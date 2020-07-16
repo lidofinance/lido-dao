@@ -44,6 +44,8 @@ To stop use:
 
 The GUI for the created DAO can be accessed at `http://localhost:3000/?#/<dao_address>/`.
 
+Note: `DAO_ID` must be unique in a blockchain.
+
 ### Other
 
 To reset the devchain state, stop the processes and use:
