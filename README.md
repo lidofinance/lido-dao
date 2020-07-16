@@ -1,4 +1,4 @@
-# DePool contracts
+# DePool DAO smart contracts
 
 ## Development
 
