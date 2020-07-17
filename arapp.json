@@ -1,7 +1,7 @@
 {
   "environments": {
     "default": {
-      "network": "localhost",
+      "network": "development",
       "appName": "depool.aragonpm.eth"
     }
   },

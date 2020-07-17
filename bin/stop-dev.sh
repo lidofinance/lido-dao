@@ -8,9 +8,12 @@ BIN_DIR="$(cd $(dirname $0) && pwd)"
 . "$BIN_DIR/.lib.sh"
 
 
-"$ARAGON" ipfs stop
+for PID_FILE in "$PID_DIR/.front.pid" "$PID_DIR/.ipfs.pid" "$PID_DIR/.devchain.pid"
+do
+    [[ -f "$PID_FILE" ]] || continue
 
-kill "$(cat "$PID_DIR/.front.pid")" "$(cat "$PID_DIR/.devchain.pid")"
-rm -f "$PID_DIR/.front.pid" "$PID_DIR/.devchain.pid"
+    kill "$(cat "$PID_FILE")"
+    rm "$PID_FILE"
+done
 
 echo DONE
