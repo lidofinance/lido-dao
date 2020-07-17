@@ -1,0 +1,75 @@
+pragma solidity 0.4.24;
+
+
+/**
+  * @title ETH 2.0 -> ETH oracle
+  */
+interface IDePoolOracle {
+    /**
+      * @notice Adds a member to the oracle member committee
+      * @param _member Address of a member to add
+      */
+    function addOracleMember(address _member) external;
+
+    /**
+      * @notice Removes a member from the oracle member committee
+      * @param _member Address of a member to remove
+      */
+    function removeOracleMember(address _member) external;
+
+    /**
+      * @notice Returns the current oracle member committee
+      */
+    function getOracleMembers() external view returns (address[]);
+
+    /**
+      * @notice Sets the number of oracle members required to form a data point
+      */
+    function setQuorum(uint _quorum) external;
+
+    /**
+      * @notice Returns the number of oracle members required to form a data point
+      */
+    function getQuorum() external view returns (uint);
+
+    event MemberAdded(address _member);
+    event MemberRemoved(address _member);
+    event QuorumChanged(uint _quorum);
+
+
+    /**
+      * @notice Returns epoch duration in seconds
+      * @dev Epochs are consecutive time intervals. Oracle data is aggregated
+      *      and processed for each epoch independently.
+      */
+    function getEpochDurationSeconds() external view returns (uint);
+
+    /**
+      * @notice Returns epoch id for a timestamp
+      * @param _timestamp Unix timestamp, seconds
+      */
+    function getEpochForTimestamp(uint _timestamp) external view returns (uint);
+
+    /**
+      * @notice Returns current epoch id
+      */
+    function getCurrentEpoch() external view returns (uint);
+
+    /**
+      * @notice An oracle committee member pushes data from the ETH 2.0 side
+      * @param _epoch Epoch id
+      * @param _eth2balance Balance in wei on the ETH 2.0 side
+      */
+    function pushData(uint _epoch, uint _eth2balance) external;
+
+    /**
+      * @notice Returns the latest data from the ETH 2.0 side
+      * @dev Depending on the oracle member committee liveness, the data can be stale. See _epoch.
+      * @return _epoch Epoch id
+      * @return _eth2balance Balance in wei on the ETH 2.0 side
+      */
+    function getLatestData() external view returns (uint _epoch, uint _eth2balance);
+
+    // Fired when some _epoch reached quorum, was processed and yielded median _eth2balance
+    event AggregatedData(uint _epoch, uint _eth2balance);
+}
