@@ -1,0 +1,13 @@
+{
+  "environments": {
+    "default": {
+      "network": "localhost",
+      "appName": "depool.aragonpm.eth"
+    }
+  },
+  "dependencies": [
+  ],
+  "roles": [
+  ],
+  "path": "contracts/DePool.sol"
+}

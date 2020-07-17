@@ -1,0 +1,43 @@
+{
+  "name": "@depools/dao",
+  "version": "0.0.1",
+  "scripts": {
+    "compile": "truffle compile",
+    "build": "cd app && npm run build",
+    "lint": "solium --dir ./contracts",
+    "test": "TRUFFLE_TEST=true npm run ganache-cli:test",
+    "test:gas": "GAS_REPORTER=true npm test",
+    "coverage": "SOLIDITY_COVERAGE=true npm run ganache-cli:test",
+    "truffle:dev": "truffle dev",
+    "ganache-cli:test": "./node_modules/@aragon/test-helpers/ganache-cli.sh",
+    "install:frontend": "cd app && npm install",
+    "abi:extract": "truffle-extract --output abi/ --keys abi",
+    "prepublishOnly": "truffle compile --all && npm run abi:extract -- --no-compile"
+  },
+  "files": [
+    "/abi",
+    "/arapp.json",
+    "/build",
+    "/contracts",
+    "/test"
+  ],
+  "keywords": [],
+  "author": "MixBytes <hello@mixbytes.io>",
+  "description": "",
+  "devDependencies": {
+    "@aragon/cli": "^6.0.0",
+    "@aragon/test-helpers": "^2.1.0",
+    "@aragon/truffle-config-v4": "^1.0.1",
+    "eth-gas-reporter": "^0.2.0",
+    "ethereumjs-testrpc-sc": "^6.5.1-sc.0",
+    "ganache-cli": "^6.4.3",
+    "solidity-coverage": "^0.7.0",
+    "solium": "^1.2.3",
+    "truffle": "4.1.14",
+    "truffle-extract": "^1.2.1"
+  },
+  "dependencies": {
+    "@aragon/os": "4.4.0",
+    "go-ipfs": "^0.4.22"
+  }
+}
