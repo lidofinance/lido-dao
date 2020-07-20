@@ -25,16 +25,16 @@ interface IDePoolOracle {
     /**
       * @notice Sets the number of oracle members required to form a data point
       */
-    function setQuorum(uint _quorum) external;
+    function setQuorum(uint256 _quorum) external;
 
     /**
       * @notice Returns the number of oracle members required to form a data point
       */
-    function getQuorum() external view returns (uint);
+    function getQuorum() external view returns (uint256);
 
     event MemberAdded(address _member);
     event MemberRemoved(address _member);
-    event QuorumChanged(uint _quorum);
+    event QuorumChanged(uint256 _quorum);
 
 
     /**
@@ -42,25 +42,25 @@ interface IDePoolOracle {
       * @dev Epochs are consecutive time intervals. Oracle data is aggregated
       *      and processed for each epoch independently.
       */
-    function getEpochDurationSeconds() external view returns (uint);
+    function getEpochDurationSeconds() external view returns (uint256);
 
     /**
       * @notice Returns epoch id for a timestamp
       * @param _timestamp Unix timestamp, seconds
       */
-    function getEpochForTimestamp(uint _timestamp) external view returns (uint);
+    function getEpochForTimestamp(uint256 _timestamp) external view returns (uint256);
 
     /**
       * @notice Returns current epoch id
       */
-    function getCurrentEpoch() external view returns (uint);
+    function getCurrentEpoch() external view returns (uint256);
 
     /**
       * @notice An oracle committee member pushes data from the ETH 2.0 side
       * @param _epoch Epoch id
       * @param _eth2balance Balance in wei on the ETH 2.0 side
       */
-    function pushData(uint _epoch, uint _eth2balance) external;
+    function pushData(uint256 _epoch, uint256 _eth2balance) external;
 
     /**
       * @notice Returns the latest data from the ETH 2.0 side
@@ -68,8 +68,8 @@ interface IDePoolOracle {
       * @return _epoch Epoch id
       * @return _eth2balance Balance in wei on the ETH 2.0 side
       */
-    function getLatestData() external view returns (uint _epoch, uint _eth2balance);
+    function getLatestData() external view returns (uint256 _epoch, uint256 _eth2balance);
 
     // Fired when some _epoch reached quorum, was processed and yielded median _eth2balance
-    event AggregatedData(uint _epoch, uint _eth2balance);
+    event AggregatedData(uint256 _epoch, uint256 _eth2balance);
 }

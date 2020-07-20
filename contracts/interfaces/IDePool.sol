@@ -29,7 +29,7 @@ interface IDePool {
 
 
     /**
-      * @notice Sets credentials to withdraw ETH on ETH 2.0 side after phase 2 is launched
+      * @notice Sets credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
       * @param _withdrawalCredentials hash of withdrawal multisignature key as accepted by
       *        the validator_registration.deposit function
       */
@@ -41,6 +41,8 @@ interface IDePool {
       *      deposit_amount) messages where deposit_amount is some typical eth denomination.
       *      Given that information, the contract'll be able to call validator_registration.deposit on-chain
       *      for any deposit amount provided by a staker.
+      *      Note that setWithdrawalCredentials invalidates all signing keys as the signatures are invalidated.
+      *      They need to be added again.
       * @param _pubkey Validator signing key
       * @param _eth1signature BLS signature of the message (_pubkey, _withdrawalCredentials, 1 ether)
       * @param _eth5signature BLS signature of the message (_pubkey, _withdrawalCredentials, 5 ether)
@@ -68,4 +70,38 @@ interface IDePool {
       * @param _pubkey Validator signing key
       */
     function removeSigningKey(bytes _pubkey) external;
+
+    /**
+      * @notice Returns count of usable signing keys
+      */
+    function getActiveSigningKeyCount() external view returns (uint256);
+
+    /**
+      * @notice Returns n-th signing key
+      * @param _index Index of key, starting with 0
+      * @return _key Key
+      * @return _stakedEther Amount of ether stacked for this validator to the moment
+      */
+    function getActiveSigningKey(uint256 _index) external view returns (bytes _key, uint256 _stakedEther);
+
+    event WithdrawalCredentialsSet(bytes _withdrawalCredentials);
+    event SigningKeyAdded(bytes _pubkey);
+
+
+    // User functions
+
+    /**
+      * @notice Adds eth to the pool
+      * @return _StETH Amount of StETH generated
+      */
+    function submit() external payable returns (uint256 _StETH);
+
+    /**
+      * @notice Issues withdrawal request. Withdrawals will be processed only after the phase 2 launch.
+      * @param _amount Amount of StETH to burn
+      * @param _pubkeyHash Receiving address
+      */
+    function withdraw(uint256 _amount, bytes _pubkeyHash) external;
+
+    event Withdrawal(uint256 _amount, bytes _pubkeyHash);
 }
