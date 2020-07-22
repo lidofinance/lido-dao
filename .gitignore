@@ -1,5 +1,11 @@
 /.idea/
-/node_modules/
-/build/
+build/
 
 /.dev.env
+
+node_modules/
+artifacts/
+.cache
+cache/
+dist/
+ipfs.cmd
