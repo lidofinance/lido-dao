@@ -19,7 +19,7 @@ contract StETH is ISTETH, OZERC20, AragonApp {
 
 
     modifier whenNotStopped() {
-        require(!stopped);
+        require(!stopped, "CONTRACT_IS_STOPPED");
         _;
     }
 
