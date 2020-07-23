@@ -83,10 +83,12 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
 
   it('stop/resume works', async () => {
     await token.transfer(user2, tokens(2), {from: user1});
+    assert.equal(await token.isStopped(), false);
 
     await assertRevert(token.stop({from: user1}));
     await token.stop({from: pool});
     await assertRevert(token.stop({from: pool}));
+    assert(await token.isStopped());
 
     await assertRevert(token.transfer(user2, tokens(2), {from: user1}), 'CONTRACT_IS_STOPPED');
     await assertRevert(token.transfer(user2, tokens(2), {from: user3}));
@@ -95,6 +97,7 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
     await assertRevert(token.resume({from: user1}));
     await token.resume({from: pool});
     await assertRevert(token.resume({from: pool}));
+    assert.equal(await token.isStopped(), false);
 
     await token.transfer(user2, tokens(2), {from: user1});
     assertBn(await token.balanceOf(user1, {from: nobody}), tokens(996));

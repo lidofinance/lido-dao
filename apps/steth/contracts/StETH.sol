@@ -5,9 +5,10 @@ import "@aragon/os/contracts/lib/math/SafeMath.sol";
 import {ERC20 as OZERC20} from "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 
 import "@depools/dao/contracts/interfaces/ISTETH.sol";
+import "@depools/depool-lib/contracts/Pausable.sol";
 
 
-contract StETH is ISTETH, OZERC20, AragonApp {
+contract StETH is ISTETH, Pausable, OZERC20, AragonApp {
     using SafeMath for uint256;
 
     /// ACL
@@ -15,23 +16,7 @@ contract StETH is ISTETH, OZERC20, AragonApp {
     bytes32 constant public MINT_ROLE = keccak256("MINT_ROLE");
 
 
-    bool private stopped;
-
-
-    modifier whenNotStopped() {
-        require(!stopped, "CONTRACT_IS_STOPPED");
-        _;
-    }
-
-    modifier whenStopped() {
-        require(stopped);
-        _;
-    }
-
-
     function initialize() public onlyInit {
-        stopped = false;
-
         initialized();
     }
 
@@ -112,24 +97,15 @@ contract StETH is ISTETH, OZERC20, AragonApp {
     /**
       * @notice Stops transfers
       */
-    function stop() external auth(PAUSE_ROLE) whenNotStopped {
-        stopped = true;
-        emit Stopped();
+    function stop() external auth(PAUSE_ROLE) {
+        _stop();
     }
 
     /**
       * @notice Resumes transfers
       */
-    function resume() external auth(PAUSE_ROLE) whenStopped {
-        stopped = false;
-        emit Resumed();
-    }
-
-    /**
-      * @notice Returns true if the token is stopped
-      */
-    function isStopped() external view returns (bool) {
-        return stopped;
+    function resume() external auth(PAUSE_ROLE) {
+        _resume();
     }
 
 
