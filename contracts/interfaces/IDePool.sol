@@ -25,6 +25,11 @@ interface IDePool {
       */
     function setFee(uint32 _feeBasisPoints) external;
 
+    /**
+      * @notice Returns staking rewards fee rate
+      */
+    function getFee() external view returns (uint32 _feeBasisPoints);
+
     event FeeSet(uint32 _feeBasisPoints);
 
 
