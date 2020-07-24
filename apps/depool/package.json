@@ -24,6 +24,7 @@
     "web3": "^1.2.0",
     "@depools/dao": "file:../../",
     "@depools/depool-lib": "file:../../shared/lib/",
-    "openzeppelin-solidity": "2.0.0"
+    "openzeppelin-solidity": "2.0.0",
+    "solidity-bytes-utils": "0.0.6"
   }
 }

@@ -35,6 +35,8 @@ interface IDePool {
 
     /**
       * @notice Sets credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
+      * @dev Note that setWithdrawalCredentials invalidates all signing keys as the signatures are invalidated.
+      *      That is why it's required to remove all signing keys beforehand. Then, they'll need to be added again.
       * @param _withdrawalCredentials hash of withdrawal multisignature key as accepted by
       *        the validator_registration.deposit function
       */
@@ -46,29 +48,11 @@ interface IDePool {
       *      deposit_amount) messages where deposit_amount is some typical eth denomination.
       *      Given that information, the contract'll be able to call validator_registration.deposit on-chain
       *      for any deposit amount provided by a staker.
-      *      Note that setWithdrawalCredentials invalidates all signing keys as the signatures are invalidated.
-      *      They need to be added again.
       * @param _pubkey Validator signing key
-      * @param _eth1signature BLS signature of the message (_pubkey, _withdrawalCredentials, 1 ether)
-      * @param _eth5signature BLS signature of the message (_pubkey, _withdrawalCredentials, 5 ether)
-      * @param _eth10signature BLS signature of the message (_pubkey, _withdrawalCredentials, 10 ether)
-      * @param _eth50signature BLS signature of the message (_pubkey, _withdrawalCredentials, 50 ether)
-      * @param _eth100signature BLS signature of the message (_pubkey, _withdrawalCredentials, 100 ether)
-      * @param _eth500signature BLS signature of the message (_pubkey, _withdrawalCredentials, 500 ether)
-      * @param _eth1000signature BLS signature of the message (_pubkey, _withdrawalCredentials, 1000 ether)
-      * @param _eth5000signature BLS signature of the message (_pubkey, _withdrawalCredentials, 5000 ether)
-      * @param _eth10000signature BLS signature of the message (_pubkey, _withdrawalCredentials, 10000 ether)
-      * @param _eth50000signature BLS signature of the message (_pubkey, _withdrawalCredentials, 50000 ether)
-      * @param _eth100000signature BLS signature of the message (_pubkey, _withdrawalCredentials, 100000 ether)
-      * @param _eth500000signature BLS signature of the message (_pubkey, _withdrawalCredentials, 500000 ether)
+      * @param _signatures 12 concatenated signatures for (_pubkey, _withdrawalCredentials, amount of ether)
+      *        where amount of ether is 1, 5, 10, 50, 100, 500, 1000, 5000, 10000, 50000, 100000, 500000
       */
-    function addSigningKey(bytes _pubkey,
-            bytes _eth1signature, bytes _eth5signature,
-            bytes _eth10signature, bytes _eth50signature,
-            bytes _eth100signature, bytes _eth500signature,
-            bytes _eth1000signature, bytes _eth5000signature,
-            bytes _eth10000signature, bytes _eth50000signature,
-            bytes _eth100000signature, bytes _eth500000signature) external;
+    function addSigningKey(bytes _pubkey, bytes _signatures) external;
 
     /**
       * @notice Removes a validator signing key from the set of usable keys
@@ -91,6 +75,7 @@ interface IDePool {
 
     event WithdrawalCredentialsSet(bytes _withdrawalCredentials);
     event SigningKeyAdded(bytes _pubkey);
+    event SigningKeyRemoved(bytes _pubkey);
 
 
     // User functions
