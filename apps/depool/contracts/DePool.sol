@@ -81,7 +81,7 @@ contract DePool is IDePool, Pausable, AragonApp {
     /**
       * @notice Returns staking rewards fee rate
       */
-    function getFee() external view returns (uint32 _feeBasisPoints) {
+    function getFee() external view returns (uint32 feeBasisPoints) {
         return _getFee();
     }
 
@@ -103,6 +103,13 @@ contract DePool is IDePool, Pausable, AragonApp {
     }
 
     /**
+      * @notice Returns current credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
+      */
+    function getWithdrawalCredentials() external view returns (bytes) {
+        return withdrawalCredentials;
+    }
+
+    /**
       * @notice Adds a validator signing key to the set of usable keys
       * @dev Along with the key the DAO has to provide signatures for several (pubkey, withdrawal_credentials,
       *      deposit_amount) messages where deposit_amount is some typical eth denomination.
@@ -110,7 +117,7 @@ contract DePool is IDePool, Pausable, AragonApp {
       *      for any deposit amount provided by a staker.
       * @param _pubkey Validator signing key
       * @param _signatures 12 concatenated signatures for (_pubkey, _withdrawalCredentials, amount of ether)
-      *        where amount of ether is 1, 5, 10, 50, 100, 500, 1000, 5000, 10000, 50000, 100000, 500000
+      *        where amount of ether is each of the values of `denominations`.
       */
     function addSigningKey(bytes _pubkey, bytes _signatures) external auth(MANAGE_SIGNING_KEYS) {
         require(_pubkey.length == PUBKEY_LENGTH, "INVALID_LENGTH");
@@ -172,10 +179,10 @@ contract DePool is IDePool, Pausable, AragonApp {
     /**
       * @notice Returns n-th signing key
       * @param _index Index of key, starting with 0
-      * @return _key Key
-      * @return _stakedEther Amount of ether stacked for this validator to the moment
+      * @return key Key
+      * @return stakedEther Amount of ether stacked for this validator to the moment
       */
-    function getActiveSigningKey(uint256 _index) external view returns (bytes _key, uint256 _stakedEther) {
+    function getActiveSigningKey(uint256 _index) external view returns (bytes key, uint256 stakedEther) {
         require(_index < signingKeys.length, "KEY_NOT_FOUND");
 
         return (signingKeys[_index], keyInfo[_index].stakedEther);
@@ -188,9 +195,9 @@ contract DePool is IDePool, Pausable, AragonApp {
 
     /**
       * @notice Adds eth to the pool
-      * @return _StETH Amount of StETH generated
+      * @return StETH Amount of StETH generated
       */
-    function submit() external payable returns (uint256 _StETH) {
+    function submit() external payable returns (uint256 StETH) {
         return _submit();
     }
 
