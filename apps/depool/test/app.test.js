@@ -108,6 +108,9 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     {const {key, stakedEther} = await app.getActiveSigningKey(1, {from: nobody});
     assert.equal(key, pad("0x050505", 48));
     assertBn(stakedEther, 0);}
+
+    await assertRevert(app.getActiveSigningKey(2, {from: nobody}), 'KEY_NOT_FOUND');
+    await assertRevert(app.getActiveSigningKey(1000, {from: nobody}), 'KEY_NOT_FOUND');
   });
 
   it('removeSigningKey works', async () => {
@@ -118,6 +121,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     await app.removeSigningKey(pad("0x010203", 48), {from: voting});
     assertBn(await app.getActiveSigningKeyCount({from: nobody}), 0);
+    await assertRevert(app.removeSigningKey(pad("0x010203", 48), {from: voting}), 'KEY_NOT_FOUND');
 
     await app.addSigningKey(pad("0x010204", 48), pad("0x01", 96 * 12), {from: voting});
     await app.addSigningKey(pad("0x010205", 48), pad("0x01", 96 * 12), {from: voting});
@@ -130,6 +134,9 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     assert.equal((await app.getActiveSigningKey(1, {from: nobody})).key, pad("0x010205", 48));
 
     await app.removeSigningKey(pad("0x010205", 48), {from: voting});
+    await assertRevert(app.removeSigningKey(pad("0x010203", 48), {from: voting}), 'KEY_NOT_FOUND');
+    await assertRevert(app.removeSigningKey(pad("0x010205", 48), {from: voting}), 'KEY_NOT_FOUND');
+
     assertBn(await app.getActiveSigningKeyCount({from: nobody}), 1);
     assert.equal((await app.getActiveSigningKey(0, {from: nobody})).key, pad("0x010206", 48));
   });
