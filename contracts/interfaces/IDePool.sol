@@ -28,7 +28,7 @@ interface IDePool {
     /**
       * @notice Returns staking rewards fee rate
       */
-    function getFee() external view returns (uint32 _feeBasisPoints);
+    function getFee() external view returns (uint32 feeBasisPoints);
 
     event FeeSet(uint32 _feeBasisPoints);
 
@@ -41,6 +41,11 @@ interface IDePool {
       *        the validator_registration.deposit function
       */
     function setWithdrawalCredentials(bytes _withdrawalCredentials) external;
+
+    /**
+      * @notice Returns current credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
+      */
+    function getWithdrawalCredentials() external view returns (bytes);
 
     /**
       * @notice Adds a validator signing key to the set of usable keys
@@ -68,10 +73,10 @@ interface IDePool {
     /**
       * @notice Returns n-th signing key
       * @param _index Index of key, starting with 0
-      * @return _key Key
-      * @return _stakedEther Amount of ether stacked for this validator to the moment
+      * @return key Key
+      * @return stakedEther Amount of ether stacked for this validator to the moment
       */
-    function getActiveSigningKey(uint256 _index) external view returns (bytes _key, uint256 _stakedEther);
+    function getActiveSigningKey(uint256 _index) external view returns (bytes key, uint256 stakedEther);
 
     event WithdrawalCredentialsSet(bytes _withdrawalCredentials);
     event SigningKeyAdded(bytes _pubkey);
@@ -82,9 +87,9 @@ interface IDePool {
 
     /**
       * @notice Adds eth to the pool
-      * @return _StETH Amount of StETH generated
+      * @return StETH Amount of StETH generated
       */
-    function submit() external payable returns (uint256 _StETH);
+    function submit() external payable returns (uint256 StETH);
 
     /**
       * @notice Issues withdrawal request. Withdrawals will be processed only after the phase 2 launch.
