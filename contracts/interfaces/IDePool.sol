@@ -30,7 +30,7 @@ interface IDePool {
       */
     function getFee() external view returns (uint32 feeBasisPoints);
 
-    event FeeSet(uint32 _feeBasisPoints);
+    event FeeSet(uint32 feeBasisPoints);
 
 
     /**
@@ -78,9 +78,9 @@ interface IDePool {
       */
     function getActiveSigningKey(uint256 _index) external view returns (bytes key, uint256 stakedEther);
 
-    event WithdrawalCredentialsSet(bytes _withdrawalCredentials);
-    event SigningKeyAdded(bytes _pubkey);
-    event SigningKeyRemoved(bytes _pubkey);
+    event WithdrawalCredentialsSet(bytes withdrawalCredentials);
+    event SigningKeyAdded(bytes pubkey);
+    event SigningKeyRemoved(bytes pubkey);
 
 
     /**
@@ -100,10 +100,10 @@ interface IDePool {
     function submit() external payable returns (uint256 StETH);
 
     // Records a deposit made by a user
-    event Submitted(address _sender, uint256 _amount);
+    event Submitted(address sender, uint256 amount);
 
     // The `_amount` of ether was sent to the validator_registration.deposit function.
-    event Unbuffered(uint256 _amount);
+    event Unbuffered(uint256 amount);
 
     /**
       * @notice Issues withdrawal request. Withdrawals will be processed only after the phase 2 launch.
@@ -112,5 +112,5 @@ interface IDePool {
       */
     function withdraw(uint256 _amount, bytes _pubkeyHash) external;
 
-    event Withdrawal(uint256 _amount, bytes _pubkeyHash);
+    event Withdrawal(uint256 amount, bytes pubkeyHash);
 }

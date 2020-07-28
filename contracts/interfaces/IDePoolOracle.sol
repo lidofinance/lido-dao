@@ -32,9 +32,9 @@ interface IDePoolOracle {
       */
     function getQuorum() external view returns (uint256);
 
-    event MemberAdded(address _member);
-    event MemberRemoved(address _member);
-    event QuorumChanged(uint256 _quorum);
+    event MemberAdded(address member);
+    event MemberRemoved(address member);
+    event QuorumChanged(uint256 quorum);
 
 
     /**
@@ -71,5 +71,5 @@ interface IDePoolOracle {
     function getLatestData() external view returns (uint256 _epoch, uint256 _eth2balance);
 
     // Fired when some _epoch reached quorum, was processed and yielded median _eth2balance
-    event AggregatedData(uint256 _epoch, uint256 _eth2balance);
+    event AggregatedData(uint256 epoch, uint256 eth2balance);
 }
