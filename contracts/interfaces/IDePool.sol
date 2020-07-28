@@ -83,6 +83,14 @@ interface IDePool {
     event SigningKeyRemoved(bytes _pubkey);
 
 
+    /**
+      * @notice Ether on the ETH 2.0 side reported by the oracle
+      * @param _epoch Epoch id
+      * @param _eth2balance Balance in wei on the ETH 2.0 side
+      */
+    function reportEther2(uint256 _epoch, uint256 _eth2balance) external;
+
+
     // User functions
 
     /**
@@ -90,6 +98,12 @@ interface IDePool {
       * @return StETH Amount of StETH generated
       */
     function submit() external payable returns (uint256 StETH);
+
+    // Records a deposit made by a user
+    event Submitted(address _sender, uint256 _amount);
+
+    // The `_amount` of ether was sent to the validator_registration.deposit function.
+    event Unbuffered(uint256 _amount);
 
     /**
       * @notice Issues withdrawal request. Withdrawals will be processed only after the phase 2 launch.

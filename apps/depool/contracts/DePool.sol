@@ -30,6 +30,10 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     bytes32 internal constant TOKEN_VALUE_POSITION = keccak256("depools.DePool.token");
     bytes32 internal constant ORACLE_VALUE_POSITION = keccak256("depools.DePool.oracle");
 
+    bytes32 internal constant BUFFERED_ETHER_VALUE_POSITION = keccak256("depools.DePool.bufferedEther");
+    bytes32 internal constant DEPOSITED_ETHER_VALUE_POSITION = keccak256("depools.DePool.depositedEther");
+    bytes32 internal constant REMOTE_ETHER_VALUE_POSITION = keccak256("depools.DePool.remoteEther");
+
 
     /// @dev index -> ether value (in ether, not wei)
     uint256[] public denominations;
@@ -264,6 +268,98 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     }
 
 
+    /**
+     * @notice Send funds to recovery Vault. Overrides default AragonApp behaviour.
+     * @param _token Token to be sent to recovery vault.
+     */
+    function transferToVault(address _token) external {
+        require(allowRecoverability(_token), "RECOVER_DISALLOWED");
+        address vault = getRecoveryVault();
+        require(isContract(vault), "RECOVER_VAULT_NOT_CONTRACT");
+
+        uint256 balance;
+        if (_token == ETH) {
+            balance = _getUnaccountedEther();
+            vault.transfer(balance);
+        } else {
+            ERC20 token = ERC20(_token);
+            balance = token.staticBalanceOf(this);
+            require(token.safeTransfer(vault, balance), "RECOVER_TOKEN_TRANSFER_FAILED");
+        }
+
+        emit RecoverToVault(vault, _token, balance);
+    }
+
+
+    /**
+      * @notice Ether on the ETH 2.0 side reported by the oracle
+      * @param _eth2balance Balance in wei on the ETH 2.0 side
+      */
+    function reportEther2(uint256 /*_epoch*/, uint256 _eth2balance) external {
+        require(msg.sender == getOracle(), 'APP_AUTH_FAILED');
+        // +1 serves as a boolean flag of a set value
+        REMOTE_ETHER_VALUE_POSITION.setStorageUint256(_eth2balance.add(1));
+
+        // TODO mint
+    }
+
+    /**
+      * @dev Records a deposit made by a user.
+      * @param _value Deposit value in wei
+      */
+    function _submitted(address _sender, uint256 _value) internal {
+        BUFFERED_ETHER_VALUE_POSITION.setStorageUint256(_getBufferedEther().add(_value));
+
+        emit Submitted(_sender, _value);
+    }
+
+    /**
+      * @dev Gets the amount of Ether temporary buffered on this contract balance
+      */
+    function _getBufferedEther() internal view returns (uint256) {
+        uint256 buffered = BUFFERED_ETHER_VALUE_POSITION.getStorageUint256();
+        assert(address(this).balance >= buffered);
+
+        return buffered;
+    }
+
+    /**
+      * @dev Gets unaccounted (excess) Ether on this contract balance
+      */
+    function _getUnaccountedEther() internal view returns (uint256) {
+        return address(this).balance.sub(_getBufferedEther());
+    }
+
+    /**
+      * @dev Records a deposit to the validator_registration.deposit function.
+      *      The function must be called before the unbuffering.
+      */
+    function _markAsUnbuffered() internal {
+        uint256 amount = _getBufferedEther();
+        assert(amount != 0);
+
+        DEPOSITED_ETHER_VALUE_POSITION.setStorageUint256(
+            DEPOSITED_ETHER_VALUE_POSITION.getStorageUint256().add(amount));
+        BUFFERED_ETHER_VALUE_POSITION.setStorageUint256(0);
+
+        emit Unbuffered(amount);
+    }
+
+    /**
+      * @dev Gets the amount of Ether controlled by the system
+      */
+    function _getTotalControlledEther() internal view returns (uint256) {
+        uint256 remote = REMOTE_ETHER_VALUE_POSITION.getStorageUint256();
+        // Until the oracle provides data, we assume that all staked ether intact.
+        uint256 deposited = DEPOSITED_ETHER_VALUE_POSITION.getStorageUint256();
+
+        return _getBufferedEther().add(remote != 0 ? remote.sub(1) : deposited);
+    }
+
+
+    /**
+      * @dev Fast dynamic array comparison
+      */
     function isEqual(bytes memory a, bytes memory b) private pure returns (bool) {
         uint256 length = a.length;
         if (length != b.length)
