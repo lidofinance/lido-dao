@@ -5,6 +5,8 @@ pragma solidity 0.4.24;
   * @title Liquid version of ETH 2.0 native token
   */
 interface ISTETH /* is IERC20 */ {
+    function totalSupply() external view returns (uint256);
+
     /**
       * @notice Stops transfers
       */

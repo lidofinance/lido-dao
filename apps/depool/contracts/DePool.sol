@@ -26,6 +26,8 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     uint256 constant public WITHDRAWAL_CREDENTIALS_LENGTH = 32;
     uint256 constant public SIGNATURE_LENGTH = 96;
 
+    uint256 constant public BUFFER_SIZE = 32 ether;
+
     bytes32 internal constant FEE_VALUE_POSITION = keccak256("depools.DePool.fee");
     bytes32 internal constant TOKEN_VALUE_POSITION = keccak256("depools.DePool.token");
     bytes32 internal constant ORACLE_VALUE_POSITION = keccak256("depools.DePool.oracle");
@@ -224,9 +226,41 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     }
 
 
-    function _submit() internal returns (uint256) {
+    /**
+      * @dev Processes user deposit
+      */
+    function _submit() internal returns (uint256 StETH) {
+        address sender = msg.sender;
+        uint256 deposit = msg.value;
+        require(deposit != 0, "ZERO_DEPOSIT");
+
+        // Minting new liquid tokens
+        if (0 == _getTotalControlledEther()) {
+            StETH = deposit;
+        } else {
+            StETH = deposit.mul(getToken().totalSupply()).div(_getTotalControlledEther());
+        }
+        getToken().mint(sender, StETH);
+
+        _submitted(sender, deposit);
+
+        // Buffer management
+        uint256 buffered = _getBufferedEther();
+        if (buffered >= BUFFER_SIZE) {
+            uint256 unaccounted = _getUnaccountedEther();
+
+            _markAsUnbuffered();
+            _ETH2Deposit(buffered);
+
+            assert(_getUnaccountedEther() == unaccounted);
+        }
+    }
+
+    /**
+      * @dev Makes a deposit to the ETH 2.0 side
+      */
+    function _ETH2Deposit(uint256 _amount) internal {
         // FIXME TBD
-        return 0;
     }
 
 
