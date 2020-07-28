@@ -2,13 +2,15 @@ pragma solidity 0.4.24;
 
 import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
+import "@aragon/os/contracts/common/IsContract.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
 import "@depools/dao/contracts/interfaces/IDePool.sol";
+import "@depools/dao/contracts/interfaces/ISTETH.sol";
 import "@depools/depool-lib/contracts/Pausable.sol";
 
 
-contract DePool is IDePool, Pausable, AragonApp {
+contract DePool is IDePool, IsContract, Pausable, AragonApp {
     using SafeMath for uint256;
     using UnstructuredStorage for bytes32;
 
@@ -17,6 +19,7 @@ contract DePool is IDePool, Pausable, AragonApp {
     bytes32 constant public MANAGE_FEE = keccak256("MANAGE_FEE");
     bytes32 constant public MANAGE_WITHDRAWAL_KEY = keccak256("MANAGE_WITHDRAWAL_KEY");
     bytes32 constant public MANAGE_SIGNING_KEYS = keccak256("MANAGE_SIGNING_KEYS");
+    bytes32 constant public SET_ORACLE = keccak256("SET_ORACLE");
 
     uint256 constant public MAX_SIGNING_KEYS = 256;
     uint256 constant public PUBKEY_LENGTH = 48;
@@ -24,6 +27,8 @@ contract DePool is IDePool, Pausable, AragonApp {
     uint256 constant public SIGNATURE_LENGTH = 96;
 
     bytes32 internal constant FEE_VALUE_POSITION = keccak256("depools.DePool.fee");
+    bytes32 internal constant TOKEN_VALUE_POSITION = keccak256("depools.DePool.token");
+    bytes32 internal constant ORACLE_VALUE_POSITION = keccak256("depools.DePool.oracle");
 
 
     /// @dev index -> ether value (in ether, not wei)
@@ -42,8 +47,12 @@ contract DePool is IDePool, Pausable, AragonApp {
     mapping (uint256 => KeyInfo) private keyInfo;
 
 
-    function initialize() public onlyInit {
+    function initialize(ISTETH _token, address _oracle) public onlyInit {
         denominations = [1, 5, 10, 50, 100, 500, 1000, 5000, 10000, 50000, 100000, 500000];
+
+        _setToken(_token);
+        _setOracle(_oracle);
+
         initialized();
     }
 
@@ -215,6 +224,45 @@ contract DePool is IDePool, Pausable, AragonApp {
         // FIXME TBD
         return 0;
     }
+
+
+    /**
+      * @dev Sets liquid token interface handle
+      */
+    function _setToken(ISTETH _token) internal {
+        require(isContract(address(_token)), 'NOT_A_CONTRACT');
+        TOKEN_VALUE_POSITION.setStorageAddress(address(_token));
+    }
+
+    /**
+      * @notice Gets liquid token interface handle
+      */
+    function getToken() public view returns (ISTETH) {
+        return ISTETH(TOKEN_VALUE_POSITION.getStorageAddress());
+    }
+
+    /**
+      * @notice Sets authorized oracle address
+      */
+    function setOracle(address _oracle) external auth(SET_ORACLE) {
+        _setOracle(_oracle);
+    }
+
+    /**
+      * @dev Internal function to set authorized oracle address
+      */
+    function _setOracle(address _oracle) internal {
+        require(isContract(_oracle), 'NOT_A_CONTRACT');
+        ORACLE_VALUE_POSITION.setStorageAddress(_oracle);
+    }
+
+    /**
+      * @notice Gets authorized oracle address
+      */
+    function getOracle() public view returns (address) {
+        return ORACLE_VALUE_POSITION.getStorageAddress();
+    }
+
 
     function isEqual(bytes memory a, bytes memory b) private pure returns (bool) {
         uint256 length = a.length;

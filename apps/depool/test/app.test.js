@@ -1,7 +1,17 @@
+const { join } = require('path')
 const { assert } = require('chai')
 const { newDao, newApp } = require('./helpers/dao')
 const { assertBn, assertRevert, assertEvent, assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
 const { ONE_DAY, ZERO_ADDRESS, MAX_UINT64, bn, getEventArgument, injectWeb3, injectArtifacts } = require('@aragon/contract-helpers-test')
+
+const oldPath = artifacts._artifactsPath;
+// FIXME use template
+artifacts._artifactsPath = join(config.paths.root, '..', 'steth/artifacts');
+
+const StETH = artifacts.require('StETH.sol')
+
+artifacts._artifactsPath = oldPath;
+
 
 const DePool = artifacts.require('DePool.sol')
 
@@ -19,15 +29,21 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
 
   before('deploy base app', async () => {
     // Deploy the app's base contract.
-    appBase = await DePool.new()
+    appBase = await DePool.new();
+    stEthBase = await StETH.new();
   })
 
   beforeEach('deploy dao and app', async () => {
     const { dao, acl } = await newDao(appManager)
 
+    // token
+    let proxyAddress = await newApp(dao, 'steth', stEthBase.address, appManager);
+    const token = await StETH.at(proxyAddress);
+    await token.initialize();
+
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
-    const proxyAddress = await newApp(dao, 'depool', appBase.address, appManager)
-    app = await DePool.at(proxyAddress)
+    proxyAddress = await newApp(dao, 'depool', appBase.address, appManager);
+    app = await DePool.at(proxyAddress);
 
     // Set up the app's permissions.
     await acl.createPermission(voting, app.address, await app.PAUSE_ROLE(), appManager, {from: appManager});
@@ -36,7 +52,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await acl.createPermission(voting, app.address, await app.MANAGE_SIGNING_KEYS(), appManager, {from: appManager});
 
     // Initialize the app's proxy.
-    await app.initialize()
+    await app.initialize(token.address, token.address /* unused */);
   })
 
   it('setFee works', async () => {

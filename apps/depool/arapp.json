@@ -1,13 +1,28 @@
 {
   "roles": [
     {
-      "name": "Increment the counter",
-      "id": "INCREMENT_ROLE",
+      "name": "Stop/resume submissions and withdrawal requests",
+      "id": "PAUSE_ROLE",
       "params": []
     },
     {
-      "name": "Decrement the counter",
-      "id": "DECREMENT_ROLE",
+      "name": "Set fee",
+      "id": "MANAGE_FEE",
+      "params": []
+    },
+    {
+      "name": "Manage withdrawal credentials",
+      "id": "MANAGE_WITHDRAWAL_KEY",
+      "params": []
+    },
+    {
+      "name": "Manage signing keys",
+      "id": "MANAGE_SIGNING_KEYS",
+      "params": []
+    },
+    {
+      "name": "Set oracle contract address",
+      "id": "SET_ORACLE",
       "params": []
     }
   ],
