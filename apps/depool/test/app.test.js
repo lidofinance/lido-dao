@@ -52,7 +52,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await acl.createPermission(voting, app.address, await app.MANAGE_SIGNING_KEYS(), appManager, {from: appManager});
 
     // Initialize the app's proxy.
-    await app.initialize(token.address, token.address /* unused */);
+    await app.initialize(token.address, token.address /* unused */, token.address /* unused */);
   })
 
   it('setFee works', async () => {
