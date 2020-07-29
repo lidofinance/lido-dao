@@ -28,6 +28,9 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
 
     uint256 constant public BUFFER_SIZE = 32 ether;
 
+    uint256 internal constant MIN_DEPOSIT_AMOUNT = 1 ether;     // validator_registration.vy
+    uint256 internal constant DEPOSIT_AMOUNT_UNIT = 1000000000 wei;     // validator_registration.vy
+
     bytes32 internal constant FEE_VALUE_POSITION = keccak256("depools.DePool.fee");
     bytes32 internal constant TOKEN_VALUE_POSITION = keccak256("depools.DePool.token");
     bytes32 internal constant ORACLE_VALUE_POSITION = keccak256("depools.DePool.oracle");
@@ -55,6 +58,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
 
     function initialize(ISTETH _token, address _oracle) public onlyInit {
         denominations = [1, 5, 10, 50, 100, 500, 1000, 5000, 10000, 50000, 100000, 500000];
+        assert(denominations[0] * 1 ether >= MIN_DEPOSIT_AMOUNT);
 
         _setToken(_token);
         _setOracle(_oracle);
@@ -238,6 +242,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         if (0 == _getTotalControlledEther()) {
             StETH = deposit;
         } else {
+            assert(getToken().totalSupply() != 0);
             StETH = deposit.mul(getToken().totalSupply()).div(_getTotalControlledEther());
         }
         getToken().mint(sender, StETH);
@@ -249,8 +254,11 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         if (buffered >= BUFFER_SIZE) {
             uint256 unaccounted = _getUnaccountedEther();
 
-            _markAsUnbuffered();
-            _ETH2Deposit(buffered);
+            uint256 toUnbuffer = (buffered / DEPOSIT_AMOUNT_UNIT) * DEPOSIT_AMOUNT_UNIT;
+            assert(toUnbuffer <= buffered);
+
+            _ETH2Deposit(toUnbuffer);
+            _markAsUnbuffered(toUnbuffer);
 
             assert(_getUnaccountedEther() == unaccounted);
         }
@@ -258,8 +266,11 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
 
     /**
       * @dev Makes a deposit to the ETH 2.0 side
+      * @param _amount Total amount to deposit to the ETH 2.0 side
       */
     function _ETH2Deposit(uint256 _amount) internal {
+        assert(_amount >= MIN_DEPOSIT_AMOUNT);
+
         // FIXME TBD
     }
 
@@ -366,17 +377,15 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
 
     /**
       * @dev Records a deposit to the validator_registration.deposit function.
-      *      The function must be called before the unbuffering.
+      * @param _amount Total amount deposited to the ETH 2.0 side
       */
-    function _markAsUnbuffered() internal {
-        uint256 amount = _getBufferedEther();
-        assert(amount != 0);
-
+    function _markAsUnbuffered(uint256 _amount) internal {
         DEPOSITED_ETHER_VALUE_POSITION.setStorageUint256(
-            DEPOSITED_ETHER_VALUE_POSITION.getStorageUint256().add(amount));
-        BUFFERED_ETHER_VALUE_POSITION.setStorageUint256(0);
+            DEPOSITED_ETHER_VALUE_POSITION.getStorageUint256().add(_amount));
+        BUFFERED_ETHER_VALUE_POSITION.setStorageUint256(
+            BUFFERED_ETHER_VALUE_POSITION.getStorageUint256().sub(_amount));
 
-        emit Unbuffered(amount);
+        emit Unbuffered(_amount);
     }
 
     /**
