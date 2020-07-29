@@ -9,6 +9,14 @@
       ]
     },
     {
+      "name": "Burn tokens",
+      "id": "BURN_ROLE",
+      "params": [
+        "Account which tokens are to be burnt",
+        "Token amount"
+      ]
+    },
+    {
       "name": "Stop/resume the token",
       "id": "PAUSE_ROLE",
       "params": []

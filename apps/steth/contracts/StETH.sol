@@ -14,6 +14,7 @@ contract StETH is ISTETH, Pausable, OZERC20, AragonApp {
     /// ACL
     bytes32 constant public PAUSE_ROLE = keccak256("PAUSE_ROLE");
     bytes32 constant public MINT_ROLE = keccak256("MINT_ROLE");
+    bytes32 constant public BURN_ROLE = keccak256("BURN_ROLE");
 
 
     function initialize() public onlyInit {
@@ -116,5 +117,14 @@ contract StETH is ISTETH, Pausable, OZERC20, AragonApp {
       */
     function mint(address _to, uint256 _value) external authP(MINT_ROLE, arr(_to, _value)) {
         _mint(_to, _value);
+    }
+
+    /**
+      * @notice Burns tokens
+      * @param _account Account which tokens are to be burnt
+      * @param _value Amount of tokens to burn
+      */
+    function burn(address _account, uint256 _value) external authP(BURN_ROLE, arr(_account, _value)) {
+        _burn(_account, _value);
     }
 }

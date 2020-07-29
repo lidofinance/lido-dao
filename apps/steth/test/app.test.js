@@ -27,6 +27,7 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
     // Set up the app's permissions.
     await acl.createPermission(pool, app.address, await app.PAUSE_ROLE(), appManager, {from: appManager});
     await acl.createPermission(pool, app.address, await app.MINT_ROLE(), appManager, {from: appManager});
+    await acl.createPermission(pool, app.address, await app.BURN_ROLE(), appManager, {from: appManager});
 
     // Initialize the app's proxy.
     await app.initialize();
@@ -102,4 +103,29 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
     assertBn(await token.balanceOf(user1, {from: nobody}), tokens(996));
     assertBn(await token.balanceOf(user2, {from: nobody}), tokens(4));
   });
-})
+
+  it('burning works', async () => {
+    await token.transfer(user2, tokens(2), {from: user1});
+
+    await token.burn(user1, tokens(2), {from: pool});
+    await token.burn(user2, tokens(1), {from: pool});
+
+    assertBn(await token.totalSupply(), tokens(997));
+    assertBn(await token.balanceOf(user1, {from: nobody}), tokens(996));
+    assertBn(await token.balanceOf(user2, {from: nobody}), tokens(1));
+
+    for (const acc of [user1, user2, user3, nobody]) {
+      await assertRevert(token.burn(user1, tokens(4), {from: acc}), 'APP_AUTH_FAILED');
+      await assertRevert(token.burn(user3, tokens(4), {from: acc}), 'APP_AUTH_FAILED');
+    }
+
+    await assertRevert(token.burn(user2, tokens(4), {from: pool}));
+
+    await token.burn(user1, tokens(96), {from: pool});
+    await token.burn(user2, tokens(1), {from: pool});
+
+    assertBn(await token.totalSupply(), tokens(900));
+    assertBn(await token.balanceOf(user1, {from: nobody}), tokens(900));
+    assertBn(await token.balanceOf(user2, {from: nobody}), 0);
+  });
+});

@@ -32,4 +32,11 @@ interface ISTETH /* is IERC20 */ {
       * @param _value Amount of new tokens to mint
       */
     function mint(address _to, uint256 _value) external;
+
+    /**
+      * @notice Burns tokens
+      * @param _account Account which tokens are to be burnt
+      * @param _value Amount of tokens to burn
+      */
+    function burn(address _account, uint256 _value) external;
 }
