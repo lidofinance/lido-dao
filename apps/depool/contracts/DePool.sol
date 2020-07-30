@@ -11,6 +11,11 @@ import "@depools/dao/contracts/interfaces/IValidatorRegistration.sol";
 import "@depools/depool-lib/contracts/Pausable.sol";
 
 
+/**
+  * @title Liquid staking pool implementation
+  *
+  * See the comment of `IDePool`.
+  */
 contract DePool is IDePool, IsContract, Pausable, AragonApp {
     using SafeMath for uint256;
     using UnstructuredStorage for bytes32;

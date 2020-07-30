@@ -8,6 +8,11 @@ import "@depools/dao/contracts/interfaces/ISTETH.sol";
 import "@depools/depool-lib/contracts/Pausable.sol";
 
 
+/**
+  * @title Implementation of a liquid version of ETH 2.0 native token
+  *
+  * ERC20 token which supports stop/resume, mint/burn mechanics. The token is operated by `IDePool`.
+  */
 contract StETH is ISTETH, Pausable, OZERC20, AragonApp {
     using SafeMath for uint256;
 

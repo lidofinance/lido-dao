@@ -3,6 +3,12 @@ pragma solidity 0.4.24;
 
 /**
   * @title Liquid staking pool
+  *
+  * For the high-level description of the pool operation please refer to the paper.
+  * Pool manages signing and withdrawal keys. It receives ether submitted by users on the ETH 1 side
+  * and stakes it via the validator_registration.vy contract. It doesn't hold ether on it's balance,
+  * only a small portion (buffer) of it.
+  * It also mints new tokens for rewards generated at the ETH 2.0 side.
   */
 interface IDePool {
     /**

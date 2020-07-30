@@ -3,6 +3,10 @@ pragma solidity 0.4.24;
 
 /**
   * @title ETH 2.0 -> ETH oracle
+  *
+  * The goal of the oracle is to inform other parts of the system about balances controlled
+  * by the DAO on the ETH 2.0 side. The balances can go up because of reward accumulation
+  * and can go down because of slashing.
   */
 interface IDePoolOracle {
     /**
