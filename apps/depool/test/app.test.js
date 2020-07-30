@@ -13,7 +13,7 @@ const StETH = artifacts.require('StETH.sol')
 artifacts._artifactsPath = oldPath;
 
 
-const DePool = artifacts.require('DePool.sol')
+const DePool = artifacts.require('TestDePool.sol')
 
 
 const pad = (hex, bytesLength) => {

@@ -169,7 +169,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
 
         uint256 length = signingKeys.length;
         for (uint256 i = 0; i < length; ++i) {
-            require(!isEqual(signingKeys[i], _pubkey), "KEY_ALREADY_EXISTS");
+            require(!_isEqual(signingKeys[i], _pubkey), "KEY_ALREADY_EXISTS");
         }
 
         uint256 index = signingKeys.length;
@@ -192,7 +192,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     function removeSigningKey(bytes _pubkey) external auth(MANAGE_SIGNING_KEYS) {
         uint256 length = signingKeys.length;
         for (uint256 i = 0; i < length; ++i) {
-            if (!isEqual(signingKeys[i], _pubkey))
+            if (!_isEqual(signingKeys[i], _pubkey))
                 continue;
 
             // Fill the spot with the latest key
@@ -551,7 +551,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     /**
       * @dev Fast dynamic array comparison
       */
-    function isEqual(bytes memory _a, bytes memory _b) internal pure returns (bool) {
+    function _isEqual(bytes memory _a, bytes memory _b) internal pure returns (bool) {
         uint256 length = _a.length;
         if (length != _b.length)
             return false;
