@@ -89,6 +89,22 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
 
 
     /**
+      * @notice Adds eth to the pool
+      */
+    function() external payable {
+        _submit();
+    }
+
+    /**
+      * @notice Adds eth to the pool
+      * @return StETH Amount of StETH generated
+      */
+    function submit() external payable returns (uint256 StETH) {
+        return _submit();
+    }
+
+
+    /**
       * @notice Stops pool routine operations
       */
     function stop() external auth(PAUSE_ROLE) {
@@ -112,17 +128,11 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         emit FeeSet(_feeBasisPoints);
     }
 
-    function _getFee() internal view returns (uint32) {
-        uint256 v = FEE_VALUE_POSITION.getStorageUint256();
-        assert(v <= uint256(uint32(-1)));
-        return uint32(v);
-    }
-
     /**
-      * @notice Returns staking rewards fee rate
+      * @notice Sets authorized oracle address
       */
-    function getFee() external view returns (uint32 feeBasisPoints) {
-        return _getFee();
+    function setOracle(address _oracle) external auth(SET_ORACLE) {
+        _setOracle(_oracle);
     }
 
 
@@ -140,13 +150,6 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         withdrawalCredentials = _withdrawalCredentials;
 
         emit WithdrawalCredentialsSet(_withdrawalCredentials);
-    }
-
-    /**
-      * @notice Returns current credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
-      */
-    function getWithdrawalCredentials() external view returns (bytes) {
-        return withdrawalCredentials;
     }
 
     /**
@@ -211,6 +214,79 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         revert("KEY_NOT_FOUND");
     }
 
+
+    /**
+      * @notice Issues withdrawal request. Withdrawals will be processed only after the phase 2 launch.
+      * @param _amount Amount of StETH to burn
+      * @param _pubkeyHash Receiving address
+      */
+    function withdraw(uint256 _amount, bytes32 _pubkeyHash) external {
+        address sender = msg.sender;
+
+        uint256 totalSupply = getToken().totalSupply();
+        getToken().burn(sender, _amount);
+
+        // (total ether) * share of msg.sender's token holding.
+        // totalSupply is taken before the burning.
+        uint256 etherAmount = _amount.mul(_getTotalControlledEther()).div(totalSupply);
+
+        withdrawalRequests.push(WithdrawalRequest({amount: etherAmount, pubkeyHash: _pubkeyHash}));
+
+        emit Withdrawal(sender, _amount, _pubkeyHash, etherAmount);
+    }
+
+
+    /**
+      * @notice Ether on the ETH 2.0 side reported by the oracle
+      * @param _eth2balance Balance in wei on the ETH 2.0 side
+      */
+    function reportEther2(uint256 /*_epoch*/, uint256 _eth2balance) external {
+        require(msg.sender == getOracle(), "APP_AUTH_FAILED");
+        // +1 serves as a boolean flag of a set value
+        REMOTE_ETHER_VALUE_POSITION.setStorageUint256(_eth2balance.add(1));
+
+        // TODO mint
+    }
+
+
+    /**
+     * @notice Send funds to recovery Vault. Overrides default AragonApp behaviour.
+     * @param _token Token to be sent to recovery vault.
+     */
+    function transferToVault(address _token) external {
+        require(allowRecoverability(_token), "RECOVER_DISALLOWED");
+        address vault = getRecoveryVault();
+        require(isContract(vault), "RECOVER_VAULT_NOT_CONTRACT");
+
+        uint256 balance;
+        if (_token == ETH) {
+            balance = _getUnaccountedEther();
+            vault.transfer(balance);
+        } else {
+            ERC20 token = ERC20(_token);
+            balance = token.staticBalanceOf(this);
+            require(token.safeTransfer(vault, balance), "RECOVER_TOKEN_TRANSFER_FAILED");
+        }
+
+        emit RecoverToVault(vault, _token, balance);
+    }
+
+
+    /**
+      * @notice Returns staking rewards fee rate
+      */
+    function getFee() external view returns (uint32 feeBasisPoints) {
+        return _getFee();
+    }
+
+
+    /**
+      * @notice Returns current credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
+      */
+    function getWithdrawalCredentials() external view returns (bytes) {
+        return withdrawalCredentials;
+    }
+
     /**
       * @notice Returns count of usable signing keys
       */
@@ -231,36 +307,65 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     }
 
 
-    function() external payable {
-        _submit();
+    /**
+      * @notice Gets the amount of Ether temporary buffered on this contract balance
+      */
+    function getBufferedEther() external view returns (uint256) {
+        return _getBufferedEther();
     }
 
     /**
-      * @notice Adds eth to the pool
-      * @return StETH Amount of StETH generated
+      * @notice Gets the amount of Ether controlled by the system
       */
-    function submit() external payable returns (uint256 StETH) {
-        return _submit();
+    function getTotalControlledEther() external view returns (uint256) {
+        return _getTotalControlledEther();
+    }
+
+
+    /**
+      * @notice Gets liquid token interface handle
+      */
+    function getToken() public view returns (ISTETH) {
+        return ISTETH(TOKEN_VALUE_POSITION.getStorageAddress());
     }
 
     /**
-      * @notice Issues withdrawal request. Withdrawals will be processed only after the phase 2 launch.
-      * @param _amount Amount of StETH to burn
-      * @param _pubkeyHash Receiving address
+      * @notice Gets validator registration contract handle
       */
-    function withdraw(uint256 _amount, bytes32 _pubkeyHash) external {
-        address sender = msg.sender;
+    function getValidatorRegistrationContract() public view returns (IValidatorRegistration) {
+        return IValidatorRegistration(VALIDATOR_REGISTRATION_VALUE_POSITION.getStorageAddress());
+    }
 
-        uint256 totalSupply = getToken().totalSupply();
-        getToken().burn(sender, _amount);
+    /**
+      * @notice Gets authorized oracle address
+      */
+    function getOracle() public view returns (address) {
+        return ORACLE_VALUE_POSITION.getStorageAddress();
+    }
 
-        // (total ether) * share of msg.sender's token holding.
-        // totalSupply is taken before the burning.
-        uint256 etherAmount = _amount.mul(_getTotalControlledEther()).div(totalSupply);
 
-        withdrawalRequests.push(WithdrawalRequest({amount: etherAmount, pubkeyHash: _pubkeyHash}));
+    /**
+      * @dev Sets liquid token interface handle
+      */
+    function _setToken(ISTETH _token) internal {
+        require(isContract(address(_token)), "NOT_A_CONTRACT");
+        TOKEN_VALUE_POSITION.setStorageAddress(address(_token));
+    }
 
-        emit Withdrawal(sender, _amount, _pubkeyHash, etherAmount);
+    /**
+      * @dev Sets validator registration contract handle
+      */
+    function _setValidatorRegistrationContract(IValidatorRegistration _contract) internal {
+        require(isContract(address(_contract)), "NOT_A_CONTRACT");
+        VALIDATOR_REGISTRATION_VALUE_POSITION.setStorageAddress(address(_contract));
+    }
+
+    /**
+      * @dev Internal function to set authorized oracle address
+      */
+    function _setOracle(address _oracle) internal {
+        require(isContract(_oracle), "NOT_A_CONTRACT");
+        ORACLE_VALUE_POSITION.setStorageAddress(_oracle);
     }
 
 
@@ -382,94 +487,6 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
 
 
     /**
-      * @dev Sets liquid token interface handle
-      */
-    function _setToken(ISTETH _token) internal {
-        require(isContract(address(_token)), "NOT_A_CONTRACT");
-        TOKEN_VALUE_POSITION.setStorageAddress(address(_token));
-    }
-
-    /**
-      * @notice Gets liquid token interface handle
-      */
-    function getToken() public view returns (ISTETH) {
-        return ISTETH(TOKEN_VALUE_POSITION.getStorageAddress());
-    }
-
-    /**
-      * @dev Sets validator registration contract handle
-      */
-    function _setValidatorRegistrationContract(IValidatorRegistration _contract) internal {
-        require(isContract(address(_contract)), "NOT_A_CONTRACT");
-        VALIDATOR_REGISTRATION_VALUE_POSITION.setStorageAddress(address(_contract));
-    }
-
-    /**
-      * @notice Gets validator registration contract handle
-      */
-    function getValidatorRegistrationContract() public view returns (IValidatorRegistration) {
-        return IValidatorRegistration(VALIDATOR_REGISTRATION_VALUE_POSITION.getStorageAddress());
-    }
-
-    /**
-      * @notice Sets authorized oracle address
-      */
-    function setOracle(address _oracle) external auth(SET_ORACLE) {
-        _setOracle(_oracle);
-    }
-
-    /**
-      * @dev Internal function to set authorized oracle address
-      */
-    function _setOracle(address _oracle) internal {
-        require(isContract(_oracle), "NOT_A_CONTRACT");
-        ORACLE_VALUE_POSITION.setStorageAddress(_oracle);
-    }
-
-    /**
-      * @notice Gets authorized oracle address
-      */
-    function getOracle() public view returns (address) {
-        return ORACLE_VALUE_POSITION.getStorageAddress();
-    }
-
-
-    /**
-     * @notice Send funds to recovery Vault. Overrides default AragonApp behaviour.
-     * @param _token Token to be sent to recovery vault.
-     */
-    function transferToVault(address _token) external {
-        require(allowRecoverability(_token), "RECOVER_DISALLOWED");
-        address vault = getRecoveryVault();
-        require(isContract(vault), "RECOVER_VAULT_NOT_CONTRACT");
-
-        uint256 balance;
-        if (_token == ETH) {
-            balance = _getUnaccountedEther();
-            vault.transfer(balance);
-        } else {
-            ERC20 token = ERC20(_token);
-            balance = token.staticBalanceOf(this);
-            require(token.safeTransfer(vault, balance), "RECOVER_TOKEN_TRANSFER_FAILED");
-        }
-
-        emit RecoverToVault(vault, _token, balance);
-    }
-
-
-    /**
-      * @notice Ether on the ETH 2.0 side reported by the oracle
-      * @param _eth2balance Balance in wei on the ETH 2.0 side
-      */
-    function reportEther2(uint256 /*_epoch*/, uint256 _eth2balance) external {
-        require(msg.sender == getOracle(), "APP_AUTH_FAILED");
-        // +1 serves as a boolean flag of a set value
-        REMOTE_ETHER_VALUE_POSITION.setStorageUint256(_eth2balance.add(1));
-
-        // TODO mint
-    }
-
-    /**
       * @dev Records a deposit made by a user.
       * @param _value Deposit value in wei
       */
@@ -480,10 +497,26 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @notice Gets the amount of Ether temporary buffered on this contract balance
+      * @dev Records a deposit to the validator_registration.deposit function.
+      * @param _amount Total amount deposited to the ETH 2.0 side
       */
-    function getBufferedEther() external view returns (uint256) {
-        return _getBufferedEther();
+    function _markAsUnbuffered(uint256 _amount) internal {
+        DEPOSITED_ETHER_VALUE_POSITION.setStorageUint256(
+            DEPOSITED_ETHER_VALUE_POSITION.getStorageUint256().add(_amount));
+        BUFFERED_ETHER_VALUE_POSITION.setStorageUint256(
+            BUFFERED_ETHER_VALUE_POSITION.getStorageUint256().sub(_amount));
+
+        emit Unbuffered(_amount);
+    }
+
+
+    /**
+      * @dev Returns staking rewards fee rate
+      */
+    function _getFee() internal view returns (uint32) {
+        uint256 v = FEE_VALUE_POSITION.getStorageUint256();
+        assert(v <= uint256(uint32(-1)));
+        return uint32(v);
     }
 
     /**
@@ -501,26 +534,6 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
       */
     function _getUnaccountedEther() internal view returns (uint256) {
         return address(this).balance.sub(_getBufferedEther());
-    }
-
-    /**
-      * @dev Records a deposit to the validator_registration.deposit function.
-      * @param _amount Total amount deposited to the ETH 2.0 side
-      */
-    function _markAsUnbuffered(uint256 _amount) internal {
-        DEPOSITED_ETHER_VALUE_POSITION.setStorageUint256(
-            DEPOSITED_ETHER_VALUE_POSITION.getStorageUint256().add(_amount));
-        BUFFERED_ETHER_VALUE_POSITION.setStorageUint256(
-            BUFFERED_ETHER_VALUE_POSITION.getStorageUint256().sub(_amount));
-
-        emit Unbuffered(_amount);
-    }
-
-    /**
-      * @notice Gets the amount of Ether controlled by the system
-      */
-    function getTotalControlledEther() external view returns (uint256) {
-        return _getTotalControlledEther();
     }
 
     /**

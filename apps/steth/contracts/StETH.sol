@@ -28,25 +28,38 @@ contract StETH is ISTETH, Pausable, OZERC20, AragonApp {
 
 
     /**
-     * @notice Returns the name of the token.
-     */
-    function name() public pure returns (string) {
-        return "Liquid staked Ether 2.0";
+      * @notice Stops transfers
+      */
+    function stop() external auth(PAUSE_ROLE) {
+        _stop();
     }
 
     /**
-     * @notice Returns the symbol of the token.
-     */
-    function symbol() public pure returns (string) {
-        return "StETH";
+      * @notice Resumes transfers
+      */
+    function resume() external auth(PAUSE_ROLE) {
+        _resume();
+    }
+
+
+    /**
+      * @notice Mints new tokens
+      * @param _to Receiver of new tokens
+      * @param _value Amount of new tokens to mint
+      */
+    function mint(address _to, uint256 _value) external authP(MINT_ROLE, arr(_to, _value)) {
+        _mint(_to, _value);
     }
 
     /**
-     * @notice Returns the number of decimals of the token.
-     */
-    function decimals() public pure returns (uint8) {
-        return 18;
+      * @notice Burns tokens
+      * @param _account Account which tokens are to be burnt
+      * @param _value Amount of tokens to burn
+      */
+    function burn(address _account, uint256 _value) external authP(BURN_ROLE, arr(_account, _value)) {
+        _burn(_account, _value);
     }
+
 
     /**
      * @notice Transfer token for a specified address
@@ -101,35 +114,23 @@ contract StETH is ISTETH, Pausable, OZERC20, AragonApp {
 
 
     /**
-      * @notice Stops transfers
-      */
-    function stop() external auth(PAUSE_ROLE) {
-        _stop();
+     * @notice Returns the name of the token.
+     */
+    function name() public pure returns (string) {
+        return "Liquid staked Ether 2.0";
     }
 
     /**
-      * @notice Resumes transfers
-      */
-    function resume() external auth(PAUSE_ROLE) {
-        _resume();
-    }
-
-
-    /**
-      * @notice Mints new tokens
-      * @param _to Receiver of new tokens
-      * @param _value Amount of new tokens to mint
-      */
-    function mint(address _to, uint256 _value) external authP(MINT_ROLE, arr(_to, _value)) {
-        _mint(_to, _value);
+     * @notice Returns the symbol of the token.
+     */
+    function symbol() public pure returns (string) {
+        return "StETH";
     }
 
     /**
-      * @notice Burns tokens
-      * @param _account Account which tokens are to be burnt
-      * @param _value Amount of tokens to burn
-      */
-    function burn(address _account, uint256 _value) external authP(BURN_ROLE, arr(_account, _value)) {
-        _burn(_account, _value);
+     * @notice Returns the number of decimals of the token.
+     */
+    function decimals() public pure returns (uint8) {
+        return 18;
     }
 }
