@@ -11,20 +11,20 @@
     "publish:patch": "buidler publish patch"
   },
   "dependencies": {
-    "@aragon/os": "^4.4.0",
-    "@aragon/truffle-config-v5": "^1.0.1"
+    "@aragon/os": "^4.4.0"
   },
   "devDependencies": {
     "@aragon/buidler-aragon": "^0.2.0",
     "@aragon/contract-helpers-test": "^0.1.0-rc.2",
+    "@depools/dao": "file:../../",
+    "@depools/depool-lib": "file:../../shared/lib/",
     "@nomiclabs/buidler": "^1.3.0",
     "@nomiclabs/buidler-etherscan": "^1.3.0",
     "@nomiclabs/buidler-truffle5": "^1.3.0",
     "@nomiclabs/buidler-web3": "^1.3.0",
-    "web3": "^1.2.0",
-    "@depools/dao": "file:../../",
-    "@depools/depool-lib": "file:../../shared/lib/",
+    "buidler-gas-reporter": "^0.1.3",
     "openzeppelin-solidity": "2.0.0",
-    "solidity-bytes-utils": "0.0.6"
+    "solidity-bytes-utils": "0.0.6",
+    "web3": "^1.2.0"
   }
 }
