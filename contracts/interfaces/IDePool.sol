@@ -100,7 +100,7 @@ interface IDePool {
     function submit() external payable returns (uint256 StETH);
 
     // Records a deposit made by a user
-    event Submitted(address sender, uint256 amount);
+    event Submitted(address indexed sender, uint256 amount);
 
     // The `_amount` of ether was sent to the validator_registration.deposit function.
     event Unbuffered(uint256 amount);
@@ -112,5 +112,6 @@ interface IDePool {
       */
     function withdraw(uint256 _amount, bytes _pubkeyHash) external;
 
-    event Withdrawal(uint256 amount, bytes pubkeyHash);
+    // Requested withdrawal of `etherAmount` to `pubkeyHash` on the ETH 2.0 side, `tokenAmount` burned by `sender`.
+    event Withdrawal(address indexed sender, uint256 tokenAmount, bytes indexed pubkeyHash, uint256 etherAmount);
 }
