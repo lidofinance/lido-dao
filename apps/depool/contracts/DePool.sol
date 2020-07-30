@@ -45,17 +45,30 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     /// @dev index -> ether value (in ether, not wei)
     uint256[] public denominations;
 
+
+    /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
     bytes private withdrawalCredentials;
 
     /// @dev index -> key
     bytes[] private signingKeys;
 
+    /// @dev Information about a signing (validator) key
     struct KeyInfo {
-        uint256 stakedEther;
+        uint256 stakedEther;    // amount of Ether staked for this key by the contract
         bytes[] signatures;     // denomination index -> signature for (_pubkey, _withdrawalCredentials, denomination)
     }
     /// @dev index -> KeyInfo
     mapping (uint256 => KeyInfo) private keyInfo;
+
+
+    /// @dev Request to withdraw Ether on the 2.0 side
+    struct WithdrawalRequest {
+        uint256 amount;     // amount of wei to withdraw
+        bytes32 pubkeyHash; // receiver's public key hash
+    }
+
+    /// @dev Queue of withdrawal requests
+    WithdrawalRequest[] private withdrawalRequests;
 
 
     function initialize(ISTETH _token, IValidatorRegistration validatorRegistration, address _oracle) public onlyInit {
@@ -230,8 +243,19 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
       * @param _amount Amount of StETH to burn
       * @param _pubkeyHash Receiving address
       */
-    function withdraw(uint256 _amount, bytes _pubkeyHash) external {
-        // FIXME TBD
+    function withdraw(uint256 _amount, bytes32 _pubkeyHash) external {
+        address sender = msg.sender;
+
+        uint256 totalSupply = getToken().totalSupply();
+        getToken().burn(sender, _amount);
+
+        // (total ether) * share of msg.sender's token holding.
+        // totalSupply is taken before the burning.
+        uint256 etherAmount = _amount.mul(_getTotalControlledEther()).div(totalSupply);
+
+        withdrawalRequests.push(WithdrawalRequest({amount: etherAmount, pubkeyHash: _pubkeyHash}));
+
+        emit Withdrawal(sender, _amount, _pubkeyHash, etherAmount);
     }
 
 

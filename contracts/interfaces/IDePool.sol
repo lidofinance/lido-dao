@@ -110,8 +110,8 @@ interface IDePool {
       * @param _amount Amount of StETH to burn
       * @param _pubkeyHash Receiving address
       */
-    function withdraw(uint256 _amount, bytes _pubkeyHash) external;
+    function withdraw(uint256 _amount, bytes32 _pubkeyHash) external;
 
     // Requested withdrawal of `etherAmount` to `pubkeyHash` on the ETH 2.0 side, `tokenAmount` burned by `sender`.
-    event Withdrawal(address indexed sender, uint256 tokenAmount, bytes indexed pubkeyHash, uint256 etherAmount);
+    event Withdrawal(address indexed sender, uint256 tokenAmount, bytes32 indexed pubkeyHash, uint256 etherAmount);
 }
