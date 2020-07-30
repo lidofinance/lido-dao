@@ -114,4 +114,17 @@ interface IDePool {
 
     // Requested withdrawal of `etherAmount` to `pubkeyHash` on the ETH 2.0 side, `tokenAmount` burned by `sender`.
     event Withdrawal(address indexed sender, uint256 tokenAmount, bytes32 indexed pubkeyHash, uint256 etherAmount);
+
+
+    // Info functions
+
+    /**
+      * @notice Gets the amount of Ether controlled by the system
+      */
+    function getTotalControlledEther() external view returns (uint256);
+
+    /**
+      * @notice Gets the amount of Ether temporary buffered on this contract balance
+      */
+    function getBufferedEther() external view returns (uint256);
 }

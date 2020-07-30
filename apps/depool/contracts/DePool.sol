@@ -475,6 +475,13 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     }
 
     /**
+      * @notice Gets the amount of Ether temporary buffered on this contract balance
+      */
+    function getBufferedEther() external view returns (uint256) {
+        return _getBufferedEther();
+    }
+
+    /**
       * @dev Gets the amount of Ether temporary buffered on this contract balance
       */
     function _getBufferedEther() internal view returns (uint256) {
@@ -502,6 +509,13 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
             BUFFERED_ETHER_VALUE_POSITION.getStorageUint256().sub(_amount));
 
         emit Unbuffered(_amount);
+    }
+
+    /**
+      * @notice Gets the amount of Ether controlled by the system
+      */
+    function getTotalControlledEther() external view returns (uint256) {
+        return _getTotalControlledEther();
     }
 
     /**
