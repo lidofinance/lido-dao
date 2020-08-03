@@ -156,4 +156,55 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(await app.getActiveSigningKeyCount({from: nobody}), 1);
     assert.equal((await app.getActiveSigningKey(0, {from: nobody})).key, pad("0x010206", 48));
   });
+
+  it('isEqual works', async () => {
+    assert.equal(await app.isEqual("0x", "0x"), true);
+    assert.equal(await app.isEqual("0x11", "0x11"), true);
+    assert.equal(await app.isEqual("0x1122", "0x1122"), true);
+    assert.equal(await app.isEqual("0x112233", "0x112233"), true);
+
+    assert.equal(await app.isEqual("0x", "0x11"), false);
+    assert.equal(await app.isEqual("0x", "0x112233"), false);
+
+    assert.equal(await app.isEqual("0x11", "0x12"), false);
+    assert.equal(await app.isEqual("0x12", "0x11"), false);
+    assert.equal(await app.isEqual("0x11", "0x1112"), false);
+    assert.equal(await app.isEqual("0x11", "0x111213"), false);
+
+    assert.equal(await app.isEqual("0x1122", "0x1123"), false);
+    assert.equal(await app.isEqual("0x1123", "0x1122"), false);
+    assert.equal(await app.isEqual("0x2122", "0x1122"), false);
+    assert.equal(await app.isEqual("0x1123", "0x1122"), false);
+    assert.equal(await app.isEqual("0x1122", "0x112233"), false);
+    assert.equal(await app.isEqual("0x112233", "0x1122"), false);
+
+    assert.equal(await app.isEqual("0x102233", "0x112233"), false);
+    assert.equal(await app.isEqual("0x112033", "0x112233"), false);
+    assert.equal(await app.isEqual("0x112230", "0x112233"), false);
+    assert.equal(await app.isEqual("0x112233", "0x102233"), false);
+    assert.equal(await app.isEqual("0x112233", "0x112033"), false);
+    assert.equal(await app.isEqual("0x112233", "0x112230"), false);
+    assert.equal(await app.isEqual("0x112233", "0x11223344"), false);
+    assert.equal(await app.isEqual("0x11223344", "0x112233"), false);
+  });
+
+  it('pad64 works', async () => {
+    await assertRevert(app.pad64("0x"));
+    await assertRevert(app.pad64("0x11"));
+    await assertRevert(app.pad64("0x1122"));
+    await assertRevert(app.pad64(pad("0x1122", 31)));
+    await assertRevert(app.pad64(pad("0x1122", 65)));
+    await assertRevert(app.pad64(pad("0x1122", 265)));
+
+    assert.equal(await app.pad64(pad("0x1122", 32)), pad("0x1122", 32) + '0'.repeat(64));
+    assert.equal(await app.pad64(pad("0x1122", 36)), pad("0x1122", 36) + '0'.repeat(56));
+    assert.equal(await app.pad64(pad("0x1122", 64)), pad("0x1122", 64));
+  });
+
+  it('toLittleEndian64 works', async () => {
+    await assertRevert(app.toLittleEndian64("0x010203040506070809"));
+    assertBn(await app.toLittleEndian64("0x0102030405060708"), bn("0x0807060504030201" + '0'.repeat(48)));
+    assertBn(await app.toLittleEndian64("0x0100000000000008"), bn("0x0800000000000001" + '0'.repeat(48)));
+    assertBn(await app.toLittleEndian64("0x10"), bn("0x1000000000000000" + '0'.repeat(48)));
+  });
 });

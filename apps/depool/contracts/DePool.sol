@@ -565,7 +565,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @dev Padding memory array with zeroes up to 64 bytes
+      * @dev Padding memory array with zeroes up to 64 bytes on the right
       * @param _b Memory array of size 32 .. 64
       */
     function _pad64(bytes memory _b) internal pure returns (bytes memory) {
@@ -583,7 +583,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @dev Converting value to little endian bytes
+      * @dev Converting value to little endian bytes and padding up to 32 bytes on the right
       * @param _value Number less than `2**64` for compatibility reasons
       */
     function _toLittleEndian64(uint256 _value) internal pure returns (uint256 result) {
@@ -594,6 +594,6 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         }
 
         assert(0 == _value);    // fully converted
-        result <<= 24;
+        result <<= (24 * 8);
     }
 }

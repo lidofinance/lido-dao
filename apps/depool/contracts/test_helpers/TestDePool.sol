@@ -22,7 +22,7 @@ contract TestDePool is DePool {
     }
 
     /**
-      * @dev Padding memory array with zeroes up to 64 bytes
+      * @dev Padding memory array with zeroes up to 64 bytes on the right
       * @param _b Memory array of size 32 .. 64
       */
     function pad64(bytes memory _b) public pure returns (bytes memory) {
@@ -30,7 +30,7 @@ contract TestDePool is DePool {
     }
 
     /**
-      * @dev Converting value to little endian bytes
+      * @dev Converting value to little endian bytes and padding up to 32 bytes on the right
       * @param _value Number less than `2**64` for compatibility reasons
       */
     function toLittleEndian64(uint256 _value) public pure returns (uint256 result) {
