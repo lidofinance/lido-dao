@@ -14,6 +14,7 @@ artifacts._artifactsPath = oldPath;
 
 
 const DePool = artifacts.require('TestDePool.sol')
+const ValidatorRegistrationMock = artifacts.require('ValidatorRegistrationMock.sol')
 
 
 const pad = (hex, bytesLength) => {
@@ -25,12 +26,13 @@ const pad = (hex, bytesLength) => {
 
 
 contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
-  let appBase, app;
+  let appBase, app, validatorRegistration;
 
   before('deploy base app', async () => {
     // Deploy the app's base contract.
     appBase = await DePool.new();
     stEthBase = await StETH.new();
+    validatorRegistration = await ValidatorRegistrationMock.new();
   })
 
   beforeEach('deploy dao and app', async () => {
@@ -52,7 +54,9 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await acl.createPermission(voting, app.address, await app.MANAGE_SIGNING_KEYS(), appManager, {from: appManager});
 
     // Initialize the app's proxy.
-    await app.initialize(token.address, token.address /* unused */, token.address /* unused */);
+    await app.initialize(token.address, validatorRegistration.address, token.address /* unused */);
+
+    await validatorRegistration.reset();
   })
 
   it('setFee works', async () => {
