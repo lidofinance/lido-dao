@@ -18,6 +18,7 @@ module.exports = {
       enabled: true,
       runs: 200,
     },
+    evmVersion: 'constantinople'
   },
   // Etherscan plugin configuration. Learn more at https://github.com/nomiclabs/buidler/tree/master/packages/buidler-etherscan
   etherscan: {

@@ -27,12 +27,11 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     bytes32 constant public MANAGE_SIGNING_KEYS = keccak256("MANAGE_SIGNING_KEYS");
     bytes32 constant public SET_ORACLE = keccak256("SET_ORACLE");
 
-    uint256 constant public MAX_SIGNING_KEYS = 256;
     uint256 constant public PUBKEY_LENGTH = 48;
     uint256 constant public WITHDRAWAL_CREDENTIALS_LENGTH = 32;
     uint256 constant public SIGNATURE_LENGTH = 96;
 
-    uint256 constant public BUFFER_SIZE = 32 ether;
+    uint256 constant public DEPOSIT_SIZE = 32 ether;
 
     uint256 internal constant MIN_DEPOSIT_AMOUNT = 1 ether;     // validator_registration.vy
     uint256 internal constant DEPOSIT_AMOUNT_UNIT = 1000000000 wei;     // validator_registration.vy
@@ -46,24 +45,14 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     bytes32 internal constant DEPOSITED_ETHER_VALUE_POSITION = keccak256("depools.DePool.depositedEther");
     bytes32 internal constant REMOTE_ETHER_VALUE_POSITION = keccak256("depools.DePool.remoteEther");
 
-
-    /// @dev index -> ether value (in ether, not wei)
-    uint256[] public denominations;
+    bytes32 internal constant SIGNING_KEYS_MAPPING_NAME = keccak256("depools.DePool.signingKeys");
 
 
     /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
     bytes private withdrawalCredentials;
 
-    /// @dev index -> key
-    bytes[] private signingKeys;
-
-    /// @dev Information about a signing (validator) key
-    struct KeyInfo {
-        uint256 stakedEther;    // amount of Ether staked for this key by the contract
-        bytes[] signatures;     // denomination index -> signature for (_pubkey, _withdrawalCredentials, denomination)
-    }
-    /// @dev index -> KeyInfo
-    mapping (uint256 => KeyInfo) private keyInfo;
+    uint256 private totalSigningKeys;
+    uint256 private usedSigningKeys;
 
 
     /// @dev Request to withdraw Ether on the 2.0 side
@@ -77,9 +66,6 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
 
 
     function initialize(ISTETH _token, IValidatorRegistration validatorRegistration, address _oracle) public onlyInit {
-        denominations = [1, 5, 10, 50, 100, 500, 1000, 5000, 10000, 50000, 100000, 500000];
-        assert(denominations[0].mul(1 ether) >= MIN_DEPOSIT_AMOUNT);
-
         _setToken(_token);
         _setValidatorRegistrationContract(validatorRegistration);
         _setOracle(_oracle);
@@ -138,80 +124,66 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
 
     /**
       * @notice Sets credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
-      * @dev Note that setWithdrawalCredentials invalidates all signing keys as the signatures are invalidated.
-      *      That is why it's required to remove all signing keys beforehand. Then, they'll need to be added again.
+      * @dev Note that setWithdrawalCredentials discards all unused signing keys as the signatures are invalidated.
       * @param _withdrawalCredentials hash of withdrawal multisignature key as accepted by
       *        the validator_registration.deposit function
       */
     function setWithdrawalCredentials(bytes _withdrawalCredentials) external auth(MANAGE_WITHDRAWAL_KEY) {
         require(_withdrawalCredentials.length == WITHDRAWAL_CREDENTIALS_LENGTH, "INVALID_LENGTH");
-        require(0 == signingKeys.length, "SIGNING_KEYS_MUST_BE_REMOVED_FIRST");
 
         withdrawalCredentials = _withdrawalCredentials;
+        totalSigningKeys = usedSigningKeys; // discard unused keys
 
         emit WithdrawalCredentialsSet(_withdrawalCredentials);
     }
 
     /**
-      * @notice Adds a validator signing key to the set of usable keys
-      * @dev Along with the key the DAO has to provide signatures for several (pubkey, withdrawal_credentials,
-      *      deposit_amount) messages where deposit_amount is some typical eth denomination.
-      *      Given that information, the contract'll be able to call validator_registration.deposit on-chain
-      *      for any deposit amount provided by a staker.
-      * @param _pubkey Validator signing key
-      * @param _signatures 12 concatenated signatures for (_pubkey, _withdrawalCredentials, amount of ether)
-      *        where amount of ether is each of the values of `denominations`.
+      * @notice Adds validator signing keys to the set of usable keys
+      * @dev Along with each key the DAO has to provide a signatures for the
+      *      (pubkey, withdrawal_credentials, 32000000000) message.
+      *      Given that information, the contract'll be able to call
+      *      validator_registration.deposit on-chain.
+      * @param _quantity Number of signing keys provided
+      * @param _pubkeys Several concatenated validator signing keys
+      * @param _signatures Several concatenated signatures for (pubkey, withdrawal_credentials, 32000000000) messages
       */
-    function addSigningKey(bytes _pubkey, bytes _signatures) external auth(MANAGE_SIGNING_KEYS) {
-        require(_pubkey.length == PUBKEY_LENGTH, "INVALID_LENGTH");
-        require(_signatures.length == SIGNATURE_LENGTH * 12, "INVALID_LENGTH");
-        require(signingKeys.length < MAX_SIGNING_KEYS, "TOO_MANY_KEYS");
+    function addSigningKeys(uint256 _quantity, bytes _pubkeys, bytes _signatures) external auth(MANAGE_SIGNING_KEYS) {
+        require(_quantity != 0, "NO_KEYS");
+        require(_pubkeys.length == _quantity.mul(PUBKEY_LENGTH), "INVALID_LENGTH");
+        require(_signatures.length == _quantity.mul(SIGNATURE_LENGTH), "INVALID_LENGTH");
 
-        uint256 length = signingKeys.length;
-        for (uint256 i = 0; i < length; ++i) {
-            require(!_isEqual(signingKeys[i], _pubkey), "KEY_ALREADY_EXISTS");
+        for (uint256 i = 0; i < _quantity; ++i) {
+            bytes memory key = BytesLib.slice(_pubkeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
+            require(!_isEmptySigningKey(key), "EMPTY_KEY");
+            bytes memory sig = BytesLib.slice(_signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
+
+            _storeSigningKey(totalSigningKeys + i, key, sig);
+            emit SigningKeyAdded(key);
         }
 
-        uint256 index = signingKeys.length;
-        signingKeys.push(_pubkey);
-
-        bytes memory signatures = _signatures;
-        keyInfo[index].stakedEther = 0;
-        keyInfo[index].signatures.length = denominations.length;
-        for (i = 0; i < denominations.length; i++) {
-            keyInfo[index].signatures[i] = BytesLib.slice(signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
-        }
-
-        emit SigningKeyAdded(_pubkey);
+        totalSigningKeys = totalSigningKeys.add(_quantity);
     }
 
     /**
       * @notice Removes a validator signing key from the set of usable keys
-      * @param _pubkey Validator signing key
+      * @param _index Index of the key, starting with 0
       */
-    function removeSigningKey(bytes _pubkey) external auth(MANAGE_SIGNING_KEYS) {
-        uint256 length = signingKeys.length;
-        for (uint256 i = 0; i < length; ++i) {
-            if (!_isEqual(signingKeys[i], _pubkey))
-                continue;
+    function removeSigningKey(uint256 _index) external auth(MANAGE_SIGNING_KEYS) {
+        require(_index < totalSigningKeys, "KEY_NOT_FOUND");
+        require(_index >= usedSigningKeys, "KEY_WAS_USED");
 
-            // Fill the spot with the latest key
-            uint256 new_index = i;
-            uint256 old_index = signingKeys.length - 1;
-            if (new_index != old_index) {
-                signingKeys[new_index] = signingKeys[old_index];
-                keyInfo[new_index] = keyInfo[old_index];
-            }
+        (bytes memory removedKey, ) = _loadSigningKey(_index);
 
-            delete signingKeys[old_index];
-            signingKeys.length--;
-            delete keyInfo[old_index];
-
-            emit SigningKeyRemoved(_pubkey);
-            return;
+        uint256 lastIndex = totalSigningKeys.sub(1);
+        if (_index < lastIndex) {
+            (bytes memory key, bytes memory signature) = _loadSigningKey(lastIndex);
+            _storeSigningKey(_index, key, signature);
         }
 
-        revert("KEY_NOT_FOUND");
+        _deleteSigningKey(lastIndex);
+        totalSigningKeys--;
+
+        emit SigningKeyRemoved(removedKey);
     }
 
 
@@ -288,22 +260,31 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @notice Returns count of usable signing keys
+      * @notice Returns total number of signing keys
       */
-    function getActiveSigningKeyCount() external view returns (uint256) {
-        return signingKeys.length;
+    function getTotalSigningKeyCount() external view returns (uint256) {
+        return totalSigningKeys;
+    }
+
+    /**
+      * @notice Returns number of usable signing keys
+      */
+    function getUnusedSigningKeyCount() external view returns (uint256) {
+        return totalSigningKeys.sub(usedSigningKeys);
     }
 
     /**
       * @notice Returns n-th signing key
-      * @param _index Index of key, starting with 0
+      * @param _index Index of the key, starting with 0
       * @return key Key
-      * @return stakedEther Amount of ether stacked for this validator to the moment
+      * @return used Flag indication if the key was used in the staking
       */
-    function getActiveSigningKey(uint256 _index) external view returns (bytes key, uint256 stakedEther) {
-        require(_index < signingKeys.length, "KEY_NOT_FOUND");
+    function getSigningKey(uint256 _index) external view returns (bytes key, bool used) {
+        require(_index < totalSigningKeys, "KEY_NOT_FOUND");
 
-        return (signingKeys[_index], keyInfo[_index].stakedEther);
+        (bytes memory key_, ) = _loadSigningKey(_index);
+
+        return (key_, _index < usedSigningKeys);
     }
 
 
@@ -390,15 +371,13 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
 
         // Buffer management
         uint256 buffered = _getBufferedEther();
-        if (buffered >= BUFFER_SIZE) {
+        if (buffered >= DEPOSIT_SIZE) {
             uint256 unaccounted = _getUnaccountedEther();
 
-            uint256 rounding = denominations[0].mul(1 ether);
-            uint256 toUnbuffer = buffered.div(rounding).mul(rounding);
-            assert(toUnbuffer <= buffered);
+            uint256 toUnbuffer = buffered.div(DEPOSIT_SIZE).mul(DEPOSIT_SIZE);
+            assert(toUnbuffer <= buffered && toUnbuffer != 0);
 
-            _ETH2Deposit(toUnbuffer);
-            _markAsUnbuffered(toUnbuffer);
+            _markAsUnbuffered(_ETH2Deposit(toUnbuffer));
 
             assert(_getUnaccountedEther() == unaccounted);
         }
@@ -407,70 +386,44 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     /**
       * @dev Makes a deposit to the ETH 2.0 side
       * @param _amount Total amount to deposit to the ETH 2.0 side
+      * @return actually deposited amount
       */
-    function _ETH2Deposit(uint256 _amount) internal {
+    function _ETH2Deposit(uint256 _amount) internal returns (uint256) {
         assert(_amount >= MIN_DEPOSIT_AMOUNT);
-        require(signingKeys.length > 0, "NO_VALIDATORS");
+        uint256 deposited = 0;
 
-        // populating stat cache in memory
-        uint256[] memory staked4validator = new uint256[](signingKeys.length);
-        uint256 length = signingKeys.length;
-        for (uint256 i = 0; i < length; ++i) {
-            staked4validator[i] = keyInfo[i].stakedEther;
+        while (_amount != 0 && totalSigningKeys > usedSigningKeys) {
+            _amount = _amount.sub(DEPOSIT_SIZE);
+            deposited = deposited.add(DEPOSIT_SIZE);
+
+            (bytes memory key, bytes memory signature) = _loadSigningKey(usedSigningKeys++);
+
+            // finally, stake the notch for the assigned validator
+            _stake(key, signature);
         }
 
-        for (uint256 denomination_idx = denominations.length - 1; ; denomination_idx = denomination_idx.sub(1)) {
-            uint256 denomination = denominations[denomination_idx].mul(1 ether);
-
-            while (_amount >= denomination) {
-                // notch off a denomination and send it to the ETH 2.0
-                _amount = _amount.sub(denomination);
-
-                // assign some validator for this notch and update stat
-                uint256 assignedValidator = 0;
-                uint256 staked = staked4validator[assignedValidator];
-                for (i = 1; i < length; ++i) {
-                    if (staked4validator[i] >= staked)
-                        continue;
-
-                    assignedValidator = i;
-                    staked = staked4validator[assignedValidator];
-                }
-                keyInfo[assignedValidator].stakedEther = keyInfo[assignedValidator].stakedEther.add(denomination);
-                staked4validator[assignedValidator] = staked4validator[assignedValidator].add(denomination);
-
-                // finally, stake the notch for the assigned validator
-                _stake(assignedValidator, denomination_idx);
-            }
-
-            if (0 == denomination_idx) {
-                assert(0 == _amount);   // everything should be distributed by this moment
-                break;
-            }
-        }
+        return deposited;
     }
 
     /**
       * @dev Invokes a validator_registration.deposit call
-      * @param _assignedValidator Validator to stake for
-      * @param _denomination_idx Denomination to stake
+      * @param _pubkey Validator to stake for
+      * @param _signature Signature of the deposit call
       */
-    function _stake(uint256 _assignedValidator, uint256 _denomination_idx) internal {
+    function _stake(bytes memory _pubkey, bytes memory _signature) internal {
         require(withdrawalCredentials.length != 0, "EMPTY_WITHDRAWAL_CREDENTIALS");
 
-        bytes memory pubkey = signingKeys[_assignedValidator];
-        bytes memory signature = keyInfo[_assignedValidator].signatures[_denomination_idx];
-        uint256 value = denominations[_denomination_idx].mul(1 ether);
+        uint256 value = DEPOSIT_SIZE;
 
         // The following computations and Merkle tree-ization will make validator_registration.vy happy
         uint256 depositAmount = value.div(DEPOSIT_AMOUNT_UNIT);
         assert(depositAmount.mul(DEPOSIT_AMOUNT_UNIT) == value);    // properly rounded
 
         // Compute deposit data root (`DepositData` hash tree root) according to validator_registration.vy
-        bytes32 pubkeyRoot = keccak256(_pad64(pubkey));
+        bytes32 pubkeyRoot = keccak256(_pad64(_pubkey));
         bytes32 signatureRoot = keccak256(abi.encodePacked(
-            keccak256(BytesLib.slice(signature, 0, 64)),
-            keccak256(_pad64(BytesLib.slice(signature, 64, SIGNATURE_LENGTH.sub(64))))
+            keccak256(BytesLib.slice(_signature, 0, 64)),
+            keccak256(_pad64(BytesLib.slice(_signature, 64, SIGNATURE_LENGTH.sub(64))))
         ));
 
         bytes32 depositDataRoot = keccak256(abi.encodePacked(
@@ -481,7 +434,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         uint256 targetBalance = address(this).balance.sub(value);
 
         getValidatorRegistrationContract().deposit.value(value)(
-            pubkey, withdrawalCredentials, signature, depositDataRoot);
+            _pubkey, withdrawalCredentials, _signature, depositDataRoot);
         require(address(this).balance == targetBalance, "EXPECTING_DEPOSIT_TO_HAPPEN");
     }
 
@@ -595,5 +548,84 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
 
         assert(0 == _value);    // fully converted
         result <<= (24 * 8);
+    }
+
+    function _isEmptySigningKey(bytes memory _key) internal pure returns (bool) {
+        assert(_key.length == PUBKEY_LENGTH);
+        // algorithm applicability constraint
+        assert(PUBKEY_LENGTH >= 32 && PUBKEY_LENGTH <= 64);
+
+        uint256 k1;
+        uint256 k2;
+        assembly {
+            k1 := mload(add(_key, 0x20))
+            k2 := mload(add(_key, 0x40))
+        }
+
+        return 0 == k1 && 0 == (k2 >> ((2 * 32 - PUBKEY_LENGTH) * 8));
+    }
+
+    function _signingKeyOffset(uint256 _keyIndex) internal pure returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(SIGNING_KEYS_MAPPING_NAME, _keyIndex)));
+    }
+
+    function _storeSigningKey(uint256 _keyIndex, bytes memory _key, bytes memory _signature) internal {
+        assert(_key.length == PUBKEY_LENGTH);
+        assert(_signature.length == SIGNATURE_LENGTH);
+        // algorithm applicability constraints
+        assert(PUBKEY_LENGTH >= 32 && PUBKEY_LENGTH <= 64);
+        assert(0 == SIGNATURE_LENGTH % 32);
+
+        // key
+        uint256 offset = _signingKeyOffset(_keyIndex);
+        uint256 keyExcessBits = (2 * 32 - PUBKEY_LENGTH) * 8;
+        assembly {
+            sstore(offset, mload(add(_key, 0x20)))
+            sstore(add(offset, 1), shl(keyExcessBits, shr(keyExcessBits, mload(add(_key, 0x40)))))
+        }
+        offset += 2;
+
+        // signature
+        for (uint256 i = 0; i < SIGNATURE_LENGTH; i += 32) {
+            assembly {
+                sstore(offset, mload(add(_signature, add(0x20, i))))
+            }
+            offset++;
+        }
+    }
+
+    function _deleteSigningKey(uint256 _keyIndex) internal {
+        uint256 offset = _signingKeyOffset(_keyIndex);
+        for (uint256 i = 0; i < (PUBKEY_LENGTH + SIGNATURE_LENGTH) / 32 + 1; ++i) {
+            assembly {
+                sstore(add(offset, i), 0)
+            }
+        }
+    }
+
+    function _loadSigningKey(uint256 _keyIndex) internal view returns (bytes memory key, bytes memory signature) {
+        // algorithm applicability constraints
+        assert(PUBKEY_LENGTH >= 32 && PUBKEY_LENGTH <= 64);
+        assert(0 == SIGNATURE_LENGTH % 32);
+
+        uint256 offset = _signingKeyOffset(_keyIndex);
+
+        // key
+        bytes memory tmpKey = new bytes(64);
+        assembly {
+            mstore(add(tmpKey, 0x20), sload(offset))
+            mstore(add(tmpKey, 0x40), sload(add(offset, 1)))
+        }
+        offset += 2;
+        key = BytesLib.slice(tmpKey, 0, PUBKEY_LENGTH);
+
+        // signature
+        signature = new bytes(SIGNATURE_LENGTH);
+        for (uint256 i = 0; i < SIGNATURE_LENGTH; i += 32) {
+            assembly {
+                mstore(add(signature, add(0x20, i)), sload(offset))
+            }
+            offset++;
+        }
     }
 }

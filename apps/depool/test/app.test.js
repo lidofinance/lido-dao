@@ -72,93 +72,83 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await assertRevert(app.setWithdrawalCredentials("0x0204", {from: voting}), 'INVALID_LENGTH');
     await assertRevert(app.setWithdrawalCredentials(pad("0x0203", 32), {from: user1}), 'APP_AUTH_FAILED');
 
-    await app.addSigningKey(pad("0x01", 48), pad("0x01", 96 * 12), {from: voting});
-
-    await assertRevert(app.setWithdrawalCredentials(pad("0x0205", 32), {from: voting}), 'SIGNING_KEYS_MUST_BE_REMOVED_FIRST');
-    await assertRevert(app.setWithdrawalCredentials("0x0204", {from: voting}), 'INVALID_LENGTH');
-    await assertRevert(app.setWithdrawalCredentials(pad("0x0206", 32), {from: user1}), 'APP_AUTH_FAILED');
-
     assert.equal(await app.getWithdrawalCredentials({from: nobody}), pad("0x0202", 32));
   });
 
-  it('denominations are correct', async () => {
-    assertBn(await app.denominations(0), 1);
-    assertBn(await app.denominations(1), 5);
-    assertBn(await app.denominations(10), 100000);
-    assertBn(await app.denominations(11), 500000);
-  });
-
-  it('addSigningKey works', async () => {
+  it('addSigningKeys works', async () => {
     // first
-    await assertRevert(app.addSigningKey(pad("0x01", 48), pad("0x01", 96 * 12), {from: user1}), 'APP_AUTH_FAILED');
-    await assertRevert(app.addSigningKey(pad("0x01", 48), pad("0x01", 96 * 12), {from: nobody}), 'APP_AUTH_FAILED');
+    await assertRevert(app.addSigningKeys(1, pad("0x01", 48), pad("0x01", 96), {from: user1}), 'APP_AUTH_FAILED');
+    await assertRevert(app.addSigningKeys(1, pad("0x01", 48), pad("0x01", 96), {from: nobody}), 'APP_AUTH_FAILED');
 
-    await assertRevert(app.addSigningKey(pad("0x01", 32), pad("0x01", 96 * 12), {from: voting}), 'INVALID_LENGTH');
-    await assertRevert(app.addSigningKey(pad("0x01", 48), pad("0x01", 96), {from: voting}), 'INVALID_LENGTH');
+    await assertRevert(app.addSigningKeys(1, pad("0x01", 32), pad("0x01", 96), {from: voting}), 'INVALID_LENGTH');
+    await assertRevert(app.addSigningKeys(1, pad("0x01", 48), pad("0x01", 90), {from: voting}), 'INVALID_LENGTH');
 
-    await app.addSigningKey(pad("0x010203", 48), pad("0x01", 96 * 12), {from: voting});
-    await assertRevert(app.addSigningKey(pad("0x010203", 48), pad("0x01", 96 * 12), {from: voting}), 'KEY_ALREADY_EXISTS');
+    await app.addSigningKeys(1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
 
     // second
-    await assertRevert(app.addSigningKey(pad("0x01", 48), pad("0x01", 96 * 12), {from: user1}), 'APP_AUTH_FAILED');
-    await assertRevert(app.addSigningKey(pad("0x01", 48), pad("0x01", 96 * 12), {from: nobody}), 'APP_AUTH_FAILED');
+    await assertRevert(app.addSigningKeys(1, pad("0x01", 48), pad("0x01", 96), {from: user1}), 'APP_AUTH_FAILED');
+    await assertRevert(app.addSigningKeys(1, pad("0x01", 48), pad("0x01", 96), {from: nobody}), 'APP_AUTH_FAILED');
 
-    await assertRevert(app.addSigningKey(pad("0x01", 32), pad("0x01", 96 * 12), {from: voting}), 'INVALID_LENGTH');
-    await assertRevert(app.addSigningKey(pad("0x01", 48), pad("0x01", 96), {from: voting}), 'INVALID_LENGTH');
+    await assertRevert(app.addSigningKeys(1, pad("0x01", 32), pad("0x01", 96), {from: voting}), 'INVALID_LENGTH');
+    await assertRevert(app.addSigningKeys(1, pad("0x01", 48), pad("0x01", 90), {from: voting}), 'INVALID_LENGTH');
 
-    await app.addSigningKey(pad("0x050505", 48), pad("0x01", 96 * 12), {from: voting});
-    await assertRevert(app.addSigningKey(pad("0x010203", 48), pad("0x01", 96 * 12), {from: voting}), 'KEY_ALREADY_EXISTS');
-    await assertRevert(app.addSigningKey(pad("0x050505", 48), pad("0x01", 96 * 12), {from: voting}), 'KEY_ALREADY_EXISTS');
+    await app.addSigningKeys(1, pad("0x050505", 48), pad("0x01", 96), {from: voting});
   });
 
   it('can view keys', async () => {
     // first
-    await app.addSigningKey(pad("0x010203", 48), pad("0x01", 96 * 12), {from: voting});
+    await app.addSigningKeys(1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
 
-    assertBn(await app.getActiveSigningKeyCount({from: nobody}), 1);
-    {const {key, stakedEther} = await app.getActiveSigningKey(0, {from: nobody});
+    assertBn(await app.getTotalSigningKeyCount({from: nobody}), 1);
+    assertBn(await app.getUnusedSigningKeyCount({from: nobody}), 1);
+    {const {key, used} = await app.getSigningKey(0, {from: nobody});
     assert.equal(key, pad("0x010203", 48));
-    assertBn(stakedEther, 0);}
+    assert.equal(used, false);}
 
     // second
-    await app.addSigningKey(pad("0x050505", 48), pad("0x01", 96 * 12), {from: voting});
+    await app.addSigningKeys(1, pad("0x050505", 48), pad("0x01", 96), {from: voting});
 
-    assertBn(await app.getActiveSigningKeyCount({from: nobody}), 2);
-    assert.equal((await app.getActiveSigningKey(0, {from: nobody})).key, pad("0x010203", 48));
-    {const {key, stakedEther} = await app.getActiveSigningKey(1, {from: nobody});
+    assertBn(await app.getTotalSigningKeyCount({from: nobody}), 2);
+    assertBn(await app.getUnusedSigningKeyCount({from: nobody}), 2);
+    assert.equal((await app.getSigningKey(0, {from: nobody})).key, pad("0x010203", 48));
+    {const {key, used} = await app.getSigningKey(1, {from: nobody});
     assert.equal(key, pad("0x050505", 48));
-    assertBn(stakedEther, 0);}
+    assert.equal(used, false);}
 
-    await assertRevert(app.getActiveSigningKey(2, {from: nobody}), 'KEY_NOT_FOUND');
-    await assertRevert(app.getActiveSigningKey(1000, {from: nobody}), 'KEY_NOT_FOUND');
+    await assertRevert(app.getSigningKey(2, {from: nobody}), 'KEY_NOT_FOUND');
+    await assertRevert(app.getSigningKey(1000, {from: nobody}), 'KEY_NOT_FOUND');
   });
 
   it('removeSigningKey works', async () => {
-    await app.addSigningKey(pad("0x010203", 48), pad("0x01", 96 * 12), {from: voting});
+    await app.addSigningKeys(1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
 
-    await assertRevert(app.removeSigningKey(pad("0x010203", 48), {from: user1}), 'APP_AUTH_FAILED');
-    await assertRevert(app.removeSigningKey(pad("0x010203", 48), {from: nobody}), 'APP_AUTH_FAILED');
+    await assertRevert(app.removeSigningKey(0, {from: user1}), 'APP_AUTH_FAILED');
+    await assertRevert(app.removeSigningKey(0, {from: nobody}), 'APP_AUTH_FAILED');
 
-    await app.removeSigningKey(pad("0x010203", 48), {from: voting});
-    assertBn(await app.getActiveSigningKeyCount({from: nobody}), 0);
-    await assertRevert(app.removeSigningKey(pad("0x010203", 48), {from: voting}), 'KEY_NOT_FOUND');
+    await app.removeSigningKey(0, {from: voting});
+    assertBn(await app.getTotalSigningKeyCount({from: nobody}), 0);
+    assertBn(await app.getUnusedSigningKeyCount({from: nobody}), 0);
+    await assertRevert(app.removeSigningKey(0, {from: voting}), 'KEY_NOT_FOUND');
 
-    await app.addSigningKey(pad("0x010204", 48), pad("0x01", 96 * 12), {from: voting});
-    await app.addSigningKey(pad("0x010205", 48), pad("0x01", 96 * 12), {from: voting});
-    await app.addSigningKey(pad("0x010206", 48), pad("0x01", 96 * 12), {from: voting});
-    assertBn(await app.getActiveSigningKeyCount({from: nobody}), 3);
+    await app.addSigningKeys(1, pad("0x010204", 48), pad("0x01", 96), {from: voting});
+    await app.addSigningKeys(1, pad("0x010205", 48), pad("0x01", 96), {from: voting});
+    await app.addSigningKeys(1, pad("0x010206", 48), pad("0x01", 96), {from: voting});
+    assertBn(await app.getTotalSigningKeyCount({from: nobody}), 3);
+    assertBn(await app.getUnusedSigningKeyCount({from: nobody}), 3);
 
-    await app.removeSigningKey(pad("0x010204", 48), {from: voting});
-    assertBn(await app.getActiveSigningKeyCount({from: nobody}), 2);
-    assert.equal((await app.getActiveSigningKey(0, {from: nobody})).key, pad("0x010206", 48));
-    assert.equal((await app.getActiveSigningKey(1, {from: nobody})).key, pad("0x010205", 48));
+    await app.removeSigningKey(0, {from: voting});
+    assertBn(await app.getTotalSigningKeyCount({from: nobody}), 2);
+    assertBn(await app.getUnusedSigningKeyCount({from: nobody}), 2);
+    assert.equal((await app.getSigningKey(0, {from: nobody})).key, pad("0x010206", 48));
+    assert.equal((await app.getSigningKey(1, {from: nobody})).key, pad("0x010205", 48));
 
-    await app.removeSigningKey(pad("0x010205", 48), {from: voting});
-    await assertRevert(app.removeSigningKey(pad("0x010203", 48), {from: voting}), 'KEY_NOT_FOUND');
-    await assertRevert(app.removeSigningKey(pad("0x010205", 48), {from: voting}), 'KEY_NOT_FOUND');
+    await app.removeSigningKey(1, {from: voting});
+    await assertRevert(app.removeSigningKey(1, {from: voting}), 'KEY_NOT_FOUND');
+    await assertRevert(app.removeSigningKey(2, {from: voting}), 'KEY_NOT_FOUND');
 
-    assertBn(await app.getActiveSigningKeyCount({from: nobody}), 1);
-    assert.equal((await app.getActiveSigningKey(0, {from: nobody})).key, pad("0x010206", 48));
+    assertBn(await app.getTotalSigningKeyCount({from: nobody}), 1);
+    assertBn(await app.getUnusedSigningKeyCount({from: nobody}), 1);
+    assert.equal((await app.getSigningKey(0, {from: nobody})).key, pad("0x010206", 48));
   });
 
   it('isEqual works', async () => {
