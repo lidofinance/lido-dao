@@ -36,4 +36,12 @@ contract TestDePool is DePool {
     function toLittleEndian64(uint256 _value) public pure returns (uint256 result) {
         return _toLittleEndian64(_value);
     }
+
+    function totalWithdrawalRequests() public view returns (uint256) {
+        return withdrawalRequests.length;
+    }
+
+    function getWithdrawalRequest(uint256 index) public view returns (uint256 amount, bytes32 pubkeyHash) {
+        return (withdrawalRequests[index].amount, withdrawalRequests[index].pubkeyHash);
+    }
 }

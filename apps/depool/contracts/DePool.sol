@@ -41,9 +41,14 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     bytes32 internal constant VALIDATOR_REGISTRATION_VALUE_POSITION = keccak256("depools.DePool.validatorRegistration");
     bytes32 internal constant ORACLE_VALUE_POSITION = keccak256("depools.DePool.oracle");
 
+    /// @dev amount of Ether (on the current Ethereum side) buffered on this smart contract balance
     bytes32 internal constant BUFFERED_ETHER_VALUE_POSITION = keccak256("depools.DePool.bufferedEther");
+    /// @dev amount of Ether (on the current Ethereum side) deposited to the validator_registration.vy contract
     bytes32 internal constant DEPOSITED_ETHER_VALUE_POSITION = keccak256("depools.DePool.depositedEther");
-    bytes32 internal constant REMOTE_ETHER_VALUE_POSITION = keccak256("depools.DePool.remoteEther");
+    /// @dev amount of Ether (on the Ethereum 2.0 side) managed by the system
+    bytes32 internal constant REMOTE_ETHER2_VALUE_POSITION = keccak256("depools.DePool.remoteEther2");
+    /// @dev amount of Ether (on the Ethereum 2.0 side) to be withdrawn from the system
+    bytes32 internal constant WITHDRAWN_ETHER2_VALUE_POSITION = keccak256("depools.DePool.withdrawnEther2");
 
     bytes32 internal constant SIGNING_KEYS_MAPPING_NAME = keccak256("depools.DePool.signingKeys");
 
@@ -57,12 +62,12 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
 
     /// @dev Request to withdraw Ether on the 2.0 side
     struct WithdrawalRequest {
-        uint256 amount;     // amount of wei to withdraw
+        uint256 amount;     // amount of wei to withdraw on the 2.0 side
         bytes32 pubkeyHash; // receiver's public key hash
     }
 
     /// @dev Queue of withdrawal requests
-    WithdrawalRequest[] private withdrawalRequests;
+    WithdrawalRequest[] internal withdrawalRequests;
 
 
     function initialize(ISTETH _token, IValidatorRegistration validatorRegistration, address _oracle) public onlyInit {
@@ -188,7 +193,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
 
 
     /**
-      * @notice Issues withdrawal request. Withdrawals will be processed only after the phase 2 launch.
+      * @notice Issues withdrawal request. Large withdrawals will be processed only after the phase 2 launch.
       * @param _amount Amount of StETH to burn
       * @param _pubkeyHash Receiving address
       */
@@ -201,10 +206,26 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         // (total ether) * share of msg.sender's token holding.
         // totalSupply is taken before the burning.
         uint256 etherAmount = _amount.mul(_getTotalControlledEther()).div(totalSupply);
+        require(0 != etherAmount, "TX_TOO_SMALL");
 
-        withdrawalRequests.push(WithdrawalRequest({amount: etherAmount, pubkeyHash: _pubkeyHash}));
+        // First, raid the buffer
+        uint256 fromBuffer = 0;
+        uint256 buffered = _getBufferedEther();
+        if (0 != buffered) {
+            fromBuffer = buffered > etherAmount ? etherAmount : buffered;
+            BUFFERED_ETHER_VALUE_POSITION.setStorageUint256(buffered.sub(fromBuffer));
+            etherAmount = etherAmount.sub(fromBuffer);
+            sender.transfer(fromBuffer);
+        }
 
-        emit Withdrawal(sender, _amount, _pubkeyHash, etherAmount);
+        // If the withdrawal is larger than the buffer, just memoize it
+        if (0 != etherAmount) {
+            WITHDRAWN_ETHER2_VALUE_POSITION.setStorageUint256(
+                WITHDRAWN_ETHER2_VALUE_POSITION.getStorageUint256().add(etherAmount));
+            withdrawalRequests.push(WithdrawalRequest({amount: etherAmount, pubkeyHash: _pubkeyHash}));
+        }
+
+        emit Withdrawal(sender, _amount, fromBuffer, _pubkeyHash, etherAmount);
     }
 
 
@@ -215,7 +236,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     function reportEther2(uint256 /*_epoch*/, uint256 _eth2balance) external {
         require(msg.sender == getOracle(), "APP_AUTH_FAILED");
         // +1 serves as a boolean flag of a set value
-        REMOTE_ETHER_VALUE_POSITION.setStorageUint256(_eth2balance.add(1));
+        REMOTE_ETHER2_VALUE_POSITION.setStorageUint256(_eth2balance.add(1));
 
         // TODO mint
     }
@@ -322,6 +343,20 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
       */
     function getOracle() public view returns (address) {
         return ORACLE_VALUE_POSITION.getStorageAddress();
+    }
+
+    /**
+      * @notice Gets the stat of the system's Ether on the Ethereum 2 side
+      * @return deposited Amount of Ether deposited from the current Ethereum
+      * @return remote Amount of Ether currently present on the Ethereum 2 side (can be 0 if the Ethereum 2 is yet to be launched)
+      * @return liabilities Amount of Ether to be unstaked and withdrawn on the Ethereum 2 side
+      */
+    function getEther2Stat() external view returns (uint256 deposited, uint256 remote, uint256 liabilities) {
+        deposited = DEPOSITED_ETHER_VALUE_POSITION.getStorageUint256();
+        remote = REMOTE_ETHER2_VALUE_POSITION.getStorageUint256();
+        if (0 != remote)
+            remote--;
+        liabilities = WITHDRAWN_ETHER2_VALUE_POSITION.getStorageUint256();
     }
 
 
@@ -493,11 +528,15 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
       * @dev Gets the amount of Ether controlled by the system
       */
     function _getTotalControlledEther() internal view returns (uint256) {
-        uint256 remote = REMOTE_ETHER_VALUE_POSITION.getStorageUint256();
+        uint256 remote = REMOTE_ETHER2_VALUE_POSITION.getStorageUint256();
         // Until the oracle provides data, we assume that all staked ether intact.
         uint256 deposited = DEPOSITED_ETHER_VALUE_POSITION.getStorageUint256();
 
-        return _getBufferedEther().add(remote != 0 ? remote.sub(1) : deposited);
+        uint256 assets = _getBufferedEther().add(remote != 0 ? remote.sub(1) : deposited);
+        uint256 liabilities = WITHDRAWN_ETHER2_VALUE_POSITION.getStorageUint256();
+        require(assets >= liabilities, "NEGATIVE_EQUITY");
+
+        return assets.sub(liabilities);
     }
 
 

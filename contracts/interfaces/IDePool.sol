@@ -116,14 +116,16 @@ interface IDePool {
     event Unbuffered(uint256 amount);
 
     /**
-      * @notice Issues withdrawal request. Withdrawals will be processed only after the phase 2 launch.
+      * @notice Issues withdrawal request. Large withdrawals will be processed only after the phase 2 launch.
       * @param _amount Amount of StETH to burn
       * @param _pubkeyHash Receiving address
       */
     function withdraw(uint256 _amount, bytes32 _pubkeyHash) external;
 
-    // Requested withdrawal of `etherAmount` to `pubkeyHash` on the ETH 2.0 side, `tokenAmount` burned by `sender`.
-    event Withdrawal(address indexed sender, uint256 tokenAmount, bytes32 indexed pubkeyHash, uint256 etherAmount);
+    // Requested withdrawal of `etherAmount` to `pubkeyHash` on the ETH 2.0 side, `tokenAmount` burned by `sender`,
+    // `sentFromBuffer` was sent on the current Ethereum side.
+    event Withdrawal(address indexed sender, uint256 tokenAmount, uint256 sentFromBuffer,
+                     bytes32 indexed pubkeyHash, uint256 etherAmount);
 
 
     // Info functions
@@ -137,4 +139,12 @@ interface IDePool {
       * @notice Gets the amount of Ether temporary buffered on this contract balance
       */
     function getBufferedEther() external view returns (uint256);
+
+    /**
+      * @notice Gets the stat of the system's Ether on the Ethereum 2 side
+      * @return deposited Amount of Ether deposited from the current Ethereum
+      * @return remote Amount of Ether currently present on the Ethereum 2 side (can be 0 if the Ethereum 2 is yet to be launched)
+      * @return liabilities Amount of Ether to be unstaked and withdrawn on the Ethereum 2 side
+      */
+    function getEther2Stat() external view returns (uint256 deposited, uint256 remote, uint256 liabilities);
 }
