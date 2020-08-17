@@ -50,6 +50,9 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     /// @dev amount of Ether (on the Ethereum 2.0 side) to be withdrawn from the system
     bytes32 internal constant WITHDRAWN_ETHER2_VALUE_POSITION = keccak256("depools.DePool.withdrawnEther2");
 
+    /// @dev last epoch reported by the oracle
+    bytes32 internal constant LAST_ORACLE_EPOCH_VALUE_POSITION = keccak256("depools.DePool.lastOracleEpoch");
+
     bytes32 internal constant SIGNING_KEYS_MAPPING_NAME = keccak256("depools.DePool.signingKeys");
 
 
@@ -233,10 +236,15 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
       * @notice Ether on the ETH 2.0 side reported by the oracle
       * @param _eth2balance Balance in wei on the ETH 2.0 side
       */
-    function reportEther2(uint256 /*_epoch*/, uint256 _eth2balance) external {
+    function reportEther2(uint256 _epoch, uint256 _eth2balance) external {
         require(msg.sender == getOracle(), "APP_AUTH_FAILED");
-        // +1 serves as a boolean flag of a set value
-        REMOTE_ETHER2_VALUE_POSITION.setStorageUint256(_eth2balance.add(1));
+        require(0 != _epoch, "ZERO_EPOCH");
+
+        if (_epoch <= LAST_ORACLE_EPOCH_VALUE_POSITION.getStorageUint256())
+            return; // ignore old data
+
+        LAST_ORACLE_EPOCH_VALUE_POSITION.setStorageUint256(_epoch);
+        REMOTE_ETHER2_VALUE_POSITION.setStorageUint256(_eth2balance);
 
         // TODO mint
     }
@@ -354,8 +362,6 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     function getEther2Stat() external view returns (uint256 deposited, uint256 remote, uint256 liabilities) {
         deposited = DEPOSITED_ETHER_VALUE_POSITION.getStorageUint256();
         remote = REMOTE_ETHER2_VALUE_POSITION.getStorageUint256();
-        if (0 != remote)
-            remote--;
         liabilities = WITHDRAWN_ETHER2_VALUE_POSITION.getStorageUint256();
     }
 
@@ -525,14 +531,21 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     }
 
     /**
+      * @dev Returns true if the oracle ever provided data
+      */
+    function _hasOracleData() internal view returns (bool) {
+        return 0 != LAST_ORACLE_EPOCH_VALUE_POSITION.getStorageUint256();
+    }
+
+    /**
       * @dev Gets the amount of Ether controlled by the system
       */
     function _getTotalControlledEther() internal view returns (uint256) {
         uint256 remote = REMOTE_ETHER2_VALUE_POSITION.getStorageUint256();
-        // Until the oracle provides data, we assume that all staked ether intact.
+        // Until the oracle provides data, we assume that all staked ether is intact.
         uint256 deposited = DEPOSITED_ETHER_VALUE_POSITION.getStorageUint256();
 
-        uint256 assets = _getBufferedEther().add(remote != 0 ? remote.sub(1) : deposited);
+        uint256 assets = _getBufferedEther().add(_hasOracleData() ? remote : deposited);
         uint256 liabilities = WITHDRAWN_ETHER2_VALUE_POSITION.getStorageUint256();
         require(assets >= liabilities, "NEGATIVE_EQUITY");
 

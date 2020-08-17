@@ -13,8 +13,9 @@ const StETH = artifacts.require('StETH.sol')
 artifacts._artifactsPath = oldPath;
 
 
-const DePool = artifacts.require('TestDePool.sol')
-const ValidatorRegistrationMock = artifacts.require('ValidatorRegistrationMock.sol')
+const DePool = artifacts.require('TestDePool.sol');
+const OracleMock = artifacts.require('OracleMock.sol');
+const ValidatorRegistrationMock = artifacts.require('ValidatorRegistrationMock.sol');
 
 
 const pad = (hex, bytesLength) => {
@@ -37,12 +38,13 @@ const tokens = ETH;
 
 
 contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
-  let appBase, app, token, validatorRegistration;
+  let appBase, app, token, oracle, validatorRegistration;
 
   before('deploy base app', async () => {
     // Deploy the app's base contract.
     appBase = await DePool.new();
     stEthBase = await StETH.new();
+    oracle = await OracleMock.new();
     validatorRegistration = await ValidatorRegistrationMock.new();
   })
 
@@ -68,8 +70,9 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await acl.createPermission(app.address, token.address, await token.BURN_ROLE(), appManager, {from: appManager});
 
     // Initialize the app's proxy.
-    await app.initialize(token.address, validatorRegistration.address, token.address /* unused */);
+    await app.initialize(token.address, validatorRegistration.address, oracle.address);
 
+    await oracle.setPool(app.address);
     await validatorRegistration.reset();
   })
 
@@ -491,5 +494,143 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     const r1 = await app.getWithdrawalRequest.call(1);
     assertBn(r1.amount, ETH(1));
     assertBn(r1.pubkeyHash, pad("0x300", 32));
+  });
+
+  it('reportEther2 works', async () => {
+    await app.setWithdrawalCredentials(pad("0x0202", 32), {from: voting});
+    await app.addSigningKeys(1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
+    await app.addSigningKeys(3,
+        hexConcat(pad("0x010204", 48), pad("0x010205", 48), pad("0x010206", 48)),
+        hexConcat(pad("0x01", 96), pad("0x01", 96), pad("0x01", 96)),
+        {from: voting});
+
+    await web3.eth.sendTransaction({to: app.address, from: user2, value: ETH(34)});
+    await checkStat({deposited: ETH(32), remote: 0, liabilities: 0});
+
+    await assertRevert(app.reportEther2(100, ETH(30), {from: appManager}), 'APP_AUTH_FAILED');
+
+    await oracle.reportEther2(100, ETH(30));
+    await checkStat({deposited: ETH(32), remote: ETH(30), liabilities: 0});
+
+    await assertRevert(app.reportEther2(100, ETH(29), {from: nobody}), 'APP_AUTH_FAILED');
+    await assertRevert(oracle.reportEther2(0, ETH(29)), 'ZERO_EPOCH');
+
+    await oracle.reportEther2(50, ETH(100));    // stale data
+    await checkStat({deposited: ETH(32), remote: ETH(30), liabilities: 0});
+
+    await oracle.reportEther2(200, ETH(33));
+    await checkStat({deposited: ETH(32), remote: ETH(33), liabilities: 0});
+  });
+
+  it('oracle data affects deposits', async () => {
+    await app.setWithdrawalCredentials(pad("0x0202", 32), {from: voting});
+    await app.addSigningKeys(1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
+    await app.addSigningKeys(3,
+        hexConcat(pad("0x010204", 48), pad("0x010205", 48), pad("0x010206", 48)),
+        hexConcat(pad("0x01", 96), pad("0x01", 96), pad("0x01", 96)),
+        {from: voting});
+
+    await web3.eth.sendTransaction({to: app.address, from: user2, value: ETH(34)});
+    await checkStat({deposited: ETH(32), remote: 0, liabilities: 0});
+    assertBn(await validatorRegistration.totalCalls(), 1);
+    assertBn(await app.getTotalControlledEther(), ETH(34));
+    assertBn(await app.getBufferedEther(), ETH(2));
+
+    // down
+    await oracle.reportEther2(100, ETH(15));
+
+    await checkStat({deposited: ETH(32), remote: ETH(15), liabilities: 0});
+    assertBn(await validatorRegistration.totalCalls(), 1);
+    assertBn(await app.getTotalControlledEther(), ETH(17));
+    assertBn(await app.getBufferedEther(), ETH(2));
+    assertBn(await token.totalSupply(), tokens(34));
+
+    // deposit, ratio is 0.5
+    await web3.eth.sendTransaction({to: app.address, from: user1, value: ETH(2)});
+
+    await checkStat({deposited: ETH(32), remote: ETH(15), liabilities: 0});
+    assertBn(await validatorRegistration.totalCalls(), 1);
+    assertBn(await app.getTotalControlledEther(), ETH(19));
+    assertBn(await app.getBufferedEther(), ETH(4));
+    assertBn(await token.balanceOf(user1), tokens(4));
+    assertBn(await token.totalSupply(), tokens(38));
+
+    // up
+    await oracle.reportEther2(200, ETH(72));
+
+    await checkStat({deposited: ETH(32), remote: ETH(72), liabilities: 0});
+    assertBn(await validatorRegistration.totalCalls(), 1);
+    assertBn(await app.getTotalControlledEther(), ETH(76));
+    assertBn(await app.getBufferedEther(), ETH(4));
+    assertBn(await token.totalSupply(), tokens(38));
+
+    // 2nd deposit, ratio is 2
+    await web3.eth.sendTransaction({to: app.address, from: user3, value: ETH(2)});
+
+    await checkStat({deposited: ETH(32), remote: ETH(72), liabilities: 0});
+    assertBn(await validatorRegistration.totalCalls(), 1);
+    assertBn(await app.getTotalControlledEther(), ETH(78));
+    assertBn(await app.getBufferedEther(), ETH(6));
+    assertBn(await token.balanceOf(user1), tokens(4));
+    assertBn(await token.balanceOf(user3), tokens(1));
+    assertBn(await token.totalSupply(), tokens(39));
+  });
+
+  it('oracle data affects withdrawals', async () => {
+    await app.setWithdrawalCredentials(pad("0x0202", 32), {from: voting});
+    await app.addSigningKeys(6,
+        hexConcat(pad("0x010203", 48), pad("0x010204", 48), pad("0x010205", 48), pad("0x010206", 48), pad("0x010207", 48), pad("0x010208", 48)),
+        hexConcat(pad("0x01", 96), pad("0x01", 96), pad("0x01", 96), pad("0x01", 96), pad("0x01", 96), pad("0x01", 96)),
+        {from: voting});
+
+    await web3.eth.sendTransaction({to: app.address, from: user1, value: ETH(1*32)});
+    await web3.eth.sendTransaction({to: app.address, from: user2, value: ETH(2*32)});
+    await web3.eth.sendTransaction({to: app.address, from: user3, value: ETH(4)});
+    assertBn(await app.getBufferedEther(), ETH(4));
+
+    await checkStat({deposited: ETH(96), remote: 0, liabilities: 0});
+
+    // down
+    await oracle.reportEther2(100, ETH(71));
+
+    await checkStat({deposited: ETH(96), remote: ETH(71), liabilities: 0});
+    assertBn(await token.totalSupply(), tokens(100));
+
+    // buffer + withdrawal request, ratio is 0.5
+    await app.withdraw(tokens(20), pad("0x200", 32), {from: user2});
+    assertBn(await token.balanceOf(user1), tokens(1*32));
+    assertBn(await token.balanceOf(user2), tokens(44));
+    assertBn(await token.balanceOf(user3), tokens(4));
+    assertBn(await app.getTotalControlledEther(), ETH(60));
+    assertBn(await token.totalSupply(), tokens(80));
+
+    await checkStat({deposited: ETH(96), remote: ETH(71), liabilities: ETH(11)});
+    assertBn(await app.getBufferedEther(), 0);
+
+    assertBn(await app.totalWithdrawalRequests(), 1);
+    const r0 = await app.getWithdrawalRequest.call(0);
+    assertBn(r0.amount, ETH(11));
+    assertBn(r0.pubkeyHash, pad("0x200", 32));
+
+    // up
+    await oracle.reportEther2(200, ETH(171));
+
+    await checkStat({deposited: ETH(96), remote: ETH(171), liabilities: ETH(11)});
+
+    // withdrawal request goes straight to Eth2, ratio is 2
+    await app.withdraw(tokens(1), pad("0x100", 32), {from: user1});
+    assertBn(await token.balanceOf(user1), tokens(31));
+    assertBn(await token.balanceOf(user2), tokens(44));
+    assertBn(await token.balanceOf(user3), tokens(4));
+    assertBn(await app.getTotalControlledEther(), ETH(158));
+    assertBn(await token.totalSupply(), tokens(79));
+
+    await checkStat({deposited: ETH(96), remote: ETH(171), liabilities: ETH(13)});
+    assertBn(await app.getBufferedEther(), 0);
+
+    assertBn(await app.totalWithdrawalRequests(), 2);
+    const r1 = await app.getWithdrawalRequest.call(1);
+    assertBn(r1.amount, ETH(2));
+    assertBn(r1.pubkeyHash, pad("0x100", 32));
   });
 });
