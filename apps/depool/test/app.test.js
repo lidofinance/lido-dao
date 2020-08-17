@@ -633,4 +633,33 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(r1.amount, ETH(2));
     assertBn(r1.pubkeyHash, pad("0x100", 32));
   });
+
+  it('can stop and resume', async () => {
+    await app.setWithdrawalCredentials(pad("0x0202", 32), {from: voting});
+    await app.addSigningKeys(1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
+    await app.addSigningKeys(3,
+        hexConcat(pad("0x010204", 48), pad("0x010205", 48), pad("0x010206", 48)),
+        hexConcat(pad("0x01", 96), pad("0x01", 96), pad("0x01", 96)),
+        {from: voting});
+
+    await web3.eth.sendTransaction({to: app.address, from: user2, value: ETH(40)});
+    await checkStat({deposited: ETH(32), remote: 0, liabilities: 0});
+    assertBn(await app.getBufferedEther(), ETH(8));
+
+    await assertRevert(app.stop({from: user2}), 'APP_AUTH_FAILED');
+    await app.stop({from: voting});
+
+    await assertRevert(web3.eth.sendTransaction({to: app.address, from: user1, value: ETH(4)}), 'CONTRACT_IS_STOPPED');
+    await assertRevert(app.submit({from: user1, value: ETH(4)}), 'CONTRACT_IS_STOPPED');
+    await assertRevert(app.submit({from: user2, value: ETH(4)}), 'CONTRACT_IS_STOPPED');
+    await assertRevert(app.withdraw(tokens(1), pad("0x200", 32), {from: user2}), 'CONTRACT_IS_STOPPED');
+
+    await assertRevert(app.resume({from: user2}), 'APP_AUTH_FAILED');
+    await app.resume({from: voting});
+
+    await web3.eth.sendTransaction({to: app.address, from: user1, value: ETH(4)});
+    await app.withdraw(tokens(1), pad("0x200", 32), {from: user2});
+    await checkStat({deposited: ETH(32), remote: 0, liabilities: 0});
+    assertBn(await app.getBufferedEther(), ETH(11));
+  });
 });

@@ -200,7 +200,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
       * @param _amount Amount of StETH to burn
       * @param _pubkeyHash Receiving address
       */
-    function withdraw(uint256 _amount, bytes32 _pubkeyHash) external {
+    function withdraw(uint256 _amount, bytes32 _pubkeyHash) external whenNotStopped {
         address sender = msg.sender;
 
         uint256 totalSupply = getToken().totalSupply();
@@ -394,7 +394,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     /**
       * @dev Processes user deposit
       */
-    function _submit() internal returns (uint256 StETH) {
+    function _submit() internal whenNotStopped returns (uint256 StETH) {
         address sender = msg.sender;
         uint256 deposit = msg.value;
         require(deposit != 0, "ZERO_DEPOSIT");
