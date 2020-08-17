@@ -47,7 +47,7 @@ contract StETH is ISTETH, Pausable, OZERC20, AragonApp {
       * @param _to Receiver of new tokens
       * @param _value Amount of new tokens to mint
       */
-    function mint(address _to, uint256 _value) external authP(MINT_ROLE, arr(_to, _value)) {
+    function mint(address _to, uint256 _value) external whenNotStopped authP(MINT_ROLE, arr(_to, _value)) {
         _mint(_to, _value);
     }
 
@@ -56,7 +56,7 @@ contract StETH is ISTETH, Pausable, OZERC20, AragonApp {
       * @param _account Account which tokens are to be burnt
       * @param _value Amount of tokens to burn
       */
-    function burn(address _account, uint256 _value) external authP(BURN_ROLE, arr(_account, _value)) {
+    function burn(address _account, uint256 _value) external whenNotStopped authP(BURN_ROLE, arr(_account, _value)) {
         _burn(_account, _value);
     }
 
