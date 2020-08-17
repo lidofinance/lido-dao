@@ -73,6 +73,13 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await validatorRegistration.reset();
   })
 
+  const checkStat = async ({deposited, remote, liabilities}) => {
+    const stat = await app.getEther2Stat();
+    assertBn(stat.deposited, deposited, 'deposited ether check');
+    assertBn(stat.remote, remote, 'remote ether check');
+    assertBn(stat.liabilities, liabilities, 'ether liabilities check');
+  };
+
   it('setFee works', async () => {
     await app.setFee(110, {from: voting});
     await assertRevert(app.setFee(110, {from: user1}), 'APP_AUTH_FAILED');
@@ -248,6 +255,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     // +1 ETH
     await web3.eth.sendTransaction({to: app.address, from: user1, value: ETH(1)});
+    await checkStat({deposited: 0, remote: 0, liabilities: 0});
     assertBn(await validatorRegistration.totalCalls(), 0);
     assertBn(await app.getTotalControlledEther(), ETH(1));
     assertBn(await app.getBufferedEther(), ETH(1));
@@ -255,6 +263,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     // +2 ETH
     await app.submit({from: user2, value: ETH(2)});     // another form of a deposit call
+    await checkStat({deposited: 0, remote: 0, liabilities: 0});
     assertBn(await validatorRegistration.totalCalls(), 0);
     assertBn(await app.getTotalControlledEther(), ETH(3));
     assertBn(await app.getBufferedEther(), ETH(3));
@@ -262,6 +271,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     // +30 ETH
     await web3.eth.sendTransaction({to: app.address, from: user3, value: ETH(30)});
+    await checkStat({deposited: ETH(32), remote: 0, liabilities: 0});
     assertBn(await app.getTotalControlledEther(), ETH(33));
     assertBn(await app.getBufferedEther(), ETH(1));
     assertBn(await token.balanceOf(user1), tokens(1));
@@ -277,6 +287,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     // +100 ETH
     await web3.eth.sendTransaction({to: app.address, from: user1, value: ETH(100)});
+    await checkStat({deposited: ETH(128), remote: 0, liabilities: 0});
     assertBn(await app.getTotalControlledEther(), ETH(133));
     assertBn(await app.getBufferedEther(), ETH(5));
     assertBn(await token.balanceOf(user1), tokens(101));
@@ -324,6 +335,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await app.addSigningKeys(1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
 
     await web3.eth.sendTransaction({to: app.address, from: user3, value: ETH(100)});
+    await checkStat({deposited: ETH(32), remote: 0, liabilities: 0});
     assertBn(await validatorRegistration.totalCalls(), 1);
     assertBn(await app.getTotalControlledEther(), ETH(100));
     assertBn(await app.getBufferedEther(), ETH(100-32));
@@ -334,17 +346,27 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
         hexConcat(pad("0x01", 96), pad("0x01", 96), pad("0x01", 96)),
         {from: voting});
     await web3.eth.sendTransaction({to: app.address, from: user1, value: ETH(1)});
+    await checkStat({deposited: ETH(96), remote: 0, liabilities: 0});
     assertBn(await validatorRegistration.totalCalls(), 3);
     assertBn(await app.getTotalControlledEther(), ETH(101));
     assertBn(await app.getBufferedEther(), ETH(5));
   });
 
-  it('withdrawal works', async () => {
+  it('withdrawal works from buffer', async () => {
+    await app.setWithdrawalCredentials(pad("0x0202", 32), {from: voting});
+    await app.addSigningKeys(6,
+        hexConcat(pad("0x010203", 48), pad("0x010204", 48), pad("0x010205", 48), pad("0x010206", 48), pad("0x010207", 48), pad("0x010208", 48)),
+        hexConcat(pad("0x01", 96), pad("0x01", 96), pad("0x01", 96), pad("0x01", 96), pad("0x01", 96), pad("0x01", 96)),
+        {from: voting});
+
     await web3.eth.sendTransaction({to: app.address, from: user1, value: ETH(1)});
     await web3.eth.sendTransaction({to: app.address, from: user2, value: ETH(2)});
     await web3.eth.sendTransaction({to: app.address, from: user3, value: ETH(3)});
     assertBn(await app.getTotalControlledEther(), ETH(6));
     assertBn(await token.totalSupply(), tokens(6));
+    assertBn(await app.getBufferedEther(), ETH(6));
+
+    await checkStat({deposited: 0, remote: 0, liabilities: 0});
 
     await assertRevert(app.withdraw(tokens(1), pad("0x1000", 32), {from: nobody}));
     await assertRevert(app.withdraw(tokens(20), pad("0x200", 32), {from: user2}));
@@ -357,12 +379,9 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(await app.getTotalControlledEther(), ETH(4));
     assertBn(await token.totalSupply(), tokens(4));
 
-    assertBn(await app.totalWithdrawalRequests(), 0);
+    await checkStat({deposited: 0, remote: 0, liabilities: 0});
 
-    /*assertBn(await app.totalWithdrawalRequests(), 1);
-    const r0 = await app.getWithdrawalRequest.call(0);
-    assertBn(r0.amount, ETH(2));
-    assertBn(r0.pubkeyHash, pad("0x200", 32));*/
+    assertBn(await app.totalWithdrawalRequests(), 0);
 
     // -1
     await app.withdraw(tokens(1), pad("0x300", 32), {from: user3});
@@ -372,11 +391,105 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(await app.getTotalControlledEther(), ETH(3));
     assertBn(await token.totalSupply(), tokens(3));
 
-    assertBn(await app.totalWithdrawalRequests(), 0);
+    await checkStat({deposited: 0, remote: 0, liabilities: 0});
 
-    /*assertBn(await app.totalWithdrawalRequests(), 2);
+    assertBn(await app.totalWithdrawalRequests(), 0);
+  });
+
+  it('withdrawal works from Ethereum 2', async () => {
+    await app.setWithdrawalCredentials(pad("0x0202", 32), {from: voting});
+    await app.addSigningKeys(6,
+        hexConcat(pad("0x010203", 48), pad("0x010204", 48), pad("0x010205", 48), pad("0x010206", 48), pad("0x010207", 48), pad("0x010208", 48)),
+        hexConcat(pad("0x01", 96), pad("0x01", 96), pad("0x01", 96), pad("0x01", 96), pad("0x01", 96), pad("0x01", 96)),
+        {from: voting});
+
+    await web3.eth.sendTransaction({to: app.address, from: user1, value: ETH(1*32)});
+    await web3.eth.sendTransaction({to: app.address, from: user2, value: ETH(2*32)});
+    await web3.eth.sendTransaction({to: app.address, from: user3, value: ETH(3*32)});
+    assertBn(await app.getTotalControlledEther(), ETH(6*32));
+    assertBn(await token.totalSupply(), tokens(6*32));
+    assertBn(await app.getBufferedEther(), 0);
+
+    await checkStat({deposited: ETH(6*32), remote: 0, liabilities: 0});
+
+    await assertRevert(app.withdraw(tokens(1*32), pad("0x1000", 32), {from: nobody}));
+    await assertRevert(app.withdraw(tokens(20*32), pad("0x200", 32), {from: user2}));
+
+    // -2*32
+    await app.withdraw(tokens(2*32), pad("0x200", 32), {from: user2});
+    assertBn(await token.balanceOf(user1), tokens(1*32));
+    assertBn(await token.balanceOf(user2), 0);
+    assertBn(await token.balanceOf(user3), tokens(3*32));
+    assertBn(await app.getTotalControlledEther(), ETH(4*32));
+    assertBn(await token.totalSupply(), tokens(4*32));
+
+    assertBn(await app.totalWithdrawalRequests(), 1);
+    const r0 = await app.getWithdrawalRequest.call(0);
+    assertBn(r0.amount, ETH(2*32));
+    assertBn(r0.pubkeyHash, pad("0x200", 32));
+
+    await checkStat({deposited: ETH(6*32), remote: 0, liabilities: ETH(2*32)});
+
+    // -1*32
+    await app.withdraw(tokens(1*32), pad("0x300", 32), {from: user3});
+    assertBn(await token.balanceOf(user1), tokens(1*32));
+    assertBn(await token.balanceOf(user2), 0);
+    assertBn(await token.balanceOf(user3), tokens(2*32));
+    assertBn(await app.getTotalControlledEther(), ETH(3*32));
+    assertBn(await token.totalSupply(), tokens(3*32));
+
+    assertBn(await app.totalWithdrawalRequests(), 2);
+    const r1 = await app.getWithdrawalRequest.call(1);
+    assertBn(r1.amount, ETH(1*32));
+    assertBn(r1.pubkeyHash, pad("0x300", 32));
+
+    await checkStat({deposited: ETH(6*32), remote: 0, liabilities: ETH(3*32)});
+  });
+
+  it('withdrawal works from buffer and Ethereum 2', async () => {
+    await app.setWithdrawalCredentials(pad("0x0202", 32), {from: voting});
+    await app.addSigningKeys(6,
+        hexConcat(pad("0x010203", 48), pad("0x010204", 48), pad("0x010205", 48), pad("0x010206", 48), pad("0x010207", 48), pad("0x010208", 48)),
+        hexConcat(pad("0x01", 96), pad("0x01", 96), pad("0x01", 96), pad("0x01", 96), pad("0x01", 96), pad("0x01", 96)),
+        {from: voting});
+
+    await web3.eth.sendTransaction({to: app.address, from: user1, value: ETH(1*32)});
+    await web3.eth.sendTransaction({to: app.address, from: user2, value: ETH(2*32)});
+    await web3.eth.sendTransaction({to: app.address, from: user3, value: ETH(10)});
+    assertBn(await app.getBufferedEther(), ETH(10));
+
+    await checkStat({deposited: ETH(96), remote: 0, liabilities: 0});
+
+    // buffer + withdrawal request
+    await app.withdraw(tokens(20), pad("0x200", 32), {from: user2});
+    assertBn(await token.balanceOf(user1), tokens(1*32));
+    assertBn(await token.balanceOf(user2), tokens(44));
+    assertBn(await token.balanceOf(user3), tokens(10));
+    assertBn(await app.getTotalControlledEther(), ETH(86));
+    assertBn(await token.totalSupply(), tokens(86));
+
+    await checkStat({deposited: ETH(96), remote: 0, liabilities: ETH(10)});
+    assertBn(await app.getBufferedEther(), 0);
+
+    assertBn(await app.totalWithdrawalRequests(), 1);
+    const r0 = await app.getWithdrawalRequest.call(0);
+    assertBn(r0.amount, ETH(10));
+    assertBn(r0.pubkeyHash, pad("0x200", 32));
+
+    // buffer is empty
+    await app.withdraw(tokens(1), pad("0x300", 32), {from: user3});
+    assertBn(await token.balanceOf(user1), tokens(1*32));
+    assertBn(await token.balanceOf(user2), tokens(44));
+    assertBn(await token.balanceOf(user3), tokens(9));
+    assertBn(await app.getTotalControlledEther(), ETH(85));
+    assertBn(await token.totalSupply(), tokens(85));
+
+    await checkStat({deposited: ETH(96), remote: 0, liabilities: ETH(11)});
+    assertBn(await app.getBufferedEther(), 0);
+
+    assertBn(await app.totalWithdrawalRequests(), 2);
     const r1 = await app.getWithdrawalRequest.call(1);
     assertBn(r1.amount, ETH(1));
-    assertBn(r1.pubkeyHash, pad("0x300", 32));*/
+    assertBn(r1.pubkeyHash, pad("0x300", 32));
   });
 });
