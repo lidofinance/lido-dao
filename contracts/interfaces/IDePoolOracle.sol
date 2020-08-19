@@ -72,7 +72,7 @@ interface IDePoolOracle {
       * @return _epoch Epoch id
       * @return _eth2balance Balance in wei on the ETH 2.0 side
       */
-    function getLatestData() external view returns (uint256 _epoch, uint256 _eth2balance);
+    function getLatestData() external view returns (uint256 epoch, uint256 eth2balance);
 
     // Fired when some _epoch reached quorum, was processed and yielded median _eth2balance
     event AggregatedData(uint256 epoch, uint256 eth2balance);
