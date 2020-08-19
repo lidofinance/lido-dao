@@ -2,8 +2,10 @@ pragma solidity 0.4.24;
 
 import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
+import "@aragon/os/contracts/common/IsContract.sol";
 
 import "@depools/dao/contracts/interfaces/IDePoolOracle.sol";
+import "@depools/dao/contracts/interfaces/IDePool.sol";
 
 import "./Algorithm.sol";
 
@@ -22,12 +24,13 @@ import "./Algorithm.sol";
   * It's prohibited to add data to non-current data points whatever finalized or not.
   * It's prohibited to add data to the current finalized data point.
   */
-contract DePoolOracle is IDePoolOracle, AragonApp {
+contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
     using SafeMath for uint256;
 
     /// ACL
     bytes32 constant public MANAGE_MEMBERS = keccak256("MANAGE_MEMBERS");
     bytes32 constant public MANAGE_QUORUM = keccak256("MANAGE_QUORUM");
+    bytes32 constant public SET_POOL = keccak256("SET_POOL");
 
     /// @dev Maximum number of oracle committee members
     uint256 public constant MAX_MEMBERS = 256;
@@ -39,6 +42,9 @@ contract DePoolOracle is IDePoolOracle, AragonApp {
     address[] private members;
     /// @dev number of the committee members required to finalize a data point
     uint256 private quorum;
+
+    /// @dev link to the pool
+    IDePool public pool;
 
     // data describing last finalized data point
     uint256 private lastFinalizedEpoch;
@@ -56,6 +62,14 @@ contract DePoolOracle is IDePoolOracle, AragonApp {
         initialized();
     }
 
+
+    /**
+      * @notice Sets the pool address to notify
+      */
+    function setPool(address _pool) external auth(SET_POOL) {
+        require(isContract(_pool), "POOL_NOT_CONTRACT");
+        pool = IDePool(_pool);
+    }
 
     /**
       * @notice Adds a member to the oracle member committee
@@ -232,6 +246,9 @@ contract DePoolOracle is IDePoolOracle, AragonApp {
         lastFinalizedEpoch = _getEpochForTimestamp(block.timestamp);
 
         emit AggregatedData(lastFinalizedEpoch, lastFinalizedData);
+
+        if (address(0) != address(pool))
+            pool.reportEther2(lastFinalizedEpoch, lastFinalizedData);
     }
 
     /**

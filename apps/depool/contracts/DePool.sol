@@ -245,8 +245,6 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
 
         LAST_ORACLE_EPOCH_VALUE_POSITION.setStorageUint256(_epoch);
         REMOTE_ETHER2_VALUE_POSITION.setStorageUint256(_eth2balance);
-
-        // TODO mint
     }
 
 
