@@ -14,6 +14,12 @@ Installation is local and don't require root privileges.
 ./bin/install-deps.sh
 ```
 
+### Build & test all our apps
+
+```bash
+npm run test:all
+```
+
 ### Configuration
 
 Can be specified in a local file `.dev.env`.

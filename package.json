@@ -6,7 +6,7 @@
     "build": "cd app && npm run build",
     "lint": "solium --dir ./contracts",
     "test": "TRUFFLE_TEST=true npm run ganache-cli:test",
-    "test:all": "npm run compile && (cd apps/steth && npm run test) && (cd apps/depool && npm run test)",
+    "test:all": "npm run compile && (cd apps/steth && npm run test) && (cd apps/depool && npm run test) && (cd apps/depooloracle && npm run test)",
     "test:gas": "GAS_REPORTER=true npm test",
     "coverage": "SOLIDITY_COVERAGE=true npm run ganache-cli:test",
     "truffle:dev": "truffle dev",
