@@ -126,7 +126,7 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
         quorum = _quorum;
         emit QuorumChanged(_quorum);
 
-        if (currentlyAggregatedEpoch == _getEpochForTimestamp(block.timestamp))
+        if (currentlyAggregatedEpoch == _getCurrentEpoch())
             _tryFinalize();
 
         _assertInvariants();
@@ -139,7 +139,7 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
       * @param _eth2balance Balance in wei on the ETH 2.0 side
       */
     function pushData(uint256 _epoch, uint256 _eth2balance) external {
-        require(_epoch == _getEpochForTimestamp(block.timestamp), "EPOCH_IS_NOT_CURRENT");
+        require(_epoch == _getCurrentEpoch(), "EPOCH_IS_NOT_CURRENT");
         assert(lastFinalizedEpoch <= _epoch);
         require(lastFinalizedEpoch != _epoch, "ALREADY_FINALIZED");
 
@@ -203,7 +203,7 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
       * @notice Returns current epoch id
       */
     function getCurrentEpoch() external view returns (uint256) {
-        return _getEpochForTimestamp(block.timestamp);
+        return _getCurrentEpoch();
     }
 
 
@@ -243,7 +243,7 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
 
         // computing a median on data
         lastFinalizedData = Algorithm.modifyingMedian(data);
-        lastFinalizedEpoch = _getEpochForTimestamp(block.timestamp);
+        lastFinalizedEpoch = _getCurrentEpoch();
 
         emit AggregatedData(lastFinalizedEpoch, lastFinalizedData);
 
@@ -273,6 +273,20 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
         return MEMBER_NOT_FOUND;
     }
 
+
+    /**
+      * @dev Returns current timestamp
+      */
+    function _getTime() internal view returns (uint256) {
+        return block.timestamp;
+    }
+
+    /**
+      * @dev Returns current epoch id
+      */
+    function _getCurrentEpoch() internal view returns (uint256) {
+        return _getEpochForTimestamp(_getTime());
+    }
 
     /**
       * @dev Returns epoch id for a timestamp
