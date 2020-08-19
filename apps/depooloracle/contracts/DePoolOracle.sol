@@ -8,7 +8,7 @@ import "@depools/dao/contracts/interfaces/IDePoolOracle.sol";
 import "@depools/dao/contracts/interfaces/IDePool.sol";
 
 import "./Algorithm.sol";
-
+import "./BitOps.sol";
 
 /**
   * @title Implementation of an ETH 2.0 -> ETH oracle
@@ -26,6 +26,7 @@ import "./Algorithm.sol";
   */
 contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
     using SafeMath for uint256;
+    using BitOps for uint256;
 
     /// ACL
     bytes32 constant public MANAGE_MEMBERS = keccak256("MANAGE_MEMBERS");
@@ -83,7 +84,7 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
         members.push(_member);
         // Unitialized data is fine since contributionBitMask tells which cells to use.
         currentlyAggregatedData.length = members.length;
-        assert(!_getBit(contributionBitMask, members.length.sub(1)));
+        assert(!contributionBitMask.getBit(members.length.sub(1)));
 
         if (1 == members.length) {
             quorum = 1;
@@ -107,9 +108,9 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
         if (index != last) {
             members[index] = members[last];
             currentlyAggregatedData[index] = currentlyAggregatedData[last];
-            contributionBitMask = _setBit(contributionBitMask, index, _getBit(contributionBitMask, last));
+            contributionBitMask = contributionBitMask.setBit(index, contributionBitMask.getBit(last));
         }
-        contributionBitMask = _setBit(contributionBitMask, last, false);
+        contributionBitMask = contributionBitMask.setBit(last, false);
         members.length--;
         currentlyAggregatedData.length--;
 
@@ -158,8 +159,8 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
         }
 
         // check & set contribution flag
-        require(!_getBit(contributionBitMask, index), "ALREADY_SUBMITTED");
-        contributionBitMask = _setBit(contributionBitMask, index, true);
+        require(!contributionBitMask.getBit(index), "ALREADY_SUBMITTED");
+        contributionBitMask = contributionBitMask.setBit(index, true);
 
         currentlyAggregatedData[index] = _eth2balance;
 
@@ -223,7 +224,7 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
       */
     function _tryFinalize() internal {
         uint256 mask = contributionBitMask;
-        uint256 popcnt = _popcnt(mask);
+        uint256 popcnt = mask.popcnt();
         if (popcnt < quorum)
             return;
 
@@ -235,7 +236,7 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
 
         uint256 membersLength = members.length;
         for (uint256 index = 0; index < membersLength; ++index) {
-            if (_getBit(mask, index)) {
+            if (mask.getBit(index)) {
                 data[i++] = currentlyAggregatedData[index];
             }
         }
@@ -294,39 +295,5 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
       */
     function _getEpochForTimestamp(uint256 _timestamp) internal pure returns (uint256) {
         return _timestamp.div(EPOCH_DURATION);
-    }
-
-    /**
-      * @dev Gets n-th bit in a bitmask
-      */
-    function _getBit(uint256 _mask, uint256 _bitIndex) internal pure returns (bool) {
-        return 0 != (_mask & (1 << _bitIndex));
-    }
-
-    /**
-      * @dev Sets n-th bit in a bitmask
-      */
-    function _setBit(uint256 _mask, uint256 _bitIndex, bool bit) internal pure returns (uint256) {
-        if (bit) {
-            return _mask | (1 << _bitIndex);
-        } else {
-            return _mask & (~(1 << _bitIndex));
-        }
-    }
-
-    /**
-      * @dev Returns a population count - number of bits set in a number
-      */
-    function _popcnt(uint256 _mask) internal pure returns (uint256) {
-        uint256 popcnt = 0;
-        for (uint256 i = 0; i < 256; ++i) {
-            if (1 == _mask & 1) {
-                popcnt++;
-            }
-            _mask >>= 1;
-        }
-
-        assert(0 == _mask);
-        return popcnt;
     }
 }
