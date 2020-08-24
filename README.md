@@ -20,6 +20,14 @@ Installation is local and don't require root privileges.
 npm run test:all
 ```
 
+#### Gas meter
+
+In an app folder:
+
+```bash
+npm run test:gas
+```
+
 ### Configuration
 
 Can be specified in a local file `.dev.env`.
