@@ -1,8 +1,9 @@
 const { usePlugin } = require('@nomiclabs/buidler/config')
 const hooks = require('./scripts/buidler-hooks')
 
-usePlugin('@aragon/buidler-aragon');
-//usePlugin('buidler-gas-reporter');
+usePlugin("@nomiclabs/buidler-ganache");
+usePlugin('@nomiclabs/buidler-truffle5');
+usePlugin('buidler-gas-reporter');
 
 module.exports = {
   // Default Buidler configurations. Read more about it at https://buidler.dev/config/
@@ -34,7 +35,8 @@ module.exports = {
     hooks, // Path to script hooks
   },
 
-//  gasReporter: {
-//    currency: "USD"
-//  }
+  gasReporter: {
+    enabled: process.env.REPORT_GAS ? true : false,
+    currency: "USD"
+  }
 }
