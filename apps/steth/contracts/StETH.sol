@@ -28,14 +28,14 @@ contract StETH is ISTETH, Pausable, OZERC20, AragonApp {
 
 
     /**
-      * @notice Stops transfers
+      * @notice Stop transfers
       */
     function stop() external auth(PAUSE_ROLE) {
         _stop();
     }
 
     /**
-      * @notice Resumes transfers
+      * @notice Resume transfers
       */
     function resume() external auth(PAUSE_ROLE) {
         _resume();
@@ -43,7 +43,7 @@ contract StETH is ISTETH, Pausable, OZERC20, AragonApp {
 
 
     /**
-      * @notice Mints new tokens
+      * @notice Mint `@tokenAmount(this, _value)` new tokens to `_to`
       * @param _to Receiver of new tokens
       * @param _value Amount of new tokens to mint
       */
@@ -52,7 +52,7 @@ contract StETH is ISTETH, Pausable, OZERC20, AragonApp {
     }
 
     /**
-      * @notice Burns tokens
+      * @notice Burn `@tokenAmount(this, _value)` tokens from `_account`
       * @param _account Account which tokens are to be burnt
       * @param _value Amount of tokens to burn
       */

@@ -10,13 +10,13 @@ pragma solidity 0.4.24;
   */
 interface IDePoolOracle {
     /**
-      * @notice Adds a member to the oracle member committee
+      * @notice Add `_member` to the oracle member committee
       * @param _member Address of a member to add
       */
     function addOracleMember(address _member) external;
 
     /**
-      * @notice Removes a member from the oracle member committee
+      * @notice Remove `_member` from the oracle member committee
       * @param _member Address of a member to remove
       */
     function removeOracleMember(address _member) external;
@@ -27,7 +27,7 @@ interface IDePoolOracle {
     function getOracleMembers() external view returns (address[]);
 
     /**
-      * @notice Sets the number of oracle members required to form a data point
+      * @notice Set the number of oracle members required to form a data point to `_quorum`
       */
     function setQuorum(uint256 _quorum) external;
 

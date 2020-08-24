@@ -12,12 +12,12 @@ pragma solidity 0.4.24;
   */
 interface IDePool {
     /**
-      * @notice Stops pool routine operations
+      * @notice Stop pool routine operations
       */
     function stop() external;
 
     /**
-      * @notice Resumes pool routine operations
+      * @notice Resume pool routine operations
       */
     function resume() external;
 
@@ -26,7 +26,7 @@ interface IDePool {
 
 
     /**
-      * @notice Sets fee rate for the fees accrued when oracles report staking results
+      * @notice Set fee rate to `_feeBasisPoints` basis points. The fees are accrued when oracles report staking results
       * @param _feeBasisPoints Fee rate, in basis points
       */
     function setFee(uint32 _feeBasisPoints) external;
@@ -40,7 +40,7 @@ interface IDePool {
 
 
     /**
-      * @notice Sets credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
+      * @notice Set credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched to `_withdrawalCredentials`
       * @dev Note that setWithdrawalCredentials discards all unused signing keys as the signatures are invalidated.
       * @param _withdrawalCredentials hash of withdrawal multisignature key as accepted by
       *        the validator_registration.deposit function
@@ -53,7 +53,7 @@ interface IDePool {
     function getWithdrawalCredentials() external view returns (bytes);
 
     /**
-      * @notice Adds validator signing keys to the set of usable keys
+      * @notice Add `_quantity` validator signing keys to the set of usable keys. Concatenated keys are: `_pubkeys`
       * @dev Along with each key the DAO has to provide a signatures for the
       *      (pubkey, withdrawal_credentials, 32000000000) message.
       *      Given that information, the contract'll be able to call
@@ -65,7 +65,7 @@ interface IDePool {
     function addSigningKeys(uint256 _quantity, bytes _pubkeys, bytes _signatures) external;
 
     /**
-      * @notice Removes a validator signing key from the set of usable keys
+      * @notice Removes a validator signing key #`_index` from the set of usable keys
       * @param _index Index of the key, starting with 0
       */
     function removeSigningKey(uint256 _index) external;

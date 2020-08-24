@@ -65,7 +65,7 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
 
 
     /**
-      * @notice Sets the pool address to notify
+      * @notice Set the pool address to `_pool`
       */
     function setPool(address _pool) external auth(SET_POOL) {
         require(isContract(_pool), "POOL_NOT_CONTRACT");
@@ -73,7 +73,7 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
     }
 
     /**
-      * @notice Adds a member to the oracle member committee
+      * @notice Add `_member` to the oracle member committee
       * @param _member Address of a member to add
       */
     function addOracleMember(address _member) external auth(MANAGE_MEMBERS) {
@@ -95,7 +95,7 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
     }
 
     /**
-      * @notice Removes a member from the oracle member committee
+      * @notice Remove `_member` from the oracle member committee
       * @param _member Address of a member to remove
       */
     function removeOracleMember(address _member) external auth(MANAGE_MEMBERS) {
@@ -119,7 +119,7 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
     }
 
     /**
-      * @notice Sets the number of oracle members required to form a data point
+      * @notice Set the number of oracle members required to form a data point to `_quorum`
       */
     function setQuorum(uint256 _quorum) external auth(MANAGE_QUORUM) {
         require(members.length >= _quorum && 0 != _quorum, "QUORUM_WONT_BE_MADE");
