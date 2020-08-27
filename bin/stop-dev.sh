@@ -12,7 +12,7 @@ for PID_FILE in "$PID_DIR/.front.pid" "$PID_DIR/.ipfs.pid" "$PID_DIR/.devchain.p
 do
     [[ -f "$PID_FILE" ]] || continue
 
-    kill "$(cat "$PID_FILE")"
+    kill "$(cat "$PID_FILE")" || true
     rm "$PID_FILE"
 done
 
