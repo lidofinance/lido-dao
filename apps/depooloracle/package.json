@@ -1,5 +1,5 @@
 {
-  "name": "depooloracle",
+  "name": "@depools/apps-depooloracle",
   "version": "0.0.1",
   "scripts": {
     "postinstall": "npm run compile && npm run build-app",

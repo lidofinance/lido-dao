@@ -13,9 +13,15 @@
   "devDependencies": {
     "@aragon/cli": "^6.0.0",
     "@aragon/test-helpers": "^2.1.0",
+    "@depools/apps-depool": "file:../apps/depool",
+    "@depools/apps-depooloracle": "file:../apps/depooloracle",
+    "@depools/apps-steth": "file:../apps/steth",
+    "@depools/dao": "file:../",
+    "@depools/depool-lib": "file:../shared/lib/",
     "eth-gas-reporter": "^0.2.0",
     "ethereumjs-testrpc-sc": "^6.5.1-sc.0",
     "ganache-cli": "^6.4.3",
+    "solidity-bytes-utils": "0.0.6",
     "truffle": "4.1.14",
     "truffle-extract": "^1.2.1"
   },

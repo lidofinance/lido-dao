@@ -1,5 +1,5 @@
 {
-  "name": "depool",
+  "name": "@depools/apps-depool",
   "version": "0.0.1",
   "scripts": {
     "build-app": "cd app && npm install && cd ..",

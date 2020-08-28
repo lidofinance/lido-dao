@@ -18,6 +18,7 @@ if [ -z ${HOLDERS+x} ]; then
 fi
 
 
+# TODO "$ARAGON" dao new dao-template.depoolspm.eth
 "$ARAGON" dao new company-template 1.0.0 --fn newTokenAndInstance --fn-args \
     "$TOKEN_NAME" "$TOKEN_SYMBOL" "$DAO_ID" \
     "$HOLDERS" "$STAKES" \
