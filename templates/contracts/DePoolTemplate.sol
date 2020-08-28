@@ -25,8 +25,7 @@ contract DePoolTemplate is BaseTemplate {
         string _tokenSymbol,
         address[] _holders,
         uint256[] _stakes,
-        uint64[3] _votingSettings,
-        uint64 _financePeriod
+        uint64[3] _votingSettings
     )
         external
     {
@@ -36,8 +35,7 @@ contract DePoolTemplate is BaseTemplate {
         MiniMeToken token = _createToken(_tokenName, _tokenSymbol, TOKEN_DECIMALS);
 
         (Kernel dao, ACL acl) = _createDAO();
-        (Finance finance, Voting voting) = _setupApps(dao, acl, token, _holders, _stakes, _votingSettings, _financePeriod);
-        _transferCreatePaymentManagerFromTemplate(acl, finance, voting);
+        Voting voting = _setupApps(dao, acl, token, _holders, _stakes, _votingSettings);
         _transferRootPermissionsFromTemplateAndFinalizeDAO(dao, voting);
     }
 
@@ -47,21 +45,20 @@ contract DePoolTemplate is BaseTemplate {
         MiniMeToken _token,
         address[] memory _holders,
         uint256[] memory _stakes,
-        uint64[3] memory _votingSettings,
-        uint64 _financePeriod
+        uint64[3] memory _votingSettings
     )
         internal
-        returns (Finance, Voting)
+        returns (Voting)
     {
         Vault agentOrVault = USE_AGENT_AS_VAULT ? _installDefaultAgentApp(_dao) : _installVaultApp(_dao);
-        Finance finance = _installFinanceApp(_dao, agentOrVault, _financePeriod == 0 ? DEFAULT_FINANCE_PERIOD : _financePeriod);
+        Finance finance = _installFinanceApp(_dao, agentOrVault, DEFAULT_FINANCE_PERIOD);
         TokenManager tokenManager = _installTokenManagerApp(_dao, _token, TOKEN_TRANSFERABLE, TOKEN_MAX_PER_ACCOUNT);
         Voting voting = _installVotingApp(_dao, _token, _votingSettings);
 
         _mintTokens(_acl, tokenManager, _holders, _stakes);
         _setupPermissions(_acl, agentOrVault, voting, finance, tokenManager);
 
-        return (finance, voting);
+        return voting;
     }
 
     function _setupPermissions(
@@ -78,7 +75,7 @@ contract DePoolTemplate is BaseTemplate {
         }
         _createVaultPermissions(_acl, _agentOrVault, _finance, _voting);
         _createFinancePermissions(_acl, _finance, _voting, _voting);
-        _createFinanceCreatePaymentsPermission(_acl, _finance, _voting, address(this));
+        _createFinanceCreatePaymentsPermission(_acl, _finance, _voting, _voting);
         _createEvmScriptsRegistryPermissions(_acl, _voting, _voting);
         _createVotingPermissions(_acl, _voting, _voting, _tokenManager, _voting);
         _createTokenManagerPermissions(_acl, _tokenManager, _voting, _voting);
