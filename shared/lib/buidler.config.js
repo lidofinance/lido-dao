@@ -15,7 +15,7 @@ module.exports = {
     version: '0.4.24',
     optimizer: {
       enabled: true,
-      runs: 200,
+      runs: 1000,
     },
   },
   // Etherscan plugin configuration. Learn more at https://github.com/nomiclabs/buidler/tree/master/packages/buidler-etherscan
@@ -28,7 +28,6 @@ module.exports = {
     clientServePort: 3000,
     appSrcPath: 'app/',
     appBuildOutputPath: 'dist/',
-    appName: 'steth',
     hooks, // Path to script hooks
   },
 }

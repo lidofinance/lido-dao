@@ -1,18 +1,13 @@
-const { join } = require('path')
 const { hash } = require('eth-ens-namehash')
-const { ONE_DAY, ZERO_ADDRESS, MAX_UINT64, bn, getEventArgument, injectWeb3, injectArtifacts } = require('@aragon/contract-helpers-test')
-
-const oldPath = artifacts._artifactsPath;
-// FIXME OMFG
-artifacts._artifactsPath = join(config.paths.root, 'node_modules/@aragon/os/build/contracts');
-
-const Kernel = artifacts.require('Kernel')
-const ACL = artifacts.require('ACL')
-const EVMScriptRegistryFactory = artifacts.require('EVMScriptRegistryFactory')
-const DAOFactory = artifacts.require('DAOFactory')
-
-artifacts._artifactsPath = oldPath;
-
+const { getEventArgument } = require('@aragon/contract-helpers-test')
+const Kernel = artifacts.require('@aragon/os/build/contracts/kernel/Kernel')
+const ACL = artifacts.require('@aragon/os/build/contracts/acl/ACL')
+const EVMScriptRegistryFactory = artifacts.require(
+  '@aragon/os/build/contracts/factory/EVMScriptRegistryFactory'
+)
+const DAOFactory = artifacts.require(
+  '@aragon/os/build/contracts/factory/DAOFactory'
+)
 
 const newDao = async (rootAccount) => {
   // Deploy a DAOFactory.

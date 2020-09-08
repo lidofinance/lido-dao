@@ -38,7 +38,6 @@
     "truffle-extract": "^1.2.1"
   },
   "dependencies": {
-    "@aragon/os": "4.4.0",
-    "go-ipfs": "^0.4.22"
+    "@aragon/os": "^4.4.0"
   }
 }
