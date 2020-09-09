@@ -6,7 +6,7 @@
     "compile": "buidler compile --force",
     "lint": "solium --dir ./contracts",
     "test": "buidler test",
-    "test:gas": "REPORT_GAS=true buidler test --network localhost",
+    "test:gas": "REPORT_GAS=true buidler test --network local",
     "start": "buidler start",
     "publish:major": "buidler publish major",
     "publish:minor": "buidler publish minor",
