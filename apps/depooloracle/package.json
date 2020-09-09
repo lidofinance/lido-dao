@@ -2,9 +2,9 @@
   "name": "@depools/apps-depooloracle",
   "version": "0.0.1",
   "scripts": {
-    "postinstall": "npm run compile && npm run build-app",
-    "build-app": "cd app && npm install && cd ..",
+    "build": "cd app && npm run build",
     "compile": "buidler compile --force",
+    "lint": "solium --dir ./contracts",
     "test": "buidler test --network buidlerevm",
     "test:gas": "REPORT_GAS=true buidler test --network local",
     "start": "buidler start",
@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@aragon/os": "^4.4.0",
-    "@depools/dao": "file:../../"
+    "@depools/dao": "^0.0.1"
   },
   "devDependencies": {
     "@aragon/buidler-aragon": "^0.2.9",
@@ -25,6 +25,9 @@
     "@nomiclabs/buidler-truffle5": "^1.3.0",
     "@nomiclabs/buidler-web3": "^1.3.0",
     "buidler-gas-reporter": "^0.1.3",
+    "eth-ens-namehash": "^2.0.8",
+    "chai": "^4.2.0",
+    "solium": "^1.2.5",
     "web3": "^1.2.0"
   }
 }
