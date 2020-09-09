@@ -13,13 +13,13 @@ Installation is local and don't require root privileges.
 
 If you have `lerna` installed globally
 ```bash
-lerna bootstrap
+npm run bootstrap
 ```
 
 otherwise
 
 ```bash
-npx lerna bootstrap
+npx lerna bootstrap 
 ```
 
 
