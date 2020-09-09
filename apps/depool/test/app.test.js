@@ -4,14 +4,7 @@ const { newDao, newApp } = require('./helpers/dao')
 const { assertBn, assertRevert, assertEvent, assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
 const { ONE_DAY, ZERO_ADDRESS, MAX_UINT64, bn, getEventArgument, injectWeb3, injectArtifacts } = require('@aragon/contract-helpers-test')
 
-const oldPath = artifacts._artifactsPath;
-// FIXME use template
-artifacts._artifactsPath = join(config.paths.root, '..', 'steth/artifacts');
-
-const StETH = artifacts.require('StETH.sol')
-
-artifacts._artifactsPath = oldPath;
-
+const StETH = artifacts.require('StETH.sol') //we can just import due to StETH imported in test_helpers/Imports.sol
 
 const DePool = artifacts.require('TestDePool.sol');
 const OracleMock = artifacts.require('OracleMock.sol');
