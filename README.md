@@ -16,15 +16,17 @@ If you have `lerna` installed globally
 lerna bootstrap
 ```
 
+otherwise
+
 ```bash
-lerna bootstrap
+npx lerna bootstrap
 ```
 
 
 ### Build & test all our apps
 
 ```bash
-npm run test:all
+npm run test
 ```
 
 #### Gas meter
