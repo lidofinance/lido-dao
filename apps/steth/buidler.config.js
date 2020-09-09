@@ -7,9 +7,9 @@ usePlugin('buidler-gas-reporter')
 
 module.exports = {
   // Default Buidler configurations. Read more about it at https://buidler.dev/config/
-  defaultNetwork: 'local',
+  defaultNetwork: 'development',
   networks: {
-    local: {
+    development: {
       url: 'http://localhost:8545',
     },
   },
