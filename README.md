@@ -4,20 +4,29 @@
 
 ### Requirements 
 
-* NodeJs 10+
+* NodeJs 12
+* (optional) Lerna
 
 ### Installing Aragon & other deps
 
 Installation is local and don't require root privileges.
 
+If you have `lerna` installed globally
 ```bash
-./bin/install-deps.sh
+lerna bootstrap
 ```
+
+otherwise
+
+```bash
+npx lerna bootstrap
+```
+
 
 ### Build & test all our apps
 
 ```bash
-npm run test:all
+npm run test
 ```
 
 #### Gas meter
