@@ -39,6 +39,6 @@
   },
   "dependencies": {
     "@aragon/os": "4.4.0",
-    "go-ipfs": "^0.4.22"
+    "go-ipfs": "0.4.22"
   }
 }
