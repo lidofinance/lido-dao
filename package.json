@@ -33,6 +33,7 @@
     "eth-gas-reporter": "^0.2.0",
     "ethereumjs-testrpc-sc": "^6.5.1-sc.0",
     "ganache-cli": "^6.4.3",
+    "husky": "^4.3.0",
     "lerna": "^3.22.1",
     "solidity-coverage": "^0.7.0",
     "solium": "^1.2.5",
