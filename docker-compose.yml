@@ -6,15 +6,26 @@ services:
     container_name: node1
     ports:
       - 8545:8545
-      - 5001:5001
-      - 8080:8080
     volumes:
       - ./data/devchain:/data
     networks:
       eth2:
     environment:
       - BLOCK_TIME=0
-#      - GAS_LIMIT=1b71b00
+      - GAS_LIMIT=12000000
+
+  ipfs:
+    build:
+      context: ./docker/ipfs/
+    container_name: ipfs
+    ports:
+      - 5001:5001
+      - 8080:8080
+    volumes:
+      - ./data/export:/export
+      - ./data/ipfs:/data/ipfs
+    networks:
+      eth2:
 
   node2-1:
     image: sigp/lighthouse@sha256:8abac5f1eaed93180fc3a1ff87a711a3c27316b49a3df3bdaf3c5f3e41f2c27e
