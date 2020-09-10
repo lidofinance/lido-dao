@@ -14,7 +14,10 @@
     "ganache-cli:test": "./node_modules/@aragon/test-helpers/ganache-cli.sh",
     "install:frontend": "cd app && npm install",
     "abi:extract": "truffle-extract --output abi/ --keys abi",
-    "prepublishOnly": "truffle compile --all && npm run abi:extract -- --no-compile"
+    "prepublishOnly": "truffle compile --all && npm run abi:extract -- --no-compile",
+    "deploy:apm:dev": "npm run compile && truffle exec ./scripts/deploy-apm.js --network development --ens 0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1 --dao-factory 0x5d94e3e7aec542ab0f9129b9a7badeb5b3ca0f77 --verbose=true",
+    "deploy:apm:rinkeby": "npm run compile && truffle exec ./scripts/deploy.js --network rinkeby --ens 0x98Df287B6C145399Aaa709692c8D308357bC085D --dao-factory 0xad4d106b43b480faa3ef7f98464ffc27fc1faa96 --mini-me-factory 0x6ffeb4038f7f077c4d20eaf1706980caec31e2bf",
+    "deploy:apm:mainnet": "npm run compile && truffle exec ./scripts/deploy.js --network mainnet --ens 0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e --dao-factory 0xb9da44c051c6cc9e04b7e0f95e95d69c6a6d8031 --mini-me-factory 0x909d05f384d0663ed4be59863815ab43b4f347ec"
   },
   "files": [
     "/abi",
@@ -27,17 +30,16 @@
   "author": "MixBytes <hello@mixbytes.io>",
   "description": "",
   "devDependencies": {
-    "@aragon/cli": "^6.0.0",
     "@aragon/test-helpers": "^2.1.0",
     "@aragon/truffle-config-v4": "^1.0.1",
-    "eth-gas-reporter": "^0.2.0",
-    "ethereumjs-testrpc-sc": "^6.5.1-sc.0",
-    "ganache-cli": "^6.4.3",
+    "eth-gas-reporter": "^0.2.17",
+    "eth-ens-namehash": "^2.0.8",
+    "ethereumjs-testrpc-sc": "^6.5.1-sc.1",
     "husky": "^4.3.0",
     "lerna": "^3.22.1",
-    "solidity-coverage": "^0.7.0",
+    "solidity-coverage": "^0.7.10",
     "solium": "^1.2.5",
-    "truffle": "4.1.14",
+    "truffle": "5.1.43",
     "truffle-extract": "^1.2.1"
   },
   "dependencies": {
