@@ -14,7 +14,7 @@ if [ ! "$(ls -A $DATA_DIR)" ]; then
   echo "Starting Ganache temporary for deploy Deposit contract..."
   ganache-cli -h 0.0.0.0 -a 10 -i 15 -l $GAS_LIMIT -e 100000 -m "$MNEMONIC" --db=$DATA_DIR 2>&1 > /dev/null &
   PID=$!
-  echo -n "Waiting for Ganache rpc"
+  echo -n "Waiting for Ganache starts"
   while ! curl --output /dev/null -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'; do
     sleep 1 && echo -n .
   done
@@ -23,29 +23,32 @@ if [ ! "$(ls -A $DATA_DIR)" ]; then
   ADMIN="$(curl -s -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_accounts","params":[],"id":1}' | jq -r '.result[0]')"
   echo "Owner: $ADMIN"
   CODE=$(jq -r '.bytecode' deposit_contract.json | cut -c 3-)
+  # send deploy deposit contract tx, gasPrice = 20gwei
   HASH=$(curl -s -L -X POST http://localhost:8545 \
     --data "{\"jsonrpc\":\"2.0\",\"method\":\"eth_sendTransaction\",\"params\":[{
     \"from\": \"$ADMIN\",
     \"gas\": \"0x20acc4\",
-    \"gasPrice\": \"0x9184e72a000\",
+    \"gasPrice\": \"0x4a817c800\",
     \"value\": \"0x00\",
     \"data\": \"$CODE\"
   }],\"id\":1}" | jq -r '.result')
   echo "Tx hash: $HASH"
-  # wait a bit for block mining
+  # wait a bit for block mined
   sleep 3
   R=$(curl -s -L -X POST http://localhost:8545 --data "{\"jsonrpc\":\"2.0\",\"method\":\"eth_getTransactionReceipt\",\"params\":[\"$HASH\"],\"id\":1}")
 #  HASH=$(echo "$R" | jq -r '.result.txHash')
   BLOCK_HEX=$(echo "$R" | jq -r '.result.blockNumber' | cut -c 3-)
   BLOCK=$((16#$BLOCK_HEX))
-  ADDR=$(echo "$R" | jq -r '.result.contractAddress' | cut -c 3-)
-  echo "Deposit contract deployed: 0x$ADDR at block $BLOCK"
+  ADDR=$(echo "$R" | jq -r '.result.contractAddress')
+  echo "Deposit contract deployed: $ADDR at block $BLOCK"
   kill $PID
   sleep 3
+else
+  echo "Chain data exists. Assuming Deposit contract deployed: 0x5f4e510503d83bd1a5436bdae2923489da0be454 at block 70"
 fi
 
 
-echo "Starting IPFS..."
-ipfs daemon --migrate=true &
+#echo "Starting IPFS..."
+#ipfs daemon --migrate=true &
 echo "Starting Ganache..."
 ganache-cli -h 0.0.0.0 -a 10 -i 15 -l $GAS_LIMIT -e 100000 -m "$MNEMONIC" -b $BLOCK_TIME --db=$DATA_DIR
