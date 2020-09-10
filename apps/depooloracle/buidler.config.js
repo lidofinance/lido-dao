@@ -1,15 +1,15 @@
 const { usePlugin } = require('@nomiclabs/buidler/config')
 const hooks = require('./scripts/buidler-hooks')
 
-usePlugin("@nomiclabs/buidler-ganache");
-usePlugin('@nomiclabs/buidler-truffle5');
-usePlugin('buidler-gas-reporter');
+usePlugin('@aragon/buidler-aragon')
+usePlugin("@nomiclabs/buidler-ganache")
+usePlugin('buidler-gas-reporter')
 
 module.exports = {
   // Default Buidler configurations. Read more about it at https://buidler.dev/config/
-  defaultNetwork: 'localhost',
+  defaultNetwork: 'development',
   networks: {
-    localhost: {
+    development: {
       url: 'http://localhost:8545',
     },
   },
@@ -17,7 +17,7 @@ module.exports = {
     version: '0.4.24',
     optimizer: {
       enabled: true,
-      runs: 200,
+      runs: 10000,
     },
     evmVersion: 'constantinople'
   },
@@ -28,15 +28,14 @@ module.exports = {
   // Aragon plugin configuration
   aragon: {
     appServePort: 8001,
-    clientServePort: 3000,
+    clientServePort: 3011,
     appSrcPath: 'app/',
     appBuildOutputPath: 'dist/',
     appName: 'depooloracle',
     hooks, // Path to script hooks
   },
-
   gasReporter: {
-    enabled: process.env.REPORT_GAS ? true : false,
+    enabled: !!process.env.REPORT_GAS,
     currency: "USD"
   }
 }

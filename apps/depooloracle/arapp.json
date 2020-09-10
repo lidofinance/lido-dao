@@ -18,8 +18,9 @@
   ],
   "environments": {
     "default": {
+      "registry": "0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1",
       "appName": "depooloracle.depoolspm.eth",
-      "network": "rpc"
+      "network": "development"
     },
     "rinkeby": {
       "registry": "0x98df287b6c145399aaa709692c8d308357bc085d",

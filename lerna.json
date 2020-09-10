@@ -1,0 +1,10 @@
+{
+  "packages": [
+    ".",
+    "apps/*",
+    "shared/lib"
+  ],
+  "hoist": true,
+  "version": "independent",
+  "npmClient": "npm"
+}
