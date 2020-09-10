@@ -8,9 +8,15 @@
     "test": "buidler test --network buidlerevm",
     "test:gas": "REPORT_GAS=true buidler test --network development",
     "start": "buidler start",
-    "publish:major": "buidler publish major",
-    "publish:minor": "buidler publish minor",
-    "publish:patch": "buidler publish patch"
+    "publish:major": "buidler publish major --network development",
+    "publish:minor": "buidler publish minor --network development",
+    "publish:patch": "buidler publish patch --network development",
+    "publish:major:rinkeby": "buidler publish major --network rinkeby",
+    "publish:minor:rinkeby": "buidler publish minor --network rinkeby",
+    "publish:patch:rinkeby": "buidler publish patch --network rinkeby",
+    "publish:major:mainnet": "buidler publish major --network mainnet",
+    "publish:minor:mainnet": "buidler publish minor --network mainnet",
+    "publish:patch:mainnet": "buidler publish patch --network mainnet"
   },
   "dependencies": {
     "@aragon/os": "^4.4.0",
