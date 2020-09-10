@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "main": "src/index.js",
   "dependencies": {
-    "@aragon/api": "^2.0.0-beta.9",
-    "@aragon/api-react": "^2.0.0-beta.9",
+    "@aragon/api": "^2.0.0",
+    "@aragon/api-react": "^2.0.0",
     "@aragon/ui": "^1.4.2",
     "core-js": "^3.6.5",
     "react": "^16.12.0",
