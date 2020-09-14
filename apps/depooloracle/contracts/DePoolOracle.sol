@@ -127,8 +127,9 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
         quorum = _quorum;
         emit QuorumChanged(_quorum);
 
-        if (currentlyAggregatedReportInterval == _getCurrentReportInterval())
-            _tryFinalize();
+        if (currentlyAggregatedReportInterval <= _getCurrentReportInterval() &&
+            currentlyAggregatedReportInterval > lastFinalizedReportInterval)
+            _tryFinalize(currentlyAggregatedReportInterval);
 
         _assertInvariants();
     }
@@ -140,7 +141,9 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
       * @param _eth2balance Balance in wei on the ETH 2.0 side
       */
     function pushData(uint256 _reportInterval, uint256 _eth2balance) external {
-        require(_reportInterval == _getCurrentReportInterval(), "REPORT_INTERVAL_IS_NOT_CURRENT");
+        require(_reportInterval <= _getCurrentReportInterval(), "REPORT_INTERVAL_HAS_NOT_YET_BEGUN");
+        require(_reportInterval >= _getCurrentReportInterval().sub(1), "REPORT_INTERVAL_IS_TOO_OLD");
+        require(_reportInterval >= currentlyAggregatedReportInterval, "REPORT_INTERVAL_IS_TOO_OLD");
         assert(lastFinalizedReportInterval <= _reportInterval);
         require(lastFinalizedReportInterval != _reportInterval, "ALREADY_FINALIZED");
 
@@ -164,7 +167,7 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
 
         currentlyAggregatedData[index] = _eth2balance;
 
-        _tryFinalize();
+        _tryFinalize(_reportInterval);
     }
 
 
@@ -222,7 +225,7 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
     /**
       * @dev Finalizes the current data point if quorum is reached
       */
-    function _tryFinalize() internal {
+    function _tryFinalize(uint256 _reportInterval) internal {
         uint256 mask = contributionBitMask;
         uint256 popcnt = mask.popcnt();
         if (popcnt < quorum)
@@ -244,7 +247,7 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
 
         // computing a median on data
         lastFinalizedData = Algorithm.modifyingMedian(data);
-        lastFinalizedReportInterval = _getCurrentReportInterval();
+        lastFinalizedReportInterval = _reportInterval;
 
         emit AggregatedData(lastFinalizedReportInterval, lastFinalizedData);
 

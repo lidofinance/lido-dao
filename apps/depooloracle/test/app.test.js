@@ -122,7 +122,7 @@ contract('DePoolOracle', ([appManager, voting, user1, user2, user3, user4, nobod
     await assertData(0, 0);
 
     await assertRevert(app.pushData(1000, 100, {from: user2}), 'MEMBER_NOT_FOUND');
-    await assertRevert(app.pushData(900, 100, {from: user1}), 'REPORT_INTERVAL_IS_NOT_CURRENT');
+    await assertRevert(app.pushData(900, 100, {from: user1}), 'REPORT_INTERVAL_IS_TOO_OLD');
 
     await app.pushData(1000, 100, {from: user1});
     await assertData(1000, 100);
@@ -132,7 +132,7 @@ contract('DePoolOracle', ([appManager, voting, user1, user2, user3, user4, nobod
     await assertData(1001, 101);
 
     await app.setTime(86400000 + 86400*4);
-    await assertRevert(app.pushData(1005, 105, {from: user1}), 'REPORT_INTERVAL_IS_NOT_CURRENT');
+    await assertRevert(app.pushData(1005, 105, {from: user1}), 'REPORT_INTERVAL_HAS_NOT_YET_BEGUN');
     await app.pushData(1004, 104, {from: user1});
     await assertData(1004, 104);
 
@@ -150,8 +150,8 @@ contract('DePoolOracle', ([appManager, voting, user1, user2, user3, user4, nobod
     await assertData(0, 0);
 
     await assertRevert(app.pushData(1000, 100, {from: nobody}), 'MEMBER_NOT_FOUND');
-    await assertRevert(app.pushData(900, 100, {from: user1}), 'REPORT_INTERVAL_IS_NOT_CURRENT');
-    await assertRevert(app.pushData(10900, 100, {from: user1}), 'REPORT_INTERVAL_IS_NOT_CURRENT');
+    await assertRevert(app.pushData(900, 100, {from: user1}), 'REPORT_INTERVAL_IS_TOO_OLD');
+    await assertRevert(app.pushData(10900, 100, {from: user1}), 'REPORT_INTERVAL_HAS_NOT_YET_BEGUN');
 
     // reportInterval 1000, quorum 2
     await app.pushData(1000, 100, {from: user1});
@@ -171,11 +171,30 @@ contract('DePoolOracle', ([appManager, voting, user1, user2, user3, user4, nobod
     // reportInterval 1004, quorum 3
     await app.setQuorum(3, {from: voting});
     await app.setTime(86400000 + 86400*4);
-    await assertRevert(app.pushData(1005, 105, {from: user1}), 'REPORT_INTERVAL_IS_NOT_CURRENT');
+    await assertRevert(app.pushData(1005, 105, {from: user1}), 'REPORT_INTERVAL_HAS_NOT_YET_BEGUN');
     await app.pushData(1004, 120, {from: user1});
     await app.pushData(1004, 110, {from: user2});
     await app.pushData(1004, 100, {from: user3});
     await assertData(1004, 110);
+  });
+
+  it('can push to past interval until current interval data came', async () => {
+    await app.setTime(86400000);
+    await app.addOracleMember(user1, {from: voting});
+    await app.addOracleMember(user2, {from: voting});
+    await app.addOracleMember(user3, {from: voting});
+    await app.setQuorum(2, {from: voting});
+
+    // reportInterval 1000
+    await app.pushData(1000, 100, {from: user1});
+    await assertData(0, 0);
+
+    // reportInterval 1001
+    await app.setTime(86400000 + 86400);
+
+    // report past interval
+    await app.pushData(1000, 100, {from: user2});
+    await assertData(1000, 100);
   });
 
   it('reportInterval can be unfinished', async () => {
@@ -193,7 +212,7 @@ contract('DePoolOracle', ([appManager, voting, user1, user2, user3, user4, nobod
     await app.setTime(86400000 + 86400);
     await app.pushData(1001, 110, {from: user2});
     await assertData(0, 0);
-    await assertRevert(app.pushData(1000, 100, {from: user3}), 'REPORT_INTERVAL_IS_NOT_CURRENT');
+    await assertRevert(app.pushData(1000, 100, {from: user3}), 'REPORT_INTERVAL_IS_TOO_OLD');
     await app.pushData(1001, 120, {from: user3});
     await assertData(1001, 115);
   });
