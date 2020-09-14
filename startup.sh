@@ -7,6 +7,8 @@ ROOT=${PWD}
 LOCAL_DATA_DIR="${PWD}${DATADIR}"
 LOCAL_WALLETS_DIR="${PWD}${WALLETS_DIR}"
 LOCAL_VALIDATORS_DIR="${PWD}${VALIDATORS_DIR}"
+LOCAL_MOCK_VALIDATORS_DIR="${PWD}${MOCK_VALIDATORS_DIR}"
+LOCAL_MOCK_SECRETS_DIR="${PWD}${MOCK_SECRETS_DIR}"
 LOCAL_TESTNET_DIR="${PWD}${TESTNET_DIR}"
 
 while test $# -gt 0; do
@@ -61,6 +63,7 @@ if [[ $RESET ]]; then
   docker-compose down -v --remove-orphans
   rm -rf $LOCAL_DATA_DIR
   mkdir -p $LOCAL_DATA_DIR
+  mkdir -p $LOCAL_TESTNET_DIR
   if [[ $SNAPSHOT ]]; then
     echo "Unzip ganache snapshot"
     unzip -o -q -d $LOCAL_DATA_DIR ./devchain.zip
@@ -71,6 +74,9 @@ fi
 
 if [[ ! "$(ls -A $DATA_DIR)" ]]; then
   RESET=true
+fi
+if [[ ! "$(ls -A $LOCAL_TESTNET_DIR)" ]]; then
+  ETH2_RESET=true
 fi
 
 echo "Starting IPFS"
@@ -87,20 +93,43 @@ echo -n "Waiting for eth1 rpc"
 while ! curl --output /dev/null -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'; do
   sleep 2 && echo -n .
 done
-sleep 3
-R="0x"
-while [[ "$R" != "0x60" ]];
-do
-  R=$(curl -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x'$DEPOSIT'","latest"],"id":1}' | jq -r '.result'  | cut -c -4)
-  sleep 2 && echo -n .
-done
+#sleep 3
+#R="0x"
+#while [[ "$R" != "0x60" ]];
+#do
+#  R=$(curl -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x'$DEPOSIT'","latest"],"id":1}' | jq -r '.result'  | cut -c -4)
+#  sleep 2 && echo -n .
+#done
 echo " "
-ADDR="$DEPOSIT"
-BLOCK=70
-echo "Deposit contract predeployed: 0x$DEPOSIT at block $BLOCK"
-
 # !! already deployed inside snapshot
 if [[ ! $SNAPSHOT ]] && [[ $DAO_DEPLOY ]] ; then
+  R=$(curl -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x'$DEPOSIT'","latest"],"id":1}' | jq -r '.result'  | cut -c -4)
+  if [[ "$R" != "0x60" ]]; then
+    echo "Deploying deposit contract..."
+    ADMIN="$(curl -s -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_accounts","params":[],"id":1}' | jq -r '.result[0]')"
+    echo "Owner: $ADMIN"
+    CODE=$(curl -s https://raw.githubusercontent.com/ethereum/eth2.0-specs/dev/solidity_deposit_contract/deposit_contract.json | jq -r '.bytecode' | cut -c 3-)
+    # send deploy deposit contract tx, gasPrice = 20gwei
+    HASH=$(curl -s -L -X POST http://localhost:8545 \
+      --data "{\"jsonrpc\":\"2.0\",\"method\":\"eth_sendTransaction\",\"params\":[{
+      \"from\": \"$ADMIN\",
+      \"gas\": \"0x20acc4\",
+      \"gasPrice\": \"0x4a817c800\",
+      \"value\": \"0x00\",
+      \"data\": \"$CODE\"
+    }],\"id\":1}" | jq -r '.result')
+    echo "Tx hash: $HASH"
+    # wait a bit for block mined
+    sleep 3
+    R=$(curl -s -L -X POST http://localhost:8545 --data "{\"jsonrpc\":\"2.0\",\"method\":\"eth_getTransactionReceipt\",\"params\":[\"$HASH\"],\"id\":1}")
+  #  HASH=$(echo "$R" | jq -r '.result.txHash')
+    BLOCK_HEX=$(echo "$R" | jq -r '.result.blockNumber' | cut -c 3-)
+    BLOCK=$((16#$BLOCK_HEX))
+    ADDR=$(echo "$R" | jq -r '.result.contractAddress')
+    echo "Deposit contract deployed: $ADDR at block $BLOCK"
+  fi
+
+
   R=$(curl -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x'$APM'","latest"],"id":1}' | jq -r '.result'  | cut -c -4)
   if [[ "$R" != "0x60" ]]; then
     echo "Deploying DePool APM..."
@@ -124,6 +153,8 @@ if [[ ! $SNAPSHOT ]] && [[ $DAO_DEPLOY ]] ; then
   # wait a bit for block mining
   sleep 3
 else
+  BLOCK=70
+  echo "Deposit contract predeployed: 0x$DEPOSIT at block $BLOCK"
   echo "DAO deployed at: 0x$DAO"
 fi
 
@@ -132,10 +163,11 @@ if [[ $ETH1_ONLY ]]; then
 fi
 
 if [ $ETH2_RESET ]; then
+  rm -rf $LOCAL_TESTNET_DIR
   docker-compose run --rm --no-deps node2-1 lcli \
     --spec "$SPEC" \
     new-testnet \
-    --deposit-contract-address "$ADDR" \
+    --deposit-contract-address "$DEPOSIT" \
     --deposit-contract-deploy-block "$BLOCK" \
     --testnet-dir "$TESTNET_DIR" \
     --force \
@@ -155,6 +187,29 @@ if [ $ETH2_RESET ]; then
   fi
 
   echo "Specification generated at $LOCAL_TESTNET_DIR."
+
+#  echo "Generating $MOCK_VALIDATOR_COUNT mock validators concurrently... (this may take a while)"
+#  rm -rf $LOCAL_MOCK_VALIDATORS_DIR
+#  rm -rf $LOCAL_MOCK_SECRETS_DIR
+#  docker-compose run --rm --no-deps node2-1 lcli \
+#    --spec "$SPEC" \
+#    insecure-validators \
+#    --count $MOCK_VALIDATOR_COUNT \
+#    --validators-dir $MOCK_VALIDATORS_DIR \
+#    --secrets-dir $MOCK_SECRETS_DIR
+#
+#  echo Validators generated at $MOCK_VALIDATORS_DIR with keystore passwords at $MOCK_SECRETS_DIR.
+#
+#  echo "Building genesis state... (this might take a while)"
+#  docker-compose run --rm --no-deps node2-1  lcli \
+#    --spec "$SPEC" \
+#    interop-genesis \
+#    --testnet-dir $TESTNET_DIR \
+#    --genesis-fork-version $FORK_VERSION \
+#    $MOCK_VALIDATOR_COUNT
+#  #
+#  echo "Created genesis state in $TESTNET_DIR"
+
 
   echo "Generating $VALIDATOR_COUNT genesis validators concurrently... (this may take a while)"
   if [ ! -d "$LOCAL_WALLETS_DIR" ]; then
@@ -195,13 +250,13 @@ if [ $ETH2_RESET ]; then
     R=$(curl -s -L -X POST http://localhost:8545 \
       --data "{\"jsonrpc\":\"2.0\",\"method\":\"eth_sendTransaction\",\"params\":[{
       \"from\": \"$ADMIN\",
-      \"to\": \"$ADDR\",
+      \"to\": \"$DEPOSIT\",
       \"gas\": \"0x1ac778\",
       \"gasPrice\": \"0x9184e72a000\",
       \"value\": \"0x1bc16d674ec800000\",
       \"data\": \"$(cat $D/eth1-deposit-data.rlp)\"
       }],\"id\":1}" | jq -r '.result')
-    # R=$(node cmd-deposit.js "$ADDR" "$(cat $D/eth1-deposit-data.rlp)" | jq -r '.hash')
+    # R=$(node cmd-deposit.js "$DEPOSIT" "$(cat $D/eth1-deposit-data.rlp)" | jq -r '.hash')
     echo "Deposit tx send, hash: $R"
     sleep 3
   done
@@ -227,8 +282,8 @@ if [[ $ETH1_ONLY ]]; then
 fi
 
 docker-compose up -d node2-1
-# sleep 3
-# #docker-compose up -d mock-validators
+sleep 3
+#docker-compose up -d mock-validators
 docker-compose up -d validators
 
 if [[ $NODES ]]; then

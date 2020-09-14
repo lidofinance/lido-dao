@@ -27,6 +27,22 @@ services:
     networks:
       eth2:
 
+#  # Aragon application node
+#  aragon:
+#    build:
+#      context: ./docker/aragon/
+#    image: aragon
+#    ports:
+#      - 3000:3000
+#    volumes:
+#      - "./apps:/apps"
+#    environment:
+#      - ARAGON_APP_LOCATOR=ipfs
+#      - ARAGON_DEFAULT_ETH_NODE=ws://node1:8545
+#      - ARAGON_ETH_NETWORK_TYPE=local
+#      - ARAGON_IPFS_GATEWAY=http://ipfs:8080/ipfs
+#      - ARAGON_ENS_REGISTRY_ADDRESS=0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1
+
   node2-1:
     image: sigp/lighthouse@sha256:8abac5f1eaed93180fc3a1ff87a711a3c27316b49a3df3bdaf3c5f3e41f2c27e
     container_name: node2-1
@@ -100,9 +116,30 @@ services:
 #      --eth1-endpoint http://node1:8545
 #      --boot-nodes $(cat $BEACON_DIR/beacon/network/enr.dat)
 
-  validators1:
+#  mock-validators:
+#    image: sigp/lighthouse@sha256:8abac5f1eaed93180fc3a1ff87a711a3c27316b49a3df3bdaf3c5f3e41f2c27e
+#    container_name: mock-validators
+#    depends_on:
+#      - node2-1
+#    networks:
+#      eth2:
+#        ipv4_address: 10.20.30.20
+#    volumes:
+#      - ./data:/data
+#    command: >
+#      lighthouse
+#      --spec "${SPEC}"
+#      --debug-level "${DEBUG_LEVEL}"
+#      vc
+#      --datadir "${MOCK_VALIDATORS_DIR}"
+#      --secrets-dir "${MOCK_SECRETS_DIR}"
+#      --testnet-dir "${TESTNET_DIR}"
+#      --auto-register
+#      --server http://node2-1:5052
+
+  validators:
     image: sigp/lighthouse@sha256:8abac5f1eaed93180fc3a1ff87a711a3c27316b49a3df3bdaf3c5f3e41f2c27e
-    container_name: validators1
+    container_name: validators
     depends_on:
       - node2-1
 #    ports:
