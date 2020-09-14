@@ -51,4 +51,4 @@ fi
 #echo "Starting IPFS..."
 #ipfs daemon --migrate=true &
 echo "Starting Ganache..."
-ganache-cli -h 0.0.0.0 -a 10 -i 15 -l $GAS_LIMIT -e 100000 -m "$MNEMONIC" -b $BLOCK_TIME --db=$DATA_DIR
+ganache-cli -h 0.0.0.0 -a 10 -i 15 -l $GAS_LIMIT -e 100000 -m "$MNEMONIC" -b $BLOCK_TIME --db=$DATA_DIR -q

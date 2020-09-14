@@ -1,6 +1,5 @@
 pragma solidity 0.4.24;
 
-import "@aragon/os/contracts/ens/ENSConstants.sol";
 import "@aragon/templates-shared/contracts/BaseTemplate.sol";
 
 import "@depools/apps-steth/contracts/StETH.sol";
@@ -8,18 +7,26 @@ import "@depools/apps-depooloracle/contracts/DePoolOracle.sol";
 import "@depools/apps-depool/contracts/DePool.sol";
 
 
-contract DePoolTemplate is ENSConstants, BaseTemplate {
-    bytes32 internal constant DEPOOLS_PM_NODE = keccak256(abi.encodePacked(ETH_TLD_NODE,
-        keccak256(abi.encodePacked("depoolspm"))));
+contract DePoolTemplate is BaseTemplate {
+    /* Hardcoded constants to save gas
+     * bytes32 internal constant DEPOOLS_PM_NODE = keccak256(abi.encodePacked(ETH_TLD_NODE, keccak256(abi.encodePacked("depoolspm"))));
+     */
+    bytes32 internal constant DEPOOLS_PM_NODE = 0x974a6fb4d8c9712163277101d2e355f655dd9b93ea96f4021f78c02265c221d7;
+
+    /* Hardcoded constant to save gas
+     * bytes32 internal constant STETH_APP_ID = keccak256(abi.encodePacked(DEPOOLS_PM_NODE, keccak256(abi.encodePacked("steth")))); // steth.depoolspm.eth
+     * bytes32 internal constant DEPOOLORACLE_APP_ID = keccak256(abi.encodePacked(DEPOOLS_PM_NODE, keccak256(abi.encodePacked("depooloracle")))); // depooloracle.depoolspm.eth
+     * bytes32 internal constant DEPOOL_APP_ID = keccak256(abi.encodePacked(DEPOOLS_PM_NODE, keccak256(abi.encodePacked("depool")))); // depool.depoolspm.eth
+     */
+    bytes32 constant internal STETH_APP_ID = 0x5937d846addd00601bf692837c2cd9854dacd2c55911625da04aec9c62a61a26;
+    bytes32 constant internal DEPOOLORACLE_APP_ID = 0xebe89ae11ec5a76827463bd202b0551f137fdc6dad7cd69ecdf4fe553af5f77b;
+    bytes32 constant internal DEPOOL_APP_ID = 0xdf4019658a996b6bc3639baa07d25c655bf826334fc5c81bb83e501905b51cb1;
 
     bool constant private TOKEN_TRANSFERABLE = true;
     uint8 constant private TOKEN_DECIMALS = uint8(18);
     uint256 constant private TOKEN_MAX_PER_ACCOUNT = uint256(0);
 
     uint64 constant private DEFAULT_FINANCE_PERIOD = uint64(30 days);
-
-    bool constant private USE_AGENT_AS_VAULT = true;
-
 
     // Storing temporary vars in storage to avoid hitting the `CompilerError: Stack too deep`
     Kernel private dao;
@@ -54,8 +61,6 @@ contract DePoolTemplate is ENSConstants, BaseTemplate {
         require(_holders.length > 0, "COMPANY_EMPTY_HOLDERS");
         require(_holders.length == _stakes.length, "COMPANY_BAD_HOLDERS_STAKES_LEN");
 
-        _reset();
-
         // setup apps
         token = _createToken(_tokenName, _tokenSymbol, TOKEN_DECIMALS);
         (dao, acl) = _createDAO();
@@ -81,28 +86,26 @@ contract DePoolTemplate is ENSConstants, BaseTemplate {
     )
         internal
     {
-        agentOrVault = USE_AGENT_AS_VAULT ? _installDefaultAgentApp(dao) : _installVaultApp(dao);
+        agentOrVault = _installDefaultAgentApp(dao);
         finance = _installFinanceApp(dao, agentOrVault, DEFAULT_FINANCE_PERIOD);
         tokenManager = _installTokenManagerApp(dao, token, TOKEN_TRANSFERABLE, TOKEN_MAX_PER_ACCOUNT);
         voting = _installVotingApp(dao, token, _votingSettings);
 
         bytes memory initializeData = abi.encodeWithSelector(StETH(0).initialize.selector);
-        steth = StETH(_installNonDefaultApp(dao, _depoolsAppId("steth"), initializeData));
+        steth = StETH(_installNonDefaultApp(dao, STETH_APP_ID, initializeData));
 
         initializeData = abi.encodeWithSelector(DePoolOracle(0).initialize.selector);
-        oracle = DePoolOracle(_installNonDefaultApp(dao, _depoolsAppId("depooloracle"), initializeData));
+        oracle = DePoolOracle(_installNonDefaultApp(dao, DEPOOLORACLE_APP_ID, initializeData));
 
         initializeData = abi.encodeWithSelector(DePool(0).initialize.selector, steth, _ETH2ValidatorRegistrationContract, oracle);
-        depool = DePool(_installNonDefaultApp(dao, _depoolsAppId("depool"), initializeData));
+        depool = DePool(_installNonDefaultApp(dao, DEPOOL_APP_ID, initializeData));
     }
 
     function _setupPermissions(
     )
         internal
     {
-        if (USE_AGENT_AS_VAULT) {
-            _createAgentPermissions(acl, Agent(agentOrVault), voting, voting);
-        }
+        _createAgentPermissions(acl, Agent(agentOrVault), voting, voting);
         _createVaultPermissions(acl, agentOrVault, finance, voting);
         _createFinancePermissions(acl, finance, voting, voting);
         _createFinanceCreatePaymentsPermission(acl, finance, voting, voting);
@@ -128,25 +131,17 @@ contract DePoolTemplate is ENSConstants, BaseTemplate {
         acl.createPermission(voting, depool, depool.SET_ORACLE(), voting);
     }
 
-
-    /// @dev translates short depools app name to appId
-    function _depoolsAppId(string name) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(DEPOOLS_PM_NODE, keccak256(bytes(name))));
-    }
-
-
     /// @dev reset temporary storage
     function _reset() private {
-        // using address(1) to avoid excess cas costs when polluting zero cells
-        dao = Kernel(address(1));
-        acl = ACL(address(1));
-        token = MiniMeToken(address(1));
-        agentOrVault = Vault(address(1));
-        finance = Finance(address(1));
-        tokenManager = TokenManager(address(1));
-        voting = Voting(address(1));
-        steth = StETH(address(1));
-        oracle = DePoolOracle(address(1));
-        depool = DePool(address(1));
+        delete dao;
+        delete acl;
+        delete token;
+        delete agentOrVault;
+        delete finance;
+        delete tokenManager;
+        delete voting;
+        delete steth;
+        delete oracle;
+        delete depool;
     }
 }

@@ -9,5 +9,7 @@ fi
 
 echo "Starting ipfs..."
 export IPFS_PROFILE=server
+/usr/local/bin/start_ipfs bootstrap rm --all
+echo "Addings assets..."
 /usr/local/bin/start_ipfs add -r -Q $CACHE_DIR
 /usr/local/bin/start_ipfs daemon --migrate=true
