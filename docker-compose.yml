@@ -60,7 +60,7 @@ services:
       --spec "${SPEC}"
       --debug-level "${DEBUG_LEVEL}"
       bn
-      --datadir "${BEACON_DIR}"
+      --datadir "${BEACON_DIR}-1"
       --testnet-dir "${TESTNET_DIR}"
       --http
       --http-address 0.0.0.0

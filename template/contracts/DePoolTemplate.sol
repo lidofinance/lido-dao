@@ -41,14 +41,16 @@ contract DePoolTemplate is BaseTemplate {
     DePool private depool;
 
 
-    constructor(DAOFactory _daoFactory, ENS _ens, MiniMeTokenFactory _miniMeFactory)
-        BaseTemplate(_daoFactory, _ens, _miniMeFactory, IFIFSResolvingRegistrar(0))
+    constructor(DAOFactory _daoFactory, ENS _ens, MiniMeTokenFactory _miniMeFactory, IFIFSResolvingRegistrar _aragonID)
+        BaseTemplate(_daoFactory, _ens, _miniMeFactory, _aragonID)
         public
     {
+        _ensureAragonIdIsValid(_aragonID);
         _ensureMiniMeFactoryIsValid(_miniMeFactory);
     }
 
     function newDAO(
+        string _id,
         string _tokenName,
         string _tokenSymbol,
         address[] _holders,
@@ -58,6 +60,7 @@ contract DePoolTemplate is BaseTemplate {
     )
         external
     {
+        _validateId(_id);
         require(_holders.length > 0, "COMPANY_EMPTY_HOLDERS");
         require(_holders.length == _stakes.length, "COMPANY_BAD_HOLDERS_STAKES_LEN");
 
@@ -76,6 +79,7 @@ contract DePoolTemplate is BaseTemplate {
         _setupPermissions();
 
         _transferRootPermissionsFromTemplateAndFinalizeDAO(dao, voting);
+        _registerID(_id, dao);
 
         _reset();   // revert the cells back to get a refund
     }

@@ -44,7 +44,12 @@
   "description": "",
   "devDependencies": {
     "@aragon/test-helpers": "^2.1.0",
-    "@aragon/truffle-config-v4": "^1.0.1",
+    "@aragon/apps-finance": "^3.0.0",
+    "@aragon/apps-voting": "^2.1.0",
+    "@aragon/apps-token-manager": "^2.1.0",
+    "@aragon/contract-helpers-test": "^0.1.0",
+    "@aragon/templates-shared": "^1.0.1",
+    "@aragon/toolkit": "0.0.7",
     "eth-gas-reporter": "^0.2.17",
     "eth-ens-namehash": "^2.0.8",
     "ethereumjs-testrpc-sc": "^6.5.1-sc.1",
@@ -53,9 +58,47 @@
     "solidity-coverage": "^0.7.10",
     "solium": "^1.2.5",
     "truffle": "^5.1.43",
-    "truffle-extract": "^1.2.1"
+    "truffle-extract": "^1.2.1",
+    "@babel/preset-env": "^7.11.5",
+    "@babel/register": "^7.11.5",
+    "@openzeppelin/test-helpers": "^0.5.6",
+    "ava": "^3.12.1",
+    "babel-plugin-istanbul": "^6.0.0",
+    "dotenv": "^8.2.0"
+
   },
   "dependencies": {
     "@aragon/os": "^4.4.0"
+  },
+  "ava": {
+    "require": [
+      "@babel/register"
+    ],
+    "files": [
+      "test/**/*.test.js"
+    ],
+    "concurrency": 5
+  },
+  "babel": {
+    "presets": [
+      [
+        "@babel/preset-env",
+        {
+          "useBuiltIns": "usage",
+          "corejs": "3",
+          "targets": {
+            "node": true
+          }
+        }
+      ]
+    ],
+    "env": {
+      "test": {
+        "plugins": [
+          "istanbul"
+        ]
+      }
+    }
   }
+
 }

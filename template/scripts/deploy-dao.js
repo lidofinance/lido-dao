@@ -29,6 +29,9 @@ const errorOut = message => {
   throw new Error(message)
 }
 
+const ZERO_ADDR = '0x0000000000000000000000000000000000000000'
+
+const dePoolDaoName = 'depool-dao'
 const dePoolTemplateName = 'depool-template'
 const dePoolTld = `depoolspm.eth`
 
@@ -38,13 +41,20 @@ const THIRTY_DAYS = ONE_DAY * 30
 
 const defaultOwner = process.env.OWNER
 const defaultENSAddress = process.env.ENS || '0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1'
+const defaultApmRegistryAddress = process.env.APM || '0x1902a0410EFe699487Dd85F12321aD672bE4ada2' //depoolspm
 const defaultDepositContractAddress = process.env.DEPOSIT_CONTRACT || '0x5f4e510503d83bd1a5436bdae2923489da0be454'
+
+const _getRegistered = async(ens, hash) => {
+  const owner = await ens.owner(hash)
+  return owner !== ZERO_ADDR && owner !== '0x' ? owner : false
+}
 
 module.exports = async (truffleExecCallback, {
   artifacts = globalArtifacts,
   web3 = globalWeb3,
   ensAddress = defaultENSAddress,
   owner = defaultOwner,
+  apmRegistryAddress = defaultApmRegistryAddress,
   depositContractAddress = defaultDepositContractAddress,
   verbose = true,
 } = {}) => {
@@ -57,6 +67,7 @@ module.exports = async (truffleExecCallback, {
   if (!web3) errorOut('Missing "web3" object. This script must be run with a "web3" object globally defined, for example through "truffle exec".')
   if (!artifacts) errorOut('Missing "artifacts" object. This script must be run with an "artifacts" object globally defined, for example through "truffle exec".')
   if (!ensAddress) errorOut('Missing ENS address. Please specify one using ENS env var')
+  if (!apmRegistryAddress) errorOut('Missing APM Registry address. Please specify one using APM env var')
   if (!depositContractAddress) errorOut('Missing Deposit Contract address. Please specify one using DAO_FACTORY env var')
 
   const [_owner, holder1, holder2, holder3, holder4, holder5] = await getAccounts(web3)
@@ -67,15 +78,20 @@ module.exports = async (truffleExecCallback, {
   log('Owner:', owner)
 
   try {
+    // const APMRegistry = artifacts.require('APMRegistry')
     const Repo = artifacts.require('Repo')
     const PublicResolver = artifacts.require('PublicResolver')
     const ENS = artifacts.require('ENS')
     const DePoolTemplate = artifacts.require('DePoolTemplate')
 
     const ens = await ENS.at(ensAddress)
-    log(`Using provided ENS: ${ensAddress}`)
+    log(`Using provided ENS: ${ens.address}`)
 
     log('=========')
+    if ((await _getRegistered(ens, namehash(`${dePoolDaoName}.${dePoolTld}`) ))) {
+      errorOut("DAO already registered")
+    }
+
 
     const tmplNameHash = namehash(`${dePoolTemplateName}.${dePoolTld}`)
     const resolverAddress = await ens.resolver(tmplNameHash)
@@ -105,9 +121,15 @@ module.exports = async (truffleExecCallback, {
     // log(estimatedGas)
 
     console.log('Deploying DePool DAO ...')
-    const receipt = await template.newDAO(TOKEN_NAME, TOKEN_SYMBOL, HOLDERS, STAKES, VOTING_SETTINGS, depositContractAddress, { from: owner })
+    let receipt = await template.newDAO(dePoolDaoName, TOKEN_NAME, TOKEN_SYMBOL, HOLDERS, STAKES, VOTING_SETTINGS, depositContractAddress, { from: owner })
+
     const tokenEvent = receipt.logs.find(l => l.event === 'DeployToken')
     const daoEvent = receipt.logs.find(l => l.event === 'DeployDao')
+
+    // log(`Registering DAO as "${dePoolDaoName}.${dePoolTld}"`)
+    // TODO ?
+    // receipt = await apm.newRepoWithVersion(dePoolDaoName, owner, [1, 0, 0], daoEvent.args.dao, '0x0', { from: owner })
+    // log(receipt)
 
     log('# DAO:')
     log('Address:', daoEvent.args.dao)

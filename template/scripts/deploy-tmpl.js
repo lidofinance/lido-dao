@@ -20,6 +20,7 @@ const defaultDaoFactoryAddress = process.env.DAO_FACTORY || '0x5d94e3e7aec542ab0
 const defaultENSAddress = process.env.ENS || '0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1'
 const defaultMiniMeFactoryAddress = process.env.MENIME_FACTORY || '0xd526b7aba39cccf76422835e7fd5327b98ad73c9'
 const defaultApmRegistryAddress = process.env.APM || '0x1902a0410EFe699487Dd85F12321aD672bE4ada2' //depoolspm
+const defaultAragonIdAddress = process.env.ARAGON_ID || ''
 
 const apps = [
   { name: 'steth', contractName: 'StETH' },
@@ -27,9 +28,9 @@ const apps = [
   { name: 'depooloracle', contractName: 'DePoolOracle' },
 ]
 
-const _isPackageRegistered = async (ens, name, tld) => {
-  const owner = await ens.owner(namehash(`${name}.${tld}`))
-  return owner !== ZERO_ADDR && owner !== '0x'
+const _getRegistered = async(ens, hash) => {
+  const owner = await ens.owner(hash)
+  return owner !== ZERO_ADDR && owner !== '0x' ? owner : false
 }
 
 module.exports = async (truffleExecCallback, {
@@ -40,6 +41,7 @@ module.exports = async (truffleExecCallback, {
   daoFactoryAddress = defaultDaoFactoryAddress,
   miniMeFactoryAddress = defaultMiniMeFactoryAddress,
   apmRegistryAddress = defaultApmRegistryAddress,
+  aragonIdAddress = defaultAragonIdAddress,
   verbose = true,
 } = {}) => {
   const log = (...args) => {
@@ -64,9 +66,8 @@ module.exports = async (truffleExecCallback, {
 
   try {
     const APMRegistry = artifacts.require('APMRegistry')
-    // const DAOFactory = artifacts.require('DAOFactory')
-    // const MiniMeTokenFactory = artifacts.require('MiniMeTokenFactory')
     const ENS = artifacts.require('ENS')
+    const FIFSResolvingRegistrar = artifacts.require('FIFSResolvingRegistrar')
     const DePoolTemplate = artifacts.require('DePoolTemplate')
 
     const ens = await ENS.at(ensAddress)
@@ -74,6 +75,20 @@ module.exports = async (truffleExecCallback, {
 
     const apm = await APMRegistry.at(apmRegistryAddress)
     log(`Using provided APM Registry: ${apm.address}`)
+
+    let aragonID
+    if (!aragonIdAddress) {
+      aragonIdAddress = await _getRegistered(ens, namehash('aragonid.eth'))
+      if (aragonIdAddress) {
+        // aragonID = await FIFSResolvingRegistrar.at(aragonIdAddress)
+        log(`Using aragonID registered at aragonid.eth: ${aragonIdAddress}`)
+      } else {
+        errorOut('Aragon ID address not found. Please specify one using ARAGON_ID env var')
+      }
+    } else {
+      // aragonID = await FIFSResolvingRegistrar.at(aragonIdAddress)
+      log(`Using provided aragonID: ${aragonIdAddress}`)
+    }
 
     // const daoFactory = await DAOFactory.at(daoFactoryAddress)
     // const hasEVMScripts = (await daoFactory.regFactory()) !== ZERO_ADDR
@@ -90,18 +105,18 @@ module.exports = async (truffleExecCallback, {
     log('Check Apps...')
 
     for (const { name, contractName } of apps) {
-      if (await _isPackageRegistered(ens, name, dePoolTld)) {
+      if (await _getRegistered(ens, namehash(`${name}.${dePoolTld}`))) {
         log(`Using registered ${contractName} app`)
       } else {
         errorOut(`No ${contractName} app registered`)
       }
     }
-    if ((await _isPackageRegistered(ens, dePoolTemplateName, dePoolTld))) {
+    if ((await _getRegistered(ens, namehash(`${dePoolTemplateName}.${dePoolTld}`)))) {
       errorOut("Template already registered")
     }
 
     log(`Deploying template: ${dePoolTemplateName}`)
-    const template = await DePoolTemplate.new(daoFactoryAddress, ensAddress, miniMeFactoryAddress, { gas: 6000000})
+    const template = await DePoolTemplate.new(daoFactoryAddress, ensAddress, miniMeFactoryAddress, aragonIdAddress, { gas: 6000000})
     await logDeploy(template)
 
     log(`Deployed DePoolTemplate: ${template.address}`)
