@@ -21,8 +21,8 @@ RUN mv $ARAGEN_PKG aragen.tgz
 #RUN ipfs add -r -Q /ipfs-cache
 
 #depositcontract
-RUN apt-get update && apt-get -y install jq && apt-get clean
-RUN wget -q https://raw.githubusercontent.com/ethereum/eth2.0-specs/dev/solidity_deposit_contract/deposit_contract.json
+#RUN apt-get update && apt-get -y install jq && apt-get clean
+#RUN wget -q https://raw.githubusercontent.com/ethereum/eth2.0-specs/dev/solidity_deposit_contract/deposit_contract.json
 
 COPY ./entrypoint.sh .
 ENTRYPOINT ["./entrypoint.sh"]
