@@ -63,7 +63,7 @@ if [[ $RESET ]]; then
   mkdir -p $LOCAL_DATA_DIR
   if [[ $SNAPSHOT ]]; then
     echo "Unzip ganache snapshot"
-    unzip -o -q -d $LOCAL_DATA_DIR ./devchain-dao-deposit.zip
+    unzip -o -q -d $LOCAL_DATA_DIR ./devchain.zip
   fi
   ETH2_RESET=true
   DAO_DEPLOY=true
@@ -84,6 +84,10 @@ echo " "
 echo "Starting eth1 node"
 docker-compose up -d node1
 echo -n "Waiting for eth1 rpc"
+while ! curl --output /dev/null -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'; do
+  sleep 2 && echo -n .
+done
+sleep 3
 R="0x"
 while [[ "$R" != "0x60" ]];
 do
