@@ -17,7 +17,7 @@ import "./BitOps.sol";
   * by the DAO on the ETH 2.0 side. The balances can go up because of reward accumulation
   * and can go down because of slashing.
   *
-  * The timeline is divided into consecutive epochs. At most one data point is produced per epoch.
+  * The timeline is divided into consecutive reportIntervals. At most one data point is produced per reportInterval.
   * A data point is considered finalized (produced) as soon as `quorum` oracle committee members
   * send data.
   * There can be gaps in data points if for some point `quorum` is not reached.
@@ -36,7 +36,7 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
     /// @dev Maximum number of oracle committee members
     uint256 public constant MAX_MEMBERS = 256;
 
-    uint256 internal constant EPOCH_DURATION = 1 days;
+    uint256 internal constant REPORT_INTERVAL_DURATION = 1 days;
     uint256 internal constant MEMBER_NOT_FOUND = uint256(-1);
 
     /// @dev oracle committee members
@@ -48,11 +48,11 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
     IDePool public pool;
 
     // data describing last finalized data point
-    uint256 private lastFinalizedEpoch;
+    uint256 private lastFinalizedReportInterval;
     uint256 private lastFinalizedData;
 
     // data of the current aggregation
-    uint256 private currentlyAggregatedEpoch;
+    uint256 private currentlyAggregatedReportInterval;
     uint256 private contributionBitMask;
     uint256[] private currentlyAggregatedData;  // only indexes set in contributionBitMask are valid
 
@@ -127,7 +127,7 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
         quorum = _quorum;
         emit QuorumChanged(_quorum);
 
-        if (currentlyAggregatedEpoch == _getCurrentEpoch())
+        if (currentlyAggregatedReportInterval == _getCurrentReportInterval())
             _tryFinalize();
 
         _assertInvariants();
@@ -136,21 +136,21 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
 
     /**
       * @notice An oracle committee member pushes data from the ETH 2.0 side
-      * @param _epoch Epoch id
+      * @param _reportInterval ReportInterval id
       * @param _eth2balance Balance in wei on the ETH 2.0 side
       */
-    function pushData(uint256 _epoch, uint256 _eth2balance) external {
-        require(_epoch == _getCurrentEpoch(), "EPOCH_IS_NOT_CURRENT");
-        assert(lastFinalizedEpoch <= _epoch);
-        require(lastFinalizedEpoch != _epoch, "ALREADY_FINALIZED");
+    function pushData(uint256 _reportInterval, uint256 _eth2balance) external {
+        require(_reportInterval == _getCurrentReportInterval(), "REPORT_INTERVAL_IS_NOT_CURRENT");
+        assert(lastFinalizedReportInterval <= _reportInterval);
+        require(lastFinalizedReportInterval != _reportInterval, "ALREADY_FINALIZED");
 
         address member = msg.sender;
         uint256 index = _findMember(member);
         require(index != MEMBER_NOT_FOUND, "MEMBER_NOT_FOUND");
 
-        if (currentlyAggregatedEpoch != _epoch) {
-            // reset aggregation on new epoch
-            currentlyAggregatedEpoch = _epoch;
+        if (currentlyAggregatedReportInterval != _reportInterval) {
+            // reset aggregation on new reportInterval
+            currentlyAggregatedReportInterval = _reportInterval;
             contributionBitMask = 0;
             // We don't need to waste gas resetting currentlyAggregatedData since
             // we cleared the index - contributionBitMask.
@@ -184,38 +184,38 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
 
 
     /**
-      * @notice Returns epoch duration in seconds
-      * @dev Epochs are consecutive time intervals. Oracle data is aggregated
-      *      and processed for each epoch independently.
+      * @notice Returns reportInterval duration in seconds
+      * @dev ReportIntervals are consecutive time intervals. Oracle data is aggregated
+      *      and processed for each reportInterval independently.
       */
-    function getEpochDurationSeconds() external view returns (uint256) {
-        return EPOCH_DURATION;
+    function getReportIntervalDurationSeconds() external view returns (uint256) {
+        return REPORT_INTERVAL_DURATION;
     }
 
     /**
-      * @notice Returns epoch id for a timestamp
+      * @notice Returns reportInterval id for a timestamp
       * @param _timestamp Unix timestamp, seconds
       */
-    function getEpochForTimestamp(uint256 _timestamp) external view returns (uint256) {
-        return _getEpochForTimestamp(_timestamp);
+    function getReportIntervalForTimestamp(uint256 _timestamp) external view returns (uint256) {
+        return _getReportIntervalForTimestamp(_timestamp);
     }
 
     /**
-      * @notice Returns current epoch id
+      * @notice Returns current reportInterval id
       */
-    function getCurrentEpoch() external view returns (uint256) {
-        return _getCurrentEpoch();
+    function getCurrentReportInterval() external view returns (uint256) {
+        return _getCurrentReportInterval();
     }
 
 
     /**
       * @notice Returns the latest data from the ETH 2.0 side
-      * @dev Depending on the oracle member committee liveness, the data can be stale. See _epoch.
-      * @return _epoch Epoch id
+      * @dev Depending on the oracle member committee liveness, the data can be stale. See _reportInterval.
+      * @return _reportInterval ReportInterval id
       * @return _eth2balance Balance in wei on the ETH 2.0 side
       */
-    function getLatestData() external view returns (uint256 epoch, uint256 eth2balance) {
-        return (lastFinalizedEpoch, lastFinalizedData);
+    function getLatestData() external view returns (uint256 reportInterval, uint256 eth2balance) {
+        return (lastFinalizedReportInterval, lastFinalizedData);
     }
 
 
@@ -244,12 +244,12 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
 
         // computing a median on data
         lastFinalizedData = Algorithm.modifyingMedian(data);
-        lastFinalizedEpoch = _getCurrentEpoch();
+        lastFinalizedReportInterval = _getCurrentReportInterval();
 
-        emit AggregatedData(lastFinalizedEpoch, lastFinalizedData);
+        emit AggregatedData(lastFinalizedReportInterval, lastFinalizedData);
 
         if (address(0) != address(pool))
-            pool.reportEther2(lastFinalizedEpoch, lastFinalizedData);
+            pool.reportEther2(lastFinalizedReportInterval, lastFinalizedData);
     }
 
     /**
@@ -283,17 +283,17 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
     }
 
     /**
-      * @dev Returns current epoch id
+      * @dev Returns current reportInterval id
       */
-    function _getCurrentEpoch() internal view returns (uint256) {
-        return _getEpochForTimestamp(_getTime());
+    function _getCurrentReportInterval() internal view returns (uint256) {
+        return _getReportIntervalForTimestamp(_getTime());
     }
 
     /**
-      * @dev Returns epoch id for a timestamp
+      * @dev Returns reportInterval id for a timestamp
       * @param _timestamp Unix timestamp, seconds
       */
-    function _getEpochForTimestamp(uint256 _timestamp) internal pure returns (uint256) {
-        return _timestamp.div(EPOCH_DURATION);
+    function _getReportIntervalForTimestamp(uint256 _timestamp) internal pure returns (uint256) {
+        return _timestamp.div(REPORT_INTERVAL_DURATION);
     }
 }
