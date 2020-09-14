@@ -2,7 +2,7 @@
 
 ### eth1 localnet contract addresses
 After clean start:
-  - Deposit contract: `0x1902a0410EFe699487Dd85F12321aD672bE4ada2` deployed at block `70`
+  - Deposit contract: `0x5f4e510503d83bd1a5436bdae2923489da0be454` deployed at block `70`
   - ENS: `0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1`
   - DAO_FACTORY: `0x5d94e3e7aec542ab0f9129b9a7badeb5b3ca0f77`
   - MINIME_FACTORY: `0xd526b7aba39cccf76422835e7fd5327b98ad73c9`
@@ -10,13 +10,14 @@ After clean start:
   - Company DAO: `0x87C62dD8FC7eb0302b121BC6e421A88231955Dcb`
   - Share token: `0xf2804D07A941F77F34EEEb252D172E4268d0e9D4`
   - Aragon APM: `aragonpm.eth` -> ``
-  - Depool APM: `depoolspm.eth` -> `0x1902a0410EFe699487Dd85F12321aD672bE4ada2`
+  - DePool APM: `depoolspm.eth` -> `0x1902a0410EFe699487Dd85F12321aD672bE4ada2`
   
   app implementations:
   - DePool: `depool.depoolspm.eth` -> `0xfe18BCBeDD6f46e0DfbB3Aea02090F23ED1c4a28` [ipfs](http://localhost:8080/ipfs/QmYK2uMUzVR86A7Cxfz2yimz7bRXUGKrQRDuUkx66mh4Hm)
   - DePool Oracle: `depooloracle.depoolspm.eth` -> `0x2e25c8F88c5cCcbC9400e5bc86cF9C58C7604327` [ipfs](http://localhost:8080/ipfs/QmbCTi3DY8vR17V11QgxuUzxApFnJgu4cUYLYcbphZUxiT)
   - StETH token: `steth.depoolspm.eth` -> `0x019F12a7DAa44A34CD0FF35055b0e2D4679D8521` [ipfs](http://localhost:8080/ipfs/QmV26JoDLiHjV5RRoQHCKzXYuwzgBgD5nishY2b3q3eh6a)
-  - DePool DAO Template: `depool-template.depoolspm.eth` -> ``
+  - DePool DAO Template: `depool-template.depoolspm.eth` -> `0xD13a7D8A728692eB2c56135B5EB5A1951b3F8395`
+  - DePool DAO: `0xD20F21CEb31a8E302603dC3ff994f00aa9312A66`
 
  > Depool APM: ens.addr('depoolspm.eth')
  > Depool apps: As APM repos, e.g. apm.getLatest('depool.depoolspm.eth')

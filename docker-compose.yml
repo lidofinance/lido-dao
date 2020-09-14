@@ -11,7 +11,7 @@ services:
     networks:
       eth2:
     environment:
-      - BLOCK_TIME=0
+      - BLOCK_TIME=2
       - GAS_LIMIT=12000000
 
   ipfs:

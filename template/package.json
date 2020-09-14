@@ -1,0 +1,34 @@
+{
+  "name": "@depools/dao-template",
+  "version": "0.0.1",
+  "scripts": {
+    "compile": "truffle compile",
+    "test": "TRUFFLE_TEST=true npm run ganache-cli:test",
+    "test:gas": "GAS_REPORTER=true npm test",
+    "truffle:dev": "truffle dev",
+    "deploy:apm:dev": "npm run compile && ENS=0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1 DAO_FACTORY=0x5d94e3e7aec542ab0f9129b9a7badeb5b3ca0f77 truffle exec ./scripts/deploy-apm.js --network development",
+    "deploy:tmpl:dev": "npm run compile && ENS=0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1 DAO_FACTORY=0x5d94e3e7aec542ab0f9129b9a7badeb5b3ca0f77 MINIME_FACTORY=0xd526b7aba39cccf76422835e7fd5327b98ad73c9 APM=0x1902a0410EFe699487Dd85F12321aD672bE4ada2 truffle exec ./scripts/deploy-tmpl.js --network development",
+    "deploy:dao:dev": "npm run compile && ENS=0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1 DEPOSIT_CONTRACT=0x5f4e510503d83bd1a5436bdae2923489da0be454 truffle exec ./scripts/deploy-dao.js --network development",
+
+    "ganache-cli:test": "./node_modules/@aragon/test-helpers/ganache-cli.sh"
+  },
+  "author": "MixBytes <hello@mixbytes.io>",
+  "description": "",
+  "devDependencies": {
+    "@aragon/test-helpers": "^2.1.0",
+    "eth-gas-reporter": "^0.2.17",
+    "ethereumjs-testrpc-sc": "^6.5.1-sc.1",
+    "solidity-bytes-utils": "0.0.6",
+    "truffle": "^5.1.43",
+    "truffle-extract": "^1.2.1"
+  },
+  "dependencies": {
+    "@aragon/os": "^4.4.0",
+    "@aragon/templates-shared": "^1.0.1",
+    "@depools/apps-depool": "^0.0.1",
+    "@depools/apps-depooloracle": "^0.0.1",
+    "@depools/apps-steth": "^0.0.1",
+    "@depools/dao": "^0.0.1",
+    "@depools/depool-lib": "^0.0.1"
+  }
+}

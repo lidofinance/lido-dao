@@ -11,6 +11,7 @@ import "@aragon/os/contracts/ens/ENSSubdomainRegistrar.sol";
 import "@aragon/os/contracts/lib/ens/ENS.sol";
 import "@aragon/os/contracts/lib/ens/AbstractENS.sol";
 import "@aragon/os/contracts/lib/ens/PublicResolver.sol";
+import "@aragon/id/contracts/FIFSResolvingRegistrar.sol";
 
 contract Imports {
     // solium-disable-previous-line no-empty-blocks
