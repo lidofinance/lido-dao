@@ -107,10 +107,10 @@ interface IDePool {
       * @notice Adds eth to the pool
       * @return StETH Amount of StETH generated
       */
-    function submit() external payable returns (uint256 StETH);
+    function submit(address _referral) external payable returns (uint256 StETH);
 
     // Records a deposit made by a user
-    event Submitted(address indexed sender, uint256 amount);
+    event Submitted(address indexed sender, uint256 amount, address referral);
 
     // The `_amount` of ether was sent to the validator_registration.deposit function.
     event Unbuffered(uint256 amount);
