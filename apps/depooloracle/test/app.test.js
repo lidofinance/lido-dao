@@ -9,9 +9,9 @@ const DePoolOracle = artifacts.require('TestDePoolOracle.sol');
 contract('DePoolOracle', ([appManager, voting, user1, user2, user3, user4, nobody]) => {
   let appBase, app;
 
-  const assertData = async (epoch, eth) => {
+  const assertData = async (reportInterval, eth) => {
     const r = await app.getLatestData();
-    assertBn(r.epoch, epoch);
+    assertBn(r.reportInterval, reportInterval);
     assertBn(r.eth2balance, eth);
   }
 
@@ -97,22 +97,22 @@ contract('DePoolOracle', ([appManager, voting, user1, user2, user3, user4, nobod
     assert.deepStrictEqual(await app.getOracleMembers(), [user3, user2]);
   });
 
-  it('getEpochDurationSeconds works', async () => {
-    assertBn(await app.getEpochDurationSeconds(), 86400);
+  it('getReportIntervalDurationSeconds works', async () => {
+    assertBn(await app.getReportIntervalDurationSeconds(), 86400);
   });
 
-  it('getEpochForTimestamp works', async () => {
-    assertBn(await app.getEpochForTimestamp(1597849493), 18493);
-    assertBn(await app.getEpochForTimestamp(86400000), 1000);
-    assertBn(await app.getEpochForTimestamp(86400000-1), 1000-1);
-    assertBn(await app.getEpochForTimestamp(86400001), 1000);
+  it('getReportIntervalForTimestamp works', async () => {
+    assertBn(await app.getReportIntervalForTimestamp(1597849493), 18493);
+    assertBn(await app.getReportIntervalForTimestamp(86400000), 1000);
+    assertBn(await app.getReportIntervalForTimestamp(86400000-1), 1000-1);
+    assertBn(await app.getReportIntervalForTimestamp(86400001), 1000);
   });
 
-  it('getCurrentEpoch works', async () => {
-    await app.setTime(1597849493); assertBn(await app.getCurrentEpoch(), 18493);
-    await app.setTime(86400000); assertBn(await app.getCurrentEpoch(), 1000);
-    await app.setTime(86400000-1); assertBn(await app.getCurrentEpoch(), 1000-1);
-    await app.setTime(86400001); assertBn(await app.getCurrentEpoch(), 1000);
+  it('getCurrentReportInterval works', async () => {
+    await app.setTime(1597849493); assertBn(await app.getCurrentReportInterval(), 18493);
+    await app.setTime(86400000); assertBn(await app.getCurrentReportInterval(), 1000);
+    await app.setTime(86400000-1); assertBn(await app.getCurrentReportInterval(), 1000-1);
+    await app.setTime(86400001); assertBn(await app.getCurrentReportInterval(), 1000);
   });
 
   it('single oracle works', async () => {
@@ -122,7 +122,7 @@ contract('DePoolOracle', ([appManager, voting, user1, user2, user3, user4, nobod
     await assertData(0, 0);
 
     await assertRevert(app.pushData(1000, 100, {from: user2}), 'MEMBER_NOT_FOUND');
-    await assertRevert(app.pushData(900, 100, {from: user1}), 'EPOCH_IS_NOT_CURRENT');
+    await assertRevert(app.pushData(900, 100, {from: user1}), 'REPORT_INTERVAL_IS_NOT_CURRENT');
 
     await app.pushData(1000, 100, {from: user1});
     await assertData(1000, 100);
@@ -132,7 +132,7 @@ contract('DePoolOracle', ([appManager, voting, user1, user2, user3, user4, nobod
     await assertData(1001, 101);
 
     await app.setTime(86400000 + 86400*4);
-    await assertRevert(app.pushData(1005, 105, {from: user1}), 'EPOCH_IS_NOT_CURRENT');
+    await assertRevert(app.pushData(1005, 105, {from: user1}), 'REPORT_INTERVAL_IS_NOT_CURRENT');
     await app.pushData(1004, 104, {from: user1});
     await assertData(1004, 104);
 
@@ -150,10 +150,10 @@ contract('DePoolOracle', ([appManager, voting, user1, user2, user3, user4, nobod
     await assertData(0, 0);
 
     await assertRevert(app.pushData(1000, 100, {from: nobody}), 'MEMBER_NOT_FOUND');
-    await assertRevert(app.pushData(900, 100, {from: user1}), 'EPOCH_IS_NOT_CURRENT');
-    await assertRevert(app.pushData(10900, 100, {from: user1}), 'EPOCH_IS_NOT_CURRENT');
+    await assertRevert(app.pushData(900, 100, {from: user1}), 'REPORT_INTERVAL_IS_NOT_CURRENT');
+    await assertRevert(app.pushData(10900, 100, {from: user1}), 'REPORT_INTERVAL_IS_NOT_CURRENT');
 
-    // epoch 1000, quorum 2
+    // reportInterval 1000, quorum 2
     await app.pushData(1000, 100, {from: user1});
     await assertRevert(app.pushData(1000, 101, {from: user1}), 'ALREADY_SUBMITTED');
     await assertData(0, 0);
@@ -161,39 +161,39 @@ contract('DePoolOracle', ([appManager, voting, user1, user2, user3, user4, nobod
     await assertData(1000, 105);
     await assertRevert(app.pushData(1000, 100, {from: user2}), 'ALREADY_FINALIZED');
 
-    // epoch 1001, quorum 2
+    // reportInterval 1001, quorum 2
     await app.setTime(86400000 + 86400);
     await app.pushData(1001, 110, {from: user1});
     await assertData(1000, 105);
     await app.pushData(1001, 120, {from: user3});
     await assertData(1001, 115);
 
-    // epoch 1004, quorum 3
+    // reportInterval 1004, quorum 3
     await app.setQuorum(3, {from: voting});
     await app.setTime(86400000 + 86400*4);
-    await assertRevert(app.pushData(1005, 105, {from: user1}), 'EPOCH_IS_NOT_CURRENT');
+    await assertRevert(app.pushData(1005, 105, {from: user1}), 'REPORT_INTERVAL_IS_NOT_CURRENT');
     await app.pushData(1004, 120, {from: user1});
     await app.pushData(1004, 110, {from: user2});
     await app.pushData(1004, 100, {from: user3});
     await assertData(1004, 110);
   });
 
-  it('epoch can be unfinished', async () => {
+  it('reportInterval can be unfinished', async () => {
     await app.setTime(86400000);
     await app.addOracleMember(user1, {from: voting});
     await app.addOracleMember(user2, {from: voting});
     await app.addOracleMember(user3, {from: voting});
     await app.setQuorum(2, {from: voting});
 
-    // epoch 1000
+    // reportInterval 1000
     await app.pushData(1000, 100, {from: user1});
     await assertData(0, 0);
 
-    // epoch 1001
+    // reportInterval 1001
     await app.setTime(86400000 + 86400);
     await app.pushData(1001, 110, {from: user2});
     await assertData(0, 0);
-    await assertRevert(app.pushData(1000, 100, {from: user3}), 'EPOCH_IS_NOT_CURRENT');
+    await assertRevert(app.pushData(1000, 100, {from: user3}), 'REPORT_INTERVAL_IS_NOT_CURRENT');
     await app.pushData(1001, 120, {from: user3});
     await assertData(1001, 115);
   });
@@ -206,11 +206,11 @@ contract('DePoolOracle', ([appManager, voting, user1, user2, user3, user4, nobod
     await app.addOracleMember(user4, {from: voting});
     await app.setQuorum(2, {from: voting});
 
-    // epoch 1000
+    // reportInterval 1000
     await app.pushData(1000, 100, {from: user1});
     await app.pushData(1000, 110, {from: user3});
 
-    // epoch 1001
+    // reportInterval 1001
     await app.setQuorum(3, {from: voting});
     await app.setTime(86400000 + 86400);
     await app.pushData(1001, 140, {from: user4});
@@ -230,11 +230,11 @@ contract('DePoolOracle', ([appManager, voting, user1, user2, user3, user4, nobod
     await app.addOracleMember(user4, {from: voting});
     await app.setQuorum(2, {from: voting});
 
-    // epoch 1000
+    // reportInterval 1000
     await app.pushData(1000, 100, {from: user1});
     await app.pushData(1000, 110, {from: user3});
 
-    // epoch 1001
+    // reportInterval 1001
     await app.setQuorum(3, {from: voting});
     await app.setTime(86400000 + 86400);
     await app.pushData(1001, 110, {from: user1});
@@ -256,11 +256,11 @@ contract('DePoolOracle', ([appManager, voting, user1, user2, user3, user4, nobod
     await app.addOracleMember(user4, {from: voting});
     await app.setQuorum(2, {from: voting});
 
-    // epoch 1000
+    // reportInterval 1000
     await app.pushData(1000, 100, {from: user1});
     await app.pushData(1000, 110, {from: user3});
 
-    // epoch 1001
+    // reportInterval 1001
     await app.setQuorum(3, {from: voting});
     await app.setTime(86400000 + 86400);
     await app.pushData(1001, 110, {from: user4});
@@ -282,13 +282,13 @@ contract('DePoolOracle', ([appManager, voting, user1, user2, user3, user4, nobod
     await app.addOracleMember(user4, {from: voting});
     await app.setQuorum(3, {from: voting});
 
-    // epoch 1000
+    // reportInterval 1000
     await app.pushData(1000, 100, {from: user1});
     await app.pushData(1000, 110, {from: user2});
     await app.pushData(1000, 110, {from: user3});
     await assertData(1000, 110);
 
-    // epoch 1001
+    // reportInterval 1001
     await app.setTime(86400000 + 86400);
     await app.pushData(1001, 110, {from: user4});
     await app.pushData(1001, 120, {from: user2});
