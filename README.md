@@ -22,11 +22,32 @@ otherwise
 npx lerna bootstrap 
 ```
 
+### Starting & stopping e2e environment
+
+Three process have to be online during development: devchain (ganache), ipfs daemon, front-end:
+
+```bash
+./startup.sh
+```
+
+To stop use:
+
+```bash
+./shutdown.sh
+```
 
 ### Build & test all our apps
 
+Unit tests
+
 ```bash
 npm run test
+```
+
+E2E tests
+
+```bash
+npm run test:e2e
 ```
 
 #### Gas meter
@@ -37,7 +58,7 @@ In an app folder:
 npm run test:gas
 ```
 
-### Configuration
+### _(deprecated)_ Configuration
 
 Can be specified in a local file `.dev.env`.
 
@@ -45,21 +66,8 @@ For options see [dev.env.default](dev.env.default).
 
 The configuration is read only during new dao deployment.
 
-### Starting & stopping processes
 
-Three process have to be online during development: devchain (ganache), ipfs daemon, front-end:
-
-```bash
-./bin/start-dev.sh
-```
-
-To stop use:
-
-```bash
-./bin/stop-dev.sh
-```
-
-### New dao creation
+### _(deprecated)_ New dao creation
 
 ```bash
 ./bin/deploy-dev-contracts.sh
@@ -74,7 +82,11 @@ Note: `DAO_ID` must be unique in a blockchain.
 To reset the devchain state, stop the processes and use:
 
 ```bash
-./node_modules/.bin/aragon devchain --reset
+./startup.sh -r
+```
 
-<Ctrl+C>
+To see other startup options:
+
+```bash
+./startup.sh -h
 ```
