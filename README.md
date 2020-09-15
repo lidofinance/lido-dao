@@ -1,4 +1,39 @@
-# DePool DAO smart contracts
+# DePool Ethereum Liquid Staking Protocol
+
+This repository contains the Solidity smart contracts for DePool Ethereum Liquid Staking Protocol. The goal of the project is to provide liquidity for the funds staked on the Beacon chain. Users can deposit their ether to the system and get stETH token in return. stETH is a tokenized version of staked ether.
+
+The protocol governed by DePool DAO. DAO decides on protocols’ key parameters (e.g. fees) and executes protocol upgrades. The DAO members govern the protocols to ensure their efficiency and stability.
+
+Before getting started with this repo, please read DePool Ethereum Liquid Staking Protocol whitepaper (TODO: add relevant link here), describing how it works.
+
+## Contracts
+
+The protocol implemented as a set of smart contracts connected by Aragon. 
+
+<dl>
+  <dt>DePool</dt>
+  <dd>Liquid staking pool implementation. The core contract that is responsible for acceptance ether from user, delegating funds to staking providers, minting liquid tokens and accept tokent for ether. DePool DAO picks validators (staking providers) and sets fee.</dd>
+</dl>
+
+<dl>
+  <dt>DePoolOracle</dt>
+  <dd>The goal of the oracle is to inform other parts of the system about balances controlled by the DAO on the ETH 2.0 side. The balances can go up because of reward accumulation and can go down because of slashing.</dd>
+</dl>
+
+<dl>
+  <dt>StETH</dt>
+  <dd>ERC20 token which represents staked ether. Supports stop/resume, mint/burn mechanics.</dd>
+</dl>
+
+<dl>
+  <dt>CStETH</dt>
+  <dd>ERC20 token which represents staked ether in a compound like way. Supports stop/resume, mint/burn mechanics.</dd>
+</dl>
+
+<dl>
+  <dt>DePoolSwap</dt>
+  <dd>The contract swaps StETH token to CStETH and vice versa.</dd>
+</dl>
 
 ## Development
 
