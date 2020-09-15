@@ -26,9 +26,9 @@ function App() {
 
   return (
     <Main>
-      {isSyncing && <SyncIndicator />}
+      {isSyncing && <SyncIndicator/>}
       <Header
-        primary="Counter"
+        primary="StETH"
         secondary={
           <span
             css={`
@@ -38,11 +38,6 @@ function App() {
             {count}
           </span>
         }
-      />
-      <Tabs
-        items={['Tab 1', 'Tab 2']}
-        selected={pageIndex}
-        onChange={index => requestPath(`/tab/${index + 1}`)}
       />
       <Box
         css={`
@@ -58,13 +53,13 @@ function App() {
         <Buttons>
           <Button
             display="icon"
-            icon={<IconMinus />}
+            icon={<IconMinus/>}
             label="Decrement"
             onClick={() => api.decrement(1).toPromise()}
           />
           <Button
             display="icon"
-            icon={<IconPlus />}
+            icon={<IconPlus/>}
             label="Increment"
             onClick={() => api.increment(1).toPromise()}
             css={`
