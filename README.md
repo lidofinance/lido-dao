@@ -37,6 +37,30 @@ In an app folder:
 npm run test:gas
 ```
 
+#### Generate test coverage report
+
+For all apps, in the repo root:
+
+```bash
+npm run test:all:coverage
+```
+
+In an app folder:
+
+```bash
+npm run test:coverage
+```
+
+Test coverage is reported to `coverage.json` and `coverage/index.html` files located
+inside each app's folder.
+
+Keep in mind that the code uses `assert`s to check invariants that should always be kept
+unless the code is buggy (in contrast to `require` statements which check pre-coditions),
+so full branch coverage will never be reported until
+[solidity-coverage#219] is implemented.
+
+[solidity-coverage#219]: https://github.com/sc-forks/solidity-coverage/issues/269
+
 ### Configuration
 
 Can be specified in a local file `.dev.env`.
