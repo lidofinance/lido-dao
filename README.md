@@ -82,6 +82,12 @@ Note: `DAO_ID` must be unique in a blockchain.
 To reset the devchain state, stop the processes and use:
 
 ```bash
+./shutdown.sh && ./startup.sh
+```
+
+or to clean restart
+
+```bash
 ./startup.sh -r
 ```
 
