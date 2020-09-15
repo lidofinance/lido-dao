@@ -4,8 +4,16 @@
 
 ### Requirements 
 
-* NodeJs 12
+* shell - bash or zsh
+* docker
+* find
+* sed
+* jq
+* curl
+* cut
+* node.js v12
 * (optional) Lerna
+
 
 ### Installing Aragon & other deps
 
