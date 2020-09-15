@@ -86,15 +86,15 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
       * @notice Adds eth to the pool
       */
     function() external payable {
-        _submit();
+        _submit(0);
     }
 
     /**
-      * @notice Adds eth to the pool
+      * @notice Adds eth to the pool with optional _referral parameter
       * @return StETH Amount of StETH generated
       */
-    function submit() external payable returns (uint256 StETH) {
-        return _submit();
+    function submit(address _referral) external payable returns (uint256 StETH) {
+        return _submit(_referral);
     }
 
 
@@ -392,7 +392,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     /**
       * @dev Processes user deposit
       */
-    function _submit() internal whenNotStopped returns (uint256 StETH) {
+    function _submit(address _referral) internal whenNotStopped returns (uint256 StETH) {
         address sender = msg.sender;
         uint256 deposit = msg.value;
         require(deposit != 0, "ZERO_DEPOSIT");
@@ -406,7 +406,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         }
         getToken().mint(sender, StETH);
 
-        _submitted(sender, deposit);
+        _submitted(sender, deposit, _referral);
 
         // Buffer management
         uint256 buffered = _getBufferedEther();
@@ -479,13 +479,13 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
 
 
     /**
-      * @dev Records a deposit made by a user.
+      * @dev Records a deposit made by a user with optional referral
       * @param _value Deposit value in wei
       */
-    function _submitted(address _sender, uint256 _value) internal {
+    function _submitted(address _sender, uint256 _value, address _referral) internal {
         BUFFERED_ETHER_VALUE_POSITION.setStorageUint256(_getBufferedEther().add(_value));
 
-        emit Submitted(_sender, _value);
+        emit Submitted(_sender, _value, _referral);
     }
 
     /**
