@@ -7,6 +7,7 @@
     "build": "cd app && npm run build",
     "lint": "lerna run --scope=@depools/apps-* lint",
     "test": "npm run test:all",
+    "test:e2e": "ava -T 60000 -v",
     "test:all": "lerna run --scope=@depools/apps-* --concurrency=1 --stream test",
     "test:all:gas": "lerna run --scope=@depools/apps-* --concurrency=1 --stream test:gas",
     "coverage": "SOLIDITY_COVERAGE=true npm run ganache-cli:test",
