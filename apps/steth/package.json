@@ -7,6 +7,7 @@
     "lint": "solium --dir ./contracts",
     "test": "buidler test --network buidlerevm",
     "test:gas": "REPORT_GAS=true buidler test --network development",
+    "test:coverage": "buidler coverage --network coverage --solcoverjs ../../.solcover.js",
     "start": "buidler start",
     "publish:major": "buidler publish major",
     "publish:minor": "buidler publish minor",
