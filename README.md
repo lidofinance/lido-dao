@@ -24,13 +24,54 @@ npx lerna bootstrap
 
 ### Starting & stopping e2e environment
 
-Three process have to be online during development: devchain (ganache), ipfs daemon, front-end:
+E2E environment consist of two parts: ETH1 related process and ETH 2.0 related process. 
 
+For ETH1 part: Ethereum single node (ganache) and IPFS docker containers.
+
+For ETH2 part: Beacon chain node, genesis validators machine, and, optionally 2nd and 3rd peer beacon chain nodes.
+
+To start the whole environment, use:
+ 
 ```bash
 ./startup.sh
 ```
 
+> To save time you can use snapshot with predeployed contracts in ETH1 chain: `./startup.sh -s `  
+
+##### ETH1 part
+During script execution, the following will be installed:
+- Deposit Contract instance
+- each Aragon App instance (contracts: DePool, DePoolOracle and StETH )
+- Aragon PM for 'depoolspm.eth'
+- DePool DAO template 
+- and finally, DePool DAO will be deployed 
+
+To start only ETH1 part use:
+
+```bash
+./startup.sh -1
+```
+
+##### ETH2 part
+To work with ETH2 part, ETH1 part must be running. 
+
+During script execution, the following will happen:
+- beacon chain genesis config (Minimal with tunes) will be generated.
+- validator's wallet with 4 keys will be generated
+- A deposit of 32ETH will be made to Deposit Contract for each validator key.
+- Based on the events about the deposit, a genesis block will be created, which including validators.
+- ETH2 node with new Genesis block will start 
+
+To reseat and restart only ETH2 part use:
+
+```bash
+./startup.sh -r2
+```
+
+##### Stop all
+
 To stop use:
+> Note: this action permanently deletes all generated data
 
 ```bash
 ./shutdown.sh
@@ -85,14 +126,11 @@ To reset the devchain state, stop the processes and use:
 ./shutdown.sh && ./startup.sh
 ```
 
-or to clean restart
+or to just clean restart
 
 ```bash
-./startup.sh -r
+./startup.sh -r -s
 ```
 
-To see other startup options:
+You free to mix the keys.
 
-```bash
-./startup.sh -h
-```
