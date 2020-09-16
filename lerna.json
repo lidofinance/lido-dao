@@ -2,6 +2,7 @@
   "packages": [
     ".",
     "apps/*",
+    "apps/*/app",
     "shared/lib"
   ],
   "hoist": true,
