@@ -4,6 +4,7 @@ const hooks = require('./scripts/buidler-hooks')
 usePlugin('@aragon/buidler-aragon')
 usePlugin("@nomiclabs/buidler-ganache")
 usePlugin('buidler-gas-reporter')
+usePlugin('solidity-coverage')
 
 module.exports = {
   // Default Buidler configurations. Read more about it at https://buidler.dev/config/
@@ -11,6 +12,9 @@ module.exports = {
   networks: {
     development: {
       url: 'http://localhost:8545',
+    },
+    coverage: {
+      url: 'http://localhost:8555',
     },
   },
   solc: {

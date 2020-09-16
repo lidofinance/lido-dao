@@ -9,3 +9,7 @@ artifacts/
 cache/
 dist/
 ipfs.cmd
+.coverage_*/
+
+/apps/*/coverage.json
+/apps/*/coverage/
