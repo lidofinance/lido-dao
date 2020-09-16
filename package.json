@@ -9,7 +9,7 @@
     "test": "npm run test:all",
     "test:all": "lerna run --scope=@depools/apps-* --concurrency=1 --stream test",
     "test:all:gas": "lerna run --scope=@depools/apps-* --concurrency=1 --stream test:gas",
-    "coverage": "SOLIDITY_COVERAGE=true npm run ganache-cli:test",
+    "test:all:coverage": "lerna run --scope=@depools/apps-* --concurrency=1 --stream test:coverage",
     "truffle:dev": "truffle dev",
     "ganache-cli:test": "./node_modules/@aragon/test-helpers/ganache-cli.sh",
     "install:frontend": "cd app && npm install",
