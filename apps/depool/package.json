@@ -6,12 +6,18 @@
     "compile": "buidler compile --force",
     "lint": "solium --dir ./contracts",
     "test": "buidler test --network buidlerevm",
-    "test:gas": "REPORT_GAS=true buidler test --network development",
+    "test:gas": "REPORT_GAS=true buidler test",
     "test:coverage": "buidler coverage --network coverage --solcoverjs ../../.solcover.js",
     "start": "buidler start",
     "publish:major": "buidler publish major",
     "publish:minor": "buidler publish minor",
-    "publish:patch": "buidler publish patch"
+    "publish:patch": "buidler publish patch",
+    "publish:major:rinkeby": "buidler publish major --network rinkeby",
+    "publish:minor:rinkeby": "buidler publish minor --network rinkeby",
+    "publish:patch:rinkeby": "buidler publish patch --network rinkeby",
+    "publish:major:mainnet": "buidler publish major --network mainnet",
+    "publish:minor:mainnet": "buidler publish minor --network mainnet",
+    "publish:patch:mainnet": "buidler publish patch --network mainnet"
   },
   "dependencies": {
     "@aragon/os": "^4.4.0",
@@ -29,9 +35,9 @@
     "@nomiclabs/buidler-truffle5": "^1.3.0",
     "@nomiclabs/buidler-web3": "^1.3.0",
     "buidler-gas-reporter": "^0.1.3",
+    "chai": "^4.2.0",
     "eth-ens-namehash": "^2.0.8",
     "openzeppelin-solidity": "2.0.0",
-    "chai": "^4.2.0",
     "solium": "^1.2.5",
     "web3": "^1.2.0"
   }

@@ -35,7 +35,7 @@
     "ganache-cli": "^6.4.3",
     "husky": "^4.3.0",
     "lerna": "^3.22.1",
-    "solidity-coverage": "^0.7.0",
+    "solidity-coverage": "^0.7.10",
     "solium": "^1.2.5",
     "truffle": "4.1.14",
     "truffle-extract": "^1.2.1"
