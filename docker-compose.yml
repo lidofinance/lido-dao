@@ -160,6 +160,18 @@ services:
       --auto-register
       --server http://node2-1:5052
 
+  dkg:
+    image: test:latest
+    container_name: dkg-generate
+    volumes:
+      - ./data:/data
+      - $SSH_AUTH_SOCK:/run/ssh-auth.sock
+    environment:
+      - SSH_AUTH_SOCK=/run/ssh-auth.sock
+    build:
+      context: .
+      dockerfile: docker/dkg-pubkey/Dockerfile
+
 networks:
   eth2:
     driver: bridge
