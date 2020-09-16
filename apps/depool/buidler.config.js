@@ -8,9 +8,9 @@ usePlugin('solidity-coverage')
 
 module.exports = {
   // Default Buidler configurations. Read more about it at https://buidler.dev/config/
-  defaultNetwork: 'development',
+  defaultNetwork: 'localhost',
   networks: {
-    development: {
+    localhost: {
       url: 'http://localhost:8545',
     },
     coverage: {
@@ -31,7 +31,7 @@ module.exports = {
   },
   // Aragon plugin configuration
   aragon: {
-    appServePort: 8001,
+    appServePort: 3010,
     clientServePort: 3000,
     appSrcPath: 'app/',
     appBuildOutputPath: 'dist/',
