@@ -93,6 +93,7 @@ echo -n "Waiting for eth1 rpc"
 while ! curl --output /dev/null -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'; do
   sleep 2 && echo -n .
 done
+docker-compose up -d dkg
 #sleep 3
 #R="0x"
 #while [[ "$R" != "0x60" ]];
