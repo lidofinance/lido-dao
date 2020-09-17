@@ -32,11 +32,25 @@ interface IDePool {
     function setFee(uint32 _feeBasisPoints) external;
 
     /**
+      * @notice Set fee distribution: `_treasuryFeeBasisPoints` basis points go to the treasury, `_insuranceFeeBasisPoints` basis points go to the insurance fund, `_SPFeeBasisPoints` basis points go to staking providers. The sum has to be 10 000.
+      */
+    function setFeeDistribution(uint32 _treasuryFeeBasisPoints, uint32 _insuranceFeeBasisPoints,
+                                uint32 _SPFeeBasisPoints) external;
+
+    /**
       * @notice Returns staking rewards fee rate
       */
     function getFee() external view returns (uint32 feeBasisPoints);
 
+    /**
+      * @notice Returns fee distribution proportion
+      */
+    function getFeeDistribution() external view returns (uint32 treasuryFeeBasisPoints, uint32 insuranceFeeBasisPoints,
+                                                         uint32 SPFeeBasisPoints);
+
     event FeeSet(uint32 feeBasisPoints);
+
+    event FeeDistributionSet(uint32 treasuryFeeBasisPoints, uint32 insuranceFeeBasisPoints, uint32 SPFeeBasisPoints);
 
 
     /**
