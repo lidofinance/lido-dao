@@ -29,28 +29,28 @@ interface IDePool {
       * @notice Set fee rate to `_feeBasisPoints` basis points. The fees are accrued when oracles report staking results
       * @param _feeBasisPoints Fee rate, in basis points
       */
-    function setFee(uint32 _feeBasisPoints) external;
+    function setFee(uint16 _feeBasisPoints) external;
 
     /**
       * @notice Set fee distribution: `_treasuryFeeBasisPoints` basis points go to the treasury, `_insuranceFeeBasisPoints` basis points go to the insurance fund, `_SPFeeBasisPoints` basis points go to staking providers. The sum has to be 10 000.
       */
-    function setFeeDistribution(uint32 _treasuryFeeBasisPoints, uint32 _insuranceFeeBasisPoints,
-                                uint32 _SPFeeBasisPoints) external;
+    function setFeeDistribution(uint16 _treasuryFeeBasisPoints, uint16 _insuranceFeeBasisPoints,
+                                uint16 _SPFeeBasisPoints) external;
 
     /**
       * @notice Returns staking rewards fee rate
       */
-    function getFee() external view returns (uint32 feeBasisPoints);
+    function getFee() external view returns (uint16 feeBasisPoints);
 
     /**
       * @notice Returns fee distribution proportion
       */
-    function getFeeDistribution() external view returns (uint32 treasuryFeeBasisPoints, uint32 insuranceFeeBasisPoints,
-                                                         uint32 SPFeeBasisPoints);
+    function getFeeDistribution() external view returns (uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints,
+                                                         uint16 SPFeeBasisPoints);
 
-    event FeeSet(uint32 feeBasisPoints);
+    event FeeSet(uint16 feeBasisPoints);
 
-    event FeeDistributionSet(uint32 treasuryFeeBasisPoints, uint32 insuranceFeeBasisPoints, uint32 SPFeeBasisPoints);
+    event FeeDistributionSet(uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, uint16 SPFeeBasisPoints);
 
 
     /**
