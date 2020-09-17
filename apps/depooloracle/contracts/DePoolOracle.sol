@@ -246,7 +246,7 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
         assert(i == data.length);
 
         // computing a median on data
-        lastFinalizedData = Algorithm.modifyingMedian(data);
+        lastFinalizedData = Algorithm.modifyingMode(data);
         lastFinalizedReportInterval = _reportInterval;
 
         emit AggregatedData(lastFinalizedReportInterval, lastFinalizedData);

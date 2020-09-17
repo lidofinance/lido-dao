@@ -23,6 +23,40 @@ library Algorithm {
     }
 
     /**
+      * Computes a mode of a non-empty array, modifying it in process (!)
+      */
+    function modifyingMode(uint256[] data) internal returns (uint256) {
+
+        assert(0 != data.length);
+        sort(data);
+
+        // linear traversal algorithm
+        uint256 result = data[0];
+        uint256 max_count = 1;
+        uint256 cur_count = 1;
+
+        for (uint256 i = 1; i < data.length; i++) {
+            if (data[i] == data[i - 1])
+                cur_count++;
+            else {
+                if (cur_count > max_count) {
+                    max_count = cur_count;
+                    result = data[i - 1];
+                }
+                cur_count = 1;
+            }
+        }
+
+        if (cur_count > max_count)
+        {
+            max_count = cur_count;
+            result = data[data.length - 1];
+        }
+
+        return result;
+    }
+
+    /**
       * Sorts an array in-place
       */
     function sort(uint256[] data) internal {
