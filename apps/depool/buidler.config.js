@@ -4,13 +4,17 @@ const hooks = require('./scripts/buidler-hooks')
 usePlugin('@aragon/buidler-aragon')
 usePlugin("@nomiclabs/buidler-ganache")
 usePlugin('buidler-gas-reporter')
+usePlugin('solidity-coverage')
 
 module.exports = {
   // Default Buidler configurations. Read more about it at https://buidler.dev/config/
-  defaultNetwork: 'development',
+  defaultNetwork: 'localhost',
   networks: {
-    development: {
+    localhost: {
       url: 'http://localhost:8545',
+    },
+    coverage: {
+      url: 'http://localhost:8555',
     },
   },
   solc: {
@@ -27,7 +31,7 @@ module.exports = {
   },
   // Aragon plugin configuration
   aragon: {
-    appServePort: 8001,
+    appServePort: 3010,
     clientServePort: 3000,
     // skip app build and publish to ipfs
     // TODO uncomment when frontend will be
