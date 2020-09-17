@@ -37,6 +37,10 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     uint256 internal constant DEPOSIT_AMOUNT_UNIT = 1000000000 wei;     // validator_registration.vy
 
     bytes32 internal constant FEE_VALUE_POSITION = keccak256("depools.DePool.fee");
+    bytes32 internal constant TREASURY_FEE_VALUE_POSITION = keccak256("depools.DePool.treasuryFee");
+    bytes32 internal constant INSURANCE_FEE_VALUE_POSITION = keccak256("depools.DePool.insuranceFee");
+    bytes32 internal constant SP_FEE_VALUE_POSITION = keccak256("depools.DePool.SPFee");
+
     bytes32 internal constant TOKEN_VALUE_POSITION = keccak256("depools.DePool.token");
     bytes32 internal constant VALIDATOR_REGISTRATION_VALUE_POSITION = keccak256("depools.DePool.validatorRegistration");
     bytes32 internal constant ORACLE_VALUE_POSITION = keccak256("depools.DePool.oracle");
@@ -118,8 +122,24 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
       * @param _feeBasisPoints Fee rate, in basis points
       */
     function setFee(uint32 _feeBasisPoints) external auth(MANAGE_FEE) {
-        FEE_VALUE_POSITION.setStorageUint256(uint256(_feeBasisPoints));
+        _setBPValue(FEE_VALUE_POSITION, _feeBasisPoints);
         emit FeeSet(_feeBasisPoints);
+    }
+
+    /**
+      * @notice Set fee distribution: `_treasuryFeeBasisPoints` basis points go to the treasury, `_insuranceFeeBasisPoints` basis points go to the insurance fund, `_SPFeeBasisPoints` basis points go to staking providers. The sum has to be 10 000.
+      */
+    function setFeeDistribution(uint32 _treasuryFeeBasisPoints, uint32 _insuranceFeeBasisPoints,
+                                uint32 _SPFeeBasisPoints) external auth(MANAGE_FEE)
+    {
+        require(10000 == uint256(_treasuryFeeBasisPoints).add(uint256(_insuranceFeeBasisPoints)).add(uint256(_SPFeeBasisPoints)),
+                "FEES_DONT_ADD_UP");
+
+        _setBPValue(TREASURY_FEE_VALUE_POSITION, _treasuryFeeBasisPoints);
+        _setBPValue(INSURANCE_FEE_VALUE_POSITION, _insuranceFeeBasisPoints);
+        _setBPValue(SP_FEE_VALUE_POSITION, _SPFeeBasisPoints);
+
+        emit FeeDistributionSet(_treasuryFeeBasisPoints, _insuranceFeeBasisPoints, _SPFeeBasisPoints);
     }
 
     /**
@@ -278,6 +298,14 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         return _getFee();
     }
 
+    /**
+      * @notice Returns fee distribution proportion
+      */
+    function getFeeDistribution() external view returns (uint32 treasuryFeeBasisPoints, uint32 insuranceFeeBasisPoints,
+                                                         uint32 SPFeeBasisPoints)
+    {
+        return _getFeeDistribution();
+    }
 
     /**
       * @notice Returns current credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
@@ -501,13 +529,39 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         emit Unbuffered(_amount);
     }
 
+    /**
+      * @dev Write a value nominated in basis points
+      */
+    function _setBPValue(bytes32 _slot, uint32 _value) internal {
+        require(_value <= 10000, "VALUE_OVER_100_PERCENT");
+        _slot.setStorageUint256(uint256(_value));
+    }
+
 
     /**
       * @dev Returns staking rewards fee rate
       */
     function _getFee() internal view returns (uint32) {
-        uint256 v = FEE_VALUE_POSITION.getStorageUint256();
-        assert(v <= uint256(uint32(-1)));
+        return _readBPValue(FEE_VALUE_POSITION);
+    }
+
+    /**
+      * @dev Returns fee distribution proportion
+      */
+    function _getFeeDistribution() internal view
+        returns (uint32 treasuryFeeBasisPoints, uint32 insuranceFeeBasisPoints, uint32 SPFeeBasisPoints)
+    {
+        treasuryFeeBasisPoints = _readBPValue(TREASURY_FEE_VALUE_POSITION);
+        insuranceFeeBasisPoints = _readBPValue(INSURANCE_FEE_VALUE_POSITION);
+        SPFeeBasisPoints = _readBPValue(SP_FEE_VALUE_POSITION);
+    }
+
+    /**
+      * @dev Read a value nominated in basis points
+      */
+    function _readBPValue(bytes32 _slot) internal view returns (uint32) {
+        uint256 v = _slot.getStorageUint256();
+        assert(v <= 10000);
         return uint32(v);
     }
 

@@ -80,8 +80,24 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await app.setFee(110, {from: voting});
     await assertRevert(app.setFee(110, {from: user1}), 'APP_AUTH_FAILED');
     await assertRevert(app.setFee(110, {from: nobody}), 'APP_AUTH_FAILED');
+    await assertRevert(app.setFee(11000, {from: voting}), 'VALUE_OVER_100_PERCENT');
 
     assertBn(await app.getFee({from: nobody}), 110);
+  });
+
+  it('setFeeDistribution works', async () => {
+    await app.setFeeDistribution(3000, 2000, 5000, {from: voting});
+    await assertRevert(app.setFeeDistribution(3000, 2000, 5000, {from: user1}), 'APP_AUTH_FAILED');
+    await assertRevert(app.setFeeDistribution(3000, 2000, 5000, {from: nobody}), 'APP_AUTH_FAILED');
+
+    await assertRevert(app.setFeeDistribution(3000, 2000, 5001, {from: voting}), 'FEES_DONT_ADD_UP');
+    await assertRevert(app.setFeeDistribution(3000, 2000-1, 5000, {from: voting}), 'FEES_DONT_ADD_UP');
+    await assertRevert(app.setFeeDistribution(0, 0, 15000, {from: voting}), 'FEES_DONT_ADD_UP');
+
+    const distribution = await app.getFeeDistribution({from: nobody});
+    assertBn(distribution.treasuryFeeBasisPoints, 3000);
+    assertBn(distribution.insuranceFeeBasisPoints, 2000);
+    assertBn(distribution.SPFeeBasisPoints, 5000);
   });
 
   it('setWithdrawalCredentials works', async () => {
