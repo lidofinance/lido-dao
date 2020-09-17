@@ -1,12 +1,36 @@
 pragma solidity 0.4.24;
 
 import "../DePool.sol";
+import "./VaultMock.sol";
 
 
 /**
   * @dev Only for testing purposes! DePool version with some functions exposed.
   */
 contract TestDePool is DePool {
+    address private treasury;
+    address private insurance;
+
+    function initialize(ISTETH _token, IValidatorRegistration validatorRegistration, address _oracle) public {
+        super.initialize(_token, validatorRegistration, _oracle);
+        treasury = address(new VaultMock());
+        insurance = address(new VaultMock());
+    }
+
+    /**
+      * @dev Returns the treasury address
+      */
+    function getTreasury() public view returns (address) {
+        return treasury;
+    }
+
+    /**
+      * @dev Returns the insurance fund address
+      */
+    function getInsuranceFund() public view returns (address) {
+        return insurance;
+    }
+
     /**
       * @dev Gets unaccounted (excess) Ether on this contract balance
       */

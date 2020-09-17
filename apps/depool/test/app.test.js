@@ -3,6 +3,7 @@ const { assert } = require('chai')
 const { newDao, newApp } = require('./helpers/dao')
 const { assertBn, assertRevert, assertEvent, assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
 const { ONE_DAY, ZERO_ADDRESS, MAX_UINT64, bn, getEventArgument, injectWeb3, injectArtifacts } = require('@aragon/contract-helpers-test')
+const { BN } = require('bn.js');
 
 const StETH = artifacts.require('StETH.sol') //we can just import due to StETH imported in test_helpers/Imports.sol
 
@@ -26,12 +27,16 @@ const hexConcat = (first, ...rest) => {
   return result;
 }
 
+// Divides a BN by 1e15
+const div15 = bn => bn.div(new BN(1000000)).div(new BN(1000000)).div(new BN(1000));
+
 const ETH = (value) => web3.utils.toWei(value + '', 'ether');
 const tokens = ETH;
 
 
 contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
   let appBase, app, token, oracle, validatorRegistration;
+  let treasuryAddr, insuranceAddr;
 
   before('deploy base app', async () => {
     // Deploy the app's base contract.
@@ -64,6 +69,8 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     // Initialize the app's proxy.
     await app.initialize(token.address, validatorRegistration.address, oracle.address);
+    treasuryAddr = await app.getTreasury();
+    insuranceAddr = await app.getInsuranceFund();
 
     await oracle.setPool(app.address);
     await validatorRegistration.reset();
@@ -74,6 +81,13 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(stat.deposited, deposited, 'deposited ether check');
     assertBn(stat.remote, remote, 'remote ether check');
     assertBn(stat.liabilities, liabilities, 'ether liabilities check');
+  };
+
+  // Assert reward distribution. The values must be divided by 1e15.
+  const checkRewards = async ({treasury, insurance, sp}) => {
+    assertBn(div15(await token.balanceOf(treasuryAddr)), treasury, 'treasury token balance check');
+    assertBn(div15(await token.balanceOf(insuranceAddr)), insurance, 'insurance fund token balance check');
+    assertBn(div15(await token.balanceOf(app.address)), sp, 'staking providers token balance check');
   };
 
   it('setFee works', async () => {
@@ -679,5 +693,87 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await app.withdraw(tokens(1), pad("0x200", 32), {from: user2});
     await checkStat({deposited: ETH(32), remote: 0, liabilities: 0});
     assertBn(await app.getBufferedEther(), ETH(11));
+  });
+
+  it('rewards distribution works in a simple case', async () => {
+    await app.setWithdrawalCredentials(pad("0x0202", 32), {from: voting});
+    await app.addSigningKeys(1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
+    await app.addSigningKeys(3,
+        hexConcat(pad("0x010204", 48), pad("0x010205", 48), pad("0x010206", 48)),
+        hexConcat(pad("0x01", 96), pad("0x01", 96), pad("0x01", 96)),
+        {from: voting});
+
+    await app.setFee(5000, {from: voting});
+    await app.setFeeDistribution(3000, 2000, 5000, {from: voting});
+
+    await web3.eth.sendTransaction({to: app.address, from: user2, value: ETH(34)});
+
+    await oracle.reportEther2(300, ETH(36));
+    await checkStat({deposited: ETH(32), remote: ETH(36), liabilities: 0});
+    assertBn(div15(await token.totalSupply()), 35888);
+    await checkRewards({treasury: 566, insurance: 377, sp: 944});
+  });
+
+  it('rewards distribution works', async () => {
+    await app.setWithdrawalCredentials(pad("0x0202", 32), {from: voting});
+    await app.addSigningKeys(1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
+    await app.addSigningKeys(3,
+        hexConcat(pad("0x010204", 48), pad("0x010205", 48), pad("0x010206", 48)),
+        hexConcat(pad("0x01", 96), pad("0x01", 96), pad("0x01", 96)),
+        {from: voting});
+
+    await app.setFee(5000, {from: voting});
+    await app.setFeeDistribution(3000, 2000, 5000, {from: voting});
+
+    await web3.eth.sendTransaction({to: app.address, from: user2, value: ETH(34)});
+    // some slashing occured
+    await oracle.reportEther2(100, ETH(30));
+
+    await checkStat({deposited: ETH(32), remote: ETH(30), liabilities: 0});
+    assertBn(await token.totalSupply(), tokens(34));
+    await checkRewards({treasury: 0, insurance: 0, sp: 0});
+
+    // back to normal
+    await oracle.reportEther2(200, ETH(32));
+    await checkStat({deposited: ETH(32), remote: ETH(32), liabilities: 0});
+    await checkRewards({treasury: 0, insurance: 0, sp: 0});
+
+    // now some rewards are here
+    await oracle.reportEther2(300, ETH(36));
+    await checkStat({deposited: ETH(32), remote: ETH(36), liabilities: 0});
+    assertBn(div15(await token.totalSupply()), 35888);
+    await checkRewards({treasury: 566, insurance: 377, sp: 944});
+  });
+
+  it('rewards distribution works in case of withdrawals', async () => {
+    await app.setWithdrawalCredentials(pad("0x0202", 32), {from: voting});
+    await app.addSigningKeys(1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
+    await app.addSigningKeys(3,
+        hexConcat(pad("0x010204", 48), pad("0x010205", 48), pad("0x010206", 48)),
+        hexConcat(pad("0x01", 96), pad("0x01", 96), pad("0x01", 96)),
+        {from: voting});
+
+    await app.setFee(5000, {from: voting});
+    await app.setFeeDistribution(3000, 2000, 5000, {from: voting});
+
+    await web3.eth.sendTransaction({to: app.address, from: user2, value: ETH(34)});
+    await app.withdraw(tokens(10), pad("0x200", 32), {from: user2});
+    // some slashing occured
+    await oracle.reportEther2(100, ETH(30));
+
+    await checkStat({deposited: ETH(32), remote: ETH(30), liabilities: ETH(8)});
+    assertBn(await token.totalSupply(), tokens(24));
+    await checkRewards({treasury: 0, insurance: 0, sp: 0});
+
+    // back to normal
+    await oracle.reportEther2(200, ETH(32));
+    await checkStat({deposited: ETH(32), remote: ETH(32), liabilities: ETH(8)});
+    await checkRewards({treasury: 0, insurance: 0, sp: 0});
+
+    // now some rewards are here
+    await oracle.reportEther2(300, ETH(36));
+    await checkStat({deposited: ETH(32), remote: ETH(36), liabilities: ETH(8)});
+    assertBn(div15(await token.totalSupply()), 25846);
+    await checkRewards({treasury: 553, insurance: 369, sp: 923});
   });
 });
