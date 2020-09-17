@@ -2,42 +2,26 @@ import React from 'react'
 import { useAragonApi } from '@aragon/api-react'
 import {
   Box,
-  Button,
   GU,
   Header,
-  IconMinus,
-  IconPlus,
   Main,
   SyncIndicator,
-  Tabs,
-  Text,
   textStyle,
 } from '@aragon/ui'
 import styled from 'styled-components'
 
-function App() {
-  const { api, appState, path, requestPath } = useAragonApi()
-  const { count, isSyncing } = appState
-
-  const pathParts = path.match(/^\/tab\/([0-9]+)/)
-  const pageIndex = Array.isArray(pathParts)
-    ? parseInt(pathParts[1], 10) - 1
-    : 0
-
+export default function App() {
+  const { api, appState, path, requestPath, currentApp, guiStyle } = useAragonApi()
+  const { isSyncing } = appState
+  const { appearance } = guiStyle
+  const appName = (currentApp && currentApp.name) || 'app'
+  const version = 'v0.0.1'
   return (
-    <Main>
-      {isSyncing && <SyncIndicator/>}
+    <Main theme={appearance} assetsUrl="./aragon-ui">
+      {isSyncing && <SyncIndicator />}
       <Header
-        primary="StETH"
-        secondary={
-          <span
-            css={`
-              ${textStyle('title2')}
-            `}
-          >
-            {count}
-          </span>
-        }
+        primary={appName.toUpperCase()}
+        secondary={version}
       />
       <Box
         css={`
@@ -49,34 +33,8 @@ function App() {
           ${textStyle('title3')};
         `}
       >
-        Count: {count}
-        <Buttons>
-          <Button
-            display="icon"
-            icon={<IconMinus/>}
-            label="Decrement"
-            onClick={() => api.decrement(1).toPromise()}
-          />
-          <Button
-            display="icon"
-            icon={<IconPlus/>}
-            label="Increment"
-            onClick={() => api.increment(1).toPromise()}
-            css={`
-              margin-left: ${2 * GU}px;
-            `}
-          />
-        </Buttons>
+        {appName} app will be here
       </Box>
     </Main>
   )
 }
-
-const Buttons = styled.div`
-  display: grid;
-  grid-auto-flow: column;
-  grid-gap: 40px;
-  margin-top: 20px;
-`
-
-export default App
