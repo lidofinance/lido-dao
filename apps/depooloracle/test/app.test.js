@@ -145,7 +145,8 @@ contract('DePoolOracle', ([appManager, voting, user1, user2, user3, user4, nobod
     await app.addOracleMember(user1, {from: voting});
     await app.addOracleMember(user2, {from: voting});
     await app.addOracleMember(user3, {from: voting});
-    await app.setQuorum(2, {from: voting});
+    await app.addOracleMember(user4, {from: voting});
+    await app.setQuorum(3, {from: voting});
 
     await assertData(0, 0);
 
@@ -153,32 +154,37 @@ contract('DePoolOracle', ([appManager, voting, user1, user2, user3, user4, nobod
     await assertRevert(app.pushData(900, 100, {from: user1}), 'REPORT_INTERVAL_IS_TOO_OLD');
     await assertRevert(app.pushData(10900, 100, {from: user1}), 'REPORT_INTERVAL_HAS_NOT_YET_BEGUN');
 
-    // reportInterval 1000, quorum 2
+    // reportInterval 1000, quorum 3
     await app.pushData(1000, 100, {from: user1});
     await assertRevert(app.pushData(1000, 101, {from: user1}), 'ALREADY_SUBMITTED');
     await assertData(0, 0);
-    await app.pushData(1000, 110, {from: user3});
-    await assertData(1000, 105);
+    await app.pushData(1000, 100, {from: user3});
+    await assertData(0, 0);
+    await app.pushData(1000, 110, {from: user4});
+    await assertData(1000, 100); // exact mode of recieved values
     await assertRevert(app.pushData(1000, 100, {from: user2}), 'ALREADY_FINALIZED');
 
-    // reportInterval 1001, quorum 2
+    // reportInterval 1001, quorum 3
     await app.setTime(86400000 + 86400);
     await app.pushData(1001, 110, {from: user1});
-    await assertData(1000, 105);
+    await assertData(1000, 100);
+    await app.pushData(1001, 120, {from: user2});
+    await assertData(1000, 100);
     await app.pushData(1001, 120, {from: user3});
-    await assertData(1001, 115);
+    await assertData(1001, 120);
 
-    // reportInterval 1004, quorum 3
-    await app.setQuorum(3, {from: voting});
+    // reportInterval 1004, quorum 4
+    await app.setQuorum(4, {from: voting});
     await app.setTime(86400000 + 86400*4);
     await assertRevert(app.pushData(1005, 105, {from: user1}), 'REPORT_INTERVAL_HAS_NOT_YET_BEGUN');
     await app.pushData(1004, 120, {from: user1});
-    await app.pushData(1004, 110, {from: user2});
-    await app.pushData(1004, 100, {from: user3});
-    await assertData(1004, 110);
+    await app.pushData(1004, 120, {from: user2});
+    await app.pushData(1004, 120, {from: user3});
+    await app.pushData(1004, 110, {from: user4});
+    await assertData(1004, 120);
   });
 
-  it('can push to past interval until current interval data came', async () => {
+  it('can push to previous interval until current interval data came', async () => {
     await app.setTime(86400000);
     await app.addOracleMember(user1, {from: voting});
     await app.addOracleMember(user2, {from: voting});
@@ -213,8 +219,8 @@ contract('DePoolOracle', ([appManager, voting, user1, user2, user3, user4, nobod
     await app.pushData(1001, 110, {from: user2});
     await assertData(0, 0);
     await assertRevert(app.pushData(1000, 100, {from: user3}), 'REPORT_INTERVAL_IS_TOO_OLD');
-    await app.pushData(1001, 120, {from: user3});
-    await assertData(1001, 115);
+    await app.pushData(1001, 110, {from: user3});
+    await assertData(1001, 110);
   });
 
   it('member removal dont affect other members\' data', async () => {
@@ -226,17 +232,18 @@ contract('DePoolOracle', ([appManager, voting, user1, user2, user3, user4, nobod
     await app.setQuorum(2, {from: voting});
 
     // reportInterval 1000
-    await app.pushData(1000, 100, {from: user1});
-    await app.pushData(1000, 110, {from: user3});
+    await app.pushData(1000, 105, {from: user1});
+    await app.pushData(1000, 105, {from: user3});
 
     // reportInterval 1001
     await app.setQuorum(3, {from: voting});
     await app.setTime(86400000 + 86400);
     await app.pushData(1001, 140, {from: user4});
-    await app.pushData(1001, 120, {from: user2});
+    await app.pushData(1001, 130, {from: user2});
     await assertData(1000, 105);
 
     await app.removeOracleMember(user1, {from: voting});
+    await assertRevert(app.pushData(1001, 100, {from: user1}), 'MEMBER_NOT_FOUND');
     await app.pushData(1001, 130, {from: user3});
     await assertData(1001, 130);
   });
@@ -250,8 +257,8 @@ contract('DePoolOracle', ([appManager, voting, user1, user2, user3, user4, nobod
     await app.setQuorum(2, {from: voting});
 
     // reportInterval 1000
-    await app.pushData(1000, 100, {from: user1});
-    await app.pushData(1000, 110, {from: user3});
+    await app.pushData(1000, 105, {from: user1});
+    await app.pushData(1000, 105, {from: user3});
 
     // reportInterval 1001
     await app.setQuorum(3, {from: voting});
@@ -261,10 +268,10 @@ contract('DePoolOracle', ([appManager, voting, user1, user2, user3, user4, nobod
     await assertData(1000, 105);
 
     await app.removeOracleMember(user1, {from: voting});
-    await app.pushData(1001, 130, {from: user3});
+    await app.pushData(1001, 120, {from: user3});
     await assertData(1000, 105);
-    await app.pushData(1001, 140, {from: user4});
-    await assertData(1001, 130);
+    await app.pushData(1001, 120, {from: user4});
+    await assertData(1001, 120);
   });
 
   it('tail member removal works', async () => {
@@ -276,14 +283,14 @@ contract('DePoolOracle', ([appManager, voting, user1, user2, user3, user4, nobod
     await app.setQuorum(2, {from: voting});
 
     // reportInterval 1000
-    await app.pushData(1000, 100, {from: user1});
+    await app.pushData(1000, 105, {from: user1});
     await app.pushData(1000, 110, {from: user3});
 
     // reportInterval 1001
     await app.setQuorum(3, {from: voting});
     await app.setTime(86400000 + 86400);
     await app.pushData(1001, 110, {from: user4});
-    await app.pushData(1001, 120, {from: user2});   // this should be intact
+    await app.pushData(1001, 130, {from: user2});   // this should be intact
     await assertData(1000, 105);
 
     await app.removeOracleMember(user4, {from: voting});
@@ -310,10 +317,10 @@ contract('DePoolOracle', ([appManager, voting, user1, user2, user3, user4, nobod
     // reportInterval 1001
     await app.setTime(86400000 + 86400);
     await app.pushData(1001, 110, {from: user4});
-    await app.pushData(1001, 120, {from: user2});
+    await app.pushData(1001, 110, {from: user2});
     await assertData(1000, 110);
 
     await app.setQuorum(2, {from: voting});
-    await assertData(1001, 115);
+    await assertData(1001, 110);
   });
 });
