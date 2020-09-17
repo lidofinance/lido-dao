@@ -121,7 +121,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
       * @notice Set fee rate to `_feeBasisPoints` basis points. The fees are accrued when oracles report staking results
       * @param _feeBasisPoints Fee rate, in basis points
       */
-    function setFee(uint32 _feeBasisPoints) external auth(MANAGE_FEE) {
+    function setFee(uint16 _feeBasisPoints) external auth(MANAGE_FEE) {
         _setBPValue(FEE_VALUE_POSITION, _feeBasisPoints);
         emit FeeSet(_feeBasisPoints);
     }
@@ -129,8 +129,8 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     /**
       * @notice Set fee distribution: `_treasuryFeeBasisPoints` basis points go to the treasury, `_insuranceFeeBasisPoints` basis points go to the insurance fund, `_SPFeeBasisPoints` basis points go to staking providers. The sum has to be 10 000.
       */
-    function setFeeDistribution(uint32 _treasuryFeeBasisPoints, uint32 _insuranceFeeBasisPoints,
-                                uint32 _SPFeeBasisPoints) external auth(MANAGE_FEE)
+    function setFeeDistribution(uint16 _treasuryFeeBasisPoints, uint16 _insuranceFeeBasisPoints,
+                                uint16 _SPFeeBasisPoints) external auth(MANAGE_FEE)
     {
         require(10000 == uint256(_treasuryFeeBasisPoints).add(uint256(_insuranceFeeBasisPoints)).add(uint256(_SPFeeBasisPoints)),
                 "FEES_DONT_ADD_UP");
@@ -294,15 +294,15 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     /**
       * @notice Returns staking rewards fee rate
       */
-    function getFee() external view returns (uint32 feeBasisPoints) {
+    function getFee() external view returns (uint16 feeBasisPoints) {
         return _getFee();
     }
 
     /**
       * @notice Returns fee distribution proportion
       */
-    function getFeeDistribution() external view returns (uint32 treasuryFeeBasisPoints, uint32 insuranceFeeBasisPoints,
-                                                         uint32 SPFeeBasisPoints)
+    function getFeeDistribution() external view returns (uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints,
+                                                         uint16 SPFeeBasisPoints)
     {
         return _getFeeDistribution();
     }
@@ -532,7 +532,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     /**
       * @dev Write a value nominated in basis points
       */
-    function _setBPValue(bytes32 _slot, uint32 _value) internal {
+    function _setBPValue(bytes32 _slot, uint16 _value) internal {
         require(_value <= 10000, "VALUE_OVER_100_PERCENT");
         _slot.setStorageUint256(uint256(_value));
     }
@@ -541,7 +541,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     /**
       * @dev Returns staking rewards fee rate
       */
-    function _getFee() internal view returns (uint32) {
+    function _getFee() internal view returns (uint16) {
         return _readBPValue(FEE_VALUE_POSITION);
     }
 
@@ -549,7 +549,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
       * @dev Returns fee distribution proportion
       */
     function _getFeeDistribution() internal view
-        returns (uint32 treasuryFeeBasisPoints, uint32 insuranceFeeBasisPoints, uint32 SPFeeBasisPoints)
+        returns (uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, uint16 SPFeeBasisPoints)
     {
         treasuryFeeBasisPoints = _readBPValue(TREASURY_FEE_VALUE_POSITION);
         insuranceFeeBasisPoints = _readBPValue(INSURANCE_FEE_VALUE_POSITION);
@@ -559,10 +559,10 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     /**
       * @dev Read a value nominated in basis points
       */
-    function _readBPValue(bytes32 _slot) internal view returns (uint32) {
+    function _readBPValue(bytes32 _slot) internal view returns (uint16) {
         uint256 v = _slot.getStorageUint256();
         assert(v <= 10000);
-        return uint32(v);
+        return uint16(v);
     }
 
     /**
