@@ -45,6 +45,9 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     bytes32 internal constant VALIDATOR_REGISTRATION_VALUE_POSITION = keccak256("depools.DePool.validatorRegistration");
     bytes32 internal constant ORACLE_VALUE_POSITION = keccak256("depools.DePool.oracle");
 
+    /// @dev A base value for tracking earned rewards
+    bytes32 internal constant REWARD_BASE_VALUE_POSITION = keccak256("depools.DePool.rewardBase");
+
     /// @dev amount of Ether (on the current Ethereum side) buffered on this smart contract balance
     bytes32 internal constant BUFFERED_ETHER_VALUE_POSITION = keccak256("depools.DePool.bufferedEther");
     /// @dev amount of Ether (on the current Ethereum side) deposited to the validator_registration.vy contract
@@ -265,6 +268,14 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
 
         LAST_ORACLE_EPOCH_VALUE_POSITION.setStorageUint256(_epoch);
         REMOTE_ETHER2_VALUE_POSITION.setStorageUint256(_eth2balance);
+
+        // Calculating real amount of rewards
+        uint256 rewardBase = REWARD_BASE_VALUE_POSITION.getStorageUint256();
+        if (_eth2balance > rewardBase) {
+            uint256 rewards = _eth2balance.sub(rewardBase);
+            REWARD_BASE_VALUE_POSITION.setStorageUint256(_eth2balance);
+            distributeRewards(rewards);
+        }
     }
 
 
@@ -380,6 +391,23 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     }
 
     /**
+      * @notice Returns the treasury address
+      */
+    function getTreasury() public view returns (address) {
+        address vault = getRecoveryVault();
+        require(isContract(vault), "RECOVER_VAULT_NOT_CONTRACT");
+        return vault;
+    }
+
+    /**
+      * @notice Returns the insurance fund address
+      */
+    function getInsuranceFund() public view returns (address) {
+        // TODO a separate vault
+        return getTreasury();
+    }
+
+    /**
       * @notice Gets the stat of the system's Ether on the Ethereum 2 side
       * @return deposited Amount of Ether deposited from the current Ethereum
       * @return remote Amount of Ether currently present on the Ethereum 2 side (can be 0 if the Ethereum 2 is yet to be launched)
@@ -469,6 +497,10 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
             _stake(key, signature);
         }
 
+        if (0 != deposited) {
+            REWARD_BASE_VALUE_POSITION.setStorageUint256(REWARD_BASE_VALUE_POSITION.getStorageUint256().add(deposited));
+        }
+
         return deposited;
     }
 
@@ -503,6 +535,39 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         getValidatorRegistrationContract().deposit.value(value)(
             _pubkey, withdrawalCredentials, _signature, depositDataRoot);
         require(address(this).balance == targetBalance, "EXPECTING_DEPOSIT_TO_HAPPEN");
+    }
+
+    /**
+      * @dev Distributes rewards and fees.
+      * @param _rewards Total rewards accrued on the Ethereum 2.0 side.
+      */
+    function distributeRewards(uint256 _rewards) internal {
+        // Amount of the rewards in Ether
+        uint256 protocolRewards = _rewards.mul(_getFee()).div(10000);
+
+        assert(0 != getToken().totalSupply());
+        // Amount of StETH we should mint to distribute protocolRewards by diluting the totalSupply
+        uint256 tokens2mint = protocolRewards.mul(getToken().totalSupply()).div(
+            _getTotalControlledEther().sub(protocolRewards));
+
+        (uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, uint16 SPFeeBasisPoints) = _getFeeDistribution();
+        uint256 toTreasury = tokens2mint.mul(treasuryFeeBasisPoints).div(10000);
+        uint256 toInsuranceFund = tokens2mint.mul(insuranceFeeBasisPoints).div(10000);
+        uint256 toSP = tokens2mint.sub(toTreasury).sub(toInsuranceFund);
+
+        getToken().mint(getTreasury(), toTreasury);
+        getToken().mint(getInsuranceFund(), toInsuranceFund);
+        getToken().mint(address(this), toSP);
+
+        distributeRewardsToSP(toSP);
+    }
+
+    /**
+      * @dev Distributes rewards to the staking providers.
+      * @param _SPTokens Rewards in the form of StETH tokens.
+      */
+    function distributeRewardsToSP(uint256 _SPTokens) internal {
+        // TODO staking providers
     }
 
 
