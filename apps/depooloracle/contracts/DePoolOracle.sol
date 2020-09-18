@@ -245,8 +245,15 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
         }
         assert(i == data.length);
 
-        // computing a median on data
-        lastFinalizedData = Algorithm.modifyingMode(data);
+        bool isUnimodal;
+        uint256 mode;
+
+        (isUnimodal, mode) = Algorithm.mode(data);
+        if (!isUnimodal)
+            return;
+
+        // finalizing and reporting mode value to depool
+        lastFinalizedData = mode;
         lastFinalizedReportInterval = _reportInterval;
 
         emit AggregatedData(lastFinalizedReportInterval, lastFinalizedData);
