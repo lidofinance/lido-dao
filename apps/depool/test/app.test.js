@@ -776,4 +776,22 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(div15(await token.totalSupply()), 25846);
     await checkRewards({treasury: 553, insurance: 369, sp: 923});
   });
+
+  it('deposits accounted properly during rewards distribution', async () => {
+    await app.setWithdrawalCredentials(pad("0x0202", 32), {from: voting});
+    await app.addSigningKeys(1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
+
+    await app.setFee(5000, {from: voting});
+    await app.setFeeDistribution(3000, 2000, 5000, {from: voting});
+
+    // Only 32 ETH deposited
+    await web3.eth.sendTransaction({to: app.address, from: user3, value: ETH(32)});
+    await web3.eth.sendTransaction({to: app.address, from: user3, value: ETH(32)});
+    assertBn(await token.totalSupply(), tokens(64));
+
+    await oracle.reportEther2(300, ETH(36));
+    await checkStat({deposited: ETH(32), remote: ETH(36), liabilities: 0});
+    assertBn(div15(await token.totalSupply()), 65939);
+    await checkRewards({treasury: 581, insurance: 387, sp: 969});
+  });
 });
