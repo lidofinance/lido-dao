@@ -258,7 +258,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(await token.balanceOf(user1), tokens(1));
 
     // +2 ETH
-    await app.submit({from: user2, value: ETH(2)});     // another form of a deposit call
+    await app.submit(ZERO_ADDRESS, {from: user2, value: ETH(2)});     // another form of a deposit call
     await checkStat({deposited: 0, remote: 0, liabilities: 0});
     assertBn(await validatorRegistration.totalCalls(), 0);
     assertBn(await app.getTotalControlledEther(), ETH(3));
@@ -302,6 +302,15 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     assert.equal(calls[1].pubkey, pad("0x010204", 48));
     assert.equal(calls[2].pubkey, pad("0x010205", 48));
     assert.equal(calls[3].pubkey, pad("0x010206", 48));
+  });
+
+  it('submits with zero and non-zero referrals work', async () => {
+    const REFERRAL = '0xDeaDbeefdEAdbeefdEadbEEFdeadbeEFdEaDbeeF';
+    let receipt;
+    receipt = await app.submit(REFERRAL, {from: user2, value: ETH(2)});
+    assertEvent(receipt, "Submitted" , { expectedArgs: { sender: user2, amount: ETH(2), referral: REFERRAL }})
+    receipt = await app.submit(ZERO_ADDRESS, {from: user2, value: ETH(5)});
+    assertEvent(receipt, "Submitted" , { expectedArgs: { sender: user2, amount: ETH(5), referral: ZERO_ADDRESS }})
   });
 
   it('key removal is taken into account during deposit', async () => {
@@ -643,8 +652,8 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await app.stop({from: voting});
 
     await assertRevert(web3.eth.sendTransaction({to: app.address, from: user1, value: ETH(4)}), 'CONTRACT_IS_STOPPED');
-    await assertRevert(app.submit({from: user1, value: ETH(4)}), 'CONTRACT_IS_STOPPED');
-    await assertRevert(app.submit({from: user2, value: ETH(4)}), 'CONTRACT_IS_STOPPED');
+    await assertRevert(web3.eth.sendTransaction({to: app.address, from: user1, value: ETH(4)}), 'CONTRACT_IS_STOPPED');
+    await assertRevert(app.submit("0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", {from: user1, value: ETH(4)}), 'CONTRACT_IS_STOPPED');
     await assertRevert(app.withdraw(tokens(1), pad("0x200", 32), {from: user2}), 'CONTRACT_IS_STOPPED');
 
     await assertRevert(app.resume({from: user2}), 'APP_AUTH_FAILED');

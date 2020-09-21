@@ -1,11 +1,6 @@
 import test from 'ava'
 import {
-  getLocalWeb3,
-  getApmOptions,
-  getAccounts,
-  ensRegistry,
   daoAddress,
-  daoName,
   KERNEL_DEFAULT_ACL_APP_ID,
   EVMSCRIPT_REGISTRY_APP_ID,
   AGENT_APP_ID,
@@ -15,40 +10,32 @@ import {
   STETH_APP_ID,
   DEPOOLORACLE_APP_ID,
   DEPOOL_APP_ID
-} from "./test-helpers";
+} from "./helpers/constants";
 
 import {
   getAllApps,
   getDaoAddress,
 } from '@aragon/toolkit'
+import { prepareContext } from "./helpers";
 
 
 test.before('Connecting Web3', async (t) => {
-  const web3 = await getLocalWeb3()
-  // Retrieve web3 accounts.
-  const accounts = await getAccounts(web3)
-  const options = await getApmOptions()
-
-  t.context = {
-    web3,
-    accounts,
-    options
-  }
+  t.context = await prepareContext()
 })
 //
 test('getDaoAddress returns the correct DAO address', async (t) => {
-  const { web3 } = t.context
-  const result = await getDaoAddress(daoName, {
+  const { web3, dao, ens } = t.context
+  const result = await getDaoAddress(dao.name, {
     provider: web3.currentProvider,
-    registryAddress: ensRegistry,
+    registryAddress: ens,
   })
   t.is(result.toLowerCase(), daoAddress.toLowerCase(), 'DAO address resolve')
 })
 
 test('Get DAO apps',
   async t => {
-    const { web3 } = t.context
-    const apps = await getAllApps(daoAddress, { web3 })
+    const { web3, dao } = t.context
+    const apps = await getAllApps(dao.address, { web3 })
     // console.log(apps)
     t.is(apps.length, 9)
     t.is(

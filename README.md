@@ -4,8 +4,16 @@
 
 ### Requirements 
 
-* NodeJs 12
+* shell - bash or zsh
+* docker
+* find
+* sed
+* jq
+* curl
+* cut
+* node.js v12
 * (optional) Lerna
+
 
 ### Installing Aragon & other deps
 
@@ -22,22 +30,30 @@ otherwise
 npx lerna bootstrap 
 ```
 
+### Building docker containers
+
+```
+docker-compose build --no-cache
+```
+
 ### Starting & stopping e2e environment
 
 E2E environment consist of two parts: ETH1 related process and ETH 2.0 related process. 
 
-For ETH1 part: Ethereum single node (ganache) and IPFS docker containers.
+For ETH1 part: Ethereum single node (ganache), IPFS docker containers and Aragon Web App.
 
 For ETH2 part: Beacon chain node, genesis validators machine, and, optionally 2nd and 3rd peer beacon chain nodes.
 
-To start the whole environment:
-
+To build and start the whole local environment, first:
 * git clone -b fix/full-flow-test git@github.com:depools/dc4bc.git
  to the depool-dao root
 * Add your local ssh key to github account
+
+then use:
 ```bash
 ./startup.sh
 ```
+then go to [http://localhost:3000/#/depool-dao/](http://localhost:3000/#/depool-dao/) to manage DAO via Aragon Web App
 
 > To save time you can use snapshot with predeployed contracts in ETH1 chain: `./startup.sh -s `  
 
@@ -101,6 +117,30 @@ In an app folder:
 ```bash
 npm run test:gas
 ```
+
+#### Generate test coverage report
+
+For all apps, in the repo root:
+
+```bash
+npm run test:all:coverage
+```
+
+In an app folder:
+
+```bash
+npm run test:coverage
+```
+
+Test coverage is reported to `coverage.json` and `coverage/index.html` files located
+inside each app's folder.
+
+Keep in mind that the code uses `assert`s to check invariants that should always be kept
+unless the code is buggy (in contrast to `require` statements which check pre-coditions),
+so full branch coverage will never be reported until
+[solidity-coverage#219] is implemented.
+
+[solidity-coverage#219]: https://github.com/sc-forks/solidity-coverage/issues/269
 
 ### _(deprecated)_ Configuration
 
