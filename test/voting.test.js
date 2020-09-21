@@ -147,7 +147,7 @@ test('Voting ',
     // function newVote(bytes _executionScript, string _metadata) external auth(CREATE_VOTES_ROLE) returns (uint256 voteId) {
 
     // finally calling Tokens app for forward call
-    receipt = await TokenManager.methods.forward(callData2).send({ from: holder1, gas: '1000000' })
+    receipt = await TokenManager.methods.forward(callData2).send({ from: holder5, gas: '1000000' })
 
     //event StartVote(uint256 indexed voteId, address indexed creator, string metadata);
     expectEvent(receipt, 'StartVote', {
