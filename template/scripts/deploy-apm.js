@@ -15,15 +15,6 @@ const ZERO_ADDR = '0x0000000000000000000000000000000000000000'
 const TLD_NAME = 'eth'
 const LABEL_NAME = 'depoolspm'
 
-// ENS: 0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1
-// DAO_FACTORY: 0x5d94e3e7aec542ab0f9129b9a7badeb5b3ca0f77
-// MINIME_FACTORY: 0xd526b7aba39cccf76422835e7fd5327b98ad73c9
-// FIFResolvingRegistrar: 0xf1f8aac64036cdd399886b1c157b7e3b361093f3
-// APM: ens.addr('aragonpm.eth')
-// AragonID: ens.owner('aragonid.eth')
-// Aragon apps: As APM repos, e.g. apm.getLatest('voting.aragonpm.eth')
-// Templates: As APM repos, e.g. apm.getLatest('democracy-template.aragonpm.eth')
-
 const defaultOwner = process.env.OWNER
 const defaultDaoFactoryAddress = process.env.DAO_FACTORY || '0x5d94e3e7aec542ab0f9129b9a7badeb5b3ca0f77'
 const defaultENSAddress = process.env.ENS || '0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1'
