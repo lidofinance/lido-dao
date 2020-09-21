@@ -10,6 +10,7 @@ LOCAL_VALIDATORS_DIR="${PWD}${VALIDATORS_DIR}"
 LOCAL_MOCK_VALIDATORS_DIR="${PWD}${MOCK_VALIDATORS_DIR}"
 LOCAL_MOCK_SECRETS_DIR="${PWD}${MOCK_SECRETS_DIR}"
 LOCAL_TESTNET_DIR="${PWD}${TESTNET_DIR}"
+LOCAL_DEVCHAIN_DIR="${LOCAL_DATA_DIR}/devchain"
 
 while test $# -gt 0; do
   case "$1" in
@@ -63,19 +64,20 @@ if [[ $RESET ]]; then
   docker-compose down -v --remove-orphans
   rm -rf $LOCAL_DATA_DIR
   mkdir -p $LOCAL_DATA_DIR
-  mkdir -p $LOCAL_TESTNET_DIR
   if [[ $SNAPSHOT ]]; then
-    echo "Unzip ganache snapshot"
+    echo "Unzip snapshot"
     unzip -o -q -d $LOCAL_DATA_DIR ./devchain.zip
+    unzip -o -q -d $LOCAL_DATA_DIR ./ipfs.zip
   fi
   ETH2_RESET=true
   DAO_DEPLOY=true
 fi
 
-if [[ ! "$(ls -A $DATA_DIR)" ]]; then
-  RESET=true
+if [ ! -d $LOCAL_DEVCHAIN_DIR ]; then
+  DAO_DEPLOY=true
 fi
-if [[ ! "$(ls -A $LOCAL_TESTNET_DIR)" ]]; then
+
+if [ ! -d $LOCAL_TESTNET_DIR ]; then
   ETH2_RESET=true
 fi
 
@@ -89,6 +91,7 @@ echo " "
 
 echo "Starting eth1 node"
 docker-compose up -d node1
+
 echo -n "Waiting for eth1 rpc"
 while ! curl --output /dev/null -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'; do
   sleep 2 && echo -n .
@@ -101,7 +104,6 @@ done
 #  sleep 2 && echo -n .
 #done
 echo " "
-# !! already deployed inside snapshot
 if [[ ! $SNAPSHOT ]] && [[ $DAO_DEPLOY ]] ; then
   R=$(curl -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x'$DEPOSIT'","latest"],"id":1}' | jq -r '.result'  | cut -c -4)
   if [[ "$R" != "0x60" ]]; then
@@ -129,7 +131,6 @@ if [[ ! $SNAPSHOT ]] && [[ $DAO_DEPLOY ]] ; then
     echo "Deposit contract deployed: $ADDR at block $BLOCK"
   fi
 
-
   R=$(curl -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x'$APM'","latest"],"id":1}' | jq -r '.result'  | cut -c -4)
   if [[ "$R" != "0x60" ]]; then
     echo "Deploying DePool APM..."
@@ -153,10 +154,13 @@ if [[ ! $SNAPSHOT ]] && [[ $DAO_DEPLOY ]] ; then
   # wait a bit for block mining
   sleep 3
 else
-  BLOCK=70
+  echo "DevChain data exists"
   echo "Deposit contract predeployed: 0x$DEPOSIT at block $BLOCK"
   echo "DAO deployed at: 0x$DAO"
 fi
+
+echo "Starting Aragon web UI"
+docker-compose up -d aragon
 
 if [[ $ETH1_ONLY ]]; then
   exit 0
