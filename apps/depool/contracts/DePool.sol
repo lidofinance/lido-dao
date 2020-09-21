@@ -26,6 +26,12 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     bytes32 constant public MANAGE_WITHDRAWAL_KEY = keccak256("MANAGE_WITHDRAWAL_KEY");
     bytes32 constant public MANAGE_SIGNING_KEYS = keccak256("MANAGE_SIGNING_KEYS");
     bytes32 constant public SET_ORACLE = keccak256("SET_ORACLE");
+    bytes32 constant public ADD_STAKING_PROVIDER_ROLE = keccak256("ADD_STAKING_PROVIDER_ROLE");
+    bytes32 constant public SET_STAKING_PROVIDER_ACTIVE_ROLE = keccak256("SET_STAKING_PROVIDER_ACTIVE_ROLE");
+    bytes32 constant public SET_STAKING_PROVIDER_NAME_ROLE = keccak256("SET_STAKING_PROVIDER_NAME_ROLE");
+    bytes32 constant public SET_STAKING_PROVIDER_ADDRESS_ROLE = keccak256("SET_STAKING_PROVIDER_ADDRESS_ROLE");
+    bytes32 constant public SET_STAKING_PROVIDER_LIMIT_ROLE = keccak256("SET_STAKING_PROVIDER_LIMIT_ROLE");
+    bytes32 constant public REPORT_STOPPED_VALIDATORS_ROLE = keccak256("REPORT_STOPPED_VALIDATORS_ROLE");
 
     uint256 constant public PUBKEY_LENGTH = 48;
     uint256 constant public WITHDRAWAL_CREDENTIALS_LENGTH = 32;
@@ -80,10 +86,39 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     WithdrawalRequest[] internal withdrawalRequests;
 
 
+    /// @dev Staking provider parameters and internal state
+    struct StakingProvider {
+        bool active;    // a flag indicating if the SP can participate in further staking and reward distribution
+        string name;    // human-readable name
+        address rewardAddress;  // Ethereum 1 address which receives steth rewards for this SP
+        uint256 stakingLimit;   // the maximum number of validators to stake for this SP
+        uint256 stoppedValidators;  // number of signing keys which stopped validation (e.g. were slashed)
+
+        uint256 totalSigningKeys;   // total amount of signing keys of this SP
+        uint256 usedSigningKeys;    // number of signing keys of this SP which were used in deposits to the Ethereum 2
+    }
+
+    /// @dev Array of all staking providers
+    StakingProvider[] internal sps;
+
+
+    modifier validAddress(address _a) {
+        require(_a != address(0), "EMPTY_ADDRESS");
+        _;
+    }
+
+    modifier SPExists(uint256 _id) {
+        require(0 != _id && _id < sps.length, "STAKING_PROVIDER_NOT_FOUND");
+        _;
+    }
+
+
     function initialize(ISTETH _token, IValidatorRegistration validatorRegistration, address _oracle) public onlyInit {
         _setToken(_token);
         _setValidatorRegistrationContract(validatorRegistration);
         _setOracle(_oracle);
+
+        sps.length++;    // sp[0] is unused
 
         initialized();
     }
@@ -168,17 +203,86 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         emit WithdrawalCredentialsSet(_withdrawalCredentials);
     }
 
+
+    /**
+      * @notice Add staking provider named `name` with reward address `rewardAddress` and staking limit `stakingLimit` validators
+      * @param _name Human-readable name
+      * @param _rewardAddress Ethereum 1 address which receives stETH rewards for this SP
+      * @param _stakingLimit the maximum number of validators to stake for this SP
+      * @return a unique key of the added SP
+      */
+    function addStakingProvider(string _name, address _rewardAddress, uint256 _stakingLimit) external
+        returns (uint256 id)
+        auth(ADD_STAKING_PROVIDER_ROLE)
+        validAddress(_rewardAddress)
+    {
+        id = sps.length++;
+        StakingProvider storage sp = sps[id];
+
+        sp.active = true;
+        sp.name = _name;
+        sp.rewardAddress = _rewardAddress;
+        sp.stakingLimit = _stakingLimit;
+
+        emit StakingProviderAdded(id, _name, _rewardAddress, _stakingLimit);
+    }
+
+    /**
+      * @notice `_active ? 'Enable' : 'Disable'` the staking provider #`_id`
+      */
+    function setStakingProviderActive(uint256 _id, bool _active) external
+        authP(SET_STAKING_PROVIDER_ACTIVE_ROLE, arr(_id, _active))
+    {
+    }
+
+
+    /**
+      * @notice Change human-readable name of the staking provider #`_id` to `_name`
+      */
+    function setStakingProviderName(uint256 _id, string _name) external
+        authP(SET_STAKING_PROVIDER_NAME_ROLE, arr(_id, _name))
+    {
+    }
+
+    /**
+      * @notice Change reward address of the staking provider #`_id` to `_rewardAddress`
+      */
+    function setStakingProviderRewardAddress(uint256 _id, address _rewardAddress) external
+        authP(SET_STAKING_PROVIDER_ADDRESS_ROLE, arr(_id, _rewardAddress))
+    {
+    }
+
+    /**
+      * @notice Set the maximum number of validators to stake for the staking provider #`_id` to `_stakingLimit`
+      */
+    function setStakingProviderStakingLimit(uint256 _id, uint256 _stakingLimit) external
+        authP(SET_STAKING_PROVIDER_LIMIT_ROLE, arr(_id, _stakingLimit))
+    {
+    }
+
+    /**
+      * @notice Report `_stoppedIncrement` more stopped validators of the staking provider #`_id`
+      */
+    function reportStoppedValidators(uint256 _id, uint256 _stoppedIncrement) external
+        authP(REPORT_STOPPED_VALIDATORS_ROLE, arr(_id, _stoppedIncrement))
+    {
+    }
+
+
     /**
       * @notice Add `_quantity` validator signing keys to the set of usable keys. Concatenated keys are: `_pubkeys`
       * @dev Along with each key the DAO has to provide a signatures for the
       *      (pubkey, withdrawal_credentials, 32000000000) message.
       *      Given that information, the contract'll be able to call
       *      validator_registration.deposit on-chain.
+      * @param _SP_id Staking provider id
       * @param _quantity Number of signing keys provided
       * @param _pubkeys Several concatenated validator signing keys
       * @param _signatures Several concatenated signatures for (pubkey, withdrawal_credentials, 32000000000) messages
       */
-    function addSigningKeys(uint256 _quantity, bytes _pubkeys, bytes _signatures) external auth(MANAGE_SIGNING_KEYS) {
+    function addSigningKeys(uint256 _SP_id, uint256 _quantity, bytes _pubkeys, bytes _signatures) external
+        authP(MANAGE_SIGNING_KEYS, arr(_SP_id))
+    {
         require(_quantity != 0, "NO_KEYS");
         require(_pubkeys.length == _quantity.mul(PUBKEY_LENGTH), "INVALID_LENGTH");
         require(_signatures.length == _quantity.mul(SIGNATURE_LENGTH), "INVALID_LENGTH");
@@ -197,9 +301,12 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
 
     /**
       * @notice Removes a validator signing key #`_index` from the set of usable keys
+      * @param _SP_id Staking provider id
       * @param _index Index of the key, starting with 0
       */
-    function removeSigningKey(uint256 _index) external auth(MANAGE_SIGNING_KEYS) {
+    function removeSigningKey(uint256 _SP_id, uint256 _index) external
+        authP(MANAGE_SIGNING_KEYS, arr(_SP_id))
+    {
         require(_index < totalSigningKeys, "KEY_NOT_FOUND");
         require(_index >= usedSigningKeys, "KEY_WAS_USED");
 
