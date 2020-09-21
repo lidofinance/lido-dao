@@ -150,7 +150,7 @@ contract('DePoolOracle', ([appManager, voting, user1, user2, user3, user4, nobod
 
     it('single-member oracle works', async () => {
       await assertRevert(app.pushData(1000, 100, {from: user2}), 'MEMBER_NOT_FOUND');
-      await assertRevert(app.pushData(900, 100, {from: user1}), 'REPORT_INTERVAL_IS_TOO_OLD');
+      await assertRevert(app.pushData(10900, 100, {from: user1}), 'REPORT_INTERVAL_HAS_NOT_YET_BEGUN');
 
       await app.pushData(1000, 100, {from: user1});
       await assertData(1000, 100);
@@ -184,7 +184,6 @@ contract('DePoolOracle', ([appManager, voting, user1, user2, user3, user4, nobod
       await assertData(0, 0);
 
       await assertRevert(app.pushData(1000, 100, {from: nobody}), 'MEMBER_NOT_FOUND');
-      await assertRevert(app.pushData(900, 100, {from: user1}), 'REPORT_INTERVAL_IS_TOO_OLD');
       await assertRevert(app.pushData(10900, 100, {from: user1}), 'REPORT_INTERVAL_HAS_NOT_YET_BEGUN');
 
       // reportInterval 1000, quorum 3
@@ -195,7 +194,7 @@ contract('DePoolOracle', ([appManager, voting, user1, user2, user3, user4, nobod
       await assertData(0, 0);
       await app.pushData(1000, 110, {from: user4});
       await assertData(1000, 100); // exact mode of recieved values
-      await assertRevert(app.pushData(1000, 100, {from: user2}), 'ALREADY_FINALIZED');
+      await assertRevert(app.pushData(1000, 100, {from: user2}), 'REPORT_INTERVAL_IS_TOO_OLD');
 
       // reportInterval 1001, quorum 3
       await app.setTime(86400000 + 86400);
@@ -314,22 +313,29 @@ contract('DePoolOracle', ([appManager, voting, user1, user2, user3, user4, nobod
       await assertData(1001, 110);
     });
 
-    it('can push to previous interval until current interval data came', async () => {
+    it('can push to previous intervals until more recent data came', async () => {
       await app.setQuorum(2, {from: voting});
 
       // reportInterval 1000
       await app.pushData(1000, 100, {from: user1});
-      await assertData(0, 0);
-
-      // reportInterval 1001
-      await app.setTime(86400000 + 86400);
-
-      // report past interval
       await app.pushData(1000, 100, {from: user2});
       await assertData(1000, 100);
+
+      // reportInterval 1005
+      await app.setTime(86400000 + 5 * 86400);
+      await assertData(1000, 100);
+
+      // report past intervals
+      await app.pushData(1002, 120, {from: user1});
+      await app.pushData(1002, 120, {from: user2});
+      await assertData(1002, 120);
+
+      await app.pushData(1003, 130, {from: user1});
+      await app.pushData(1003, 130, {from: user2});
+      await assertData(1003, 130);
     });
 
-    it('can\'t push to previous interval if current interval data came', async () => {
+    it('can\'t push to previous intervals if more recent data came', async () => {
       await app.setQuorum(2, {from: voting});
 
       // reportInterval 1000
@@ -339,6 +345,7 @@ contract('DePoolOracle', ([appManager, voting, user1, user2, user3, user4, nobod
       // reportInterval 1001
       await app.setTime(86400000 + 86400);
       await app.pushData(1001, 100, {from: user1});
+      await assertData(0, 0);
 
       // report past interval
       await assertRevert(app.pushData(1000, 100, {from: user2}), "REPORT_INTERVAL_IS_TOO_OLD");
