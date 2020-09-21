@@ -33,9 +33,7 @@ module.exports = {
   aragon: {
     appServePort: 3010,
     clientServePort: 3000,
-    // skip app build and publish to ipfs
-    // TODO uncomment when frontend will be
-    // appSrcPath: 'app/',
+    appSrcPath: 'app/',
     appBuildOutputPath: 'dist/',
     appName: 'depool',
     hooks, // Path to script hooks

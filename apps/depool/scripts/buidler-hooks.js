@@ -47,7 +47,9 @@ module.exports = {
   preInit: async (
     { proxy, _experimentalAppInstaller, log },
     { web3, artifacts }
-  ) => {},
+  ) => {
+
+  },
 
   // Called after the app's proxy is initialized.
   postInit: async (
