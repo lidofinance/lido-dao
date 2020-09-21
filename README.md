@@ -30,19 +30,26 @@ otherwise
 npx lerna bootstrap 
 ```
 
+### Building docker containers
+
+```
+docker-compose build --no-cache
+```
+
 ### Starting & stopping e2e environment
 
 E2E environment consist of two parts: ETH1 related process and ETH 2.0 related process. 
 
-For ETH1 part: Ethereum single node (ganache) and IPFS docker containers.
+For ETH1 part: Ethereum single node (ganache), IPFS docker containers and Aragon Web App.
 
 For ETH2 part: Beacon chain node, genesis validators machine, and, optionally 2nd and 3rd peer beacon chain nodes.
 
-To start the whole environment, use:
+To build and start the whole local environment, use:
  
 ```bash
 ./startup.sh
 ```
+then go to [http://localhost:3000/#/depool-dao/](http://localhost:3000/#/depool-dao/) to manage DAO via Aragon Web App
 
 > To save time you can use snapshot with predeployed contracts in ETH1 chain: `./startup.sh -s `  
 

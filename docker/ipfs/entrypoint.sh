@@ -4,7 +4,7 @@ CACHE_DIR=/export
 mkdir -p $CACHE_DIR
 echo "Tuning ipfs..."
 /usr/local/bin/start_ipfs init
-#/usr/local/bin/start_ipfs bootstrap rm --all
+/usr/local/bin/start_ipfs bootstrap rm --all
 
 if [ ! "$(ls -A $CACHE_DIR)" ]; then
   echo "Initializing ipfs data from snapshot"
@@ -14,7 +14,5 @@ if [ ! "$(ls -A $CACHE_DIR)" ]; then
   echo "Asset hash: $HASH"
 fi
 
-#webui
-#bafybeihpetclqvwb4qnmumvcn7nh4pxrtugrlpw4jgjpqicdxsv7opdm6e
 echo "Starting ipfs..."
 /usr/local/bin/start_ipfs daemon --migrate=true --enable-gc
