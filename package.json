@@ -52,7 +52,7 @@
     "@aragon/contract-helpers-test": "^0.1.0",
     "@aragon/templates-shared": "^1.0.1",
     "@aragon/test-helpers": "^2.1.0",
-    "@aragon/toolkit": "^0.0.7-beta.1",
+    "@aragon/toolkit": "0.0.7",
     "@babel/preset-env": "^7.11.5",
     "@babel/register": "^7.11.5",
     "@openzeppelin/test-helpers": "^0.5.6",
