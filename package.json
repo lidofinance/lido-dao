@@ -18,20 +18,22 @@
     "prepublishOnly": "truffle compile --all && npm run abi:extract -- --no-compile",
     "deploy": "npm run deploy:dev",
     "deploy:dev": "npm run deploy:apm:dev && deploy:apps:dev && deploy:tmpl:dev && deploy:dao:dev",
-    "deploy:rinkeby": "npm run deploy:apm:rinkeby && deploy:apps:rinkeby",
-    "deploy:mainnet": "npm run deploy:apm:mainnet && deploy:apps:mainnet",
     "deploy:apm": "npm run deploy:apm:dev",
     "deploy:apps": "npm run deploy:apps:dev",
     "deploy:tmpl": "npm run deploy:tmpl:dev",
     "deploy:dao": "npm run deploy:dao:dev",
     "deploy:apm:dev": "lerna run --scope=@depools/dao-template --concurrency=1 --stream deploy:apm:dev",
+    "deploy:apm:rinkeby": "lerna run --scope=@depools/dao-template --concurrency=1 --stream deploy:apm:rinkeby",
+    "deploy:apm:mainnet": "lerna run --scope=@depools/dao-template --concurrency=1 --stream deploy:apm:mainnet",
     "deploy:apps:dev": "lerna run --scope=@depools/apps-* --concurrency=1 --stream publish:patch",
-    "deploy:tmpl:dev": "lerna run --scope=@depools/dao-template --concurrency=1 --stream deploy:tmpl:dev",
-    "deploy:dao:dev": "lerna run --scope=@depools/dao-template --concurrency=1 --stream deploy:dao:dev",
-    "deploy:apm:rinkeby": "npm run compile && ENS=0x98Df287B6C145399Aaa709692c8D308357bC085D DAO_FACTORY=0xad4d106b43b480faa3ef7f98464ffc27fc1faa96 truffle exec ./scripts/deploy-apm.js --network rinkeby",
     "deploy:apps:rinkeby": "lerna run --scope=@depools/apps-* --concurrency=1 --stream publish:patch:rinkeby",
-    "deploy:apm:mainnet": "npm run compile && ENS=0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e DAO_FACTORY=0xb9da44c051c6cc9e04b7e0f95e95d69c6a6d8031 truffle exec ./scripts/deploy-apm.js --network mainnet",
-    "deploy:apps:mainnet": "lerna run --scope=@depools/apps-* --concurrency=1 --stream publish:patch:mainnet"
+    "deploy:apps:mainnet": "lerna run --scope=@depools/apps-* --concurrency=1 --stream publish:patch:mainnet",
+    "deploy:tmpl:dev": "lerna run --scope=@depools/dao-template --concurrency=1 --stream deploy:tmpl:dev",
+    "deploy:tmpl:rinkeby": "lerna run --scope=@depools/dao-template --concurrency=1 --stream deploy:tmpl:rinkeby",
+    "deploy:tmpl:mainnet": "lerna run --scope=@depools/dao-template --concurrency=1 --stream deploy:tmpl:mainnet",
+    "deploy:dao:dev": "lerna run --scope=@depools/dao-template --concurrency=1 --stream deploy:dao:dev",
+    "deploy:dao:rinkeby": "lerna run --scope=@depools/dao-template --concurrency=1 --stream deploy:dao:rinkeby",
+    "deploy:dao:mainnet": "lerna run --scope=@depools/dao-template --concurrency=1 --stream deploy:dao:mainnet"
   },
   "files": [
     "/abi",
@@ -44,32 +46,33 @@
   "author": "MixBytes <hello@mixbytes.io>",
   "description": "",
   "devDependencies": {
-    "@aragon/test-helpers": "^2.1.0",
     "@aragon/apps-finance": "^3.0.0",
-    "@aragon/apps-voting": "^2.1.0",
     "@aragon/apps-token-manager": "^2.1.0",
+    "@aragon/apps-voting": "^2.1.0",
     "@aragon/contract-helpers-test": "^0.1.0",
     "@aragon/templates-shared": "^1.0.1",
-    "@aragon/toolkit": "0.0.7",
-    "eth-gas-reporter": "^0.2.17",
+    "@aragon/test-helpers": "^2.1.0",
+    "@aragon/toolkit": "^0.0.7-beta.1",
+    "@babel/preset-env": "^7.11.5",
+    "@babel/register": "^7.11.5",
+    "@openzeppelin/test-helpers": "^0.5.6",
+    "ava": "^3.12.1",
+    "babel-plugin-istanbul": "^6.0.0",
+    "dotenv": "^8.2.0",
     "eth-ens-namehash": "^2.0.8",
+    "eth-gas-reporter": "^0.2.17",
     "ethereumjs-testrpc-sc": "^6.5.1-sc.1",
     "husky": "^4.3.0",
     "lerna": "^3.22.1",
     "solidity-coverage": "^0.7.10",
     "solium": "^1.2.5",
     "truffle": "^5.1.43",
-    "truffle-extract": "^1.2.1",
-    "@babel/preset-env": "^7.11.5",
-    "@babel/register": "^7.11.5",
-    "@openzeppelin/test-helpers": "^0.5.6",
-    "ava": "^3.12.1",
-    "babel-plugin-istanbul": "^6.0.0",
-    "dotenv": "^8.2.0"
-
+    "truffle-extract": "^1.2.1"
   },
   "dependencies": {
-    "@aragon/os": "^4.4.0"
+    "@aragon/os": "^4.4.0",
+    "@truffle/contract": "^4.2.22",
+    "yargs": "^16.0.3"
   },
   "ava": {
     "require": [
@@ -101,5 +104,4 @@
       }
     }
   }
-
 }

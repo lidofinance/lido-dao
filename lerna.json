@@ -8,5 +8,6 @@
   ],
   "hoist": true,
   "version": "independent",
-  "npmClient": "npm"
+  "npmClient": "npm",
+  "loglevel": "warn"
 }
