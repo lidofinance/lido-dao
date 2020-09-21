@@ -1,25 +1,6 @@
 const { hash: namehash } = require('eth-ens-namehash')
-const keccak256 = require('js-sha3').keccak_256
 const getAccounts = require('@aragon/os/scripts/helpers/get-accounts')
 const logDeploy = require('@aragon/os/scripts/helpers/deploy-logger')
-
-const {
-  ANY_ENTITY,
-  NO_MANAGER,
-  ZERO_ADDRESS,
-  addressesEqual,
-  resolveAddressOrEnsDomain,
-  getAclAddress,
-  encodeInitPayload,
-  getAppProxyAddressFromReceipt,
-  getAppBase,
-  defaultAPMName,
-  startLocalDaemon,
-  getBinaryPath,
-  getDefaultRepoPath,
-  isLocalDaemonRunning,
-  getApmRepo,
-} = require('@aragon/toolkit')
 
 const globalArtifacts = this.artifacts // Not injected unless called directly via truffle
 const globalWeb3 = this.web3 // Not injected unless called directly via truffle
@@ -70,9 +51,9 @@ module.exports = async (truffleExecCallback, {
   if (!apmRegistryAddress) errorOut('Missing APM Registry address. Please specify one using APM env var')
   if (!depositContractAddress) errorOut('Missing Deposit Contract address. Please specify one using DAO_FACTORY env var')
 
-  const [_owner, holder1, holder2, holder3, holder4, holder5] = await getAccounts(web3)
+  const [holder1, holder2, holder3, holder4, holder5] = await getAccounts(web3)
   if (!owner) {
-    owner = _owner
+    owner = holder1
     log('OWNER env variable not found, setting owner to the provider\'s first account')
   }
   log('Owner:', owner)
@@ -105,12 +86,13 @@ module.exports = async (truffleExecCallback, {
     const template = await DePoolTemplate.at(tmplAddress)
     console.log(`Using DePool template ${dePoolTemplateName}.${dePoolTld} at:`, template.address)
 
-    //TODO move holders to .env
+    //TODO get holders from .env
     const HOLDERS = [holder1, holder2, holder3, holder4, holder5]
     const STAKES = HOLDERS.map(() => '100000000000000000000') //100e18
     const TOKEN_NAME = 'DePool DAO Token'
     const TOKEN_SYMBOL = 'DPD'
 
+    //TODO get voting settings from .env
     const VOTE_DURATION = ONE_WEEK
     const SUPPORT_REQUIRED = '500000000000000000' //50e16
     const MIN_ACCEPTANCE_QUORUM = '50000000000000000' //5e16
@@ -127,13 +109,13 @@ module.exports = async (truffleExecCallback, {
     const daoEvent = receipt.logs.find(l => l.event === 'DeployDao')
 
     // log(`Registering DAO as "${dePoolDaoName}.${dePoolTld}"`)
-    // TODO ?
+    // TODO register dao at depoolspm.eth (by default dao registered at aragonid.eth)
     // receipt = await apm.newRepoWithVersion(dePoolDaoName, owner, [1, 0, 0], daoEvent.args.dao, '0x0', { from: owner })
     // log(receipt)
 
     log('# DAO:')
     log('Address:', daoEvent.args.dao)
-    log('Token:', tokenEvent.args.token)
+    log('Share Token:', tokenEvent.args.token)
     log('=========')
 
     if (typeof truffleExecCallback === 'function') {

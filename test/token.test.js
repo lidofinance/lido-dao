@@ -1,40 +1,21 @@
 import test from 'ava'
-import {
-  getLocalWeb3,
-  getApmOptions,
-  getAccounts,
-  daoAddress,
-  owner,
-  TOKEN_MANAGER_APP_ID,
-} from "./test-helpers";
+import { prepareContext } from "./helpers";
 
 import { abi as tokenManagerAbi } from '@aragon/apps-token-manager/abi/TokenManager.json'
 import { abi as tokenAbi } from '@aragon/apps-token-manager/abi/MiniMeToken.json'
 
-import { getAllApps } from '@aragon/toolkit'
-
 test.before('Connecting Web3', async (t) => {
-  const web3 = await getLocalWeb3()
-  // Retrieve web3 accounts.
-  const accounts = await getAccounts(web3)
-  const options = await getApmOptions()
-  t.context = {
-    web3,
-    accounts,
-    options
-  }
+  t.context = await prepareContext()
 })
 
 test('Tokens',
   async t => {
-    const { web3,accounts } = t.context
-    const apps = await getAllApps(daoAddress, { web3 })
-    const tokenManagerApp = apps.find(
-      app => app.appId === TOKEN_MANAGER_APP_ID
-    )
+    const { web3, accounts, apps } = t.context
+
+    const { tokenManagerApp } = apps
     if (!tokenManagerApp)
       throw Error(
-        `TokenManager app not found: ${apps.map(({ name }) => name).join(', ')}`
+        `TokenManager app not found`
       )
     const tokenManagerAddress = tokenManagerApp.proxyAddress
     // console.log(`Retrieved TokenManager app: ${tokenManagerAddress}`)
@@ -45,7 +26,7 @@ test('Tokens',
     // console.log(`Retrieved Token: ${tokenManagerAddress}`)
     const Token = new web3.eth.Contract(tokenAbi, tokenAddress)
 
-    const [ name, symbol, decimals ] = await Promise.all([
+    const [name, symbol, decimals] = await Promise.all([
       Token.methods.name().call(),
       Token.methods.symbol().call(),
       Token.methods.decimals().call()
