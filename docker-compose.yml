@@ -3,20 +3,24 @@ services:
   node1:
     build:
       context: ./docker/devchain/
+#      args:
+#        ARAGON_PKG: aragen-6.0.0-beta.1.tgz
     container_name: node1
     ports:
       - 8545:8545
     volumes:
       - ./data/devchain:/data
-    networks:
-      eth2:
     environment:
       - BLOCK_TIME=2
       - GAS_LIMIT=12000000
+    networks:
+      eth2:
 
   ipfs:
     build:
       context: ./docker/ipfs/
+#      args:
+#        - ARAGON_PKG=aragen-6.0.0-beta.1.tgz
     container_name: ipfs
     ports:
       - 5001:5001
@@ -24,24 +28,26 @@ services:
     volumes:
       - ./data/export:/export
       - ./data/ipfs:/data/ipfs
+    environment:
+      - IPFS_PROFILE=server
     networks:
       eth2:
 
-#  # Aragon application node
-#  aragon:
-#    build:
-#      context: ./docker/aragon/
-#    image: aragon
-#    ports:
-#      - 3000:3000
-#    volumes:
-#      - "./apps:/apps"
-#    environment:
-#      - ARAGON_APP_LOCATOR=ipfs
-#      - ARAGON_DEFAULT_ETH_NODE=ws://node1:8545
-#      - ARAGON_ETH_NETWORK_TYPE=local
-#      - ARAGON_IPFS_GATEWAY=http://ipfs:8080/ipfs
-#      - ARAGON_ENS_REGISTRY_ADDRESS=0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1
+  # Aragon application node
+  aragon:
+    build:
+      context: ./docker/aragon/
+#      args:
+#        - ARAGON_IPFS_GATEWAY=http://public_ipfs_hostname:8080/ipfs
+#        - ARAGON_DEFAULT_ETH_NODE=ws://public_eth1_node_hostname:8545
+#        - ARAGON_APP_LOCATOR=ipfs
+#        - ARAGON_ETH_NETWORK_TYPE=local
+#        - ARAGON_ENS_REGISTRY_ADDRESS=0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1
+    container_name: aragon
+    ports:
+      - 3000:8080
+    networks:
+      eth2:
 
   node2-1:
     image: sigp/lighthouse@sha256:8abac5f1eaed93180fc3a1ff87a711a3c27316b49a3df3bdaf3c5f3e41f2c27e
