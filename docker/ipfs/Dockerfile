@@ -1,11 +1,11 @@
 FROM ipfs/go-ipfs:latest
 
-ARG ARAGON_PKG="aragen-5.4.2.tgz"
-ENV ARAGON_PKG=$ARAGON_PKG
+ARG ARAGEN_PKG="aragen-5.4.3.tgz"
+ENV ARAGEN_PKG=$ARAGEN_PKG
+ENV IPFS_PROFILE="server"
 
 # get aragen snapshot
-RUN wget -q https://registry.npmjs.org/@aragon/aragen/-/$ARAGON_PKG
-RUN mv $ARAGON_PKG aragen.tgz
+RUN wget -q https://registry.npmjs.org/@aragon/aragen/-/$ARAGEN_PKG
 
 COPY ./entrypoint.sh .
 ENTRYPOINT ["/sbin/tini", "--", "./entrypoint.sh"]

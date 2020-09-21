@@ -1,25 +1,28 @@
 FROM node:12
 
+ARG ARAGON_APP_LOCATOR=ipfs
+ARG ARAGON_ETH_NETWORK_TYPE=local
+ARG ARAGON_ENS_REGISTRY_ADDRESS=0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1
+ARG ARAGON_IPFS_GATEWAY=http://localhost:8080/ipfs
+ARG ARAGON_DEFAULT_ETH_NODE=ws://localhost:8545
+
+ENV ARAGON_APP_LOCATOR=$ARAGON_APP_LOCATOR
+ENV ARAGON_ETH_NETWORK_TYPE=$ARAGON_ETH_NETWORK_TYPE
+ENV ARAGON_ENS_REGISTRY_ADDRESS=$ARAGON_ENS_REGISTRY_ADDRESS
+ENV ARAGON_IPFS_GATEWAY=$ARAGON_IPFS_GATEWAY
+ENV ARAGON_DEFAULT_ETH_NODE=$ARAGON_DEFAULT_ETH_NODE
 
 RUN mkdir -p /aragon
 RUN wget -q https://github.com/aragon/aragon/archive/0.8.14.tar.gz
-RUN tar -xzf -C /aragon 0.8.14.tar.gz
+RUN tar -xzf 0.8.14.tar.gz -C /aragon --strip 1 aragon-0.8.14
 WORKDIR /aragon
-#RUN cd go-ipfs && ./install.sh
-#RUN rm -rf go-ipfs
-#RUN ipfs init --profile server
+RUN yarn global add http-server
+RUN yarn
 
-# get aragen snapshot
-RUN wget -q https://registry.npmjs.org/@aragon/aragen/-/$ARAGEN_PKG
-RUN mv $ARAGEN_PKG aragen.tgz
-#RUN mkdir -p /ipfs-cache
-# extract ipfs cache
-#RUN tar -xzf aragen.tgz -C /ipfs-cache --strip 2 package/ipfs-cache
-#RUN ipfs add -r -Q /ipfs-cache
+RUN npx copy-aragon-ui-assets -n aragon-ui ./public
 
-#depositcontract
-RUN apt-get update && apt-get -y install jq && apt-get clean
-RUN wget -q https://raw.githubusercontent.com/ethereum/eth2.0-specs/dev/solidity_deposit_contract/deposit_contract.json
+ENV NODE_OPTIONS=--max_old_space_size=4096
+# RUN yarn build:local
+RUN npx parcel build src/index.html --out-dir ./public --public-url ./ --no-cache --no-source-maps
 
-COPY ./entrypoint.sh .
-ENTRYPOINT ["./entrypoint.sh"]
+ENTRYPOINT ["http-server"]
