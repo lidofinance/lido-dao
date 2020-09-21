@@ -142,10 +142,8 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
       */
     function pushData(uint256 _reportInterval, uint256 _eth2balance) external {
         require(_reportInterval <= _getCurrentReportInterval(), "REPORT_INTERVAL_HAS_NOT_YET_BEGUN");
-        require(_reportInterval >= _getCurrentReportInterval().sub(1), "REPORT_INTERVAL_IS_TOO_OLD");
         require(_reportInterval >= currentlyAggregatedReportInterval, "REPORT_INTERVAL_IS_TOO_OLD");
-        assert(lastFinalizedReportInterval <= _reportInterval);
-        require(lastFinalizedReportInterval != _reportInterval, "ALREADY_FINALIZED");
+        require(_reportInterval > lastFinalizedReportInterval, "REPORT_INTERVAL_IS_TOO_OLD");
 
         address member = msg.sender;
         uint256 index = _findMember(member);
