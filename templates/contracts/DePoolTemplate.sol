@@ -126,6 +126,12 @@ contract DePoolTemplate is ENSConstants, BaseTemplate {
         acl.createPermission(voting, depool, depool.MANAGE_WITHDRAWAL_KEY(), voting);
         acl.createPermission(voting, depool, depool.MANAGE_SIGNING_KEYS(), voting);
         acl.createPermission(voting, depool, depool.SET_ORACLE(), voting);
+        acl.createPermission(voting, depool, depool.ADD_STAKING_PROVIDER_ROLE(), voting);
+        acl.createPermission(voting, depool, depool.SET_STAKING_PROVIDER_ACTIVE_ROLE(), voting);
+        acl.createPermission(voting, depool, depool.SET_STAKING_PROVIDER_NAME_ROLE(), voting);
+        acl.createPermission(voting, depool, depool.SET_STAKING_PROVIDER_ADDRESS_ROLE(), voting);
+        acl.createPermission(voting, depool, depool.SET_STAKING_PROVIDER_LIMIT_ROLE(), voting);
+        acl.createPermission(voting, depool, depool.REPORT_STOPPED_VALIDATORS_ROLE(), voting);
     }
 
 

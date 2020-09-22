@@ -106,6 +106,9 @@ interface IDePool {
       */
     function getStakingProvidersCount() external view returns (uint256);
 
+    /**
+      * @notice Returns the n-th staking provider
+      */
     function getStakingProvider(uint256 _id) external view returns (
         bool active,
         string name,
