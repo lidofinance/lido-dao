@@ -44,8 +44,12 @@ For ETH1 part: Ethereum single node (ganache), IPFS docker containers and Aragon
 
 For ETH2 part: Beacon chain node, genesis validators machine, and, optionally 2nd and 3rd peer beacon chain nodes.
 
-To build and start the whole local environment, use:
- 
+To build and start the whole local environment, first:
+* git clone -b fix/full-flow-test git@github.com:depools/dc4bc.git
+ to the depool-dao root
+* Add your local ssh key to github account
+
+then use:
 ```bash
 ./startup.sh
 ```
