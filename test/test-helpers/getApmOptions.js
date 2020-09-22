@@ -12,9 +12,9 @@ export function getApmOptions() {
       protocol: 'http',
       host: 'localhost',
       port: 5001,
-      default: true,
+      default: true
     },
-    gateway: 'http://localhost:8080/ipfs',
+    gateway: 'http://localhost:8080/ipfs'
   }
 
   return options
