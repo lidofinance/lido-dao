@@ -32,7 +32,6 @@ test.before('Connecting Web3', async (t) => {
   t.context = await prepareContext()
 })
 
-const findApp = (apps, id) => apps.find(app => app.appId === id)
 test('Voting ',
   async t => {
     const { web3, accounts, apps } = t.context
