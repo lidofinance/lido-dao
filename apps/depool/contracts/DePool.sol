@@ -15,6 +15,8 @@ import "@depools/depool-lib/contracts/Pausable.sol";
   * @title Liquid staking pool implementation
   *
   * See the comment of `IDePool`.
+  *
+  * NOTE: the code below assumes moderate amount of staking providers, e.g. up to 50.
   */
 contract DePool is IDePool, IsContract, Pausable, AragonApp {
     using SafeMath for uint256;
@@ -71,9 +73,6 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
 
     /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
     bytes private withdrawalCredentials;
-
-    uint256 private totalSigningKeys;
-    uint256 private usedSigningKeys;
 
 
     /// @dev Request to withdraw Ether on the 2.0 side
@@ -198,7 +197,13 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         require(_withdrawalCredentials.length == WITHDRAWAL_CREDENTIALS_LENGTH, "INVALID_LENGTH");
 
         withdrawalCredentials = _withdrawalCredentials;
-        totalSigningKeys = usedSigningKeys; // discard unused keys
+
+        uint256 length = sps.length;
+        for (uint256 _SP_id = 1; _SP_id < length; ++_SP_id) {
+            if (sps[_SP_id].totalSigningKeys != sps[_SP_id].usedSigningKeys)    // write only if update is needed
+                // discard unused keys
+                sps[_SP_id].totalSigningKeys = sps[_SP_id].usedSigningKeys;
+        }
 
         emit WithdrawalCredentialsSet(_withdrawalCredentials);
     }
@@ -212,9 +217,9 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
       * @return a unique key of the added SP
       */
     function addStakingProvider(string _name, address _rewardAddress, uint256 _stakingLimit) external
-        returns (uint256 id)
         auth(ADD_STAKING_PROVIDER_ROLE)
         validAddress(_rewardAddress)
+        returns (uint256 id)
     {
         id = sps.length++;
         StakingProvider storage sp = sps[id];
@@ -232,16 +237,21 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
       */
     function setStakingProviderActive(uint256 _id, bool _active) external
         authP(SET_STAKING_PROVIDER_ACTIVE_ROLE, arr(_id, _active))
+        SPExists(_id)
     {
+        sps[_id].active = _active;
+        emit StakingProviderActiveSet(_id, _active);
     }
-
 
     /**
       * @notice Change human-readable name of the staking provider #`_id` to `_name`
       */
     function setStakingProviderName(uint256 _id, string _name) external
         authP(SET_STAKING_PROVIDER_NAME_ROLE, arr(_id, _name))
+        SPExists(_id)
     {
+        sps[_id].name = _name;
+        emit StakingProviderNameSet(_id, _name);
     }
 
     /**
@@ -249,7 +259,11 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
       */
     function setStakingProviderRewardAddress(uint256 _id, address _rewardAddress) external
         authP(SET_STAKING_PROVIDER_ADDRESS_ROLE, arr(_id, _rewardAddress))
+        SPExists(_id)
+        validAddress(_rewardAddress)
     {
+        sps[_id].rewardAddress = _rewardAddress;
+        emit StakingProviderRewardAddressSet(_id, _rewardAddress);
     }
 
     /**
@@ -257,7 +271,10 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
       */
     function setStakingProviderStakingLimit(uint256 _id, uint256 _stakingLimit) external
         authP(SET_STAKING_PROVIDER_LIMIT_ROLE, arr(_id, _stakingLimit))
+        SPExists(_id)
     {
+        sps[_id].stakingLimit = _stakingLimit;
+        emit StakingProviderStakingLimitSet(_id, _stakingLimit);
     }
 
     /**
@@ -265,7 +282,13 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
       */
     function reportStoppedValidators(uint256 _id, uint256 _stoppedIncrement) external
         authP(REPORT_STOPPED_VALIDATORS_ROLE, arr(_id, _stoppedIncrement))
+        SPExists(_id)
     {
+        require(0 != _stoppedIncrement, "EMPTY_VALUE");
+        sps[_id].stoppedValidators = sps[_id].stoppedValidators.add(_stoppedIncrement);
+        require(sps[_id].stoppedValidators <= sps[_id].usedSigningKeys, "STOPPED_MORE_THAN_LAUNCHED");
+
+        emit StakingProviderTotalStoppedValidatorsReported(_id, sps[_id].stoppedValidators);
     }
 
 
@@ -282,6 +305,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
       */
     function addSigningKeys(uint256 _SP_id, uint256 _quantity, bytes _pubkeys, bytes _signatures) external
         authP(MANAGE_SIGNING_KEYS, arr(_SP_id))
+        SPExists(_SP_id)
     {
         require(_quantity != 0, "NO_KEYS");
         require(_pubkeys.length == _quantity.mul(PUBKEY_LENGTH), "INVALID_LENGTH");
@@ -292,11 +316,11 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
             require(!_isEmptySigningKey(key), "EMPTY_KEY");
             bytes memory sig = BytesLib.slice(_signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
 
-            _storeSigningKey(totalSigningKeys + i, key, sig);
-            emit SigningKeyAdded(key);
+            _storeSigningKey(_SP_id, sps[_SP_id].totalSigningKeys + i, key, sig);
+            emit SigningKeyAdded(_SP_id, key);
         }
 
-        totalSigningKeys = totalSigningKeys.add(_quantity);
+        sps[_SP_id].totalSigningKeys = sps[_SP_id].totalSigningKeys.add(_quantity);
     }
 
     /**
@@ -306,22 +330,23 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
       */
     function removeSigningKey(uint256 _SP_id, uint256 _index) external
         authP(MANAGE_SIGNING_KEYS, arr(_SP_id))
+        SPExists(_SP_id)
     {
-        require(_index < totalSigningKeys, "KEY_NOT_FOUND");
-        require(_index >= usedSigningKeys, "KEY_WAS_USED");
+        require(_index < sps[_SP_id].totalSigningKeys, "KEY_NOT_FOUND");
+        require(_index >= sps[_SP_id].usedSigningKeys, "KEY_WAS_USED");
 
-        (bytes memory removedKey, ) = _loadSigningKey(_index);
+        (bytes memory removedKey, ) = _loadSigningKey(_SP_id, _index);
 
-        uint256 lastIndex = totalSigningKeys.sub(1);
+        uint256 lastIndex = sps[_SP_id].totalSigningKeys.sub(1);
         if (_index < lastIndex) {
-            (bytes memory key, bytes memory signature) = _loadSigningKey(lastIndex);
-            _storeSigningKey(_index, key, signature);
+            (bytes memory key, bytes memory signature) = _loadSigningKey(_SP_id, lastIndex);
+            _storeSigningKey(_SP_id, _index, key, signature);
         }
 
-        _deleteSigningKey(lastIndex);
-        totalSigningKeys--;
+        _deleteSigningKey(_SP_id, lastIndex);
+        sps[_SP_id].totalSigningKeys = sps[_SP_id].totalSigningKeys.sub(1);
 
-        emit SigningKeyRemoved(removedKey);
+        emit SigningKeyRemoved(_SP_id, removedKey);
     }
 
 
@@ -433,31 +458,67 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @notice Returns total number of signing keys
+      * @notice Returns total number of staking providers
       */
-    function getTotalSigningKeyCount() external view returns (uint256) {
-        return totalSigningKeys;
+    function getStakingProvidersCount() external view returns (uint256) {
+        return sps.length.sub(1);
     }
 
     /**
-      * @notice Returns number of usable signing keys
+      * @notice Returns the n-th staking provider
       */
-    function getUnusedSigningKeyCount() external view returns (uint256) {
-        return totalSigningKeys.sub(usedSigningKeys);
+    function getStakingProvider(uint256 _id) external view
+        SPExists(_id)
+        returns
+        (
+            bool active,
+            string name,
+            address rewardAddress,
+            uint256 stakingLimit,
+            uint256 stoppedValidators,
+            uint256 totalSigningKeys,
+            uint256 usedSigningKeys
+        )
+    {
+        StakingProvider storage sp = sps[_id];
+
+        active = sp.active;
+        name = sp.name;
+        rewardAddress = sp.rewardAddress;
+        stakingLimit = sp.stakingLimit;
+        stoppedValidators = sp.stoppedValidators;
+        totalSigningKeys = sp.totalSigningKeys;
+        usedSigningKeys = sp.usedSigningKeys;
     }
 
     /**
-      * @notice Returns n-th signing key
+      * @notice Returns total number of signing keys of the staking provider #`_SP_id`
+      */
+    function getTotalSigningKeyCount(uint256 _SP_id) external view SPExists(_SP_id) returns (uint256) {
+        return sps[_SP_id].totalSigningKeys;
+    }
+
+    /**
+      * @notice Returns number of usable signing keys of the staking provider #`_SP_id`
+      */
+    function getUnusedSigningKeyCount(uint256 _SP_id) external view SPExists(_SP_id) returns (uint256) {
+        return sps[_SP_id].totalSigningKeys.sub(sps[_SP_id].usedSigningKeys);
+    }
+
+    /**
+      * @notice Returns n-th signing key of the staking provider #`_SP_id`
+      * @param _SP_id Staking provider id
       * @param _index Index of the key, starting with 0
       * @return key Key
       * @return used Flag indication if the key was used in the staking
       */
-    function getSigningKey(uint256 _index) external view returns (bytes key, bool used) {
-        require(_index < totalSigningKeys, "KEY_NOT_FOUND");
+    function getSigningKey(uint256 _SP_id, uint256 _index) external view SPExists(_SP_id) returns (bytes key, bool used)
+    {
+        require(_index < sps[_SP_id].totalSigningKeys, "KEY_NOT_FOUND");
 
-        (bytes memory key_, ) = _loadSigningKey(_index);
+        (bytes memory key_, ) = _loadSigningKey(_SP_id, _index);
 
-        return (key_, _index < usedSigningKeys);
+        return (key_, _index < sps[_SP_id].usedSigningKeys);
     }
 
 
@@ -841,11 +902,11 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         return 0 == k1 && 0 == (k2 >> ((2 * 32 - PUBKEY_LENGTH) * 8));
     }
 
-    function _signingKeyOffset(uint256 _keyIndex) internal pure returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(SIGNING_KEYS_MAPPING_NAME, _keyIndex)));
+    function _signingKeyOffset(uint256 _SP_id, uint256 _keyIndex) internal pure returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(SIGNING_KEYS_MAPPING_NAME, _SP_id, _keyIndex)));
     }
 
-    function _storeSigningKey(uint256 _keyIndex, bytes memory _key, bytes memory _signature) internal {
+    function _storeSigningKey(uint256 _SP_id, uint256 _keyIndex, bytes memory _key, bytes memory _signature) internal {
         assert(_key.length == PUBKEY_LENGTH);
         assert(_signature.length == SIGNATURE_LENGTH);
         // algorithm applicability constraints
@@ -853,7 +914,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         assert(0 == SIGNATURE_LENGTH % 32);
 
         // key
-        uint256 offset = _signingKeyOffset(_keyIndex);
+        uint256 offset = _signingKeyOffset(_SP_id, _keyIndex);
         uint256 keyExcessBits = (2 * 32 - PUBKEY_LENGTH) * 8;
         assembly {
             sstore(offset, mload(add(_key, 0x20)))
@@ -870,8 +931,8 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         }
     }
 
-    function _deleteSigningKey(uint256 _keyIndex) internal {
-        uint256 offset = _signingKeyOffset(_keyIndex);
+    function _deleteSigningKey(uint256 _SP_id, uint256 _keyIndex) internal {
+        uint256 offset = _signingKeyOffset(_SP_id, _keyIndex);
         for (uint256 i = 0; i < (PUBKEY_LENGTH + SIGNATURE_LENGTH) / 32 + 1; ++i) {
             assembly {
                 sstore(add(offset, i), 0)
@@ -879,12 +940,12 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         }
     }
 
-    function _loadSigningKey(uint256 _keyIndex) internal view returns (bytes memory key, bytes memory signature) {
+    function _loadSigningKey(uint256 _SP_id, uint256 _keyIndex) internal view returns (bytes memory key, bytes memory signature) {
         // algorithm applicability constraints
         assert(PUBKEY_LENGTH >= 32 && PUBKEY_LENGTH <= 64);
         assert(0 == SIGNATURE_LENGTH % 32);
 
-        uint256 offset = _signingKeyOffset(_keyIndex);
+        uint256 offset = _signingKeyOffset(_SP_id, _keyIndex);
 
         // key
         bytes memory tmpKey = new bytes(64);
