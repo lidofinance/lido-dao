@@ -32,7 +32,6 @@
     "@depools/apps-steth": "^0.0.1",
     "@depools/dao": "^0.0.1",
     "@depools/depool-lib": "^0.0.1",
-    "@truffle/contract": "^4.2.22",
-    "yargs": "^16.0.3"
+    "@truffle/contract": "^4.2.22"
   }
 }
