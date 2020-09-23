@@ -100,6 +100,21 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     /// @dev Array of all staking providers
     StakingProvider[] internal sps;
 
+    // @dev Cached number of active SPs
+    uint256 internal activeSPCount;
+
+
+    // Memory cache entry used in the _ETH2Deposit function
+    struct DepositLookupCacheEntry {
+        // Makes no sense to pack types since reading memory is as fast as any op
+        uint256 id;
+        uint256 stakingLimit;
+        uint256 stoppedValidators;
+        uint256 totalSigningKeys;
+        uint256 usedSigningKeys;
+        uint256 initialUsedSigningKeys; // for write-back control
+    }
+
 
     modifier validAddress(address _a) {
         require(_a != address(0), "EMPTY_ADDRESS");
@@ -118,6 +133,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         _setOracle(_oracle);
 
         sps.length++;    // sp[0] is unused
+        activeSPCount = 0;
 
         initialized();
     }
@@ -199,10 +215,10 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         withdrawalCredentials = _withdrawalCredentials;
 
         uint256 length = sps.length;
-        for (uint256 _SP_id = 1; _SP_id < length; ++_SP_id) {
-            if (sps[_SP_id].totalSigningKeys != sps[_SP_id].usedSigningKeys)    // write only if update is needed
+        for (uint256 SP_id = 1; SP_id < length; ++SP_id) {
+            if (sps[SP_id].totalSigningKeys != sps[SP_id].usedSigningKeys)    // write only if update is needed
                 // discard unused keys
-                sps[_SP_id].totalSigningKeys = sps[_SP_id].usedSigningKeys;
+                sps[SP_id].totalSigningKeys = sps[SP_id].usedSigningKeys;
         }
 
         emit WithdrawalCredentialsSet(_withdrawalCredentials);
@@ -224,6 +240,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         id = sps.length++;
         StakingProvider storage sp = sps[id];
 
+        activeSPCount++;
         sp.active = true;
         sp.name = _name;
         sp.rewardAddress = _rewardAddress;
@@ -239,7 +256,15 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         authP(SET_STAKING_PROVIDER_ACTIVE_ROLE, arr(_id, _active))
         SPExists(_id)
     {
+        if (sps[_id].active != _active) {
+            if (_active)
+                activeSPCount++;
+            else
+                activeSPCount = activeSPCount.sub(1);
+        }
+
         sps[_id].active = _active;
+
         emit StakingProviderActiveSet(_id, _active);
     }
 
@@ -451,10 +476,10 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
             bool active,
             string name,
             address rewardAddress,
-            uint256 stakingLimit,
-            uint256 stoppedValidators,
-            uint256 totalSigningKeys,
-            uint256 usedSigningKeys
+            uint64 stakingLimit,
+            uint64 stoppedValidators,
+            uint64 totalSigningKeys,
+            uint64 usedSigningKeys
         )
     {
         StakingProvider storage sp = sps[_id];
@@ -628,13 +653,60 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
       */
     function _ETH2Deposit(uint256 _amount) internal returns (uint256) {
         assert(_amount >= MIN_DEPOSIT_AMOUNT);
-        uint256 deposited = 0;
+        if (0 == activeSPCount)
+            return 0;
 
-        while (_amount != 0 && totalSigningKeys > usedSigningKeys) {
+        // Memory is very cheap, although you don't want to grow it too much.
+        DepositLookupCacheEntry[] memory cache = new DepositLookupCacheEntry[](activeSPCount);
+        uint256 idx = 0;
+        uint256 length = sps.length;
+        for (uint256 SP_id = 1; SP_id < length; ++SP_id) {
+            StakingProvider storage sp = sps[SP_id];
+            if (!sp.active)
+                continue;
+
+            DepositLookupCacheEntry memory cached = cache[idx++];
+            cached.id = SP_id;
+            cached.stakingLimit = sp.stakingLimit;
+            cached.stoppedValidators = sp.stoppedValidators;
+            cached.totalSigningKeys = sp.totalSigningKeys;
+            cached.usedSigningKeys = sp.usedSigningKeys;
+            cached.initialUsedSigningKeys = cached.usedSigningKeys;
+        }
+        assert(idx == cache.length);
+
+        uint256 deposited = 0;
+        while (_amount != 0) {
+            // Finding the best suitable SP
+            uint256 bestSPidx = cache.length;   // 'not found' flag
+            uint256 smallestStake;
+            // The loop is ligthweight comparing to an ether transfer and .deposit invocation
+            for (idx = 0; idx < cache.length; ++idx) {
+                DepositLookupCacheEntry memory entry = cache[idx];
+
+                assert(entry.usedSigningKeys <= entry.totalSigningKeys);
+                if (entry.usedSigningKeys == entry.totalSigningKeys)
+                    continue;
+
+                uint256 stake = entry.usedSigningKeys.sub(entry.stoppedValidators);
+                if (stake + 1 > entry.stakingLimit)
+                    continue;
+
+                if (bestSPidx == cache.length || stake < smallestStake) {
+                    bestSPidx = idx;
+                    smallestStake = stake;
+                }
+            }
+
+            if (bestSPidx == cache.length)  // not found
+                break;
+
+            // Invoking deposit for the best SP
             _amount = _amount.sub(DEPOSIT_SIZE);
             deposited = deposited.add(DEPOSIT_SIZE);
 
-            (bytes memory key, bytes memory signature) = _loadSigningKey(usedSigningKeys++);
+            (bytes memory key, bytes memory signature) =
+                    _loadSigningKey(cache[bestSPidx].id, cache[bestSPidx].usedSigningKeys++);
 
             // finally, stake the notch for the assigned validator
             _stake(key, signature);
@@ -642,6 +714,13 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
 
         if (0 != deposited) {
             REWARD_BASE_VALUE_POSITION.setStorageUint256(REWARD_BASE_VALUE_POSITION.getStorageUint256().add(deposited));
+
+            // Write back usedSigningKeys
+            for (idx = 0; idx < cache.length; ++idx) {
+                DepositLookupCacheEntry memory entry = cache[idx];
+                if (entry.usedSigningKeys > entry.initialUsedSigningKeys)
+                    sps[cache[idx].id].usedSigningKeys = entry.usedSigningKeys;
+            }
         }
 
         return deposited;
