@@ -5,10 +5,11 @@ import "@aragon/os/contracts/lib/math/SafeMath.sol";
 import "@aragon/os/contracts/common/IsContract.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
-import "@depools/dao/contracts/interfaces/IDePool.sol";
-import "@depools/dao/contracts/interfaces/ISTETH.sol";
-import "@depools/dao/contracts/interfaces/IValidatorRegistration.sol";
-import "@depools/depool-lib/contracts/Pausable.sol";
+import "./interfaces/IDePool.sol";
+import "./interfaces/ISTETH.sol";
+import "./interfaces/IValidatorRegistration.sol";
+
+import "./lib/Pausable.sol";
 
 
 /**

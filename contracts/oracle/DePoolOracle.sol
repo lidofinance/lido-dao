@@ -4,8 +4,8 @@ import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 import "@aragon/os/contracts/common/IsContract.sol";
 
-import "@depools/dao/contracts/interfaces/IDePoolOracle.sol";
-import "@depools/dao/contracts/interfaces/IDePool.sol";
+import "../interfaces/IDePoolOracle.sol";
+import "../interfaces/IDePool.sol";
 
 import "./Algorithm.sol";
 import "./BitOps.sol";

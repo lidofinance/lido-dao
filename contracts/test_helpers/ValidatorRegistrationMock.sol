@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-import "@depools/dao/contracts/interfaces/IValidatorRegistration.sol";
+import "../interfaces/IValidatorRegistration.sol";
 
 
 /**
