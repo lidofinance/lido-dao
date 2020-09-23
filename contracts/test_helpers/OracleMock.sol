@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-import "@depools/dao/contracts/interfaces/IDePool.sol";
+import "../interfaces/IDePool.sol";
 
 
 /**

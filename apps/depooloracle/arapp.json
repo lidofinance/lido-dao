@@ -39,5 +39,5 @@
     }
   },
   "appName": "depooloracle.depoolspm.eth",
-  "path": "contracts/DePoolOracle.sol"
+  "path": "../../contracts/oracle/DePoolOracle.sol"
 }
