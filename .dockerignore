@@ -1,0 +1,10 @@
+**/dist
+**/node_modules
+npm-debug*
+
+Dockerfile
+.dockerignore
+.git
+.gitignore
+
+.ipfs

@@ -1,0 +1,22 @@
+export const KERNEL_CORE_APP_ID = '0x3b4bf6bf3ad5000ecf0f989d5befde585c6860fea3e574a4fab4c49d1c177d9c'
+export const KERNEL_DEFAULT_ACL_APP_ID = '0xe3262375f45a6e2026b7e7b18c2b807434f2508fe1a2a3dfb493c7df8f4aad6a'
+export const KERNEL_DEFAULT_VAULT_APP_ID = '0x7e852e0fcfce6551c13800f1e7476f982525c2b5277ba14b24339c68416336d1'
+export const EVMSCRIPT_REGISTRY_APP_ID = '0xddbcfd564f642ab5627cf68b9b7d374fb4f8a36e941a75d89c87998cef03bd61'
+export const AGENT_APP_ID = '0x9ac98dc5f995bf0211ed589ef022719d1487e5cb2bab505676f0d084c07cf89a'
+export const VAULT_APP_ID = '0x7e852e0fcfce6551c13800f1e7476f982525c2b5277ba14b24339c68416336d1'
+export const VOTING_APP_ID = '0x9fa3927f639745e587912d4b0fea7ef9013bf93fb907d29faeab57417ba6e1d4'
+export const PAYROLL_APP_ID = '0x463f596a96d808cb28b5d080181e4a398bc793df2c222f6445189eb801001991'
+export const FINANCE_APP_ID = '0xbf8491150dafc5dcaee5b861414dca922de09ccffa344964ae167212e8c673ae'
+export const TOKEN_MANAGER_APP_ID = '0x6b20a3010614eeebf2138ccec99f028a61c811b3b1a3343b6ff635985c75c91f'
+export const SURVEY_APP_ID = '0x030b2ab880b88e228f2da5a3d19a2a31bc10dbf91fb1143776a6de489389471e'
+
+// depool
+export const STETH_APP_ID = '0x5937d846addd00601bf692837c2cd9854dacd2c55911625da04aec9c62a61a26'
+export const DEPOOLORACLE_APP_ID = '0xebe89ae11ec5a76827463bd202b0551f137fdc6dad7cd69ecdf4fe553af5f77b'
+export const DEPOOL_APP_ID = '0xdf4019658a996b6bc3639baa07d25c655bf826334fc5c81bb83e501905b51cb1'
+
+export const depositContract = '0x5f4e510503d83bd1a5436bdae2923489da0be454'
+export const ensRegistry = '0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1'
+export const daoAddress = '0xD20F21CEb31a8E302603dC3ff994f00aa9312A66'
+export const daoName = 'depool-dao.aragonid.eth'
+export const owner = '0xb4124cEB3451635DAcedd11767f004d8a28c6eE7'
