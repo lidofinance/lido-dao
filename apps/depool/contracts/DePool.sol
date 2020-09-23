@@ -253,7 +253,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
       * @notice `_active ? 'Enable' : 'Disable'` the staking provider #`_id`
       */
     function setStakingProviderActive(uint256 _id, bool _active) external
-        authP(SET_STAKING_PROVIDER_ACTIVE_ROLE, arr(_id, _active))
+        authP(SET_STAKING_PROVIDER_ACTIVE_ROLE, arr(_id, _active ? uint256(1) : uint256(0)))
         SPExists(_id)
     {
         if (sps[_id].active != _active) {
@@ -272,7 +272,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
       * @notice Change human-readable name of the staking provider #`_id` to `_name`
       */
     function setStakingProviderName(uint256 _id, string _name) external
-        authP(SET_STAKING_PROVIDER_NAME_ROLE, arr(_id, _name))
+        authP(SET_STAKING_PROVIDER_NAME_ROLE, arr(_id))
         SPExists(_id)
     {
         sps[_id].name = _name;
@@ -283,7 +283,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
       * @notice Change reward address of the staking provider #`_id` to `_rewardAddress`
       */
     function setStakingProviderRewardAddress(uint256 _id, address _rewardAddress) external
-        authP(SET_STAKING_PROVIDER_ADDRESS_ROLE, arr(_id, _rewardAddress))
+        authP(SET_STAKING_PROVIDER_ADDRESS_ROLE, arr(_id, uint256(_rewardAddress)))
         SPExists(_id)
         validAddress(_rewardAddress)
     {
@@ -347,7 +347,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
             emit SigningKeyAdded(_SP_id, key);
         }
 
-        sps[_SP_id].totalSigningKeys = sps[_SP_id].totalSigningKeys.add(_quantity);
+        sps[_SP_id].totalSigningKeys = sps[_SP_id].totalSigningKeys.add(to64(_quantity));
     }
 
     /**
@@ -717,9 +717,9 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
 
             // Write back usedSigningKeys
             for (idx = 0; idx < cache.length; ++idx) {
-                DepositLookupCacheEntry memory entry = cache[idx];
+                entry = cache[idx];
                 if (entry.usedSigningKeys > entry.initialUsedSigningKeys)
-                    sps[cache[idx].id].usedSigningKeys = entry.usedSigningKeys;
+                    sps[cache[idx].id].usedSigningKeys = to64(entry.usedSigningKeys);
             }
         }
 
@@ -952,6 +952,11 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         }
 
         return 0 == k1 && 0 == (k2 >> ((2 * 32 - PUBKEY_LENGTH) * 8));
+    }
+
+    function to64(uint256 v) internal pure returns (uint64) {
+        assert(v <= uint256(uint64(-1)));
+        return uint64(v);
     }
 
     function _signingKeyOffset(uint256 _SP_id, uint256 _keyIndex) internal pure returns (uint256) {
