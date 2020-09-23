@@ -1,7 +1,7 @@
 const { hash: namehash } = require('eth-ens-namehash')
 const getAccounts = require('@aragon/os/scripts/helpers/get-accounts')
 const logDeploy = require('@aragon/os/scripts/helpers/deploy-logger')
-
+const apps = require('./helpers/apps')
 const globalArtifacts = this.artifacts // Not injected unless called directly via truffle
 const globalWeb3 = this.web3 // Not injected unless called directly via truffle
 
@@ -124,7 +124,9 @@ module.exports = async (
 
     const tokenEvent = receipt.logs.find((l) => l.event === 'DeployToken')
     const daoEvent = receipt.logs.find((l) => l.event === 'DeployDao')
+    const installedApps = receipt.logs.filter((l) => l.event === 'InstalledApp').map((l) => l.args)
 
+    log('=========')
     // log(`Registering DAO as "${dePoolDaoName}.${dePoolTld}"`)
     // TODO register dao at depoolspm.eth (by default dao registered at aragonid.eth)
     // receipt = await apm.newRepoWithVersion(dePoolDaoName, owner, [1, 0, 0], daoEvent.args.dao, '0x0', { from: owner })
@@ -133,6 +135,15 @@ module.exports = async (
     log('# DAO:')
     log('Address:', daoEvent.args.dao)
     log('Share Token:', tokenEvent.args.token)
+    log('=========')
+    installedApps.forEach((app) => {
+      const knownApp = apps.find((a) => a.appId === app.appId)
+      if (knownApp) {
+        log(`App ${knownApp.contractName} deployed at ${app.appProxy}`)
+      } else {
+        log(`Unknown AppId ${app.appId} deployed at ${app.appProxy}`)
+      }
+    })
     log('=========')
 
     if (typeof truffleExecCallback === 'function') {

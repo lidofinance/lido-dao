@@ -1,7 +1,7 @@
 # testnet for local e2e tests
 
-### eth1 localnet contract addresses
-After clean start:
+### ETH1 localnet contract addresses
+  ###### Infrastructure:
   - Deposit contract: `0x5f4e510503d83bd1a5436bdae2923489da0be454` deployed at block `70`
   - ENS: `0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1`
   - DAO_FACTORY: `0x5d94e3e7aec542ab0f9129b9a7badeb5b3ca0f77`
@@ -10,18 +10,26 @@ After clean start:
   - Aragon APM: `aragonpm.eth` -> ``
   - DePool APM: `depoolspm.eth` -> `0x1902a0410EFe699487Dd85F12321aD672bE4ada2`
   
-  app implementations:
-  - DePool: `depool.depoolspm.eth` -> `0xfe18BCBeDD6f46e0DfbB3Aea02090F23ED1c4a28` [ipfs](http://localhost:8080/ipfs/QmYK2uMUzVR86A7Cxfz2yimz7bRXUGKrQRDuUkx66mh4Hm)
-  - DePool Oracle: `depooloracle.depoolspm.eth` -> `0x2e25c8F88c5cCcbC9400e5bc86cF9C58C7604327` [ipfs](http://localhost:8080/ipfs/QmbCTi3DY8vR17V11QgxuUzxApFnJgu4cUYLYcbphZUxiT)
-  - StETH token: `steth.depoolspm.eth` -> `0x019F12a7DAa44A34CD0FF35055b0e2D4679D8521` [ipfs](http://localhost:8080/ipfs/QmV26JoDLiHjV5RRoQHCKzXYuwzgBgD5nishY2b3q3eh6a)
+  ###### Apps and template repos:
+  - DePool App: `depool.depoolspm.eth` -> `0xfe18BCBeDD6f46e0DfbB3Aea02090F23ED1c4a28` [ipfs](http://localhost:8080/ipfs/QmYK2uMUzVR86A7Cxfz2yimz7bRXUGKrQRDuUkx66mh4Hm)
+  - DePoolOracle App: `depooloracle.depoolspm.eth` -> `0x2e25c8F88c5cCcbC9400e5bc86cF9C58C7604327` [ipfs](http://localhost:8080/ipfs/QmbCTi3DY8vR17V11QgxuUzxApFnJgu4cUYLYcbphZUxiT)
+  - StETH token App: `steth.depoolspm.eth` -> `0x019F12a7DAa44A34CD0FF35055b0e2D4679D8521` [ipfs](http://localhost:8080/ipfs/QmV26JoDLiHjV5RRoQHCKzXYuwzgBgD5nishY2b3q3eh6a)
   - DePool DAO Template: `depool-template.depoolspm.eth` -> `0xD13a7D8A728692eB2c56135B5EB5A1951b3F8395`
-  - DePool DAO: `depool-dao.aragon.id` -> `0xD20F21CEb31a8E302603dC3ff994f00aa9312A66`
-  - DePool Share token: `0xf2804D07A941F77F34EEEb252D172E4268d0e9D4`
-
- > Depool APM: ens.addr('depoolspm.eth')
- > Depool apps: As APM repos, e.g. apm.getLatest('depool.depoolspm.eth')
- > Templates: As APM repos, e.g. apm.getLatest('depool-template.depoolspm.eth')
   
+   > Depool APM: ens.addr('depoolspm.eth')
+   > Depool apps: As APM repos, e.g. apm.getLatest('depool.depoolspm.eth')
+   > Templates: As APM repos, e.g. apm.getLatest('depool-template.depoolspm.eth')
+    
+  ###### Deployed DAO and Apps instances:
+  - Aragon Agent: `0x2CE1b3669f72727D3000D37F8B431C2e3731E3F4`
+  - Aragon Finance: `0xd2c0889B4c73C82d9403EAd5e562031d2067A96F`
+  - Aragon Tokens: `0xF8FdFCEC370576442E1358fCF970b841809509f6`
+  - Aragon Voting: `0xDa160A5164A40831735eEB5416fEd3573a50FE27`
+  - DePool: `0x5ec5DDf7A0cdD3235AD1bCC0ad04F059507EC5a3`
+  - DePoolOracle: `0x12aa6ec7d603dc79eD663792E40a520B54A7ae6A`
+  - StETH: `0x1Ae44Ea2B3e422E3D0c0eaD84617ECE55517EED7`
+  - DePool DAO: `depool-dao.aragon.id` -> `0xD20F21CEb31a8E302603dC3ff994f00aa9312A66`
+  - DePool DAO Token: `0xf2804D07A941F77F34EEEb252D172E4268d0e9D4`
 
 ### eth1 DAO accounts
 mnemonic: `explain tackle mirror kit van hammer degree position ginger unfair soup bonus`

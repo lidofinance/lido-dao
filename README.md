@@ -92,6 +92,12 @@ To stop use:
 ./shutdown.sh
 ```
 
+### DKG
+To build DGK container:
+ 
+ * Add your local ssh key to github account
+ * run `./dkg.sh`
+
 ### Build & test all our apps
 
 Unit tests
