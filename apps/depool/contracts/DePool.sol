@@ -2,6 +2,7 @@ pragma solidity 0.4.24;
 
 import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
+import "@aragon/os/contracts/lib/math/SafeMath64.sol";
 import "@aragon/os/contracts/common/IsContract.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
@@ -20,6 +21,7 @@ import "@depools/depool-lib/contracts/Pausable.sol";
   */
 contract DePool is IDePool, IsContract, Pausable, AragonApp {
     using SafeMath for uint256;
+    using SafeMath64 for uint64;
     using UnstructuredStorage for bytes32;
 
     /// ACL
@@ -86,13 +88,13 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     /// @dev Staking provider parameters and internal state
     struct StakingProvider {
         bool active;    // a flag indicating if the SP can participate in further staking and reward distribution
-        string name;    // human-readable name
         address rewardAddress;  // Ethereum 1 address which receives steth rewards for this SP
-        uint256 stakingLimit;   // the maximum number of validators to stake for this SP
-        uint256 stoppedValidators;  // number of signing keys which stopped validation (e.g. were slashed)
+        string name;    // human-readable name
+        uint64 stakingLimit;    // the maximum number of validators to stake for this SP
+        uint64 stoppedValidators;   // number of signing keys which stopped validation (e.g. were slashed)
 
-        uint256 totalSigningKeys;   // total amount of signing keys of this SP
-        uint256 usedSigningKeys;    // number of signing keys of this SP which were used in deposits to the Ethereum 2
+        uint64 totalSigningKeys;    // total amount of signing keys of this SP
+        uint64 usedSigningKeys;     // number of signing keys of this SP which were used in deposits to the Ethereum 2
     }
 
     /// @dev Array of all staking providers
@@ -214,7 +216,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
       * @param _stakingLimit the maximum number of validators to stake for this SP
       * @return a unique key of the added SP
       */
-    function addStakingProvider(string _name, address _rewardAddress, uint256 _stakingLimit) external
+    function addStakingProvider(string _name, address _rewardAddress, uint64 _stakingLimit) external
         auth(ADD_STAKING_PROVIDER_ROLE)
         validAddress(_rewardAddress)
         returns (uint256 id)
@@ -267,8 +269,8 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     /**
       * @notice Set the maximum number of validators to stake for the staking provider #`_id` to `_stakingLimit`
       */
-    function setStakingProviderStakingLimit(uint256 _id, uint256 _stakingLimit) external
-        authP(SET_STAKING_PROVIDER_LIMIT_ROLE, arr(_id, _stakingLimit))
+    function setStakingProviderStakingLimit(uint256 _id, uint64 _stakingLimit) external
+        authP(SET_STAKING_PROVIDER_LIMIT_ROLE, arr(_id, uint256(_stakingLimit)))
         SPExists(_id)
     {
         sps[_id].stakingLimit = _stakingLimit;
@@ -278,8 +280,8 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     /**
       * @notice Report `_stoppedIncrement` more stopped validators of the staking provider #`_id`
       */
-    function reportStoppedValidators(uint256 _id, uint256 _stoppedIncrement) external
-        authP(REPORT_STOPPED_VALIDATORS_ROLE, arr(_id, _stoppedIncrement))
+    function reportStoppedValidators(uint256 _id, uint64 _stoppedIncrement) external
+        authP(REPORT_STOPPED_VALIDATORS_ROLE, arr(_id, uint256(_stoppedIncrement)))
         SPExists(_id)
     {
         require(0 != _stoppedIncrement, "EMPTY_VALUE");
@@ -305,7 +307,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         SPExists(_SP_id)
     {
         require(msg.sender == sps[_SP_id].rewardAddress
-                || canPerform(msg.sender, MANAGE_SIGNING_KEYS, arr(_SP_id)), ERROR_AUTH_FAILED);
+                || canPerform(msg.sender, MANAGE_SIGNING_KEYS, arr(_SP_id)), "APP_AUTH_FAILED");
 
         require(_quantity != 0, "NO_KEYS");
         require(_pubkeys.length == _quantity.mul(PUBKEY_LENGTH), "INVALID_LENGTH");
@@ -332,7 +334,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         SPExists(_SP_id)
     {
         require(msg.sender == sps[_SP_id].rewardAddress
-                || canPerform(msg.sender, MANAGE_SIGNING_KEYS, arr(_SP_id)), ERROR_AUTH_FAILED);
+                || canPerform(msg.sender, MANAGE_SIGNING_KEYS, arr(_SP_id)), "APP_AUTH_FAILED");
 
         require(_index < sps[_SP_id].totalSigningKeys, "KEY_NOT_FOUND");
         require(_index >= sps[_SP_id].usedSigningKeys, "KEY_WAS_USED");

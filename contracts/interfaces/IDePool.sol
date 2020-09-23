@@ -74,7 +74,7 @@ interface IDePool {
       * @param _stakingLimit the maximum number of validators to stake for this SP
       * @return a unique key of the added SP
       */
-    function addStakingProvider(string _name, address _rewardAddress, uint256 _stakingLimit) external returns (uint256 id);
+    function addStakingProvider(string _name, address _rewardAddress, uint64 _stakingLimit) external returns (uint256 id);
 
     /**
       * @notice `_active ? 'Enable' : 'Disable'` the staking provider #`_id`
@@ -94,12 +94,12 @@ interface IDePool {
     /**
       * @notice Set the maximum number of validators to stake for the staking provider #`_id` to `_stakingLimit`
       */
-    function setStakingProviderStakingLimit(uint256 _id, uint256 _stakingLimit) external;
+    function setStakingProviderStakingLimit(uint256 _id, uint64 _stakingLimit) external;
 
     /**
       * @notice Report `_stoppedIncrement` more stopped validators of the staking provider #`_id`
       */
-    function reportStoppedValidators(uint256 _id, uint256 _stoppedIncrement) external;
+    function reportStoppedValidators(uint256 _id, uint64 _stoppedIncrement) external;
 
     /**
       * @notice Returns total number of staking providers
@@ -113,17 +113,17 @@ interface IDePool {
         bool active,
         string name,
         address rewardAddress,
-        uint256 stakingLimit,
-        uint256 stoppedValidators,
-        uint256 totalSigningKeys,
-        uint256 usedSigningKeys);
+        uint64 stakingLimit,
+        uint64 stoppedValidators,
+        uint64 totalSigningKeys,
+        uint64 usedSigningKeys);
 
-    event StakingProviderAdded(uint256 id, string name, address rewardAddress, uint256 stakingLimit);
+    event StakingProviderAdded(uint256 id, string name, address rewardAddress, uint64 stakingLimit);
     event StakingProviderActiveSet(uint256 indexed id, bool active);
     event StakingProviderNameSet(uint256 indexed id, string name);
     event StakingProviderRewardAddressSet(uint256 indexed id, address rewardAddress);
-    event StakingProviderStakingLimitSet(uint256 indexed id, uint256 stakingLimit);
-    event StakingProviderTotalStoppedValidatorsReported(uint256 indexed id, uint256 totalStopped);
+    event StakingProviderStakingLimitSet(uint256 indexed id, uint64 stakingLimit);
+    event StakingProviderTotalStoppedValidatorsReported(uint256 indexed id, uint64 totalStopped);
 
 
     /**
