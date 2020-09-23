@@ -127,8 +127,9 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
         quorum = _quorum;
         emit QuorumChanged(_quorum);
 
-        if (currentlyAggregatedReportInterval <= _getCurrentReportInterval() &&
-            currentlyAggregatedReportInterval > lastFinalizedReportInterval)
+        assert(currentlyAggregatedReportInterval <= _getCurrentReportInterval());
+
+        if (currentlyAggregatedReportInterval > lastFinalizedReportInterval)
             _tryFinalize(currentlyAggregatedReportInterval);
 
         _assertInvariants();
