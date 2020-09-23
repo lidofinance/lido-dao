@@ -1,7 +1,7 @@
 const { hash: namehash } = require('eth-ens-namehash')
 const getAccounts = require('@aragon/os/scripts/helpers/get-accounts')
 const logDeploy = require('@aragon/os/scripts/helpers/deploy-logger')
-
+const apps = require('./helpers/apps')
 const globalArtifacts = this.artifacts // Not injected unless called directly via truffle
 const globalWeb3 = this.web3 // Not injected unless called directly via truffle
 
@@ -21,12 +21,6 @@ const defaultENSAddress = process.env.ENS || '0x5f6f7e8cc7346a11ca2def8f827b7a0b
 const defaultMiniMeFactoryAddress = process.env.MENIME_FACTORY || '0xd526b7aba39cccf76422835e7fd5327b98ad73c9'
 const defaultApmRegistryAddress = process.env.APM || '0x1902a0410EFe699487Dd85F12321aD672bE4ada2' // depoolspm
 const defaultAragonIdAddress = process.env.ARAGON_ID || ''
-
-const apps = [
-  { name: 'steth', contractName: 'StETH' },
-  { name: 'depool', contractName: 'DePool' },
-  { name: 'depooloracle', contractName: 'DePoolOracle' }
-]
 
 const _getRegistered = async (ens, hash) => {
   const owner = await ens.owner(hash)
@@ -111,8 +105,8 @@ module.exports = async (
     log('=========')
     log('Check Apps...')
 
-    for (const { name, contractName } of apps) {
-      if (await _getRegistered(ens, namehash(`${name}.${dePoolTld}`))) {
+    for (const { name, tld, contractName } of apps) {
+      if (await _getRegistered(ens, namehash(`${name}.${tld}`))) {
         log(`Using registered ${contractName} app`)
       } else {
         errorOut(`No ${contractName} app registered`)
