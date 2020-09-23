@@ -54,8 +54,6 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     bytes32 internal constant DEPOSITED_ETHER_VALUE_POSITION = keccak256("depools.DePool.depositedEther");
     /// @dev amount of Ether (on the Ethereum 2.0 side) managed by the system
     bytes32 internal constant REMOTE_ETHER2_VALUE_POSITION = keccak256("depools.DePool.remoteEther2");
-    /// @dev amount of Ether (on the Ethereum 2.0 side) to be withdrawn from the system
-    bytes32 internal constant WITHDRAWN_ETHER2_VALUE_POSITION = keccak256("depools.DePool.withdrawnEther2");
 
     /// @dev last epoch reported by the oracle
     bytes32 internal constant LAST_ORACLE_EPOCH_VALUE_POSITION = keccak256("depools.DePool.lastOracleEpoch");
@@ -219,39 +217,12 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
 
 
     /**
-      * @notice Issues withdrawal request. Large withdrawals will be processed only after the phase 2 launch.
+      * @notice Issues withdrawal request. Large withdrawals will be processed only after the phase 2 launch. WIP.
       * @param _amount Amount of StETH to burn
       * @param _pubkeyHash Receiving address
       */
     function withdraw(uint256 _amount, bytes32 _pubkeyHash) external whenNotStopped {
-        address sender = msg.sender;
-
-        uint256 totalSupply = getToken().totalSupply();
-        getToken().burn(sender, _amount);
-
-        // (total ether) * share of msg.sender's token holding.
-        // totalSupply is taken before the burning.
-        uint256 etherAmount = _amount.mul(_getTotalControlledEther()).div(totalSupply);
-        require(0 != etherAmount, "TX_TOO_SMALL");
-
-        // First, raid the buffer
-        uint256 fromBuffer = 0;
-        uint256 buffered = _getBufferedEther();
-        if (0 != buffered) {
-            fromBuffer = buffered > etherAmount ? etherAmount : buffered;
-            BUFFERED_ETHER_VALUE_POSITION.setStorageUint256(buffered.sub(fromBuffer));
-            etherAmount = etherAmount.sub(fromBuffer);
-            sender.transfer(fromBuffer);
-        }
-
-        // If the withdrawal is larger than the buffer, just memoize it
-        if (0 != etherAmount) {
-            WITHDRAWN_ETHER2_VALUE_POSITION.setStorageUint256(
-                WITHDRAWN_ETHER2_VALUE_POSITION.getStorageUint256().add(etherAmount));
-            withdrawalRequests.push(WithdrawalRequest({amount: etherAmount, pubkeyHash: _pubkeyHash}));
-        }
-
-        emit Withdrawal(sender, _amount, fromBuffer, _pubkeyHash, etherAmount);
+        revert("NOT_IMPLEMENTED_YET");
     }
 
 
@@ -410,13 +381,11 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     /**
       * @notice Gets the stat of the system's Ether on the Ethereum 2 side
       * @return deposited Amount of Ether deposited from the current Ethereum
-      * @return remote Amount of Ether currently present on the Ethereum 2 side (can be 0 if the Ethereum 2 is yet to be launched)
-      * @return liabilities Amount of Ether to be unstaked and withdrawn on the Ethereum 2 side
+      * @return remote Amount of Ether currently present on the Ethereum 2 side (can be 0 if the Ethereum 2 is yet to be launch
       */
-    function getEther2Stat() external view returns (uint256 deposited, uint256 remote, uint256 liabilities) {
+    function getEther2Stat() external view returns (uint256 deposited, uint256 remote) {
         deposited = DEPOSITED_ETHER_VALUE_POSITION.getStorageUint256();
         remote = REMOTE_ETHER2_VALUE_POSITION.getStorageUint256();
-        liabilities = WITHDRAWN_ETHER2_VALUE_POSITION.getStorageUint256();
     }
 
 
@@ -663,10 +632,8 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         uint256 deposited = DEPOSITED_ETHER_VALUE_POSITION.getStorageUint256();
 
         uint256 assets = _getBufferedEther().add(_hasOracleData() ? remote : deposited);
-        uint256 liabilities = WITHDRAWN_ETHER2_VALUE_POSITION.getStorageUint256();
-        require(assets >= liabilities, "NEGATIVE_EQUITY");
 
-        return assets.sub(liabilities);
+        return assets;
     }
 
 

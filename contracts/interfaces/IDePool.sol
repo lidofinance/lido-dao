@@ -158,7 +158,6 @@ interface IDePool {
       * @notice Gets the stat of the system's Ether on the Ethereum 2 side
       * @return deposited Amount of Ether deposited from the current Ethereum
       * @return remote Amount of Ether currently present on the Ethereum 2 side (can be 0 if the Ethereum 2 is yet to be launched)
-      * @return liabilities Amount of Ether to be unstaked and withdrawn on the Ethereum 2 side
       */
-    function getEther2Stat() external view returns (uint256 deposited, uint256 remote, uint256 liabilities);
+    function getEther2Stat() external view returns (uint256 deposited, uint256 remote);
 }
