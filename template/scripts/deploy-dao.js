@@ -66,7 +66,6 @@ module.exports = async (
   log('Owner:', owner)
 
   try {
-    // const APMRegistry = artifacts.require('APMRegistry')
     const Repo = artifacts.require('Repo')
     const PublicResolver = artifacts.require('PublicResolver')
     const ENS = artifacts.require('ENS')
@@ -85,7 +84,6 @@ module.exports = async (
     const resolver = await PublicResolver.at(resolverAddress)
     const repoAddress = await resolver.addr(tmplNameHash)
     const repo = await Repo.at(repoAddress)
-    // log('id', await repo.appId())
     const latestRepo = await repo.getLatest()
     const tmplAddress = latestRepo[1]
 

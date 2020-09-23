@@ -68,7 +68,6 @@ module.exports = async (
   try {
     const APMRegistry = artifacts.require('APMRegistry')
     const ENS = artifacts.require('ENS')
-    const FIFSResolvingRegistrar = artifacts.require('FIFSResolvingRegistrar')
     const DePoolTemplate = artifacts.require('DePoolTemplate')
 
     const ens = await ENS.at(ensAddress)
@@ -77,30 +76,16 @@ module.exports = async (
     const apm = await APMRegistry.at(apmRegistryAddress)
     log(`Using provided APM Registry: ${apm.address}`)
 
-    let aragonID
     if (!aragonIdAddress) {
       aragonIdAddress = await _getRegistered(ens, namehash('aragonid.eth'))
       if (aragonIdAddress) {
-        // aragonID = await FIFSResolvingRegistrar.at(aragonIdAddress)
         log(`Using aragonID registered at aragonid.eth: ${aragonIdAddress}`)
       } else {
         errorOut('Aragon ID address not found. Please specify one using ARAGON_ID env var')
       }
     } else {
-      // aragonID = await FIFSResolvingRegistrar.at(aragonIdAddress)
       log(`Using provided aragonID: ${aragonIdAddress}`)
     }
-
-    // const daoFactory = await DAOFactory.at(daoFactoryAddress)
-    // const hasEVMScripts = (await daoFactory.regFactory()) !== ZERO_ADDR
-    // log(
-    //   `Using provided DAOFactory (with${
-    //     hasEVMScripts ? '' : 'out'
-    //   } EVMScripts):`,
-    //   daoFactory.address
-    // )
-    // const miniMeFactory = await MiniMeTokenFactory.at(miniMeFactoryAddress)
-    // log(`Using provided MiniMeTokenFactory: ${miniMeFactory.address}`)
 
     log('=========')
     log('Check Apps...')
