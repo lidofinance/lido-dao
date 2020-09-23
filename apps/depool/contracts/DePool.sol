@@ -302,9 +302,11 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
       * @param _signatures Several concatenated signatures for (pubkey, withdrawal_credentials, 32000000000) messages
       */
     function addSigningKeys(uint256 _SP_id, uint256 _quantity, bytes _pubkeys, bytes _signatures) external
-        authP(MANAGE_SIGNING_KEYS, arr(_SP_id))
         SPExists(_SP_id)
     {
+        require(msg.sender == sps[_SP_id].rewardAddress
+                || canPerform(msg.sender, MANAGE_SIGNING_KEYS, arr(_SP_id)), ERROR_AUTH_FAILED);
+
         require(_quantity != 0, "NO_KEYS");
         require(_pubkeys.length == _quantity.mul(PUBKEY_LENGTH), "INVALID_LENGTH");
         require(_signatures.length == _quantity.mul(SIGNATURE_LENGTH), "INVALID_LENGTH");
@@ -327,9 +329,11 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
       * @param _index Index of the key, starting with 0
       */
     function removeSigningKey(uint256 _SP_id, uint256 _index) external
-        authP(MANAGE_SIGNING_KEYS, arr(_SP_id))
         SPExists(_SP_id)
     {
+        require(msg.sender == sps[_SP_id].rewardAddress
+                || canPerform(msg.sender, MANAGE_SIGNING_KEYS, arr(_SP_id)), ERROR_AUTH_FAILED);
+
         require(_index < sps[_SP_id].totalSigningKeys, "KEY_NOT_FOUND");
         require(_index >= sps[_SP_id].usedSigningKeys, "KEY_WAS_USED");
 
