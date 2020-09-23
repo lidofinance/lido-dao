@@ -11,6 +11,7 @@
 * jq
 * curl
 * cut
+* docker
 * node.js v12
 * (optional) Lerna
 
@@ -44,7 +45,7 @@ For ETH1 part: Ethereum single node (ganache), IPFS docker containers and Aragon
 
 For ETH2 part: Beacon chain node, genesis validators machine, and, optionally 2nd and 3rd peer beacon chain nodes.
 
-To build and start the whole local environment use:
+To start the whole environment, use:
 ```bash
 ./startup.sh
 ```
@@ -108,6 +109,7 @@ npm run test
 E2E tests
 
 ```bash
+./dkg.sh
 npm run test:e2e
 ```
 
