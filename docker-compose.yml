@@ -166,15 +166,6 @@ services:
       --auto-register
       --server http://node2-1:5052
 
-  dkg:
-    image: test:latest
-    container_name: dkg-generate
-    volumes:
-      - ./data:/data
-    build:
-      context: .
-      dockerfile: docker/dkg-pubkey/Dockerfile
-
 networks:
   eth2:
     driver: bridge
