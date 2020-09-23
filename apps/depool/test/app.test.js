@@ -76,11 +76,10 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await validatorRegistration.reset();
   })
 
-  const checkStat = async ({deposited, remote, liabilities}) => {
+  const checkStat = async ({deposited, remote}) => {
     const stat = await app.getEther2Stat();
     assertBn(stat.deposited, deposited, 'deposited ether check');
     assertBn(stat.remote, remote, 'remote ether check');
-    assertBn(stat.liabilities, liabilities, 'ether liabilities check');
   };
 
   // Assert reward distribution. The values must be divided by 1e15.
@@ -281,7 +280,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     // +1 ETH
     await web3.eth.sendTransaction({to: app.address, from: user1, value: ETH(1)});
-    await checkStat({deposited: 0, remote: 0, liabilities: 0});
+    await checkStat({deposited: 0, remote: 0});
     assertBn(await validatorRegistration.totalCalls(), 0);
     assertBn(await app.getTotalControlledEther(), ETH(1));
     assertBn(await app.getBufferedEther(), ETH(1));
@@ -289,7 +288,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     // +2 ETH
     await app.submit(ZERO_ADDRESS, {from: user2, value: ETH(2)});     // another form of a deposit call
-    await checkStat({deposited: 0, remote: 0, liabilities: 0});
+    await checkStat({deposited: 0, remote: 0});
     assertBn(await validatorRegistration.totalCalls(), 0);
     assertBn(await app.getTotalControlledEther(), ETH(3));
     assertBn(await app.getBufferedEther(), ETH(3));
@@ -297,7 +296,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     // +30 ETH
     await web3.eth.sendTransaction({to: app.address, from: user3, value: ETH(30)});
-    await checkStat({deposited: ETH(32), remote: 0, liabilities: 0});
+    await checkStat({deposited: ETH(32), remote: 0});
     assertBn(await app.getTotalControlledEther(), ETH(33));
     assertBn(await app.getBufferedEther(), ETH(1));
     assertBn(await token.balanceOf(user1), tokens(1));
@@ -313,7 +312,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     // +100 ETH
     await web3.eth.sendTransaction({to: app.address, from: user1, value: ETH(100)});
-    await checkStat({deposited: ETH(128), remote: 0, liabilities: 0});
+    await checkStat({deposited: ETH(128), remote: 0});
     assertBn(await app.getTotalControlledEther(), ETH(133));
     assertBn(await app.getBufferedEther(), ETH(5));
     assertBn(await token.balanceOf(user1), tokens(101));
@@ -370,7 +369,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await app.addSigningKeys(1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
 
     await web3.eth.sendTransaction({to: app.address, from: user3, value: ETH(100)});
-    await checkStat({deposited: ETH(32), remote: 0, liabilities: 0});
+    await checkStat({deposited: ETH(32), remote: 0});
     assertBn(await validatorRegistration.totalCalls(), 1);
     assertBn(await app.getTotalControlledEther(), ETH(100));
     assertBn(await app.getBufferedEther(), ETH(100-32));
@@ -381,13 +380,13 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
         hexConcat(pad("0x01", 96), pad("0x01", 96), pad("0x01", 96)),
         {from: voting});
     await web3.eth.sendTransaction({to: app.address, from: user1, value: ETH(1)});
-    await checkStat({deposited: ETH(96), remote: 0, liabilities: 0});
+    await checkStat({deposited: ETH(96), remote: 0});
     assertBn(await validatorRegistration.totalCalls(), 3);
     assertBn(await app.getTotalControlledEther(), ETH(101));
     assertBn(await app.getBufferedEther(), ETH(5));
   });
 
-  it('withdrawal works from buffer', async () => {
+  it('withrawal method reverts', async () => {
     await app.setWithdrawalCredentials(pad("0x0202", 32), {from: voting});
     await app.addSigningKeys(6,
         hexConcat(pad("0x010203", 48), pad("0x010204", 48), pad("0x010205", 48), pad("0x010206", 48), pad("0x010207", 48), pad("0x010208", 48)),
@@ -395,137 +394,14 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
         {from: voting});
 
     await web3.eth.sendTransaction({to: app.address, from: user1, value: ETH(1)});
-    await web3.eth.sendTransaction({to: app.address, from: user2, value: ETH(2)});
-    await web3.eth.sendTransaction({to: app.address, from: user3, value: ETH(3)});
-    assertBn(await app.getTotalControlledEther(), ETH(6));
-    assertBn(await token.totalSupply(), tokens(6));
-    assertBn(await app.getBufferedEther(), ETH(6));
+    assertBn(await app.getTotalControlledEther(), ETH(1));
+    assertBn(await token.totalSupply(), tokens(1));
+    assertBn(await app.getBufferedEther(), ETH(1));
 
-    await checkStat({deposited: 0, remote: 0, liabilities: 0});
+    await checkStat({deposited: 0, remote: 0});
 
-    await assertRevert(app.withdraw(tokens(1), pad("0x1000", 32), {from: nobody}));
-    await assertRevert(app.withdraw(tokens(20), pad("0x200", 32), {from: user2}));
-
-    // -2
-    await app.withdraw(tokens(2), pad("0x200", 32), {from: user2});
-    assertBn(await token.balanceOf(user1), tokens(1));
-    assertBn(await token.balanceOf(user2), 0);
-    assertBn(await token.balanceOf(user3), tokens(3));
-    assertBn(await app.getTotalControlledEther(), ETH(4));
-    assertBn(await token.totalSupply(), tokens(4));
-
-    await checkStat({deposited: 0, remote: 0, liabilities: 0});
-
-    assertBn(await app.totalWithdrawalRequests(), 0);
-
-    // -1
-    await app.withdraw(tokens(1), pad("0x300", 32), {from: user3});
-    assertBn(await token.balanceOf(user1), tokens(1));
-    assertBn(await token.balanceOf(user2), 0);
-    assertBn(await token.balanceOf(user3), tokens(2));
-    assertBn(await app.getTotalControlledEther(), ETH(3));
-    assertBn(await token.totalSupply(), tokens(3));
-
-    await checkStat({deposited: 0, remote: 0, liabilities: 0});
-
-    assertBn(await app.totalWithdrawalRequests(), 0);
-  });
-
-  it('withdrawal works from Ethereum 2', async () => {
-    await app.setWithdrawalCredentials(pad("0x0202", 32), {from: voting});
-    await app.addSigningKeys(6,
-        hexConcat(pad("0x010203", 48), pad("0x010204", 48), pad("0x010205", 48), pad("0x010206", 48), pad("0x010207", 48), pad("0x010208", 48)),
-        hexConcat(pad("0x01", 96), pad("0x01", 96), pad("0x01", 96), pad("0x01", 96), pad("0x01", 96), pad("0x01", 96)),
-        {from: voting});
-
-    await web3.eth.sendTransaction({to: app.address, from: user1, value: ETH(1*32)});
-    await web3.eth.sendTransaction({to: app.address, from: user2, value: ETH(2*32)});
-    await web3.eth.sendTransaction({to: app.address, from: user3, value: ETH(3*32)});
-    assertBn(await app.getTotalControlledEther(), ETH(6*32));
-    assertBn(await token.totalSupply(), tokens(6*32));
-    assertBn(await app.getBufferedEther(), 0);
-
-    await checkStat({deposited: ETH(6*32), remote: 0, liabilities: 0});
-
-    await assertRevert(app.withdraw(tokens(1*32), pad("0x1000", 32), {from: nobody}));
-    await assertRevert(app.withdraw(tokens(20*32), pad("0x200", 32), {from: user2}));
-
-    // -2*32
-    await app.withdraw(tokens(2*32), pad("0x200", 32), {from: user2});
-    assertBn(await token.balanceOf(user1), tokens(1*32));
-    assertBn(await token.balanceOf(user2), 0);
-    assertBn(await token.balanceOf(user3), tokens(3*32));
-    assertBn(await app.getTotalControlledEther(), ETH(4*32));
-    assertBn(await token.totalSupply(), tokens(4*32));
-
-    assertBn(await app.totalWithdrawalRequests(), 1);
-    const r0 = await app.getWithdrawalRequest.call(0);
-    assertBn(r0.amount, ETH(2*32));
-    assertBn(r0.pubkeyHash, pad("0x200", 32));
-
-    await checkStat({deposited: ETH(6*32), remote: 0, liabilities: ETH(2*32)});
-
-    // -1*32
-    await app.withdraw(tokens(1*32), pad("0x300", 32), {from: user3});
-    assertBn(await token.balanceOf(user1), tokens(1*32));
-    assertBn(await token.balanceOf(user2), 0);
-    assertBn(await token.balanceOf(user3), tokens(2*32));
-    assertBn(await app.getTotalControlledEther(), ETH(3*32));
-    assertBn(await token.totalSupply(), tokens(3*32));
-
-    assertBn(await app.totalWithdrawalRequests(), 2);
-    const r1 = await app.getWithdrawalRequest.call(1);
-    assertBn(r1.amount, ETH(1*32));
-    assertBn(r1.pubkeyHash, pad("0x300", 32));
-
-    await checkStat({deposited: ETH(6*32), remote: 0, liabilities: ETH(3*32)});
-  });
-
-  it('withdrawal works from buffer and Ethereum 2', async () => {
-    await app.setWithdrawalCredentials(pad("0x0202", 32), {from: voting});
-    await app.addSigningKeys(6,
-        hexConcat(pad("0x010203", 48), pad("0x010204", 48), pad("0x010205", 48), pad("0x010206", 48), pad("0x010207", 48), pad("0x010208", 48)),
-        hexConcat(pad("0x01", 96), pad("0x01", 96), pad("0x01", 96), pad("0x01", 96), pad("0x01", 96), pad("0x01", 96)),
-        {from: voting});
-
-    await web3.eth.sendTransaction({to: app.address, from: user1, value: ETH(1*32)});
-    await web3.eth.sendTransaction({to: app.address, from: user2, value: ETH(2*32)});
-    await web3.eth.sendTransaction({to: app.address, from: user3, value: ETH(10)});
-    assertBn(await app.getBufferedEther(), ETH(10));
-
-    await checkStat({deposited: ETH(96), remote: 0, liabilities: 0});
-
-    // buffer + withdrawal request
-    await app.withdraw(tokens(20), pad("0x200", 32), {from: user2});
-    assertBn(await token.balanceOf(user1), tokens(1*32));
-    assertBn(await token.balanceOf(user2), tokens(44));
-    assertBn(await token.balanceOf(user3), tokens(10));
-    assertBn(await app.getTotalControlledEther(), ETH(86));
-    assertBn(await token.totalSupply(), tokens(86));
-
-    await checkStat({deposited: ETH(96), remote: 0, liabilities: ETH(10)});
-    assertBn(await app.getBufferedEther(), 0);
-
-    assertBn(await app.totalWithdrawalRequests(), 1);
-    const r0 = await app.getWithdrawalRequest.call(0);
-    assertBn(r0.amount, ETH(10));
-    assertBn(r0.pubkeyHash, pad("0x200", 32));
-
-    // buffer is empty
-    await app.withdraw(tokens(1), pad("0x300", 32), {from: user3});
-    assertBn(await token.balanceOf(user1), tokens(1*32));
-    assertBn(await token.balanceOf(user2), tokens(44));
-    assertBn(await token.balanceOf(user3), tokens(9));
-    assertBn(await app.getTotalControlledEther(), ETH(85));
-    assertBn(await token.totalSupply(), tokens(85));
-
-    await checkStat({deposited: ETH(96), remote: 0, liabilities: ETH(11)});
-    assertBn(await app.getBufferedEther(), 0);
-
-    assertBn(await app.totalWithdrawalRequests(), 2);
-    const r1 = await app.getWithdrawalRequest.call(1);
-    assertBn(r1.amount, ETH(1));
-    assertBn(r1.pubkeyHash, pad("0x300", 32));
+    await assertRevert(app.withdraw(tokens(1), pad("0x1000", 32), {from: nobody}), "NOT_IMPLEMENTED_YET");
+    await assertRevert(app.withdraw(tokens(1), pad("0x1000", 32), {from: user1}), "NOT_IMPLEMENTED_YET");
   });
 
   it('reportEther2 works', async () => {
@@ -537,21 +413,21 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
         {from: voting});
 
     await web3.eth.sendTransaction({to: app.address, from: user2, value: ETH(34)});
-    await checkStat({deposited: ETH(32), remote: 0, liabilities: 0});
+    await checkStat({deposited: ETH(32), remote: 0});
 
     await assertRevert(app.reportEther2(100, ETH(30), {from: appManager}), 'APP_AUTH_FAILED');
 
     await oracle.reportEther2(100, ETH(30));
-    await checkStat({deposited: ETH(32), remote: ETH(30), liabilities: 0});
+    await checkStat({deposited: ETH(32), remote: ETH(30)});
 
     await assertRevert(app.reportEther2(100, ETH(29), {from: nobody}), 'APP_AUTH_FAILED');
     await assertRevert(oracle.reportEther2(0, ETH(29)), 'ZERO_EPOCH');
 
     await oracle.reportEther2(50, ETH(100));    // stale data
-    await checkStat({deposited: ETH(32), remote: ETH(30), liabilities: 0});
+    await checkStat({deposited: ETH(32), remote: ETH(30)});
 
     await oracle.reportEther2(200, ETH(33));
-    await checkStat({deposited: ETH(32), remote: ETH(33), liabilities: 0});
+    await checkStat({deposited: ETH(32), remote: ETH(33)});
   });
 
   it('oracle data affects deposits', async () => {
@@ -563,7 +439,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
         {from: voting});
 
     await web3.eth.sendTransaction({to: app.address, from: user2, value: ETH(34)});
-    await checkStat({deposited: ETH(32), remote: 0, liabilities: 0});
+    await checkStat({deposited: ETH(32), remote: 0});
     assertBn(await validatorRegistration.totalCalls(), 1);
     assertBn(await app.getTotalControlledEther(), ETH(34));
     assertBn(await app.getBufferedEther(), ETH(2));
@@ -571,7 +447,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     // down
     await oracle.reportEther2(100, ETH(15));
 
-    await checkStat({deposited: ETH(32), remote: ETH(15), liabilities: 0});
+    await checkStat({deposited: ETH(32), remote: ETH(15)});
     assertBn(await validatorRegistration.totalCalls(), 1);
     assertBn(await app.getTotalControlledEther(), ETH(17));
     assertBn(await app.getBufferedEther(), ETH(2));
@@ -580,7 +456,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     // deposit, ratio is 0.5
     await web3.eth.sendTransaction({to: app.address, from: user1, value: ETH(2)});
 
-    await checkStat({deposited: ETH(32), remote: ETH(15), liabilities: 0});
+    await checkStat({deposited: ETH(32), remote: ETH(15)});
     assertBn(await validatorRegistration.totalCalls(), 1);
     assertBn(await app.getTotalControlledEther(), ETH(19));
     assertBn(await app.getBufferedEther(), ETH(4));
@@ -590,7 +466,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     // up
     await oracle.reportEther2(200, ETH(72));
 
-    await checkStat({deposited: ETH(32), remote: ETH(72), liabilities: 0});
+    await checkStat({deposited: ETH(32), remote: ETH(72)});
     assertBn(await validatorRegistration.totalCalls(), 1);
     assertBn(await app.getTotalControlledEther(), ETH(76));
     assertBn(await app.getBufferedEther(), ETH(4));
@@ -599,71 +475,13 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     // 2nd deposit, ratio is 2
     await web3.eth.sendTransaction({to: app.address, from: user3, value: ETH(2)});
 
-    await checkStat({deposited: ETH(32), remote: ETH(72), liabilities: 0});
+    await checkStat({deposited: ETH(32), remote: ETH(72)});
     assertBn(await validatorRegistration.totalCalls(), 1);
     assertBn(await app.getTotalControlledEther(), ETH(78));
     assertBn(await app.getBufferedEther(), ETH(6));
     assertBn(await token.balanceOf(user1), tokens(4));
     assertBn(await token.balanceOf(user3), tokens(1));
     assertBn(await token.totalSupply(), tokens(39));
-  });
-
-  it('oracle data affects withdrawals', async () => {
-    await app.setWithdrawalCredentials(pad("0x0202", 32), {from: voting});
-    await app.addSigningKeys(6,
-        hexConcat(pad("0x010203", 48), pad("0x010204", 48), pad("0x010205", 48), pad("0x010206", 48), pad("0x010207", 48), pad("0x010208", 48)),
-        hexConcat(pad("0x01", 96), pad("0x01", 96), pad("0x01", 96), pad("0x01", 96), pad("0x01", 96), pad("0x01", 96)),
-        {from: voting});
-
-    await web3.eth.sendTransaction({to: app.address, from: user1, value: ETH(1*32)});
-    await web3.eth.sendTransaction({to: app.address, from: user2, value: ETH(2*32)});
-    await web3.eth.sendTransaction({to: app.address, from: user3, value: ETH(4)});
-    assertBn(await app.getBufferedEther(), ETH(4));
-
-    await checkStat({deposited: ETH(96), remote: 0, liabilities: 0});
-
-    // down
-    await oracle.reportEther2(100, ETH(71));
-
-    await checkStat({deposited: ETH(96), remote: ETH(71), liabilities: 0});
-    assertBn(await token.totalSupply(), tokens(100));
-
-    // buffer + withdrawal request, ratio is 0.5
-    await app.withdraw(tokens(20), pad("0x200", 32), {from: user2});
-    assertBn(await token.balanceOf(user1), tokens(1*32));
-    assertBn(await token.balanceOf(user2), tokens(44));
-    assertBn(await token.balanceOf(user3), tokens(4));
-    assertBn(await app.getTotalControlledEther(), ETH(60));
-    assertBn(await token.totalSupply(), tokens(80));
-
-    await checkStat({deposited: ETH(96), remote: ETH(71), liabilities: ETH(11)});
-    assertBn(await app.getBufferedEther(), 0);
-
-    assertBn(await app.totalWithdrawalRequests(), 1);
-    const r0 = await app.getWithdrawalRequest.call(0);
-    assertBn(r0.amount, ETH(11));
-    assertBn(r0.pubkeyHash, pad("0x200", 32));
-
-    // up
-    await oracle.reportEther2(200, ETH(171));
-
-    await checkStat({deposited: ETH(96), remote: ETH(171), liabilities: ETH(11)});
-
-    // withdrawal request goes straight to Eth2, ratio is 2
-    await app.withdraw(tokens(1), pad("0x100", 32), {from: user1});
-    assertBn(await token.balanceOf(user1), tokens(31));
-    assertBn(await token.balanceOf(user2), tokens(44));
-    assertBn(await token.balanceOf(user3), tokens(4));
-    assertBn(await app.getTotalControlledEther(), ETH(158));
-    assertBn(await token.totalSupply(), tokens(79));
-
-    await checkStat({deposited: ETH(96), remote: ETH(171), liabilities: ETH(13)});
-    assertBn(await app.getBufferedEther(), 0);
-
-    assertBn(await app.totalWithdrawalRequests(), 2);
-    const r1 = await app.getWithdrawalRequest.call(1);
-    assertBn(r1.amount, ETH(2));
-    assertBn(r1.pubkeyHash, pad("0x100", 32));
   });
 
   it('can stop and resume', async () => {
@@ -675,7 +493,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
         {from: voting});
 
     await web3.eth.sendTransaction({to: app.address, from: user2, value: ETH(40)});
-    await checkStat({deposited: ETH(32), remote: 0, liabilities: 0});
+    await checkStat({deposited: ETH(32), remote: 0});
     assertBn(await app.getBufferedEther(), ETH(8));
 
     await assertRevert(app.stop({from: user2}), 'APP_AUTH_FAILED');
@@ -684,15 +502,13 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await assertRevert(web3.eth.sendTransaction({to: app.address, from: user1, value: ETH(4)}), 'CONTRACT_IS_STOPPED');
     await assertRevert(web3.eth.sendTransaction({to: app.address, from: user1, value: ETH(4)}), 'CONTRACT_IS_STOPPED');
     await assertRevert(app.submit("0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", {from: user1, value: ETH(4)}), 'CONTRACT_IS_STOPPED');
-    await assertRevert(app.withdraw(tokens(1), pad("0x200", 32), {from: user2}), 'CONTRACT_IS_STOPPED');
 
     await assertRevert(app.resume({from: user2}), 'APP_AUTH_FAILED');
     await app.resume({from: voting});
 
     await web3.eth.sendTransaction({to: app.address, from: user1, value: ETH(4)});
-    await app.withdraw(tokens(1), pad("0x200", 32), {from: user2});
-    await checkStat({deposited: ETH(32), remote: 0, liabilities: 0});
-    assertBn(await app.getBufferedEther(), ETH(11));
+    await checkStat({deposited: ETH(32), remote: 0});
+    assertBn(await app.getBufferedEther(), ETH(12));
   });
 
   it('rewards distribution works in a simple case', async () => {
@@ -709,7 +525,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await web3.eth.sendTransaction({to: app.address, from: user2, value: ETH(34)});
 
     await oracle.reportEther2(300, ETH(36));
-    await checkStat({deposited: ETH(32), remote: ETH(36), liabilities: 0});
+    await checkStat({deposited: ETH(32), remote: ETH(36)});
     assertBn(div15(await token.totalSupply()), 35888);
     await checkRewards({treasury: 566, insurance: 377, sp: 944});
   });
@@ -729,52 +545,20 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     // some slashing occured
     await oracle.reportEther2(100, ETH(30));
 
-    await checkStat({deposited: ETH(32), remote: ETH(30), liabilities: 0});
+    await checkStat({deposited: ETH(32), remote: ETH(30)});
     assertBn(await token.totalSupply(), tokens(34));
     await checkRewards({treasury: 0, insurance: 0, sp: 0});
 
     // back to normal
     await oracle.reportEther2(200, ETH(32));
-    await checkStat({deposited: ETH(32), remote: ETH(32), liabilities: 0});
+    await checkStat({deposited: ETH(32), remote: ETH(32)});
     await checkRewards({treasury: 0, insurance: 0, sp: 0});
 
     // now some rewards are here
     await oracle.reportEther2(300, ETH(36));
-    await checkStat({deposited: ETH(32), remote: ETH(36), liabilities: 0});
+    await checkStat({deposited: ETH(32), remote: ETH(36)});
     assertBn(div15(await token.totalSupply()), 35888);
     await checkRewards({treasury: 566, insurance: 377, sp: 944});
-  });
-
-  it('rewards distribution works in case of withdrawals', async () => {
-    await app.setWithdrawalCredentials(pad("0x0202", 32), {from: voting});
-    await app.addSigningKeys(1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
-    await app.addSigningKeys(3,
-        hexConcat(pad("0x010204", 48), pad("0x010205", 48), pad("0x010206", 48)),
-        hexConcat(pad("0x01", 96), pad("0x01", 96), pad("0x01", 96)),
-        {from: voting});
-
-    await app.setFee(5000, {from: voting});
-    await app.setFeeDistribution(3000, 2000, 5000, {from: voting});
-
-    await web3.eth.sendTransaction({to: app.address, from: user2, value: ETH(34)});
-    await app.withdraw(tokens(10), pad("0x200", 32), {from: user2});
-    // some slashing occured
-    await oracle.reportEther2(100, ETH(30));
-
-    await checkStat({deposited: ETH(32), remote: ETH(30), liabilities: ETH(8)});
-    assertBn(await token.totalSupply(), tokens(24));
-    await checkRewards({treasury: 0, insurance: 0, sp: 0});
-
-    // back to normal
-    await oracle.reportEther2(200, ETH(32));
-    await checkStat({deposited: ETH(32), remote: ETH(32), liabilities: ETH(8)});
-    await checkRewards({treasury: 0, insurance: 0, sp: 0});
-
-    // now some rewards are here
-    await oracle.reportEther2(300, ETH(36));
-    await checkStat({deposited: ETH(32), remote: ETH(36), liabilities: ETH(8)});
-    assertBn(div15(await token.totalSupply()), 25846);
-    await checkRewards({treasury: 553, insurance: 369, sp: 923});
   });
 
   it('deposits accounted properly during rewards distribution', async () => {
@@ -790,7 +574,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(await token.totalSupply(), tokens(64));
 
     await oracle.reportEther2(300, ETH(36));
-    await checkStat({deposited: ETH(32), remote: ETH(36), liabilities: 0});
+    await checkStat({deposited: ETH(32), remote: ETH(36)});
     assertBn(div15(await token.totalSupply()), 65939);
     await checkRewards({treasury: 581, insurance: 387, sp: 969});
   });
