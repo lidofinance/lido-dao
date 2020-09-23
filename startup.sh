@@ -162,9 +162,6 @@ fi
 echo "Starting Aragon web UI"
 docker-compose up -d aragon
 
-echo "Starting DKG"
-docker-compose up -d dkg
-
 if [[ $ETH1_ONLY ]]; then
   exit 0
 fi
