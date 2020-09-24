@@ -29,6 +29,7 @@
     "@aragon/buidler-aragon": "^0.2.9",
     "@aragon/contract-helpers-test": "^0.1.0",
     "@depools/apps-steth": "^0.0.1",
+    "@depools/apps-staking-providers-registry": "^0.0.1",
     "@nomiclabs/buidler": "^1.4.5",
     "@nomiclabs/buidler-etherscan": "^1.3.0",
     "@nomiclabs/buidler-ganache": "^1.3.3",
