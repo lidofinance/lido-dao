@@ -890,22 +890,6 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
 
 
     /**
-      * @dev Fast dynamic array comparison
-      */
-    function _isEqual(bytes memory _a, bytes memory _b) internal pure returns (bool) {
-        uint256 length = _a.length;
-        if (length != _b.length)
-            return false;
-
-        if (length > 0 && _a[length - 1] != _b[length - 1])
-            return false;
-        if (length > 1 && _a[length - 2] != _b[length - 2])
-            return false;
-
-        return keccak256(_a) == keccak256(_b);
-    }
-
-    /**
       * @dev Padding memory array with zeroes up to 64 bytes on the right
       * @param _b Memory array of size 32 .. 64
       */
