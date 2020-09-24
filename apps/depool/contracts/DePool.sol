@@ -68,16 +68,6 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     bytes private withdrawalCredentials;
 
 
-    /// @dev Request to withdraw Ether on the 2.0 side
-    struct WithdrawalRequest {
-        uint256 amount;     // amount of wei to withdraw on the 2.0 side
-        bytes32 pubkeyHash; // receiver's public key hash
-    }
-
-    /// @dev Queue of withdrawal requests
-    WithdrawalRequest[] internal withdrawalRequests;
-
-
     // Memory cache entry used in the _ETH2Deposit function
     struct DepositLookupCacheEntry {
         // Makes no sense to pack types since reading memory is as fast as any op
