@@ -69,16 +69,6 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     uint256 private usedSigningKeys;
 
 
-    /// @dev Request to withdraw Ether on the 2.0 side
-    struct WithdrawalRequest {
-        uint256 amount;     // amount of wei to withdraw on the 2.0 side
-        bytes32 pubkeyHash; // receiver's public key hash
-    }
-
-    /// @dev Queue of withdrawal requests
-    WithdrawalRequest[] internal withdrawalRequests;
-
-
     function initialize(ISTETH _token, IValidatorRegistration validatorRegistration, address _oracle) public onlyInit {
         _setToken(_token);
         _setValidatorRegistrationContract(validatorRegistration);
