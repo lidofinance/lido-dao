@@ -190,9 +190,9 @@ if [ $ETH2_RESET ]; then
 
   if [ $SPEC = "minimal" ]; then
     # reduce slot time generation
-    sed -i 's/SECONDS_PER_SLOT: 6/SECONDS_PER_SLOT: 1/' $LOCAL_TESTNET_DIR/config.yaml
+    sed -i '' 's/SECONDS_PER_SLOT: 6/SECONDS_PER_SLOT: 1/' $LOCAL_TESTNET_DIR/config.yaml
     # set according eth1 block time generation, see docker-compose.yml
-    sed -i 's/SECONDS_PER_ETH1_BLOCK: 14/SECONDS_PER_ETH1_BLOCK: 2/' $LOCAL_TESTNET_DIR/config.yaml
+    sed -i '' 's/SECONDS_PER_ETH1_BLOCK: 14/SECONDS_PER_ETH1_BLOCK: 2/' $LOCAL_TESTNET_DIR/config.yaml
   fi
 
   echo "Specification generated at $LOCAL_TESTNET_DIR."
