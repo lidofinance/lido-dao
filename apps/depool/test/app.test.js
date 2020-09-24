@@ -6,10 +6,19 @@ const { ONE_DAY, ZERO_ADDRESS, MAX_UINT64, bn, getEventArgument, injectWeb3, inj
 const { BN } = require('bn.js');
 
 const StETH = artifacts.require('StETH.sol') //we can just import due to StETH imported in test_helpers/Imports.sol
+const StakingProvidersRegistry = artifacts.require('StakingProvidersRegistry');
 
 const DePool = artifacts.require('TestDePool.sol');
 const OracleMock = artifacts.require('OracleMock.sol');
 const ValidatorRegistrationMock = artifacts.require('ValidatorRegistrationMock.sol');
+
+
+const ADDRESS_1 = "0x0000000000000000000000000000000000000001";
+const ADDRESS_2 = "0x0000000000000000000000000000000000000002";
+const ADDRESS_3 = "0x0000000000000000000000000000000000000003";
+const ADDRESS_4 = "0x0000000000000000000000000000000000000004";
+
+const UNLIMITED = 1000000000;
 
 
 const pad = (hex, bytesLength) => {
@@ -35,7 +44,7 @@ const tokens = ETH;
 
 
 contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
-  let appBase, app, token, oracle, validatorRegistration;
+  let appBase, stEthBase, stakingProvidersRegistryBase, app, token, oracle, validatorRegistration, sps;
   let treasuryAddr, insuranceAddr;
 
   before('deploy base app', async () => {
@@ -44,6 +53,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     stEthBase = await StETH.new();
     oracle = await OracleMock.new();
     validatorRegistration = await ValidatorRegistrationMock.new();
+    stakingProvidersRegistryBase = await StakingProvidersRegistry.new();
   })
 
   beforeEach('deploy dao and app', async () => {
@@ -54,6 +64,11 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     token = await StETH.at(proxyAddress);
     await token.initialize();
 
+    // StakingProvidersRegistry
+    proxyAddress = await newApp(dao, 'staking-providers-registry', stakingProvidersRegistryBase.address, appManager);
+    sps = await StakingProvidersRegistry.at(proxyAddress);
+    await sps.initialize();
+
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
     proxyAddress = await newApp(dao, 'depool', appBase.address, appManager);
     app = await DePool.at(proxyAddress);
@@ -62,18 +77,27 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await acl.createPermission(voting, app.address, await app.PAUSE_ROLE(), appManager, {from: appManager});
     await acl.createPermission(voting, app.address, await app.MANAGE_FEE(), appManager, {from: appManager});
     await acl.createPermission(voting, app.address, await app.MANAGE_WITHDRAWAL_KEY(), appManager, {from: appManager});
-    await acl.createPermission(voting, app.address, await app.MANAGE_SIGNING_KEYS(), appManager, {from: appManager});
 
     await acl.createPermission(app.address, token.address, await token.MINT_ROLE(), appManager, {from: appManager});
     await acl.createPermission(app.address, token.address, await token.BURN_ROLE(), appManager, {from: appManager});
 
+    await acl.createPermission(voting, sps.address, await sps.SET_POOL(), appManager, {from: appManager});
+    await acl.createPermission(voting, sps.address, await sps.MANAGE_SIGNING_KEYS(), appManager, {from: appManager});
+    await acl.createPermission(voting, sps.address, await sps.ADD_STAKING_PROVIDER_ROLE(), appManager, {from: appManager});
+    await acl.createPermission(voting, sps.address, await sps.SET_STAKING_PROVIDER_ACTIVE_ROLE(), appManager, {from: appManager});
+    await acl.createPermission(voting, sps.address, await sps.SET_STAKING_PROVIDER_NAME_ROLE(), appManager, {from: appManager});
+    await acl.createPermission(voting, sps.address, await sps.SET_STAKING_PROVIDER_ADDRESS_ROLE(), appManager, {from: appManager});
+    await acl.createPermission(voting, sps.address, await sps.SET_STAKING_PROVIDER_LIMIT_ROLE(), appManager, {from: appManager});
+    await acl.createPermission(voting, sps.address, await sps.REPORT_STOPPED_VALIDATORS_ROLE(), appManager, {from: appManager});
+
     // Initialize the app's proxy.
-    await app.initialize(token.address, validatorRegistration.address, oracle.address);
+    await app.initialize(token.address, validatorRegistration.address, oracle.address, sps.address);
     treasuryAddr = await app.getTreasury();
     insuranceAddr = await app.getInsuranceFund();
 
     await oracle.setPool(app.address);
     await validatorRegistration.reset();
+    await sps.setPool(app.address, {from: voting});
   })
 
   const checkStat = async ({deposited, remote}) => {
@@ -122,16 +146,25 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
   });
 
   it('setWithdrawalCredentials resets unused keys', async () => {
+    await sps.addStakingProvider("1", ADDRESS_1, UNLIMITED, {from: voting});
+    await sps.addStakingProvider("2", ADDRESS_2, UNLIMITED, {from: voting});
+
     await app.setWithdrawalCredentials(pad("0x0202", 32), {from: voting});
 
-    await app.addSigningKeys(1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
-    assertBn(await app.getTotalSigningKeyCount({from: nobody}), 1);
-    assertBn(await app.getUnusedSigningKeyCount({from: nobody}), 1);
+    await sps.addSigningKeys(0, 1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
+    await sps.addSigningKeys(1, 2, hexConcat(pad("0x050505", 48), pad("0x060606", 48)),
+                            hexConcat(pad("0x02", 96), pad("0x03", 96)), {from: voting});
+    assertBn(await sps.getTotalSigningKeyCount(0, {from: nobody}), 1);
+    assertBn(await sps.getUnusedSigningKeyCount(0, {from: nobody}), 1);
+    assertBn(await sps.getTotalSigningKeyCount(1, {from: nobody}), 2);
+    assertBn(await sps.getUnusedSigningKeyCount(1, {from: nobody}), 2);
 
     await app.setWithdrawalCredentials(pad("0x0203", 32), {from: voting});
 
-    assertBn(await app.getTotalSigningKeyCount({from: nobody}), 0);
-    assertBn(await app.getUnusedSigningKeyCount({from: nobody}), 0);
+    assertBn(await sps.getTotalSigningKeyCount(0, {from: nobody}), 0);
+    assertBn(await sps.getUnusedSigningKeyCount(0, {from: nobody}), 0);
+    assertBn(await sps.getTotalSigningKeyCount(1, {from: nobody}), 0);
+    assertBn(await sps.getUnusedSigningKeyCount(1, {from: nobody}), 0);
     assert.equal(await app.getWithdrawalCredentials({from: nobody}), pad("0x0203", 32));
   });
 
@@ -156,9 +189,12 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
   });
 
   it('deposit works', async () => {
+    await sps.addStakingProvider("1", ADDRESS_1, UNLIMITED, {from: voting});
+    await sps.addStakingProvider("2", ADDRESS_2, UNLIMITED, {from: voting});
+
     await app.setWithdrawalCredentials(pad("0x0202", 32), {from: voting});
-    await app.addSigningKeys(1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
-    await app.addSigningKeys(3,
+    await sps.addSigningKeys(0, 1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
+    await sps.addSigningKeys(0, 3,
         hexConcat(pad("0x010204", 48), pad("0x010205", 48), pad("0x010206", 48)),
         hexConcat(pad("0x01", 96), pad("0x01", 96), pad("0x01", 96)),
         {from: voting});
@@ -228,30 +264,36 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
   });
 
   it('key removal is taken into account during deposit', async () => {
+    await sps.addStakingProvider("1", ADDRESS_1, UNLIMITED, {from: voting});
+    await sps.addStakingProvider("2", ADDRESS_2, UNLIMITED, {from: voting});
+
     await app.setWithdrawalCredentials(pad("0x0202", 32), {from: voting});
-    await app.addSigningKeys(1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
-    await app.addSigningKeys(3,
+    await sps.addSigningKeys(0, 1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
+    await sps.addSigningKeys(0, 3,
         hexConcat(pad("0x010204", 48), pad("0x010205", 48), pad("0x010206", 48)),
         hexConcat(pad("0x01", 96), pad("0x01", 96), pad("0x01", 96)),
         {from: voting});
 
     await web3.eth.sendTransaction({to: app.address, from: user3, value: ETH(33)});
     assertBn(await validatorRegistration.totalCalls(), 1);
-    await assertRevert(app.removeSigningKey(0, {from: voting}), 'KEY_WAS_USED');
+    await assertRevert(sps.removeSigningKey(0, 0, {from: voting}), 'KEY_WAS_USED');
 
-    await app.removeSigningKey(1, {from: voting});
+    await sps.removeSigningKey(0, 1, {from: voting});
 
     await web3.eth.sendTransaction({to: app.address, from: user3, value: ETH(100)});
-    await assertRevert(app.removeSigningKey(1, {from: voting}), 'KEY_WAS_USED');
-    await assertRevert(app.removeSigningKey(2, {from: voting}), 'KEY_WAS_USED');
+    await assertRevert(sps.removeSigningKey(0, 1, {from: voting}), 'KEY_WAS_USED');
+    await assertRevert(sps.removeSigningKey(0, 2, {from: voting}), 'KEY_WAS_USED');
     assertBn(await validatorRegistration.totalCalls(), 3);
     assertBn(await app.getTotalControlledEther(), ETH(133));
     assertBn(await app.getBufferedEther(), ETH(37));
   });
 
   it('out of signing keys doesn\'t revert but buffers', async () => {
+    await sps.addStakingProvider("1", ADDRESS_1, UNLIMITED, {from: voting});
+    await sps.addStakingProvider("2", ADDRESS_2, UNLIMITED, {from: voting});
+
     await app.setWithdrawalCredentials(pad("0x0202", 32), {from: voting});
-    await app.addSigningKeys(1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
+    await sps.addSigningKeys(0, 1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
 
     await web3.eth.sendTransaction({to: app.address, from: user3, value: ETH(100)});
     await checkStat({deposited: ETH(32), remote: 0});
@@ -260,7 +302,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(await app.getBufferedEther(), ETH(100-32));
 
     // buffer unwinds
-    await app.addSigningKeys(3,
+    await sps.addSigningKeys(0, 3,
         hexConcat(pad("0x010204", 48), pad("0x010205", 48), pad("0x010206", 48)),
         hexConcat(pad("0x01", 96), pad("0x01", 96), pad("0x01", 96)),
         {from: voting});
@@ -272,8 +314,11 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
   });
 
   it('withrawal method reverts', async () => {
+    await sps.addStakingProvider("1", ADDRESS_1, UNLIMITED, {from: voting});
+    await sps.addStakingProvider("2", ADDRESS_2, UNLIMITED, {from: voting});
+
     await app.setWithdrawalCredentials(pad("0x0202", 32), {from: voting});
-    await app.addSigningKeys(6,
+    await sps.addSigningKeys(0, 6,
         hexConcat(pad("0x010203", 48), pad("0x010204", 48), pad("0x010205", 48), pad("0x010206", 48), pad("0x010207", 48), pad("0x010208", 48)),
         hexConcat(pad("0x01", 96), pad("0x01", 96), pad("0x01", 96), pad("0x01", 96), pad("0x01", 96), pad("0x01", 96)),
         {from: voting});
@@ -290,9 +335,12 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
   });
 
   it('reportEther2 works', async () => {
+    await sps.addStakingProvider("1", ADDRESS_1, UNLIMITED, {from: voting});
+    await sps.addStakingProvider("2", ADDRESS_2, UNLIMITED, {from: voting});
+
     await app.setWithdrawalCredentials(pad("0x0202", 32), {from: voting});
-    await app.addSigningKeys(1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
-    await app.addSigningKeys(3,
+    await sps.addSigningKeys(0, 1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
+    await sps.addSigningKeys(0, 3,
         hexConcat(pad("0x010204", 48), pad("0x010205", 48), pad("0x010206", 48)),
         hexConcat(pad("0x01", 96), pad("0x01", 96), pad("0x01", 96)),
         {from: voting});
@@ -316,9 +364,12 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
   });
 
   it('oracle data affects deposits', async () => {
+    await sps.addStakingProvider("1", ADDRESS_1, UNLIMITED, {from: voting});
+    await sps.addStakingProvider("2", ADDRESS_2, UNLIMITED, {from: voting});
+
     await app.setWithdrawalCredentials(pad("0x0202", 32), {from: voting});
-    await app.addSigningKeys(1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
-    await app.addSigningKeys(3,
+    await sps.addSigningKeys(0, 1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
+    await sps.addSigningKeys(0, 3,
         hexConcat(pad("0x010204", 48), pad("0x010205", 48), pad("0x010206", 48)),
         hexConcat(pad("0x01", 96), pad("0x01", 96), pad("0x01", 96)),
         {from: voting});
@@ -370,9 +421,12 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
   });
 
   it('can stop and resume', async () => {
+    await sps.addStakingProvider("1", ADDRESS_1, UNLIMITED, {from: voting});
+    await sps.addStakingProvider("2", ADDRESS_2, UNLIMITED, {from: voting});
+
     await app.setWithdrawalCredentials(pad("0x0202", 32), {from: voting});
-    await app.addSigningKeys(1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
-    await app.addSigningKeys(3,
+    await sps.addSigningKeys(0, 1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
+    await sps.addSigningKeys(0, 3,
         hexConcat(pad("0x010204", 48), pad("0x010205", 48), pad("0x010206", 48)),
         hexConcat(pad("0x01", 96), pad("0x01", 96), pad("0x01", 96)),
         {from: voting});
@@ -397,9 +451,12 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
   });
 
   it('rewards distribution works in a simple case', async () => {
+    await sps.addStakingProvider("1", ADDRESS_1, UNLIMITED, {from: voting});
+    await sps.addStakingProvider("2", ADDRESS_2, UNLIMITED, {from: voting});
+
     await app.setWithdrawalCredentials(pad("0x0202", 32), {from: voting});
-    await app.addSigningKeys(1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
-    await app.addSigningKeys(3,
+    await sps.addSigningKeys(0, 1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
+    await sps.addSigningKeys(0, 3,
         hexConcat(pad("0x010204", 48), pad("0x010205", 48), pad("0x010206", 48)),
         hexConcat(pad("0x01", 96), pad("0x01", 96), pad("0x01", 96)),
         {from: voting});
@@ -416,9 +473,12 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
   });
 
   it('rewards distribution works', async () => {
+    await sps.addStakingProvider("1", ADDRESS_1, UNLIMITED, {from: voting});
+    await sps.addStakingProvider("2", ADDRESS_2, UNLIMITED, {from: voting});
+
     await app.setWithdrawalCredentials(pad("0x0202", 32), {from: voting});
-    await app.addSigningKeys(1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
-    await app.addSigningKeys(3,
+    await sps.addSigningKeys(0, 1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
+    await sps.addSigningKeys(0, 3,
         hexConcat(pad("0x010204", 48), pad("0x010205", 48), pad("0x010206", 48)),
         hexConcat(pad("0x01", 96), pad("0x01", 96), pad("0x01", 96)),
         {from: voting});
@@ -447,8 +507,11 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
   });
 
   it('deposits accounted properly during rewards distribution', async () => {
+    await sps.addStakingProvider("1", ADDRESS_1, UNLIMITED, {from: voting});
+    await sps.addStakingProvider("2", ADDRESS_2, UNLIMITED, {from: voting});
+
     await app.setWithdrawalCredentials(pad("0x0202", 32), {from: voting});
-    await app.addSigningKeys(1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
+    await sps.addSigningKeys(0, 1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
 
     await app.setFee(5000, {from: voting});
     await app.setFeeDistribution(3000, 2000, 5000, {from: voting});
