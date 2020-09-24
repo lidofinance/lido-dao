@@ -219,37 +219,6 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     assert.equal((await app.getSigningKey(0, {from: nobody})).key, pad("0x010206", 48));
   });
 
-  it('isEqual works', async () => {
-    assert.equal(await app.isEqual("0x", "0x"), true);
-    assert.equal(await app.isEqual("0x11", "0x11"), true);
-    assert.equal(await app.isEqual("0x1122", "0x1122"), true);
-    assert.equal(await app.isEqual("0x112233", "0x112233"), true);
-
-    assert.equal(await app.isEqual("0x", "0x11"), false);
-    assert.equal(await app.isEqual("0x", "0x112233"), false);
-
-    assert.equal(await app.isEqual("0x11", "0x12"), false);
-    assert.equal(await app.isEqual("0x12", "0x11"), false);
-    assert.equal(await app.isEqual("0x11", "0x1112"), false);
-    assert.equal(await app.isEqual("0x11", "0x111213"), false);
-
-    assert.equal(await app.isEqual("0x1122", "0x1123"), false);
-    assert.equal(await app.isEqual("0x1123", "0x1122"), false);
-    assert.equal(await app.isEqual("0x2122", "0x1122"), false);
-    assert.equal(await app.isEqual("0x1123", "0x1122"), false);
-    assert.equal(await app.isEqual("0x1122", "0x112233"), false);
-    assert.equal(await app.isEqual("0x112233", "0x1122"), false);
-
-    assert.equal(await app.isEqual("0x102233", "0x112233"), false);
-    assert.equal(await app.isEqual("0x112033", "0x112233"), false);
-    assert.equal(await app.isEqual("0x112230", "0x112233"), false);
-    assert.equal(await app.isEqual("0x112233", "0x102233"), false);
-    assert.equal(await app.isEqual("0x112233", "0x112033"), false);
-    assert.equal(await app.isEqual("0x112233", "0x112230"), false);
-    assert.equal(await app.isEqual("0x112233", "0x11223344"), false);
-    assert.equal(await app.isEqual("0x11223344", "0x112233"), false);
-  });
-
   it('pad64 works', async () => {
     await assertRevert(app.pad64("0x"));
     await assertRevert(app.pad64("0x11"));

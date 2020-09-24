@@ -39,13 +39,6 @@ contract TestDePool is DePool {
     }
 
     /**
-      * @dev Fast dynamic array comparison
-      */
-    function isEqual(bytes memory _a, bytes memory _b) public pure returns (bool) {
-        return _isEqual(_a, _b);
-    }
-
-    /**
       * @dev Padding memory array with zeroes up to 64 bytes on the right
       * @param _b Memory array of size 32 .. 64
       */
