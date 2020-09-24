@@ -659,8 +659,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         // Memory is very cheap, although you don't want to grow it too much.
         DepositLookupCacheEntry[] memory cache = new DepositLookupCacheEntry[](activeSPCount);
         uint256 idx = 0;
-        uint256 length = sps.length;
-        for (uint256 SP_id = 1; SP_id < length; ++SP_id) {
+        for (uint256 SP_id = 1; SP_id < sps.length; ++SP_id) {
             StakingProvider storage sp = sps[SP_id];
             if (!sp.active)
                 continue;
@@ -772,7 +771,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         uint256 tokens2mint = protocolRewards.mul(getToken().totalSupply()).div(
             _getTotalControlledEther().sub(protocolRewards));
 
-        (uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, uint16 SPFeeBasisPoints) = _getFeeDistribution();
+        (uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, ) = _getFeeDistribution();
         uint256 toTreasury = tokens2mint.mul(treasuryFeeBasisPoints).div(10000);
         uint256 toInsuranceFund = tokens2mint.mul(insuranceFeeBasisPoints).div(10000);
         uint256 toSP = tokens2mint.sub(toTreasury).sub(toInsuranceFund);
