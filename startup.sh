@@ -59,6 +59,11 @@ while test $# -gt 0; do
   esac
 done
 
+if ! command -v jq >/dev/null; then
+  echo 'Please install jq executable: https://stedolan.github.io/jq'
+  exit 1
+fi
+
 if [[ $RESET ]]; then
   echo "Cleanup"
   docker-compose down -v --remove-orphans
