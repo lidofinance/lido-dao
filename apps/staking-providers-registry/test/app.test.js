@@ -6,6 +6,7 @@ const { ONE_DAY, ZERO_ADDRESS, MAX_UINT64, bn, getEventArgument, injectWeb3, inj
 const { BN } = require('bn.js');
 
 const TestStakingProvidersRegistry = artifacts.require('TestStakingProvidersRegistry.sol');
+const PoolMock = artifacts.require('PoolMock.sol');
 
 
 const ADDRESS_1 = "0x0000000000000000000000000000000000000001";
@@ -63,6 +64,195 @@ contract('StakingProvidersRegistry', ([appManager, voting, user1, user2, user3, 
     // Initialize the app's proxy.
     await app.initialize();
   })
+
+  it('addStakingProvider works', async () => {
+    await assertRevert(app.addStakingProvider("1", ADDRESS_1, 10, {from: user1}), 'APP_AUTH_FAILED');
+    await assertRevert(app.addStakingProvider("1", ADDRESS_1, 10, {from: nobody}), 'APP_AUTH_FAILED');
+
+    await app.addStakingProvider("fo o", ADDRESS_1, 10, {from: voting});
+    await app.addStakingProvider(" bar", ADDRESS_2, UNLIMITED, {from: voting});
+
+    assertBn(await app.getStakingProvidersCount({from: nobody}), 2);
+    assertBn(await app.getActiveStakingProvidersCount({from: nobody}), 2);
+
+    await assertRevert(app.addStakingProvider("1", ADDRESS_3, 10, {from: user1}), 'APP_AUTH_FAILED');
+    await assertRevert(app.addStakingProvider("1", ADDRESS_3, 10, {from: nobody}), 'APP_AUTH_FAILED');
+  });
+
+  it('getStakingProvider works', async () => {
+    await app.addStakingProvider("fo o", ADDRESS_1, 10, {from: voting});
+    await app.addStakingProvider(" bar", ADDRESS_2, UNLIMITED, {from: voting});
+
+    await app.addSigningKeys(0, 1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
+
+    let sp = await app.getStakingProvider(0, true);
+    assert.equal(sp.active, true);
+    assert.equal(sp.name, "fo o");
+    assert.equal(sp.rewardAddress, ADDRESS_1);
+    assertBn(sp.stakingLimit, 10);
+    assertBn(sp.stoppedValidators, 0);
+    assertBn(sp.totalSigningKeys, 1);
+    assertBn(sp.usedSigningKeys, 0);
+
+    sp = await app.getStakingProvider(1, true);
+    assert.equal(sp.active, true);
+    assert.equal(sp.name, " bar");
+    assert.equal(sp.rewardAddress, ADDRESS_2);
+    assertBn(sp.stakingLimit, UNLIMITED);
+    assertBn(sp.stoppedValidators, 0);
+    assertBn(sp.totalSigningKeys, 0);
+    assertBn(sp.usedSigningKeys, 0);
+
+    sp = await app.getStakingProvider(0, false);
+    assert.equal(sp.name, "");
+    assert.equal(sp.rewardAddress, ADDRESS_1);
+
+    sp = await app.getStakingProvider(1, false);
+    assert.equal(sp.name, "");
+    assert.equal(sp.rewardAddress, ADDRESS_2);
+
+    await assertRevert(app.getStakingProvider(10, false), 'STAKING_PROVIDER_NOT_FOUND');
+  });
+
+  it('setStakingProviderActive works', async () => {
+    await app.addStakingProvider("fo o", ADDRESS_1, 10, {from: voting});
+    await app.addStakingProvider(" bar", ADDRESS_2, UNLIMITED, {from: voting});
+
+    await app.addSigningKeys(0, 1, pad("0x010203", 48), pad("0x01", 96), {from: voting});
+
+    assert.equal((await app.getStakingProvider(0, false)).active, true);
+    assert.equal((await app.getStakingProvider(1, false)).active, true);
+    assertBn(await app.getStakingProvidersCount({from: nobody}), 2);
+    assertBn(await app.getActiveStakingProvidersCount({from: nobody}), 2);
+
+    await assertRevert(app.setStakingProviderActive(0, false, {from: user1}), 'APP_AUTH_FAILED');
+    await assertRevert(app.setStakingProviderActive(0, true, {from: nobody}), 'APP_AUTH_FAILED');
+
+    // switch off #0
+    await app.setStakingProviderActive(0, false, {from: voting});
+    assert.equal((await app.getStakingProvider(0, false)).active, false);
+    assert.equal((await app.getStakingProvider(1, false)).active, true);
+    assertBn(await app.getStakingProvidersCount({from: nobody}), 2);
+    assertBn(await app.getActiveStakingProvidersCount({from: nobody}), 1);
+
+    await app.setStakingProviderActive(0, false, {from: voting});
+    assert.equal((await app.getStakingProvider(0, false)).active, false);
+    assertBn(await app.getActiveStakingProvidersCount({from: nobody}), 1);
+
+    // switch off #1
+    await app.setStakingProviderActive(1, false, {from: voting});
+    assert.equal((await app.getStakingProvider(0, false)).active, false);
+    assert.equal((await app.getStakingProvider(1, false)).active, false);
+    assertBn(await app.getStakingProvidersCount({from: nobody}), 2);
+    assertBn(await app.getActiveStakingProvidersCount({from: nobody}), 0);
+
+    // switch #0 back on
+    await app.setStakingProviderActive(0, true, {from: voting});
+    assert.equal((await app.getStakingProvider(0, false)).active, true);
+    assert.equal((await app.getStakingProvider(1, false)).active, false);
+    assertBn(await app.getStakingProvidersCount({from: nobody}), 2);
+    assertBn(await app.getActiveStakingProvidersCount({from: nobody}), 1);
+
+    await app.setStakingProviderActive(0, true, {from: voting});
+    assert.equal((await app.getStakingProvider(0, false)).active, true);
+    assertBn(await app.getActiveStakingProvidersCount({from: nobody}), 1);
+
+    await assertRevert(app.setStakingProviderActive(10, false, {from: voting}), 'STAKING_PROVIDER_NOT_FOUND');
+  });
+
+  it('setStakingProviderName works', async () => {
+    await app.addStakingProvider("fo o", ADDRESS_1, 10, {from: voting});
+    await app.addStakingProvider(" bar", ADDRESS_2, UNLIMITED, {from: voting});
+
+    await assertRevert(app.setStakingProviderName(0, "zzz", {from: user1}), 'APP_AUTH_FAILED');
+    await assertRevert(app.setStakingProviderName(0, "zzz", {from: nobody}), 'APP_AUTH_FAILED');
+
+    assert.equal((await app.getStakingProvider(0, true)).name, "fo o");
+    assert.equal((await app.getStakingProvider(1, true)).name, " bar");
+
+    await app.setStakingProviderName(0, "zzz", {from: voting});
+
+    assert.equal((await app.getStakingProvider(0, true)).name, "zzz");
+    assert.equal((await app.getStakingProvider(1, true)).name, " bar");
+
+    await assertRevert(app.setStakingProviderName(10, "foo", {from: voting}), 'STAKING_PROVIDER_NOT_FOUND');
+  });
+
+  it('setStakingProviderRewardAddress works', async () => {
+    await app.addStakingProvider("fo o", ADDRESS_1, 10, {from: voting});
+    await app.addStakingProvider(" bar", ADDRESS_2, UNLIMITED, {from: voting});
+
+    await assertRevert(app.setStakingProviderRewardAddress(0, ADDRESS_4, {from: user1}), 'APP_AUTH_FAILED');
+    await assertRevert(app.setStakingProviderRewardAddress(1, ADDRESS_4, {from: nobody}), 'APP_AUTH_FAILED');
+
+    assert.equal((await app.getStakingProvider(0, false)).rewardAddress, ADDRESS_1);
+    assert.equal((await app.getStakingProvider(1, false)).rewardAddress, ADDRESS_2);
+
+    await app.setStakingProviderRewardAddress(0, ADDRESS_4, {from: voting});
+
+    assert.equal((await app.getStakingProvider(0, false)).rewardAddress, ADDRESS_4);
+    assert.equal((await app.getStakingProvider(1, false)).rewardAddress, ADDRESS_2);
+
+    await assertRevert(app.setStakingProviderRewardAddress(10, ADDRESS_4, {from: voting}), 'STAKING_PROVIDER_NOT_FOUND');
+  });
+
+  it('setStakingProviderStakingLimit works', async () => {
+    await app.addStakingProvider("fo o", ADDRESS_1, 10, {from: voting});
+    await app.addStakingProvider(" bar", ADDRESS_2, UNLIMITED, {from: voting});
+
+    await assertRevert(app.setStakingProviderStakingLimit(0, 40, {from: user1}), 'APP_AUTH_FAILED');
+    await assertRevert(app.setStakingProviderStakingLimit(1, 40, {from: nobody}), 'APP_AUTH_FAILED');
+
+    assertBn((await app.getStakingProvider(0, false)).stakingLimit, 10);
+    assertBn((await app.getStakingProvider(1, false)).stakingLimit, UNLIMITED);
+
+    await app.setStakingProviderStakingLimit(0, 40, {from: voting});
+
+    assertBn((await app.getStakingProvider(0, false)).stakingLimit, 40);
+    assertBn((await app.getStakingProvider(1, false)).stakingLimit, UNLIMITED);
+
+    await assertRevert(app.setStakingProviderStakingLimit(10, 40, {from: voting}), 'STAKING_PROVIDER_NOT_FOUND');
+  });
+
+  it('reportStoppedValidators works', async () => {
+    await app.addStakingProvider("fo o", ADDRESS_1, 10, {from: voting});
+    await app.addStakingProvider(" bar", ADDRESS_2, UNLIMITED, {from: voting});
+
+    await app.addSigningKeys(0, 2, hexConcat(pad("0x010101", 48), pad("0x020202", 48)),
+                            hexConcat(pad("0x01", 96), pad("0x02", 96)), {from: voting});
+    await app.addSigningKeys(1, 2, hexConcat(pad("0x050505", 48), pad("0x060606", 48)),
+                            hexConcat(pad("0x04", 96), pad("0x03", 96)), {from: voting});
+
+    const pool = await PoolMock.new(app.address);
+    await app.setPool(pool.address, {from: voting});
+    await pool.updateUsedKeys([0, 1], [2, 1], {from: voting});
+
+    await assertRevert(app.reportStoppedValidators(0, 1, {from: user1}), 'APP_AUTH_FAILED');
+    await assertRevert(app.reportStoppedValidators(1, 1, {from: nobody}), 'APP_AUTH_FAILED');
+
+    assertBn((await app.getStakingProvider(0, false)).stoppedValidators, 0);
+    assertBn((await app.getStakingProvider(1, false)).stoppedValidators, 0);
+
+    await app.reportStoppedValidators(0, 1, {from: voting});
+
+    assertBn((await app.getStakingProvider(0, false)).stoppedValidators, 1);
+    assertBn((await app.getStakingProvider(1, false)).stoppedValidators, 0);
+
+    await app.reportStoppedValidators(1, 1, {from: voting});
+
+    assertBn((await app.getStakingProvider(0, false)).stoppedValidators, 1);
+    assertBn((await app.getStakingProvider(1, false)).stoppedValidators, 1);
+
+    await app.reportStoppedValidators(0, 1, {from: voting});
+
+    assertBn((await app.getStakingProvider(0, false)).stoppedValidators, 2);
+    assertBn((await app.getStakingProvider(1, false)).stoppedValidators, 1);
+
+    await assertRevert(app.reportStoppedValidators(0, 1, {from: voting}), 'STOPPED_MORE_THAN_LAUNCHED');
+    await assertRevert(app.reportStoppedValidators(1, 12, {from: voting}), 'STOPPED_MORE_THAN_LAUNCHED');
+
+    await assertRevert(app.reportStoppedValidators(10, 1, {from: voting}), 'STAKING_PROVIDER_NOT_FOUND');
+  });
 
   it('addSigningKeys works', async () => {
     await app.addStakingProvider("1", ADDRESS_1, UNLIMITED, {from: voting});
