@@ -6,13 +6,14 @@
 
 * shell - bash or zsh
 * docker
+* docker-compose
 * find
 * sed
 * jq
 * curl
 * cut
-* docker
-* node.js v12
+* nodejs 12
+* npm ^6.14
 * (optional) Lerna
 
 
