@@ -81,5 +81,5 @@
     }
   },
   "appName": "staking-providers-registry.depoolspm.eth",
-  "path": "contracts/StakingProvidersRegistry.sol"
+  "path": "../../contracts/sps/StakingProvidersRegistry.sol"
 }
