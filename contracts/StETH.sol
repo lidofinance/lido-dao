@@ -4,8 +4,9 @@ import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 import {ERC20 as OZERC20} from "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 
-import "@depools/dao/contracts/interfaces/ISTETH.sol";
-import "@depools/depool-lib/contracts/Pausable.sol";
+import "./interfaces/ISTETH.sol";
+
+import "./lib/Pausable.sol";
 
 
 /**

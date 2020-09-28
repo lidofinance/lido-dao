@@ -27,11 +27,7 @@
   "dependencies": {
     "@aragon/os": "^4.4.0",
     "@aragon/templates-shared": "^1.0.1",
-    "@depools/apps-depool": "^0.0.1",
-    "@depools/apps-depooloracle": "^0.0.1",
-    "@depools/apps-steth": "^0.0.1",
     "@depools/dao": "^0.0.1",
-    "@depools/depool-lib": "^0.0.1",
     "@truffle/contract": "^4.2.22"
   }
 }
