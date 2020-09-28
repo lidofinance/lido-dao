@@ -89,6 +89,15 @@ interface IStakingProvidersRegistry {
 
 
     /**
+      * @notice Distributes rewards among staking providers.
+      * @dev Function is used by the pool
+      * @param _token Reward token (must be ERC20-compatible)
+      * @param _totalReward Total amount to distribute (must be transferred to this contract beforehand)
+      */
+    function distributeRewards(address _token, uint256 _totalReward) external;
+
+
+    /**
       * @notice Add `_quantity` validator signing keys to the keys of the staking provider #`_SP_id`. Concatenated keys are: `_pubkeys`
       * @dev Along with each key the DAO has to provide a signatures for the
       *      (pubkey, withdrawal_credentials, 32000000000) message.

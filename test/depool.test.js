@@ -108,9 +108,14 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
 
   // Assert reward distribution. The values must be divided by 1e15.
   const checkRewards = async ({treasury, insurance, sp}) => {
-    assertBn(div15(await token.balanceOf(treasuryAddr)), treasury, 'treasury token balance check');
-    assertBn(div15(await token.balanceOf(insuranceAddr)), insurance, 'insurance fund token balance check');
-    assertBn(div15(await token.balanceOf(app.address)), sp, 'staking providers token balance check');
+    const [treasury_b, insurance_b, sps_b, a1, a2, a3, a4] = await Promise.all([
+        token.balanceOf(treasuryAddr), token.balanceOf(insuranceAddr), token.balanceOf(sps.address),
+        token.balanceOf(ADDRESS_1), token.balanceOf(ADDRESS_2), token.balanceOf(ADDRESS_3), token.balanceOf(ADDRESS_4)
+    ]);
+
+    assertBn(div15(treasury_b), treasury, 'treasury token balance check');
+    assertBn(div15(insurance_b), insurance, 'insurance fund token balance check');
+    assertBn(div15(sps_b.add(a1).add(a2).add(a3).add(a4)), sp, 'staking providers token balance check');
   };
 
   it('setFee works', async () => {

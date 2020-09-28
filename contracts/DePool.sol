@@ -504,17 +504,8 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
 
         getToken().mint(getTreasury(), toTreasury);
         getToken().mint(getInsuranceFund(), toInsuranceFund);
-        getToken().mint(address(this), toSP);
-
-        distributeRewardsToSP(toSP);
-    }
-
-    /**
-      * @dev Distributes rewards to the staking providers.
-      * @param _SPTokens Rewards in the form of StETH tokens.
-      */
-    function distributeRewardsToSP(uint256 _SPTokens) internal {
-        // TODO staking providers
+        getToken().mint(address(getSPs()), toSP);
+        getSPs().distributeRewards(address(getToken()), toSP);
     }
 
 
