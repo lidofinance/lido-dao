@@ -6,7 +6,6 @@ set -o pipefail
 ROOT=${PWD}
 LOCAL_DATA_DIR="${PWD}${DATADIR}"
 LOCAL_VALIDATORS_DIR="${PWD}${VALIDATORS_DIR}"
-LOCAL_VALIDATOR_MNEMONIC_FILE="${PWD}${VALIDATOR_MNEMONIC_FILE}"
 LOCAL_MOCK_VALIDATORS_DIR="${PWD}${MOCK_VALIDATORS_DIR}"
 LOCAL_MOCK_SECRETS_DIR="${PWD}${MOCK_SECRETS_DIR}"
 LOCAL_TESTNET_DIR="${PWD}${TESTNET_DIR}"
@@ -243,19 +242,6 @@ fi
 
 if [ ! -d "$LOCAL_VALIDATORS_DIR" ]; then
   unzip -o -q -d $LOCAL_DATA_DIR ./validators.zip
-#  echo "$VALIDATOR_MNEMONIC" > $LOCAL_VALIDATOR_MNEMONIC_FILE
-#  docker-compose run --rm --no-deps node2-1 lighthouse \
-#    --spec "$SPEC" \
-#    --debug-level "$DEBUG_LEVEL" \
-#    account \
-#    validator \
-#    recover \
-#    --count $VALIDATOR_COUNT \
-#    --datadir "$DATADIR" \
-#    --secrets-dir "$SECRETS_DIR" \
-#    --mnemonic-path "$VALIDATOR_MNEMONIC_FILE" \
-#    --validator-dir "$VALIDATORS_DIR" \
-#    --testnet-dir "$TESTNET_DIR"
 fi
 
 docker-compose up -d node2-1
