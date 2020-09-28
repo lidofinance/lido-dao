@@ -4,8 +4,9 @@ import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 import {ERC20 as OZERC20} from "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 
-import "@depools/dao/contracts/interfaces/ISTETH.sol";
-import "@depools/depool-lib/contracts/Pausable.sol";
+import "./interfaces/ISTETH.sol";
+
+import "./lib/Pausable.sol";
 
 
 /**
@@ -48,6 +49,9 @@ contract StETH is ISTETH, Pausable, OZERC20, AragonApp {
       * @param _value Amount of new tokens to mint
       */
     function mint(address _to, uint256 _value) external whenNotStopped authP(MINT_ROLE, arr(_to, _value)) {
+        if (0 == _value)
+            return;
+
         _mint(_to, _value);
     }
 
@@ -57,6 +61,9 @@ contract StETH is ISTETH, Pausable, OZERC20, AragonApp {
       * @param _value Amount of tokens to burn
       */
     function burn(address _account, uint256 _value) external whenNotStopped authP(BURN_ROLE, arr(_account, _value)) {
+        if (0 == _value)
+            return;
+
         _burn(_account, _value);
     }
 

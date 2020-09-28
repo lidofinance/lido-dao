@@ -42,38 +42,38 @@ interface IDePoolOracle {
 
 
     /**
-      * @notice Returns epoch duration in seconds
-      * @dev Epochs are consecutive time intervals. Oracle data is aggregated
-      *      and processed for each epoch independently.
+      * @notice Returns reportInterval duration in seconds
+      * @dev ReportIntervals are consecutive time intervals. Oracle data is aggregated
+      *      and processed for each reportInterval independently.
       */
-    function getEpochDurationSeconds() external view returns (uint256);
+    function getReportIntervalDurationSeconds() external view returns (uint256);
 
     /**
-      * @notice Returns epoch id for a timestamp
+      * @notice Returns reportInterval id for a timestamp
       * @param _timestamp Unix timestamp, seconds
       */
-    function getEpochForTimestamp(uint256 _timestamp) external view returns (uint256);
+    function getReportIntervalForTimestamp(uint256 _timestamp) external view returns (uint256);
 
     /**
-      * @notice Returns current epoch id
+      * @notice Returns current reportInterval id
       */
-    function getCurrentEpoch() external view returns (uint256);
+    function getCurrentReportInterval() external view returns (uint256);
 
     /**
       * @notice An oracle committee member pushes data from the ETH 2.0 side
-      * @param _epoch Epoch id
+      * @param _reportInterval ReportInterval id
       * @param _eth2balance Balance in wei on the ETH 2.0 side
       */
-    function pushData(uint256 _epoch, uint256 _eth2balance) external;
+    function pushData(uint256 _reportInterval, uint256 _eth2balance) external;
 
     /**
       * @notice Returns the latest data from the ETH 2.0 side
-      * @dev Depending on the oracle member committee liveness, the data can be stale. See _epoch.
-      * @return _epoch Epoch id
+      * @dev Depending on the oracle member committee liveness, the data can be stale. See _reportInterval.
+      * @return _reportInterval ReportInterval id
       * @return _eth2balance Balance in wei on the ETH 2.0 side
       */
-    function getLatestData() external view returns (uint256 epoch, uint256 eth2balance);
+    function getLatestData() external view returns (uint256 reportInterval, uint256 eth2balance);
 
-    // Fired when some _epoch reached quorum, was processed and yielded median _eth2balance
-    event AggregatedData(uint256 epoch, uint256 eth2balance);
+    // Fired when some _reportInterval reached quorum, was processed and yielded median _eth2balance
+    event AggregatedData(uint256 reportInterval, uint256 eth2balance);
 }

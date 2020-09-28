@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-import "../DePoolOracle.sol";
+import "../oracle/DePoolOracle.sol";
 
 
 /**
