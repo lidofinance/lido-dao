@@ -4,6 +4,7 @@ import "@aragon/templates-shared/contracts/BaseTemplate.sol";
 
 import "@depools/apps-steth/contracts/StETH.sol";
 import "@depools/apps-depooloracle/contracts/DePoolOracle.sol";
+import "@depools/apps-staking-providers-registry/contracts/StakingProvidersRegistry.sol";
 import "@depools/apps-depool/contracts/DePool.sol";
 
 
@@ -16,10 +17,12 @@ contract DePoolTemplate is BaseTemplate {
     /* Hardcoded constant to save gas
      * bytes32 internal constant STETH_APP_ID = keccak256(abi.encodePacked(DEPOOLS_PM_NODE, keccak256(abi.encodePacked("steth")))); // steth.depoolspm.eth
      * bytes32 internal constant DEPOOLORACLE_APP_ID = keccak256(abi.encodePacked(DEPOOLS_PM_NODE, keccak256(abi.encodePacked("depooloracle")))); // depooloracle.depoolspm.eth
+     * bytes32 internal constant REGISTRY_APP_ID = keccak256(abi.encodePacked(DEPOOLS_PM_NODE, keccak256(abi.encodePacked("staking-providers-registry")))); // staking-providers-registry.depoolspm.eth
      * bytes32 internal constant DEPOOL_APP_ID = keccak256(abi.encodePacked(DEPOOLS_PM_NODE, keccak256(abi.encodePacked("depool")))); // depool.depoolspm.eth
      */
     bytes32 constant internal STETH_APP_ID = 0x5937d846addd00601bf692837c2cd9854dacd2c55911625da04aec9c62a61a26;
     bytes32 constant internal DEPOOLORACLE_APP_ID = 0xebe89ae11ec5a76827463bd202b0551f137fdc6dad7cd69ecdf4fe553af5f77b;
+    bytes32 internal constant REGISTRY_APP_ID = 0x6ca5078df26de2bcf0976b0bfba50b6ed5dac3644879214556e2789dfc78df16;
     bytes32 constant internal DEPOOL_APP_ID = 0xdf4019658a996b6bc3639baa07d25c655bf826334fc5c81bb83e501905b51cb1;
 
     bool constant private TOKEN_TRANSFERABLE = true;
@@ -38,6 +41,7 @@ contract DePoolTemplate is BaseTemplate {
     Voting private voting;
     StETH private steth;
     DePoolOracle private oracle;
+    StakingProvidersRegistry private sps;
     DePool private depool;
 
 
@@ -74,6 +78,11 @@ contract DePoolTemplate is BaseTemplate {
         oracle.setPool(depool);
         _removePermissionFromTemplate(acl, oracle, oracle.SET_POOL());
 
+        // StakingProvidersRegistry setPool
+        _createPermissionForTemplate(acl, sps, sps.SET_POOL());
+        sps.setPool(depool);
+        _removePermissionFromTemplate(acl, sps, sps.SET_POOL());
+
         _mintTokens(acl, tokenManager, _holders, _stakes);
 
         _setupPermissions();
@@ -101,7 +110,11 @@ contract DePoolTemplate is BaseTemplate {
         initializeData = abi.encodeWithSelector(DePoolOracle(0).initialize.selector);
         oracle = DePoolOracle(_installNonDefaultApp(dao, DEPOOLORACLE_APP_ID, initializeData));
 
-        initializeData = abi.encodeWithSelector(DePool(0).initialize.selector, steth, _ETH2ValidatorRegistrationContract, oracle);
+        initializeData = abi.encodeWithSelector(StakingProvidersRegistry(0).initialize.selector);
+        sps = StakingProvidersRegistry(_installNonDefaultApp(dao, REGISTRY_APP_ID, initializeData));
+
+        initializeData = abi.encodeWithSelector(DePool(0).initialize.selector,
+                                                steth, _ETH2ValidatorRegistrationContract, oracle, sps);
         depool = DePool(_installNonDefaultApp(dao, DEPOOL_APP_ID, initializeData));
     }
 
@@ -127,18 +140,21 @@ contract DePoolTemplate is BaseTemplate {
         acl.createPermission(voting, oracle, oracle.MANAGE_QUORUM(), voting);
         acl.createPermission(voting, oracle, oracle.SET_POOL(), voting);
 
+        // StakingProvidersRegistry
+        acl.createPermission(voting, sps, sps.MANAGE_SIGNING_KEYS(), voting);
+        acl.createPermission(voting, sps, sps.ADD_STAKING_PROVIDER_ROLE(), voting);
+        acl.createPermission(voting, sps, sps.SET_STAKING_PROVIDER_ACTIVE_ROLE(), voting);
+        acl.createPermission(voting, sps, sps.SET_STAKING_PROVIDER_NAME_ROLE(), voting);
+        acl.createPermission(voting, sps, sps.SET_STAKING_PROVIDER_ADDRESS_ROLE(), voting);
+        acl.createPermission(voting, sps, sps.SET_STAKING_PROVIDER_LIMIT_ROLE(), voting);
+        acl.createPermission(voting, sps, sps.REPORT_STOPPED_VALIDATORS_ROLE(), voting);
+        acl.createPermission(voting, sps, sps.SET_POOL(), voting);
+
         // Pool
         acl.createPermission(voting, depool, depool.PAUSE_ROLE(), voting);
         acl.createPermission(voting, depool, depool.MANAGE_FEE(), voting);
         acl.createPermission(voting, depool, depool.MANAGE_WITHDRAWAL_KEY(), voting);
-        acl.createPermission(voting, depool, depool.MANAGE_SIGNING_KEYS(), voting);
         acl.createPermission(voting, depool, depool.SET_ORACLE(), voting);
-        acl.createPermission(voting, depool, depool.ADD_STAKING_PROVIDER_ROLE(), voting);
-        acl.createPermission(voting, depool, depool.SET_STAKING_PROVIDER_ACTIVE_ROLE(), voting);
-        acl.createPermission(voting, depool, depool.SET_STAKING_PROVIDER_NAME_ROLE(), voting);
-        acl.createPermission(voting, depool, depool.SET_STAKING_PROVIDER_ADDRESS_ROLE(), voting);
-        acl.createPermission(voting, depool, depool.SET_STAKING_PROVIDER_LIMIT_ROLE(), voting);
-        acl.createPermission(voting, depool, depool.REPORT_STOPPED_VALIDATORS_ROLE(), voting);
     }
 
     /// @dev reset temporary storage
@@ -152,6 +168,7 @@ contract DePoolTemplate is BaseTemplate {
         delete voting;
         delete steth;
         delete oracle;
+        delete sps;
         delete depool;
     }
 }
