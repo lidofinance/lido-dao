@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-import "@depools/dao/contracts/interfaces/IStakingProvidersRegistry.sol";
+import "../../interfaces/IStakingProvidersRegistry.sol";
 
 
 /**

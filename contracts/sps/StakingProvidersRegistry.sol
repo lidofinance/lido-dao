@@ -6,7 +6,7 @@ import "@aragon/os/contracts/lib/math/SafeMath.sol";
 import "@aragon/os/contracts/lib/math/SafeMath64.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
-import "@depools/dao/contracts/interfaces/IStakingProvidersRegistry.sol";
+import "../interfaces/IStakingProvidersRegistry.sol";
 
 
 /**
