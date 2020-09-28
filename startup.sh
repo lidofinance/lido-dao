@@ -5,8 +5,8 @@ set -o pipefail
 
 ROOT=${PWD}
 LOCAL_DATA_DIR="${PWD}${DATADIR}"
-LOCAL_WALLETS_DIR="${PWD}${WALLETS_DIR}"
 LOCAL_VALIDATORS_DIR="${PWD}${VALIDATORS_DIR}"
+LOCAL_VALIDATOR_MNEMONIC_FILE="${PWD}${VALIDATOR_MNEMONIC_FILE}"
 LOCAL_MOCK_VALIDATORS_DIR="${PWD}${MOCK_VALIDATORS_DIR}"
 LOCAL_MOCK_SECRETS_DIR="${PWD}${MOCK_SECRETS_DIR}"
 LOCAL_TESTNET_DIR="${PWD}${TESTNET_DIR}"
@@ -167,6 +167,15 @@ if [[ $ETH1_ONLY ]]; then
 fi
 
 if [ $ETH2_RESET ]; then
+  if [ ! $RESET ]; then
+    docker-compose stop node2-1
+    docker-compose rm -f node2-1
+    docker-compose stop genesis-validators
+    docker-compose rm -f genesis-validators
+    docker-compose stop validators
+    docker-compose rm -f validators
+  fi
+
   rm -rf $LOCAL_TESTNET_DIR
   docker-compose run --rm --no-deps node2-1 lcli \
     --spec "$SPEC" \
@@ -175,7 +184,7 @@ if [ $ETH2_RESET ]; then
     --deposit-contract-deploy-block "$BLOCK" \
     --testnet-dir "$TESTNET_DIR" \
     --force \
-    --min-genesis-active-validator-count "$VALIDATOR_COUNT" \
+    --min-genesis-active-validator-count "$MOCK_VALIDATOR_COUNT" \
     --eth1-follow-distance "$ETH1_FOLLOW_DISTANCE" \
     --genesis-delay "$GENESIS_DELAY" \
     --genesis-fork-version "$FORK_VERSION"
@@ -192,85 +201,27 @@ if [ $ETH2_RESET ]; then
 
   echo "Specification generated at $LOCAL_TESTNET_DIR."
 
-#  echo "Generating $MOCK_VALIDATOR_COUNT mock validators concurrently... (this may take a while)"
-#  rm -rf $LOCAL_MOCK_VALIDATORS_DIR
-#  rm -rf $LOCAL_MOCK_SECRETS_DIR
-#  docker-compose run --rm --no-deps node2-1 lcli \
-#    --spec "$SPEC" \
-#    insecure-validators \
-#    --count $MOCK_VALIDATOR_COUNT \
-#    --validators-dir $MOCK_VALIDATORS_DIR \
-#    --secrets-dir $MOCK_SECRETS_DIR
-#
-#  echo Validators generated at $MOCK_VALIDATORS_DIR with keystore passwords at $MOCK_SECRETS_DIR.
-#
-#  echo "Building genesis state... (this might take a while)"
-#  docker-compose run --rm --no-deps node2-1  lcli \
-#    --spec "$SPEC" \
-#    interop-genesis \
-#    --testnet-dir $TESTNET_DIR \
-#    --genesis-fork-version $FORK_VERSION \
-#    $MOCK_VALIDATOR_COUNT
-#  #
-#  echo "Created genesis state in $TESTNET_DIR"
-
-
-  echo "Generating $VALIDATOR_COUNT genesis validators concurrently... (this may take a while)"
-  if [ ! -d "$LOCAL_WALLETS_DIR" ]; then
-    docker-compose run --rm --no-deps node2-1 lighthouse \
-      --spec "$SPEC" \
-      --debug-level "$DEBUG_LEVEL" \
-      account \
-      wallet \
-      --base-dir "$WALLETS_DIR" \
-      create \
-      --datadir "$DATADIR" \
-      --name "$WALLET_NAME" \
-      --password-file "$WALLET_PASSFILE" \
-      --mnemonic-output-path "$WALLET_MNEMONIC" \
-      --testnet-dir "$TESTNET_DIR"
-  else
-    echo "Wallet directory already exists. Skip accounts creating and deposit"
-  fi
-
-  # will skip extra accs creation if already some exists
-  docker-compose run --rm --no-deps node2-1 lighthouse \
-    --spec "$SPEC" \
-    --debug-level "$DEBUG_LEVEL" \
-    account \
-    validator \
-    --base-dir "$WALLETS_DIR" \
-    create \
-    --secrets-dir "$SECRETS_DIR" \
-    --validator-dir "$VALIDATORS_DIR" \
-    --wallet-name "$WALLET_NAME" \
-    --wallet-password "$WALLET_PASSFILE" \
-    --at-most "$VALIDATOR_COUNT" \
-    --testnet-dir "$TESTNET_DIR"
-
-
-  echo "Making deposits for $VALIDATOR_COUNT genesis validators... (this may take a while)"
-  for D in $(find "$LOCAL_VALIDATORS_DIR" -type d -mindepth 1 -maxdepth 1); do
-    R=$(curl -s -L -X POST http://localhost:8545 \
-      --data "{\"jsonrpc\":\"2.0\",\"method\":\"eth_sendTransaction\",\"params\":[{
-      \"from\": \"$ADMIN\",
-      \"to\": \"$DEPOSIT\",
-      \"gas\": \"0x1ac778\",
-      \"gasPrice\": \"0x9184e72a000\",
-      \"value\": \"0x1bc16d674ec800000\",
-      \"data\": \"$(cat $D/eth1-deposit-data.rlp)\"
-      }],\"id\":1}" | jq -r '.result')
-    # R=$(node cmd-deposit.js "$DEPOSIT" "$(cat $D/eth1-deposit-data.rlp)" | jq -r '.hash')
-    echo "Deposit tx send, hash: $R"
-    sleep 3
-  done
-
-  echo "Generating genesis"
+  echo "Generating $MOCK_VALIDATOR_COUNT mock validators concurrently... (this may take a while)"
+  rm -rf $LOCAL_MOCK_VALIDATORS_DIR
+  rm -rf $LOCAL_MOCK_SECRETS_DIR
   docker-compose run --rm --no-deps node2-1 lcli \
     --spec "$SPEC" \
-    eth1-genesis \
-    --testnet-dir "$TESTNET_DIR" \
-    --eth1-endpoint http://node1:8545
+    insecure-validators \
+    --count $MOCK_VALIDATOR_COUNT \
+    --validators-dir $MOCK_VALIDATORS_DIR \
+    --secrets-dir $MOCK_SECRETS_DIR
+
+  echo "Validators generated at $MOCK_VALIDATORS_DIR with keystore passwords at $MOCK_SECRETS_DIR."
+
+  echo "Building genesis state... (this might take a while)"
+  docker-compose run --rm --no-deps node2-1  lcli \
+    --spec "$SPEC" \
+    interop-genesis \
+    --testnet-dir $TESTNET_DIR \
+    --genesis-fork-version $FORK_VERSION \
+    $MOCK_VALIDATOR_COUNT
+  #
+  echo "Created genesis state in $TESTNET_DIR"
 
   NOW=$(date +%s)
   echo "Reset genesis time to now ($NOW)"
@@ -285,9 +236,26 @@ if [[ $ETH1_ONLY ]]; then
   exit 0
 fi
 
+if [ ! -d "$LOCAL_VALIDATORS_DIR" ]; then
+  unzip -o -q -d $LOCAL_DATA_DIR ./validators.zip
+#  echo "$VALIDATOR_MNEMONIC" > $LOCAL_VALIDATOR_MNEMONIC_FILE
+#  docker-compose run --rm --no-deps node2-1 lighthouse \
+#    --spec "$SPEC" \
+#    --debug-level "$DEBUG_LEVEL" \
+#    account \
+#    validator \
+#    recover \
+#    --count $VALIDATOR_COUNT \
+#    --datadir "$DATADIR" \
+#    --secrets-dir "$SECRETS_DIR" \
+#    --mnemonic-path "$VALIDATOR_MNEMONIC_FILE" \
+#    --validator-dir "$VALIDATORS_DIR" \
+#    --testnet-dir "$TESTNET_DIR"
+fi
+
 docker-compose up -d node2-1
 sleep 3
-#docker-compose up -d mock-validators
+docker-compose up -d mock-validators
 docker-compose up -d validators
 
 if [[ $NODES ]]; then
