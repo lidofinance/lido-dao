@@ -3,18 +3,17 @@ const hooks = require('./scripts/buidler-hooks')
 
 usePlugin('@aragon/buidler-aragon')
 usePlugin("@nomiclabs/buidler-ganache")
-usePlugin('buidler-gas-reporter')
-usePlugin('solidity-coverage')
 
 module.exports = {
+  paths: {
+    root: '../..',
+    sources: './contracts',
+  },
   // Default Buidler configurations. Read more about it at https://buidler.dev/config/
   defaultNetwork: 'localhost',
   networks: {
     localhost: {
       url: 'http://localhost:8545',
-    },
-    coverage: {
-      url: 'http://localhost:8555',
     },
   },
   solc: {
@@ -38,8 +37,4 @@ module.exports = {
     appName: 'steth',
     hooks, // Path to script hooks
   },
-  gasReporter: {
-    enabled: !!process.env.REPORT_GAS,
-    currency: "USD"
-  }
 }

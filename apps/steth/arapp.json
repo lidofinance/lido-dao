@@ -45,5 +45,5 @@
     }
   },
   "appName": "steth.depoolspm.eth",
-  "path": "contracts/StETH.sol"
+  "path": "../../contracts/StETH.sol"
 }
