@@ -225,7 +225,7 @@ contract('StakingProvidersRegistry', ([appManager, voting, user1, user2, user3, 
 
     const pool = await PoolMock.new(app.address);
     await app.setPool(pool.address, {from: voting});
-    await pool.updateUsedKeys([0, 1], [2, 1], {from: voting});
+    await pool.updateUsedKeys([0, 1], [2, 1]);
 
     await assertRevert(app.reportStoppedValidators(0, 1, {from: user1}), 'APP_AUTH_FAILED');
     await assertRevert(app.reportStoppedValidators(1, 1, {from: nobody}), 'APP_AUTH_FAILED');
@@ -252,6 +252,58 @@ contract('StakingProvidersRegistry', ([appManager, voting, user1, user2, user3, 
     await assertRevert(app.reportStoppedValidators(1, 12, {from: voting}), 'STOPPED_MORE_THAN_LAUNCHED');
 
     await assertRevert(app.reportStoppedValidators(10, 1, {from: voting}), 'STAKING_PROVIDER_NOT_FOUND');
+  });
+
+  it('updateUsedKeys works', async () => {
+    await app.addStakingProvider("fo o", ADDRESS_1, 10, {from: voting});
+    await app.addStakingProvider(" bar", ADDRESS_2, UNLIMITED, {from: voting});
+
+    await app.addSigningKeys(0, 2, hexConcat(pad("0x010101", 48), pad("0x020202", 48)),
+                            hexConcat(pad("0x01", 96), pad("0x02", 96)), {from: voting});
+    await app.addSigningKeys(1, 2, hexConcat(pad("0x050505", 48), pad("0x060606", 48)),
+                            hexConcat(pad("0x04", 96), pad("0x03", 96)), {from: voting});
+
+    const pool = await PoolMock.new(app.address);
+    await app.setPool(pool.address, {from: voting});
+
+    await pool.updateUsedKeys([1], [1]);
+    assertBn(await app.getUnusedSigningKeyCount(0, {from: nobody}), 2);
+    assertBn(await app.getUnusedSigningKeyCount(1, {from: nobody}), 1);
+
+    await pool.updateUsedKeys([1], [1]);
+    assertBn(await app.getUnusedSigningKeyCount(0, {from: nobody}), 2);
+    assertBn(await app.getUnusedSigningKeyCount(1, {from: nobody}), 1);
+
+    await pool.updateUsedKeys([0, 1, 0], [1, 2, 1]);
+    assertBn(await app.getUnusedSigningKeyCount(0, {from: nobody}), 1);
+    assertBn(await app.getUnusedSigningKeyCount(1, {from: nobody}), 0);
+
+    await assertRevert(pool.updateUsedKeys([10], [1]), 'STAKING_PROVIDER_NOT_FOUND');
+    await assertRevert(pool.updateUsedKeys([1], [3]), 'INCONSISTENCY');
+    await assertRevert(pool.updateUsedKeys([1], [2, 2, 2]), 'BAD_LENGTH');
+    await assertRevert(pool.updateUsedKeys([1], [0]), 'USED_KEYS_DECREASED');
+  });
+
+  it('trimUnusedKeys works', async () => {
+    await app.addStakingProvider("fo o", ADDRESS_1, 10, {from: voting});
+    await app.addStakingProvider(" bar", ADDRESS_2, UNLIMITED, {from: voting});
+
+    await app.addSigningKeys(0, 2, hexConcat(pad("0x010101", 48), pad("0x020202", 48)),
+                            hexConcat(pad("0x01", 96), pad("0x02", 96)), {from: voting});
+    await app.addSigningKeys(1, 2, hexConcat(pad("0x050505", 48), pad("0x060606", 48)),
+                            hexConcat(pad("0x04", 96), pad("0x03", 96)), {from: voting});
+
+    const pool = await PoolMock.new(app.address);
+    await app.setPool(pool.address, {from: voting});
+
+    await pool.updateUsedKeys([1], [1]);
+    await pool.trimUnusedKeys();
+
+    assertBn(await app.getUnusedSigningKeyCount(0, {from: nobody}), 0);
+    assertBn(await app.getUnusedSigningKeyCount(1, {from: nobody}), 0);
+
+    assertBn(await app.getTotalSigningKeyCount(0, {from: nobody}), 0);
+    assertBn(await app.getTotalSigningKeyCount(1, {from: nobody}), 1);
   });
 
   it('addSigningKeys works', async () => {
@@ -282,6 +334,38 @@ contract('StakingProvidersRegistry', ([appManager, voting, user1, user2, user3, 
     // to the second SP
     await app.addSigningKeys(1, 1, pad("0x070707", 48), pad("0x01", 96), {from: voting});
     await assertRevert(app.addSigningKeys(2, 1, pad("0x080808", 48), pad("0x01", 96), {from: voting}), 'STAKING_PROVIDER_NOT_FOUND');
+
+    assertBn(await app.getTotalSigningKeyCount(0, {from: nobody}), 3);
+    assertBn(await app.getTotalSigningKeyCount(1, {from: nobody}), 1);
+  });
+
+  it('rewardAddress can add & remove signing keys', async () => {
+    await app.addStakingProvider("1", user1, UNLIMITED, {from: voting});
+    await app.addStakingProvider("2", user2, UNLIMITED, {from: voting});
+
+    // add to the first SP
+    await assertRevert(app.addSigningKeys(0, 1, pad("0x01", 48), pad("0x01", 96), {from: nobody}), 'APP_AUTH_FAILED');
+    await app.addSigningKeys(0, 1, pad("0x010203", 48), pad("0x01", 96), {from: user1});
+
+    // add to the second SP
+    await assertRevert(app.addSigningKeys(1, 1, pad("0x070707", 48), pad("0x01", 96), {from: nobody}), 'APP_AUTH_FAILED');
+    await assertRevert(app.addSigningKeys(1, 1, pad("0x070707", 48), pad("0x01", 96), {from: user1}), 'APP_AUTH_FAILED');
+
+    await app.addSigningKeys(1, 1, pad("0x070707", 48), pad("0x01", 96), {from: user2});
+
+    assertBn(await app.getTotalSigningKeyCount(0, {from: nobody}), 1);
+    assertBn(await app.getTotalSigningKeyCount(1, {from: nobody}), 1);
+
+    // removal
+    await assertRevert(app.removeSigningKey(0, 0, {from: nobody}), 'APP_AUTH_FAILED');
+    await app.removeSigningKey(0, 0, {from: user1});
+
+    await assertRevert(app.removeSigningKey(1, 0, {from: nobody}), 'APP_AUTH_FAILED');
+    await assertRevert(app.removeSigningKey(1, 0, {from: user1}), 'APP_AUTH_FAILED');
+    await app.removeSigningKey(1, 0, {from: user2});
+
+    assertBn(await app.getTotalSigningKeyCount(0, {from: nobody}), 0);
+    assertBn(await app.getTotalSigningKeyCount(1, {from: nobody}), 0);
   });
 
   it('can view keys', async () => {

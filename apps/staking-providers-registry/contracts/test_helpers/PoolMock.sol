@@ -16,4 +16,8 @@ contract PoolMock {
     function updateUsedKeys(uint256[] _ids, uint64[] _usedSigningKeys) external {
         sps.updateUsedKeys(_ids, _usedSigningKeys);
     }
+
+    function trimUnusedKeys() external {
+        sps.trimUnusedKeys();
+    }
 }
