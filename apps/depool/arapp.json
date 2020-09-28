@@ -44,5 +44,5 @@
     }
   },
   "appName": "depool.depoolspm.eth",
-  "path": "contracts/DePool.sol"
+  "path": "../../contracts/DePool.sol"
 }

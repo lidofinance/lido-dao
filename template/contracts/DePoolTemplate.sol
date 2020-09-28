@@ -2,10 +2,10 @@ pragma solidity 0.4.24;
 
 import "@aragon/templates-shared/contracts/BaseTemplate.sol";
 
-import "@depools/apps-steth/contracts/StETH.sol";
-import "@depools/apps-depooloracle/contracts/DePoolOracle.sol";
-import "@depools/apps-staking-providers-registry/contracts/StakingProvidersRegistry.sol";
-import "@depools/apps-depool/contracts/DePool.sol";
+import "@depools/dao/contracts/StETH.sol";
+import "@depools/dao/contracts/oracle/DePoolOracle.sol";
+import "@depools/dao/contracts/sps/StakingProvidersRegistry.sol";
+import "@depools/dao/contracts/DePool.sol";
 
 
 contract DePoolTemplate is BaseTemplate {
