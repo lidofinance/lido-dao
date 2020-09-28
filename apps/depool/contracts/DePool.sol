@@ -641,19 +641,20 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     }
 
     function _load_SP_cache() internal view returns (DepositLookupCacheEntry[] memory cache) {
-        cache = new DepositLookupCacheEntry[](getSPs().getActiveStakingProvidersCount());
+        IStakingProvidersRegistry sps = getSPs();
+        cache = new DepositLookupCacheEntry[](sps.getActiveStakingProvidersCount());
         if (0 == cache.length)
             return cache;
 
         uint256 idx = 0;
-        for (uint256 SP_id = getSPs().getStakingProvidersCount().sub(1); ; SP_id = SP_id.sub(1)) {
+        for (uint256 SP_id = sps.getStakingProvidersCount().sub(1); ; SP_id = SP_id.sub(1)) {
             (
                 bool active, , ,
                 uint64 stakingLimit,
                 uint64 stoppedValidators,
                 uint64 totalSigningKeys,
                 uint64 usedSigningKeys
-            ) = getSPs().getStakingProvider(SP_id, false);
+            ) = sps.getStakingProvider(SP_id, false);
             if (!active)
                 continue;
 
