@@ -1,6 +1,7 @@
 import { getAllApps, getDaoAddress } from '@aragon/toolkit'
-import { getLocalWeb3 } from './getLocalWeb3'
-import { getAccounts } from './getAccounts'
+import { getLocalWeb3 } from './base'
+import { getAccounts } from './eth1Helper'
+import { getLogger } from './utils'
 
 import {
   ensRegistry,
@@ -14,17 +15,13 @@ import {
   AGENT_APP_ID
 } from './constants'
 
-export const sleep = (ms) => {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
 export const findApp = (apps, id) => apps.find((app) => app.appId === id)
 
 export const prepareContext = async (params) => {
   const web3 = await getLocalWeb3()
   // Retrieve web3 accounts.
   const accounts = await getAccounts(web3)
-
+  const logger = getLogger()
   const daoAddress = await getDaoAddress(daoName, {
     provider: web3.currentProvider,
     registryAddress: ensRegistry
@@ -38,10 +35,10 @@ export const prepareContext = async (params) => {
   const dePoolOracleApp = findApp(apps, DEPOOLORACLE_APP_ID)
   const dePoolApp = findApp(apps, DEPOOL_APP_ID)
 
-  // ! возвращаем объект с инициализированными перменными
   return {
     web3,
     accounts,
+    logger,
     ens: ensRegistry,
     dao: {
       name: daoName,
