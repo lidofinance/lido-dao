@@ -526,4 +526,265 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(div15(await token.totalSupply()), 65939);
     await checkRewards({treasury: 581, insurance: 387, sp: 969});
   });
+
+  it('SP filtering during deposit works when doing a huge deposit', async () => {
+    await app.setWithdrawalCredentials(pad("0x0202", 32), {from: voting});
+
+    await sps.addStakingProvider("good", ADDRESS_1, UNLIMITED, {from: voting});     // 0
+    await sps.addSigningKeys(0, 2, hexConcat(pad("0x0001", 48), pad("0x0002", 48)), hexConcat(pad("0x01", 96), pad("0x01", 96)), {from: voting});
+
+    await sps.addStakingProvider("limited", ADDRESS_2, 1, {from: voting});          // 1
+    await sps.addSigningKeys(1, 2, hexConcat(pad("0x0101", 48), pad("0x0102", 48)), hexConcat(pad("0x01", 96), pad("0x01", 96)), {from: voting});
+
+    await sps.addStakingProvider("deactivated", ADDRESS_3, UNLIMITED, {from: voting});  // 2
+    await sps.addSigningKeys(2, 2, hexConcat(pad("0x0201", 48), pad("0x0202", 48)), hexConcat(pad("0x01", 96), pad("0x01", 96)), {from: voting});
+    await sps.setStakingProviderActive(2, false, {from: voting});
+
+    await sps.addStakingProvider("short on keys", ADDRESS_4, UNLIMITED, {from: voting});    // 3
+
+    await app.setFee(5000, {from: voting});
+    await app.setFeeDistribution(3000, 2000, 5000, {from: voting});
+
+    // Deposit huge chunk
+    await web3.eth.sendTransaction({to: app.address, from: user1, value: ETH(32*3 + 50)});
+    await checkStat({deposited: ETH(96), remote: 0});
+    assertBn(await app.getTotalControlledEther(), ETH(146));
+    assertBn(await app.getBufferedEther(), ETH(50));
+    assertBn(await validatorRegistration.totalCalls(), 3);
+
+    assertBn(await sps.getTotalSigningKeyCount(0, {from: nobody}), 2);
+    assertBn(await sps.getTotalSigningKeyCount(1, {from: nobody}), 2);
+    assertBn(await sps.getTotalSigningKeyCount(2, {from: nobody}), 2);
+    assertBn(await sps.getTotalSigningKeyCount(3, {from: nobody}), 0);
+
+    assertBn(await sps.getUnusedSigningKeyCount(0, {from: nobody}), 0);
+    assertBn(await sps.getUnusedSigningKeyCount(1, {from: nobody}), 1);
+    assertBn(await sps.getUnusedSigningKeyCount(2, {from: nobody}), 2);
+    assertBn(await sps.getUnusedSigningKeyCount(3, {from: nobody}), 0);
+
+    // Next deposit changes nothing
+    await web3.eth.sendTransaction({to: app.address, from: user2, value: ETH(32)});
+    await checkStat({deposited: ETH(96), remote: 0});
+    assertBn(await app.getTotalControlledEther(), ETH(178));
+    assertBn(await app.getBufferedEther(), ETH(82));
+    assertBn(await validatorRegistration.totalCalls(), 3);
+
+    assertBn(await sps.getTotalSigningKeyCount(0, {from: nobody}), 2);
+    assertBn(await sps.getTotalSigningKeyCount(1, {from: nobody}), 2);
+    assertBn(await sps.getTotalSigningKeyCount(2, {from: nobody}), 2);
+    assertBn(await sps.getTotalSigningKeyCount(3, {from: nobody}), 0);
+
+    assertBn(await sps.getUnusedSigningKeyCount(0, {from: nobody}), 0);
+    assertBn(await sps.getUnusedSigningKeyCount(1, {from: nobody}), 1);
+    assertBn(await sps.getUnusedSigningKeyCount(2, {from: nobody}), 2);
+    assertBn(await sps.getUnusedSigningKeyCount(3, {from: nobody}), 0);
+
+    // #1 goes below the limit
+    await sps.reportStoppedValidators(1, 1, {from: voting});
+    await web3.eth.sendTransaction({to: app.address, from: user3, value: ETH(1)});
+    await checkStat({deposited: ETH(128), remote: 0});
+    assertBn(await app.getTotalControlledEther(), ETH(179));
+    assertBn(await app.getBufferedEther(), ETH(51));
+    assertBn(await validatorRegistration.totalCalls(), 4);
+
+    assertBn(await sps.getTotalSigningKeyCount(0, {from: nobody}), 2);
+    assertBn(await sps.getTotalSigningKeyCount(1, {from: nobody}), 2);
+    assertBn(await sps.getTotalSigningKeyCount(2, {from: nobody}), 2);
+    assertBn(await sps.getTotalSigningKeyCount(3, {from: nobody}), 0);
+
+    assertBn(await sps.getUnusedSigningKeyCount(0, {from: nobody}), 0);
+    assertBn(await sps.getUnusedSigningKeyCount(1, {from: nobody}), 0);
+    assertBn(await sps.getUnusedSigningKeyCount(2, {from: nobody}), 2);
+    assertBn(await sps.getUnusedSigningKeyCount(3, {from: nobody}), 0);
+
+    // Adding a key will help
+    await sps.addSigningKeys(0, 1, pad("0x0003", 48), pad("0x01", 96), {from: voting});
+    await web3.eth.sendTransaction({to: app.address, from: user3, value: ETH(1)});
+    await checkStat({deposited: ETH(160), remote: 0});
+    assertBn(await app.getTotalControlledEther(), ETH(180));
+    assertBn(await app.getBufferedEther(), ETH(20));
+    assertBn(await validatorRegistration.totalCalls(), 5);
+
+    assertBn(await sps.getTotalSigningKeyCount(0, {from: nobody}), 3);
+    assertBn(await sps.getTotalSigningKeyCount(1, {from: nobody}), 2);
+    assertBn(await sps.getTotalSigningKeyCount(2, {from: nobody}), 2);
+    assertBn(await sps.getTotalSigningKeyCount(3, {from: nobody}), 0);
+
+    assertBn(await sps.getUnusedSigningKeyCount(0, {from: nobody}), 0);
+    assertBn(await sps.getUnusedSigningKeyCount(1, {from: nobody}), 0);
+    assertBn(await sps.getUnusedSigningKeyCount(2, {from: nobody}), 2);
+    assertBn(await sps.getUnusedSigningKeyCount(3, {from: nobody}), 0);
+
+    // Reactivation of #2
+    await sps.setStakingProviderActive(2, true, {from: voting});
+    await web3.eth.sendTransaction({to: app.address, from: user3, value: ETH(12)});
+    await checkStat({deposited: ETH(192), remote: 0});
+    assertBn(await app.getTotalControlledEther(), ETH(192));
+    assertBn(await app.getBufferedEther(), ETH(0));
+    assertBn(await validatorRegistration.totalCalls(), 6);
+
+    assertBn(await sps.getTotalSigningKeyCount(0, {from: nobody}), 3);
+    assertBn(await sps.getTotalSigningKeyCount(1, {from: nobody}), 2);
+    assertBn(await sps.getTotalSigningKeyCount(2, {from: nobody}), 2);
+    assertBn(await sps.getTotalSigningKeyCount(3, {from: nobody}), 0);
+
+    assertBn(await sps.getUnusedSigningKeyCount(0, {from: nobody}), 0);
+    assertBn(await sps.getUnusedSigningKeyCount(1, {from: nobody}), 0);
+    assertBn(await sps.getUnusedSigningKeyCount(2, {from: nobody}), 1);
+    assertBn(await sps.getUnusedSigningKeyCount(3, {from: nobody}), 0);
+  });
+
+  it('SP filtering during deposit works when doing small deposits', async () => {
+    await app.setWithdrawalCredentials(pad("0x0202", 32), {from: voting});
+
+    await sps.addStakingProvider("good", ADDRESS_1, UNLIMITED, {from: voting});     // 0
+    await sps.addSigningKeys(0, 2, hexConcat(pad("0x0001", 48), pad("0x0002", 48)), hexConcat(pad("0x01", 96), pad("0x01", 96)), {from: voting});
+
+    await sps.addStakingProvider("limited", ADDRESS_2, 1, {from: voting});          // 1
+    await sps.addSigningKeys(1, 2, hexConcat(pad("0x0101", 48), pad("0x0102", 48)), hexConcat(pad("0x01", 96), pad("0x01", 96)), {from: voting});
+
+    await sps.addStakingProvider("deactivated", ADDRESS_3, UNLIMITED, {from: voting});  // 2
+    await sps.addSigningKeys(2, 2, hexConcat(pad("0x0201", 48), pad("0x0202", 48)), hexConcat(pad("0x01", 96), pad("0x01", 96)), {from: voting});
+    await sps.setStakingProviderActive(2, false, {from: voting});
+
+    await sps.addStakingProvider("short on keys", ADDRESS_4, UNLIMITED, {from: voting});    // 3
+
+    await app.setFee(5000, {from: voting});
+    await app.setFeeDistribution(3000, 2000, 5000, {from: voting});
+
+    // Small deposits
+    for (let i = 0; i < 14; i++)
+        await web3.eth.sendTransaction({to: app.address, from: user1, value: ETH(10)});
+    await web3.eth.sendTransaction({to: app.address, from: user1, value: ETH(6)});
+
+    await checkStat({deposited: ETH(96), remote: 0});
+    assertBn(await app.getTotalControlledEther(), ETH(146));
+    assertBn(await app.getBufferedEther(), ETH(50));
+    assertBn(await validatorRegistration.totalCalls(), 3);
+
+    assertBn(await sps.getTotalSigningKeyCount(0, {from: nobody}), 2);
+    assertBn(await sps.getTotalSigningKeyCount(1, {from: nobody}), 2);
+    assertBn(await sps.getTotalSigningKeyCount(2, {from: nobody}), 2);
+    assertBn(await sps.getTotalSigningKeyCount(3, {from: nobody}), 0);
+
+    assertBn(await sps.getUnusedSigningKeyCount(0, {from: nobody}), 0);
+    assertBn(await sps.getUnusedSigningKeyCount(1, {from: nobody}), 1);
+    assertBn(await sps.getUnusedSigningKeyCount(2, {from: nobody}), 2);
+    assertBn(await sps.getUnusedSigningKeyCount(3, {from: nobody}), 0);
+
+    // Next deposit changes nothing
+    await web3.eth.sendTransaction({to: app.address, from: user2, value: ETH(32)});
+    await checkStat({deposited: ETH(96), remote: 0});
+    assertBn(await app.getTotalControlledEther(), ETH(178));
+    assertBn(await app.getBufferedEther(), ETH(82));
+    assertBn(await validatorRegistration.totalCalls(), 3);
+
+    assertBn(await sps.getTotalSigningKeyCount(0, {from: nobody}), 2);
+    assertBn(await sps.getTotalSigningKeyCount(1, {from: nobody}), 2);
+    assertBn(await sps.getTotalSigningKeyCount(2, {from: nobody}), 2);
+    assertBn(await sps.getTotalSigningKeyCount(3, {from: nobody}), 0);
+
+    assertBn(await sps.getUnusedSigningKeyCount(0, {from: nobody}), 0);
+    assertBn(await sps.getUnusedSigningKeyCount(1, {from: nobody}), 1);
+    assertBn(await sps.getUnusedSigningKeyCount(2, {from: nobody}), 2);
+    assertBn(await sps.getUnusedSigningKeyCount(3, {from: nobody}), 0);
+
+    // #1 goes below the limit
+    await sps.reportStoppedValidators(1, 1, {from: voting});
+    await web3.eth.sendTransaction({to: app.address, from: user3, value: ETH(1)});
+    await checkStat({deposited: ETH(128), remote: 0});
+    assertBn(await app.getTotalControlledEther(), ETH(179));
+    assertBn(await app.getBufferedEther(), ETH(51));
+    assertBn(await validatorRegistration.totalCalls(), 4);
+
+    assertBn(await sps.getTotalSigningKeyCount(0, {from: nobody}), 2);
+    assertBn(await sps.getTotalSigningKeyCount(1, {from: nobody}), 2);
+    assertBn(await sps.getTotalSigningKeyCount(2, {from: nobody}), 2);
+    assertBn(await sps.getTotalSigningKeyCount(3, {from: nobody}), 0);
+
+    assertBn(await sps.getUnusedSigningKeyCount(0, {from: nobody}), 0);
+    assertBn(await sps.getUnusedSigningKeyCount(1, {from: nobody}), 0);
+    assertBn(await sps.getUnusedSigningKeyCount(2, {from: nobody}), 2);
+    assertBn(await sps.getUnusedSigningKeyCount(3, {from: nobody}), 0);
+
+    // Adding a key will help
+    await sps.addSigningKeys(0, 1, pad("0x0003", 48), pad("0x01", 96), {from: voting});
+    await web3.eth.sendTransaction({to: app.address, from: user3, value: ETH(1)});
+    await checkStat({deposited: ETH(160), remote: 0});
+    assertBn(await app.getTotalControlledEther(), ETH(180));
+    assertBn(await app.getBufferedEther(), ETH(20));
+    assertBn(await validatorRegistration.totalCalls(), 5);
+
+    assertBn(await sps.getTotalSigningKeyCount(0, {from: nobody}), 3);
+    assertBn(await sps.getTotalSigningKeyCount(1, {from: nobody}), 2);
+    assertBn(await sps.getTotalSigningKeyCount(2, {from: nobody}), 2);
+    assertBn(await sps.getTotalSigningKeyCount(3, {from: nobody}), 0);
+
+    assertBn(await sps.getUnusedSigningKeyCount(0, {from: nobody}), 0);
+    assertBn(await sps.getUnusedSigningKeyCount(1, {from: nobody}), 0);
+    assertBn(await sps.getUnusedSigningKeyCount(2, {from: nobody}), 2);
+    assertBn(await sps.getUnusedSigningKeyCount(3, {from: nobody}), 0);
+
+    // Reactivation of #2
+    await sps.setStakingProviderActive(2, true, {from: voting});
+    await web3.eth.sendTransaction({to: app.address, from: user3, value: ETH(12)});
+    await checkStat({deposited: ETH(192), remote: 0});
+    assertBn(await app.getTotalControlledEther(), ETH(192));
+    assertBn(await app.getBufferedEther(), ETH(0));
+    assertBn(await validatorRegistration.totalCalls(), 6);
+
+    assertBn(await sps.getTotalSigningKeyCount(0, {from: nobody}), 3);
+    assertBn(await sps.getTotalSigningKeyCount(1, {from: nobody}), 2);
+    assertBn(await sps.getTotalSigningKeyCount(2, {from: nobody}), 2);
+    assertBn(await sps.getTotalSigningKeyCount(3, {from: nobody}), 0);
+
+    assertBn(await sps.getUnusedSigningKeyCount(0, {from: nobody}), 0);
+    assertBn(await sps.getUnusedSigningKeyCount(1, {from: nobody}), 0);
+    assertBn(await sps.getUnusedSigningKeyCount(2, {from: nobody}), 1);
+    assertBn(await sps.getUnusedSigningKeyCount(3, {from: nobody}), 0);
+  });
+
+  it('Deposit finds the right SP', async () => {
+    await app.setWithdrawalCredentials(pad("0x0202", 32), {from: voting});
+
+    await sps.addStakingProvider("good", ADDRESS_1, UNLIMITED, {from: voting});     // 0
+    await sps.addSigningKeys(0, 2, hexConcat(pad("0x0001", 48), pad("0x0002", 48)), hexConcat(pad("0x01", 96), pad("0x01", 96)), {from: voting});
+
+    await sps.addStakingProvider("2nd good", ADDRESS_2, UNLIMITED, {from: voting}); // 1
+    await sps.addSigningKeys(1, 2, hexConcat(pad("0x0101", 48), pad("0x0102", 48)), hexConcat(pad("0x01", 96), pad("0x01", 96)), {from: voting});
+
+    await sps.addStakingProvider("deactivated", ADDRESS_3, UNLIMITED, {from: voting});  // 2
+    await sps.addSigningKeys(2, 2, hexConcat(pad("0x0201", 48), pad("0x0202", 48)), hexConcat(pad("0x01", 96), pad("0x01", 96)), {from: voting});
+    await sps.setStakingProviderActive(2, false, {from: voting});
+
+    await sps.addStakingProvider("short on keys", ADDRESS_4, UNLIMITED, {from: voting});    // 3
+
+    await app.setFee(5000, {from: voting});
+    await app.setFeeDistribution(3000, 2000, 5000, {from: voting});
+
+    // #1 and #0 get the funds
+    await web3.eth.sendTransaction({to: app.address, from: user2, value: ETH(64)});
+    await checkStat({deposited: ETH(64), remote: 0});
+    assertBn(await app.getTotalControlledEther(), ETH(64));
+    assertBn(await app.getBufferedEther(), ETH(0));
+    assertBn(await validatorRegistration.totalCalls(), 2);
+
+    assertBn(await sps.getUnusedSigningKeyCount(0, {from: nobody}), 1);
+    assertBn(await sps.getUnusedSigningKeyCount(1, {from: nobody}), 1);
+    assertBn(await sps.getUnusedSigningKeyCount(2, {from: nobody}), 2);
+    assertBn(await sps.getUnusedSigningKeyCount(3, {from: nobody}), 0);
+
+    // Reactivation of #2 - has the smallest stake
+    await sps.setStakingProviderActive(2, true, {from: voting});
+    await web3.eth.sendTransaction({to: app.address, from: user2, value: ETH(36)});
+    await checkStat({deposited: ETH(96), remote: 0});
+    assertBn(await app.getTotalControlledEther(), ETH(100));
+    assertBn(await app.getBufferedEther(), ETH(4));
+    assertBn(await validatorRegistration.totalCalls(), 3);
+
+    assertBn(await sps.getUnusedSigningKeyCount(0, {from: nobody}), 1);
+    assertBn(await sps.getUnusedSigningKeyCount(1, {from: nobody}), 1);
+    assertBn(await sps.getUnusedSigningKeyCount(2, {from: nobody}), 1);
+    assertBn(await sps.getUnusedSigningKeyCount(3, {from: nobody}), 0);
+  });
 });
