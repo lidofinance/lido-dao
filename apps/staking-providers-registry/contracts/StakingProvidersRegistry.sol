@@ -49,8 +49,11 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
         uint64 usedSigningKeys;     // number of signing keys of this SP which were used in deposits to the Ethereum 2
     }
 
-    /// @dev Array of all staking providers
-    StakingProvider[] internal sps;
+    /// @dev Mapping of all staking providers. Mapping is used to be able to extend the struct.
+    mapping(uint256 => StakingProvider) internal sps;
+
+    // @dev Total number of SPs
+    uint256 internal totalSPCount;
 
     // @dev Cached number of active SPs
     uint256 internal activeSPCount;
@@ -70,12 +73,13 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
     }
 
     modifier SPExists(uint256 _id) {
-        require(_id < sps.length, "STAKING_PROVIDER_NOT_FOUND");
+        require(_id < totalSPCount, "STAKING_PROVIDER_NOT_FOUND");
         _;
     }
 
 
     function initialize() public onlyInit {
+        totalSPCount = 0;
         activeSPCount = 0;
         initialized();
     }
@@ -102,7 +106,7 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
         validAddress(_rewardAddress)
         returns (uint256 id)
     {
-        id = sps.length++;
+        id = totalSPCount++;
         StakingProvider storage sp = sps[id];
 
         activeSPCount++;
@@ -190,7 +194,7 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
     function updateUsedKeys(uint256[] _ids, uint64[] _usedSigningKeys) external onlyPool {
         require(_ids.length == _usedSigningKeys.length, "BAD_LENGTH");
         for (uint256 i = 0; i < _ids.length; ++i) {
-            require(_ids[i] < sps.length, "STAKING_PROVIDER_NOT_FOUND");
+            require(_ids[i] < totalSPCount, "STAKING_PROVIDER_NOT_FOUND");
             StakingProvider storage sp = sps[_ids[i]];
 
             uint64 current = sp.usedSigningKeys;
@@ -211,7 +215,7 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
       * @dev Function is used by the pool
       */
     function trimUnusedKeys() external onlyPool {
-        uint256 length = sps.length;
+        uint256 length = totalSPCount;
         for (uint256 SP_id = 0; SP_id < length; ++SP_id) {
             if (sps[SP_id].totalSigningKeys != sps[SP_id].usedSigningKeys)    // write only if update is needed
                 // discard unused keys
@@ -286,7 +290,7 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
       * @notice Returns total number of staking providers
       */
     function getStakingProvidersCount() external view returns (uint256) {
-        return sps.length;
+        return totalSPCount;
     }
     /**
       * @notice Returns number of active staking providers
