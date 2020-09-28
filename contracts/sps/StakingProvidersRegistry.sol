@@ -4,6 +4,7 @@ import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/common/IsContract.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 import "@aragon/os/contracts/lib/math/SafeMath64.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
 import "../interfaces/IStakingProvidersRegistry.sol";
@@ -283,6 +284,40 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
         sps[_SP_id].totalSigningKeys = sps[_SP_id].totalSigningKeys.sub(1);
 
         emit SigningKeyRemoved(_SP_id, removedKey);
+    }
+
+
+    /**
+      * @notice Distributes rewards among staking providers.
+      * @dev Function is used by the pool
+      * @param _token Reward token (must be ERC20-compatible)
+      * @param _totalReward Total amount to distribute (must be transferred to this contract beforehand)
+      */
+    function distributeRewards(address _token, uint256 _totalReward) external onlyPool {
+        uint256 length = totalSPCount;
+        uint64 effectiveStakeTotal;
+        for (uint256 SP_id = 0; SP_id < length; ++SP_id) {
+            StakingProvider storage sp = sps[SP_id];
+            if (!sp.active)
+                continue;
+
+            uint64 effectiveStake = sp.usedSigningKeys.sub(sp.stoppedValidators);
+            effectiveStakeTotal = effectiveStakeTotal.add(effectiveStake);
+        }
+
+        if (0 == effectiveStakeTotal)
+            revert("NO_STAKE");
+
+        for (SP_id = 0; SP_id < length; ++SP_id) {
+            sp = sps[SP_id];
+            if (!sp.active)
+                continue;
+
+            effectiveStake = sp.usedSigningKeys.sub(sp.stoppedValidators);
+            uint256 reward = uint256(effectiveStake).mul(_totalReward).div(uint256(effectiveStakeTotal));
+            require(IERC20(_token).transfer(sp.rewardAddress, reward), "TRANSFER_FAILED");
+            // leaves some dust on the balance of this
+        }
     }
 
 
