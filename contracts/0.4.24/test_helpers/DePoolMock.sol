@@ -9,9 +9,19 @@ import "./VaultMock.sol";
   */
 contract DePoolMock is DePool {
 
-    function initialize(ISTETH _token) public {
-        _setToken(_token);
-        initialized();
-    }
+  uint256 private totalControlledEther;
+
+  function initialize(ISTETH _token) public {
+    _setToken(_token);
+    initialized();
+  }
+
+  function setTotalControlledEther(uint256 _totalControlledEther) public {
+    totalControlledEther = _totalControlledEther;
+  }
+
+  function getTotalControlledEther() external view returns (uint256) {
+    return totalControlledEther;
+  }
 
 }
