@@ -7,6 +7,7 @@ const { BN } = require('bn.js');
 
 const TestStakingProvidersRegistry = artifacts.require('TestStakingProvidersRegistry.sol');
 const PoolMock = artifacts.require('PoolMock.sol');
+const ERC20Mock = artifacts.require('ERC20Mock.sol');
 
 
 const ADDRESS_1 = "0x0000000000000000000000000000000000000001";
@@ -463,5 +464,35 @@ contract('StakingProvidersRegistry', ([appManager, voting, user1, user2, user3, 
     assert.equal((await app.getSigningKey(1, 0, {from: nobody})).key, pad("0x070707", 48));
     await app.removeSigningKey(1, 0, {from: voting});
     await assertRevert(app.getSigningKey(1, 0, {from: nobody}), 'KEY_NOT_FOUND');
+  });
+
+  it('distributeRewards works', async () => {
+    await app.addStakingProvider("fo o", ADDRESS_1, 10, {from: voting});
+    await app.addStakingProvider(" bar", ADDRESS_2, UNLIMITED, {from: voting});
+    await app.addStakingProvider("3", ADDRESS_3, UNLIMITED, {from: voting});
+
+    await app.addSigningKeys(0, 2, hexConcat(pad("0x010101", 48), pad("0x020202", 48)),
+                            hexConcat(pad("0x01", 96), pad("0x02", 96)), {from: voting});
+    await app.addSigningKeys(1, 2, hexConcat(pad("0x050505", 48), pad("0x060606", 48)),
+                            hexConcat(pad("0x04", 96), pad("0x03", 96)), {from: voting});
+    await app.addSigningKeys(2, 2, hexConcat(pad("0x070707", 48), pad("0x080808", 48)),
+                            hexConcat(pad("0x05", 96), pad("0x06", 96)), {from: voting});
+
+    const pool = await PoolMock.new(app.address);
+    await app.setPool(pool.address, {from: voting});
+
+    await pool.updateUsedKeys([0, 1, 2], [2, 2, 2]);
+
+    await app.reportStoppedValidators(0, 1, {from: voting});
+    await app.setStakingProviderActive(2, false, {from: voting});
+
+    const token = await ERC20Mock.new();
+    await token.mint(app.address, tokens(900));
+    await pool.distributeRewards(token.address, tokens(900));
+
+    assertBn(await token.balanceOf(ADDRESS_1, {from: nobody}), tokens(300));
+    assertBn(await token.balanceOf(ADDRESS_2, {from: nobody}), tokens(600));
+    assertBn(await token.balanceOf(ADDRESS_3, {from: nobody}), 0);
+    assertBn(await token.balanceOf(app.address, {from: nobody}), 0);
   });
 });
