@@ -59,19 +59,19 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
   beforeEach('deploy dao and app', async () => {
     const { dao, acl } = await newDao(appManager)
 
-    // token
-    let proxyAddress = await newApp(dao, 'steth', stEthBase.address, appManager);
-    token = await StETH.at(proxyAddress);
-    await token.initialize();
-
     // StakingProvidersRegistry
-    proxyAddress = await newApp(dao, 'staking-providers-registry', stakingProvidersRegistryBase.address, appManager);
+    let proxyAddress = await newApp(dao, 'staking-providers-registry', stakingProvidersRegistryBase.address, appManager);
     sps = await StakingProvidersRegistry.at(proxyAddress);
     await sps.initialize();
 
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
     proxyAddress = await newApp(dao, 'depool', appBase.address, appManager);
     app = await DePool.at(proxyAddress);
+
+    // token
+    proxyAddress = await newApp(dao, 'steth', stEthBase.address, appManager);
+    token = await StETH.at(proxyAddress);
+    await token.initialize(app.address);
 
     // Set up the app's permissions.
     await acl.createPermission(voting, app.address, await app.PAUSE_ROLE(), appManager, {from: appManager});
