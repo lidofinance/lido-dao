@@ -6,7 +6,7 @@
 
 * shell - bash or zsh
 * docker
-* docker-compose
+* docker-compose 1.27
 * find
 * sed
 * jq
