@@ -41,7 +41,7 @@ async function deployDaoAndPool(appManager, voting, depositIterationLimit = 10) 
 
   // Initialize the token, the SP registry and the pool
 
-  await token.initialize()
+  await token.initialize(pool.address)
   await spRegistry.initialize()
 
   const [
