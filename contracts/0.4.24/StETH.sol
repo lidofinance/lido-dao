@@ -8,6 +8,8 @@ import "./interfaces/ISTETH.sol";
 
 import "./lib/Pausable.sol";
 
+import "./interfaces/IDePool.sol";
+
 
 /**
   * @title Implementation of a liquid version of ETH 2.0 native token
@@ -15,15 +17,25 @@ import "./lib/Pausable.sol";
   * ERC20 token which supports stop/resume, mint/burn mechanics. The token is operated by `IDePool`.
   */
 contract StETH is ISTETH, Pausable, OZERC20, AragonApp {
-    using SafeMath for uint256;
 
     /// ACL
     bytes32 constant public PAUSE_ROLE = keccak256("PAUSE_ROLE");
     bytes32 constant public MINT_ROLE = keccak256("MINT_ROLE");
     bytes32 constant public BURN_ROLE = keccak256("BURN_ROLE");
 
+    // DePool contract serves as a source of information on the amount of pooled funds
+    // and acts as the 'minter' of the new shares when staker submits his funds
+    IDePool public dePool;
 
-    function initialize() public onlyInit {
+    // Shares are the amounts of pooled Ether normalized to the volume of ETH1.0 Ether on the moment of system start.
+    // Shares represent how much of initial ether are worth all-time deposits of the given user.
+    // In this implementation shares replace traditional balances
+    mapping (address => uint256) private _shares;
+    // ...and totalShares replace traditional totalSupply counter.
+    uint256 private _totalShares;
+
+    function initialize(IDePool _dePool) public onlyInit {
+        dePool = _dePool;
         initialized();
     }
 
@@ -139,5 +151,45 @@ contract StETH is ISTETH, Pausable, OZERC20, AragonApp {
      */
     function decimals() public pure returns (uint8) {
         return 18;
+    }
+
+    /**
+    * @dev Return the amount of shares that given holder has.
+    * @param _holder The address of the holder
+    */
+    function getSharesByHolder(address _holder) public view returns (uint256) {
+        return _shares[_holder];
+    }
+
+    /**
+    * @dev Return the amount of pooled ethers for given amount of shares
+    * @param _sharesAmount The amount of shares
+    */
+    function getPooledEthByShares(uint256 _sharesAmount) public view returns (uint256) {
+        if (_totalShares == 0) {
+            return 0;
+        }
+        return _sharesAmount.mul(dePool.getTotalControlledEther()).div(_totalShares);
+    }
+
+    /**
+    * @dev Return the amount of pooled ethers for given holder
+    * @param _holder The address of the holder
+    */
+    function getPooledEthByHolder(address _holder) public view returns (uint256) {
+        uint256 holderShares = getSharesByHolder(_holder);
+        uint256 holderPooledEth = getPooledEthByShares(holderShares);
+        return holderPooledEth;
+    }
+
+    /**
+    * @dev Return the amount of shares backed by given amount of pooled Eth
+    * @param _pooledEthAmount The amount of pooled Eth 
+    */
+    function getSharesByPooledEth(uint256 _pooledEthAmount) public view returns (uint256) {
+        if (dePool.getTotalControlledEther() == 0) {
+            return 0;
+        }
+        return _totalShares.mul(_pooledEthAmount).div(dePool.getTotalControlledEther());
     }
 }
