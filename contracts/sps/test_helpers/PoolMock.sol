@@ -20,4 +20,8 @@ contract PoolMock {
     function trimUnusedKeys() external {
         sps.trimUnusedKeys();
     }
+
+    function distributeRewards(address _token, uint256 _totalReward) external {
+        sps.distributeRewards(_token, _totalReward);
+    }
 }
