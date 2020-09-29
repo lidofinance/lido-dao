@@ -132,4 +132,49 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
     assertBn(await stEth.balanceOf(user1, {from: nobody}), tokens(900));
     assertBn(await stEth.balanceOf(user2, {from: nobody}), 0);
   });
+
+  context('share-related getters', async () => {
+    context('with zero stETH.totalShares', async () => {
+      context('with zero totalControlledEther', async () => {
+        beforeEach( async () => {
+          await dePool.setTotalControlledEther(tokens(0));
+        });
+        it('getSharesByHolder', async () => {
+          assertBn(await stEth.getSharesByHolder(nobody), tokens(0));
+        });
+        it('getPooledEthByShares', async () => {
+          assertBn(await stEth.getPooledEthByShares(tokens(0)), tokens(0));
+          assertBn(await stEth.getPooledEthByShares(tokens(1)), tokens(0));
+        });
+        it('getPooledEthByHolder', async () => {
+          assertBn(await stEth.getPooledEthByHolder(nobody), tokens(0));
+        });
+        it('getSharesByPooledEth', async () => {
+          assertBn(await stEth.getSharesByPooledEth(tokens(1)), tokens(0));
+          assertBn(await stEth.getSharesByPooledEth(tokens(0)), tokens(0));
+          assertBn(await stEth.getSharesByPooledEth(tokens(1000)), tokens(0));
+        });
+      });
+      context('with non-zero totalControlledEther', async () => {
+        beforeEach( async () => {
+          await dePool.setTotalControlledEther(tokens(1));
+        });
+        it('getSharesByHolder', async () => {
+          assertBn(await stEth.getSharesByHolder(nobody), tokens(0));
+        });
+        it('getPooledEthByShares', async () => {
+          assertBn(await stEth.getPooledEthByShares(tokens(0)), tokens(0));
+          assertBn(await stEth.getPooledEthByShares(tokens(1)), tokens(0));
+        });
+        it('getPooledEthByHolder', async () => {
+          assertBn(await stEth.getPooledEthByHolder(nobody), tokens(0));
+        });
+        it('getSharesByPooledEth', async () => {
+          assertBn(await stEth.getSharesByPooledEth(tokens(1)), tokens(0));
+          assertBn(await stEth.getSharesByPooledEth(tokens(0)), tokens(0));
+          assertBn(await stEth.getSharesByPooledEth(tokens(1000)), tokens(0));
+        });
+      });
+    });
+  });
 });
