@@ -226,7 +226,7 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
 
 
     /**
-      * @notice Add `_quantity` validator signing keys to the set of usable keys. Concatenated keys are: `_pubkeys`
+      * @notice Add `_quantity` validator signing keys to the set of usable keys. Concatenated keys are: `_pubkeys`. Can be done by the DAO or by staking provider in question by using the designated rewards address.
       * @dev Along with each key the DAO has to provide a signatures for the
       *      (pubkey, withdrawal_credentials, 32000000000) message.
       *      Given that information, the contract'll be able to call
