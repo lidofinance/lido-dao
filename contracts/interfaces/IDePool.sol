@@ -5,7 +5,7 @@ pragma solidity 0.4.24;
   * @title Liquid staking pool
   *
   * For the high-level description of the pool operation please refer to the paper.
-  * Pool manages signing and withdrawal keys. It receives ether submitted by users on the ETH 1 side
+  * Pool manages withdrawal keys and fees. It receives ether submitted by users on the ETH 1 side
   * and stakes it via the validator_registration.vy contract. It doesn't hold ether on it's balance,
   * only a small portion (buffer) of it.
   * It also mints new tokens for rewards generated at the ETH 2.0 side.
@@ -66,45 +66,8 @@ interface IDePool {
       */
     function getWithdrawalCredentials() external view returns (bytes);
 
-    /**
-      * @notice Add `_quantity` validator signing keys to the set of usable keys. Concatenated keys are: `_pubkeys`
-      * @dev Along with each key the DAO has to provide a signatures for the
-      *      (pubkey, withdrawal_credentials, 32000000000) message.
-      *      Given that information, the contract'll be able to call
-      *      validator_registration.deposit on-chain.
-      * @param _quantity Number of signing keys provided
-      * @param _pubkeys Several concatenated validator signing keys
-      * @param _signatures Several concatenated signatures for (pubkey, withdrawal_credentials, 32000000000) messages
-      */
-    function addSigningKeys(uint256 _quantity, bytes _pubkeys, bytes _signatures) external;
-
-    /**
-      * @notice Removes a validator signing key #`_index` from the set of usable keys
-      * @param _index Index of the key, starting with 0
-      */
-    function removeSigningKey(uint256 _index) external;
-
-    /**
-      * @notice Returns total number of signing keys
-      */
-    function getTotalSigningKeyCount() external view returns (uint256);
-
-    /**
-      * @notice Returns number of usable signing keys
-      */
-    function getUnusedSigningKeyCount() external view returns (uint256);
-
-    /**
-      * @notice Returns n-th signing key
-      * @param _index Index of the key, starting with 0
-      * @return key Key
-      * @return used Flag indication if the key was used in the staking
-      */
-    function getSigningKey(uint256 _index) external view returns (bytes key, bool used);
 
     event WithdrawalCredentialsSet(bytes withdrawalCredentials);
-    event SigningKeyAdded(bytes pubkey);
-    event SigningKeyRemoved(bytes pubkey);
 
 
     /**

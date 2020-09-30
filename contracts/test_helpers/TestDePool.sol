@@ -11,8 +11,11 @@ contract TestDePool is DePool {
     address private treasury;
     address private insurance;
 
-    function initialize(ISTETH _token, IValidatorRegistration validatorRegistration, address _oracle) public {
-        super.initialize(_token, validatorRegistration, _oracle);
+    function initialize(ISTETH _token, IValidatorRegistration validatorRegistration, address _oracle,
+                        IStakingProvidersRegistry _sps)
+    public
+    {
+        super.initialize(_token, validatorRegistration, _oracle, _sps);
         treasury = address(new VaultMock());
         insurance = address(new VaultMock());
     }
@@ -36,13 +39,6 @@ contract TestDePool is DePool {
       */
     function getUnaccountedEther() public view returns (uint256) {
         return _getUnaccountedEther();
-    }
-
-    /**
-      * @dev Fast dynamic array comparison
-      */
-    function isEqual(bytes memory _a, bytes memory _b) public pure returns (bool) {
-        return _isEqual(_a, _b);
     }
 
     /**
