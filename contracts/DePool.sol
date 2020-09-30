@@ -151,7 +151,8 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @notice Set authorized oracle address to `_oracle`
+      * @notice Set authorized oracle contract address to `_oracle`
+      * @dev Contract specified here must periodically make `reportEther2` calls.
       */
     function setOracle(address _oracle) external auth(SET_ORACLE) {
         _setOracle(_oracle);
