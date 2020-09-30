@@ -16,11 +16,6 @@
       "params": []
     },
     {
-      "name": "Manage signing keys",
-      "id": "MANAGE_SIGNING_KEYS",
-      "params": []
-    },
-    {
       "name": "Set oracle contract address",
       "id": "SET_ORACLE",
       "params": []
