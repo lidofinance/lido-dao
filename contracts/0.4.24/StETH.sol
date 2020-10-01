@@ -68,6 +68,25 @@ contract StETH is ISTETH, Pausable, OZERC20, AragonApp {
     }
 
     /**
+      * @notice processSubmission is called by dePool contract when user submits the ETH1.0 deposit. 
+      *         It calculates share difference to preserve ratio of shares to pooled eth, 
+      *         so that all the old shares still correspond to the same amount of pooled ethers. 
+      *         Then adds the calculated difference to the user's share and to the totalShares
+      *         similarly as traditional mint() function does with balances.
+      * @param _to Receiver of new shares
+      * @param _submittedAmount Amount of submitted ethers in wei
+      */
+    function processSubmission(address _to, uint256 _submittedAmount) external whenNotStopped authP(MINT_ROLE, arr(_to, _submittedAmount)) {
+        // ToDo rename controlledEth to pooledEth
+        uint256 controlledEthAfter = dePool.getTotalControlledEther().add(_submittedAmount);
+        uint256 totalSharesBefore = _totalShares;
+        uint256 totalSharesAfter = getSharesByPooledEth(controlledEthAfter);
+        uint256 sharesDifference = totalSharesAfter.sub(totalSharesBefore);
+        _shares[_to] = _shares[_to].add(sharesDifference);
+        _totalShares = _totalShares.add(sharesDifference);
+    }
+
+    /**
       * @notice Burn `@tokenAmount(this, _value)` tokens from `_account`
       * @param _account Account which tokens are to be burnt
       * @param _value Amount of tokens to burn
