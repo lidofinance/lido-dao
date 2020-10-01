@@ -13,7 +13,23 @@ const StakingProvidersRegistry = artifacts.require('StakingProvidersRegistry')
 const OracleMock = artifacts.require('OracleMock.sol')
 const ValidatorRegistrationMock = artifacts.require('ValidatorRegistrationMock.sol')
 
-contract('DePool: happy path', ([appManager, voting, sp1, sp2, user1, user2, user3, nobody]) => {
+contract('DePool: happy path', (addresses) => {
+  const [
+    // the root account which deployed the DAO
+    appManager,
+    // the address which we use to simulate the voting DAO application
+    voting,
+    // staking providers
+    sp1,
+    sp2,
+    // users who deposit Ether to the pool
+    user1,
+    user2,
+    user3,
+    // unrelated address
+    nobody
+  ] = addresses
+
   let oracle, validatorRegistration, pool, spRegistry, token
   let treasuryAddr, insuranceAddr
 
@@ -43,10 +59,9 @@ contract('DePool: happy path', ([appManager, voting, sp1, sp2, user1, user2, use
 
   it('voting sets fee and its distribution', async () => {
     await pool.setFee(totalFeePoints, { from: voting })
-
     await pool.setFeeDistribution(treasuryFeePoints, insuranceFeePoints, stakingProvidersFeePoints, { from: voting })
 
-    // Checking correctness
+    // Fee and distribution were set
 
     assertBn(await pool.getFee({ from: nobody }), totalFeePoints, 'total fee')
 
@@ -61,11 +76,13 @@ contract('DePool: happy path', ([appManager, voting, sp1, sp2, user1, user2, use
   it('voting sets withdrawal credentials', async () => {
     await pool.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
 
-    // Checking correctness
+    // Withdrawal credentials were set
 
     assert.equal(await pool.getWithdrawalCredentials({ from: nobody }), withdrawalCredentials, 'withdrawal credentials')
   })
 
+  // Each staking provider has its Ethereum 1 address, a name and a set of registered
+  // validators, each of them defined as a (public key, signature) pair
   const stakingProvider1 = {
     name: 'SP-1',
     address: sp1,
@@ -78,6 +95,7 @@ contract('DePool: happy path', ([appManager, voting, sp1, sp2, user1, user2, use
   }
 
   it('voting adds the first staking provider', async () => {
+    // How many validators can this staking provider register
     const validatorsLimit = 1000000000
 
     const spTx = await spRegistry.addStakingProvider(stakingProvider1.name, stakingProvider1.address, validatorsLimit, { from: voting })
@@ -88,19 +106,19 @@ contract('DePool: happy path', ([appManager, voting, sp1, sp2, user1, user2, use
     assertBn(await spRegistry.getStakingProvidersCount(), 1, 'total staking providers')
   })
 
-  it('the first staking provider registers one validator (signing key)', async () => {
+  it('the first staking provider registers one validator', async () => {
     const numKeys = 1
 
     await spRegistry.addSigningKeys(stakingProvider1.id, numKeys, stakingProvider1.validators[0].key, stakingProvider1.validators[0].sig, {
       from: stakingProvider1.address
     })
 
-    // The key's been added
+    // The was added
 
     const totalKeys = await spRegistry.getTotalSigningKeyCount(stakingProvider1.id, { from: nobody })
     assertBn(totalKeys, 1, 'total signing keys')
 
-    // The key is not used yet
+    // The key was not used yet
 
     const unusedKeys = await spRegistry.getUnusedSigningKeyCount(stakingProvider1.id, { from: nobody })
     assertBn(unusedKeys, 1, 'unused signing keys')
@@ -117,7 +135,7 @@ contract('DePool: happy path', ([appManager, voting, sp1, sp2, user1, user2, use
     assertBn(ether2Stat.deposited, 0, 'deposited ether2')
     assertBn(ether2Stat.remote, 0, 'remote ether2')
 
-    // All Ether is buffered within the pool contract atm
+    // All Ether was buffered within the pool contract atm
 
     assertBn(await pool.getBufferedEther(), ETH(3), 'buffered ether')
     assertBn(await pool.getTotalControlledEther(), ETH(3), 'total controlled ether')
@@ -192,12 +210,12 @@ contract('DePool: happy path', ([appManager, voting, sp1, sp2, user1, user2, use
       from: stakingProvider2.address
     })
 
-    // The key's been added
+    // The key was added
 
     const totalKeys = await spRegistry.getTotalSigningKeyCount(stakingProvider2.id, { from: nobody })
     assertBn(totalKeys, 1, 'total signing keys')
 
-    // The key is not used yet
+    // The key was not used yet
 
     const unusedKeys = await spRegistry.getUnusedSigningKeyCount(stakingProvider2.id, { from: nobody })
     assertBn(unusedKeys, 1, 'unused signing keys')
@@ -221,7 +239,7 @@ contract('DePool: happy path', ([appManager, voting, sp1, sp2, user1, user2, use
     assertBn(ether2Stat.deposited, ETH(64), 'deposited ether2')
     assertBn(ether2Stat.remote, 0, 'remote ether2')
 
-    // The pool has ran out of validator keys, so the remaining 32 ETH were added to the
+    // The pool ran out of validator keys, so the remaining 32 ETH were added to the
     // pool buffer
 
     assertBn(await pool.getBufferedEther(), ETH(1 + 32), 'buffered ether')
@@ -243,24 +261,24 @@ contract('DePool: happy path', ([appManager, voting, sp1, sp2, user1, user2, use
 
     await oracle.reportEther2(epoch, ETH(96))
 
-    // Ether2 stat reported by the pool changes correspondingly
+    // Ether2 stat reported by the pool changed correspondingly
 
     const ether2Stat = await pool.getEther2Stat()
     assertBn(ether2Stat.deposited, ETH(64), 'deposited ether2')
     assertBn(ether2Stat.remote, ETH(96), 'remote ether2')
 
-    // Buffered Ether amount doesn't change
+    // Buffered Ether amount didn't change
 
     assertBn(await pool.getBufferedEther(), ETH(33), 'buffered ether')
 
-    // Total controlled Ether increases
+    // Total controlled Ether increased
 
     assertBn(await pool.getTotalControlledEther(), ETH(33 + 96), 'total controlled ether')
 
-    // New tokens get minted to distribute fee, diluting token total supply:
+    // New tokens was minted to distribute fee, diluting token total supply:
     //
-    // => mintedAmount * newPrice = totalFee
-    // => newPrice = newTotalControlledEther / newTotalSupply =
+    // => mintedAmount * newRatio = totalFee
+    // => newRatio = newTotalControlledEther / newTotalSupply =
     //             = newTotalControlledEther / (prevTotalSupply + mintedAmount)
     // => mintedAmount * newTotalControlledEther / (prevTotalSupply + mintedAmount) = totalFee
     // => mintedAmount = (totalFee * prevTotalSupply) / (newTotalControlledEther - totalFee)
@@ -275,13 +293,13 @@ contract('DePool: happy path', ([appManager, voting, sp1, sp2, user1, user2, use
 
     assertBn(await token.totalSupply(), newTotalSupply.toString(10), 'token total supply')
 
-    // Token user balances don't change
+    // Token user balances didn't change
 
     assertBn(await token.balanceOf(user1), tokens(3), 'user1 tokens')
     assertBn(await token.balanceOf(user2), tokens(30), 'user2 tokens')
     assertBn(await token.balanceOf(user3), tokens(64), 'user3 tokens')
 
-    // Fee, in the form of minted tokens, gets distributed between treasury, insurance fund
+    // Fee, in the form of minted tokens, was distributed between treasury, insurance fund
     // and staking providers
 
     const treasuryTokenBalance = mintedAmount.muln(treasuryFeePoints).divn(10000)
@@ -290,8 +308,12 @@ contract('DePool: happy path', ([appManager, voting, sp1, sp2, user1, user2, use
     assertBn(await token.balanceOf(treasuryAddr), treasuryTokenBalance.toString(10), 'treasury tokens')
     assertBn(await token.balanceOf(insuranceAddr), insuranceTokenBalance.toString(10), 'insurance tokens')
 
-    // Both staking providers receive the same fee since they have
-    // the same effective stake (one signing key used)
+    // The staking providers' fee is distributed between all active staking providers,
+    // proprotional to their effective stake (the amount of Ether staked by the provider's
+    // used and non-stopped validators).
+    //
+    // In our case, both staking providers received the same fee since they have the same
+    // effective stake (one signing key used from each SP, staking 32 ETH)
 
     const stakingProvidersTokenBalance = mintedAmount.sub(treasuryTokenBalance).sub(insuranceTokenBalance)
     const individualProviderBalance = stakingProvidersTokenBalance.divn(2)
