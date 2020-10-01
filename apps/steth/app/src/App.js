@@ -1,28 +1,32 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { useAragonApi } from '@aragon/api-react'
-import {
-  Box,
-  GU,
-  Header,
-  Main,
-  SyncIndicator,
-  textStyle,
-} from '@aragon/ui'
+import { Box, GU, Header, Main, SyncIndicator, textStyle } from '@aragon/ui'
 import styled from 'styled-components'
+import Button from '@aragon/ui/dist/Button'
 
 export default function App() {
-  const { api, appState, path, requestPath, currentApp, guiStyle } = useAragonApi()
-  const { isSyncing } = appState
+  const { api, appState, currentApp, guiStyle } = useAragonApi()
+  const { tokenName, isStopped, isSyncing } = appState
   const { appearance } = guiStyle
   const appName = (currentApp && currentApp.name) || 'app'
   const version = 'v0.0.1'
+
+  const resume = () => {
+    api.resume().toPromise()
+  }
+
+  const stop = () => {
+    api.stop().toPromise()
+  }
+
+  const getName = async () => {
+    const name = await api.name().toPromise()
+    console.log('Name: ' + name)
+  }
+
   return (
     <Main theme={appearance} assetsUrl="./aragon-ui">
-      {isSyncing && <SyncIndicator />}
-      <Header
-        primary={appName.toUpperCase()}
-        secondary={version}
-      />
+      <Header primary={appName.toUpperCase()} secondary={version} />
       <Box
         css={`
           display: flex;
@@ -33,7 +37,13 @@ export default function App() {
           ${textStyle('title3')};
         `}
       >
-        {appName} app will be here
+        <div>{tokenName}</div>
+        <div>Status: {isStopped ? 'INACTIVE' : 'ACTIVE'}</div>
+        <Button onClick={resume}>resume</Button>
+        <br />
+        <Button onClick={stop}>stop</Button>
+        <br />
+        <Button onClick={getName}>print appName</Button>
       </Box>
     </Main>
   )
