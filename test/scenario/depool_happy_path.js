@@ -3,15 +3,8 @@ const { BN } = require('bn.js')
 const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 const { getEventArgument } = require('@aragon/contract-helpers-test')
 
-const { newDao, newApp } = require('../helpers/dao')
 const { pad, toBN, ETH, tokens } = require('../helpers/utils')
-
-const StETH = artifacts.require('StETH.sol')
-const DePool = artifacts.require('TestDePool.sol')
-const StakingProvidersRegistry = artifacts.require('StakingProvidersRegistry')
-
-const OracleMock = artifacts.require('OracleMock.sol')
-const ValidatorRegistrationMock = artifacts.require('ValidatorRegistrationMock.sol')
+const { deployDaoAndPool } = require('./helpers/deploy')
 
 contract('DePool: happy path', (addresses) => {
   const [
@@ -30,17 +23,27 @@ contract('DePool: happy path', (addresses) => {
     nobody
   ] = addresses
 
-  let oracle, validatorRegistration, pool, spRegistry, token
+  let pool, spRegistry, token
+  let oracleMock, validatorRegistrationMock
   let treasuryAddr, insuranceAddr
 
   it('DAO, staking providers registry, token, and pool are deployed and initialized', async () => {
     const deployed = await deployDaoAndPool(appManager, voting)
 
-    oracle = deployed.oracle
-    validatorRegistration = deployed.validatorRegistration
+    // contracts/StETH.sol
     token = deployed.token
+
+    // contracts/DePool.sol
     pool = deployed.pool
+
+    // contracts/sps/StakingProvidersRegistry.sol
     spRegistry = deployed.spRegistry
+
+    // mocks
+    oracleMock = deployed.oracleMock
+    validatorRegistrationMock = deployed.validatorRegistrationMock
+
+    // addresses
     treasuryAddr = deployed.treasuryAddr
     insuranceAddr = deployed.insuranceAddr
   })
@@ -129,7 +132,7 @@ contract('DePool: happy path', (addresses) => {
 
     // No Ether was deposited yet to the validator contract
 
-    assertBn(await validatorRegistration.totalCalls(), 0)
+    assertBn(await validatorRegistrationMock.totalCalls(), 0)
 
     const ether2Stat = await pool.getEther2Stat()
     assertBn(ether2Stat.deposited, 0, 'deposited ether2')
@@ -153,9 +156,9 @@ contract('DePool: happy path', (addresses) => {
     // The first 32 ETH chunk was deposited to the validator registration contract,
     // using public key and signature of the only validator of the first SP
 
-    assertBn(await validatorRegistration.totalCalls(), 1)
+    assertBn(await validatorRegistrationMock.totalCalls(), 1)
 
-    const regCall = await validatorRegistration.calls.call(0)
+    const regCall = await validatorRegistrationMock.calls.call(0)
     assert.equal(regCall.pubkey, stakingProvider1.validators[0].key)
     assert.equal(regCall.withdrawal_credentials, withdrawalCredentials)
     assert.equal(regCall.signature, stakingProvider1.validators[0].sig)
@@ -227,9 +230,9 @@ contract('DePool: happy path', (addresses) => {
     // The first 32 ETH chunk was deposited to the validator registration contract,
     // using public key and signature of the only validator of the second SP
 
-    assertBn(await validatorRegistration.totalCalls(), 2)
+    assertBn(await validatorRegistrationMock.totalCalls(), 2)
 
-    const regCall = await validatorRegistration.calls.call(1)
+    const regCall = await validatorRegistrationMock.calls.call(1)
     assert.equal(regCall.pubkey, stakingProvider2.validators[0].key)
     assert.equal(regCall.withdrawal_credentials, withdrawalCredentials)
     assert.equal(regCall.signature, stakingProvider2.validators[0].sig)
@@ -259,7 +262,7 @@ contract('DePool: happy path', (addresses) => {
 
     // Reporting 1.5-fold balance increase (64 => 96)
 
-    await oracle.reportEther2(epoch, ETH(96))
+    await oracleMock.reportEther2(epoch, ETH(96))
 
     // Ether2 stat reported by the pool changed correspondingly
 
@@ -322,105 +325,3 @@ contract('DePool: happy path', (addresses) => {
     assertBn(await token.balanceOf(stakingProvider2.address), individualProviderBalance.toString(10), 'SP-2 tokens')
   })
 })
-
-async function deployDaoAndPool(appManager, voting) {
-  // Deploy the DAO, oracle and validator registration mocks, and base contracts for
-  // StETH (the token), DePool (the pool) and StakingProvidersRegistry (the SP registry)
-
-  const [{ dao, acl }, oracle, validatorRegistration, stEthBase, poolBase, spRegistryBase] = await Promise.all([
-    newDao(appManager),
-    OracleMock.new(),
-    ValidatorRegistrationMock.new(),
-    StETH.new(),
-    DePool.new(),
-    StakingProvidersRegistry.new()
-  ])
-
-  // Instantiate proxies for the pool, the token, and the SP registry, using
-  // the base contracts as their logic implementation
-
-  const [tokenProxyAddress, poolProxyAddress, spRegistryProxyAddress] = await Promise.all([
-    newApp(dao, 'steth', stEthBase.address, appManager),
-    newApp(dao, 'depool', poolBase.address, appManager),
-    newApp(dao, 'staking-providers-registry', spRegistryBase.address, appManager)
-  ])
-
-  const [token, pool, spRegistry] = await Promise.all([
-    StETH.at(tokenProxyAddress),
-    DePool.at(poolProxyAddress),
-    StakingProvidersRegistry.at(spRegistryProxyAddress)
-  ])
-
-  // Initialize the token, the SP registry and the pool
-
-  await token.initialize()
-  await spRegistry.initialize()
-
-  const [
-    POOL_PAUSE_ROLE,
-    POOL_MANAGE_FEE,
-    POOL_MANAGE_WITHDRAWAL_KEY,
-    SP_REGISTRY_SET_POOL,
-    SP_REGISTRY_MANAGE_SIGNING_KEYS,
-    SP_REGISTRY_ADD_STAKING_PROVIDER_ROLE,
-    SP_REGISTRY_SET_STAKING_PROVIDER_ACTIVE_ROLE,
-    SP_REGISTRY_SET_STAKING_PROVIDER_NAME_ROLE,
-    SP_REGISTRY_SET_STAKING_PROVIDER_ADDRESS_ROLE,
-    SP_REGISTRY_SET_STAKING_PROVIDER_LIMIT_ROLE,
-    SP_REGISTRY_REPORT_STOPPED_VALIDATORS_ROLE,
-    TOKEN_MINT_ROLE,
-    TOKEN_BURN_ROLE
-  ] = await Promise.all([
-    pool.PAUSE_ROLE(),
-    pool.MANAGE_FEE(),
-    pool.MANAGE_WITHDRAWAL_KEY(),
-    spRegistry.SET_POOL(),
-    spRegistry.MANAGE_SIGNING_KEYS(),
-    spRegistry.ADD_STAKING_PROVIDER_ROLE(),
-    spRegistry.SET_STAKING_PROVIDER_ACTIVE_ROLE(),
-    spRegistry.SET_STAKING_PROVIDER_NAME_ROLE(),
-    spRegistry.SET_STAKING_PROVIDER_ADDRESS_ROLE(),
-    spRegistry.SET_STAKING_PROVIDER_LIMIT_ROLE(),
-    spRegistry.REPORT_STOPPED_VALIDATORS_ROLE(),
-    token.MINT_ROLE(),
-    token.BURN_ROLE()
-  ])
-
-  await Promise.all([
-    // Allow voting to manage the pool
-    acl.createPermission(voting, pool.address, POOL_PAUSE_ROLE, appManager, { from: appManager }),
-    acl.createPermission(voting, pool.address, POOL_MANAGE_FEE, appManager, { from: appManager }),
-    acl.createPermission(voting, pool.address, POOL_MANAGE_WITHDRAWAL_KEY, appManager, { from: appManager }),
-    // Allow voting to manage staking providers registry
-    acl.createPermission(voting, spRegistry.address, SP_REGISTRY_SET_POOL, appManager, { from: appManager }),
-    acl.createPermission(voting, spRegistry.address, SP_REGISTRY_MANAGE_SIGNING_KEYS, appManager, { from: appManager }),
-    acl.createPermission(voting, spRegistry.address, SP_REGISTRY_ADD_STAKING_PROVIDER_ROLE, appManager, { from: appManager }),
-    acl.createPermission(voting, spRegistry.address, SP_REGISTRY_SET_STAKING_PROVIDER_ACTIVE_ROLE, appManager, { from: appManager }),
-    acl.createPermission(voting, spRegistry.address, SP_REGISTRY_SET_STAKING_PROVIDER_NAME_ROLE, appManager, { from: appManager }),
-    acl.createPermission(voting, spRegistry.address, SP_REGISTRY_SET_STAKING_PROVIDER_ADDRESS_ROLE, appManager, { from: appManager }),
-    acl.createPermission(voting, spRegistry.address, SP_REGISTRY_SET_STAKING_PROVIDER_LIMIT_ROLE, appManager, { from: appManager }),
-    acl.createPermission(voting, spRegistry.address, SP_REGISTRY_REPORT_STOPPED_VALIDATORS_ROLE, appManager, { from: appManager }),
-    // Allow the pool to mint and burn tokens
-    acl.createPermission(pool.address, token.address, TOKEN_MINT_ROLE, appManager, { from: appManager }),
-    acl.createPermission(pool.address, token.address, TOKEN_BURN_ROLE, appManager, { from: appManager })
-  ])
-
-  await pool.initialize(token.address, validatorRegistration.address, oracle.address, spRegistry.address)
-  await oracle.setPool(pool.address)
-  await spRegistry.setPool(pool.address, { from: voting })
-  await validatorRegistration.reset()
-
-  const [treasuryAddr, insuranceAddr] = await Promise.all([pool.getTreasury(), pool.getInsuranceFund()])
-
-  return {
-    dao,
-    acl,
-    oracle,
-    validatorRegistration,
-    token,
-    pool,
-    spRegistry,
-    treasuryAddr,
-    insuranceAddr
-  }
-}
