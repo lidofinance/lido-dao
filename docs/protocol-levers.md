@@ -1,20 +1,21 @@
 # Levers
 
-The protocol governed by DePool DAO. DAO decides on protocols’ key parameters (e.g. fees) and executes protocol upgrades. The DAO members govern the protocols to ensure their efficiency and stability.
-
-Here is a list of levers inside the protocol that is controllable by Aragon DAO.
+The protocol is governed by DePool DAO. The DAO decides on protocols’ key parameters and executes protocol upgrades. Here is a list of levers inside the protocol that is controllable by Aragon DAO.
 
 ## ACL
 
-PAUSE_ROLE
-MANAGE_FEE
-MANAGE_WITHDRAWAL_KEY
-MANAGE_SIGNING_KEYS
-SET_ORACLE
-
 TODO: add description to each permission.
 
+* PAUSE_ROLE
+* MANAGE_FEE
+* MANAGE_WITHDRAWAL_KEY
+* MANAGE_SIGNING_KEYS
+* SET_ORACLE
+
 ## Governance
+
+TODO: update levers according to the current implementation.
+TODO: split levers by different contracts: DePool, StakingProvidersRegistry, DePoolOracle.
 
 #### `oracle`
 ##### File: `DePool.sol`
@@ -26,8 +27,6 @@ Authorized oracle address that deliver reward/slashing rate feed to help establi
 
 <br />
 <br />
-<br />
-
 #### `feeBasisPoints`
 ##### File: `DePool.sol`
 ##### Description
@@ -38,8 +37,6 @@ Fee rate, in basis points. The fees are accrued when oracles report staking resu
 
 <br />
 <br />
-<br />
-
 #### `withdrawalCredentials`
 ##### File: `DePool.sol`
 ##### Description
@@ -49,8 +46,6 @@ Credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
 `setWithdrawalCredentials(bytes _withdrawalCredentials)`: sets credentials to `_withdrawalCredentials`. Note that setWithdrawalCredentials discards all unused signing keys as the signatures are invalidated.
 <br />
 <br />
-<br />
-
 #### `addSigningKeys()`
 ##### File: `DePool.sol`
 ##### Description
@@ -66,8 +61,6 @@ TODO: update acording to new DP spec.
 
 <br />
 <br />
-<br />
-
 #### `removeSigningKey()`
 ##### File: `DePool.sol`
 ##### Description
@@ -78,8 +71,6 @@ TODO: update acording to new DP spec.
 
 <br />
 <br />
-<br />
-
 #### `transferToVault()`
 ##### File: `DePool.sol`
 ##### Description
@@ -87,8 +78,6 @@ TODO: add description
 
 <br />
 <br />
-<br />
-
 ### Emergency
 
 #### `stop()`
@@ -98,13 +87,10 @@ Stop pool routine operations.
 
 <br />
 <br />
-<br />
-
 #### `resume()`
 ##### File: `DePool.sol`
 ##### Description
 Resume pool routine operations.
 
-<br />
 <br />
 <br />

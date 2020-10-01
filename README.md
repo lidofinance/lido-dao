@@ -1,38 +1,53 @@
 # DePool Ethereum Liquid Staking Protocol
 
-This repository contains the Solidity smart contracts for DePool Ethereum Liquid Staking Protocol. The goal of the project is to provide liquidity for the funds staked on the Beacon chain. Users can deposit their ether to the system and get stETH token in return. stETH is a tokenized version of staked ether.
+The DePool Ethereum Liquid Staking Protocol, built on the Ethereum blockchain, allows their users to earn staking rewards on Beacon chain without locking Ether or maintaining staking infrastructure. 
 
-The protocol governed by DePool DAO. DAO decides on protocols’ key parameters (e.g. fees) and executes protocol upgrades. The DAO members govern the protocols to ensure their efficiency and stability.
+Users can deposit Ether to DePool smart contract and receive stETH tokens in return. The smart contract then stakes tokens with DAO-picked staking providers. Users' deposited funds are controlled by the DAO, staking providers never have direct access to the users' assets. 
 
-Before getting started with this repo, please read DePool Ethereum Liquid Staking Protocol whitepaper (TODO: add relevant link here), describing how it works.
+Unlike staked ether, stETH token is free from the limitations associated with a lack of liquidity and can be transferred at any time. Token fair price could be calculated based on the total amount of staked ether, plus rewards and minus any slashing penalties.
+
+Before getting started with this repo, please read:
+* Whitepaper (TODO: add link here)
+* Documentation (TODO: add link here)
+
+## DePool DAO
+
+The DePool DAO is a Decentralized Autonomous Organization which manages the liquid staking protocol by deciding on key parameters (e.g., setting fees, assigning staking providers and oracles, etc.) through the voting power of governance token (DPG) holders.
+
+In addition, the DAO will accumulate service fees and spend them on further research, development, and protocol upgrades. Initial DAO members will take part in the threshold signature for Ethereum 2.0 by making BLS threshold signatures.
+
+The DePool DAO is an [Aragon organization](https://aragon.org/dao). Since Aragon provides a full end-to-end framework to build DAOs, we use its standard tools. Protocol smart contracts extend AragonApp base contract and can be managed by DAO.
+
+Full list of protocol levers that are controllable by Aragon DAO and you can found [here](docs/protocol-levers.md).
 
 ## Contracts
 
-The protocol implemented as a set of smart contracts connected by Aragon. 
+The protocol implemented as a set of smart contracts which extend AragonApp base contract.
 
 <dl>
-  <dt>DePool</dt>
-  <dd>Liquid staking pool implementation. The core contract that is responsible for acceptance ether from user, delegating funds to staking providers, minting liquid tokens and accept tokent for ether. DePool DAO picks validators (staking providers) and sets fee.</dd>
+  <dt>[StETH](contracts/StETH.sol)</dt>
+  <dd>StETH is ERC20 token which represents staked ether. Tokens are minted upon deposit and burned when redeemed. StETH tokens are pegged 1:1 to the Ethers that are held by DePool. StETH token’s balances are updated when oracle reports change in total stake every day.</dd>
 </dl>
 
 <dl>
-  <dt>DePoolOracle</dt>
-  <dd>The goal of the oracle is to inform other parts of the system about balances controlled by the DAO on the ETH 2.0 side. The balances can go up because of reward accumulation and can go down because of slashing.</dd>
+  <dt>[DePool](contracts/DePool.sol)</dt>
+  <dd>DePool is a the core contract which acts as a liquid staking pool. The contract is responsible for Ether deposits and withdrawals, minting and burning liquid tokens, delegating funds to staking providers, applying fees and accept updates from oracle contract. Staking providers' logic is extracted to the separate contract StakingProvidersRegistry.</dd>
 </dl>
 
 <dl>
-  <dt>StETH</dt>
-  <dd>ERC20 token which represents staked ether. Supports stop/resume, mint/burn mechanics.</dd>
+  <dt>StakingProvidersRegistry</dt>
+  <dd>Staking Providers act as validators on Beacon chain for the benefit of the protcol. The DAO selects validators and adds their addresses to StakingProvidersRegistry contract. Authorized providers have to generate a set of keys for validation and also provide them to the smart contract. As ether is received from users, it is distributed in chunks of 32 ethers between all active Staking Providers. The contract contains a list of validators, their keys and the logic for distributing rewards between them. The DAO has the ability to deactivate misbehaving validators.
+</dd>
+</dl>
+
+<dl>
+  <dt>[DePoolOracle](contracts/oracle/DePoolOracle.sol)</dt>
+  <dd>DePoolOracle is a contract where oracles send addresses' balances controlled by the DAO on the ETH 2.0 side. The balances can go up because of reward accumulation and can go down because of slashing. Oracles are assigned by DAO.</dd>
 </dl>
 
 <dl>
   <dt>CStETH</dt>
-  <dd>ERC20 token which represents staked ether in a compound like way. Supports stop/resume, mint/burn mechanics.</dd>
-</dl>
-
-<dl>
-  <dt>DePoolSwap</dt>
-  <dd>The contract swaps StETH token to CStETH and vice versa.</dd>
+  <dd>It's ERC20 token which represents staked ether in a compound like way. The contract also swaps StETH token to CStETH and vice versa. It’s a wrapper contract that accepts StETH tokens and mints CStETH in return.</dd>
 </dl>
 
 ## Development
