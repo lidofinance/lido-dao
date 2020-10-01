@@ -28,5 +28,20 @@
     "no-useless-escape": 0,
     "valid-jsdoc": "error",
     "linebreak-style": [ "error", "unix" ]
-  }
+  },
+  "overrides": [
+    {
+      "files": [
+        "./test{,-e2e}/{**/,}*.js",
+      ],
+      "env": {
+        "mocha": true
+      },
+      "globals": {
+        "artifacts": "readonly",
+        "contract": "readonly",
+        "web3": "readonly"
+      }
+    }
+  ]
 }
