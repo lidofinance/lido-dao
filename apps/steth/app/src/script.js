@@ -10,12 +10,14 @@ app.store(
       ...state,
     }
 
+    console.log({ state, event })
+
     try {
       switch (event) {
-        case 'Increment':
-          return { ...nextState, count: await getValue() }
-        case 'Decrement':
-          return { ...nextState, count: await getValue() }
+        case 'Stopped':
+          return { ...nextState, isStopped: await getIsStopped() }
+        case 'Resumed':
+          return { ...nextState, isStopped: await getIsStopped() }
         case events.SYNC_STATUS_SYNCING:
           return { ...nextState, isSyncing: true }
         case events.SYNC_STATUS_SYNCED:
@@ -39,14 +41,19 @@ app.store(
  ***********************/
 
 function initializeState() {
-  return async cachedState => {
+  return async (cachedState) => {
     return {
       ...cachedState,
-      count: await getValue(),
+      isStopped: await getIsStopped(),
+      // tokenName: await getTokenName(),
     }
   }
 }
 
-async function getValue() {
-  return parseInt(await app.call('value').toPromise(), 10)
+async function getIsStopped() {
+  return await app.isStopped().toPromise()
+}
+
+async function getTokenName() {
+  return await app.name().toPromise()
 }
