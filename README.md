@@ -22,33 +22,22 @@ Full list of protocol levers that are controllable by Aragon DAO and you can fou
 
 ## Contracts
 
-The protocol implemented as a set of smart contracts which extend AragonApp base contract.
+The protocol implemented as a set of smart contracts which extend [AragonApp](https://github.com/aragon/aragonOS/blob/next/contracts/apps/AragonApp.sol) base contract.
 
-<dl>
-  <dt>[StETH](contracts/StETH.sol)</dt>
-  <dd>StETH is ERC20 token which represents staked ether. Tokens are minted upon deposit and burned when redeemed. StETH tokens are pegged 1:1 to the Ethers that are held by DePool. StETH token’s balances are updated when oracle reports change in total stake every day.</dd>
-</dl>
+#### [StETH](contracts/StETH.sol)
+StETH is ERC20 token which represents staked ether. Tokens are minted upon deposit and burned when redeemed. StETH tokens are pegged 1:1 to the Ethers that are held by DePool. StETH token’s balances are updated when oracle reports change in total stake every day.
 
-<dl>
-  <dt>[DePool](contracts/DePool.sol)</dt>
-  <dd>DePool is a the core contract which acts as a liquid staking pool. The contract is responsible for Ether deposits and withdrawals, minting and burning liquid tokens, delegating funds to staking providers, applying fees and accept updates from oracle contract. Staking providers' logic is extracted to the separate contract StakingProvidersRegistry.</dd>
-</dl>
+#### [DePool](contracts/DePool.sol)
+DePool is a the core contract which acts as a liquid staking pool. The contract is responsible for Ether deposits and withdrawals, minting and burning liquid tokens, delegating funds to staking providers, applying fees and accept updates from oracle contract. Staking providers' logic is extracted to the separate contract StakingProvidersRegistry.
 
-<dl>
-  <dt>StakingProvidersRegistry</dt>
-  <dd>Staking Providers act as validators on Beacon chain for the benefit of the protcol. The DAO selects validators and adds their addresses to StakingProvidersRegistry contract. Authorized providers have to generate a set of keys for validation and also provide them to the smart contract. As ether is received from users, it is distributed in chunks of 32 ethers between all active Staking Providers. The contract contains a list of validators, their keys and the logic for distributing rewards between them. The DAO has the ability to deactivate misbehaving validators.
-</dd>
-</dl>
+#### StakingProvidersRegistry
+Staking Providers act as validators on Beacon chain for the benefit of the protcol. The DAO selects validators and adds their addresses to StakingProvidersRegistry contract. Authorized providers have to generate a set of keys for validation and also provide them to the smart contract. As ether is received from users, it is distributed in chunks of 32 ethers between all active Staking Providers. The contract contains a list of validators, their keys and the logic for distributing rewards between them. The DAO has the ability to deactivate misbehaving validators.
 
-<dl>
-  <dt>[DePoolOracle](contracts/oracle/DePoolOracle.sol)</dt>
-  <dd>DePoolOracle is a contract where oracles send addresses' balances controlled by the DAO on the ETH 2.0 side. The balances can go up because of reward accumulation and can go down because of slashing. Oracles are assigned by DAO.</dd>
-</dl>
+#### [DePoolOracle](contracts/oracle/DePoolOracle.sol)
+DePoolOracle is a contract where oracles send addresses' balances controlled by the DAO on the ETH 2.0 side. The balances can go up because of reward accumulation and can go down because of slashing. Oracles are assigned by DAO.
 
-<dl>
-  <dt>CStETH</dt>
-  <dd>It's ERC20 token which represents staked ether in a compound like way. The contract also swaps StETH token to CStETH and vice versa. It’s a wrapper contract that accepts StETH tokens and mints CStETH in return.</dd>
-</dl>
+#### CStETH
+It's ERC20 token which represents staked ether in a compound like way. The contract also swaps StETH token to CStETH and vice versa. It’s a wrapper contract that accepts StETH tokens and mints CStETH in return.
 
 ## Development
 
