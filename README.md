@@ -1,10 +1,10 @@
 # DePool Ethereum Liquid Staking Protocol
 
-The DePool Ethereum Liquid Staking Protocol, built on the Ethereum blockchain, allows their users to earn staking rewards on Beacon chain without locking Ether or maintaining staking infrastructure. 
+The DePool Ethereum Liquid Staking Protocol, built on Ethereum 2.0's Beacon chain, allows their users to earn staking rewards on Beacon chain without locking Ether or maintaining staking infrastructure. 
 
 Users can deposit Ether to DePool smart contract and receive stETH tokens in return. The smart contract then stakes tokens with DAO-picked staking providers. Users' deposited funds are controlled by the DAO, staking providers never have direct access to the users' assets. 
 
-Unlike staked ether, stETH token is free from the limitations associated with a lack of liquidity and can be transferred at any time. The token fair price could be calculated based on the total amount of staked ether, plus rewards and minus any slashing penalties.
+Unlike staked ether, stETH token is free from the limitations associated with a lack of liquidity and can be transferred at any time. stETH token balance corresponds to the amount of Beacon chain Ether that the holder could withdraw if state transitions were enabled right now in the Ethereum 2.0 network.
 
 Before getting started with this repo, please read:
 * Whitepaper (TODO: add a link here)
@@ -14,7 +14,7 @@ Before getting started with this repo, please read:
 
 The DePool DAO is a Decentralized Autonomous Organization that manages the liquid staking protocol by deciding on key parameters (e.g., setting fees, assigning staking providers and oracles, etc.) through the voting power of governance token (DPG) holders.
 
-Also, the DAO will accumulate service fees and spend them on further research, development, and protocol upgrades. Initial DAO members will take part in the threshold signature for Ethereum 2.0 by making BLS threshold signatures.
+Also, the DAO will accumulate service fees and spend them on insurance, research, development, and protocol upgrades. Initial DAO members will take part in the threshold signature for Ethereum 2.0 by making BLS threshold signatures.
 
 The DePool DAO is an [Aragon organization](https://aragon.org/dao). Since Aragon provides a full end-to-end framework to build DAOs, we use its standard tools. Protocol smart contracts extend AragonApp base contract and can be managed by DAO.
 
@@ -37,7 +37,9 @@ Staking Providers act as validators on Beacon chain for the benefit of the proto
 DePoolOracle is a contract where oracles send addresses' balances controlled by the DAO on the ETH 2.0 side. The balances can go up because of reward accumulation and can go down because of slashing. Oracles are assigned by DAO.
 
 #### CStETH
-It's an ERC20 token which represents staked ether in a compound like way. The contract also swaps StETH token to CStETH and vice versa. It’s a wrapper contract that accepts StETH tokens and mints CStETH in return.
+It's an ERC20 token that represents the account's share of the total supply of StETH tokens. CStETH token's balance only changes on transfers, unlike StETH that is also changed when oracles report staking rewards, penalties, and slashings. It's a "power user" token that might be needed to work correctly with some DeFi protocols like Uniswap v2, cross-chain bridges, etc.
+
+The contract also works as a wrapper that accepts StETH tokens and mints CStETH in return. The reverse exchange works exactly the opposite, received CStETH token is burned, and StETH token is returned to the user.
 
 ## Development
 
