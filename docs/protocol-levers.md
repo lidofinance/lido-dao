@@ -1,6 +1,5 @@
 # Levers
-
-The protocol is governed by DePool DAO. The DAO decides on protocols’ key parameters and executes protocol upgrades. Here is a list of levers inside the protocol that is controllable by Aragon DAO.
+Here is a list of levers inside the protocol.
 
 ## ACL
 
