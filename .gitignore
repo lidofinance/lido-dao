@@ -12,3 +12,6 @@ ipfs.cmd
 /coverage/
 /coverage.json
 .coverage_*/
+
+/template/flattened_contracts/
+/data/
