@@ -10,8 +10,6 @@ app.store(
       ...state,
     }
 
-    console.log({ state, event })
-
     try {
       switch (event) {
         case 'Stopped':
@@ -45,15 +43,25 @@ function initializeState() {
     return {
       ...cachedState,
       isStopped: await getIsStopped(),
-      // tokenName: await getTokenName(),
+      tokenName: await getTokenName(),
+      tokenSymbol: await getTokenSymbol(),
+      totalSupply: await getTotalSupply(),
     }
   }
 }
 
 async function getIsStopped() {
-  return await app.isStopped().toPromise()
+  return await app.call('isStopped').toPromise()
 }
 
 async function getTokenName() {
-  return await app.name().toPromise()
+  return await app.call('name').toPromise()
+}
+
+async function getTokenSymbol() {
+  return await app.call('symbol').toPromise()
+}
+
+async function getTotalSupply() {
+  return await app.call('totalSupply').toPromise()
 }
