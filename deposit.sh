@@ -7,7 +7,6 @@ TMP_DIR=$PWD/tmp-deposit-cli
 IMG="depool-deposit-cli:latest"
 
 if [[ "$(docker images -q $IMG 2> /dev/null)" == "" ]] || [[ $REBUILD ]]; then
-  # do something
   echo "Building deposit-cli Docker image..."
   rm -rf $TMP_DIR
   mkdir -p $TMP_DIR
