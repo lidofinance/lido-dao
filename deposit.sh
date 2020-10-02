@@ -17,4 +17,4 @@ if [[ "$(docker images -q $IMG 2> /dev/null)" == "" ]] || [[ $REBUILD ]]; then
   rm -rf $TMP_DIR
 fi
 
-docker run -it -v $PWD/data:/data $IMG --folder /data "$@"
+docker run -it --rm -v $PWD/data:/data $IMG --folder /data "$@"
