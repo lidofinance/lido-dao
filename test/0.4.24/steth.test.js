@@ -119,7 +119,7 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
       await stEth.stop({from: pool});
       await assertRevert(stEth.stop({from: pool}));
       assert(await stEth.isStopped());
-  
+      //ToDo check other funcs decorated as whenNotStopped
       await assertRevert(stEth.transfer(user2, tokens(2), {from: user1}), 'CONTRACT_IS_STOPPED');
       await assertRevert(stEth.transfer(user2, tokens(2), {from: user3}));
       await assertRevert(stEth.transferFrom(user1, user3, tokens(2), {from: user2}));
