@@ -73,44 +73,45 @@ module.exports = async (
     const ens = await ENS.at(ensAddress)
     log(`Using provided ENS: ${ens.address}`)
 
-    const apm = await APMRegistry.at(apmRegistryAddress)
-    log(`Using provided APM Registry: ${apm.address}`)
-
-    if (!aragonIdAddress) {
-      aragonIdAddress = await _getRegistered(ens, namehash('aragonid.eth'))
-      if (aragonIdAddress) {
-        log(`Using aragonID registered at aragonid.eth: ${aragonIdAddress}`)
-      } else {
-        errorOut('Aragon ID address not found. Please specify one using ARAGON_ID env var')
-      }
+    const templateAddress = await _getRegistered(ens, namehash(`${dePoolTemplateName}.${dePoolTld}`))
+    if (templateAddress) {
+      log(`DePoolTemplate already registered and deployed at: ${templateAddress}`)
     } else {
-      log(`Using provided aragonID: ${aragonIdAddress}`)
-    }
+      const apm = await APMRegistry.at(apmRegistryAddress)
+      log(`Using provided APM Registry: ${apm.address}`)
 
-    log('=========')
-    log('Check Apps...')
-
-    for (const { name, tld, contractName } of apps) {
-      if (await _getRegistered(ens, namehash(`${name}.${tld}`))) {
-        log(`Using registered ${contractName} app`)
+      if (!aragonIdAddress) {
+        aragonIdAddress = await _getRegistered(ens, namehash('aragonid.eth'))
+        if (aragonIdAddress) {
+          log(`Using aragonID registered at aragonid.eth: ${aragonIdAddress}`)
+        } else {
+          errorOut('Aragon ID address not found. Please specify one using ARAGON_ID env var')
+        }
       } else {
-        errorOut(`No ${contractName} app registered`)
+        log(`Using provided aragonID: ${aragonIdAddress}`)
       }
+
+      log('=========')
+      log('Check Apps...')
+
+      for (const { name, tld, contractName } of apps) {
+        if (await _getRegistered(ens, namehash(`${name}.${tld}`))) {
+          log(`Using registered ${contractName} app`)
+        } else {
+          errorOut(`No ${contractName} app registered`)
+        }
+      }
+
+      log(`Deploying template: ${dePoolTemplateName}`)
+      const template = await DePoolTemplate.new(daoFactoryAddress, ensAddress, miniMeFactoryAddress, aragonIdAddress, { gas: 6000000 })
+      await logDeploy(template)
+
+      log(`Deployed DePoolTemplate: ${template.address}`)
+
+      log(`Registering package for DePoolTemplate as "${dePoolTemplateName}.${dePoolTld}"`)
+      const receipt = await apm.newRepoWithVersion(dePoolTemplateName, owner, [1, 0, 0], template.address, '0x0', { from: owner })
+      // log(receipt)
     }
-    if (await _getRegistered(ens, namehash(`${dePoolTemplateName}.${dePoolTld}`))) {
-      errorOut('Template already registered')
-    }
-
-    log(`Deploying template: ${dePoolTemplateName}`)
-    const template = await DePoolTemplate.new(daoFactoryAddress, ensAddress, miniMeFactoryAddress, aragonIdAddress, { gas: 6000000 })
-    await logDeploy(template)
-
-    log(`Deployed DePoolTemplate: ${template.address}`)
-
-    log(`Registering package for DePoolTemplate as "${dePoolTemplateName}.${dePoolTld}"`)
-    const receipt = await apm.newRepoWithVersion(dePoolTemplateName, owner, [1, 0, 0], template.address, '0x0', { from: owner })
-    // log(receipt)
-
     if (typeof truffleExecCallback === 'function') {
       // Called directly via `truffle exec`
       truffleExecCallback()
