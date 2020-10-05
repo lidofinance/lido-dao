@@ -6,34 +6,100 @@ import {
   Header,
   Main,
   SyncIndicator,
-  textStyle,
+  Button,
+  useTheme,
 } from '@aragon/ui'
-import styled from 'styled-components'
 
 export default function App() {
-  const { api, appState, path, requestPath, currentApp, guiStyle } = useAragonApi()
-  const { isSyncing } = appState
+  const { api, appState, currentApp, guiStyle } = useAragonApi()
+  const { tokenName, tokenSymbol, totalSupply, isStopped, isSyncing } = appState
   const { appearance } = guiStyle
   const appName = (currentApp && currentApp.name) || 'app'
-  const version = 'v0.0.1'
+  const theme = useTheme()
+
+  const resume = () => {
+    api.resume().toPromise()
+  }
+
+  const stop = () => {
+    api.stop().toPromise()
+  }
+
   return (
     <Main theme={appearance} assetsUrl="./aragon-ui">
       {isSyncing && <SyncIndicator />}
       <Header
         primary={appName.toUpperCase()}
-        secondary={version}
+        secondary={
+          <Button
+            mode="strong"
+            onClick={isStopped ? resume : stop}
+            label={isStopped ? 'RESUME' : 'PAUSE'}
+            display="label"
+          />
+        }
       />
       <Box
+        heading={tokenName}
+        padding={20}
         css={`
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          text-align: center;
-          height: ${50 * GU}px;
-          ${textStyle('title3')};
+          h1 {
+            font-size: 24px;
+            padding: 8px;
+            height: unset;
+            text-transform: initial;
+            font-weight: 400;
+            justify-content: center;
+          }
         `}
       >
-        {appName} app will be here
+        <ul>
+          {[
+            ['Token', <strong>{tokenName}</strong>],
+            ['Symbol', <strong>{tokenSymbol}</strong>],
+            ['Total supply', <strong>{totalSupply}</strong>],
+            [
+              'Status',
+              isStopped ? (
+                <strong style={{ color: 'red' }}>INACTIVE</strong>
+              ) : (
+                <strong style={{ color: 'green' }}>LIVE</strong>
+              ),
+            ],
+          ].map(([label, content], index) => (
+            <li
+              key={index}
+              css={`
+                display: flex;
+                justify-content: space-between;
+                list-style: none;
+                color: ${theme.surfaceContent};
+
+                & + & {
+                  margin-top: ${2 * GU}px;
+                }
+
+                > span:nth-child(1) {
+                  color: ${theme.surfaceContentSecondary};
+                }
+                > span:nth-child(2) {
+                  opacity: 0;
+                  width: 10px;
+                }
+                > span:nth-child(3) {
+                  flex-shrink: 1;
+                }
+                > strong {
+                  text-transform: uppercase;
+                }
+              `}
+            >
+              <span>{label}</span>
+              <span>:</span>
+              {content}
+            </li>
+          ))}
+        </ul>
       </Box>
     </Main>
   )
