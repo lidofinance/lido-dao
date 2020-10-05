@@ -11,10 +11,11 @@
   - DePool APM: `depoolspm.eth` -> `0x1902a0410EFe699487Dd85F12321aD672bE4ada2`
   
   ###### Apps and template repos:
-  - DePool App: `depool.depoolspm.eth` -> `0xfe18BCBeDD6f46e0DfbB3Aea02090F23ED1c4a28` [ipfs](http://localhost:8080/ipfs/QmYK2uMUzVR86A7Cxfz2yimz7bRXUGKrQRDuUkx66mh4Hm)
-  - DePoolOracle App: `depooloracle.depoolspm.eth` -> `0x2e25c8F88c5cCcbC9400e5bc86cF9C58C7604327` [ipfs](http://localhost:8080/ipfs/QmbCTi3DY8vR17V11QgxuUzxApFnJgu4cUYLYcbphZUxiT)
-  - StETH token App: `steth.depoolspm.eth` -> `0x019F12a7DAa44A34CD0FF35055b0e2D4679D8521` [ipfs](http://localhost:8080/ipfs/QmV26JoDLiHjV5RRoQHCKzXYuwzgBgD5nishY2b3q3eh6a)
-  - DePool DAO Template: `depool-template.depoolspm.eth` -> `0xD13a7D8A728692eB2c56135B5EB5A1951b3F8395`
+  - DePool App: `depool.depoolspm.eth` -> `0x2e25c8F88c5cCcbC9400e5bc86cF9C58C7604327` [ipfs](http://localhost:8080/ipfs/QmZ3B6r8oB7tnZpDF43V2s9yMqWpgRmStos23hmWGcqrdD)
+  - DePoolOracle App: `depooloracle.depoolspm.eth` -> `0x019F12a7DAa44A34CD0FF35055b0e2D4679D8521` [ipfs](http://localhost:8080/ipfs/Qmc5rm2GSds4emDtPL4dQKpa1UwwLr5jRBm7i8Ypi38jF4)
+  - Staking Provider Registry App: `staking-providers-registry.depoolspm.eth` -> `0xfe18BCBeDD6f46e0DfbB3Aea02090F23ED1c4a28` [ipfs](http://localhost:8080/ipfs/Qmc4PJY2TLGNj3RLFZp39C8ZzU7X2xtPNc9N2GDg5bBciD)
+  - StETH token App: `steth.depoolspm.eth` -> `0xD13a7D8A728692eB2c56135B5EB5A1951b3F8395` [ipfs](http://localhost:8080/ipfs/QmeTgg3C17smfYphFzwafs6Ufvt7UjHeVxm8HWwGb2c1Rd)
+  - DePool DAO Template: `depool-template.depoolspm.eth` -> `0xc7a5b4d533a18370f3EB88f48971B3A3276546fb`
   
    > Depool APM: ens.addr('depoolspm.eth')
    > Depool apps: As APM repos, e.g. apm.getLatest('depool.depoolspm.eth')
@@ -25,7 +26,8 @@
   - Aragon Finance: `0xd2c0889B4c73C82d9403EAd5e562031d2067A96F`
   - Aragon Tokens: `0xF8FdFCEC370576442E1358fCF970b841809509f6`
   - Aragon Voting: `0xDa160A5164A40831735eEB5416fEd3573a50FE27`
-  - DePool: `0x5ec5DDf7A0cdD3235AD1bCC0ad04F059507EC5a3`
+  - DePool: `0xE4d6602497077C44cB39Df55131A97BCFc8ed454`
+  - SPRegistry: `0x5ec5DDf7A0cdD3235AD1bCC0ad04F059507EC5a3`
   - DePoolOracle: `0x12aa6ec7d603dc79eD663792E40a520B54A7ae6A`
   - StETH: `0x1Ae44Ea2B3e422E3D0c0eaD84617ECE55517EED7`
   - DePool DAO: `depool-dao.aragon.id` -> `0xD20F21CEb31a8E302603dC3ff994f00aa9312A66`
