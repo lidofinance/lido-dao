@@ -8,18 +8,21 @@ const { shouldBehaveLikeERC20Burnable } = require('./helpers/ERC20Burnable.behav
 const CstETH = artifacts.require('CstETHMock');
 const StETH = artifacts.require('StETHMock');
 
-contract('CstETH', function ([initialHolder, recipient, anotherAccount, ...otherAccounts]) {
+contract('CstETH', function ([deployer, initialHolder, recipient, anotherAccount, ...otherAccounts]) {
+  beforeEach(async function () {
+    this.steth = await StETH.new({ from: deployer });
+    this.csteth = await CstETH.new(this.steth.address, { from: deployer });
+  });
+
   describe('Wrapping / Unwrapping', function () {
-    [ deployer, user1, user2 ] = otherAccounts;
+    [ user1, user2 ] = otherAccounts;
 
     beforeEach(async function () {
-      this.steth = await StETH.new({ from: deployer });
-      this.csteth = await CstETH.new(this.steth.address, { from: deployer });
-
       await this.steth.mint(user1, new BN(100), { from: deployer });
-
       expect(await this.steth.balanceOf(user1)).to.be.bignumber.equal('100');
       expect(await this.csteth.balanceOf(user1)).to.be.bignumber.equal('0');
+      await this.steth.approve(this.csteth.address, 50, { from: user1 });
+      expect(await this.steth.allowance(user1, this.csteth.address)).to.be.bignumber.equal('50');
     });
 
     it('stETH is set correctly', async function () {
@@ -27,21 +30,17 @@ contract('CstETH', function ([initialHolder, recipient, anotherAccount, ...other
     });
 
     it('can\'t wrap more than allowed', async function () {
-      await expectRevert(this.csteth.wrap(user1, 101, { from: user1 }), 'ERC20: transfer amount exceeds balance');
+      await expectRevert(this.csteth.wrap(51, { from: user1 }), 'ERC20: transfer amount exceeds allowance');
     });
 
-    it('cant wrap if sender hasn\'t any cstETH', async function () {
-      await expectRevert(this.csteth.wrap(user2, 1, { from: user2 }), 'ERC20: transfer amount exceeds balance');
-    });
-
-    it('only holder can wrap', async function () {
-      await expectRevert(this.csteth.wrap(user1, 1, { from: user2 }), 'ERC20: transfer amount exceeds balance');
+    it('cant wrap if sender hasn\'t any stETH', async function () {
+      await this.steth.approve(this.csteth.address, 50, { from: user2 });
+      await expectRevert(this.csteth.wrap(1, { from: user2 }), 'ERC20: transfer amount exceeds balance');
     });
 
     describe('After successful wrap', function () {
       beforeEach(async function () {
-        await this.steth.approve(this.csteth.address, 50, { from: user1 });
-        await this.csteth.wrap(user1, 50, { from: user1 });
+        await this.csteth.wrap(50, { from: user1 });
       });
 
       it('balances are correct', async function () {
@@ -50,28 +49,90 @@ contract('CstETH', function ([initialHolder, recipient, anotherAccount, ...other
         expect(await this.csteth.balanceOf(user1)).to.be.bignumber.equal('50');
       });
 
-      it('can\'t unwrap more than allowed', async function () {
-        await expectRevert(this.csteth.unwrap(user1, 51, { from: user1 }), 'ERC20: burn amount exceeds balance');
+      it('can\'t unwrap more than current balance', async function () {
+        await expectRevert(this.csteth.unwrap(51, { from: user1 }), 'ERC20: burn amount exceeds balance');
       });
 
       it('cant unwrap if sender hasn\'t any cstETH', async function () {
-        await expectRevert(this.csteth.unwrap(user2, 1, { from: user2 }), 'ERC20: burn amount exceeds balance');
+        await expectRevert(this.csteth.unwrap(1, { from: user2 }), 'ERC20: burn amount exceeds balance');
       });
 
-      it('only holder can unwrap', async function () {
-        await expectRevert(this.csteth.unwrap(user1, 1, { from: user2 }), 'ERC20: burn amount exceeds balance');
-      });
-
-      describe('After successful unwrap', function () {
+      describe('After successful immediate unwrap', function () {
         beforeEach(async function () {
-          await this.csteth.unwrap(user1, 50, { from: user1 });
+          await this.csteth.unwrap(10, { from: user1 });
         });
 
         it('balances are correct', async function () {
-          expect(await this.steth.balanceOf(user1)).to.be.bignumber.equal('100');
-          expect(await this.steth.balanceOf(this.csteth.address)).to.be.bignumber.equal('0');
-          expect(await this.csteth.balanceOf(user1)).to.be.bignumber.equal('0');
+          expect(await this.steth.balanceOf(user1)).to.be.bignumber.equal('60');
+          expect(await this.steth.balanceOf(this.csteth.address)).to.be.bignumber.equal('40');
+          expect(await this.csteth.balanceOf(user1)).to.be.bignumber.equal('40');
         });
+      });
+
+      describe('After successful unwrap after stETH supply update', function () {
+        beforeEach(async function () {
+          await this.steth.mint(user1, new BN(5), { from: deployer }); // balance increased +10%
+          await this.steth.mint(this.csteth.address, new BN(5), { from: deployer }); // balance increased +10%
+          await this.csteth.unwrap(10, { from: user1 });
+        });
+
+        it('balances are correct', async function () {
+          expect(await this.steth.balanceOf(user1)).to.be.bignumber.equal('66');
+          expect(await this.steth.balanceOf(this.csteth.address)).to.be.bignumber.equal('44');
+          expect(await this.csteth.balanceOf(user1)).to.be.bignumber.equal('40');
+        });
+      });
+    });
+  });
+
+  describe('Token exchange calculations', function () {
+    [ user1, user2 ] = otherAccounts;
+
+    beforeEach(async function () {
+      await this.steth.mint(user1, new BN(100), { from: deployer });
+      expect(await this.steth.balanceOf(user1)).to.be.bignumber.equal('100');
+      expect(await this.csteth.balanceOf(user1)).to.be.bignumber.equal('0');
+    });
+
+    describe('getStETHByCstETH', function () {
+      it('works correctly on initial state (0 issued cstETH)', async function () {
+        expect(await this.csteth.getStETHByCstETH(100)).to.be.bignumber.equal('0');
+      });
+
+      it('works correctly on wrap / unwrap', async function () {
+        // fisrt wrap
+        await this.steth.approve(this.csteth.address, 50, { from: user1 });
+        await this.csteth.wrap(50, { from: user1 });
+
+        // before first steth balance change
+        expect(await this.steth.balanceOf(user1)).to.be.bignumber.equal('50');
+        expect(await this.steth.balanceOf(this.csteth.address)).to.be.bignumber.equal('50');
+        expect(await this.csteth.balanceOf(user1)).to.be.bignumber.equal('50');
+        expect(await this.csteth.getStETHByCstETH(100)).to.be.bignumber.equal('100');
+        expect(await this.csteth.getCstETHByStETH(100)).to.be.bignumber.equal('100');
+
+        // after steth balance change
+        await this.steth.mint(user1, new BN(5), { from: deployer }); // balance increased +10%
+        await this.steth.mint(this.csteth.address, new BN(5), { from: deployer }); // balance increased +10%
+        expect(await this.csteth.getStETHByCstETH(100)).to.be.bignumber.equal('110'); // wrap ratio changed
+        expect(await this.csteth.getCstETHByStETH(110)).to.be.bignumber.equal('100'); // unwrap ratio changed
+
+        // second wrap
+        await this.steth.approve(this.csteth.address, 55, { from: user1 });
+        await this.csteth.wrap(55, { from: user1 });
+
+        // before second steth balance change
+        expect(await this.steth.balanceOf(user1)).to.be.bignumber.equal('0');
+        expect(await this.steth.balanceOf(this.csteth.address)).to.be.bignumber.equal('110');
+        expect(await this.csteth.balanceOf(user1)).to.be.bignumber.equal('100');
+        expect(await this.csteth.getStETHByCstETH(100)).to.be.bignumber.equal('110'); // wrap ratio changed
+        expect(await this.csteth.getCstETHByStETH(110)).to.be.bignumber.equal('100'); // unwrap ratio changed
+
+        // after steth balance change
+        await this.steth.mint(user1, new BN(0), { from: deployer }); // balance increased +10%
+        await this.steth.mint(this.csteth.address, new BN(11), { from: deployer }); // balance increased +10%
+        expect(await this.csteth.getStETHByCstETH(100)).to.be.bignumber.equal('121'); // ratio changed
+        expect(await this.csteth.getCstETHByStETH(121)).to.be.bignumber.equal('100'); // unwrap ratio changed
       });
     });
   });
@@ -83,8 +144,7 @@ contract('CstETH', function ([initialHolder, recipient, anotherAccount, ...other
     const initialSupply = new BN(100);
 
     beforeEach(async function () {
-      this.steth = await StETH.new();
-      this.token = await CstETH.new(this.steth.address);
+      this.token = this.csteth;
       await this.token.mint(initialHolder, initialSupply);
     });
 
