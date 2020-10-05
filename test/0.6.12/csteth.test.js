@@ -86,7 +86,6 @@ contract('CstETH', function ([initialHolder, recipient, anotherAccount, ...other
       this.steth = await StETH.new();
       this.token = await CstETH.new(this.steth.address);
       await this.token.mint(initialHolder, initialSupply);
-      assert(false);
     });
 
     it('has a name', async function () {
