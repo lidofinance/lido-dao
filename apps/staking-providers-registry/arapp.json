@@ -24,8 +24,7 @@
       "name": "Set name of a staking provider",
       "id": "SET_STAKING_PROVIDER_NAME_ROLE",
       "params": [
-         "Staking provider id",
-         "New name"
+         "Staking provider id"
       ]
     },
     {
