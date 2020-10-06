@@ -467,15 +467,15 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         assert(depositAmount.mul(DEPOSIT_AMOUNT_UNIT) == value);    // properly rounded
 
         // Compute deposit data root (`DepositData` hash tree root) according to validator_registration.vy
-        bytes32 pubkeyRoot = keccak256(_pad64(_pubkey));
-        bytes32 signatureRoot = keccak256(abi.encodePacked(
-            keccak256(BytesLib.slice(_signature, 0, 64)),
-            keccak256(_pad64(BytesLib.slice(_signature, 64, SIGNATURE_LENGTH.sub(64))))
+        bytes32 pubkeyRoot = sha256(_pad64(_pubkey));
+        bytes32 signatureRoot = sha256(abi.encodePacked(
+            sha256(BytesLib.slice(_signature, 0, 64)),
+            sha256(_pad64(BytesLib.slice(_signature, 64, SIGNATURE_LENGTH.sub(64))))
         ));
 
-        bytes32 depositDataRoot = keccak256(abi.encodePacked(
-            keccak256(abi.encodePacked(pubkeyRoot, withdrawalCredentials)),
-            keccak256(abi.encodePacked(_toLittleEndian64(depositAmount), signatureRoot))
+        bytes32 depositDataRoot = sha256(abi.encodePacked(
+            sha256(abi.encodePacked(pubkeyRoot, withdrawalCredentials)),
+            sha256(abi.encodePacked(_toLittleEndian64(depositAmount), signatureRoot))
         ));
 
         uint256 targetBalance = address(this).balance.sub(value);
