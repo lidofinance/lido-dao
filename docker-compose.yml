@@ -166,6 +166,19 @@ services:
       --auto-register
       --server http://node2-1:5052
 
+  oracle:
+    image: depool-oracle:latest
+    container_name: oracle
+    environment:
+      - ETH1_NODE=http://node1:8545
+      - ETH2_NODE=http://node2-1:5052
+      - DEPOOL_CONTRACT=${DEPOOL_CONTRACT}
+      - ORACLE_CONTRACT=${ORACLE_CONTRACT}
+      - MANAGER_PRIV_KEY=${MANAGER_PRIV_KEY}
+      - DEPOOL_ABI_FILE=assets/IDePool.json
+      - ORACLE_ABI_FILE=assets/IDePoolOracle.json
+      - REPORT_INTVL_SLOTS=7200
+
 networks:
   eth2:
     driver: bridge

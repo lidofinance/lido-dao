@@ -287,6 +287,9 @@ fi
 
 docker-compose up -d node2-1
 sleep 3
+# depool oracle
+docker-compose up -d oracle
+
 #docker-compose up -d mock-validators
 docker-compose up -d validators
 
