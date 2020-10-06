@@ -60,7 +60,8 @@ contract DePoolTemplate is BaseTemplate {
         address[] _holders,
         uint256[] _stakes,
         uint64[3] _votingSettings,
-        address _ETH2ValidatorRegistrationContract
+        address _ETH2ValidatorRegistrationContract,
+        uint256 _depositIterationLimit
     )
         external
     {
@@ -71,7 +72,7 @@ contract DePoolTemplate is BaseTemplate {
         // setup apps
         token = _createToken(_tokenName, _tokenSymbol, TOKEN_DECIMALS);
         (dao, acl) = _createDAO();
-        _setupApps(_votingSettings, _ETH2ValidatorRegistrationContract);
+        _setupApps(_votingSettings, _ETH2ValidatorRegistrationContract, _depositIterationLimit);
 
         // oracle setPool
         _createPermissionForTemplate(acl, oracle, oracle.SET_POOL());
@@ -95,7 +96,8 @@ contract DePoolTemplate is BaseTemplate {
 
     function _setupApps(
         uint64[3] memory _votingSettings,
-        address _ETH2ValidatorRegistrationContract
+        address _ETH2ValidatorRegistrationContract,
+        uint256 _depositIterationLimit
     )
         internal
     {
@@ -114,7 +116,8 @@ contract DePoolTemplate is BaseTemplate {
         sps = StakingProvidersRegistry(_installNonDefaultApp(dao, REGISTRY_APP_ID, initializeData));
 
         initializeData = abi.encodeWithSelector(DePool(0).initialize.selector,
-                                                steth, _ETH2ValidatorRegistrationContract, oracle, sps);
+                                                steth, _ETH2ValidatorRegistrationContract,
+                                                oracle, sps, _depositIterationLimit);
         depool = DePool(_installNonDefaultApp(dao, DEPOOL_APP_ID, initializeData));
     }
 
@@ -155,6 +158,7 @@ contract DePoolTemplate is BaseTemplate {
         acl.createPermission(voting, depool, depool.MANAGE_FEE(), voting);
         acl.createPermission(voting, depool, depool.MANAGE_WITHDRAWAL_KEY(), voting);
         acl.createPermission(voting, depool, depool.SET_ORACLE(), voting);
+        acl.createPermission(voting, depool, depool.SET_DEPOSIT_ITERATION_LIMIT(), voting);
     }
 
     /// @dev reset temporary storage

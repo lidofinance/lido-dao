@@ -24,6 +24,7 @@ const defaultOwner = process.env.OWNER
 const defaultENSAddress = process.env.ENS || '0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1'
 const defaultApmRegistryAddress = process.env.APM || '0x1902a0410EFe699487Dd85F12321aD672bE4ada2' // depoolspm
 const defaultDepositContractAddress = process.env.DEPOSIT_CONTRACT || '0x5f4e510503d83bd1a5436bdae2923489da0be454'
+const defaultDepositIterationLimit = process.env.DEPOSIT_ITERATION_LIMIT || '10'
 
 const _getRegistered = async (ens, hash) => {
   const owner = await ens.owner(hash)
@@ -39,6 +40,7 @@ module.exports = async (
     owner = defaultOwner,
     apmRegistryAddress = defaultApmRegistryAddress,
     depositContractAddress = defaultDepositContractAddress,
+    depositIterationLimit = defaultDepositIterationLimit,
     verbose = true
   } = {}
 ) => {
@@ -57,6 +59,7 @@ module.exports = async (
   if (!ensAddress) errorOut('Missing ENS address. Please specify one using ENS env var')
   if (!apmRegistryAddress) errorOut('Missing APM Registry address. Please specify one using APM env var')
   if (!depositContractAddress) errorOut('Missing Deposit Contract address. Please specify one using DAO_FACTORY env var')
+  if (!depositIterationLimit) errorOut('Missing Deposit iteration limit. Please specify one using DEPOSIT_ITERATION_LIMIT env var')
 
   const [holder1, holder2, holder3, holder4, holder5] = await getAccounts(web3)
   if (!owner) {
@@ -115,6 +118,7 @@ module.exports = async (
       STAKES,
       VOTING_SETTINGS,
       depositContractAddress,
+      depositIterationLimit,
       {
         from: owner
       }
