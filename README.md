@@ -1,4 +1,45 @@
-# DePool DAO smart contracts
+# DePool Ethereum Liquid Staking Protocol
+
+The DePool Ethereum Liquid Staking Protocol, built on Ethereum 2.0's Beacon chain, allows their users to earn staking rewards on Beacon chain without locking Ether or maintaining staking infrastructure. 
+
+Users can deposit Ether to DePool smart contract and receive stETH tokens in return. The smart contract then stakes tokens with DAO-picked staking providers. Users' deposited funds are controlled by the DAO, staking providers never have direct access to the users' assets. 
+
+Unlike staked ether, stETH token is free from the limitations associated with a lack of liquidity and can be transferred at any time. stETH token balance corresponds to the amount of Beacon chain Ether that the holder could withdraw if state transitions were enabled right now in the Ethereum 2.0 network.
+
+Before getting started with this repo, please read:
+* Whitepaper (TODO: add a link here)
+* Documentation (TODO: add a link here)
+
+## DePool DAO
+
+The DePool DAO is a Decentralized Autonomous Organization that manages the liquid staking protocol by deciding on key parameters (e.g., setting fees, assigning staking providers and oracles, etc.) through the voting power of governance token (DPG) holders.
+
+Also, the DAO will accumulate service fees and spend them on insurance, research, development, and protocol upgrades. Initial DAO members will take part in the threshold signature for Ethereum 2.0 by making BLS threshold signatures.
+
+The DePool DAO is an [Aragon organization](https://aragon.org/dao). Since Aragon provides a full end-to-end framework to build DAOs, we use its standard tools. Protocol smart contracts extend AragonApp base contract and can be managed by DAO.
+
+A full list of protocol levers that are controllable by Aragon DAO and you can found [here](docs/protocol-levers.md).
+
+## Contracts
+
+The protocol is implemented as a set of smart contracts that extend [AragonApp](https://github.com/aragon/aragonOS/blob/next/contracts/apps/AragonApp.sol) base contract.
+
+#### [StETH](contracts/StETH.sol)
+StETH is ERC20 token which represents staked ether. Tokens are minted upon deposit and burned when redeemed. StETH tokens are pegged 1:1 to the Ethers that are held by DePool. StETH token’s balances are updated when oracle reports change in total stake every day.
+
+#### [DePool](contracts/DePool.sol)
+DePool is a the core contract which acts as a liquid staking pool. The contract is responsible for Ether deposits and withdrawals, minting and burning liquid tokens, delegating funds to staking providers, applying fees, and accept updates from oracle contract. Staking providers' logic is extracted to the separate contract StakingProvidersRegistry.
+
+#### StakingProvidersRegistry
+Staking Providers act as validators on Beacon chain for the benefit of the protocol. The DAO selects validators and adds their addresses to StakingProvidersRegistry contract. Authorized providers have to generate a set of keys for the validation and also provide them with the smart contract. As ether is received from users, it is distributed in chunks of 32 ethers between all active Staking Providers. The contract contains a list of validators, their keys, and the logic for distributing rewards between them. The DAO can deactivate misbehaving validators.
+
+#### [DePoolOracle](contracts/oracle/DePoolOracle.sol)
+DePoolOracle is a contract where oracles send addresses' balances controlled by the DAO on the ETH 2.0 side. The balances can go up because of reward accumulation and can go down because of slashing. Oracles are assigned by DAO.
+
+#### CStETH
+It's an ERC20 token that represents the account's share of the total supply of StETH tokens. CStETH token's balance only changes on transfers, unlike StETH that is also changed when oracles report staking rewards, penalties, and slashings. It's a "power user" token that might be needed to work correctly with some DeFi protocols like Uniswap v2, cross-chain bridges, etc.
+
+The contract also works as a wrapper that accepts StETH tokens and mints CStETH in return. The reverse exchange works exactly the opposite, received CStETH token is burned, and StETH token is returned to the user.
 
 ## Development
 
