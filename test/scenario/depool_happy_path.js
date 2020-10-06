@@ -116,7 +116,7 @@ contract('DePool: happy path', (addresses) => {
       from: stakingProvider1.address
     })
 
-    // The was added
+    // The key was added
 
     const totalKeys = await spRegistry.getTotalSigningKeyCount(stakingProvider1.id, { from: nobody })
     assertBn(totalKeys, 1, 'total signing keys')
