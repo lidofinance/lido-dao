@@ -4,13 +4,26 @@ set -e +u
 set -o pipefail
 
 ROOT=${PWD}
-LOCAL_DATA_DIR="${PWD}${DATADIR}"
-LOCAL_WALLETS_DIR="${PWD}${WALLETS_DIR}"
-LOCAL_VALIDATORS_DIR="${PWD}${VALIDATORS_DIR}"
-LOCAL_MOCK_VALIDATORS_DIR="${PWD}${MOCK_VALIDATORS_DIR}"
-LOCAL_MOCK_SECRETS_DIR="${PWD}${MOCK_SECRETS_DIR}"
-LOCAL_TESTNET_DIR="${PWD}${TESTNET_DIR}"
-LOCAL_DEVCHAIN_DIR="${LOCAL_DATA_DIR}/devchain"
+ROOT=${PWD}
+DATA_DIR="${ROOT}/data"
+WALLETS_DIR="${DATA_DIR}/wallets"
+VALIDATORS_DIR="${DATA_DIR}/validators"
+TESTNET_DIR="${DATA_DIR}/testnet"
+DEVCHAIN_DIR="${DATA_DIR}/devchain"
+BEACONDATA1_DIR="${DATA_DIR}/beacondata-1"
+BEACONDATA2_DIR="${DATA_DIR}/beacondata-2"
+BEACONDATA3_DIR="${DATA_DIR}/beacondata-3"
+BEACONDATA4_DIR="${DATA_DIR}/beacondata-4"
+
+MOCK_VALIDATOR_KEYS_DIR="${DATA_DIR}/mock_validator_keys"
+MOCK_VALIDATORS_DIR="${DATA_DIR}/mock_validators"
+MOCK_SECRETS_DIR="${DATA_DIR}/mock_secrets"
+
+VALIDATOR_KEYS_DIR="${DATA_DIR}/validator_keys"
+VALIDATORS_DIR="${DATA_DIR}/validators"
+SECRETS_DIR="${DATA_DIR}/secrets"
+
+PASSWORD=123
 
 while test $# -gt 0; do
   case "$1" in
@@ -62,22 +75,23 @@ done
 if [[ $RESET ]]; then
   echo "Cleanup"
   docker-compose down -v --remove-orphans
-  rm -rf $LOCAL_DATA_DIR
-  mkdir -p $LOCAL_DATA_DIR
+  rm -rf $DATA_DIR
+  mkdir -p $DATA_DIR
   if [[ $SNAPSHOT ]]; then
     echo "Unzip snapshot"
-    unzip -o -q -d $LOCAL_DATA_DIR ./devchain.zip
-    unzip -o -q -d $LOCAL_DATA_DIR ./ipfs.zip
+    unzip -o -q -d $DATA_DIR ./mock_data/devchain.zip
+    unzip -o -q -d $DATA_DIR ./mock_data/ipfs.zip
+    unzip -o -q -d $DATA_DIR ./mock_data/mock_validators.zip
   fi
   ETH2_RESET=true
   DAO_DEPLOY=true
 fi
 
-if [ ! -d $LOCAL_DEVCHAIN_DIR ]; then
+if [ ! -d $DEVCHAIN_DIR ]; then
   DAO_DEPLOY=true
 fi
 
-if [ ! -d $LOCAL_TESTNET_DIR ]; then
+if [ ! -d $TESTNET_DIR ]; then
   ETH2_RESET=true
 fi
 
@@ -162,114 +176,62 @@ fi
 echo "Starting Aragon web UI"
 docker-compose up -d aragon
 
-if [[ $ETH1_ONLY ]]; then
-  exit 0
-fi
-
 if [ $ETH2_RESET ]; then
-  rm -rf $LOCAL_TESTNET_DIR
+  if [ ! $RESET ]; then
+    docker-compose rm -s -v -f node2-1
+    docker-compose rm -s -v -f mock-validators
+    docker-compose rm -s -v -f validators
+  fi
+
+  rm -rf $TESTNET_DIR
+  rm -rf $BEACONDATA1_DIR
+  rm -rf $BEACONDATA2_DIR
+  rm -rf $BEACONDATA3_DIR
+  rm -rf $BEACONDATA4_DIR
+
   docker-compose run --rm --no-deps node2-1 lcli \
     --spec "$SPEC" \
-    new-testnet \
+    new-testnet --force \
     --deposit-contract-address "$DEPOSIT" \
     --deposit-contract-deploy-block "$BLOCK" \
-    --testnet-dir "$TESTNET_DIR" \
-    --force \
-    --min-genesis-active-validator-count "$VALIDATOR_COUNT" \
+    --testnet-dir "/data/testnet" \
+    --min-genesis-active-validator-count "$MOCK_VALIDATOR_COUNT" \
     --eth1-follow-distance "$ETH1_FOLLOW_DISTANCE" \
     --genesis-delay "$GENESIS_DELAY" \
     --genesis-fork-version "$FORK_VERSION"
 
-  # overwrite some params in config
-  #cp -f ./config.yaml $LOCAL_TESTNET_DIR
-
   if [ $SPEC = "minimal" ]; then
     # reduce slot time generation
-    sed -i 's/SECONDS_PER_SLOT: 6/SECONDS_PER_SLOT: 1/' $LOCAL_TESTNET_DIR/config.yaml
+    sed -i 's/SECONDS_PER_SLOT: 6/SECONDS_PER_SLOT: 1/' $TESTNET_DIR/config.yaml
     # set according eth1 block time generation, see docker-compose.yml
-    sed -i 's/SECONDS_PER_ETH1_BLOCK: 14/SECONDS_PER_ETH1_BLOCK: 2/' $LOCAL_TESTNET_DIR/config.yaml
+    sed -i 's/SECONDS_PER_ETH1_BLOCK: 14/SECONDS_PER_ETH1_BLOCK: 5/' $TESTNET_DIR/config.yaml
   fi
 
-  echo "Specification generated at $LOCAL_TESTNET_DIR."
+  echo "Specification generated at $TESTNET_DIR."
 
-#  echo "Generating $MOCK_VALIDATOR_COUNT mock validators concurrently... (this may take a while)"
-#  rm -rf $LOCAL_MOCK_VALIDATORS_DIR
-#  rm -rf $LOCAL_MOCK_SECRETS_DIR
-#  docker-compose run --rm --no-deps node2-1 lcli \
-#    --spec "$SPEC" \
-#    insecure-validators \
-#    --count $MOCK_VALIDATOR_COUNT \
-#    --validators-dir $MOCK_VALIDATORS_DIR \
-#    --secrets-dir $MOCK_SECRETS_DIR
-#
-#  echo Validators generated at $MOCK_VALIDATORS_DIR with keystore passwords at $MOCK_SECRETS_DIR.
-#
-#  echo "Building genesis state... (this might take a while)"
-#  docker-compose run --rm --no-deps node2-1  lcli \
-#    --spec "$SPEC" \
-#    interop-genesis \
-#    --testnet-dir $TESTNET_DIR \
-#    --genesis-fork-version $FORK_VERSION \
-#    $MOCK_VALIDATOR_COUNT
-#  #
-#  echo "Created genesis state in $TESTNET_DIR"
+  if [ ! -d "$MOCK_VALIDATORS_DIR" ]; then
+    echo "Generating $MOCK_VALIDATOR_COUNT mock validators concurrently... (this may take a while)"
+    ./deposit.sh --num_validators=$MOCK_VALIDATOR_COUNT --password=$PASSWORD --chain=medalla --mnemonic="$MNEMONIC"
+    mv $VALIDATOR_KEYS_DIR $MOCK_VALIDATOR_KEYS_DIR
 
+    echo "Importing validators keystore"
+    echo $PASSWORD | docker-compose run --rm --no-deps node2-1 lighthouse \
+      --spec "$SPEC" --debug-level "$DEBUG_LEVEL" \
+      account validator import --reuse-password --stdin-inputs \
+      --datadir "/data" \
+      --directory "/data/mock_validator_keys" \
+      --validator-dir "/data/mock_validators" \
+      --testnet-dir "/data/testnet"
 
-  echo "Generating $VALIDATOR_COUNT genesis validators concurrently... (this may take a while)"
-  if [ ! -d "$LOCAL_WALLETS_DIR" ]; then
-    docker-compose run --rm --no-deps node2-1 lighthouse \
-      --spec "$SPEC" \
-      --debug-level "$DEBUG_LEVEL" \
-      account \
-      wallet \
-      --base-dir "$WALLETS_DIR" \
-      create \
-      --datadir "$DATADIR" \
-      --name "$WALLET_NAME" \
-      --password-file "$WALLET_PASSFILE" \
-      --mnemonic-output-path "$WALLET_MNEMONIC" \
-      --testnet-dir "$TESTNET_DIR"
-  else
-    echo "Wallet directory already exists. Skip accounts creating and deposit"
+    echo "Making deposits for $MOCK_VALIDATOR_COUNT genesis validators... (this may take a while)"
+    node ./scripts/mock_deposit.js $MOCK_VALIDATOR_KEYS_DIR
   fi
-
-  # will skip extra accs creation if already some exists
-  docker-compose run --rm --no-deps node2-1 lighthouse \
-    --spec "$SPEC" \
-    --debug-level "$DEBUG_LEVEL" \
-    account \
-    validator \
-    --base-dir "$WALLETS_DIR" \
-    create \
-    --secrets-dir "$SECRETS_DIR" \
-    --validator-dir "$VALIDATORS_DIR" \
-    --wallet-name "$WALLET_NAME" \
-    --wallet-password "$WALLET_PASSFILE" \
-    --at-most "$VALIDATOR_COUNT" \
-    --testnet-dir "$TESTNET_DIR"
-
-
-  echo "Making deposits for $VALIDATOR_COUNT genesis validators... (this may take a while)"
-  for D in $(find "$LOCAL_VALIDATORS_DIR" -type d -mindepth 1 -maxdepth 1); do
-    R=$(curl -s -L -X POST http://localhost:8545 \
-      --data "{\"jsonrpc\":\"2.0\",\"method\":\"eth_sendTransaction\",\"params\":[{
-      \"from\": \"$ADMIN\",
-      \"to\": \"$DEPOSIT\",
-      \"gas\": \"0x1ac778\",
-      \"gasPrice\": \"0x9184e72a000\",
-      \"value\": \"0x1bc16d674ec800000\",
-      \"data\": \"$(cat $D/eth1-deposit-data.rlp)\"
-      }],\"id\":1}" | jq -r '.result')
-    # R=$(node cmd-deposit.js "$DEPOSIT" "$(cat $D/eth1-deposit-data.rlp)" | jq -r '.hash')
-    echo "Deposit tx send, hash: $R"
-    sleep 3
-  done
 
   echo "Generating genesis"
   docker-compose run --rm --no-deps node2-1 lcli \
     --spec "$SPEC" \
     eth1-genesis \
-    --testnet-dir "$TESTNET_DIR" \
+    --testnet-dir "/data/testnet" \
     --eth1-endpoint http://node1:8545
 
   NOW=$(date +%s)
@@ -277,8 +239,23 @@ if [ $ETH2_RESET ]; then
   docker-compose run --rm --no-deps node2-1 lcli \
     --spec "$SPEC" \
     change-genesis-time \
-    $TESTNET_DIR/genesis.ssz \
+    /data/testnet/genesis.ssz \
     $NOW
+fi
+
+if [ ! -d "$VALIDATORS_DIR" ]; then
+  #   unzip -o -q -d $DATA_DIR ./validators.zip
+  # TODO dkg
+  ./deposit.sh --num_validators=$VALIDATOR_COUNT --password=$PASSWORD --chain=medalla --mnemonic="$VALIDATOR_MNEMONIC" --withdrawal_pk=$WITHDRAWAL_PK
+
+  echo "Importing validators keystore"
+  echo $PASSWORD | docker-compose run --rm --no-deps node2-1 lighthouse \
+    --spec "$SPEC" --debug-level "$DEBUG_LEVEL" \
+    account validator import --reuse-password --stdin-inputs \
+    --datadir "/data" \
+    --directory "/data/validator_keys" \
+    --validator-dir "/data/validators" \
+    --testnet-dir "/data/testnet"
 fi
 
 if [[ $ETH1_ONLY ]]; then
@@ -287,13 +264,15 @@ fi
 
 docker-compose up -d node2-1
 sleep 3
-#docker-compose up -d mock-validators
+docker-compose up -d node2-2
+sleep 3
+docker-compose up -d mock-validators
 docker-compose up -d validators
 
 if [[ $NODES ]]; then
   echo "Start extra nodes"
   sleep 3
-  docker-compose up -d node2-2
-  sleep 3
   docker-compose up -d node2-3
+  sleep 3
+  docker-compose up -d node2-4
 fi
