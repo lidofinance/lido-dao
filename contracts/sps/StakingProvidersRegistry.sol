@@ -224,9 +224,8 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
         }
     }
 
-
     /**
-      * @notice Add `_quantity` validator signing keys to the set of usable keys. Concatenated keys are: `_pubkeys`. Can be done by the DAO or by staking provider in question by using the designated rewards address.
+      * @notice Add `_quantity` validator signing keys to the set of usable keys. Concatenated keys are: `_pubkeys`. Can be done by the DAO in question by using the designated rewards address.
       * @dev Along with each key the DAO has to provide a signatures for the
       *      (pubkey, withdrawal_credentials, 32000000000) message.
       *      Given that information, the contract'll be able to call
@@ -237,55 +236,49 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
       * @param _signatures Several concatenated signatures for (pubkey, withdrawal_credentials, 32000000000) messages
       */
     function addSigningKeys(uint256 _SP_id, uint256 _quantity, bytes _pubkeys, bytes _signatures) external
-        SPExists(_SP_id)
+        authP(MANAGE_SIGNING_KEYS, arr(_SP_id))
     {
-        require(msg.sender == sps[_SP_id].rewardAddress
-                || canPerform(msg.sender, MANAGE_SIGNING_KEYS, arr(_SP_id)), "APP_AUTH_FAILED");
-
-        require(_quantity != 0, "NO_KEYS");
-        require(_pubkeys.length == _quantity.mul(PUBKEY_LENGTH), "INVALID_LENGTH");
-        require(_signatures.length == _quantity.mul(SIGNATURE_LENGTH), "INVALID_LENGTH");
-
-        for (uint256 i = 0; i < _quantity; ++i) {
-            bytes memory key = BytesLib.slice(_pubkeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
-            require(!_isEmptySigningKey(key), "EMPTY_KEY");
-            bytes memory sig = BytesLib.slice(_signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
-
-            _storeSigningKey(_SP_id, sps[_SP_id].totalSigningKeys + i, key, sig);
-            emit SigningKeyAdded(_SP_id, key);
-        }
-
-        sps[_SP_id].totalSigningKeys = sps[_SP_id].totalSigningKeys.add(to64(_quantity));
+        _addSigningKeys(_SP_id, _quantity, _pubkeys, _signatures);
     }
 
     /**
-      * @notice Removes a validator signing key #`_index` from the set of usable keys
+      * @notice Add `_quantity` validator signing keys to the set of usable keys. Concatenated keys are: `_pubkeys`. Can be done by staking provider in question by using the designated rewards address.
+      * @dev Along with each key the DAO has to provide a signatures for the
+      *      (pubkey, withdrawal_credentials, 32000000000) message.
+      *      Given that information, the contract'll be able to call
+      *      validator_registration.deposit on-chain.
+      * @param _SP_id Staking provider id
+      * @param _quantity Number of signing keys provided
+      * @param _pubkeys Several concatenated validator signing keys
+      * @param _signatures Several concatenated signatures for (pubkey, withdrawal_credentials, 32000000000) messages
+      */
+    function addSigningKeysSP(uint256 _SP_id, uint256 _quantity, bytes _pubkeys, bytes _signatures) external
+    {
+        require(msg.sender == sps[_SP_id].rewardAddress);
+        _addSigningKeys(_SP_id, _quantity, _pubkeys, _signatures);
+    }
+
+    /**
+      * @notice Removes a validator signing key #`_index` from the set of usable keys. Executed on behalf of DAO.
       * @param _SP_id Staking provider id
       * @param _index Index of the key, starting with 0
       */
     function removeSigningKey(uint256 _SP_id, uint256 _index) external
-        SPExists(_SP_id)
+        authP(MANAGE_SIGNING_KEYS, arr(_SP_id))
     {
-        require(msg.sender == sps[_SP_id].rewardAddress
-                || canPerform(msg.sender, MANAGE_SIGNING_KEYS, arr(_SP_id)), "APP_AUTH_FAILED");
-
-        require(_index < sps[_SP_id].totalSigningKeys, "KEY_NOT_FOUND");
-        require(_index >= sps[_SP_id].usedSigningKeys, "KEY_WAS_USED");
-
-        (bytes memory removedKey, ) = _loadSigningKey(_SP_id, _index);
-
-        uint256 lastIndex = sps[_SP_id].totalSigningKeys.sub(1);
-        if (_index < lastIndex) {
-            (bytes memory key, bytes memory signature) = _loadSigningKey(_SP_id, lastIndex);
-            _storeSigningKey(_SP_id, _index, key, signature);
-        }
-
-        _deleteSigningKey(_SP_id, lastIndex);
-        sps[_SP_id].totalSigningKeys = sps[_SP_id].totalSigningKeys.sub(1);
-
-        emit SigningKeyRemoved(_SP_id, removedKey);
+        _removeSigningKey(_SP_id, _index);
     }
 
+    /**
+      * @notice Removes a validator signing key #`_index` from the set of usable keys. Executed on behalf of Staking Provider.
+      * @param _SP_id Staking provider id
+      * @param _index Index of the key, starting with 0
+      */
+    function removeSigningKeySP(uint256 _SP_id, uint256 _index) external
+    {
+        require(msg.sender == sps[_SP_id].rewardAddress);
+        _removeSigningKey(_SP_id, _index);
+    }
 
     /**
       * @notice Distributes rewards among staking providers.
@@ -444,6 +437,45 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
             }
             offset++;
         }
+    }
+
+    function _addSigningKeys(uint256 _SP_id, uint256 _quantity, bytes _pubkeys, bytes _signatures) internal
+        SPExists(_SP_id)
+    {
+        require(_quantity != 0, "NO_KEYS");
+        require(_pubkeys.length == _quantity.mul(PUBKEY_LENGTH), "INVALID_LENGTH");
+        require(_signatures.length == _quantity.mul(SIGNATURE_LENGTH), "INVALID_LENGTH");
+
+        for (uint256 i = 0; i < _quantity; ++i) {
+            bytes memory key = BytesLib.slice(_pubkeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
+            require(!_isEmptySigningKey(key), "EMPTY_KEY");
+            bytes memory sig = BytesLib.slice(_signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
+
+            _storeSigningKey(_SP_id, sps[_SP_id].totalSigningKeys + i, key, sig);
+            emit SigningKeyAdded(_SP_id, key);
+        }
+
+        sps[_SP_id].totalSigningKeys = sps[_SP_id].totalSigningKeys.add(to64(_quantity));
+    }
+
+    function _removeSigningKey(uint256 _SP_id, uint256 _index) internal
+        SPExists(_SP_id)
+    {
+        require(_index < sps[_SP_id].totalSigningKeys, "KEY_NOT_FOUND");
+        require(_index >= sps[_SP_id].usedSigningKeys, "KEY_WAS_USED");
+
+        (bytes memory removedKey, ) = _loadSigningKey(_SP_id, _index);
+
+        uint256 lastIndex = sps[_SP_id].totalSigningKeys.sub(1);
+        if (_index < lastIndex) {
+            (bytes memory key, bytes memory signature) = _loadSigningKey(_SP_id, lastIndex);
+            _storeSigningKey(_SP_id, _index, key, signature);
+        }
+
+        _deleteSigningKey(_SP_id, lastIndex);
+        sps[_SP_id].totalSigningKeys = sps[_SP_id].totalSigningKeys.sub(1);
+
+        emit SigningKeyRemoved(_SP_id, removedKey);
     }
 
     function _deleteSigningKey(uint256 _SP_id, uint256 _keyIndex) internal {
