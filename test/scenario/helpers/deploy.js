@@ -11,7 +11,7 @@ module.exports = {
   deployDaoAndPool
 }
 
-async function deployDaoAndPool(appManager, voting) {
+async function deployDaoAndPool(appManager, voting, depositIterationLimit = 10) {
   // Deploy the DAO, oracle and validator registration mocks, and base contracts for
   // StETH (the token), DePool (the pool) and StakingProvidersRegistry (the SP registry)
 
@@ -48,6 +48,7 @@ async function deployDaoAndPool(appManager, voting) {
     POOL_PAUSE_ROLE,
     POOL_MANAGE_FEE,
     POOL_MANAGE_WITHDRAWAL_KEY,
+    POOL_SET_DEPOSIT_ITERATION_LIMIT,
     SP_REGISTRY_SET_POOL,
     SP_REGISTRY_MANAGE_SIGNING_KEYS,
     SP_REGISTRY_ADD_STAKING_PROVIDER_ROLE,
@@ -62,6 +63,7 @@ async function deployDaoAndPool(appManager, voting) {
     pool.PAUSE_ROLE(),
     pool.MANAGE_FEE(),
     pool.MANAGE_WITHDRAWAL_KEY(),
+    pool.SET_DEPOSIT_ITERATION_LIMIT(),
     spRegistry.SET_POOL(),
     spRegistry.MANAGE_SIGNING_KEYS(),
     spRegistry.ADD_STAKING_PROVIDER_ROLE(),
@@ -79,6 +81,7 @@ async function deployDaoAndPool(appManager, voting) {
     acl.createPermission(voting, pool.address, POOL_PAUSE_ROLE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, POOL_MANAGE_FEE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, POOL_MANAGE_WITHDRAWAL_KEY, appManager, { from: appManager }),
+    acl.createPermission(voting, pool.address, POOL_SET_DEPOSIT_ITERATION_LIMIT, appManager, { from: appManager }),
     // Allow voting to manage staking providers registry
     acl.createPermission(voting, spRegistry.address, SP_REGISTRY_SET_POOL, appManager, { from: appManager }),
     acl.createPermission(voting, spRegistry.address, SP_REGISTRY_MANAGE_SIGNING_KEYS, appManager, { from: appManager }),
@@ -93,7 +96,8 @@ async function deployDaoAndPool(appManager, voting) {
     acl.createPermission(pool.address, token.address, TOKEN_BURN_ROLE, appManager, { from: appManager })
   ])
 
-  await pool.initialize(token.address, validatorRegistrationMock.address, oracleMock.address, spRegistry.address)
+  await pool.initialize(token.address, validatorRegistrationMock.address, oracleMock.address, spRegistry.address, depositIterationLimit)
+
   await oracleMock.setPool(pool.address)
   await spRegistry.setPool(pool.address, { from: voting })
   await validatorRegistrationMock.reset()
