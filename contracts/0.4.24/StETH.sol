@@ -32,10 +32,8 @@ contract StETH is ISTETH, Pausable, AragonApp {
     // Shares represent how much of initial ether are worth all-time deposits of the given user.
     // In this implementation shares replace traditional balances
     mapping (address => uint256) private _shares;
-    mapping (address => uint256) private _balances; //ToDo remove
     // ...and totalShares replace traditional totalSupply counter.
     uint256 private _totalShares;
-    uint256 private _totalSupply; //ToDo remove
 
     mapping (address => mapping (address => uint256)) private _allowed;
 
@@ -75,7 +73,7 @@ contract StETH is ISTETH, Pausable, AragonApp {
     * @dev Total number of tokens in existence
     */
     function totalSupply() public view returns (uint256) {
-        return _totalSupply;
+        return _totalShares;
     }
 
     /**
@@ -84,7 +82,7 @@ contract StETH is ISTETH, Pausable, AragonApp {
     * @return An uint256 representing the amount owned by the passed address.
     */
     function balanceOf(address owner) public view returns (uint256) {
-        return _balances[owner];
+        return _shares[owner];
     }
 
     /**
@@ -210,11 +208,11 @@ contract StETH is ISTETH, Pausable, AragonApp {
     * @param value The amount to be transferred.
     */
     function _transfer(address from, address to, uint256 value) internal {
-        require(value <= _balances[from]);
+        require(value <= _shares[from]);
         require(to != address(0));
 
-        _balances[from] = _balances[from].sub(value);
-        _balances[to] = _balances[to].add(value);
+        _shares[from] = _shares[from].sub(value);
+        _shares[to] = _shares[to].add(value);
         emit Transfer(from, to, value);
     }
 
@@ -227,8 +225,8 @@ contract StETH is ISTETH, Pausable, AragonApp {
     */
     function _mint(address account, uint256 value) internal {
         require(account != 0);
-        _totalSupply = _totalSupply.add(value);
-        _balances[account] = _balances[account].add(value);
+        _totalShares = _totalShares.add(value);
+        _shares[account] = _shares[account].add(value);
         emit Transfer(address(0), account, value);
     }
 
@@ -240,10 +238,10 @@ contract StETH is ISTETH, Pausable, AragonApp {
     */
     function _burn(address account, uint256 value) internal {
         require(account != 0);
-        require(value <= _balances[account]);
+        require(value <= _shares[account]);
 
-        _totalSupply = _totalSupply.sub(value);
-        _balances[account] = _balances[account].sub(value);
+        _totalShares = _totalShares.sub(value);
+        _shares[account] = _shares[account].sub(value);
         emit Transfer(account, address(0), value);
     }
 
