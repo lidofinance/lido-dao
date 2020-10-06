@@ -186,14 +186,14 @@ contract('CstETH', function ([deployer, initialHolder, recipient, anotherAccount
                 expect(await this.steth.balanceOf(user1)).to.be.bignumber.equal('0');
                 expect(await this.csteth.balanceOf(user1)).to.be.bignumber.equal('100');
                 expect(await this.steth.balanceOf(user2)).to.be.bignumber.equal('0');
-                expect(await this.csteth.balanceOf(user2)).to.be.bignumber.equal('99');
+                expect(await this.csteth.balanceOf(user2)).to.be.bignumber.equal('100');
                 expect(await this.steth.balanceOf(this.csteth.address)).to.be.bignumber.equal('241');
               });
 
               it('ratio almost unchanged (error caused by rounding)', async function () {
                 // 199:251 ~ 0.82 ~ 150:181
-                expect(await this.csteth.getStETHByCstETH(199)).to.be.bignumber.equal('241');
-                expect(await this.csteth.getCstETHByStETH(241)).to.be.bignumber.equal('199');
+                expect(await this.csteth.getStETHByCstETH(200)).to.be.bignumber.equal('241');
+                expect(await this.csteth.getCstETHByStETH(241)).to.be.bignumber.equal('200');
               });
 
               describe('After unwrap', function () {
@@ -204,13 +204,13 @@ contract('CstETH', function ([deployer, initialHolder, recipient, anotherAccount
                   expect(await this.steth.balanceOf(user1)).to.be.bignumber.equal('12');
                   expect(await this.csteth.balanceOf(user1)).to.be.bignumber.equal('90');
                   expect(await this.steth.balanceOf(user2)).to.be.bignumber.equal('12');
-                  expect(await this.csteth.balanceOf(user2)).to.be.bignumber.equal('89');
+                  expect(await this.csteth.balanceOf(user2)).to.be.bignumber.equal('90');
                   expect(await this.steth.balanceOf(this.csteth.address)).to.be.bignumber.equal('217');
                 });
 
                 it('unwrap all: balances are correct', async function () {
                   await this.csteth.unwrap(100, { from: user1 });
-                  await this.csteth.unwrap(99, { from: user2 });
+                  await this.csteth.unwrap(100, { from: user2 });
 
                   expect(await this.steth.balanceOf(user1)).to.be.bignumber.equal('121');
                   expect(await this.csteth.balanceOf(user1)).to.be.bignumber.equal('0');

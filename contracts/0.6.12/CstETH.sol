@@ -35,7 +35,7 @@ contract CstETH is ERC20, ERC20Burnable {
         uint256 cstETHIssued = totalSupply();
         uint256 stETHAmount = (
             (stEthWrapped != 0) ?
-            _stETHAmount.mul(cstETHIssued).div(stEthWrapped) :
+            _stETHAmount.mul(cstETHIssued).mul(2).div(stEthWrapped).add(1).div(2) :
             _stETHAmount
         );
         return stETHAmount;
@@ -46,7 +46,7 @@ contract CstETH is ERC20, ERC20Burnable {
         uint256 cstETHIssued = totalSupply();
         uint256 stETHAmount = (
             (cstETHIssued != 0) ?
-            _cstETHAmount.mul(stEthWrapped).div(cstETHIssued) :
+            _cstETHAmount.mul(stEthWrapped).mul(2).div(cstETHIssued).add(1).div(2) :
             0
         );
         return stETHAmount;
