@@ -1,20 +1,6 @@
 import 'core-js/stable'
 import 'regenerator-runtime/runtime'
 import Aragon, { events } from '@aragon/api'
-import {
-  getFee,
-  getFeeDistribution,
-  getWithdrawalCredentials,
-  getBufferedEther,
-  getEther2Stat,
-  getInsuranceFund,
-  getOracle,
-  getSPs,
-  getToken,
-  getTotalControlledEther,
-  getTreasury,
-  getValidatorRegistrationContract,
-} from './api'
 
 const app = new Aragon()
 
@@ -24,8 +10,6 @@ app.store(
       ...state,
     }
 
-    console.log('reducer', event)
-
     try {
       switch (event) {
         case 'FeeSet':
@@ -33,7 +17,10 @@ app.store(
         case 'FeeDistributionSet':
           return { ...nextState, feeDistribution: await getFeeDistribution() }
         case 'WithdrawalCredentialsSet':
-          return { ...nextState, withdrawalCredentials: await getWithdrawalCredentials() }
+          return {
+            ...nextState,
+            withdrawalCredentials: await getWithdrawalCredentials(),
+          }
         case events.SYNC_STATUS_SYNCING:
           return { ...nextState, isSyncing: true }
         case events.SYNC_STATUS_SYNCED:
@@ -66,7 +53,7 @@ function initializeState() {
       bufferedEther: await getBufferedEther(),
       totalControlledEther: await getTotalControlledEther(),
       token: await getToken(),
-      // validatorRegistrationContract: await getValidatorRegistrationContract(),
+      validatorRegistrationContract: await getValidatorRegistrationContract(),
       oracle: await getOracle(),
       // SPs: await getSPs(),
       // treasury: await getTreasury(),
@@ -74,4 +61,53 @@ function initializeState() {
       ether2Stat: await getEther2Stat(),
     }
   }
+}
+
+// API
+async function getFee() {
+  return await app.call('getFee').toPromise()
+}
+
+async function getFeeDistribution() {
+  return await app.call('getFeeDistribution').toPromise()
+}
+
+async function getWithdrawalCredentials() {
+  return await app.call('getWithdrawalCredentials').toPromise()
+}
+
+async function getBufferedEther() {
+  return await app.call('getBufferedEther').toPromise()
+}
+
+async function getTotalControlledEther() {
+  return await app.call('getTotalControlledEther').toPromise()
+}
+
+async function getToken() {
+  return await app.call('getToken').toPromise()
+}
+
+async function getValidatorRegistrationContract() {
+  return await app.call('getValidatorRegistrationContract').toPromise()
+}
+
+async function getOracle() {
+  return await app.call('getOracle').toPromise()
+}
+
+async function getSPs() {
+  return await app.call('getSPs').toPromise()
+}
+
+async function getTreasury() {
+  return await app.call('getTreasury').toPromise()
+}
+
+async function getInsuranceFund() {
+  return await app.call('getInsuranceFund').toPromise()
+}
+
+async function getEther2Stat() {
+  return await app.call('getEther2Stat').toPromise()
 }

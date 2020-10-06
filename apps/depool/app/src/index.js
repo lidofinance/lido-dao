@@ -6,7 +6,8 @@ import ReactDOM from 'react-dom'
 import { AragonApi } from '@aragon/api-react'
 import App from './App'
 
-const defaultValue = 'default'
+const defaultValue = ''
+
 const defaultState = {
   fee: defaultValue,
   feeDistribution: defaultValue,
