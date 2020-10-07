@@ -3,8 +3,9 @@ source ./.env
 set -e +u
 set -o pipefail
 
-LOCAL_DATA_DIR="${PWD}${DATADIR}"
+ROOT=${PWD}
+DATA_DIR="${ROOT}/data"
 
 echo "Cleanup"
 docker-compose down -v --remove-orphans
-rm -rf $LOCAL_DATA_DIR
+rm -rf $DATA_DIR

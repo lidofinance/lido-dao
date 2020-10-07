@@ -4,7 +4,6 @@ set -e +u
 set -o pipefail
 
 ROOT=${PWD}
-ROOT=${PWD}
 DATA_DIR="${ROOT}/data"
 WALLETS_DIR="${DATA_DIR}/wallets"
 VALIDATORS_DIR="${DATA_DIR}/validators"
