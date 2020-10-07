@@ -141,6 +141,9 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
         beforeEach( async () => {
           await dePool.setTotalControlledEther(tokens(0));
         });
+        it('getTotalShares', async () => {
+          assertBn(await stEth.getTotalShares(), tokens(0));
+        });
         it('getSharesByHolder', async () => {
           assertBn(await stEth.getSharesByHolder(nobody), tokens(0));
         });
@@ -160,6 +163,9 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
       context('with non-zero totalControlledEther', async () => {
         beforeEach( async () => {
           await dePool.setTotalControlledEther(tokens(1));
+        });
+        it('getTotalShares', async () => {
+          assertBn(await stEth.getTotalShares(), tokens(0));
         });
         it('getSharesByHolder', async () => {
           assertBn(await stEth.getSharesByHolder(nobody), tokens(0));
@@ -184,6 +190,9 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
           //ToDo processSubmission here to create amounts
           await dePool.setTotalControlledEther(tokens(0));
         });
+        it('getTotalShares', async () => {
+          assertBn(await stEth.getTotalShares(), tokens(0)); //ToDo subj to change
+        });
         it('getSharesByHolder', async () => {
           assertBn(await stEth.getSharesByHolder(nobody), tokens(0));
         });
@@ -203,6 +212,9 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
       context('with non-zero totalControlledEther', async () => {
         beforeEach( async () => {
           await dePool.setTotalControlledEther(tokens(1));
+        });
+        it('getTotalShares', async () => {
+          assertBn(await stEth.getTotalShares(), tokens(0)); //ToDo subj to change
         });
         it('getSharesByHolder', async () => {
           assertBn(await stEth.getSharesByHolder(nobody), tokens(0));
