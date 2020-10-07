@@ -32,7 +32,7 @@
   "overrides": [
     {
       "files": [
-        "./test{,-e2e}/{**/,}*.js",
+        "./test{,-e2e}/{**/,}*.js"
       ],
       "env": {
         "mocha": true

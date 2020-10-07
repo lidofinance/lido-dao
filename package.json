@@ -3,7 +3,10 @@
   "version": "0.0.1",
   "scripts": {
     "bootstrap": "lerna bootstrap --hoist",
-    "lint": "solium --dir ./contracts",
+    "lint": "npm run lint:sol && npm run lint:js",
+    "lint:sol": "solium --dir ./contracts",
+    "lint:js": "eslint test/",
+    "lint:js:fix": "eslint test/ --fix",
     "test": "npm run test:unit",
     "test:unit": "npm run compile:6 && buidler test --network buidlerevm",
     "test:gas": "npm run compile:6 && REPORT_GAS=true buidler test --network localhost",
