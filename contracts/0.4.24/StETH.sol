@@ -365,4 +365,11 @@ contract StETH is ISTETH, Pausable, AragonApp {
         }
         return _totalShares.mul(_pooledEthAmount).div(dePool.getTotalControlledEther());
     }
+
+    /**
+    * @dev Return the sum of the shares of all holders for better external visibility
+    */ 
+    function getTotalShares() public view returns (uint256) {
+        return _totalShares;
+    }
 }
