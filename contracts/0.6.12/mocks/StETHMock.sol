@@ -9,4 +9,8 @@ contract StETHMock is ERC20, ERC20Burnable {
     function mint(address recipient, uint256 amount) public {
         _mint(recipient, amount);
     }
+
+    function getSharesByHolder(address _holder) public view returns (uint256) {
+        return balanceOf(_holder);
+    }
 }

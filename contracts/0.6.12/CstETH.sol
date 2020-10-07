@@ -4,9 +4,10 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20Burnable.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "./IStETH.sol";
 
 /**
- * @title Token wrapper of stETH with static balances
+ * @title Token wrapper of stETH with static balances.
  * @dev It's an ERC20 token that represents the account's share of the total
  * supply of StETH tokens. CStETH token's balance only changes on transfers,
  * unlike StETH that is also changed when oracles report staking rewards,
@@ -20,14 +21,15 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
  */
 contract CstETH is ERC20, ERC20Burnable {
     using SafeERC20 for ERC20;
+    using SafeERC20 for IStETH;
     using SafeMath for uint256;
 
-    ERC20 public stETH;
+    IStETH public stETH;
 
     /**
      * @param _stETH address of stETH token to wrap
      */
-    constructor(ERC20 _stETH)
+    constructor(IStETH _stETH)
         public
         ERC20("Wrapped Liquid staked DePool Ether", "cstETH")
     {
@@ -76,7 +78,7 @@ contract CstETH is ERC20, ERC20Burnable {
      * @return Returns amount of cstETH with current ratio and given stETH amount
     */
     function getCstETHByStETH(uint256 _stETHAmount) public view returns (uint256) {
-        uint256 stEthWrapped = stETH.balanceOf(address(this));
+        uint256 stEthWrapped = _getShares();
         uint256 cstETHIssued = totalSupply();
         if (stEthWrapped == 0 || cstETHIssued == 0)
             return _stETHAmount;
@@ -91,10 +93,18 @@ contract CstETH is ERC20, ERC20Burnable {
      * @return Returns amount of stETH with current ratio and given cstETH amount
     */
     function getStETHByCstETH(uint256 _cstETHAmount) public view returns (uint256) {
-        uint256 stEthWrapped = stETH.balanceOf(address(this));
+        uint256 stEthWrapped = _getShares();
         uint256 cstETHIssued = totalSupply();
         if (stEthWrapped == 0 || cstETHIssued == 0)
             return 0;
         return _cstETHAmount.mul(stEthWrapped).div(cstETHIssued);
+    }
+
+    /**
+     * @dev Calls stETH to get shares of this contract.
+     * @return Returns amount of stETH with current ratio and given cstETH amount
+    */
+    function _getShares() internal view returns(uint256) {
+        return stETH.getSharesByHolder(address(this));
     }
 }
