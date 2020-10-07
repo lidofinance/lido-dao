@@ -78,12 +78,9 @@ contract CstETH is ERC20, ERC20Burnable {
     function getCstETHByStETH(uint256 _stETHAmount) public view returns (uint256) {
         uint256 stEthWrapped = stETH.balanceOf(address(this));
         uint256 cstETHIssued = totalSupply();
-        uint256 stETHAmount = (
-            (stEthWrapped != 0) ?
-            _stETHAmount.mul(cstETHIssued).div(stEthWrapped) :
-            _stETHAmount
-        );
-        return stETHAmount;
+        if (stEthWrapped == 0 || cstETHIssued == 0)
+            return _stETHAmount;
+        return _stETHAmount.mul(cstETHIssued).div(stEthWrapped);
     }
 
     /**
@@ -96,11 +93,8 @@ contract CstETH is ERC20, ERC20Burnable {
     function getStETHByCstETH(uint256 _cstETHAmount) public view returns (uint256) {
         uint256 stEthWrapped = stETH.balanceOf(address(this));
         uint256 cstETHIssued = totalSupply();
-        uint256 stETHAmount = (
-            (cstETHIssued != 0) ?
-            _cstETHAmount.mul(stEthWrapped).div(cstETHIssued) :
-            0
-        );
-        return stETHAmount;
+        if (stEthWrapped == 0 || cstETHIssued == 0)
+            return 0;
+        return _cstETHAmount.mul(stEthWrapped).div(cstETHIssued);
     }
 }
