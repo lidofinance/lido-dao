@@ -107,9 +107,29 @@ contract('CstETH', function ([deployer, initialHolder, recipient, anotherAccount
       expect(await this.csteth.balanceOf(user1)).to.be.bignumber.equal('0')
       expect(await this.steth.balanceOf(user2)).to.be.bignumber.equal('100')
       expect(await this.csteth.balanceOf(user2)).to.be.bignumber.equal('0')
+      expect(await this.steth.balanceOf(this.csteth.address)).to.be.bignumber.equal('0')
       expect(await this.csteth.getStETHByCstETH(1)).to.be.bignumber.equal('0')
       expect(await this.csteth.getCstETHByStETH(1)).to.be.bignumber.equal('1')
     })
+
+    describe('After wrong-way steth transfer', function () {
+      beforeEach(async function () {
+        await this.steth.transfer(this.csteth.address, 50, { from: user1 })
+      })
+
+      it('balances are correct', async function () {
+        expect(await this.steth.balanceOf(user1)).to.be.bignumber.equal('50')
+        expect(await this.csteth.balanceOf(user1)).to.be.bignumber.equal('0')
+        expect(await this.steth.balanceOf(user2)).to.be.bignumber.equal('100')
+        expect(await this.csteth.balanceOf(user2)).to.be.bignumber.equal('0')
+        expect(await this.steth.balanceOf(this.csteth.address)).to.be.bignumber.equal('50')
+      });
+
+      it('ratio unchanged', async function () {
+        expect(await this.csteth.getStETHByCstETH(1)).to.be.bignumber.equal('0')
+        expect(await this.csteth.getCstETHByStETH(1)).to.be.bignumber.equal('1')
+      })
+    });
 
     describe('After first wrap', function () {
       beforeEach(async function () {
