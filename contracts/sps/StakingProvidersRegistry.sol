@@ -254,7 +254,7 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
       */
     function addSigningKeysSP(uint256 _SP_id, uint256 _quantity, bytes _pubkeys, bytes _signatures) external
     {
-        require(msg.sender == sps[_SP_id].rewardAddress);
+        require(msg.sender == sps[_SP_id].rewardAddress, "APP_AUTH_FAILED");
         _addSigningKeys(_SP_id, _quantity, _pubkeys, _signatures);
     }
 
@@ -276,7 +276,7 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
       */
     function removeSigningKeySP(uint256 _SP_id, uint256 _index) external
     {
-        require(msg.sender == sps[_SP_id].rewardAddress);
+        require(msg.sender == sps[_SP_id].rewardAddress, "APP_AUTH_FAILED");
         _removeSigningKey(_SP_id, _index);
     }
 
