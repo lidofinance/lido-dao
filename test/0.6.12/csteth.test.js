@@ -14,6 +14,13 @@ contract('CstETH', function ([deployer, initialHolder, recipient, anotherAccount
     this.csteth = await CstETH.new(this.steth.address, { from: deployer })
   })
 
+  it('getShares works', async function () {
+    expect(await this.csteth.getShares()).to.be.bignumber.equal('0')
+
+    await this.steth.mint(this.csteth.address, new BN(100), { from: deployer })
+    expect(await this.csteth.getShares()).to.be.bignumber.equal('100')
+  });
+
   describe('Wrapping / Unwrapping', function () {
     const [user1, user2] = otherAccounts
 
