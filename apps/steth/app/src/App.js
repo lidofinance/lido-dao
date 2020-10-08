@@ -9,6 +9,7 @@ import {
   Button,
   useTheme,
 } from '@aragon/ui'
+import ListItem from './components/ListItem'
 
 export default function App() {
   const { api, appState, currentApp, guiStyle } = useAragonApi()
@@ -61,43 +62,29 @@ export default function App() {
             [
               'Status',
               isStopped ? (
-                <strong style={{ color: 'red' }}>INACTIVE</strong>
+                <strong
+                  css={`
+                    color: ${theme.negative};
+                  `}
+                >
+                  INACTIVE
+                </strong>
               ) : (
-                <strong style={{ color: 'green' }}>LIVE</strong>
+                <strong
+                  css={`
+                    color: ${theme.positive};
+                  `}
+                >
+                  LIVE
+                </strong>
               ),
             ],
           ].map(([label, content], index) => (
-            <li
-              key={index}
-              css={`
-                display: flex;
-                justify-content: space-between;
-                list-style: none;
-                color: ${theme.surfaceContent};
-
-                & + & {
-                  margin-top: ${2 * GU}px;
-                }
-
-                > span:nth-child(1) {
-                  color: ${theme.surfaceContentSecondary};
-                }
-                > span:nth-child(2) {
-                  opacity: 0;
-                  width: 10px;
-                }
-                > span:nth-child(3) {
-                  flex-shrink: 1;
-                }
-                > strong {
-                  text-transform: uppercase;
-                }
-              `}
-            >
+            <ListItem key={index}>
               <span>{label}</span>
               <span>:</span>
               {content}
-            </li>
+            </ListItem>
           ))}
         </ul>
       </Box>
