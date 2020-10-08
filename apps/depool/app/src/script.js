@@ -12,10 +12,15 @@ app.store(
 
     try {
       switch (event) {
-        case 'Increment':
-          return { ...nextState, count: await getValue() }
-        case 'Decrement':
-          return { ...nextState, count: await getValue() }
+        case 'FeeSet':
+          return { ...nextState, fee: await getFee() }
+        case 'FeeDistributionSet':
+          return { ...nextState, feeDistribution: await getFeeDistribution() }
+        case 'WithdrawalCredentialsSet':
+          return {
+            ...nextState,
+            withdrawalCredentials: await getWithdrawalCredentials(),
+          }
         case events.SYNC_STATUS_SYNCING:
           return { ...nextState, isSyncing: true }
         case events.SYNC_STATUS_SYNCED:
@@ -39,14 +44,70 @@ app.store(
  ***********************/
 
 function initializeState() {
-  return async cachedState => {
+  return async (cachedState) => {
     return {
       ...cachedState,
-      count: await getValue(),
+      fee: await getFee(),
+      // feeDistribution: await getFeeDistribution(),
+      withdrawalCredentials: await getWithdrawalCredentials(),
+      bufferedEther: await getBufferedEther(),
+      totalControlledEther: await getTotalControlledEther(),
+      token: await getToken(),
+      validatorRegistrationContract: await getValidatorRegistrationContract(),
+      oracle: await getOracle(),
+      // SPs: await getSPs(),
+      // treasury: await getTreasury(),
+      // insuranceFund: await getInsuranceFund(),
+      ether2Stat: await getEther2Stat(),
     }
   }
 }
 
-async function getValue() {
-  return parseInt(await app.call('value').toPromise(), 10)
+// API
+async function getFee() {
+  return await app.call('getFee').toPromise()
+}
+
+async function getFeeDistribution() {
+  return await app.call('getFeeDistribution').toPromise()
+}
+
+async function getWithdrawalCredentials() {
+  return await app.call('getWithdrawalCredentials').toPromise()
+}
+
+async function getBufferedEther() {
+  return await app.call('getBufferedEther').toPromise()
+}
+
+async function getTotalControlledEther() {
+  return await app.call('getTotalControlledEther').toPromise()
+}
+
+async function getToken() {
+  return await app.call('getToken').toPromise()
+}
+
+async function getValidatorRegistrationContract() {
+  return await app.call('getValidatorRegistrationContract').toPromise()
+}
+
+async function getOracle() {
+  return await app.call('getOracle').toPromise()
+}
+
+async function getSPs() {
+  return await app.call('getSPs').toPromise()
+}
+
+async function getTreasury() {
+  return await app.call('getTreasury').toPromise()
+}
+
+async function getInsuranceFund() {
+  return await app.call('getInsuranceFund').toPromise()
+}
+
+async function getEther2Stat() {
+  return await app.call('getEther2Stat').toPromise()
 }
