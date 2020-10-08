@@ -73,7 +73,7 @@ contract StETH is ISTETH, Pausable, AragonApp {
     * @dev Total number of tokens in existence
     */
     function totalSupply() public view returns (uint256) {
-        return _totalShares;
+        return dePool.getTotalControlledEther();
     }
 
     /**
@@ -82,7 +82,7 @@ contract StETH is ISTETH, Pausable, AragonApp {
     * @return An uint256 representing the amount owned by the passed address.
     */
     function balanceOf(address owner) public view returns (uint256) {
-        return _shares[owner];
+        return getPooledEthByShares(_shares[owner]);
     }
 
     /**
@@ -225,8 +225,19 @@ contract StETH is ISTETH, Pausable, AragonApp {
     */
     function _mint(address account, uint256 value) internal {
         require(account != 0);
-        _totalShares = _totalShares.add(value);
-        _shares[account] = _shares[account].add(value);
+        require(value != 0);
+        uint256 sharesDifference;
+        uint256 totalControlledEthBefore = dePool.getTotalControlledEther();
+        if ( totalControlledEthBefore == 0) {
+            sharesDifference = value;
+        } else {
+            uint256 controlledEthAfter = totalControlledEthBefore.add(value);
+            uint256 totalSharesBefore = _totalShares;
+            uint256 totalSharesAfter = getSharesByPooledEth(controlledEthAfter);
+            sharesDifference = totalSharesAfter.sub(totalSharesBefore);
+        }
+        _totalShares = _totalShares.add(sharesDifference);
+        _shares[account] = _shares[account].add(sharesDifference);
         emit Transfer(address(0), account, value);
     }
 
@@ -238,10 +249,10 @@ contract StETH is ISTETH, Pausable, AragonApp {
     */
     function _burn(address account, uint256 value) internal {
         require(account != 0);
-        require(value <= _shares[account]);
-
-        _totalShares = _totalShares.sub(value);
-        _shares[account] = _shares[account].sub(value);
+        require(value != 0);
+        uint256 sharesToBurn = getSharesByPooledEth(value);
+        _totalShares = _totalShares.sub(sharesToBurn);
+        _shares[account] = _shares[account].sub(sharesToBurn);
         emit Transfer(account, address(0), value);
     }
 
