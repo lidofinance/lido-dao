@@ -6,7 +6,7 @@
     "@aragon/api": "^2.0.0",
     "@aragon/api-react": "^2.0.0",
     "@aragon/ui": "^1.7.0",
-    "@openzeppelin/contracts": "^3.2.0",
+    "@openzeppelin/contracts": "3.1.0",
     "core-js": "^3.6.5",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
