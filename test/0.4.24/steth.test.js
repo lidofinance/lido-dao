@@ -50,6 +50,7 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
   context('with non-zero supply', async () => {
     beforeEach(async () => {
       await stEth.mint(user1, tokens(1000), { from: pool });
+      await dePool.setTotalControlledEther(tokens(1000));
     });
     it('ERC20 methods behave correctly', async () => {
       assertBn(await stEth.totalSupply({ from: nobody }), tokens(1000));
@@ -81,8 +82,9 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
       await stEth.transfer(user2, tokens(2), {from: user1});
   
       await stEth.burn(user1, tokens(2), {from: pool});
+      await dePool.setTotalControlledEther(tokens(998)); //done dy depool
       await stEth.burn(user2, tokens(1), {from: pool});
-  
+      await dePool.setTotalControlledEther(tokens(997)); //done dy depool
       assertBn(await stEth.totalSupply(), tokens(997));
       assertBn(await stEth.balanceOf(user1, {from: nobody}), tokens(996));
       assertBn(await stEth.balanceOf(user2, {from: nobody}), tokens(1));
@@ -95,15 +97,22 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
       await assertRevert(stEth.burn(user2, tokens(4), {from: pool}));
   
       await stEth.burn(user1, tokens(96), {from: pool});
+      // In real scenario DePool contract transfers the corresponding amount of
+      // ether, so totalControlledEther decreases automatically.
+      // In unit-test here we mock this behavior by manually setting
+      // expected totalControlledEther after burning tokens.
+      await dePool.setTotalControlledEther(tokens(901)); //done dy depool
       await stEth.burn(user2, tokens(1), {from: pool});
+      await dePool.setTotalControlledEther(tokens(900)); //done dy depool
   
-      assertBn(await stEth.totalSupply(), tokens(900));
       assertBn(await stEth.balanceOf(user1, {from: nobody}), tokens(900));
       assertBn(await stEth.balanceOf(user2, {from: nobody}), 0);
     });
     it('minting works', async () => {
       await stEth.mint(user1, tokens(12), {from: pool});
+      await dePool.setTotalControlledEther(tokens(1012)); //done dy depool
       await stEth.mint(user2, tokens(4), {from: pool});
+      await dePool.setTotalControlledEther(tokens(1016)); //done dy depool
       assertBn(await stEth.totalSupply(), tokens(1016));
       assertBn(await stEth.balanceOf(user1, {from: nobody}), tokens(1012));
       assertBn(await stEth.balanceOf(user2, {from: nobody}), tokens(4));
@@ -136,101 +145,57 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
   });
 
   context('share-related getters', async () => {
-    context('with zero supply', async () => {
-      context('with zero totalControlledEther', async () => {
-        beforeEach( async () => {
-          await dePool.setTotalControlledEther(tokens(0));
-        });
-        it('getTotalShares', async () => {
-          assertBn(await stEth.getTotalShares(), tokens(0));
-        });
-        it('getSharesByHolder', async () => {
-          assertBn(await stEth.getSharesByHolder(nobody), tokens(0));
-        });
-        it('getPooledEthByShares', async () => {
-          assertBn(await stEth.getPooledEthByShares(tokens(0)), tokens(0));
-          assertBn(await stEth.getPooledEthByShares(tokens(1)), tokens(0));
-        });
-        it('getPooledEthByHolder', async () => {
-          assertBn(await stEth.getPooledEthByHolder(nobody), tokens(0));
-        });
-        it('getSharesByPooledEth', async () => {
-          assertBn(await stEth.getSharesByPooledEth(tokens(1)), tokens(0));
-          assertBn(await stEth.getSharesByPooledEth(tokens(0)), tokens(0));
-          assertBn(await stEth.getSharesByPooledEth(tokens(1000)), tokens(0));
-        });
+    context('with zero totalControlledEther (supply)', async () => {
+      beforeEach( async () => {
+        await dePool.setTotalControlledEther(tokens(0));
       });
-      context('with non-zero totalControlledEther', async () => {
-        beforeEach( async () => {
-          await dePool.setTotalControlledEther(tokens(1));
-        });
-        it('getTotalShares', async () => {
-          assertBn(await stEth.getTotalShares(), tokens(0));
-        });
-        it('getSharesByHolder', async () => {
-          assertBn(await stEth.getSharesByHolder(nobody), tokens(0));
-        });
-        it('getPooledEthByShares', async () => {
-          assertBn(await stEth.getPooledEthByShares(tokens(0)), tokens(0));
-          assertBn(await stEth.getPooledEthByShares(tokens(1)), tokens(0));
-        });
-        it('getPooledEthByHolder', async () => {
-          assertBn(await stEth.getPooledEthByHolder(nobody), tokens(0));
-        });
-        it('getSharesByPooledEth', async () => {
-          assertBn(await stEth.getSharesByPooledEth(tokens(1)), tokens(0));
-          assertBn(await stEth.getSharesByPooledEth(tokens(0)), tokens(0));
-          assertBn(await stEth.getSharesByPooledEth(tokens(1000)), tokens(0));
-        });
+      it('getTotalSupply', async () => {
+        assertBn(await stEth.totalSupply({ from: nobody }), tokens(0));
+      });
+      it('getTotalShares', async () => {
+        assertBn(await stEth.getTotalShares(), tokens(0));
+      });
+      it('getSharesByHolder', async () => {
+        assertBn(await stEth.getSharesByHolder(nobody), tokens(0));
+      });
+      it('getPooledEthByShares', async () => {
+        assertBn(await stEth.getPooledEthByShares(tokens(0)), tokens(0));
+        assertBn(await stEth.getPooledEthByShares(tokens(1)), tokens(0));
+      });
+      it('getPooledEthByHolder', async () => {
+        assertBn(await stEth.getPooledEthByHolder(nobody), tokens(0));
+      });
+      it('getSharesByPooledEth', async () => {
+        assertBn(await stEth.getSharesByPooledEth(tokens(1)), tokens(0));
+        assertBn(await stEth.getSharesByPooledEth(tokens(0)), tokens(0));
+        assertBn(await stEth.getSharesByPooledEth(tokens(1000)), tokens(0));
       });
     });
-    context('with non-zero supply', async () => {
-      context('with zero totalControlledEther', async () => {
-        beforeEach( async () => {
-          //ToDo processSubmission here to create amounts
-          await dePool.setTotalControlledEther(tokens(0));
-        });
-        it('getTotalShares', async () => {
-          assertBn(await stEth.getTotalShares(), tokens(0)); //ToDo subj to change
-        });
-        it('getSharesByHolder', async () => {
-          assertBn(await stEth.getSharesByHolder(nobody), tokens(0));
-        });
-        it('getPooledEthByShares', async () => {
-          assertBn(await stEth.getPooledEthByShares(tokens(0)), tokens(0));
-          assertBn(await stEth.getPooledEthByShares(tokens(1)), tokens(0));
-        });
-        it('getPooledEthByHolder', async () => {
-          assertBn(await stEth.getPooledEthByHolder(nobody), tokens(0));
-        });
-        it('getSharesByPooledEth', async () => {
-          assertBn(await stEth.getSharesByPooledEth(tokens(1)), tokens(0));
-          assertBn(await stEth.getSharesByPooledEth(tokens(0)), tokens(0));
-          assertBn(await stEth.getSharesByPooledEth(tokens(1000)), tokens(0));
-        });
+    context('with non-zero totalControlledEther (supply)', async () => {
+      beforeEach( async () => {
+        await dePool.setTotalControlledEther(tokens(1000));
+        await stEth.mint(user1, tokens(1000), { from: pool });
       });
-      context('with non-zero totalControlledEther', async () => {
-        beforeEach( async () => {
-          await dePool.setTotalControlledEther(tokens(1));
-        });
-        it('getTotalShares', async () => {
-          assertBn(await stEth.getTotalShares(), tokens(0)); //ToDo subj to change
-        });
-        it('getSharesByHolder', async () => {
-          assertBn(await stEth.getSharesByHolder(nobody), tokens(0));
-        });
-        it('getPooledEthByShares', async () => {
-          assertBn(await stEth.getPooledEthByShares(tokens(0)), tokens(0));
-          assertBn(await stEth.getPooledEthByShares(tokens(1)), tokens(0));
-        });
-        it('getPooledEthByHolder', async () => {
-          assertBn(await stEth.getPooledEthByHolder(nobody), tokens(0));
-        });
-        it('getSharesByPooledEth', async () => {
-          assertBn(await stEth.getSharesByPooledEth(tokens(1)), tokens(0));
-          assertBn(await stEth.getSharesByPooledEth(tokens(0)), tokens(0));
-          assertBn(await stEth.getSharesByPooledEth(tokens(1000)), tokens(0));
-        });
+      it('getTotalSupply', async () => {
+        assertBn(await stEth.totalSupply({ from: nobody }), tokens(1000));
+      });
+      it('getTotalShares', async () => {
+        assertBn(await stEth.getTotalShares(), tokens(0)); //ToDo subj to change
+      });
+      it('getSharesByHolder', async () => {
+        assertBn(await stEth.getSharesByHolder(nobody), tokens(0));
+      });
+      it('getPooledEthByShares', async () => {
+        assertBn(await stEth.getPooledEthByShares(tokens(0)), tokens(0));
+        assertBn(await stEth.getPooledEthByShares(tokens(1)), tokens(0));
+      });
+      it('getPooledEthByHolder', async () => {
+        assertBn(await stEth.getPooledEthByHolder(nobody), tokens(0));
+      });
+      it('getSharesByPooledEth', async () => {
+        assertBn(await stEth.getSharesByPooledEth(tokens(1)), tokens(0));
+        assertBn(await stEth.getSharesByPooledEth(tokens(0)), tokens(0));
+        assertBn(await stEth.getSharesByPooledEth(tokens(1000)), tokens(0));
       });
     });
   });
