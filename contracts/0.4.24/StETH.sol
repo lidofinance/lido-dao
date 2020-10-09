@@ -208,11 +208,12 @@ contract StETH is ISTETH, Pausable, AragonApp {
     * @param value The amount to be transferred.
     */
     function _transfer(address from, address to, uint256 value) internal {
-        require(value <= _shares[from]);
+        require(value != 0);
         require(to != address(0));
-
-        _shares[from] = _shares[from].sub(value);
-        _shares[to] = _shares[to].add(value);
+        uint256 sharesToTransfer = getSharesByPooledEth(value);
+        require(sharesToTransfer <= _shares[from]);
+        _shares[from] = _shares[from].sub(sharesToTransfer);
+        _shares[to] = _shares[to].add(sharesToTransfer);
         emit Transfer(from, to, value);
     }
 
