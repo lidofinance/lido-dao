@@ -1,5 +1,5 @@
-const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
-const { getEventArgument, ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
+const { assertBn, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
+const { getEvents, getEventArgument, ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 
 const { pad, ETH, hexConcat } = require('../helpers/utils')
 const { deployDaoAndPool } = require('./helpers/deploy')
@@ -78,7 +78,7 @@ contract('DePool: deposit loop iteration limit', (addresses) => {
   })
 
   it('at this point, only 5 validators were registered due to the iteration limit', async () => {
-    assertBn(await validatorRegistrationMock.totalCalls(), 5)
+    assertBn(await validatorRegistrationMock.totalCalls(), 5, 'total validators registered')
 
     const ether2Stat = await pool.getEther2Stat()
     assertBn(ether2Stat.deposited, ETH(5 * 32), 'deposited ether2')
@@ -89,12 +89,16 @@ contract('DePool: deposit loop iteration limit', (addresses) => {
   })
 
   it('one can advance the deposit loop by submitting any Ether amount', async () => {
-    await pool.submit(ZERO_ADDRESS, { from: user2, value: ETH(10 * 32) })
+    const result = await pool.submit(ZERO_ADDRESS, { from: user2, value: ETH(10 * 32) })
+
+    const submittedEvents = getEvents(result, 'Submitted')
+    assert(submittedEvents.length === 1, 'a Submitted event was generated')
+
     assertBn(await pool.getTotalControlledEther(), ETH(25 * 32), 'total controlled ether')
 
     // no more than depositIterationLimit validators are registered in a single transaction
 
-    assertBn(await validatorRegistrationMock.totalCalls(), 10)
+    assertBn(await validatorRegistrationMock.totalCalls(), 10, 'total validators registered')
 
     const ether2Stat = await pool.getEther2Stat()
     assertBn(ether2Stat.deposited, ETH(10 * 32), 'deposited ether2')
@@ -103,10 +107,13 @@ contract('DePool: deposit loop iteration limit', (addresses) => {
   })
 
   it('submitting zero Ether advances the loop as well as long as there is enough buffered Ether and validator keys', async () => {
-    await pool.submit(ZERO_ADDRESS, { from: nobody, value: 0 })
-    assertBn(await pool.getTotalControlledEther(), ETH(25 * 32), 'total controlled ether')
+    const result = await pool.submit(ZERO_ADDRESS, { from: nobody, value: 0 })
 
-    assertBn(await validatorRegistrationMock.totalCalls(), 15)
+    const submittedEvents = getEvents(result, 'Submitted')
+    assert(submittedEvents.length === 0, 'no Submitted events were generated')
+
+    assertBn(await pool.getTotalControlledEther(), ETH(25 * 32), 'total controlled ether')
+    assertBn(await validatorRegistrationMock.totalCalls(), 15, 'total validators registered')
 
     const ether2Stat = await pool.getEther2Stat()
     assertBn(ether2Stat.deposited, ETH(15 * 32), 'deposited ether2')
@@ -117,6 +124,10 @@ contract('DePool: deposit loop iteration limit', (addresses) => {
   it('voting can change deposit loop iteration limit (setting it to 3)', async () => {
     await pool.setDepositIterationLimit(3, { from: voting })
     assertBn(await pool.getDepositIterationLimit(), 3)
+  })
+
+  it('the limit cannot be set to zero', async () => {
+    await assertRevert(pool.setDepositIterationLimit(0, { from: voting }), 'ZERO_LIMIT')
   })
 
   it('the new iteration limit comes into effect on the next submit', async () => {
