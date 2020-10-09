@@ -18,7 +18,7 @@ module.exports = {
     version: '0.6.12',
     optimizer: {
       enabled: true,
-      runs: 10000,
+      runs: 200,
     },
   },
   paths: {

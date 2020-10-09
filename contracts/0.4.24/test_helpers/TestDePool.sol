@@ -12,10 +12,10 @@ contract TestDePool is DePool {
     address private insurance;
 
     function initialize(ISTETH _token, IValidatorRegistration validatorRegistration, address _oracle,
-                        IStakingProvidersRegistry _sps)
+                        IStakingProvidersRegistry _sps, uint256 _depositIterationLimit)
     public
     {
-        super.initialize(_token, validatorRegistration, _oracle, _sps);
+        super.initialize(_token, validatorRegistration, _oracle, _sps, _depositIterationLimit);
         treasury = address(new VaultMock());
         insurance = address(new VaultMock());
     }

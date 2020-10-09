@@ -1,9 +1,9 @@
 const {BN} = require('bn.js');
 
-const pad = (hex, bytesLength) => {
+const pad = (hex, bytesLength, fill = '0') => {
   const absentZeroes = bytesLength * 2 + 2 - hex.length;
   if (absentZeroes > 0)
-    hex = '0x' + ('0'.repeat(absentZeroes)) + hex.substr(2);
+    hex = '0x' + (fill.repeat(absentZeroes)) + hex.substr(2);
   return hex;
 }
 
