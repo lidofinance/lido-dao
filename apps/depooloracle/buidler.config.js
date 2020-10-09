@@ -19,7 +19,7 @@ module.exports = {
     version: '0.4.24',
     optimizer: {
       enabled: true,
-      runs: 10000,
+      runs: 200,
     },
     evmVersion: 'constantinople'
   },
