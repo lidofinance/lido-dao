@@ -218,31 +218,6 @@ contract StETH is ISTETH, Pausable, AragonApp {
     }
 
     /**
-    * @dev Internal function that mints an amount of the token and assigns it to
-    * an account. This encapsulates the modification of balances such that the
-    * proper events are emitted.
-    * @param account The account that will receive the created tokens.
-    * @param value The amount that will be created.
-    */
-    function _mint(address account, uint256 value) internal {
-        require(account != 0);
-        require(value != 0);
-        uint256 sharesDifference;
-        uint256 totalControlledEthBefore = dePool.getTotalControlledEther();
-        if ( totalControlledEthBefore == 0) {
-            sharesDifference = value;
-        } else {
-            uint256 controlledEthAfter = totalControlledEthBefore.add(value);
-            uint256 totalSharesBefore = _totalShares;
-            uint256 totalSharesAfter = getSharesByPooledEth(controlledEthAfter);
-            sharesDifference = totalSharesAfter.sub(totalSharesBefore);
-        }
-        _totalShares = _totalShares.add(sharesDifference);
-        _shares[account] = _shares[account].add(sharesDifference);
-        emit Transfer(address(0), account, value);
-    }
-
-    /**
     * @dev Internal function that burns an amount of the token of a given
     * account.
     * @param account The account whose tokens will be burnt.
@@ -275,15 +250,31 @@ contract StETH is ISTETH, Pausable, AragonApp {
     }
 
     /**
-      * @notice Mint `@tokenAmount(this, _value)` new tokens to `_to`
-      * @param _to Receiver of new tokens
-      * @param _value Amount of new tokens to mint
-      */
+    * @notice Mint is called by dePool contract when user submits the ETH1.0 deposit. 
+    *         It calculates share difference to preserve ratio of shares to the increased 
+    *         amount of pooledEthers so that all the previously created shares still correspond 
+    *         to the same amount of pooled ethers. 
+    *         Then adds the calculated difference to the user's share and to the totalShares
+    *         similarly as traditional mint() function does with balances.
+    * @param _to Receiver of new shares
+    * @param _value Amount of pooledEthers (then gets converted to shares)
+    */
     function mint(address _to, uint256 _value) external whenNotStopped authP(MINT_ROLE, arr(_to, _value)) {
-        if (0 == _value)
-            return;
-
-        _mint(_to, _value);
+        require(_to != 0);
+        require(_value != 0);
+        uint256 sharesDifference;
+        uint256 totalControlledEthBefore = dePool.getTotalControlledEther();
+        if ( totalControlledEthBefore == 0) {
+            sharesDifference = _value;
+        } else {
+            uint256 controlledEthAfter = totalControlledEthBefore.add(_value);
+            uint256 totalSharesBefore = _totalShares;
+            uint256 totalSharesAfter = getSharesByPooledEth(controlledEthAfter);
+            sharesDifference = totalSharesAfter.sub(totalSharesBefore);
+        }
+        _totalShares = _totalShares.add(sharesDifference);
+        _shares[_to] = _shares[_to].add(sharesDifference);
+        emit Transfer(address(0), _to, _value);
     }
 
     /**
