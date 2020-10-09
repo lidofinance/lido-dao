@@ -7,6 +7,7 @@ usePlugin("@nomiclabs/buidler-ganache")
 module.exports = {
   paths: {
     root: '../..',
+    sources: './contracts/0.4.24',
   },
   // Default Buidler configurations. Read more about it at https://buidler.dev/config/
   defaultNetwork: 'localhost',
