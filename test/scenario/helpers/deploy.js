@@ -1,4 +1,4 @@
-const { newDao, newApp } = require('../../helpers/dao')
+const { newDao, newApp } = require('../../0.4.24/helpers/dao')
 
 const StETH = artifacts.require('StETH.sol')
 const DePool = artifacts.require('TestDePool.sol')

@@ -5,16 +5,20 @@
     "bootstrap": "lerna bootstrap --hoist",
     "lint": "solium --dir ./contracts",
     "test": "npm run test:unit",
-    "test:unit": "buidler test --network buidlerevm",
-    "test:gas": "REPORT_GAS=true buidler test --network localhost",
-    "test:coverage": "buidler coverage --network coverage",
+    "test:unit": "npm run compile:6 && buidler test --network buidlerevm",
+    "test:gas": "npm run compile:6 && REPORT_GAS=true buidler test --network localhost",
+    "test:coverage": "npm run test:coverage:4 && npm run test:coverage:6",
+    "test:coverage:4": "buidler coverage --network coverage --testfiles test/0.4.24",
+    "test:coverage:6": "buidler coverage --network coverage --testfiles test/0.6.12 --config buidler.config.6.js",
     "test:e2e": "ava -T 60000 -v",
     "truffle:dev": "truffle dev",
     "ganache-cli:test": "./node_modules/@aragon/test-helpers/ganache-cli.sh",
     "install:frontend": "cd app && npm install",
     "abi:extract": "truffle-extract --output abi/ --keys abi",
     "prepublishOnly": "truffle compile --all && npm run abi:extract -- --no-compile",
-    "compile": "npm run compile:apps",
+    "compile" : "npm run compile:4 && npm run compile:6",
+    "compile:4": "buidler compile --force",
+    "compile:6": "buidler compile --config buidler.config.6.js --force",
     "compile:apps": "lerna run --scope=@depools/apps-* --concurrency=4 --stream compile",
     "build": "npm run build:apps",
     "build:apps": "lerna run --scope=@depools/apps-* --concurrency=4 --stream build",
@@ -65,16 +69,6 @@
     "buidler-gas-reporter": "^0.1.3",
     "chai": "^4.2.0",
     "dotenv": "^8.2.0",
-    "eth-ens-namehash": "^2.0.8",
-    "eth-gas-reporter": "^0.2.17",
-    "ethereumjs-testrpc-sc": "^6.5.1-sc.1",
-    "husky": "^4.3.0",
-    "lerna": "^3.22.1",
-    "solidity-coverage": "^0.7.10",
-    "solium": "^1.2.5",
-    "truffle": "^5.1.43",
-    "truffle-extract": "^1.2.1",
-
     "eslint": "^7.9.0",
     "eslint-config-prettier": "^6.11.0",
     "eslint-config-standard": "^14.1.1",
@@ -83,11 +77,20 @@
     "eslint-plugin-prettier": "^3.1.4",
     "eslint-plugin-promise": "^4.2.1",
     "eslint-plugin-standard": "^4.0.1",
-    "prettier": "^2.1.2"
-
+    "eth-ens-namehash": "^2.0.8",
+    "eth-gas-reporter": "^0.2.17",
+    "ethereumjs-testrpc-sc": "^6.5.1-sc.1",
+    "husky": "^4.3.0",
+    "lerna": "^3.22.1",
+    "prettier": "^2.1.2",
+    "solidity-coverage": "^0.7.10",
+    "solium": "^1.2.5",
+    "truffle": "^5.1.43",
+    "truffle-extract": "^1.2.1"
   },
   "dependencies": {
     "@aragon/os": "^4.4.0",
+    "@openzeppelin/contracts": "3.1.0",
     "@truffle/contract": "^4.2.22",
     "openzeppelin-solidity": "2.0.0",
     "solidity-bytes-utils": "0.0.6",
@@ -99,7 +102,7 @@
       "@babel/register"
     ],
     "files": [
-      "test/e2e/**/*.test.js"
+      "test-e2e/**/*.test.js"
     ],
     "concurrency": 5
   },
