@@ -9,14 +9,16 @@ WALLETS_DIR="${DATA_DIR}/wallets"
 VALIDATORS_DIR="${DATA_DIR}/validators"
 TESTNET_DIR="${DATA_DIR}/testnet"
 DEVCHAIN_DIR="${DATA_DIR}/devchain"
+IPFS_DIR="${DATA_DIR}/ipfs"
 BEACONDATA1_DIR="${DATA_DIR}/beacondata-1"
 BEACONDATA2_DIR="${DATA_DIR}/beacondata-2"
 BEACONDATA3_DIR="${DATA_DIR}/beacondata-3"
 BEACONDATA4_DIR="${DATA_DIR}/beacondata-4"
 
-MOCK_VALIDATOR_KEYS_DIR="${DATA_DIR}/mock_validator_keys"
-MOCK_VALIDATORS_DIR="${DATA_DIR}/mock_validators"
-MOCK_SECRETS_DIR="${DATA_DIR}/mock_secrets"
+MOCK_DATA_DIR="${DATA_DIR}/mock"
+MOCK_VALIDATOR_KEYS_DIR="${MOCK_DATA_DIR}/validator_keys"
+MOCK_VALIDATORS_DIR="${MOCK_DATA_DIR}/validators"
+MOCK_SECRETS_DIR="${MOCK_DATA_DIR}/secrets"
 
 VALIDATOR_KEYS_DIR="${DATA_DIR}/validator_keys"
 VALIDATORS_DIR="${DATA_DIR}/validators"
@@ -35,10 +37,12 @@ while test $# -gt 0; do
       echo "  -h | --help           show this help"
       echo "  -r | --reset          force reset all blockchains state (clear all data)"
       echo "  -d | --dao            force try to deploy dao"
+      echo "  -r1 | --reset1        force reset ETH1 blockchain state"
       echo "  -r2 | --reset2        force reset ETH2 blockchain state"
       echo "  -n | --nodes          start 2nd and 3d eth2 nodes"
       echo "  -s | --snapshot       use snapshot instead deploy"
-      echo "  -1 | --eth1           start only eth1 node"
+      echo "  -1 | --eth1           start only eth1 part"
+      echo "  -k | --keys           generate validators keys"
       exit 0
       ;;
     -r|--reset)
@@ -55,6 +59,14 @@ while test $# -gt 0; do
       ;;
     -1|--eth1)
       ETH1_ONLY=true
+      shift
+      ;;
+    -k|--keys)
+      GEN_KEYS=true
+      shift
+      ;;
+    -r1|--reset1)
+      ETH1_RESET=true
       shift
       ;;
     -r2|--reset2)
@@ -80,10 +92,20 @@ if [[ $RESET ]]; then
     echo "Unzip snapshot"
     unzip -o -q -d $DATA_DIR ./mock_data/devchain.zip
     unzip -o -q -d $DATA_DIR ./mock_data/ipfs.zip
-    unzip -o -q -d $DATA_DIR ./mock_data/mock_validators.zip
+    unzip -o -q -d $DATA_DIR ./mock_data/validators.zip
   fi
   ETH2_RESET=true
   DAO_DEPLOY=true
+elif [ $ETH1_RESET ]; then
+  echo "Reset ETH1 state"
+
+  docker-compose rm -s -v -f node1 > /dev/null
+  rm -rf $DEVCHAIN_DIR
+  if [[ $SNAPSHOT ]]; then
+    echo "Unzip snapshot"
+    unzip -o -q -d $DATA_DIR ./mock_data/devchain.zip
+  fi
+  ETH2_RESET=true
 fi
 
 if [ ! -d $DEVCHAIN_DIR ]; then
@@ -117,7 +139,7 @@ done
 #  sleep 2 && echo -n .
 #done
 echo " "
-if [[ ! $SNAPSHOT ]] && [[ $DAO_DEPLOY ]] ; then
+if [ ! $SNAPSHOT ] && [ $DAO_DEPLOY ] ; then
   R=$(curl -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x'$DEPOSIT'","latest"],"id":1}' | jq -r '.result'  | cut -c -4)
   if [[ "$R" != "0x60" ]]; then
     echo "Deploying deposit contract..."
@@ -175,11 +197,30 @@ fi
 echo "Starting Aragon web UI"
 docker-compose up -d aragon
 
+if [ ! -d "$VALIDATORS_DIR" ] && [ $GEN_KEYS ]; then
+  echo "Generating $VALIDATOR_COUNT validator keys... (this may take a while)"
+  # TODO dkg
+  ./deposit.sh --num_validators=$VALIDATOR_COUNT --password=$PASSWORD --chain=medalla --mnemonic="$VALIDATOR_MNEMONIC" --withdrawal_pk=$WITHDRAWAL_PK > /dev/null
+
+  echo "Importing validators keystore"
+  echo $PASSWORD | docker-compose run --rm --no-deps node2-1 lighthouse \
+    --spec "$SPEC" --debug-level "$DEBUG_LEVEL" \
+    account validator import --reuse-password --stdin-inputs \
+    --datadir "/data" \
+    --directory "/data/validator_keys" \
+    --validator-dir "/data/validators" \
+    --testnet-dir "/data/testnet"
+fi
+
+if [ $ETH1_ONLY ]; then
+  exit 0
+fi
+
 if [ $ETH2_RESET ]; then
   if [ ! $RESET ]; then
-    docker-compose rm -s -v -f node2-1
-    docker-compose rm -s -v -f mock-validators
-    docker-compose rm -s -v -f validators
+    docker-compose rm -s -v -f node2-1 > /dev/null
+    docker-compose rm -s -v -f mock-validators > /dev/null
+    docker-compose rm -s -v -f validators > /dev/null
   fi
 
   rm -rf $TESTNET_DIR
@@ -209,29 +250,25 @@ if [ $ETH2_RESET ]; then
   echo "Specification generated at $TESTNET_DIR."
 
   if [ ! -d "$MOCK_VALIDATORS_DIR" ]; then
-    echo "Generating $MOCK_VALIDATOR_COUNT mock validators concurrently... (this may take a while)"
-    ./deposit.sh --num_validators=$MOCK_VALIDATOR_COUNT --password=$PASSWORD --chain=medalla --mnemonic="$MNEMONIC"
-    mv $VALIDATOR_KEYS_DIR $MOCK_VALIDATOR_KEYS_DIR
-
-    echo "Importing validators keystore"
-    echo $PASSWORD | docker-compose run --rm --no-deps node2-1 lighthouse \
-      --spec "$SPEC" --debug-level "$DEBUG_LEVEL" \
-      account validator import --reuse-password --stdin-inputs \
-      --datadir "/data" \
-      --directory "/data/mock_validator_keys" \
-      --validator-dir "/data/mock_validators" \
-      --testnet-dir "/data/testnet"
-
-    echo "Making deposits for $MOCK_VALIDATOR_COUNT genesis validators... (this may take a while)"
-    node ./scripts/mock_deposit.js $MOCK_VALIDATOR_KEYS_DIR
+    echo "Generating $MOCK_VALIDATOR_COUNT mock validator keys... (this may take a while)"
+    # rm -rf $MOCK_VALIDATORS_DIR
+    # rm -rf $MOCK_SECRETS_DIR
+    docker-compose run --rm --no-deps node2-1 lcli \
+      --spec "$SPEC" \
+      insecure-validators \
+      --count $MOCK_VALIDATOR_COUNT \
+      --validators-dir "/data/mock/validators" \
+      --secrets-dir "/data/mock/secrets"
+    echo "Validators generated at $MOCK_VALIDATORS_DIR with keystore passwords at $MOCK_SECRETS_DIR."
   fi
 
   echo "Generating genesis"
-  docker-compose run --rm --no-deps node2-1 lcli \
+  docker-compose run --rm --no-deps node2-1  lcli \
     --spec "$SPEC" \
-    eth1-genesis \
+    interop-genesis \
     --testnet-dir "/data/testnet" \
-    --eth1-endpoint http://node1:8545
+    --genesis-fork-version $FORK_VERSION \
+    $MOCK_VALIDATOR_COUNT
 
   NOW=$(date +%s)
   echo "Reset genesis time to now ($NOW)"
@@ -242,34 +279,15 @@ if [ $ETH2_RESET ]; then
     $NOW
 fi
 
-if [ ! -d "$VALIDATORS_DIR" ]; then
-  #   unzip -o -q -d $DATA_DIR ./validators.zip
-  # TODO dkg
-  ./deposit.sh --num_validators=$VALIDATOR_COUNT --password=$PASSWORD --chain=medalla --mnemonic="$VALIDATOR_MNEMONIC" --withdrawal_pk=$WITHDRAWAL_PK
-
-  echo "Importing validators keystore"
-  echo $PASSWORD | docker-compose run --rm --no-deps node2-1 lighthouse \
-    --spec "$SPEC" --debug-level "$DEBUG_LEVEL" \
-    account validator import --reuse-password --stdin-inputs \
-    --datadir "/data" \
-    --directory "/data/validator_keys" \
-    --validator-dir "/data/validators" \
-    --testnet-dir "/data/testnet"
-fi
-
-if [[ $ETH1_ONLY ]]; then
-  exit 0
-fi
-
 docker-compose up -d node2-1
-sleep 3
-docker-compose up -d node2-2
 sleep 3
 docker-compose up -d mock-validators
 docker-compose up -d validators
 
 if [[ $NODES ]]; then
   echo "Start extra nodes"
+  sleep 3
+  docker-compose up -d node2-2
   sleep 3
   docker-compose up -d node2-3
   sleep 3

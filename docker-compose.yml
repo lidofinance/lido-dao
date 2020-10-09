@@ -164,8 +164,8 @@ services:
       --spec "${SPEC}"
       --debug-level "${DEBUG_LEVEL}"
       vc
-      --datadir "/data/mock_validators"
-      --secrets-dir "/data/mock_secrets"
+      --datadir "/data/mock/validators"
+      --secrets-dir "/data/mock/secrets"
       --testnet-dir "/data/testnet"
       --auto-register
       --server http://node2-1:5052
@@ -176,7 +176,7 @@ services:
     image: sigp/lighthouse:latest
     container_name: validators
     depends_on:
-      - node2-2
+      - node2-1
 #    ports:
 #      - 30303:30303
     networks:
@@ -193,7 +193,7 @@ services:
       --secrets-dir "/data/secrets"
       --testnet-dir "/data/testnet"
       --auto-register
-      --server http://node2-2:5052
+      --server http://node2-1:5052
 
 networks:
   eth2:
