@@ -39,7 +39,8 @@
     "deploy:tmpl:mainnet": "lerna run --scope=@depools/dao-template --concurrency=1 --stream deploy:tmpl:mainnet",
     "deploy:dao:dev": "lerna run --scope=@depools/dao-template --concurrency=1 --stream deploy:dao:dev",
     "deploy:dao:rinkeby": "lerna run --scope=@depools/dao-template --concurrency=1 --stream deploy:dao:rinkeby",
-    "deploy:dao:mainnet": "lerna run --scope=@depools/dao-template --concurrency=1 --stream deploy:dao:mainnet"
+    "deploy:dao:mainnet": "lerna run --scope=@depools/dao-template --concurrency=1 --stream deploy:dao:mainnet",
+    "estimate-deposit-loop-gas": "npm run test:unit ./estimate_deposit_loop_gas.js"
   },
   "files": [
     "/abi",

@@ -77,6 +77,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await acl.createPermission(voting, app.address, await app.PAUSE_ROLE(), appManager, {from: appManager});
     await acl.createPermission(voting, app.address, await app.MANAGE_FEE(), appManager, {from: appManager});
     await acl.createPermission(voting, app.address, await app.MANAGE_WITHDRAWAL_KEY(), appManager, {from: appManager});
+    await acl.createPermission(voting, app.address, await app.SET_DEPOSIT_ITERATION_LIMIT(), appManager, {from: appManager});
 
     await acl.createPermission(app.address, token.address, await token.MINT_ROLE(), appManager, {from: appManager});
     await acl.createPermission(app.address, token.address, await token.BURN_ROLE(), appManager, {from: appManager});
@@ -91,7 +92,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await acl.createPermission(voting, sps.address, await sps.REPORT_STOPPED_VALIDATORS_ROLE(), appManager, {from: appManager});
 
     // Initialize the app's proxy.
-    await app.initialize(token.address, validatorRegistration.address, oracle.address, sps.address);
+    await app.initialize(token.address, validatorRegistration.address, oracle.address, sps.address, 10);
     treasuryAddr = await app.getTreasury();
     insuranceAddr = await app.getInsuranceFund();
 
@@ -172,6 +173,14 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(await sps.getUnusedSigningKeyCount(1, {from: nobody}), 0);
     assert.equal(await app.getWithdrawalCredentials({from: nobody}), pad("0x0203", 32));
   });
+
+  it('setDepositIterationLimit works', async () => {
+    await app.setDepositIterationLimit(22, {from: voting});
+    assertBn(await app.getDepositIterationLimit(), 22);
+
+    await assertRevert(app.setDepositIterationLimit(0, {from: voting}), 'ZERO_LIMIT');
+    await assertRevert(app.setDepositIterationLimit(33, {from: user1}), 'APP_AUTH_FAILED');
+  })
 
   it('pad64 works', async () => {
     await assertRevert(app.pad64("0x"));
