@@ -14,4 +14,4 @@ else
 fi
 
 echo "Starting Ganache..."
-ganache-cli -h 0.0.0.0 -a 10 -i 5 -l $GAS_LIMIT -e 100000 -m "$MNEMONIC" -b $BLOCK_TIME --db=$DATA_DIR -q
+ganache-cli -h 0.0.0.0 -a 100 -i 5 -l $GAS_LIMIT -e 100000 -m "$MNEMONIC" -b $BLOCK_TIME --db=$DATA_DIR -q
