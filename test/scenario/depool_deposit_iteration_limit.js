@@ -64,7 +64,7 @@ contract('DePool: deposit loop iteration limit', (addresses) => {
     const keys = hexConcat(...data.map((v) => v.key))
     const sigs = hexConcat(...data.map((v) => v.sig))
 
-    await spRegistry.addSigningKeys(stakingProviderId, numKeys, keys, sigs, { from: stakingProvider })
+    await spRegistry.addSigningKeysSP(stakingProviderId, numKeys, keys, sigs, { from: stakingProvider })
 
     const totalKeys = await spRegistry.getTotalSigningKeyCount(stakingProviderId, { from: nobody })
     assertBn(totalKeys, numKeys, 'total signing keys')

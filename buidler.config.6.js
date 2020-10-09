@@ -15,15 +15,14 @@ module.exports = {
     },
   },
   solc: {
-    version: '0.4.24',
+    version: '0.6.12',
     optimizer: {
       enabled: true,
       runs: 200,
     },
-    evmVersion: 'constantinople'
   },
   paths: {
-    sources: "./contracts/0.4.24",
+    sources: "./contracts/0.6.12",
   },
   gasReporter: {
     enabled: !!process.env.REPORT_GAS,
