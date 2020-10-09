@@ -141,12 +141,29 @@ function App() {
       <Split
         primary={
           <DataView
-            fields={['Staking Provider', 'Address', 'Staking Limit', 'Status']}
+            fields={[
+              'Staking Provider',
+              'Address',
+              'Staking Limit',
+              'Total / Used / Stopped',
+              'Status',
+            ]}
             entries={stakingProviders}
-            renderEntry={({ name, rewardAddress, stakingLimit, active }) => [
+            renderEntry={({
+              name,
+              rewardAddress,
+              stakingLimit,
+              stoppedValidators,
+              totalSigningKeys,
+              usedSigningKeys,
+              active,
+            }) => [
               <strong>{name}</strong>,
               <IdentityBadge entity={rewardAddress} />,
               <strong>{stakingLimit}</strong>,
+              <strong>
+                {totalSigningKeys} / {usedSigningKeys} / {stoppedValidators}
+              </strong>,
               active ? (
                 <strong
                   css={`
