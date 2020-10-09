@@ -31,6 +31,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     bytes32 constant public MANAGE_FEE = keccak256("MANAGE_FEE");
     bytes32 constant public MANAGE_WITHDRAWAL_KEY = keccak256("MANAGE_WITHDRAWAL_KEY");
     bytes32 constant public SET_ORACLE = keccak256("SET_ORACLE");
+    bytes32 constant public SET_DEPOSIT_ITERATION_LIMIT = keccak256("SET_DEPOSIT_ITERATION_LIMIT");
 
     uint256 constant public PUBKEY_LENGTH = 48;
     uint256 constant public WITHDRAWAL_CREDENTIALS_LENGTH = 32;
@@ -64,6 +65,9 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     /// @dev last epoch reported by the oracle
     bytes32 internal constant LAST_ORACLE_EPOCH_VALUE_POSITION = keccak256("depools.DePool.lastOracleEpoch");
 
+    /// @dev maximum number of Ethereum 2.0 validators registered in a single transaction
+    bytes32 internal constant DEPOSIT_ITERATION_LIMIT_VALUE_POSITION = keccak256("depools.DePool.depositIterationLimit");
+
 
     /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
     bytes private withdrawalCredentials;
@@ -82,13 +86,14 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
 
 
     function initialize(ISTETH _token, IValidatorRegistration validatorRegistration, address _oracle,
-                        IStakingProvidersRegistry _sps)
+                        IStakingProvidersRegistry _sps, uint256 _depositIterationLimit)
         public onlyInit
     {
         _setToken(_token);
         _setValidatorRegistrationContract(validatorRegistration);
         _setOracle(_oracle);
         _setSPs(_sps);
+        _setDepositIterationLimit(_depositIterationLimit);
 
         initialized();
     }
@@ -156,6 +161,14 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
       */
     function setOracle(address _oracle) external auth(SET_ORACLE) {
         _setOracle(_oracle);
+    }
+
+
+    /**
+      * @notice Set maximum number of Ethereum 2.0 validators registered in a single transaction.
+      */
+    function setDepositIterationLimit(uint256 _limit) external auth(SET_DEPOSIT_ITERATION_LIMIT) {
+        _setDepositIterationLimit(_limit);
     }
 
 
@@ -293,6 +306,13 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     }
 
     /**
+      * @notice Gets maximum number of Ethereum 2.0 validators registered in a single transaction
+      */
+    function getDepositIterationLimit() public view returns (uint256) {
+        return DEPOSIT_ITERATION_LIMIT_VALUE_POSITION.getStorageUint256();
+    }
+
+    /**
       * @notice Gets staking providers registry interface handle
       */
     function getSPs() public view returns (IStakingProvidersRegistry) {
@@ -359,6 +379,14 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         SP_REGISTRY_VALUE_POSITION.setStorageAddress(_r);
     }
 
+    /**
+      * @notice Internal function to set deposit loop iteration limit
+      */
+    function _setDepositIterationLimit(uint256 _limit) internal {
+        require(0 != _limit, "ZERO_LIMIT");
+        DEPOSIT_ITERATION_LIMIT_VALUE_POSITION.setStorageUint256(_limit);
+    }
+
 
     /**
       * @dev Processes user deposit
@@ -366,18 +394,19 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     function _submit(address _referral) internal whenNotStopped returns (uint256 StETH) {
         address sender = msg.sender;
         uint256 deposit = msg.value;
-        require(deposit != 0, "ZERO_DEPOSIT");
 
-        // Minting new liquid tokens
-        if (0 == _getTotalControlledEther()) {
-            StETH = deposit;
-        } else {
-            assert(getToken().totalSupply() != 0);
-            StETH = deposit.mul(getToken().totalSupply()).div(_getTotalControlledEther());
+        if (0 != deposit) {
+            // Minting new liquid tokens
+            if (0 == _getTotalControlledEther()) {
+                StETH = deposit;
+            } else {
+                assert(getToken().totalSupply() != 0);
+                StETH = deposit.mul(getToken().totalSupply()).div(_getTotalControlledEther());
+            }
+            getToken().mint(sender, StETH);
+
+            _submitted(sender, deposit, _referral);
         }
-        getToken().mint(sender, StETH);
-
-        _submitted(sender, deposit, _referral);
 
         // Buffer management
         uint256 buffered = _getBufferedEther();
@@ -406,8 +435,9 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         if (0 == cache.length)
             return 0;
 
-        uint256 deposited = 0;
-        while (_amount != 0) {
+        uint256 totalDepositCalls = 0;
+        uint256 maxDepositCalls = getDepositIterationLimit();
+        while (_amount != 0 && totalDepositCalls < maxDepositCalls) {
             // Finding the best suitable SP
             uint256 bestSPidx = cache.length;   // 'not found' flag
             uint256 smallestStake;
@@ -434,7 +464,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
 
             // Invoking deposit for the best SP
             _amount = _amount.sub(DEPOSIT_SIZE);
-            deposited = deposited.add(DEPOSIT_SIZE);
+            ++totalDepositCalls;
 
             (bytes memory key, bytes memory signature, bool used) =
                     getSPs().getSigningKey(cache[bestSPidx].id, cache[bestSPidx].usedSigningKeys++);
@@ -444,6 +474,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
             _stake(key, signature);
         }
 
+        uint256 deposited = totalDepositCalls.mul(DEPOSIT_SIZE);
         if (0 != deposited) {
             REWARD_BASE_VALUE_POSITION.setStorageUint256(REWARD_BASE_VALUE_POSITION.getStorageUint256().add(deposited));
             _write_back_SP_cache(cache);
