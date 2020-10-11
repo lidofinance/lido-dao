@@ -8,11 +8,15 @@ import {
   Split,
   SyncIndicator,
   IdentityBadge,
+  useTheme,
+  IconConnect,
+  IconRemove,
 } from '@aragon/ui'
 import Button from '@aragon/ui/dist/Button'
 import ChangeFeeSidePanel from './components/ChangeFeeSidePanel'
 import ChangeWCSidePanel from './components/ChangeWCSidePanel'
 import { ListItem } from './components/ListItem'
+import StakeSidePanel from './components/StakeSidePanel'
 
 export default function App() {
   const { api, appState, currentApp, guiStyle } = useAragonApi()
@@ -42,8 +46,19 @@ export default function App() {
     [api]
   )
 
+  const theme = useTheme()
+
+  const resume = useCallback(() => {
+    api.resume().toPromise()
+  }, [api])
+
+  const stop = useCallback(() => {
+    api.stop().toPromise()
+  }, [api])
+
   const data = useMemo(() => {
     const {
+      isStopped,
       fee,
       feeDistribution,
       withdrawalCredentials,
@@ -59,6 +74,56 @@ export default function App() {
     } = appState
 
     return [
+      {
+        label: 'Status',
+        content: isStopped ? (
+          <span style={{ display: 'flex', alignItems: 'center' }}>
+            <strong
+              css={`
+                color: ${theme.negative};
+              `}
+            >
+              INACTIVE
+            </strong>
+            <Button
+              label="RESUME"
+              icon={
+                <IconConnect
+                  css={`
+                    color: ${theme.positive};
+                  `}
+                />
+              }
+              display="icon"
+              onClick={resume}
+              style={{ marginLeft: 10 }}
+            />
+          </span>
+        ) : (
+          <span style={{ display: 'flex', alignItems: 'center' }}>
+            <strong
+              css={`
+                color: ${theme.positive};
+              `}
+            >
+              LIVE
+            </strong>
+            <Button
+              label="PAUSE"
+              icon={
+                <IconRemove
+                  css={`
+                    color: ${theme.negative};
+                  `}
+                />
+              }
+              display="icon"
+              onClick={stop}
+              style={{ marginLeft: 10 }}
+            />
+          </span>
+        ),
+      },
       {
         label: 'Fee',
         content: (
@@ -110,7 +175,7 @@ export default function App() {
         content: <IdentityBadge entity={oracle} />,
       },
     ]
-  }, [appState])
+  }, [appState, theme])
 
   const ether2StatData = useMemo(() => {
     const { ether2Stat } = appState
@@ -121,12 +186,35 @@ export default function App() {
     }))
   }, [appState])
 
+  const [stakeSidePanelOpen, setStakeSidePanelOpen] = useState(false)
+  const openStakeSidePanel = useCallback(() => setStakeSidePanelOpen(true), [])
+  const closeStakeSidePanel = useCallback(
+    () => setStakeSidePanelOpen(false),
+    []
+  )
+  const stake = useCallback(
+    (address) => {
+      return api.submit(address).toPromise()
+    },
+    [api]
+  )
+
   return (
     <Main theme={appearance} assetsUrl="./aragon-ui">
       {isSyncing && <SyncIndicator />}
       <Header
         primary={appName.toUpperCase()}
-        secondary={version}
+        secondary={
+          <Button
+            mode="strong"
+            onClick={openStakeSidePanel}
+            css={`
+              background: ${theme.negative};
+            `}
+          >
+            STAKE
+          </Button>
+        }
       />
       <Split
         primary={
@@ -156,11 +244,17 @@ export default function App() {
           </Box>
         }
       />
+      <StakeSidePanel
+        opened={stakeSidePanelOpen}
+        onClose={closeStakeSidePanel}
+        api={stake}
+      />
       <ChangeFeeSidePanel
         opened={changeFeePanelOpened}
         onClose={closeChangeFeePanel}
         apiSetFee={apiSetFee}
       />
+
       <ChangeWCSidePanel
         opened={changeWCPanelOpened}
         onClose={closeChangeWCPanel}

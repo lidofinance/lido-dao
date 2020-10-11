@@ -12,6 +12,10 @@ app.store(
 
     try {
       switch (event) {
+        case 'Stopped':
+          return { ...nextState, isStopped: await isStopped() }
+        case 'Resumed':
+          return { ...nextState, isStopped: await isStopped() }
         case 'FeeSet':
           return { ...nextState, fee: await getFee() }
         case 'FeeDistributionSet':
@@ -47,6 +51,7 @@ function initializeState() {
   return async (cachedState) => {
     return {
       ...cachedState,
+      isStopped: await isStopped(),
       fee: await getFee(),
       // feeDistribution: await getFeeDistribution(),
       withdrawalCredentials: await getWithdrawalCredentials(),
@@ -64,6 +69,10 @@ function initializeState() {
 }
 
 // API
+async function isStopped() {
+  return await app.call('isStopped').toPromise()
+}
+
 async function getFee() {
   return await app.call('getFee').toPromise()
 }
