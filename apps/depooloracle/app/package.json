@@ -8,10 +8,12 @@
     "@aragon/ui": "^1.7.0",
     "@openzeppelin/contracts": "3.1.0",
     "core-js": "^3.6.5",
+    "formik": "^2.2.0",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "regenerator-runtime": "^0.13.7",
-    "styled-components": "^5.2.0"
+    "styled-components": "^5.2.0",
+    "yup": "^0.29.3"
   },
   "devDependencies": {
     "@babel/core": "^7.11.6",

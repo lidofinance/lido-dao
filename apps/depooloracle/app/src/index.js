@@ -6,9 +6,15 @@ import ReactDOM from 'react-dom'
 import { AragonApi } from '@aragon/api-react'
 import App from './App'
 
-const reducer = state => {
+const reducer = (state) => {
   if (state === null) {
-    return { count: 0, isSyncing: true }
+    return {
+      oracleMembers: [],
+      quorum: null,
+      reportIntervalDurationSeconds: null,
+      latestData: null,
+      isSyncing: true,
+    }
   }
   return state
 }
