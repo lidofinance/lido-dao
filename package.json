@@ -90,7 +90,6 @@
     "@truffle/contract": "^4.2.22",
     "openzeppelin-solidity": "2.0.0",
     "solidity-bytes-utils": "0.0.6",
-    "solium": "^1.2.5",
     "yargs": "^16.0.3"
   },
   "ava": {
