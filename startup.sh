@@ -88,12 +88,6 @@ if [[ $RESET ]]; then
   docker-compose down -v --remove-orphans
   rm -rf $DATA_DIR
   mkdir -p $DATA_DIR
-  if [[ $SNAPSHOT ]]; then
-    echo "Unzip snapshot"
-    unzip -o -q -d $DATA_DIR ./mock_data/devchain.zip
-    unzip -o -q -d $DATA_DIR ./mock_data/ipfs.zip
-    unzip -o -q -d $DATA_DIR ./mock_data/validators.zip
-  fi
   ETH2_RESET=true
   DAO_DEPLOY=true
 elif [ $ETH1_RESET ]; then
@@ -101,15 +95,25 @@ elif [ $ETH1_RESET ]; then
 
   docker-compose rm -s -v -f node1 > /dev/null
   rm -rf $DEVCHAIN_DIR
-  if [[ $SNAPSHOT ]]; then
-    echo "Unzip snapshot"
-    unzip -o -q -d $DATA_DIR ./mock_data/devchain.zip
-  fi
   ETH2_RESET=true
 fi
 
 if [ ! -d $DEVCHAIN_DIR ]; then
-  DAO_DEPLOY=true
+  if [ $SNAPSHOT ]; then
+    echo "Unzip devchain snapshot"
+    unzip -o -q -d $DATA_DIR ./mock_data/devchain.zip
+  else
+    DAO_DEPLOY=true
+  fi
+fi
+
+if [ ! -d $IPFS_DIR ] && [ $SNAPSHOT ] ; then
+  echo "Unzip ipfs snapshot"
+  unzip -o -q -d $DATA_DIR ./mock_data/ipfs.zip
+fi
+if [ ! -d $VALIDATORS_DIR ] && [ $SNAPSHOT ]; then
+  echo "Unzip validators snapshot"
+  unzip -o -q -d $DATA_DIR ./mock_data/validators.zip
 fi
 
 if [ ! -d $TESTNET_DIR ]; then
