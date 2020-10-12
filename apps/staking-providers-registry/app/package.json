@@ -7,7 +7,7 @@
     "@aragon/api-react": "^2.0.0",
     "@aragon/ui": "^1.7.0",
     "core-js": "^3.6.5",
-    "formik": "^2.1.7",
+    "formik": "^2.2.0",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "regenerator-runtime": "^0.13.7",
