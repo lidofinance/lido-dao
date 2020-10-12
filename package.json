@@ -91,35 +91,5 @@
     "openzeppelin-solidity": "2.0.0",
     "solidity-bytes-utils": "0.0.6",
     "yargs": "^16.0.3"
-  },
-  "ava": {
-    "require": [
-      "@babel/register"
-    ],
-    "files": [
-      "test-e2e/**/*.test.js"
-    ],
-    "concurrency": 5
-  },
-  "babel": {
-    "presets": [
-      [
-        "@babel/preset-env",
-        {
-          "useBuiltIns": "usage",
-          "corejs": "3",
-          "targets": {
-            "node": true
-          }
-        }
-      ]
-    ],
-    "env": {
-      "test": {
-        "plugins": [
-          "istanbul"
-        ]
-      }
-    }
   }
 }
