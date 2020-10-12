@@ -9,6 +9,7 @@ import App from './App'
 const defaultValue = ''
 
 const defaultState = {
+  isStopped: true,
   fee: defaultValue,
   feeDistribution: defaultValue,
   withdrawalCredentials: defaultValue,
