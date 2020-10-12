@@ -54,8 +54,7 @@ contract CstETH is ERC20, ERC20Burnable {
     }
 
     /**
-     * @dev Exchanges cstETH to stETH with dynamically calculated on each
-     * transact ratio.
+     * @dev Exchanges cstETH to stETH with dynamically calculated ratio.
      * @param _cstETHAmount amount of cstETH to uwrap and get stETH
      *
      * Requirements:
@@ -71,30 +70,33 @@ contract CstETH is ERC20, ERC20Burnable {
     }
 
     /**
-     * @dev Calculates current exchange ratio that exactly is this contract
-     * stETH balance divided by total issued cstETH. Multiplicates it with given
-     * amount. Works with usual rounding.
+     * @dev Multiplicates given amount of stETH with current exchange ratio that
+     * exactly is total issued cstETH divided by this contract stETH shares.
+     *
      * @param _stETHAmount amount of stETH
      * @return Returns amount of cstETH with current ratio and given stETH amount
-    */
+     */
     function getCstETHByStETH(uint256 _stETHAmount) public view returns (uint256) {
         uint256 stEthWrapped = _getShares();
         uint256 cstETHIssued = totalSupply();
+        // The initial amount of cstETH enforced to be issued at the fixed 1:1 ratio
         if (stEthWrapped == 0 || cstETHIssued == 0)
             return _stETHAmount;
         return _stETHAmount.mul(cstETHIssued).div(stEthWrapped);
     }
 
     /**
-     * @dev Calculates current exchange ratio that exactly is this contract
-     * total issued cstETH divided by stETH balance. Multiplicates it with given
-     * amount. Works with usual rounding.
+     * @dev Multiplicates given amount of cstETH with current exchange ratio
+     * that exactly is this contract stETH shares divided by total issued cstETH.
+     *
      * @param _cstETHAmount amount of cstETH
      * @return Returns amount of stETH with current ratio and given cstETH amount
-    */
+     */
     function getStETHByCstETH(uint256 _cstETHAmount) public view returns (uint256) {
         uint256 stEthWrapped = _getShares();
         uint256 cstETHIssued = totalSupply();
+        // At the initial state you can't get any stETH from this contract,
+        // because no cstETH was issued
         if (stEthWrapped == 0 || cstETHIssued == 0)
             return 0;
         return _cstETHAmount.mul(stEthWrapped).div(cstETHIssued);
@@ -102,8 +104,8 @@ contract CstETH is ERC20, ERC20Burnable {
 
     /**
      * @dev Calls stETH to get shares of this contract.
-     * @return Returns amount of stETH with current ratio and given cstETH amount
-    */
+     * @return Returns stETH shares of this contract
+     */
     function _getShares() internal view returns(uint256) {
         return stETH.getSharesByHolder(address(this));
     }
