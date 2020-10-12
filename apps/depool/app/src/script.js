@@ -1,6 +1,7 @@
 import 'core-js/stable'
 import 'regenerator-runtime/runtime'
 import Aragon, { events } from '@aragon/api'
+import { fromWei } from 'web3-utils'
 
 const app = new Aragon()
 
@@ -86,11 +87,11 @@ async function getWithdrawalCredentials() {
 }
 
 async function getBufferedEther() {
-  return await app.call('getBufferedEther').toPromise()
+  return fromWei(await app.call('getBufferedEther').toPromise())
 }
 
 async function getTotalControlledEther() {
-  return await app.call('getTotalControlledEther').toPromise()
+  return fromWei(await app.call('getTotalControlledEther').toPromise())
 }
 
 async function getToken() {
@@ -118,5 +119,9 @@ async function getInsuranceFund() {
 }
 
 async function getEther2Stat() {
-  return await app.call('getEther2Stat').toPromise()
+  const stat = await app.call('getEther2Stat').toPromise()
+  return {
+    Deposited: fromWei(stat.deposited),
+    Remote: fromWei(stat.remote)
+  }
 }
