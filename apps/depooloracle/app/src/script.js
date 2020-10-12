@@ -12,10 +12,12 @@ app.store(
 
     try {
       switch (event) {
-        case 'Increment':
-          return { ...nextState, count: await getValue() }
-        case 'Decrement':
-          return { ...nextState, count: await getValue() }
+        case 'MemberAdded':
+          return { ...nextState, oracleMembers: await getOracleMembers() }
+        case 'MemberRemoved':
+          return { ...nextState, oracleMembers: await getOracleMembers() }
+        case 'QuorumChanged':
+          return { ...nextState, quorum: await getQuorum() }
         case events.SYNC_STATUS_SYNCING:
           return { ...nextState, isSyncing: true }
         case events.SYNC_STATUS_SYNCED:
@@ -39,14 +41,29 @@ app.store(
  ***********************/
 
 function initializeState() {
-  return async cachedState => {
+  return async (cachedState) => {
     return {
       ...cachedState,
-      count: await getValue(),
+      oracleMembers: await getOracleMembers(),
+      quorum: await getQuorum(),
+      reportIntervalDurationSeconds: await getReportIntervalDurationSeconds(),
+      latestData: await getLatestData(),
     }
   }
 }
 
-async function getValue() {
-  return parseInt(await app.call('value').toPromise(), 10)
+function getOracleMembers() {
+  return app.call('getOracleMembers').toPromise()
+}
+
+function getQuorum() {
+  return app.call('getQuorum').toPromise()
+}
+
+function getReportIntervalDurationSeconds() {
+  return app.call('getReportIntervalDurationSeconds').toPromise()
+}
+
+function getLatestData() {
+  return app.call('getLatestData').toPromise()
 }
