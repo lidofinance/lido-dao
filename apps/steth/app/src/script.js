@@ -1,6 +1,7 @@
 import 'core-js/stable'
 import 'regenerator-runtime/runtime'
 import Aragon, { events } from '@aragon/api'
+import { fromWei } from 'web3-utils'
 
 const app = new Aragon()
 
@@ -63,5 +64,5 @@ async function getTokenSymbol() {
 }
 
 async function getTotalSupply() {
-  return await app.call('totalSupply').toPromise()
+  return fromWei(await app.call('totalSupply').toPromise())
 }
