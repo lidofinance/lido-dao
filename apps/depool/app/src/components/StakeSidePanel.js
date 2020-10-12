@@ -9,7 +9,7 @@ const initialValues = {
 }
 
 const validationSchema = yup.object().shape({
-  address: yup.string().required().min(1),
+  // address: yup.string().required().min(1),
 })
 
 function PanelContent({ api, onClose }) {
@@ -42,8 +42,7 @@ function PanelContent({ api, onClose }) {
           >
             <Field
               name="address"
-              label="Address"
-              required
+              label="Referral"
               component={TextField}
             />
             <Button

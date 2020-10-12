@@ -100,29 +100,29 @@ export default function App() {
             />
           </span>
         ) : (
-          <span style={{ display: 'flex', alignItems: 'center' }}>
-            <strong
-              css={`
+            <span style={{ display: 'flex', alignItems: 'center' }}>
+              <strong
+                css={`
                 color: ${theme.positive};
               `}
-            >
-              LIVE
+              >
+                LIVE
             </strong>
-            <Button
-              label="PAUSE"
-              icon={
-                <IconRemove
-                  css={`
+              <Button
+                label="PAUSE"
+                icon={
+                  <IconRemove
+                    css={`
                     color: ${theme.negative};
                   `}
-                />
-              }
-              display="icon"
-              onClick={stop}
-              style={{ marginLeft: 10 }}
-            />
-          </span>
-        ),
+                  />
+                }
+                display="icon"
+                onClick={stop}
+                style={{ marginLeft: 10 }}
+              />
+            </span>
+          ),
       },
       {
         label: 'Fee',
@@ -194,7 +194,11 @@ export default function App() {
   )
   const stake = useCallback(
     (address) => {
-      return api.submit(address).toPromise()
+      return api
+        .submit(address || '0x0000000000000000000000000000000000000000', {
+          value: '0x1bc16d674ec800000', // 32ETH
+        })
+        .toPromise()
     },
     [api]
   )
