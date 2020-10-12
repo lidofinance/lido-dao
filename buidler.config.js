@@ -23,7 +23,8 @@ module.exports = {
     evmVersion: 'constantinople'
   },
   paths: {
-    sources: "./contracts/0.4.24",
+    sources: './contracts/0.4.24',
+    cache: './cache/v4'
   },
   gasReporter: {
     enabled: !!process.env.REPORT_GAS,
