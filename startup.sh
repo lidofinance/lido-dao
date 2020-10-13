@@ -201,19 +201,10 @@ fi
 echo "Starting Aragon web UI"
 docker-compose up -d aragon
 
-if [ ! -d "$VALIDATORS_DIR" ] && [ $GEN_KEYS ]; then
+if [ ! -d "$VALIDATOR_KEYS_DIR" ] && [ $GEN_KEYS ]; then
   echo "Generating $VALIDATOR_COUNT validator keys... (this may take a while)"
   # TODO dkg
   ./deposit.sh --num_validators=$VALIDATOR_COUNT --password=$PASSWORD --chain=medalla --mnemonic="$VALIDATOR_MNEMONIC" --withdrawal_pk=$WITHDRAWAL_PK > /dev/null
-
-  echo "Importing validators keystore"
-  echo $PASSWORD | docker-compose run --rm --no-deps node2-1 lighthouse \
-    --spec "$SPEC" --debug-level "$DEBUG_LEVEL" \
-    account validator import --reuse-password --stdin-inputs \
-    --datadir "/data" \
-    --directory "/data/validator_keys" \
-    --validator-dir "/data/validators" \
-    --testnet-dir "/data/testnet"
 fi
 
 if [ $ETH1_ONLY ]; then
@@ -222,7 +213,11 @@ fi
 
 if [ $ETH2_RESET ]; then
   if [ ! $RESET ]; then
+    echo "Stopping ETH2 nodes..."
     docker-compose rm -s -v -f node2-1 > /dev/null
+    docker-compose rm -s -v -f node2-2 > /dev/null
+    docker-compose rm -s -v -f node2-3 > /dev/null
+    docker-compose rm -s -v -f node2-4 > /dev/null
     docker-compose rm -s -v -f mock-validators > /dev/null
     docker-compose rm -s -v -f validators > /dev/null
   fi
@@ -233,7 +228,10 @@ if [ $ETH2_RESET ]; then
   rm -rf $BEACONDATA3_DIR
   rm -rf $BEACONDATA4_DIR
 
-  docker-compose run --rm --no-deps node2-1 lcli \
+  echo "Updating lighthouse node"
+  docker pull sigp/lighthouse
+
+  docker-compose run --rm --no-deps node2 lcli \
     --spec "$SPEC" \
     new-testnet --force \
     --deposit-contract-address "$DEPOSIT" \
@@ -246,33 +244,63 @@ if [ $ETH2_RESET ]; then
 
   if [ $SPEC = "minimal" ]; then
     # reduce slot time generation
-    sed -i 's/SECONDS_PER_SLOT: 6/SECONDS_PER_SLOT: 1/' $TESTNET_DIR/config.yaml
+    sed -i 's/SECONDS_PER_SLOT: "6"/SECONDS_PER_SLOT: "1"/' $TESTNET_DIR/config.yaml
     # set according eth1 block time generation, see docker-compose.yml
-    sed -i 's/SECONDS_PER_ETH1_BLOCK: 14/SECONDS_PER_ETH1_BLOCK: 5/' $TESTNET_DIR/config.yaml
+    # sed -i 's/SECONDS_PER_ETH1_BLOCK: "14"/SECONDS_PER_ETH1_BLOCK: "5"/' $TESTNET_DIR/config.yaml
+    # fix deposit contract address
+    sed -i "s/1234567890123456789012345678901234567890/$DEPOSIT/" $TESTNET_DIR/config.yaml
   fi
 
   echo "Specification generated at $TESTNET_DIR."
 
+  if [ ! -d "$MOCK_VALIDATOR_KEYS_DIR" ]; then
+    echo "Generating $MOCK_VALIDATOR_COUNT mock validators concurrently... (this may take a while)"
+    KEYS_DIR=$MOCK_DATA_DIR ./deposit.sh --num_validators=$MOCK_VALIDATOR_COUNT --password=$PASSWORD --chain=medalla --mnemonic="$MNEMONIC" > /dev/null
+
+    # mv $VALIDATOR_KEYS_DIR $MOCK_VALIDATOR_KEYS_DIR
+    echo "Making deposits for $MOCK_VALIDATOR_COUNT genesis validators... (this may take a while)"
+    node ./scripts/mock_deposit.js $MOCK_VALIDATOR_KEYS_DIR
+  fi
+
   if [ ! -d "$MOCK_VALIDATORS_DIR" ]; then
-    echo "Generating $MOCK_VALIDATOR_COUNT mock validator keys... (this may take a while)"
-    # rm -rf $MOCK_VALIDATORS_DIR
-    # rm -rf $MOCK_SECRETS_DIR
-    docker-compose run --rm --no-deps node2-1 lcli \
-      --spec "$SPEC" \
-      insecure-validators \
-      --count $MOCK_VALIDATOR_COUNT \
-      --validators-dir "/data/mock/validators" \
-      --secrets-dir "/data/mock/secrets"
-    echo "Validators generated at $MOCK_VALIDATORS_DIR with keystore passwords at $MOCK_SECRETS_DIR."
+  echo "Importing validators keystore"
+  echo $PASSWORD | docker-compose run --rm --no-deps node2 lighthouse \
+    --spec "$SPEC" --debug-level "$DEBUG_LEVEL" \
+    account validator import --reuse-password --stdin-inputs \
+    --datadir "/data/mock" \
+    --directory "/data/mock/validator_keys" \
+    --testnet-dir "/data/testnet"
   fi
 
   echo "Generating genesis"
-  docker-compose run --rm --no-deps node2-1  lcli \
+  docker-compose run --rm --no-deps node2 lcli \
     --spec "$SPEC" \
-    interop-genesis \
+    eth1-genesis \
     --testnet-dir "/data/testnet" \
-    --genesis-fork-version $FORK_VERSION \
-    $MOCK_VALIDATOR_COUNT
+    --eth1-endpoint http://node1:8545
+
+
+
+  # if [ ! -d "$MOCK_VALIDATORS_DIR" ]; then
+  #   echo "Generating $MOCK_VALIDATOR_COUNT mock validator keys... (this may take a while)"
+  #   # rm -rf $MOCK_VALIDATORS_DIR
+  #   # rm -rf $MOCK_SECRETS_DIR
+  #   docker-compose run --rm --no-deps node2-1 lcli \
+  #     --spec "$SPEC" \
+  #     insecure-validators \
+  #     --count $MOCK_VALIDATOR_COUNT \
+  #     --validators-dir "/data/mock/validators" \
+  #     --secrets-dir "/data/mock/secrets"
+  #   echo "Validators generated at $MOCK_VALIDATORS_DIR with keystore passwords at $MOCK_SECRETS_DIR."
+  # fi
+
+  # echo "Generating genesis"
+  # docker-compose run --rm --no-deps node2-1  lcli \
+  #   --spec "$SPEC" \
+  #   interop-genesis \
+  #   --testnet-dir "/data/testnet" \
+  #   --genesis-fork-version $FORK_VERSION \
+  #   $MOCK_VALIDATOR_COUNT
 
   NOW=$(date +%s)
   echo "Reset genesis time to now ($NOW)"
@@ -282,18 +310,26 @@ if [ $ETH2_RESET ]; then
     /data/testnet/genesis.ssz \
     $NOW
 fi
+if [ ! -d "$VALIDATORS_DIR" ]; then
+  echo "Importing validators keystore"
+  echo $PASSWORD | docker-compose run --rm --no-deps node2 lighthouse \
+    --spec "$SPEC" --debug-level "$DEBUG_LEVEL" \
+    account validator import --reuse-password --stdin-inputs \
+    --datadir "/data" \
+    --directory "/data/validator_keys" \
+    --testnet-dir "/data/testnet"
+fi
 
-docker-compose up -d node2-1
-sleep 3
+
+docker-compose up -d node2-1 node2-2
+sleep 5
 docker-compose up -d mock-validators
 docker-compose up -d validators
 
-if [[ $NODES ]]; then
-  echo "Start extra nodes"
-  sleep 3
-  docker-compose up -d node2-2
-  sleep 3
-  docker-compose up -d node2-3
-  sleep 3
-  docker-compose up -d node2-4
-fi
+# if [[ $NODES ]]; then
+#   echo "Start extra nodes"
+#   sleep 3
+#   docker-compose up -d node2-3
+#   sleep 3
+#   docker-compose up -d node2-4
+# fi

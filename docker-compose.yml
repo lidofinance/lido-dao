@@ -49,6 +49,16 @@ services:
     networks:
       eth2:
 
+  node2:
+    image: sigp/lighthouse:latest
+    container_name: node2
+    networks:
+      eth2:
+    links:
+      - node1
+    volumes:
+      - ./data:/data
+
   node2-1:
     image: sigp/lighthouse:latest
     container_name: node2-1
@@ -66,10 +76,13 @@ services:
       --spec "${SPEC}"
       --debug-level "${DEBUG_LEVEL}"
       bn
+      --disable-discovery
+      --disable-upnp
       --datadir "/data/beacondata-1"
       --testnet-dir "/data/testnet"
       --http
       --http-address 0.0.0.0
+      --http-allow-origin *
       --libp2p-addresses /ip4/10.20.30.102/tcp/9000,/ip4/10.20.30.103/tcp/9000,/ip4/10.20.30.104/tcp/9000
       --eth1
       --eth1-endpoint http://node1:8545
@@ -91,10 +104,13 @@ services:
       --spec "${SPEC}"
       --debug-level "${DEBUG_LEVEL}"
       bn
+      --disable-discovery
+      --disable-upnp
       --datadir "/data/beacondata-2"
       --testnet-dir "/data/testnet"
       --http
       --http-address 0.0.0.0
+      --http-allow-origin *
       --libp2p-addresses /ip4/10.20.30.101/tcp/9000,/ip4/10.20.30.103/tcp/9000,/ip4/10.20.30.104/tcp/9000
 #      --eth1
 #      --eth1-endpoint http://node1:8545
@@ -117,10 +133,13 @@ services:
       --spec "${SPEC}"
       --debug-level "${DEBUG_LEVEL}"
       bn
+      --disable-discovery
+      --disable-upnp
       --datadir "/data/beacondata-3"
       --testnet-dir "/data/testnet"
       --http
       --http-address 0.0.0.0
+      --http-allow-origin *
       --libp2p-addresses /ip4/10.20.30.102/tcp/9000,/ip4/10.20.30.101/tcp/9000,/ip4/10.20.30.104/tcp/9000
 #      --eth1
 #      --eth1-endpoint http://node1:8545
@@ -143,10 +162,13 @@ services:
       --spec "${SPEC}"
       --debug-level "${DEBUG_LEVEL}"
       bn
+      --disable-discovery
+      --disable-upnp
       --datadir "/data/beacondata-4"
       --testnet-dir "/data/testnet"
       --http
       --http-address 0.0.0.0
+      --http-allow-origin *
       --libp2p-addresses /ip4/10.20.30.102/tcp/9000,/ip4/10.20.30.101/tcp/9000,/ip4/10.20.30.103/tcp/9000
   #      --eth1
   #      --eth1-endpoint http://node1:8545
@@ -162,12 +184,12 @@ services:
     command: >
       lighthouse
       --spec "${SPEC}"
+      validator_client
+      --delete-lockfiles 
+      --init-slashing-protection
       --debug-level "${DEBUG_LEVEL}"
-      vc
-      --datadir "/data/mock/validators"
-      --secrets-dir "/data/mock/secrets"
+      --datadir "/data/mock"
       --testnet-dir "/data/testnet"
-      --auto-register
       --server http://node2-1:5052
     networks:
       eth2:
@@ -187,12 +209,12 @@ services:
     command: >
       lighthouse
       --spec "${SPEC}"
+      validator_client
+      --delete-lockfiles 
+      --init-slashing-protection
       --debug-level "${DEBUG_LEVEL}"
-      vc
-      --datadir "/data/validators"
-      --secrets-dir "/data/secrets"
+      --datadir "/data"
       --testnet-dir "/data/testnet"
-      --auto-register
       --server http://node2-1:5052
 
 networks:
