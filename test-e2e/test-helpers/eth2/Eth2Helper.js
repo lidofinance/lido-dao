@@ -6,7 +6,7 @@ import { sleep as waitFor } from '../utils'
 // TODO api assertions
 
 export function getActiveValidatorsPubKeys() {
-  const response = request('GET', 'http://localhost:5052/beacon/validators/active', {
+  const response = request('GET', 'http://localhost:5052/eth/v1/beacon/states/head/validators', {
     headers: {
       accept: 'application/json'
     }
