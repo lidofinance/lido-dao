@@ -1,4 +1,4 @@
-import { abi as DePoolAbi } from '../../../apps/depool/artifacts/DePool.json'
+import { abi as DePoolAbi } from '../../../artifacts/DePool.json'
 import { createVote, voteForAction, init as voteInit } from './votingHelper'
 import { encodeCallScript } from '@aragon/contract-helpers-test/src/aragon-os'
 import * as eth1Helper from '../eth1Helper'
@@ -19,6 +19,10 @@ function init(c) {
 }
 function getProxyAddress() {
   return context.apps.dePoolApp.proxyAddress
+}
+
+async function hasInitialized() {
+  return await dePoolContract.methods.hasInitialized().call()
 }
 
 async function setWithdrawalCredentials(withdrawalCredentials, holder, holders) {
@@ -52,15 +56,12 @@ function getWithdrawalCredentials() {
   return dePoolContract.methods.getWithdrawalCredentials().call()
 }
 
-function getTotalSigningKeys() {
-  return dePoolContract.methods.getTotalSigningKeyCount().call()
-}
-function getUnusedSigningKeyCount() {
-  return dePoolContract.methods.getUnusedSigningKeyCount().call()
+async function getTreasury() {
+  return await dePoolContract.methods.getTreasury().call()
 }
 
-async function putEthToDePoolContract(from, value) {
-  await eth1Helper.sendTransaction(web3, getProxyAddress(), from, value)
+async function depositToDePoolContract(from, value) {
+  return await eth1Helper.sendTransaction(web3, getProxyAddress(), from, value)
 }
 
 function getTotalControlledEther() {
@@ -69,29 +70,21 @@ function getTotalControlledEther() {
 function getBufferedEther() {
   return dePoolContract.methods.getBufferedEther().call()
 }
-async function getSigningKey(index) {
-  return await dePoolContract.methods.getSigningKey(index).call()
-}
 
-// async function initDepoolObject() {
-//   const myObj = {}
-//   dePoolContract.methods.forEach((m) => {
-//     myObj[m.name] = (...args) => {
-//       return dePoolContract.methods[m.name].call(...args)
-//     }
-//   })
-//   return myObj
-// }
+function reportEther(sender, epoch, value) {
+  return dePoolContract.methods.reportEther2(epoch, value).send({ from: sender, gas: '2000000' })
+}
 
 export {
   init,
   getWithdrawalCredentials,
   setWithdrawalCredentials,
   addSigningKeys,
-  getTotalSigningKeys,
-  getUnusedSigningKeyCount,
-  putEthToDePoolContract,
+  depositToDePoolContract,
   getBufferedEther,
   getTotalControlledEther,
-  getSigningKey
+  getProxyAddress,
+  getTreasury,
+  hasInitialized,
+  reportEther
 }

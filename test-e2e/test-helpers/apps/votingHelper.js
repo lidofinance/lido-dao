@@ -4,6 +4,7 @@ import { abi as financeAbi } from '@aragon/apps-finance/abi/Finance.json'
 import { encodeCallScript } from '@aragon/contract-helpers-test/src/aragon-os'
 import { init as tokenManagerInit, tokenManagerContract } from './tokenManagerHelper'
 
+
 const financeAbiExt = financeAbi.concat(vaultAbi.filter((i) => i.type === 'event'))
 const votingAbiExt = votingAbi.concat(financeAbiExt.filter((i) => i.type === 'event'))
 
@@ -23,6 +24,9 @@ function init(c) {
 }
 function getProxyAddress() {
   return context.apps.votingApp.proxyAddress
+}
+async function hasInitialized() {
+  return await voteContract.methods.hasInitialized().call()
 }
 
 async function createVote(callData1, holder, voteName = '') {
@@ -51,4 +55,4 @@ async function voteForAction(voteId, holders, voteName = '') {
   // TODO vote assert?
 }
 
-export { init, createVote, voteForAction }
+export { init, createVote, voteForAction, hasInitialized }
