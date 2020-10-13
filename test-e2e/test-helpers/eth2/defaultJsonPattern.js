@@ -12,7 +12,6 @@ export class DefaultJsonPattern {
   }
 
   getValidatorBalance(pubKey) {
-    console.log(this.jsonData)
     for (let i = 0; i < this.jsonData.length; i++) {
       if (pubKey === this.jsonData[i].pubkey) {
         return this.jsonData[i].balance

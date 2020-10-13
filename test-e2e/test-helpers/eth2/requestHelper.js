@@ -1,4 +1,3 @@
-const format = require('../../../automation/utils')
 // TODO request wrapper
 function getRequest() {
   // response status
