@@ -3,6 +3,7 @@ source ./.env
 set -e +u
 set -o pipefail
 
+KEYS_DIR=${KEYS_DIR:-$PWD/data}
 TMP_DIR=$PWD/tmp-deposit-cli
 IMG="depool-deposit-cli:latest"
 
@@ -17,4 +18,4 @@ if [[ "$(docker images -q $IMG 2> /dev/null)" == "" ]] || [[ $REBUILD ]]; then
   rm -rf $TMP_DIR
 fi
 
-docker run -it --rm -v $PWD/data:/data $IMG --folder /data "$@"
+docker run -it --rm -v $KEYS_DIR:/data $IMG --folder /data "$@"
