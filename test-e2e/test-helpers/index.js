@@ -12,7 +12,9 @@ import {
   VOTING_APP_ID,
   FINANCE_APP_ID,
   TOKEN_MANAGER_APP_ID,
-  AGENT_APP_ID
+  AGENT_APP_ID,
+  KERNEL_DEFAULT_ACL_APP_ID,
+  SP_REGISTRY_APP_ID
 } from './constants'
 
 export const findApp = (apps, id) => apps.find((app) => app.appId === id)
@@ -27,9 +29,11 @@ export const prepareContext = async (params) => {
     registryAddress: ensRegistry
   })
   const apps = await getAllApps(daoAddress, { web3 })
+  const aclApp = findApp(apps, KERNEL_DEFAULT_ACL_APP_ID)
   const votingApp = findApp(apps, VOTING_APP_ID)
   const financeApp = findApp(apps, FINANCE_APP_ID)
   const vaultApp = findApp(apps, AGENT_APP_ID)
+  const stakingProvidersApp = findApp(apps, SP_REGISTRY_APP_ID)
   const tokenManagerApp = findApp(apps, TOKEN_MANAGER_APP_ID)
   const stEthApp = findApp(apps, STETH_APP_ID)
   const dePoolOracleApp = findApp(apps, DEPOOLORACLE_APP_ID)
@@ -51,7 +55,9 @@ export const prepareContext = async (params) => {
       tokenManagerApp,
       stEthApp,
       dePoolOracleApp,
-      dePoolApp
+      dePoolApp,
+      aclApp,
+      stakingProvidersApp
     }
   }
 }
