@@ -1,5 +1,6 @@
 const { usePlugin } = require('@nomiclabs/buidler/config')
 
+usePlugin('@nomiclabs/buidler-web3')
 usePlugin('@nomiclabs/buidler-truffle5')
 usePlugin('@nomiclabs/buidler-ganache')
 usePlugin('buidler-gas-reporter')
