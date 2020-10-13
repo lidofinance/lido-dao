@@ -9,4 +9,4 @@ RUN echo "replace github.com/depools/kyber-bls12381 => /depool-dao/kyber-bls1238
 WORKDIR ./client
 RUN go test -run=TestFullFlow
 #Copy generated pubKey to ./data
-CMD bash -c "cp -f /tmp/dc4bc_participant_0.pubkey /data/ && chmod -R 666 /data/dc4bc_participant_0.pubkey"
+CMD bash -c "cp -f /tmp/participant_0.pubkey /data/ && chmod -R 666 /data/participant_0.pubkey"
