@@ -49,9 +49,9 @@ services:
     networks:
       eth2:
 
-  node2:
+  lh:
     image: sigp/lighthouse:latest
-    container_name: node2
+    container_name: lh
     networks:
       eth2:
     links:

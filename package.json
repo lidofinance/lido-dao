@@ -16,7 +16,7 @@
     "install:frontend": "cd app && npm install",
     "abi:extract": "truffle-extract --output abi/ --keys abi",
     "prepublishOnly": "truffle compile --all && npm run abi:extract -- --no-compile",
-    "compile" : "npm run compile:4 && npm run compile:6",
+    "compile": "npm run compile:4 && npm run compile:6",
     "compile:4": "buidler compile --force",
     "compile:6": "buidler compile --config buidler.config.6.js --force",
     "compile:apps": "lerna run --scope=@depools/apps-* --concurrency=4 --stream compile",
@@ -56,6 +56,7 @@
     "@aragon/apps-finance": "^3.0.0",
     "@aragon/apps-token-manager": "^2.1.0",
     "@aragon/apps-voting": "^2.1.0",
+    "@aragon/buidler-aragon": "^0.2.9",
     "@aragon/contract-helpers-test": "^0.1.0",
     "@aragon/templates-shared": "^1.0.1",
     "@aragon/test-helpers": "^2.1.0",
@@ -89,7 +90,9 @@
     "solidity-coverage": "^0.7.11",
     "solium": "^1.2.5",
     "truffle": "^5.1.43",
-    "truffle-extract": "^1.2.1"
+    "truffle-extract": "^1.2.1",
+    "app-root-path": "^3.0.0",
+    "winston": "^3.3.3"
   },
   "dependencies": {
     "@aragon/os": "^4.4.0",
@@ -105,7 +108,7 @@
       "@babel/register"
     ],
     "files": [
-      "test-e2e/**/*.test.js"
+      "tmp/test-e2e/**/*.test.js"
     ],
     "concurrency": 5
   },
