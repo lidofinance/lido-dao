@@ -1,4 +1,4 @@
-import { abi as DePoolAbi } from '../../../artifacts/DePool.json'
+import { abi as DePoolAbi } from '../../../../artifacts/DePool.json'
 import { createVote, voteForAction, init as voteInit } from './votingHelper'
 import { encodeCallScript } from '@aragon/contract-helpers-test/src/aragon-os'
 import * as eth1Helper from '../eth1Helper'
@@ -36,6 +36,28 @@ async function setWithdrawalCredentials(withdrawalCredentials, holder, holders) 
   await voteForAction(voteId, holders, 'Set withdrawal credentials')
 }
 
+async function setFee(fee, holder, holders) {
+  const callData1 = encodeCallScript([
+    {
+      to: getProxyAddress(),
+      calldata: dePoolContract.methods.setFee(fee).encodeABI()
+    }
+  ])
+  const voteId = await createVote(callData1, holder, 'setFee')
+  await voteForAction(voteId, holders, 'setFee')
+}
+
+async function setFeeDistribution(treasuryFee, insuranceFee, SPFee, holder, holders) {
+  const callData1 = encodeCallScript([
+    {
+      to: getProxyAddress(),
+      calldata: dePoolContract.methods.setFeeDistribution(treasuryFee, insuranceFee, SPFee).encodeABI()
+    }
+  ])
+  const voteId = await createVote(callData1, holder, 'setFeeDistribution')
+  await voteForAction(voteId, holders, 'setFeeDistribution')
+}
+
 async function addSigningKeys(validatorsTestData, holder, count, holders) {
   const validatorsPubKeys = validatorsTestData.pubKey
   const validatorsSignatures = validatorsTestData.signature
@@ -54,6 +76,13 @@ async function addSigningKeys(validatorsTestData, holder, count, holders) {
 
 function getWithdrawalCredentials() {
   return dePoolContract.methods.getWithdrawalCredentials().call()
+}
+function getFee() {
+  return dePoolContract.methods.getFee().call()
+}
+
+function getFeeDistribution() {
+  return dePoolContract.methods.getFeeDistribution().call()
 }
 
 async function getTreasury() {
@@ -86,5 +115,9 @@ export {
   getProxyAddress,
   getTreasury,
   hasInitialized,
-  reportEther
+  reportEther,
+  setFee,
+  setFeeDistribution,
+  getFee,
+  getFeeDistribution
 }

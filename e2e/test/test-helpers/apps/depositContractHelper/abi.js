@@ -1,4 +1,4 @@
-export const depositContractAbi = [
+const depositContractAbi = [
   { inputs: [], stateMutability: 'nonpayable', type: 'constructor' },
   {
     anonymous: false,
@@ -56,3 +56,5 @@ export const depositContractAbi = [
     type: 'function'
   }
 ]
+
+module.exports = depositContractAbi

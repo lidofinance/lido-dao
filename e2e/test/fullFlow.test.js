@@ -1,6 +1,6 @@
 import test from 'ava'
 
-import { prepareContext } from './test-helpers/index'
+import { prepareContext } from './test-helpers'
 import { expectEvent } from '@openzeppelin/test-helpers'
 import {
   ETH,
@@ -20,7 +20,7 @@ import * as dePoolOracleHelper from './test-helpers/apps/dePoolOracleHelper'
 import * as stakingProvidersHelper from './test-helpers/apps/stakingProviderHelper'
 import * as vaultHelper from './test-helpers/apps/vaultHelper'
 import * as tokenManagerHelper from './test-helpers/apps/tokenManagerHelper'
-import * as depositContractHelper from './test-helpers/apps/depositContract/depositContractHelper'
+import * as depositContractHelper from './test-helpers/apps/depositContractHelper'
 import {
   oracleAccounts as oracleMembers,
   spsAccounts as spsMembers,
@@ -85,8 +85,19 @@ test('Full flow test ', async (t) => {
   const withdrawalAddress = getGeneratedWithdrawalAddress()
   await dePoolHelper.setWithdrawalCredentials(withdrawalAddress, holder1, quorumHolders)
   t.is(await dePoolHelper.getWithdrawalCredentials(), withdrawalAddress, 'Check that withdrawal credentials were set correctly')
-  //
-  //
+
+  logger.info('Set fees')
+  // 100% = 10000
+  await dePoolHelper.setFee(10000, holder1, quorumHolders)
+  t.is(await dePoolHelper.getFee(), '10000', 'Check that fee was set correctly')
+
+  // 100% = 10000
+  await dePoolHelper.setFeeDistribution(1000, 1000, 8000, holder1, quorumHolders)
+  const result = await dePoolHelper.getFeeDistribution()
+  t.is(result[0], '1000', 'Check that fee was set correctly')
+  t.is(result[1], '1000', 'Check that fee was set correctly')
+  t.is(result[2], '8000', 'Check that fee was set correctly')
+
   await stakingProvidersHelper.addStakingProvider('test provider1', spsMember1, 2, holder1, quorumHolders)
   let validatorsTestDataForSp1 = getSigningKeys(2, 0)
   await stakingProvidersHelper.addSigningKeys(0, validatorsTestDataForSp1, holder1, quorumHolders)
@@ -226,15 +237,15 @@ test('Full flow test ', async (t) => {
   // TODO Convert some default token to ctoken
   // TODO deploy oracle daemons
 
-  logger.info('Wait for validators activation')
-  await waitFor(150)
+  // logger.info('Wait for validators activation')
+  // await waitFor(150)
 
-  logger.info('Check that the validators have been activated')
-  const sp1UsedSigningKeys = await getActiveSigningKeys(sp1, sp1SigningKeys)
-  const sp2UsedSigningKeys = await getActiveSigningKeys(sp2, sp2SigningKeys)
-  const sp3UsedSigningKeys = await getActiveSigningKeys(sp3, sp3SigningKeys)
-  const spsUsedSigningKeys = sp1UsedSigningKeys.concat(sp2UsedSigningKeys, sp3UsedSigningKeys)
-  t.true(eth2Helper.isValidatorsStarted(spsUsedSigningKeys), 'Check that validators have been activated with added signing keys')
+  // logger.info('Check that the validators have been activated')
+  // const sp1UsedSigningKeys = await getActiveSigningKeys(sp1, sp1SigningKeys)
+  // const sp2UsedSigningKeys = await getActiveSigningKeys(sp2, sp2SigningKeys)
+  // const sp3UsedSigningKeys = await getActiveSigningKeys(sp3, sp3SigningKeys)
+  // const spsUsedSigningKeys = sp1UsedSigningKeys.concat(sp2UsedSigningKeys, sp3UsedSigningKeys)
+  // t.true(eth2Helper.isValidatorsStarted(spsUsedSigningKeys), 'Check that validators have been activated with added signing keys')
 
   // TODO change api
   // logger.info('Check that the network is producing and finalizing blocks')
@@ -245,16 +256,17 @@ test('Full flow test ', async (t) => {
   // // await waitFor(20000)
 
   logger.info('Push data to eth1')
-  const oracleData = ETH(100)
+  const oracleData = ETH(600)
+  const period = 400
   console.log('ORACLE DATA', oracleData)
-  console.log(await dePoolOracleHelper.pushData(400, oracleData, holder1))
-  console.log(await dePoolOracleHelper.pushData(400, oracleData, holder2))
-  console.log(await dePoolOracleHelper.pushData(400, oracleData, holder3))
+  console.log(await dePoolOracleHelper.pushData(period, oracleData, holder1))
+  console.log(await dePoolOracleHelper.pushData(period, oracleData, holder2))
+  console.log(await dePoolOracleHelper.pushData(period, oracleData, holder3))
   console.log(await dePoolOracleHelper.getQuorum())
   console.log(await stEthHelper.getBalance(spsMember1))
   console.log(await stEthHelper.getBalance(spsMember2))
   console.log(await stEthHelper.getBalance(spsMember3))
-  console.log(await web3.eth.getBalance(await dePoolHelper.getTreasury()))
+  console.log(await stEthHelper.getBalance(await dePoolHelper.getTreasury()))
   // t.is(await stEthHelper.getBalance(sps1Member), (((user1Deposit * 100) / stEthHelper.getTotalSupply()) * oracleData) / 100 * 0.9, "Check that sp1 receive an appropriate amount of reward tokens")
   // t.is(await stEthHelper.getBalance(sps2Member), (((user2Deposit * 100) / stEthHelper.getTotalSupply()) * oracleData) / 100 * 0.9, "Check that sp2 receive an appropriate amount of reward tokens")
   // t.is(await stEthHelper.getBalance(sps3Member), (((user3Deposit * 100) / stEthHelper.getTotalSupply()) * oracleData) / 100 * 0.9, "Check that sp3 receive an appropriate amount of reward tokens")

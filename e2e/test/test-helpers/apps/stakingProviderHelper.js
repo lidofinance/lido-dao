@@ -1,4 +1,4 @@
-import { abi as spsAbi } from '../../../artifacts/StakingProvidersRegistry.json'
+import { abi as spsAbi } from '../../../../artifacts/StakingProvidersRegistry.json'
 import { encodeCallScript } from '@aragon/contract-helpers-test/src/aragon-os'
 import { createVote, voteForAction } from './votingHelper'
 import { concatKeys } from '../utils'

@@ -1,4 +1,4 @@
-import { abi as stEthAbi } from '../../../artifacts/StETH.json'
+import { abi as stEthAbi } from '../../../../artifacts/StETH.json'
 
 let context
 let stEthContract

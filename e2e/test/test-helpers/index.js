@@ -1,29 +1,27 @@
-import { getAllApps, getDaoAddress } from '@aragon/toolkit'
-import { getLocalWeb3 } from './base'
-import { getAccounts } from './eth1Helper'
-import { getLogger } from './utils'
+const { getAllApps, getDaoAddress } = require('@aragon/toolkit')
+const { getAccounts, getLocalWeb3 } = require('./eth1Helper')
+const logger = require('./logger')
 
-import {
+const {
   ensRegistry,
   daoName,
   DEPOOL_APP_ID,
   DEPOOLORACLE_APP_ID,
   STETH_APP_ID,
+  SP_REGISTRY_APP_ID,
   VOTING_APP_ID,
   FINANCE_APP_ID,
   TOKEN_MANAGER_APP_ID,
   AGENT_APP_ID,
-  KERNEL_DEFAULT_ACL_APP_ID,
-  SP_REGISTRY_APP_ID
-} from './constants'
+  KERNEL_DEFAULT_ACL_APP_ID
+} = require('./constants')
 
-export const findApp = (apps, id) => apps.find((app) => app.appId === id)
+const findApp = (apps, id) => apps.find((app) => app.appId === id)
 
-export const prepareContext = async (params) => {
+const prepareContext = async (params) => {
   const web3 = await getLocalWeb3()
   // Retrieve web3 accounts.
   const accounts = await getAccounts(web3)
-  const logger = getLogger()
   const daoAddress = await getDaoAddress(daoName, {
     provider: web3.currentProvider,
     registryAddress: ensRegistry
@@ -49,6 +47,7 @@ export const prepareContext = async (params) => {
       address: daoAddress
     },
     apps: {
+      aclApp,
       votingApp,
       financeApp,
       vaultApp,
@@ -56,8 +55,8 @@ export const prepareContext = async (params) => {
       stEthApp,
       dePoolOracleApp,
       dePoolApp,
-      aclApp,
       stakingProvidersApp
     }
   }
 }
+exports.prepareContext = prepareContext

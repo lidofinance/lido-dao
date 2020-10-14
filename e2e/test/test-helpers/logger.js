@@ -1,6 +1,6 @@
 const { createLogger, format, transports } = require('winston')
 
-export const logger = createLogger({
+const logger = createLogger({
   level: 'debug',
   format: format.combine(format.errors({ stack: true }), format.splat(), format.json()),
   transports: [
@@ -16,3 +16,5 @@ if (process.env.NODE_ENV !== 'production') {
     })
   )
 }
+
+module.exports = logger
