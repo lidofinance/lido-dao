@@ -12,8 +12,4 @@ contract CstETHMock is CstETH {
     function mint(address recipient, uint256 amount) public {
         _mint(recipient, amount);
     }
-
-    function getShares() public view returns(uint256) {
-        return _getShares();
-    }
 }
