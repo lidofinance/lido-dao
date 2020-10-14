@@ -1,6 +1,6 @@
 import test from 'ava'
 import { getAllApps, getDaoAddress } from '@aragon/toolkit'
-import { prepareContext } from './test-helpers'
+import { prepareContext } from '../scripts/helpers'
 import {
   daoAddress,
   KERNEL_DEFAULT_ACL_APP_ID,
@@ -13,7 +13,7 @@ import {
   DEPOOLORACLE_APP_ID,
   DEPOOL_APP_ID,
   SP_REGISTRY_APP_ID
-} from './test-helpers/constants'
+} from '../scripts/helpers/constants'
 
 test.before('Connecting Web3', async (t) => {
   t.context = await prepareContext()

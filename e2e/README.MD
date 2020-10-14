@@ -14,10 +14,10 @@
   
 ### Apps and template repos
 
-- DePool App: `depool.depoolspm.eth` -> `0x2e25c8F88c5cCcbC9400e5bc86cF9C58C7604327` [ipfs](http://localhost:8080/ipfs/QmZ3B6r8oB7tnZpDF43V2s9yMqWpgRmStos23hmWGcqrdD)
-- DePoolOracle App: `depooloracle.depoolspm.eth` -> `0x019F12a7DAa44A34CD0FF35055b0e2D4679D8521` [ipfs](http://localhost:8080/ipfs/Qmc5rm2GSds4emDtPL4dQKpa1UwwLr5jRBm7i8Ypi38jF4)
-- Staking Provider Registry App: `staking-providers-registry.depoolspm.eth` -> `0xfe18BCBeDD6f46e0DfbB3Aea02090F23ED1c4a28` [ipfs](http://localhost:8080/ipfs/Qmc4PJY2TLGNj3RLFZp39C8ZzU7X2xtPNc9N2GDg5bBciD)
-- StETH token App: `steth.depoolspm.eth` -> `0xD13a7D8A728692eB2c56135B5EB5A1951b3F8395` [ipfs](http://localhost:8080/ipfs/QmXLCWbFojaCsU9Ak1xMPdP94Mfr6WLrpvK2qVcuLHTC8d)
+- DePool App: `depool.depoolspm.eth` -> `0x2e25c8F88c5cCcbC9400e5bc86cF9C58C7604327` [ipfs](http://localhost:8080/ipfs/QmQKqHhw8CicmDMnQ8NAGuCjtJiPqW77nDL2ogB8ydQpda)
+- DePoolOracle App: `depooloracle.depoolspm.eth` -> `0x019F12a7DAa44A34CD0FF35055b0e2D4679D8521` [ipfs](http://localhost:8080/ipfs/Qme9kqHep4v3mLkg18kHWchdiPRpJ3addw6ZeMXVqqgjRo)
+- Staking Provider Registry App: `staking-providers-registry.depoolspm.eth` -> `0xfe18BCBeDD6f46e0DfbB3Aea02090F23ED1c4a28` [ipfs](http://localhost:8080/ipfs/Qmbm3iF2HhPD3V2LDdgnsmGQCC8nQzcAY7D8r8NbBGPC5d)
+- StETH token App: `steth.depoolspm.eth` -> `0xD13a7D8A728692eB2c56135B5EB5A1951b3F8395` [ipfs](http://localhost:8080/ipfs/QmZChra7tQPPBw58fJBVSaVF1kpMsR45HCMtjVosUAgb35)
 - DePool DAO Template: `depool-template.depoolspm.eth` -> `0xc7a5b4d533a18370f3EB88f48971B3A3276546fb`
 
 > Depool APM: ens.addr('depoolspm.eth')

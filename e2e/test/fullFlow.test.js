@@ -1,6 +1,6 @@
 import test from 'ava'
 
-import { prepareContext } from './test-helpers'
+import { prepareContext } from '../scripts/helpers'
 import { expectEvent } from '@openzeppelin/test-helpers'
 import {
   ETH,
@@ -9,25 +9,25 @@ import {
   getGeneratedWithdrawalAddress,
   concat0x,
   getDataToPerformDepositContract
-} from './test-helpers/utils'
+} from '../scripts/helpers/utils'
 
-import * as aclHelper from './test-helpers/apps/aclHelper'
-import * as dePoolHelper from './test-helpers/apps/depoolHelper'
-import * as eth2Helper from './test-helpers/eth2/Eth2Helper'
-import * as stEthHelper from './test-helpers/apps/stEthHelper'
-import * as votingHelper from './test-helpers/apps/votingHelper'
-import * as dePoolOracleHelper from './test-helpers/apps/dePoolOracleHelper'
-import * as stakingProvidersHelper from './test-helpers/apps/stakingProviderHelper'
-import * as vaultHelper from './test-helpers/apps/vaultHelper'
-import * as tokenManagerHelper from './test-helpers/apps/tokenManagerHelper'
-import * as depositContractHelper from './test-helpers/apps/depositContractHelper'
+import * as aclHelper from '../scripts/helpers/apps/aclHelper'
+import * as dePoolHelper from '../scripts/helpers/apps/depoolHelper'
+import * as eth2Helper from '../scripts/helpers/eth2/Eth2Helper'
+import * as stEthHelper from '../scripts/helpers/apps/stEthHelper'
+import * as votingHelper from '../scripts/helpers/apps/votingHelper'
+import * as dePoolOracleHelper from '../scripts/helpers/apps/dePoolOracleHelper'
+import * as stakingProvidersHelper from '../scripts/helpers/apps/stakingProviderHelper'
+import * as vaultHelper from '../scripts/helpers/apps/vaultHelper'
+import * as tokenManagerHelper from '../scripts/helpers/apps/tokenManagerHelper'
+import * as depositContractHelper from '../scripts/helpers/apps/depositContractHelper'
 import {
   oracleAccounts as oracleMembers,
   spsAccounts as spsMembers,
   simpleAccounts as users,
   UNLIMITED_STAKING_LIMIT
-} from './test-helpers/constants'
-import { getActiveSigningKeys } from './test-helpers/apps/stakingProviderHelper'
+} from '../scripts/helpers/constants'
+import { getActiveSigningKeys } from '../scripts/helpers/apps/stakingProviderHelper'
 
 test.before('Connecting Web3', async (t) => {
   t.context = await prepareContext()
