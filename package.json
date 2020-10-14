@@ -108,7 +108,7 @@
       "@babel/register"
     ],
     "files": [
-      "tmp/test-e2e/**/*.test.js"
+      "e2e/test/**/*.test.js"
     ],
     "concurrency": 5
   },

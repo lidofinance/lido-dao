@@ -1,13 +1,7 @@
 import test from 'ava'
-import { depositContract } from './test-helpers/constants'
-
-import {
-  ether,
-  constants, // Common constants, like the zero address and largest integers
-  expectEvent, // Assertions for emitted events
-  expectRevert // Assertions for transactions that should fail
-} from '@openzeppelin/test-helpers'
-import { prepareContext } from './test-helpers'
+import { ether, expectEvent } from '@openzeppelin/test-helpers'
+import { prepareContext } from '../scripts/helpers'
+import { depositContract } from '../scripts/helpers/constants'
 
 const depositContractAbi = [
   { inputs: [], stateMutability: 'nonpayable', type: 'constructor' },
