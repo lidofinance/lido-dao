@@ -19,7 +19,7 @@ const {
 const findApp = (apps, id) => apps.find((app) => app.appId === id)
 
 const getLocalWeb3 = async () => {
-  const web3 = new Web3(new Web3.providers.WebsocketProvider(`ws://localhost:8545`))
+  const web3 = new Web3('http://localhost:8545')
   // const web3 = new Web3(new Web3.providers.WebsocketProvider(`ws://195.201.102.242:8545`))
   const connected = await web3.eth.net.isListening()
   if (!connected) throw new Error('Web3 connection failed')

@@ -7,7 +7,7 @@ MNEMONIC="explain tackle mirror kit van hammer degree position ginger unfair sou
 
 mkdir -p $DATA_DIR
 if [ ! "$(ls -A $DATA_DIR)" ]; then
-  echo "Initializing chain data from snapshot"
+  echo "Initializing chain data from Aragen snapshot"
   tar -xzf $ARAGEN_PKG -C $DATA_DIR --strip 2 package/aragon-ganache
 else
   echo "Chain data exists. Assuming Deposit contract deployed: 0x5f4e510503d83bd1a5436bdae2923489da0be454 at block 70"

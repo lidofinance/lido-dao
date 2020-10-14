@@ -42,7 +42,6 @@ while test $# -gt 0; do
       echo "  -n | --nodes          start 2nd and 3d eth2 nodes"
       echo "  -s | --snapshot       use snapshot instead deploy"
       echo "  -1 | --eth1           start only eth1 part"
-      echo "  -k | --keys           generate validators keys"
       exit 0
       ;;
     -r|--reset)
@@ -101,7 +100,7 @@ fi
 if [ ! -d $DEVCHAIN_DIR ]; then
   if [ $SNAPSHOT ]; then
     echo "Unzip devchain snapshot"
-    unzip -o -q -d $DATA_DIR ./mock_data/devchain.zip
+    unzip -o -q -d $DATA_DIR ./snapshots/devchain.zip
   else
     DAO_DEPLOY=true
   fi
@@ -109,11 +108,11 @@ fi
 
 if [ ! -d $IPFS_DIR ] && [ $SNAPSHOT ] ; then
   echo "Unzip ipfs snapshot"
-  unzip -o -q -d $DATA_DIR ./mock_data/ipfs.zip
+  unzip -o -q -d $DATA_DIR ./snapshots/ipfs.zip
 fi
 if [ ! -d $VALIDATORS_DIR ] && [ $SNAPSHOT ]; then
   echo "Unzip validators snapshot"
-  unzip -o -q -d $DATA_DIR ./mock_data/validators.zip
+  unzip -o -q -d $DATA_DIR ./snapshots/validators.zip
 fi
 
 if [ ! -d $TESTNET_DIR ]; then
@@ -201,7 +200,8 @@ fi
 echo "Starting Aragon web UI"
 docker-compose up -d aragon
 
-if [ ! -d "$VALIDATOR_KEYS_DIR" ] && [ $GEN_KEYS ]; then
+if [ ! -d "$VALIDATOR_KEYS_DIR" ]; then
+  rm -rf $VALIDATORS_DIR
   echo "Generating $VALIDATOR_COUNT validator keys... (this may take a while)"
   # TODO dkg
   ./deposit.sh --num_validators=$VALIDATOR_COUNT --password=$PASSWORD --chain=medalla --mnemonic="$VALIDATOR_MNEMONIC" --withdrawal_pk=$WITHDRAWAL_PK > /dev/null
@@ -231,7 +231,7 @@ if [ $ETH2_RESET ]; then
   echo "Updating lighthouse node"
   docker pull sigp/lighthouse
 
-  docker-compose run --rm --no-deps node2 lcli \
+  docker-compose run --rm --no-deps lh lcli \
     --spec "$SPEC" \
     new-testnet --force \
     --deposit-contract-address "$DEPOSIT" \
@@ -254,6 +254,7 @@ if [ $ETH2_RESET ]; then
   echo "Specification generated at $TESTNET_DIR."
 
   if [ ! -d "$MOCK_VALIDATOR_KEYS_DIR" ]; then
+    rm -rf $MOCK_VALIDATORS_DIR
     echo "Generating $MOCK_VALIDATOR_COUNT mock validators concurrently... (this may take a while)"
     KEYS_DIR=$MOCK_DATA_DIR ./deposit.sh --num_validators=$MOCK_VALIDATOR_COUNT --password=$PASSWORD --chain=medalla --mnemonic="$MNEMONIC" > /dev/null
 
@@ -264,7 +265,7 @@ if [ $ETH2_RESET ]; then
 
   if [ ! -d "$MOCK_VALIDATORS_DIR" ]; then
   echo "Importing validators keystore"
-  echo $PASSWORD | docker-compose run --rm --no-deps node2 lighthouse \
+  echo $PASSWORD | docker-compose run --rm --no-deps lh lighthouse \
     --spec "$SPEC" --debug-level "$DEBUG_LEVEL" \
     account validator import --reuse-password --stdin-inputs \
     --datadir "/data/mock" \
@@ -273,7 +274,7 @@ if [ $ETH2_RESET ]; then
   fi
 
   echo "Generating genesis"
-  docker-compose run --rm --no-deps node2 lcli \
+  docker-compose run --rm --no-deps lh lcli \
     --spec "$SPEC" \
     eth1-genesis \
     --testnet-dir "/data/testnet" \
@@ -304,7 +305,7 @@ if [ $ETH2_RESET ]; then
 
   NOW=$(date +%s)
   echo "Reset genesis time to now ($NOW)"
-  docker-compose run --rm --no-deps node2-1 lcli \
+  docker-compose run --rm --no-deps lh lcli \
     --spec "$SPEC" \
     change-genesis-time \
     /data/testnet/genesis.ssz \
@@ -312,7 +313,7 @@ if [ $ETH2_RESET ]; then
 fi
 if [ ! -d "$VALIDATORS_DIR" ]; then
   echo "Importing validators keystore"
-  echo $PASSWORD | docker-compose run --rm --no-deps node2 lighthouse \
+  echo $PASSWORD | docker-compose run --rm --no-deps lh lighthouse \
     --spec "$SPEC" --debug-level "$DEBUG_LEVEL" \
     account validator import --reuse-password --stdin-inputs \
     --datadir "/data" \

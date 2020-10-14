@@ -22,7 +22,7 @@ require('dotenv').config()
 const tokenManagerAbiExt = tokenManagerAbi.concat(votingAbi.filter((i) => i.type === 'event'))
 const financeAbiExt = financeAbi.concat(vaultAbi.filter((i) => i.type === 'event'))
 const votingAbiExt = votingAbi.concat(financeAbiExt.filter((i) => i.type === 'event'))
-const voteSettings = JSON.parse(process.env.VOTING_SETTINGS)
+const voteSettings = ['500000000000000000', '50000000000000000', '604800']
 
 test.before('Connecting Web3', async (t) => {
   t.context = await prepareContext()
