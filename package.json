@@ -1,57 +1,37 @@
 {
   "name": "@depools/dao",
   "version": "0.0.1",
+  "private": true,
+  "workspaces": [
+    "apps/*/app"
+  ],
   "scripts": {
-    "bootstrap": "lerna bootstrap --hoist",
     "lint": "solium --dir ./contracts",
-    "test": "npm run test:unit",
-    "test:unit": "npm run compile:6 && buidler test --network buidlerevm",
-    "test:gas": "npm run compile:6 && REPORT_GAS=true buidler test --network localhost",
-    "test:coverage": "npm run test:coverage:4 && npm run test:coverage:6",
+    "test": "yarn run test:unit",
+    "test:unit": "yarn run compile:6 && buidler test --network buidlerevm",
+    "test:gas": "yarn run compile:6 && REPORT_GAS=true buidler test --network localhost",
+    "test:coverage": "yarn run test:coverage:4 && yarn run test:coverage:6",
     "test:coverage:4": "buidler coverage --network coverage --testfiles test/0.4.24",
     "test:coverage:6": "buidler coverage --network coverage --testfiles test/0.6.12 --config buidler.config.6.js",
     "test:e2e": "npm run compile && ava -T 250000 -v",
-    "truffle:dev": "truffle dev",
-    "ganache-cli:test": "./node_modules/@aragon/test-helpers/ganache-cli.sh",
-    "install:frontend": "cd app && npm install",
-    "abi:extract": "truffle-extract --output abi/ --keys abi",
-    "prepublishOnly": "truffle compile --all && npm run abi:extract -- --no-compile",
-    "compile": "npm run compile:4 && npm run compile:6",
-    "compile:4": "buidler compile --force",
+    "estimate-deposit-loop-gas": "yarn run test:unit ./estimate_deposit_loop_gas.js",
+    "compile": "yarn run compile:4 && yarn run compile:6",
+    "compile:4": "buidler compile",
     "compile:6": "buidler compile --config buidler.config.6.js --force",
-    "compile:apps": "lerna run --scope=@depools/apps-* --concurrency=4 --stream compile",
-    "build": "npm run build:apps",
-    "build:apps": "lerna run --scope=@depools/apps-* --concurrency=4 --stream build",
-    "deploy": "npm run deploy:dev",
-    "deploy:dev": "npm run deploy:apm:dev && deploy:apps:dev && deploy:tmpl:dev && deploy:dao:dev",
-    "deploy:apm": "npm run deploy:apm:dev",
-    "deploy:apps": "npm run deploy:apps:dev",
-    "deploy:tmpl": "npm run deploy:tmpl:dev",
-    "deploy:dao": "npm run deploy:dao:dev",
-    "deploy:apm:dev": "lerna run --scope=@depools/dao-template --concurrency=1 --stream deploy:apm:dev",
-    "deploy:apm:rinkeby": "lerna run --scope=@depools/dao-template --concurrency=1 --stream deploy:apm:rinkeby",
-    "deploy:apm:mainnet": "lerna run --scope=@depools/dao-template --concurrency=1 --stream deploy:apm:mainnet",
-    "deploy:apps:dev": "lerna run --scope=@depools/apps-* --concurrency=1 --stream publish:patch",
-    "deploy:apps:rinkeby": "lerna run --scope=@depools/apps-* --concurrency=1 --stream publish:patch:rinkeby",
-    "deploy:apps:mainnet": "lerna run --scope=@depools/apps-* --concurrency=1 --stream publish:patch:mainnet",
-    "deploy:tmpl:dev": "lerna run --scope=@depools/dao-template --concurrency=1 --stream deploy:tmpl:dev",
-    "deploy:tmpl:rinkeby": "lerna run --scope=@depools/dao-template --concurrency=1 --stream deploy:tmpl:rinkeby",
-    "deploy:tmpl:mainnet": "lerna run --scope=@depools/dao-template --concurrency=1 --stream deploy:tmpl:mainnet",
-    "deploy:dao:dev": "lerna run --scope=@depools/dao-template --concurrency=1 --stream deploy:dao:dev",
-    "deploy:dao:rinkeby": "lerna run --scope=@depools/dao-template --concurrency=1 --stream deploy:dao:rinkeby",
-    "deploy:dao:mainnet": "lerna run --scope=@depools/dao-template --concurrency=1 --stream deploy:dao:mainnet",
-    "estimate-deposit-loop-gas": "npm run test:unit ./estimate_deposit_loop_gas.js"
+    "deploy": "yarn run deploy:dev",
+    "deploy:dev": "yarn run deploy:apm:dev && deploy:apps:dev && deploy:tmpl:dev && deploy:dao:dev",
+    "deploy:apm:dev": "ENS=0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1 DAO_FACTORY=0x5d94e3e7aec542ab0f9129b9a7badeb5b3ca0f77 buidler run ./scripts/deploy-apm.js --network localhost",
+    "deploy:apm:rinkeby": "ENS=0x98Df287B6C145399Aaa709692c8D308357bC085D DAO_FACTORY=0xad4d106b43b480faa3ef7f98464ffc27fc1faa96 buidler run ./scripts/deploy-apm.js --network rinkeby",
+    "deploy:apm:mainnet": "ENS=0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e DAO_FACTORY=0xb9da44c051c6cc9e04b7e0f95e95d69c6a6d8031 buidler run ./scripts/deploy-apm.js --network mainnet",
+    "deploy:tmpl:dev": "ENS=0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1 DAO_FACTORY=0x5d94e3e7aec542ab0f9129b9a7badeb5b3ca0f77 MINIME_FACTORY=0xd526b7aba39cccf76422835e7fd5327b98ad73c9 APM=0x1902a0410EFe699487Dd85F12321aD672bE4ada2 buidler run ./scripts/deploy-tmpl.js --network localhost",
+    "deploy:dao:dev": "ENS=0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1 DEPOSIT_CONTRACT=0x5f4e510503d83bd1a5436bdae2923489da0be454 buidler run ./scripts/deploy-dao.js --network localhost",
+    "deploy:apps:dev": "yarn run deploy:app-depool && yarn run deploy:app-depooloracle && yarn run deploy:app-staking-providers-registry && yarn run deploy:app-steth",
+    "deploy:app-depool": "cd apps/depool && buidler publish patch",
+    "deploy:app-depooloracle": "cd apps/depooloracle && buidler publish patch",
+    "deploy:app-staking-providers-registry": "cd apps/staking-providers-registry && buidler publish patch",
+    "deploy:app-steth": "cd apps/steth && buidler publish patch"
   },
-  "files": [
-    "/abi",
-    "/arapp.json",
-    "/build",
-    "/contracts",
-    "/test"
-  ],
-  "keywords": [],
   "author": "MixBytes <hello@mixbytes.io>",
-  "description": "",
   "devDependencies": {
     "@aragon/apps-finance": "^3.0.0",
     "@aragon/apps-token-manager": "^2.1.0",
@@ -63,10 +43,11 @@
     "@aragon/toolkit": "0.0.7",
     "@babel/preset-env": "^7.11.5",
     "@babel/register": "^7.11.5",
-    "@nomiclabs/buidler": "^1.4.5",
-    "@nomiclabs/buidler-ganache": "^1.3.3",
-    "@nomiclabs/buidler-truffle5": "^1.3.0",
-    "@nomiclabs/buidler-web3": "^1.3.0",
+    "@nomiclabs/buidler": "1.4.7",
+    "@nomiclabs/buidler-etherscan": "1.3.0",
+    "@nomiclabs/buidler-ganache": "1.3.3",
+    "@nomiclabs/buidler-truffle5": "1.3.0",
+    "@nomiclabs/buidler-web3": "1.3.4",
     "@openzeppelin/test-helpers": "^0.5.6",
     "app-root-path": "^3.0.0",
     "ava": "^3.13.0",
@@ -92,6 +73,7 @@
     "solium": "^1.2.5",
     "truffle": "^5.1.43",
     "truffle-extract": "^1.2.1",
+    "web3": "^1.3.0",
     "winston": "^3.3.3"
   },
   "dependencies": {
@@ -100,37 +82,6 @@
     "@truffle/contract": "^4.2.22",
     "openzeppelin-solidity": "2.0.0",
     "solidity-bytes-utils": "0.0.6",
-    "solium": "^1.2.5",
     "yargs": "^16.0.3"
-  },
-  "ava": {
-    "require": [
-      "@babel/register"
-    ],
-    "files": [
-      "e2e/test/**/*.test.js"
-    ],
-    "concurrency": 5
-  },
-  "babel": {
-    "presets": [
-      [
-        "@babel/preset-env",
-        {
-          "useBuiltIns": "usage",
-          "corejs": "3",
-          "targets": {
-            "node": true
-          }
-        }
-      ]
-    ],
-    "env": {
-      "test": {
-        "plugins": [
-          "istanbul"
-        ]
-      }
-    }
   }
 }

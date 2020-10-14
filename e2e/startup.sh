@@ -204,10 +204,11 @@ if [ ! -d "$VALIDATOR_KEYS_DIR" ]; then
   rm -rf $VALIDATORS_DIR
   echo "Generating $VALIDATOR_COUNT validator keys... (this may take a while)"
   # TODO dkg
-  ./deposit.sh --num_validators=$VALIDATOR_COUNT --password=$PASSWORD --chain=medalla --mnemonic="$VALIDATOR_MNEMONIC" --withdrawal_pk=$WITHDRAWAL_PK > /dev/null
+  ./deposit.sh --num_validators=$VALIDATOR_COUNT --password=$PASSWORD --chain=medalla --mnemonic="$VALIDATOR_MNEMONIC" --withdrawal_pk=$WITHDRAWAL_PK
 fi
 
 if [ $ETH1_ONLY ]; then
+  echo "ETH1 part done!"
   exit 0
 fi
 
@@ -256,7 +257,7 @@ if [ $ETH2_RESET ]; then
   if [ ! -d "$MOCK_VALIDATOR_KEYS_DIR" ]; then
     rm -rf $MOCK_VALIDATORS_DIR
     echo "Generating $MOCK_VALIDATOR_COUNT mock validators concurrently... (this may take a while)"
-    KEYS_DIR=$MOCK_DATA_DIR ./deposit.sh --num_validators=$MOCK_VALIDATOR_COUNT --password=$PASSWORD --chain=medalla --mnemonic="$MNEMONIC" > /dev/null
+    KEYS_DIR=$MOCK_DATA_DIR ./deposit.sh --num_validators=$MOCK_VALIDATOR_COUNT --password=$PASSWORD --chain=medalla --mnemonic="$MNEMONIC"
 
     # mv $VALIDATOR_KEYS_DIR $MOCK_VALIDATOR_KEYS_DIR
     echo "Making deposits for $MOCK_VALIDATOR_COUNT genesis validators... (this may take a while)"
@@ -327,10 +328,9 @@ sleep 5
 docker-compose up -d mock-validators
 docker-compose up -d validators
 
-# if [[ $NODES ]]; then
-#   echo "Start extra nodes"
-#   sleep 3
-#   docker-compose up -d node2-3
-#   sleep 3
-#   docker-compose up -d node2-4
-# fi
+if [[ $NODES ]]; then
+  echo "Start extra nodes"
+  docker-compose up -d node2-3 node2-4
+fi
+
+echo "All done!"

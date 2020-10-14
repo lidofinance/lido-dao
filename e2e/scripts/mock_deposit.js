@@ -1,9 +1,9 @@
 require('dotenv').config()
 
-const { prepareContext } = require('../test/test-helpers')
-const logger = require('../test/test-helpers/logger')
-const { loadGeneratedValidatorsData, objHexlify } = require('../test/test-helpers/utils')
-const depositContractHelper = require('../test/test-helpers/apps/depositContractHelper')
+const { prepareContext } = require('./helpers')
+const logger = require('./helpers/logger')
+const { loadGeneratedValidatorsData, objHexlify } = require('./helpers/utils')
+const depositContractHelper = require('./helpers/apps/depositContractHelper')
 
 const args = process.argv.slice(2)
 const dir = args[0]

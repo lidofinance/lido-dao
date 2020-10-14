@@ -1,11 +1,11 @@
 import test from 'ava'
-import * as depositContractHelper from './test-helpers/apps/depositContractHelper'
+import * as depositContractHelper from '../scripts/helpers/apps/depositContractHelper'
 
 import {
   ether,
   expectEvent // Assertions for emitted events
 } from '@openzeppelin/test-helpers'
-import { prepareContext } from './test-helpers'
+import { prepareContext } from '../scripts/helpers'
 
 test.before('Connecting Web3', async (t) => {
   t.context = await prepareContext()
