@@ -31,6 +31,7 @@ contract('CstETH', function ([deployer, initialHolder, recipient, anotherAccount
       expect(await this.csteth.balanceOf(user1)).to.be.bignumber.equal('0')
       expect(await this.steth.balanceOf(user2)).to.be.bignumber.equal('0')
       expect(await this.csteth.balanceOf(user2)).to.be.bignumber.equal('0')
+      expect(await this.steth.balanceOf(this.csteth.address)).to.be.bignumber.equal('0')
     })
 
     it('stETH is set correctly', async function () {
@@ -78,7 +79,7 @@ contract('CstETH', function ([deployer, initialHolder, recipient, anotherAccount
         await expectRevert(this.csteth.unwrap(1, { from: user2 }), 'ERC20: burn amount exceeds balance')
       })
 
-      describe('before rewarding/slashing', function () {
+      describe('Before rewarding/slashing', function () {
         it('after partial unwrap balances are correct', async function () {
           for (let i = 0; i < 5; i++) await this.csteth.unwrap(10, { from: user1 })
 
@@ -98,10 +99,44 @@ contract('CstETH', function ([deployer, initialHolder, recipient, anotherAccount
         it('cstETH allowances isn\'t changed', async function () {
           expect(await this.csteth.allowance(user1, any_contract)).to.be.bignumber.equal('25')
         });
+
+        describe('After user2 submission', function () {
+          beforeEach(async function () {
+            await this.steth.mint(user2, new BN(100), { from: deployer })
+            await this.steth.setTotalShares(new BN(200), { from: deployer })
+            await this.steth.setTotalControlledEther(new BN(200), { from: deployer })
+
+            await this.steth.approve(this.csteth.address, 50, { from: user2 })
+            expect(await this.steth.allowance(user2, this.csteth.address)).to.be.bignumber.equal('50')
+          })
+
+          it('balances are correct', async function () {
+            expect(await this.steth.balanceOf(user1)).to.be.bignumber.equal('50')
+            expect(await this.csteth.balanceOf(user1)).to.be.bignumber.equal('50')
+            expect(await this.steth.balanceOf(user2)).to.be.bignumber.equal('100')
+            expect(await this.csteth.balanceOf(user2)).to.be.bignumber.equal('0')
+            expect(await this.steth.balanceOf(this.csteth.address)).to.be.bignumber.equal('50')
+          })
+
+          describe('After successful wrap', function () {
+            beforeEach(async function () {
+              await this.csteth.wrap(50, { from: user2 })
+            });
+
+            it('balances are correct', async function () {
+              expect(await this.steth.balanceOf(user1)).to.be.bignumber.equal('50')
+              expect(await this.csteth.balanceOf(user1)).to.be.bignumber.equal('50')
+              expect(await this.steth.balanceOf(user2)).to.be.bignumber.equal('50')
+              expect(await this.csteth.balanceOf(user2)).to.be.bignumber.equal('50')
+              expect(await this.steth.balanceOf(this.csteth.address)).to.be.bignumber.equal('100')
+            })
+          });
+        });
       })
 
       describe('After rewarding', function () {
         beforeEach(async function () {
+          // simulate rewarding by minting
           await this.steth.mint(user1, new BN(5), { from: deployer }) // +10%
           await this.steth.mint(this.csteth.address, new BN(5), { from: deployer }) // +10%
           await this.steth.setTotalControlledEther(new BN(110), { from: deployer }) // +10%
@@ -126,10 +161,77 @@ contract('CstETH', function ([deployer, initialHolder, recipient, anotherAccount
         it('cstETH allowances isn\'t changed', async function () {
           expect(await this.csteth.allowance(user1, any_contract)).to.be.bignumber.equal('25')
         });
+
+        describe('After user2 submission', function () {
+          beforeEach(async function () {
+            // simulate submission maths
+            await this.steth.mint(user2, new BN(100), { from: deployer })
+            await this.steth.setTotalShares(new BN(190), { from: deployer })
+            await this.steth.setTotalControlledEther(new BN(210), { from: deployer })
+
+            await this.steth.approve(this.csteth.address, 50, { from: user2 })
+            expect(await this.steth.allowance(user2, this.csteth.address)).to.be.bignumber.equal('50')
+          })
+
+          it('balances are correct', async function () {
+            expect(await this.steth.balanceOf(user1)).to.be.bignumber.equal('55')
+            expect(await this.csteth.balanceOf(user1)).to.be.bignumber.equal('50')
+            expect(await this.steth.balanceOf(user2)).to.be.bignumber.equal('100')
+            expect(await this.csteth.balanceOf(user2)).to.be.bignumber.equal('0')
+            expect(await this.steth.balanceOf(this.csteth.address)).to.be.bignumber.equal('55')
+          })
+
+          it('cstETH allowances isn\'t changed', async function () {
+            expect(await this.csteth.allowance(user1, any_contract)).to.be.bignumber.equal('25')
+          });
+
+          describe('After user2 wrap', function () {
+            beforeEach(async function () {
+              await this.csteth.wrap(50, { from: user2 })
+            });
+
+            it('balances are correct', async function () {
+              expect(await this.steth.balanceOf(user1)).to.be.bignumber.equal('55')
+              expect(await this.csteth.balanceOf(user1)).to.be.bignumber.equal('50')
+              expect(await this.steth.balanceOf(user2)).to.be.bignumber.equal('50')
+              expect(await this.csteth.balanceOf(user2)).to.be.bignumber.equal('45')
+              expect(await this.steth.balanceOf(this.csteth.address)).to.be.bignumber.equal('105')
+            })
+
+            it('after partial unwrap balances are correct', async function () {
+              for (let i = 0; i < 5; i++) {
+                await this.csteth.unwrap(10, { from: user1 })
+                await this.csteth.unwrap(9, { from: user2 })
+              }
+
+              expect(await this.steth.balanceOf(user1)).to.be.bignumber.equal('110')
+              expect(await this.csteth.balanceOf(user1)).to.be.bignumber.equal('0')
+              expect(await this.steth.balanceOf(user2)).to.be.bignumber.equal('95') // low values round error
+              expect(await this.csteth.balanceOf(user2)).to.be.bignumber.equal('0')
+              expect(await this.steth.balanceOf(this.csteth.address)).to.be.bignumber.equal('5') // low values round error
+            })
+
+            it('after full unwrap balances are correct', async function () {
+              await this.csteth.unwrap(50, { from: user1 })
+              await this.csteth.unwrap(45, { from: user2 })
+
+              expect(await this.steth.balanceOf(user1)).to.be.bignumber.equal('110')
+              expect(await this.csteth.balanceOf(user1)).to.be.bignumber.equal('0')
+              expect(await this.steth.balanceOf(user2)).to.be.bignumber.equal('99') // low values round error
+              expect(await this.csteth.balanceOf(user2)).to.be.bignumber.equal('0')
+              expect(await this.steth.balanceOf(this.csteth.address)).to.be.bignumber.equal('1') // low values round error
+            })
+
+            it('cstETH allowances isn\'t changed', async function () {
+              expect(await this.csteth.allowance(user1, any_contract)).to.be.bignumber.equal('25')
+            });
+          });
+        });
       })
 
       describe('After slashing', function () {
         beforeEach(async function () {
+          // simulate slashing by burning
           await this.steth.slash(user1, new BN(5), { from: deployer }) // -10%
           await this.steth.slash(this.csteth.address, new BN(5), { from: deployer }) // -10%
           await this.steth.setTotalControlledEther(new BN(90), { from: deployer }) // -10%
