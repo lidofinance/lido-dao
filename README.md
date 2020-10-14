@@ -187,6 +187,50 @@ so full branch coverage will never be reported until
 
 [solidity-coverage#219]: https://github.com/sc-forks/solidity-coverage/issues/269
 
+### Deploying
+
+1. Deploy Aragon APM
+
+```bash
+# Local dev network
+yarn run deploy:apm:dev
+
+# Rinkeby network
+yarn run deploy:apm:rinkeby
+
+# Mainnet network
+yarn run deploy:apm:mainnet
+```
+
+2. Build and deploy Aragon applications
+
+```bash
+# Local dev network
+yarn run deploy:apps:dev
+
+# Rinkeby network
+yarn run deploy:app-depool --network rinkeby
+yarn run deploy:app-depooloracle --network rinkeby
+yarn run deploy:app-staking-providers-registry --network rinkeby
+yarn run deploy:app-steth --network rinkeby
+
+# The same for mainnet, just replace "--network rinkeby" with "--network mainnet"
+```
+
+3. Deploy DAO template
+
+```bash
+# Local dev network
+yarn run deploy:tmpl:dev
+```
+
+4. Deploy DAO
+
+```bash
+# Local dev network
+yarn run deploy:dao:dev
+```
+
 ### _(deprecated)_ Configuration
 
 Can be specified in a local file `.dev.env`.
