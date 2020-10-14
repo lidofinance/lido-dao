@@ -13,6 +13,10 @@ contract StETHMock is ERC20, ERC20Burnable {
         _mint(recipient, amount);
     }
 
+    function slash(address holder, uint256 amount) public {
+        _burn(holder, amount);
+    }
+
     function setTotalShares(uint256 _totalShares) public {
         totalShares = _totalShares;
     }

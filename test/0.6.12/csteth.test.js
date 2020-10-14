@@ -15,7 +15,7 @@ contract('CstETH', function ([deployer, initialHolder, recipient, anotherAccount
   })
 
   describe('Wrapping / Unwrapping', function () {
-    const [user1, user2] = otherAccounts
+    const [user1, user2, any_contract] = otherAccounts
 
     beforeEach(async function () {
       await this.steth.mint(user1, new BN(100), { from: deployer })
@@ -53,6 +53,9 @@ contract('CstETH', function ([deployer, initialHolder, recipient, anotherAccount
     describe('After successful wrap', function () {
       beforeEach(async function () {
         await this.csteth.wrap(50, { from: user1 })
+
+        await this.csteth.approve(any_contract, 25, { from: user1 })
+        expect(await this.csteth.allowance(user1, any_contract)).to.be.bignumber.equal('25')
       })
 
       it('balances are correct', async function () {
@@ -91,9 +94,13 @@ contract('CstETH', function ([deployer, initialHolder, recipient, anotherAccount
           expect(await this.steth.balanceOf(this.csteth.address)).to.be.bignumber.equal('0')
           expect(await this.csteth.balanceOf(user1)).to.be.bignumber.equal('0')
         })
+
+        it('cstETH allowances isn\'t changed', async function () {
+          expect(await this.csteth.allowance(user1, any_contract)).to.be.bignumber.equal('25')
+        });
       })
 
-      describe('After rewarding/slashing', function () {
+      describe('After rewarding', function () {
         beforeEach(async function () {
           await this.steth.mint(user1, new BN(5), { from: deployer }) // +10%
           await this.steth.mint(this.csteth.address, new BN(5), { from: deployer }) // +10%
@@ -115,6 +122,38 @@ contract('CstETH', function ([deployer, initialHolder, recipient, anotherAccount
           expect(await this.steth.balanceOf(this.csteth.address)).to.be.bignumber.equal('0')
           expect(await this.csteth.balanceOf(user1)).to.be.bignumber.equal('0')
         })
+
+        it('cstETH allowances isn\'t changed', async function () {
+          expect(await this.csteth.allowance(user1, any_contract)).to.be.bignumber.equal('25')
+        });
+      })
+
+      describe('After slashing', function () {
+        beforeEach(async function () {
+          await this.steth.slash(user1, new BN(5), { from: deployer }) // -10%
+          await this.steth.slash(this.csteth.address, new BN(5), { from: deployer }) // -10%
+          await this.steth.setTotalControlledEther(new BN(90), { from: deployer }) // -10%
+        })
+
+        it('after partial unwrap balances are correct', async function () {
+          for (let i = 0; i < 5; i++) await this.csteth.unwrap(10, { from: user1 })
+
+          expect(await this.steth.balanceOf(user1)).to.be.bignumber.equal('90')
+          expect(await this.steth.balanceOf(this.csteth.address)).to.be.bignumber.equal('0')
+          expect(await this.csteth.balanceOf(user1)).to.be.bignumber.equal('0')
+        })
+
+        it('after full unwrap balances are correct', async function () {
+          await this.csteth.unwrap(50, { from: user1 })
+
+          expect(await this.steth.balanceOf(user1)).to.be.bignumber.equal('90')
+          expect(await this.steth.balanceOf(this.csteth.address)).to.be.bignumber.equal('0')
+          expect(await this.csteth.balanceOf(user1)).to.be.bignumber.equal('0')
+        })
+
+        it('cstETH allowances isn\'t changed', async function () {
+          expect(await this.csteth.allowance(user1, any_contract)).to.be.bignumber.equal('25')
+        });
       })
     })
   })
