@@ -1,10 +1,12 @@
 const { hash: namehash } = require('eth-ens-namehash')
 const keccak256 = require('js-sha3').keccak_256
 const getAccounts = require('@aragon/os/scripts/helpers/get-accounts')
-const logDeploy = require('@aragon/os/scripts/helpers/deploy-logger')
 
-const globalArtifacts = this.artifacts // Not injected unless called directly via truffle
-const globalWeb3 = this.web3 // Not injected unless called directly via truffle
+const runOrWrapScript = require('./helpers/run-or-wrap-script')
+const logDeploy = require('./helpers/log-deploy')
+
+const globalArtifacts = this.artifacts || artifacts // Not injected unless called directly via truffle
+const globalWeb3 = this.web3 || web3 // Not injected unless called directly via truffle
 
 const errorOut = (message) => {
   console.error(message)
@@ -19,8 +21,7 @@ const defaultOwner = process.env.OWNER
 const defaultDaoFactoryAddress = process.env.DAO_FACTORY || '0x5d94e3e7aec542ab0f9129b9a7badeb5b3ca0f77'
 const defaultENSAddress = process.env.ENS || '0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1'
 
-module.exports = async (
-  truffleExecCallback,
+async function deploy(
   {
     artifacts = globalArtifacts,
     web3 = globalWeb3,
@@ -29,7 +30,7 @@ module.exports = async (
     daoFactoryAddress = defaultDaoFactoryAddress,
     verbose = true
   } = {}
-) => {
+) {
   const log = (...args) => {
     if (verbose) {
       console.log(...args)
@@ -78,11 +79,11 @@ module.exports = async (
     log('Deploying APM bases...')
 
     const apmRegistryBase = await APMRegistry.new({ from: owner })
-    await logDeploy(apmRegistryBase, { verbose: this.verbose })
+    await logDeploy('APMRegistry', apmRegistryBase)
     const apmRepoBase = await Repo.new({ from: owner })
-    await logDeploy(apmRepoBase, { verbose: this.verbose })
+    await logDeploy('Repo', apmRepoBase)
     const ensSubdomainRegistrarBase = await ENSSubdomainRegistrar.new({ from: owner })
-    await logDeploy(ensSubdomainRegistrarBase, { verbose: this.verbose })
+    await logDeploy('ENSSubdomainRegistrar', ensSubdomainRegistrarBase)
 
     log('Deploying APMRegistryFactory...')
     const apmFactory = await APMRegistryFactory.new(
@@ -94,7 +95,7 @@ module.exports = async (
       ZERO_ADDR,
       { from: owner }
     )
-    await logDeploy(apmFactory, { verbose: this.verbose })
+    await logDeploy('APMRegistryFactory', apmFactory)
 
     log(`Assigning ENS name (${labelName}.${tldName}) to factory...`)
 
@@ -123,19 +124,13 @@ module.exports = async (
     log('Address:', apmAddress)
     log('Transaction hash:', receipt.tx)
     log('=========')
-    if (typeof truffleExecCallback === 'function') {
-      // Called directly via `truffle exec`
-      truffleExecCallback()
-    } else {
-      return {
-        apm: apmAddress
-      }
+
+    return {
+      apm: apmAddress
     }
   } catch (e) {
-    if (typeof truffleExecCallback === 'function') {
-      truffleExecCallback(e)
-    } else {
-      throw e
-    }
+    throw e
   }
 }
+
+module.exports = runOrWrapScript(deploy, module)

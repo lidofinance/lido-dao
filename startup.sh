@@ -134,22 +134,22 @@ if [[ ! $SNAPSHOT ]] && [[ $DAO_DEPLOY ]] ; then
   R=$(curl -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x'$APM'","latest"],"id":1}' | jq -r '.result'  | cut -c -4)
   if [[ "$R" != "0x60" ]]; then
     echo "Deploying DePool APM..."
-    npm run deploy:apm:dev
+    yarn run deploy:apm:dev
   fi
   R=$(curl -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x'$DEPOOL_APP'","latest"],"id":1}' | jq -r '.result'  | cut -c -4)
   if [[ "$R" != "0x60" ]]; then
     echo "Deploying DePool Apps..."
-    npm run deploy:apps:dev
+    yarn run deploy:apps:dev
   fi
   R=$(curl -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x'$TEMPLATE'","latest"],"id":1}' | jq -r '.result'  | cut -c -4)
   if [[ "$R" != "0x60" ]]; then
     echo "Deploying DePool DAO template..."
-    npm run deploy:tmpl:dev
+    yarn run deploy:tmpl:dev
   fi
   R=$(curl -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x'$DAO'","latest"],"id":1}' | jq -r '.result'  | cut -c -4)
   if [[ "$R" != "0x60" ]]; then
     echo "Deploying DePool DAO..."
-    npm run deploy:dao:dev
+    yarn run deploy:dao:dev
   fi
   # wait a bit for block mining
   sleep 3

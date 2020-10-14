@@ -1,9 +1,11 @@
 const { hash: namehash } = require('eth-ens-namehash')
 const getAccounts = require('@aragon/os/scripts/helpers/get-accounts')
-const logDeploy = require('@aragon/os/scripts/helpers/deploy-logger')
+
 const apps = require('./helpers/apps')
-const globalArtifacts = this.artifacts // Not injected unless called directly via truffle
-const globalWeb3 = this.web3 // Not injected unless called directly via truffle
+const runOrWrapScript = require('./helpers/run-or-wrap-script')
+
+const globalArtifacts = this.artifacts || artifacts // Not injected unless called directly via truffle
+const globalWeb3 = this.web3 || web3 // Not injected unless called directly via truffle
 
 const errorOut = (message) => {
   console.error(message)
@@ -31,8 +33,7 @@ const _getRegistered = async (ens, hash) => {
   return owner !== ZERO_ADDR && owner !== '0x' ? owner : false
 }
 
-module.exports = async (
-  truffleExecCallback,
+async function deploy(
   {
     artifacts = globalArtifacts,
     web3 = globalWeb3,
@@ -43,7 +44,7 @@ module.exports = async (
     depositIterationLimit = defaultDepositIterationLimit,
     verbose = true
   } = {}
-) => {
+) {
   const log = (...args) => {
     if (verbose) {
       console.log(...args)
@@ -148,20 +149,13 @@ module.exports = async (
     })
     log('=========')
 
-    if (typeof truffleExecCallback === 'function') {
-      // Called directly via `truffle exec`
-      truffleExecCallback()
-    } else {
-      return {
-        dao: daoEvent.args.dao,
-        token: tokenEvent.args.token
-      }
+    return {
+      dao: daoEvent.args.dao,
+      token: tokenEvent.args.token
     }
   } catch (e) {
-    if (typeof truffleExecCallback === 'function') {
-      truffleExecCallback(e)
-    } else {
-      throw e
-    }
+    throw e
   }
 }
+
+module.exports = runOrWrapScript(deploy, module)

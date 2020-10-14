@@ -4,6 +4,8 @@ const { getEvents, getEventArgument, ZERO_ADDRESS } = require('@aragon/contract-
 const { pad, ETH, hexConcat } = require('../helpers/utils')
 const { deployDaoAndPool } = require('./helpers/deploy')
 
+const StakingProvidersRegistry = artifacts.require('StakingProvidersRegistry')
+
 contract('DePool: deposit loop iteration limit', (addresses) => {
   const [
     // the root account which deployed the DAO
@@ -49,7 +51,9 @@ contract('DePool: deposit loop iteration limit', (addresses) => {
     const numKeys = 20
 
     const spTx = await spRegistry.addStakingProvider('SP-1', stakingProvider, validatorsLimit, { from: voting })
-    const stakingProviderId = getEventArgument(spTx, 'StakingProviderAdded', 'id')
+
+    // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
+    const stakingProviderId = getEventArgument(spTx, 'StakingProviderAdded', 'id', { decodeForAbi: StakingProvidersRegistry._json.abi })
 
     assertBn(await spRegistry.getStakingProvidersCount(), 1, 'total staking providers')
 

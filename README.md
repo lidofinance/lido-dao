@@ -61,15 +61,16 @@ The contract also works as a wrapper that accepts StETH tokens and mints CStETH 
 
 Installation is local and don't require root privileges.
 
-If you have `lerna` installed globally
+If you have `yarn` installed globally
+
 ```bash
-npm run bootstrap
+yarn
 ```
 
 otherwise
 
 ```bash
-npx lerna bootstrap 
+npx yarn
 ```
 
 ### Building docker containers
@@ -144,14 +145,14 @@ To build DGK container:
 Unit tests
 
 ```bash
-npm run test
+yarn run test
 ```
 
 E2E tests
 
 ```bash
 ./dkg.sh
-npm run test:e2e
+yarn run test:e2e
 ```
 
 #### Gas meter
@@ -159,7 +160,7 @@ npm run test:e2e
 In an app folder:
 
 ```bash
-npm run test:gas
+yarn run test:gas
 ```
 
 #### Generate test coverage report
@@ -167,13 +168,13 @@ npm run test:gas
 For all apps, in the repo root:
 
 ```bash
-npm run test:all:coverage
+yarn run test:all:coverage
 ```
 
 In an app folder:
 
 ```bash
-npm run test:coverage
+yarn run test:coverage
 ```
 
 Test coverage is reported to `coverage.json` and `coverage/index.html` files located
@@ -185,6 +186,50 @@ so full branch coverage will never be reported until
 [solidity-coverage#219] is implemented.
 
 [solidity-coverage#219]: https://github.com/sc-forks/solidity-coverage/issues/269
+
+### Deploying
+
+1. Deploy Aragon APM
+
+```bash
+# Local dev network
+yarn run deploy:apm:dev
+
+# Rinkeby network
+yarn run deploy:apm:rinkeby
+
+# Mainnet network
+yarn run deploy:apm:mainnet
+```
+
+2. Build and deploy Aragon applications
+
+```bash
+# Local dev network
+yarn run deploy:apps:dev
+
+# Rinkeby network
+yarn run deploy:app-depool --network rinkeby
+yarn run deploy:app-depooloracle --network rinkeby
+yarn run deploy:app-staking-providers-registry --network rinkeby
+yarn run deploy:app-steth --network rinkeby
+
+# The same for mainnet, just replace "--network rinkeby" with "--network mainnet"
+```
+
+3. Deploy DAO template
+
+```bash
+# Local dev network
+yarn run deploy:tmpl:dev
+```
+
+4. Deploy DAO
+
+```bash
+# Local dev network
+yarn run deploy:dao:dev
+```
 
 ### _(deprecated)_ Configuration
 

@@ -22,7 +22,8 @@ module.exports = {
     },
   },
   paths: {
-    sources: "./contracts/0.6.12",
+    sources: './contracts/0.6.12',
+    cache: './cache/v6'
   },
   gasReporter: {
     enabled: !!process.env.REPORT_GAS,

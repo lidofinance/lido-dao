@@ -15,3 +15,11 @@ ipfs.cmd
 
 /template/flattened_contracts/
 /data/
+
+# Yarn stuff
+.yarn/*
+!.yarn/releases
+!.yarn/plugins
+!.yarn/sdks
+!.yarn/versions
+.pnp.*
