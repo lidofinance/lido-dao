@@ -1,35 +1,37 @@
 {
   "name": "@depools/dao",
   "version": "0.0.1",
+  "private": true,
+  "workspaces": [
+    "apps/*/app"
+  ],
   "scripts": {
     "lint": "solium --dir ./contracts",
-    "test": "npm run test:unit",
-    "test:unit": "npm run compile:6 && buidler test --network buidlerevm",
-    "test:gas": "npm run compile:6 && REPORT_GAS=true buidler test --network localhost",
-    "test:coverage": "npm run test:coverage:4 && npm run test:coverage:6",
+    "test": "yarn run test:unit",
+    "test:unit": "yarn run compile:6 && buidler test --network buidlerevm",
+    "test:gas": "yarn run compile:6 && REPORT_GAS=true buidler test --network localhost",
+    "test:coverage": "yarn run test:coverage:4 && yarn run test:coverage:6",
     "test:coverage:4": "buidler coverage --network coverage --testfiles test/0.4.24",
     "test:coverage:6": "buidler coverage --network coverage --testfiles test/0.6.12 --config buidler.config.6.js",
     "test:e2e": "ava -T 60000 -v",
-    "estimate-deposit-loop-gas": "npm run test:unit ./estimate_deposit_loop_gas.js",
-    "compile": "npm run compile:4 && npm run compile:6",
+    "estimate-deposit-loop-gas": "yarn run test:unit ./estimate_deposit_loop_gas.js",
+    "compile": "yarn run compile:4 && yarn run compile:6",
     "compile:4": "buidler compile",
     "compile:6": "buidler compile --config buidler.config.6.js --force",
-    "deploy": "npm run deploy:dev",
-    "deploy:dev": "npm run deploy:apm:dev && deploy:apps:dev && deploy:tmpl:dev && deploy:dao:dev",
+    "deploy": "yarn run deploy:dev",
+    "deploy:dev": "yarn run deploy:apm:dev && deploy:apps:dev && deploy:tmpl:dev && deploy:dao:dev",
     "deploy:apm:dev": "ENS=0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1 DAO_FACTORY=0x5d94e3e7aec542ab0f9129b9a7badeb5b3ca0f77 buidler run ./scripts/deploy-apm.js --network localhost",
     "deploy:apm:rinkeby": "ENS=0x98Df287B6C145399Aaa709692c8D308357bC085D DAO_FACTORY=0xad4d106b43b480faa3ef7f98464ffc27fc1faa96 buidler run ./scripts/deploy-apm.js --network rinkeby",
     "deploy:apm:mainnet": "ENS=0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e DAO_FACTORY=0xb9da44c051c6cc9e04b7e0f95e95d69c6a6d8031 buidler run ./scripts/deploy-apm.js --network mainnet",
     "deploy:tmpl:dev": "ENS=0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1 DAO_FACTORY=0x5d94e3e7aec542ab0f9129b9a7badeb5b3ca0f77 MINIME_FACTORY=0xd526b7aba39cccf76422835e7fd5327b98ad73c9 APM=0x1902a0410EFe699487Dd85F12321aD672bE4ada2 buidler run ./scripts/deploy-tmpl.js --network localhost",
     "deploy:dao:dev": "ENS=0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1 DEPOSIT_CONTRACT=0x5f4e510503d83bd1a5436bdae2923489da0be454 buidler run ./scripts/deploy-dao.js --network localhost",
-    "deploy:apps:dev": "npm run deploy:app-depool && npm run deploy:app-depooloracle && npm run deploy:app-staking-providers-registry && npm run deploy:app-steth",
+    "deploy:apps:dev": "yarn run deploy:app-depool && yarn run deploy:app-depooloracle && yarn run deploy:app-staking-providers-registry && yarn run deploy:app-steth",
     "deploy:app-depool": "cd apps/depool && buidler publish patch",
     "deploy:app-depooloracle": "cd apps/depooloracle && buidler publish patch",
     "deploy:app-staking-providers-registry": "cd apps/staking-providers-registry && buidler publish patch",
     "deploy:app-steth": "cd apps/steth && buidler publish patch"
   },
-  "keywords": [],
   "author": "MixBytes <hello@mixbytes.io>",
-  "description": "",
   "devDependencies": {
     "@aragon/apps-finance": "^3.0.0",
     "@aragon/apps-token-manager": "^2.1.0",
@@ -69,7 +71,8 @@
     "solidity-coverage": "^0.7.10",
     "solium": "^1.2.5",
     "truffle": "^5.1.43",
-    "truffle-extract": "^1.2.1"
+    "truffle-extract": "^1.2.1",
+    "web3": "^1.3.0"
   },
   "dependencies": {
     "@aragon/os": "^4.4.0",
