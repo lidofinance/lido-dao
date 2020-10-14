@@ -74,11 +74,14 @@ npx lerna bootstrap
 
 ### Building docker containers
 
-```
+```bash
+cd e2e
 docker-compose build --no-cache
 ```
 
 ### Starting & stopping e2e environment
+
+> ***All E2E operations must be launched under the `./e2e` subdirectory***
 
 E2E environment consist of two parts: ETH1 related process and ETH 2.0 related process. 
 

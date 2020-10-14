@@ -1,20 +1,13 @@
-import { prepareContext } from './test-helpers'
 import test from 'ava'
-
+import { encodeCallScript } from '@aragon/contract-helpers-test/src/aragon-os'
+import { ZERO_ADDRESS } from '@aragon/toolkit'
 import { abi as votingAbi } from '@aragon/apps-voting/abi/Voting.json'
 import { abi as tokenManagerAbi } from '@aragon/apps-token-manager/abi/TokenManager.json'
 import { abi as financeAbi } from '@aragon/apps-finance/abi/Finance.json'
 import { abi as vaultAbi } from '@aragon/apps-finance/abi/Vault.json'
+import { prepareContext } from '../scripts/helpers'
 
-import { encodeCallScript } from '@aragon/contract-helpers-test/src/aragon-os'
-import { ZERO_ADDRESS } from '@aragon/toolkit'
-
-import {
-  ether,
-  constants, // Common constants, like the zero address and largest integers
-  expectEvent, // Assertions for emitted events
-  expectRevert // Assertions for transactions that should fail
-} from '@openzeppelin/test-helpers'
+import { ether, expectEvent } from '@openzeppelin/test-helpers'
 
 require('dotenv').config()
 
@@ -110,7 +103,6 @@ test('Voting ', async (t) => {
   //   1) Tokens App (as holder) -> Voting app (create a new vote)
   //   2) Voting App (when the vote executed) -> Finance app (make a transfer)
 
-  val = ether('1.11')
   ref = 'test withdraw'
 
   // encode call to finance app for withdraw
