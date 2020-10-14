@@ -1,5 +1,6 @@
-import { depositContractAbi } from './abi'
-import { depositContract as depositContractAddress } from '../../constants'
+const depositContractAbi = require('./abi')
+const logger = require('../../logger')
+const { depositContract: depositContractAddress } = require('../../constants')
 
 let context
 let depositContract
@@ -19,4 +20,5 @@ async function deposit(sender, value, depositData) {
       from: sender
     })
 }
-export { init, deposit }
+
+module.exports = { init, deposit }

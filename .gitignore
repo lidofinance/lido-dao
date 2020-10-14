@@ -13,3 +13,4 @@ dist/
 
 /template/flattened_contracts/
 **/data/
+*.log

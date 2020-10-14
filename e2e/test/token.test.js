@@ -1,5 +1,5 @@
 import test from 'ava'
-import { prepareContext } from '../scripts/helpers'
+import { prepareContext } from './test-helpers'
 
 import { abi as tokenManagerAbi } from '@aragon/apps-token-manager/abi/TokenManager.json'
 import { abi as tokenAbi } from '@aragon/apps-token-manager/abi/MiniMeToken.json'

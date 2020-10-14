@@ -5,7 +5,7 @@ import { abi as votingAbi } from '@aragon/apps-voting/abi/Voting.json'
 import { abi as tokenManagerAbi } from '@aragon/apps-token-manager/abi/TokenManager.json'
 import { abi as financeAbi } from '@aragon/apps-finance/abi/Finance.json'
 import { abi as vaultAbi } from '@aragon/apps-finance/abi/Vault.json'
-import { prepareContext } from '../scripts/helpers'
+import { prepareContext } from './test-helpers'
 
 import { ether, expectEvent } from '@openzeppelin/test-helpers'
 

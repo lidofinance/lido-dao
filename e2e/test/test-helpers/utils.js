@@ -1,32 +1,25 @@
-import { logger } from './logger'
-const fileSystem = require('fs')
-const web3 = require('web3')
-const appRoot = require('app-root-path')
+const logger = require('./logger')
+const fs = require('fs')
+const path = require('path')
+const { toWei, isHex } = require('web3-utils')
 
-function getRootDir() {
-  return appRoot.path
-}
-
-function getLogger() {
-  return logger
-}
+const validatorKeysPath = path.resolve(__dirname, '../../data/validator_keys')
 
 const sleep = (ms) => {
   return new Promise((resolve) => setTimeout(resolve, ms * 1000))
 }
 
 function getDataFromFile(path) {
-  getLogger().debug('Parse data from ' + path)
+  logger.debug('Parse data from ' + path)
   try {
-    return fileSystem.readFileSync(path, 'utf8')
+    return fs.readFileSync(path, 'utf8')
   } catch (e) {
-    getLogger().error(e.stack)
+    logger.error(e.stack)
   }
 }
-function loadGeneratedValidatorsData(index = 0) {
-  // const dir = getRootDir() + '/data/validator_keys'
-  const dir = getRootDir() + '/data/validator_keys'
-  const depositDataFiles = fileSystem.readdirSync(dir).filter((file) => {
+
+function loadGeneratedValidatorsData(dir = validatorKeysPath, index = 0) {
+  const depositDataFiles = fs.readdirSync(dir).filter((file) => {
     return file.indexOf('.') !== 0 && file.match(/deposit_data.+\.json$/i)
   })
   if (!depositDataFiles.length) {
@@ -36,33 +29,26 @@ function loadGeneratedValidatorsData(index = 0) {
 }
 
 function getGeneratedWithdrawalAddress() {
-  // const validatorsJson = loadGeneratedValidatorsData()
-  const validatorsJson = require(getRootDir() + '/test-e2e/test-data/validators.json')
+  const validatorsJson = loadGeneratedValidatorsData()
   return '0x' + validatorsJson[0].withdrawal_credentials
 }
 
 function getDataToPerformDepositContract() {
-  const validatorsJson = require(getRootDir() + '/test-e2e/test-data/validators.json')
+  const validatorsJson = loadGeneratedValidatorsData()
+  const validator = validatorsJson[validatorsJson.length - 1]
   return {
-    pubkey: '0x' + validatorsJson[validatorsJson.length - 1].pubkey,
-    withdrawal_credentials: '0x' + validatorsJson[validatorsJson.length - 1].withdrawal_credentials,
-    signature: '0x' + validatorsJson[validatorsJson.length - 1].signature,
-    deposit_data_root: '0x' + validatorsJson[validatorsJson.length - 1].deposit_data_root
+    pubkey: '0x' + validator.pubkey,
+    withdrawal_credentials: '0x' + validator.withdrawal_credentials,
+    signature: '0x' + validator.signature,
+    deposit_data_root: '0x' + validator.deposit_data_root
   }
 }
+
 function getSigningKeys(signingKeysCount, offset = 0) {
-  // let validatorsJson = loadGeneratedValidatorsData()
-  let validatorsJson = require(getRootDir() + '/test-e2e/test-data/validators.json')
-  validatorsJson = validatorsJson.slice(offset, signingKeysCount + offset)
-  const pubKeys = []
-  const signatures = []
-  for (let i = 0; i < validatorsJson.length; i++) {
-    pubKeys.push(validatorsJson[i].pubkey)
-    signatures.push(validatorsJson[i].signature)
-  }
+  const validatorsJson = loadGeneratedValidatorsData().slice(offset, signingKeysCount + offset)
   return {
-    pubKeys,
-    signatures
+    pubKeys: validatorsJson.map((v) => v.pubkey),
+    signatures: validatorsJson.map((v) => v.signature)
   }
 }
 
@@ -71,25 +57,34 @@ function concatKeys(keys) {
 }
 
 function concat0x(array) {
-  let { pubKeys, signatures } = array
-  pubKeys = pubKeys.map((key) => `0x${key}`)
-  signatures = signatures.map((signature) => `0x${signature}`)
+  const { pubKeys, signatures } = array
   return {
-    pubKeys,
-    signatures
+    pubKeys: pubKeys.map((key) => `0x${key}`),
+    signatures: signatures.map((signature) => `0x${signature}`)
   }
 }
-const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 
-export {
+function objHexlify(obj) {
+  Object.keys(obj).forEach(k => {
+    if (isHex(obj[k])) {
+      obj[k] = `0x${obj[k]}`
+    }
+  })
+  return obj
+}
+
+const ETH = (value) => toWei(value + '', 'ether')
+
+module.exports = {
   sleep,
   ETH,
-  getRootDir,
+  loadGeneratedValidatorsData,
   getDataFromFile,
   getGeneratedWithdrawalAddress,
   getSigningKeys,
-  getLogger,
+  logger,
   getDataToPerformDepositContract,
   concatKeys,
-  concat0x
+  concat0x,
+  objHexlify
 }

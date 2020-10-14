@@ -1,4 +1,4 @@
-import { abi as DePoolOracleAbi } from '../../../artifacts/DePoolOracle.json'
+import { abi as DePoolOracleAbi } from '../../../../artifacts/DePoolOracle.json'
 import { createVote, voteForAction } from './votingHelper'
 import { encodeCallScript } from '@aragon/contract-helpers-test/src/aragon-os'
 

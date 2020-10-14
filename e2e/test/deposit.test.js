@@ -1,5 +1,5 @@
 import test from 'ava'
-import * as depositContractHelper from './test-helpers/apps/depositContract/depositContractHelper'
+import * as depositContractHelper from './test-helpers/apps/depositContractHelper'
 
 import {
   ether,

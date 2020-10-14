@@ -1,6 +1,6 @@
 import test from 'ava'
 import { getAllApps, getDaoAddress } from '@aragon/toolkit'
-import { prepareContext } from '../scripts/helpers'
+import { prepareContext } from './test-helpers'
 import {
   daoAddress,
   KERNEL_DEFAULT_ACL_APP_ID,
@@ -12,8 +12,8 @@ import {
   STETH_APP_ID,
   DEPOOLORACLE_APP_ID,
   DEPOOL_APP_ID,
-  SPREGISTRY_APP_ID
-} from '../scripts/helpers/constants'
+  SP_REGISTRY_APP_ID
+} from './test-helpers/constants'
 
 test.before('Connecting Web3', async (t) => {
   t.context = await prepareContext()
@@ -41,6 +41,6 @@ test('Get DAO apps', async (t) => {
   t.is(apps[5].appId, VOTING_APP_ID, 'VOTING app id')
   t.is(apps[6].appId, STETH_APP_ID, 'STETH app id')
   t.is(apps[7].appId, DEPOOLORACLE_APP_ID, 'DEPOOLORACLE app id')
-  t.is(apps[8].appId, SPREGISTRY_APP_ID, 'SPREGISTRY app id')
+  t.is(apps[8].appId, SP_REGISTRY_APP_ID, 'SPREGISTRY app id')
   t.is(apps[9].appId, DEPOOL_APP_ID, 'DEPOOL app id')
 })
