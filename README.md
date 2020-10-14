@@ -61,15 +61,16 @@ The contract also works as a wrapper that accepts StETH tokens and mints CStETH 
 
 Installation is local and don't require root privileges.
 
-If you have `lerna` installed globally
+If you have `yarn` installed globally
+
 ```bash
-npm run bootstrap
+yarn
 ```
 
 otherwise
 
 ```bash
-npx lerna bootstrap 
+npx yarn
 ```
 
 ### Building docker containers
@@ -144,14 +145,14 @@ To build DGK container:
 Unit tests
 
 ```bash
-npm run test
+yarn run test
 ```
 
 E2E tests
 
 ```bash
 ./dkg.sh
-npm run test:e2e
+yarn run test:e2e
 ```
 
 #### Gas meter
@@ -159,7 +160,7 @@ npm run test:e2e
 In an app folder:
 
 ```bash
-npm run test:gas
+yarn run test:gas
 ```
 
 #### Generate test coverage report
@@ -167,13 +168,13 @@ npm run test:gas
 For all apps, in the repo root:
 
 ```bash
-npm run test:all:coverage
+yarn run test:all:coverage
 ```
 
 In an app folder:
 
 ```bash
-npm run test:coverage
+yarn run test:coverage
 ```
 
 Test coverage is reported to `coverage.json` and `coverage/index.html` files located
