@@ -9,6 +9,9 @@ export function getActiveValidatorsPubKeys() {
   const response = request('GET', 'http://localhost:5052/eth/v1/beacon/states/head/validators', {
     headers: {
       accept: 'application/json'
+    },
+    params: {
+      status: 'Active'
     }
   })
   const jsonPattern = new DefaultJsonPattern(response.getBody('utf-8'))
@@ -19,7 +22,7 @@ export function isValidatorsStarted(pubKeys) {
   for (const pubKey of pubKeys) {
     if (!activeValidators.includes(pubKey)) {
       logger.error('Validator ' + pubKey + ' was not started')
-      // return false
+      return false
     }
   }
   return true
@@ -46,17 +49,22 @@ export function getValidatorBalance(pubKey) {
 }
 
 export function getBeaconHead() {
-  const response = request('GET', 'http://localhost:5052/beacon/head', {
+  const response = request('GET', 'http://localhost:5052/eth/v1/beacon/blocks/head/attestations', {
     headers: {
       accept: 'application/json'
     }
   })
-  return JSON.parse(response.getBody('utf-8'))
+  const jsonPattern = new DefaultJsonPattern(response.getBody('utf-8'))
+  return jsonPattern.getNetworkBlocksInfo()
 }
 
 export async function isEth2NetworkProducingSlots() {
   const beaconHead = getBeaconHead()
   await waitFor(15)
   const updatedBeaconHead = getBeaconHead()
-  return beaconHead.slot !== updatedBeaconHead.slot && updatedBeaconHead.finalized_slot - beaconHead.finalized_slot >= 8
+  return (
+    beaconHead.slot !== updatedBeaconHead.slot &&
+    beaconHead.sourceEpoch !== updatedBeaconHead.sourceEpoch &&
+    beaconHead.targetEpoch !== updatedBeaconHead.targetEpoch
+  )
 }
