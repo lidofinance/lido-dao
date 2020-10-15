@@ -23,8 +23,6 @@ async function hasInitialized() {
 }
 
 async function pushData(epoch, amount, sender) {
-  console.log('ppoolc ' + (await dePoolOracleContract.methods.pool().call()))
-  console.log('INTERVAL ' + (await getCurrentReportInterval()))
   return await dePoolOracleContract.methods.pushData(epoch, amount).send({ from: sender, gas: '3000000' })
 }
 
@@ -64,8 +62,11 @@ async function addOracleMembers(members, holder, holders) {
 }
 
 async function getQuorum() {
-  console.log('LATEST DATA',await dePoolOracleContract.methods.getLatestData().call())
   return await dePoolOracleContract.methods.getQuorum().call()
+}
+
+async function getLatestData() {
+  return await dePoolOracleContract.methods.getLatestData().call()
 }
 
 export {
@@ -78,5 +79,6 @@ export {
   getCurrentReportInterval,
   getQuorum,
   setQuorum,
-  hasInitialized
+  hasInitialized,
+  getLatestData
 }
