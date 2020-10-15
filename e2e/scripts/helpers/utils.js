@@ -1,7 +1,7 @@
 const logger = require('./logger')
 const fs = require('fs')
 const path = require('path')
-const { toWei, isHex } = require('web3-utils')
+const { toWei, isHex, toBN } = require('web3-utils')
 
 const validatorKeysPath = path.resolve(__dirname, '../../data/validator_keys')
 
@@ -65,7 +65,7 @@ function concat0x(array) {
 }
 
 function objHexlify(obj) {
-  Object.keys(obj).forEach(k => {
+  Object.keys(obj).forEach((k) => {
     if (isHex(obj[k])) {
       obj[k] = `0x${obj[k]}`
     }
@@ -74,10 +74,12 @@ function objHexlify(obj) {
 }
 
 const ETH = (value) => toWei(value + '', 'ether')
+const BN = (value) => toBN(value)
 
 module.exports = {
   sleep,
   ETH,
+  BN,
   loadGeneratedValidatorsData,
   getDataFromFile,
   getGeneratedWithdrawalAddress,
