@@ -1,17 +1,24 @@
-/.idea/
-build/
-
-/.dev.env
-
-node_modules/
-artifacts/
+.idea
+.vscode
+**/build/
+**/node_modules/
+**/artifacts/
 .cache
-cache/
+**/cache/
 dist/
-ipfs.cmd
+
 /coverage/
 /coverage.json
 .coverage_*/
 
 /template/flattened_contracts/
-/data/
+**/data/
+*.log
+
+# Yarn stuff
+.yarn/*
+!.yarn/releases
+!.yarn/plugins
+!.yarn/sdks
+!.yarn/versions
+.pnp.*
