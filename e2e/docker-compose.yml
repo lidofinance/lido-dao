@@ -1,0 +1,225 @@
+version: '3.7'
+services:
+  node1:
+    build:
+      context: ./docker/devchain/
+#      args:
+#        ARAGON_PKG: aragen-6.0.0-beta.1.tgz
+    container_name: node1
+    ports:
+      - 8545:8545
+    volumes:
+      - ./data/devchain:/data
+    environment:
+      - BLOCK_TIME=${BLOCK_TIME}
+      - GAS_LIMIT=12000000
+    networks:
+      eth2:
+
+  ipfs:
+    build:
+      context: ./docker/ipfs/
+#      args:
+#        - ARAGON_PKG=aragen-6.0.0-beta.1.tgz
+    container_name: ipfs
+    ports:
+      - 5001:5001
+      - 8080:8080
+    volumes:
+      - ./data/export:/export
+      - ./data/ipfs:/data/ipfs
+    environment:
+      - IPFS_PROFILE=server
+    networks:
+      eth2:
+
+  # Aragon application node
+  aragon:
+    build:
+      context: ./docker/aragon/
+#      args:
+#        - ARAGON_IPFS_GATEWAY=http://public_ipfs_hostname:8080/ipfs
+#        - ARAGON_DEFAULT_ETH_NODE=ws://public_eth1_node_hostname:8545
+#        - ARAGON_APP_LOCATOR=ipfs
+#        - ARAGON_ETH_NETWORK_TYPE=local
+#        - ARAGON_ENS_REGISTRY_ADDRESS=0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1
+    container_name: aragon
+    ports:
+      - 3000:8080
+    networks:
+      eth2:
+
+  lh:
+    image: sigp/lighthouse
+    container_name: lh
+    networks:
+      eth2:
+    links:
+      - node1
+    volumes:
+      - ./data:/data
+
+  node2-1:
+    image: sigp/lighthouse
+    container_name: node2-1
+    ports:
+      - 5052:5052
+    networks:
+      eth2:
+        ipv4_address: 10.20.30.101
+    links:
+      - node1
+    volumes:
+      - ./data:/data
+    command: >
+      lighthouse
+      --spec "${SPEC}"
+      --debug-level "${DEBUG_LEVEL}"
+      bn
+      --disable-discovery
+      --disable-upnp
+      --datadir "/data/beacondata-1"
+      --testnet-dir "/data/testnet"
+      --http
+      --http-address 0.0.0.0
+      --http-allow-origin *
+      --libp2p-addresses /ip4/10.20.30.102/tcp/9000,/ip4/10.20.30.103/tcp/9000,/ip4/10.20.30.104/tcp/9000
+      --eth1
+      --eth1-endpoint http://node1:8545
+
+  node2-2:
+    image: sigp/lighthouse
+    container_name: node2-2
+    depends_on:
+      - node2-1
+    ports:
+      - 5053:5052
+    networks:
+      eth2:
+        ipv4_address: 10.20.30.102
+    volumes:
+      - ./data:/data
+    command: >
+      lighthouse
+      --spec "${SPEC}"
+      --debug-level "${DEBUG_LEVEL}"
+      bn
+      --disable-discovery
+      --disable-upnp
+      --datadir "/data/beacondata-2"
+      --testnet-dir "/data/testnet"
+      --http
+      --http-address 0.0.0.0
+      --http-allow-origin *
+      --libp2p-addresses /ip4/10.20.30.101/tcp/9000,/ip4/10.20.30.103/tcp/9000,/ip4/10.20.30.104/tcp/9000
+#      --eth1
+#      --eth1-endpoint http://node1:8545
+#      --boot-nodes $(cat $BEACON_DIR/beacon/network/enr.dat)
+
+  node2-3:
+    image: sigp/lighthouse
+    container_name: node2-3
+    depends_on:
+      - node2-1
+    ports:
+      - 5054:5052
+    networks:
+      eth2:
+        ipv4_address: 10.20.30.103
+    volumes:
+      - ./data:/data
+    command: >
+      lighthouse
+      --spec "${SPEC}"
+      --debug-level "${DEBUG_LEVEL}"
+      bn
+      --disable-discovery
+      --disable-upnp
+      --datadir "/data/beacondata-3"
+      --testnet-dir "/data/testnet"
+      --http
+      --http-address 0.0.0.0
+      --http-allow-origin *
+      --libp2p-addresses /ip4/10.20.30.102/tcp/9000,/ip4/10.20.30.101/tcp/9000,/ip4/10.20.30.104/tcp/9000
+#      --eth1
+#      --eth1-endpoint http://node1:8545
+#      --boot-nodes $(cat $BEACON_DIR/beacon/network/enr.dat)
+
+  node2-4:
+    image: sigp/lighthouse
+    container_name: node2-4
+    depends_on:
+      - node2-1
+    ports:
+      - 5055:5052
+    networks:
+      eth2:
+        ipv4_address: 10.20.30.104
+    volumes:
+      - ./data:/data
+    command: >
+      lighthouse
+      --spec "${SPEC}"
+      --debug-level "${DEBUG_LEVEL}"
+      bn
+      --disable-discovery
+      --disable-upnp
+      --datadir "/data/beacondata-4"
+      --testnet-dir "/data/testnet"
+      --http
+      --http-address 0.0.0.0
+      --http-allow-origin *
+      --libp2p-addresses /ip4/10.20.30.102/tcp/9000,/ip4/10.20.30.101/tcp/9000,/ip4/10.20.30.103/tcp/9000
+  #      --eth1
+  #      --eth1-endpoint http://node1:8545
+  #      --boot-nodes $(cat $BEACON_DIR/beacon/network/enr.dat)
+
+  mock-validators:
+    image: sigp/lighthouse
+    container_name: mock-validators
+    depends_on:
+      - node2-1
+    volumes:
+      - ./data:/data
+    command: >
+      lighthouse
+      --spec "${SPEC}"
+      validator_client
+      --delete-lockfiles 
+      --init-slashing-protection
+      --debug-level "${DEBUG_LEVEL}"
+      --datadir "/data/mock"
+      --testnet-dir "/data/testnet"
+      --server http://node2-1:5052
+    networks:
+      eth2:
+
+  validators:
+    image: sigp/lighthouse
+    container_name: validators
+    depends_on:
+      - node2-1
+#    ports:
+#      - 30303:30303
+    networks:
+      eth2:
+        ipv4_address: 10.20.30.22
+    volumes:
+      - ./data:/data
+    command: >
+      lighthouse
+      --spec "${SPEC}"
+      validator_client
+      --delete-lockfiles 
+      --init-slashing-protection
+      --debug-level "${DEBUG_LEVEL}"
+      --datadir "/data"
+      --testnet-dir "/data/testnet"
+      --server http://node2-1:5052
+
+networks:
+  eth2:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.20.30.0/24

@@ -6,6 +6,8 @@ const { getEventArgument } = require('@aragon/contract-helpers-test')
 const { pad, toBN, ETH, tokens } = require('../helpers/utils')
 const { deployDaoAndPool } = require('./helpers/deploy')
 
+const StakingProvidersRegistry = artifacts.require('StakingProvidersRegistry')
+
 contract('DePool: happy path', (addresses) => {
   const [
     // the root account which deployed the DAO
@@ -103,7 +105,8 @@ contract('DePool: happy path', (addresses) => {
 
     const spTx = await spRegistry.addStakingProvider(stakingProvider1.name, stakingProvider1.address, validatorsLimit, { from: voting })
 
-    stakingProvider1.id = getEventArgument(spTx, 'StakingProviderAdded', 'id')
+    // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
+    stakingProvider1.id = getEventArgument(spTx, 'StakingProviderAdded', 'id', { decodeForAbi: StakingProvidersRegistry._json.abi })
     assertBn(stakingProvider1.id, 0, 'SP id')
 
     assertBn(await spRegistry.getStakingProvidersCount(), 1, 'total staking providers')
@@ -202,7 +205,8 @@ contract('DePool: happy path', (addresses) => {
 
     const spTx = await spRegistry.addStakingProvider(stakingProvider2.name, stakingProvider2.address, validatorsLimit, { from: voting })
 
-    stakingProvider2.id = getEventArgument(spTx, 'StakingProviderAdded', 'id')
+    // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
+    stakingProvider2.id = getEventArgument(spTx, 'StakingProviderAdded', 'id', { decodeForAbi: StakingProvidersRegistry._json.abi })
     assertBn(stakingProvider2.id, 1, 'SP id')
 
     assertBn(await spRegistry.getStakingProvidersCount(), 2, 'total staking providers')
