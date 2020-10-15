@@ -2,6 +2,8 @@ import { abi as DePoolAbi } from '../../../../artifacts/DePool.json'
 import { createVote, voteForAction, init as voteInit } from './votingHelper'
 import { encodeCallScript } from '@aragon/contract-helpers-test/src/aragon-os'
 import * as eth1Helper from '../eth1Helper'
+import { BN } from '../utils'
+import { TREASURY_FEE, INSURANCE_FEE } from '../constants'
 
 let context
 let dePoolContract
@@ -85,8 +87,18 @@ function getFeeDistribution() {
   return dePoolContract.methods.getFeeDistribution().call()
 }
 
-async function getTreasury() {
+async function getTreasuryAddress() {
   return await dePoolContract.methods.getTreasury().call()
+}
+
+async function getInsuranceFundAddress() {
+  return await dePoolContract.methods.getInsuranceFund().call()
+}
+
+async function getUsedEther() {
+  const totalControledEther = await getTotalControlledEther()
+  const bufferedEther = await getBufferedEther()
+  return +totalControledEther - +bufferedEther
 }
 
 async function depositToDePoolContract(from, value) {
@@ -100,10 +112,17 @@ function getBufferedEther() {
   return dePoolContract.methods.getBufferedEther().call()
 }
 
-function reportEther(sender, epoch, value) {
-  return dePoolContract.methods.reportEther2(epoch, value).send({ from: sender, gas: '2000000' })
+function calculateNewTreasuryBalance(stakeProfit, balanceBeforePushData) {
+  const reward = calculateTreasuryReward(stakeProfit)
+  return BN(balanceBeforePushData).add(reward).toString()
 }
 
+function calculateTreasuryReward(stakeProfit) {
+  // TODO change treasury/insurance
+  return BN(stakeProfit)
+    .mul(BN((TREASURY_FEE / 100) * 2))
+    .div(BN(100))
+}
 export {
   init,
   getWithdrawalCredentials,
@@ -113,11 +132,13 @@ export {
   getBufferedEther,
   getTotalControlledEther,
   getProxyAddress,
-  getTreasury,
+  getTreasuryAddress,
   hasInitialized,
-  reportEther,
   setFee,
   setFeeDistribution,
   getFee,
-  getFeeDistribution
+  getFeeDistribution,
+  getInsuranceFundAddress,
+  getUsedEther,
+  calculateNewTreasuryBalance
 }

@@ -1,7 +1,8 @@
 import { abi as spsAbi } from '../../../../artifacts/StakingProvidersRegistry.json'
 import { encodeCallScript } from '@aragon/contract-helpers-test/src/aragon-os'
 import { createVote, voteForAction } from './votingHelper'
-import { concatKeys } from '../utils'
+import { BN, concatKeys, ETH } from '../utils'
+import { SP_BASIC_FEE } from '../constants'
 
 let web3
 let context
@@ -101,6 +102,19 @@ async function getActiveSigningKeys(sp, spSigningKeys) {
   return activeSigningKeys
 }
 
+function calculateSpReward(spUsedSigningKeysCount, stakeProfit, totalUsedSigningKeysCount) {
+  return BN(stakeProfit)
+    .mul(BN(ETH(+spUsedSigningKeysCount)))
+    .mul(BN(SP_BASIC_FEE / 100))
+    .div(BN(ETH(totalUsedSigningKeysCount)))
+    .div(BN(100))
+}
+
+function calculateNewSpBalance(spUsedSigningKeysCount, stakeProfit, totalUsedSigningKeysCount, balanceBeforePushData) {
+  const reward = calculateSpReward(spUsedSigningKeysCount, stakeProfit, totalUsedSigningKeysCount)
+  return BN(balanceBeforePushData).add(reward).toString()
+}
+
 export {
   init,
   stakingProviderContract,
@@ -113,5 +127,6 @@ export {
   getAllSigningKeys,
   addSigningKeysSP,
   getActiveSigningKeys,
-  getUnusedSigningKeyCount
+  getUnusedSigningKeyCount,
+  calculateNewSpBalance
 }
