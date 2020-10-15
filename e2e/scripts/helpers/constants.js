@@ -39,6 +39,12 @@ const MANAGE_QUORUM = '0xa5ffa9f45fa52c446078e834e1914561bd9c2ab1e833572d62af775
 
 const UNLIMITED_STAKING_LIMIT = 1000000000
 
+// fee 100% = 10000
+const BASIC_FEE = 10000
+const TREASURY_FEE = 1000
+const INSURANCE_FEE = 1000
+const SP_BASIC_FEE = 8000
+
 // accounts
 const holderAccounts = [
   '0xb4124cEB3451635DAcedd11767f004d8a28c6eE7',
@@ -110,6 +116,11 @@ module.exports = {
   MANAGE_QUORUM,
 
   UNLIMITED_STAKING_LIMIT,
+
+  BASIC_FEE,
+  TREASURY_FEE,
+  INSURANCE_FEE,
+  SP_BASIC_FEE,
 
   holderAccounts,
   spsAccounts,
