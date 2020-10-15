@@ -43,7 +43,7 @@ The contract also works as a wrapper that accepts StETH tokens and mints CStETH 
 
 ## Development
 
-### Requirements 
+### Requirements
 
 * shell - bash or zsh
 * docker
@@ -55,7 +55,6 @@ The contract also works as a wrapper that accepts StETH tokens and mints CStETH 
 * docker
 * node.js v12
 * (optional) Lerna
-
 
 ### Installing Aragon & other deps
 
@@ -75,11 +74,14 @@ npx yarn
 
 ### Building docker containers
 
-```
+```bash
+cd e2e
 docker-compose build --no-cache
 ```
 
 ### Starting & stopping e2e environment
+
+> ***All E2E operations must be launched under the `./e2e` subdirectory***
 
 E2E environment consist of two parts: ETH1 related process and ETH 2.0 related process. 
 
@@ -87,21 +89,25 @@ For ETH1 part: Ethereum single node (ganache), IPFS docker containers and Aragon
 
 For ETH2 part: Beacon chain node, genesis validators machine, and, optionally 2nd and 3rd peer beacon chain nodes.
 
-To start the whole environment, use:
+To start the whole environment from predeployed snapshots, use:
+
 ```bash
-./startup.sh
+./startup.sh -r -s
 ```
+
 then go to [http://localhost:3000/#/depool-dao/](http://localhost:3000/#/depool-dao/) to manage DAO via Aragon Web App
 
-> To save time you can use snapshot with predeployed contracts in ETH1 chain: `./startup.sh -s `  
+> To completely repeat the compilation and deployment process in ETH1 chain, just omit the `-s` flag.
 
-##### ETH1 part
+#### ETH1 part
+
 During script execution, the following will be installed:
-- Deposit Contract instance
-- each Aragon App instance (contracts: DePool, DePoolOracle and StETH )
-- Aragon PM for 'depoolspm.eth'
-- DePool DAO template 
-- and finally, DePool DAO will be deployed 
+
+* Deposit Contract instance
+* each Aragon App instance (contracts: DePool, DePoolOracle and StETH )
+* Aragon PM for 'depoolspm.eth'
+* DePool DAO template 
+* and finally, DePool DAO will be deployed
 
 To start only ETH1 part use:
 
@@ -109,15 +115,17 @@ To start only ETH1 part use:
 ./startup.sh -1
 ```
 
-##### ETH2 part
-To work with ETH2 part, ETH1 part must be running. 
+#### ETH2 part
+
+To work with ETH2 part, ETH1 part must be running.
 
 During script execution, the following will happen:
-- beacon chain genesis config (Minimal with tunes) will be generated.
-- validator's wallet with 4 keys will be generated
-- A deposit of 32ETH will be made to Deposit Contract for each validator key.
-- Based on the events about the deposit, a genesis block will be created, which including validators.
-- ETH2 node with new Genesis block will start 
+
+* beacon chain genesis config (Minimal with tunes) will be generated.
+* validator's wallet with 4 keys will be generated
+* A deposit of 32ETH will be made to Deposit Contract for each validator key.
+* Based on the events about the deposit, a genesis block will be created, which including validators.
+* ETH2 node with new Genesis block will start
 
 To reseat and restart only ETH2 part use:
 
@@ -145,14 +153,17 @@ To build DGK container:
 Unit tests
 
 ```bash
-yarn run test
+yarn test
 ```
 
 E2E tests
 
 ```bash
+cd e2e
 ./dkg.sh
-yarn run test:e2e
+./startup.sh -r -s
+yarn test:e2e
+./shutdown.sh
 ```
 
 #### Gas meter
@@ -160,7 +171,7 @@ yarn run test:e2e
 In an app folder:
 
 ```bash
-yarn run test:gas
+yarn test:gas
 ```
 
 #### Generate test coverage report
@@ -168,13 +179,13 @@ yarn run test:gas
 For all apps, in the repo root:
 
 ```bash
-yarn run test:all:coverage
+yarn test:all:coverage
 ```
 
 In an app folder:
 
 ```bash
-yarn run test:coverage
+yarn test:coverage
 ```
 
 Test coverage is reported to `coverage.json` and `coverage/index.html` files located
@@ -193,26 +204,26 @@ so full branch coverage will never be reported until
 
 ```bash
 # Local dev network
-yarn run deploy:apm:dev
+yarn deploy:apm:dev
 
 # Rinkeby network
-yarn run deploy:apm:rinkeby
+yarn deploy:apm:rinkeby
 
 # Mainnet network
-yarn run deploy:apm:mainnet
+yarn deploy:apm:mainnet
 ```
 
 2. Build and deploy Aragon applications
 
 ```bash
 # Local dev network
-yarn run deploy:apps:dev
+yarn deploy:apps:dev
 
 # Rinkeby network
-yarn run deploy:app-depool --network rinkeby
-yarn run deploy:app-depooloracle --network rinkeby
-yarn run deploy:app-staking-providers-registry --network rinkeby
-yarn run deploy:app-steth --network rinkeby
+yarn deploy:app-depool --network rinkeby
+yarn deploy:app-depooloracle --network rinkeby
+yarn deploy:app-staking-providers-registry --network rinkeby
+yarn deploy:app-steth --network rinkeby
 
 # The same for mainnet, just replace "--network rinkeby" with "--network mainnet"
 ```
@@ -221,34 +232,15 @@ yarn run deploy:app-steth --network rinkeby
 
 ```bash
 # Local dev network
-yarn run deploy:tmpl:dev
+yarn deploy:tmpl:dev
 ```
 
 4. Deploy DAO
 
 ```bash
 # Local dev network
-yarn run deploy:dao:dev
+yarn deploy:dao:dev
 ```
-
-### _(deprecated)_ Configuration
-
-Can be specified in a local file `.dev.env`.
-
-For options see [dev.env.default](dev.env.default).
-
-The configuration is read only during new dao deployment.
-
-
-### _(deprecated)_ New dao creation
-
-```bash
-./bin/deploy-dev-contracts.sh
-```
-
-The GUI for the created DAO can be accessed at `http://localhost:3000/?#/<dao_address>/`.
-
-Note: `DAO_ID` must be unique in a blockchain.
 
 ### Other
 

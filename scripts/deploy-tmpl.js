@@ -30,19 +30,17 @@ const _getRegistered = async (ens, hash) => {
   return owner !== ZERO_ADDR && owner !== '0x' ? owner : false
 }
 
-async function deploy(
-  {
-    artifacts = globalArtifacts,
-    web3 = globalWeb3,
-    ensAddress = defaultENSAddress,
-    owner = defaultOwner,
-    daoFactoryAddress = defaultDaoFactoryAddress,
-    miniMeFactoryAddress = defaultMiniMeFactoryAddress,
-    apmRegistryAddress = defaultApmRegistryAddress,
-    aragonIdAddress = defaultAragonIdAddress,
-    verbose = true
-  } = {}
-) {
+async function deploy({
+  artifacts = globalArtifacts,
+  web3 = globalWeb3,
+  ensAddress = defaultENSAddress,
+  owner = defaultOwner,
+  daoFactoryAddress = defaultDaoFactoryAddress,
+  miniMeFactoryAddress = defaultMiniMeFactoryAddress,
+  apmRegistryAddress = defaultApmRegistryAddress,
+  aragonIdAddress = defaultAragonIdAddress,
+  verbose = true
+} = {}) {
   const log = (...args) => {
     if (verbose) {
       console.log(...args)
@@ -67,57 +65,53 @@ async function deploy(
   }
   log('Owner:', owner)
 
-  try {
-    const APMRegistry = artifacts.require('APMRegistry')
-    const ENS = artifacts.require('ENS')
-    const DePoolTemplate = artifacts.require('DePoolTemplate')
+  const APMRegistry = artifacts.require('APMRegistry')
+  const ENS = artifacts.require('ENS')
+  const DePoolTemplate = artifacts.require('DePoolTemplate')
 
-    const ens = await ENS.at(ensAddress)
-    log(`Using provided ENS: ${ens.address}`)
+  const ens = await ENS.at(ensAddress)
+  log(`Using provided ENS: ${ens.address}`)
 
-    const apm = await APMRegistry.at(apmRegistryAddress)
-    log(`Using provided APM Registry: ${apm.address}`)
+  const apm = await APMRegistry.at(apmRegistryAddress)
+  log(`Using provided APM Registry: ${apm.address}`)
 
-    if (!aragonIdAddress) {
-      aragonIdAddress = await _getRegistered(ens, namehash('aragonid.eth'))
-      if (aragonIdAddress) {
-        log(`Using aragonID registered at aragonid.eth: ${aragonIdAddress}`)
-      } else {
-        errorOut('Aragon ID address not found. Please specify one using ARAGON_ID env var')
-      }
+  if (!aragonIdAddress) {
+    aragonIdAddress = await _getRegistered(ens, namehash('aragonid.eth'))
+    if (aragonIdAddress) {
+      log(`Using aragonID registered at aragonid.eth: ${aragonIdAddress}`)
     } else {
-      log(`Using provided aragonID: ${aragonIdAddress}`)
+      errorOut('Aragon ID address not found. Please specify one using ARAGON_ID env var')
     }
+  } else {
+    log(`Using provided aragonID: ${aragonIdAddress}`)
+  }
 
-    log('=========')
-    log('Check Apps...')
+  log('=========')
+  log('Check Apps...')
 
-    for (const { name, tld, contractName } of apps) {
-      if (await _getRegistered(ens, namehash(`${name}.${tld}`))) {
-        log(`Using registered ${contractName} app`)
-      } else {
-        errorOut(`No ${contractName} app registered`)
-      }
+  for (const { name, tld, contractName } of apps) {
+    if (await _getRegistered(ens, namehash(`${name}.${tld}`))) {
+      log(`Using registered ${contractName} app`)
+    } else {
+      errorOut(`No ${contractName} app registered`)
     }
-    if (await _getRegistered(ens, namehash(`${dePoolTemplateName}.${dePoolTld}`))) {
-      errorOut('Template already registered')
-    }
+  }
+  if (await _getRegistered(ens, namehash(`${dePoolTemplateName}.${dePoolTld}`))) {
+    errorOut('Template already registered')
+  }
 
-    log(`Deploying template: ${dePoolTemplateName}`)
-    const template = await DePoolTemplate.new(daoFactoryAddress, ensAddress, miniMeFactoryAddress, aragonIdAddress, { gas: 6000000 })
-    await logDeploy('DePoolTemplate', template)
+  log(`Deploying template: ${dePoolTemplateName}`)
+  const template = await DePoolTemplate.new(daoFactoryAddress, ensAddress, miniMeFactoryAddress, aragonIdAddress, { gas: 6000000 })
+  await logDeploy('DePoolTemplate', template)
 
-    log(`Deployed DePoolTemplate: ${template.address}`)
+  log(`Deployed DePoolTemplate: ${template.address}`)
 
-    log(`Registering package for DePoolTemplate as "${dePoolTemplateName}.${dePoolTld}"`)
-    const receipt = await apm.newRepoWithVersion(dePoolTemplateName, owner, [1, 0, 0], template.address, '0x0', { from: owner })
-    // log(receipt)
+  log(`Registering package for DePoolTemplate as "${dePoolTemplateName}.${dePoolTld}"`)
+  const receipt = await apm.newRepoWithVersion(dePoolTemplateName, owner, [1, 0, 0], template.address, '0x0', { from: owner })
+  // log(receipt)
 
-    return {
-      template: template.address
-    }
-  } catch (e) {
-    throw e
+  return {
+    template: template.address
   }
 }
 

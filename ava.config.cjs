@@ -1,5 +1,5 @@
 module.exports = {
   require: ['@babel/register'],
-  files: ['test-e2e/**/*.test.js'],
+  files: ['e2e/test/**/*.test.js'],
   concurrency: 5
 }
