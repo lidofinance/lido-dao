@@ -1,9 +1,10 @@
 pragma solidity 0.6.12; // latest available for using OZ
 
 import "../CstETH.sol";
+import "../IStETH.sol";
 
 contract CstETHMock is CstETH {
-    constructor(ERC20 _stETH)
+    constructor(IStETH _stETH)
         public
         CstETH(_stETH)
     { }
