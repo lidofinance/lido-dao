@@ -33,18 +33,16 @@ const _getRegistered = async (ens, hash) => {
   return owner !== ZERO_ADDR && owner !== '0x' ? owner : false
 }
 
-async function deploy(
-  {
-    artifacts = globalArtifacts,
-    web3 = globalWeb3,
-    ensAddress = defaultENSAddress,
-    owner = defaultOwner,
-    apmRegistryAddress = defaultApmRegistryAddress,
-    depositContractAddress = defaultDepositContractAddress,
-    depositIterationLimit = defaultDepositIterationLimit,
-    verbose = true
-  } = {}
-) {
+async function deploy({
+  artifacts = globalArtifacts,
+  web3 = globalWeb3,
+  ensAddress = defaultENSAddress,
+  owner = defaultOwner,
+  apmRegistryAddress = defaultApmRegistryAddress,
+  depositContractAddress = defaultDepositContractAddress,
+  depositIterationLimit = defaultDepositIterationLimit,
+  verbose = true
+} = {}) {
   const log = (...args) => {
     if (verbose) {
       console.log(...args)
@@ -69,92 +67,88 @@ async function deploy(
   }
   log('Owner:', owner)
 
-  try {
-    const Repo = artifacts.require('Repo')
-    const PublicResolver = artifacts.require('PublicResolver')
-    const ENS = artifacts.require('ENS')
-    const DePoolTemplate = artifacts.require('DePoolTemplate')
+  const Repo = artifacts.require('Repo')
+  const PublicResolver = artifacts.require('PublicResolver')
+  const ENS = artifacts.require('ENS')
+  const DePoolTemplate = artifacts.require('DePoolTemplate')
 
-    const ens = await ENS.at(ensAddress)
-    log(`Using provided ENS: ${ens.address}`)
+  const ens = await ENS.at(ensAddress)
+  log(`Using provided ENS: ${ens.address}`)
 
-    log('=========')
-    if (await _getRegistered(ens, namehash(`${dePoolDaoName}.${dePoolTld}`))) {
-      errorOut('DAO already registered')
+  log('=========')
+  if (await _getRegistered(ens, namehash(`${dePoolDaoName}.${dePoolTld}`))) {
+    errorOut('DAO already registered')
+  }
+
+  const tmplNameHash = namehash(`${dePoolTemplateName}.${dePoolTld}`)
+  const resolverAddress = await ens.resolver(tmplNameHash)
+  const resolver = await PublicResolver.at(resolverAddress)
+  const repoAddress = await resolver.addr(tmplNameHash)
+  const repo = await Repo.at(repoAddress)
+  const latestRepo = await repo.getLatest()
+  const tmplAddress = latestRepo[1]
+
+  const template = await DePoolTemplate.at(tmplAddress)
+  console.log(`Using DePool template ${dePoolTemplateName}.${dePoolTld} at:`, template.address)
+
+  // TODO get holders from .env
+  const HOLDERS = [holder1, holder2, holder3, holder4, holder5]
+  const STAKES = HOLDERS.map(() => '100000000000000000000') // 100e18
+  const TOKEN_NAME = 'DePool DAO Token'
+  const TOKEN_SYMBOL = 'DPD'
+
+  // TODO get voting settings from .env
+  const VOTE_DURATION = ONE_WEEK
+  const SUPPORT_REQUIRED = '500000000000000000' // 50e16
+  const MIN_ACCEPTANCE_QUORUM = '50000000000000000' // 5e16
+  const VOTING_SETTINGS = [SUPPORT_REQUIRED, MIN_ACCEPTANCE_QUORUM, VOTE_DURATION]
+
+  // const newInstanceTx = template.contract.methods.newDAO(TOKEN_NAME, TOKEN_SYMBOL, HOLDERS, STAKES, VOTING_SETTINGS, depositContractAddress)
+  // const estimatedGas = await newInstanceTx.estimateGas()
+  // log(estimatedGas)
+
+  console.log('Deploying DePool DAO ...')
+  const receipt = await template.newDAO(
+    dePoolDaoName,
+    TOKEN_NAME,
+    TOKEN_SYMBOL,
+    HOLDERS,
+    STAKES,
+    VOTING_SETTINGS,
+    depositContractAddress,
+    depositIterationLimit,
+    {
+      from: owner
     }
+  )
 
-    const tmplNameHash = namehash(`${dePoolTemplateName}.${dePoolTld}`)
-    const resolverAddress = await ens.resolver(tmplNameHash)
-    const resolver = await PublicResolver.at(resolverAddress)
-    const repoAddress = await resolver.addr(tmplNameHash)
-    const repo = await Repo.at(repoAddress)
-    const latestRepo = await repo.getLatest()
-    const tmplAddress = latestRepo[1]
+  const tokenEvent = receipt.logs.find((l) => l.event === 'DeployToken')
+  const daoEvent = receipt.logs.find((l) => l.event === 'DeployDao')
+  const installedApps = receipt.logs.filter((l) => l.event === 'InstalledApp').map((l) => l.args)
 
-    const template = await DePoolTemplate.at(tmplAddress)
-    console.log(`Using DePool template ${dePoolTemplateName}.${dePoolTld} at:`, template.address)
+  log('=========')
+  // log(`Registering DAO as "${dePoolDaoName}.${dePoolTld}"`)
+  // TODO register dao at depoolspm.eth (by default dao registered at aragonid.eth)
+  // receipt = await apm.newRepoWithVersion(dePoolDaoName, owner, [1, 0, 0], daoEvent.args.dao, '0x0', { from: owner })
+  // log(receipt)
 
-    // TODO get holders from .env
-    const HOLDERS = [holder1, holder2, holder3, holder4, holder5]
-    const STAKES = HOLDERS.map(() => '100000000000000000000') // 100e18
-    const TOKEN_NAME = 'DePool DAO Token'
-    const TOKEN_SYMBOL = 'DPD'
-
-    // TODO get voting settings from .env
-    const VOTE_DURATION = ONE_WEEK
-    const SUPPORT_REQUIRED = '500000000000000000' // 50e16
-    const MIN_ACCEPTANCE_QUORUM = '50000000000000000' // 5e16
-    const VOTING_SETTINGS = [SUPPORT_REQUIRED, MIN_ACCEPTANCE_QUORUM, VOTE_DURATION]
-
-    // const newInstanceTx = template.contract.methods.newDAO(TOKEN_NAME, TOKEN_SYMBOL, HOLDERS, STAKES, VOTING_SETTINGS, depositContractAddress)
-    // const estimatedGas = await newInstanceTx.estimateGas()
-    // log(estimatedGas)
-
-    console.log('Deploying DePool DAO ...')
-    const receipt = await template.newDAO(
-      dePoolDaoName,
-      TOKEN_NAME,
-      TOKEN_SYMBOL,
-      HOLDERS,
-      STAKES,
-      VOTING_SETTINGS,
-      depositContractAddress,
-      depositIterationLimit,
-      {
-        from: owner
-      }
-    )
-
-    const tokenEvent = receipt.logs.find((l) => l.event === 'DeployToken')
-    const daoEvent = receipt.logs.find((l) => l.event === 'DeployDao')
-    const installedApps = receipt.logs.filter((l) => l.event === 'InstalledApp').map((l) => l.args)
-
-    log('=========')
-    // log(`Registering DAO as "${dePoolDaoName}.${dePoolTld}"`)
-    // TODO register dao at depoolspm.eth (by default dao registered at aragonid.eth)
-    // receipt = await apm.newRepoWithVersion(dePoolDaoName, owner, [1, 0, 0], daoEvent.args.dao, '0x0', { from: owner })
-    // log(receipt)
-
-    log('# DAO:')
-    log('Address:', daoEvent.args.dao)
-    log('Share Token:', tokenEvent.args.token)
-    log('=========')
-    installedApps.forEach((app) => {
-      const knownApp = apps.find((a) => a.appId === app.appId)
-      if (knownApp) {
-        log(`App ${knownApp.contractName} deployed at ${app.appProxy}`)
-      } else {
-        log(`Unknown AppId ${app.appId} deployed at ${app.appProxy}`)
-      }
-    })
-    log('=========')
-
-    return {
-      dao: daoEvent.args.dao,
-      token: tokenEvent.args.token
+  log('# DAO:')
+  log('Address:', daoEvent.args.dao)
+  log('Share Token:', tokenEvent.args.token)
+  log('=========')
+  installedApps.forEach((app) => {
+    const knownApp = apps.find((a) => a.appId === app.appId)
+    if (knownApp) {
+      log(`App ${knownApp.contractName} deployed at ${app.appProxy}`)
+    } else {
+      log(`Unknown AppId ${app.appId} deployed at ${app.appProxy}`)
     }
-  } catch (e) {
-    throw e
+  })
+  log('=========')
+
+  return {
+    dao: daoEvent.args.dao,
+    token: tokenEvent.args.token
   }
 }
 

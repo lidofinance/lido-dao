@@ -9,7 +9,7 @@ module.exports = {
   ...baseConfig,
   paths: {
     ...baseConfig.paths,
-    root: '../..',
+    root: '../..'
   },
   defaultNetwork: 'localhost',
   // Aragon plugin configuration
@@ -19,6 +19,6 @@ module.exports = {
     appSrcPath: 'app/',
     appBuildOutputPath: 'dist/',
     appName: 'depool',
-    hooks, // Path to script hooks
-  },
+    hooks // Path to script hooks
+  }
 }
