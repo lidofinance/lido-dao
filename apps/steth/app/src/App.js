@@ -1,14 +1,6 @@
 import React from 'react'
 import { useAragonApi } from '@aragon/api-react'
-import {
-  Box,
-  GU,
-  Header,
-  Main,
-  SyncIndicator,
-  Button,
-  useTheme,
-} from '@aragon/ui'
+import { Box, Header, Main, SyncIndicator, Button, useTheme } from '@aragon/ui'
 import ListItem from './components/ListItem'
 
 export default function App() {
@@ -56,8 +48,11 @@ export default function App() {
       >
         <ul>
           {[
+            // eslint-disable-next-line react/jsx-key
             ['Token', <strong>{tokenName}</strong>],
+            // eslint-disable-next-line react/jsx-key
             ['Symbol', <strong>{tokenSymbol}</strong>],
+            // eslint-disable-next-line react/jsx-key
             ['Total supply', <strong>{totalSupply}</strong>],
             [
               'Status',

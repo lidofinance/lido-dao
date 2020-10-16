@@ -115,9 +115,15 @@ contract('DePool: happy path', (addresses) => {
   it('the first staking provider registers one validator', async () => {
     const numKeys = 1
 
-    await spRegistry.addSigningKeysSP(stakingProvider1.id, numKeys, stakingProvider1.validators[0].key, stakingProvider1.validators[0].sig, {
-      from: stakingProvider1.address
-    })
+    await spRegistry.addSigningKeysSP(
+      stakingProvider1.id,
+      numKeys,
+      stakingProvider1.validators[0].key,
+      stakingProvider1.validators[0].sig,
+      {
+        from: stakingProvider1.address
+      }
+    )
 
     // The key was added
 
@@ -213,9 +219,15 @@ contract('DePool: happy path', (addresses) => {
 
     const numKeys = 1
 
-    await spRegistry.addSigningKeysSP(stakingProvider2.id, numKeys, stakingProvider2.validators[0].key, stakingProvider2.validators[0].sig, {
-      from: stakingProvider2.address
-    })
+    await spRegistry.addSigningKeysSP(
+      stakingProvider2.id,
+      numKeys,
+      stakingProvider2.validators[0].key,
+      stakingProvider2.validators[0].sig,
+      {
+        from: stakingProvider2.address
+      }
+    )
 
     // The key was added
 

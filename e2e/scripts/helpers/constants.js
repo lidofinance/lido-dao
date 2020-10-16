@@ -72,7 +72,6 @@ const simpleAccounts = [
   '0x05c23b938a85ab26A36E6314a0D02080E9ca6BeD'
 ]
 
-
 module.exports = {
   KERNEL_CORE_APP_ID,
   KERNEL_DEFAULT_ACL_APP_ID,

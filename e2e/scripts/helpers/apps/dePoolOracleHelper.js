@@ -64,7 +64,7 @@ async function addOracleMembers(members, holder, holders) {
 }
 
 async function getQuorum() {
-  console.log('LATEST DATA',await dePoolOracleContract.methods.getLatestData().call())
+  console.log('LATEST DATA', await dePoolOracleContract.methods.getLatestData().call())
   return await dePoolOracleContract.methods.getQuorum().call()
 }
 
