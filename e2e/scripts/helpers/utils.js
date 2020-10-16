@@ -65,7 +65,7 @@ function concat0x(array) {
 }
 
 function objHexlify(obj) {
-  Object.keys(obj).forEach(k => {
+  Object.keys(obj).forEach((k) => {
     if (isHex(obj[k])) {
       obj[k] = `0x${obj[k]}`
     }

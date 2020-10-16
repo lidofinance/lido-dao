@@ -1,4 +1,4 @@
-import { Bar, Box, Button, GU, useTheme, useToast } from '@aragon/ui'
+import { Box, Button, useTheme, useToast } from '@aragon/ui'
 import { Field, Formik } from 'formik'
 import React, { useCallback } from 'react'
 import * as yup from 'yup'

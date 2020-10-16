@@ -50,7 +50,7 @@ test('Full flow test ', async (t) => {
   const [oracleMember1, oracleMember2, oracleMember3, oracleMember4, oracleMember5] = oracleMembers
   const [user1, user2, user3, user4, user5] = users
 
-  //TODO wrap
+  // TODO wrap
 
   for (let i = 0; i < 10; i++) {
     for (let j = 0; j < 5; j++) {

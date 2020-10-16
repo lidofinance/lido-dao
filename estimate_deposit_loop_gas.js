@@ -74,7 +74,7 @@ contract('DePool: deposit loop gas estimate', (addresses) => {
   })
 
   let gasPerMockDeposit
-  let gasPerNValidators = {}
+  const gasPerNValidators = {}
   // let gasPerSingleValidator
   // let gasPerTenValidators
 
