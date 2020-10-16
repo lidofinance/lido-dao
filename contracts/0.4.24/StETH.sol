@@ -28,11 +28,11 @@ contract StETH is ISTETH, Pausable, AragonApp {
     // and acts as the 'minter' of the new shares when staker submits his funds
     IDePool public dePool;
 
-    // Shares are the amounts of pooled Ether normalized to the volume of ETH1.0 Ether on the moment of system start.
-    // Shares represent how much of initial ether are worth all-time deposits of the given user.
-    // In this implementation shares replace traditional balances
+    // Shares are the amounts of pooled Ether 'discounted' to the volume of ETH1.0 Ether deposited on the first day
+    // or, more precisely, to Ethers deposited from start until the first oracle report.
+    // Shares represent how much of first-day ether are worth all-time deposits of the given user.
+    // In this implementation token stores relative shares, not fixed balances.
     mapping (address => uint256) private _shares;
-    // ...and totalShares replace traditional totalSupply counter.
     uint256 private _totalShares;
 
     mapping (address => mapping (address => uint256)) private _allowed;
@@ -82,7 +82,7 @@ contract StETH is ISTETH, Pausable, AragonApp {
     * @return An uint256 representing the amount owned by the passed address.
     */
     function balanceOf(address owner) public view returns (uint256) {
-        return getPooledEthByShares(_shares[owner]);
+        return getPooledEthByHolder(owner);
     }
 
     /**
@@ -267,10 +267,7 @@ contract StETH is ISTETH, Pausable, AragonApp {
         if ( totalControlledEthBefore == 0) {
             sharesDifference = _value;
         } else {
-            uint256 controlledEthAfter = totalControlledEthBefore.add(_value);
-            uint256 totalSharesBefore = _totalShares;
-            uint256 totalSharesAfter = getSharesByPooledEth(controlledEthAfter);
-            sharesDifference = totalSharesAfter.sub(totalSharesBefore);
+            sharesDifference = getSharesByPooledEth(_value);
         }
         _totalShares = _totalShares.add(sharesDifference);
         _shares[_to] = _shares[_to].add(sharesDifference);
