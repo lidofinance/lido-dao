@@ -143,20 +143,21 @@ To stop use:
 ```
 
 ### DKG
+
 To build DGK container:
 
  * Add your local ssh key to github account
- * run `./dkg.sh`
+ * run `./dkg.sh` inside `e2e` directory
 
 ### Build & test all our apps
 
-Unit tests
+Unit tests:
 
 ```bash
 yarn test
 ```
 
-E2E tests
+E2E tests:
 
 ```bash
 cd e2e
@@ -166,23 +167,13 @@ yarn test:e2e
 ./shutdown.sh
 ```
 
-#### Gas meter
-
-In an app folder:
+Run unit tests and report gas used by each Solidity function:
 
 ```bash
 yarn test:gas
 ```
 
-#### Generate test coverage report
-
-For all apps, in the repo root:
-
-```bash
-yarn test:all:coverage
-```
-
-In an app folder:
+Generate test coverage report:
 
 ```bash
 yarn test:coverage
