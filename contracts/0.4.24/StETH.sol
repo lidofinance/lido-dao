@@ -208,7 +208,6 @@ contract StETH is ISTETH, Pausable, AragonApp {
     * @param value The amount to be transferred.
     */
     function _transfer(address from, address to, uint256 value) internal {
-        require(value != 0);
         require(to != address(0));
         uint256 sharesToTransfer = getSharesByPooledEth(value);
         require(sharesToTransfer <= _shares[from]);
@@ -250,10 +249,10 @@ contract StETH is ISTETH, Pausable, AragonApp {
     }
 
     /**
-    * @notice Mint is called by dePool contract when user submits the ETH1.0 deposit. 
-    *         It calculates share difference to preserve ratio of shares to the increased 
-    *         amount of pooledEthers so that all the previously created shares still correspond 
-    *         to the same amount of pooled ethers. 
+    * @notice Mint is called by dePool contract when user submits the ETH1.0 deposit.
+    *         It calculates share difference to preserve ratio of shares to the increased
+    *         amount of pooledEthers so that all the previously created shares still correspond
+    *         to the same amount of pooled ethers.
     *         Then adds the calculated difference to the user's share and to the totalShares
     *         similarly as traditional mint() function does with balances.
     * @param _to Receiver of new shares
@@ -261,7 +260,6 @@ contract StETH is ISTETH, Pausable, AragonApp {
     */
     function mint(address _to, uint256 _value) external whenNotStopped authP(MINT_ROLE, arr(_to, _value)) {
         require(_to != 0);
-        require(_value != 0);
         uint256 sharesDifference;
         uint256 totalControlledEthBefore = dePool.getTotalControlledEther();
         if ( totalControlledEthBefore == 0) {
@@ -338,18 +336,18 @@ contract StETH is ISTETH, Pausable, AragonApp {
 
     /**
     * @dev Return the amount of shares backed by given amount of pooled Eth
-    * @param _pooledEthAmount The amount of pooled Eth 
+    * @param _pooledEthAmount The amount of pooled Eth
     */
     function getSharesByPooledEth(uint256 _pooledEthAmount) public view returns (uint256) {
         if (dePool.getTotalControlledEther() == 0) {
             return 0;
         }
-        return _totalShares.mul(_pooledEthAmount).div(dePool.getTotalControlledEther());
+        return _pooledEthAmount.mul(_totalShares).div(dePool.getTotalControlledEther());
     }
 
     /**
     * @dev Return the sum of the shares of all holders for better external visibility
-    */ 
+    */
     function getTotalShares() public view returns (uint256) {
         return _totalShares;
     }
