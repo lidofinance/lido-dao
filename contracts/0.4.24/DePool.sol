@@ -524,19 +524,22 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
       */
     function distributeRewards(uint256 _totalRewards) internal {
         // Amount of the rewards in Ether
-        uint256 rewardsToDistribute = _totalRewards.mul(_getFee()).div(10000);
+        uint256 tokens2mint = _totalRewards.mul(_getFee()).div(10000);
 
         assert(0 != getToken().totalSupply());
 
         (uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, ) = _getFeeDistribution();
-        uint256 toTreasury = rewardsToDistribute.mul(treasuryFeeBasisPoints).div(10000);
-        uint256 toInsuranceFund = rewardsToDistribute.mul(insuranceFeeBasisPoints).div(10000);
-        uint256 toSP = rewardsToDistribute.sub(toTreasury).sub(toInsuranceFund);
-        //FixMe: zero feeBasePoint breaks mint
+        uint256 toTreasury = tokens2mint.mul(treasuryFeeBasisPoints).div(10000);
+        uint256 toInsuranceFund = tokens2mint.mul(insuranceFeeBasisPoints).div(10000);
+        uint256 toSP = tokens2mint.sub(toTreasury).sub(toInsuranceFund);
+
         getToken().mint(getTreasury(), toTreasury);
         getToken().mint(getInsuranceFund(), toInsuranceFund);
         getToken().mint(address(getSPs()), toSP);
-        getSPs().distributeRewards(address(getToken()), toSP);
+        getSPs().distributeRewards(
+          address(getToken()),
+          getToken().balanceOf(address(getSPs()))
+        );
     }
 
 
@@ -657,7 +660,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         uint256 remote = REMOTE_ETHER2_VALUE_POSITION.getStorageUint256();
         // Until the oracle provides data, we assume that all staked ether is intact.
         uint256 deposited = DEPOSITED_ETHER_VALUE_POSITION.getStorageUint256();
-        uint256 assets = _getBufferedEther().add(_hasOracleData() ? remote : deposited);  
+        uint256 assets = _getBufferedEther().add(_hasOracleData() ? remote : deposited);
 
         return assets;
     }
