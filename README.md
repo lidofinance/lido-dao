@@ -1,8 +1,8 @@
 # DePool Ethereum Liquid Staking Protocol
 
-The DePool Ethereum Liquid Staking Protocol, built on Ethereum 2.0's Beacon chain, allows their users to earn staking rewards on Beacon chain without locking Ether or maintaining staking infrastructure. 
+The DePool Ethereum Liquid Staking Protocol, built on Ethereum 2.0's Beacon chain, allows their users to earn staking rewards on Beacon chain without locking Ether or maintaining staking infrastructure.
 
-Users can deposit Ether to DePool smart contract and receive stETH tokens in return. The smart contract then stakes tokens with DAO-picked staking providers. Users' deposited funds are controlled by the DAO, staking providers never have direct access to the users' assets. 
+Users can deposit Ether to DePool smart contract and receive stETH tokens in return. The smart contract then stakes tokens with DAO-picked staking providers. Users' deposited funds are controlled by the DAO, staking providers never have direct access to the users' assets.
 
 Unlike staked ether, stETH token is free from the limitations associated with a lack of liquidity and can be transferred at any time. stETH token balance corresponds to the amount of Beacon chain Ether that the holder could withdraw if state transitions were enabled right now in the Ethereum 2.0 network.
 
@@ -83,7 +83,7 @@ docker-compose build --no-cache
 
 > ***All E2E operations must be launched under the `./e2e` subdirectory***
 
-E2E environment consist of two parts: ETH1 related process and ETH 2.0 related process. 
+E2E environment consist of two parts: ETH1 related process and ETH 2.0 related process.
 
 For ETH1 part: Ethereum single node (ganache), IPFS docker containers and Aragon Web App.
 
@@ -106,7 +106,7 @@ During script execution, the following will be installed:
 * Deposit Contract instance
 * each Aragon App instance (contracts: DePool, DePoolOracle and StETH )
 * Aragon PM for 'depoolspm.eth'
-* DePool DAO template 
+* DePool DAO template
 * and finally, DePool DAO will be deployed
 
 To start only ETH1 part use:
@@ -144,7 +144,7 @@ To stop use:
 
 ### DKG
 To build DGK container:
- 
+
  * Add your local ssh key to github account
  * run `./dkg.sh`
 
