@@ -308,9 +308,7 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
 
             effectiveStake = sp.usedSigningKeys.sub(sp.stoppedValidators);
             uint256 reward = uint256(effectiveStake).mul(_totalReward).div(uint256(effectiveStakeTotal));
-            //FixMe: in integration test with StETH the next line reverts without a reason
-            //require(IERC20(_token).transfer(sp.rewardAddress, reward), "TRANSFER_FAILED");
-            // leaves some dust on the balance of this
+            require(IERC20(_token).transfer(sp.rewardAddress, reward), "TRANSFER_FAILED");
         }
     }
 
