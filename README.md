@@ -24,19 +24,19 @@ A full list of protocol levers that are controllable by Aragon DAO and you can f
 
 The protocol is implemented as a set of smart contracts that extend [AragonApp](https://github.com/aragon/aragonOS/blob/next/contracts/apps/AragonApp.sol) base contract.
 
-#### [StETH](contracts/StETH.sol)
+#### [StETH](contracts/0.4.24/StETH.sol)
 StETH is ERC20 token which represents staked ether. Tokens are minted upon deposit and burned when redeemed. StETH tokens are pegged 1:1 to the Ethers that are held by DePool. StETH token’s balances are updated when oracle reports change in total stake every day.
 
-#### [DePool](contracts/DePool.sol)
+#### [DePool](contracts/0.4.24/DePool.sol)
 DePool is a the core contract which acts as a liquid staking pool. The contract is responsible for Ether deposits and withdrawals, minting and burning liquid tokens, delegating funds to staking providers, applying fees, and accept updates from oracle contract. Staking providers' logic is extracted to the separate contract StakingProvidersRegistry.
 
-#### StakingProvidersRegistry
+#### [StakingProvidersRegistry](contracts/0.4.24/sps/StakingProvidersRegistry.sol)
 Staking Providers act as validators on Beacon chain for the benefit of the protocol. The DAO selects validators and adds their addresses to StakingProvidersRegistry contract. Authorized providers have to generate a set of keys for the validation and also provide them with the smart contract. As ether is received from users, it is distributed in chunks of 32 ethers between all active Staking Providers. The contract contains a list of validators, their keys, and the logic for distributing rewards between them. The DAO can deactivate misbehaving validators.
 
-#### [DePoolOracle](contracts/oracle/DePoolOracle.sol)
+#### [DePoolOracle](contracts/0.4.24/oracle/DePoolOracle.sol)
 DePoolOracle is a contract where oracles send addresses' balances controlled by the DAO on the ETH 2.0 side. The balances can go up because of reward accumulation and can go down because of slashing. Oracles are assigned by DAO.
 
-#### CStETH
+#### [CStETH](contracts/0.6.12/CstETH.sol)
 It's an ERC20 token that represents the account's share of the total supply of StETH tokens. CStETH token's balance only changes on transfers, unlike StETH that is also changed when oracles report staking rewards, penalties, and slashings. It's a "power user" token that might be needed to work correctly with some DeFi protocols like Uniswap v2, cross-chain bridges, etc.
 
 The contract also works as a wrapper that accepts StETH tokens and mints CStETH in return. The reverse exchange works exactly the opposite, received CStETH token is burned, and StETH token is returned to the user.
