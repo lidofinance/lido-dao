@@ -41,4 +41,6 @@ interface ISTETH /* is IERC20 */ {
       * @param _value Amount of tokens to burn
       */
     function burn(address _account, uint256 _value) external;
+
+    function balanceOf(address owner) external view returns (uint256);
 }
