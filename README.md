@@ -25,7 +25,8 @@ A full list of protocol levers that are controllable by the Aragon DAO can be fo
 
 ## Contracts
 
-The protocol is implemented as a set of smart contracts that extend the [AragonApp](https://github.com/aragon/aragonOS/blob/next/contracts/apps/AragonApp.sol) base contract.
+Most of the protocol is implemented as a set of smart contracts that extend the [AragonApp](https://github.com/aragon/aragonOS/blob/next/contracts/apps/AragonApp.sol) base contract.
+These contracts are located in the [contracts/0.4.24](contracts/0.4.24) directory. Additionally, there are contracts that don't depend on the Aragon; they are located in the [contracts/0.6.12](contracts/0.6.12) directory.
 
 #### [StETH](contracts/0.4.24/StETH.sol)
 StETH is an ERC20 token which represents staked ether. Tokens are minted upon deposit and burned when redeemed. StETH tokens are pegged 1:1 to the Ethers that are held by DePool. StETH token’s balances are updated when the oracle reports change in total stake every day.
