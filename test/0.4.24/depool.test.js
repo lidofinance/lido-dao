@@ -114,11 +114,9 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
         token.balanceOf(ADDRESS_1), token.balanceOf(ADDRESS_2), token.balanceOf(ADDRESS_3), token.balanceOf(ADDRESS_4)
     ]);
 
-    /* FixMe
     assertBn(div15(treasury_b), treasury, 'treasury token balance check');
     assertBn(div15(insurance_b), insurance, 'insurance fund token balance check');
     assertBn(div15(sps_b.add(a1).add(a2).add(a3).add(a4)), sp, 'staking providers token balance check');
-    */
   };
 
   it('setFee works', async () => {
@@ -377,9 +375,9 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     await oracle.reportEther2(50, ETH(100));    // stale data
     await checkStat({deposited: ETH(32), remote: ETH(30)});
-    //FixMe: fails with revert.
-    //await oracle.reportEther2(200, ETH(33)); 
-    //await checkStat({deposited: ETH(32), remote: ETH(33)});
+
+    await oracle.reportEther2(200, ETH(33));
+    await checkStat({deposited: ETH(32), remote: ETH(33)});
   });
 
   it('oracle data affects deposits', async () => {
@@ -415,18 +413,17 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(await validatorRegistration.totalCalls(), 1);
     assertBn(await app.getTotalControlledEther(), ETH(19));
     assertBn(await app.getBufferedEther(), ETH(4));
-    //FixMe assertBn(await token.balanceOf(user1), tokens(2));
-    //FixMe assertBn(await token.totalSupply(), tokens(38));
+    assertBn(await token.balanceOf(user1), tokens(2));
+    assertBn(await token.totalSupply(), tokens(19));
 
     // up
-    /*FixMe
     await oracle.reportEther2(200, ETH(72));
 
     await checkStat({deposited: ETH(32), remote: ETH(72)});
     assertBn(await validatorRegistration.totalCalls(), 1);
     assertBn(await app.getTotalControlledEther(), ETH(76));
     assertBn(await app.getBufferedEther(), ETH(4));
-    assertBn(await token.totalSupply(), tokens(38));
+    assertBn(await token.totalSupply(), tokens(76));
 
     // 2nd deposit, ratio is 2
     await web3.eth.sendTransaction({to: app.address, from: user3, value: ETH(2)});
@@ -435,10 +432,9 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(await validatorRegistration.totalCalls(), 1);
     assertBn(await app.getTotalControlledEther(), ETH(78));
     assertBn(await app.getBufferedEther(), ETH(6));
-    assertBn(await token.balanceOf(user1), tokens(4));
-    assertBn(await token.balanceOf(user3), tokens(1));
-    assertBn(await token.totalSupply(), tokens(39));
-    */
+    assertBn(await token.balanceOf(user1), tokens(8));
+    assertBn(await token.balanceOf(user3), tokens(2));
+    assertBn(await token.totalSupply(), tokens(78));
   });
 
   it('can stop and resume', async () => {
@@ -489,8 +485,8 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     await oracle.reportEther2(300, ETH(36));
     await checkStat({deposited: ETH(32), remote: ETH(36)});
-    //Fixme: assertBn(div15(await token.totalSupply()), 35888);
-    await checkRewards({treasury: 566, insurance: 377, sp: 944});
+    assertBn(await token.totalSupply(), tokens(38)); // remote + buffered
+    await checkRewards({treasury: 569, insurance: 385, sp: 974});
   });
 
   it('rewards distribution works', async () => {
@@ -524,8 +520,8 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     // now some rewards are here
     await oracle.reportEther2(300, ETH(36));
     await checkStat({deposited: ETH(32), remote: ETH(36)});
-    //Fixme assertBn(div15(await token.totalSupply()), 35888);
-    await checkRewards({treasury: 566, insurance: 377, sp: 944});
+    assertBn(await token.totalSupply(), tokens(38));
+    await checkRewards({treasury: 569, insurance: 385, sp: 974});
   });
 
   it('deposits accounted properly during rewards distribution', async () => {
@@ -545,8 +541,8 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     await oracle.reportEther2(300, ETH(36));
     await checkStat({deposited: ETH(32), remote: ETH(36)});
-    //assertBn(div15(await token.totalSupply()), 65939);
-    await checkRewards({treasury: 581, insurance: 387, sp: 969});
+    assertBn(await token.totalSupply(), tokens(68));
+    await checkRewards({treasury: 582, insurance: 391, sp: 985});
   });
 
   it('SP filtering during deposit works when doing a huge deposit', async () => {
