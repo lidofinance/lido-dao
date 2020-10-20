@@ -163,8 +163,8 @@ is sent to staking providers’ reward addresses (`_rewardAddress`).
 * Mutator: `setStakingProviderActive(uint256 _id, bool _active)`
   * Permission required: `SET_STAKING_PROVIDER_ACTIVE_ROLE`
 
-The DAO can deactivate misbehaving staking providers by calling this function. The pool skips
-deactivated staking providers during validator registration; also, deactivated providers don’t
+Misbehaving staking providers can be deactivated by calling this function. The pool skips
+deactivated providers during validator registration; also, deactivated providers don’t
 take part in fee distribution.
 
 
@@ -175,7 +175,7 @@ take part in fee distribution.
 * Mutator: `removeSigningKey(uint256 _SP_id, uint256 _index)`
   * Permission required: `MANAGE_SIGNING_KEYS`
 
-Allow the DAO to manage signing keys for the given staking provider.
+Allow to manage signing keys for the given staking provider.
 
 > Signing keys can also be managed by the reward address of a signing provier by calling
 > the equivalent functions with the `SP` suffix: `addSigningKeysSP`, `removeSigningKeySP`.
@@ -186,8 +186,7 @@ Allow the DAO to manage signing keys for the given staking provider.
 * Mutator: `reportStoppedValidators(uint256 _id, uint64 _stoppedIncrement)`
   * Permission required: `REPORT_STOPPED_VALIDATORS_ROLE`
 
-Allows the DAO to report that `_stoppedIncrement` more validators of a staking provider
-have become stopped.
+Allows to report that `_stoppedIncrement` more validators of a staking provider have become stopped.
 
 
 ## [DePoolOracle.sol](/contracts/0.4.24/oracle/DePoolOracle.sol)
