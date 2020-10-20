@@ -1,10 +1,10 @@
 # DePool Ethereum Liquid Staking Protocol
 
-The DePool Ethereum Liquid Staking Protocol, built on Ethereum 2.0's Beacon chain, allows their users to earn staking rewards on Beacon chain without locking Ether or maintaining staking infrastructure.
+The DePool Ethereum Liquid Staking Protocol, built on Ethereum 2.0's Beacon chain, allows their users to earn staking rewards on the Beacon chain without locking Ether or maintaining staking infrastructure.
 
-Users can deposit Ether to DePool smart contract and receive stETH tokens in return. The smart contract then stakes tokens with DAO-picked staking providers. Users' deposited funds are controlled by the DAO, staking providers never have direct access to the users' assets.
+Users can deposit Ether to the DePool smart contract and receive stETH tokens in return. The smart contract then stakes tokens with the DAO-picked staking providers. Users' deposited funds are controlled by the DAO, staking providers never have direct access to the users' assets.
 
-Unlike staked ether, stETH token is free from the limitations associated with a lack of liquidity and can be transferred at any time. stETH token balance corresponds to the amount of Beacon chain Ether that the holder could withdraw if state transitions were enabled right now in the Ethereum 2.0 network.
+Unlike staked ether, the stETH token is free from the limitations associated with a lack of liquidity and can be transferred at any time. The stETH token balance corresponds to the amount of Beacon chain Ether that the holder could withdraw if state transitions were enabled right now in the Ethereum 2.0 network.
 
 Before getting started with this repo, please read:
 
@@ -17,30 +17,32 @@ The DePool DAO is a Decentralized Autonomous Organization that manages the liqui
 
 Also, the DAO will accumulate service fees and spend them on insurance, research, development, and protocol upgrades. Initial DAO members will take part in the threshold signature for Ethereum 2.0 by making BLS threshold signatures.
 
-The DePool DAO is an [Aragon organization](https://aragon.org/dao). Since Aragon provides a full end-to-end framework to build DAOs, we use its standard tools. Protocol smart contracts extend AragonApp base contract and can be managed by the DAO.
+The DePool DAO is an [Aragon organization](https://aragon.org/dao). Since Aragon provides a full end-to-end framework to build DAOs, we use its standard tools. The protocol smart contracts extend AragonApp base contract and can be managed by the DAO.
+
+## Protocol levers
 
 A full list of protocol levers that are controllable by the Aragon DAO can be found [here](docs/protocol-levers.md).
 
 ## Contracts
 
-The protocol is implemented as a set of smart contracts that extend [AragonApp](https://github.com/aragon/aragonOS/blob/next/contracts/apps/AragonApp.sol) base contract.
+The protocol is implemented as a set of smart contracts that extend the [AragonApp](https://github.com/aragon/aragonOS/blob/next/contracts/apps/AragonApp.sol) base contract.
 
 #### [StETH](contracts/0.4.24/StETH.sol)
-StETH is ERC20 token which represents staked ether. Tokens are minted upon deposit and burned when redeemed. StETH tokens are pegged 1:1 to the Ethers that are held by DePool. StETH token’s balances are updated when oracle reports change in total stake every day.
+StETH is an ERC20 token which represents staked ether. Tokens are minted upon deposit and burned when redeemed. StETH tokens are pegged 1:1 to the Ethers that are held by DePool. StETH token’s balances are updated when the oracle reports change in total stake every day.
 
 #### [DePool](contracts/0.4.24/DePool.sol)
 DePool is the core contract which acts as a liquid staking pool. The contract is responsible for Ether deposits and withdrawals, minting and burning liquid tokens, delegating funds to staking providers, applying fees, and accepting updates from the oracle contract. Staking providers' logic is extracted to a separate contract, StakingProvidersRegistry.
 
 #### [StakingProvidersRegistry](contracts/0.4.24/sps/StakingProvidersRegistry.sol)
-Staking Providers act as validators on Beacon chain for the benefit of the protocol. The DAO selects staking providers and adds their addresses to StakingProvidersRegistry contract. Authorized providers have to generate a set of keys for the validation and also provide them with the smart contract. As Ether is received from users, it is distributed in chunks of 32 Ether between all active Staking Providers. The contract contains a list of providers, their keys, and the logic for distributing rewards between them. The DAO can deactivate misbehaving providers.
+Staking Providers act as validators on the Beacon chain for the benefit of the protocol. The DAO selects staking providers and adds their addresses to the StakingProvidersRegistry contract. Authorized providers have to generate a set of keys for the validation and also provide them with the smart contract. As Ether is received from users, it is distributed in chunks of 32 Ether between all active Staking Providers. The contract contains a list of providers, their keys, and the logic for distributing rewards between them. The DAO can deactivate misbehaving providers.
 
 #### [DePoolOracle](contracts/0.4.24/oracle/DePoolOracle.sol)
 DePoolOracle is a contract where oracles send addresses' balances controlled by the DAO on the ETH 2.0 side. The balances can go up because of reward accumulation and can go down due to slashing and staking penalties. Oracles are assigned by the DAO.
 
 #### [CStETH](contracts/0.6.12/CstETH.sol)
-It's an ERC20 token that represents the account's share of the total supply of StETH tokens. CStETH token's balance only changes on transfers, unlike StETH that is also changed when oracles report staking rewards, penalties, and slashings. It's a "power user" token that might be needed to work correctly with some DeFi protocols like Uniswap v2, cross-chain bridges, etc.
+It's an ERC20 token that represents the account's share of the total supply of StETH tokens. The balance of a CStETH token holder only changes on transfers, unlike the balance of StETH that is also changed when oracles report staking rewards, penalties, and slashings. It's a "power user" token that might be needed to work correctly with some DeFi protocols like Uniswap v2, cross-chain bridges, etc.
 
-The contract also works as a wrapper that accepts StETH tokens and mints CStETH in return. The reverse exchange works exactly the opposite, received CStETH token is burned, and StETH token is returned to the user.
+The contract also works as a wrapper that accepts StETH tokens and mints CStETH in return. The reverse exchange works exactly the opposite, the received CStETH tokens are burned, and StETH tokens are returned to the user.
 
 ## Development
 
@@ -84,7 +86,7 @@ docker-compose build --no-cache
 
 > ***All E2E operations must be launched under the `./e2e` subdirectory***
 
-E2E environment consists of two parts: ETH1-related processes and ETH 2.0-related processes.
+The E2E environment consists of two parts: ETH1-related processes and ETH 2.0-related processes.
 
 For ETH1 part: Ethereum single node (ganache), IPFS docker containers and Aragon Web App.
 
@@ -96,19 +98,19 @@ To start the whole environment from predeployed snapshots, use:
 ./startup.sh -r -s
 ```
 
-then go to [http://localhost:3000/#/depool-dao/](http://localhost:3000/#/depool-dao/) to manage DAO via Aragon Web App
+then go to [http://localhost:3000/#/depool-dao/](http://localhost:3000/#/depool-dao/) to manage the DAO via Aragon Web App.
 
 > To completely repeat the compilation and deployment process in ETH1 chain, just omit the `-s` flag.
 
 #### ETH1 part
 
-During script execution, the following will be installed:
+As a result of the script execution, the following will be installed:
 
-* Deposit Contract instance
-* each Aragon App instance (contracts: DePool, StakingProvidersRegistry, DePoolOracle, and StETH)
-* Aragon PM for `depoolspm.eth`
-* DePool DAO template
-* and finally, DePool DAO will be deployed
+* the Deposit Contract instance;
+* all Aragon App instances (contracts: DePool, StakingProvidersRegistry, DePoolOracle, and StETH)
+* the Aragon PM for `depoolspm.eth`;
+* the DePool DAO template;
+* and finally, the DePool DAO will be deployed.
 
 To start only the ETH1 part, use:
 
@@ -120,13 +122,13 @@ To start only the ETH1 part, use:
 
 To work with the ETH2 part, the ETH1 part must be running.
 
-During script execution, the following will happen:
+As a result of the script execution, the following will happen:
 
-* beacon chain genesis config (Minimal with tunes) will be generated.
-* validator's wallet with 4 keys will be generated
-* A deposit of 32ETH will be made to Deposit Contract for each validator key.
-* Based on the events about the deposit, a genesis block will be created, including validators.
-* ETH2 node will start from the new Genesis block
+* the Beacon chain genesis config (Minimal with tunes) will be generated;
+* validator's wallet with 4 keys will be generated;
+* a deposit of 32 ETH will be made to the Deposit Contract for each validator key;
+* based on the events about the deposit, a genesis block will be created, including validators;
+* ETH2 node will start from the new Genesis block.
 
 To reseat and restart only the ETH2 part, use:
 
@@ -147,18 +149,18 @@ To stop, use:
 
 To build a DGK container:
 
- * Add your local ssh key to github account
- * run `./dkg.sh` inside `e2e` directory
+ * Add your local SSH key to the Github account;
+ * run `./dkg.sh` inside the `e2e` directory.
 
 ### Build & test all our apps
 
-Unit tests:
+Run unit tests:
 
 ```bash
 yarn test
 ```
 
-E2E tests:
+Run E2E tests:
 
 ```bash
 cd e2e
@@ -174,7 +176,7 @@ Run unit tests and report gas used by each Solidity function:
 yarn test:gas
 ```
 
-Generate test coverage report:
+Generate unit test coverage report:
 
 ```bash
 yarn test:coverage
@@ -192,7 +194,7 @@ so full branch coverage will never be reported until
 
 ### Deploying
 
-1. Deploy Aragon APM
+1. Deploy the Aragon APM
 
 ```bash
 # Local dev network
@@ -220,14 +222,14 @@ yarn deploy:app-steth --network rinkeby
 # The same for mainnet, just replace "--network rinkeby" with "--network mainnet"
 ```
 
-3. Deploy DAO template
+3. Deploy the DAO template
 
 ```bash
 # Local dev network
 yarn deploy:tmpl:dev
 ```
 
-4. Deploy DAO
+4. Deploy the DAO
 
 ```bash
 # Local dev network
@@ -236,17 +238,16 @@ yarn deploy:dao:dev
 
 ### Other
 
-To reset the devchain state, stop the processes and use:
+To reset the devchain state, use:
 
 ```bash
 ./shutdown.sh && ./startup.sh
 ```
 
-or to just clean restart
+or just do a clean restart by passing the `-r` flag:
 
 ```bash
 ./startup.sh -r -s
 ```
 
-You free to mix the keys.
-
+You're free to mix the keys.
