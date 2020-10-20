@@ -9,6 +9,26 @@ initially, levers can only be changed by the DAO voting, and other entities can 
 do the same only as a result of the voting.
 
 
+## [StETH.sol](/contracts/0.4.24/StETH.sol)
+
+### Pausing
+
+* Mutators: `stop()`, `resume()`
+  * Permission required: `PAUSE_ROLE`
+* Accessor: `isStopped() returns (bool)`
+
+When paused, the token contract won’t allow minting, burning, transferring tokens, approving token
+transfers and changing allowances. Calls of the following functions will revert:
+
+* `mint(address, uint256)`
+* `burn(address, uint256)`
+* `transfer(address, uint256)`
+* `transferFrom(address, address, uint256)`
+* `approve(address, uint256)`
+* `increaseAllowance(address, uint)`
+* `decreaseAllowance(address, uint)`
+
+
 ## [DePool.sol](/contracts/0.4.24/DePool.sol)
 
 ### Oracle
@@ -90,11 +110,16 @@ for the related calculations; you can run them with `yarn estimate-deposit-loop-
 
 ### Pausing
 
-Allows pausing pool routine operations.
-
 * Mutators: `stop()`, `resume()`
   * Permission required: `PAUSE_ROLE`
 * Accessor: `isStopped() returns (bool)`
+
+When paused, the pool won’t accept user submissions and won’t allow user withdrawals. The following
+transactions will revert:
+
+* Plain Ether transfers;
+* Calls of the `submit(address)` function;
+* Calls of the `withdraw(uint256, bytes32)` function (withdrawals are not implemented yet).
 
 
 ### TODO
