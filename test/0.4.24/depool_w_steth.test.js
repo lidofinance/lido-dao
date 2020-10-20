@@ -214,15 +214,16 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody]
             assertBn(await token.balanceOf(user2),         new BN('34990001971093930278'));
             assertBn(await token.balanceOf(treasuryAddr),  new BN('00002999143026093765'));
             assertBn(await token.balanceOf(insuranceAddr), new BN('00001999600063664000'));
-            //FixMe: will be distributed among sps'es
-            assertBn(await token.balanceOf(sps.address),   new BN('00004999285816311955')); 
+
+            assertBn(await token.balanceOf(ADDRESS_1),   new BN('00004999285816311954'));
           });
           it('stETH shares: total=34.01 user2=34 treasury.003, insurance=.002, sps=.004', async () => {
             assertBn(await token.getTotalShares(), new BN('34009715146146239066'));
             assertBn(await token.getSharesByHolder(user2), tokens(34)); //stays the same
             assertBn(await token.getSharesByHolder(treasuryAddr), new BN('00002914285714285714'));
             assertBn(await token.getSharesByHolder(insuranceAddr), new BN('00001943023673469387'));
-            assertBn(await token.getSharesByHolder(sps.address), new BN('00004857836758483965'));
+
+            assertBn(await token.getSharesByHolder(ADDRESS_1), new BN('00004857836758483964'));
           });
         });
       });
@@ -244,17 +245,18 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody]
           assertBn(await token.balanceOf(user2),         new BN('67661169524583879360'));
           assertBn(await token.balanceOf(treasuryAddr),  new BN('101491754286875819'));
           assertBn(await token.balanceOf(insuranceAddr), new BN('67762661278870755'));
-          //FixMe: will be distributed among sps'es
-          assertBn(await token.balanceOf(sps.address),   new BN('169576059850374064')); 
+
+          assertBn(await token.balanceOf(ADDRESS_1),   new BN('169576059850374062'));
         });
         it('stETH shares: total=34.17 user2=34 treasury=.05, insurance=.03, sps=.09', async () => {
           assertBn(await token.getTotalShares(), new BN('34170263627500000000'));
           assertBn(await token.getSharesByHolder(user2), tokens(34)); //stays the same
           assertBn(await token.getSharesByHolder(treasuryAddr), new BN('51000000000000000'));
           assertBn(await token.getSharesByHolder(insuranceAddr), new BN('34051000000000000'));
-          assertBn(await token.getSharesByHolder(sps.address), new BN('85212627500000000'));
+
+          assertBn(await token.getSharesByHolder(ADDRESS_1), new BN('85212627499999999'));
         });
-        
+
         context('user3 submits 34 ETH (submitted but not propagated to ETH2 yet)', async () => {
           beforeEach(async function () {
             await web3.eth.sendTransaction({to: app.address, from: user3, value: ETH(34)});
@@ -273,8 +275,8 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody]
             assertBn(await token.balanceOf(user3),         new BN('23333333333333333333'));
             assertBn(await token.balanceOf(treasuryAddr),  new BN('00069651203922365758'));
             assertBn(await token.balanceOf(insuranceAddr), new BN('00046503787152166204'));
-            //FixMe: will be distributed among sps'es
-            assertBn(await token.balanceOf(sps.address),   new BN('00116375727348295926')); 
+
+            assertBn(await token.balanceOf(ADDRESS_1),   new BN('00116375727348295925'));
           });
           it('stETH shares: total=51.255 user2=34 user3=17.085 treasury=.051, insurance=.034, sps=.085', async () => {
             assertBn(await token.getTotalShares(),              new BN('51255395441250000000'));
@@ -282,7 +284,8 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody]
             assertBn(await token.getSharesByHolder(user3),      new BN('17085131813750000000'));
             assertBn(await token.getSharesByHolder(treasuryAddr),  new BN('51000000000000000'));
             assertBn(await token.getSharesByHolder(insuranceAddr), new BN('34051000000000000'));
-            assertBn(await token.getSharesByHolder(sps.address),   new BN('85212627500000000'));
+
+            assertBn(await token.getSharesByHolder(ADDRESS_1),   new BN('85212627499999999'));
           });
           context('oracle reports 98 ETH (66 existing + 32 new). No rewards at this point', async () => {
             beforeEach(async function () {
@@ -302,8 +305,8 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody]
               assertBn(await token.balanceOf(user3),         new BN('34000000000000000000'));
               assertBn(await token.balanceOf(treasuryAddr),  new BN('00101491754286875819'));
               assertBn(await token.balanceOf(insuranceAddr), new BN('00067762661278870755'));
-              //FixMe: will be distributed among sps'es
-              assertBn(await token.balanceOf(sps.address),   new BN('00169576059850374064')); 
+
+              assertBn(await token.balanceOf(ADDRESS_1),   new BN('00169576059850374062'));
             });
             it('stETH shares: total=51.255 user2=34 user3=17.085 treasury=.051, insurance=.034, sps=.085 (same as before)', async () => {
               assertBn(await token.getTotalShares(),              new BN('51255395441250000000'));
@@ -311,7 +314,8 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody]
               assertBn(await token.getSharesByHolder(user3),      new BN('17085131813750000000'));
               assertBn(await token.getSharesByHolder(treasuryAddr),  new BN('51000000000000000'));
               assertBn(await token.getSharesByHolder(insuranceAddr), new BN('34051000000000000'));
-              assertBn(await token.getSharesByHolder(sps.address),   new BN('85212627500000000'));
+
+              assertBn(await token.getSharesByHolder(ADDRESS_1),   new BN('85212627499999999'));
             });
           });
         });
