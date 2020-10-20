@@ -152,6 +152,9 @@ take part in fee distribution.
 
 Allow the DAO to manage signing keys for the given staking provider.
 
+> Signing keys can also be managed by the reward address of a signing provier by calling
+> the equivalent functions with the `SP` suffix: `addSigningKeysSP`, `removeSigningKeySP`.
+
 
 ### Reporting new stopped validators
 
