@@ -15,8 +15,9 @@ do the same only as a result of the voting.
 
 The address of the oracle contract.
 
+* Mutator: `setOracle(address)`
+  * Permission required: `SET_ORACLE`
 * Accessor: `getOracle() returns (address)`
-* Mutator: `setOracle(address)` (requires `SET_ORACLE` permission)
 
 This contract serves as a bridge between ETH 2.0 -> ETH oracle committee members and the rest of the protocol,
 implementing quorum between the members. The oracle committee members report balances controlled by the DAO
@@ -27,8 +28,9 @@ on the ETH 2.0 side, which can go up because of reward accumulation and can go d
 
 The total fee, in basis points (`10000` corresponding to `100%`).
 
+* Mutator: `setFee(uint16)`
+  * Permission required: `MANAGE_FEE`
 * Accessor: `getFee() returns (uint16)`
-* Mutator: `setFee(uint16)` (requires `MANAGE_FEE` permission)
 
 The fee is taken on staking rewards and distributed between the treasury, the insurance fund, and
 staking providers.
@@ -39,16 +41,18 @@ staking providers.
 Controls how the fee is distributed between the treasury, the insurance fund, and staking providers.
 Each fee component is in basis points; the sum of all components must add up to 1 (`10000` basis points).
 
+* Mutator: `setFeeDistribution(uint16 treasury, uint16 insurance, uint16 sps)`
+  * Permission required: `MANAGE_FEE`
 * Accessor: `getFeeDistribution() returns (uint16 treasury, uint16 insurance, uint16 sps)`
-* Mutator: `setFeeDistribution(uint16 treasury, uint16 insurance, uint16 sps)` (requires `MANAGE_FEE` permission)
 
 
 ### ETH 2.0 withdrawal Credentials
 
 Credentials to withdraw ETH on ETH 2.0 side after phase 2 is launched.
 
+* Mutator: `setWithdrawalCredentials(bytes)`
+  * Permission required: `MANAGE_WITHDRAWAL_KEY`
 * Accessor: `getWithdrawalCredentials() returns (bytes)`
-* Mutator: `setWithdrawalCredentials(bytes)` (requires `MANAGE_WITHDRAWAL_KEY` permission)
 
 The pool uses these credentials to register new ETH 2.0 validators.
 
@@ -57,8 +61,9 @@ The pool uses these credentials to register new ETH 2.0 validators.
 
 Controls how many ETH 2.0 validators can be registered in a single transaction.
 
+* Mutator: `setDepositIterationLimit(uint256)`
+  * Permission required: `SET_DEPOSIT_ITERATION_LIMIT`
 * Accessor: `getDepositIterationLimit() returns (uint256)`
-* Mutator: `setDepositIterationLimit(uint256)` (requires `SET_DEPOSIT_ITERATION_LIMIT` permission)
 * [Scenario test](/test/scenario/depool_deposit_iteration_limit.js)
 
 When someone submits Ether to the pool, the received Ether gets buffered in the pool contract. If the amount
@@ -87,8 +92,9 @@ for the related calculations; you can run them with `yarn estimate-deposit-loop-
 
 Allows pausing pool routine operations.
 
+* Mutators: `stop()`, `resume()`
+  * Permission required: `PAUSE_ROLE`
 * Accessor: `isStopped() returns (bool)`
-* Mutators: `stop()`, `resume()` (requires `PAUSE_ROLE`)
 
 
 ### TODO
@@ -104,20 +110,21 @@ Allows pausing pool routine operations.
 
 Address of the pool contract.
 
+* Mutator: `setPool(address)`
+  * Permission required: `SET_POOL`
 * Accessor: `pool() returns (address)`
-* Mutator: `setPool(address)` (requires `SET_POOL` permission)
 
 
 ### Staking providers list
 
-* `addStakingProvider(string _name, address _rewardAddress, uint64 _stakingLimit)`,
-  requires `ADD_STAKING_PROVIDER_ROLE`
-* `setStakingProviderName(uint256 _id, string _name)`,
-  requires `SET_STAKING_PROVIDER_NAME_ROLE`
-* `setStakingProviderRewardAddress(uint256 _id, address _rewardAddress)`,
-  requires `SET_STAKING_PROVIDER_ADDRESS_ROLE`
-* `setStakingProviderStakingLimit(uint256 _id, uint64 _stakingLimit)`,
-  requires `SET_STAKING_PROVIDER_LIMIT_ROLE`
+* Mutator: `addStakingProvider(string _name, address _rewardAddress, uint64 _stakingLimit)`
+  * Permission required: `ADD_STAKING_PROVIDER_ROLE`
+* Mutator: `setStakingProviderName(uint256 _id, string _name)`
+  * Permission required: `SET_STAKING_PROVIDER_NAME_ROLE`
+* Mutator: `setStakingProviderRewardAddress(uint256 _id, address _rewardAddress)`
+  * Permission required: `SET_STAKING_PROVIDER_ADDRESS_ROLE`
+* Mutator: `setStakingProviderStakingLimit(uint256 _id, uint64 _stakingLimit)`
+  * Permission required: `SET_STAKING_PROVIDER_LIMIT_ROLE`
 
 Staking providers act as validators on the Beacon chain for the benefit of the protocol. Each
 staking provider submits no more than `_stakingLimit` signing keys that will be used later
@@ -128,7 +135,8 @@ is sent to staking providers’ reward addresses (`_rewardAddress`).
 
 ### Deactivating a staking provider
 
-* `setStakingProviderActive(uint256 _id, bool _active)`, requires `SET_STAKING_PROVIDER_ACTIVE_ROLE`
+* Mutator: `setStakingProviderActive(uint256 _id, bool _active)`
+  * Permission required: `SET_STAKING_PROVIDER_ACTIVE_ROLE`
 
 The DAO can deactivate misbehaving staking providers by calling this function. The pool skips
 deactivated staking providers during validator registration; also, deactivated providers don’t
@@ -137,19 +145,21 @@ take part in fee distribution.
 
 ### Managing staking provider’s signing keys
 
-* `addSigningKeys(uint256 _SP_id, uint256 _quantity, bytes _pubkeys, bytes _signatures)`
-* `removeSigningKey(uint256 _SP_id, uint256 _index)`
+* Mutator: `addSigningKeys(uint256 _SP_id, uint256 _quantity, bytes _pubkeys, bytes _signatures)`
+  * Permission required: `MANAGE_SIGNING_KEYS`
+* Mutator: `removeSigningKey(uint256 _SP_id, uint256 _index)`
+  * Permission required: `MANAGE_SIGNING_KEYS`
 
-Allow the DAO to manage signing keys for the given staking provider. All functions require
-`MANAGE_SIGNING_KEYS` permission.
+Allow the DAO to manage signing keys for the given staking provider.
 
 
 ### Reporting new stopped validators
 
-* `reportStoppedValidators(uint256 _id, uint64 _stoppedIncrement)`
+* Mutator: `reportStoppedValidators(uint256 _id, uint64 _stoppedIncrement)`
+  * Permission required: `REPORT_STOPPED_VALIDATORS_ROLE`
 
 Allows the DAO to report that `_stoppedIncrement` more validators of a staking provider
-have become stopped. Requires `REPORT_STOPPED_VALIDATORS_ROLE`.
+have become stopped.
 
 
 ## [DePoolOracle.sol](/contracts/0.4.24/oracle/DePoolOracle.sol)
@@ -158,25 +168,27 @@ have become stopped. Requires `REPORT_STOPPED_VALIDATORS_ROLE`.
 
 Address of the pool contract.
 
+* Mutator: `setPool(address)`
+  * Permission required: `SET_POOL`
 * Accessor: `pool() returns (address)`
-* Mutator: `setPool(address)` (requires `SET_POOL` permission)
 
 
 ### Members list
 
 The list of oracle committee members.
 
+* Mutators: `addOracleMember(address)`, `removeOracleMember(address)`
+  * Permission required: `MANAGE_MEMBERS`
 * Accessor: `getOracleMembers() returns (address[])`
-* Mutators: `addOracleMember(address)`, `removeOracleMember(address)`;
-  require `MANAGE_MEMBERS` permission
 
 
 ### The quorum
 
 The number of oracle committee members required to form a data point.
 
+* Mutator: `setQuorum(uint256)`
+  * Permission required: `MANAGE_QUORUM`
 * Accessor: `getQuorum() returns (uint256)`
-* Mutator: `setQuorum(uint256)`, requires `MANAGE_QUORUM` permission
 
 The data point for a given report interval is formed when:
 
