@@ -1,12 +1,30 @@
 # Protocol levers
 
-The protocol provides a number of settings controllable by the DAO. They are listed below, grouped
-by the contract.
+The protocol provides a number of settings controllable by the DAO. Modifying each of them requires
+the caller to have a specific permission. After deploying the DAO, all permissions belong to the DAO
+`Voting` app, which can also manage them. This means that, initially, levers can only be changed by
+the DAO voting, and other entities can be allowed to do the same only as a result of the voting.
 
-Modifying each setting requires the caller to have a specific permission. After deploying the DAO,
-all permissions belong to the DAO `Voting` app, which can also manage them. This means that,
-initially, levers can only be changed by the DAO voting, and other entities can be allowed to
-do the same only as a result of the voting.
+All existing levers are listed below, grouped by the contract.
+
+### A note on upgradeability
+
+The following contracts are upgradeable by the DAO voting:
+
+* `contracts/0.4.24/StETH.sol`
+* `contracts/0.4.24/DePool.sol`
+* `contracts/0.4.24/StakingProvidersRegistry.sol`
+* `contracts/0.4.24/DePoolOracle.sol`
+
+Upgradeability is implemented by the Aragon kernel and base contracts. To upgrade an app, one needs
+the `dao.APP_MANAGER_ROLE` permission provided by Aragon. All upgradeable contracts use the
+[Unstructured Storage pattern] in order to provide stable storage structure accross upgrades.
+
+[Unstructured Storage pattern]: https://blog.openzeppelin.com/upgradeability-using-unstructured-storage
+
+The following contracts are not upgradeable and don't depend on the Aragon code:
+
+* `contracts/0.6.12/CstETH.sol`
 
 
 ## [StETH.sol](/contracts/0.4.24/StETH.sol)
