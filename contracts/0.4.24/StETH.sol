@@ -329,7 +329,15 @@ contract StETH is ISTETH, Pausable, AragonApp {
     function _burn(address account, uint256 value) internal {
         require(account != 0);
         require(value != 0);
-        uint256 sharesToBurn = getSharesByPooledEth(value);
+        uint256 totalBalances = totalSupply();
+        uint256 sharesToBurn = (
+            _totalShares
+            .sub(
+                (totalBalances)
+                .mul(_totalShares.sub(_shares[account]))
+                .div(totalBalances - balanceOf(account) + value)
+            )
+        );
         _totalShares = _totalShares.sub(sharesToBurn);
         _shares[account] = _shares[account].sub(sharesToBurn);
         emit Transfer(account, address(0), value);
