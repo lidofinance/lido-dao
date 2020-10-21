@@ -11,6 +11,17 @@ do the same only as a result of the voting.
 
 ## [StETH.sol](/contracts/0.4.24/StETH.sol)
 
+### Minting and burning
+
+* Mutator: `mint(address _to, uint256 _value)`
+  * Permission required: `MINT_ROLE`
+* Mutator: `burn(address _account, uint256 _value)`
+  * Permission required: `BURN_ROLE`
+
+Initially, only the `DePool.sol` contract is authorized to mint and burn tokens, but the DAO can
+vote to grant these permissions to other actors.
+
+
 ### Pausing
 
 * Mutators: `stop()`, `resume()`
