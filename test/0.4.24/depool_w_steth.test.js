@@ -154,6 +154,12 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody]
       });
 
       it('DePool: deposited=32, remote=0, buffered=2, totalControlled=34, rewBase=32', async () => {
+        /* When user2 submits 34 Ethers, 32 of them get deposited to Deposit ETH2 contract,
+        and 2 Ethers get buffered on DePool contract.
+        totalControlledEther is the sum of deposited and buffered values.
+        Since dePool rewards only playing validator role, there is rewardBase counter to catch the
+        increment. To avoid rewards for deposits, the rewardBase gets shifted by deposited amount (N x 32).
+        */
         const stat = await app.getEther2Stat();
         assertBn(stat.deposited, ETH(32));
         assertBn(stat.remote, ETH(0));
@@ -163,12 +169,18 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody]
       });
 
       it('stETH: totalSupply=34 user2=34', async () => {
+        /* The initial deposit initiates the stETH token with the corresponding totalSupply 
+        that is taken from dePool.totalControlledEther.
+        Submitter's balance is equivalent to deposited Ether amount.
+        */
         assertBn(await token.totalSupply(), tokens(34));
         assertBn(await token.balanceOf(user1), tokens(0));
         assertBn(await token.balanceOf(user2), tokens(34));
       });
 
       it('stETH shares: total=34 user2=34', async () => {
+        /* Until the first oracle report share-to-balance ratio is 1:1
+        */
         assertBn(await token.getTotalShares(), tokens(34));
         assertBn(await token.getSharesByHolder(user1), tokens(0));
         assertBn(await token.getSharesByHolder(user2), tokens(34));
@@ -176,10 +188,18 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody]
 
       context('oracle reported 30 ETH (2 ETH lost due slashing)', async () => {
         beforeEach(async function () {
+          /* Let's assume staking provider forgot to run validator or misconfigured it. The validator
+          was a subject to slashing and lost 2 Ether of 32.
+          */
           await oracle.reportEther2(100, ETH(30));
         });
 
         it('DePool: deposited=32, remote=30, buffered=2, totalControlled=32, rewBase=32', async () => {
+          /* The oracle's report changes `remote` value (was 32, became 30).
+          This affects output of totalControlledEther, that decreased by 2.
+          getRewardBase didn't change. Validators need to compensate the loss occured due to their fault 
+          before receiving fees from rewards.
+          */
           const stat = await app.getEther2Stat();
           assertBn(stat.deposited, ETH(32));
           assertBn(stat.remote, ETH(30));
@@ -189,12 +209,14 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody]
         });
 
         it('stETH: totalSupply=32 user2=32', async () => {
+          // totalSupply and staker's balance decreased due to slashing (34 -> 32)
           assertBn(await token.totalSupply(), tokens(32));
           assertBn(await token.balanceOf(user1), tokens(0));
           assertBn(await token.balanceOf(user2), tokens(32));
         });
 
         it('stETH shares: total=34 user2=34', async () => {
+          // total and personal shares as relative measure stay the same despite of slashing
           assertBn(await token.getTotalShares(), tokens(34));
           assertBn(await token.getSharesByHolder(user1), tokens(0));
           assertBn(await token.getSharesByHolder(user2), tokens(34));
@@ -202,43 +224,78 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody]
 
         context('oracle reported 33 ETH (recovered then rewarded)', async () => {
           beforeEach(async function () {
+          /* The validators worked hard and honestly and gradually worked out losses.
+          One day oracle's report says that `remote` became more than initial deposit.
+          It's the first point where they produced reward (initially submitted 32, now 33. Profit: 1 Ether)
+          */
             await oracle.reportEther2(200, ETH(33));
           });
 
           it('DePool: deposited=32, remote=33, buffered=2, totalControlled=35, rewBase=33', async () => {
+            /* This positive oracle's report updates the `remote` value.
+            and totalControlledEther's formula gives the increased amount:
+            totalControlledEther = 34 Ether initial submission + 1 Ether reward = 35 Ether
+              or
+            totalControlledEther = 33 Ether remote + 2 Ether buffer = 35 Ether
+            New totalControlledEther value leads to increase of stETH.totalSupply and output of 
+            personal balances increased proportionally to holders' shares.
+            */
             const stat = await app.getEther2Stat();
             assertBn(stat.deposited, ETH(32));
             assertBn(stat.remote, ETH(33));
             assertBn(await app.getBufferedEther(), ETH(2));
             assertBn(await app.getTotalControlledEther(), ETH(35));
+            /*
+            then dePool calculates the total reward value (remote - rewardBase) 33-32=1 Ether
+            and updates the rewardBase accordingly.
+            */
             assertBn(await app.getRewardBase(), ETH(33));
           });
 
-          it('stETH: totalSupply=35 user=34.99 treasury.003, insurance=.002, sps=.004', async () => {
+          it('stETH: totalSupply=35 user=34.99 treasury.003, insurance=.002, sp=.005', async () => {
+            /*
+            New totalControlledEther value leads to increase of stETH.totalSupply, and output of 
+            personal balances increased proportionally to holders' shares.
+            Oracle's report also triggers fee payment that is substracted from the reward.
+            The fee divides in given proportion between SPs, treasury and insurance vaults.
+
+            userBalance = 34.0 Ether staked
+            shares = 34.0 
+            totalControlledEtherInitial = 34.0 Ether
+            totalControlledEtherNew = 35.0 Ether
+            reward = totalControlledEtherNew - totalControlledEtherInitial = 1.0 Ether
+            totalFee = reward * 0.01 = 0.01 stETH (equals to Ether)
+            userGets = reward - totalFee = 0.99 stETH
+            userBalance = userBalance + totalFee = 34.99
+            treasuryBalance = totalFee * 0.3 = 0.003
+            insuranceBalance = totalFee * 0.2 = 0.002
+            spsBalance = totalFee * 0.5 = 0.005
+            */
             assertBn(await token.totalSupply(), tokens(35));
             assertBn(await token.balanceOf(user2),         new BN('34990001971093930278'));
             assertBn(await token.balanceOf(treasuryAddr),  new BN('00002999143026093765'));
             assertBn(await token.balanceOf(insuranceAddr), new BN('00001999600063664000'));
-            // SP1 takes all SP reward
+            // single SP1 takes all SP reward in this configuration
             assertBn(await token.balanceOf(ADDRESS_1),   new BN('00004999285816311954'));
           });
 
-          it('stETH shares: total=34.01 user2=34 treasury.003, insurance=.002, sps=.004', async () => {
+          it('stETH shares: total=34.01 user2=34 treasury.003, insurance=.002, sp=.0048', async () => {
+            /* totalShares increased to reflect new balances.
+            */
             assertBn(await token.getTotalShares(), new BN('34009715146146239066'));
             assertBn(await token.getSharesByHolder(user2), tokens(34)); //stays the same
             assertBn(await token.getSharesByHolder(treasuryAddr), new BN('00002914285714285714'));
             assertBn(await token.getSharesByHolder(insuranceAddr), new BN('00001943023673469387'));
-            // SP1 takes all SP reward
             assertBn(await token.getSharesByHolder(ADDRESS_1), new BN('00004857836758483964'));
           });
         });
 
-        context('2d SP added (inactive)', async () => {
+        context('2nd SP added (still inactive)', async () => {
           beforeEach(async function () {
             await sps.addStakingProvider("2", ADDRESS_2, UNLIMITED, {from: voting});
           });
 
-          context('oracle reported 33 ETH (recovered then rewarded), must be same as without 2d SP', async () => {
+          context('oracle reported 33 ETH (recovered then rewarded), must be same as without new SP', async () => {
             beforeEach(async function () {
               await oracle.reportEther2(200, ETH(33));
             });
@@ -252,7 +309,7 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody]
               assertBn(await app.getRewardBase(), ETH(33));
             });
   
-            it('stETH: totalSupply=35 user=34.99 treasury.003, insurance=.002, sps=.004', async () => {
+            it('stETH: totalSupply=35 user=34.99 treasury=.003, insurance=.002, sp1=.005 sp2=0', async () => {
               assertBn(await token.totalSupply(), tokens(35));
               assertBn(await token.balanceOf(user2),         new BN('34990001971093930278'));
               assertBn(await token.balanceOf(treasuryAddr),  new BN('00002999143026093765'));
@@ -262,7 +319,7 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody]
               assertBn(await token.balanceOf(ADDRESS_2),   new BN('0'));
             });
   
-            it('stETH shares: total=34.01 user2=34 treasury.003, insurance=.002, sps=.004', async () => {
+            it('stETH shares: total=34.01 user2=34 treasury.003, insurance=.002, sp1=.005', async () => {
               assertBn(await token.getTotalShares(), new BN('34009715146146239066'));
               assertBn(await token.getSharesByHolder(user2), tokens(34)); //stays the same
               assertBn(await token.getSharesByHolder(treasuryAddr), new BN('00002914285714285714'));
@@ -273,7 +330,7 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody]
             });
           });
 
-          context('2d SP activated (equal to 1st SP amount of keys)', async () => {
+          context('2nd SP activated (same amount of effective keys)', async () => {
             beforeEach(async function () {
               await sps.addSigningKeys(1, 1,
                 hexConcat(pad("0x010207", 48)),
@@ -293,7 +350,7 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody]
               assertBn(await app.getRewardBase(), ETH(64));
             });
 
-            context('oracle reported 66 ETH (rewarded)', async () => {
+            context('oracle reported 66 ETH (rewarded 2 Ether)', async () => {
               beforeEach(async function () {
                 await oracle.reportEther2(400, ETH(66));
               });
@@ -328,7 +385,7 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody]
               });
             });
 
-            context('1st SP have 2 keys, 2d SP - 1', async () => {
+            context('1st SP with 2 keys, 2nd SP with 1 key', async () => {
               beforeEach(async function () {
                 await sps.addSigningKeys(0, 1,
                   hexConcat(pad("0x01020b", 48)),
@@ -348,7 +405,7 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody]
                 assertBn(await app.getRewardBase(), ETH(96));
               });
 
-              context('oracle reported 100 ETH (rewarded)', async () => {
+              context('oracle reported 100 ETH (rewarded 4 Ether)', async () => {
                 beforeEach(async function () {
                   await oracle.reportEther2(600, ETH(100));
                 });
@@ -364,6 +421,9 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody]
       
                 it('stETH: totalSupply=100 user=99.96 treasury.012, insurance=.008, sps=.020', async () => {
                   assertBn(await token.totalSupply(), tokens(100));
+                  //fees = 4 * 0.01 = 0.04 Ether
+                  //userReward = 4 - fee = 3.96
+                  //userBalance = 96 + userReward = 99.96
                   assertBn(await token.balanceOf(user2),         new BN('99960011037376578693'));
                   assertBn(await token.balanceOf(treasuryAddr),  new BN('00011995201324485189'));
                   assertBn(await token.balanceOf(insuranceAddr), new BN('00007997760499096085'));
@@ -399,6 +459,19 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody]
         });
 
         it('DePool: deposited=32, remote=66, buffered=2, totalControlled=68, rewBase=66', async () => {
+          /*
+          userBalance = 34.0 Ether staked
+          shares = 34.0 
+          totalControlledEtherInitial = 34.0 Ether
+          totalControlledEtherNew = 68.0 Ether (66 remote + 2 buffer)
+          reward = totalControlledEtherNew - totalControlledEtherInitial = 34.0 Ether
+          totalFee = reward * 0.01 = 0.34 stETH 
+          userGets = reward - totalFee = 33.66 stETH
+          userBalance = userBalance + reward - totalFee = 67.66 stETH
+          treasuryBalance = totalFee * 0.3 = 0.102
+          insuranceBalance = totalFee * 0.2 = 0.068
+          spsBalance = totalFee * 0.5 = 0.17
+          */
           const stat = await app.getEther2Stat();
           assertBn(stat.deposited, ETH(32));
           assertBn(stat.remote, ETH(66));
@@ -427,18 +500,19 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody]
           assertBn(await token.getSharesByHolder(ADDRESS_2), new BN('0'));
         });
 
-        context('user3 submits 34 ETH (submitted but not propagated to ETH2 yet)', async () => {
+        context('user3 submits another 34 ETH (submitted but not seen on beacon by oracle yet)', async () => {
           beforeEach(async function () {
+            // so total submitted 34 + 34
             await web3.eth.sendTransaction({to: app.address, from: user3, value: ETH(34)});
           });
 
           it('DePool: deposited=64, remote=66, buffered=4, totalControlled=70, rewBase=98', async () => {
             const stat = await app.getEther2Stat();
-            assertBn(stat.deposited, ETH(64));
-            assertBn(stat.remote, ETH(66));
-            assertBn(await app.getBufferedEther(), ETH(4));
-            assertBn(await app.getTotalControlledEther(), ETH(70));
-            assertBn(await app.getRewardBase(), ETH(98)); //was 66, added 32 on submit
+            assertBn(stat.deposited, ETH(64)); //two submissions: 32 + 32
+            assertBn(stat.remote, ETH(66)); //first submission (32) propagated to eth2 and rewarded +34 
+            assertBn(await app.getBufferedEther(), ETH(4)); //remainders of first (34-32) and second (34-32) submissions 
+            assertBn(await app.getTotalControlledEther(), ETH(70)); //remote + buffer
+            assertBn(await app.getRewardBase(), ETH(98)); //was 66, then added 32 on second submit
           });
 
           it('stETH: totalSupply=70 user2=46.43 user3=23.33 treasury=.06, insurance=.04, sps=.12', async () => {
