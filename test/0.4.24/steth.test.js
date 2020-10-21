@@ -78,35 +78,48 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
       await assertRevert(stEth.transferFrom(user1, user3, tokens(2), { from: user3 }));
       await assertRevert(stEth.transferFrom(user2, user3, tokens(2), { from: user3 }));
     });
-    it('burning works', async () => {
-      await stEth.transfer(user2, tokens(2), {from: user1});
-  
-      await stEth.burn(user1, tokens(2), {from: pool});
-      await dePool.setTotalControlledEther(tokens(998)); //done dy depool
-      await stEth.burn(user2, tokens(1), {from: pool});
-      await dePool.setTotalControlledEther(tokens(997)); //done dy depool
-      assertBn(await stEth.totalSupply(), tokens(997));
-      assertBn(await stEth.balanceOf(user1, {from: nobody}), tokens(996));
-      assertBn(await stEth.balanceOf(user2, {from: nobody}), tokens(1));
-  
-      for (const acc of [user1, user2, user3, nobody]) {
-        await assertRevert(stEth.burn(user1, tokens(4), {from: acc}), 'APP_AUTH_FAILED');
-        await assertRevert(stEth.burn(user3, tokens(4), {from: acc}), 'APP_AUTH_FAILED');
-      }
-  
-      await assertRevert(stEth.burn(user2, tokens(4), {from: pool}));
-  
-      await stEth.burn(user1, tokens(96), {from: pool});
-      // In real scenario DePool contract transfers the corresponding amount of
-      // ether, so totalControlledEther decreases automatically.
-      // In unit-test here we mock this behavior by manually setting
-      // expected totalControlledEther after burning tokens.
-      await dePool.setTotalControlledEther(tokens(901)); //done dy depool
-      await stEth.burn(user2, tokens(1), {from: pool});
-      await dePool.setTotalControlledEther(tokens(900)); //done dy depool
-  
-      assertBn(await stEth.balanceOf(user1, {from: nobody}), tokens(900));
-      assertBn(await stEth.balanceOf(user2, {from: nobody}), 0);
+    context('burning', async () => {
+      beforeEach(async () => {
+        // user1 already had 1000 tokens
+        // 1000 + 1000 = 2000
+        await stEth.mint(user2, tokens(1000), { from: pool });
+        await dePool.setTotalControlledEther(tokens(2000)); //assume this is done by depool
+      });
+      it('without decreasing totalControlledEther - virtually redistributes tokens', async () => {
+        await stEth.burn(user1, tokens(2), {from: pool});
+        assertBn(await stEth.totalSupply(), tokens(2000));
+        //FixMe: the next lines don't have expected effect
+        assertBn(await stEth.balanceOf(user1, {from: nobody}), tokens(998));
+        assertBn(await stEth.balanceOf(user2, {from: nobody}), tokens(1002));
+      });
+      it('with decreasing totalControlledEther - traditional behavior', async () => {
+        await stEth.burn(user1, tokens(2), {from: pool});
+        await dePool.setTotalControlledEther(tokens(1998)); //assume this is done by depool
+        await stEth.burn(user2, tokens(1), {from: pool});
+        await dePool.setTotalControlledEther(tokens(1997)); //assume this is done by depool
+
+        // (1000-2) + (1000-1) = 998 + 999 = 1997
+        assertBn(await stEth.totalSupply(), tokens(1997));
+        assertBn(await stEth.balanceOf(user1, {from: nobody}), tokens(998));
+        assertBn(await stEth.balanceOf(user2, {from: nobody}), tokens(999));
+
+        
+        for (const acc of [user1, user2, user3, nobody]) {
+          await assertRevert(stEth.burn(user1, tokens(4), {from: acc}), 'APP_AUTH_FAILED');
+          await assertRevert(stEth.burn(user3, tokens(4), {from: acc}), 'APP_AUTH_FAILED');
+        }
+    
+        await assertRevert(stEth.burn(user3, tokens(4), {from: pool}));
+    
+        await stEth.burn(user1, tokens(96), {from: pool});
+        await dePool.setTotalControlledEther(tokens(1901)); //assume this is done by depool
+        await stEth.burn(user2, tokens(1), {from: pool});
+        await dePool.setTotalControlledEther(tokens(1900)); //assume this is done by depool
+
+        // (998-96) + (999-1) = 902 + 998 = 1900
+        assertBn(await stEth.balanceOf(user1, {from: nobody}), tokens(902));
+        assertBn(await stEth.balanceOf(user2, {from: nobody}), tokens(998));
+      });
     });
     it('minting works', async () => {
       await stEth.mint(user1, tokens(12), {from: pool});
