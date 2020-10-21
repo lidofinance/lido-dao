@@ -49,11 +49,6 @@ contract StETH is ISTETH, Pausable, AragonApp {
         uint256 value
     );
 
-    function initialize(IDePool _dePool) public onlyInit {
-        dePool = _dePool;
-        initialized();
-    }
-
 
     /**
       * @notice Stop transfers
@@ -67,6 +62,47 @@ contract StETH is ISTETH, Pausable, AragonApp {
       */
     function resume() external auth(PAUSE_ROLE) {
         _resume();
+    }
+
+    /**
+    * @notice Mint is called by dePool contract when user submits the ETH1.0 deposit.
+    *         It calculates share difference to preserve ratio of shares to the increased
+    *         amount of pooledEthers so that all the previously created shares still correspond
+    *         to the same amount of pooled ethers.
+    *         Then adds the calculated difference to the user's share and to the totalShares
+    *         similarly as traditional mint() function does with balances.
+    * @param _to Receiver of new shares
+    * @param _value Amount of pooledEthers (then gets converted to shares)
+    */
+    function mint(address _to, uint256 _value) external whenNotStopped authP(MINT_ROLE, arr(_to, _value)) {
+        require(_to != 0);
+        uint256 sharesDifference;
+        uint256 totalControlledEthBefore = dePool.getTotalControlledEther();
+        if ( totalControlledEthBefore == 0) {
+            sharesDifference = _value;
+        } else {
+            sharesDifference = getSharesByPooledEth(_value);
+        }
+        _totalShares = _totalShares.add(sharesDifference);
+        _shares[_to] = _shares[_to].add(sharesDifference);
+        emit Transfer(address(0), _to, _value);
+    }
+
+    /**
+      * @notice Burn `@tokenAmount(this, _value)` tokens from `_account`
+      * @param _account Account which tokens are to be burnt
+      * @param _value Amount of tokens to burn
+      */
+    function burn(address _account, uint256 _value) external whenNotStopped authP(BURN_ROLE, arr(_account, _value)) {
+        if (0 == _value)
+            return;
+
+        _burn(_account, _value);
+    }
+
+    function initialize(IDePool _dePool) public onlyInit {
+        dePool = _dePool;
+        initialized();
     }
 
     /**
@@ -202,89 +238,6 @@ contract StETH is ISTETH, Pausable, AragonApp {
     }
 
     /**
-    * @dev Transfer token for a specified addresses
-    * @param from The address to transfer from.
-    * @param to The address to transfer to.
-    * @param value The amount to be transferred.
-    */
-    function _transfer(address from, address to, uint256 value) internal {
-        require(to != address(0));
-        uint256 sharesToTransfer = getSharesByPooledEth(value);
-        require(sharesToTransfer <= _shares[from]);
-        _shares[from] = _shares[from].sub(sharesToTransfer);
-        _shares[to] = _shares[to].add(sharesToTransfer);
-        emit Transfer(from, to, value);
-    }
-
-    /**
-    * @dev Internal function that burns an amount of the token of a given
-    * account.
-    * @param account The account whose tokens will be burnt.
-    * @param value The amount that will be burnt.
-    */
-    function _burn(address account, uint256 value) internal {
-        require(account != 0);
-        require(value != 0);
-        uint256 sharesToBurn = getSharesByPooledEth(value);
-        _totalShares = _totalShares.sub(sharesToBurn);
-        _shares[account] = _shares[account].sub(sharesToBurn);
-        emit Transfer(account, address(0), value);
-    }
-
-    /**
-    * @dev Internal function that burns an amount of the token of a given
-    * account, deducting from the sender's allowance for said account. Uses the
-    * internal burn function.
-    * @param account The account whose tokens will be burnt.
-    * @param value The amount that will be burnt.
-    */
-    function _burnFrom(address account, uint256 value) internal {
-        require(value <= _allowed[account][msg.sender]);
-
-        // Should https://github.com/OpenZeppelin/zeppelin-solidity/issues/707 be accepted,
-        // this function needs to emit an event with the updated approval.
-        _allowed[account][msg.sender] = _allowed[account][msg.sender].sub(
-        value);
-        _burn(account, value);
-    }
-
-    /**
-    * @notice Mint is called by dePool contract when user submits the ETH1.0 deposit.
-    *         It calculates share difference to preserve ratio of shares to the increased
-    *         amount of pooledEthers so that all the previously created shares still correspond
-    *         to the same amount of pooled ethers.
-    *         Then adds the calculated difference to the user's share and to the totalShares
-    *         similarly as traditional mint() function does with balances.
-    * @param _to Receiver of new shares
-    * @param _value Amount of pooledEthers (then gets converted to shares)
-    */
-    function mint(address _to, uint256 _value) external whenNotStopped authP(MINT_ROLE, arr(_to, _value)) {
-        require(_to != 0);
-        uint256 sharesDifference;
-        uint256 totalControlledEthBefore = dePool.getTotalControlledEther();
-        if ( totalControlledEthBefore == 0) {
-            sharesDifference = _value;
-        } else {
-            sharesDifference = getSharesByPooledEth(_value);
-        }
-        _totalShares = _totalShares.add(sharesDifference);
-        _shares[_to] = _shares[_to].add(sharesDifference);
-        emit Transfer(address(0), _to, _value);
-    }
-
-    /**
-      * @notice Burn `@tokenAmount(this, _value)` tokens from `_account`
-      * @param _account Account which tokens are to be burnt
-      * @param _value Amount of tokens to burn
-      */
-    function burn(address _account, uint256 _value) external whenNotStopped authP(BURN_ROLE, arr(_account, _value)) {
-        if (0 == _value)
-            return;
-
-        _burn(_account, _value);
-    }
-
-    /**
      * @notice Returns the name of the token.
      */
     function name() public pure returns (string) {
@@ -350,5 +303,52 @@ contract StETH is ISTETH, Pausable, AragonApp {
     */
     function getTotalShares() public view returns (uint256) {
         return _totalShares;
+    }
+
+    /**
+    * @dev Transfer token for a specified addresses
+    * @param from The address to transfer from.
+    * @param to The address to transfer to.
+    * @param value The amount to be transferred.
+    */
+    function _transfer(address from, address to, uint256 value) internal {
+        require(to != address(0));
+        uint256 sharesToTransfer = getSharesByPooledEth(value);
+        require(sharesToTransfer <= _shares[from]);
+        _shares[from] = _shares[from].sub(sharesToTransfer);
+        _shares[to] = _shares[to].add(sharesToTransfer);
+        emit Transfer(from, to, value);
+    }
+
+    /**
+    * @dev Internal function that burns an amount of the token of a given
+    * account.
+    * @param account The account whose tokens will be burnt.
+    * @param value The amount that will be burnt.
+    */
+    function _burn(address account, uint256 value) internal {
+        require(account != 0);
+        require(value != 0);
+        uint256 sharesToBurn = getSharesByPooledEth(value);
+        _totalShares = _totalShares.sub(sharesToBurn);
+        _shares[account] = _shares[account].sub(sharesToBurn);
+        emit Transfer(account, address(0), value);
+    }
+
+    /**
+    * @dev Internal function that burns an amount of the token of a given
+    * account, deducting from the sender's allowance for said account. Uses the
+    * internal burn function.
+    * @param account The account whose tokens will be burnt.
+    * @param value The amount that will be burnt.
+    */
+    function _burnFrom(address account, uint256 value) internal {
+        require(value <= _allowed[account][msg.sender]);
+
+        // Should https://github.com/OpenZeppelin/zeppelin-solidity/issues/707 be accepted,
+        // this function needs to emit an event with the updated approval.
+        _allowed[account][msg.sender] = _allowed[account][msg.sender].sub(
+        value);
+        _burn(account, value);
     }
 }
