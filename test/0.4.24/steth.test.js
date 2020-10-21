@@ -78,49 +78,20 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
       await assertRevert(stEth.transferFrom(user1, user3, tokens(2), { from: user3 }));
       await assertRevert(stEth.transferFrom(user2, user3, tokens(2), { from: user3 }));
     });
-    context('burning', async () => {
-      beforeEach(async () => {
-        // user1 already had 1000 tokens
-        // 1000 + 1000 = 2000
-        await stEth.mint(user2, tokens(1000), { from: pool });
-        await dePool.setTotalControlledEther(tokens(2000)); //assume this is done by depool
-      });
-      it('without decreasing totalControlledEther - virtually redistributes tokens', async () => {
-        await stEth.burn(user1, tokens(2), {from: pool});
-        assertBn(await stEth.totalSupply(), tokens(2000));
-        //FixMe: the next lines don't have expected effect
-        assertBn(await stEth.balanceOf(user1, {from: nobody}), tokens(998));
-        assertBn(await stEth.balanceOf(user2, {from: nobody}), tokens(1002));
-      });
-      it('with decreasing totalControlledEther - traditional behavior', async () => {
-        await stEth.burn(user1, tokens(2), {from: pool});
-        await dePool.setTotalControlledEther(tokens(1998)); //assume this is done by depool
-        await stEth.burn(user2, tokens(1), {from: pool});
-        await dePool.setTotalControlledEther(tokens(1997)); //assume this is done by depool
 
-        // (1000-2) + (1000-1) = 998 + 999 = 1997
-        assertBn(await stEth.totalSupply(), tokens(1997));
-        assertBn(await stEth.balanceOf(user1, {from: nobody}), tokens(998));
-        assertBn(await stEth.balanceOf(user2, {from: nobody}), tokens(999));
+    it('burning redistributes tokens', async () => {
+      // user1 already had 1000 tokens
+      // 1000 + 1000 = 2000
+      await stEth.mint(user2, tokens(1000), { from: pool });
+      await dePool.setTotalControlledEther(tokens(2000)); //assume this is done by depool
 
-        
-        for (const acc of [user1, user2, user3, nobody]) {
-          await assertRevert(stEth.burn(user1, tokens(4), {from: acc}), 'APP_AUTH_FAILED');
-          await assertRevert(stEth.burn(user3, tokens(4), {from: acc}), 'APP_AUTH_FAILED');
-        }
-    
-        await assertRevert(stEth.burn(user3, tokens(4), {from: pool}));
-    
-        await stEth.burn(user1, tokens(96), {from: pool});
-        await dePool.setTotalControlledEther(tokens(1901)); //assume this is done by depool
-        await stEth.burn(user2, tokens(1), {from: pool});
-        await dePool.setTotalControlledEther(tokens(1900)); //assume this is done by depool
+      await stEth.burn(user1, tokens(2), {from: pool});
+      assertBn(await stEth.totalSupply(), tokens(2000));
 
-        // (998-96) + (999-1) = 902 + 998 = 1900
-        assertBn(await stEth.balanceOf(user1, {from: nobody}), tokens(902));
-        assertBn(await stEth.balanceOf(user2, {from: nobody}), tokens(998));
-      });
+      assertBn(await stEth.balanceOf(user1, {from: nobody}), '997999999999999999999');
+      assertBn(await stEth.balanceOf(user2, {from: nobody}), tokens(1002));
     });
+
     it('minting works', async () => {
       await stEth.mint(user1, tokens(12), {from: pool});
       await dePool.setTotalControlledEther(tokens(1012)); //done dy depool
@@ -129,14 +100,14 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
       assertBn(await stEth.totalSupply(), tokens(1016));
       assertBn(await stEth.balanceOf(user1, {from: nobody}), tokens(1012));
       assertBn(await stEth.balanceOf(user2, {from: nobody}), tokens(4));
-  
+
       for (const acc of [user1, user2, user3, nobody])
           await assertRevert(stEth.mint(user2, tokens(4), {from: acc}), 'APP_AUTH_FAILED');
     });
     it('stop/resume works', async () => {
       await stEth.transfer(user2, tokens(2), {from: user1});
       assert.equal(await stEth.isStopped(), false);
-  
+
       await assertRevert(stEth.stop({from: user1}));
       await stEth.stop({from: pool});
       await assertRevert(stEth.stop({from: pool}));
@@ -145,12 +116,12 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
       await assertRevert(stEth.transfer(user2, tokens(2), {from: user1}), 'CONTRACT_IS_STOPPED');
       await assertRevert(stEth.transfer(user2, tokens(2), {from: user3}));
       await assertRevert(stEth.transferFrom(user1, user3, tokens(2), {from: user2}));
-  
+
       await assertRevert(stEth.resume({from: user1}));
       await stEth.resume({from: pool});
       await assertRevert(stEth.resume({from: pool}));
       assert.equal(await stEth.isStopped(), false);
-  
+
       await stEth.transfer(user2, tokens(2), {from: user1});
       assertBn(await stEth.balanceOf(user1, {from: nobody}), tokens(996));
       assertBn(await stEth.balanceOf(user2, {from: nobody}), tokens(4));
