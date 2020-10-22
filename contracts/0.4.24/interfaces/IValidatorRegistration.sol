@@ -12,8 +12,11 @@ interface IValidatorRegistration {
       * @param signature Signature of the request
       * @param deposit_data_root The deposits Merkle tree node, used as a checksum
       */
-    function deposit(bytes /* 48 */ pubkey,
-                     bytes /* 32 */ withdrawal_credentials,
-                     bytes /* 96 */ signature,
-                     bytes32 deposit_data_root) external payable;
+    function deposit(
+        bytes /* 48 */ pubkey,
+        bytes /* 32 */ withdrawal_credentials,
+        bytes /* 96 */ signature,
+        bytes32 deposit_data_root
+    )
+        external payable;
 }

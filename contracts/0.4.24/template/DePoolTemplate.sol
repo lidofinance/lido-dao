@@ -115,9 +115,14 @@ contract DePoolTemplate is BaseTemplate {
         initializeData = abi.encodeWithSelector(StakingProvidersRegistry(0).initialize.selector);
         sps = StakingProvidersRegistry(_installNonDefaultApp(dao, REGISTRY_APP_ID, initializeData));
 
-        initializeData = abi.encodeWithSelector(DePool(0).initialize.selector,
-                                                steth, _ETH2ValidatorRegistrationContract,
-                                                oracle, sps, _depositIterationLimit);
+        initializeData = abi.encodeWithSelector(
+            DePool(0).initialize.selector,
+            steth,
+            _ETH2ValidatorRegistrationContract,
+            oracle,
+            sps,
+            _depositIterationLimit
+        );
         depool = DePool(_installNonDefaultApp(dao, DEPOOL_APP_ID, initializeData));
     }
 

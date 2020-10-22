@@ -14,7 +14,7 @@
     "semicolon-whitespace": "error",
     "function-whitespace": "error",
     "lbrace": "error",
-    "mixedcase": "error",
+    "mixedcase": "off",
     "camelcase": "error",
     "uppercase": "error",
     "no-empty-blocks": "error",
@@ -26,7 +26,10 @@
     "whitespace": "error",
     "deprecated-suicide": "error",
     "pragma-on-top": "error",
-    "function-order": "error",
+    "function-order": [
+      "error",
+      {"ignore": {"functions": ["initialize"]}}
+    ],
     "emit": "error",
     "no-constant": "error",
     "value-in-payable": "error",

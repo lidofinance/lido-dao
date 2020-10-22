@@ -79,13 +79,11 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
         _;
     }
 
-
     function initialize() public onlyInit {
         totalSPCount = 0;
         activeSPCount = 0;
         initialized();
     }
-
 
     /**
       * @notice Set the pool address to `_pool`
@@ -94,7 +92,6 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
         require(isContract(_pool), "POOL_NOT_CONTRACT");
         pool = _pool;
     }
-
 
     /**
       * @notice Add staking provider named `name` with reward address `rewardAddress` and staking limit `stakingLimit` validators
@@ -219,9 +216,8 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
     function trimUnusedKeys() external onlyPool {
         uint256 length = totalSPCount;
         for (uint256 SP_id = 0; SP_id < length; ++SP_id) {
-            if (sps[SP_id].totalSigningKeys != sps[SP_id].usedSigningKeys)    // write only if update is needed
-                // discard unused keys
-                sps[SP_id].totalSigningKeys = sps[SP_id].usedSigningKeys;
+            if (sps[SP_id].totalSigningKeys != sps[SP_id].usedSigningKeys)  // write only if update is needed
+                sps[SP_id].totalSigningKeys = sps[SP_id].usedSigningKeys;  // discard unused keys
         }
     }
 
@@ -253,7 +249,13 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
       * @param _pubkeys Several concatenated validator signing keys
       * @param _signatures Several concatenated signatures for (pubkey, withdrawal_credentials, 32000000000) messages
       */
-    function addSigningKeysSP(uint256 _SP_id, uint256 _quantity, bytes _pubkeys, bytes _signatures) external
+    function addSigningKeysSP(
+        uint256 _SP_id,
+        uint256 _quantity,
+        bytes _pubkeys,
+        bytes _signatures
+    )
+        external
     {
         require(msg.sender == sps[_SP_id].rewardAddress, "APP_AUTH_FAILED");
         _addSigningKeys(_SP_id, _quantity, _pubkeys, _signatures);
@@ -264,7 +266,8 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
       * @param _SP_id Staking provider id
       * @param _index Index of the key, starting with 0
       */
-    function removeSigningKey(uint256 _SP_id, uint256 _index) external
+    function removeSigningKey(uint256 _SP_id, uint256 _index)
+        external
         authP(MANAGE_SIGNING_KEYS, arr(_SP_id))
     {
         _removeSigningKey(_SP_id, _index);
@@ -275,8 +278,7 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
       * @param _SP_id Staking provider id
       * @param _index Index of the key, starting with 0
       */
-    function removeSigningKeySP(uint256 _SP_id, uint256 _index) external
-    {
+    function removeSigningKeySP(uint256 _SP_id, uint256 _index) external {
         require(msg.sender == sps[_SP_id].rewardAddress, "APP_AUTH_FAILED");
         _removeSigningKey(_SP_id, _index);
     }
@@ -313,13 +315,13 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
         }
     }
 
-
     /**
       * @notice Returns total number of staking providers
       */
     function getStakingProvidersCount() external view returns (uint256) {
         return totalSPCount;
     }
+
     /**
       * @notice Returns number of active staking providers
       */
