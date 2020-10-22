@@ -34,8 +34,11 @@ interface IDePool {
     /**
       * @notice Set fee distribution: `_treasuryFeeBasisPoints` basis points go to the treasury, `_insuranceFeeBasisPoints` basis points go to the insurance fund, `_SPFeeBasisPoints` basis points go to staking providers. The sum has to be 10 000.
       */
-    function setFeeDistribution(uint16 _treasuryFeeBasisPoints, uint16 _insuranceFeeBasisPoints,
-                                uint16 _SPFeeBasisPoints) external;
+    function setFeeDistribution(
+        uint16 _treasuryFeeBasisPoints,
+        uint16 _insuranceFeeBasisPoints,
+        uint16 _SPFeeBasisPoints)
+        external;
 
     /**
       * @notice Returns staking rewards fee rate

@@ -17,11 +17,12 @@ contract ValidatorRegistrationMock is IValidatorRegistration {
 
     Call[] public calls;
 
-
-    function deposit(bytes /* 48 */ pubkey,
-                     bytes /* 32 */ withdrawal_credentials,
-                     bytes /* 96 */ signature,
-                     bytes32 deposit_data_root)
+    function deposit(
+        bytes /* 48 */ pubkey,
+        bytes /* 32 */ withdrawal_credentials,
+        bytes /* 96 */ signature,
+        bytes32 deposit_data_root
+    )
         external
         payable
     {

@@ -50,6 +50,10 @@ contract StETH is ISTETH, Pausable, AragonApp {
         uint256 value
     );
 
+    function initialize(IDePool _dePool) public onlyInit {
+        dePool = _dePool;
+        initialized();
+    }
 
     /**
       * @notice Stop transfers
@@ -99,11 +103,6 @@ contract StETH is ISTETH, Pausable, AragonApp {
             return;
 
         _burn(_account, _value);
-    }
-
-    function initialize(IDePool _dePool) public onlyInit {
-        dePool = _dePool;
-        initialized();
     }
 
     /**

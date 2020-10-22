@@ -11,6 +11,7 @@ import "../interfaces/IDePool.sol";
 import "./Algorithm.sol";
 import "./BitOps.sol";
 
+
 /**
   * @title Implementation of an ETH 2.0 -> ETH oracle
   *
@@ -57,13 +58,10 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
     uint256 private contributionBitMask;
     uint256[] private currentlyAggregatedData;  // only indexes set in contributionBitMask are valid
 
-
     function initialize() public onlyInit {
         assert(1 == ((1 << (MAX_MEMBERS - 1)) >> (MAX_MEMBERS - 1)));   // static assert
-
         initialized();
     }
-
 
     /**
       * @notice Set the pool address to `_pool`
@@ -136,7 +134,6 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
         _assertInvariants();
     }
 
-
     /**
       * @notice An oracle committee member pushes data from the ETH 2.0 side
       * @param _reportInterval ReportInterval id
@@ -170,7 +167,6 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
         _tryFinalize(_reportInterval);
     }
 
-
     /**
       * @notice Returns the current oracle member committee
       */
@@ -184,7 +180,6 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
     function getQuorum() external view returns (uint256) {
         return quorum;
     }
-
 
     /**
       * @notice Returns reportInterval duration in seconds
@@ -210,7 +205,6 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
         return _getCurrentReportInterval();
     }
 
-
     /**
       * @notice Returns the latest data from the ETH 2.0 side
       * @dev Depending on the oracle member committee liveness, the data can be stale. See _reportInterval.
@@ -220,7 +214,6 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
     function getLatestData() external view returns (uint256 reportInterval, uint256 eth2balance) {
         return (lastFinalizedReportInterval, lastFinalizedData);
     }
-
 
     /**
       * @dev Finalizes the current data point if quorum is reached
@@ -263,14 +256,6 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
     }
 
     /**
-      * @dev Checks code self-consistency
-      */
-    function _assertInvariants() private view {
-        assert(quorum != 0 && members.length >= quorum);
-        assert(members.length <= MAX_MEMBERS);
-    }
-
-    /**
       * @dev Returns member's index in the members array or MEMBER_NOT_FOUND
       */
     function _findMember(address _member) internal view returns (uint256) {
@@ -284,12 +269,11 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
         return MEMBER_NOT_FOUND;
     }
 
-
     /**
       * @dev Returns current timestamp
       */
     function _getTime() internal view returns (uint256) {
-        return block.timestamp;
+        return block.timestamp; /* solium-disable-line security/no-block-members */
     }
 
     /**
@@ -305,5 +289,13 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
       */
     function _getReportIntervalForTimestamp(uint256 _timestamp) internal pure returns (uint256) {
         return _timestamp.div(REPORT_INTERVAL_DURATION);
+    }
+
+    /**
+      * @dev Checks code self-consistency
+      */
+    function _assertInvariants() private view {
+        assert(quorum != 0 && members.length >= quorum);
+        assert(members.length <= MAX_MEMBERS);
     }
 }
