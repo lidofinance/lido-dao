@@ -73,6 +73,7 @@
     "lerna": "^3.22.1",
     "lint-staged": ">=10",
     "prettier": "^2.1.2",
+    "solhint": "^3.2.2",
     "solidity-coverage": "^0.7.11",
     "solium": "^1.2.5",
     "truffle": "^5.1.43",
