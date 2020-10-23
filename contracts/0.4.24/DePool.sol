@@ -445,7 +445,8 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
 
         uint256 totalDepositCalls = 0;
         uint256 maxDepositCalls = getDepositIterationLimit();
-        while (_amount != 0 && totalDepositCalls < maxDepositCalls) {
+        uint256 depositAmount = _amount;
+        while (depositAmount != 0 && totalDepositCalls < maxDepositCalls) {
             // Finding the best suitable SP
             uint256 bestSPidx = cache.length;   // 'not found' flag
             uint256 smallestStake;
@@ -471,7 +472,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
                 break;
 
             // Invoking deposit for the best SP
-            _amount = _amount.sub(DEPOSIT_SIZE);
+            depositAmount = depositAmount.sub(DEPOSIT_SIZE);
             ++totalDepositCalls;
 
             (bytes memory key, bytes memory signature, bool used) =  /* solium-disable-line */
@@ -729,12 +730,13 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
       */
     function _toLittleEndian64(uint256 _value) internal pure returns (uint256 result) {
         result = 0;
+        uint256 temp_value = _value;
         for (uint256 i = 0; i < 8; ++i) {
-            result = (result << 8) | (_value & 0xFF);
-            _value >>= 8;
+            result = (result << 8) | (temp_value & 0xFF);
+            temp_value >>= 8;
         }
 
-        assert(0 == _value);    // fully converted
+        assert(0 == temp_value);    // fully converted
         result <<= (24 * 8);
     }
 
