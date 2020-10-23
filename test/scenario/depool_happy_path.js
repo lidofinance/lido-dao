@@ -5,7 +5,6 @@ const { getEventArgument } = require('@aragon/contract-helpers-test')
 
 const { pad, toBN, ETH, tokens } = require('../helpers/utils')
 const { deployDaoAndPool } = require('./helpers/deploy')
-const { add } = require('winston')
 
 const StakingProvidersRegistry = artifacts.require('StakingProvidersRegistry')
 

@@ -1,3 +1,4 @@
+const { assert } = require('chai')
 const { assertBn, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
 const { getEvents, getEventArgument, ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 
