@@ -40,11 +40,7 @@ function PanelContent({ api, onClose }) {
               submitForm()
             }}
           >
-            <Field
-              name="address"
-              label="Referral"
-              component={TextField}
-            />
+            <Field name="address" label="Referral" component={TextField} />
             <Button
               mode="strong"
               wide

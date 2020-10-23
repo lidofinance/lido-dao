@@ -8,7 +8,7 @@ const setOpenPermission = async (acl, appAddress, role, rootAddress) => {
     appAddress, // app (where?) - The app that holds the role involved in this permission.
     role, // role (what?) - The particular role that the entity is being assigned to in this permission.
     rootAddress, // manager - Can grant/revoke further permissions for this role.
-    { from: rootAddress}
+    { from: rootAddress }
   )
 }
 

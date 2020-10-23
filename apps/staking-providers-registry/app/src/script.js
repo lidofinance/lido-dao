@@ -13,6 +13,7 @@ app.store(
     try {
       switch (event) {
         case 'StakingProviderAdded':
+          // eslint-disable-next-line no-case-declarations
           const stakingProvidersCount = await getStakingProvidersCount()
           return {
             ...nextState,

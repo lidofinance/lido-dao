@@ -96,9 +96,9 @@ contract('CstETH', function ([deployer, initialHolder, recipient, anotherAccount
           expect(await this.csteth.balanceOf(user1)).to.be.bignumber.equal('0')
         })
 
-        it('cstETH allowances isn\'t changed', async function () {
+        it("cstETH allowances isn't changed", async function () {
           expect(await this.csteth.allowance(user1, any_contract)).to.be.bignumber.equal('25')
-        });
+        })
 
         describe('After user2 submission', function () {
           beforeEach(async function () {
@@ -121,7 +121,7 @@ contract('CstETH', function ([deployer, initialHolder, recipient, anotherAccount
           describe('After successful wrap', function () {
             beforeEach(async function () {
               await this.csteth.wrap(50, { from: user2 })
-            });
+            })
 
             it('balances are correct', async function () {
               expect(await this.steth.balanceOf(user1)).to.be.bignumber.equal('50')
@@ -130,8 +130,8 @@ contract('CstETH', function ([deployer, initialHolder, recipient, anotherAccount
               expect(await this.csteth.balanceOf(user2)).to.be.bignumber.equal('50')
               expect(await this.steth.balanceOf(this.csteth.address)).to.be.bignumber.equal('100')
             })
-          });
-        });
+          })
+        })
       })
 
       describe('After rewarding', function () {
@@ -158,9 +158,9 @@ contract('CstETH', function ([deployer, initialHolder, recipient, anotherAccount
           expect(await this.csteth.balanceOf(user1)).to.be.bignumber.equal('0')
         })
 
-        it('cstETH allowances isn\'t changed', async function () {
+        it("cstETH allowances isn't changed", async function () {
           expect(await this.csteth.allowance(user1, any_contract)).to.be.bignumber.equal('25')
-        });
+        })
 
         describe('After user2 submission', function () {
           beforeEach(async function () {
@@ -181,14 +181,14 @@ contract('CstETH', function ([deployer, initialHolder, recipient, anotherAccount
             expect(await this.steth.balanceOf(this.csteth.address)).to.be.bignumber.equal('55')
           })
 
-          it('cstETH allowances isn\'t changed', async function () {
+          it("cstETH allowances isn't changed", async function () {
             expect(await this.csteth.allowance(user1, any_contract)).to.be.bignumber.equal('25')
-          });
+          })
 
           describe('After user2 wrap', function () {
             beforeEach(async function () {
               await this.csteth.wrap(50, { from: user2 })
-            });
+            })
 
             it('balances are correct', async function () {
               expect(await this.steth.balanceOf(user1)).to.be.bignumber.equal('55')
@@ -222,11 +222,11 @@ contract('CstETH', function ([deployer, initialHolder, recipient, anotherAccount
               expect(await this.steth.balanceOf(this.csteth.address)).to.be.bignumber.equal('1') // low values round error
             })
 
-            it('cstETH allowances isn\'t changed', async function () {
+            it("cstETH allowances isn't changed", async function () {
               expect(await this.csteth.allowance(user1, any_contract)).to.be.bignumber.equal('25')
-            });
-          });
-        });
+            })
+          })
+        })
       })
 
       describe('After slashing', function () {
@@ -253,9 +253,9 @@ contract('CstETH', function ([deployer, initialHolder, recipient, anotherAccount
           expect(await this.csteth.balanceOf(user1)).to.be.bignumber.equal('0')
         })
 
-        it('cstETH allowances isn\'t changed', async function () {
+        it("cstETH allowances isn't changed", async function () {
           expect(await this.csteth.allowance(user1, any_contract)).to.be.bignumber.equal('25')
-        });
+        })
       })
     })
   })
