@@ -55,19 +55,19 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
   beforeEach('deploy dao and app', async () => {
     const { dao, acl } = await newDao(appManager)
 
-    // token
-    let proxyAddress = await newApp(dao, 'steth', stEthBase.address, appManager)
-    token = await StETH.at(proxyAddress)
-    await token.initialize()
-
     // StakingProvidersRegistry
-    proxyAddress = await newApp(dao, 'staking-providers-registry', stakingProvidersRegistryBase.address, appManager)
+    let proxyAddress = await newApp(dao, 'staking-providers-registry', stakingProvidersRegistryBase.address, appManager)
     sps = await StakingProvidersRegistry.at(proxyAddress)
     await sps.initialize()
 
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
     proxyAddress = await newApp(dao, 'depool', appBase.address, appManager)
     app = await DePool.at(proxyAddress)
+
+    // token
+    proxyAddress = await newApp(dao, 'steth', stEthBase.address, appManager)
+    token = await StETH.at(proxyAddress)
+    await token.initialize(app.address)
 
     // Set up the app's permissions.
     await acl.createPermission(voting, app.address, await app.PAUSE_ROLE(), appManager, { from: appManager })
@@ -225,6 +225,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(await app.getTotalControlledEther(), ETH(1))
     assertBn(await app.getBufferedEther(), ETH(1))
     assertBn(await token.balanceOf(user1), tokens(1))
+    assertBn(await token.totalSupply(), tokens(1))
 
     // +2 ETH
     await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2) }) // another form of a deposit call
@@ -233,6 +234,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(await app.getTotalControlledEther(), ETH(3))
     assertBn(await app.getBufferedEther(), ETH(3))
     assertBn(await token.balanceOf(user2), tokens(2))
+    assertBn(await token.totalSupply(), tokens(3))
 
     // +30 ETH
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(30) })
@@ -242,6 +244,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(await token.balanceOf(user1), tokens(1))
     assertBn(await token.balanceOf(user2), tokens(2))
     assertBn(await token.balanceOf(user3), tokens(30))
+    assertBn(await token.totalSupply(), tokens(33))
 
     assertBn(await validatorRegistration.totalCalls(), 1)
     const c0 = await validatorRegistration.calls.call(0)
@@ -428,7 +431,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(await validatorRegistration.totalCalls(), 1)
     assertBn(await app.getTotalControlledEther(), ETH(17))
     assertBn(await app.getBufferedEther(), ETH(2))
-    assertBn(await token.totalSupply(), tokens(34))
+    assertBn(await token.totalSupply(), tokens(17))
 
     // deposit, ratio is 0.5
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(2) })
@@ -437,8 +440,8 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(await validatorRegistration.totalCalls(), 1)
     assertBn(await app.getTotalControlledEther(), ETH(19))
     assertBn(await app.getBufferedEther(), ETH(4))
-    assertBn(await token.balanceOf(user1), tokens(4))
-    assertBn(await token.totalSupply(), tokens(38))
+    assertBn(await token.balanceOf(user1), tokens(2))
+    assertBn(await token.totalSupply(), tokens(19))
 
     // up
     await oracle.reportEther2(200, ETH(72))
@@ -447,7 +450,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(await validatorRegistration.totalCalls(), 1)
     assertBn(await app.getTotalControlledEther(), ETH(76))
     assertBn(await app.getBufferedEther(), ETH(4))
-    assertBn(await token.totalSupply(), tokens(38))
+    assertBn(await token.totalSupply(), tokens(76))
 
     // 2nd deposit, ratio is 2
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(2) })
@@ -456,9 +459,9 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(await validatorRegistration.totalCalls(), 1)
     assertBn(await app.getTotalControlledEther(), ETH(78))
     assertBn(await app.getBufferedEther(), ETH(6))
-    assertBn(await token.balanceOf(user1), tokens(4))
-    assertBn(await token.balanceOf(user3), tokens(1))
-    assertBn(await token.totalSupply(), tokens(39))
+    assertBn(await token.balanceOf(user1), tokens(8))
+    assertBn(await token.balanceOf(user3), tokens(2))
+    assertBn(await token.totalSupply(), tokens(78))
   })
 
   it('can stop and resume', async () => {
@@ -515,8 +518,8 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     await oracle.reportEther2(300, ETH(36))
     await checkStat({ deposited: ETH(32), remote: ETH(36) })
-    assertBn(div15(await token.totalSupply()), 35888)
-    await checkRewards({ treasury: 566, insurance: 377, sp: 944 })
+    assertBn(await token.totalSupply(), tokens(38)) // remote + buffered
+    await checkRewards({ treasury: 569, insurance: 385, sp: 974 })
   })
 
   it('rewards distribution works', async () => {
@@ -541,7 +544,8 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await oracle.reportEther2(100, ETH(30))
 
     await checkStat({ deposited: ETH(32), remote: ETH(30) })
-    assertBn(await token.totalSupply(), tokens(34))
+    // ToDo check buffer=2
+    assertBn(await token.totalSupply(), tokens(32)) // 30 remote (slashed) + 2 buffered = 32
     await checkRewards({ treasury: 0, insurance: 0, sp: 0 })
 
     // back to normal
@@ -552,8 +556,8 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     // now some rewards are here
     await oracle.reportEther2(300, ETH(36))
     await checkStat({ deposited: ETH(32), remote: ETH(36) })
-    assertBn(div15(await token.totalSupply()), 35888)
-    await checkRewards({ treasury: 566, insurance: 377, sp: 944 })
+    assertBn(await token.totalSupply(), tokens(38))
+    await checkRewards({ treasury: 569, insurance: 385, sp: 974 })
   })
 
   it('deposits accounted properly during rewards distribution', async () => {
@@ -573,8 +577,8 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     await oracle.reportEther2(300, ETH(36))
     await checkStat({ deposited: ETH(32), remote: ETH(36) })
-    assertBn(div15(await token.totalSupply()), 65939)
-    await checkRewards({ treasury: 581, insurance: 387, sp: 969 })
+    assertBn(await token.totalSupply(), tokens(68))
+    await checkRewards({ treasury: 582, insurance: 391, sp: 985 })
   })
 
   it('SP filtering during deposit works when doing a huge deposit', async () => {
