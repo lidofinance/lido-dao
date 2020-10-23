@@ -121,7 +121,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     /**
       * @notice Stop pool routine operations
       */
-    function stop() external auth(PAUSE_ROLE) {
+    function stop() external auth(PAUSE_ROLE) { /* solhint-disable-line no-inline-assembly */
         _stop();
     }
 
@@ -200,7 +200,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
       * @param _amount Amount of StETH to burn
       * @param _pubkeyHash Receiving address
       */
-    function withdraw(uint256 _amount, bytes32 _pubkeyHash) external whenNotStopped {
+    function withdraw(uint256 _amount, bytes32 _pubkeyHash) external whenNotStopped { /* solhint-disable-line no-unused-vars */
         revert("NOT_IMPLEMENTED_YET");
     }
 
@@ -259,8 +259,14 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     /**
       * @notice Returns fee distribution proportion
       */
-    function getFeeDistribution() external view returns (uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints,
-                                                         uint16 SPFeeBasisPoints)
+    function getFeeDistribution()
+        external
+        view
+        returns (
+            uint16 treasuryFeeBasisPoints,
+            uint16 insuranceFeeBasisPoints,
+            uint16 SPFeeBasisPoints
+        )
     {
         return _getFeeDistribution();
     }
@@ -468,7 +474,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
             _amount = _amount.sub(DEPOSIT_SIZE);
             ++totalDepositCalls;
 
-            ( bytes memory key, bytes memory signature, bool used ) =
+            (bytes memory key, bytes memory signature, bool used) =  /* solium-disable-line */
                 getSPs().getSigningKey(cache[bestSPidx].id, cache[bestSPidx].usedSigningKeys++);
             assert(!used);
 
@@ -709,7 +715,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
             return _b;
 
         bytes memory zero32 = new bytes(32);
-        assembly { mstore(add(zero32, 0x20), 0) }
+        assembly { mstore(add(zero32, 0x20), 0) } /* solhint-disable-line no-inline-assembly */
 
         if (32 == _b.length)
             return BytesLib.concat(_b, zero32);
