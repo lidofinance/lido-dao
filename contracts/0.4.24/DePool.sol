@@ -313,6 +313,14 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     }
 
     /**
+    * @notice Returns the value against which the next reward will be calculated
+    * This method can be discarded in the future
+    */
+    function getRewardBase() public view returns (uint256) {
+        return REWARD_BASE_VALUE_POSITION.getStorageUint256();
+    }
+
+    /**
       * @notice Gets staking providers registry interface handle
       */
     function getSPs() public view returns (IStakingProvidersRegistry) {
@@ -396,14 +404,8 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         uint256 deposit = msg.value;
 
         if (0 != deposit) {
-            // Minting new liquid tokens
-            if (0 == _getTotalControlledEther()) {
-                StETH = deposit;
-            } else {
-                assert(getToken().totalSupply() != 0);
-                StETH = deposit.mul(getToken().totalSupply()).div(_getTotalControlledEther());
-            }
-            getToken().mint(sender, StETH);
+
+            getToken().mint(sender, deposit);
 
             _submitted(sender, deposit, _referral);
         }
@@ -518,16 +520,13 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
 
     /**
       * @dev Distributes rewards and fees.
-      * @param _rewards Total rewards accrued on the Ethereum 2.0 side.
+      * @param _totalRewards Total rewards accrued on the Ethereum 2.0 side.
       */
-    function distributeRewards(uint256 _rewards) internal {
+    function distributeRewards(uint256 _totalRewards) internal {
         // Amount of the rewards in Ether
-        uint256 protocolRewards = _rewards.mul(_getFee()).div(10000);
+        uint256 tokens2mint = _totalRewards.mul(_getFee()).div(10000);
 
         assert(0 != getToken().totalSupply());
-        // Amount of StETH we should mint to distribute protocolRewards by diluting the totalSupply
-        uint256 tokens2mint = protocolRewards.mul(getToken().totalSupply()).div(
-            _getTotalControlledEther().sub(protocolRewards));
 
         (uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, ) = _getFeeDistribution();
         uint256 toTreasury = tokens2mint.mul(treasuryFeeBasisPoints).div(10000);
@@ -537,7 +536,10 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         getToken().mint(getTreasury(), toTreasury);
         getToken().mint(getInsuranceFund(), toInsuranceFund);
         getToken().mint(address(getSPs()), toSP);
-        getSPs().distributeRewards(address(getToken()), toSP);
+        getSPs().distributeRewards(
+          address(getToken()),
+          getToken().balanceOf(address(getSPs()))
+        );
     }
 
 
@@ -658,7 +660,6 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         uint256 remote = REMOTE_ETHER2_VALUE_POSITION.getStorageUint256();
         // Until the oracle provides data, we assume that all staked ether is intact.
         uint256 deposited = DEPOSITED_ETHER_VALUE_POSITION.getStorageUint256();
-
         uint256 assets = _getBufferedEther().add(_hasOracleData() ? remote : deposited);
 
         return assets;
