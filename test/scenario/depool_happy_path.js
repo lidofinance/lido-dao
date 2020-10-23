@@ -116,9 +116,15 @@ contract('DePool: happy path', (addresses) => {
   it('the first staking provider registers one validator', async () => {
     const numKeys = 1
 
-    await spRegistry.addSigningKeysSP(stakingProvider1.id, numKeys, stakingProvider1.validators[0].key, stakingProvider1.validators[0].sig, {
-      from: stakingProvider1.address
-    })
+    await spRegistry.addSigningKeysSP(
+      stakingProvider1.id,
+      numKeys,
+      stakingProvider1.validators[0].key,
+      stakingProvider1.validators[0].sig,
+      {
+        from: stakingProvider1.address
+      }
+    )
 
     // The key was added
 
@@ -214,9 +220,15 @@ contract('DePool: happy path', (addresses) => {
 
     const numKeys = 1
 
-    await spRegistry.addSigningKeysSP(stakingProvider2.id, numKeys, stakingProvider2.validators[0].key, stakingProvider2.validators[0].sig, {
-      from: stakingProvider2.address
-    })
+    await spRegistry.addSigningKeysSP(
+      stakingProvider2.id,
+      numKeys,
+      stakingProvider2.validators[0].key,
+      stakingProvider2.validators[0].sig,
+      {
+        from: stakingProvider2.address
+      }
+    )
 
     // The key was added
 
@@ -267,12 +279,12 @@ contract('DePool: happy path', (addresses) => {
 
     // Total shares are equal to deposited eth before ratio change and fee mint
 
-    const oldTotalShares = await token.getTotalShares();
+    const oldTotalShares = await token.getTotalShares()
     assertBn(oldTotalShares, ETH(97), 'total shares')
 
     // Old total controlled Ether
 
-    const oldTotalControlledEther = await pool.getTotalControlledEther();
+    const oldTotalControlledEther = await pool.getTotalControlledEther()
     assertBn(oldTotalControlledEther, ETH(33 + 64), 'total controlled ether')
 
     // Reporting 1.5-fold balance increase (64 => 96)
@@ -282,12 +294,12 @@ contract('DePool: happy path', (addresses) => {
     // Total shares increased because fee minted (fee shares added)
     // shares ~= oldTotalShares + reward * oldTotalShares / (newTotalControlledEther - reward)
 
-    const newTotalShares = await token.getTotalShares();
+    const newTotalShares = await token.getTotalShares()
     assertBn(newTotalShares, new BN('97240805234492225001'), 'total shares')
 
     // Total controlled Ether increased
 
-    const newTotalControlledEther = await pool.getTotalControlledEther();
+    const newTotalControlledEther = await pool.getTotalControlledEther()
     assertBn(newTotalControlledEther, ETH(33 + 96), 'total controlled ether')
 
     // Ether2 stat reported by the pool changed correspondingly
@@ -329,17 +341,18 @@ contract('DePool: happy path', (addresses) => {
     assertBn(await token.balanceOf(stakingProvider1.address), new BN('79900898110870236'), 'SP-1 tokens')
     assertBn(await token.balanceOf(stakingProvider2.address), new BN('79900898110870236'), 'SP-2 tokens')
 
-
     // Real minted amount should be a bit less than calculated caused by round errors on mint and transfer operations
     assert(
-      mintedAmount.sub(
-        new BN(0)
-        .add(await token.balanceOf(treasuryAddr))
-        .add(await token.balanceOf(insuranceAddr))
-        .add(await token.balanceOf(stakingProvider1.address))
-        .add(await token.balanceOf(stakingProvider2.address))
-        .add(await token.balanceOf(spRegistry.address))
-      ).lt(mintedAmount.divn(100))
+      mintedAmount
+        .sub(
+          new BN(0)
+            .add(await token.balanceOf(treasuryAddr))
+            .add(await token.balanceOf(insuranceAddr))
+            .add(await token.balanceOf(stakingProvider1.address))
+            .add(await token.balanceOf(stakingProvider2.address))
+            .add(await token.balanceOf(spRegistry.address))
+        )
+        .lt(mintedAmount.divn(100))
     )
   })
 })

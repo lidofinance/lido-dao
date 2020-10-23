@@ -21,7 +21,6 @@ import StakeSidePanel from './components/StakeSidePanel'
 export default function App() {
   const { api, appState, currentApp, guiStyle } = useAragonApi()
   const appName = (currentApp && currentApp.name) || 'app'
-  const version = 'v0.0.1'
   const { appearance } = guiStyle
 
   const { isSyncing } = appState
@@ -60,17 +59,17 @@ export default function App() {
     const {
       isStopped,
       fee,
-      feeDistribution,
+      // feeDistribution,
       withdrawalCredentials,
       bufferedEther,
       totalControlledEther,
       token,
       validatorRegistrationContract,
       oracle,
-      SPs,
-      treasury,
-      insuranceFund,
-      ether2Stat,
+      // SPs,
+      // treasury,
+      // insuranceFund,
+      // ether2Stat,
     } = appState
 
     return [
@@ -100,29 +99,29 @@ export default function App() {
             />
           </span>
         ) : (
-            <span style={{ display: 'flex', alignItems: 'center' }}>
-              <strong
-                css={`
+          <span style={{ display: 'flex', alignItems: 'center' }}>
+            <strong
+              css={`
                 color: ${theme.positive};
               `}
-              >
-                LIVE
+            >
+              LIVE
             </strong>
-              <Button
-                label="PAUSE"
-                icon={
-                  <IconRemove
-                    css={`
+            <Button
+              label="PAUSE"
+              icon={
+                <IconRemove
+                  css={`
                     color: ${theme.negative};
                   `}
-                  />
-                }
-                display="icon"
-                onClick={stop}
-                style={{ marginLeft: 10 }}
-              />
-            </span>
-          ),
+                />
+              }
+              display="icon"
+              onClick={stop}
+              style={{ marginLeft: 10 }}
+            />
+          </span>
+        ),
       },
       {
         label: 'Fee',
@@ -222,7 +221,7 @@ export default function App() {
       />
       <Split
         primary={
-          <Box heading={'Details'} padding={20}>
+          <Box heading="Details" padding={20}>
             <ul>
               {data.map(({ label, content }, index) => (
                 <ListItem key={label + index}>

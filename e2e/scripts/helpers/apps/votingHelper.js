@@ -4,7 +4,6 @@ import { abi as financeAbi } from '@aragon/apps-finance/abi/Finance.json'
 import { encodeCallScript } from '@aragon/contract-helpers-test/src/aragon-os'
 import { init as tokenManagerInit, tokenManagerContract } from './tokenManagerHelper'
 
-
 const financeAbiExt = financeAbi.concat(vaultAbi.filter((i) => i.type === 'event'))
 const votingAbiExt = votingAbi.concat(financeAbiExt.filter((i) => i.type === 'event'))
 

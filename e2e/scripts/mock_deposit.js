@@ -8,7 +8,6 @@ const depositContractHelper = require('./helpers/apps/depositContractHelper')
 const args = process.argv.slice(2)
 const dir = args[0]
 
-
 const main = async () => {
   if (!dir) {
     throw new Error('Validator keys dir not specified')

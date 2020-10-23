@@ -8,8 +8,8 @@
   "scripts": {
     "lint": "yarn run lint:sol && yarn run lint:js",
     "lint:sol": "solium --dir ./contracts",
-    "lint:js": "eslint test/",
-    "lint:js:fix": "eslint test/ --fix",
+    "lint:js": "eslint --ext .js --cache --ignore-path .gitignore .",
+    "lint:js:fix": "eslint --fix --ext .js --cache --ignore-path .gitignore .",
     "test": "yarn run test:unit",
     "test:unit": "yarn run compile:6 && buidler test --network buidlerevm",
     "test:gas": "yarn run compile:6 && REPORT_GAS=true buidler test --network localhost",
@@ -71,6 +71,7 @@
     "ethereumjs-testrpc-sc": "^6.5.1-sc.1",
     "husky": "^4.3.0",
     "lerna": "^3.22.1",
+    "lint-staged": ">=10",
     "prettier": "^2.1.2",
     "solidity-coverage": "^0.7.11",
     "solium": "^1.2.5",
@@ -86,5 +87,13 @@
     "openzeppelin-solidity": "2.0.0",
     "solidity-bytes-utils": "0.0.6",
     "yargs": "^16.0.3"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.{js,jsx}": "yarn lint:js:fix"
   }
 }
