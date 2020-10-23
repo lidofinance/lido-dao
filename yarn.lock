@@ -1761,7 +1761,6 @@ __metadata:
     solidity-bytes-utils: 0.0.6
     solidity-coverage: ^0.7.11
     solium: ^1.2.5
-    solium-config-aragon: ^0.0.0
     truffle: ^5.1.43
     truffle-extract: ^1.2.1
     web3: ^1.3.0
@@ -21977,13 +21976,6 @@ resolve@1.1.x:
   bin:
     solidity-coverage: ./plugins/bin.js
   checksum: 6c9b3984db2260a8ffce19e58c3fda1730e39c9bc3389aa27fab5309d05ae74a5f48b4d9d4a13f81fb44f9bfd216479fb7d1770782084222f20343a67be54f77
-  languageName: node
-  linkType: hard
-
-"solium-config-aragon@npm:^0.0.0":
-  version: 0.0.0
-  resolution: "solium-config-aragon@npm:0.0.0"
-  checksum: d40f9e34b36618cae52cedd97feb8acc7efb2b6463ffe8d55b3df474abd50754b9773a47728ea9fc49f8014ff80eaee254f40f2b29af1bc84de67e093b3ba0d9
   languageName: node
   linkType: hard
 

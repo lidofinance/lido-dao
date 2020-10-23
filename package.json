@@ -7,7 +7,7 @@
   ],
   "scripts": {
     "lint": "yarn lint:sol && yarn lint:js",
-    "lint:sol": "yarn lint:sol:solium && yarn lint:sol:solhint",
+    "lint:sol": "yarn lint:sol:solhint && yarn lint:sol:solium",
     "lint:js": "eslint --ext .js --cache --ignore-path .gitignore .",
     "lint:js:fix": "eslint --fix --ext .js --cache --ignore-path .gitignore .",
     "lint:sol:solium": "solium --dir ./contracts",
