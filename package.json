@@ -24,7 +24,7 @@
     "estimate-deposit-loop-gas": "yarn run test:unit ./estimate_deposit_loop_gas.js",
     "compile": "yarn run compile:4 && yarn run compile:6",
     "compile:4": "buidler compile",
-    "compile:6": "buidler compile --config buidler.config.6.js --force",
+    "compile:6": "buidler compile --config buidler.config.6.js --force && buidler compile --config buidler.config.6.11.js --force",
     "deploy": "yarn run deploy:dev",
     "deploy:dev": "yarn run deploy:apm:dev && deploy:apps:dev && deploy:tmpl:dev && deploy:dao:dev",
     "deploy:apm:dev": "ENS=0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1 DAO_FACTORY=0x5d94e3e7aec542ab0f9129b9a7badeb5b3ca0f77 buidler run ./scripts/deploy-apm.js --network localhost",
