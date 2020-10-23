@@ -121,7 +121,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     /**
       * @notice Stop pool routine operations
       */
-    function stop() external auth(PAUSE_ROLE) { /* solhint-disable-line no-inline-assembly */
+    function stop() external auth(PAUSE_ROLE) {
         _stop();
     }
 
@@ -715,7 +715,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
             return _b;
 
         bytes memory zero32 = new bytes(32);
-        assembly { mstore(add(zero32, 0x20), 0) } /* solhint-disable-line no-inline-assembly */
+        assembly { mstore(add(zero32, 0x20), 0) }
 
         if (32 == _b.length)
             return BytesLib.concat(_b, zero32);

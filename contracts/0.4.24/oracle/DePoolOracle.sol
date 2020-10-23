@@ -273,7 +273,7 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
       * @dev Returns current timestamp
       */
     function _getTime() internal view returns (uint256) {
-        return block.timestamp; /* solium-disable-line security/no-block-members */ /* solhint-disable-line not-rely-on-time */
+        return block.timestamp;
     }
 
     /**
