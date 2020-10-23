@@ -26,7 +26,7 @@
 
   "rules": {
     "prettier/prettier": "error",
-    "max-len": ["warn", { "code": 140, "ignoreUrls": true }],
+    "max-len": ["warn", { "code": 140, "ignoreComments": true, "ignoreUrls": true }],
     "no-undef": "warn",
     "no-unused-vars": "warn",
     "prefer-const": "warn",
