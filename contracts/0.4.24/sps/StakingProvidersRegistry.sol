@@ -391,7 +391,6 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
         return (key_, signature, _index < sps[_SP_id].usedSigningKeys);
     }
 
-
     function _isEmptySigningKey(bytes memory _key) internal pure returns (bool) {
         assert(_key.length == PUBKEY_LENGTH);
         // algorithm applicability constraint

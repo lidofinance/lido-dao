@@ -45,9 +45,14 @@ contract DePoolTemplate is BaseTemplate {
     DePool private depool;
 
 
-    constructor(DAOFactory _daoFactory, ENS _ens, MiniMeTokenFactory _miniMeFactory, IFIFSResolvingRegistrar _aragonID)
-        BaseTemplate(_daoFactory, _ens, _miniMeFactory, _aragonID)
+    constructor(
+        DAOFactory _daoFactory,
+        ENS _ens,
+        MiniMeTokenFactory _miniMeFactory,
+        IFIFSResolvingRegistrar _aragonID
+    )
         public
+        BaseTemplate(_daoFactory, _ens, _miniMeFactory, _aragonID)
     {
         _ensureAragonIdIsValid(_aragonID);
         _ensureMiniMeFactoryIsValid(_miniMeFactory);

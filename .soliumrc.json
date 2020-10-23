@@ -4,6 +4,7 @@
   "rules": {
     "security/no-low-level-calls": "off",
     "security/no-inline-assembly": "off",
+    "security/no-assign-params": "warning",
     "error-reason": "off",
     "imports-on-top": "error",
     "variable-declarations": "error",

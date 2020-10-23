@@ -7,10 +7,7 @@ import "../interfaces/IStETH.sol";
 
 
 contract CstETHMock is CstETH {
-    constructor(IStETH _stETH)
-        public
-        CstETH(_stETH)
-    { }
+    constructor(IStETH _stETH) public CstETH(_stETH) {}
 
     function mint(address recipient, uint256 amount) public {
         _mint(recipient, amount);
