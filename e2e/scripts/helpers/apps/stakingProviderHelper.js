@@ -26,6 +26,26 @@ async function hasInitialized() {
   return await stakingProviderContract.methods.hasInitialized().call()
 }
 
+async function reportStoppedValidator(spId, incerment, sender) {
+  return await stakingProviderContract.methods.reportStoppedValidators(spId, incerment).send({ from: sender, gas: '1000000' })
+}
+
+async function setStakingProviderActive(spId, status, sender) {
+  await stakingProviderContract.methods.setStakingProviderActive(spId, status).send({ from: sender, gas: '1000000' })
+}
+
+async function setStakingProviderName(spId, name, sender) {
+  await stakingProviderContract.methods.setStakingProviderName().send({ from: sender, gas: '1000000' })
+}
+
+async function setStakingProviderRewardAddress(spId, rewardAddress, sender) {
+  await stakingProviderContract.methods.setStakingProviderRewardAddress(spId, rewardAddress).send({ from: sender, gas: '1000000' })
+}
+
+async function setStakingProviderStakingLimit(spId, limit, sender) {
+  await stakingProviderContract.methods.setStakingProviderStakingLimit(spId, limit).send({ from: sender, gas: '1000000' })
+}
+
 async function addStakingProvider(name, member, stakingLimit, holder, holders) {
   const callData1 = encodeCallScript([
     {
@@ -93,6 +113,10 @@ async function getAllSigningKeys(sp, spId) {
   }
 }
 
+async function getStakingProvidersCount() {
+  return await stakingProviderContract.methods.getStakingProvidersCount().call()
+}
+
 async function getActiveSigningKeys(sp, spSigningKeys) {
   const usedSigningKeysCount = sp.usedSigningKeys
   const activeSigningKeys = []
@@ -102,17 +126,38 @@ async function getActiveSigningKeys(sp, spSigningKeys) {
   return activeSigningKeys
 }
 
-function calculateSpReward(spUsedSigningKeysCount, stakeProfit, totalUsedSigningKeysCount) {
+async function getActiveStakingProvidersCount() {
+  return await stakingProviderContract.methods.getActiveStakingProvidersCount().call()
+}
+
+async function getTotalSigningKeyCount(spId) {
+  return await stakingProviderContract.methods.getTotalSigningKeyCount(spId).call()
+}
+
+function calculateSpReward(spActiveSigningKeysCount, stakeProfit, totalUsedSigningKeysCount) {
   return BN(stakeProfit)
-    .mul(BN(ETH(+spUsedSigningKeysCount)))
+    .mul(BN(ETH(+spActiveSigningKeysCount)))
     .mul(BN(SP_BASIC_FEE / 100))
-    .div(BN(ETH(totalUsedSigningKeysCount)))
+    .div(BN(ETH(+totalUsedSigningKeysCount)))
     .div(BN(100))
 }
 
-function calculateNewSpBalance(spUsedSigningKeysCount, stakeProfit, totalUsedSigningKeysCount, balanceBeforePushData) {
-  const reward = calculateSpReward(spUsedSigningKeysCount, stakeProfit, totalUsedSigningKeysCount)
-  return BN(balanceBeforePushData).add(reward).toString()
+function calculateNewSpBalance(sp, stakeProfit, totalUsedSigningKeysCount, balanceBeforePushData) {
+  const spActiveSigningKeys = +sp.usedSigningKeys - +sp.stoppedValidators
+  const reward = calculateSpReward(spActiveSigningKeys, stakeProfit, totalUsedSigningKeysCount)
+  return BN(balanceBeforePushData).add(BN(reward)).toString()
+}
+
+async function getTotalActiveKeysCount() {
+  let effectiveStakeTotal = ''
+  for (let spId = 0; spId < (await getStakingProvidersCount()); spId++) {
+    const sp = await getStakingProvider(spId, true)
+    if (!sp.active) continue
+
+    const effectiveStake = +sp.usedSigningKeys - +sp.stoppedValidators
+    effectiveStakeTotal = +effectiveStakeTotal + +effectiveStake
+  }
+  return effectiveStakeTotal.toString()
 }
 
 export {
@@ -128,5 +173,13 @@ export {
   addSigningKeysSP,
   getActiveSigningKeys,
   getUnusedSigningKeyCount,
-  calculateNewSpBalance
+  calculateNewSpBalance,
+  reportStoppedValidator,
+  setStakingProviderActive,
+  getActiveStakingProvidersCount,
+  setStakingProviderName,
+  getTotalSigningKeyCount,
+  setStakingProviderRewardAddress,
+  getTotalActiveKeysCount,
+  setStakingProviderStakingLimit
 }
