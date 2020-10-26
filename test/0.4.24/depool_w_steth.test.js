@@ -1,8 +1,6 @@
-const { join } = require('path')
 const { assert } = require('chai')
 const { newDao, newApp } = require('./helpers/dao')
-const { assertBn, assertRevert, assertEvent, assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
-const { ONE_DAY, ZERO_ADDRESS, MAX_UINT64, bn, getEventArgument, injectWeb3, injectArtifacts } = require('@aragon/contract-helpers-test')
+const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 const { BN } = require('bn.js')
 
 const StETH = artifacts.require('StETH.sol') // we can just import due to StETH imported in test_helpers/Imports.sol
@@ -156,7 +154,7 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody,
       })
 
       it('stETH: totalSupply=34 user2=34', async () => {
-        /* The initial deposit initiates the stETH token with the corresponding totalSupply 
+        /* The initial deposit initiates the stETH token with the corresponding totalSupply
         that is taken from dePool.totalControlledEther.
         Submitter's balance is equivalent to deposited Ether amount.
         */
@@ -184,7 +182,7 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody,
         it('DePool: deposited=32, remote=30, buffered=2, totalControlled=32, rewBase=32', async () => {
           /* The oracle's report changes `remote` value (was 32, became 30).
           This affects output of totalControlledEther, that decreased by 2.
-          getRewardBase didn't change. Validators need to compensate the loss occured due to their fault 
+          getRewardBase didn't change. Validators need to compensate the loss occured due to their fault
           before receiving fees from rewards.
           */
           const stat = await app.getEther2Stat()
@@ -224,7 +222,7 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody,
             totalControlledEther = 34 Ether initial submission + 1 Ether reward = 35 Ether
               or
             totalControlledEther = 33 Ether remote + 2 Ether buffer = 35 Ether
-            New totalControlledEther value leads to increase of stETH.totalSupply and output of 
+            New totalControlledEther value leads to increase of stETH.totalSupply and output of
             personal balances increased proportionally to holders' shares.
             */
             const stat = await app.getEther2Stat()
@@ -241,13 +239,13 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody,
 
           it('stETH: totalSupply=35 user=34.99 treasury.003, insurance=.002, sp=.005', async () => {
             /*
-            New totalControlledEther value leads to increase of stETH.totalSupply, and output of 
+            New totalControlledEther value leads to increase of stETH.totalSupply, and output of
             personal balances increased proportionally to holders' shares.
             Oracle's report also triggers fee payment that is substracted from the reward.
             The fee divides in given proportion between SPs, treasury and insurance vaults.
 
             userBalance = 34.0 Ether staked
-            shares = 34.0 
+            shares = 34.0
             totalControlledEtherInitial = 34.0 Ether
             totalControlledEtherNew = 35.0 Ether
             reward = totalControlledEtherNew - totalControlledEtherInitial = 1.0 Ether
@@ -436,11 +434,11 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody,
         it('DePool: deposited=32, remote=66, buffered=2, totalControlled=68, rewBase=66', async () => {
           /*
           userBalance = 34.0 Ether staked
-          shares = 34.0 
+          shares = 34.0
           totalControlledEtherInitial = 34.0 Ether
           totalControlledEtherNew = 68.0 Ether (66 remote + 2 buffer)
           reward = totalControlledEtherNew - totalControlledEtherInitial = 34.0 Ether
-          totalFee = reward * 0.01 = 0.34 stETH 
+          totalFee = reward * 0.01 = 0.34 stETH
           userGets = reward - totalFee = 33.66 stETH
           userBalance = userBalance + reward - totalFee = 67.66 stETH
           treasuryBalance = totalFee * 0.3 = 0.102

@@ -1,9 +1,6 @@
-const { join } = require('path')
 const { assert } = require('chai')
 const { newDao, newApp } = require('./helpers/dao')
-const { assertBn, assertRevert, assertEvent, assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
-const { ONE_DAY, ZERO_ADDRESS, MAX_UINT64, bn, getEventArgument, injectWeb3, injectArtifacts } = require('@aragon/contract-helpers-test')
-const { BN } = require('bn.js')
+const { assertBn, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
 
 const TestStakingProvidersRegistry = artifacts.require('TestStakingProvidersRegistry.sol')
 const PoolMock = artifacts.require('PoolMock.sol')
@@ -45,7 +42,7 @@ contract('StakingProvidersRegistry', ([appManager, voting, user1, user2, user3, 
     const { dao, acl } = await newDao(appManager)
 
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
-    proxyAddress = await newApp(dao, 'staking-providers-registry', appBase.address, appManager)
+    const proxyAddress = await newApp(dao, 'staking-providers-registry', appBase.address, appManager)
     app = await TestStakingProvidersRegistry.at(proxyAddress)
 
     // Set up the app's permissions.

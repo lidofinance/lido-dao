@@ -1,8 +1,7 @@
-const { join } = require('path')
 const { assert } = require('chai')
 const { newDao, newApp } = require('./helpers/dao')
-const { assertBn, assertRevert, assertEvent, assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
-const { ONE_DAY, ZERO_ADDRESS, MAX_UINT64, bn, getEventArgument, injectWeb3, injectArtifacts } = require('@aragon/contract-helpers-test')
+const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
+const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 const { BN } = require('bn.js')
 
 const StETH = artifacts.require('StETH.sol') // we can just import due to StETH imported in test_helpers/Imports.sol
