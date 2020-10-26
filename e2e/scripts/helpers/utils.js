@@ -3,8 +3,6 @@ const fs = require('fs')
 const path = require('path')
 const { toWei, isHex, toBN } = require('web3-utils')
 
-const validatorKeysPath = path.resolve(__dirname, '../../data/validator_keys')
-
 const sleep = (ms) => {
   return new Promise((resolve) => setTimeout(resolve, ms * 1000))
 }
@@ -18,23 +16,24 @@ function getDataFromFile(path) {
   }
 }
 
-function loadGeneratedValidatorsData(dir = validatorKeysPath, index = 0) {
-  const depositDataFiles = fs.readdirSync(dir).filter((file) => {
+function loadGeneratedValidatorsData(validator, index = 0) {
+  const validatorKeysPath = path.resolve(__dirname, '../../data/' + validator + '/validator_keys')
+  const depositDataFiles = fs.readdirSync(validatorKeysPath).filter((file) => {
     return file.indexOf('.') !== 0 && file.match(/deposit_data.+\.json$/i)
   })
   if (!depositDataFiles.length) {
     throw new Error('No deposit_data files found')
   }
-  return require(`${dir}/${depositDataFiles[index]}`)
+  return require(`${validatorKeysPath}/${depositDataFiles[index]}`)
 }
 
-function getGeneratedWithdrawalAddress() {
-  const validatorsJson = loadGeneratedValidatorsData()
+function getGeneratedWithdrawalAddress(validator) {
+  const validatorsJson = loadGeneratedValidatorsData(validator)
   return '0x' + validatorsJson[0].withdrawal_credentials
 }
 
-function getDataToPerformDepositContract() {
-  const validatorsJson = loadGeneratedValidatorsData()
+function getDataToPerformDepositContract(validators) {
+  const validatorsJson = loadGeneratedValidatorsData(validators)
   const validator = validatorsJson[validatorsJson.length - 1]
   return {
     pubkey: '0x' + validator.pubkey,
@@ -44,8 +43,8 @@ function getDataToPerformDepositContract() {
   }
 }
 
-function getSigningKeys(signingKeysCount, offset = 0) {
-  const validatorsJson = loadGeneratedValidatorsData().slice(offset, signingKeysCount + offset)
+function getSigningKeys(validator, signingKeysCount, offset = 0) {
+  const validatorsJson = loadGeneratedValidatorsData(validator).slice(offset, signingKeysCount + offset)
   return {
     pubKeys: validatorsJson.map((v) => v.pubkey),
     signatures: validatorsJson.map((v) => v.signature)
