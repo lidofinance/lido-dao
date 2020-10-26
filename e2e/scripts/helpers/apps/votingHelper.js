@@ -4,7 +4,6 @@ import { abi as financeAbi } from '@aragon/apps-finance/abi/Finance.json'
 import { encodeCallScript } from '@aragon/contract-helpers-test/src/aragon-os'
 import { init as tokenManagerInit, tokenManagerContract } from './tokenManagerHelper'
 
-
 const financeAbiExt = financeAbi.concat(vaultAbi.filter((i) => i.type === 'event'))
 const votingAbiExt = votingAbi.concat(financeAbiExt.filter((i) => i.type === 'event'))
 
@@ -48,7 +47,7 @@ async function createVote(callData1, holder, voteName = '') {
 async function voteForAction(voteId, holders, voteName = '') {
   logger.info('Vote for ' + voteName)
   for (let i = 0; i < holders.length; i++) {
-    logger.debug('Voting from holder - ' + holders[i])
+    logger.debug(`Voting from holder - (${i + 1}) ~ ${holders[i]}`)
     await voteContract.methods.vote(voteId, true, true).send({ from: holders[i], gas: '1000000' })
   }
 

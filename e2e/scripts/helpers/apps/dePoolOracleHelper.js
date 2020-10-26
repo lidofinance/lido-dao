@@ -23,7 +23,7 @@ async function hasInitialized() {
 }
 
 async function pushData(epoch, amount, sender) {
-  return await dePoolOracleContract.methods.pushData(epoch, amount).send({ from: sender, gas: '3000000' })
+  return await dePoolOracleContract.methods.pushData(epoch, amount).send({ from: sender, gas: '8000000' })
 }
 
 async function setQuorum(quorum, holder, holders) {

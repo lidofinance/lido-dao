@@ -3,7 +3,7 @@ import { createVote, voteForAction, init as voteInit } from './votingHelper'
 import { encodeCallScript } from '@aragon/contract-helpers-test/src/aragon-os'
 import * as eth1Helper from '../eth1Helper'
 import { BN } from '../utils'
-import { TREASURY_FEE, INSURANCE_FEE } from '../constants'
+import { TREASURY_FEE, INSURANCE_FEE, ZERO_ADDRESS } from '../constants'
 
 let context
 let dePoolContract
@@ -60,25 +60,14 @@ async function setFeeDistribution(treasuryFee, insuranceFee, SPFee, holder, hold
   await voteForAction(voteId, holders, 'setFeeDistribution')
 }
 
-async function addSigningKeys(validatorsTestData, holder, count, holders) {
-  const validatorsPubKeys = validatorsTestData.pubKey
-  const validatorsSignatures = validatorsTestData.signature
-  logger.debug('PubKeys to add ' + validatorsPubKeys)
-  logger.debug('Signatures to add' + validatorsSignatures)
-  const callData1 = encodeCallScript([
-    {
-      to: getProxyAddress(),
-      calldata: await dePoolContract.methods.addSigningKeys(count, validatorsPubKeys, validatorsSignatures).encodeABI()
-    }
-  ])
-
-  const voteId = await createVote(callData1, holder, 'Add signing keys')
-  await voteForAction(voteId, holders, 'Add signing keys')
+function getDepositIterationLimit() {
+  return dePoolContract.methods.getDepositIterationLimit().call()
 }
 
 function getWithdrawalCredentials() {
   return dePoolContract.methods.getWithdrawalCredentials().call()
 }
+
 function getFee() {
   return dePoolContract.methods.getFee().call()
 }
@@ -95,10 +84,18 @@ async function getInsuranceFundAddress() {
   return await dePoolContract.methods.getInsuranceFund().call()
 }
 
+async function submit(sender, value) {
+  return await dePoolContract.methods.submit(ZERO_ADDRESS).send({ from: sender, value: value, gas: '1000000' })
+}
+
+async function getEther2Stat() {
+  return await dePoolContract.methods.getEther2Stat().call()
+}
+
 async function getUsedEther() {
   const totalControledEther = await getTotalControlledEther()
   const bufferedEther = await getBufferedEther()
-  return +totalControledEther - +bufferedEther
+  return BN(totalControledEther).sub(BN(bufferedEther)).toString()
 }
 
 async function depositToDePoolContract(from, value) {
@@ -127,7 +124,6 @@ export {
   init,
   getWithdrawalCredentials,
   setWithdrawalCredentials,
-  addSigningKeys,
   depositToDePoolContract,
   getBufferedEther,
   getTotalControlledEther,
@@ -140,5 +136,8 @@ export {
   getFeeDistribution,
   getInsuranceFundAddress,
   getUsedEther,
-  calculateNewTreasuryBalance
+  calculateNewTreasuryBalance,
+  getDepositIterationLimit,
+  submit,
+  getEther2Stat
 }
