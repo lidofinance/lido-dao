@@ -20,8 +20,8 @@ MOCK_VALIDATOR_KEYS_DIR="${MOCK_DATA_DIR}/validator_keys"
 MOCK_VALIDATORS_DIR="${MOCK_DATA_DIR}/validators"
 MOCK_SECRETS_DIR="${MOCK_DATA_DIR}/secrets"
 
-VALIDATOR_KEYS_DIR="${DATA_DIR}/validator_keys"
-VALIDATORS_DIR="${DATA_DIR}/validators"
+VALIDATOR_KEYS_DIR="${DATA_DIR}/validators1/validator_keys"
+VALIDATORS_DIR="${DATA_DIR}/validators1"
 SECRETS_DIR="${DATA_DIR}/secrets"
 
 PASSWORD=123
@@ -199,12 +199,12 @@ fi
 
 echo "Starting Aragon web UI"
 docker-compose up -d aragon
-
+# TODO generating for validators2
 if [ ! -d "$VALIDATOR_KEYS_DIR" ]; then
   rm -rf $VALIDATORS_DIR
   echo "Generating $VALIDATOR_COUNT validator keys... (this may take a while)"
   # TODO dkg
-  ./deposit.sh --num_validators=$VALIDATOR_COUNT --password=$PASSWORD --chain=medalla --mnemonic="$VALIDATOR_MNEMONIC" --withdrawal_pk=$WITHDRAWAL_PK
+  ./deposit.sh --num_validators=$VALIDATOR_COUNT --password=$PASSWORD --chain=medalla --mnemonic="$VALIDATOR_MNEMONIC1" --withdrawal_pk=$WITHDRAWAL_PK1
 fi
 
 if [ $ETH1_ONLY ]; then
@@ -326,7 +326,9 @@ fi
 docker-compose up -d node2-1 node2-2
 sleep 5
 docker-compose up -d mock-validators
-docker-compose up -d validators
+docker-compose up -d validators1
+sleep 5
+docker-compose up -d validators2
 
 if [[ $NODES ]]; then
   echo "Start extra nodes"

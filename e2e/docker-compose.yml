@@ -194,16 +194,37 @@ services:
     networks:
       eth2:
 
-  validators:
+  validators1:
     image: sigp/lighthouse
-    container_name: validators
+    container_name: validators1
+    depends_on:
+      - node2-1
+    #    ports:
+    #      - 30303:30303
+    networks:
+      eth2:
+    volumes:
+      - ./data:/data
+    command: >
+      lighthouse
+      --spec "${SPEC}"
+      validator_client
+      --delete-lockfiles
+      --init-slashing-protection
+      --debug-level "${DEBUG_LEVEL}"
+      --datadir "/data/validators1"
+      --testnet-dir "/data/testnet"
+      --server http://node2-1:5052
+
+  validators2:
+    image: sigp/lighthouse
+    container_name: validators2
     depends_on:
       - node2-1
 #    ports:
 #      - 30303:30303
     networks:
       eth2:
-        ipv4_address: 10.20.30.22
     volumes:
       - ./data:/data
     command: >
@@ -213,7 +234,7 @@ services:
       --delete-lockfiles 
       --init-slashing-protection
       --debug-level "${DEBUG_LEVEL}"
-      --datadir "/data"
+      --datadir "/data/validators2"
       --testnet-dir "/data/testnet"
       --server http://node2-1:5052
 
