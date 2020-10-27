@@ -265,25 +265,26 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
     context('burn', () => {
       beforeEach(async () => {
         // user1 already had 1000 tokens
-        // 1000 + 1000 = 2000
+        // 1000 + 1000 + 1000 = 3000
         await stEth.mint(user2, tokens(1000), { from: pool })
         await dePool.setTotalControlledEther(tokens(2000)) // assume this is done by depool
+        await stEth.mint(user3, tokens(1000), { from: pool })
+        await dePool.setTotalControlledEther(tokens(3000)) // assume this is done by depool
       })
 
       it('burning works (redistributes tokens)', async () => {
-        await stEth.burn(user1, tokens(2), { from: pool })
-        assertBn(await stEth.totalSupply(), tokens(2000))
-        assertBn(await stEth.balanceOf(user1, { from: nobody }), '997999999999999999999')
-        assertBn(await stEth.balanceOf(user2, { from: nobody }), tokens(1002))
+        await stEth.burn(user1, tokens(100), { from: pool })
+        assertBn(await stEth.totalSupply(), tokens(3000))
+        assertBn(await stEth.balanceOf(user1, { from: nobody }), bn(tokens(900)).subn(1)) // expected round error
+        assertBn(await stEth.balanceOf(user2, { from: nobody }), tokens(1050))
+        assertBn(await stEth.balanceOf(user3, { from: nobody }), tokens(1050))
       })
 
       it('allowance behavior after burning is correct', async () => {
         await stEth.approve(user2, tokens(250), { from: user1 })
 
         await stEth.burn(user1, tokens(500), { from: pool })
-        assertBn(await stEth.totalSupply(), tokens(2000))
-        assertBn(await stEth.balanceOf(user1, { from: nobody }), '499999999999999999999')
-        assertBn(await stEth.balanceOf(user2, { from: nobody }), tokens(1500))
+        assertBn(await stEth.balanceOf(user1, { from: nobody }), tokens(500))
 
         assertBn(await stEth.allowance(user1, user2, { from: nobody }), tokens(250))
       })
