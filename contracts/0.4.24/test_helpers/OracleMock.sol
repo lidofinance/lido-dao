@@ -9,7 +9,7 @@ import "../interfaces/IDePool.sol";
 contract OracleMock {
     IDePool private pool;
 
-    function setPool(address _pool) external {
+    function initialize(address _pool) external {
         pool = IDePool(_pool);
     }
 

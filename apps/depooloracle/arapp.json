@@ -9,11 +9,6 @@
       "name": "Set the number of oracle members required to form a data point",
       "id": "MANAGE_QUORUM",
       "params": []
-    },
-    {
-      "name": "Sets the pool address to notify",
-      "id": "SET_POOL",
-      "params": []
     }
   ],
   "environments": {
