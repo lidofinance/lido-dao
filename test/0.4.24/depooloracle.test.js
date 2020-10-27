@@ -6,6 +6,8 @@ const { bn } = require('@aragon/contract-helpers-test')
 const DePoolOracle = artifacts.require('TestDePoolOracle.sol')
 const Algorithm = artifacts.require('TestAlgorithm.sol')
 
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
+
 contract('Algorithm', ([testUser]) => {
   let algorithm
 
@@ -54,16 +56,15 @@ contract('DePoolOracle', ([appManager, voting, user1, user2, user3, user4, nobod
     // Set up the app's permissions.
     await acl.createPermission(voting, app.address, await app.MANAGE_MEMBERS(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.MANAGE_QUORUM(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.SET_POOL(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
-    await app.initialize()
+    await app.initialize(ZERO_ADDRESS)
   })
 
   describe('Test utility functions:', function () {
     it('addOracleMember works', async () => {
       await assertRevert(app.addOracleMember(user1, { from: user1 }), 'APP_AUTH_FAILED')
-      await assertRevert(app.addOracleMember('0x0000000000000000000000000000000000000000', { from: voting }), 'BAD_ARGUMENT')
+      await assertRevert(app.addOracleMember(ZERO_ADDRESS, { from: voting }), 'BAD_ARGUMENT')
 
       await app.addOracleMember(user1, { from: voting })
 
