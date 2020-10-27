@@ -64,21 +64,29 @@ contract('DePool with official deposit contract', ([appManager, voting, user1, u
     depositContract = await DepositContract.new()
     const { dao, acl } = await newDao(appManager)
 
-    // StakingProvidersRegistry
-    let proxyAddress = await newApp(dao, 'staking-providers-registry', stakingProvidersRegistryBase.address, appManager)
-    sps = await StakingProvidersRegistry.at(proxyAddress)
-    await sps.initialize()
-
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
-    proxyAddress = await newApp(dao, 'depool', appBase.address, appManager)
+    let proxyAddress = await newApp(dao, 'depool', appBase.address, appManager)
     app = await DePool.at(proxyAddress)
+
+    // Initialize the app's proxy.
+    await app.initialize(depositContract.address, 10)
+    treasuryAddr = await app.getTreasury()
+    insuranceAddr = await app.getInsuranceFund()
 
     // token
     proxyAddress = await newApp(dao, 'steth', stEthBase.address, appManager)
     token = await StETH.at(proxyAddress)
     await token.initialize(app.address)
 
+    // StakingProvidersRegistry
+    proxyAddress = await newApp(dao, 'staking-providers-registry', stakingProvidersRegistryBase.address, appManager)
+    sps = await StakingProvidersRegistry.at(proxyAddress)
+    await sps.initialize(app.address)
+
+    await oracle.initialize(app.address)
+
     // Set up the app's permissions.
+    await acl.createPermission(voting, app.address, await app.SET_APPS(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.PAUSE_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.MANAGE_FEE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.MANAGE_WITHDRAWAL_KEY(), appManager, { from: appManager })
@@ -87,7 +95,6 @@ contract('DePool with official deposit contract', ([appManager, voting, user1, u
     await acl.createPermission(app.address, token.address, await token.MINT_ROLE(), appManager, { from: appManager })
     await acl.createPermission(app.address, token.address, await token.BURN_ROLE(), appManager, { from: appManager })
 
-    await acl.createPermission(voting, sps.address, await sps.SET_POOL(), appManager, { from: appManager })
     await acl.createPermission(voting, sps.address, await sps.MANAGE_SIGNING_KEYS(), appManager, { from: appManager })
     await acl.createPermission(voting, sps.address, await sps.ADD_STAKING_PROVIDER_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, sps.address, await sps.SET_STAKING_PROVIDER_ACTIVE_ROLE(), appManager, { from: appManager })
@@ -96,14 +103,8 @@ contract('DePool with official deposit contract', ([appManager, voting, user1, u
     await acl.createPermission(voting, sps.address, await sps.SET_STAKING_PROVIDER_LIMIT_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, sps.address, await sps.REPORT_STOPPED_VALIDATORS_ROLE(), appManager, { from: appManager })
 
-    // Initialize the app's proxy.
-    await app.initialize(token.address, depositContract.address, oracle.address, sps.address, 10)
-    treasuryAddr = await app.getTreasury()
-    insuranceAddr = await app.getInsuranceFund()
-
-    await oracle.setPool(app.address)
     // await depositContract.reset()
-    await sps.setPool(app.address, { from: voting })
+    await app.setApps(token.address, oracle.address, sps.address, { from: voting })
   })
 
   const checkStat = async ({ deposited, remote }) => {
