@@ -49,7 +49,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     bytes32 internal constant SP_FEE_VALUE_POSITION = keccak256("depools.DePool.SPFee");
 
     bytes32 internal constant TOKEN_VALUE_POSITION = keccak256("depools.DePool.token");
-    bytes32 internal constant VALIDATOR_REGISTRATION_VALUE_POSITION = keccak256("depools.DePool._depositContractAddress");
+    bytes32 internal constant VALIDATOR_REGISTRATION_VALUE_POSITION = keccak256("depools.DePool.validatorRegistration");
     bytes32 internal constant ORACLE_VALUE_POSITION = keccak256("depools.DePool.oracle");
     bytes32 internal constant SP_REGISTRY_VALUE_POSITION = keccak256("depools.DePool.spRegistry");
 
