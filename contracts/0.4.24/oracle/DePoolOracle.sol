@@ -33,7 +33,6 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
     /// ACL
     bytes32 constant public MANAGE_MEMBERS = keccak256("MANAGE_MEMBERS");
     bytes32 constant public MANAGE_QUORUM = keccak256("MANAGE_QUORUM");
-    bytes32 constant public SET_POOL = keccak256("SET_POOL");
 
     /// @dev Maximum number of oracle committee members
     uint256 public constant MAX_MEMBERS = 256;
@@ -58,17 +57,13 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
     uint256 private contributionBitMask;
     uint256[] private currentlyAggregatedData;  // only indexes set in contributionBitMask are valid
 
-    function initialize() public onlyInit {
-        assert(1 == ((1 << (MAX_MEMBERS - 1)) >> (MAX_MEMBERS - 1)));   // static assert
-        initialized();
-    }
-
     /**
-      * @notice Set the pool address to `_pool`
+      * @notice `_pool` is the `DePool` contract address, set by template
       */
-    function setPool(address _pool) external auth(SET_POOL) {
-        require(isContract(_pool), "POOL_NOT_CONTRACT");
+    function initialize(address _pool) public onlyInit {
+        assert(1 == ((1 << (MAX_MEMBERS - 1)) >> (MAX_MEMBERS - 1)));   // static assert
         pool = IDePool(_pool);
+        initialized();
     }
 
     /**

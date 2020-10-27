@@ -24,7 +24,6 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
     using UnstructuredStorage for bytes32;
 
     /// ACL
-    bytes32 constant public SET_POOL = keccak256("SET_POOL");
     bytes32 constant public MANAGE_SIGNING_KEYS = keccak256("MANAGE_SIGNING_KEYS");
     bytes32 constant public ADD_STAKING_PROVIDER_ROLE = keccak256("ADD_STAKING_PROVIDER_ROLE");
     bytes32 constant public SET_STAKING_PROVIDER_ACTIVE_ROLE = keccak256("SET_STAKING_PROVIDER_ACTIVE_ROLE");
@@ -79,18 +78,15 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
         _;
     }
 
-    function initialize() public onlyInit {
+    /**
+      * @notice `_pool` is the `DePool` contract address, set by template
+      */
+
+    function initialize(address _pool) public onlyInit {
         totalSPCount = 0;
         activeSPCount = 0;
-        initialized();
-    }
-
-    /**
-      * @notice Set the pool address to `_pool`
-      */
-    function setPool(address _pool) external auth(SET_POOL) {
-        require(isContract(_pool), "POOL_NOT_CONTRACT");
         pool = _pool;
+        initialized();
     }
 
     /**
