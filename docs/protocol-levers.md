@@ -60,15 +60,17 @@ transfers and changing allowances. Calls of the following functions will revert:
 
 ## [DePool.sol](/contracts/0.4.24/DePool.sol)
 
-### Oracle
+### stETH, Oracle, SP Registry
 
-The address of the oracle contract.
+The addresses of the steth, oracle and sps contracts.
 
-* Mutator: `setOracle(address)`
-  * Permission required: `SET_ORACLE`
+* Mutator: `setApps(address,address,address)`
+  * Permission required: `SET_APPS`
+* Accessor: `getToken() returns (address)`
 * Accessor: `getOracle() returns (address)`
+* Accessor: `getSPs() returns (address)`
 
-This contract serves as a bridge between ETH 2.0 -> ETH oracle committee members and the rest of the protocol,
+This oracle contract serves as a bridge between ETH 2.0 -> ETH oracle committee members and the rest of the protocol,
 implementing quorum between the members. The oracle committee members report balances controlled by the DAO
 on the ETH 2.0 side, which can go up because of reward accumulation and can go down due to slashing.
 
@@ -164,8 +166,6 @@ transactions will revert:
 
 Address of the pool contract.
 
-* Mutator: `setPool(address)`
-  * Permission required: `SET_POOL`
 * Accessor: `pool() returns (address)`
 
 
@@ -224,8 +224,6 @@ Allows to report that `_stoppedIncrement` more validators of a staking provider 
 
 Address of the pool contract.
 
-* Mutator: `setPool(address)`
-  * Permission required: `SET_POOL`
 * Accessor: `pool() returns (address)`
 
 

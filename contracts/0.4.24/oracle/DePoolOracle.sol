@@ -34,7 +34,6 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
     bytes32 constant public MANAGE_MEMBERS = keccak256("MANAGE_MEMBERS");
     bytes32 constant public MANAGE_QUORUM = keccak256("MANAGE_QUORUM");
     bytes32 constant public SET_REPORT_INTERVAL_DURATION = keccak256("SET_REPORT_INTERVAL_DURATION");
-    bytes32 constant public SET_POOL = keccak256("SET_POOL");
 
     /// @dev Maximum number of oracle committee members
     uint256 public constant MAX_MEMBERS = 256;
@@ -61,18 +60,14 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
 
     uint256 private reportIntervalDuration;
 
-    function initialize() public onlyInit {
+    /**
+      * @notice `_pool` is the `DePool` contract address, set by template
+      */
+    function initialize(address _pool) public onlyInit {
         assert(1 == ((1 << (MAX_MEMBERS - 1)) >> (MAX_MEMBERS - 1)));   // static assert
+        pool = IDePool(_pool);
         reportIntervalDuration = REPORT_INTERVAL_DURATION;
         initialized();
-    }
-
-    /**
-      * @notice Set the pool address to `_pool`
-      */
-    function setPool(address _pool) external auth(SET_POOL) {
-        require(isContract(_pool), "POOL_NOT_CONTRACT");
-        pool = IDePool(_pool);
     }
 
     /**

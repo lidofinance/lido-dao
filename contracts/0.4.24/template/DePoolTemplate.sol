@@ -65,7 +65,7 @@ contract DePoolTemplate is BaseTemplate {
         address[] _holders,
         uint256[] _stakes,
         uint64[3] _votingSettings,
-        address _ETH2ValidatorRegistrationContract,
+        address _depositContractAddress,
         uint256 _depositIterationLimit
     )
         external
@@ -77,17 +77,12 @@ contract DePoolTemplate is BaseTemplate {
         // setup apps
         token = _createToken(_tokenName, _tokenSymbol, TOKEN_DECIMALS);
         (dao, acl) = _createDAO();
-        _setupApps(_votingSettings, _ETH2ValidatorRegistrationContract, _depositIterationLimit);
+        _setupApps(_votingSettings, _depositContractAddress, _depositIterationLimit);
 
-        // oracle setPool
-        _createPermissionForTemplate(acl, oracle, oracle.SET_POOL());
-        oracle.setPool(depool);
-        _removePermissionFromTemplate(acl, oracle, oracle.SET_POOL());
-
-        // StakingProvidersRegistry setPool
-        _createPermissionForTemplate(acl, sps, sps.SET_POOL());
-        sps.setPool(depool);
-        _removePermissionFromTemplate(acl, sps, sps.SET_POOL());
+        // depool setApps
+        _createPermissionForTemplate(acl, depool, depool.SET_APPS());
+        depool.setApps(steth, oracle, sps);
+        _removePermissionFromTemplate(acl, depool, depool.SET_APPS());
 
         _mintTokens(acl, tokenManager, _holders, _stakes);
 
@@ -101,7 +96,7 @@ contract DePoolTemplate is BaseTemplate {
 
     function _setupApps(
         uint64[3] memory _votingSettings,
-        address _ETH2ValidatorRegistrationContract,
+        address _depositContractAddress,
         uint256 _depositIterationLimit
     )
         internal
@@ -111,24 +106,21 @@ contract DePoolTemplate is BaseTemplate {
         tokenManager = _installTokenManagerApp(dao, token, TOKEN_TRANSFERABLE, TOKEN_MAX_PER_ACCOUNT);
         voting = _installVotingApp(dao, token, _votingSettings);
 
-        bytes memory initializeData = abi.encodeWithSelector(StETH(0).initialize.selector);
-        steth = StETH(_installNonDefaultApp(dao, STETH_APP_ID, initializeData));
-
-        initializeData = abi.encodeWithSelector(DePoolOracle(0).initialize.selector);
-        oracle = DePoolOracle(_installNonDefaultApp(dao, DEPOOLORACLE_APP_ID, initializeData));
-
-        initializeData = abi.encodeWithSelector(StakingProvidersRegistry(0).initialize.selector);
-        sps = StakingProvidersRegistry(_installNonDefaultApp(dao, REGISTRY_APP_ID, initializeData));
-
-        initializeData = abi.encodeWithSelector(
+        bytes memory initializeData = abi.encodeWithSelector(
             DePool(0).initialize.selector,
-            steth,
-            _ETH2ValidatorRegistrationContract,
-            oracle,
-            sps,
+            _depositContractAddress,
             _depositIterationLimit
         );
         depool = DePool(_installNonDefaultApp(dao, DEPOOL_APP_ID, initializeData));
+        
+        initializeData = abi.encodeWithSelector(StETH(0).initialize.selector, depool);
+        steth = StETH(_installNonDefaultApp(dao, STETH_APP_ID, initializeData));
+
+        initializeData = abi.encodeWithSelector(DePoolOracle(0).initialize.selector, depool);
+        oracle = DePoolOracle(_installNonDefaultApp(dao, DEPOOLORACLE_APP_ID, initializeData));
+
+        initializeData = abi.encodeWithSelector(StakingProvidersRegistry(0).initialize.selector, depool);
+        sps = StakingProvidersRegistry(_installNonDefaultApp(dao, REGISTRY_APP_ID, initializeData));
     }
 
     function _setupPermissions(
@@ -152,7 +144,6 @@ contract DePoolTemplate is BaseTemplate {
         acl.createPermission(voting, oracle, oracle.MANAGE_MEMBERS(), voting);
         acl.createPermission(voting, oracle, oracle.MANAGE_QUORUM(), voting);
         acl.createPermission(voting, oracle, oracle.SET_REPORT_INTERVAL_DURATION(), voting);
-        acl.createPermission(voting, oracle, oracle.SET_POOL(), voting);
 
         // StakingProvidersRegistry
         acl.createPermission(voting, sps, sps.MANAGE_SIGNING_KEYS(), voting);
@@ -162,13 +153,12 @@ contract DePoolTemplate is BaseTemplate {
         acl.createPermission(voting, sps, sps.SET_STAKING_PROVIDER_ADDRESS_ROLE(), voting);
         acl.createPermission(voting, sps, sps.SET_STAKING_PROVIDER_LIMIT_ROLE(), voting);
         acl.createPermission(voting, sps, sps.REPORT_STOPPED_VALIDATORS_ROLE(), voting);
-        acl.createPermission(voting, sps, sps.SET_POOL(), voting);
 
         // Pool
         acl.createPermission(voting, depool, depool.PAUSE_ROLE(), voting);
         acl.createPermission(voting, depool, depool.MANAGE_FEE(), voting);
         acl.createPermission(voting, depool, depool.MANAGE_WITHDRAWAL_KEY(), voting);
-        acl.createPermission(voting, depool, depool.SET_ORACLE(), voting);
+        acl.createPermission(voting, depool, depool.SET_APPS(), voting);
         acl.createPermission(voting, depool, depool.SET_DEPOSIT_ITERATION_LIMIT(), voting);
     }
 

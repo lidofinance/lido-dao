@@ -31,7 +31,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     bytes32 constant public PAUSE_ROLE = keccak256("PAUSE_ROLE");
     bytes32 constant public MANAGE_FEE = keccak256("MANAGE_FEE");
     bytes32 constant public MANAGE_WITHDRAWAL_KEY = keccak256("MANAGE_WITHDRAWAL_KEY");
-    bytes32 constant public SET_ORACLE = keccak256("SET_ORACLE");
+    bytes32 constant public SET_APPS = keccak256("SET_APPS");
     bytes32 constant public SET_DEPOSIT_ITERATION_LIMIT = keccak256("SET_DEPOSIT_ITERATION_LIMIT");
 
     uint256 constant public PUBKEY_LENGTH = 48;
@@ -85,19 +85,10 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         uint256 initialUsedSigningKeys; // for write-back control
     }
 
-    function initialize(
-        ISTETH _token,
-        IValidatorRegistration validatorRegistration,
-        address _oracle,
-        IStakingProvidersRegistry _sps,
-        uint256 _depositIterationLimit
-    )
+    function initialize(address _depositContractAddress, uint256 _depositIterationLimit)
         public onlyInit
     {
-        _setToken(_token);
-        _setValidatorRegistrationContract(validatorRegistration);
-        _setOracle(_oracle);
-        _setSPs(_sps);
+        _setValidatorRegistrationContract(_depositContractAddress);
         _setDepositIterationLimit(_depositIterationLimit);
 
         initialized();
@@ -166,11 +157,16 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @notice Set authorized oracle contract address to `_oracle`
-      * @dev Contract specified here must periodically make `reportEther2` calls.
+      * @notice Set authorized app contracts addresses
+      * @dev `_oracle` contract specified here must periodically make `reportEther2` calls.
+      * @param _token `stETH` contract address
+      * @param _oracle `DePoolOracle` contract address
+      * @param _sps `StakingProvidersRegistry` contract address
       */
-    function setOracle(address _oracle) external auth(SET_ORACLE) {
+    function setApps(address _token, address _oracle, address _sps) external auth(SET_APPS) {
+        _setToken(_token);
         _setOracle(_oracle);
+        _setSPs(_sps);
     }
 
     /**
@@ -365,17 +361,17 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     /**
       * @dev Sets liquid token interface handle
       */
-    function _setToken(ISTETH _token) internal {
-        require(isContract(address(_token)), "NOT_A_CONTRACT");
-        TOKEN_VALUE_POSITION.setStorageAddress(address(_token));
+    function _setToken(address _token) internal {
+        require(isContract(_token), "NOT_A_CONTRACT");
+        TOKEN_VALUE_POSITION.setStorageAddress(_token);
     }
 
     /**
       * @dev Sets validator registration contract handle
       */
-    function _setValidatorRegistrationContract(IValidatorRegistration _contract) internal {
-        require(isContract(address(_contract)), "NOT_A_CONTRACT");
-        VALIDATOR_REGISTRATION_VALUE_POSITION.setStorageAddress(address(_contract));
+    function _setValidatorRegistrationContract(address _contract) internal {
+        require(isContract(_contract), "NOT_A_CONTRACT");
+        VALIDATOR_REGISTRATION_VALUE_POSITION.setStorageAddress(_contract);
     }
 
     /**
@@ -389,7 +385,7 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     /**
       * @dev Internal function to set staking provider registry address
       */
-    function _setSPs(IStakingProvidersRegistry _r) internal {
+    function _setSPs(address _r) internal {
         require(isContract(_r), "NOT_A_CONTRACT");
         SP_REGISTRY_VALUE_POSITION.setStorageAddress(_r);
     }
