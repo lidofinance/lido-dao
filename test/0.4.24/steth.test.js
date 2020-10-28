@@ -263,6 +263,26 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
       assertBn(await stEth.balanceOf(user2, { from: nobody }), tokens(4))
     })
 
+    it('allowance behavior is correct after slashing', async () => {
+      await stEth.approve(user2, tokens(750), { from: user1 })
+
+      await dePool.setTotalControlledEther(tokens(500))
+
+      assertBn(await stEth.balanceOf(user1, { from: nobody }), tokens(500))
+      assertBn(await stEth.getSharesByHolder(user1, { from: nobody }), tokens(1000))
+
+      assertBn(await stEth.allowance(user1, user2, { from: nobody }), tokens(750))
+
+      await assertRevert(stEth.transferFrom(user1, user2, tokens(750), { from: user2 }))
+      await assertRevert(stEth.transferFrom(user1, user2, bn(tokens(500)).addn(100), { from: user2 }))
+      await stEth.transferFrom(user1, user2, tokens(500), { from: user2 })
+
+      assertBn(await stEth.balanceOf(user1, { from: nobody }), tokens(0))
+      assertBn(await stEth.getSharesByHolder(user1, { from: nobody }), tokens(0))
+      assertBn(await stEth.balanceOf(user2, { from: nobody }), tokens(500))
+      assertBn(await stEth.getSharesByHolder(user2, { from: nobody }), tokens(1000))
+    })
+
     context('mint', () => {
       it('minting works', async () => {
         await stEth.mint(user1, tokens(12), { from: pool })
