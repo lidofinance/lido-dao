@@ -144,6 +144,7 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
     function setReportIntervalDuration(uint256 _reportIntervalDuration) external auth(SET_REPORT_INTERVAL_DURATION) {
         require(_reportIntervalDuration > 0, "ZERO_REPORT_INTERVAL_DURATION");
         reportIntervalDuration = _reportIntervalDuration;
+        emit ReportIntervalDurationChanged(_reportIntervalDuration);
     }
 
     /**
