@@ -42,14 +42,14 @@ async function deployDaoAndPool(appManager, voting, depositIterationLimit = 10) 
   // Initialize the token, the SP registry and the pool
 
   await token.initialize(pool.address)
-  await spRegistry.initialize()
+  await spRegistry.initialize(pool.address)
 
   const [
+    POOL_SET_APPS,
     POOL_PAUSE_ROLE,
     POOL_MANAGE_FEE,
     POOL_MANAGE_WITHDRAWAL_KEY,
     POOL_SET_DEPOSIT_ITERATION_LIMIT,
-    SP_REGISTRY_SET_POOL,
     SP_REGISTRY_MANAGE_SIGNING_KEYS,
     SP_REGISTRY_ADD_STAKING_PROVIDER_ROLE,
     SP_REGISTRY_SET_STAKING_PROVIDER_ACTIVE_ROLE,
@@ -60,11 +60,11 @@ async function deployDaoAndPool(appManager, voting, depositIterationLimit = 10) 
     TOKEN_MINT_ROLE,
     TOKEN_BURN_ROLE
   ] = await Promise.all([
+    pool.SET_APPS(),
     pool.PAUSE_ROLE(),
     pool.MANAGE_FEE(),
     pool.MANAGE_WITHDRAWAL_KEY(),
     pool.SET_DEPOSIT_ITERATION_LIMIT(),
-    spRegistry.SET_POOL(),
     spRegistry.MANAGE_SIGNING_KEYS(),
     spRegistry.ADD_STAKING_PROVIDER_ROLE(),
     spRegistry.SET_STAKING_PROVIDER_ACTIVE_ROLE(),
@@ -78,12 +78,12 @@ async function deployDaoAndPool(appManager, voting, depositIterationLimit = 10) 
 
   await Promise.all([
     // Allow voting to manage the pool
+    acl.createPermission(voting, pool.address, POOL_SET_APPS, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, POOL_PAUSE_ROLE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, POOL_MANAGE_FEE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, POOL_MANAGE_WITHDRAWAL_KEY, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, POOL_SET_DEPOSIT_ITERATION_LIMIT, appManager, { from: appManager }),
     // Allow voting to manage staking providers registry
-    acl.createPermission(voting, spRegistry.address, SP_REGISTRY_SET_POOL, appManager, { from: appManager }),
     acl.createPermission(voting, spRegistry.address, SP_REGISTRY_MANAGE_SIGNING_KEYS, appManager, { from: appManager }),
     acl.createPermission(voting, spRegistry.address, SP_REGISTRY_ADD_STAKING_PROVIDER_ROLE, appManager, { from: appManager }),
     acl.createPermission(voting, spRegistry.address, SP_REGISTRY_SET_STAKING_PROVIDER_ACTIVE_ROLE, appManager, { from: appManager }),
@@ -96,10 +96,10 @@ async function deployDaoAndPool(appManager, voting, depositIterationLimit = 10) 
     acl.createPermission(pool.address, token.address, TOKEN_BURN_ROLE, appManager, { from: appManager })
   ])
 
-  await pool.initialize(token.address, validatorRegistrationMock.address, oracleMock.address, spRegistry.address, depositIterationLimit)
+  await pool.initialize(validatorRegistrationMock.address, depositIterationLimit)
+  await pool.setApps(token.address, oracleMock.address, spRegistry.address, { from: voting })
 
-  await oracleMock.setPool(pool.address)
-  await spRegistry.setPool(pool.address, { from: voting })
+  await oracleMock.initialize(pool.address)
   await validatorRegistrationMock.reset()
 
   const [treasuryAddr, insuranceAddr] = await Promise.all([pool.getTreasury(), pool.getInsuranceFund()])

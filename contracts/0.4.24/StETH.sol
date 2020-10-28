@@ -50,8 +50,8 @@ contract StETH is ISTETH, Pausable, AragonApp {
         uint256 value
     );
 
-    function initialize(IDePool _dePool) public onlyInit {
-        dePool = _dePool;
+    function initialize(address _pool) public onlyInit {
+        dePool = IDePool(_pool);
         initialized();
     }
 

@@ -9,7 +9,7 @@ import "../../interfaces/IStakingProvidersRegistry.sol";
 contract PoolMock {
     IStakingProvidersRegistry private sps;
 
-    constructor(address _sps) public {
+    function setApps(address _token, address _oracle, address _sps) external {
         sps = IStakingProvidersRegistry(_sps);
     }
 

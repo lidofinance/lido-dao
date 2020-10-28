@@ -6,6 +6,7 @@ const TestStakingProvidersRegistry = artifacts.require('TestStakingProvidersRegi
 const PoolMock = artifacts.require('PoolMock.sol')
 const ERC20Mock = artifacts.require('ERC20Mock.sol')
 
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
 const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
 const ADDRESS_3 = '0x0000000000000000000000000000000000000003'
@@ -31,7 +32,7 @@ const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 const tokens = ETH
 
 contract('StakingProvidersRegistry', ([appManager, voting, user1, user2, user3, nobody]) => {
-  let appBase, app
+  let appBase, app, pool
 
   before('deploy base app', async () => {
     // Deploy the app's base contract.
@@ -40,13 +41,13 @@ contract('StakingProvidersRegistry', ([appManager, voting, user1, user2, user3, 
 
   beforeEach('deploy dao and app', async () => {
     const { dao, acl } = await newDao(appManager)
+    pool = await PoolMock.new()
 
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
     const proxyAddress = await newApp(dao, 'staking-providers-registry', appBase.address, appManager)
     app = await TestStakingProvidersRegistry.at(proxyAddress)
 
     // Set up the app's permissions.
-    await acl.createPermission(voting, app.address, await app.SET_POOL(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.MANAGE_SIGNING_KEYS(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.ADD_STAKING_PROVIDER_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_STAKING_PROVIDER_ACTIVE_ROLE(), appManager, { from: appManager })
@@ -56,7 +57,8 @@ contract('StakingProvidersRegistry', ([appManager, voting, user1, user2, user3, 
     await acl.createPermission(voting, app.address, await app.REPORT_STOPPED_VALIDATORS_ROLE(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
-    await app.initialize()
+    await app.initialize(pool.address)
+    await pool.setApps(ZERO_ADDRESS, ZERO_ADDRESS, app.address)
   })
 
   it('addStakingProvider works', async () => {
@@ -219,8 +221,6 @@ contract('StakingProvidersRegistry', ([appManager, voting, user1, user2, user3, 
       from: voting
     })
 
-    const pool = await PoolMock.new(app.address)
-    await app.setPool(pool.address, { from: voting })
     await pool.updateUsedKeys([0, 1], [2, 1])
 
     await assertRevert(app.reportStoppedValidators(0, 1, { from: user1 }), 'APP_AUTH_FAILED')
@@ -261,9 +261,6 @@ contract('StakingProvidersRegistry', ([appManager, voting, user1, user2, user3, 
       from: voting
     })
 
-    const pool = await PoolMock.new(app.address)
-    await app.setPool(pool.address, { from: voting })
-
     await pool.updateUsedKeys([1], [1])
     assertBn(await app.getUnusedSigningKeyCount(0, { from: nobody }), 2)
     assertBn(await app.getUnusedSigningKeyCount(1, { from: nobody }), 1)
@@ -292,9 +289,6 @@ contract('StakingProvidersRegistry', ([appManager, voting, user1, user2, user3, 
     await app.addSigningKeys(1, 2, hexConcat(pad('0x050505', 48), pad('0x060606', 48)), hexConcat(pad('0x04', 96), pad('0x03', 96)), {
       from: voting
     })
-
-    const pool = await PoolMock.new(app.address)
-    await app.setPool(pool.address, { from: voting })
 
     await pool.updateUsedKeys([1], [1])
     await pool.trimUnusedKeys()
@@ -489,9 +483,6 @@ contract('StakingProvidersRegistry', ([appManager, voting, user1, user2, user3, 
     await app.addSigningKeys(2, 2, hexConcat(pad('0x070707', 48), pad('0x080808', 48)), hexConcat(pad('0x05', 96), pad('0x06', 96)), {
       from: voting
     })
-
-    const pool = await PoolMock.new(app.address)
-    await app.setPool(pool.address, { from: voting })
 
     await pool.updateUsedKeys([0, 1, 2], [2, 2, 2])
 
