@@ -33,6 +33,7 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
     /// ACL
     bytes32 constant public MANAGE_MEMBERS = keccak256("MANAGE_MEMBERS");
     bytes32 constant public MANAGE_QUORUM = keccak256("MANAGE_QUORUM");
+    bytes32 constant public SET_REPORT_INTERVAL_DURATION = keccak256("SET_REPORT_INTERVAL_DURATION");
     bytes32 constant public SET_POOL = keccak256("SET_POOL");
 
     /// @dev Maximum number of oracle committee members
@@ -58,8 +59,11 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
     uint256 private contributionBitMask;
     uint256[] private currentlyAggregatedData;  // only indexes set in contributionBitMask are valid
 
+    uint256 private reportIntervalDuration;
+
     function initialize() public onlyInit {
         assert(1 == ((1 << (MAX_MEMBERS - 1)) >> (MAX_MEMBERS - 1)));   // static assert
+        reportIntervalDuration = REPORT_INTERVAL_DURATION;
         initialized();
     }
 
@@ -135,6 +139,14 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
     }
 
     /**
+      * @notice Set the new report interval duration to `_reportIntervalDuration`
+      */
+    function setReportIntervalDuration(uint256 _reportIntervalDuration) external auth(SET_REPORT_INTERVAL_DURATION) {
+        require(_reportIntervalDuration > 0, "ZERO_REPORT_INTERVAL_DURATION");
+        reportIntervalDuration = _reportIntervalDuration;
+    }
+
+    /**
       * @notice An oracle committee member pushes data from the ETH 2.0 side
       * @param _reportInterval ReportInterval id
       * @param _eth2balance Balance in wei on the ETH 2.0 side
@@ -187,7 +199,7 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
       *      and processed for each reportInterval independently.
       */
     function getReportIntervalDurationSeconds() external view returns (uint256) {
-        return REPORT_INTERVAL_DURATION;
+        return reportIntervalDuration;
     }
 
     /**
@@ -287,8 +299,8 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
       * @dev Returns reportInterval id for a timestamp
       * @param _timestamp Unix timestamp, seconds
       */
-    function _getReportIntervalForTimestamp(uint256 _timestamp) internal pure returns (uint256) {
-        return _timestamp.div(REPORT_INTERVAL_DURATION);
+    function _getReportIntervalForTimestamp(uint256 _timestamp) internal view returns (uint256) {
+        return _timestamp.div(reportIntervalDuration);
     }
 
     /**

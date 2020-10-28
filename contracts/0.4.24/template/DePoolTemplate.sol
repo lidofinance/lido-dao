@@ -151,6 +151,7 @@ contract DePoolTemplate is BaseTemplate {
         // Oracle
         acl.createPermission(voting, oracle, oracle.MANAGE_MEMBERS(), voting);
         acl.createPermission(voting, oracle, oracle.MANAGE_QUORUM(), voting);
+        acl.createPermission(voting, oracle, oracle.SET_REPORT_INTERVAL_DURATION(), voting);
         acl.createPermission(voting, oracle, oracle.SET_POOL(), voting);
 
         // StakingProvidersRegistry
