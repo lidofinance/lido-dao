@@ -35,7 +35,7 @@ async function setStakingProviderActive(spId, status, sender) {
 }
 
 async function setStakingProviderName(spId, name, sender) {
-  await stakingProviderContract.methods.setStakingProviderName().send({ from: sender, gas: '1000000' })
+  await stakingProviderContract.methods.setStakingProviderName(spId, name).send({ from: sender, gas: '1000000' })
 }
 
 async function setStakingProviderRewardAddress(spId, rewardAddress, sender) {
