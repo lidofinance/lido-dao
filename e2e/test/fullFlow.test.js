@@ -316,7 +316,7 @@ test('Full flow test ', async (t) => {
   await dePoolHelper.setWithdrawalCredentials(withdrawalAddress, holder1, quorumHolders)
   t.is(await dePoolHelper.getWithdrawalCredentials(), withdrawalAddress, 'Check that withdrawal credentials were set correctly')
 
-  logger.info('Check that unused signing keys removed from sps after change withdrawal crdentials')
+  logger.info('Check that unused signing keys removed from sps after change withdrawal credentials')
   sp1 = await stakingProvidersHelper.getStakingProvider(0, true)
   sp2 = await stakingProvidersHelper.getStakingProvider(1, true)
   sp3 = await stakingProvidersHelper.getStakingProvider(2, true)
@@ -348,6 +348,7 @@ test('Full flow test ', async (t) => {
   validatorsTestDataForSp4 = concat0x(validatorsTestDataForSp4)
   t.deepEqual(sp4SigningKeys.pubKeys, validatorsTestDataForSp4.pubKeys, 'Check that sp4 signing pubKeys set correct')
   t.deepEqual(sp4SigningKeys.signatures, validatorsTestDataForSp4.signatures, 'Check that sp4 signatures were set correct')
+
   logger.info('Change sp4 name and rewardAddress')
   // await stakingProvidersHelper.setStakingProviderName(3, 'newName', spsMember4)
   await stakingProvidersHelper.setStakingProviderRewardAddress(3, spsMember5, spsMember4)
@@ -365,12 +366,15 @@ test('Full flow test ', async (t) => {
     (+ETH(20 * 32) - +ETH(16 * 32)).toString(),
     'Check that the rest of the deposited Ether is still buffered in the dePool due to iteration limit '
   )
+  // When oracle`s push data was submitted at the first time,
+  // the total  total controlled ether is changing after next oracle pushData,
+  // but buffered ether is displaying in total controlled ether
   t.is(
     await dePoolHelper.getTotalControlledEther(),
     BN(oracleData)
       .add(BN(ETH(4 * 32)))
       .toString(),
-    'Total controlled ether in dePool'
+    'Check that the total controlled ether in dePool is correct'
   )
   t.is(
     ether2Stat.deposited,
@@ -453,12 +457,12 @@ test('Full flow test ', async (t) => {
     'Check that the insurance fund receive appropriate amount of tokens by validators rewards'
   )
 
-  logger.info('Increase staking limit for and sp4')
+  logger.info('Increase staking limit for sp4')
   await stakingProvidersHelper.setStakingProviderStakingLimit(3, 50, spsMember4)
   sp4 = await stakingProvidersHelper.getStakingProvider(3, true)
   t.is(sp4.stakingLimit, '50', 'Check that the sp4 staking limit increased correctly')
 
-  logger.info('Reduce the staking limit for an sp4')
+  logger.info('Reduce the staking limit for sp4')
   await stakingProvidersHelper.setStakingProviderStakingLimit(3, +sp4.usedSigningKeys, spsMember4)
   sp4 = await stakingProvidersHelper.getStakingProvider(3, true)
   t.is(sp4.stakingLimit, sp4.usedSigningKeys, 'Check that the sp4 staking limit reduced correctly')
@@ -481,7 +485,7 @@ test('Full flow test ', async (t) => {
   logger.info('Check that the validators do not activate if there are no unused signing keys')
   await dePoolHelper.depositToDePoolContract(user2, ETH(64))
   ether2Stat = await dePoolHelper.getEther2Stat()
-  t.is(ether2Stat.deposited, usersDeposits.toString(), 'Check that the deposited not performed')
+  t.is(ether2Stat.deposited, usersDeposits.toString(), 'Check that the deposit not performed')
   t.is(await dePoolHelper.getBufferedEther(), ETH(64), 'Check that the deposited Ether is buffered due to no unused keys')
 
   // TODO Test insurance (pending for the actual insurance)
