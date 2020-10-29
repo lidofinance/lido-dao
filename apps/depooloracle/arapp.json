@@ -11,6 +11,11 @@
       "params": []
     },
     {
+      "name": "Set the new report interval duration",
+      "id": "SET_REPORT_INTERVAL_DURATION",
+      "params": []
+    },
+    {
       "name": "Sets the pool address to notify",
       "id": "SET_POOL",
       "params": []
