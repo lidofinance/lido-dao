@@ -107,7 +107,7 @@ async function deploy({
   // const estimatedGas = await newInstanceTx.estimateGas()
   // log(estimatedGas)
 
-  console.log('Deploying DePool DAO ...')
+  console.log('Deploying DePool DAO contract...')
   const receipt = await template.newDAO(
     dePoolDaoName,
     TOKEN_NAME,
