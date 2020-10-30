@@ -4,7 +4,7 @@ pragma solidity 0.4.24;
 /**
   * @title Liquid version of ETH 2.0 native token
   *
-  * ERC20 token which supports stop/resume, mint/burn mechanics. The token is operated by `IDePool`.
+  * ERC20 token which supports stop/resume, mint/burn mechanics. The token is operated by `ILido`.
   */
 interface ISTETH /* is IERC20 */ {
     function totalSupply() external view returns (uint256);

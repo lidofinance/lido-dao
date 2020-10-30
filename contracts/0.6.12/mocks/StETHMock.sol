@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20Burnable.sol";
 
 
 contract StETHMock is ERC20, ERC20Burnable {
-    constructor() public ERC20("Liquid staked DePool Ether", "StETH") {}
+    constructor() public ERC20("Liquid staked Lido Ether", "StETH") {}
 
     uint256 public totalShares;
     uint256 public totalControlledEther;

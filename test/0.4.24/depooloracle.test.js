@@ -3,7 +3,7 @@ const { newDao, newApp } = require('./helpers/dao')
 const { assertBn, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
 const { bn } = require('@aragon/contract-helpers-test')
 
-const DePoolOracle = artifacts.require('TestDePoolOracle.sol')
+const LidoOracle = artifacts.require('TestLidoOracle.sol')
 const Algorithm = artifacts.require('TestAlgorithm.sol')
 
 contract('Algorithm', ([testUser]) => {
@@ -30,7 +30,7 @@ contract('Algorithm', ([testUser]) => {
   })
 })
 
-contract('DePoolOracle', ([appManager, voting, user1, user2, user3, user4, nobody]) => {
+contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]) => {
   let appBase, app
 
   const assertData = async (reportInterval, eth) => {
@@ -41,15 +41,15 @@ contract('DePoolOracle', ([appManager, voting, user1, user2, user3, user4, nobod
 
   before('deploy base app', async () => {
     // Deploy the app's base contract.
-    appBase = await DePoolOracle.new()
+    appBase = await LidoOracle.new()
   })
 
   beforeEach('deploy dao and app', async () => {
     const { dao, acl } = await newDao(appManager)
 
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
-    const proxyAddress = await newApp(dao, 'depooloracle', appBase.address, appManager)
-    app = await DePoolOracle.at(proxyAddress)
+    const proxyAddress = await newApp(dao, 'lidooracle', appBase.address, appManager)
+    app = await LidoOracle.at(proxyAddress)
 
     // Set up the app's permissions.
     await acl.createPermission(voting, app.address, await app.MANAGE_MEMBERS(), appManager, { from: appManager })

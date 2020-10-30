@@ -1,13 +1,13 @@
 pragma solidity 0.4.24;
 
-import "../DePool.sol";
+import "../Lido.sol";
 import "./VaultMock.sol";
 
 
 /**
- * @dev Only for testing purposes! DePool version with some functions exposed.
+ * @dev Only for testing purposes! Lido version with some functions exposed.
  */
-contract DePoolMock is DePool {
+contract LidoMock is Lido {
     function getTotalControlledEther() external view returns (uint256) {
         return totalControlledEther;
     }

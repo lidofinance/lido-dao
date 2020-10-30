@@ -10,7 +10,7 @@ pragma solidity 0.4.24;
   * only a small portion (buffer) of it.
   * It also mints new tokens for rewards generated at the ETH 2.0 side.
   */
-interface IDePool {
+interface ILido {
     /**
       * @notice Stop pool routine operations
       */

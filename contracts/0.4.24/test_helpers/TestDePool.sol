@@ -1,13 +1,13 @@
 pragma solidity 0.4.24;
 
-import "../DePool.sol";
+import "../Lido.sol";
 import "./VaultMock.sol";
 
 
 /**
-  * @dev Only for testing purposes! DePool version with some functions exposed.
+  * @dev Only for testing purposes! Lido version with some functions exposed.
   */
-contract TestDePool is DePool {
+contract TestLido is Lido {
     address private treasury;
     address private insurance;
 

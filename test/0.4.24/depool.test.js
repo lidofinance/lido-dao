@@ -7,7 +7,7 @@ const { BN } = require('bn.js')
 const StETH = artifacts.require('StETH.sol') // we can just import due to StETH imported in test_helpers/Imports.sol
 const StakingProvidersRegistry = artifacts.require('StakingProvidersRegistry')
 
-const DePool = artifacts.require('TestDePool.sol')
+const Lido = artifacts.require('TestLido.sol')
 const OracleMock = artifacts.require('OracleMock.sol')
 const ValidatorRegistrationMock = artifacts.require('ValidatorRegistrationMock.sol')
 
@@ -38,13 +38,13 @@ const div15 = (bn) => bn.div(new BN(1000000)).div(new BN(1000000)).div(new BN(10
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 const tokens = ETH
 
-contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
+contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
   let appBase, stEthBase, stakingProvidersRegistryBase, app, token, oracle, validatorRegistration, sps
   let treasuryAddr, insuranceAddr
 
   before('deploy base app', async () => {
     // Deploy the app's base contract.
-    appBase = await DePool.new()
+    appBase = await Lido.new()
     stEthBase = await StETH.new()
     oracle = await OracleMock.new()
     validatorRegistration = await ValidatorRegistrationMock.new()
@@ -60,8 +60,8 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await sps.initialize()
 
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
-    proxyAddress = await newApp(dao, 'depool', appBase.address, appManager)
-    app = await DePool.at(proxyAddress)
+    proxyAddress = await newApp(dao, 'lido', appBase.address, appManager)
+    app = await Lido.at(proxyAddress)
 
     // token
     proxyAddress = await newApp(dao, 'steth', stEthBase.address, appManager)

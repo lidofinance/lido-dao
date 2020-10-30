@@ -1,7 +1,7 @@
 const { newDao, newApp } = require('../../0.4.24/helpers/dao')
 
 const StETH = artifacts.require('StETH.sol')
-const DePool = artifacts.require('TestDePool.sol')
+const Lido = artifacts.require('TestLido.sol')
 const StakingProvidersRegistry = artifacts.require('StakingProvidersRegistry')
 
 const OracleMock = artifacts.require('OracleMock.sol')
@@ -13,14 +13,14 @@ module.exports = {
 
 async function deployDaoAndPool(appManager, voting, depositIterationLimit = 10) {
   // Deploy the DAO, oracle and validator registration mocks, and base contracts for
-  // StETH (the token), DePool (the pool) and StakingProvidersRegistry (the SP registry)
+  // StETH (the token), Lido (the pool) and StakingProvidersRegistry (the SP registry)
 
   const [{ dao, acl }, oracleMock, validatorRegistrationMock, stEthBase, poolBase, spRegistryBase] = await Promise.all([
     newDao(appManager),
     OracleMock.new(),
     ValidatorRegistrationMock.new(),
     StETH.new(),
-    DePool.new(),
+    Lido.new(),
     StakingProvidersRegistry.new()
   ])
 
@@ -29,13 +29,13 @@ async function deployDaoAndPool(appManager, voting, depositIterationLimit = 10) 
 
   const [tokenProxyAddress, poolProxyAddress, spRegistryProxyAddress] = await Promise.all([
     newApp(dao, 'steth', stEthBase.address, appManager),
-    newApp(dao, 'depool', poolBase.address, appManager),
+    newApp(dao, 'lido', poolBase.address, appManager),
     newApp(dao, 'staking-providers-registry', spRegistryBase.address, appManager)
   ])
 
   const [token, pool, spRegistry] = await Promise.all([
     StETH.at(tokenProxyAddress),
-    DePool.at(poolProxyAddress),
+    Lido.at(poolProxyAddress),
     StakingProvidersRegistry.at(spRegistryProxyAddress)
   ])
 
