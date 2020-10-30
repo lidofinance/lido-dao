@@ -5,8 +5,8 @@ import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 import "@aragon/os/contracts/common/IsContract.sol";
 
-import "../interfaces/IDePoolOracle.sol";
-import "../interfaces/IDePool.sol";
+import "../interfaces/ILidoOracle.sol";
+import "../interfaces/ILido.sol";
 
 import "./Algorithm.sol";
 import "./BitOps.sol";
@@ -26,7 +26,7 @@ import "./BitOps.sol";
   * It's prohibited to add data to non-current data points whatever finalized or not.
   * It's prohibited to add data to the current finalized data point.
   */
-contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
+contract LidoOracle is ILidoOracle, IsContract, AragonApp {
     using SafeMath for uint256;
     using BitOps for uint256;
 
@@ -48,7 +48,7 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
     uint256 private quorum;
 
     /// @dev link to the pool
-    IDePool public pool;
+    ILido public pool;
 
     // data describing last finalized data point
     uint256 private lastFinalizedReportInterval;
@@ -72,7 +72,7 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
       */
     function setPool(address _pool) external auth(SET_POOL) {
         require(isContract(_pool), "POOL_NOT_CONTRACT");
-        pool = IDePool(_pool);
+        pool = ILido(_pool);
     }
 
     /**
@@ -258,7 +258,7 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
         if (!isUnimodal)
             return;
 
-        // finalizing and reporting mode value to depool
+        // finalizing and reporting mode value to lido
         lastFinalizedData = mode;
         lastFinalizedReportInterval = _reportInterval;
 

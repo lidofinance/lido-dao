@@ -4,17 +4,17 @@ const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helper
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 
 const StETH = artifacts.require('StETH')
-const DePoolMock = artifacts.require('DePoolMock')
+const LidoMock = artifacts.require('LidoMock')
 
 const tokens = (value) => web3.utils.toWei(value + '', 'ether')
 
 contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
-  let dePool, dePoolBase, stEth, stEthBase
+  let lido, lidoBase, stEth, stEthBase
 
   before('deploy base app', async () => {
     // Deploy the app's base contract.
     stEthBase = await StETH.new()
-    dePoolBase = await DePoolMock.new()
+    lidoBase = await LidoMock.new()
   })
 
   beforeEach('deploy dao and app', async () => {
@@ -28,12 +28,12 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
     await acl.createPermission(pool, stEth.address, await stEth.MINT_ROLE(), appManager, { from: appManager })
     await acl.createPermission(pool, stEth.address, await stEth.BURN_ROLE(), appManager, { from: appManager })
 
-    const dePoolProxyAddress = await newApp(dao, 'depool', dePoolBase.address, appManager)
-    dePool = await DePoolMock.at(dePoolProxyAddress)
+    const lidoProxyAddress = await newApp(dao, 'lido', lidoBase.address, appManager)
+    lido = await LidoMock.at(lidoProxyAddress)
 
     // Initialize the app's proxy.
-    await stEth.initialize(dePool.address)
-    await dePool.initialize(stEth.address)
+    await stEth.initialize(lido.address)
+    await lido.initialize(stEth.address)
   })
 
   context('ERC20 methods', () => {
@@ -51,7 +51,7 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
     context('with non-zero supply', async () => {
       beforeEach(async () => {
         await stEth.mint(user1, tokens(1000), { from: pool })
-        await dePool.setTotalControlledEther(tokens(1000))
+        await lido.setTotalControlledEther(tokens(1000))
       })
 
       it('balances are correct', async () => {
@@ -222,7 +222,7 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
   context('with non-zero supply', async () => {
     beforeEach(async () => {
       await stEth.mint(user1, tokens(1000), { from: pool })
-      await dePool.setTotalControlledEther(tokens(1000)) // assume this is done by depool
+      await lido.setTotalControlledEther(tokens(1000)) // assume this is done by lido
     })
 
     it('stop/resume works', async () => {
@@ -266,7 +266,7 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
     it('allowance behavior is correct after slashing', async () => {
       await stEth.approve(user2, tokens(750), { from: user1 })
 
-      await dePool.setTotalControlledEther(tokens(500))
+      await lido.setTotalControlledEther(tokens(500))
 
       assertBn(await stEth.balanceOf(user1, { from: nobody }), tokens(500))
       assertBn(await stEth.getSharesByHolder(user1, { from: nobody }), tokens(1000))
@@ -286,7 +286,7 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
     context('mint', () => {
       it('minting works', async () => {
         await stEth.mint(user1, tokens(12), { from: pool })
-        await dePool.setTotalControlledEther(tokens(1012)) // done dy depool
+        await lido.setTotalControlledEther(tokens(1012)) // done dy lido
 
         assertBn(await stEth.totalSupply(), tokens(1012))
         assertBn(await stEth.balanceOf(user1, { from: nobody }), tokens(1012))
@@ -296,7 +296,7 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
         assertBn(await stEth.getSharesByHolder(user2, { from: nobody }), tokens(0))
 
         await stEth.mint(user2, tokens(4), { from: pool })
-        await dePool.setTotalControlledEther(tokens(1016)) // done dy depool
+        await lido.setTotalControlledEther(tokens(1016)) // done dy lido
 
         assertBn(await stEth.totalSupply(), tokens(1016))
         assertBn(await stEth.balanceOf(user1, { from: nobody }), tokens(1012))
@@ -320,9 +320,9 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
         // user1 already had 1000 tokens
         // 1000 + 1000 + 1000 = 3000
         await stEth.mint(user2, tokens(1000), { from: pool })
-        await dePool.setTotalControlledEther(tokens(2000)) // assume this is done by depool
+        await lido.setTotalControlledEther(tokens(2000)) // assume this is done by lido
         await stEth.mint(user3, tokens(1000), { from: pool })
-        await dePool.setTotalControlledEther(tokens(3000)) // assume this is done by depool
+        await lido.setTotalControlledEther(tokens(3000)) // assume this is done by lido
       })
 
       it('reverts when burn from zero address', async () => {
@@ -375,7 +375,7 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
   context('share-related getters', async () => {
     context('with zero totalControlledEther (supply)', async () => {
       beforeEach(async () => {
-        await dePool.setTotalControlledEther(tokens(0))
+        await lido.setTotalControlledEther(tokens(0))
       })
 
       it('getTotalSupply', async () => {
@@ -410,7 +410,7 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
     context('with non-zero totalControlledEther (supply)', async () => {
       beforeEach(async () => {
         await stEth.mint(user1, tokens(1000), { from: pool })
-        await dePool.setTotalControlledEther(tokens(1000))
+        await lido.setTotalControlledEther(tokens(1000))
       })
 
       it('getTotalSupply', async () => {

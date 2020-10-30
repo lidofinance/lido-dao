@@ -12,9 +12,9 @@ All existing levers are listed below, grouped by the contract.
 The following contracts are upgradeable by the DAO voting:
 
 * `contracts/0.4.24/StETH.sol`
-* `contracts/0.4.24/DePool.sol`
+* `contracts/0.4.24/Lido.sol`
 * `contracts/0.4.24/StakingProvidersRegistry.sol`
-* `contracts/0.4.24/DePoolOracle.sol`
+* `contracts/0.4.24/LidoOracle.sol`
 
 Upgradeability is implemented by the Aragon kernel and base contracts. To upgrade an app, one needs
 the `dao.APP_MANAGER_ROLE` permission provided by Aragon. All upgradeable contracts use the
@@ -36,7 +36,7 @@ The following contracts are not upgradeable and don't depend on the Aragon code:
 * Mutator: `burn(address _account, uint256 _value)`
   * Permission required: `BURN_ROLE`
 
-Initially, only the `DePool.sol` contract is authorized to mint and burn tokens, but the DAO can
+Initially, only the `Lido.sol` contract is authorized to mint and burn tokens, but the DAO can
 vote to grant these permissions to other actors.
 
 
@@ -58,7 +58,7 @@ transfers and changing allowances. Calls of the following functions will revert:
 * `decreaseAllowance(address, uint)`
 
 
-## [DePool.sol](/contracts/0.4.24/DePool.sol)
+## [Lido.sol](/contracts/0.4.24/Lido.sol)
 
 ### Oracle
 
@@ -113,7 +113,7 @@ Controls how many ETH 2.0 validators can be registered in a single transaction.
 * Mutator: `setDepositIterationLimit(uint256)`
   * Permission required: `SET_DEPOSIT_ITERATION_LIMIT`
 * Accessor: `getDepositIterationLimit() returns (uint256)`
-* [Scenario test](/test/scenario/depool_deposit_iteration_limit.js)
+* [Scenario test](/test/scenario/lido_deposit_iteration_limit.js)
 
 When someone submits Ether to the pool, the received Ether gets buffered in the pool contract. If the amount
 of the buffered Ether becomes larger than the ETH 2.0 deposit size (32 ETH), then the pool tries to register
@@ -218,7 +218,7 @@ Allow to manage signing keys for the given staking provider.
 Allows to report that `_stoppedIncrement` more validators of a staking provider have become stopped.
 
 
-## [DePoolOracle.sol](/contracts/0.4.24/oracle/DePoolOracle.sol)
+## [LidoOracle.sol](/contracts/0.4.24/oracle/LidoOracle.sol)
 
 ### Pool
 

@@ -261,7 +261,7 @@ contract('CstETH', function ([deployer, initialHolder, recipient, anotherAccount
   })
 
   describe('ERC20 part', function () {
-    const name = 'Wrapped Liquid staked DePool Ether'
+    const name = 'Wrapped Liquid staked Lido Ether'
     const symbol = 'cstETH'
 
     const initialSupply = new BN(100)

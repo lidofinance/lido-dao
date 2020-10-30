@@ -1,16 +1,16 @@
 pragma solidity 0.4.24;
 
-import "../interfaces/IDePool.sol";
+import "../interfaces/ILido.sol";
 
 
 /**
   * @dev This is a mock. Don't use in production.
   */
 contract OracleMock {
-    IDePool private pool;
+    ILido private pool;
 
     function setPool(address _pool) external {
-        pool = IDePool(_pool);
+        pool = ILido(_pool);
     }
 
     function reportEther2(uint256 _epoch, uint256 _eth2balance) external {

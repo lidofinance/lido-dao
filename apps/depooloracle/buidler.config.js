@@ -18,7 +18,7 @@ module.exports = {
     clientServePort: 3000,
     appSrcPath: 'app/',
     appBuildOutputPath: 'dist/',
-    appName: 'depooloracle',
+    appName: 'lidooracle',
     hooks // Path to script hooks
   }
 }

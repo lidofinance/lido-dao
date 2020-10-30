@@ -7,7 +7,7 @@ import "@aragon/os/contracts/lib/math/SafeMath64.sol";
 import "@aragon/os/contracts/common/IsContract.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
-import "./interfaces/IDePool.sol";
+import "./interfaces/ILido.sol";
 import "./interfaces/ISTETH.sol";
 import "./interfaces/IStakingProvidersRegistry.sol";
 import "./interfaces/IValidatorRegistration.sol";
@@ -18,11 +18,11 @@ import "./lib/Pausable.sol";
 /**
   * @title Liquid staking pool implementation
   *
-  * See the comment of `IDePool`.
+  * See the comment of `ILido`.
   *
   * NOTE: the code below assumes moderate amount of staking providers, e.g. up to 50.
   */
-contract DePool is IDePool, IsContract, Pausable, AragonApp {
+contract Lido is ILido, IsContract, Pausable, AragonApp {
     using SafeMath for uint256;
     using SafeMath64 for uint64;
     using UnstructuredStorage for bytes32;
@@ -43,31 +43,31 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     uint256 internal constant MIN_DEPOSIT_AMOUNT = 1 ether;     // validator_registration.vy
     uint256 internal constant DEPOSIT_AMOUNT_UNIT = 1000000000 wei;     // validator_registration.vy
 
-    bytes32 internal constant FEE_VALUE_POSITION = keccak256("depools.DePool.fee");
-    bytes32 internal constant TREASURY_FEE_VALUE_POSITION = keccak256("depools.DePool.treasuryFee");
-    bytes32 internal constant INSURANCE_FEE_VALUE_POSITION = keccak256("depools.DePool.insuranceFee");
-    bytes32 internal constant SP_FEE_VALUE_POSITION = keccak256("depools.DePool.SPFee");
+    bytes32 internal constant FEE_VALUE_POSITION = keccak256("lido.Lido.fee");
+    bytes32 internal constant TREASURY_FEE_VALUE_POSITION = keccak256("lido.Lido.treasuryFee");
+    bytes32 internal constant INSURANCE_FEE_VALUE_POSITION = keccak256("lido.Lido.insuranceFee");
+    bytes32 internal constant SP_FEE_VALUE_POSITION = keccak256("lido.Lido.SPFee");
 
-    bytes32 internal constant TOKEN_VALUE_POSITION = keccak256("depools.DePool.token");
-    bytes32 internal constant VALIDATOR_REGISTRATION_VALUE_POSITION = keccak256("depools.DePool.validatorRegistration");
-    bytes32 internal constant ORACLE_VALUE_POSITION = keccak256("depools.DePool.oracle");
-    bytes32 internal constant SP_REGISTRY_VALUE_POSITION = keccak256("depools.DePool.spRegistry");
+    bytes32 internal constant TOKEN_VALUE_POSITION = keccak256("lido.Lido.token");
+    bytes32 internal constant VALIDATOR_REGISTRATION_VALUE_POSITION = keccak256("lido.Lido.validatorRegistration");
+    bytes32 internal constant ORACLE_VALUE_POSITION = keccak256("lido.Lido.oracle");
+    bytes32 internal constant SP_REGISTRY_VALUE_POSITION = keccak256("lido.Lido.spRegistry");
 
     /// @dev A base value for tracking earned rewards
-    bytes32 internal constant REWARD_BASE_VALUE_POSITION = keccak256("depools.DePool.rewardBase");
+    bytes32 internal constant REWARD_BASE_VALUE_POSITION = keccak256("lido.Lido.rewardBase");
 
     /// @dev amount of Ether (on the current Ethereum side) buffered on this smart contract balance
-    bytes32 internal constant BUFFERED_ETHER_VALUE_POSITION = keccak256("depools.DePool.bufferedEther");
+    bytes32 internal constant BUFFERED_ETHER_VALUE_POSITION = keccak256("lido.Lido.bufferedEther");
     /// @dev amount of Ether (on the current Ethereum side) deposited to the validator_registration.vy contract
-    bytes32 internal constant DEPOSITED_ETHER_VALUE_POSITION = keccak256("depools.DePool.depositedEther");
+    bytes32 internal constant DEPOSITED_ETHER_VALUE_POSITION = keccak256("lido.Lido.depositedEther");
     /// @dev amount of Ether (on the Ethereum 2.0 side) managed by the system
-    bytes32 internal constant REMOTE_ETHER2_VALUE_POSITION = keccak256("depools.DePool.remoteEther2");
+    bytes32 internal constant REMOTE_ETHER2_VALUE_POSITION = keccak256("lido.Lido.remoteEther2");
 
     /// @dev last epoch reported by the oracle
-    bytes32 internal constant LAST_ORACLE_EPOCH_VALUE_POSITION = keccak256("depools.DePool.lastOracleEpoch");
+    bytes32 internal constant LAST_ORACLE_EPOCH_VALUE_POSITION = keccak256("lido.Lido.lastOracleEpoch");
 
     /// @dev maximum number of Ethereum 2.0 validators registered in a single transaction
-    bytes32 internal constant DEPOSIT_ITERATION_LIMIT_VALUE_POSITION = keccak256("depools.DePool.depositIterationLimit");
+    bytes32 internal constant DEPOSIT_ITERATION_LIMIT_VALUE_POSITION = keccak256("lido.Lido.depositIterationLimit");
 
 
     /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side

@@ -8,7 +8,7 @@ const { deployDaoAndPool } = require('./helpers/deploy')
 
 const StakingProvidersRegistry = artifacts.require('StakingProvidersRegistry')
 
-contract('DePool: happy path', (addresses) => {
+contract('Lido: happy path', (addresses) => {
   const [
     // the root account which deployed the DAO
     appManager,
@@ -35,7 +35,7 @@ contract('DePool: happy path', (addresses) => {
     // contracts/StETH.sol
     token = deployed.token
 
-    // contracts/DePool.sol
+    // contracts/Lido.sol
     pool = deployed.pool
 
     // contracts/sps/StakingProvidersRegistry.sol
