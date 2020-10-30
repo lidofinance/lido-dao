@@ -5,11 +5,10 @@ set -o pipefail
 
 ROOT=${PWD}
 DATA_DIR="${ROOT}/data"
-WALLETS_DIR="${DATA_DIR}/wallets"
-VALIDATORS_DIR="${DATA_DIR}/validators"
 TESTNET_DIR="${DATA_DIR}/testnet"
 DEVCHAIN_DIR="${DATA_DIR}/devchain"
 IPFS_DIR="${DATA_DIR}/ipfs"
+
 BEACONDATA1_DIR="${DATA_DIR}/beacondata-1"
 BEACONDATA2_DIR="${DATA_DIR}/beacondata-2"
 BEACONDATA3_DIR="${DATA_DIR}/beacondata-3"
@@ -18,11 +17,9 @@ BEACONDATA4_DIR="${DATA_DIR}/beacondata-4"
 MOCK_DATA_DIR="${DATA_DIR}/mock"
 MOCK_VALIDATOR_KEYS_DIR="${MOCK_DATA_DIR}/validator_keys"
 MOCK_VALIDATORS_DIR="${MOCK_DATA_DIR}/validators"
-MOCK_SECRETS_DIR="${MOCK_DATA_DIR}/secrets"
 
 VALIDATOR_KEYS_DIR="${DATA_DIR}/validator_keys"
 VALIDATORS_DIR="${DATA_DIR}/validators"
-SECRETS_DIR="${DATA_DIR}/secrets"
 
 PASSWORD=123
 
@@ -42,6 +39,7 @@ while test $# -gt 0; do
       echo "  -n | --nodes          start 2nd and 3d eth2 nodes"
       echo "  -s | --snapshot       use snapshot instead deploy"
       echo "  -1 | --eth1           start only eth1 part"
+      echo "  -w | --web              also start Aragon web UI"
       exit 0
       ;;
     -r|--reset)
@@ -76,6 +74,11 @@ while test $# -gt 0; do
       DAO_DEPLOY=true
       shift
       ;;
+      -w|--web)
+      WEB_UI=true
+      shift
+      ;;
+
     *)
       break
       ;;
@@ -106,29 +109,18 @@ if [ ! -d $DEVCHAIN_DIR ]; then
   fi
 fi
 
-if [ ! -d $IPFS_DIR ] && [ $SNAPSHOT ] ; then
-  echo "Unzip ipfs snapshot"
-  unzip -o -q -d $DATA_DIR ./snapshots/ipfs.zip
-fi
-if [ ! -d $VALIDATORS_DIR ] && [ $SNAPSHOT ]; then
-  echo "Unzip validators snapshot"
-  unzip -o -q -d $DATA_DIR ./snapshots/validators.zip
-fi
-
 if [ ! -d $TESTNET_DIR ]; then
   ETH2_RESET=true
 fi
 
-echo "Starting IPFS"
-docker-compose up -d ipfs
-echo -n "Waiting for IPFS start"
-while ! curl --output /dev/null -s -f -L http://localhost:8080/api/v0/version; do
-  sleep 2 && echo -n .
-done
-echo " "
-
 echo "Starting eth1 node"
 docker-compose up -d node1
+
+if [ ! -d $IPFS_DIR ] && [ $SNAPSHOT ] && [ $WEB_UI ]; then
+  echo "Unzip ipfs snapshot"
+  unzip -o -q -d $DATA_DIR ./snapshots/ipfs.zip
+fi
+
 
 echo -n "Waiting for eth1 rpc"
 while ! curl --output /dev/null -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'; do
@@ -143,6 +135,14 @@ done
 #done
 echo " "
 if [ ! $SNAPSHOT ] && [ $DAO_DEPLOY ] ; then
+  echo "Starting IPFS"
+  docker-compose up -d ipfs
+  echo -n "Waiting for IPFS start"
+  while ! curl --output /dev/null -s -f -L http://localhost:8080/api/v0/version; do
+    sleep 2 && echo -n .
+  done
+  echo " "
+
   R=$(curl -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x'$DEPOSIT'","latest"],"id":1}' | jq -r '.result'  | cut -c -4)
   if [[ "$R" != "0x60" ]]; then
     echo "Deploying deposit contract..."
@@ -171,22 +171,22 @@ if [ ! $SNAPSHOT ] && [ $DAO_DEPLOY ] ; then
 
   R=$(curl -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x'$APM'","latest"],"id":1}' | jq -r '.result'  | cut -c -4)
   if [[ "$R" != "0x60" ]]; then
-    echo "Deploying DePool APM..."
+    echo "Deploying Lido APM..."
     npm run deploy:apm:dev
   fi
   R=$(curl -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x'$DEPOOL_APP'","latest"],"id":1}' | jq -r '.result'  | cut -c -4)
   if [[ "$R" != "0x60" ]]; then
-    echo "Deploying DePool Apps..."
+    echo "Deploying Lido Apps..."
     npm run deploy:apps:dev
   fi
   R=$(curl -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x'$TEMPLATE'","latest"],"id":1}' | jq -r '.result'  | cut -c -4)
   if [[ "$R" != "0x60" ]]; then
-    echo "Deploying DePool DAO template..."
+    echo "Deploying Lido DAO template..."
     npm run deploy:tmpl:dev
   fi
   R=$(curl -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x'$DAO'","latest"],"id":1}' | jq -r '.result'  | cut -c -4)
   if [[ "$R" != "0x60" ]]; then
-    echo "Deploying DePool DAO..."
+    echo "Deploying Lido DAO..."
     npm run deploy:dao:dev
   fi
   # wait a bit for block mining
@@ -197,8 +197,19 @@ else
   echo "DAO deployed at: 0x$DAO"
 fi
 
-echo "Starting Aragon web UI"
-docker-compose up -d aragon
+if [ $WEB_UI ]; then
+  echo "(Re)Starting IPFS"
+  docker-compose up -d ipfs
+  echo "Starting Aragon web UI"
+  docker-compose up -d aragon
+fi
+
+
+if [ ! -d $VALIDATORS_DIR ] && [ $SNAPSHOT ]; then
+  echo "Unzip validators snapshot"
+  unzip -o -q -d $DATA_DIR ./snapshots/validators.zip
+fi
+
 
 if [ ! -d "$VALIDATOR_KEYS_DIR" ]; then
   rm -rf $VALIDATORS_DIR
@@ -259,9 +270,8 @@ if [ $ETH2_RESET ]; then
     echo "Generating $MOCK_VALIDATOR_COUNT mock validators concurrently... (this may take a while)"
     KEYS_DIR=$MOCK_DATA_DIR ./deposit.sh --num_validators=$MOCK_VALIDATOR_COUNT --password=$PASSWORD --chain=medalla --mnemonic="$MNEMONIC"
 
-    # mv $VALIDATOR_KEYS_DIR $MOCK_VALIDATOR_KEYS_DIR
     echo "Making deposits for $MOCK_VALIDATOR_COUNT genesis validators... (this may take a while)"
-    node ./scripts/mock_deposit.js $MOCK_VALIDATOR_KEYS_DIR
+    npx babel-node --presets=@babel/preset-env scripts/mock_deposit.js $MOCK_VALIDATOR_KEYS_DIR
   fi
 
   if [ ! -d "$MOCK_VALIDATORS_DIR" ]; then
@@ -281,29 +291,6 @@ if [ $ETH2_RESET ]; then
     --testnet-dir "/data/testnet" \
     --eth1-endpoint http://node1:8545
 
-
-
-  # if [ ! -d "$MOCK_VALIDATORS_DIR" ]; then
-  #   echo "Generating $MOCK_VALIDATOR_COUNT mock validator keys... (this may take a while)"
-  #   # rm -rf $MOCK_VALIDATORS_DIR
-  #   # rm -rf $MOCK_SECRETS_DIR
-  #   docker-compose run --rm --no-deps node2-1 lcli \
-  #     --spec "$SPEC" \
-  #     insecure-validators \
-  #     --count $MOCK_VALIDATOR_COUNT \
-  #     --validators-dir "/data/mock/validators" \
-  #     --secrets-dir "/data/mock/secrets"
-  #   echo "Validators generated at $MOCK_VALIDATORS_DIR with keystore passwords at $MOCK_SECRETS_DIR."
-  # fi
-
-  # echo "Generating genesis"
-  # docker-compose run --rm --no-deps node2-1  lcli \
-  #   --spec "$SPEC" \
-  #   interop-genesis \
-  #   --testnet-dir "/data/testnet" \
-  #   --genesis-fork-version $FORK_VERSION \
-  #   $MOCK_VALIDATOR_COUNT
-
   NOW=$(date +%s)
   echo "Reset genesis time to now ($NOW)"
   docker-compose run --rm --no-deps lh lcli \
@@ -322,11 +309,16 @@ if [ ! -d "$VALIDATORS_DIR" ]; then
     --testnet-dir "/data/testnet"
 fi
 
-
+# exit 0
 docker-compose up -d node2-1 node2-2
 sleep 5
 docker-compose up -d mock-validators
 docker-compose up -d validators
+
+# oracles
+# echo "Building oracle container"
+# ./oracle.sh
+# docker-compose up -d oracle-1 oracle-2 oracle-3
 
 if [[ $NODES ]]; then
   echo "Start extra nodes"
