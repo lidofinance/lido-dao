@@ -188,7 +188,7 @@ services:
       --delete-lockfiles 
       --init-slashing-protection
       --debug-level "${DEBUG_LEVEL}"
-      --datadir "/data/mock"
+      --datadir "/data/validators/mock_validators"
       --testnet-dir "/data/testnet"
       --server http://node2-1:5052
     networks:
@@ -212,7 +212,7 @@ services:
       --delete-lockfiles
       --init-slashing-protection
       --debug-level "${DEBUG_LEVEL}"
-      --datadir "/data/validators1"
+      --datadir "/data/validators/validators1"
       --testnet-dir "/data/testnet"
       --server http://node2-1:5052
 
@@ -234,7 +234,7 @@ services:
       --delete-lockfiles 
       --init-slashing-protection
       --debug-level "${DEBUG_LEVEL}"
-      --datadir "/data/validators2"
+      --datadir "/data/validators/validators2"
       --testnet-dir "/data/testnet"
       --server http://node2-1:5052
 

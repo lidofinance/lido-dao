@@ -17,7 +17,7 @@ function getDataFromFile(path) {
 }
 
 function loadGeneratedValidatorsData(validator, index = 0) {
-  const validatorKeysPath = path.resolve(__dirname, '../../data/' + validator + '/validator_keys')
+  const validatorKeysPath = path.resolve(__dirname, '../../data/validators/' + validator + '/validator_keys')
   const depositDataFiles = fs.readdirSync(validatorKeysPath).filter((file) => {
     return file.indexOf('.') !== 0 && file.match(/deposit_data.+\.json$/i)
   })
