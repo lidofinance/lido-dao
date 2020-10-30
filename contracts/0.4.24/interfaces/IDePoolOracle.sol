@@ -8,7 +8,7 @@ pragma solidity 0.4.24;
   * by the DAO on the ETH 2.0 side. The balances can go up because of reward accumulation
   * and can go down because of slashing.
   */
-interface IDePoolOracle {
+interface ILidoOracle {
     /**
       * @notice Add `_member` to the oracle member committee
       * @param _member Address of a member to add

@@ -36,7 +36,7 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
     uint256 constant public PUBKEY_LENGTH = 48;
     uint256 constant public SIGNATURE_LENGTH = 96;
 
-    bytes32 internal constant SIGNING_KEYS_MAPPING_NAME = keccak256("depools.DePool.signingKeys");
+    bytes32 internal constant SIGNING_KEYS_MAPPING_NAME = keccak256("lido.Lido.signingKeys");
 
 
     /// @dev Staking provider parameters and internal state

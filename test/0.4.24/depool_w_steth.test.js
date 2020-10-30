@@ -6,7 +6,7 @@ const { BN } = require('bn.js')
 const StETH = artifacts.require('StETH.sol') // we can just import due to StETH imported in test_helpers/Imports.sol
 const StakingProvidersRegistry = artifacts.require('StakingProvidersRegistry')
 
-const DePool = artifacts.require('TestDePool.sol')
+const Lido = artifacts.require('TestLido.sol')
 const OracleMock = artifacts.require('OracleMock.sol')
 const ValidatorRegistrationMock = artifacts.require('ValidatorRegistrationMock.sol')
 
@@ -29,7 +29,7 @@ const hexConcat = (first, ...rest) => {
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 const tokens = ETH
 
-contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody, spAddress1, spAddress2]) => {
+contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, spAddress1, spAddress2]) => {
   let appBase, stEthBase, stakingProvidersRegistryBase, app, token, oracle, validatorRegistration, sps
   let treasuryAddr, insuranceAddr
   // Fee and its distribution are in basis points, 10000 corresponding to 100%
@@ -45,7 +45,7 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody,
 
   before('deploy base app', async () => {
     // Deploy the app's base contract.
-    appBase = await DePool.new()
+    appBase = await Lido.new()
     stEthBase = await StETH.new()
     oracle = await OracleMock.new()
     validatorRegistration = await ValidatorRegistrationMock.new()
@@ -61,8 +61,8 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody,
     await sps.initialize()
 
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
-    proxyAddress = await newApp(dao, 'depool', appBase.address, appManager)
-    app = await DePool.at(proxyAddress)
+    proxyAddress = await newApp(dao, 'lido', appBase.address, appManager)
+    app = await Lido.at(proxyAddress)
 
     // token
     proxyAddress = await newApp(dao, 'steth', stEthBase.address, appManager)
@@ -139,11 +139,11 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody,
         await app.depositBufferedEther()
       })
 
-      it('DePool: deposited=32, remote=0, buffered=2, totalControlled=34, rewBase=32', async () => {
+      it('Lido: deposited=32, remote=0, buffered=2, totalControlled=34, rewBase=32', async () => {
         /* When user2 submits 34 Ethers, 32 of them get deposited to Deposit ETH2 contract,
-        and 2 Ethers get buffered on DePool contract.
+        and 2 Ethers get buffered on Lido contract.
         totalControlledEther is the sum of deposited and buffered values.
-        Since dePool rewards only playing validator role, there is rewardBase counter to catch the
+        Since lido rewards only playing validator role, there is rewardBase counter to catch the
         increment. To avoid rewards for deposits, the rewardBase gets shifted by deposited amount (N x 32).
         */
         const stat = await app.getEther2Stat()
@@ -156,7 +156,7 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody,
 
       it('stETH: totalSupply=34 user2=34', async () => {
         /* The initial deposit initiates the stETH token with the corresponding totalSupply
-        that is taken from dePool.totalControlledEther.
+        that is taken from lido.totalControlledEther.
         Submitter's balance is equivalent to deposited Ether amount.
         */
         assertBn(await token.totalSupply(), tokens(34))
@@ -180,7 +180,7 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody,
           await oracle.reportEther2(100, ETH(30))
         })
 
-        it('DePool: deposited=32, remote=30, buffered=2, totalControlled=32, rewBase=32', async () => {
+        it('Lido: deposited=32, remote=30, buffered=2, totalControlled=32, rewBase=32', async () => {
           /* The oracle's report changes `remote` value (was 32, became 30).
           This affects output of totalControlledEther, that decreased by 2.
           getRewardBase didn't change. Validators need to compensate the loss occured due to their fault
@@ -217,7 +217,7 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody,
             await oracle.reportEther2(200, ETH(33))
           })
 
-          it('DePool: deposited=32, remote=33, buffered=2, totalControlled=35, rewBase=33', async () => {
+          it('Lido: deposited=32, remote=33, buffered=2, totalControlled=35, rewBase=33', async () => {
             /* This positive oracle's report updates the `remote` value.
             and totalControlledEther's formula gives the increased amount:
             totalControlledEther = 34 Ether initial submission + 1 Ether reward = 35 Ether
@@ -232,7 +232,7 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody,
             assertBn(await app.getBufferedEther(), ETH(2))
             assertBn(await app.getTotalControlledEther(), ETH(35))
             /*
-            then dePool calculates the total reward value (remote - rewardBase) 33-32=1 Ether
+            then lido calculates the total reward value (remote - rewardBase) 33-32=1 Ether
             and updates the rewardBase accordingly.
             */
             assertBn(await app.getRewardBase(), ETH(33))
@@ -286,7 +286,7 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody,
               await oracle.reportEther2(200, ETH(33))
             })
 
-            it('DePool: deposited=32, remote=33, buffered=2, totalControlled=35, rewBase=33', async () => {
+            it('Lido: deposited=32, remote=33, buffered=2, totalControlled=35, rewBase=33', async () => {
               const stat = await app.getEther2Stat()
               assertBn(stat.deposited, ETH(32))
               assertBn(stat.remote, ETH(33))
@@ -325,7 +325,7 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody,
               await oracle.reportEther2(300, ETH(64))
             })
 
-            it('DePool: deposited=64, remote=64, buffered=0, totalControlled=64, rewBase=64', async () => {
+            it('Lido: deposited=64, remote=64, buffered=0, totalControlled=64, rewBase=64', async () => {
               const stat = await app.getEther2Stat()
               assertBn(stat.deposited, ETH(64))
               assertBn(stat.remote, ETH(64))
@@ -339,7 +339,7 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody,
                 await oracle.reportEther2(400, ETH(66))
               })
 
-              it('DePool: deposited=64, remote=66, buffered=0, totalControlled=66, rewBase=66', async () => {
+              it('Lido: deposited=64, remote=66, buffered=0, totalControlled=66, rewBase=66', async () => {
                 const stat = await app.getEther2Stat()
                 assertBn(stat.deposited, ETH(64))
                 assertBn(stat.remote, ETH(66))
@@ -377,7 +377,7 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody,
                 await oracle.reportEther2(500, ETH(96))
               })
 
-              it('DePool: deposited=96, remote=96, buffered=0, totalControlled=96, rewBase=96', async () => {
+              it('Lido: deposited=96, remote=96, buffered=0, totalControlled=96, rewBase=96', async () => {
                 const stat = await app.getEther2Stat()
                 assertBn(stat.deposited, ETH(96))
                 assertBn(stat.remote, ETH(96))
@@ -391,7 +391,7 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody,
                   await oracle.reportEther2(600, ETH(100))
                 })
 
-                it('DePool: deposited=96, remote=100, buffered=0, totalControlled=100, rewBase=100', async () => {
+                it('Lido: deposited=96, remote=100, buffered=0, totalControlled=100, rewBase=100', async () => {
                   const stat = await app.getEther2Stat()
                   assertBn(stat.deposited, ETH(96))
                   assertBn(stat.remote, ETH(100))
@@ -435,7 +435,7 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody,
           await oracle.reportEther2(200, ETH(66))
         })
 
-        it('DePool: deposited=32, remote=66, buffered=2, totalControlled=68, rewBase=66', async () => {
+        it('Lido: deposited=32, remote=66, buffered=2, totalControlled=68, rewBase=66', async () => {
           /*
           userBalance = 34.0 Ether staked
           shares = 34.0
@@ -484,7 +484,7 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody,
             await app.depositBufferedEther()
           })
 
-          it('DePool: deposited=64, remote=66, buffered=4, totalControlled=70, rewBase=98', async () => {
+          it('Lido: deposited=64, remote=66, buffered=4, totalControlled=70, rewBase=98', async () => {
             const stat = await app.getEther2Stat()
             assertBn(stat.deposited, ETH(64)) // two submissions: 32 + 32
             assertBn(stat.remote, ETH(66)) // first submission (32) propagated to eth2 and rewarded +34
@@ -520,7 +520,7 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody,
               await oracle.reportEther2(300, ETH(98))
             })
 
-            it('DePool: deposited=64, remote=98, buffered=4, totalControlled=102, rewBase=98', async () => {
+            it('Lido: deposited=64, remote=98, buffered=4, totalControlled=102, rewBase=98', async () => {
               const stat = await app.getEther2Stat()
               assertBn(stat.deposited, ETH(64))
               assertBn(stat.remote, ETH(98))

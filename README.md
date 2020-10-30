@@ -1,8 +1,8 @@
-# DePool Ethereum Liquid Staking Protocol
+# Lido Ethereum Liquid Staking Protocol
 
-The DePool Ethereum Liquid Staking Protocol, built on Ethereum 2.0's Beacon chain, allows their users to earn staking rewards on the Beacon chain without locking Ether or maintaining staking infrastructure.
+The Lido Ethereum Liquid Staking Protocol, built on Ethereum 2.0's Beacon chain, allows their users to earn staking rewards on the Beacon chain without locking Ether or maintaining staking infrastructure.
 
-Users can deposit Ether to the DePool smart contract and receive stETH tokens in return. The smart contract then stakes tokens with the DAO-picked staking providers. Users' deposited funds are controlled by the DAO, staking providers never have direct access to the users' assets.
+Users can deposit Ether to the Lido smart contract and receive stETH tokens in return. The smart contract then stakes tokens with the DAO-picked staking providers. Users' deposited funds are controlled by the DAO, staking providers never have direct access to the users' assets.
 
 Unlike staked ether, the stETH token is free from the limitations associated with a lack of liquidity and can be transferred at any time. The stETH token balance corresponds to the amount of Beacon chain Ether that the holder could withdraw if state transitions were enabled right now in the Ethereum 2.0 network.
 
@@ -11,13 +11,13 @@ Before getting started with this repo, please read:
 * Whitepaper (TODO: add a link here)
 * Documentation (TODO: add a link here)
 
-## DePool DAO
+## Lido DAO
 
-The DePool DAO is a Decentralized Autonomous Organization that manages the liquid staking protocol by deciding on key parameters (e.g., setting fees, assigning staking providers and oracles, etc.) through the voting power of governance token (DPG) holders.
+The Lido DAO is a Decentralized Autonomous Organization that manages the liquid staking protocol by deciding on key parameters (e.g., setting fees, assigning staking providers and oracles, etc.) through the voting power of governance token (DPG) holders.
 
 Also, the DAO will accumulate service fees and spend them on insurance, research, development, and protocol upgrades. Initial DAO members will take part in the threshold signature for Ethereum 2.0 by making BLS threshold signatures.
 
-The DePool DAO is an [Aragon organization](https://aragon.org/dao). Since Aragon provides a full end-to-end framework to build DAOs, we use its standard tools. The protocol smart contracts extend AragonApp base contract and can be managed by the DAO.
+The Lido DAO is an [Aragon organization](https://aragon.org/dao). Since Aragon provides a full end-to-end framework to build DAOs, we use its standard tools. The protocol smart contracts extend AragonApp base contract and can be managed by the DAO.
 
 ## Protocol levers
 
@@ -29,16 +29,16 @@ Most of the protocol is implemented as a set of smart contracts that extend the 
 These contracts are located in the [contracts/0.4.24](contracts/0.4.24) directory. Additionally, there are contracts that don't depend on the Aragon; they are located in the [contracts/0.6.12](contracts/0.6.12) directory.
 
 #### [StETH](contracts/0.4.24/StETH.sol)
-StETH is an ERC20 token which represents staked ether. Tokens are minted upon deposit and burned when redeemed. StETH tokens are pegged 1:1 to the Ethers that are held by DePool. StETH token’s balances are updated when the oracle reports change in total stake every day.
+StETH is an ERC20 token which represents staked ether. Tokens are minted upon deposit and burned when redeemed. StETH tokens are pegged 1:1 to the Ethers that are held by Lido. StETH token’s balances are updated when the oracle reports change in total stake every day.
 
-#### [DePool](contracts/0.4.24/DePool.sol)
-DePool is the core contract which acts as a liquid staking pool. The contract is responsible for Ether deposits and withdrawals, minting and burning liquid tokens, delegating funds to staking providers, applying fees, and accepting updates from the oracle contract. Staking providers' logic is extracted to a separate contract, StakingProvidersRegistry.
+#### [Lido](contracts/0.4.24/Lido.sol)
+Lido is the core contract which acts as a liquid staking pool. The contract is responsible for Ether deposits and withdrawals, minting and burning liquid tokens, delegating funds to staking providers, applying fees, and accepting updates from the oracle contract. Staking providers' logic is extracted to a separate contract, StakingProvidersRegistry.
 
 #### [StakingProvidersRegistry](contracts/0.4.24/sps/StakingProvidersRegistry.sol)
 Staking Providers act as validators on the Beacon chain for the benefit of the protocol. The DAO selects staking providers and adds their addresses to the StakingProvidersRegistry contract. Authorized providers have to generate a set of keys for the validation and also provide them with the smart contract. As Ether is received from users, it is distributed in chunks of 32 Ether between all active Staking Providers. The contract contains a list of providers, their keys, and the logic for distributing rewards between them. The DAO can deactivate misbehaving providers.
 
-#### [DePoolOracle](contracts/0.4.24/oracle/DePoolOracle.sol)
-DePoolOracle is a contract where oracles send addresses' balances controlled by the DAO on the ETH 2.0 side. The balances can go up because of reward accumulation and can go down due to slashing and staking penalties. Oracles are assigned by the DAO.
+#### [LidoOracle](contracts/0.4.24/oracle/LidoOracle.sol)
+LidoOracle is a contract where oracles send addresses' balances controlled by the DAO on the ETH 2.0 side. The balances can go up because of reward accumulation and can go down due to slashing and staking penalties. Oracles are assigned by the DAO.
 
 #### [CStETH](contracts/0.6.12/CstETH.sol)
 It's an ERC20 token that represents the account's share of the total supply of StETH tokens. The balance of a CStETH token holder only changes on transfers, unlike the balance of StETH that is also changed when oracles report staking rewards, penalties, and slashings. It's a "power user" token that might be needed to work correctly with some DeFi protocols like Uniswap v2, cross-chain bridges, etc.
@@ -99,7 +99,7 @@ To start the whole environment from predeployed snapshots, use:
 ./startup.sh -r -s
 ```
 
-then go to [http://localhost:3000/#/depool-dao/](http://localhost:3000/#/depool-dao/) to manage the DAO via Aragon Web App.
+then go to [http://localhost:3000/#/lido-dao/](http://localhost:3000/#/lido-dao/) to manage the DAO via Aragon Web App.
 
 > To completely repeat the compilation and deployment process in ETH1 chain, just omit the `-s` flag.
 
@@ -108,10 +108,10 @@ then go to [http://localhost:3000/#/depool-dao/](http://localhost:3000/#/depool-
 As a result of the script execution, the following will be installed:
 
 * the Deposit Contract instance;
-* all Aragon App instances (contracts: DePool, StakingProvidersRegistry, DePoolOracle, and StETH)
-* the Aragon PM for `depoolspm.eth`;
-* the DePool DAO template;
-* and finally, the DePool DAO will be deployed.
+* all Aragon App instances (contracts: Lido, StakingProvidersRegistry, LidoOracle, and StETH)
+* the Aragon PM for `lidopm.eth`;
+* the Lido DAO template;
+* and finally, the Lido DAO will be deployed.
 
 To start only the ETH1 part, use:
 
@@ -215,8 +215,8 @@ yarn deploy:apm:mainnet
 yarn deploy:apps:dev
 
 # Rinkeby network
-yarn deploy:app-depool --network rinkeby
-yarn deploy:app-depooloracle --network rinkeby
+yarn deploy:app-lido --network rinkeby
+yarn deploy:app-lidooracle --network rinkeby
 yarn deploy:app-staking-providers-registry --network rinkeby
 yarn deploy:app-steth --network rinkeby
 

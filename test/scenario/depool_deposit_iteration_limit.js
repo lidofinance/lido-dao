@@ -7,7 +7,7 @@ const { deployDaoAndPool } = require('./helpers/deploy')
 
 const StakingProvidersRegistry = artifacts.require('StakingProvidersRegistry')
 
-contract('DePool: deposit loop iteration limit', (addresses) => {
+contract('Lido: deposit loop iteration limit', (addresses) => {
   const [
     // the root account which deployed the DAO
     appManager,
@@ -33,7 +33,7 @@ contract('DePool: deposit loop iteration limit', (addresses) => {
   it('DAO, staking providers registry, token, and pool are deployed and initialized', async () => {
     const deployed = await deployDaoAndPool(appManager, voting, depositIterationLimit)
 
-    // contracts/DePool.sol
+    // contracts/Lido.sol
     pool = deployed.pool
 
     // contracts/sps/StakingProvidersRegistry.sol
