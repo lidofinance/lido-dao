@@ -95,7 +95,7 @@ async function deploy({
   const HOLDERS = [holder1, holder2, holder3, holder4, holder5]
   const STAKES = HOLDERS.map(() => '100000000000000000000') // 100e18
   const TOKEN_NAME = 'Lido DAO Token'
-  const TOKEN_SYMBOL = 'DPD'
+  const TOKEN_SYMBOL = 'LDO'
 
   // TODO get voting settings from .env
   const VOTE_DURATION = ONE_WEEK
