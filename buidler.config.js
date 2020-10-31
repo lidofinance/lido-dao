@@ -30,5 +30,8 @@ module.exports = {
   gasReporter: {
     enabled: !!process.env.REPORT_GAS,
     currency: 'USD'
+  },
+  mocha: {
+    timeout: 100000
   }
 }
