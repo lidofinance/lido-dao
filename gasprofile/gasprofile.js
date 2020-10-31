@@ -1,45 +1,77 @@
+/***
+ * Modified from: https://github.com/yushih/solidity-gas-profiler
+ * with the support for multiple contracts
+ **/
+
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const binarysearch = require('binarysearch');
 const Web3 = require('web3');
+const BN = require('bn.js');
+
+const dataByContractAddr = {};
+
+async function getContractData(_addressHexStr, web3, solcOutput) {
+  const addressBN = new BN(strip0x(_addressHexStr), 16);
+  const addressHexStr = addressBN.toString(16, 40);
+
+  if (!!dataByContractAddr[addressHexStr]) {
+    return dataByContractAddr[addressHexStr];
+  }
+
+  const codeHexStr = strip0x(await web3.eth.getCode(addressHexStr));
+  const contractData = findContractByDeployedBytecode(codeHexStr, solcOutput);
+
+  if (!contractData) {
+    return dataByContractAddr[addressHexStr] = {
+      source: null,
+      gasBeforeContract: 0,
+      totalGasCost: 0,
+    };
+  }
+
+  const sourcePath = path.resolve(__dirname, contractData.fileName);
+  const source = fs.readFileSync(sourcePath, 'utf8');
+
+  return dataByContractAddr[addressHexStr] = {
+    ...contractData,
+    source,
+    sourceMap: parseSourceMap(contractData.sourceMap),
+    pcToIdx: buildPcToInstructionMapping(codeHexStr),
+    lineOffsets: buildLineOffsets(source),
+    gasBeforeContract: 0,
+    callLine: null,
+    gasBeforeCall: 0,
+    lineGas: [],
+    synthCost: 0,
+    totalGasCost: 0,
+  };
+}
+
+function findContractByDeployedBytecode(codeHexStr, solcOutput) {
+  const filesNames = Object.keys(solcOutput.contracts);
+  for (let iFile = 0; iFile < filesNames.length; ++iFile) {
+    const fileName = filesNames[iFile];
+    const fileContracts = solcOutput.contracts[fileName];
+    const contractNames = Object.keys(fileContracts);
+    for (let iContract = 0; iContract < contractNames.length; ++iContract) {
+      const contractName = contractNames[iContract];
+      const contractData = fileContracts[contractName];
+      if (contractData.evm.deployedBytecode.object === codeHexStr) {
+        return {
+          fileName,
+          contractName,
+          codeHexStr,
+          sourceMap: contractData.evm.deployedBytecode.sourceMap,
+        };
+      }
+    }
+  }
+  return null;
+}
 
 (async function main () {
-  const buidlerConfigPath = process.argv[2];
-  const contractName = process.argv[3];
-  const buidlerConfigText = fs.readFileSync(buidlerConfigPath, 'utf8')
-
-  const [,sourcesDir] = buidlerConfigText.match(/sources: '([\w\.\/]+)'/)
-  const [,cacheDir] = buidlerConfigText.match(/cache: '([\w\.\/]+)'/)
-
-  console.log('sourcesDir', sourcesDir)
-  console.log('cacheDir', cacheDir)
-
-  const foundContracts = recFindByName(path.join(__dirname, sourcesDir), contractName)
-  if (foundContracts.length !== 1) {
-    console.error('found 0 or greater than 1 contracts', foundContracts)
-  }
-  
-  const contractPath = foundContracts[0]
-  const solcOutputPath = path.join(__dirname, cacheDir, 'solc-output.json')
-
-  console.log('contractPath', contractPath)
-  console.log('solcOutputPath', solcOutputPath)
-  console.log()
-
-  const solcOutput = JSON.parse(fs.readFileSync(solcOutputPath, 'utf8'))
-  
-  const relContractPath = path.relative(path.join(__dirname, sourcesDir), contractPath)
-  let sourceMap = solcOutput.contracts[path.join(sourcesDir, relContractPath)][contractName].evm.deployedBytecode.sourceMap;
-
-  const src = fs.readFileSync(contractPath, 'utf8');
-
-  // console.log('sourceMap', sourceMap)
-  // console.log('src', src)
-
-  sourceMap = parseSourceMap(sourceMap)
-
-  const TX_HASH = process.argv[4];
   const PROVIDER = "http://localhost:8545"
   const provider = new Web3.providers.HttpProvider(PROVIDER);
   const web3 = new Web3(provider);
@@ -51,68 +83,130 @@ const Web3 = require('web3');
       params: 2
     }
   ]});
+
+  const solcOutputPath = process.argv[2];
+  const TX_HASH = process.argv[3];
+
+  const solcOutput = JSON.parse(fs.readFileSync(solcOutputPath, 'utf8'));
+
+  const rootAddr = (await web3.eth.getTransaction(TX_HASH)).to;
+  const rootData = await getContractData(rootAddr, web3, solcOutput);
+
+  // console.error(`rootAddr ${rootAddr}, rootData:`, stripDataForLog(rootData));
+
+  const receipt = await web3.eth.getTransactionReceipt(TX_HASH);
+  console.log('Gas used by transaction:', receipt.gasUsed);
+
+  if (!rootData) {
+    console.log(`The transaction target address is not a contract`);
+    return
+  }
+
   // https://github.com/ethereum/go-ethereum/wiki/Tracing:-Introduction
-  const trace = await web3.traceTx(TX_HASH, {disableStack: true, disableMemory: true, disableStorage: true}); //FIXME: not disabled
+  const trace = await web3.traceTx(TX_HASH, {disableStack: false, disableMemory: false, disableStorage: true});
+  const callStack = [rootData];
 
-  // console.log(trace)
-  // const sourceMap = parseSourceMap(fs.readFileSync(SOURCEMAP_FILE, 'utf8'));
-  
-  // console.log(sourceMap)
-  const addr = (await web3.eth.getTransaction(TX_HASH)).to;
-  const code = await web3.eth.getCode(addr);
-  // console.log('code', code)
-  const pcToIdx = buildPcToInstructionMapping(code);
+  assert(trace.structLogs[0].depth === 0);
 
-  console.log('Gas used by transaction:', (await web3.eth.getTransactionReceipt(TX_HASH)).gasUsed);
+  for (let i = 0; i < trace.structLogs.length; ++i) {
+    const log = trace.structLogs[i];
 
-  // const src = fs.readFileSync(CONTRACT_FILE, 'utf8');
-  const lineOffsets = buildLineOffsets(src);
+    // console.error(`${log.op}, gas ${log.gas}, gasCost ${log.gasCost}, pc ${log.pc}, depth ${log.depth}`);
 
-  const lineGas = [];
+    while (log.depth < callStack.length - 1) {
+      const prevTopData = callStack.pop();
+      // using the prev opcode since Ganache reports RETURN opcodes as having negative cost
+      const prevLog = trace.structLogs[i - 1];
+      prevTopData.totalGasCost += prevTopData.gasBeforeContract - prevLog.gas + Math.max(0, prevLog.gasCost);
 
-  let synthCost = 0;
+      const topData = callStack[callStack.length - 1];
+      // console.error(`call ended, parent:`, stripDataForLog(topData));
+      if (topData.source != null) {
+        const cumulativeCallCost = topData.gasBeforeCall - log.gas;
+        // console.error(`current gas ${log.gas}, cumulativeCallCost: ${cumulativeCallCost}`);
+        increaseLineCost(topData, topData.callLine, cumulativeCallCost);
+      }
+    }
 
-  const bottomDepth = trace.structLogs[0].depth; // should be 1
+    assert(callStack.length > 0);
 
-  for (let i=0; i<trace.structLogs.length; ) {
-    const {depth, error, gas, gasCost, op, pc, stack} = trace.structLogs[i];
-    let cost;
-    if (['CALL', 'CALLCODE', 'DELEGATECALL', 'STATICCALL'].includes(op)) {
-      // for call instruction, gasCost is 63/64*gas, not real gas cost
-      const gasBeforeCall = gas;
-      do {
-          i += 1;
-      } while (trace.structLogs[i].depth > bottomDepth);
-      cost = gasBeforeCall - trace.structLogs[i].gas;
+    const data = callStack[log.depth];
+    const line = getLineNumber(data, log);
+
+    const callTargetHexStr = getCallTargetAddr(log);
+    if (callTargetHexStr) {
+      data.callLine = line;
+      data.gasBeforeCall = log.gas;
+      // the current instruction is a call instruction
+      const targetData = await getContractData(callTargetHexStr, web3, solcOutput);
+      targetData.gasBeforeContract = trace.structLogs[i + 1].gas;
+      // console.error(`${log.op} to 0x${callTargetHexStr}, data:`, stripDataForLog(targetData) || '<empty>');
+      callStack.push(targetData);
+      if (targetData.source == null) {
+        console.error(`WARN no source for contract at 0x${callTargetHexStr}`)
+      }
     } else {
-      i += 1;
-      cost = gasCost;
+      if (log.gasCost < 0 && isTerminalOpcode(log.op)) {
+        // see: https://github.com/trufflesuite/ganache-core/issues/277
+        // see: https://github.com/trufflesuite/ganache-core/pull/578
+        console.error(`WARN skipping invalid gasCost value ${log.gasCost} for op ${log.op}`)
+      } else if (data.source != null) {
+        increaseLineCost(data, line, log.gasCost);
+      }
     }
+  }
 
-    const instructionIdx = pcToIdx[pc];
-    const {s, l, f, j} = sourceMap[instructionIdx];
-    if (f===-1) {
-      synthCost += cost;
-      continue;
-    }
-    const line = binarysearch.closest(lineOffsets, s);
-    if (lineGas[line]===undefined) {
-      lineGas[line] = cost;
+  const firstLog = trace.structLogs[0];
+  const lastLog = trace.structLogs[trace.structLogs.length - 1];
+  rootData.totalGasCost += firstLog.gas - lastLog.gas + Math.max(0, lastLog.gasCost);
+
+  Object.keys(dataByContractAddr).forEach(addressHexStr => {
+    const data = dataByContractAddr[addressHexStr];
+    if (data.source == null) {
+      console.log(`\nUnknown contract at 0x${addressHexStr}`);
     } else {
-      lineGas[line] += cost;
+      console.log(`\nFile ${data.fileName}, contract ${data.contractName} at 0x${addressHexStr}\n`);
+
+      data.source.split('\n').forEach((line, i) => {
+        const gas = data.lineGas[i] || 0;
+        console.log('%s\t\t%s', gas, line);
+      });
+
+      console.log('Synthetic instruction gas:', data.synthCost);
+
+      // showAllPointsInSourceMap(data.sourceMap, data.source, data.lineOffsets);
     }
-  } // for 
-
-
-  src.split('\n').forEach((line, i) => {
-    const gas = lineGas[i] || 0;
-    console.log('%s\t\t%s', gas, line);
+    console.log('Total gas spent in the contract:', data.totalGasCost);
   });
-  console.log('synthetic instruction gas', synthCost);
 
-  //showAllPointsInSourceMap (sourceMap, src, lineOffsets);
+})().catch(e => console.log(e));
 
-})().catch(e=>console.log(e));
+function getCallTargetAddr(log) {
+  return log.op === 'CALL' || log.op === 'CALLCODE' || log.op === 'DELEGATECALL' || log.op === 'STATICCALL'
+    ? new BN(log.stack[log.stack.length - 2], 16).toString(16) // https://ethervm.io/#F1
+    : null
+}
+
+function getLineNumber(data, log) {
+  if (!data.pcToIdx) {
+    return null
+  }
+  const instructionIdx = data.pcToIdx[log.pc];
+  const mapItem = data.sourceMap[instructionIdx];
+  return mapItem.f === -1 ? null : binarysearch.closest(data.lineOffsets, mapItem.s);
+}
+
+function increaseLineCost(data, line, gasCost) {
+  if (line === null) {
+    data.synthCost += gasCost;
+  } else {
+    data.lineGas[line] = (data.lineGas[line] | 0) + gasCost;
+  }
+}
+
+function isTerminalOpcode(op) {
+  return op === 'RETURN' || op === 'REVERT' || op === 'STOP'
+}
 
 function showAllPointsInSourceMap (sourceMap, src, lineOffsets) {
   const linePoints = []; //line no -> number of points in source map
@@ -140,16 +234,15 @@ function showAllPointsInSourceMap (sourceMap, src, lineOffsets) {
 
 function buildLineOffsets (src) {
   let accu = 0;
-  return src.split('\n').map(line=>{
+  return src.split('\n').map(line => {
     const ret = accu;
-    accu += line.length+1;
+    accu += line.length + 1;
     return ret;
   });
 }
 
-function buildPcToInstructionMapping (code0xHexStr) {
+function buildPcToInstructionMapping (codeHexStr) {
   const mapping = {};
-  const codeHexStr = code0xHexStr.slice(2);
   let instructionIndex = 0;
   for (let pc=0; pc<codeHexStr.length/2;) {
     mapping[pc] = instructionIndex;
@@ -199,26 +292,25 @@ function parseSourceMap (raw) {
     } else {
       prevJ = j;
     }
-    
+
     return {s:Number(s), l:Number(l), f:Number(f), j};
   });
 }
 
-function recFindByName(base, name, files, result) {
-  files = files || fs.readdirSync(base) 
-  result = result || [] 
+function strip0x(hexStr) {
+  return hexStr[0] === '0' && hexStr[1] === 'x'
+    ? hexStr.substring(2)
+    : hexStr
+}
 
-  files.forEach( 
-    function (file) {
-      const newbase = path.join(base, file)
-      if (fs.statSync(newbase).isDirectory()) {
-        result = recFindByName(newbase,name,fs.readdirSync(newbase), result)
-      } else {
-        if (file.split('.').slice(0, -1).join('.') == name) {
-          result.push(newbase)
-        } 
-      }
-    }
-  )
-  return result
+function ensure0x(hexStr) {
+  return hexStr[0] === '0' && hexStr[1] === 'x'
+    ? hexStr
+    : `0x${hexStr}`
+}
+
+function stripDataForLog(data) {
+  if (!data) return data;
+  const {fileName, contractName, callLine, gasBeforeCall} = data;
+  return {fileName, contractName, callLine, gasBeforeCall};
 }
