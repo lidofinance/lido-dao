@@ -3,7 +3,8 @@
   "version": "0.0.1",
   "private": true,
   "workspaces": [
-    "apps/*/app"
+    "apps/*/app",
+    "gasprofile"
   ],
   "scripts": {
     "lint": "yarn lint:sol && yarn lint:js",
@@ -15,14 +16,13 @@
     "lint:sol:solhint": "solhint \"contracts/**/*.sol\" --ignore-path .soliumignore",
     "lint:sol:solhint:fix": "solhint \"contracts/**/*.sol\" --ignore-path .soliumignore --fix",
     "test": "yarn run test:unit",
-    "test:unit": "yarn run compile:6 && buidler test --network localhost",
+    "test:unit": "yarn run compile:6 && buidler test --network buidlerevm",
     "test:gas": "yarn run compile:6 && REPORT_GAS=true buidler test --network localhost",
     "test:coverage": "yarn run test:coverage:4 && yarn run test:coverage:6",
     "test:coverage:4": "buidler coverage --network coverage --testfiles test/0.4.24",
     "test:coverage:6": "buidler coverage --network coverage --testfiles test/0.6.12 --config buidler.config.6.js",
     "test:e2e": "npm run compile && ava -T 250000 -v",
     "estimate-deposit-loop-gas": "yarn run test:unit ./estimate_deposit_loop_gas.js",
-    "gasprofile-test": "yarn run test:unit ./gasprofile-test.js",
     "compile": "yarn run compile:4 && yarn run compile:6",
     "compile:4": "buidler compile",
     "compile:6": "buidler compile --config buidler.config.6.js --force && buidler compile --config buidler.config.6.11.js --force",
@@ -60,7 +60,6 @@
     "app-root-path": "^3.0.0",
     "ava": "^3.13.0",
     "babel-plugin-istanbul": "^6.0.0",
-    "binarysearch": "^1.0.1",
     "buidler-gas-reporter": "^0.1.3",
     "chai": "^4.2.0",
     "dotenv": "^8.2.0",
