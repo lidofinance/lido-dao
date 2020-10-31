@@ -1,0 +1,15 @@
+{
+  "name": "gasprofile",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "ganache": "ganache-cli -e 10000",
+    "test": "buidler test --network localhost ./test.js",
+    "profile": "node ./gasprofile.js"
+  },
+  "dependencies": {
+    "@nomiclabs/buidler": "1.4.7",
+    "binarysearch": "^1.0.1",
+    "ganache-cli": "^6.12.0"
+  }
+}
