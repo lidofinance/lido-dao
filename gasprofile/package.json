@@ -10,6 +10,7 @@
   "dependencies": {
     "@nomiclabs/buidler": "1.4.7",
     "binarysearch": "^1.0.1",
+    "bn.js": "^5.1.3",
     "ganache-cli": "^6.12.0"
   }
 }
