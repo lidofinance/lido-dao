@@ -1,6 +1,7 @@
 /***
- * Modified from: https://github.com/yushih/solidity-gas-profiler
- * with the support for multiple contracts
+ * Inspired by & rewritten from: https://github.com/yushih/solidity-gas-profiler;
+ * added support for multiple contracts (call, delegatecall, etc.) and multiple
+ * sources per contract (inheritance).
  **/
 
 const assert = require('assert');
@@ -10,43 +11,110 @@ const binarysearch = require('binarysearch');
 const Web3 = require('web3');
 const BN = require('bn.js');
 
-const dataByContractAddr = {};
+const MAKE_EMPTY_SOURCE = (id, fileName) => ({
+  id,
+  fileName,
+  text: null,
+  lineOffsets: null,
+  lineGas: []
+});
 
-async function getContractData(_addressHexStr, web3, solcOutput) {
-  const addressBN = new BN(strip0x(_addressHexStr), 16);
-  const addressHexStr = addressBN.toString(16, 40);
+const MAKE_EMPTY_CONTRACT = addressHexStr => ({
+  addressHexStr,
+  codeHexStr: null,
+  fileName: null,
+  name: null,
+  sourcesById: {},
+  sourceMap: null,
+  pcToIdx: null,
+  gasBeforeContract: 0,
+  gasBeforeCall: 0,
+  callSource: null,
+  callLine: null,
+  totalGasCost: 0,
+  synthGasCost: 0,
+});
 
-  if (!!dataByContractAddr[addressHexStr]) {
-    return dataByContractAddr[addressHexStr];
+const contractByAddr = {};
+const sourceById = {};
+const sourceByFilename = {};
+
+async function getContractWithAddr(addr, web3, solcOutput) {
+  const addressHexStr = normalizeAddress(addr);
+
+  const cached = contractByAddr[addressHexStr];
+  if (cached) {
+    return cached;
   }
 
-  const codeHexStr = strip0x(await web3.eth.getCode(addressHexStr));
-  const contractData = findContractByDeployedBytecode(codeHexStr, solcOutput);
+  const result = MAKE_EMPTY_CONTRACT(addressHexStr);
+  contractByAddr[addressHexStr] = result;
 
+  result.codeHexStr = strip0x(await web3.eth.getCode(addressHexStr)) || null;
+  if (!result.codeHexStr) {
+    console.error(`WARN no code at address 0x${addressHexStr}`);
+    return result;
+  }
+
+  result.pcToIdx = buildPcToInstructionMapping(result.codeHexStr);
+
+  const contractData = findContractByDeployedBytecode(result.codeHexStr, solcOutput);
   if (!contractData) {
-    return dataByContractAddr[addressHexStr] = {
-      source: null,
-      gasBeforeContract: 0,
-      totalGasCost: 0,
-    };
+    console.error(`WARN no source for contract at address 0x${addressHexStr}`);
+    return result;
   }
 
-  const sourcePath = path.resolve(__dirname, contractData.fileName);
-  const source = fs.readFileSync(sourcePath, 'utf8');
+  result.name = contractData.name;
+  result.fileName = contractData.fileName;
+  result.sourceMap = parseSourceMap(contractData.sourceMap);
 
-  return dataByContractAddr[addressHexStr] = {
-    ...contractData,
-    source,
-    sourceMap: parseSourceMap(contractData.sourceMap),
-    pcToIdx: buildPcToInstructionMapping(codeHexStr),
-    lineOffsets: buildLineOffsets(source),
-    gasBeforeContract: 0,
-    callLine: null,
-    gasBeforeCall: 0,
-    lineGas: [],
-    synthCost: 0,
-    totalGasCost: 0,
-  };
+  return result;
+}
+
+function getSourceWithId(sourceId, solcOutput) {
+  const cached = sourceById[sourceId];
+  if (cached) {
+    return cached;
+  }
+
+  const fileName = Object
+    .keys(solcOutput.sources)
+    .find(sourceFileName => solcOutput.sources[sourceFileName].id === sourceId) || null;
+
+  if (!fileName) {
+    console.error(`WARN no source with id ${sourceId}`);
+    return sourceById[sourceId] = MAKE_EMPTY_SOURCE(sourceId, null);
+  }
+
+  return getSourceForFilename(fileName, solcOutput);
+}
+
+function getSourceForFilename(fileName, solcOutput) {
+  const cached = sourceByFilename[fileName];
+  if (cached) {
+    return cached;
+  }
+
+  const result = MAKE_EMPTY_SOURCE(null, fileName);
+  sourceByFilename[fileName] = result;
+
+  const sourceData = solcOutput.sources[fileName];
+  if (!sourceData) {
+    console.error(`WARN no source info for filename ${fileName}`);
+    return result;
+  }
+
+  result.id = sourceData.id;
+  sourceById[result.id] = result;
+
+  result.text = readSource(fileName);
+  if (result.text) {
+    result.lineOffsets = buildLineOffsets(result.text);
+  } else {
+    console.error(`WARN no source text for filename ${fileName} (id ${result.id})`);
+  }
+
+  return result;
 }
 
 function findContractByDeployedBytecode(codeHexStr, solcOutput) {
@@ -56,24 +124,34 @@ function findContractByDeployedBytecode(codeHexStr, solcOutput) {
     const fileContracts = solcOutput.contracts[fileName];
     const contractNames = Object.keys(fileContracts);
     for (let iContract = 0; iContract < contractNames.length; ++iContract) {
-      const contractName = contractNames[iContract];
-      const contractData = fileContracts[contractName];
+      const name = contractNames[iContract];
+      const contractData = fileContracts[name];
       if (contractData.evm.deployedBytecode.object === codeHexStr) {
-        return {
-          fileName,
-          contractName,
-          codeHexStr,
-          sourceMap: contractData.evm.deployedBytecode.sourceMap,
-        };
+        const {sourceMap} = contractData.evm.deployedBytecode;
+        return {fileName, name, sourceMap};
       }
     }
   }
   return null;
 }
 
+function readSource(fileName) {
+  try {
+    const sourcePath = path.resolve(__dirname, fileName);
+    return fs.readFileSync(sourcePath, 'utf8');
+  } catch (err) {
+    try {
+      const sourcePath = require.resolve(fileName);
+      return fs.readFileSync(sourcePath, 'utf8');
+    } catch (err) {
+      return null;
+    }
+  }
+}
+
 (async function main () {
-  const PROVIDER = "http://localhost:8545"
-  const provider = new Web3.providers.HttpProvider(PROVIDER);
+  const connString = 'http://localhost:8545';
+  const provider = new Web3.providers.HttpProvider(connString);
   const web3 = new Web3(provider);
 
   web3.extend({methods: [
@@ -85,98 +163,113 @@ function findContractByDeployedBytecode(codeHexStr, solcOutput) {
   ]});
 
   const solcOutputPath = process.argv[2];
-  const TX_HASH = process.argv[3];
+  const txHash = process.argv[3];
 
   const solcOutput = JSON.parse(fs.readFileSync(solcOutputPath, 'utf8'));
 
-  const rootAddr = (await web3.eth.getTransaction(TX_HASH)).to;
-  const rootData = await getContractData(rootAddr, web3, solcOutput);
+  const [receipt, tx] = await Promise.all([
+    web3.eth.getTransactionReceipt(txHash),
+    web3.eth.getTransaction(txHash)
+  ]);
 
-  // console.error(`rootAddr ${rootAddr}, rootData:`, stripDataForLog(rootData));
-
-  const receipt = await web3.eth.getTransactionReceipt(TX_HASH);
   console.log('Gas used by transaction:', receipt.gasUsed);
 
-  if (!rootData) {
+  const entryAddr = tx.to;
+  if (!entryAddr) {
+    // TODO: implement profiling construction code
+    console.log(`The transaction is a create transaction`);
+    return
+  }
+
+  const entryContract = await getContractWithAddr(entryAddr, web3, solcOutput);
+  if (!entryContract) {
     console.log(`The transaction target address is not a contract`);
     return
   }
 
   // https://github.com/ethereum/go-ethereum/wiki/Tracing:-Introduction
-  const trace = await web3.traceTx(TX_HASH, {disableStack: false, disableMemory: false, disableStorage: true});
-  const callStack = [rootData];
+  const trace = await web3.traceTx(txHash, {
+    disableStack: false,
+    disableMemory: true,
+    disableStorage: true
+  });
 
-  assert(trace.structLogs[0].depth === 0);
+  const callStack = [entryContract];
+  const bottomDepth = trace.structLogs[0].depth; // 1 in geth, 0 in ganache
 
   for (let i = 0; i < trace.structLogs.length; ++i) {
     const log = trace.structLogs[i];
+    const gasCost = getGasCost(log);
 
-    // console.error(`${log.op}, gas ${log.gas}, gasCost ${log.gasCost}, pc ${log.pc}, depth ${log.depth}`);
+    // console.error(`${log.op}, gas ${log.gas}, gasCost ${gasCost}, pc ${log.pc}, depth ${log.depth}`);
 
-    while (log.depth < callStack.length - 1) {
-      const prevTopData = callStack.pop();
+    while (log.depth - bottomDepth < callStack.length - 1) {
+      const prevTopContract = callStack.pop();
       // using the prev opcode since Ganache reports RETURN opcodes as having negative cost
       const prevLog = trace.structLogs[i - 1];
-      prevTopData.totalGasCost += prevTopData.gasBeforeContract - prevLog.gas + Math.max(0, prevLog.gasCost);
+      prevTopContract.totalGasCost += prevTopContract.gasBeforeContract - prevLog.gas + getGasCost(prevLog);
 
-      const topData = callStack[callStack.length - 1];
-      // console.error(`call ended, parent:`, stripDataForLog(topData));
-      if (topData.source != null) {
-        const cumulativeCallCost = topData.gasBeforeCall - log.gas;
-        // console.error(`current gas ${log.gas}, cumulativeCallCost: ${cumulativeCallCost}`);
-        increaseLineCost(topData, topData.callLine, cumulativeCallCost);
-      }
+      const topContract = callStack[callStack.length - 1];
+      const cumulativeCallCost = topContract.gasBeforeCall - log.gas;
+      increaseGasCost(topContract.callSource, topContract.callLine, cumulativeCallCost);
     }
 
     assert(callStack.length > 0);
 
-    const data = callStack[log.depth];
-    const line = getLineNumber(data, log);
+    const contract = callStack[log.depth - bottomDepth];
+    const {source, line, isSynthOp} = getSourceInfo(contract, log, solcOutput);
 
-    const callTargetHexStr = getCallTargetAddr(log);
-    if (callTargetHexStr) {
-      data.callLine = line;
-      data.gasBeforeCall = log.gas;
+    const callTargetAddrHexStr = getCallTargetAddr(log);
+    if (callTargetAddrHexStr) {
       // the current instruction is a call instruction
-      const targetData = await getContractData(callTargetHexStr, web3, solcOutput);
-      targetData.gasBeforeContract = trace.structLogs[i + 1].gas;
-      // console.error(`${log.op} to 0x${callTargetHexStr}, data:`, stripDataForLog(targetData) || '<empty>');
-      callStack.push(targetData);
-      if (targetData.source == null) {
-        console.error(`WARN no source for contract at 0x${callTargetHexStr}`)
-      }
+      contract.callSource = source;
+      contract.callLine = line;
+      contract.gasBeforeCall = log.gas;
+      const targetContract = await getContractWithAddr(callTargetAddrHexStr, web3, solcOutput);
+      targetContract.gasBeforeContract = trace.structLogs[i + 1].gas;
+      callStack.push(targetContract);
+    } else if (isSynthOp) {
+      contract.synthGasCost += gasCost;
     } else {
-      if (log.gasCost < 0 && isTerminalOpcode(log.op)) {
-        // see: https://github.com/trufflesuite/ganache-core/issues/277
-        // see: https://github.com/trufflesuite/ganache-core/pull/578
-        console.error(`WARN skipping invalid gasCost value ${log.gasCost} for op ${log.op}`)
-      } else if (data.source != null) {
-        increaseLineCost(data, line, log.gasCost);
-      }
+      increaseGasCost(source, line, gasCost);
     }
   }
 
   const firstLog = trace.structLogs[0];
   const lastLog = trace.structLogs[trace.structLogs.length - 1];
-  rootData.totalGasCost += firstLog.gas - lastLog.gas + Math.max(0, lastLog.gasCost);
 
-  Object.keys(dataByContractAddr).forEach(addressHexStr => {
-    const data = dataByContractAddr[addressHexStr];
-    if (data.source == null) {
+  entryContract.totalGasCost = firstLog.gas - lastLog.gas + getGasCost(lastLog);
+
+  Object.keys(contractByAddr).forEach(addressHexStr => {
+    const contract = contractByAddr[addressHexStr];
+    if (contract.name == null) {
       console.log(`\nUnknown contract at 0x${addressHexStr}`);
     } else {
-      console.log(`\nFile ${data.fileName}, contract ${data.contractName} at 0x${addressHexStr}\n`);
-
-      data.source.split('\n').forEach((line, i) => {
-        const gas = data.lineGas[i] || 0;
-        console.log('%s\t\t%s', gas, line);
-      });
-
-      console.log('Synthetic instruction gas:', data.synthCost);
-
-      // showAllPointsInSourceMap(data.sourceMap, data.source, data.lineOffsets);
+      const fileNames = Object.keys(contract.sourcesById)
+        .map(id => contract.sourcesById[id])
+        .map(source => source && source.fileName)
+        .filter(x => !!x)
+        .join(', ')
+      console.log(`\nContract ${contract.name} at 0x${addressHexStr}`);
+      console.log(`  defined in: ${fileNames || contract.fileName || '<no sources found>'}`);
+      console.log('  synthetic instruction gas:', contract.synthGasCost);
+      // showAllPointsInSourceMap(contract.sourceMap, contract.source, contract.lineOffsets);
     }
-    console.log('Total gas spent in the contract:', data.totalGasCost);
+    console.log('  total gas spent in the contract:', contract.totalGasCost);
+  });
+
+  Object.keys(sourceByFilename).forEach(fileName => {
+    const source = sourceByFilename[fileName];
+    if (!source.text) {
+      return;
+    }
+
+    console.log(`\nFile ${fileName}\n`);
+
+    source.text.split('\n').forEach((lineText, i) => {
+      const gas = source.lineGas[i] || 0;
+      console.log('%s\t\t%s', gas, lineText);
+    });
   });
 
 })().catch(e => console.log(e));
@@ -187,25 +280,52 @@ function getCallTargetAddr(log) {
     : null
 }
 
-function getLineNumber(data, log) {
-  if (!data.pcToIdx) {
-    return null
+function getSourceInfo(contract, log, solcOutput) {
+  const result = {source: null, line: null, isSynthOp: false};
+  if (!contract.pcToIdx || !contract.sourceMap) {
+    return result;
   }
-  const instructionIdx = data.pcToIdx[log.pc];
-  const mapItem = data.sourceMap[instructionIdx];
-  return mapItem.f === -1 ? null : binarysearch.closest(data.lineOffsets, mapItem.s);
+
+  const instructionIdx = contract.pcToIdx[log.pc];
+  const {s: sourceOffset, f: sourceId} = contract.sourceMap[instructionIdx];
+
+  if (sourceId === -1) {
+    // > In the case of instructions that are not associated with any particular source file,
+    // > the source mapping assigns an integer identifier of -1. This may happen for bytecode
+    // > sections stemming from compiler-generated inline assembly statements.
+    // From: https://solidity.readthedocs.io/en/v0.6.7/internals/source_mappings.html
+    result.isSynthOp = true;
+    return result;
+  }
+
+  result.source = getSourceWithId(sourceId, solcOutput) || null;
+
+  if (contract.sourcesById[sourceId] === undefined) {
+    contract.sourcesById[sourceId] = result.source;
+  }
+
+  if (result.source && result.source.lineOffsets) {
+    result.line = binarysearch.closest(result.source.lineOffsets, sourceOffset);
+  }
+
+  return result;
 }
 
-function increaseLineCost(data, line, gasCost) {
-  if (line === null) {
-    data.synthCost += gasCost;
+function getGasCost(log) {
+  // See: https://github.com/trufflesuite/ganache-core/issues/277
+  // See: https://github.com/trufflesuite/ganache-core/pull/578
+  if (log.gasCost < 0 && (log.op === 'RETURN' || log.op === 'REVERT' || log.op === 'STOP')) {
+    console.error(`WARN skipping invalid gasCost value ${log.gasCost} for op ${log.op}`);
+    return 0;
   } else {
-    data.lineGas[line] = (data.lineGas[line] | 0) + gasCost;
+    return log.gasCost;
   }
 }
 
-function isTerminalOpcode(op) {
-  return op === 'RETURN' || op === 'REVERT' || op === 'STOP'
+function increaseGasCost(source, line, gasCost) {
+  if (source != null && line != null) {
+    source.lineGas[line] = (source.lineGas[line] | 0) + gasCost;
+  }
 }
 
 function showAllPointsInSourceMap (sourceMap, src, lineOffsets) {
@@ -297,20 +417,16 @@ function parseSourceMap (raw) {
   });
 }
 
+function normalizeAddress(addressHexStr) {
+  if (!addressHexStr) {
+    return addressHexStr;
+  }
+  const addressBN = new BN(strip0x(addressHexStr), 16);
+  return addressBN.toString(16, 40);
+}
+
 function strip0x(hexStr) {
-  return hexStr[0] === '0' && hexStr[1] === 'x'
+  return hexStr && hexStr[0] === '0' && hexStr[1] === 'x'
     ? hexStr.substring(2)
     : hexStr
-}
-
-function ensure0x(hexStr) {
-  return hexStr[0] === '0' && hexStr[1] === 'x'
-    ? hexStr
-    : `0x${hexStr}`
-}
-
-function stripDataForLog(data) {
-  if (!data) return data;
-  const {fileName, contractName, callLine, gasBeforeCall} = data;
-  return {fileName, contractName, callLine, gasBeforeCall};
 }

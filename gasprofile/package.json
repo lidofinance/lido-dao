@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "ganache": "ganache-cli -e 10000",
-    "test": "buidler test --network localhost ./test.js",
+    "buidler-exec": "buidler run --network localhost",
     "profile": "node ./gasprofile.js"
   },
   "dependencies": {
