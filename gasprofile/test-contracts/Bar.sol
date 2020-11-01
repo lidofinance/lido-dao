@@ -6,8 +6,9 @@ contract Bar {
     uint s;
     Baz baz;
 
-    constructor (address a) public {
-        baz = Baz(a);
+    constructor () public {
+        baz = new Baz();
+        s = baz.add(0, 0);
     }
 
     function bar (uint i) public returns (uint) {
