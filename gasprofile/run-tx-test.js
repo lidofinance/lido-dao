@@ -1,21 +1,20 @@
 const Foo = artifacts.require('Foo.sol')
 const Bar = artifacts.require('Bar.sol')
-const Baz = artifacts.require('Baz.sol')
 
 async function main() {
   const addresses = await web3.eth.getAccounts()
 
-  const baz = await Baz.new()
-  const bar = await Bar.new(baz.address)
+  const bar = await Bar.new()
   const foo = await Foo.new(bar.address)
 
   console.log()
   console.log('Foo address:', foo.address)
   console.log('Bar address:', bar.address)
-  console.log('Baz address:', baz.address)
   console.log()
 
   console.log('Foo deploy tx:', foo.transactionHash)
+  console.log('Bar deploy tx:', bar.transactionHash)
+  console.log()
 
   await printTx(
     `foo.foo`,

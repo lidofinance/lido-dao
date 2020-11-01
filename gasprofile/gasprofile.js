@@ -1,7 +1,7 @@
 /***
  * Inspired by & rewritten from: https://github.com/yushih/solidity-gas-profiler;
- * added support for multiple contracts (call, delegatecall, etc.) and multiple
- * sources per contract (inheritance).
+ * added support for multiple contracts (call, delegatecall, etc.), multiple sources
+ * per contract (inheritance), and transactions/opcodes that construct new contracts.
  **/
 
 const assert = require('assert');
@@ -20,17 +20,23 @@ const MAKE_EMPTY_SOURCE = (id, fileName) => ({
 });
 
 const MAKE_EMPTY_CONTRACT = addressHexStr => ({
+  // constant fields
   addressHexStr,
   codeHexStr: null,
+  constructionСodeHexStr: null,
   fileName: null,
   name: null,
-  sourcesById: {},
   sourceMap: null,
+  constructorSourceMap: null,
   pcToIdx: null,
+  constructionPcToIdx: null,
+  // volatile fields
+  isConstructionCall: false,
+  sourcesById: {},
   gasBeforeContract: 0,
-  gasBeforeCall: 0,
-  callSource: null,
-  callLine: null,
+  gasBeforeOutgoingCall: 0,
+  outgoingCallSource: null,
+  outgoingCallLine: null,
   totalGasCost: 0,
   synthGasCost: 0,
 });
@@ -64,9 +70,13 @@ async function getContractWithAddr(addr, web3, solcOutput) {
     return result;
   }
 
+  result.constructionСodeHexStr = contractData.constructionСodeHexStr;
+  result.constructionPcToIdx = buildPcToInstructionMapping(result.constructionСodeHexStr);
+
   result.name = contractData.name;
   result.fileName = contractData.fileName;
   result.sourceMap = parseSourceMap(contractData.sourceMap);
+  result.constructorSourceMap = parseSourceMap(contractData.constructorSourceMap);
 
   return result;
 }
@@ -127,8 +137,13 @@ function findContractByDeployedBytecode(codeHexStr, solcOutput) {
       const name = contractNames[iContract];
       const contractData = fileContracts[name];
       if (contractData.evm.deployedBytecode.object === codeHexStr) {
-        const {sourceMap} = contractData.evm.deployedBytecode;
-        return {fileName, name, sourceMap};
+        return {
+          fileName,
+          name,
+          sourceMap: contractData.evm.deployedBytecode.sourceMap,
+          constructorSourceMap: contractData.evm.bytecode.sourceMap,
+          constructionСodeHexStr: contractData.evm.bytecode.object
+        };
       }
     }
   }
@@ -173,19 +188,20 @@ function readSource(fileName) {
   ]);
 
   console.log('Gas used by transaction:', receipt.gasUsed);
+  // console.log(`receipt:`, receipt)
 
-  const entryAddr = tx.to;
-  if (!entryAddr) {
-    // TODO: implement profiling construction code
-    console.log(`The transaction is a create transaction`);
-    return
-  }
+  const isEntryCallConstruction = !tx.to && !!receipt.contractAddress;
+  const entryAddr = isEntryCallConstruction ? receipt.contractAddress : tx.to;
+
+  assert(!!entryAddr);
 
   const entryContract = await getContractWithAddr(entryAddr, web3, solcOutput);
   if (!entryContract) {
     console.log(`The transaction target address is not a contract`);
     return
   }
+
+  entryContract.isConstructionCall = isEntryCallConstruction;
 
   // https://github.com/ethereum/go-ethereum/wiki/Tracing:-Introduction
   const trace = await web3.traceTx(txHash, {
@@ -210,8 +226,8 @@ function readSource(fileName) {
       prevTopContract.totalGasCost += prevTopContract.gasBeforeContract - prevLog.gas + getGasCost(prevLog);
 
       const topContract = callStack[callStack.length - 1];
-      const cumulativeCallCost = topContract.gasBeforeCall - log.gas;
-      increaseGasCost(topContract.callSource, topContract.callLine, cumulativeCallCost);
+      const cumulativeCallCost = topContract.gasBeforeOutgoingCall - log.gas;
+      increaseGasCost(topContract.outgoingCallSource, topContract.outgoingCallLine, cumulativeCallCost);
     }
 
     assert(callStack.length > 0);
@@ -219,19 +235,28 @@ function readSource(fileName) {
     const contract = callStack[log.depth - bottomDepth];
     const {source, line, isSynthOp} = getSourceInfo(contract, log, solcOutput);
 
-    const callTargetAddrHexStr = getCallTargetAddr(log);
-    if (callTargetAddrHexStr) {
-      // the current instruction is a call instruction
-      contract.callSource = source;
-      contract.callLine = line;
-      contract.gasBeforeCall = log.gas;
-      const targetContract = await getContractWithAddr(callTargetAddrHexStr, web3, solcOutput);
+    const nextLog = trace.structLogs[i + 1];
+    const callTarget = getCallTarget(log, i, trace.structLogs);
+
+    if (callTarget.addressHexStr && nextLog && nextLog.depth > log.depth) {
+      // the current instruction is a call or create instruction
+      assert(nextLog.depth === log.depth + 1);
+
+      contract.outgoingCallSource = source;
+      contract.outgoingCallLine = line;
+      contract.gasBeforeOutgoingCall = log.gas;
+
+      const targetContract = await getContractWithAddr(callTarget.addressHexStr, web3, solcOutput);
+      targetContract.isConstructionCall = callTarget.isConstructionCall;
       targetContract.gasBeforeContract = trace.structLogs[i + 1].gas;
+
       callStack.push(targetContract);
-    } else if (isSynthOp) {
-      contract.synthGasCost += gasCost;
     } else {
-      increaseGasCost(source, line, gasCost);
+      if (isSynthOp) {
+        contract.synthGasCost += gasCost;
+      } else {
+        increaseGasCost(source, line, gasCost);
+      }
     }
   }
 
@@ -274,20 +299,54 @@ function readSource(fileName) {
 
 })().catch(e => console.log(e));
 
-function getCallTargetAddr(log) {
-  return log.op === 'CALL' || log.op === 'CALLCODE' || log.op === 'DELEGATECALL' || log.op === 'STATICCALL'
-    ? new BN(log.stack[log.stack.length - 2], 16).toString(16) // https://ethervm.io/#F1
-    : null
+function getCallTarget(log, iLog, structLogs) {
+  switch (log.op) {
+    case 'CALL': // https://ethervm.io/#F1
+    case 'CALLCODE': // https://ethervm.io/#F2
+    case 'DELEGATECALL': // https://ethervm.io/#F4
+    case 'STATICCALL': { // https://ethervm.io/#FA
+      return {
+        addressHexStr: normalizeAddress(log.stack[log.stack.length - 2]),
+        isConstructionCall: false
+      };
+    }
+    case 'CREATE': // https://ethervm.io/#F0
+    case 'CREATE2': { // https://ethervm.io/#F5
+      let nextLogSameDepth = null;
+      for (++iLog; iLog < structLogs.length && !nextLogSameDepth; ++iLog) {
+        const nextLog = structLogs[iLog];
+        if (nextLog.depth === log.depth) {
+          nextLogSameDepth = nextLog;
+        }
+      }
+      return {
+        addressHexStr: nextLogSameDepth
+          ? normalizeAddress(nextLogSameDepth.stack[nextLogSameDepth.stack.length - 1])
+          : null,
+        isConstructionCall: true
+      };
+    }
+    default: {
+      return {
+        addressHexStr: null,
+        isConstructionCall: false
+      };
+    }
+  }
 }
 
 function getSourceInfo(contract, log, solcOutput) {
   const result = {source: null, line: null, isSynthOp: false};
-  if (!contract.pcToIdx || !contract.sourceMap) {
+
+  const pcToIdx = contract.isConstructionCall ? contract.constructionPcToIdx : contract.pcToIdx;
+  const sourceMap = contract.isConstructionCall ? contract.constructorSourceMap : contract.sourceMap;
+
+  if (!pcToIdx || !sourceMap) {
     return result;
   }
 
-  const instructionIdx = contract.pcToIdx[log.pc];
-  const {s: sourceOffset, f: sourceId} = contract.sourceMap[instructionIdx];
+  const instructionIdx = pcToIdx[log.pc];
+  const {s: sourceOffset, f: sourceId} = sourceMap[instructionIdx];
 
   if (sourceId === -1) {
     // > In the case of instructions that are not associated with any particular source file,
