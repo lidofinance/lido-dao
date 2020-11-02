@@ -11,7 +11,7 @@ const binarysearch = require('binarysearch');
 const Web3 = require('web3');
 const BN = require('bn.js');
 
-const MAKE_EMPTY_SOURCE = (id, fileName) => ({
+const makeSource = (id, fileName) => ({
   id,
   fileName,
   text: null,
@@ -19,7 +19,7 @@ const MAKE_EMPTY_SOURCE = (id, fileName) => ({
   lineGas: []
 });
 
-const MAKE_EMPTY_CONTRACT = addressHexStr => ({
+const makeContract = addressHexStr => ({
   addressHexStr,
   codeHexStr: null,
   constructionСodeHexStr: null,
@@ -31,10 +31,10 @@ const MAKE_EMPTY_CONTRACT = addressHexStr => ({
   pcToIdx: null,
   constructionPcToIdx: null,
   totalGasCost: 0,
-  synthGasCost: 0,
+  synthGasCost: 0
 });
 
-const MAKE_CALLSTACK_ITEM = contract => ({
+const makeCallStackItem = contract => ({
   contract,
   isConstructionCall: false,
   gasBefore: 0,
@@ -46,125 +46,6 @@ const MAKE_CALLSTACK_ITEM = contract => ({
 const contractByAddr = {};
 const sourceById = {};
 const sourceByFilename = {};
-
-async function getContractWithAddr(addr, web3, solcOutput) {
-  const addressHexStr = normalizeAddress(addr);
-
-  const cached = contractByAddr[addressHexStr];
-  if (cached) {
-    return cached;
-  }
-
-  const result = MAKE_EMPTY_CONTRACT(addressHexStr);
-  contractByAddr[addressHexStr] = result;
-
-  result.codeHexStr = strip0x(await web3.eth.getCode(addressHexStr)) || null;
-  if (!result.codeHexStr) {
-    console.error(`WARN no code at address 0x${addressHexStr}`);
-    return result;
-  }
-
-  result.pcToIdx = buildPcToInstructionMapping(result.codeHexStr);
-
-  const contractData = findContractByDeployedBytecode(result.codeHexStr, solcOutput);
-  if (!contractData) {
-    console.error(`WARN no source for contract at address 0x${addressHexStr}`);
-    return result;
-  }
-
-  result.constructionСodeHexStr = contractData.constructionСodeHexStr;
-  result.constructionPcToIdx = buildPcToInstructionMapping(result.constructionСodeHexStr);
-
-  result.name = contractData.name;
-  result.fileName = contractData.fileName;
-  result.sourceMap = parseSourceMap(contractData.sourceMap);
-  result.constructorSourceMap = parseSourceMap(contractData.constructorSourceMap);
-
-  return result;
-}
-
-function getSourceWithId(sourceId, solcOutput) {
-  const cached = sourceById[sourceId];
-  if (cached) {
-    return cached;
-  }
-
-  const fileName = Object
-    .keys(solcOutput.sources)
-    .find(sourceFileName => solcOutput.sources[sourceFileName].id === sourceId) || null;
-
-  if (!fileName) {
-    console.error(`WARN no source with id ${sourceId}`);
-    return sourceById[sourceId] = MAKE_EMPTY_SOURCE(sourceId, null);
-  }
-
-  return getSourceForFilename(fileName, solcOutput);
-}
-
-function getSourceForFilename(fileName, solcOutput) {
-  const cached = sourceByFilename[fileName];
-  if (cached) {
-    return cached;
-  }
-
-  const result = MAKE_EMPTY_SOURCE(null, fileName);
-  sourceByFilename[fileName] = result;
-
-  const sourceData = solcOutput.sources[fileName];
-  if (!sourceData) {
-    console.error(`WARN no source info for filename ${fileName}`);
-    return result;
-  }
-
-  result.id = sourceData.id;
-  sourceById[result.id] = result;
-
-  result.text = readSource(fileName);
-  if (result.text) {
-    result.lineOffsets = buildLineOffsets(result.text);
-  } else {
-    console.error(`WARN no source text for filename ${fileName} (id ${result.id})`);
-  }
-
-  return result;
-}
-
-function findContractByDeployedBytecode(codeHexStr, solcOutput) {
-  const filesNames = Object.keys(solcOutput.contracts);
-  for (let iFile = 0; iFile < filesNames.length; ++iFile) {
-    const fileName = filesNames[iFile];
-    const fileContracts = solcOutput.contracts[fileName];
-    const contractNames = Object.keys(fileContracts);
-    for (let iContract = 0; iContract < contractNames.length; ++iContract) {
-      const name = contractNames[iContract];
-      const contractData = fileContracts[name];
-      if (contractData.evm.deployedBytecode.object === codeHexStr) {
-        return {
-          fileName,
-          name,
-          sourceMap: contractData.evm.deployedBytecode.sourceMap,
-          constructorSourceMap: contractData.evm.bytecode.sourceMap,
-          constructionСodeHexStr: contractData.evm.bytecode.object
-        };
-      }
-    }
-  }
-  return null;
-}
-
-function readSource(fileName) {
-  try {
-    const sourcePath = path.resolve(__dirname, fileName);
-    return fs.readFileSync(sourcePath, 'utf8');
-  } catch (err) {
-    try {
-      const sourcePath = require.resolve(fileName);
-      return fs.readFileSync(sourcePath, 'utf8');
-    } catch (err) {
-      return null;
-    }
-  }
-}
 
 (async function main () {
   const connString = 'http://localhost:8545';
@@ -209,7 +90,7 @@ function readSource(fileName) {
     disableStorage: true
   });
 
-  const entryCall = MAKE_CALLSTACK_ITEM(entryContract);
+  const entryCall = makeCallStackItem(entryContract);
   entryCall.isConstructionCall = isEntryCallConstruction;
 
   const callStack = [entryCall];
@@ -235,7 +116,7 @@ function readSource(fileName) {
     assert(callStack.length > 0);
 
     const call = callStack[log.depth - bottomDepth];
-    const {source, line, isSynthOp} = getSourceInfo(call, log, solcOutput);
+    const {source, line, isSynthOp} = getSourcePosition(call, log, solcOutput);
 
     const nextLog = trace.structLogs[i + 1];
     const outgoingCallTarget = getCallTarget(log, i, trace.structLogs);
@@ -249,7 +130,7 @@ function readSource(fileName) {
       call.gasBeforeOutgoingCall = log.gas;
 
       const targetContract = await getContractWithAddr(outgoingCallTarget.addressHexStr, web3, solcOutput);
-      const outgoingCall = MAKE_CALLSTACK_ITEM(targetContract);
+      const outgoingCall = makeCallStackItem(targetContract);
 
       outgoingCall.isConstructionCall = outgoingCallTarget.isConstructionCall;
       outgoingCall.gasBefore = nextLog.gas;
@@ -303,6 +184,125 @@ function readSource(fileName) {
 
 })().catch(e => console.log(e));
 
+async function getContractWithAddr(addr, web3, solcOutput) {
+  const addressHexStr = normalizeAddress(addr);
+
+  const cached = contractByAddr[addressHexStr];
+  if (cached) {
+    return cached;
+  }
+
+  const result = makeContract(addressHexStr);
+  contractByAddr[addressHexStr] = result;
+
+  result.codeHexStr = strip0x(await web3.eth.getCode(addressHexStr)) || null;
+  if (!result.codeHexStr) {
+    console.error(`WARN no code at address 0x${addressHexStr}`);
+    return result;
+  }
+
+  result.pcToIdx = buildPcToInstructionMapping(result.codeHexStr);
+
+  const contractData = findContractByDeployedBytecode(result.codeHexStr, solcOutput);
+  if (!contractData) {
+    console.error(`WARN no source for contract at address 0x${addressHexStr}`);
+    return result;
+  }
+
+  result.constructionСodeHexStr = contractData.constructionСodeHexStr;
+  result.constructionPcToIdx = buildPcToInstructionMapping(result.constructionСodeHexStr);
+
+  result.name = contractData.name;
+  result.fileName = contractData.fileName;
+  result.sourceMap = parseSourceMap(contractData.sourceMap);
+  result.constructorSourceMap = parseSourceMap(contractData.constructorSourceMap);
+
+  return result;
+}
+
+function findContractByDeployedBytecode(codeHexStr, solcOutput) {
+  const filesNames = Object.keys(solcOutput.contracts);
+  for (let iFile = 0; iFile < filesNames.length; ++iFile) {
+    const fileName = filesNames[iFile];
+    const fileContracts = solcOutput.contracts[fileName];
+    const contractNames = Object.keys(fileContracts);
+    for (let iContract = 0; iContract < contractNames.length; ++iContract) {
+      const name = contractNames[iContract];
+      const contractData = fileContracts[name];
+      if (contractData.evm.deployedBytecode.object === codeHexStr) {
+        return {
+          fileName,
+          name,
+          sourceMap: contractData.evm.deployedBytecode.sourceMap,
+          constructorSourceMap: contractData.evm.bytecode.sourceMap,
+          constructionСodeHexStr: contractData.evm.bytecode.object
+        };
+      }
+    }
+  }
+  return null;
+}
+
+function getSourceWithId(sourceId, solcOutput) {
+  const cached = sourceById[sourceId];
+  if (cached) {
+    return cached;
+  }
+
+  const fileName = Object
+    .keys(solcOutput.sources)
+    .find(sourceFileName => solcOutput.sources[sourceFileName].id === sourceId) || null;
+
+  if (!fileName) {
+    console.error(`WARN no source with id ${sourceId}`);
+    return sourceById[sourceId] = makeSource(sourceId, null);
+  }
+
+  return getSourceForFilename(fileName, solcOutput);
+}
+
+function getSourceForFilename(fileName, solcOutput) {
+  const cached = sourceByFilename[fileName];
+  if (cached) {
+    return cached;
+  }
+
+  const result = makeSource(null, fileName);
+  sourceByFilename[fileName] = result;
+
+  const sourceData = solcOutput.sources[fileName];
+  if (!sourceData) {
+    console.error(`WARN no source info for filename ${fileName}`);
+    return result;
+  }
+
+  result.id = sourceData.id;
+  sourceById[result.id] = result;
+
+  result.text = readSource(fileName);
+  if (result.text) {
+    result.lineOffsets = buildLineOffsets(result.text);
+  } else {
+    console.error(`WARN no source text for filename ${fileName} (id ${result.id})`);
+  }
+
+  return result;
+}
+
+function readSource(fileName) {
+  try {
+    const sourcePath = path.resolve(__dirname, fileName);
+    return fs.readFileSync(sourcePath, 'utf8');
+  } catch (err) {
+    try {
+      const sourcePath = require.resolve(fileName);
+      return fs.readFileSync(sourcePath, 'utf8');
+    } catch (err) {
+      return null;
+    }
+  }
+}
+
 function getCallTarget(log, iLog, structLogs) {
   switch (log.op) {
     case 'CALL': // https://ethervm.io/#F1
@@ -339,7 +339,7 @@ function getCallTarget(log, iLog, structLogs) {
   }
 }
 
-function getSourceInfo(call, log, solcOutput) {
+function getSourcePosition(call, log, solcOutput) {
   const result = {source: null, line: null, isSynthOp: false};
 
   const {contract} = call;
