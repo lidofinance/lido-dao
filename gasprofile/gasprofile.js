@@ -8,6 +8,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const yargs = require('yargs/yargs');
+const chalk = require('chalk');
 const binarysearch = require('binarysearch');
 const Web3 = require('web3');
 const BN = require('bn.js');
@@ -87,8 +88,13 @@ const argv = yargs(yargs.hideBin(process.argv))
   .argv;
 
 main(argv)
-  .catch(e => console.error(e.stack))
-  .then(() => process.exit(0));
+  .catch(e => {
+    console.error(e.stack);
+    process.exit(2);
+  })
+  .then(success => {
+    process.exit(success ? 0 : 1);
+  });
 
 async function main(argv) {
   const provider = new Web3.providers.HttpProvider(argv.rpcEndpoint);
@@ -99,6 +105,11 @@ async function main(argv) {
       name: 'traceTx',
       call: 'debug_traceTransaction',
       params: 2
+    },
+    {
+      name: 'getClientVersion',
+      call: 'web3_clientVersion',
+      params: 0
     }
   ]});
 
@@ -107,12 +118,18 @@ async function main(argv) {
   const sourceRoot = argv.srcRoot;
   const skipFiles = argv.skip;
 
+  const clientVersion = await web3.getClientVersion();
+  console.error(`Client version: ${clientVersion}\n`);
+
   const [receipt, tx] = await Promise.all([
-    web3.eth.getTransactionReceipt(txHash),
-    web3.eth.getTransaction(txHash)
+    web3.eth.getTransactionReceipt(txHash).catch(e => null),
+    web3.eth.getTransaction(txHash).catch(e => null)
   ]);
 
-  console.log('Gas used by transaction:', receipt.gasUsed);
+  if (!tx || !receipt) {
+    console.log(`Transaction not found`);
+    return false;
+  }
 
   const isEntryCallConstruction = !tx.to && !!receipt.contractAddress;
   const entryAddr = isEntryCallConstruction ? receipt.contractAddress : tx.to;
@@ -120,9 +137,10 @@ async function main(argv) {
   assert(!!entryAddr);
 
   const entryContract = await getContractWithAddr(entryAddr, web3, solcOutput);
-  if (!entryContract) {
+  if (!entryContract.codeHexStr) {
+    console.log(`Total gas used by transaction:`, receipt.gasUsed);
     console.log(`The transaction target address is not a contract`);
-    return
+    return false;
   }
 
   // https://github.com/ethereum/go-ethereum/wiki/Tracing:-Introduction
@@ -137,17 +155,21 @@ async function main(argv) {
 
   const callStack = [entryCall];
   const bottomDepth = trace.structLogs[0].depth; // 1 in geth, 0 in ganache
+  const initialGasCost = tx.gas - trace.structLogs[0].gas;
 
   for (let i = 0; i < trace.structLogs.length; ++i) {
+    const prevLog = trace.structLogs[i - 1];
+    const nextLog = trace.structLogs[i + 1];
     const log = trace.structLogs[i];
     const gasCost = getGasCost(log);
 
-    // console.error(`${log.op}, gas ${log.gas}, gasCost ${gasCost}, pc ${log.pc}, depth ${log.depth}`);
+    // console.error(`${log.op}, gas ${log.gas}, gasCost ${log.gasCost}, pc ${log.pc}, depth ${log.depth}`);
 
     while (log.depth - bottomDepth < callStack.length - 1) {
       const prevTopCall = callStack.pop();
-      // using the prev opcode since Ganache reports RETURN opcodes as having negative cost
-      const prevLog = trace.structLogs[i - 1];
+      // Using the previous log since the current log's gas contains the compensation of 1/64 gas
+      // that was held when making the call, and at the point when prevTopCall.gasBefore was
+      // recorded this amount had been already held by the call instruction.
       prevTopCall.contract.totalGasCost += prevTopCall.gasBefore - prevLog.gas + getGasCost(prevLog);
 
       const topCall = callStack[callStack.length - 1];
@@ -160,7 +182,6 @@ async function main(argv) {
     const call = callStack[log.depth - bottomDepth];
     const {source, line, isSynthOp} = getSourcePosition(call, log, solcOutput, sourceRoot, skipFiles);
 
-    const nextLog = trace.structLogs[i + 1];
     const outgoingCallTarget = getCallTarget(log, i, trace.structLogs);
 
     if (outgoingCallTarget.addressHexStr && nextLog && nextLog.depth > log.depth) {
@@ -175,7 +196,7 @@ async function main(argv) {
       const outgoingCall = makeCallStackItem(targetContract);
 
       outgoingCall.isConstructionCall = outgoingCallTarget.isConstructionCall;
-      outgoingCall.gasBefore = nextLog.gas;
+      outgoingCall.gasBefore = nextLog.gas; // here the 1/64 of the remaining gas will already be held
 
       callStack.push(outgoingCall);
     } else {
@@ -189,8 +210,12 @@ async function main(argv) {
 
   const firstLog = trace.structLogs[0];
   const lastLog = trace.structLogs[trace.structLogs.length - 1];
-
   entryContract.totalGasCost = firstLog.gas - lastLog.gas + getGasCost(lastLog);
+
+  console.log(`Total gas used by transaction:`, receipt.gasUsed);
+  console.log(`Initial gas cost (sending tx, data):`, initialGasCost);
+  console.log(`Gas used by opcodes:`, entryContract.totalGasCost);
+  console.log(`Other gas:`, receipt.gasUsed - initialGasCost - entryContract.totalGasCost);
 
   Object.keys(contractByAddr).forEach(addressHexStr => {
     const contract = contractByAddr[addressHexStr];
@@ -228,12 +253,11 @@ async function main(argv) {
 
   const gasColTitle = 'GAS';
   const gasColLength = Math.max(String(maxGasPerLine).length, gasColTitle.length);
-
   const header = `┌───┬${ ''.padStart(gasColLength + 2, '─') }┐\n` +
                  `│ C │${ padCenter(gasColTitle, gasColLength + 2, ' ') }│\n` +
                  `├───┼${ ''.padStart(gasColLength + 2, '─') }┤`;
-
   const footer = `└───┴${ ''.padStart(gasColLength + 2, '─') }┘`;
+  const callType = chalk.yellow('+');
 
   souceFilenames.forEach(fileName => {
     const source = sourceByFilename[fileName];
@@ -244,18 +268,21 @@ async function main(argv) {
     console.log(`\nFile ${fileName}\n${header}`);
 
     source.text.split('\n').forEach((lineText, i) => {
-      const type = source.linesWithCalls[i] ? '+' : ' ';
-      const gas = String(source.lineGas[i] || 0).padStart(gasColLength, ' ');
-      console.log(`│ ${type} │ ${gas} │ ${lineText}`);
+      const type = source.linesWithCalls[i] ? callType : ' ';
+      const gas = source.lineGas[i] || 0
+      const gasText = String(gas).padStart(gasColLength, ' ');
+      console.log(`│ ${type} │ ${gas ? chalk.yellow(gasText) : gasText} │ ${lineText}`);
     });
 
     console.log(footer);
   });
 
   if (hasCalls) {
-    console.log(`\nLines marked with + contain calls to other contracts, and gas`);
+    console.log(`\nLines marked with a ${callType} contain calls to other contracts, and gas`);
     console.log(`usage of such lines includes the gas spent by the called code.`);
   }
+
+  return true;
 }
 
 async function getContractWithAddr(addr, web3, solcOutput) {
@@ -448,16 +475,20 @@ function getSourcePosition(call, log, solcOutput, sourceRoot, skipFiles) {
 
   if (result.source && result.source.lineOffsets) {
     result.line = binarysearch.closest(result.source.lineOffsets, sourceOffset);
+    // if (result.line) {
+    //   const endOffset = result.source.text.indexOf('\n', sourceOffset + 1);
+    //   console.error(`  ${result.source.fileName}:${result.line}\n  ${result.source.text.substring(sourceOffset, endOffset)}`);
+    // }
   }
 
   return result;
 }
 
 function getGasCost(log) {
-  // See: https://github.com/trufflesuite/ganache-core/issues/277
-  // See: https://github.com/trufflesuite/ganache-core/pull/578
+  // Ganache reports negative gasCost for return ops to account for compensation of 1/64 gas
+  // that was held when making a call; see Appendix H of Ethereum yellow paper and
+  // https://medium.com/@researchandinnovation/the-dark-side-of-ethereum-1-64th-call-gas-reduction-967d12e0627e
   if (log.gasCost < 0 && (log.op === 'RETURN' || log.op === 'REVERT' || log.op === 'STOP')) {
-    console.error(`WARN skipping invalid gasCost value ${log.gasCost} for op ${log.op}`);
     return 0;
   } else {
     return log.gasCost;
