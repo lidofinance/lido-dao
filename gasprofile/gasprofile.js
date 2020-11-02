@@ -15,6 +15,7 @@ const BN = require('bn.js');
 const makeSource = (id, fileName) => ({
   id,
   fileName,
+  skip: false,
   text: null,
   lineOffsets: null,
   lineGas: [],
@@ -62,6 +63,12 @@ const argv = yargs(yargs.hideBin(process.argv))
         describe: 'hash of the transaction to profile',
         type: 'string'
       })
+      .option('S', {
+        alias: 'skip',
+        type: 'array',
+        default: [],
+        describe: 'skip printing gas usage for filenames containing this substring'
+      })
       .option('R', {
         alias: 'src-root',
         type: 'string',
@@ -98,6 +105,7 @@ async function main(argv) {
   const txHash = argv.transactionHash;
   const solcOutput = JSON.parse(fs.readFileSync(argv.solcOutputJson, 'utf8'));
   const sourceRoot = argv.srcRoot;
+  const skipFiles = argv.skip;
 
   const [receipt, tx] = await Promise.all([
     web3.eth.getTransactionReceipt(txHash),
@@ -150,7 +158,7 @@ async function main(argv) {
     assert(callStack.length > 0);
 
     const call = callStack[log.depth - bottomDepth];
-    const {source, line, isSynthOp} = getSourcePosition(call, log, solcOutput, sourceRoot);
+    const {source, line, isSynthOp} = getSourcePosition(call, log, solcOutput, sourceRoot, skipFiles);
 
     const nextLog = trace.structLogs[i + 1];
     const outgoingCallTarget = getCallTarget(log, i, trace.structLogs);
@@ -287,7 +295,7 @@ function findContractByDeployedBytecode(codeHexStr, solcOutput) {
   return null;
 }
 
-function getSourceWithId(sourceId, solcOutput, sourceRoot) {
+function getSourceWithId(sourceId, solcOutput, sourceRoot, skipFiles) {
   const cached = sourceById[sourceId];
   if (cached) {
     return cached;
@@ -302,10 +310,10 @@ function getSourceWithId(sourceId, solcOutput, sourceRoot) {
     return sourceById[sourceId] = makeSource(sourceId, null);
   }
 
-  return getSourceForFilename(fileName, solcOutput, sourceRoot);
+  return getSourceForFilename(fileName, solcOutput, sourceRoot, skipFiles);
 }
 
-function getSourceForFilename(fileName, solcOutput, sourceRoot) {
+function getSourceForFilename(fileName, solcOutput, sourceRoot, skipFiles) {
   const cached = sourceByFilename[fileName];
   if (cached) {
     return cached;
@@ -321,12 +329,16 @@ function getSourceForFilename(fileName, solcOutput, sourceRoot) {
   }
 
   result.id = sourceData.id;
+  result.skip = skipFiles.some(str => fileName.indexOf(str) !== -1);
   sourceById[result.id] = result;
 
-  result.text = readSource(fileName, sourceRoot);
+  if (!result.skip) {
+    result.text = readSource(fileName, sourceRoot);
+  }
+
   if (result.text) {
     result.lineOffsets = buildLineOffsets(result.text);
-  } else {
+  } else if (!result.skip) {
     console.error(`WARN no source text for filename ${fileName} (id ${result.id})`);
   }
 
@@ -383,7 +395,7 @@ function getCallTarget(log, iLog, structLogs) {
   }
 }
 
-function getSourcePosition(call, log, solcOutput, sourceRoot) {
+function getSourcePosition(call, log, solcOutput, sourceRoot, skipFiles) {
   const result = {source: null, line: null, isSynthOp: false};
 
   const {contract} = call;
@@ -406,7 +418,7 @@ function getSourcePosition(call, log, solcOutput, sourceRoot) {
     return result;
   }
 
-  result.source = getSourceWithId(sourceId, solcOutput, sourceRoot) || null;
+  result.source = getSourceWithId(sourceId, solcOutput, sourceRoot, skipFiles) || null;
 
   if (contract.sourcesById[sourceId] === undefined) {
     contract.sourcesById[sourceId] = result.source;
@@ -431,7 +443,7 @@ function getGasCost(log) {
 }
 
 function increaseLineGasCost(source, line, gasCost, isCall) {
-  if (source != null && line != null) {
+  if (source != null && line != null && !source.skip) {
     source.lineGas[line] = (source.lineGas[line] | 0) + gasCost;
     if (isCall) {
       source.linesWithCalls[line] = true;
