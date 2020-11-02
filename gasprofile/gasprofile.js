@@ -20,26 +20,28 @@ const MAKE_EMPTY_SOURCE = (id, fileName) => ({
 });
 
 const MAKE_EMPTY_CONTRACT = addressHexStr => ({
-  // constant fields
   addressHexStr,
   codeHexStr: null,
   constructionСodeHexStr: null,
   fileName: null,
   name: null,
+  sourcesById: {},
   sourceMap: null,
   constructorSourceMap: null,
   pcToIdx: null,
   constructionPcToIdx: null,
-  // volatile fields
-  isConstructionCall: false,
-  sourcesById: {},
-  gasBeforeContract: 0,
-  gasBeforeOutgoingCall: 0,
-  outgoingCallSource: null,
-  outgoingCallLine: null,
   totalGasCost: 0,
   synthGasCost: 0,
 });
+
+const MAKE_CALLSTACK_ITEM = contract => ({
+  contract,
+  isConstructionCall: false,
+  gasBefore: 0,
+  gasBeforeOutgoingCall: 0,
+  outgoingCallSource: null,
+  outgoingCallLine: null
+})
 
 const contractByAddr = {};
 const sourceById = {};
@@ -188,7 +190,6 @@ function readSource(fileName) {
   ]);
 
   console.log('Gas used by transaction:', receipt.gasUsed);
-  // console.log(`receipt:`, receipt)
 
   const isEntryCallConstruction = !tx.to && !!receipt.contractAddress;
   const entryAddr = isEntryCallConstruction ? receipt.contractAddress : tx.to;
@@ -201,8 +202,6 @@ function readSource(fileName) {
     return
   }
 
-  entryContract.isConstructionCall = isEntryCallConstruction;
-
   // https://github.com/ethereum/go-ethereum/wiki/Tracing:-Introduction
   const trace = await web3.traceTx(txHash, {
     disableStack: false,
@@ -210,7 +209,10 @@ function readSource(fileName) {
     disableStorage: true
   });
 
-  const callStack = [entryContract];
+  const entryCall = MAKE_CALLSTACK_ITEM(entryContract);
+  entryCall.isConstructionCall = isEntryCallConstruction;
+
+  const callStack = [entryCall];
   const bottomDepth = trace.structLogs[0].depth; // 1 in geth, 0 in ganache
 
   for (let i = 0; i < trace.structLogs.length; ++i) {
@@ -220,42 +222,44 @@ function readSource(fileName) {
     // console.error(`${log.op}, gas ${log.gas}, gasCost ${gasCost}, pc ${log.pc}, depth ${log.depth}`);
 
     while (log.depth - bottomDepth < callStack.length - 1) {
-      const prevTopContract = callStack.pop();
+      const prevTopCall = callStack.pop();
       // using the prev opcode since Ganache reports RETURN opcodes as having negative cost
       const prevLog = trace.structLogs[i - 1];
-      prevTopContract.totalGasCost += prevTopContract.gasBeforeContract - prevLog.gas + getGasCost(prevLog);
+      prevTopCall.contract.totalGasCost += prevTopCall.gasBefore - prevLog.gas + getGasCost(prevLog);
 
-      const topContract = callStack[callStack.length - 1];
-      const cumulativeCallCost = topContract.gasBeforeOutgoingCall - log.gas;
-      increaseGasCost(topContract.outgoingCallSource, topContract.outgoingCallLine, cumulativeCallCost);
+      const topCall = callStack[callStack.length - 1];
+      const cumulativeCallCost = topCall.gasBeforeOutgoingCall - log.gas;
+      increaseLineGasCost(topCall.outgoingCallSource, topCall.outgoingCallLine, cumulativeCallCost);
     }
 
     assert(callStack.length > 0);
 
-    const contract = callStack[log.depth - bottomDepth];
-    const {source, line, isSynthOp} = getSourceInfo(contract, log, solcOutput);
+    const call = callStack[log.depth - bottomDepth];
+    const {source, line, isSynthOp} = getSourceInfo(call, log, solcOutput);
 
     const nextLog = trace.structLogs[i + 1];
-    const callTarget = getCallTarget(log, i, trace.structLogs);
+    const outgoingCallTarget = getCallTarget(log, i, trace.structLogs);
 
-    if (callTarget.addressHexStr && nextLog && nextLog.depth > log.depth) {
+    if (outgoingCallTarget.addressHexStr && nextLog && nextLog.depth > log.depth) {
       // the current instruction is a call or create instruction
       assert(nextLog.depth === log.depth + 1);
 
-      contract.outgoingCallSource = source;
-      contract.outgoingCallLine = line;
-      contract.gasBeforeOutgoingCall = log.gas;
+      call.outgoingCallSource = source;
+      call.outgoingCallLine = line;
+      call.gasBeforeOutgoingCall = log.gas;
 
-      const targetContract = await getContractWithAddr(callTarget.addressHexStr, web3, solcOutput);
-      targetContract.isConstructionCall = callTarget.isConstructionCall;
-      targetContract.gasBeforeContract = trace.structLogs[i + 1].gas;
+      const targetContract = await getContractWithAddr(outgoingCallTarget.addressHexStr, web3, solcOutput);
+      const outgoingCall = MAKE_CALLSTACK_ITEM(targetContract);
 
-      callStack.push(targetContract);
+      outgoingCall.isConstructionCall = outgoingCallTarget.isConstructionCall;
+      outgoingCall.gasBefore = nextLog.gas;
+
+      callStack.push(outgoingCall);
     } else {
       if (isSynthOp) {
-        contract.synthGasCost += gasCost;
+        call.contract.synthGasCost += gasCost;
       } else {
-        increaseGasCost(source, line, gasCost);
+        increaseLineGasCost(source, line, gasCost);
       }
     }
   }
@@ -335,11 +339,12 @@ function getCallTarget(log, iLog, structLogs) {
   }
 }
 
-function getSourceInfo(contract, log, solcOutput) {
+function getSourceInfo(call, log, solcOutput) {
   const result = {source: null, line: null, isSynthOp: false};
 
-  const pcToIdx = contract.isConstructionCall ? contract.constructionPcToIdx : contract.pcToIdx;
-  const sourceMap = contract.isConstructionCall ? contract.constructorSourceMap : contract.sourceMap;
+  const {contract} = call;
+  const pcToIdx = call.isConstructionCall ? contract.constructionPcToIdx : contract.pcToIdx;
+  const sourceMap = call.isConstructionCall ? contract.constructorSourceMap : contract.sourceMap;
 
   if (!pcToIdx || !sourceMap) {
     return result;
@@ -381,7 +386,7 @@ function getGasCost(log) {
   }
 }
 
-function increaseGasCost(source, line, gasCost) {
+function increaseLineGasCost(source, line, gasCost) {
   if (source != null && line != null) {
     source.lineGas[line] = (source.lineGas[line] | 0) + gasCost;
   }
