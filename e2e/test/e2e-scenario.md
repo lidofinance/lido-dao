@@ -64,11 +64,23 @@ X Report slashing, check that there is no reward and atoken balance decreases an
 
 ✅Add sp4 and add signing keys
 
-✅Deactivate sp4
+✅Check deposit iteration limit
+
+✅Add sp4 and add signing keys
+
+✅Add sp4 and add signing keys
+
+✅Deactivate sp4 with currently using signing keys
+
+✅Push data and check that the deactivated provider balance not changed
+
+✅Increase the staking limit for an SP
 
 ✅Reduce the staking limit for an SP
 
-✅Increase the staking limit for an SP
+✅Check that the validators do not activate if there are no unused signing keys
+
+✅Check that the validators do not activate if there are no unused signing keys
 
 X Test insurance (pending for the actual insurance)
 
