@@ -30,7 +30,6 @@ async function hasInitialized() {
 async function setPermissions(members, role, app_address, holder, holders) {
   for (let i = 0; i < members.length; i++) {
     for (let j = 0; j < role.length; j++) {
-      console.log(j)
       const callData1 = encodeCallScript([
         {
           to: getProxyAddress(),
@@ -53,7 +52,6 @@ async function hasPermissions(members, address, roles) {
         return state
       }
     }
-    console.log('Закончили с ' + members[i])
   }
   return state
 }
