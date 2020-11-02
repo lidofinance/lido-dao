@@ -209,24 +209,47 @@ async function main(argv) {
     console.log('  total gas spent in the contract:', contract.totalGasCost);
   });
 
+  const souceFilenames = Object.keys(sourceByFilename);
+
+  let maxGasPerLine = 0;
   let hasCalls = false;
 
-  Object.keys(sourceByFilename).forEach(fileName => {
+  souceFilenames.forEach(fileName => {
+    const source = sourceByFilename[fileName];
+    source.lineGas.forEach((gasPerLine, iLine) => {
+      if (gasPerLine > maxGasPerLine) {
+        maxGasPerLine = gasPerLine;
+      }
+      if (!hasCalls && source.linesWithCalls[iLine]) {
+        hasCalls = true
+      }
+    })
+  });
+
+  const gasColTitle = 'GAS';
+  const gasColLength = Math.max(String(maxGasPerLine).length, gasColTitle.length);
+
+  const header = `┌───┬${ ''.padStart(gasColLength + 2, '─') }┐\n` +
+                 `│ C │${ padCenter(gasColTitle, gasColLength + 2, ' ') }│\n` +
+                 `├───┼${ ''.padStart(gasColLength + 2, '─') }┤`;
+
+  const footer = `└───┴${ ''.padStart(gasColLength + 2, '─') }┘`;
+
+  souceFilenames.forEach(fileName => {
     const source = sourceByFilename[fileName];
     if (!source.text) {
       return;
     }
 
-    console.log(`\nFile ${fileName}\n`);
+    console.log(`\nFile ${fileName}\n${header}`);
 
     source.text.split('\n').forEach((lineText, i) => {
-      const gas = source.lineGas[i] || 0;
-      const containsCall = !!source.linesWithCalls[i];
-      if (containsCall && !hasCalls) {
-        hasCalls = true;
-      }
-      console.log(`${gas}${containsCall ? '+' : ''}\t\t${lineText}`);
+      const type = source.linesWithCalls[i] ? '+' : ' ';
+      const gas = String(source.lineGas[i] || 0).padStart(gasColLength, ' ');
+      console.log(`│ ${type} │ ${gas} │ ${lineText}`);
     });
+
+    console.log(footer);
   });
 
   if (hasCalls) {
@@ -527,4 +550,13 @@ function strip0x(hexStr) {
   return hexStr && hexStr[0] === '0' && hexStr[1] === 'x'
     ? hexStr.substring(2)
     : hexStr
+}
+
+function padCenter(str, targetLength, padSymbol = ' ') {
+  const totalPad = targetLength - str.length;
+  if (totalPad <= 0) {
+    return str;
+  }
+  const leftPad = Math.floor(totalPad / 2);
+  return str.padStart(str.length + leftPad, padSymbol).padEnd(targetLength, padSymbol);
 }
