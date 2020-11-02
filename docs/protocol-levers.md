@@ -1,95 +1,255 @@
-# Levers
-Here is a list of levers inside the protocol.
+# Protocol levers
 
-## ACL
+The protocol provides a number of settings controllable by the DAO. Modifying each of them requires
+the caller to have a specific permission. After deploying the DAO, all permissions belong to the DAO
+`Voting` app, which can also manage them. This means that, initially, levers can only be changed by
+the DAO voting, and other entities can be allowed to do the same only as a result of the voting.
 
-TODO: add description to each permission.
+All existing levers are listed below, grouped by the contract.
 
-* PAUSE_ROLE
-* MANAGE_FEE
-* MANAGE_WITHDRAWAL_KEY
-* MANAGE_SIGNING_KEYS
-* SET_ORACLE
+### A note on upgradeability
 
-## Governance
+The following contracts are upgradeable by the DAO voting:
 
-TODO: update levers according to the current implementation.
-TODO: split levers by different contracts: DePool, StakingProvidersRegistry, DePoolOracle.
+* `contracts/0.4.24/StETH.sol`
+* `contracts/0.4.24/DePool.sol`
+* `contracts/0.4.24/StakingProvidersRegistry.sol`
+* `contracts/0.4.24/DePoolOracle.sol`
 
-#### `oracle`
-##### File: `DePool.sol`
-##### Description
-Authorized oracle address that deliver reward/slashing rate feed to help establish liquid staking token fair price
-##### Setting
-###### File: `DePool.sol`
-`setOracle(address)`: sets `_oracle` to new address. Oracle should be a contract.
+Upgradeability is implemented by the Aragon kernel and base contracts. To upgrade an app, one needs
+the `dao.APP_MANAGER_ROLE` permission provided by Aragon. All upgradeable contracts use the
+[Unstructured Storage pattern] in order to provide stable storage structure accross upgrades.
 
-<br />
-<br />
-#### `feeBasisPoints`
-##### File: `DePool.sol`
-##### Description
-Fee rate, in basis points. The fees are accrued when oracles report staking results.
-##### Setting
-###### File: `DePool.sol`
-`setFee(uint32 _feeBasisPoints)` set fee rate to `_feeBasisPoints` basis points.
+[Unstructured Storage pattern]: https://blog.openzeppelin.com/upgradeability-using-unstructured-storage
 
-<br />
-<br />
-#### `withdrawalCredentials`
-##### File: `DePool.sol`
-##### Description
-Credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
-##### Setting
-###### File: `DePool.sol`
-`setWithdrawalCredentials(bytes _withdrawalCredentials)`: sets credentials to `_withdrawalCredentials`. Note that setWithdrawalCredentials discards all unused signing keys as the signatures are invalidated.
-<br />
-<br />
-#### `addSigningKeys()`
-##### File: `DePool.sol`
-##### Description
-Add `_quantity` validator signing keys to the set of usable keys. Concatenated keys are: `_pubkeys`. `_signatures` are concatenated signatures for (pubkey, withdrawal_credentials, 32000000000) messages.
-```
-addSigningKeys(
-  uint256 _quantity, 
-  bytes _pubkeys,
-  bytes _signatures
-)
-```
-TODO: update acording to new DP spec.
+The following contracts are not upgradeable and don't depend on the Aragon code:
 
-<br />
-<br />
-#### `removeSigningKey()`
-##### File: `DePool.sol`
-##### Description
-Removes a validator signing key #`_index` from the set of usable keys.
-`removeSigningKey(uint256 _index)`
+* `contracts/0.6.12/CstETH.sol`
 
-TODO: update acording to new DP spec.
 
-<br />
-<br />
-#### `transferToVault()`
-##### File: `DePool.sol`
-##### Description
-TODO: add description
+## [StETH.sol](/contracts/0.4.24/StETH.sol)
 
-<br />
-<br />
-### Emergency
+### Minting and burning
 
-#### `stop()`
-##### File: `DePool.sol`
-##### Description
-Stop pool routine operations.
+* Mutator: `mint(address _to, uint256 _value)`
+  * Permission required: `MINT_ROLE`
+* Mutator: `burn(address _account, uint256 _value)`
+  * Permission required: `BURN_ROLE`
 
-<br />
-<br />
-#### `resume()`
-##### File: `DePool.sol`
-##### Description
-Resume pool routine operations.
+Initially, only the `DePool.sol` contract is authorized to mint and burn tokens, but the DAO can
+vote to grant these permissions to other actors.
 
-<br />
-<br />
+
+### Pausing
+
+* Mutators: `stop()`, `resume()`
+  * Permission required: `PAUSE_ROLE`
+* Accessor: `isStopped() returns (bool)`
+
+When paused, the token contract won’t allow minting, burning, transferring tokens, approving token
+transfers and changing allowances. Calls of the following functions will revert:
+
+* `mint(address, uint256)`
+* `burn(address, uint256)`
+* `transfer(address, uint256)`
+* `transferFrom(address, address, uint256)`
+* `approve(address, uint256)`
+* `increaseAllowance(address, uint)`
+* `decreaseAllowance(address, uint)`
+
+
+## [DePool.sol](/contracts/0.4.24/DePool.sol)
+
+### Oracle
+
+The address of the oracle contract.
+
+* Mutator: `setOracle(address)`
+  * Permission required: `SET_ORACLE`
+* Accessor: `getOracle() returns (address)`
+
+This contract serves as a bridge between ETH 2.0 -> ETH oracle committee members and the rest of the protocol,
+implementing quorum between the members. The oracle committee members report balances controlled by the DAO
+on the ETH 2.0 side, which can go up because of reward accumulation and can go down due to slashing.
+
+
+### Fee
+
+The total fee, in basis points (`10000` corresponding to `100%`).
+
+* Mutator: `setFee(uint16)`
+  * Permission required: `MANAGE_FEE`
+* Accessor: `getFee() returns (uint16)`
+
+The fee is taken on staking rewards and distributed between the treasury, the insurance fund, and
+staking providers.
+
+
+### Fee distribution
+
+Controls how the fee is distributed between the treasury, the insurance fund, and staking providers.
+Each fee component is in basis points; the sum of all components must add up to 1 (`10000` basis points).
+
+* Mutator: `setFeeDistribution(uint16 treasury, uint16 insurance, uint16 sps)`
+  * Permission required: `MANAGE_FEE`
+* Accessor: `getFeeDistribution() returns (uint16 treasury, uint16 insurance, uint16 sps)`
+
+
+### ETH 2.0 withdrawal Credentials
+
+Credentials to withdraw ETH on ETH 2.0 side after phase 2 is launched.
+
+* Mutator: `setWithdrawalCredentials(bytes)`
+  * Permission required: `MANAGE_WITHDRAWAL_KEY`
+* Accessor: `getWithdrawalCredentials() returns (bytes)`
+
+The pool uses these credentials to register new ETH 2.0 validators.
+
+
+### Deposit loop iteration limit
+
+Controls how many ETH 2.0 validators can be registered in a single transaction.
+
+* Mutator: `setDepositIterationLimit(uint256)`
+  * Permission required: `SET_DEPOSIT_ITERATION_LIMIT`
+* Accessor: `getDepositIterationLimit() returns (uint256)`
+* [Scenario test](/test/scenario/depool_deposit_iteration_limit.js)
+
+When someone submits Ether to the pool, the received Ether gets buffered in the pool contract. If the amount
+of the buffered Ether becomes larger than the ETH 2.0 deposit size (32 ETH), then the pool tries to register
+as many ETH 2.0 validators as it can. The limiting factors here are the amount of the buffered Ether (obviously),
+the number of spare validator keys (provided by staking providers), and the deposit loop iteration limit,
+controlled by this lever.
+
+The limit is needed to prevent the submit transaction from [failing due to the block gas limit](https://github.com/ConsenSys/smart-contract-best-practices/blob/8f99aef/docs/known_attacks.md#gas-limit-dos-on-a-contract-via-unbounded-operations).
+This is possible if the amount of the buffered Ether becomes sufficiently large, which, in turn, can occur due to:
+
+* a user sending a large amount of Ether in a single transaction;
+* temporary lack of new validator keys.
+
+In a situation when some Ether that could otherwise be used to register validators gets left buffered in
+the pool due to this limit, one can resume registering new validators by submitting zero Ether, which is
+allowed exactly for this purpose.
+
+Currently, the submit function, compiled with `200` optimizer iterations, consumes around `577000 gas` plus
+`107000 gas` for each registered validator, so the default limit is set by deploy scripts to `16` validators
+to make the submit transaction occupy no more than `20%` of a block. See [this file](/estimate_deposit_loop_gas.js)
+for the related calculations; you can run them with `yarn estimate-deposit-loop-gas`.
+
+
+### Pausing
+
+* Mutators: `stop()`, `resume()`
+  * Permission required: `PAUSE_ROLE`
+* Accessor: `isStopped() returns (bool)`
+
+When paused, the pool won’t accept user submissions and won’t allow user withdrawals. The following
+transactions will revert:
+
+* Plain Ether transfers;
+* Calls of the `submit(address)` function;
+* Calls of the `withdraw(uint256, bytes32)` function (withdrawals are not implemented yet).
+
+
+### TODO
+
+* Treasury (`getTreasury() returns (address)`; mutator?)
+* Insurance fund (`getInsuranceFund() returns (address)`; mutator?)
+* Transfer to vault (`transferToVault()`)
+
+
+## [StakingProvidersRegistry.sol](/contracts/0.4.24/sps/StakingProvidersRegistry.sol)
+
+### Pool
+
+Address of the pool contract.
+
+* Mutator: `setPool(address)`
+  * Permission required: `SET_POOL`
+* Accessor: `pool() returns (address)`
+
+
+### Staking providers list
+
+* Mutator: `addStakingProvider(string _name, address _rewardAddress, uint64 _stakingLimit)`
+  * Permission required: `ADD_STAKING_PROVIDER_ROLE`
+* Mutator: `setStakingProviderName(uint256 _id, string _name)`
+  * Permission required: `SET_STAKING_PROVIDER_NAME_ROLE`
+* Mutator: `setStakingProviderRewardAddress(uint256 _id, address _rewardAddress)`
+  * Permission required: `SET_STAKING_PROVIDER_ADDRESS_ROLE`
+* Mutator: `setStakingProviderStakingLimit(uint256 _id, uint64 _stakingLimit)`
+  * Permission required: `SET_STAKING_PROVIDER_LIMIT_ROLE`
+
+Staking providers act as validators on the Beacon chain for the benefit of the protocol. Each
+staking provider submits no more than `_stakingLimit` signing keys that will be used later
+by the pool for registering the corresponding ETH 2.0 validators. As oracle committee
+reports rewards on the ETH 2.0 side, the fee is taken on these rewards, and part of that fee
+is sent to staking providers’ reward addresses (`_rewardAddress`).
+
+
+### Deactivating a staking provider
+
+* Mutator: `setStakingProviderActive(uint256 _id, bool _active)`
+  * Permission required: `SET_STAKING_PROVIDER_ACTIVE_ROLE`
+
+Misbehaving staking providers can be deactivated by calling this function. The pool skips
+deactivated providers during validator registration; also, deactivated providers don’t
+take part in fee distribution.
+
+
+### Managing staking provider’s signing keys
+
+* Mutator: `addSigningKeys(uint256 _SP_id, uint256 _quantity, bytes _pubkeys, bytes _signatures)`
+  * Permission required: `MANAGE_SIGNING_KEYS`
+* Mutator: `removeSigningKey(uint256 _SP_id, uint256 _index)`
+  * Permission required: `MANAGE_SIGNING_KEYS`
+
+Allow to manage signing keys for the given staking provider.
+
+> Signing keys can also be managed by the reward address of a signing provier by calling
+> the equivalent functions with the `SP` suffix: `addSigningKeysSP`, `removeSigningKeySP`.
+
+
+### Reporting new stopped validators
+
+* Mutator: `reportStoppedValidators(uint256 _id, uint64 _stoppedIncrement)`
+  * Permission required: `REPORT_STOPPED_VALIDATORS_ROLE`
+
+Allows to report that `_stoppedIncrement` more validators of a staking provider have become stopped.
+
+
+## [DePoolOracle.sol](/contracts/0.4.24/oracle/DePoolOracle.sol)
+
+### Pool
+
+Address of the pool contract.
+
+* Mutator: `setPool(address)`
+  * Permission required: `SET_POOL`
+* Accessor: `pool() returns (address)`
+
+
+### Members list
+
+The list of oracle committee members.
+
+* Mutators: `addOracleMember(address)`, `removeOracleMember(address)`
+  * Permission required: `MANAGE_MEMBERS`
+* Accessor: `getOracleMembers() returns (address[])`
+
+
+### The quorum
+
+The number of oracle committee members required to form a data point.
+
+* Mutator: `setQuorum(uint256)`
+  * Permission required: `MANAGE_QUORUM`
+* Accessor: `getQuorum() returns (uint256)`
+
+The data point for a given report interval is formed when:
+
+1. No less than `quorum` oracle committee members have reported their value
+   for the given report interval;
+2. Among these values, there is some value that occurs more frequently than
+   the others, i.e. the set of reported values is unimodal. This value is
+   then used for the resulting data point.

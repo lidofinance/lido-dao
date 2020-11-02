@@ -1,6 +1,5 @@
-const { assert } = require('chai')
-const { newDao, newApp } = require('./helpers/dao')
-const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
+const { newDao, newApp } = require('./0.4.24/helpers/dao')
+const { assertBn, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 const { BN } = require('bn.js')
 
@@ -9,7 +8,7 @@ const StakingProvidersRegistry = artifacts.require('StakingProvidersRegistry')
 
 const DePool = artifacts.require('TestDePool.sol')
 const OracleMock = artifacts.require('OracleMock.sol')
-const ValidatorRegistrationMock = artifacts.require('ValidatorRegistrationMock.sol')
+const DepositContract = artifacts.require('DepositContract')
 
 const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
 const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
@@ -32,14 +31,25 @@ const hexConcat = (first, ...rest) => {
   return result
 }
 
+const changeEndianness = (string) => {
+  string = string.replace('0x', '')
+  const result = []
+  let len = string.length - 2
+  while (len >= 0) {
+    result.push(string.substr(len, 2))
+    len -= 2
+  }
+  return '0x' + result.join('')
+}
+
 // Divides a BN by 1e15
 const div15 = (bn) => bn.div(new BN(1000000)).div(new BN(1000000)).div(new BN(1000))
 
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 const tokens = ETH
 
-contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
-  let appBase, stEthBase, stakingProvidersRegistryBase, app, token, oracle, validatorRegistration, sps
+contract('DePool with official deposit contract', ([appManager, voting, user1, user2, user3, nobody]) => {
+  let appBase, stEthBase, stakingProvidersRegistryBase, app, token, oracle, depositContract, sps
   let treasuryAddr, insuranceAddr
 
   before('deploy base app', async () => {
@@ -47,11 +57,11 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     appBase = await DePool.new()
     stEthBase = await StETH.new()
     oracle = await OracleMock.new()
-    validatorRegistration = await ValidatorRegistrationMock.new()
     stakingProvidersRegistryBase = await StakingProvidersRegistry.new()
   })
 
   beforeEach('deploy dao and app', async () => {
+    depositContract = await DepositContract.new()
     const { dao, acl } = await newDao(appManager)
 
     // StakingProvidersRegistry
@@ -87,12 +97,12 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await acl.createPermission(voting, sps.address, await sps.REPORT_STOPPED_VALIDATORS_ROLE(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
-    await app.initialize(token.address, validatorRegistration.address, oracle.address, sps.address, 10)
+    await app.initialize(token.address, depositContract.address, oracle.address, sps.address, 10)
     treasuryAddr = await app.getTreasury()
     insuranceAddr = await app.getInsuranceFund()
 
     await oracle.setPool(app.address)
-    await validatorRegistration.reset()
+    // await depositContract.reset()
     await sps.setPool(app.address, { from: voting })
   })
 
@@ -119,90 +129,6 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(div15(sps_b.add(a1).add(a2).add(a3).add(a4)), sp, 'staking providers token balance check')
   }
 
-  it('setFee works', async () => {
-    await app.setFee(110, { from: voting })
-    await assertRevert(app.setFee(110, { from: user1 }), 'APP_AUTH_FAILED')
-    await assertRevert(app.setFee(110, { from: nobody }), 'APP_AUTH_FAILED')
-    await assertRevert(app.setFee(11000, { from: voting }), 'VALUE_OVER_100_PERCENT')
-
-    assertBn(await app.getFee({ from: nobody }), 110)
-  })
-
-  it('setFeeDistribution works', async () => {
-    await app.setFeeDistribution(3000, 2000, 5000, { from: voting })
-    await assertRevert(app.setFeeDistribution(3000, 2000, 5000, { from: user1 }), 'APP_AUTH_FAILED')
-    await assertRevert(app.setFeeDistribution(3000, 2000, 5000, { from: nobody }), 'APP_AUTH_FAILED')
-
-    await assertRevert(app.setFeeDistribution(3000, 2000, 5001, { from: voting }), 'FEES_DONT_ADD_UP')
-    await assertRevert(app.setFeeDistribution(3000, 2000 - 1, 5000, { from: voting }), 'FEES_DONT_ADD_UP')
-    await assertRevert(app.setFeeDistribution(0, 0, 15000, { from: voting }), 'FEES_DONT_ADD_UP')
-
-    const distribution = await app.getFeeDistribution({ from: nobody })
-    assertBn(distribution.treasuryFeeBasisPoints, 3000)
-    assertBn(distribution.insuranceFeeBasisPoints, 2000)
-    assertBn(distribution.SPFeeBasisPoints, 5000)
-  })
-
-  it('setWithdrawalCredentials works', async () => {
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
-    await assertRevert(app.setWithdrawalCredentials('0x0204', { from: voting }), 'INVALID_LENGTH')
-    await assertRevert(app.setWithdrawalCredentials(pad('0x0203', 32), { from: user1 }), 'APP_AUTH_FAILED')
-
-    assert.equal(await app.getWithdrawalCredentials({ from: nobody }), pad('0x0202', 32))
-  })
-
-  it('setWithdrawalCredentials resets unused keys', async () => {
-    await sps.addStakingProvider('1', ADDRESS_1, UNLIMITED, { from: voting })
-    await sps.addStakingProvider('2', ADDRESS_2, UNLIMITED, { from: voting })
-
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
-
-    await sps.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
-    await sps.addSigningKeys(1, 2, hexConcat(pad('0x050505', 48), pad('0x060606', 48)), hexConcat(pad('0x02', 96), pad('0x03', 96)), {
-      from: voting
-    })
-    assertBn(await sps.getTotalSigningKeyCount(0, { from: nobody }), 1)
-    assertBn(await sps.getUnusedSigningKeyCount(0, { from: nobody }), 1)
-    assertBn(await sps.getTotalSigningKeyCount(1, { from: nobody }), 2)
-    assertBn(await sps.getUnusedSigningKeyCount(1, { from: nobody }), 2)
-
-    await app.setWithdrawalCredentials(pad('0x0203', 32), { from: voting })
-
-    assertBn(await sps.getTotalSigningKeyCount(0, { from: nobody }), 0)
-    assertBn(await sps.getUnusedSigningKeyCount(0, { from: nobody }), 0)
-    assertBn(await sps.getTotalSigningKeyCount(1, { from: nobody }), 0)
-    assertBn(await sps.getUnusedSigningKeyCount(1, { from: nobody }), 0)
-    assert.equal(await app.getWithdrawalCredentials({ from: nobody }), pad('0x0203', 32))
-  })
-
-  it('setDepositIterationLimit works', async () => {
-    await app.setDepositIterationLimit(22, { from: voting })
-    assertBn(await app.getDepositIterationLimit(), 22)
-
-    await assertRevert(app.setDepositIterationLimit(0, { from: voting }), 'ZERO_LIMIT')
-    await assertRevert(app.setDepositIterationLimit(33, { from: user1 }), 'APP_AUTH_FAILED')
-  })
-
-  it('pad64 works', async () => {
-    await assertRevert(app.pad64('0x'))
-    await assertRevert(app.pad64('0x11'))
-    await assertRevert(app.pad64('0x1122'))
-    await assertRevert(app.pad64(pad('0x1122', 31)))
-    await assertRevert(app.pad64(pad('0x1122', 65)))
-    await assertRevert(app.pad64(pad('0x1122', 265)))
-
-    assert.equal(await app.pad64(pad('0x1122', 32)), pad('0x1122', 32) + '0'.repeat(64))
-    assert.equal(await app.pad64(pad('0x1122', 36)), pad('0x1122', 36) + '0'.repeat(56))
-    assert.equal(await app.pad64(pad('0x1122', 64)), pad('0x1122', 64))
-  })
-
-  it('toLittleEndian64 works', async () => {
-    await assertRevert(app.toLittleEndian64('0x010203040506070809'))
-    assertBn(await app.toLittleEndian64('0x0102030405060708'), bn('0x0807060504030201' + '0'.repeat(48)))
-    assertBn(await app.toLittleEndian64('0x0100000000000008'), bn('0x0800000000000001' + '0'.repeat(48)))
-    assertBn(await app.toLittleEndian64('0x10'), bn('0x1000000000000000' + '0'.repeat(48)))
-  })
-
   it('deposit works', async () => {
     await sps.addStakingProvider('1', ADDRESS_1, UNLIMITED, { from: voting })
     await sps.addStakingProvider('2', ADDRESS_2, UNLIMITED, { from: voting })
@@ -220,7 +146,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     // +1 ETH
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(1) })
     await checkStat({ deposited: 0, remote: 0 })
-    assertBn(await validatorRegistration.totalCalls(), 0)
+    assertBn(bn(await app.toLittleEndian64(await depositContract.get_deposit_count())), 0)
     assertBn(await app.getTotalControlledEther(), ETH(1))
     assertBn(await app.getBufferedEther(), ETH(1))
     assertBn(await token.balanceOf(user1), tokens(1))
@@ -229,7 +155,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     // +2 ETH
     await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2) }) // another form of a deposit call
     await checkStat({ deposited: 0, remote: 0 })
-    assertBn(await validatorRegistration.totalCalls(), 0)
+    assertBn(bn(await depositContract.get_deposit_count()), 0)
     assertBn(await app.getTotalControlledEther(), ETH(3))
     assertBn(await app.getBufferedEther(), ETH(3))
     assertBn(await token.balanceOf(user2), tokens(2))
@@ -245,12 +171,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(await token.balanceOf(user3), tokens(30))
     assertBn(await token.totalSupply(), tokens(33))
 
-    assertBn(await validatorRegistration.totalCalls(), 1)
-    const c0 = await validatorRegistration.calls.call(0)
-    assert.equal(c0.pubkey, pad('0x010203', 48))
-    assert.equal(c0.withdrawal_credentials, pad('0x0202', 32))
-    assert.equal(c0.signature, pad('0x01', 96))
-    assertBn(c0.value, ETH(32))
+    assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 1)
 
     // +100 ETH
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(100) })
@@ -262,26 +183,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(await token.balanceOf(user3), tokens(30))
     assertBn(await token.totalSupply(), tokens(133))
 
-    assertBn(await validatorRegistration.totalCalls(), 4)
-    const calls = {}
-    for (const i of [1, 2, 3]) {
-      calls[i] = await validatorRegistration.calls.call(i)
-      assert.equal(calls[i].withdrawal_credentials, pad('0x0202', 32))
-      assert.equal(calls[i].signature, pad('0x01', 96))
-      assertBn(calls[i].value, ETH(32))
-    }
-    assert.equal(calls[1].pubkey, pad('0x010204', 48))
-    assert.equal(calls[2].pubkey, pad('0x010205', 48))
-    assert.equal(calls[3].pubkey, pad('0x010206', 48))
-  })
-
-  it('submits with zero and non-zero referrals work', async () => {
-    const REFERRAL = '0xDeaDbeefdEAdbeefdEadbEEFdeadbeEFdEaDbeeF'
-    let receipt
-    receipt = await app.submit(REFERRAL, { from: user2, value: ETH(2) })
-    assertEvent(receipt, 'Submitted', { expectedArgs: { sender: user2, amount: ETH(2), referral: REFERRAL } })
-    receipt = await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(5) })
-    assertEvent(receipt, 'Submitted', { expectedArgs: { sender: user2, amount: ETH(5), referral: ZERO_ADDRESS } })
+    assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 4)
   })
 
   it('key removal is taken into account during deposit', async () => {
@@ -299,7 +201,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     )
 
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(33) })
-    assertBn(await validatorRegistration.totalCalls(), 1)
+    assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 1)
     await assertRevert(sps.removeSigningKey(0, 0, { from: voting }), 'KEY_WAS_USED')
 
     await sps.removeSigningKey(0, 1, { from: voting })
@@ -307,277 +209,9 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(100) })
     await assertRevert(sps.removeSigningKey(0, 1, { from: voting }), 'KEY_WAS_USED')
     await assertRevert(sps.removeSigningKey(0, 2, { from: voting }), 'KEY_WAS_USED')
-    assertBn(await validatorRegistration.totalCalls(), 3)
+    assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 3)
     assertBn(await app.getTotalControlledEther(), ETH(133))
     assertBn(await app.getBufferedEther(), ETH(37))
-  })
-
-  it("out of signing keys doesn't revert but buffers", async () => {
-    await sps.addStakingProvider('1', ADDRESS_1, UNLIMITED, { from: voting })
-    await sps.addStakingProvider('2', ADDRESS_2, UNLIMITED, { from: voting })
-
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
-    await sps.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
-
-    await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(100) })
-    await checkStat({ deposited: ETH(32), remote: 0 })
-    assertBn(await validatorRegistration.totalCalls(), 1)
-    assertBn(await app.getTotalControlledEther(), ETH(100))
-    assertBn(await app.getBufferedEther(), ETH(100 - 32))
-
-    // buffer unwinds
-    await sps.addSigningKeys(
-      0,
-      3,
-      hexConcat(pad('0x010204', 48), pad('0x010205', 48), pad('0x010206', 48)),
-      hexConcat(pad('0x01', 96), pad('0x01', 96), pad('0x01', 96)),
-      { from: voting }
-    )
-    await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(1) })
-    await checkStat({ deposited: ETH(96), remote: 0 })
-    assertBn(await validatorRegistration.totalCalls(), 3)
-    assertBn(await app.getTotalControlledEther(), ETH(101))
-    assertBn(await app.getBufferedEther(), ETH(5))
-  })
-
-  it('withrawal method reverts', async () => {
-    await sps.addStakingProvider('1', ADDRESS_1, UNLIMITED, { from: voting })
-    await sps.addStakingProvider('2', ADDRESS_2, UNLIMITED, { from: voting })
-
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
-    await sps.addSigningKeys(
-      0,
-      6,
-      hexConcat(
-        pad('0x010203', 48),
-        pad('0x010204', 48),
-        pad('0x010205', 48),
-        pad('0x010206', 48),
-        pad('0x010207', 48),
-        pad('0x010208', 48)
-      ),
-      hexConcat(pad('0x01', 96), pad('0x01', 96), pad('0x01', 96), pad('0x01', 96), pad('0x01', 96), pad('0x01', 96)),
-      { from: voting }
-    )
-
-    await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(1) })
-    assertBn(await app.getTotalControlledEther(), ETH(1))
-    assertBn(await token.totalSupply(), tokens(1))
-    assertBn(await app.getBufferedEther(), ETH(1))
-
-    await checkStat({ deposited: 0, remote: 0 })
-
-    await assertRevert(app.withdraw(tokens(1), pad('0x1000', 32), { from: nobody }), 'NOT_IMPLEMENTED_YET')
-    await assertRevert(app.withdraw(tokens(1), pad('0x1000', 32), { from: user1 }), 'NOT_IMPLEMENTED_YET')
-  })
-
-  it('reportEther2 works', async () => {
-    await sps.addStakingProvider('1', ADDRESS_1, UNLIMITED, { from: voting })
-    await sps.addStakingProvider('2', ADDRESS_2, UNLIMITED, { from: voting })
-
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
-    await sps.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
-    await sps.addSigningKeys(
-      0,
-      3,
-      hexConcat(pad('0x010204', 48), pad('0x010205', 48), pad('0x010206', 48)),
-      hexConcat(pad('0x01', 96), pad('0x01', 96), pad('0x01', 96)),
-      { from: voting }
-    )
-
-    await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(34) })
-    await checkStat({ deposited: ETH(32), remote: 0 })
-
-    await assertRevert(app.reportEther2(100, ETH(30), { from: appManager }), 'APP_AUTH_FAILED')
-
-    await oracle.reportEther2(100, ETH(30))
-    await checkStat({ deposited: ETH(32), remote: ETH(30) })
-
-    await assertRevert(app.reportEther2(100, ETH(29), { from: nobody }), 'APP_AUTH_FAILED')
-    await assertRevert(oracle.reportEther2(0, ETH(29)), 'ZERO_EPOCH')
-
-    await oracle.reportEther2(50, ETH(100)) // stale data
-    await checkStat({ deposited: ETH(32), remote: ETH(30) })
-
-    await oracle.reportEther2(200, ETH(33))
-    await checkStat({ deposited: ETH(32), remote: ETH(33) })
-  })
-
-  it('oracle data affects deposits', async () => {
-    await sps.addStakingProvider('1', ADDRESS_1, UNLIMITED, { from: voting })
-    await sps.addStakingProvider('2', ADDRESS_2, UNLIMITED, { from: voting })
-
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
-    await sps.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
-    await sps.addSigningKeys(
-      0,
-      3,
-      hexConcat(pad('0x010204', 48), pad('0x010205', 48), pad('0x010206', 48)),
-      hexConcat(pad('0x01', 96), pad('0x01', 96), pad('0x01', 96)),
-      { from: voting }
-    )
-
-    await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(34) })
-    await checkStat({ deposited: ETH(32), remote: 0 })
-    assertBn(await validatorRegistration.totalCalls(), 1)
-    assertBn(await app.getTotalControlledEther(), ETH(34))
-    assertBn(await app.getBufferedEther(), ETH(2))
-
-    // down
-    await oracle.reportEther2(100, ETH(15))
-
-    await checkStat({ deposited: ETH(32), remote: ETH(15) })
-    assertBn(await validatorRegistration.totalCalls(), 1)
-    assertBn(await app.getTotalControlledEther(), ETH(17))
-    assertBn(await app.getBufferedEther(), ETH(2))
-    assertBn(await token.totalSupply(), tokens(17))
-
-    // deposit, ratio is 0.5
-    await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(2) })
-
-    await checkStat({ deposited: ETH(32), remote: ETH(15) })
-    assertBn(await validatorRegistration.totalCalls(), 1)
-    assertBn(await app.getTotalControlledEther(), ETH(19))
-    assertBn(await app.getBufferedEther(), ETH(4))
-    assertBn(await token.balanceOf(user1), tokens(2))
-    assertBn(await token.totalSupply(), tokens(19))
-
-    // up
-    await oracle.reportEther2(200, ETH(72))
-
-    await checkStat({ deposited: ETH(32), remote: ETH(72) })
-    assertBn(await validatorRegistration.totalCalls(), 1)
-    assertBn(await app.getTotalControlledEther(), ETH(76))
-    assertBn(await app.getBufferedEther(), ETH(4))
-    assertBn(await token.totalSupply(), tokens(76))
-
-    // 2nd deposit, ratio is 2
-    await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(2) })
-
-    await checkStat({ deposited: ETH(32), remote: ETH(72) })
-    assertBn(await validatorRegistration.totalCalls(), 1)
-    assertBn(await app.getTotalControlledEther(), ETH(78))
-    assertBn(await app.getBufferedEther(), ETH(6))
-    assertBn(await token.balanceOf(user1), tokens(8))
-    assertBn(await token.balanceOf(user3), tokens(2))
-    assertBn(await token.totalSupply(), tokens(78))
-  })
-
-  it('can stop and resume', async () => {
-    await sps.addStakingProvider('1', ADDRESS_1, UNLIMITED, { from: voting })
-    await sps.addStakingProvider('2', ADDRESS_2, UNLIMITED, { from: voting })
-
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
-    await sps.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
-    await sps.addSigningKeys(
-      0,
-      3,
-      hexConcat(pad('0x010204', 48), pad('0x010205', 48), pad('0x010206', 48)),
-      hexConcat(pad('0x01', 96), pad('0x01', 96), pad('0x01', 96)),
-      { from: voting }
-    )
-
-    await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(40) })
-    await checkStat({ deposited: ETH(32), remote: 0 })
-    assertBn(await app.getBufferedEther(), ETH(8))
-
-    await assertRevert(app.stop({ from: user2 }), 'APP_AUTH_FAILED')
-    await app.stop({ from: voting })
-
-    await assertRevert(web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(4) }), 'CONTRACT_IS_STOPPED')
-    await assertRevert(web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(4) }), 'CONTRACT_IS_STOPPED')
-    await assertRevert(app.submit('0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef', { from: user1, value: ETH(4) }), 'CONTRACT_IS_STOPPED')
-
-    await assertRevert(app.resume({ from: user2 }), 'APP_AUTH_FAILED')
-    await app.resume({ from: voting })
-
-    await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(4) })
-    await checkStat({ deposited: ETH(32), remote: 0 })
-    assertBn(await app.getBufferedEther(), ETH(12))
-  })
-
-  it('rewards distribution works in a simple case', async () => {
-    await sps.addStakingProvider('1', ADDRESS_1, UNLIMITED, { from: voting })
-    await sps.addStakingProvider('2', ADDRESS_2, UNLIMITED, { from: voting })
-
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
-    await sps.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
-    await sps.addSigningKeys(
-      0,
-      3,
-      hexConcat(pad('0x010204', 48), pad('0x010205', 48), pad('0x010206', 48)),
-      hexConcat(pad('0x01', 96), pad('0x01', 96), pad('0x01', 96)),
-      { from: voting }
-    )
-
-    await app.setFee(5000, { from: voting })
-    await app.setFeeDistribution(3000, 2000, 5000, { from: voting })
-
-    await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(34) })
-
-    await oracle.reportEther2(300, ETH(36))
-    await checkStat({ deposited: ETH(32), remote: ETH(36) })
-    assertBn(await token.totalSupply(), tokens(38)) // remote + buffered
-    await checkRewards({ treasury: 569, insurance: 385, sp: 974 })
-  })
-
-  it('rewards distribution works', async () => {
-    await sps.addStakingProvider('1', ADDRESS_1, UNLIMITED, { from: voting })
-    await sps.addStakingProvider('2', ADDRESS_2, UNLIMITED, { from: voting })
-
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
-    await sps.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
-    await sps.addSigningKeys(
-      0,
-      3,
-      hexConcat(pad('0x010204', 48), pad('0x010205', 48), pad('0x010206', 48)),
-      hexConcat(pad('0x01', 96), pad('0x01', 96), pad('0x01', 96)),
-      { from: voting }
-    )
-
-    await app.setFee(5000, { from: voting })
-    await app.setFeeDistribution(3000, 2000, 5000, { from: voting })
-
-    await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(34) })
-    // some slashing occured
-    await oracle.reportEther2(100, ETH(30))
-
-    await checkStat({ deposited: ETH(32), remote: ETH(30) })
-    // ToDo check buffer=2
-    assertBn(await token.totalSupply(), tokens(32)) // 30 remote (slashed) + 2 buffered = 32
-    await checkRewards({ treasury: 0, insurance: 0, sp: 0 })
-
-    // back to normal
-    await oracle.reportEther2(200, ETH(32))
-    await checkStat({ deposited: ETH(32), remote: ETH(32) })
-    await checkRewards({ treasury: 0, insurance: 0, sp: 0 })
-
-    // now some rewards are here
-    await oracle.reportEther2(300, ETH(36))
-    await checkStat({ deposited: ETH(32), remote: ETH(36) })
-    assertBn(await token.totalSupply(), tokens(38))
-    await checkRewards({ treasury: 569, insurance: 385, sp: 974 })
-  })
-
-  it('deposits accounted properly during rewards distribution', async () => {
-    await sps.addStakingProvider('1', ADDRESS_1, UNLIMITED, { from: voting })
-    await sps.addStakingProvider('2', ADDRESS_2, UNLIMITED, { from: voting })
-
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
-    await sps.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
-
-    await app.setFee(5000, { from: voting })
-    await app.setFeeDistribution(3000, 2000, 5000, { from: voting })
-
-    // Only 32 ETH deposited
-    await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(32) })
-    await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(32) })
-    assertBn(await token.totalSupply(), tokens(64))
-
-    await oracle.reportEther2(300, ETH(36))
-    await checkStat({ deposited: ETH(32), remote: ETH(36) })
-    assertBn(await token.totalSupply(), tokens(68))
-    await checkRewards({ treasury: 582, insurance: 391, sp: 985 })
   })
 
   it('SP filtering during deposit works when doing a huge deposit', async () => {
@@ -609,7 +243,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await checkStat({ deposited: ETH(96), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(146))
     assertBn(await app.getBufferedEther(), ETH(50))
-    assertBn(await validatorRegistration.totalCalls(), 3)
+    assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 3)
 
     assertBn(await sps.getTotalSigningKeyCount(0, { from: nobody }), 2)
     assertBn(await sps.getTotalSigningKeyCount(1, { from: nobody }), 2)
@@ -626,7 +260,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await checkStat({ deposited: ETH(96), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(178))
     assertBn(await app.getBufferedEther(), ETH(82))
-    assertBn(await validatorRegistration.totalCalls(), 3)
+    assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 3)
 
     assertBn(await sps.getTotalSigningKeyCount(0, { from: nobody }), 2)
     assertBn(await sps.getTotalSigningKeyCount(1, { from: nobody }), 2)
@@ -644,7 +278,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await checkStat({ deposited: ETH(128), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(179))
     assertBn(await app.getBufferedEther(), ETH(51))
-    assertBn(await validatorRegistration.totalCalls(), 4)
+    assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 4)
 
     assertBn(await sps.getTotalSigningKeyCount(0, { from: nobody }), 2)
     assertBn(await sps.getTotalSigningKeyCount(1, { from: nobody }), 2)
@@ -662,7 +296,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await checkStat({ deposited: ETH(160), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(180))
     assertBn(await app.getBufferedEther(), ETH(20))
-    assertBn(await validatorRegistration.totalCalls(), 5)
+    assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 5)
 
     assertBn(await sps.getTotalSigningKeyCount(0, { from: nobody }), 3)
     assertBn(await sps.getTotalSigningKeyCount(1, { from: nobody }), 2)
@@ -680,7 +314,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await checkStat({ deposited: ETH(192), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(192))
     assertBn(await app.getBufferedEther(), ETH(0))
-    assertBn(await validatorRegistration.totalCalls(), 6)
+    assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 6)
 
     assertBn(await sps.getTotalSigningKeyCount(0, { from: nobody }), 3)
     assertBn(await sps.getTotalSigningKeyCount(1, { from: nobody }), 2)
@@ -724,7 +358,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await checkStat({ deposited: ETH(96), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(146))
     assertBn(await app.getBufferedEther(), ETH(50))
-    assertBn(await validatorRegistration.totalCalls(), 3)
+    assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 3)
 
     assertBn(await sps.getTotalSigningKeyCount(0, { from: nobody }), 2)
     assertBn(await sps.getTotalSigningKeyCount(1, { from: nobody }), 2)
@@ -741,7 +375,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await checkStat({ deposited: ETH(96), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(178))
     assertBn(await app.getBufferedEther(), ETH(82))
-    assertBn(await validatorRegistration.totalCalls(), 3)
+    assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 3)
 
     assertBn(await sps.getTotalSigningKeyCount(0, { from: nobody }), 2)
     assertBn(await sps.getTotalSigningKeyCount(1, { from: nobody }), 2)
@@ -759,7 +393,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await checkStat({ deposited: ETH(128), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(179))
     assertBn(await app.getBufferedEther(), ETH(51))
-    assertBn(await validatorRegistration.totalCalls(), 4)
+    assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 4)
 
     assertBn(await sps.getTotalSigningKeyCount(0, { from: nobody }), 2)
     assertBn(await sps.getTotalSigningKeyCount(1, { from: nobody }), 2)
@@ -777,7 +411,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await checkStat({ deposited: ETH(160), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(180))
     assertBn(await app.getBufferedEther(), ETH(20))
-    assertBn(await validatorRegistration.totalCalls(), 5)
+    assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 5)
 
     assertBn(await sps.getTotalSigningKeyCount(0, { from: nobody }), 3)
     assertBn(await sps.getTotalSigningKeyCount(1, { from: nobody }), 2)
@@ -795,7 +429,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await checkStat({ deposited: ETH(192), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(192))
     assertBn(await app.getBufferedEther(), ETH(0))
-    assertBn(await validatorRegistration.totalCalls(), 6)
+    assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 6)
 
     assertBn(await sps.getTotalSigningKeyCount(0, { from: nobody }), 3)
     assertBn(await sps.getTotalSigningKeyCount(1, { from: nobody }), 2)
@@ -837,7 +471,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await checkStat({ deposited: ETH(64), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(64))
     assertBn(await app.getBufferedEther(), ETH(0))
-    assertBn(await validatorRegistration.totalCalls(), 2)
+    assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 2)
 
     assertBn(await sps.getUnusedSigningKeyCount(0, { from: nobody }), 1)
     assertBn(await sps.getUnusedSigningKeyCount(1, { from: nobody }), 1)
@@ -850,7 +484,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await checkStat({ deposited: ETH(96), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(100))
     assertBn(await app.getBufferedEther(), ETH(4))
-    assertBn(await validatorRegistration.totalCalls(), 3)
+    assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 3)
 
     assertBn(await sps.getUnusedSigningKeyCount(0, { from: nobody }), 1)
     assertBn(await sps.getUnusedSigningKeyCount(1, { from: nobody }), 1)

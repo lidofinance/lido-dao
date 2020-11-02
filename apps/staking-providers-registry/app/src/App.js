@@ -23,7 +23,7 @@ import InfoBox from './components/InfoBox'
 import { getEndingBasedOnNumber } from './utils/helpers'
 
 function App() {
-  const { api, appState, currentApp, connectedAccount } = useAragonApi()
+  const { api, appState, connectedAccount } = useAragonApi()
   const { appearance } = useGuiStyle()
   const {
     stakingProvidersCount,
@@ -158,9 +158,13 @@ function App() {
               usedSigningKeys,
               active,
             }) => [
+              // eslint-disable-next-line react/jsx-key
               <strong>{name}</strong>,
+              // eslint-disable-next-line react/jsx-key
               <IdentityBadge entity={rewardAddress} />,
+              // eslint-disable-next-line react/jsx-key
               <strong>{stakingLimit}</strong>,
+              // eslint-disable-next-line react/jsx-key
               <strong>
                 {totalSigningKeys} / {usedSigningKeys} / {stoppedValidators}
               </strong>,
@@ -188,25 +192,25 @@ function App() {
                   <MenuItem
                     onClick={() => disableProvider(id)}
                     icon={<IconClose />}
-                    label={'disable'}
+                    label="disable"
                   />
                 ) : (
                   <MenuItem
                     onClick={() => enableProvider(id)}
                     icon={<IconCheck />}
-                    label={'enable'}
+                    label="enable"
                   />
                 )}
                 <MenuItem
                   onClick={() => openAddSKSidePanel(id)}
                   icon={<IconWrite />}
-                  label={'add signing keys (Manager)'}
+                  label="add signing keys (Manager)"
                 />
                 {connectedAccount === rewardAddress && (
                   <MenuItem
                     onClick={openAddMySKSidePanelOpen}
                     icon={<IconWrite />}
-                    label={'add signing keys'}
+                    label="add signing keys"
                   />
                 )}
                 <Toast>
@@ -223,7 +227,7 @@ function App() {
                         })
                       }}
                       icon={<IconQuestion />}
-                      label={'number of signing keys'}
+                      label="number of signing keys"
                     />
                   )}
                 </Toast>
@@ -241,7 +245,7 @@ function App() {
                         })
                       }}
                       icon={<IconQuestion />}
-                      label={'number of unused keys'}
+                      label="number of unused keys"
                     />
                   )}
                 </Toast>
@@ -250,13 +254,13 @@ function App() {
           />
         }
         secondary={
-          <React.Fragment>
+          <>
             <InfoBox heading="Number of SPs" value={stakingProvidersCount} />
             <InfoBox
               heading="Number of Active SPs"
               value={activeStakingProvidersCount}
             />
-          </React.Fragment>
+          </>
         }
       />
       <AddStakingProviderSidePanel

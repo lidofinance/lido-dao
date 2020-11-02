@@ -6,10 +6,14 @@
     "apps/*/app"
   ],
   "scripts": {
-    "lint": "yarn run lint:sol && yarn run lint:js",
-    "lint:sol": "solium --dir ./contracts",
-    "lint:js": "eslint test/",
-    "lint:js:fix": "eslint test/ --fix",
+    "lint": "yarn lint:sol && yarn lint:js",
+    "lint:sol": "yarn lint:sol:solhint && yarn lint:sol:solium",
+    "lint:js": "eslint --ext .js --cache --ignore-path .gitignore .",
+    "lint:js:fix": "eslint --fix --ext .js --cache --ignore-path .gitignore .",
+    "lint:sol:solium": "solium --dir ./contracts",
+    "lint:sol:solium:fix": "solium --dir ./contracts --fix",
+    "lint:sol:solhint": "solhint \"contracts/**/*.sol\" --ignore-path .soliumignore",
+    "lint:sol:solhint:fix": "solhint \"contracts/**/*.sol\" --ignore-path .soliumignore --fix",
     "test": "yarn run test:unit",
     "test:unit": "yarn run compile:6 && buidler test --network buidlerevm",
     "test:gas": "yarn run compile:6 && REPORT_GAS=true buidler test --network localhost",
@@ -20,7 +24,7 @@
     "estimate-deposit-loop-gas": "yarn run test:unit ./estimate_deposit_loop_gas.js",
     "compile": "yarn run compile:4 && yarn run compile:6",
     "compile:4": "buidler compile",
-    "compile:6": "buidler compile --config buidler.config.6.js --force",
+    "compile:6": "buidler compile --config buidler.config.6.js --force && buidler compile --config buidler.config.6.11.js --force",
     "deploy": "yarn run deploy:dev",
     "deploy:dev": "yarn run deploy:apm:dev && deploy:apps:dev && deploy:tmpl:dev && deploy:dao:dev",
     "deploy:apm:dev": "ENS=0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1 DAO_FACTORY=0x5d94e3e7aec542ab0f9129b9a7badeb5b3ca0f77 buidler run ./scripts/deploy-apm.js --network localhost",
@@ -71,7 +75,9 @@
     "ethereumjs-testrpc-sc": "^6.5.1-sc.1",
     "husky": "^4.3.0",
     "lerna": "^3.22.1",
+    "lint-staged": ">=10",
     "prettier": "^2.1.2",
+    "solhint": "^3.2.2",
     "solidity-coverage": "^0.7.11",
     "solium": "^1.2.5",
     "truffle": "^5.1.43",
@@ -86,5 +92,13 @@
     "openzeppelin-solidity": "2.0.0",
     "solidity-bytes-utils": "0.0.6",
     "yargs": "^16.0.3"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.{js,jsx}": "yarn lint:js:fix"
   }
 }

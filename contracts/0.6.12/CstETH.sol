@@ -1,10 +1,13 @@
-pragma solidity 0.6.12; // latest available for using OZ
+// SPDX-License-Identifier: NONE
+/* See contracts/COMPILERS.md */
+pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20Burnable.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "./IStETH.sol";
+import "./interfaces/IStETH.sol";
+
 
 /**
  * @title Token wrapper of stETH with static balances.

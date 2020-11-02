@@ -25,14 +25,15 @@ library BitOps {
       */
     function popcnt(uint256 _mask) internal pure returns (uint256) {
         uint256 result = 0;
+        uint256 tmp_mask = _mask;
         for (uint256 i = 0; i < 256; ++i) {
-            if (1 == _mask & 1) {
+            if (1 == tmp_mask & 1) {
                 result++;
             }
-            _mask >>= 1;
+            tmp_mask >>= 1;
         }
 
-        assert(0 == _mask);
+        assert(0 == tmp_mask);
         return result;
     }
 }

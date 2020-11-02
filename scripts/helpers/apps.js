@@ -15,7 +15,12 @@ const apps = [
   { name: 'steth', tld: 'depoolspm.eth', contractName: 'StETH', appId: STETH_APP_ID },
   { name: 'depool', tld: 'depoolspm.eth', contractName: 'DePool', appId: DEPOOL_APP_ID },
   { name: 'depooloracle', tld: 'depoolspm.eth', contractName: 'DePoolOracle', appId: DEPOOLORACLE_APP_ID },
-  { name: 'staking-providers-registry', tld: 'depoolspm.eth', contractName: 'StakingProvidersRegistry', appId: STAKING_PROVIDERS_REGISTRY_APP_ID },
+  {
+    name: 'staking-providers-registry',
+    tld: 'depoolspm.eth',
+    contractName: 'StakingProvidersRegistry',
+    appId: STAKING_PROVIDERS_REGISTRY_APP_ID
+  },
   { name: 'agent', tld: 'aragonpm.eth', contractName: 'Agent', appId: AGENT_APP_ID },
   // { name: 'vault', tld: 'aragonpm.eth', contractName: 'Vault', appId: VAULT_APP_ID },
   { name: 'voting', tld: 'aragonpm.eth', contractName: 'Voting', appId: VOTING_APP_ID },

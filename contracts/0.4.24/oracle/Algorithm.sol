@@ -45,14 +45,16 @@ library Algorithm {
 
         // find mode value index
         uint256 mostFrequentValueIndex = 0;
-        for (i = 1; i < dataValuesLength; i++)
+        for (i = 1; i < dataValuesLength; i++) {
             if (dataValuesCounts[i] > dataValuesCounts[mostFrequentValueIndex])
                 mostFrequentValueIndex = i;
+        }
 
         // check if data is unimodal
-        for (i = 0; i < dataValuesLength; i++)
+        for (i = 0; i < dataValuesLength; i++) {
             if ((i != mostFrequentValueIndex) && (dataValuesCounts[i] == dataValuesCounts[mostFrequentValueIndex]))
                 return (false, 0);
+        }
 
         return (true, dataValues[mostFrequentValueIndex]);
     }
