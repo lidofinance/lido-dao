@@ -47,7 +47,7 @@ async function createVote(callData1, holder, voteName = '') {
 async function voteForAction(voteId, holders, voteName = '') {
   logger.info('Vote for ' + voteName)
   for (let i = 0; i < holders.length; i++) {
-    logger.debug('Voting from holder - ' + holders[i])
+    logger.debug(`Voting from holder - (${i + 1}) ~ ${holders[i]}`)
     await voteContract.methods.vote(voteId, true, true).send({ from: holders[i], gas: '1000000' })
   }
 
