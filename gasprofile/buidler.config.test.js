@@ -1,13 +1,10 @@
-const path = require('path')
-
 const baseConfig = require('../buidler.config.js')
 
 module.exports = {
   ...baseConfig,
   paths: {
-    ...baseConfig.paths,
-    root: '..',
-    cache: path.resolve(__dirname, 'cache')
+    sources: './test-contracts',
+    cache: './cache/test'
   },
   mocha: {
     timeout: 100000
