@@ -16,7 +16,8 @@ const makeSource = (id, fileName) => ({
   fileName,
   text: null,
   lineOffsets: null,
-  lineGas: []
+  lineGas: [],
+  linesWithCalls: {}
 });
 
 const makeContract = addressHexStr => ({
@@ -110,7 +111,7 @@ const sourceByFilename = {};
 
       const topCall = callStack[callStack.length - 1];
       const cumulativeCallCost = topCall.gasBeforeOutgoingCall - log.gas;
-      increaseLineGasCost(topCall.outgoingCallSource, topCall.outgoingCallLine, cumulativeCallCost);
+      increaseLineGasCost(topCall.outgoingCallSource, topCall.outgoingCallLine, cumulativeCallCost, true);
     }
 
     assert(callStack.length > 0);
@@ -140,7 +141,7 @@ const sourceByFilename = {};
       if (isSynthOp) {
         call.contract.synthGasCost += gasCost;
       } else {
-        increaseLineGasCost(source, line, gasCost);
+        increaseLineGasCost(source, line, gasCost, false);
       }
     }
   }
@@ -168,6 +169,8 @@ const sourceByFilename = {};
     console.log('  total gas spent in the contract:', contract.totalGasCost);
   });
 
+  let hasCalls = false;
+
   Object.keys(sourceByFilename).forEach(fileName => {
     const source = sourceByFilename[fileName];
     if (!source.text) {
@@ -178,9 +181,18 @@ const sourceByFilename = {};
 
     source.text.split('\n').forEach((lineText, i) => {
       const gas = source.lineGas[i] || 0;
-      console.log('%s\t\t%s', gas, lineText);
+      const containsCall = !!source.linesWithCalls[i];
+      if (containsCall && !hasCalls) {
+        hasCalls = true;
+      }
+      console.log(`${gas}${containsCall ? '+' : ''}\t\t${lineText}`);
     });
   });
+
+  if (hasCalls) {
+    console.log(`\nLines marked with + contain calls to other contracts, and gas`);
+    console.log(`usage of such lines includes the gas spent by the called code.`);
+  }
 
 })().catch(e => console.log(e));
 
@@ -386,9 +398,12 @@ function getGasCost(log) {
   }
 }
 
-function increaseLineGasCost(source, line, gasCost) {
+function increaseLineGasCost(source, line, gasCost, isCall) {
   if (source != null && line != null) {
     source.lineGas[line] = (source.lineGas[line] | 0) + gasCost;
+    if (isCall) {
+      source.linesWithCalls[line] = true;
+    }
   }
 }
 
