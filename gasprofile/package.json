@@ -3,7 +3,8 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "ganache": "ganache-cli -e 10000",
+    "ganache": "ganache-cli -e 10000 -l 12000000",
+    "geth": "./geth.sh",
     "buidler-exec": "buidler run --network localhost",
     "profile": "node ./gasprofile.js"
   },
