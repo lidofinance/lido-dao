@@ -205,7 +205,6 @@ async function main(argv) {
       console.log(`\nContract ${contract.name} at 0x${addressHexStr}`);
       console.log(`  defined in: ${fileNames || contract.fileName || '<no sources found>'}`);
       console.log('  synthetic instruction gas:', contract.synthGasCost);
-      // showAllPointsInSourceMap(contract.sourceMap, contract.source, contract.lineOffsets);
     }
     console.log('  total gas spent in the contract:', contract.totalGasCost);
   });
@@ -449,30 +448,6 @@ function increaseLineGasCost(source, line, gasCost, isCall) {
       source.linesWithCalls[line] = true;
     }
   }
-}
-
-function showAllPointsInSourceMap (sourceMap, src, lineOffsets) {
-  const linePoints = []; //line no -> number of points in source map
-  sourceMap.forEach(instruction=>{
-    if (instruction.f === -1) {
-        return;
-    }
-    const s = instruction.s;
-    const line = binarysearch.closest(lineOffsets, s);
-    if (line === 0) {
-        console.log('>>>', instruction);
-    }
-    if (linePoints[line] === undefined) {
-        linePoints[line] = 1;
-    } else {
-        linePoints[line] += 1;
-    }
-  });
-
-  src.split('\n').forEach((line, i) => {
-    const points = linePoints[i] || 0;
-    console.log('%s\t%s\t%s\t\t%s', i, lineOffsets[i], points, line);
-  });
 }
 
 function buildLineOffsets (src) {
