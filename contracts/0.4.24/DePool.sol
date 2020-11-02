@@ -1,3 +1,4 @@
+/* See contracts/COMPILERS.md */
 pragma solidity 0.4.24;
 
 import "@aragon/os/contracts/apps/AragonApp.sol";
@@ -84,9 +85,13 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         uint256 initialUsedSigningKeys; // for write-back control
     }
 
-
-    function initialize(ISTETH _token, IValidatorRegistration validatorRegistration, address _oracle,
-                        IStakingProvidersRegistry _sps, uint256 _depositIterationLimit)
+    function initialize(
+        ISTETH _token,
+        IValidatorRegistration validatorRegistration,
+        address _oracle,
+        IStakingProvidersRegistry _sps,
+        uint256 _depositIterationLimit
+    )
         public onlyInit
     {
         _setToken(_token);
@@ -97,7 +102,6 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
 
         initialized();
     }
-
 
     /**
       * @notice Adds eth to the pool
@@ -114,7 +118,6 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         return _submit(_referral);
     }
 
-
     /**
       * @notice Stop pool routine operations
       */
@@ -129,7 +132,6 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         _resume();
     }
 
-
     /**
       * @notice Set fee rate to `_feeBasisPoints` basis points. The fees are accrued when oracles report staking results
       * @param _feeBasisPoints Fee rate, in basis points
@@ -142,11 +144,19 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     /**
       * @notice Set fee distribution: `_treasuryFeeBasisPoints` basis points go to the treasury, `_insuranceFeeBasisPoints` basis points go to the insurance fund, `_SPFeeBasisPoints` basis points go to staking providers. The sum has to be 10 000.
       */
-    function setFeeDistribution(uint16 _treasuryFeeBasisPoints, uint16 _insuranceFeeBasisPoints,
-                                uint16 _SPFeeBasisPoints) external auth(MANAGE_FEE)
+    function setFeeDistribution(
+        uint16 _treasuryFeeBasisPoints,
+        uint16 _insuranceFeeBasisPoints,
+        uint16 _SPFeeBasisPoints
+    )
+        external auth(MANAGE_FEE)
     {
-        require(10000 == uint256(_treasuryFeeBasisPoints).add(uint256(_insuranceFeeBasisPoints)).add(uint256(_SPFeeBasisPoints)),
-                "FEES_DONT_ADD_UP");
+        require(
+            10000 == uint256(_treasuryFeeBasisPoints)
+            .add(uint256(_insuranceFeeBasisPoints))
+            .add(uint256(_SPFeeBasisPoints)),
+            "FEES_DONT_ADD_UP"
+        );
 
         _setBPValue(TREASURY_FEE_VALUE_POSITION, _treasuryFeeBasisPoints);
         _setBPValue(INSURANCE_FEE_VALUE_POSITION, _insuranceFeeBasisPoints);
@@ -163,14 +173,12 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         _setOracle(_oracle);
     }
 
-
     /**
       * @notice Set maximum number of Ethereum 2.0 validators registered in a single transaction.
       */
     function setDepositIterationLimit(uint256 _limit) external auth(SET_DEPOSIT_ITERATION_LIMIT) {
         _setDepositIterationLimit(_limit);
     }
-
 
     /**
       * @notice Set credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched to `_withdrawalCredentials`
@@ -187,16 +195,14 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         emit WithdrawalCredentialsSet(_withdrawalCredentials);
     }
 
-
     /**
       * @notice Issues withdrawal request. Large withdrawals will be processed only after the phase 2 launch. WIP.
       * @param _amount Amount of StETH to burn
       * @param _pubkeyHash Receiving address
       */
-    function withdraw(uint256 _amount, bytes32 _pubkeyHash) external whenNotStopped {
+    function withdraw(uint256 _amount, bytes32 _pubkeyHash) external whenNotStopped { /* solhint-disable-line no-unused-vars */
         revert("NOT_IMPLEMENTED_YET");
     }
-
 
     /**
       * @notice Ether on the ETH 2.0 side reported by the oracle
@@ -221,11 +227,10 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         }
     }
 
-
     /**
-     * @notice Send funds to recovery Vault. Overrides default AragonApp behaviour.
-     * @param _token Token to be sent to recovery vault.
-     */
+      * @notice Send funds to recovery Vault. Overrides default AragonApp behaviour.
+      * @param _token Token to be sent to recovery vault.
+      */
     function transferToVault(address _token) external {
         require(allowRecoverability(_token), "RECOVER_DISALLOWED");
         address vault = getRecoveryVault();
@@ -244,7 +249,6 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         emit RecoverToVault(vault, _token, balance);
     }
 
-
     /**
       * @notice Returns staking rewards fee rate
       */
@@ -255,8 +259,14 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     /**
       * @notice Returns fee distribution proportion
       */
-    function getFeeDistribution() external view returns (uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints,
-                                                         uint16 SPFeeBasisPoints)
+    function getFeeDistribution()
+        external
+        view
+        returns (
+            uint16 treasuryFeeBasisPoints,
+            uint16 insuranceFeeBasisPoints,
+            uint16 SPFeeBasisPoints
+        )
     {
         return _getFeeDistribution();
     }
@@ -267,7 +277,6 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     function getWithdrawalCredentials() external view returns (bytes) {
         return withdrawalCredentials;
     }
-
 
     /**
       * @notice Gets the amount of Ether temporary buffered on this contract balance
@@ -282,7 +291,6 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     function getTotalControlledEther() external view returns (uint256) {
         return _getTotalControlledEther();
     }
-
 
     /**
       * @notice Gets liquid token interface handle
@@ -310,6 +318,14 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
       */
     function getDepositIterationLimit() public view returns (uint256) {
         return DEPOSIT_ITERATION_LIMIT_VALUE_POSITION.getStorageUint256();
+    }
+
+    /**
+      * @notice Returns the value against which the next reward will be calculated
+      * This method can be discarded in the future
+      */
+    function getRewardBase() public view returns (uint256) {
+        return REWARD_BASE_VALUE_POSITION.getStorageUint256();
     }
 
     /**
@@ -341,11 +357,10 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
       * @return deposited Amount of Ether deposited from the current Ethereum
       * @return remote Amount of Ether currently present on the Ethereum 2 side (can be 0 if the Ethereum 2 is yet to be launch
       */
-    function getEther2Stat() external view returns (uint256 deposited, uint256 remote) {
+    function getEther2Stat() public view returns (uint256 deposited, uint256 remote) {
         deposited = DEPOSITED_ETHER_VALUE_POSITION.getStorageUint256();
         remote = REMOTE_ETHER2_VALUE_POSITION.getStorageUint256();
     }
-
 
     /**
       * @dev Sets liquid token interface handle
@@ -387,7 +402,6 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         DEPOSIT_ITERATION_LIMIT_VALUE_POSITION.setStorageUint256(_limit);
     }
 
-
     /**
       * @dev Processes user deposit
       */
@@ -396,14 +410,8 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         uint256 deposit = msg.value;
 
         if (0 != deposit) {
-            // Minting new liquid tokens
-            if (0 == _getTotalControlledEther()) {
-                StETH = deposit;
-            } else {
-                assert(getToken().totalSupply() != 0);
-                StETH = deposit.mul(getToken().totalSupply()).div(_getTotalControlledEther());
-            }
-            getToken().mint(sender, StETH);
+
+            getToken().mint(sender, deposit);
 
             _submitted(sender, deposit, _referral);
         }
@@ -437,7 +445,8 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
 
         uint256 totalDepositCalls = 0;
         uint256 maxDepositCalls = getDepositIterationLimit();
-        while (_amount != 0 && totalDepositCalls < maxDepositCalls) {
+        uint256 depositAmount = _amount;
+        while (depositAmount != 0 && totalDepositCalls < maxDepositCalls) {
             // Finding the best suitable SP
             uint256 bestSPidx = cache.length;   // 'not found' flag
             uint256 smallestStake;
@@ -463,11 +472,11 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
                 break;
 
             // Invoking deposit for the best SP
-            _amount = _amount.sub(DEPOSIT_SIZE);
+            depositAmount = depositAmount.sub(DEPOSIT_SIZE);
             ++totalDepositCalls;
 
-            (bytes memory key, bytes memory signature, bool used) =
-                    getSPs().getSigningKey(cache[bestSPidx].id, cache[bestSPidx].usedSigningKeys++);
+            (bytes memory key, bytes memory signature, bool used) =  /* solium-disable-line */
+                getSPs().getSigningKey(cache[bestSPidx].id, cache[bestSPidx].usedSigningKeys++);
             assert(!used);
 
             // finally, stake the notch for the assigned validator
@@ -499,15 +508,19 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
 
         // Compute deposit data root (`DepositData` hash tree root) according to validator_registration.vy
         bytes32 pubkeyRoot = sha256(_pad64(_pubkey));
-        bytes32 signatureRoot = sha256(abi.encodePacked(
-            sha256(BytesLib.slice(_signature, 0, 64)),
-            sha256(_pad64(BytesLib.slice(_signature, 64, SIGNATURE_LENGTH.sub(64))))
-        ));
+        bytes32 signatureRoot = sha256(
+            abi.encodePacked(
+                sha256(BytesLib.slice(_signature, 0, 64)),
+                sha256(_pad64(BytesLib.slice(_signature, 64, SIGNATURE_LENGTH.sub(64))))
+            )
+        );
 
-        bytes32 depositDataRoot = sha256(abi.encodePacked(
-            sha256(abi.encodePacked(pubkeyRoot, withdrawalCredentials)),
-            sha256(abi.encodePacked(_toLittleEndian64(depositAmount), signatureRoot))
-        ));
+        bytes32 depositDataRoot = sha256(
+            abi.encodePacked(
+                sha256(abi.encodePacked(pubkeyRoot, withdrawalCredentials)),
+                sha256(abi.encodePacked(_toLittleEndian64(depositAmount), signatureRoot))
+            )
+        );
 
         uint256 targetBalance = address(this).balance.sub(value);
 
@@ -518,16 +531,13 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
 
     /**
       * @dev Distributes rewards and fees.
-      * @param _rewards Total rewards accrued on the Ethereum 2.0 side.
+      * @param _totalRewards Total rewards accrued on the Ethereum 2.0 side.
       */
-    function distributeRewards(uint256 _rewards) internal {
+    function distributeRewards(uint256 _totalRewards) internal {
         // Amount of the rewards in Ether
-        uint256 protocolRewards = _rewards.mul(_getFee()).div(10000);
+        uint256 tokens2mint = _totalRewards.mul(_getFee()).div(10000);
 
         assert(0 != getToken().totalSupply());
-        // Amount of StETH we should mint to distribute protocolRewards by diluting the totalSupply
-        uint256 tokens2mint = protocolRewards.mul(getToken().totalSupply()).div(
-            _getTotalControlledEther().sub(protocolRewards));
 
         (uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, ) = _getFeeDistribution();
         uint256 toTreasury = tokens2mint.mul(treasuryFeeBasisPoints).div(10000);
@@ -537,9 +547,11 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         getToken().mint(getTreasury(), toTreasury);
         getToken().mint(getInsuranceFund(), toInsuranceFund);
         getToken().mint(address(getSPs()), toSP);
-        getSPs().distributeRewards(address(getToken()), toSP);
+        getSPs().distributeRewards(
+          address(getToken()),
+          getToken().balanceOf(address(getSPs()))
+        );
     }
-
 
     /**
       * @dev Records a deposit made by a user with optional referral
@@ -599,7 +611,6 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         getSPs().updateUsedKeys(ids, usedSigningKeys);
     }
 
-
     /**
       * @dev Returns staking rewards fee rate
       */
@@ -658,7 +669,6 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         uint256 remote = REMOTE_ETHER2_VALUE_POSITION.getStorageUint256();
         // Until the oracle provides data, we assume that all staked ether is intact.
         uint256 deposited = DEPOSITED_ETHER_VALUE_POSITION.getStorageUint256();
-
         uint256 assets = _getBufferedEther().add(_hasOracleData() ? remote : deposited);
 
         return assets;
@@ -696,7 +706,6 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
         require(idx == cache.length, "SP_REGISTRY_INCOSISTENCY");
     }
 
-
     /**
       * @dev Padding memory array with zeroes up to 64 bytes on the right
       * @param _b Memory array of size 32 .. 64
@@ -721,12 +730,13 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
       */
     function _toLittleEndian64(uint256 _value) internal pure returns (uint256 result) {
         result = 0;
+        uint256 temp_value = _value;
         for (uint256 i = 0; i < 8; ++i) {
-            result = (result << 8) | (_value & 0xFF);
-            _value >>= 8;
+            result = (result << 8) | (temp_value & 0xFF);
+            temp_value >>= 8;
         }
 
-        assert(0 == _value);    // fully converted
+        assert(0 == temp_value);    // fully converted
         result <<= (24 * 8);
     }
 

@@ -1,3 +1,4 @@
+/* See contracts/COMPILERS.md */
 pragma solidity 0.4.24;
 
 import "@aragon/os/contracts/apps/AragonApp.sol";
@@ -9,6 +10,7 @@ import "../interfaces/IDePool.sol";
 
 import "./Algorithm.sol";
 import "./BitOps.sol";
+
 
 /**
   * @title Implementation of an ETH 2.0 -> ETH oracle
@@ -31,6 +33,7 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
     /// ACL
     bytes32 constant public MANAGE_MEMBERS = keccak256("MANAGE_MEMBERS");
     bytes32 constant public MANAGE_QUORUM = keccak256("MANAGE_QUORUM");
+    bytes32 constant public SET_REPORT_INTERVAL_DURATION = keccak256("SET_REPORT_INTERVAL_DURATION");
     bytes32 constant public SET_POOL = keccak256("SET_POOL");
 
     /// @dev Maximum number of oracle committee members
@@ -56,13 +59,13 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
     uint256 private contributionBitMask;
     uint256[] private currentlyAggregatedData;  // only indexes set in contributionBitMask are valid
 
+    uint256 private reportIntervalDuration;
 
     function initialize() public onlyInit {
         assert(1 == ((1 << (MAX_MEMBERS - 1)) >> (MAX_MEMBERS - 1)));   // static assert
-
+        reportIntervalDuration = REPORT_INTERVAL_DURATION;
         initialized();
     }
-
 
     /**
       * @notice Set the pool address to `_pool`
@@ -135,6 +138,14 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
         _assertInvariants();
     }
 
+    /**
+      * @notice Set the new report interval duration to `_reportIntervalDuration`
+      */
+    function setReportIntervalDuration(uint256 _reportIntervalDuration) external auth(SET_REPORT_INTERVAL_DURATION) {
+        require(_reportIntervalDuration > 0, "ZERO_REPORT_INTERVAL_DURATION");
+        reportIntervalDuration = _reportIntervalDuration;
+        emit ReportIntervalDurationChanged(_reportIntervalDuration);
+    }
 
     /**
       * @notice An oracle committee member pushes data from the ETH 2.0 side
@@ -169,7 +180,6 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
         _tryFinalize(_reportInterval);
     }
 
-
     /**
       * @notice Returns the current oracle member committee
       */
@@ -184,14 +194,13 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
         return quorum;
     }
 
-
     /**
       * @notice Returns reportInterval duration in seconds
       * @dev ReportIntervals are consecutive time intervals. Oracle data is aggregated
       *      and processed for each reportInterval independently.
       */
     function getReportIntervalDurationSeconds() external view returns (uint256) {
-        return REPORT_INTERVAL_DURATION;
+        return reportIntervalDuration;
     }
 
     /**
@@ -209,7 +218,6 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
         return _getCurrentReportInterval();
     }
 
-
     /**
       * @notice Returns the latest data from the ETH 2.0 side
       * @dev Depending on the oracle member committee liveness, the data can be stale. See _reportInterval.
@@ -219,7 +227,6 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
     function getLatestData() external view returns (uint256 reportInterval, uint256 eth2balance) {
         return (lastFinalizedReportInterval, lastFinalizedData);
     }
-
 
     /**
       * @dev Finalizes the current data point if quorum is reached
@@ -262,14 +269,6 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
     }
 
     /**
-      * @dev Checks code self-consistency
-      */
-    function _assertInvariants() private view {
-        assert(quorum != 0 && members.length >= quorum);
-        assert(members.length <= MAX_MEMBERS);
-    }
-
-    /**
       * @dev Returns member's index in the members array or MEMBER_NOT_FOUND
       */
     function _findMember(address _member) internal view returns (uint256) {
@@ -282,7 +281,6 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
 
         return MEMBER_NOT_FOUND;
     }
-
 
     /**
       * @dev Returns current timestamp
@@ -302,7 +300,15 @@ contract DePoolOracle is IDePoolOracle, IsContract, AragonApp {
       * @dev Returns reportInterval id for a timestamp
       * @param _timestamp Unix timestamp, seconds
       */
-    function _getReportIntervalForTimestamp(uint256 _timestamp) internal pure returns (uint256) {
-        return _timestamp.div(REPORT_INTERVAL_DURATION);
+    function _getReportIntervalForTimestamp(uint256 _timestamp) internal view returns (uint256) {
+        return _timestamp.div(reportIntervalDuration);
+    }
+
+    /**
+      * @dev Checks code self-consistency
+      */
+    function _assertInvariants() private view {
+        assert(quorum != 0 && members.length >= quorum);
+        assert(members.length <= MAX_MEMBERS);
     }
 }

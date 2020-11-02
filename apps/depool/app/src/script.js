@@ -106,22 +106,22 @@ async function getOracle() {
   return await app.call('getOracle').toPromise()
 }
 
-async function getSPs() {
-  return await app.call('getSPs').toPromise()
-}
+// async function getSPs() {
+//   return await app.call('getSPs').toPromise()
+// }
 
-async function getTreasury() {
-  return await app.call('getTreasury').toPromise()
-}
+// async function getTreasury() {
+//   return await app.call('getTreasury').toPromise()
+// }
 
-async function getInsuranceFund() {
-  return await app.call('getInsuranceFund').toPromise()
-}
+// async function getInsuranceFund() {
+//   return await app.call('getInsuranceFund').toPromise()
+// }
 
 async function getEther2Stat() {
   const stat = await app.call('getEther2Stat').toPromise()
   return {
     Deposited: fromWei(stat.deposited),
-    Remote: fromWei(stat.remote)
+    Remote: fromWei(stat.remote),
   }
 }

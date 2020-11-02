@@ -41,7 +41,7 @@ async function setPermissions(members, role, app_address, holder, holders) {
     }
   }
 }
-//TODO delete?
+// TODO delete?
 async function hasPermissions(members, address, roles) {
   let state
   for (let i = 0; i < members.length; i++) {

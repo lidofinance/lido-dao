@@ -13,6 +13,5 @@ import "@aragon/os/contracts/lib/ens/AbstractENS.sol";
 import "@aragon/os/contracts/lib/ens/PublicResolver.sol";
 import "@aragon/id/contracts/FIFSResolvingRegistrar.sol";
 
-contract Imports {
-    // solium-disable-previous-line no-empty-blocks
-}
+
+contract Imports {} /* solium-disable-line no-empty-blocks */

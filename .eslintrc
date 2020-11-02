@@ -3,36 +3,49 @@
     "node": true,
     "es2020": true
   },
-  "extends": [
+    "extends": [
     "standard",
     "plugin:prettier/recommended",
     "prettier",
     "prettier/standard"
   ],
-  "parser": "babel-eslint",
-  "plugins": [
+"parser": "babel-eslint",
+  "parserOptions": {
+    "ecmaVersion": 8,
+    "sourceType": "module",
+    "ecmaFeatures": {
+      "jsx": true,
+      "modules": true
+    }
+  },
+    "plugins": [
     "node",
     "prettier",
     "standard"
   ],
+
   "rules": {
-    "max-len": ["error", { "code": 140, "ignoreUrls": true }],
-    "no-undef": 1,
-    "no-unused-vars": 1,
-    "camelcase": 0,
-    "eol-last": 1,
-    "no-multiple-empty-lines": 1,
-    "comma-dangle": 1,
-    "quotes": [2, "single", { "avoidEscape": true, "allowTemplateLiterals": true }],
-    "jsx-quotes": [2, "prefer-single"],
-    "no-useless-escape": 0,
+    "prettier/prettier": "error",
+    "max-len": ["warn", { "code": 140, "ignoreComments": true, "ignoreUrls": true }],
+    "no-undef": "warn",
+    "no-unused-vars": "warn",
+    "prefer-const": "warn",
+    "camelcase": "off",
+    "eol-last": "warn",
+    "no-multiple-empty-lines": "warn",
+    "comma-dangle": "warn",
+    "quotes": ["error", "single", { "avoidEscape": true, "allowTemplateLiterals": true }],
+    "jsx-quotes": ["error", "prefer-single"],
+    "no-useless-escape": "off",
     "valid-jsdoc": "error",
-    "linebreak-style": [ "error", "unix" ]
+    "linebreak-style": ["error", "unix"]
   },
   "overrides": [
     {
       "files": [
-        "./test{,-e2e}/{**/,}*.js"
+        "./scripts/{**/,}*.js",
+        "./test/{**/,}*.js",
+        "./e2e/test/{**/,}*.js"
       ],
       "env": {
         "mocha": true

@@ -4,6 +4,8 @@ const { getEventArgument, ZERO_ADDRESS } = require('@aragon/contract-helpers-tes
 const { pad, ETH, hexConcat, toBN } = require('./test/helpers/utils')
 const { deployDaoAndPool } = require('./test/scenario/helpers/deploy')
 
+const StakingProvidersRegistry = artifacts.require('StakingProvidersRegistry')
+
 contract('DePool: deposit loop gas estimate', (addresses) => {
   const [
     // the root account which deployed the DAO
@@ -49,7 +51,7 @@ contract('DePool: deposit loop gas estimate', (addresses) => {
 
     for (let iProvider = 0; iProvider < numProviders; ++iProvider) {
       const spTx = await spRegistry.addStakingProvider(`SP-${iProvider}`, stakingProvider, spValidatorsLimit, { from: voting })
-      const stakingProviderId = getEventArgument(spTx, 'StakingProviderAdded', 'id')
+      const stakingProviderId = getEventArgument(spTx, 'StakingProviderAdded', 'id', { decodeForAbi: StakingProvidersRegistry._json.abi })
 
       const data = Array.from({ length: numKeys }, (_, iKey) => {
         const n = arbitraryN.clone().addn(10 * iKey + 1000 * iProvider)
@@ -74,7 +76,7 @@ contract('DePool: deposit loop gas estimate', (addresses) => {
   })
 
   let gasPerMockDeposit
-  let gasPerNValidators = {}
+  const gasPerNValidators = {}
   // let gasPerSingleValidator
   // let gasPerTenValidators
 

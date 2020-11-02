@@ -115,9 +115,15 @@ contract('DePool: happy path', (addresses) => {
   it('the first staking provider registers one validator', async () => {
     const numKeys = 1
 
-    await spRegistry.addSigningKeysSP(stakingProvider1.id, numKeys, stakingProvider1.validators[0].key, stakingProvider1.validators[0].sig, {
-      from: stakingProvider1.address
-    })
+    await spRegistry.addSigningKeysSP(
+      stakingProvider1.id,
+      numKeys,
+      stakingProvider1.validators[0].key,
+      stakingProvider1.validators[0].sig,
+      {
+        from: stakingProvider1.address
+      }
+    )
 
     // The key was added
 
@@ -213,9 +219,15 @@ contract('DePool: happy path', (addresses) => {
 
     const numKeys = 1
 
-    await spRegistry.addSigningKeysSP(stakingProvider2.id, numKeys, stakingProvider2.validators[0].key, stakingProvider2.validators[0].sig, {
-      from: stakingProvider2.address
-    })
+    await spRegistry.addSigningKeysSP(
+      stakingProvider2.id,
+      numKeys,
+      stakingProvider2.validators[0].key,
+      stakingProvider2.validators[0].sig,
+      {
+        from: stakingProvider2.address
+      }
+    )
 
     // The key was added
 
@@ -264,9 +276,30 @@ contract('DePool: happy path', (addresses) => {
   it('the oracle reports balance increase on Ethereum2 side', async () => {
     const epoch = 100
 
+    // Total shares are equal to deposited eth before ratio change and fee mint
+
+    const oldTotalShares = await token.getTotalShares()
+    assertBn(oldTotalShares, ETH(97), 'total shares')
+
+    // Old total controlled Ether
+
+    const oldTotalControlledEther = await pool.getTotalControlledEther()
+    assertBn(oldTotalControlledEther, ETH(33 + 64), 'total controlled ether')
+
     // Reporting 1.5-fold balance increase (64 => 96)
 
     await oracleMock.reportEther2(epoch, ETH(96))
+
+    // Total shares increased because fee minted (fee shares added)
+    // shares ~= oldTotalShares + reward * oldTotalShares / (newTotalControlledEther - reward)
+
+    const newTotalShares = await token.getTotalShares()
+    assertBn(newTotalShares, new BN('97240805234492225001'), 'total shares')
+
+    // Total controlled Ether increased
+
+    const newTotalControlledEther = await pool.getTotalControlledEther()
+    assertBn(newTotalControlledEther, ETH(33 + 96), 'total controlled ether')
 
     // Ether2 stat reported by the pool changed correspondingly
 
@@ -278,42 +311,24 @@ contract('DePool: happy path', (addresses) => {
 
     assertBn(await pool.getBufferedEther(), ETH(33), 'buffered ether')
 
-    // Total controlled Ether increased
-
-    assertBn(await pool.getTotalControlledEther(), ETH(33 + 96), 'total controlled ether')
-
-    // New tokens was minted to distribute fee, diluting token total supply:
-    //
-    // => mintedAmount * newRatio = totalFee
-    // => newRatio = newTotalControlledEther / newTotalSupply =
-    //             = newTotalControlledEther / (prevTotalSupply + mintedAmount)
-    // => mintedAmount * newTotalControlledEther / (prevTotalSupply + mintedAmount) = totalFee
-    // => mintedAmount = (totalFee * prevTotalSupply) / (newTotalControlledEther - totalFee)
+    // New tokens was minted to distribute fee
+    assertBn(await token.totalSupply(), tokens(129), 'token total supply')
 
     const reward = toBN(ETH(96 - 64))
-    const prevTotalSupply = toBN(tokens(3 + 30 + 64))
-    const newTotalControlledEther = toBN(ETH(33 + 96))
+    const mintedAmount = new BN(totalFeePoints).mul(reward).divn(10000)
 
-    const totalFee = new BN(totalFeePoints).mul(reward).divn(10000)
-    const mintedAmount = totalFee.mul(prevTotalSupply).div(newTotalControlledEther.sub(totalFee))
-    const newTotalSupply = prevTotalSupply.add(mintedAmount)
-
-    assertBn(await token.totalSupply(), newTotalSupply.toString(10), 'token total supply')
-
-    // Token user balances didn't change
-
-    assertBn(await token.balanceOf(user1), tokens(3), 'user1 tokens')
-    assertBn(await token.balanceOf(user2), tokens(30), 'user2 tokens')
-    assertBn(await token.balanceOf(user3), tokens(64), 'user3 tokens')
+    // Token user balances increased
+    assertBn(await token.balanceOf(user1), new BN('3979810729320528835'), 'user1 tokens')
+    assertBn(await token.balanceOf(user2), new BN('39798107293205288355'), 'user2 tokens')
+    assertBn(await token.balanceOf(user3), new BN('84902628892171281825'), 'user3 tokens')
 
     // Fee, in the form of minted tokens, was distributed between treasury, insurance fund
     // and staking providers
+    // treasuryTokenBalance ~= mintedAmount * treasuryFeePoints / 10000
+    // insuranceTokenBalance ~= mintedAmount * insuranceFeePoints / 10000
 
-    const treasuryTokenBalance = mintedAmount.muln(treasuryFeePoints).divn(10000)
-    const insuranceTokenBalance = mintedAmount.muln(insuranceFeePoints).divn(10000)
-
-    assertBn(await token.balanceOf(treasuryAddr), treasuryTokenBalance.toString(10), 'treasury tokens')
-    assertBn(await token.balanceOf(insuranceAddr), insuranceTokenBalance.toString(10), 'insurance tokens')
+    assertBn(await token.balanceOf(treasuryAddr), new BN('95762267471402490'), 'treasury tokens')
+    assertBn(await token.balanceOf(insuranceAddr), new BN('63889021609758015'), 'insurance tokens')
 
     // The staking providers' fee is distributed between all active staking providers,
     // proprotional to their effective stake (the amount of Ether staked by the provider's
@@ -322,10 +337,21 @@ contract('DePool: happy path', (addresses) => {
     // In our case, both staking providers received the same fee since they have the same
     // effective stake (one signing key used from each SP, staking 32 ETH)
 
-    const stakingProvidersTokenBalance = mintedAmount.sub(treasuryTokenBalance).sub(insuranceTokenBalance)
-    const individualProviderBalance = stakingProvidersTokenBalance.divn(2)
+    assertBn(await token.balanceOf(stakingProvider1.address), new BN('79900898110870236'), 'SP-1 tokens')
+    assertBn(await token.balanceOf(stakingProvider2.address), new BN('79900898110870236'), 'SP-2 tokens')
 
-    assertBn(await token.balanceOf(stakingProvider1.address), individualProviderBalance.toString(10), 'SP-1 tokens')
-    assertBn(await token.balanceOf(stakingProvider2.address), individualProviderBalance.toString(10), 'SP-2 tokens')
+    // Real minted amount should be a bit less than calculated caused by round errors on mint and transfer operations
+    assert(
+      mintedAmount
+        .sub(
+          new BN(0)
+            .add(await token.balanceOf(treasuryAddr))
+            .add(await token.balanceOf(insuranceAddr))
+            .add(await token.balanceOf(stakingProvider1.address))
+            .add(await token.balanceOf(stakingProvider2.address))
+            .add(await token.balanceOf(spRegistry.address))
+        )
+        .lt(mintedAmount.divn(100))
+    )
   })
 })

@@ -32,6 +32,11 @@ interface IDePoolOracle {
     function setQuorum(uint256 _quorum) external;
 
     /**
+      * @notice Set the new report interval duration to `_reportIntervalDuration`
+      */
+    function setReportIntervalDuration(uint256 _reportIntervalDuration) external;
+
+    /**
       * @notice Returns the number of oracle members required to form a data point
       */
     function getQuorum() external view returns (uint256);
@@ -39,6 +44,7 @@ interface IDePoolOracle {
     event MemberAdded(address member);
     event MemberRemoved(address member);
     event QuorumChanged(uint256 quorum);
+    event ReportIntervalDurationChanged(uint256 duration);
 
 
     /**

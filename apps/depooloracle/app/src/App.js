@@ -1,22 +1,17 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { useAragonApi } from '@aragon/api-react'
 import {
-  Box,
   Button,
   ContextMenu,
   DataView,
-  GU,
   Header,
-  IconRemove,
   IconTrash,
   IdentityBadge,
   Main,
   Split,
   SyncIndicator,
-  textStyle,
   useTheme,
 } from '@aragon/ui'
-import styled from 'styled-components'
 import AddMemberSidePanel from './components/AddMemberSidePanel'
 import MenuItem from './components/MenuItem'
 import InfoBox from './components/InfoBox'
@@ -130,6 +125,7 @@ export default function App() {
             fields={['Oracle Members']}
             entries={oracleMembers}
             renderEntry={(memberAddress) => [
+              // eslint-disable-next-line react/jsx-key
               <IdentityBadge entity={memberAddress} />,
             ]}
             renderEntryActions={(memberAddress) => (
@@ -145,7 +141,7 @@ export default function App() {
           />
         }
         secondary={
-          <React.Fragment>
+          <>
             <InfoBox
               heading="Quorum"
               value={quorum}
@@ -153,7 +149,7 @@ export default function App() {
               label="Change Quorum"
             />
             {latestData && (
-              <React.Fragment>
+              <>
                 <InfoBox
                   heading="ETH2 Balance"
                   value={latestData.eth2balance}
@@ -162,7 +158,7 @@ export default function App() {
                   heading="Report Interval"
                   value={latestData.reportInterval}
                 />
-              </React.Fragment>
+              </>
             )}
             <IntervalInfo
               duration={reportIntervalDurationSeconds}
@@ -170,7 +166,7 @@ export default function App() {
               update={updateCurrentReportInterval}
               api={getReportIntervalForTimestamp}
             />
-          </React.Fragment>
+          </>
         }
       />
       <AddMemberSidePanel

@@ -1,2 +1,3 @@
 node_modules
 contracts/Migrations.sol
+contracts/0.6.11/deposit_contract.sol
