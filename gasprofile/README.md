@@ -37,5 +37,24 @@ yarn buidler-exec --config ./buidler.config.js ./run-tx.js
 yarn profile ./cache/solc-output.json --src-root '..' 0xb1e910ad15ddbe14fb00fbabb5924b3ed79ba781e83448d43b2934917f521f2c
 
 # Profile the tx, skipping Aragon contracts
-yarn profile ./cache/solc-output.json --src-root '..' --skip '@aragon/' 0xb1e910ad15ddbe14fb00fbabb5924b3ed79ba781e83448d43b2934917f521f2c
+yarn profile ./cache/solc-output.json --src-root '..' 0xb1e910ad15ddbe14fb00fbabb5924b3ed79ba781e83448d43b2934917f521f2c --skip '@aragon/'
+```
+
+Profile deposit:
+
+```sh
+# Run ganache-cli with extend ether balance in a separate terminal
+ganache-cli -e 10000
+# Execute several transactions
+yarn buidler-exec --config ./buidler.config.js ./run-deposit-tx.js
+#
+# Outputs:
+#
+# pool.submit tx hash: 0x9bb43602b8a755388ea75c65d7a4bff0fac30189acc5feb08a0af71654bbc56e
+
+# Profile the tx
+yarn profile ./cache/solc-output.json --src-root '..' 0x9bb43602b8a755388ea75c65d7a4bff0fac30189acc5feb08a0af71654bbc56e
+
+# Profile the tx, skipping Aragon contracts
+yarn profile ./cache/solc-output.json --src-root '..' --skip '@aragon/' 0x9bb43602b8a755388ea75c65d7a4bff0fac30189acc5feb08a0af71654bbc56e
 ```
