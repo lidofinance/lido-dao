@@ -4,7 +4,7 @@ const { getEventArgument, ZERO_ADDRESS } = require('@aragon/contract-helpers-tes
 const { pad, ETH, hexConcat, toBN } = require('./test/helpers/utils')
 const { deployDaoAndPool } = require('./test/scenario/helpers/deploy')
 
-const StakingProvidersRegistry = artifacts.require('StakingProvidersRegistry')
+const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
 contract('Lido: deposit loop gas estimate', (addresses) => {
   const [
@@ -33,7 +33,7 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
     // contracts/Lido.sol
     pool = deployed.pool
 
-    // contracts/sps/StakingProvidersRegistry.sol
+    // contracts/sps/NodeOperatorsRegistry.sol
     spRegistry = deployed.spRegistry
 
     // mocks
@@ -50,8 +50,8 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
     const numKeys = 3
 
     for (let iProvider = 0; iProvider < numProviders; ++iProvider) {
-      const spTx = await spRegistry.addStakingProvider(`SP-${iProvider}`, stakingProvider, spValidatorsLimit, { from: voting })
-      const stakingProviderId = getEventArgument(spTx, 'StakingProviderAdded', 'id', { decodeForAbi: StakingProvidersRegistry._json.abi })
+      const spTx = await spRegistry.addNodeOperator(`SP-${iProvider}`, stakingProvider, spValidatorsLimit, { from: voting })
+      const stakingProviderId = getEventArgument(spTx, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
 
       const data = Array.from({ length: numKeys }, (_, iKey) => {
         const n = arbitraryN.clone().addn(10 * iKey + 1000 * iProvider)
@@ -72,7 +72,7 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
       validatorData.push.apply(validatorData, data)
     }
 
-    assertBn(await spRegistry.getStakingProvidersCount(), numProviders, 'total providers')
+    assertBn(await spRegistry.getNodeOperatorsCount(), numProviders, 'total providers')
   })
 
   let gasPerMockDeposit

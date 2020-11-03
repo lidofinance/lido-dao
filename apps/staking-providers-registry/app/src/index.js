@@ -8,7 +8,7 @@ const reducer = (state) => {
     return {
       isSyncing: true,
       stakingProvidersCount: '',
-      getActiveStakingProvidersCount: '',
+      getActiveNodeOperatorsCount: '',
       stakingProviders: [],
     }
   }

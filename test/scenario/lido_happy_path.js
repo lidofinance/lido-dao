@@ -6,7 +6,7 @@ const { getEventArgument } = require('@aragon/contract-helpers-test')
 const { pad, toBN, ETH, tokens } = require('../helpers/utils')
 const { deployDaoAndPool } = require('./helpers/deploy')
 
-const StakingProvidersRegistry = artifacts.require('StakingProvidersRegistry')
+const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
 contract('Lido: happy path', (addresses) => {
   const [
@@ -38,7 +38,7 @@ contract('Lido: happy path', (addresses) => {
     // contracts/Lido.sol
     pool = deployed.pool
 
-    // contracts/sps/StakingProvidersRegistry.sol
+    // contracts/sps/NodeOperatorsRegistry.sol
     spRegistry = deployed.spRegistry
 
     // mocks
@@ -103,13 +103,13 @@ contract('Lido: happy path', (addresses) => {
     // How many validators can this staking provider register
     const validatorsLimit = 1000000000
 
-    const spTx = await spRegistry.addStakingProvider(stakingProvider1.name, stakingProvider1.address, validatorsLimit, { from: voting })
+    const spTx = await spRegistry.addNodeOperator(stakingProvider1.name, stakingProvider1.address, validatorsLimit, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
-    stakingProvider1.id = getEventArgument(spTx, 'StakingProviderAdded', 'id', { decodeForAbi: StakingProvidersRegistry._json.abi })
+    stakingProvider1.id = getEventArgument(spTx, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
     assertBn(stakingProvider1.id, 0, 'SP id')
 
-    assertBn(await spRegistry.getStakingProvidersCount(), 1, 'total staking providers')
+    assertBn(await spRegistry.getNodeOperatorsCount(), 1, 'total staking providers')
   })
 
   it('the first staking provider registers one validator', async () => {
@@ -211,13 +211,13 @@ contract('Lido: happy path', (addresses) => {
   it('voting adds the second staking provider who registers one validator', async () => {
     const validatorsLimit = 1000000000
 
-    const spTx = await spRegistry.addStakingProvider(stakingProvider2.name, stakingProvider2.address, validatorsLimit, { from: voting })
+    const spTx = await spRegistry.addNodeOperator(stakingProvider2.name, stakingProvider2.address, validatorsLimit, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
-    stakingProvider2.id = getEventArgument(spTx, 'StakingProviderAdded', 'id', { decodeForAbi: StakingProvidersRegistry._json.abi })
+    stakingProvider2.id = getEventArgument(spTx, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
     assertBn(stakingProvider2.id, 1, 'SP id')
 
-    assertBn(await spRegistry.getStakingProvidersCount(), 2, 'total staking providers')
+    assertBn(await spRegistry.getNodeOperatorsCount(), 2, 'total staking providers')
 
     const numKeys = 1
 

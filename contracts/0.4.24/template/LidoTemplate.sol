@@ -5,7 +5,7 @@ import "@aragon/templates-shared/contracts/BaseTemplate.sol";
 
 import "../StETH.sol";
 import "../oracle/LidoOracle.sol";
-import "../sps/StakingProvidersRegistry.sol";
+import "../sps/NodeOperatorsRegistry.sol";
 import "../Lido.sol";
 
 
@@ -50,7 +50,7 @@ contract LidoTemplate is BaseTemplate {
     Voting private voting;
     StETH private steth;
     LidoOracle private oracle;
-    StakingProvidersRegistry private sps;
+    NodeOperatorsRegistry private sps;
     Lido private lido;
 
 
@@ -93,7 +93,7 @@ contract LidoTemplate is BaseTemplate {
         oracle.setPool(lido);
         _removePermissionFromTemplate(acl, oracle, oracle.SET_POOL());
 
-        // StakingProvidersRegistry setPool
+        // NodeOperatorsRegistry setPool
         _createPermissionForTemplate(acl, sps, sps.SET_POOL());
         sps.setPool(lido);
         _removePermissionFromTemplate(acl, sps, sps.SET_POOL());
@@ -126,8 +126,8 @@ contract LidoTemplate is BaseTemplate {
         initializeData = abi.encodeWithSelector(LidoOracle(0).initialize.selector);
         oracle = LidoOracle(_installNonDefaultApp(dao, LIDOORACLE_APP_ID, initializeData));
 
-        initializeData = abi.encodeWithSelector(StakingProvidersRegistry(0).initialize.selector);
-        sps = StakingProvidersRegistry(_installNonDefaultApp(dao, REGISTRY_APP_ID, initializeData));
+        initializeData = abi.encodeWithSelector(NodeOperatorsRegistry(0).initialize.selector);
+        sps = NodeOperatorsRegistry(_installNonDefaultApp(dao, REGISTRY_APP_ID, initializeData));
 
         initializeData = abi.encodeWithSelector(
             Lido(0).initialize.selector,
@@ -163,7 +163,7 @@ contract LidoTemplate is BaseTemplate {
         acl.createPermission(voting, oracle, oracle.SET_REPORT_INTERVAL_DURATION(), voting);
         acl.createPermission(voting, oracle, oracle.SET_POOL(), voting);
 
-        // StakingProvidersRegistry
+        // NodeOperatorsRegistry
         acl.createPermission(voting, sps, sps.MANAGE_SIGNING_KEYS(), voting);
         acl.createPermission(voting, sps, sps.ADD_STAKING_PROVIDER_ROLE(), voting);
         acl.createPermission(voting, sps, sps.SET_STAKING_PROVIDER_ACTIVE_ROLE(), voting);

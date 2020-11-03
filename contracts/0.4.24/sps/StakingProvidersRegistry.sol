@@ -8,17 +8,17 @@ import "@aragon/os/contracts/lib/math/SafeMath64.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
-import "../interfaces/IStakingProvidersRegistry.sol";
+import "../interfaces/INodeOperatorsRegistry.sol";
 
 
 /**
   * @title Staking provider registry implementation
   *
-  * See the comment of `IStakingProvidersRegistry`.
+  * See the comment of `INodeOperatorsRegistry`.
   *
   * NOTE: the code below assumes moderate amount of staking providers, e.g. up to 50.
   */
-contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, AragonApp {
+contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp {
     using SafeMath for uint256;
     using SafeMath64 for uint64;
     using UnstructuredStorage for bytes32;
@@ -40,7 +40,7 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
 
 
     /// @dev Staking provider parameters and internal state
-    struct StakingProvider {
+    struct NodeOperator {
         bool active;    // a flag indicating if the SP can participate in further staking and reward distribution
         address rewardAddress;  // Ethereum 1 address which receives steth rewards for this SP
         string name;    // human-readable name
@@ -52,7 +52,7 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
     }
 
     /// @dev Mapping of all staking providers. Mapping is used to be able to extend the struct.
-    mapping(uint256 => StakingProvider) internal sps;
+    mapping(uint256 => NodeOperator) internal sps;
 
     // @dev Total number of SPs
     uint256 internal totalSPCount;
@@ -100,13 +100,13 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
       * @param _stakingLimit the maximum number of validators to stake for this SP
       * @return a unique key of the added SP
       */
-    function addStakingProvider(string _name, address _rewardAddress, uint64 _stakingLimit) external
+    function addNodeOperator(string _name, address _rewardAddress, uint64 _stakingLimit) external
         auth(ADD_STAKING_PROVIDER_ROLE)
         validAddress(_rewardAddress)
         returns (uint256 id)
     {
         id = totalSPCount++;
-        StakingProvider storage sp = sps[id];
+        NodeOperator storage sp = sps[id];
 
         activeSPCount++;
         sp.active = true;
@@ -114,13 +114,13 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
         sp.rewardAddress = _rewardAddress;
         sp.stakingLimit = _stakingLimit;
 
-        emit StakingProviderAdded(id, _name, _rewardAddress, _stakingLimit);
+        emit NodeOperatorAdded(id, _name, _rewardAddress, _stakingLimit);
     }
 
     /**
       * @notice `_active ? 'Enable' : 'Disable'` the staking provider #`_id`
       */
-    function setStakingProviderActive(uint256 _id, bool _active) external
+    function setNodeOperatorActive(uint256 _id, bool _active) external
         authP(SET_STAKING_PROVIDER_ACTIVE_ROLE, arr(_id, _active ? uint256(1) : uint256(0)))
         SPExists(_id)
     {
@@ -133,41 +133,41 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
 
         sps[_id].active = _active;
 
-        emit StakingProviderActiveSet(_id, _active);
+        emit NodeOperatorActiveSet(_id, _active);
     }
 
     /**
       * @notice Change human-readable name of the staking provider #`_id` to `_name`
       */
-    function setStakingProviderName(uint256 _id, string _name) external
+    function setNodeOperatorName(uint256 _id, string _name) external
         authP(SET_STAKING_PROVIDER_NAME_ROLE, arr(_id))
         SPExists(_id)
     {
         sps[_id].name = _name;
-        emit StakingProviderNameSet(_id, _name);
+        emit NodeOperatorNameSet(_id, _name);
     }
 
     /**
       * @notice Change reward address of the staking provider #`_id` to `_rewardAddress`
       */
-    function setStakingProviderRewardAddress(uint256 _id, address _rewardAddress) external
+    function setNodeOperatorRewardAddress(uint256 _id, address _rewardAddress) external
         authP(SET_STAKING_PROVIDER_ADDRESS_ROLE, arr(_id, uint256(_rewardAddress)))
         SPExists(_id)
         validAddress(_rewardAddress)
     {
         sps[_id].rewardAddress = _rewardAddress;
-        emit StakingProviderRewardAddressSet(_id, _rewardAddress);
+        emit NodeOperatorRewardAddressSet(_id, _rewardAddress);
     }
 
     /**
       * @notice Set the maximum number of validators to stake for the staking provider #`_id` to `_stakingLimit`
       */
-    function setStakingProviderStakingLimit(uint256 _id, uint64 _stakingLimit) external
+    function setNodeOperatorStakingLimit(uint256 _id, uint64 _stakingLimit) external
         authP(SET_STAKING_PROVIDER_LIMIT_ROLE, arr(_id, uint256(_stakingLimit)))
         SPExists(_id)
     {
         sps[_id].stakingLimit = _stakingLimit;
-        emit StakingProviderStakingLimitSet(_id, _stakingLimit);
+        emit NodeOperatorStakingLimitSet(_id, _stakingLimit);
     }
 
     /**
@@ -181,7 +181,7 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
         sps[_id].stoppedValidators = sps[_id].stoppedValidators.add(_stoppedIncrement);
         require(sps[_id].stoppedValidators <= sps[_id].usedSigningKeys, "STOPPED_MORE_THAN_LAUNCHED");
 
-        emit StakingProviderTotalStoppedValidatorsReported(_id, sps[_id].stoppedValidators);
+        emit NodeOperatorTotalStoppedValidatorsReported(_id, sps[_id].stoppedValidators);
     }
 
     /**
@@ -194,7 +194,7 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
         require(_ids.length == _usedSigningKeys.length, "BAD_LENGTH");
         for (uint256 i = 0; i < _ids.length; ++i) {
             require(_ids[i] < totalSPCount, "STAKING_PROVIDER_NOT_FOUND");
-            StakingProvider storage sp = sps[_ids[i]];
+            NodeOperator storage sp = sps[_ids[i]];
 
             uint64 current = sp.usedSigningKeys;
             uint64 new_ = _usedSigningKeys[i];
@@ -293,7 +293,7 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
         uint256 length = totalSPCount;
         uint64 effectiveStakeTotal;
         for (uint256 SP_id = 0; SP_id < length; ++SP_id) {
-            StakingProvider storage sp = sps[SP_id];
+            NodeOperator storage sp = sps[SP_id];
             if (!sp.active)
                 continue;
 
@@ -318,14 +318,14 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
     /**
       * @notice Returns total number of staking providers
       */
-    function getStakingProvidersCount() external view returns (uint256) {
+    function getNodeOperatorsCount() external view returns (uint256) {
         return totalSPCount;
     }
 
     /**
       * @notice Returns number of active staking providers
       */
-    function getActiveStakingProvidersCount() external view returns (uint256) {
+    function getActiveNodeOperatorsCount() external view returns (uint256) {
         return activeSPCount;
     }
 
@@ -334,7 +334,7 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
       * @param _id Staking provider id
       * @param _fullInfo If true, name will be returned as well
       */
-    function getStakingProvider(uint256 _id, bool _fullInfo) external view
+    function getNodeOperator(uint256 _id, bool _fullInfo) external view
         SPExists(_id)
         returns
         (
@@ -347,7 +347,7 @@ contract StakingProvidersRegistry is IStakingProvidersRegistry, IsContract, Arag
             uint64 usedSigningKeys
         )
     {
-        StakingProvider storage sp = sps[_id];
+        NodeOperator storage sp = sps[_id];
 
         active = sp.active;
         name = _fullInfo ? sp.name : "";    // reading name is 2+ SLOADs

@@ -32,10 +32,10 @@ These contracts are located in the [contracts/0.4.24](contracts/0.4.24) director
 StETH is an ERC20 token which represents staked ether. Tokens are minted upon deposit and burned when redeemed. StETH tokens are pegged 1:1 to the Ethers that are held by Lido. StETH token’s balances are updated when the oracle reports change in total stake every day.
 
 #### [Lido](contracts/0.4.24/Lido.sol)
-Lido is the core contract which acts as a liquid staking pool. The contract is responsible for Ether deposits and withdrawals, minting and burning liquid tokens, delegating funds to staking providers, applying fees, and accepting updates from the oracle contract. Staking providers' logic is extracted to a separate contract, StakingProvidersRegistry.
+Lido is the core contract which acts as a liquid staking pool. The contract is responsible for Ether deposits and withdrawals, minting and burning liquid tokens, delegating funds to staking providers, applying fees, and accepting updates from the oracle contract. Staking providers' logic is extracted to a separate contract, NodeOperatorsRegistry.
 
-#### [StakingProvidersRegistry](contracts/0.4.24/sps/StakingProvidersRegistry.sol)
-Staking Providers act as validators on the Beacon chain for the benefit of the protocol. The DAO selects staking providers and adds their addresses to the StakingProvidersRegistry contract. Authorized providers have to generate a set of keys for the validation and also provide them with the smart contract. As Ether is received from users, it is distributed in chunks of 32 Ether between all active Staking Providers. The contract contains a list of providers, their keys, and the logic for distributing rewards between them. The DAO can deactivate misbehaving providers.
+#### [NodeOperatorsRegistry](contracts/0.4.24/sps/NodeOperatorsRegistry.sol)
+Staking Providers act as validators on the Beacon chain for the benefit of the protocol. The DAO selects staking providers and adds their addresses to the NodeOperatorsRegistry contract. Authorized providers have to generate a set of keys for the validation and also provide them with the smart contract. As Ether is received from users, it is distributed in chunks of 32 Ether between all active Staking Providers. The contract contains a list of providers, their keys, and the logic for distributing rewards between them. The DAO can deactivate misbehaving providers.
 
 #### [LidoOracle](contracts/0.4.24/oracle/LidoOracle.sol)
 LidoOracle is a contract where oracles send addresses' balances controlled by the DAO on the ETH 2.0 side. The balances can go up because of reward accumulation and can go down due to slashing and staking penalties. Oracles are assigned by the DAO.
@@ -108,7 +108,7 @@ then go to [http://localhost:3000/#/lido-dao/](http://localhost:3000/#/lido-dao/
 As a result of the script execution, the following will be installed:
 
 * the Deposit Contract instance;
-* all Aragon App instances (contracts: Lido, StakingProvidersRegistry, LidoOracle, and StETH)
+* all Aragon App instances (contracts: Lido, NodeOperatorsRegistry, LidoOracle, and StETH)
 * the Aragon PM for `lido.eth`;
 * the Lido DAO template;
 * and finally, the Lido DAO will be deployed.

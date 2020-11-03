@@ -4,7 +4,7 @@ const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 const { BN } = require('bn.js')
 
 const StETH = artifacts.require('StETH.sol') // we can just import due to StETH imported in test_helpers/Imports.sol
-const StakingProvidersRegistry = artifacts.require('StakingProvidersRegistry')
+const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
 const Lido = artifacts.require('TestLido.sol')
 const OracleMock = artifacts.require('OracleMock.sol')
@@ -49,15 +49,15 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, s
     stEthBase = await StETH.new()
     oracle = await OracleMock.new()
     validatorRegistration = await ValidatorRegistrationMock.new()
-    stakingProvidersRegistryBase = await StakingProvidersRegistry.new()
+    stakingProvidersRegistryBase = await NodeOperatorsRegistry.new()
   })
 
   beforeEach('deploy dao and app', async () => {
     const { dao, acl } = await newDao(appManager)
 
-    // StakingProvidersRegistry
+    // NodeOperatorsRegistry
     let proxyAddress = await newApp(dao, 'staking-providers-registry', stakingProvidersRegistryBase.address, appManager)
-    sps = await StakingProvidersRegistry.at(proxyAddress)
+    sps = await NodeOperatorsRegistry.at(proxyAddress)
     await sps.initialize()
 
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
@@ -120,7 +120,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, s
     beforeEach(async function () {
       await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
-      await sps.addStakingProvider('1', spAddress1, UNLIMITED, { from: voting })
+      await sps.addNodeOperator('1', spAddress1, UNLIMITED, { from: voting })
       await sps.addSigningKeys(0, 1, hexConcat(pad('0x010203', 48)), hexConcat(pad('0x01', 96)), { from: voting })
     })
 
@@ -278,7 +278,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, s
 
         context('2nd SP added (still inactive)', async () => {
           beforeEach(async function () {
-            await sps.addStakingProvider('2', spAddress2, UNLIMITED, { from: voting })
+            await sps.addNodeOperator('2', spAddress2, UNLIMITED, { from: voting })
           })
 
           context('oracle reported 33 ETH (recovered then rewarded), must be same as without new SP', async () => {

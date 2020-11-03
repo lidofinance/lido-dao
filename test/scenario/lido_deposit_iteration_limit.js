@@ -5,7 +5,7 @@ const { getEvents, getEventArgument, ZERO_ADDRESS } = require('@aragon/contract-
 const { pad, ETH, hexConcat } = require('../helpers/utils')
 const { deployDaoAndPool } = require('./helpers/deploy')
 
-const StakingProvidersRegistry = artifacts.require('StakingProvidersRegistry')
+const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
 contract('Lido: deposit loop iteration limit', (addresses) => {
   const [
@@ -36,7 +36,7 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
     // contracts/Lido.sol
     pool = deployed.pool
 
-    // contracts/sps/StakingProvidersRegistry.sol
+    // contracts/sps/NodeOperatorsRegistry.sol
     spRegistry = deployed.spRegistry
 
     // mocks
@@ -51,12 +51,12 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
     const validatorsLimit = 1000
     const numKeys = 16
 
-    const spTx = await spRegistry.addStakingProvider('SP-1', stakingProvider, validatorsLimit, { from: voting })
+    const spTx = await spRegistry.addNodeOperator('SP-1', stakingProvider, validatorsLimit, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
-    const stakingProviderId = getEventArgument(spTx, 'StakingProviderAdded', 'id', { decodeForAbi: StakingProvidersRegistry._json.abi })
+    const stakingProviderId = getEventArgument(spTx, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
 
-    assertBn(await spRegistry.getStakingProvidersCount(), 1, 'total staking providers')
+    assertBn(await spRegistry.getNodeOperatorsCount(), 1, 'total staking providers')
 
     const data = Array.from({ length: numKeys }, (_, i) => {
       const n = 1 + 10 * i

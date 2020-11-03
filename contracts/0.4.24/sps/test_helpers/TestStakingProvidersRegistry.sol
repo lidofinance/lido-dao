@@ -1,9 +1,9 @@
 pragma solidity 0.4.24;
 
-import "../StakingProvidersRegistry.sol";
+import "../NodeOperatorsRegistry.sol";
 
 
 /**
-  * @dev Only for testing purposes! StakingProvidersRegistry version with some functions exposed.
+  * @dev Only for testing purposes! NodeOperatorsRegistry version with some functions exposed.
   */
-contract TestStakingProvidersRegistry is StakingProvidersRegistry {} /* solium-disable-line no-empty-blocks */
+contract TestNodeOperatorsRegistry is NodeOperatorsRegistry {} /* solium-disable-line no-empty-blocks */

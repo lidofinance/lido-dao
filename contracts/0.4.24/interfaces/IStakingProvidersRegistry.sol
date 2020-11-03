@@ -7,7 +7,7 @@ pragma solidity 0.4.24;
   * Staking provider registry manages signing keys and other staking provider data.
   * It's also responsible for distributing rewards to staking providers.
   */
-interface IStakingProvidersRegistry {
+interface INodeOperatorsRegistry {
     /**
       * @notice Add staking provider named `name` with reward address `rewardAddress` and staking limit `stakingLimit` validators
       * @param _name Human-readable name
@@ -15,27 +15,27 @@ interface IStakingProvidersRegistry {
       * @param _stakingLimit the maximum number of validators to stake for this SP
       * @return a unique key of the added SP
       */
-    function addStakingProvider(string _name, address _rewardAddress, uint64 _stakingLimit) external returns (uint256 id);
+    function addNodeOperator(string _name, address _rewardAddress, uint64 _stakingLimit) external returns (uint256 id);
 
     /**
       * @notice `_active ? 'Enable' : 'Disable'` the staking provider #`_id`
       */
-    function setStakingProviderActive(uint256 _id, bool _active) external;
+    function setNodeOperatorActive(uint256 _id, bool _active) external;
 
     /**
       * @notice Change human-readable name of the staking provider #`_id` to `_name`
       */
-    function setStakingProviderName(uint256 _id, string _name) external;
+    function setNodeOperatorName(uint256 _id, string _name) external;
 
     /**
       * @notice Change reward address of the staking provider #`_id` to `_rewardAddress`
       */
-    function setStakingProviderRewardAddress(uint256 _id, address _rewardAddress) external;
+    function setNodeOperatorRewardAddress(uint256 _id, address _rewardAddress) external;
 
     /**
       * @notice Set the maximum number of validators to stake for the staking provider #`_id` to `_stakingLimit`
       */
-    function setStakingProviderStakingLimit(uint256 _id, uint64 _stakingLimit) external;
+    function setNodeOperatorStakingLimit(uint256 _id, uint64 _stakingLimit) external;
 
     /**
       * @notice Report `_stoppedIncrement` more stopped validators of the staking provider #`_id`
@@ -59,19 +59,19 @@ interface IStakingProvidersRegistry {
     /**
       * @notice Returns total number of staking providers
       */
-    function getStakingProvidersCount() external view returns (uint256);
+    function getNodeOperatorsCount() external view returns (uint256);
 
     /**
       * @notice Returns number of active staking providers
       */
-    function getActiveStakingProvidersCount() external view returns (uint256);
+    function getActiveNodeOperatorsCount() external view returns (uint256);
 
     /**
       * @notice Returns the n-th staking provider
       * @param _id Staking provider id
       * @param _fullInfo If true, name will be returned as well
       */
-    function getStakingProvider(uint256 _id, bool _fullInfo) external view returns (
+    function getNodeOperator(uint256 _id, bool _fullInfo) external view returns (
         bool active,
         string name,
         address rewardAddress,
@@ -80,12 +80,12 @@ interface IStakingProvidersRegistry {
         uint64 totalSigningKeys,
         uint64 usedSigningKeys);
 
-    event StakingProviderAdded(uint256 id, string name, address rewardAddress, uint64 stakingLimit);
-    event StakingProviderActiveSet(uint256 indexed id, bool active);
-    event StakingProviderNameSet(uint256 indexed id, string name);
-    event StakingProviderRewardAddressSet(uint256 indexed id, address rewardAddress);
-    event StakingProviderStakingLimitSet(uint256 indexed id, uint64 stakingLimit);
-    event StakingProviderTotalStoppedValidatorsReported(uint256 indexed id, uint64 totalStopped);
+    event NodeOperatorAdded(uint256 id, string name, address rewardAddress, uint64 stakingLimit);
+    event NodeOperatorActiveSet(uint256 indexed id, bool active);
+    event NodeOperatorNameSet(uint256 indexed id, string name);
+    event NodeOperatorRewardAddressSet(uint256 indexed id, address rewardAddress);
+    event NodeOperatorStakingLimitSet(uint256 indexed id, uint64 stakingLimit);
+    event NodeOperatorTotalStoppedValidatorsReported(uint256 indexed id, uint64 totalStopped);
 
 
     /**
