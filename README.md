@@ -109,7 +109,7 @@ As a result of the script execution, the following will be installed:
 
 * the Deposit Contract instance;
 * all Aragon App instances (contracts: Lido, StakingProvidersRegistry, LidoOracle, and StETH)
-* the Aragon PM for `lidopm.eth`;
+* the Aragon PM for `lido.eth`;
 * the Lido DAO template;
 * and finally, the Lido DAO will be deployed.
 
