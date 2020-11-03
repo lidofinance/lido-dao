@@ -18,7 +18,7 @@ module.exports = {
     clientServePort: 3000,
     appSrcPath: 'app/',
     appBuildOutputPath: 'dist/',
-    appName: 'staking-providers-registry',
+    appName: 'node-operators-registry',
     hooks // Path to script hooks
   }
 }

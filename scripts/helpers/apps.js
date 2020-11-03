@@ -16,7 +16,7 @@ const apps = [
   { name: 'lido', tld: 'lido.eth', contractName: 'Lido', appId: LIDO_APP_ID },
   { name: 'lidooracle', tld: 'lido.eth', contractName: 'LidoOracle', appId: LIDOORACLE_APP_ID },
   {
-    name: 'staking-providers-registry',
+    name: 'node-operators-registry',
     tld: 'lido.eth',
     contractName: 'NodeOperatorsRegistry',
     appId: STAKING_PROVIDERS_REGISTRY_APP_ID

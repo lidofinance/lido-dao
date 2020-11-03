@@ -1,5 +1,5 @@
 {
-  "name": "staking-providers-registry-frontend",
+  "name": "node-operators-registry-frontend",
   "version": "1.0.0",
   "main": "src/index.js",
   "dependencies": {
