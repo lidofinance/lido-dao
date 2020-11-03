@@ -158,7 +158,7 @@ transactions will revert:
 * Transfer to vault (`transferToVault()`)
 
 
-## [NodeOperatorsRegistry.sol](/contracts/0.4.24/sps/NodeOperatorsRegistry.sol)
+## [NodeOperatorsRegistry.sol](/contracts/0.4.24/nos/NodeOperatorsRegistry.sol)
 
 ### Pool
 

@@ -5,7 +5,7 @@ import "@aragon/templates-shared/contracts/BaseTemplate.sol";
 
 import "../StETH.sol";
 import "../oracle/LidoOracle.sol";
-import "../sps/NodeOperatorsRegistry.sol";
+import "../nos/NodeOperatorsRegistry.sol";
 import "../Lido.sol";
 
 

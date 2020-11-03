@@ -38,7 +38,7 @@ contract('Lido: happy path', (addresses) => {
     // contracts/Lido.sol
     pool = deployed.pool
 
-    // contracts/sps/NodeOperatorsRegistry.sol
+    // contracts/nos/NodeOperatorsRegistry.sol
     spRegistry = deployed.spRegistry
 
     // mocks
