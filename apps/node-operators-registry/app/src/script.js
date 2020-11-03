@@ -71,10 +71,10 @@ function getNodeOperatorInfo(index) {
   return app.call('getNodeOperator', index, true).toPromise()
 }
 
-async function getNodeOperators(numberOfProviders) {
+async function getNodeOperators(numberOfOperators) {
   const nodeOperators = []
 
-  for (let id = 0; id < numberOfProviders; id++) {
+  for (let id = 0; id < numberOfOperators; id++) {
     const info = await getNodeOperatorInfo(id)
     nodeOperators.push({
       ...info,

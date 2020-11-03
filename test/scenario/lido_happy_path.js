@@ -322,7 +322,7 @@ contract('Lido: happy path', (addresses) => {
     assertBn(await token.balanceOf(insuranceAddr), new BN('63889021609758015'), 'insurance tokens')
 
     // The node operators' fee is distributed between all active node operators,
-    // proprotional to their effective stake (the amount of Ether staked by the provider's
+    // proprotional to their effective stake (the amount of Ether staked by the operator's
     // used and non-stopped validators).
     //
     // In our case, both node operators received the same fee since they have the same

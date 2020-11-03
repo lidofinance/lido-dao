@@ -46,15 +46,15 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
 
   it('voting adds 20 node operators with 3 signing keys each', async () => {
     const spValidatorsLimit = 1000
-    const numProviders = 20
+    const numOperators = 20
     const numKeys = 3
 
-    for (let iProvider = 0; iProvider < numProviders; ++iProvider) {
-      const spTx = await spRegistry.addNodeOperator(`SP-${iProvider}`, nodeOperator, spValidatorsLimit, { from: voting })
+    for (let iOperator = 0; iOperator < numOperators; ++iOperator) {
+      const spTx = await spRegistry.addNodeOperator(`SP-${iOperator}`, nodeOperator, spValidatorsLimit, { from: voting })
       const nodeOperatorId = getEventArgument(spTx, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
 
       const data = Array.from({ length: numKeys }, (_, iKey) => {
-        const n = arbitraryN.clone().addn(10 * iKey + 1000 * iProvider)
+        const n = arbitraryN.clone().addn(10 * iKey + 1000 * iOperator)
         return {
           key: pad(`0x${n.toString(16)}`, 48, 'd'),
           sig: pad(`0x${n.toString(16)}`, 96, 'e')
@@ -72,7 +72,7 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
       validatorData.push.apply(validatorData, data)
     }
 
-    assertBn(await spRegistry.getNodeOperatorsCount(), numProviders, 'total providers')
+    assertBn(await spRegistry.getNodeOperatorsCount(), numOperators, 'total operators')
   })
 
   let gasPerMockDeposit
