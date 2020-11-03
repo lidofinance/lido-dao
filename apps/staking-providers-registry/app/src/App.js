@@ -129,7 +129,7 @@ function App() {
     <Main theme={appearance}>
       <SyncIndicator visible={isSyncing} shift={50} />
       <Header
-        primary="Staking Providers Registry"
+        primary="Node Operators Registry"
         secondary={
           <Button
             mode="strong"

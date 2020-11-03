@@ -82,12 +82,12 @@ The total fee, in basis points (`10000` corresponding to `100%`).
 * Accessor: `getFee() returns (uint16)`
 
 The fee is taken on staking rewards and distributed between the treasury, the insurance fund, and
-staking providers.
+node operators.
 
 
 ### Fee distribution
 
-Controls how the fee is distributed between the treasury, the insurance fund, and staking providers.
+Controls how the fee is distributed between the treasury, the insurance fund, and node operators.
 Each fee component is in basis points; the sum of all components must add up to 1 (`10000` basis points).
 
 * Mutator: `setFeeDistribution(uint16 treasury, uint16 insurance, uint16 sps)`
@@ -118,7 +118,7 @@ Controls how many ETH 2.0 validators can be registered in a single transaction.
 When someone submits Ether to the pool, the received Ether gets buffered in the pool contract. If the amount
 of the buffered Ether becomes larger than the ETH 2.0 deposit size (32 ETH), then the pool tries to register
 as many ETH 2.0 validators as it can. The limiting factors here are the amount of the buffered Ether (obviously),
-the number of spare validator keys (provided by staking providers), and the deposit loop iteration limit,
+the number of spare validator keys (provided by node operators), and the deposit loop iteration limit,
 controlled by this lever.
 
 The limit is needed to prevent the submit transaction from [failing due to the block gas limit](https://github.com/ConsenSys/smart-contract-best-practices/blob/8f99aef/docs/known_attacks.md#gas-limit-dos-on-a-contract-via-unbounded-operations).
@@ -169,7 +169,7 @@ Address of the pool contract.
 * Accessor: `pool() returns (address)`
 
 
-### Staking providers list
+### Node Operators list
 
 * Mutator: `addNodeOperator(string _name, address _rewardAddress, uint64 _stakingLimit)`
   * Permission required: `ADD_STAKING_PROVIDER_ROLE`
@@ -180,11 +180,11 @@ Address of the pool contract.
 * Mutator: `setNodeOperatorStakingLimit(uint256 _id, uint64 _stakingLimit)`
   * Permission required: `SET_STAKING_PROVIDER_LIMIT_ROLE`
 
-Staking providers act as validators on the Beacon chain for the benefit of the protocol. Each
+Node Operators act as validators on the Beacon chain for the benefit of the protocol. Each
 staking provider submits no more than `_stakingLimit` signing keys that will be used later
 by the pool for registering the corresponding ETH 2.0 validators. As oracle committee
 reports rewards on the ETH 2.0 side, the fee is taken on these rewards, and part of that fee
-is sent to staking providers’ reward addresses (`_rewardAddress`).
+is sent to node operators’ reward addresses (`_rewardAddress`).
 
 
 ### Deactivating a staking provider
@@ -192,7 +192,7 @@ is sent to staking providers’ reward addresses (`_rewardAddress`).
 * Mutator: `setNodeOperatorActive(uint256 _id, bool _active)`
   * Permission required: `SET_STAKING_PROVIDER_ACTIVE_ROLE`
 
-Misbehaving staking providers can be deactivated by calling this function. The pool skips
+Misbehaving node operators can be deactivated by calling this function. The pool skips
 deactivated providers during validator registration; also, deactivated providers don’t
 take part in fee distribution.
 

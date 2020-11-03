@@ -82,7 +82,7 @@ async function deployDaoAndPool(appManager, voting, depositIterationLimit = 10) 
     acl.createPermission(voting, pool.address, POOL_MANAGE_FEE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, POOL_MANAGE_WITHDRAWAL_KEY, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, POOL_SET_DEPOSIT_ITERATION_LIMIT, appManager, { from: appManager }),
-    // Allow voting to manage staking providers registry
+    // Allow voting to manage node operators registry
     acl.createPermission(voting, spRegistry.address, SP_REGISTRY_SET_POOL, appManager, { from: appManager }),
     acl.createPermission(voting, spRegistry.address, SP_REGISTRY_MANAGE_SIGNING_KEYS, appManager, { from: appManager }),
     acl.createPermission(voting, spRegistry.address, SP_REGISTRY_ADD_STAKING_PROVIDER_ROLE, appManager, { from: appManager }),

@@ -16,7 +16,7 @@ import "../interfaces/INodeOperatorsRegistry.sol";
   *
   * See the comment of `INodeOperatorsRegistry`.
   *
-  * NOTE: the code below assumes moderate amount of staking providers, e.g. up to 50.
+  * NOTE: the code below assumes moderate amount of node operators, e.g. up to 50.
   */
 contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp {
     using SafeMath for uint256;
@@ -51,7 +51,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         uint64 usedSigningKeys;     // number of signing keys of this SP which were used in deposits to the Ethereum 2
     }
 
-    /// @dev Mapping of all staking providers. Mapping is used to be able to extend the struct.
+    /// @dev Mapping of all node operators. Mapping is used to be able to extend the struct.
     mapping(uint256 => NodeOperator) internal sps;
 
     // @dev Total number of SPs
@@ -284,7 +284,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     /**
-      * @notice Distributes rewards among staking providers.
+      * @notice Distributes rewards among node operators.
       * @dev Function is used by the pool
       * @param _token Reward token (must be ERC20-compatible)
       * @param _totalReward Total amount to distribute (must be transferred to this contract beforehand)
@@ -316,14 +316,14 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     /**
-      * @notice Returns total number of staking providers
+      * @notice Returns total number of node operators
       */
     function getNodeOperatorsCount() external view returns (uint256) {
         return totalSPCount;
     }
 
     /**
-      * @notice Returns number of active staking providers
+      * @notice Returns number of active node operators
       */
     function getActiveNodeOperatorsCount() external view returns (uint256) {
         return activeSPCount;

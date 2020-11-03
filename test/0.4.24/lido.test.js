@@ -116,7 +116,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     assertBn(div15(treasury_b), treasury, 'treasury token balance check')
     assertBn(div15(insurance_b), insurance, 'insurance fund token balance check')
-    assertBn(div15(sps_b.add(a1).add(a2).add(a3).add(a4)), sp, 'staking providers token balance check')
+    assertBn(div15(sps_b.add(a1).add(a2).add(a3).add(a4)), sp, 'node operators token balance check')
   }
 
   it('setFee works', async () => {

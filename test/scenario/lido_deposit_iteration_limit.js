@@ -13,7 +13,7 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
     appManager,
     // the address which we use to simulate the voting DAO application
     voting,
-    // staking providers
+    // node operators
     nodeOperator,
     // users who deposit Ether to the pool
     user1,
@@ -30,7 +30,7 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
 
   let pool, spRegistry, validatorRegistrationMock
 
-  it('DAO, staking providers registry, token, and pool are deployed and initialized', async () => {
+  it('DAO, node operators registry, token, and pool are deployed and initialized', async () => {
     const deployed = await deployDaoAndPool(appManager, voting, depositIterationLimit)
 
     // contracts/Lido.sol
@@ -56,7 +56,7 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
     const nodeOperatorId = getEventArgument(spTx, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
 
-    assertBn(await spRegistry.getNodeOperatorsCount(), 1, 'total staking providers')
+    assertBn(await spRegistry.getNodeOperatorsCount(), 1, 'total node operators')
 
     const data = Array.from({ length: numKeys }, (_, i) => {
       const n = 1 + 10 * i

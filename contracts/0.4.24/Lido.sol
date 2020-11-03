@@ -20,7 +20,7 @@ import "./lib/Pausable.sol";
   *
   * See the comment of `ILido`.
   *
-  * NOTE: the code below assumes moderate amount of staking providers, e.g. up to 50.
+  * NOTE: the code below assumes moderate amount of node operators, e.g. up to 50.
   */
 contract Lido is ILido, IsContract, Pausable, AragonApp {
     using SafeMath for uint256;
@@ -149,7 +149,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @notice Set fee distribution: `_treasuryFeeBasisPoints` basis points go to the treasury, `_insuranceFeeBasisPoints` basis points go to the insurance fund, `_SPFeeBasisPoints` basis points go to staking providers. The sum has to be 10 000.
+      * @notice Set fee distribution: `_treasuryFeeBasisPoints` basis points go to the treasury, `_insuranceFeeBasisPoints` basis points go to the insurance fund, `_SPFeeBasisPoints` basis points go to node operators. The sum has to be 10 000.
       */
     function setFeeDistribution(
         uint16 _treasuryFeeBasisPoints,
@@ -336,7 +336,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @notice Gets staking providers registry interface handle
+      * @notice Gets node operators registry interface handle
       */
     function getSPs() public view returns (INodeOperatorsRegistry) {
         return INodeOperatorsRegistry(SP_REGISTRY_VALUE_POSITION.getStorageAddress());
