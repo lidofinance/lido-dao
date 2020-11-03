@@ -4,8 +4,8 @@ const Bar = artifacts.require('Bar.sol')
 async function main() {
   const addresses = await web3.eth.getAccounts()
 
-  const bar = await Bar.new()
-  const foo = await Foo.new(bar.address)
+  const bar = await Bar.new({gas: 10000000})
+  const foo = await Foo.new(bar.address, {gas: 10000000})
 
   console.log()
   console.log('Foo address:', foo.address)

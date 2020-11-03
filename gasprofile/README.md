@@ -1,10 +1,32 @@
 # Gas profiler
 
+In order to run the profiler, either Ganache or Geth node should be running:
+
+```sh
+# run Ganache
+yarn ganache
+
+# run Geth
+yarn geth
+```
+
+To profile a transaction:
+
+1. Write a script that executes the transaction and run it using `yarn buidler-exec`.
+   The script will be provided with a `web3` instance and `artifacts.require` function.
+2. In the script, print the hash of the transaction that you'd like to profile.
+3. Run `yarn profile`, passing the path to the solc compiler output JSON and the transaction hash.
+
+The profile command accepts several options, you can print them by running `yarn profile --help`.
+
+
+## Profiling scenarios
+
 Test gas profiling:
 
 ```sh
 # Execute several transactions
-yarn buidler-exec --config ./buidler.config.test.js ./run-tx-test.js
+yarn buidler-exec --config ./buidler.config.test.js ./tx-test.js
 #
 # Outputs:
 #
@@ -23,30 +45,11 @@ yarn profile ./cache/test/solc-output.json 0x30b70f748f2c4160f810c6e97e02229f7be
 yarn profile ./cache/test/solc-output.json 0xe8decc106d166887b4868ab930c572e88318701caed27e1f35e4b2c78e9ba10d
 ```
 
-Profile DAO gas usage:
-
-```sh
-# Execute several transactions
-yarn buidler-exec --config ./buidler.config.js ./run-tx.js
-#
-# Outputs:
-#
-# pool.setFee tx hash: 0xb1e910ad15ddbe14fb00fbabb5924b3ed79ba781e83448d43b2934917f521f2c
-
-# Profile the tx
-yarn profile ./cache/solc-output.json --src-root '..' 0xb1e910ad15ddbe14fb00fbabb5924b3ed79ba781e83448d43b2934917f521f2c
-
-# Profile the tx, skipping Aragon contracts
-yarn profile ./cache/solc-output.json --src-root '..' 0xb1e910ad15ddbe14fb00fbabb5924b3ed79ba781e83448d43b2934917f521f2c --skip '@aragon/'
-```
-
 Profile deposit:
 
 ```sh
-# Run ganache-cli with extend ether balance in a separate terminal
-ganache-cli -e 10000
 # Execute several transactions
-yarn buidler-exec --config ./buidler.config.js ./run-deposit-tx.js
+yarn buidler-exec ./tx-deposit.js
 #
 # Outputs:
 #
