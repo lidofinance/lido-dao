@@ -12,7 +12,7 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
     appManager,
     // the address which we use to simulate the voting DAO application
     voting,
-    // staking providers
+    // node operators
     nodeOperator,
     // users who deposit Ether to the pool
     user1,
@@ -27,7 +27,7 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
   const withdrawalCredentials = pad('0x0202', 32)
   const validatorData = []
 
-  it('DAO, staking providers registry, token, and pool are deployed and initialized', async () => {
+  it('DAO, node operators registry, token, and pool are deployed and initialized', async () => {
     const deployed = await deployDaoAndPool(appManager, voting, 100)
 
     // contracts/Lido.sol
@@ -44,7 +44,7 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
     await pool.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
   })
 
-  it('voting adds 20 staking providers with 3 signing keys each', async () => {
+  it('voting adds 20 node operators with 3 signing keys each', async () => {
     const spValidatorsLimit = 1000
     const numProviders = 20
     const numKeys = 3

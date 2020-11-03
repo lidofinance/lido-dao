@@ -14,7 +14,7 @@ contract('Lido: happy path', (addresses) => {
     appManager,
     // the address which we use to simulate the voting DAO application
     voting,
-    // staking providers
+    // node operators
     sp1,
     sp2,
     // users who deposit Ether to the pool
@@ -29,7 +29,7 @@ contract('Lido: happy path', (addresses) => {
   let oracleMock, validatorRegistrationMock
   let treasuryAddr, insuranceAddr
 
-  it('DAO, staking providers registry, token, and pool are deployed and initialized', async () => {
+  it('DAO, node operators registry, token, and pool are deployed and initialized', async () => {
     const deployed = await deployDaoAndPool(appManager, voting)
 
     // contracts/StETH.sol
@@ -59,7 +59,7 @@ contract('Lido: happy path', (addresses) => {
   const treasuryFeePoints = 0.3 * 10000
   // 20% goes to the insurance fund
   const insuranceFeePoints = 0.2 * 10000
-  // 50% goes to staking providers
+  // 50% goes to node operators
   const nodeOperatorsFeePoints = 0.5 * 10000
 
   it('voting sets fee and its distribution', async () => {
@@ -73,7 +73,7 @@ contract('Lido: happy path', (addresses) => {
     const distribution = await pool.getFeeDistribution({ from: nobody })
     assertBn(distribution.treasuryFeeBasisPoints, treasuryFeePoints, 'treasury fee')
     assertBn(distribution.insuranceFeeBasisPoints, insuranceFeePoints, 'insurance fee')
-    assertBn(distribution.SPFeeBasisPoints, nodeOperatorsFeePoints, 'staking providers fee')
+    assertBn(distribution.SPFeeBasisPoints, nodeOperatorsFeePoints, 'node operators fee')
   })
 
   const withdrawalCredentials = pad('0x0202', 32)
@@ -109,7 +109,7 @@ contract('Lido: happy path', (addresses) => {
     nodeOperator1.id = getEventArgument(spTx, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
     assertBn(nodeOperator1.id, 0, 'SP id')
 
-    assertBn(await spRegistry.getNodeOperatorsCount(), 1, 'total staking providers')
+    assertBn(await spRegistry.getNodeOperatorsCount(), 1, 'total node operators')
   })
 
   it('the first staking provider registers one validator', async () => {
@@ -211,7 +211,7 @@ contract('Lido: happy path', (addresses) => {
     nodeOperator2.id = getEventArgument(spTx, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
     assertBn(nodeOperator2.id, 1, 'SP id')
 
-    assertBn(await spRegistry.getNodeOperatorsCount(), 2, 'total staking providers')
+    assertBn(await spRegistry.getNodeOperatorsCount(), 2, 'total node operators')
 
     const numKeys = 1
 
@@ -314,18 +314,18 @@ contract('Lido: happy path', (addresses) => {
     assertBn(await token.balanceOf(user3), new BN('84902628892171281825'), 'user3 tokens')
 
     // Fee, in the form of minted tokens, was distributed between treasury, insurance fund
-    // and staking providers
+    // and node operators
     // treasuryTokenBalance ~= mintedAmount * treasuryFeePoints / 10000
     // insuranceTokenBalance ~= mintedAmount * insuranceFeePoints / 10000
 
     assertBn(await token.balanceOf(treasuryAddr), new BN('95762267471402490'), 'treasury tokens')
     assertBn(await token.balanceOf(insuranceAddr), new BN('63889021609758015'), 'insurance tokens')
 
-    // The staking providers' fee is distributed between all active staking providers,
+    // The node operators' fee is distributed between all active node operators,
     // proprotional to their effective stake (the amount of Ether staked by the provider's
     // used and non-stopped validators).
     //
-    // In our case, both staking providers received the same fee since they have the same
+    // In our case, both node operators received the same fee since they have the same
     // effective stake (one signing key used from each SP, staking 32 ETH)
 
     assertBn(await token.balanceOf(nodeOperator1.address), new BN('79900898110870236'), 'SP-1 tokens')

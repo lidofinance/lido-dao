@@ -8,12 +8,12 @@
       ]
     },
     {
-      "name": "Add staking providers",
+      "name": "Add node operators",
       "id": "ADD_STAKING_PROVIDER_ROLE",
       "params": []
     },
     {
-      "name": "Activate/deactivate staking providers",
+      "name": "Activate/deactivate node operators",
       "id": "SET_STAKING_PROVIDER_ACTIVE_ROLE",
       "params": [
          "Staking provider id",

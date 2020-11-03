@@ -40,7 +40,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, s
   const treasuryFeePoints = 0.3 * 10000
   // 20% goes to the insurance fund
   const insuranceFeePoints = 0.2 * 10000
-  // 50% goes to staking providers
+  // 50% goes to node operators
   const nodeOperatorsFeePoints = 0.5 * 10000
 
   before('deploy base app', async () => {

@@ -5,7 +5,7 @@ pragma solidity 0.4.24;
   * @title Staking provider registry
   *
   * Staking provider registry manages signing keys and other staking provider data.
-  * It's also responsible for distributing rewards to staking providers.
+  * It's also responsible for distributing rewards to node operators.
   */
 interface INodeOperatorsRegistry {
     /**
@@ -57,12 +57,12 @@ interface INodeOperatorsRegistry {
     function trimUnusedKeys() external;
 
     /**
-      * @notice Returns total number of staking providers
+      * @notice Returns total number of node operators
       */
     function getNodeOperatorsCount() external view returns (uint256);
 
     /**
-      * @notice Returns number of active staking providers
+      * @notice Returns number of active node operators
       */
     function getActiveNodeOperatorsCount() external view returns (uint256);
 
@@ -89,7 +89,7 @@ interface INodeOperatorsRegistry {
 
 
     /**
-      * @notice Distributes rewards among staking providers.
+      * @notice Distributes rewards among node operators.
       * @dev Function is used by the pool
       * @param _token Reward token (must be ERC20-compatible)
       * @param _totalReward Total amount to distribute (must be transferred to this contract beforehand)
