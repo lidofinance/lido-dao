@@ -7,9 +7,9 @@ const reducer = (state) => {
   if (state === null) {
     return {
       isSyncing: true,
-      stakingProvidersCount: '',
+      nodeOperatorsCount: '',
       getActiveNodeOperatorsCount: '',
-      stakingProviders: [],
+      nodeOperators: [],
     }
   }
   return state

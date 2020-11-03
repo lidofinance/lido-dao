@@ -39,7 +39,7 @@ const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 const tokens = ETH
 
 contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
-  let appBase, stEthBase, stakingProvidersRegistryBase, app, token, oracle, validatorRegistration, sps
+  let appBase, stEthBase, nodeOperatorsRegistryBase, app, token, oracle, validatorRegistration, sps
   let treasuryAddr, insuranceAddr
 
   before('deploy base app', async () => {
@@ -48,14 +48,14 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     stEthBase = await StETH.new()
     oracle = await OracleMock.new()
     validatorRegistration = await ValidatorRegistrationMock.new()
-    stakingProvidersRegistryBase = await NodeOperatorsRegistry.new()
+    nodeOperatorsRegistryBase = await NodeOperatorsRegistry.new()
   })
 
   beforeEach('deploy dao and app', async () => {
     const { dao, acl } = await newDao(appManager)
 
     // NodeOperatorsRegistry
-    let proxyAddress = await newApp(dao, 'staking-providers-registry', stakingProvidersRegistryBase.address, appManager)
+    let proxyAddress = await newApp(dao, 'staking-providers-registry', nodeOperatorsRegistryBase.address, appManager)
     sps = await NodeOperatorsRegistry.at(proxyAddress)
     await sps.initialize()
 

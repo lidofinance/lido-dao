@@ -30,7 +30,7 @@ const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 const tokens = ETH
 
 contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, spAddress1, spAddress2]) => {
-  let appBase, stEthBase, stakingProvidersRegistryBase, app, token, oracle, validatorRegistration, sps
+  let appBase, stEthBase, nodeOperatorsRegistryBase, app, token, oracle, validatorRegistration, sps
   let treasuryAddr, insuranceAddr
   // Fee and its distribution are in basis points, 10000 corresponding to 100%
   // Total fee is 1%
@@ -41,7 +41,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, s
   // 20% goes to the insurance fund
   const insuranceFeePoints = 0.2 * 10000
   // 50% goes to staking providers
-  const stakingProvidersFeePoints = 0.5 * 10000
+  const nodeOperatorsFeePoints = 0.5 * 10000
 
   before('deploy base app', async () => {
     // Deploy the app's base contract.
@@ -49,14 +49,14 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, s
     stEthBase = await StETH.new()
     oracle = await OracleMock.new()
     validatorRegistration = await ValidatorRegistrationMock.new()
-    stakingProvidersRegistryBase = await NodeOperatorsRegistry.new()
+    nodeOperatorsRegistryBase = await NodeOperatorsRegistry.new()
   })
 
   beforeEach('deploy dao and app', async () => {
     const { dao, acl } = await newDao(appManager)
 
     // NodeOperatorsRegistry
-    let proxyAddress = await newApp(dao, 'staking-providers-registry', stakingProvidersRegistryBase.address, appManager)
+    let proxyAddress = await newApp(dao, 'staking-providers-registry', nodeOperatorsRegistryBase.address, appManager)
     sps = await NodeOperatorsRegistry.at(proxyAddress)
     await sps.initialize()
 
@@ -97,7 +97,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, s
 
     // Set fee
     await app.setFee(totalFeePoints, { from: voting })
-    await app.setFeeDistribution(treasuryFeePoints, insuranceFeePoints, stakingProvidersFeePoints, { from: voting })
+    await app.setFeeDistribution(treasuryFeePoints, insuranceFeePoints, nodeOperatorsFeePoints, { from: voting })
   })
 
   it('check fee configuration', async () => {
@@ -105,7 +105,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, s
     const fees = await app.getFeeDistribution()
     assertBn(fees.treasuryFeeBasisPoints, treasuryFeePoints)
     assertBn(fees.insuranceFeeBasisPoints, insuranceFeePoints)
-    assertBn(fees.SPFeeBasisPoints, stakingProvidersFeePoints)
+    assertBn(fees.SPFeeBasisPoints, nodeOperatorsFeePoints)
   })
 
   it('check token variables', async () => {
