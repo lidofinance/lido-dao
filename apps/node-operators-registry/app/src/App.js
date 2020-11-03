@@ -48,14 +48,14 @@ function App() {
   )
 
   // ENABLE / DISABLE
-  const enableProvider = useCallback(
+  const enableOperator = useCallback(
     (id) => {
       api.setNodeOperatorActive(id, true).toPromise()
     },
     [api]
   )
 
-  const disableProvider = useCallback(
+  const disableOperator = useCallback(
     (id) => {
       api.setNodeOperatorActive(id, false).toPromise()
     },
@@ -63,28 +63,28 @@ function App() {
   )
 
   // ADD SIGNING KEYS FOR MANAGER
-  const [addSigningKeysToProviderId, setAddSigningKeysToProviderId] = useState(
+  const [addSigningKeysToOperatorId, setAddSigningKeysToOperatorId] = useState(
     null
   )
   const openAddSKSidePanel = useCallback(
-    (id) => setAddSigningKeysToProviderId(id),
+    (id) => setAddSigningKeysToOperatorId(id),
     []
   )
   const closeAddSKSidePanel = useCallback(
-    () => setAddSigningKeysToProviderId(null),
+    () => setAddSigningKeysToOperatorId(null),
     []
   )
   const addSKManagerApi = useCallback(
     (quantity, pubkeys, signatures) =>
       api
         .addSigningKeys(
-          addSigningKeysToProviderId,
+          addSigningKeysToOperatorId,
           quantity,
           pubkeys,
           signatures
         )
         .toPromise(),
-    [api, addSigningKeysToProviderId]
+    [api, addSigningKeysToOperatorId]
   )
 
   // ADD SIGNING KEYS FOR SP
@@ -101,13 +101,13 @@ function App() {
     (quantity, pubkeys, signatures) =>
       api
         .addSigningKeysSP(
-          addSigningKeysToProviderId,
+          addSigningKeysToOperatorId,
           quantity,
           pubkeys,
           signatures
         )
         .toPromise(),
-    [api, addSigningKeysToProviderId]
+    [api, addSigningKeysToOperatorId]
   )
 
   // GET SIGNING KEYS
@@ -133,7 +133,7 @@ function App() {
         secondary={
           <Button
             mode="strong"
-            label="Add Provider"
+            label="Add Operator"
             onClick={openAddSPSidePanel}
           />
         }
@@ -190,13 +190,13 @@ function App() {
               <ContextMenu zIndex={1}>
                 {active ? (
                   <MenuItem
-                    onClick={() => disableProvider(id)}
+                    onClick={() => disableOperator(id)}
                     icon={<IconClose />}
                     label="disable"
                   />
                 ) : (
                   <MenuItem
-                    onClick={() => enableProvider(id)}
+                    onClick={() => enableOperator(id)}
                     icon={<IconCheck />}
                     label="enable"
                   />
@@ -269,7 +269,7 @@ function App() {
         addSPApi={addSPApi}
       />
       <AddSigningKeysSidePanel
-        opened={addSigningKeysToProviderId !== null}
+        opened={addSigningKeysToOperatorId !== null}
         onClose={closeAddSKSidePanel}
         api={addSKManagerApi}
       />

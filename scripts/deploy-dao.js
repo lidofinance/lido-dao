@@ -63,7 +63,7 @@ async function deploy({
   const [holder1, holder2, holder3, holder4, holder5] = await getAccounts(web3)
   if (!owner) {
     owner = holder1
-    log("OWNER env variable not found, setting owner to the provider's first account")
+    log("OWNER env variable not found, setting owner to the operator's first account")
   }
   log('Owner:', owner)
 
