@@ -394,7 +394,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @dev Internal function to set staking provider registry address
+      * @dev Internal function to set node operator registry address
       */
     function _setSPs(INodeOperatorsRegistry _r) internal {
         require(isContract(_r), "NOT_A_CONTRACT");

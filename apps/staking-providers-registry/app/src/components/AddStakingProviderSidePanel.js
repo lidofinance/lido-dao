@@ -61,7 +61,7 @@ function PanelContent({ addSPApi, onClose }) {
               wide
               required
               disabled={isSubmitting}
-              label="Add Staking Provider"
+              label="Add Node Operator"
               type="submit"
             />
           </form>
@@ -72,7 +72,7 @@ function PanelContent({ addSPApi, onClose }) {
 }
 
 export default (props) => (
-  <SidePanel title="ADD STAKING PROVIDER" {...props}>
+  <SidePanel title="ADD NODE OPERATOR" {...props}>
     <PanelContent {...props} />
   </SidePanel>
 )

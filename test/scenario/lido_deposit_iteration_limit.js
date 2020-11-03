@@ -47,7 +47,7 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
     await pool.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
   })
 
-  it('voting adds a staking provider with 16 signing keys', async () => {
+  it('voting adds a node operator with 16 signing keys', async () => {
     const validatorsLimit = 1000
     const numKeys = 16
 
@@ -79,10 +79,10 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
     const referral = ZERO_ADDRESS
     await pool.submit(referral, { from: user1, value: ETH(15 * 32) })
     assertBn(await pool.getTotalControlledEther(), ETH(15 * 32), 'total controlled ether')
-    
+
     // at this point, no deposit assignments were made and all ether is buffered
     assertBn(await pool.getBufferedEther(), ETH(15 * 32), 'buffered ether')
-    
+
     const ether2Stat = await pool.getEther2Stat()
     assertBn(ether2Stat.deposited, ETH(0), 'deposited ether2')
   })
@@ -138,7 +138,7 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
 
   it('the number of assigned validators is limited by the remaining ether', async () => {
     await pool.depositBufferedEther()
-    
+
     assertBn(await validatorRegistrationMock.totalCalls(), 15)
 
     const ether2Stat = await pool.getEther2Stat()

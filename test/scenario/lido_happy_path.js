@@ -86,7 +86,7 @@ contract('Lido: happy path', (addresses) => {
     assert.equal(await pool.getWithdrawalCredentials({ from: nobody }), withdrawalCredentials, 'withdrawal credentials')
   })
 
-  // Each staking provider has its Ethereum 1 address, a name and a set of registered
+  // Each node operator has its Ethereum 1 address, a name and a set of registered
   // validators, each of them defined as a (public key, signature) pair
   const nodeOperator1 = {
     name: 'SP-1',
@@ -99,8 +99,8 @@ contract('Lido: happy path', (addresses) => {
     ]
   }
 
-  it('voting adds the first staking provider', async () => {
-    // How many validators can this staking provider register
+  it('voting adds the first node operator', async () => {
+    // How many validators can this node operator register
     const validatorsLimit = 1000000000
 
     const spTx = await spRegistry.addNodeOperator(nodeOperator1.name, nodeOperator1.address, validatorsLimit, { from: voting })
@@ -112,7 +112,7 @@ contract('Lido: happy path', (addresses) => {
     assertBn(await spRegistry.getNodeOperatorsCount(), 1, 'total node operators')
   })
 
-  it('the first staking provider registers one validator', async () => {
+  it('the first node operator registers one validator', async () => {
     const numKeys = 1
 
     await spRegistry.addSigningKeysSP(nodeOperator1.id, numKeys, nodeOperator1.validators[0].key, nodeOperator1.validators[0].sig, {
@@ -202,7 +202,7 @@ contract('Lido: happy path', (addresses) => {
     ]
   }
 
-  it('voting adds the second staking provider who registers one validator', async () => {
+  it('voting adds the second node operator who registers one validator', async () => {
     const validatorsLimit = 1000000000
 
     const spTx = await spRegistry.addNodeOperator(nodeOperator2.name, nodeOperator2.address, validatorsLimit, { from: voting })
