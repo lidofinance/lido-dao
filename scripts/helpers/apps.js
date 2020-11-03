@@ -18,7 +18,7 @@ const apps = [
   {
     name: 'staking-providers-registry',
     tld: 'lido.eth',
-    contractName: 'StakingProvidersRegistry',
+    contractName: 'NodeOperatorsRegistry',
     appId: STAKING_PROVIDERS_REGISTRY_APP_ID
   },
   { name: 'agent', tld: 'aragonpm.eth', contractName: 'Agent', appId: AGENT_APP_ID },

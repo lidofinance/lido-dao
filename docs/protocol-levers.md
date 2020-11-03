@@ -13,7 +13,7 @@ The following contracts are upgradeable by the DAO voting:
 
 * `contracts/0.4.24/StETH.sol`
 * `contracts/0.4.24/Lido.sol`
-* `contracts/0.4.24/StakingProvidersRegistry.sol`
+* `contracts/0.4.24/NodeOperatorsRegistry.sol`
 * `contracts/0.4.24/LidoOracle.sol`
 
 Upgradeability is implemented by the Aragon kernel and base contracts. To upgrade an app, one needs
@@ -158,7 +158,7 @@ transactions will revert:
 * Transfer to vault (`transferToVault()`)
 
 
-## [StakingProvidersRegistry.sol](/contracts/0.4.24/sps/StakingProvidersRegistry.sol)
+## [NodeOperatorsRegistry.sol](/contracts/0.4.24/sps/NodeOperatorsRegistry.sol)
 
 ### Pool
 
@@ -171,13 +171,13 @@ Address of the pool contract.
 
 ### Staking providers list
 
-* Mutator: `addStakingProvider(string _name, address _rewardAddress, uint64 _stakingLimit)`
+* Mutator: `addNodeOperator(string _name, address _rewardAddress, uint64 _stakingLimit)`
   * Permission required: `ADD_STAKING_PROVIDER_ROLE`
-* Mutator: `setStakingProviderName(uint256 _id, string _name)`
+* Mutator: `setNodeOperatorName(uint256 _id, string _name)`
   * Permission required: `SET_STAKING_PROVIDER_NAME_ROLE`
-* Mutator: `setStakingProviderRewardAddress(uint256 _id, address _rewardAddress)`
+* Mutator: `setNodeOperatorRewardAddress(uint256 _id, address _rewardAddress)`
   * Permission required: `SET_STAKING_PROVIDER_ADDRESS_ROLE`
-* Mutator: `setStakingProviderStakingLimit(uint256 _id, uint64 _stakingLimit)`
+* Mutator: `setNodeOperatorStakingLimit(uint256 _id, uint64 _stakingLimit)`
   * Permission required: `SET_STAKING_PROVIDER_LIMIT_ROLE`
 
 Staking providers act as validators on the Beacon chain for the benefit of the protocol. Each
@@ -189,7 +189,7 @@ is sent to staking providers’ reward addresses (`_rewardAddress`).
 
 ### Deactivating a staking provider
 
-* Mutator: `setStakingProviderActive(uint256 _id, bool _active)`
+* Mutator: `setNodeOperatorActive(uint256 _id, bool _active)`
   * Permission required: `SET_STAKING_PROVIDER_ACTIVE_ROLE`
 
 Misbehaving staking providers can be deactivated by calling this function. The pool skips

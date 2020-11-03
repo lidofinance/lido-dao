@@ -15,7 +15,7 @@ contract TestLido is Lido {
         ISTETH _token,
         IValidatorRegistration validatorRegistration,
         address _oracle,
-        IStakingProvidersRegistry _sps,
+        INodeOperatorsRegistry _sps,
         uint256 _depositIterationLimit
     )
     public

@@ -12,20 +12,20 @@ app.store(
 
     try {
       switch (event) {
-        case 'StakingProviderAdded':
+        case 'NodeOperatorAdded':
           // eslint-disable-next-line no-case-declarations
-          const stakingProvidersCount = await getStakingProvidersCount()
+          const stakingProvidersCount = await getNodeOperatorsCount()
           return {
             ...nextState,
             stakingProvidersCount,
-            activeStakingProvidersCount: await getActiveStakingProvidersCount(),
-            stakingProviders: await getStakingProviders(stakingProvidersCount),
+            activeNodeOperatorsCount: await getActiveNodeOperatorsCount(),
+            stakingProviders: await getNodeOperators(stakingProvidersCount),
           }
-        case 'StakingProviderActiveSet':
+        case 'NodeOperatorActiveSet':
           return {
             ...nextState,
-            activeStakingProvidersCount: await getActiveStakingProvidersCount(),
-            stakingProviders: await getStakingProviders(
+            activeNodeOperatorsCount: await getActiveNodeOperatorsCount(),
+            stakingProviders: await getNodeOperators(
               nextState.stakingProvidersCount
             ),
           }
@@ -51,33 +51,33 @@ app.store(
 
 function initializeState() {
   return async (cachedState) => {
-    const stakingProvidersCount = await getStakingProvidersCount()
+    const stakingProvidersCount = await getNodeOperatorsCount()
     return {
       ...cachedState,
       stakingProvidersCount,
-      activeStakingProvidersCount: await getActiveStakingProvidersCount(),
-      stakingProviders: await getStakingProviders(stakingProvidersCount),
+      activeNodeOperatorsCount: await getActiveNodeOperatorsCount(),
+      stakingProviders: await getNodeOperators(stakingProvidersCount),
     }
   }
 }
 
-async function getStakingProvidersCount() {
-  return await app.call('getStakingProvidersCount').toPromise()
+async function getNodeOperatorsCount() {
+  return await app.call('getNodeOperatorsCount').toPromise()
 }
 
-async function getActiveStakingProvidersCount() {
-  return await app.call('getActiveStakingProvidersCount').toPromise()
+async function getActiveNodeOperatorsCount() {
+  return await app.call('getActiveNodeOperatorsCount').toPromise()
 }
 
-function getStakingProviderInfo(index) {
-  return app.call('getStakingProvider', index, true).toPromise()
+function getNodeOperatorInfo(index) {
+  return app.call('getNodeOperator', index, true).toPromise()
 }
 
-async function getStakingProviders(numberOfProviders) {
+async function getNodeOperators(numberOfProviders) {
   const stakingProviders = []
 
   for (let id = 0; id < numberOfProviders; id++) {
-    const info = await getStakingProviderInfo(id)
+    const info = await getNodeOperatorInfo(id)
     stakingProviders.push({
       ...info,
       id,

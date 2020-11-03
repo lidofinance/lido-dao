@@ -80,5 +80,5 @@
     }
   },
   "appName": "staking-providers-registry.lido.eth",
-  "path": "../../contracts/sps/StakingProvidersRegistry.sol"
+  "path": "../../contracts/sps/NodeOperatorsRegistry.sol"
 }

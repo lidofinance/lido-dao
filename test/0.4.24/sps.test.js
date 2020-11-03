@@ -2,7 +2,7 @@ const { assert } = require('chai')
 const { newDao, newApp } = require('./helpers/dao')
 const { assertBn, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
 
-const TestStakingProvidersRegistry = artifacts.require('TestStakingProvidersRegistry.sol')
+const TestNodeOperatorsRegistry = artifacts.require('TestNodeOperatorsRegistry.sol')
 const PoolMock = artifacts.require('PoolMock.sol')
 const ERC20Mock = artifacts.require('ERC20Mock.sol')
 
@@ -30,12 +30,12 @@ const hexConcat = (first, ...rest) => {
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 const tokens = ETH
 
-contract('StakingProvidersRegistry', ([appManager, voting, user1, user2, user3, nobody]) => {
+contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nobody]) => {
   let appBase, app
 
   before('deploy base app', async () => {
     // Deploy the app's base contract.
-    appBase = await TestStakingProvidersRegistry.new()
+    appBase = await TestNodeOperatorsRegistry.new()
   })
 
   beforeEach('deploy dao and app', async () => {
@@ -43,7 +43,7 @@ contract('StakingProvidersRegistry', ([appManager, voting, user1, user2, user3, 
 
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
     const proxyAddress = await newApp(dao, 'staking-providers-registry', appBase.address, appManager)
-    app = await TestStakingProvidersRegistry.at(proxyAddress)
+    app = await TestNodeOperatorsRegistry.at(proxyAddress)
 
     // Set up the app's permissions.
     await acl.createPermission(voting, app.address, await app.SET_POOL(), appManager, { from: appManager })
@@ -59,27 +59,27 @@ contract('StakingProvidersRegistry', ([appManager, voting, user1, user2, user3, 
     await app.initialize()
   })
 
-  it('addStakingProvider works', async () => {
-    await assertRevert(app.addStakingProvider('1', ADDRESS_1, 10, { from: user1 }), 'APP_AUTH_FAILED')
-    await assertRevert(app.addStakingProvider('1', ADDRESS_1, 10, { from: nobody }), 'APP_AUTH_FAILED')
+  it('addNodeOperator works', async () => {
+    await assertRevert(app.addNodeOperator('1', ADDRESS_1, 10, { from: user1 }), 'APP_AUTH_FAILED')
+    await assertRevert(app.addNodeOperator('1', ADDRESS_1, 10, { from: nobody }), 'APP_AUTH_FAILED')
 
-    await app.addStakingProvider('fo o', ADDRESS_1, 10, { from: voting })
-    await app.addStakingProvider(' bar', ADDRESS_2, UNLIMITED, { from: voting })
+    await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
+    await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
 
-    assertBn(await app.getStakingProvidersCount({ from: nobody }), 2)
-    assertBn(await app.getActiveStakingProvidersCount({ from: nobody }), 2)
+    assertBn(await app.getNodeOperatorsCount({ from: nobody }), 2)
+    assertBn(await app.getActiveNodeOperatorsCount({ from: nobody }), 2)
 
-    await assertRevert(app.addStakingProvider('1', ADDRESS_3, 10, { from: user1 }), 'APP_AUTH_FAILED')
-    await assertRevert(app.addStakingProvider('1', ADDRESS_3, 10, { from: nobody }), 'APP_AUTH_FAILED')
+    await assertRevert(app.addNodeOperator('1', ADDRESS_3, 10, { from: user1 }), 'APP_AUTH_FAILED')
+    await assertRevert(app.addNodeOperator('1', ADDRESS_3, 10, { from: nobody }), 'APP_AUTH_FAILED')
   })
 
-  it('getStakingProvider works', async () => {
-    await app.addStakingProvider('fo o', ADDRESS_1, 10, { from: voting })
-    await app.addStakingProvider(' bar', ADDRESS_2, UNLIMITED, { from: voting })
+  it('getNodeOperator works', async () => {
+    await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
+    await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
 
     await app.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
 
-    let sp = await app.getStakingProvider(0, true)
+    let sp = await app.getNodeOperator(0, true)
     assert.equal(sp.active, true)
     assert.equal(sp.name, 'fo o')
     assert.equal(sp.rewardAddress, ADDRESS_1)
@@ -88,7 +88,7 @@ contract('StakingProvidersRegistry', ([appManager, voting, user1, user2, user3, 
     assertBn(sp.totalSigningKeys, 1)
     assertBn(sp.usedSigningKeys, 0)
 
-    sp = await app.getStakingProvider(1, true)
+    sp = await app.getNodeOperator(1, true)
     assert.equal(sp.active, true)
     assert.equal(sp.name, ' bar')
     assert.equal(sp.rewardAddress, ADDRESS_2)
@@ -97,120 +97,120 @@ contract('StakingProvidersRegistry', ([appManager, voting, user1, user2, user3, 
     assertBn(sp.totalSigningKeys, 0)
     assertBn(sp.usedSigningKeys, 0)
 
-    sp = await app.getStakingProvider(0, false)
+    sp = await app.getNodeOperator(0, false)
     assert.equal(sp.name, '')
     assert.equal(sp.rewardAddress, ADDRESS_1)
 
-    sp = await app.getStakingProvider(1, false)
+    sp = await app.getNodeOperator(1, false)
     assert.equal(sp.name, '')
     assert.equal(sp.rewardAddress, ADDRESS_2)
 
-    await assertRevert(app.getStakingProvider(10, false), 'STAKING_PROVIDER_NOT_FOUND')
+    await assertRevert(app.getNodeOperator(10, false), 'STAKING_PROVIDER_NOT_FOUND')
   })
 
-  it('setStakingProviderActive works', async () => {
-    await app.addStakingProvider('fo o', ADDRESS_1, 10, { from: voting })
-    await app.addStakingProvider(' bar', ADDRESS_2, UNLIMITED, { from: voting })
+  it('setNodeOperatorActive works', async () => {
+    await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
+    await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
 
     await app.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
 
-    assert.equal((await app.getStakingProvider(0, false)).active, true)
-    assert.equal((await app.getStakingProvider(1, false)).active, true)
-    assertBn(await app.getStakingProvidersCount({ from: nobody }), 2)
-    assertBn(await app.getActiveStakingProvidersCount({ from: nobody }), 2)
+    assert.equal((await app.getNodeOperator(0, false)).active, true)
+    assert.equal((await app.getNodeOperator(1, false)).active, true)
+    assertBn(await app.getNodeOperatorsCount({ from: nobody }), 2)
+    assertBn(await app.getActiveNodeOperatorsCount({ from: nobody }), 2)
 
-    await assertRevert(app.setStakingProviderActive(0, false, { from: user1 }), 'APP_AUTH_FAILED')
-    await assertRevert(app.setStakingProviderActive(0, true, { from: nobody }), 'APP_AUTH_FAILED')
+    await assertRevert(app.setNodeOperatorActive(0, false, { from: user1 }), 'APP_AUTH_FAILED')
+    await assertRevert(app.setNodeOperatorActive(0, true, { from: nobody }), 'APP_AUTH_FAILED')
 
     // switch off #0
-    await app.setStakingProviderActive(0, false, { from: voting })
-    assert.equal((await app.getStakingProvider(0, false)).active, false)
-    assert.equal((await app.getStakingProvider(1, false)).active, true)
-    assertBn(await app.getStakingProvidersCount({ from: nobody }), 2)
-    assertBn(await app.getActiveStakingProvidersCount({ from: nobody }), 1)
+    await app.setNodeOperatorActive(0, false, { from: voting })
+    assert.equal((await app.getNodeOperator(0, false)).active, false)
+    assert.equal((await app.getNodeOperator(1, false)).active, true)
+    assertBn(await app.getNodeOperatorsCount({ from: nobody }), 2)
+    assertBn(await app.getActiveNodeOperatorsCount({ from: nobody }), 1)
 
-    await app.setStakingProviderActive(0, false, { from: voting })
-    assert.equal((await app.getStakingProvider(0, false)).active, false)
-    assertBn(await app.getActiveStakingProvidersCount({ from: nobody }), 1)
+    await app.setNodeOperatorActive(0, false, { from: voting })
+    assert.equal((await app.getNodeOperator(0, false)).active, false)
+    assertBn(await app.getActiveNodeOperatorsCount({ from: nobody }), 1)
 
     // switch off #1
-    await app.setStakingProviderActive(1, false, { from: voting })
-    assert.equal((await app.getStakingProvider(0, false)).active, false)
-    assert.equal((await app.getStakingProvider(1, false)).active, false)
-    assertBn(await app.getStakingProvidersCount({ from: nobody }), 2)
-    assertBn(await app.getActiveStakingProvidersCount({ from: nobody }), 0)
+    await app.setNodeOperatorActive(1, false, { from: voting })
+    assert.equal((await app.getNodeOperator(0, false)).active, false)
+    assert.equal((await app.getNodeOperator(1, false)).active, false)
+    assertBn(await app.getNodeOperatorsCount({ from: nobody }), 2)
+    assertBn(await app.getActiveNodeOperatorsCount({ from: nobody }), 0)
 
     // switch #0 back on
-    await app.setStakingProviderActive(0, true, { from: voting })
-    assert.equal((await app.getStakingProvider(0, false)).active, true)
-    assert.equal((await app.getStakingProvider(1, false)).active, false)
-    assertBn(await app.getStakingProvidersCount({ from: nobody }), 2)
-    assertBn(await app.getActiveStakingProvidersCount({ from: nobody }), 1)
+    await app.setNodeOperatorActive(0, true, { from: voting })
+    assert.equal((await app.getNodeOperator(0, false)).active, true)
+    assert.equal((await app.getNodeOperator(1, false)).active, false)
+    assertBn(await app.getNodeOperatorsCount({ from: nobody }), 2)
+    assertBn(await app.getActiveNodeOperatorsCount({ from: nobody }), 1)
 
-    await app.setStakingProviderActive(0, true, { from: voting })
-    assert.equal((await app.getStakingProvider(0, false)).active, true)
-    assertBn(await app.getActiveStakingProvidersCount({ from: nobody }), 1)
+    await app.setNodeOperatorActive(0, true, { from: voting })
+    assert.equal((await app.getNodeOperator(0, false)).active, true)
+    assertBn(await app.getActiveNodeOperatorsCount({ from: nobody }), 1)
 
-    await assertRevert(app.setStakingProviderActive(10, false, { from: voting }), 'STAKING_PROVIDER_NOT_FOUND')
+    await assertRevert(app.setNodeOperatorActive(10, false, { from: voting }), 'STAKING_PROVIDER_NOT_FOUND')
   })
 
-  it('setStakingProviderName works', async () => {
-    await app.addStakingProvider('fo o', ADDRESS_1, 10, { from: voting })
-    await app.addStakingProvider(' bar', ADDRESS_2, UNLIMITED, { from: voting })
+  it('setNodeOperatorName works', async () => {
+    await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
+    await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
 
-    await assertRevert(app.setStakingProviderName(0, 'zzz', { from: user1 }), 'APP_AUTH_FAILED')
-    await assertRevert(app.setStakingProviderName(0, 'zzz', { from: nobody }), 'APP_AUTH_FAILED')
+    await assertRevert(app.setNodeOperatorName(0, 'zzz', { from: user1 }), 'APP_AUTH_FAILED')
+    await assertRevert(app.setNodeOperatorName(0, 'zzz', { from: nobody }), 'APP_AUTH_FAILED')
 
-    assert.equal((await app.getStakingProvider(0, true)).name, 'fo o')
-    assert.equal((await app.getStakingProvider(1, true)).name, ' bar')
+    assert.equal((await app.getNodeOperator(0, true)).name, 'fo o')
+    assert.equal((await app.getNodeOperator(1, true)).name, ' bar')
 
-    await app.setStakingProviderName(0, 'zzz', { from: voting })
+    await app.setNodeOperatorName(0, 'zzz', { from: voting })
 
-    assert.equal((await app.getStakingProvider(0, true)).name, 'zzz')
-    assert.equal((await app.getStakingProvider(1, true)).name, ' bar')
+    assert.equal((await app.getNodeOperator(0, true)).name, 'zzz')
+    assert.equal((await app.getNodeOperator(1, true)).name, ' bar')
 
-    await assertRevert(app.setStakingProviderName(10, 'foo', { from: voting }), 'STAKING_PROVIDER_NOT_FOUND')
+    await assertRevert(app.setNodeOperatorName(10, 'foo', { from: voting }), 'STAKING_PROVIDER_NOT_FOUND')
   })
 
-  it('setStakingProviderRewardAddress works', async () => {
-    await app.addStakingProvider('fo o', ADDRESS_1, 10, { from: voting })
-    await app.addStakingProvider(' bar', ADDRESS_2, UNLIMITED, { from: voting })
+  it('setNodeOperatorRewardAddress works', async () => {
+    await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
+    await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
 
-    await assertRevert(app.setStakingProviderRewardAddress(0, ADDRESS_4, { from: user1 }), 'APP_AUTH_FAILED')
-    await assertRevert(app.setStakingProviderRewardAddress(1, ADDRESS_4, { from: nobody }), 'APP_AUTH_FAILED')
+    await assertRevert(app.setNodeOperatorRewardAddress(0, ADDRESS_4, { from: user1 }), 'APP_AUTH_FAILED')
+    await assertRevert(app.setNodeOperatorRewardAddress(1, ADDRESS_4, { from: nobody }), 'APP_AUTH_FAILED')
 
-    assert.equal((await app.getStakingProvider(0, false)).rewardAddress, ADDRESS_1)
-    assert.equal((await app.getStakingProvider(1, false)).rewardAddress, ADDRESS_2)
+    assert.equal((await app.getNodeOperator(0, false)).rewardAddress, ADDRESS_1)
+    assert.equal((await app.getNodeOperator(1, false)).rewardAddress, ADDRESS_2)
 
-    await app.setStakingProviderRewardAddress(0, ADDRESS_4, { from: voting })
+    await app.setNodeOperatorRewardAddress(0, ADDRESS_4, { from: voting })
 
-    assert.equal((await app.getStakingProvider(0, false)).rewardAddress, ADDRESS_4)
-    assert.equal((await app.getStakingProvider(1, false)).rewardAddress, ADDRESS_2)
+    assert.equal((await app.getNodeOperator(0, false)).rewardAddress, ADDRESS_4)
+    assert.equal((await app.getNodeOperator(1, false)).rewardAddress, ADDRESS_2)
 
-    await assertRevert(app.setStakingProviderRewardAddress(10, ADDRESS_4, { from: voting }), 'STAKING_PROVIDER_NOT_FOUND')
+    await assertRevert(app.setNodeOperatorRewardAddress(10, ADDRESS_4, { from: voting }), 'STAKING_PROVIDER_NOT_FOUND')
   })
 
-  it('setStakingProviderStakingLimit works', async () => {
-    await app.addStakingProvider('fo o', ADDRESS_1, 10, { from: voting })
-    await app.addStakingProvider(' bar', ADDRESS_2, UNLIMITED, { from: voting })
+  it('setNodeOperatorStakingLimit works', async () => {
+    await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
+    await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
 
-    await assertRevert(app.setStakingProviderStakingLimit(0, 40, { from: user1 }), 'APP_AUTH_FAILED')
-    await assertRevert(app.setStakingProviderStakingLimit(1, 40, { from: nobody }), 'APP_AUTH_FAILED')
+    await assertRevert(app.setNodeOperatorStakingLimit(0, 40, { from: user1 }), 'APP_AUTH_FAILED')
+    await assertRevert(app.setNodeOperatorStakingLimit(1, 40, { from: nobody }), 'APP_AUTH_FAILED')
 
-    assertBn((await app.getStakingProvider(0, false)).stakingLimit, 10)
-    assertBn((await app.getStakingProvider(1, false)).stakingLimit, UNLIMITED)
+    assertBn((await app.getNodeOperator(0, false)).stakingLimit, 10)
+    assertBn((await app.getNodeOperator(1, false)).stakingLimit, UNLIMITED)
 
-    await app.setStakingProviderStakingLimit(0, 40, { from: voting })
+    await app.setNodeOperatorStakingLimit(0, 40, { from: voting })
 
-    assertBn((await app.getStakingProvider(0, false)).stakingLimit, 40)
-    assertBn((await app.getStakingProvider(1, false)).stakingLimit, UNLIMITED)
+    assertBn((await app.getNodeOperator(0, false)).stakingLimit, 40)
+    assertBn((await app.getNodeOperator(1, false)).stakingLimit, UNLIMITED)
 
-    await assertRevert(app.setStakingProviderStakingLimit(10, 40, { from: voting }), 'STAKING_PROVIDER_NOT_FOUND')
+    await assertRevert(app.setNodeOperatorStakingLimit(10, 40, { from: voting }), 'STAKING_PROVIDER_NOT_FOUND')
   })
 
   it('reportStoppedValidators works', async () => {
-    await app.addStakingProvider('fo o', ADDRESS_1, 10, { from: voting })
-    await app.addStakingProvider(' bar', ADDRESS_2, UNLIMITED, { from: voting })
+    await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
+    await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
 
     await app.addSigningKeys(0, 2, hexConcat(pad('0x010101', 48), pad('0x020202', 48)), hexConcat(pad('0x01', 96), pad('0x02', 96)), {
       from: voting
@@ -226,23 +226,23 @@ contract('StakingProvidersRegistry', ([appManager, voting, user1, user2, user3, 
     await assertRevert(app.reportStoppedValidators(0, 1, { from: user1 }), 'APP_AUTH_FAILED')
     await assertRevert(app.reportStoppedValidators(1, 1, { from: nobody }), 'APP_AUTH_FAILED')
 
-    assertBn((await app.getStakingProvider(0, false)).stoppedValidators, 0)
-    assertBn((await app.getStakingProvider(1, false)).stoppedValidators, 0)
+    assertBn((await app.getNodeOperator(0, false)).stoppedValidators, 0)
+    assertBn((await app.getNodeOperator(1, false)).stoppedValidators, 0)
 
     await app.reportStoppedValidators(0, 1, { from: voting })
 
-    assertBn((await app.getStakingProvider(0, false)).stoppedValidators, 1)
-    assertBn((await app.getStakingProvider(1, false)).stoppedValidators, 0)
+    assertBn((await app.getNodeOperator(0, false)).stoppedValidators, 1)
+    assertBn((await app.getNodeOperator(1, false)).stoppedValidators, 0)
 
     await app.reportStoppedValidators(1, 1, { from: voting })
 
-    assertBn((await app.getStakingProvider(0, false)).stoppedValidators, 1)
-    assertBn((await app.getStakingProvider(1, false)).stoppedValidators, 1)
+    assertBn((await app.getNodeOperator(0, false)).stoppedValidators, 1)
+    assertBn((await app.getNodeOperator(1, false)).stoppedValidators, 1)
 
     await app.reportStoppedValidators(0, 1, { from: voting })
 
-    assertBn((await app.getStakingProvider(0, false)).stoppedValidators, 2)
-    assertBn((await app.getStakingProvider(1, false)).stoppedValidators, 1)
+    assertBn((await app.getNodeOperator(0, false)).stoppedValidators, 2)
+    assertBn((await app.getNodeOperator(1, false)).stoppedValidators, 1)
 
     await assertRevert(app.reportStoppedValidators(0, 1, { from: voting }), 'STOPPED_MORE_THAN_LAUNCHED')
     await assertRevert(app.reportStoppedValidators(1, 12, { from: voting }), 'STOPPED_MORE_THAN_LAUNCHED')
@@ -251,8 +251,8 @@ contract('StakingProvidersRegistry', ([appManager, voting, user1, user2, user3, 
   })
 
   it('updateUsedKeys works', async () => {
-    await app.addStakingProvider('fo o', ADDRESS_1, 10, { from: voting })
-    await app.addStakingProvider(' bar', ADDRESS_2, UNLIMITED, { from: voting })
+    await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
+    await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
 
     await app.addSigningKeys(0, 2, hexConcat(pad('0x010101', 48), pad('0x020202', 48)), hexConcat(pad('0x01', 96), pad('0x02', 96)), {
       from: voting
@@ -283,8 +283,8 @@ contract('StakingProvidersRegistry', ([appManager, voting, user1, user2, user3, 
   })
 
   it('trimUnusedKeys works', async () => {
-    await app.addStakingProvider('fo o', ADDRESS_1, 10, { from: voting })
-    await app.addStakingProvider(' bar', ADDRESS_2, UNLIMITED, { from: voting })
+    await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
+    await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
 
     await app.addSigningKeys(0, 2, hexConcat(pad('0x010101', 48), pad('0x020202', 48)), hexConcat(pad('0x01', 96), pad('0x02', 96)), {
       from: voting
@@ -307,8 +307,8 @@ contract('StakingProvidersRegistry', ([appManager, voting, user1, user2, user3, 
   })
 
   it('addSigningKeys works', async () => {
-    await app.addStakingProvider('1', ADDRESS_1, UNLIMITED, { from: voting })
-    await app.addStakingProvider('2', ADDRESS_2, UNLIMITED, { from: voting })
+    await app.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
+    await app.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
 
     // first
     await assertRevert(app.addSigningKeys(0, 1, pad('0x01', 48), pad('0x01', 96), { from: user1 }), 'APP_AUTH_FAILED')
@@ -341,8 +341,8 @@ contract('StakingProvidersRegistry', ([appManager, voting, user1, user2, user3, 
   })
 
   it('rewardAddress can add & remove signing keys', async () => {
-    await app.addStakingProvider('1', user1, UNLIMITED, { from: voting })
-    await app.addStakingProvider('2', user2, UNLIMITED, { from: voting })
+    await app.addNodeOperator('1', user1, UNLIMITED, { from: voting })
+    await app.addNodeOperator('2', user2, UNLIMITED, { from: voting })
 
     // add to the first SP
     await assertRevert(app.addSigningKeysSP(0, 1, pad('0x01', 48), pad('0x01', 96), { from: nobody }), 'APP_AUTH_FAILED')
@@ -370,8 +370,8 @@ contract('StakingProvidersRegistry', ([appManager, voting, user1, user2, user3, 
   })
 
   it('can view keys', async () => {
-    await app.addStakingProvider('1', ADDRESS_1, UNLIMITED, { from: voting })
-    await app.addStakingProvider('2', ADDRESS_2, UNLIMITED, { from: voting })
+    await app.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
+    await app.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
 
     // first
     await app.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
@@ -432,8 +432,8 @@ contract('StakingProvidersRegistry', ([appManager, voting, user1, user2, user3, 
   })
 
   it('removeSigningKey works', async () => {
-    await app.addStakingProvider('1', ADDRESS_1, UNLIMITED, { from: voting })
-    await app.addStakingProvider('2', ADDRESS_2, UNLIMITED, { from: voting })
+    await app.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
+    await app.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
 
     await app.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
 
@@ -476,9 +476,9 @@ contract('StakingProvidersRegistry', ([appManager, voting, user1, user2, user3, 
   })
 
   it('distributeRewards works', async () => {
-    await app.addStakingProvider('fo o', ADDRESS_1, 10, { from: voting })
-    await app.addStakingProvider(' bar', ADDRESS_2, UNLIMITED, { from: voting })
-    await app.addStakingProvider('3', ADDRESS_3, UNLIMITED, { from: voting })
+    await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
+    await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
+    await app.addNodeOperator('3', ADDRESS_3, UNLIMITED, { from: voting })
 
     await app.addSigningKeys(0, 2, hexConcat(pad('0x010101', 48), pad('0x020202', 48)), hexConcat(pad('0x01', 96), pad('0x02', 96)), {
       from: voting
@@ -496,7 +496,7 @@ contract('StakingProvidersRegistry', ([appManager, voting, user1, user2, user3, 
     await pool.updateUsedKeys([0, 1, 2], [2, 2, 2])
 
     await app.reportStoppedValidators(0, 1, { from: voting })
-    await app.setStakingProviderActive(2, false, { from: voting })
+    await app.setNodeOperatorActive(2, false, { from: voting })
 
     const token = await ERC20Mock.new()
     await token.mint(app.address, tokens(900))

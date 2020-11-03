@@ -5,7 +5,7 @@ const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 const { BN } = require('bn.js')
 
 const StETH = artifacts.require('StETH.sol') // we can just import due to StETH imported in test_helpers/Imports.sol
-const StakingProvidersRegistry = artifacts.require('StakingProvidersRegistry')
+const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
 const Lido = artifacts.require('TestLido.sol')
 const OracleMock = artifacts.require('OracleMock.sol')
@@ -48,15 +48,15 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     stEthBase = await StETH.new()
     oracle = await OracleMock.new()
     validatorRegistration = await ValidatorRegistrationMock.new()
-    stakingProvidersRegistryBase = await StakingProvidersRegistry.new()
+    stakingProvidersRegistryBase = await NodeOperatorsRegistry.new()
   })
 
   beforeEach('deploy dao and app', async () => {
     const { dao, acl } = await newDao(appManager)
 
-    // StakingProvidersRegistry
+    // NodeOperatorsRegistry
     let proxyAddress = await newApp(dao, 'staking-providers-registry', stakingProvidersRegistryBase.address, appManager)
-    sps = await StakingProvidersRegistry.at(proxyAddress)
+    sps = await NodeOperatorsRegistry.at(proxyAddress)
     await sps.initialize()
 
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
@@ -152,8 +152,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
   })
 
   it('setWithdrawalCredentials resets unused keys', async () => {
-    await sps.addStakingProvider('1', ADDRESS_1, UNLIMITED, { from: voting })
-    await sps.addStakingProvider('2', ADDRESS_2, UNLIMITED, { from: voting })
+    await sps.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
+    await sps.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
 
     await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
@@ -204,8 +204,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
   })
 
   it('deposit works', async () => {
-    await sps.addStakingProvider('1', ADDRESS_1, UNLIMITED, { from: voting })
-    await sps.addStakingProvider('2', ADDRESS_2, UNLIMITED, { from: voting })
+    await sps.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
+    await sps.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
 
     await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
     await sps.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
@@ -292,8 +292,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
   })
 
   it('key removal is taken into account during deposit', async () => {
-    await sps.addStakingProvider('1', ADDRESS_1, UNLIMITED, { from: voting })
-    await sps.addStakingProvider('2', ADDRESS_2, UNLIMITED, { from: voting })
+    await sps.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
+    await sps.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
 
     await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
     await sps.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
@@ -322,8 +322,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
   })
 
   it("out of signing keys doesn't revert but buffers", async () => {
-    await sps.addStakingProvider('1', ADDRESS_1, UNLIMITED, { from: voting })
-    await sps.addStakingProvider('2', ADDRESS_2, UNLIMITED, { from: voting })
+    await sps.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
+    await sps.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
 
     await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
     await sps.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
@@ -352,8 +352,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
   })
 
   it('withrawal method reverts', async () => {
-    await sps.addStakingProvider('1', ADDRESS_1, UNLIMITED, { from: voting })
-    await sps.addStakingProvider('2', ADDRESS_2, UNLIMITED, { from: voting })
+    await sps.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
+    await sps.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
 
     await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
     await sps.addSigningKeys(
@@ -384,8 +384,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
   })
 
   it('reportEther2 works', async () => {
-    await sps.addStakingProvider('1', ADDRESS_1, UNLIMITED, { from: voting })
-    await sps.addStakingProvider('2', ADDRESS_2, UNLIMITED, { from: voting })
+    await sps.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
+    await sps.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
 
     await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
     await sps.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
@@ -417,8 +417,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
   })
 
   it('oracle data affects deposits', async () => {
-    await sps.addStakingProvider('1', ADDRESS_1, UNLIMITED, { from: voting })
-    await sps.addStakingProvider('2', ADDRESS_2, UNLIMITED, { from: voting })
+    await sps.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
+    await sps.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
 
     await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
     await sps.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
@@ -480,8 +480,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
   })
 
   it('can stop and resume', async () => {
-    await sps.addStakingProvider('1', ADDRESS_1, UNLIMITED, { from: voting })
-    await sps.addStakingProvider('2', ADDRESS_2, UNLIMITED, { from: voting })
+    await sps.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
+    await sps.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
 
     await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
     await sps.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
@@ -515,8 +515,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
   })
 
   it('rewards distribution works in a simple case', async () => {
-    await sps.addStakingProvider('1', ADDRESS_1, UNLIMITED, { from: voting })
-    await sps.addStakingProvider('2', ADDRESS_2, UNLIMITED, { from: voting })
+    await sps.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
+    await sps.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
 
     await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
     await sps.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
@@ -541,8 +541,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
   })
 
   it('rewards distribution works', async () => {
-    await sps.addStakingProvider('1', ADDRESS_1, UNLIMITED, { from: voting })
-    await sps.addStakingProvider('2', ADDRESS_2, UNLIMITED, { from: voting })
+    await sps.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
+    await sps.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
 
     await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
     await sps.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
@@ -580,8 +580,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
   })
 
   it('deposits accounted properly during rewards distribution', async () => {
-    await sps.addStakingProvider('1', ADDRESS_1, UNLIMITED, { from: voting })
-    await sps.addStakingProvider('2', ADDRESS_2, UNLIMITED, { from: voting })
+    await sps.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
+    await sps.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
 
     await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
     await sps.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
@@ -605,23 +605,23 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
   it('SP filtering during deposit works when doing a huge deposit', async () => {
     await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
-    await sps.addStakingProvider('good', ADDRESS_1, UNLIMITED, { from: voting }) // 0
+    await sps.addNodeOperator('good', ADDRESS_1, UNLIMITED, { from: voting }) // 0
     await sps.addSigningKeys(0, 2, hexConcat(pad('0x0001', 48), pad('0x0002', 48)), hexConcat(pad('0x01', 96), pad('0x01', 96)), {
       from: voting
     })
 
-    await sps.addStakingProvider('limited', ADDRESS_2, 1, { from: voting }) // 1
+    await sps.addNodeOperator('limited', ADDRESS_2, 1, { from: voting }) // 1
     await sps.addSigningKeys(1, 2, hexConcat(pad('0x0101', 48), pad('0x0102', 48)), hexConcat(pad('0x01', 96), pad('0x01', 96)), {
       from: voting
     })
 
-    await sps.addStakingProvider('deactivated', ADDRESS_3, UNLIMITED, { from: voting }) // 2
+    await sps.addNodeOperator('deactivated', ADDRESS_3, UNLIMITED, { from: voting }) // 2
     await sps.addSigningKeys(2, 2, hexConcat(pad('0x0201', 48), pad('0x0202', 48)), hexConcat(pad('0x01', 96), pad('0x01', 96)), {
       from: voting
     })
-    await sps.setStakingProviderActive(2, false, { from: voting })
+    await sps.setNodeOperatorActive(2, false, { from: voting })
 
-    await sps.addStakingProvider('short on keys', ADDRESS_4, UNLIMITED, { from: voting }) // 3
+    await sps.addNodeOperator('short on keys', ADDRESS_4, UNLIMITED, { from: voting }) // 3
 
     await app.setFee(5000, { from: voting })
     await app.setFeeDistribution(3000, 2000, 5000, { from: voting })
@@ -701,7 +701,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(await sps.getUnusedSigningKeyCount(3, { from: nobody }), 0)
 
     // Reactivation of #2
-    await sps.setStakingProviderActive(2, true, { from: voting })
+    await sps.setNodeOperatorActive(2, true, { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(12) })
     await app.depositBufferedEther()
     await checkStat({ deposited: ETH(192), remote: 0 })
@@ -723,23 +723,23 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
   it('SP filtering during deposit works when doing small deposits', async () => {
     await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
-    await sps.addStakingProvider('good', ADDRESS_1, UNLIMITED, { from: voting }) // 0
+    await sps.addNodeOperator('good', ADDRESS_1, UNLIMITED, { from: voting }) // 0
     await sps.addSigningKeys(0, 2, hexConcat(pad('0x0001', 48), pad('0x0002', 48)), hexConcat(pad('0x01', 96), pad('0x01', 96)), {
       from: voting
     })
 
-    await sps.addStakingProvider('limited', ADDRESS_2, 1, { from: voting }) // 1
+    await sps.addNodeOperator('limited', ADDRESS_2, 1, { from: voting }) // 1
     await sps.addSigningKeys(1, 2, hexConcat(pad('0x0101', 48), pad('0x0102', 48)), hexConcat(pad('0x01', 96), pad('0x01', 96)), {
       from: voting
     })
 
-    await sps.addStakingProvider('deactivated', ADDRESS_3, UNLIMITED, { from: voting }) // 2
+    await sps.addNodeOperator('deactivated', ADDRESS_3, UNLIMITED, { from: voting }) // 2
     await sps.addSigningKeys(2, 2, hexConcat(pad('0x0201', 48), pad('0x0202', 48)), hexConcat(pad('0x01', 96), pad('0x01', 96)), {
       from: voting
     })
-    await sps.setStakingProviderActive(2, false, { from: voting })
+    await sps.setNodeOperatorActive(2, false, { from: voting })
 
-    await sps.addStakingProvider('short on keys', ADDRESS_4, UNLIMITED, { from: voting }) // 3
+    await sps.addNodeOperator('short on keys', ADDRESS_4, UNLIMITED, { from: voting }) // 3
 
     await app.setFee(5000, { from: voting })
     await app.setFeeDistribution(3000, 2000, 5000, { from: voting })
@@ -822,7 +822,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(await sps.getUnusedSigningKeyCount(3, { from: nobody }), 0)
 
     // Reactivation of #2
-    await sps.setStakingProviderActive(2, true, { from: voting })
+    await sps.setNodeOperatorActive(2, true, { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(12) })
     await app.depositBufferedEther()
     await checkStat({ deposited: ETH(192), remote: 0 })
@@ -844,23 +844,23 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
   it('Deposit finds the right SP', async () => {
     await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
-    await sps.addStakingProvider('good', ADDRESS_1, UNLIMITED, { from: voting }) // 0
+    await sps.addNodeOperator('good', ADDRESS_1, UNLIMITED, { from: voting }) // 0
     await sps.addSigningKeys(0, 2, hexConcat(pad('0x0001', 48), pad('0x0002', 48)), hexConcat(pad('0x01', 96), pad('0x01', 96)), {
       from: voting
     })
 
-    await sps.addStakingProvider('2nd good', ADDRESS_2, UNLIMITED, { from: voting }) // 1
+    await sps.addNodeOperator('2nd good', ADDRESS_2, UNLIMITED, { from: voting }) // 1
     await sps.addSigningKeys(1, 2, hexConcat(pad('0x0101', 48), pad('0x0102', 48)), hexConcat(pad('0x01', 96), pad('0x01', 96)), {
       from: voting
     })
 
-    await sps.addStakingProvider('deactivated', ADDRESS_3, UNLIMITED, { from: voting }) // 2
+    await sps.addNodeOperator('deactivated', ADDRESS_3, UNLIMITED, { from: voting }) // 2
     await sps.addSigningKeys(2, 2, hexConcat(pad('0x0201', 48), pad('0x0202', 48)), hexConcat(pad('0x01', 96), pad('0x01', 96)), {
       from: voting
     })
-    await sps.setStakingProviderActive(2, false, { from: voting })
+    await sps.setNodeOperatorActive(2, false, { from: voting })
 
-    await sps.addStakingProvider('short on keys', ADDRESS_4, UNLIMITED, { from: voting }) // 3
+    await sps.addNodeOperator('short on keys', ADDRESS_4, UNLIMITED, { from: voting }) // 3
 
     await app.setFee(5000, { from: voting })
     await app.setFeeDistribution(3000, 2000, 5000, { from: voting })
@@ -879,7 +879,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(await sps.getUnusedSigningKeyCount(3, { from: nobody }), 0)
 
     // Reactivation of #2 - has the smallest stake
-    await sps.setStakingProviderActive(2, true, { from: voting })
+    await sps.setNodeOperatorActive(2, true, { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(36) })
     await app.depositBufferedEther()
     await checkStat({ deposited: ETH(96), remote: 0 })

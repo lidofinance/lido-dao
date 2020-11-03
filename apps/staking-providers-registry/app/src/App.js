@@ -15,7 +15,7 @@ import {
   Toast,
   useTheme,
 } from '@aragon/ui'
-import AddStakingProviderSidePanel from './components/AddStakingProviderSidePanel'
+import AddNodeOperatorSidePanel from './components/AddNodeOperatorSidePanel'
 import AddSigningKeysSidePanel from './components/AddSigningKeysSidePanel'
 import MenuItem from './components/MenuItem'
 import IconQuestion from '@aragon/ui/dist/IconQuestion'
@@ -27,7 +27,7 @@ function App() {
   const { appearance } = useGuiStyle()
   const {
     stakingProvidersCount,
-    activeStakingProvidersCount,
+    activeNodeOperatorsCount,
     stakingProviders,
     isSyncing,
   } = appState
@@ -43,21 +43,21 @@ function App() {
   )
   const addSPApi = useCallback(
     (name, address, limit) =>
-      api.addStakingProvider(name, address, limit).toPromise(),
+      api.addNodeOperator(name, address, limit).toPromise(),
     [api]
   )
 
   // ENABLE / DISABLE
   const enableProvider = useCallback(
     (id) => {
-      api.setStakingProviderActive(id, true).toPromise()
+      api.setNodeOperatorActive(id, true).toPromise()
     },
     [api]
   )
 
   const disableProvider = useCallback(
     (id) => {
-      api.setStakingProviderActive(id, false).toPromise()
+      api.setNodeOperatorActive(id, false).toPromise()
     },
     [api]
   )
@@ -258,12 +258,12 @@ function App() {
             <InfoBox heading="Number of SPs" value={stakingProvidersCount} />
             <InfoBox
               heading="Number of Active SPs"
-              value={activeStakingProvidersCount}
+              value={activeNodeOperatorsCount}
             />
           </>
         }
       />
-      <AddStakingProviderSidePanel
+      <AddNodeOperatorSidePanel
         opened={AddSPSidePanelOpen}
         onClose={closeAddSPSidePanel}
         addSPApi={addSPApi}

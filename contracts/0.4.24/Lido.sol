@@ -9,7 +9,7 @@ import "solidity-bytes-utils/contracts/BytesLib.sol";
 
 import "./interfaces/ILido.sol";
 import "./interfaces/ISTETH.sol";
-import "./interfaces/IStakingProvidersRegistry.sol";
+import "./interfaces/INodeOperatorsRegistry.sol";
 import "./interfaces/IValidatorRegistration.sol";
 
 import "./lib/Pausable.sol";
@@ -89,7 +89,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         ISTETH _token,
         IValidatorRegistration validatorRegistration,
         address _oracle,
-        IStakingProvidersRegistry _sps,
+        INodeOperatorsRegistry _sps,
         uint256 _depositIterationLimit
     )
         public onlyInit
@@ -338,8 +338,8 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     /**
       * @notice Gets staking providers registry interface handle
       */
-    function getSPs() public view returns (IStakingProvidersRegistry) {
-        return IStakingProvidersRegistry(SP_REGISTRY_VALUE_POSITION.getStorageAddress());
+    function getSPs() public view returns (INodeOperatorsRegistry) {
+        return INodeOperatorsRegistry(SP_REGISTRY_VALUE_POSITION.getStorageAddress());
     }
 
     /**
@@ -396,7 +396,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     /**
       * @dev Internal function to set staking provider registry address
       */
-    function _setSPs(IStakingProvidersRegistry _r) internal {
+    function _setSPs(INodeOperatorsRegistry _r) internal {
         require(isContract(_r), "NOT_A_CONTRACT");
         SP_REGISTRY_VALUE_POSITION.setStorageAddress(_r);
     }
@@ -684,20 +684,20 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     }
 
     function _load_SP_cache() internal view returns (DepositLookupCacheEntry[] memory cache) {
-        IStakingProvidersRegistry sps = getSPs();
-        cache = new DepositLookupCacheEntry[](sps.getActiveStakingProvidersCount());
+        INodeOperatorsRegistry sps = getSPs();
+        cache = new DepositLookupCacheEntry[](sps.getActiveNodeOperatorsCount());
         if (0 == cache.length)
             return cache;
 
         uint256 idx = 0;
-        for (uint256 SP_id = sps.getStakingProvidersCount().sub(1); ; SP_id = SP_id.sub(1)) {
+        for (uint256 SP_id = sps.getNodeOperatorsCount().sub(1); ; SP_id = SP_id.sub(1)) {
             (
                 bool active, , ,
                 uint64 stakingLimit,
                 uint64 stoppedValidators,
                 uint64 totalSigningKeys,
                 uint64 usedSigningKeys
-            ) = sps.getStakingProvider(SP_id, false);
+            ) = sps.getNodeOperator(SP_id, false);
             if (!active)
                 continue;
 

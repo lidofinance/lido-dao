@@ -1,16 +1,16 @@
 pragma solidity 0.4.24;
 
-import "../../interfaces/IStakingProvidersRegistry.sol";
+import "../../interfaces/INodeOperatorsRegistry.sol";
 
 
 /**
   * @dev This is a mock. Don't use in production.
   */
 contract PoolMock {
-    IStakingProvidersRegistry private sps;
+    INodeOperatorsRegistry private sps;
 
     constructor(address _sps) public {
-        sps = IStakingProvidersRegistry(_sps);
+        sps = INodeOperatorsRegistry(_sps);
     }
 
     function updateUsedKeys(uint256[] _ids, uint64[] _usedSigningKeys) external {
