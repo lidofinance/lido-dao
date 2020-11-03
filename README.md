@@ -217,7 +217,7 @@ yarn deploy:apps:dev
 # Rinkeby network
 yarn deploy:app-lido --network rinkeby
 yarn deploy:app-lidooracle --network rinkeby
-yarn deploy:app-staking-providers-registry --network rinkeby
+yarn deploy:app-node-operators-registry --network rinkeby
 yarn deploy:app-steth --network rinkeby
 
 # The same for mainnet, just replace "--network rinkeby" with "--network mainnet"

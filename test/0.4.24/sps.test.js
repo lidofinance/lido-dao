@@ -42,7 +42,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     const { dao, acl } = await newDao(appManager)
 
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
-    const proxyAddress = await newApp(dao, 'staking-providers-registry', appBase.address, appManager)
+    const proxyAddress = await newApp(dao, 'node-operators-registry', appBase.address, appManager)
     app = await TestNodeOperatorsRegistry.at(proxyAddress)
 
     // Set up the app's permissions.

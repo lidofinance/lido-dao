@@ -30,7 +30,7 @@ async function deployDaoAndPool(appManager, voting, depositIterationLimit = 10) 
   const [tokenProxyAddress, poolProxyAddress, spRegistryProxyAddress] = await Promise.all([
     newApp(dao, 'steth', stEthBase.address, appManager),
     newApp(dao, 'lido', poolBase.address, appManager),
-    newApp(dao, 'staking-providers-registry', spRegistryBase.address, appManager)
+    newApp(dao, 'node-operators-registry', spRegistryBase.address, appManager)
   ])
 
   const [token, pool, spRegistry] = await Promise.all([

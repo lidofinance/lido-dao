@@ -56,7 +56,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, s
     const { dao, acl } = await newDao(appManager)
 
     // NodeOperatorsRegistry
-    let proxyAddress = await newApp(dao, 'staking-providers-registry', nodeOperatorsRegistryBase.address, appManager)
+    let proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)
     sps = await NodeOperatorsRegistry.at(proxyAddress)
     await sps.initialize()
 

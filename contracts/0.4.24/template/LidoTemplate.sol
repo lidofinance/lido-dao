@@ -23,7 +23,7 @@ contract LidoTemplate is BaseTemplate {
         keccak256(abi.encodePacked(LIDO_PM_NODE, keccak256(abi.encodePacked("lidooracle")))) // lidooracle.lido.eth
     );
     bytes32 internal constant REGISTRY_APP_ID = (
-        keccak256(abi.encodePacked(LIDO_PM_NODE, keccak256(abi.encodePacked("staking-providers-registry")))) // staking-providers-registry.lido.eth
+        keccak256(abi.encodePacked(LIDO_PM_NODE, keccak256(abi.encodePacked("node-operators-registry")))) // node-operators-registry.lido.eth
     );
     bytes32 internal constant LIDO_APP_ID = (
         keccak256(abi.encodePacked(LIDO_PM_NODE, keccak256(abi.encodePacked("lido")))) // lido.lido.eth
