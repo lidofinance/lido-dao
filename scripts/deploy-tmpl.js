@@ -16,13 +16,13 @@ const errorOut = (message) => {
 const ZERO_ADDR = '0x0000000000000000000000000000000000000000'
 
 const lidoTemplateName = 'lido-template'
-const lidoTld = `lidopm.eth`
+const lidoTld = `lido.eth`
 
 const defaultOwner = process.env.OWNER
 const defaultDaoFactoryAddress = process.env.DAO_FACTORY || '0x5d94e3e7aec542ab0f9129b9a7badeb5b3ca0f77'
 const defaultENSAddress = process.env.ENS || '0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1'
 const defaultMiniMeFactoryAddress = process.env.MENIME_FACTORY || '0xd526b7aba39cccf76422835e7fd5327b98ad73c9'
-const defaultApmRegistryAddress = process.env.APM || '0x1902a0410EFe699487Dd85F12321aD672bE4ada2' // lidopm
+const defaultApmRegistryAddress = process.env.APM || '0x1902a0410EFe699487Dd85F12321aD672bE4ada2' // lido
 const defaultAragonIdAddress = process.env.ARAGON_ID || ''
 
 const _getRegistered = async (ens, hash) => {

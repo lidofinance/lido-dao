@@ -10,15 +10,15 @@ import "../Lido.sol";
 
 contract LidoTemplate is BaseTemplate {
     /* Hardcoded constants to save gas
-     * bytes32 internal constant LIDO_PM_NODE = keccak256(abi.encodePacked(ETH_TLD_NODE, keccak256(abi.encodePacked("lidopm"))));
+     * bytes32 internal constant LIDO_PM_NODE = keccak256(abi.encodePacked(ETH_TLD_NODE, keccak256(abi.encodePacked("lido"))));
      */
     bytes32 internal constant LIDO_PM_NODE = 0x974a6fb4d8c9712163277101d2e355f655dd9b93ea96f4021f78c02265c221d7;
 
     /* Hardcoded constant to save gas
-     * bytes32 internal constant STETH_APP_ID = keccak256(abi.encodePacked(LIDO_PM_NODE, keccak256(abi.encodePacked("steth")))); // steth.lidopm.eth
-     * bytes32 internal constant LIDOORACLE_APP_ID = keccak256(abi.encodePacked(LIDO_PM_NODE, keccak256(abi.encodePacked("lidooracle")))); // lidooracle.lidopm.eth
-     * bytes32 internal constant REGISTRY_APP_ID = keccak256(abi.encodePacked(LIDO_PM_NODE, keccak256(abi.encodePacked("staking-providers-registry")))); // staking-providers-registry.lidopm.eth
-     * bytes32 internal constant LIDO_APP_ID = keccak256(abi.encodePacked(LIDO_PM_NODE, keccak256(abi.encodePacked("lido")))); // lido.lidopm.eth
+     * bytes32 internal constant STETH_APP_ID = keccak256(abi.encodePacked(LIDO_PM_NODE, keccak256(abi.encodePacked("steth")))); // steth.lido.eth
+     * bytes32 internal constant LIDOORACLE_APP_ID = keccak256(abi.encodePacked(LIDO_PM_NODE, keccak256(abi.encodePacked("lidooracle")))); // lidooracle.lido.eth
+     * bytes32 internal constant REGISTRY_APP_ID = keccak256(abi.encodePacked(LIDO_PM_NODE, keccak256(abi.encodePacked("staking-providers-registry")))); // staking-providers-registry.lido.eth
+     * bytes32 internal constant LIDO_APP_ID = keccak256(abi.encodePacked(LIDO_PM_NODE, keccak256(abi.encodePacked("lido")))); // lido.lido.eth
      */
     bytes32 constant internal STETH_APP_ID = 0x5937d846addd00601bf692837c2cd9854dacd2c55911625da04aec9c62a61a26;
     bytes32 constant internal LIDOORACLE_APP_ID = 0xebe89ae11ec5a76827463bd202b0551f137fdc6dad7cd69ecdf4fe553af5f77b;
