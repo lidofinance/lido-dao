@@ -16,7 +16,7 @@ const ZERO_ADDR = '0x0000000000000000000000000000000000000000'
 
 const lidoDaoName = 'lido-dao'
 const lidoTemplateName = 'lido-template'
-const lidoTld = `lidopm.eth`
+const lidoTld = `lido.eth`
 
 const ONE_DAY = 60 * 60 * 24
 const ONE_WEEK = ONE_DAY * 7
@@ -24,7 +24,7 @@ const THIRTY_DAYS = ONE_DAY * 30
 
 const defaultOwner = process.env.OWNER
 const defaultENSAddress = process.env.ENS || '0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1'
-const defaultApmRegistryAddress = process.env.APM || '0x1902a0410EFe699487Dd85F12321aD672bE4ada2' // lidopm
+const defaultApmRegistryAddress = process.env.APM || '0x1902a0410EFe699487Dd85F12321aD672bE4ada2' // lido
 const defaultDepositContractAddress = process.env.DEPOSIT_CONTRACT || '0x5f4e510503d83bd1a5436bdae2923489da0be454'
 const defaultDepositIterationLimit = process.env.DEPOSIT_ITERATION_LIMIT || '16'
 
@@ -132,7 +132,7 @@ async function deploy({
 
   log('=========')
   // log(`Registering DAO as "${lidoDaoName}.${lidoTld}"`)
-  // TODO register dao at lidopm.eth (by default dao registered at aragonid.eth)
+  // TODO register dao at lido.eth (by default dao registered at aragonid.eth)
   // receipt = await apm.newRepoWithVersion(lidoDaoName, owner, [1, 0, 0], daoEvent.args.dao, '0x0', { from: owner })
   // log(receipt)
 

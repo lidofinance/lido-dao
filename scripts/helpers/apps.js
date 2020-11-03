@@ -12,12 +12,12 @@ const LIDO_APP_ID = '0xdf4019658a996b6bc3639baa07d25c655bf826334fc5c81bb83e50190
 const STAKING_PROVIDERS_REGISTRY_APP_ID = '0x6ca5078df26de2bcf0976b0bfba50b6ed5dac3644879214556e2789dfc78df16'
 
 const apps = [
-  { name: 'steth', tld: 'lidopm.eth', contractName: 'StETH', appId: STETH_APP_ID },
-  { name: 'lido', tld: 'lidopm.eth', contractName: 'Lido', appId: LIDO_APP_ID },
-  { name: 'lidooracle', tld: 'lidopm.eth', contractName: 'LidoOracle', appId: LIDOORACLE_APP_ID },
+  { name: 'steth', tld: 'lido.eth', contractName: 'StETH', appId: STETH_APP_ID },
+  { name: 'lido', tld: 'lido.eth', contractName: 'Lido', appId: LIDO_APP_ID },
+  { name: 'lidooracle', tld: 'lido.eth', contractName: 'LidoOracle', appId: LIDOORACLE_APP_ID },
   {
     name: 'staking-providers-registry',
-    tld: 'lidopm.eth',
+    tld: 'lido.eth',
     contractName: 'StakingProvidersRegistry',
     appId: STAKING_PROVIDERS_REGISTRY_APP_ID
   },
