@@ -9,7 +9,7 @@ const TOKEN_MANAGER_APP_ID = '0x6b20a3010614eeebf2138ccec99f028a61c811b3b1a3343b
 const STETH_APP_ID = '0x7a155a469b6e893b1e5d8f992f066474a74daf5ece6715948667ef3565e34ec2'
 const LIDOORACLE_APP_ID = '0xc62f68e3a6f657e08c27afe0f11d03375e5255f5845055d81c1281dbf139ce18'
 const LIDO_APP_ID = '0xe5c0c15280069e08354c1c1d5b6706edcc4e849e76ec9822afa35d4d66bbbe06'
-const STAKING_PROVIDERS_REGISTRY_APP_ID = '0x6ba226ab4c6dc8945d4ef74de1da0053b9bb7cfe8c1f4f0b88b59bfe2b8b943e'
+const NODE_OPERATORS_REGISTRY_APP_ID = '0x6ba226ab4c6dc8945d4ef74de1da0053b9bb7cfe8c1f4f0b88b59bfe2b8b943e'
 
 const apps = [
   { name: 'steth', tld: 'lido.eth', contractName: 'StETH', appId: STETH_APP_ID },
@@ -19,7 +19,7 @@ const apps = [
     name: 'node-operators-registry',
     tld: 'lido.eth',
     contractName: 'NodeOperatorsRegistry',
-    appId: STAKING_PROVIDERS_REGISTRY_APP_ID
+    appId: NODE_OPERATORS_REGISTRY_APP_ID
   },
   { name: 'agent', tld: 'aragonpm.eth', contractName: 'Agent', appId: AGENT_APP_ID },
   // { name: 'vault', tld: 'aragonpm.eth', contractName: 'Vault', appId: VAULT_APP_ID },
