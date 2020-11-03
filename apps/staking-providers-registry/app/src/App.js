@@ -26,9 +26,9 @@ function App() {
   const { api, appState, connectedAccount } = useAragonApi()
   const { appearance } = useGuiStyle()
   const {
-    stakingProvidersCount,
+    nodeOperatorsCount,
     activeNodeOperatorsCount,
-    stakingProviders,
+    nodeOperators,
     isSyncing,
   } = appState
 
@@ -148,7 +148,7 @@ function App() {
               'Total / Used / Stopped',
               'Status',
             ]}
-            entries={stakingProviders}
+            entries={nodeOperators}
             renderEntry={({
               name,
               rewardAddress,
@@ -255,7 +255,7 @@ function App() {
         }
         secondary={
           <>
-            <InfoBox heading="Number of SPs" value={stakingProvidersCount} />
+            <InfoBox heading="Number of SPs" value={nodeOperatorsCount} />
             <InfoBox
               heading="Number of Active SPs"
               value={activeNodeOperatorsCount}

@@ -14,20 +14,18 @@ app.store(
       switch (event) {
         case 'NodeOperatorAdded':
           // eslint-disable-next-line no-case-declarations
-          const stakingProvidersCount = await getNodeOperatorsCount()
+          const nodeOperatorsCount = await getNodeOperatorsCount()
           return {
             ...nextState,
-            stakingProvidersCount,
+            nodeOperatorsCount,
             activeNodeOperatorsCount: await getActiveNodeOperatorsCount(),
-            stakingProviders: await getNodeOperators(stakingProvidersCount),
+            nodeOperators: await getNodeOperators(nodeOperatorsCount),
           }
         case 'NodeOperatorActiveSet':
           return {
             ...nextState,
             activeNodeOperatorsCount: await getActiveNodeOperatorsCount(),
-            stakingProviders: await getNodeOperators(
-              nextState.stakingProvidersCount
-            ),
+            nodeOperators: await getNodeOperators(nextState.nodeOperatorsCount),
           }
         case events.SYNC_STATUS_SYNCING:
           return { ...nextState, isSyncing: true }
@@ -51,12 +49,12 @@ app.store(
 
 function initializeState() {
   return async (cachedState) => {
-    const stakingProvidersCount = await getNodeOperatorsCount()
+    const nodeOperatorsCount = await getNodeOperatorsCount()
     return {
       ...cachedState,
-      stakingProvidersCount,
+      nodeOperatorsCount,
       activeNodeOperatorsCount: await getActiveNodeOperatorsCount(),
-      stakingProviders: await getNodeOperators(stakingProvidersCount),
+      nodeOperators: await getNodeOperators(nodeOperatorsCount),
     }
   }
 }
@@ -74,15 +72,15 @@ function getNodeOperatorInfo(index) {
 }
 
 async function getNodeOperators(numberOfProviders) {
-  const stakingProviders = []
+  const nodeOperators = []
 
   for (let id = 0; id < numberOfProviders; id++) {
     const info = await getNodeOperatorInfo(id)
-    stakingProviders.push({
+    nodeOperators.push({
       ...info,
       id,
     })
   }
 
-  return stakingProviders
+  return nodeOperators
 }

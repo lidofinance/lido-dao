@@ -14,7 +14,7 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
     // the address which we use to simulate the voting DAO application
     voting,
     // staking providers
-    stakingProvider,
+    nodeOperator,
     // users who deposit Ether to the pool
     user1,
     user2,
@@ -51,10 +51,10 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
     const validatorsLimit = 1000
     const numKeys = 16
 
-    const spTx = await spRegistry.addNodeOperator('SP-1', stakingProvider, validatorsLimit, { from: voting })
+    const spTx = await spRegistry.addNodeOperator('SP-1', nodeOperator, validatorsLimit, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
-    const stakingProviderId = getEventArgument(spTx, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
+    const nodeOperatorId = getEventArgument(spTx, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
 
     assertBn(await spRegistry.getNodeOperatorsCount(), 1, 'total staking providers')
 
@@ -69,9 +69,9 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
     const keys = hexConcat(...data.map((v) => v.key))
     const sigs = hexConcat(...data.map((v) => v.sig))
 
-    await spRegistry.addSigningKeysSP(stakingProviderId, numKeys, keys, sigs, { from: stakingProvider })
+    await spRegistry.addSigningKeysSP(nodeOperatorId, numKeys, keys, sigs, { from: nodeOperator })
 
-    const totalKeys = await spRegistry.getTotalSigningKeyCount(stakingProviderId, { from: nobody })
+    const totalKeys = await spRegistry.getTotalSigningKeyCount(nodeOperatorId, { from: nobody })
     assertBn(totalKeys, numKeys, 'total signing keys')
   })
 

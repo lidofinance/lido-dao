@@ -60,11 +60,11 @@ contract('Lido: happy path', (addresses) => {
   // 20% goes to the insurance fund
   const insuranceFeePoints = 0.2 * 10000
   // 50% goes to staking providers
-  const stakingProvidersFeePoints = 0.5 * 10000
+  const nodeOperatorsFeePoints = 0.5 * 10000
 
   it('voting sets fee and its distribution', async () => {
     await pool.setFee(totalFeePoints, { from: voting })
-    await pool.setFeeDistribution(treasuryFeePoints, insuranceFeePoints, stakingProvidersFeePoints, { from: voting })
+    await pool.setFeeDistribution(treasuryFeePoints, insuranceFeePoints, nodeOperatorsFeePoints, { from: voting })
 
     // Fee and distribution were set
 
@@ -73,7 +73,7 @@ contract('Lido: happy path', (addresses) => {
     const distribution = await pool.getFeeDistribution({ from: nobody })
     assertBn(distribution.treasuryFeeBasisPoints, treasuryFeePoints, 'treasury fee')
     assertBn(distribution.insuranceFeeBasisPoints, insuranceFeePoints, 'insurance fee')
-    assertBn(distribution.SPFeeBasisPoints, stakingProvidersFeePoints, 'staking providers fee')
+    assertBn(distribution.SPFeeBasisPoints, nodeOperatorsFeePoints, 'staking providers fee')
   })
 
   const withdrawalCredentials = pad('0x0202', 32)
@@ -88,7 +88,7 @@ contract('Lido: happy path', (addresses) => {
 
   // Each staking provider has its Ethereum 1 address, a name and a set of registered
   // validators, each of them defined as a (public key, signature) pair
-  const stakingProvider1 = {
+  const nodeOperator1 = {
     name: 'SP-1',
     address: sp1,
     validators: [
@@ -103,11 +103,11 @@ contract('Lido: happy path', (addresses) => {
     // How many validators can this staking provider register
     const validatorsLimit = 1000000000
 
-    const spTx = await spRegistry.addNodeOperator(stakingProvider1.name, stakingProvider1.address, validatorsLimit, { from: voting })
+    const spTx = await spRegistry.addNodeOperator(nodeOperator1.name, nodeOperator1.address, validatorsLimit, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
-    stakingProvider1.id = getEventArgument(spTx, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
-    assertBn(stakingProvider1.id, 0, 'SP id')
+    nodeOperator1.id = getEventArgument(spTx, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
+    assertBn(nodeOperator1.id, 0, 'SP id')
 
     assertBn(await spRegistry.getNodeOperatorsCount(), 1, 'total staking providers')
   })
@@ -115,24 +115,18 @@ contract('Lido: happy path', (addresses) => {
   it('the first staking provider registers one validator', async () => {
     const numKeys = 1
 
-    await spRegistry.addSigningKeysSP(
-      stakingProvider1.id,
-      numKeys,
-      stakingProvider1.validators[0].key,
-      stakingProvider1.validators[0].sig,
-      {
-        from: stakingProvider1.address
-      }
-    )
+    await spRegistry.addSigningKeysSP(nodeOperator1.id, numKeys, nodeOperator1.validators[0].key, nodeOperator1.validators[0].sig, {
+      from: nodeOperator1.address
+    })
 
     // The key was added
 
-    const totalKeys = await spRegistry.getTotalSigningKeyCount(stakingProvider1.id, { from: nobody })
+    const totalKeys = await spRegistry.getTotalSigningKeyCount(nodeOperator1.id, { from: nobody })
     assertBn(totalKeys, 1, 'total signing keys')
 
     // The key was not used yet
 
-    const unusedKeys = await spRegistry.getUnusedSigningKeyCount(stakingProvider1.id, { from: nobody })
+    const unusedKeys = await spRegistry.getUnusedSigningKeyCount(nodeOperator1.id, { from: nobody })
     assertBn(unusedKeys, 1, 'unused signing keys')
   })
 
@@ -170,9 +164,9 @@ contract('Lido: happy path', (addresses) => {
     assertBn(await validatorRegistrationMock.totalCalls(), 1)
 
     const regCall = await validatorRegistrationMock.calls.call(0)
-    assert.equal(regCall.pubkey, stakingProvider1.validators[0].key)
+    assert.equal(regCall.pubkey, nodeOperator1.validators[0].key)
     assert.equal(regCall.withdrawal_credentials, withdrawalCredentials)
-    assert.equal(regCall.signature, stakingProvider1.validators[0].sig)
+    assert.equal(regCall.signature, nodeOperator1.validators[0].sig)
     assertBn(regCall.value, ETH(32))
 
     const ether2Stat = await pool.getEther2Stat()
@@ -193,11 +187,11 @@ contract('Lido: happy path', (addresses) => {
   })
 
   it('at this point, the pool has ran out of signing keys', async () => {
-    const unusedKeys = await spRegistry.getUnusedSigningKeyCount(stakingProvider1.id, { from: nobody })
+    const unusedKeys = await spRegistry.getUnusedSigningKeyCount(nodeOperator1.id, { from: nobody })
     assertBn(unusedKeys, 0, 'unused signing keys')
   })
 
-  const stakingProvider2 = {
+  const nodeOperator2 = {
     name: 'SP-2',
     address: sp2,
     validators: [
@@ -211,34 +205,28 @@ contract('Lido: happy path', (addresses) => {
   it('voting adds the second staking provider who registers one validator', async () => {
     const validatorsLimit = 1000000000
 
-    const spTx = await spRegistry.addNodeOperator(stakingProvider2.name, stakingProvider2.address, validatorsLimit, { from: voting })
+    const spTx = await spRegistry.addNodeOperator(nodeOperator2.name, nodeOperator2.address, validatorsLimit, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
-    stakingProvider2.id = getEventArgument(spTx, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
-    assertBn(stakingProvider2.id, 1, 'SP id')
+    nodeOperator2.id = getEventArgument(spTx, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
+    assertBn(nodeOperator2.id, 1, 'SP id')
 
     assertBn(await spRegistry.getNodeOperatorsCount(), 2, 'total staking providers')
 
     const numKeys = 1
 
-    await spRegistry.addSigningKeysSP(
-      stakingProvider2.id,
-      numKeys,
-      stakingProvider2.validators[0].key,
-      stakingProvider2.validators[0].sig,
-      {
-        from: stakingProvider2.address
-      }
-    )
+    await spRegistry.addSigningKeysSP(nodeOperator2.id, numKeys, nodeOperator2.validators[0].key, nodeOperator2.validators[0].sig, {
+      from: nodeOperator2.address
+    })
 
     // The key was added
 
-    const totalKeys = await spRegistry.getTotalSigningKeyCount(stakingProvider2.id, { from: nobody })
+    const totalKeys = await spRegistry.getTotalSigningKeyCount(nodeOperator2.id, { from: nobody })
     assertBn(totalKeys, 1, 'total signing keys')
 
     // The key was not used yet
 
-    const unusedKeys = await spRegistry.getUnusedSigningKeyCount(stakingProvider2.id, { from: nobody })
+    const unusedKeys = await spRegistry.getUnusedSigningKeyCount(nodeOperator2.id, { from: nobody })
     assertBn(unusedKeys, 1, 'unused signing keys')
   })
 
@@ -252,9 +240,9 @@ contract('Lido: happy path', (addresses) => {
     assertBn(await validatorRegistrationMock.totalCalls(), 2)
 
     const regCall = await validatorRegistrationMock.calls.call(1)
-    assert.equal(regCall.pubkey, stakingProvider2.validators[0].key)
+    assert.equal(regCall.pubkey, nodeOperator2.validators[0].key)
     assert.equal(regCall.withdrawal_credentials, withdrawalCredentials)
-    assert.equal(regCall.signature, stakingProvider2.validators[0].sig)
+    assert.equal(regCall.signature, nodeOperator2.validators[0].sig)
     assertBn(regCall.value, ETH(32))
 
     const ether2Stat = await pool.getEther2Stat()
@@ -340,8 +328,8 @@ contract('Lido: happy path', (addresses) => {
     // In our case, both staking providers received the same fee since they have the same
     // effective stake (one signing key used from each SP, staking 32 ETH)
 
-    assertBn(await token.balanceOf(stakingProvider1.address), new BN('79900898110870236'), 'SP-1 tokens')
-    assertBn(await token.balanceOf(stakingProvider2.address), new BN('79900898110870236'), 'SP-2 tokens')
+    assertBn(await token.balanceOf(nodeOperator1.address), new BN('79900898110870236'), 'SP-1 tokens')
+    assertBn(await token.balanceOf(nodeOperator2.address), new BN('79900898110870236'), 'SP-2 tokens')
 
     // Real minted amount should be a bit less than calculated caused by round errors on mint and transfer operations
     assert(
@@ -350,8 +338,8 @@ contract('Lido: happy path', (addresses) => {
           new BN(0)
             .add(await token.balanceOf(treasuryAddr))
             .add(await token.balanceOf(insuranceAddr))
-            .add(await token.balanceOf(stakingProvider1.address))
-            .add(await token.balanceOf(stakingProvider2.address))
+            .add(await token.balanceOf(nodeOperator1.address))
+            .add(await token.balanceOf(nodeOperator2.address))
             .add(await token.balanceOf(spRegistry.address))
         )
         .lt(mintedAmount.divn(100))

@@ -13,7 +13,7 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
     // the address which we use to simulate the voting DAO application
     voting,
     // staking providers
-    stakingProvider,
+    nodeOperator,
     // users who deposit Ether to the pool
     user1,
     user2,
@@ -50,8 +50,8 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
     const numKeys = 3
 
     for (let iProvider = 0; iProvider < numProviders; ++iProvider) {
-      const spTx = await spRegistry.addNodeOperator(`SP-${iProvider}`, stakingProvider, spValidatorsLimit, { from: voting })
-      const stakingProviderId = getEventArgument(spTx, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
+      const spTx = await spRegistry.addNodeOperator(`SP-${iProvider}`, nodeOperator, spValidatorsLimit, { from: voting })
+      const nodeOperatorId = getEventArgument(spTx, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
 
       const data = Array.from({ length: numKeys }, (_, iKey) => {
         const n = arbitraryN.clone().addn(10 * iKey + 1000 * iProvider)
@@ -64,9 +64,9 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
       const keys = hexConcat(...data.map((v) => v.key))
       const sigs = hexConcat(...data.map((v) => v.sig))
 
-      await spRegistry.addSigningKeys(stakingProviderId, numKeys, keys, sigs, { from: voting })
+      await spRegistry.addSigningKeys(nodeOperatorId, numKeys, keys, sigs, { from: voting })
 
-      const totalKeys = await spRegistry.getTotalSigningKeyCount(stakingProviderId, { from: nobody })
+      const totalKeys = await spRegistry.getTotalSigningKeyCount(nodeOperatorId, { from: nobody })
       assertBn(totalKeys, numKeys, 'total signing keys')
 
       validatorData.push.apply(validatorData, data)
