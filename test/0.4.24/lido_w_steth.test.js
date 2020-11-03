@@ -174,7 +174,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, s
 
       context('oracle reported 30 ETH (2 ETH lost due slashing)', async () => {
         beforeEach(async function () {
-          /* Let's assume staking provider forgot to run validator or misconfigured it. The validator
+          /* Let's assume node operator forgot to run validator or misconfigured it. The validator
           was a subject to slashing and lost 2 Ether of 32.
           */
           await oracle.reportEther2(100, ETH(30))

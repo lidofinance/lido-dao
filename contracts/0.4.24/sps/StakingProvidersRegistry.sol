@@ -12,7 +12,7 @@ import "../interfaces/INodeOperatorsRegistry.sol";
 
 
 /**
-  * @title Staking provider registry implementation
+  * @title Node Operator registry implementation
   *
   * See the comment of `INodeOperatorsRegistry`.
   *
@@ -39,7 +39,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     bytes32 internal constant SIGNING_KEYS_MAPPING_NAME = keccak256("lido.Lido.signingKeys");
 
 
-    /// @dev Staking provider parameters and internal state
+    /// @dev Node Operator parameters and internal state
     struct NodeOperator {
         bool active;    // a flag indicating if the SP can participate in further staking and reward distribution
         address rewardAddress;  // Ethereum 1 address which receives steth rewards for this SP
@@ -94,7 +94,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     /**
-      * @notice Add staking provider named `name` with reward address `rewardAddress` and staking limit `stakingLimit` validators
+      * @notice Add node operator named `name` with reward address `rewardAddress` and staking limit `stakingLimit` validators
       * @param _name Human-readable name
       * @param _rewardAddress Ethereum 1 address which receives stETH rewards for this SP
       * @param _stakingLimit the maximum number of validators to stake for this SP
@@ -118,7 +118,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     /**
-      * @notice `_active ? 'Enable' : 'Disable'` the staking provider #`_id`
+      * @notice `_active ? 'Enable' : 'Disable'` the node operator #`_id`
       */
     function setNodeOperatorActive(uint256 _id, bool _active) external
         authP(SET_STAKING_PROVIDER_ACTIVE_ROLE, arr(_id, _active ? uint256(1) : uint256(0)))
@@ -137,7 +137,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     /**
-      * @notice Change human-readable name of the staking provider #`_id` to `_name`
+      * @notice Change human-readable name of the node operator #`_id` to `_name`
       */
     function setNodeOperatorName(uint256 _id, string _name) external
         authP(SET_STAKING_PROVIDER_NAME_ROLE, arr(_id))
@@ -148,7 +148,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     /**
-      * @notice Change reward address of the staking provider #`_id` to `_rewardAddress`
+      * @notice Change reward address of the node operator #`_id` to `_rewardAddress`
       */
     function setNodeOperatorRewardAddress(uint256 _id, address _rewardAddress) external
         authP(SET_STAKING_PROVIDER_ADDRESS_ROLE, arr(_id, uint256(_rewardAddress)))
@@ -160,7 +160,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     /**
-      * @notice Set the maximum number of validators to stake for the staking provider #`_id` to `_stakingLimit`
+      * @notice Set the maximum number of validators to stake for the node operator #`_id` to `_stakingLimit`
       */
     function setNodeOperatorStakingLimit(uint256 _id, uint64 _stakingLimit) external
         authP(SET_STAKING_PROVIDER_LIMIT_ROLE, arr(_id, uint256(_stakingLimit)))
@@ -171,7 +171,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     /**
-      * @notice Report `_stoppedIncrement` more stopped validators of the staking provider #`_id`
+      * @notice Report `_stoppedIncrement` more stopped validators of the node operator #`_id`
       */
     function reportStoppedValidators(uint256 _id, uint64 _stoppedIncrement) external
         authP(REPORT_STOPPED_VALIDATORS_ROLE, arr(_id, uint256(_stoppedIncrement)))
@@ -187,7 +187,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     /**
       * @notice Update used key counts
       * @dev Function is used by the pool
-      * @param _ids Array of staking provider ids
+      * @param _ids Array of node operator ids
       * @param _usedSigningKeys Array of corresponding used key counts (the same length as _ids)
       */
     function updateUsedKeys(uint256[] _ids, uint64[] _usedSigningKeys) external onlyPool {
@@ -227,7 +227,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       *      (pubkey, withdrawal_credentials, 32000000000) message.
       *      Given that information, the contract'll be able to call
       *      validator_registration.deposit on-chain.
-      * @param _SP_id Staking provider id
+      * @param _SP_id Node Operator id
       * @param _quantity Number of signing keys provided
       * @param _pubkeys Several concatenated validator signing keys
       * @param _signatures Several concatenated signatures for (pubkey, withdrawal_credentials, 32000000000) messages
@@ -239,12 +239,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     /**
-      * @notice Add `_quantity` validator signing keys to the set of usable keys. Concatenated keys are: `_pubkeys`. Can be done by staking provider in question by using the designated rewards address.
+      * @notice Add `_quantity` validator signing keys to the set of usable keys. Concatenated keys are: `_pubkeys`. Can be done by node operator in question by using the designated rewards address.
       * @dev Along with each key the DAO has to provide a signatures for the
       *      (pubkey, withdrawal_credentials, 32000000000) message.
       *      Given that information, the contract'll be able to call
       *      validator_registration.deposit on-chain.
-      * @param _SP_id Staking provider id
+      * @param _SP_id Node Operator id
       * @param _quantity Number of signing keys provided
       * @param _pubkeys Several concatenated validator signing keys
       * @param _signatures Several concatenated signatures for (pubkey, withdrawal_credentials, 32000000000) messages
@@ -263,7 +263,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
     /**
       * @notice Removes a validator signing key #`_index` from the set of usable keys. Executed on behalf of DAO.
-      * @param _SP_id Staking provider id
+      * @param _SP_id Node Operator id
       * @param _index Index of the key, starting with 0
       */
     function removeSigningKey(uint256 _SP_id, uint256 _index)
@@ -274,8 +274,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     /**
-      * @notice Removes a validator signing key #`_index` from the set of usable keys. Executed on behalf of Staking Provider.
-      * @param _SP_id Staking provider id
+      * @notice Removes a validator signing key #`_index` from the set of usable keys. Executed on behalf of Node Operator.
+      * @param _SP_id Node Operator id
       * @param _index Index of the key, starting with 0
       */
     function removeSigningKeySP(uint256 _SP_id, uint256 _index) external {
@@ -330,8 +330,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     /**
-      * @notice Returns the n-th staking provider
-      * @param _id Staking provider id
+      * @notice Returns the n-th node operator
+      * @param _id Node Operator id
       * @param _fullInfo If true, name will be returned as well
       */
     function getNodeOperator(uint256 _id, bool _fullInfo) external view
@@ -359,22 +359,22 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     /**
-      * @notice Returns total number of signing keys of the staking provider #`_SP_id`
+      * @notice Returns total number of signing keys of the node operator #`_SP_id`
       */
     function getTotalSigningKeyCount(uint256 _SP_id) external view SPExists(_SP_id) returns (uint256) {
         return sps[_SP_id].totalSigningKeys;
     }
 
     /**
-      * @notice Returns number of usable signing keys of the staking provider #`_SP_id`
+      * @notice Returns number of usable signing keys of the node operator #`_SP_id`
       */
     function getUnusedSigningKeyCount(uint256 _SP_id) external view SPExists(_SP_id) returns (uint256) {
         return sps[_SP_id].totalSigningKeys.sub(sps[_SP_id].usedSigningKeys);
     }
 
     /**
-      * @notice Returns n-th signing key of the staking provider #`_SP_id`
-      * @param _SP_id Staking provider id
+      * @notice Returns n-th signing key of the node operator #`_SP_id`
+      * @param _SP_id Node Operator id
       * @param _index Index of the key, starting with 0
       * @return key Key
       * @return depositSignature Signature needed for a validator_registration.deposit call

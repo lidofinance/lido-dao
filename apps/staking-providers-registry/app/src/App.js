@@ -34,7 +34,7 @@ function App() {
 
   const theme = useTheme()
 
-  // ADD STAKING PROVIDER
+  // ADD NODE OPERATOR
   const [AddSPSidePanelOpen, setAddSPSidePanelOpen] = useState(false)
   const openAddSPSidePanel = useCallback(() => setAddSPSidePanelOpen(true), [])
   const closeAddSPSidePanel = useCallback(
@@ -142,7 +142,7 @@ function App() {
         primary={
           <DataView
             fields={[
-              'Staking Provider',
+              'Node Operator',
               'Address',
               'Staking Limit',
               'Total / Used / Stopped',

@@ -181,13 +181,13 @@ Address of the pool contract.
   * Permission required: `SET_STAKING_PROVIDER_LIMIT_ROLE`
 
 Node Operators act as validators on the Beacon chain for the benefit of the protocol. Each
-staking provider submits no more than `_stakingLimit` signing keys that will be used later
+node operator submits no more than `_stakingLimit` signing keys that will be used later
 by the pool for registering the corresponding ETH 2.0 validators. As oracle committee
 reports rewards on the ETH 2.0 side, the fee is taken on these rewards, and part of that fee
 is sent to node operators’ reward addresses (`_rewardAddress`).
 
 
-### Deactivating a staking provider
+### Deactivating a node operator
 
 * Mutator: `setNodeOperatorActive(uint256 _id, bool _active)`
   * Permission required: `SET_STAKING_PROVIDER_ACTIVE_ROLE`
@@ -197,14 +197,14 @@ deactivated providers during validator registration; also, deactivated providers
 take part in fee distribution.
 
 
-### Managing staking provider’s signing keys
+### Managing node operator’s signing keys
 
 * Mutator: `addSigningKeys(uint256 _SP_id, uint256 _quantity, bytes _pubkeys, bytes _signatures)`
   * Permission required: `MANAGE_SIGNING_KEYS`
 * Mutator: `removeSigningKey(uint256 _SP_id, uint256 _index)`
   * Permission required: `MANAGE_SIGNING_KEYS`
 
-Allow to manage signing keys for the given staking provider.
+Allow to manage signing keys for the given node operator.
 
 > Signing keys can also be managed by the reward address of a signing provier by calling
 > the equivalent functions with the `SP` suffix: `addSigningKeysSP`, `removeSigningKeySP`.
@@ -215,7 +215,7 @@ Allow to manage signing keys for the given staking provider.
 * Mutator: `reportStoppedValidators(uint256 _id, uint64 _stoppedIncrement)`
   * Permission required: `REPORT_STOPPED_VALIDATORS_ROLE`
 
-Allows to report that `_stoppedIncrement` more validators of a staking provider have become stopped.
+Allows to report that `_stoppedIncrement` more validators of a node operator have become stopped.
 
 
 ## [LidoOracle.sol](/contracts/0.4.24/oracle/LidoOracle.sol)
