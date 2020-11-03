@@ -165,11 +165,11 @@ contract LidoTemplate is BaseTemplate {
 
         // NodeOperatorsRegistry
         acl.createPermission(voting, sps, sps.MANAGE_SIGNING_KEYS(), voting);
-        acl.createPermission(voting, sps, sps.ADD_STAKING_PROVIDER_ROLE(), voting);
-        acl.createPermission(voting, sps, sps.SET_STAKING_PROVIDER_ACTIVE_ROLE(), voting);
-        acl.createPermission(voting, sps, sps.SET_STAKING_PROVIDER_NAME_ROLE(), voting);
-        acl.createPermission(voting, sps, sps.SET_STAKING_PROVIDER_ADDRESS_ROLE(), voting);
-        acl.createPermission(voting, sps, sps.SET_STAKING_PROVIDER_LIMIT_ROLE(), voting);
+        acl.createPermission(voting, sps, sps.ADD_NODE_OPERATOR_ROLE(), voting);
+        acl.createPermission(voting, sps, sps.SET_NODE_OPERATOR_ACTIVE_ROLE(), voting);
+        acl.createPermission(voting, sps, sps.SET_NODE_OPERATOR_NAME_ROLE(), voting);
+        acl.createPermission(voting, sps, sps.SET_NODE_OPERATOR_ADDRESS_ROLE(), voting);
+        acl.createPermission(voting, sps, sps.SET_NODE_OPERATOR_LIMIT_ROLE(), voting);
         acl.createPermission(voting, sps, sps.REPORT_STOPPED_VALIDATORS_ROLE(), voting);
         acl.createPermission(voting, sps, sps.SET_POOL(), voting);
 

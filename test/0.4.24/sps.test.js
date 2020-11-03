@@ -48,11 +48,11 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     // Set up the app's permissions.
     await acl.createPermission(voting, app.address, await app.SET_POOL(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.MANAGE_SIGNING_KEYS(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.ADD_STAKING_PROVIDER_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.SET_STAKING_PROVIDER_ACTIVE_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.SET_STAKING_PROVIDER_NAME_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.SET_STAKING_PROVIDER_ADDRESS_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.SET_STAKING_PROVIDER_LIMIT_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, app.address, await app.ADD_NODE_OPERATOR_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, app.address, await app.SET_NODE_OPERATOR_ACTIVE_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, app.address, await app.SET_NODE_OPERATOR_NAME_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, app.address, await app.SET_NODE_OPERATOR_ADDRESS_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, app.address, await app.SET_NODE_OPERATOR_LIMIT_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.REPORT_STOPPED_VALIDATORS_ROLE(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
@@ -105,7 +105,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     assert.equal(sp.name, '')
     assert.equal(sp.rewardAddress, ADDRESS_2)
 
-    await assertRevert(app.getNodeOperator(10, false), 'STAKING_PROVIDER_NOT_FOUND')
+    await assertRevert(app.getNodeOperator(10, false), 'NODE_OPERATOR_NOT_FOUND')
   })
 
   it('setNodeOperatorActive works', async () => {
@@ -151,7 +151,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     assert.equal((await app.getNodeOperator(0, false)).active, true)
     assertBn(await app.getActiveNodeOperatorsCount({ from: nobody }), 1)
 
-    await assertRevert(app.setNodeOperatorActive(10, false, { from: voting }), 'STAKING_PROVIDER_NOT_FOUND')
+    await assertRevert(app.setNodeOperatorActive(10, false, { from: voting }), 'NODE_OPERATOR_NOT_FOUND')
   })
 
   it('setNodeOperatorName works', async () => {
@@ -169,7 +169,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     assert.equal((await app.getNodeOperator(0, true)).name, 'zzz')
     assert.equal((await app.getNodeOperator(1, true)).name, ' bar')
 
-    await assertRevert(app.setNodeOperatorName(10, 'foo', { from: voting }), 'STAKING_PROVIDER_NOT_FOUND')
+    await assertRevert(app.setNodeOperatorName(10, 'foo', { from: voting }), 'NODE_OPERATOR_NOT_FOUND')
   })
 
   it('setNodeOperatorRewardAddress works', async () => {
@@ -187,7 +187,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     assert.equal((await app.getNodeOperator(0, false)).rewardAddress, ADDRESS_4)
     assert.equal((await app.getNodeOperator(1, false)).rewardAddress, ADDRESS_2)
 
-    await assertRevert(app.setNodeOperatorRewardAddress(10, ADDRESS_4, { from: voting }), 'STAKING_PROVIDER_NOT_FOUND')
+    await assertRevert(app.setNodeOperatorRewardAddress(10, ADDRESS_4, { from: voting }), 'NODE_OPERATOR_NOT_FOUND')
   })
 
   it('setNodeOperatorStakingLimit works', async () => {
@@ -205,7 +205,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     assertBn((await app.getNodeOperator(0, false)).stakingLimit, 40)
     assertBn((await app.getNodeOperator(1, false)).stakingLimit, UNLIMITED)
 
-    await assertRevert(app.setNodeOperatorStakingLimit(10, 40, { from: voting }), 'STAKING_PROVIDER_NOT_FOUND')
+    await assertRevert(app.setNodeOperatorStakingLimit(10, 40, { from: voting }), 'NODE_OPERATOR_NOT_FOUND')
   })
 
   it('reportStoppedValidators works', async () => {
@@ -247,7 +247,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await assertRevert(app.reportStoppedValidators(0, 1, { from: voting }), 'STOPPED_MORE_THAN_LAUNCHED')
     await assertRevert(app.reportStoppedValidators(1, 12, { from: voting }), 'STOPPED_MORE_THAN_LAUNCHED')
 
-    await assertRevert(app.reportStoppedValidators(10, 1, { from: voting }), 'STAKING_PROVIDER_NOT_FOUND')
+    await assertRevert(app.reportStoppedValidators(10, 1, { from: voting }), 'NODE_OPERATOR_NOT_FOUND')
   })
 
   it('updateUsedKeys works', async () => {
@@ -276,7 +276,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     assertBn(await app.getUnusedSigningKeyCount(0, { from: nobody }), 1)
     assertBn(await app.getUnusedSigningKeyCount(1, { from: nobody }), 0)
 
-    await assertRevert(pool.updateUsedKeys([10], [1]), 'STAKING_PROVIDER_NOT_FOUND')
+    await assertRevert(pool.updateUsedKeys([10], [1]), 'NODE_OPERATOR_NOT_FOUND')
     await assertRevert(pool.updateUsedKeys([1], [3]), 'INCONSISTENCY')
     await assertRevert(pool.updateUsedKeys([1], [2, 2, 2]), 'BAD_LENGTH')
     await assertRevert(pool.updateUsedKeys([1], [0]), 'USED_KEYS_DECREASED')
@@ -334,7 +334,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     // to the second SP
     await app.addSigningKeys(1, 1, pad('0x070707', 48), pad('0x01', 96), { from: voting })
-    await assertRevert(app.addSigningKeys(2, 1, pad('0x080808', 48), pad('0x01', 96), { from: voting }), 'STAKING_PROVIDER_NOT_FOUND')
+    await assertRevert(app.addSigningKeys(2, 1, pad('0x080808', 48), pad('0x01', 96), { from: voting }), 'NODE_OPERATOR_NOT_FOUND')
 
     assertBn(await app.getTotalSigningKeyCount(0, { from: nobody }), 3)
     assertBn(await app.getTotalSigningKeyCount(1, { from: nobody }), 1)
@@ -427,8 +427,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     assert.equal((await app.getSigningKey(0, 0, { from: nobody })).key, pad('0x010203', 48))
     assert.equal((await app.getSigningKey(0, 1, { from: nobody })).key, pad('0x050505', 48))
 
-    await assertRevert(app.getTotalSigningKeyCount(2, { from: nobody }), 'STAKING_PROVIDER_NOT_FOUND')
-    await assertRevert(app.getUnusedSigningKeyCount(2, { from: nobody }), 'STAKING_PROVIDER_NOT_FOUND')
+    await assertRevert(app.getTotalSigningKeyCount(2, { from: nobody }), 'NODE_OPERATOR_NOT_FOUND')
+    await assertRevert(app.getUnusedSigningKeyCount(2, { from: nobody }), 'NODE_OPERATOR_NOT_FOUND')
   })
 
   it('removeSigningKey works', async () => {

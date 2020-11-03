@@ -9,12 +9,12 @@
     },
     {
       "name": "Add node operators",
-      "id": "ADD_STAKING_PROVIDER_ROLE",
+      "id": "ADD_NODE_OPERATOR_ROLE",
       "params": []
     },
     {
       "name": "Activate/deactivate node operators",
-      "id": "SET_STAKING_PROVIDER_ACTIVE_ROLE",
+      "id": "SET_NODE_OPERATOR_ACTIVE_ROLE",
       "params": [
          "Node Operator id",
          "New state"
@@ -22,14 +22,14 @@
     },
     {
       "name": "Set name of a node operator",
-      "id": "SET_STAKING_PROVIDER_NAME_ROLE",
+      "id": "SET_NODE_OPERATOR_NAME_ROLE",
       "params": [
          "Node Operator id"
       ]
     },
     {
       "name": "Set rewards address of a node operator",
-      "id": "SET_STAKING_PROVIDER_ADDRESS_ROLE",
+      "id": "SET_NODE_OPERATOR_ADDRESS_ROLE",
       "params": [
          "Node Operator id",
          "New rewards address"
@@ -37,7 +37,7 @@
     },
     {
       "name": "Set staking limit of a node operator",
-      "id": "SET_STAKING_PROVIDER_LIMIT_ROLE",
+      "id": "SET_NODE_OPERATOR_LIMIT_ROLE",
       "params": [
          "Node Operator id",
          "New validators limit value"

@@ -26,11 +26,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     /// ACL
     bytes32 constant public SET_POOL = keccak256("SET_POOL");
     bytes32 constant public MANAGE_SIGNING_KEYS = keccak256("MANAGE_SIGNING_KEYS");
-    bytes32 constant public ADD_STAKING_PROVIDER_ROLE = keccak256("ADD_STAKING_PROVIDER_ROLE");
-    bytes32 constant public SET_STAKING_PROVIDER_ACTIVE_ROLE = keccak256("SET_STAKING_PROVIDER_ACTIVE_ROLE");
-    bytes32 constant public SET_STAKING_PROVIDER_NAME_ROLE = keccak256("SET_STAKING_PROVIDER_NAME_ROLE");
-    bytes32 constant public SET_STAKING_PROVIDER_ADDRESS_ROLE = keccak256("SET_STAKING_PROVIDER_ADDRESS_ROLE");
-    bytes32 constant public SET_STAKING_PROVIDER_LIMIT_ROLE = keccak256("SET_STAKING_PROVIDER_LIMIT_ROLE");
+    bytes32 constant public ADD_NODE_OPERATOR_ROLE = keccak256("ADD_NODE_OPERATOR_ROLE");
+    bytes32 constant public SET_NODE_OPERATOR_ACTIVE_ROLE = keccak256("SET_NODE_OPERATOR_ACTIVE_ROLE");
+    bytes32 constant public SET_NODE_OPERATOR_NAME_ROLE = keccak256("SET_NODE_OPERATOR_NAME_ROLE");
+    bytes32 constant public SET_NODE_OPERATOR_ADDRESS_ROLE = keccak256("SET_NODE_OPERATOR_ADDRESS_ROLE");
+    bytes32 constant public SET_NODE_OPERATOR_LIMIT_ROLE = keccak256("SET_NODE_OPERATOR_LIMIT_ROLE");
     bytes32 constant public REPORT_STOPPED_VALIDATORS_ROLE = keccak256("REPORT_STOPPED_VALIDATORS_ROLE");
 
     uint256 constant public PUBKEY_LENGTH = 48;
@@ -75,7 +75,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     modifier SPExists(uint256 _id) {
-        require(_id < totalSPCount, "STAKING_PROVIDER_NOT_FOUND");
+        require(_id < totalSPCount, "NODE_OPERATOR_NOT_FOUND");
         _;
     }
 
@@ -101,7 +101,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       * @return a unique key of the added SP
       */
     function addNodeOperator(string _name, address _rewardAddress, uint64 _stakingLimit) external
-        auth(ADD_STAKING_PROVIDER_ROLE)
+        auth(ADD_NODE_OPERATOR_ROLE)
         validAddress(_rewardAddress)
         returns (uint256 id)
     {
@@ -121,7 +121,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       * @notice `_active ? 'Enable' : 'Disable'` the node operator #`_id`
       */
     function setNodeOperatorActive(uint256 _id, bool _active) external
-        authP(SET_STAKING_PROVIDER_ACTIVE_ROLE, arr(_id, _active ? uint256(1) : uint256(0)))
+        authP(SET_NODE_OPERATOR_ACTIVE_ROLE, arr(_id, _active ? uint256(1) : uint256(0)))
         SPExists(_id)
     {
         if (sps[_id].active != _active) {
@@ -140,7 +140,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       * @notice Change human-readable name of the node operator #`_id` to `_name`
       */
     function setNodeOperatorName(uint256 _id, string _name) external
-        authP(SET_STAKING_PROVIDER_NAME_ROLE, arr(_id))
+        authP(SET_NODE_OPERATOR_NAME_ROLE, arr(_id))
         SPExists(_id)
     {
         sps[_id].name = _name;
@@ -151,7 +151,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       * @notice Change reward address of the node operator #`_id` to `_rewardAddress`
       */
     function setNodeOperatorRewardAddress(uint256 _id, address _rewardAddress) external
-        authP(SET_STAKING_PROVIDER_ADDRESS_ROLE, arr(_id, uint256(_rewardAddress)))
+        authP(SET_NODE_OPERATOR_ADDRESS_ROLE, arr(_id, uint256(_rewardAddress)))
         SPExists(_id)
         validAddress(_rewardAddress)
     {
@@ -163,7 +163,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       * @notice Set the maximum number of validators to stake for the node operator #`_id` to `_stakingLimit`
       */
     function setNodeOperatorStakingLimit(uint256 _id, uint64 _stakingLimit) external
-        authP(SET_STAKING_PROVIDER_LIMIT_ROLE, arr(_id, uint256(_stakingLimit)))
+        authP(SET_NODE_OPERATOR_LIMIT_ROLE, arr(_id, uint256(_stakingLimit)))
         SPExists(_id)
     {
         sps[_id].stakingLimit = _stakingLimit;
@@ -193,7 +193,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     function updateUsedKeys(uint256[] _ids, uint64[] _usedSigningKeys) external onlyPool {
         require(_ids.length == _usedSigningKeys.length, "BAD_LENGTH");
         for (uint256 i = 0; i < _ids.length; ++i) {
-            require(_ids[i] < totalSPCount, "STAKING_PROVIDER_NOT_FOUND");
+            require(_ids[i] < totalSPCount, "NODE_OPERATOR_NOT_FOUND");
             NodeOperator storage sp = sps[_ids[i]];
 
             uint64 current = sp.usedSigningKeys;

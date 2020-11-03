@@ -172,13 +172,13 @@ Address of the pool contract.
 ### Node Operators list
 
 * Mutator: `addNodeOperator(string _name, address _rewardAddress, uint64 _stakingLimit)`
-  * Permission required: `ADD_STAKING_PROVIDER_ROLE`
+  * Permission required: `ADD_NODE_OPERATOR_ROLE`
 * Mutator: `setNodeOperatorName(uint256 _id, string _name)`
-  * Permission required: `SET_STAKING_PROVIDER_NAME_ROLE`
+  * Permission required: `SET_NODE_OPERATOR_NAME_ROLE`
 * Mutator: `setNodeOperatorRewardAddress(uint256 _id, address _rewardAddress)`
-  * Permission required: `SET_STAKING_PROVIDER_ADDRESS_ROLE`
+  * Permission required: `SET_NODE_OPERATOR_ADDRESS_ROLE`
 * Mutator: `setNodeOperatorStakingLimit(uint256 _id, uint64 _stakingLimit)`
-  * Permission required: `SET_STAKING_PROVIDER_LIMIT_ROLE`
+  * Permission required: `SET_NODE_OPERATOR_LIMIT_ROLE`
 
 Node Operators act as validators on the Beacon chain for the benefit of the protocol. Each
 node operator submits no more than `_stakingLimit` signing keys that will be used later
@@ -190,7 +190,7 @@ is sent to node operators’ reward addresses (`_rewardAddress`).
 ### Deactivating a node operator
 
 * Mutator: `setNodeOperatorActive(uint256 _id, bool _active)`
-  * Permission required: `SET_STAKING_PROVIDER_ACTIVE_ROLE`
+  * Permission required: `SET_NODE_OPERATOR_ACTIVE_ROLE`
 
 Misbehaving node operators can be deactivated by calling this function. The pool skips
 deactivated providers during validator registration; also, deactivated providers don’t

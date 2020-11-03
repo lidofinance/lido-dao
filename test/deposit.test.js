@@ -89,11 +89,11 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
 
     await acl.createPermission(voting, sps.address, await sps.SET_POOL(), appManager, { from: appManager })
     await acl.createPermission(voting, sps.address, await sps.MANAGE_SIGNING_KEYS(), appManager, { from: appManager })
-    await acl.createPermission(voting, sps.address, await sps.ADD_STAKING_PROVIDER_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, sps.address, await sps.SET_STAKING_PROVIDER_ACTIVE_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, sps.address, await sps.SET_STAKING_PROVIDER_NAME_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, sps.address, await sps.SET_STAKING_PROVIDER_ADDRESS_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, sps.address, await sps.SET_STAKING_PROVIDER_LIMIT_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, sps.address, await sps.ADD_NODE_OPERATOR_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, sps.address, await sps.SET_NODE_OPERATOR_ACTIVE_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, sps.address, await sps.SET_NODE_OPERATOR_NAME_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, sps.address, await sps.SET_NODE_OPERATOR_ADDRESS_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, sps.address, await sps.SET_NODE_OPERATOR_LIMIT_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, sps.address, await sps.REPORT_STOPPED_VALIDATORS_ROLE(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
