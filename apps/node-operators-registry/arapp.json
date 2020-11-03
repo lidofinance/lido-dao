@@ -80,5 +80,5 @@
     }
   },
   "appName": "node-operators-registry.lido.eth",
-  "path": "../../contracts/sps/NodeOperatorsRegistry.sol"
+  "path": "../../contracts/nos/NodeOperatorsRegistry.sol"
 }
