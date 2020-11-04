@@ -1,6 +1,5 @@
-
 const getAccounts = require('@aragon/os/scripts/helpers/get-accounts')
-const { getAllApps, getDaoAddress } = require( '@aragon/toolkit')
+const { getAllApps, getDaoAddress } = require('@aragon/toolkit')
 
 const { STETH_APP_ID } = require('./helpers/apps')
 const runOrWrapScript = require('./helpers/run-or-wrap-script')
@@ -10,7 +9,7 @@ const { errorOut } = require('./helpers')
 const globalArtifacts = this.artifacts || artifacts // Not injected unless called directly via truffle
 const globalWeb3 = this.web3 || web3 // Not injected unless called directly via truffle
 
-const daoName = 'lido-dao.aragonid.eth'
+const daoName = 'depool-dao.aragonid.eth'
 
 const defaultOwner = process.env.OWNER
 const defaultENSAddress = process.env.ENS || '0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1'
