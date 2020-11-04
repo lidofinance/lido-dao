@@ -348,7 +348,7 @@ async function getContractWithAddr(addr, web3, solcOutput, isDump, codeByAddr) {
     return result;
   }
 
-  if (!isDump) {
+  if (!isDump && codeByAddr) {
     codeByAddr[addressHexStr] = code;
   }
 
