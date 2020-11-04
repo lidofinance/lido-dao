@@ -4,6 +4,7 @@ const baseConfig = require('../buidler.config.js')
 
 module.exports = {
   ...baseConfig,
+  defaultNetwork: 'localhost',
   paths: {
     ...baseConfig.paths,
     root: '..',
