@@ -1,8 +1,7 @@
-const { getAllApps, getDaoAddress } = require('@aragon/toolkit')
-const { getAccounts, getLocalWeb3 } = require('./eth1Helper')
-const logger = require('./logger')
+import { getAllApps, getDaoAddress } from '@aragon/toolkit'
+import { getAccounts, getLocalWeb3 } from './eth1Helper'
 
-const {
+import {
   ensRegistry,
   daoName,
   DEPOOL_APP_ID,
@@ -14,11 +13,11 @@ const {
   TOKEN_MANAGER_APP_ID,
   AGENT_APP_ID,
   KERNEL_DEFAULT_ACL_APP_ID
-} = require('./constants')
+} from './constants'
 
 const findApp = (apps, id) => apps.find((app) => app.appId === id)
 
-const prepareContext = async (params) => {
+export const prepareContext = async (params) => {
   const web3 = await getLocalWeb3()
   // Retrieve web3 accounts.
   const accounts = await getAccounts(web3)
@@ -40,7 +39,6 @@ const prepareContext = async (params) => {
   return {
     web3,
     accounts,
-    logger,
     ens: ensRegistry,
     dao: {
       name: daoName,
@@ -59,4 +57,3 @@ const prepareContext = async (params) => {
     }
   }
 }
-exports.prepareContext = prepareContext

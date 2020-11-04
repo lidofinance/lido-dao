@@ -1,31 +1,28 @@
-require('dotenv').config()
-
-const { prepareContext } = require('./helpers')
-const logger = require('./helpers/logger')
-const { loadGeneratedValidatorsData, objHexlify } = require('./helpers/utils')
-const depositContractHelper = require('./helpers/apps/depositContractHelper')
-
-const args = process.argv.slice(2)
-const dir = args[0]
+import { prepareContext } from './helpers'
+import logger from './helpers/logger'
+import { loadGeneratedValidatorsData, objHexlify } from './helpers/utils'
+import { sendTransaction } from './helpers/eth1Helper'
+import { init, deposit } from './helpers/apps/depositContractHelper'
 
 const main = async () => {
-  if (!dir) {
-    throw new Error('Validator keys dir not specified')
-  }
-  logger.info(`Reading deposit data from: ${dir}`)
+  logger.info(`Reading mock validators deposit data`)
   const context = await prepareContext()
   const { web3, accounts } = context
-  depositContractHelper.init(context)
-  const data = await loadGeneratedValidatorsData(dir)
+  init(context)
+  const donators = accounts.slice(5)
+  const data = await loadGeneratedValidatorsData('mock_validators')
 
-  return await Promise.all(data.map((d, i) => depositContractHelper.deposit(accounts[i], web3.utils.toWei('32', 'ether'), objHexlify(d))))
+  const receipts = await Promise.all(data.map((d, i) => deposit(donators[i], web3.utils.toWei('32', 'ether'), objHexlify(d))))
+  receipts.forEach((r) => {
+    logger.info(`Validator ${r.events.DepositEvent.returnValues.pubkey} deposited, txHash: ${r.transactionHash}`)
+  })
+
+  logger.info(`Send stub tx`)
+  return await sendTransaction(web3, donators[0], donators[0], 0)
 }
 
 main()
-  .then((receipts) => {
-    receipts.forEach((r) => {
-      logger.info(`Validator ${r.events.DepositEvent.returnValues.pubkey} deposited, txHash: ${r.transactionHash}`)
-    })
+  .then(() => {
     process.exit(0)
   })
   .catch((e) => {

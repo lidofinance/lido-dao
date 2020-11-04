@@ -4,30 +4,30 @@ import { encodeCallScript } from '@aragon/contract-helpers-test/src/aragon-os'
 import * as eth1Helper from '../eth1Helper'
 import { BN } from '../utils'
 import { TREASURY_FEE, INSURANCE_FEE, ZERO_ADDRESS } from '../constants'
+import logger from '../logger'
 
 let context
-let dePoolContract
+export let dePoolContract
 let web3
-let logger
 
-function init(c) {
+export function init(c) {
   if (!context) {
     context = c
     web3 = context.web3
     dePoolContract = new web3.eth.Contract(DePoolAbi, getProxyAddress())
     voteInit(context)
-    logger = context.logger
   }
 }
-function getProxyAddress() {
+
+export function getProxyAddress() {
   return context.apps.dePoolApp.proxyAddress
 }
 
-async function hasInitialized() {
+export async function hasInitialized() {
   return await dePoolContract.methods.hasInitialized().call()
 }
 
-async function setWithdrawalCredentials(withdrawalCredentials, holder, holders) {
+export async function setWithdrawalCredentials(withdrawalCredentials, holder, holders) {
   const callData1 = encodeCallScript([
     {
       to: getProxyAddress(),
@@ -35,10 +35,10 @@ async function setWithdrawalCredentials(withdrawalCredentials, holder, holders) 
     }
   ])
   const voteId = await createVote(callData1, holder, 'Set withdrawal credentials')
-  await voteForAction(voteId, holders, 'Set withdrawal credentials')
+  return await voteForAction(voteId, holders, 'Set withdrawal credentials')
 }
 
-async function setFee(fee, holder, holders) {
+export async function setFee(fee, holder, holders) {
   const callData1 = encodeCallScript([
     {
       to: getProxyAddress(),
@@ -49,7 +49,7 @@ async function setFee(fee, holder, holders) {
   await voteForAction(voteId, holders, 'setFee')
 }
 
-async function setFeeDistribution(treasuryFee, insuranceFee, SPFee, holder, holders) {
+export async function setFeeDistribution(treasuryFee, insuranceFee, SPFee, holder, holders) {
   const callData1 = encodeCallScript([
     {
       to: getProxyAddress(),
@@ -60,84 +60,85 @@ async function setFeeDistribution(treasuryFee, insuranceFee, SPFee, holder, hold
   await voteForAction(voteId, holders, 'setFeeDistribution')
 }
 
-function getDepositIterationLimit() {
+export function getDepositIterationLimit() {
   return dePoolContract.methods.getDepositIterationLimit().call()
 }
 
-function getWithdrawalCredentials() {
-  return dePoolContract.methods.getWithdrawalCredentials().call()
+export async function addSigningKeys(validatorsTestData, holder, count, holders) {
+  const validatorsPubKeys = validatorsTestData.pubKey
+  const validatorsSignatures = validatorsTestData.signature
+  const callData1 = encodeCallScript([
+    {
+      to: getProxyAddress(),
+      calldata: await dePoolContract.methods.addSigningKeys(count, validatorsPubKeys, validatorsSignatures).encodeABI()
+    }
+  ])
+
+  const voteId = await createVote(callData1, holder, 'Add signing keys')
+  await voteForAction(voteId, holders, 'Add signing keys')
 }
 
-function getFee() {
+export function getWithdrawalCredentials() {
+  return dePoolContract.methods.getWithdrawalCredentials().call()
+}
+export function getFee() {
   return dePoolContract.methods.getFee().call()
 }
 
-function getFeeDistribution() {
+export function getFeeDistribution() {
   return dePoolContract.methods.getFeeDistribution().call()
 }
 
-async function getTreasuryAddress() {
+export async function getTreasuryAddress() {
   return await dePoolContract.methods.getTreasury().call()
 }
 
-async function getInsuranceFundAddress() {
+export async function getInsuranceFundAddress() {
   return await dePoolContract.methods.getInsuranceFund().call()
 }
 
-async function submit(sender, value) {
+export async function submit(sender, value) {
   return await dePoolContract.methods.submit(ZERO_ADDRESS).send({ from: sender, value: value, gas: '1000000' })
 }
 
-async function getEther2Stat() {
+export async function getEther2Stat() {
   return await dePoolContract.methods.getEther2Stat().call()
 }
 
-async function getUsedEther() {
+export async function getUsedEther() {
   const totalControledEther = await getTotalControlledEther()
   const bufferedEther = await getBufferedEther()
   return BN(totalControledEther).sub(BN(bufferedEther)).toString()
 }
 
-async function depositToDePoolContract(from, value) {
-  return await eth1Helper.sendTransaction(web3, getProxyAddress(), from, value)
+export async function getTreasury() {
+  return await dePoolContract.methods.getTreasury().call()
 }
 
-function getTotalControlledEther() {
+export async function depositToDePoolContract(from, value, referral = '0x0000000000000000000000000000000000000000') {
+  return await dePoolContract.methods.submit(referral).send({ from, value, gas: '8000000' })
+  // return await eth1Helper.sendTransaction(web3, getProxyAddress(), from, value)
+}
+
+export function getTotalControlledEther() {
   return dePoolContract.methods.getTotalControlledEther().call()
 }
-function getBufferedEther() {
+export function getBufferedEther() {
   return dePoolContract.methods.getBufferedEther().call()
 }
 
-function calculateNewTreasuryBalance(stakeProfit, balanceBeforePushData) {
+export function calculateNewTreasuryBalance(stakeProfit, balanceBeforePushData) {
   const reward = calculateTreasuryReward(stakeProfit)
   return BN(balanceBeforePushData).add(reward).toString()
 }
 
-function calculateTreasuryReward(stakeProfit) {
+export function calculateTreasuryReward(stakeProfit) {
   // TODO change treasury/insurance
   return BN(stakeProfit)
     .mul(BN((TREASURY_FEE / 100) * 2))
     .div(BN(100))
 }
-export {
-  init,
-  getWithdrawalCredentials,
-  setWithdrawalCredentials,
-  depositToDePoolContract,
-  getBufferedEther,
-  getTotalControlledEther,
-  getProxyAddress,
-  getTreasuryAddress,
-  hasInitialized,
-  setFee,
-  setFeeDistribution,
-  getFee,
-  getFeeDistribution,
-  getInsuranceFundAddress,
-  getUsedEther,
-  calculateNewTreasuryBalance,
-  getDepositIterationLimit,
-  submit,
-  getEther2Stat
+
+export function reportEther(sender, epoch, value) {
+  return dePoolContract.methods.reportEther2(epoch, value).send({ from: sender, gas: '2000000' })
 }
