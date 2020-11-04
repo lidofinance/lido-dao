@@ -1,6 +1,7 @@
 import test from 'ava'
 
 import { prepareContext } from '../scripts/helpers'
+import logger from '../scripts/helpers/logger'
 import { expectEvent } from '@openzeppelin/test-helpers'
 import {
   ETH,
@@ -52,7 +53,7 @@ test.before('Connecting Web3', async (t) => {
 })
 
 test('Full flow test ', async (t) => {
-  const { web3, logger, accounts } = t.context
+  const { web3, accounts } = t.context
   const [holder1, holder2, holder3, holder4, holder5] = accounts
   const quorumHolders = [holder1, holder2, holder3]
   const [spsMember1, spsMember2, spsMember3, spsMember4, spsMember5] = spsMembers
@@ -66,18 +67,6 @@ test('Full flow test ', async (t) => {
     REPORT_STOPPED_VALIDATORS_ROLE
   ]
 
-  // TODO wrap
-
-  for (let i = 0; i < 10; i++) {
-    for (let j = 0; j < 5; j++) {
-      await web3.eth.sendTransaction({
-        from: accounts[i],
-        to: accounts[i * 5 + 10 + j],
-        value: web3.utils.toWei('1000', 'ether')
-      })
-      logger.debug(`1000ETH from ${accounts[i]} (${i}) to ${accounts[i * 5 + 10 + j]} (${i * 5 + 10 + j})}`)
-    }
-  }
   logger.info('Check dao apps are deployed')
   t.true(await dePoolHelper.hasInitialized(), 'Check dePool deploy')
   t.true(await stEthHelper.hasInitialized(), 'Check stEth deploy')
