@@ -59,5 +59,5 @@ yarn buidler-exec ./tx-deposit.js
 yarn profile ./cache/solc-output.json --src-root '..' 0x9bb43602b8a755388ea75c65d7a4bff0fac30189acc5feb08a0af71654bbc56e
 
 # Profile the tx, skipping Aragon contracts
-yarn profile ./cache/solc-output.json --src-root '..' --skip '@aragon/' 0x9bb43602b8a755388ea75c65d7a4bff0fac30189acc5feb08a0af71654bbc56e
+yarn profile ./cache/solc-output.json --src-root '..' 0x9bb43602b8a755388ea75c65d7a4bff0fac30189acc5feb08a0af71654bbc56e --skip '@aragon/'
 ```
