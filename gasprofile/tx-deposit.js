@@ -37,7 +37,7 @@ async function main() {
   await pool.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
 
   const spValidatorsLimit = 1000
-  const numProviders = 20
+  const numProviders = 10
   const numKeys = 3
 
   for (let iProvider = 0; iProvider < numProviders; ++iProvider) {
@@ -61,6 +61,10 @@ async function main() {
     assertBn(totalKeys, numKeys, 'total signing keys')
 
     validatorData.push.apply(validatorData, data)
+  }
+
+  for (let iProvider = 0; iProvider < numProviders; ++iProvider) {
+    await pool.submit(ZERO_ADDRESS, { from: user1, value: ETH(33) })
   }
 
   await printTx(`pool.submit`, pool.submit(ZERO_ADDRESS, { from: user1, value: ETH(33) }))
