@@ -1,20 +1,14 @@
 const { hash: namehash } = require('eth-ens-namehash')
 const getAccounts = require('@aragon/os/scripts/helpers/get-accounts')
 
-const apps = require('./helpers/apps')
+const { apps } = require('./helpers/apps')
 const runOrWrapScript = require('./helpers/run-or-wrap-script')
+const { _getRegistered, errorOut } = require('./helpers')
 
 const globalArtifacts = this.artifacts || artifacts // Not injected unless called directly via truffle
 const globalWeb3 = this.web3 || web3 // Not injected unless called directly via truffle
 
-const errorOut = (message) => {
-  console.error(message)
-  throw new Error(message)
-}
-
-const ZERO_ADDR = '0x0000000000000000000000000000000000000000'
-
-const dePoolDaoName = 'depool-dao'
+const dePoolDaoName = 'lido-dao'
 const dePoolTemplateName = 'depool-template'
 const dePoolTld = `depoolspm.eth`
 
@@ -27,11 +21,6 @@ const defaultENSAddress = process.env.ENS || '0x5f6f7e8cc7346a11ca2def8f827b7a0b
 const defaultApmRegistryAddress = process.env.APM || '0x1902a0410EFe699487Dd85F12321aD672bE4ada2' // depoolspm
 const defaultDepositContractAddress = process.env.DEPOSIT_CONTRACT || '0x5f4e510503d83bd1a5436bdae2923489da0be454'
 const defaultDepositIterationLimit = process.env.DEPOSIT_ITERATION_LIMIT || '16'
-
-const _getRegistered = async (ens, hash) => {
-  const owner = await ens.owner(hash)
-  return owner !== ZERO_ADDR && owner !== '0x' ? owner : false
-}
 
 async function deploy({
   artifacts = globalArtifacts,
