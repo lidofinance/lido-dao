@@ -122,6 +122,10 @@ async function deploy({
     }
   )
 
+  log('=========')
+  log('Tx hash:', receipt.tx)
+  log('=========')
+
   const tokenEvent = receipt.logs.find((l) => l.event === 'DeployToken')
   const daoEvent = receipt.logs.find((l) => l.event === 'DeployDao')
   const installedApps = receipt.logs.filter((l) => l.event === 'InstalledApp').map((l) => l.args)
