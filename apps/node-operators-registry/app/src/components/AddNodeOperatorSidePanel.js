@@ -16,9 +16,9 @@ const validationSchema = yup.object().shape({
   limit: yup.number().integer().min(0).required(),
 })
 
-function PanelContent({ addSPApi, onClose }) {
+function PanelContent({ addNodeOperatorApi, onClose }) {
   const onSubmit = useCallback(({ name, address, limit }) => {
-    addSPApi(name, address, limit).then(() => {
+    addNodeOperatorApi(name, address, limit).then(() => {
       onClose()
     })
   }, [])
