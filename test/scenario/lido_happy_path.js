@@ -15,8 +15,8 @@ contract('Lido: happy path', (addresses) => {
     // the address which we use to simulate the voting DAO application
     voting,
     // node operators
-    sp1,
-    sp2,
+    operator_1,
+    operator_2,
     // users who deposit Ether to the pool
     user1,
     user2,
@@ -90,7 +90,7 @@ contract('Lido: happy path', (addresses) => {
   // validators, each of them defined as a (public key, signature) pair
   const nodeOperator1 = {
     name: 'SP-1',
-    address: sp1,
+    address: operator_1,
     validators: [
       {
         key: pad('0x010101', 48),
@@ -199,7 +199,7 @@ contract('Lido: happy path', (addresses) => {
 
   const nodeOperator2 = {
     name: 'SP-2',
-    address: sp2,
+    address: operator_2,
     validators: [
       {
         key: pad('0x020202', 48),
