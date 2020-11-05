@@ -49,11 +49,11 @@ interface ILido {
       * @notice Returns fee distribution proportion
       */
     function getFeeDistribution() external view returns (uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints,
-                                                         uint16 SPFeeBasisPoints);
+                                                         uint16 operatorsFeeBasisPoints);
 
     event FeeSet(uint16 feeBasisPoints);
 
-    event FeeDistributionSet(uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, uint16 SPFeeBasisPoints);
+    event FeeDistributionSet(uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, uint16 operatorsFeeBasisPoints);
 
 
     /**

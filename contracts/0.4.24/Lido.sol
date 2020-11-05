@@ -46,7 +46,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     bytes32 internal constant FEE_VALUE_POSITION = keccak256("lido.Lido.fee");
     bytes32 internal constant TREASURY_FEE_VALUE_POSITION = keccak256("lido.Lido.treasuryFee");
     bytes32 internal constant INSURANCE_FEE_VALUE_POSITION = keccak256("lido.Lido.insuranceFee");
-    bytes32 internal constant NODE_OPERATORS_FEE_VALUE_POSITION = keccak256("lido.Lido.SPFee");
+    bytes32 internal constant NODE_OPERATORS_FEE_VALUE_POSITION = keccak256("lido.Lido.operatorsFee");
 
     bytes32 internal constant TOKEN_VALUE_POSITION = keccak256("lido.Lido.token");
     bytes32 internal constant VALIDATOR_REGISTRATION_VALUE_POSITION = keccak256("lido.Lido.validatorRegistration");
@@ -272,7 +272,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         returns (
             uint16 treasuryFeeBasisPoints,
             uint16 insuranceFeeBasisPoints,
-            uint16 SPFeeBasisPoints
+            uint16 operatorsFeeBasisPoints
         )
     {
         return _getFeeDistribution();
@@ -631,11 +631,11 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
       * @dev Returns fee distribution proportion
       */
     function _getFeeDistribution() internal view
-        returns (uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, uint16 SPFeeBasisPoints)
+        returns (uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, uint16 operatorsFeeBasisPoints)
     {
         treasuryFeeBasisPoints = _readBPValue(TREASURY_FEE_VALUE_POSITION);
         insuranceFeeBasisPoints = _readBPValue(INSURANCE_FEE_VALUE_POSITION);
-        SPFeeBasisPoints = _readBPValue(NODE_OPERATORS_FEE_VALUE_POSITION);
+        operatorsFeeBasisPoints = _readBPValue(NODE_OPERATORS_FEE_VALUE_POSITION);
     }
 
     /**

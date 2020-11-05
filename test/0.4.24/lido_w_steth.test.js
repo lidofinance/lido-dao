@@ -109,7 +109,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
     const fees = await app.getFeeDistribution()
     assertBn(fees.treasuryFeeBasisPoints, treasuryFeePoints)
     assertBn(fees.insuranceFeeBasisPoints, insuranceFeePoints)
-    assertBn(fees.SPFeeBasisPoints, nodeOperatorsFeePoints)
+    assertBn(fees.operatorsFeeBasisPoints, nodeOperatorsFeePoints)
   })
 
   it('check token variables', async () => {
