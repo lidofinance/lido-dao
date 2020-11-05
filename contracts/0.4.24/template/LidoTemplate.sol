@@ -50,7 +50,7 @@ contract LidoTemplate is BaseTemplate {
     Voting private voting;
     StETH private steth;
     LidoOracle private oracle;
-    NodeOperatorsRegistry private sps;
+    NodeOperatorsRegistry private operators;
     Lido private lido;
 
 
@@ -94,9 +94,9 @@ contract LidoTemplate is BaseTemplate {
         _removePermissionFromTemplate(acl, oracle, oracle.SET_POOL());
 
         // NodeOperatorsRegistry setPool
-        _createPermissionForTemplate(acl, sps, sps.SET_POOL());
-        sps.setPool(lido);
-        _removePermissionFromTemplate(acl, sps, sps.SET_POOL());
+        _createPermissionForTemplate(acl, operators, operators.SET_POOL());
+        operators.setPool(lido);
+        _removePermissionFromTemplate(acl, operators, operators.SET_POOL());
 
         _mintTokens(acl, tokenManager, _holders, _stakes);
 
@@ -127,14 +127,14 @@ contract LidoTemplate is BaseTemplate {
         oracle = LidoOracle(_installNonDefaultApp(dao, LIDOORACLE_APP_ID, initializeData));
 
         initializeData = abi.encodeWithSelector(NodeOperatorsRegistry(0).initialize.selector);
-        sps = NodeOperatorsRegistry(_installNonDefaultApp(dao, REGISTRY_APP_ID, initializeData));
+        operators = NodeOperatorsRegistry(_installNonDefaultApp(dao, REGISTRY_APP_ID, initializeData));
 
         initializeData = abi.encodeWithSelector(
             Lido(0).initialize.selector,
             steth,
             _ETH2ValidatorRegistrationContract,
             oracle,
-            sps,
+            operators,
             _depositIterationLimit
         );
         lido = Lido(_installNonDefaultApp(dao, LIDO_APP_ID, initializeData));
@@ -164,14 +164,14 @@ contract LidoTemplate is BaseTemplate {
         acl.createPermission(voting, oracle, oracle.SET_POOL(), voting);
 
         // NodeOperatorsRegistry
-        acl.createPermission(voting, sps, sps.MANAGE_SIGNING_KEYS(), voting);
-        acl.createPermission(voting, sps, sps.ADD_NODE_OPERATOR_ROLE(), voting);
-        acl.createPermission(voting, sps, sps.SET_NODE_OPERATOR_ACTIVE_ROLE(), voting);
-        acl.createPermission(voting, sps, sps.SET_NODE_OPERATOR_NAME_ROLE(), voting);
-        acl.createPermission(voting, sps, sps.SET_NODE_OPERATOR_ADDRESS_ROLE(), voting);
-        acl.createPermission(voting, sps, sps.SET_NODE_OPERATOR_LIMIT_ROLE(), voting);
-        acl.createPermission(voting, sps, sps.REPORT_STOPPED_VALIDATORS_ROLE(), voting);
-        acl.createPermission(voting, sps, sps.SET_POOL(), voting);
+        acl.createPermission(voting, operators, operators.MANAGE_SIGNING_KEYS(), voting);
+        acl.createPermission(voting, operators, operators.ADD_NODE_OPERATOR_ROLE(), voting);
+        acl.createPermission(voting, operators, operators.SET_NODE_OPERATOR_ACTIVE_ROLE(), voting);
+        acl.createPermission(voting, operators, operators.SET_NODE_OPERATOR_NAME_ROLE(), voting);
+        acl.createPermission(voting, operators, operators.SET_NODE_OPERATOR_ADDRESS_ROLE(), voting);
+        acl.createPermission(voting, operators, operators.SET_NODE_OPERATOR_LIMIT_ROLE(), voting);
+        acl.createPermission(voting, operators, operators.REPORT_STOPPED_VALIDATORS_ROLE(), voting);
+        acl.createPermission(voting, operators, operators.SET_POOL(), voting);
 
         // Pool
         acl.createPermission(voting, lido, lido.PAUSE_ROLE(), voting);
@@ -192,7 +192,7 @@ contract LidoTemplate is BaseTemplate {
         delete voting;
         delete steth;
         delete oracle;
-        delete sps;
+        delete operators;
         delete lido;
     }
 }

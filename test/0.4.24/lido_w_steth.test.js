@@ -30,7 +30,7 @@ const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 const tokens = ETH
 
 contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, nodeOperatorAddress1, nodeOperatorAddress2]) => {
-  let appBase, stEthBase, nodeOperatorsRegistryBase, app, token, oracle, validatorRegistration, sps
+  let appBase, stEthBase, nodeOperatorsRegistryBase, app, token, oracle, validatorRegistration, operators
   let treasuryAddr, insuranceAddr
   // Fee and its distribution are in basis points, 10000 corresponding to 100%
   // Total fee is 1%
@@ -57,8 +57,8 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
 
     // NodeOperatorsRegistry
     let proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)
-    sps = await NodeOperatorsRegistry.at(proxyAddress)
-    await sps.initialize()
+    operators = await NodeOperatorsRegistry.at(proxyAddress)
+    await operators.initialize()
 
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
     proxyAddress = await newApp(dao, 'lido', appBase.address, appManager)
@@ -78,22 +78,26 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
     await acl.createPermission(app.address, token.address, await token.MINT_ROLE(), appManager, { from: appManager })
     await acl.createPermission(app.address, token.address, await token.BURN_ROLE(), appManager, { from: appManager })
 
-    await acl.createPermission(voting, sps.address, await sps.SET_POOL(), appManager, { from: appManager })
-    await acl.createPermission(voting, sps.address, await sps.MANAGE_SIGNING_KEYS(), appManager, { from: appManager })
-    await acl.createPermission(voting, sps.address, await sps.ADD_NODE_OPERATOR_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, sps.address, await sps.SET_NODE_OPERATOR_ACTIVE_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, sps.address, await sps.SET_NODE_OPERATOR_NAME_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, sps.address, await sps.SET_NODE_OPERATOR_ADDRESS_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, sps.address, await sps.SET_NODE_OPERATOR_LIMIT_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, sps.address, await sps.REPORT_STOPPED_VALIDATORS_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, operators.address, await operators.SET_POOL(), appManager, { from: appManager })
+    await acl.createPermission(voting, operators.address, await operators.MANAGE_SIGNING_KEYS(), appManager, { from: appManager })
+    await acl.createPermission(voting, operators.address, await operators.ADD_NODE_OPERATOR_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, operators.address, await operators.SET_NODE_OPERATOR_ACTIVE_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, operators.address, await operators.SET_NODE_OPERATOR_NAME_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, operators.address, await operators.SET_NODE_OPERATOR_ADDRESS_ROLE(), appManager, {
+      from: appManager
+    })
+    await acl.createPermission(voting, operators.address, await operators.SET_NODE_OPERATOR_LIMIT_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, operators.address, await operators.REPORT_STOPPED_VALIDATORS_ROLE(), appManager, {
+      from: appManager
+    })
 
     // Initialize the app's proxy.
-    await app.initialize(token.address, validatorRegistration.address, oracle.address, sps.address, 10)
+    await app.initialize(token.address, validatorRegistration.address, oracle.address, operators.address, 10)
     treasuryAddr = await app.getTreasury()
     insuranceAddr = await app.getInsuranceFund()
     await oracle.setPool(app.address)
     await validatorRegistration.reset()
-    await sps.setPool(app.address, { from: voting })
+    await operators.setPool(app.address, { from: voting })
 
     // Set fee
     await app.setFee(totalFeePoints, { from: voting })
@@ -120,8 +124,8 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
     beforeEach(async function () {
       await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
-      await sps.addNodeOperator('1', nodeOperatorAddress1, UNLIMITED, { from: voting })
-      await sps.addSigningKeys(0, 1, hexConcat(pad('0x010203', 48)), hexConcat(pad('0x01', 96)), { from: voting })
+      await operators.addNodeOperator('1', nodeOperatorAddress1, UNLIMITED, { from: voting })
+      await operators.addSigningKeys(0, 1, hexConcat(pad('0x010203', 48)), hexConcat(pad('0x01', 96)), { from: voting })
     })
 
     it('initial values are zeros', async () => {
@@ -278,7 +282,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
 
         context('2nd SP added (still inactive)', async () => {
           beforeEach(async function () {
-            await sps.addNodeOperator('2', nodeOperatorAddress2, UNLIMITED, { from: voting })
+            await operators.addNodeOperator('2', nodeOperatorAddress2, UNLIMITED, { from: voting })
           })
 
           context('oracle reported 33 ETH (recovered then rewarded), must be same as without new SP', async () => {
@@ -318,7 +322,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
 
           context('2nd SP activated (same amount of effective keys)', async () => {
             beforeEach(async function () {
-              await sps.addSigningKeys(1, 1, hexConcat(pad('0x010207', 48)), hexConcat(pad('0x01', 96)), { from: voting })
+              await operators.addSigningKeys(1, 1, hexConcat(pad('0x010207', 48)), hexConcat(pad('0x01', 96)), { from: voting })
               await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(30) })
               await app.depositBufferedEther()
 
@@ -348,7 +352,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
                 assertBn(await app.getRewardBase(), ETH(66))
               })
 
-              it('stETH: totalSupply=66 user=65.98 treasury.006, insurance=.004, sps=.010', async () => {
+              it('stETH: totalSupply=66 user=65.98 treasury.006, insurance=.004, operators=.010', async () => {
                 assertBn(await token.totalSupply(), tokens(66))
                 assertBn(await token.balanceOf(user2), new BN('65980004181065323241'))
                 assertBn(await token.balanceOf(treasuryAddr), new BN('00005998182198278665'))
@@ -358,7 +362,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
                 assertBn(await token.balanceOf(nodeOperatorAddress2), new BN('00004999242539009239'))
               })
 
-              it('stETH shares: total=65.895 user2=65.875 treasury.006, insurance=.004, sps=.010', async () => {
+              it('stETH shares: total=65.895 user2=65.875 treasury.006, insurance=.004, operators=.010', async () => {
                 assertBn(await token.getTotalShares(), new BN('65894963996496681691'))
                 assertBn(await token.getSharesByHolder(user2), tokens(65.875))
                 assertBn(await token.getSharesByHolder(treasuryAddr), new BN('00005988636363636363'))
@@ -371,7 +375,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
 
             context('1st SP with 2 keys, 2nd SP with 1 key', async () => {
               beforeEach(async function () {
-                await sps.addSigningKeys(0, 1, hexConcat(pad('0x01020b', 48)), hexConcat(pad('0x01', 96)), { from: voting })
+                await operators.addSigningKeys(0, 1, hexConcat(pad('0x01020b', 48)), hexConcat(pad('0x01', 96)), { from: voting })
                 await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(32) })
                 await app.depositBufferedEther()
                 await oracle.reportEther2(500, ETH(96))
@@ -400,7 +404,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
                   assertBn(await app.getRewardBase(), ETH(100))
                 })
 
-                it('stETH: totalSupply=100 user=99.96 treasury.012, insurance=.008, sps=.020', async () => {
+                it('stETH: totalSupply=100 user=99.96 treasury.012, insurance=.008, operators=.020', async () => {
                   assertBn(await token.totalSupply(), tokens(100))
                   // fees = 4 * 0.01 = 0.04 Ether
                   // userReward = 4 - fee = 3.96
@@ -413,7 +417,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
                   assertBn(await token.balanceOf(nodeOperatorAddress2), new BN('00006665333599946676'))
                 })
 
-                it('stETH shares: total=98.852 user2=98.8125 treasury.012, insurance=.008, sps=.020', async () => {
+                it('stETH shares: total=98.852 user2=98.8125 treasury.012, insurance=.008, operators=.020', async () => {
                   assertBn(await token.getTotalShares(), new BN('98852029901289720000'))
                   assertBn(await token.getSharesByHolder(user2), tokens(98.8125))
                   assertBn(await token.getSharesByHolder(treasuryAddr), new BN('00011857500000000000'))
@@ -431,7 +435,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
       context('oracle reported 66 ETH (never slashed)', async () => {
         beforeEach(async function () {
           // must be several signing keys for that case
-          await sps.addSigningKeys(0, 1, hexConcat(pad('0x020203', 48)), hexConcat(pad('0x01', 96)), { from: voting })
+          await operators.addSigningKeys(0, 1, hexConcat(pad('0x020203', 48)), hexConcat(pad('0x01', 96)), { from: voting })
           await oracle.reportEther2(200, ETH(66))
         })
 
@@ -457,7 +461,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
           assertBn(await app.getRewardBase(), ETH(66))
         })
 
-        it('stETH: totalSupply=68 user=68.99 treasury=.006, insurance=.004, sps=.004', async () => {
+        it('stETH: totalSupply=68 user=68.99 treasury=.006, insurance=.004, operators=.004', async () => {
           assertBn(await token.totalSupply(), tokens(68))
           assertBn(await token.balanceOf(user2), new BN('67661169524583879360'))
           assertBn(await token.balanceOf(treasuryAddr), new BN('101491754286875819'))
@@ -467,7 +471,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
           assertBn(await token.balanceOf(nodeOperatorAddress2), new BN('0'))
         })
 
-        it('stETH shares: total=34.17 user2=34 treasury=.05, insurance=.03, sps=.09', async () => {
+        it('stETH shares: total=34.17 user2=34 treasury=.05, insurance=.03, operators=.09', async () => {
           assertBn(await token.getTotalShares(), new BN('34170263627500000000'))
           assertBn(await token.getSharesByHolder(user2), tokens(34)) // stays the same
           assertBn(await token.getSharesByHolder(treasuryAddr), new BN('51000000000000000'))
@@ -493,7 +497,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
             assertBn(await app.getRewardBase(), ETH(98)) // was 66, then added 32 on second submit
           })
 
-          it('stETH: totalSupply=70 user2=46.43 user3=23.33 treasury=.06, insurance=.04, sps=.12', async () => {
+          it('stETH: totalSupply=70 user2=46.43 user3=23.33 treasury=.06, insurance=.04, operators=.12', async () => {
             assertBn(await token.totalSupply(), tokens(70))
             assertBn(await token.balanceOf(user2), new BN('46434135948243838777'))
             assertBn(await token.balanceOf(user3), new BN('23333333333333333333'))
@@ -504,7 +508,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
             assertBn(await token.balanceOf(nodeOperatorAddress2), new BN('0'))
           })
 
-          it('stETH shares: total=51.255 user2=34 user3=17.085 treasury=.051, insurance=.034, sps=.085', async () => {
+          it('stETH shares: total=51.255 user2=34 user3=17.085 treasury=.051, insurance=.034, operators=.085', async () => {
             assertBn(await token.getTotalShares(), new BN('51255395441250000000'))
             assertBn(await token.getSharesByHolder(user2), tokens(34)) // stays the same
             assertBn(await token.getSharesByHolder(user3), new BN('17085131813750000000'))
@@ -529,7 +533,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
               assertBn(await app.getRewardBase(), ETH(98)) // was 66, added 32 on submit
             })
 
-            it('stETH: totalSupply=102 user2=67.66 user3=34 treasury=.1, insurance=.067, sps=.17', async () => {
+            it('stETH: totalSupply=102 user2=67.66 user3=34 treasury=.1, insurance=.067, operators=.17', async () => {
               assertBn(await token.totalSupply(), tokens(102))
               assertBn(await token.balanceOf(user2), new BN('67661169524583879360'))
               assertBn(await token.balanceOf(user3), new BN('34000000000000000000'))
@@ -540,7 +544,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
               assertBn(await token.balanceOf(nodeOperatorAddress2), new BN('0'))
             })
 
-            it('stETH shares: total=51.255 user2=34 user3=17.085 treasury=.051, insurance=.034, sps=.085 (same as before)', async () => {
+            it('stETH shares: total=51.255 user2=34 user3=17.085 treasury=.051, insurance=.034, operators=.085 (same as before)', async () => {
               assertBn(await token.getTotalShares(), new BN('51255395441250000000'))
               assertBn(await token.getSharesByHolder(user2), tokens(34)) // stays the same
               assertBn(await token.getSharesByHolder(user3), new BN('17085131813750000000'))

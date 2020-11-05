@@ -90,9 +90,9 @@ node operators.
 Controls how the fee is distributed between the treasury, the insurance fund, and node operators.
 Each fee component is in basis points; the sum of all components must add up to 1 (`10000` basis points).
 
-* Mutator: `setFeeDistribution(uint16 treasury, uint16 insurance, uint16 sps)`
+* Mutator: `setFeeDistribution(uint16 treasury, uint16 insurance, uint16 operators)`
   * Permission required: `MANAGE_FEE`
-* Accessor: `getFeeDistribution() returns (uint16 treasury, uint16 insurance, uint16 sps)`
+* Accessor: `getFeeDistribution() returns (uint16 treasury, uint16 insurance, uint16 operators)`
 
 
 ### ETH 2.0 withdrawal Credentials

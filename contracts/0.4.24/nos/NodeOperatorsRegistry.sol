@@ -52,7 +52,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     /// @dev Mapping of all node operators. Mapping is used to be able to extend the struct.
-    mapping(uint256 => NodeOperator) internal sps;
+    mapping(uint256 => NodeOperator) internal operators;
 
     // @dev Total number of SPs
     uint256 internal totalSPCount;
@@ -106,7 +106,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         returns (uint256 id)
     {
         id = totalSPCount++;
-        NodeOperator storage operator = sps[id];
+        NodeOperator storage operator = operators[id];
 
         activeSPCount++;
         operator.active = true;
@@ -124,14 +124,14 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         authP(SET_NODE_OPERATOR_ACTIVE_ROLE, arr(_id, _active ? uint256(1) : uint256(0)))
         SPExists(_id)
     {
-        if (sps[_id].active != _active) {
+        if (operators[_id].active != _active) {
             if (_active)
                 activeSPCount++;
             else
                 activeSPCount = activeSPCount.sub(1);
         }
 
-        sps[_id].active = _active;
+        operators[_id].active = _active;
 
         emit NodeOperatorActiveSet(_id, _active);
     }
@@ -143,7 +143,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         authP(SET_NODE_OPERATOR_NAME_ROLE, arr(_id))
         SPExists(_id)
     {
-        sps[_id].name = _name;
+        operators[_id].name = _name;
         emit NodeOperatorNameSet(_id, _name);
     }
 
@@ -155,7 +155,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         SPExists(_id)
         validAddress(_rewardAddress)
     {
-        sps[_id].rewardAddress = _rewardAddress;
+        operators[_id].rewardAddress = _rewardAddress;
         emit NodeOperatorRewardAddressSet(_id, _rewardAddress);
     }
 
@@ -166,7 +166,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         authP(SET_NODE_OPERATOR_LIMIT_ROLE, arr(_id, uint256(_stakingLimit)))
         SPExists(_id)
     {
-        sps[_id].stakingLimit = _stakingLimit;
+        operators[_id].stakingLimit = _stakingLimit;
         emit NodeOperatorStakingLimitSet(_id, _stakingLimit);
     }
 
@@ -178,10 +178,10 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         SPExists(_id)
     {
         require(0 != _stoppedIncrement, "EMPTY_VALUE");
-        sps[_id].stoppedValidators = sps[_id].stoppedValidators.add(_stoppedIncrement);
-        require(sps[_id].stoppedValidators <= sps[_id].usedSigningKeys, "STOPPED_MORE_THAN_LAUNCHED");
+        operators[_id].stoppedValidators = operators[_id].stoppedValidators.add(_stoppedIncrement);
+        require(operators[_id].stoppedValidators <= operators[_id].usedSigningKeys, "STOPPED_MORE_THAN_LAUNCHED");
 
-        emit NodeOperatorTotalStoppedValidatorsReported(_id, sps[_id].stoppedValidators);
+        emit NodeOperatorTotalStoppedValidatorsReported(_id, operators[_id].stoppedValidators);
     }
 
     /**
@@ -194,7 +194,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         require(_ids.length == _usedSigningKeys.length, "BAD_LENGTH");
         for (uint256 i = 0; i < _ids.length; ++i) {
             require(_ids[i] < totalSPCount, "NODE_OPERATOR_NOT_FOUND");
-            NodeOperator storage operator = sps[_ids[i]];
+            NodeOperator storage operator = operators[_ids[i]];
 
             uint64 current = operator.usedSigningKeys;
             uint64 new_ = _usedSigningKeys[i];
@@ -216,8 +216,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     function trimUnusedKeys() external onlyPool {
         uint256 length = totalSPCount;
         for (uint256 SP_id = 0; SP_id < length; ++SP_id) {
-            if (sps[SP_id].totalSigningKeys != sps[SP_id].usedSigningKeys)  // write only if update is needed
-                sps[SP_id].totalSigningKeys = sps[SP_id].usedSigningKeys;  // discard unused keys
+            if (operators[SP_id].totalSigningKeys != operators[SP_id].usedSigningKeys)  // write only if update is needed
+                operators[SP_id].totalSigningKeys = operators[SP_id].usedSigningKeys;  // discard unused keys
         }
     }
 
@@ -257,7 +257,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     )
         external
     {
-        require(msg.sender == sps[_SP_id].rewardAddress, "APP_AUTH_FAILED");
+        require(msg.sender == operators[_SP_id].rewardAddress, "APP_AUTH_FAILED");
         _addSigningKeys(_SP_id, _quantity, _pubkeys, _signatures);
     }
 
@@ -279,7 +279,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       * @param _index Index of the key, starting with 0
       */
     function removeSigningKeySP(uint256 _SP_id, uint256 _index) external {
-        require(msg.sender == sps[_SP_id].rewardAddress, "APP_AUTH_FAILED");
+        require(msg.sender == operators[_SP_id].rewardAddress, "APP_AUTH_FAILED");
         _removeSigningKey(_SP_id, _index);
     }
 
@@ -293,7 +293,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         uint256 length = totalSPCount;
         uint64 effectiveStakeTotal;
         for (uint256 SP_id = 0; SP_id < length; ++SP_id) {
-            NodeOperator storage operator = sps[SP_id];
+            NodeOperator storage operator = operators[SP_id];
             if (!operator.active)
                 continue;
 
@@ -305,7 +305,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             revert("NO_STAKE");
 
         for (SP_id = 0; SP_id < length; ++SP_id) {
-            operator = sps[SP_id];
+            operator = operators[SP_id];
             if (!operator.active)
                 continue;
 
@@ -347,7 +347,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             uint64 usedSigningKeys
         )
     {
-        NodeOperator storage operator = sps[_id];
+        NodeOperator storage operator = operators[_id];
 
         active = operator.active;
         name = _fullInfo ? operator.name : "";    // reading name is 2+ SLOADs
@@ -362,14 +362,14 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       * @notice Returns total number of signing keys of the node operator #`_SP_id`
       */
     function getTotalSigningKeyCount(uint256 _SP_id) external view SPExists(_SP_id) returns (uint256) {
-        return sps[_SP_id].totalSigningKeys;
+        return operators[_SP_id].totalSigningKeys;
     }
 
     /**
       * @notice Returns number of usable signing keys of the node operator #`_SP_id`
       */
     function getUnusedSigningKeyCount(uint256 _SP_id) external view SPExists(_SP_id) returns (uint256) {
-        return sps[_SP_id].totalSigningKeys.sub(sps[_SP_id].usedSigningKeys);
+        return operators[_SP_id].totalSigningKeys.sub(operators[_SP_id].usedSigningKeys);
     }
 
     /**
@@ -384,11 +384,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         SPExists(_SP_id)
         returns (bytes key, bytes depositSignature, bool used)
     {
-        require(_index < sps[_SP_id].totalSigningKeys, "KEY_NOT_FOUND");
+        require(_index < operators[_SP_id].totalSigningKeys, "KEY_NOT_FOUND");
 
         (bytes memory key_, bytes memory signature) = _loadSigningKey(_SP_id, _index);
 
-        return (key_, signature, _index < sps[_SP_id].usedSigningKeys);
+        return (key_, signature, _index < operators[_SP_id].usedSigningKeys);
     }
 
     function _isEmptySigningKey(bytes memory _key) internal pure returns (bool) {
@@ -452,29 +452,29 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             require(!_isEmptySigningKey(key), "EMPTY_KEY");
             bytes memory sig = BytesLib.slice(_signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
 
-            _storeSigningKey(_SP_id, sps[_SP_id].totalSigningKeys + i, key, sig);
+            _storeSigningKey(_SP_id, operators[_SP_id].totalSigningKeys + i, key, sig);
             emit SigningKeyAdded(_SP_id, key);
         }
 
-        sps[_SP_id].totalSigningKeys = sps[_SP_id].totalSigningKeys.add(to64(_quantity));
+        operators[_SP_id].totalSigningKeys = operators[_SP_id].totalSigningKeys.add(to64(_quantity));
     }
 
     function _removeSigningKey(uint256 _SP_id, uint256 _index) internal
         SPExists(_SP_id)
     {
-        require(_index < sps[_SP_id].totalSigningKeys, "KEY_NOT_FOUND");
-        require(_index >= sps[_SP_id].usedSigningKeys, "KEY_WAS_USED");
+        require(_index < operators[_SP_id].totalSigningKeys, "KEY_NOT_FOUND");
+        require(_index >= operators[_SP_id].usedSigningKeys, "KEY_WAS_USED");
 
         (bytes memory removedKey, ) = _loadSigningKey(_SP_id, _index);
 
-        uint256 lastIndex = sps[_SP_id].totalSigningKeys.sub(1);
+        uint256 lastIndex = operators[_SP_id].totalSigningKeys.sub(1);
         if (_index < lastIndex) {
             (bytes memory key, bytes memory signature) = _loadSigningKey(_SP_id, lastIndex);
             _storeSigningKey(_SP_id, _index, key, signature);
         }
 
         _deleteSigningKey(_SP_id, lastIndex);
-        sps[_SP_id].totalSigningKeys = sps[_SP_id].totalSigningKeys.sub(1);
+        operators[_SP_id].totalSigningKeys = operators[_SP_id].totalSigningKeys.sub(1);
 
         emit SigningKeyRemoved(_SP_id, removedKey);
     }
