@@ -11,9 +11,9 @@ interface INodeOperatorsRegistry {
     /**
       * @notice Add node operator named `name` with reward address `rewardAddress` and staking limit `stakingLimit` validators
       * @param _name Human-readable name
-      * @param _rewardAddress Ethereum 1 address which receives stETH rewards for this SP
-      * @param _stakingLimit the maximum number of validators to stake for this SP
-      * @return a unique key of the added SP
+      * @param _rewardAddress Ethereum 1 address which receives stETH rewards for this operator
+      * @param _stakingLimit the maximum number of validators to stake for this operator
+      * @return a unique key of the added operator
       */
     function addNodeOperator(string _name, address _rewardAddress, uint64 _stakingLimit) external returns (uint256 id);
 

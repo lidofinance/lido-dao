@@ -285,7 +285,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
             await operators.addNodeOperator('2', nodeOperatorAddress2, UNLIMITED, { from: voting })
           })
 
-          context('oracle reported 33 ETH (recovered then rewarded), must be same as without new SP', async () => {
+          context('oracle reported 33 ETH (recovered then rewarded), must be same as without new operator', async () => {
             beforeEach(async function () {
               await oracle.reportEther2(200, ETH(33))
             })

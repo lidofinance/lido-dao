@@ -42,12 +42,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     /// @dev Node Operator parameters and internal state
     struct NodeOperator {
         bool active;    // a flag indicating if the operator can participate in further staking and reward distribution
-        address rewardAddress;  // Ethereum 1 address which receives steth rewards for this SP
+        address rewardAddress;  // Ethereum 1 address which receives steth rewards for this operator
         string name;    // human-readable name
-        uint64 stakingLimit;    // the maximum number of validators to stake for this SP
+        uint64 stakingLimit;    // the maximum number of validators to stake for this operator
         uint64 stoppedValidators;   // number of signing keys which stopped validation (e.g. were slashed)
 
-        uint64 totalSigningKeys;    // total amount of signing keys of this SP
+        uint64 totalSigningKeys;    // total amount of signing keys of this operator
         uint64 usedSigningKeys;     // number of signing keys of this operator which were used in deposits to the Ethereum 2
     }
 
@@ -96,9 +96,9 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     /**
       * @notice Add node operator named `name` with reward address `rewardAddress` and staking limit `stakingLimit` validators
       * @param _name Human-readable name
-      * @param _rewardAddress Ethereum 1 address which receives stETH rewards for this SP
-      * @param _stakingLimit the maximum number of validators to stake for this SP
-      * @return a unique key of the added SP
+      * @param _rewardAddress Ethereum 1 address which receives stETH rewards for this operator
+      * @param _stakingLimit the maximum number of validators to stake for this operator
+      * @return a unique key of the added operator
       */
     function addNodeOperator(string _name, address _rewardAddress, uint64 _stakingLimit) external
         auth(ADD_NODE_OPERATOR_ROLE)
