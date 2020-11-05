@@ -89,7 +89,7 @@ contract('Lido: happy path', (addresses) => {
   // Each node operator has its Ethereum 1 address, a name and a set of registered
   // validators, each of them defined as a (public key, signature) pair
   const nodeOperator1 = {
-    name: 'SP-1',
+    name: 'operator_1',
     address: operator_1,
     validators: [
       {
@@ -198,7 +198,7 @@ contract('Lido: happy path', (addresses) => {
   })
 
   const nodeOperator2 = {
-    name: 'SP-2',
+    name: 'operator_2',
     address: operator_2,
     validators: [
       {
@@ -340,8 +340,8 @@ contract('Lido: happy path', (addresses) => {
     // In our case, both node operators received the same fee since they have the same
     // effective stake (one signing key used from each SP, staking 32 ETH)
 
-    assertBn(await token.balanceOf(nodeOperator1.address), new BN('79900898110870236'), 'SP-1 tokens')
-    assertBn(await token.balanceOf(nodeOperator2.address), new BN('79900898110870236'), 'SP-2 tokens')
+    assertBn(await token.balanceOf(nodeOperator1.address), new BN('79900898110870236'), 'operator_1 tokens')
+    assertBn(await token.balanceOf(nodeOperator2.address), new BN('79900898110870236'), 'operator_2 tokens')
 
     // Real minted amount should be a bit less than calculated caused by round errors on mint and transfer operations
     assert(
