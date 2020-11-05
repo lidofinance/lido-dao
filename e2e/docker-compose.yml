@@ -12,7 +12,6 @@ services:
       - ./data/devchain:/data
     environment:
       - BLOCK_TIME=${BLOCK_TIME}
-      - GAS_LIMIT=12000000
     networks:
       eth2:
 
@@ -26,10 +25,7 @@ services:
       - 5001:5001
       - 8080:8080
     volumes:
-      - ./data/export:/export
       - ./data/ipfs:/data/ipfs
-    environment:
-      - IPFS_PROFILE=server
     networks:
       eth2:
 
@@ -291,6 +287,19 @@ services:
       - REPORT_INTERVAL_DURATION=160
     networks:
       eth2:
+
+  slasher:
+    image: gcr.io/prysmaticlabs/prysm/slasher:latest
+    container_name: slasher
+    volumes:
+      - ./data/slasher:/data
+    command: >
+      --accept-terms-of-use
+      --beacon-rpc-provider=node2-1:5052
+      --datadir=/data
+    networks:
+      eth2:
+
 
 networks:
   eth2:

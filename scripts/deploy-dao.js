@@ -4,13 +4,13 @@ const getAccounts = require('@aragon/os/scripts/helpers/get-accounts')
 const { apps } = require('./helpers/apps')
 const runOrWrapScript = require('./helpers/run-or-wrap-script')
 const { _getRegistered, errorOut } = require('./helpers')
+const { tld, apmName, templateName, daoName } = require('./helpers/constants')
 
 const globalArtifacts = this.artifacts || artifacts // Not injected unless called directly via truffle
 const globalWeb3 = this.web3 || web3 // Not injected unless called directly via truffle
 
-const dePoolDaoName = 'lido-dao'
-const dePoolTemplateName = 'depool-template'
-const dePoolTld = `depoolspm.eth`
+const apmTld = `${apmName}.${tld}`
+const tmplTld = `${templateName}.${apmName}.${tld}`
 
 const ONE_DAY = 60 * 60 * 24
 const ONE_WEEK = ONE_DAY * 7
@@ -65,11 +65,11 @@ async function deploy({
   log(`Using provided ENS: ${ens.address}`)
 
   log('=========')
-  if (await _getRegistered(ens, namehash(`${dePoolDaoName}.${dePoolTld}`))) {
+  if (await _getRegistered(ens, namehash(`${daoName}.${apmTld}`))) {
     errorOut('DAO already registered')
   }
 
-  const tmplNameHash = namehash(`${dePoolTemplateName}.${dePoolTld}`)
+  const tmplNameHash = namehash(tmplTld)
   const resolverAddress = await ens.resolver(tmplNameHash)
   const resolver = await PublicResolver.at(resolverAddress)
   const repoAddress = await resolver.addr(tmplNameHash)
@@ -78,7 +78,7 @@ async function deploy({
   const tmplAddress = latestRepo[1]
 
   const template = await DePoolTemplate.at(tmplAddress)
-  console.log(`Using DePool template ${dePoolTemplateName}.${dePoolTld} at:`, template.address)
+  console.log(`Using DePool template ${tmplTld} at:`, template.address)
 
   // TODO get holders from .env
   const HOLDERS = [holder1, holder2, holder3, holder4, holder5]
@@ -98,7 +98,7 @@ async function deploy({
 
   console.log('Deploying DePool DAO contract...')
   const receipt = await template.newDAO(
-    dePoolDaoName,
+    daoName,
     TOKEN_NAME,
     TOKEN_SYMBOL,
     HOLDERS,
@@ -116,11 +116,6 @@ async function deploy({
   const installedApps = receipt.logs.filter((l) => l.event === 'InstalledApp').map((l) => l.args)
 
   log('=========')
-  // log(`Registering DAO as "${dePoolDaoName}.${dePoolTld}"`)
-  // TODO register dao at depoolspm.eth (by default dao registered at aragonid.eth)
-  // receipt = await apm.newRepoWithVersion(dePoolDaoName, owner, [1, 0, 0], daoEvent.args.dao, '0x0', { from: owner })
-  // log(receipt)
-
   log('# DAO:')
   log('Address:', daoEvent.args.dao)
   log('Share Token:', tokenEvent.args.token)

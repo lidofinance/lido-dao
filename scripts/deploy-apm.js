@@ -5,12 +5,10 @@ const getAccounts = require('@aragon/os/scripts/helpers/get-accounts')
 const runOrWrapScript = require('./helpers/run-or-wrap-script')
 const logDeploy = require('./helpers/log-deploy')
 const { ZERO_ADDR, errorOut } = require('./helpers')
+const { tld, apmName } = require('./helpers/constants')
 
 const globalArtifacts = this.artifacts || artifacts // Not injected unless called directly via truffle
 const globalWeb3 = this.web3 || web3 // Not injected unless called directly via truffle
-
-const TLD_NAME = 'eth'
-const LABEL_NAME = 'depoolspm'
 
 const defaultOwner = process.env.OWNER
 const defaultDaoFactoryAddress = process.env.DAO_FACTORY || '0x5d94e3e7aec542ab0f9129b9a7badeb5b3ca0f77'
@@ -59,14 +57,12 @@ async function deploy({
   const ens = await ENS.at(ensAddress)
   log(`Using provided ENS: ${ensAddress}`)
 
-  const tldName = TLD_NAME
-  const labelName = LABEL_NAME
-  const tldHash = namehash(tldName)
-  const labelHash = '0x' + keccak256(labelName)
-  const apmNode = namehash(`${labelName}.${tldName}`)
+  const tldHash = namehash(tld)
+  const labelHash = '0x' + keccak256(apmName)
+  const apmNode = namehash(`${apmName}.${tld}`)
 
-  log(`TLD: ${tldName} (${tldHash})`)
-  log(`Label: ${labelName} (${labelHash})`)
+  log(`TLD: ${tld} (${tldHash})`)
+  log(`Label: ${apmName} (${labelHash})`)
   log('=========')
   log('Deploying APM bases...')
 
@@ -89,7 +85,7 @@ async function deploy({
   )
   await logDeploy('APMRegistryFactory', apmFactory)
 
-  log(`Assigning ENS name (${labelName}.${tldName}) to factory...`)
+  log(`Assigning ENS name (${apmName}.${tld}) to factory...`)
 
   if ((await ens.owner(apmNode)) === owner) {
     log('Transferring name ownership from deployer to APMRegistryFactory')
@@ -100,7 +96,7 @@ async function deploy({
       await ens.setSubnodeOwner(tldHash, labelHash, apmFactory.address, { from: owner })
     } catch (err) {
       console.error(
-        `Error: could not set the owner of '${labelName}.${tldName}' on the given ENS instance`,
+        `Error: could not set the owner of '${apmName}.${tld}' on the given ENS instance`,
         `(${ens.address}). Make sure you have ownership rights over the subdomain.`
       )
       throw err

@@ -5,12 +5,12 @@ const { apps } = require('./helpers/apps')
 const runOrWrapScript = require('./helpers/run-or-wrap-script')
 const logDeploy = require('./helpers/log-deploy')
 const { _getRegistered, errorOut } = require('./helpers')
+const { tld, apmName, templateName } = require('./helpers/constants')
 
 const globalArtifacts = this.artifacts || artifacts // Not injected unless called directly via truffle
 const globalWeb3 = this.web3 || web3 // Not injected unless called directly via truffle
 
-const dePoolTemplateName = 'depool-template'
-const dePoolTld = `depoolspm.eth`
+const tmplTld = `${templateName}.${apmName}.${tld}`
 
 const defaultOwner = process.env.OWNER
 const defaultDaoFactoryAddress = process.env.DAO_FACTORY || '0x5d94e3e7aec542ab0f9129b9a7badeb5b3ca0f77'
@@ -85,19 +85,22 @@ async function deploy({
       errorOut(`No ${contractName} app registered`)
     }
   }
-  if (await _getRegistered(ens, namehash(`${dePoolTemplateName}.${dePoolTld}`))) {
+  if (await _getRegistered(ens, namehash(tmplTld))) {
     errorOut('Template already registered')
   }
 
-  log(`Deploying template: ${dePoolTemplateName}`)
+  log(`Deploying template: ${templateName}`)
   const template = await DePoolTemplate.new(daoFactoryAddress, ensAddress, miniMeFactoryAddress, aragonIdAddress, { gas: 6000000 })
   await logDeploy('DePoolTemplate', template)
 
   log(`Deployed DePoolTemplate: ${template.address}`)
 
-  log(`Registering package for DePoolTemplate as "${dePoolTemplateName}.${dePoolTld}"`)
-  const receipt = await apm.newRepoWithVersion(dePoolTemplateName, owner, [1, 0, 0], template.address, '0x0', { from: owner })
-  // log(receipt)
+  log(`Registering template repo at APM"${templateName}.${tmplTld}"`)
+  const receipt = await apm.newRepoWithVersion(templateName, owner, [1, 0, 0], template.address, '0x0', { from: owner })
+  const repo = receipt.logs.find((l) => l.event === 'NewRepo').args
+  log(`Repo for "${tmplTld}" created`)
+  log(`Name: ${repo.name}`)
+  log(`Repo address: ${repo.repo}`)
 
   return {
     template: template.address
