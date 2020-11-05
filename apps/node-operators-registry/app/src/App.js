@@ -35,13 +35,19 @@ function App() {
   const theme = useTheme()
 
   // ADD NODE OPERATOR
-  const [AddSPSidePanelOpen, setAddSPSidePanelOpen] = useState(false)
-  const openAddSPSidePanel = useCallback(() => setAddSPSidePanelOpen(true), [])
-  const closeAddSPSidePanel = useCallback(
-    () => setAddSPSidePanelOpen(false),
+  const [
+    AddNodeOperatorSidePanelOpen,
+    setAddNodeOperatorSidePanelOpen,
+  ] = useState(false)
+  const openAddNodeOperatorSidePanel = useCallback(
+    () => setAddNodeOperatorSidePanelOpen(true),
     []
   )
-  const addSPApi = useCallback(
+  const closeAddNodeOperatorSidePanel = useCallback(
+    () => setAddNodeOperatorSidePanelOpen(false),
+    []
+  )
+  const addNodeOperatorApi = useCallback(
     (name, address, limit) =>
       api.addNodeOperator(name, address, limit).toPromise(),
     [api]
@@ -87,7 +93,7 @@ function App() {
     [api, addSigningKeysToOperatorId]
   )
 
-  // ADD SIGNING KEYS FOR SP
+  // ADD SIGNING KEYS FOR NodeOperator
   const [addMySKSidePanelOpen, setAddMySkSidePanelOpen] = useState(false)
   const openAddMySKSidePanelOpen = useCallback(
     () => setAddMySkSidePanelOpen(true),
@@ -100,7 +106,7 @@ function App() {
   const addSKApi = useCallback(
     (quantity, pubkeys, signatures) =>
       api
-        .addSigningKeysSP(
+        .addSigningKeysNodeOperator(
           addSigningKeysToOperatorId,
           quantity,
           pubkeys,
@@ -134,7 +140,7 @@ function App() {
           <Button
             mode="strong"
             label="Add Operator"
-            onClick={openAddSPSidePanel}
+            onClick={openAddNodeOperatorSidePanel}
           />
         }
       />
@@ -264,9 +270,9 @@ function App() {
         }
       />
       <AddNodeOperatorSidePanel
-        opened={AddSPSidePanelOpen}
-        onClose={closeAddSPSidePanel}
-        addSPApi={addSPApi}
+        opened={AddNodeOperatorSidePanelOpen}
+        onClose={closeAddNodeOperatorSidePanel}
+        addNodeOperatorApi={addNodeOperatorApi}
       />
       <AddSigningKeysSidePanel
         opened={addSigningKeysToOperatorId !== null}
