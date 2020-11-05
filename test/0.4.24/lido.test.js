@@ -845,7 +845,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
   })
 
-  it('Deposit finds the right SP', async () => {
+  it('Deposit finds the right operator', async () => {
     await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
     await operators.addNodeOperator('good', ADDRESS_1, UNLIMITED, { from: voting }) // 0

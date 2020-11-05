@@ -165,7 +165,7 @@ contract('Lido: happy path', (addresses) => {
     await pool.depositBufferedEther()
 
     // The first 32 ETH chunk was deposited to the validator registration contract,
-    // using public key and signature of the only validator of the first SP
+    // using public key and signature of the only validator of the first operator
 
     assertBn(await validatorRegistrationMock.totalCalls(), 1)
 
@@ -247,7 +247,7 @@ contract('Lido: happy path', (addresses) => {
     await pool.depositBufferedEther()
 
     // The first 32 ETH chunk was deposited to the validator registration contract,
-    // using public key and signature of the only validator of the second SP
+    // using public key and signature of the only validator of the second operator
 
     assertBn(await validatorRegistrationMock.totalCalls(), 2)
 
@@ -338,7 +338,7 @@ contract('Lido: happy path', (addresses) => {
     // used and non-stopped validators).
     //
     // In our case, both node operators received the same fee since they have the same
-    // effective stake (one signing key used from each SP, staking 32 ETH)
+    // effective stake (one signing key used from each operator, staking 32 ETH)
 
     assertBn(await token.balanceOf(nodeOperator1.address), new BN('79900898110870236'), 'operator_1 tokens')
     assertBn(await token.balanceOf(nodeOperator2.address), new BN('79900898110870236'), 'operator_2 tokens')

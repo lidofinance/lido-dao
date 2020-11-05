@@ -456,7 +456,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         uint256 maxDepositCalls = getDepositIterationLimit();
         uint256 depositAmount = _amount;
         while (depositAmount != 0 && totalDepositCalls < maxDepositCalls) {
-            // Finding the best suitable SP
+            // Finding the best suitable operator
             uint256 bestOperatorIdx = cache.length;   // 'not found' flag
             uint256 smallestStake;
             // The loop is ligthweight comparing to an ether transfer and .deposit invocation
@@ -480,7 +480,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
             if (bestOperatorIdx == cache.length)  // not found
                 break;
 
-            // Invoking deposit for the best SP
+            // Invoking deposit for the best operator
             depositAmount = depositAmount.sub(DEPOSIT_SIZE);
             ++totalDepositCalls;
 
@@ -555,7 +555,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
 
         getToken().mint(getTreasury(), toTreasury);
         getToken().mint(getInsuranceFund(), toInsuranceFund);
-        getToken().mint(address(getOperators()), toSP);
+        getToken().mint(address(getOperators()), tooperator);
         getOperators().distributeRewards(
           address(getToken()),
           getToken().balanceOf(address(getOperators()))

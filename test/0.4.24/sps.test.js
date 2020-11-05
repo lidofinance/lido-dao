@@ -332,7 +332,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       from: voting
     })
 
-    // to the second SP
+    // to the second operator
     await app.addSigningKeys(1, 1, pad('0x070707', 48), pad('0x01', 96), { from: voting })
     await assertRevert(app.addSigningKeys(2, 1, pad('0x080808', 48), pad('0x01', 96), { from: voting }), 'NODE_OPERATOR_NOT_FOUND')
 
@@ -344,11 +344,11 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await app.addNodeOperator('1', user1, UNLIMITED, { from: voting })
     await app.addNodeOperator('2', user2, UNLIMITED, { from: voting })
 
-    // add to the first SP
+    // add to the first operator
     await assertRevert(app.addSigningKeysOperatorBH(0, 1, pad('0x01', 48), pad('0x01', 96), { from: nobody }), 'APP_AUTH_FAILED')
     await app.addSigningKeysOperatorBH(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: user1 })
 
-    // add to the second SP
+    // add to the second operator
     await assertRevert(app.addSigningKeysOperatorBH(1, 1, pad('0x070707', 48), pad('0x01', 96), { from: nobody }), 'APP_AUTH_FAILED')
     await assertRevert(app.addSigningKeysOperatorBH(1, 1, pad('0x070707', 48), pad('0x01', 96), { from: user1 }), 'APP_AUTH_FAILED')
 
@@ -410,7 +410,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await assertRevert(app.getSigningKey(0, 3, { from: nobody }), 'KEY_NOT_FOUND')
     await assertRevert(app.getSigningKey(0, 1000, { from: nobody }), 'KEY_NOT_FOUND')
 
-    // to the second SP
+    // to the second operator
     await app.addSigningKeys(1, 1, pad('0x070707', 48), pad('0x01', 96), { from: voting })
     assertBn(await app.getTotalSigningKeyCount(1, { from: nobody }), 1)
     assertBn(await app.getUnusedSigningKeyCount(1, { from: nobody }), 1)
@@ -445,7 +445,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     assertBn(await app.getUnusedSigningKeyCount(0, { from: nobody }), 0)
     await assertRevert(app.removeSigningKey(0, 0, { from: voting }), 'KEY_NOT_FOUND')
 
-    // to the second SP
+    // to the second operator
     await app.addSigningKeys(1, 1, pad('0x070707', 48), pad('0x01', 96), { from: voting })
 
     // again to the first
@@ -469,7 +469,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     assertBn(await app.getUnusedSigningKeyCount(0, { from: nobody }), 1)
     assert.equal((await app.getSigningKey(0, 0, { from: nobody })).key, pad('0x010206', 48))
 
-    // back to the second SP
+    // back to the second operator
     assert.equal((await app.getSigningKey(1, 0, { from: nobody })).key, pad('0x070707', 48))
     await app.removeSigningKey(1, 0, { from: voting })
     await assertRevert(app.getSigningKey(1, 0, { from: nobody }), 'KEY_NOT_FOUND')
