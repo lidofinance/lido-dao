@@ -109,10 +109,10 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         NodeOperator storage sp = sps[id];
 
         activeSPCount++;
-        sp.active = true;
-        sp.name = _name;
-        sp.rewardAddress = _rewardAddress;
-        sp.stakingLimit = _stakingLimit;
+        operator.active = true;
+        operator.name = _name;
+        operator.rewardAddress = _rewardAddress;
+        operator.stakingLimit = _stakingLimit;
 
         emit NodeOperatorAdded(id, _name, _rewardAddress, _stakingLimit);
     }
@@ -196,16 +196,16 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             require(_ids[i] < totalSPCount, "NODE_OPERATOR_NOT_FOUND");
             NodeOperator storage sp = sps[_ids[i]];
 
-            uint64 current = sp.usedSigningKeys;
+            uint64 current = operator.usedSigningKeys;
             uint64 new_ = _usedSigningKeys[i];
 
             require(current <= new_, "USED_KEYS_DECREASED");
             if (current == new_)
                 continue;
 
-            require(new_ <= sp.totalSigningKeys, "INCONSISTENCY");
+            require(new_ <= operator.totalSigningKeys, "INCONSISTENCY");
 
-            sp.usedSigningKeys = new_;
+            operator.usedSigningKeys = new_;
         }
     }
 
@@ -294,10 +294,10 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         uint64 effectiveStakeTotal;
         for (uint256 SP_id = 0; SP_id < length; ++SP_id) {
             NodeOperator storage sp = sps[SP_id];
-            if (!sp.active)
+            if (!operator.active)
                 continue;
 
-            uint64 effectiveStake = sp.usedSigningKeys.sub(sp.stoppedValidators);
+            uint64 effectiveStake = operator.usedSigningKeys.sub(operator.stoppedValidators);
             effectiveStakeTotal = effectiveStakeTotal.add(effectiveStake);
         }
 
@@ -306,12 +306,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
         for (SP_id = 0; SP_id < length; ++SP_id) {
             sp = sps[SP_id];
-            if (!sp.active)
+            if (!operator.active)
                 continue;
 
-            effectiveStake = sp.usedSigningKeys.sub(sp.stoppedValidators);
+            effectiveStake = operator.usedSigningKeys.sub(operator.stoppedValidators);
             uint256 reward = uint256(effectiveStake).mul(_totalReward).div(uint256(effectiveStakeTotal));
-            require(IERC20(_token).transfer(sp.rewardAddress, reward), "TRANSFER_FAILED");
+            require(IERC20(_token).transfer(operator.rewardAddress, reward), "TRANSFER_FAILED");
         }
     }
 
@@ -349,13 +349,13 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     {
         NodeOperator storage sp = sps[_id];
 
-        active = sp.active;
-        name = _fullInfo ? sp.name : "";    // reading name is 2+ SLOADs
-        rewardAddress = sp.rewardAddress;
-        stakingLimit = sp.stakingLimit;
-        stoppedValidators = sp.stoppedValidators;
-        totalSigningKeys = sp.totalSigningKeys;
-        usedSigningKeys = sp.usedSigningKeys;
+        active = operator.active;
+        name = _fullInfo ? operator.name : "";    // reading name is 2+ SLOADs
+        rewardAddress = operator.rewardAddress;
+        stakingLimit = operator.stakingLimit;
+        stoppedValidators = operator.stoppedValidators;
+        totalSigningKeys = operator.totalSigningKeys;
+        usedSigningKeys = operator.usedSigningKeys;
     }
 
     /**
