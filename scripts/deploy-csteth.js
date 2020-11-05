@@ -5,11 +5,13 @@ const { STETH_APP_ID } = require('./helpers/apps')
 const runOrWrapScript = require('./helpers/run-or-wrap-script')
 const logDeploy = require('./helpers/log-deploy')
 const { errorOut } = require('./helpers')
+const { daoName } = require('./helpers/constants')
 
 const globalArtifacts = this.artifacts || artifacts // Not injected unless called directly via truffle
 const globalWeb3 = this.web3 || web3 // Not injected unless called directly via truffle
 
-const daoName = 'depool-dao.aragonid.eth'
+const aragonTld = `aragonid.eth`
+const daoTld = `${daoName}.${aragonTld}`
 
 const defaultOwner = process.env.OWNER
 const defaultENSAddress = process.env.ENS || '0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1'
@@ -43,7 +45,7 @@ async function deploy({
   log('Owner:', owner)
 
   const CstETH = artifacts.require('CstETH')
-  const daoAddress = await getDaoAddress(daoName, {
+  const daoAddress = await getDaoAddress(daoTld, {
     provider: web3.currentProvider,
     registryAddress: ensAddress
   })
