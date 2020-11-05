@@ -66,7 +66,7 @@ export default function App() {
       token,
       validatorRegistrationContract,
       oracle,
-      // SPs,
+      // operators,
       // treasury,
       // insuranceFund,
       // ether2Stat,

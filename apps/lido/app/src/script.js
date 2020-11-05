@@ -61,7 +61,7 @@ function initializeState() {
       token: await getToken(),
       validatorRegistrationContract: await getValidatorRegistrationContract(),
       oracle: await getOracle(),
-      // SPs: await getSPs(),
+      // operators: await getSPs(),
       // treasury: await getTreasury(),
       // insuranceFund: await getInsuranceFund(),
       ether2Stat: await getEther2Stat(),

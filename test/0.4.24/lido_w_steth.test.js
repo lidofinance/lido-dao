@@ -247,7 +247,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
             New totalControlledEther value leads to increase of stETH.totalSupply, and output of
             personal balances increased proportionally to holders' shares.
             Oracle's report also triggers fee payment that is substracted from the reward.
-            The fee divides in given proportion between SPs, treasury and insurance vaults.
+            The fee divides in given proportion between operators, treasury and insurance vaults.
 
             userBalance = 34.0 Ether staked
             shares = 34.0

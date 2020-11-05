@@ -54,10 +54,10 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     /// @dev Mapping of all node operators. Mapping is used to be able to extend the struct.
     mapping(uint256 => NodeOperator) internal operators;
 
-    // @dev Total number of SPs
+    // @dev Total number of operators
     uint256 internal totalSPCount;
 
-    // @dev Cached number of active SPs
+    // @dev Cached number of active operators
     uint256 internal activeSPCount;
 
     /// @dev link to the pool

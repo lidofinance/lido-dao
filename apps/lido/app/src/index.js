@@ -18,7 +18,7 @@ const defaultState = {
   token: defaultValue,
   validatorRegistrationContract: defaultValue,
   oracle: defaultValue,
-  SPs: defaultValue,
+  operators: defaultValue,
   treasury: defaultValue,
   insuranceFund: defaultValue,
   ether2Stat: defaultValue,
