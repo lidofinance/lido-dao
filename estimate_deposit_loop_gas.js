@@ -50,8 +50,8 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
     const numKeys = 3
 
     for (let iOperator = 0; iOperator < numOperators; ++iOperator) {
-      const spTx = await nodeOperatorRegistry.addNodeOperator(`SP-${iOperator}`, nodeOperator, spValidatorsLimit, { from: voting })
-      const nodeOperatorId = getEventArgument(spTx, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
+      const txn = await nodeOperatorRegistry.addNodeOperator(`SP-${iOperator}`, nodeOperator, spValidatorsLimit, { from: voting })
+      const nodeOperatorId = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
 
       const data = Array.from({ length: numKeys }, (_, iKey) => {
         const n = arbitraryN.clone().addn(10 * iKey + 1000 * iOperator)
