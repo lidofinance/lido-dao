@@ -551,7 +551,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         (uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, ) = _getFeeDistribution();
         uint256 toTreasury = tokens2mint.mul(treasuryFeeBasisPoints).div(10000);
         uint256 toInsuranceFund = tokens2mint.mul(insuranceFeeBasisPoints).div(10000);
-        uint256 toSP = tokens2mint.sub(toTreasury).sub(toInsuranceFund);
+        uint256 toOperators = tokens2mint.sub(toTreasury).sub(toInsuranceFund);
 
         getToken().mint(getTreasury(), toTreasury);
         getToken().mint(getInsuranceFund(), toInsuranceFund);
@@ -594,7 +594,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @dev Write back updated usedSigningKeys SP values
+      * @dev Write back updated usedSigningKeys operator's values
       */
     function _write_back_operator_cache(DepositLookupCacheEntry[] memory cache) internal {
         uint256 updateSize;

@@ -230,7 +230,7 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
     assertBn(await app.getBufferedEther(), ETH(37))
   })
 
-  it('SP filtering during deposit works when doing a huge deposit', async () => {
+  it('Node Operators filtering during deposit works when doing a huge deposit', async () => {
     await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
     await operators.addNodeOperator('good', ADDRESS_1, UNLIMITED, { from: voting }) // 0
@@ -353,7 +353,7 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
     assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
   })
 
-  it('SP filtering during deposit works when doing small deposits', async () => {
+  it('Node Operators filtering during deposit works when doing small deposits', async () => {
     await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
     await operators.addNodeOperator('good', ADDRESS_1, UNLIMITED, { from: voting }) // 0

@@ -120,7 +120,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
     assertBn(await token.balanceOf(user1), tokens(0))
   })
 
-  context('started with single-SP configuration', async () => {
+  context('started with single-operator configuration', async () => {
     beforeEach(async function () {
       await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
@@ -265,7 +265,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
             assertBn(await token.balanceOf(user2), new BN('34990001971093930278'))
             assertBn(await token.balanceOf(treasuryAddr), new BN('00002999143026093765'))
             assertBn(await token.balanceOf(insuranceAddr), new BN('00001999600063664000'))
-            // single SP1 takes all SP reward in this configuration
+            // single SP1 takes all operators' reward in this configuration
             assertBn(await token.balanceOf(nodeOperatorAddress1), new BN('00004999285816311954'))
           })
 
@@ -280,7 +280,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
           })
         })
 
-        context('2nd SP added (still inactive)', async () => {
+        context('2nd operator added (still inactive)', async () => {
           beforeEach(async function () {
             await operators.addNodeOperator('2', nodeOperatorAddress2, UNLIMITED, { from: voting })
           })
@@ -320,7 +320,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
             })
           })
 
-          context('2nd SP activated (same amount of effective keys)', async () => {
+          context('2nd operator activated (same amount of effective keys)', async () => {
             beforeEach(async function () {
               await operators.addSigningKeys(1, 1, hexConcat(pad('0x010207', 48)), hexConcat(pad('0x01', 96)), { from: voting })
               await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(30) })
@@ -373,7 +373,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
               })
             })
 
-            context('1st SP with 2 keys, 2nd SP with 1 key', async () => {
+            context('1st operator with 2 keys, 2nd operator with 1 key', async () => {
               beforeEach(async function () {
                 await operators.addSigningKeys(0, 1, hexConcat(pad('0x01020b', 48)), hexConcat(pad('0x01', 96)), { from: voting })
                 await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(32) })

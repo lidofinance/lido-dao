@@ -107,7 +107,7 @@ contract('Lido: happy path', (addresses) => {
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
     nodeOperator1.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
-    assertBn(nodeOperator1.id, 0, 'SP id')
+    assertBn(nodeOperator1.id, 0, 'operator id')
 
     assertBn(await nodeOperatorRegistry.getNodeOperatorsCount(), 1, 'total node operators')
   })
@@ -215,7 +215,7 @@ contract('Lido: happy path', (addresses) => {
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
     nodeOperator2.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
-    assertBn(nodeOperator2.id, 1, 'SP id')
+    assertBn(nodeOperator2.id, 1, 'operator id')
 
     assertBn(await nodeOperatorRegistry.getNodeOperatorsCount(), 2, 'total node operators')
 

@@ -606,7 +606,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await checkRewards({ treasury: 582, insurance: 391, operator: 985 })
   })
 
-  it('SP filtering during deposit works when doing a huge deposit', async () => {
+  it('Node Operators filtering during deposit works when doing a huge deposit', async () => {
     await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
     await operators.addNodeOperator('good', ADDRESS_1, UNLIMITED, { from: voting }) // 0
@@ -724,7 +724,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
   })
 
-  it('SP filtering during deposit works when doing small deposits', async () => {
+  it('Node Operators filtering during deposit works when doing small deposits', async () => {
     await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
     await operators.addNodeOperator('good', ADDRESS_1, UNLIMITED, { from: voting }) // 0

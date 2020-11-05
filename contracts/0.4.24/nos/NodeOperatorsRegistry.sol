@@ -41,14 +41,14 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
     /// @dev Node Operator parameters and internal state
     struct NodeOperator {
-        bool active;    // a flag indicating if the SP can participate in further staking and reward distribution
+        bool active;    // a flag indicating if the operator can participate in further staking and reward distribution
         address rewardAddress;  // Ethereum 1 address which receives steth rewards for this SP
         string name;    // human-readable name
         uint64 stakingLimit;    // the maximum number of validators to stake for this SP
         uint64 stoppedValidators;   // number of signing keys which stopped validation (e.g. were slashed)
 
         uint64 totalSigningKeys;    // total amount of signing keys of this SP
-        uint64 usedSigningKeys;     // number of signing keys of this SP which were used in deposits to the Ethereum 2
+        uint64 usedSigningKeys;     // number of signing keys of this operator which were used in deposits to the Ethereum 2
     }
 
     /// @dev Mapping of all node operators. Mapping is used to be able to extend the struct.
