@@ -73,7 +73,7 @@ contract('Lido: happy path', (addresses) => {
     const distribution = await pool.getFeeDistribution({ from: nobody })
     assertBn(distribution.treasuryFeeBasisPoints, treasuryFeePoints, 'treasury fee')
     assertBn(distribution.insuranceFeeBasisPoints, insuranceFeePoints, 'insurance fee')
-    assertBn(distribution.SPFeeBasisPoints, nodeOperatorsFeePoints, 'node operators fee')
+    assertBn(distribution.operatorsFeeBasisPoints, nodeOperatorsFeePoints, 'node operators fee')
   })
 
   const withdrawalCredentials = pad('0x0202', 32)

@@ -144,7 +144,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     const distribution = await app.getFeeDistribution({ from: nobody })
     assertBn(distribution.treasuryFeeBasisPoints, 3000)
     assertBn(distribution.insuranceFeeBasisPoints, 2000)
-    assertBn(distribution.SPFeeBasisPoints, 5000)
+    assertBn(distribution.operatorsFeeBasisPoints, 5000)
   })
 
   it('setWithdrawalCredentials works', async () => {
