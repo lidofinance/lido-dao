@@ -149,27 +149,27 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @notice Set fee distribution: `_treasuryFeeBasisPoints` basis points go to the treasury, `_insuranceFeeBasisPoints` basis points go to the insurance fund, `_SPFeeBasisPoints` basis points go to node operators. The sum has to be 10 000.
+      * @notice Set fee distribution: `_treasuryFeeBasisPoints` basis points go to the treasury, `_insuranceFeeBasisPoints` basis points go to the insurance fund, `_operatorsFeeBasisPoints` basis points go to node operators. The sum has to be 10 000.
       */
     function setFeeDistribution(
         uint16 _treasuryFeeBasisPoints,
         uint16 _insuranceFeeBasisPoints,
-        uint16 _SPFeeBasisPoints
+        uint16 _operatorsFeeBasisPoints
     )
         external auth(MANAGE_FEE)
     {
         require(
             10000 == uint256(_treasuryFeeBasisPoints)
             .add(uint256(_insuranceFeeBasisPoints))
-            .add(uint256(_SPFeeBasisPoints)),
+            .add(uint256(_operatorsFeeBasisPoints)),
             "FEES_DONT_ADD_UP"
         );
 
         _setBPValue(TREASURY_FEE_VALUE_POSITION, _treasuryFeeBasisPoints);
         _setBPValue(INSURANCE_FEE_VALUE_POSITION, _insuranceFeeBasisPoints);
-        _setBPValue(SP_FEE_VALUE_POSITION, _SPFeeBasisPoints);
+        _setBPValue(SP_FEE_VALUE_POSITION, _operatorsFeeBasisPoints);
 
-        emit FeeDistributionSet(_treasuryFeeBasisPoints, _insuranceFeeBasisPoints, _SPFeeBasisPoints);
+        emit FeeDistributionSet(_treasuryFeeBasisPoints, _insuranceFeeBasisPoints, _operatorsFeeBasisPoints);
     }
 
     /**
