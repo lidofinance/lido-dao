@@ -259,7 +259,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
             userBalance = userBalance + totalFee = 34.99
             treasuryBalance = totalFee * 0.3 = 0.003
             insuranceBalance = totalFee * 0.2 = 0.002
-            spsBalance = totalFee * 0.5 = 0.005
+            operatorsBalance = totalFee * 0.5 = 0.005
             */
             assertBn(await token.totalSupply(), tokens(35))
             assertBn(await token.balanceOf(user2), new BN('34990001971093930278'))
@@ -451,7 +451,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
           userBalance = userBalance + reward - totalFee = 67.66 stETH
           treasuryBalance = totalFee * 0.3 = 0.102
           insuranceBalance = totalFee * 0.2 = 0.068
-          spsBalance = totalFee * 0.5 = 0.17
+          operatorsBalance = totalFee * 0.5 = 0.17
           */
           const stat = await app.getEther2Stat()
           assertBn(stat.deposited, ETH(32))
