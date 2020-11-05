@@ -98,44 +98,44 @@ interface INodeOperatorsRegistry {
 
 
     /**
-      * @notice Add `_quantity` validator signing keys to the keys of the node operator #`_SP_id`. Concatenated keys are: `_pubkeys`
+      * @notice Add `_quantity` validator signing keys to the keys of the node operator #`_operator_id`. Concatenated keys are: `_pubkeys`
       * @dev Along with each key the DAO has to provide a signatures for the
       *      (pubkey, withdrawal_credentials, 32000000000) message.
       *      Given that information, the contract'll be able to call
       *      validator_registration.deposit on-chain.
-      * @param _SP_id Node Operator id
+      * @param _operator_id Node Operator id
       * @param _quantity Number of signing keys provided
       * @param _pubkeys Several concatenated validator signing keys
       * @param _signatures Several concatenated signatures for (pubkey, withdrawal_credentials, 32000000000) messages
       */
-    function addSigningKeys(uint256 _SP_id, uint256 _quantity, bytes _pubkeys, bytes _signatures) external;
+    function addSigningKeys(uint256 _operator_id, uint256 _quantity, bytes _pubkeys, bytes _signatures) external;
 
     /**
-      * @notice Removes a validator signing key #`_index` from the keys of the node operator #`_SP_id`
-      * @param _SP_id Node Operator id
+      * @notice Removes a validator signing key #`_index` from the keys of the node operator #`_operator_id`
+      * @param _operator_id Node Operator id
       * @param _index Index of the key, starting with 0
       */
-    function removeSigningKey(uint256 _SP_id, uint256 _index) external;
+    function removeSigningKey(uint256 _operator_id, uint256 _index) external;
 
     /**
-      * @notice Returns total number of signing keys of the node operator #`_SP_id`
+      * @notice Returns total number of signing keys of the node operator #`_operator_id`
       */
-    function getTotalSigningKeyCount(uint256 _SP_id) external view returns (uint256);
+    function getTotalSigningKeyCount(uint256 _operator_id) external view returns (uint256);
 
     /**
-      * @notice Returns number of usable signing keys of the node operator #`_SP_id`
+      * @notice Returns number of usable signing keys of the node operator #`_operator_id`
       */
-    function getUnusedSigningKeyCount(uint256 _SP_id) external view returns (uint256);
+    function getUnusedSigningKeyCount(uint256 _operator_id) external view returns (uint256);
 
     /**
-      * @notice Returns n-th signing key of the node operator #`_SP_id`
-      * @param _SP_id Node Operator id
+      * @notice Returns n-th signing key of the node operator #`_operator_id`
+      * @param _operator_id Node Operator id
       * @param _index Index of the key, starting with 0
       * @return key Key
       * @return depositSignature Signature needed for a validator_registration.deposit call
       * @return used Flag indication if the key was used in the staking
       */
-    function getSigningKey(uint256 _SP_id, uint256 _index) external view returns
+    function getSigningKey(uint256 _operator_id, uint256 _index) external view returns
             (bytes key, bytes depositSignature, bool used);
 
     event SigningKeyAdded(uint256 indexed SP_id, bytes pubkey);

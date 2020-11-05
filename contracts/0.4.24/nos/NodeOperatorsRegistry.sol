@@ -227,15 +227,15 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       *      (pubkey, withdrawal_credentials, 32000000000) message.
       *      Given that information, the contract'll be able to call
       *      validator_registration.deposit on-chain.
-      * @param _SP_id Node Operator id
+      * @param _operator_id Node Operator id
       * @param _quantity Number of signing keys provided
       * @param _pubkeys Several concatenated validator signing keys
       * @param _signatures Several concatenated signatures for (pubkey, withdrawal_credentials, 32000000000) messages
       */
-    function addSigningKeys(uint256 _SP_id, uint256 _quantity, bytes _pubkeys, bytes _signatures) external
-        authP(MANAGE_SIGNING_KEYS, arr(_SP_id))
+    function addSigningKeys(uint256 _operator_id, uint256 _quantity, bytes _pubkeys, bytes _signatures) external
+        authP(MANAGE_SIGNING_KEYS, arr(_operator_id))
     {
-        _addSigningKeys(_SP_id, _quantity, _pubkeys, _signatures);
+        _addSigningKeys(_operator_id, _quantity, _pubkeys, _signatures);
     }
 
     /**
@@ -244,43 +244,43 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       *      (pubkey, withdrawal_credentials, 32000000000) message.
       *      Given that information, the contract'll be able to call
       *      validator_registration.deposit on-chain.
-      * @param _SP_id Node Operator id
+      * @param _operator_id Node Operator id
       * @param _quantity Number of signing keys provided
       * @param _pubkeys Several concatenated validator signing keys
       * @param _signatures Several concatenated signatures for (pubkey, withdrawal_credentials, 32000000000) messages
       */
     function addSigningKeysSP(
-        uint256 _SP_id,
+        uint256 _operator_id,
         uint256 _quantity,
         bytes _pubkeys,
         bytes _signatures
     )
         external
     {
-        require(msg.sender == operators[_SP_id].rewardAddress, "APP_AUTH_FAILED");
-        _addSigningKeys(_SP_id, _quantity, _pubkeys, _signatures);
+        require(msg.sender == operators[_operator_id].rewardAddress, "APP_AUTH_FAILED");
+        _addSigningKeys(_operator_id, _quantity, _pubkeys, _signatures);
     }
 
     /**
       * @notice Removes a validator signing key #`_index` from the set of usable keys. Executed on behalf of DAO.
-      * @param _SP_id Node Operator id
+      * @param _operator_id Node Operator id
       * @param _index Index of the key, starting with 0
       */
-    function removeSigningKey(uint256 _SP_id, uint256 _index)
+    function removeSigningKey(uint256 _operator_id, uint256 _index)
         external
-        authP(MANAGE_SIGNING_KEYS, arr(_SP_id))
+        authP(MANAGE_SIGNING_KEYS, arr(_operator_id))
     {
-        _removeSigningKey(_SP_id, _index);
+        _removeSigningKey(_operator_id, _index);
     }
 
     /**
       * @notice Removes a validator signing key #`_index` from the set of usable keys. Executed on behalf of Node Operator.
-      * @param _SP_id Node Operator id
+      * @param _operator_id Node Operator id
       * @param _index Index of the key, starting with 0
       */
-    function removeSigningKeySP(uint256 _SP_id, uint256 _index) external {
-        require(msg.sender == operators[_SP_id].rewardAddress, "APP_AUTH_FAILED");
-        _removeSigningKey(_SP_id, _index);
+    function removeSigningKeySP(uint256 _operator_id, uint256 _index) external {
+        require(msg.sender == operators[_operator_id].rewardAddress, "APP_AUTH_FAILED");
+        _removeSigningKey(_operator_id, _index);
     }
 
     /**
@@ -359,36 +359,36 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     /**
-      * @notice Returns total number of signing keys of the node operator #`_SP_id`
+      * @notice Returns total number of signing keys of the node operator #`_operator_id`
       */
-    function getTotalSigningKeyCount(uint256 _SP_id) external view SPExists(_SP_id) returns (uint256) {
-        return operators[_SP_id].totalSigningKeys;
+    function getTotalSigningKeyCount(uint256 _operator_id) external view SPExists(_operator_id) returns (uint256) {
+        return operators[_operator_id].totalSigningKeys;
     }
 
     /**
-      * @notice Returns number of usable signing keys of the node operator #`_SP_id`
+      * @notice Returns number of usable signing keys of the node operator #`_operator_id`
       */
-    function getUnusedSigningKeyCount(uint256 _SP_id) external view SPExists(_SP_id) returns (uint256) {
-        return operators[_SP_id].totalSigningKeys.sub(operators[_SP_id].usedSigningKeys);
+    function getUnusedSigningKeyCount(uint256 _operator_id) external view SPExists(_operator_id) returns (uint256) {
+        return operators[_operator_id].totalSigningKeys.sub(operators[_operator_id].usedSigningKeys);
     }
 
     /**
-      * @notice Returns n-th signing key of the node operator #`_SP_id`
-      * @param _SP_id Node Operator id
+      * @notice Returns n-th signing key of the node operator #`_operator_id`
+      * @param _operator_id Node Operator id
       * @param _index Index of the key, starting with 0
       * @return key Key
       * @return depositSignature Signature needed for a validator_registration.deposit call
       * @return used Flag indication if the key was used in the staking
       */
-    function getSigningKey(uint256 _SP_id, uint256 _index) external view
-        SPExists(_SP_id)
+    function getSigningKey(uint256 _operator_id, uint256 _index) external view
+        SPExists(_operator_id)
         returns (bytes key, bytes depositSignature, bool used)
     {
-        require(_index < operators[_SP_id].totalSigningKeys, "KEY_NOT_FOUND");
+        require(_index < operators[_operator_id].totalSigningKeys, "KEY_NOT_FOUND");
 
-        (bytes memory key_, bytes memory signature) = _loadSigningKey(_SP_id, _index);
+        (bytes memory key_, bytes memory signature) = _loadSigningKey(_operator_id, _index);
 
-        return (key_, signature, _index < operators[_SP_id].usedSigningKeys);
+        return (key_, signature, _index < operators[_operator_id].usedSigningKeys);
     }
 
     function _isEmptySigningKey(bytes memory _key) internal pure returns (bool) {
@@ -411,11 +411,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         return uint64(v);
     }
 
-    function _signingKeyOffset(uint256 _SP_id, uint256 _keyIndex) internal pure returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(SIGNING_KEYS_MAPPING_NAME, _SP_id, _keyIndex)));
+    function _signingKeyOffset(uint256 _operator_id, uint256 _keyIndex) internal pure returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(SIGNING_KEYS_MAPPING_NAME, _operator_id, _keyIndex)));
     }
 
-    function _storeSigningKey(uint256 _SP_id, uint256 _keyIndex, bytes memory _key, bytes memory _signature) internal {
+    function _storeSigningKey(uint256 _operator_id, uint256 _keyIndex, bytes memory _key, bytes memory _signature) internal {
         assert(_key.length == PUBKEY_LENGTH);
         assert(_signature.length == SIGNATURE_LENGTH);
         // algorithm applicability constraints
@@ -423,7 +423,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         assert(0 == SIGNATURE_LENGTH % 32);
 
         // key
-        uint256 offset = _signingKeyOffset(_SP_id, _keyIndex);
+        uint256 offset = _signingKeyOffset(_operator_id, _keyIndex);
         uint256 keyExcessBits = (2 * 32 - PUBKEY_LENGTH) * 8;
         assembly {
             sstore(offset, mload(add(_key, 0x20)))
@@ -440,8 +440,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         }
     }
 
-    function _addSigningKeys(uint256 _SP_id, uint256 _quantity, bytes _pubkeys, bytes _signatures) internal
-        SPExists(_SP_id)
+    function _addSigningKeys(uint256 _operator_id, uint256 _quantity, bytes _pubkeys, bytes _signatures) internal
+        SPExists(_operator_id)
     {
         require(_quantity != 0, "NO_KEYS");
         require(_pubkeys.length == _quantity.mul(PUBKEY_LENGTH), "INVALID_LENGTH");
@@ -452,35 +452,35 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             require(!_isEmptySigningKey(key), "EMPTY_KEY");
             bytes memory sig = BytesLib.slice(_signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
 
-            _storeSigningKey(_SP_id, operators[_SP_id].totalSigningKeys + i, key, sig);
-            emit SigningKeyAdded(_SP_id, key);
+            _storeSigningKey(_operator_id, operators[_operator_id].totalSigningKeys + i, key, sig);
+            emit SigningKeyAdded(_operator_id, key);
         }
 
-        operators[_SP_id].totalSigningKeys = operators[_SP_id].totalSigningKeys.add(to64(_quantity));
+        operators[_operator_id].totalSigningKeys = operators[_operator_id].totalSigningKeys.add(to64(_quantity));
     }
 
-    function _removeSigningKey(uint256 _SP_id, uint256 _index) internal
-        SPExists(_SP_id)
+    function _removeSigningKey(uint256 _operator_id, uint256 _index) internal
+        SPExists(_operator_id)
     {
-        require(_index < operators[_SP_id].totalSigningKeys, "KEY_NOT_FOUND");
-        require(_index >= operators[_SP_id].usedSigningKeys, "KEY_WAS_USED");
+        require(_index < operators[_operator_id].totalSigningKeys, "KEY_NOT_FOUND");
+        require(_index >= operators[_operator_id].usedSigningKeys, "KEY_WAS_USED");
 
-        (bytes memory removedKey, ) = _loadSigningKey(_SP_id, _index);
+        (bytes memory removedKey, ) = _loadSigningKey(_operator_id, _index);
 
-        uint256 lastIndex = operators[_SP_id].totalSigningKeys.sub(1);
+        uint256 lastIndex = operators[_operator_id].totalSigningKeys.sub(1);
         if (_index < lastIndex) {
-            (bytes memory key, bytes memory signature) = _loadSigningKey(_SP_id, lastIndex);
-            _storeSigningKey(_SP_id, _index, key, signature);
+            (bytes memory key, bytes memory signature) = _loadSigningKey(_operator_id, lastIndex);
+            _storeSigningKey(_operator_id, _index, key, signature);
         }
 
-        _deleteSigningKey(_SP_id, lastIndex);
-        operators[_SP_id].totalSigningKeys = operators[_SP_id].totalSigningKeys.sub(1);
+        _deleteSigningKey(_operator_id, lastIndex);
+        operators[_operator_id].totalSigningKeys = operators[_operator_id].totalSigningKeys.sub(1);
 
-        emit SigningKeyRemoved(_SP_id, removedKey);
+        emit SigningKeyRemoved(_operator_id, removedKey);
     }
 
-    function _deleteSigningKey(uint256 _SP_id, uint256 _keyIndex) internal {
-        uint256 offset = _signingKeyOffset(_SP_id, _keyIndex);
+    function _deleteSigningKey(uint256 _operator_id, uint256 _keyIndex) internal {
+        uint256 offset = _signingKeyOffset(_operator_id, _keyIndex);
         for (uint256 i = 0; i < (PUBKEY_LENGTH + SIGNATURE_LENGTH) / 32 + 1; ++i) {
             assembly {
                 sstore(add(offset, i), 0)
@@ -488,12 +488,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         }
     }
 
-    function _loadSigningKey(uint256 _SP_id, uint256 _keyIndex) internal view returns (bytes memory key, bytes memory signature) {
+    function _loadSigningKey(uint256 _operator_id, uint256 _keyIndex) internal view returns (bytes memory key, bytes memory signature) {
         // algorithm applicability constraints
         assert(PUBKEY_LENGTH >= 32 && PUBKEY_LENGTH <= 64);
         assert(0 == SIGNATURE_LENGTH % 32);
 
-        uint256 offset = _signingKeyOffset(_SP_id, _keyIndex);
+        uint256 offset = _signingKeyOffset(_operator_id, _keyIndex);
 
         // key
         bytes memory tmpKey = new bytes(64);

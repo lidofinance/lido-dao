@@ -448,7 +448,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         assert(_amount >= MIN_DEPOSIT_AMOUNT);
 
         // Memory is very cheap, although you don't want to grow it too much.
-        DepositLookupCacheEntry[] memory cache = _load_SP_cache();
+        DepositLookupCacheEntry[] memory cache = _load_operator_cache();
         if (0 == cache.length)
             return 0;
 
@@ -495,7 +495,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         uint256 deposited = totalDepositCalls.mul(DEPOSIT_SIZE);
         if (0 != deposited) {
             REWARD_BASE_VALUE_POSITION.setStorageUint256(REWARD_BASE_VALUE_POSITION.getStorageUint256().add(deposited));
-            _write_back_SP_cache(cache);
+            _write_back_operator_cache(cache);
         }
 
         return deposited;
@@ -596,7 +596,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     /**
       * @dev Write back updated usedSigningKeys SP values
       */
-    function _write_back_SP_cache(DepositLookupCacheEntry[] memory cache) internal {
+    function _write_back_operator_cache(DepositLookupCacheEntry[] memory cache) internal {
         uint256 updateSize;
         for (uint256 idx = 0; idx < cache.length; ++idx) {
             if (cache[idx].usedSigningKeys > cache[idx].initialUsedSigningKeys)
@@ -683,7 +683,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         return assets;
     }
 
-    function _load_SP_cache() internal view returns (DepositLookupCacheEntry[] memory cache) {
+    function _load_operator_cache() internal view returns (DepositLookupCacheEntry[] memory cache) {
         INodeOperatorsRegistry operators = getOperators();
         cache = new DepositLookupCacheEntry[](operators.getActiveNodeOperatorsCount());
         if (0 == cache.length)
