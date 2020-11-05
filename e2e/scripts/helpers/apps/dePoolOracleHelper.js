@@ -23,7 +23,7 @@ export async function hasInitialized() {
   return await dePoolOracleContract.methods.hasInitialized().call()
 }
 
-async function pushData(epoch, amount, sender) {
+export async function pushData(epoch, amount, sender) {
   return await dePoolOracleContract.methods.pushData(epoch, amount).send({ from: sender, gas: '8000000' })
 }
 

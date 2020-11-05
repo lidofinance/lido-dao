@@ -121,7 +121,7 @@ fi
 if [ ! -d $DEVCHAIN_DIR ]; then
   if [ $SNAPSHOT ]; then
     echo "Unzip devchain snapshot"
-    unzip -o -q -d $DATA_DIR $SNAPSHOTS_DIR/devchain.zip
+    unzip -o -q -d $DATA_DIR $SNAPSHOTS_DIR/stage1/devchain.zip
   else
     DAO_DEPLOY=true
   fi
@@ -130,7 +130,7 @@ fi
 if [ ! -d $TESTNET_DIR ]; then
   if [ $SNAPSHOT ]; then
     echo "Unzip testnet snapshot"
-    unzip -o -q -d $DATA_DIR $SNAPSHOTS_DIR/testnet.zip
+    unzip -o -q -d $DATA_DIR $SNAPSHOTS_DIR/stage1/testnet.zip
   else
     ETH2_RESET=true
   fi
@@ -141,7 +141,7 @@ BLOCK_TIME=0 docker-compose up -d node1
 
 if [ ! -d $IPFS_DIR ] && [ $SNAPSHOT ] && [ $WEB_UI ]; then
   echo "Unzip ipfs snapshot"
-  unzip -o -q -d $DATA_DIR $SNAPSHOTS_DIR/ipfs.zip
+  unzip -o -q -d $DATA_DIR $SNAPSHOTS_DIR/stage0/ipfs.zip
 fi
 
 
@@ -237,7 +237,7 @@ fi
 
 if [ ! -d $VALIDATORS_DIR ] && [ $SNAPSHOT ]; then
   echo "Unzip validators snapshot"
-  unzip -o -q -d $DATA_DIR $SNAPSHOTS_DIR/validators.zip
+  unzip -o -q -d $DATA_DIR $SNAPSHOTS_DIR/stage1/validators.zip
 fi
 
 if [ ! -d "$VALIDATORS1_VALIDATORS_KEYS_DIR" ]; then

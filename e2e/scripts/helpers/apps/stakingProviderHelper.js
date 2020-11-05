@@ -25,23 +25,23 @@ export async function hasInitialized() {
   return await stakingProviderContract.methods.hasInitialized().call()
 }
 
-async function reportStoppedValidator(spId, incerment, sender) {
+export async function reportStoppedValidator(spId, incerment, sender) {
   return await stakingProviderContract.methods.reportStoppedValidators(spId, incerment).send({ from: sender, gas: '1000000' })
 }
 
-async function setStakingProviderActive(spId, status, sender) {
+export async function setStakingProviderActive(spId, status, sender) {
   await stakingProviderContract.methods.setStakingProviderActive(spId, status).send({ from: sender, gas: '1000000' })
 }
 
-async function setStakingProviderName(spId, name, sender) {
+export async function setStakingProviderName(spId, name, sender) {
   await stakingProviderContract.methods.setStakingProviderName(spId, name).send({ from: sender, gas: '1000000' })
 }
 
-async function setStakingProviderRewardAddress(spId, rewardAddress, sender) {
+export async function setStakingProviderRewardAddress(spId, rewardAddress, sender) {
   await stakingProviderContract.methods.setStakingProviderRewardAddress(spId, rewardAddress).send({ from: sender, gas: '1000000' })
 }
 
-async function setStakingProviderStakingLimit(spId, limit, sender) {
+export async function setStakingProviderStakingLimit(spId, limit, sender) {
   await stakingProviderContract.methods.setStakingProviderStakingLimit(spId, limit).send({ from: sender, gas: '1000000' })
 }
 
@@ -147,7 +147,7 @@ export function calculateNewSpBalance(sp, stakeProfit, totalUsedSigningKeysCount
   return BN(balanceBeforePushData).add(BN(reward)).toString()
 }
 
-async function getTotalActiveKeysCount() {
+export async function getTotalActiveKeysCount() {
   let effectiveStakeTotal = ''
   for (let spId = 0; spId < (await getStakingProvidersCount()); spId++) {
     const sp = await getStakingProvider(spId, true)
