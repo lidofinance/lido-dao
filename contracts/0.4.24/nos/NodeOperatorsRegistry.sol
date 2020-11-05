@@ -55,10 +55,10 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     mapping(uint256 => NodeOperator) internal operators;
 
     // @dev Total number of operators
-    uint256 internal totalSPCount;
+    uint256 internal totalOperatorsCount;
 
     // @dev Cached number of active operators
-    uint256 internal activeSPCount;
+    uint256 internal activeOperatorsCount;
 
     /// @dev link to the pool
     address public pool;
@@ -75,13 +75,13 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     modifier operatorExists(uint256 _id) {
-        require(_id < totalSPCount, "NODE_OPERATOR_NOT_FOUND");
+        require(_id < totalOperatorsCount, "NODE_OPERATOR_NOT_FOUND");
         _;
     }
 
     function initialize() public onlyInit {
-        totalSPCount = 0;
-        activeSPCount = 0;
+        totalOperatorsCount = 0;
+        activeOperatorsCount = 0;
         initialized();
     }
 
@@ -105,10 +105,10 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         validAddress(_rewardAddress)
         returns (uint256 id)
     {
-        id = totalSPCount++;
+        id = totalOperatorsCount++;
         NodeOperator storage operator = operators[id];
 
-        activeSPCount++;
+        activeOperatorsCount++;
         operator.active = true;
         operator.name = _name;
         operator.rewardAddress = _rewardAddress;
@@ -126,9 +126,9 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     {
         if (operators[_id].active != _active) {
             if (_active)
-                activeSPCount++;
+                activeOperatorsCount++;
             else
-                activeSPCount = activeSPCount.sub(1);
+                activeOperatorsCount = activeOperatorsCount.sub(1);
         }
 
         operators[_id].active = _active;
@@ -193,7 +193,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     function updateUsedKeys(uint256[] _ids, uint64[] _usedSigningKeys) external onlyPool {
         require(_ids.length == _usedSigningKeys.length, "BAD_LENGTH");
         for (uint256 i = 0; i < _ids.length; ++i) {
-            require(_ids[i] < totalSPCount, "NODE_OPERATOR_NOT_FOUND");
+            require(_ids[i] < totalOperatorsCount, "NODE_OPERATOR_NOT_FOUND");
             NodeOperator storage operator = operators[_ids[i]];
 
             uint64 current = operator.usedSigningKeys;
@@ -214,7 +214,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       * @dev Function is used by the pool
       */
     function trimUnusedKeys() external onlyPool {
-        uint256 length = totalSPCount;
+        uint256 length = totalOperatorsCount;
         for (uint256 operatorId = 0; operatorId < length; ++operatorId) {
             if (operators[operatorId].totalSigningKeys != operators[operatorId].usedSigningKeys)  // write only if update is needed
                 operators[operatorId].totalSigningKeys = operators[operatorId].usedSigningKeys;  // discard unused keys
@@ -290,7 +290,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       * @param _totalReward Total amount to distribute (must be transferred to this contract beforehand)
       */
     function distributeRewards(address _token, uint256 _totalReward) external onlyPool {
-        uint256 length = totalSPCount;
+        uint256 length = totalOperatorsCount;
         uint64 effectiveStakeTotal;
         for (uint256 operatorId = 0; operatorId < length; ++operatorId) {
             NodeOperator storage operator = operators[operatorId];
@@ -319,14 +319,14 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       * @notice Returns total number of node operators
       */
     function getNodeOperatorsCount() external view returns (uint256) {
-        return totalSPCount;
+        return totalOperatorsCount;
     }
 
     /**
       * @notice Returns number of active node operators
       */
     function getActiveNodeOperatorsCount() external view returns (uint256) {
-        return activeSPCount;
+        return activeOperatorsCount;
     }
 
     /**
