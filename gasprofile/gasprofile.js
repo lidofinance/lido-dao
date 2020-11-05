@@ -115,6 +115,11 @@ async function main(argv) {
     return false;
   }
 
+  if (!isDump && !isValidTransactionId(argv.transactionHashOrDump)) {
+    console.log(`Dump file ${argv.transactionHashOrDump} not found`);
+    return false;
+  }
+
   const web3 = isDump ? null : getWeb3(argv.rpcEndpoint);
   const codeByAddr = isDump ? dump.codeByAddr : (argv.dumpTo ? {} : null);
   const txHash = isDump ? dump.tx.hash : argv.transactionHashOrDump;
@@ -608,6 +613,10 @@ function parseSourceMap (raw) {
 
     return {s:Number(s), l:Number(l), f:Number(f), j};
   });
+}
+
+function isValidTransactionId(str) {
+  return /^0x[0123456789abcdefABCDEF]{64}$/.test(str);
 }
 
 function tryReadJSONFile(fileName) {
