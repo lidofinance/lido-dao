@@ -115,7 +115,7 @@ contract('Lido: happy path', (addresses) => {
   it('the first node operator registers one validator', async () => {
     const numKeys = 1
 
-    await nodeOperatorRegistry.addSigningKeysSP(
+    await nodeOperatorRegistry.addSigningKeysOperatorBH(
       nodeOperator1.id,
       numKeys,
       nodeOperator1.validators[0].key,
@@ -221,7 +221,7 @@ contract('Lido: happy path', (addresses) => {
 
     const numKeys = 1
 
-    await nodeOperatorRegistry.addSigningKeysSP(
+    await nodeOperatorRegistry.addSigningKeysOperatorBH(
       nodeOperator2.id,
       numKeys,
       nodeOperator2.validators[0].key,
