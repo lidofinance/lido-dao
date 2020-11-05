@@ -457,7 +457,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         uint256 depositAmount = _amount;
         while (depositAmount != 0 && totalDepositCalls < maxDepositCalls) {
             // Finding the best suitable SP
-            uint256 bestSPidx = cache.length;   // 'not found' flag
+            uint256 bestOperatorIdx = cache.length;   // 'not found' flag
             uint256 smallestStake;
             // The loop is ligthweight comparing to an ether transfer and .deposit invocation
             for (uint256 idx = 0; idx < cache.length; ++idx) {
@@ -471,13 +471,13 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
                 if (stake + 1 > entry.stakingLimit)
                     continue;
 
-                if (bestSPidx == cache.length || stake < smallestStake) {
-                    bestSPidx = idx;
+                if (bestOperatorIdx == cache.length || stake < smallestStake) {
+                    bestOperatorIdx = idx;
                     smallestStake = stake;
                 }
             }
 
-            if (bestSPidx == cache.length)  // not found
+            if (bestOperatorIdx == cache.length)  // not found
                 break;
 
             // Invoking deposit for the best SP
@@ -485,7 +485,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
             ++totalDepositCalls;
 
             (bytes memory key, bytes memory signature, bool used) =  /* solium-disable-line */
-                getOperators().getSigningKey(cache[bestSPidx].id, cache[bestSPidx].usedSigningKeys++);
+                getOperators().getSigningKey(cache[bestOperatorIdx].id, cache[bestOperatorIdx].usedSigningKeys++);
             assert(!used);
 
             // finally, stake the notch for the assigned validator
