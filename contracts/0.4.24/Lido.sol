@@ -240,7 +240,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         require(_beaconValidators <= depositedValidators, "REPORTED_MORE_DEPOSITED");
 
         uint256 beaconValidators = BEACON_VALIDATORS_VALUE_POSITION.getStorageUint256();
-        // Since the calculation of funds in the ingress queue is based on the number of validators 
+        // Since the calculation of funds in the ingress queue is based on the number of validators
         // that are in a transient state (deposited but not seen on beacon yet), we can't decrease the previously
         // reported number (we'll be unable to figure out who is in the queue and count them).
         // See LIP-1 for details https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-1.md
@@ -757,34 +757,46 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
 
     function _load_operator_cache() internal view returns (DepositLookupCacheEntry[] memory cache) {
         INodeOperatorsRegistry operators = getOperators();
-        cache = new DepositLookupCacheEntry[](operators.getActiveNodeOperatorsCount());
-        if (0 == cache.length)
+
+        (uint256 activeCount, bytes memory data) = operators.getNodeOperatorsMetrics();
+        require(0 == data.length % 33, "NODE_OPERATOR_REGISTRY_INCOSISTENT_DATALEN");
+
+        cache = new DepositLookupCacheEntry[](activeCount);
+        if (0 == activeCount)
             return cache;
 
-        uint256 idx = 0;
-        for (uint256 operatorId = operators.getNodeOperatorsCount().sub(1); ; operatorId = operatorId.sub(1)) {
-            (
-                bool active, , ,
-                uint64 stakingLimit,
-                uint64 stoppedValidators,
-                uint64 totalSigningKeys,
-                uint64 usedSigningKeys
-            ) = operators.getNodeOperator(operatorId, false);
-            if (!active)
+        // data is a sequence of 33-byte chunks, i-th chunk corresponding to a staking provider
+        // with id i and having the following layout:
+        // usedSigningKeys | totalSigningKeys | stoppedValidators | stakingLimit | active,
+        // where the first 4 elements are 8-byte uints and the last element is a 1-byte uint
+        uint256 totalOps = data.length / 33;
+        uint256 cacheIdx = 0;
+        for (uint256 i = 0; i < totalOps; ++i) {
+            uint256 iData;
+            bool iActive;
+            assembly {
+                // get the i-th 33-byte chunk offset: iData + 32 + i*33
+                let offset := add(data, add(32, mul(i, 33)))
+                // and write its first 32 bytes to iData
+                iData := mload(offset)
+                // and its last, 33-rd, byte to iActive
+                iActive := and(mload(add(offset, 1)), 0x1)
+            }
+
+            if (!iActive)
                 continue;
 
-            DepositLookupCacheEntry memory cached = cache[idx++];
-            cached.id = operatorId;
-            cached.stakingLimit = stakingLimit;
-            cached.stoppedValidators = stoppedValidators;
-            cached.totalSigningKeys = totalSigningKeys;
-            cached.usedSigningKeys = usedSigningKeys;
-            cached.initialUsedSigningKeys = usedSigningKeys;
+            DepositLookupCacheEntry memory cached = cache[cacheIdx++];
+            cached.id = i;
 
-            if (0 == operatorId)
-                break;
+            cached.stakingLimit = iData & 0xffffffffffffffff;
+            cached.stoppedValidators = (iData >> 64) & 0xffffffffffffffff;
+            cached.totalSigningKeys = (iData >> 128) & 0xffffffffffffffff;
+            cached.usedSigningKeys = (iData >> 192) & 0xffffffffffffffff;
+
+            cached.initialUsedSigningKeys = cached.usedSigningKeys;
         }
-        require(idx == cache.length, "NODE_OPERATOR_REGISTRY_INCOSISTENCY");
+        require(cacheIdx == cache.length, "NODE_OPERATOR_REGISTRY_INCOSISTENCY");
     }
 
     /**

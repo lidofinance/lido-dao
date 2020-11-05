@@ -44,12 +44,14 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
     /// @dev Node Operator parameters and internal state
     struct NodeOperator {
+        // slot 1
         bool active;    // a flag indicating if the operator can participate in further staking and reward distribution
         address rewardAddress;  // Ethereum 1 address which receives steth rewards for this operator
+        // slot 2
         string name;    // human-readable name
+        // slot 3: getNodeOperatorsMetrics depends on this slot position and layout
         uint64 stakingLimit;    // the maximum number of validators to stake for this operator
         uint64 stoppedValidators;   // number of signing keys which stopped validation (e.g. were slashed)
-
         uint64 totalSigningKeys;    // total amount of signing keys of this operator
         uint64 usedSigningKeys;     // number of signing keys of this operator which were used in deposits to the Ethereum 2
     }
@@ -402,6 +404,41 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         }
 
         return 0 == k1 && 0 == (k2 >> ((2 * 32 - PUBKEY_LENGTH) * 8));
+    }
+
+    /**
+      * @notice Returns a tuple: the first element is the number of active node operators;
+      * the second element contains packed metrics of all node operators, including inactive.
+      * The second element is a tightly-packed byte array consisting of 33-byte chunks, with
+      * i-th chunk corresponding to the i-th node operator and having the following layout:
+      * UK|TK|SV|SL|A, where UK is the number of used signing keys, TK is the total number of
+      * signing keys, SV is the number of stopped validators, and SL is staking limit, all
+      * 8-byte unsigned integers, and A is the active flag, a 1-byte unsigned integer (0 or 1).
+      */
+    function getNodeOperatorsMetrics() external view returns (uint256 activeCount, bytes memory data) {
+        uint256 count = totalOperatorsCount;
+        data = new bytes(33 * count);
+        for (uint256 i = 0; i < count; ++i) {
+            NodeOperator storage op = operators[i];
+            assembly {
+                // load the third slot of the StakingProvider struct containing UK,TK,SV,SL
+                // and store it into the first 32 bytes of the i-th chunk of the array
+                mstore(
+                    // the first 32 bytes of a byte array contain its length
+                    add(data, add(mul(i, 33), 32)),
+                    // we know that the offset inside a storage slot is always zero for a struct
+                    sload(add(op_slot, 2))
+                )
+                // store the active flag into the remaining byte of the i-th 33-byte chunk
+                mstore8(
+                    // (data + 32) + i*33 + 32
+                    add(data, add(mul(i, 33), 64)),
+                    // we know that the offset inside a storage slot is always zero for a struct
+                    and(sload(op_slot), 0x1)
+                )
+            }
+        }
+        activeCount = activeOperatorsCount;
     }
 
     function to64(uint256 v) internal pure returns (uint64) {
