@@ -207,7 +207,7 @@ take part in fee distribution.
 Allow to manage signing keys for the given node operator.
 
 > Signing keys can also be managed by the reward address of a signing provier by calling
-> the equivalent functions with the `SP` suffix: `addSigningKeysSP`, `removeSigningKeySP`.
+> the equivalent functions with the `OperatorBH` suffix: `addSigningKeysOperatorBH`, `removeSigningKeyOperatorBH`.
 
 
 ### Reporting new stopped validators
