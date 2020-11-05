@@ -3,7 +3,8 @@
   "version": "0.0.1",
   "private": true,
   "workspaces": [
-    "apps/*/app"
+    "apps/*/app",
+    "gasprofile"
   ],
   "scripts": {
     "lint": "yarn lint:sol && yarn lint:js",
