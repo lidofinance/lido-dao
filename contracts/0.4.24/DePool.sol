@@ -119,6 +119,13 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     }
 
     /**
+      * @notice Deposits buffered eth to the DepositContract
+      */
+    function depositBufferedEther() external {
+        return _depositBufferedEther();
+    }
+
+    /**
       * @notice Stop pool routine operations
       */
     function stop() external auth(PAUSE_ROLE) {
@@ -403,19 +410,23 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @dev Processes user deposit
+      * @dev Processes user deposit: mints liquid tokens and increases the pool buffer
       */
     function _submit(address _referral) internal whenNotStopped returns (uint256 StETH) {
         address sender = msg.sender;
         uint256 deposit = msg.value;
 
         if (0 != deposit) {
-
             getToken().mint(sender, deposit);
 
             _submitted(sender, deposit, _referral);
         }
+    }
 
+    /**
+      * @dev Deposits buffered eth to the DepositContract: assigns chunked deposits to node operators
+      */
+    function _depositBufferedEther() internal whenNotStopped {
         // Buffer management
         uint256 buffered = _getBufferedEther();
         if (buffered >= DEPOSIT_SIZE) {
