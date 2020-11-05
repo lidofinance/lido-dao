@@ -9,8 +9,8 @@ import "../../interfaces/INodeOperatorsRegistry.sol";
 contract PoolMock {
     INodeOperatorsRegistry private operators;
 
-    constructor(address _sps) public {
-        operators = INodeOperatorsRegistry(_sps);
+    constructor(address _operators) public {
+        operators = INodeOperatorsRegistry(_operators);
     }
 
     function updateUsedKeys(uint256[] _ids, uint64[] _usedSigningKeys) external {

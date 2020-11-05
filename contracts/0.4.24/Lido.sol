@@ -89,7 +89,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         ISTETH _token,
         IValidatorRegistration validatorRegistration,
         address _oracle,
-        INodeOperatorsRegistry _sps,
+        INodeOperatorsRegistry _operators,
         uint256 _depositIterationLimit
     )
         public onlyInit
@@ -97,7 +97,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         _setToken(_token);
         _setValidatorRegistrationContract(validatorRegistration);
         _setOracle(_oracle);
-        _setOperators(_sps);
+        _setOperators(_operators);
         _setDepositIterationLimit(_depositIterationLimit);
 
         initialized();
