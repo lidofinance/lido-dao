@@ -19,7 +19,7 @@ export const DEPOOL_APP_ID = '0xdf4019658a996b6bc3639baa07d25c655bf826334fc5c81b
 export const depositContract = '0x5f4e510503d83bd1a5436bdae2923489da0be454'
 export const ensRegistry = '0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1'
 export const daoAddress = '0xD20F21CEb31a8E302603dC3ff994f00aa9312A66'
-export const daoName = 'lido-dao.aragonid.eth'
+export const daoName = 'depool-dao.aragonid.eth'
 export const owner = '0xb4124cEB3451635DAcedd11767f004d8a28c6eE7'
 export const cstETHAddress = ''
 

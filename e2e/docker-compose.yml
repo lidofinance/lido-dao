@@ -108,9 +108,8 @@ services:
       --http-address 0.0.0.0
       --http-allow-origin *
       --libp2p-addresses /ip4/10.20.30.101/tcp/9000,/ip4/10.20.30.103/tcp/9000,/ip4/10.20.30.104/tcp/9000
-#      --eth1
-#      --eth1-endpoint http://node1:8545
-#      --boot-nodes $(cat $BEACON_DIR/beacon/network/enr.dat)
+      --eth1
+      --eth1-endpoint http://node1:8545
 
   node2-3:
     image: sigp/lighthouse
@@ -137,9 +136,8 @@ services:
       --http-address 0.0.0.0
       --http-allow-origin *
       --libp2p-addresses /ip4/10.20.30.102/tcp/9000,/ip4/10.20.30.101/tcp/9000,/ip4/10.20.30.104/tcp/9000
-#      --eth1
-#      --eth1-endpoint http://node1:8545
-#      --boot-nodes $(cat $BEACON_DIR/beacon/network/enr.dat)
+      --eth1
+      --eth1-endpoint http://node1:8545
 
   node2-4:
     image: sigp/lighthouse
@@ -166,9 +164,8 @@ services:
       --http-address 0.0.0.0
       --http-allow-origin *
       --libp2p-addresses /ip4/10.20.30.102/tcp/9000,/ip4/10.20.30.101/tcp/9000,/ip4/10.20.30.103/tcp/9000
-  #      --eth1
-  #      --eth1-endpoint http://node1:8545
-  #      --boot-nodes $(cat $BEACON_DIR/beacon/network/enr.dat)
+      --eth1
+      --eth1-endpoint http://node1:8545
 
   mock-validators:
     image: sigp/lighthouse
