@@ -97,7 +97,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         _setToken(_token);
         _setValidatorRegistrationContract(validatorRegistration);
         _setOracle(_oracle);
-        _setSPs(_sps);
+        _setOperators(_sps);
         _setDepositIterationLimit(_depositIterationLimit);
 
         initialized();
@@ -197,7 +197,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         require(_withdrawalCredentials.length == WITHDRAWAL_CREDENTIALS_LENGTH, "INVALID_LENGTH");
 
         withdrawalCredentials = _withdrawalCredentials;
-        getSPs().trimUnusedKeys();
+        getOperators().trimUnusedKeys();
 
         emit WithdrawalCredentialsSet(_withdrawalCredentials);
     }
@@ -338,7 +338,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     /**
       * @notice Gets node operators registry interface handle
       */
-    function getSPs() public view returns (INodeOperatorsRegistry) {
+    function getOperators() public view returns (INodeOperatorsRegistry) {
         return INodeOperatorsRegistry(NODE_OPERATOR_REGISTRY_VALUE_POSITION.getStorageAddress());
     }
 
@@ -396,7 +396,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     /**
       * @dev Internal function to set node operator registry address
       */
-    function _setSPs(INodeOperatorsRegistry _r) internal {
+    function _setOperators(INodeOperatorsRegistry _r) internal {
         require(isContract(_r), "NOT_A_CONTRACT");
         NODE_OPERATOR_REGISTRY_VALUE_POSITION.setStorageAddress(_r);
     }
@@ -485,7 +485,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
             ++totalDepositCalls;
 
             (bytes memory key, bytes memory signature, bool used) =  /* solium-disable-line */
-                getSPs().getSigningKey(cache[bestSPidx].id, cache[bestSPidx].usedSigningKeys++);
+                getOperators().getSigningKey(cache[bestSPidx].id, cache[bestSPidx].usedSigningKeys++);
             assert(!used);
 
             // finally, stake the notch for the assigned validator
@@ -555,10 +555,10 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
 
         getToken().mint(getTreasury(), toTreasury);
         getToken().mint(getInsuranceFund(), toInsuranceFund);
-        getToken().mint(address(getSPs()), toSP);
-        getSPs().distributeRewards(
+        getToken().mint(address(getOperators()), toSP);
+        getOperators().distributeRewards(
           address(getToken()),
-          getToken().balanceOf(address(getSPs()))
+          getToken().balanceOf(address(getOperators()))
         );
     }
 
@@ -617,7 +617,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         }
         assert(i == updateSize);
 
-        getSPs().updateUsedKeys(ids, usedSigningKeys);
+        getOperators().updateUsedKeys(ids, usedSigningKeys);
     }
 
     /**
@@ -684,7 +684,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     }
 
     function _load_SP_cache() internal view returns (DepositLookupCacheEntry[] memory cache) {
-        INodeOperatorsRegistry operators = getSPs();
+        INodeOperatorsRegistry operators = getOperators();
         cache = new DepositLookupCacheEntry[](operators.getActiveNodeOperatorsCount());
         if (0 == cache.length)
             return cache;

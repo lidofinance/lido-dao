@@ -61,7 +61,7 @@ function initializeState() {
       token: await getToken(),
       validatorRegistrationContract: await getValidatorRegistrationContract(),
       oracle: await getOracle(),
-      // operators: await getSPs(),
+      // operators: await getOperators(),
       // treasury: await getTreasury(),
       // insuranceFund: await getInsuranceFund(),
       ether2Stat: await getEther2Stat(),
@@ -106,8 +106,8 @@ async function getOracle() {
   return await app.call('getOracle').toPromise()
 }
 
-// async function getSPs() {
-//   return await app.call('getSPs').toPromise()
+// async function getOperators() {
+//   return await app.call('getOperators').toPromise()
 // }
 
 // async function getTreasury() {
