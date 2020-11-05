@@ -25,7 +25,7 @@ contract('Lido: happy path', (addresses) => {
     nobody
   ] = addresses
 
-  let pool, spRegistry, token
+  let pool, nodeOperatorRegistry, token
   let oracleMock, validatorRegistrationMock
   let treasuryAddr, insuranceAddr
 
@@ -39,7 +39,7 @@ contract('Lido: happy path', (addresses) => {
     pool = deployed.pool
 
     // contracts/nos/NodeOperatorsRegistry.sol
-    spRegistry = deployed.spRegistry
+    nodeOperatorRegistry = deployed.nodeOperatorRegistry
 
     // mocks
     oracleMock = deployed.oracleMock
@@ -103,30 +103,36 @@ contract('Lido: happy path', (addresses) => {
     // How many validators can this node operator register
     const validatorsLimit = 1000000000
 
-    const spTx = await spRegistry.addNodeOperator(nodeOperator1.name, nodeOperator1.address, validatorsLimit, { from: voting })
+    const spTx = await nodeOperatorRegistry.addNodeOperator(nodeOperator1.name, nodeOperator1.address, validatorsLimit, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
     nodeOperator1.id = getEventArgument(spTx, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
     assertBn(nodeOperator1.id, 0, 'SP id')
 
-    assertBn(await spRegistry.getNodeOperatorsCount(), 1, 'total node operators')
+    assertBn(await nodeOperatorRegistry.getNodeOperatorsCount(), 1, 'total node operators')
   })
 
   it('the first node operator registers one validator', async () => {
     const numKeys = 1
 
-    await spRegistry.addSigningKeysSP(nodeOperator1.id, numKeys, nodeOperator1.validators[0].key, nodeOperator1.validators[0].sig, {
-      from: nodeOperator1.address
-    })
+    await nodeOperatorRegistry.addSigningKeysSP(
+      nodeOperator1.id,
+      numKeys,
+      nodeOperator1.validators[0].key,
+      nodeOperator1.validators[0].sig,
+      {
+        from: nodeOperator1.address
+      }
+    )
 
     // The key was added
 
-    const totalKeys = await spRegistry.getTotalSigningKeyCount(nodeOperator1.id, { from: nobody })
+    const totalKeys = await nodeOperatorRegistry.getTotalSigningKeyCount(nodeOperator1.id, { from: nobody })
     assertBn(totalKeys, 1, 'total signing keys')
 
     // The key was not used yet
 
-    const unusedKeys = await spRegistry.getUnusedSigningKeyCount(nodeOperator1.id, { from: nobody })
+    const unusedKeys = await nodeOperatorRegistry.getUnusedSigningKeyCount(nodeOperator1.id, { from: nobody })
     assertBn(unusedKeys, 1, 'unused signing keys')
   })
 
@@ -187,7 +193,7 @@ contract('Lido: happy path', (addresses) => {
   })
 
   it('at this point, the pool has ran out of signing keys', async () => {
-    const unusedKeys = await spRegistry.getUnusedSigningKeyCount(nodeOperator1.id, { from: nobody })
+    const unusedKeys = await nodeOperatorRegistry.getUnusedSigningKeyCount(nodeOperator1.id, { from: nobody })
     assertBn(unusedKeys, 0, 'unused signing keys')
   })
 
@@ -205,28 +211,34 @@ contract('Lido: happy path', (addresses) => {
   it('voting adds the second node operator who registers one validator', async () => {
     const validatorsLimit = 1000000000
 
-    const spTx = await spRegistry.addNodeOperator(nodeOperator2.name, nodeOperator2.address, validatorsLimit, { from: voting })
+    const spTx = await nodeOperatorRegistry.addNodeOperator(nodeOperator2.name, nodeOperator2.address, validatorsLimit, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
     nodeOperator2.id = getEventArgument(spTx, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
     assertBn(nodeOperator2.id, 1, 'SP id')
 
-    assertBn(await spRegistry.getNodeOperatorsCount(), 2, 'total node operators')
+    assertBn(await nodeOperatorRegistry.getNodeOperatorsCount(), 2, 'total node operators')
 
     const numKeys = 1
 
-    await spRegistry.addSigningKeysSP(nodeOperator2.id, numKeys, nodeOperator2.validators[0].key, nodeOperator2.validators[0].sig, {
-      from: nodeOperator2.address
-    })
+    await nodeOperatorRegistry.addSigningKeysSP(
+      nodeOperator2.id,
+      numKeys,
+      nodeOperator2.validators[0].key,
+      nodeOperator2.validators[0].sig,
+      {
+        from: nodeOperator2.address
+      }
+    )
 
     // The key was added
 
-    const totalKeys = await spRegistry.getTotalSigningKeyCount(nodeOperator2.id, { from: nobody })
+    const totalKeys = await nodeOperatorRegistry.getTotalSigningKeyCount(nodeOperator2.id, { from: nobody })
     assertBn(totalKeys, 1, 'total signing keys')
 
     // The key was not used yet
 
-    const unusedKeys = await spRegistry.getUnusedSigningKeyCount(nodeOperator2.id, { from: nobody })
+    const unusedKeys = await nodeOperatorRegistry.getUnusedSigningKeyCount(nodeOperator2.id, { from: nobody })
     assertBn(unusedKeys, 1, 'unused signing keys')
   })
 
@@ -340,7 +352,7 @@ contract('Lido: happy path', (addresses) => {
             .add(await token.balanceOf(insuranceAddr))
             .add(await token.balanceOf(nodeOperator1.address))
             .add(await token.balanceOf(nodeOperator2.address))
-            .add(await token.balanceOf(spRegistry.address))
+            .add(await token.balanceOf(nodeOperatorRegistry.address))
         )
         .lt(mintedAmount.divn(100))
     )
