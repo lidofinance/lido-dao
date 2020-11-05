@@ -684,20 +684,20 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     }
 
     function _load_SP_cache() internal view returns (DepositLookupCacheEntry[] memory cache) {
-        INodeOperatorsRegistry sps = getSPs();
-        cache = new DepositLookupCacheEntry[](sps.getActiveNodeOperatorsCount());
+        INodeOperatorsRegistry operators = getSPs();
+        cache = new DepositLookupCacheEntry[](operators.getActiveNodeOperatorsCount());
         if (0 == cache.length)
             return cache;
 
         uint256 idx = 0;
-        for (uint256 SP_id = sps.getNodeOperatorsCount().sub(1); ; SP_id = SP_id.sub(1)) {
+        for (uint256 SP_id = operators.getNodeOperatorsCount().sub(1); ; SP_id = SP_id.sub(1)) {
             (
                 bool active, , ,
                 uint64 stakingLimit,
                 uint64 stoppedValidators,
                 uint64 totalSigningKeys,
                 uint64 usedSigningKeys
-            ) = sps.getNodeOperator(SP_id, false);
+            ) = operators.getNodeOperator(SP_id, false);
             if (!active)
                 continue;
 
