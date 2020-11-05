@@ -49,14 +49,14 @@ async function deployDaoAndPool(appManager, voting, depositIterationLimit = 10) 
     POOL_MANAGE_FEE,
     POOL_MANAGE_WITHDRAWAL_KEY,
     POOL_SET_DEPOSIT_ITERATION_LIMIT,
-    SP_REGISTRY_SET_POOL,
-    SP_REGISTRY_MANAGE_SIGNING_KEYS,
-    SP_REGISTRY_ADD_NODE_OPERATOR_ROLE,
-    SP_REGISTRY_SET_NODE_OPERATOR_ACTIVE_ROLE,
-    SP_REGISTRY_SET_NODE_OPERATOR_NAME_ROLE,
-    SP_REGISTRY_SET_NODE_OPERATOR_ADDRESS_ROLE,
-    SP_REGISTRY_SET_NODE_OPERATOR_LIMIT_ROLE,
-    SP_REGISTRY_REPORT_STOPPED_VALIDATORS_ROLE,
+    NODE_OPERATOR_REGISTRY_SET_POOL,
+    NODE_OPERATOR_REGISTRY_MANAGE_SIGNING_KEYS,
+    NODE_OPERATOR_REGISTRY_ADD_NODE_OPERATOR_ROLE,
+    NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_ACTIVE_ROLE,
+    NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_NAME_ROLE,
+    NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_ADDRESS_ROLE,
+    NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_LIMIT_ROLE,
+    NODE_OPERATOR_REGISTRY_REPORT_STOPPED_VALIDATORS_ROLE,
     TOKEN_MINT_ROLE,
     TOKEN_BURN_ROLE
   ] = await Promise.all([
@@ -83,14 +83,20 @@ async function deployDaoAndPool(appManager, voting, depositIterationLimit = 10) 
     acl.createPermission(voting, pool.address, POOL_MANAGE_WITHDRAWAL_KEY, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, POOL_SET_DEPOSIT_ITERATION_LIMIT, appManager, { from: appManager }),
     // Allow voting to manage node operators registry
-    acl.createPermission(voting, spRegistry.address, SP_REGISTRY_SET_POOL, appManager, { from: appManager }),
-    acl.createPermission(voting, spRegistry.address, SP_REGISTRY_MANAGE_SIGNING_KEYS, appManager, { from: appManager }),
-    acl.createPermission(voting, spRegistry.address, SP_REGISTRY_ADD_NODE_OPERATOR_ROLE, appManager, { from: appManager }),
-    acl.createPermission(voting, spRegistry.address, SP_REGISTRY_SET_NODE_OPERATOR_ACTIVE_ROLE, appManager, { from: appManager }),
-    acl.createPermission(voting, spRegistry.address, SP_REGISTRY_SET_NODE_OPERATOR_NAME_ROLE, appManager, { from: appManager }),
-    acl.createPermission(voting, spRegistry.address, SP_REGISTRY_SET_NODE_OPERATOR_ADDRESS_ROLE, appManager, { from: appManager }),
-    acl.createPermission(voting, spRegistry.address, SP_REGISTRY_SET_NODE_OPERATOR_LIMIT_ROLE, appManager, { from: appManager }),
-    acl.createPermission(voting, spRegistry.address, SP_REGISTRY_REPORT_STOPPED_VALIDATORS_ROLE, appManager, { from: appManager }),
+    acl.createPermission(voting, spRegistry.address, NODE_OPERATOR_REGISTRY_SET_POOL, appManager, { from: appManager }),
+    acl.createPermission(voting, spRegistry.address, NODE_OPERATOR_REGISTRY_MANAGE_SIGNING_KEYS, appManager, { from: appManager }),
+    acl.createPermission(voting, spRegistry.address, NODE_OPERATOR_REGISTRY_ADD_NODE_OPERATOR_ROLE, appManager, { from: appManager }),
+    acl.createPermission(voting, spRegistry.address, NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_ACTIVE_ROLE, appManager, {
+      from: appManager
+    }),
+    acl.createPermission(voting, spRegistry.address, NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_NAME_ROLE, appManager, { from: appManager }),
+    acl.createPermission(voting, spRegistry.address, NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_ADDRESS_ROLE, appManager, {
+      from: appManager
+    }),
+    acl.createPermission(voting, spRegistry.address, NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_LIMIT_ROLE, appManager, { from: appManager }),
+    acl.createPermission(voting, spRegistry.address, NODE_OPERATOR_REGISTRY_REPORT_STOPPED_VALIDATORS_ROLE, appManager, {
+      from: appManager
+    }),
     // Allow the pool to mint and burn tokens
     acl.createPermission(pool.address, token.address, TOKEN_MINT_ROLE, appManager, { from: appManager }),
     acl.createPermission(pool.address, token.address, TOKEN_BURN_ROLE, appManager, { from: appManager })

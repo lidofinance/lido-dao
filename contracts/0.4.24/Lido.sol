@@ -51,7 +51,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     bytes32 internal constant TOKEN_VALUE_POSITION = keccak256("lido.Lido.token");
     bytes32 internal constant VALIDATOR_REGISTRATION_VALUE_POSITION = keccak256("lido.Lido.validatorRegistration");
     bytes32 internal constant ORACLE_VALUE_POSITION = keccak256("lido.Lido.oracle");
-    bytes32 internal constant SP_REGISTRY_VALUE_POSITION = keccak256("lido.Lido.spRegistry");
+    bytes32 internal constant NODE_OPERATOR_REGISTRY_VALUE_POSITION = keccak256("lido.Lido.spRegistry");
 
     /// @dev A base value for tracking earned rewards
     bytes32 internal constant REWARD_BASE_VALUE_POSITION = keccak256("lido.Lido.rewardBase");
@@ -339,7 +339,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
       * @notice Gets node operators registry interface handle
       */
     function getSPs() public view returns (INodeOperatorsRegistry) {
-        return INodeOperatorsRegistry(SP_REGISTRY_VALUE_POSITION.getStorageAddress());
+        return INodeOperatorsRegistry(NODE_OPERATOR_REGISTRY_VALUE_POSITION.getStorageAddress());
     }
 
     /**
@@ -398,7 +398,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
       */
     function _setSPs(INodeOperatorsRegistry _r) internal {
         require(isContract(_r), "NOT_A_CONTRACT");
-        SP_REGISTRY_VALUE_POSITION.setStorageAddress(_r);
+        NODE_OPERATOR_REGISTRY_VALUE_POSITION.setStorageAddress(_r);
     }
 
     /**
@@ -712,7 +712,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
             if (0 == SP_id)
                 break;
         }
-        require(idx == cache.length, "SP_REGISTRY_INCOSISTENCY");
+        require(idx == cache.length, "NODE_OPERATOR_REGISTRY_INCOSISTENCY");
     }
 
     /**
