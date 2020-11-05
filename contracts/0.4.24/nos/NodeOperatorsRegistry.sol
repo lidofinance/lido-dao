@@ -215,9 +215,9 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       */
     function trimUnusedKeys() external onlyPool {
         uint256 length = totalSPCount;
-        for (uint256 SP_id = 0; SP_id < length; ++SP_id) {
-            if (operators[SP_id].totalSigningKeys != operators[SP_id].usedSigningKeys)  // write only if update is needed
-                operators[SP_id].totalSigningKeys = operators[SP_id].usedSigningKeys;  // discard unused keys
+        for (uint256 operatorId = 0; operatorId < length; ++operatorId) {
+            if (operators[operatorId].totalSigningKeys != operators[operatorId].usedSigningKeys)  // write only if update is needed
+                operators[operatorId].totalSigningKeys = operators[operatorId].usedSigningKeys;  // discard unused keys
         }
     }
 
@@ -292,8 +292,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     function distributeRewards(address _token, uint256 _totalReward) external onlyPool {
         uint256 length = totalSPCount;
         uint64 effectiveStakeTotal;
-        for (uint256 SP_id = 0; SP_id < length; ++SP_id) {
-            NodeOperator storage operator = operators[SP_id];
+        for (uint256 operatorId = 0; operatorId < length; ++operatorId) {
+            NodeOperator storage operator = operators[operatorId];
             if (!operator.active)
                 continue;
 
@@ -304,8 +304,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         if (0 == effectiveStakeTotal)
             revert("NO_STAKE");
 
-        for (SP_id = 0; SP_id < length; ++SP_id) {
-            operator = operators[SP_id];
+        for (operatorId = 0; operatorId < length; ++operatorId) {
+            operator = operators[operatorId];
             if (!operator.active)
                 continue;
 

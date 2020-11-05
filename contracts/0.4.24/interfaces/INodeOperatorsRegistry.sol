@@ -138,6 +138,6 @@ interface INodeOperatorsRegistry {
     function getSigningKey(uint256 _operator_id, uint256 _index) external view returns
             (bytes key, bytes depositSignature, bool used);
 
-    event SigningKeyAdded(uint256 indexed SP_id, bytes pubkey);
-    event SigningKeyRemoved(uint256 indexed SP_id, bytes pubkey);
+    event SigningKeyAdded(uint256 indexed operatorId, bytes pubkey);
+    event SigningKeyRemoved(uint256 indexed operatorId, bytes pubkey);
 }
