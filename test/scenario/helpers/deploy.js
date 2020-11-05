@@ -13,7 +13,7 @@ module.exports = {
 
 async function deployDaoAndPool(appManager, voting, depositIterationLimit = 10) {
   // Deploy the DAO, oracle and validator registration mocks, and base contracts for
-  // StETH (the token), Lido (the pool) and NodeOperatorsRegistry (the SP registry)
+  // StETH (the token), Lido (the pool) and NodeOperatorsRegistry (the Node Operators registry)
 
   const [{ dao, acl }, oracleMock, validatorRegistrationMock, stEthBase, poolBase, nodeOperatorRegistryBase] = await Promise.all([
     newDao(appManager),
@@ -24,7 +24,7 @@ async function deployDaoAndPool(appManager, voting, depositIterationLimit = 10) 
     NodeOperatorsRegistry.new()
   ])
 
-  // Instantiate proxies for the pool, the token, and the SP registry, using
+  // Instantiate proxies for the pool, the token, and the node operators registry, using
   // the base contracts as their logic implementation
 
   const [tokenProxyAddress, poolProxyAddress, nodeOperatorRegistryProxyAddress] = await Promise.all([
@@ -39,7 +39,7 @@ async function deployDaoAndPool(appManager, voting, depositIterationLimit = 10) 
     NodeOperatorsRegistry.at(nodeOperatorRegistryProxyAddress)
   ])
 
-  // Initialize the token, the SP registry and the pool
+  // Initialize the token, the node operators registry and the pool
 
   await token.initialize(pool.address)
   await nodeOperatorRegistry.initialize()
