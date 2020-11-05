@@ -255,9 +255,9 @@ function App() {
         }
         secondary={
           <>
-            <InfoBox heading="Number of SPs" value={nodeOperatorsCount} />
+            <InfoBox heading="Number of operators" value={nodeOperatorsCount} />
             <InfoBox
-              heading="Number of Active SPs"
+              heading="Number of Active operators"
               value={activeNodeOperatorsCount}
             />
           </>
