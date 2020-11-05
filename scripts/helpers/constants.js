@@ -1,5 +1,5 @@
-const daoName = 'depool-dao'
-const templateName = 'depool-template'
+const daoName = 'lido-dao'
+const templateName = 'lido-dao-template'
 const apmName = 'depoolspm'
 const tld = 'eth'
 

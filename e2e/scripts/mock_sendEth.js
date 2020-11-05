@@ -8,7 +8,7 @@ const main = async () => {
   const context = await prepareContext()
   const { web3, accounts } = context
   const value = ETH(1000)
-  const start = 6
+  const start = 2
   const senders = 9
   const recipientsPerSender = 5
   for (let i = start; i <= senders; i++) {
