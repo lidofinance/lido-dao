@@ -79,7 +79,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     await app.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
 
-    let sp = await app.getNodeOperator(0, true)
+    let operator = await app.getNodeOperator(0, true)
     assert.equal(operator.active, true)
     assert.equal(operator.name, 'fo o')
     assert.equal(operator.rewardAddress, ADDRESS_1)
@@ -88,7 +88,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     assertBn(operator.totalSigningKeys, 1)
     assertBn(operator.usedSigningKeys, 0)
 
-    sp = await app.getNodeOperator(1, true)
+    operator = await app.getNodeOperator(1, true)
     assert.equal(operator.active, true)
     assert.equal(operator.name, ' bar')
     assert.equal(operator.rewardAddress, ADDRESS_2)
@@ -97,11 +97,11 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     assertBn(operator.totalSigningKeys, 0)
     assertBn(operator.usedSigningKeys, 0)
 
-    sp = await app.getNodeOperator(0, false)
+    operator = await app.getNodeOperator(0, false)
     assert.equal(operator.name, '')
     assert.equal(operator.rewardAddress, ADDRESS_1)
 
-    sp = await app.getNodeOperator(1, false)
+    operator = await app.getNodeOperator(1, false)
     assert.equal(operator.name, '')
     assert.equal(operator.rewardAddress, ADDRESS_2)
 

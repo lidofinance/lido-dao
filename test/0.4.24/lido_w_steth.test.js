@@ -238,7 +238,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
             assertBn(await app.getRewardBase(), ETH(33))
           })
 
-          it('stETH: totalSupply=35 user=34.99 treasury.003, insurance=.002, sp=.005', async () => {
+          it('stETH: totalSupply=35 user=34.99 treasury.003, insurance=.002, operator=.005', async () => {
             /*
             New totalControlledEther value leads to increase of stETH.totalSupply, and output of
             personal balances increased proportionally to holders' shares.
@@ -265,7 +265,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
             assertBn(await token.balanceOf(nodeOperatorAddress1), new BN('00004999285816311954'))
           })
 
-          it('stETH shares: total=34.01 user2=34 treasury.003, insurance=.002, sp=.0048', async () => {
+          it('stETH shares: total=34.01 user2=34 treasury.003, insurance=.002, operator=.0048', async () => {
             /* totalShares increased to reflect new balances.
              */
             assertBn(await token.getTotalShares(), new BN('34009715146146239066'))

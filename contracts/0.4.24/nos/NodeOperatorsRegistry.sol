@@ -106,7 +106,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         returns (uint256 id)
     {
         id = totalSPCount++;
-        NodeOperator storage sp = sps[id];
+        NodeOperator storage operator = sps[id];
 
         activeSPCount++;
         operator.active = true;
@@ -194,7 +194,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         require(_ids.length == _usedSigningKeys.length, "BAD_LENGTH");
         for (uint256 i = 0; i < _ids.length; ++i) {
             require(_ids[i] < totalSPCount, "NODE_OPERATOR_NOT_FOUND");
-            NodeOperator storage sp = sps[_ids[i]];
+            NodeOperator storage operator = sps[_ids[i]];
 
             uint64 current = operator.usedSigningKeys;
             uint64 new_ = _usedSigningKeys[i];
@@ -293,7 +293,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         uint256 length = totalSPCount;
         uint64 effectiveStakeTotal;
         for (uint256 SP_id = 0; SP_id < length; ++SP_id) {
-            NodeOperator storage sp = sps[SP_id];
+            NodeOperator storage operator = sps[SP_id];
             if (!operator.active)
                 continue;
 
@@ -305,7 +305,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             revert("NO_STAKE");
 
         for (SP_id = 0; SP_id < length; ++SP_id) {
-            sp = sps[SP_id];
+            operator = sps[SP_id];
             if (!operator.active)
                 continue;
 
@@ -347,7 +347,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             uint64 usedSigningKeys
         )
     {
-        NodeOperator storage sp = sps[_id];
+        NodeOperator storage operator = sps[_id];
 
         active = operator.active;
         name = _fullInfo ? operator.name : "";    // reading name is 2+ SLOADs

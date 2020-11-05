@@ -103,7 +103,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
   }
 
   // Assert reward distribution. The values must be divided by 1e15.
-  const checkRewards = async ({ treasury, insurance, sp }) => {
+  const checkRewards = async ({ treasury, insurance, operator }) => {
     const [treasury_b, insurance_b, sps_b, a1, a2, a3, a4] = await Promise.all([
       token.balanceOf(treasuryAddr),
       token.balanceOf(insuranceAddr),
@@ -116,7 +116,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     assertBn(div15(treasury_b), treasury, 'treasury token balance check')
     assertBn(div15(insurance_b), insurance, 'insurance fund token balance check')
-    assertBn(div15(sps_b.add(a1).add(a2).add(a3).add(a4)), sp, 'node operators token balance check')
+    assertBn(div15(sps_b.add(a1).add(a2).add(a3).add(a4)), operator, 'node operators token balance check')
   }
 
   it('setFee works', async () => {
@@ -537,7 +537,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await oracle.reportEther2(300, ETH(36))
     await checkStat({ deposited: ETH(32), remote: ETH(36) })
     assertBn(await token.totalSupply(), tokens(38)) // remote + buffered
-    await checkRewards({ treasury: 569, insurance: 385, sp: 974 })
+    await checkRewards({ treasury: 569, insurance: 385, operator: 974 })
   })
 
   it('rewards distribution works', async () => {
@@ -565,18 +565,18 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await checkStat({ deposited: ETH(32), remote: ETH(30) })
     // ToDo check buffer=2
     assertBn(await token.totalSupply(), tokens(32)) // 30 remote (slashed) + 2 buffered = 32
-    await checkRewards({ treasury: 0, insurance: 0, sp: 0 })
+    await checkRewards({ treasury: 0, insurance: 0, operator: 0 })
 
     // back to normal
     await oracle.reportEther2(200, ETH(32))
     await checkStat({ deposited: ETH(32), remote: ETH(32) })
-    await checkRewards({ treasury: 0, insurance: 0, sp: 0 })
+    await checkRewards({ treasury: 0, insurance: 0, operator: 0 })
 
     // now some rewards are here
     await oracle.reportEther2(300, ETH(36))
     await checkStat({ deposited: ETH(32), remote: ETH(36) })
     assertBn(await token.totalSupply(), tokens(38))
-    await checkRewards({ treasury: 569, insurance: 385, sp: 974 })
+    await checkRewards({ treasury: 569, insurance: 385, operator: 974 })
   })
 
   it('deposits accounted properly during rewards distribution', async () => {
@@ -599,7 +599,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await oracle.reportEther2(300, ETH(36))
     await checkStat({ deposited: ETH(32), remote: ETH(36) })
     assertBn(await token.totalSupply(), tokens(68))
-    await checkRewards({ treasury: 582, insurance: 391, sp: 985 })
+    await checkRewards({ treasury: 582, insurance: 391, operator: 985 })
   })
 
   it('SP filtering during deposit works when doing a huge deposit', async () => {
