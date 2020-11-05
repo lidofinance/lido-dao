@@ -249,7 +249,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       * @param _pubkeys Several concatenated validator signing keys
       * @param _signatures Several concatenated signatures for (pubkey, withdrawal_credentials, 32000000000) messages
       */
-    function addSigningKeysSP(
+    function addSigningKeysOperatorBH(
         uint256 _operator_id,
         uint256 _quantity,
         bytes _pubkeys,
@@ -278,7 +278,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       * @param _operator_id Node Operator id
       * @param _index Index of the key, starting with 0
       */
-    function removeSigningKeySP(uint256 _operator_id, uint256 _index) external {
+    function removeSigningKeyOperatorBH(uint256 _operator_id, uint256 _index) external {
         require(msg.sender == operators[_operator_id].rewardAddress, "APP_AUTH_FAILED");
         _removeSigningKey(_operator_id, _index);
     }

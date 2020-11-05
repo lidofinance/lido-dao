@@ -345,25 +345,25 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await app.addNodeOperator('2', user2, UNLIMITED, { from: voting })
 
     // add to the first SP
-    await assertRevert(app.addSigningKeysSP(0, 1, pad('0x01', 48), pad('0x01', 96), { from: nobody }), 'APP_AUTH_FAILED')
-    await app.addSigningKeysSP(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: user1 })
+    await assertRevert(app.addSigningKeysOperatorBH(0, 1, pad('0x01', 48), pad('0x01', 96), { from: nobody }), 'APP_AUTH_FAILED')
+    await app.addSigningKeysOperatorBH(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: user1 })
 
     // add to the second SP
-    await assertRevert(app.addSigningKeysSP(1, 1, pad('0x070707', 48), pad('0x01', 96), { from: nobody }), 'APP_AUTH_FAILED')
-    await assertRevert(app.addSigningKeysSP(1, 1, pad('0x070707', 48), pad('0x01', 96), { from: user1 }), 'APP_AUTH_FAILED')
+    await assertRevert(app.addSigningKeysOperatorBH(1, 1, pad('0x070707', 48), pad('0x01', 96), { from: nobody }), 'APP_AUTH_FAILED')
+    await assertRevert(app.addSigningKeysOperatorBH(1, 1, pad('0x070707', 48), pad('0x01', 96), { from: user1 }), 'APP_AUTH_FAILED')
 
-    await app.addSigningKeysSP(1, 1, pad('0x070707', 48), pad('0x01', 96), { from: user2 })
+    await app.addSigningKeysOperatorBH(1, 1, pad('0x070707', 48), pad('0x01', 96), { from: user2 })
 
     assertBn(await app.getTotalSigningKeyCount(0, { from: nobody }), 1)
     assertBn(await app.getTotalSigningKeyCount(1, { from: nobody }), 1)
 
     // removal
-    await assertRevert(app.removeSigningKeySP(0, 0, { from: nobody }), 'APP_AUTH_FAILED')
-    await app.removeSigningKeySP(0, 0, { from: user1 })
+    await assertRevert(app.removeSigningKeyOperatorBH(0, 0, { from: nobody }), 'APP_AUTH_FAILED')
+    await app.removeSigningKeyOperatorBH(0, 0, { from: user1 })
 
-    await assertRevert(app.removeSigningKeySP(1, 0, { from: nobody }), 'APP_AUTH_FAILED')
-    await assertRevert(app.removeSigningKeySP(1, 0, { from: user1 }), 'APP_AUTH_FAILED')
-    await app.removeSigningKeySP(1, 0, { from: user2 })
+    await assertRevert(app.removeSigningKeyOperatorBH(1, 0, { from: nobody }), 'APP_AUTH_FAILED')
+    await assertRevert(app.removeSigningKeyOperatorBH(1, 0, { from: user1 }), 'APP_AUTH_FAILED')
+    await app.removeSigningKeyOperatorBH(1, 0, { from: user2 })
 
     assertBn(await app.getTotalSigningKeyCount(0, { from: nobody }), 0)
     assertBn(await app.getTotalSigningKeyCount(1, { from: nobody }), 0)

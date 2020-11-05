@@ -69,7 +69,7 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
     const keys = hexConcat(...data.map((v) => v.key))
     const sigs = hexConcat(...data.map((v) => v.sig))
 
-    await nodeOperatorRegistry.addSigningKeysSP(nodeOperatorId, numKeys, keys, sigs, { from: nodeOperator })
+    await nodeOperatorRegistry.addSigningKeysOperatorBH(nodeOperatorId, numKeys, keys, sigs, { from: nodeOperator })
 
     const totalKeys = await nodeOperatorRegistry.getTotalSigningKeyCount(nodeOperatorId, { from: nobody })
     assertBn(totalKeys, numKeys, 'total signing keys')
