@@ -555,7 +555,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
 
         getToken().mint(getTreasury(), toTreasury);
         getToken().mint(getInsuranceFund(), toInsuranceFund);
-        getToken().mint(address(getOperators()), tooperator);
+        getToken().mint(address(getOperators()), toOperators);
         getOperators().distributeRewards(
           address(getToken()),
           getToken().balanceOf(address(getOperators()))
