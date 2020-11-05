@@ -45,12 +45,12 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
   })
 
   it('voting adds 20 node operators with 3 signing keys each', async () => {
-    const spValidatorsLimit = 1000
+    const operatorValidatorsLimit = 1000
     const numOperators = 20
     const numKeys = 3
 
     for (let iOperator = 0; iOperator < numOperators; ++iOperator) {
-      const txn = await nodeOperatorRegistry.addNodeOperator(`SP-${iOperator}`, nodeOperator, spValidatorsLimit, { from: voting })
+      const txn = await nodeOperatorRegistry.addNodeOperator(`SP-${iOperator}`, nodeOperator, operatorValidatorsLimit, { from: voting })
       const nodeOperatorId = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
 
       const data = Array.from({ length: numKeys }, (_, iKey) => {
