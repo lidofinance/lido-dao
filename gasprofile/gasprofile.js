@@ -64,6 +64,11 @@ const argv = yargs(yargs.hideBin(process.argv))
         describe: 'hash of the transaction to profile',
         type: 'string'
       })
+      .option('i', {
+        alias: 'solc-input-json',
+        type: 'string',
+        describe: 'read sources from solc standard input JSON file'
+      })
       .option('S', {
         alias: 'skip',
         type: 'array',
@@ -113,9 +118,18 @@ async function main(argv) {
   const web3 = isDump ? null : getWeb3(argv.rpcEndpoint);
   const codeByAddr = isDump ? dump.codeByAddr : (argv.dumpTo ? {} : null);
   const txHash = isDump ? dump.tx.hash : argv.transactionHashOrDump;
-  const solcOutput = JSON.parse(fs.readFileSync(argv.solcOutputJson, 'utf8'));
-  const sourceRoot = argv.srcRoot;
-  const skipFiles = argv.skip;
+  const solcOutput = JSON.parse(await readFile(argv.solcOutputJson));
+  const solcInput = argv.solcInputJson
+    ? JSON.parse(await readFile(argv.solcInputJson))
+    : null;
+
+  const sourceProvider = {
+    skipFiles: argv.skip,
+    getSourceFilename: makeGetSourceFilenameFromSolcOutputJson(solcOutput),
+    readSource: solcInput
+      ? makeReadSourceFromSolcInputJSON(solcInput)
+      : makeReadSourceFromDisk(argv.srcRoot)
+  };
 
   if (!isDump) {
     const clientVersion = await web3.getClientVersion();
@@ -188,7 +202,21 @@ async function main(argv) {
     assert(callStack.length > 0);
 
     const call = callStack[log.depth - bottomDepth];
-    const {source, line, isSynthOp} = getSourcePosition(call, log, solcOutput, sourceRoot, skipFiles);
+
+    const sourceInfo = getSourceInfo(call, log);
+    const {sourceId, isSynthOp} = sourceInfo;
+
+    const source = sourceId != null
+      ? sourceById[sourceId] || await getSourceWithId(sourceId, sourceProvider)
+      : null;
+
+    const line = source && source.lineOffsets
+      ? binarysearch.closest(source.lineOffsets, sourceInfo.offset)
+      : null;
+
+    if (sourceId != null && call.contract.sourcesById[sourceId] === undefined) {
+      call.contract.sourcesById[sourceId] = source;
+    }
 
     if (i === 0 && line != null) {
       console.log(`Entry line: ${source.fileName}:${line + 1}`);
@@ -305,26 +333,81 @@ async function main(argv) {
   return true;
 }
 
-function tryReadJSONFile(fileName) {
-  let data;
-  try {
-    data = fs.readFileSync(fileName, 'utf8');
-  } catch (err) {
-    return null;
+function getSourceInfo(call, log) {
+  const {contract} = call;
+  const pcToIdx = call.isConstructionCall ? contract.constructionPcToIdx : contract.pcToIdx;
+  const sourceMap = call.isConstructionCall ? contract.constructorSourceMap : contract.sourceMap;
+
+  if (!pcToIdx || !sourceMap) {
+    return {sourceId: null, isSynthOp: false, offset: null, length: null};
   }
-  return JSON.parse(data);
+
+  const instructionIdx = pcToIdx[log.pc];
+  const {s: offset, f: sourceId, l: length} = sourceMap[instructionIdx];
+
+  // > In the case of instructions that are not associated with any particular source file,
+  // > the source mapping assigns an integer identifier of -1. This may happen for bytecode
+  // > sections stemming from compiler-generated inline assembly statements.
+  // From: https://solidity.readthedocs.io/en/v0.6.7/internals/source_mappings.html
+  return sourceId === -1
+    ? {sourceId: null, isSynthOp: true, offset, length}
+    : {sourceId, isSynthOp: false, offset, length};
 }
 
-function getWeb3(rpcEndpoint) {
-  const provider = new Web3.providers.HttpProvider(rpcEndpoint);
-  const web3 = new Web3(provider);
-  web3.extend({
-    methods: [
-      { name: 'traceTx', call: 'debug_traceTransaction', params: 2 },
-      { name: 'getClientVersion', call: 'web3_clientVersion', params: 0 }
-    ]
-  });
-  return web3;
+function getGasCost(log) {
+  // Ganache reports negative gasCost for return ops to account for compensation of 1/64 gas
+  // that was held when making a call; see Appendix H of Ethereum yellow paper and
+  // https://medium.com/@researchandinnovation/the-dark-side-of-ethereum-1-64th-call-gas-reduction-967d12e0627e
+  if (log.gasCost < 0 && (log.op === 'RETURN' || log.op === 'REVERT' || log.op === 'STOP')) {
+    return 0;
+  } else {
+    return log.gasCost;
+  }
+}
+
+function getCallTarget(log, iLog, structLogs) {
+  switch (log.op) {
+    case 'CALL': // https://ethervm.io/#F1
+    case 'CALLCODE': // https://ethervm.io/#F2
+    case 'DELEGATECALL': // https://ethervm.io/#F4
+    case 'STATICCALL': { // https://ethervm.io/#FA
+      return {
+        addressHexStr: normalizeAddress(log.stack[log.stack.length - 2]),
+        isConstructionCall: false
+      };
+    }
+    case 'CREATE': // https://ethervm.io/#F0
+    case 'CREATE2': { // https://ethervm.io/#F5
+      let nextLogSameDepth = null;
+      for (++iLog; iLog < structLogs.length && !nextLogSameDepth; ++iLog) {
+        const nextLog = structLogs[iLog];
+        if (nextLog.depth === log.depth) {
+          nextLogSameDepth = nextLog;
+        }
+      }
+      return {
+        addressHexStr: nextLogSameDepth
+          ? normalizeAddress(nextLogSameDepth.stack[nextLogSameDepth.stack.length - 1])
+          : null,
+        isConstructionCall: true
+      };
+    }
+    default: {
+      return {
+        addressHexStr: null,
+        isConstructionCall: false
+      };
+    }
+  }
+}
+
+function increaseLineGasCost(source, line, gasCost, isCall) {
+  if (source != null && line != null && !source.skip) {
+    source.lineGas[line] = (source.lineGas[line] | 0) + gasCost;
+    if (isCall) {
+      source.linesWithCalls[line] = true;
+    }
+  }
 }
 
 async function getContractWithAddr(addr, web3, solcOutput, isDump, codeByAddr) {
@@ -394,45 +477,26 @@ function findContractByDeployedBytecode(codeHexStr, solcOutput) {
   return null;
 }
 
-function getSourceWithId(sourceId, solcOutput, sourceRoot, skipFiles) {
+async function getSourceWithId(sourceId, sourceProvider) {
   const cached = sourceById[sourceId];
   if (cached) {
     return cached;
   }
 
-  const fileName = Object
-    .keys(solcOutput.sources)
-    .find(sourceFileName => solcOutput.sources[sourceFileName].id === sourceId) || null;
+  const fileName = sourceProvider.getSourceFilename(sourceId);
+  const result = makeSource(sourceId, fileName);
+  sourceById[sourceId] = result;
 
   if (!fileName) {
     console.error(`WARN no source with id ${sourceId}`);
-    return sourceById[sourceId] = makeSource(sourceId, null);
-  }
-
-  return getSourceForFilename(fileName, solcOutput, sourceRoot, skipFiles);
-}
-
-function getSourceForFilename(fileName, solcOutput, sourceRoot, skipFiles) {
-  const cached = sourceByFilename[fileName];
-  if (cached) {
-    return cached;
-  }
-
-  const result = makeSource(null, fileName);
-  sourceByFilename[fileName] = result;
-
-  const sourceData = solcOutput.sources[fileName];
-  if (!sourceData) {
-    console.error(`WARN no source info for filename ${fileName}`);
     return result;
   }
 
-  result.id = sourceData.id;
-  result.skip = skipFiles.some(str => fileName.indexOf(str) !== -1);
-  sourceById[result.id] = result;
+  sourceByFilename[fileName] = result;
+  result.skip = sourceProvider.skipFiles.some(str => fileName.indexOf(str) !== -1);
 
   if (!result.skip) {
-    result.text = readSource(fileName, sourceRoot);
+    result.text = await sourceProvider.readSource(fileName, sourceId);
   }
 
   if (result.text) {
@@ -444,114 +508,41 @@ function getSourceForFilename(fileName, solcOutput, sourceRoot, skipFiles) {
   return result;
 }
 
-function readSource(fileName, sourceRoot) {
-  try {
-    const sourcePath = path.resolve(__dirname, sourceRoot, fileName);
-    return fs.readFileSync(sourcePath, 'utf8');
-  } catch (err) {
+function makeGetSourceFilenameFromSolcOutputJson(solcOutput) {
+  return function getSourceFilenameSolcOutputJson(sourceId) {
+    return Object
+      .keys(solcOutput.sources)
+      .find(fileName => solcOutput.sources[fileName].id === sourceId) || null;
+  }
+}
+
+function makeReadSourceFromDisk(sourceRoot) {
+  return async function readSourceFromDisk(fileName, sourceId) {
     try {
-      const sourcePath = require.resolve(fileName);
-      return fs.readFileSync(sourcePath, 'utf8');
+      const sourcePath = path.resolve(sourceRoot, fileName);
+      return await readFile(sourcePath);
     } catch (err) {
-      return null;
-    }
-  }
-}
-
-function getCallTarget(log, iLog, structLogs) {
-  switch (log.op) {
-    case 'CALL': // https://ethervm.io/#F1
-    case 'CALLCODE': // https://ethervm.io/#F2
-    case 'DELEGATECALL': // https://ethervm.io/#F4
-    case 'STATICCALL': { // https://ethervm.io/#FA
-      return {
-        addressHexStr: normalizeAddress(log.stack[log.stack.length - 2]),
-        isConstructionCall: false
-      };
-    }
-    case 'CREATE': // https://ethervm.io/#F0
-    case 'CREATE2': { // https://ethervm.io/#F5
-      let nextLogSameDepth = null;
-      for (++iLog; iLog < structLogs.length && !nextLogSameDepth; ++iLog) {
-        const nextLog = structLogs[iLog];
-        if (nextLog.depth === log.depth) {
-          nextLogSameDepth = nextLog;
-        }
+      try {
+        const sourcePath = require.resolve(fileName);
+        return await readFile(sourcePath);
+      } catch (err) {
+        return null;
       }
-      return {
-        addressHexStr: nextLogSameDepth
-          ? normalizeAddress(nextLogSameDepth.stack[nextLogSameDepth.stack.length - 1])
-          : null,
-        isConstructionCall: true
-      };
-    }
-    default: {
-      return {
-        addressHexStr: null,
-        isConstructionCall: false
-      };
     }
   }
 }
 
-function getSourcePosition(call, log, solcOutput, sourceRoot, skipFiles) {
-  const result = {source: null, line: null, isSynthOp: false};
-
-  const {contract} = call;
-  const pcToIdx = call.isConstructionCall ? contract.constructionPcToIdx : contract.pcToIdx;
-  const sourceMap = call.isConstructionCall ? contract.constructorSourceMap : contract.sourceMap;
-
-  if (!pcToIdx || !sourceMap) {
-    return result;
-  }
-
-  const instructionIdx = pcToIdx[log.pc];
-  const {s: sourceOffset, f: sourceId} = sourceMap[instructionIdx];
-
-  if (sourceId === -1) {
-    // > In the case of instructions that are not associated with any particular source file,
-    // > the source mapping assigns an integer identifier of -1. This may happen for bytecode
-    // > sections stemming from compiler-generated inline assembly statements.
-    // From: https://solidity.readthedocs.io/en/v0.6.7/internals/source_mappings.html
-    result.isSynthOp = true;
-    return result;
-  }
-
-  result.source = getSourceWithId(sourceId, solcOutput, sourceRoot, skipFiles) || null;
-
-  if (contract.sourcesById[sourceId] === undefined) {
-    contract.sourcesById[sourceId] = result.source;
-  }
-
-  if (result.source && result.source.lineOffsets) {
-    result.line = binarysearch.closest(result.source.lineOffsets, sourceOffset);
-    // if (result.line) {
-    //   const endOffset = result.source.text.indexOf('\n', sourceOffset + 1);
-    //   console.error(`  ${result.source.fileName}:${result.line}\n  ${result.source.text.substring(sourceOffset, endOffset)}`);
-    // }
-  }
-
-  return result;
-}
-
-function getGasCost(log) {
-  // Ganache reports negative gasCost for return ops to account for compensation of 1/64 gas
-  // that was held when making a call; see Appendix H of Ethereum yellow paper and
-  // https://medium.com/@researchandinnovation/the-dark-side-of-ethereum-1-64th-call-gas-reduction-967d12e0627e
-  if (log.gasCost < 0 && (log.op === 'RETURN' || log.op === 'REVERT' || log.op === 'STOP')) {
-    return 0;
-  } else {
-    return log.gasCost;
+function makeReadSourceFromSolcInputJSON(solcInput) {
+  return function readSourceFromSolcInputJSON(fileName, sourceId) {
+    const source = solcInput.sources[fileName];
+    return source && source.content || null;
   }
 }
 
-function increaseLineGasCost(source, line, gasCost, isCall) {
-  if (source != null && line != null && !source.skip) {
-    source.lineGas[line] = (source.lineGas[line] | 0) + gasCost;
-    if (isCall) {
-      source.linesWithCalls[line] = true;
-    }
-  }
+function readFile(path) {
+  return new Promise((resolve, reject) => {
+    fs.readFile(path, 'utf8', (err, data) => err ? reject(err) : resolve(data));
+  })
 }
 
 function buildLineOffsets (src) {
@@ -617,6 +608,28 @@ function parseSourceMap (raw) {
 
     return {s:Number(s), l:Number(l), f:Number(f), j};
   });
+}
+
+function tryReadJSONFile(fileName) {
+  let data;
+  try {
+    data = fs.readFileSync(fileName, 'utf8');
+  } catch (err) {
+    return null;
+  }
+  return JSON.parse(data);
+}
+
+function getWeb3(rpcEndpoint) {
+  const provider = new Web3.providers.HttpProvider(rpcEndpoint);
+  const web3 = new Web3(provider);
+  web3.extend({
+    methods: [
+      { name: 'traceTx', call: 'debug_traceTransaction', params: 2 },
+      { name: 'getClientVersion', call: 'web3_clientVersion', params: 0 }
+    ]
+  });
+  return web3;
 }
 
 function normalizeAddress(addressHexStr) {
