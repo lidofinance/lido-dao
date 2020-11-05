@@ -74,7 +74,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         _;
     }
 
-    modifier SPExists(uint256 _id) {
+    modifier operatorExists(uint256 _id) {
         require(_id < totalSPCount, "NODE_OPERATOR_NOT_FOUND");
         _;
     }
@@ -122,7 +122,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       */
     function setNodeOperatorActive(uint256 _id, bool _active) external
         authP(SET_NODE_OPERATOR_ACTIVE_ROLE, arr(_id, _active ? uint256(1) : uint256(0)))
-        SPExists(_id)
+        operatorExists(_id)
     {
         if (operators[_id].active != _active) {
             if (_active)
@@ -141,7 +141,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       */
     function setNodeOperatorName(uint256 _id, string _name) external
         authP(SET_NODE_OPERATOR_NAME_ROLE, arr(_id))
-        SPExists(_id)
+        operatorExists(_id)
     {
         operators[_id].name = _name;
         emit NodeOperatorNameSet(_id, _name);
@@ -152,7 +152,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       */
     function setNodeOperatorRewardAddress(uint256 _id, address _rewardAddress) external
         authP(SET_NODE_OPERATOR_ADDRESS_ROLE, arr(_id, uint256(_rewardAddress)))
-        SPExists(_id)
+        operatorExists(_id)
         validAddress(_rewardAddress)
     {
         operators[_id].rewardAddress = _rewardAddress;
@@ -164,7 +164,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       */
     function setNodeOperatorStakingLimit(uint256 _id, uint64 _stakingLimit) external
         authP(SET_NODE_OPERATOR_LIMIT_ROLE, arr(_id, uint256(_stakingLimit)))
-        SPExists(_id)
+        operatorExists(_id)
     {
         operators[_id].stakingLimit = _stakingLimit;
         emit NodeOperatorStakingLimitSet(_id, _stakingLimit);
@@ -175,7 +175,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       */
     function reportStoppedValidators(uint256 _id, uint64 _stoppedIncrement) external
         authP(REPORT_STOPPED_VALIDATORS_ROLE, arr(_id, uint256(_stoppedIncrement)))
-        SPExists(_id)
+        operatorExists(_id)
     {
         require(0 != _stoppedIncrement, "EMPTY_VALUE");
         operators[_id].stoppedValidators = operators[_id].stoppedValidators.add(_stoppedIncrement);
@@ -335,7 +335,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       * @param _fullInfo If true, name will be returned as well
       */
     function getNodeOperator(uint256 _id, bool _fullInfo) external view
-        SPExists(_id)
+        operatorExists(_id)
         returns
         (
             bool active,
@@ -361,14 +361,14 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     /**
       * @notice Returns total number of signing keys of the node operator #`_operator_id`
       */
-    function getTotalSigningKeyCount(uint256 _operator_id) external view SPExists(_operator_id) returns (uint256) {
+    function getTotalSigningKeyCount(uint256 _operator_id) external view operatorExists(_operator_id) returns (uint256) {
         return operators[_operator_id].totalSigningKeys;
     }
 
     /**
       * @notice Returns number of usable signing keys of the node operator #`_operator_id`
       */
-    function getUnusedSigningKeyCount(uint256 _operator_id) external view SPExists(_operator_id) returns (uint256) {
+    function getUnusedSigningKeyCount(uint256 _operator_id) external view operatorExists(_operator_id) returns (uint256) {
         return operators[_operator_id].totalSigningKeys.sub(operators[_operator_id].usedSigningKeys);
     }
 
@@ -381,7 +381,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       * @return used Flag indication if the key was used in the staking
       */
     function getSigningKey(uint256 _operator_id, uint256 _index) external view
-        SPExists(_operator_id)
+        operatorExists(_operator_id)
         returns (bytes key, bytes depositSignature, bool used)
     {
         require(_index < operators[_operator_id].totalSigningKeys, "KEY_NOT_FOUND");
@@ -441,7 +441,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     function _addSigningKeys(uint256 _operator_id, uint256 _quantity, bytes _pubkeys, bytes _signatures) internal
-        SPExists(_operator_id)
+        operatorExists(_operator_id)
     {
         require(_quantity != 0, "NO_KEYS");
         require(_pubkeys.length == _quantity.mul(PUBKEY_LENGTH), "INVALID_LENGTH");
@@ -460,7 +460,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     function _removeSigningKey(uint256 _operator_id, uint256 _index) internal
-        SPExists(_operator_id)
+        operatorExists(_operator_id)
     {
         require(_index < operators[_operator_id].totalSigningKeys, "KEY_NOT_FOUND");
         require(_index >= operators[_operator_id].usedSigningKeys, "KEY_WAS_USED");
