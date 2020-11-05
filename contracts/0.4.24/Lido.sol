@@ -51,7 +51,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     bytes32 internal constant TOKEN_VALUE_POSITION = keccak256("lido.Lido.token");
     bytes32 internal constant VALIDATOR_REGISTRATION_VALUE_POSITION = keccak256("lido.Lido.validatorRegistration");
     bytes32 internal constant ORACLE_VALUE_POSITION = keccak256("lido.Lido.oracle");
-    bytes32 internal constant NODE_OPERATOR_REGISTRY_VALUE_POSITION = keccak256("lido.Lido.spRegistry");
+    bytes32 internal constant NODE_OPERATOR_REGISTRY_VALUE_POSITION = keccak256("lido.Lido.nodeOperatorRegistry");
 
     /// @dev A base value for tracking earned rewards
     bytes32 internal constant REWARD_BASE_VALUE_POSITION = keccak256("lido.Lido.rewardBase");

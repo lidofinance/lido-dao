@@ -28,7 +28,7 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
   // available in a single block and to protect from possible attacks exploiting this.
   const depositIterationLimit = 5
 
-  let pool, spRegistry, validatorRegistrationMock
+  let pool, nodeOperatorRegistry, validatorRegistrationMock
 
   it('DAO, node operators registry, token, and pool are deployed and initialized', async () => {
     const deployed = await deployDaoAndPool(appManager, voting, depositIterationLimit)
@@ -37,7 +37,7 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
     pool = deployed.pool
 
     // contracts/nos/NodeOperatorsRegistry.sol
-    spRegistry = deployed.spRegistry
+    nodeOperatorRegistry = deployed.nodeOperatorRegistry
 
     // mocks
     validatorRegistrationMock = deployed.validatorRegistrationMock
@@ -51,12 +51,12 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
     const validatorsLimit = 1000
     const numKeys = 16
 
-    const spTx = await spRegistry.addNodeOperator('SP-1', nodeOperator, validatorsLimit, { from: voting })
+    const spTx = await nodeOperatorRegistry.addNodeOperator('SP-1', nodeOperator, validatorsLimit, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
     const nodeOperatorId = getEventArgument(spTx, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
 
-    assertBn(await spRegistry.getNodeOperatorsCount(), 1, 'total node operators')
+    assertBn(await nodeOperatorRegistry.getNodeOperatorsCount(), 1, 'total node operators')
 
     const data = Array.from({ length: numKeys }, (_, i) => {
       const n = 1 + 10 * i
@@ -69,9 +69,9 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
     const keys = hexConcat(...data.map((v) => v.key))
     const sigs = hexConcat(...data.map((v) => v.sig))
 
-    await spRegistry.addSigningKeysSP(nodeOperatorId, numKeys, keys, sigs, { from: nodeOperator })
+    await nodeOperatorRegistry.addSigningKeysSP(nodeOperatorId, numKeys, keys, sigs, { from: nodeOperator })
 
-    const totalKeys = await spRegistry.getTotalSigningKeyCount(nodeOperatorId, { from: nobody })
+    const totalKeys = await nodeOperatorRegistry.getTotalSigningKeyCount(nodeOperatorId, { from: nobody })
     assertBn(totalKeys, numKeys, 'total signing keys')
   })
 
