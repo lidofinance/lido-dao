@@ -199,9 +199,9 @@ take part in fee distribution.
 
 ### Managing node operator’s signing keys
 
-* Mutator: `addSigningKeys(uint256 _SP_id, uint256 _quantity, bytes _pubkeys, bytes _signatures)`
+* Mutator: `addSigningKeys(uint256 _operator_id, uint256 _quantity, bytes _pubkeys, bytes _signatures)`
   * Permission required: `MANAGE_SIGNING_KEYS`
-* Mutator: `removeSigningKey(uint256 _SP_id, uint256 _index)`
+* Mutator: `removeSigningKey(uint256 _operator_id, uint256 _index)`
   * Permission required: `MANAGE_SIGNING_KEYS`
 
 Allow to manage signing keys for the given node operator.
