@@ -200,7 +200,7 @@ async function main(argv) {
     const prevLog = trace.structLogs[i - 1];
     const nextLog = trace.structLogs[i + 1];
     const log = trace.structLogs[i];
-    const gasCost = getGasCost(log);
+    const gasCost = getGasCost(log, nextLog);
 
     // console.error(`${log.op}, gas ${log.gas}, gasCost ${log.gasCost}, pc ${log.pc}, depth ${log.depth}`);
 
@@ -209,7 +209,7 @@ async function main(argv) {
       // Using the previous log since the current log's gas contains the compensation of 1/64 gas
       // that was held when making the call, and at the point when prevTopCall.gasBefore was
       // recorded this amount had been already held by the call instruction.
-      prevTopCall.contract.totalGasCost += prevTopCall.gasBefore - prevLog.gas + getGasCost(prevLog);
+      prevTopCall.contract.totalGasCost += prevTopCall.gasBefore - prevLog.gas + getGasCost(prevLog, log);
 
       const topCall = callStack[callStack.length - 1];
       const cumulativeCallCost = topCall.gasBeforeOutgoingCall - log.gas;
@@ -381,15 +381,21 @@ function getSourceInfo(call, log) {
     : {sourceId, isSynthOp: false, offset, length};
 }
 
-function getGasCost(log) {
+function getGasCost(log, nextLog) {
+  const {op} = log
   // Ganache reports negative gasCost for return ops to account for compensation of 1/64 gas
   // that was held when making a call; see Appendix H of Ethereum yellow paper and
   // https://medium.com/@researchandinnovation/the-dark-side-of-ethereum-1-64th-call-gas-reduction-967d12e0627e
-  if (log.gasCost < 0 && (log.op === 'RETURN' || log.op === 'REVERT' || log.op === 'STOP')) {
+  if (log.gasCost < 0 && (op === 'RETURN' || op === 'REVERT' || op === 'STOP')) {
     return 0;
-  } else {
-    return log.gasCost;
   }
+  if (nextLog && nextLog.depth === log.depth && (op === 'CALL' || op === 'CALLCODE' || op === 'DELEGATECALL' || op === 'STATICCALL')) {
+    // geth reports the cost including 1/64 gas deposit even if it doesn't intorduce
+    // a new stack item (e.g. calls to precompiled contracts like sha256), so the
+    // deposit is already returned by the next opcode
+    return log.gas - nextLog.gas;
+  }
+  return log.gasCost;
 }
 
 function getCallTarget(log, iLog, structLogs) {
