@@ -31,7 +31,7 @@ contract LidoTemplate is BaseTemplate {
     */
     bytes32 constant internal STETH_APP_ID = 0x7a155a469b6e893b1e5d8f992f066474a74daf5ece6715948667ef3565e34ec2;
     bytes32 constant internal LIDOORACLE_APP_ID = 0xc62f68e3a6f657e08c27afe0f11d03375e5255f5845055d81c1281dbf139ce18;
-    bytes32 internal constant REGISTRY_APP_ID = 0x6ba226ab4c6dc8945d4ef74de1da0053b9bb7cfe8c1f4f0b88b59bfe2b8b943e;
+    bytes32 internal constant REGISTRY_APP_ID = 0x9a09c6bc9551dd5e194dc3f814ce4725494966d9cdc90ff6cb49fc94d8a034ab;
     bytes32 constant internal LIDO_APP_ID = 0xe5c0c15280069e08354c1c1d5b6706edcc4e849e76ec9822afa35d4d66bbbe06;
 
     bool constant private TOKEN_TRANSFERABLE = true;
