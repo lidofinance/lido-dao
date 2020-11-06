@@ -415,19 +415,17 @@ contract DePool is IDePool, IsContract, Pausable, AragonApp {
     function _submit(address _referral) internal whenNotStopped returns (uint256 StETH) {
         address sender = msg.sender;
         uint256 deposit = msg.value;
+        require(deposit != 0, "ZERO_DEPOSIT");
 
-        if (0 != deposit) {
-            getToken().mint(sender, deposit);
+        getToken().mint(sender, deposit);
 
-            _submitted(sender, deposit, _referral);
-        }
+        _submitted(sender, deposit, _referral);
     }
 
     /**
       * @dev Deposits buffered eth to the DepositContract: assigns chunked deposits to node operators
       */
     function _depositBufferedEther() internal whenNotStopped {
-        // Buffer management
         uint256 buffered = _getBufferedEther();
         if (buffered >= DEPOSIT_SIZE) {
             uint256 unaccounted = _getUnaccountedEther();
