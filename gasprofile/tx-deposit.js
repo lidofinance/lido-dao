@@ -6,8 +6,6 @@ const { deployDaoAndPool } = require('../test/scenario/helpers/deploy')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
-console.log('toBN', toBN)
-
 const arbitraryN = toBN('0x0159e2036050fb43f6ecaca13a7b53b23ea54a623e47fb2bd89a5b4a18da3295')
 const withdrawalCredentials = pad('0x0202', 32)
 const validatorData = []
@@ -62,11 +60,10 @@ async function main() {
     validatorData.push.apply(validatorData, data)
   }
 
-  for (let iProvider = 0; iProvider < numProviders; ++iProvider) {
-    await pool.submit(ZERO_ADDRESS, { from: user1, value: ETH(33) })
-  }
+  // preheating: use one signing key from each provider
+  await pool.submit(ZERO_ADDRESS, { from: user1, value: ETH(32 * numProviders + 1) })
 
-  await printTx(`pool.submit`, pool.submit(ZERO_ADDRESS, { from: user1, value: ETH(33) }))
+  await printTx(`pool.submit(32 ETH)`, pool.submit(ZERO_ADDRESS, { from: user2, value: ETH(32) }))
 }
 
 async function printTx(name, promise) {
