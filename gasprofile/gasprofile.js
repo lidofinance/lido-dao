@@ -24,7 +24,7 @@ const makeSource = (id, fileName) => ({
 });
 
 const makeContract = addressHexStr => ({
-  addressHexStr,
+  addressHexStr: strip0x(addressHexStr.toLowerCase()),
   codeHexStr: null,
   constructionСodeHexStr: null,
   fileName: null,
@@ -38,8 +38,9 @@ const makeContract = addressHexStr => ({
   synthGasCost: 0
 });
 
-const makeCallStackItem = contract => ({
+const makeCallStackItem = (contract, targetAddressHexStr) => ({
   contract,
+  targetAddressHexStr: strip0x(targetAddressHexStr.toLowerCase()),
   isConstructionCall: false,
   gasBefore: 0,
   gasBeforeOutgoingCall: 0,
@@ -74,6 +75,10 @@ const argv = yargs(yargs.hideBin(process.argv))
         type: 'array',
         default: [],
         describe: 'skip printing gas usage for filenames containing this substring'
+      })
+      .option('only-address', {
+        type: 'string',
+        describe: 'only report line gas usage within a contract with the given address'
       })
       .option('R', {
         alias: 'src-root',
@@ -155,8 +160,15 @@ async function main(argv) {
 
   const isEntryCallConstruction = !tx.to && !!receipt.contractAddress;
   const entryAddr = isEntryCallConstruction ? receipt.contractAddress : tx.to;
-
   assert(!!entryAddr);
+
+  const onlyAddressHexStr = argv.onlyAddress
+    ? strip0x(argv.onlyAddress.toLowerCase())
+    : null;
+
+  if (onlyAddressHexStr != null) {
+    console.log(`Reporting line-by-line gas consumed only inside 0x${onlyAddressHexStr}`);
+  }
 
   const entryContract = await getContractWithAddr(entryAddr, web3, solcOutput, isDump, codeByAddr);
   if (!entryContract.codeHexStr) {
@@ -177,7 +189,7 @@ async function main(argv) {
 
   !isDump && console.error(`Trace obtained`);
 
-  const entryCall = makeCallStackItem(entryContract);
+  const entryCall = makeCallStackItem(entryContract, entryAddr);
   entryCall.isConstructionCall = isEntryCallConstruction;
 
   const callStack = [entryCall];
@@ -201,7 +213,9 @@ async function main(argv) {
 
       const topCall = callStack[callStack.length - 1];
       const cumulativeCallCost = topCall.gasBeforeOutgoingCall - log.gas;
-      increaseLineGasCost(topCall.outgoingCallSource, topCall.outgoingCallLine, cumulativeCallCost, true);
+      if (onlyAddressHexStr == null || topCall.targetAddressHexStr === onlyAddressHexStr) {
+        increaseLineGasCost(topCall.outgoingCallSource, topCall.outgoingCallLine, cumulativeCallCost, true);
+      }
     }
 
     assert(callStack.length > 0);
@@ -238,13 +252,13 @@ async function main(argv) {
       call.gasBeforeOutgoingCall = log.gas;
 
       const targetContract = await getContractWithAddr(outgoingCallTarget.addressHexStr, web3, solcOutput, isDump, codeByAddr);
-      const outgoingCall = makeCallStackItem(targetContract);
+      const outgoingCall = makeCallStackItem(targetContract, outgoingCallTarget.addressHexStr);
 
       outgoingCall.isConstructionCall = outgoingCallTarget.isConstructionCall;
       outgoingCall.gasBefore = nextLog.gas; // here the 1/64 of the remaining gas will already be held
 
       callStack.push(outgoingCall);
-    } else {
+    } else if (onlyAddressHexStr == null || call.targetAddressHexStr === onlyAddressHexStr) {
       if (isSynthOp) {
         call.contract.synthGasCost += gasCost;
       } else {
@@ -291,10 +305,15 @@ async function main(argv) {
 
   let maxGasPerLine = 0;
   let hasCalls = false;
+  let hasGasByFilename = {}
 
   souceFilenames.forEach(fileName => {
     const source = sourceByFilename[fileName];
+    let hasGas = false;
     source.lineGas.forEach((gasPerLine, iLine) => {
+      if (!hasGas && gasPerLine > 0) {
+        hasGas = true;
+      }
       if (gasPerLine > maxGasPerLine) {
         maxGasPerLine = gasPerLine;
       }
@@ -302,6 +321,9 @@ async function main(argv) {
         hasCalls = true
       }
     })
+    if (hasGas) {
+      hasGasByFilename[fileName] = true;
+    }
   });
 
   const gasColTitle = 'GAS';
@@ -314,7 +336,7 @@ async function main(argv) {
 
   souceFilenames.forEach(fileName => {
     const source = sourceByFilename[fileName];
-    if (!source.text) {
+    if (!source.text || !hasGasByFilename[fileName]) {
       return;
     }
 
