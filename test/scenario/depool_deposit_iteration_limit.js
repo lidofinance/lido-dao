@@ -78,6 +78,7 @@ contract('DePool: deposit loop iteration limit', (addresses) => {
   it('a user submits 15 * 32 ETH', async () => {
     const referral = ZERO_ADDRESS
     await pool.submit(referral, { from: user1, value: ETH(15 * 32) })
+    await pool.depositBufferedEther()
 
     assertBn(await pool.getTotalControlledEther(), ETH(15 * 32), 'total controlled ether')
   })
@@ -101,6 +102,7 @@ contract('DePool: deposit loop iteration limit', (addresses) => {
 
     assertBn(await pool.getTotalControlledEther(), ETH(25 * 32), 'total controlled ether')
 
+    await pool.depositBufferedEther()
     // no more than depositIterationLimit validators are registered in a single transaction
 
     assertBn(await validatorRegistrationMock.totalCalls(), 10, 'total validators registered')
@@ -111,11 +113,8 @@ contract('DePool: deposit loop iteration limit', (addresses) => {
     assertBn(await pool.getBufferedEther(), ETH(25 * 32 - 10 * 32), 'buffered ether')
   })
 
-  it('submitting zero Ether advances the loop as well as long as there is enough buffered Ether and validator keys', async () => {
-    const result = await pool.submit(ZERO_ADDRESS, { from: nobody, value: 0 })
-
-    const submittedEvents = getEvents(result, 'Submitted')
-    assert(submittedEvents.length === 0, 'no Submitted events were generated')
+  it('depositBufferedEther assigns available deposits if there is enough buffered Ether and validator keys', async () => {
+    await pool.depositBufferedEther()
 
     assertBn(await pool.getTotalControlledEther(), ETH(25 * 32), 'total controlled ether')
     assertBn(await validatorRegistrationMock.totalCalls(), 15, 'total validators registered')
@@ -135,9 +134,8 @@ contract('DePool: deposit loop iteration limit', (addresses) => {
     await assertRevert(pool.setDepositIterationLimit(0, { from: voting }), 'ZERO_LIMIT')
   })
 
-  it('the new iteration limit comes into effect on the next submit', async () => {
-    await pool.submit(ZERO_ADDRESS, { from: nobody, value: 0 })
-    assertBn(await pool.getTotalControlledEther(), ETH(25 * 32), 'total controlled ether')
+  it('the new iteration limit comes into effect on the next depositBufferedEther', async () => {
+    await pool.depositBufferedEther()
 
     assertBn(await validatorRegistrationMock.totalCalls(), 18)
 
@@ -151,11 +149,55 @@ contract('DePool: deposit loop iteration limit', (addresses) => {
     await pool.submit(ZERO_ADDRESS, { from: user1, value: ETH(32) })
     assertBn(await pool.getTotalControlledEther(), ETH(26 * 32), 'total controlled ether')
 
+    await pool.depositBufferedEther()
+    
     assertBn(await validatorRegistrationMock.totalCalls(), 20)
 
     const ether2Stat = await pool.getEther2Stat()
     assertBn(ether2Stat.deposited, ETH(20 * 32), 'deposited ether2')
 
     assertBn(await pool.getBufferedEther(), ETH(26 * 32 - 20 * 32), 'buffered ether')
+  })
+
+  it('voting adds additional staking provider with 7 signing keys', async () => {
+    const validatorsLimit = 1000
+    const numKeys = 7
+
+    const spTx = await spRegistry.addStakingProvider('SP-1', stakingProvider, validatorsLimit, { from: voting })
+
+    // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
+    const stakingProviderId = getEventArgument(spTx, 'StakingProviderAdded', 'id', { decodeForAbi: StakingProvidersRegistry._json.abi })
+
+    assertBn(await spRegistry.getStakingProvidersCount(), 2, 'total staking providers')
+
+    const data = Array.from({ length: numKeys }, (_, i) => {
+      const n = 1 + 10 * i
+      return {
+        key: pad(`0x${n.toString(16)}`, 48),
+        sig: pad(`0x${n.toString(16)}`, 96)
+      }
+    })
+
+    const keys = hexConcat(...data.map((v) => v.key))
+    const sigs = hexConcat(...data.map((v) => v.sig))
+
+    await spRegistry.addSigningKeysSP(stakingProviderId, numKeys, keys, sigs, { from: stakingProvider })
+
+    const totalKeys = await spRegistry.getTotalSigningKeyCount(stakingProviderId, { from: nobody })
+    assertBn(totalKeys, numKeys, 'total signing keys')
+  })
+
+  it('anybody can call depositBufferedEther twice to assign the rest of buffered ether', async () => {
+    assertBn(await pool.getBufferedEther(), ETH(32 * 6), 'buffered ether')
+
+    await pool.depositBufferedEther()
+    await pool.depositBufferedEther()
+
+    assertBn(await validatorRegistrationMock.totalCalls(), 26, 'total validators registered')
+  })
+
+  it('depositBufferedEther not takes an effect if there is no buffered Ether', async () => {
+    await pool.depositBufferedEther()
+    assertBn(await validatorRegistrationMock.totalCalls(), 26, 'total validators registered')
   })
 })

@@ -219,6 +219,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     // +1 ETH
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(1) })
+    await app.depositBufferedEther()
     await checkStat({ deposited: 0, remote: 0 })
     assertBn(await validatorRegistration.totalCalls(), 0)
     assertBn(await app.getTotalControlledEther(), ETH(1))
@@ -237,6 +238,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     // +30 ETH
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(30) })
+    await app.depositBufferedEther()
     await checkStat({ deposited: ETH(32), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(33))
     assertBn(await app.getBufferedEther(), ETH(1))
@@ -254,6 +256,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     // +100 ETH
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(100) })
+    await app.depositBufferedEther()
     await checkStat({ deposited: ETH(128), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(133))
     assertBn(await app.getBufferedEther(), ETH(5))
@@ -299,12 +302,14 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     )
 
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(33) })
+    await app.depositBufferedEther()
     assertBn(await validatorRegistration.totalCalls(), 1)
     await assertRevert(sps.removeSigningKey(0, 0, { from: voting }), 'KEY_WAS_USED')
 
     await sps.removeSigningKey(0, 1, { from: voting })
 
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(100) })
+    await app.depositBufferedEther()
     await assertRevert(sps.removeSigningKey(0, 1, { from: voting }), 'KEY_WAS_USED')
     await assertRevert(sps.removeSigningKey(0, 2, { from: voting }), 'KEY_WAS_USED')
     assertBn(await validatorRegistration.totalCalls(), 3)
@@ -320,6 +325,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await sps.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
 
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(100) })
+    await app.depositBufferedEther()
     await checkStat({ deposited: ETH(32), remote: 0 })
     assertBn(await validatorRegistration.totalCalls(), 1)
     assertBn(await app.getTotalControlledEther(), ETH(100))
@@ -334,6 +340,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
       { from: voting }
     )
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(1) })
+    await app.depositBufferedEther()
     await checkStat({ deposited: ETH(96), remote: 0 })
     assertBn(await validatorRegistration.totalCalls(), 3)
     assertBn(await app.getTotalControlledEther(), ETH(101))
@@ -361,6 +368,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     )
 
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(1) })
+    await app.depositBufferedEther()
     assertBn(await app.getTotalControlledEther(), ETH(1))
     assertBn(await token.totalSupply(), tokens(1))
     assertBn(await app.getBufferedEther(), ETH(1))
@@ -386,6 +394,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     )
 
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(34) })
+    await app.depositBufferedEther()
     await checkStat({ deposited: ETH(32), remote: 0 })
 
     await assertRevert(app.reportEther2(100, ETH(30), { from: appManager }), 'APP_AUTH_FAILED')
@@ -418,6 +427,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     )
 
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(34) })
+    await app.depositBufferedEther()
     await checkStat({ deposited: ETH(32), remote: 0 })
     assertBn(await validatorRegistration.totalCalls(), 1)
     assertBn(await app.getTotalControlledEther(), ETH(34))
@@ -434,6 +444,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     // deposit, ratio is 0.5
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(2) })
+    await app.depositBufferedEther()
 
     await checkStat({ deposited: ETH(32), remote: ETH(15) })
     assertBn(await validatorRegistration.totalCalls(), 1)
@@ -453,6 +464,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     // 2nd deposit, ratio is 2
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(2) })
+    await app.depositBufferedEther()
 
     await checkStat({ deposited: ETH(32), remote: ETH(72) })
     assertBn(await validatorRegistration.totalCalls(), 1)
@@ -478,6 +490,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     )
 
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(40) })
+    await app.depositBufferedEther()
     await checkStat({ deposited: ETH(32), remote: 0 })
     assertBn(await app.getBufferedEther(), ETH(8))
 
@@ -492,6 +505,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await app.resume({ from: voting })
 
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(4) })
+    await app.depositBufferedEther()
     await checkStat({ deposited: ETH(32), remote: 0 })
     assertBn(await app.getBufferedEther(), ETH(12))
   })
@@ -514,6 +528,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await app.setFeeDistribution(3000, 2000, 5000, { from: voting })
 
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(34) })
+    await app.depositBufferedEther()
 
     await oracle.reportEther2(300, ETH(36))
     await checkStat({ deposited: ETH(32), remote: ETH(36) })
@@ -539,6 +554,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     await app.setFeeDistribution(3000, 2000, 5000, { from: voting })
 
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(34) })
+    await app.depositBufferedEther()
     // some slashing occured
     await oracle.reportEther2(100, ETH(30))
 
@@ -571,7 +587,9 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     // Only 32 ETH deposited
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(32) })
+    await app.depositBufferedEther()
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(32) })
+    await app.depositBufferedEther()
     assertBn(await token.totalSupply(), tokens(64))
 
     await oracle.reportEther2(300, ETH(36))
@@ -606,6 +624,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     // Deposit huge chunk
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(32 * 3 + 50) })
+    await app.depositBufferedEther()
     await checkStat({ deposited: ETH(96), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(146))
     assertBn(await app.getBufferedEther(), ETH(50))
@@ -623,6 +642,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     // Next deposit changes nothing
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(32) })
+    await app.depositBufferedEther()
     await checkStat({ deposited: ETH(96), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(178))
     assertBn(await app.getBufferedEther(), ETH(82))
@@ -641,6 +661,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     // #1 goes below the limit
     await sps.reportStoppedValidators(1, 1, { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(1) })
+    await app.depositBufferedEther()
     await checkStat({ deposited: ETH(128), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(179))
     assertBn(await app.getBufferedEther(), ETH(51))
@@ -659,6 +680,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     // Adding a key will help
     await sps.addSigningKeys(0, 1, pad('0x0003', 48), pad('0x01', 96), { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(1) })
+    await app.depositBufferedEther()
     await checkStat({ deposited: ETH(160), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(180))
     assertBn(await app.getBufferedEther(), ETH(20))
@@ -677,6 +699,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     // Reactivation of #2
     await sps.setStakingProviderActive(2, true, { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(12) })
+    await app.depositBufferedEther()
     await checkStat({ deposited: ETH(192), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(192))
     assertBn(await app.getBufferedEther(), ETH(0))
@@ -719,7 +742,9 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     // Small deposits
     for (let i = 0; i < 14; i++) await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(10) })
+    await app.depositBufferedEther()
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(6) })
+    await app.depositBufferedEther()
 
     await checkStat({ deposited: ETH(96), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(146))
@@ -738,6 +763,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     // Next deposit changes nothing
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(32) })
+    await app.depositBufferedEther()
     await checkStat({ deposited: ETH(96), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(178))
     assertBn(await app.getBufferedEther(), ETH(82))
@@ -756,6 +782,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     // #1 goes below the limit
     await sps.reportStoppedValidators(1, 1, { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(1) })
+    await app.depositBufferedEther()
     await checkStat({ deposited: ETH(128), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(179))
     assertBn(await app.getBufferedEther(), ETH(51))
@@ -774,6 +801,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     // Adding a key will help
     await sps.addSigningKeys(0, 1, pad('0x0003', 48), pad('0x01', 96), { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(1) })
+    await app.depositBufferedEther()
     await checkStat({ deposited: ETH(160), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(180))
     assertBn(await app.getBufferedEther(), ETH(20))
@@ -792,6 +820,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     // Reactivation of #2
     await sps.setStakingProviderActive(2, true, { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(12) })
+    await app.depositBufferedEther()
     await checkStat({ deposited: ETH(192), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(192))
     assertBn(await app.getBufferedEther(), ETH(0))
@@ -834,6 +863,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     // #1 and #0 get the funds
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(64) })
+    await app.depositBufferedEther()
     await checkStat({ deposited: ETH(64), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(64))
     assertBn(await app.getBufferedEther(), ETH(0))
@@ -847,6 +877,7 @@ contract('DePool', ([appManager, voting, user1, user2, user3, nobody]) => {
     // Reactivation of #2 - has the smallest stake
     await sps.setStakingProviderActive(2, true, { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(36) })
+    await app.depositBufferedEther()
     await checkStat({ deposited: ETH(96), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(100))
     assertBn(await app.getBufferedEther(), ETH(4))
