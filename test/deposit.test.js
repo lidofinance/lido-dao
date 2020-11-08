@@ -145,6 +145,8 @@ contract('DePool with official deposit contract', ([appManager, voting, user1, u
 
     // +1 ETH
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(1) })
+    await app.depositBufferedEther()
+
     await checkStat({ deposited: 0, remote: 0 })
     assertBn(bn(await app.toLittleEndian64(await depositContract.get_deposit_count())), 0)
     assertBn(await app.getTotalControlledEther(), ETH(1))
@@ -154,6 +156,8 @@ contract('DePool with official deposit contract', ([appManager, voting, user1, u
 
     // +2 ETH
     await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2) }) // another form of a deposit call
+    await app.depositBufferedEther()
+
     await checkStat({ deposited: 0, remote: 0 })
     assertBn(bn(await depositContract.get_deposit_count()), 0)
     assertBn(await app.getTotalControlledEther(), ETH(3))
@@ -163,6 +167,8 @@ contract('DePool with official deposit contract', ([appManager, voting, user1, u
 
     // +30 ETH
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(30) })
+    await app.depositBufferedEther()
+
     await checkStat({ deposited: ETH(32), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(33))
     assertBn(await app.getBufferedEther(), ETH(1))
@@ -175,6 +181,8 @@ contract('DePool with official deposit contract', ([appManager, voting, user1, u
 
     // +100 ETH
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(100) })
+    await app.depositBufferedEther()
+
     await checkStat({ deposited: ETH(128), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(133))
     assertBn(await app.getBufferedEther(), ETH(5))
@@ -201,12 +209,16 @@ contract('DePool with official deposit contract', ([appManager, voting, user1, u
     )
 
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(33) })
+    await app.depositBufferedEther()
+
     assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 1)
     await assertRevert(sps.removeSigningKey(0, 0, { from: voting }), 'KEY_WAS_USED')
 
     await sps.removeSigningKey(0, 1, { from: voting })
 
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(100) })
+    await app.depositBufferedEther()
+
     await assertRevert(sps.removeSigningKey(0, 1, { from: voting }), 'KEY_WAS_USED')
     await assertRevert(sps.removeSigningKey(0, 2, { from: voting }), 'KEY_WAS_USED')
     assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 3)
@@ -240,6 +252,8 @@ contract('DePool with official deposit contract', ([appManager, voting, user1, u
 
     // Deposit huge chunk
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(32 * 3 + 50) })
+    await app.depositBufferedEther()
+
     await checkStat({ deposited: ETH(96), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(146))
     assertBn(await app.getBufferedEther(), ETH(50))
@@ -257,6 +271,8 @@ contract('DePool with official deposit contract', ([appManager, voting, user1, u
 
     // Next deposit changes nothing
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(32) })
+    await app.depositBufferedEther()
+
     await checkStat({ deposited: ETH(96), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(178))
     assertBn(await app.getBufferedEther(), ETH(82))
@@ -275,6 +291,8 @@ contract('DePool with official deposit contract', ([appManager, voting, user1, u
     // #1 goes below the limit
     await sps.reportStoppedValidators(1, 1, { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(1) })
+    await app.depositBufferedEther()
+
     await checkStat({ deposited: ETH(128), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(179))
     assertBn(await app.getBufferedEther(), ETH(51))
@@ -293,6 +311,8 @@ contract('DePool with official deposit contract', ([appManager, voting, user1, u
     // Adding a key will help
     await sps.addSigningKeys(0, 1, pad('0x0003', 48), pad('0x01', 96), { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(1) })
+    await app.depositBufferedEther()
+
     await checkStat({ deposited: ETH(160), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(180))
     assertBn(await app.getBufferedEther(), ETH(20))
@@ -311,6 +331,8 @@ contract('DePool with official deposit contract', ([appManager, voting, user1, u
     // Reactivation of #2
     await sps.setStakingProviderActive(2, true, { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(12) })
+    await app.depositBufferedEther()
+
     await checkStat({ deposited: ETH(192), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(192))
     assertBn(await app.getBufferedEther(), ETH(0))
@@ -353,7 +375,11 @@ contract('DePool with official deposit contract', ([appManager, voting, user1, u
 
     // Small deposits
     for (let i = 0; i < 14; i++) await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(10) })
+    await app.depositBufferedEther()
+
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(6) })
+    await app.depositBufferedEther()
+
 
     await checkStat({ deposited: ETH(96), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(146))
@@ -372,6 +398,8 @@ contract('DePool with official deposit contract', ([appManager, voting, user1, u
 
     // Next deposit changes nothing
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(32) })
+    await app.depositBufferedEther()
+
     await checkStat({ deposited: ETH(96), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(178))
     assertBn(await app.getBufferedEther(), ETH(82))
@@ -390,6 +418,8 @@ contract('DePool with official deposit contract', ([appManager, voting, user1, u
     // #1 goes below the limit
     await sps.reportStoppedValidators(1, 1, { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(1) })
+    await app.depositBufferedEther()
+
     await checkStat({ deposited: ETH(128), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(179))
     assertBn(await app.getBufferedEther(), ETH(51))
@@ -408,6 +438,8 @@ contract('DePool with official deposit contract', ([appManager, voting, user1, u
     // Adding a key will help
     await sps.addSigningKeys(0, 1, pad('0x0003', 48), pad('0x01', 96), { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(1) })
+    await app.depositBufferedEther()
+
     await checkStat({ deposited: ETH(160), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(180))
     assertBn(await app.getBufferedEther(), ETH(20))
@@ -426,6 +458,8 @@ contract('DePool with official deposit contract', ([appManager, voting, user1, u
     // Reactivation of #2
     await sps.setStakingProviderActive(2, true, { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(12) })
+    await app.depositBufferedEther()
+
     await checkStat({ deposited: ETH(192), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(192))
     assertBn(await app.getBufferedEther(), ETH(0))
@@ -468,6 +502,8 @@ contract('DePool with official deposit contract', ([appManager, voting, user1, u
 
     // #1 and #0 get the funds
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(64) })
+    await app.depositBufferedEther()
+
     await checkStat({ deposited: ETH(64), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(64))
     assertBn(await app.getBufferedEther(), ETH(0))
@@ -481,6 +517,8 @@ contract('DePool with official deposit contract', ([appManager, voting, user1, u
     // Reactivation of #2 - has the smallest stake
     await sps.setStakingProviderActive(2, true, { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(36) })
+    await app.depositBufferedEther()
+
     await checkStat({ deposited: ETH(96), remote: 0 })
     assertBn(await app.getTotalControlledEther(), ETH(100))
     assertBn(await app.getBufferedEther(), ETH(4))
