@@ -136,6 +136,7 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody,
     context('user2 submitted 34 ETH', async () => {
       beforeEach(async function () {
         await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(34) })
+        await app.depositBufferedEther()
       })
 
       it('DePool: deposited=32, remote=0, buffered=2, totalControlled=34, rewBase=32', async () => {
@@ -319,6 +320,8 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody,
             beforeEach(async function () {
               await sps.addSigningKeys(1, 1, hexConcat(pad('0x010207', 48)), hexConcat(pad('0x01', 96)), { from: voting })
               await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(30) })
+              await app.depositBufferedEther()
+
               await oracle.reportEther2(300, ETH(64))
             })
 
@@ -370,6 +373,7 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody,
               beforeEach(async function () {
                 await sps.addSigningKeys(0, 1, hexConcat(pad('0x01020b', 48)), hexConcat(pad('0x01', 96)), { from: voting })
                 await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(32) })
+                await app.depositBufferedEther()
                 await oracle.reportEther2(500, ETH(96))
               })
 
@@ -477,6 +481,7 @@ contract('DePool with StEth', ([appManager, voting, user1, user2, user3, nobody,
           beforeEach(async function () {
             // so total submitted 34 + 34
             await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(34) })
+            await app.depositBufferedEther()
           })
 
           it('DePool: deposited=64, remote=66, buffered=4, totalControlled=70, rewBase=98', async () => {
