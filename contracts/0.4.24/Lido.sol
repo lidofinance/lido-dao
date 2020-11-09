@@ -545,20 +545,35 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     function distributeRewards(uint256 _totalRewards) internal {
         // Amount of the rewards in Ether
         uint256 tokens2mint = _totalRewards.mul(_getFee()).div(10000);
-
-        assert(0 != getToken().totalSupply());
+        // Amount of shares that matches tokens2mint after minting (with new ratio)
+        // Folmula gets from this equation:
+        //       shares2mint
+        // ------------------------- * (remoteEther + bufferedEther) = tokens2mint
+        // totalShares + shares2mint
+        uint256 shares2mint = (
+            tokens2mint
+            .mul(getToken().getTotalShares())
+            .div(_getTotalControlledEther().sub(tokens2mint))
+        );
+        // Add calculated amount of shares to this contract, after mint balances
+        // This will reduce the balances of the holders, as if the rewards were
+        // taken in parts from each of them.
+        getToken().mint(address(this), getToken().getPooledEthByShares(shares2mint));
+        // (!) minted amount may be less than tokens2mint due to round errors
+        uint256 mintedRewards = getToken().balanceOf(address(this));
 
         (uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, ) = _getFeeDistribution();
-        uint256 toTreasury = tokens2mint.mul(treasuryFeeBasisPoints).div(10000);
-        uint256 toInsuranceFund = tokens2mint.mul(insuranceFeeBasisPoints).div(10000);
-        uint256 toOperators = tokens2mint.sub(toTreasury).sub(toInsuranceFund);
+        uint256 toTreasury = mintedRewards.mul(treasuryFeeBasisPoints).div(10000);
+        uint256 toInsuranceFund = mintedRewards.mul(insuranceFeeBasisPoints).div(10000);
+        uint256 toOperators = mintedRewards.sub(toTreasury).sub(toInsuranceFund);
 
-        getToken().mint(getTreasury(), toTreasury);
-        getToken().mint(getInsuranceFund(), toInsuranceFund);
-        getToken().mint(address(getOperators()), toOperators);
+        getToken().transfer(getTreasury(), toTreasury);
+        getToken().transfer(getInsuranceFund(), toInsuranceFund);
+        getToken().transfer(address(getOperators()), toOperators);
+
         getOperators().distributeRewards(
-          address(getToken()),
-          getToken().balanceOf(address(getOperators()))
+            address(getToken()),
+            getToken().balanceOf(address(getOperators()))
         );
     }
 
