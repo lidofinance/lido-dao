@@ -11,14 +11,14 @@ module.exports = {
     ...baseConfig.paths,
     root: '../..'
   },
-  defaultNetwork: 'localhost',
+  defaultNetwork: process.env.NETWORK_NAME || 'localhost',
   // Aragon plugin configuration
   aragon: {
     appServePort: 3011,
     clientServePort: 3000,
     appSrcPath: 'app/',
     appBuildOutputPath: 'dist/',
-    appName: 'depooloracle',
+    appName: 'oracle',
     hooks // Path to script hooks
   }
 }

@@ -10,20 +10,20 @@ import "../DePool.sol";
 
 contract DePoolTemplate is BaseTemplate {
     /* Hardcoded constants to save gas
-     * bytes32 internal constant DEPOOLS_PM_NODE = keccak256(abi.encodePacked(ETH_TLD_NODE, keccak256(abi.encodePacked("depoolspm"))));
+     * bytes32 internal constant DEPOOLS_PM_NODE = keccak256(abi.encodePacked(ETH_TLD_NODE, keccak256(abi.encodePacked("lidofinance"))));
      */
-    bytes32 internal constant DEPOOLS_PM_NODE = 0x974a6fb4d8c9712163277101d2e355f655dd9b93ea96f4021f78c02265c221d7;
+    bytes32 internal constant DEPOOLS_PM_NODE = 0x9fa164e83dba3ca4aa168cd8c196df44cde7a27457391918be79a43c2807835e;
 
     /* Hardcoded constant to save gas
-     * bytes32 internal constant STETH_APP_ID = keccak256(abi.encodePacked(DEPOOLS_PM_NODE, keccak256(abi.encodePacked("steth")))); // steth.depoolspm.eth
-     * bytes32 internal constant DEPOOLORACLE_APP_ID = keccak256(abi.encodePacked(DEPOOLS_PM_NODE, keccak256(abi.encodePacked("depooloracle")))); // depooloracle.depoolspm.eth
-     * bytes32 internal constant REGISTRY_APP_ID = keccak256(abi.encodePacked(DEPOOLS_PM_NODE, keccak256(abi.encodePacked("staking-providers-registry")))); // staking-providers-registry.depoolspm.eth
-     * bytes32 internal constant DEPOOL_APP_ID = keccak256(abi.encodePacked(DEPOOLS_PM_NODE, keccak256(abi.encodePacked("depool")))); // depool.depoolspm.eth
+     * bytes32 internal constant STETH_APP_ID = keccak256(abi.encodePacked(DEPOOLS_PM_NODE, keccak256(abi.encodePacked("steth")))); // steth.lidofinance.eth
+     * bytes32 internal constant DEPOOLORACLE_APP_ID = keccak256(abi.encodePacked(DEPOOLS_PM_NODE, keccak256(abi.encodePacked("oracle")))); // oracle.lidofinance.eth
+     * bytes32 internal constant REGISTRY_APP_ID = keccak256(abi.encodePacked(DEPOOLS_PM_NODE, keccak256(abi.encodePacked("staking-providers-registry")))); // staking-providers-registry.lidofinance.eth
+     * bytes32 internal constant DEPOOL_APP_ID = keccak256(abi.encodePacked(DEPOOLS_PM_NODE, keccak256(abi.encodePacked("lido")))); // lido.lidofinance.eth
      */
-    bytes32 constant internal STETH_APP_ID = 0x5937d846addd00601bf692837c2cd9854dacd2c55911625da04aec9c62a61a26;
-    bytes32 constant internal DEPOOLORACLE_APP_ID = 0xebe89ae11ec5a76827463bd202b0551f137fdc6dad7cd69ecdf4fe553af5f77b;
-    bytes32 internal constant REGISTRY_APP_ID = 0x6ca5078df26de2bcf0976b0bfba50b6ed5dac3644879214556e2789dfc78df16;
-    bytes32 constant internal DEPOOL_APP_ID = 0xdf4019658a996b6bc3639baa07d25c655bf826334fc5c81bb83e501905b51cb1;
+    bytes32 constant internal STETH_APP_ID = 0x4c88c2004db7e9fb0b13bc9ba52f60447f8917bf0743c6911aa546a726c2d10c;
+    bytes32 constant internal DEPOOLORACLE_APP_ID = 0xeba505196c5a47d806338ab08bb9ca2f518115bd705602ffb991bc90843b0dcf;
+    bytes32 internal constant REGISTRY_APP_ID = 0xc29e736bf32afbaec4dda8d213a38f158fd7afafdedbeb9a77f22261b87d671f;
+    bytes32 constant internal DEPOOL_APP_ID = 0xe3dd17c3a59f34cfa257527766ba5d7561f6b7b15ab0299f102dbdf5a58cb791;
 
     bool constant private TOKEN_TRANSFERABLE = true;
     uint8 constant private TOKEN_DECIMALS = uint8(18);

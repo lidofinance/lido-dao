@@ -11,7 +11,7 @@ module.exports = {
     ...baseConfig.paths,
     root: '../..'
   },
-  defaultNetwork: 'localhost',
+  defaultNetwork: process.env.NETWORK_NAME || 'localhost',
   // Aragon plugin configuration
   aragon: {
     appServePort: 3012,
