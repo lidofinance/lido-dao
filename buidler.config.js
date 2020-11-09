@@ -6,10 +6,23 @@ usePlugin('@nomiclabs/buidler-ganache')
 usePlugin('buidler-gas-reporter')
 usePlugin('solidity-coverage')
 
+let stateByNetId
+try {
+  stateByNetId = require('./deployed.json')
+} catch (err) {
+  stateByNetId = {networks: {}}
+}
+
+const getNetState = netId => stateByNetId.networks[netId] || {}
+
 module.exports = {
+  defaultNetwork: process.env.NETWORK_NAME || 'buidlerevm',
   networks: {
     localhost: {
-      url: 'http://localhost:8545'
+      url: 'http://localhost:8545',
+      chainId: 1337,
+      ensAddress: getNetState('1337').ensAddress,
+      accounts: 'remote'
     },
     coverage: {
       url: 'http://localhost:8555'

@@ -1,11 +1,15 @@
+const globalArtifacts = this.artifacts || global.artifacts
+const globalWeb3 = this.web3 || global.web3
+
 // If executed directly by Node.js, calls the passed function.
 // Otherwise, returns a wrapped function that should support
 // both running by Truffle and requiring by a custom code.
 //
 module.exports = (scriptFn, mainModule) => {
   if (require.main === mainModule) {
+    assertGlobalAPIs()
     // Buidler executes scripts in a forked subprocess
-    scriptFn()
+    scriptFn({artifacts: globalArtifacts, web3: globalWeb3})
       .then(() => {
         console.log('All done!')
         process.exit(0)
@@ -19,7 +23,8 @@ module.exports = (scriptFn, mainModule) => {
     return (callback, opts) => {
       if (typeof callback === 'function') {
         // Truffle requires scripts and uses a callback
-        scriptFn(opts)
+        assertGlobalAPIs()
+        scriptFn({artifacts: globalArtifacts, web3: globalWeb3, ...opts})
           .then(() => callback())
           .catch(callback)
       } else {
@@ -27,5 +32,12 @@ module.exports = (scriptFn, mainModule) => {
         return scriptFn(opts || callback)
       }
     }
+  }
+}
+
+function assertGlobalAPIs() {
+  if (!globalArtifacts || !globalWeb3) {
+    console.error('No `web3` and/or `artifacts` global APIs provided. This script must be run through `truffle exec` or `hardhat run`')
+    process.exit(1)
   }
 }
