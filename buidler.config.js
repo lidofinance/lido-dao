@@ -9,7 +9,8 @@ usePlugin('solidity-coverage')
 module.exports = {
   networks: {
     localhost: {
-      url: 'http://localhost:8545'
+      url: 'http://localhost:8545',
+      timeout: 60000
     },
     coverage: {
       url: 'http://localhost:8555'

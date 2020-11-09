@@ -34,7 +34,7 @@ contract CstETH is ERC20, ERC20Burnable {
      */
     constructor(IStETH _stETH)
         public
-        ERC20("Wrapped Liquid staked DePool Ether", "cstETH")
+        ERC20("Wrapped Liquid staked Lido Ether", "cstETH")
     {
         stETH = _stETH;
     }
