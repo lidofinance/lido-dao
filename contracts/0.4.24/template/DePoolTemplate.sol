@@ -70,6 +70,7 @@ contract DePoolTemplate is BaseTemplate {
     )
         external
     {
+        require(dao == address(0), "PREVIOUS_DAO_NOT_FINALIZED");
         _validateId(_id);
         require(_holders.length > 0, "COMPANY_EMPTY_HOLDERS");
         require(_holders.length == _stakes.length, "COMPANY_BAD_HOLDERS_STAKES_LEN");
@@ -90,13 +91,14 @@ contract DePoolTemplate is BaseTemplate {
         _removePermissionFromTemplate(acl, sps, sps.SET_POOL());
 
         _mintTokens(acl, tokenManager, _holders, _stakes);
-
-        _setupPermissions();
-
-        _transferRootPermissionsFromTemplateAndFinalizeDAO(dao, voting);
         _registerID(_id, dao);
+    }
 
-        _reset();   // revert the cells back to get a refund
+    function finalizeDAO() external {
+        require(dao != address(0), "DAO_NOT_DEPLOYED");
+        _setupPermissions();
+        _transferRootPermissionsFromTemplateAndFinalizeDAO(dao, voting);
+        _reset(); // revert the cells back to get a refund
     }
 
     function _setupApps(
@@ -111,7 +113,8 @@ contract DePoolTemplate is BaseTemplate {
         tokenManager = _installTokenManagerApp(dao, token, TOKEN_TRANSFERABLE, TOKEN_MAX_PER_ACCOUNT);
         voting = _installVotingApp(dao, token, _votingSettings);
 
-        bytes memory initializeData = abi.encodeWithSelector(StETH(0).initialize.selector);
+        // skipping StETH initialization for now, will call it manually later since we need the pool
+        bytes memory initializeData = new bytes(0);
         steth = StETH(_installNonDefaultApp(dao, STETH_APP_ID, initializeData));
 
         initializeData = abi.encodeWithSelector(DePoolOracle(0).initialize.selector);
@@ -129,6 +132,8 @@ contract DePoolTemplate is BaseTemplate {
             _depositIterationLimit
         );
         depool = DePool(_installNonDefaultApp(dao, DEPOOL_APP_ID, initializeData));
+
+        steth.initialize(depool);
     }
 
     function _setupPermissions(
