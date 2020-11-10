@@ -5,21 +5,21 @@ const VOTING_APP_ID = '0x9fa3927f639745e587912d4b0fea7ef9013bf93fb907d29faeab574
 const FINANCE_APP_ID = '0xbf8491150dafc5dcaee5b861414dca922de09ccffa344964ae167212e8c673ae'
 const TOKEN_MANAGER_APP_ID = '0x6b20a3010614eeebf2138ccec99f028a61c811b3b1a3343b6ff635985c75c91f'
 
-// depool
-const STETH_APP_ID = '0x5937d846addd00601bf692837c2cd9854dacd2c55911625da04aec9c62a61a26'
-const DEPOOLORACLE_APP_ID = '0xebe89ae11ec5a76827463bd202b0551f137fdc6dad7cd69ecdf4fe553af5f77b'
-const DEPOOL_APP_ID = '0xdf4019658a996b6bc3639baa07d25c655bf826334fc5c81bb83e501905b51cb1'
-const STAKING_PROVIDERS_REGISTRY_APP_ID = '0x6ca5078df26de2bcf0976b0bfba50b6ed5dac3644879214556e2789dfc78df16'
+// lido
+const STETH_APP_ID = '0x7a155a469b6e893b1e5d8f992f066474a74daf5ece6715948667ef3565e34ec2'
+const LIDOORACLE_APP_ID = '0xc62f68e3a6f657e08c27afe0f11d03375e5255f5845055d81c1281dbf139ce18'
+const LIDO_APP_ID = '0xe5c0c15280069e08354c1c1d5b6706edcc4e849e76ec9822afa35d4d66bbbe06'
+const NODE_OPERATORS_REGISTRY_APP_ID = '0x9a09c6bc9551dd5e194dc3f814ce4725494966d9cdc90ff6cb49fc94d8a034ab'
 
 const apps = [
-  { name: 'steth', tld: 'depoolspm.eth', contractName: 'StETH', appId: STETH_APP_ID },
-  { name: 'depool', tld: 'depoolspm.eth', contractName: 'DePool', appId: DEPOOL_APP_ID },
-  { name: 'depooloracle', tld: 'depoolspm.eth', contractName: 'DePoolOracle', appId: DEPOOLORACLE_APP_ID },
+  { name: 'steth', tld: 'lido.eth', contractName: 'StETH', appId: STETH_APP_ID },
+  { name: 'lido', tld: 'lido.eth', contractName: 'Lido', appId: LIDO_APP_ID },
+  { name: 'lidooracle', tld: 'lido.eth', contractName: 'LidoOracle', appId: LIDOORACLE_APP_ID },
   {
-    name: 'staking-providers-registry',
-    tld: 'depoolspm.eth',
-    contractName: 'StakingProvidersRegistry',
-    appId: STAKING_PROVIDERS_REGISTRY_APP_ID
+    name: 'node-operators-registry',
+    tld: 'lido.eth',
+    contractName: 'NodeOperatorsRegistry',
+    appId: NODE_OPERATORS_REGISTRY_APP_ID
   },
   { name: 'agent', tld: 'aragonpm.eth', contractName: 'Agent', appId: AGENT_APP_ID },
   // { name: 'vault', tld: 'aragonpm.eth', contractName: 'Vault', appId: VAULT_APP_ID },
@@ -30,8 +30,8 @@ const apps = [
 
 module.exports = {
   apps,
-  DEPOOL_APP_ID,
+  LIDO_APP_ID,
   STETH_APP_ID,
-  DEPOOLORACLE_APP_ID,
-  STAKING_PROVIDERS_REGISTRY_APP_ID
+  LIDOORACLE_APP_ID,
+  NODE_OPERATORS_REGISTRY_APP_ID
 }

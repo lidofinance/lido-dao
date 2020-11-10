@@ -50,8 +50,8 @@ async function deploy({
     registryAddress: ensAddress
   })
   const installedApps = await getAllApps(daoAddress, { web3 })
-  const bEthApp = installedApps.find((a) => a.appId === STETH_APP_ID)
-  const cstEth = await CstETH.new(bEthApp.proxyAddress)
+  const stEthApp = installedApps.find((a) => a.appId === STETH_APP_ID)
+  const cstEth = await CstETH.new(stEthApp.proxyAddress)
   await logDeploy('DePoolTemplate', cstEth)
 
   return {

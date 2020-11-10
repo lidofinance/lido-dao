@@ -1,0 +1,79 @@
+{
+  "roles": [
+    {
+      "name": "Manage signing keys",
+      "id": "MANAGE_SIGNING_KEYS",
+      "params": [
+         "Node Operator id"
+      ]
+    },
+    {
+      "name": "Add node operators",
+      "id": "ADD_NODE_OPERATOR_ROLE",
+      "params": []
+    },
+    {
+      "name": "Activate/deactivate node operators",
+      "id": "SET_NODE_OPERATOR_ACTIVE_ROLE",
+      "params": [
+         "Node Operator id",
+         "New state"
+      ]
+    },
+    {
+      "name": "Set name of a node operator",
+      "id": "SET_NODE_OPERATOR_NAME_ROLE",
+      "params": [
+         "Node Operator id"
+      ]
+    },
+    {
+      "name": "Set rewards address of a node operator",
+      "id": "SET_NODE_OPERATOR_ADDRESS_ROLE",
+      "params": [
+         "Node Operator id",
+         "New rewards address"
+      ]
+    },
+    {
+      "name": "Set staking limit of a node operator",
+      "id": "SET_NODE_OPERATOR_LIMIT_ROLE",
+      "params": [
+         "Node Operator id",
+         "New validators limit value"
+      ]
+    },
+    {
+      "name": "Report increments of stopped validators for a node operator",
+      "id": "REPORT_STOPPED_VALIDATORS_ROLE",
+      "params": [
+         "Node Operator id",
+         "Stopped validators increment"
+      ]
+    }
+  ],
+  "environments": {
+    "default": {
+      "registry": "0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1",
+      "appName": "node-operators-registry.lido.eth",
+      "network": "development"
+    },
+    "rinkeby": {
+      "registry": "0x98df287b6c145399aaa709692c8d308357bc085d",
+      "appName": "node-operators-registry.lido.eth",
+      "network": "rinkeby"
+    },
+    "staging": {
+      "registry": "0xfe03625ea880a8cba336f9b5ad6e15b0a3b5a939",
+      "appName": "node-operators-registry.lido.eth",
+      "network": "rinkeby"
+    },
+    "mainnet": {
+      "registry": "0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e",
+      "appName": "node-operators-registry.lido.eth",
+      "network": "mainnet"
+    }
+  },
+  "appName": "node-operators-registry.lido.eth",
+  "path": "../../contracts/nos/NodeOperatorsRegistry.sol"
+}
