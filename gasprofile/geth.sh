@@ -9,15 +9,23 @@ echo 'Starting geth container...'
 
 docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
 
-docker >/dev/null run -d --name "$CONTAINER_NAME" -p 8545:8545 \
+mkdir -p .chaindata
+
+docker >/dev/null run -d --name "$CONTAINER_NAME" -p 8545:8545 -p 8546:8546 -v "$(pwd)/.chaindata:/var/chaindata" \
   ethereum/client-go \
   --dev \
+  --datadir /var/chaindata \
   --targetgaslimit 12000000 \
   --allow-insecure-unlock \
   --http \
   --http.addr 0.0.0.0 \
   --http.corsdomain '*' \
-  --http.api 'eth,net,web3,personal,debug'
+  --http.api 'eth,net,web3,personal,debug' \
+  --ws \
+  --ws.addr 0.0.0.0 \
+  --ws.port 8546 \
+  --wsorigins '*' \
+  --ws.api 'eth,net,web3'
 
 cleanup() {
   exit_code=$?
