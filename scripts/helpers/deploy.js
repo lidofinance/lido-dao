@@ -17,4 +17,16 @@ async function useOrDeploy(artifactName, artifacts, address, deploy) {
   }
 }
 
-module.exports = {deploy, useOrDeploy}
+function withArgs(...args) {
+  return async Artifact => {
+    const instance = await Artifact.new(...args)
+    const lastArg = args[args.length - 1]
+    // remove {from: ..., gas: ...}
+    instance.constructorArgs = lastArg && 'object' === typeof lastArg && lastArg.constructor === Object
+      ? args.slice(0, -1)
+      : args
+    return instance
+  }
+}
+
+module.exports = {deploy, useOrDeploy, withArgs}
