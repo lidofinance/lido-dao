@@ -80,7 +80,7 @@ async function publishApp(appName, env, netName, appsDirPath, releaseType) {
   const hasFrontend = await directoryExists(appFrontendPath)
 
   if (hasFrontend) {
-    logSplitter(`Installing frontend deps for app ${appName}`)
+    logSplitter(`Installing frontend deps for app '${appName}'`)
     await execLive('npm', {args: ['install'], cwd: appFrontendPath})
     logSplitter()
   } else {
