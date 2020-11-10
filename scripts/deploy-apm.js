@@ -4,18 +4,13 @@ const getAccounts = require('@aragon/os/scripts/helpers/get-accounts')
 
 const runOrWrapScript = require('./helpers/run-or-wrap-script')
 const logDeploy = require('./helpers/log-deploy')
+const { ZERO_ADDR, errorOut } = require('./helpers')
 
 const globalArtifacts = this.artifacts || artifacts // Not injected unless called directly via truffle
 const globalWeb3 = this.web3 || web3 // Not injected unless called directly via truffle
 
-const errorOut = (message) => {
-  console.error(message)
-  throw new Error(message)
-}
-
-const ZERO_ADDR = '0x0000000000000000000000000000000000000000'
 const TLD_NAME = 'eth'
-const LABEL_NAME = 'depoolspm'
+const LABEL_NAME = 'lido'
 
 const defaultOwner = process.env.OWNER
 const defaultDaoFactoryAddress = process.env.DAO_FACTORY || '0x5d94e3e7aec542ab0f9129b9a7badeb5b3ca0f77'
@@ -47,7 +42,7 @@ async function deploy({
   const accounts = await getAccounts(web3)
   if (!owner) {
     owner = accounts[0]
-    log("OWNER env variable not found, setting owner to the provider's first account")
+    log("OWNER env variable not found, setting owner to the operator's first account")
   }
   log('Owner:', owner)
 

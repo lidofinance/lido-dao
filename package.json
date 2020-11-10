@@ -1,9 +1,10 @@
 {
-  "name": "@depools/dao",
+  "name": "@lido/dao",
   "version": "0.0.1",
   "private": true,
   "workspaces": [
-    "apps/*/app"
+    "apps/*/app",
+    "gasprofile"
   ],
   "scripts": {
     "lint": "yarn lint:sol && yarn lint:js",
@@ -12,8 +13,8 @@
     "lint:js:fix": "eslint --fix --ext .js --cache --ignore-path .gitignore .",
     "lint:sol:solium": "solium --dir ./contracts",
     "lint:sol:solium:fix": "solium --dir ./contracts --fix",
-    "lint:sol:solhint": "solhint \"contracts/**/*.sol\"",
-    "lint:sol:solhint:fix": "solhint \"contracts/**/*.sol\" --fix",
+    "lint:sol:solhint": "solhint \"contracts/**/*.sol\" --ignore-path .soliumignore",
+    "lint:sol:solhint:fix": "solhint \"contracts/**/*.sol\" --ignore-path .soliumignore --fix",
     "test": "yarn run test:unit",
     "test:unit": "yarn run compile:6 && buidler test --network buidlerevm",
     "test:gas": "yarn run compile:6 && REPORT_GAS=true buidler test --network localhost",
@@ -26,16 +27,17 @@
     "compile:4": "buidler compile",
     "compile:6": "buidler compile --config buidler.config.6.js --force && buidler compile --config buidler.config.6.11.js --force",
     "deploy": "yarn run deploy:dev",
-    "deploy:dev": "yarn run deploy:apm:dev && deploy:apps:dev && deploy:tmpl:dev && deploy:dao:dev",
+    "deploy:dev": "yarn run deploy:apm:dev && deploy:apps:dev && deploy:tmpl:dev && deploy:dao:dev && deploy:csteth:dev",
     "deploy:apm:dev": "ENS=0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1 DAO_FACTORY=0x5d94e3e7aec542ab0f9129b9a7badeb5b3ca0f77 buidler run ./scripts/deploy-apm.js --network localhost",
     "deploy:apm:rinkeby": "ENS=0x98Df287B6C145399Aaa709692c8D308357bC085D DAO_FACTORY=0xad4d106b43b480faa3ef7f98464ffc27fc1faa96 buidler run ./scripts/deploy-apm.js --network rinkeby",
     "deploy:apm:mainnet": "ENS=0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e DAO_FACTORY=0xb9da44c051c6cc9e04b7e0f95e95d69c6a6d8031 buidler run ./scripts/deploy-apm.js --network mainnet",
     "deploy:tmpl:dev": "ENS=0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1 DAO_FACTORY=0x5d94e3e7aec542ab0f9129b9a7badeb5b3ca0f77 MINIME_FACTORY=0xd526b7aba39cccf76422835e7fd5327b98ad73c9 APM=0x1902a0410EFe699487Dd85F12321aD672bE4ada2 buidler run ./scripts/deploy-tmpl.js --network localhost",
     "deploy:dao:dev": "ENS=0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1 DEPOSIT_CONTRACT=0x5f4e510503d83bd1a5436bdae2923489da0be454 buidler run ./scripts/deploy-dao.js --network localhost",
-    "deploy:apps:dev": "yarn run deploy:app-depool && yarn run deploy:app-depooloracle && yarn run deploy:app-staking-providers-registry && yarn run deploy:app-steth",
-    "deploy:app-depool": "cd apps/depool && buidler publish patch",
-    "deploy:app-depooloracle": "cd apps/depooloracle && buidler publish patch",
-    "deploy:app-staking-providers-registry": "cd apps/staking-providers-registry && buidler publish patch",
+    "deploy:csteth:dev": "ENS=0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1 buidler run ./scripts/deploy-csteth.js --network localhost",
+    "deploy:apps:dev": "yarn run deploy:app-lido && yarn run deploy:app-lidooracle && yarn run deploy:app-node-operators-registry && yarn run deploy:app-steth",
+    "deploy:app-lido": "cd apps/lido && buidler publish patch",
+    "deploy:app-lidooracle": "cd apps/lidooracle && buidler publish patch",
+    "deploy:app-node-operators-registry": "cd apps/node-operators-registry && buidler publish patch",
     "deploy:app-steth": "cd apps/steth && buidler publish patch"
   },
   "author": "MixBytes <hello@mixbytes.io>",

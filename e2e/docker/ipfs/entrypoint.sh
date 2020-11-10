@@ -17,6 +17,7 @@ if [ ! -d $IPFS_DIR ] || [ ! "$(ls -A $IPFS_DIR)" ]; then
     echo "Asset hash: $HASH"
   fi
 fi
+chmod -R ugo+wrX $IPFS_DIR
 
 echo "Starting ipfs..."
 /usr/local/bin/start_ipfs daemon --migrate=true --enable-gc

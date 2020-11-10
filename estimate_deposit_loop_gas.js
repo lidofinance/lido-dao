@@ -4,14 +4,16 @@ const { getEventArgument, ZERO_ADDRESS } = require('@aragon/contract-helpers-tes
 const { pad, ETH, hexConcat, toBN } = require('./test/helpers/utils')
 const { deployDaoAndPool } = require('./test/scenario/helpers/deploy')
 
-contract('DePool: deposit loop gas estimate', (addresses) => {
+const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
+
+contract('Lido: deposit loop gas estimate', (addresses) => {
   const [
     // the root account which deployed the DAO
     appManager,
     // the address which we use to simulate the voting DAO application
     voting,
-    // staking providers
-    stakingProvider,
+    // node operators
+    nodeOperator,
     // users who deposit Ether to the pool
     user1,
     user2,
@@ -19,20 +21,20 @@ contract('DePool: deposit loop gas estimate', (addresses) => {
     nobody
   ] = addresses
 
-  let pool, spRegistry, validatorRegistrationMock
+  let pool, nodeOperatorRegistry, validatorRegistrationMock
 
   const arbitraryN = toBN('0x0159e2036050fb43f6ecaca13a7b53b23ea54a623e47fb2bd89a5b4a18da3295')
   const withdrawalCredentials = pad('0x0202', 32)
   const validatorData = []
 
-  it('DAO, staking providers registry, token, and pool are deployed and initialized', async () => {
+  it('DAO, node operators registry, token, and pool are deployed and initialized', async () => {
     const deployed = await deployDaoAndPool(appManager, voting, 100)
 
-    // contracts/DePool.sol
+    // contracts/Lido.sol
     pool = deployed.pool
 
-    // contracts/sps/StakingProvidersRegistry.sol
-    spRegistry = deployed.spRegistry
+    // contracts/nos/NodeOperatorsRegistry.sol
+    nodeOperatorRegistry = deployed.nodeOperatorRegistry
 
     // mocks
     validatorRegistrationMock = deployed.validatorRegistrationMock
@@ -42,17 +44,19 @@ contract('DePool: deposit loop gas estimate', (addresses) => {
     await pool.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
   })
 
-  it('voting adds 20 staking providers with 3 signing keys each', async () => {
-    const spValidatorsLimit = 1000
-    const numProviders = 20
+  it('voting adds 20 node operators with 3 signing keys each', async () => {
+    const operatorValidatorsLimit = 1000
+    const numOperators = 20
     const numKeys = 3
 
-    for (let iProvider = 0; iProvider < numProviders; ++iProvider) {
-      const spTx = await spRegistry.addStakingProvider(`SP-${iProvider}`, stakingProvider, spValidatorsLimit, { from: voting })
-      const stakingProviderId = getEventArgument(spTx, 'StakingProviderAdded', 'id')
+    for (let iOperator = 0; iOperator < numOperators; ++iOperator) {
+      const txn = await nodeOperatorRegistry.addNodeOperator(`operator-${iOperator}`, nodeOperator, operatorValidatorsLimit, {
+        from: voting
+      })
+      const nodeOperatorId = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
 
       const data = Array.from({ length: numKeys }, (_, iKey) => {
-        const n = arbitraryN.clone().addn(10 * iKey + 1000 * iProvider)
+        const n = arbitraryN.clone().addn(10 * iKey + 1000 * iOperator)
         return {
           key: pad(`0x${n.toString(16)}`, 48, 'd'),
           sig: pad(`0x${n.toString(16)}`, 96, 'e')
@@ -62,15 +66,15 @@ contract('DePool: deposit loop gas estimate', (addresses) => {
       const keys = hexConcat(...data.map((v) => v.key))
       const sigs = hexConcat(...data.map((v) => v.sig))
 
-      await spRegistry.addSigningKeys(stakingProviderId, numKeys, keys, sigs, { from: voting })
+      await nodeOperatorRegistry.addSigningKeys(nodeOperatorId, numKeys, keys, sigs, { from: voting })
 
-      const totalKeys = await spRegistry.getTotalSigningKeyCount(stakingProviderId, { from: nobody })
+      const totalKeys = await nodeOperatorRegistry.getTotalSigningKeyCount(nodeOperatorId, { from: nobody })
       assertBn(totalKeys, numKeys, 'total signing keys')
 
       validatorData.push.apply(validatorData, data)
     }
 
-    assertBn(await spRegistry.getStakingProvidersCount(), numProviders, 'total providers')
+    assertBn(await nodeOperatorRegistry.getNodeOperatorsCount(), numOperators, 'total operators')
   })
 
   let gasPerMockDeposit
