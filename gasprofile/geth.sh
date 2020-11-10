@@ -2,6 +2,7 @@
 set -eo pipefail
 
 : ${NUM_ACCOUNTS:=10}
+: ${FUND_ACCOUNTS:=}
 : ${RPC_ENDPOINT:=http://localhost:8545}
 : ${CONTAINER_NAME:=geth}
 
@@ -47,8 +48,13 @@ done
 echo
 
 if [[ $NUM_ACCOUNTS != 1 ]]; then
-  echo 'Geth started, populating accounts...'
+  echo 'Populating accounts...'
   node ./populate-geth.js "$NUM_ACCOUNTS" "$RPC_ENDPOINT"
+fi
+
+if [[ -n "$FUND_ACCOUNTS" ]]; then
+  echo 'Funding accounts...'
+  node ./fund-accounts.js "$RPC_ENDPOINT" "$FUND_ACCOUNTS"
 fi
 
 docker logs --since 10m "$CONTAINER_NAME"
