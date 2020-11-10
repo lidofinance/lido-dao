@@ -99,6 +99,7 @@ async function deployDao({
     depositContractAddress: state.depositContractAddress
   })
   updateNetworkState(state, depositContractResults)
+  persistNetworkState(networkStateFile, netId, state)
 
   logHeader(`The DAO`)
 
@@ -125,9 +126,9 @@ async function deployDao({
   for (const [name, {fullName, ensNode}] of Object.entries(lidoApps)) {
     const repoAddress = await resolveEnsAddress(artifacts, ens, ensNode)
     if (repoAddress) {
-      log(`Found repo for app ${name} (${fullName}): ${chalk.yellow(repoAddress)}`)
+      log(`Found Repo for app ${name} (${fullName}): ${chalk.yellow(repoAddress)}`)
     } else {
-      throw new Error(`failed to resolve repo for app ${name} (${fullName})`)
+      throw new Error(`failed to resolve Repo for app ${name} (${fullName})`)
     }
   }
 
@@ -146,9 +147,21 @@ async function deployDao({
     daoAddress: state.daoAddress
   })
   updateNetworkState(state, daoResults)
+  persistNetworkState(networkStateFile, netId, state)
+
+  logHeader(`CstETH`)
+  const cstEthResults = await deployCstETH({
+    artifacts,
+    ens,
+    owner: state.owner,
+    stEthAppName: state.lido_app_steth_name,
+    appProxies: state.appProxies,
+    cstEthAddress: state.cstEthAddress
+  })
+  updateNetworkState(state, cstEthResults)
+  persistNetworkState(networkStateFile, netId, state)
 
   logWideSplitter()
-  persistNetworkState(networkStateFile, netId, state)
 }
 
 async function useOrDeployDepositContract({artifacts, owner, depositContractAddress}) {
@@ -264,6 +277,32 @@ async function deployDAO({
   }
 
   return {dao, token, appProxies}
+}
+
+async function deployCstETH({
+  artifacts,
+  owner,
+  ens,
+  stEthAppName,
+  appProxies,
+  cstEthAddress
+}) {
+  if (cstEthAddress) {
+    log(`Using CstETH at: ${chalk.yellow(cstEthAddress)}`)
+    const cstEth = await artifacts.require('CstETH').at(cstEthAddress)
+    return {cstEth}
+  }
+  const stEthAppProxy = appProxies[stEthAppName]
+  if (!stEthAppProxy) {
+    throw new Error(`proxy address for StETH app ${stEthAppName} not found in network state`)
+  }
+  log(`Using StETH app proxy: ${chalk.yellow(stEthAppProxy)}`)
+  const cstEth = await deploy(
+    'CstETH',
+    artifacts,
+    CstETH => CstETH.new(stEthAppProxy, {from: owner})
+  )
+  return {cstEth}
 }
 
 module.exports = runOrWrapScript(deployDao, module)
