@@ -5,7 +5,7 @@ const getAccounts = require('@aragon/os/scripts/helpers/get-accounts')
 
 const runOrWrapScript = require('./helpers/run-or-wrap-script')
 const {log, logSplitter, logWideSplitter, logHeader, logTx, logDeploy} = require('./helpers/log')
-const {deploy, useOrDeploy} = require('./helpers/deploy')
+const {deploy, useOrDeploy, withArgs} = require('./helpers/deploy')
 const {readNetworkState, persistNetworkState, updateNetworkState} = require('./helpers/persisted-network-state')
 
 const {deployAPM} = require('./components/apm')
@@ -48,6 +48,7 @@ async function deployAragonEnv({web3, artifacts, networkStateFile = NETWORK_STAT
     ensAddress: state.ensAddress
   })
   updateNetworkState(state, ensResults)
+  persistNetworkState(networkStateFile, netId, state)
 
   logHeader(`DAO factory`)
   const daoFactoryResults = await useOrDeployDaoFactory({
@@ -56,6 +57,7 @@ async function deployAragonEnv({web3, artifacts, networkStateFile = NETWORK_STAT
     daoFactoryAddress: state.daoFactoryAddress
   })
   updateNetworkState(state, daoFactoryResults)
+  persistNetworkState(networkStateFile, netId, state)
 
   logHeader(`APM registry factory`)
   const apmRegistryFactoryResults = await useOrDeployAPMRegistryFactory({
@@ -69,6 +71,7 @@ async function deployAragonEnv({web3, artifacts, networkStateFile = NETWORK_STAT
     ensSubdomainRegistrarBaseAddress: state.ensSubdomainRegistrarBaseAddress
   })
   updateNetworkState(state, apmRegistryFactoryResults)
+  persistNetworkState(networkStateFile, netId, state)
 
   logHeader(`Aragon APM`)
   const apmResults = await deployAPM({
@@ -85,6 +88,7 @@ async function deployAragonEnv({web3, artifacts, networkStateFile = NETWORK_STAT
     aragonEnsNodeName: apmResults.ensNodeName,
     aragonEnsNode: apmResults.ensNode,
   })
+  persistNetworkState(networkStateFile, netId, state)
 
   logHeader(`MiniMeTokenFactory`)
   const tokenFactoryResults = await deployMiniMeTokenFactory({
@@ -93,6 +97,7 @@ async function deployAragonEnv({web3, artifacts, networkStateFile = NETWORK_STAT
     miniMeTokenFactoryAddress: state.miniMeTokenFactoryAddress
   })
   updateNetworkState(state, tokenFactoryResults)
+  persistNetworkState(networkStateFile, netId, state)
 
   logHeader('AragonID')
   const aragonIDResults = await deployAragonID({
@@ -102,8 +107,6 @@ async function deployAragonEnv({web3, artifacts, networkStateFile = NETWORK_STAT
     aragonIDAddress: state.aragonIDAddress
   })
   updateNetworkState(state, aragonIDResults)
-
-  logWideSplitter()
   persistNetworkState(networkStateFile, netId, state)
 }
 
@@ -122,9 +125,8 @@ async function useOrDeployENS({artifacts, owner, ensAddress}) {
 
 async function deployENS({artifacts, owner}) {
   const ENS = artifacts.require('ENS')
-  const ENSFactory = artifacts.require('ENSFactory')
 
-  const factory = await logDeploy(`ENSFactory`, ENSFactory.new({from: owner}))
+  const factory = await deploy(`ENSFactory`, artifacts, withArgs({from: owner}))
   const result = await logTx(`Creating ENS`, factory.newENS(owner))
 
   const ensAddr = result.logs.filter(l => l.event == 'DeployENS')[0].args.ens
@@ -163,17 +165,15 @@ async function useOrDeployAPMRegistryFactory({
   const apmRegistryBase = await useOrDeploy('APMRegistry', artifacts, apmRegistryBaseAddress)
   const apmRepoBase = await useOrDeploy('Repo', artifacts, apmRepoBaseAddress)
   const ensSubdomainRegistrarBase = await useOrDeploy('ENSSubdomainRegistrar', artifacts, ensSubdomainRegistrarBaseAddress)
-  const apmRegistryFactory = await useOrDeploy('APMRegistryFactory', artifacts, apmRegistryFactoryAddress, APMRegistryFactory => {
-    return APMRegistryFactory.new(
-      daoFactory.address,
-      apmRegistryBase.address,
-      apmRepoBase.address,
-      ensSubdomainRegistrarBase.address,
-      ens.address,
-      ZERO_ADDR,
-      {from: owner}
-    )
-  })
+  const apmRegistryFactory = await useOrDeploy('APMRegistryFactory', artifacts, apmRegistryFactoryAddress, withArgs(
+    daoFactory.address,
+    apmRegistryBase.address,
+    apmRepoBase.address,
+    ensSubdomainRegistrarBase.address,
+    ens.address,
+    ZERO_ADDR,
+    {from: owner}
+  ))
   return {apmRegistryBase, apmRepoBase, ensSubdomainRegistrarBase, apmRegistryFactory}
 }
 
@@ -184,18 +184,21 @@ async function deployDAOFactory({
   aclBaseAddress,
   withEvmScriptRegistryFactory
 }) {
-  const kernelBase = await useOrDeploy('Kernel', artifacts, kernelBaseAddress, Kernel => {
+  const kernelBase = await useOrDeploy(
+    'Kernel',
+    artifacts,
+    kernelBaseAddress,
     // immediately petrify
-    return Kernel.new(true, {from: owner})
-  })
+    withArgs(true, {from: owner})
+  )
 
-  const aclBase = await useOrDeploy('ACL', artifacts, aclBaseAddress, ACL => ACL.new({from: owner}))
+  const aclBase = await useOrDeploy('ACL', artifacts, aclBaseAddress, withArgs({from: owner}))
 
   const evmScriptRegistryFactory = withEvmScriptRegistryFactory
-    ? await deploy('EVMScriptRegistryFactory', artifacts, Factory => Factory.new({from: owner}))
+    ? await deploy('EVMScriptRegistryFactory', artifacts, withArgs({from: owner}))
     : undefined
 
-  const daoFactory = await deploy('DAOFactory', artifacts, DAOFactory => DAOFactory.new(
+  const daoFactory = await deploy('DAOFactory', artifacts, withArgs(
     kernelBase.address,
     aclBase.address,
     evmScriptRegistryFactory ? evmScriptRegistryFactory.address : ZERO_ADDR,
@@ -214,7 +217,7 @@ async function deployMiniMeTokenFactory({artifacts, owner, miniMeTokenFactoryAdd
     'MiniMeTokenFactory',
     artifacts,
     miniMeTokenFactoryAddress,
-    MiniMeTokenFactory => MiniMeTokenFactory.new({from: owner})
+    withArgs({from: owner})
   )
   return {miniMeTokenFactory: factory}
 }
@@ -236,9 +239,10 @@ async function deployAragonID({artifacts, owner, ens, aragonIDAddress}) {
   const node = namehash(nodeName)
   log(`ENS node: ${chalk.yellow(nodeName)} (${node})`)
 
-  const aragonID = await logDeploy(
+  const aragonID = await deploy(
     'FIFSResolvingRegistrar',
-    FIFSResolvingRegistrar.new(ens.address, publicResolverAddress, node, {from: owner})
+    artifacts,
+    withArgs(ens.address, publicResolverAddress, node, {from: owner})
   )
 
   logSplitter()

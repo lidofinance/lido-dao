@@ -5,7 +5,7 @@ const namehash = require('eth-ens-namehash').hash
 
 const runOrWrapScript = require('./helpers/run-or-wrap-script')
 const {log, logSplitter, logWideSplitter, logHeader, logTx, logDeploy} = require('./helpers/log')
-const {deploy, useOrDeploy} = require('./helpers/deploy')
+const {deploy, useOrDeploy, withArgs} = require('./helpers/deploy')
 const {readNetworkState, persistNetworkState, updateNetworkState} = require('./helpers/persisted-network-state')
 
 const {deployAPM, resolveLatestVersion} = require('./components/apm')
@@ -171,11 +171,7 @@ async function useOrDeployDepositContract({artifacts, owner, depositContractAddr
     return {depositContract}
   }
   log(chalk.red(`WARN deploying a new instance of DepositContract`))
-  const depositContract = await deploy(
-    'DepositContract',
-    artifacts,
-    DepositContract => DepositContract.new({from: owner})
-  )
+  const depositContract = await deploy('DepositContract', artifacts, withArgs({from: owner}))
   return {depositContract}
 }
 
@@ -300,7 +296,7 @@ async function deployCstETH({
   const cstEth = await deploy(
     'CstETH',
     artifacts,
-    CstETH => CstETH.new(stEthAppProxy, {from: owner})
+    withArgs(stEthAppProxy, {from: owner})
   )
   return {cstEth}
 }

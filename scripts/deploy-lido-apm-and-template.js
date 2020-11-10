@@ -3,7 +3,7 @@ const namehash = require('eth-ens-namehash').hash
 
 const runOrWrapScript = require('./helpers/run-or-wrap-script')
 const {log, logSplitter, logWideSplitter, logHeader, logTx} = require('./helpers/log')
-const {deploy} = require('./helpers/deploy')
+const {deploy, withArgs} = require('./helpers/deploy')
 const {readNetworkState, persistNetworkState, updateNetworkState} = require('./helpers/persisted-network-state')
 
 const {deployAPM, resolveLatestVersion} = require('./components/apm')
@@ -72,6 +72,7 @@ async function deployApmAndTemplate({
     lidoEnsNodeName: apmResults.ensNodeName,
     lidoEnsNode: apmResults.ensNode
   })
+  persistNetworkState(networkStateFile, netId, state)
 
   logHeader(`DAO template`)
   const daoTemplateResults = await deployDaoTemplate({
@@ -86,8 +87,6 @@ async function deployApmAndTemplate({
     daoTemplateAddress: state.daoTemplateAddress
   })
   updateNetworkState(state, daoTemplateResults)
-
-  logWideSplitter()
   persistNetworkState(networkStateFile, netId, state)
 }
 
@@ -129,7 +128,7 @@ async function deployDaoTemplate({
     throw new Error(`failed to resolve AragonID (aragonid.eth)`)
   }
 
-  const daoTemplate = await deploy('LidoTemplate', artifacts, LidoTemplate => LidoTemplate.new(
+  const daoTemplate = await deploy('LidoTemplate', artifacts, withArgs(
     daoFactoryAddress,
     ens.address,
     miniMeTokenFactoryAddress,

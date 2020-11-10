@@ -35,6 +35,9 @@ function updateNetworkState(state, newState) {
     if (value != null) {
       if (value.address) {
         state[`${key}Address`] = value.address
+        if (value.constructorArgs) {
+          state[`${key}ConstructorArgs`] = value.constructorArgs
+        }
       } else {
         state[key] = value
       }
