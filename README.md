@@ -279,7 +279,13 @@ An example of `deployed.json` file prepared for a testnet deployment:
 }
 ```
 
-#### Step 0: deploy Aragon environment and core apps (optional)
+#### Step 1: сompile the code
+
+```bash
+yarn compile
+```
+
+#### Step 1: deploy Aragon environment and core apps (optional)
 
 This is required for test/dev networks that don't have Aragon environment deployed.
 
@@ -291,19 +297,19 @@ NETWORK_NAME=localhost yarn deploy:aragon-env
 NETWORK_NAME=localhost yarn deploy:aragon-std-apps
 ```
 
-#### Step 1: deploy Lido APM registry and DAO template
+#### Step 2: deploy Lido APM registry and DAO template
 
 ```bash
 NETWORK_NAME=localhost yarn deploy:apm-and-template
 ```
 
-#### Step 2: build and deploy Lido applications
+#### Step 3: build and deploy Lido applications
 
 ```bash
 NETWORK_NAME=localhost yarn deploy:apps
 ```
 
-#### Step 3: deploy the DAO
+#### Step 4: deploy the DAO
 
 ```bash
 NETWORK_NAME=localhost yarn deploy:dao
