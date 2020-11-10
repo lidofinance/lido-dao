@@ -28,4 +28,10 @@ const apps = [
   { name: 'token-manager', tld: 'aragonpm.eth', contractName: 'Tokens', appId: TOKEN_MANAGER_APP_ID }
 ]
 
-module.exports = apps
+module.exports = {
+  apps,
+  DEPOOL_APP_ID,
+  STETH_APP_ID,
+  DEPOOLORACLE_APP_ID,
+  STAKING_PROVIDERS_REGISTRY_APP_ID
+}
