@@ -26,7 +26,7 @@ const hexConcat = (first, ...rest) => {
   return result
 }
 
-const div10 = (bn) => bn.div(new BN(10000000000))
+const round = (bn) => bn.addn(50).divn(100).muln(100)
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 const tokens = ETH
 
@@ -135,11 +135,11 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
 
     it('stETH', async () => {
         assertBn(await token.totalSupply(), tokens(64))
-        assertBn(div10(await token.balanceOf(app.address)), new BN('0'))
-        assertBn(div10(await token.balanceOf(user1)), new BN('6080000000'))
-        assertBn(div10(await token.balanceOf(treasuryAddr)), new BN('95999999'))
-        assertBn(div10(await token.balanceOf(insuranceAddr)), new BN('63999999'))
-        assertBn(div10(await token.balanceOf(nodeOperatorAddress1)), new BN('159999999'))
+        assertBn(round(await token.balanceOf(app.address)), tokens(0))
+        assertBn(round(await token.balanceOf(user1)), tokens(60.8))
+        assertBn(round(await token.balanceOf(treasuryAddr)), tokens(0.96))
+        assertBn(round(await token.balanceOf(insuranceAddr)), tokens(0.64))
+        assertBn(round(await token.balanceOf(nodeOperatorAddress1)), tokens(1.6))
     })
   })
 })
