@@ -10,9 +10,9 @@ import {
   TOKEN_MANAGER_APP_ID,
   VOTING_APP_ID,
   STETH_APP_ID,
-  DEPOOLORACLE_APP_ID,
-  DEPOOL_APP_ID,
-  SP_REGISTRY_APP_ID
+  LIDOORACLE_APP_ID,
+  LIDO_APP_ID,
+  NODE_OPERATORS_REGISTRY_APP_ID
 } from '../scripts/helpers/constants'
 
 test.before('Connecting Web3', async (t) => {
@@ -39,8 +39,8 @@ test('Get DAO apps', async (t) => {
   t.is(apps[3].appId, FINANCE_APP_ID, 'FINANCE app id')
   t.is(apps[4].appId, TOKEN_MANAGER_APP_ID, 'TOKEN MANAGER app id')
   t.is(apps[5].appId, VOTING_APP_ID, 'VOTING app id')
-  t.is(apps[6].appId, DEPOOL_APP_ID, 'DEPOOL app id')
+  t.is(apps[6].appId, LIDO_APP_ID, 'LIDO app id')
   t.is(apps[7].appId, STETH_APP_ID, 'STETH app id')
-  t.is(apps[8].appId, DEPOOLORACLE_APP_ID, 'DEPOOLORACLE app id')
-  t.is(apps[9].appId, SP_REGISTRY_APP_ID, 'SPREGISTRY app id')
+  t.is(apps[8].appId, LIDOORACLE_APP_ID, 'LIDOORACLE app id')
+  t.is(apps[9].appId, NODE_OPERATORS_REGISTRY_APP_ID, 'SPREGISTRY app id')
 })

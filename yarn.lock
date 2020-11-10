@@ -1871,64 +1871,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@depools/dao@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "@depools/dao@workspace:."
-  dependencies:
-    "@aragon/apps-finance": ^3.0.0
-    "@aragon/apps-token-manager": ^2.1.0
-    "@aragon/apps-voting": ^2.1.0
-    "@aragon/buidler-aragon": ^0.2.9
-    "@aragon/contract-helpers-test": ^0.1.0
-    "@aragon/os": ^4.4.0
-    "@aragon/templates-shared": ^1.0.1
-    "@aragon/test-helpers": ^2.1.0
-    "@aragon/toolkit": 0.0.7
-    "@babel/core": ^7.12.3
-    "@babel/node": ^7.12.1
-    "@babel/preset-env": ^7.11.5
-    "@babel/register": ^7.12.1
-    "@nomiclabs/buidler": ^1.4.7
-    "@nomiclabs/buidler-etherscan": 1.3.0
-    "@nomiclabs/buidler-ganache": ^1.3.3
-    "@nomiclabs/buidler-truffle5": ^1.3.4
-    "@nomiclabs/buidler-web3": ^1.3.4
-    "@openzeppelin/contracts": 3.1.0
-    "@openzeppelin/test-helpers": ^0.5.6
-    "@truffle/contract": ^4.2.22
-    ava: ^3.13.0
-    babel-plugin-istanbul: ^6.0.0
-    buidler-gas-reporter: ^0.1.3
-    chai: ^4.2.0
-    dotenv: ^8.2.0
-    eslint: ^7.10.0
-    eslint-config-prettier: ^6.12.0
-    eslint-config-standard: ^14.1.1
-    eslint-plugin-import: ^2.22.1
-    eslint-plugin-node: ^11.1.0
-    eslint-plugin-prettier: ^3.1.4
-    eslint-plugin-promise: ^4.2.1
-    eslint-plugin-standard: ^4.0.1
-    eth-ens-namehash: ^2.0.8
-    eth-gas-reporter: ^0.2.17
-    ethereumjs-testrpc-sc: ^6.5.1-sc.1
-    husky: ^4.3.0
-    lerna: ^3.22.1
-    lint-staged: ">=10"
-    openzeppelin-solidity: 2.0.0
-    prettier: ^2.1.2
-    solhint: ^3.2.2
-    solidity-bytes-utils: 0.0.6
-    solidity-coverage: ^0.7.11
-    solium: ^1.2.5
-    truffle: ^5.1.43
-    truffle-extract: ^1.2.1
-    web3: ^1.3.0
-    winston: ^3.3.3
-    yargs: ^16.0.3
-  languageName: unknown
-  linkType: soft
-
 "@emotion/is-prop-valid@npm:^0.8.8":
   version: 0.8.8
   resolution: "@emotion/is-prop-valid@npm:0.8.8"
@@ -3054,6 +2996,64 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@lido/dao@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "@lido/dao@workspace:."
+  dependencies:
+    "@aragon/apps-finance": ^3.0.0
+    "@aragon/apps-token-manager": ^2.1.0
+    "@aragon/apps-voting": ^2.1.0
+    "@aragon/buidler-aragon": ^0.2.9
+    "@aragon/contract-helpers-test": ^0.1.0
+    "@aragon/os": ^4.4.0
+    "@aragon/templates-shared": ^1.0.1
+    "@aragon/test-helpers": ^2.1.0
+    "@aragon/toolkit": 0.0.7
+    "@babel/core": ^7.12.3
+    "@babel/node": ^7.12.1
+    "@babel/preset-env": ^7.11.5
+    "@babel/register": ^7.12.1
+    "@nomiclabs/buidler": ^1.4.7
+    "@nomiclabs/buidler-etherscan": 1.3.0
+    "@nomiclabs/buidler-ganache": ^1.3.3
+    "@nomiclabs/buidler-truffle5": ^1.3.4
+    "@nomiclabs/buidler-web3": ^1.3.4
+    "@openzeppelin/contracts": 3.1.0
+    "@openzeppelin/test-helpers": ^0.5.6
+    "@truffle/contract": ^4.2.22
+    ava: ^3.13.0
+    babel-plugin-istanbul: ^6.0.0
+    buidler-gas-reporter: ^0.1.3
+    chai: ^4.2.0
+    dotenv: ^8.2.0
+    eslint: ^7.10.0
+    eslint-config-prettier: ^6.12.0
+    eslint-config-standard: ^14.1.1
+    eslint-plugin-import: ^2.22.1
+    eslint-plugin-node: ^11.1.0
+    eslint-plugin-prettier: ^3.1.4
+    eslint-plugin-promise: ^4.2.1
+    eslint-plugin-standard: ^4.0.1
+    eth-ens-namehash: ^2.0.8
+    eth-gas-reporter: ^0.2.17
+    ethereumjs-testrpc-sc: ^6.5.1-sc.1
+    husky: ^4.3.0
+    lerna: ^3.22.1
+    lint-staged: ">=10"
+    openzeppelin-solidity: 2.0.0
+    prettier: ^2.1.2
+    solhint: ^3.2.2
+    solidity-bytes-utils: 0.0.6
+    solidity-coverage: ^0.7.11
+    solium: ^1.2.5
+    truffle: ^5.1.43
+    truffle-extract: ^1.2.1
+    web3: ^1.3.0
+    winston: ^3.3.3
+    yargs: ^16.0.3
+  languageName: unknown
+  linkType: soft
+
 "@mrmlnc/readdir-enhanced@npm:^2.2.1":
   version: 2.2.1
   resolution: "@mrmlnc/readdir-enhanced@npm:2.2.1"
@@ -3151,6 +3151,60 @@ __metadata:
     "@nomiclabs/buidler": ^1.3.3
     web3: ^1.0.0-beta.36
   checksum: c8d54e931fa06194a128782391d088b26694603fd6f918b0bc6968e48e9c0bb5fc293e0a3ad2dc36ce7902adb9c25b6239d9b641a16ea18ac63887c9f17441fc
+  languageName: node
+  linkType: hard
+
+"@nomiclabs/buidler@npm:1.4.7":
+  version: 1.4.7
+  resolution: "@nomiclabs/buidler@npm:1.4.7"
+  dependencies:
+    "@nomiclabs/ethereumjs-vm": ^4.1.1
+    "@sentry/node": ^5.18.1
+    "@solidity-parser/parser": ^0.5.2
+    "@types/bn.js": ^4.11.5
+    "@types/lru-cache": ^5.1.0
+    abort-controller: ^3.0.0
+    ansi-escapes: ^4.3.0
+    chalk: ^2.4.2
+    chokidar: ^3.4.0
+    ci-info: ^2.0.0
+    debug: ^4.1.1
+    deepmerge: ^2.1.0
+    download: ^7.1.0
+    enquirer: ^2.3.0
+    env-paths: ^2.2.0
+    eth-sig-util: ^2.5.2
+    ethereum-cryptography: ^0.1.2
+    ethereumjs-abi: ^0.6.8
+    ethereumjs-account: ^3.0.0
+    ethereumjs-block: ^2.2.0
+    ethereumjs-common: ^1.3.2
+    ethereumjs-tx: ^2.1.1
+    ethereumjs-util: ^6.1.0
+    find-up: ^2.1.0
+    fp-ts: 1.19.3
+    fs-extra: ^7.0.1
+    glob: ^7.1.3
+    io-ts: 1.10.4
+    is-installed-globally: ^0.2.0
+    lodash: ^4.17.11
+    merkle-patricia-tree: ^3.0.0
+    mocha: ^7.1.2
+    node-fetch: ^2.6.0
+    qs: ^6.7.0
+    raw-body: ^2.4.1
+    semver: ^6.3.0
+    slash: ^3.0.0
+    solc: 0.6.8
+    source-map-support: ^0.5.13
+    ts-essentials: ^2.0.7
+    tsort: 0.0.1
+    uuid: ^3.3.2
+    ws: ^7.2.1
+  bin:
+    buidler: internal/cli/cli.js
+    builder: internal/cli/cli-with-a-typo.js
+  checksum: 3d9c0513c60adad1f7b8ee0f33abccbbc308c94d009f55e3fa4a8e1e8b72cec0c8dc5b8b56ef28824eaaf94534960bf3843dd43ed0cda2377920bcdfb4405051
   languageName: node
   linkType: hard
 
@@ -6037,6 +6091,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"binarysearch@npm:^1.0.1":
+  version: 1.0.1
+  resolution: "binarysearch@npm:1.0.1"
+  checksum: 638d83534d0d72c322666a7819aeeb75eb2c45a09a3bafef0eb8ee19e1ca0ef764e04d0130e575240dfe90802e6aa5d760cfc98010ff9cc81988b6a2d2cc3aa5
+  languageName: node
+  linkType: hard
+
 "bindings@npm:^1.2.1, bindings@npm:^1.3.0, bindings@npm:^1.5.0":
   version: 1.5.0
   resolution: "bindings@npm:1.5.0"
@@ -6161,7 +6222,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"bn.js@npm:^5.1.1, bn.js@npm:^5.1.2":
+"bn.js@npm:^5.1.1, bn.js@npm:^5.1.2, bn.js@npm:^5.1.3":
   version: 5.1.3
   resolution: "bn.js@npm:5.1.3"
   checksum: 991c1fefb03bd69315297d454b379d5a5dd4834ab97db3ec985714f00ff7d3cc19642e1ac6bdf0d9f04946cc9f1ad26a5b497b7f4e7fa1230caf68af46fbefe6
@@ -7308,6 +7369,17 @@ __metadata:
     strip-ansi: ^6.0.0
     wrap-ansi: ^7.0.0
   checksum: 9c1433067a5860f9b8df76e5e0186a86992a180b8f8dd316357e19aa65b68d46964d448d18991fb598ab638a6c24218ce1331344fa4eec6767fcab40232b19fa
+  languageName: node
+  linkType: hard
+
+"cliui@npm:^7.0.2":
+  version: 7.0.3
+  resolution: "cliui@npm:7.0.3"
+  dependencies:
+    string-width: ^4.2.0
+    strip-ansi: ^6.0.0
+    wrap-ansi: ^7.0.0
+  checksum: aa05598ac7178428d41188e73fcafd25dd17ddba6aba2f99d5c7805fc6655d503e46a0a56e4e173dbda9a4adf0001c484cd586f50324365e0c83cfa6c58a6520
   languageName: node
   linkType: hard
 
@@ -8796,82 +8868,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"depool-frontend@workspace:apps/depool/app":
-  version: 0.0.0-use.local
-  resolution: "depool-frontend@workspace:apps/depool/app"
-  dependencies:
-    "@aragon/api": ^2.0.0
-    "@aragon/api-react": ^2.0.0
-    "@aragon/ui": ^1.7.0
-    "@babel/core": ^7.11.6
-    "@babel/preset-env": ^7.11.5
-    "@babel/preset-react": ^7.10.1
-    "@openzeppelin/contracts": 3.1.0
-    babel-eslint: ^10.1.0
-    babel-plugin-styled-components: ^1.11.1
-    copyfiles: ^2.3.0
-    core-js: ^3.6.5
-    eslint: ^7.9.0
-    eslint-config-prettier: ^6.11.0
-    eslint-config-standard: ^14.1.1
-    eslint-config-standard-react: ^9.2.0
-    eslint-plugin-import: ^2.22.0
-    eslint-plugin-node: ^11.1.0
-    eslint-plugin-prettier: ^3.1.4
-    eslint-plugin-promise: ^4.2.1
-    eslint-plugin-react: ^7.20.6
-    eslint-plugin-react-hooks: ^4.1.2
-    eslint-plugin-standard: ^4.0.1
-    formik: ^2.2.0
-    parcel-bundler: ^1.12.4
-    prettier: ^2.1.2
-    react: ^16.13.1
-    react-dom: ^16.13.1
-    regenerator-runtime: ^0.13.7
-    styled-components: ^5.2.0
-    web3-utils: ^1.3.0
-    yup: ^0.29.3
-  languageName: unknown
-  linkType: soft
-
-"depooloracle-frontend@workspace:apps/depooloracle/app":
-  version: 0.0.0-use.local
-  resolution: "depooloracle-frontend@workspace:apps/depooloracle/app"
-  dependencies:
-    "@aragon/api": ^2.0.0
-    "@aragon/api-react": ^2.0.0
-    "@aragon/ui": ^1.7.0
-    "@babel/core": ^7.11.6
-    "@babel/preset-env": ^7.11.5
-    "@babel/preset-react": ^7.10.1
-    "@openzeppelin/contracts": 3.1.0
-    babel-eslint: ^10.1.0
-    babel-plugin-styled-components: ^1.11.1
-    copyfiles: ^2.3.0
-    core-js: ^3.6.5
-    eslint: ^7.9.0
-    eslint-config-prettier: ^6.11.0
-    eslint-config-standard: ^14.1.1
-    eslint-config-standard-react: ^9.2.0
-    eslint-plugin-import: ^2.22.0
-    eslint-plugin-node: ^11.1.0
-    eslint-plugin-prettier: ^3.1.4
-    eslint-plugin-promise: ^4.2.1
-    eslint-plugin-react: ^7.20.6
-    eslint-plugin-react-hooks: ^4.1.2
-    eslint-plugin-standard: ^4.0.1
-    formik: ^2.2.0
-    parcel-bundler: ^1.12.4
-    prettier: ^2.1.2
-    react: ^16.13.1
-    react-dom: ^16.13.1
-    regenerator-runtime: ^0.13.7
-    styled-components: ^5.2.0
-    web3-utils: ^1.3.0
-    yup: ^0.29.3
-  languageName: unknown
-  linkType: soft
-
 "deprecation@npm:^2.0.0, deprecation@npm:^2.3.1":
   version: 2.3.1
   resolution: "deprecation@npm:2.3.1"
@@ -9553,7 +9549,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"escalade@npm:^3.0.2, escalade@npm:^3.1.0":
+"escalade@npm:^3.0.2, escalade@npm:^3.1.0, escalade@npm:^3.1.1":
   version: 3.1.1
   resolution: "escalade@npm:3.1.1"
   checksum: 1e31ff50d66f47cd0dfffa702061127116ccf9886d1f54a802a7b3bc95b94cab0cbf5b145cc5ac199036df6fd9d1bb24af1fa1bfed87c94879e950fbee5f86d1
@@ -11986,6 +11982,19 @@ __metadata:
   languageName: node
   linkType: hard
 
+"ganache-cli@npm:^6.12.0":
+  version: 6.12.1
+  resolution: "ganache-cli@npm:6.12.1"
+  dependencies:
+    ethereumjs-util: 6.2.1
+    source-map-support: 0.5.12
+    yargs: 13.2.4
+  bin:
+    ganache-cli: cli.js
+  checksum: 32db25381dcea31904ee8233367566548f44f86e9f22da6a8621d5eb5a315b396cb24bec1ffc7fe1e5f197fc8a61a69bd0bcce66a39a63f5326b5c879121d742
+  languageName: node
+  linkType: hard
+
 "ganache-core@npm:^2.10.1, ganache-core@npm:^2.7.0":
   version: 2.13.0
   resolution: "ganache-core@npm:2.13.0"
@@ -12035,6 +12044,19 @@ __metadata:
   checksum: 8827a537f6fca7ff093269122531a4db90c4830aaa04776c934a6b85ccb96261664af875311aab629eb21907077c375e70f3ef07d102f2a93ce67289ee89fbd5
   languageName: node
   linkType: hard
+
+"gasprofile@workspace:gasprofile":
+  version: 0.0.0-use.local
+  resolution: "gasprofile@workspace:gasprofile"
+  dependencies:
+    "@nomiclabs/buidler": 1.4.7
+    binarysearch: ^1.0.1
+    bn.js: ^5.1.3
+    chalk: ^4.1.0
+    ganache-cli: ^6.12.0
+    yargs: ^16.1.0
+  languageName: unknown
+  linkType: soft
 
 "gauge@npm:~2.7.3":
   version: 2.7.4
@@ -15725,6 +15747,82 @@ __metadata:
   languageName: node
   linkType: hard
 
+"lido-frontend@workspace:apps/lido/app":
+  version: 0.0.0-use.local
+  resolution: "lido-frontend@workspace:apps/lido/app"
+  dependencies:
+    "@aragon/api": ^2.0.0
+    "@aragon/api-react": ^2.0.0
+    "@aragon/ui": ^1.7.0
+    "@babel/core": ^7.11.6
+    "@babel/preset-env": ^7.11.5
+    "@babel/preset-react": ^7.10.1
+    "@openzeppelin/contracts": 3.1.0
+    babel-eslint: ^10.1.0
+    babel-plugin-styled-components: ^1.11.1
+    copyfiles: ^2.3.0
+    core-js: ^3.6.5
+    eslint: ^7.9.0
+    eslint-config-prettier: ^6.11.0
+    eslint-config-standard: ^14.1.1
+    eslint-config-standard-react: ^9.2.0
+    eslint-plugin-import: ^2.22.0
+    eslint-plugin-node: ^11.1.0
+    eslint-plugin-prettier: ^3.1.4
+    eslint-plugin-promise: ^4.2.1
+    eslint-plugin-react: ^7.20.6
+    eslint-plugin-react-hooks: ^4.1.2
+    eslint-plugin-standard: ^4.0.1
+    formik: ^2.2.0
+    parcel-bundler: ^1.12.4
+    prettier: ^2.1.2
+    react: ^16.13.1
+    react-dom: ^16.13.1
+    regenerator-runtime: ^0.13.7
+    styled-components: ^5.2.0
+    web3-utils: ^1.3.0
+    yup: ^0.29.3
+  languageName: unknown
+  linkType: soft
+
+"lidooracle-frontend@workspace:apps/lidooracle/app":
+  version: 0.0.0-use.local
+  resolution: "lidooracle-frontend@workspace:apps/lidooracle/app"
+  dependencies:
+    "@aragon/api": ^2.0.0
+    "@aragon/api-react": ^2.0.0
+    "@aragon/ui": ^1.7.0
+    "@babel/core": ^7.11.6
+    "@babel/preset-env": ^7.11.5
+    "@babel/preset-react": ^7.10.1
+    "@openzeppelin/contracts": 3.1.0
+    babel-eslint: ^10.1.0
+    babel-plugin-styled-components: ^1.11.1
+    copyfiles: ^2.3.0
+    core-js: ^3.6.5
+    eslint: ^7.9.0
+    eslint-config-prettier: ^6.11.0
+    eslint-config-standard: ^14.1.1
+    eslint-config-standard-react: ^9.2.0
+    eslint-plugin-import: ^2.22.0
+    eslint-plugin-node: ^11.1.0
+    eslint-plugin-prettier: ^3.1.4
+    eslint-plugin-promise: ^4.2.1
+    eslint-plugin-react: ^7.20.6
+    eslint-plugin-react-hooks: ^4.1.2
+    eslint-plugin-standard: ^4.0.1
+    formik: ^2.2.0
+    parcel-bundler: ^1.12.4
+    prettier: ^2.1.2
+    react: ^16.13.1
+    react-dom: ^16.13.1
+    regenerator-runtime: ^0.13.7
+    styled-components: ^5.2.0
+    web3-utils: ^1.3.0
+    yup: ^0.29.3
+  languageName: unknown
+  linkType: soft
+
 "lie@npm:3.1.1":
   version: 3.1.1
   resolution: "lie@npm:3.1.1"
@@ -17653,6 +17751,42 @@ __metadata:
   checksum: 90f928a1dbc3c98d39b3d133f8c910e6bd8e45416f8e15151a31c41550cffe4e3022a39c38c20ae4ceca56b6e63741def4f3a2018080d13f5be245f4b060a9b1
   languageName: node
   linkType: hard
+
+"node-operators-registry-frontend@workspace:apps/node-operators-registry/app":
+  version: 0.0.0-use.local
+  resolution: "node-operators-registry-frontend@workspace:apps/node-operators-registry/app"
+  dependencies:
+    "@aragon/api": ^2.0.0
+    "@aragon/api-react": ^2.0.0
+    "@aragon/ui": ^1.7.0
+    "@babel/core": ^7.11.6
+    "@babel/preset-env": ^7.11.5
+    "@babel/preset-react": ^7.10.1
+    babel-eslint: ^10.1.0
+    babel-plugin-styled-components: ^1.11.1
+    copyfiles: ^2.3.0
+    core-js: ^3.6.5
+    eslint: ^7.9.0
+    eslint-config-prettier: ^6.11.0
+    eslint-config-standard: ^14.1.1
+    eslint-config-standard-react: ^9.2.0
+    eslint-plugin-import: ^2.22.0
+    eslint-plugin-node: ^11.1.0
+    eslint-plugin-prettier: ^3.1.4
+    eslint-plugin-promise: ^4.2.1
+    eslint-plugin-react: ^7.20.6
+    eslint-plugin-react-hooks: ^4.1.2
+    eslint-plugin-standard: ^4.0.1
+    formik: ^2.2.0
+    parcel-bundler: ^1.12.4
+    prettier: ^2.1.2
+    react: ^16.13.1
+    react-dom: ^16.13.1
+    regenerator-runtime: ^0.13.7
+    styled-components: ^5.2.0
+    yup: ^0.29.3
+  languageName: unknown
+  linkType: soft
 
 "node-releases@npm:^1.1.61":
   version: 1.1.61
@@ -22450,42 +22584,6 @@ resolve@1.1.x:
   languageName: node
   linkType: hard
 
-"staking-providers-registry-frontend@workspace:apps/staking-providers-registry/app":
-  version: 0.0.0-use.local
-  resolution: "staking-providers-registry-frontend@workspace:apps/staking-providers-registry/app"
-  dependencies:
-    "@aragon/api": ^2.0.0
-    "@aragon/api-react": ^2.0.0
-    "@aragon/ui": ^1.7.0
-    "@babel/core": ^7.11.6
-    "@babel/preset-env": ^7.11.5
-    "@babel/preset-react": ^7.10.1
-    babel-eslint: ^10.1.0
-    babel-plugin-styled-components: ^1.11.1
-    copyfiles: ^2.3.0
-    core-js: ^3.6.5
-    eslint: ^7.9.0
-    eslint-config-prettier: ^6.11.0
-    eslint-config-standard: ^14.1.1
-    eslint-config-standard-react: ^9.2.0
-    eslint-plugin-import: ^2.22.0
-    eslint-plugin-node: ^11.1.0
-    eslint-plugin-prettier: ^3.1.4
-    eslint-plugin-promise: ^4.2.1
-    eslint-plugin-react: ^7.20.6
-    eslint-plugin-react-hooks: ^4.1.2
-    eslint-plugin-standard: ^4.0.1
-    formik: ^2.2.0
-    parcel-bundler: ^1.12.4
-    prettier: ^2.1.2
-    react: ^16.13.1
-    react-dom: ^16.13.1
-    regenerator-runtime: ^0.13.7
-    styled-components: ^5.2.0
-    yup: ^0.29.3
-  languageName: unknown
-  linkType: soft
-
 "static-eval@npm:^2.0.0":
   version: 2.1.0
   resolution: "static-eval@npm:2.1.0"
@@ -26620,6 +26718,13 @@ resolve@1.1.x:
   languageName: node
   linkType: hard
 
+"y18n@npm:^5.0.2":
+  version: 5.0.5
+  resolution: "y18n@npm:5.0.5"
+  checksum: a7d41b0cccca1c98ebab270a944df48eb3b5352d3be0affb8afc8369823f6aa97a5fbead2c5b35e59a5650cb786b2b37627b45be5ff31f02a80dd3b881aceb17
+  languageName: node
+  linkType: hard
+
 "yaeti@npm:^0.0.6":
   version: 0.0.6
   resolution: "yaeti@npm:0.0.6"
@@ -26709,6 +26814,13 @@ resolve@1.1.x:
   version: 20.2.1
   resolution: "yargs-parser@npm:20.2.1"
   checksum: c4945ade7d792bde00e3f68930f56f1fdd531e501c4ecf944c524c1541c5fe2468c27b4f76b0b459009ef09e338750d01810732f99f0a1fa061af4126cf5f53e
+  languageName: node
+  linkType: hard
+
+"yargs-parser@npm:^20.2.2":
+  version: 20.2.3
+  resolution: "yargs-parser@npm:20.2.3"
+  checksum: 6504b053bbb7ac0a3cd4c0e343447f2a7bb7ee18f3de8865a83874531ac8b8b0661cab4a4603a515224d5f5cfcd26d0d9998642b07a58ceab29eea12878123f7
   languageName: node
   linkType: hard
 
@@ -26872,6 +26984,21 @@ resolve@1.1.x:
     y18n: ^5.0.1
     yargs-parser: ^20.0.0
   checksum: 39490963e02bceb73ffff285cd9b241e5b019acbedef456586c97027cc18d0cadb743ad1340ccdc9340d0a21e18176c63b9f8bd90eee64c7e1f512c147aab1c2
+  languageName: node
+  linkType: hard
+
+"yargs@npm:^16.1.0":
+  version: 16.1.0
+  resolution: "yargs@npm:16.1.0"
+  dependencies:
+    cliui: ^7.0.2
+    escalade: ^3.1.1
+    get-caller-file: ^2.0.5
+    require-directory: ^2.1.1
+    string-width: ^4.2.0
+    y18n: ^5.0.2
+    yargs-parser: ^20.2.2
+  checksum: 19e94e62eb653f8310aa4ed6eab797b1756fea90cdacb38dec45afdd21b8607bf38723ee0fae0b967ca3886ad58b8430eb48b716958231f2f1b950c1c7f11034
   languageName: node
   linkType: hard
 

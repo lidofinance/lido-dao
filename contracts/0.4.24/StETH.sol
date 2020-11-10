@@ -9,13 +9,13 @@ import "./interfaces/ISTETH.sol";
 
 import "./lib/Pausable.sol";
 
-import "./interfaces/IDePool.sol";
+import "./interfaces/ILido.sol";
 
 
 /**
   * @title Implementation of a liquid version of ETH 2.0 native token
   *
-  * ERC20 token which supports stop/resume, mint/burn mechanics. The token is operated by `IDePool`.
+  * ERC20 token which supports stop/resume, mint/burn mechanics. The token is operated by `ILido`.
   */
 contract StETH is ISTETH, Pausable, AragonApp {
     using SafeMath for uint256;
@@ -25,9 +25,9 @@ contract StETH is ISTETH, Pausable, AragonApp {
     bytes32 constant public MINT_ROLE = keccak256("MINT_ROLE");
     bytes32 constant public BURN_ROLE = keccak256("BURN_ROLE");
 
-    // DePool contract serves as a source of information on the amount of pooled funds
+    // Lido contract serves as a source of information on the amount of pooled funds
     // and acts as the 'minter' of the new shares when staker submits his funds
-    IDePool public dePool;
+    ILido public lido;
 
     // Shares are the amounts of pooled Ether 'discounted' to the volume of ETH1.0 Ether deposited on the first day
     // or, more precisely, to Ethers deposited from start until the first oracle report.
@@ -50,8 +50,8 @@ contract StETH is ISTETH, Pausable, AragonApp {
         uint256 value
     );
 
-    function initialize(address _pool) public onlyInit {
-        dePool = IDePool(_pool);
+    function initialize(address _lido) public onlyInit {
+        lido = ILido(_lido);
         initialized();
     }
 
@@ -70,7 +70,7 @@ contract StETH is ISTETH, Pausable, AragonApp {
     }
 
     /**
-    * @notice Mint is called by dePool contract when user submits the ETH1.0 deposit.
+    * @notice Mint is called by lido contract when user submits the ETH1.0 deposit.
     *         It calculates share difference to preserve ratio of shares to the increased
     *         amount of pooledEthers so that all the previously created shares still correspond
     *         to the same amount of pooled ethers.
@@ -82,7 +82,7 @@ contract StETH is ISTETH, Pausable, AragonApp {
     function mint(address _to, uint256 _value) external whenNotStopped authP(MINT_ROLE, arr(_to, _value)) {
         require(_to != 0);
         uint256 sharesDifference;
-        uint256 totalControlledEthBefore = dePool.getTotalControlledEther();
+        uint256 totalControlledEthBefore = lido.getTotalControlledEther();
         if ( totalControlledEthBefore == 0) {
             sharesDifference = _value;
         } else {
@@ -109,7 +109,7 @@ contract StETH is ISTETH, Pausable, AragonApp {
     * @dev Total number of tokens in existence
     */
     function totalSupply() public view returns (uint256) {
-        return dePool.getTotalControlledEther();
+        return lido.getTotalControlledEther();
     }
 
     /**
@@ -274,7 +274,7 @@ contract StETH is ISTETH, Pausable, AragonApp {
         if (_totalShares == 0) {
             return 0;
         }
-        return _sharesAmount.mul(dePool.getTotalControlledEther()).div(_totalShares);
+        return _sharesAmount.mul(lido.getTotalControlledEther()).div(_totalShares);
     }
 
     /**
@@ -292,10 +292,10 @@ contract StETH is ISTETH, Pausable, AragonApp {
     * @param _pooledEthAmount The amount of pooled Eth
     */
     function getSharesByPooledEth(uint256 _pooledEthAmount) public view returns (uint256) {
-        if (dePool.getTotalControlledEther() == 0) {
+        if (lido.getTotalControlledEther() == 0) {
             return 0;
         }
-        return _pooledEthAmount.mul(_totalShares).div(dePool.getTotalControlledEther());
+        return _pooledEthAmount.mul(_totalShares).div(lido.getTotalControlledEther());
     }
 
     /**

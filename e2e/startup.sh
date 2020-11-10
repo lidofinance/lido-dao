@@ -197,7 +197,7 @@ if [ ! $SNAPSHOT ] && [ $DAO_DEPLOY ] ; then
     echo "Deploying APM..."
     npm run deploy:apm:dev
   fi
-  R=$(curl -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x'$DEPOOL_APP'","latest"],"id":1}' | jq -r '.result'  | cut -c -4)
+  R=$(curl -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x'$LIDO_APP'","latest"],"id":1}' | jq -r '.result'  | cut -c -4)
   if [[ "$R" != "0x60" ]]; then
     echo "Deploying Apps..."
     npm run deploy:apps:dev
