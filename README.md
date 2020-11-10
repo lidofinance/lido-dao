@@ -195,51 +195,126 @@ so full branch coverage will never be reported until
 
 ### Deploying
 
-1. Deploy the Aragon APM
+Networks are defined in `buidler.config.js` file. To select the target network for deployment,
+set `NETWORK_NAME` environment variable to a network name defined in that file. All examples
+below assume `localhost` target network.
 
-```bash
-# Local dev network
-yarn deploy:apm:dev
+#### Network state file
 
-# Rinkeby network
-yarn deploy:apm:rinkeby
+Deployment scripts read their config from and store their results to a file called `deployed.json`,
+located in the repo root. This file has the following structure and should always be committed:
 
-# Mainnet network
-yarn deploy:apm:mainnet
+```js
+{
+  "networks": {
+    "1337": { // network id
+      "networkName": "devnet", // serves as a comment
+      // ...deployment results
+    }
+  }
+}
 ```
 
-2. Build and deploy Aragon applications
+When a script sees that some contract address is already defined in the network state file, it won't
+re-deploy the same contract. This means that all deployment scripts are idempotent, you can call the
+same script twice and the second call will be a nop.
 
-```bash
-# Local dev network
-yarn deploy:apps:dev
+You may want to specify some of the configuration options in `networks.<netId>` prior to running
+deployment to avoid those values being set to default values:
 
-# Rinkeby network
-yarn deploy:app-depool --network rinkeby
-yarn deploy:app-depooloracle --network rinkeby
-yarn deploy:app-staking-providers-registry --network rinkeby
-yarn deploy:app-steth --network rinkeby
+* `owner` The address that everything will be deployed from.
+* `ensAddress` The address of a ENS instance.
+* `depositContractAddress` The address of the Beacon chain deposit contract (it will deployed otherwise).
+* `daoInitialSettings` Initial settings of the DAO; see below.
 
-# The same for mainnet, just replace "--network rinkeby" with "--network mainnet"
+You may specify any number additional keys inside any network state, they will be left intact by
+deployment scripts.
+
+#### DAO initial settings
+
+Initial DAO settings can be specified pripr to deployment for the specific network in
+`networks.<netId>.daoInitialSettings` field inside `deployed.json` file.
+
+* `holders` Addresses of initial DAO token holders.
+* `stakes` Initial DAO token balances of the holders.
+* `tokenName` Name of the DAO token.
+* `tokenSymbol` Symbol of the DAO token.
+* `voteDuration` See [Voting app documentation].
+* `votingSupportRequired` See [Voting app documentation].
+* `votingMinAcceptanceQuorum` See [Voting app documentation].
+* `depositIterationLimit` See [protocol levers documentation].
+
+[Voting app documentation]: https://wiki.aragon.org/archive/dev/apps/voting
+[protocol levers documentation]: /protocol-levers.md
+
+An example of `deployed.json` file prepared for a testnet deployment:
+
+```js
+{
+  "networks": {
+    "5": {
+      "networkName": "goerli",
+      "depositContractAddress": "0x07b39f4fde4a38bace212b546dac87c58dfe3fdc",
+      "owner": "0x3463dD800410965fdBeC2958085b1467CBd4aA31",
+      "daoInitialSettings": {
+        "holders": [
+          "0x9be0D8ef365A7217c2313c3f33a71D5CeBea2686",
+          "0x7B1F4c068b3E89Cc586c2f3656Bd95f56CA5B10A",
+          "0x6244D856606c874DEAC61a61bd07698d47a6F6F2"
+        ],
+        "stakes": [
+          "100000000000000000000",
+          "100000000000000000000",
+          "100000000000000000000"
+        ],
+        "tokenName": "Lido DAO Token",
+        "tokenSymbol": "LDD",
+        "voteDuration": 86400,
+        "votingSupportRequired": "500000000000000000",
+        "votingMinAcceptanceQuorum": "50000000000000000",
+        "depositIterationLimit": 16
+      }
+    }
+  }
+}
 ```
 
-3. Deploy the DAO template
+#### Step 0: deploy Aragon environment and core apps (optional)
+
+This is required for test/dev networks that don't have Aragon environment deployed.
 
 ```bash
-# Local dev network
-yarn deploy:tmpl:dev
+# ENS, APMRegistryFactory, DAOFactory, APMRegistry for aragonpm.eth, etc.
+NETWORK_NAME=localhost yarn deploy:aragon-env
+
+# Core Aragon apps: voting, vault, etc.
+NETWORK_NAME=localhost yarn deploy:aragon-std-apps
 ```
 
-4. Deploy the DAO
+#### Step 1: deploy Lido APM registry and DAO template
 
 ```bash
-# Local dev network
-yarn deploy:dao:dev
+NETWORK_NAME=localhost yarn deploy:apm-and-template
 ```
 
-### Other
+#### Step 2: build and deploy Lido applications
 
-To reset the devchain state, use:
+```bash
+NETWORK_NAME=localhost yarn deploy:apps
+```
+
+#### Step 3: deploy the DAO
+
+```bash
+NETWORK_NAME=localhost yarn deploy:dao
+```
+
+This step deploys `DepositContract` as well, if `depositContractAddress` is not specified
+in `deployed.json`.
+
+### E2E
+
+To reset the devchain state, use (indise the `e2e` dorectory):
 
 ```bash
 ./shutdown.sh && ./startup.sh
