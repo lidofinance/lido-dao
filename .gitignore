@@ -29,3 +29,6 @@ dist/
 
 # Optional eslint cache
 .eslintcache
+
+# Geth chaindata
+.chaindata/
