@@ -234,6 +234,7 @@ services:
   oracle-1:
     image: lido-oracle:latest
     container_name: oracle-1
+    restart: unless-stopped
     environment:
       - ETH1_NODE=http://node1:8545
       - ETH2_NODE=http://node2-1:5052
@@ -243,15 +244,15 @@ services:
       - SECONDS_PER_SLOT=1
       - SLOTS_PER_EPOCH=8
       - SPR_ABI_FILE=./assets/StakingProvidersRegistry.json
-      - ORACLE_ABI_FILE=./assets/DePoolOracle.json
+      - ORACLE_ABI_FILE=./assets/LidoOracle.json
       - REPORT_INTVL_SLOTS=160
-      - REPORT_INTERVAL_DURATION=160
     networks:
       eth2:
 
   oracle-2:
     image: lido-oracle:latest
     container_name: oracle-2
+    restart: unless-stopped
     environment:
       - ETH1_NODE=http://node1:8545
       - ETH2_NODE=http://node2-1:5052
@@ -261,15 +262,15 @@ services:
       - SECONDS_PER_SLOT=1
       - SLOTS_PER_EPOCH=8
       - SPR_ABI_FILE=./assets/StakingProvidersRegistry.json
-      - ORACLE_ABI_FILE=./assets/DePoolOracle.json
+      - ORACLE_ABI_FILE=./assets/LidoOracle.json
       - REPORT_INTVL_SLOTS=160
-      - REPORT_INTERVAL_DURATION=160
     networks:
       eth2:
 
   oracle-3:
     image: lido-oracle:latest
     container_name: oracle-3
+    restart: unless-stopped
     environment:
       - ETH1_NODE=http://node1:8545
       - ETH2_NODE=http://node2-1:5052
@@ -279,9 +280,8 @@ services:
       - SECONDS_PER_SLOT=1
       - SLOTS_PER_EPOCH=8
       - SPR_ABI_FILE=./assets/StakingProvidersRegistry.json
-      - ORACLE_ABI_FILE=./assets/DePoolOracle.json
+      - ORACLE_ABI_FILE=./assets/LidoOracle.json
       - REPORT_INTVL_SLOTS=160
-      - REPORT_INTERVAL_DURATION=160
     networks:
       eth2:
 
