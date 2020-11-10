@@ -9,14 +9,14 @@ const { _getRegistered, errorOut } = require('./helpers')
 const globalArtifacts = this.artifacts || artifacts // Not injected unless called directly via truffle
 const globalWeb3 = this.web3 || web3 // Not injected unless called directly via truffle
 
-const dePoolTemplateName = 'depool-template'
-const dePoolTld = `depoolspm.eth`
+const lidoTemplateName = 'lido-template'
+const lidoTld = `lido.eth`
 
 const defaultOwner = process.env.OWNER
 const defaultDaoFactoryAddress = process.env.DAO_FACTORY || '0x5d94e3e7aec542ab0f9129b9a7badeb5b3ca0f77'
 const defaultENSAddress = process.env.ENS || '0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1'
 const defaultMiniMeFactoryAddress = process.env.MENIME_FACTORY || '0xd526b7aba39cccf76422835e7fd5327b98ad73c9'
-const defaultApmRegistryAddress = process.env.APM || '0x1902a0410EFe699487Dd85F12321aD672bE4ada2' // depoolspm
+const defaultApmRegistryAddress = process.env.APM || '0x1902a0410EFe699487Dd85F12321aD672bE4ada2' // lido
 const defaultAragonIdAddress = process.env.ARAGON_ID || ''
 
 async function deploy({
@@ -50,13 +50,13 @@ async function deploy({
   const accounts = await getAccounts(web3)
   if (!owner) {
     owner = accounts[0]
-    log("OWNER env variable not found, setting owner to the provider's first account")
+    log("OWNER env variable not found, setting owner to the operator's first account")
   }
   log('Owner:', owner)
 
   const APMRegistry = artifacts.require('APMRegistry')
   const ENS = artifacts.require('ENS')
-  const DePoolTemplate = artifacts.require('DePoolTemplate')
+  const LidoTemplate = artifacts.require('LidoTemplate')
 
   const ens = await ENS.at(ensAddress)
   log(`Using provided ENS: ${ens.address}`)
@@ -85,18 +85,18 @@ async function deploy({
       errorOut(`No ${contractName} app registered`)
     }
   }
-  if (await _getRegistered(ens, namehash(`${dePoolTemplateName}.${dePoolTld}`))) {
+  if (await _getRegistered(ens, namehash(`${lidoTemplateName}.${lidoTld}`))) {
     errorOut('Template already registered')
   }
 
-  log(`Deploying template: ${dePoolTemplateName}`)
-  const template = await DePoolTemplate.new(daoFactoryAddress, ensAddress, miniMeFactoryAddress, aragonIdAddress, { gas: 6000000 })
-  await logDeploy('DePoolTemplate', template)
+  log(`Deploying template: ${lidoTemplateName}`)
+  const template = await LidoTemplate.new(daoFactoryAddress, ensAddress, miniMeFactoryAddress, aragonIdAddress, { gas: 6000000 })
+  await logDeploy('LidoTemplate', template)
 
-  log(`Deployed DePoolTemplate: ${template.address}`)
+  log(`Deployed LidoTemplate: ${template.address}`)
 
-  log(`Registering package for DePoolTemplate as "${dePoolTemplateName}.${dePoolTld}"`)
-  const receipt = await apm.newRepoWithVersion(dePoolTemplateName, owner, [1, 0, 0], template.address, '0x0', { from: owner })
+  log(`Registering package for LidoTemplate as "${lidoTemplateName}.${lidoTld}"`)
+  const receipt = await apm.newRepoWithVersion(lidoTemplateName, owner, [1, 0, 0], template.address, '0x0', { from: owner })
   // log(receipt)
 
   return {

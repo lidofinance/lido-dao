@@ -8,9 +8,9 @@ const { _getRegistered, errorOut } = require('./helpers')
 const globalArtifacts = this.artifacts || artifacts // Not injected unless called directly via truffle
 const globalWeb3 = this.web3 || web3 // Not injected unless called directly via truffle
 
-const dePoolDaoName = 'lido-dao'
-const dePoolTemplateName = 'depool-template'
-const dePoolTld = `depoolspm.eth`
+const lidoDaoName = 'lido-dao'
+const lidoTemplateName = 'lido-template'
+const lidoTld = `lido.eth`
 
 const ONE_DAY = 60 * 60 * 24
 const ONE_WEEK = ONE_DAY * 7
@@ -18,7 +18,7 @@ const THIRTY_DAYS = ONE_DAY * 30
 
 const defaultOwner = process.env.OWNER
 const defaultENSAddress = process.env.ENS || '0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1'
-const defaultApmRegistryAddress = process.env.APM || '0x1902a0410EFe699487Dd85F12321aD672bE4ada2' // depoolspm
+const defaultApmRegistryAddress = process.env.APM || '0x1902a0410EFe699487Dd85F12321aD672bE4ada2' // lido
 const defaultDepositContractAddress = process.env.DEPOSIT_CONTRACT || '0x5f4e510503d83bd1a5436bdae2923489da0be454'
 const defaultDepositIterationLimit = process.env.DEPOSIT_ITERATION_LIMIT || '16'
 
@@ -52,24 +52,24 @@ async function deploy({
   const [holder1, holder2, holder3, holder4, holder5] = await getAccounts(web3)
   if (!owner) {
     owner = holder1
-    log("OWNER env variable not found, setting owner to the provider's first account")
+    log("OWNER env variable not found, setting owner to the operator's first account")
   }
   log('Owner:', owner)
 
   const Repo = artifacts.require('Repo')
   const PublicResolver = artifacts.require('PublicResolver')
   const ENS = artifacts.require('ENS')
-  const DePoolTemplate = artifacts.require('DePoolTemplate')
+  const LidoTemplate = artifacts.require('LidoTemplate')
 
   const ens = await ENS.at(ensAddress)
   log(`Using provided ENS: ${ens.address}`)
 
   log('=========')
-  if (await _getRegistered(ens, namehash(`${dePoolDaoName}.${dePoolTld}`))) {
+  if (await _getRegistered(ens, namehash(`${lidoDaoName}.${lidoTld}`))) {
     errorOut('DAO already registered')
   }
 
-  const tmplNameHash = namehash(`${dePoolTemplateName}.${dePoolTld}`)
+  const tmplNameHash = namehash(`${lidoTemplateName}.${lidoTld}`)
   const resolverAddress = await ens.resolver(tmplNameHash)
   const resolver = await PublicResolver.at(resolverAddress)
   const repoAddress = await resolver.addr(tmplNameHash)
@@ -77,14 +77,14 @@ async function deploy({
   const latestRepo = await repo.getLatest()
   const tmplAddress = latestRepo[1]
 
-  const template = await DePoolTemplate.at(tmplAddress)
-  console.log(`Using DePool template ${dePoolTemplateName}.${dePoolTld} at:`, template.address)
+  const template = await LidoTemplate.at(tmplAddress)
+  console.log(`Using Lido template ${lidoTemplateName}.${lidoTld} at:`, template.address)
 
   // TODO get holders from .env
   const HOLDERS = [holder1, holder2, holder3, holder4, holder5]
   const STAKES = HOLDERS.map(() => '100000000000000000000') // 100e18
-  const TOKEN_NAME = 'DePool DAO Token'
-  const TOKEN_SYMBOL = 'DPD'
+  const TOKEN_NAME = 'Lido DAO Token'
+  const TOKEN_SYMBOL = 'LDO'
 
   // TODO get voting settings from .env
   const VOTE_DURATION = ONE_WEEK
@@ -96,9 +96,9 @@ async function deploy({
   // const estimatedGas = await newInstanceTx.estimateGas()
   // log(estimatedGas)
 
-  console.log('Deploying DePool DAO ...')
+  console.log('Deploying Lido DAO ...')
   const receipt = await template.newDAO(
-    dePoolDaoName,
+    lidoDaoName,
     TOKEN_NAME,
     TOKEN_SYMBOL,
     HOLDERS,
@@ -111,14 +111,18 @@ async function deploy({
     }
   )
 
+  log('=========')
+  log('Tx hash:', receipt.tx)
+  log('=========')
+
   const tokenEvent = receipt.logs.find((l) => l.event === 'DeployToken')
   const daoEvent = receipt.logs.find((l) => l.event === 'DeployDao')
   const installedApps = receipt.logs.filter((l) => l.event === 'InstalledApp').map((l) => l.args)
 
   log('=========')
-  // log(`Registering DAO as "${dePoolDaoName}.${dePoolTld}"`)
-  // TODO register dao at depoolspm.eth (by default dao registered at aragonid.eth)
-  // receipt = await apm.newRepoWithVersion(dePoolDaoName, owner, [1, 0, 0], daoEvent.args.dao, '0x0', { from: owner })
+  // log(`Registering DAO as "${lidoDaoName}.${lidoTld}"`)
+  // TODO register dao at lido.eth (by default dao registered at aragonid.eth)
+  // receipt = await apm.newRepoWithVersion(lidoDaoName, owner, [1, 0, 0], daoEvent.args.dao, '0x0', { from: owner })
   // log(receipt)
 
   log('# DAO:')

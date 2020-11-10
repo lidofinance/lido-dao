@@ -19,7 +19,7 @@ const SP_REGISTRY_APP_ID = '0x6ca5078df26de2bcf0976b0bfba50b6ed5dac3644879214556
 const depositContract = '0x5f4e510503d83bd1a5436bdae2923489da0be454'
 const ensRegistry = '0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1'
 const daoAddress = '0xD20F21CEb31a8E302603dC3ff994f00aa9312A66'
-const daoName = 'depool-dao.aragonid.eth'
+const daoName = 'lido-dao.aragonid.eth'
 const owner = '0xb4124cEB3451635DAcedd11767f004d8a28c6eE7'
 
 // TODO naming wrappers for logger purpose

@@ -10,7 +10,7 @@ const globalArtifacts = this.artifacts || artifacts // Not injected unless calle
 const globalWeb3 = this.web3 || web3 // Not injected unless called directly via truffle
 
 const TLD_NAME = 'eth'
-const LABEL_NAME = 'depoolspm'
+const LABEL_NAME = 'lido'
 
 const defaultOwner = process.env.OWNER
 const defaultDaoFactoryAddress = process.env.DAO_FACTORY || '0x5d94e3e7aec542ab0f9129b9a7badeb5b3ca0f77'
@@ -42,7 +42,7 @@ async function deploy({
   const accounts = await getAccounts(web3)
   if (!owner) {
     owner = accounts[0]
-    log("OWNER env variable not found, setting owner to the provider's first account")
+    log("OWNER env variable not found, setting owner to the operator's first account")
   }
   log('Owner:', owner)
 
