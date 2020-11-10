@@ -22,7 +22,8 @@ module.exports = {
       url: 'http://localhost:8545',
       chainId: 1337,
       ensAddress: getNetState('1337').ensAddress,
-      accounts: 'remote'
+      accounts: 'remote',
+      timeout: 60000
     },
     coverage: {
       url: 'http://localhost:8555'

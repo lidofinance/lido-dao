@@ -18,7 +18,7 @@ const DEFAULT_DAO_SETTINGS = {
   holders: [ /* acct1, acct2, acct3 */ ],
   stakes: ['100000000000000000000', '100000000000000000000', '100000000000000000000'], // 100e18
   tokenName: 'Lido DAO Token',
-  tokenSymbol: 'LDD',
+  tokenSymbol: 'LDO',
   voteDuration: 60 * 3, // 3 minutes
   votingSupportRequired: '500000000000000000', // 50e16 basis points === 50%
   votingMinAcceptanceQuorum: '50000000000000000', // 5e16 basis points === 5%
@@ -190,7 +190,7 @@ async function deployDAO({
 
   const {contractAddress: daoTemplateAddress} = templateLatestVersion
   log(`Using registered DAO template: ${chalk.yellow(daoTemplateAddress)}`)
-  const template = await artifacts.require('DePoolTemplate').at(daoTemplateAddress)
+  const template = await artifacts.require('LidoTemplate').at(daoTemplateAddress)
 
   log(`Using DepositContract at: ${chalk.yellow(depositContractAddress)}`)
 

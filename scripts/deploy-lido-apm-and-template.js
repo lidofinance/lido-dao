@@ -9,7 +9,7 @@ const {readNetworkState, persistNetworkState, updateNetworkState} = require('./h
 const {deployAPM, resolveLatestVersion} = require('./components/apm')
 const {getENSNodeOwner} = require('./components/ens')
 
-const LIDO_ENS_LABEL = process.env.LIDO_ENS_LABEL || 'lidofinance'
+const LIDO_ENS_LABEL = process.env.LIDO_ENS_LABEL || 'lido'
 const DAO_TEMPLATE_ENS_LABEL = process.env.DAO_TEMPLATE_ENS_LABEL || 'template'
 const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
 
@@ -104,7 +104,7 @@ async function deployDaoTemplate({
 }) {
   if (daoTemplateAddress) {
     log(`Using DAO template: ${chalk.yellow(daoTemplateAddress)}`)
-    const daoTemplate = await artifacts.require('DePoolTemplate').at(daoTemplateAddress)
+    const daoTemplate = await artifacts.require('LidoTemplate').at(daoTemplateAddress)
     return {daoTemplate}
   }
 
@@ -115,7 +115,7 @@ async function deployDaoTemplate({
   const latestDaoTemplateVersion = await resolveLatestVersion(daoTemplateNode, ens, artifacts)
   if (latestDaoTemplateVersion) {
     log(`Using DAO template resolved from ENS: ${chalk.yellow(latestDaoTemplateVersion.contractAddress)}`)
-    const daoTemplate = await artifacts.require('DePoolTemplate').at(latestDaoTemplateVersion.contractAddress)
+    const daoTemplate = await artifacts.require('LidoTemplate').at(latestDaoTemplateVersion.contractAddress)
     return {daoTemplate, daoTemplateNodeName, daoTemplateNode}
   }
 
@@ -129,7 +129,7 @@ async function deployDaoTemplate({
     throw new Error(`failed to resolve AragonID (aragonid.eth)`)
   }
 
-  const daoTemplate = await deploy('DePoolTemplate', artifacts, DePoolTemplate => DePoolTemplate.new(
+  const daoTemplate = await deploy('LidoTemplate', artifacts, LidoTemplate => LidoTemplate.new(
     daoFactoryAddress,
     ens.address,
     miniMeTokenFactoryAddress,
