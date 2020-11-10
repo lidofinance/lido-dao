@@ -11,7 +11,7 @@ const {readNetworkState, persistNetworkState, updateNetworkState} = require('./h
 const {deployAPM, resolveLatestVersion} = require('./components/apm')
 const {assignENSName, getENSNodeOwner, resolveEnsAddress} = require('./components/ens')
 
-const DAO_ENS_LABEL = process.env.DAO_ENS_LABEL || 'dao'
+const DAO_NAME = process.env.DAO_NAME || 'lido-dao'
 const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
 
 const DEFAULT_DAO_SETTINGS = {
@@ -31,6 +31,7 @@ const LIDO_APP_NAMES = fs.readdirSync(APPS_DIR_PATH)
 const REQUIRED_NET_STATE = [
   'owner',
   'ensAddress',
+  'aragonIDEnsNodeName',
   'lidoEnsNodeName',
   'lidoApmRegistryAddress',
   'daoTemplateNode'
@@ -40,7 +41,7 @@ async function deployDao({
   web3,
   artifacts,
   networkStateFile = NETWORK_STATE_FILE,
-  defaultDaoEnsLabel = DAO_ENS_LABEL,
+  defaultDaoName = DAO_NAME,
   defaultDaoSettings = DEFAULT_DAO_SETTINGS
 }) {
   const netId = await web3.eth.net.getId()
@@ -67,9 +68,9 @@ async function deployDao({
   const ens = await artifacts.require('ENS').at(state.ensAddress)
   log(`Using ENS: ${chalk.yellow(ens.address)}`)
 
-  if (!state.daoEnsLabel) {
-    state.daoEnsLabel = defaultDaoEnsLabel
-    log(`Using default DAO label: ${state.daoEnsLabel}`)
+  if (!state.daoName) {
+    state.daoName = defaultDaoName
+    log(`Using default DAO name: ${state.daoName}`)
   }
 
   const isDevNet = netId <= 1000
@@ -137,9 +138,10 @@ async function deployDao({
     owner: state.owner,
     lidoApmRegistryAddress: state.lidoApmRegistryAddress,
     depositContractAddress: state.depositContractAddress,
+    aragonIDEnsNodeName: state.aragonIDEnsNodeName,
     lidoEnsNodeName: state.lidoEnsNodeName,
     daoTemplateNode: state.daoTemplateNode,
-    daoEnsLabel: state.daoEnsLabel,
+    daoName: state.daoName,
     daoInitialSettings: state.daoInitialSettings,
     daoAddress: state.daoAddress
   })
@@ -170,8 +172,9 @@ async function deployDAO({
   ens,
   lidoApmRegistryAddress,
   daoTemplateNode,
+  aragonIDEnsNodeName,
   lidoEnsNodeName,
-  daoEnsLabel,
+  daoName,
   daoInitialSettings,
   depositContractAddress,
   knownApps,
@@ -194,9 +197,10 @@ async function deployDAO({
 
   log(`Using DepositContract at: ${chalk.yellow(depositContractAddress)}`)
 
-  const daoEnsName = `${daoEnsLabel}.${lidoEnsNodeName}`
-  log(`Using ENS name: ${chalk.yellow(daoEnsName)}`)
+  const daoEnsName = `${daoName}.${aragonIDEnsNodeName}`
 
+  log(`Using DAO name: ${chalk.yellow(daoName)}`)
+  log(`Using ENS name: ${chalk.yellow(daoEnsName)}`)
   log(`Using DAO initial settings:`, daoInitialSettings)
 
   const votingSettings = [
@@ -210,7 +214,7 @@ async function deployDAO({
   const deployResult = await logTx(
     `Deploying DAO from template`,
     template.newDAO(
-      daoEnsName,
+      daoName,
       daoInitialSettings.tokenName,
       daoInitialSettings.tokenSymbol,
       daoInitialSettings.holders,
