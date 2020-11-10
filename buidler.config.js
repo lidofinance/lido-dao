@@ -1,16 +1,21 @@
+const fs = require('fs')
+const path = require('path')
 const { usePlugin } = require('@nomiclabs/buidler/config')
 
 usePlugin('@nomiclabs/buidler-web3')
 usePlugin('@nomiclabs/buidler-truffle5')
 usePlugin('@nomiclabs/buidler-ganache')
+usePlugin('@nomiclabs/buidler-etherscan')
 usePlugin('buidler-gas-reporter')
 usePlugin('solidity-coverage')
 
-let stateByNetId
-try {
-  stateByNetId = require('./deployed.json')
-} catch (err) {
-  stateByNetId = {networks: {}}
+const accounts = readJson('./accounts.json') || {
+  eth: 'remote',
+  etherscan: {apiKey: undefined}
+}
+
+const stateByNetId = readJson('./deployed.json') || {
+  networks: {}
 }
 
 const getNetState = netId => stateByNetId.networks[netId] || {}
@@ -27,6 +32,13 @@ module.exports = {
     },
     coverage: {
       url: 'http://localhost:8555'
+    },
+    goerli: {
+      url: 'http://206.81.31.11/rpc',
+      chainId: 5,
+      ensAddress: getNetState('5').ensAddress,
+      timeout: 60000,
+      accounts: accounts.eth
     }
   },
   solc: {
@@ -44,5 +56,15 @@ module.exports = {
   gasReporter: {
     enabled: !!process.env.REPORT_GAS,
     currency: 'USD'
+  },
+  etherscan: accounts.etherscan
+}
+
+function readJson(fileName) {
+  try {
+    const filePath = path.join(__dirname, fileName)
+    return JSON.parse(fs.readFileSync(filePath))
+  } catch (err) {
+    return null
   }
 }

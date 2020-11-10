@@ -1,0 +1,11 @@
+{
+  "eth": {
+    "mnemonic": "BIP_39_15_WORD_MNEMONIC",
+    "path": "m/44'/60'/0'/0",
+    "initialIndex": 0,
+    "count": 10
+  },
+  "etherscan": {
+    "apiKey": "ETHERSCAN_API_KEY"
+  }
+}

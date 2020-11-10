@@ -32,3 +32,6 @@ dist/
 
 # Geth chaindata
 .chaindata/
+
+# Sensitive data
+/accounts.json
