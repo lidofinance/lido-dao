@@ -51,6 +51,7 @@ while test $# -gt 0; do
       echo "  -1 | --eth1           start only eth1 part"
       echo "  -w | --web            also start Aragon web UI"
       echo "  -ms | --makesnapshots create stage snapshots"
+      echo "  -o | --oracles        start oracles"
       exit 0
       ;;
     -r|--reset)
@@ -89,12 +90,14 @@ while test $# -gt 0; do
       WEB_UI=true
       shift
       ;;
-
     -ms|--makesnapshots)
       MAKE_SNAPSHOT=true
       shift
       ;;
-
+    -o|--oracles)
+      ORACLES=true
+      shift
+      ;;
     *)
       break
       ;;
@@ -121,7 +124,11 @@ fi
 if [ ! -d $DEVCHAIN_DIR ]; then
   if [ $SNAPSHOT ]; then
     echo "Unzip devchain snapshot"
-    unzip -o -q -d $DATA_DIR $SNAPSHOTS_DIR/stage1/devchain.zip
+    if [ $ORACLES ]; then
+      unzip -o -q -d $DATA_DIR $SNAPSHOTS_DIR/stage2/devchain.zip
+    else
+      unzip -o -q -d $DATA_DIR $SNAPSHOTS_DIR/stage1/devchain.zip
+    fi
   else
     DAO_DEPLOY=true
   fi
@@ -136,19 +143,20 @@ if [ ! -d $TESTNET_DIR ]; then
   fi
 fi
 
-echo "Starting eth1 node"
-BLOCK_TIME=0 docker-compose up -d node1
-
 if [ ! -d $IPFS_DIR ] && [ $SNAPSHOT ] && [ $WEB_UI ]; then
   echo "Unzip ipfs snapshot"
   unzip -o -q -d $DATA_DIR $SNAPSHOTS_DIR/stage0/ipfs.zip
 fi
 
+if [ ! $SNAPSHOT ]; then
+  echo "Starting eth1 node"
+  BLOCK_TIME=0 docker-compose up -d node1
+  echo -n "Waiting for eth1 rpc"
+  while ! curl --output /dev/null -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'; do
+    sleep 2 && echo -n .
+  done
+fi
 
-echo -n "Waiting for eth1 rpc"
-while ! curl --output /dev/null -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'; do
-  sleep 2 && echo -n .
-done
 #sleep 3
 #R="0x"
 #while [[ "$R" != "0x60" ]];
@@ -388,6 +396,30 @@ if [ $MAKE_SNAPSHOT ] && [ ! $SNAPSHOT ] && [ ! -d $SNAPSHOTS_DIR/stage1 ]; then
   docker-compose unpause
 fi
 
+
+# oracles
+if [ $ORACLES ] && [ $RESET ]; then
+  echo "Building oracle container"
+  ./oracle.sh
+  if [ ! $SNAPSHOT ]; then
+    $NODE scripts/mock_validators.js
+  fi
+  if [ $MAKE_SNAPSHOT ]&& [ ! $SNAPSHOT ] && [ ! -d $SNAPSHOTS_DIR/stage2 ]; then
+    echo "Take snapshots for stage 2"
+    mkdir -p $SNAPSHOTS_DIR/stage2
+    docker-compose pause
+    cd $DATA_DIR
+    echo "Take snapshots for devchain"
+    zip -rqu $SNAPSHOTS_DIR/stage2/devchain.zip devchain
+    # echo "Take snapshots for testnet"
+    # zip -rqu $SNAPSHOTS_DIR/stage1/testnet.zip testnet
+    # echo "Take snapshots for validators"
+    # zip -rqu $SNAPSHOTS_DIR/stage1/validators.zip validators
+    cd -
+    docker-compose unpause
+  fi
+fi
+
 echo "Starting ETH2"
 docker-compose up -d node1
 docker-compose up -d node2-1 node2-2
@@ -397,10 +429,9 @@ docker-compose up -d validators1
 sleep 5
 docker-compose up -d validators2
 
-# oracles
-# echo "Building oracle container"
-# ./oracle.sh
-# docker-compose up -d oracle-1 oracle-2 oracle-3
+if [ $ORACLES ]; then
+  docker-compose up -d oracle-1 oracle-2 oracle-3
+fi
 
 if [ $NODES ]; then
   echo "Start extra nodes"

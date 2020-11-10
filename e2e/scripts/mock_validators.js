@@ -5,9 +5,6 @@ import * as depoolHelper from './helpers/apps/depoolHelper'
 import * as stakingProviderHelper from './helpers/apps/stakingProviderHelper'
 import * as dePoolOracleHelper from './helpers/apps/dePoolOracleHelper'
 
-const args = process.argv.slice(2)
-const dir = args[0]
-
 const duration = parseInt(process.env.REPORT_INTERVAL_DURATION || '160')
 
 const main = async () => {
@@ -15,10 +12,9 @@ const main = async () => {
   const { accounts } = context
   const voters = accounts.slice(0, 3)
   const proposer = accounts[0]
-  const staker = accounts[1]
-  const staker2 = accounts[2]
+  const staker = accounts[0]
   const sps = accounts.slice(5, 7)
-  const oracles = accounts.slice(7, 10)
+  const oracles = accounts.slice(30, 33)
 
   logger.info(voters)
   logger.info(sps)
@@ -29,9 +25,8 @@ const main = async () => {
   stakingProviderHelper.init(context)
   dePoolOracleHelper.init(context)
 
-  // dir = '../data/validator_keys'
-  logger.info('Reading deposit data from: ' + dir)
-  const depositData = await loadGeneratedValidatorsData(dir)
+  const depositData = await loadGeneratedValidatorsData('validators1')
+
   const wc = '0x' + depositData[0].withdrawal_credentials
   const keysPerSP = 20
 
@@ -102,8 +97,6 @@ const main = async () => {
 
   // test deoposit
   r = await depoolHelper.depositToDePoolContract(staker, ETH(333))
-  console.log(r.events)
-  r = await depoolHelper.depositToDePoolContract(staker2, ETH(222))
   console.log(r.events)
   return true
 }
