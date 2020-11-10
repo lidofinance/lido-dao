@@ -5,10 +5,10 @@ const logger = require('./logger')
 const {
   ensRegistry,
   daoName,
-  DEPOOL_APP_ID,
-  DEPOOLORACLE_APP_ID,
+  LIDO_APP_ID,
+  LIDOORACLE_APP_ID,
   STETH_APP_ID,
-  SP_REGISTRY_APP_ID,
+  NODE_OPERATORS_REGISTRY_APP_ID,
   VOTING_APP_ID,
   FINANCE_APP_ID,
   TOKEN_MANAGER_APP_ID,
@@ -31,11 +31,11 @@ const prepareContext = async (params) => {
   const votingApp = findApp(apps, VOTING_APP_ID)
   const financeApp = findApp(apps, FINANCE_APP_ID)
   const vaultApp = findApp(apps, AGENT_APP_ID)
-  const stakingProvidersApp = findApp(apps, SP_REGISTRY_APP_ID)
+  const stakingProvidersApp = findApp(apps, NODE_OPERATORS_REGISTRY_APP_ID)
   const tokenManagerApp = findApp(apps, TOKEN_MANAGER_APP_ID)
   const stEthApp = findApp(apps, STETH_APP_ID)
-  const dePoolOracleApp = findApp(apps, DEPOOLORACLE_APP_ID)
-  const dePoolApp = findApp(apps, DEPOOL_APP_ID)
+  const dePoolOracleApp = findApp(apps, LIDOORACLE_APP_ID)
+  const dePoolApp = findApp(apps, LIDO_APP_ID)
 
   return {
     web3,

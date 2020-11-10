@@ -12,9 +12,9 @@ All existing levers are listed below, grouped by the contract.
 The following contracts are upgradeable by the DAO voting:
 
 * `contracts/0.4.24/StETH.sol`
-* `contracts/0.4.24/DePool.sol`
-* `contracts/0.4.24/StakingProvidersRegistry.sol`
-* `contracts/0.4.24/DePoolOracle.sol`
+* `contracts/0.4.24/Lido.sol`
+* `contracts/0.4.24/NodeOperatorsRegistry.sol`
+* `contracts/0.4.24/LidoOracle.sol`
 
 Upgradeability is implemented by the Aragon kernel and base contracts. To upgrade an app, one needs
 the `dao.APP_MANAGER_ROLE` permission provided by Aragon. All upgradeable contracts use the
@@ -36,7 +36,7 @@ The following contracts are not upgradeable and don't depend on the Aragon code:
 * Mutator: `burn(address _account, uint256 _value)`
   * Permission required: `BURN_ROLE`
 
-Initially, only the `DePool.sol` contract is authorized to mint and burn tokens, but the DAO can
+Initially, only the `Lido.sol` contract is authorized to mint and burn tokens, but the DAO can
 vote to grant these permissions to other actors.
 
 
@@ -58,7 +58,7 @@ transfers and changing allowances. Calls of the following functions will revert:
 * `decreaseAllowance(address, uint)`
 
 
-## [DePool.sol](/contracts/0.4.24/DePool.sol)
+## [Lido.sol](/contracts/0.4.24/Lido.sol)
 
 ### stETH, Oracle, SP Registry
 
@@ -84,17 +84,17 @@ The total fee, in basis points (`10000` corresponding to `100%`).
 * Accessor: `getFee() returns (uint16)`
 
 The fee is taken on staking rewards and distributed between the treasury, the insurance fund, and
-staking providers.
+node operators.
 
 
 ### Fee distribution
 
-Controls how the fee is distributed between the treasury, the insurance fund, and staking providers.
+Controls how the fee is distributed between the treasury, the insurance fund, and node operators.
 Each fee component is in basis points; the sum of all components must add up to 1 (`10000` basis points).
 
-* Mutator: `setFeeDistribution(uint16 treasury, uint16 insurance, uint16 sps)`
+* Mutator: `setFeeDistribution(uint16 treasury, uint16 insurance, uint16 operators)`
   * Permission required: `MANAGE_FEE`
-* Accessor: `getFeeDistribution() returns (uint16 treasury, uint16 insurance, uint16 sps)`
+* Accessor: `getFeeDistribution() returns (uint16 treasury, uint16 insurance, uint16 operators)`
 
 
 ### ETH 2.0 withdrawal Credentials
@@ -115,12 +115,12 @@ Controls how many ETH 2.0 validators can be registered in a single transaction.
 * Mutator: `setDepositIterationLimit(uint256)`
   * Permission required: `SET_DEPOSIT_ITERATION_LIMIT`
 * Accessor: `getDepositIterationLimit() returns (uint256)`
-* [Scenario test](/test/scenario/depool_deposit_iteration_limit.js)
+* [Scenario test](/test/scenario/lido_deposit_iteration_limit.js)
 
 When someone submits Ether to the pool, the received Ether gets buffered in the pool contract. If the amount
 of the buffered Ether becomes larger than the ETH 2.0 deposit size (32 ETH), then the pool tries to register
 as many ETH 2.0 validators as it can. The limiting factors here are the amount of the buffered Ether (obviously),
-the number of spare validator keys (provided by staking providers), and the deposit loop iteration limit,
+the number of spare validator keys (provided by node operators), and the deposit loop iteration limit,
 controlled by this lever.
 
 The limit is needed to prevent the submit transaction from [failing due to the block gas limit](https://github.com/ConsenSys/smart-contract-best-practices/blob/8f99aef/docs/known_attacks.md#gas-limit-dos-on-a-contract-via-unbounded-operations).
@@ -160,7 +160,7 @@ transactions will revert:
 * Transfer to vault (`transferToVault()`)
 
 
-## [StakingProvidersRegistry.sol](/contracts/0.4.24/sps/StakingProvidersRegistry.sol)
+## [NodeOperatorsRegistry.sol](/contracts/0.4.24/nos/NodeOperatorsRegistry.sol)
 
 ### Pool
 
@@ -169,45 +169,45 @@ Address of the pool contract.
 * Accessor: `pool() returns (address)`
 
 
-### Staking providers list
+### Node Operators list
 
-* Mutator: `addStakingProvider(string _name, address _rewardAddress, uint64 _stakingLimit)`
-  * Permission required: `ADD_STAKING_PROVIDER_ROLE`
-* Mutator: `setStakingProviderName(uint256 _id, string _name)`
-  * Permission required: `SET_STAKING_PROVIDER_NAME_ROLE`
-* Mutator: `setStakingProviderRewardAddress(uint256 _id, address _rewardAddress)`
-  * Permission required: `SET_STAKING_PROVIDER_ADDRESS_ROLE`
-* Mutator: `setStakingProviderStakingLimit(uint256 _id, uint64 _stakingLimit)`
-  * Permission required: `SET_STAKING_PROVIDER_LIMIT_ROLE`
+* Mutator: `addNodeOperator(string _name, address _rewardAddress, uint64 _stakingLimit)`
+  * Permission required: `ADD_NODE_OPERATOR_ROLE`
+* Mutator: `setNodeOperatorName(uint256 _id, string _name)`
+  * Permission required: `SET_NODE_OPERATOR_NAME_ROLE`
+* Mutator: `setNodeOperatorRewardAddress(uint256 _id, address _rewardAddress)`
+  * Permission required: `SET_NODE_OPERATOR_ADDRESS_ROLE`
+* Mutator: `setNodeOperatorStakingLimit(uint256 _id, uint64 _stakingLimit)`
+  * Permission required: `SET_NODE_OPERATOR_LIMIT_ROLE`
 
-Staking providers act as validators on the Beacon chain for the benefit of the protocol. Each
-staking provider submits no more than `_stakingLimit` signing keys that will be used later
+Node Operators act as validators on the Beacon chain for the benefit of the protocol. Each
+node operator submits no more than `_stakingLimit` signing keys that will be used later
 by the pool for registering the corresponding ETH 2.0 validators. As oracle committee
 reports rewards on the ETH 2.0 side, the fee is taken on these rewards, and part of that fee
-is sent to staking providers’ reward addresses (`_rewardAddress`).
+is sent to node operators’ reward addresses (`_rewardAddress`).
 
 
-### Deactivating a staking provider
+### Deactivating a node operator
 
-* Mutator: `setStakingProviderActive(uint256 _id, bool _active)`
-  * Permission required: `SET_STAKING_PROVIDER_ACTIVE_ROLE`
+* Mutator: `setNodeOperatorActive(uint256 _id, bool _active)`
+  * Permission required: `SET_NODE_OPERATOR_ACTIVE_ROLE`
 
-Misbehaving staking providers can be deactivated by calling this function. The pool skips
-deactivated providers during validator registration; also, deactivated providers don’t
+Misbehaving node operators can be deactivated by calling this function. The pool skips
+deactivated operators during validator registration; also, deactivated operators don’t
 take part in fee distribution.
 
 
-### Managing staking provider’s signing keys
+### Managing node operator’s signing keys
 
-* Mutator: `addSigningKeys(uint256 _SP_id, uint256 _quantity, bytes _pubkeys, bytes _signatures)`
+* Mutator: `addSigningKeys(uint256 _operator_id, uint256 _quantity, bytes _pubkeys, bytes _signatures)`
   * Permission required: `MANAGE_SIGNING_KEYS`
-* Mutator: `removeSigningKey(uint256 _SP_id, uint256 _index)`
+* Mutator: `removeSigningKey(uint256 _operator_id, uint256 _index)`
   * Permission required: `MANAGE_SIGNING_KEYS`
 
-Allow to manage signing keys for the given staking provider.
+Allow to manage signing keys for the given node operator.
 
 > Signing keys can also be managed by the reward address of a signing provier by calling
-> the equivalent functions with the `SP` suffix: `addSigningKeysSP`, `removeSigningKeySP`.
+> the equivalent functions with the `OperatorBH` suffix: `addSigningKeysOperatorBH`, `removeSigningKeyOperatorBH`.
 
 
 ### Reporting new stopped validators
@@ -215,10 +215,10 @@ Allow to manage signing keys for the given staking provider.
 * Mutator: `reportStoppedValidators(uint256 _id, uint64 _stoppedIncrement)`
   * Permission required: `REPORT_STOPPED_VALIDATORS_ROLE`
 
-Allows to report that `_stoppedIncrement` more validators of a staking provider have become stopped.
+Allows to report that `_stoppedIncrement` more validators of a node operator have become stopped.
 
 
-## [DePoolOracle.sol](/contracts/0.4.24/oracle/DePoolOracle.sol)
+## [LidoOracle.sol](/contracts/0.4.24/oracle/LidoOracle.sol)
 
 ### Pool
 

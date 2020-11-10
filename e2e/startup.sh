@@ -5,7 +5,6 @@ set -o pipefail
 
 ROOT=${PWD}
 DATA_DIR="${ROOT}/data"
-WALLETS_DIR="${DATA_DIR}/wallets"
 VALIDATORS_DIR="${DATA_DIR}/validators"
 TESTNET_DIR="${DATA_DIR}/testnet"
 DEVCHAIN_DIR="${DATA_DIR}/devchain"
@@ -15,14 +14,15 @@ BEACONDATA2_DIR="${DATA_DIR}/beacondata-2"
 BEACONDATA3_DIR="${DATA_DIR}/beacondata-3"
 BEACONDATA4_DIR="${DATA_DIR}/beacondata-4"
 
-MOCK_DATA_DIR="${DATA_DIR}/mock"
-MOCK_VALIDATOR_KEYS_DIR="${MOCK_DATA_DIR}/validator_keys"
-MOCK_VALIDATORS_DIR="${MOCK_DATA_DIR}/validators"
-MOCK_SECRETS_DIR="${MOCK_DATA_DIR}/secrets"
+MOCK_VALIDATORS_DATA_DIR="${VALIDATORS_DIR}/mock_validators"
+MOCK_VALIDATORS_KEYS_DIR="${MOCK_VALIDATORS_DATA_DIR}/validator_keys"
+MOCK_VALIDATORS_DIR="${MOCK_VALIDATORS_DATA_DIR}/validators"
 
-VALIDATOR_KEYS_DIR="${DATA_DIR}/validator_keys"
-VALIDATORS_DIR="${DATA_DIR}/validators"
-SECRETS_DIR="${DATA_DIR}/secrets"
+VALIDATORS1_DATA_DIR="${VALIDATORS_DIR}/validators1"
+VALIDATORS1_VALIDATORS_DIR="${VALIDATORS1_DATA_DIR}/validators"
+
+VALIDATORS2_DATA_DIR="${VALIDATORS_DIR}/validators2"
+VALIDATORS2_VALIDATORS_DIR="${VALIDATORS2_DATA_DIR}/validators"
 
 PASSWORD=123
 
@@ -171,22 +171,22 @@ if [ ! $SNAPSHOT ] && [ $DAO_DEPLOY ] ; then
 
   R=$(curl -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x'$APM'","latest"],"id":1}' | jq -r '.result'  | cut -c -4)
   if [[ "$R" != "0x60" ]]; then
-    echo "Deploying DePool APM..."
+    echo "Deploying APM..."
     npm run deploy:apm:dev
   fi
-  R=$(curl -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x'$DEPOOL_APP'","latest"],"id":1}' | jq -r '.result'  | cut -c -4)
+  R=$(curl -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x'$LIDO_APP'","latest"],"id":1}' | jq -r '.result'  | cut -c -4)
   if [[ "$R" != "0x60" ]]; then
-    echo "Deploying DePool Apps..."
+    echo "Deploying Apps..."
     npm run deploy:apps:dev
   fi
   R=$(curl -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x'$TEMPLATE'","latest"],"id":1}' | jq -r '.result'  | cut -c -4)
   if [[ "$R" != "0x60" ]]; then
-    echo "Deploying DePool DAO template..."
+    echo "Deploying DAO template..."
     npm run deploy:tmpl:dev
   fi
   R=$(curl -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x'$DAO'","latest"],"id":1}' | jq -r '.result'  | cut -c -4)
   if [[ "$R" != "0x60" ]]; then
-    echo "Deploying DePool DAO..."
+    echo "Deploying DAO..."
     npm run deploy:dao:dev
   fi
   # wait a bit for block mining
@@ -199,12 +199,19 @@ fi
 
 echo "Starting Aragon web UI"
 docker-compose up -d aragon
-
-if [ ! -d "$VALIDATOR_KEYS_DIR" ]; then
-  rm -rf $VALIDATORS_DIR
-  echo "Generating $VALIDATOR_COUNT validator keys... (this may take a while)"
+if [ ! -d "$VALIDATORS_DIR" ]; then
   # TODO dkg
-  ./deposit.sh --num_validators=$VALIDATOR_COUNT --password=$PASSWORD --chain=medalla --mnemonic="$VALIDATOR_MNEMONIC" --withdrawal_pk=$WITHDRAWAL_PK
+  echo "Generating $VALIDATOR_COUNT validator1 keys... (this may take a while)"
+  KEYS_DIR=$VALIDATORS1_DATA_DIR ./deposit.sh --num_validators=$VALIDATOR_COUNT --password=$PASSWORD --chain=medalla --mnemonic="$VALIDATOR_MNEMONIC2" --withdrawal_pk=$WITHDRAWAL_PK1
+
+  echo "Generating $VALIDATOR_COUNT validator2 keys... (this may take a while)"
+  KEYS_DIR=$VALIDATORS2_DATA_DIR ./deposit.sh --num_validators=$VALIDATOR_COUNT --password=$PASSWORD --chain=medalla --mnemonic="$VALIDATOR_MNEMONIC2" --withdrawal_pk=$WITHDRAWAL_PK2
+
+  echo "Generating $MOCK_VALIDATOR_COUNT mock validator keys.. (this may take a while)"
+  KEYS_DIR=$MOCK_VALIDATORS_DATA_DIR ./deposit.sh --num_validators=$MOCK_VALIDATOR_COUNT --password=$PASSWORD --chain=medalla --mnemonic="$MOCK_VALIDATOR_MNEMONIC"
+
+  echo "Making deposits for $MOCK_VALIDATOR_COUNT genesis validators... (this may take a while)"
+  node ./scripts/mock_deposit.js "mock_validators"
 fi
 
 if [ $ETH1_ONLY ]; then
@@ -254,23 +261,13 @@ if [ $ETH2_RESET ]; then
 
   echo "Specification generated at $TESTNET_DIR."
 
-  if [ ! -d "$MOCK_VALIDATOR_KEYS_DIR" ]; then
-    rm -rf $MOCK_VALIDATORS_DIR
-    echo "Generating $MOCK_VALIDATOR_COUNT mock validators concurrently... (this may take a while)"
-    KEYS_DIR=$MOCK_DATA_DIR ./deposit.sh --num_validators=$MOCK_VALIDATOR_COUNT --password=$PASSWORD --chain=medalla --mnemonic="$MNEMONIC"
-
-    # mv $VALIDATOR_KEYS_DIR $MOCK_VALIDATOR_KEYS_DIR
-    echo "Making deposits for $MOCK_VALIDATOR_COUNT genesis validators... (this may take a while)"
-    node ./scripts/mock_deposit.js $MOCK_VALIDATOR_KEYS_DIR
-  fi
-
   if [ ! -d "$MOCK_VALIDATORS_DIR" ]; then
   echo "Importing validators keystore"
   echo $PASSWORD | docker-compose run --rm --no-deps lh lighthouse \
     --spec "$SPEC" --debug-level "$DEBUG_LEVEL" \
     account validator import --reuse-password --stdin-inputs \
-    --datadir "/data/mock" \
-    --directory "/data/mock/validator_keys" \
+    --datadir "/data/validators/mock_validators" \
+    --directory "/data/validators/mock_validators/validator_keys" \
     --testnet-dir "/data/testnet"
   fi
 
@@ -281,29 +278,6 @@ if [ $ETH2_RESET ]; then
     --testnet-dir "/data/testnet" \
     --eth1-endpoint http://node1:8545
 
-
-
-  # if [ ! -d "$MOCK_VALIDATORS_DIR" ]; then
-  #   echo "Generating $MOCK_VALIDATOR_COUNT mock validator keys... (this may take a while)"
-  #   # rm -rf $MOCK_VALIDATORS_DIR
-  #   # rm -rf $MOCK_SECRETS_DIR
-  #   docker-compose run --rm --no-deps node2-1 lcli \
-  #     --spec "$SPEC" \
-  #     insecure-validators \
-  #     --count $MOCK_VALIDATOR_COUNT \
-  #     --validators-dir "/data/mock/validators" \
-  #     --secrets-dir "/data/mock/secrets"
-  #   echo "Validators generated at $MOCK_VALIDATORS_DIR with keystore passwords at $MOCK_SECRETS_DIR."
-  # fi
-
-  # echo "Generating genesis"
-  # docker-compose run --rm --no-deps node2-1  lcli \
-  #   --spec "$SPEC" \
-  #   interop-genesis \
-  #   --testnet-dir "/data/testnet" \
-  #   --genesis-fork-version $FORK_VERSION \
-  #   $MOCK_VALIDATOR_COUNT
-
   NOW=$(date +%s)
   echo "Reset genesis time to now ($NOW)"
   docker-compose run --rm --no-deps lh lcli \
@@ -312,13 +286,23 @@ if [ $ETH2_RESET ]; then
     /data/testnet/genesis.ssz \
     $NOW
 fi
-if [ ! -d "$VALIDATORS_DIR" ]; then
+if [ ! -d "$VALIDATORS1_VALIDATORS_DIR" ]; then
   echo "Importing validators keystore"
   echo $PASSWORD | docker-compose run --rm --no-deps lh lighthouse \
     --spec "$SPEC" --debug-level "$DEBUG_LEVEL" \
     account validator import --reuse-password --stdin-inputs \
-    --datadir "/data" \
-    --directory "/data/validator_keys" \
+    --datadir "/data/validators/validators1" \
+    --directory "/data/validators/validators1/validator_keys" \
+    --testnet-dir "/data/testnet"
+fi
+
+if [ ! -d "$VALIDATORS2_VALIDATORS_DIR" ]; then
+  echo "Importing validators keystore"
+  echo $PASSWORD | docker-compose run --rm --no-deps lh lighthouse \
+    --spec "$SPEC" --debug-level "$DEBUG_LEVEL" \
+    account validator import --reuse-password --stdin-inputs \
+    --datadir "/data/validators/validators2" \
+    --directory "/data/validators/validators2/validator_keys" \
     --testnet-dir "/data/testnet"
 fi
 
@@ -326,7 +310,9 @@ fi
 docker-compose up -d node2-1 node2-2
 sleep 5
 docker-compose up -d mock-validators
-docker-compose up -d validators
+docker-compose up -d validators1
+sleep 5
+docker-compose up -d validators2
 
 if [[ $NODES ]]; then
   echo "Start extra nodes"

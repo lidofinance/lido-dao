@@ -2,6 +2,8 @@ import { abi as DePoolAbi } from '../../../../artifacts/DePool.json'
 import { createVote, voteForAction, init as voteInit } from './votingHelper'
 import { encodeCallScript } from '@aragon/contract-helpers-test/src/aragon-os'
 import * as eth1Helper from '../eth1Helper'
+import { BN } from '../utils'
+import { TREASURY_FEE, INSURANCE_FEE, ZERO_ADDRESS } from '../constants'
 
 let context
 let dePoolContract
@@ -58,25 +60,14 @@ async function setFeeDistribution(treasuryFee, insuranceFee, SPFee, holder, hold
   await voteForAction(voteId, holders, 'setFeeDistribution')
 }
 
-async function addSigningKeys(validatorsTestData, holder, count, holders) {
-  const validatorsPubKeys = validatorsTestData.pubKey
-  const validatorsSignatures = validatorsTestData.signature
-  logger.debug('PubKeys to add ' + validatorsPubKeys)
-  logger.debug('Signatures to add' + validatorsSignatures)
-  const callData1 = encodeCallScript([
-    {
-      to: getProxyAddress(),
-      calldata: await dePoolContract.methods.addSigningKeys(count, validatorsPubKeys, validatorsSignatures).encodeABI()
-    }
-  ])
-
-  const voteId = await createVote(callData1, holder, 'Add signing keys')
-  await voteForAction(voteId, holders, 'Add signing keys')
+function getDepositIterationLimit() {
+  return dePoolContract.methods.getDepositIterationLimit().call()
 }
 
 function getWithdrawalCredentials() {
   return dePoolContract.methods.getWithdrawalCredentials().call()
 }
+
 function getFee() {
   return dePoolContract.methods.getFee().call()
 }
@@ -85,8 +76,26 @@ function getFeeDistribution() {
   return dePoolContract.methods.getFeeDistribution().call()
 }
 
-async function getTreasury() {
+async function getTreasuryAddress() {
   return await dePoolContract.methods.getTreasury().call()
+}
+
+async function getInsuranceFundAddress() {
+  return await dePoolContract.methods.getInsuranceFund().call()
+}
+
+async function submit(sender, value) {
+  return await dePoolContract.methods.submit(ZERO_ADDRESS).send({ from: sender, value: value, gas: '1000000' })
+}
+
+async function getEther2Stat() {
+  return await dePoolContract.methods.getEther2Stat().call()
+}
+
+async function getUsedEther() {
+  const totalControledEther = await getTotalControlledEther()
+  const bufferedEther = await getBufferedEther()
+  return BN(totalControledEther).sub(BN(bufferedEther)).toString()
 }
 
 async function depositToDePoolContract(from, value) {
@@ -100,24 +109,35 @@ function getBufferedEther() {
   return dePoolContract.methods.getBufferedEther().call()
 }
 
-function reportEther(sender, epoch, value) {
-  return dePoolContract.methods.reportEther2(epoch, value).send({ from: sender, gas: '2000000' })
+function calculateNewTreasuryBalance(stakeProfit, balanceBeforePushData) {
+  const reward = calculateTreasuryReward(stakeProfit)
+  return BN(balanceBeforePushData).add(reward).toString()
 }
 
+function calculateTreasuryReward(stakeProfit) {
+  // TODO change treasury/insurance
+  return BN(stakeProfit)
+    .mul(BN((TREASURY_FEE / 100) * 2))
+    .div(BN(100))
+}
 export {
   init,
   getWithdrawalCredentials,
   setWithdrawalCredentials,
-  addSigningKeys,
   depositToDePoolContract,
   getBufferedEther,
   getTotalControlledEther,
   getProxyAddress,
-  getTreasury,
+  getTreasuryAddress,
   hasInitialized,
-  reportEther,
   setFee,
   setFeeDistribution,
   getFee,
-  getFeeDistribution
+  getFeeDistribution,
+  getInsuranceFundAddress,
+  getUsedEther,
+  calculateNewTreasuryBalance,
+  getDepositIterationLimit,
+  submit,
+  getEther2Stat
 }
