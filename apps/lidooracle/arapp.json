@@ -1,0 +1,44 @@
+{
+  "roles": [
+    {
+      "name": "Add or remove oracle committee members",
+      "id": "MANAGE_MEMBERS",
+      "params": []
+    },
+    {
+      "name": "Set the number of oracle members required to form a data point",
+      "id": "MANAGE_QUORUM",
+      "params": []
+    },
+    {
+      "name": "Set the new report interval duration",
+      "id": "SET_REPORT_INTERVAL_DURATION",
+      "params": []
+    },
+    {
+      "name": "Sets the pool address to notify",
+      "id": "SET_POOL",
+      "params": []
+    }
+  ],
+  "environments": {
+    "default": {
+      "appName": "lidooracle.lido.eth",
+      "network": "development"
+    },
+    "rinkeby": {
+      "appName": "lidooracle.lido.eth",
+      "network": "rinkeby"
+    },
+    "staging": {
+      "appName": "lidooracle.lido.eth",
+      "network": "rinkeby"
+    },
+    "mainnet": {
+      "appName": "lidooracle.lido.eth",
+      "network": "mainnet"
+    }
+  },
+  "appName": "lidooracle.lido.eth",
+  "path": "../../contracts/oracle/LidoOracle.sol"
+}

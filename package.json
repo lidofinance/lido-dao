@@ -1,5 +1,5 @@
 {
-  "name": "@depools/dao",
+  "name": "@lido/dao",
   "version": "0.0.1",
   "private": true,
   "workspaces": [
@@ -26,9 +26,7 @@
     "compile": "yarn run compile:4 && yarn run compile:6",
     "compile:4": "buidler compile",
     "compile:6": "buidler compile --config buidler.config.6.js --force && buidler compile --config buidler.config.6.11.js --force",
-    "deploy:localhost": "NETWORK_NAME=localhost yarn run deploy:all",
-    "deploy:rinkeby": "NETWORK_NAME=rinkeby yarn run deploy:all",
-    "deploy:mainnet": "NETWORK_NAME=mainnet yarn run deploy:all",
+    "deploy": "yarn run deploy:all",
     "deploy:all": "yarn compile && yarn deploy:aragon-env && yarn deploy:aragon-std-apps && yarn deploy:apm-and-template && yarn deploy:apps && yarn deploy:dao",
     "deploy:aragon-env": "buidler run ./scripts/deploy-aragon-env.js",
     "deploy:aragon-std-apps": "RELEASE_TYPE=major buidler run --no-compile ./scripts/deploy-aragon-std-apps.js --config ./buidler.config.aragon-apps.js",

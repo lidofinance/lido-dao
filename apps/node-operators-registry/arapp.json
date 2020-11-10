@@ -1,0 +1,80 @@
+{
+  "roles": [
+    {
+      "name": "Manage signing keys",
+      "id": "MANAGE_SIGNING_KEYS",
+      "params": [
+         "Node Operator id"
+      ]
+    },
+    {
+      "name": "Add node operators",
+      "id": "ADD_NODE_OPERATOR_ROLE",
+      "params": []
+    },
+    {
+      "name": "Activate/deactivate node operators",
+      "id": "SET_NODE_OPERATOR_ACTIVE_ROLE",
+      "params": [
+         "Node Operator id",
+         "New state"
+      ]
+    },
+    {
+      "name": "Set name of a node operator",
+      "id": "SET_NODE_OPERATOR_NAME_ROLE",
+      "params": [
+         "Node Operator id"
+      ]
+    },
+    {
+      "name": "Set rewards address of a node operator",
+      "id": "SET_NODE_OPERATOR_ADDRESS_ROLE",
+      "params": [
+         "Node Operator id",
+         "New rewards address"
+      ]
+    },
+    {
+      "name": "Set staking limit of a node operator",
+      "id": "SET_NODE_OPERATOR_LIMIT_ROLE",
+      "params": [
+         "Node Operator id",
+         "New validators limit value"
+      ]
+    },
+    {
+      "name": "Report increments of stopped validators for a node operator",
+      "id": "REPORT_STOPPED_VALIDATORS_ROLE",
+      "params": [
+         "Node Operator id",
+         "Stopped validators increment"
+      ]
+    },
+    {
+      "name": "Sets the pool address",
+      "id": "SET_POOL",
+      "params": []
+    }
+  ],
+  "environments": {
+    "default": {
+      "appName": "node-operators-registry.lido.eth",
+      "network": "development"
+    },
+    "rinkeby": {
+      "appName": "node-operators-registry.lido.eth",
+      "network": "rinkeby"
+    },
+    "staging": {
+      "appName": "node-operators-registry.lido.eth",
+      "network": "rinkeby"
+    },
+    "mainnet": {
+      "appName": "node-operators-registry.lido.eth",
+      "network": "mainnet"
+    }
+  },
+  "appName": "node-operators-registry.lido.eth",
+  "path": "../../contracts/nos/NodeOperatorsRegistry.sol"
+}
