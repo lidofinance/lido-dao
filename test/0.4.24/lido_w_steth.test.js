@@ -26,8 +26,12 @@ const hexConcat = (first, ...rest) => {
   return result
 }
 
-const ETH = (value) => web3.utils.toWei(value + '', 'ether')
+const div10d = (bn, d) => bn.divn(10 ** d)
+const round = (bn) => bn.addn(50).divn(100).muln(100)
+const ETH = (value) => new BN(web3.utils.toWei(value + '', 'ether'))
 const tokens = ETH
+
+const assertBnDiv = (bnA, bnB, d) => assertBn(div10d(bnA, d), div10d(bnB, d));
 
 contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, nodeOperatorAddress1, nodeOperatorAddress2]) => {
   let appBase, stEthBase, nodeOperatorsRegistryBase, app, token, oracle, validatorRegistration, operators
@@ -262,17 +266,17 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
             operatorsBalance = totalFee * 0.5 = 0.005
             */
             assertBn(await token.totalSupply(), tokens(35))
-            assertBn(await token.balanceOf(user2), new BN('34990001971093930278'))
-            assertBn(await token.balanceOf(treasuryAddr), new BN('00002999143026093765'))
-            assertBn(await token.balanceOf(insuranceAddr), new BN('00001999600063664000'))
+            assertBn(round(await token.balanceOf(user2)), tokens(34.99))
+            assertBn(round(await token.balanceOf(treasuryAddr)), tokens(0.003))
+            assertBn(round(await token.balanceOf(insuranceAddr)), tokens(0.002))
             // single operator_1 takes all operators' reward in this configuration
-            assertBn(await token.balanceOf(nodeOperatorAddress1), new BN('00004999285816311954'))
+            assertBn(round(await token.balanceOf(nodeOperatorAddress1)), tokens(0.005))
           })
 
           it('stETH shares: total=34.01 user2=34 treasury.003, insurance=.002, operator=.0048', async () => {
             /* totalShares increased to reflect new balances.
              */
-            assertBn(await token.getTotalShares(), new BN('34009715146146239066'))
+            assertBn(await token.getTotalShares(), new BN('34009717062017719347'))
             assertBn(await token.getSharesByHolder(user2), tokens(34)) // stays the same
             assertBn(await token.getSharesByHolder(treasuryAddr), new BN('00002914285714285714'))
             assertBn(await token.getSharesByHolder(insuranceAddr), new BN('00001943023673469387'))
@@ -301,12 +305,12 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
 
             it('stETH: totalSupply=35 user=34.99 treasury=.003, insurance=.002, operator_1=.005 operator_2=0', async () => {
               assertBn(await token.totalSupply(), tokens(35))
-              assertBn(await token.balanceOf(user2), new BN('34990001971093930278'))
-              assertBn(await token.balanceOf(treasuryAddr), new BN('00002999143026093765'))
-              assertBn(await token.balanceOf(insuranceAddr), new BN('00001999600063664000'))
+              assertBn(round(await token.balanceOf(user2)), tokens(34.99))
+              assertBn(round(await token.balanceOf(treasuryAddr)), tokens(0.003))
+              assertBn(round(await token.balanceOf(insuranceAddr)), tokens(0.002))
               // operator_1 : operator_2 reward = 1 : 0
-              assertBn(await token.balanceOf(nodeOperatorAddress1), new BN('00004999285816311954'))
-              assertBn(await token.balanceOf(nodeOperatorAddress2), new BN('0'))
+              assertBn(round(await token.balanceOf(nodeOperatorAddress1)), tokens(0.005))
+              assertBn(round(await token.balanceOf(nodeOperatorAddress2)), tokens(0))
             })
 
             it('stETH shares: total=34.01 user2=34 treasury.003, insurance=.002, operator_1=.005', async () => {
@@ -354,12 +358,12 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
 
               it('stETH: totalSupply=66 user=65.98 treasury.006, insurance=.004, operators=.010', async () => {
                 assertBn(await token.totalSupply(), tokens(66))
-                assertBn(await token.balanceOf(user2), new BN('65980004181065323241'))
-                assertBn(await token.balanceOf(treasuryAddr), new BN('00005998182198278665'))
-                assertBn(await token.balanceOf(insuranceAddr), new BN('00003999151658379611'))
+                assertBn(round(await token.balanceOf(user2)), tokens(65.98))
+                assertBn(round(await token.balanceOf(treasuryAddr)), tokens(.006))
+                assertBn(round(await token.balanceOf(insuranceAddr)), tokens(.004))
                 // operator_1 : operator_2 reward = 1 : 1
-                assertBn(await token.balanceOf(nodeOperatorAddress1), new BN('00004999242539009239'))
-                assertBn(await token.balanceOf(nodeOperatorAddress2), new BN('00004999242539009239'))
+                assertBn(round(await token.balanceOf(nodeOperatorAddress1)), tokens(.005))
+                assertBn(round(await token.balanceOf(nodeOperatorAddress2)), tokens(.005))
               })
 
               it('stETH shares: total=65.895 user2=65.875 treasury.006, insurance=.004, operators=.010', async () => {
@@ -409,12 +413,12 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
                   // fees = 4 * 0.01 = 0.04 Ether
                   // userReward = 4 - fee = 3.96
                   // userBalance = 96 + userReward = 99.96
-                  assertBn(await token.balanceOf(user2), new BN('99960011037376578693'))
-                  assertBn(await token.balanceOf(treasuryAddr), new BN('00011995201324485189'))
-                  assertBn(await token.balanceOf(insuranceAddr), new BN('00007997760499096085'))
+                  assertBn(round(await token.balanceOf(user2)), tokens(99.96))
+                  assertBn(round(await token.balanceOf(treasuryAddr)), tokens(.012))
+                  assertBn(round(await token.balanceOf(insuranceAddr)), tokens(.008))
                   // operator_1 : operator_2 reward = 2 : 1
-                  assertBn(await token.balanceOf(nodeOperatorAddress1), new BN('00013330667199893353'))
-                  assertBn(await token.balanceOf(nodeOperatorAddress2), new BN('00006665333599946676'))
+                  assertBnDiv(await token.balanceOf(nodeOperatorAddress1), tokens(.02 * 2 / 3), 2)
+                  assertBnDiv(await token.balanceOf(nodeOperatorAddress2), tokens(.02 / 3), 2)
                 })
 
                 it('stETH shares: total=98.852 user2=98.8125 treasury.012, insurance=.008, operators=.020', async () => {
@@ -461,14 +465,12 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
           assertBn(await app.getRewardBase(), ETH(66))
         })
 
-        it('stETH: totalSupply=68 user=68.99 treasury=.006, insurance=.004, operators=.004', async () => {
+        it('stETH: totalSupply=68 user=67.66 treasury=.102, insurance=.068, operators=.17', async () => {
           assertBn(await token.totalSupply(), tokens(68))
-          assertBn(await token.balanceOf(user2), new BN('67661169524583879360'))
-          assertBn(await token.balanceOf(treasuryAddr), new BN('101491754286875819'))
-          assertBn(await token.balanceOf(insuranceAddr), new BN('67762661278870755'))
-
-          assertBn(await token.balanceOf(nodeOperatorAddress1), new BN('169576059850374062'))
-          assertBn(await token.balanceOf(nodeOperatorAddress2), new BN('0'))
+          assertBn(round(await token.balanceOf(user2)), tokens(67.66))
+          assertBn(round(await token.balanceOf(treasuryAddr)), tokens(.102))
+          assertBn(round(await token.balanceOf(insuranceAddr)), tokens(.068))
+          assertBn(round(await token.balanceOf(nodeOperatorAddress1)), tokens(.17))
         })
 
         it('stETH shares: total=34.17 user2=34 treasury=.05, insurance=.03, operators=.09', async () => {
@@ -476,9 +478,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
           assertBn(await token.getSharesByHolder(user2), tokens(34)) // stays the same
           assertBn(await token.getSharesByHolder(treasuryAddr), new BN('51000000000000000'))
           assertBn(await token.getSharesByHolder(insuranceAddr), new BN('34051000000000000'))
-
           assertBn(await token.getSharesByHolder(nodeOperatorAddress1), new BN('85212627499999999'))
-          assertBn(await token.getSharesByHolder(nodeOperatorAddress2), new BN('0'))
         })
 
         context('user3 submits another 34 ETH (submitted but not seen on beacon by oracle yet)', async () => {
@@ -497,15 +497,13 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
             assertBn(await app.getRewardBase(), ETH(98)) // was 66, then added 32 on second submit
           })
 
-          it('stETH: totalSupply=70 user2=46.43 user3=23.33 treasury=.06, insurance=.04, operators=.12', async () => {
+          it('stETH: totalSupply=70 user2=46.4(3) user3=23.3(3) treasury=.07, insurance=.04(6), operators=.11(6)', async () => {
             assertBn(await token.totalSupply(), tokens(70))
-            assertBn(await token.balanceOf(user2), new BN('46434135948243838777'))
-            assertBn(await token.balanceOf(user3), new BN('23333333333333333333'))
-            assertBn(await token.balanceOf(treasuryAddr), new BN('00069651203922365758'))
-            assertBn(await token.balanceOf(insuranceAddr), new BN('00046503787152166204'))
-
-            assertBn(await token.balanceOf(nodeOperatorAddress1), new BN('00116375727348295925'))
-            assertBn(await token.balanceOf(nodeOperatorAddress2), new BN('0'))
+            assertBnDiv(await token.balanceOf(user2), tokens(46.4).add(tokens(.1 / 3)), 5)
+            assertBnDiv(await token.balanceOf(user3), tokens(23.3).add(tokens(.1 / 3)), 5)
+            assertBn(round(await token.balanceOf(treasuryAddr)), tokens(.07))
+            assertBnDiv(await token.balanceOf(insuranceAddr), tokens(.04).add(tokens(.01 * 2 / 3)), 5)
+            assertBnDiv(await token.balanceOf(nodeOperatorAddress1), tokens(.11).add(tokens(.01 * 2 / 3)), 5)
           })
 
           it('stETH shares: total=51.255 user2=34 user3=17.085 treasury=.051, insurance=.034, operators=.085', async () => {
@@ -514,9 +512,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
             assertBn(await token.getSharesByHolder(user3), new BN('17085131813750000000'))
             assertBn(await token.getSharesByHolder(treasuryAddr), new BN('51000000000000000'))
             assertBn(await token.getSharesByHolder(insuranceAddr), new BN('34051000000000000'))
-
             assertBn(await token.getSharesByHolder(nodeOperatorAddress1), new BN('85212627499999999'))
-            assertBn(await token.getSharesByHolder(nodeOperatorAddress2), new BN('0'))
           })
 
           context('oracle reports 98 ETH (66 existing + 32 new). No rewards at this point', async () => {
@@ -533,15 +529,13 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
               assertBn(await app.getRewardBase(), ETH(98)) // was 66, added 32 on submit
             })
 
-            it('stETH: totalSupply=102 user2=67.66 user3=34 treasury=.1, insurance=.067, operators=.17', async () => {
+            it('stETH: totalSupply=102 user2=67.66 user3=34 treasury=.102, insurance=.068, operators=.17', async () => {
               assertBn(await token.totalSupply(), tokens(102))
-              assertBn(await token.balanceOf(user2), new BN('67661169524583879360'))
-              assertBn(await token.balanceOf(user3), new BN('34000000000000000000'))
-              assertBn(await token.balanceOf(treasuryAddr), new BN('00101491754286875819'))
-              assertBn(await token.balanceOf(insuranceAddr), new BN('00067762661278870755'))
-
-              assertBn(await token.balanceOf(nodeOperatorAddress1), new BN('00169576059850374062'))
-              assertBn(await token.balanceOf(nodeOperatorAddress2), new BN('0'))
+              assertBn(round(await token.balanceOf(user2)), tokens(67.66))
+              assertBn(round(await token.balanceOf(user3)), tokens(34))
+              assertBn(round(await token.balanceOf(treasuryAddr)), tokens(.102))
+              assertBn(round(await token.balanceOf(insuranceAddr)), tokens(.068))
+              assertBn(round(await token.balanceOf(nodeOperatorAddress1)), tokens(.17))
             })
 
             it('stETH shares: total=51.255 user2=34 user3=17.085 treasury=.051, insurance=.034, operators=.085 (same as before)', async () => {
@@ -550,9 +544,7 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
               assertBn(await token.getSharesByHolder(user3), new BN('17085131813750000000'))
               assertBn(await token.getSharesByHolder(treasuryAddr), new BN('51000000000000000'))
               assertBn(await token.getSharesByHolder(insuranceAddr), new BN('34051000000000000'))
-
               assertBn(await token.getSharesByHolder(nodeOperatorAddress1), new BN('85212627499999999'))
-              assertBn(await token.getSharesByHolder(nodeOperatorAddress2), new BN('0'))
             })
           })
         })
