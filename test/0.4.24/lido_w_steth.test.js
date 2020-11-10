@@ -550,4 +550,72 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
       })
     })
   })
+
+  context('change fee', () => {
+    // Total fee is 10%
+    const totalFeePoints = 0.1 * 10000
+
+    // Of this 10%, 35% goes to the treasury
+    const treasuryFeePoints = 0.1 * 10000
+    // 20% goes to the insurance fund
+    const insuranceFeePoints = 0.3 * 10000
+    // 50% goes to node operators
+    const nodeOperatorsFeePoints = 0.6 * 10000
+
+    beforeEach(async () => {
+      await app.setFee(totalFeePoints, { from: voting })
+      await app.setFeeDistribution(treasuryFeePoints, insuranceFeePoints, nodeOperatorsFeePoints, { from: voting })
+    })
+
+    it('check fee configuration', async () => {
+      assertBn(await app.getFee(), totalFeePoints)
+      const fees = await app.getFeeDistribution()
+      assertBn(fees.treasuryFeeBasisPoints, treasuryFeePoints)
+      assertBn(fees.insuranceFeeBasisPoints, insuranceFeePoints)
+      assertBn(fees.operatorsFeeBasisPoints, nodeOperatorsFeePoints)
+    })
+
+    context('check rewards', () => {
+      beforeEach(async () => {
+        await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+        await operators.addNodeOperator('1', nodeOperatorAddress1, UNLIMITED, { from: voting })
+        await operators.addSigningKeys(0, 1, hexConcat(pad('0x010203', 48)), hexConcat(pad('0x01', 96)), { from: voting })
+
+        await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(32) })
+        await app.depositBufferedEther()
+        await oracle.reportEther2(200, ETH(64))
+      })
+
+      it('Lido: deposited=32, remote=64, buffered=0, totalControlled=64, oldRewBase=32, rewBase=64', async () => {
+        const stat = await app.getEther2Stat()
+        assertBn(stat.deposited, ETH(32))
+        assertBn(stat.remote, ETH(64))
+        assertBn(await app.getBufferedEther(), ETH(0))
+        assertBn(await app.getTotalControlledEther(), ETH(64))
+        assertBn(await app.getRewardBase(), ETH(64))
+      })
+
+      it('stETH: totalSupply=64 user1=60.8 treasury=.32, insurance=.96, operators=1.92', async () => {
+        /*
+        userBalance = 64.0 Ether staked
+        shares = 32.0
+        totalControlledEtherInitial = 32.0 Ether
+        totalControlledEtherNew = 64.0 Ether
+        reward = totalControlledEtherNew - totalControlledEtherInitial = 32.0 Ether
+        totalFee = reward * 0.1 = 3.2 stETH (equals to Ether)
+        userGets = reward - totalFee = 28.8 stETH
+        userBalance = userBalance + totalFee = 60.8
+        treasuryBalance = totalFee * 0.1 = 0.32
+        insuranceBalance = totalFee * 0.3 = 0.96
+        operatorsBalance = totalFee * 0.6 = 1.92
+        */
+        assertBn(await token.totalSupply(), tokens(64))
+        assertBn(round(await token.balanceOf(app.address)), tokens(0))
+        assertBn(round(await token.balanceOf(user1)), tokens(60.8))
+        assertBn(round(await token.balanceOf(treasuryAddr)), tokens(0.32))
+        assertBn(round(await token.balanceOf(insuranceAddr)), tokens(0.96))
+        assertBn(round(await token.balanceOf(nodeOperatorAddress1)), tokens(1.92))
+      })
+    })
+  })
 })
