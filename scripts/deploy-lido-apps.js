@@ -86,7 +86,12 @@ async function publishApp(appName, env, netName, appsDirPath, releaseType) {
   }
 
   await execLive('buidler', {
-    args: ['publish', releaseType, '--network', netName],
+    args: [
+      'publish', releaseType,
+      '--network', netName,
+      // workaround: force to read URL from Buidler config
+      '--ipfs-api-url', ''
+    ],
     cwd: appRootPath,
     env
   })

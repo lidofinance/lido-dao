@@ -123,7 +123,7 @@ async function deployDaoTemplate({
 
   const aragonIdAddress = await getENSNodeOwner(ens, namehash('aragonid.eth'))
   if (aragonIdAddress) {
-    log(`Using Aragon ID: ${chalk.yellow(aragonIdAddress)}`)
+    log(`Using AragonID: ${chalk.yellow(aragonIdAddress)}`)
   } else {
     throw new Error(`failed to resolve AragonID (aragonid.eth)`)
   }
