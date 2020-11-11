@@ -11,7 +11,7 @@
     "5": {
       "networkName": "goerli",
       "ipfsGateway": "http://206.81.31.11/ipfs/",
-      "depositContractAddress": "0x07b39f4fde4a38bace212b546dac87c58dfe3fdc",
+      "depositContractAddress": "0x07b39F4fDE4A38bACe212b546dAc87C58DfE3fDC",
       "daoInitialSettings": {
         "holders": [
           "0xC279928a891b904B0bD78Fa523bd0640830420D6",
@@ -79,7 +79,46 @@
       "aragon_app_vault_name": "vault.aragonpm.eth",
       "aragon_app_vault_id": "0x7e852e0fcfce6551c13800f1e7476f982525c2b5277ba14b24339c68416336d1",
       "aragon_app_voting_name": "voting.aragonpm.eth",
-      "aragon_app_voting_id": "0x9fa3927f639745e587912d4b0fea7ef9013bf93fb907d29faeab57417ba6e1d4"
+      "aragon_app_voting_id": "0x9fa3927f639745e587912d4b0fea7ef9013bf93fb907d29faeab57417ba6e1d4",
+      "lidoEnsLabelName": "lido",
+      "daoTemplateEnsLabel": "template-2",
+      "lidoApmRegistryAddress": "0xE279648d49143afB7Aa37D037Ba9185829658906",
+      "lidoEnsNodeName": "lido.eth",
+      "lidoEnsNode": "0xbc171924c4ea138304db6886c0c786d160c88b76e94f9f89453a6ca2dbf6316f",
+      "lido_app_lido_name": "lido.lido.eth",
+      "lido_app_lido_id": "0xe5c0c15280069e08354c1c1d5b6706edcc4e849e76ec9822afa35d4d66bbbe06",
+      "lido_app_lidooracle_name": "lidooracle.lido.eth",
+      "lido_app_lidooracle_id": "0xc62f68e3a6f657e08c27afe0f11d03375e5255f5845055d81c1281dbf139ce18",
+      "lido_app_node-operators-registry_name": "node-operators-registry.lido.eth",
+      "lido_app_node-operators-registry_id": "0x9a09c6bc9551dd5e194dc3f814ce4725494966d9cdc90ff6cb49fc94d8a034ab",
+      "lido_app_steth_name": "steth.lido.eth",
+      "lido_app_steth_id": "0x7a155a469b6e893b1e5d8f992f066474a74daf5ece6715948667ef3565e34ec2",
+      "daoName": "lido-dao-1",
+      "daoTemplateAddress": "0xC1459F305f171316408658e0A2B1c32e66D01e31",
+      "daoTemplateConstructorArgs": [
+        "0x0B6769F500b293e3adacD97c3961189565069902",
+        "0x043e6DBC5CAd60874727d21ecC2aAeBf50A0de80",
+        "0x92E2750729e04c9a5CF21A830Bd00cbd5139D992",
+        "0x673cB86B60B9768Eebb05517fbF5a7F9f1Ab62C4"
+      ],
+      "daoTemplateNodeName": "template-2.lido.eth",
+      "daoTemplateNode": "0xfac5ce26464ced91d54192cec46ecf09991d80d38613e5bf6b9012b00ca8f25e",
+      "daoAddress": "0xe1970358e9E5b5aA126e36532f3703CfeF0A5D01",
+      "tokenAddress": "0x0b006Ed565ede0f1523809BE746E88c7b8070423",
+      "appProxies": {
+        "agent.aragonpm.eth": "0x6601602d0C3AE008b3891C1D15F1da36C5561ce2",
+        "finance.aragonpm.eth": "0xeB2b865bD67c77a8840dc46B402df9be5ACF051B",
+        "token-manager.aragonpm.eth": "0x5a216A4667977ca595FdAeB049280f1c858789cE",
+        "voting.aragonpm.eth": "0xE4E333bb551A32e75d5707B8F9cd3E2b854bB0c6",
+        "steth.lido.eth": "0x39028aaFaae59C3c5d8848fc3Ccc4e4CfD1f124C",
+        "lidooracle.lido.eth": "0xF281604Ea9F917F37ECD27109276190a4F2f3991",
+        "node-operators-registry.lido.eth": "0x5AF45B34460ec64902C099A27E3457c43644e971",
+        "lido.lido.eth": "0xcC5D52985e6Dc9Cc97AE37EAE90970437BF1154C"
+      },
+      "cstEthAddress": "0xBF2F37490511Dd9d36331321DF770cBD028bFDe4",
+      "cstEthConstructorArgs": [
+        "0x39028aaFaae59C3c5d8848fc3Ccc4e4CfD1f124C"
+      ]
     },
     "1337": {
       "networkName": "local-dev"
