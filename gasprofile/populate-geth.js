@@ -27,7 +27,7 @@ async function createAccounts(numAccounts, rpcEndpoint) {
     await web3.eth.sendTransaction({
       from: firstAccount,
       to: newAccount,
-      value: web3.utils.toWei(`${10000}`, 'ether'),
+      value: web3.utils.toWei(`${10000}`, 'ether')
     })
   }
   console.log(`  done!`)

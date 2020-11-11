@@ -9,7 +9,7 @@ module.exports = (scriptFn, mainModule) => {
   if (require.main === mainModule) {
     assertGlobalAPIs()
     // Buidler executes scripts in a forked subprocess
-    scriptFn({artifacts: globalArtifacts, web3: globalWeb3})
+    scriptFn({ artifacts: globalArtifacts, web3: globalWeb3 })
       .then(() => {
         console.log('All done!')
         process.exit(0)
@@ -24,7 +24,7 @@ module.exports = (scriptFn, mainModule) => {
       if (typeof callback === 'function') {
         // Truffle requires scripts and uses a callback
         assertGlobalAPIs()
-        scriptFn({artifacts: globalArtifacts, web3: globalWeb3, ...opts})
+        scriptFn({ artifacts: globalArtifacts, web3: globalWeb3, ...opts })
           .then(() => callback())
           .catch(callback)
       } else {

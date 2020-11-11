@@ -13,7 +13,7 @@ function readFile(path) {
 }
 
 function readJSON(path) {
-  return readFile(path).then(data => JSON.parse(data))
+  return readFile(path).then((data) => JSON.parse(data))
 }
 
 function directoryExists(path) {
@@ -26,4 +26,4 @@ function fileExists(path, isDirectory = false) {
   })
 }
 
-module.exports = {readFile, readJSON, fileExists, directoryExists}
+module.exports = { readFile, readJSON, fileExists, directoryExists }

@@ -11,14 +11,14 @@ usePlugin('solidity-coverage')
 
 const accounts = readJson('./accounts.json') || {
   eth: 'remote',
-  etherscan: {apiKey: undefined}
+  etherscan: { apiKey: undefined }
 }
 
 const stateByNetId = readJson('./deployed.json') || {
   networks: {}
 }
 
-const getNetState = netId => stateByNetId.networks[netId] || {}
+const getNetState = (netId) => stateByNetId.networks[netId] || {}
 
 module.exports = {
   defaultNetwork: process.env.NETWORK_NAME || 'buidlerevm',

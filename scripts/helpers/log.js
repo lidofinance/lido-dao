@@ -50,4 +50,4 @@ async function logTx(desc, promise) {
   return result
 }
 
-module.exports = {log, logSplitter, logWideSplitter, logHeader, logDeploy, logTx}
+module.exports = { log, logSplitter, logWideSplitter, logHeader, logDeploy, logTx }

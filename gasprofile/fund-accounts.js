@@ -23,7 +23,7 @@ async function fundAccounts(accounts, rpcEndpoint) {
     await web3.eth.sendTransaction({
       from: firstAccount,
       to: account,
-      value: web3.utils.toWei(`${10000}`, 'ether'),
+      value: web3.utils.toWei(`${10000}`, 'ether')
     })
   }
 

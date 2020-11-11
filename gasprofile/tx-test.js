@@ -4,8 +4,8 @@ const Bar = artifacts.require('Bar.sol')
 async function main() {
   const addresses = await web3.eth.getAccounts()
 
-  const bar = await Bar.new({gas: 10000000})
-  const foo = await Foo.new(bar.address, {gas: 10000000})
+  const bar = await Bar.new({ gas: 10000000 })
+  const foo = await Foo.new(bar.address, { gas: 10000000 })
 
   console.log()
   console.log('Foo address:', foo.address)
@@ -16,10 +16,7 @@ async function main() {
   console.log('Bar deploy tx:', bar.transactionHash)
   console.log()
 
-  await printTx(
-    `foo.foo`,
-    foo.foo(3, { from: addresses[0] })
-  )
+  await printTx(`foo.foo`, foo.foo(3, { from: addresses[0] }))
 }
 
 async function printTx(name, promise) {
@@ -29,5 +26,5 @@ async function printTx(name, promise) {
 }
 
 main()
-  .catch(e => console.error(e.stack))
+  .catch((e) => console.error(e.stack))
   .then(() => process.exit(0))

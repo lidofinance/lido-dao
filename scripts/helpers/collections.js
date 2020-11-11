@@ -1,6 +1,6 @@
 function filterObject(obj, filter) {
   const result = {}
-  Object.keys(obj).forEach(key => {
+  Object.keys(obj).forEach((key) => {
     if (filter(key)) {
       result[key] = obj[key]
     }
@@ -8,4 +8,4 @@ function filterObject(obj, filter) {
   return result
 }
 
-module.exports = {filterObject}
+module.exports = { filterObject }
