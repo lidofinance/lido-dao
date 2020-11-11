@@ -1,4 +1,4 @@
-import { abi as DePoolAbi } from '../../../../artifacts/DePool.json'
+import { abi as LidoAbi } from '../../../../artifacts/Lido.json'
 import { createVote, voteForAction, init as voteInit } from './votingHelper'
 import { encodeCallScript } from '@aragon/contract-helpers-test/src/aragon-os'
 import * as eth1Helper from '../eth1Helper'
@@ -14,7 +14,7 @@ export function init(c) {
   if (!context) {
     context = c
     web3 = context.web3
-    dePoolContract = new web3.eth.Contract(DePoolAbi, getProxyAddress())
+    dePoolContract = new web3.eth.Contract(LidoAbi, getProxyAddress())
     voteInit(context)
   }
 }
@@ -115,7 +115,7 @@ export async function getTreasury() {
   return await dePoolContract.methods.getTreasury().call()
 }
 
-export async function depositToDePoolContract(from, value, referral = '0x0000000000000000000000000000000000000000') {
+export async function depositToLidoContract(from, value, referral = '0x0000000000000000000000000000000000000000') {
   return await dePoolContract.methods.submit(referral).send({ from, value, gas: '8000000' })
   // return await eth1Helper.sendTransaction(web3, getProxyAddress(), from, value)
 }

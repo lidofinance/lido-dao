@@ -106,12 +106,12 @@ test('Full flow test ', async (t) => {
   t.is(await dePoolHelper.getDepositIterationLimit(), '16', 'Check that deposit iteration limit was set correctly')
 
   logger.info('Add sp1 and add signing keys')
-  await stakingProvidersHelper.addStakingProvider('test provider1', spsMember1, 2, holder1, quorumHolders)
+  await stakingProvidersHelper.addNodeOperator('test provider1', spsMember1, 2, holder1, quorumHolders)
   let validatorsTestDataForSp1 = getSigningKeys('validators1', 2, 0)
   await stakingProvidersHelper.addSigningKeys(0, validatorsTestDataForSp1, holder1, quorumHolders)
 
   logger.info('Check the correctness of sp1')
-  let sp1 = await stakingProvidersHelper.getStakingProvider(0, true)
+  let sp1 = await stakingProvidersHelper.getNodeOperator(0, true)
   t.is(sp1.active, true, 'Check that the sp1 is active')
   t.is(sp1.name, 'test provider1', 'Check that the sp1 name is correct')
   t.is(sp1.rewardAddress, spsMember1, 'Check that the sp1 is correct')
@@ -124,12 +124,12 @@ test('Full flow test ', async (t) => {
   t.deepEqual(sp1SigningKeys.signatures, validatorsTestDataForSp1.signatures, 'Check that sp1 signatures were set correct')
 
   logger.info('Add sp2 and add signing keys')
-  await stakingProvidersHelper.addStakingProvider('test provider2', spsMember2, 10, holder1, quorumHolders)
+  await stakingProvidersHelper.addNodeOperator('test provider2', spsMember2, 10, holder1, quorumHolders)
   let validatorsTestDataForSp2 = getSigningKeys('validators1', 6, 2)
   await stakingProvidersHelper.addSigningKeys(1, validatorsTestDataForSp2, holder1, quorumHolders)
 
   logger.info('Check the correctness of sp2')
-  let sp2 = await stakingProvidersHelper.getStakingProvider(1, true)
+  let sp2 = await stakingProvidersHelper.getNodeOperator(1, true)
   t.is(sp2.active, true, 'Check that the sp2 is active')
   t.is(sp2.name, 'test provider2', 'Check that the sp2 name is correct')
   t.is(sp2.rewardAddress, spsMember2, 'Check that the sp2 is correct ')
@@ -142,12 +142,12 @@ test('Full flow test ', async (t) => {
   t.deepEqual(sp2SigningKeys.signatures, validatorsTestDataForSp2.signatures, 'Check that sp2 signatures were set correct')
 
   logger.info('Add sp3 and add signing keys')
-  await stakingProvidersHelper.addStakingProvider('test provider3', spsMember3, UNLIMITED_STAKING_LIMIT, holder1, quorumHolders)
+  await stakingProvidersHelper.addNodeOperator('test provider3', spsMember3, UNLIMITED_STAKING_LIMIT, holder1, quorumHolders)
   let validatorsTestDataForSp3 = getSigningKeys('validators1', 20, 8)
-  await stakingProvidersHelper.addSigningKeysSP(2, validatorsTestDataForSp3, spsMember3)
+  await stakingProvidersHelper.addSigningKeysOperatorBH(2, validatorsTestDataForSp3, spsMember3)
 
   logger.info('Check the correctness of sp3')
-  let sp3 = await stakingProvidersHelper.getStakingProvider(2, true)
+  let sp3 = await stakingProvidersHelper.getNodeOperator(2, true)
   t.is(sp3.active, true, 'Check that the sp3 is active')
   t.is(sp3.name, 'test provider3', 'Check that the sp3 name is correct')
   t.is(sp3.rewardAddress, spsMember3, 'Check that the sp3 is correct ')
@@ -217,9 +217,9 @@ test('Full flow test ', async (t) => {
   t.is(await ether2Stat.deposited, usersDeposits, 'Check that the ether2 stat is changed correctly')
 
   logger.info('Chek that the staking providers keys became using')
-  sp1 = await stakingProvidersHelper.getStakingProvider(0, true)
-  sp2 = await stakingProvidersHelper.getStakingProvider(1, true)
-  sp3 = await stakingProvidersHelper.getStakingProvider(2, true)
+  sp1 = await stakingProvidersHelper.getNodeOperator(0, true)
+  sp2 = await stakingProvidersHelper.getNodeOperator(1, true)
+  sp3 = await stakingProvidersHelper.getNodeOperator(2, true)
   t.is(sp1.usedSigningKeys, '2', 'sps1 signing keys became using')
   t.is(await stakingProvidersHelper.getUnusedSigningKeyCount(0), '0', 'Check unused sp1 keys')
   t.is(sp2.usedSigningKeys, '6', 'sps2 signing keys became using')
@@ -306,9 +306,9 @@ test('Full flow test ', async (t) => {
   t.is(await dePoolHelper.getWithdrawalCredentials(), withdrawalAddress, 'Check that withdrawal credentials were set correctly')
 
   logger.info('Check that unused signing keys removed from sps after change withdrawal credentials')
-  sp1 = await stakingProvidersHelper.getStakingProvider(0, true)
-  sp2 = await stakingProvidersHelper.getStakingProvider(1, true)
-  sp3 = await stakingProvidersHelper.getStakingProvider(2, true)
+  sp1 = await stakingProvidersHelper.getNodeOperator(0, true)
+  sp2 = await stakingProvidersHelper.getNodeOperator(1, true)
+  sp3 = await stakingProvidersHelper.getNodeOperator(2, true)
   t.is(await stakingProvidersHelper.getUnusedSigningKeyCount(0), '0', 'sp1 unused keys were removed after change withdrawal credentials')
   t.is(await stakingProvidersHelper.getUnusedSigningKeyCount(1), '0', 'sp2 unused keys were removed after change withdrawal credentials')
   t.is(await stakingProvidersHelper.getUnusedSigningKeyCount(2), '0', 'sp3 unused keys were removed after change withdrawal credentials')
@@ -321,12 +321,12 @@ test('Full flow test ', async (t) => {
   t.true(await aclHelper.hasPermissions([spsMember4], stakingProvidersHelper.getProxyAddress(), spsFullPermissions))
 
   logger.info('Add sp4 and add signing keys')
-  await stakingProvidersHelper.addStakingProvider('test provider4', spsMember4, UNLIMITED_STAKING_LIMIT, holder1, quorumHolders)
+  await stakingProvidersHelper.addNodeOperator('test provider4', spsMember4, UNLIMITED_STAKING_LIMIT, holder1, quorumHolders)
   let validatorsTestDataForSp4 = getSigningKeys('validators2', 40, 0)
-  await stakingProvidersHelper.addSigningKeysSP(3, validatorsTestDataForSp4, spsMember4)
+  await stakingProvidersHelper.addSigningKeysOperatorBH(3, validatorsTestDataForSp4, spsMember4)
 
   logger.info('Check the correctness of sp4')
-  let sp4 = await stakingProvidersHelper.getStakingProvider(3, true)
+  let sp4 = await stakingProvidersHelper.getNodeOperator(3, true)
   t.is(sp4.active, true, 'Check that the sp4 is active')
   t.is(sp4.name, 'test provider4', 'Check that the sp4 name is correct')
   t.is(sp4.rewardAddress, spsMember4, 'Check that the sp4 is correct ')
@@ -341,7 +341,7 @@ test('Full flow test ', async (t) => {
   logger.info('Change sp4 name and rewardAddress')
   // await stakingProvidersHelper.setStakingProviderName(3, 'newName', spsMember4)
   await stakingProvidersHelper.setStakingProviderRewardAddress(3, spsMember5, spsMember4)
-  sp4 = await stakingProvidersHelper.getStakingProvider(3, true)
+  sp4 = await stakingProvidersHelper.getNodeOperator(3, true)
   // t.is(sp4.name,'newName','Check the correctness of change sp4 name')
   t.is(sp4.rewardAddress, spsMember5, 'Check the correctness of change sp4 rewardAddress')
 
@@ -374,7 +374,7 @@ test('Full flow test ', async (t) => {
 
   logger.info('Check that the rest of buffered Ether in the pool can be submitted')
   await dePoolHelper.submit(user5, ETH(0))
-  sp4 = await stakingProvidersHelper.getStakingProvider(3, true)
+  sp4 = await stakingProvidersHelper.getNodeOperator(3, true)
   ether2Stat = await dePoolHelper.getEther2Stat()
   usersDeposits = BN(usersDeposits).add(BN(user5Deposit))
   t.is(await dePoolHelper.getBufferedEther(), '0', 'Check that the rest of buffered Ether became became active')
@@ -391,7 +391,7 @@ test('Full flow test ', async (t) => {
 
   logger.info('Deactivate sp4 with currently using signing keys')
   await stakingProvidersHelper.setStakingProviderActive(3, false, spsMember4)
-  sp4 = await stakingProvidersHelper.getStakingProvider(3, true)
+  sp4 = await stakingProvidersHelper.getNodeOperator(3, true)
   t.is(sp4.active, false, 'Check that the sp4 has been deactivated')
   t.is(
     await stakingProvidersHelper.getActiveStakingProvidersCount(),
@@ -448,21 +448,21 @@ test('Full flow test ', async (t) => {
 
   logger.info('Increase staking limit for sp4')
   await stakingProvidersHelper.setStakingProviderStakingLimit(3, 50, spsMember4)
-  sp4 = await stakingProvidersHelper.getStakingProvider(3, true)
+  sp4 = await stakingProvidersHelper.getNodeOperator(3, true)
   t.is(sp4.stakingLimit, '50', 'Check that the sp4 staking limit increased correctly')
 
   logger.info('Reduce the staking limit for sp4')
   await stakingProvidersHelper.setStakingProviderStakingLimit(3, +sp4.usedSigningKeys, spsMember4)
-  sp4 = await stakingProvidersHelper.getStakingProvider(3, true)
+  sp4 = await stakingProvidersHelper.getNodeOperator(3, true)
   t.is(sp4.stakingLimit, sp4.usedSigningKeys, 'Check that the sp4 staking limit reduced correctly')
 
   logger.info('Check that the validators do not activate if there are no unused signing keys')
   withdrawalAddress = getGeneratedWithdrawalAddress('validators1')
   await dePoolHelper.setWithdrawalCredentials(withdrawalAddress, holder1, quorumHolders)
-  sp1 = await stakingProvidersHelper.getStakingProvider(0, true)
-  sp2 = await stakingProvidersHelper.getStakingProvider(1, true)
-  sp3 = await stakingProvidersHelper.getStakingProvider(2, true)
-  sp4 = await stakingProvidersHelper.getStakingProvider(3, true)
+  sp1 = await stakingProvidersHelper.getNodeOperator(0, true)
+  sp2 = await stakingProvidersHelper.getNodeOperator(1, true)
+  sp3 = await stakingProvidersHelper.getNodeOperator(2, true)
+  sp4 = await stakingProvidersHelper.getNodeOperator(3, true)
   t.is(await stakingProvidersHelper.getUnusedSigningKeyCount(0), '0', 'sp1 unused keys were removed after change withdrawal credentials')
   t.is(await stakingProvidersHelper.getUnusedSigningKeyCount(1), '0', 'sp2 unused keys were removed after change withdrawal credentials')
   t.is(await stakingProvidersHelper.getUnusedSigningKeyCount(2), '0', 'sp3 unused keys were removed after change withdrawal credentials')
