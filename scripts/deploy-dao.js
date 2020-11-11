@@ -77,13 +77,13 @@ async function deploy({
   const latestRepo = await repo.getLatest()
   const tmplAddress = latestRepo[1]
 
-  const template = await DePoolTemplate.at(tmplAddress)
+  const template = await LidoTemplate.at(tmplAddress)
   console.log(`Using template ${tmplTld} at:`, template.address)
 
   // TODO get holders from .env
   const HOLDERS = [holder1, holder2, holder3, holder4, holder5]
   const STAKES = HOLDERS.map(() => '100000000000000000000') // 100e18
-  const TOKEN_NAME = 'DAO Token'
+  const TOKEN_NAME = 'Lido DAO Token'
   const TOKEN_SYMBOL = 'LDO'
 
   // TODO get voting settings from .env

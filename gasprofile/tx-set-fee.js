@@ -2,7 +2,7 @@ const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 
 const { deployDaoAndPool } = require('../test/scenario/helpers/deploy')
 
-const DePool = artifacts.require('TestDePool.sol')
+const Lido = artifacts.require('TestLido.sol')
 
 async function main() {
   const addresses = await web3.eth.getAccounts()

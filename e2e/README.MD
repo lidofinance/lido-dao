@@ -10,19 +10,19 @@
 - MINIME_FACTORY: `0xd526b7aba39cccf76422835e7fd5327b98ad73c9`
 - FIFResolvingRegistrar: `0xf1f8aac64036cdd399886b1c157b7e3b361093f3`
 - Aragon APM: `aragonpm.eth` -> ``
-- DePool APM: `lido.eth` -> `0x1902a0410EFe699487Dd85F12321aD672bE4ada2`
+- Lido APM: `lido.eth` -> `0x1902a0410EFe699487Dd85F12321aD672bE4ada2`
   
 ### Apps and template repos
 
-- DePool App: `lido.lido.eth` -> `0x2e25c8F88c5cCcbC9400e5bc86cF9C58C7604327` [ipfs](http://localhost:8080/ipfs/QmQKqHhw8CicmDMnQ8NAGuCjtJiPqW77nDL2ogB8ydQpda)
+- Lido App: `lido.lido.eth` -> `0x2e25c8F88c5cCcbC9400e5bc86cF9C58C7604327` [ipfs](http://localhost:8080/ipfs/QmQKqHhw8CicmDMnQ8NAGuCjtJiPqW77nDL2ogB8ydQpda)
 - LidoOracle App: `lidooracle.lido.eth` -> `0x019F12a7DAa44A34CD0FF35055b0e2D4679D8521` [ipfs](http://localhost:8080/ipfs/Qme8dN9tVBaf6g3qEp7QkQkDuogKkqhD4Aph6oGfCcKoQk)
 - Node Operators Registry App: `node-operators-registry.lido.eth` -> `0xfe18BCBeDD6f46e0DfbB3Aea02090F23ED1c4a28` [ipfs](http://localhost:8080/ipfs/QmfFYDKzUwPpdcqLVd5WwuDAY3iLknDs9CgBeV9nqt2ENm)
 - StETH token App: `steth.lido.eth` -> `0xD13a7D8A728692eB2c56135B5EB5A1951b3F8395` [ipfs](http://localhost:8080/ipfs/QmZChra7tQPPBw58fJBVSaVF1kpMsR45HCMtjVosUAgb35)
 - Lido DAO Template: `lido-template.lido.eth` -> `0xc7a5b4d533a18370f3EB88f48971B3A3276546fb`
 
-> Depool APM: ens.addr('depoolspm.eth')
-> Depool apps: As APM repos, e.g. apm.getLatest('depool.depoolspm.eth')
-> Templates: As APM repos, e.g. apm.getLatest('depool-template.depoolspm.eth')
+> Lido APM: ens.addr('lido.eth')
+> Lido apps: As APM repos, e.g. apm.getLatest('lido.lido.eth')
+> Templates: As APM repos, e.g. apm.getLatest('lido-template.lido.eth')
 
 ### Deployed DAO and Apps instances
 
@@ -42,7 +42,7 @@
 
 ### Permission roles ID
 
-- DePool
+- Lido
   - MANAGE_WITHDRAWAL_KEY: `0x96088a8483023eb2f67b12aabbaf17d1d055e6ef387e563902adc1bba1e4028b`
   - SET_APPS: `0x11eba3f259e2be865238d718fd308257e3874ad4b3a642ea3af386a4eea190bd`
 
