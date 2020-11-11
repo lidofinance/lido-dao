@@ -297,7 +297,7 @@ contract('Lido: happy path', (addresses) => {
     // shares ~= oldTotalShares + reward * oldTotalShares / (newTotalControlledEther - reward)
 
     const newTotalShares = await token.getTotalShares()
-    assertBn(newTotalShares, new BN('97241218526577556728'), 'total shares')
+    assertBn(newTotalShares, new BN('97241218526577556729'), 'total shares')
 
     // Total controlled Ether increased
 
@@ -323,7 +323,7 @@ contract('Lido: happy path', (addresses) => {
     // Token user balances increased
     assertBn(await token.balanceOf(user1), new BN('3979793814432989690'), 'user1 tokens')
     assertBn(await token.balanceOf(user2), new BN('39797938144329896907'), 'user2 tokens')
-    assertBn(await token.balanceOf(user3), new BN('84902268041237113403'), 'user3 tokens')
+    assertBn(await token.balanceOf(user3), new BN('84902268041237113402'), 'user3 tokens')
 
     // Fee, in the form of minted tokens, was distributed between treasury, insurance fund
     // and node operators

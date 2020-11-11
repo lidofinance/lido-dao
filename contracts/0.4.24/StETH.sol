@@ -106,6 +106,22 @@ contract StETH is ISTETH, Pausable, AragonApp {
     }
 
     /**
+    * @notice Same as mint, but changes shares directly.
+    * @param _to Receiver of new shares
+    * @param _amount Amount of shares
+    */
+    function increaseShares(address _to, uint256 _amount)
+        external
+        whenNotStopped
+        authP(MINT_ROLE, arr(_to, _amount))
+    {
+        require(_to != 0);
+        _totalShares = _totalShares.add(_amount);
+        _shares[_to] = _shares[_to].add(_amount);
+        emit Transfer(address(0), _to, getPooledEthByShares(_amount));
+    }
+
+    /**
     * @dev Total number of tokens in existence
     */
     function totalSupply() public view returns (uint256) {

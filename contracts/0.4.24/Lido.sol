@@ -555,10 +555,10 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
             .mul(getToken().getTotalShares())
             .div(_getTotalControlledEther().sub(tokens2mint))
         );
-        // Add calculated amount of shares to this contract, after mint balances
+        // Add calculated amount of shares to this contract, after minting
         // This will reduce the balances of the holders, as if the rewards were
         // taken in parts from each of them.
-        getToken().mint(address(this), getToken().getPooledEthByShares(shares2mint));
+        getToken().increaseShares(address(this), shares2mint);
         // (!) minted amount may be less than tokens2mint due to round errors
         uint256 mintedRewards = getToken().balanceOf(address(this));
 
