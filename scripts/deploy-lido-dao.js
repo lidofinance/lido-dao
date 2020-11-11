@@ -8,8 +8,7 @@ const {log, logSplitter, logWideSplitter, logHeader, logTx, logDeploy} = require
 const {deploy, useOrDeploy, withArgs} = require('./helpers/deploy')
 const {readNetworkState, persistNetworkState, updateNetworkState} = require('./helpers/persisted-network-state')
 
-const {deployAPM, resolveLatestVersion} = require('./components/apm')
-const {assignENSName, getENSNodeOwner, resolveEnsAddress} = require('./components/ens')
+const {resolveLatestVersion} = require('./components/apm')
 
 const DAO_NAME = process.env.DAO_NAME || 'lido-dao'
 const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
@@ -122,15 +121,17 @@ async function deployDao({
     }
   })
 
-  log(`Checking app repos...`)
+  log(`Checking app impls...`)
   for (const [name, {fullName, ensNode}] of Object.entries(lidoApps)) {
-    const repoAddress = await resolveEnsAddress(artifacts, ens, ensNode)
-    if (repoAddress) {
-      log(`Found Repo for app ${name} (${fullName}): ${chalk.yellow(repoAddress)}`)
+    const latest = await resolveLatestVersion(ensNode, ens, artifacts)
+    if (latest) {
+      const vDesc = latest.semanticVersion.map(x => `${x}`).join('.')
+      log(`Found an impl v${vDesc} for app '${name}' (${fullName}): ${chalk.yellow(latest.contractAddress)}`)
     } else {
-      throw new Error(`failed to resolve Repo for app ${name} (${fullName})`)
+      throw new Error(`failed to resolve an impl for app '${name}' (${fullName})`)
     }
   }
+  logSplitter()
 
   const daoResults = await deployDAO({
     artifacts,
@@ -212,38 +213,28 @@ async function deployDAO({
   log(`Using ENS name: ${chalk.yellow(daoEnsName)}`)
   log(`Using DAO initial settings:`, daoInitialSettings)
 
+  logSplitter()
+
   const votingSettings = [
     daoInitialSettings.votingSupportRequired,
     daoInitialSettings.votingMinAcceptanceQuorum,
     daoInitialSettings.voteDuration
   ]
 
-  logSplitter()
-
-  const deployResult = await logTx(
-    `Deploying DAO from template`,
-    template.newDAO(
-      daoName,
-      daoInitialSettings.tokenName,
-      daoInitialSettings.tokenSymbol,
-      daoInitialSettings.holders,
-      daoInitialSettings.stakes,
-      votingSettings,
-      depositContractAddress,
-      daoInitialSettings.depositIterationLimit,
-      {from: owner, gas: 11500000}
-    )
-  )
+  const newDaoResult = await logTx(`Deploying DAO from template`, template.newDAO(
+    daoInitialSettings.tokenName,
+    daoInitialSettings.tokenSymbol,
+    votingSettings,
+    depositContractAddress,
+    daoInitialSettings.depositIterationLimit,
+    {from: owner}
+  ))
 
   logSplitter()
 
-  await logTx(`Finalizing DAO`, template.finalizeDAO({from: owner}))
-
-  logSplitter()
-
-  const tokenEvent = deployResult.logs.find((l) => l.event === 'DeployToken')
-  const daoEvent = deployResult.logs.find((l) => l.event === 'DeployDao')
-  const installedApps = deployResult.logs.filter((l) => l.event === 'InstalledApp').map((l) => l.args)
+  const tokenEvent = newDaoResult.logs.find(l => l.event === 'DeployToken')
+  const daoEvent = newDaoResult.logs.find(l => l.event === 'DeployDao')
+  const installedApps = newDaoResult.logs.filter((l) => l.event === 'InstalledApp').map(l => l.args)
 
   const dao = await artifacts.require('Kernel').at(daoEvent.args.dao)
   const token = await artifacts.require('ERC20').at(tokenEvent.args.token)
@@ -252,14 +243,27 @@ async function deployDAO({
   log(`Deployed DAO share token ${daoInitialSettings.tokenSymbol}: ${chalk.yellow(token.address)}`)
 
   logSplitter()
+  const appProxies = getAppProxies(installedApps, knownApps)
+  logSplitter()
+
+  await logTx(`Finalizing DAO`, template.finalizeDAO(
+    daoName,
+    daoInitialSettings.holders,
+    daoInitialSettings.stakes,
+    {from: owner}
+  ))
+
+  return {dao, token, appProxies}
+}
+
+function getAppProxies(installedApps, knownApps) {
+  const appProxies = {}
 
   const knownAppsByEnsNode = Object.fromEntries(
     Object.entries(knownApps).map(
       ([appName, {ensNode, fullName}]) => [ensNode, {name: appName, fullName}]
     )
   )
-
-  const appProxies = {}
 
   for (const app of installedApps) {
     const knownApp = knownAppsByEnsNode[app.appId]
@@ -272,7 +276,7 @@ async function deployDAO({
     }
   }
 
-  return {dao, token, appProxies}
+  return appProxies
 }
 
 async function deployCstETH({
