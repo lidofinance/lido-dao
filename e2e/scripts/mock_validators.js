@@ -44,19 +44,19 @@ const main = async () => {
     // console.log(r.events)
   }
 
-  // const _spcnt = await stakingProviderHelper.getStakingProvidersCount()
+  // const _spcnt = await stakingProviderHelper.getNodeOperatorsCount()
   // if (_spcnt < sps.length) {
   for (let i = 0; i < sps.length; i++) {
     let _sp
     try {
-      _sp = await stakingProviderHelper.getStakingProvider(i)
+      _sp = await stakingProviderHelper.getNodeOperator(i)
     } catch (e) {
       _sp = null
     }
     if (!_sp) {
-      r = await stakingProviderHelper.addStakingProvider(`SP#${i}`, sps[i], 0x100, proposer, voters)
+      r = await stakingProviderHelper.addNodeOperator(`SP#${i}`, sps[i], 0x100, proposer, voters)
       // console.log(r.events)
-      _sp = await stakingProviderHelper.getStakingProvider(i)
+      _sp = await stakingProviderHelper.getNodeOperator(i)
     }
     logger.info(`name: ${_sp.name}`)
     if (!+_sp.totalSigningKeys) {
@@ -69,7 +69,7 @@ const main = async () => {
         },
         { pubKeys: [], signatures: [] }
       )
-      r = await stakingProviderHelper.addSigningKeysSP(i, data, sps[i])
+      r = await stakingProviderHelper.addSigningKeysOperatorBH(i, data, sps[i])
       // console.log(r.events)
       logger.info(`keys: ${keysPerSP}`)
     } else {
@@ -96,7 +96,7 @@ const main = async () => {
   }
 
   // test deoposit
-  r = await depoolHelper.depositToDePoolContract(staker, ETH(333))
+  r = await depoolHelper.depositToLidoContract(staker, ETH(333))
   console.log(r.events)
   return true
 }

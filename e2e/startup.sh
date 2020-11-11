@@ -52,6 +52,7 @@ while test $# -gt 0; do
       echo "  -w | --web            also start Aragon web UI"
       echo "  -ms | --makesnapshots create stage snapshots"
       echo "  -o | --oracles        start oracles"
+      echo "  -os | --seed          seed mock data"
       exit 0
       ;;
     -r|--reset)
@@ -96,6 +97,10 @@ while test $# -gt 0; do
       ;;
     -o|--oracles)
       ORACLES=true
+      shift
+      ;;
+    -os|--seed)
+      SEED=true
       shift
       ;;
     *)
@@ -398,10 +403,10 @@ fi
 
 
 # oracles
-if [ $ORACLES ] && [ $RESET ]; then
+if [ $ORACLES ]; then
   echo "Building oracle container"
   ./oracle.sh
-  if [ ! $SNAPSHOT ]; then
+  if [ ! $SNAPSHOT ] && [ $SEED ]; then
     $NODE scripts/mock_validators.js
   fi
   if [ $MAKE_SNAPSHOT ]&& [ ! $SNAPSHOT ] && [ ! -d $SNAPSHOTS_DIR/stage2 ]; then

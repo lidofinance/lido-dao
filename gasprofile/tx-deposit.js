@@ -40,7 +40,7 @@ async function main() {
   const numKeys = 3
 
   for (let iProvider = 0; iProvider < numProviders; ++iProvider) {
-    const spTx = await spRegistry.addStakingProvider(`SP-${iProvider}`, stakingProvider, spValidatorsLimit, { from: voting })
+    const spTx = await spRegistry.addNodeOperator(`SP-${iProvider}`, stakingProvider, spValidatorsLimit, { from: voting })
     const stakingProviderId = getEventArgument(spTx, 'StakingProviderAdded', 'id', { decodeForAbi: StakingProvidersRegistry._json.abi })
 
     const data = Array.from({ length: numKeys }, (_, iKey) => {

@@ -1,4 +1,4 @@
-import { abi as spsAbi } from '../../../../artifacts/StakingProvidersRegistry.json'
+import { abi as spsAbi } from '../../../../artifacts/NodeOperatorsRegistry.json'
 import { encodeCallScript } from '@aragon/contract-helpers-test/src/aragon-os'
 import { createVote, voteForAction } from './votingHelper'
 import { BN, concatKeys, ETH } from '../utils'
@@ -45,11 +45,11 @@ export async function setStakingProviderStakingLimit(spId, limit, sender) {
   await stakingProviderContract.methods.setStakingProviderStakingLimit(spId, limit).send({ from: sender, gas: '1000000' })
 }
 
-export async function addStakingProvider(name, member, stakingLimit, holder, holders) {
+export async function addNodeOperator(name, member, stakingLimit, holder, holders) {
   const callData1 = encodeCallScript([
     {
       to: getProxyAddress(),
-      calldata: await stakingProviderContract.methods.addStakingProvider(name, member, stakingLimit).encodeABI()
+      calldata: await stakingProviderContract.methods.addNodeOperator(name, member, stakingLimit).encodeABI()
     }
   ])
 
@@ -76,13 +76,13 @@ export async function addSigningKeys(spId, validatorsTestData, holder, holders) 
   return await voteForAction(voteId, holders, 'Add signing keys')
 }
 
-export async function addSigningKeysSP(spId, validatorsTestData, spMember) {
+export async function addSigningKeysOperatorBH(spId, validatorsTestData, spMember) {
   const validatorsPubKeys = concatKeys(validatorsTestData.pubKeys)
   const validatorsSignatures = concatKeys(validatorsTestData.signatures)
   // logger.debug('PubKeys to add ' + validatorsPubKeys)
   // logger.debug('Signatures to add' + validatorsSignatures)
   return await stakingProviderContract.methods
-    .addSigningKeysSP(spId, validatorsTestData.pubKeys.length, validatorsPubKeys, validatorsSignatures)
+    .addSigningKeysOperatorBH(spId, validatorsTestData.pubKeys.length, validatorsPubKeys, validatorsSignatures)
     .send({ from: spMember, gas: '10000000' })
 }
 
@@ -90,8 +90,8 @@ export async function getUnusedSigningKeyCount(spId) {
   return await stakingProviderContract.methods.getUnusedSigningKeyCount(spId).call()
 }
 
-export async function getStakingProvider(spId, fullInfo = true) {
-  return await stakingProviderContract.methods.getStakingProvider(spId, fullInfo).call()
+export async function getNodeOperator(spId, fullInfo = true) {
+  return await stakingProviderContract.methods.getNodeOperator(spId, fullInfo).call()
 }
 export async function getSigningKey(spId, signingKeyId) {
   return await stakingProviderContract.methods.getSigningKey(spId, signingKeyId).call()
@@ -112,8 +112,8 @@ export async function getAllSigningKeys(sp, spId) {
   }
 }
 
-export async function getStakingProvidersCount() {
-  return await stakingProviderContract.methods.getStakingProvidersCount().call()
+export async function getNodeOperatorsCount() {
+  return await stakingProviderContract.methods.getNodeOperatorsCount().call()
 }
 
 export async function getActiveSigningKeys(sp, spSigningKeys) {
@@ -149,8 +149,8 @@ export function calculateNewSpBalance(sp, stakeProfit, totalUsedSigningKeysCount
 
 export async function getTotalActiveKeysCount() {
   let effectiveStakeTotal = ''
-  for (let spId = 0; spId < (await getStakingProvidersCount()); spId++) {
-    const sp = await getStakingProvider(spId, true)
+  for (let spId = 0; spId < (await getNodeOperatorsCount()); spId++) {
+    const sp = await getNodeOperator(spId, true)
     if (!sp.active) continue
 
     const effectiveStake = +sp.usedSigningKeys - +sp.stoppedValidators

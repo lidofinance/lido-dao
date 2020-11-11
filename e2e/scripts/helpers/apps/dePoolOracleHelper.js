@@ -1,4 +1,4 @@
-import { abi as DePoolOracleAbi } from '../../../../artifacts/DePoolOracle.json'
+import { abi as LidoOracleAbi } from '../../../../artifacts/LidoOracle.json'
 import { createVote, voteForAction } from './votingHelper'
 import { encodeCallScript } from '@aragon/contract-helpers-test/src/aragon-os'
 import logger from '../logger'
@@ -11,7 +11,7 @@ export function init(c) {
   if (!context) {
     context = c
     web3 = context.web3
-    dePoolOracleContract = new web3.eth.Contract(DePoolOracleAbi, getProxyAddress())
+    dePoolOracleContract = new web3.eth.Contract(LidoOracleAbi, getProxyAddress())
   }
 }
 
