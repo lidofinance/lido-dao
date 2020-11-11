@@ -28,7 +28,8 @@ module.exports = {
       chainId: 1337,
       ensAddress: getNetState('1337').ensAddress,
       accounts: 'remote',
-      timeout: 60000
+      timeout: 60000,
+      gas: 8000000 // the same as in Göerli
     },
     coverage: {
       url: 'http://localhost:8555'
