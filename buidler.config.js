@@ -37,8 +37,9 @@ module.exports = {
       url: 'http://206.81.31.11/rpc',
       chainId: 5,
       ensAddress: getNetState('5').ensAddress,
-      timeout: 60000,
-      accounts: accounts.eth
+      timeout: 60000 * 10,
+      accounts: accounts.eth,
+      gasPrice: 2000000000
     }
   },
   solc: {
@@ -57,7 +58,11 @@ module.exports = {
     enabled: !!process.env.REPORT_GAS,
     currency: 'USD'
   },
-  etherscan: accounts.etherscan
+  etherscan: accounts.etherscan,
+  aragon: {
+    ipfsApi: 'http://206.81.31.11/ipfs-api/v0',
+    ipfsGateway: 'http://206.81.31.11'
+  }
 }
 
 function readJson(fileName) {

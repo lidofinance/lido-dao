@@ -59,10 +59,8 @@ async function deployAragonStdApps({
   for (let appName of appNames) {
     const results = await publishApp(appName, env, netName, appsDirPath, releaseType)
     updateNetworkState(netState, results)
+    persistNetworkState(networkStateFile, netId, netState)
   }
-
-  logWideSplitter()
-  persistNetworkState(networkStateFile, netId, netState)
 }
 
 async function publishApp(appName, env, netName, appsDirPath, releaseType) {

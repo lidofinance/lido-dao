@@ -13,7 +13,10 @@ if (process.env.APP_FRONTEND_PATH) {
 
 module.exports = {
   ...baseConfig,
-  aragon: aragonConfig
+  aragon: {
+    ...baseConfig.aragon,
+    ...aragonConfig
+  }
 }
 
 if (process.env.STD_APPS_DEPLOY) {
