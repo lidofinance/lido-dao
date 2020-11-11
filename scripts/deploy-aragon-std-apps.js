@@ -64,10 +64,8 @@ async function deployAragonStdApps({
   for (let appName of APPS) {
     const results = await publishApp(appName, appsRepoPath, buidlerConfig, env, netName, releaseType)
     updateNetworkState(netState, results)
+    persistNetworkState(networkStateFile, netId, netState)
   }
-
-  logWideSplitter()
-  persistNetworkState(networkStateFile, netId, netState)
 }
 
 async function publishApp(appName, appsRepoPath, buidlerConfig, env, netName, releaseType) {
@@ -107,7 +105,9 @@ async function publishApp(appName, appsRepoPath, buidlerConfig, env, netName, re
       'publish', 'major',
       '--config', buidlerConfig,
       '--network', netName,
-      '--skip-validation'
+      '--skip-validation',
+      // workaround: force to read URL from Buidler config
+      '--ipfs-api-url', ''
     ],
     cwd: appRootPath,
     env: childEnv
