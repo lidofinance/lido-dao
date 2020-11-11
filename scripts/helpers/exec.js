@@ -17,7 +17,8 @@ function exec(cmdWithArgs, opts) {
 function execLive(cmd, {args, cwd, env}) {
   return new Promise((resolve, reject) => {
     args = args || []
-    log(`+ cd ${cwd || process.cwd()} && ${cmd}${args.length ? ' ' + args.join(' ') : ''}`)
+    const argsDesc = args.length ? ' ' + args.map(a => a === '' ? "''" : a).join(' ') : ''
+    log(`+ cd ${cwd || process.cwd()} && ${cmd}${argsDesc}`)
     const proc = childProcess.spawn(cmd, args, {cwd, env, stdio: 'inherit'})
     proc.on('exit', code => {
       if (code !== 0) {
