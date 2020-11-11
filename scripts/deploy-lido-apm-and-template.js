@@ -2,24 +2,18 @@ const chalk = require('chalk')
 const namehash = require('eth-ens-namehash').hash
 
 const runOrWrapScript = require('./helpers/run-or-wrap-script')
-const {log, logSplitter, logWideSplitter, logHeader, logTx} = require('./helpers/log')
-const {deploy, withArgs} = require('./helpers/deploy')
-const {readNetworkState, persistNetworkState, updateNetworkState} = require('./helpers/persisted-network-state')
+const { log, logSplitter, logWideSplitter, logHeader, logTx } = require('./helpers/log')
+const { deploy, withArgs } = require('./helpers/deploy')
+const { readNetworkState, persistNetworkState, updateNetworkState } = require('./helpers/persisted-network-state')
 
-const {deployAPM, resolveLatestVersion} = require('./components/apm')
-const {getENSNodeOwner} = require('./components/ens')
+const { deployAPM, resolveLatestVersion } = require('./components/apm')
+const { getENSNodeOwner } = require('./components/ens')
 
 const LIDO_ENS_LABEL = process.env.LIDO_ENS_LABEL || 'lido'
 const DAO_TEMPLATE_ENS_LABEL = process.env.DAO_TEMPLATE_ENS_LABEL || 'template'
 const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
 
-const REQUIRED_NET_STATE = [
-  'owner',
-  'ensAddress',
-  'apmRegistryFactoryAddress',
-  'daoFactoryAddress',
-  'miniMeTokenFactoryAddress'
-]
+const REQUIRED_NET_STATE = ['owner', 'ensAddress', 'apmRegistryFactoryAddress', 'daoFactoryAddress', 'miniMeTokenFactoryAddress']
 
 async function deployApmAndTemplate({
   web3,
@@ -35,7 +29,7 @@ async function deployApmAndTemplate({
 
   const state = readNetworkState(networkStateFile, netId)
 
-  const missingState = REQUIRED_NET_STATE.filter(key => !state[key])
+  const missingState = REQUIRED_NET_STATE.filter((key) => !state[key])
   if (missingState.length) {
     const missingDesc = missingState.join(', ')
     throw new Error(`missing following fields from network state file, make sure you've run previous deployment steps: ${missingDesc}`)
@@ -99,12 +93,12 @@ async function deployDaoTemplate({
   miniMeTokenFactoryAddress,
   lidoEnsNodeName,
   daoTemplateEnsLabel,
-  daoTemplateAddress,
+  daoTemplateAddress
 }) {
   if (daoTemplateAddress) {
     log(`Using DAO template: ${chalk.yellow(daoTemplateAddress)}`)
     const daoTemplate = await artifacts.require('LidoTemplate').at(daoTemplateAddress)
-    return {daoTemplate}
+    return { daoTemplate }
   }
 
   const daoTemplateNodeName = `${daoTemplateEnsLabel}.${lidoEnsNodeName}`
@@ -115,7 +109,7 @@ async function deployDaoTemplate({
   if (latestDaoTemplateVersion) {
     log(`Using DAO template resolved from ENS: ${chalk.yellow(latestDaoTemplateVersion.contractAddress)}`)
     const daoTemplate = await artifacts.require('LidoTemplate').at(latestDaoTemplateVersion.contractAddress)
-    return {daoTemplate, daoTemplateNodeName, daoTemplateNode}
+    return { daoTemplate, daoTemplateNodeName, daoTemplateNode }
   }
 
   log(`Using Lido APM registry: ${chalk.yellow(lidoApmRegistryAddress)}`)
@@ -128,28 +122,19 @@ async function deployDaoTemplate({
     throw new Error(`failed to resolve AragonID (aragonid.eth)`)
   }
 
-  const daoTemplate = await deploy('LidoTemplate', artifacts, withArgs(
-    daoFactoryAddress,
-    ens.address,
-    miniMeTokenFactoryAddress,
-    aragonIdAddress,
-    {from: owner, gas: 6000000}
-  ))
+  const daoTemplate = await deploy(
+    'LidoTemplate',
+    artifacts,
+    withArgs(daoFactoryAddress, ens.address, miniMeTokenFactoryAddress, aragonIdAddress, { from: owner, gas: 6000000 })
+  )
   logSplitter()
 
   await logTx(
     `Registering package for DAO template as '${daoTemplateNodeName}'...`,
-    lidoApmRegistry.newRepoWithVersion(
-      daoTemplateEnsLabel,
-      owner,
-      [1, 0, 0],
-      daoTemplate.address,
-      '0x0',
-      {from: owner}
-    )
+    lidoApmRegistry.newRepoWithVersion(daoTemplateEnsLabel, owner, [1, 0, 0], daoTemplate.address, '0x0', { from: owner })
   )
 
-  return {daoTemplate, daoTemplateNodeName, daoTemplateNode}
+  return { daoTemplate, daoTemplateNodeName, daoTemplateNode }
 }
 
 module.exports = runOrWrapScript(deployApmAndTemplate, module)

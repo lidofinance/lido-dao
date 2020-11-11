@@ -2,10 +2,10 @@ const chalk = require('chalk')
 const namehash = require('eth-ens-namehash').hash
 const keccak256 = require('js-sha3').keccak_256
 
-const {log, logTx} = require('../helpers/log')
-const {isZeroAddress} = require('../helpers/address')
+const { log, logTx } = require('../helpers/log')
+const { isZeroAddress } = require('../helpers/address')
 
-async function assignENSName({tldName = 'eth', labelName, owner, ens, assigneeAddress, assigneeDesc}) {
+async function assignENSName({ tldName = 'eth', labelName, owner, ens, assigneeAddress, assigneeDesc }) {
   log(`Assigning ENS name '${labelName}.${tldName}' to ${assigneeDesc} at ${assigneeAddress}...`)
 
   const tldHash = namehash(tldName)
@@ -18,16 +18,10 @@ async function assignENSName({tldName = 'eth', labelName, owner, ens, assigneeAd
   log(`Label: ${chalk.yellow(labelName)} (${labelHash})`)
 
   if ((await ens.owner(node)) === owner) {
-    await logTx(
-      `Transferring name ownership from owner ${owner} to ${assigneeAddress}`,
-      ens.setOwner(node, assigneeAddress)
-    )
+    await logTx(`Transferring name ownership from owner ${owner} to ${assigneeAddress}`, ens.setOwner(node, assigneeAddress))
   } else {
     try {
-      await logTx(
-        `Creating subdomain and assigning it to ${assigneeAddress}`,
-        ens.setSubnodeOwner(tldHash, labelHash, assigneeAddress)
-      )
+      await logTx(`Creating subdomain and assigning it to ${assigneeAddress}`, ens.setSubnodeOwner(tldHash, labelHash, assigneeAddress))
     } catch (err) {
       log(
         `Error: could not set the owner of '${labelName}.${tldName}' on the given ENS instance`,
@@ -37,7 +31,7 @@ async function assignENSName({tldName = 'eth', labelName, owner, ens, assigneeAd
     }
   }
 
-  return {tldHash, labelHash, nodeName, node}
+  return { tldHash, labelHash, nodeName, node }
 }
 
 async function getENSNodeOwner(ens, node) {
@@ -55,4 +49,4 @@ async function resolveEnsAddress(artifacts, ens, node) {
   return isZeroAddress(addr) ? null : addr
 }
 
-module.exports = {assignENSName, getENSNodeOwner, resolveEnsAddress}
+module.exports = { assignENSName, getENSNodeOwner, resolveEnsAddress }

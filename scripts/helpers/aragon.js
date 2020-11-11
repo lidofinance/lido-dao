@@ -1,9 +1,9 @@
 const path = require('path')
 
-const {readJSON} = require('./fs')
+const { readJSON } = require('./fs')
 
 async function readAppName(appRoot, netName) {
-  const {environments} = await readJSON(path.join(appRoot, 'arapp.json'))
+  const { environments } = await readJSON(path.join(appRoot, 'arapp.json'))
   if (!environments) {
     return null
   }
@@ -14,4 +14,4 @@ async function readAppName(appRoot, netName) {
   return (environments.default || {}).appName || null
 }
 
-module.exports = {readAppName}
+module.exports = { readAppName }

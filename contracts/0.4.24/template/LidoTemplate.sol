@@ -76,7 +76,9 @@ contract LidoTemplate is BaseTemplate {
         uint64[3] _votingSettings,
         address _BeaconDepositContract,
         uint256 _depositIterationLimit
-    ) external {
+    )
+        external
+    {
         require(deployer == address(0), "PREVIOUS_DAO_NOT_FINALIZED");
 
         deployer = msg.sender;

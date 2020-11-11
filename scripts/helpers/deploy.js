@@ -1,6 +1,6 @@
 const chalk = require('chalk')
 
-const {log, logDeploy} = require('./log')
+const { log, logDeploy } = require('./log')
 
 async function deploy(artifactName, artifacts, deploy) {
   const Artifact = artifacts.require(artifactName)
@@ -18,15 +18,13 @@ async function useOrDeploy(artifactName, artifacts, address, deploy) {
 }
 
 function withArgs(...args) {
-  return async Artifact => {
+  return async (Artifact) => {
     const instance = await Artifact.new(...args)
     const lastArg = args[args.length - 1]
     // remove {from: ..., gas: ...}
-    instance.constructorArgs = lastArg && 'object' === typeof lastArg && lastArg.constructor === Object
-      ? args.slice(0, -1)
-      : args
+    instance.constructorArgs = lastArg && typeof lastArg === 'object' && lastArg.constructor === Object ? args.slice(0, -1) : args
     return instance
   }
 }
 
-module.exports = {deploy, useOrDeploy, withArgs}
+module.exports = { deploy, useOrDeploy, withArgs }

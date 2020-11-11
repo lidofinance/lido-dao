@@ -4,12 +4,12 @@ const chalk = require('chalk')
 const namehash = require('eth-ens-namehash').hash
 
 const runOrWrapScript = require('./helpers/run-or-wrap-script')
-const {log, logSplitter, logWideSplitter, logHeader} = require('./helpers/log')
-const {readNetworkState, persistNetworkState, updateNetworkState} = require('./helpers/persisted-network-state')
-const {readJSON, directoryExists} = require('./helpers/fs')
-const {exec, execLive} = require('./helpers/exec')
-const {filterObject} = require('./helpers/collections')
-const {readAppName} = require('./helpers/aragon')
+const { log, logSplitter, logWideSplitter, logHeader } = require('./helpers/log')
+const { readNetworkState, persistNetworkState, updateNetworkState } = require('./helpers/persisted-network-state')
+const { readJSON, directoryExists } = require('./helpers/fs')
+const { exec, execLive } = require('./helpers/exec')
+const { filterObject } = require('./helpers/collections')
+const { readAppName } = require('./helpers/aragon')
 
 const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
 const APPS_DIR_PATH = path.resolve(__dirname, '..', 'apps')
@@ -40,15 +40,14 @@ async function deployAragonStdApps({
     throw new Error(`ensAddress is not defined for network ${netName} in Buidler config file ${buidlerConfig}`)
   }
 
-  if (network.config.ensAddress.toLowerCase() !== network.config.ensAddress.toLowerCase()) {
+  if (network.config.ensAddress.toLowerCase() !== netState.ensAddress.toLowerCase()) {
     throw new Error(
-      `ensAddress for network ${netId} is different in Buidler config file ${buidlerConfig} ` +
-      `and network state file ${networkStateFile}`
+      `ensAddress for network ${netId} is different in Buidler config file ${buidlerConfig} ` + `and network state file ${networkStateFile}`
     )
   }
 
   // prevent Buidler from passing the config to subprocesses
-  const env = filterObject(process.env, key => key.substr(0, 8) !== 'BUIDLER_')
+  const env = filterObject(process.env, (key) => key.substr(0, 8) !== 'BUIDLER_')
 
   if (appNames && appNames !== '*') {
     appNames = appNames.split(',')
@@ -56,7 +55,7 @@ async function deployAragonStdApps({
     appNames = fs.readdirSync(appsDirPath)
   }
 
-  for (let appName of appNames) {
+  for (const appName of appNames) {
     const results = await publishApp(appName, env, netName, appsDirPath, releaseType)
     updateNetworkState(netState, results)
     persistNetworkState(networkStateFile, netId, netState)
@@ -79,7 +78,7 @@ async function publishApp(appName, env, netName, appsDirPath, releaseType) {
 
   if (hasFrontend) {
     logSplitter(`Installing frontend deps for app '${appName}'`)
-    await execLive('npm', {args: ['install'], cwd: appFrontendPath})
+    await execLive('npm', { args: ['install'], cwd: appFrontendPath })
     logSplitter()
   } else {
     log(`The app has no frontend`)
@@ -87,10 +86,13 @@ async function publishApp(appName, env, netName, appsDirPath, releaseType) {
 
   await execLive('buidler', {
     args: [
-      'publish', releaseType,
-      '--network', netName,
+      'publish',
+      releaseType,
+      '--network',
+      netName,
       // workaround: force to read URL from Buidler config
-      '--ipfs-api-url', ''
+      '--ipfs-api-url',
+      ''
     ],
     cwd: appRootPath,
     env
