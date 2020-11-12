@@ -164,8 +164,6 @@ transactions will revert:
 
 Address of the pool contract.
 
-* Mutator: `setPool(address)`
-  * Permission required: `SET_POOL`
 * Accessor: `pool() returns (address)`
 
 
@@ -224,8 +222,6 @@ Allows to report that `_stoppedIncrement` more validators of a node operator hav
 
 Address of the pool contract.
 
-* Mutator: `setPool(address)`
-  * Permission required: `SET_POOL`
 * Accessor: `pool() returns (address)`
 
 
