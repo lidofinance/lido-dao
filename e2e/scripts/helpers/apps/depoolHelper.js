@@ -88,12 +88,12 @@ async function submit(sender, value) {
   return await dePoolContract.methods.submit(ZERO_ADDRESS).send({ from: sender, value: value, gas: '1000000' })
 }
 
-async function getEther2Stat() {
-  return await dePoolContract.methods.getEther2Stat().call()
+async function getBeaconStat() {
+  return await dePoolContract.methods.getBeaconStat().call()
 }
 
 async function getUsedEther() {
-  const totalControledEther = await getTotalControlledEther()
+  const totalControledEther = await getTotalPooledEther()
   const bufferedEther = await getBufferedEther()
   return BN(totalControledEther).sub(BN(bufferedEther)).toString()
 }
@@ -102,8 +102,8 @@ async function depositToDePoolContract(from, value) {
   return await eth1Helper.sendTransaction(web3, getProxyAddress(), from, value)
 }
 
-function getTotalControlledEther() {
-  return dePoolContract.methods.getTotalControlledEther().call()
+function getTotalPooledEther() {
+  return dePoolContract.methods.getTotalPooledEther().call()
 }
 function getBufferedEther() {
   return dePoolContract.methods.getBufferedEther().call()
@@ -126,7 +126,7 @@ export {
   setWithdrawalCredentials,
   depositToDePoolContract,
   getBufferedEther,
-  getTotalControlledEther,
+  getTotalPooledEther,
   getProxyAddress,
   getTreasuryAddress,
   hasInitialized,
@@ -139,5 +139,5 @@ export {
   calculateNewTreasuryBalance,
   getDepositIterationLimit,
   submit,
-  getEther2Stat
+  getBeaconStat
 }

@@ -82,8 +82,8 @@ contract StETH is ISTETH, Pausable, AragonApp {
     function mint(address _to, uint256 _value) external whenNotStopped authP(MINT_ROLE, arr(_to, _value)) {
         require(_to != 0);
         uint256 sharesDifference;
-        uint256 totalControlledEthBefore = lido.getTotalControlledEther();
-        if ( totalControlledEthBefore == 0) {
+        uint256 totalPooledEthBefore = lido.getTotalPooledEther();
+        if ( totalPooledEthBefore == 0) {
             sharesDifference = _value;
         } else {
             sharesDifference = getSharesByPooledEth(_value);
@@ -109,7 +109,7 @@ contract StETH is ISTETH, Pausable, AragonApp {
     * @dev Total number of tokens in existence
     */
     function totalSupply() public view returns (uint256) {
-        return lido.getTotalControlledEther();
+        return lido.getTotalPooledEther();
     }
 
     /**
@@ -274,7 +274,7 @@ contract StETH is ISTETH, Pausable, AragonApp {
         if (_totalShares == 0) {
             return 0;
         }
-        return _sharesAmount.mul(lido.getTotalControlledEther()).div(_totalShares);
+        return _sharesAmount.mul(lido.getTotalPooledEther()).div(_totalShares);
     }
 
     /**
@@ -292,10 +292,10 @@ contract StETH is ISTETH, Pausable, AragonApp {
     * @param _pooledEthAmount The amount of pooled Eth
     */
     function getSharesByPooledEth(uint256 _pooledEthAmount) public view returns (uint256) {
-        if (lido.getTotalControlledEther() == 0) {
+        if (lido.getTotalPooledEther() == 0) {
             return 0;
         }
-        return _pooledEthAmount.mul(_totalShares).div(lido.getTotalControlledEther());
+        return _pooledEthAmount.mul(_totalShares).div(lido.getTotalPooledEther());
     }
 
     /**
