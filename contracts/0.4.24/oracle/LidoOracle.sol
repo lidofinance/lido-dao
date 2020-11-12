@@ -59,6 +59,121 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
     uint256[] private currentlyAggregatedData;  // only indexes set in contributionBitMask are valid
 
     uint256 private reportIntervalDuration;
+    
+    // ---------------------------------------------------------------------- //
+
+    uint256 public lastPushedEpoch;
+
+    // TODO: thimk about variables size
+    struct BeaconSpec {
+        uint64 slotsPerEpoch;
+        uint64 secondsPerSlot;
+        uint64 genesisTime;
+    }
+
+    BeaconSpec public beaconSpec;
+
+    struct Report {
+        uint128 beaconBalance;
+        uint128 beaconValidators;
+    }
+
+    struct EpochData {
+        uint256 reportsBitMask;
+        mapping (uint256 => Report) reports;
+    }
+    
+    mapping(uint256 => EpochData) public gatheredEpochData;
+    
+    function setBeaconSpec(uint64 slotsPerEpoch, uint64 secondsPerSlot, uint64 genesisTime) public {
+        beaconSpec.slotsPerEpoch = slotsPerEpoch;
+        beaconSpec.secondsPerSlot = secondsPerSlot;
+        beaconSpec.genesisTime = genesisTime;
+    }
+
+    function getCurrentEpochID() public view returns (uint256) {
+        return (_getTime() - beaconSpec.genesisTime) / (beaconSpec.slotsPerEpoch * beaconSpec.secondsPerSlot);
+    }
+
+    function getCurrentReportableEpochs() public view returns (uint256, uint256) {
+        uint256 startEpoch = (lastPushedEpoch == 0) ? lastPushedEpoch : lastPushedEpoch + 1;
+        uint256 endEpoch = getCurrentEpochID();
+        return (startEpoch, endEpoch);
+    }
+
+    function getCurrentReportableTimeInterval() public view returns (uint256, uint256) {
+        (uint256 startEpoch, uint256 endEpoch) = getCurrentReportableEpochs();
+        uint256 startTime = beaconSpec.genesisTime + startEpoch * beaconSpec.secondsPerSlot * beaconSpec.slotsPerEpoch;
+        uint256 endTime = beaconSpec.genesisTime + (endEpoch + 1) * beaconSpec.secondsPerSlot * beaconSpec.slotsPerEpoch - 1;
+        return (startTime, endTime);
+    }
+    
+    function reportBeacon(uint256 _epochId, uint128 _eth2balance, uint128 _validators) external {
+        (uint256 startEpoch, uint256 endEpoch) = getCurrentReportableEpochs();
+        require(_epochId >= startEpoch, "REPORT_INTERVAL_IS_TOO_OLD");
+        require(_epochId <= endEpoch, "REPORT_INTERVAL_HAS_NOT_YET_BEGUN");
+
+        address member = msg.sender;
+        uint256 index = _findMember(member);
+        require(index != MEMBER_NOT_FOUND, "MEMBER_NOT_FOUND");
+
+        // check & set contribution flag
+        require(!contributionBitMask.getBit(index), "ALREADY_SUBMITTED");
+
+        gatheredEpochData[_epochId].reportsBitMask = gatheredEpochData[_epochId].reportsBitMask.setBit(index, true);
+
+        Report memory currentReport = Report(_eth2balance, _validators);
+        gatheredEpochData[_epochId].reports[index] = currentReport;
+
+        _tryPush(_epochId);
+    }
+
+    function reportToUint256(Report _report) internal pure returns (uint256) {
+        return uint256(_report.beaconBalance) << 128 | uint256(_report.beaconValidators);
+    }
+    
+    function uint256ToReport(uint256 _report) internal pure returns (Report) {
+        Report memory report;
+        report.beaconBalance = uint128(_report >> 128);
+        report.beaconValidators = uint128(_report);
+        return report;
+    }
+
+    function _tryPush(uint256 _epochId) internal {
+        uint256 mask = gatheredEpochData[_epochId].reportsBitMask;
+        uint256 popcnt = mask.popcnt();
+        if (popcnt < quorum)
+            return;
+
+        assert(0 != popcnt && popcnt <= members.length);
+
+        // getting reported data out of current gatheredEpochData mapping
+        uint256[] memory data = new uint256[](popcnt);
+        uint256 i = 0;
+        uint256 membersLength = members.length;
+        for (uint256 index = 0; index < membersLength; ++index) {
+            if (mask.getBit(index)) {
+                data[i++] = reportToUint256(gatheredEpochData[_epochId].reports[index]);
+            }
+        }
+        assert(i == data.length);
+
+        (bool isUnimodal, uint256 mode) = Algorithm.mode(data);
+        if (!isUnimodal)
+            return;
+
+        // finalizing and reporting mode value to lido
+        lastPushedEpoch = _epochId;
+
+        Report memory modeReport = uint256ToReport(mode);
+
+        // emitting event
+        
+        if (address(0) != address(pool))
+            pool.pushBeacon(modeReport.beaconValidators, modeReport.beaconBalance);
+    }
+
+    // ---------------------------------------------------------------------- //
 
     function initialize(ILido _lido) public onlyInit {
         assert(1 == ((1 << (MAX_MEMBERS - 1)) >> (MAX_MEMBERS - 1)));   // static assert

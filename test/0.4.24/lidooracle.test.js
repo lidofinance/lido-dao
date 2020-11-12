@@ -51,6 +51,9 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
     const proxyAddress = await newApp(dao, 'lidooracle', appBase.address, appManager)
     app = await LidoOracle.at(proxyAddress)
 
+    // setBeaconSpec
+    await app.setBeaconSpec(32, 12, 1606824000, { from: appManager })
+
     // Set up the app's permissions.
     await acl.createPermission(voting, app.address, await app.MANAGE_MEMBERS(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.MANAGE_QUORUM(), appManager, { from: appManager })
@@ -59,7 +62,35 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
     await app.initialize('0x0000000000000000000000000000000000000000')
   })
 
+  it('beaconSpec is correct', async () => {
+    const beaconSpec = await app.beaconSpec()
+    assertBn(beaconSpec.slotsPerEpoch, 32)
+    assertBn(beaconSpec.secondsPerSlot, 12)
+    assertBn(beaconSpec.genesisTime, 1606824000)
+  })
+
   describe('Test utility functions:', function () {
+    it('', async () => {
+      
+    })
+
+    it('reportBeacon', async () => {
+      await app.setTime(1607824001)
+      await app.addOracleMember(user1, { from: voting })
+      await app.addOracleMember(user2, { from: voting })
+      await app.addOracleMember(user3, { from: voting })
+      await app.addOracleMember(user4, { from: voting })
+
+      await app.setQuorum(3, { from: voting })
+
+      await app.reportBeacon(5, 1000, 1, { from: user1 })
+      await app.reportBeacon(5, 1000, 1, { from: user2 })
+      await app.reportBeacon(5, 1000, 1, { from: user3 })
+
+      assertBn(await app.lastPushedEpoch(), 5)
+    })
+    
+    /*
     it('addOracleMember works', async () => {
       await assertRevert(app.addOracleMember(user1, { from: user1 }), 'APP_AUTH_FAILED')
       await assertRevert(app.addOracleMember('0x0000000000000000000000000000000000000000', { from: voting }), 'BAD_ARGUMENT')
@@ -381,5 +412,6 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
       await app.pushData(1002, 100, { from: user1 })
       await assertData(1002, 100)
     })
+    */
   })
 })
