@@ -43,4 +43,10 @@ interface ISTETH /* is IERC20 */ {
     function burn(address _account, uint256 _value) external;
 
     function balanceOf(address owner) external view returns (uint256);
+
+    function transfer(address to, uint256 value) external returns (bool);
+
+    function getTotalShares() external view returns (uint256);
+
+    function getPooledEthByShares(uint256 _sharesAmount) external view returns (uint256);
 }

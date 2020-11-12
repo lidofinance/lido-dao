@@ -542,7 +542,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await oracle.reportEther2(300, ETH(36))
     await checkStat({ deposited: ETH(32), remote: ETH(36) })
     assertBn(await token.totalSupply(), tokens(38)) // remote + buffered
-    await checkRewards({ treasury: 569, insurance: 385, operator: 974 })
+    await checkRewards({ treasury: 599, insurance: 399, operator: 999 })
   })
 
   it('rewards distribution works', async () => {
@@ -581,7 +581,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await oracle.reportEther2(300, ETH(36))
     await checkStat({ deposited: ETH(32), remote: ETH(36) })
     assertBn(await token.totalSupply(), tokens(38))
-    await checkRewards({ treasury: 569, insurance: 385, operator: 974 })
+    await checkRewards({ treasury: 599, insurance: 399, operator: 999 })
   })
 
   it('deposits accounted properly during rewards distribution', async () => {
@@ -604,7 +604,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await oracle.reportEther2(300, ETH(36))
     await checkStat({ deposited: ETH(32), remote: ETH(36) })
     assertBn(await token.totalSupply(), tokens(68))
-    await checkRewards({ treasury: 582, insurance: 391, operator: 985 })
+    await checkRewards({ treasury: 599, insurance: 399, operator: 999 })
   })
 
   it('Node Operators filtering during deposit works when doing a huge deposit', async () => {
