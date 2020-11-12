@@ -144,14 +144,14 @@ contract('Lido: happy path', (addresses) => {
 
     assertBn(await validatorRegistrationMock.totalCalls(), 0)
 
-    const ether2Stat = await pool.getEther2Stat()
-    assertBn(ether2Stat.deposited, 0, 'deposited ether2')
-    assertBn(ether2Stat.remote, 0, 'remote ether2')
+    const ether2Stat = await pool.getBeaconStat()
+    assertBn(ether2Stat.depositedValidators, 0, 'deposited ether2')
+    assertBn(ether2Stat.beaconBalance, 0, 'remote ether2')
 
     // All Ether was buffered within the pool contract atm
 
     assertBn(await pool.getBufferedEther(), ETH(3), 'buffered ether')
-    assertBn(await pool.getTotalControlledEther(), ETH(3), 'total controlled ether')
+    assertBn(await pool.getTotalPooledEther(), ETH(3), 'total pooled ether')
 
     // The amount of tokens corresponding to the deposited ETH value was minted to the user
 
@@ -175,14 +175,14 @@ contract('Lido: happy path', (addresses) => {
     assert.equal(regCall.signature, nodeOperator1.validators[0].sig)
     assertBn(regCall.value, ETH(32))
 
-    const ether2Stat = await pool.getEther2Stat()
-    assertBn(ether2Stat.deposited, ETH(32), 'deposited ether2')
-    assertBn(ether2Stat.remote, 0, 'remote ether2')
+    const ether2Stat = await pool.getBeaconStat()
+    assertBn(ether2Stat.depositedValidators, 1, 'deposited ether2')
+    assertBn(ether2Stat.beaconBalance, 0, 'remote ether2')
 
     // Some Ether remained buffered within the pool contract
 
     assertBn(await pool.getBufferedEther(), ETH(1), 'buffered ether')
-    assertBn(await pool.getTotalControlledEther(), ETH(1 + 32), 'total controlled ether')
+    assertBn(await pool.getTotalPooledEther(), ETH(1 + 32), 'total pooled ether')
 
     // The amount of tokens corresponding to the deposited ETH value was minted to the users
 
@@ -257,15 +257,15 @@ contract('Lido: happy path', (addresses) => {
     assert.equal(regCall.signature, nodeOperator2.validators[0].sig)
     assertBn(regCall.value, ETH(32))
 
-    const ether2Stat = await pool.getEther2Stat()
-    assertBn(ether2Stat.deposited, ETH(64), 'deposited ether2')
-    assertBn(ether2Stat.remote, 0, 'remote ether2')
+    const ether2Stat = await pool.getBeaconStat()
+    assertBn(ether2Stat.depositedValidators, 2, 'deposited ether2')
+    assertBn(ether2Stat.beaconBalance, 0, 'remote ether2')
 
     // The pool ran out of validator keys, so the remaining 32 ETH were added to the
     // pool buffer
 
     assertBn(await pool.getBufferedEther(), ETH(1 + 32), 'buffered ether')
-    assertBn(await pool.getTotalControlledEther(), ETH(33 + 64), 'total controlled ether')
+    assertBn(await pool.getTotalPooledEther(), ETH(33 + 64), 'total pooled ether')
 
     // The amount of tokens corresponding to the deposited ETH value was minted to the users
 
@@ -284,31 +284,31 @@ contract('Lido: happy path', (addresses) => {
     const oldTotalShares = await token.getTotalShares()
     assertBn(oldTotalShares, ETH(97), 'total shares')
 
-    // Old total controlled Ether
+    // Old total pooled Ether
 
-    const oldTotalControlledEther = await pool.getTotalControlledEther()
-    assertBn(oldTotalControlledEther, ETH(33 + 64), 'total controlled ether')
+    const oldTotalPooledEther = await pool.getTotalPooledEther()
+    assertBn(oldTotalPooledEther, ETH(33 + 64), 'total pooled ether')
 
     // Reporting 1.5-fold balance increase (64 => 96)
 
-    await oracleMock.reportEther2(epoch, ETH(96))
+    await oracleMock.reportBeacon(epoch, 2, ETH(96))
 
     // Total shares increased because fee minted (fee shares added)
-    // shares ~= oldTotalShares + reward * oldTotalShares / (newTotalControlledEther - reward)
+    // shares ~= oldTotalShares + reward * oldTotalShares / (newTotalPooledEther - reward)
 
     const newTotalShares = await token.getTotalShares()
     assertBn(newTotalShares, new BN('97241218526577556729'), 'total shares')
 
-    // Total controlled Ether increased
+    // Total pooled Ether increased
 
-    const newTotalControlledEther = await pool.getTotalControlledEther()
-    assertBn(newTotalControlledEther, ETH(33 + 96), 'total controlled ether')
+    const newTotalPooledEther = await pool.getTotalPooledEther()
+    assertBn(newTotalPooledEther, ETH(33 + 96), 'total pooled ether')
 
     // Ether2 stat reported by the pool changed correspondingly
 
-    const ether2Stat = await pool.getEther2Stat()
-    assertBn(ether2Stat.deposited, ETH(64), 'deposited ether2')
-    assertBn(ether2Stat.remote, ETH(96), 'remote ether2')
+    const ether2Stat = await pool.getBeaconStat()
+    assertBn(ether2Stat.depositedValidators, 2, 'deposited ether2')
+    assertBn(ether2Stat.beaconBalance, ETH(96), 'remote ether2')
 
     // Buffered Ether amount didn't change
 

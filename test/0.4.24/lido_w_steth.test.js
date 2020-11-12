@@ -131,12 +131,11 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
     })
 
     it('initial values are zeros', async () => {
-      const stat = await app.getEther2Stat()
-      assertBn(stat.deposited, ETH(0))
-      assertBn(stat.remote, ETH(0))
+      const stat = await app.getBeaconStat()
+      assertBn(stat.depositedValidators, 0)
+      assertBn(stat.beaconBalance, ETH(0))
       assertBn(await app.getBufferedEther(), ETH(0))
-      assertBn(await app.getTotalControlledEther(), ETH(0))
-      assertBn(await app.getRewardBase(), ETH(0))
+      assertBn(await app.getTotalPooledEther(), ETH(0))
     })
 
     context('user2 submitted 34 ETH', async () => {
@@ -145,24 +144,21 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
         await app.depositBufferedEther()
       })
 
-      it('Lido: deposited=32, remote=0, buffered=2, totalControlled=34, rewBase=32', async () => {
+      it('Lido: deposited=32, remote=0, buffered=2, totalPooled=34, rewBase=32', async () => {
         /* When user2 submits 34 Ethers, 32 of them get deposited to Deposit ETH2 contract,
         and 2 Ethers get buffered on Lido contract.
-        totalControlledEther is the sum of deposited and buffered values.
-        Since lido rewards only playing validator role, there is rewardBase counter to catch the
-        increment. To avoid rewards for deposits, the rewardBase gets shifted by deposited amount (N x 32).
+        totalPooledEther is the sum of deposited and buffered values.
         */
-        const stat = await app.getEther2Stat()
-        assertBn(stat.deposited, ETH(32))
-        assertBn(stat.remote, ETH(0))
+        const stat = await app.getBeaconStat()
+        assertBn(stat.depositedValidators, 1)
+        assertBn(stat.beaconBalance, ETH(0))
         assertBn(await app.getBufferedEther(), ETH(2))
-        assertBn(await app.getTotalControlledEther(), ETH(34))
-        assertBn(await app.getRewardBase(), ETH(32))
+        assertBn(await app.getTotalPooledEther(), ETH(34))
       })
 
       it('stETH: totalSupply=34 user2=34', async () => {
         /* The initial deposit initiates the stETH token with the corresponding totalSupply
-        that is taken from lido.totalControlledEther.
+        that is taken from lido.totalPooledEther.
         Submitter's balance is equivalent to deposited Ether amount.
         */
         assertBn(await token.totalSupply(), tokens(34))
@@ -183,21 +179,18 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
           /* Let's assume node operator forgot to run validator or misconfigured it. The validator
           was a subject to slashing and lost 2 Ether of 32.
           */
-          await oracle.reportEther2(100, ETH(30))
+          await oracle.reportBeacon(100, 1, ETH(30))
         })
 
-        it('Lido: deposited=32, remote=30, buffered=2, totalControlled=32, rewBase=32', async () => {
+        it('Lido: deposited=32, remote=30, buffered=2, totalPooled=32, rewBase=32', async () => {
           /* The oracle's report changes `remote` value (was 32, became 30).
-          This affects output of totalControlledEther, that decreased by 2.
-          getRewardBase didn't change. Validators need to compensate the loss occured due to their fault
-          before receiving fees from rewards.
+          This affects output of totalPooledEther, that decreased by 2.
           */
-          const stat = await app.getEther2Stat()
-          assertBn(stat.deposited, ETH(32))
-          assertBn(stat.remote, ETH(30))
+          const stat = await app.getBeaconStat()
+          assertBn(stat.depositedValidators, 1)
+          assertBn(stat.beaconBalance, ETH(30))
           assertBn(await app.getBufferedEther(), ETH(2))
-          assertBn(await app.getTotalControlledEther(), ETH(32))
-          assertBn(await app.getRewardBase(), ETH(32))
+          assertBn(await app.getTotalPooledEther(), ETH(32))
         })
 
         it('stETH: totalSupply=32 user2=32', async () => {
@@ -220,42 +213,37 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
           One day oracle's report says that `remote` became more than initial deposit.
           It's the first point where they produced reward (initially submitted 32, now 33. Profit: 1 Ether)
           */
-            await oracle.reportEther2(200, ETH(33))
+            await oracle.reportBeacon(200, 1, ETH(33))
           })
 
-          it('Lido: deposited=32, remote=33, buffered=2, totalControlled=35, rewBase=33', async () => {
+          it('Lido: deposited=32, remote=33, buffered=2, totalPooled=35, rewBase=33', async () => {
             /* This positive oracle's report updates the `remote` value.
-            and totalControlledEther's formula gives the increased amount:
-            totalControlledEther = 34 Ether initial submission + 1 Ether reward = 35 Ether
+            and totalPooledEther's formula gives the increased amount:
+            totalPooledEther = 34 Ether initial submission + 1 Ether reward = 35 Ether
               or
-            totalControlledEther = 33 Ether remote + 2 Ether buffer = 35 Ether
-            New totalControlledEther value leads to increase of stETH.totalSupply and output of
+            totalPooledEther = 33 Ether remote + 2 Ether buffer = 35 Ether
+            New totalPooledEther value leads to increase of stETH.totalSupply and output of
             personal balances increased proportionally to holders' shares.
             */
-            const stat = await app.getEther2Stat()
-            assertBn(stat.deposited, ETH(32))
-            assertBn(stat.remote, ETH(33))
+            const stat = await app.getBeaconStat()
+            assertBn(stat.depositedValidators, 1)
+            assertBn(stat.beaconBalance, ETH(33))
             assertBn(await app.getBufferedEther(), ETH(2))
-            assertBn(await app.getTotalControlledEther(), ETH(35))
-            /*
-            then lido calculates the total reward value (remote - rewardBase) 33-32=1 Ether
-            and updates the rewardBase accordingly.
-            */
-            assertBn(await app.getRewardBase(), ETH(33))
+            assertBn(await app.getTotalPooledEther(), ETH(35))
           })
 
           it('stETH: totalSupply=35 user=34.99 treasury.003, insurance=.002, operator=.005', async () => {
             /*
-            New totalControlledEther value leads to increase of stETH.totalSupply, and output of
+            New totalPooledEther value leads to increase of stETH.totalSupply, and output of
             personal balances increased proportionally to holders' shares.
             Oracle's report also triggers fee payment that is substracted from the reward.
             The fee divides in given proportion between operators, treasury and insurance vaults.
 
             userBalance = 34.0 Ether staked
             shares = 34.0
-            totalControlledEtherInitial = 34.0 Ether
-            totalControlledEtherNew = 35.0 Ether
-            reward = totalControlledEtherNew - totalControlledEtherInitial = 1.0 Ether
+            totalPooledEtherInitial = 34.0 Ether
+            totalPooledEtherNew = 35.0 Ether
+            reward = totalPooledEtherNew - totalPooledEtherInitial = 1.0 Ether
             totalFee = reward * 0.01 = 0.01 stETH (equals to Ether)
             userGets = reward - totalFee = 0.99 stETH
             userBalance = userBalance + totalFee = 34.99
@@ -288,16 +276,15 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
 
           context('oracle reported 33 ETH (recovered then rewarded), must be same as without new operator', async () => {
             beforeEach(async function () {
-              await oracle.reportEther2(200, ETH(33))
+              await oracle.reportBeacon(200, 1, ETH(33))
             })
 
-            it('Lido: deposited=32, remote=33, buffered=2, totalControlled=35, rewBase=33', async () => {
-              const stat = await app.getEther2Stat()
-              assertBn(stat.deposited, ETH(32))
-              assertBn(stat.remote, ETH(33))
+            it('Lido: deposited=32, remote=33, buffered=2, totalPooled=35, rewBase=33', async () => {
+              const stat = await app.getBeaconStat()
+              assertBn(stat.depositedValidators, 1)
+              assertBn(stat.beaconBalance, ETH(33))
               assertBn(await app.getBufferedEther(), ETH(2))
-              assertBn(await app.getTotalControlledEther(), ETH(35))
-              assertBn(await app.getRewardBase(), ETH(33))
+              assertBn(await app.getTotalPooledEther(), ETH(35))
             })
 
             it('stETH: totalSupply=35 user=34.99 treasury=.003, insurance=.002, operator_1=.005 operator_2=0', async () => {
@@ -327,30 +314,28 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
               await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(30) })
               await app.depositBufferedEther()
 
-              await oracle.reportEther2(300, ETH(64))
+              await oracle.reportBeacon(300, 2, ETH(64))
             })
 
-            it('Lido: deposited=64, remote=64, buffered=0, totalControlled=64, rewBase=64', async () => {
-              const stat = await app.getEther2Stat()
-              assertBn(stat.deposited, ETH(64))
-              assertBn(stat.remote, ETH(64))
+            it('Lido: deposited=64, remote=64, buffered=0, totalPooled=64, rewBase=64', async () => {
+              const stat = await app.getBeaconStat()
+              assertBn(stat.depositedValidators, 1)
+              assertBn(stat.beaconBalance, ETH(64))
               assertBn(await app.getBufferedEther(), ETH(0))
-              assertBn(await app.getTotalControlledEther(), ETH(64))
-              assertBn(await app.getRewardBase(), ETH(64))
+              assertBn(await app.getTotalPooledEther(), ETH(64))
             })
 
             context('oracle reported 66 ETH (rewarded 2 Ether)', async () => {
               beforeEach(async function () {
-                await oracle.reportEther2(400, ETH(66))
+                await oracle.reportBeacon(400, 2, ETH(66))
               })
 
-              it('Lido: deposited=64, remote=66, buffered=0, totalControlled=66, rewBase=66', async () => {
-                const stat = await app.getEther2Stat()
-                assertBn(stat.deposited, ETH(64))
-                assertBn(stat.remote, ETH(66))
+              it('Lido: deposited=64, remote=66, buffered=0, totalPooled=66, rewBase=66', async () => {
+                const stat = await app.getBeaconStat()
+                assertBn(stat.depositedValidators, ETH(64))
+                assertBn(stat.beaconBalance, ETH(66))
                 assertBn(await app.getBufferedEther(), ETH(0))
-                assertBn(await app.getTotalControlledEther(), ETH(66))
-                assertBn(await app.getRewardBase(), ETH(66))
+                assertBn(await app.getTotalPooledEther(), ETH(66))
               })
 
               it('stETH: totalSupply=66 user=65.98 treasury.006, insurance=.004, operators=.010', async () => {
@@ -379,30 +364,28 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
                 await operators.addSigningKeys(0, 1, hexConcat(pad('0x01020b', 48)), hexConcat(pad('0x01', 96)), { from: voting })
                 await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(32) })
                 await app.depositBufferedEther()
-                await oracle.reportEther2(500, ETH(96))
+                await oracle.reportBeacon(500, 3, ETH(96))
               })
 
-              it('Lido: deposited=96, remote=96, buffered=0, totalControlled=96, rewBase=96', async () => {
-                const stat = await app.getEther2Stat()
-                assertBn(stat.deposited, ETH(96))
-                assertBn(stat.remote, ETH(96))
+              it('Lido: deposited=96, remote=96, buffered=0, totalPooled=96, rewBase=96', async () => {
+                const stat = await app.getBeaconStat()
+                assertBn(stat.depositedValidators, 3)
+                assertBn(stat.beaconBalance, ETH(96))
                 assertBn(await app.getBufferedEther(), ETH(0))
-                assertBn(await app.getTotalControlledEther(), ETH(96))
-                assertBn(await app.getRewardBase(), ETH(96))
+                assertBn(await app.getTotalPooledEther(), ETH(96))
               })
 
               context('oracle reported 100 ETH (rewarded 4 Ether)', async () => {
                 beforeEach(async function () {
-                  await oracle.reportEther2(600, ETH(100))
+                  await oracle.reportBeacon(600, 3, ETH(100))
                 })
 
-                it('Lido: deposited=96, remote=100, buffered=0, totalControlled=100, rewBase=100', async () => {
-                  const stat = await app.getEther2Stat()
-                  assertBn(stat.deposited, ETH(96))
-                  assertBn(stat.remote, ETH(100))
+                it('Lido: deposited=96, remote=100, buffered=0, totalPooled=100, rewBase=100', async () => {
+                  const stat = await app.getBeaconStat()
+                  assertBn(stat.depositedValidators, ETH(96))
+                  assertBn(stat.beaconBalance, ETH(100))
                   assertBn(await app.getBufferedEther(), ETH(0))
-                  assertBn(await app.getTotalControlledEther(), ETH(100))
-                  assertBn(await app.getRewardBase(), ETH(100))
+                  assertBn(await app.getTotalPooledEther(), ETH(100))
                 })
 
                 it('stETH: totalSupply=100 user=99.96 treasury=.012, insurance=.008, operators=.020', async () => {
@@ -437,16 +420,16 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
         beforeEach(async function () {
           // must be several signing keys for that case
           await operators.addSigningKeys(0, 1, hexConcat(pad('0x020203', 48)), hexConcat(pad('0x01', 96)), { from: voting })
-          await oracle.reportEther2(200, ETH(66))
+          await oracle.reportBeacon(200, 2, ETH(66))
         })
 
-        it('Lido: deposited=32, remote=66, buffered=2, totalControlled=68, rewBase=66', async () => {
+        it('Lido: deposited=32, remote=66, buffered=2, totalPooled=68, rewBase=66', async () => {
           /*
           userBalance = 34.0 Ether staked
           shares = 34.0
-          totalControlledEtherInitial = 34.0 Ether
-          totalControlledEtherNew = 68.0 Ether (66 remote + 2 buffer)
-          reward = totalControlledEtherNew - totalControlledEtherInitial = 34.0 Ether
+          totalPooledEtherInitial = 34.0 Ether
+          totalPooledEtherNew = 68.0 Ether (66 remote + 2 buffer)
+          reward = totalPooledEtherNew - totalPooledEtherInitial = 34.0 Ether
           totalFee = reward * 0.01 = 0.34 stETH
           userGets = reward - totalFee = 33.66 stETH
           userBalance = userBalance + reward - totalFee = 67.66 stETH
@@ -454,12 +437,11 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
           insuranceBalance = totalFee * 0.2 = 0.068
           operatorsBalance = totalFee * 0.5 = 0.17
           */
-          const stat = await app.getEther2Stat()
-          assertBn(stat.deposited, ETH(32))
-          assertBn(stat.remote, ETH(66))
+          const stat = await app.getBeaconStat()
+          assertBn(stat.depositedValidators, 1)
+          assertBn(stat.beaconBalance, ETH(66))
           assertBn(await app.getBufferedEther(), ETH(2))
-          assertBn(await app.getTotalControlledEther(), ETH(68))
-          assertBn(await app.getRewardBase(), ETH(66))
+          assertBn(await app.getTotalPooledEther(), ETH(68))
         })
 
         it('stETH: totalSupply=68 user=67.66 treasury=.102, insurance=.068, operators=.17', async () => {
@@ -485,13 +467,12 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
             await app.depositBufferedEther()
           })
 
-          it('Lido: deposited=64, remote=66, buffered=4, totalControlled=70, rewBase=98', async () => {
-            const stat = await app.getEther2Stat()
-            assertBn(stat.deposited, ETH(64)) // two submissions: 32 + 32
-            assertBn(stat.remote, ETH(66)) // first submission (32) propagated to eth2 and rewarded +34
+          it('Lido: deposited=64, remote=66, buffered=4, totalPooled=70, rewBase=98', async () => {
+            const stat = await app.getBeaconStat()
+            assertBn(stat.depositedValidators, 2) // two submissions: 32 + 32
+            assertBn(stat.beaconBalance, ETH(66)) // first submission (32) propagated to eth2 and rewarded +34
             assertBn(await app.getBufferedEther(), ETH(4)) // remainders of first (34-32) and second (34-32) submissions
-            assertBn(await app.getTotalControlledEther(), ETH(70)) // remote + buffer
-            assertBn(await app.getRewardBase(), ETH(98)) // was 66, then added 32 on second submit
+            assertBn(await app.getTotalPooledEther(), ETH(70)) // remote + buffer
           })
 
           it('stETH: totalSupply=70 user2=46.4(3) user3=23.3(3) treasury=.07, insurance=.04(6), operators=.11(6)', async () => {
@@ -514,16 +495,15 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
 
           context('oracle reports 98 ETH (66 existing + 32 new). No rewards at this point', async () => {
             beforeEach(async function () {
-              await oracle.reportEther2(300, ETH(98))
+              await oracle.reportBeacon(300, 3, ETH(98))
             })
 
-            it('Lido: deposited=64, remote=98, buffered=4, totalControlled=102, rewBase=98', async () => {
-              const stat = await app.getEther2Stat()
-              assertBn(stat.deposited, ETH(64))
-              assertBn(stat.remote, ETH(98))
+            it('Lido: deposited=64, remote=98, buffered=4, totalPooled=102, rewBase=98', async () => {
+              const stat = await app.getBeaconStat()
+              assertBn(stat.depositedValidators, 2)
+              assertBn(stat.beaconBalance, ETH(98))
               assertBn(await app.getBufferedEther(), ETH(4))
-              assertBn(await app.getTotalControlledEther(), ETH(102))
-              assertBn(await app.getRewardBase(), ETH(98)) // was 66, added 32 on submit
+              assertBn(await app.getTotalPooledEther(), ETH(102))
             })
 
             it('stETH: totalSupply=102 user2=67.66 user3=34 treasury=.102, insurance=.068, operators=.17', async () => {

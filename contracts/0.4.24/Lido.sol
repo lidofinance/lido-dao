@@ -53,19 +53,14 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     bytes32 internal constant ORACLE_VALUE_POSITION = keccak256("lido.Lido.oracle");
     bytes32 internal constant NODE_OPERATOR_REGISTRY_VALUE_POSITION = keccak256("lido.Lido.nodeOperatorRegistry");
 
-    /// @dev A base value for tracking earned rewards
-    bytes32 internal constant REWARD_BASE_VALUE_POSITION = keccak256("lido.Lido.rewardBase");
-
     /// @dev amount of Ether (on the current Ethereum side) buffered on this smart contract balance
     bytes32 internal constant BUFFERED_ETHER_VALUE_POSITION = keccak256("lido.Lido.bufferedEther");
-    /// @dev amount of Ether (on the current Ethereum side) deposited to the validator_registration.vy contract
-    bytes32 internal constant DEPOSITED_ETHER_VALUE_POSITION = keccak256("lido.Lido.depositedEther");
-    /// @dev amount of Ether (on the Ethereum 2.0 side) managed by the system
-    bytes32 internal constant REMOTE_ETHER2_VALUE_POSITION = keccak256("lido.Lido.remoteEther2");
-
-    /// @dev last epoch reported by the oracle
-    bytes32 internal constant LAST_ORACLE_EPOCH_VALUE_POSITION = keccak256("lido.Lido.lastOracleEpoch");
-
+    /// @dev number of deposited validators (incrementing counter of deposit operations).
+    bytes32 internal constant DEPOSITED_VALIDATORS_VALUE_POSITION = keccak256("lido.Lido.depositedValidators");
+    /// @dev total amount of Beacon-side Ether (sum of all the balances of Lido validators)
+    bytes32 internal constant BEACON_BALANCE_VALUE_POSITION = keccak256("lido.Lido.beaconBalance");
+    /// @dev number of Lido's validators available in the Beacon state
+    bytes32 internal constant BEACON_VALIDATORS_VALUE_POSITION = keccak256("lido.Lido.beaconValidators"); 
     /// @dev maximum number of Ethereum 2.0 validators registered in a single transaction
     bytes32 internal constant DEPOSIT_ITERATION_LIMIT_VALUE_POSITION = keccak256("lido.Lido.depositIterationLimit");
 
@@ -174,7 +169,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
 
     /**
       * @notice Set authorized oracle contract address to `_oracle`
-      * @dev Contract specified here must periodically make `reportEther2` calls.
+      * @dev Contract specified here must periodically make `pushBeacon` calls.
       */
     function setOracle(address _oracle) external auth(SET_ORACLE) {
         _setOracle(_oracle);
@@ -212,24 +207,30 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @notice Ether on the ETH 2.0 side reported by the oracle
-      * @param _eth2balance Balance in wei on the ETH 2.0 side
+      * @notice pushBeacon called by the Oracle contract. Pushed the number of 
+      *         Lido-controlled keys in the beacon validators list and their total balance. 
+      * @param _beaconValidators - number of Lido's keys in the beacon state
+      * @param _beaconBalance - simmarized balance in wei
       */
-    function reportEther2(uint256 _epoch, uint256 _eth2balance) external {
+    function pushBeacon(uint256 _beaconValidators, uint256 _beaconBalance) external {
         require(msg.sender == getOracle(), "APP_AUTH_FAILED");
-        require(0 != _epoch, "ZERO_EPOCH");
 
-        if (_epoch <= LAST_ORACLE_EPOCH_VALUE_POSITION.getStorageUint256())
-            return; // ignore old data
+        uint256 depositedValidators = DEPOSITED_VALIDATORS_VALUE_POSITION.getStorageUint256();
+        require(_beaconValidators <= depositedValidators, "REPORTED_MORE_DEPOSITED");
 
-        LAST_ORACLE_EPOCH_VALUE_POSITION.setStorageUint256(_epoch);
-        REMOTE_ETHER2_VALUE_POSITION.setStorageUint256(_eth2balance);
+        uint256 appearedValidators = _beaconValidators.sub(BEACON_VALIDATORS_VALUE_POSITION.getStorageUint256());
 
-        // Calculating real amount of rewards
-        uint256 rewardBase = REWARD_BASE_VALUE_POSITION.getStorageUint256();
-        if (_eth2balance > rewardBase) {
-            uint256 rewards = _eth2balance.sub(rewardBase);
-            REWARD_BASE_VALUE_POSITION.setStorageUint256(_eth2balance);
+        // RewardBase is the amount of money that is not included in the reward calculation
+        // Just appeared validators * 32 added to the previously reported beacon balance
+        uint256 rewardBase = (appearedValidators.mul(DEPOSIT_SIZE)).add(BEACON_BALANCE_VALUE_POSITION.getStorageUint256());
+
+        // Save the current beacon balance and validators to
+        // calcuate rewards on the next push
+        BEACON_BALANCE_VALUE_POSITION.setStorageUint256(_beaconBalance);
+        BEACON_VALIDATORS_VALUE_POSITION.setStorageUint256(_beaconValidators);
+
+        if (_beaconBalance > rewardBase) {
+            uint256 rewards = _beaconBalance.sub(rewardBase);
             distributeRewards(rewards);
         }
     }
@@ -295,8 +296,8 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     /**
       * @notice Gets the amount of Ether controlled by the system
       */
-    function getTotalControlledEther() external view returns (uint256) {
-        return _getTotalControlledEther();
+    function getTotalPooledEther() external view returns (uint256) {
+        return _getTotalPooledEther();
     }
 
     /**
@@ -328,14 +329,6 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @notice Returns the value against which the next reward will be calculated
-      * This method can be discarded in the future
-      */
-    function getRewardBase() public view returns (uint256) {
-        return REWARD_BASE_VALUE_POSITION.getStorageUint256();
-    }
-
-    /**
       * @notice Gets node operators registry interface handle
       */
     function getOperators() public view returns (INodeOperatorsRegistry) {
@@ -360,13 +353,15 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @notice Gets the stat of the system's Ether on the Ethereum 2 side
-      * @return deposited Amount of Ether deposited from the current Ethereum
-      * @return remote Amount of Ether currently present on the Ethereum 2 side (can be 0 if the Ethereum 2 is yet to be launch
+      * @notice Returns the key values related to Beacon-side
+      * @return depositedValidators - number of deposited validators
+      * @return beaconValidators - number of Lido's validators visible in the Beacon state, reported by oracles
+      * @return beaconBalance - total amount of Beacon-side Ether (sum of all the balances of Lido validators)
       */
-    function getEther2Stat() public view returns (uint256 deposited, uint256 remote) {
-        deposited = DEPOSITED_ETHER_VALUE_POSITION.getStorageUint256();
-        remote = REMOTE_ETHER2_VALUE_POSITION.getStorageUint256();
+    function getBeaconStat() public view returns (uint256 depositedValidators, uint256 beaconValidators, uint256 beaconBalance) {
+        depositedValidators = DEPOSITED_VALIDATORS_VALUE_POSITION.getStorageUint256();
+        beaconValidators = BEACON_VALIDATORS_VALUE_POSITION.getStorageUint256();
+        beaconBalance = BEACON_BALANCE_VALUE_POSITION.getStorageUint256();
     }
 
     /**
@@ -501,13 +496,12 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
             _stake(key, signature);
         }
 
-        uint256 deposited = totalDepositCalls.mul(DEPOSIT_SIZE);
-        if (0 != deposited) {
-            REWARD_BASE_VALUE_POSITION.setStorageUint256(REWARD_BASE_VALUE_POSITION.getStorageUint256().add(deposited));
+        if (0 != totalDepositCalls) {
+            DEPOSITED_VALIDATORS_VALUE_POSITION.setStorageUint256(DEPOSITED_VALIDATORS_VALUE_POSITION.getStorageUint256().add(totalDepositCalls));
             _write_back_operator_cache(cache);
         }
 
-        return deposited;
+        return totalDepositCalls.mul(DEPOSIT_SIZE);
     }
 
     /**
@@ -623,8 +617,6 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
       * @param _amount Total amount deposited to the ETH 2.0 side
       */
     function _markAsUnbuffered(uint256 _amount) internal {
-        DEPOSITED_ETHER_VALUE_POSITION.setStorageUint256(
-            DEPOSITED_ETHER_VALUE_POSITION.getStorageUint256().add(_amount));
         BUFFERED_ETHER_VALUE_POSITION.setStorageUint256(
             BUFFERED_ETHER_VALUE_POSITION.getStorageUint256().sub(_amount));
 
@@ -711,22 +703,27 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @dev Returns true if the oracle ever provided data
+      * @dev Calculates and returns the total base balance (multiple of 32) of validators in transient state,
+      *      i.e. submitted to the official Deposit contract but not yet visible in the beacon state.
+      *      Nominated in wei (1e-18 Ether).
       */
-    function _hasOracleData() internal view returns (bool) {
-        return 0 != LAST_ORACLE_EPOCH_VALUE_POSITION.getStorageUint256();
+    function _getTransientBalance() internal view returns (uint256) {
+      uint256 depositedValidators = DEPOSITED_VALIDATORS_VALUE_POSITION.getStorageUint256();
+      uint256 beaconValidators = BEACON_VALIDATORS_VALUE_POSITION.getStorageUint256();
+      // beaconValidators can never be less than deposited ones.
+      assert(depositedValidators >= beaconValidators);
+      uint256 transientValidators = depositedValidators.sub(beaconValidators);
+      return (transientValidators.mul(DEPOSIT_SIZE));
     }
 
     /**
-      * @dev Gets the amount of Ether controlled by the system
+      * @dev Gets the total amount of Ether controlled by the system
       */
-    function _getTotalControlledEther() internal view returns (uint256) {
-        uint256 remote = REMOTE_ETHER2_VALUE_POSITION.getStorageUint256();
-        // Until the oracle provides data, we assume that all staked ether is intact.
-        uint256 deposited = DEPOSITED_ETHER_VALUE_POSITION.getStorageUint256();
-        uint256 assets = _getBufferedEther().add(_hasOracleData() ? remote : deposited);
-
-        return assets;
+    function _getTotalPooledEther() internal view returns (uint256) {
+        uint256 bufferedBalance = _getBufferedEther();
+        uint256 beaconBalance = BEACON_BALANCE_VALUE_POSITION.getStorageUint256();
+        uint256 transientBalance = _getTransientBalance();
+        return(bufferedBalance.add(beaconBalance).add(transientBalance));
     }
 
     function _load_operator_cache() internal view returns (DepositLookupCacheEntry[] memory cache) {

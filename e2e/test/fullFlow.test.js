@@ -172,35 +172,35 @@ test('Full flow test ', async (t) => {
   let user1Deposit = ETH(2)
   t.is(await stEthHelper.getBalance(user1), ETH(2), 'Check that user receive an appropriate amount of stEth tokens')
   t.is(await lidoHelper.getBufferedEther(), ETH(2), 'Buffered ether in Lido')
-  t.is(await lidoHelper.getTotalControlledEther(), ETH(2), 'Total controlled ether in Lido')
+  t.is(await lidoHelper.getTotalPooledEther(), ETH(2), 'Total pooled ether in Lido')
 
   logger.info('Deposit 30 ETH to Lido via Lido from user1')
   await lidoHelper.depositToLidoContract(user1, ETH(30))
   user1Deposit = (+user1Deposit + +ETH(30)).toString()
   t.is(await stEthHelper.getBalance(user1), user1Deposit, 'Check that user receive an appropriate amount of stEth tokens')
   t.is(await lidoHelper.getBufferedEther(), '0', 'Buffered ether in Lido')
-  t.is(await lidoHelper.getTotalControlledEther(), ETH(32), 'Total controlled ether in Lido')
+  t.is(await lidoHelper.getTotalPooledEther(), ETH(32), 'Total pooled ether in Lido')
 
   logger.info('Deposit 2 ETH to Lido via Lido from user2')
   await lidoHelper.depositToLidoContract(user2, ETH(2))
   let user2Deposit = ETH(2)
   t.is(await stEthHelper.getBalance(user2), ETH(2), 'Check that user receive an appropriate amount of stEth tokens')
   t.is(await lidoHelper.getBufferedEther(), ETH(2), 'Buffered ether in Lido')
-  t.is(await lidoHelper.getTotalControlledEther(), ETH(34), 'Total controlled ether in Lido')
+  t.is(await lidoHelper.getTotalPooledEther(), ETH(34), 'Total pooled ether in Lido')
 
   logger.info('Deposit 32 ETH to Lido via Lido  from user2')
   user2Deposit = (+user2Deposit + +ETH(32)).toString()
   await lidoHelper.depositToLidoContract(user2, ETH(32))
   t.is(await stEthHelper.getBalance(user2), user2Deposit, 'Check that user receive an appropriate amount of stEth tokens')
   t.is(await lidoHelper.getBufferedEther(), ETH(2), 'Buffered ether in Lido')
-  t.is(await lidoHelper.getTotalControlledEther(), ETH(66), 'Total controlled ether in Lido')
+  t.is(await lidoHelper.getTotalPooledEther(), ETH(66), 'Total pooled ether in Lido')
 
   logger.info('Deposit 222 ETH to Lido via Lido from user3')
   await lidoHelper.depositToLidoContract(user3, ETH(222))
   let user3Deposit = ETH(222)
   t.is(await stEthHelper.getBalance(user3), user3Deposit, 'Check that user receive an appropriate amount of stEth tokens')
   t.is(await lidoHelper.getBufferedEther(), '0', 'Buffered ether in Lido')
-  t.is(await lidoHelper.getTotalControlledEther(), ETH(288), 'Total controlled ether in Lido')
+  t.is(await lidoHelper.getTotalPooledEther(), ETH(288), 'Total pooled ether in Lido')
 
   logger.info('Deposit 32 ETH via validators deposit contract from user4')
   const depositData = getDataToPerformDepositContract('validators1')
@@ -217,12 +217,13 @@ test('Full flow test ', async (t) => {
   logger.info('Deposit 288 ETH to Lido via Lido from user3')
   await lidoHelper.depositToLidoContract(user3, ETH(288))
   user3Deposit = (+user3Deposit + +ETH(288)).toString()
-  let ether2Stat = await lidoHelper.getEther2Stat()
+
+  let ether2Stat = await lidoHelper.getBeaconStat()
   let usersDeposits = (+user1Deposit + +user2Deposit + +user3Deposit).toString()
   t.is(await stEthHelper.getBalance(user3), user3Deposit, 'Check that user receive an appropriate amount of stEth tokens')
   t.is(await lidoHelper.getBufferedEther(), '0', 'Buffered ether in Lido')
-  t.is(await lidoHelper.getTotalControlledEther(), usersDeposits, 'Total controlled ether in Lido')
-  t.is(await ether2Stat.deposited, usersDeposits, 'Check that the ether2 stat is changed correctly')
+  t.is(await lidoHelper.getTotalPooledEther(), usersDeposits, 'Total pooled ether in Lido')
+  t.is(await ether2Stat.depositedValidators, usersDeposits, 'Check that the ether2 stat is changed correctly')
 
   logger.info('Chek that the staking providers keys became using')
   operator1 = await nodeOperatorsHelper.getNodeOperator(0, true)
@@ -368,7 +369,7 @@ test('Full flow test ', async (t) => {
   logger.info('Check deposit iteration limit')
   const user5Deposit = ETH(20 * 32)
   await lidoHelper.depositToLidoContract(user5, user5Deposit)
-  ether2Stat = await lidoHelper.getEther2Stat()
+  ether2Stat = await lidoHelper.getBeaconStat()
   t.is(await stEthHelper.getBalance(user5), user5Deposit, 'Check that user receive an appropriate amount of stEth tokens')
   t.is(
     await lidoHelper.getBufferedEther(),
@@ -377,30 +378,31 @@ test('Full flow test ', async (t) => {
   )
   // When oracle`s push data was submitted at the first time,
   // the total  total controlled ether is changing after next oracle pushData,
-  // but buffered ether is displaying in total controlled ether
+  // but buffered ether is displaying in total pooled ether
   t.is(
-    await lidoHelper.getTotalControlledEther(),
+    await lidoHelper.getTotalPooledEther(),
     BN(oracleData)
       .add(BN(ETH(4 * 32)))
       .toString(),
-    'Check that the total controlled ether in Lido is correct'
+    'Check that the total pooled ether in Lido is correct'
   )
   t.is(
-    ether2Stat.deposited,
+    ether2Stat.depositedValidators,
     BN(usersDeposits)
       .add(BN(ETH(16 * 32)))
       .toString()
   )
 
   logger.info('Check that the rest of buffered Ether in the pool can be submitted')
+
   await lidoHelper.depositBufferedEther(user5)
   operator4 = await nodeOperatorsHelper.getNodeOperator(3, true)
-  ether2Stat = await lidoHelper.getEther2Stat()
+  ether2Stat = await lidoHelper.getBeaconStat()
   usersDeposits = BN(usersDeposits).add(BN(user5Deposit))
   t.is(await lidoHelper.getBufferedEther(), '0', 'Check that the rest of buffered Ether became became active')
   t.is(operator4.usedSigningKeys, '20', 'nodeOperators4 signing keys became using')
   t.is(await nodeOperatorsHelper.getUnusedSigningKeyCount(3), '20', 'Check unused nodeOperator4 keys')
-  t.is(ether2Stat.deposited, usersDeposits.toString(), 'Check that the Ether was deposited after submit buffered ether')
+  t.is(ether2Stat.depositedValidators, usersDeposits.toString(), 'Check that the Ether was deposited after submit buffered ether')
 
   logger.info('Wait for validators activation')
   await waitFor(150)
@@ -421,8 +423,8 @@ test('Full flow test ', async (t) => {
 
   logger.info('Push data and check that the deactivated provider balance not changed')
   oracleData = ETH(2000)
-  ether2Stat = await lidoHelper.getEther2Stat()
-  stakeProfit = BN(oracleData).sub(BN(ether2Stat.deposited)).sub(BN(validatorsReward)).toString()
+  ether2Stat = await lidoHelper.getBeaconStat()
+  stakeProfit = BN(oracleData).sub(BN(ether2Stat.depositedValidators)).sub(BN(validatorsReward)).toString()
   validatorsReward = stakeProfit
   totalUsedSigningKeys = await nodeOperatorsHelper.getTotalActiveKeysCount()
   operator1BalanceBeforePushData = await stEthHelper.getBalance(nosMember1)
@@ -509,10 +511,9 @@ test('Full flow test ', async (t) => {
 
   logger.info('Check that the validators do not activate if there are no unused signing keys')
   await lidoHelper.depositToLidoContract(user2, ETH(64))
-  ether2Stat = await lidoHelper.getEther2Stat()
-  t.is(ether2Stat.deposited, usersDeposits.toString(), 'Check that the deposit not performed')
+  ether2Stat = await lidoHelper.getBeaconStat()
+  t.is(ether2Stat.depositedValidators, usersDeposits.toString(), 'Check that the deposit not performed')
   t.is(await lidoHelper.getBufferedEther(), ETH(64), 'Check that the deposited Ether is buffered due to no unused keys')
-
   // TODO Test insurance (pending for the actual insurance)
   t.pass()
 })
