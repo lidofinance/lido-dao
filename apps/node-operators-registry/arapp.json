@@ -50,11 +50,6 @@
          "Node Operator id",
          "Stopped validators increment"
       ]
-    },
-    {
-      "name": "Sets the pool address",
-      "id": "SET_POOL",
-      "params": []
     }
   ],
   "environments": {

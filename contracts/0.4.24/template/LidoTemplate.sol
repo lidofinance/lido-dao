@@ -107,16 +107,6 @@ contract LidoTemplate is BaseTemplate {
         // revert the cells back to get a refund
         _resetStorage();
 
-        // oracle setPool
-        _createPermissionForTemplate(apps.acl, apps.oracle, apps.oracle.SET_POOL());
-        apps.oracle.setPool(apps.lido);
-        _removePermissionFromTemplate(apps.acl, apps.oracle, apps.oracle.SET_POOL());
-
-        // NodeOperatorsRegistry setPool
-        _createPermissionForTemplate(apps.acl, apps.operators, apps.operators.SET_POOL());
-        apps.operators.setPool(apps.lido);
-        _removePermissionFromTemplate(apps.acl, apps.operators, apps.operators.SET_POOL());
-
         _mintTokens(apps.acl, apps.tokenManager, _holders, _stakes);
         _setupPermissions(apps);
         _transferRootPermissionsFromTemplateAndFinalizeDAO(apps.dao, apps.voting);
@@ -139,11 +129,7 @@ contract LidoTemplate is BaseTemplate {
         // skipping StETH initialization for now, will call it manually later since we need the pool
         bytes memory initializeData = new bytes(0);
         apps.steth = StETH(_installNonDefaultApp(apps.dao, STETH_APP_ID, initializeData));
-
-        initializeData = abi.encodeWithSelector(LidoOracle(0).initialize.selector);
         apps.oracle = LidoOracle(_installNonDefaultApp(apps.dao, LIDOORACLE_APP_ID, initializeData));
-
-        initializeData = abi.encodeWithSelector(NodeOperatorsRegistry(0).initialize.selector);
         apps.operators = NodeOperatorsRegistry(_installNonDefaultApp(apps.dao, REGISTRY_APP_ID, initializeData));
 
         initializeData = abi.encodeWithSelector(
@@ -157,6 +143,8 @@ contract LidoTemplate is BaseTemplate {
         apps.lido = Lido(_installNonDefaultApp(apps.dao, LIDO_APP_ID, initializeData));
 
         apps.steth.initialize(apps.lido);
+        apps.oracle.initialize(apps.lido);
+        apps.operators.initialize(apps.lido);
     }
 
     function _setupPermissions(DeployedApps memory apps) internal {
@@ -177,7 +165,6 @@ contract LidoTemplate is BaseTemplate {
         apps.acl.createPermission(apps.voting, apps.oracle, apps.oracle.MANAGE_MEMBERS(), apps.voting);
         apps.acl.createPermission(apps.voting, apps.oracle, apps.oracle.MANAGE_QUORUM(), apps.voting);
         apps.acl.createPermission(apps.voting, apps.oracle, apps.oracle.SET_REPORT_INTERVAL_DURATION(), apps.voting);
-        apps.acl.createPermission(apps.voting, apps.oracle, apps.oracle.SET_POOL(), apps.voting);
 
         // NodeOperatorsRegistry
         apps.acl.createPermission(apps.voting, apps.operators, apps.operators.MANAGE_SIGNING_KEYS(), apps.voting);
@@ -187,7 +174,6 @@ contract LidoTemplate is BaseTemplate {
         apps.acl.createPermission(apps.voting, apps.operators, apps.operators.SET_NODE_OPERATOR_ADDRESS_ROLE(), apps.voting);
         apps.acl.createPermission(apps.voting, apps.operators, apps.operators.SET_NODE_OPERATOR_LIMIT_ROLE(), apps.voting);
         apps.acl.createPermission(apps.voting, apps.operators, apps.operators.REPORT_STOPPED_VALIDATORS_ROLE(), apps.voting);
-        apps.acl.createPermission(apps.voting, apps.operators, apps.operators.SET_POOL(), apps.voting);
 
         // Pool
         apps.acl.createPermission(apps.voting, apps.lido, apps.lido.PAUSE_ROLE(), apps.voting);
