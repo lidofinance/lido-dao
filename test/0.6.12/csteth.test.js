@@ -20,7 +20,7 @@ contract('CstETH', function ([deployer, initialHolder, recipient, anotherAccount
     beforeEach(async function () {
       await this.steth.mint(user1, new BN(100), { from: deployer })
       await this.steth.setTotalShares(new BN(100), { from: deployer })
-      await this.steth.setTotalControlledEther(new BN(100), { from: deployer })
+      await this.steth.setTotalPooledEther(new BN(100), { from: deployer })
 
       await this.steth.approve(this.csteth.address, 50, { from: user1 })
       expect(await this.steth.allowance(user1, this.csteth.address)).to.be.bignumber.equal('50')
@@ -104,7 +104,7 @@ contract('CstETH', function ([deployer, initialHolder, recipient, anotherAccount
           beforeEach(async function () {
             await this.steth.mint(user2, new BN(100), { from: deployer })
             await this.steth.setTotalShares(new BN(200), { from: deployer })
-            await this.steth.setTotalControlledEther(new BN(200), { from: deployer })
+            await this.steth.setTotalPooledEther(new BN(200), { from: deployer })
 
             await this.steth.approve(this.csteth.address, 50, { from: user2 })
             expect(await this.steth.allowance(user2, this.csteth.address)).to.be.bignumber.equal('50')
@@ -139,7 +139,7 @@ contract('CstETH', function ([deployer, initialHolder, recipient, anotherAccount
           // simulate rewarding by minting
           await this.steth.mint(user1, new BN(5), { from: deployer }) // +10%
           await this.steth.mint(this.csteth.address, new BN(5), { from: deployer }) // +10%
-          await this.steth.setTotalControlledEther(new BN(110), { from: deployer }) // +10%
+          await this.steth.setTotalPooledEther(new BN(110), { from: deployer }) // +10%
         })
 
         it('after partial unwrap balances are correct', async function () {
@@ -167,7 +167,7 @@ contract('CstETH', function ([deployer, initialHolder, recipient, anotherAccount
             // simulate submission maths
             await this.steth.mint(user2, new BN(100), { from: deployer })
             await this.steth.setTotalShares(new BN(190), { from: deployer })
-            await this.steth.setTotalControlledEther(new BN(210), { from: deployer })
+            await this.steth.setTotalPooledEther(new BN(210), { from: deployer })
 
             await this.steth.approve(this.csteth.address, 50, { from: user2 })
             expect(await this.steth.allowance(user2, this.csteth.address)).to.be.bignumber.equal('50')
@@ -234,7 +234,7 @@ contract('CstETH', function ([deployer, initialHolder, recipient, anotherAccount
           // simulate slashing by burning
           await this.steth.slash(user1, new BN(5), { from: deployer }) // -10%
           await this.steth.slash(this.csteth.address, new BN(5), { from: deployer }) // -10%
-          await this.steth.setTotalControlledEther(new BN(90), { from: deployer }) // -10%
+          await this.steth.setTotalPooledEther(new BN(90), { from: deployer }) // -10%
         })
 
         it('after partial unwrap balances are correct', async function () {

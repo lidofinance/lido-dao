@@ -59,14 +59,14 @@ function initializeState() {
       // feeDistribution: await getFeeDistribution(),
       withdrawalCredentials: await getWithdrawalCredentials(),
       bufferedEther: await getBufferedEther(),
-      totalControlledEther: await getTotalControlledEther(),
+      totalPooledEther: await getTotalPooledEther(),
       token: await getToken(),
       validatorRegistrationContract: await getValidatorRegistrationContract(),
       oracle: await getOracle(),
       // operators: await getOperators(),
       // treasury: await getTreasury(),
       // insuranceFund: await getInsuranceFund(),
-      ether2Stat: await getEther2Stat(),
+      ether2Stat: await getBeaconStat(),
     }
   }
 }
@@ -92,8 +92,8 @@ async function getBufferedEther() {
   return fromWei(await app.call('getBufferedEther').toPromise())
 }
 
-async function getTotalControlledEther() {
-  return fromWei(await app.call('getTotalControlledEther').toPromise())
+async function getTotalPooledEther() {
+  return fromWei(await app.call('getTotalPooledEther').toPromise())
 }
 
 async function getToken() {
@@ -120,10 +120,10 @@ async function getOracle() {
 //   return await app.call('getInsuranceFund').toPromise()
 // }
 
-async function getEther2Stat() {
-  const stat = await app.call('getEther2Stat').toPromise()
+async function getBeaconStat() {
+  const stat = await app.call('getBeaconStat').toPromise()
   return {
-    Deposited: fromWei(stat.deposited),
-    Remote: fromWei(stat.remote),
+    Deposited: fromWei(stat.depositedValidators),
+    Remote: fromWei(stat.beaconBalance),
   }
 }

@@ -14,7 +14,7 @@ const defaultState = {
   feeDistribution: defaultValue,
   withdrawalCredentials: defaultValue,
   bufferedEther: defaultValue,
-  totalControlledEther: defaultValue,
+  totalPooledEther: defaultValue,
   token: defaultValue,
   validatorRegistrationContract: defaultValue,
   oracle: defaultValue,

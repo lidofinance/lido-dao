@@ -78,7 +78,7 @@ interface ILido {
       * @param _epoch Epoch id
       * @param _eth2balance Balance in wei on the ETH 2.0 side
       */
-    function reportEther2(uint256 _epoch, uint256 _eth2balance) external;
+    function pushBeacon(uint256 _epoch, uint256 _eth2balance) external;
 
 
     // User functions
@@ -113,7 +113,7 @@ interface ILido {
     /**
       * @notice Gets the amount of Ether controlled by the system
       */
-    function getTotalControlledEther() external view returns (uint256);
+    function getTotalPooledEther() external view returns (uint256);
 
     /**
       * @notice Gets the amount of Ether temporary buffered on this contract balance
@@ -121,9 +121,10 @@ interface ILido {
     function getBufferedEther() external view returns (uint256);
 
     /**
-      * @notice Gets the stat of the system's Ether on the Ethereum 2 side
-      * @return deposited Amount of Ether deposited from the current Ethereum
-      * @return remote Amount of Ether currently present on the Ethereum 2 side (can be 0 if the Ethereum 2 is yet to be launched)
+      * @notice Returns the key values related to Beacon-side
+      * @return depositedValidators - number of deposited validators
+      * @return beaconValidators - number of Lido's validators visible in the Beacon state, reported by oracles
+      * @return beaconBalance - total amount of Beacon-side Ether (sum of all the balances of Lido validators)
       */
-    function getEther2Stat() external view returns (uint256 deposited, uint256 remote);
+    function getBeaconStat() external view returns (uint256 depositedValidators, uint256 beaconValidators, uint256 beaconBalance);
 }
