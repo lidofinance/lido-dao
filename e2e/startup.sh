@@ -43,11 +43,11 @@ while test $# -gt 0; do
       echo "options:"
       echo "  -h | --help           show this help"
       echo "  -r | --reset          force reset all blockchains state (clear all data)"
-      echo "  -d | --dao            force try to deploy dao"
+      echo "  -d | --deploy         force try to deploy contracts"
       echo "  -r1 | --reset1        force reset ETH1 blockchain state"
       echo "  -r2 | --reset2        force reset ETH2 blockchain state"
       echo "  -n | --nodes          start 2nd and 3d eth2 nodes"
-      echo "  -s | --snapshot       use snapshot instead deploy"
+      echo "  -s [id]               use snapshot instead deploy, optinally pass stage id (1 by default)"
       echo "  -1 | --eth1           start only eth1 part"
       echo "  -w | --web            also start Aragon web UI"
       echo "  -ms | --makesnapshots create stage snapshots"
@@ -65,6 +65,7 @@ while test $# -gt 0; do
       ;;
     -s|--snapshot)
       SNAPSHOT=true
+      STAGE=${2:-"1"}
       shift
       ;;
     -1|--eth1)
@@ -104,7 +105,7 @@ while test $# -gt 0; do
       shift
       ;;
     *)
-      break
+      shift
       ;;
   esac
 done
@@ -128,12 +129,8 @@ fi
 
 if [ ! -d $DEVCHAIN_DIR ]; then
   if [ $SNAPSHOT ]; then
-    echo "Unzip devchain snapshot"
-    if [ $ORACLES ]; then
-      unzip -o -q -d $DATA_DIR $SNAPSHOTS_DIR/stage2/devchain.zip
-    else
-      unzip -o -q -d $DATA_DIR $SNAPSHOTS_DIR/stage1/devchain.zip
-    fi
+    echo "Unzip devchain snapshot from stage $STAGE"
+    unzip -o -q -d $DATA_DIR $SNAPSHOTS_DIR/stage$STAGE/devchain.zip
   else
     DAO_DEPLOY=true
   fi
@@ -142,6 +139,7 @@ fi
 if [ ! -d $TESTNET_DIR ]; then
   if [ $SNAPSHOT ]; then
     echo "Unzip testnet snapshot"
+    # always use stage1 snapshot
     unzip -o -q -d $DATA_DIR $SNAPSHOTS_DIR/stage1/testnet.zip
   else
     ETH2_RESET=true
@@ -150,6 +148,7 @@ fi
 
 if [ ! -d $IPFS_DIR ] && [ $SNAPSHOT ] && [ $WEB_UI ]; then
   echo "Unzip ipfs snapshot"
+  # always use stage0 snapshot
   unzip -o -q -d $DATA_DIR $SNAPSHOTS_DIR/stage0/ipfs.zip
 fi
 
