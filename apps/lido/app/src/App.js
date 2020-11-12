@@ -62,7 +62,7 @@ export default function App() {
       // feeDistribution,
       withdrawalCredentials,
       bufferedEther,
-      totalControlledEther,
+      totalPooledEther,
       token,
       validatorRegistrationContract,
       oracle,
@@ -158,8 +158,8 @@ export default function App() {
         content: <strong>{bufferedEther || 'No data'}</strong>,
       },
       {
-        label: 'Total Controlled Ether',
-        content: <strong>{totalControlledEther || 'No data'}</strong>,
+        label: 'Total Pooled Ether',
+        content: <strong>{totalPooledEther || 'No data'}</strong>,
       },
       {
         label: 'Validator Registration Contract',

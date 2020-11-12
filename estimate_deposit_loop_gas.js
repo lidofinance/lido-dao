@@ -103,7 +103,7 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
   it('a user sends 33 ETH', async () => {
     const result = await pool.submit(ZERO_ADDRESS, { from: user1, value: ETH(33) })
 
-    assertBn(await pool.getTotalControlledEther(), ETH(33), 'total controlled ether')
+    assertBn(await pool.getTotalPooledEther(), ETH(33), 'total pooled ether')
     assertBn((await validatorRegistrationMock.totalCalls()) - validatorData.length, 1, 'validators registered')
 
     console.log('1 validator (initial), gas:', result.receipt.gasUsed)
@@ -112,7 +112,7 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
   it('a user submits 32 ETH', async () => {
     const result = await pool.submit(ZERO_ADDRESS, { from: user2, value: ETH(32) })
 
-    assertBn(await pool.getTotalControlledEther(), ETH(33 + 32), 'total controlled ether')
+    assertBn(await pool.getTotalPooledEther(), ETH(33 + 32), 'total pooled ether')
     assertBn((await validatorRegistrationMock.totalCalls()) - validatorData.length, 2, 'validators registered')
 
     console.log('1 validator, gas:', result.receipt.gasUsed)
@@ -123,7 +123,7 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
   it('a, 1 validator user submits 5 * 32 ETH', async () => {
     const result = await pool.submit(ZERO_ADDRESS, { from: user2, value: ETH(5 * 32) })
 
-    assertBn(await pool.getTotalControlledEther(), ETH(33 + 32 + 5 * 32), 'total controlled ether')
+    assertBn(await pool.getTotalPooledEther(), ETH(33 + 32 + 5 * 32), 'total pooled ether')
     assertBn((await validatorRegistrationMock.totalCalls()) - validatorData.length, 2 + 5, 'validators registered')
 
     const gasPerIter = result.receipt.gasUsed / 5
@@ -137,7 +137,7 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
   it('a user submits 10 * 32 ETH', async () => {
     const result = await pool.submit(ZERO_ADDRESS, { from: user2, value: ETH(10 * 32) })
 
-    assertBn(await pool.getTotalControlledEther(), ETH(33 + 32 + 5 * 32 + 10 * 32), 'total controlled ether')
+    assertBn(await pool.getTotalPooledEther(), ETH(33 + 32 + 5 * 32 + 10 * 32), 'total pooled ether')
     assertBn((await validatorRegistrationMock.totalCalls()) - validatorData.length, 2 + 5 + 10, 'validators registered')
 
     const gasPerIter = result.receipt.gasUsed / 10
@@ -151,7 +151,7 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
   it('a user submits 30 * 32 ETH', async () => {
     const result = await pool.submit(ZERO_ADDRESS, { from: user2, value: ETH(30 * 32) })
 
-    assertBn(await pool.getTotalControlledEther(), ETH(33 + 32 + 5 * 32 + 10 * 32 + 30 * 32), 'total controlled ether')
+    assertBn(await pool.getTotalPooledEther(), ETH(33 + 32 + 5 * 32 + 10 * 32 + 30 * 32), 'total pooled ether')
     assertBn((await validatorRegistrationMock.totalCalls()) - validatorData.length, 2 + 5 + 10 + 30, 'validators registered')
 
     const gasPerIter = result.receipt.gasUsed / 30

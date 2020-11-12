@@ -10,7 +10,7 @@ contract StETHMock is ERC20, ERC20Burnable {
     constructor() public ERC20("Liquid staked Lido Ether", "StETH") {}
 
     uint256 public totalShares;
-    uint256 public totalControlledEther;
+    uint256 public totalPooledEther;
 
     function mint(address recipient, uint256 amount) public {
         _mint(recipient, amount);
@@ -24,19 +24,19 @@ contract StETHMock is ERC20, ERC20Burnable {
         totalShares = _totalShares;
     }
 
-    function setTotalControlledEther(uint256 _totalControlledEther) public {
-        totalControlledEther = _totalControlledEther;
+    function setTotalPooledEther(uint256 _totalPooledEther) public {
+        totalPooledEther = _totalPooledEther;
     }
 
     function getPooledEthByShares(uint256 _sharesAmount) public view returns (uint256) {
         if (totalShares == 0)
             return 0;
-        return _sharesAmount.mul(totalControlledEther).div(totalShares);
+        return _sharesAmount.mul(totalPooledEther).div(totalShares);
     }
 
     function getSharesByPooledEth(uint256 _pooledEthAmount) public view returns (uint256) {
-        if (totalControlledEther == 0)
+        if (totalPooledEther == 0)
             return 0;
-        return _pooledEthAmount.mul(totalShares).div(totalControlledEther);
+        return _pooledEthAmount.mul(totalShares).div(totalPooledEther);
     }
 }
