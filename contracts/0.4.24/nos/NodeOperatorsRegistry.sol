@@ -24,7 +24,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     using UnstructuredStorage for bytes32;
 
     /// ACL
-    bytes32 constant public SET_POOL = keccak256("SET_POOL");
     bytes32 constant public MANAGE_SIGNING_KEYS = keccak256("MANAGE_SIGNING_KEYS");
     bytes32 constant public ADD_NODE_OPERATOR_ROLE = keccak256("ADD_NODE_OPERATOR_ROLE");
     bytes32 constant public SET_NODE_OPERATOR_ACTIVE_ROLE = keccak256("SET_NODE_OPERATOR_ACTIVE_ROLE");
@@ -79,18 +78,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         _;
     }
 
-    function initialize() public onlyInit {
+    function initialize(address _pool) public onlyInit {
         totalOperatorsCount = 0;
         activeOperatorsCount = 0;
-        initialized();
-    }
-
-    /**
-      * @notice Set the pool address to `_pool`
-      */
-    function setPool(address _pool) external auth(SET_POOL) {
-        require(isContract(_pool), "POOL_NOT_CONTRACT");
         pool = _pool;
+        initialized();
     }
 
     /**
