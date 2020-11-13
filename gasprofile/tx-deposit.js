@@ -4,7 +4,7 @@ const { getEventArgument, ZERO_ADDRESS } = require('@aragon/contract-helpers-tes
 const { pad, ETH, hexConcat, toBN } = require('../test/helpers/utils')
 const { deployDaoAndPool } = require('../test/scenario/helpers/deploy')
 
-const StakingProvidersRegistry = artifacts.require('StakingProvidersRegistry')
+const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
 console.log('toBN', toBN)
 
@@ -19,8 +19,8 @@ async function main() {
     appManager,
     // the address which we use to simulate the voting DAO application
     voting,
-    // staking providers
-    stakingProvider,
+    // nosOperators
+    nodeOperator,
     // users who deposit Ether to the pool
     user1,
     user2,
@@ -29,19 +29,19 @@ async function main() {
   ] = addresses
 
   const deployed = await deployDaoAndPool(appManager, voting, 100)
-  const { pool, spRegistry } = deployed
+  const { pool, nosRegistry } = deployed
 
   await pool.setFee(0.01 * 10000, { from: voting })
   await pool.setFeeDistribution(0.3 * 10000, 0.2 * 10000, 0.5 * 10000, { from: voting })
   await pool.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
 
-  const spValidatorsLimit = 1000
+  const nosValidatorsLimit = 1000
   const numProviders = 10
   const numKeys = 3
 
   for (let iProvider = 0; iProvider < numProviders; ++iProvider) {
-    const spTx = await spRegistry.addNodeOperator(`SP-${iProvider}`, stakingProvider, spValidatorsLimit, { from: voting })
-    const stakingProviderId = getEventArgument(spTx, 'StakingProviderAdded', 'id', { decodeForAbi: StakingProvidersRegistry._json.abi })
+    const nosTx = await nosRegistry.addNodeOperator(`NOS-${iProvider}`, nodeOperator, nosValidatorsLimit, { from: voting })
+    const nodeOperatorId = getEventArgument(nosTx, 'NosOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
 
     const data = Array.from({ length: numKeys }, (_, iKey) => {
       const n = arbitraryN.clone().addn(10 * iKey + 1000 * iProvider)
@@ -54,9 +54,9 @@ async function main() {
     const keys = hexConcat(...data.map((v) => v.key))
     const sigs = hexConcat(...data.map((v) => v.sig))
 
-    await spRegistry.addSigningKeys(stakingProviderId, numKeys, keys, sigs, { from: voting })
+    await nosRegistry.addSigningKeys(nodeOperatorId, numKeys, keys, sigs, { from: voting })
 
-    const totalKeys = await spRegistry.getTotalSigningKeyCount(stakingProviderId, { from: nobody })
+    const totalKeys = await nosRegistry.getTotalSigningKeyCount(nodeOperatorId, { from: nobody })
     assertBn(totalKeys, numKeys, 'total signing keys')
 
     validatorData.push.apply(validatorData, data)

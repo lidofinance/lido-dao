@@ -238,12 +238,12 @@ services:
     environment:
       - ETH1_NODE=http://node1:8545
       - ETH2_NODE=http://node2-1:5052
-      - SPR_CONTRACT=${SPR_CONTRACT}
+      - NOS_CONTRACT=${NOS_CONTRACT}
       - ORACLE_CONTRACT=${ORACLE_CONTRACT}
       - MANAGER_PRIV_KEY=${MANAGER1_PRIV_KEY}
       - SECONDS_PER_SLOT=1
       - SLOTS_PER_EPOCH=8
-      - SPR_ABI_FILE=./assets/StakingProvidersRegistry.json
+      - NOS_ABI_FILE=./assets/NodeOperatorsRegistry.json
       - ORACLE_ABI_FILE=./assets/LidoOracle.json
       - REPORT_INTVL_SLOTS=160
     networks:
@@ -256,12 +256,12 @@ services:
     environment:
       - ETH1_NODE=http://node1:8545
       - ETH2_NODE=http://node2-1:5052
-      - SPR_CONTRACT=${SPR_CONTRACT}
+      - NOS_CONTRACT=${NOS_CONTRACT}
       - ORACLE_CONTRACT=${ORACLE_CONTRACT}
       - MANAGER_PRIV_KEY=${MANAGER2_PRIV_KEY}
       - SECONDS_PER_SLOT=1
       - SLOTS_PER_EPOCH=8
-      - SPR_ABI_FILE=./assets/StakingProvidersRegistry.json
+      - NOS_ABI_FILE=./assets/NodeOperatorsRegistry.json
       - ORACLE_ABI_FILE=./assets/LidoOracle.json
       - REPORT_INTVL_SLOTS=160
     networks:
@@ -274,12 +274,12 @@ services:
     environment:
       - ETH1_NODE=http://node1:8545
       - ETH2_NODE=http://node2-1:5052
-      - SPR_CONTRACT=${SPR_CONTRACT}
+      - NOS_CONTRACT=${NOS_CONTRACT}
       - ORACLE_CONTRACT=${ORACLE_CONTRACT}
       - MANAGER_PRIV_KEY=${MANAGER3_PRIV_KEY}
       - SECONDS_PER_SLOT=1
       - SLOTS_PER_EPOCH=8
-      - SPR_ABI_FILE=./assets/StakingProvidersRegistry.json
+      - NOS_ABI_FILE=./assets/NodeOperatorsRegistry.json
       - ORACLE_ABI_FILE=./assets/LidoOracle.json
       - REPORT_INTVL_SLOTS=160
     networks:
