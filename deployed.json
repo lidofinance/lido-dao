@@ -35,6 +35,10 @@
       "ensAddress": "0x043e6DBC5CAd60874727d21ecC2aAeBf50A0de80",
       "ensFactoryAddress": "0xd0BfA4a0A50547e41Fb676c954DF1C2be924ec3F",
       "ensFactoryConstructorArgs": [],
+      "kernelBaseAddress": "0xcC272fA3bFa4AE2043320e2d56Cf5AE439c62C3d",
+      "kernelBaseConstructorArgs": [
+        true
+      ],
       "aclBaseAddress": "0x74C81dd97338329367E5C52B1E3CBC5C757d9AEb",
       "aclBaseConstructorArgs": [],
       "evmScriptRegistryFactoryAddress": "0x65A306d18cEa4A604c247bd10F7Be31833a0CAFC",

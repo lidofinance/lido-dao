@@ -198,6 +198,7 @@ async function deployDAOFactory({ artifacts, owner, kernelBaseAddress, aclBaseAd
   )
 
   return {
+    kernelBase,
     aclBase,
     ...(evmScriptRegistryFactory ? { evmScriptRegistryFactory } : null),
     daoFactory
