@@ -219,8 +219,11 @@ async function deployDAO({
   const newDaoResult = await logTx(
     `Deploying DAO from template`,
     template.newDAO(
+      daoName,
       daoInitialSettings.tokenName,
       daoInitialSettings.tokenSymbol,
+      daoInitialSettings.holders,
+      daoInitialSettings.stakes,
       votingSettings,
       depositContractAddress,
       daoInitialSettings.depositIterationLimit,
@@ -244,7 +247,7 @@ async function deployDAO({
   const appProxies = getAppProxies(installedApps, knownApps)
   logSplitter()
 
-  await logTx(`Finalizing DAO`, template.finalizeDAO(daoName, daoInitialSettings.holders, daoInitialSettings.stakes, { from: owner }))
+  await logTx(`Finalizing DAO`, template.finalizeDAO({ from: owner }))
 
   return { dao, token, appProxies }
 }
