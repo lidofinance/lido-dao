@@ -11,7 +11,8 @@ dist/
 /coverage.json
 .coverage_*/
 
-/template/flattened_contracts/
+/aragon-apps
+
 **/data/
 *.log
 
@@ -28,3 +29,9 @@ dist/
 
 # Optional eslint cache
 .eslintcache
+
+# Geth chaindata
+.chaindata/
+
+# Sensitive data
+/accounts.json

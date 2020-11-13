@@ -13,8 +13,8 @@ ENV ARAGON_IPFS_GATEWAY=$ARAGON_IPFS_GATEWAY
 ENV ARAGON_DEFAULT_ETH_NODE=$ARAGON_DEFAULT_ETH_NODE
 
 RUN mkdir -p /aragon
-RUN wget -q https://github.com/aragon/aragon/archive/0.8.14.tar.gz
-RUN tar -xzf 0.8.14.tar.gz -C /aragon --strip 1 aragon-0.8.14
+RUN wget -q https://github.com/aragon/client/archive/0.8.14.tar.gz
+RUN tar -xzf 0.8.14.tar.gz -C /aragon --strip 1 client-0.8.14
 WORKDIR /aragon
 RUN yarn global add http-server
 RUN yarn

@@ -12,7 +12,6 @@ const arbitraryN = toBN('0x0159e2036050fb43f6ecaca13a7b53b23ea54a623e47fb2bd89a5
 const withdrawalCredentials = pad('0x0202', 32)
 const validatorData = []
 
-
 async function main() {
   const addresses = await web3.eth.getAccounts()
   const [
