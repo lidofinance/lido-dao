@@ -85,6 +85,7 @@ contract LidoTemplate is BaseTemplate {
     )
         external
     {
+        require(deployState.dao == address(0), "PREVIOUS_DEPLOYMENT_NOT_FINALIZED");
         require(_holders.length > 0, "COMPANY_EMPTY_HOLDERS");
         require(_holders.length == _stakes.length, "COMPANY_BAD_HOLDERS_STAKES_LEN");
 
@@ -106,7 +107,9 @@ contract LidoTemplate is BaseTemplate {
     function finalizeDAO() external {
         // read from the storage once to prevent gas spending on SLOADs
         DeployState memory state = deployState;
-
+        
+        require(state.dao != address(0), "DAO_NOT_DEPLOYED");
+        
         // revert the cells back to get a refund
         _resetStorage();
 
