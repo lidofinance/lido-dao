@@ -42,5 +42,5 @@ test('Get DAO apps', async (t) => {
   t.is(apps[6].appId, LIDO_APP_ID, 'LIDO app id')
   t.is(apps[7].appId, STETH_APP_ID, 'STETH app id')
   t.is(apps[8].appId, LIDOORACLE_APP_ID, 'LIDOORACLE app id')
-  t.is(apps[9].appId, NODE_OPERATORS_REGISTRY_APP_ID, 'SPREGISTRY app id')
+  t.is(apps[9].appId, NODE_OPERATORS_REGISTRY_APP_ID, 'NOSREGISTRY app id')
 })
