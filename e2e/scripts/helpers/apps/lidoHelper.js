@@ -1,10 +1,8 @@
 import { abi as LidoAbi } from '../../../../artifacts/Lido.json'
 import { createVote, voteForAction, init as voteInit } from './votingHelper'
 import { encodeCallScript } from '@aragon/contract-helpers-test/src/aragon-os'
-import * as eth1Helper from '../eth1Helper'
 import { BN } from '../utils'
 import { TREASURY_FEE, INSURANCE_FEE, ZERO_ADDRESS } from '../constants'
-import logger from '../logger'
 
 let context
 export let lidoContract
