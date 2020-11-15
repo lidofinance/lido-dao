@@ -342,21 +342,4 @@ contract StETH is ISTETH, Pausable, AragonApp {
         _shares[account] = _shares[account].sub(sharesToBurn);
         emit Transfer(account, address(0), value);
     }
-
-    /**
-    * @dev Internal function that burns an amount of the token of a given
-    * account, deducting from the sender's allowance for said account. Uses the
-    * internal burn function.
-    * @param account The account whose tokens will be burnt.
-    * @param value The amount that will be burnt.
-    */
-    function _burnFrom(address account, uint256 value) internal {
-        require(value <= _allowed[account][msg.sender]);
-
-        // Should https://github.com/OpenZeppelin/zeppelin-solidity/issues/707 be accepted,
-        // this function needs to emit an event with the updated approval.
-        _allowed[account][msg.sender] = _allowed[account][msg.sender].sub(
-        value);
-        _burn(account, value);
-    }
 }
