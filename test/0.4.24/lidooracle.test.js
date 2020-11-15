@@ -54,10 +54,9 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
     // Set up the app's permissions.
     await acl.createPermission(voting, app.address, await app.MANAGE_MEMBERS(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.MANAGE_QUORUM(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.SET_POOL(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
-    await app.initialize()
+    await app.initialize('0x0000000000000000000000000000000000000000')
   })
 
   describe('Test utility functions:', function () {

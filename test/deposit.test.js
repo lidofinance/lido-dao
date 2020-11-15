@@ -64,14 +64,14 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
     depositContract = await DepositContract.new()
     const { dao, acl } = await newDao(appManager)
 
-    // NodeOperatorsRegistry
-    let proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)
-    operators = await NodeOperatorsRegistry.at(proxyAddress)
-    await operators.initialize()
-
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
-    proxyAddress = await newApp(dao, 'lido', appBase.address, appManager)
+    let proxyAddress = await newApp(dao, 'lido', appBase.address, appManager)
     app = await Lido.at(proxyAddress)
+
+    // NodeOperatorsRegistry
+    proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)
+    operators = await NodeOperatorsRegistry.at(proxyAddress)
+    await operators.initialize(app.address)
 
     // token
     proxyAddress = await newApp(dao, 'steth', stEthBase.address, appManager)
@@ -87,7 +87,6 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
     await acl.createPermission(app.address, token.address, await token.MINT_ROLE(), appManager, { from: appManager })
     await acl.createPermission(app.address, token.address, await token.BURN_ROLE(), appManager, { from: appManager })
 
-    await acl.createPermission(voting, operators.address, await operators.SET_POOL(), appManager, { from: appManager })
     await acl.createPermission(voting, operators.address, await operators.MANAGE_SIGNING_KEYS(), appManager, { from: appManager })
     await acl.createPermission(voting, operators.address, await operators.ADD_NODE_OPERATOR_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, operators.address, await operators.SET_NODE_OPERATOR_ACTIVE_ROLE(), appManager, { from: appManager })
@@ -107,7 +106,6 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
 
     await oracle.setPool(app.address)
     // await depositContract.reset()
-    await operators.setPool(app.address, { from: voting })
   })
 
   const checkStat = async ({ deposited, remote }) => {
