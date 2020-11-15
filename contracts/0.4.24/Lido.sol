@@ -16,12 +16,14 @@ import "./lib/Pausable.sol";
 
 
 /**
-  * @title Liquid staking pool implementation
-  *
-  * See the comment of `ILido`.
-  *
-  * NOTE: the code below assumes moderate amount of node operators, e.g. up to 50.
-  */
+* @title Liquid staking pool implementation
+*
+* Lido is an Ethereum 2.0 liquid staking protocol solving the problem of frozen staked Ethers
+* until transfers become available in Ethereum 2.0.
+* Whitepaper: https://lido.fi/static/Lido:Ethereum-Liquid-Staking.pdf
+*
+* NOTE: the code below assumes moderate amount of node operators, e.g. up to 50.
+*/
 contract Lido is ILido, IsContract, Pausable, AragonApp {
     using SafeMath for uint256;
     using SafeMath64 for uint64;
@@ -60,7 +62,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     /// @dev total amount of Beacon-side Ether (sum of all the balances of Lido validators)
     bytes32 internal constant BEACON_BALANCE_VALUE_POSITION = keccak256("lido.Lido.beaconBalance");
     /// @dev number of Lido's validators available in the Beacon state
-    bytes32 internal constant BEACON_VALIDATORS_VALUE_POSITION = keccak256("lido.Lido.beaconValidators"); 
+    bytes32 internal constant BEACON_VALIDATORS_VALUE_POSITION = keccak256("lido.Lido.beaconValidators");
     /// @dev maximum number of Ethereum 2.0 validators registered in a single transaction
     bytes32 internal constant DEPOSIT_ITERATION_LIMIT_VALUE_POSITION = keccak256("lido.Lido.depositIterationLimit");
 
@@ -80,6 +82,14 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         uint256 initialUsedSigningKeys; // for write-back control
     }
 
+    /**
+    * @dev As AragonApp, Lido contract must be initialized with following variables:
+    * @param _token instance of stETH token
+    * @param validatorRegistration official ETH2 Deposit contract
+    * @param _oracle oracle contract
+    * @param _operators instance of Node Operators Registry
+    * @param _depositIterationLimit the number of deposit calls per transaction
+    */
     function initialize(
         ISTETH _token,
         IValidatorRegistration validatorRegistration,
@@ -99,23 +109,29 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @notice Adds eth to the pool
-      */
+    * @notice Send funds to the pool
+    * @dev Users are able to submit their funds by transacting to the fallback function.
+    * Unlike vanilla Eth2.0 Deposit contract, accepting only 32-Ether transactions, Lido
+    * accepts payments of any size. Submitted Ethers are stored in Buffer until someone calls
+    * depositBufferedEther() and pushes them to the ETH2 Deposit contract.
+    */
     function() external payable {
         _submit(0);
     }
 
     /**
-      * @notice Adds eth to the pool with optional _referral parameter
-      * @return StETH Amount of StETH generated
-      */
+    * @notice Send funds to the pool with optional _referral parameter
+    * @dev This function is alternative way to submit funds. Supports optional referral address.
+    * @return StETH Amount of StETH tokens generated
+    */
     function submit(address _referral) external payable returns (uint256 StETH) {
         return _submit(_referral);
     }
 
     /**
-      * @notice Deposits buffered eth to the DepositContract
-      */
+    * @notice Deposits buffered ethers to the official DepositContract.
+    * @dev This function is separated from submit() to reduce the cost of sending funds.
+    */
     function depositBufferedEther() external {
         return _depositBufferedEther();
     }
@@ -168,16 +184,19 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @notice Set authorized oracle contract address to `_oracle`
-      * @dev Contract specified here must periodically make `pushBeacon` calls.
-      */
+    * @notice Set authorized oracle contract address to `_oracle`
+    * @dev Contract specified here is allowed to make periodical updates of beacon states by calling pushBeacon
+    * @param _oracle oracle contract
+    */
     function setOracle(address _oracle) external auth(SET_ORACLE) {
         _setOracle(_oracle);
     }
 
     /**
-      * @notice Set maximum number of Ethereum 2.0 validators registered in a single transaction.
-      */
+    * @notice Set maximum number of Ethereum 2.0 validators registered in a single transaction.
+    * @dev This parameter used to change the amount of consumed gas per TX to the adequate levels
+    * @param _limit max number of Deposit iterations per single transaction
+    */
     function setDepositIterationLimit(uint256 _limit) external auth(SET_DEPOSIT_ITERATION_LIMIT) {
         _setDepositIterationLimit(_limit);
     }
@@ -207,11 +226,11 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @notice pushBeacon called by the Oracle contract. Pushed the number of 
-      *         Lido-controlled keys in the beacon validators list and their total balance. 
-      * @param _beaconValidators - number of Lido's keys in the beacon state
-      * @param _beaconBalance - simmarized balance in wei
-      */
+    * @notice Updates the number of Lido-controlled keys in the beacon validators set and their total balance.
+    * @dev periodically called by the Oracle contract
+    * @param _beaconValidators number of Lido's keys in the beacon state
+    * @param _beaconBalance simmarized balance of Lido-controlled keys in wei
+    */
     function pushBeacon(uint256 _beaconValidators, uint256 _beaconBalance) external {
         require(msg.sender == getOracle(), "APP_AUTH_FAILED");
 
@@ -287,22 +306,28 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @notice Gets the amount of Ether temporary buffered on this contract balance
-      */
+    * @notice Get the amount of Ether temporary buffered on this contract balance
+    * @dev Buffered balance is kept on the contract from the moment the funds are received from user
+    * until the moment they are actually sent to the official Deposit contract.
+    * @return uint256 of buffered funds in wei
+    */
     function getBufferedEther() external view returns (uint256) {
         return _getBufferedEther();
     }
 
     /**
-      * @notice Gets the amount of Ether controlled by the system
-      */
+    * @notice Get the entire amount of Ether controlled by the system
+    * @dev The summary of all the balances in the system, equals to the total supply of stETH.
+    * @return uint256 of total assets in the pool
+    */
     function getTotalPooledEther() external view returns (uint256) {
         return _getTotalPooledEther();
     }
 
     /**
-      * @notice Gets liquid token interface handle
-      */
+    * @notice Gets liquid token interface handle
+    * @return the instance of stETH token
+    */
     function getToken() public view returns (ISTETH) {
         return ISTETH(TOKEN_VALUE_POSITION.getStorageAddress());
     }
@@ -315,15 +340,17 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @notice Gets authorized oracle address
-      */
+    * @notice Gets authorized oracle address
+    * @return address of oracle contract
+    */
     function getOracle() public view returns (address) {
         return ORACLE_VALUE_POSITION.getStorageAddress();
     }
 
     /**
-      * @notice Gets maximum number of Ethereum 2.0 validators registered in a single transaction
-      */
+    * @notice Gets maximum number of Ethereum 2.0 validators registered in a single transaction
+    * @return uint256 max number of Deposit iterations per single transaction
+    */
     function getDepositIterationLimit() public view returns (uint256) {
         return DEPOSIT_ITERATION_LIMIT_VALUE_POSITION.getStorageUint256();
     }
@@ -353,11 +380,11 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @notice Returns the key values related to Beacon-side
-      * @return depositedValidators - number of deposited validators
-      * @return beaconValidators - number of Lido's validators visible in the Beacon state, reported by oracles
-      * @return beaconBalance - total amount of Beacon-side Ether (sum of all the balances of Lido validators)
-      */
+    * @notice Returns the key values related to Beacon-side
+    * @return depositedValidators - number of deposited validators
+    * @return beaconValidators - number of Lido's validators visible in the Beacon state, reported by oracles
+    * @return beaconBalance - total amount of Beacon-side Ether (sum of all the balances of Lido validators)
+    */
     function getBeaconStat() public view returns (uint256 depositedValidators, uint256 beaconValidators, uint256 beaconBalance) {
         depositedValidators = DEPOSITED_VALIDATORS_VALUE_POSITION.getStorageUint256();
         beaconValidators = BEACON_VALIDATORS_VALUE_POSITION.getStorageUint256();
@@ -365,48 +392,55 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @dev Sets liquid token interface handle
-      */
+    * @dev Sets liquid token interface handle
+    * @param _token stETH token to set
+    */
     function _setToken(ISTETH _token) internal {
         require(isContract(address(_token)), "NOT_A_CONTRACT");
         TOKEN_VALUE_POSITION.setStorageAddress(address(_token));
     }
 
     /**
-      * @dev Sets validator registration contract handle
-      */
+    * @dev Sets the address of Deposit contract
+    * @param _contract the address of Deposit contract
+    */
     function _setValidatorRegistrationContract(IValidatorRegistration _contract) internal {
         require(isContract(address(_contract)), "NOT_A_CONTRACT");
         VALIDATOR_REGISTRATION_VALUE_POSITION.setStorageAddress(address(_contract));
     }
 
     /**
-      * @dev Internal function to set authorized oracle address
-      */
+    * @dev Internal function to set authorized oracle address
+    * @param _oracle oracle contract
+    */
     function _setOracle(address _oracle) internal {
         require(isContract(_oracle), "NOT_A_CONTRACT");
         ORACLE_VALUE_POSITION.setStorageAddress(_oracle);
     }
 
     /**
-      * @dev Internal function to set node operator registry address
-      */
+    * @dev Internal function to set node operator registry address
+    * @param _r registry of node operators
+    */
     function _setOperators(INodeOperatorsRegistry _r) internal {
         require(isContract(_r), "NOT_A_CONTRACT");
         NODE_OPERATOR_REGISTRY_VALUE_POSITION.setStorageAddress(_r);
     }
 
     /**
-      * @notice Internal function to set deposit loop iteration limit
-      */
+    * @notice Internal function to set deposit loop iteration limit
+    * @param _limit max number of deposits per transaction
+    */
     function _setDepositIterationLimit(uint256 _limit) internal {
         require(0 != _limit, "ZERO_LIMIT");
         DEPOSIT_ITERATION_LIMIT_VALUE_POSITION.setStorageUint256(_limit);
     }
 
     /**
-      * @dev Processes user deposit: mints liquid tokens and increases the pool buffer
-      */
+    * @dev Process user deposit, mints liquid tokens and increase the pool buffer
+    * @param _referral address of referral.
+    * @return StETH amount of tokens generated
+    */
     function _submit(address _referral) internal whenNotStopped returns (uint256 StETH) {
         address sender = msg.sender;
         uint256 deposit = msg.value;
@@ -427,8 +461,8 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @dev Deposits buffered eth to the DepositContract: assigns chunked deposits to node operators
-      */
+    * @dev Deposits buffered eth to the DepositContract and assigns chunked deposits to node operators
+    */
     function _depositBufferedEther() internal whenNotStopped {
         uint256 buffered = _getBufferedEther();
         if (buffered >= DEPOSIT_SIZE) {
@@ -444,10 +478,10 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @dev Makes a deposit to the ETH 2.0 side
-      * @param _amount Total amount to deposit to the ETH 2.0 side
-      * @return actually deposited amount
-      */
+    * @dev Makes a deposit to the ETH 2.0 side
+    * @param _amount Total amount of Ethers to deposit to the ETH 2.0 side
+    * @return actually deposited amount
+    */
     function _ETH2Deposit(uint256 _amount) internal returns (uint256) {
         assert(_amount >= MIN_DEPOSIT_AMOUNT);
 
@@ -505,16 +539,16 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @dev Invokes a validator_registration.deposit call
-      * @param _pubkey Validator to stake for
-      * @param _signature Signature of the deposit call
-      */
+    * @dev Invokes a deposit call to the official Deposit contract
+    * @param _pubkey Validator to stake for
+    * @param _signature Signature of the deposit call
+    */
     function _stake(bytes memory _pubkey, bytes memory _signature) internal {
         require(withdrawalCredentials.length != 0, "EMPTY_WITHDRAWAL_CREDENTIALS");
 
         uint256 value = DEPOSIT_SIZE;
 
-        // The following computations and Merkle tree-ization will make validator_registration.vy happy
+        // The following computations and Merkle tree-ization will make official Deposit contract happy
         uint256 depositAmount = value.div(DEPOSIT_AMOUNT_UNIT);
         assert(depositAmount.mul(DEPOSIT_AMOUNT_UNIT) == value);    // properly rounded
 
@@ -542,9 +576,9 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @dev Distributes rewards and fees.
-      * @param _totalRewards Total rewards accrued on the Ethereum 2.0 side.
-      */
+    * @dev Distributes rewards by minting and distributing corresponding amount of liquid tokens.
+    * @param _totalRewards Total rewards accrued on the Ethereum 2.0 side in wei
+    */
     function distributeRewards(uint256 _totalRewards) internal {
         ISTETH stEth = getToken();
         uint256 feeInEther = _totalRewards.mul(_getFee()).div(10000);
@@ -603,9 +637,11 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @dev Records a deposit made by a user with optional referral
-      * @param _value Deposit value in wei
-      */
+    * @dev Records a deposit made by a user with optional referral
+    * @param _sender sender's address
+    * @param _value Deposit value in wei
+    * @param _referral address of the referral
+    */
     function _submitted(address _sender, uint256 _value, address _referral) internal {
         BUFFERED_ETHER_VALUE_POSITION.setStorageUint256(_getBufferedEther().add(_value));
 
@@ -703,22 +739,23 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @dev Calculates and returns the total base balance (multiple of 32) of validators in transient state,
-      *      i.e. submitted to the official Deposit contract but not yet visible in the beacon state.
-      *      Nominated in wei (1e-18 Ether).
-      */
+    * @dev Calculates and returns the total base balance (multiple of 32) of validators in transient state,
+    *      i.e. submitted to the official Deposit contract but not yet visible in the beacon state.
+    * @return transient balance in wei (1e-18 Ether)
+    */
     function _getTransientBalance() internal view returns (uint256) {
-      uint256 depositedValidators = DEPOSITED_VALIDATORS_VALUE_POSITION.getStorageUint256();
-      uint256 beaconValidators = BEACON_VALIDATORS_VALUE_POSITION.getStorageUint256();
-      // beaconValidators can never be less than deposited ones.
-      assert(depositedValidators >= beaconValidators);
-      uint256 transientValidators = depositedValidators.sub(beaconValidators);
-      return (transientValidators.mul(DEPOSIT_SIZE));
+        uint256 depositedValidators = DEPOSITED_VALIDATORS_VALUE_POSITION.getStorageUint256();
+        uint256 beaconValidators = BEACON_VALIDATORS_VALUE_POSITION.getStorageUint256();
+        // beaconValidators can never be less than deposited ones.
+        assert(depositedValidators >= beaconValidators);
+        uint256 transientValidators = depositedValidators.sub(beaconValidators);
+        return (transientValidators.mul(DEPOSIT_SIZE));
     }
 
     /**
-      * @dev Gets the total amount of Ether controlled by the system
-      */
+    * @dev Gets the total amount of Ether controlled by the system
+    * @return total balance in wei
+    */
     function _getTotalPooledEther() internal view returns (uint256) {
         uint256 bufferedBalance = _getBufferedEther();
         uint256 beaconBalance = BEACON_BALANCE_VALUE_POSITION.getStorageUint256();
