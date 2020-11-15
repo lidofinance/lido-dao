@@ -543,6 +543,8 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
       * @param _totalRewards Total rewards accrued on the Ethereum 2.0 side.
       */
     function distributeRewards(uint256 _totalRewards) internal {
+        ISTETH steth = getToken();
+
         // Amount of the rewards in Ether
         uint256 tokens2mint = _totalRewards.mul(_getFee()).div(10000);
         // Amount of shares that matches tokens2mint after minting (with new ratio)
@@ -552,28 +554,28 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         // totalShares + shares2mint
         uint256 shares2mint = (
             tokens2mint
-            .mul(getToken().getTotalShares())
+            .mul(steth.getTotalShares())
             .div(_getTotalControlledEther().sub(tokens2mint))
         );
         // Add calculated amount of shares to this contract, after mint balances
         // This will reduce the balances of the holders, as if the rewards were
         // taken in parts from each of them.
-        getToken().mint(address(this), getToken().getPooledEthByShares(shares2mint));
+        steth.mint(address(this), steth.getPooledEthByShares(shares2mint));
         // (!) minted amount may be less than tokens2mint due to round errors
-        uint256 mintedRewards = getToken().balanceOf(address(this));
+        uint256 mintedRewards = steth.balanceOf(address(this));
 
         (uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, ) = _getFeeDistribution();
         uint256 toTreasury = mintedRewards.mul(treasuryFeeBasisPoints).div(10000);
         uint256 toInsuranceFund = mintedRewards.mul(insuranceFeeBasisPoints).div(10000);
         uint256 toOperators = mintedRewards.sub(toTreasury).sub(toInsuranceFund);
 
-        getToken().transfer(getTreasury(), toTreasury);
-        getToken().transfer(getInsuranceFund(), toInsuranceFund);
-        getToken().transfer(address(getOperators()), toOperators);
+        steth.transfer(getTreasury(), toTreasury);
+        steth.transfer(getInsuranceFund(), toInsuranceFund);
+        steth.transfer(address(getOperators()), toOperators);
 
         getOperators().distributeRewards(
-            address(getToken()),
-            getToken().balanceOf(address(getOperators()))
+            address(steth),
+            steth.balanceOf(address(getOperators()))
         );
     }
 
