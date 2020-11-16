@@ -107,9 +107,9 @@ contract LidoTemplate is BaseTemplate {
     function finalizeDAO() external {
         // read from the storage once to prevent gas spending on SLOADs
         DeployState memory state = deployState;
-        
+
         require(state.dao != address(0), "DAO_NOT_DEPLOYED");
-        
+
         // revert the cells back to get a refund
         _resetStorage();
 
@@ -170,7 +170,7 @@ contract LidoTemplate is BaseTemplate {
         // Oracle
         state.acl.createPermission(state.voting, state.oracle, state.oracle.MANAGE_MEMBERS(), state.voting);
         state.acl.createPermission(state.voting, state.oracle, state.oracle.MANAGE_QUORUM(), state.voting);
-        state.acl.createPermission(state.voting, state.oracle, state.oracle.SET_REPORT_INTERVAL_DURATION(), state.voting);
+        // state.acl.createPermission(state.voting, state.oracle, state.oracle.SET_REPORT_INTERVAL_DURATION(), state.voting);
 
         // NodeOperatorsRegistry
         state.acl.createPermission(state.voting, state.operators, state.operators.MANAGE_SIGNING_KEYS(), state.voting);
