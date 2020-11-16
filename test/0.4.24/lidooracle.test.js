@@ -1,6 +1,6 @@
 const { assert } = require('chai')
 const { newDao, newApp } = require('./helpers/dao')
-const { assertBn, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const { bn } = require('@aragon/contract-helpers-test')
 
 const LidoOracle = artifacts.require('TestLidoOracle.sol')
@@ -33,10 +33,16 @@ contract('Algorithm', ([testUser]) => {
 contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]) => {
   let appBase, app
 
-  const assertData = async (reportInterval, eth) => {
-    const r = await app.getLatestData()
-    assertBn(r.reportInterval, reportInterval)
-    assertBn(r.eth2balance, eth)
+  const assertReportableEpochs = async (startEpoch, endEpoch) => {
+    const result = await app.getCurrentReportableEpochs()
+    assertBn(result.firstReportableEpoch, startEpoch)
+    assertBn(result.lastReportableEpoch, endEpoch)
+  }
+
+  const assertReportableTimeInterval = async (startTime, endTime) => {
+    const result = await app.getCurrentReportableTimeInterval()
+    assertBn(result.startTime, startTime)
+    assertBn(result.endTime, endTime)
   }
 
   before('deploy base app', async () => {
@@ -70,27 +76,25 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
   })
 
   describe('Test utility functions:', function () {
-    it('', async () => {
-      
-    })
-
     it('reportBeacon', async () => {
-      await app.setTime(1607824001)
+      await app.setTime(1606824000 + 32 * 12 * 5 + 1)
+
       await app.addOracleMember(user1, { from: voting })
       await app.addOracleMember(user2, { from: voting })
       await app.addOracleMember(user3, { from: voting })
       await app.addOracleMember(user4, { from: voting })
 
-      await app.setQuorum(3, { from: voting })
+      await app.setQuorum(4, { from: voting })
 
-      await app.reportBeacon(5, 1000, 1, { from: user1 })
-      await app.reportBeacon(5, 1000, 1, { from: user2 })
-      await app.reportBeacon(5, 1000, 1, { from: user3 })
+      await app.reportBeacon(3, 100, 1, { from: user1 })
+      await app.reportBeacon(3, 101, 1, { from: user2 })
+      await app.reportBeacon(3, 200, 2, { from: user3 })
+      receipt = await app.reportBeacon(3, 200, 2, { from: user4 })
+      assertEvent(receipt, "Completed", { expectedArgs: { epochId: 3, beaconBalance: 200, beaconValidators: 2 }})
 
-      assertBn(await app.lastPushedEpoch(), 5)
+      assertBn(await app.earliestReportableEpoch(), 4)
     })
     
-    /*
     it('addOracleMember works', async () => {
       await assertRevert(app.addOracleMember(user1, { from: user1 }), 'APP_AUTH_FAILED')
       await assertRevert(app.addOracleMember('0x0000000000000000000000000000000000000000', { from: voting }), 'BAD_ARGUMENT')
@@ -152,266 +156,286 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
       assert.deepStrictEqual(await app.getOracleMembers(), [user3, user2])
     })
 
-    it('getReportIntervalDurationSeconds works', async () => {
-      assertBn(await app.getReportIntervalDurationSeconds(), 86400)
+    it('getCurrentEpochId works', async () => {
+      await app.setTime(1606824000)
+      assertBn(await app.getCurrentEpochId(), 0)
+      await app.setTime(1606824000 + 32 * 12 - 1)
+      assertBn(await app.getCurrentEpochId(), 0)
+      await app.setTime(1606824000 + 32 * 12 * 123 + 1)
+      assertBn(await app.getCurrentEpochId(), 123)
     })
 
-    it('getReportIntervalForTimestamp works', async () => {
-      assertBn(await app.getReportIntervalForTimestamp(1597849493), 18493)
-      assertBn(await app.getReportIntervalForTimestamp(86400000), 1000)
-      assertBn(await app.getReportIntervalForTimestamp(86400000 - 1), 1000 - 1)
-      assertBn(await app.getReportIntervalForTimestamp(86400001), 1000)
+    it('getCurrentReportableEpochs works', async () => {
+      let result
+
+      await app.setTime(1606824000)
+      result = await app.getCurrentReportableEpochs()
+      assertBn(result.firstReportableEpoch, 0)
+      assertBn(result.lastReportableEpoch, 0)
+
+      await app.setTime(1606824000 + 32 * 12 - 1)
+      result = await app.getCurrentReportableEpochs()
+      assertBn(result.firstReportableEpoch, 0)
+      assertBn(result.lastReportableEpoch, 0)
+
+      await app.setTime(1606824000 + 32 * 12 * 123 + 1)
+      result = await app.getCurrentReportableEpochs()
+      assertBn(result.firstReportableEpoch, 0)
+      assertBn(result.lastReportableEpoch, 123)
     })
 
-    it('getCurrentReportInterval works', async () => {
-      await app.setTime(1597849493)
-      assertBn(await app.getCurrentReportInterval(), 18493)
-      await app.setTime(86400000)
-      assertBn(await app.getCurrentReportInterval(), 1000)
-      await app.setTime(86400000 - 1)
-      assertBn(await app.getCurrentReportInterval(), 1000 - 1)
-      await app.setTime(86400001)
-      assertBn(await app.getCurrentReportInterval(), 1000)
+    it('getCurrentReportableTimeInterval works', async () => {
+      let result
+
+      await app.setTime(1606824000)
+      result = await app.getCurrentReportableTimeInterval()
+      assertBn(result.startTime, 1606824000)
+      assertBn(result.endTime, 1606824000 + 32 * 12 - 1)
+
+      await app.setTime(1606824000 + 32 * 12 - 1)
+      result = await app.getCurrentReportableTimeInterval()
+      assertBn(result.startTime, 1606824000)
+      assertBn(result.endTime, 1606824000 + 32 * 12 - 1)
+
+      await app.setTime(1606824000 + 32 * 12 * 123 + 1)
+      result = await app.getCurrentReportableTimeInterval()
+      assertBn(result.startTime, 1606824000)
+      assertBn(result.endTime, 1606824000 + 32 * 12 * 124 - 1)
     })
   })
 
   describe('When there is single-member setup', function () {
-    beforeEach('add single member', async () => {
-      await app.setTime(86400000)
-      await app.addOracleMember(user1, { from: voting })
-      await assertData(0, 0)
-    })
+    describe('genesis time: 1606824000 , current epoch: 0', function () {
+      beforeEach(async () => {
+        await app.setTime(1606824000)
+        await app.addOracleMember(user1, { from: voting })
+        assertBn(await app.getQuorum(), 1)
+      })
 
-    it('single-member oracle works', async () => {
-      await assertRevert(app.pushData(1000, 100, { from: user2 }), 'MEMBER_NOT_FOUND')
-      await assertRevert(app.pushData(10900, 100, { from: user1 }), 'REPORT_INTERVAL_HAS_NOT_YET_BEGUN')
+      it('reverts when trying to report from non-member', async () => {
+        for (const account of [user2, user3, user4, nobody])
+          await assertRevert(app.reportBeacon(0, 32, 1, { from: account }), 'MEMBER_NOT_FOUND')
+      })
 
-      await app.pushData(1000, 100, { from: user1 })
-      await assertData(1000, 100)
+      it('reportBeacon works and emits event', async () => {
+        const receipt = await app.reportBeacon(0, 32, 1, { from: user1 })
+        assertEvent(receipt, "Completed", { expectedArgs: { epochId: 0, beaconBalance: 32, beaconValidators: 1 }})
+        await assertReportableEpochs(1, 0)
+      })
 
-      await app.setTime(86400000 + 86400)
-      await app.pushData(1001, 101, { from: user1 })
-      await assertData(1001, 101)
+      it('reverts when trying to report this epoch again', async () => {
+        await app.reportBeacon(0, 32, 1, { from: user1 })
+        await assertRevert(app.reportBeacon(0, 32, 1, { from: user1 }), 'EPOCH_IS_TOO_OLD')
+        await assertReportableEpochs(1, 0)
+      })
 
-      await app.setTime(86400000 + 86400 * 4)
-      await assertRevert(app.pushData(1005, 105, { from: user1 }), 'REPORT_INTERVAL_HAS_NOT_YET_BEGUN')
-      await app.pushData(1004, 104, { from: user1 })
-      await assertData(1004, 104)
+      it('reverts when trying to report future epoch', async () => {
+        await assertRevert(app.reportBeacon(1, 32, 1, { from: user1 }), 'EPOCH_HAS_NOT_YET_BEGUN')
+      })
+      
+      describe(`genesis time: ${1606824000 + 32 * 12 * 5}, current epoch: 5`, function () {
+        beforeEach(async () => {
+          await app.reportBeacon(0, 32, 1, { from: user1 })
+          await app.setTime(1606824000 + 32 * 12 * 5) 
+          await assertReportableEpochs(1, 5)
+        })
 
-      await app.addOracleMember(user2, { from: voting })
-      await assertData(1004, 104)
+        it('reverts when trying to report stale epoch', async () => {
+          await assertRevert(app.reportBeacon(0, 32, 1, { from: user1 }), 'EPOCH_IS_TOO_OLD')
+          await assertReportableEpochs(1, 5)
+        })
+
+        it('reportBeacon works and emits event', async () => {
+          const receipt = await app.reportBeacon(5, 32, 1, { from: user1 })
+          assertEvent(receipt, "Completed", { expectedArgs: { epochId: 5, beaconBalance: 32, beaconValidators: 1 }})
+          await assertReportableEpochs(6, 5)
+        })
+      })
     })
   })
 
-  describe('When there is multi-member setup', function () {
-    beforeEach('add several members', async () => {
-      await app.setTime(86400000)
+  describe('When there is multi-member setup (4 members)', function () {
+    beforeEach(async () => {
       await app.addOracleMember(user1, { from: voting })
       await app.addOracleMember(user2, { from: voting })
       await app.addOracleMember(user3, { from: voting })
       await app.addOracleMember(user4, { from: voting })
-      await assertData(0, 0)
-    })
-
-    it('multi-member oracle works', async () => {
       await app.setQuorum(3, { from: voting })
-      await assertData(0, 0)
-
-      await assertRevert(app.pushData(1000, 100, { from: nobody }), 'MEMBER_NOT_FOUND')
-      await assertRevert(app.pushData(10900, 100, { from: user1 }), 'REPORT_INTERVAL_HAS_NOT_YET_BEGUN')
-
-      // reportInterval 1000, quorum 3
-      await app.pushData(1000, 100, { from: user1 })
-      await assertRevert(app.pushData(1000, 101, { from: user1 }), 'ALREADY_SUBMITTED')
-      await assertData(0, 0)
-      await app.pushData(1000, 100, { from: user3 })
-      await assertData(0, 0)
-      await app.pushData(1000, 110, { from: user4 })
-      await assertData(1000, 100) // exact mode of recieved values
-      await assertRevert(app.pushData(1000, 100, { from: user2 }), 'REPORT_INTERVAL_IS_TOO_OLD')
-
-      // reportInterval 1001, quorum 3
-      await app.setTime(86400000 + 86400)
-      await app.pushData(1001, 110, { from: user1 })
-      await assertData(1000, 100)
-      await app.pushData(1001, 120, { from: user2 })
-      await assertData(1000, 100)
-      await app.pushData(1001, 120, { from: user3 })
-      await assertData(1001, 120)
-
-      // reportInterval 1004, quorum 4
-      await app.setQuorum(4, { from: voting })
-      await app.setTime(86400000 + 86400 * 4)
-      await assertRevert(app.pushData(1005, 105, { from: user1 }), 'REPORT_INTERVAL_HAS_NOT_YET_BEGUN')
-      await app.pushData(1004, 120, { from: user1 })
-      await app.pushData(1004, 120, { from: user2 })
-      await app.pushData(1004, 120, { from: user3 })
-      await app.pushData(1004, 110, { from: user4 })
-      await assertData(1004, 120)
+      assertBn(await app.getQuorum(), 3)
     })
 
-    it('reportInterval can be unfinished', async () => {
-      await app.setQuorum(2, { from: voting })
+    describe('genesis time: 1606824000 , current epoch: 0', function () { 
+      beforeEach(async () => {
+        await app.setTime(1606824000)
+      })
 
-      // reportInterval 1000
-      await app.pushData(1000, 100, { from: user1 })
-      await assertData(0, 0)
+      it('reverts when trying to report from non-member', async () => {
+        await assertRevert(app.reportBeacon(0, 32, 1, { from: nobody }), 'MEMBER_NOT_FOUND')
+      })
 
-      // reportInterval 1001
-      await app.setTime(86400000 + 86400)
-      await app.pushData(1001, 110, { from: user2 })
-      await assertData(0, 0)
-      await assertRevert(app.pushData(1000, 100, { from: user3 }), 'REPORT_INTERVAL_IS_TOO_OLD')
-      await app.pushData(1001, 110, { from: user3 })
-      await assertData(1001, 110)
+      it('reportBeacon works and emits event', async () => {
+        await app.reportBeacon(0, 32, 1, { from: user1 })
+        await assertReportableEpochs(0, 0)
+        await app.reportBeacon(0, 32, 1, { from: user2 })
+        await assertReportableEpochs(0, 0)
+        const receipt = await app.reportBeacon(0, 32, 1, { from: user3 })
+        assertEvent(receipt, "Completed", { expectedArgs: { epochId: 0, beaconBalance: 32, beaconValidators: 1 }})
+        await assertReportableEpochs(1, 0)
+      })
+
+      it('reportBeacon completes only if data is unimodal', async () => {
+        let receipt
+
+        await app.reportBeacon(0, 32, 1, { from: user1 })
+        await assertReportableEpochs(0, 0)
+        await app.reportBeacon(0, 33, 1, { from: user2 })
+        await assertReportableEpochs(0, 0)
+        await app.reportBeacon(0, 65, 2, { from: user3 }) // data is not unimodal, quorum is not reached
+        await assertReportableEpochs(0, 0)
+        receipt = await app.reportBeacon(0, 65, 2, { from: user4 }) // data is unimodal, quorum is reached
+        assertEvent(receipt, "Completed", { expectedArgs: { epochId: 0, beaconBalance: 65, beaconValidators: 2 }})
+        await assertReportableEpochs(1, 0)
+
+        await app.setTime(1606824000 + 32 * 12)
+        await app.setQuorum(4, { from: voting})
+        await assertReportableEpochs(1, 1)
+
+        await app.reportBeacon(1, 64, 2, { from: user1 })
+        await assertReportableEpochs(1, 1)
+        await app.reportBeacon(1, 65, 2, { from: user2 })
+        await assertReportableEpochs(1, 1)
+        await app.reportBeacon(1, 97, 3, { from: user3 }) 
+        await assertReportableEpochs(1, 1)
+        await app.reportBeacon(1, 98, 3, { from: user4 }) // data is not unimodal, quorum is not reached
+        await assertReportableEpochs(1, 1)
+
+        await app.setTime(1606824000 + 32 * 12 * 2)  
+        await assertReportableEpochs(1, 2)
+
+        await app.reportBeacon(2, 99, 3, { from: user1 })
+        await assertReportableEpochs(1, 2)
+        receipt = await await app.setQuorum(1, { from: voting})
+        assertEvent(receipt, "Completed", { expectedArgs: { epochId: 2, beaconBalance: 99, beaconValidators: 3 }})
+        await assertReportableEpochs(3, 2)
+      })
+
+      it('reverts when trying to report this epoch again', async () => {
+        await app.reportBeacon(0, 32, 1, { from: user1 })
+        await app.reportBeacon(0, 32, 1, { from: user2 })
+        await app.reportBeacon(0, 32, 1, { from: user3 })
+        
+        for (const account of [user1, user2, user3, user4])
+          await assertRevert(app.reportBeacon(0, 32, 1, { from: account }), 'EPOCH_IS_TOO_OLD')
+
+        await assertReportableEpochs(1, 0)
+      })
+
+      it('reverts when trying to report this epoch again from the same user', async () => {
+        await app.reportBeacon(0, 32, 1, { from: user1 })
+        
+        await assertRevert(app.reportBeacon(0, 32, 1, { from: user1 }), 'ALREADY_SUBMITTED')
+        await assertReportableEpochs(0, 0)
+      })
+
+      it('reverts when trying to report future epoch', async () => {
+        await assertRevert(app.reportBeacon(1, 32, 1, { from: user1 }), 'EPOCH_HAS_NOT_YET_BEGUN')
+      })
+
+      describe(`genesis time: ${1606824000 + 32 * 12 * 5}, current epoch: 5`, function () {
+        beforeEach(async () => {
+          await app.reportBeacon(0, 32, 1, { from: user1 })
+          await app.reportBeacon(0, 32, 1, { from: user2 })
+          await app.reportBeacon(0, 32, 1, { from: user3 })
+
+          await app.setTime(1606824000 + 32 * 12 * 5)
+
+          await assertReportableEpochs(1, 5)
+        })
+        
+        it('members can reports to all reportable epochs, the earliest reportable epoch is the last completed, the latest is current', async () => {
+          for (let epoch = 1; epoch < 6; epoch++)
+            await app.reportBeacon(epoch, 32, 1, { from: user1 })
+          await assertReportableEpochs(1, 5)
+          
+          for (let epoch = 1; epoch < 6; epoch++)
+            await app.reportBeacon(epoch, 32, 1, { from: user2 })
+          await assertReportableEpochs(1, 5)
+
+          await app.reportBeacon(3, 32, 1, { from: user3 })
+          await assertReportableEpochs(4, 5)
+
+          await assertRevert(app.reportBeacon(2, 32, 1, { from: user3 }), 'EPOCH_IS_TOO_OLD')
+        })
+
+        it("member removal dont affect other members' data in last reportable epoch, all other reportable epochs will be staled", async () => {
+          for (let epoch = 1; epoch < 6; epoch++)
+            await app.reportBeacon(epoch, 32, 1, { from: user1 })
+          await assertReportableEpochs(1, 5)
+          
+          for (let epoch = 1; epoch < 6; epoch++)
+            await app.reportBeacon(epoch, 32, 1, { from: user2 })
+          await assertReportableEpochs(1, 5)
+
+          await app.removeOracleMember(user3, { from: voting })
+          await assertReportableEpochs(5, 5)
+
+          await assertRevert(app.reportBeacon(5, 32, 1, { from: user3 }), 'MEMBER_NOT_FOUND')
+
+          await app.reportBeacon(5, 32, 1, { from: user4 })
+          await assertReportableEpochs(6, 5)
+        })
+
+        it('member removal removes their data', async () => {
+          for (let epoch = 1; epoch < 6; epoch++)
+            await app.reportBeacon(epoch, 32, 1, { from: user1 }) // this should be removed
+          await assertReportableEpochs(1, 5)
+          
+          for (let epoch = 1; epoch < 6; epoch++)
+            await app.reportBeacon(epoch, 64, 2, { from: user2 }) // this should be intact
+          await assertReportableEpochs(1, 5)
+
+          await app.removeOracleMember(user1, { from: voting })
+          await assertReportableEpochs(5, 5)
+
+          await app.reportBeacon(5, 64, 2, { from: user3 })
+          await assertReportableEpochs(5, 5)
+
+          await app.reportBeacon(5, 65, 2, { from: user4 })
+          await assertReportableEpochs(6, 5)
+        })
+
+        it('tail member removal works', async () => {
+          for (let epoch = 1; epoch < 6; epoch++)
+            await app.reportBeacon(epoch, 32, 1, { from: user1 }) // this should be intact
+          await assertReportableEpochs(1, 5)
+          
+          for (let epoch = 1; epoch < 6; epoch++)
+            await app.reportBeacon(epoch, 64, 2, { from: user4 }) // this should be removed
+          await assertReportableEpochs(1, 5)
+
+          await app.removeOracleMember(user4, { from: voting })
+          await assertReportableEpochs(5, 5)
+
+          await app.reportBeacon(5, 32, 1, { from: user2 })
+          await assertReportableEpochs(5, 5)
+
+          await app.reportBeacon(5, 32, 1, { from: user3 })
+          await assertReportableEpochs(6, 5)
+        })
+
+        it('quorum change triggers finalization of last reported epoch, all other reportable epochs will be staled', async () => {
+          for (let epoch = 1; epoch < 5; epoch++)
+            await app.reportBeacon(epoch, 32, 1, { from: user1 })
+          await assertReportableEpochs(1, 5)
+          
+          for (let epoch = 1; epoch < 5; epoch++)
+            await app.reportBeacon(epoch, 32, 1, { from: user2 }) // this should be intact
+          await assertReportableEpochs(1, 5)
+
+          await app.setQuorum(2, { from: voting })
+          await assertReportableEpochs(5, 5)
+        })
+      })
     })
-
-    it("member removal dont affect other members' data", async () => {
-      await app.setQuorum(2, { from: voting })
-
-      // reportInterval 1000
-      await app.pushData(1000, 105, { from: user1 })
-      await app.pushData(1000, 105, { from: user3 })
-
-      // reportInterval 1001
-      await app.setQuorum(3, { from: voting })
-      await app.setTime(86400000 + 86400)
-      await app.pushData(1001, 140, { from: user4 })
-      await app.pushData(1001, 130, { from: user2 })
-      await assertData(1000, 105)
-
-      await app.removeOracleMember(user1, { from: voting })
-      await assertRevert(app.pushData(1001, 100, { from: user1 }), 'MEMBER_NOT_FOUND')
-      await app.pushData(1001, 130, { from: user3 })
-      await assertData(1001, 130)
-    })
-
-    it('member removal removes their data', async () => {
-      await app.setQuorum(2, { from: voting })
-
-      // reportInterval 1000
-      await app.pushData(1000, 105, { from: user1 })
-      await app.pushData(1000, 105, { from: user3 })
-
-      // reportInterval 1001
-      await app.setQuorum(3, { from: voting })
-      await app.setTime(86400000 + 86400)
-      await app.pushData(1001, 110, { from: user1 })
-      await app.pushData(1001, 120, { from: user2 }) // this should be intact
-      await assertData(1000, 105)
-
-      await app.removeOracleMember(user1, { from: voting })
-      await app.pushData(1001, 120, { from: user3 })
-      await assertData(1000, 105)
-      await app.pushData(1001, 120, { from: user4 })
-      await assertData(1001, 120)
-    })
-
-    it('tail member removal works', async () => {
-      await app.setQuorum(2, { from: voting })
-
-      // reportInterval 1000
-      await app.pushData(1000, 105, { from: user1 })
-      await app.pushData(1000, 105, { from: user3 })
-
-      // reportInterval 1001
-      await app.setQuorum(3, { from: voting })
-      await app.setTime(86400000 + 86400)
-      await app.pushData(1001, 110, { from: user4 })
-      await app.pushData(1001, 130, { from: user2 }) // this should be intact
-      await assertData(1000, 105)
-
-      await app.removeOracleMember(user4, { from: voting })
-      await app.pushData(1001, 130, { from: user1 })
-      await assertData(1000, 105)
-      await app.pushData(1001, 140, { from: user3 })
-      await assertData(1001, 130)
-    })
-
-    it('quorum change triggers finalization', async () => {
-      await app.setQuorum(3, { from: voting })
-
-      // reportInterval 1000
-      await app.pushData(1000, 100, { from: user1 })
-      await app.pushData(1000, 110, { from: user2 })
-      await app.pushData(1000, 110, { from: user3 })
-      await assertData(1000, 110)
-
-      // reportInterval 1001
-      await app.setTime(86400000 + 86400)
-      await app.pushData(1001, 110, { from: user4 })
-      await app.pushData(1001, 110, { from: user2 })
-      await assertData(1000, 110)
-
-      await app.setQuorum(2, { from: voting })
-      await assertData(1001, 110)
-    })
-
-    it('can push to previous intervals until more recent data came', async () => {
-      await app.setQuorum(2, { from: voting })
-
-      // reportInterval 1000
-      await app.pushData(1000, 100, { from: user1 })
-      await app.pushData(1000, 100, { from: user2 })
-      await assertData(1000, 100)
-
-      // reportInterval 1005
-      await app.setTime(86400000 + 5 * 86400)
-      await assertData(1000, 100)
-
-      // report past intervals
-      await app.pushData(1002, 120, { from: user1 })
-      await app.pushData(1002, 120, { from: user2 })
-      await assertData(1002, 120)
-
-      await app.pushData(1003, 130, { from: user1 })
-      await app.pushData(1003, 130, { from: user2 })
-      await assertData(1003, 130)
-    })
-
-    it("can't push to previous intervals if more recent data came", async () => {
-      await app.setQuorum(2, { from: voting })
-
-      // reportInterval 1000
-      await app.pushData(1000, 100, { from: user1 })
-      await assertData(0, 0)
-
-      // reportInterval 1001
-      await app.setTime(86400000 + 86400)
-      await app.pushData(1001, 100, { from: user1 })
-      await assertData(0, 0)
-
-      // report past interval
-      await assertRevert(app.pushData(1000, 100, { from: user2 }), 'REPORT_INTERVAL_IS_TOO_OLD')
-      await assertData(0, 0)
-    })
-
-    it('report interval finalizes only if data is unimodal', async () => {
-      await app.setQuorum(3, { from: voting })
-
-      // reportInterval 1000
-      await app.pushData(1000, 100, { from: user1 })
-      await app.pushData(1000, 110, { from: user2 })
-      await app.pushData(1000, 120, { from: user3 })
-      await assertData(0, 0) // because all reported values are different
-      await app.pushData(1000, 120, { from: user4 })
-      await assertData(1000, 120)
-
-      // reportInterval 1001
-      await app.setTime(86400000 + 86400)
-      await app.setQuorum(2, { from: voting })
-      await app.pushData(1001, 110, { from: user1 })
-      await app.pushData(1001, 120, { from: user2 })
-      await app.pushData(1001, 130, { from: user3 })
-      await app.pushData(1001, 140, { from: user4 })
-      await assertData(1000, 120) // quorum is not reached because all reported values are different
-
-      // reportInterval 1002
-      await app.setTime(86400000 + 2 * 86400)
-      await app.setQuorum(1, { from: voting })
-      await app.pushData(1002, 100, { from: user1 })
-      await assertData(1002, 100)
-    })
-    */
   })
 })
