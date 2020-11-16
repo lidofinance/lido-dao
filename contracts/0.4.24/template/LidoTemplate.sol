@@ -123,7 +123,12 @@ contract LidoTemplate is BaseTemplate {
         bytes memory initializeData = abi.encodeWithSelector(StETH(0).initialize.selector);
         steth = StETH(_installNonDefaultApp(dao, STETH_APP_ID, initializeData));
 
-        initializeData = abi.encodeWithSelector(LidoOracle(0).initialize.selector);
+        initializeData = abi.encodeWithSelector(
+            LidoOracle(0).initialize.selector,
+            uint64(32),  // slotsPerEpoch
+            uint64(12),  // secondsPerSlot
+            uint64(1606824000)  // genesisTime
+        );
         oracle = LidoOracle(_installNonDefaultApp(dao, LIDOORACLE_APP_ID, initializeData));
 
         initializeData = abi.encodeWithSelector(NodeOperatorsRegistry(0).initialize.selector);
@@ -160,7 +165,7 @@ contract LidoTemplate is BaseTemplate {
         // Oracle
         acl.createPermission(voting, oracle, oracle.MANAGE_MEMBERS(), voting);
         acl.createPermission(voting, oracle, oracle.MANAGE_QUORUM(), voting);
-        //acl.createPermission(voting, oracle, oracle.SET_REPORT_INTERVAL_DURATION(), voting);
+        acl.createPermission(voting, oracle, oracle.SET_BEACON_SPEC(), voting);
         acl.createPermission(voting, oracle, oracle.SET_POOL(), voting);
 
         // NodeOperatorsRegistry

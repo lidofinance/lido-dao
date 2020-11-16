@@ -57,16 +57,14 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
     const proxyAddress = await newApp(dao, 'lidooracle', appBase.address, appManager)
     app = await LidoOracle.at(proxyAddress)
 
-    // setBeaconSpec
-    await app.setBeaconSpec(32, 12, 1606824000, { from: appManager })
-
     // Set up the app's permissions.
     await acl.createPermission(voting, app.address, await app.MANAGE_MEMBERS(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.MANAGE_QUORUM(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_POOL(), appManager, { from: appManager })
+    await acl.createPermission(voting, app.address, await app.SET_BEACON_SPEC(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
-    await app.initialize()
+    await app.initialize(32, 12, 1606824000)
   })
 
   it('beaconSpec is correct', async () => {
@@ -133,6 +131,8 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
     })
 
     it('setQuorum works', async () => {
+      await app.setTime(1606824000)
+
       await app.addOracleMember(user1, { from: voting })
       await app.addOracleMember(user2, { from: voting })
       await app.addOracleMember(user3, { from: voting })
@@ -206,7 +206,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
   })
 
   describe('When there is single-member setup', function () {
-    describe('genesis time: 1606824000 , current epoch: 0', function () {
+    describe('current time: 1606824000 , current epoch: 0', function () {
       beforeEach(async () => {
         await app.setTime(1606824000)
         await app.addOracleMember(user1, { from: voting })
@@ -234,7 +234,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
         await assertRevert(app.reportBeacon(1, 32, 1, { from: user1 }), 'EPOCH_HAS_NOT_YET_BEGUN')
       })
       
-      describe(`genesis time: ${1606824000 + 32 * 12 * 5}, current epoch: 5`, function () {
+      describe(`current time: ${1606824000 + 32 * 12 * 5}, current epoch: 5`, function () {
         beforeEach(async () => {
           await app.reportBeacon(0, 32, 1, { from: user1 })
           await app.setTime(1606824000 + 32 * 12 * 5) 
@@ -261,13 +261,13 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
       await app.addOracleMember(user2, { from: voting })
       await app.addOracleMember(user3, { from: voting })
       await app.addOracleMember(user4, { from: voting })
-      await app.setQuorum(3, { from: voting })
-      assertBn(await app.getQuorum(), 3)
     })
 
-    describe('genesis time: 1606824000 , current epoch: 0', function () { 
+    describe('current time: 1606824000 , current epoch: 0', function () { 
       beforeEach(async () => {
         await app.setTime(1606824000)
+        await app.setQuorum(3, { from: voting })
+        assertBn(await app.getQuorum(), 3)
       })
 
       it('reverts when trying to report from non-member', async () => {
@@ -342,7 +342,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
         await assertRevert(app.reportBeacon(1, 32, 1, { from: user1 }), 'EPOCH_HAS_NOT_YET_BEGUN')
       })
 
-      describe(`genesis time: ${1606824000 + 32 * 12 * 5}, current epoch: 5`, function () {
+      describe(`current time: ${1606824000 + 32 * 12 * 5}, current epoch: 5`, function () {
         beforeEach(async () => {
           await app.reportBeacon(0, 32, 1, { from: user1 })
           await app.reportBeacon(0, 32, 1, { from: user2 })
