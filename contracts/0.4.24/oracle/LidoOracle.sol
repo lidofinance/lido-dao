@@ -36,6 +36,7 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
     bytes32 constant public MANAGE_MEMBERS = keccak256("MANAGE_MEMBERS");
     bytes32 constant public MANAGE_QUORUM = keccak256("MANAGE_QUORUM");
     bytes32 constant public SET_POOL = keccak256("SET_POOL");
+    bytes32 constant public SET_BEACON_SPEC = keccak256("SET_BEACON_SPEC");
 
     /// @dev Maximum number of oracle committee members
     uint256 public constant MAX_MEMBERS = 256;
@@ -50,8 +51,8 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
     /// @dev link to the pool
     ILido public pool;
 
-    uint256 public lastReportedEpoch;
     uint256 public earliestReportableEpoch;
+    uint256 public lastReportedEpoch;
 
     struct BeaconSpec {
         uint64 slotsPerEpoch;
@@ -85,14 +86,25 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
         uint128 beaconValidators
     );
 
-    function setBeaconSpec(uint64 slotsPerEpoch, uint64 secondsPerSlot, uint64 genesisTime) public {
+    function setBeaconSpec(uint64 slotsPerEpoch, uint64 secondsPerSlot, uint64 genesisTime) public auth(SET_BEACON_SPEC) {
+        require(slotsPerEpoch > 0);
+        require(secondsPerSlot > 0);
+        require(genesisTime > 0);
+
         beaconSpec.slotsPerEpoch = slotsPerEpoch;
         beaconSpec.secondsPerSlot = secondsPerSlot;
         beaconSpec.genesisTime = genesisTime;
     }
 
     function getCurrentEpochId() public view returns (uint256) {
-        return (_getTime() - beaconSpec.genesisTime) / (beaconSpec.slotsPerEpoch * beaconSpec.secondsPerSlot);
+        assert(_getTime() >= beaconSpec.genesisTime);
+
+        return (
+            uint64(_getTime())
+            .sub(beaconSpec.genesisTime)
+            .div(beaconSpec.slotsPerEpoch)
+            .div(beaconSpec.secondsPerSlot)
+        );
     }
 
     function getCurrentReportableEpochs() public view returns (uint256 firstReportableEpoch, uint256 lastReportableEpoch) {
@@ -107,9 +119,19 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
         return (startTime, endTime);
     }
 
-    function initialize(ILido _lido) public onlyInit {
+    function initialize(ILido _lido, uint64 slotsPerEpoch, uint64 secondsPerSlot, uint64 genesisTime) public onlyInit {
         assert(1 == ((1 << (MAX_MEMBERS - 1)) >> (MAX_MEMBERS - 1)));  // static assert
+
+        require(slotsPerEpoch > 0);
+        require(secondsPerSlot > 0);
+        require(genesisTime > 0);
+
         pool = _lido;
+
+        beaconSpec.slotsPerEpoch = slotsPerEpoch;
+        beaconSpec.secondsPerSlot = secondsPerSlot;
+        beaconSpec.genesisTime = genesisTime;
+
         initialized();
     }
 
@@ -249,7 +271,7 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
         if (!isUnimodal)
             return;
 
-        // data for this epoch are collected, now this epoch is completed and can not be reported anymore
+        // data for this epoch are collected, now this epoch is completed and members can not report this epoch anymore
         earliestReportableEpoch = _epochId.add(1);
 
         // unpack Report struct from uint256

@@ -149,7 +149,12 @@ contract LidoTemplate is BaseTemplate {
         state.lido = Lido(_installNonDefaultApp(state.dao, LIDO_APP_ID, initializeData));
 
         state.steth.initialize(state.lido);
-        state.oracle.initialize(state.lido);
+        state.oracle.initialize(
+            state.lido,
+            uint64(32),  // slotsPerEpoch
+            uint64(12),  // secondsPerSlot
+            uint64(1606824000)  // genesisTime
+        );
         state.operators.initialize(state.lido);
     }
 
@@ -170,7 +175,7 @@ contract LidoTemplate is BaseTemplate {
         // Oracle
         state.acl.createPermission(state.voting, state.oracle, state.oracle.MANAGE_MEMBERS(), state.voting);
         state.acl.createPermission(state.voting, state.oracle, state.oracle.MANAGE_QUORUM(), state.voting);
-        // state.acl.createPermission(state.voting, state.oracle, state.oracle.SET_REPORT_INTERVAL_DURATION(), state.voting);
+        state.acl.createPermission(state.voting, state.oracle, state.oracle.SET_BEACON_SPEC(), state.voting);
 
         // NodeOperatorsRegistry
         state.acl.createPermission(state.voting, state.operators, state.operators.MANAGE_SIGNING_KEYS(), state.voting);
