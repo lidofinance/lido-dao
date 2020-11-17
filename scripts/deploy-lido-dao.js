@@ -67,10 +67,10 @@ async function deployDao({
     log(`Using default DAO name: ${state.daoName}`)
   }
 
-  const isDevNet = netId <= 1000
+  const isPublicNet = netId <= 1000
 
   if (!state.daoInitialSettings) {
-    if (isDevNet) {
+    if (isPublicNet) {
       throw new Error(`please specify initial DAO settings in state file ${networkStateFile}`)
     }
     const accounts = (await web3.eth.getAccounts()).slice(0, 3)
@@ -82,7 +82,7 @@ async function deployDao({
     log(`Using default DAO settings`)
   }
 
-  if (!state.depositContractAddress && isDevNet) {
+  if (!state.depositContractAddress && isPublicNet) {
     throw new Error(`please specify deposit contract address in state file ${networkStateFile}`)
   }
 
