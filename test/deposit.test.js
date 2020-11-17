@@ -68,10 +68,10 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
     let proxyAddress = await newApp(dao, 'lido', appBase.address, appManager)
     app = await Lido.at(proxyAddress)
 
-    // Initialize the app's proxy.
-    await app.initialize(depositContract.address, 10)
-    treasuryAddr = await app.getTreasury()
-    insuranceAddr = await app.getInsuranceFund()
+    // NodeOperatorsRegistry
+    proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)
+    operators = await NodeOperatorsRegistry.at(proxyAddress)
+    await operators.initialize(app.address)
 
     // token
     proxyAddress = await newApp(dao, 'steth', stEthBase.address, appManager)
@@ -108,7 +108,6 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
     })
 
     // await depositContract.reset()
-    await app.setApps(token.address, oracle.address, operators.address, { from: voting })
   })
 
   const checkStat = async ({ deposited, remote }) => {

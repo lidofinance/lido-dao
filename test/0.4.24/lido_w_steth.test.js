@@ -63,20 +63,15 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
     let proxyAddress = await newApp(dao, 'lido', appBase.address, appManager)
     app = await Lido.at(proxyAddress)
 
-    // Initialize the app's proxy.
-    await app.initialize(validatorRegistration.address, 10)
-    treasuryAddr = await app.getTreasury()
-    insuranceAddr = await app.getInsuranceFund()
+    // NodeOperatorsRegistry
+    proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)
+    operators = await NodeOperatorsRegistry.at(proxyAddress)
+    await operators.initialize(app.address)
 
     // token
     proxyAddress = await newApp(dao, 'steth', stEthBase.address, appManager)
     token = await StETH.at(proxyAddress)
     await token.initialize(app.address)
-
-    // NodeOperatorsRegistry
-    proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)
-    operators = await NodeOperatorsRegistry.at(proxyAddress)
-    await operators.initialize(app.address)
 
     await oracle.initialize(app.address)
 
@@ -103,7 +98,6 @@ contract('Lido with StEth', ([appManager, voting, user1, user2, user3, nobody, n
     })
 
     await validatorRegistration.reset()
-    await app.setApps(token.address, oracle.address, operators.address, { from: voting })
 
     // Set fee
     await app.setFee(totalFeePoints, { from: voting })

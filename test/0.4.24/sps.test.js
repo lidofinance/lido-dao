@@ -56,9 +56,10 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await acl.createPermission(voting, app.address, await app.SET_NODE_OPERATOR_LIMIT_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.REPORT_STOPPED_VALIDATORS_ROLE(), appManager, { from: appManager })
 
+    pool = await PoolMock.new(app.address)
+
     // Initialize the app's proxy.
     await app.initialize(pool.address)
-    await pool.setApps(ZERO_ADDRESS, ZERO_ADDRESS, app.address)
   })
 
   it('addNodeOperator works', async () => {

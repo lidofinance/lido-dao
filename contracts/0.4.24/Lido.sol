@@ -413,7 +413,16 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         uint256 deposit = msg.value;
         require(deposit != 0, "ZERO_DEPOSIT");
 
-        getToken().mint(sender, deposit);
+        ISTETH stEth = getToken();
+
+        uint256 sharesAmount = stEth.getSharesByPooledEth(deposit);
+        if (sharesAmount == 0) {
+            // totalControlledEther is 0: either the first-ever deposit or complete slashing
+            // assume that shares correspond to Ether 1-to-1
+            stEth.mintShares(sender, deposit);
+        } else {
+            stEth.mintShares(sender, sharesAmount);
+        }
 
         _submitted(sender, deposit, _referral);
     }
@@ -539,38 +548,60 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
       * @param _totalRewards Total rewards accrued on the Ethereum 2.0 side.
       */
     function distributeRewards(uint256 _totalRewards) internal {
-        // Amount of the rewards in Ether
-        uint256 tokens2mint = _totalRewards.mul(_getFee()).div(10000);
-        // Amount of shares that matches tokens2mint after minting (with new ratio)
-        // Folmula gets from this equation:
-        //       shares2mint
-        // ------------------------- * (remoteEther + bufferedEther) = tokens2mint
-        // totalShares + shares2mint
+        ISTETH stEth = getToken();
+        uint256 feeInEther = _totalRewards.mul(_getFee()).div(10000);
+
+        // We need to take a defined percentage of the reported reward as a fee, and we do
+        // this by minting new token shares and assigning them to the fee recipients (see
+        // StETH docs for the explanation of the shares mechanics).
+        //
+        // Since we've increased totalControlledEther by _totalRewards (which is already
+        // performed by the time this function is called), the combined cost of all holders'
+        // shares has became _totalRewards StETH tokens more, effectively splitting the reward
+        // between each token holder proportionally to their token share.
+        //
+        // Now we want to mint new shares to the fee recipient, so that the total cost of the
+        // newly-minted shares exactly corresponds to the fee taken:
+        //
+        // shares2mint * newShareCost = feeInEther
+        // newShareCost = newTotalControlledEther / (prevTotalShares + shares2mint)
+        //
+        // which follows to:
+        //
+        //                    feeInEther * prevTotalShares
+        // shares2mint = --------------------------------------
+        //                newTotalControlledEther - feeInEther
+        //
+        // The effect is that the given percentage of the reward goes to the fee recipient, and
+        // the rest of the reward is distributed between token holders proportionally to their
+        // token shares.
+        //
+        uint256 totalControlledEther = _getTotalControlledEther();
         uint256 shares2mint = (
-            tokens2mint
-            .mul(getToken().getTotalShares())
-            .div(_getTotalControlledEther().sub(tokens2mint))
+            feeInEther
+            .mul(stEth.getTotalShares())
+            .div(totalControlledEther.sub(feeInEther))
         );
-        // Add calculated amount of shares to this contract, after mint balances
-        // This will reduce the balances of the holders, as if the rewards were
-        // taken in parts from each of them.
-        getToken().mint(address(this), getToken().getPooledEthByShares(shares2mint));
-        // (!) minted amount may be less than tokens2mint due to round errors
-        uint256 mintedRewards = getToken().balanceOf(address(this));
+
+        // Mint the calculated amount of shares to this contract address. This will reduce the
+        // balances of the holders, as if the fee was taken in parts from each of them.
+        uint256 totalShares = stEth.mintShares(address(this), shares2mint);
+
+        // The minted token amount may be less than feeInEther due to the shares2mint rounding
+        uint256 mintedFee = shares2mint.mul(totalControlledEther).div(totalShares);
 
         (uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, ) = _getFeeDistribution();
-        uint256 toTreasury = mintedRewards.mul(treasuryFeeBasisPoints).div(10000);
-        uint256 toInsuranceFund = mintedRewards.mul(insuranceFeeBasisPoints).div(10000);
-        uint256 toOperators = mintedRewards.sub(toTreasury).sub(toInsuranceFund);
+        uint256 toTreasury = mintedFee.mul(treasuryFeeBasisPoints).div(10000);
+        uint256 toInsuranceFund = mintedFee.mul(insuranceFeeBasisPoints).div(10000);
 
-        getToken().transfer(getTreasury(), toTreasury);
-        getToken().transfer(getInsuranceFund(), toInsuranceFund);
-        getToken().transfer(address(getOperators()), toOperators);
+        stEth.transfer(getTreasury(), toTreasury);
+        stEth.transfer(getInsuranceFund(), toInsuranceFund);
 
-        getOperators().distributeRewards(
-            address(getToken()),
-            getToken().balanceOf(address(getOperators()))
-        );
+        // Transfer the rest of the fee to operators
+        mintedFee = mintedFee.sub(toTreasury).sub(toInsuranceFund);
+        INodeOperatorsRegistry operatorsRegistry = getOperators();
+        stEth.transfer(address(operatorsRegistry), mintedFee);
+        operatorsRegistry.distributeRewards(address(stEth), mintedFee);
     }
 
     /**
