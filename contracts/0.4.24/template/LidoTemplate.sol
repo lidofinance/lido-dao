@@ -125,6 +125,7 @@ contract LidoTemplate is BaseTemplate {
 
         initializeData = abi.encodeWithSelector(
             LidoOracle(0).initialize.selector,
+            uint64(225),  // epochsPerFrame
             uint64(32),  // slotsPerEpoch
             uint64(12),  // secondsPerSlot
             uint64(1606824000)  // genesisTime

@@ -64,7 +64,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
     await acl.createPermission(voting, app.address, await app.SET_BEACON_SPEC(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
-    await app.initialize(32, 12, 1606824000)
+    await app.initialize(10, 32, 12, 1606824000)
   })
 
   it('beaconSpec is correct', async () => {
@@ -93,7 +93,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
 
       assertBn(await app.earliestReportableEpoch(), 4)
     })
-    
+
     it('addOracleMember works', async () => {
       await assertRevert(app.addOracleMember(user1, { from: user1 }), 'APP_AUTH_FAILED')
       await assertRevert(app.addOracleMember('0x0000000000000000000000000000000000000000', { from: voting }), 'BAD_ARGUMENT')
@@ -203,6 +203,28 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
       assertBn(result.startTime, 1606824000)
       assertBn(result.endTime, 1606824000 + 32 * 12 * 124 - 1)
     })
+
+    it('getCurrentFrame works', async () => {
+      let result
+
+      await app.setTime(1606824000)
+      result = await app.getCurrentFrame()
+      assertBn(result.frameEpochId, 0)
+      assertBn(result.frameStartTime, 1606824000)
+      assertBn(result.frameEndTime, 1606824000 + 32 * 12 * 10 - 1)
+
+      await app.setTime(1606824000 + 32 * 12 * 10 - 1)
+      result = await app.getCurrentFrame()
+      assertBn(result.frameEpochId, 0)
+      assertBn(result.frameStartTime, 1606824000)
+      assertBn(result.frameEndTime, 1606824000 + 32 * 12 * 10 - 1)
+
+      await app.setTime(1606824000 + 32 * 12 * 123)
+      result = await app.getCurrentFrame()
+      assertBn(result.frameEpochId, 120)
+      assertBn(result.frameStartTime, 1606824000 + 32 * 12 * 120)
+      assertBn(result.frameEndTime, 1606824000 + 32 * 12 * 130 - 1)
+    })
   })
 
   describe('When there is single-member setup', function () {
@@ -233,11 +255,11 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
       it('reverts when trying to report future epoch', async () => {
         await assertRevert(app.reportBeacon(1, 32, 1, { from: user1 }), 'EPOCH_HAS_NOT_YET_BEGUN')
       })
-      
+
       describe(`current time: ${1606824000 + 32 * 12 * 5}, current epoch: 5`, function () {
         beforeEach(async () => {
           await app.reportBeacon(0, 32, 1, { from: user1 })
-          await app.setTime(1606824000 + 32 * 12 * 5) 
+          await app.setTime(1606824000 + 32 * 12 * 5)
           await assertReportableEpochs(1, 5)
         })
 
@@ -263,7 +285,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
       await app.addOracleMember(user4, { from: voting })
     })
 
-    describe('current time: 1606824000 , current epoch: 0', function () { 
+    describe('current time: 1606824000 , current epoch: 0', function () {
       beforeEach(async () => {
         await app.setTime(1606824000)
         await app.setQuorum(3, { from: voting })
@@ -305,12 +327,12 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
         await assertReportableEpochs(1, 1)
         await app.reportBeacon(1, 65, 2, { from: user2 })
         await assertReportableEpochs(1, 1)
-        await app.reportBeacon(1, 97, 3, { from: user3 }) 
+        await app.reportBeacon(1, 97, 3, { from: user3 })
         await assertReportableEpochs(1, 1)
         await app.reportBeacon(1, 98, 3, { from: user4 }) // data is not unimodal, quorum is not reached
         await assertReportableEpochs(1, 1)
 
-        await app.setTime(1606824000 + 32 * 12 * 2)  
+        await app.setTime(1606824000 + 32 * 12 * 2)
         await assertReportableEpochs(1, 2)
 
         await app.reportBeacon(2, 99, 3, { from: user1 })
@@ -324,7 +346,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
         await app.reportBeacon(0, 32, 1, { from: user1 })
         await app.reportBeacon(0, 32, 1, { from: user2 })
         await app.reportBeacon(0, 32, 1, { from: user3 })
-        
+
         for (const account of [user1, user2, user3, user4])
           await assertRevert(app.reportBeacon(0, 32, 1, { from: account }), 'EPOCH_IS_TOO_OLD')
 
@@ -333,7 +355,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
 
       it('reverts when trying to report this epoch again from the same user', async () => {
         await app.reportBeacon(0, 32, 1, { from: user1 })
-        
+
         await assertRevert(app.reportBeacon(0, 32, 1, { from: user1 }), 'ALREADY_SUBMITTED')
         await assertReportableEpochs(0, 0)
       })
@@ -352,12 +374,12 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
 
           await assertReportableEpochs(1, 5)
         })
-        
+
         it('members can reports to all reportable epochs, the earliest reportable epoch is the last completed, the latest is current', async () => {
           for (let epoch = 1; epoch < 6; epoch++)
             await app.reportBeacon(epoch, 32, 1, { from: user1 })
           await assertReportableEpochs(1, 5)
-          
+
           for (let epoch = 1; epoch < 6; epoch++)
             await app.reportBeacon(epoch, 32, 1, { from: user2 })
           await assertReportableEpochs(1, 5)
@@ -372,7 +394,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
           for (let epoch = 1; epoch < 6; epoch++)
             await app.reportBeacon(epoch, 32, 1, { from: user1 })
           await assertReportableEpochs(1, 5)
-          
+
           for (let epoch = 1; epoch < 6; epoch++)
             await app.reportBeacon(epoch, 32, 1, { from: user2 })
           await assertReportableEpochs(1, 5)
@@ -390,7 +412,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
           for (let epoch = 1; epoch < 6; epoch++)
             await app.reportBeacon(epoch, 32, 1, { from: user1 }) // this should be removed
           await assertReportableEpochs(1, 5)
-          
+
           for (let epoch = 1; epoch < 6; epoch++)
             await app.reportBeacon(epoch, 64, 2, { from: user2 }) // this should be intact
           await assertReportableEpochs(1, 5)
@@ -409,7 +431,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
           for (let epoch = 1; epoch < 6; epoch++)
             await app.reportBeacon(epoch, 32, 1, { from: user1 }) // this should be intact
           await assertReportableEpochs(1, 5)
-          
+
           for (let epoch = 1; epoch < 6; epoch++)
             await app.reportBeacon(epoch, 64, 2, { from: user4 }) // this should be removed
           await assertReportableEpochs(1, 5)
@@ -428,7 +450,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
           for (let epoch = 1; epoch < 5; epoch++)
             await app.reportBeacon(epoch, 32, 1, { from: user1 })
           await assertReportableEpochs(1, 5)
-          
+
           for (let epoch = 1; epoch < 5; epoch++)
             await app.reportBeacon(epoch, 32, 1, { from: user2 }) // this should be intact
           await assertReportableEpochs(1, 5)

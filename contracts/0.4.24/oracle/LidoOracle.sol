@@ -50,11 +50,12 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
 
     /// @dev link to the pool
     ILido public pool;
-    
+
     uint256 public earliestReportableEpoch;
     uint256 public lastReportedEpoch;
-    
+
     struct BeaconSpec {
+        uint64 epochsPerFrame;
         uint64 slotsPerEpoch;
         uint64 secondsPerSlot;
         uint64 genesisTime;
@@ -71,9 +72,9 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
         uint256 reportsBitMask;
         mapping (uint256 => Report) reports;
     }
-    
+
     mapping(uint256 => EpochData) public gatheredEpochData;
-    
+
     event Completed(
         uint256 epochId,
         uint128 beaconBalance,
@@ -86,21 +87,28 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
         uint128 beaconValidators
     );
 
-    function setBeaconSpec(uint64 slotsPerEpoch, uint64 secondsPerSlot, uint64 genesisTime) public auth(SET_BEACON_SPEC) {
-        require(slotsPerEpoch > 0);
-        require(secondsPerSlot > 0);
-        require(genesisTime > 0);
+    function setBeaconSpec(
+        uint64 _epochsPerFrame,
+        uint64 _slotsPerEpoch,
+        uint64 _secondsPerSlot,
+        uint64 _genesisTime
+    )
+        public auth(SET_BEACON_SPEC)
+    {
+        require(_epochsPerFrame > 0);
+        require(_slotsPerEpoch > 0);
+        require(_secondsPerSlot > 0);
+        require(_genesisTime > 0);
 
-        beaconSpec.slotsPerEpoch = slotsPerEpoch;
-        beaconSpec.secondsPerSlot = secondsPerSlot;
-        beaconSpec.genesisTime = genesisTime;
+        beaconSpec.epochsPerFrame = _epochsPerFrame;
+        beaconSpec.slotsPerEpoch = _slotsPerEpoch;
+        beaconSpec.secondsPerSlot = _secondsPerSlot;
+        beaconSpec.genesisTime = _genesisTime;
     }
 
     function getCurrentEpochId() public view returns (uint256) {
-        assert(_getTime() >= beaconSpec.genesisTime);
-        
         return (
-            uint64(_getTime())
+            _getTime()
             .sub(beaconSpec.genesisTime)
             .div(beaconSpec.slotsPerEpoch)
             .div(beaconSpec.secondsPerSlot)
@@ -119,16 +127,36 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
         return (startTime, endTime);
     }
 
-    function initialize(uint64 slotsPerEpoch, uint64 secondsPerSlot, uint64 genesisTime) public onlyInit {
+    function getCurrentFrame() public view returns (uint256 frameEpochId, uint256 frameStartTime, uint256 frameEndTime) {
+        uint64 genesisTime = beaconSpec.genesisTime;
+        uint64 epochsPerFrame = beaconSpec.epochsPerFrame;
+        uint64 secondsPerEpoch = beaconSpec.secondsPerSlot.mul(beaconSpec.slotsPerEpoch);
+        uint256 currentEpochId = getCurrentEpochId();
+        frameEpochId = currentEpochId.div(epochsPerFrame).mul(epochsPerFrame);
+        frameStartTime = frameEpochId.mul(secondsPerEpoch).add(genesisTime);
+        uint256 nextFrameEpochId = frameEpochId.div(epochsPerFrame).add(1).mul(epochsPerFrame);
+        frameEndTime = nextFrameEpochId.mul(secondsPerEpoch).add(genesisTime).sub(1);
+    }
+
+    function initialize(
+        uint64 _epochsPerFrame,
+        uint64 _slotsPerEpoch,
+        uint64 _secondsPerSlot,
+        uint64 _genesisTime
+    )
+        public onlyInit
+    {
         assert(1 == ((1 << (MAX_MEMBERS - 1)) >> (MAX_MEMBERS - 1)));  // static assert
 
-        require(slotsPerEpoch > 0);
-        require(secondsPerSlot > 0);
-        require(genesisTime > 0);
+        require(_epochsPerFrame > 0);
+        require(_slotsPerEpoch > 0);
+        require(_secondsPerSlot > 0);
+        require(_genesisTime > 0);
 
-        beaconSpec.slotsPerEpoch = slotsPerEpoch;
-        beaconSpec.secondsPerSlot = secondsPerSlot;
-        beaconSpec.genesisTime = genesisTime;
+        beaconSpec.epochsPerFrame = _epochsPerFrame;
+        beaconSpec.slotsPerEpoch = _slotsPerEpoch;
+        beaconSpec.secondsPerSlot = _secondsPerSlot;
+        beaconSpec.genesisTime = _genesisTime;
 
         initialized();
     }
@@ -295,7 +323,7 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
     function reportToUint256(Report _report) internal pure returns (uint256) {
         return uint256(_report.beaconBalance) << 128 | uint256(_report.beaconValidators);
     }
-    
+
     function uint256ToReport(uint256 _report) internal pure returns (Report) {
         Report memory report;
         report.beaconBalance = uint128(_report >> 128);
