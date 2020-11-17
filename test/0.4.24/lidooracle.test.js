@@ -63,7 +63,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
     await acl.createPermission(voting, app.address, await app.SET_BEACON_SPEC(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
-    await app.initialize('0x0000000000000000000000000000000000000000', 32, 12, 1606824000)
+    await app.initialize('0x0000000000000000000000000000000000000000', 10, 32, 12, 1606824000)
   })
 
   it('beaconSpec is correct', async () => {
@@ -201,6 +201,28 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
       result = await app.getCurrentReportableTimeInterval()
       assertBn(result.startTime, 1606824000)
       assertBn(result.endTime, 1606824000 + 32 * 12 * 124 - 1)
+    })
+
+    it('getCurrentFrame works', async () => {
+      let result
+
+      await app.setTime(1606824000)
+      result = await app.getCurrentFrame()
+      assertBn(result.frameEpochId, 0)
+      assertBn(result.frameStartTime, 1606824000)
+      assertBn(result.frameEndTime, 1606824000 + 32 * 12 * 10 - 1)
+
+      await app.setTime(1606824000 + 32 * 12 * 10 - 1)
+      result = await app.getCurrentFrame()
+      assertBn(result.frameEpochId, 0)
+      assertBn(result.frameStartTime, 1606824000)
+      assertBn(result.frameEndTime, 1606824000 + 32 * 12 * 10 - 1)
+
+      await app.setTime(1606824000 + 32 * 12 * 123)
+      result = await app.getCurrentFrame()
+      assertBn(result.frameEpochId, 120)
+      assertBn(result.frameStartTime, 1606824000 + 32 * 12 * 120)
+      assertBn(result.frameEndTime, 1606824000 + 32 * 12 * 130 - 1)
     })
   })
 

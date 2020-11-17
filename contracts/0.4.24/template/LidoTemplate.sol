@@ -151,6 +151,7 @@ contract LidoTemplate is BaseTemplate {
         state.steth.initialize(state.lido);
         state.oracle.initialize(
             state.lido,
+            uint64(225),  // epochsPerFrame
             uint64(32),  // slotsPerEpoch
             uint64(12),  // secondsPerSlot
             uint64(1606824000)  // genesisTime
