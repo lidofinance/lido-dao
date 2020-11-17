@@ -1,7 +1,7 @@
 import { abi as aclAbi } from '@aragon/os/abi/ACL.json'
 import { encodeCallScript } from '@aragon/contract-helpers-test/src/aragon-os'
 import { createVote, voteForAction } from './votingHelper'
-import { init as dePoolOracleInit } from './dePoolOracleHelper'
+import { init as lidoOracleInit } from './lidoOracleHelper'
 import logger from '../logger'
 
 let web3
@@ -12,7 +12,7 @@ export function init(c) {
   if (!context) {
     context = c
     web3 = context.web3
-    dePoolOracleInit(context)
+    lidoOracleInit(context)
     aclContract = new web3.eth.Contract(aclAbi, getProxyAddress())
   }
 }
