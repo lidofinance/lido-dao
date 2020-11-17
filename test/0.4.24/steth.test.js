@@ -307,7 +307,8 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
       })
 
       it('reverts when trying to mint without permission', async () => {
-        for (const acc of [user1, user2, user3, nobody]) await assertRevert(stEth.mintShares(user2, tokens(1), { from: acc }), 'APP_AUTH_FAILED')
+        for (const acc of [user1, user2, user3, nobody])
+          await assertRevert(stEth.mintShares(user2, tokens(1), { from: acc }), 'APP_AUTH_FAILED')
       })
 
       it('reverts when mint to zero address', async () => {
@@ -330,7 +331,8 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
       })
 
       it('reverts when trying to burn without permission', async () => {
-        for (const acc of [user1, user2, user3, nobody]) await assertRevert(stEth.burnShares(user2, tokens(1), { from: acc }), 'APP_AUTH_FAILED')
+        for (const acc of [user1, user2, user3, nobody])
+          await assertRevert(stEth.burnShares(user2, tokens(1), { from: acc }), 'APP_AUTH_FAILED')
       })
 
       it('burning zero value works', async () => {
@@ -352,9 +354,7 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
         const user1Shares = await stEth.getSharesByHolder(user1)
 
         const sharesToBurn = totalShares.sub(
-          totalSupply
-            .mul(totalShares.sub(user1Shares))
-            .div(totalSupply.sub(user1Balance).add(bn(tokens(100))))
+          totalSupply.mul(totalShares.sub(user1Shares)).div(totalSupply.sub(user1Balance).add(bn(tokens(100))))
         )
 
         await stEth.burnShares(user1, sharesToBurn, { from: pool })
@@ -377,9 +377,7 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
         const user1Shares = await stEth.getSharesByHolder(user1)
 
         const sharesToBurn = totalShares.sub(
-          totalSupply
-            .mul(totalShares.sub(user1Shares))
-            .div(totalSupply.sub(user1Balance).add(bn(tokens(500))))
+          totalSupply.mul(totalShares.sub(user1Shares)).div(totalSupply.sub(user1Balance).add(bn(tokens(500))))
         )
 
         await stEth.burnShares(user1, sharesToBurn, { from: pool })
