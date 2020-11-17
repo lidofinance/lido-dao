@@ -63,7 +63,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
     await acl.createPermission(voting, app.address, await app.SET_BEACON_SPEC(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
-    await app.initialize('0x0000000000000000000000000000000000000000', 10, 32, 12, 1606824000)
+    await app.initialize('0x0000000000000000000000000000000000000000', 1, 32, 12, 1606824000)
   })
 
   it('beaconSpec is correct', async () => {
@@ -74,25 +74,6 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
   })
 
   describe('Test utility functions:', function () {
-    it('reportBeacon', async () => {
-      await app.setTime(1606824000 + 32 * 12 * 5 + 1)
-
-      await app.addOracleMember(user1, { from: voting })
-      await app.addOracleMember(user2, { from: voting })
-      await app.addOracleMember(user3, { from: voting })
-      await app.addOracleMember(user4, { from: voting })
-
-      await app.setQuorum(4, { from: voting })
-
-      await app.reportBeacon(3, 100, 1, { from: user1 })
-      await app.reportBeacon(3, 101, 1, { from: user2 })
-      await app.reportBeacon(3, 200, 2, { from: user3 })
-      receipt = await app.reportBeacon(3, 200, 2, { from: user4 })
-      assertEvent(receipt, "Completed", { expectedArgs: { epochId: 3, beaconBalance: 200, beaconValidators: 2 }})
-
-      assertBn(await app.earliestReportableEpoch(), 4)
-    })
-
     it('addOracleMember works', async () => {
       await assertRevert(app.addOracleMember(user1, { from: user1 }), 'APP_AUTH_FAILED')
       await assertRevert(app.addOracleMember('0x0000000000000000000000000000000000000000', { from: voting }), 'BAD_ARGUMENT')
@@ -204,6 +185,8 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
     })
 
     it('getCurrentFrame works', async () => {
+      await app.setBeaconSpec(10, 32, 12, 1606824000, { from: voting })
+
       let result
 
       await app.setTime(1606824000)
