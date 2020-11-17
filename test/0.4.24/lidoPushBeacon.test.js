@@ -143,14 +143,75 @@ contract('Lido pushBeacon', ([appManager, voting, user1, user2, user3, nobody]) 
       assert.equal(await app.distributeRewardsCalled(), false)
       assertBn(await app.totalRewards(), 0)
     })
+  })
 
-    it('report BcnValidators:1 BcnBalance:33 = rewards:1', async () => {
-      await oracle.reportBeacon(100, 1, ETH(33), { from: user1 })
-      checkStat({depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(33)})
-      assertBn(await app.getBufferedEther(), ETH(3))
-      assertBn(await app.getTotalPooledEther(), ETH(36))
+  context('with depositedVals=2, beaconVals=1, bcnBal=30, bufferedEth=3', async () => {
+    beforeEach(async function () {
+      await app.setDepositedValidators(2)
+      await app.setBeaconBalance(ETH(30))
+      await app.setBufferedEther({from: user1, value: ETH(5)})
+      await app.setBeaconValidators(1)
+    })
+
+    it('initial state before report', async () => {
+      checkStat({depositedValidators:2, beaconValidators: 1, beaconBalance: ETH(30)})
+      assertBn(await app.getBufferedEther(), ETH(5))
+      assertBn(await app.getTotalPooledEther(), ETH(67))
+    })
+
+    it('report BcnValidators:1 BcnBalance:0 = no rewards', async () => {
+      await oracle.reportBeacon(100, 1, ETH(0), { from: user1 })
+      checkStat({depositedValidators: 2, beaconValidators: 1, beaconBalance: ETH(0)})
+      assertBn(await app.getBufferedEther(), ETH(5))
+      assertBn(await app.getTotalPooledEther(), ETH(37))
+      assert.equal(await app.distributeRewardsCalled(), false)
+      assertBn(await app.totalRewards(), 0)
+    })
+    
+    it('report BcnValidators:1 BcnBalance:1 = no rewards', async () => {
+      await oracle.reportBeacon(100, 1, ETH(1), { from: user1 })
+      checkStat({depositedValidators: 2, beaconValidators: 1, beaconBalance: ETH(1)})
+      assertBn(await app.getBufferedEther(), ETH(5))
+      assertBn(await app.getTotalPooledEther(), ETH(38))
+      assert.equal(await app.distributeRewardsCalled(), false)
+      assertBn(await app.totalRewards(), 0)
+    })
+
+    it('report BcnValidators:2 BcnBalance:62 = no reward', async () => {
+      await oracle.reportBeacon(100, 2, ETH(62), { from: user1 })
+      checkStat({depositedValidators: 2, beaconValidators: 2, beaconBalance: ETH(62)})
+      assertBn(await app.getBufferedEther(), ETH(5))
+      assertBn(await app.getTotalPooledEther(), ETH(67))
+      assert.equal(await app.distributeRewardsCalled(), false)
+      assertBn(await app.totalRewards(), 0)
+    })
+
+    it('report BcnValidators:1 BcnBalance:31 = reward:1', async () => {
+      await oracle.reportBeacon(100, 1, ETH(31), { from: user1 })
+      checkStat({depositedValidators: 2, beaconValidators: 1, beaconBalance: ETH(31)})
+      assertBn(await app.getBufferedEther(), ETH(5))
+      assertBn(await app.getTotalPooledEther(), ETH(68))
       assert.equal(await app.distributeRewardsCalled(), true)
       assertBn(await app.totalRewards(), ETH(1))
     })
+
+    it('report BcnValidators:2 BcnBalance:63 = reward:1', async () => {
+      await oracle.reportBeacon(100, 2, ETH(63), { from: user1 })
+      checkStat({depositedValidators: 2, beaconValidators: 2, beaconBalance: ETH(63)})
+      assertBn(await app.getBufferedEther(), ETH(5))
+      assertBn(await app.getTotalPooledEther(), ETH(68))
+      assert.equal(await app.distributeRewardsCalled(), true)
+      assertBn(await app.totalRewards(), ETH(1))
+    })
+
+    it('report BcnValidators:3 = revert', async () => {
+      await assertRevert(oracle.reportBeacon(110, 3, ETH(65), { from: user2 }), 'REPORTED_MORE_DEPOSITED')
+      checkStat({depositedValidators: 2, beaconValidators: 1, beaconBalance: ETH(30)})
+      assertBn(await app.getBufferedEther(), ETH(5))
+      assertBn(await app.getTotalPooledEther(), ETH(67))
+      assert.equal(await app.distributeRewardsCalled(), false)
+      assertBn(await app.totalRewards(), 0)
+    })
+    
   })
 })
