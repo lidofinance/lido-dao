@@ -16,8 +16,8 @@
       "params": []
     },
     {
-      "name": "Set app contracts addresses",
-      "id": "SET_APPS",
+      "name": "Set oracle contract address",
+      "id": "SET_ORACLE",
       "params": []
     },
     {
