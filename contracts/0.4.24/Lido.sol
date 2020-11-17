@@ -596,23 +596,23 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         // newly-minted shares exactly corresponds to the fee taken:
         //
         // shares2mint * newShareCost = feeInEther
-        // newShareCost = newTotalControlledEther / (prevTotalShares + shares2mint)
+        // newShareCost = totalPooledEther / (prevTotalShares + shares2mint)
         //
         // which follows to:
         //
         //                    feeInEther * prevTotalShares
         // shares2mint = --------------------------------------
-        //                newTotalControlledEther - feeInEther
+        //                 newtTotalPooledEther - feeInEther
         //
         // The effect is that the given percentage of the reward goes to the fee recipient, and
         // the rest of the reward is distributed between token holders proportionally to their
         // token shares.
         //
-        uint256 totalControlledEther = _getTotalControlledEther();
+        uint256 totalPooledEther = _getTotalPooledEther();
         uint256 shares2mint = (
             feeInEther
             .mul(stEth.getTotalShares())
-            .div(totalControlledEther.sub(feeInEther))
+            .div(totalPooledEther.sub(feeInEther))
         );
 
         // Mint the calculated amount of shares to this contract address. This will reduce the
@@ -620,7 +620,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         uint256 totalShares = stEth.mintShares(address(this), shares2mint);
 
         // The minted token amount may be less than feeInEther due to the shares2mint rounding
-        uint256 mintedFee = shares2mint.mul(totalControlledEther).div(totalShares);
+        uint256 mintedFee = shares2mint.mul(totalPooledEther).div(totalShares);
 
         (uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, ) = _getFeeDistribution();
         uint256 toTreasury = mintedFee.mul(treasuryFeeBasisPoints).div(10000);
