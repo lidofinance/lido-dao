@@ -300,8 +300,14 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
         if (!isUnimodal)
             return;
 
-        // data for this epoch are collected, now this epoch is completed and members can not report this epoch anymore
-        earliestReportableEpoch = _epochId.add(1);
+        // data for this frame is collected, now this frame is completed, change
+        // earliestReportableEpoch to first epoch from next frame
+        earliestReportableEpoch = (
+            _epochId
+            .div(beaconSpec.epochsPerFrame)
+            .add(1)
+            .mul(beaconSpec.epochsPerFrame)
+        );
 
         // unpack Report struct from uint256
         Report memory modeReport = uint256ToReport(mode);
