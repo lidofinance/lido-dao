@@ -195,7 +195,7 @@ so full branch coverage will never be reported until
 
 [solidity-coverage#219]: https://github.com/sc-forks/solidity-coverage/issues/269
 
-### Deploying
+## Deploying
 
 Networks are defined in `buidler.config.js` file. To select the target network for deployment,
 set `NETWORK_NAME` environment variable to a network name defined in that file. All examples
@@ -287,7 +287,7 @@ An example of `deployed.json` file prepared for a testnet deployment:
 yarn compile
 ```
 
-#### Step 1: deploy Aragon environment and core apps (optional)
+#### Step 2: deploy Aragon environment and core apps (optional)
 
 This is required for test/dev networks that don't have Aragon environment deployed.
 
@@ -299,19 +299,19 @@ NETWORK_NAME=localhost yarn deploy:aragon-env
 NETWORK_NAME=localhost yarn deploy:aragon-std-apps
 ```
 
-#### Step 2: deploy Lido APM registry and DAO template
+#### Step 3: deploy Lido APM registry and DAO template
 
 ```bash
 NETWORK_NAME=localhost yarn deploy:apm-and-template
 ```
 
-#### Step 3: build and deploy Lido applications
+#### Step 4: build and deploy Lido applications
 
 ```bash
 NETWORK_NAME=localhost yarn deploy:apps
 ```
 
-#### Step 4: deploy the DAO
+#### Step 5: deploy the DAO
 
 ```bash
 NETWORK_NAME=localhost yarn deploy:dao
@@ -319,19 +319,3 @@ NETWORK_NAME=localhost yarn deploy:dao
 
 This step deploys `DepositContract` as well, if `depositContractAddress` is not specified
 in `deployed.json`.
-
-### E2E
-
-To reset the devchain state, use (indise the `e2e` dorectory):
-
-```bash
-./shutdown.sh && ./startup.sh
-```
-
-or just do a clean restart by passing the `-r` flag:
-
-```bash
-./startup.sh -r -s
-```
-
-You're free to mix the keys.
