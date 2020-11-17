@@ -31,7 +31,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     bytes32 constant public PAUSE_ROLE = keccak256("PAUSE_ROLE");
     bytes32 constant public MANAGE_FEE = keccak256("MANAGE_FEE");
     bytes32 constant public MANAGE_WITHDRAWAL_KEY = keccak256("MANAGE_WITHDRAWAL_KEY");
-    bytes32 constant public SET_APPS = keccak256("SET_APPS");
+    bytes32 constant public SET_ORACLE = keccak256("SET_ORACLE");
     bytes32 constant public SET_DEPOSIT_ITERATION_LIMIT = keccak256("SET_DEPOSIT_ITERATION_LIMIT");
 
     uint256 constant public PUBKEY_LENGTH = 48;
@@ -85,10 +85,19 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         uint256 initialUsedSigningKeys; // for write-back control
     }
 
-    function initialize(address _validatorRegistration, uint256 _depositIterationLimit)
+    function initialize(
+        ISTETH _token,
+        IValidatorRegistration validatorRegistration,
+        address _oracle,
+        INodeOperatorsRegistry _operators,
+        uint256 _depositIterationLimit
+    )
         public onlyInit
     {
-        _setValidatorRegistrationContract(_validatorRegistration);
+        _setToken(_token);
+        _setValidatorRegistrationContract(validatorRegistration);
+        _setOracle(_oracle);
+        _setOperators(_operators);
         _setDepositIterationLimit(_depositIterationLimit);
 
         initialized();

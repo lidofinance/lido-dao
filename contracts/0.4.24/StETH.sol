@@ -54,8 +54,8 @@ contract StETH is ISTETH, Pausable, AragonApp {
         uint256 value
     );
 
-    function initialize(address _lido) public onlyInit {
-        lido = ILido(_lido);
+    function initialize(ILido _lido) public onlyInit {
+        lido = _lido;
         initialized();
     }
 

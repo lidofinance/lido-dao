@@ -60,17 +60,15 @@ transfers and changing allowances. Calls of the following functions will revert:
 
 ## [Lido.sol](/contracts/0.4.24/Lido.sol)
 
-### stETH, Oracle, SP Registry
+### Oracle
 
-The addresses of the steth, oracle and sps contracts.
+The address of the oracle contract.
 
-* Mutator: `setApps(address,address,address)`
-  * Permission required: `SET_APPS`
-* Accessor: `getToken() returns (address)`
+* Mutator: `setOracle(address)`
+  * Permission required: `SET_ORACLE`
 * Accessor: `getOracle() returns (address)`
-* Accessor: `getSPs() returns (address)`
 
-This oracle contract serves as a bridge between ETH 2.0 -> ETH oracle committee members and the rest of the protocol,
+This contract serves as a bridge between ETH 2.0 -> ETH oracle committee members and the rest of the protocol,
 implementing quorum between the members. The oracle committee members report balances controlled by the DAO
 on the ETH 2.0 side, which can go up because of reward accumulation and can go down due to slashing.
 
