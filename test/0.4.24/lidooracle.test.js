@@ -35,14 +35,8 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
 
   const assertReportableEpochs = async (startEpoch, endEpoch) => {
     const result = await app.getCurrentReportableEpochs()
-    assertBn(result.firstReportableEpoch, startEpoch)
-    assertBn(result.lastReportableEpoch, endEpoch)
-  }
-
-  const assertReportableTimeInterval = async (startTime, endTime) => {
-    const result = await app.getCurrentReportableTimeInterval()
-    assertBn(result.startTime, startTime)
-    assertBn(result.endTime, endTime)
+    assertBn(result.firstReportableEpochId, startEpoch)
+    assertBn(result.lastReportableEpochId, endEpoch)
   }
 
   before('deploy base app', async () => {
@@ -151,37 +145,18 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
 
       await app.setTime(1606824000)
       result = await app.getCurrentReportableEpochs()
-      assertBn(result.firstReportableEpoch, 0)
-      assertBn(result.lastReportableEpoch, 0)
+      assertBn(result.firstReportableEpochId, 0)
+      assertBn(result.lastReportableEpochId, 0)
 
       await app.setTime(1606824000 + 32 * 12 - 1)
       result = await app.getCurrentReportableEpochs()
-      assertBn(result.firstReportableEpoch, 0)
-      assertBn(result.lastReportableEpoch, 0)
+      assertBn(result.firstReportableEpochId, 0)
+      assertBn(result.lastReportableEpochId, 0)
 
       await app.setTime(1606824000 + 32 * 12 * 123 + 1)
       result = await app.getCurrentReportableEpochs()
-      assertBn(result.firstReportableEpoch, 0)
-      assertBn(result.lastReportableEpoch, 123)
-    })
-
-    it('getCurrentReportableTimeInterval works', async () => {
-      let result
-
-      await app.setTime(1606824000)
-      result = await app.getCurrentReportableTimeInterval()
-      assertBn(result.startTime, 1606824000)
-      assertBn(result.endTime, 1606824000 + 32 * 12 - 1)
-
-      await app.setTime(1606824000 + 32 * 12 - 1)
-      result = await app.getCurrentReportableTimeInterval()
-      assertBn(result.startTime, 1606824000)
-      assertBn(result.endTime, 1606824000 + 32 * 12 - 1)
-
-      await app.setTime(1606824000 + 32 * 12 * 123 + 1)
-      result = await app.getCurrentReportableTimeInterval()
-      assertBn(result.startTime, 1606824000)
-      assertBn(result.endTime, 1606824000 + 32 * 12 * 124 - 1)
+      assertBn(result.firstReportableEpochId, 0)
+      assertBn(result.lastReportableEpochId, 123)
     })
 
     it('getCurrentFrame works', async () => {
