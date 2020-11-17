@@ -43,8 +43,8 @@ interface ILidoOracle {
     /**
       * @notice An oracle committee member reports data from the ETH 2.0 side
       * @param _epochId BeaconChain epoch id
-      * @param _eth2balance Balance in wei on the ETH 2.0 side
-      * @param _validators Number of validators visible on this epoch
+      * @param _beaconBalance Balance in wei on the ETH 2.0 side
+      * @param _beaconValidators Number of validators visible on this epoch
       */
-    function reportBeacon(uint256 _epochId, uint128 _eth2balance, uint128 _validators) external;
+    function reportBeacon(uint256 _epochId, uint128 _beaconBalance, uint128 _beaconValidators) external;
 }
