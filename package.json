@@ -4,6 +4,7 @@
   "private": true,
   "workspaces": [
     "apps/*/app",
+    "lib",
     "gasprofile"
   ],
   "scripts": {
@@ -27,6 +28,7 @@
     "compile": "yarn run compile:4 && yarn run compile:6",
     "compile:4": "buidler compile",
     "compile:6": "buidler compile --config buidler.config.6.js --force && buidler compile --config buidler.config.6.11.js --force",
+    "extract-abi": "node ./scripts/extract-abi.js",
     "deploy": "yarn run deploy:all",
     "deploy:all": "yarn compile && yarn deploy:aragon-env && yarn deploy:aragon-std-apps && yarn deploy:apm-and-template && yarn deploy:apps && yarn deploy:dao",
     "deploy:aragon-env": "buidler run --no-compile ./scripts/deploy-aragon-env.js",
