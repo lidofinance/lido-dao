@@ -61,6 +61,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
 
     // Initialize the app's proxy.
     await app.initialize(pool.address)
+    // await app.initialize('0x0000000000000000000000000000000000000000')
   })
 
   describe('Test utility functions:', function () {

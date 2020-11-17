@@ -113,7 +113,7 @@ async function deployDaoAndPool(appManager, voting, depositIterationLimit = 10) 
   await pool.initialize(validatorRegistrationMock.address, depositIterationLimit)
   await pool.setApps(token.address, oracleMock.address, nodeOperatorRegistry.address, { from: voting })
 
-  await oracleMock.initialize(pool.address)
+  await oracleMock.setPool(pool.address)
   await validatorRegistrationMock.reset()
 
   const [treasuryAddr, insuranceAddr] = await Promise.all([pool.getTreasury(), pool.getInsuranceFund()])

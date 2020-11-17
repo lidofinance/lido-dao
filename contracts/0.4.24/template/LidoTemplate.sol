@@ -40,19 +40,25 @@ contract LidoTemplate is BaseTemplate {
 
     uint64 constant private DEFAULT_FINANCE_PERIOD = uint64(30 days);
 
-    // Storing temporary vars in storage to avoid hitting the `CompilerError: Stack too deep`
-    Kernel private dao;
-    ACL private acl;
-    MiniMeToken private token;
-    Vault private agentOrVault;
-    Finance private finance;
-    TokenManager private tokenManager;
-    Voting private voting;
-    StETH private steth;
-    LidoOracle private oracle;
-    NodeOperatorsRegistry private operators;
-    Lido private lido;
+    struct DeployState {
+        Kernel dao;
+        ACL acl;
+        MiniMeToken token;
+        Vault agentOrVault;
+        Finance finance;
+        TokenManager tokenManager;
+        Voting voting;
+        StETH steth;
+        LidoOracle oracle;
+        NodeOperatorsRegistry operators;
+        Lido lido;
+        string id;
+        address[] holders;
+        uint256[] stakes;
 
+    }
+
+    DeployState private deployState;
 
     constructor(
         DAOFactory _daoFactory,
@@ -74,115 +80,130 @@ contract LidoTemplate is BaseTemplate {
         address[] _holders,
         uint256[] _stakes,
         uint64[3] _votingSettings,
-        address _ETH2ValidatorRegistrationContract,
+        address _BeaconDepositContract,
         uint256 _depositIterationLimit
     )
         external
     {
-        _validateId(_id);
+        require(deployState.dao == address(0), "PREVIOUS_DEPLOYMENT_NOT_FINALIZED");
         require(_holders.length > 0, "COMPANY_EMPTY_HOLDERS");
         require(_holders.length == _stakes.length, "COMPANY_BAD_HOLDERS_STAKES_LEN");
 
-        // setup apps
-        token = _createToken(_tokenName, _tokenSymbol, TOKEN_DECIMALS);
-        (dao, acl) = _createDAO();
-        _setupApps(_votingSettings, _ETH2ValidatorRegistrationContract, _depositIterationLimit);
+        _validateId(_id);
 
-        // lido setApps
-        _createPermissionForTemplate(acl, lido, lido.SET_APPS());
-        lido.setApps(steth, oracle, operators);
-        _removePermissionFromTemplate(acl, lido, lido.SET_APPS());
+        DeployState memory state;
+        state.id = _id;
+        state.holders = _holders;
+        state.stakes = _stakes;
 
-        _mintTokens(acl, tokenManager, _holders, _stakes);
+        state.token = _createToken(_tokenName, _tokenSymbol, TOKEN_DECIMALS);
+        (state.dao, state.acl) = _createDAO();
 
-        _setupPermissions();
+        _setupApps(state, _votingSettings, _BeaconDepositContract, _depositIterationLimit);
 
-        _transferRootPermissionsFromTemplateAndFinalizeDAO(dao, voting);
-        _registerID(_id, dao);
+        deployState = state;
+    }
 
-        _reset();   // revert the cells back to get a refund
+    function finalizeDAO() external {
+        // read from the storage once to prevent gas spending on SLOADs
+        DeployState memory state = deployState;
+        
+        require(state.dao != address(0), "DAO_NOT_DEPLOYED");
+        
+        // revert the cells back to get a refund
+        _resetStorage();
+
+        _mintTokens(state.acl, state.tokenManager, state.holders, state.stakes);
+        _setupPermissions(state);
+        _transferRootPermissionsFromTemplateAndFinalizeDAO(state.dao, state.voting);
+        _registerID(state.id, state.dao);
     }
 
     function _setupApps(
+        DeployState memory state,
         uint64[3] memory _votingSettings,
-        address _ETH2ValidatorRegistrationContract,
+        address _BeaconDepositContract,
         uint256 _depositIterationLimit
     )
         internal
     {
-        agentOrVault = _installDefaultAgentApp(dao);
-        finance = _installFinanceApp(dao, agentOrVault, DEFAULT_FINANCE_PERIOD);
-        tokenManager = _installTokenManagerApp(dao, token, TOKEN_TRANSFERABLE, TOKEN_MAX_PER_ACCOUNT);
-        voting = _installVotingApp(dao, token, _votingSettings);
+        state.agentOrVault = _installDefaultAgentApp(state.dao);
+        state.finance = _installFinanceApp(state.dao, state.agentOrVault, DEFAULT_FINANCE_PERIOD);
+        state.tokenManager = _installTokenManagerApp(state.dao, state.token, TOKEN_TRANSFERABLE, TOKEN_MAX_PER_ACCOUNT);
+        state.voting = _installVotingApp(state.dao, state.token, _votingSettings);
 
-        bytes memory initializeData = abi.encodeWithSelector(
+        // skipping StETH initialization for now, will call it manually later since we need the pool
+        bytes memory initializeData = new bytes(0);
+        state.steth = StETH(_installNonDefaultApp(state.dao, STETH_APP_ID, initializeData));
+        state.oracle = LidoOracle(_installNonDefaultApp(state.dao, LIDOORACLE_APP_ID, initializeData));
+        state.operators = NodeOperatorsRegistry(_installNonDefaultApp(state.dao, REGISTRY_APP_ID, initializeData));
+
+        initializeData = abi.encodeWithSelector(
             Lido(0).initialize.selector,
-            _ETH2ValidatorRegistrationContract,
+            state.steth,
+            _BeaconDepositContract,
+            state.oracle,
+            state.operators,
             _depositIterationLimit
         );
-        lido = Lido(_installNonDefaultApp(dao, LIDO_APP_ID, initializeData));
-        
-        initializeData = abi.encodeWithSelector(StETH(0).initialize.selector, lido);
-        steth = StETH(_installNonDefaultApp(dao, STETH_APP_ID, initializeData));
+        state.lido = Lido(_installNonDefaultApp(state.dao, LIDO_APP_ID, initializeData));
 
-        initializeData = abi.encodeWithSelector(LidoOracle(0).initialize.selector, lido);
-        oracle = LidoOracle(_installNonDefaultApp(dao, LIDOORACLE_APP_ID, initializeData));
-
-        initializeData = abi.encodeWithSelector(NodeOperatorsRegistry(0).initialize.selector, lido);
-        operators = NodeOperatorsRegistry(_installNonDefaultApp(dao, REGISTRY_APP_ID, initializeData));
+        state.steth.initialize(state.lido);
+        state.oracle.initialize(state.lido);
+        state.operators.initialize(state.lido);
     }
 
-    function _setupPermissions(
-    )
-        internal
-    {
-        _createAgentPermissions(acl, Agent(agentOrVault), voting, voting);
-        _createVaultPermissions(acl, agentOrVault, finance, voting);
-        _createFinancePermissions(acl, finance, voting, voting);
-        _createFinanceCreatePaymentsPermission(acl, finance, voting, voting);
-        _createEvmScriptsRegistryPermissions(acl, voting, voting);
-        _createVotingPermissions(acl, voting, voting, tokenManager, voting);
-        _createTokenManagerPermissions(acl, tokenManager, voting, voting);
+    function _setupPermissions(DeployState memory state) internal {
+        _createAgentPermissions(state.acl, Agent(state.agentOrVault), state.voting, state.voting);
+        _createVaultPermissions(state.acl, state.agentOrVault, state.finance, state.voting);
+        _createFinancePermissions(state.acl, state.finance, state.voting, state.voting);
+        _createFinanceCreatePaymentsPermission(state.acl, state.finance, state.voting, state.voting);
+        _createEvmScriptsRegistryPermissions(state.acl, state.voting, state.voting);
+        _createVotingPermissions(state.acl, state.voting, state.voting, state.tokenManager, state.voting);
+        _createTokenManagerPermissions(state.acl, state.tokenManager, state.voting, state.voting);
 
         // StETH
-        acl.createPermission(voting, steth, steth.PAUSE_ROLE(), voting);
-        acl.createPermission(lido, steth, steth.MINT_ROLE(), voting);
-        acl.createPermission(lido, steth, steth.BURN_ROLE(), voting);
+        state.acl.createPermission(state.voting, state.steth, state.steth.PAUSE_ROLE(), state.voting);
+        state.acl.createPermission(state.lido, state.steth, state.steth.MINT_ROLE(), state.voting);
+        state.acl.createPermission(state.lido, state.steth, state.steth.BURN_ROLE(), state.voting);
 
         // Oracle
-        acl.createPermission(voting, oracle, oracle.MANAGE_MEMBERS(), voting);
-        acl.createPermission(voting, oracle, oracle.MANAGE_QUORUM(), voting);
-        acl.createPermission(voting, oracle, oracle.SET_REPORT_INTERVAL_DURATION(), voting);
+        state.acl.createPermission(state.voting, state.oracle, state.oracle.MANAGE_MEMBERS(), state.voting);
+        state.acl.createPermission(state.voting, state.oracle, state.oracle.MANAGE_QUORUM(), state.voting);
+        state.acl.createPermission(state.voting, state.oracle, state.oracle.SET_REPORT_INTERVAL_DURATION(), state.voting);
 
         // NodeOperatorsRegistry
-        acl.createPermission(voting, operators, operators.MANAGE_SIGNING_KEYS(), voting);
-        acl.createPermission(voting, operators, operators.ADD_NODE_OPERATOR_ROLE(), voting);
-        acl.createPermission(voting, operators, operators.SET_NODE_OPERATOR_ACTIVE_ROLE(), voting);
-        acl.createPermission(voting, operators, operators.SET_NODE_OPERATOR_NAME_ROLE(), voting);
-        acl.createPermission(voting, operators, operators.SET_NODE_OPERATOR_ADDRESS_ROLE(), voting);
-        acl.createPermission(voting, operators, operators.SET_NODE_OPERATOR_LIMIT_ROLE(), voting);
-        acl.createPermission(voting, operators, operators.REPORT_STOPPED_VALIDATORS_ROLE(), voting);
+        state.acl.createPermission(state.voting, state.operators, state.operators.MANAGE_SIGNING_KEYS(), state.voting);
+        state.acl.createPermission(state.voting, state.operators, state.operators.ADD_NODE_OPERATOR_ROLE(), state.voting);
+        state.acl.createPermission(state.voting, state.operators, state.operators.SET_NODE_OPERATOR_ACTIVE_ROLE(), state.voting);
+        state.acl.createPermission(state.voting, state.operators, state.operators.SET_NODE_OPERATOR_NAME_ROLE(), state.voting);
+        state.acl.createPermission(state.voting, state.operators, state.operators.SET_NODE_OPERATOR_ADDRESS_ROLE(), state.voting);
+        state.acl.createPermission(state.voting, state.operators, state.operators.SET_NODE_OPERATOR_LIMIT_ROLE(), state.voting);
+        state.acl.createPermission(state.voting, state.operators, state.operators.REPORT_STOPPED_VALIDATORS_ROLE(), state.voting);
 
         // Pool
-        acl.createPermission(voting, lido, lido.PAUSE_ROLE(), voting);
-        acl.createPermission(voting, lido, lido.MANAGE_FEE(), voting);
-        acl.createPermission(voting, lido, lido.MANAGE_WITHDRAWAL_KEY(), voting);
-        acl.createPermission(voting, lido, lido.SET_DEPOSIT_ITERATION_LIMIT(), voting);
-        acl.createPermission(voting, lido, lido.SET_APPS(), voting);
+        state.acl.createPermission(state.voting, state.lido, state.lido.PAUSE_ROLE(), state.voting);
+        state.acl.createPermission(state.voting, state.lido, state.lido.MANAGE_FEE(), state.voting);
+        state.acl.createPermission(state.voting, state.lido, state.lido.MANAGE_WITHDRAWAL_KEY(), state.voting);
+        state.acl.createPermission(state.voting, state.lido, state.lido.SET_ORACLE(), state.voting);
+        state.acl.createPermission(state.voting, state.lido, state.lido.SET_DEPOSIT_ITERATION_LIMIT(), state.voting);
     }
 
-    /// @dev reset temporary storage
-    function _reset() private {
-        delete dao;
-        delete acl;
-        delete token;
-        delete agentOrVault;
-        delete finance;
-        delete tokenManager;
-        delete voting;
-        delete steth;
-        delete oracle;
-        delete operators;
-        delete lido;
+    function _resetStorage() internal {
+        delete deployState.dao;
+        delete deployState.acl;
+        delete deployState.token;
+        delete deployState.agentOrVault;
+        delete deployState.finance;
+        delete deployState.tokenManager;
+        delete deployState.voting;
+        delete deployState.steth;
+        delete deployState.oracle;
+        delete deployState.operators;
+        delete deployState.lido;
+        delete deployState.id;
+        delete deployState.holders;
+        delete deployState.stakes;
+        delete deployState;
     }
 }

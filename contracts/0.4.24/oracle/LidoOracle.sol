@@ -60,14 +60,10 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
 
     uint256 private reportIntervalDuration;
 
-    /**
-      * @notice `_pool` is the `Lido` contract address, set by template
-      */
-    function initialize(address _pool) public onlyInit {
+    function initialize(ILido _lido) public onlyInit {
         assert(1 == ((1 << (MAX_MEMBERS - 1)) >> (MAX_MEMBERS - 1)));   // static assert
-        require(isContract(_pool), "POOL_NOT_CONTRACT");
-        pool = ILido(_pool);
         reportIntervalDuration = REPORT_INTERVAL_DURATION;
+        pool = _lido;
         initialized();
     }
 

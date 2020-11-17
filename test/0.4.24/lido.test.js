@@ -58,20 +58,15 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     let proxyAddress = await newApp(dao, 'lido', appBase.address, appManager)
     app = await Lido.at(proxyAddress)
 
-    // Initialize the app's proxy.
-    await app.initialize(validatorRegistration.address, 10)
-    treasuryAddr = await app.getTreasury()
-    insuranceAddr = await app.getInsuranceFund()
+    // NodeOperatorsRegistry
+    proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)
+    operators = await NodeOperatorsRegistry.at(proxyAddress)
+    await operators.initialize(app.address)
 
     // token
     proxyAddress = await newApp(dao, 'steth', stEthBase.address, appManager)
     token = await StETH.at(proxyAddress)
     await token.initialize(app.address)
-
-    // NodeOperatorsRegistry
-    proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)
-    operators = await NodeOperatorsRegistry.at(proxyAddress)
-    await operators.initialize(app.address)
 
     await oracle.initialize(app.address)
 
@@ -98,7 +93,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     })
 
     await validatorRegistration.reset()
-    await app.setApps(token.address, oracle.address, operators.address, { from: voting })
   })
 
   const checkStat = async ({ deposited, remote }) => {
@@ -542,7 +536,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await oracle.reportEther2(300, ETH(36))
     await checkStat({ deposited: ETH(32), remote: ETH(36) })
     assertBn(await token.totalSupply(), tokens(38)) // remote + buffered
-    await checkRewards({ treasury: 599, insurance: 399, operator: 999 })
+    await checkRewards({ treasury: 599, insurance: 399, operator: 1000 })
   })
 
   it('rewards distribution works', async () => {
@@ -581,7 +575,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await oracle.reportEther2(300, ETH(36))
     await checkStat({ deposited: ETH(32), remote: ETH(36) })
     assertBn(await token.totalSupply(), tokens(38))
-    await checkRewards({ treasury: 599, insurance: 399, operator: 999 })
+    await checkRewards({ treasury: 599, insurance: 399, operator: 1000 })
   })
 
   it('deposits accounted properly during rewards distribution', async () => {
@@ -604,7 +598,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await oracle.reportEther2(300, ETH(36))
     await checkStat({ deposited: ETH(32), remote: ETH(36) })
     assertBn(await token.totalSupply(), tokens(68))
-    await checkRewards({ treasury: 599, insurance: 399, operator: 999 })
+    await checkRewards({ treasury: 599, insurance: 399, operator: 1000 })
   })
 
   it('Node Operators filtering during deposit works when doing a huge deposit', async () => {
