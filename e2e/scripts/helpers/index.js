@@ -30,11 +30,11 @@ export const prepareContext = async (params) => {
   const votingApp = findApp(apps, VOTING_APP_ID)
   const financeApp = findApp(apps, FINANCE_APP_ID)
   const vaultApp = findApp(apps, AGENT_APP_ID)
-  const stakingProvidersApp = findApp(apps, NODE_OPERATORS_REGISTRY_APP_ID)
+  const nodeOperatorsApp = findApp(apps, NODE_OPERATORS_REGISTRY_APP_ID)
   const tokenManagerApp = findApp(apps, TOKEN_MANAGER_APP_ID)
   const stEthApp = findApp(apps, STETH_APP_ID)
-  const dePoolOracleApp = findApp(apps, LIDOORACLE_APP_ID)
-  const dePoolApp = findApp(apps, LIDO_APP_ID)
+  const lidoOracleApp = findApp(apps, LIDOORACLE_APP_ID)
+  const lidoApp = findApp(apps, LIDO_APP_ID)
 
   return {
     web3,
@@ -51,9 +51,9 @@ export const prepareContext = async (params) => {
       vaultApp,
       tokenManagerApp,
       stEthApp,
-      dePoolOracleApp,
-      dePoolApp,
-      stakingProvidersApp
+      lidoOracleApp,
+      lidoApp,
+      nodeOperatorsApp
     }
   }
 }

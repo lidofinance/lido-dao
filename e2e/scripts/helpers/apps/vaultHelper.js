@@ -1,5 +1,4 @@
 import { abi as vaultAbi } from '@aragon/apps-finance/abi/Vault.json'
-import { stakingProviderContract } from './stakingProviderHelper'
 
 let web3
 let context
