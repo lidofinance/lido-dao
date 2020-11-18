@@ -749,7 +749,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         // beaconValidators can never be less than deposited ones.
         assert(depositedValidators >= beaconValidators);
         uint256 transientValidators = depositedValidators.sub(beaconValidators);
-        return (transientValidators.mul(DEPOSIT_SIZE));
+        return transientValidators.mul(DEPOSIT_SIZE);
     }
 
     /**
@@ -760,7 +760,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         uint256 bufferedBalance = _getBufferedEther();
         uint256 beaconBalance = BEACON_BALANCE_VALUE_POSITION.getStorageUint256();
         uint256 transientBalance = _getTransientBalance();
-        return(bufferedBalance.add(beaconBalance).add(transientBalance));
+        return bufferedBalance.add(beaconBalance).add(transientBalance);
     }
 
     function _load_operator_cache() internal view returns (DepositLookupCacheEntry[] memory cache) {
