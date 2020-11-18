@@ -15,7 +15,7 @@ import "./lib/Pausable.sol";
   *
   * ERC20 token which supports stop/resume mechanics. The token is operated by `ILido`.
   *
-  * Since balances of all token holders change when the amount of total controlled Ether
+  * Since balances of all token holders change when the amount of total pooled Ether
   * changes, this token cannot fully implement ERC20 standard: it only emits `Transfer`
   * events upon explicit transfer between holders. In contrast, when Lido oracle reports
   * rewards, no Transfer events are generated: doing so would require emitting an event

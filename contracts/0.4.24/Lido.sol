@@ -587,7 +587,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         // this by minting new token shares and assigning them to the fee recipients (see
         // StETH docs for the explanation of the shares mechanics).
         //
-        // Since we've increased totalControlledEther by _totalRewards (which is already
+        // Since we've increased totalPooledEther by _totalRewards (which is already
         // performed by the time this function is called), the combined cost of all holders'
         // shares has became _totalRewards StETH tokens more, effectively splitting the reward
         // between each token holder proportionally to their token share.
@@ -596,13 +596,13 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         // newly-minted shares exactly corresponds to the fee taken:
         //
         // shares2mint * newShareCost = feeInEther
-        // newShareCost = totalPooledEther / (prevTotalShares + shares2mint)
+        // newShareCost = newTotalPooledEther / (prevTotalShares + shares2mint)
         //
         // which follows to:
         //
         //                    feeInEther * prevTotalShares
         // shares2mint = --------------------------------------
-        //                 newtTotalPooledEther - feeInEther
+        //                 newTotalPooledEther - feeInEther
         //
         // The effect is that the given percentage of the reward goes to the fee recipient, and
         // the rest of the reward is distributed between token holders proportionally to their
