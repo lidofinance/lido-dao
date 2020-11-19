@@ -26,6 +26,8 @@ app.store(
             ...nextState,
             withdrawalCredentials: await getWithdrawalCredentials(),
           }
+        case 'Unbuffered':
+          return { ...nextState, bufferedEther: await getBufferedEther() }
         case events.SYNC_STATUS_SYNCING:
           return { ...nextState, isSyncing: true }
         case events.SYNC_STATUS_SYNCED:
