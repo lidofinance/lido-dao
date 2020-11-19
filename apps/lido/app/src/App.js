@@ -16,7 +16,7 @@ import Button from '@aragon/ui/dist/Button'
 import ChangeFeeSidePanel from './components/ChangeFeeSidePanel'
 import ChangeWCSidePanel from './components/ChangeWCSidePanel'
 import { ListItem } from './components/ListItem'
-import StakeSidePanel from './components/StakeSidePanel'
+import DbeSidePanel from './components/DbeSidePanel'
 
 export default function App() {
   const { api, appState, currentApp, guiStyle } = useAragonApi()
@@ -174,7 +174,7 @@ export default function App() {
         content: <IdentityBadge entity={oracle} />,
       },
     ]
-  }, [appState, theme])
+  }, [appState, resume, stop, theme.negative, theme.positive])
 
   const ether2StatData = useMemo(() => {
     const { ether2Stat } = appState
@@ -185,22 +185,12 @@ export default function App() {
     }))
   }, [appState])
 
-  const [stakeSidePanelOpen, setStakeSidePanelOpen] = useState(false)
-  const openStakeSidePanel = useCallback(() => setStakeSidePanelOpen(true), [])
-  const closeStakeSidePanel = useCallback(
-    () => setStakeSidePanelOpen(false),
-    []
-  )
-  const stake = useCallback(
-    (address) => {
-      return api
-        .submit(address || '0x0000000000000000000000000000000000000000', {
-          value: '0x1bc16d674ec800000', // 32ETH
-        })
-        .toPromise()
-    },
-    [api]
-  )
+  const [dbePanelOpen, setDbePanelOpen] = useState(false)
+  const openStakeSidePanel = useCallback(() => setDbePanelOpen(true), [])
+  const closeStakeSidePanel = useCallback(() => setDbePanelOpen(false), [])
+  const apiDepositBufferedEther = useCallback(() => {
+    return api.depositBufferedEther()
+  }, [api])
 
   return (
     <Main theme={appearance} assetsUrl="./aragon-ui">
@@ -215,7 +205,7 @@ export default function App() {
               background: ${theme.negative};
             `}
           >
-            STAKE
+            DEPOSIT BUFFERED ETHER
           </Button>
         }
       />
@@ -247,10 +237,10 @@ export default function App() {
           </Box>
         }
       />
-      <StakeSidePanel
-        opened={stakeSidePanelOpen}
+      <DbeSidePanel
+        opened={dbePanelOpen}
         onClose={closeStakeSidePanel}
-        api={stake}
+        api={apiDepositBufferedEther}
       />
       <ChangeFeeSidePanel
         opened={changeFeePanelOpened}
