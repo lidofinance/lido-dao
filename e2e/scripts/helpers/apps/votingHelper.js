@@ -3,32 +3,31 @@ import { abi as votingAbi } from '@aragon/apps-voting/abi/Voting.json'
 import { abi as financeAbi } from '@aragon/apps-finance/abi/Finance.json'
 import { encodeCallScript } from '@aragon/contract-helpers-test/src/aragon-os'
 import { init as tokenManagerInit, tokenManagerContract } from './tokenManagerHelper'
+import logger from '../logger'
 
 const financeAbiExt = financeAbi.concat(vaultAbi.filter((i) => i.type === 'event'))
 const votingAbiExt = votingAbi.concat(financeAbiExt.filter((i) => i.type === 'event'))
 
 let context
-let voteContract
+export let voteContract
 let tokenManager
-let logger
 
-function init(c) {
+export function init(c) {
   if (!context) {
     context = c
     tokenManagerInit(context)
     tokenManager = tokenManagerContract
     voteContract = new context.web3.eth.Contract(votingAbiExt, getProxyAddress())
-    logger = context.logger
   }
 }
-function getProxyAddress() {
+export function getProxyAddress() {
   return context.apps.votingApp.proxyAddress
 }
-async function hasInitialized() {
+export async function hasInitialized() {
   return await voteContract.methods.hasInitialized().call()
 }
 
-async function createVote(callData1, holder, voteName = '') {
+export async function createVote(callData1, holder, voteName = '') {
   logger.info('Create vote to ' + voteName)
   const callData2 = encodeCallScript([
     {
@@ -44,14 +43,13 @@ async function createVote(callData1, holder, voteName = '') {
 
   return voteId
 }
-async function voteForAction(voteId, holders, voteName = '') {
+export async function voteForAction(voteId, holders, voteName = '') {
   logger.info('Vote for ' + voteName)
+  let receipt
   for (let i = 0; i < holders.length; i++) {
     logger.debug(`Voting from holder - (${i + 1}) ~ ${holders[i]}`)
-    await voteContract.methods.vote(voteId, true, true).send({ from: holders[i], gas: '1000000' })
+    receipt = await voteContract.methods.vote(voteId, true, true).send({ from: holders[i], gas: '8000000' })
   }
-
   // TODO vote assert?
+  return receipt
 }
-
-export { init, createVote, voteForAction, hasInitialized }

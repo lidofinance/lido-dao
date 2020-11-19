@@ -5,6 +5,12 @@
     "initialIndex": 0,
     "count": 10
   },
+  "e2e": {
+    "mnemonic": "explain tackle mirror kit van hammer degree position ginger unfair soup bonus",
+    "path": "m/44'/60'/0'/0",
+    "initialIndex": 0,
+    "count": 10
+  },
   "etherscan": {
     "apiKey": "ETHERSCAN_API_KEY"
   }

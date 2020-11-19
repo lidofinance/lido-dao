@@ -1,13 +1,13 @@
-const logger = require('./logger')
-const fs = require('fs')
-const path = require('path')
-const { toWei, isHex, toBN } = require('web3-utils')
+import logger from './logger'
+import fs from 'fs'
+import path from 'path'
+import { toWei, isHex, toBN } from 'web3-utils'
 
-const sleep = (ms) => {
+export const sleep = (ms) => {
   return new Promise((resolve) => setTimeout(resolve, ms * 1000))
 }
 
-function getDataFromFile(path) {
+export function getDataFromFile(path) {
   logger.debug('Parse data from ' + path)
   try {
     return fs.readFileSync(path, 'utf8')
@@ -16,7 +16,7 @@ function getDataFromFile(path) {
   }
 }
 
-function loadGeneratedValidatorsData(validator, index = 0) {
+export function loadGeneratedValidatorsData(validator, index = 0) {
   const validatorKeysPath = path.resolve(__dirname, '../../data/validators/' + validator + '/validator_keys')
   const depositDataFiles = fs.readdirSync(validatorKeysPath).filter((file) => {
     return file.indexOf('.') !== 0 && file.match(/deposit_data.+\.json$/i)
@@ -27,12 +27,12 @@ function loadGeneratedValidatorsData(validator, index = 0) {
   return require(`${validatorKeysPath}/${depositDataFiles[index]}`)
 }
 
-function getGeneratedWithdrawalAddress(validator) {
-  const validatorsJson = loadGeneratedValidatorsData(validator)
+export function getGeneratedWithdrawalAddress(validators) {
+  const validatorsJson = loadGeneratedValidatorsData(validators)
   return '0x' + validatorsJson[0].withdrawal_credentials
 }
 
-function getDataToPerformDepositContract(validators) {
+export function getDataToPerformDepositContract(validators) {
   const validatorsJson = loadGeneratedValidatorsData(validators)
   const validator = validatorsJson[validatorsJson.length - 1]
   return {
@@ -43,7 +43,7 @@ function getDataToPerformDepositContract(validators) {
   }
 }
 
-function getSigningKeys(validator, signingKeysCount, offset = 0) {
+export function getSigningKeys(validator, signingKeysCount, offset = 0) {
   const validatorsJson = loadGeneratedValidatorsData(validator).slice(offset, signingKeysCount + offset)
   return {
     pubKeys: validatorsJson.map((v) => v.pubkey),
@@ -51,11 +51,11 @@ function getSigningKeys(validator, signingKeysCount, offset = 0) {
   }
 }
 
-function concatKeys(keys) {
+export function concatKeys(keys) {
   return '0x' + keys.toString().split(',').join('')
 }
 
-function concat0x(array) {
+export function concat0x(array) {
   const { pubKeys, signatures } = array
   return {
     pubKeys: pubKeys.map((key) => `0x${key}`),
@@ -63,7 +63,7 @@ function concat0x(array) {
   }
 }
 
-function objHexlify(obj) {
+export function objHexlify(obj) {
   Object.keys(obj).forEach((k) => {
     if (isHex(obj[k])) {
       obj[k] = `0x${obj[k]}`
@@ -72,20 +72,5 @@ function objHexlify(obj) {
   return obj
 }
 
-const ETH = (value) => toWei(value + '', 'ether')
-const BN = (value) => toBN(value)
-
-module.exports = {
-  sleep,
-  ETH,
-  BN,
-  loadGeneratedValidatorsData,
-  getDataFromFile,
-  getGeneratedWithdrawalAddress,
-  getSigningKeys,
-  logger,
-  getDataToPerformDepositContract,
-  concatKeys,
-  concat0x,
-  objHexlify
-}
+export const BN = (value) => toBN(value)
+export const ETH = (value) => toWei(value + '', 'ether')
