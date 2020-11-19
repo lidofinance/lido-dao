@@ -58,7 +58,15 @@ contract LidoTemplate is BaseTemplate {
 
     }
 
+    struct BeaconSpec {
+        uint64 epochsPerFrame;
+        uint64 slotsPerEpoch;
+        uint64 secondsPerSlot;
+        uint64 genesisTime;
+    }
+
     DeployState private deployState;
+    BeaconSpec public beaconSpec;
 
     constructor(
         DAOFactory _daoFactory,
@@ -81,13 +89,18 @@ contract LidoTemplate is BaseTemplate {
         uint256[] _stakes,
         uint64[3] _votingSettings,
         address _BeaconDepositContract,
-        uint256 _depositIterationLimit
+        uint256 _depositIterationLimit,
+        uint32[4] _beaconSpec
     )
         external
     {
         require(deployState.dao == address(0), "PREVIOUS_DEPLOYMENT_NOT_FINALIZED");
         require(_holders.length > 0, "COMPANY_EMPTY_HOLDERS");
         require(_holders.length == _stakes.length, "COMPANY_BAD_HOLDERS_STAKES_LEN");
+        beaconSpec.epochsPerFrame = _beaconSpec[0];
+        beaconSpec.slotsPerEpoch = _beaconSpec[1];
+        beaconSpec.secondsPerSlot = _beaconSpec[2];
+        beaconSpec.genesisTime = _beaconSpec[3];
 
         _validateId(_id);
 
@@ -99,7 +112,7 @@ contract LidoTemplate is BaseTemplate {
         state.token = _createToken(_tokenName, _tokenSymbol, TOKEN_DECIMALS);
         (state.dao, state.acl) = _createDAO();
 
-        _setupApps(state, _votingSettings, _BeaconDepositContract, _depositIterationLimit);
+        _setupApps(state, _votingSettings, _BeaconDepositContract, _depositIterationLimit, beaconSpec.epochsPerFrame, beaconSpec.slotsPerEpoch, beaconSpec.secondsPerSlot, beaconSpec.genesisTime);
 
         deployState = state;
     }
@@ -123,7 +136,11 @@ contract LidoTemplate is BaseTemplate {
         DeployState memory state,
         uint64[3] memory _votingSettings,
         address _BeaconDepositContract,
-        uint256 _depositIterationLimit
+        uint256 _depositIterationLimit,
+        uint64 _epochsPerFrame,
+        uint64 _slotsPerEpoch,
+        uint64 _secondsPerSlot,
+        uint64 _genesisTime
     )
         internal
     {
@@ -151,10 +168,10 @@ contract LidoTemplate is BaseTemplate {
         state.steth.initialize(state.lido);
         state.oracle.initialize(
             state.lido,
-            uint64(225),  // epochsPerFrame
-            uint64(32),  // slotsPerEpoch
-            uint64(12),  // secondsPerSlot
-            uint64(1606824000)  // genesisTime
+            _epochsPerFrame,
+            _slotsPerEpoch,
+            _secondsPerSlot,
+            _genesisTime
         );
         state.operators.initialize(state.lido);
     }
