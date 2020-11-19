@@ -56,13 +56,10 @@ export default function App() {
     api.stop().toPromise()
   }, [api])
 
-  console.log(appState)
-
   const [changeFeeDistrPanelOpened, setChangeFeeDistrPanelOpened] = useState(
     false
   )
   const openChangeFeeDistrPanel = useCallback(() => {
-    console.log('ds')
     setChangeFeeDistrPanelOpened(true)
   }, [])
   const closeChangeFeeDistrPanel = useCallback(() => {
