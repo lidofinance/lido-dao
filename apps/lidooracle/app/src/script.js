@@ -1,6 +1,7 @@
 import 'core-js/stable'
 import 'regenerator-runtime/runtime'
 import Aragon, { events } from '@aragon/api'
+import { fromWei } from 'web3-utils'
 
 const app = new Aragon()
 
@@ -64,6 +65,10 @@ function getReportIntervalDurationSeconds() {
   return app.call('getReportIntervalDurationSeconds').toPromise()
 }
 
-function getLatestData() {
-  return app.call('getLatestData').toPromise()
+async function getLatestData() {
+  const data = await app.call('getLatestData').toPromise()
+  return {
+    eth2balance: fromWei(data.eth2balance),
+    reportInterval: data.reportInterval,
+  }
 }

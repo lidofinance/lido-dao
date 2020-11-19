@@ -15,7 +15,7 @@ test.before('Connecting Web3', async (t) => {
 test('DepositContract', async (t) => {
   const { accounts } = t.context
   // Use the different accounts, which are unlocked and funded with Ether
-  const [owner, ...holders] = accounts
+  const [dev] = accounts
 
   // mock data for validator
   const validatorData = {
@@ -26,7 +26,7 @@ test('DepositContract', async (t) => {
     deposit_data_root: '0x57f0444e89f6849ea26eb9720a92bd38cc3e95cb8f26eeaa1dec9477b5aed497'
   }
 
-  const receipt = await depositContractHelper.deposit(holders[0], ether('32'), validatorData)
+  const receipt = await depositContractHelper.deposit(dev, ether('32'), validatorData)
   // console.log(receipt)
   expectEvent(receipt, 'DepositEvent', {
     pubkey: validatorData.pubkey,

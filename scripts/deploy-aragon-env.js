@@ -127,7 +127,7 @@ async function deployENS({ artifacts, owner }) {
   const ENS = artifacts.require('ENS')
 
   const factory = await deploy(`ENSFactory`, artifacts, withArgs({ from: owner }))
-  const result = await logTx(`Creating ENS`, factory.newENS(owner))
+  const result = await logTx(`Creating ENS`, factory.newENS(owner, { from: owner }))
 
   const ensAddr = result.logs.filter((l) => l.event === 'DeployENS')[0].args.ens
   log(`ENS address: ${chalk.yellow(ensAddr)}`)

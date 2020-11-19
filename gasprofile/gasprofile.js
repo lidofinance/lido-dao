@@ -149,9 +149,9 @@ async function main(argv) {
   const [receipt, tx] = isDump
     ? [dump.receipt, dump.tx]
     : await Promise.all([
-        web3.eth.getTransactionReceipt(txHash).catch(e => null),
-        web3.eth.getTransaction(txHash).catch(e => null)
-      ]);
+      web3.eth.getTransactionReceipt(txHash).catch(e => null),
+      web3.eth.getTransaction(txHash).catch(e => null)
+    ]);
 
   if (!tx || !receipt) {
     console.log(`Transaction not found`);
@@ -223,7 +223,7 @@ async function main(argv) {
     const call = callStack[log.depth - bottomDepth];
 
     const sourceInfo = getSourceInfo(call, log);
-    const {sourceId, isSynthOp} = sourceInfo;
+    const { sourceId, isSynthOp } = sourceInfo;
 
     const source = sourceId != null
       ? sourceById[sourceId] || await getSourceWithId(sourceId, sourceProvider)
@@ -269,7 +269,7 @@ async function main(argv) {
 
   if (argv.dumpTo) {
     console.error(`Dumping the trace...`);
-    const data = JSON.stringify({tx, receipt, codeByAddr, trace});
+    const data = JSON.stringify({ tx, receipt, codeByAddr, trace });
     fs.writeFileSync(argv.dumpTo, data);
     console.error(`Done dumping the trace`);
     process.exit(0);
@@ -328,10 +328,10 @@ async function main(argv) {
 
   const gasColTitle = 'GAS';
   const gasColLength = Math.max(String(maxGasPerLine).length, gasColTitle.length);
-  const header = `┌───┬${ ''.padStart(gasColLength + 2, '─') }┐\n` +
-                 `│ C │${ padCenter(gasColTitle, gasColLength + 2, ' ') }│\n` +
-                 `├───┼${ ''.padStart(gasColLength + 2, '─') }┤`;
-  const footer = `└───┴${ ''.padStart(gasColLength + 2, '─') }┘`;
+  const header = `┌───┬${''.padStart(gasColLength + 2, '─')}┐\n` +
+    `│ C │${padCenter(gasColTitle, gasColLength + 2, ' ')}│\n` +
+    `├───┼${''.padStart(gasColLength + 2, '─')}┤`;
+  const footer = `└───┴${''.padStart(gasColLength + 2, '─')}┘`;
   const callType = chalk.yellow('+');
 
   souceFilenames.forEach(fileName => {
@@ -361,28 +361,28 @@ async function main(argv) {
 }
 
 function getSourceInfo(call, log) {
-  const {contract} = call;
+  const { contract } = call;
   const pcToIdx = call.isConstructionCall ? contract.constructionPcToIdx : contract.pcToIdx;
   const sourceMap = call.isConstructionCall ? contract.constructorSourceMap : contract.sourceMap;
 
   if (!pcToIdx || !sourceMap) {
-    return {sourceId: null, isSynthOp: false, offset: null, length: null};
+    return { sourceId: null, isSynthOp: false, offset: null, length: null };
   }
 
   const instructionIdx = pcToIdx[log.pc];
-  const {s: offset, f: sourceId, l: length} = sourceMap[instructionIdx];
+  const { s: offset, f: sourceId, l: length } = sourceMap[instructionIdx];
 
   // > In the case of instructions that are not associated with any particular source file,
   // > the source mapping assigns an integer identifier of -1. This may happen for bytecode
   // > sections stemming from compiler-generated inline assembly statements.
   // From: https://solidity.readthedocs.io/en/v0.6.7/internals/source_mappings.html
   return sourceId === -1
-    ? {sourceId: null, isSynthOp: true, offset, length}
-    : {sourceId, isSynthOp: false, offset, length};
+    ? { sourceId: null, isSynthOp: true, offset, length }
+    : { sourceId, isSynthOp: false, offset, length };
 }
 
 function getGasCost(log, nextLog) {
-  const {op} = log
+  const { op } = log
   // Ganache reports negative gasCost for return ops to account for compensation of 1/64 gas
   // that was held when making a call; see Appendix H of Ethereum yellow paper and
   // https://medium.com/@researchandinnovation/the-dark-side-of-ethereum-1-64th-call-gas-reduction-967d12e0627e
@@ -578,7 +578,7 @@ function readFile(path) {
   })
 }
 
-function buildLineOffsets (src) {
+function buildLineOffsets(src) {
   let accu = 0;
   return src.split('\n').map(line => {
     const ret = accu;
@@ -587,21 +587,21 @@ function buildLineOffsets (src) {
   });
 }
 
-function buildPcToInstructionMapping (codeHexStr) {
+function buildPcToInstructionMapping(codeHexStr) {
   const mapping = {};
   let instructionIndex = 0;
-  for (let pc=0; pc<codeHexStr.length/2;) {
+  for (let pc = 0; pc < codeHexStr.length / 2;) {
     mapping[pc] = instructionIndex;
 
-    const byteHex = codeHexStr[pc*2]+codeHexStr[pc*2+1];
+    const byteHex = codeHexStr[pc * 2] + codeHexStr[pc * 2 + 1];
     const byte = parseInt(byteHex, 16);
 
     // PUSH instruction has immediates
     if (byte >= 0x60 && byte <= 0x7f) {
-        const n = byte-0x60+1; // number of immediates
-        pc += (n+1);
+      const n = byte - 0x60 + 1; // number of immediates
+      pc += (n + 1);
     } else {
-        pc += 1;
+      pc += 1;
     }
 
     instructionIndex += 1;
@@ -610,36 +610,36 @@ function buildPcToInstructionMapping (codeHexStr) {
 }
 
 // https://solidity.readthedocs.io/en/develop/miscellaneous.html#source-mappings
-function parseSourceMap (raw) {
+function parseSourceMap(raw) {
   let prevS, prevL, prevF, prevJ;
-  return raw.trim().split(';').map(section=> {
-    let [s,l,f,j] = section.split(':');
+  return raw.trim().split(';').map(section => {
+    let [s, l, f, j] = section.split(':');
 
-    if (s==='' || s===undefined) {
+    if (s === '' || s === undefined) {
       s = prevS;
     } else {
       prevS = s;
     }
 
-    if (l==='' || l===undefined) {
+    if (l === '' || l === undefined) {
       l = prevL;
     } else {
       prevL = l;
     }
 
-    if (f==='' || f===undefined) {
+    if (f === '' || f === undefined) {
       f = prevF;
     } else {
       prevF = f;
     }
 
-    if (j==='' || j===undefined) {
+    if (j === '' || j === undefined) {
       j = prevJ;
     } else {
       prevJ = j;
     }
 
-    return {s:Number(s), l:Number(l), f:Number(f), j};
+    return { s: Number(s), l: Number(l), f: Number(f), j };
   });
 }
 

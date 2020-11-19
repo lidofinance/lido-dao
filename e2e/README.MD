@@ -10,19 +10,19 @@
 - MINIME_FACTORY: `0xd526b7aba39cccf76422835e7fd5327b98ad73c9`
 - FIFResolvingRegistrar: `0xf1f8aac64036cdd399886b1c157b7e3b361093f3`
 - Aragon APM: `aragonpm.eth` -> ``
-- DePool APM: `depoolspm.eth` -> `0x1902a0410EFe699487Dd85F12321aD672bE4ada2`
+- Lido APM: `lido.eth` -> `0x1902a0410EFe699487Dd85F12321aD672bE4ada2`
   
 ### Apps and template repos
 
-- DePool App: `depool.depoolspm.eth` -> `0x2e25c8F88c5cCcbC9400e5bc86cF9C58C7604327` [ipfs](http://localhost:8080/ipfs/QmQKqHhw8CicmDMnQ8NAGuCjtJiPqW77nDL2ogB8ydQpda)
-- DePoolOracle App: `depooloracle.depoolspm.eth` -> `0x019F12a7DAa44A34CD0FF35055b0e2D4679D8521` [ipfs](http://localhost:8080/ipfs/Qme9kqHep4v3mLkg18kHWchdiPRpJ3addw6ZeMXVqqgjRo)
-- Staking Provider Registry App: `staking-providers-registry.depoolspm.eth` -> `0xfe18BCBeDD6f46e0DfbB3Aea02090F23ED1c4a28` [ipfs](http://localhost:8080/ipfs/Qmbm3iF2HhPD3V2LDdgnsmGQCC8nQzcAY7D8r8NbBGPC5d)
-- StETH token App: `steth.depoolspm.eth` -> `0xD13a7D8A728692eB2c56135B5EB5A1951b3F8395` [ipfs](http://localhost:8080/ipfs/QmZChra7tQPPBw58fJBVSaVF1kpMsR45HCMtjVosUAgb35)
-- DePool DAO Template: `depool-template.depoolspm.eth` -> `0xc7a5b4d533a18370f3EB88f48971B3A3276546fb`
+- Lido App: `lido.lido.eth` -> `0x2e25c8F88c5cCcbC9400e5bc86cF9C58C7604327` [ipfs](http://localhost:8080/ipfs/QmQKqHhw8CicmDMnQ8NAGuCjtJiPqW77nDL2ogB8ydQpda)
+- LidoOracle App: `lidooracle.lido.eth` -> `0x019F12a7DAa44A34CD0FF35055b0e2D4679D8521` [ipfs](http://localhost:8080/ipfs/Qme8dN9tVBaf6g3qEp7QkQkDuogKkqhD4Aph6oGfCcKoQk)
+- Node Operators Registry App: `node-operators-registry.lido.eth` -> `0xfe18BCBeDD6f46e0DfbB3Aea02090F23ED1c4a28` [ipfs](http://localhost:8080/ipfs/QmfFYDKzUwPpdcqLVd5WwuDAY3iLknDs9CgBeV9nqt2ENm)
+- StETH token App: `steth.lido.eth` -> `0xD13a7D8A728692eB2c56135B5EB5A1951b3F8395` [ipfs](http://localhost:8080/ipfs/QmZChra7tQPPBw58fJBVSaVF1kpMsR45HCMtjVosUAgb35)
+- Lido DAO Template: `lido-template.lido.eth` -> `0xc7a5b4d533a18370f3EB88f48971B3A3276546fb`
 
-> Depool APM: ens.addr('depoolspm.eth')
-> Depool apps: As APM repos, e.g. apm.getLatest('depool.depoolspm.eth')
-> Templates: As APM repos, e.g. apm.getLatest('depool-template.depoolspm.eth')
+> Lido APM: ens.addr('lido.eth')
+> Lido apps: As APM repos, e.g. apm.getLatest('lido.lido.eth')
+> Templates: As APM repos, e.g. apm.getLatest('lido-template.lido.eth')
 
 ### Deployed DAO and Apps instances
 
@@ -30,31 +30,32 @@
 - Aragon Finance: `0xd2c0889B4c73C82d9403EAd5e562031d2067A96F`
 - Aragon Tokens: `0xF8FdFCEC370576442E1358fCF970b841809509f6`
 - Aragon Voting: `0xDa160A5164A40831735eEB5416fEd3573a50FE27`
-- DePool: `0xE4d6602497077C44cB39Df55131A97BCFc8ed454`
-- SPRegistry: `0x5ec5DDf7A0cdD3235AD1bCC0ad04F059507EC5a3`
-- DePoolOracle: `0x12aa6ec7d603dc79eD663792E40a520B54A7ae6A`
-- StETH: `0x1Ae44Ea2B3e422E3D0c0eaD84617ECE55517EED7`
-- DePool DAO: `depool-dao.aragon.id` -> `0xD20F21CEb31a8E302603dC3ff994f00aa9312A66`
-- DePool DAO Token: `0xf2804D07A941F77F34EEEb252D172E4268d0e9D4`
+- Lido: `0x1Ae44Ea2B3e422E3D0c0eaD84617ECE55517EED7`
+- Operators Registry: `0xE4d6602497077C44cB39Df55131A97BCFc8ed454`
+- LidoOracle: `0x5ec5DDf7A0cdD3235AD1bCC0ad04F059507EC5a3`
+- StETH: `0x12aa6ec7d603dc79eD663792E40a520B54A7ae6A`
+- CStETH: `0xbc1B7f0e9C764deedA0cC56Ad10e5855f3140227`
+- Lido DAO: `lido-dao.aragon.id` -> `0xD20F21CEb31a8E302603dC3ff994f00aa9312A66`
+- Lido DAO Token: `0xf2804D07A941F77F34EEEb252D172E4268d0e9D4`
 - DAO ACL: `0xE0CA61949ed8c7CF31E73B819E9cEe02eDfa31Fa`
 - DAO Registry: `0xB0a7CD50842fEFE74F0D69D2B79E235261d16987`
 
 ### Permission roles ID
 
-- DePool
+- Lido
   - MANAGE_WITHDRAWAL_KEY: `0x96088a8483023eb2f67b12aabbaf17d1d055e6ef387e563902adc1bba1e4028b`
-  - SET_ORACLE: `0x11eba3f259e2be865238d718fd308257e3874ad4b3a642ea3af386a4eea190bd`
+  - SET_APPS: `0x11eba3f259e2be865238d718fd308257e3874ad4b3a642ea3af386a4eea190bd`
 
-- SP Registry
-  - REPORT_STOPPED_VALIDATORS_ROLE: `0x18ad851afd4930ecc8d243c8869bd91583210624f3f1572e99ee8b450315c80f`
-  - SET_STAKING_PROVIDER_LIMIT_ROLE: `0xc31dd6b145bba2b341fa170d90177d802b67bf2ec2dc32095ee5b862ed9e9fc0`
-  - SET_STAKING_PROVIDER_ADDRESS_ROLE: `0xc31dd6b145bba2b341fa170d90177d802b67bf2ec2dc32095ee5b862ed9e9fc0`
-  - SET_STAKING_PROVIDER_NAME_ROLE: `0x2c0f36065367c65a22dec016fb648ef447bfc93bc904d07caf01b731d89a8edc`
-  - SET_STAKING_PROVIDER_ACTIVE_ROLE: `0x070f29f3c2c95f4a8c82968673c12201a6bd0c95487ccc432b7c6be834ad13fa`
-  - ADD_STAKING_PROVIDER_ROLE: `0x87dc63ee3d442343561bc4dc4c0d96e71ee3354d3e25de74fd01175908e6a53b`
+- NOS Registry
+  - ADD_NODE_OPERATOR_ROLE = '0xe9367af2d321a2fc8d9c8f1e67f0fc1e2adf2f9844fb89ffa212619c713685b2'
+  - SET_NODE_OPERATOR_NAME_ROLE = '0x58412970477f41493548d908d4307dfca38391d6bc001d56ffef86bd4f4a72e8'
+  - SET_NODE_OPERATOR_ACTIVE_ROLE = '0xd856e115ac9805c675a51831fa7d8ce01c333d666b0e34b3fc29833b7c68936a'
+  - SET_NODE_OPERATOR_ADDRESS_ROLE = '0xbf4b1c236312ab76e456c7a8cca624bd2f86c74a4f8e09b3a26d60b1ce492183'
+  - SET_NODE_OPERATOR_LIMIT_ROLE = '0x07b39e0faf2521001ae4e58cb9ffd3840a63e205d288dc9c93c3774f0d794754'
+  - REPORT_STOPPED_VALIDATORS_ROLE = '0x18ad851afd4930ecc8d243c8869bd91583210624f3f1572e99ee8b450315c80f'
   - MANAGE_SIGNING_KEYS: `0x75abc64490e17b40ea1e66691c3eb493647b24430b358bd87ec3e5127f1621ee`
 
-- DePool Oracle
+- Lido Oracle
   - MANAGE_MEMBERS: `0xbf6336045918ae0015f4cdb3441a2fdbfaa4bcde6558c8692aac7f56c69fb067`
   - MANAGE_QUORUM: `0xa5ffa9f45fa52c446078e834e1914561bd9c2ab1e833572d62af775da092ccbc`
   
