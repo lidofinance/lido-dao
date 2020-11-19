@@ -37,7 +37,7 @@
     "deploy:apm-and-template": "buidler run --no-compile  ./scripts/deploy-lido-apm-and-template.js",
     "deploy:e2e:apm-and-template": "NETWORK_NAME=e2e buidler run --no-compile  ./scripts/deploy-lido-apm-and-template.js",
     "deploy:apps": "buidler run --no-compile ./scripts/deploy-lido-apps.js",
-    "deploy:e2e:apps": "NETWORK_NAME=e2e buidler run --no-compile ./scripts/deploy-lido-apps.js",
+    "deploy:e2e:apps": "NETWORK_NAME=e2e IPFS_API_URL=http://localhost:5001/api/v0 IPFS_GATEWAY_URL=http://localhost:8080 buidler run --no-compile ./scripts/deploy-lido-apps.js",
     "deploy:app-pool": "APPS=depool yarn deploy:apps",
     "deploy:app-oracle": "APPS=depooloracle yarn deploy:apps",
     "deploy:app-staking-providers-registry": "APPS=staking-providers-registry yarn deploy:apps",

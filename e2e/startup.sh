@@ -233,15 +233,17 @@ if [ $WEB_UI ]; then
   echo "(Re)Starting IPFS"
   docker-compose up -d ipfs
   echo "Starting Aragon web UI"
-  docker-compose up -d aragon
+  docker-compose up -d --build aragon
 else
   echo "Stopping IPFS"
   docker-compose rm -s -v -f ipfs > /dev/null
 fi
 if [ $ETH1_ONLY ]; then
-  docker-compose up -d node1
+  BLOCK_TIME=0 docker-compose up -d node1
   echo "ETH1 part done!"
   exit 0
+else
+  docker-compose up -d node1
 fi
 
 if [ ! -d $VALIDATORS_DIR ] && [ $SNAPSHOT ]; then

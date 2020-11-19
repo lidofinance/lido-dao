@@ -16,7 +16,6 @@ async function assignENSName({ tldName = 'eth', labelName, owner, ens, assigneeA
   log(`Node: ${chalk.yellow(nodeName)} (${node})`)
   log(`TLD: ${chalk.yellow(tldName)} (${tldHash})`)
   log(`Label: ${chalk.yellow(labelName)} (${labelHash})`)
-  log(`Owner: ${await ens.owner(node)} `)
 
   if ((await ens.owner(node)) === owner) {
     await logTx(
