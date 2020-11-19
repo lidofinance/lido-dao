@@ -31,6 +31,14 @@ module.exports = {
       timeout: 60000,
       gas: 8000000 // the same as in Göerli
     },
+    e2e: {
+      url: 'http://localhost:8545',
+      chainId: 1337,
+      ensAddress: getNetState('2020').ensAddress,
+      accounts: accounts.e2e || 'remote',
+      timeout: 60000,
+      gas: 8000000 // the same as in Göerli
+    },
     coverage: {
       url: 'http://localhost:8555'
     },
@@ -61,8 +69,8 @@ module.exports = {
   },
   etherscan: accounts.etherscan,
   aragon: {
-    ipfsApi: 'http://206.81.31.11/ipfs-api/v0',
-    ipfsGateway: 'http://206.81.31.11'
+    ipfsApi: process.env.IPFS_API_URL || 'http://206.81.31.11/ipfs-api/v0',
+    ipfsGateway: process.env.IPFS_GATEWAY_URL || 'http://206.81.31.11'
   }
 }
 
