@@ -256,7 +256,7 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
 
         emit AggregatedData(lastFinalizedReportInterval, lastFinalizedData);
 
-        if (address(0) != address(pool)) 
+        if (address(0) != address(pool))
             pool.reportEther2(lastFinalizedReportInterval, lastFinalizedData);
     }
 

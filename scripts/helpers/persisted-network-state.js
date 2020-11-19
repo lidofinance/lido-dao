@@ -12,10 +12,13 @@ function readNetworkState(fileName, netId) {
 
 function _readNetworkStateFile(fileName) {
   try {
+    if (!fs.existsSync(fileName)) {
+      return {}
+    }
     const data = fs.readFileSync(fileName, 'utf8')
     return (stateByFilename[fileName] = JSON.parse(data))
   } catch (err) {
-    throw new Error(`missing or malformed network state file ${fileName} (${err.message})`)
+    throw new Error(`malformed network state file ${fileName} (${err.message})`)
   }
 }
 

@@ -16,12 +16,19 @@ async function assignENSName({ tldName = 'eth', labelName, owner, ens, assigneeA
   log(`Node: ${chalk.yellow(nodeName)} (${node})`)
   log(`TLD: ${chalk.yellow(tldName)} (${tldHash})`)
   log(`Label: ${chalk.yellow(labelName)} (${labelHash})`)
+  log(`Owner: ${await ens.owner(node)} `)
 
   if ((await ens.owner(node)) === owner) {
-    await logTx(`Transferring name ownership from owner ${owner} to ${assigneeAddress}`, ens.setOwner(node, assigneeAddress))
+    await logTx(
+      `Transferring name ownership from owner ${owner} to ${assigneeAddress}`,
+      ens.setOwner(node, assigneeAddress, { from: owner })
+    )
   } else {
     try {
-      await logTx(`Creating subdomain and assigning it to ${assigneeAddress}`, ens.setSubnodeOwner(tldHash, labelHash, assigneeAddress))
+      await logTx(
+        `Creating subdomain and assigning it to ${assigneeAddress}`,
+        ens.setSubnodeOwner(tldHash, labelHash, assigneeAddress, { from: owner })
+      )
     } catch (err) {
       log(
         `Error: could not set the owner of '${labelName}.${tldName}' on the given ENS instance`,

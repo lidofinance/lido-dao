@@ -173,16 +173,11 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @notice Set authorized app contracts addresses
-      * @dev `_oracle` contract specified here must periodically make `reportEther2` calls.
-      * @param _token `stETH` contract address
-      * @param _oracle `LidoOracle` contract address
-      * @param _operators `NodeOperatorsRegistry` contract address
+      * @notice Set authorized oracle contract address to `_oracle`
+      * @dev Contract specified here must periodically make `reportEther2` calls.
       */
-    function setApps(address _token, address _oracle, address _operators) external auth(SET_APPS) {
-        _setToken(_token);
+    function setOracle(address _oracle) external auth(SET_ORACLE) {
         _setOracle(_oracle);
-        _setOperators(_operators);
     }
 
     /**
@@ -377,17 +372,17 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     /**
       * @dev Sets liquid token interface handle
       */
-    function _setToken(address _token) internal {
-        require(isContract(_token), "NOT_A_CONTRACT");
-        TOKEN_VALUE_POSITION.setStorageAddress(_token);
+    function _setToken(ISTETH _token) internal {
+        require(isContract(address(_token)), "NOT_A_CONTRACT");
+        TOKEN_VALUE_POSITION.setStorageAddress(address(_token));
     }
 
     /**
       * @dev Sets validator registration contract handle
       */
-    function _setValidatorRegistrationContract(address _contract) internal {
-        require(isContract(_contract), "NOT_A_CONTRACT");
-        VALIDATOR_REGISTRATION_VALUE_POSITION.setStorageAddress(_contract);
+    function _setValidatorRegistrationContract(IValidatorRegistration _contract) internal {
+        require(isContract(address(_contract)), "NOT_A_CONTRACT");
+        VALIDATOR_REGISTRATION_VALUE_POSITION.setStorageAddress(address(_contract));
     }
 
     /**
@@ -401,9 +396,9 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     /**
       * @dev Internal function to set node operator registry address
       */
-    function _setOperators(address _operators) internal {
-        require(isContract(_operators), "NOT_A_CONTRACT");
-        NODE_OPERATOR_REGISTRY_VALUE_POSITION.setStorageAddress(_operators);
+    function _setOperators(INodeOperatorsRegistry _r) internal {
+        require(isContract(_r), "NOT_A_CONTRACT");
+        NODE_OPERATOR_REGISTRY_VALUE_POSITION.setStorageAddress(_r);
     }
 
     /**
