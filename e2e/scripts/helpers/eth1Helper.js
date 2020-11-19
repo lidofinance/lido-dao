@@ -1,7 +1,7 @@
 import Web3, { providers } from 'web3'
 
 export const getLocalWeb3 = async () => {
-  const web3 = new Web3(new providers.WebsocketProvider(`ws://localhost:8545`))
+  const web3 = new Web3(new providers.HttpProvider(`http://localhost:8545`))
 
   web3.extend({
     property: 'ganache',

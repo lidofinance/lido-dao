@@ -3,6 +3,7 @@ import { getAccounts, getLocalWeb3 } from './eth1Helper'
 
 import {
   ensRegistry,
+  daoAddress,
   daoName,
   LIDO_APP_ID,
   LIDOORACLE_APP_ID,
@@ -21,10 +22,10 @@ export const prepareContext = async (params) => {
   const web3 = await getLocalWeb3()
   // Retrieve web3 accounts.
   const accounts = await getAccounts(web3)
-  const daoAddress = await getDaoAddress(daoName, {
-    provider: web3.currentProvider,
-    registryAddress: ensRegistry
-  })
+  // const daoAddress = await getDaoAddress(daoName, {
+  //   provider: web3.currentProvider,
+  //   registryAddress: ensRegistry
+  // })
   const apps = await getAllApps(daoAddress, { web3 })
   const aclApp = findApp(apps, KERNEL_DEFAULT_ACL_APP_ID)
   const votingApp = findApp(apps, VOTING_APP_ID)

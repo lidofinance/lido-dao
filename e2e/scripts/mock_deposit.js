@@ -9,16 +9,17 @@ const main = async () => {
   const context = await prepareContext()
   const { web3, accounts } = context
   init(context)
-  const donators = accounts.slice(5)
+  // console.log(accounts)
+  const donator = accounts[0]
   const data = await loadGeneratedValidatorsData('mock_validators')
 
-  const receipts = await Promise.all(data.map((d, i) => deposit(donators[i], web3.utils.toWei('32', 'ether'), objHexlify(d))))
+  const receipts = await Promise.all(data.map((d, i) => deposit(donator, web3.utils.toWei('32', 'ether'), objHexlify(d))))
   receipts.forEach((r) => {
     logger.info(`Validator ${r.events.DepositEvent.returnValues.pubkey} deposited, txHash: ${r.transactionHash}`)
   })
 
   logger.info(`Send stub tx`)
-  return await sendTransaction(web3, donators[0], donators[0], 0)
+  return await sendTransaction(web3, donator, donator, 0)
 }
 
 main()
