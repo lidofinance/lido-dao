@@ -33,6 +33,9 @@ PASSWORD=123
 
 NODE='npx babel-node --presets=@babel/preset-env'
 
+DEPLOYED_FILE="../deployed.json"
+STAGE="2"
+
 while test $# -gt 0; do
   case "$1" in
     -h|--help)
@@ -47,7 +50,8 @@ while test $# -gt 0; do
       echo "  -r1 | --reset1        force reset ETH1 blockchain state"
       echo "  -r2 | --reset2        force reset ETH2 blockchain state"
       echo "  -n | --nodes          start 2nd and 3d eth2 nodes"
-      echo "  -s [id]               use snapshot instead deploy, optinally pass stage id (1 by default)"
+      echo "  -s | --snapshot       use snapshot instead deploy"
+      echo "  --stage [id]          uset stage id for snapshots (2 by default)"
       echo "  -1 | --eth1           start only eth1 part"
       echo "  -w | --web            also start Aragon web UI"
       echo "  -ms | --makesnapshots create stage snapshots"
@@ -65,7 +69,10 @@ while test $# -gt 0; do
       ;;
     -s|--snapshot)
       SNAPSHOT=true
-      STAGE=${2:-"1"}
+      shift
+      ;;
+    --stage)
+      STAGE=${2:-"2"}
       shift
       ;;
     -1|--eth1)
@@ -85,7 +92,7 @@ while test $# -gt 0; do
       shift
       ;;
     -d|--dao)
-      DAO_DEPLOY=true
+      DEPLOY=true
       shift
       ;;
     -w|--web)
@@ -115,8 +122,11 @@ if [ $RESET ]; then
   docker-compose down -v --remove-orphans
   rm -rf $DATA_DIR
   mkdir -p $DATA_DIR
+
+  echo "Reset deployed.json"
+  node ./scripts/deployed-reset.js $NETWORK_ID "e2e" $OWNER $HOLDERS
   ETH2_RESET=true
-  DAO_DEPLOY=true
+  DEPLOY=true
 elif [ $ETH1_RESET ]; then
   echo "Reset ETH1 state"
 
@@ -131,110 +141,92 @@ if [ ! -d $DEVCHAIN_DIR ]; then
   if [ $SNAPSHOT ]; then
     echo "Unzip devchain snapshot from stage $STAGE"
     unzip -o -q -d $DATA_DIR $SNAPSHOTS_DIR/stage$STAGE/devchain.zip
+    echo "Restore deployed.json"
+    node ./scripts/deployed-restore.js $NETWORK_ID $SNAPSHOTS_DIR/stage1
   else
-    DAO_DEPLOY=true
+    DEPLOY=true
   fi
 fi
 
-if [ ! -d $TESTNET_DIR ]; then
-  if [ $SNAPSHOT ]; then
-    echo "Unzip testnet snapshot"
-    # always use stage1 snapshot
-    unzip -o -q -d $DATA_DIR $SNAPSHOTS_DIR/stage1/testnet.zip
-  else
-    ETH2_RESET=true
-  fi
-fi
 
-if [ ! -d $IPFS_DIR ] && [ $SNAPSHOT ] && [ $WEB_UI ]; then
-  echo "Unzip ipfs snapshot"
-  # always use stage0 snapshot
-  unzip -o -q -d $DATA_DIR $SNAPSHOTS_DIR/stage0/ipfs.zip
-fi
+RPC_ENDPOINT=${RPC_ENDPOINT:-http://localhost:8545}
+REQ_BODY='{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
+HEADERS='Content-Type: application/json'
 
-if [ ! $SNAPSHOT ]; then
-  echo "Starting eth1 node"
-  BLOCK_TIME=0 docker-compose up -d node1
+# if [ ! $SNAPSHOT ]; then
+# fi
+
+if [ ! $SNAPSHOT ] && [ $DEPLOY ] ; then
+  echo "Starting ETH1 node in onDemand mode"
+  docker-compose up -d node1
   echo -n "Waiting for eth1 rpc"
-  while ! curl --output /dev/null -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'; do
+  while ! curl -X POST -H "$HEADERS" -sfL0 -o /dev/null --data "$REQ_BODY" "$RPC_ENDPOINT"; do
     sleep 2 && echo -n .
   done
-fi
-
-#sleep 3
-#R="0x"
-#while [[ "$R" != "0x60" ]];
-#do
-#  R=$(curl -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x'$DEPOSIT'","latest"],"id":1}' | jq -r '.result'  | cut -c -4)
-#  sleep 2 && echo -n .
-#done
-echo " "
-if [ ! $SNAPSHOT ] && [ $DAO_DEPLOY ] ; then
-  echo "Starting IPFS"
+  echo
+  echo "Starting local IPFS"
   docker-compose up -d ipfs
   echo -n "Waiting for IPFS start"
   while ! curl --output /dev/null -s -f -L http://localhost:8080/api/v0/version; do
     sleep 2 && echo -n .
   done
-  echo " "
+  echo
 
-  R=$(curl -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x'$DEPOSIT'","latest"],"id":1}' | jq -r '.result'  | cut -c -4)
-  if [[ "$R" != "0x60" ]]; then
-    echo "Deploying deposit contract..."
-    ADMIN="$(curl -s -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_accounts","params":[],"id":1}' | jq -r '.result[0]')"
-    echo "Owner: $ADMIN"
-    CODE=$(curl -s https://raw.githubusercontent.com/ethereum/eth2.0-specs/dev/solidity_deposit_contract/deposit_contract.json | jq -r '.bytecode' | cut -c 3-)
-    # send deploy deposit contract tx, gasPrice = 20gwei
-    HASH=$(curl -s -L -X POST http://localhost:8545 \
-      --data "{\"jsonrpc\":\"2.0\",\"method\":\"eth_sendTransaction\",\"params\":[{
-      \"from\": \"$ADMIN\",
-      \"gas\": \"0x20acc4\",
-      \"gasPrice\": \"0x4a817c800\",
-      \"value\": \"0x00\",
-      \"data\": \"$CODE\"
-    }],\"id\":1}" | jq -r '.result')
-    echo "Tx hash: $HASH"
-    # wait a bit for block mined
-    sleep 3
-    R=$(curl -s -L -X POST http://localhost:8545 --data "{\"jsonrpc\":\"2.0\",\"method\":\"eth_getTransactionReceipt\",\"params\":[\"$HASH\"],\"id\":1}")
-  #  HASH=$(echo "$R" | jq -r '.result.txHash')
-    BLOCK_HEX=$(echo "$R" | jq -r '.result.blockNumber' | cut -c 3-)
-    BLOCK=$((16#$BLOCK_HEX))
-    ADDR=$(echo "$R" | jq -r '.result.contractAddress')
-    echo "Deposit contract deployed: $ADDR at block $BLOCK"
+
+  echo "Deploying Lido!"
+  # yarn deploy:e2e:all
+  yarn compile
+  echo "Take snapshots for devchain"
+  node ./scripts/gen-accounts.js $RPC_ENDPOINT 50 $DEVCHAIN_DIR "$MOCK_VALIDATOR_MNEMONIC" $PASSWORD
+  yarn deploy:e2e:aragon-env
+
+  STAGE_DIR="stage0"
+  if [ $MAKE_SNAPSHOT ] && [ ! -d $SNAPSHOTS_DIR/$STAGE_DIR ]; then
+    echo "Take snapshots for $STAGE_DIR"
+    mkdir -p $SNAPSHOTS_DIR/$STAGE_DIR
+    docker-compose stop node1
+    cd $DATA_DIR
+    echo "Take snapshots for devchain"
+    zip -rqu $SNAPSHOTS_DIR/$STAGE_DIR/devchain.zip devchain -x *.ipc
+    cd -
+    docker-compose start node1
+    echo "Take snapshots of deployed.json"
+    node ./scripts/deployed-backup.js $NETWORK_ID $SNAPSHOTS_DIR/$STAGE_DIR
   fi
 
-  R=$(curl -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x'$APM'","latest"],"id":1}' | jq -r '.result'  | cut -c -4)
-  if [[ "$R" != "0x60" ]]; then
-    echo "Deploying APM..."
-    npm run deploy:apm:dev
+  yarn deploy:e2e:aragon-std-apps
+  node ./scripts/gen-accounts.js $RPC_ENDPOINT 1 $DEVCHAIN_DIR "$MOCK_VALIDATOR_MNEMONIC" $PASSWORD
+  yarn deploy:e2e:apm-and-template
+  yarn deploy:e2e:apps
+  node ./scripts/gen-accounts.js $RPC_ENDPOINT 1 $DEVCHAIN_DIR "$MOCK_VALIDATOR_MNEMONIC" $PASSWORD
+  yarn deploy:e2e:dao
+
+  STAGE_DIR="stage1"
+  if [ $MAKE_SNAPSHOT ] && [ ! -d $SNAPSHOTS_DIR/$STAGE_DIR ]; then
+    echo "Take snapshots for $STAGE_DIR"
+    mkdir -p $SNAPSHOTS_DIR/$STAGE_DIR
+    docker-compose stop node1
+    docker-compose stop ipfs
+    cd $DATA_DIR
+    echo "Take snapshots for devchain"
+    zip -rqu $SNAPSHOTS_DIR/$STAGE_DIR/devchain.zip devchain -x *.ipc
+    echo "Take snapshots for ipfs"
+    zip -rqu $SNAPSHOTS_DIR/$STAGE_DIR/ipfs.zip ipfs
+    cd -
+    docker-compose start node1
+    docker-compose start ipfs
+    echo "Take snapshots of deployed.json"
+    node ./scripts/deployed-backup.js $NETWORK_ID $SNAPSHOTS_DIR/$STAGE_DIR
   fi
-  R=$(curl -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x'$LIDO_APP'","latest"],"id":1}' | jq -r '.result'  | cut -c -4)
-  if [[ "$R" != "0x60" ]]; then
-    echo "Deploying Apps..."
-    npm run deploy:apps:dev
-  fi
-  R=$(curl -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x'$TEMPLATE'","latest"],"id":1}' | jq -r '.result'  | cut -c -4)
-  if [[ "$R" != "0x60" ]]; then
-    echo "Deploying DAO template..."
-    npm run deploy:tmpl:dev
-  fi
-  R=$(curl -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x'$DAO'","latest"],"id":1}' | jq -r '.result'  | cut -c -4)
-  if [[ "$R" != "0x60" ]]; then
-    echo "Deploying DAO..."
-    npm run deploy:dao:dev
-  fi
-  R=$(curl -s -f -L -X POST http://localhost:8545 --data '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x'$CSTETH'","latest"],"id":1}' | jq -r '.result'  | cut -c -4)
-  if [[ "$R" != "0x60" ]]; then
-    echo "Deploying CstETH wrapper..."
-    npm run deploy:csteth:dev
-  fi
+
   # wait a bit for block mining
   sleep 3
-else
-  echo "DevChain data exists"
-  echo "Deposit contract predeployed: 0x$DEPOSIT at block $BLOCK"
-  echo "DAO deployed at: 0x$DAO"
+fi
+
+if [ ! -d $IPFS_DIR ] && [ $SNAPSHOT ] && [ $WEB_UI ]; then
+  echo "Unzip ipfs snapshot"
+  # always use stage0 snapshot
+  unzip -o -q -d $DATA_DIR $SNAPSHOTS_DIR/stage1/ipfs.zip
 fi
 
 if [ $WEB_UI ]; then
@@ -246,10 +238,15 @@ else
   echo "Stopping IPFS"
   docker-compose rm -s -v -f ipfs > /dev/null
 fi
+if [ $ETH1_ONLY ]; then
+  docker-compose up -d node1
+  echo "ETH1 part done!"
+  exit 0
+fi
 
 if [ ! -d $VALIDATORS_DIR ] && [ $SNAPSHOT ]; then
   echo "Unzip validators snapshot"
-  unzip -o -q -d $DATA_DIR $SNAPSHOTS_DIR/stage1/validators.zip
+  unzip -o -q -d $DATA_DIR $SNAPSHOTS_DIR/stage2/validators.zip
 fi
 
 if [ ! -d "$VALIDATORS1_VALIDATORS_KEYS_DIR" ]; then
@@ -263,25 +260,14 @@ if [ ! -d "$VALIDATORS2_VALIDATORS_KEYS_DIR" ]; then
   KEYS_DIR=$VALIDATORS2_DATA_DIR ./deposit.sh --num_validators=$VALIDATOR_COUNT --password=$PASSWORD --chain=medalla --mnemonic="$VALIDATOR_MNEMONIC2" --withdrawal_pk=$WITHDRAWAL_PK2
 fi
 
-if [ $MAKE_SNAPSHOT ] && [ ! $SNAPSHOT ] && [ ! -d $SNAPSHOTS_DIR/stage0 ]; then
-  echo "Take snapshots for stage 0"
-  mkdir -p $SNAPSHOTS_DIR/stage0
-  docker-compose pause
-  cd $DATA_DIR
-  echo "Take snapshots for devchain"
-  zip -rqu $SNAPSHOTS_DIR/stage0/devchain.zip devchain
-  echo "Take snapshots for ipfs"
-  zip -rqu $SNAPSHOTS_DIR/stage0/ipfs.zip ipfs
-  echo "Take snapshots for validators"
-  zip -rqu $SNAPSHOTS_DIR/stage0/validators.zip validators
-  cd -
-  docker-compose unpause
-fi
-
-if [ $ETH1_ONLY ]; then
-  echo "ETH1 part done!"
-  # snapshot stage 0
-  exit 0
+if [ ! -d $TESTNET_DIR ]; then
+  if [ $SNAPSHOT ]; then
+    echo "Unzip testnet snapshot"
+    # always use stage1 snapshot
+    unzip -o -q -d $DATA_DIR $SNAPSHOTS_DIR/stage2/testnet.zip
+  else
+    ETH2_RESET=true
+  fi
 fi
 
 if [ $ETH2_RESET ]; then
@@ -301,21 +287,26 @@ if [ $ETH2_RESET ]; then
   rm -rf $BEACONDATA2_DIR
   rm -rf $BEACONDATA3_DIR
   rm -rf $BEACONDATA4_DIR
+
+
   if [ ! $SNAPSHOT ]; then
     rm -rf $TESTNET_DIR
     echo "Updating lighthouse node"
     docker pull sigp/lighthouse
+    DEPOSIT=$(cat $DEPLOYED_FILE | jq -r ".networks[\"$NETWORK_ID\"].depositContractAddress")
+    DEPOSIT_HEX=$(echo $DEPOSIT | cut -c 3-)
 
     docker-compose run --rm --no-deps lh lcli \
       --spec "$SPEC" \
       new-testnet --force \
-      --deposit-contract-address "$DEPOSIT" \
-      --deposit-contract-deploy-block "$BLOCK" \
+      --deposit-contract-address "$DEPOSIT_HEX" \
       --testnet-dir "/data/testnet" \
       --min-genesis-active-validator-count "$MOCK_VALIDATOR_COUNT" \
       --eth1-follow-distance "$ETH1_FOLLOW_DISTANCE" \
       --genesis-delay "$GENESIS_DELAY" \
       --genesis-fork-version "$FORK_VERSION"
+
+      # --deposit-contract-deploy-block "$BLOCK" \
 
     if [ $SPEC = "minimal" ]; then
       # reduce slot time generation
@@ -323,9 +314,10 @@ if [ $ETH2_RESET ]; then
       # set according eth1 block time generation, see docker-compose.yml
       # sed -i 's/SECONDS_PER_ETH1_BLOCK: "14"/SECONDS_PER_ETH1_BLOCK: "5"/' $TESTNET_DIR/config.yaml
       # fix deposit contract address
-      sed -i "s/1234567890123456789012345678901234567890/$DEPOSIT/" $TESTNET_DIR/config.yaml
+      sed -i "s/DEPOSIT_CHAIN_ID: \"5\"/DEPOSIT_CHAIN_ID: \"1337\"/" $TESTNET_DIR/config.yaml
+      sed -i "s/DEPOSIT_NETWORK_ID: \"5\"/DEPOSIT_NETWORK_ID: \"$NETWORK_ID\"/" $TESTNET_DIR/config.yaml
+      sed -i "s/0x1234567890123456789012345678901234567890/$DEPOSIT/" $TESTNET_DIR/config.yaml
     fi
-
     echo "Specification generated at $TESTNET_DIR."
 
     if [ ! -d "$MOCK_VALIDATORS_KEYS_DIR" ]; then
@@ -337,8 +329,6 @@ if [ $ETH2_RESET ]; then
     if [ ! -d "$MOCK_VALIDATORS_DIR" ]; then
       echo "Making deposits for $MOCK_VALIDATOR_COUNT genesis validators... (this may take a while)"
       $NODE scripts/mock_deposit.js
-      echo "Sending ETH to mock users... (this may take a while)"
-      $NODE scripts/mock_sendEth.js
       echo "Importing validators keystore"
       echo $PASSWORD | docker-compose run --rm --no-deps lh lighthouse \
         --spec "$SPEC" --debug-level "$DEBUG_LEVEL" \
@@ -346,6 +336,7 @@ if [ $ETH2_RESET ]; then
         --datadir "/data/validators/mock_validators" \
         --directory "/data/validators/mock_validators/validator_keys" \
         --testnet-dir "/data/testnet"
+
     fi
 
     echo "Generating genesis"
@@ -385,21 +376,22 @@ if [ ! -d "$VALIDATORS2_VALIDATORS_DIR" ]; then
     --directory "/data/validators/validators2/validator_keys" \
     --testnet-dir "/data/testnet"
 fi
-if [ $MAKE_SNAPSHOT ] && [ ! $SNAPSHOT ] && [ ! -d $SNAPSHOTS_DIR/stage1 ]; then
-  echo "Take snapshots for stage 1"
-  mkdir -p $SNAPSHOTS_DIR/stage1
-  docker-compose pause
+
+STAGE_DIR="stage2"
+if [ $MAKE_SNAPSHOT ] && [ ! $SNAPSHOT ] && [ ! -d $SNAPSHOTS_DIR/$STAGE_DIR ]; then
+  echo "Take snapshots for $STAGE_DIR"
+  mkdir -p $SNAPSHOTS_DIR/$STAGE_DIR
+  docker-compose stop node1
   cd $DATA_DIR
   echo "Take snapshots for devchain"
-  zip -rqu $SNAPSHOTS_DIR/stage1/devchain.zip devchain
+  zip -rqu $SNAPSHOTS_DIR/$STAGE_DIR/devchain.zip devchain -x *.ipc
   echo "Take snapshots for testnet"
-  zip -rqu $SNAPSHOTS_DIR/stage1/testnet.zip testnet
+  zip -rqu $SNAPSHOTS_DIR/$STAGE_DIR/testnet.zip testnet
   echo "Take snapshots for validators"
-  zip -rqu $SNAPSHOTS_DIR/stage1/validators.zip validators
+  zip -rqu $SNAPSHOTS_DIR/$STAGE_DIR/validators.zip validators
   cd -
-  docker-compose unpause
+  docker-compose start node1
 fi
-
 
 # oracles
 if [ $ORACLES ]; then

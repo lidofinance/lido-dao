@@ -6,6 +6,7 @@
 .cache
 **/cache/
 dist/
+tmp/
 
 /coverage/
 /coverage.json
