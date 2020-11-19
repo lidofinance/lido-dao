@@ -13,10 +13,11 @@ import {
   IconRemove,
 } from '@aragon/ui'
 import Button from '@aragon/ui/dist/Button'
+import { ListItem } from './components/ListItem'
 import ChangeFeeSidePanel from './components/ChangeFeeSidePanel'
 import ChangeWCSidePanel from './components/ChangeWCSidePanel'
-import { ListItem } from './components/ListItem'
 import DbeSidePanel from './components/DbeSidePanel'
+import ChangeFeeDistrSidePanel from './components/ChangeFeeDistrSidePanel'
 
 export default function App() {
   const { api, appState, currentApp, guiStyle } = useAragonApi()
@@ -55,11 +56,30 @@ export default function App() {
     api.stop().toPromise()
   }, [api])
 
+  console.log(appState)
+
+  const [changeFeeDistrPanelOpened, setChangeFeeDistrPanelOpened] = useState(
+    false
+  )
+  const openChangeFeeDistrPanel = useCallback(() => {
+    console.log('ds')
+    setChangeFeeDistrPanelOpened(true)
+  }, [])
+  const closeChangeFeeDistrPanel = useCallback(() => {
+    setChangeFeeDistrPanelOpened(false)
+  }, [])
+  const apiSetFeeDistr = useCallback(
+    (treasury, insurance, operators) => {
+      return api.setFeeDistribution(treasury, insurance, operators).toPromise()
+    },
+    [api]
+  )
+
   const data = useMemo(() => {
     const {
       isStopped,
       fee,
-      // feeDistribution,
+      feeDistribution,
       withdrawalCredentials,
       bufferedEther,
       totalPooledEther,
@@ -139,6 +159,53 @@ export default function App() {
         ),
       },
       {
+        label: 'Fee distribution (basis points)',
+        content: (
+          <span style={{ display: 'flex', alignItems: 'center' }}>
+            <Button
+              icon={<IconEdit />}
+              label="Change fee"
+              display="icon"
+              onClick={openChangeFeeDistrPanel}
+              style={{ marginLeft: 10 }}
+            />
+          </span>
+        ),
+      },
+      {
+        label: 'Insurance',
+        content: (
+          <span style={{ display: 'flex', alignItems: 'center' }}>
+            <strong>
+              {feeDistribution.insuranceFeeBasisPoints || 'No data'}
+            </strong>
+          </span>
+        ),
+        subBullet: true,
+      },
+      {
+        label: 'Operators',
+        content: (
+          <span style={{ display: 'flex', alignItems: 'center' }}>
+            <strong>
+              {feeDistribution.operatorsFeeBasisPoints || 'No data'}
+            </strong>
+          </span>
+        ),
+        subBullet: true,
+      },
+      {
+        label: 'Treasury',
+        content: (
+          <span style={{ display: 'flex', alignItems: 'center' }}>
+            <strong>
+              {feeDistribution.treasuryFeeBasisPoints || 'No data'}
+            </strong>
+          </span>
+        ),
+        subBullet: true,
+      },
+      {
         label: 'Withdrawal Credentials',
         content: (
           <span style={{ display: 'flex', alignItems: 'center' }}>
@@ -215,8 +282,8 @@ export default function App() {
         primary={
           <Box heading="Details" padding={20}>
             <ul>
-              {data.map(({ label, content }, index) => (
-                <ListItem key={label + index}>
+              {data.map(({ label, content, subBullet }, index) => (
+                <ListItem key={label + index} subBullet={subBullet}>
                   <span>{label}</span>
                   <span>:</span>
                   {content}
@@ -249,11 +316,15 @@ export default function App() {
         onClose={closeChangeFeePanel}
         apiSetFee={apiSetFee}
       />
-
       <ChangeWCSidePanel
         opened={changeWCPanelOpened}
         onClose={closeChangeWCPanel}
         apiSetWC={apiSetWC}
+      />
+      <ChangeFeeDistrSidePanel
+        opened={changeFeeDistrPanelOpened}
+        onClose={closeChangeFeeDistrPanel}
+        api={apiSetFeeDistr}
       />
     </Main>
   )
