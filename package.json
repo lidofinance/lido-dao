@@ -43,7 +43,7 @@
     "deploy:app-staking-providers-registry": "APPS=staking-providers-registry yarn deploy:apps",
     "deploy:app-steth": "APPS=steth yarn deploy:apps",
     "deploy:dao": "buidler run --no-compile ./scripts/deploy-lido-dao.js",
-    "deploy:e2e:dao": "NETWORK_NAME=localhost  buidler run --no-compile ./scripts/deploy-lido-dao.js"
+    "deploy:e2e:dao": "NETWORK_NAME=e2e buidler run --no-compile ./scripts/deploy-lido-dao.js"
   },
   "author": "MixBytes <hello@mixbytes.io>",
   "devDependencies": {
