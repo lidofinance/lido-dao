@@ -8,6 +8,7 @@ const NUM_ACCOUNTS = +(process.argv[3] || '10')
 const OUT_DIR = process.argv[4] || './'
 const MNEMONIC = process.argv[5] || ''
 const PASSWORD = process.argv[6] || '123'
+const NUM_UNLOCK = +(process.argv[7] || '1')
 
 const sleep = (ms) => {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -29,7 +30,14 @@ const tryFindAcc = async (address, provider) => {
   return found
 }
 
-const main = async (numAccounts = NUM_ACCOUNTS, rpcEndpoint = RPC_ENDPOINT, outDir = OUT_DIR, mnemonic = MNEMONIC, password = PASSWORD) => {
+const main = async (
+  numAccounts = NUM_ACCOUNTS,
+  rpcEndpoint = RPC_ENDPOINT,
+  outDir = OUT_DIR,
+  mnemonic = MNEMONIC,
+  password = PASSWORD,
+  numUnlock = NUM_UNLOCK
+) => {
   console.log('Generating accounts')
   const provider = new ethers.providers.JsonRpcProvider(rpcEndpoint)
   const sysSigner = await provider.getSigner(0)
@@ -53,18 +61,17 @@ const main = async (numAccounts = NUM_ACCOUNTS, rpcEndpoint = RPC_ENDPOINT, outD
     if (found) {
       // console.log(await provider.listAccounts())
       const signer = await provider.getSigner(wallet.address)
-      const bal = await signer.getBalance()
+      const [bal, to] = await Promise.all([signer.getBalance(), signer.getAddress()])
       if (bal.lt(value)) {
         console.log(`   transferring funds`)
-        const tx = await sysSigner.sendTransaction({
-          to: await signer.getAddress(),
-          value
-        })
+        const tx = await sysSigner.sendTransaction({ to, value })
       }
       // await tx.wait()
       // console.log(ethers.utils.formatEther(await provider.getBalance(wallet.address)))
-      console.log(`   unlocking...`)
-      await signer.unlock(password)
+      if (i < numUnlock) {
+        console.log(`   unlocking...`)
+        await signer.unlock(password)
+      }
     } else {
       console.log(`  error creating account ${i + 1}/${numAccounts}: ${wallet.address}`)
     }
