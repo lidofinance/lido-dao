@@ -36,7 +36,7 @@ test('Tokens', async (t) => {
   t.is(name, 'Lido DAO Token', 'Token name')
   t.is(symbol, 'LDO', 'Token symbol')
   t.is(decimals, '18', 'Token decimals')
-  t.is(totalSupply, '500', 'Token totalSupply')
+  t.is(totalSupply, '300', 'Token totalSupply')
   t.is(balance, '100', 'Account balance')
 
   // t.pass()

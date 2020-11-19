@@ -40,7 +40,7 @@ import {
 } from '../scripts/helpers/constants'
 
 test.before('Connecting Web3', async (t) => {
-  t.context = await prepareContext()
+  t.context = await prepareContext({ numUnlock: 50 })
   lidoHelper.init(t.context)
   aclHelper.init(t.context)
   votingHelper.init(t.context)
@@ -53,9 +53,9 @@ test.before('Connecting Web3', async (t) => {
 })
 
 test('Full flow test ', async (t) => {
-  const { web3, accounts } = t.context
-  const [holder1, holder2, holder3, holder4, holder5] = accounts
-  const quorumHolders = [holder1, holder2, holder3]
+  const { accounts } = t.context
+  const [holder1, holder2, holder3] = accounts
+  const quorumHolders = [holder1, holder2]
   const [nosMember1, nosMember2, nosMember3, nosMember4, nosMember5] = nosMembers
   const [oracleMember1, oracleMember2, oracleMember3] = oracleMembers
   const [user1, user2, user3, user4, user5] = users
