@@ -11,6 +11,7 @@ import {
   useTheme,
   IconConnect,
   IconRemove,
+  TransactionBadge,
 } from '@aragon/ui'
 import Button from '@aragon/ui/dist/Button'
 import { ListItem } from './components/ListItem'
@@ -212,7 +213,15 @@ export default function App() {
         label: 'Withdrawal Credentials',
         content: (
           <span style={{ display: 'flex', alignItems: 'center' }}>
-            <strong>{withdrawalCredentials || 'Unset'}</strong>
+            {withdrawalCredentials ? (
+              <TransactionBadge
+                transaction={withdrawalCredentials}
+                shorten
+                disabled
+              />
+            ) : (
+              <strong>None</strong>
+            )}
             <Button
               icon={<IconEdit />}
               label="Change withdrawal credentials"
