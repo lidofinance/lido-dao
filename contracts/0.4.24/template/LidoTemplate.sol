@@ -58,13 +58,6 @@ contract LidoTemplate is BaseTemplate {
 
     }
 
-    struct BeaconSpec {
-        uint64 epochsPerFrame;
-        uint64 slotsPerEpoch;
-        uint64 secondsPerSlot;
-        uint64 genesisTime;
-    }
-
     DeployState private deployState;
 
     constructor(
@@ -88,7 +81,6 @@ contract LidoTemplate is BaseTemplate {
         uint256[] _stakes,
         uint64[3] _votingSettings,
         address _BeaconDepositContract,
-        uint256 _depositIterationLimit,
         uint32[4] _beaconSpec
     )
         external
@@ -111,7 +103,6 @@ contract LidoTemplate is BaseTemplate {
             state,
             _votingSettings,
             _BeaconDepositContract,
-            _depositIterationLimit,
             _beaconSpec[0], // epochsPerFrame
             _beaconSpec[1], // slotsPerEpoch
             _beaconSpec[2], // secondsPerSlot
@@ -140,7 +131,6 @@ contract LidoTemplate is BaseTemplate {
         DeployState memory state,
         uint64[3] memory _votingSettings,
         address _BeaconDepositContract,
-        uint256 _depositIterationLimit,
         uint64 _epochsPerFrame,
         uint64 _slotsPerEpoch,
         uint64 _secondsPerSlot,
@@ -164,8 +154,7 @@ contract LidoTemplate is BaseTemplate {
             state.steth,
             _BeaconDepositContract,
             state.oracle,
-            state.operators,
-            _depositIterationLimit
+            state.operators
         );
         state.lido = Lido(_installNonDefaultApp(state.dao, LIDO_APP_ID, initializeData));
 
@@ -213,7 +202,6 @@ contract LidoTemplate is BaseTemplate {
         state.acl.createPermission(state.voting, state.lido, state.lido.MANAGE_FEE(), state.voting);
         state.acl.createPermission(state.voting, state.lido, state.lido.MANAGE_WITHDRAWAL_KEY(), state.voting);
         state.acl.createPermission(state.voting, state.lido, state.lido.SET_ORACLE(), state.voting);
-        state.acl.createPermission(state.voting, state.lido, state.lido.SET_DEPOSIT_ITERATION_LIMIT(), state.voting);
     }
 
     function _resetStorage() internal {
