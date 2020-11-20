@@ -58,10 +58,6 @@ export async function setFeeDistribution(treasuryFee, insuranceFee, NOSFee, hold
   await voteForAction(voteId, holders, 'setFeeDistribution')
 }
 
-export function getDepositIterationLimit() {
-  return lidoContract.methods.getDepositIterationLimit().call()
-}
-
 export async function addSigningKeys(validatorsTestData, holder, count, holders) {
   const validatorsPubKeys = validatorsTestData.pubKey
   const validatorsSignatures = validatorsTestData.signature
@@ -95,9 +91,9 @@ export async function getInsuranceFundAddress() {
   return await lidoContract.methods.getInsuranceFund().call()
 }
 
-export async function submit(sender, value, referral) {
+export async function submit(sender, value, referral, maxDepositCalls = 16) {
   await lidoContract.methods.submit(referral).send({ from: sender, value: value, gas: '8000000' })
-  await depositBufferedEther(sender)
+  await depositBufferedEther(sender, maxDepositCalls)
 }
 
 export async function getEther2Stat() {
@@ -114,14 +110,14 @@ export async function getTreasury() {
   return await lidoContract.methods.getTreasury().call()
 }
 
-export async function depositToLidoContract(from, value, referral = '0x0000000000000000000000000000000000000000') {
+export async function depositToLidoContract(from, value, referral = '0x0000000000000000000000000000000000000000', maxDepositCalls = 16) {
   await submit(from, value, referral)
-  await depositBufferedEther(from)
+  await depositBufferedEther(from, maxDepositCalls)
   // return await eth1Helper.sendTransaction(web3, getProxyAddress(), from, value)
 }
 
-export async function depositBufferedEther(from) {
-  await lidoContract.methods.depositBufferedEther().send({ from, gas: '8000000' })
+export async function depositBufferedEther(from, maxDepositCalls = 16) {
+  await lidoContract.methods.depositBufferedEther(maxDepositCalls).send({ from, gas: '8000000' })
 }
 
 export function getTotalControlledEther() {

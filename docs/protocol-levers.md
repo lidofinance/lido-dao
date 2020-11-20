@@ -108,34 +108,18 @@ The pool uses these credentials to register new ETH 2.0 validators.
 
 ### Deposit loop iteration limit
 
-Controls how many ETH 2.0 validators can be registered in a single transaction.
+Controls how many ETH 2.0 deposits can be made in a single transaction.
 
-* Mutator: `setDepositIterationLimit(uint256)`
-  * Permission required: `SET_DEPOSIT_ITERATION_LIMIT`
-* Accessor: `getDepositIterationLimit() returns (uint256)`
+* A parameter of the `depositBufferedEther(uint256)` funciton
+* Default value: `16`
 * [Scenario test](/test/scenario/lido_deposit_iteration_limit.js)
 
-When someone submits Ether to the pool, the received Ether gets buffered in the pool contract. If the amount
-of the buffered Ether becomes larger than the ETH 2.0 deposit size (32 ETH), then the pool tries to register
-as many ETH 2.0 validators as it can. The limiting factors here are the amount of the buffered Ether (obviously),
-the number of spare validator keys (provided by node operators), and the deposit loop iteration limit,
-controlled by this lever.
+When someone calls `depositBufferedEther`, the pool tries to register as many ETH 2.0 validators
+as it can given the buffered Ether amount. The limit is passed as an argument to this function and
+is needed to prevent the transaction from [failing due to the block gas limit], which is possible
+if the amount of the buffered Ether becomes sufficiently large.
 
-The limit is needed to prevent the submit transaction from [failing due to the block gas limit](https://github.com/ConsenSys/smart-contract-best-practices/blob/8f99aef/docs/known_attacks.md#gas-limit-dos-on-a-contract-via-unbounded-operations).
-This is possible if the amount of the buffered Ether becomes sufficiently large, which, in turn, can occur due to:
-
-* a user sending a large amount of Ether in a single transaction;
-* temporary lack of new validator keys.
-
-In a situation when some Ether that could otherwise be used to register validators gets left buffered in
-the pool due to this limit, one can resume registering new validators by submitting zero Ether, which is
-allowed exactly for this purpose.
-
-Currently, the submit function, compiled with `200` optimizer iterations, consumes around `577000 gas` plus
-`107000 gas` for each registered validator, so the default limit is set by deploy scripts to `16` validators
-to make the submit transaction occupy no more than `20%` of a block. See [this file](/estimate_deposit_loop_gas.js)
-for the related calculations; you can run them with `yarn estimate-deposit-loop-gas`.
-
+[failing due to the block gas limit]: https://github.com/ConsenSys/smart-contract-best-practices/blob/8f99aef/docs/known_attacks.md#gas-limit-dos-on-a-contract-via-unbounded-operations
 
 ### Pausing
 
