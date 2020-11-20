@@ -1,70 +1,79 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
-import {
-  Button,
-  GU,
-  SidePanel,
-  Info,
-  Field,
-  TextInput,
-  useSidePanel,
-} from '@aragon/ui'
+import React from 'react'
+import { Button, GU, SidePanel, Info } from '@aragon/ui'
+import { Formik, Field } from 'formik'
+import * as yup from 'yup'
+import TextField from './TextField'
+
+const initialValues = {
+  credentials: '',
+}
+
+const validationSchema = yup.object().shape({
+  credentials: yup
+    .string()
+    .required()
+    .test(
+      'credentials',
+      'Credentials must be a 64-character hexadecimal number',
+      (credentials) => {
+        const hasPrefix = credentials.substring(0, 2) === '0x'
+        const withoutPrefix = hasPrefix ? credentials.substring(2) : credentials
+        const regex = /^[a-fA-F0-9]{64}$/
+        return regex.test(withoutPrefix)
+      }
+    ),
+})
 
 function Panel({ onClose, apiSetWC }) {
-  const inputRef = useRef()
-  const { readyToFocus } = useSidePanel()
-
-  useEffect(() => {
-    if (readyToFocus && inputRef.current) {
-      inputRef.current.focus()
-    }
-  }, [readyToFocus, inputRef])
-
-  const [pending, setPending] = useState(false)
-  const [newWC, setNewWC] = useState('')
-
-  const onChangeNewWC = useCallback((event) => {
-    setNewWC(event.target.value)
-  }, [])
-
-  const handleChangeWCSubmit = (event) => {
-    event.preventDefault()
-    setPending(true)
-    apiSetWC(newWC)
+  const handleFormikSubmit = ({ credentials }) => {
+    const hasPrefix = credentials.substring(0, 2) === '0x'
+    const withdrawalCredentials = hasPrefix ? credentials : `0x${credentials}`
+    apiSetWC(withdrawalCredentials)
       .toPromise()
-      .then(() => {
-        setNewWC('')
+      .catch(console.error)
+      .finally(() => {
         onClose()
-        setPending(false)
-      })
-      .catch(() => {
-        setNewWC('')
-        onClose()
-        setPending(false)
       })
   }
 
   return (
-    <form
-      css={`
-        margin-top: ${3 * GU}px;
-      `}
-      onSubmit={handleChangeWCSubmit}
+    <Formik
+      initialValues={initialValues}
+      validationSchema={validationSchema}
+      onSubmit={handleFormikSubmit}
+      validateOnBlur={false}
+      validateOnChange={false}
     >
-      <Info
-        title="Action"
-        css={`
-          margin-bottom: ${3 * GU}px;
-        `}
-      >
-        This action will change the withdrawal credentials.
-      </Info>
-      <Field label="New withdrawal credentials">
-        <TextInput type="text" onChange={onChangeNewWC} required wide />
-      </Field>
-      <Button mode="strong" type="submit" disabled={pending}>
-        Set withdrawal credentials
-      </Button>
-    </form>
+      {({ values, errors, submitForm, isSubmitting }) => {
+        const handleSubmit = (event) => {
+          event.preventDefault()
+          submitForm()
+        }
+        return (
+          <form
+            css={`
+              margin-top: ${3 * GU}px;
+            `}
+            onSubmit={handleSubmit}
+          >
+            <pre>{JSON.stringify(values, null, 2)}</pre>
+            <pre>{JSON.stringify(errors, null, 2)}</pre>
+            <Info
+              title="Action"
+              css={`
+                margin-bottom: ${3 * GU}px;
+              `}
+            >
+              This action will change the withdrawal credentials.
+            </Info>
+            <Field name="credentials" label="Referral" component={TextField} />
+            <Button mode="strong" type="submit" disabled={isSubmitting}>
+              Set withdrawal credentials
+            </Button>
+          </form>
+        )
+      }}
+    </Formik>
   )
 }
 
