@@ -10,6 +10,7 @@
     "core-js": "^3.6.5",
     "formik": "^2.2.0",
     "react": "^16.13.1",
+    "react-copy-to-clipboard": "^5.0.2",
     "react-dom": "^16.13.1",
     "regenerator-runtime": "^0.13.7",
     "styled-components": "^5.2.0",
