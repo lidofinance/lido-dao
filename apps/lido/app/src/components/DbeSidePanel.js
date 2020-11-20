@@ -33,7 +33,9 @@ function PanelContent({ api, onClose }) {
           margin-bottom: ${3 * GU}px;
         `}
       >
-        This action will transfer all the buffered ether into the deposit.
+        This action will deposit Ether currently buffered in Lido to the
+        DepositContract in 32 ETH chunks, assigning each chunk to a Node
+        Operators.
       </Info>
       <Button
         mode="strong"
