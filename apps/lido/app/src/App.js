@@ -186,8 +186,8 @@ export default function App() {
   }, [appState])
 
   const [dbePanelOpen, setDbePanelOpen] = useState(false)
-  const openStakeSidePanel = useCallback(() => setDbePanelOpen(true), [])
-  const closeStakeSidePanel = useCallback(() => setDbePanelOpen(false), [])
+  const openDbePanel = useCallback(() => setDbePanelOpen(true), [])
+  const closeDbePanel = useCallback(() => setDbePanelOpen(false), [])
   const apiDepositBufferedEther = useCallback(() => {
     return api.depositBufferedEther()
   }, [api])
@@ -200,7 +200,7 @@ export default function App() {
         secondary={
           <Button
             mode="strong"
-            onClick={openStakeSidePanel}
+            onClick={openDbePanel}
             css={`
               background: ${theme.negative};
             `}
@@ -239,7 +239,7 @@ export default function App() {
       />
       <DbeSidePanel
         opened={dbePanelOpen}
-        onClose={closeStakeSidePanel}
+        onClose={closeDbePanel}
         api={apiDepositBufferedEther}
       />
       <ChangeFeeSidePanel

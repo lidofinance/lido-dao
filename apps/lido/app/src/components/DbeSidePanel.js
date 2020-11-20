@@ -35,7 +35,7 @@ function PanelContent({ api, onClose }) {
       >
         This action will deposit Ether currently buffered in Lido to the
         DepositContract in 32 ETH chunks, assigning each chunk to a Node
-        Operators.
+        Operator.
       </Info>
       <Button
         mode="strong"
