@@ -1,39 +1,39 @@
+import getDeployedParam from './getDeployed'
+
 export const KERNEL_CORE_APP_ID = '0x3b4bf6bf3ad5000ecf0f989d5befde585c6860fea3e574a4fab4c49d1c177d9c'
 export const KERNEL_DEFAULT_ACL_APP_ID = '0xe3262375f45a6e2026b7e7b18c2b807434f2508fe1a2a3dfb493c7df8f4aad6a'
 export const KERNEL_DEFAULT_VAULT_APP_ID = '0x7e852e0fcfce6551c13800f1e7476f982525c2b5277ba14b24339c68416336d1'
 export const EVMSCRIPT_REGISTRY_APP_ID = '0xddbcfd564f642ab5627cf68b9b7d374fb4f8a36e941a75d89c87998cef03bd61'
-export const AGENT_APP_ID = '0x9ac98dc5f995bf0211ed589ef022719d1487e5cb2bab505676f0d084c07cf89a'
-export const VAULT_APP_ID = '0x7e852e0fcfce6551c13800f1e7476f982525c2b5277ba14b24339c68416336d1'
-export const VOTING_APP_ID = '0x9fa3927f639745e587912d4b0fea7ef9013bf93fb907d29faeab57417ba6e1d4'
-export const PAYROLL_APP_ID = '0x463f596a96d808cb28b5d080181e4a398bc793df2c222f6445189eb801001991'
-export const FINANCE_APP_ID = '0xbf8491150dafc5dcaee5b861414dca922de09ccffa344964ae167212e8c673ae'
-export const TOKEN_MANAGER_APP_ID = '0x6b20a3010614eeebf2138ccec99f028a61c811b3b1a3343b6ff635985c75c91f'
-export const SURVEY_APP_ID = '0x030b2ab880b88e228f2da5a3d19a2a31bc10dbf91fb1143776a6de489389471e'
+export const AGENT_APP_ID = getDeployedParam('aragon_app_agent_id')
+export const VAULT_APP_ID = getDeployedParam('aragon_app_vault_id')
+export const VOTING_APP_ID = getDeployedParam('aragon_app_voting_id')
+export const FINANCE_APP_ID = getDeployedParam('aragon_app_finance_id')
+export const TOKEN_MANAGER_APP_ID = getDeployedParam('aragon_app_token-manager_id')
 
 // lido
-export const STETH_APP_ID = '0x5937d846addd00601bf692837c2cd9854dacd2c55911625da04aec9c62a61a26'
-export const LIDOORACLE_APP_ID = '0xc62f68e3a6f657e08c27afe0f11d03375e5255f5845055d81c1281dbf139ce18'
-export const LIDO_APP_ID = '0xe5c0c15280069e08354c1c1d5b6706edcc4e849e76ec9822afa35d4d66bbbe06'
-export const NODE_OPERATORS_REGISTRY_APP_ID = '0x9a09c6bc9551dd5e194dc3f814ce4725494966d9cdc90ff6cb49fc94d8a034ab'
+export const STETH_APP_ID = getDeployedParam('lido_app_steth_id')
+export const LIDOORACLE_APP_ID = getDeployedParam('lido_app_lidooracle_id')
+export const LIDO_APP_ID = getDeployedParam('lido_app_lido_id')
+export const NODE_OPERATORS_REGISTRY_APP_ID = getDeployedParam('lido_app_node-operators-registry_id')
 
-export const depositContract = '0x5f4e510503d83bd1a5436bdae2923489da0be454'
-export const ensRegistry = '0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1'
-export const daoAddress = '0xD20F21CEb31a8E302603dC3ff994f00aa9312A66'
-export const daoName = 'lido-dao.aragonid.eth'
-export const owner = '0xb4124cEB3451635DAcedd11767f004d8a28c6eE7'
-export const cstETHAddress = '0xbc1B7f0e9C764deedA0cC56Ad10e5855f3140227'
+export const depositContract = getDeployedParam('depositContractAddress')
+export const ensRegistry = getDeployedParam('ensAddress')
+export const daoAddress = getDeployedParam('daoAddress')
+export const daoName = getDeployedParam('daoName') + '.' + getDeployedParam('aragonIDEnsNodeName')
+export const owner = getDeployedParam('owner')
+export const cstETHAddress = getDeployedParam('cstEthAddress')
 
 // TODO naming wrappers for logger purpose
 // permissions
 export const MANAGE_WITHDRAWAL_KEY = '0x96088a8483023eb2f67b12aabbaf17d1d055e6ef387e563902adc1bba1e4028b'
 export const MANAGE_SIGNING_KEYS = '0x75abc64490e17b40ea1e66691c3eb493647b24430b358bd87ec3e5127f1621ee'
-export const ADD_STAKING_PROVIDER_ROLE = '0x87dc63ee3d442343561bc4dc4c0d96e71ee3354d3e25de74fd01175908e6a53b'
-export const SET_STAKING_PROVIDER_NAME_ROLE = '0x2c0f36065367c65a22dec016fb648ef447bfc93bc904d07caf01b731d89a8edc'
-export const SET_STAKING_PROVIDER_ACTIVE_ROLE = '0x070f29f3c2c95f4a8c82968673c12201a6bd0c95487ccc432b7c6be834ad13fa'
-export const SET_STAKING_PROVIDER_ADDRESS_ROLE = '0xc31dd6b145bba2b341fa170d90177d802b67bf2ec2dc32095ee5b862ed9e9fc0'
-export const SET_STAKING_PROVIDER_LIMIT_ROLE = '0x687a2a6c1e99bdfe1ffbec2af3dcbef5a9b68bd58789a2991a49290827fa96df'
+export const ADD_NODE_OPERATOR_ROLE = '0xe9367af2d321a2fc8d9c8f1e67f0fc1e2adf2f9844fb89ffa212619c713685b2'
+export const SET_NODE_OPERATOR_NAME_ROLE = '0x58412970477f41493548d908d4307dfca38391d6bc001d56ffef86bd4f4a72e8'
+export const SET_NODE_OPERATOR_ACTIVE_ROLE = '0xd856e115ac9805c675a51831fa7d8ce01c333d666b0e34b3fc29833b7c68936a'
+export const SET_NODE_OPERATOR_ADDRESS_ROLE = '0xbf4b1c236312ab76e456c7a8cca624bd2f86c74a4f8e09b3a26d60b1ce492183'
+export const SET_NODE_OPERATOR_LIMIT_ROLE = '0x07b39e0faf2521001ae4e58cb9ffd3840a63e205d288dc9c93c3774f0d794754'
 export const REPORT_STOPPED_VALIDATORS_ROLE = '0x18ad851afd4930ecc8d243c8869bd91583210624f3f1572e99ee8b450315c80f'
-export const SET_APPS = '0x11eba3f259e2be865238d718fd308257e3874ad4b3a642ea3af386a4eea190bd'
+export const SET_ORACLE = '0x11eba3f259e2be865238d718fd308257e3874ad4b3a642ea3af386a4eea190bd'
 export const MANAGE_MEMBERS = '0xbf6336045918ae0015f4cdb3441a2fdbfaa4bcde6558c8692aac7f56c69fb067'
 export const MANAGE_QUORUM = '0xa5ffa9f45fa52c446078e834e1914561bd9c2ab1e833572d62af775da092ccbc'
 
@@ -44,18 +44,18 @@ export const ZERO_ADDRESS = '0x' + '0'.repeat(40)
 export const BASIC_FEE = 10000
 export const TREASURY_FEE = 1000
 export const INSURANCE_FEE = 1000
-export const SP_BASIC_FEE = 8000
+export const NODE_OPERATOR_BASIC_FEE = 8000
 
 // accounts
 export const holderAccounts = [
   '0xb4124cEB3451635DAcedd11767f004d8a28c6eE7', // 0
   '0x8401Eb5ff34cc943f096A32EF3d5113FEbE8D4Eb', // 1
-  '0x306469457266CBBe7c0505e8Aad358622235e768', // 2
-  '0xd873F6DC68e3057e4B7da74c6b304d0eF0B484C7', // 3
-  '0xDcC5dD922fb1D0fd0c450a0636a8cE827521f0eD' // 4
+  '0x306469457266CBBe7c0505e8Aad358622235e768' // 2
+  // '0xd873F6DC68e3057e4B7da74c6b304d0eF0B484C7', // 3
+  // '0xDcC5dD922fb1D0fd0c450a0636a8cE827521f0eD' // 4
 ]
 
-export const spsAccounts = [
+export const nosAccounts = [
   '0x27E9727FD9b8CdDdd0854F56712AD9DF647FaB74', // 5
   '0x9766D2e7FFde358AD0A40BB87c4B88D9FAC3F4dd', // 6
   '0xBd7055AB500cD1b0b0B14c82BdBe83ADCc2e8D06', // 7

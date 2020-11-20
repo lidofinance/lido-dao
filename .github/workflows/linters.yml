@@ -1,0 +1,26 @@
+name: Tests
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install modules
+      run: yarn
+
+    - name: Run Solidity linters
+      run: yarn lint:sol:solhint
+
+    - name: Run Solidity tests
+      run: yarn test:unit
+
+    - name: Run Solidity test coverage
+      run: yarn test:coverage
+      continue-on-error: true
+
+    - name: Run JS linters
+      run: yarn lint:js
+      continue-on-error: true

@@ -9,7 +9,7 @@ import "../interfaces/ILido.sol";
 contract OracleMock {
     ILido private pool;
 
-    function initialize(address _pool) external {
+    function setPool(address _pool) external {
         pool = ILido(_pool);
     }
 

@@ -3,19 +3,23 @@ pragma solidity 0.4.24;
 
 import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
-import {ERC20 as OZERC20} from "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 
 import "./interfaces/ISTETH.sol";
+import "./interfaces/ILido.sol";
 
 import "./lib/Pausable.sol";
-
-import "./interfaces/ILido.sol";
 
 
 /**
   * @title Implementation of a liquid version of ETH 2.0 native token
   *
-  * ERC20 token which supports stop/resume, mint/burn mechanics. The token is operated by `ILido`.
+  * ERC20 token which supports stop/resume mechanics. The token is operated by `ILido`.
+  *
+  * Since balances of all token holders change when the amount of total controlled Ether
+  * changes, this token cannot fully implement ERC20 standard: it only emits `Transfer`
+  * events upon explicit transfer between holders. In contrast, when Lido oracle reports
+  * rewards, no Transfer events are generated: doing so would require emitting an event
+  * for each token holder and thus running an unbounded loop.
   */
 contract StETH is ISTETH, Pausable, AragonApp {
     using SafeMath for uint256;
@@ -50,8 +54,8 @@ contract StETH is ISTETH, Pausable, AragonApp {
         uint256 value
     );
 
-    function initialize(address _lido) public onlyInit {
-        lido = ILido(_lido);
+    function initialize(ILido _lido) public onlyInit {
+        lido = _lido;
         initialized();
     }
 
@@ -70,39 +74,48 @@ contract StETH is ISTETH, Pausable, AragonApp {
     }
 
     /**
-    * @notice Mint is called by lido contract when user submits the ETH1.0 deposit.
-    *         It calculates share difference to preserve ratio of shares to the increased
-    *         amount of pooledEthers so that all the previously created shares still correspond
-    *         to the same amount of pooled ethers.
-    *         Then adds the calculated difference to the user's share and to the totalShares
-    *         similarly as traditional mint() function does with balances.
+    * @notice Increases shares of a given address by the specified amount. Called by Lido
+    *         contract in two cases: 1) when a user submits an ETH1.0 deposit; 2) when
+    *         ETH2.0 rewards are reported by the oracle. Upon user deposit, Lido contract
+    *         mints the amount of shares that corresponds to the submitted Ether, so
+    *         token balances of other token holders don't change. Upon rewards report,
+    *         Lido contract mints new shares to distribute fee, effectively diluting the
+    *         amount of Ether that would otherwise correspond to each share.
+    *
     * @param _to Receiver of new shares
-    * @param _value Amount of pooledEthers (then gets converted to shares)
+    * @param _sharesAmount Amount of shares to mint
+    * @return The total amount of all holders' shares after new shares are minted
     */
-    function mint(address _to, uint256 _value) external whenNotStopped authP(MINT_ROLE, arr(_to, _value)) {
-        require(_to != 0);
-        uint256 sharesDifference;
-        uint256 totalControlledEthBefore = lido.getTotalControlledEther();
-        if ( totalControlledEthBefore == 0) {
-            sharesDifference = _value;
-        } else {
-            sharesDifference = getSharesByPooledEth(_value);
-        }
-        _totalShares = _totalShares.add(sharesDifference);
-        _shares[_to] = _shares[_to].add(sharesDifference);
-        emit Transfer(address(0), _to, _value);
+    function mintShares(address _to, uint256 _sharesAmount)
+        external
+        whenNotStopped
+        authP(MINT_ROLE, arr(_to, _sharesAmount))
+        returns (uint256 newTotalShares)
+    {
+        require(_to != address(0));
+        newTotalShares = _totalShares.add(_sharesAmount);
+        _totalShares = newTotalShares;
+        _shares[_to] = _shares[_to].add(_sharesAmount);
+        // no Transfer events emitted, see the comment at the top
     }
 
     /**
-      * @notice Burn `@tokenAmount(this, _value)` tokens from `_account`
+      * @notice Burn is called by Lido contract when a user withdraws their Ether.
       * @param _account Account which tokens are to be burnt
-      * @param _value Amount of tokens to burn
+      * @param _sharesAmount Amount of shares to burn
+      * @return The total amount of all holders' shares after the shares are burned
       */
-    function burn(address _account, uint256 _value) external whenNotStopped authP(BURN_ROLE, arr(_account, _value)) {
-        if (0 == _value)
-            return;
-
-        _burn(_account, _value);
+    function burnShares(address _account, uint256 _sharesAmount)
+        external
+        whenNotStopped
+        authP(BURN_ROLE, arr(_account, _sharesAmount))
+        returns (uint256 newTotalShares)
+    {
+        require(_account != address(0));
+        newTotalShares = _totalShares.sub(_sharesAmount);
+        _totalShares = newTotalShares;
+        _shares[_account] = _shares[_account].sub(_sharesAmount);
+        // no Transfer events emitted, see the comment at the top
     }
 
     /**
@@ -318,45 +331,5 @@ contract StETH is ISTETH, Pausable, AragonApp {
         _shares[from] = _shares[from].sub(sharesToTransfer);
         _shares[to] = _shares[to].add(sharesToTransfer);
         emit Transfer(from, to, value);
-    }
-
-    /**
-    * @dev Internal function that burns an amount of the token of a given
-    * account.
-    * @param account The account whose tokens will be burnt.
-    * @param value The amount that will be burnt.
-    */
-    function _burn(address account, uint256 value) internal {
-        require(account != 0);
-        require(value != 0);
-        uint256 totalBalances = totalSupply();
-        uint256 sharesToBurn = (
-            _totalShares
-            .sub(
-                (totalBalances)
-                .mul(_totalShares.sub(_shares[account]))
-                .div(totalBalances - balanceOf(account) + value)
-            )
-        );
-        _totalShares = _totalShares.sub(sharesToBurn);
-        _shares[account] = _shares[account].sub(sharesToBurn);
-        emit Transfer(account, address(0), value);
-    }
-
-    /**
-    * @dev Internal function that burns an amount of the token of a given
-    * account, deducting from the sender's allowance for said account. Uses the
-    * internal burn function.
-    * @param account The account whose tokens will be burnt.
-    * @param value The amount that will be burnt.
-    */
-    function _burnFrom(address account, uint256 value) internal {
-        require(value <= _allowed[account][msg.sender]);
-
-        // Should https://github.com/OpenZeppelin/zeppelin-solidity/issues/707 be accepted,
-        // this function needs to emit an event with the updated approval.
-        _allowed[account][msg.sender] = _allowed[account][msg.sender].sub(
-        value);
-        _burn(account, value);
     }
 }

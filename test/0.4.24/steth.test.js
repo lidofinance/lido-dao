@@ -50,7 +50,7 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
 
     context('with non-zero supply', async () => {
       beforeEach(async () => {
-        await stEth.mint(user1, tokens(1000), { from: pool })
+        await stEth.mintShares(user1, tokens(1000), { from: pool })
         await lido.setTotalControlledEther(tokens(1000))
       })
 
@@ -221,7 +221,7 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
 
   context('with non-zero supply', async () => {
     beforeEach(async () => {
-      await stEth.mint(user1, tokens(1000), { from: pool })
+      await stEth.mintShares(user1, tokens(1000), { from: pool })
       await lido.setTotalControlledEther(tokens(1000)) // assume this is done by lido
     })
 
@@ -244,8 +244,8 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
       await assertRevert(stEth.transfer(user2, tokens(2), { from: user1 }), 'CONTRACT_IS_STOPPED')
       await assertRevert(stEth.approve(user2, tokens(2), { from: user1 }), 'CONTRACT_IS_STOPPED')
       await assertRevert(stEth.transferFrom(user2, user3, tokens(2), { from: user1 }), 'CONTRACT_IS_STOPPED')
-      await assertRevert(stEth.mint(user1, tokens(2), { from: pool }), 'CONTRACT_IS_STOPPED')
-      await assertRevert(stEth.burn(user1, tokens(2), { from: pool }), 'CONTRACT_IS_STOPPED')
+      await assertRevert(stEth.mintShares(user1, tokens(2), { from: pool }), 'CONTRACT_IS_STOPPED')
+      await assertRevert(stEth.burnShares(user1, tokens(2), { from: pool }), 'CONTRACT_IS_STOPPED')
       await assertRevert(stEth.increaseAllowance(user2, tokens(2), { from: user1 }), 'CONTRACT_IS_STOPPED')
       await assertRevert(stEth.decreaseAllowance(user2, tokens(2), { from: user1 }), 'CONTRACT_IS_STOPPED')
 
@@ -285,7 +285,7 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
 
     context('mint', () => {
       it('minting works', async () => {
-        await stEth.mint(user1, tokens(12), { from: pool })
+        await stEth.mintShares(user1, tokens(12), { from: pool })
         await lido.setTotalControlledEther(tokens(1012)) // done dy lido
 
         assertBn(await stEth.totalSupply(), tokens(1012))
@@ -295,7 +295,7 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
         assertBn(await stEth.getSharesByHolder(user1, { from: nobody }), tokens(1012))
         assertBn(await stEth.getSharesByHolder(user2, { from: nobody }), tokens(0))
 
-        await stEth.mint(user2, tokens(4), { from: pool })
+        await stEth.mintShares(user2, tokens(4), { from: pool })
         await lido.setTotalControlledEther(tokens(1016)) // done dy lido
 
         assertBn(await stEth.totalSupply(), tokens(1016))
@@ -307,11 +307,12 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
       })
 
       it('reverts when trying to mint without permission', async () => {
-        for (const acc of [user1, user2, user3, nobody]) await assertRevert(stEth.mint(user2, tokens(1), { from: acc }), 'APP_AUTH_FAILED')
+        for (const acc of [user1, user2, user3, nobody])
+          await assertRevert(stEth.mintShares(user2, tokens(1), { from: acc }), 'APP_AUTH_FAILED')
       })
 
       it('reverts when mint to zero address', async () => {
-        await assertRevert(stEth.mint(ZERO_ADDRESS, tokens(1), { from: pool }))
+        await assertRevert(stEth.mintShares(ZERO_ADDRESS, tokens(1), { from: pool }))
       })
     })
 
@@ -319,22 +320,23 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
       beforeEach(async () => {
         // user1 already had 1000 tokens
         // 1000 + 1000 + 1000 = 3000
-        await stEth.mint(user2, tokens(1000), { from: pool })
+        await stEth.mintShares(user2, tokens(1000), { from: pool })
         await lido.setTotalControlledEther(tokens(2000)) // assume this is done by lido
-        await stEth.mint(user3, tokens(1000), { from: pool })
+        await stEth.mintShares(user3, tokens(1000), { from: pool })
         await lido.setTotalControlledEther(tokens(3000)) // assume this is done by lido
       })
 
       it('reverts when burn from zero address', async () => {
-        await assertRevert(stEth.burn(ZERO_ADDRESS, tokens(1), { from: pool }))
+        await assertRevert(stEth.burnShares(ZERO_ADDRESS, tokens(1), { from: pool }))
       })
 
       it('reverts when trying to burn without permission', async () => {
-        for (const acc of [user1, user2, user3, nobody]) await assertRevert(stEth.burn(user2, tokens(1), { from: acc }), 'APP_AUTH_FAILED')
+        for (const acc of [user1, user2, user3, nobody])
+          await assertRevert(stEth.burnShares(user2, tokens(1), { from: acc }), 'APP_AUTH_FAILED')
       })
 
       it('burning zero value works', async () => {
-        await stEth.burn(user1, tokens(0), { from: pool })
+        await stEth.burnShares(user1, tokens(0), { from: pool })
         assertBn(await stEth.totalSupply(), tokens(3000))
         assertBn(await stEth.balanceOf(user1, { from: nobody }), tokens(1000))
         assertBn(await stEth.balanceOf(user2, { from: nobody }), tokens(1000))
@@ -346,7 +348,16 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
       })
 
       it('burning works (redistributes tokens)', async () => {
-        await stEth.burn(user1, tokens(100), { from: pool })
+        const totalShares = await stEth.getTotalShares()
+        const totalSupply = await stEth.totalSupply()
+        const user1Balance = await stEth.balanceOf(user1)
+        const user1Shares = await stEth.getSharesByHolder(user1)
+
+        const sharesToBurn = totalShares.sub(
+          totalSupply.mul(totalShares.sub(user1Shares)).div(totalSupply.sub(user1Balance).add(bn(tokens(100))))
+        )
+
+        await stEth.burnShares(user1, sharesToBurn, { from: pool })
         assertBn(await stEth.totalSupply(), tokens(3000))
         assertBn(await stEth.balanceOf(user1, { from: nobody }), bn(tokens(900)).subn(1)) // expected round error
         assertBn(await stEth.balanceOf(user2, { from: nobody }), tokens(1050))
@@ -360,7 +371,16 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
       it('allowance behavior is correct after burning', async () => {
         await stEth.approve(user2, tokens(750), { from: user1 })
 
-        await stEth.burn(user1, tokens(500), { from: pool })
+        const totalShares = await stEth.getTotalShares()
+        const totalSupply = await stEth.totalSupply()
+        const user1Balance = await stEth.balanceOf(user1)
+        const user1Shares = await stEth.getSharesByHolder(user1)
+
+        const sharesToBurn = totalShares.sub(
+          totalSupply.mul(totalShares.sub(user1Shares)).div(totalSupply.sub(user1Balance).add(bn(tokens(500))))
+        )
+
+        await stEth.burnShares(user1, sharesToBurn, { from: pool })
         assertBn(await stEth.balanceOf(user1, { from: nobody }), tokens(500))
 
         assertBn(await stEth.allowance(user1, user2, { from: nobody }), tokens(750))
@@ -409,7 +429,7 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
 
     context('with non-zero totalControlledEther (supply)', async () => {
       beforeEach(async () => {
-        await stEth.mint(user1, tokens(1000), { from: pool })
+        await stEth.mintShares(user1, tokens(1000), { from: pool })
         await lido.setTotalControlledEther(tokens(1000))
       })
 

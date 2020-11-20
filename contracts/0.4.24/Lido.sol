@@ -31,7 +31,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     bytes32 constant public PAUSE_ROLE = keccak256("PAUSE_ROLE");
     bytes32 constant public MANAGE_FEE = keccak256("MANAGE_FEE");
     bytes32 constant public MANAGE_WITHDRAWAL_KEY = keccak256("MANAGE_WITHDRAWAL_KEY");
-    bytes32 constant public SET_APPS = keccak256("SET_APPS");
+    bytes32 constant public SET_ORACLE = keccak256("SET_ORACLE");
     bytes32 constant public SET_DEPOSIT_ITERATION_LIMIT = keccak256("SET_DEPOSIT_ITERATION_LIMIT");
 
     uint256 constant public PUBKEY_LENGTH = 48;
@@ -85,10 +85,19 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         uint256 initialUsedSigningKeys; // for write-back control
     }
 
-    function initialize(address _validatorRegistration, uint256 _depositIterationLimit)
+    function initialize(
+        ISTETH _token,
+        IValidatorRegistration validatorRegistration,
+        address _oracle,
+        INodeOperatorsRegistry _operators,
+        uint256 _depositIterationLimit
+    )
         public onlyInit
     {
-        _setValidatorRegistrationContract(_validatorRegistration);
+        _setToken(_token);
+        _setValidatorRegistrationContract(validatorRegistration);
+        _setOracle(_oracle);
+        _setOperators(_operators);
         _setDepositIterationLimit(_depositIterationLimit);
 
         initialized();
@@ -164,16 +173,11 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @notice Set authorized app contracts addresses
-      * @dev `_oracle` contract specified here must periodically make `reportEther2` calls.
-      * @param _token `stETH` contract address
-      * @param _oracle `LidoOracle` contract address
-      * @param _operators `NodeOperatorsRegistry` contract address
+      * @notice Set authorized oracle contract address to `_oracle`
+      * @dev Contract specified here must periodically make `reportEther2` calls.
       */
-    function setApps(address _token, address _oracle, address _operators) external auth(SET_APPS) {
-        _setToken(_token);
+    function setOracle(address _oracle) external auth(SET_ORACLE) {
         _setOracle(_oracle);
-        _setOperators(_operators);
     }
 
     /**
@@ -368,17 +372,17 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     /**
       * @dev Sets liquid token interface handle
       */
-    function _setToken(address _token) internal {
-        require(isContract(_token), "NOT_A_CONTRACT");
-        TOKEN_VALUE_POSITION.setStorageAddress(_token);
+    function _setToken(ISTETH _token) internal {
+        require(isContract(address(_token)), "NOT_A_CONTRACT");
+        TOKEN_VALUE_POSITION.setStorageAddress(address(_token));
     }
 
     /**
       * @dev Sets validator registration contract handle
       */
-    function _setValidatorRegistrationContract(address _contract) internal {
-        require(isContract(_contract), "NOT_A_CONTRACT");
-        VALIDATOR_REGISTRATION_VALUE_POSITION.setStorageAddress(_contract);
+    function _setValidatorRegistrationContract(IValidatorRegistration _contract) internal {
+        require(isContract(address(_contract)), "NOT_A_CONTRACT");
+        VALIDATOR_REGISTRATION_VALUE_POSITION.setStorageAddress(address(_contract));
     }
 
     /**
@@ -392,9 +396,9 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     /**
       * @dev Internal function to set node operator registry address
       */
-    function _setOperators(address _operators) internal {
-        require(isContract(_operators), "NOT_A_CONTRACT");
-        NODE_OPERATOR_REGISTRY_VALUE_POSITION.setStorageAddress(_operators);
+    function _setOperators(INodeOperatorsRegistry _r) internal {
+        require(isContract(_r), "NOT_A_CONTRACT");
+        NODE_OPERATOR_REGISTRY_VALUE_POSITION.setStorageAddress(_r);
     }
 
     /**
@@ -413,7 +417,16 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         uint256 deposit = msg.value;
         require(deposit != 0, "ZERO_DEPOSIT");
 
-        getToken().mint(sender, deposit);
+        ISTETH stEth = getToken();
+
+        uint256 sharesAmount = stEth.getSharesByPooledEth(deposit);
+        if (sharesAmount == 0) {
+            // totalControlledEther is 0: either the first-ever deposit or complete slashing
+            // assume that shares correspond to Ether 1-to-1
+            stEth.mintShares(sender, deposit);
+        } else {
+            stEth.mintShares(sender, sharesAmount);
+        }
 
         _submitted(sender, deposit, _referral);
     }
@@ -539,23 +552,60 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
       * @param _totalRewards Total rewards accrued on the Ethereum 2.0 side.
       */
     function distributeRewards(uint256 _totalRewards) internal {
-        // Amount of the rewards in Ether
-        uint256 tokens2mint = _totalRewards.mul(_getFee()).div(10000);
+        ISTETH stEth = getToken();
+        uint256 feeInEther = _totalRewards.mul(_getFee()).div(10000);
 
-        assert(0 != getToken().totalSupply());
+        // We need to take a defined percentage of the reported reward as a fee, and we do
+        // this by minting new token shares and assigning them to the fee recipients (see
+        // StETH docs for the explanation of the shares mechanics).
+        //
+        // Since we've increased totalControlledEther by _totalRewards (which is already
+        // performed by the time this function is called), the combined cost of all holders'
+        // shares has became _totalRewards StETH tokens more, effectively splitting the reward
+        // between each token holder proportionally to their token share.
+        //
+        // Now we want to mint new shares to the fee recipient, so that the total cost of the
+        // newly-minted shares exactly corresponds to the fee taken:
+        //
+        // shares2mint * newShareCost = feeInEther
+        // newShareCost = newTotalControlledEther / (prevTotalShares + shares2mint)
+        //
+        // which follows to:
+        //
+        //                    feeInEther * prevTotalShares
+        // shares2mint = --------------------------------------
+        //                newTotalControlledEther - feeInEther
+        //
+        // The effect is that the given percentage of the reward goes to the fee recipient, and
+        // the rest of the reward is distributed between token holders proportionally to their
+        // token shares.
+        //
+        uint256 totalControlledEther = _getTotalControlledEther();
+        uint256 shares2mint = (
+            feeInEther
+            .mul(stEth.getTotalShares())
+            .div(totalControlledEther.sub(feeInEther))
+        );
+
+        // Mint the calculated amount of shares to this contract address. This will reduce the
+        // balances of the holders, as if the fee was taken in parts from each of them.
+        uint256 totalShares = stEth.mintShares(address(this), shares2mint);
+
+        // The minted token amount may be less than feeInEther due to the shares2mint rounding
+        uint256 mintedFee = shares2mint.mul(totalControlledEther).div(totalShares);
 
         (uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, ) = _getFeeDistribution();
-        uint256 toTreasury = tokens2mint.mul(treasuryFeeBasisPoints).div(10000);
-        uint256 toInsuranceFund = tokens2mint.mul(insuranceFeeBasisPoints).div(10000);
-        uint256 toOperators = tokens2mint.sub(toTreasury).sub(toInsuranceFund);
+        uint256 toTreasury = mintedFee.mul(treasuryFeeBasisPoints).div(10000);
+        uint256 toInsuranceFund = mintedFee.mul(insuranceFeeBasisPoints).div(10000);
 
-        getToken().mint(getTreasury(), toTreasury);
-        getToken().mint(getInsuranceFund(), toInsuranceFund);
-        getToken().mint(address(getOperators()), toOperators);
-        getOperators().distributeRewards(
-          address(getToken()),
-          getToken().balanceOf(address(getOperators()))
-        );
+        stEth.transfer(getTreasury(), toTreasury);
+        stEth.transfer(getInsuranceFund(), toInsuranceFund);
+
+        // Transfer the rest of the fee to operators
+        mintedFee = mintedFee.sub(toTreasury).sub(toInsuranceFund);
+        INodeOperatorsRegistry operatorsRegistry = getOperators();
+        stEth.transfer(address(operatorsRegistry), mintedFee);
+        operatorsRegistry.distributeRewards(address(stEth), mintedFee);
     }
 
     /**

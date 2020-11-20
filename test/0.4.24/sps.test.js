@@ -6,7 +6,6 @@ const TestNodeOperatorsRegistry = artifacts.require('TestNodeOperatorsRegistry.s
 const PoolMock = artifacts.require('PoolMock.sol')
 const ERC20Mock = artifacts.require('ERC20Mock.sol')
 
-const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
 const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
 const ADDRESS_3 = '0x0000000000000000000000000000000000000003'
@@ -41,7 +40,6 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
   beforeEach('deploy dao and app', async () => {
     const { dao, acl } = await newDao(appManager)
-    pool = await PoolMock.new()
 
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
     const proxyAddress = await newApp(dao, 'node-operators-registry', appBase.address, appManager)
@@ -56,9 +54,10 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await acl.createPermission(voting, app.address, await app.SET_NODE_OPERATOR_LIMIT_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.REPORT_STOPPED_VALIDATORS_ROLE(), appManager, { from: appManager })
 
+    pool = await PoolMock.new(app.address)
+
     // Initialize the app's proxy.
     await app.initialize(pool.address)
-    await pool.setApps(ZERO_ADDRESS, ZERO_ADDRESS, app.address)
   })
 
   it('addNodeOperator works', async () => {
