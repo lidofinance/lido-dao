@@ -156,7 +156,7 @@ export default function App() {
         ),
       },
       {
-        label: 'Fee distribution (basis points)',
+        label: 'Fee distribution',
         content: (
           <span style={{ display: 'flex', alignItems: 'center' }}>
             <Button
@@ -170,11 +170,26 @@ export default function App() {
         ),
       },
       {
+        label: 'Treasury',
+        content: (
+          <span style={{ display: 'flex', alignItems: 'center' }}>
+            <strong>
+              {feeDistribution.treasuryFeeBasisPoints
+                ? `${feeDistribution.treasuryFeeBasisPoints / 100}%`
+                : 'No data'}
+            </strong>
+          </span>
+        ),
+        subBullet: true,
+      },
+      {
         label: 'Insurance',
         content: (
           <span style={{ display: 'flex', alignItems: 'center' }}>
             <strong>
-              {feeDistribution.insuranceFeeBasisPoints || 'No data'}
+              {feeDistribution.insuranceFeeBasisPoints
+                ? `${feeDistribution.insuranceFeeBasisPoints / 100}%`
+                : 'No data'}
             </strong>
           </span>
         ),
@@ -185,18 +200,9 @@ export default function App() {
         content: (
           <span style={{ display: 'flex', alignItems: 'center' }}>
             <strong>
-              {feeDistribution.operatorsFeeBasisPoints || 'No data'}
-            </strong>
-          </span>
-        ),
-        subBullet: true,
-      },
-      {
-        label: 'Treasury',
-        content: (
-          <span style={{ display: 'flex', alignItems: 'center' }}>
-            <strong>
-              {feeDistribution.treasuryFeeBasisPoints || 'No data'}
+              {feeDistribution.operatorsFeeBasisPoints
+                ? `${feeDistribution.operatorsFeeBasisPoints / 100}%`
+                : 'No data'}
             </strong>
           </span>
         ),
