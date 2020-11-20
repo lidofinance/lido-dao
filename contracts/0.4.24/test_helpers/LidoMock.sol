@@ -20,6 +20,6 @@ contract LidoMock is Lido {
     function setTotalControlledEther(uint256 _totalControlledEther) public {
         totalControlledEther = _totalControlledEther;
     }
-    
+
     uint256 private totalControlledEther;
 }

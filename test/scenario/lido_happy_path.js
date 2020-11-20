@@ -297,7 +297,7 @@ contract('Lido: happy path', (addresses) => {
     // shares ~= oldTotalShares + reward * oldTotalShares / (newTotalControlledEther - reward)
 
     const newTotalShares = await token.getTotalShares()
-    assertBn(newTotalShares, new BN('97240805234492225001'), 'total shares')
+    assertBn(newTotalShares, new BN('97241218526577556729'), 'total shares')
 
     // Total controlled Ether increased
 
@@ -321,17 +321,17 @@ contract('Lido: happy path', (addresses) => {
     const mintedAmount = new BN(totalFeePoints).mul(reward).divn(10000)
 
     // Token user balances increased
-    assertBn(await token.balanceOf(user1), new BN('3979810729320528835'), 'user1 tokens')
-    assertBn(await token.balanceOf(user2), new BN('39798107293205288355'), 'user2 tokens')
-    assertBn(await token.balanceOf(user3), new BN('84902628892171281825'), 'user3 tokens')
+    assertBn(await token.balanceOf(user1), new BN('3979793814432989690'), 'user1 tokens')
+    assertBn(await token.balanceOf(user2), new BN('39797938144329896907'), 'user2 tokens')
+    assertBn(await token.balanceOf(user3), new BN('84902268041237113402'), 'user3 tokens')
 
     // Fee, in the form of minted tokens, was distributed between treasury, insurance fund
     // and node operators
     // treasuryTokenBalance ~= mintedAmount * treasuryFeePoints / 10000
     // insuranceTokenBalance ~= mintedAmount * insuranceFeePoints / 10000
 
-    assertBn(await token.balanceOf(treasuryAddr), new BN('95762267471402490'), 'treasury tokens')
-    assertBn(await token.balanceOf(insuranceAddr), new BN('63889021609758015'), 'insurance tokens')
+    assertBn(await token.balanceOf(treasuryAddr), new BN('95999999999999998'), 'treasury tokens')
+    assertBn(await token.balanceOf(insuranceAddr), new BN('63999999999999998'), 'insurance tokens')
 
     // The node operators' fee is distributed between all active node operators,
     // proprotional to their effective stake (the amount of Ether staked by the operator's
@@ -340,8 +340,8 @@ contract('Lido: happy path', (addresses) => {
     // In our case, both node operators received the same fee since they have the same
     // effective stake (one signing key used from each operator, staking 32 ETH)
 
-    assertBn(await token.balanceOf(nodeOperator1.address), new BN('79900898110870236'), 'operator_1 tokens')
-    assertBn(await token.balanceOf(nodeOperator2.address), new BN('79900898110870236'), 'operator_2 tokens')
+    assertBn(await token.balanceOf(nodeOperator1.address), new BN('79999999999999999'), 'operator_1 tokens')
+    assertBn(await token.balanceOf(nodeOperator2.address), new BN('79999999999999999'), 'operator_2 tokens')
 
     // Real minted amount should be a bit less than calculated caused by round errors on mint and transfer operations
     assert(

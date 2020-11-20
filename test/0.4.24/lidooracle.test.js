@@ -3,11 +3,8 @@ const { newDao, newApp } = require('./helpers/dao')
 const { assertBn, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
 const { bn } = require('@aragon/contract-helpers-test')
 
-const PoolMock = artifacts.require('PoolMock.sol')
 const LidoOracle = artifacts.require('TestLidoOracle.sol')
 const Algorithm = artifacts.require('TestAlgorithm.sol')
-
-const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 
 contract('Algorithm', ([testUser]) => {
   let algorithm
@@ -34,7 +31,7 @@ contract('Algorithm', ([testUser]) => {
 })
 
 contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]) => {
-  let appBase, app, pool
+  let appBase, app
 
   const assertData = async (reportInterval, eth) => {
     const r = await app.getLatestData()
@@ -49,7 +46,6 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
 
   beforeEach('deploy dao and app', async () => {
     const { dao, acl } = await newDao(appManager)
-    pool = await PoolMock.new()
 
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
     const proxyAddress = await newApp(dao, 'lidooracle', appBase.address, appManager)
@@ -60,13 +56,13 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
     await acl.createPermission(voting, app.address, await app.MANAGE_QUORUM(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
-    await app.initialize(pool.address)
+    await app.initialize('0x0000000000000000000000000000000000000000')
   })
 
   describe('Test utility functions:', function () {
     it('addOracleMember works', async () => {
       await assertRevert(app.addOracleMember(user1, { from: user1 }), 'APP_AUTH_FAILED')
-      await assertRevert(app.addOracleMember(ZERO_ADDRESS, { from: voting }), 'BAD_ARGUMENT')
+      await assertRevert(app.addOracleMember('0x0000000000000000000000000000000000000000', { from: voting }), 'BAD_ARGUMENT')
 
       await app.addOracleMember(user1, { from: voting })
 

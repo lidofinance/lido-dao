@@ -3,6 +3,7 @@ import { getAccounts, getLocalWeb3 } from './eth1Helper'
 
 import {
   ensRegistry,
+  daoAddress,
   daoName,
   LIDO_APP_ID,
   LIDOORACLE_APP_ID,
@@ -15,26 +16,36 @@ import {
   KERNEL_DEFAULT_ACL_APP_ID
 } from './constants'
 
+const password = '123'
+const duration = 36000 // 10h
 const findApp = (apps, id) => apps.find((app) => app.appId === id)
 
-export const prepareContext = async (params) => {
+export const prepareContext = async ({ numUnlock = 0 } = {}) => {
   const web3 = await getLocalWeb3()
   // Retrieve web3 accounts.
-  const accounts = await getAccounts(web3)
-  const daoAddress = await getDaoAddress(daoName, {
-    provider: web3.currentProvider,
-    registryAddress: ensRegistry
-  })
+  const accounts = (await getAccounts(web3)).slice(1)
+  if (numUnlock) {
+    console.log(`Unlocking ${numUnlock} accounts`)
+    await Promise.all(
+      (numUnlock < accounts.length ? accounts.slice(0, numUnlock) : accounts).map((a) =>
+        web3.eth.personal.unlockAccount(a, password, duration)
+      )
+    )
+  }
+  // const daoAddress = await getDaoAddress(daoName, {
+  //   provider: web3.currentProvider,
+  //   registryAddress: ensRegistry
+  // })
   const apps = await getAllApps(daoAddress, { web3 })
   const aclApp = findApp(apps, KERNEL_DEFAULT_ACL_APP_ID)
   const votingApp = findApp(apps, VOTING_APP_ID)
   const financeApp = findApp(apps, FINANCE_APP_ID)
   const vaultApp = findApp(apps, AGENT_APP_ID)
-  const stakingProvidersApp = findApp(apps, NODE_OPERATORS_REGISTRY_APP_ID)
+  const nodeOperatorsApp = findApp(apps, NODE_OPERATORS_REGISTRY_APP_ID)
   const tokenManagerApp = findApp(apps, TOKEN_MANAGER_APP_ID)
   const stEthApp = findApp(apps, STETH_APP_ID)
-  const dePoolOracleApp = findApp(apps, LIDOORACLE_APP_ID)
-  const dePoolApp = findApp(apps, LIDO_APP_ID)
+  const lidoOracleApp = findApp(apps, LIDOORACLE_APP_ID)
+  const lidoApp = findApp(apps, LIDO_APP_ID)
 
   return {
     web3,
@@ -51,9 +62,9 @@ export const prepareContext = async (params) => {
       vaultApp,
       tokenManagerApp,
       stEthApp,
-      dePoolOracleApp,
-      dePoolApp,
-      stakingProvidersApp
+      lidoOracleApp,
+      lidoApp,
+      nodeOperatorsApp
     }
   }
 }

@@ -68,25 +68,17 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
     let proxyAddress = await newApp(dao, 'lido', appBase.address, appManager)
     app = await Lido.at(proxyAddress)
 
-    // Initialize the app's proxy.
-    await app.initialize(depositContract.address, 10)
-    treasuryAddr = await app.getTreasury()
-    insuranceAddr = await app.getInsuranceFund()
+    // NodeOperatorsRegistry
+    proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)
+    operators = await NodeOperatorsRegistry.at(proxyAddress)
+    await operators.initialize(app.address)
 
     // token
     proxyAddress = await newApp(dao, 'steth', stEthBase.address, appManager)
     token = await StETH.at(proxyAddress)
     await token.initialize(app.address)
 
-    // NodeOperatorsRegistry
-    proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)
-    operators = await NodeOperatorsRegistry.at(proxyAddress)
-    await operators.initialize(app.address)
-
-    await oracle.initialize(app.address)
-
     // Set up the app's permissions.
-    await acl.createPermission(voting, app.address, await app.SET_APPS(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.PAUSE_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.MANAGE_FEE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.MANAGE_WITHDRAWAL_KEY(), appManager, { from: appManager })
@@ -107,8 +99,13 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
       from: appManager
     })
 
+    // Initialize the app's proxy.
+    await app.initialize(token.address, depositContract.address, oracle.address, operators.address, 10)
+    treasuryAddr = await app.getTreasury()
+    insuranceAddr = await app.getInsuranceFund()
+
+    await oracle.setPool(app.address)
     // await depositContract.reset()
-    await app.setApps(token.address, oracle.address, operators.address, { from: voting })
   })
 
   const checkStat = async ({ deposited, remote }) => {

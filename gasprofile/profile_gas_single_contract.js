@@ -1,12 +1,12 @@
-const assert = require('assert')
-const fs = require('fs')
-const path = require('path')
-const binarysearch = require('binarysearch')
-const Web3 = require('web3')
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+const binarysearch = require('binarysearch');
+const Web3 = require('web3');
 
-;(async function main() {
-  const buidlerConfigPath = process.argv[2]
-  const contractName = process.argv[3]
+(async function main() {
+  const buidlerConfigPath = process.argv[2];
+  const contractName = process.argv[3];
   const buidlerConfigText = fs.readFileSync(buidlerConfigPath, 'utf8')
 
   const [, sourcesDir] = buidlerConfigText.match(/sources: '([\w\.\/]+)'/)
@@ -30,21 +30,21 @@ const Web3 = require('web3')
   const solcOutput = JSON.parse(fs.readFileSync(solcOutputPath, 'utf8'))
 
   const relContractPath = path.relative(path.join(__dirname, sourcesDir), contractPath)
-  let sourceMap = solcOutput.contracts[path.join(sourcesDir, relContractPath)][contractName].evm.deployedBytecode.sourceMap
+  let sourceMap = solcOutput.contracts[path.join(sourcesDir, relContractPath)][contractName].evm.deployedBytecode.sourceMap;
 
   const code = solcOutput.contracts[path.join(sourcesDir, relContractPath)][contractName].evm.deployedBytecode.object
 
-  const src = fs.readFileSync(contractPath, 'utf8')
+  const src = fs.readFileSync(contractPath, 'utf8');
 
   // console.log('sourceMap', sourceMap)
   // console.log('src', src)
 
   sourceMap = parseSourceMap(sourceMap)
 
-  const TX_HASH = process.argv[4]
-  const PROVIDER = 'http://localhost:8545'
-  const provider = new Web3.providers.HttpProvider(PROVIDER)
-  const web3 = new Web3(provider)
+  const TX_HASH = process.argv[4];
+  const PROVIDER = "http://localhost:8545"
+  const provider = new Web3.providers.HttpProvider(PROVIDER);
+  const web3 = new Web3(provider);
 
   web3.extend({
     methods: [
@@ -54,39 +54,43 @@ const Web3 = require('web3')
         params: 2
       }
     ]
-  })
+  });
   // https://github.com/ethereum/go-ethereum/wiki/Tracing:-Introduction
-  const trace = await web3.traceTx(TX_HASH, { disableStack: false, disableMemory: false, disableStorage: true }) // FIXME: not disabled
+  const trace = await web3.traceTx(TX_HASH, { disableStack: false, disableMemory: false, disableStorage: true }); //FIXME: not disabled
 
   // console.log(trace.structLogs.filter(t => t.depth > 0).length)
   // const sourceMap = parseSourceMap(fs.readFileSync(SOURCEMAP_FILE, 'utf8'));
 
   // console.log(sourceMap)
-  const addr = (await web3.eth.getTransaction(TX_HASH)).to
+  const addr = (await web3.eth.getTransaction(TX_HASH)).to;
   // const code = await web3.eth.getCode(addr);
   // console.log('code', code)
-  const pcToIdx = buildPcToInstructionMapping(code)
+  const pcToIdx = buildPcToInstructionMapping(code);
 
-  console.log('Gas used by transaction:', (await web3.eth.getTransactionReceipt(TX_HASH)).gasUsed)
+  console.log('Gas used by transaction:', (await web3.eth.getTransactionReceipt(TX_HASH)).gasUsed);
 
   // const src = fs.readFileSync(CONTRACT_FILE, 'utf8');
-  const lineOffsets = buildLineOffsets(src)
+  const lineOffsets = buildLineOffsets(src);
 
-  const lineGas = []
+  const lineGas = [];
 
-  let synthCost = 0
+  let synthCost = 0;
 
   const logs = trace.structLogs
   const callOpCodes = ['CALL', 'CALLCODE', 'DELEGATECALL', 'STATICCALL']
-  let contractAddresses = logs.filter(({ op }) => callOpCodes.includes(op)).map(({ stack }) => extractAddrFromCall(stack))
+  let contractAddresses = logs
+    .filter(({ op }) => callOpCodes.includes(op))
+    .map(({ stack }) => extractAddrFromCall(stack))
 
   contractAddresses = dedup(contractAddresses)
 
-  let contractCodes = await Promise.all(contractAddresses.map((addr) => web3.eth.getCode(addr)))
+  let contractCodes = await Promise.all(
+    contractAddresses.map(addr => web3.eth.getCode(addr))
+  )
 
-  contractCodes = contractCodes.map((c) => c.slice(2))
+  contractCodes = contractCodes.map(c => c.slice(2))
 
-  const contractIndex = contractCodes.findIndex((c) => c === code)
+  const contractIndex = contractCodes.findIndex(c => c === code)
   if (contractIndex === -1) {
     console.error('not found a contract')
     process.exit(1)
@@ -94,7 +98,7 @@ const Web3 = require('web3')
 
   const thatContract = contractAddresses[contractIndex]
 
-  const [, thatDepth] = logs
+  let [, thatDepth] = logs
     .filter(({ op }) => callOpCodes.includes(op))
     .map(({ stack, depth }) => [extractAddrFromCall(stack), depth + 1])
     .find(([addr, depth]) => addr === thatContract)
@@ -104,9 +108,10 @@ const Web3 = require('web3')
 
   let lastContract = null
   for (let i = 0; i < trace.structLogs.length; i++) {
-    const { depth, error, gas, gasCost, op, pc, stack, memory } = trace.structLogs[i]
 
-    let cost
+    const { depth, error, gas, gasCost, op, pc, stack, memory } = trace.structLogs[i];
+
+    let cost;
 
     if (callOpCodes.includes(op)) {
       lastContract = extractAddrFromCall(stack)
@@ -114,143 +119,144 @@ const Web3 = require('web3')
 
     if (depth === thatDepth && lastContract === thatContract) {
       cost = Math.max(gasCost, 0)
-      const instructionIdx = pcToIdx[pc]
-      const { s, l, f, j } = sourceMap[instructionIdx]
+      const instructionIdx = pcToIdx[pc];
+      const { s, l, f, j } = sourceMap[instructionIdx];
       if (f === -1) {
-        synthCost += cost
-        continue
+        synthCost += cost;
+        continue;
       }
-      const line = binarysearch.closest(lineOffsets, s)
+      const line = binarysearch.closest(lineOffsets, s);
       if (lineGas[line] === undefined) {
-        lineGas[line] = cost
+        lineGas[line] = cost;
       } else {
-        lineGas[line] += cost
+        lineGas[line] += cost;
       }
     }
-  } // for
+  } // for 
 
-  const totalForDepth = src.split('\n').forEach((line, i) => {
-    const gas = lineGas[i] || 0
-    console.log('%s\t\t%s', gas, line)
-  })
-  console.log('synthetic instruction gas', synthCost)
+  const totalForDepth =
+    src.split('\n').forEach((line, i) => {
+      const gas = lineGas[i] || 0;
+      console.log('%s\t\t%s', gas, line);
+    });
+  console.log('synthetic instruction gas', synthCost);
 
-  // showAllPointsInSourceMap (sourceMap, src, lineOffsets);
-})().catch((e) => console.log(e))
+  //showAllPointsInSourceMap (sourceMap, src, lineOffsets);
+
+})().catch(e => console.log(e));
 
 function showAllPointsInSourceMap(sourceMap, src, lineOffsets) {
-  const linePoints = [] // line no -> number of points in source map
-  sourceMap.forEach((instruction) => {
+  const linePoints = []; //line no -> number of points in source map
+  sourceMap.forEach(instruction => {
     if (instruction.f === -1) {
-      return
+      return;
     }
-    const s = instruction.s
-    const line = binarysearch.closest(lineOffsets, s)
+    const s = instruction.s;
+    const line = binarysearch.closest(lineOffsets, s);
     if (line === 0) {
-      console.log('>>>', instruction)
+      console.log('>>>', instruction);
     }
     if (linePoints[line] === undefined) {
-      linePoints[line] = 1
+      linePoints[line] = 1;
     } else {
-      linePoints[line] += 1
+      linePoints[line] += 1;
     }
-  })
+  });
 
   src.split('\n').forEach((line, i) => {
-    const points = linePoints[i] || 0
-    console.log('%s\t%s\t%s\t\t%s', i, lineOffsets[i], points, line)
-  })
+    const points = linePoints[i] || 0;
+    console.log('%s\t%s\t%s\t\t%s', i, lineOffsets[i], points, line);
+  });
 }
 
 function buildLineOffsets(src) {
-  let accu = 0
-  return src.split('\n').map((line) => {
-    const ret = accu
-    accu += line.length + 1
-    return ret
-  })
+  let accu = 0;
+  return src.split('\n').map(line => {
+    const ret = accu;
+    accu += line.length + 1;
+    return ret;
+  });
 }
 
 function buildPcToInstructionMapping(codeHexStr) {
-  const mapping = {}
-  let instructionIndex = 0
-  for (let pc = 0; pc < codeHexStr.length / 2; ) {
-    mapping[pc] = instructionIndex
+  const mapping = {};
+  let instructionIndex = 0;
+  for (let pc = 0; pc < codeHexStr.length / 2;) {
+    mapping[pc] = instructionIndex;
 
-    const byteHex = codeHexStr[pc * 2] + codeHexStr[pc * 2 + 1]
-    const byte = parseInt(byteHex, 16)
+    const byteHex = codeHexStr[pc * 2] + codeHexStr[pc * 2 + 1];
+    const byte = parseInt(byteHex, 16);
 
     // PUSH instruction has immediates
     if (byte >= 0x60 && byte <= 0x7f) {
-      const n = byte - 0x60 + 1 // number of immediates
-      pc += n + 1
+      const n = byte - 0x60 + 1; // number of immediates
+      pc += (n + 1);
     } else {
-      pc += 1
+      pc += 1;
     }
 
-    instructionIndex += 1
+    instructionIndex += 1;
   }
-  return mapping
+  return mapping;
 }
 
 // https://solidity.readthedocs.io/en/develop/miscellaneous.html#source-mappings
 function parseSourceMap(raw) {
-  let prevS, prevL, prevF, prevJ
-  return raw
-    .trim()
-    .split(';')
-    .map((section) => {
-      let [s, l, f, j] = section.split(':')
+  let prevS, prevL, prevF, prevJ;
+  return raw.trim().split(';').map(section => {
+    let [s, l, f, j] = section.split(':');
 
-      if (s === '' || s === undefined) {
-        s = prevS
-      } else {
-        prevS = s
-      }
+    if (s === '' || s === undefined) {
+      s = prevS;
+    } else {
+      prevS = s;
+    }
 
-      if (l === '' || l === undefined) {
-        l = prevL
-      } else {
-        prevL = l
-      }
+    if (l === '' || l === undefined) {
+      l = prevL;
+    } else {
+      prevL = l;
+    }
 
-      if (f === '' || f === undefined) {
-        f = prevF
-      } else {
-        prevF = f
-      }
+    if (f === '' || f === undefined) {
+      f = prevF;
+    } else {
+      prevF = f;
+    }
 
-      if (j === '' || j === undefined) {
-        j = prevJ
-      } else {
-        prevJ = j
-      }
+    if (j === '' || j === undefined) {
+      j = prevJ;
+    } else {
+      prevJ = j;
+    }
 
-      return { s: Number(s), l: Number(l), f: Number(f), j }
-    })
+    return { s: Number(s), l: Number(l), f: Number(f), j };
+  });
 }
 
 function recFindByName(base, name, files, result) {
   files = files || fs.readdirSync(base)
   result = result || []
 
-  files.forEach(function (file) {
-    const newbase = path.join(base, file)
-    if (fs.statSync(newbase).isDirectory()) {
-      result = recFindByName(newbase, name, fs.readdirSync(newbase), result)
-    } else {
-      if (file.split('.').slice(0, -1).join('.') === name) {
-        result.push(newbase)
+  files.forEach(
+    function (file) {
+      const newbase = path.join(base, file)
+      if (fs.statSync(newbase).isDirectory()) {
+        result = recFindByName(newbase, name, fs.readdirSync(newbase), result)
+      } else {
+        if (file.split('.').slice(0, -1).join('.') == name) {
+          result.push(newbase)
+        }
       }
     }
-  })
+  )
   return result
 }
 
 function dedup(arr) {
-  const s = new Set(arr)
-  const it = s.values()
-  return Array.from(it)
+  let s = new Set(arr);
+  let it = s.values();
+  return Array.from(it);
 }
 
 function extractAddrFromCall(stack) {

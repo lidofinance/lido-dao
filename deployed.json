@@ -1,0 +1,131 @@
+{
+  "networks": {
+    "1": {
+      "networkName": "mainnet",
+      "ensAddress": "0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e"
+    },
+    "4": {
+      "networkName": "rinkeby",
+      "ensAddress": "0x98Df287B6C145399Aaa709692c8D308357bC085D"
+    },
+    "5": {
+      "networkName": "goerli",
+      "ipfsGateway": "http://206.81.31.11/ipfs/",
+      "depositContractAddress": "0xDeba1e0FC7372D0fa0dc068C7E6A8651c4cE5BA5",
+      "daoInitialSettings": {
+        "holders": [
+          "0xC279928a891b904B0bD78Fa523bd0640830420D6",
+          "0x7c5790F42a48bF715C559E66e3F612AFa43DC7e8",
+          "0x9b9Fb8Ccd232BA41f9833E002e934C031D8c61c5"
+        ],
+        "stakes": [
+          "100000000000000000000",
+          "100000000000000000000",
+          "100000000000000000000"
+        ],
+        "tokenName": "Lido DAO Token",
+        "tokenSymbol": "LDO",
+        "voteDuration": 3600,
+        "votingSupportRequired": "500000000000000000",
+        "votingMinAcceptanceQuorum": "50000000000000000",
+        "depositIterationLimit": 16
+      },
+      "owner": "0x8303B3A462F4Cb4d2468DDcBD4c9f212914A3a7F",
+      "aragonEnsLabelName": "aragonpm",
+      "ensAddress": "0x043e6DBC5CAd60874727d21ecC2aAeBf50A0de80",
+      "ensFactoryAddress": "0xd0BfA4a0A50547e41Fb676c954DF1C2be924ec3F",
+      "ensFactoryConstructorArgs": [],
+      "kernelBaseAddress": "0xcC272fA3bFa4AE2043320e2d56Cf5AE439c62C3d",
+      "kernelBaseConstructorArgs": [
+        true
+      ],
+      "aclBaseAddress": "0x74C81dd97338329367E5C52B1E3CBC5C757d9AEb",
+      "aclBaseConstructorArgs": [],
+      "evmScriptRegistryFactoryAddress": "0x65A306d18cEa4A604c247bd10F7Be31833a0CAFC",
+      "evmScriptRegistryFactoryConstructorArgs": [],
+      "daoFactoryAddress": "0x0B6769F500b293e3adacD97c3961189565069902",
+      "daoFactoryConstructorArgs": [
+        "0xcC272fA3bFa4AE2043320e2d56Cf5AE439c62C3d",
+        "0x74C81dd97338329367E5C52B1E3CBC5C757d9AEb",
+        "0x65A306d18cEa4A604c247bd10F7Be31833a0CAFC"
+      ],
+      "apmRegistryBaseAddress": "0x1DfC3B8eF4574F5c2Afda80Fb4f3e37199921244",
+      "apmRepoBaseAddress": "0xf95aAc2A1A7F1613fFD22D6A3E9421Ef1E63F777",
+      "ensSubdomainRegistrarBaseAddress": "0xCB504bf25e8358f21266e01130591a081006DBC1",
+      "apmRegistryFactoryAddress": "0x70B3284fD016a570146cE48fC54D7A81bCd94BBa",
+      "apmRegistryFactoryConstructorArgs": [
+        "0x0B6769F500b293e3adacD97c3961189565069902",
+        "0x1DfC3B8eF4574F5c2Afda80Fb4f3e37199921244",
+        "0xf95aAc2A1A7F1613fFD22D6A3E9421Ef1E63F777",
+        "0xCB504bf25e8358f21266e01130591a081006DBC1",
+        "0x043e6DBC5CAd60874727d21ecC2aAeBf50A0de80",
+        "0x0000000000000000000000000000000000000000"
+      ],
+      "aragonApmRegistryAddress": "0x759ade22744b9B35aDA1F250E581484129B4ecDd",
+      "aragonEnsNodeName": "aragonpm.eth",
+      "aragonEnsNode": "0x9065c3e7f7b7ef1ef4e53d2d0b8e0cef02874ab020c1ece79d5f0d3d0111c0ba",
+      "miniMeTokenFactoryAddress": "0x92E2750729e04c9a5CF21A830Bd00cbd5139D992",
+      "miniMeTokenFactoryConstructorArgs": [],
+      "aragonIDAddress": "0x673cB86B60B9768Eebb05517fbF5a7F9f1Ab62C4",
+      "aragonIDConstructorArgs": [
+        "0x043e6DBC5CAd60874727d21ecC2aAeBf50A0de80",
+        "0x1B56d009BCF3a417142be98a3BDc9bD265B5345D",
+        "0x7e74a86b6e146964fb965db04dc2590516da77f720bb6759337bf5632415fd86"
+      ],
+      "aragonIDEnsNodeName": "aragonid.eth",
+      "aragonIDEnsNode": "0x7e74a86b6e146964fb965db04dc2590516da77f720bb6759337bf5632415fd86",
+      "aragon_app_agent_name": "agent.aragonpm.eth",
+      "aragon_app_agent_id": "0x9ac98dc5f995bf0211ed589ef022719d1487e5cb2bab505676f0d084c07cf89a",
+      "aragon_app_finance_name": "finance.aragonpm.eth",
+      "aragon_app_finance_id": "0xbf8491150dafc5dcaee5b861414dca922de09ccffa344964ae167212e8c673ae",
+      "aragon_app_token-manager_name": "token-manager.aragonpm.eth",
+      "aragon_app_token-manager_id": "0x6b20a3010614eeebf2138ccec99f028a61c811b3b1a3343b6ff635985c75c91f",
+      "aragon_app_vault_name": "vault.aragonpm.eth",
+      "aragon_app_vault_id": "0x7e852e0fcfce6551c13800f1e7476f982525c2b5277ba14b24339c68416336d1",
+      "aragon_app_voting_name": "voting.aragonpm.eth",
+      "aragon_app_voting_id": "0x9fa3927f639745e587912d4b0fea7ef9013bf93fb907d29faeab57417ba6e1d4",
+      "lidoEnsLabelName": "lido",
+      "daoTemplateEnsLabel": "template-3",
+      "lidoApmRegistryAddress": "0xE279648d49143afB7Aa37D037Ba9185829658906",
+      "lidoEnsNodeName": "lido.eth",
+      "lidoEnsNode": "0xbc171924c4ea138304db6886c0c786d160c88b76e94f9f89453a6ca2dbf6316f",
+      "lido_app_lido_name": "lido.lido.eth",
+      "lido_app_lido_id": "0xe5c0c15280069e08354c1c1d5b6706edcc4e849e76ec9822afa35d4d66bbbe06",
+      "lido_app_lidooracle_name": "lidooracle.lido.eth",
+      "lido_app_lidooracle_id": "0xc62f68e3a6f657e08c27afe0f11d03375e5255f5845055d81c1281dbf139ce18",
+      "lido_app_node-operators-registry_name": "node-operators-registry.lido.eth",
+      "lido_app_node-operators-registry_id": "0x9a09c6bc9551dd5e194dc3f814ce4725494966d9cdc90ff6cb49fc94d8a034ab",
+      "lido_app_steth_name": "steth.lido.eth",
+      "lido_app_steth_id": "0x7a155a469b6e893b1e5d8f992f066474a74daf5ece6715948667ef3565e34ec2",
+      "daoName": "lido-dao-2",
+      "daoTemplateAddress": "0x56aF001E2750cAF88027139e1cE7115edB75882F",
+      "daoTemplateConstructorArgs": [
+        "0x0B6769F500b293e3adacD97c3961189565069902",
+        "0x043e6DBC5CAd60874727d21ecC2aAeBf50A0de80",
+        "0x92E2750729e04c9a5CF21A830Bd00cbd5139D992",
+        "0x673cB86B60B9768Eebb05517fbF5a7F9f1Ab62C4"
+      ],
+      "daoTemplateNodeName": "template-3.lido.eth",
+      "daoTemplateNode": "0xf5b69ef2a418d00f3c81a39f75c5030dd51647f79f45759418b412b06c831343",
+      "daoAddress": "0xB5912c4C66B677b03C6c6946dE7030F143e68Bc6",
+      "tokenAddress": "0xd14A56d31306Cd439054D3B9c240a001328B491E",
+      "appProxies": {
+        "agent.aragonpm.eth": "0xd565cb6f78D7295f65815BdD3A28b71F0a42FD71",
+        "finance.aragonpm.eth": "0x145Bee61D4Aa5301EECc81F21d2B6AfB99367D1f",
+        "token-manager.aragonpm.eth": "0x92b47d9f59C872B6AC6d7038927d29F3356CCe26",
+        "voting.aragonpm.eth": "0xC94Ec6e47DdE83Ee3eEd1e026047f0735c07f602",
+        "steth.lido.eth": "0x05E276aFA69094bB779424b4e39899FC8E1da1B7",
+        "lidooracle.lido.eth": "0x1B7fd5d994Db56B4846646B3299f353CCa6105bC",
+        "node-operators-registry.lido.eth": "0x66462515727A72885f37ed86043d4C3c206bE350",
+        "lido.lido.eth": "0xD8e196c1AECE9dCc657bf60aE0762FA63de20018"
+      },
+      "cstEthAddress": "0x86b6D26467e66fd3Eb8e8208D5C7bE6FB7DFE431",
+      "cstEthConstructorArgs": [
+        "0x05E276aFA69094bB779424b4e39899FC8E1da1B7"
+      ]
+    },
+    "1337": {
+      "networkName": "local-dev"
+    }
+  }
+}

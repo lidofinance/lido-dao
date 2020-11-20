@@ -1,17 +1,53 @@
 version: '3.7'
 services:
+  # node1:
+  #   build:
+  #     context: ./docker/geth/
+  #   container_name: node1
+  #   ports:
+  #     - 8545:8545
+  #     - 8546:8546
+  #   volumes:
+  #     - ./data/ethereum:/data
+  #   environment:
+  #     - DATA_DIR=/data
+  #     - MINE=${MINE}
+  #     - NETWORK_ID=5
+  #   networks:
+  #     eth2:
   node1:
-    build:
-      context: ./docker/devchain/
-#      args:
-#        ARAGON_PKG: aragen-6.0.0-beta.1.tgz
+    image: ethereum/client-go
     container_name: node1
     ports:
       - 8545:8545
+      - 8546:8546
     volumes:
       - ./data/devchain:/data
-    environment:
-      - BLOCK_TIME=${BLOCK_TIME}
+    # environment:
+    #   - DATA_DIR=/data
+    #   - MINE=${MINE}
+    #   - NETWORK_ID=5
+    command: >
+      --nousb
+      --nodiscover
+      --datadir /data
+      --dev
+      --dev.period "$BLOCK_TIME"
+      --miner.gaslimit "$GAS_LIMIT"
+      --miner.gasprice "$GAS_PRICE"
+      --networkid "$NETWORK_ID"
+      --allow-insecure-unlock
+      --http
+      --http.addr 0.0.0.0
+      --http.corsdomain '*'
+      --http.vhosts '*'
+      --http.api 'eth,net,web3,personal,debug'
+      --ws
+      --ws.addr 0.0.0.0
+      --ws.port 8546
+      --ws.origins '*'
+      --ws.api 'eth,net,web3'
+      --vmdebug
     networks:
       eth2:
 
@@ -33,12 +69,12 @@ services:
   aragon:
     build:
       context: ./docker/aragon/
-#      args:
-#        - ARAGON_IPFS_GATEWAY=http://public_ipfs_hostname:8080/ipfs
-#        - ARAGON_DEFAULT_ETH_NODE=ws://public_eth1_node_hostname:8545
-#        - ARAGON_APP_LOCATOR=ipfs
-#        - ARAGON_ETH_NETWORK_TYPE=local
-#        - ARAGON_ENS_REGISTRY_ADDRESS=0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1
+      args:
+        - ARAGON_IPFS_GATEWAY=http://localhost:8080/ipfs
+        - ARAGON_DEFAULT_ETH_NODE=ws://localhost:8546
+        - ARAGON_APP_LOCATOR=ipfs
+        - ARAGON_ETH_NETWORK_TYPE=local
+        - ARAGON_ENS_REGISTRY_ADDRESS=0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1
     container_name: aragon
     ports:
       - 3000:8080
@@ -238,12 +274,12 @@ services:
     environment:
       - ETH1_NODE=http://node1:8545
       - ETH2_NODE=http://node2-1:5052
-      - SPR_CONTRACT=${SPR_CONTRACT}
+      - NOS_CONTRACT=${NOS_CONTRACT}
       - ORACLE_CONTRACT=${ORACLE_CONTRACT}
       - MANAGER_PRIV_KEY=${MANAGER1_PRIV_KEY}
       - SECONDS_PER_SLOT=1
       - SLOTS_PER_EPOCH=8
-      - SPR_ABI_FILE=./assets/StakingProvidersRegistry.json
+      - NOS_ABI_FILE=./assets/NodeOperatorsRegistry.json
       - ORACLE_ABI_FILE=./assets/LidoOracle.json
       - REPORT_INTVL_SLOTS=160
     networks:
@@ -256,12 +292,12 @@ services:
     environment:
       - ETH1_NODE=http://node1:8545
       - ETH2_NODE=http://node2-1:5052
-      - SPR_CONTRACT=${SPR_CONTRACT}
+      - NOS_CONTRACT=${NOS_CONTRACT}
       - ORACLE_CONTRACT=${ORACLE_CONTRACT}
       - MANAGER_PRIV_KEY=${MANAGER2_PRIV_KEY}
       - SECONDS_PER_SLOT=1
       - SLOTS_PER_EPOCH=8
-      - SPR_ABI_FILE=./assets/StakingProvidersRegistry.json
+      - NOS_ABI_FILE=./assets/NodeOperatorsRegistry.json
       - ORACLE_ABI_FILE=./assets/LidoOracle.json
       - REPORT_INTVL_SLOTS=160
     networks:
@@ -274,12 +310,12 @@ services:
     environment:
       - ETH1_NODE=http://node1:8545
       - ETH2_NODE=http://node2-1:5052
-      - SPR_CONTRACT=${SPR_CONTRACT}
+      - NOS_CONTRACT=${NOS_CONTRACT}
       - ORACLE_CONTRACT=${ORACLE_CONTRACT}
       - MANAGER_PRIV_KEY=${MANAGER3_PRIV_KEY}
       - SECONDS_PER_SLOT=1
       - SLOTS_PER_EPOCH=8
-      - SPR_ABI_FILE=./assets/StakingProvidersRegistry.json
+      - NOS_ABI_FILE=./assets/NodeOperatorsRegistry.json
       - ORACLE_ABI_FILE=./assets/LidoOracle.json
       - REPORT_INTVL_SLOTS=160
     networks:

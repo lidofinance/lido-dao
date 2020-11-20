@@ -1,37 +1,35 @@
 import { abi as LidoAbi } from '../../../../artifacts/Lido.json'
 import { createVote, voteForAction, init as voteInit } from './votingHelper'
 import { encodeCallScript } from '@aragon/contract-helpers-test/src/aragon-os'
-import * as eth1Helper from '../eth1Helper'
 import { BN } from '../utils'
 import { TREASURY_FEE, INSURANCE_FEE, ZERO_ADDRESS } from '../constants'
-import logger from '../logger'
 
 let context
-export let dePoolContract
+export let lidoContract
 let web3
 
 export function init(c) {
   if (!context) {
     context = c
     web3 = context.web3
-    dePoolContract = new web3.eth.Contract(LidoAbi, getProxyAddress())
+    lidoContract = new web3.eth.Contract(LidoAbi, getProxyAddress())
     voteInit(context)
   }
 }
 
 export function getProxyAddress() {
-  return context.apps.dePoolApp.proxyAddress
+  return context.apps.lidoApp.proxyAddress
 }
 
 export async function hasInitialized() {
-  return await dePoolContract.methods.hasInitialized().call()
+  return await lidoContract.methods.hasInitialized().call()
 }
 
 export async function setWithdrawalCredentials(withdrawalCredentials, holder, holders) {
   const callData1 = encodeCallScript([
     {
       to: getProxyAddress(),
-      calldata: dePoolContract.methods.setWithdrawalCredentials(withdrawalCredentials).encodeABI()
+      calldata: lidoContract.methods.setWithdrawalCredentials(withdrawalCredentials).encodeABI()
     }
   ])
   const voteId = await createVote(callData1, holder, 'Set withdrawal credentials')
@@ -42,18 +40,18 @@ export async function setFee(fee, holder, holders) {
   const callData1 = encodeCallScript([
     {
       to: getProxyAddress(),
-      calldata: dePoolContract.methods.setFee(fee).encodeABI()
+      calldata: lidoContract.methods.setFee(fee).encodeABI()
     }
   ])
   const voteId = await createVote(callData1, holder, 'setFee')
   await voteForAction(voteId, holders, 'setFee')
 }
 
-export async function setFeeDistribution(treasuryFee, insuranceFee, SPFee, holder, holders) {
+export async function setFeeDistribution(treasuryFee, insuranceFee, NOSFee, holder, holders) {
   const callData1 = encodeCallScript([
     {
       to: getProxyAddress(),
-      calldata: dePoolContract.methods.setFeeDistribution(treasuryFee, insuranceFee, SPFee).encodeABI()
+      calldata: lidoContract.methods.setFeeDistribution(treasuryFee, insuranceFee, NOSFee).encodeABI()
     }
   ])
   const voteId = await createVote(callData1, holder, 'setFeeDistribution')
@@ -61,7 +59,7 @@ export async function setFeeDistribution(treasuryFee, insuranceFee, SPFee, holde
 }
 
 export function getDepositIterationLimit() {
-  return dePoolContract.methods.getDepositIterationLimit().call()
+  return lidoContract.methods.getDepositIterationLimit().call()
 }
 
 export async function addSigningKeys(validatorsTestData, holder, count, holders) {
@@ -70,7 +68,7 @@ export async function addSigningKeys(validatorsTestData, holder, count, holders)
   const callData1 = encodeCallScript([
     {
       to: getProxyAddress(),
-      calldata: await dePoolContract.methods.addSigningKeys(count, validatorsPubKeys, validatorsSignatures).encodeABI()
+      calldata: await lidoContract.methods.addSigningKeys(count, validatorsPubKeys, validatorsSignatures).encodeABI()
     }
   ])
 
@@ -79,30 +77,31 @@ export async function addSigningKeys(validatorsTestData, holder, count, holders)
 }
 
 export function getWithdrawalCredentials() {
-  return dePoolContract.methods.getWithdrawalCredentials().call()
+  return lidoContract.methods.getWithdrawalCredentials().call()
 }
 export function getFee() {
-  return dePoolContract.methods.getFee().call()
+  return lidoContract.methods.getFee().call()
 }
 
 export function getFeeDistribution() {
-  return dePoolContract.methods.getFeeDistribution().call()
+  return lidoContract.methods.getFeeDistribution().call()
 }
 
 export async function getTreasuryAddress() {
-  return await dePoolContract.methods.getTreasury().call()
+  return await lidoContract.methods.getTreasury().call()
 }
 
 export async function getInsuranceFundAddress() {
-  return await dePoolContract.methods.getInsuranceFund().call()
+  return await lidoContract.methods.getInsuranceFund().call()
 }
 
-export async function submit(sender, value) {
-  return await dePoolContract.methods.submit(ZERO_ADDRESS).send({ from: sender, value: value, gas: '1000000' })
+export async function submit(sender, value, referral) {
+  await lidoContract.methods.submit(referral).send({ from: sender, value: value, gas: '8000000' })
+  await depositBufferedEther(sender)
 }
 
 export async function getEther2Stat() {
-  return await dePoolContract.methods.getEther2Stat().call()
+  return await lidoContract.methods.getEther2Stat().call()
 }
 
 export async function getUsedEther() {
@@ -112,19 +111,24 @@ export async function getUsedEther() {
 }
 
 export async function getTreasury() {
-  return await dePoolContract.methods.getTreasury().call()
+  return await lidoContract.methods.getTreasury().call()
 }
 
 export async function depositToLidoContract(from, value, referral = '0x0000000000000000000000000000000000000000') {
-  return await dePoolContract.methods.submit(referral).send({ from, value, gas: '8000000' })
+  await submit(from, value, referral)
+  await depositBufferedEther(from)
   // return await eth1Helper.sendTransaction(web3, getProxyAddress(), from, value)
 }
 
+export async function depositBufferedEther(from) {
+  await lidoContract.methods.depositBufferedEther().send({ from, gas: '8000000' })
+}
+
 export function getTotalControlledEther() {
-  return dePoolContract.methods.getTotalControlledEther().call()
+  return lidoContract.methods.getTotalControlledEther().call()
 }
 export function getBufferedEther() {
-  return dePoolContract.methods.getBufferedEther().call()
+  return lidoContract.methods.getBufferedEther().call()
 }
 
 export function calculateNewTreasuryBalance(stakeProfit, balanceBeforePushData) {
@@ -140,5 +144,5 @@ export function calculateTreasuryReward(stakeProfit) {
 }
 
 export function reportEther(sender, epoch, value) {
-  return dePoolContract.methods.reportEther2(epoch, value).send({ from: sender, gas: '2000000' })
+  return lidoContract.methods.reportEther2(epoch, value).send({ from: sender, gas: '2000000' })
 }

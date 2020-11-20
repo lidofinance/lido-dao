@@ -78,9 +78,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         _;
     }
 
-    /**
-      * @notice `_pool` is the `Lido` contract address, set by template
-      */
     function initialize(address _pool) public onlyInit {
         totalOperatorsCount = 0;
         activeOperatorsCount = 0;

@@ -5,33 +5,33 @@ import logger from '../logger'
 
 let web3
 let context
-export let dePoolOracleContract
+export let lidoOracleContract
 
 export function init(c) {
   if (!context) {
     context = c
     web3 = context.web3
-    dePoolOracleContract = new web3.eth.Contract(LidoOracleAbi, getProxyAddress())
+    lidoOracleContract = new web3.eth.Contract(LidoOracleAbi, getProxyAddress())
   }
 }
 
 export function getProxyAddress() {
-  return context.apps.dePoolOracleApp.proxyAddress
+  return context.apps.lidoOracleApp.proxyAddress
 }
 
 export async function hasInitialized() {
-  return await dePoolOracleContract.methods.hasInitialized().call()
+  return await lidoOracleContract.methods.hasInitialized().call()
 }
 
 export async function pushData(epoch, amount, sender) {
-  return await dePoolOracleContract.methods.pushData(epoch, amount).send({ from: sender, gas: '8000000' })
+  return await lidoOracleContract.methods.pushData(epoch, amount).send({ from: sender, gas: '8000000' })
 }
 
 export async function setQuorum(quorum, holder, holders) {
   const callData1 = encodeCallScript([
     {
       to: getProxyAddress(),
-      calldata: await dePoolOracleContract.methods.setQuorum(quorum).encodeABI()
+      calldata: await lidoOracleContract.methods.setQuorum(quorum).encodeABI()
     }
   ])
 
@@ -43,7 +43,7 @@ export async function setReportIntervalDuration(duration, holder, holders) {
   const callData1 = encodeCallScript([
     {
       to: getProxyAddress(),
-      calldata: await dePoolOracleContract.methods.setReportIntervalDuration(duration).encodeABI()
+      calldata: await lidoOracleContract.methods.setReportIntervalDuration(duration).encodeABI()
     }
   ])
 
@@ -52,16 +52,16 @@ export async function setReportIntervalDuration(duration, holder, holders) {
 }
 
 export async function getAllOracleMembers() {
-  return await dePoolOracleContract.methods.getOracleMembers().call()
+  return await lidoOracleContract.methods.getOracleMembers().call()
 }
 
 // TODO delete?
 export async function getCurrentReportInterval() {
-  return await dePoolOracleContract.methods.getCurrentReportInterval().call()
+  return await lidoOracleContract.methods.getCurrentReportInterval().call()
 }
 
 export async function getReportIntervalDuration() {
-  return await dePoolOracleContract.methods.getReportIntervalDurationSeconds().call()
+  return await lidoOracleContract.methods.getReportIntervalDurationSeconds().call()
 }
 
 export async function addOracleMember(member, holder, holders) {
@@ -69,7 +69,7 @@ export async function addOracleMember(member, holder, holders) {
   const callData1 = encodeCallScript([
     {
       to: getProxyAddress(),
-      calldata: await dePoolOracleContract.methods.addOracleMember(member).encodeABI()
+      calldata: await lidoOracleContract.methods.addOracleMember(member).encodeABI()
     }
   ])
 
@@ -84,9 +84,9 @@ export async function addOracleMembers(members, holder, holders) {
 }
 
 export async function getQuorum() {
-  return await dePoolOracleContract.methods.getQuorum().call()
+  return await lidoOracleContract.methods.getQuorum().call()
 }
 
 export async function getLatestData() {
-  return await dePoolOracleContract.methods.getLatestData().call()
+  return await lidoOracleContract.methods.getLatestData().call()
 }

@@ -1,3 +1,5 @@
+const chalk = require('chalk')
+
 module.exports = async (name, instance) => {
   const { contractName, sourcePath, updatedAt: compiledAt } = instance.constructor._json
 
@@ -7,8 +9,8 @@ module.exports = async (name, instance) => {
 
   console.log('=========')
   console.log(`# ${contractName}:`)
-  console.log(`Address: ${instance.address}`)
-  console.log(`Transaction hash: ${instance.transactionHash}`)
+  console.log(`Address: ${chalk.yellow(instance.address)}`)
+  console.log(`Transaction hash: ${chalk.yellow(instance.transactionHash)}`)
   console.log(`Compiler: solc@${compilerVersion} (optimizer: ${optimizerStatus})`)
   console.log('=========')
 }

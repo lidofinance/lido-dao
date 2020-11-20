@@ -14,30 +14,30 @@
 
 ✅Set basic fee 100%
 
-✅Set fee distribution(treasury - 10%,insurance -10%,sp - 80%)
+✅Set fee distribution(treasury - 10%,insurance -10%,nodeOperator - 80%)
 
-✅Add sp1 and add signing keys
+✅Add nodeOperator1 and add signing keys
 
-✅Add sp2 and add signing keys
+✅Add nodeOperator2 and add signing keys
 
-✅Add sp3 and add signing keys
+✅Add nodeOperator3 and add signing keys
 
-✅Deposit 2 ETH to DePool via DePool from user1
+✅Deposit 2 ETH to Lido via Lido from user1
 
-✅Deposit 30 ETH to DePool via DePool from user1
+✅Deposit 30 ETH to Lido via Lido from user1
 
-✅Deposit 2 ETH to DePool via DePool from user2
+✅Deposit 2 ETH to Lido via Lido from user2
 
-✅Deposit 32 ETH to DePool via DePool  from user2
+✅Deposit 32 ETH to Lido via Lido  from user2
 
-✅Deposit 222 ETH to dePool via DePool from user3
+✅Deposit 222 ETH to Lido via Lido from user3
 
-✅Deposit 32 ETH to DePool via deposit contract from user4
+✅Deposit 32 ETH to Lido via deposit contract from user4
 check that validator is up??
 
-✅Deposit 288 ETH to dePool via DePool from user3
+✅Deposit 288 ETH to Lido via Lido from user3
 
-✅Chek that the staking providers keys became using
+✅Chek that the nodeOperators keys became using
 
 ✅Wait for validators activation(~150 sec)
 
@@ -62,21 +62,21 @@ X ctoken stay the same but is convertable to a right amount of atoken,
     
 X Report slashing, check that there is no reward and atoken balance decreases and ctoken stay the same
 
-✅Add sp4 and add signing keys
+✅Add nodeOperator4 and add signing keys
 
 ✅Check deposit iteration limit
 
-✅Add sp4 and add signing keys
+✅Add nodeOperator4 and add signing keys
 
-✅Add sp4 and add signing keys
+✅Add nodeOperator4 and add signing keys
 
-✅Deactivate sp4 with currently using signing keys
+✅Deactivate nodeOperator4 with currently using signing keys
 
 ✅Push data and check that the deactivated provider balance not changed
 
-✅Increase the staking limit for an SP
+✅Increase the staking limit for node operator
 
-✅Reduce the staking limit for an SP
+✅Reduce the staking limit for node operator
 
 ✅Check that the validators do not activate if there are no unused signing keys
 
