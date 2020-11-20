@@ -95,7 +95,7 @@ function PanelContent({ api, onClose }) {
               `}
             >
               This action will change the fee distribution for treasury,
-              insurance and operators.
+              insurance and operators. All fields must add up to 100.
             </Info>
             <Field
               name={TREASURY}
