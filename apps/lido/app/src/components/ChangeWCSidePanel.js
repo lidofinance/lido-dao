@@ -44,7 +44,7 @@ function Panel({ onClose, apiSetWC }) {
       validateOnBlur={false}
       validateOnChange={false}
     >
-      {({ values, errors, submitForm, isSubmitting }) => {
+      {({ submitForm, isSubmitting }) => {
         const handleSubmit = (event) => {
           event.preventDefault()
           submitForm()
@@ -56,8 +56,6 @@ function Panel({ onClose, apiSetWC }) {
             `}
             onSubmit={handleSubmit}
           >
-            <pre>{JSON.stringify(values, null, 2)}</pre>
-            <pre>{JSON.stringify(errors, null, 2)}</pre>
             <Info
               title="Action"
               css={`
