@@ -86,7 +86,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     /**
-      * @notice Add node operator named `name` with reward address `rewardAddress` and staking limit `stakingLimit` validators
+      * @notice Add node operator named `_name` with reward address `_rewardAddress` and staking limit `_stakingLimit`
       * @param _name Human-readable name
       * @param _rewardAddress Ethereum 1 address which receives stETH rewards for this operator
       * @param _stakingLimit the maximum number of validators to stake for this operator
@@ -214,7 +214,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     /**
-      * @notice Add `_quantity` validator signing keys to the set of usable keys. Concatenated keys are: `_pubkeys`. Can be done by the DAO in question by using the designated rewards address.
+      * @notice Add `_quantity` validator signing keys of operator #`_id` to the set of usable keys. Concatenated keys are: `_pubkeys`. Can be done by the DAO in question by using the designated rewards address.
       * @dev Along with each key the DAO has to provide a signatures for the
       *      (pubkey, withdrawal_credentials, 32000000000) message.
       *      Given that information, the contract'll be able to call
@@ -231,7 +231,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     /**
-      * @notice Add `_quantity` validator signing keys to the set of usable keys. Concatenated keys are: `_pubkeys`. Can be done by node operator in question by using the designated rewards address.
+      * @notice Add `_quantity` validator signing keys of operator #`_id` to the set of usable keys. Concatenated keys are: `_pubkeys`. Can be done by node operator in question by using the designated rewards address.
       * @dev Along with each key the DAO has to provide a signatures for the
       *      (pubkey, withdrawal_credentials, 32000000000) message.
       *      Given that information, the contract'll be able to call
@@ -254,7 +254,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     /**
-      * @notice Removes a validator signing key #`_index` from the set of usable keys. Executed on behalf of DAO.
+      * @notice Removes a validator signing key #`_index` of operator #`_id` from the set of usable keys. Executed on behalf of DAO.
       * @param _operator_id Node Operator id
       * @param _index Index of the key, starting with 0
       */
@@ -266,7 +266,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     /**
-      * @notice Removes a validator signing key #`_index` from the set of usable keys. Executed on behalf of Node Operator.
+      * @notice Removes a validator signing key #`_index` of operator #`_id` from the set of usable keys. Executed on behalf of Node Operator.
       * @param _operator_id Node Operator id
       * @param _index Index of the key, starting with 0
       */
