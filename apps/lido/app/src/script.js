@@ -64,7 +64,7 @@ function initializeState() {
       // operators: await getOperators(),
       // treasury: await getTreasury(),
       // insuranceFund: await getInsuranceFund(),
-      ether2Stat: await getBeaconStat(),
+      beaconStat: await getBeaconStat(),
     }
   }
 }
@@ -121,7 +121,7 @@ async function getOracle() {
 async function getBeaconStat() {
   const stat = await app.call('getBeaconStat').toPromise()
   return {
-    Deposited: fromWei(stat.depositedValidators),
-    Remote: fromWei(stat.beaconBalance),
+    depositedValidators: +stat.depositedValidators,
+    beaconBalance: fromWei(stat.beaconBalance),
   }
 }
