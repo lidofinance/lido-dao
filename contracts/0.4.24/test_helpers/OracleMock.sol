@@ -13,7 +13,7 @@ contract OracleMock {
         pool = ILido(_pool);
     }
 
-    function reportEther2(uint256 _epoch, uint256 _eth2balance) external {
-        pool.reportEther2(_epoch, _eth2balance);
+    function reportBeacon(uint256 _epochId, uint128 _beaconValidators, uint128 _beaconBalance) external {
+        pool.pushBeacon(_beaconValidators, _beaconBalance);
     }
 }

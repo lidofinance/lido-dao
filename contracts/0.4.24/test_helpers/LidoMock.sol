@@ -8,8 +8,8 @@ import "./VaultMock.sol";
  * @dev Only for testing purposes! Lido version with some functions exposed.
  */
 contract LidoMock is Lido {
-    function getTotalControlledEther() external view returns (uint256) {
-        return totalControlledEther;
+    function getTotalPooledEther() external view returns (uint256) {
+        return totalPooledEther;
     }
 
     function initialize(ISTETH _token) public {
@@ -17,9 +17,9 @@ contract LidoMock is Lido {
         initialized();
     }
 
-    function setTotalControlledEther(uint256 _totalControlledEther) public {
-        totalControlledEther = _totalControlledEther;
+    function setTotalPooledEther(uint256 _totalPooledEther) public {
+        totalPooledEther = _totalPooledEther;
     }
 
-    uint256 private totalControlledEther;
+    uint256 private totalPooledEther;
 }

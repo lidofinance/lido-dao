@@ -14,14 +14,14 @@ const defaultState = {
   feeDistribution: defaultValue,
   withdrawalCredentials: defaultValue,
   bufferedEther: defaultValue,
-  totalControlledEther: defaultValue,
+  totalPooledEther: defaultValue,
   token: defaultValue,
   validatorRegistrationContract: defaultValue,
   oracle: defaultValue,
   operators: defaultValue,
   treasury: defaultValue,
   insuranceFund: defaultValue,
-  ether2Stat: defaultValue,
+  beaconStat: defaultValue,
   isSyncing: true,
 }
 
