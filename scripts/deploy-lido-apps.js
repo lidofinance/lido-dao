@@ -12,9 +12,9 @@ const { filterObject } = require('./helpers/collections')
 const { readAppName } = require('./helpers/aragon')
 
 const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
-const APPS_DIR_PATH = path.resolve(__dirname, '..', 'apps')
-const RELEASE_TYPE = 'major'
-const APPS = '*'
+const RELEASE_TYPE = process.env.RELEASE_TYPE || 'major'
+const APPS = process.env.APPS || '*'
+const APPS_DIR_PATH = process.env.APPS_DIR_PATH || path.resolve(__dirname, '..', 'apps')
 
 async function deployAragonStdApps({
   web3,
