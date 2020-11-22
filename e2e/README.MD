@@ -1,4 +1,82 @@
-# testnet for local e2e tests
+# Testnet for local e2e tests
+
+# Install
+
+## For MacOS X
+
+Tested on MacOS Catalina 10.15.7 @MacBook Pro 15-inch 2018 2.6 GHz 6-core Intel Core i7 16GB RAM 2400MHz DDR4
+
+1. install [homebrew](https://brew.sh/) `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"`
+
+2. Using homebrew, install gnu-sed `brew install gnu-sed`. This is is important since default MacOSX sed has different interface.
+
+How to check the sed is correct (GNU's)? It's output should look like this.
+
+```sh
+$ sed
+Usage: gsed [OPTION]... {script-only-if-no-other-script} [input-file]...
+<omitted>
+GNU sed home page: <https://www.gnu.org/software/sed/>.
+General help using GNU software: <https://www.gnu.org/gethelp/>.
+```
+
+3. Install nvm [Node Version Manager](https://github.com/nvm-sh/nvm#installing-and-updating)
+
+4. Using nvm install node v12.20.0 (lts).
+
+```sh
+nvm install --lts 12
+nvm alias default node
+```
+
+Check the version is correct
+
+```sh
+$ node -v
+v12.20.0
+```
+
+5. Install Yarn package manager using its [official guide](https://classic.yarnpkg.com/en/docs/install/#mac-stable):
+
+```sh
+curl -o- -L https://yarnpkg.com/install.sh | bash
+```
+
+6. Clone the repository and run `yarn` in its root. It will install all requirements from package.json.
+
+
+### For Ubuntu
+
+TBD
+
+## Start
+
+Go to `e2e` folder and run `startup.sh -h` in it. It will print available invocation options.
+
+```
+bash-3.2$ ./startup.sh -h
+./startup.sh [options]
+ 
+options:
+  -h | --help           show this help
+  -r | --reset          force reset all blockchains state (clear all data)
+  -d | --deploy         force try to deploy contracts
+  -r1 | --reset1        force reset ETH1 blockchain state
+  -r2 | --reset2        force reset ETH2 blockchain state
+  -n | --nodes          start 2nd and 3d eth2 nodes
+  -s | --snapshot       use snapshot instead deploy
+  --stage [id]          uset stage id for snapshots (2 by default)
+  -1 | --eth1           start only eth1 part
+  -w | --web            also start Aragon web UI
+  -ms | --makesnapshots create stage snapshots
+  -o | --oracles        start oracles
+  -os | --seed          seed mock data
+
+```
+
+For example, `./startup.sh -r -d` clears all the data, builds and deploys all the artifacts from scratch.
+
+During the start, the script writes the parameters of artifacts it creates to the JSON file `deployed.json` located in the repository root.
 
 ## ETH1 localnet contract addresses
 
