@@ -16,7 +16,6 @@ import AddMemberSidePanel from './components/AddMemberSidePanel'
 import MenuItem from './components/MenuItem'
 import InfoBox from './components/InfoBox'
 import ChangeQuorumSidePanel from './components/ChangeQuorumSidePanel'
-import IntervalInfo from './components/IntervalInfo'
 
 export default function App() {
   const { api, appState, currentApp, guiStyle } = useAragonApi()
@@ -25,8 +24,8 @@ export default function App() {
     isSyncing,
     oracleMembers,
     quorum,
-    latestData,
-    reportIntervalDurationSeconds,
+    currentFrame,
+    currentReportableEpochs,
   } = appState
   const { appearance } = guiStyle
   const appName = (currentApp && currentApp.name) || 'app'
@@ -81,30 +80,10 @@ export default function App() {
     [api]
   )
 
-  // INTERVAL
-
-  const getReportIntervalForTimestamp = useCallback(
-    (timestamp) => {
-      return api.call('getReportIntervalForTimestamp', timestamp).toPromise()
-    },
-    [api]
+  const currentFrameEl = renderCurrentFrame(currentFrame)
+  const currentReportableEpochsEl = renderCurrentReportableEpochs(
+    currentReportableEpochs
   )
-
-  const [currentReportInterval, setCurrentReportInterval] = useState(0)
-  const updateCurrentReportInterval = useCallback(() => {
-    api
-      .call('getCurrentReportInterval')
-      .toPromise()
-      .then(setCurrentReportInterval)
-  }, [api])
-
-  useEffect(() => {
-    if (api) {
-      updateCurrentReportInterval()
-    }
-  }, [api])
-
-  console.log(latestData)
 
   return (
     <Main theme={appearance} assetsUrl="./aragon-ui">
@@ -148,24 +127,24 @@ export default function App() {
               onClick={openChangeQuorumSidePanel}
               label="Change Quorum"
             />
-            {latestData && (
-              <>
-                <InfoBox
-                  heading="ETH2 Balance"
-                  value={latestData.eth2balance}
-                />
-                <InfoBox
-                  heading="Report Interval"
-                  value={latestData.reportInterval}
-                />
-              </>
+            {currentFrameEl && (
+              <InfoBox
+                heading="Frame"
+                value={currentFrameEl}
+                largeText={false}
+                label="Update"
+                onClick={() => api.emitTrigger('UI:UpdateFrame')}
+              />
             )}
-            <IntervalInfo
-              duration={reportIntervalDurationSeconds}
-              currentInterval={currentReportInterval}
-              update={updateCurrentReportInterval}
-              api={getReportIntervalForTimestamp}
-            />
+            {currentReportableEpochsEl && (
+              <InfoBox
+                heading="Reportable epochs"
+                value={currentReportableEpochsEl}
+                largeText={false}
+                label="Update"
+                onClick={() => api.emitTrigger('UI:UpdateReportableEpochs')}
+              />
+            )}
           </>
         }
       />
@@ -181,4 +160,36 @@ export default function App() {
       />
     </Main>
   )
+}
+
+function renderCurrentFrame(frame) {
+  if (!frame) {
+    return null
+  }
+  return (
+    <>
+      Epoch: {frame.frameEpochId}
+      <br />
+      Start: {formatUnixTime(frame.frameStartTime)}
+      <br />
+      End: {formatUnixTime(frame.frameEndTime)}
+    </>
+  )
+}
+
+function renderCurrentReportableEpochs(epochs) {
+  if (!epochs) {
+    return null
+  }
+  return (
+    <>
+      First: {epochs.firstReportableEpochId}
+      <br />
+      Last: {epochs.lastReportableEpochId}
+    </>
+  )
+}
+
+function formatUnixTime(unixTime) {
+  return new Date(1000 * unixTime).toISOString().replace(/[.]\d+Z$/, 'Z')
 }
