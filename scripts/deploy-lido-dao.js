@@ -24,12 +24,12 @@ const DEFAULT_DAO_SETTINGS = {
   votingSupportRequired: '500000000000000000', // 50e16 basis points === 50%
   votingMinAcceptanceQuorum: '50000000000000000', // 5e16 basis points === 5%
   depositIterationLimit: 16,
-  beaconSpec: [
-    225, // epochsPerFrame:
-    32, // slotsPerEpoch
-    12, // secondsPerSlot
-    1606824000
-  ] // genesisTime
+  beaconSpec: {
+    epochsPerFrame: 225,
+    slotsPerEpoch: 32,
+    secondsPerSlot: 12,
+    genesisTime: 1606824000
+  }
 }
 
 const APPS_DIR_PATH = path.resolve(__dirname, '..', 'apps')
@@ -75,7 +75,12 @@ async function deployDao({
 
   const isPublicNet = netId <= 1000
 
-  if (!state.daoInitialSettings) {
+  if (state.daoInitialSettings) {
+    state.daoInitialSettings = {
+      ...defaultDaoSettings,
+      ...state.daoInitialSettings
+    }
+  } else {
     if (isPublicNet) {
       throw new Error(`please specify initial DAO settings in state file ${networkStateFile}`)
     }
@@ -222,6 +227,13 @@ async function deployDAO({
     daoInitialSettings.voteDuration
   ]
 
+  const beaconSpec = [
+    daoInitialSettings.beaconSpec.epochsPerFrame,
+    daoInitialSettings.beaconSpec.slotsPerEpoch,
+    daoInitialSettings.beaconSpec.secondsPerSlot,
+    daoInitialSettings.beaconSpec.genesisTime
+  ]
+
   const newDaoResult = await logTx(
     `Deploying DAO from template`,
     template.newDAO(
@@ -233,7 +245,7 @@ async function deployDAO({
       votingSettings,
       depositContractAddress,
       daoInitialSettings.depositIterationLimit,
-      daoInitialSettings.beaconSpec,
+      beaconSpec,
       { from: owner }
     )
   )
