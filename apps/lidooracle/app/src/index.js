@@ -11,8 +11,8 @@ const reducer = (state) => {
     return {
       oracleMembers: [],
       quorum: null,
-      reportIntervalDurationSeconds: null,
-      latestData: null,
+      currentFrame: null,
+      currentReportableEpochs: null,
       isSyncing: true,
     }
   }
