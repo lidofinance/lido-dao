@@ -11,8 +11,8 @@
       "params": []
     },
     {
-      "name": "Set the new report interval duration",
-      "id": "SET_REPORT_INTERVAL_DURATION",
+      "name": "Set the Beacon chain spec",
+      "id": "SET_BEACON_SPEC",
       "params": []
     }
   ],

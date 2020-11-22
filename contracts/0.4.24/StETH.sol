@@ -15,7 +15,7 @@ import "./lib/Pausable.sol";
   *
   * ERC20 token which supports stop/resume mechanics. The token is operated by `ILido`.
   *
-  * Since balances of all token holders change when the amount of total controlled Ether
+  * Since balances of all token holders change when the amount of total pooled Ether
   * changes, this token cannot fully implement ERC20 standard: it only emits `Transfer`
   * events upon explicit transfer between holders. In contrast, when Lido oracle reports
   * rewards, no Transfer events are generated: doing so would require emitting an event
@@ -122,7 +122,7 @@ contract StETH is ISTETH, Pausable, AragonApp {
     * @dev Total number of tokens in existence
     */
     function totalSupply() public view returns (uint256) {
-        return lido.getTotalControlledEther();
+        return lido.getTotalPooledEther();
     }
 
     /**
@@ -287,7 +287,7 @@ contract StETH is ISTETH, Pausable, AragonApp {
         if (_totalShares == 0) {
             return 0;
         }
-        return _sharesAmount.mul(lido.getTotalControlledEther()).div(_totalShares);
+        return _sharesAmount.mul(lido.getTotalPooledEther()).div(_totalShares);
     }
 
     /**
@@ -305,10 +305,10 @@ contract StETH is ISTETH, Pausable, AragonApp {
     * @param _pooledEthAmount The amount of pooled Eth
     */
     function getSharesByPooledEth(uint256 _pooledEthAmount) public view returns (uint256) {
-        if (lido.getTotalControlledEther() == 0) {
+        if (lido.getTotalPooledEther() == 0) {
             return 0;
         }
-        return _pooledEthAmount.mul(_totalShares).div(lido.getTotalControlledEther());
+        return _pooledEthAmount.mul(_totalShares).div(lido.getTotalPooledEther());
     }
 
     /**

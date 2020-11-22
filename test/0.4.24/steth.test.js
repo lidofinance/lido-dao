@@ -51,7 +51,7 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
     context('with non-zero supply', async () => {
       beforeEach(async () => {
         await stEth.mintShares(user1, tokens(1000), { from: pool })
-        await lido.setTotalControlledEther(tokens(1000))
+        await lido.setTotalPooledEther(tokens(1000))
       })
 
       it('balances are correct', async () => {
@@ -222,7 +222,7 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
   context('with non-zero supply', async () => {
     beforeEach(async () => {
       await stEth.mintShares(user1, tokens(1000), { from: pool })
-      await lido.setTotalControlledEther(tokens(1000)) // assume this is done by lido
+      await lido.setTotalPooledEther(tokens(1000)) // assume this is done by lido
     })
 
     it('stop/resume works', async () => {
@@ -266,7 +266,7 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
     it('allowance behavior is correct after slashing', async () => {
       await stEth.approve(user2, tokens(750), { from: user1 })
 
-      await lido.setTotalControlledEther(tokens(500))
+      await lido.setTotalPooledEther(tokens(500))
 
       assertBn(await stEth.balanceOf(user1, { from: nobody }), tokens(500))
       assertBn(await stEth.getSharesByHolder(user1, { from: nobody }), tokens(1000))
@@ -286,7 +286,7 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
     context('mint', () => {
       it('minting works', async () => {
         await stEth.mintShares(user1, tokens(12), { from: pool })
-        await lido.setTotalControlledEther(tokens(1012)) // done dy lido
+        await lido.setTotalPooledEther(tokens(1012)) // done dy lido
 
         assertBn(await stEth.totalSupply(), tokens(1012))
         assertBn(await stEth.balanceOf(user1, { from: nobody }), tokens(1012))
@@ -296,7 +296,7 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
         assertBn(await stEth.getSharesByHolder(user2, { from: nobody }), tokens(0))
 
         await stEth.mintShares(user2, tokens(4), { from: pool })
-        await lido.setTotalControlledEther(tokens(1016)) // done dy lido
+        await lido.setTotalPooledEther(tokens(1016)) // done dy lido
 
         assertBn(await stEth.totalSupply(), tokens(1016))
         assertBn(await stEth.balanceOf(user1, { from: nobody }), tokens(1012))
@@ -321,9 +321,9 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
         // user1 already had 1000 tokens
         // 1000 + 1000 + 1000 = 3000
         await stEth.mintShares(user2, tokens(1000), { from: pool })
-        await lido.setTotalControlledEther(tokens(2000)) // assume this is done by lido
+        await lido.setTotalPooledEther(tokens(2000)) // assume this is done by lido
         await stEth.mintShares(user3, tokens(1000), { from: pool })
-        await lido.setTotalControlledEther(tokens(3000)) // assume this is done by lido
+        await lido.setTotalPooledEther(tokens(3000)) // assume this is done by lido
       })
 
       it('reverts when burn from zero address', async () => {
@@ -393,9 +393,9 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
   })
 
   context('share-related getters', async () => {
-    context('with zero totalControlledEther (supply)', async () => {
+    context('with zero totalPooledEther (supply)', async () => {
       beforeEach(async () => {
-        await lido.setTotalControlledEther(tokens(0))
+        await lido.setTotalPooledEther(tokens(0))
       })
 
       it('getTotalSupply', async () => {
@@ -427,10 +427,10 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
       })
     })
 
-    context('with non-zero totalControlledEther (supply)', async () => {
+    context('with non-zero totalPooledEther (supply)', async () => {
       beforeEach(async () => {
         await stEth.mintShares(user1, tokens(1000), { from: pool })
-        await lido.setTotalControlledEther(tokens(1000))
+        await lido.setTotalPooledEther(tokens(1000))
       })
 
       it('getTotalSupply', async () => {
