@@ -66,7 +66,6 @@ contract LidoTemplate is BaseTemplate {
     }
 
     DeployState private deployState;
-    BeaconSpec public beaconSpec;
 
     constructor(
         DAOFactory _daoFactory,
@@ -97,10 +96,6 @@ contract LidoTemplate is BaseTemplate {
         require(deployState.dao == address(0), "PREVIOUS_DEPLOYMENT_NOT_FINALIZED");
         require(_holders.length > 0, "COMPANY_EMPTY_HOLDERS");
         require(_holders.length == _stakes.length, "COMPANY_BAD_HOLDERS_STAKES_LEN");
-        beaconSpec.epochsPerFrame = _beaconSpec[0];
-        beaconSpec.slotsPerEpoch = _beaconSpec[1];
-        beaconSpec.secondsPerSlot = _beaconSpec[2];
-        beaconSpec.genesisTime = _beaconSpec[3];
 
         _validateId(_id);
 
@@ -112,7 +107,16 @@ contract LidoTemplate is BaseTemplate {
         state.token = _createToken(_tokenName, _tokenSymbol, TOKEN_DECIMALS);
         (state.dao, state.acl) = _createDAO();
 
-        _setupApps(state, _votingSettings, _BeaconDepositContract, _depositIterationLimit, beaconSpec.epochsPerFrame, beaconSpec.slotsPerEpoch, beaconSpec.secondsPerSlot, beaconSpec.genesisTime);
+        _setupApps(
+            state,
+            _votingSettings,
+            _BeaconDepositContract,
+            _depositIterationLimit,
+            _beaconSpec[0], // epochsPerFrame
+            _beaconSpec[1], // slotsPerEpoch
+            _beaconSpec[2], // secondsPerSlot
+            _beaconSpec[3]  // genesisTime
+        );
 
         deployState = state;
     }
