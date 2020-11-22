@@ -21,7 +21,7 @@ const defaultState = {
   operators: defaultValue,
   treasury: defaultValue,
   insuranceFund: defaultValue,
-  ether2Stat: defaultValue,
+  beaconStat: defaultValue,
   isSyncing: true,
 }
 
