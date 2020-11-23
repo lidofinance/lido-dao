@@ -1,31 +1,27 @@
-import { Button, GU, SidePanel } from '@aragon/ui'
+import { Button, GU, SidePanel, Info } from '@aragon/ui'
 import React, { useCallback } from 'react'
 import { Formik, Field } from 'formik'
 import * as yup from 'yup'
 import TextField from './TextField'
 
 const initialValues = {
-  name: '',
-  address: '',
-  limit: '',
+  limit: 0,
 }
 
 const validationSchema = yup.object().shape({
-  name: yup.string().required().min(1),
-  address: yup.string().required().min(1),
-  limit: yup.number().integer().min(0).required(),
+  limit: yup.number().positive().integer().required().min(0),
 })
 
-function PanelContent({ addNodeOperatorApi, onClose }) {
+function PanelContent({ api, onClose }) {
   const onSubmit = useCallback(
-    ({ name, address, limit }) => {
-      addNodeOperatorApi(name, address, limit)
+    ({ limit }) => {
+      api(limit)
         .catch(console.error)
-        .finally(() => {
+        .then(() => {
           onClose()
         })
     },
-    [addNodeOperatorApi, onClose]
+    [api, onClose]
   )
 
   return (
@@ -36,7 +32,7 @@ function PanelContent({ addNodeOperatorApi, onClose }) {
       validateOnBlur={false}
       validateOnChange={false}
     >
-      {({ submitForm, isSubmitting }) => {
+      {({ submitForm, isSubmitting, isValidating }) => {
         return (
           <form
             css={`
@@ -47,13 +43,15 @@ function PanelContent({ addNodeOperatorApi, onClose }) {
               submitForm()
             }}
           >
-            <Field name="name" label="Name" required component={TextField} />
-            <Field
-              name="address"
-              label="Address"
-              required
-              component={TextField}
-            />
+            <Info
+              title="Action"
+              css={`
+                margin-bottom: ${3 * GU}px;
+              `}
+            >
+              This action will change the maximum number of validators to stake
+              for the chosen node operator.
+            </Info>
             <Field
               name="limit"
               label="Limit"
@@ -65,8 +63,8 @@ function PanelContent({ addNodeOperatorApi, onClose }) {
               mode="strong"
               wide
               required
-              disabled={isSubmitting}
-              label="Add Node Operator"
+              disabled={isSubmitting || isValidating}
+              label="Set limit"
               type="submit"
             />
           </form>
@@ -77,7 +75,7 @@ function PanelContent({ addNodeOperatorApi, onClose }) {
 }
 
 export default (props) => (
-  <SidePanel title="ADD NODE OPERATOR" {...props}>
+  <SidePanel {...props}>
     <PanelContent {...props} />
   </SidePanel>
 )
