@@ -21,6 +21,8 @@ import MenuItem from './components/MenuItem'
 import IconQuestion from '@aragon/ui/dist/IconQuestion'
 import InfoBox from './components/InfoBox'
 import { getEndingBasedOnNumber } from './utils/helpers'
+import ChangeLimitPanel from './components/ChangeLimitPanel'
+import IconGroup from '@aragon/ui/dist/IconGroup'
 
 function App() {
   const { api, appState, connectedAccount } = useAragonApi()
@@ -122,6 +124,22 @@ function App() {
         )
         .toPromise(),
     [api, currentUserOperatorId]
+  )
+
+  // CHANGING STAKING LIMIT
+  const [changeLimitOperatorId, setChangeLimitOperatorId] = useState(null)
+  const openChangeLimitPanel = useCallback(
+    (id) => setChangeLimitOperatorId(id),
+    []
+  )
+  const closeChangeLimitPanel = useCallback(
+    () => setChangeLimitOperatorId(null),
+    []
+  )
+  const changeLimitApi = useCallback(
+    (limit) =>
+      api.setNodeOperatorStakingLimit(changeLimitOperatorId, limit).toPromise(),
+    [api, changeLimitOperatorId]
   )
 
   // GET SIGNING KEYS
@@ -230,6 +248,11 @@ function App() {
                     label="add my signing keys"
                   />
                 )}
+                <MenuItem
+                  onClick={() => openChangeLimitPanel(id)}
+                  icon={<IconGroup />}
+                  label="change staking limit"
+                />
                 <Toast>
                   {(toast) => (
                     <MenuItem
@@ -296,6 +319,12 @@ function App() {
         opened={addMySKSidePanelOpen}
         onClose={closeAddMySKSidePanelOpen}
         api={addSKApi}
+      />
+      <ChangeLimitPanel
+        title="Change staking limit"
+        opened={changeLimitOperatorId !== null}
+        onClose={closeChangeLimitPanel}
+        api={changeLimitApi}
       />
     </Main>
   )
