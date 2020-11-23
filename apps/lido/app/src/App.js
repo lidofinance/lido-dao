@@ -18,6 +18,7 @@ import ChangeFeeSidePanel from './components/ChangeFeeSidePanel'
 import ChangeWCSidePanel from './components/ChangeWCSidePanel'
 import DbeSidePanel from './components/DbeSidePanel'
 import ChangeFeeDistrSidePanel from './components/ChangeFeeDistrSidePanel'
+import WcBadge from './components/WcBadge'
 
 export default function App() {
   const { api, appState, currentApp, guiStyle } = useAragonApi()
@@ -212,7 +213,11 @@ export default function App() {
         label: 'Withdrawal Credentials',
         content: (
           <span style={{ display: 'flex', alignItems: 'center' }}>
-            <strong>{withdrawalCredentials || 'Unset'}</strong>
+            {withdrawalCredentials ? (
+              <WcBadge wc={withdrawalCredentials} />
+            ) : (
+              <strong>None</strong>
+            )}
             <Button
               icon={<IconEdit />}
               label="Change withdrawal credentials"
