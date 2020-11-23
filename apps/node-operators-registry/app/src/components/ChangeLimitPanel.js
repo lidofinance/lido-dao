@@ -32,7 +32,7 @@ function PanelContent({ api, onClose }) {
       validateOnBlur={false}
       validateOnChange={false}
     >
-      {({ values, errors, submitForm, isSubmitting, isValidating }) => {
+      {({ submitForm, isSubmitting, isValidating }) => {
         return (
           <form
             css={`
@@ -43,8 +43,6 @@ function PanelContent({ api, onClose }) {
               submitForm()
             }}
           >
-            <pre>{JSON.stringify(values, null, 2)}</pre>
-            <pre>{JSON.stringify(errors, null, 2)}</pre>
             <Info
               title="Action"
               css={`
