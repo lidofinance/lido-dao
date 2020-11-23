@@ -47,7 +47,7 @@ const validationSchema = yup
 
       return this.createError({
         path: 'total',
-        message: 'All fields must total to 100.',
+        message: 'All fields must add up to 100%',
       })
     },
   })
@@ -94,8 +94,8 @@ function PanelContent({ api, onClose }) {
                 margin-bottom: ${3 * GU}px;
               `}
             >
-              This action will change the fee distribution for treasury,
-              insurance and operators. All fields must add up to 100.
+              This action will change the fee distribution between treasury,
+              insurance fund, and Node Operators. All fields must add up to 100%.
             </Info>
             <Field
               name={TREASURY}
