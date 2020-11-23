@@ -72,7 +72,7 @@ function PanelContent({ api, onClose }) {
       validateOnBlur={false}
       validateOnChange={false}
     >
-      {({ values, errors, submitForm, isSubmitting, isValidating }) => {
+      {({ submitForm, isSubmitting, isValidating }) => {
         return (
           <form
             css={`
