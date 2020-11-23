@@ -42,7 +42,7 @@ const validationSchema = yup
     name: 'total',
     test: function ({ operators, insurance, treasury }) {
       const total =
-        parseFloat(operators) + parseFloat(insurance) + parseFloat(treasury)
+        Number(operators) + Number(insurance) + Number(treasury)
       if (total === 100) return true
 
       return this.createError({
