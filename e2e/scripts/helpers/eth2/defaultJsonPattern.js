@@ -26,4 +26,17 @@ export class DefaultJsonPattern {
       targetEpoch: this.jsonData[0].data.target.epoch
     }
   }
+
+  getGenesisTime() {
+    return {
+      genesisTime: this.jsonData.genesis_time
+    }
+  }
+
+  getSpec() {
+    return {
+      slotsPerEpoch: this.jsonData.SLOTS_PER_EPOCH,
+      secondsPerSlot: this.jsonData.SECONDS_PER_SLOT
+    }
+  }
 }

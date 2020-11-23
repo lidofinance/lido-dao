@@ -83,7 +83,7 @@ export async function addSigningKeysOperatorBH(nodeOperatorId, validatorsTestDat
   // logger.debug('Signatures to add' + validatorsSignatures)
   return await nodeOperatorsContract.methods
     .addSigningKeysOperatorBH(nodeOperatorId, validatorsTestData.pubKeys.length, validatorsPubKeys, validatorsSignatures)
-    .send({ from: nosMember, gas: '10000000' })
+    .send({ from: nosMember })
 }
 
 export async function getUnusedSigningKeyCount(nodeOperatorId) {
