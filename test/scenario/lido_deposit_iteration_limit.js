@@ -31,7 +31,7 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
   let pool, nodeOperatorRegistry, validatorRegistrationMock
 
   it('DAO, node operators registry, token, and pool are deployed and initialized', async () => {
-    const deployed = await deployDaoAndPool(appManager, voting, depositIterationLimit)
+    const deployed = await deployDaoAndPool(appManager, voting)
 
     // contracts/Lido.sol
     pool = deployed.pool
@@ -49,7 +49,7 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
 
   it('voting adds a node operator with 16 signing keys', async () => {
     const validatorsLimit = 1000
-    const numKeys = 16
+    const numKeys = 21
 
     const txn = await nodeOperatorRegistry.addNodeOperator('operator_1', nodeOperator, validatorsLimit, { from: voting })
 
@@ -75,103 +75,85 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
     assertBn(totalKeys, numKeys, 'total signing keys')
   })
 
-  it('a user submits 15 * 32 ETH', async () => {
+  it('a user submits 20 * 32 ETH', async () => {
     const referral = ZERO_ADDRESS
-    await pool.submit(referral, { from: user1, value: ETH(15 * 32) })
-    assertBn(await pool.getTotalPooledEther(), ETH(15 * 32), 'total pooled ether')
+    await pool.submit(referral, { from: user1, value: ETH(20 * 32) })
+    assertBn(await pool.getTotalPooledEther(), ETH(20 * 32), 'total controlled ether')
 
     // at this point, no deposit assignments were made and all ether is buffered
-    assertBn(await pool.getBufferedEther(), ETH(15 * 32), 'buffered ether')
+    assertBn(await pool.getBufferedEther(), ETH(20 * 32), 'buffered ether')
 
     const ether2Stat = await pool.getBeaconStat()
-    assertBn(ether2Stat.depositedValidators, 0, 'deposited ether2')
+    assertBn(ether2Stat.depositedValidators, 0, 'deposited validators')
   })
 
-  it('one can assign the buffered ether to validators by calling depositBufferedEther()', async () => {
-    await pool.depositBufferedEther()
+  it('one can assign the buffered ether to validators by calling depositBufferedEther() and passing deposit iteration limit', async () => {
+    const depositIterationLimit = 5
+    await pool.depositBufferedEther(depositIterationLimit)
 
     // no more than depositIterationLimit validators are assigned in a single transaction
     assertBn(await validatorRegistrationMock.totalCalls(), 5, 'total validators assigned')
 
     const ether2Stat = await pool.getBeaconStat()
-    assertBn(ether2Stat.depositedValidators, 5, 'deposited ether2')
+    assertBn(ether2Stat.depositedValidators, 5, 'deposited validators')
+
+    // the rest of the received Ether is still buffered in the pool
+    assertBn(await pool.getBufferedEther(), ETH(15 * 32), 'buffered ether')
   })
 
-  it('at this point, only 5 validators were assigned due to the iteration limit', async () => {
-    assertBn(await validatorRegistrationMock.totalCalls(), 5, 'total validators assigned')
-  })
+  it('one can advance the deposit loop further by calling depositBufferedEther() once again', async () => {
+    const depositIterationLimit = 10
+    await pool.depositBufferedEther(depositIterationLimit)
 
-  it('the rest of the received Ether is still buffered in the pool', async () => {
-    assertBn(await pool.getBufferedEther(), ETH(10 * 32), 'buffered ether')
-  })
-
-  it('one can advance the deposit loop by calling depositBufferedEther()', async () => {
-    await pool.depositBufferedEther()
-
-    assertBn(await validatorRegistrationMock.totalCalls(), 10, 'total validators assigned')
+    assertBn(await validatorRegistrationMock.totalCalls(), 15, 'total validators assigned')
 
     const ether2Stat = await pool.getBeaconStat()
-    assertBn(ether2Stat.depositedValidators, 10, 'deposited ether2')
+    assertBn(ether2Stat.depositedValidators, 15, 'deposited validators')
 
     assertBn(await pool.getBufferedEther(), ETH(5 * 32), 'buffered ether')
   })
 
-  it('voting can change deposit loop iteration limit (setting it to 4)', async () => {
-    await pool.setDepositIterationLimit(4, { from: voting })
-    assertBn(await pool.getDepositIterationLimit(), 4)
-  })
-
-  it('the limit cannot be set to zero', async () => {
-    await assertRevert(pool.setDepositIterationLimit(0, { from: voting }), 'ZERO_LIMIT')
-  })
-
-  it('the new iteration limit comes into effect on the next depositBufferedEther() call', async () => {
-    await pool.depositBufferedEther()
-
-    assertBn(await validatorRegistrationMock.totalCalls(), 14)
-
-    const ether2Stat = await pool.getBeaconStat()
-    assertBn(ether2Stat.depositedValidators, 14, 'deposited ether2')
-
-    assertBn(await pool.getBufferedEther(), ETH(1 * 32), 'buffered ether')
-  })
-
   it('the number of assigned validators is limited by the remaining ether', async () => {
-    await pool.depositBufferedEther()
+    const depositIterationLimit = 10
+    await pool.depositBufferedEther(depositIterationLimit)
 
-    assertBn(await validatorRegistrationMock.totalCalls(), 15)
+    assertBn(await validatorRegistrationMock.totalCalls(), 20)
 
     const ether2Stat = await pool.getBeaconStat()
-    assertBn(ether2Stat.depositedValidators, 15, 'deposited ether2')
-  })
+    assertBn(ether2Stat.depositedValidators, 20, 'deposited validators')
 
-  it('the is no ether left buffered in the pool', async () => {
+    // the is no ether left buffered in the pool
     assertBn(await pool.getBufferedEther(), ETH(0), 'buffered ether')
   })
 
   it('a user submits 2 * 32 ETH', async () => {
     const referral = ZERO_ADDRESS
     await pool.submit(referral, { from: user1, value: ETH(2 * 32) })
-    assertBn(await pool.getTotalPooledEther(), ETH(17 * 32), 'total pooled ether')
 
+    assertBn(await pool.getTotalPooledEther(), ETH(22 * 32), 'total controlled ether')
     assertBn(await pool.getBufferedEther(), ETH(2 * 32), 'buffered ether')
   })
 
   it('the number of assigned validators is still limited by the number of available validator keys', async () => {
-    await pool.depositBufferedEther()
+    const depositIterationLimit = 10
+    await pool.depositBufferedEther(depositIterationLimit)
 
-    assertBn(await validatorRegistrationMock.totalCalls(), 16)
+    assertBn(await validatorRegistrationMock.totalCalls(), 21)
 
     const ether2Stat = await pool.getBeaconStat()
-    assertBn(ether2Stat.depositedValidators, 16, 'deposited ether2')
+    assertBn(ether2Stat.depositedValidators, 21, 'deposited validators')
+
+    // the rest of the received Ether is still buffered in the pool
+    assertBn(await pool.getBufferedEther(), ETH(1 * 32), 'buffered ether')
   })
 
   it('depositBufferedEther is a nop if there are no signing keys available', async () => {
-    await pool.depositBufferedEther()
-    assertBn(await validatorRegistrationMock.totalCalls(), 16, 'total validators assigned')
-  })
+    const depositIterationLimit = 10
+    await pool.depositBufferedEther(depositIterationLimit)
 
-  it('the rest of the received Ether is still buffered in the pool', async () => {
+    assertBn(await validatorRegistrationMock.totalCalls(), 21, 'total validators assigned')
+
+    // the rest of the received Ether is still buffered in the pool
     assertBn(await pool.getBufferedEther(), ETH(1 * 32), 'buffered ether')
   })
 })

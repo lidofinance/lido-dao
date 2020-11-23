@@ -36,7 +36,8 @@ import {
   SET_NODE_OPERATOR_ADDRESS_ROLE,
   SET_NODE_OPERATOR_ACTIVE_ROLE,
   SET_NODE_OPERATOR_LIMIT_ROLE,
-  REPORT_STOPPED_VALIDATORS_ROLE
+  REPORT_STOPPED_VALIDATORS_ROLE,
+  ZERO_ADDRESS
 } from '../scripts/helpers/constants'
 
 test.before('Connecting Web3', async (t) => {
@@ -101,9 +102,6 @@ test('Full flow test ', async (t) => {
   t.is(result[0], TREASURY_FEE.toString(), 'Check that treasury fee was set correctly')
   t.is(result[1], INSURANCE_FEE.toString(), 'Check that insurance fee was set correctly')
   t.is(result[2], NODE_OPERATOR_BASIC_FEE.toString(), 'Check that nodeOperator basic fee was set correctly')
-
-  logger.info('Check the correctness of deposit iteration limit')
-  t.is(await lidoHelper.getDepositIterationLimit(), '16', 'Check that deposit iteration limit was set correctly')
 
   logger.info('Add nodeOperator1 and add signing keys')
   await nodeOperatorsHelper.addNodeOperator('test provider1', nosMember1, 2, holder1, quorumHolders)
@@ -368,7 +366,8 @@ test('Full flow test ', async (t) => {
 
   logger.info('Check deposit iteration limit')
   const user5Deposit = ETH(20 * 32)
-  await lidoHelper.depositToLidoContract(user5, user5Deposit)
+  const maxDepositCalls = 16
+  await lidoHelper.depositToLidoContract(user5, user5Deposit, ZERO_ADDRESS, maxDepositCalls)
   ether2Stat = await lidoHelper.getBeaconStat()
   t.is(await stEthHelper.getBalance(user5), user5Deposit, 'Check that user receive an appropriate amount of stEth tokens')
   t.is(
