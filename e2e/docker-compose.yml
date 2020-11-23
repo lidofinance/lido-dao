@@ -1,55 +1,56 @@
 version: '3.7'
 services:
-  # node1:
-  #   build:
-  #     context: ./docker/geth/
-  #   container_name: node1
-  #   ports:
-  #     - 8545:8545
-  #     - 8546:8546
-  #   volumes:
-  #     - ./data/ethereum:/data
-  #   environment:
-  #     - DATA_DIR=/data
-  #     - MINE=${MINE}
-  #     - NETWORK_ID=5
-  #   networks:
-  #     eth2:
   node1:
-    image: ethereum/client-go
+    build:
+      context: ./docker/geth/
     container_name: node1
     ports:
       - 8545:8545
       - 8546:8546
     volumes:
       - ./data/devchain:/data
-    # environment:
-    #   - DATA_DIR=/data
-    #   - MINE=${MINE}
-    #   - NETWORK_ID=5
-    command: >
-      --nousb
-      --nodiscover
-      --datadir /data
-      --dev
-      --dev.period "$BLOCK_TIME"
-      --miner.gaslimit "$GAS_LIMIT"
-      --miner.gasprice "$GAS_PRICE"
-      --networkid "$NETWORK_ID"
-      --allow-insecure-unlock
-      --http
-      --http.addr 0.0.0.0
-      --http.corsdomain '*'
-      --http.vhosts '*'
-      --http.api 'eth,net,web3,personal,debug'
-      --ws
-      --ws.addr 0.0.0.0
-      --ws.port 8546
-      --ws.origins '*'
-      --ws.api 'eth,net,web3'
-      --vmdebug
+    environment:
+      - DATA_DIR=/data
+      - NETWORK_ID=${NETWORK_ID}
+      - GAS_PRICE=${GAS_PRICE}
+      - GAS_LIMIT=${GAS_LIMIT}
     networks:
       eth2:
+  # node1:
+  #   image: ethereum/client-go
+  #   container_name: node1
+  #   ports:
+  #     - 8545:8545
+  #     - 8546:8546
+  #   volumes:
+  #     - ./data/devchain:/data
+  #   # environment:
+  #   #   - DATA_DIR=/data
+  #   #   - MINE=${MINE}
+  #   #   - NETWORK_ID=5
+  #   command: >
+  #     --nousb
+  #     --nodiscover
+  #     --datadir /data
+  #     --dev
+  #     --dev.period "$BLOCK_TIME"
+  #     --miner.gaslimit "$GAS_LIMIT"
+  #     --miner.gasprice "$GAS_PRICE"
+  #     --networkid "$NETWORK_ID"
+  #     --allow-insecure-unlock
+  #     --http
+  #     --http.addr 0.0.0.0
+  #     --http.corsdomain '*'
+  #     --http.vhosts '*'
+  #     --http.api 'eth,net,web3,personal,debug'
+  #     --ws
+  #     --ws.addr 0.0.0.0
+  #     --ws.port 8546
+  #     --ws.origins '*'
+  #     --ws.api 'eth,net,web3'
+  #     --vmdebug
+  #   networks:
+  #     eth2:
 
   ipfs:
     build:
