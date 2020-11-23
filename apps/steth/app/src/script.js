@@ -1,7 +1,6 @@
 import 'core-js/stable'
 import 'regenerator-runtime/runtime'
 import Aragon, { events } from '@aragon/api'
-import { fromWei } from 'web3-utils'
 
 const app = new Aragon()
 
@@ -17,6 +16,8 @@ app.store(
           return { ...nextState, isStopped: await getIsStopped() }
         case 'Resumed':
           return { ...nextState, isStopped: await getIsStopped() }
+        case 'Transfer':
+          return { ...nextState, totalSupply: await getTotalSupply() }
         case events.SYNC_STATUS_SYNCING:
           return { ...nextState, isSyncing: true }
         case events.SYNC_STATUS_SYNCED:
@@ -51,18 +52,18 @@ function initializeState() {
   }
 }
 
-async function getIsStopped() {
-  return await app.call('isStopped').toPromise()
+function getIsStopped() {
+  return app.call('isStopped').toPromise()
 }
 
-async function getTokenName() {
-  return await app.call('name').toPromise()
+function getTokenName() {
+  return app.call('name').toPromise()
 }
 
-async function getTokenSymbol() {
-  return await app.call('symbol').toPromise()
+function getTokenSymbol() {
+  return app.call('symbol').toPromise()
 }
 
-async function getTotalSupply() {
-  return fromWei(await app.call('totalSupply').toPromise())
+function getTotalSupply() {
+  return app.call('totalSupply').toPromise()
 }
