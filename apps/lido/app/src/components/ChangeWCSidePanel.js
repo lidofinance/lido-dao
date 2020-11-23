@@ -14,7 +14,7 @@ const validationSchema = yup.object().shape({
     .required()
     .test(
       'credentials',
-      'Credentials must be a 64-character hexadecimal number',
+      'Credentials must be a 32-byte hexadecimal number',
       (credentials) => {
         const hasPrefix = credentials.substring(0, 2) === '0x'
         const withoutPrefix = hasPrefix ? credentials.substring(2) : credentials
