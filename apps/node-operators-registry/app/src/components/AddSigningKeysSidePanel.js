@@ -17,10 +17,13 @@ const validationSchema = yup.object().shape({
       let data
       try {
         data = JSON.parse(json)
+        if (!Array.isArray(data)) {
+          throw new Error('JSON must be an array')
+        }
       } catch (e) {
         return this.createError({
           path: 'json',
-          message: 'Invalid JSON',
+          message: e.message || 'Invalid JSON',
         })
       }
 
