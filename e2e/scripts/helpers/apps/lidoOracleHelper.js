@@ -39,16 +39,16 @@ export async function setQuorum(quorum, holder, holders) {
   return await voteForAction(voteId, holders, 'Set quorum')
 }
 
-export async function setReportIntervalDuration(duration, holder, holders) {
+export async function setBeaconSpec({ epochsPerFrame, slotsPerEpoch, secondsPerSlot, genesisTime }, holder, holders) {
   const callData1 = encodeCallScript([
     {
       to: getProxyAddress(),
-      calldata: await lidoOracleContract.methods.setReportIntervalDuration(duration).encodeABI()
+      calldata: await lidoOracleContract.methods.setBeaconSpec(epochsPerFrame, slotsPerEpoch, secondsPerSlot, genesisTime).encodeABI()
     }
   ])
 
-  const voteId = await createVote(callData1, holder, 'Set report interval duration')
-  return await voteForAction(voteId, holders, 'Set report interval duration')
+  const voteId = await createVote(callData1, holder, 'Set beacon spec')
+  return await voteForAction(voteId, holders, 'Set beacon spec')
 }
 
 export async function getAllOracleMembers() {
@@ -60,8 +60,8 @@ export async function getCurrentReportInterval() {
   return await lidoOracleContract.methods.getCurrentReportInterval().call()
 }
 
-export async function getReportIntervalDuration() {
-  return await lidoOracleContract.methods.getReportIntervalDurationSeconds().call()
+export async function getBeaconSpec() {
+  return await lidoOracleContract.methods.beaconSpec().call()
 }
 
 export async function addOracleMember(member, holder, holders) {
