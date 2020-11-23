@@ -176,13 +176,15 @@ if [ ! $SNAPSHOT ] && [ $DEPLOY ] ; then
   echo "Deploying Lido!"
   # yarn deploy:e2e:all
   yarn compile
-  echo "Take snapshots for devchain"
-  node ./scripts/gen-accounts.js $RPC_ENDPOINT 50 $DEVCHAIN_DIR "$MOCK_VALIDATOR_MNEMONIC" $PASSWORD
+  echo "Generating mock accounts"
+  # node ./scripts/gen-accounts.js $RPC_ENDPOINT 50 $DEVCHAIN_DIR "$MOCK_VALIDATOR_MNEMONIC" $PASSWORD
   yarn deploy:e2e:aragon-env
 
   STAGE_DIR="stage0"
   if [ $MAKE_SNAPSHOT ] && [ ! -d $SNAPSHOTS_DIR/$STAGE_DIR ]; then
     echo "Take snapshots for $STAGE_DIR"
+    # wait for state save
+    sleep 5
     mkdir -p $SNAPSHOTS_DIR/$STAGE_DIR
     docker-compose stop node1
     cd $DATA_DIR
@@ -195,10 +197,10 @@ if [ ! $SNAPSHOT ] && [ $DEPLOY ] ; then
   fi
 
   yarn deploy:e2e:aragon-std-apps
-  node ./scripts/gen-accounts.js $RPC_ENDPOINT 1 $DEVCHAIN_DIR "$MOCK_VALIDATOR_MNEMONIC" $PASSWORD
+  # node ./scripts/gen-accounts.js $RPC_ENDPOINT 1 $DEVCHAIN_DIR "$MOCK_VALIDATOR_MNEMONIC" $PASSWORD
   yarn deploy:e2e:apm-and-template
   yarn deploy:e2e:apps
-  node ./scripts/gen-accounts.js $RPC_ENDPOINT 1 $DEVCHAIN_DIR "$MOCK_VALIDATOR_MNEMONIC" $PASSWORD
+  # node ./scripts/gen-accounts.js $RPC_ENDPOINT 1 $DEVCHAIN_DIR "$MOCK_VALIDATOR_MNEMONIC" $PASSWORD
   yarn deploy:e2e:dao
 
   STAGE_DIR="stage1"
@@ -207,6 +209,7 @@ if [ ! $SNAPSHOT ] && [ $DEPLOY ] ; then
     mkdir -p $SNAPSHOTS_DIR/$STAGE_DIR
     docker-compose stop node1
     docker-compose stop ipfs
+    sleep 5
     cd $DATA_DIR
     echo "Take snapshots for devchain"
     zip -rqu $SNAPSHOTS_DIR/$STAGE_DIR/devchain.zip devchain -x *.ipc
@@ -384,9 +387,10 @@ if [ $MAKE_SNAPSHOT ] && [ ! $SNAPSHOT ] && [ ! -d $SNAPSHOTS_DIR/$STAGE_DIR ]; 
   echo "Take snapshots for $STAGE_DIR"
   mkdir -p $SNAPSHOTS_DIR/$STAGE_DIR
   docker-compose stop node1
+  sleep 5
   cd $DATA_DIR
   echo "Take snapshots for devchain"
-  zip -rqu $SNAPSHOTS_DIR/$STAGE_DIR/devchain.zip devchain -x *.ipc
+  zip -rqu $SNAPSHOTS_DIR/$STAGE_DIR/devchain.zip devchain
   echo "Take snapshots for testnet"
   zip -rqu $SNAPSHOTS_DIR/$STAGE_DIR/testnet.zip testnet
   echo "Take snapshots for validators"
@@ -405,7 +409,8 @@ if [ $ORACLES ]; then
   if [ $MAKE_SNAPSHOT ]&& [ ! $SNAPSHOT ] && [ ! -d $SNAPSHOTS_DIR/stage2 ]; then
     echo "Take snapshots for stage 2"
     mkdir -p $SNAPSHOTS_DIR/stage2
-    docker-compose pause
+    docker-compose stop node1
+    sleep 5
     cd $DATA_DIR
     echo "Take snapshots for devchain"
     zip -rqu $SNAPSHOTS_DIR/stage2/devchain.zip devchain
@@ -414,7 +419,7 @@ if [ $ORACLES ]; then
     # echo "Take snapshots for validators"
     # zip -rqu $SNAPSHOTS_DIR/stage1/validators.zip validators
     cd -
-    docker-compose unpause
+    docker-compose start node1
   fi
 fi
 
