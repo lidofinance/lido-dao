@@ -8339,6 +8339,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"copy-to-clipboard@npm:^3":
+  version: 3.3.1
+  resolution: "copy-to-clipboard@npm:3.3.1"
+  dependencies:
+    toggle-selection: ^1.0.6
+  checksum: 9707f2e405ca4019de1f4194565568acdf3d1dd8a59f7b8f63d0e7257648132b579461e7aeb6140169cb943cf4b6a243b377cf0437d8c10c6f5e5bb3935dea78
+  languageName: node
+  linkType: hard
+
 "copyfiles@npm:^2.3.0":
   version: 2.4.0
   resolution: "copyfiles@npm:2.4.0"
@@ -16195,6 +16204,7 @@ __metadata:
     parcel-bundler: ^1.12.4
     prettier: ^2.1.2
     react: ^16.13.1
+    react-copy-to-clipboard: ^5.0.2
     react-dom: ^16.13.1
     regenerator-runtime: ^0.13.7
     styled-components: ^5.2.0
@@ -20492,7 +20502,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"prop-types@npm:^15.5.10, prop-types@npm:^15.6.0, prop-types@npm:^15.6.2, prop-types@npm:^15.7.2":
+"prop-types@npm:^15.5.10, prop-types@npm:^15.5.8, prop-types@npm:^15.6.0, prop-types@npm:^15.6.2, prop-types@npm:^15.7.2":
   version: 15.7.2
   resolution: "prop-types@npm:15.7.2"
   dependencies:
@@ -20966,6 +20976,18 @@ __metadata:
   peerDependencies:
     react: ">=15.0.0"
   checksum: d23983c7ed7f6b537eeef2edadc8f9b356f569f00fa32749c00d22b13d65541248808c01b762b845a4d7fe47d4695a86920b9630de71591d7a2e541e96788e1c
+  languageName: node
+  linkType: hard
+
+"react-copy-to-clipboard@npm:^5.0.2":
+  version: 5.0.2
+  resolution: "react-copy-to-clipboard@npm:5.0.2"
+  dependencies:
+    copy-to-clipboard: ^3
+    prop-types: ^15.5.8
+  peerDependencies:
+    react: ^15.3.0 || ^16.0.0
+  checksum: 7a0ceebcfde3118302885f115c9992ecf191d2cca5712f7fde9cfc8ad62b98d6d41b647352b408df9cf993c662047a6e55a66b4ae55dc6559a8f82ffb4aa5513
   languageName: node
   linkType: hard
 
@@ -24096,6 +24118,13 @@ resolve@1.1.x:
     regex-not: ^1.0.2
     safe-regex: ^1.1.0
   checksum: ed733fdff8970628ef2d425564d1331a812e57cbb6ab7675c970046b2b792cbf2386c8292e45bb201bf85ca71a7708e3e1ffb979f5cd089ad4a82a12df75939b
+  languageName: node
+  linkType: hard
+
+"toggle-selection@npm:^1.0.6":
+  version: 1.0.6
+  resolution: "toggle-selection@npm:1.0.6"
+  checksum: c47702aad780581f17367c413c4dc55b61a31b0c15c87a08461f4c4618457b11efce8ad9a7bf7b79fb23d17128b1c7da9248647a34dd15ae36c9afbdd2084d9f
   languageName: node
   linkType: hard
 
