@@ -11,7 +11,11 @@ const defaultValue = ''
 const defaultState = {
   isStopped: true,
   fee: defaultValue,
-  feeDistribution: defaultValue,
+  feeDistribution: {
+    insuranceFeeBasisPoints: defaultValue,
+    operatorsFeeBasisPoints: defaultValue,
+    treasuryFeeBasisPoints: defaultValue,
+  },
   withdrawalCredentials: defaultValue,
   bufferedEther: defaultValue,
   totalPooledEther: defaultValue,

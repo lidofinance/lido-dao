@@ -56,7 +56,7 @@ function initializeState() {
       ...cachedState,
       isStopped: await isStopped(),
       fee: await getFee(),
-      // feeDistribution: await getFeeDistribution(),
+      feeDistribution: await getFeeDistribution(),
       withdrawalCredentials: await getWithdrawalCredentials(),
       bufferedEther: await getBufferedEther(),
       totalPooledEther: await getTotalPooledEther(),
@@ -72,20 +72,20 @@ function initializeState() {
 }
 
 // API
-async function isStopped() {
-  return await app.call('isStopped').toPromise()
+function isStopped() {
+  return app.call('isStopped').toPromise()
 }
 
-async function getFee() {
-  return await app.call('getFee').toPromise()
+function getFee() {
+  return app.call('getFee').toPromise()
 }
 
-async function getFeeDistribution() {
-  return await app.call('getFeeDistribution').toPromise()
+function getFeeDistribution() {
+  return app.call('getFeeDistribution').toPromise()
 }
 
-async function getWithdrawalCredentials() {
-  return await app.call('getWithdrawalCredentials').toPromise()
+function getWithdrawalCredentials() {
+  return app.call('getWithdrawalCredentials').toPromise()
 }
 
 async function getBufferedEther() {
@@ -96,16 +96,16 @@ async function getTotalPooledEther() {
   return fromWei(await app.call('getTotalPooledEther').toPromise())
 }
 
-async function getToken() {
-  return await app.call('getToken').toPromise()
+function getToken() {
+  return app.call('getToken').toPromise()
 }
 
-async function getValidatorRegistrationContract() {
-  return await app.call('getValidatorRegistrationContract').toPromise()
+function getValidatorRegistrationContract() {
+  return app.call('getValidatorRegistrationContract').toPromise()
 }
 
-async function getOracle() {
-  return await app.call('getOracle').toPromise()
+function getOracle() {
+  return app.call('getOracle').toPromise()
 }
 
 // async function getOperators() {
