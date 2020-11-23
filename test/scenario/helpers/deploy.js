@@ -104,12 +104,7 @@ async function deployDaoAndPool(appManager, voting) {
     acl.createPermission(pool.address, token.address, TOKEN_BURN_ROLE, appManager, { from: appManager })
   ])
 
-  await pool.initialize(
-    token.address,
-    validatorRegistrationMock.address,
-    oracleMock.address,
-    nodeOperatorRegistry.address
-  )
+  await pool.initialize(token.address, validatorRegistrationMock.address, oracleMock.address, nodeOperatorRegistry.address)
 
   await oracleMock.setPool(pool.address)
   await validatorRegistrationMock.reset()
