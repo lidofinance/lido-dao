@@ -25,7 +25,7 @@
     "test:coverage:6": "buidler coverage --network coverage --testfiles test/0.6.12 --config buidler.config.6.js",
     "test:e2e": "npm run compile && ava -T 250000 -v",
     "estimate-deposit-loop-gas": "yarn run test:unit ./estimate_deposit_loop_gas.js",
-    "compile": "yarn run compile:4 && yarn run compile:6",
+    "compile": "yarn run compile:4 && yarn run compile:6 && yarn extract-abi",
     "compile:4": "buidler compile",
     "compile:6": "buidler compile --config buidler.config.6.js --force && buidler compile --config buidler.config.6.11.js --force",
     "extract-abi": "node ./scripts/extract-abi.js",
