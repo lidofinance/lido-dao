@@ -89,7 +89,7 @@ function PanelContent({ api, onClose }) {
                 margin-bottom: ${3 * GU}px;
               `}
             >
-              This action will add signing keys to the set of your usable keys.
+              This action will add signing keys to the set of usable keys.
               Please paste the contents of your JSON file into the field below.
             </Info>
             <Field
