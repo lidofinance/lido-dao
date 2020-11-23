@@ -36,14 +36,14 @@
     "prettier": "^2.1.2"
   },
   "scripts": {
-    "build": "npm run sync-assets && npm run build:app && npm run build:script",
+    "build": "yarn sync-assets && yarn build:app && yarn build:script",
     "build:app": "parcel build index.html -d ../dist/ --public-url \".\" --no-cache",
     "build:script": "parcel build src/script.js --out-dir ../dist/ --no-cache",
     "watch:script": "parcel watch src/script.js --out-dir ../dist/ --no-hmr",
     "serve": "parcel serve index.html --out-dir ../dist/ --no-cache",
-    "watch": "npm run watch:script",
+    "watch": "yarn watch:script",
     "sync-assets": "copy-aragon-ui-assets ../dist && copyfiles -u 1 './public/**/*' ../dist",
-    "start": "npm run sync-assets && npm run watch:script & npm run serve",
-    "dev": "npm run sync-assets && npm run watch:script & npm run serve -- --port 3012"
+    "start": "yarn sync-assets && yarn watch:script & yarn serve",
+    "dev": "yarn sync-assets && yarn watch:script & yarn serve -- --port 3012"
   }
 }
