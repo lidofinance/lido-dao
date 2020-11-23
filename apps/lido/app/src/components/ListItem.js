@@ -1,7 +1,7 @@
 import { GU, useTheme } from '@aragon/ui'
 import React from 'react'
 
-export function ListItem({ children }) {
+export function ListItem({ children, subBullet }) {
   const theme = useTheme()
 
   return (
@@ -12,6 +12,7 @@ export function ListItem({ children }) {
         align-items: center;
         list-style: none;
         height: 40px;
+        margin-left: ${subBullet ? '24px' : '0px'};
 
         & + & {
           margin-top: ${2 * GU}px;
