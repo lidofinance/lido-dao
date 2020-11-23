@@ -19,11 +19,6 @@
       "name": "Set oracle contract address",
       "id": "SET_ORACLE",
       "params": []
-    },
-    {
-      "name": "Set maximum number of Ethereum 2.0 validators registered in a single transaction",
-      "id": "SET_DEPOSIT_ITERATION_LIMIT",
-      "params": []
     }
   ],
   "environments": {

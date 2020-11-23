@@ -15,12 +15,11 @@ contract TestLido is Lido {
         ISTETH _token,
         IValidatorRegistration validatorRegistration,
         address _oracle,
-        INodeOperatorsRegistry _operators,
-        uint256 _depositIterationLimit
+        INodeOperatorsRegistry _operators
     )
     public
     {
-        super.initialize(_token, validatorRegistration, _oracle, _operators, _depositIterationLimit);
+        super.initialize(_token, validatorRegistration, _oracle, _operators);
         treasury = address(new VaultMock());
         insurance = address(new VaultMock());
     }

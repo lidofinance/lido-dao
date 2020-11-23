@@ -11,7 +11,7 @@ module.exports = {
   deployDaoAndPool
 }
 
-async function deployDaoAndPool(appManager, voting, depositIterationLimit = 10) {
+async function deployDaoAndPool(appManager, voting) {
   // Deploy the DAO, oracle and validator registration mocks, and base contracts for
   // StETH (the token), Lido (the pool) and NodeOperatorsRegistry (the Node Operators registry)
 
@@ -48,7 +48,6 @@ async function deployDaoAndPool(appManager, voting, depositIterationLimit = 10) 
     POOL_PAUSE_ROLE,
     POOL_MANAGE_FEE,
     POOL_MANAGE_WITHDRAWAL_KEY,
-    POOL_SET_DEPOSIT_ITERATION_LIMIT,
     NODE_OPERATOR_REGISTRY_MANAGE_SIGNING_KEYS,
     NODE_OPERATOR_REGISTRY_ADD_NODE_OPERATOR_ROLE,
     NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_ACTIVE_ROLE,
@@ -62,7 +61,6 @@ async function deployDaoAndPool(appManager, voting, depositIterationLimit = 10) 
     pool.PAUSE_ROLE(),
     pool.MANAGE_FEE(),
     pool.MANAGE_WITHDRAWAL_KEY(),
-    pool.SET_DEPOSIT_ITERATION_LIMIT(),
     nodeOperatorRegistry.MANAGE_SIGNING_KEYS(),
     nodeOperatorRegistry.ADD_NODE_OPERATOR_ROLE(),
     nodeOperatorRegistry.SET_NODE_OPERATOR_ACTIVE_ROLE(),
@@ -79,7 +77,6 @@ async function deployDaoAndPool(appManager, voting, depositIterationLimit = 10) 
     acl.createPermission(voting, pool.address, POOL_PAUSE_ROLE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, POOL_MANAGE_FEE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, POOL_MANAGE_WITHDRAWAL_KEY, appManager, { from: appManager }),
-    acl.createPermission(voting, pool.address, POOL_SET_DEPOSIT_ITERATION_LIMIT, appManager, { from: appManager }),
     // Allow voting to manage node operators registry
     acl.createPermission(voting, nodeOperatorRegistry.address, NODE_OPERATOR_REGISTRY_MANAGE_SIGNING_KEYS, appManager, {
       from: appManager
@@ -111,8 +108,7 @@ async function deployDaoAndPool(appManager, voting, depositIterationLimit = 10) 
     token.address,
     validatorRegistrationMock.address,
     oracleMock.address,
-    nodeOperatorRegistry.address,
-    depositIterationLimit
+    nodeOperatorRegistry.address
   )
 
   await oracleMock.setPool(pool.address)
