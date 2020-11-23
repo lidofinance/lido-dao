@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import { useAragonApi, useGuiStyle } from '@aragon/api-react'
 import {
   Button,
@@ -94,6 +94,14 @@ function App() {
   )
 
   // ADD SIGNING KEYS FOR NodeOperator
+  const currentUserOperatorId = useMemo(() => {
+    const currentUserAmongOperators = nodeOperators.find(
+      ({ rewardAddress }) => rewardAddress === connectedAccount
+    )
+    if (!currentUserAmongOperators) return -1
+    return currentUserAmongOperators.id
+  }, [connectedAccount, nodeOperators])
+
   const [addMySKSidePanelOpen, setAddMySkSidePanelOpen] = useState(false)
   const openAddMySKSidePanelOpen = useCallback(
     () => setAddMySkSidePanelOpen(true),
@@ -106,14 +114,14 @@ function App() {
   const addSKApi = useCallback(
     (quantity, pubkeys, signatures) =>
       api
-        .addSigningKeysNodeOperator(
-          addSigningKeysToOperatorId,
+        .addSigningKeysOperatorBH(
+          currentUserOperatorId,
           quantity,
           pubkeys,
           signatures
         )
         .toPromise(),
-    [api, addSigningKeysToOperatorId]
+    [api, currentUserOperatorId]
   )
 
   // GET SIGNING KEYS
@@ -163,9 +171,12 @@ function App() {
               totalSigningKeys,
               usedSigningKeys,
               active,
+              id,
             }) => [
               // eslint-disable-next-line react/jsx-key
-              <strong>{name}</strong>,
+              <strong>
+                {name} {currentUserOperatorId === id && '(you)'}
+              </strong>,
               // eslint-disable-next-line react/jsx-key
               <IdentityBadge entity={rewardAddress} />,
               // eslint-disable-next-line react/jsx-key
@@ -192,7 +203,7 @@ function App() {
                 </strong>
               ),
             ]}
-            renderEntryActions={({ name, active, id, rewardAddress }) => (
+            renderEntryActions={({ name, active, id }) => (
               <ContextMenu zIndex={1}>
                 {active ? (
                   <MenuItem
@@ -212,11 +223,11 @@ function App() {
                   icon={<IconWrite />}
                   label="add signing keys (Manager)"
                 />
-                {connectedAccount === rewardAddress && (
+                {currentUserOperatorId === id && (
                   <MenuItem
                     onClick={openAddMySKSidePanelOpen}
                     icon={<IconWrite />}
-                    label="add signing keys"
+                    label="add my signing keys"
                   />
                 )}
                 <Toast>
@@ -275,11 +286,13 @@ function App() {
         addNodeOperatorApi={addNodeOperatorApi}
       />
       <AddSigningKeysSidePanel
+        title="Add signing keys as Manager"
         opened={addSigningKeysToOperatorId !== null}
         onClose={closeAddSKSidePanel}
         api={addSKManagerApi}
       />
       <AddSigningKeysSidePanel
+        title="Add my signing keys"
         opened={addMySKSidePanelOpen}
         onClose={closeAddMySKSidePanelOpen}
         api={addSKApi}
