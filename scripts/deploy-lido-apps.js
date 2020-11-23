@@ -6,8 +6,7 @@ const namehash = require('eth-ens-namehash').hash
 const runOrWrapScript = require('./helpers/run-or-wrap-script')
 const { log, logSplitter, logWideSplitter, logHeader } = require('./helpers/log')
 const { readNetworkState, persistNetworkState, updateNetworkState } = require('./helpers/persisted-network-state')
-const { readJSON, directoryExists } = require('./helpers/fs')
-const { exec, execLive } = require('./helpers/exec')
+const { execLive } = require('./helpers/exec')
 const { filterObject } = require('./helpers/collections')
 const { readAppName } = require('./helpers/aragon')
 
@@ -72,17 +71,6 @@ async function publishApp(appName, env, netName, appsDirPath, releaseType) {
   log(`App name: ${chalk.yellow(appFullName)}`)
   log(`App ID: ${chalk.yellow(appId)}`)
   logSplitter()
-
-  const appFrontendPath = path.join(appRootPath, 'app')
-  const hasFrontend = await directoryExists(appFrontendPath)
-
-  if (hasFrontend) {
-    logSplitter(`Installing frontend deps for app '${appName}'`)
-    await execLive('npm', { args: ['install'], cwd: appFrontendPath })
-    logSplitter()
-  } else {
-    log(`The app has no frontend`)
-  }
 
   await execLive('buidler', {
     args: [
