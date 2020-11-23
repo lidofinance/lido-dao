@@ -2,6 +2,7 @@ import React from 'react'
 import { useAragonApi } from '@aragon/api-react'
 import { Box, Header, Main, SyncIndicator, Button, useTheme } from '@aragon/ui'
 import ListItem from './components/ListItem'
+import { formatEth } from './utils'
 
 export default function App() {
   const { api, appState, currentApp, guiStyle } = useAragonApi()
@@ -53,7 +54,7 @@ export default function App() {
             // eslint-disable-next-line react/jsx-key
             ['Symbol', <strong>{tokenSymbol}</strong>],
             // eslint-disable-next-line react/jsx-key
-            ['Total supply', <strong>{totalSupply}</strong>],
+            ['Total supply', <strong>{formatEth(totalSupply)}</strong>],
             [
               'Status',
               isStopped ? (

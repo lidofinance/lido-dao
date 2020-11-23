@@ -19,6 +19,7 @@ import ChangeWCSidePanel from './components/ChangeWCSidePanel'
 import DbeSidePanel from './components/DbeSidePanel'
 import ChangeFeeDistrSidePanel from './components/ChangeFeeDistrSidePanel'
 import WcBadge from './components/WcBadge'
+import { formatEth } from './utils'
 
 export default function App() {
   const { api, appState, currentApp, guiStyle } = useAragonApi()
@@ -230,11 +231,11 @@ export default function App() {
       },
       {
         label: 'Buffered Ether',
-        content: <strong>{bufferedEther || 'No data'}</strong>,
+        content: <strong>{formatEth(bufferedEther) || 'No data'}</strong>,
       },
       {
         label: 'Total Pooled Ether',
-        content: <strong>{totalPooledEther || 'No data'}</strong>,
+        content: <strong>{formatEth(totalPooledEther) || 'No data'}</strong>,
       },
       {
         label: 'Validator Registration Contract',
@@ -265,7 +266,7 @@ export default function App() {
         label: 'Deposits',
         content: <strong>{stat.depositedValidators}</strong>,
       },
-      { label: 'Balance', content: <strong>{stat.beaconBalance}</strong> },
+      { label: 'Balance', content: <strong>{formatEth(stat.beaconBalance)}</strong> },
     ]
   }, [appState])
 
