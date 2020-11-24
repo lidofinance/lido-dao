@@ -146,7 +146,7 @@ export default function App() {
         label: 'Fee',
         content: (
           <span style={{ display: 'flex', alignItems: 'center' }}>
-            <strong>{fee ? fee / 100 : 'No data'}</strong>
+            <strong>{fee ? `${fee / 100}%` : 'No data'}</strong>
             <Button
               icon={<IconEdit />}
               label="Change fee"
