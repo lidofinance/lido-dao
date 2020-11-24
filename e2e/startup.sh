@@ -409,20 +409,20 @@ docker-compose up -d validators2
 if [ $ORACLES ]; then
   echo "Building oracle container"
   ./oracle.sh
-  if [ ! $SNAPSHOT ] && [ $SEED ]; then
+  if [ $SEED ]; then
     $NODE scripts/mock_validators.js
   fi
-  STAGE_DIR="stage3"
-  if [ $MAKE_SNAPSHOT ] && [ ! $SNAPSHOT ] && [ ! -d $SNAPSHOTS_DIR/$STAGE_DIR ]; then
-    echo "Take snapshots for $STAGE_DIR"
-    mkdir -p $SNAPSHOTS_DIR/$STAGE_DIR
-    docker-compose stop node1
-    cd $DATA_DIR
-    echo "Take snapshots for devchain"
-    zip -rqu $SNAPSHOTS_DIR/$STAGE_DIR/devchain.zip devchain
-    cd - > /dev/null
-    docker-compose start node1
-  fi
+  # STAGE_DIR="stage3"
+  # if [ $MAKE_SNAPSHOT ] && [ ! $SNAPSHOT ] && [ ! -d $SNAPSHOTS_DIR/$STAGE_DIR ]; then
+  #   echo "Take snapshots for $STAGE_DIR"
+  #   mkdir -p $SNAPSHOTS_DIR/$STAGE_DIR
+  #   docker-compose stop node1
+  #   cd $DATA_DIR
+  #   echo "Take snapshots for devchain"
+  #   zip -rqu $SNAPSHOTS_DIR/$STAGE_DIR/devchain.zip devchain
+  #   cd - > /dev/null
+  #   docker-compose start node1
+  # fi
   LIDO=$(cat $DEPLOYED_FILE | jq -r ".networks[\"$NETWORK_ID\"].appProxies[\"lido.lido.eth\"]")
   LIDO_CONTRACT=$LIDO docker-compose up -d oracle-1 oracle-2 oracle-3
 fi
