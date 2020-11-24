@@ -25,7 +25,10 @@ const defaultState = {
   operators: defaultValue,
   treasury: defaultValue,
   insuranceFund: defaultValue,
-  beaconStat: defaultValue,
+  beaconStat: {
+    depositedValidators: defaultValue,
+    beaconBalance: defaultValue,
+  },
   isSyncing: true,
 }
 
