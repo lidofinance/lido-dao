@@ -1,78 +1,86 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
-import {
-  Button,
-  GU,
-  SidePanel,
-  Info,
-  Field,
-  TextInput,
-  useSidePanel,
-} from '@aragon/ui'
+import React, { useCallback } from 'react'
+import { Button, GU, SidePanel, Info } from '@aragon/ui'
+import * as yup from 'yup'
+import { Formik, Field } from 'formik'
+import TextField from './TextField'
 
-function Panel({ opened, onClose, apiSetFee }) {
-  const inputRef = useRef()
-  const { readyToFocus } = useSidePanel()
+const initialValues = {
+  fee: 0,
+}
 
-  useEffect(() => {
-    if (readyToFocus && inputRef.current) {
-      inputRef.current.focus()
-    }
-  }, [readyToFocus, inputRef])
+const validationSchema = yup.object().shape({
+  fee: yup
+    .number()
+    .positive()
+    .required()
+    .min(0)
+    .max(100)
+    .test(
+      'fee',
+      `Fee must be an integer or have 1 or 2 decimal places.`,
+      (value) => {
+        const regex = /^\d{1,3}(\.\d{1,2})?$/
+        return regex.test(value)
+      }
+    ),
+})
 
-  const [pending, setPending] = useState(false)
-  const [newFee, setNewFee] = useState(0)
-
-  const onChangeNewFee = useCallback((event) => {
-    setNewFee(+event.target.value)
-  }, [])
-
-  const handleChangeFeeSubmit = (event) => {
-    event.preventDefault()
-    setPending(true)
-    apiSetFee(newFee)
-      .toPromise()
-      .then(() => {
-        setNewFee(0)
-        onClose()
-        setPending(false)
-      })
-      .catch(() => {
-        setNewFee(0)
-        onClose()
-        setPending(false)
-      })
-  }
+function Panel({ onClose, apiSetFee }) {
+  const handleChangeFeeSubmit = useCallback(
+    ({ fee }) => {
+      apiSetFee(fee * 100)
+        .catch(console.error)
+        .finally(() => {
+          onClose()
+        })
+    },
+    [apiSetFee, onClose]
+  )
 
   return (
-    <form
-      css={`
-        margin-top: ${3 * GU}px;
-      `}
+    <Formik
+      initialValues={initialValues}
+      validationSchema={validationSchema}
+      validateOnBlur={false}
+      validateOnChange={false}
       onSubmit={handleChangeFeeSubmit}
     >
-      <Info
-        title="Action"
-        css={`
-          margin-bottom: ${3 * GU}px;
-        `}
-      >
-        This action will change the fee.
-      </Info>
-      <Field label="New fee value">
-        <TextInput
-          type="number"
-          min={0}
-          step="any"
-          onChange={onChangeNewFee}
-          required
-          wide
-          ref={inputRef}
-        />
-      </Field>
-      <Button mode="strong" type="submit" disabled={pending}>
-        Set fee
-      </Button>
-    </form>
+      {({ submitForm, isSubmitting, isValidating }) => {
+        return (
+          <form
+            css={`
+              margin-top: ${3 * GU}px;
+            `}
+            onSubmit={(e) => {
+              e.preventDefault()
+              submitForm()
+            }}
+          >
+            <Info
+              title="Action"
+              css={`
+                margin-bottom: ${3 * GU}px;
+              `}
+            >
+              This action will change the fee rate.
+            </Info>
+            <Field
+              name="fee"
+              type="number"
+              label="Fee (%)"
+              component={TextField}
+            />
+            <Button
+              mode="strong"
+              type="submit"
+              disabled={isValidating || isSubmitting}
+            >
+              Set fee
+            </Button>
+          </form>
+        )
+      }}
+    </Formik>
   )
 }
 
