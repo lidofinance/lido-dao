@@ -112,12 +112,12 @@ export async function getTreasury() {
 
 export async function depositToLidoContract(from, value, referral = '0x0000000000000000000000000000000000000000', maxDepositCalls = 16) {
   await submit(from, value, referral)
-  await depositBufferedEther(from, maxDepositCalls)
+  return await depositBufferedEther(from, maxDepositCalls)
   // return await eth1Helper.sendTransaction(web3, getProxyAddress(), from, value)
 }
 
 export async function depositBufferedEther(from, maxDepositCalls = 16) {
-  await lidoContract.methods.depositBufferedEther(maxDepositCalls).send({ from, gas: '8000000' })
+  return await lidoContract.methods.depositBufferedEther(maxDepositCalls).send({ from, gas: '8000000' })
 }
 
 export function getTotalControlledEther() {

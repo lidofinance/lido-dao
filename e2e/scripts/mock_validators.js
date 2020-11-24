@@ -4,21 +4,20 @@ import { loadGeneratedValidatorsData, ETH } from './helpers/utils'
 import * as lidoHelper from './helpers/apps/lidoHelper'
 import * as nodeOperatorsHelper from './helpers/apps/nodeOperatorsHelper'
 import * as lidoOracleHelper from './helpers/apps/lidoOracleHelper'
-
-const duration = parseInt(process.env.REPORT_INTERVAL_DURATION || '160')
+import * as eth2Helper from './helpers/eth2/Eth2Helper'
 
 const main = async () => {
   const context = await prepareContext()
   const { accounts } = context
-  const voters = accounts.slice(0, 3)
+  const voters = accounts.slice(0, 2)
   const proposer = accounts[0]
   const staker = accounts[0]
   const nos = accounts.slice(5, 7)
   const oracles = accounts.slice(30, 33)
 
-  logger.info(voters)
-  logger.info(nos)
-  logger.info(oracles)
+  logger.info(`Holders: ${voters}`)
+  logger.info(`Node operators: ${nos}`)
+  logger.info(`Oracle members: ${oracles}`)
   let r
 
   lidoHelper.init(context)
@@ -28,14 +27,8 @@ const main = async () => {
   const depositData = await loadGeneratedValidatorsData('validators1')
 
   const wc = '0x' + depositData[0].withdrawal_credentials
-  const keysPerNOS = 20
+  const keysPerNOS = 10
 
-  const _duration = parseInt(await lidoOracleHelper.getReportIntervalDuration())
-  if (_duration !== duration) {
-    r = await lidoOracleHelper.setReportIntervalDuration(duration, proposer, voters)
-  }
-
-  // return
   const _wc = await lidoHelper.getWithdrawalCredentials()
   if (_wc !== wc) {
     r = await lidoHelper.setWithdrawalCredentials(wc, proposer, voters)
@@ -58,9 +51,9 @@ const main = async () => {
       // console.log(r.events)
       _nodeOperator = await nodeOperatorsHelper.getNodeOperator(i)
     }
-    logger.info(`name: ${_nodeOperator.name}`)
+    logger.info(`Node operator: ${_nodeOperator.name}`)
     if (!+_nodeOperator.totalSigningKeys) {
-      logger.info(`Add keys...`)
+      logger.info(`Add ${keysPerNOS} keys...`)
       const data = depositData.slice(i * keysPerNOS, (i + 1) * keysPerNOS).reduce(
         (a, d) => {
           a.pubKeys.push(d.pubkey)
@@ -71,14 +64,22 @@ const main = async () => {
       )
       r = await nodeOperatorsHelper.addSigningKeysOperatorBH(i, data, nos[i])
       // console.log(r.events)
-      logger.info(`keys: ${keysPerNOS}`)
+      logger.info(` keys: ${keysPerNOS}`)
     } else {
-      logger.info(`keys: ${_nodeOperator.totalSigningKeys}`)
+      logger.info(` keys: ${_nodeOperator.totalSigningKeys}`)
     }
   }
   // }
 
   // oracles
+
+  const _bsContract = await lidoOracleHelper.getBeaconSpec()
+  const _bsNet = await eth2Helper.getBeaconSpec()
+  // assume compare only genesis time is enough
+  if (parseInt(parseInt(_bsContract.genesisTime)) !== parseInt(_bsNet.genesisTime)) {
+    r = await lidoOracleHelper.setBeaconSpec(_bsNet, proposer, voters)
+    // console.log(r.events)
+  }
 
   const members = (await lidoOracleHelper.getAllOracleMembers()).map((m) => m.toLowerCase())
   for (let i = 0; i < oracles.length; i++) {
@@ -92,12 +93,12 @@ const main = async () => {
   const _q = await lidoOracleHelper.getQuorum()
   if (parseInt(_q) !== oracles.length) {
     r = await lidoOracleHelper.setQuorum(oracles.length, proposer, voters)
-    console.log(r.events)
+    // console.log(r.events)
   }
 
   // test deoposit
-  r = await lidoHelper.depositToLidoContract(staker, ETH(333))
-  console.log(r.events)
+  logger.info(`Make deposit 123ETH...`)
+  r = await lidoHelper.depositToLidoContract(staker, ETH(123))
   return true
 }
 
