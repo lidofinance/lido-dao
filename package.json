@@ -47,7 +47,9 @@
     "deploy:dao": "buidler run --no-compile ./scripts/deploy-lido-dao.js",
     "deploy:e2e:dao": "NETWORK_NAME=e2e buidler run --no-compile ./scripts/deploy-lido-dao.js"
   },
-  "author": "MixBytes <hello@mixbytes.io>",
+  "author": "Lido <info@lido.fi>",
+  "homepage": "https://lido.fi/",
+  "license" : "GPL-3.0",
   "devDependencies": {
     "@aragon/apps-finance": "^3.0.0",
     "@aragon/apps-token-manager": "^2.1.0",
