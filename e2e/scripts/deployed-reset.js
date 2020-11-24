@@ -16,7 +16,14 @@ const DEFAULT_DAO_SETTINGS = {
   tokenSymbol: 'LDO',
   voteDuration: 60 * 3, // 3 minutes
   votingSupportRequired: '500000000000000000', // 50e16 basis points === 50%
-  votingMinAcceptanceQuorum: '50000000000000000' // 5e16 basis points === 5%
+  votingMinAcceptanceQuorum: '50000000000000000', // 5e16 basis points === 5%
+  depositIterationLimit: 16,
+  beaconSpec: {
+    epochsPerFrame: 20,
+    slotsPerEpoch: 8,
+    secondsPerSlot: 1,
+    genesisTime: Math.floor(Date.now() / 1000)
+  }
 }
 
 const main = async ({

@@ -153,9 +153,6 @@ RPC_ENDPOINT=${RPC_ENDPOINT:-http://localhost:8545}
 REQ_BODY='{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
 HEADERS='Content-Type: application/json'
 
-# if [ ! $SNAPSHOT ]; then
-# fi
-
 if [ ! $SNAPSHOT ] && [ $DEPLOY ] ; then
   echo "Starting ETH1 node in onDemand mode"
   docker-compose up -d node1
@@ -173,24 +170,22 @@ if [ ! $SNAPSHOT ] && [ $DEPLOY ] ; then
   echo
 
 
-  echo "Deploying Lido!"
+  echo "Deploying Lido E2E env"
   # yarn deploy:e2e:all
   yarn compile
-  echo "Generating mock accounts"
+  # echo "Generating mock accounts"
   # node ./scripts/gen-accounts.js $RPC_ENDPOINT 50 $DEVCHAIN_DIR "$MOCK_VALIDATOR_MNEMONIC" $PASSWORD
   yarn deploy:e2e:aragon-env
 
   STAGE_DIR="stage0"
   if [ $MAKE_SNAPSHOT ] && [ ! -d $SNAPSHOTS_DIR/$STAGE_DIR ]; then
     echo "Take snapshots for $STAGE_DIR"
-    # wait for state save
-    sleep 5
     mkdir -p $SNAPSHOTS_DIR/$STAGE_DIR
     docker-compose stop node1
     cd $DATA_DIR
     echo "Take snapshots for devchain"
-    zip -rqu $SNAPSHOTS_DIR/$STAGE_DIR/devchain.zip devchain -x *.ipc
-    cd -
+    zip -rqu $SNAPSHOTS_DIR/$STAGE_DIR/devchain.zip devchain
+    cd - > /dev/null
     docker-compose start node1
     echo "Take snapshots of deployed.json"
     node ./scripts/deployed-backup.js $NETWORK_ID $SNAPSHOTS_DIR/$STAGE_DIR
@@ -209,13 +204,12 @@ if [ ! $SNAPSHOT ] && [ $DEPLOY ] ; then
     mkdir -p $SNAPSHOTS_DIR/$STAGE_DIR
     docker-compose stop node1
     docker-compose stop ipfs
-    sleep 5
     cd $DATA_DIR
     echo "Take snapshots for devchain"
-    zip -rqu $SNAPSHOTS_DIR/$STAGE_DIR/devchain.zip devchain -x *.ipc
+    zip -rqu $SNAPSHOTS_DIR/$STAGE_DIR/devchain.zip devchain
     echo "Take snapshots for ipfs"
     zip -rqu $SNAPSHOTS_DIR/$STAGE_DIR/ipfs.zip ipfs
-    cd -
+    cd - > /dev/null
     docker-compose start node1
     docker-compose start ipfs
     echo "Take snapshots of deployed.json"
@@ -236,7 +230,7 @@ if [ $WEB_UI ]; then
   echo "(Re)Starting IPFS"
   docker-compose up -d ipfs
   echo "Starting Aragon web UI"
-  docker-compose up -d --build aragon
+  docker-compose up -d aragon
 else
   echo "Stopping IPFS"
   docker-compose rm -s -v -f ipfs > /dev/null
@@ -305,22 +299,26 @@ if [ $ETH2_RESET ]; then
       --spec "$SPEC" \
       new-testnet --force \
       --deposit-contract-address "$DEPOSIT_HEX" \
+      --deposit-contract-deploy-block "10" \
       --testnet-dir "/data/testnet" \
       --min-genesis-active-validator-count "$MOCK_VALIDATOR_COUNT" \
       --eth1-follow-distance "$ETH1_FOLLOW_DISTANCE" \
       --genesis-delay "$GENESIS_DELAY" \
       --genesis-fork-version "$FORK_VERSION"
 
-      # --deposit-contract-deploy-block "$BLOCK" \
 
     if [ $SPEC = "minimal" ]; then
+      NOW=$(date +%s)
+      echo "Reset genesis time to now ($NOW)"
+
       # reduce slot time generation
       sed -i 's/SECONDS_PER_SLOT: "6"/SECONDS_PER_SLOT: "1"/' $TESTNET_DIR/config.yaml
       # set according eth1 block time generation, see docker-compose.yml
-      # sed -i 's/SECONDS_PER_ETH1_BLOCK: "14"/SECONDS_PER_ETH1_BLOCK: "5"/' $TESTNET_DIR/config.yaml
-      # fix deposit contract address
+      sed -i 's/SECONDS_PER_ETH1_BLOCK: "14"/SECONDS_PER_ETH1_BLOCK: "5"/' $TESTNET_DIR/config.yaml
+      # sed -i "s/MIN_GENESIS_TIME: \"1578009600\"/MIN_GENESIS_TIME: \"$NOW\"/" $TESTNET_DIR/config.yaml
       sed -i "s/DEPOSIT_CHAIN_ID: \"5\"/DEPOSIT_CHAIN_ID: \"1337\"/" $TESTNET_DIR/config.yaml
       sed -i "s/DEPOSIT_NETWORK_ID: \"5\"/DEPOSIT_NETWORK_ID: \"$NETWORK_ID\"/" $TESTNET_DIR/config.yaml
+      # fix deposit contract address
       sed -i "s/0x1234567890123456789012345678901234567890/$DEPOSIT/" $TESTNET_DIR/config.yaml
     fi
     echo "Specification generated at $TESTNET_DIR."
@@ -387,7 +385,6 @@ if [ $MAKE_SNAPSHOT ] && [ ! $SNAPSHOT ] && [ ! -d $SNAPSHOTS_DIR/$STAGE_DIR ]; 
   echo "Take snapshots for $STAGE_DIR"
   mkdir -p $SNAPSHOTS_DIR/$STAGE_DIR
   docker-compose stop node1
-  sleep 5
   cd $DATA_DIR
   echo "Take snapshots for devchain"
   zip -rqu $SNAPSHOTS_DIR/$STAGE_DIR/devchain.zip devchain
@@ -395,32 +392,8 @@ if [ $MAKE_SNAPSHOT ] && [ ! $SNAPSHOT ] && [ ! -d $SNAPSHOTS_DIR/$STAGE_DIR ]; 
   zip -rqu $SNAPSHOTS_DIR/$STAGE_DIR/testnet.zip testnet
   echo "Take snapshots for validators"
   zip -rqu $SNAPSHOTS_DIR/$STAGE_DIR/validators.zip validators
-  cd -
+  cd - > /dev/null
   docker-compose start node1
-fi
-
-# oracles
-if [ $ORACLES ]; then
-  echo "Building oracle container"
-  ./oracle.sh
-  if [ ! $SNAPSHOT ] && [ $SEED ]; then
-    $NODE scripts/mock_validators.js
-  fi
-  if [ $MAKE_SNAPSHOT ]&& [ ! $SNAPSHOT ] && [ ! -d $SNAPSHOTS_DIR/stage2 ]; then
-    echo "Take snapshots for stage 2"
-    mkdir -p $SNAPSHOTS_DIR/stage2
-    docker-compose stop node1
-    sleep 5
-    cd $DATA_DIR
-    echo "Take snapshots for devchain"
-    zip -rqu $SNAPSHOTS_DIR/stage2/devchain.zip devchain
-    # echo "Take snapshots for testnet"
-    # zip -rqu $SNAPSHOTS_DIR/stage1/testnet.zip testnet
-    # echo "Take snapshots for validators"
-    # zip -rqu $SNAPSHOTS_DIR/stage1/validators.zip validators
-    cd -
-    docker-compose start node1
-  fi
 fi
 
 echo "Starting ETH2"
@@ -432,8 +405,26 @@ docker-compose up -d validators1
 sleep 5
 docker-compose up -d validators2
 
+# oracles
 if [ $ORACLES ]; then
-  docker-compose up -d oracle-1 oracle-2 oracle-3
+  echo "Building oracle container"
+  ./oracle.sh
+  if [ ! $SNAPSHOT ] && [ $SEED ]; then
+    $NODE scripts/mock_validators.js
+  fi
+  STAGE_DIR="stage3"
+  if [ $MAKE_SNAPSHOT ] && [ ! $SNAPSHOT ] && [ ! -d $SNAPSHOTS_DIR/$STAGE_DIR ]; then
+    echo "Take snapshots for $STAGE_DIR"
+    mkdir -p $SNAPSHOTS_DIR/$STAGE_DIR
+    docker-compose stop node1
+    cd $DATA_DIR
+    echo "Take snapshots for devchain"
+    zip -rqu $SNAPSHOTS_DIR/$STAGE_DIR/devchain.zip devchain
+    cd - > /dev/null
+    docker-compose start node1
+  fi
+  LIDO=$(cat $DEPLOYED_FILE | jq -r ".networks[\"$NETWORK_ID\"].appProxies[\"lido.lido.eth\"]")
+  LIDO_CONTRACT=$LIDO docker-compose up -d oracle-1 oracle-2 oracle-3
 fi
 
 if [ $NODES ]; then

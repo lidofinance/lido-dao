@@ -3,6 +3,7 @@ import request from 'sync-request'
 import { logger } from '../logger'
 import { sleep as waitFor } from '../utils'
 
+const ORACLE_FRAME = '20'
 // TODO api assertions
 
 export function getActiveValidatorsPubKeys() {
@@ -46,6 +47,26 @@ export function getValidatorBalance(pubKey) {
   })
   const jsonPattern = new DefaultJsonPattern(response.getBody('utf-8'))
   return jsonPattern.getValidatorBalance(pubKey)
+}
+
+export function getBeaconSpec() {
+  const resp1 = request('GET', 'http://localhost:5052/eth/v1/beacon/genesis', {
+    headers: {
+      accept: 'application/json'
+    }
+  })
+  const resp1Json = new DefaultJsonPattern(resp1.getBody('utf-8'))
+  const resp2 = request('GET', 'http://localhost:5052/eth/v1/config/spec', {
+    headers: {
+      accept: 'application/json'
+    }
+  })
+  const resp2Json = new DefaultJsonPattern(resp2.getBody('utf-8'))
+  return {
+    epochsPerFrame: ORACLE_FRAME,
+    ...resp2Json.getSpec(),
+    ...resp1Json.getGenesisTime()
+  }
 }
 
 export function getBeaconHead() {
