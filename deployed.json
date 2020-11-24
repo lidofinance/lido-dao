@@ -151,6 +151,12 @@
         "voteDuration": 180,
         "votingSupportRequired": "500000000000000000",
         "votingMinAcceptanceQuorum": "50000000000000000",
+        "beaconSpec": {
+          "epochsPerFrame": 20,
+          "slotsPerEpoch": 8,
+          "secondsPerSlot": 1,
+          "genesisTime": 1606223696
+        },
         "depositIterationLimit": 16
       },
       "aragonEnsLabelName": "aragonpm",

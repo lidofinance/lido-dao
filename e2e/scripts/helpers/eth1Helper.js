@@ -3,19 +3,6 @@ import Web3, { providers } from 'web3'
 export const getLocalWeb3 = async () => {
   const web3 = new Web3(new providers.HttpProvider(`http://localhost:8545`))
 
-  web3.extend({
-    property: 'ganache',
-    methods: [
-      {
-        name: 'mine',
-        call: 'evm_mine',
-        params: 1,
-        inputFormatter: [null]
-        // outputFormatter: web3.utils.hexToNumberString
-      }
-    ]
-  })
-
   const connected = await web3.eth.net.isListening()
   if (!connected) throw new Error('Web3 connection failed')
   return web3

@@ -41,7 +41,7 @@ import {
 } from '../scripts/helpers/constants'
 
 test.before('Connecting Web3', async (t) => {
-  t.context = await prepareContext({ numUnlock: 50 })
+  t.context = await prepareContext()
   lidoHelper.init(t.context)
   aclHelper.init(t.context)
   votingHelper.init(t.context)
