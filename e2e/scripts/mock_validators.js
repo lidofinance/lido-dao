@@ -62,7 +62,6 @@ const main = async () => {
         },
         { pubKeys: [], signatures: [] }
       )
-      console.log(data)
       r = await nodeOperatorsHelper.addSigningKeysOperatorBH(i, data, nos[i])
       // console.log(r.events)
       logger.info(` keys: ${keysPerNOS}`)
