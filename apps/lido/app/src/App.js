@@ -33,7 +33,7 @@ export default function App() {
   const closeChangeFeePanel = () => setChangeFeePanelOpened(false)
   const apiSetFee = useCallback(
     (newFee) => {
-      return api.setFee(newFee)
+      return api.setFee(newFee).toPromise()
     },
     [api]
   )
@@ -146,7 +146,7 @@ export default function App() {
         label: 'Fee',
         content: (
           <span style={{ display: 'flex', alignItems: 'center' }}>
-            <strong>{fee || 'No data'}</strong>
+            <strong>{fee ? fee / 100 : 'No data'}</strong>
             <Button
               icon={<IconEdit />}
               label="Change fee"
@@ -266,7 +266,10 @@ export default function App() {
         label: 'Deposits',
         content: <strong>{stat.depositedValidators}</strong>,
       },
-      { label: 'Balance', content: <strong>{formatEth(stat.beaconBalance)}</strong> },
+      {
+        label: 'Balance',
+        content: <strong>{formatEth(stat.beaconBalance)}</strong>,
+      },
     ]
   }, [appState])
 
