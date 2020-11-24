@@ -16,22 +16,12 @@ import {
   KERNEL_DEFAULT_ACL_APP_ID
 } from './constants'
 
-const password = '123'
-const duration = 36000 // 10h
 const findApp = (apps, id) => apps.find((app) => app.appId === id)
 
-export const prepareContext = async ({ numUnlock = 0 } = {}) => {
+export const prepareContext = async () => {
   const web3 = await getLocalWeb3()
   // Retrieve web3 accounts.
-  const accounts = (await getAccounts(web3)).slice(1)
-  if (numUnlock) {
-    console.log(`Unlocking ${numUnlock} accounts`)
-    await Promise.all(
-      (numUnlock < accounts.length ? accounts.slice(0, numUnlock) : accounts).map((a) =>
-        web3.eth.personal.unlockAccount(a, password, duration)
-      )
-    )
-  }
+  const accounts = await getAccounts(web3)
   // const daoAddress = await getDaoAddress(daoName, {
   //   provider: web3.currentProvider,
   //   registryAddress: ensRegistry
