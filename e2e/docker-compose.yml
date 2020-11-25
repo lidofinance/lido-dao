@@ -234,47 +234,41 @@ services:
       eth2:
 
   oracle-1:
-    image: lido-oracle:latest
+    image: lido-oracle:e2e
     container_name: oracle-1
-    restart: unless-stopped
-    command: >
-      --daemon
-      --submit-tx
+    #restart: unless-stopped
     environment:
       - ETH1_NODE=http://node1:8545
-      - ETH2_NODE=http://node2-1:5052
-      - LIDO_CONTRACT=${LIDO_CONTRACT}
-      - MANAGER_PRIV_KEY=${MANAGER1_PRIV_KEY}
+      - BEACON_NODE=http://node2-1:5052
+      - POOL_CONTRACT=${POOL_CONTRACT}
+      - MEMBER_PRIV_KEY=${MEMBER1_PRIV_KEY}
+      - DAEMON=1
     networks:
       eth2:
 
   oracle-2:
-    image: lido-oracle:latest
+    image: lido-oracle:e2e
     container_name: oracle-2
-    restart: unless-stopped
-    command: >
-      --daemon
-      --submit-tx
+    #restart: unless-stopped
     environment:
       - ETH1_NODE=http://node1:8545
-      - ETH2_NODE=http://node2-1:5052
-      - LIDO_CONTRACT=${LIDO_CONTRACT}
-      - MANAGER_PRIV_KEY=${MANAGER2_PRIV_KEY}
+      - BEACON_NODE=http://node2-1:5052
+      - POOL_CONTRACT=${POOL_CONTRACT}
+      - MEMBER_PRIV_KEY=${MEMBER2_PRIV_KEY}
+      - DAEMON=1
     networks:
       eth2:
 
   oracle-3:
-    image: lido-oracle:latest
+    image: lido-oracle:e2e
     container_name: oracle-3
-    restart: unless-stopped
-    command: >
-      --daemon
-      --submit-tx
+    #restart: unless-stopped
     environment:
       - ETH1_NODE=http://node1:8545
-      - ETH2_NODE=http://node2-1:5052
-      - LIDO_CONTRACT=${LIDO_CONTRACT}
-      - MANAGER_PRIV_KEY=${MANAGER3_PRIV_KEY}
+      - BEACON_NODE=http://node2-1:5052
+      - POOL_CONTRACT=${POOL_CONTRACT}
+      - MEMBER_PRIV_KEY=${MEMBER3_PRIV_KEY}
+      - DAEMON=1
     networks:
       eth2:
 
