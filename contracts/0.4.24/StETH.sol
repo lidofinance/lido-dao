@@ -200,6 +200,7 @@ contract StETH is ISTETH, Pausable, AragonApp {
         require(value <= _allowed[from][msg.sender]);
 
         _allowed[from][msg.sender] = _allowed[from][msg.sender].sub(value);
+        emit Approval(from, msg.sender, _allowed[from][msg.sender]);
         _transfer(from, to, value);
         return true;
     }
