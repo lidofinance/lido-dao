@@ -197,10 +197,9 @@ contract StETH is ISTETH, Pausable, AragonApp {
         whenNotStopped
         returns (bool)
     {
-        require(value <= _allowed[from][msg.sender]);
-
-        _allowed[from][msg.sender] = _allowed[from][msg.sender].sub(value);
-        emit Approval(from, msg.sender, _allowed[from][msg.sender]);
+        uint256 newAllowance = _allowed[from][msg.sender].sub(value);
+        _allowed[from][msg.sender] = newAllowance;
+        emit Approval(from, msg.sender, newAllowance);
         _transfer(from, to, value);
         return true;
     }
@@ -224,9 +223,9 @@ contract StETH is ISTETH, Pausable, AragonApp {
     {
         require(spender != address(0));
 
-        _allowed[msg.sender][spender] = (
-        _allowed[msg.sender][spender].add(addedValue));
-        emit Approval(msg.sender, spender, _allowed[msg.sender][spender]);
+        uint256 newAllowance = _allowed[msg.sender][spender].add(addedValue);
+        _allowed[msg.sender][spender] = newAllowance;
+        emit Approval(msg.sender, spender, newAllowance);
         return true;
     }
 
@@ -249,9 +248,9 @@ contract StETH is ISTETH, Pausable, AragonApp {
     {
         require(spender != address(0));
 
-        _allowed[msg.sender][spender] = (
-        _allowed[msg.sender][spender].sub(subtractedValue));
-        emit Approval(msg.sender, spender, _allowed[msg.sender][spender]);
+        uint256 newAllowance = _allowed[msg.sender][spender].sub(subtractedValue);
+        _allowed[msg.sender][spender] = newAllowance;
+        emit Approval(msg.sender, spender, newAllowance);
         return true;
     }
 
@@ -332,7 +331,6 @@ contract StETH is ISTETH, Pausable, AragonApp {
     function _transfer(address from, address to, uint256 value) internal {
         require(to != address(0));
         uint256 sharesToTransfer = getSharesByPooledEth(value);
-        require(sharesToTransfer <= _shares[from]);
         _shares[from] = _shares[from].sub(sharesToTransfer);
         _shares[to] = _shares[to].add(sharesToTransfer);
         emit Transfer(from, to, value);
