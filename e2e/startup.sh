@@ -424,7 +424,7 @@ if [ $ORACLES ]; then
   #   docker-compose start node1
   # fi
   LIDO=$(cat $DEPLOYED_FILE | jq -r ".networks[\"$NETWORK_ID\"].appProxies[\"lido.lido.eth\"]")
-  LIDO_CONTRACT=$LIDO docker-compose up -d oracle-1 oracle-2 oracle-3
+  POOL_CONTRACT=$LIDO docker-compose up -d oracle-1 oracle-2 oracle-3
 fi
 
 if [ $NODES ]; then
