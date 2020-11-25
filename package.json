@@ -49,7 +49,7 @@
   },
   "author": "Lido <info@lido.fi>",
   "homepage": "https://lido.fi/",
-  "license" : "GPL-3.0",
+  "license": "GPL-3.0",
   "devDependencies": {
     "@aragon/apps-finance": "^3.0.0",
     "@aragon/apps-token-manager": "^2.1.0",
