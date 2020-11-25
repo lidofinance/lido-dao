@@ -34,6 +34,8 @@ PASSWORD=123
 NODE='npx babel-node --presets=@babel/preset-env'
 
 DEPLOYED_FILE="../deployed.json"
+ACCOUNTS_FILE="../accounts.json"
+ACCOUNTS_SAMPLE_FILE="../accounts.sample.json"
 STAGE="2"
 
 while test $# -gt 0; do
@@ -116,6 +118,13 @@ while test $# -gt 0; do
       ;;
   esac
 done
+
+if test -f "$ACCOUNTS_FILE"; then
+    echo "Accounts file $ACCOUNTS_FILE exists."
+  else
+    echo "Accounts file $ACCOUNTS_FILE not found. Copying from the sample"
+    cp $ACCOUNTS_SAMPLE_FILE $ACCOUNTS_FILE
+fi
 
 if [ $RESET ]; then
   echo "Cleanup"
