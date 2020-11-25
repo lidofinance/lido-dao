@@ -1,8 +1,6 @@
-const { usePlugin } = require('@nomiclabs/buidler/config')
+require('@aragon/buidler-aragon')
 
-usePlugin('@aragon/buidler-aragon')
-
-const baseConfig = require('./buidler.config.js')
+const baseConfig = require('./hardhat.config.js')
 const aragonConfig = {}
 
 // See scripts/deploy-aragon-std-apps.js
@@ -20,5 +18,5 @@ module.exports = {
 }
 
 if (process.env.STD_APPS_DEPLOY) {
-  console.log(`Buidler config:`, module.exports)
+  console.log(`Hardhat config:`, module.exports)
 }
