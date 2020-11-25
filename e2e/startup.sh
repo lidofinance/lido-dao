@@ -408,7 +408,7 @@ docker-compose up -d validators2
 # oracles
 if [ $ORACLES ]; then
   echo "Building oracle container"
-  ./oracle.sh
+  ./oracle_build.sh
   if [ $SEED ]; then
     $NODE scripts/mock_validators.js
   fi
