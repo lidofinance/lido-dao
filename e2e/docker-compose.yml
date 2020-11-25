@@ -48,7 +48,7 @@ services:
       eth2:
 
   lh:
-    image: sigp/lighthouse
+    image: sigp/lighthouse:v0.3.5
     container_name: lh
     networks:
       eth2:
