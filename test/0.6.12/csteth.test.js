@@ -3,7 +3,6 @@ const { expect } = require('chai')
 const { ZERO_ADDRESS } = constants
 
 const { shouldBehaveLikeERC20 } = require('./helpers/ERC20.behavior')
-const { shouldBehaveLikeERC20Burnable } = require('./helpers/ERC20Burnable.behavior')
 
 const CstETH = artifacts.require('CstETHMock')
 const StETH = artifacts.require('StETHMock')
@@ -284,7 +283,6 @@ contract('CstETH', function ([deployer, initialHolder, recipient, anotherAccount
     })
 
     shouldBehaveLikeERC20('ERC20', initialSupply, initialHolder, recipient, anotherAccount)
-    shouldBehaveLikeERC20Burnable(initialHolder, initialSupply, otherAccounts)
 
     describe('decrease allowance', function () {
       describe('when the spender is not the zero address', function () {

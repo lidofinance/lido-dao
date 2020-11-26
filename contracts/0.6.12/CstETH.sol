@@ -6,7 +6,6 @@
 pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20Burnable.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./interfaces/IStETH.sol";
@@ -25,7 +24,7 @@ import "./interfaces/IStETH.sol";
  * CStETH in return. The reverse exchange works exactly the opposite, received
  * CStETH token is burned, and StETH token is returned to the user.
  */
-contract CstETH is ERC20, ERC20Burnable {
+contract CstETH is ERC20 {
     using SafeERC20 for ERC20;
     using SafeERC20 for IStETH;
     using SafeMath for uint256;
