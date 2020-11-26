@@ -4,7 +4,7 @@ This document is intended for those who wish to participate in the Lido protocol
 
 ## TL;DR
 
-1. Generate an Ethereum address and propose it as oracle address via the «Add Member» button [in the app UI].
+1. Generate an Ethereum address and propose it as oracle address via the "Add Member" button [in the app UI].
 2. Facilitate the DAO members to approve your oracle address.
 3. Launch and sync Ethereum 1.0 node pointed to Goerli with JSON-RPC endpoint enabled.
 4. Launch and sync Lighthouse node pointed to Pyrmont with RPC endpoint enabled (Prysm is not yet supported).
@@ -41,7 +41,7 @@ In order to launch oracle daemon on your machine, you need to have several thing
 
 1. A synced Ethereum 1.0 client pointed to the Görli testnet and with JSON-RPC endpoint enabled.
 2. A synced Lighthouse client pointed to Pyrmont testnet and with RPC endpoint enabled (Prysm client not yet supported).
-3) An address that’s added to the approved oracles list here: https://goerli.lido.fi/#/lido-dao-testnet/0x8aa931352fedc2a5a5b3e20ed3a546414e40d86c. You have to initiate the DAO voting on adding your address there by pressing the «Add Member» button.
+3) An address that’s added to the approved oracles list here: https://goerli.lido.fi/#/lido-dao-testnet/0x8aa931352fedc2a5a5b3e20ed3a546414e40d86c. You have to initiate the DAO voting on adding your address there by pressing the "Add Member" button.
 
 ## The oracle daemon
 
