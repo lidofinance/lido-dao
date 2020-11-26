@@ -217,11 +217,13 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @notice Issues withdrawal request. Large withdrawals will be processed only after the phase 2 launch. WIP.
-      * @param _amount Amount of StETH to burn
+      * @notice Issues withdrawal request. Not implemented.
+      * @param _amount Amount of StETH to withdraw
       * @param _pubkeyHash Receiving address
       */
     function withdraw(uint256 _amount, bytes32 _pubkeyHash) external whenNotStopped { /* solhint-disable-line no-unused-vars */
+        //will be upgraded to an actual implementation when withdrawals are enabled (Phase 1.5 or 2 of Eth2 launch, likely late 2021 or 2022).
+        //at the moment withdrawals are not possible in the beacon chain and there's no workaround
         revert("NOT_IMPLEMENTED_YET");
     }
 
