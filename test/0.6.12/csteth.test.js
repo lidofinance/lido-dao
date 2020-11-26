@@ -475,4 +475,18 @@ contract('CstETH', function ([deployer, initialHolder, recipient, anotherAccount
       })
     })
   })
+
+  /*
+  The burn(uint256 amount) and burnFrom(address account, uint256 amount) public functions both inherited
+  from openzeppelin ERC20Burnable library were removed since they have no use-case for users to
+  discard their own tokens. These actions lead to loss of stETH tokens locked on the wrapper.
+  After introducing the special `wrap` and `unwrap` functions, `burn(uint256 amount)` and
+  `burnFrom(address account, uint256 amount)` became rudimentary.
+  See https://github.com/lidofinance/lido-dao/issues/192
+  */
+  it('has no burn and burnFrom functions (discarded)', async function () {
+    assert.isNotFunction(this.csteth.burn, 'no burn function');
+    assert.isNotFunction(this.csteth.burnFrom, 'no burnFrom function');
+  })
+
 })
