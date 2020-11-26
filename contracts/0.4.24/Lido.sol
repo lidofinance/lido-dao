@@ -123,9 +123,9 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     /**
     * @notice Send funds to the pool with optional _referral parameter
     * @dev This function is alternative way to submit funds. Supports optional referral address.
-    * @return StETH Amount of StETH tokens generated
+    * @return Amount of StETH shares generated
     */
-    function submit(address _referral) external payable returns (uint256 StETH) {
+    function submit(address _referral) external payable returns (uint256) {
         return _submit(_referral);
     }
 
@@ -424,9 +424,9 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     /**
     * @dev Process user deposit, mints liquid tokens and increase the pool buffer
     * @param _referral address of referral.
-    * @return StETH amount of tokens generated
+    * @return amount of StETH shares generated
     */
-    function _submit(address _referral) internal whenNotStopped returns (uint256 StETH) {
+    function _submit(address _referral) internal whenNotStopped returns (uint256) {
         address sender = msg.sender;
         uint256 deposit = msg.value;
         require(deposit != 0, "ZERO_DEPOSIT");
@@ -443,6 +443,8 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         }
 
         _submitted(sender, deposit, _referral);
+
+        return sharesAmount;
     }
 
     /**
