@@ -15,13 +15,13 @@ This document is intended for those who wish to participate in the Lido protocol
       --env "ETH1_NODE=http://$ETH1_NODE_RPC_ADDRESS" \
       --env "ETH2_NODE=http://$ETH2_NODE_RPC_ADDRESS" \
       --env "LIDO_CONTRACT=0xE9c991d2c9Ac29b041C8D05484C2104bD00CFF4b" \
-      --env "MANAGER_PRIV_KEY=$ORACLE_ADDRESS_0X_PREFIXED" \
+      --env "MANAGER_PRIV_KEY=$ORACLE_PRIVATE_KEY_0X_PREFIXED" \
       lidofinance/oracle:latest \
         --daemon \
         --submit-tx
     ```
 
-Here, `ORACLE_ADDRESS_0X_PREFIXED` should be populated with the address from step 1.
+Here, `ORACLE_PRIVATE_KEY_0X_PREFIXED` should be populated with the address from step 1.
 
 [in the app UI]: https://goerli.lido.fi/#/lido-dao-testnet/0x8aa931352fedc2a5a5b3e20ed3a546414e40d86c
 
@@ -79,7 +79,7 @@ docker run -d --name lido-oracle \
   --env "ETH1_NODE=http://$ETH1_NODE_RPC_ADDRESS" \
   --env "ETH2_NODE=http://$ETH2_NODE_RPC_ADDRESS" \
   --env "LIDO_CONTRACT=0xE9c991d2c9Ac29b041C8D05484C2104bD00CFF4b" \
-  --env "MANAGER_PRIV_KEY=$ORACLE_ADDRESS_0X_PREFIXED" \
+  --env "MANAGER_PRIV_KEY=$ORACLE_PRIVATE_KEY_0X_PREFIXED" \
   lidofinance/oracle:latest \
     --daemon \
     --submit-tx
@@ -94,6 +94,6 @@ docker run --rm \
   --env "ETH1_NODE=http://$ETH1_NODE_RPC_ADDRESS" \
   --env "ETH2_NODE=http://$ETH2_NODE_RPC_ADDRESS" \
   --env "LIDO_CONTRACT=0xE9c991d2c9Ac29b041C8D05484C2104bD00CFF4b" \
-  --env "MANAGER_PRIV_KEY=$ORACLE_ADDRESS_0X_PREFIXED" \
+  --env "MANAGER_PRIV_KEY=$ORACLE_PRIVATE_KEY_0X_PREFIXED" \
   lidofinance/oracle:latest
 ```
