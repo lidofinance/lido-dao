@@ -431,15 +431,15 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         uint256 deposit = msg.value;
         require(deposit != 0, "ZERO_DEPOSIT");
 
-        ISTETH stEth = getToken();
+        ISTETH token = getToken();
 
-        uint256 sharesAmount = stEth.getSharesByPooledEth(deposit);
+        uint256 sharesAmount = token.getSharesByPooledEth(deposit);
         if (sharesAmount == 0) {
             // totalControlledEther is 0: either the first-ever deposit or complete slashing
             // assume that shares correspond to Ether 1-to-1
-            stEth.mintShares(sender, deposit);
+            token.mintShares(sender, deposit);
         } else {
-            stEth.mintShares(sender, sharesAmount);
+            token.mintShares(sender, sharesAmount);
         }
 
         _submitted(sender, deposit, _referral);
@@ -566,7 +566,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     * @param _totalRewards Total rewards accrued on the Ethereum 2.0 side in wei
     */
     function distributeRewards(uint256 _totalRewards) internal {
-        ISTETH stEth = getToken();
+        ISTETH token = getToken();
         uint256 feeInEther = _totalRewards.mul(_getFee()).div(10000);
 
         // We need to take a defined percentage of the reported reward as a fee, and we do
@@ -597,13 +597,13 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         uint256 totalPooledEther = _getTotalPooledEther();
         uint256 shares2mint = (
             feeInEther
-            .mul(stEth.getTotalShares())
+            .mul(token.getTotalShares())
             .div(totalPooledEther.sub(feeInEther))
         );
 
         // Mint the calculated amount of shares to this contract address. This will reduce the
         // balances of the holders, as if the fee was taken in parts from each of them.
-        uint256 totalShares = stEth.mintShares(address(this), shares2mint);
+        uint256 totalShares = token.mintShares(address(this), shares2mint);
 
         // The minted token amount may be less than feeInEther due to the shares2mint rounding
         uint256 mintedFee = shares2mint.mul(totalPooledEther).div(totalShares);
@@ -612,14 +612,14 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         uint256 toTreasury = mintedFee.mul(treasuryFeeBasisPoints).div(10000);
         uint256 toInsuranceFund = mintedFee.mul(insuranceFeeBasisPoints).div(10000);
 
-        stEth.transfer(getTreasury(), toTreasury);
-        stEth.transfer(getInsuranceFund(), toInsuranceFund);
+        token.transfer(getTreasury(), toTreasury);
+        token.transfer(getInsuranceFund(), toInsuranceFund);
 
         // Transfer the rest of the fee to operators
         mintedFee = mintedFee.sub(toTreasury).sub(toInsuranceFund);
         INodeOperatorsRegistry operatorsRegistry = getOperators();
-        stEth.transfer(address(operatorsRegistry), mintedFee);
-        operatorsRegistry.distributeRewards(address(stEth), mintedFee);
+        token.transfer(address(operatorsRegistry), mintedFee);
+        operatorsRegistry.distributeRewards(address(token), mintedFee);
     }
 
     /**
