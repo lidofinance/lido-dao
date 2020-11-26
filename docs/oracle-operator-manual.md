@@ -59,7 +59,7 @@ The algorithm of the above oracle implementation is simple: at each step of an i
 )
 ```
 
-Keep in mind that some of these transactions may revert; this happens when, another oracle instance's transaction that finalizes the current reporting frame is included in a block after your oracle instance have fetched the reportable epoch, but before the transaction that your oracle instance submitted.
+Keep in mind that some of these transactions may revert. This happens when a transaction finalizing the current frame gets included in a block before your oracle's transaction. For example, such a transaction might already be submitted (but not included in a block) when your oracle fetched the current reportable epoch.
 
 #### Environment variables
 
@@ -83,4 +83,17 @@ docker run -d --name lido-oracle \
   lidofinance/oracle:latest \
     --daemon \
     --submit-tx
+```
+
+This will start the oracle in daemon mode. You can also run it in a one-off mode, for example if you'd prefer to trigger oracle execution as a `cron` job. In this case, skip passing the `--daemon` flag to the oracle (and the `-d` flag to `docker run`).
+
+To skip sending the transaction and just see what oracle is going to report, don't pass the `--submit-tx` flag:
+
+```sh
+docker run --rm \
+  --env "ETH1_NODE=http://$ETH1_NODE_RPC_ADDRESS" \
+  --env "ETH2_NODE=http://$ETH2_NODE_RPC_ADDRESS" \
+  --env "LIDO_CONTRACT=0xE9c991d2c9Ac29b041C8D05484C2104bD00CFF4b" \
+  --env "MANAGER_PRIV_KEY=$ORACLE_ADDRESS_0X_PREFIXED" \
+  lidofinance/oracle:latest
 ```
