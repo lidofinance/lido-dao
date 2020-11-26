@@ -111,6 +111,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         operator.stakingLimit = _stakingLimit;
 
         emit NodeOperatorAdded(id, _name, _rewardAddress, _stakingLimit);
+
+        return id;
     }
 
     /**
@@ -508,5 +510,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             }
             offset++;
         }
+
+        return (key, signature);
     }
 }
