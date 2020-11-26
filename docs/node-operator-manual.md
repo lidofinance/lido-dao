@@ -200,11 +200,11 @@ behalf of the Node Operator's reward address. Press the Connect account button i
 allow the access to the account associated with the reward address. Then, find yourself in the
 list of Node Operators — the corresponding item will be suffixed by `(you)`:
 
-<img width="1153" alt="add-signing-keys-1" src="https://user-images.githubusercontent.com/1699593/100351842-26da3c80-2ffd-11eb-8d84-e35e939412d9.png">
+<img width="1124" alt="add-signing-keys-1" src="https://user-images.githubusercontent.com/1699593/100355848-7f143d00-3003-11eb-9d63-94630e059eb8.png">
 
 Then, press the `...` button on the right of the item and select `add my signing keys`:
 
-<img width="1150" alt="add-signing-keys-2" src="https://user-images.githubusercontent.com/1699593/100351851-293c9680-2ffd-11eb-9f07-583c66140e31.png">
+<img width="1123" alt="add-signing-keys-2" src="https://user-images.githubusercontent.com/1699593/100355837-7d4a7980-3003-11eb-84ae-02a71f9ed2ec.png">
 
 Prepare a JSON data of the following structure and paste it to the `JSON` field in the side panel
 that will appear on the right:
@@ -230,7 +230,7 @@ Then, press `Add signing keys` and sign the transaction. Wait for it to be inclu
 refresh the page and make sure that the number in the `Total` field corresponds to the number
 of the keys you've just submitted:
 
-<img width="1152" alt="add-signing-keys-4" src="https://user-images.githubusercontent.com/1699593/100352128-96502c00-2ffd-11eb-936e-51135cdf82f1.png">
+<img width="1125" alt="add-signing-keys-3" src="https://user-images.githubusercontent.com/1699593/100355828-7ae81f80-3003-11eb-9d04-d29ae57c0904.png">
 
 
 ### Importing the keys to a Lighthouse validator client
