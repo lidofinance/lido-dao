@@ -239,7 +239,13 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         uint256 depositedValidators = DEPOSITED_VALIDATORS_VALUE_POSITION.getStorageUint256();
         require(_beaconValidators <= depositedValidators, "REPORTED_MORE_DEPOSITED");
 
-        uint256 appearedValidators = _beaconValidators.sub(BEACON_VALIDATORS_VALUE_POSITION.getStorageUint256());
+        uint256 beaconValidators = BEACON_VALIDATORS_VALUE_POSITION.getStorageUint256();
+        // Since the calculation of funds in the ingress queue is based on the number of validators 
+        // that are in a transient state (deposited but not seen on beacon yet), we can't decrease the previously
+        // reported number (we'll be unable to figure out who is in the queue and count them).
+        // See LIP-1 for details https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-1.md
+        require(_beaconValidators >= beaconValidators, "REPORTED_LESS_VALIDATORS");
+        uint256 appearedValidators = _beaconValidators.sub(beaconValidators);
 
         // RewardBase is the amount of money that is not included in the reward calculation
         // Just appeared validators * 32 added to the previously reported beacon balance
