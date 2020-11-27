@@ -48,7 +48,7 @@ services:
       eth2:
 
   lh:
-    image: sigp/lighthouse
+    image: sigp/lighthouse:v0.3.5
     container_name: lh
     networks:
       eth2:
@@ -58,7 +58,7 @@ services:
       - ./data:/data
 
   node2-1:
-    image: sigp/lighthouse
+    image: sigp/lighthouse:v0.3.5
     container_name: node2-1
     ports:
       - 5052:5052
@@ -86,7 +86,7 @@ services:
       --eth1-endpoint http://node1:8545
 
   node2-2:
-    image: sigp/lighthouse
+    image: sigp/lighthouse:v0.3.5
     container_name: node2-2
     depends_on:
       - node2-1
@@ -114,7 +114,7 @@ services:
       --eth1-endpoint http://node1:8545
 
   node2-3:
-    image: sigp/lighthouse
+    image: sigp/lighthouse:v0.3.5
     container_name: node2-3
     depends_on:
       - node2-1
@@ -142,7 +142,7 @@ services:
       --eth1-endpoint http://node1:8545
 
   node2-4:
-    image: sigp/lighthouse
+    image: sigp/lighthouse:v0.3.5
     container_name: node2-4
     depends_on:
       - node2-1
@@ -170,7 +170,7 @@ services:
       --eth1-endpoint http://node1:8545
 
   mock-validators:
-    image: sigp/lighthouse
+    image: sigp/lighthouse:v0.3.5
     container_name: mock-validators
     depends_on:
       - node2-1
@@ -190,7 +190,7 @@ services:
       eth2:
 
   validators1:
-    image: sigp/lighthouse
+    image: sigp/lighthouse:v0.3.5
     container_name: validators1
     depends_on:
       - node2-1
@@ -212,7 +212,7 @@ services:
       --server http://node2-1:5052
 
   validators2:
-    image: sigp/lighthouse
+    image: sigp/lighthouse:v0.3.5
     container_name: validators2
     depends_on:
       - node2-1
