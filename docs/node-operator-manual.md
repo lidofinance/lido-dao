@@ -3,13 +3,14 @@
 This document is intended for those who wish to participate in the Lido protocol as Node Operators—entities
 who run Beacon validator nodes on behalf of the protocol and receive fee in return. It consists of
 two sections: [General overview](#general-overview) and [Operations HOWTO](#operations-howto).
-If you came here for the technical details of interacting with the protocol, skip to the latter.
+If you’re here for the technical details of interacting with the protocol, feel free to skip to
+the latter.
 
 
 ## General overview
 
 Node Operators manage a secure and stable infrastructure for running Beacon validator clients
-for the benefit of the protocol. They are professional staking providers who can ensure the safety
+for the benefit of the protocol. They’re professional staking providers who can ensure the safety
 of funds belonging to the protocol users and correctness of validator operations.
 
 The general flow is the following:
@@ -23,15 +24,14 @@ The general flow is the following:
    for future validators that will be managed by the Operator. When generating the signatures, the
    Operator must use the withdrawal credentials supplied by the DAO.
 
-4. DAO members check the submitted keys for correctness and, if everything's good, vote for
+4. The DAO members check the submitted keys for correctness and, if everything’s good, vote for
    approving them. After successful approval, the keys become usable by the protocol.
 
 5. The protocol distributes the pooled Ether evenly between all active Node Operators in `32 Ether`
    chunks. When it assigns the next deposit to a Node Operator, it takes the first non-used signing
-   key, as well as the accociated signature, from the Node Operator's usable set, and performs
-   a deposit to the official `DepositContract` using the pooled funds and the provider's public
-   key and signature. At that time, the Node Operator should have the validator configured with
-   that public key already running.
+   key, as well as the accociated signature, from the Node Operator’s usable set and performs
+   a deposit to the official `DepositContract`, submitting the pooled funds. At that time, the Node
+   Operator should have the validator already running and configured with the public key being used.
 
 6. From this point, the Node Operator is responsible for keeping the validator associated with
    the signing key operable and well-behaving.
@@ -44,40 +44,39 @@ The general flow is the following:
 ### The fee
 
 The fee is taken as a percentage from Beacon chain rewards at the moment the Oracles report
-those rewards. Oracles do that once in a while — the exact period is decided by DAO members
+those rewards. Oracles do that once in a while—the exact period is decided by the DAO members
 via the voting process.
 
 The total fee percentage, as well as the percentage that goes to all Node Operators, is also decided
-by the DAO voting and can be changed during the lifetime of the DAO. The Node Operators part of the
+by the DAO voting and can be changed during the lifetime of the DAO. The Node Operators’ part of the
 fee is distributed between the active Node Operators proportionally to the number of validators that
 each Node Operator runs.
 
 > For example, if Oracles report that the protocol has received 10 Ether as a reward, the fee
-> percentage that goes to Operators is `1%`, and there are two active Node Operators, running
+> percentage that goes to Operators is `10%`, and there are two active Node Operators, running
 > `2` and `8` validators, respectively, then the first operator will receive `0.2` StETH, the
 > second — `0.8` StETH.
 
 The fee is nominated in StETH, a liquid version of ETH2 token introduced by the Lido protocol. The
 tokens correspond 1:1 to the Ether that the token holder would be able get by burning their StETH
 if transfers were already enabled in the Beacon chain. At any time point, the total amount of StETH
-tokens corresponds to the total amount of Ether controlled by the protocol on both ETH1 and
-ETH2 sides.
+tokens is equal to the total amount of Ether controlled by the protocol on both ETH1 and ETH2 sides.
 
 When a user submits Ether to the pool, they get the same amount of freshly-minted StETH tokens.
-When reward is received on the ETH2 side, each StETH holder's balance increases by the same
+When reward is received on the ETH2 side, each StETH holder’s balance increases by the same
 percentage that the total amount of protocol-controlled Ether has increased, corrected for the
-protocol fee, [which is taken by minting new StETH tokens] to the fee recipients.
+protocol fee which is taken by [minting new StETH tokens] to the fee recipients.
 
 > For example, if the reward has increased the total amount of protocol-controlled Ether by `10%`,
-> and the total protocol fee percentage is `1%`, then each token holder's balance will grow by
-> approximately `9.9%`, and `1%` of the reward will be forwarded to the treasury, insurance fund
+> and the total protocol fee percentage is `10%`, then each token holder’s balance will grow by
+> approximately `9.09%`, and `10%` of the reward will be forwarded to the treasury, insurance fund
 > and Node Operators.
 
 One side effect of this is that you, as a Node Operator, will continue receiving the percentage
 of protocol rewards even after you stop actively validating, if you chose to hold StETH received
 as a fee.
 
-[which is taken by minting new StETH tokens]: https://github.com/lidofinance/lido-dao/blob/a2e93ba/contracts/0.4.24/Lido.sol#L566
+[minting new StETH tokens]: https://github.com/lidofinance/lido-dao/blob/971ac8f/contracts/0.4.24/Lido.sol#L576
 
 
 ## Operations HOWTO
@@ -111,14 +110,14 @@ The fork version used for generating the signature must correspond to the fork v
 chain the instance of Lido protocol is targeted to.
 
 You can obtain the protocol withdrawal credentials by calling [`Lido.getWithdrawalCredentials()`].
-On the [Etherscan page for the Pyrmont-deployed Lido], it's the field number 17. The ABI of the
+On the [Etherscan page for the Pyrmont-deployed Lido], it’s the field number 17. The ABI of the
 `Lido` contract can be found in [`lib/abi/Lido.json`].
 
 [BLS12-381]: https://ethresear.ch/t/pragmatic-signature-aggregation-with-bls/2105
 [as defined in the spec]: https://github.com/ethereum/annotated-spec/blob/master/phase0/beacon-chain.md#depositmessage
-[`Lido.getWithdrawalCredentials()`]: https://github.com/lidofinance/lido-dao/blob/a2e93ba/contracts/0.4.24/Lido.sol#L304
+[`Lido.getWithdrawalCredentials()`]: https://github.com/lidofinance/lido-dao/blob/971ac8f/contracts/0.4.24/Lido.sol#L312
 [Etherscan page for the Pyrmont-deployed Lido]: https://goerli.etherscan.io/address/0xA5d26F68130c989ef3e063c9bdE33BC50a86629D#readProxyContract
-[`lib/abi/Lido.json`]: https://github.com/lidofinance/lido-dao/blob/a2e93ba/lib/abi/Lido.json
+[`lib/abi/Lido.json`]: https://github.com/lidofinance/lido-dao/blob/971ac8f/lib/abi/Lido.json
 
 #### Using the forked eth2.0-deposit-cli
 
@@ -146,7 +145,7 @@ directory. It will contain a deposit data file named `deposit-data-*.json` and a
 stores named `keystore-*.json`, the latter encrypted with the password you were asked for when running
 the command.
 
-If you chose to use the UI for submitting the keys, you'll need to pass the JSON data found in the
+If you chose to use the UI for submitting the keys, you’ll need to pass the JSON data found in the
 deposit data file to the protocol (see the next section). If you wish, you can remove any other
 fields except `pubkey` and `signature` from the array items.
 
@@ -160,7 +159,7 @@ and DAO holders.
 ### Submitting the keys
 
 After generating the keys, a Node Operator submits them to the protocol. To do this, they send a
-transaction from the Node Operator's withdrawa address to the `NodeOperatorsRegistry` contract
+transaction from the Node Operator’s withdrawa address to the `NodeOperatorsRegistry` contract
 instance, calling [`addSigningKeysOperatorBH` function] and with the following arguments:
 
 ```
@@ -183,10 +182,10 @@ Etherscan pages for the Görli/Pyrmont contracts:
 * [`Lido`](https://goerli.etherscan.io/address/0xA5d26F68130c989ef3e063c9bdE33BC50a86629D#readProxyContract)
 * [`NodeOperatorsRegistry`](https://goerli.etherscan.io/address/0xb1e7fb9e9a71063ab552ddee87ea8c6eec7f5c7a#readProxyContract)
 
-[`addSigningKeysOperatorBH` function]: https://github.com/lidofinance/lido-dao/blob/a2e93ba/contracts/0.4.24/nos/NodeOperatorsRegistry.sol#L248
-[`getOperators()` function]: https://github.com/lidofinance/lido-dao/blob/a2e93ba/contracts/0.4.24/Lido.sol#L353
-[`lib/abi/NodeOperatorsRegistry.json`]: https://github.com/lidofinance/lido-dao/blob/a2e93ba/lib/abi/NodeOperatorsRegistry.json
-[`NodeOperatorsRegistry.getNodeOperator`]: https://github.com/lidofinance/lido-dao/blob/a2e93ba/contracts/0.4.24/nos/NodeOperatorsRegistry.sol#L333
+[`addSigningKeysOperatorBH` function]: https://github.com/lidofinance/lido-dao/blob/971ac8f/contracts/0.4.24/nos/NodeOperatorsRegistry.sol#L250
+[`getOperators()` function]: https://github.com/lidofinance/lido-dao/blob/971ac8f/contracts/0.4.24/Lido.sol#L361
+[`lib/abi/NodeOperatorsRegistry.json`]: https://github.com/lidofinance/lido-dao/blob/971ac8f/lib/abi/NodeOperatorsRegistry.json
+[`NodeOperatorsRegistry.getNodeOperator`]: https://github.com/lidofinance/lido-dao/blob/971ac8f/contracts/0.4.24/nos/NodeOperatorsRegistry.sol#L335
 
 #### Using the UI
 
@@ -195,8 +194,8 @@ Görli/Pyrmont deployment, you can find it here:
 
 https://goerli.lido.fi/#/lido-dao-testnet/0xb1e7fb9e9a71063ab552ddee87ea8c6eec7f5c7a
 
-Make sure you're using a browser that exposes a Web3 provider allowing to sign transactions on
-behalf of the Node Operator's reward address. Press the Connect account button in the top-right and
+Make sure you’re using a browser that exposes a Web3 provider allowing to sign transactions on
+behalf of the Node Operator’s reward address. Press the Connect account button in the top-right and
 allow the access to the account associated with the reward address. Then, find yourself in the
 list of Node Operators — the corresponding item will be suffixed by `(you)`:
 
@@ -223,19 +222,19 @@ that will appear on the right:
 ]
 ```
 
-If you've used the forked `eth2.0-deposit-cli`, you can paste the content of the generated
+If you’ve used the forked `eth2.0-deposit-cli`, you can paste the content of the generated
 `deposit-data-*.json` file as-is.
 
 Then, press `Add signing keys` and sign the transaction. Wait for it to be included in a block,
 refresh the page and make sure that the number in the `Total` field corresponds to the number
-of the keys you've just submitted:
+of the keys you’ve just submitted:
 
 <img width="1125" alt="add-signing-keys-3" src="https://user-images.githubusercontent.com/1699593/100355828-7ae81f80-3003-11eb-9d04-d29ae57c0904.png">
 
 
 ### Importing the keys to a Lighthouse validator client
 
-If you've used the forked `eth2.0-deposit-cli` to generate the keys, you can import them to a
+If you’ve used the forked `eth2.0-deposit-cli` to generate the keys, you can import them to a
 Lighthouse validator client by running this command:
 
 ```
