@@ -447,7 +447,6 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         } else {
             token.mintShares(sender, sharesAmount);
         }
-
         _submitted(sender, deposit, _referral);
 
         return sharesAmount;
@@ -636,7 +635,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     */
     function _submitted(address _sender, uint256 _value, address _referral) internal {
         BUFFERED_ETHER_VALUE_POSITION.setStorageUint256(_getBufferedEther().add(_value));
-
+        emit Transfer(address(0), _sender, _value);
         emit Submitted(_sender, _value, _referral);
     }
 
