@@ -265,7 +265,7 @@ contract StETH is ISTETH, Pausable, AragonApp {
      * @notice Returns the symbol of the token.
      */
     function symbol() public pure returns (string) {
-        return "StETH";
+        return "stETH";
     }
 
     /**
