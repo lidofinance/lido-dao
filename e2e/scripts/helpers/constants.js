@@ -41,10 +41,11 @@ export const UNLIMITED_STAKING_LIMIT = 1000000000
 export const ZERO_ADDRESS = '0x' + '0'.repeat(40)
 
 // fee 100% = 10000
-export const BASIC_FEE = 10000
-export const TREASURY_FEE = 1000
-export const INSURANCE_FEE = 1000
-export const NODE_OPERATOR_BASIC_FEE = 8000
+export const BASIC_FEE = 1000
+export const TREASURY_FEE = 0
+export const INSURANCE_FEE = 5000
+export const NODE_OPERATOR_BASIC_FEE = 5000
+export const USER_REWARDS = 10000 - BASIC_FEE
 
 // accounts
 export const holderAccounts = [
