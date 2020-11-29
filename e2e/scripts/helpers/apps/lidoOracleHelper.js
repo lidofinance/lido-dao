@@ -23,8 +23,8 @@ export async function hasInitialized() {
   return await lidoOracleContract.methods.hasInitialized().call()
 }
 
-export async function pushData(epoch, amount, sender) {
-  return await lidoOracleContract.methods.pushData(epoch, amount).send({ from: sender, gas: '8000000' })
+export async function reportBeacon(epoch, oracleData, beaconValidatorsCount, sender) {
+  return await lidoOracleContract.methods.reportBeacon(epoch, oracleData, beaconValidatorsCount).send({ from: sender, gas: '8000000' })
 }
 
 export async function setQuorum(quorum, holder, holders) {
@@ -55,11 +55,6 @@ export async function getAllOracleMembers() {
   return await lidoOracleContract.methods.getOracleMembers().call()
 }
 
-// TODO delete?
-export async function getCurrentReportInterval() {
-  return await lidoOracleContract.methods.getCurrentReportInterval().call()
-}
-
 export async function getBeaconSpec() {
   return await lidoOracleContract.methods.beaconSpec().call()
 }
@@ -85,8 +80,4 @@ export async function addOracleMembers(members, holder, holders) {
 
 export async function getQuorum() {
   return await lidoOracleContract.methods.getQuorum().call()
-}
-
-export async function getLatestData() {
-  return await lidoOracleContract.methods.getLatestData().call()
 }
