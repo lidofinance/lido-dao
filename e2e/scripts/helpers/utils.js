@@ -72,5 +72,10 @@ export function objHexlify(obj) {
   return obj
 }
 
+export function compareBN(number1, number2) {
+  logger.debug(`Comparing : ${number1} and  ${number2}`)
+  return BN(+number1).eq(BN(+number2))
+}
+
 export const BN = (value) => toBN(value)
 export const ETH = (value) => toWei(value + '', 'ether')
