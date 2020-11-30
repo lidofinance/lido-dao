@@ -3,7 +3,6 @@ const { expect } = require('chai')
 const { ZERO_ADDRESS } = constants
 
 const { shouldBehaveLikeERC20 } = require('./helpers/ERC20.behavior')
-const { shouldBehaveLikeERC20Burnable } = require('./helpers/ERC20Burnable.behavior')
 
 const CstETH = artifacts.require('CstETHMock')
 const StETH = artifacts.require('StETHMock')
@@ -284,7 +283,6 @@ contract('CstETH', function ([deployer, initialHolder, recipient, anotherAccount
     })
 
     shouldBehaveLikeERC20('ERC20', initialSupply, initialHolder, recipient, anotherAccount)
-    shouldBehaveLikeERC20Burnable(initialHolder, initialSupply, otherAccounts)
 
     describe('decrease allowance', function () {
       describe('when the spender is not the zero address', function () {
@@ -477,4 +475,18 @@ contract('CstETH', function ([deployer, initialHolder, recipient, anotherAccount
       })
     })
   })
+
+  /*
+  The burn(uint256 amount) and burnFrom(address account, uint256 amount) public functions both inherited
+  from openzeppelin ERC20Burnable library were removed since they have no use-case for users to
+  discard their own tokens. These actions lead to loss of stETH tokens locked on the wrapper.
+  After introducing the special `wrap` and `unwrap` functions, `burn(uint256 amount)` and
+  `burnFrom(address account, uint256 amount)` became rudimentary.
+  See https://github.com/lidofinance/lido-dao/issues/192
+  */
+  it('has no burn and burnFrom functions (discarded)', async function () {
+    assert.isNotFunction(this.csteth.burn, 'no burn function');
+    assert.isNotFunction(this.csteth.burnFrom, 'no burnFrom function');
+  })
+
 })

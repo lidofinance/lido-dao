@@ -204,11 +204,34 @@ contract('Lido pushBeacon', ([appManager, voting, user1, user2, user3, nobody]) 
       assertBn(await app.totalRewards(), ETH(1))
     })
 
-    it('report BcnValidators:3 = revert', async () => {
+    it('report BcnValidators:3 = revert with REPORTED_MORE_DEPOSITED', async () => {
       await assertRevert(oracle.reportBeacon(110, 3, ETH(65), { from: user2 }), 'REPORTED_MORE_DEPOSITED')
       checkStat({ depositedValidators: 2, beaconValidators: 1, beaconBalance: ETH(30) })
       assertBn(await app.getBufferedEther(), ETH(5))
       assertBn(await app.getTotalPooledEther(), ETH(67))
+      assert.equal(await app.distributeRewardsCalled(), false)
+      assertBn(await app.totalRewards(), 0)
+    })
+  })
+
+  context('with depositedVals=5, beaconVals=4, bcnBal=1, bufferedEth=0', async () => {
+    beforeEach(async function () {
+      await app.setDepositedValidators(5)
+      await app.setBeaconBalance(ETH(1))
+      await app.setBufferedEther({ from: user1, value: ETH(0) })
+      await app.setBeaconValidators(4)
+    })
+
+    // See LIP-1 for explanation
+    // https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-1.md
+    it('report decreased BcnValidators:3 = revert with REPORTED_LESS_VALIDATORS', async () => {
+      await assertRevert(oracle.reportBeacon(123, 3, ETH(1), { from: user2 }), 'REPORTED_LESS_VALIDATORS')
+      await assertRevert(oracle.reportBeacon(321, 2, ETH(10), { from: user2 }), 'REPORTED_LESS_VALIDATORS')
+      await assertRevert(oracle.reportBeacon(12345, 1, ETH(123), { from: user2 }), 'REPORTED_LESS_VALIDATORS')
+      // values stay intact
+      checkStat({ depositedValidators: 5, beaconValidators: 4, beaconBalance: ETH(1) })
+      assertBn(await app.getBufferedEther(), ETH(0))
+      assertBn(await app.getTotalPooledEther(), ETH(33))
       assert.equal(await app.distributeRewardsCalled(), false)
       assertBn(await app.totalRewards(), 0)
     })
