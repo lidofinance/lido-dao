@@ -11,8 +11,8 @@ Unlike staked ether, the stETH token is free from the limitations associated wit
 
 Before getting started with this repo, please read:
 
-* Whitepaper (TODO: add a link here)
-* Documentation (TODO: add a link here)
+* [A Primer](https://lido.fi/static/Lido:Ethereum-Liquid-Staking.pdf)
+* [Documentation](/docs)
 
 ## Lido DAO
 
@@ -284,12 +284,17 @@ An example of `deployed.json` file prepared for a testnet deployment:
           "100000000000000000000",
           "100000000000000000000"
         ],
-        "tokenName": "Lido DAO Token",
+        "tokenName": "Lido DAO Testnet Token",
         "tokenSymbol": "LDO",
         "voteDuration": 86400,
         "votingSupportRequired": "500000000000000000",
-        "votingMinAcceptanceQuorum": "50000000000000000",
-        "depositIterationLimit": 16
+        "votingMinAcceptanceQuorum": "300000000000000000",
+        "beaconSpec": {
+          "epochsPerFrame": 225,
+          "slotsPerEpoch": 32,
+          "secondsPerSlot": 12,
+          "genesisTime": 1605700807
+        }
       }
     }
   }

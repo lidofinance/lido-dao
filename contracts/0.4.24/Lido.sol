@@ -123,9 +123,9 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     /**
     * @notice Send funds to the pool with optional _referral parameter
     * @dev This function is alternative way to submit funds. Supports optional referral address.
-    * @return StETH Amount of StETH tokens generated
+    * @return Amount of StETH shares generated
     */
-    function submit(address _referral) external payable returns (uint256 StETH) {
+    function submit(address _referral) external payable returns (uint256) {
         return _submit(_referral);
     }
 
@@ -217,11 +217,13 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @notice Issues withdrawal request. Large withdrawals will be processed only after the phase 2 launch. WIP.
-      * @param _amount Amount of StETH to burn
+      * @notice Issues withdrawal request. Not implemented.
+      * @param _amount Amount of StETH to withdraw
       * @param _pubkeyHash Receiving address
       */
     function withdraw(uint256 _amount, bytes32 _pubkeyHash) external whenNotStopped { /* solhint-disable-line no-unused-vars */
+        //will be upgraded to an actual implementation when withdrawals are enabled (Phase 1.5 or 2 of Eth2 launch, likely late 2021 or 2022).
+        //at the moment withdrawals are not possible in the beacon chain and there's no workaround
         revert("NOT_IMPLEMENTED_YET");
     }
 
@@ -237,7 +239,13 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         uint256 depositedValidators = DEPOSITED_VALIDATORS_VALUE_POSITION.getStorageUint256();
         require(_beaconValidators <= depositedValidators, "REPORTED_MORE_DEPOSITED");
 
-        uint256 appearedValidators = _beaconValidators.sub(BEACON_VALIDATORS_VALUE_POSITION.getStorageUint256());
+        uint256 beaconValidators = BEACON_VALIDATORS_VALUE_POSITION.getStorageUint256();
+        // Since the calculation of funds in the ingress queue is based on the number of validators 
+        // that are in a transient state (deposited but not seen on beacon yet), we can't decrease the previously
+        // reported number (we'll be unable to figure out who is in the queue and count them).
+        // See LIP-1 for details https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-1.md
+        require(_beaconValidators >= beaconValidators, "REPORTED_LESS_VALIDATORS");
+        uint256 appearedValidators = _beaconValidators.sub(beaconValidators);
 
         // RewardBase is the amount of money that is not included in the reward calculation
         // Just appeared validators * 32 added to the previously reported beacon balance
@@ -422,25 +430,27 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     /**
     * @dev Process user deposit, mints liquid tokens and increase the pool buffer
     * @param _referral address of referral.
-    * @return StETH amount of tokens generated
+    * @return amount of StETH shares generated
     */
-    function _submit(address _referral) internal whenNotStopped returns (uint256 StETH) {
+    function _submit(address _referral) internal whenNotStopped returns (uint256) {
         address sender = msg.sender;
         uint256 deposit = msg.value;
         require(deposit != 0, "ZERO_DEPOSIT");
 
-        ISTETH stEth = getToken();
+        ISTETH token = getToken();
 
-        uint256 sharesAmount = stEth.getSharesByPooledEth(deposit);
+        uint256 sharesAmount = token.getSharesByPooledEth(deposit);
         if (sharesAmount == 0) {
             // totalControlledEther is 0: either the first-ever deposit or complete slashing
             // assume that shares correspond to Ether 1-to-1
-            stEth.mintShares(sender, deposit);
+            token.mintShares(sender, deposit);
         } else {
-            stEth.mintShares(sender, sharesAmount);
+            token.mintShares(sender, sharesAmount);
         }
 
         _submitted(sender, deposit, _referral);
+
+        return sharesAmount;
     }
 
     /**
@@ -562,7 +572,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     * @param _totalRewards Total rewards accrued on the Ethereum 2.0 side in wei
     */
     function distributeRewards(uint256 _totalRewards) internal {
-        ISTETH stEth = getToken();
+        ISTETH token = getToken();
         uint256 feeInEther = _totalRewards.mul(_getFee()).div(10000);
 
         // We need to take a defined percentage of the reported reward as a fee, and we do
@@ -593,13 +603,13 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         uint256 totalPooledEther = _getTotalPooledEther();
         uint256 shares2mint = (
             feeInEther
-            .mul(stEth.getTotalShares())
+            .mul(token.getTotalShares())
             .div(totalPooledEther.sub(feeInEther))
         );
 
         // Mint the calculated amount of shares to this contract address. This will reduce the
         // balances of the holders, as if the fee was taken in parts from each of them.
-        uint256 totalShares = stEth.mintShares(address(this), shares2mint);
+        uint256 totalShares = token.mintShares(address(this), shares2mint);
 
         // The minted token amount may be less than feeInEther due to the shares2mint rounding
         uint256 mintedFee = shares2mint.mul(totalPooledEther).div(totalShares);
@@ -608,14 +618,14 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         uint256 toTreasury = mintedFee.mul(treasuryFeeBasisPoints).div(10000);
         uint256 toInsuranceFund = mintedFee.mul(insuranceFeeBasisPoints).div(10000);
 
-        stEth.transfer(getTreasury(), toTreasury);
-        stEth.transfer(getInsuranceFund(), toInsuranceFund);
+        token.transfer(getTreasury(), toTreasury);
+        token.transfer(getInsuranceFund(), toInsuranceFund);
 
         // Transfer the rest of the fee to operators
         mintedFee = mintedFee.sub(toTreasury).sub(toInsuranceFund);
         INodeOperatorsRegistry operatorsRegistry = getOperators();
-        stEth.transfer(address(operatorsRegistry), mintedFee);
-        operatorsRegistry.distributeRewards(address(stEth), mintedFee);
+        token.transfer(address(operatorsRegistry), mintedFee);
+        operatorsRegistry.distributeRewards(address(token), mintedFee);
     }
 
     /**
