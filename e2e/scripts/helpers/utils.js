@@ -1,7 +1,7 @@
 import logger from './logger'
 import fs from 'fs'
 import path from 'path'
-import { toWei, isHex, toBN } from 'web3-utils'
+import { toWei, isHex, toBN, fromWei } from 'web3-utils'
 
 export const sleep = (ms) => {
   return new Promise((resolve) => setTimeout(resolve, ms * 1000))
@@ -74,3 +74,4 @@ export function objHexlify(obj) {
 
 export const BN = (value) => toBN(value)
 export const ETH = (value) => toWei(value + '', 'ether')
+export const toETH = (value) => fromWei(value + '', 'ether')

@@ -101,7 +101,7 @@ export async function getEther2Stat() {
 }
 
 export async function getUsedEther() {
-  const totalControledEther = await getTotalControlledEther()
+  const totalControledEther = await getTotalPooledEther()
   const bufferedEther = await getBufferedEther()
   return BN(totalControledEther).sub(BN(bufferedEther)).toString()
 }
@@ -120,11 +120,14 @@ export async function depositBufferedEther(from, maxDepositCalls = 16) {
   return await lidoContract.methods.depositBufferedEther(maxDepositCalls).send({ from, gas: '8000000' })
 }
 
-export function getTotalControlledEther() {
-  return lidoContract.methods.getTotalControlledEther().call()
+export function getTotalPooledEther() {
+  return lidoContract.methods.getTotalPooledEther().call()
 }
 export function getBufferedEther() {
   return lidoContract.methods.getBufferedEther().call()
+}
+export async function getBeaconStat() {
+  return await lidoContract.methods.getBeaconStat().call()
 }
 
 export function calculateNewTreasuryBalance(stakeProfit, balanceBeforePushData) {
