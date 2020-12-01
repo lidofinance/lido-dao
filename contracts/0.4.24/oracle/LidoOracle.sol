@@ -69,13 +69,13 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
     bytes32 internal constant QUORUM_VAULE_POSITION = keccak256("lido.lidooracle.quorum");
 
     /// @dev link to the pool
-    bytes32 internal constant POOL_VALUE_POSITION = keccak256("lido.Lido.pool");
+    bytes32 internal constant POOL_VALUE_POSITION = keccak256("lido.lidooracle.pool");
 
     /// @dev struct for actual beacon chain specs
     BeaconSpec public beaconSpec;
 
     /// @dev the most early epoch that can be reported
-    uint256 public earliestReportableEpochId;
+    bytes32 internal constant EARLIEST_REPORTABLE_EPOCH_ID_VALUE_POSITION = keccak256("lido.lidooracle.earliestReportableEpochId");
     /// @dev the last reported epoch
     uint256 private lastReportedEpochId;
     /// @dev storage for all gathered from reports data
@@ -165,7 +165,7 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
         uint256 index = _getMemberId(_member);
         require(index != MEMBER_NOT_FOUND, "MEMBER_NOT_FOUND");
 
-        earliestReportableEpochId = lastReportedEpochId;
+        EARLIEST_REPORTABLE_EPOCH_ID_VALUE_POSITION.setStorageUint256(lastReportedEpochId);
         uint256 last = members.length.sub(1);
 
         uint256 bitMask = gatheredEpochData[lastReportedEpochId].reportsBitMask;
@@ -190,6 +190,10 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
 
         QUORUM_VAULE_POSITION.setStorageUint256(_quorum);
         emit QuorumChanged(_quorum);
+
+        uint256 earliestReportableEpochId = (
+            EARLIEST_REPORTABLE_EPOCH_ID_VALUE_POSITION.getStorageUint256()
+        );
 
         assert(lastReportedEpochId <= getCurrentEpochId());
 
@@ -292,17 +296,17 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
             uint256 lastReportableEpochId
         )
     {
+        uint256 earliestReportableEpochId = (
+            EARLIEST_REPORTABLE_EPOCH_ID_VALUE_POSITION.getStorageUint256()
+        );
         return (earliestReportableEpochId, getCurrentEpochId());
     }
 
-    /**
-     * @dev Pushed the current data point if quorum is reached
-     */
-    function _tryPush(uint256 _epochId) internal {
+    function _isQuorum(uint256 _epochId) internal returns (bool, Report) {
         uint256 mask = gatheredEpochData[_epochId].reportsBitMask;
         uint256 popcnt = mask.popcnt();
         if (popcnt < getQuorum())
-            return;
+            return (false, Report({beaconBalance: 0, beaconValidators: 0}));
 
         assert(0 != popcnt && popcnt <= members.length);
 
@@ -321,14 +325,25 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
         // find mode value of this array
         (bool isUnimodal, uint256 mode) = Algorithm.mode(data);
         if (!isUnimodal)
-            return;
+            return (false, Report({beaconBalance: 0, beaconValidators: 0}));
 
         // unpack Report struct from uint256
         Report memory modeReport = uint256ToReport(mode);
 
+        return (true, modeReport);
+    }
+
+    /**
+     * @dev Pushed the current data point if quorum is reached
+     */
+    function _tryPush(uint256 _epochId) internal {
+        (bool isQuorum, Report memory modeReport) = _isQuorum(_epochId);
+        if (!isQuorum)
+            return;
+
         // data for this frame is collected, now this frame is completed, so
         // earliestReportableEpochId should be changed to first epoch from next frame
-        earliestReportableEpochId = (
+        EARLIEST_REPORTABLE_EPOCH_ID_VALUE_POSITION.setStorageUint256(
             _epochId
             .div(beaconSpec.epochsPerFrame)
             .add(1)
