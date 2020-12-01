@@ -29,7 +29,11 @@ VALIDATORS2_DATA_DIR="${VALIDATORS_DIR}/validators2"
 VALIDATORS2_VALIDATORS_KEYS_DIR="${VALIDATORS2_DATA_DIR}/validator_keys"
 VALIDATORS2_VALIDATORS_DIR="${VALIDATORS2_DATA_DIR}/validators"
 
-PASSWORD=123
+VALIDATORS3_DATA_DIR="${VALIDATORS_DIR}/validators3"
+VALIDATORS3_VALIDATORS_KEYS_DIR="${VALIDATORS3_DATA_DIR}/validator_keys"
+VALIDATORS3_VALIDATORS_DIR="${VALIDATORS3_DATA_DIR}/validators"
+
+PASSWORD=12345678
 
 NODE='npx babel-node --presets=@babel/preset-env'
 
@@ -248,8 +252,6 @@ if [ $ETH1_ONLY ]; then
   BLOCK_TIME=0 docker-compose up -d node1
   echo "ETH1 part done!"
   exit 0
-else
-  docker-compose up -d node1
 fi
 
 if [ ! -d $VALIDATORS_DIR ] && [ $SNAPSHOT ]; then
@@ -259,13 +261,18 @@ fi
 
 if [ ! -d "$VALIDATORS1_VALIDATORS_KEYS_DIR" ]; then
   # TODO dkg
-  echo "Generating $VALIDATOR_COUNT validator1 keys... (this may take a while)"
-  KEYS_DIR=$VALIDATORS1_DATA_DIR ./deposit.sh --num_validators=$VALIDATOR_COUNT --password=$PASSWORD --chain=medalla --mnemonic="$VALIDATOR_MNEMONIC1" --withdrawal_pk=$WITHDRAWAL_PK1
+  echo "Generating $VALIDATOR1_COUNT validator1 keys... (this may take a while)"
+  KEYS_DIR=$VALIDATORS1_DATA_DIR ./deposit.sh --num_validators=$VALIDATOR1_COUNT --keystore_password=$PASSWORD --chain=medalla --mnemonic="$VALIDATOR_MNEMONIC1" --withdrawal_pk=$WITHDRAWAL_PK1
 fi
 
 if [ ! -d "$VALIDATORS2_VALIDATORS_KEYS_DIR" ]; then
-  echo "Generating $VALIDATOR_COUNT validator2 keys... (this may take a while)"
-  KEYS_DIR=$VALIDATORS2_DATA_DIR ./deposit.sh --num_validators=$VALIDATOR_COUNT --password=$PASSWORD --chain=medalla --mnemonic="$VALIDATOR_MNEMONIC2" --withdrawal_pk=$WITHDRAWAL_PK2
+  echo "Generating $VALIDATOR2_COUNT validator2 keys... (this may take a while)"
+  KEYS_DIR=$VALIDATORS2_DATA_DIR ./deposit.sh --num_validators=$VALIDATOR2_COUNT --keystore_password=$PASSWORD --chain=medalla --mnemonic="$VALIDATOR_MNEMONIC2" --withdrawal_pk=$WITHDRAWAL_PK2
+fi
+
+if [ ! -d "$VALIDATORS3_VALIDATORS_KEYS_DIR" ]; then
+  echo "Generating $VALIDATOR3_COUNT validator2 keys... (this may take a while)"
+  KEYS_DIR=$VALIDATORS3_DATA_DIR ./deposit.sh --num_validators=$VALIDATOR3_COUNT --keystore_password=$PASSWORD --chain=medalla --mnemonic="$VALIDATOR_MNEMONIC3" --withdrawal_pk=$WITHDRAWAL_PK1
 fi
 
 if [ ! -d $TESTNET_DIR ]; then
@@ -278,6 +285,8 @@ if [ ! -d $TESTNET_DIR ]; then
   fi
 fi
 
+docker-compose up -d node1
+
 if [ $ETH2_RESET ]; then
   if [ ! $RESET ]; then
     echo "Stopping ETH2 nodes"
@@ -288,6 +297,7 @@ if [ $ETH2_RESET ]; then
     docker-compose rm -s -v -f mock-validators > /dev/null
     docker-compose rm -s -v -f validators1 > /dev/null
     docker-compose rm -s -v -f validators2 > /dev/null
+    docker-compose rm -s -v -f validators3 > /dev/null
   fi
 
   
@@ -335,13 +345,13 @@ if [ $ETH2_RESET ]; then
     if [ ! -d "$MOCK_VALIDATORS_KEYS_DIR" ]; then
       rm -rf $MOCK_VALIDATORS_DIR
       echo "Generating $MOCK_VALIDATOR_COUNT mock validator keys.. (this may take a while)"
-      KEYS_DIR=$MOCK_VALIDATORS_DATA_DIR ./deposit.sh --num_validators=$MOCK_VALIDATOR_COUNT --password=$PASSWORD --chain=medalla --mnemonic="$MOCK_VALIDATOR_MNEMONIC"
+      KEYS_DIR=$MOCK_VALIDATORS_DATA_DIR ./deposit.sh --num_validators=$MOCK_VALIDATOR_COUNT --keystore_password=$PASSWORD --chain=medalla --mnemonic="$MOCK_VALIDATOR_MNEMONIC"
     fi
 
     if [ ! -d "$MOCK_VALIDATORS_DIR" ]; then
       echo "Making deposits for $MOCK_VALIDATOR_COUNT genesis validators... (this may take a while)"
       $NODE scripts/mock_deposit.js
-      echo "Importing validators keystore"
+      echo "Importing mock validators keystore"
       echo $PASSWORD | docker-compose run --rm --no-deps lh lighthouse \
         --spec "$SPEC" --debug-level "$DEBUG_LEVEL" \
         account validator import --reuse-password --stdin-inputs \
@@ -370,7 +380,7 @@ if [ $ETH2_RESET ]; then
 fi
 
 if [ ! -d "$VALIDATORS1_VALIDATORS_DIR" ]; then
-  echo "Importing validators keystore"
+  echo "Importing validator1 keystore"
   echo $PASSWORD | docker-compose run --rm --no-deps lh lighthouse \
     --spec "$SPEC" --debug-level "$DEBUG_LEVEL" \
     account validator import --reuse-password --stdin-inputs \
@@ -380,12 +390,22 @@ if [ ! -d "$VALIDATORS1_VALIDATORS_DIR" ]; then
 fi
 
 if [ ! -d "$VALIDATORS2_VALIDATORS_DIR" ]; then
-  echo "Importing validators keystore"
+  echo "Importing validator2 keystore"
   echo $PASSWORD | docker-compose run --rm --no-deps lh lighthouse \
     --spec "$SPEC" --debug-level "$DEBUG_LEVEL" \
     account validator import --reuse-password --stdin-inputs \
     --datadir "/data/validators/validators2" \
     --directory "/data/validators/validators2/validator_keys" \
+    --testnet-dir "/data/testnet"
+fi
+
+if [ ! -d "$VALIDATORS3_VALIDATORS_DIR" ]; then
+  echo "Importing validator3 keystore"
+  echo $PASSWORD | docker-compose run --rm --no-deps lh lighthouse \
+    --spec "$SPEC" --debug-level "$DEBUG_LEVEL" \
+    account validator import --reuse-password --stdin-inputs \
+    --datadir "/data/validators/validators3" \
+    --directory "/data/validators/validators3/validator_keys" \
     --testnet-dir "/data/testnet"
 fi
 
@@ -411,8 +431,8 @@ docker-compose up -d node2-1 node2-2
 sleep 5
 docker-compose up -d mock-validators
 docker-compose up -d validators1
-sleep 5
 docker-compose up -d validators2
+docker-compose up -d validators3
 
 # oracles
 if [ $ORACLES ]; then

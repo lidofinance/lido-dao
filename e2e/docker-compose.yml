@@ -233,6 +233,28 @@ services:
     networks:
       eth2:
 
+  validators3:
+    image: sigp/lighthouse:v0.3.5
+    container_name: validators3
+    depends_on:
+      - node2-2
+#    ports:
+#      - 30303:30303
+    volumes:
+      - ./data:/data
+    command: >
+      lighthouse
+      --spec "${SPEC}"
+      validator_client
+      --delete-lockfiles 
+      --init-slashing-protection
+      --debug-level "${DEBUG_LEVEL}"
+      --datadir "/data/validators/validators3"
+      --testnet-dir "/data/testnet"
+      --server http://node2-2:5052
+    networks:
+      eth2:
+
   oracle-1:
     image: lido-oracle:e2e
     container_name: oracle-1
