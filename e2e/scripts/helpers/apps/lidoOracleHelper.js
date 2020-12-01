@@ -23,8 +23,8 @@ export async function hasInitialized() {
   return await lidoOracleContract.methods.hasInitialized().call()
 }
 
-export async function pushData(epoch, amount, sender) {
-  return await lidoOracleContract.methods.pushData(epoch, amount).send({ from: sender, gas: '8000000' })
+export async function reportBeacon(epoch, oracleData, beaconValidatorsCount, sender) {
+  return await lidoOracleContract.methods.reportBeacon(epoch, oracleData, beaconValidatorsCount).send({ from: sender, gas: '8000000' })
 }
 
 export async function setQuorum(quorum, holder, holders) {
@@ -89,4 +89,17 @@ export async function getQuorum() {
 
 export async function getLatestData() {
   return await lidoOracleContract.methods.getLatestData().call()
+}
+
+export async function waitForReportBeacon() {
+  const fromBlock = await web3.eth.getBlockNumber()
+  return new Promise((resolve, reject) => {
+    lidoOracleContract.once(
+      'Completed',
+      {
+        fromBlock
+      },
+      (error, event) => (error ? reject(error) : resolve(event.returnValues))
+    )
+  })
 }
