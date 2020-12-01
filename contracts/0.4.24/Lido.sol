@@ -536,7 +536,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     * @param _signature Signature of the deposit call
     */
     function _stake(bytes memory _pubkey, bytes memory _signature) internal {
-        require(getWithdrawalCredentials().length != 0, "EMPTY_WITHDRAWAL_CREDENTIALS");
+        require(keccak256(getWithdrawalCredentials()) != keccak256(abi.encodePacked(bytes32(0))), "EMPTY_WITHDRAWAL_CREDENTIALS");
 
         uint256 value = DEPOSIT_SIZE;
 
