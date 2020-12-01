@@ -66,7 +66,7 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
     /// @dev oracle committee members
     address[] private members;
     /// @dev number of the committee members required to finalize a data point
-    uint256 private quorum;
+    bytes32 internal constant QUORUM_VAULE_POSITION = keccak256("lido.lidooracle.quorum");
 
     /// @dev link to the pool
     ILido public pool;
@@ -148,7 +148,7 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
 
         // set quorum to 1 when first member added
         if (1 == members.length) {
-            quorum = 1;
+            QUORUM_VAULE_POSITION.setStorageUint256(1);
         }
 
         emit MemberAdded(_member);
@@ -160,7 +160,7 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
      * @param _member Address of a member to remove
      */
     function removeOracleMember(address _member) external auth(MANAGE_MEMBERS) {
-        require(members.length > quorum, "QUORUM_WONT_BE_MADE");
+        require(members.length > getQuorum(), "QUORUM_WONT_BE_MADE");
 
         uint256 index = _getMemberId(_member);
         require(index != MEMBER_NOT_FOUND, "MEMBER_NOT_FOUND");
@@ -188,7 +188,7 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
     function setQuorum(uint256 _quorum) external auth(MANAGE_QUORUM) {
         require(members.length >= _quorum && 0 != _quorum, "QUORUM_WONT_BE_MADE");
 
-        quorum = _quorum;
+        QUORUM_VAULE_POSITION.setStorageUint256(_quorum);
         emit QuorumChanged(_quorum);
 
         assert(lastReportedEpochId <= getCurrentEpochId());
@@ -240,8 +240,8 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
     /**
      * @notice Returns the number of oracle members required to form a data point
      */
-    function getQuorum() external view returns (uint256) {
-        return quorum;
+    function getQuorum() public view returns (uint256) {
+        return QUORUM_VAULE_POSITION.getStorageUint256();
     }
 
     /**
@@ -297,7 +297,7 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
     function _tryPush(uint256 _epochId) internal {
         uint256 mask = gatheredEpochData[_epochId].reportsBitMask;
         uint256 popcnt = mask.popcnt();
-        if (popcnt < quorum)
+        if (popcnt < getQuorum())
             return;
 
         assert(0 != popcnt && popcnt <= members.length);
@@ -372,6 +372,7 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
      * @dev Checks code self-consistency
      */
     function _assertInvariants() private view {
+        uint256 quorum = getQuorum();
         assert(quorum != 0 && members.length >= quorum);
         assert(members.length <= MAX_MEMBERS);
     }
