@@ -69,7 +69,7 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
     bytes32 internal constant QUORUM_VAULE_POSITION = keccak256("lido.lidooracle.quorum");
 
     /// @dev link to the pool
-    ILido public pool;
+    bytes32 internal constant POOL_VALUE_POSITION = keccak256("lido.Lido.pool");
 
     /// @dev struct for actual beacon chain specs
     BeaconSpec public beaconSpec;
@@ -88,7 +88,7 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
     );
 
     function initialize(
-        ILido _lido,
+        address _lido,
         uint64 _epochsPerFrame,
         uint64 _slotsPerEpoch,
         uint64 _secondsPerSlot,
@@ -103,7 +103,7 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
         require(_secondsPerSlot > 0);
         require(_genesisTime > 0);
 
-        pool = _lido;
+        POOL_VALUE_POSITION.setStorageAddress(_lido);
 
         beaconSpec.epochsPerFrame = _epochsPerFrame;
         beaconSpec.slotsPerEpoch = _slotsPerEpoch;
@@ -237,6 +237,10 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
         return members;
     }
 
+    function getPool() public view returns (ILido) {
+        return ILido(POOL_VALUE_POSITION.getStorageAddress());
+    }
+
     /**
      * @notice Returns the number of oracle members required to form a data point
      */
@@ -333,8 +337,8 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
 
         emit Completed(_epochId, modeReport.beaconBalance, modeReport.beaconValidators);
 
-        if (address(0) != address(pool))
-            pool.pushBeacon(modeReport.beaconValidators, modeReport.beaconBalance);
+        if (address(0) != address(getPool()))
+            getPool().pushBeacon(modeReport.beaconValidators, modeReport.beaconBalance);
     }
 
     function reportToUint256(Report _report) internal pure returns (uint256) {
