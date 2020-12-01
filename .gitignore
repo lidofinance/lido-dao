@@ -36,3 +36,5 @@ tmp/
 
 # Sensitive data
 /accounts.json
+# e2e temp data
+/deployed-e2e.json
