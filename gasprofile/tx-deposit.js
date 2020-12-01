@@ -27,7 +27,7 @@ async function main() {
   ] = addresses
 
   const deployed = await deployDaoAndPool(appManager, voting, 100)
-  const { pool, nosRegistry } = deployed
+  const { pool, nodeOperatorRegistry } = deployed
 
   await pool.setFee(0.01 * 10000, { from: voting })
   await pool.setFeeDistribution(0.3 * 10000, 0.2 * 10000, 0.5 * 10000, { from: voting })
@@ -38,8 +38,8 @@ async function main() {
   const numKeys = 3
 
   for (let iProvider = 0; iProvider < numProviders; ++iProvider) {
-    const nosTx = await nosRegistry.addNodeOperator(`NOS-${iProvider}`, nodeOperator, nosValidatorsLimit, { from: voting })
-    const nodeOperatorId = getEventArgument(nosTx, 'NosOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
+    const nosTx = await nodeOperatorRegistry.addNodeOperator(`NOS-${iProvider}`, nodeOperator, nosValidatorsLimit, { from: voting })
+    const nodeOperatorId = getEventArgument(nosTx, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
 
     const data = Array.from({ length: numKeys }, (_, iKey) => {
       const n = arbitraryN.clone().addn(10 * iKey + 1000 * iProvider)
@@ -52,9 +52,9 @@ async function main() {
     const keys = hexConcat(...data.map((v) => v.key))
     const sigs = hexConcat(...data.map((v) => v.sig))
 
-    await nosRegistry.addSigningKeys(nodeOperatorId, numKeys, keys, sigs, { from: voting })
+    await nodeOperatorRegistry.addSigningKeys(nodeOperatorId, numKeys, keys, sigs, { from: voting })
 
-    const totalKeys = await nosRegistry.getTotalSigningKeyCount(nodeOperatorId, { from: nobody })
+    const totalKeys = await nodeOperatorRegistry.getTotalSigningKeyCount(nodeOperatorId, { from: nobody })
     assertBn(totalKeys, numKeys, 'total signing keys')
 
     validatorData.push.apply(validatorData, data)
@@ -62,8 +62,10 @@ async function main() {
 
   // preheating: use one signing key from each provider
   await pool.submit(ZERO_ADDRESS, { from: user1, value: ETH(32 * numProviders + 1) })
+  await pool.depositBufferedEther(numProviders, { from: nobody })
 
   await printTx(`pool.submit(32 ETH)`, pool.submit(ZERO_ADDRESS, { from: user2, value: ETH(32) }))
+  await printTx(`await pool.depositBufferedEther(10)`, pool.depositBufferedEther(10, { from: nobody }))
 }
 
 async function printTx(name, promise) {
