@@ -72,7 +72,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
 
 
     /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
-    bytes private withdrawalCredentials;
+    bytes32 internal constant WITHDRAWAL_CREDENTIALS_POSITION = keccak256("lido.Lido.withdrawalCredentials");
 
 
     // Memory cache entry used in the _ETH2Deposit function
@@ -210,7 +210,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     function setWithdrawalCredentials(bytes _withdrawalCredentials) external auth(MANAGE_WITHDRAWAL_KEY) {
         require(_withdrawalCredentials.length == WITHDRAWAL_CREDENTIALS_LENGTH, "INVALID_LENGTH");
 
-        withdrawalCredentials = _withdrawalCredentials;
+        WITHDRAWAL_CREDENTIALS_POSITION.setStorageBytes32(BytesLib.toBytes32(_withdrawalCredentials, 0));
         getOperators().trimUnusedKeys();
 
         emit WithdrawalCredentialsSet(_withdrawalCredentials);
@@ -240,7 +240,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         require(_beaconValidators <= depositedValidators, "REPORTED_MORE_DEPOSITED");
 
         uint256 beaconValidators = BEACON_VALIDATORS_VALUE_POSITION.getStorageUint256();
-        // Since the calculation of funds in the ingress queue is based on the number of validators 
+        // Since the calculation of funds in the ingress queue is based on the number of validators
         // that are in a transient state (deposited but not seen on beacon yet), we can't decrease the previously
         // reported number (we'll be unable to figure out who is in the queue and count them).
         // See LIP-1 for details https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-1.md
@@ -307,13 +307,6 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @notice Returns current credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
-      */
-    function getWithdrawalCredentials() external view returns (bytes) {
-        return withdrawalCredentials;
-    }
-
-    /**
     * @notice Get the amount of Ether temporary buffered on this contract balance
     * @dev Buffered balance is kept on the contract from the moment the funds are received from user
     * until the moment they are actually sent to the official Deposit contract.
@@ -330,6 +323,13 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     */
     function getTotalPooledEther() external view returns (uint256) {
         return _getTotalPooledEther();
+    }
+
+    /**
+      * @notice Returns current credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
+      */
+    function getWithdrawalCredentials() public view returns (bytes) {
+        return abi.encodePacked(WITHDRAWAL_CREDENTIALS_POSITION.getStorageBytes32());
     }
 
     /**
@@ -536,7 +536,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     * @param _signature Signature of the deposit call
     */
     function _stake(bytes memory _pubkey, bytes memory _signature) internal {
-        require(withdrawalCredentials.length != 0, "EMPTY_WITHDRAWAL_CREDENTIALS");
+        require(getWithdrawalCredentials().length != 0, "EMPTY_WITHDRAWAL_CREDENTIALS");
 
         uint256 value = DEPOSIT_SIZE;
 
@@ -555,7 +555,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
 
         bytes32 depositDataRoot = sha256(
             abi.encodePacked(
-                sha256(abi.encodePacked(pubkeyRoot, withdrawalCredentials)),
+                sha256(abi.encodePacked(pubkeyRoot, getWithdrawalCredentials())),
                 sha256(abi.encodePacked(_toLittleEndian64(depositAmount), signatureRoot))
             )
         );
@@ -563,7 +563,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         uint256 targetBalance = address(this).balance.sub(value);
 
         getValidatorRegistrationContract().deposit.value(value)(
-            _pubkey, withdrawalCredentials, _signature, depositDataRoot);
+            _pubkey, getWithdrawalCredentials(), _signature, depositDataRoot);
         require(address(this).balance == targetBalance, "EXPECTING_DEPOSIT_TO_HAPPEN");
     }
 
