@@ -32,8 +32,8 @@ const main = async () => {
   const _wc = await lidoHelper.getWithdrawalCredentials()
   if (_wc !== wc) {
     r = await lidoHelper.setWithdrawalCredentials(wc, proposer, voters)
-    r = await lidoHelper.setFee('10000', proposer, voters)
-    r = await lidoHelper.setFeeDistribution('1000', '1000', '8000', proposer, voters)
+    r = await lidoHelper.setFee('1000', proposer, voters)
+    r = await lidoHelper.setFeeDistribution('0', '5000', '5000', proposer, voters)
     // console.log(r.events)
   }
 
