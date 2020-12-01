@@ -66,7 +66,7 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
     /// @dev oracle committee members
     address[] private members;
     /// @dev number of the committee members required to finalize a data point
-    bytes32 internal constant QUORUM_VAULE_POSITION = keccak256("lido.lidooracle.quorum");
+    bytes32 internal constant QUORUM_VALUE_POSITION = keccak256("lido.lidooracle.quorum");
 
     /// @dev link to the pool
     bytes32 internal constant POOL_VALUE_POSITION = keccak256("lido.lidooracle.pool");
@@ -148,7 +148,7 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
 
         // set quorum to 1 when first member added
         if (1 == members.length) {
-            QUORUM_VAULE_POSITION.setStorageUint256(1);
+            QUORUM_VALUE_POSITION.setStorageUint256(1);
         }
 
         emit MemberAdded(_member);
@@ -192,7 +192,7 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
     function setQuorum(uint256 _quorum) external auth(MANAGE_QUORUM) {
         require(members.length >= _quorum && 0 != _quorum, "QUORUM_WONT_BE_MADE");
 
-        QUORUM_VAULE_POSITION.setStorageUint256(_quorum);
+        QUORUM_VALUE_POSITION.setStorageUint256(_quorum);
         emit QuorumChanged(_quorum);
 
         uint256 earliestReportableEpochId = (
@@ -256,7 +256,7 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
      * @notice Returns the number of oracle members required to form a data point
      */
     function getQuorum() public view returns (uint256) {
-        return QUORUM_VAULE_POSITION.getStorageUint256();
+        return QUORUM_VALUE_POSITION.getStorageUint256();
     }
 
     /**
