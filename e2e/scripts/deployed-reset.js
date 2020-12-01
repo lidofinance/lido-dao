@@ -7,7 +7,7 @@ const NET_NAME = process.argv[3] || 'e2e'
 const OWNER = process.argv[4] || ''
 const HOLDERS = process.argv[5] || ''
 const STATE_PATH = process.argv[6] || '../..'
-const NETWORK_STATE_FILE = process.argv[7] || 'deployed.json'
+const NETWORK_STATE_FILE = process.argv[7] || 'deployed-e2e.json'
 const DEFAULT_STAKE = '100000000000000000000' // 100e18
 const DEFAULT_DAO_SETTINGS = {
   holders: [],
