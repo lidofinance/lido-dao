@@ -74,6 +74,7 @@ services:
       --spec "${SPEC}"
       --debug-level "${DEBUG_LEVEL}"
       bn
+      --slasher
       --disable-discovery
       --disable-upnp
       --datadir "/data/beacondata-1"
@@ -102,6 +103,7 @@ services:
       --spec "${SPEC}"
       --debug-level "${DEBUG_LEVEL}"
       bn
+      --slasher
       --disable-discovery
       --disable-upnp
       --datadir "/data/beacondata-2"
@@ -130,6 +132,7 @@ services:
       --spec "${SPEC}"
       --debug-level "${DEBUG_LEVEL}"
       bn
+      --slasher
       --disable-discovery
       --disable-upnp
       --datadir "/data/beacondata-3"
@@ -158,6 +161,7 @@ services:
       --spec "${SPEC}"
       --debug-level "${DEBUG_LEVEL}"
       bn
+      --slasher
       --disable-discovery
       --disable-upnp
       --datadir "/data/beacondata-4"
@@ -230,6 +234,28 @@ services:
       --datadir "/data/validators/validators2"
       --testnet-dir "/data/testnet"
       --server http://node2-1:5052
+    networks:
+      eth2:
+
+  validators3:
+    image: sigp/lighthouse:v0.3.5
+    container_name: validators3
+    depends_on:
+      - node2-2
+#    ports:
+#      - 30303:30303
+    volumes:
+      - ./data:/data
+    command: >
+      lighthouse
+      --spec "${SPEC}"
+      validator_client
+      --delete-lockfiles 
+      --init-slashing-protection
+      --debug-level "${DEBUG_LEVEL}"
+      --datadir "/data/validators/validators3"
+      --testnet-dir "/data/testnet"
+      --server http://node2-2:5052
     networks:
       eth2:
 
