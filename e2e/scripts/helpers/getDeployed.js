@@ -3,7 +3,7 @@ import { readNetworkState } from '../../../scripts/helpers/persisted-network-sta
 
 const NET_ID = '2020'
 const STATE_PATH = '../../..'
-const NETWORK_STATE_FILE = 'deployed.json'
+const NETWORK_STATE_FILE = 'deployed-e2e.json'
 
 let stateCache
 
