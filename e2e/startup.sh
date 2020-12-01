@@ -37,7 +37,7 @@ PASSWORD=12345678
 
 NODE='npx babel-node --presets=@babel/preset-env'
 
-DEPLOYED_FILE="../deployed.json"
+DEPLOYED_FILE="../deployed-e2e.json"
 ACCOUNTS_FILE="../accounts.json"
 ACCOUNTS_SAMPLE_FILE="../accounts.sample.json"
 STAGE="2"
