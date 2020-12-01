@@ -64,11 +64,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     bytes32 internal constant ACTIVE_OPERATORS_COUNT_VALUE_POSITION = keccak256("lido.Lido.activeOperatorsCount");
 
     /// @dev link to the pool
-    address public pool;
+    bytes32 internal constant POOL_VALUE_POSITION = keccak256("lido.Lido.pool");
 
 
     modifier onlyPool() {
-        require(msg.sender == pool, "APP_AUTH_FAILED");
+        require(msg.sender == POOL_VALUE_POSITION.getStorageAddress(), "APP_AUTH_FAILED");
         _;
     }
 
@@ -85,7 +85,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     function initialize(address _pool) public onlyInit {
         TOTAL_OPERATORS_COUNT_VALUE_POSITION.setStorageUint256(0);
         ACTIVE_OPERATORS_COUNT_VALUE_POSITION.setStorageUint256(0);
-        pool = _pool;
+        POOL_VALUE_POSITION.setStorageAddress(_pool);
         initialized();
     }
 
