@@ -74,7 +74,6 @@ services:
       --spec "${SPEC}"
       --debug-level "${DEBUG_LEVEL}"
       bn
-      --slasher
       --disable-discovery
       --disable-upnp
       --datadir "/data/beacondata-1"
@@ -103,7 +102,6 @@ services:
       --spec "${SPEC}"
       --debug-level "${DEBUG_LEVEL}"
       bn
-      --slasher
       --disable-discovery
       --disable-upnp
       --datadir "/data/beacondata-2"
@@ -132,7 +130,6 @@ services:
       --spec "${SPEC}"
       --debug-level "${DEBUG_LEVEL}"
       bn
-      --slasher
       --disable-discovery
       --disable-upnp
       --datadir "/data/beacondata-3"
@@ -161,7 +158,6 @@ services:
       --spec "${SPEC}"
       --debug-level "${DEBUG_LEVEL}"
       bn
-      --slasher
       --disable-discovery
       --disable-upnp
       --datadir "/data/beacondata-4"
