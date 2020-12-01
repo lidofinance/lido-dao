@@ -407,38 +407,40 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     /**
-      * @notice Returns a tuple: the first element is the number of active node operators;
-      * the second element contains packed metrics of all node operators, including inactive.
-      * The second element is a tightly-packed byte array consisting of 33-byte chunks, with
-      * i-th chunk corresponding to the i-th node operator and having the following layout:
-      * UK|TK|SV|SL|A, where UK is the number of used signing keys, TK is the total number of
-      * signing keys, SV is the number of stopped validators, and SL is staking limit, all
-      * 8-byte unsigned integers, and A is the active flag, a 1-byte unsigned integer (0 or 1).
+      * @notice Returns metrics of active node operators: a tightly-packed byte array consisting
+      * of 40-byte chunks, with each chunk corresponding to an active node operator and having the
+      * following layout: UK|TK|SV|SL|ID, where UK is the number of used signing keys, TK is the
+      * total number of signing keys, SV is the number of stopped validators, SL is staking limit,
+      * and ID is the id of the node operator, all 8-byte unsigned integers.
       */
-    function getNodeOperatorsMetrics() external view returns (uint256 activeCount, bytes memory data) {
-        uint256 count = totalOperatorsCount;
-        data = new bytes(33 * count);
-        for (uint256 i = 0; i < count; ++i) {
-            NodeOperator storage op = operators[i];
-            assembly {
-                // load the third slot of the StakingProvider struct containing UK,TK,SV,SL
-                // and store it into the first 32 bytes of the i-th chunk of the array
-                mstore(
-                    // the first 32 bytes of a byte array contain its length
-                    add(data, add(mul(i, 33), 32)),
-                    // we know that the offset inside a storage slot is always zero for a struct
-                    sload(add(op_slot, 2))
-                )
-                // store the active flag into the remaining byte of the i-th 33-byte chunk
-                mstore8(
-                    // (data + 32) + i*33 + 32
-                    add(data, add(mul(i, 33), 64)),
-                    // we know that the offset inside a storage slot is always zero for a struct
-                    and(sload(op_slot), 0x1)
-                )
+    function getActiveNodeOperatorsMetrics() external view returns (bytes memory data) {
+        uint256 totalCount = totalOperatorsCount;
+        // we assume that all operator ids (their indices into the array) are 8-byte integers
+        assert(totalCount <= 0x010000000000000000);
+
+        uint256 activeCount = activeOperatorsCount;
+        data = new bytes(40 * activeCount);
+        uint256 dataIndex = 0;
+
+        for (uint256 id = 0; dataIndex < activeCount && id < totalCount; ++id) {
+            NodeOperator storage op = operators[id];
+            if (!op.active) {
+                continue;
             }
+            assembly {
+                // the first 32 bytes of a byte array contain its length
+                let offset := add(add(data, 32), mul(dataIndex, 40))
+                // store the id (that's actually a 8-byte integer) into bytes 8..39 of the i-th
+                // 40-byte chunk of the array. the next mstore will overwrite bytes 0..31 of the
+                // chunk, so the id will actually occupy bytes 32..39
+                mstore(add(offset, 8), id)
+                // load the third slot of the NodeOperator struct containing UK,TK,SV,SL
+                // and store it into the first 32 bytes of the i-th chunk of the array.
+                // we know that the offset inside a storage slot is always zero for a struct
+                mstore(offset, sload(add(op_slot, 2)))
+            }
+            ++dataIndex;
         }
-        activeCount = activeOperatorsCount;
     }
 
     function to64(uint256 v) internal pure returns (uint64) {

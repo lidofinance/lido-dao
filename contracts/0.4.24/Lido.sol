@@ -758,36 +758,33 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     function _load_operator_cache() internal view returns (DepositLookupCacheEntry[] memory cache) {
         INodeOperatorsRegistry operators = getOperators();
 
-        (uint256 activeCount, bytes memory data) = operators.getNodeOperatorsMetrics();
-        require(0 == data.length % 33, "NODE_OPERATOR_REGISTRY_INCOSISTENT_DATALEN");
+        bytes memory data = operators.getActiveNodeOperatorsMetrics();
+        require(0 == data.length % 40, "NODE_OPERATOR_REGISTRY_INCOSISTENT_DATALEN");
+        uint256 activeCount = data.length / 40;
 
         cache = new DepositLookupCacheEntry[](activeCount);
         if (0 == activeCount)
             return cache;
 
-        // data is a sequence of 33-byte chunks, i-th chunk corresponding to a staking provider
-        // with id i and having the following layout:
-        // usedSigningKeys | totalSigningKeys | stoppedValidators | stakingLimit | active,
-        // where the first 4 elements are 8-byte uints and the last element is a 1-byte uint
-        uint256 totalOps = data.length / 33;
-        uint256 cacheIdx = 0;
-        for (uint256 i = 0; i < totalOps; ++i) {
+        // data is a sequence of 40-byte chunks, with each chunk corresponding to an
+        // active node operator and having the following layout:
+        // usedSigningKeys | totalSigningKeys | stoppedValidators | stakingLimit | id,
+        // where each elements is a 8-byte uint
+        for (uint256 i = 0; i < activeCount; ++i) {
             uint256 iData;
-            bool iActive;
+            uint256 id;
             assembly {
-                // get the i-th 33-byte chunk offset: iData + 32 + i*33
-                let offset := add(data, add(32, mul(i, 33)))
-                // and write its first 32 bytes to iData
+                // get the i-th 40-byte chunk offset: iData + 32 + i*40
+                let offset := add(add(data, 32), mul(i, 40))
+                // write its first 32 bytes to iData
                 iData := mload(offset)
-                // and its last, 33-rd, byte to iActive
-                iActive := and(mload(add(offset, 1)), 0x1)
+                // and the last 8 bytes to id
+                let idWithTail := mload(add(offset, 32))
+                id := and(shr(192, idWithTail), 0xffffffffffffffff)
             }
 
-            if (!iActive)
-                continue;
-
-            DepositLookupCacheEntry memory cached = cache[cacheIdx++];
-            cached.id = i;
+            DepositLookupCacheEntry memory cached = cache[i];
+            cached.id = id;
 
             cached.stakingLimit = iData & 0xffffffffffffffff;
             cached.stoppedValidators = (iData >> 64) & 0xffffffffffffffff;
@@ -796,7 +793,6 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
 
             cached.initialUsedSigningKeys = cached.usedSigningKeys;
         }
-        require(cacheIdx == cache.length, "NODE_OPERATOR_REGISTRY_INCOSISTENCY");
     }
 
     /**

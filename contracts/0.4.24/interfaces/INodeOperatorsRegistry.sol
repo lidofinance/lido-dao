@@ -143,15 +143,13 @@ interface INodeOperatorsRegistry {
             (bytes key, bytes depositSignature, bool used);
 
     /**
-      * @notice Returns a tuple: the first element is the number of active node operators;
-      * the second element contains packed metrics of all node operators, including inactive.
-      * The second element is a tightly-packed byte array consisting of 33-byte chunks, with
-      * i-th chunk corresponding to the i-th node operator and having the following layout:
-      * UK|TK|SV|SL|A, where UK is the number of used signing keys, TK is the total number of
-      * signing keys, SV is the number of stopped validators, and SL is staking limit, all
-      * 8-byte unsigned integers, and A is the active flag, a 1-byte unsigned integer (0 or 1).
+      * @notice Returns metrics of active node operators: a tightly-packed byte array consisting
+      * of 40-byte chunks, with each chunk corresponding to an active node operator and having the
+      * following layout: UK|TK|SV|SL|ID, where UK is the number of used signing keys, TK is the
+      * total number of signing keys, SV is the number of stopped validators, SL is staking limit,
+      * and ID is the id of the node operator, all 8-byte unsigned integers.
       */
-    function getNodeOperatorsMetrics() external view returns (uint256 activeCount, bytes memory data);
+    function getActiveNodeOperatorsMetrics() external view returns (bytes memory data);
 
     event SigningKeyAdded(uint256 indexed operatorId, bytes pubkey);
     event SigningKeyRemoved(uint256 indexed operatorId, bytes pubkey);
