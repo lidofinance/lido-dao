@@ -1,5 +1,5 @@
 import { abi as LidoOracleAbi } from '../../../../artifacts/LidoOracle.json'
-import { createVote, voteForAction } from './votingHelper'
+import { createVote, voteForAction, init as votingInit } from './votingHelper'
 import { encodeCallScript } from '@aragon/contract-helpers-test/src/aragon-os'
 import logger from '../logger'
 
@@ -10,6 +10,7 @@ export let lidoOracleContract
 export function init(c) {
   if (!context) {
     context = c
+    votingInit(context)
     web3 = context.web3
     lidoOracleContract = new web3.eth.Contract(LidoOracleAbi, getProxyAddress())
   }

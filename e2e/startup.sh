@@ -298,6 +298,9 @@ if [ $ETH2_RESET ]; then
     docker-compose rm -s -v -f validators1 > /dev/null
     docker-compose rm -s -v -f validators2 > /dev/null
     docker-compose rm -s -v -f validators3 > /dev/null
+    docker-compose rm -s -v -f oracle1 > /dev/null
+    docker-compose rm -s -v -f oracle2 > /dev/null
+    docker-compose rm -s -v -f oracle3 > /dev/null
   fi
 
   
@@ -358,7 +361,6 @@ if [ $ETH2_RESET ]; then
         --datadir "/data/validators/mock_validators" \
         --directory "/data/validators/mock_validators/validator_keys" \
         --testnet-dir "/data/testnet"
-
     fi
 
     echo "Generating genesis"
@@ -437,7 +439,12 @@ docker-compose up -d validators3
 # oracles
 if [ $ORACLES ]; then
   echo "Building oracle container"
+  docker-compose rm -s -v -f oracle1 > /dev/null
+  docker-compose rm -s -v -f oracle2 > /dev/null
+  docker-compose rm -s -v -f oracle3 > /dev/null
+
   ./oracle_build.sh
+  $NODE scripts/set_beacon_spec.js
   if [ $SEED ]; then
     $NODE scripts/mock_validators.js
   fi
@@ -452,6 +459,7 @@ if [ $ORACLES ]; then
   #   cd - > /dev/null
   #   docker-compose start node1
   # fi
+
   LIDO=$(cat $DEPLOYED_FILE | jq -r ".networks[\"$NETWORK_ID\"].appProxies[\"lido.lido.eth\"]")
   POOL_CONTRACT=$LIDO docker-compose up -d oracle-1 oracle-2 oracle-3
 fi
