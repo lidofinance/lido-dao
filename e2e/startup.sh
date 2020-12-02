@@ -439,9 +439,9 @@ docker-compose up -d validators3
 # oracles
 if [ $ORACLES ]; then
   echo "Building oracle container"
-  docker-compose rm -s -v -f oracle1 > /dev/null
-  docker-compose rm -s -v -f oracle2 > /dev/null
-  docker-compose rm -s -v -f oracle3 > /dev/null
+  docker-compose rm -s -v -f oracle-1 > /dev/null
+  docker-compose rm -s -v -f oracle-2 > /dev/null
+  docker-compose rm -s -v -f oracle-3 > /dev/null
 
   ./oracle_build.sh
   $NODE scripts/set_beacon_spec.js
