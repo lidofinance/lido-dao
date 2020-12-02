@@ -250,11 +250,10 @@ test('Full flow test ', async (t) => {
   t.is(await stEthHelper.getBalance(user1), '0', 'Check that the stEthToken balance equal 0 after convert to cStToken')
   t.is(await stEthHelper.getBalance(cstETHAddress), stEthTokenToWrap, 'Check that the balance of cstEthAddress is calculated correctly')
 
-  // TODO deploy oracle daemons
-
   logger.info('Wait for validators activation')
   await waitFor(150)
 
+  // Oracle daemons have been deployed by ./startup.sh script
   logger.info('Check that the validators have been activated')
   const operator1UsedSigningKeys = await nodeOperatorsHelper.getActiveSigningKeys(operator1, operator1SigningKeys)
   const operator2UsedSigningKeys = await nodeOperatorsHelper.getActiveSigningKeys(operator2, nodeOperator2SigningKeys)
@@ -265,20 +264,11 @@ test('Full flow test ', async (t) => {
   logger.info('Check that the network is producing and finalizing blocks')
   t.true(await eth2Helper.isEth2NetworkProducingSlots())
 
-  // // logger.info('Waiting for the validator to receive a reward')
-  // // TODO check validators data
-  // // await waitFor(20000)
-
-  logger.info('Push data to eth1')
-  let oracleData = ETH(600)
-  const lidoUsedEther = await lidoHelper.getUsedEther()
-  let stakeProfit = +oracleData - +lidoUsedEther
-  let validatorsReward = stakeProfit
+  logger.info('Waiting for the validator to receive a rewards')
+  let oracleEvent = await lidoOracleHelper.waitForReportBeacon()
   beaconStat = await lidoHelper.getBeaconStat()
-  await lidoOracleHelper.reportBeacon(400, oracleData, beaconStat.depositedValidators, oracleMember1)
-  await lidoOracleHelper.reportBeacon(400, oracleData, beaconStat.depositedValidators, oracleMember2)
-  await lidoOracleHelper.reportBeacon(400, oracleData, beaconStat.depositedValidators, oracleMember3)
-  beaconStat = await lidoHelper.getBeaconStat()
+  t.is(oracleEvent.beaconBalance, beaconStat.beaconBalance, 'Check that the remote beacon balance changed correctly')
+  t.is(oracleEvent.beaconValidators, beaconStat.depositedValidators, 'Check that the remote deposited validators changed correctly')
   t.true(
     compareBN(await stEthHelper.getBalance(nosMember1), await nodeOperatorsHelper.calculateNewNodeOperatorBalance(nosMember1)),
     'Check that nodeOperator1 receive an appropriate amount of stEthTokens by validators rewards'
@@ -312,7 +302,6 @@ test('Full flow test ', async (t) => {
     compareBN(await stEthHelper.getBalance(user3), await stEthHelper.calculateNewUserBalance(user3)),
     'Check that the user2 receive appropriate amount of stEthTokens by validators rewards'
   )
-  t.is(beaconStat.beaconBalance, oracleData, 'Check that the remote beacon balance changed correctly')
 
   logger.info('Convert cstEthToken back to stEthToken')
   const cstEthTokenToUnwrap = ETH(32)
@@ -400,15 +389,9 @@ test('Full flow test ', async (t) => {
     (+ETH(20 * 32) - +ETH(16 * 32)).toString(),
     'Check that the rest of the deposited Ether is still buffered in the Lido due to iteration limit '
   )
-  t.is(
-    await lidoHelper.getTotalPooledEther(),
-    BN(oracleData).add(BN(user5Deposit)).toString(),
-    'Check that the total pooled ether in Lido is correct'
-  )
   t.is(beaconStat.depositedValidators, totalDepositedValidators, 'Check that the deposited validators count is correct')
 
   logger.info('Check that the rest of buffered Ether in the pool can be submitted')
-
   await lidoHelper.depositBufferedEther(user5)
   operator4 = await nodeOperatorsHelper.getNodeOperator(3, true)
   usersDeposits = BN(usersDeposits).add(BN(user5Deposit))
@@ -422,6 +405,7 @@ test('Full flow test ', async (t) => {
     totalDepositedValidators,
     'Check that the deposited validators count is correct after deposit of rest of buffered Ether'
   )
+  t.is(await beaconStat.depositedValidators, (+usersDeposits / ETH(32)).toString(), 'Check that the ether2 stat is changed correctly')
 
   logger.info('Wait for validators activation')
   await waitFor(150)
@@ -440,17 +424,11 @@ test('Full flow test ', async (t) => {
     'Check that the count of active providers is changed after deactivate one'
   )
 
-  logger.info('Push data and check that the deactivated provider balance not changed')
-  oracleData = ETH(2000)
+  logger.info('Waiting for the validator to receive a rewards and check that the deactivated provider balance not changed')
+  oracleEvent = await lidoOracleHelper.waitForReportBeacon()
   beaconStat = await lidoHelper.getBeaconStat()
-  stakeProfit = BN(oracleData)
-    .sub(BN(validatorsReward))
-    .sub(BN(BN(beaconStat.depositedValidators).mul(BN(ETH(32)))))
-    .toString()
-  validatorsReward = stakeProfit
-  await lidoOracleHelper.reportBeacon(2500, oracleData, beaconStat.depositedValidators, oracleMember1)
-  await lidoOracleHelper.reportBeacon(2500, oracleData, beaconStat.depositedValidators, oracleMember2)
-  await lidoOracleHelper.reportBeacon(2500, oracleData, beaconStat.depositedValidators, oracleMember3)
+  t.is(oracleEvent.beaconBalance, beaconStat.beaconBalance, 'Check that the remote beacon balance changed correctly')
+  t.is(oracleEvent.beaconValidators, beaconStat.depositedValidators, 'Check that the remote deposited validators changed correctly')
 
   logger.info('Check that the rewards have been split between nos1,nos2,nos3 due to nos4 was deactivated')
   t.true(
