@@ -11,7 +11,9 @@ import {
   concat0x,
   getDataToPerformDepositContract,
   BN,
-  compareBN
+  compareBN,
+  startValidatorsNodes,
+  stopValidatorsNodes
 } from '../scripts/helpers/utils'
 
 import * as aclHelper from '../scripts/helpers/apps/aclHelper'
@@ -204,16 +206,16 @@ test('Full flow test ', async (t) => {
   t.is(await lidoHelper.getBufferedEther(), '0', 'Buffered ether in Lido')
   t.is(await lidoHelper.getTotalPooledEther(), ETH(288), 'Total pooled ether in Lido')
 
-  logger.info('Deposit 32 ETH via validators deposit contract from user4')
+  logger.info('Deposit 32 ETH via validators deposit contract from user5')
   const depositData = getDataToPerformDepositContract('validators1')
-  const receipt = await depositContractHelper.deposit(user4, ETH(32), depositData)
+  const receipt = await depositContractHelper.deposit(user5, ETH(32), depositData)
   expectEvent(receipt, 'DepositEvent', {
     pubkey: depositData.pubkey,
     withdrawal_credentials: depositData.withdrawal_credentials,
     signature: depositData.signature,
     amount: '0x0040597307000000' // 32eth in gweis converted to little endian bytes
   })
-  t.is(await stEthHelper.getBalance(user4), '0', 'Check that user4 don`t receive stEthTokens after transaction to deposit contract')
+  t.is(await stEthHelper.getBalance(user5), '0', 'Check that user5 don`t receive stEthTokens after transaction to deposit contract')
   // TODO check that validator is up/not up
 
   logger.info('Deposit 288 ETH to Lido via Lido from user3')
@@ -380,10 +382,10 @@ test('Full flow test ', async (t) => {
   logger.info('Check deposit iteration limit')
   const user5Deposit = ETH(20 * 32)
   const maxDepositCalls = 16
-  await lidoHelper.depositToLidoContract(user5, user5Deposit, ZERO_ADDRESS, maxDepositCalls)
+  await lidoHelper.depositToLidoContract(user4, user5Deposit, ZERO_ADDRESS, maxDepositCalls)
   beaconStat = await lidoHelper.getBeaconStat()
   totalDepositedValidators = (+totalDepositedValidators + +maxDepositCalls).toString()
-  t.true(compareBN(await stEthHelper.getBalance(user5), user5Deposit), 'Check that user receive an appropriate amount of stEthTokens')
+  t.true(compareBN(await stEthHelper.getBalance(user4), user5Deposit), 'Check that user receive an appropriate amount of stEthTokens')
   t.is(
     await lidoHelper.getBufferedEther(),
     (+ETH(20 * 32) - +ETH(16 * 32)).toString(),
@@ -392,7 +394,7 @@ test('Full flow test ', async (t) => {
   t.is(beaconStat.depositedValidators, totalDepositedValidators, 'Check that the deposited validators count is correct')
 
   logger.info('Check that the rest of buffered Ether in the pool can be submitted')
-  await lidoHelper.depositBufferedEther(user5)
+  await lidoHelper.depositBufferedEther(user4)
   operator4 = await nodeOperatorsHelper.getNodeOperator(3, true)
   usersDeposits = BN(usersDeposits).add(BN(user5Deposit))
   beaconStat = await lidoHelper.getBeaconStat()
@@ -467,7 +469,7 @@ test('Full flow test ', async (t) => {
   )
   t.true(
     compareBN(await stEthHelper.getBalance(user4), await stEthHelper.calculateNewUserBalance(user4)),
-    'Check that the user5 receive appropriate amount of stEthTokens by validators rewards'
+    'Check that the user4 receive appropriate amount of stEthTokens by validators rewards'
   )
 
   logger.info('Increase staking limit for nodeOperator4')
