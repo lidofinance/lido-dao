@@ -41,6 +41,13 @@ contract('Lido pushBeacon', ([appManager, voting, user1, user2, user3, nobody]) 
     await assertRevert(fakeOracle.reportBeacon(110, 0, ETH(0), { from: user2 }), 'APP_AUTH_FAILED')
   })
 
+  it('initial reportBounds is correct', async () => {
+    const receipt = await app.getReportBounds()
+    console.log(receipt)
+    assertBn(receipt.reportLowerBound, 0)
+    assertBn(receipt.reportUpperBound, 1000000)
+  })
+
   context('with depositedVals=0, beaconVals=0, bcnBal=0, bufferedEth=0', async () => {
     beforeEach(async function () {
       await app.setDepositedValidators(0)

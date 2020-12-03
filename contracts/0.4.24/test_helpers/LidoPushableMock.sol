@@ -35,6 +35,10 @@ contract LidoPushableMock is Lido {
     function initialize(address _oracle) public onlyInit {
         _setOracle(_oracle);
         initialized();
+
+        // TODO: set correct initial values
+        REPORT_LOWER_BOUND_VALUE_POSITION.setStorageUint256(0);
+        REPORT_UPPER_BOUND_VALUE_POSITION.setStorageUint256(uint256(1000000));
     }
 
     function resetDistributeRewards() public {

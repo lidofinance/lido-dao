@@ -36,6 +36,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     /// ACL
     bytes32 constant public PAUSE_ROLE = keccak256("PAUSE_ROLE");
     bytes32 constant public MANAGE_FEE = keccak256("MANAGE_FEE");
+    bytes32 constant public MANAGE_REPORT_BOUNDS = keccak256("MANAGE_REPORT_BOUNDS");
     bytes32 constant public MANAGE_WITHDRAWAL_KEY = keccak256("MANAGE_WITHDRAWAL_KEY");
     bytes32 constant public SET_ORACLE = keccak256("SET_ORACLE");
 
@@ -70,6 +71,10 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     /// @dev number of Lido's validators available in the Beacon state
     bytes32 internal constant BEACON_VALIDATORS_VALUE_POSITION = keccak256("lido.Lido.beaconValidators");
 
+    ///
+    bytes32 internal constant REPORT_LOWER_BOUND_VALUE_POSITION = keccak256("lido.Lido.reportLowerBound");
+    /// 
+    bytes32 internal constant REPORT_UPPER_BOUND_VALUE_POSITION = keccak256("lido.Lido.reportUpperBound");
 
     /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
     bytes private withdrawalCredentials;
@@ -105,6 +110,10 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         _setValidatorRegistrationContract(validatorRegistration);
         _setOracle(_oracle);
         _setOperators(_operators);
+
+        // TODO: set correct initial values
+        REPORT_LOWER_BOUND_VALUE_POSITION.setStorageUint256(0);
+        REPORT_UPPER_BOUND_VALUE_POSITION.setStorageUint256(uint256(1000000));
 
         initialized();
     }
@@ -166,6 +175,24 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     function setFee(uint16 _feeBasisPoints) external auth(MANAGE_FEE) {
         _setBPValue(FEE_VALUE_POSITION, _feeBasisPoints);
         emit FeeSet(_feeBasisPoints);
+    }
+
+    /**
+      * @notice 
+      * @param _reportLowerBoundBasisPoints Lower bound, in basis points
+      */
+    function setReportLowerBound(uint16 _reportLowerBoundBasisPoints) external auth(MANAGE_REPORT_BOUNDS) {
+        require(_reportLowerBoundBasisPoints < 10000, "TOO_BIG_LOWER_BOUND");
+        REPORT_LOWER_BOUND_VALUE_POSITION.setStorageUint256(uint256(_reportLowerBoundBasisPoints));
+    }
+
+    /**
+      * @notice 
+      * @param _reportUpperBoundBasisPoints Upper bound, in basis points
+      */
+    function setReportUpperBound(uint16 _reportUpperBoundBasisPoints) external auth(MANAGE_REPORT_BOUNDS) {
+        require(_reportUpperBoundBasisPoints > 10000, "TOO_SMALL_UPPER_BOUND");
+        REPORT_UPPER_BOUND_VALUE_POSITION.setStorageUint256(uint256(_reportUpperBoundBasisPoints));
     }
 
     /**
@@ -250,6 +277,14 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         // RewardBase is the amount of money that is not included in the reward calculation
         // Just appeared validators * 32 added to the previously reported beacon balance
         uint256 rewardBase = (appearedValidators.mul(DEPOSIT_SIZE)).add(BEACON_BALANCE_VALUE_POSITION.getStorageUint256());
+
+        // Prevent reports with abnormal _beaconBalance values
+        uint256 oldBeaconBalance = BEACON_BALANCE_VALUE_POSITION.getStorageUint256();
+        (uint256 reportLowerBound, uint256 reportUpperBound) = getReportBounds();
+        require(_beaconBalance >= oldBeaconBalance.mul(reportLowerBound).div(10000), "ABNORMAL_SLASHING");
+        if (_beaconBalance > rewardBase) {
+            require(_beaconBalance <= rewardBase.mul(reportUpperBound).div(10000), "ABNORMAL_REWARD");
+        }
 
         // Save the current beacon balance and validators to
         // calcuate rewards on the next push
@@ -389,6 +424,17 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         depositedValidators = DEPOSITED_VALIDATORS_VALUE_POSITION.getStorageUint256();
         beaconValidators = BEACON_VALIDATORS_VALUE_POSITION.getStorageUint256();
         beaconBalance = BEACON_BALANCE_VALUE_POSITION.getStorageUint256();
+    }
+
+    /**
+    * @notice 
+    * @return reportLowerBound
+    * @return reportUpperBound
+    */
+    function getReportBounds() public view returns (uint256 reportLowerBound, uint256 reportUpperBound) {
+        reportLowerBound = REPORT_LOWER_BOUND_VALUE_POSITION.getStorageUint256();
+        reportUpperBound = REPORT_UPPER_BOUND_VALUE_POSITION.getStorageUint256();
+        return (reportLowerBound, reportUpperBound);
     }
 
     /**

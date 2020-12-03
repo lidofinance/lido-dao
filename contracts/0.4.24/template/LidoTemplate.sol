@@ -204,6 +204,7 @@ contract LidoTemplate is BaseTemplate {
         // Pool
         state.acl.createPermission(state.voting, state.lido, state.lido.PAUSE_ROLE(), state.voting);
         state.acl.createPermission(state.voting, state.lido, state.lido.MANAGE_FEE(), state.voting);
+        state.acl.createPermission(state.voting, state.lido, state.lido.MANAGE_REPORT_BOUNDS(), state.voting);
         state.acl.createPermission(state.voting, state.lido, state.lido.MANAGE_WITHDRAWAL_KEY(), state.voting);
         state.acl.createPermission(state.voting, state.lido, state.lido.SET_ORACLE(), state.voting);
     }
