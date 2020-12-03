@@ -3,6 +3,8 @@ import React, { useCallback } from 'react'
 import { Formik, Field } from 'formik'
 import * as yup from 'yup'
 import TextField from './TextField'
+import { toBasisPoints, sum } from '../utils'
+import BN from 'bn.js'
 
 const TREASURY = 'treasury'
 const INSURANCE = 'insurance'
@@ -41,9 +43,14 @@ const validationSchema = yup
   .test({
     name: 'total',
     test: function ({ operators, insurance, treasury }) {
-      const total =
-        Number(operators) + Number(insurance) + Number(treasury)
-      if (total === 100) return true
+      const operatorsBps = toBasisPoints(operators)
+      const insuranceBps = toBasisPoints(insurance)
+      const treasuryBps = toBasisPoints(treasury)
+
+      const total = sum(operatorsBps, insuranceBps, treasuryBps)
+      const totalEquals10000 = new BN(total).eq(new BN(10000))
+
+      if (totalEquals10000) return true
 
       return this.createError({
         path: 'total',
@@ -55,11 +62,11 @@ const validationSchema = yup
 function PanelContent({ api, onClose }) {
   const onSubmit = useCallback(
     ({ treasury, insurance, operators }) => {
-      const treasuryBp = treasury * 100
-      const insuranceBp = insurance * 100
-      const operatorsBp = operators * 100
+      const insuranceBps = toBasisPoints(insurance)
+      const treasuryBps = toBasisPoints(treasury)
+      const operatorsBps = toBasisPoints(operators)
 
-      api(treasuryBp, insuranceBp, operatorsBp)
+      api(treasuryBps, insuranceBps, operatorsBps)
         .catch(console.error)
         .finally(() => {
           onClose()
@@ -95,7 +102,8 @@ function PanelContent({ api, onClose }) {
               `}
             >
               This action will change the fee distribution between treasury,
-              insurance fund, and Node Operators. All fields must add up to 100%.
+              insurance fund, and Node Operators. All fields must add up to
+              100%.
             </Info>
             <Field
               name={TREASURY}
