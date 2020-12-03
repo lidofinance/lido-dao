@@ -5,6 +5,9 @@ import * as yup from 'yup'
 import TextField from './TextField'
 import { formatJsonData, isHexadecimal } from '../utils/helpers'
 
+const DEFAULT_LIMIT = 20
+const LIMIT = process.env.SK_LIMIT || DEFAULT_LIMIT
+
 const initialValues = {
   json: '',
 }
@@ -32,6 +35,12 @@ const validationSchema = yup.object().shape({
         return this.createError({
           path: 'json',
           message: `Expected one or more keys but got ${quantity}.`,
+        })
+
+      if (quantity > LIMIT)
+        return this.createError({
+          path: 'json',
+          message: `Expected ${LIMIT} signing keys max per submission but got ${quantity}.`,
         })
 
       for (let i = 0; i < data.length; i++) {
