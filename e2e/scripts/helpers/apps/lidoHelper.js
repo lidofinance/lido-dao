@@ -101,7 +101,7 @@ export async function getBeaconStat() {
 }
 
 export async function getUsedEther() {
-  const totalControledEther = await getTotalPooledEther()
+  const totalControlledEther = await getTotalPooledEther()
   const bufferedEther = await getBufferedEther()
   return BN(totalControlledEther).sub(BN(bufferedEther)).toString()
 }

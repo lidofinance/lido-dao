@@ -83,10 +83,6 @@ export async function getQuorum() {
   return await lidoOracleContract.methods.getQuorum().call()
 }
 
-export async function getLatestData() {
-  return await lidoOracleContract.methods.getLatestData().call()
-}
-
 export async function waitForReportBeacon() {
   const fromBlock = await web3.eth.getBlockNumber()
   return new Promise((resolve, reject) => {
