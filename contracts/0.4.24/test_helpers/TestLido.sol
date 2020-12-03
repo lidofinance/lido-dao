@@ -16,7 +16,7 @@ contract TestLido is Lido {
     address private insurance;
 
     function initialize(
-        ISTETH _token,
+        IERC20 _token,
         IValidatorRegistration validatorRegistration,
         address _oracle,
         INodeOperatorsRegistry _operators

@@ -5,10 +5,11 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.6.12;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "./interfaces/IStETH.sol";
+import "./interfaces/ILido.sol";
 
 
 /**
@@ -26,19 +27,22 @@ import "./interfaces/IStETH.sol";
  */
 contract CstETH is ERC20 {
     using SafeERC20 for ERC20;
-    using SafeERC20 for IStETH;
+    using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
-    IStETH public stETH;
+    ILido public lido;
+    IERC20 public stETH;
 
     /**
-     * @param _stETH address of stETH token to wrap
+     * @param _lido address of stETH token to wrap
      */
-    constructor(IStETH _stETH)
+    constructor(ILido _lido, IERC20 _stETH)
         public
         ERC20("Wrapped Liquid staked Lido Ether", "cstETH")
     {
+        lido = _lido;
         stETH = _stETH;
+        // TODO: do we need to upgrade a token?
     }
 
     /**
@@ -80,7 +84,7 @@ contract CstETH is ERC20 {
      * @return Returns amount of cstETH with given stETH amount
      */
     function getCstETHByStETH(uint256 _stETHAmount) public view returns (uint256) {
-        return stETH.getSharesByPooledEth(_stETHAmount);
+        return lido.getSharesByPooledEth(_stETHAmount);
     }
 
     /**
@@ -89,6 +93,6 @@ contract CstETH is ERC20 {
      * @return Returns amount of stETH with current ratio and given cstETH amount
      */
     function getStETHByCstETH(uint256 _cstETHAmount) public view returns (uint256) {
-        return stETH.getPooledEthByShares(_cstETHAmount);
+        return lido.getPooledEthByShares(_cstETHAmount);
     }
 }
