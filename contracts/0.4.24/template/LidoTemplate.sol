@@ -7,7 +7,6 @@ pragma solidity 0.4.24;
 //import "@aragon/os/contracts/ens/ENSConstants.sol";
 import "@aragon/templates-shared/contracts/BaseTemplate.sol";
 
-import "../StETH.sol";
 import "../oracle/LidoOracle.sol";
 import "../nos/NodeOperatorsRegistry.sol";
 import "../Lido.sol";
@@ -33,7 +32,6 @@ contract LidoTemplate is BaseTemplate {
         keccak256(abi.encodePacked(LIDO_PM_NODE, keccak256(abi.encodePacked("lido")))) // lido.lido.eth
     );
     */
-    bytes32 constant internal STETH_APP_ID = 0x7a155a469b6e893b1e5d8f992f066474a74daf5ece6715948667ef3565e34ec2;
     bytes32 constant internal LIDOORACLE_APP_ID = 0xc62f68e3a6f657e08c27afe0f11d03375e5255f5845055d81c1281dbf139ce18;
     bytes32 internal constant REGISTRY_APP_ID = 0x9a09c6bc9551dd5e194dc3f814ce4725494966d9cdc90ff6cb49fc94d8a034ab;
     bytes32 constant internal LIDO_APP_ID = 0xe5c0c15280069e08354c1c1d5b6706edcc4e849e76ec9822afa35d4d66bbbe06;
@@ -52,7 +50,6 @@ contract LidoTemplate is BaseTemplate {
         Finance finance;
         TokenManager tokenManager;
         Voting voting;
-        StETH steth;
         LidoOracle oracle;
         NodeOperatorsRegistry operators;
         Lido lido;
@@ -149,20 +146,17 @@ contract LidoTemplate is BaseTemplate {
 
         // skipping StETH initialization for now, will call it manually later since we need the pool
         bytes memory initializeData = new bytes(0);
-        state.steth = StETH(_installNonDefaultApp(state.dao, STETH_APP_ID, initializeData));
         state.oracle = LidoOracle(_installNonDefaultApp(state.dao, LIDOORACLE_APP_ID, initializeData));
         state.operators = NodeOperatorsRegistry(_installNonDefaultApp(state.dao, REGISTRY_APP_ID, initializeData));
 
         initializeData = abi.encodeWithSelector(
             Lido(0).initialize.selector,
-            state.steth,
             _BeaconDepositContract,
             state.oracle,
             state.operators
         );
         state.lido = Lido(_installNonDefaultApp(state.dao, LIDO_APP_ID, initializeData));
 
-        state.steth.initialize(state.lido);
         state.oracle.initialize(
             state.lido,
             _epochsPerFrame,
@@ -181,11 +175,6 @@ contract LidoTemplate is BaseTemplate {
         _createEvmScriptsRegistryPermissions(state.acl, state.voting, state.voting);
         _createVotingPermissions(state.acl, state.voting, state.voting, state.tokenManager, state.voting);
         _createTokenManagerPermissions(state.acl, state.tokenManager, state.voting, state.voting);
-
-        // StETH
-        state.acl.createPermission(state.voting, state.steth, state.steth.PAUSE_ROLE(), state.voting);
-        state.acl.createPermission(state.lido, state.steth, state.steth.MINT_ROLE(), state.voting);
-        state.acl.createPermission(state.lido, state.steth, state.steth.BURN_ROLE(), state.voting);
 
         // Oracle
         state.acl.createPermission(state.voting, state.oracle, state.oracle.MANAGE_MEMBERS(), state.voting);
@@ -216,7 +205,6 @@ contract LidoTemplate is BaseTemplate {
         delete deployState.finance;
         delete deployState.tokenManager;
         delete deployState.voting;
-        delete deployState.steth;
         delete deployState.oracle;
         delete deployState.operators;
         delete deployState.lido;
