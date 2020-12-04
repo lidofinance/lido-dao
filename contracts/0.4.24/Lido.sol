@@ -527,12 +527,11 @@ contract Lido is ILido, IsContract, StETH, Pausable, AragonApp {
             // totalControlledEther is 0: either the first-ever deposit or complete slashing
             // assume that shares correspond to Ether 1-to-1
             mintShares(sender, deposit);
+            emit Transfer(address(0), sender, deposit);
         } else {
             mintShares(sender, sharesAmount);
-        }
-        // TODO: check this logic twice 
-        // emit transfer event for depositer
-        emit Transfer(address(0), sender, balanceOf(sender));
+            emit Transfer(address(0), sender, getPooledEthByShares(sharesAmount));
+        }        
 
         _submitted(sender, deposit, _referral);
 
