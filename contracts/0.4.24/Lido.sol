@@ -10,14 +10,11 @@ import "@aragon/os/contracts/lib/math/SafeMath.sol";
 import "@aragon/os/contracts/lib/math/SafeMath64.sol";
 import "@aragon/os/contracts/common/IsContract.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
-import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 
 import "./interfaces/ILido.sol";
-// import "./interfaces/IERC20.sol";
 import "./interfaces/INodeOperatorsRegistry.sol";
 import "./interfaces/IValidatorRegistration.sol";
 
-import "./lib/Pausable.sol";
 import "./StETH.sol";
 
 
