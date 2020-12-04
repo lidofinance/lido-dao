@@ -3,11 +3,12 @@ source ./.env
 set -e +u
 set -o pipefail
 
+TAG=${DEPOSIT_CLI_DOCKER_TAG:-"latest"}
 KEYS_DIR=${KEYS_DIR:-$PWD/data}
 TMP_DIR=$PWD/tmp-deposit-cli
-IMG="lido-deposit-cli:latest"
+IMG="lidofinance/deposit-cli:$TAG"
 
-if [[ "$(docker images -q $IMG 2> /dev/null)" == "" ]] || [[ $REBUILD ]]; then
+if [[ $REBUILD ]]; then
   echo "Building deposit-cli Docker image..."
   rm -rf $TMP_DIR
   mkdir -p $TMP_DIR
