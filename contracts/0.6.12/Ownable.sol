@@ -10,7 +10,7 @@ pragma solidity 0.6.12;
  * there is an account (an owner) that can be granted exclusive access to
  * specific functions.
  *
- * By default, the owner account will be the one that deploys the contract. This
+ * Initital owner account shold be passed in the constructor params. This
  * can later be changed with {transferOwnership}.
  *
  * This module is used through inheritance. It will make available the modifier
