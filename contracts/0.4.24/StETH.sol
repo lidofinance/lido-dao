@@ -181,6 +181,10 @@ contract StETH is IERC20, Pausable {
         return _getSharesOf(account);
     }
     
+    /**
+     * @dev Returns the amount of shares that corresponds to `_ethAmount`.
+     * @return amount of shares that corresponds to `_ethAmount`
+     */
     function getSharesByPooledEth(uint256 _ethAmount) public view returns (uint256) {
         uint256 totalPooledEther = _getTotalPooledEther();
         if (totalPooledEther == 0) {
@@ -192,6 +196,10 @@ contract StETH is IERC20, Pausable {
         }
     }
     
+    /**
+     * @dev Returns the amount of ether that corresponds to `_sharesAmount`.
+     * @return amount of ether that corresponds to `_sharesAmount`
+     */
     function getPooledEthByShares(uint256 _sharesAmount) public view returns (uint256) {
         uint256 totalShares = _getTotalShares();
         if (totalShares == 0) {
