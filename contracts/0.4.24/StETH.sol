@@ -10,13 +10,14 @@ import "@aragon/os/contracts/common/UnstructuredStorage.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 
 
-import "./lib/Pausable.sol";
-
 /**
-  * @title Base abstract contract for StETH token.
-  *
-  * TODO: describe motivation and moving parts 
-  */
+ * @title Interest bearing ERC20-compatible token for Lido Liquid Stacking protocol.
+ *
+ * @dev This contract is abstract. Override the `_getTotalPooledEther` function.
+ * Lido.sol contract inherits StETH and defines the `_getTotalPooledEther` function.
+ *
+
+ */
 contract StETH is IERC20, Pausable {
     using SafeMath for uint256;
     using UnstructuredStorage for bytes32;
@@ -83,6 +84,8 @@ contract StETH is IERC20, Pausable {
      *
      * - `recipient` cannot be the zero address.
      * - the caller must have a balance of at least `amount`.
+     *
+     * @notice the `amount` in parameters is amount of token, not shares
      */
     function transfer(address recipient, uint256 amount) public returns (bool) {
         _transfer(msg.sender, recipient, amount);
@@ -212,9 +215,10 @@ contract StETH is IERC20, Pausable {
     }
 
     /**
-    * @dev Gets the total amount of Ether controlled by the system
-    * @return total balance in wei
-    */
+     * @dev Gets the total amount of Ether controlled by the system
+     * which is the base for shares and token balance computations
+     * @return total balance in wei
+     */
     function _getTotalPooledEther() internal view returns (uint256);
 
     /**
@@ -272,7 +276,9 @@ contract StETH is IERC20, Pausable {
         return shares[account];
     }
 
-    function _transferShares(address sender, address recipient, uint256 sharesAmount) internal whenNotStopped {
+    /**
+     * @dev transfers shares
+     */
         require(sender != address(0));
         require(recipient != address(0));
 
