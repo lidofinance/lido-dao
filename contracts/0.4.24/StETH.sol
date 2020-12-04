@@ -13,10 +13,15 @@ import "@aragon/os/contracts/lib/math/SafeMath.sol";
 /**
  * @title Interest bearing ERC20-compatible token for Lido Liquid Stacking protocol.
  *
- * @dev This contract is abstract. Override the `_getTotalPooledEther` function.
+ * @dev This contract is abstract. To make the contract deployable override the `_getTotalPooledEther` function
  * Lido.sol contract inherits StETH and defines the `_getTotalPooledEther` function.
  *
-
+ * @notice StETH balances are dynamic and represent the holder's share
+ * in the amount of the protocol's Ether 2.0 pool.
+ * While the regular token transfers change the shares only,
+ * the Lido protocol has methods affecting both the shares distribution
+ * and the total amount of Ether 2.0
+ *
  */
 contract StETH is IERC20, Pausable {
     using SafeMath for uint256;
@@ -24,12 +29,12 @@ contract StETH is IERC20, Pausable {
 
     // Shares are the amounts of pooled Ether 'discounted' to the volume of ETH1.0 Ether deposited on the first day
     // or, more precisely, to Ethers deposited from start until the first oracle report.
-    // Shares represent how much of first-day ether are worth all-time deposits of the given user.
-    // In this implementation token stores relative shares, not fixed balances.
+    // Shares represent the worth of a user's all-time deposits in the "first-day ether"
+    // Current implementation stores relative shares, not fixed balances.
     mapping (address => uint256) private shares;
     mapping (address => mapping (address => uint256)) private allowances;
 
-    /// @dev amount amount of shares in existence
+    /// @dev the amount of existing shares
     bytes32 internal constant TOTAL_SHARES_VALUE_POSITION = keccak256("lido.Lido.totalShares");
 
     /**
