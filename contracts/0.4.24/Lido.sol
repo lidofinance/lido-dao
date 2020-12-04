@@ -45,7 +45,6 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
 
     uint256 constant public DEPOSIT_SIZE = 32 ether;
 
-    uint256 internal constant MIN_DEPOSIT_AMOUNT = 1 ether;     // validator_registration.vy
     uint256 internal constant DEPOSIT_AMOUNT_UNIT = 1000000000 wei;     // validator_registration.vy
 
     /// @dev default value for maximum number of Ethereum 2.0 validators registered in a single depositBufferedEther call
@@ -74,17 +73,6 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
     bytes private withdrawalCredentials;
 
-
-    // Memory cache entry used in the _ETH2Deposit function
-    struct DepositLookupCacheEntry {
-        // Makes no sense to pack types since reading memory is as fast as any op
-        uint256 id;
-        uint256 stakingLimit;
-        uint256 stoppedValidators;
-        uint256 totalSigningKeys;
-        uint256 usedSigningKeys;
-        uint256 initialUsedSigningKeys; // for write-back control
-    }
 
     /**
     * @dev As AragonApp, Lido contract must be initialized with following variables:
@@ -240,7 +228,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         require(_beaconValidators <= depositedValidators, "REPORTED_MORE_DEPOSITED");
 
         uint256 beaconValidators = BEACON_VALIDATORS_VALUE_POSITION.getStorageUint256();
-        // Since the calculation of funds in the ingress queue is based on the number of validators 
+        // Since the calculation of funds in the ingress queue is based on the number of validators
         // that are in a transient state (deposited but not seen on beacon yet), we can't decrease the previously
         // reported number (we'll be unable to figure out who is in the queue and count them).
         // See LIP-1 for details https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-1.md
@@ -460,74 +448,41 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         uint256 buffered = _getBufferedEther();
         if (buffered >= DEPOSIT_SIZE) {
             uint256 unaccounted = _getUnaccountedEther();
-
-            uint256 toUnbuffer = buffered.div(DEPOSIT_SIZE).mul(DEPOSIT_SIZE);
-            assert(toUnbuffer <= buffered && toUnbuffer != 0);
-
-            _markAsUnbuffered(_ETH2Deposit(toUnbuffer, _maxDeposits));
-
+            uint256 numDeposits = buffered.div(DEPOSIT_SIZE);
+            _markAsUnbuffered(_ETH2Deposit(numDeposits < _maxDeposits ? numDeposits : _maxDeposits));
             assert(_getUnaccountedEther() == unaccounted);
         }
     }
 
     /**
-    * @dev Makes a deposit to the ETH 2.0 side
-    * @param _amount Total amount of Ethers to deposit to the ETH 2.0 side
-    * @return actually deposited amount
+    * @dev Performs deposits to the ETH 2.0 side
+    * @param _numDeposits Number of deposits to perform
+    * @return actually deposited Ether amount
     */
-    function _ETH2Deposit(uint256 _amount, uint256 _maxDeposits) internal returns (uint256) {
-        assert(_amount >= MIN_DEPOSIT_AMOUNT);
+    function _ETH2Deposit(uint256 _numDeposits) internal returns (uint256) {
+        (bytes memory pubkeys, bytes memory signatures) = getOperators().assignNextSigningKeys(_numDeposits);
 
-        // Memory is very cheap, although you don't want to grow it too much.
-        DepositLookupCacheEntry[] memory cache = _load_operator_cache();
-        if (0 == cache.length)
+        if (pubkeys.length == 0) {
             return 0;
-
-        uint256 totalDeposits = 0;
-        uint256 depositAmount = _amount;
-        while (depositAmount != 0 && totalDeposits < _maxDeposits) {
-            // Finding the best suitable operator
-            uint256 bestOperatorIdx = cache.length;   // 'not found' flag
-            uint256 smallestStake;
-            // The loop is ligthweight comparing to an ether transfer and .deposit invocation
-            for (uint256 idx = 0; idx < cache.length; ++idx) {
-                DepositLookupCacheEntry memory entry = cache[idx];
-
-                assert(entry.usedSigningKeys <= entry.totalSigningKeys);
-                if (entry.usedSigningKeys == entry.totalSigningKeys)
-                    continue;
-
-                uint256 stake = entry.usedSigningKeys.sub(entry.stoppedValidators);
-                if (stake + 1 > entry.stakingLimit)
-                    continue;
-
-                if (bestOperatorIdx == cache.length || stake < smallestStake) {
-                    bestOperatorIdx = idx;
-                    smallestStake = stake;
-                }
-            }
-
-            if (bestOperatorIdx == cache.length)  // not found
-                break;
-
-            // Invoking deposit for the best operator
-            depositAmount = depositAmount.sub(DEPOSIT_SIZE);
-            ++totalDeposits;
-
-            (bytes memory key, bytes memory signature, bool used) =  /* solium-disable-line */
-                getOperators().getSigningKey(cache[bestOperatorIdx].id, cache[bestOperatorIdx].usedSigningKeys++);
-            assert(!used);
-
-            // finally, stake the notch for the assigned validator
-            _stake(key, signature);
         }
 
-        if (0 != totalDeposits) {
-            DEPOSITED_VALIDATORS_VALUE_POSITION.setStorageUint256(DEPOSITED_VALIDATORS_VALUE_POSITION.getStorageUint256().add(totalDeposits));
-            _write_back_operator_cache(cache);
+        require(pubkeys.length.mod(PUBKEY_LENGTH) == 0, "REGISTRY_INCONSISTENT_PUBKEYS_LEN");
+        require(signatures.length.mod(SIGNATURE_LENGTH) == 0, "REGISTRY_INCONSISTENT_SIG_LEN");
+
+        uint256 numKeys = pubkeys.length.div(PUBKEY_LENGTH);
+        require(numKeys == signatures.length.div(SIGNATURE_LENGTH), "REGISTRY_INCONSISTENT_SIG_COUNT");
+
+        for (uint256 i = 0; i < numKeys; ++i) {
+            bytes memory pubkey = BytesLib.slice(pubkeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
+            bytes memory signature = BytesLib.slice(signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
+            _stake(pubkey, signature);
         }
 
-        return totalDeposits.mul(DEPOSIT_SIZE);
+        DEPOSITED_VALIDATORS_VALUE_POSITION.setStorageUint256(
+            DEPOSITED_VALIDATORS_VALUE_POSITION.getStorageUint256().add(numKeys)
+        );
+
+        return numKeys.mul(DEPOSIT_SIZE);
     }
 
     /**
@@ -660,33 +615,6 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     }
 
     /**
-      * @dev Write back updated usedSigningKeys operator's values
-      */
-    function _write_back_operator_cache(DepositLookupCacheEntry[] memory cache) internal {
-        uint256 updateSize;
-        for (uint256 idx = 0; idx < cache.length; ++idx) {
-            if (cache[idx].usedSigningKeys > cache[idx].initialUsedSigningKeys)
-                updateSize++;
-        }
-        if (0 == updateSize)
-            return;
-
-        uint256[] memory ids = new uint256[](updateSize);
-        uint64[] memory usedSigningKeys = new uint64[](updateSize);
-        uint256 i;
-        for (idx = 0; idx < cache.length; ++idx) {
-            if (cache[idx].usedSigningKeys > cache[idx].initialUsedSigningKeys) {
-                ids[i] = cache[idx].id;
-                usedSigningKeys[i] = to64(cache[idx].usedSigningKeys);
-                i++;
-            }
-        }
-        assert(i == updateSize);
-
-        getOperators().updateUsedKeys(ids, usedSigningKeys);
-    }
-
-    /**
       * @dev Returns staking rewards fee rate
       */
     function _getFee() internal view returns (uint16) {
@@ -753,36 +681,6 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         uint256 beaconBalance = BEACON_BALANCE_VALUE_POSITION.getStorageUint256();
         uint256 transientBalance = _getTransientBalance();
         return bufferedBalance.add(beaconBalance).add(transientBalance);
-    }
-
-    function _load_operator_cache() internal view returns (DepositLookupCacheEntry[] memory cache) {
-        INodeOperatorsRegistry operators = getOperators();
-        cache = new DepositLookupCacheEntry[](operators.getActiveNodeOperatorsCount());
-        if (0 == cache.length)
-            return cache;
-
-        uint256 idx = 0;
-        for (uint256 nextOperatorId = operators.getNodeOperatorsCount(); nextOperatorId > 0; nextOperatorId = nextOperatorId.sub(1)) {
-            uint256 operatorId = nextOperatorId.sub(1);
-            (
-                bool active, , ,
-                uint64 stakingLimit,
-                uint64 stoppedValidators,
-                uint64 totalSigningKeys,
-                uint64 usedSigningKeys
-            ) = operators.getNodeOperator(operatorId, false);
-            if (!active)
-                continue;
-
-            DepositLookupCacheEntry memory cached = cache[idx++];
-            cached.id = operatorId;
-            cached.stakingLimit = stakingLimit;
-            cached.stoppedValidators = stoppedValidators;
-            cached.totalSigningKeys = totalSigningKeys;
-            cached.usedSigningKeys = usedSigningKeys;
-            cached.initialUsedSigningKeys = usedSigningKeys;
-        }
-        require(idx == cache.length, "NODE_OPERATOR_REGISTRY_INCOSISTENCY");
     }
 
     /**

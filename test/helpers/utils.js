@@ -14,6 +14,18 @@ const hexConcat = (first, ...rest) => {
   return result
 }
 
+const hexSplit = (hexStr, lenBytes) => {
+  const lenSymbols = lenBytes * 2
+  hexStr = hexStr.replace(/^0x/, '')
+  assert(hexStr.length % lenSymbols === 0, `data length must be a multiple of ${lenBytes} bytes`)
+  const result = []
+  const totalSegs = hexStr.length / lenSymbols
+  for (let i = 0; i < totalSegs; ++i) {
+    result.push('0x' + hexStr.substr(i * lenSymbols, lenSymbols))
+  }
+  return result
+}
+
 const toBN = (obj) => {
   if (BN.isBN(obj)) {
     return obj
@@ -34,6 +46,7 @@ const tokens = ETH
 module.exports = {
   pad,
   hexConcat,
+  hexSplit,
   toBN,
   div15,
   ETH,
