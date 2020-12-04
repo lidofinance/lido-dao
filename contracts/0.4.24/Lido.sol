@@ -762,7 +762,8 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
             return cache;
 
         uint256 idx = 0;
-        for (uint256 operatorId = operators.getNodeOperatorsCount().sub(1); ; operatorId = operatorId.sub(1)) {
+        for (uint256 nextOperatorId = operators.getNodeOperatorsCount(); nextOperatorId > 0; nextOperatorId = nextOperatorId.sub(1)) {
+            uint256 operatorId = nextOperatorId.sub(1);
             (
                 bool active, , ,
                 uint64 stakingLimit,
@@ -780,9 +781,6 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
             cached.totalSigningKeys = totalSigningKeys;
             cached.usedSigningKeys = usedSigningKeys;
             cached.initialUsedSigningKeys = usedSigningKeys;
-
-            if (0 == operatorId)
-                break;
         }
         require(idx == cache.length, "NODE_OPERATOR_REGISTRY_INCOSISTENCY");
     }
