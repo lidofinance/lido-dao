@@ -8,7 +8,7 @@ pragma solidity 0.4.24;
 import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "@aragon/os/contracts/common/UnstructuredStorage.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
-
+import "./lib/Pausable.sol"; 
 
 /**
  * @title Interest bearing ERC20-compatible token for Lido Liquid Stacking protocol.
