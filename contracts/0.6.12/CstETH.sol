@@ -8,7 +8,7 @@ pragma solidity 0.6.12;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "./interfaces/ILido.sol";
+import "./interfaces/IStETH.sol";
 
 
 /**
@@ -26,20 +26,19 @@ import "./interfaces/ILido.sol";
  */
 contract CstETH is ERC20 {
     using SafeERC20 for ERC20;
-    using SafeERC20 for ILido;
+    using SafeERC20 for IStETH;
     using SafeMath for uint256;
 
-    ILido public lido;
+    IStETH public stETH;
 
     /**
-     * @param _lido address of token to wrap
+     * @param _stETH address of stETH token to wrap
      */
-    constructor(ILido _lido)
+    constructor(IStETH _stETH)
         public
         ERC20("Wrapped Liquid staked Lido Ether", "cstETH")
     {
-        lido = _lido;
-        // TODO: do we need to upgrade Lido here?
+        stETH = _stETH;
     }
 
     /**
@@ -56,7 +55,7 @@ contract CstETH is ERC20 {
         require(_stETHAmount > 0, "CstETH: zero amount wrap not allowed");
         uint256 cstETHAmount = getCstETHByStETH(_stETHAmount);
         _mint(msg.sender, cstETHAmount);
-        lido.safeTransferFrom(msg.sender, address(this), _stETHAmount);
+        stETH.safeTransferFrom(msg.sender, address(this), _stETHAmount);
     }
 
     /**
@@ -72,7 +71,7 @@ contract CstETH is ERC20 {
         require(_cstETHAmount > 0, "CstETH: zero amount unwrap not allowed");
         uint256 stETHAmount = getStETHByCstETH(_cstETHAmount);
         _burn(msg.sender, _cstETHAmount);
-        lido.safeTransfer(msg.sender, stETHAmount);
+        stETH.safeTransfer(msg.sender, stETHAmount);
     }
 
     /**
@@ -81,7 +80,7 @@ contract CstETH is ERC20 {
      * @return Returns amount of cstETH with given stETH amount
      */
     function getCstETHByStETH(uint256 _stETHAmount) public view returns (uint256) {
-        return lido.getSharesByPooledEth(_stETHAmount);
+        return stETH.getSharesByPooledEth(_stETHAmount);
     }
 
     /**
@@ -90,6 +89,6 @@ contract CstETH is ERC20 {
      * @return Returns amount of stETH with current ratio and given cstETH amount
      */
     function getStETHByCstETH(uint256 _cstETHAmount) public view returns (uint256) {
-        return lido.getPooledEthByShares(_cstETHAmount);
+        return stETH.getPooledEthByShares(_cstETHAmount);
     }
 }
