@@ -36,7 +36,7 @@ import "./StETH.sol";
 * rewards, no Transfer events are generated: doing so would require emitting an event
 * for each token holder and thus running an unbounded loop.
 */
-contract Lido is ILido, IsContract, StETH, Pausable, AragonApp {
+contract Lido is ILido, IsContract, StETH, AragonApp {
     using SafeMath for uint256;
     using SafeMath64 for uint64;
     using UnstructuredStorage for bytes32;
@@ -78,18 +78,9 @@ contract Lido is ILido, IsContract, StETH, Pausable, AragonApp {
     bytes32 internal constant BEACON_BALANCE_VALUE_POSITION = keccak256("lido.Lido.beaconBalance");
     /// @dev number of Lido's validators available in the Beacon state
     bytes32 internal constant BEACON_VALIDATORS_VALUE_POSITION = keccak256("lido.Lido.beaconValidators");
-    /// @dev amount amount of shares in existence
-    bytes32 internal constant TOTAL_SHARES_VALUE_POSITION = keccak256("lido.Lido.totalShares");
-
 
     /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
     bytes private withdrawalCredentials;
-
-    // Shares are the amounts of pooled Ether 'discounted' to the volume of ETH1.0 Ether deposited on the first day
-    // or, more precisely, to Ethers deposited from start until the first oracle report.
-    // Shares represent how much of first-day ether are worth all-time deposits of the given user.
-    // In this implementation token stores relative shares, not fixed balances.
-    mapping (address => uint256) private shares;
 
     // Memory cache entry used in the _ETH2Deposit function
     struct DepositLookupCacheEntry {
@@ -158,94 +149,13 @@ contract Lido is ILido, IsContract, StETH, Pausable, AragonApp {
         return _depositBufferedEther(_maxDeposits);
     }
 
-    function getTotalShares() public view returns (uint256) {
-        return _getTotalShares();
-    }
-
-    /**
-      * @dev Gets the total amount of shares in the protocol
-      * @return total total amount of shares
-    */
-    function _getTotalShares() internal view returns (uint256) {
-        return TOTAL_SHARES_VALUE_POSITION.getStorageUint256();
-    }
-
-    function getSharesByHolder(address _holder) public view returns (uint256) {
-        return shares[_holder];
-    }
-
-    function totalSupply() external view returns (uint256) {
-        return _getTotalPooledEther();
-    }
-
-    function balanceOf(address account) public view returns (uint256) {
-        if (_getTotalShares() == 0) {
-            return 0;
-        } else {
-            return shares[account]
-                .mul(_getTotalPooledEther())
-                .div(_getTotalShares());
-        }
-    }
-
-    function _transfer(address sender, address recipient, uint256 amount) internal {
-        uint256 _sharesToTransfer = getSharesByPooledEth(amount);
-        _transferShares(sender, recipient, _sharesToTransfer);
-        emit Transfer(sender, recipient, amount);
-    }
-
-    function _transferShares(address sender, address recipient, uint256 sharesAmount) internal whenNotStopped {
-        require(sender != address(0));
-        require(recipient != address(0));
-
-        require(sharesAmount <= shares[sender], "TRANSFER_AMOUNT_EXCEEDS_BALANCE");
-
-        shares[sender] = shares[sender].sub(sharesAmount);
-        shares[recipient] = shares[recipient].add(sharesAmount);
-    }
-    
-    function getSharesByPooledEth(uint256 _ethAmount) public view returns (uint256) {
-        if (_getTotalPooledEther() == 0) {
-            return 0;
-        } else {
-            return _ethAmount
-                .mul(_getTotalShares())
-                .div(_getTotalPooledEther());
-        }
-    }
-    
-    function getPooledEthByShares(uint256 _sharesAmount) public view returns (uint256) {
-         if (_getTotalShares() == 0) {
-            return 0;
-        } else {
-            return _sharesAmount
-                .mul(_getTotalPooledEther())
-                .div(_getTotalShares());
-        }
-    }
-    
-    function mintShares(address _to, uint256 _sharesAmount) internal whenNotStopped returns (uint256 newTotalShares) {
-        require(_to != address(0));
-        
-        newTotalShares = _getTotalShares().add(_sharesAmount);
-        TOTAL_SHARES_VALUE_POSITION.setStorageUint256(newTotalShares);
-        
-        shares[_to] = shares[_to].add(_sharesAmount);
-    }
-
     function burnShares(address _account, uint256 _sharesAmount)
         external
-        whenNotStopped
         authP(BURN_ROLE, arr(_account, _sharesAmount))
         returns (uint256 newTotalShares)
     {
-        require(_account != address(0));
-        
-        newTotalShares = _getTotalShares().sub(_sharesAmount);
-        TOTAL_SHARES_VALUE_POSITION.setStorageUint256(newTotalShares);
-        
-        shares[_account] = shares[_account].sub(_sharesAmount);
-    }    
+        return _burnShares(_account, _sharesAmount);
+    }
 
     /**
       * @notice Stop pool routine operations
@@ -426,15 +336,6 @@ contract Lido is ILido, IsContract, StETH, Pausable, AragonApp {
     }
 
     /**
-    * @notice Get the entire amount of Ether controlled by the system
-    * @dev The summary of all the balances in the system, equals to the total supply of stETH.
-    * @return uint256 of total assets in the pool
-    */
-    function getTotalPooledEther() external view returns (uint256) {
-        return _getTotalPooledEther();
-    }
-
-    /**
       * @notice Gets validator registration contract handle
       */
     function getValidatorRegistrationContract() public view returns (IValidatorRegistration) {
@@ -526,10 +427,10 @@ contract Lido is ILido, IsContract, StETH, Pausable, AragonApp {
         if (sharesAmount == 0) {
             // totalControlledEther is 0: either the first-ever deposit or complete slashing
             // assume that shares correspond to Ether 1-to-1
-            mintShares(sender, deposit);
+            _mintShares(sender, deposit);
             emit Transfer(address(0), sender, deposit);
         } else {
-            mintShares(sender, sharesAmount);
+            _mintShares(sender, sharesAmount);
             emit Transfer(address(0), sender, getPooledEthByShares(sharesAmount));
         }        
 
@@ -691,7 +592,7 @@ contract Lido is ILido, IsContract, StETH, Pausable, AragonApp {
 
         // Mint the calculated amount of shares to this contract address. This will reduce the
         // balances of the holders, as if the fee was taken in parts from each of them.
-        mintShares(address(this), shares2mint);
+        _mintShares(address(this), shares2mint);
 
         (uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, ) = _getFeeDistribution();
         uint256 toTreasury = shares2mint.mul(treasuryFeeBasisPoints).div(10000);

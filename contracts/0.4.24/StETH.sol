@@ -6,27 +6,75 @@
 pragma solidity 0.4.24;
 
 import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
+import "@aragon/os/contracts/common/UnstructuredStorage.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
+
+
+import "./lib/Pausable.sol";
 
 /**
   * @title Base abstract contract for StETH token.
   *
   * TODO: describe motivation and moving parts 
   */
-contract StETH is IERC20 {
+contract StETH is IERC20, Pausable {
     using SafeMath for uint256;
+    using UnstructuredStorage for bytes32;
 
-    mapping (address => mapping (address => uint256)) private _allowances;
+    // Shares are the amounts of pooled Ether 'discounted' to the volume of ETH1.0 Ether deposited on the first day
+    // or, more precisely, to Ethers deposited from start until the first oracle report.
+    // Shares represent how much of first-day ether are worth all-time deposits of the given user.
+    // In this implementation token stores relative shares, not fixed balances.
+    mapping (address => uint256) private shares;
+    mapping (address => mapping (address => uint256)) private allowances;
+
+    /// @dev amount amount of shares in existence
+    bytes32 internal constant TOTAL_SHARES_VALUE_POSITION = keccak256("lido.Lido.totalShares");
+
+    /**
+     * @dev Returns the name of the token.
+     */
+    function name() public pure returns (string) {
+        return "Liquid staked Ether 2.0";
+    }
+
+    /**
+     * @dev Returns the symbol of the token, usually a shorter version of the
+     * name.
+     */
+    function symbol() public pure returns (string) {
+        return "stETH";
+    }
+
+    /**
+     * @dev Returns the number of decimals used to get its user representation.
+     */
+    function decimals() public pure returns (uint8) {
+        return 18;
+    }
+
+    /**
+     * @notice Get the entire amount of Ether controlled by the system
+     * @dev The summary of all the balances in the system, equals to the total supply of stETH.
+     * @return uint256 of total assets in the pool
+     */
+    function getTotalPooledEther() external view returns (uint256) {
+        return _getTotalPooledEther();
+    }
 
     /**
      * @dev See {IERC20-totalSupply}.
      */
-    function totalSupply() external view returns (uint256);
+    function totalSupply() external view returns (uint256) {
+        return _getTotalPooledEther();
+    }
 
     /**
      * @dev See {IERC20-balanceOf}.
      */
-    function balanceOf(address account) public view returns (uint256);
+    function balanceOf(address account) external view returns (uint256) {
+        return getPooledEthByShares(_getSharesOf(account));
+    }
 
     /**
      * @dev See {IERC20-transfer}.
@@ -45,7 +93,7 @@ contract StETH is IERC20 {
      * @dev See {IERC20-allowance}.
      */
     function allowance(address owner, address spender) public view returns (uint256) {
-        return _allowances[owner][spender];
+        return allowances[owner][spender];
     }
 
     /**
@@ -74,9 +122,9 @@ contract StETH is IERC20 {
      * `amount`.
      */
     function transferFrom(address sender, address recipient, uint256 amount) public returns (bool) {
-        require(_allowances[sender][msg.sender] >= amount, "TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE");
+        require(allowances[sender][msg.sender] >= amount, "TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE");
         _transfer(sender, recipient, amount);
-        _approve(sender, msg.sender, _allowances[sender][msg.sender].sub(amount));
+        _approve(sender, msg.sender, allowances[sender][msg.sender].sub(amount));
         return true;
     }
 
@@ -93,7 +141,7 @@ contract StETH is IERC20 {
      * - `spender` cannot be the zero address.
      */
     function increaseAllowance(address spender, uint256 addedValue) public returns (bool) {
-        _approve(msg.sender, spender, _allowances[msg.sender][spender].add(addedValue));
+        _approve(msg.sender, spender, allowances[msg.sender][spender].add(addedValue));
         return true;
     }
 
@@ -112,10 +160,54 @@ contract StETH is IERC20 {
      * `subtractedValue`.
      */
     function decreaseAllowance(address spender, uint256 subtractedValue) public returns (bool) {
-        require(_allowances[msg.sender][spender] >= subtractedValue, "DECREASED_ALLOWANCE_BELLOW_ZERO");
-        _approve(msg.sender, spender, _allowances[msg.sender][spender].sub(subtractedValue));
+        require(allowances[msg.sender][spender] >= subtractedValue, "DECREASED_ALLOWANCE_BELLOW_ZERO");
+        _approve(msg.sender, spender, allowances[msg.sender][spender].sub(subtractedValue));
         return true;
     }
+
+    /**
+      * @dev Gets the total amount of shares
+      * @return total amount of shares
+    */
+    function getTotalShares() external view returns (uint256) {
+        return _getTotalShares();
+    }
+
+    /**
+     * @dev Returns the amount of shares owned by `account`.
+     * @return amount of shares owned by `account`
+     */
+    function getSharesOf(address account) external view returns (uint256) {
+        return _getSharesOf(account);
+    }
+    
+    function getSharesByPooledEth(uint256 _ethAmount) public view returns (uint256) {
+        uint256 totalPooledEther = _getTotalPooledEther();
+        if (totalPooledEther == 0) {
+            return 0;
+        } else {
+            return _ethAmount
+                .mul(_getTotalShares())
+                .div(totalPooledEther);
+        }
+    }
+    
+    function getPooledEthByShares(uint256 _sharesAmount) public view returns (uint256) {
+        uint256 totalShares = _getTotalShares();
+        if (totalShares == 0) {
+            return 0;
+        } else {
+            return _sharesAmount
+                .mul(_getTotalPooledEther())
+                .div(totalShares);
+        }
+    }
+
+    /**
+    * @dev Gets the total amount of Ether controlled by the system
+    * @return total balance in wei
+    */
+    function _getTotalPooledEther() internal view returns (uint256);
 
     /**
      * @dev Moves tokens `amount` from `sender` to `recipient`.
@@ -129,7 +221,11 @@ contract StETH is IERC20 {
      *
      * Emits a {Transfer} event.
      */
-    function _transfer(address sender, address recipient, uint256 amount) internal;
+    function _transfer(address sender, address recipient, uint256 amount) internal {
+        uint256 _sharesToTransfer = getSharesByPooledEth(amount);
+        _transferShares(sender, recipient, _sharesToTransfer);
+        emit Transfer(sender, recipient, amount);
+    }
 
     /**
      * @dev Sets `amount` as the allowance of `spender` over the `owner` s tokens.
@@ -144,19 +240,55 @@ contract StETH is IERC20 {
      * - `owner` cannot be the zero address.
      * - `spender` cannot be the zero address.
      */
-    function _approve(address owner, address spender, uint256 amount) internal {
+    function _approve(address owner, address spender, uint256 amount) internal whenNotStopped {
         require(owner != address(0), "APPROVE_FROM_ZERO_ADDRESS");
         require(spender != address(0), "APPROVE_TO_ZERO_ADDRESS");
 
-        _allowances[owner][spender] = amount;
-        _emitApproval(owner, spender, amount);
+        allowances[owner][spender] = amount;
+        emit Approval(owner, spender, amount);
     }
 
-    function _emitTransfer(address sender, address recipient, uint256 amount) internal {
-        emit Transfer(sender, recipient, amount);
+    /**
+      * @dev Gets the total amount of shares
+      * @return total total amount of shares
+    */
+    function _getTotalShares() internal view returns (uint256) {
+        return TOTAL_SHARES_VALUE_POSITION.getStorageUint256();
+    }
+
+    /**
+     * @dev Returns the amount of shares owned by `account`.
+     * @return amount of shares owned by `account`
+     */
+    function _getSharesOf(address account) internal view returns (uint256) {
+        return shares[account];
+    }
+
+    function _transferShares(address sender, address recipient, uint256 sharesAmount) internal whenNotStopped {
+        require(sender != address(0));
+        require(recipient != address(0));
+
+        require(sharesAmount <= shares[sender], "TRANSFER_AMOUNT_EXCEEDS_BALANCE");
+
+        shares[sender] = shares[sender].sub(sharesAmount);
+        shares[recipient] = shares[recipient].add(sharesAmount);
     }
     
-    function _emitApproval(address owner, address spender, uint256 amount) internal {
-        emit Approval(owner, spender, amount);
+    function _mintShares(address to, uint256 sharesAmount) internal whenNotStopped returns (uint256 newTotalShares) {
+        require(to != address(0));
+        
+        newTotalShares = _getTotalShares().add(sharesAmount);
+        TOTAL_SHARES_VALUE_POSITION.setStorageUint256(newTotalShares);
+        
+        shares[to] = shares[to].add(sharesAmount);
+    }
+
+    function _burnShares(address account, uint256 sharesAmount) internal whenNotStopped returns (uint256 newTotalShares) {
+        require(account != address(0));
+        
+        newTotalShares = _getTotalShares().sub(sharesAmount);
+        TOTAL_SHARES_VALUE_POSITION.setStorageUint256(newTotalShares);
+        
+        shares[account] = shares[account].sub(sharesAmount);
     }
 }
