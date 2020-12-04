@@ -287,7 +287,7 @@ contract StETH is IERC20, Pausable {
     function _transferShares(address sender, address recipient, uint256 sharesAmount) internal whenNotStopped {
         require(sender != address(0));
         require(recipient != address(0));
-        require(sharesAmount <= shares[sender], 'TRANSFER_AMOUNT_EXCEEDS_BALANCE');
+        require(sharesAmount <= shares[sender], "TRANSFER_AMOUNT_EXCEEDS_BALANCE");
 
         shares[sender] = shares[sender].sub(sharesAmount);
         shares[recipient] = shares[recipient].add(sharesAmount);
