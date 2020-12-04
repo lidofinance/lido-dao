@@ -183,7 +183,7 @@ contract StETH is IERC20, Pausable {
     function getSharesOf(address account) external view returns (uint256) {
         return _getSharesOf(account);
     }
-    
+
     /**
      * @dev Returns the amount of shares that corresponds to `_ethAmount`.
      * @return amount of shares that corresponds to `_ethAmount`
@@ -198,7 +198,7 @@ contract StETH is IERC20, Pausable {
                 .div(totalPooledEther);
         }
     }
-    
+
     /**
      * @dev Returns the amount of ether that corresponds to `_sharesAmount`.
      * @return amount of ether that corresponds to `_sharesAmount`
@@ -287,22 +287,22 @@ contract StETH is IERC20, Pausable {
         shares[sender] = shares[sender].sub(sharesAmount);
         shares[recipient] = shares[recipient].add(sharesAmount);
     }
-    
+
     function _mintShares(address to, uint256 sharesAmount) internal whenNotStopped returns (uint256 newTotalShares) {
         require(to != address(0));
-        
+
         newTotalShares = _getTotalShares().add(sharesAmount);
         TOTAL_SHARES_VALUE_POSITION.setStorageUint256(newTotalShares);
-        
+
         shares[to] = shares[to].add(sharesAmount);
     }
 
     function _burnShares(address account, uint256 sharesAmount) internal whenNotStopped returns (uint256 newTotalShares) {
         require(account != address(0));
-        
+
         newTotalShares = _getTotalShares().sub(sharesAmount);
         TOTAL_SHARES_VALUE_POSITION.setStorageUint256(newTotalShares);
-        
+
         shares[account] = shares[account].sub(sharesAmount);
     }
 }
