@@ -428,15 +428,22 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
             // totalControlledEther is 0: either the first-ever deposit or complete slashing
             // assume that shares correspond to Ether 1-to-1
             _mintShares(sender, deposit);
-            emit Transfer(address(0), sender, deposit);
+            _emitTransferAfterMintingShares(sender, deposit);
         } else {
             _mintShares(sender, sharesAmount);
-            emit Transfer(address(0), sender, getPooledEthByShares(sharesAmount));
+            _emitTransferAfterMintingShares(sender, sharesAmount);
         }        
 
         _submitted(sender, deposit, _referral);
 
         return sharesAmount;
+    }
+
+    /**
+     * @dev Emits an {Transfer} event where from is 0 address. Indicates mint events.
+     */
+    function _emitTransferAfterMintingShares(address _to, uint256 _sharesAmount) internal {
+        emit Transfer(address(0), _to, getPooledEthByShares(_sharesAmount));
     }
 
     /**
@@ -602,18 +609,17 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         
         address treasury = getTreasury();
         _transferShares(address(this), getTreasury(), toTreasury);
-        emit Transfer(address(0), treasury, getPooledEthByShares(toTreasury));
+        _emitTransferAfterMintingShares(treasury, toTreasury);
 
         address insuranceFund = getInsuranceFund();
         _transferShares(address(this), getInsuranceFund(), toInsuranceFund);
-        emit Transfer(address(0), insuranceFund, getPooledEthByShares(toInsuranceFund));
+        _emitTransferAfterMintingShares(insuranceFund, toInsuranceFund);
 
         INodeOperatorsRegistry operatorsRegistry = getOperators();
         _transferShares(address(this), operatorsRegistry, toOperatorsRegistry);
-        uint256 toOperatorsRegistryInEth = getPooledEthByShares(toOperatorsRegistry);
-        emit Transfer(address(0), operatorsRegistry, toOperatorsRegistryInEth);
+        _emitTransferAfterMintingShares(operatorsRegistry, toOperatorsRegistry);
 
-        operatorsRegistry.distributeRewards(address(this), toOperatorsRegistryInEth);        
+        operatorsRegistry.distributeRewards(address(this), getPooledEthByShares(toOperatorsRegistry));        
     }
 
     /**
