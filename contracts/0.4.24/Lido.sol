@@ -43,7 +43,6 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     bytes32 constant public MANAGE_FEE = keccak256("MANAGE_FEE");
     bytes32 constant public MANAGE_WITHDRAWAL_KEY = keccak256("MANAGE_WITHDRAWAL_KEY");
     bytes32 constant public SET_ORACLE = keccak256("SET_ORACLE");
-    bytes32 constant public SET_TOKEN = keccak256("SET_TOKEN");
     bytes32 constant public BURN_ROLE = keccak256("BURN_ROLE");
 
     uint256 constant public PUBKEY_LENGTH = 48;
