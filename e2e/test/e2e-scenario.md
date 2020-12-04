@@ -1,20 +1,22 @@
-✅ token.test.js
+# Validating docker deploy before test
+✅token.test.js
 
 ✅deposit.test.js
 
 ✅dao.test.js
 
-✅dao apps are deployed
+✅voting.test.js
 
-✅set oracle beacon specs
+# FullFlow test
+✅Check dao apps are deployed
 
-✅add 3 oracle members
+✅Add oracle members'
 
-✅set quorum to 3
+✅Set quorum
 
-✅Set withdrawal credentials by generated dkg
+✅Set withdrawal credentials
 
-✅Set basic fee 10%
+✅Set basic fee(10%)
 
 ✅Set fee distribution(treasury - 0%,insurance -10%,nodeOperator - 90%)
 
@@ -39,7 +41,7 @@ check that validator is up??
 
 ✅Deposit 288 ETH to Lido via Lido from user3
 
-✅Convert some default token to cstToken
+✅Convert some stEthToken to cstToken
 
 ✅Chek that the nodeOperators keys became using
 
@@ -51,15 +53,19 @@ check that validator is up??
 
 ✅Waiting for the validator to receive a reward ~30 sec
 
-✅Check that the users balances in stEthToken changed and cStEthToken 
+✅Check that the users balances in stEthToken changed and cStEthToken stay the same
 
 ✅Convert cstEthToken back to stEthToken
-    
+
 X Reproduce penalties and check that the users balances changed correctly due to mint/burn of token
 
 ✅Change withdrawal credentials
 
 ✅Check that unused signing keys removed from nodeOperators due to changed withdrawal credentials
+
+✅Set full nodeOperator permissions to nodeOperator4
+
+✅Add nodeOperator4 and add signing keys
 
 ✅Check the correctness of nodeOperator4
 
@@ -90,4 +96,3 @@ X Reproduce penalties and check that the users balances changed correctly due to
 ✅Check that the validators do not activate if there are no unused signing keys.
 
 X Test insurance (pending for the actual insurance)
-
