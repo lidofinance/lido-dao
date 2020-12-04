@@ -16,8 +16,7 @@ contract LidoMock is Lido {
         return totalPooledEther;
     }
 
-    function initialize(IERC20 _token) public {
-        _setToken(_token);
+    function initialize() public {
         initialized();
     }
 

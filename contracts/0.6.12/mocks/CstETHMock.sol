@@ -9,7 +9,7 @@ import "../interfaces/ILido.sol";
 
 
 contract CstETHMock is CstETH {
-    constructor(ILido _lido, IERC20 _stETH) public CstETH(_lido, _stETH) {}
+    constructor(ILido _lido) public CstETH(_lido) {}
 
     function mint(address recipient, uint256 amount) public {
         _mint(recipient, amount);

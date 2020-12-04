@@ -5,7 +5,6 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.6.12;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
@@ -27,22 +26,20 @@ import "./interfaces/ILido.sol";
  */
 contract CstETH is ERC20 {
     using SafeERC20 for ERC20;
-    using SafeERC20 for IERC20;
+    using SafeERC20 for ILido;
     using SafeMath for uint256;
 
     ILido public lido;
-    IERC20 public stETH;
 
     /**
-     * @param _lido address of stETH token to wrap
+     * @param _lido address of token to wrap
      */
-    constructor(ILido _lido, IERC20 _stETH)
+    constructor(ILido _lido)
         public
         ERC20("Wrapped Liquid staked Lido Ether", "cstETH")
     {
         lido = _lido;
-        stETH = _stETH;
-        // TODO: do we need to upgrade a token?
+        // TODO: do we need to upgrade Lido here?
     }
 
     /**
@@ -59,7 +56,7 @@ contract CstETH is ERC20 {
         require(_stETHAmount > 0, "CstETH: zero amount wrap not allowed");
         uint256 cstETHAmount = getCstETHByStETH(_stETHAmount);
         _mint(msg.sender, cstETHAmount);
-        stETH.safeTransferFrom(msg.sender, address(this), _stETHAmount);
+        lido.safeTransferFrom(msg.sender, address(this), _stETHAmount);
     }
 
     /**
@@ -75,7 +72,7 @@ contract CstETH is ERC20 {
         require(_cstETHAmount > 0, "CstETH: zero amount unwrap not allowed");
         uint256 stETHAmount = getStETHByCstETH(_cstETHAmount);
         _burn(msg.sender, _cstETHAmount);
-        stETH.safeTransfer(msg.sender, stETHAmount);
+        lido.safeTransfer(msg.sender, stETHAmount);
     }
 
     /**
