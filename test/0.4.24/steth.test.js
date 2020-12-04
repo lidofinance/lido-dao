@@ -3,7 +3,7 @@ const { newDao, newApp } = require('./helpers/dao')
 const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 
-const StETH = artifacts.require('StETH')
+// const StETH = artifacts.require('StETH')
 const LidoMock = artifacts.require('LidoMock')
 
 const tokens = (value) => web3.utils.toWei(value + '', 'ether')
@@ -13,27 +13,27 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
 
   before('deploy base app', async () => {
     // Deploy the app's base contract.
-    stEthBase = await StETH.new()
+    // stEthBase = await StETH.new()
     lidoBase = await LidoMock.new()
   })
 
   beforeEach('deploy dao and app', async () => {
     const { dao, acl } = await newDao(appManager)
 
-    const stEthProxyAddress = await newApp(dao, 'steth', stEthBase.address, appManager)
-    stEth = await StETH.at(stEthProxyAddress)
+    // const stEthProxyAddress = await newApp(dao, 'steth', stEthBase.address, appManager)
+    // stEth = await StETH.at(stEthProxyAddress)
 
     // Set up the permissions for token management
-    await acl.createPermission(pool, stEth.address, await stEth.PAUSE_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(pool, stEth.address, await stEth.MINT_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(pool, stEth.address, await stEth.BURN_ROLE(), appManager, { from: appManager })
+    // await acl.createPermission(pool, stEth.address, await stEth.PAUSE_ROLE(), appManager, { from: appManager })
+    // await acl.createPermission(pool, stEth.address, await stEth.MINT_ROLE(), appManager, { from: appManager })
+    // await acl.createPermission(pool, stEth.address, await stEth.BURN_ROLE(), appManager, { from: appManager })
 
     const lidoProxyAddress = await newApp(dao, 'lido', lidoBase.address, appManager)
     lido = await LidoMock.at(lidoProxyAddress)
-
+    stEth = lido
     // Initialize the app's proxy.
-    await stEth.initialize(lido.address)
-    await lido.initialize(stEth.address)
+    // await stEth.initialize(lido.address)
+    // await lido.initialize(stEth.address)
   })
 
   context('ERC20 methods', () => {
@@ -50,8 +50,9 @@ contract('StETH', ([appManager, pool, user1, user2, user3, nobody]) => {
 
     context('with non-zero supply', async () => {
       beforeEach(async () => {
-        await stEth.mintShares(user1, tokens(1000), { from: pool })
-        await lido.setTotalPooledEther(tokens(1000))
+        await web3.eth.sendTransaction({ to: lido.address, from: user1, value: tokens(1000) })
+        // await stEth.mintShares(user1, tokens(1000), { from: pool })
+        // await lido.setTotalPooledEther(tokens(1000))
       })
 
       it('balances are correct', async () => {

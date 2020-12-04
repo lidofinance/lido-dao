@@ -33,7 +33,7 @@ contract('Lido: happy path', (addresses) => {
     const deployed = await deployDaoAndPool(appManager, voting)
 
     // contracts/StETH.sol
-    token = deployed.token
+    token = deployed.pool
 
     // contracts/Lido.sol
     pool = deployed.pool
