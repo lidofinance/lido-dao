@@ -19,27 +19,6 @@ contract StETH is IERC20 {
     mapping (address => mapping (address => uint256)) private _allowances;
 
     /**
-     * @notice Returns the name of the token.
-     */
-    function name() public pure returns (string) {
-        return "Liquid staked Ether 2.0";
-    }
-
-    /**
-     * @notice Returns the symbol of the token.
-     */
-    function symbol() public pure returns (string) {
-        return "stETH";
-    }
-
-    /**
-     * @notice Returns the number of decimals of the token.
-     */
-    function decimals() public pure returns (uint8) {
-        return 18;
-    }
-
-    /**
      * @dev See {IERC20-totalSupply}.
      */
     function totalSupply() external view returns (uint256);
@@ -165,12 +144,19 @@ contract StETH is IERC20 {
      * - `owner` cannot be the zero address.
      * - `spender` cannot be the zero address.
      */
-    //TODO: whenNotStopped?
     function _approve(address owner, address spender, uint256 amount) internal {
         require(owner != address(0), "APPROVE_FROM_ZERO_ADDRESS");
         require(spender != address(0), "APPROVE_TO_ZERO_ADDRESS");
 
         _allowances[owner][spender] = amount;
+        _emitApproval(owner, spender, amount);
+    }
+
+    function _emitTransfer(address sender, address recipient, uint256 amount) internal {
+        emit Transfer(sender, recipient, amount);
+    }
+    
+    function _emitApproval(address owner, address spender, uint256 amount) internal {
         emit Approval(owner, spender, amount);
     }
 }
