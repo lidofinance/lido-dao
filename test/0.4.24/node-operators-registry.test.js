@@ -2,7 +2,7 @@ const { assert } = require('chai')
 const { newDao, newApp } = require('./helpers/dao')
 const { assertBn, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
 
-const TestNodeOperatorsRegistry = artifacts.require('TestNodeOperatorsRegistry.sol')
+const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry.sol')
 const PoolMock = artifacts.require('PoolMock.sol')
 const ERC20Mock = artifacts.require('ERC20Mock.sol')
 
@@ -35,7 +35,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
   before('deploy base app', async () => {
     // Deploy the app's base contract.
-    appBase = await TestNodeOperatorsRegistry.new()
+    appBase = await NodeOperatorsRegistry.new()
   })
 
   beforeEach('deploy dao and app', async () => {
@@ -43,7 +43,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
     const proxyAddress = await newApp(dao, 'node-operators-registry', appBase.address, appManager)
-    app = await TestNodeOperatorsRegistry.at(proxyAddress)
+    app = await NodeOperatorsRegistry.at(proxyAddress)
 
     // Set up the app's permissions.
     await acl.createPermission(voting, app.address, await app.MANAGE_SIGNING_KEYS(), appManager, { from: appManager })
