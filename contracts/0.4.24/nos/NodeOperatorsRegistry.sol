@@ -587,15 +587,13 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     function _loadOperatorCache() internal view returns (DepositLookupCacheEntry[] memory cache) {
-        uint256 totalActive = activeOperatorsCount;
-
-        cache = new DepositLookupCacheEntry[](totalActive);
-        if (0 == totalActive)
+        cache = new DepositLookupCacheEntry[](activeOperatorsCount);
+        if (0 == cache.length)
             return cache;
 
+        uint256 totalOperators = totalOperatorsCount;
         uint256 idx = 0;
-        for (uint256 nextOperatorId = totalOperatorsCount; nextOperatorId > 0; nextOperatorId = nextOperatorId.sub(1)) {
-            uint256 operatorId = nextOperatorId.sub(1);
+        for (uint256 operatorId = 0; operatorId < totalOperators; ++operatorId) {
             NodeOperator storage operator = operators[operatorId];
 
             if (!operator.active)

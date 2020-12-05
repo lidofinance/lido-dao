@@ -240,27 +240,27 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     result = await pool.assignNextSigningKeys(1)
     keysAssignedEvt = getEventAt(result, 'KeysAssigned').args
 
-    assert.equal(keysAssignedEvt.pubkeys, op1.keys[0], 'assignment 1: pubkeys')
-    assert.equal(keysAssignedEvt.signatures, op1.sigs[0], 'assignment 1: signatures')
+    assert.equal(keysAssignedEvt.pubkeys, op0.keys[0], 'assignment 1: pubkeys')
+    assert.equal(keysAssignedEvt.signatures, op0.sigs[0], 'assignment 1: signatures')
 
     result = await pool.assignNextSigningKeys(2)
     keysAssignedEvt = getEventAt(result, 'KeysAssigned').args
 
-    assert.sameMembers(hexSplit(keysAssignedEvt.pubkeys, PUBKEY_LENGTH_BYTES), [op0.keys[0], op1.keys[1]], 'assignment 2: pubkeys')
-    assert.sameMembers(hexSplit(keysAssignedEvt.signatures, SIGNATURE_LENGTH_BYTES), [op0.sigs[0], op1.sigs[1]], 'assignment 2: signatures')
+    assert.sameMembers(hexSplit(keysAssignedEvt.pubkeys, PUBKEY_LENGTH_BYTES), [op0.keys[1], op1.keys[0]], 'assignment 2: pubkeys')
+    assert.sameMembers(hexSplit(keysAssignedEvt.signatures, SIGNATURE_LENGTH_BYTES), [op0.sigs[1], op1.sigs[0]], 'assignment 2: signatures')
 
     result = await pool.assignNextSigningKeys(10)
     keysAssignedEvt = getEventAt(result, 'KeysAssigned').args
 
     assert.sameMembers(
       hexSplit(keysAssignedEvt.pubkeys, PUBKEY_LENGTH_BYTES),
-      [op0.keys[1], op0.keys[2], op1.keys[2]],
+      [op0.keys[2], op1.keys[1], op1.keys[2]],
       'assignment 2: pubkeys'
     )
 
     assert.sameMembers(
       hexSplit(keysAssignedEvt.signatures, SIGNATURE_LENGTH_BYTES),
-      [op0.sigs[1], op0.sigs[2], op1.sigs[2]],
+      [op0.sigs[2], op1.sigs[1], op1.sigs[2]],
       'assignment 2: signatures'
     )
 
@@ -366,8 +366,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     await pool.assignNextSigningKeys(3)
-    assertBn((await app.getNodeOperator(0, false)).usedSigningKeys, 1, 'op 0 used keys')
-    assertBn((await app.getNodeOperator(1, false)).usedSigningKeys, 2, 'op 1 used keys')
+    assertBn((await app.getNodeOperator(0, false)).usedSigningKeys, 2, 'op 0 used keys')
+    assertBn((await app.getNodeOperator(1, false)).usedSigningKeys, 1, 'op 1 used keys')
 
     await assertRevert(app.reportStoppedValidators(0, 1, { from: user1 }), 'APP_AUTH_FAILED')
     await assertRevert(app.reportStoppedValidators(1, 1, { from: nobody }), 'APP_AUTH_FAILED')
@@ -375,20 +375,20 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     assertBn((await app.getNodeOperator(0, false)).stoppedValidators, 0, 'before stop: op 0 stopped validators')
     assertBn((await app.getNodeOperator(1, false)).stoppedValidators, 0, 'before stop: op 1 stopped validators')
 
-    await app.reportStoppedValidators(0, 1, { from: voting })
-
-    assertBn((await app.getNodeOperator(0, false)).stoppedValidators, 1, 'after stop 1: op 0 stopped validators')
-    assertBn((await app.getNodeOperator(1, false)).stoppedValidators, 0, 'after stop 1: op 1 stopped validators')
-
     await app.reportStoppedValidators(1, 1, { from: voting })
+
+    assertBn((await app.getNodeOperator(0, false)).stoppedValidators, 0, 'after stop 1: op 0 stopped validators')
+    assertBn((await app.getNodeOperator(1, false)).stoppedValidators, 1, 'after stop 1: op 1 stopped validators')
+
+    await app.reportStoppedValidators(0, 1, { from: voting })
 
     assertBn((await app.getNodeOperator(0, false)).stoppedValidators, 1, 'after stop 2: op 0 stopped validators')
     assertBn((await app.getNodeOperator(1, false)).stoppedValidators, 1, 'after stop 2: op 1 stopped validators')
 
-    await app.reportStoppedValidators(1, 1, { from: voting })
+    await app.reportStoppedValidators(0, 1, { from: voting })
 
-    assertBn((await app.getNodeOperator(0, false)).stoppedValidators, 1, 'after stop 3: op 0 stopped validators')
-    assertBn((await app.getNodeOperator(1, false)).stoppedValidators, 2, 'after stop 3: op 1 stopped validators')
+    assertBn((await app.getNodeOperator(0, false)).stoppedValidators, 2, 'after stop 3: op 0 stopped validators')
+    assertBn((await app.getNodeOperator(1, false)).stoppedValidators, 1, 'after stop 3: op 1 stopped validators')
 
     await assertRevert(app.reportStoppedValidators(0, 1, { from: voting }), 'STOPPED_MORE_THAN_LAUNCHED')
     await assertRevert(app.reportStoppedValidators(1, 12, { from: voting }), 'STOPPED_MORE_THAN_LAUNCHED')
@@ -409,16 +409,16 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     await pool.assignNextSigningKeys(1)
 
-    assertBn((await app.getNodeOperator(0, false)).usedSigningKeys, 0, 'before the report: op 0 used keys')
-    assertBn((await app.getNodeOperator(1, false)).usedSigningKeys, 1, 'before the report: op 1 used keys')
+    assertBn((await app.getNodeOperator(0, false)).usedSigningKeys, 1, 'before the report: op 0 used keys')
+    assertBn((await app.getNodeOperator(1, false)).usedSigningKeys, 0, 'before the report: op 1 used keys')
 
-    await app.reportStoppedValidators(1, 1, { from: voting })
-    assertBn((await app.getNodeOperator(1, false)).stoppedValidators, 1, 'op 1 stopped validators')
+    await app.reportStoppedValidators(0, 1, { from: voting })
+    assertBn((await app.getNodeOperator(0, false)).stoppedValidators, 1, 'op 0 stopped validators')
 
     await pool.assignNextSigningKeys(1)
 
-    assertBn((await app.getNodeOperator(0, false)).usedSigningKeys, 0, 'after the report: op 0 used keys')
-    assertBn((await app.getNodeOperator(1, false)).usedSigningKeys, 2, 'after the report: op 1 used keys')
+    assertBn((await app.getNodeOperator(0, false)).usedSigningKeys, 2, 'after the report: op 0 used keys')
+    assertBn((await app.getNodeOperator(1, false)).usedSigningKeys, 0, 'after the report: op 1 used keys')
   })
 
   it('trimUnusedKeys works', async () => {
@@ -433,15 +433,15 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     await pool.assignNextSigningKeys(1)
-    assertBn((await app.getNodeOperator(1, false)).usedSigningKeys, 1, 'op 1 used keys')
+    assertBn((await app.getNodeOperator(0, false)).usedSigningKeys, 1, 'op 0 used keys')
 
     await pool.trimUnusedKeys()
 
-    assertBn(await app.getUnusedSigningKeyCount(0, { from: nobody }), 0)
-    assertBn(await app.getUnusedSigningKeyCount(1, { from: nobody }), 0)
+    assertBn(await app.getUnusedSigningKeyCount(0, { from: nobody }), 0, 'op 0 unused keys')
+    assertBn(await app.getUnusedSigningKeyCount(1, { from: nobody }), 0, 'op 1 unused keys')
 
-    assertBn(await app.getTotalSigningKeyCount(0, { from: nobody }), 0)
-    assertBn(await app.getTotalSigningKeyCount(1, { from: nobody }), 1)
+    assertBn(await app.getTotalSigningKeyCount(0, { from: nobody }), 1, 'op 0 total keys')
+    assertBn(await app.getTotalSigningKeyCount(1, { from: nobody }), 0, 'op 1 total keys')
   })
 
   it('addSigningKeys works', async () => {
