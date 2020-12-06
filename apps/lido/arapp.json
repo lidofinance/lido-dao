@@ -19,6 +19,14 @@
       "name": "Set oracle contract address",
       "id": "SET_ORACLE",
       "params": []
+    },
+    {
+      "name": "Burn tokens",
+      "id": "BURN_ROLE",
+      "params": [
+        "Account which tokens are to be burnt",
+        "Token amount"
+      ]
     }
   ],
   "environments": {
