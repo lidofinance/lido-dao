@@ -61,7 +61,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     bytes32 internal constant FEE_VALUE_POSITION = keccak256("fee.lido.lido.eth");
     bytes32 internal constant TREASURY_FEE_VALUE_POSITION = keccak256("treasuryFee.lido.lido.eth");
     bytes32 internal constant INSURANCE_FEE_VALUE_POSITION = keccak256("insuranceFee.lido.lido.eth");
-    bytes32 internal constant NODE_OPERATORS_FEE_VALUE_POSITION = keccak256("operatorsFee.lido.lido.eth");
+    bytes32 internal constant NODE_OPERATORS_FEE_VALUE_POSITION = keccak256("nodeOperatorsFee.lido.lido.eth");
 
     bytes32 internal constant VALIDATOR_REGISTRATION_VALUE_POSITION = keccak256("validatorRegistration.lido.lido.eth");
     bytes32 internal constant ORACLE_VALUE_POSITION = keccak256("oracle.lido.lido.eth");
