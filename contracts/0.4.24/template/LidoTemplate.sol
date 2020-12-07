@@ -144,16 +144,18 @@ contract LidoTemplate is BaseTemplate {
         state.tokenManager = _installTokenManagerApp(state.dao, state.token, TOKEN_TRANSFERABLE, TOKEN_MAX_PER_ACCOUNT);
         state.voting = _installVotingApp(state.dao, state.token, _votingSettings);
 
-        // skipping StETH initialization for now, will call it manually later since we need the pool
         bytes memory initializeData = new bytes(0);
         state.oracle = LidoOracle(_installNonDefaultApp(state.dao, LIDOORACLE_APP_ID, initializeData));
         state.operators = NodeOperatorsRegistry(_installNonDefaultApp(state.dao, REGISTRY_APP_ID, initializeData));
 
+        address recoveryVault = state.dao.getRecoveryVault();
         initializeData = abi.encodeWithSelector(
             Lido(0).initialize.selector,
             _BeaconDepositContract,
             state.oracle,
-            state.operators
+            state.operators,
+            recoveryVault,
+            recoveryVault
         );
         state.lido = Lido(_installNonDefaultApp(state.dao, LIDO_APP_ID, initializeData));
 
@@ -196,6 +198,8 @@ contract LidoTemplate is BaseTemplate {
         state.acl.createPermission(state.voting, state.lido, state.lido.MANAGE_WITHDRAWAL_KEY(), state.voting);
         state.acl.createPermission(state.voting, state.lido, state.lido.SET_ORACLE(), state.voting);
         state.acl.createPermission(state.voting, state.lido, state.lido.BURN_ROLE(), state.voting);
+        state.acl.createPermission(state.voting, state.lido, state.lido.SET_TREASURY(), state.voting);
+        state.acl.createPermission(state.voting, state.lido, state.lido.SET_INSURANCE_FUND(), state.voting);
     }
 
     function _resetStorage() internal {
