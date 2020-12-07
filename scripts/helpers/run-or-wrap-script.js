@@ -11,11 +11,11 @@ module.exports = (scriptFn, mainModule) => {
     // Buidler executes scripts in a forked subprocess
     scriptFn({ artifacts: globalArtifacts, web3: globalWeb3 })
       .then(() => {
-        console.log('All done!')
+        console.error('All done!')
         process.exit(0)
       })
       .catch((err) => {
-        console.log(err.stack)
+        console.error(err.stack)
         process.exit(2)
       })
     return undefined

@@ -1,20 +1,19 @@
 const chalk = require('chalk')
 
-function log(...args) {
-  console.log(...args)
-}
+const log = (...args) => console.error(...args)
+log.stdout = (...args) => console.log(...args)
 
 function logSplitter(...args) {
-  console.log('====================')
+  console.error('====================')
   if (args.length) {
-    console.log(...args)
+    console.error(...args)
   }
 }
 
 function logWideSplitter(...args) {
-  console.log('========================================')
+  console.error('========================================')
   if (args.length) {
-    console.log(...args)
+    console.error(...args)
   }
 }
 
@@ -24,8 +23,8 @@ function logHeader(msg) {
 }
 
 async function logDeploy(name, promise) {
-  console.log('====================')
-  console.log(`Deploying ${name}...`)
+  console.error('====================')
+  console.error(`Deploying ${name}...`)
   const instance = await promise
   const receipt = await web3.eth.getTransactionReceipt(instance.transactionHash)
   const { contractName, sourcePath, updatedAt: compiledAt } = instance.constructor._json
@@ -34,19 +33,19 @@ async function logDeploy(name, promise) {
   // const optimizer = config.solc.optimizer || null
   // const optimizerStatus = optimizer && optimizer.enabled ? `${optimizer.runs} runs` : 'disabled'
 
-  console.log(`${name} address: ${chalk.yellow(instance.address)}`)
-  console.log(`TX hash: ${instance.transactionHash}`)
-  console.log(`Compiler: solc@${compilerVersion} (optimizer: ${optimizerStatus})`)
-  console.log(`Gas used: ${receipt.gasUsed}`)
+  console.error(`${name} address: ${chalk.yellow(instance.address)}`)
+  console.error(`TX hash: ${instance.transactionHash}`)
+  // console.log(`Compiler: solc@${compilerVersion} (optimizer: ${optimizerStatus})`)
+  console.error(`Gas used: ${receipt.gasUsed}`)
 
   return instance
 }
 
 async function logTx(desc, promise) {
-  console.log(`${desc}...`)
+  console.error(`${desc}...`)
   const result = await promise
-  console.log(`TX hash: ${result.tx}`)
-  console.log(`Gas used: ${result.receipt.gasUsed}`)
+  console.error(`TX hash: ${result.tx}`)
+  console.error(`Gas used: ${result.receipt.gasUsed}`)
   return result
 }
 
