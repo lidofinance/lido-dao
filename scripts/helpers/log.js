@@ -30,9 +30,9 @@ async function logDeploy(name, promise) {
   const receipt = await web3.eth.getTransactionReceipt(instance.transactionHash)
   const { contractName, sourcePath, updatedAt: compiledAt } = instance.constructor._json
 
-  const compilerVersion = config.solc.version
-  const optimizer = config.solc.optimizer || null
-  const optimizerStatus = optimizer && optimizer.enabled ? `${optimizer.runs} runs` : 'disabled'
+  // const compilerVersion = config.solc.version
+  // const optimizer = config.solc.optimizer || null
+  // const optimizerStatus = optimizer && optimizer.enabled ? `${optimizer.runs} runs` : 'disabled'
 
   console.log(`${name} address: ${chalk.yellow(instance.address)}`)
   console.log(`TX hash: ${instance.transactionHash}`)
