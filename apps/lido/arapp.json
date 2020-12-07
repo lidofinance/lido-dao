@@ -29,12 +29,12 @@
       ]
     },
     {
-      "name": "Set treasury contract address",
+      "name": "Set treasury address",
       "id": "SET_TREASURY",
       "params": []
     },
     {
-      "name": "Set insurance fund contract address",
+      "name": "Set insurance fund address",
       "id": "SET_INSURANCE_FUND",
       "params": []
     }
