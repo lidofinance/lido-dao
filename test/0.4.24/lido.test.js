@@ -267,6 +267,63 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     assert.equal(calls[3].pubkey, pad('0x010206', 48))
   })
 
+  it('deposit uses the expected signing keys', async () => {
+    await operators.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
+    await operators.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
+
+    const op0 = {
+      keys: Array.from({ length: 3 }, (_, i) => `0x11${i}${i}` + 'abcd'.repeat(46 / 2)),
+      sigs: Array.from({ length: 3 }, (_, i) => `0x11${i}${i}` + 'cdef'.repeat(94 / 2))
+    }
+
+    const op1 = {
+      keys: Array.from({ length: 3 }, (_, i) => `0x22${i}${i}` + 'efab'.repeat(46 / 2)),
+      sigs: Array.from({ length: 3 }, (_, i) => `0x22${i}${i}` + 'fcde'.repeat(94 / 2))
+    }
+
+    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+    await operators.addSigningKeys(0, 3, hexConcat(...op0.keys), hexConcat(...op0.sigs), { from: voting })
+    await operators.addSigningKeys(1, 3, hexConcat(...op1.keys), hexConcat(...op1.sigs), { from: voting })
+
+    await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(32) })
+    await app.depositBufferedEther()
+    assertBn(await validatorRegistration.totalCalls(), 1, 'first submit: total deposits')
+
+    await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2 * 32) })
+    await app.depositBufferedEther()
+    assertBn(await validatorRegistration.totalCalls(), 3, 'second submit: total deposits')
+
+    await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(3 * 32) })
+    await app.depositBufferedEther()
+    assertBn(await validatorRegistration.totalCalls(), 6, 'third submit: total deposits')
+
+    const calls = await Promise.all(Array.from({ length: 6 }, (_, i) => validatorRegistration.calls(i)))
+    const keys = [...op0.keys, ...op1.keys]
+    const sigs = [...op0.sigs, ...op1.sigs]
+    const pairs = keys.map((key, i) => `${key}|${sigs[i]}`)
+
+    assert.sameMembers(
+      calls.map((c) => `${c.pubkey}|${c.signature}`),
+      pairs,
+      'pairs'
+    )
+  })
+
+  it('deposit works when the first node operator is inactive', async () => {
+    await operators.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
+    await operators.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
+
+    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+    await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
+    await operators.addSigningKeys(1, 1, pad('0x030405', 48), pad('0x06', 96), { from: voting })
+
+    await operators.setNodeOperatorActive(0, false, { from: voting })
+    await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(32) })
+
+    await app.depositBufferedEther()
+    assertBn(await validatorRegistration.totalCalls(), 1)
+  })
+
   it('submits with zero and non-zero referrals work', async () => {
     const REFERRAL = '0xDeaDbeefdEAdbeefdEadbEEFdeadbeEFdEaDbeeF'
     let receipt
