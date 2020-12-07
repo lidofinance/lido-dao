@@ -27,6 +27,16 @@
         "Account which tokens are to be burnt",
         "Token amount"
       ]
+    },
+    {
+      "name": "Set treasury contract address",
+      "id": "SET_TREASURY",
+      "params": []
+    },
+    {
+      "name": "Set insurance fund contract address",
+      "id": "SET_INSURANCE_FUND",
+      "params": []
     }
   ],
   "environments": {
