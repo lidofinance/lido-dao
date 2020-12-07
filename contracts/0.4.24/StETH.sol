@@ -126,10 +126,10 @@ contract StETH is IERC20, Pausable {
      * @return the amount of tokens owned by the `_account`.
      *
      * @dev Balances are dynamic and equal the `_account`'s share in the amount of the
-     * total Ether controlled by the protocol. See `getSharesOf`.
+     * total Ether controlled by the protocol. See `sharesOf`.
      */
     function balanceOf(address _account) public view returns (uint256) {
-        return getPooledEthByShares(_getSharesOf(_account));
+        return getPooledEthByShares(_sharesOf(_account));
     }
 
     /**
@@ -259,8 +259,8 @@ contract StETH is IERC20, Pausable {
     /**
      * @return the amount of shares owned by `_account`.
      */
-    function getSharesOf(address _account) public view returns (uint256) {
-        return _getSharesOf(_account);
+    function sharesOf(address _account) public view returns (uint256) {
+        return _sharesOf(_account);
     }
 
     /**
@@ -337,7 +337,7 @@ contract StETH is IERC20, Pausable {
     /**
      * @return the amount of shares owned by `_account`.
      */
-    function _getSharesOf(address _account) internal view returns (uint256) {
+    function _sharesOf(address _account) internal view returns (uint256) {
         return shares[_account];
     }
 

@@ -492,13 +492,13 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
   })
 
   it.skip(`oracle reports profit, stopped node operator doesn't get the fee`, async () => {
-    const nodeOperator1TokenSharesBefore = await token.getSharesOf(nodeOperator1.address)
-    const nodeOperator2TokenSharesBefore = await token.getSharesOf(nodeOperator2.address)
+    const nodeOperator1TokenSharesBefore = await token.sharesOf(nodeOperator1.address)
+    const nodeOperator2TokenSharesBefore = await token.sharesOf(nodeOperator2.address)
 
     await oracleMock.reportBeacon(105, 2, tokens(96)) // 105 is an epoch number
 
-    const nodeOperator1TokenSharesAfter = await token.getSharesOf(nodeOperator1.address)
-    const nodeOperator2TokenSharesAfter = await token.getSharesOf(nodeOperator2.address)
+    const nodeOperator1TokenSharesAfter = await token.sharesOf(nodeOperator1.address)
+    const nodeOperator2TokenSharesAfter = await token.sharesOf(nodeOperator2.address)
     assertBn(nodeOperator1TokenSharesAfter, nodeOperator1TokenSharesBefore, `first node operator balance hasn't changed`)
     assert(
       nodeOperator2TokenSharesBefore.sub(nodeOperator2TokenSharesAfter).negative,
@@ -514,13 +514,13 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
   })
 
   it.skip(`oracle reports profit, previously stopped node operator gets the fee`, async () => {
-    const nodeOperator1TokenSharesBefore = await token.getSharesOf(nodeOperator1.address)
-    const nodeOperator2TokenSharesBefore = await token.getSharesOf(nodeOperator2.address)
+    const nodeOperator1TokenSharesBefore = await token.sharesOf(nodeOperator1.address)
+    const nodeOperator2TokenSharesBefore = await token.sharesOf(nodeOperator2.address)
 
     await oracleMock.reportBeacon(105, 2, tokens(100)) // 105 is an epoch number
 
-    const nodeOperator1TokenSharesAfter = await token.getSharesOf(nodeOperator1.address)
-    const nodeOperator2TokenSharesAfter = await token.getSharesOf(nodeOperator2.address)
+    const nodeOperator1TokenSharesAfter = await token.sharesOf(nodeOperator1.address)
+    const nodeOperator2TokenSharesAfter = await token.sharesOf(nodeOperator2.address)
 
     assert(
       nodeOperator1TokenSharesBefore.sub(nodeOperator1TokenSharesAfter).negative,
