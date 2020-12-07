@@ -75,7 +75,7 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
     BeaconSpec public beaconSpec;
 
     /// @dev the most early epoch that can be reported
-    bytes32 internal constant EARLIEST_REPORTABLE_EPOCH_ID_VALUE_POSITION = keccak256("lido.lidooracle.earliestReportableEpochId");
+    bytes32 internal constant MIN_REPORTABLE_EPOCH_ID_VALUE_POSITION = keccak256("lido.lidooracle.minReportableEpochId");
     /// @dev the last reported epoch
     bytes32 internal constant LAST_REPORTED_EPOCH_ID_VALUE_POSITION = keccak256("lido.lidooracle.lastReportedEpochId");
     /// @dev storage for all gathered from reports data
@@ -169,7 +169,7 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
             LAST_REPORTED_EPOCH_ID_VALUE_POSITION.getStorageUint256()
         );
 
-        EARLIEST_REPORTABLE_EPOCH_ID_VALUE_POSITION.setStorageUint256(lastReportedEpochId);
+        MIN_REPORTABLE_EPOCH_ID_VALUE_POSITION.setStorageUint256(lastReportedEpochId);
         uint256 last = members.length.sub(1);
 
         uint256 bitMask = gatheredEpochData[lastReportedEpochId].reportsBitMask;
@@ -195,8 +195,8 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
         QUORUM_VALUE_POSITION.setStorageUint256(_quorum);
         emit QuorumChanged(_quorum);
 
-        uint256 earliestReportableEpochId = (
-            EARLIEST_REPORTABLE_EPOCH_ID_VALUE_POSITION.getStorageUint256()
+        uint256 minReportableEpochId = (
+            MIN_REPORTABLE_EPOCH_ID_VALUE_POSITION.getStorageUint256()
         );
         uint256 lastReportedEpochId = (
             LAST_REPORTED_EPOCH_ID_VALUE_POSITION.getStorageUint256()
@@ -204,8 +204,8 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
 
         assert(lastReportedEpochId <= getCurrentEpochId());
 
-        if (lastReportedEpochId > earliestReportableEpochId) {
-            earliestReportableEpochId = lastReportedEpochId;
+        if (lastReportedEpochId > minReportableEpochId) {
+            minReportableEpochId = lastReportedEpochId;
             _tryPush(lastReportedEpochId);
         }
 
@@ -299,14 +299,14 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
     function getCurrentReportableEpochs()
         public view
         returns (
-            uint256 firstReportableEpochId,
-            uint256 lastReportableEpochId
+            uint256 minReportableEpochId,
+            uint256 maxReportableEpochId
         )
     {
-        uint256 earliestReportableEpochId = (
-            EARLIEST_REPORTABLE_EPOCH_ID_VALUE_POSITION.getStorageUint256()
+        minReportableEpochId = (
+            MIN_REPORTABLE_EPOCH_ID_VALUE_POSITION.getStorageUint256()
         );
-        return (earliestReportableEpochId, getCurrentEpochId());
+        return (minReportableEpochId, getCurrentEpochId());
     }
 
     /**
@@ -354,8 +354,8 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
             return;
 
         // data for this frame is collected, now this frame is completed, so
-        // earliestReportableEpochId should be changed to first epoch from next frame
-        EARLIEST_REPORTABLE_EPOCH_ID_VALUE_POSITION.setStorageUint256(
+        // minReportableEpochId should be changed to first epoch from next frame
+        MIN_REPORTABLE_EPOCH_ID_VALUE_POSITION.setStorageUint256(
             _epochId
             .div(beaconSpec.epochsPerFrame)
             .add(1)

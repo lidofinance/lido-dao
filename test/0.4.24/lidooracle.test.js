@@ -35,8 +35,8 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
 
   const assertReportableEpochs = async (startEpoch, endEpoch) => {
     const result = await app.getCurrentReportableEpochs()
-    assertBn(result.firstReportableEpochId, startEpoch)
-    assertBn(result.lastReportableEpochId, endEpoch)
+    assertBn(result.minReportableEpochId, startEpoch)
+    assertBn(result.maxReportableEpochId, endEpoch)
   }
 
   before('deploy base app', async () => {
@@ -145,18 +145,18 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
 
       await app.setTime(1606824000)
       result = await app.getCurrentReportableEpochs()
-      assertBn(result.firstReportableEpochId, 0)
-      assertBn(result.lastReportableEpochId, 0)
+      assertBn(result.minReportableEpochId, 0)
+      assertBn(result.maxReportableEpochId, 0)
 
       await app.setTime(1606824000 + 32 * 12 - 1)
       result = await app.getCurrentReportableEpochs()
-      assertBn(result.firstReportableEpochId, 0)
-      assertBn(result.lastReportableEpochId, 0)
+      assertBn(result.minReportableEpochId, 0)
+      assertBn(result.maxReportableEpochId, 0)
 
       await app.setTime(1606824000 + 32 * 12 * 123 + 1)
       result = await app.getCurrentReportableEpochs()
-      assertBn(result.firstReportableEpochId, 0)
-      assertBn(result.lastReportableEpochId, 123)
+      assertBn(result.minReportableEpochId, 0)
+      assertBn(result.maxReportableEpochId, 123)
     })
 
     it('getCurrentFrame works', async () => {
