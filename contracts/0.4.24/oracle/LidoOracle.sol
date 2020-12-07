@@ -429,8 +429,9 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
 
         emit Completed(_epochId, modeReport.beaconBalance, modeReport.beaconValidators);
 
-        if (address(0) != address(getPool()))
-            getPool().pushBeacon(modeReport.beaconValidators, modeReport.beaconBalance);
+        ILido pool = getPool();
+        if (address(0) != address(pool))
+            pool.pushBeacon(modeReport.beaconValidators, modeReport.beaconBalance);
     }
 
     function reportToUint256(Report _report) internal pure returns (uint256) {
