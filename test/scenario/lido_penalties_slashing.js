@@ -26,7 +26,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
   ] = addresses
 
   let pool, nodeOperatorRegistry, token
-  let oracleMock, validatorRegistrationMock
+  let oracleMock, depositContractMock
   let treasuryAddr, insuranceAddr
 
   it('DAO, node operators registry, token, and pool are deployed and initialized', async () => {
@@ -43,7 +43,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
 
     // mocks
     oracleMock = deployed.oracleMock
-    validatorRegistrationMock = deployed.validatorRegistrationMock
+    depositContractMock = deployed.depositContractMock
 
     // addresses
     treasuryAddr = deployed.treasuryAddr
@@ -152,7 +152,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
 
     // No Ether was deposited yet to the validator contract
 
-    assertBn(await validatorRegistrationMock.totalCalls(), 0, 'no validators registered yet')
+    assertBn(await depositContractMock.totalCalls(), 0, 'no validators registered yet')
 
     const ether2Stat = await pool.getBeaconStat()
     assertBn(ether2Stat.depositedValidators, 0, 'no validators have received the ether2')
@@ -339,7 +339,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     await web3.eth.sendTransaction({ to: pool.address, from: user1, value: depositAmount })
     await pool.depositBufferedEther()
 
-    assertBn(await validatorRegistrationMock.totalCalls(), 2)
+    assertBn(await depositContractMock.totalCalls(), 2)
 
     const ether2Stat = await pool.getBeaconStat()
     assertBn(ether2Stat.depositedValidators, 2, 'deposited ether2')
