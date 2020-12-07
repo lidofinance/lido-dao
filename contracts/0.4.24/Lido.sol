@@ -12,11 +12,10 @@ import "@aragon/os/contracts/common/IsContract.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
 import "./interfaces/ILido.sol";
-import "./interfaces/ISTETH.sol";
 import "./interfaces/INodeOperatorsRegistry.sol";
 import "./interfaces/IValidatorRegistration.sol";
 
-import "./lib/Pausable.sol";
+import "./StETH.sol";
 
 
 /**
@@ -27,8 +26,14 @@ import "./lib/Pausable.sol";
 * Whitepaper: https://lido.fi/static/Lido:Ethereum-Liquid-Staking.pdf
 *
 * NOTE: the code below assumes moderate amount of node operators, e.g. up to 50.
+*
+* Since balances of all token holders change when the amount of total pooled Ether
+* changes, this token cannot fully implement ERC20 standard: it only emits `Transfer`
+* events upon explicit transfer between holders. In contrast, when Lido oracle reports
+* rewards, no Transfer events are generated: doing so would require emitting an event
+* for each token holder and thus running an unbounded loop.
 */
-contract Lido is ILido, IsContract, Pausable, AragonApp {
+contract Lido is ILido, IsContract, StETH, AragonApp {
     using SafeMath for uint256;
     using SafeMath64 for uint64;
     using UnstructuredStorage for bytes32;
@@ -38,6 +43,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     bytes32 constant public MANAGE_FEE = keccak256("MANAGE_FEE");
     bytes32 constant public MANAGE_WITHDRAWAL_KEY = keccak256("MANAGE_WITHDRAWAL_KEY");
     bytes32 constant public SET_ORACLE = keccak256("SET_ORACLE");
+    bytes32 constant public BURN_ROLE = keccak256("BURN_ROLE");
 
     uint256 constant public PUBKEY_LENGTH = 48;
     uint256 constant public WITHDRAWAL_CREDENTIALS_LENGTH = 32;
@@ -56,7 +62,6 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     bytes32 internal constant INSURANCE_FEE_VALUE_POSITION = keccak256("lido.Lido.insuranceFee");
     bytes32 internal constant NODE_OPERATORS_FEE_VALUE_POSITION = keccak256("lido.Lido.operatorsFee");
 
-    bytes32 internal constant TOKEN_VALUE_POSITION = keccak256("lido.Lido.token");
     bytes32 internal constant VALIDATOR_REGISTRATION_VALUE_POSITION = keccak256("lido.Lido.validatorRegistration");
     bytes32 internal constant ORACLE_VALUE_POSITION = keccak256("lido.Lido.oracle");
     bytes32 internal constant NODE_OPERATOR_REGISTRY_VALUE_POSITION = keccak256("lido.Lido.nodeOperatorRegistry");
@@ -74,7 +79,6 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
     bytes private withdrawalCredentials;
 
-
     // Memory cache entry used in the _ETH2Deposit function
     struct DepositLookupCacheEntry {
         // Makes no sense to pack types since reading memory is as fast as any op
@@ -88,20 +92,17 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
 
     /**
     * @dev As AragonApp, Lido contract must be initialized with following variables:
-    * @param _token instance of stETH token
     * @param validatorRegistration official ETH2 Deposit contract
     * @param _oracle oracle contract
     * @param _operators instance of Node Operators Registry
     */
     function initialize(
-        ISTETH _token,
         IValidatorRegistration validatorRegistration,
         address _oracle,
         INodeOperatorsRegistry _operators
     )
         public onlyInit
     {
-        _setToken(_token);
         _setValidatorRegistrationContract(validatorRegistration);
         _setOracle(_oracle);
         _setOperators(_operators);
@@ -143,6 +144,14 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
       */
     function depositBufferedEther(uint256 _maxDeposits) external {
         return _depositBufferedEther(_maxDeposits);
+    }
+
+    function burnShares(address _account, uint256 _sharesAmount)
+        external
+        authP(BURN_ROLE, arr(_account, _sharesAmount))
+        returns (uint256 newTotalShares)
+    {
+        return _burnShares(_account, _sharesAmount);
     }
 
     /**
@@ -324,23 +333,6 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     }
 
     /**
-    * @notice Get the entire amount of Ether controlled by the system
-    * @dev The summary of all the balances in the system, equals to the total supply of stETH.
-    * @return uint256 of total assets in the pool
-    */
-    function getTotalPooledEther() external view returns (uint256) {
-        return _getTotalPooledEther();
-    }
-
-    /**
-    * @notice Gets liquid token interface handle
-    * @return the instance of stETH token
-    */
-    function getToken() public view returns (ISTETH) {
-        return ISTETH(TOKEN_VALUE_POSITION.getStorageAddress());
-    }
-
-    /**
       * @notice Gets validator registration contract handle
       */
     function getValidatorRegistrationContract() public view returns (IValidatorRegistration) {
@@ -392,15 +384,6 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     }
 
     /**
-    * @dev Sets liquid token interface handle
-    * @param _token stETH token to set
-    */
-    function _setToken(ISTETH _token) internal {
-        require(isContract(address(_token)), "NOT_A_CONTRACT");
-        TOKEN_VALUE_POSITION.setStorageAddress(address(_token));
-    }
-
-    /**
     * @dev Sets the address of Deposit contract
     * @param _contract the address of Deposit contract
     */
@@ -437,20 +420,27 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         uint256 deposit = msg.value;
         require(deposit != 0, "ZERO_DEPOSIT");
 
-        ISTETH token = getToken();
-
-        uint256 sharesAmount = token.getSharesByPooledEth(deposit);
+        uint256 sharesAmount = getSharesByPooledEth(deposit);
         if (sharesAmount == 0) {
             // totalControlledEther is 0: either the first-ever deposit or complete slashing
             // assume that shares correspond to Ether 1-to-1
-            token.mintShares(sender, deposit);
+            _mintShares(sender, deposit);
+            _emitTransferAfterMintingShares(sender, deposit);
         } else {
-            token.mintShares(sender, sharesAmount);
-        }
+            _mintShares(sender, sharesAmount);
+            _emitTransferAfterMintingShares(sender, sharesAmount);
+        }        
 
         _submitted(sender, deposit, _referral);
 
         return sharesAmount;
+    }
+
+    /**
+     * @dev Emits an {Transfer} event where from is 0 address. Indicates mint events.
+     */
+    function _emitTransferAfterMintingShares(address _to, uint256 _sharesAmount) internal {
+        emit Transfer(address(0), _to, getPooledEthByShares(_sharesAmount));
     }
 
     /**
@@ -572,9 +562,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     * @param _totalRewards Total rewards accrued on the Ethereum 2.0 side in wei
     */
     function distributeRewards(uint256 _totalRewards) internal {
-        ISTETH token = getToken();
         uint256 feeInEther = _totalRewards.mul(_getFee()).div(10000);
-
         // We need to take a defined percentage of the reported reward as a fee, and we do
         // this by minting new token shares and assigning them to the fee recipients (see
         // StETH docs for the explanation of the shares mechanics).
@@ -600,32 +588,35 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         // the rest of the reward is distributed between token holders proportionally to their
         // token shares.
         //
-        uint256 totalPooledEther = _getTotalPooledEther();
         uint256 shares2mint = (
             feeInEther
-            .mul(token.getTotalShares())
-            .div(totalPooledEther.sub(feeInEther))
+            .mul(_getTotalShares())
+            .div(_getTotalPooledEther().sub(feeInEther))
         );
 
         // Mint the calculated amount of shares to this contract address. This will reduce the
         // balances of the holders, as if the fee was taken in parts from each of them.
-        uint256 totalShares = token.mintShares(address(this), shares2mint);
-
-        // The minted token amount may be less than feeInEther due to the shares2mint rounding
-        uint256 mintedFee = shares2mint.mul(totalPooledEther).div(totalShares);
+        _mintShares(address(this), shares2mint);
 
         (uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, ) = _getFeeDistribution();
-        uint256 toTreasury = mintedFee.mul(treasuryFeeBasisPoints).div(10000);
-        uint256 toInsuranceFund = mintedFee.mul(insuranceFeeBasisPoints).div(10000);
-
-        token.transfer(getTreasury(), toTreasury);
-        token.transfer(getInsuranceFund(), toInsuranceFund);
-
+        uint256 toTreasury = shares2mint.mul(treasuryFeeBasisPoints).div(10000);
+        uint256 toInsuranceFund = shares2mint.mul(insuranceFeeBasisPoints).div(10000);
         // Transfer the rest of the fee to operators
-        mintedFee = mintedFee.sub(toTreasury).sub(toInsuranceFund);
+        uint256 toOperatorsRegistry = shares2mint.sub(toTreasury).sub(toInsuranceFund);
+        
+        address treasury = getTreasury();
+        _transferShares(address(this), getTreasury(), toTreasury);
+        _emitTransferAfterMintingShares(treasury, toTreasury);
+
+        address insuranceFund = getInsuranceFund();
+        _transferShares(address(this), getInsuranceFund(), toInsuranceFund);
+        _emitTransferAfterMintingShares(insuranceFund, toInsuranceFund);
+
         INodeOperatorsRegistry operatorsRegistry = getOperators();
-        token.transfer(address(operatorsRegistry), mintedFee);
-        operatorsRegistry.distributeRewards(address(token), mintedFee);
+        _transferShares(address(this), operatorsRegistry, toOperatorsRegistry);
+        _emitTransferAfterMintingShares(operatorsRegistry, toOperatorsRegistry);
+
+        operatorsRegistry.distributeRewards(address(this), getPooledEthByShares(toOperatorsRegistry));        
     }
 
     /**
