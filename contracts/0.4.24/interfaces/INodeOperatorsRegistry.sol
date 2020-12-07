@@ -47,14 +47,6 @@ interface INodeOperatorsRegistry {
     function reportStoppedValidators(uint256 _id, uint64 _stoppedIncrement) external;
 
     /**
-      * @notice Update used key counts
-      * @dev Function is used by the pool
-      * @param _ids Array of node operator ids
-      * @param _usedSigningKeys Array of corresponding used key counts (the same length as _ids)
-      */
-    function updateUsedKeys(uint256[] _ids, uint64[] _usedSigningKeys) external;
-
-    /**
       * @notice Remove unused signing keys
       * @dev Function is used by the pool
       */
@@ -91,7 +83,6 @@ interface INodeOperatorsRegistry {
     event NodeOperatorStakingLimitSet(uint256 indexed id, uint64 stakingLimit);
     event NodeOperatorTotalStoppedValidatorsReported(uint256 indexed id, uint64 totalStopped);
 
-
     /**
       * @notice Distributes rewards among node operators.
       * @dev Function is used by the pool
@@ -100,6 +91,15 @@ interface INodeOperatorsRegistry {
       */
     function distributeRewards(address _token, uint256 _totalReward) external;
 
+    /**
+     * @notice Selects and returns at most `_numKeys` signing keys (as well as the corresponding
+     *         signatures) from the set of active keys and marks the selected keys as used.
+     *         May only be called by the pool contract.
+     *
+     * @param _numKeys The number of keys to select. The actual number of selected keys may be less
+     *        due to the lack of active keys.
+     */
+    function assignNextSigningKeys(uint256 _numKeys) external returns (bytes memory pubkeys, bytes memory signatures);
 
     /**
       * @notice Add `_quantity` validator signing keys to the keys of the node operator #`_operator_id`. Concatenated keys are: `_pubkeys`

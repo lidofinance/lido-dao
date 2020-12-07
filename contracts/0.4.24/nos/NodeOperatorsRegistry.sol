@@ -13,6 +13,7 @@ import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
 import "../interfaces/INodeOperatorsRegistry.sol";
+import "../lib/MemUtils.sol";
 
 
 /**
@@ -39,6 +40,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     uint256 constant public PUBKEY_LENGTH = 48;
     uint256 constant public SIGNATURE_LENGTH = 96;
 
+    uint256 internal constant UINT64_MAX = uint256(uint64(-1));
+
     bytes32 internal constant SIGNING_KEYS_MAPPING_NAME = keccak256("lido.Lido.signingKeys");
 
 
@@ -52,6 +55,17 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
         uint64 totalSigningKeys;    // total amount of signing keys of this operator
         uint64 usedSigningKeys;     // number of signing keys of this operator which were used in deposits to the Ethereum 2
+    }
+
+    /// @dev Memory cache entry used in the assignNextKeys function
+    struct DepositLookupCacheEntry {
+        // Makes no sense to pack types since reading memory is as fast as any op
+        uint256 id;
+        uint256 stakingLimit;
+        uint256 stoppedValidators;
+        uint256 totalSigningKeys;
+        uint256 usedSigningKeys;
+        uint256 initialUsedSigningKeys;
     }
 
     /// @dev Mapping of all node operators. Mapping is used to be able to extend the struct.
@@ -183,31 +197,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     /**
-      * @notice Update used key counts
-      * @dev Function is used by the pool
-      * @param _ids Array of node operator ids
-      * @param _usedSigningKeys Array of corresponding used key counts (the same length as _ids)
-      */
-    function updateUsedKeys(uint256[] _ids, uint64[] _usedSigningKeys) external onlyPool {
-        require(_ids.length == _usedSigningKeys.length, "BAD_LENGTH");
-        for (uint256 i = 0; i < _ids.length; ++i) {
-            require(_ids[i] < totalOperatorsCount, "NODE_OPERATOR_NOT_FOUND");
-            NodeOperator storage operator = operators[_ids[i]];
-
-            uint64 current = operator.usedSigningKeys;
-            uint64 new_ = _usedSigningKeys[i];
-
-            require(current <= new_, "USED_KEYS_DECREASED");
-            if (current == new_)
-                continue;
-
-            require(new_ <= operator.totalSigningKeys, "INCONSISTENCY");
-
-            operator.usedSigningKeys = new_;
-        }
-    }
-
-    /**
       * @notice Remove unused signing keys
       * @dev Function is used by the pool
       */
@@ -279,6 +268,89 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     function removeSigningKeyOperatorBH(uint256 _operator_id, uint256 _index) external {
         require(msg.sender == operators[_operator_id].rewardAddress, "APP_AUTH_FAILED");
         _removeSigningKey(_operator_id, _index);
+    }
+
+    /**
+     * @notice Selects and returns at most `_numKeys` signing keys (as well as the corresponding
+     *         signatures) from the set of active keys and marks the selected keys as used.
+     *         May only be called by the pool contract.
+     *
+     * @param _numKeys The number of keys to select. The actual number of selected keys may be less
+     *        due to the lack of active keys.
+     */
+    function assignNextSigningKeys(uint256 _numKeys) external onlyPool returns (bytes memory pubkeys, bytes memory signatures) {
+        // Memory is very cheap, although you don't want to grow it too much
+        DepositLookupCacheEntry[] memory cache = _loadOperatorCache();
+        if (0 == cache.length)
+            return (new bytes(0), new bytes(0));
+
+        uint256 numAssignedKeys = 0;
+        DepositLookupCacheEntry memory entry;
+
+        while (numAssignedKeys < _numKeys) {
+            // Finding the best suitable operator
+            uint256 bestOperatorIdx = cache.length;   // 'not found' flag
+            uint256 smallestStake;
+            // The loop is ligthweight comparing to an ether transfer and .deposit invocation
+            for (uint256 idx = 0; idx < cache.length; ++idx) {
+                entry = cache[idx];
+
+                assert(entry.usedSigningKeys <= entry.totalSigningKeys);
+                if (entry.usedSigningKeys == entry.totalSigningKeys)
+                    continue;
+
+                uint256 stake = entry.usedSigningKeys.sub(entry.stoppedValidators);
+                if (stake + 1 > entry.stakingLimit)
+                    continue;
+
+                if (bestOperatorIdx == cache.length || stake < smallestStake) {
+                    bestOperatorIdx = idx;
+                    smallestStake = stake;
+                }
+            }
+
+            if (bestOperatorIdx == cache.length)  // not found
+                break;
+
+            assert(++cache[bestOperatorIdx].usedSigningKeys <= UINT64_MAX);
+            ++numAssignedKeys;
+        }
+
+        if (numAssignedKeys == 0) {
+            return (new bytes(0), new bytes(0));
+        }
+
+        if (numAssignedKeys > 1) {
+            // we can allocate without zeroing out since we're going to rewrite the whole array
+            pubkeys = MemUtils.unsafeAllocateBytes(numAssignedKeys * PUBKEY_LENGTH);
+            signatures = MemUtils.unsafeAllocateBytes(numAssignedKeys * SIGNATURE_LENGTH);
+        }
+
+        uint256 numLoadedKeys = 0;
+
+        for (uint256 i = 0; i < cache.length; ++i) {
+            entry = cache[i];
+
+            if (entry.usedSigningKeys == entry.initialUsedSigningKeys) {
+                continue;
+            }
+
+            operators[entry.id].usedSigningKeys = uint64(entry.usedSigningKeys);
+
+            for (uint256 keyIndex = entry.initialUsedSigningKeys; keyIndex < entry.usedSigningKeys; ++keyIndex) {
+                (bytes memory pubkey, bytes memory signature) = _loadSigningKey(entry.id, keyIndex);
+                if (numAssignedKeys == 1) {
+                    return (pubkey, signature);
+                } else {
+                    MemUtils.copyBytes(pubkey, pubkeys, numLoadedKeys * PUBKEY_LENGTH);
+                    MemUtils.copyBytes(signature, signatures, numLoadedKeys * SIGNATURE_LENGTH);
+                    ++numLoadedKeys;
+                }
+            }
+        }
+
+        assert(numLoadedKeys == numAssignedKeys);
+        return (pubkeys, signatures);
     }
 
     /**
@@ -512,5 +584,31 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         }
 
         return (key, signature);
+    }
+
+    function _loadOperatorCache() internal view returns (DepositLookupCacheEntry[] memory cache) {
+        cache = new DepositLookupCacheEntry[](activeOperatorsCount);
+        if (0 == cache.length)
+            return cache;
+
+        uint256 totalOperators = totalOperatorsCount;
+        uint256 idx = 0;
+        for (uint256 operatorId = 0; operatorId < totalOperators; ++operatorId) {
+            NodeOperator storage operator = operators[operatorId];
+
+            if (!operator.active)
+                continue;
+
+            DepositLookupCacheEntry memory entry = cache[idx++];
+            entry.id = operatorId;
+            entry.stakingLimit = operator.stakingLimit;
+            entry.stoppedValidators = operator.stoppedValidators;
+            entry.totalSigningKeys = operator.totalSigningKeys;
+            entry.usedSigningKeys = operator.usedSigningKeys;
+            entry.initialUsedSigningKeys = entry.usedSigningKeys;
+        }
+        require(idx == cache.length, "INCOSISTENT_ACTIVE_COUNT");
+
+        return cache;
     }
 }
