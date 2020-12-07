@@ -61,10 +61,11 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
   })
 
   it('beaconSpec is correct', async () => {
-    const beaconSpec = await app.beaconSpec()
-    assertBn(beaconSpec.slotsPerEpoch, 32)
-    assertBn(beaconSpec.secondsPerSlot, 12)
-    assertBn(beaconSpec.genesisTime, 1606824000)
+    const receipt = await app.getBeaconSpec()
+    assertBn(receipt.epochsPerFrame, 1)
+    assertBn(receipt.slotsPerEpoch, 32)
+    assertBn(receipt.secondsPerSlot, 12)
+    assertBn(receipt.genesisTime, 1606824000)
   })
 
   describe('Test utility functions:', function () {
