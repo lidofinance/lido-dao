@@ -16,14 +16,13 @@ contract TestLido is Lido {
     address private insurance;
 
     function initialize(
-        ISTETH _token,
         IValidatorRegistration validatorRegistration,
         address _oracle,
         INodeOperatorsRegistry _operators
     )
     public
     {
-        super.initialize(_token, validatorRegistration, _oracle, _operators);
+        super.initialize(validatorRegistration, _oracle, _operators);
         treasury = address(new VaultMock());
         insurance = address(new VaultMock());
     }

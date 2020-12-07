@@ -5,335 +5,413 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.4.24;
 
-import "@aragon/os/contracts/apps/AragonApp.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
+import "@aragon/os/contracts/common/UnstructuredStorage.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
-
-import "./interfaces/ISTETH.sol";
-import "./interfaces/ILido.sol";
-
 import "./lib/Pausable.sol";
 
-
 /**
-  * @title Implementation of a liquid version of ETH 2.0 native token
-  *
-  * ERC20 token which supports stop/resume mechanics. The token is operated by `ILido`.
-  *
-  * Since balances of all token holders change when the amount of total pooled Ether
-  * changes, this token cannot fully implement ERC20 standard: it only emits `Transfer`
-  * events upon explicit transfer between holders. In contrast, when Lido oracle reports
-  * rewards, no Transfer events are generated: doing so would require emitting an event
-  * for each token holder and thus running an unbounded loop.
-  */
-contract StETH is ISTETH, Pausable, AragonApp {
+ * @title Interest-bearing ERC20-like token for Lido Liquid Stacking protocol.
+ *
+ * This contract is abstract. To make the contract deployable override the
+ * `_getTotalPooledEther` function. `Lido.sol` contract inherits StETH and defines
+ * the `_getTotalPooledEther` function.
+ *
+ * StETH balances are dynamic and represent the holder's share in the total amount
+ * of Ether controlled by the protocol. Account shares aren't normalized, so the
+ * contract also stores the sum of all shares to calculate each account's token balance
+ * which equals to:
+ *
+ *   shares[account] * _getTotalPooledEther() / _getTotalShares()
+ *
+ * For example, assume that we have:
+ *
+ *   _getTotalPooledEther() -> 10 ETH
+ *   sharesOf(user1) -> 100
+ *   sharesOf(user2) -> 400
+ *
+ * Therefore:
+ *
+ *   balanceOf(user1) -> 2 tokens which corresponds 2 ETH
+ *   balanceOf(user2) -> 8 tokens which corresponds 8 ETH
+ *
+ * Since balances of all token holders change when the amount of total pooled Ether
+ * changes, this token cannot fully implement ERC20 standard: it only emits `Transfer`
+ * events upon explicit transfer between holders. In contrast, when total amount of
+ * pooled Ether increases, no `Transfer` events are generated: doing so would require
+ * emitting an event for each token holder and thus running an unbounded loop.
+ *
+ * The token inherits from `Pausable` and uses `whenNotStopped` modifier for methods
+ * which change `shares` or `allowances`. `_stop` and `_resume` functions are overriden
+ * in `Lido.sol` and might be called by an account with the `PAUSE_ROLE` assigned by the
+ * DAO. This is useful for emergency scenarios, e.g. a protocol bug, where one might want
+ * to freeze all token transfers and approvals until the emergency is resolved.
+ */
+contract StETH is IERC20, Pausable {
     using SafeMath for uint256;
-
-    /// ACL
-    bytes32 constant public PAUSE_ROLE = keccak256("PAUSE_ROLE");
-    bytes32 constant public MINT_ROLE = keccak256("MINT_ROLE");
-    bytes32 constant public BURN_ROLE = keccak256("BURN_ROLE");
-
-    // Lido contract serves as a source of information on the amount of pooled funds
-    // and acts as the 'minter' of the new shares when staker submits his funds
-    ILido public lido;
-
-    // Shares are the amounts of pooled Ether 'discounted' to the volume of ETH1.0 Ether deposited on the first day
-    // or, more precisely, to Ethers deposited from start until the first oracle report.
-    // Shares represent how much of first-day ether are worth all-time deposits of the given user.
-    // In this implementation token stores relative shares, not fixed balances.
-    mapping (address => uint256) private _shares;
-    uint256 private _totalShares;
-
-    mapping (address => mapping (address => uint256)) private _allowed;
-
-    event Transfer(
-        address indexed from,
-        address indexed to,
-        uint256 value
-    );
-
-    event Approval(
-        address indexed owner,
-        address indexed spender,
-        uint256 value
-    );
-
-    function initialize(ILido _lido) public onlyInit {
-        lido = _lido;
-        initialized();
-    }
+    using UnstructuredStorage for bytes32;
 
     /**
-      * @notice Stop transfers
-      */
-    function stop() external auth(PAUSE_ROLE) {
-        _stop();
-    }
-
-    /**
-      * @notice Resume transfers
-      */
-    function resume() external auth(PAUSE_ROLE) {
-        _resume();
-    }
-
-    /**
-    * @notice Increases shares of a given address by the specified amount. Called by Lido
-    *         contract in two cases: 1) when a user submits an ETH1.0 deposit; 2) when
-    *         ETH2.0 rewards are reported by the oracle. Upon user deposit, Lido contract
-    *         mints the amount of shares that corresponds to the submitted Ether, so
-    *         token balances of other token holders don't change. Upon rewards report,
-    *         Lido contract mints new shares to distribute fee, effectively diluting the
-    *         amount of Ether that would otherwise correspond to each share.
-    *
-    * @param _to Receiver of new shares
-    * @param _sharesAmount Amount of shares to mint
-    * @return The total amount of all holders' shares after new shares are minted
+     * @dev StETH balances are dynamic and are calculated based on the accounts' shares
+     * and the total amount of Ether controlled by the protocol. Account shares aren't
+     * normalized, so the contract also stores the sum of all shares to calculate
+     * each account's token balance which equals to:
+     *
+     *   shares[account] * _getTotalPooledEther() / _getTotalShares()
     */
-    function mintShares(address _to, uint256 _sharesAmount)
-        external
-        whenNotStopped
-        authP(MINT_ROLE, arr(_to, _sharesAmount))
-        returns (uint256 newTotalShares)
-    {
-        require(_to != address(0));
-        newTotalShares = _totalShares.add(_sharesAmount);
-        _totalShares = newTotalShares;
-        _shares[_to] = _shares[_to].add(_sharesAmount);
-        // no Transfer events emitted, see the comment at the top
-    }
+    mapping (address => uint256) private shares;
 
     /**
-      * @notice Burn is called by Lido contract when a user withdraws their Ether.
-      * @param _account Account which tokens are to be burnt
-      * @param _sharesAmount Amount of shares to burn
-      * @return The total amount of all holders' shares after the shares are burned
-      */
-    function burnShares(address _account, uint256 _sharesAmount)
-        external
-        whenNotStopped
-        authP(BURN_ROLE, arr(_account, _sharesAmount))
-        returns (uint256 newTotalShares)
-    {
-        require(_account != address(0));
-        newTotalShares = _totalShares.sub(_sharesAmount);
-        _totalShares = newTotalShares;
-        _shares[_account] = _shares[_account].sub(_sharesAmount);
-        // no Transfer events emitted, see the comment at the top
-    }
+     * @dev Allowances are nominated in tokens, not token shares.
+     */
+    mapping (address => mapping (address => uint256)) private allowances;
 
     /**
-    * @dev Total number of tokens in existence
-    */
-    function totalSupply() public view returns (uint256) {
-        return lido.getTotalPooledEther();
-    }
+     * @dev Storage position used for holding the total amount of shares in existence.
+     *
+     * The Lido protocol is built on top of Aragon and uses the Unstructured Storage pattern
+     * for value types:
+     *
+     * https://blog.openzeppelin.com/upgradeability-using-unstructured-storage
+     * https://blog.8bitzen.com/posts/20-02-2020-understanding-how-solidity-upgradeable-unstructured-proxies-work
+     *
+     * For reference types, conventional storage variables are used since it's non-trivial
+     * and error-prone to implement reference-type unstructured storage using Solidity v0.4;
+     * see https://github.com/lidofinance/lido-dao/issues/181#issuecomment-736098834
+     */
+    bytes32 internal constant TOTAL_SHARES_VALUE_POSITION = keccak256("lido.Lido.totalShares");
 
     /**
-    * @dev Gets the balance of the specified address.
-    * @param owner The address to query the balance of.
-    * @return An uint256 representing the amount owned by the passed address.
-    */
-    function balanceOf(address owner) public view returns (uint256) {
-        return getPooledEthByHolder(owner);
-    }
-
-    /**
-    * @dev Function to check the amount of tokens that an owner allowed to a spender.
-    * @param owner address The address which owns the funds.
-    * @param spender address The address which will spend the funds.
-    * @return A uint256 specifying the amount of tokens still available for the spender.
-    */
-    function allowance(
-        address owner,
-        address spender
-    )
-        public
-        view
-        returns (uint256)
-    {
-        return _allowed[owner][spender];
-    }
-
-    /**
-    * @dev Transfer token for a specified address
-    * @param to The address to transfer to.
-    * @param value The amount to be transferred.
-    */
-    function transfer(address to, uint256 value) public whenNotStopped returns (bool) {
-        _transfer(msg.sender, to, value);
-        return true;
-    }
-
-    /**
-    * @dev Approve the passed address to spend the specified amount of tokens on behalf of msg.sender.
-    * Beware that changing an allowance with this method brings the risk that someone may use both the old
-    * and the new allowance by unfortunate transaction ordering. One possible solution to mitigate this
-    * race condition is to first reduce the spender's allowance to 0 and set the desired value afterwards:
-    * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
-    * @param spender The address which will spend the funds.
-    * @param value The amount of tokens to be spent.
-    */
-    function approve(address spender, uint256 value) public whenNotStopped returns (bool) {
-        require(spender != address(0));
-
-        _allowed[msg.sender][spender] = value;
-        emit Approval(msg.sender, spender, value);
-        return true;
-    }
-
-    /**
-    * @dev Transfer tokens from one address to another
-    * @param from address The address which you want to send tokens from
-    * @param to address The address which you want to transfer to
-    * @param value uint256 the amount of tokens to be transferred
-    */
-    function transferFrom(
-        address from,
-        address to,
-        uint256 value
-    )
-        public
-        whenNotStopped
-        returns (bool)
-    {
-        require(value <= _allowed[from][msg.sender]);
-
-        _allowed[from][msg.sender] = _allowed[from][msg.sender].sub(value);
-        _transfer(from, to, value);
-        return true;
-    }
-
-    /**
-    * @dev Increase the amount of tokens that an owner allowed to a spender.
-    * approve should be called when allowed_[_spender] == 0. To increment
-    * allowed value is better to use this function to avoid 2 calls (and wait until
-    * the first transaction is mined)
-    * From MonolithDAO Token.sol
-    * @param spender The address which will spend the funds.
-    * @param addedValue The amount of tokens to increase the allowance by.
-    */
-    function increaseAllowance(
-        address spender,
-        uint256 addedValue
-    )
-        public
-        whenNotStopped
-        returns (bool)
-    {
-        require(spender != address(0));
-
-        _allowed[msg.sender][spender] = (
-        _allowed[msg.sender][spender].add(addedValue));
-        emit Approval(msg.sender, spender, _allowed[msg.sender][spender]);
-        return true;
-    }
-
-    /**
-    * @dev Decrease the amount of tokens that an owner allowed to a spender.
-    * approve should be called when allowed_[_spender] == 0. To decrement
-    * allowed value is better to use this function to avoid 2 calls (and wait until
-    * the first transaction is mined)
-    * From MonolithDAO Token.sol
-    * @param spender The address which will spend the funds.
-    * @param subtractedValue The amount of tokens to decrease the allowance by.
-    */
-    function decreaseAllowance(
-        address spender,
-        uint256 subtractedValue
-    )
-        public
-        whenNotStopped
-        returns (bool)
-    {
-        require(spender != address(0));
-
-        _allowed[msg.sender][spender] = (
-        _allowed[msg.sender][spender].sub(subtractedValue));
-        emit Approval(msg.sender, spender, _allowed[msg.sender][spender]);
-        return true;
-    }
-
-    /**
-     * @notice Returns the name of the token.
+     * @return the name of the token.
      */
     function name() public pure returns (string) {
         return "Liquid staked Ether 2.0";
     }
 
     /**
-     * @notice Returns the symbol of the token.
+     * @return the symbol of the token, usually a shorter version of the
+     * name.
      */
     function symbol() public pure returns (string) {
         return "stETH";
     }
 
     /**
-     * @notice Returns the number of decimals of the token.
+     * @return the number of decimals for getting user representation of a token amount.
      */
     function decimals() public pure returns (uint8) {
         return 18;
     }
 
     /**
-    * @dev Return the amount of shares that given holder has.
-    * @param _holder The address of the holder
-    */
-    function getSharesByHolder(address _holder) public view returns (uint256) {
-        return _shares[_holder];
+     * @return the amount of tokens in existence.
+     *
+     * @dev Always equals to `_getTotalPooledEther()` since token amount
+     * is pegged to the total amount of Ether controlled by the protocol.
+     */
+    function totalSupply() public view returns (uint256) {
+        return _getTotalPooledEther();
     }
 
     /**
-    * @dev Return the amount of pooled ethers for given amount of shares
-    * @param _sharesAmount The amount of shares
-    */
-    function getPooledEthByShares(uint256 _sharesAmount) public view returns (uint256) {
-        if (_totalShares == 0) {
-            return 0;
-        }
-        return _sharesAmount.mul(lido.getTotalPooledEther()).div(_totalShares);
+     * @return the entire amount of Ether controlled by the protocol.
+     *
+     * @dev The sum of all ETH balances in the protocol, equals to the total supply of stETH.
+     */
+    function getTotalPooledEther() public view returns (uint256) {
+        return _getTotalPooledEther();
     }
 
     /**
-    * @dev Return the amount of pooled ethers for given holder
-    * @param _holder The address of the holder
-    */
-    function getPooledEthByHolder(address _holder) public view returns (uint256) {
-        uint256 holderShares = getSharesByHolder(_holder);
-        uint256 holderPooledEth = getPooledEthByShares(holderShares);
-        return holderPooledEth;
+     * @return the amount of tokens owned by the `_account`.
+     *
+     * @dev Balances are dynamic and equal the `_account`'s share in the amount of the
+     * total Ether controlled by the protocol. See `sharesOf`.
+     */
+    function balanceOf(address _account) public view returns (uint256) {
+        return getPooledEthByShares(_sharesOf(_account));
     }
 
     /**
-    * @dev Return the amount of shares backed by given amount of pooled Eth
-    * @param _pooledEthAmount The amount of pooled Eth
-    */
-    function getSharesByPooledEth(uint256 _pooledEthAmount) public view returns (uint256) {
-        if (lido.getTotalPooledEther() == 0) {
-            return 0;
-        }
-        return _pooledEthAmount.mul(_totalShares).div(lido.getTotalPooledEther());
+     * @notice Moves `_amount` tokens from the caller's account to the `_recipient` account.
+     *
+     * @return a boolean value indicating whether the operation succeeded.
+     * Emits a `Transfer` event.
+     *
+     * Requirements:
+     *
+     * - `_recipient` cannot be the zero address.
+     * - the caller must have a balance of at least `_amount`.
+     * - the contract must not be paused.
+     *
+     * @dev The `_amount` argument is the amount of tokens, not shares.
+     */
+    function transfer(address _recipient, uint256 _amount) public returns (bool) {
+        _transfer(msg.sender, _recipient, _amount);
+        return true;
     }
 
     /**
-    * @dev Return the sum of the shares of all holders for better external visibility
-    */
+     * @return the remaining number of tokens that `_spender` is allowed to spend
+     * on behalf of `_owner` through `transferFrom`. This is zero by default.
+     *
+     * @dev This value changes when `approve` or `transferFrom` is called.
+     */
+    function allowance(address _owner, address _spender) public view returns (uint256) {
+        return allowances[_owner][_spender];
+    }
+
+    /**
+     * @notice Sets `_amount` as the allowance of `_spender` over the caller's tokens.
+     *
+     * @return a boolean value indicating whether the operation succeeded.
+     * Emits an `Approval` event.
+     *
+     * Requirements:
+     *
+     * - `_spender` cannot be the zero address.
+     * - the contract must not be paused.
+     *
+     * @dev The `_amount` argument is the amount of tokens, not shares.
+     */
+    function approve(address _spender, uint256 _amount) public returns (bool) {
+        _approve(msg.sender, _spender, _amount);
+        return true;
+    }
+
+    /**
+     * @notice Moves `_amount` tokens from `_sender` to `_recipient` using the
+     * allowance mechanism. `_amount` is then deducted from the caller's
+     * allowance.
+     *
+     * @return a boolean value indicating whether the operation succeeded.
+     *
+     * Emits a `Transfer` event.
+     * Emits an `Approval` event indicating the updated allowance.
+     *
+     * Requirements:
+     *
+     * - `_sender` and `_recipient` cannot be the zero addresses.
+     * - `_sender` must have a balance of at least `_amount`.
+     * - the caller must have allowance for `_sender`'s tokens of at least `_amount`.
+     * - the contract must not be paused.
+     *
+     * @dev The `_amount` argument is the amount of tokens, not shares.
+     */
+    function transferFrom(address _sender, address _recipient, uint256 _amount) public returns (bool) {
+        uint256 currentAllowance = allowances[_sender][msg.sender];
+        require(currentAllowance >= _amount, "TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE");
+
+        _transfer(_sender, _recipient, _amount);
+        _approve(_sender, msg.sender, currentAllowance.sub(_amount));
+        return true;
+    }
+
+    /**
+     * @notice Atomically increases the allowance granted to `_spender` by the caller by `_addedValue`.
+     *
+     * This is an alternative to `approve` that can be used as a mitigation for
+     * problems described in:
+     * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol#L42
+     * Emits an `Approval` event indicating the updated allowance.
+     *
+     * Requirements:
+     *
+     * - `_spender` cannot be the the zero address.
+     * - the contract must not be paused.
+     */
+    function increaseAllowance(address _spender, uint256 _addedValue) public returns (bool) {
+        _approve(msg.sender, _spender, allowances[msg.sender][_spender].add(_addedValue));
+        return true;
+    }
+
+    /**
+     * @notice Atomically decreases the allowance granted to `_spender` by the caller by `_subtractedValue`.
+     *
+     * This is an alternative to `approve` that can be used as a mitigation for
+     * problems described in:
+     * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol#L42
+     * Emits an `Approval` event indicating the updated allowance.
+     *
+     * Requirements:
+     *
+     * - `_spender` cannot be the zero address.
+     * - `_spender` must have allowance for the caller of at least `_subtractedValue`.
+     * - the contract must not be paused.
+     */
+    function decreaseAllowance(address _spender, uint256 _subtractedValue) public returns (bool) {
+        uint256 currentAllowance = allowances[msg.sender][_spender];
+        require(currentAllowance >= _subtractedValue, "DECREASED_ALLOWANCE_BELOW_ZERO");
+        _approve(msg.sender, _spender, currentAllowance.sub(_subtractedValue));
+        return true;
+    }
+
+    /**
+     * @return the total amount of shares in existence.
+     *
+     * @dev The sum of all accounts' shares can be an arbitrary number, therefore
+     * it is necessary to store it in order to calculate each account's relative share.
+     */
     function getTotalShares() public view returns (uint256) {
-        return _totalShares;
+        return _getTotalShares();
     }
 
     /**
-    * @dev Transfer token for a specified addresses
-    * @param from The address to transfer from.
-    * @param to The address to transfer to.
-    * @param value The amount to be transferred.
-    */
-    function _transfer(address from, address to, uint256 value) internal {
-        require(to != address(0));
-        uint256 sharesToTransfer = getSharesByPooledEth(value);
-        require(sharesToTransfer <= _shares[from]);
-        _shares[from] = _shares[from].sub(sharesToTransfer);
-        _shares[to] = _shares[to].add(sharesToTransfer);
-        emit Transfer(from, to, value);
+     * @return the amount of shares owned by `_account`.
+     */
+    function sharesOf(address _account) public view returns (uint256) {
+        return _sharesOf(_account);
+    }
+
+    /**
+     * @return the amount of shares that corresponds to `_ethAmount` protocol-controlled Ether.
+     */
+    function getSharesByPooledEth(uint256 _ethAmount) public view returns (uint256) {
+        uint256 totalPooledEther = _getTotalPooledEther();
+        if (totalPooledEther == 0) {
+            return 0;
+        } else {
+            return _ethAmount
+                .mul(_getTotalShares())
+                .div(totalPooledEther);
+        }
+    }
+
+    /**
+     * @return the amount of Ether that corresponds to `_sharesAmount` token shares.
+     */
+    function getPooledEthByShares(uint256 _sharesAmount) public view returns (uint256) {
+        uint256 totalShares = _getTotalShares();
+        if (totalShares == 0) {
+            return 0;
+        } else {
+            return _sharesAmount
+                .mul(_getTotalPooledEther())
+                .div(totalShares);
+        }
+    }
+
+    /**
+     * @return the total amount (in wei) of Ether controlled by the protocol.
+     * @dev This is used for calaulating tokens from shares and vice versa.
+     * @dev This function is required to be implemented in a derived contract.
+     */
+    function _getTotalPooledEther() internal view returns (uint256);
+
+    /**
+     * @notice Moves `_amount` tokens from `_sender` to `_recipient`.
+     * Emits a `Transfer` event.
+     */
+    function _transfer(address _sender, address _recipient, uint256 _amount) internal {
+        uint256 _sharesToTransfer = getSharesByPooledEth(_amount);
+        _transferShares(_sender, _recipient, _sharesToTransfer);
+        emit Transfer(_sender, _recipient, _amount);
+    }
+
+    /**
+     * @notice Sets `_amount` as the allowance of `_spender` over the `_owner` s tokens.
+     *
+     * Emits an `Approval` event.
+     *
+     * Requirements:
+     *
+     * - `_owner` cannot be the zero address.
+     * - `_spender` cannot be the zero address.
+     * - the contract must not be paused.
+     */
+    function _approve(address _owner, address _spender, uint256 _amount) internal whenNotStopped {
+        require(_owner != address(0), "APPROVE_FROM_ZERO_ADDRESS");
+        require(_spender != address(0), "APPROVE_TO_ZERO_ADDRESS");
+
+        allowances[_owner][_spender] = _amount;
+        emit Approval(_owner, _spender, _amount);
+    }
+
+    /**
+     * @return the total amount of shares in existence.
+     */
+    function _getTotalShares() internal view returns (uint256) {
+        return TOTAL_SHARES_VALUE_POSITION.getStorageUint256();
+    }
+
+    /**
+     * @return the amount of shares owned by `_account`.
+     */
+    function _sharesOf(address _account) internal view returns (uint256) {
+        return shares[_account];
+    }
+
+    /**
+     * @notice Moves `_sharesAmount` shares from `_sender` to `_recipient`.
+     *
+     * Requirements:
+     *
+     * - `_sender` cannot be the zero address.
+     * - `_recipient` cannot be the zero address.
+     * - `_sender` must hold at least `_sharesAmount` shares.
+     * - the contract must not be paused.
+     */
+    function _transferShares(address _sender, address _recipient, uint256 _sharesAmount) internal whenNotStopped {
+        require(_sender != address(0), "TRANSFER_FROM_THE_ZERO_ADDRESS");
+        require(_recipient != address(0), "TRANSFER_TO_THE_ZERO_ADDRESS");
+
+        uint256 currentSenderShares = shares[_sender];
+        require(_sharesAmount <= currentSenderShares, "TRANSFER_AMOUNT_EXCEEDS_BALANCE");
+
+        shares[_sender] = currentSenderShares.sub(_sharesAmount);
+        shares[_recipient] = shares[_recipient].add(_sharesAmount);
+    }
+
+    /**
+     * @notice Creates `_sharesAmount` shares and assigns them to `_recipient`, increasing the total amount of shares.
+     * @dev This doesn't increase the token total supply.
+     *
+     * Requirements:
+     *
+     * - `_recipient` cannot be the zero address.
+     * - the contract must not be paused.
+     */
+    function _mintShares(address _recipient, uint256 _sharesAmount) internal whenNotStopped returns (uint256 newTotalShares) {
+        require(_recipient != address(0), "MINT_TO_THE_ZERO_ADDRESS");
+
+        newTotalShares = _getTotalShares().add(_sharesAmount);
+        TOTAL_SHARES_VALUE_POSITION.setStorageUint256(newTotalShares);
+
+        shares[_recipient] = shares[_recipient].add(_sharesAmount);
+
+        // Notice: we're not emitting a Transfer event from the zero address here since shares mint
+        // works by taking the amount of tokens corresponding to the minted shares from all other
+        // token holders, proportionally to their share. The total supply of the token doesn't change
+        // as the result. This is equivalent to performing a send from each other token holder's
+        // address to `address`, but we cannot reflect this as it would require sending an unbounded
+        // number of events.
+    }
+
+    /**
+     * @notice Destroys `_sharesAmount` shares from `_account`'s holdings, decreasing the total amount of shares.
+     * @dev This doesn't decrease the token total supply.
+     *
+     * Requirements:
+     *
+     * - `_account` cannot be the zero address.
+     * - `_account` must hold at least `_sharesAmount` shares.
+     * - the contract must not be paused.
+     */
+    function _burnShares(address _account, uint256 _sharesAmount) internal whenNotStopped returns (uint256 newTotalShares) {
+        require(_account != address(0), "BURN_FROM_THE_ZERO_ADDRESS");
+
+        uint256 accountShares = shares[_account];
+        require(_sharesAmount <= accountShares, "BURN_AMOUNT_EXCEEDS_BALANCE");
+
+        newTotalShares = _getTotalShares().sub(_sharesAmount);
+        TOTAL_SHARES_VALUE_POSITION.setStorageUint256(newTotalShares);
+
+        shares[_account] = accountShares.sub(_sharesAmount);
+
+        // Notice: we're not emitting a Transfer event to the zero address here since shares burn
+        // works by redistributing the amount of tokens corresponding to the burned shares between
+        // all other token holders. The total supply of the token doesn't change as the result.
+        // This is equivalent to performing a send from `address` to each other token holder address,
+        // but we cannot reflect this as it would require sending an unbounded number of events.
     }
 }
