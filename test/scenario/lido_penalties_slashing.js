@@ -460,14 +460,14 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     assertBn(unusedKeys, 1, 'one signing key is unused')
   })
 
-  it.skip(`voting stops the first operator`, async () => {
+  it(`voting stops the first operator`, async () => {
     const activeOperatorsBefore = await nodeOperatorRegistry.getActiveNodeOperatorsCount()
     await nodeOperatorRegistry.setNodeOperatorActive(0, false, { from: voting })
     const activeOperatorsAfter = await nodeOperatorRegistry.getActiveNodeOperatorsCount()
     assertBn(activeOperatorsAfter, activeOperatorsBefore.sub(new BN(1)), 'deactivated one operator')
   })
 
-  it.skip(`user deposits another 32 ETH to the pool`, async () => {
+  it(`user deposits another 32 ETH to the pool`, async () => {
     const totalPooledEther = await pool.getTotalPooledEther()
     const depositAmount = ETH(32)
     awaitingTotalShares = awaitingTotalShares.add(new BN(depositAmount).mul(awaitingTotalShares).div(totalPooledEther))
@@ -491,7 +491,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     assertBn(await pool.getBufferedEther(), ETH(32), `32 ETH is pooled`)
   })
 
-  it.skip(`oracle reports profit, stopped node operator doesn't get the fee`, async () => {
+  it(`oracle reports profit, stopped node operator doesn't get the fee`, async () => {
     const nodeOperator1TokenSharesBefore = await token.sharesOf(nodeOperator1.address)
     const nodeOperator2TokenSharesBefore = await token.sharesOf(nodeOperator2.address)
 
@@ -506,14 +506,14 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     )
   })
 
-  it.skip(`voting starts the first operator back`, async () => {
+  it(`voting starts the first operator back`, async () => {
     const activeOperatorsBefore = await nodeOperatorRegistry.getActiveNodeOperatorsCount()
     await nodeOperatorRegistry.setNodeOperatorActive(0, true, { from: voting })
     const activeOperatorsAfter = await nodeOperatorRegistry.getActiveNodeOperatorsCount()
     assertBn(activeOperatorsAfter, activeOperatorsBefore.add(new BN(1)), 'activated one operator')
   })
 
-  it.skip(`oracle reports profit, previously stopped node operator gets the fee`, async () => {
+  it(`oracle reports profit, previously stopped node operator gets the fee`, async () => {
     const nodeOperator1TokenSharesBefore = await token.sharesOf(nodeOperator1.address)
     const nodeOperator2TokenSharesBefore = await token.sharesOf(nodeOperator2.address)
 
