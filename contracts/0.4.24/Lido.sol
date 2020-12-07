@@ -240,7 +240,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         require(_beaconValidators <= depositedValidators, "REPORTED_MORE_DEPOSITED");
 
         uint256 beaconValidators = BEACON_VALIDATORS_VALUE_POSITION.getStorageUint256();
-        // Since the calculation of funds in the ingress queue is based on the number of validators 
+        // Since the calculation of funds in the ingress queue is based on the number of validators
         // that are in a transient state (deposited but not seen on beacon yet), we can't decrease the previously
         // reported number (we'll be unable to figure out who is in the queue and count them).
         // See LIP-1 for details https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-1.md
@@ -278,6 +278,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         } else {
             ERC20 token = ERC20(_token);
             balance = token.staticBalanceOf(this);
+            // safeTransfer comes from overriden default implementation
             require(token.safeTransfer(vault, balance), "RECOVER_TOKEN_TRANSFER_FAILED");
         }
 
