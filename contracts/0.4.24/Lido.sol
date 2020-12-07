@@ -75,7 +75,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     bytes32 internal constant BEACON_VALIDATORS_VALUE_POSITION = keccak256("lido.Lido.beaconValidators");
 
     /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
-    bytes private withdrawalCredentials;
+    bytes32 internal constant WITHDRAWAL_CREDENTIALS_POSITION = keccak256("lido.Lido.withdrawalCredentials");
 
     /**
     * @dev As AragonApp, Lido contract must be initialized with following variables:
@@ -203,10 +203,8 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
       * @param _withdrawalCredentials hash of withdrawal multisignature key as accepted by
       *        the validator_registration.deposit function
       */
-    function setWithdrawalCredentials(bytes _withdrawalCredentials) external auth(MANAGE_WITHDRAWAL_KEY) {
-        require(_withdrawalCredentials.length == WITHDRAWAL_CREDENTIALS_LENGTH, "INVALID_LENGTH");
-
-        withdrawalCredentials = _withdrawalCredentials;
+    function setWithdrawalCredentials(bytes32 _withdrawalCredentials) external auth(MANAGE_WITHDRAWAL_KEY) {
+        WITHDRAWAL_CREDENTIALS_POSITION.setStorageBytes32(_withdrawalCredentials);
         getOperators().trimUnusedKeys();
 
         emit WithdrawalCredentialsSet(_withdrawalCredentials);
@@ -305,8 +303,8 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     /**
       * @notice Returns current credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
       */
-    function getWithdrawalCredentials() external view returns (bytes) {
-        return withdrawalCredentials;
+    function getWithdrawalCredentials() public view returns (bytes32) {
+        return WITHDRAWAL_CREDENTIALS_POSITION.getStorageBytes32();
     }
 
     /**
@@ -480,7 +478,8 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     * @param _signature Signature of the deposit call
     */
     function _stake(bytes memory _pubkey, bytes memory _signature) internal {
-        require(withdrawalCredentials.length != 0, "EMPTY_WITHDRAWAL_CREDENTIALS");
+        bytes32 withdrawalCredentials = getWithdrawalCredentials();
+        require(withdrawalCredentials != 0, "EMPTY_WITHDRAWAL_CREDENTIALS");
 
         uint256 value = DEPOSIT_SIZE;
 
@@ -507,7 +506,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         uint256 targetBalance = address(this).balance.sub(value);
 
         getValidatorRegistrationContract().deposit.value(value)(
-            _pubkey, withdrawalCredentials, _signature, depositDataRoot);
+            _pubkey, abi.encodePacked(withdrawalCredentials), _signature, depositDataRoot);
         require(address(this).balance == targetBalance, "EXPECTING_DEPOSIT_TO_HAPPEN");
     }
 

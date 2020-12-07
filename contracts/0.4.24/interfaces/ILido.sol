@@ -66,7 +66,7 @@ interface ILido {
       * @param _withdrawalCredentials hash of withdrawal multisignature key as accepted by
       *        the validator_registration.deposit function
       */
-    function setWithdrawalCredentials(bytes _withdrawalCredentials) external;
+    function setWithdrawalCredentials(bytes32 _withdrawalCredentials) external;
 
     /**
       * @notice Returns current credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
@@ -74,7 +74,7 @@ interface ILido {
     function getWithdrawalCredentials() external view returns (bytes);
 
 
-    event WithdrawalCredentialsSet(bytes withdrawalCredentials);
+    event WithdrawalCredentialsSet(bytes32 withdrawalCredentials);
 
 
     /**
