@@ -207,10 +207,8 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
       * @param _withdrawalCredentials hash of withdrawal multisignature key as accepted by
       *        the validator_registration.deposit function
       */
-    function setWithdrawalCredentials(bytes _withdrawalCredentials) external auth(MANAGE_WITHDRAWAL_KEY) {
-        require(_withdrawalCredentials.length == WITHDRAWAL_CREDENTIALS_LENGTH, "INVALID_LENGTH");
-
-        WITHDRAWAL_CREDENTIALS_POSITION.setStorageBytes32(BytesLib.toBytes32(_withdrawalCredentials, 0));
+    function setWithdrawalCredentials(bytes32 _withdrawalCredentials) external auth(MANAGE_WITHDRAWAL_KEY) {
+        WITHDRAWAL_CREDENTIALS_POSITION.setStorageBytes32(_withdrawalCredentials);
         getOperators().trimUnusedKeys();
 
         emit WithdrawalCredentialsSet(_withdrawalCredentials);
@@ -328,8 +326,8 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     /**
       * @notice Returns current credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
       */
-    function getWithdrawalCredentials() public view returns (bytes) {
-        return abi.encodePacked(WITHDRAWAL_CREDENTIALS_POSITION.getStorageBytes32());
+    function getWithdrawalCredentials() public view returns (bytes32) {
+        return WITHDRAWAL_CREDENTIALS_POSITION.getStorageBytes32();
     }
 
     /**
@@ -536,7 +534,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     * @param _signature Signature of the deposit call
     */
     function _stake(bytes memory _pubkey, bytes memory _signature) internal {
-        require(keccak256(getWithdrawalCredentials()) != keccak256(abi.encodePacked(bytes32(0))), "EMPTY_WITHDRAWAL_CREDENTIALS");
+        require(getWithdrawalCredentials() != 0, "EMPTY_WITHDRAWAL_CREDENTIALS");
 
         uint256 value = DEPOSIT_SIZE;
 
@@ -563,7 +561,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         uint256 targetBalance = address(this).balance.sub(value);
 
         getValidatorRegistrationContract().deposit.value(value)(
-            _pubkey, getWithdrawalCredentials(), _signature, depositDataRoot);
+            _pubkey, abi.encodePacked(getWithdrawalCredentials()), _signature, depositDataRoot);
         require(address(this).balance == targetBalance, "EXPECTING_DEPOSIT_TO_HAPPEN");
     }
 
