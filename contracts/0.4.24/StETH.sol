@@ -123,65 +123,65 @@ contract StETH is IERC20, Pausable {
     }
 
     /**
-     * @return the amount of tokens owned by the `account`.
+     * @return the amount of tokens owned by the `_account`.
      *
-     * @dev Balances are dynamic and equal the account's share in the amount of the
+     * @dev Balances are dynamic and equal the `_account`'s share in the amount of the
      * total Ether controlled by the protocol. See `getSharesOf`.
      */
-    function balanceOf(address account) public view returns (uint256) {
-        return getPooledEthByShares(_getSharesOf(account));
+    function balanceOf(address _account) public view returns (uint256) {
+        return getPooledEthByShares(_getSharesOf(_account));
     }
 
     /**
-     * @notice Moves `amount` tokens from the caller's account to the `recipient` account.
+     * @notice Moves `_amount` tokens from the caller's account to the `_recipient` account.
      *
      * @return a boolean value indicating whether the operation succeeded.
      * Emits a `Transfer` event.
      *
      * Requirements:
      *
-     * - `recipient` cannot be the zero address.
-     * - the caller must have a balance of at least `amount`.
+     * - `_recipient` cannot be the zero address.
+     * - the caller must have a balance of at least `_amount`.
      * - the contract must not be paused.
      *
-     * @dev The `amount` parameter is the amount of tokens, not shares.
+     * @dev The `_amount` argument is the amount of tokens, not shares.
      */
-    function transfer(address recipient, uint256 amount) public returns (bool) {
-        _transfer(msg.sender, recipient, amount);
+    function transfer(address _recipient, uint256 _amount) public returns (bool) {
+        _transfer(msg.sender, _recipient, _amount);
         return true;
     }
 
     /**
-     * @return the remaining number of tokens that `spender` is allowed to spend
-     * on behalf of `owner` through `transferFrom`. This is zero by default.
+     * @return the remaining number of tokens that `_spender` is allowed to spend
+     * on behalf of `_owner` through `transferFrom`. This is zero by default.
      *
      * @dev This value changes when `approve` or `transferFrom` is called.
      */
-    function allowance(address owner, address spender) public view returns (uint256) {
-        return allowances[owner][spender];
+    function allowance(address _owner, address _spender) public view returns (uint256) {
+        return allowances[_owner][_spender];
     }
 
     /**
-     * @notice Sets `amount` as the allowance of `spender` over the caller's tokens.
+     * @notice Sets `_amount` as the allowance of `_spender` over the caller's tokens.
      *
      * @return a boolean value indicating whether the operation succeeded.
      * Emits an `Approval` event.
      *
      * Requirements:
      *
-     * - `spender` cannot be the zero address.
+     * - `_spender` cannot be the zero address.
      * - the contract must not be paused.
      *
-     * @dev The `amount` parameter is the amount of tokens, not shares.
+     * @dev The `_amount` argument is the amount of tokens, not shares.
      */
-    function approve(address spender, uint256 amount) public returns (bool) {
-        _approve(msg.sender, spender, amount);
+    function approve(address _spender, uint256 _amount) public returns (bool) {
+        _approve(msg.sender, _spender, _amount);
         return true;
     }
 
     /**
-     * @notice Moves `amount` tokens from `sender` to `recipient` using the
-     * allowance mechanism. `amount` is then deducted from the caller's
+     * @notice Moves `_amount` tokens from `_sender` to `_recipient` using the
+     * allowance mechanism. `_amount` is then deducted from the caller's
      * allowance.
      *
      * @return a boolean value indicating whether the operation succeeded.
@@ -191,24 +191,24 @@ contract StETH is IERC20, Pausable {
      *
      * Requirements:
      *
-     * - `sender` and `recipient` cannot be the zero addresses.
-     * - `sender` must have a balance of at least `amount`.
-     * - the caller must have allowance for `sender`'s tokens of at least `amount`.
+     * - `_sender` and `_recipient` cannot be the zero addresses.
+     * - `_sender` must have a balance of at least `_amount`.
+     * - the caller must have allowance for `_sender`'s tokens of at least `_amount`.
      * - the contract must not be paused.
      *
-     * @dev The `amount` parameter is the amount of tokens, not shares.
+     * @dev The `_amount` argument is the amount of tokens, not shares.
      */
-    function transferFrom(address sender, address recipient, uint256 amount) public returns (bool) {
-        uint256 currentAllowance = allowances[sender][msg.sender];
-        require(currentAllowance >= amount, "TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE");
+    function transferFrom(address _sender, address _recipient, uint256 _amount) public returns (bool) {
+        uint256 currentAllowance = allowances[_sender][msg.sender];
+        require(currentAllowance >= _amount, "TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE");
 
-        _transfer(sender, recipient, amount);
-        _approve(sender, msg.sender, currentAllowance.sub(amount));
+        _transfer(_sender, _recipient, _amount);
+        _approve(_sender, msg.sender, currentAllowance.sub(_amount));
         return true;
     }
 
     /**
-     * @notice Atomically increases the allowance granted to `spender` by the caller.
+     * @notice Atomically increases the allowance granted to `_spender` by the caller by `_addedValue`.
      *
      * This is an alternative to `approve` that can be used as a mitigation for
      * problems described in:
@@ -217,16 +217,16 @@ contract StETH is IERC20, Pausable {
      *
      * Requirements:
      *
-     * - `spender` cannot be the the zero address.
+     * - `_spender` cannot be the the zero address.
      * - the contract must not be paused.
      */
-    function increaseAllowance(address spender, uint256 addedValue) public returns (bool) {
-        _approve(msg.sender, spender, allowances[msg.sender][spender].add(addedValue));
+    function increaseAllowance(address _spender, uint256 _addedValue) public returns (bool) {
+        _approve(msg.sender, _spender, allowances[msg.sender][_spender].add(_addedValue));
         return true;
     }
 
     /**
-     * @notice Atomically decreases the allowance granted to `spender` by the caller.
+     * @notice Atomically decreases the allowance granted to `_spender` by the caller by `_subtractedValue`.
      *
      * This is an alternative to `approve` that can be used as a mitigation for
      * problems described in:
@@ -235,19 +235,19 @@ contract StETH is IERC20, Pausable {
      *
      * Requirements:
      *
-     * - `spender` cannot be the zero address.
-     * - `spender` must have allowance for the caller of at least `subtractedValue`.
+     * - `_spender` cannot be the zero address.
+     * - `_spender` must have allowance for the caller of at least `_subtractedValue`.
      * - the contract must not be paused.
      */
-    function decreaseAllowance(address spender, uint256 subtractedValue) public returns (bool) {
-        uint256 currentAllowance = allowances[msg.sender][spender];
-        require(currentAllowance >= subtractedValue, "DECREASED_ALLOWANCE_BELOW_ZERO");
-        _approve(msg.sender, spender, currentAllowance.sub(subtractedValue));
+    function decreaseAllowance(address _spender, uint256 _subtractedValue) public returns (bool) {
+        uint256 currentAllowance = allowances[msg.sender][_spender];
+        require(currentAllowance >= _subtractedValue, "DECREASED_ALLOWANCE_BELOW_ZERO");
+        _approve(msg.sender, _spender, currentAllowance.sub(_subtractedValue));
         return true;
     }
 
     /**
-     * @notice Returns the total amount of shares in existence.
+     * @return the total amount of shares in existence.
      *
      * @dev The sum of all accounts' shares can be an arbitrary number, therefore
      * it is necessary to store it in order to calculate each account's relative share.
@@ -257,10 +257,10 @@ contract StETH is IERC20, Pausable {
     }
 
     /**
-     * @return the amount of shares owned by `account`.
+     * @return the amount of shares owned by `_account`.
      */
-    function getSharesOf(address account) public view returns (uint256) {
-        return _getSharesOf(account);
+    function getSharesOf(address _account) public view returns (uint256) {
+        return _getSharesOf(_account);
     }
 
     /**
@@ -299,32 +299,32 @@ contract StETH is IERC20, Pausable {
     function _getTotalPooledEther() internal view returns (uint256);
 
     /**
-     * @notice Moves `amount` tokens from `sender` to `recipient`.
+     * @notice Moves `_amount` tokens from `_sender` to `_recipient`.
      * Emits a `Transfer` event.
      */
-    function _transfer(address sender, address recipient, uint256 amount) internal {
-        uint256 _sharesToTransfer = getSharesByPooledEth(amount);
-        _transferShares(sender, recipient, _sharesToTransfer);
-        emit Transfer(sender, recipient, amount);
+    function _transfer(address _sender, address _recipient, uint256 _amount) internal {
+        uint256 _sharesToTransfer = getSharesByPooledEth(_amount);
+        _transferShares(_sender, _recipient, _sharesToTransfer);
+        emit Transfer(_sender, _recipient, _amount);
     }
 
     /**
-     * @notice Sets `amount` as the allowance of `spender` over the `owner` s tokens.
+     * @notice Sets `_amount` as the allowance of `_spender` over the `_owner` s tokens.
      *
      * Emits an `Approval` event.
      *
      * Requirements:
      *
-     * - `owner` cannot be the zero address.
-     * - `spender` cannot be the zero address.
+     * - `_owner` cannot be the zero address.
+     * - `_spender` cannot be the zero address.
      * - the contract must not be paused.
      */
-    function _approve(address owner, address spender, uint256 amount) internal whenNotStopped {
-        require(owner != address(0), "APPROVE_FROM_ZERO_ADDRESS");
-        require(spender != address(0), "APPROVE_TO_ZERO_ADDRESS");
+    function _approve(address _owner, address _spender, uint256 _amount) internal whenNotStopped {
+        require(_owner != address(0), "APPROVE_FROM_ZERO_ADDRESS");
+        require(_spender != address(0), "APPROVE_TO_ZERO_ADDRESS");
 
-        allowances[owner][spender] = amount;
-        emit Approval(owner, spender, amount);
+        allowances[_owner][_spender] = _amount;
+        emit Approval(_owner, _spender, _amount);
     }
 
     /**
@@ -335,49 +335,49 @@ contract StETH is IERC20, Pausable {
     }
 
     /**
-     * @return the amount of shares owned by `account`.
+     * @return the amount of shares owned by `_account`.
      */
-    function _getSharesOf(address account) internal view returns (uint256) {
-        return shares[account];
+    function _getSharesOf(address _account) internal view returns (uint256) {
+        return shares[_account];
     }
 
     /**
-     * @notice Moves `sharesAmount` shares from `sender` to `recipient`.
+     * @notice Moves `_sharesAmount` shares from `_sender` to `_recipient`.
      *
      * Requirements:
      *
-     * - `sender` cannot be the zero address.
-     * - `recipient` cannot be the zero address.
-     * - `sender` must hold at least `sharesAmount` shares.
+     * - `_sender` cannot be the zero address.
+     * - `_recipient` cannot be the zero address.
+     * - `_sender` must hold at least `_sharesAmount` shares.
      * - the contract must not be paused.
      */
-    function _transferShares(address sender, address recipient, uint256 sharesAmount) internal whenNotStopped {
-        require(sender != address(0), "TRANSFER_FROM_THE_ZERO_ADDRESS");
-        require(recipient != address(0), "TRANSFER_TO_THE_ZERO_ADDRESS");
+    function _transferShares(address _sender, address _recipient, uint256 _sharesAmount) internal whenNotStopped {
+        require(_sender != address(0), "TRANSFER_FROM_THE_ZERO_ADDRESS");
+        require(_recipient != address(0), "TRANSFER_TO_THE_ZERO_ADDRESS");
 
-        uint256 currentSenderShares = shares[sender];
-        require(sharesAmount <= currentSenderShares, "TRANSFER_AMOUNT_EXCEEDS_BALANCE");
+        uint256 currentSenderShares = shares[_sender];
+        require(_sharesAmount <= currentSenderShares, "TRANSFER_AMOUNT_EXCEEDS_BALANCE");
 
-        shares[sender] = currentSenderShares.sub(sharesAmount);
-        shares[recipient] = shares[recipient].add(sharesAmount);
+        shares[_sender] = currentSenderShares.sub(_sharesAmount);
+        shares[_recipient] = shares[_recipient].add(_sharesAmount);
     }
 
     /**
-     * @notice Creates `sharesAmount` shares and assigns them to `account`, increasing the total amount of shares.
+     * @notice Creates `_sharesAmount` shares and assigns them to `_recipient`, increasing the total amount of shares.
      * @dev This doesn't increase the token total supply.
      *
      * Requirements:
      *
-     * - `to` cannot be the zero address.
+     * - `_recipient` cannot be the zero address.
      * - the contract must not be paused.
      */
-    function _mintShares(address to, uint256 sharesAmount) internal whenNotStopped returns (uint256 newTotalShares) {
-        require(to != address(0), "MINT_TO_THE_ZERO_ADDRESS");
+    function _mintShares(address _recipient, uint256 _sharesAmount) internal whenNotStopped returns (uint256 newTotalShares) {
+        require(_recipient != address(0), "MINT_TO_THE_ZERO_ADDRESS");
 
-        newTotalShares = _getTotalShares().add(sharesAmount);
+        newTotalShares = _getTotalShares().add(_sharesAmount);
         TOTAL_SHARES_VALUE_POSITION.setStorageUint256(newTotalShares);
 
-        shares[to] = shares[to].add(sharesAmount);
+        shares[_recipient] = shares[_recipient].add(_sharesAmount);
 
         // Notice: we're not emitting a Transfer event from the zero address here since shares mint
         // works by taking the amount of tokens corresponding to the minted shares from all other
@@ -388,25 +388,25 @@ contract StETH is IERC20, Pausable {
     }
 
     /**
-     * @notice Destroys `sharesAmount` shares from `account`'s holdings, decreasing the total amount of shares.
+     * @notice Destroys `_sharesAmount` shares from `_account`'s holdings, decreasing the total amount of shares.
      * @dev This doesn't decrease the token total supply.
      *
      * Requirements:
      *
-     * - `account` cannot be the zero address.
-     * - `account` must hold at least `sharesAmount` shares.
+     * - `_account` cannot be the zero address.
+     * - `_account` must hold at least `_sharesAmount` shares.
      * - the contract must not be paused.
      */
-    function _burnShares(address account, uint256 sharesAmount) internal whenNotStopped returns (uint256 newTotalShares) {
-        require(account != address(0), "BURN_FROM_THE_ZERO_ADDRESS");
+    function _burnShares(address _account, uint256 _sharesAmount) internal whenNotStopped returns (uint256 newTotalShares) {
+        require(_account != address(0), "BURN_FROM_THE_ZERO_ADDRESS");
 
-        uint256 accountShares = shares[account];
-        require(sharesAmount <= accountShares, "BURN_AMOUNT_EXCEEDS_BALANCE");
+        uint256 accountShares = shares[_account];
+        require(_sharesAmount <= accountShares, "BURN_AMOUNT_EXCEEDS_BALANCE");
 
-        newTotalShares = _getTotalShares().sub(sharesAmount);
+        newTotalShares = _getTotalShares().sub(_sharesAmount);
         TOTAL_SHARES_VALUE_POSITION.setStorageUint256(newTotalShares);
 
-        shares[account] = accountShares.sub(sharesAmount);
+        shares[_account] = accountShares.sub(_sharesAmount);
 
         // Notice: we're not emitting a Transfer event to the zero address here since shares burn
         // works by redistributing the amount of tokens corresponding to the burned shares between
