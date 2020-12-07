@@ -26,8 +26,8 @@ import "./lib/Pausable.sol";
  *
  * For example, assume we have:
  *   _getTotalPooledEther() -> 10 ETH
- *   shareOf(user1) -> 100
- *   shareOf(user2) -> 400
+ *   sharesOf(user1) -> 100
+ *   sharesOf(user2) -> 400
  *
  * Therefore:
  *   balanceOf(user1) -> 2 tokens which corresponds 2 ETH
@@ -375,7 +375,7 @@ contract StETH is IERC20, Pausable {
      *
      * Requirements:
      * - `account` cannot be the zero address.
-     * - `account` must have at least `sharesAmount` tokens.
+     * - `account` must have at least `sharesAmount` shares.
      * - the contract must not be paused.
      */
     function _burnShares(address account, uint256 sharesAmount) internal whenNotStopped returns (uint256 newTotalShares) {
