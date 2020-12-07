@@ -101,12 +101,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         validAddress(_rewardAddress)
         returns (uint256 id)
     {
-        id = TOTAL_OPERATORS_COUNT_VALUE_POSITION.getStorageUint256();
+        id = getNodeOperatorsCount();
         TOTAL_OPERATORS_COUNT_VALUE_POSITION.setStorageUint256(id.add(1));
 
         NodeOperator storage operator = operators[id];
 
-        uint256 activeOperatorsCount = ACTIVE_OPERATORS_COUNT_VALUE_POSITION.getStorageUint256();
+        uint256 activeOperatorsCount = getActiveNodeOperatorsCount();
         ACTIVE_OPERATORS_COUNT_VALUE_POSITION.setStorageUint256(activeOperatorsCount.add(1));
 
         operator.active = true;
@@ -127,12 +127,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         operatorExists(_id)
     {
         if (operators[_id].active != _active) {
-            bytes32 activeOperatorsCountPosition = ACTIVE_OPERATORS_COUNT_VALUE_POSITION;
-            uint256 activeOperatorsCount = activeOperatorsCountPosition.getStorageUint256();
+            uint256 activeOperatorsCount = getActiveNodeOperatorsCount();
             if (_active)
-                activeOperatorsCountPosition.setStorageUint256(activeOperatorsCount.add(1));
+                ACTIVE_OPERATORS_COUNT_VALUE_POSITION.setStorageUint256(activeOperatorsCount.add(1));
             else
-                activeOperatorsCountPosition.setStorageUint256(activeOperatorsCount.sub(1));
+                ACTIVE_OPERATORS_COUNT_VALUE_POSITION.setStorageUint256(activeOperatorsCount.sub(1));
         }
 
         operators[_id].active = _active;
@@ -322,7 +321,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     /**
       * @notice Returns number of active node operators
       */
-    function getActiveNodeOperatorsCount() external view returns (uint256) {
+    function getActiveNodeOperatorsCount() public view returns (uint256) {
         return ACTIVE_OPERATORS_COUNT_VALUE_POSITION.getStorageUint256();
     }
 
