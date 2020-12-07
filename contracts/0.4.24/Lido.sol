@@ -58,28 +58,28 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     /// @dev default value for maximum number of Ethereum 2.0 validators registered in a single depositBufferedEther call
     uint256 internal constant DEFAULT_MAX_DEPOSITS_PER_CALL = 16;
 
-    bytes32 internal constant FEE_VALUE_POSITION = keccak256("lido.Lido.fee");
-    bytes32 internal constant TREASURY_FEE_VALUE_POSITION = keccak256("lido.Lido.treasuryFee");
-    bytes32 internal constant INSURANCE_FEE_VALUE_POSITION = keccak256("lido.Lido.insuranceFee");
-    bytes32 internal constant NODE_OPERATORS_FEE_VALUE_POSITION = keccak256("lido.Lido.operatorsFee");
+    bytes32 internal constant FEE_VALUE_POSITION = keccak256("fee.lido.lido.eth");
+    bytes32 internal constant TREASURY_FEE_VALUE_POSITION = keccak256("treasuryFee.lido.lido.eth");
+    bytes32 internal constant INSURANCE_FEE_VALUE_POSITION = keccak256("insuranceFee.lido.lido.eth");
+    bytes32 internal constant NODE_OPERATORS_FEE_VALUE_POSITION = keccak256("operatorsFee.lido.lido.eth");
 
-    bytes32 internal constant VALIDATOR_REGISTRATION_VALUE_POSITION = keccak256("lido.Lido.validatorRegistration");
-    bytes32 internal constant ORACLE_VALUE_POSITION = keccak256("lido.Lido.oracle");
-    bytes32 internal constant NODE_OPERATOR_REGISTRY_VALUE_POSITION = keccak256("lido.Lido.nodeOperatorRegistry");
-    bytes32 internal constant TREASURY_VALUE_POSITION = keccak256("lido.Lido.treasury");
-    bytes32 internal constant INSURANCE_FUND_VALUE_POSITION = keccak256("lido.Lido.insuranceFunds");
+    bytes32 internal constant VALIDATOR_REGISTRATION_VALUE_POSITION = keccak256("validatorRegistration.lido.lido.eth");
+    bytes32 internal constant ORACLE_VALUE_POSITION = keccak256("oracle.lido.lido.eth");
+    bytes32 internal constant NODE_OPERATOR_REGISTRY_VALUE_POSITION = keccak256("nodeOperatorRegistry.lido.lido.eth");
+    bytes32 internal constant TREASURY_VALUE_POSITION = keccak256("treasury.lido.lido.eth");
+    bytes32 internal constant INSURANCE_FUND_VALUE_POSITION = keccak256("insuranceFunds.lido.lido.eth");
 
     /// @dev amount of Ether (on the current Ethereum side) buffered on this smart contract balance
-    bytes32 internal constant BUFFERED_ETHER_VALUE_POSITION = keccak256("lido.Lido.bufferedEther");
+    bytes32 internal constant BUFFERED_ETHER_VALUE_POSITION = keccak256("bufferedEther.lido.lido.eth");
     /// @dev number of deposited validators (incrementing counter of deposit operations).
-    bytes32 internal constant DEPOSITED_VALIDATORS_VALUE_POSITION = keccak256("lido.Lido.depositedValidators");
+    bytes32 internal constant DEPOSITED_VALIDATORS_VALUE_POSITION = keccak256("depositedValidators.lido.lido.eth");
     /// @dev total amount of Beacon-side Ether (sum of all the balances of Lido validators)
-    bytes32 internal constant BEACON_BALANCE_VALUE_POSITION = keccak256("lido.Lido.beaconBalance");
+    bytes32 internal constant BEACON_BALANCE_VALUE_POSITION = keccak256("beaconBalance.lido.lido.eth");
     /// @dev number of Lido's validators available in the Beacon state
-    bytes32 internal constant BEACON_VALIDATORS_VALUE_POSITION = keccak256("lido.Lido.beaconValidators");
+    bytes32 internal constant BEACON_VALIDATORS_VALUE_POSITION = keccak256("beaconValidators.lido.lido.eth");
 
     /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
-    bytes32 internal constant WITHDRAWAL_CREDENTIALS_POSITION = keccak256("lido.Lido.withdrawalCredentials");
+    bytes32 internal constant WITHDRAWAL_CREDENTIALS_VALUE_POSITION = keccak256("withdrawalCredentials.lido.lido.eth");
 
     /**
     * @dev As AragonApp, Lido contract must be initialized with following variables:
@@ -235,7 +235,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
       *        the validator_registration.deposit function
       */
     function setWithdrawalCredentials(bytes32 _withdrawalCredentials) external auth(MANAGE_WITHDRAWAL_KEY) {
-        WITHDRAWAL_CREDENTIALS_POSITION.setStorageBytes32(_withdrawalCredentials);
+        WITHDRAWAL_CREDENTIALS_VALUE_POSITION.setStorageBytes32(_withdrawalCredentials);
         getOperators().trimUnusedKeys();
 
         emit WithdrawalCredentialsSet(_withdrawalCredentials);
@@ -336,7 +336,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
       * @notice Returns current credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
       */
     function getWithdrawalCredentials() public view returns (bytes32) {
-        return WITHDRAWAL_CREDENTIALS_POSITION.getStorageBytes32();
+        return WITHDRAWAL_CREDENTIALS_VALUE_POSITION.getStorageBytes32();
     }
 
     /**
