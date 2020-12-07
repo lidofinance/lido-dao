@@ -885,16 +885,16 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
 
   it('burnShares works', async () => {
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(1) })
-    
+
     // not permited from arbitary address
     await assertRevert(app.burnShares(user1, ETH(1), { from: nobody }), 'APP_AUTH_FAILED')
-    
+
     // voting can burn shares of any user
     await app.burnShares(user1, ETH(0.5), { from: voting })
     await app.burnShares(user1, ETH(0.5), { from: voting })
 
     // user1 has zero shares afteralls
-    assertBn(await app.getSharesOf(user1), tokens(0))
+    assertBn(await app.sharesOf(user1), tokens(0))
 
     // voting can't continue burning if user already has no shares
     await assertRevert(app.burnShares(user1, 1, { from: voting }), 'BURN_AMOUNT_EXCEEDS_BALANCE')
