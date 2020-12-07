@@ -534,7 +534,8 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
     * @param _signature Signature of the deposit call
     */
     function _stake(bytes memory _pubkey, bytes memory _signature) internal {
-        require(getWithdrawalCredentials() != 0, "EMPTY_WITHDRAWAL_CREDENTIALS");
+        bytes32 withdrawalCredentials = getWithdrawalCredentials();
+        require(withdrawalCredentials != 0, "EMPTY_WITHDRAWAL_CREDENTIALS");
 
         uint256 value = DEPOSIT_SIZE;
 
@@ -553,7 +554,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
 
         bytes32 depositDataRoot = sha256(
             abi.encodePacked(
-                sha256(abi.encodePacked(pubkeyRoot, getWithdrawalCredentials())),
+                sha256(abi.encodePacked(pubkeyRoot, withdrawalCredentials)),
                 sha256(abi.encodePacked(_toLittleEndian64(depositAmount), signatureRoot))
             )
         );
@@ -561,7 +562,7 @@ contract Lido is ILido, IsContract, Pausable, AragonApp {
         uint256 targetBalance = address(this).balance.sub(value);
 
         getValidatorRegistrationContract().deposit.value(value)(
-            _pubkey, abi.encodePacked(getWithdrawalCredentials()), _signature, depositDataRoot);
+            _pubkey, abi.encodePacked(withdrawalCredentials), _signature, depositDataRoot);
         require(address(this).balance == targetBalance, "EXPECTING_DEPOSIT_TO_HAPPEN");
     }
 
