@@ -71,8 +71,8 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
     /// @dev link to the pool
     bytes32 internal constant POOL_VALUE_POSITION = keccak256("lido.lidooracle.pool");
 
-    /// @dev struct for actual beacon chain specs
-    BeaconSpec public beaconSpec;
+    /// @dev storage for actual beacon chain specs
+    bytes32 internal constant BEACON_SPEC_VALUE_POSITION = keccak256("lido.lidooracle.beaconSpec");
 
     /// @dev the most early epoch that can be reported
     bytes32 internal constant MIN_REPORTABLE_EPOCH_ID_VALUE_POSITION = keccak256("lido.lidooracle.minReportableEpochId");
@@ -105,34 +105,14 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
 
         POOL_VALUE_POSITION.setStorageAddress(_lido);
 
-        beaconSpec.epochsPerFrame = _epochsPerFrame;
-        beaconSpec.slotsPerEpoch = _slotsPerEpoch;
-        beaconSpec.secondsPerSlot = _secondsPerSlot;
-        beaconSpec.genesisTime = _genesisTime;
+        _setBeaconSpec(
+            _epochsPerFrame,
+            _slotsPerEpoch,
+            _secondsPerSlot,
+            _genesisTime
+        );
 
         initialized();
-    }
-
-    /**
-     * @notice Set beacon specs
-     */
-    function setBeaconSpec(
-        uint64 _epochsPerFrame,
-        uint64 _slotsPerEpoch,
-        uint64 _secondsPerSlot,
-        uint64 _genesisTime
-    )
-        external auth(SET_BEACON_SPEC)
-    {
-        require(_epochsPerFrame > 0);
-        require(_slotsPerEpoch > 0);
-        require(_secondsPerSlot > 0);
-        require(_genesisTime > 0);
-
-        beaconSpec.epochsPerFrame = _epochsPerFrame;
-        beaconSpec.slotsPerEpoch = _slotsPerEpoch;
-        beaconSpec.secondsPerSlot = _secondsPerSlot;
-        beaconSpec.genesisTime = _genesisTime;
     }
 
     /**
@@ -242,24 +222,6 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
     }
 
     /**
-     * @notice Returns the current oracle member committee
-     */
-    function getOracleMembers() external view returns (address[]) {
-        return members;
-    }
-
-    function getPool() public view returns (ILido) {
-        return ILido(POOL_VALUE_POSITION.getStorageAddress());
-    }
-
-    /**
-     * @notice Returns the number of oracle members required to form a data point
-     */
-    function getQuorum() public view returns (uint256) {
-        return QUORUM_VALUE_POSITION.getStorageUint256();
-    }
-
-    /**
      * @notice Returns all needed to oracle daemons data
      */
     function getCurrentFrame()
@@ -270,6 +232,7 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
             uint256 frameEndTime
         )
     {
+        BeaconSpec memory beaconSpec = _getBeaconSpec();
         uint64 genesisTime = beaconSpec.genesisTime;
         uint64 epochsPerFrame = beaconSpec.epochsPerFrame;
         uint64 secondsPerEpoch = beaconSpec.secondsPerSlot.mul(beaconSpec.slotsPerEpoch);
@@ -282,9 +245,74 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
     }
 
     /**
+     * @notice Returns the current oracle member committee
+     */
+    function getOracleMembers() external view returns (address[]) {
+        return members;
+    }
+
+    function getPool() public view returns (ILido) {
+        return ILido(POOL_VALUE_POSITION.getStorageAddress());
+    }
+
+    /**
+     * @notice Set beacon specs
+     */
+    function setBeaconSpec(
+        uint64 _epochsPerFrame,
+        uint64 _slotsPerEpoch,
+        uint64 _secondsPerSlot,
+        uint64 _genesisTime
+    )
+        public auth(SET_BEACON_SPEC)
+    {
+        require(_epochsPerFrame > 0);
+        require(_slotsPerEpoch > 0);
+        require(_secondsPerSlot > 0);
+        require(_genesisTime > 0);
+
+        _setBeaconSpec(
+            _epochsPerFrame,
+            _slotsPerEpoch,
+            _secondsPerSlot,
+            _genesisTime
+        );
+    }
+
+    /**
+     * @notice Returns beacon specs
+     */
+    function getBeaconSpec()
+        public
+        view
+        returns (
+            uint64 epochsPerFrame,
+            uint64 slotsPerEpoch,
+            uint64 secondsPerSlot,
+            uint64 genesisTime
+        )
+    {
+        BeaconSpec memory beaconSpec = _getBeaconSpec();
+        return (
+            beaconSpec.epochsPerFrame,
+            beaconSpec.slotsPerEpoch,
+            beaconSpec.secondsPerSlot,
+            beaconSpec.genesisTime
+        );
+    }
+
+    /**
+     * @notice Returns the number of oracle members required to form a data point
+     */
+    function getQuorum() public view returns (uint256) {
+        return QUORUM_VALUE_POSITION.getStorageUint256();
+    }
+
+    /**
      * @notice Returns the epochId calculated from current timestamp
      */
     function getCurrentEpochId() public view returns (uint256) {
+        BeaconSpec memory beaconSpec = _getBeaconSpec();
         return (
             _getTime()
             .sub(beaconSpec.genesisTime)
@@ -307,6 +335,42 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
             MIN_REPORTABLE_EPOCH_ID_VALUE_POSITION.getStorageUint256()
         );
         return (minReportableEpochId, getCurrentEpochId());
+    }
+
+    /**
+     * @dev Sets beacon spec
+     */
+    function _setBeaconSpec(
+        uint64 _epochsPerFrame,
+        uint64 _slotsPerEpoch,
+        uint64 _secondsPerSlot,
+        uint64 _genesisTime
+    )
+        internal
+    {
+        uint256 data = (
+            uint256(_epochsPerFrame) << 192 |
+            uint256(_slotsPerEpoch) << 128 |
+            uint256(_secondsPerSlot) << 64 |
+            uint256(_genesisTime)
+        );
+        BEACON_SPEC_VALUE_POSITION.setStorageUint256(data);
+    }
+
+    /**
+     * @dev Returns beaconSpec struct
+     */
+    function _getBeaconSpec()
+        internal
+        view
+        returns (BeaconSpec memory beaconSpec)
+    {
+        uint256 data = BEACON_SPEC_VALUE_POSITION.getStorageUint256();
+        beaconSpec.epochsPerFrame = uint64(data >> 192);
+        beaconSpec.slotsPerEpoch = uint64(data >> 128);
+        beaconSpec.secondsPerSlot = uint64(data >> 64);
+        beaconSpec.genesisTime = uint64(data);
+        return beaconSpec;
     }
 
     /**
@@ -355,6 +419,7 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
 
         // data for this frame is collected, now this frame is completed, so
         // minReportableEpochId should be changed to first epoch from next frame
+        BeaconSpec memory beaconSpec = _getBeaconSpec();
         MIN_REPORTABLE_EPOCH_ID_VALUE_POSITION.setStorageUint256(
             _epochId
             .div(beaconSpec.epochsPerFrame)
