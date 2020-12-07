@@ -138,7 +138,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
 
   it('setWithdrawalCredentials works', async () => {
     await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
-    await assertRevert(app.setWithdrawalCredentials('0x0204', { from: voting }), 'INVALID_LENGTH')
     await assertRevert(app.setWithdrawalCredentials(pad('0x0203', 32), { from: user1 }), 'APP_AUTH_FAILED')
 
     assert.equal(await app.getWithdrawalCredentials({ from: nobody }), pad('0x0202', 32))
