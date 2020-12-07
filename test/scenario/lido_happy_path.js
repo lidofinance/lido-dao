@@ -209,6 +209,7 @@ contract('Lido: happy path', (addresses) => {
   }
 
   it('voting adds the second node operator who registers one validator', async () => {
+    // TODO: we have to submit operators with 0 validators allowed only
     const validatorsLimit = 1000000000
 
     const txn = await nodeOperatorRegistry.addNodeOperator(nodeOperator2.name, nodeOperator2.address, validatorsLimit, { from: voting })
