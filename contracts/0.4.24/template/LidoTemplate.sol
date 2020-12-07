@@ -195,6 +195,7 @@ contract LidoTemplate is BaseTemplate {
         state.acl.createPermission(state.voting, state.lido, state.lido.MANAGE_FEE(), state.voting);
         state.acl.createPermission(state.voting, state.lido, state.lido.MANAGE_WITHDRAWAL_KEY(), state.voting);
         state.acl.createPermission(state.voting, state.lido, state.lido.SET_ORACLE(), state.voting);
+        state.acl.createPermission(state.voting, state.lido, state.lido.BURN_ROLE(), state.voting);
     }
 
     function _resetStorage() internal {
