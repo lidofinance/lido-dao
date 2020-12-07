@@ -309,7 +309,12 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
         return (earliestReportableEpochId, getCurrentEpochId());
     }
 
-    function _isQuorum(uint256 _epochId) internal returns (bool, Report) {
+    /**
+     * @dev Returns if quorum reached and mode-value report
+     * @return isQuorum - true, when quorum is reached, false otherwise
+     * @return modeReport - valid mode-value report when quorum is reached, 0-data otherwise
+     */
+    function _getQuorumReport(uint256 _epochId) internal view returns (bool isQuorum, Report memory modeReport) {
         uint256 mask = gatheredEpochData[_epochId].reportsBitMask;
         uint256 popcnt = mask.popcnt();
         if (popcnt < getQuorum())
@@ -335,16 +340,16 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
             return (false, Report({beaconBalance: 0, beaconValidators: 0}));
 
         // unpack Report struct from uint256
-        Report memory modeReport = uint256ToReport(mode);
+        modeReport = uint256ToReport(mode);
 
         return (true, modeReport);
     }
 
     /**
-     * @dev Pushed the current data point if quorum is reached
+     * @dev Pushes the current data point if quorum is reached
      */
     function _tryPush(uint256 _epochId) internal {
-        (bool isQuorum, Report memory modeReport) = _isQuorum(_epochId);
+        (bool isQuorum, Report memory modeReport) = _getQuorumReport(_epochId);
         if (!isQuorum)
             return;
 

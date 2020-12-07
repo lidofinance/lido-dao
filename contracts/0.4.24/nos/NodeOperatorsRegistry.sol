@@ -101,15 +101,13 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         validAddress(_rewardAddress)
         returns (uint256 id)
     {
-        bytes32 totalOperatorsCountPosition = TOTAL_OPERATORS_COUNT_VALUE_POSITION;
-        id = totalOperatorsCountPosition.getStorageUint256();
-        totalOperatorsCountPosition.setStorageUint256(id.add(1));
+        id = TOTAL_OPERATORS_COUNT_VALUE_POSITION.getStorageUint256();
+        TOTAL_OPERATORS_COUNT_VALUE_POSITION.setStorageUint256(id.add(1));
 
         NodeOperator storage operator = operators[id];
 
-        bytes32 activeOperatorsCountPosition = ACTIVE_OPERATORS_COUNT_VALUE_POSITION;
-        uint256 activeOperatorsCount = activeOperatorsCountPosition.getStorageUint256();
-        activeOperatorsCountPosition.setStorageUint256(activeOperatorsCount.add(1));
+        uint256 activeOperatorsCount = ACTIVE_OPERATORS_COUNT_VALUE_POSITION.getStorageUint256();
+        ACTIVE_OPERATORS_COUNT_VALUE_POSITION.setStorageUint256(activeOperatorsCount.add(1));
 
         operator.active = true;
         operator.name = _name;
