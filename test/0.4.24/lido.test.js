@@ -66,6 +66,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await acl.createPermission(voting, app.address, await app.MANAGE_FEE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.MANAGE_WITHDRAWAL_KEY(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.BURN_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, app.address, await app.SET_TREASURY(), appManager, { from: appManager })
+    await acl.createPermission(voting, app.address, await app.SET_INSURANCE_FUND(), appManager, { from: appManager })
 
     await acl.createPermission(voting, operators.address, await operators.MANAGE_SIGNING_KEYS(), appManager, { from: appManager })
     await acl.createPermission(voting, operators.address, await operators.ADD_NODE_OPERATOR_ROLE(), appManager, { from: appManager })
@@ -898,5 +900,51 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     // voting can't continue burning if user already has no shares
     await assertRevert(app.burnShares(user1, 1, { from: voting }), 'BURN_AMOUNT_EXCEEDS_BALANCE')
+  })
+
+  context('treasury', () => {
+    it('treasury adddress has been set after init', async () => {
+      assert.notEqual(await app.getTreasury(), ZERO_ADDRESS);
+    })
+
+    it(`treasury can't be set by an arbitary address`, async () => {
+      await assertRevert(app.setTreasury(user1, { from: nobody  }))
+      await assertRevert(app.setTreasury(user1, { from: user1 }))
+    })
+
+    it('voting can set treasury', async () => {
+      await app.setTreasury(user1, { from: voting })
+      assert.equal(await app.getTreasury(), user1)
+    })
+
+    it('reverts when treasury is zero address', async () => {
+      await assertRevert(
+        app.setTreasury(ZERO_ADDRESS, { from: voting }),
+        "SET_TREASURY_ZERO_ADDRESS"
+      )
+    })
+  })
+
+  context('insurance fund', () => {
+    it('insurance fund adddress has been set after init', async () => {
+      assert.notEqual(await app.getInsuranceFund(), ZERO_ADDRESS);
+    })
+
+    it(`insurance fund can't be set by an arbitary address`, async () => {
+      await assertRevert(app.setInsuranceFund(user1, { from: nobody   }))
+      await assertRevert(app.setInsuranceFund(user1, { from: user1 }))
+    })
+
+    it('voting can set insurance fund', async () => {
+      await app.setInsuranceFund(user1, { from: voting })
+      assert.equal(await app.getInsuranceFund(), user1)
+    })
+
+    it('reverts when insurance fund is zero address', async () => {
+      await assertRevert(
+        app.setInsuranceFund(ZERO_ADDRESS, { from: voting }),
+        "SET_INSURANCE_FUND_ZERO_ADDRESS"
+      )
+    })
   })
 })

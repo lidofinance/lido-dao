@@ -12,9 +12,6 @@ import "./VaultMock.sol";
   * @dev Only for testing purposes! Lido version with some functions exposed.
   */
 contract TestLido is Lido {
-    address private treasury;
-    address private insurance;
-
     function initialize(
         IValidatorRegistration validatorRegistration,
         address _oracle,
@@ -22,23 +19,13 @@ contract TestLido is Lido {
     )
     public
     {
-        super.initialize(validatorRegistration, _oracle, _operators);
-        treasury = address(new VaultMock());
-        insurance = address(new VaultMock());
-    }
-
-    /**
-      * @dev Returns the treasury address
-      */
-    function getTreasury() public view returns (address) {
-        return treasury;
-    }
-
-    /**
-      * @dev Returns the insurance fund address
-      */
-    function getInsuranceFund() public view returns (address) {
-        return insurance;
+        super.initialize(
+          validatorRegistration,
+          _oracle,
+          _operators,
+          new VaultMock(),
+          new VaultMock()
+        );
     }
 
     /**
