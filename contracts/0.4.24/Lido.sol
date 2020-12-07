@@ -210,7 +210,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     }
 
     /**
-      * @notice Set authorized oracle contract address to `_oracle`.
+      * @notice Set authorized oracle contract address to `_oracle`
       * @dev Contract specified here is allowed to make periodical updates of beacon states
       * by calling pushBeacon.
       * @param _oracle oracle contract
@@ -220,7 +220,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     }
 
     /**
-      * @notice Set treasury contract address to `_treasury`.
+      * @notice Set treasury contract address to `_treasury`
       * @dev Contract specified here is used to accumulate the protocol treasury fee.
       * @param _treasury contract which accumulates treasury fee.
       */
@@ -229,7 +229,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     }
 
     /**
-      * @notice Set insuranceFund contract address to `_insuranceFund`.
+      * @notice Set insuranceFund contract address to `_insuranceFund`
       * @dev Contract specified here is used to accumulate the protocol insurance fee.
       * @param _insuranceFund contract which accumulates insurance fee.
       */
