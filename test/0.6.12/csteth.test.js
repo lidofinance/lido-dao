@@ -5,7 +5,7 @@ const { ZERO_ADDRESS } = constants
 const { shouldBehaveLikeERC20 } = require('./helpers/ERC20.behavior')
 
 const CstETH = artifacts.require('CstETHMock')
-const StETH = artifacts.require('StETHMock')
+const StETH = artifacts.require('StETHMockERC20')
 
 contract('CstETH', function ([deployer, initialHolder, recipient, anotherAccount, ...otherAccounts]) {
   beforeEach(async function () {
