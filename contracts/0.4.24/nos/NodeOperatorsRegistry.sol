@@ -41,7 +41,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
     uint256 internal constant UINT64_MAX = uint256(uint64(-1));
 
-    bytes32 internal constant SIGNING_KEYS_MAPPING_NAME = keccak256("lido.Lido.signingKeys");
+    bytes32 internal constant SIGNING_KEYS_MAPPING_NAME = keccak256("signingKeys.lido.lido.eth");
 
 
     /// @dev Node Operator parameters and internal state
@@ -71,13 +71,13 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     mapping(uint256 => NodeOperator) internal operators;
 
     // @dev Total number of operators
-    bytes32 internal constant TOTAL_OPERATORS_COUNT_VALUE_POSITION = keccak256("lido.Lido.totalOperatorsCount");
+    bytes32 internal constant TOTAL_OPERATORS_COUNT_VALUE_POSITION = keccak256("totalOperatorsCount.lido.lido.eth");
 
     // @dev Cached number of active operators
-    bytes32 internal constant ACTIVE_OPERATORS_COUNT_VALUE_POSITION = keccak256("lido.Lido.activeOperatorsCount");
+    bytes32 internal constant ACTIVE_OPERATORS_COUNT_VALUE_POSITION = keccak256("activeOperatorsCount.lido.lido.eth");
 
     /// @dev link to the pool
-    bytes32 internal constant POOL_VALUE_POSITION = keccak256("lido.Lido.pool");
+    bytes32 internal constant POOL_VALUE_POSITION = keccak256("pool.lido.lido.eth");
 
 
     modifier onlyPool() {

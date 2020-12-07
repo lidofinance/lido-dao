@@ -65,18 +65,18 @@ contract LidoOracle is ILidoOracle, AragonApp {
     /// @dev oracle committee members
     address[] private members;
     /// @dev number of the committee members required to finalize a data point
-    bytes32 internal constant QUORUM_VALUE_POSITION = keccak256("lido.lidooracle.quorum");
+    bytes32 internal constant QUORUM_VALUE_POSITION = keccak256("quorum.lidooracle.lido.eth");
 
     /// @dev link to the pool
-    bytes32 internal constant POOL_VALUE_POSITION = keccak256("lido.lidooracle.pool");
+    bytes32 internal constant POOL_VALUE_POSITION = keccak256("pool.lidooracle.lido.eth");
 
     /// @dev storage for actual beacon chain specs
-    bytes32 internal constant BEACON_SPEC_VALUE_POSITION = keccak256("lido.lidooracle.beaconSpec");
+    bytes32 internal constant BEACON_SPEC_VALUE_POSITION = keccak256("beaconSpec.lidooracle.lido.eth");
 
     /// @dev the most early epoch that can be reported
-    bytes32 internal constant MIN_REPORTABLE_EPOCH_ID_VALUE_POSITION = keccak256("lido.lidooracle.minReportableEpochId");
+    bytes32 internal constant MIN_REPORTABLE_EPOCH_ID_VALUE_POSITION = keccak256("minReportableEpochId.lidooracle.lido.eth");
     /// @dev the last reported epoch
-    bytes32 internal constant LAST_REPORTED_EPOCH_ID_VALUE_POSITION = keccak256("lido.lidooracle.lastReportedEpochId");
+    bytes32 internal constant LAST_REPORTED_EPOCH_ID_VALUE_POSITION = keccak256("lastReportedEpochId.lidooracle.lido.eth");
     /// @dev storage for all gathered from reports data
     mapping(uint256 => EpochData) private gatheredEpochData;
 

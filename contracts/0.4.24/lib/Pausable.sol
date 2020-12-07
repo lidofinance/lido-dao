@@ -13,7 +13,7 @@ contract Pausable {
     event Stopped();
     event Resumed();
 
-    bytes32 internal constant ACTIVE_FLAG_POSITION = keccak256("lido.Pausable.active");
+    bytes32 internal constant ACTIVE_FLAG_POSITION = keccak256("lido.Pausable.activeFlag");
 
     modifier whenNotStopped() {
         require(ACTIVE_FLAG_POSITION.getStorageBool(), "CONTRACT_IS_STOPPED");
