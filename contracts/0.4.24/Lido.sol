@@ -13,7 +13,7 @@ import "solidity-bytes-utils/contracts/BytesLib.sol";
 
 import "./interfaces/ILido.sol";
 import "./interfaces/INodeOperatorsRegistry.sol";
-import "./interfaces/IValidatorRegistration.sol";
+import "./interfaces/IDepositContract.sol";
 
 import "./StETH.sol";
 
@@ -53,7 +53,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
 
     uint256 constant public DEPOSIT_SIZE = 32 ether;
 
-    uint256 internal constant DEPOSIT_AMOUNT_UNIT = 1000000000 wei;     // validator_registration.vy
+    uint256 internal constant DEPOSIT_AMOUNT_UNIT = 1000000000 wei;
 
     /// @dev default value for maximum number of Ethereum 2.0 validators registered in a single depositBufferedEther call
     uint256 internal constant DEFAULT_MAX_DEPOSITS_PER_CALL = 16;
@@ -63,7 +63,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     bytes32 internal constant INSURANCE_FEE_VALUE_POSITION = keccak256("insuranceFee.lido.lido.eth");
     bytes32 internal constant NODE_OPERATORS_FEE_VALUE_POSITION = keccak256("nodeOperatorsFee.lido.lido.eth");
 
-    bytes32 internal constant VALIDATOR_REGISTRATION_VALUE_POSITION = keccak256("validatorRegistration.lido.lido.eth");
+    bytes32 internal constant DEPOSIT_CONTRACT_VALUE_POSITION = keccak256("depositContract.lido.lido.eth");
     bytes32 internal constant ORACLE_VALUE_POSITION = keccak256("oracle.lido.lido.eth");
     bytes32 internal constant NODE_OPERATOR_REGISTRY_VALUE_POSITION = keccak256("nodeOperatorRegistry.lido.lido.eth");
     bytes32 internal constant TREASURY_VALUE_POSITION = keccak256("treasury.lido.lido.eth");
@@ -83,12 +83,12 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
 
     /**
     * @dev As AragonApp, Lido contract must be initialized with following variables:
-    * @param validatorRegistration official ETH2 Deposit contract
+    * @param depositContract official ETH2 Deposit contract
     * @param _oracle oracle contract
     * @param _operators instance of Node Operators Registry
     */
     function initialize(
-        IValidatorRegistration validatorRegistration,
+        IDepositContract depositContract,
         address _oracle,
         INodeOperatorsRegistry _operators,
         address _treasury,
@@ -96,7 +96,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     )
         public onlyInit
     {
-        _setValidatorRegistrationContract(validatorRegistration);
+        _setDepositContractContract(depositContract);
         _setOracle(_oracle);
         _setOperators(_operators);
         _setTreasury(_treasury);
@@ -232,7 +232,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
       * @notice Set credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched to `_withdrawalCredentials`
       * @dev Note that setWithdrawalCredentials discards all unused signing keys as the signatures are invalidated.
       * @param _withdrawalCredentials hash of withdrawal multisignature key as accepted by
-      *        the validator_registration.deposit function
+      *        the deposit_contract.deposit function
       */
     function setWithdrawalCredentials(bytes32 _withdrawalCredentials) external auth(MANAGE_WITHDRAWAL_KEY) {
         WITHDRAWAL_CREDENTIALS_VALUE_POSITION.setStorageBytes32(_withdrawalCredentials);
@@ -350,10 +350,10 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     }
 
     /**
-      * @notice Gets validator registration contract handle
+      * @notice Gets deposit contract contract handle
       */
-    function getValidatorRegistrationContract() public view returns (IValidatorRegistration) {
-        return IValidatorRegistration(VALIDATOR_REGISTRATION_VALUE_POSITION.getStorageAddress());
+    function getDepositContractContract() public view returns (IDepositContract) {
+        return IDepositContract(DEPOSIT_CONTRACT_VALUE_POSITION.getStorageAddress());
     }
 
     /**
@@ -401,9 +401,9 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     * @dev Sets the address of Deposit contract
     * @param _contract the address of Deposit contract
     */
-    function _setValidatorRegistrationContract(IValidatorRegistration _contract) internal {
+    function _setDepositContractContract(IDepositContract _contract) internal {
         require(isContract(address(_contract)), "NOT_A_CONTRACT");
-        VALIDATOR_REGISTRATION_VALUE_POSITION.setStorageAddress(address(_contract));
+        DEPOSIT_CONTRACT_VALUE_POSITION.setStorageAddress(address(_contract));
     }
 
     /**
@@ -523,7 +523,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         uint256 depositAmount = value.div(DEPOSIT_AMOUNT_UNIT);
         assert(depositAmount.mul(DEPOSIT_AMOUNT_UNIT) == value);    // properly rounded
 
-        // Compute deposit data root (`DepositData` hash tree root) according to validator_registration.vy
+        // Compute deposit data root (`DepositData` hash tree root) according to deposit_contract.vy
         bytes32 pubkeyRoot = sha256(_pad64(_pubkey));
         bytes32 signatureRoot = sha256(
             abi.encodePacked(
@@ -541,7 +541,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
 
         uint256 targetBalance = address(this).balance.sub(value);
 
-        getValidatorRegistrationContract().deposit.value(value)(
+        getDepositContractContract().deposit.value(value)(
             _pubkey, abi.encodePacked(withdrawalCredentials), _signature, depositDataRoot);
         require(address(this).balance == targetBalance, "EXPECTING_DEPOSIT_TO_HAPPEN");
     }
@@ -638,7 +638,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     }
 
     /**
-      * @dev Records a deposit to the validator_registration.deposit function.
+      * @dev Records a deposit to the deposit_contract.deposit function.
       * @param _amount Total amount deposited to the ETH 2.0 side
       */
     function _markAsUnbuffered(uint256 _amount) internal {

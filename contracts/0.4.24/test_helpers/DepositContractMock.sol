@@ -4,13 +4,13 @@
 
 pragma solidity 0.4.24;
 
-import "../interfaces/IValidatorRegistration.sol";
+import "../interfaces/IDepositContract.sol";
 
 
 /**
   * @dev This is a mock. Don't use in production.
   */
-contract ValidatorRegistrationMock is IValidatorRegistration {
+contract DepositContractMock is IDepositContract {
     struct Call {
         bytes pubkey;
         bytes withdrawal_credentials;

@@ -10,7 +10,7 @@ pragma solidity 0.4.24;
   *
   * For the high-level description of the pool operation please refer to the paper.
   * Pool manages withdrawal keys and fees. It receives ether submitted by users on the ETH 1 side
-  * and stakes it via the validator_registration.vy contract. It doesn't hold ether on it's balance,
+  * and stakes it via the deposit_contract.vy contract. It doesn't hold ether on it's balance,
   * only a small portion (buffer) of it.
   * It also mints new tokens for rewards generated at the ETH 2.0 side.
   */
@@ -64,7 +64,7 @@ interface ILido {
       * @notice Set credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched to `_withdrawalCredentials`
       * @dev Note that setWithdrawalCredentials discards all unused signing keys as the signatures are invalidated.
       * @param _withdrawalCredentials hash of withdrawal multisignature key as accepted by
-      *        the validator_registration.deposit function
+      *        the deposit_contract.deposit function
       */
     function setWithdrawalCredentials(bytes32 _withdrawalCredentials) external;
 
@@ -96,7 +96,7 @@ interface ILido {
     // Records a deposit made by a user
     event Submitted(address indexed sender, uint256 amount, address referral);
 
-    // The `_amount` of ether was sent to the validator_registration.deposit function.
+    // The `_amount` of ether was sent to the deposit_contract.deposit function.
     event Unbuffered(uint256 amount);
 
     /**

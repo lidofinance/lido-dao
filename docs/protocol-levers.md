@@ -175,7 +175,7 @@ is sent to node operators’ reward addresses (`_rewardAddress`).
   * Permission required: `SET_NODE_OPERATOR_ACTIVE_ROLE`
 
 Misbehaving node operators can be deactivated by calling this function. The pool skips
-deactivated operators during validator registration; also, deactivated operators don’t
+deactivated operators during deposit contract; also, deactivated operators don’t
 take part in fee distribution.
 
 
