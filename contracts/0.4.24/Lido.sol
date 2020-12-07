@@ -44,6 +44,8 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     bytes32 constant public MANAGE_WITHDRAWAL_KEY = keccak256("MANAGE_WITHDRAWAL_KEY");
     bytes32 constant public SET_ORACLE = keccak256("SET_ORACLE");
     bytes32 constant public BURN_ROLE = keccak256("BURN_ROLE");
+    bytes32 constant public SET_TREASURY = keccak256("SET_TREASURY");
+    bytes32 constant public SET_INSURANCE_FUND = keccak256("SET_INSURANCE_FUND");
 
     uint256 constant public PUBKEY_LENGTH = 48;
     uint256 constant public WITHDRAWAL_CREDENTIALS_LENGTH = 32;
@@ -65,6 +67,8 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     bytes32 internal constant VALIDATOR_REGISTRATION_VALUE_POSITION = keccak256("lido.Lido.validatorRegistration");
     bytes32 internal constant ORACLE_VALUE_POSITION = keccak256("lido.Lido.oracle");
     bytes32 internal constant NODE_OPERATOR_REGISTRY_VALUE_POSITION = keccak256("lido.Lido.nodeOperatorRegistry");
+    bytes32 internal constant TREASURY_VALUE_POSITION = keccak256("lido.Lido.treasury");
+    bytes32 internal constant INSURANCE_FUND_VALUE_POSITION = keccak256("lido.Lido.insuranceFunds");
 
     /// @dev amount of Ether (on the current Ethereum side) buffered on this smart contract balance
     bytes32 internal constant BUFFERED_ETHER_VALUE_POSITION = keccak256("lido.Lido.bufferedEther");
@@ -99,13 +103,17 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     function initialize(
         IValidatorRegistration validatorRegistration,
         address _oracle,
-        INodeOperatorsRegistry _operators
+        INodeOperatorsRegistry _operators,
+        address _treasury,
+        address _insuranceFund
     )
         public onlyInit
     {
         _setValidatorRegistrationContract(validatorRegistration);
         _setOracle(_oracle);
         _setOperators(_operators);
+        _setTreasury(_treasury);
+        _setInsuranceFund(_insuranceFund);
 
         initialized();
     }
@@ -202,12 +210,31 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     }
 
     /**
-    * @notice Set authorized oracle contract address to `_oracle`
-    * @dev Contract specified here is allowed to make periodical updates of beacon states by calling pushBeacon
-    * @param _oracle oracle contract
-    */
+      * @notice Set authorized oracle contract address to `_oracle`.
+      * @dev Contract specified here is allowed to make periodical updates of beacon states
+      * by calling pushBeacon.
+      * @param _oracle oracle contract
+      */
     function setOracle(address _oracle) external auth(SET_ORACLE) {
         _setOracle(_oracle);
+    }
+
+    /**
+      * @notice Set treasury contract address to `_treasury`.
+      * @dev Contract specified here is used to accumulate the protocol treasury fee.
+      * @param _treasury contract which accumulates treasury fee.
+      */
+    function setTreasury(address _treasury) external auth(SET_TREASURY) {
+        _setTreasury(_treasury);
+    }
+
+    /**
+      * @notice Set insuranceFund contract address to `_insuranceFund`.
+      * @dev Contract specified here is used to accumulate the protocol insurance fee.
+      * @param _insuranceFund contract which accumulates insurance fee.
+      */
+    function setInsuranceFund(address _insuranceFund) external auth(SET_INSURANCE_FUND) {
+        _setInsuranceFund(_insuranceFund);
     }
 
     /**
@@ -358,17 +385,14 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
       * @notice Returns the treasury address
       */
     function getTreasury() public view returns (address) {
-        address vault = getRecoveryVault();
-        require(isContract(vault), "RECOVER_VAULT_NOT_CONTRACT");
-        return vault;
+        return TREASURY_VALUE_POSITION.getStorageAddress();
     }
 
     /**
       * @notice Returns the insurance fund address
       */
     function getInsuranceFund() public view returns (address) {
-        // TODO a separate vault
-        return getTreasury();
+        return INSURANCE_FUND_VALUE_POSITION.getStorageAddress();
     }
 
     /**
@@ -408,6 +432,16 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     function _setOperators(INodeOperatorsRegistry _r) internal {
         require(isContract(_r), "NOT_A_CONTRACT");
         NODE_OPERATOR_REGISTRY_VALUE_POSITION.setStorageAddress(_r);
+    }
+
+    function _setTreasury(address _treasury) internal {
+        require(_treasury != address(0), "SET_TREASURY_ZERO_ADDRESS");
+        TREASURY_VALUE_POSITION.setStorageAddress(_treasury);
+    }
+
+    function _setInsuranceFund(address _insuranceFund) internal {
+        require(_insuranceFund != address(0), "SET_INSURANCE_FUND_ZERO_ADDRESS");
+        INSURANCE_FUND_VALUE_POSITION.setStorageAddress(_insuranceFund);
     }
 
     /**
