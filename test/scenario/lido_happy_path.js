@@ -164,7 +164,7 @@ contract('Lido: happy path', (addresses) => {
     await web3.eth.sendTransaction({ to: pool.address, from: user2, value: ETH(30) })
     await pool.depositBufferedEther()
 
-    // The first 32 ETH chunk was deposited to the deposit contract contract,
+    // The first 32 ETH chunk was deposited to the deposit contract,
     // using public key and signature of the only validator of the first operator
 
     assertBn(await depositContractMock.totalCalls(), 1)
@@ -247,7 +247,7 @@ contract('Lido: happy path', (addresses) => {
     await web3.eth.sendTransaction({ to: pool.address, from: user3, value: ETH(64) })
     await pool.depositBufferedEther()
 
-    // The first 32 ETH chunk was deposited to the deposit contract contract,
+    // The first 32 ETH chunk was deposited to the deposit contract,
     // using public key and signature of the only validator of the second operator
 
     assertBn(await depositContractMock.totalCalls(), 2)

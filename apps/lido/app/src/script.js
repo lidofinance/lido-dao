@@ -60,7 +60,7 @@ function initializeState() {
       bufferedEther: await getBufferedEther(),
       totalPooledEther: await getTotalPooledEther(),
       token: await getToken(),
-      depositContractContract: await getDepositContractContract(),
+      depositContract: await getDepositContract(),
       oracle: await getOracle(),
       // operators: await getOperators(),
       // treasury: await getTreasury(),
@@ -99,8 +99,8 @@ function getToken() {
   return app.call('getToken').toPromise()
 }
 
-function getDepositContractContract() {
-  return app.call('getDepositContractContract').toPromise()
+function getDepositContract() {
+  return app.call('getDepositContract').toPromise()
 }
 
 function getOracle() {

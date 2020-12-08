@@ -96,7 +96,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     )
         public onlyInit
     {
-        _setDepositContractContract(depositContract);
+        _setDepositContract(depositContract);
         _setOracle(_oracle);
         _setOperators(_operators);
         _setTreasury(_treasury);
@@ -350,9 +350,9 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     }
 
     /**
-      * @notice Gets deposit contract contract handle
+      * @notice Gets deposit contract handle
       */
-    function getDepositContractContract() public view returns (IDepositContract) {
+    function getDepositContract() public view returns (IDepositContract) {
         return IDepositContract(DEPOSIT_CONTRACT_VALUE_POSITION.getStorageAddress());
     }
 
@@ -401,7 +401,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     * @dev Sets the address of Deposit contract
     * @param _contract the address of Deposit contract
     */
-    function _setDepositContractContract(IDepositContract _contract) internal {
+    function _setDepositContract(IDepositContract _contract) internal {
         require(isContract(address(_contract)), "NOT_A_CONTRACT");
         DEPOSIT_CONTRACT_VALUE_POSITION.setStorageAddress(address(_contract));
     }
@@ -523,7 +523,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         uint256 depositAmount = value.div(DEPOSIT_AMOUNT_UNIT);
         assert(depositAmount.mul(DEPOSIT_AMOUNT_UNIT) == value);    // properly rounded
 
-        // Compute deposit data root (`DepositData` hash tree root) according to deposit_contract.vy
+        // Compute deposit data root (`DepositData` hash tree root) according to deposit_contract.sol
         bytes32 pubkeyRoot = sha256(_pad64(_pubkey));
         bytes32 signatureRoot = sha256(
             abi.encodePacked(
@@ -541,7 +541,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
 
         uint256 targetBalance = address(this).balance.sub(value);
 
-        getDepositContractContract().deposit.value(value)(
+        getDepositContract().deposit.value(value)(
             _pubkey, abi.encodePacked(withdrawalCredentials), _signature, depositDataRoot);
         require(address(this).balance == targetBalance, "EXPECTING_DEPOSIT_TO_HAPPEN");
     }

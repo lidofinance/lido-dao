@@ -83,7 +83,7 @@ export default function App() {
       bufferedEther,
       totalPooledEther,
       token,
-      depositContractContract,
+      depositContract,
       oracle,
       // operators,
       // treasury,
@@ -238,8 +238,8 @@ export default function App() {
         content: <strong>{formatEth(totalPooledEther) || 'No data'}</strong>,
       },
       {
-        label: 'Deposit contract Contract',
-        content: <IdentityBadge entity={depositContractContract} />,
+        label: 'Deposit Contract',
+        content: <IdentityBadge entity={depositContract} />,
       },
       {
         label: 'Token',

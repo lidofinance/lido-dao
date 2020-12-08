@@ -6,7 +6,7 @@ pragma solidity 0.4.24;
 
 
 /**
-  * @title Deposit contract contract interface
+  * @title Deposit contract interface
   */
 interface IDepositContract {
     /**
