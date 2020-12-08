@@ -20,7 +20,7 @@ const defaultState = {
   bufferedEther: defaultValue,
   totalPooledEther: defaultValue,
   token: defaultValue,
-  depositContractContract: defaultValue,
+  depositContract: defaultValue,
   oracle: defaultValue,
   operators: defaultValue,
   treasury: defaultValue,
