@@ -299,6 +299,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         } else {
             ERC20 token = ERC20(_token);
             balance = token.staticBalanceOf(this);
+            // safeTransfer comes from overriden default implementation
             require(token.safeTransfer(vault, balance), "RECOVER_TOKEN_TRANSFER_FAILED");
         }
 
