@@ -18,22 +18,22 @@
   ],
   "environments": {
     "default": {
-      "appName": "lidooracle.lido.eth",
+      "appName": "lidooracle.lidofinance.eth",
       "network": "development"
     },
     "rinkeby": {
-      "appName": "lidooracle.lido.eth",
+      "appName": "lidooracle.lidofinance.eth",
       "network": "rinkeby"
     },
     "staging": {
-      "appName": "lidooracle.lido.eth",
+      "appName": "lidooracle.lidofinance.eth",
       "network": "rinkeby"
     },
     "mainnet": {
-      "appName": "lidooracle.lido.eth",
+      "appName": "lidooracle.lidofinance.eth",
       "network": "mainnet"
     }
   },
-  "appName": "lidooracle.lido.eth",
-  "path": "../../contracts/oracle/LidoOracle.sol"
+  "appName": "lidooracle.lidofinance.eth",
+  "path": "../../contracts/0.4.24/oracle/LidoOracle.sol"
 }

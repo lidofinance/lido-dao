@@ -22,11 +22,14 @@ function _readNetworkStateFile(fileName) {
   }
 }
 
-function persistNetworkState(fileName, netId, newState) {
+function persistNetworkState(fileName, netId, netState, updates = undefined) {
+  if (updates) {
+    updateNetworkState(netState, updates)
+  }
   log(`Writing network state to ${fileName}...`)
   const state = stateByFilename[fileName] || _readNetworkStateFile(fileName)
   const networks = state.networks || (state.networks = {})
-  networks[netId] = newState
+  networks[netId] = netState
   stateByFilename[fileName] = state
   const data = JSON.stringify(state, null, '  ') + '\n'
   fs.writeFileSync(fileName, data, 'utf8')
@@ -48,4 +51,15 @@ function updateNetworkState(state, newState) {
   })
 }
 
-module.exports = { readNetworkState, persistNetworkState, updateNetworkState }
+function assertRequiredNetworkState(state, requiredStateNames) {
+  const missingState = requiredStateNames.filter((key) => !state[key])
+  if (missingState.length) {
+    const missingDesc = missingState.join(', ')
+    throw new Error(
+      `missing following fields from the network state file, make sure you've run ` +
+      `previous deployment steps: ${missingDesc}`
+    )
+  }
+}
+
+module.exports = { readNetworkState, persistNetworkState, updateNetworkState, assertRequiredNetworkState }

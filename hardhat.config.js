@@ -30,11 +30,19 @@ const solcSettings = {
 module.exports = {
   defaultNetwork: process.env.NETWORK_NAME || 'hardhat',
   networks: {
-    localhost: {
+    localhost_remote: {
       url: 'http://localhost:8545',
       chainId: 1337,
       ensAddress: getNetState('1337').ensAddress,
       accounts: 'remote',
+      timeout: 60000,
+      gas: 8000000 // the same as in Göerli
+    },
+    localhost: {
+      url: 'http://localhost:8545',
+      chainId: 1337,
+      ensAddress: getNetState('1337').ensAddress,
+      accounts: accounts.dev ? accounts.dev.eth : 'remote',
       timeout: 60000,
       gas: 8000000 // the same as in Göerli
     },
@@ -103,4 +111,8 @@ function readJson(fileName) {
   } catch (err) {
     return null
   }
+}
+
+if ('function' === typeof task) {
+  require('./scripts/hardhat-tasks')
 }
