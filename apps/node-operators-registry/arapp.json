@@ -54,22 +54,22 @@
   ],
   "environments": {
     "default": {
-      "appName": "node-operators-registry.lido.eth",
+      "appName": "node-operators-registry.lidofinance.eth",
       "network": "development"
     },
     "rinkeby": {
-      "appName": "node-operators-registry.lido.eth",
+      "appName": "node-operators-registry.lidofinance.eth",
       "network": "rinkeby"
     },
     "staging": {
-      "appName": "node-operators-registry.lido.eth",
+      "appName": "node-operators-registry.lidofinance.eth",
       "network": "rinkeby"
     },
     "mainnet": {
-      "appName": "node-operators-registry.lido.eth",
+      "appName": "node-operators-registry.lidofinance.eth",
       "network": "mainnet"
     }
   },
-  "appName": "node-operators-registry.lido.eth",
-  "path": "../../contracts/nos/NodeOperatorsRegistry.sol"
+  "appName": "node-operators-registry.lidofinance.eth",
+  "path": "../../contracts/0.4.24/nos/NodeOperatorsRegistry.sol"
 }

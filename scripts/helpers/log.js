@@ -3,12 +3,20 @@ const chalk = require('chalk')
 const log = (...args) => console.error(...args)
 log.stdout = (...args) => console.log(...args)
 
+const OK = chalk.green('✓')
+
+log.success = (...args) => {
+  console.error(OK, ...args)
+}
+
 function logSplitter(...args) {
   console.error('====================')
   if (args.length) {
     console.error(...args)
   }
 }
+
+log.splitter = logSplitter
 
 function logWideSplitter(...args) {
   console.error('========================================')
@@ -17,10 +25,14 @@ function logWideSplitter(...args) {
   }
 }
 
+log.wideSplitter = logWideSplitter
+
 function logHeader(msg) {
   logWideSplitter(msg)
   logWideSplitter()
 }
+
+log.header = logHeader
 
 async function logDeploy(name, promise) {
   console.error('====================')
@@ -41,6 +53,8 @@ async function logDeploy(name, promise) {
   return instance
 }
 
+log.deploy = logDeploy
+
 async function logTx(desc, promise) {
   console.error(`${desc}...`)
   const result = await promise
@@ -49,4 +63,22 @@ async function logTx(desc, promise) {
   return result
 }
 
-module.exports = { log, logSplitter, logWideSplitter, logHeader, logDeploy, logTx }
+log.tx = logTx
+
+async function logDeployTxData(contractName, txData) {
+  console.error('====================')
+  console.error(`To deploy ${chalk.yellow(contractName)}, send the following transaction:`)
+  console.log(`{`)
+  if (txData.from) {
+    console.log(`  "from": "${chalk.yellow(txData.from)}",`)
+  }
+  if (txData.gas) {
+    console.log(`  "gas": "${chalk.yellow(txData.gas)}",`)
+  }
+  console.log(`  "data": "${chalk.yellow(txData.data)}"`)
+  console.log(`}`)
+}
+
+log.deployTxData = logDeployTxData
+
+module.exports = { log, logSplitter, logWideSplitter, logHeader, logDeploy, logDeployTxData, logTx }
