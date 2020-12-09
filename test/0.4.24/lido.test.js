@@ -248,8 +248,17 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     assert.equal(c0.signature, pad('0x01', 96))
     assertBn(c0.value, ETH(32))
 
-    // +100 ETH
+    // +100 ETH, test partial unbuffering
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(100) })
+    await app.depositBufferedEther(1)
+    await checkStat({ depositedValidators: 2, beaconValidators: 0, beaconBalance: ETH(0) })
+    assertBn(await app.getTotalPooledEther(), ETH(133))
+    assertBn(await app.getBufferedEther(), ETH(69))
+    assertBn(await app.balanceOf(user1), tokens(101))
+    assertBn(await app.balanceOf(user2), tokens(2))
+    assertBn(await app.balanceOf(user3), tokens(30))
+    assertBn(await app.totalSupply(), tokens(133))
+
     await app.depositBufferedEther()
     await checkStat({ depositedValidators: 4, beaconValidators: 0, beaconBalance: ETH(0) })
     assertBn(await app.getTotalPooledEther(), ETH(133))
