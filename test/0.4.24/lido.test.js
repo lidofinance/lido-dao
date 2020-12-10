@@ -212,7 +212,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await operators.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
     await operators.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
 
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
     await operators.addSigningKeys(
       0,
@@ -250,7 +249,11 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     // +30 ETH
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(30) })
+    // can not deposit with unset withdrawalCredentials
+    await assertRevert(app.depositBufferedEther(), "EMPTY_WITHDRAWAL_CREDENTIALS")
+    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
     await app.depositBufferedEther()
+
     await checkStat({ depositedValidators: 1, beaconValidators: 0, beaconBalance: ETH(0) })
     assertBn(await app.getTotalPooledEther(), ETH(33))
     assertBn(await app.getBufferedEther(), ETH(1))
