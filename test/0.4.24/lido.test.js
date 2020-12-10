@@ -9,6 +9,8 @@ const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 const Lido = artifacts.require('TestLido.sol')
 const OracleMock = artifacts.require('OracleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
+const ERC20Mock = artifacts.require('ERC20Mock.sol')
+
 
 const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
 const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
@@ -46,8 +48,10 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     // Deploy the app's base contract.
     appBase = await Lido.new()
     oracle = await OracleMock.new()
+    yetAnotherOracle = await OracleMock.new()
     depositContract = await DepositContractMock.new()
     nodeOperatorsRegistryBase = await NodeOperatorsRegistry.new()
+    anyToken = await ERC20Mock.new()
   })
 
   beforeEach('deploy dao and app', async () => {
@@ -68,6 +72,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await acl.createPermission(voting, app.address, await app.MANAGE_WITHDRAWAL_KEY(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.BURN_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_TREASURY(), appManager, { from: appManager })
+    await acl.createPermission(voting, app.address, await app.SET_ORACLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_INSURANCE_FUND(), appManager, { from: appManager })
 
     await acl.createPermission(voting, operators.address, await operators.MANAGE_SIGNING_KEYS(), appManager, { from: appManager })
@@ -144,6 +149,19 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await assertRevert(app.setWithdrawalCredentials(pad('0x0203', 32), { from: user1 }), 'APP_AUTH_FAILED')
 
     assert.equal(await app.getWithdrawalCredentials({ from: nobody }), pad('0x0202', 32))
+  })
+
+  it('setOracle works', async () => {
+    await assertRevert(app.setOracle(user1, { from: voting }), "NOT_A_CONTRACT")
+    await app.setOracle(yetAnotherOracle.address, { from: voting })
+  })
+
+  it('_setValidatorRegistrationContract reverts with invalid arg', async () => {
+    await assertRevert(app.setValidatorRegistrationContract(user1, { from: voting }), "NOT_A_CONTRACT")
+  })
+  
+  it('_setOperators reverts with invalid arg', async () => {
+    await assertRevert(app.setOperators(user1, { from: voting }), "NOT_A_CONTRACT")
   })
 
   it('setWithdrawalCredentials resets unused keys', async () => {
@@ -1020,6 +1038,16 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     it('reverts when insurance fund is zero address', async () => {
       await assertRevert(app.setInsuranceFund(ZERO_ADDRESS, { from: voting }), 'SET_INSURANCE_FUND_ZERO_ADDRESS')
+    })
+  })
+
+  context('recovery vault', () => {
+    beforeEach(async () => {
+      await anyToken.mint(app.address, 100)
+    })
+
+    it('reverts when vault is not set', async () => {
+      await assertRevert(app.transferToVault(anyToken.address, { from: nobody }), "RECOVER_VAULT_NOT_CONTRACT")
     })
   })
 })
