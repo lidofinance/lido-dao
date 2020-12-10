@@ -68,6 +68,20 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
     assertBn(receipt.genesisTime, 1606824000)
   })
 
+  it('setBeaconSpec works', async () => {
+    await assertRevert(app.setBeaconSpec(0, 1, 1, 1, { from: voting }), "BAD_ARGUMENT")
+    await assertRevert(app.setBeaconSpec(1, 0, 1, 1, { from: voting }), "BAD_ARGUMENT")
+    await assertRevert(app.setBeaconSpec(1, 1, 0, 1, { from: voting }), "BAD_ARGUMENT")
+    await assertRevert(app.setBeaconSpec(1, 1, 1, 0, { from: voting }), "BAD_ARGUMENT")
+
+    await app.setBeaconSpec(1, 1, 1, 1, { from: voting })
+    const receipt = await app.getBeaconSpec()
+    assertBn(receipt.epochsPerFrame, 1)
+    assertBn(receipt.slotsPerEpoch, 1)
+    assertBn(receipt.secondsPerSlot, 1)
+    assertBn(receipt.genesisTime, 1)
+  })
+
   describe('Test utility functions:', function () {
     it('addOracleMember works', async () => {
       await assertRevert(app.addOracleMember(user1, { from: user1 }), 'APP_AUTH_FAILED')
