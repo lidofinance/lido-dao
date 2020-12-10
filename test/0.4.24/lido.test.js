@@ -251,7 +251,19 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(30) })
     // can not deposit with unset withdrawalCredentials
     await assertRevert(app.depositBufferedEther(), "EMPTY_WITHDRAWAL_CREDENTIALS")
+
+    // set withdrawalCredentials with keys, because they were trimmed
     await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+    await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
+    await operators.addSigningKeys(
+      0,
+      3,
+      hexConcat(pad('0x010204', 48), pad('0x010205', 48), pad('0x010206', 48)),
+      hexConcat(pad('0x01', 96), pad('0x01', 96), pad('0x01', 96)),
+      { from: voting }
+    )
+    
+    // now deposit works
     await app.depositBufferedEther()
 
     await checkStat({ depositedValidators: 1, beaconValidators: 0, beaconBalance: ETH(0) })
