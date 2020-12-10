@@ -9,6 +9,8 @@ import {
   hasDuplicatePubkeys,
   hasDuplicateSigs,
   isHexadecimal,
+  SIGNATURE_VERIFY_ENDPOINT,
+  SUBGRAPH_ENDPOINT,
   verifySignaturesAsync,
 } from '../utils/helpers'
 import CheckBox from './CheckBox'
@@ -155,7 +157,9 @@ function PanelContent({ api, onClose }) {
               component={TextField}
               multiline
             />
-            <Field name="useAdvancedV8n" component={CheckBox} />
+            {SIGNATURE_VERIFY_ENDPOINT && SUBGRAPH_ENDPOINT && (
+              <Field name="useAdvancedV8n" component={CheckBox} />
+            )}
             <Button
               mode="strong"
               wide
