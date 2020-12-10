@@ -758,9 +758,4 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         assert(0 == temp_value);    // fully converted
         result <<= (24 * 8);
     }
-
-    function to64(uint256 v) internal pure returns (uint64) {
-        assert(v <= uint256(uint64(-1)));
-        return uint64(v);
-    }
 }
