@@ -74,9 +74,7 @@ export async function myFetch(url, method = 'GET', body) {
   return response.json()
 }
 
-const SIGNATURE_VERIFY_ENDPOINT =
-  process.env.SIGNATURE_VERIFY_ENDPOINT ||
-  'https://goerli.lido.fi/key-checker/api/signature'
+export const SIGNATURE_VERIFY_ENDPOINT = process.env.SIGNATURE_VERIFY_ENDPOINT
 
 function withoutPrefix(hexString) {
   if (hexString.slice(0, 2) === '0x') {
@@ -102,9 +100,7 @@ export async function verifySignaturesAsync(signingKeys) {
   return invalidSigs.map(shortenHex)
 }
 
-const SUBGRAPH_ENDPOINT =
-  process.env.SUBGRAPH_ENDPOINT ||
-  'https://goerli.lido.fi/key-checker/api/subgraph'
+export const SUBGRAPH_ENDPOINT = process.env.SUBGRAPH_ENDPOINT
 
 function prefixEach(arrayOfkeys) {
   return arrayOfkeys.map(({ pubkey }) => '0x' + pubkey)
