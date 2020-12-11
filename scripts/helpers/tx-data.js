@@ -7,7 +7,7 @@ async function saveCallTxData(txDesc, instance, methodName, filename, opts = {})
   const txData = await getCallTxData(instance, methodName, opts)
   log(
     `Saving data for ${chalk.yellow(txDesc)} transaction to ${chalk.yellow(filename)}` +
-    (txData.gas ? ` (projected gas usage is ${chalk.yellow(txData.gas)})` : '')
+      (txData.gas ? ` (projected gas usage is ${chalk.yellow(txData.gas)})` : '')
   )
   // const argsDesc = (opts.arguments || []).map(x => chalk.yellow(x)).join(', ')
   // log(`This transaction will call ${methodName}(${argsDesc}) on ${chalk.yellow(instance.address)}`)

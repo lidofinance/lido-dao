@@ -9,27 +9,15 @@ const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { readJSON } = require('../helpers/fs')
 const { log, logSplitter, logWideSplitter, logHeader, logTx } = require('../helpers/log')
 const { useOrGetDeployed, assertProxiedContractBytecode } = require('../helpers/deploy')
-const {
-  readNetworkState,
-  persistNetworkState,
-  assertRequiredNetworkState
-} = require('../helpers/persisted-network-state')
+const { readNetworkState, persistNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
+const { assertRole } = require('../helpers/aragon')
 const { getENSNodeOwner } = require('../components/ens')
 
-const REQUIRED_NET_STATE = [
-  'lidoApmDeployTx',
-  'ensAddress',
-  'lidoApmEnsName',
-  'daoTemplateAddress'
-]
+const REQUIRED_NET_STATE = ['lidoApmDeployTx', 'ensAddress', 'lidoApmEnsName', 'daoTemplateAddress', 'apmRegistryFactoryAddress']
 
 const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
 
-async function obtainDeployedAPM({
-  web3,
-  artifacts,
-  networkStateFile = NETWORK_STATE_FILE
-}) {
+async function obtainDeployedAPM({ web3, artifacts, networkStateFile = NETWORK_STATE_FILE }) {
   const netId = await web3.eth.net.getId()
 
   logWideSplitter()
@@ -41,9 +29,8 @@ async function obtainDeployedAPM({
   logSplitter()
   log(`Using LidoTemplate: ${chalk.yellow(state.daoTemplateAddress)}`)
 
-  const registryAddress = await getRegistryAddress(state.lidoApmAddress, state.lidoApmDeployTx)
+  const registryAddress = await getRegistryAddress(state.lidoApmAddress, state.lidoApmDeployTx, state.apmRegistryFactoryAddress)
 
-  logSplitter(`Checking...`)
   const registry = await artifacts.require('APMRegistry').at(registryAddress)
 
   const registryArtifact = await readJSON(path.join(__dirname, 'external-artifacts', 'APMRegistry.json'))
@@ -86,7 +73,7 @@ async function obtainDeployedAPM({
     appName: 'registry',
     roleName: 'CREATE_REPO_ROLE',
     managerAddress: state.daoTemplateAddress,
-    granteeAddress: state.daoTemplateAddress,
+    granteeAddress: state.daoTemplateAddress
   })
 
   await assertRole({
@@ -94,7 +81,7 @@ async function obtainDeployedAPM({
     app: registryKernel,
     appName: 'registry.kernel',
     roleName: 'APP_MANAGER_ROLE',
-    managerAddress: state.daoTemplateAddress,
+    managerAddress: state.daoTemplateAddress
   })
 
   await assertRole({
@@ -103,7 +90,7 @@ async function obtainDeployedAPM({
     appName: 'registry.kernel.acl',
     roleName: 'CREATE_PERMISSIONS_ROLE',
     managerAddress: state.daoTemplateAddress,
-    granteeAddress: state.daoTemplateAddress,
+    granteeAddress: state.daoTemplateAddress
   })
 
   const registrarKernelAddress = await registrar.kernel()
@@ -116,7 +103,7 @@ async function obtainDeployedAPM({
     appName: 'registrar',
     roleName: 'CREATE_NAME_ROLE',
     managerAddress: state.daoTemplateAddress,
-    granteeAddress: registryAddress,
+    granteeAddress: registryAddress
   })
 
   await assertRole({
@@ -125,16 +112,16 @@ async function obtainDeployedAPM({
     appName: 'registrar',
     roleName: 'POINT_ROOTNODE_ROLE',
     managerAddress: state.daoTemplateAddress,
-    granteeAddress: registryAddress,
+    granteeAddress: registryAddress
   })
 
   logSplitter()
   persistNetworkState(networkStateFile, netId, state, { lidoApmAddress: registryAddress })
 }
 
-async function getRegistryAddress(lidoApmAddress, lidoApmDeployTx) {
+async function getRegistryAddress(lidoApmAddress, lidoApmDeployTx, apmRegistryFactoryAddress) {
   if (!lidoApmAddress) {
-    log(`Using transaction: ${chalk.yellow(lidoApmDeployTx)}`)
+    log.splitter(`Using transaction: ${chalk.yellow(lidoApmDeployTx)}`)
 
     const receipt = await web3.eth.getTransactionReceipt(lidoApmDeployTx)
     if (!receipt) {
@@ -142,40 +129,23 @@ async function getRegistryAddress(lidoApmAddress, lidoApmDeployTx) {
     }
 
     const { abi: registryFactoryABI } = await artifacts.readArtifact('APMRegistryFactory')
-
     const events = getEvents(receipt, 'DeployAPM', { decodeForAbi: registryFactoryABI })
-    assert.equal(events.length, 1, 'the transaction has generated one DeployAPM event')
+
+    const totalCheckDesc = `the transaction has generated one DeployAPM event`
+    assert.equal(events.length, 1, totalCheckDesc)
+    log.success(totalCheckDesc)
+
+    const originCheckDesc = `the event originates from the APMRegistryFactory ` + `at ${chalk.yellow(apmRegistryFactoryAddress)}`
+
+    assert.equal(toChecksumAddress(events[0].address), toChecksumAddress(apmRegistryFactoryAddress), originCheckDesc)
+    log.success(originCheckDesc)
 
     lidoApmAddress = events[0].args.apm
   }
 
-  log(`Using APMRegistry: ${chalk.yellow(lidoApmAddress)}`)
+  log.splitter(`Using APMRegistry: ${chalk.yellow(lidoApmAddress)}`)
 
   return lidoApmAddress
-}
-
-async function assertRole({ roleName, acl, app, appName, managerAddress, granteeAddress }) {
-  appName = appName || app.constructor
-
-  assert.isTrue(
-    managerAddress !== undefined || granteeAddress !== undefined,
-    'empty assert: specify either managerAddress or granteeAddress'
-  )
-
-  const permission = await app[roleName]()
-  const actualManagerAddress = await acl.getPermissionManager(app.address, permission)
-
-  if (managerAddress !== undefined) {
-    const desc = `${appName}.${chalk.yellow(roleName)} perm manager`
-    assert.equal(toChecksumAddress(actualManagerAddress), toChecksumAddress(managerAddress), desc)
-    log.success(`${desc}: ${chalk.yellow(actualManagerAddress)}`)
-  }
-
-  if (granteeAddress !== undefined) {
-    const desc = `${appName}.${chalk.yellow(roleName)} perm is accessible by ${chalk.yellow(granteeAddress)}`
-    assert.isTrue(await acl.hasPermission(granteeAddress, app.address, permission), desc)
-    log.success(desc)
-  }
 }
 
 module.exports = runOrWrapScript(obtainDeployedAPM, module)

@@ -7,53 +7,28 @@ const { toChecksumAddress } = require('web3-utils')
 
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log } = require('../helpers/log')
-const {
-  readNetworkState,
-  persistNetworkState,
-  assertRequiredNetworkState
-} = require('../helpers/persisted-network-state')
+const { readNetworkState, persistNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
 const { saveCallTxData } = require('../helpers/tx-data')
 const { resolveLatestVersion: apmResolveLatest } = require('../components/apm')
+
+const { APP_NAMES } = require('./constants')
+const VALID_APP_NAMES = Object.entries(APP_NAMES).map((e) => e[1])
 
 const REQUIRED_NET_STATE = [
   'ensAddress',
   'multisigAddress',
   'daoTemplateAddress',
   'createAppReposTx',
-  'lido_app_lido',
-  'lido_app_lidooracle',
-  'lido_app_node-operators-registry',
+  `app:${APP_NAMES.LIDO}`,
+  `app:${APP_NAMES.ORACLE}`,
+  `app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`,
   'daoInitialSettings'
 ]
 
 const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
+const ARAGON_APM_ENS_DOMAIN = 'aragonpm.eth'
 
-// Aragon app names
-const ARAGON_AGENT_APP_NAME = 'aragon-agent'
-const ARAGON_FINANCE_APP_NAME = 'aragon-finance'
-const ARAGON_TOKEN_MANAGER_APP_NAME = 'aragon-token-manager'
-const ARAGON_VOTING_APP_NAME = 'aragon-voting'
-
-// Lido app names
-const LIDO_APP_NAME = 'lido'
-const NODE_OPERATORS_REGISTRY_APP_NAME = 'node-operators-registry'
-const ORACLE_APP_NAME = 'oracle'
-
-const APP_NAMES = [
-  ARAGON_AGENT_APP_NAME,
-  ARAGON_FINANCE_APP_NAME,
-  ARAGON_TOKEN_MANAGER_APP_NAME,
-  ARAGON_VOTING_APP_NAME,
-  LIDO_APP_NAME,
-  NODE_OPERATORS_REGISTRY_APP_NAME,
-  ORACLE_APP_NAME
-]
-
-async function deployDAO({
-  web3,
-  artifacts,
-  networkStateFile = NETWORK_STATE_FILE
-}) {
+async function deployDAO({ web3, artifacts, networkStateFile = NETWORK_STATE_FILE }) {
   const netId = await web3.eth.net.getId()
 
   log.splitter()
@@ -87,6 +62,8 @@ async function deployDAO({
     daoInitialSettings.beaconSpec.genesisTime
   ]
 
+  log(`Using DAO settings:`, daoInitialSettings)
+
   await saveCallTxData(`newDAO`, template, 'newDAO', `tx-07-deploy-dao.json`, {
     arguments: [
       daoInitialSettings.tokenName,
@@ -108,8 +85,8 @@ async function checkAppRepos(state) {
   const { abi: APMRegistryABI } = await artifacts.readArtifact('APMRegistry')
   const events = getEvents(receipt, 'NewRepo', { decodeForAbi: APMRegistryABI })
 
-  const repoIds = events.map(evt => evt.args.id)
-  const expectedIds = APP_NAMES.map(name => namehash(`${name}.${state.lidoApmEnsName}`))
+  const repoIds = events.map((evt) => evt.args.id)
+  const expectedIds = VALID_APP_NAMES.map((name) => namehash(`${name}.${state.lidoApmEnsName}`))
 
   const idsCheckDesc = `all (and only) expected app repos are created`
   assert.sameMembers(repoIds, expectedIds, idsCheckDesc)
@@ -117,27 +94,23 @@ async function checkAppRepos(state) {
 
   const Repo = artifacts.require('Repo')
 
-  const appsInfo = await Promise.all(events.map(async (evt) => {
-    const repo = await Repo.at(evt.args.repo)
-    const latest = await repo.getLatest()
-    return {
-      appName: evt.args.name,
-      contractAddress: latest.contractAddress,
-      contentURI: latest.contentURI
-    }
-  }))
+  const appsInfo = await Promise.all(
+    events.map(async (evt) => {
+      const repo = await Repo.at(evt.args.repo)
+      const latest = await repo.getLatest()
+      return {
+        appName: evt.args.name,
+        contractAddress: latest.contractAddress,
+        contentURI: latest.contentURI
+      }
+    })
+  )
 
-  const aragonApps = appsInfo.filter(info => info.appName.startsWith('aragon-'))
-  const lidoApps = appsInfo.filter(info => !info.appName.startsWith('aragon-'))
-
-  const stateNames = {
-    'lido': 'lido_app_lido',
-    'node-operators-registry': 'lido_app_node-operators-registry',
-    'oracle': 'lido_app_lidooracle'
-  }
+  const aragonApps = appsInfo.filter((info) => info.appName.startsWith('aragon-'))
+  const lidoApps = appsInfo.filter((info) => !info.appName.startsWith('aragon-'))
 
   for (const app of lidoApps) {
-    const appState = state[ stateNames[ app.appName ] ]
+    const appState = state[`app:${app.appName}`]
     const appDesc = `repo ${chalk.yellow(app.appName + '.' + state.lidoApmEnsName)}`
 
     const addrCheckDesc = `${appDesc}: latest version contract address is correct`
@@ -152,7 +125,7 @@ async function checkAppRepos(state) {
   const ens = await artifacts.require('ENS').at(state.ensAddress)
 
   for (const app of aragonApps) {
-    const upstreamRepoName = `${app.appName.substring(7)}.aragonpm.eth`
+    const upstreamRepoName = `${app.appName.substring(7)}.${ARAGON_APM_ENS_DOMAIN}`
     const latestAragonVersion = await apmResolveLatest(namehash(upstreamRepoName), ens, artifacts)
 
     const appDesc = `repo ${chalk.yellow(app.appName + '.' + state.lidoApmEnsName)}`

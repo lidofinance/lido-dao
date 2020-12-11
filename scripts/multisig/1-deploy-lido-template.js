@@ -3,27 +3,13 @@ const chalk = require('chalk')
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, logSplitter, logWideSplitter } = require('../helpers/log')
 const { saveDeployTx } = require('../helpers/deploy')
-const {
-  readNetworkState,
-  assertRequiredNetworkState,
-  persistNetworkState,
-} = require('../helpers/persisted-network-state')
+const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
 
-const REQUIRED_NET_STATE = [
-  'ensAddress',
-  'daoFactoryAddress',
-  'miniMeTokenFactoryAddress',
-  'aragonIDAddress',
-  'apmRegistryFactoryAddress'
-]
+const REQUIRED_NET_STATE = ['ensAddress', 'daoFactoryAddress', 'miniMeTokenFactoryAddress', 'aragonIDAddress', 'apmRegistryFactoryAddress']
 
 const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
 
-async function deployTemplate({
-  web3,
-  artifacts,
-  networkStateFile = NETWORK_STATE_FILE
-}) {
+async function deployTemplate({ web3, artifacts, networkStateFile = NETWORK_STATE_FILE }) {
   const netId = await web3.eth.net.getId()
 
   logWideSplitter()

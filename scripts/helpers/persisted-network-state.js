@@ -56,8 +56,7 @@ function assertRequiredNetworkState(state, requiredStateNames) {
   if (missingState.length) {
     const missingDesc = missingState.join(', ')
     throw new Error(
-      `missing following fields from the network state file, make sure you've run ` +
-      `previous deployment steps: ${missingDesc}`
+      `missing following fields from the network state file, make sure you've run ` + `previous deployment steps: ${missingDesc}`
     )
   }
 }

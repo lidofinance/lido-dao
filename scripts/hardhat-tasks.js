@@ -28,7 +28,7 @@ task(`tx`, `Performs a transaction`)
       const gas = await web3.eth.estimateGas(data)
       console.error(`The projected gas usage is ${gas}`)
       console.error(`Press Ctrl+C within 5 seconds to cancel sending the transaction...`)
-      await new Promise(r => setTimeout(r, 5000))
+      await new Promise((r) => setTimeout(r, 5000))
     } catch (err) {
       console.error(`ERROR Gas estimation failed: ${err.message}`)
       process.exit(1)
@@ -40,7 +40,7 @@ task(`tx`, `Performs a transaction`)
     const receiptPromise = await web3.eth.sendTransaction(data, (err, hash) => {
       console.error('====================')
       if (err) {
-        console.error(`Failed to send transaction: ${err && err.message || err}`)
+        console.error(`Failed to send transaction: ${(err && err.message) || err}`)
       } else {
         console.error(`Transaction sent: ${hash}`)
         console.error(`Waiting for inclusion...`)

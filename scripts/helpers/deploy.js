@@ -82,11 +82,13 @@ async function assertDeployedBytecode(address, artifact, desc = '') {
   log.success(checkDesc)
 }
 
-async function assertProxiedContractBytecode(proxyAddress, proxyArtifact, proxiedArtifact) {
-  await assertDeployedBytecode(proxyAddress, proxyArtifact, `is a proxy`)
+async function assertProxiedContractBytecode(proxyAddress, proxyArtifact, proxiedArtifact, desc) {
+  desc = desc ? `${desc} ` : ''
+  await assertDeployedBytecode(proxyAddress, proxyArtifact, `${desc}proxy`)
   const proxy = await artifacts.require('ERCProxy').at(proxyAddress)
   const implAddress = await proxy.implementation()
-  await assertDeployedBytecode(implAddress, proxiedArtifact, `proxy impl is correct`)
+  await assertDeployedBytecode(implAddress, proxiedArtifact, `${desc}impl`)
+  return implAddress
 }
 
 function withArgs(...args) {
