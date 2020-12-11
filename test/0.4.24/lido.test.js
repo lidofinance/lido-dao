@@ -58,7 +58,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
   })
 
   beforeEach('deploy dao and app', async () => {
-    ({dao, acl} = await newDao(appManager))
+    ;({ dao, acl } = await newDao(appManager))
 
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
     let proxyAddress = await newApp(dao, 'lido', appBase.address, appManager)
@@ -155,16 +155,16 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
   })
 
   it('setOracle works', async () => {
-    await assertRevert(app.setOracle(user1, { from: voting }), "NOT_A_CONTRACT")
+    await assertRevert(app.setOracle(user1, { from: voting }), 'NOT_A_CONTRACT')
     await app.setOracle(yetAnotherOracle.address, { from: voting })
   })
 
   it('_setValidatorRegistrationContract reverts with invalid arg', async () => {
-    await assertRevert(app.setValidatorRegistrationContract(user1, { from: voting }), "NOT_A_CONTRACT")
+    await assertRevert(app.setValidatorRegistrationContract(user1, { from: voting }), 'NOT_A_CONTRACT')
   })
-  
+
   it('_setOperators reverts with invalid arg', async () => {
-    await assertRevert(app.setOperators(user1, { from: voting }), "NOT_A_CONTRACT")
+    await assertRevert(app.setOperators(user1, { from: voting }), 'NOT_A_CONTRACT')
   })
 
   it('setWithdrawalCredentials resets unused keys', async () => {
@@ -253,7 +253,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     // +30 ETH
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(30) })
     // can not deposit with unset withdrawalCredentials
-    await assertRevert(app.depositBufferedEther(), "EMPTY_WITHDRAWAL_CREDENTIALS")
+    await assertRevert(app.depositBufferedEther(), 'EMPTY_WITHDRAWAL_CREDENTIALS')
 
     // set withdrawalCredentials with keys, because they were trimmed
     await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
@@ -265,7 +265,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
       hexConcat(pad('0x01', 96), pad('0x01', 96), pad('0x01', 96)),
       { from: voting }
     )
-    
+
     // now deposit works
     await app.depositBufferedEther()
 
@@ -1065,7 +1065,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     })
 
     it('reverts when vault is not set', async () => {
-      await assertRevert(app.transferToVault(anyToken.address, { from: nobody }), "RECOVER_VAULT_NOT_CONTRACT")
+      await assertRevert(app.transferToVault(anyToken.address, { from: nobody }), 'RECOVER_VAULT_NOT_CONTRACT')
     })
 
     context('recovery works with vault mock deployed', () => {

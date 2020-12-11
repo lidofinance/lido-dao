@@ -69,10 +69,10 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
   })
 
   it('setBeaconSpec works', async () => {
-    await assertRevert(app.setBeaconSpec(0, 1, 1, 1, { from: voting }), "BAD_ARGUMENT")
-    await assertRevert(app.setBeaconSpec(1, 0, 1, 1, { from: voting }), "BAD_ARGUMENT")
-    await assertRevert(app.setBeaconSpec(1, 1, 0, 1, { from: voting }), "BAD_ARGUMENT")
-    await assertRevert(app.setBeaconSpec(1, 1, 1, 0, { from: voting }), "BAD_ARGUMENT")
+    await assertRevert(app.setBeaconSpec(0, 1, 1, 1, { from: voting }), 'BAD_ARGUMENT')
+    await assertRevert(app.setBeaconSpec(1, 0, 1, 1, { from: voting }), 'BAD_ARGUMENT')
+    await assertRevert(app.setBeaconSpec(1, 1, 0, 1, { from: voting }), 'BAD_ARGUMENT')
+    await assertRevert(app.setBeaconSpec(1, 1, 1, 0, { from: voting }), 'BAD_ARGUMENT')
 
     await app.setBeaconSpec(1, 1, 1, 1, { from: voting })
     const receipt = await app.getBeaconSpec()
