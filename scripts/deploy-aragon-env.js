@@ -231,7 +231,7 @@ async function deployAragonID({ artifacts, owner, ens, aragonIDAddress }) {
 
   logSplitter()
   await assignENSName({
-    tldName: 'eth',
+    parentName: 'eth',
     labelName: 'aragonid',
     assigneeAddress: aragonID.address,
     assigneeDesc: 'AragonID',

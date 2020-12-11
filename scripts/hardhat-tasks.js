@@ -61,3 +61,29 @@ task(`tx`, `Performs a transaction`)
       console.error(`The contract deployed to:`, receipt.contractAddress)
     }
   })
+
+task('ens-assign', `Assigns/transfers ENS node owner`)
+  .addParam(`domain`, `The ENS domain name, e.g. my.domain.eth`)
+  .addParam(`to`, `The new owner address`)
+  .addParam(`from`, `The address that currently owns the domain or the parent domain`)
+  .addOptionalParam(`ens`, `ENS address`)
+  .setAction(async (params) => {
+    const ensAddress = params.ens || network.config.ensAddress
+    const chalk = require('chalk')
+    console.log(`Using ENS: ${chalk.yellow(ensAddress)}`)
+    const ens = await artifacts.require('ENS').at(ensAddress)
+    const dotIndex = params.domain.indexOf('.')
+    const { node, txResult } = await require('./components/ens').assignENSName({
+      labelName: params.domain.substring(0, dotIndex),
+      parentName: params.domain.substring(dotIndex + 1),
+      owner: params.from,
+      assigneeAddress: params.to,
+      ens
+    })
+    console.error(`Transaction has been included in a block, tx hash: ${chalk.yellow(txResult.tx)}`)
+    const owner = await ens.owner(node)
+    if (owner.toLowerCase() !== params.to.toLowerCase()) {
+      throw new Error(`the owner '${owner}' is different from the expected '${params.to}'`)
+    }
+    console.error(chalk.green('✓'), `the ownsership was successfully updated`)
+  })
