@@ -66,4 +66,9 @@ contract TestLido is Lido {
     function setOperators(INodeOperatorsRegistry _r) public {
         _setOperators(_r);
     }
+
+    /**
+    * @dev Only for testing recovery vault
+    */
+    function makeUnaccountedEther() public payable {}
 }

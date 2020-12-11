@@ -1,5 +1,7 @@
+const { hash } = require('eth-ens-namehash')
 const { assert } = require('chai')
 const { newDao, newApp } = require('./helpers/dao')
+const { getInstalledApp } = require('@aragon/contract-helpers-test/src/aragon-os')
 const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 const { BN } = require('bn.js')
@@ -10,7 +12,7 @@ const Lido = artifacts.require('TestLido.sol')
 const OracleMock = artifacts.require('OracleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
 const ERC20Mock = artifacts.require('ERC20Mock.sol')
-
+const VaultMock = artifacts.require('AragonVaultMock.sol')
 
 const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
 const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
@@ -43,6 +45,7 @@ const tokens = ETH
 contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
   let appBase, nodeOperatorsRegistryBase, app, oracle, depositContract, operators
   let treasuryAddr, insuranceAddr
+  let dao, acl
 
   before('deploy base app', async () => {
     // Deploy the app's base contract.
@@ -55,7 +58,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
   })
 
   beforeEach('deploy dao and app', async () => {
-    const { dao, acl } = await newDao(appManager)
+    ({dao, acl} = await newDao(appManager))
 
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
     let proxyAddress = await newApp(dao, 'lido', appBase.address, appManager)
@@ -1063,6 +1066,33 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     it('reverts when vault is not set', async () => {
       await assertRevert(app.transferToVault(anyToken.address, { from: nobody }), "RECOVER_VAULT_NOT_CONTRACT")
+    })
+
+    context('recovery works with vault mock deployed', () => {
+      let vault
+
+      beforeEach(async () => {
+        // Create a new vault and set that vault as the default vault in the kernel
+        const vaultId = hash('vault.aragonpm.test')
+        const vaultBase = await VaultMock.new()
+        const vaultReceipt = await dao.newAppInstance(vaultId, vaultBase.address, '0x', true)
+        const vaultAddress = getInstalledApp(vaultReceipt)
+        vault = await VaultMock.at(vaultAddress)
+        await vault.initialize()
+
+        await dao.setRecoveryVaultAppId(vaultId)
+      })
+
+      it('recovery with erc20 tokens works and emits event', async () => {
+        const receipt = await app.transferToVault(anyToken.address, { from: nobody })
+        assertEvent(receipt, 'RecoverToVault', { expectedArgs: { vault: vault.address, token: anyToken.address, amount: 100 } })
+      })
+
+      it('recovery with unaccounted ether works and emits event', async () => {
+        await app.makeUnaccountedEther({ from: user1, value: ETH(10) })
+        const receipt = await app.transferToVault(ZERO_ADDRESS, { from: nobody })
+        assertEvent(receipt, 'RecoverToVault', { expectedArgs: { vault: vault.address, token: ZERO_ADDRESS, amount: ETH(10) } })
+      })
     })
   })
 })
