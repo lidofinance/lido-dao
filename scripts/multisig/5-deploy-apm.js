@@ -6,27 +6,14 @@ const keccak256 = require('js-sha3').keccak_256
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, logSplitter, logWideSplitter } = require('../helpers/log')
 const { saveCallTxData } = require('../helpers/tx-data')
-const {
-  readNetworkState,
-  assertRequiredNetworkState,
-  persistNetworkState,
-} = require('../helpers/persisted-network-state')
+const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
 const { getENSNodeOwner } = require('../components/ens')
 
-const REQUIRED_NET_STATE = [
-  'multisigAddress',
-  'daoTemplateAddress',
-  'ensAddress',
-  'lidoApmEnsName'
-]
+const REQUIRED_NET_STATE = ['multisigAddress', 'daoTemplateAddress', 'ensAddress', 'lidoApmEnsName']
 
 const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
 
-async function deployAPM({
-  web3,
-  artifacts,
-  networkStateFile = NETWORK_STATE_FILE
-}) {
+async function deployAPM({ web3, artifacts, networkStateFile = NETWORK_STATE_FILE }) {
   const netId = await web3.eth.net.getId()
 
   logWideSplitter()
@@ -63,7 +50,7 @@ async function deployAPM({
   logSplitter()
 
   await saveCallTxData(`APM deploy`, template, 'deployLidoAPM', `tx-05-deploy-apm.json`, {
-    arguments: [ parentHash, subHash ],
+    arguments: [parentHash, subHash],
     from: state.multisigAddress
   })
 }

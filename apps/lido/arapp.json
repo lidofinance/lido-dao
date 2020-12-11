@@ -41,22 +41,21 @@
   ],
   "environments": {
     "default": {
-      "appName": "lido.lidofinance.eth",
+      "appName": "lido.lidopm.eth",
       "network": "development"
     },
     "rinkeby": {
-      "appName": "lido.lidofinance.eth",
+      "appName": "lido.lidopm.eth",
       "network": "rinkeby"
     },
     "staging": {
-      "appName": "lido.lidofinance.eth",
+      "appName": "lido.lidopm.eth",
       "network": "rinkeby"
     },
     "mainnet": {
-      "appName": "lido.lidofinance.eth",
+      "appName": "lido.lidopm.eth",
       "network": "mainnet"
     }
   },
-  "appName": "lido.lidofinance.eth",
   "path": "../../contracts/0.4.24/Lido.sol"
 }

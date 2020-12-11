@@ -9,11 +9,7 @@ const hardhatTaskNames = require('hardhat/builtin-tasks/task-names')
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, logSplitter, logWideSplitter, logHeader, logTx } = require('../helpers/log')
 const { useOrGetDeployed } = require('../helpers/deploy')
-const {
-  readNetworkState,
-  persistNetworkState,
-  assertRequiredNetworkState
-} = require('../helpers/persisted-network-state')
+const { readNetworkState, persistNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
 const { exec, execLive } = require('../helpers/exec')
 const { readJSON } = require('../helpers/fs')
 
@@ -23,10 +19,10 @@ require('@aragon/buidler-aragon/dist/bootstrap-paths')
 const { generateArtifacts } = require('@aragon/buidler-aragon/dist/src/utils/artifact/generateArtifacts')
 const { uploadDirToIpfs } = require('@aragon/buidler-aragon/dist/src/utils/ipfs/uploadDirToIpfs')
 
-const REQUIRED_NET_STATE = [
-  'lidoApmEnsName',
-  'ipfsAPI'
-]
+const { APP_NAMES } = require('./constants')
+const VALID_APP_NAMES = Object.entries(APP_NAMES).map((e) => e[1])
+
+const REQUIRED_NET_STATE = ['lidoApmEnsName', 'ipfsAPI']
 
 const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
 const APPS = process.env.APPS || '*'
@@ -37,7 +33,7 @@ async function publishAppFrontends({
   artifacts,
   networkStateFile = NETWORK_STATE_FILE,
   appsDirPath = APPS_DIR_PATH,
-  appNames = APPS
+  appDirs = APPS
 }) {
   const netId = await web3.eth.net.getId()
 
@@ -50,31 +46,44 @@ async function publishAppFrontends({
   const state = readNetworkState(networkStateFile, netId)
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
 
-  if (appNames && appNames !== '*') {
-    appNames = appNames.split(',')
+  if (appDirs && appDirs !== '*') {
+    appDirs = appDirs.split(',')
   } else {
-    appNames = fs.readdirSync(appsDirPath)
+    appDirs = fs.readdirSync(appsDirPath)
   }
 
-  for (const appName of appNames) {
-    const results = await publishAppFrotnend(appName, appsDirPath, state.ipfsAPI, state.lidoApmEnsName)
-    persistNetworkState(networkStateFile, netId, state, results)
+  for (const appDir of appDirs) {
+    const app = await publishAppFrotnend(appDir, appsDirPath, state.ipfsAPI, state.lidoApmEnsName)
+    persistNetworkState(networkStateFile, netId, state, {
+      [`app:${app.name}`]: {
+        ...state[`app:${app.name}`],
+        ...app
+      }
+    })
   }
 }
 
-async function publishAppFrotnend(appName, appsDirPath, ipfsAPI, lidoApmEnsName) {
-  logHeader(`Publishing frontend of the app '${appName}'`)
+async function publishAppFrotnend(appDir, appsDirPath, ipfsAPI, lidoApmEnsName) {
+  logHeader(`Publishing frontend of the app '${appDir}'`)
 
-  const appRootPath = path.resolve(appsDirPath, appName)
+  const appRootPath = path.resolve(appsDirPath, appDir)
   const { appFullName, contractPath } = await readArappJSON(appRootPath, network.name)
-  const appId = namehash(appFullName)
 
   log(`App full name: ${chalk.yellow(appFullName)}`)
-  log(`App ID: ${chalk.yellow(appId)}`)
 
   if (!appFullName.endsWith('.' + lidoApmEnsName)) {
-    throw new Error(`app name is not a subdomain of the Lido APM ENS domain ${lidoApmEnsName}`)
+    throw new Error(`app full name is not a subdomain of the Lido APM ENS domain ${lidoApmEnsName}`)
   }
+
+  const appName = appFullName.substring(0, appFullName.indexOf('.'))
+  log(`App name: ${chalk.yellow(appName)}`)
+
+  if (VALID_APP_NAMES.indexOf(appName) === -1) {
+    throw new Error(`app name is not recognized; valid app names are: ${VALID_APP_NAMES.join(', ')}`)
+  }
+
+  const appId = namehash(appFullName)
+  log(`App ID: ${chalk.yellow(appId)}`)
 
   logSplitter()
 
@@ -83,7 +92,7 @@ async function publishAppFrotnend(appName, appsDirPath, ipfsAPI, lidoApmEnsName)
   await exec(`rm -rf ${distPath}`)
 
   await execLive('yarn', {
-    args: [ 'build' ],
+    args: ['build'],
     cwd: path.join(appRootPath, 'app')
   })
 
@@ -100,7 +109,7 @@ async function publishAppFrotnend(appName, appsDirPath, ipfsAPI, lidoApmEnsName)
     // parce Solidity syntax newer than 0.4 (which we have in non-Aragon contracts), so
     // here we're flattening only the app's dependency graph instead
     return await run(hardhatTaskNames.TASK_FLATTEN_GET_FLATTENED_SOURCE, {
-      files: [ contractPath ]
+      files: [contractPath]
     })
   }
 
@@ -114,11 +123,10 @@ async function publishAppFrotnend(appName, appsDirPath, ipfsAPI, lidoApmEnsName)
   log(`Content root CID: ${chalk.yellow(rootCid)}`)
 
   return {
-    [`lido_app_${appName}`]: {
-      fullName: appFullName,
-      id: appId,
-      ipfsCid: rootCid
-    }
+    fullName: appFullName,
+    name: appName,
+    id: appId,
+    ipfsCid: rootCid
   }
 }
 

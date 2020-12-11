@@ -7,11 +7,7 @@ const { readNetworkState, persistNetworkState } = require('./helpers/persisted-n
 
 const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
 
-async function deployBeaconDepositContract({
-  web3,
-  artifacts,
-  networkStateFile = NETWORK_STATE_FILE
-}) {
+async function deployBeaconDepositContract({ web3, artifacts, networkStateFile = NETWORK_STATE_FILE }) {
   const netId = await web3.eth.net.getId()
 
   logWideSplitter()

@@ -4,11 +4,9 @@ const { assert } = require('chai')
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, logSplitter, logWideSplitter, logHeader, logTx } = require('../helpers/log')
 const { useOrGetDeployed, assertDeployedBytecode } = require('../helpers/deploy')
-const {
-  readNetworkState,
-  persistNetworkState,
-  assertRequiredNetworkState
-} = require('../helpers/persisted-network-state')
+const { readNetworkState, persistNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
+
+const { APP_NAMES } = require('./constants')
 
 const REQUIRED_NET_STATE = [
   'ensAddress',
@@ -25,11 +23,7 @@ const REQUIRED_NET_STATE = [
 
 const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
 
-async function deployTemplate({
-  web3,
-  artifacts,
-  networkStateFile = NETWORK_STATE_FILE
-}) {
+async function deployTemplate({ web3, artifacts, networkStateFile = NETWORK_STATE_FILE }) {
   const netId = await web3.eth.net.getId()
 
   logWideSplitter()
@@ -48,8 +42,8 @@ async function deployTemplate({
   await assertDeployedBytecode(lidoBase.address, 'Lido')
   await assertAragonProxyBase(lidoBase, 'lidoBase')
   persistNetworkState(networkStateFile, netId, state, {
-    'lido_app_lido': {
-      ...state['lido_app_lido'],
+    [`app:${APP_NAMES.LIDO}`]: {
+      ...state[`app:${APP_NAMES.LIDO}`],
       baseAddress: lidoBase.address
     }
   })
@@ -60,8 +54,8 @@ async function deployTemplate({
   await assertDeployedBytecode(oracleBase.address, 'LidoOracle')
   await assertAragonProxyBase(oracleBase, 'oracleBase')
   persistNetworkState(networkStateFile, netId, state, {
-    'lido_app_lidooracle': {
-      ...state['lido_app_lidooracle'],
+    [`app:${APP_NAMES.ORACLE}`]: {
+      ...state[`app:${APP_NAMES.ORACLE}`],
       baseAddress: oracleBase.address
     }
   })
@@ -76,8 +70,8 @@ async function deployTemplate({
   await assertDeployedBytecode(nodeOperatorsRegistryBase.address, 'NodeOperatorsRegistry')
   await assertAragonProxyBase(nodeOperatorsRegistryBase, 'nodeOperatorsRegistryBase')
   persistNetworkState(networkStateFile, netId, state, {
-    'lido_app_node-operators-registry': {
-      ...state['lido_app_node-operators-registry'],
+    [`app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`]: {
+      ...state[`app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`],
       baseAddress: nodeOperatorsRegistryBase.address
     }
   })
