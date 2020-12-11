@@ -5,39 +5,48 @@ const keccak256 = require('js-sha3').keccak_256
 const { log, logTx } = require('../helpers/log')
 const { isZeroAddress } = require('../helpers/address')
 
-async function assignENSName({ tldName = 'eth', labelName, owner, ens, assigneeAddress, assigneeDesc }) {
-  log(`Assigning ENS name '${labelName}.${tldName}' to ${assigneeDesc} at ${assigneeAddress}...`)
+async function assignENSName({ parentName = 'eth', labelName, owner, ens, assigneeAddress, assigneeDesc }) {
+  const assigneeFullDesc = assigneeDesc ? `${assigneeDesc} at ${assigneeAddress}` : assigneeAddress
+  log(`Assigning ENS name '${labelName}.${parentName}' to ${assigneeFullDesc}...`)
 
-  const tldHash = namehash(tldName)
+  const parentNode = namehash(parentName)
   const labelHash = '0x' + keccak256(labelName)
-  const nodeName = `${labelName}.${tldName}`
+  const nodeName = `${labelName}.${parentName}`
   const node = namehash(nodeName)
 
   log(`Node: ${chalk.yellow(nodeName)} (${node})`)
-  log(`TLD: ${chalk.yellow(tldName)} (${tldHash})`)
+  log(`Parent node: ${chalk.yellow(parentName)} (${parentNode})`)
   log(`Label: ${chalk.yellow(labelName)} (${labelHash})`)
 
+  let txResult
+
   if ((await ens.owner(node)) === owner) {
-    await logTx(
-      `Transferring name ownership from owner ${owner} to ${assigneeAddress}`,
+    txResult = await logTx(
+      `Transferring name ownership from owner ${chalk.yellow(owner)} to ${chalk.yellow(assigneeAddress)}`,
       ens.setOwner(node, assigneeAddress, { from: owner })
     )
   } else {
+    if ((await ens.owner(parentNode)) !== owner) {
+      throw new Error(
+        `the address ${owner} has no ownership righs over the target ` +
+          `domain '${labelName}.${parentName}' or parent domain '${parentName}'`
+      )
+    }
     try {
-      await logTx(
-        `Creating subdomain and assigning it to ${assigneeAddress}`,
-        ens.setSubnodeOwner(tldHash, labelHash, assigneeAddress, { from: owner })
+      txResult = await logTx(
+        `Creating the subdomain and assigning it to ${chalk.yellow(assigneeAddress)}`,
+        ens.setSubnodeOwner(parentNode, labelHash, assigneeAddress, { from: owner })
       )
     } catch (err) {
       log(
-        `Error: could not set the owner of '${labelName}.${tldName}' on the given ENS instance`,
+        `Error: could not set the owner of '${labelName}.${parentName}' on the given ENS instance`,
         `(${ens.address}). Make sure you have ownership rights over the subdomain.`
       )
       throw err
     }
   }
 
-  return { tldHash, labelHash, nodeName, node }
+  return { txResult, parentNode, labelHash, nodeName, node }
 }
 
 async function getENSNodeOwner(ens, node) {
