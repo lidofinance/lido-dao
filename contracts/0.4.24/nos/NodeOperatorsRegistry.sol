@@ -9,7 +9,6 @@ import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/common/IsContract.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 import "@aragon/os/contracts/lib/math/SafeMath64.sol";
-import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
 import "../interfaces/INodeOperatorsRegistry.sol";
@@ -363,34 +362,39 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     /**
-      * @notice Distributes rewards among node operators.
-      * @dev Function is used by the pool
-      * @param _token Reward token (must be ERC20-compatible)
-      * @param _totalReward Total amount to distribute (must be transferred to this contract beforehand)
+      * @notice Returns the rewards distribution proportional to the effective stake for each node operator.
+      * @param _totalRewardShares Total amount of reward shares to distribute.
       */
-    function distributeRewards(address _token, uint256 _totalReward) external onlyPool {
-        uint256 length = getNodeOperatorsCount();
-        uint64 effectiveStakeTotal;
-        for (uint256 operatorId = 0; operatorId < length; ++operatorId) {
+    function getRewardsDistribution(uint256 _totalRewardShares) external view
+        returns (
+            address[] memory recipients,
+            uint256[] memory shares
+        )
+    {
+        uint256 nodeOperatorCount = getNodeOperatorsCount();
+
+        uint256 activeCount = getActiveNodeOperatorsCount();
+        recipients = new address[](activeCount);
+        shares = new uint256[](activeCount);
+        uint256 idx = 0;
+
+        uint256 effectiveStakeTotal = 0;
+        for (uint256 operatorId = 0; operatorId < nodeOperatorCount; ++operatorId) {
             NodeOperator storage operator = operators[operatorId];
             if (!operator.active)
                 continue;
 
-            uint64 effectiveStake = operator.usedSigningKeys.sub(operator.stoppedValidators);
+            uint256 effectiveStake = operator.usedSigningKeys.sub(operator.stoppedValidators);
             effectiveStakeTotal = effectiveStakeTotal.add(effectiveStake);
+
+            recipients[idx] = operator.rewardAddress;
+            shares[idx] = effectiveStake.mul(_totalRewardShares);
+
+            ++idx;
         }
 
-        if (0 == effectiveStakeTotal)
-            revert("NO_STAKE");
-
-        for (operatorId = 0; operatorId < length; ++operatorId) {
-            operator = operators[operatorId];
-            if (!operator.active)
-                continue;
-
-            effectiveStake = operator.usedSigningKeys.sub(operator.stoppedValidators);
-            uint256 reward = uint256(effectiveStake).mul(_totalReward).div(uint256(effectiveStakeTotal));
-            require(IERC20(_token).transfer(operator.rewardAddress, reward), "TRANSFER_FAILED");
+        for (idx = 0; idx < activeCount; ++idx) {
+            shares[idx] = shares[idx].div(effectiveStakeTotal);
         }
     }
 
