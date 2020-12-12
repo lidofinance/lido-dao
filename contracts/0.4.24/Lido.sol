@@ -448,15 +448,12 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         if (sharesAmount == 0) {
             // totalControlledEther is 0: either the first-ever deposit or complete slashing
             // assume that shares correspond to Ether 1-to-1
-            _mintShares(sender, deposit);
-            _emitTransferAfterMintingShares(sender, deposit);
-        } else {
-            _mintShares(sender, sharesAmount);
-            _emitTransferAfterMintingShares(sender, sharesAmount);
+            sharesAmount = deposit;
         }
 
+        _mintShares(sender, sharesAmount);
         _submitted(sender, deposit, _referral);
-
+        _emitTransferAfterMintingShares(sender, sharesAmount);
         return sharesAmount;
     }
 
