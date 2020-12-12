@@ -76,6 +76,10 @@ interface INodeOperatorsRegistry {
         uint64 totalSigningKeys,
         uint64 usedSigningKeys);
 
+    /**
+      * @notice Returns the rewards distribution proportional to the effective stake for each node operator.
+      * @param _totalRewardShares Total amount of reward shares to distribute.
+      */
     function getRewardsDistribution(uint256 _totalRewardShares) external view returns (
         address[] memory recipients,
         uint256[] memory shares
