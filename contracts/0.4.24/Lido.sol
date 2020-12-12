@@ -609,11 +609,12 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         _emitTransferAfterMintingShares(treasury, toTreasury);
     }
 
-    function _distributeNodeOperatorsReward(uint256 _sharesToDistribute) internal returns (uint256) {
+    function _distributeNodeOperatorsReward(uint256 _sharesToDistribute) internal returns (uint256 distributed) {
         (address[] memory recipients, uint256[] memory shares) = getOperators().getRewardsDistribution(_sharesToDistribute);
 
         assert(recipients.length == shares.length);
 
+        distributed = 0;
         for (uint256 idx = 0; idx < recipients.length; ++idx) {
             _transferShares(
                 address(this),
@@ -621,12 +622,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
                 shares[idx]
             );
             _emitTransferAfterMintingShares(recipients[idx], shares[idx]);
-        }
-
-        if (recipients.length > 0) {
-            return _sharesToDistribute;
-        } else {
-            return 0;
+            distributed = distributed.add(shares[idx]);
         }
     }
 
