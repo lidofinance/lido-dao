@@ -76,20 +76,17 @@ interface INodeOperatorsRegistry {
         uint64 totalSigningKeys,
         uint64 usedSigningKeys);
 
+    function getRewardsDistribution(uint256 _totalRewardShares) external view returns (
+        address[] memory recipients,
+        uint256[] memory shares
+    );
+
     event NodeOperatorAdded(uint256 id, string name, address rewardAddress, uint64 stakingLimit);
     event NodeOperatorActiveSet(uint256 indexed id, bool active);
     event NodeOperatorNameSet(uint256 indexed id, string name);
     event NodeOperatorRewardAddressSet(uint256 indexed id, address rewardAddress);
     event NodeOperatorStakingLimitSet(uint256 indexed id, uint64 stakingLimit);
     event NodeOperatorTotalStoppedValidatorsReported(uint256 indexed id, uint64 totalStopped);
-
-    /**
-      * @notice Distributes rewards among node operators.
-      * @dev Function is used by the pool
-      * @param _token Reward token (must be ERC20-compatible)
-      * @param _totalReward Total amount to distribute (must be transferred to this contract beforehand)
-      */
-    function distributeRewards(address _token, uint256 _totalReward) external;
 
     /**
      * @notice Selects and returns at most `_numKeys` signing keys (as well as the corresponding

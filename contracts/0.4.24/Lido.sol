@@ -590,25 +590,44 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         // balances of the holders, as if the fee was taken in parts from each of them.
         _mintShares(address(this), shares2mint);
 
-        (uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, ) = _getFeeDistribution();
-        uint256 toTreasury = shares2mint.mul(treasuryFeeBasisPoints).div(10000);
+        (,uint16 insuranceFeeBasisPoints, uint16 operatorsFeeBasisPoints) = _getFeeDistribution();
+
         uint256 toInsuranceFund = shares2mint.mul(insuranceFeeBasisPoints).div(10000);
-        // Transfer the rest of the fee to operators
-        uint256 toOperatorsRegistry = shares2mint.sub(toTreasury).sub(toInsuranceFund);
-
-        address treasury = getTreasury();
-        _transferShares(address(this), getTreasury(), toTreasury);
-        _emitTransferAfterMintingShares(treasury, toTreasury);
-
         address insuranceFund = getInsuranceFund();
-        _transferShares(address(this), getInsuranceFund(), toInsuranceFund);
+        _transferShares(address(this), insuranceFund, toInsuranceFund);
         _emitTransferAfterMintingShares(insuranceFund, toInsuranceFund);
 
-        INodeOperatorsRegistry operatorsRegistry = getOperators();
-        _transferShares(address(this), operatorsRegistry, toOperatorsRegistry);
-        _emitTransferAfterMintingShares(operatorsRegistry, toOperatorsRegistry);
+        uint256 distributedToOperatorsShares = _distributeNodeOperatorsReward(
+            shares2mint.mul(operatorsFeeBasisPoints).div(10000)
+        );
 
-        operatorsRegistry.distributeRewards(address(this), getPooledEthByShares(toOperatorsRegistry));
+        // Transfer the rest of the fee to treasury
+        uint256 toTreasury = shares2mint.sub(toInsuranceFund).sub(distributedToOperatorsShares);
+
+        address treasury = getTreasury();
+        _transferShares(address(this), treasury, toTreasury);
+        _emitTransferAfterMintingShares(treasury, toTreasury);
+    }
+
+    function _distributeNodeOperatorsReward(uint256 _sharesToDistribute) internal returns (uint256) {
+        (address[] memory recipients, uint256[] memory shares) = getOperators().getRewardsDistribution(_sharesToDistribute);
+
+        assert(recipients.length == shares.length);
+
+        for (uint256 idx = 0; idx < recipients.length; ++idx) {
+            _transferShares(
+                address(this),
+                recipients[idx],
+                shares[idx]
+            );
+            _emitTransferAfterMintingShares(recipients[idx], shares[idx]);
+        }
+
+        if (recipients.length > 0) {
+            return _sharesToDistribute;
+        } else {
+            return 0;
+        }
     }
 
     /**
