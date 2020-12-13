@@ -559,14 +559,12 @@ contract LidoTemplate is IsContract {
         ACL acl = _state.acl;
         Voting voting = _state.voting;
 
-        _removeTokenManagerPersissionsFromTemplate(acl, _state.tokenManager);
-
         _createAgentPermissions(acl, _state.agent, voting);
         _createVaultPermissions(acl, _state.agent, _state.finance, voting);
         _createFinancePermissions(acl, _state.finance, voting);
         _createEvmScriptsRegistryPermissions(acl, voting);
         _createVotingPermissions(acl, voting, _state.tokenManager);
-        _createTokenManagerPermissions(acl, _state.tokenManager, voting);
+        _configureTokenManagerPermissions(acl, _state.tokenManager, voting);
 
         // APM
 
@@ -645,11 +643,6 @@ contract LidoTemplate is IsContract {
         _createPermissionForTemplate(_acl, _tokenManager, _tokenManager.ASSIGN_ROLE());
     }
 
-    function _removeTokenManagerPersissionsFromTemplate(ACL _acl, TokenManager _tokenManager) internal {
-        _removePermissionFromTemplate(_acl, _tokenManager, _tokenManager.ISSUE_ROLE());
-        _removePermissionFromTemplate(_acl, _tokenManager, _tokenManager.ASSIGN_ROLE());
-    }
-
     function _createPermissionForVoting(ACL _acl, address _app, bytes32 perm, address _voting) internal {
        _acl.createPermission(_voting, _app, perm, _voting);
     }
@@ -681,9 +674,10 @@ contract LidoTemplate is IsContract {
         _acl.createPermission(_tokenManager, _voting, _voting.CREATE_VOTES_ROLE(), _voting);
     }
 
-    function _createTokenManagerPermissions(ACL _acl, TokenManager _tokenManager, address _voting) internal {
-        _createPermissionForVoting(_acl, _tokenManager, _tokenManager.MINT_ROLE(), _voting);
-        _createPermissionForVoting(_acl, _tokenManager, _tokenManager.BURN_ROLE(), _voting);
+    function _configureTokenManagerPermissions(ACL _acl, TokenManager _tokenManager, address _voting) internal {
+        _removePermissionFromTemplate(_acl, _tokenManager, _tokenManager.ISSUE_ROLE());
+        _removePermissionFromTemplate(_acl, _tokenManager, _tokenManager.ASSIGN_ROLE());
+        _createPermissionForVoting(_acl, _tokenManager, _tokenManager.ASSIGN_ROLE(), _voting);
     }
 
     function _createPermissionForTemplate(ACL _acl, address _app, bytes32 _permission) private {
