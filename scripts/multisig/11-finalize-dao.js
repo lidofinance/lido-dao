@@ -49,7 +49,10 @@ async function finalizeDAO({ web3, artifacts, networkStateFile = NETWORK_STATE_F
   await assertVesting({
     tokenManagerAddress: state[`app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`].proxyAddress,
     tokenAddress: state.daoTokenAddress,
-    vestingParams: state.vestingParams
+    vestingParams: {
+      ...state.vestingParams,
+      unvestedTokensAmount: '0' // since we're minting them during the finalizeDAO call below
+    }
   })
 
   log.splitter()
@@ -60,7 +63,8 @@ async function finalizeDAO({ web3, artifacts, networkStateFile = NETWORK_STATE_F
       percentToBP(fee.totalPercent),
       percentToBP(fee.treasuryPercent),
       percentToBP(fee.insurancePercent),
-      percentToBP(fee.nodeOperatorsPercent)
+      percentToBP(fee.nodeOperatorsPercent),
+      state.vestingParams.unvestedTokensAmount
     ],
     from: state.multisigAddress
   })
