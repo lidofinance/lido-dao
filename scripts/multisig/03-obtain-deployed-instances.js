@@ -1,9 +1,9 @@
 const chalk = require('chalk')
-const { assert } = require('chai')
 
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, logSplitter, logWideSplitter, logHeader, logTx } = require('../helpers/log')
 const { useOrGetDeployed, assertDeployedBytecode } = require('../helpers/deploy')
+const { assert } = require('../helpers/assert')
 const { readNetworkState, persistNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
 
 const { APP_NAMES } = require('./constants')
@@ -84,12 +84,12 @@ async function obtainTemplate(state) {
   await assertDeployedBytecode(daoTemplate.address, 'LidoTemplate')
 
   const templateConfig = await daoTemplate.getConfig()
-  assert.equal(templateConfig._owner, state.multisigAddress, 'tmpl: owner')
-  assert.equal(templateConfig._daoFactory, state.daoFactoryAddress, 'tmpl: daoFactory')
-  assert.equal(templateConfig._ens, state.ensAddress, 'tmpl: ens')
-  assert.equal(templateConfig._miniMeFactory, state.miniMeTokenFactoryAddress, 'tmpl: miniMeFactory')
-  assert.equal(templateConfig._aragonID, state.aragonIDAddress, 'tmpl: aragonId')
-  assert.equal(templateConfig._apmRegistryFactory, state.apmRegistryFactoryAddress, 'tmpl: apmRegistryFactory')
+  assert.addressEqual(templateConfig._owner, state.multisigAddress, 'tmpl: owner')
+  assert.addressEqual(templateConfig._daoFactory, state.daoFactoryAddress, 'tmpl: daoFactory')
+  assert.addressEqual(templateConfig._ens, state.ensAddress, 'tmpl: ens')
+  assert.addressEqual(templateConfig._miniMeFactory, state.miniMeTokenFactoryAddress, 'tmpl: miniMeFactory')
+  assert.addressEqual(templateConfig._aragonID, state.aragonIDAddress, 'tmpl: aragonId')
+  assert.addressEqual(templateConfig._apmRegistryFactory, state.apmRegistryFactoryAddress, 'tmpl: apmRegistryFactory')
   log.success(`the config`)
 
   return daoTemplate
