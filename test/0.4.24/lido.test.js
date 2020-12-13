@@ -219,7 +219,10 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(await app.totalSupply(), tokens(1))
 
     // +2 ETH
-    await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2) }) // another form of a deposit call
+    const receipt = await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2) }) // another form of a deposit call
+
+    assertEvent(receipt, 'Transfer', { expectedArgs: { from: ZERO_ADDRESS, to: user2, value: ETH(2) } })
+
     await checkStat({ depositedValidators: 0, beaconValidators: 0, beaconBalance: ETH(0) })
     assertBn(await validatorRegistration.totalCalls(), 0)
     assertBn(await app.getTotalPooledEther(), ETH(3))
