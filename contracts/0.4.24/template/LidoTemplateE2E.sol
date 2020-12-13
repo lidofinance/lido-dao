@@ -12,7 +12,7 @@ import "../nos/NodeOperatorsRegistry.sol";
 import "../Lido.sol";
 
 
-contract LidoTemplate is BaseTemplate {
+contract LidoTemplateE2E is BaseTemplate {
     /* Hardcoded constants to save gas
     bytes32 internal constant LIDO_PM_NODE = keccak256(abi.encodePacked(ETH_TLD_NODE, keccak256(abi.encodePacked("lido"))));
     */
