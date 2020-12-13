@@ -12,7 +12,7 @@
     "lint:sol": "yarn lint:sol:solhint && yarn lint:sol:solium",
     "lint:js": "yarn lint:js:cmd .",
     "lint:js:fix": "yarn lint:js:cmd --fix .",
-    "lint:js:cmd": "eslint --ext .js --cache --ignore-path .gitignore --ignore-pattern 'apps/*/app/' --ignore-pattern /gasprofile/",
+    "lint:js:cmd": "eslint --ext .js --cache --ignore-path .gitignore --ignore-pattern 'apps/*/app/' --ignore-pattern /gasprofile/ --ignore-pattern /scripts/",
     "lint:sol:solium": "solium --dir ./contracts",
     "lint:sol:solium:fix": "yarn lint:sol:solium --fix",
     "lint:sol:solhint": "solhint \"contracts/**/*.sol\" --ignore-path .soliumignore",
