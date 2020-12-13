@@ -330,8 +330,7 @@ contract('Lido: happy path', (addresses) => {
     // and node operators
     // treasuryTokenBalance ~= mintedAmount * treasuryFeePoints / 10000
     // insuranceTokenBalance ~= mintedAmount * insuranceFeePoints / 10000
-
-    assertBn(await token.balanceOf(treasuryAddr), new BN('95999999999999998'), 'treasury tokens')
+    assertBn(await token.balanceOf(treasuryAddr), new BN('96000000000000001'), 'treasury tokens')
     assertBn(await token.balanceOf(insuranceAddr), new BN('63999999999999998'), 'insurance tokens')
 
     // The node operators' fee is distributed between all active node operators,
