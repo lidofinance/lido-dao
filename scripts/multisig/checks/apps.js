@@ -12,7 +12,13 @@ const { APP_NAMES, APP_ARTIFACTS } = require('../constants')
 
 const VALID_APP_NAMES = Object.entries(APP_NAMES).map((e) => e[1])
 
-async function assertInstalledApps({ template, dao: kernel, lidoApmEnsName }) {
+async function assertInstalledApps({
+  template,
+  dao: kernel,
+  lidoApmEnsName,
+  appProxyUpgradeableArtifactName = 'external:AppProxyUpgradeable',
+  aragonAppArtifactName = 'AragonApp'
+}) {
   const appInstalledEvts = (await template.getPastEvents('TmplAppInstalled', { fromBlock: 0 }))
     .map((evt) => evt.args)
 
@@ -28,8 +34,8 @@ async function assertInstalledApps({ template, dao: kernel, lidoApmEnsName }) {
   )
   log.success(idsCheckDesc)
 
-  const proxyArtifact = await loadArtifact('external:AppProxyUpgradeable')
-  const AragonApp = artifacts.require('AragonApp')
+  const proxyArtifact = await loadArtifact(appProxyUpgradeableArtifactName)
+  const AragonApp = artifacts.require(aragonAppArtifactName)
   const APP_BASES_NAMESPACE = await kernel.APP_BASES_NAMESPACE()
 
   const dataByAppName = {}

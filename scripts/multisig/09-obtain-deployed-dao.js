@@ -54,7 +54,8 @@ async function obtainDeployedAPM({ web3, artifacts, networkStateFile = NETWORK_S
   const dataByAppId = await assertInstalledApps({
     template,
     dao,
-    lidoApmEnsName: state.lidoApmEnsName
+    lidoApmEnsName: state.lidoApmEnsName,
+    appProxyUpgradeableArtifactName: 'external:AppProxyUpgradeable_DAO'
   })
 
   for (const [appName, appData] of Object.entries(dataByAppId)) {
