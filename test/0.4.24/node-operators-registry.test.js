@@ -612,37 +612,4 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await app.removeSigningKey(1, 0, { from: voting })
     await assertRevert(app.getSigningKey(1, 0, { from: nobody }), 'KEY_NOT_FOUND')
   })
-
-  it('distributeRewards works', async () => {
-    await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
-    await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
-    await app.addNodeOperator('3', ADDRESS_3, UNLIMITED, { from: voting })
-
-    await app.addSigningKeys(0, 2, hexConcat(pad('0x010101', 48), pad('0x020202', 48)), hexConcat(pad('0x01', 96), pad('0x02', 96)), {
-      from: voting
-    })
-    await app.addSigningKeys(1, 2, hexConcat(pad('0x050505', 48), pad('0x060606', 48)), hexConcat(pad('0x04', 96), pad('0x03', 96)), {
-      from: voting
-    })
-    await app.addSigningKeys(2, 2, hexConcat(pad('0x070707', 48), pad('0x080808', 48)), hexConcat(pad('0x05', 96), pad('0x06', 96)), {
-      from: voting
-    })
-
-    await pool.assignNextSigningKeys(6)
-    assertBn((await app.getNodeOperator(0, false)).usedSigningKeys, 2, 'op 0 used keys')
-    assertBn((await app.getNodeOperator(1, false)).usedSigningKeys, 2, 'op 1 used keys')
-    assertBn((await app.getNodeOperator(2, false)).usedSigningKeys, 2, 'op 2 used keys')
-
-    await app.reportStoppedValidators(0, 1, { from: voting })
-    await app.setNodeOperatorActive(2, false, { from: voting })
-
-    const token = await ERC20Mock.new()
-    await token.mint(app.address, tokens(900))
-    await pool.distributeRewards(token.address, tokens(900))
-
-    assertBn(await token.balanceOf(ADDRESS_1, { from: nobody }), tokens(300))
-    assertBn(await token.balanceOf(ADDRESS_2, { from: nobody }), tokens(600))
-    assertBn(await token.balanceOf(ADDRESS_3, { from: nobody }), 0)
-    assertBn(await token.balanceOf(app.address, { from: nobody }), 0)
-  })
 })
