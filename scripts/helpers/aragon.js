@@ -46,14 +46,20 @@ async function assertRole({
   }
 
   if (granteeAddress !== undefined) {
-    const desc = `${appName}.${chalk.yellow(roleName)} perm is accessible by ${chalk.yellow(granteeAddress)}`
-    assert.isTrue(await acl.hasPermission(granteeAddress, app.address, permission), desc)
-    log.success(desc)
+    if (!Array.isArray(granteeAddress)) {
+      granteeAddress = [granteeAddress]
+    }
+
+    for (const grantee of granteeAddress) {
+      const desc = `${appName}.${chalk.yellow(roleName)} perm is accessible by ${chalk.yellow(grantee)}`
+      assert.isTrue(await acl.hasPermission(grantee, app.address, permission), desc)
+      log.success(desc)
+    }
 
     if (onlyGrantee) {
       const checkDesc = `${appName}.${chalk.yellow(roleName)} perm is not accessible by any other entities`
       const grantees = getAllGrantees(app, permission, allAclEvents || await getAllAclEvents(acl))
-      const expectedGrantees = [normalizeBytes(granteeAddress)]
+      const expectedGrantees = granteeAddress.map(normalizeBytes)
       assert.sameMembers(grantees, expectedGrantees, checkDesc)
       log.success(checkDesc)
     }
