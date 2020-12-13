@@ -195,6 +195,10 @@ contract LidoTemplate is IsContract {
 
         // make the template a (temporary) manager of the APM registry
         APMRegistry registry = factory.newAPM(_tld, _label, address(this));
+
+        // APMRegistryFactory doesn't revoke its permission to create repos
+        ACL(registry.kernel().acl()).revokePermission(factory, registry, registry.CREATE_REPO_ROLE());
+
         deployState.lidoRegistry = registry;
 
         emit TmplAPMDeployed(address(registry));
