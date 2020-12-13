@@ -9,6 +9,7 @@ const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log } = require('../helpers/log')
 const { readNetworkState, persistNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
 const { saveCallTxData } = require('../helpers/tx-data')
+const { assertLastEvent } = require('../helpers/events')
 const { resolveLatestVersion: apmResolveLatest } = require('../components/apm')
 
 const { APP_NAMES } = require('./constants')
@@ -18,7 +19,6 @@ const REQUIRED_NET_STATE = [
   'ensAddress',
   'multisigAddress',
   'daoTemplateAddress',
-  'createAppReposTx',
   `app:${APP_NAMES.LIDO}`,
   `app:${APP_NAMES.ORACLE}`,
   `app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`,
@@ -38,21 +38,25 @@ async function deployDAO({ web3, artifacts, networkStateFile = NETWORK_STATE_FIL
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
 
   log.splitter()
-  log(`Using LidoTemplate: ${chalk.yellow(state.daoTemplateAddress)}`)
-  log(`Using createRepos transaction: ${chalk.yellow(state.createAppReposTx)}`)
 
-  log.splitter(`Checking preconditions...`)
-  await checkAppRepos(state)
+  log(`Using LidoTemplate: ${chalk.yellow(state.daoTemplateAddress)}`)
+  const template = await artifacts.require('LidoTemplate').at(state.daoTemplateAddress)
+
+  const reposCreatedEvt = await assertLastEvent(template, 'TmplReposCreated')
+  state.createAppReposTx = reposCreatedEvt.transactionHash
+  log(`Using createRepos transaction: ${chalk.yellow(state.createAppReposTx)}`)
+  persistNetworkState(networkStateFile, netId, state)
 
   log.splitter()
+  await checkAppRepos(state)
+  log.splitter()
 
-  const template = await artifacts.require('LidoTemplate3').at(state.daoTemplateAddress)
   const { daoInitialSettings } = state
 
   const votingSettings = [
-    daoInitialSettings.votingSettings.minSupportRequired,
-    daoInitialSettings.votingSettings.minAcceptanceQuorum,
-    daoInitialSettings.votingSettings.voteDuration
+    daoInitialSettings.voting.minSupportRequired,
+    daoInitialSettings.voting.minAcceptanceQuorum,
+    daoInitialSettings.voting.voteDuration
   ]
 
   const beaconSpec = [
@@ -62,12 +66,14 @@ async function deployDAO({ web3, artifacts, networkStateFile = NETWORK_STATE_FIL
     daoInitialSettings.beaconSpec.genesisTime
   ]
 
-  log(`Using DAO settings:`, daoInitialSettings)
+  log(`Using DAO token settings:`, daoInitialSettings.token)
+  log(`Using DAO voting settings:`, daoInitialSettings.voting)
+  log(`Using beacon spec:`, daoInitialSettings.beaconSpec)
 
-  await saveCallTxData(`newDAO`, template, 'newDAO', `tx-07-deploy-dao.json`, {
+  await saveCallTxData(`newDAO`, template, 'newDAO', `tx-04-deploy-dao.json`, {
     arguments: [
-      daoInitialSettings.tokenName,
-      daoInitialSettings.tokenSymbol,
+      daoInitialSettings.token.name,
+      daoInitialSettings.token.symbol,
       votingSettings,
       daoInitialSettings.beaconSpec.depositContractAddress,
       beaconSpec
