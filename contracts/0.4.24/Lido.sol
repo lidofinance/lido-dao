@@ -551,10 +551,10 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     * @param _totalRewards Total rewards accrued on the Ethereum 2.0 side in wei
     */
     function distributeRewards(uint256 _totalRewards) internal {
-        uint256 feeInEther = _totalRewards.mul(_getFee()).div(10000);
         // We need to take a defined percentage of the reported reward as a fee, and we do
         // this by minting new token shares and assigning them to the fee recipients (see
-        // StETH docs for the explanation of the shares mechanics).
+        // StETH docs for the explanation of the shares mechanics). The staking rewards fee
+        // is defined in basis points (1 basis point is equal to 0.01%, 10000 is 100%).
         //
         // Since we've increased totalPooledEther by _totalRewards (which is already
         // performed by the time this function is called), the combined cost of all holders'
@@ -564,23 +564,25 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         // Now we want to mint new shares to the fee recipient, so that the total cost of the
         // newly-minted shares exactly corresponds to the fee taken:
         //
-        // shares2mint * newShareCost = feeInEther
+        // shares2mint * newShareCost = (_totalRewards * feeBasis) / 10000
         // newShareCost = newTotalPooledEther / (prevTotalShares + shares2mint)
         //
         // which follows to:
         //
-        //                    feeInEther * prevTotalShares
-        // shares2mint = --------------------------------------
-        //                 newTotalPooledEther - feeInEther
+        //                        _totalRewards * feeBasis * prevTotalShares
+        // shares2mint = --------------------------------------------------------------
+        //                 (newTotalPooledEther * 10000) - (feeBasis * _totalRewards)
         //
         // The effect is that the given percentage of the reward goes to the fee recipient, and
         // the rest of the reward is distributed between token holders proportionally to their
         // token shares.
-        //
+        uint256 feeBasis = _getFee();
         uint256 shares2mint = (
-            feeInEther
-            .mul(_getTotalShares())
-            .div(_getTotalPooledEther().sub(feeInEther))
+            _totalRewards.mul(feeBasis).mul(_getTotalShares())
+            .div(
+                _getTotalPooledEther().mul(10000)
+                .sub(feeBasis.mul(_totalRewards))
+            )
         );
 
         // Mint the calculated amount of shares to this contract address. This will reduce the
