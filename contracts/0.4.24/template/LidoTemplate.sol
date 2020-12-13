@@ -391,7 +391,6 @@ contract LidoTemplate is IsContract {
         require(tokenManager != address(0), ERROR_DAO_NOT_DEPLOYED);
 
         uint256 totalAmount = _issueTokens(
-            deployState.acl,
             tokenManager,
             _holders,
             _amounts,
@@ -527,7 +526,6 @@ contract LidoTemplate is IsContract {
     }
 
     function _issueTokens(
-        ACL _acl,
         TokenManager _tokenManager,
         address[] memory _holders,
         uint256[] memory _amounts,
