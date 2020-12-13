@@ -156,7 +156,12 @@ async function checkDAO({ web3, artifacts, networkStateFile = NETWORK_STATE_FILE
 
   log.splitter()
 
-  await assertInstalledApps({ template, dao, lidoApmEnsName: state.lidoApmEnsName })
+  await assertInstalledApps({
+    template,
+    dao,
+    lidoApmEnsName: state.lidoApmEnsName,
+    appProxyUpgradeableArtifactName: 'external:AppProxyUpgradeable_DAO'
+  })
 
   log.splitter()
 
