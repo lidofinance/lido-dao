@@ -33,7 +33,7 @@ library MemUtils {
             if gt(_len, 0) {
                 // read the next 32-byte chunk from _dst, replace the first N bytes
                 // with those left in the _src, and write the transformed chunk back
-                let mask := sub(exp(256, sub(32, _len)), 1) // 2 ** (8 * (32 - _len)) - 1
+                let mask := sub(shl(1, mul(8, sub(32, _len))), 1) // 2 ** (8 * (32 - _len)) - 1
                 let srcMasked := and(mload(_src), not(mask))
                 let dstMasked := and(mload(_dst), mask)
                 mstore(_dst, or(dstMasked, srcMasked))
