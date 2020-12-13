@@ -11,13 +11,13 @@ async function deployLidoBases({ web3, artifacts }) {
   log(`Network ID: ${chalk.yellow(netId)}`)
 
   logSplitter()
-  await saveDeployTx('Lido', 'tx-02-deploy-lido-base.json')
+  await saveDeployTx('Lido', 'tx-01-2-deploy-lido-base.json')
 
   logSplitter()
-  await saveDeployTx('LidoOracle', 'tx-03-deploy-oracle-base.json')
+  await saveDeployTx('LidoOracle', 'tx-01-3-deploy-oracle-base.json')
 
   logSplitter()
-  await saveDeployTx('NodeOperatorsRegistry', 'tx-04-deploy-nops-base.json')
+  await saveDeployTx('NodeOperatorsRegistry', 'tx-01-4-deploy-nops-base.json')
 }
 
 module.exports = runOrWrapScript(deployLidoBases, module)

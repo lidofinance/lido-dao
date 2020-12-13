@@ -27,7 +27,7 @@ async function deployTemplate({ web3, artifacts, networkStateFile = NETWORK_STAT
     state.apmRegistryFactoryAddress
   ]
 
-  await saveDeployTx('LidoTemplate3', 'tx-01-deploy-template.json', daoTemplateConstructorArgs)
+  await saveDeployTx('LidoTemplate', 'tx-01-1-deploy-template.json', daoTemplateConstructorArgs)
   persistNetworkState(networkStateFile, netId, state, { daoTemplateConstructorArgs })
 }
 

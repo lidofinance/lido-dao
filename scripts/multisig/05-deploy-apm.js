@@ -6,6 +6,7 @@ const keccak256 = require('js-sha3').keccak_256
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, logSplitter, logWideSplitter } = require('../helpers/log')
 const { saveCallTxData } = require('../helpers/tx-data')
+const { assertNoEvents } = require('../helpers/events')
 const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
 const { getENSNodeOwner } = require('../components/ens')
 
@@ -26,7 +27,10 @@ async function deployAPM({ web3, artifacts, networkStateFile = NETWORK_STATE_FIL
   log(`APM ENS domain: ${chalk.yellow(state.lidoApmEnsName)}`)
   log(`Using DAO template: ${chalk.yellow(state.daoTemplateAddress)}`)
 
-  logSplitter('Checking preconditions...')
+  const template = await artifacts.require('LidoTemplate').at(state.daoTemplateAddress)
+
+  log.splitter()
+  await assertNoEvents(template)
 
   const ens = await artifacts.require('ENS').at(state.ensAddress)
   const lidoApmEnsNode = namehash(state.lidoApmEnsName)
@@ -38,8 +42,6 @@ async function deployAPM({ web3, artifacts, networkStateFile = NETWORK_STATE_FIL
 
   logSplitter()
 
-  const template = await artifacts.require('LidoTemplate3').at(state.daoTemplateAddress)
-
   const domain = splitDomain(state.lidoApmEnsName)
   const parentHash = namehash(domain.parent)
   const subHash = '0x' + keccak256(domain.sub)
@@ -49,7 +51,7 @@ async function deployAPM({ web3, artifacts, networkStateFile = NETWORK_STATE_FIL
 
   logSplitter()
 
-  await saveCallTxData(`APM deploy`, template, 'deployLidoAPM', `tx-05-deploy-apm.json`, {
+  await saveCallTxData(`APM deploy`, template, 'deployLidoAPM', `tx-02-deploy-apm.json`, {
     arguments: [parentHash, subHash],
     from: state.multisigAddress
   })

@@ -4,6 +4,7 @@ const { assert } = require('chai')
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, logSplitter, logWideSplitter } = require('../helpers/log')
 const { saveCallTxData } = require('../helpers/tx-data')
+const { assertLastEvent } = require('../helpers/events')
 const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
 
 // this is needed for the next `require` to work, some kind of typescript path magic
@@ -32,10 +33,10 @@ async function createAppRepos({ web3, artifacts, networkStateFile = NETWORK_STAT
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
 
   logSplitter()
-  log(`Using DAO template: ${chalk.yellow(state.daoTemplateAddress)}`)
+  log(`Using LidoTemplate: ${chalk.yellow(state.daoTemplateAddress)}`)
+  const template = await artifacts.require('LidoTemplate').at(state.daoTemplateAddress)
+  await assertLastEvent(template, 'TmplAPMDeployed')
   logSplitter()
-
-  const template = await artifacts.require('LidoTemplate3').at(state.daoTemplateAddress)
 
   const lidoAppState = state[`app:${APP_NAMES.LIDO}`]
   const oracleAppState = state[`app:${APP_NAMES.ORACLE}`]
@@ -45,7 +46,7 @@ async function createAppRepos({ web3, artifacts, networkStateFile = NETWORK_STAT
   assignContentURI(oracleAppState)
   assignContentURI(nodeOperatorsAppState)
 
-  await saveCallTxData(`createRepos`, template, 'createRepos', `tx-06-create-app-repos.json`, {
+  await saveCallTxData(`createRepos`, template, 'createRepos', `tx-03-create-app-repos.json`, {
     arguments: [
       [1, 0, 0],
       // Lido app

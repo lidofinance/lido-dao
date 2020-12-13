@@ -30,7 +30,7 @@ import "../nos/NodeOperatorsRegistry.sol";
 import "../interfaces/IValidatorRegistration.sol";
 
 
-contract LidoTemplate3 is IsContract {
+contract LidoTemplate is IsContract {
     // Configurarion errors
     string constant private ERROR_ZERO_OWNER = "TMPL_ZERO_OWNER";
     string constant private ERROR_ENS_NOT_CONTRACT = "TMPL_ENS_NOT_CONTRACT";

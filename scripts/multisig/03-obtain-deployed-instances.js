@@ -78,10 +78,10 @@ async function deployTemplate({ web3, artifacts, networkStateFile = NETWORK_STAT
 }
 
 async function obtainTemplate(state) {
-  const daoTemplate = await useOrGetDeployed('LidoTemplate3', state.daoTemplateAddress, state.daoTemplateDeployTx)
+  const daoTemplate = await useOrGetDeployed('LidoTemplate', state.daoTemplateAddress, state.daoTemplateDeployTx)
 
   log(`Checking...`)
-  await assertDeployedBytecode(daoTemplate.address, 'LidoTemplate3')
+  await assertDeployedBytecode(daoTemplate.address, 'LidoTemplate')
 
   const templateConfig = await daoTemplate.getConfig()
   assert.equal(templateConfig._owner, state.multisigAddress, 'tmpl: owner')
