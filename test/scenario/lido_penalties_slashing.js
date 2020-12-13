@@ -179,7 +179,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
   it(`new validator doesn't get buffered ether even if there's 32 ETH deposit in the pool`, async () => {
     assertBn(await pool.getBufferedEther(), ETH(32), `all ether is buffered until there's a validator to deposit it`)
     assertBn(await pool.getTotalPooledEther(), ETH(32), 'total pooled ether')
-    assertBn(await nodeOperatorRegistry.getUnusedSigningKeyCount(0), 1, 'no more available keys for the first validator')
+    assertBn(await nodeOperatorRegistry.getUnusedSigningKeyCount(0), 1, 'one key available for the first validator')
   })
 
   it(`pushes pooled eth to the available validator`, async () => {
