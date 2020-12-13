@@ -80,6 +80,7 @@
         }
       },
       "vestingParams": {
+        "unvestedTokensAmount": "10000000000000000000000",
         "holders": [
           "0x22bB9fC78EB9eDC1A44b3B5c25ae1Ed157ecda35",
           "0x31a3D0080AA54C303Da7c15c5b89C51d582EF6CF",

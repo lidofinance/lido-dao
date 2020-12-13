@@ -409,7 +409,8 @@ contract LidoTemplate is IsContract {
         uint16 _totalFeeBP,
         uint16 _treasuryFeeBP,
         uint16 _insuranceFeeBP,
-        uint16 _operatorsFeeBP
+        uint16 _operatorsFeeBP,
+        uint256 unvestedTokensAmount
     )
         onlyOwner
         external
@@ -426,6 +427,11 @@ contract LidoTemplate is IsContract {
         state.lido.setFee(_totalFeeBP);
         state.lido.setFeeDistribution(_treasuryFeeBP, _insuranceFeeBP, _operatorsFeeBP);
         _removePermissionFromTemplate(state.acl, state.lido, LIDO_MANAGE_FEE);
+
+        if (unvestedTokensAmount != 0) {
+            state.tokenManager.issue(unvestedTokensAmount);
+            emit TmplTokensIssued(unvestedTokensAmount);
+        }
 
         _setupPermissions(state, repos);
         _transferRootPermissionsFromTemplateAndFinalizeDAO(state.dao, state.voting);
