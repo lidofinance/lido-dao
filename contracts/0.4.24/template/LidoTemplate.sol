@@ -106,7 +106,6 @@ contract LidoTemplate is IsContract {
     }
 
     struct AppVersion {
-        uint16[3] semanticVersion;
         address contractAddress;
         bytes contentURI;
     }
@@ -252,7 +251,7 @@ contract LidoTemplate is IsContract {
         apmRepos.aragonAgent = lidoRegistry.newRepoWithVersion(
             ARAGON_AGENT_APP_NAME,
             this,
-            latest.semanticVersion,
+            _initialSemanticVersion,
             latest.contractAddress,
             latest.contentURI
         );
@@ -261,7 +260,7 @@ contract LidoTemplate is IsContract {
         apmRepos.aragonFinance = lidoRegistry.newRepoWithVersion(
             ARAGON_FINANCE_APP_NAME,
             this,
-            latest.semanticVersion,
+            _initialSemanticVersion,
             latest.contractAddress,
             latest.contentURI
         );
@@ -270,7 +269,7 @@ contract LidoTemplate is IsContract {
         apmRepos.aragonTokenManager = lidoRegistry.newRepoWithVersion(
             ARAGON_TOKEN_MANAGER_APP_NAME,
             this,
-            latest.semanticVersion,
+            _initialSemanticVersion,
             latest.contractAddress,
             latest.contentURI
         );
@@ -279,7 +278,7 @@ contract LidoTemplate is IsContract {
         apmRepos.aragonVoting = lidoRegistry.newRepoWithVersion(
             ARAGON_VOTING_APP_NAME,
             this,
-            latest.semanticVersion,
+            _initialSemanticVersion,
             latest.contractAddress,
             latest.contentURI
         );
@@ -713,8 +712,8 @@ contract LidoTemplate is IsContract {
 
     function _apmResolveLatest(bytes32 _appId) private view returns (AppVersion memory) {
         Repo repo = _resolveRepo(_appId);
-        (uint16[3] memory semanticVersion, address contractAddress, bytes memory contentURI) = repo.getLatest();
-        return AppVersion(semanticVersion, contractAddress, contentURI);
+        (, address contractAddress, bytes memory contentURI) = repo.getLatest();
+        return AppVersion(contractAddress, contentURI);
     }
 
     function _resolveRepo(bytes32 _appId) private view returns (Repo) {
