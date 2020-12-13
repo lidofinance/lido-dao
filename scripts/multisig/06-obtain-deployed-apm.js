@@ -1,6 +1,5 @@
 const path = require('path')
 const chalk = require('chalk')
-const { assert } = require('chai')
 const { getEvents } = require('@aragon/contract-helpers-test')
 const { hash: namehash } = require('eth-ens-namehash')
 const { toChecksumAddress } = require('web3-utils')
@@ -8,6 +7,7 @@ const { toChecksumAddress } = require('web3-utils')
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { readJSON } = require('../helpers/fs')
 const { log } = require('../helpers/log')
+const { assert } = require('../helpers/assert')
 const { assertProxiedContractBytecode } = require('../helpers/deploy')
 const { assertLastEvent } = require('../helpers/events')
 const { readNetworkState, persistNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
@@ -44,11 +44,11 @@ async function obtainDeployedAPM({ web3, artifacts, networkStateFile = NETWORK_S
   const registry = await artifacts.require('APMRegistry').at(registryAddress)
 
   const registryArtifact = await readJSON(path.join(__dirname, 'external-artifacts', 'APMRegistry.json'))
-  const proxyArtifact = await readJSON(path.join(__dirname, 'external-artifacts', 'AppProxyUpgradeable.json'))
+  const proxyArtifact = await readJSON(path.join(__dirname, 'external-artifacts', 'AppProxyUpgradeable_APM.json'))
   await assertProxiedContractBytecode(registry.address, proxyArtifact, registryArtifact)
 
   const ensAddress = await registry.ens()
-  assert.equal(ensAddress, state.ensAddress, 'APMRegistry ENS address')
+  assert.addressEqual(ensAddress, state.ensAddress, 'APMRegistry ENS address')
   log.success(`registry.ens: ${chalk.yellow(ensAddress)}`)
 
   const registrarAddress = await registry.registrar()
@@ -56,7 +56,7 @@ async function obtainDeployedAPM({ web3, artifacts, networkStateFile = NETWORK_S
   log.success(`registry.registrar: ${chalk.yellow(registrarAddress)}`)
 
   const registrarEnsAddress = await registrar.ens()
-  assert.equal(registrarEnsAddress, state.ensAddress, 'ENSSubdomainRegistrar: ENS address')
+  assert.addressEqual(registrarEnsAddress, state.ensAddress, 'ENSSubdomainRegistrar: ENS address')
   log.success(`registry.registrar.ens: ${chalk.yellow(registrarEnsAddress)}`)
 
   const rootNode = await registrar.rootNode()
@@ -66,7 +66,7 @@ async function obtainDeployedAPM({ web3, artifacts, networkStateFile = NETWORK_S
 
   const ens = await artifacts.require('ENS').at(ensAddress)
   const rootNodeOwner = await getENSNodeOwner(ens, lidoApmRootNode)
-  assert.equal(rootNodeOwner, registrarAddress, 'ENSSubdomainRegistrar: root node owner')
+  assert.addressEqual(rootNodeOwner, registrarAddress, 'ENSSubdomainRegistrar: root node owner')
   log.success(`registry.registrar.rootNode owner: ${chalk.yellow(rootNodeOwner)}`)
 
   const registryKernelAddress = await registry.kernel()
@@ -78,7 +78,7 @@ async function obtainDeployedAPM({ web3, artifacts, networkStateFile = NETWORK_S
   log.success(`registry.kernel.acl: ${chalk.yellow(registryACLAddress)}`)
 
   const registrarKernelAddress = await registrar.kernel()
-  assert.equal(registrarKernelAddress, registryKernelAddress, 'registrar kernel')
+  assert.addressEqual(registrarKernelAddress, registryKernelAddress, 'registrar kernel')
   log.success(`registry.registrar.kernel: ${chalk.yellow(registrarKernelAddress)}`)
 
   await assertAPMRegistryPermissions({
