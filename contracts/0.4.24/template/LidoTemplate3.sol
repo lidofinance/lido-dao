@@ -7,6 +7,8 @@ pragma solidity 0.4.24;
 import "@aragon/os/contracts/factory/APMRegistryFactory.sol";
 import "@aragon/os/contracts/acl/ACL.sol";
 import "@aragon/os/contracts/apm/Repo.sol";
+import "@aragon/os/contracts/apm/APMRegistry.sol";
+import "@aragon/os/contracts/ens/ENSSubdomainRegistrar.sol";
 import "@aragon/os/contracts/kernel/Kernel.sol";
 import "@aragon/os/contracts/lib/ens/ENS.sol";
 import "@aragon/os/contracts/lib/ens/PublicResolver.sol";
@@ -37,7 +39,7 @@ contract LidoTemplate3 is IsContract {
     string constant private ERROR_ARAGON_ID_NOT_CONTRACT = "TMPL_ARAGON_ID_NOT_CONTRACT";
     string constant private ERROR_APM_REGISTRY_FACTORY_NOT_CONTRACT = "TMPL_APM_REGISTRY_FAC_NOT_CONTRACT";
     string constant private ERROR_EMPTY_HOLDERS = "TMPL_EMPTY_HOLDERS";
-    string constant private ERROR_BAD_STAKES_LEN = "TMPL_BAD_STAKES_LEN";
+    string constant private ERROR_BAD_AMOUNTS_LEN = "TMPL_BAD_AMOUNTS_LEN";
     string constant private ERROR_INVALID_ID = "TMPL_INVALID_ID";
 
     // Operational errors
@@ -55,6 +57,11 @@ contract LidoTemplate3 is IsContract {
     bytes32 constant private ARAGON_VOTING_APP_ID = 0x9fa3927f639745e587912d4b0fea7ef9013bf93fb907d29faeab57417ba6e1d4; // voting.aragonpm.eth
     bytes32 constant private ARAGON_FINANCE_APP_ID = 0xbf8491150dafc5dcaee5b861414dca922de09ccffa344964ae167212e8c673ae; // finance.aragonpm.eth
     bytes32 constant private ARAGON_TOKEN_MANAGER_APP_ID = 0x6b20a3010614eeebf2138ccec99f028a61c811b3b1a3343b6ff635985c75c91f; // token-manager.aragonpm.eth
+
+    // APM app names, see https://github.com/aragon/aragonOS/blob/f3ae59b/contracts/apm/APMRegistry.sol#L11
+    string constant private APM_APP_NAME = "apm-registry";
+    string constant private APM_REPO_APP_NAME = "apm-repo";
+    string constant private APM_ENSSUB_APP_NAME = "apm-enssub";
 
     // Aragon app names
     string constant private ARAGON_AGENT_APP_NAME = "aragon-agent";
@@ -114,10 +121,12 @@ contract LidoTemplate3 is IsContract {
     DeployState private deployState;
     APMRepos private apmRepos;
 
-    event DeployDao(address dao);
-    event SetupDao(address dao);
-    event DeployToken(address token);
-    event InstalledApp(address appProxy, bytes32 appId);
+    event TmplAPMDeployed(address apm);
+    event TmplReposCreated();
+    event TmplAppInstalled(address appProxy, bytes32 appId);
+    event TmplDAOAndTokenDeployed(address dao, address token);
+    event TmplTokensIssued(uint256 totalAmount);
+    event TmplDaoFinalized();
 
     modifier onlyOwner() {
         require(msg.sender == owner, ERROR_PERMISSION_DENIED);
@@ -187,6 +196,8 @@ contract LidoTemplate3 is IsContract {
         // make the template a (temporary) manager of the APM registry
         APMRegistry registry = factory.newAPM(_tld, _label, address(this));
         deployState.lidoRegistry = registry;
+
+        emit TmplAPMDeployed(address(registry));
     }
 
     function createRepos(
@@ -268,6 +279,8 @@ contract LidoTemplate3 is IsContract {
             latest.contractAddress,
             latest.contentURI
         );
+
+        emit TmplReposCreated();
     }
 
     function newDAO(
@@ -352,13 +365,17 @@ contract LidoTemplate3 is IsContract {
             state.agent  // insurance fund
         );
 
+        // used for issuing vested tokens in the next step
+        _createTokenManagerPersissionsForTemplate(state.acl, state.tokenManager);
+
+        emit TmplDAOAndTokenDeployed(address(state.dao), address(state.token));
+
         deployState = state;
     }
 
-    function finalizeDAO(
-        string _daoName,
+    function issueTokens(
         address[] _holders,
-        uint256[] _stakes,
+        uint256[] _amounts,
         uint64 _vestingStart,
         uint64 _vestingCliff,
         uint64 _vestingEnd,
@@ -367,32 +384,56 @@ contract LidoTemplate3 is IsContract {
         onlyOwner
         external
     {
-        DeployState memory state = deployState;
-        APMRepos memory repos = apmRepos;
-
-        require(state.dao != address(0), ERROR_DAO_NOT_DEPLOYED);
-
         require(_holders.length > 0, ERROR_EMPTY_HOLDERS);
-        require(_holders.length == _stakes.length, ERROR_BAD_STAKES_LEN);
+        require(_holders.length == _amounts.length, ERROR_BAD_AMOUNTS_LEN);
 
-        require(bytes(_daoName).length > 0, ERROR_INVALID_ID);
+        TokenManager tokenManager = deployState.tokenManager;
+        require(tokenManager != address(0), ERROR_DAO_NOT_DEPLOYED);
 
-        _issueTokens(
-            state.acl,
-            state.tokenManager,
+        uint256 totalAmount = _issueTokens(
+            deployState.acl,
+            tokenManager,
             _holders,
-            _stakes,
+            _amounts,
             _vestingStart,
             _vestingCliff,
             _vestingEnd,
             _vestingRevokable
         );
 
-        _resetState();
+        emit TmplTokensIssued(totalAmount);
+    }
+
+    function finalizeDAO(
+        string _daoName,
+        uint16 _totalFeeBP,
+        uint16 _treasuryFeeBP,
+        uint16 _insuranceFeeBP,
+        uint16 _operatorsFeeBP
+    )
+        onlyOwner
+        external
+    {
+        DeployState memory state = deployState;
+        APMRepos memory repos = apmRepos;
+
+        require(state.dao != address(0), ERROR_DAO_NOT_DEPLOYED);
+        require(bytes(_daoName).length > 0, ERROR_INVALID_ID);
+
+        // Set initial values for fee and its distribution
+        bytes32 LIDO_MANAGE_FEE = state.lido.MANAGE_FEE();
+        _createPermissionForTemplate(state.acl, state.lido, LIDO_MANAGE_FEE);
+        state.lido.setFee(_totalFeeBP);
+        state.lido.setFeeDistribution(_treasuryFeeBP, _insuranceFeeBP, _operatorsFeeBP);
+        _removePermissionFromTemplate(state.acl, state.lido, LIDO_MANAGE_FEE);
+
         _setupPermissions(state, repos);
         _transferRootPermissionsFromTemplateAndFinalizeDAO(state.dao, state.voting, state.voting);
+        _resetState();
 
         aragonID.register(keccak256(abi.encodePacked(_daoName)), state.dao);
+
+        emit TmplDaoFinalized();
     }
 
     /* DAO AND APPS */
@@ -405,7 +446,6 @@ contract LidoTemplate3 is IsContract {
     */
     function _createDAO() private returns (Kernel dao, ACL acl) {
         dao = daoFactory.newDAO(this);
-        emit DeployDao(address(dao));
         acl = ACL(dao.acl());
         _createPermissionForTemplate(acl, dao, dao.APP_MANAGER_ROLE());
     }
@@ -469,7 +509,7 @@ contract LidoTemplate3 is IsContract {
     function _installApp(Kernel _dao, bytes32 _appId, bytes memory _initializeData, bool _setDefault) internal returns (address) {
         address latestBaseAppAddress = _apmResolveLatest(_appId).contractAddress;
         address instance = address(_dao.newAppInstance(_appId, latestBaseAppAddress, _initializeData, _setDefault));
-        emit InstalledApp(instance, _appId);
+        emit TmplAppInstalled(instance, _appId);
         return instance;
     }
 
@@ -477,7 +517,6 @@ contract LidoTemplate3 is IsContract {
 
     function _createToken(string memory _name, string memory _symbol, uint8 _decimals) internal returns (MiniMeToken) {
         MiniMeToken token = miniMeFactory.createCloneToken(MiniMeToken(address(0)), 0, _name, _decimals, _symbol, true);
-        emit DeployToken(address(token));
         return token;
     }
 
@@ -485,35 +524,36 @@ contract LidoTemplate3 is IsContract {
         ACL _acl,
         TokenManager _tokenManager,
         address[] memory _holders,
-        uint256[] memory _stakes,
+        uint256[] memory _amounts,
         uint64 _vestingStart,
         uint64 _vestingCliff,
         uint64 _vestingEnd,
         bool _vestingRevokable
-    ) private {
-        _createPermissionForTemplate(_acl, _tokenManager, _tokenManager.ISSUE_ROLE());
-        _createPermissionForTemplate(_acl, _tokenManager, _tokenManager.ASSIGN_ROLE());
-
-        uint256 totalStake = 0;
+    )
+        private
+        returns (uint256 totalAmount)
+    {
+        totalAmount = 0;
         uint256 i;
 
         for (i = 0; i < _holders.length; ++i) {
-            totalStake += _stakes[i];
+            totalAmount += _amounts[i];
         }
 
-        _tokenManager.issue(totalStake);
+        _tokenManager.issue(totalAmount);
 
         for (i = 0; i < _holders.length; ++i) {
-            _tokenManager.assignVested(_holders[i], _stakes[i], _vestingStart, _vestingCliff, _vestingEnd, _vestingRevokable);
+            _tokenManager.assignVested(_holders[i], _amounts[i], _vestingStart, _vestingCliff, _vestingEnd, _vestingRevokable);
         }
 
-        _removePermissionFromTemplate(_acl, _tokenManager, _tokenManager.ISSUE_ROLE());
-        _removePermissionFromTemplate(_acl, _tokenManager, _tokenManager.ASSIGN_ROLE());
+        return totalAmount;
     }
 
     /* PERMISSIONS */
 
     function _setupPermissions(DeployState memory _state, APMRepos memory _repos) private {
+        _removeTokenManagerPersissionsFromTemplate(_state.acl, _state.tokenManager);
+
         _createAgentPermissions(_state.acl, _state.agent, _state.voting, _state.voting);
         _createVaultPermissions(_state.acl, _state.agent, _state.finance, _state.voting);
         _createFinancePermissions(_state.acl, _state.finance, _state.voting, _state.voting);
@@ -521,13 +561,20 @@ contract LidoTemplate3 is IsContract {
         _createVotingPermissions(_state.acl, _state.voting, _state.voting, _state.tokenManager, _state.voting);
         _createTokenManagerPermissions(_state.acl, _state.tokenManager, _state.voting, _state.voting);
 
+        // APM
+
         Kernel apmDAO = Kernel(_state.lidoRegistry.kernel());
         ACL apmACL = ACL(apmDAO.acl());
         bytes32 REPO_CREATE_VERSION_ROLE = _repos.lido.CREATE_VERSION_ROLE();
+        ENSSubdomainRegistrar apmRegistrar = _state.lidoRegistry.registrar();
 
         _transferPermissionFromTemplate(apmACL, _state.lidoRegistry, _state.voting, _state.lidoRegistry.CREATE_REPO_ROLE());
         apmACL.setPermissionManager(_state.voting, apmDAO, apmDAO.APP_MANAGER_ROLE());
         _transferPermissionFromTemplate(apmACL, apmACL, _state.voting, apmACL.CREATE_PERMISSIONS_ROLE());
+        apmACL.setPermissionManager(_state.voting, apmRegistrar, apmRegistrar.CREATE_NAME_ROLE());
+        apmACL.setPermissionManager(_state.voting, apmRegistrar, apmRegistrar.POINT_ROOTNODE_ROLE());
+
+        // APM repos
 
         _transferPermissionFromTemplate(apmACL, _repos.lido, _state.voting, REPO_CREATE_VERSION_ROLE);
         _transferPermissionFromTemplate(apmACL, _repos.oracle, _state.voting, REPO_CREATE_VERSION_ROLE);
@@ -536,6 +583,27 @@ contract LidoTemplate3 is IsContract {
         _transferPermissionFromTemplate(apmACL, _repos.aragonFinance, _state.voting, REPO_CREATE_VERSION_ROLE);
         _transferPermissionFromTemplate(apmACL, _repos.aragonTokenManager, _state.voting, REPO_CREATE_VERSION_ROLE);
         _transferPermissionFromTemplate(apmACL, _repos.aragonVoting, _state.voting, REPO_CREATE_VERSION_ROLE);
+
+        _transferPermissionFromTemplate(
+            apmACL,
+            _resolveRepo(_getAppId(APM_APP_NAME, _state.lidoRegistryEnsNode)),
+            _state.voting,
+            REPO_CREATE_VERSION_ROLE
+        );
+
+        _transferPermissionFromTemplate(
+            apmACL,
+            _resolveRepo(_getAppId(APM_REPO_APP_NAME, _state.lidoRegistryEnsNode)),
+            _state.voting,
+            REPO_CREATE_VERSION_ROLE
+        );
+
+        _transferPermissionFromTemplate(
+            apmACL,
+            _resolveRepo(_getAppId(APM_ENSSUB_APP_NAME, _state.lidoRegistryEnsNode)),
+            _state.voting,
+            REPO_CREATE_VERSION_ROLE
+        );
 
         // Oracle
         _state.acl.createPermission(_state.voting, _state.oracle, _state.oracle.MANAGE_MEMBERS(), _state.voting);
@@ -559,6 +627,16 @@ contract LidoTemplate3 is IsContract {
         _state.acl.createPermission(_state.voting, _state.lido, _state.lido.BURN_ROLE(), _state.voting);
         _state.acl.createPermission(_state.voting, _state.lido, _state.lido.SET_TREASURY(), _state.voting);
         _state.acl.createPermission(_state.voting, _state.lido, _state.lido.SET_INSURANCE_FUND(), _state.voting);
+    }
+
+    function _createTokenManagerPersissionsForTemplate(ACL _acl, TokenManager _tokenManager) internal {
+        _createPermissionForTemplate(_acl, _tokenManager, _tokenManager.ISSUE_ROLE());
+        _createPermissionForTemplate(_acl, _tokenManager, _tokenManager.ASSIGN_ROLE());
+    }
+
+    function _removeTokenManagerPersissionsFromTemplate(ACL _acl, TokenManager _tokenManager) internal {
+        _removePermissionFromTemplate(_acl, _tokenManager, _tokenManager.ISSUE_ROLE());
+        _removePermissionFromTemplate(_acl, _tokenManager, _tokenManager.ASSIGN_ROLE());
     }
 
     function _createAgentPermissions(ACL _acl, Agent _agent, address _grantee, address _manager) internal {
@@ -614,7 +692,6 @@ contract LidoTemplate3 is IsContract {
         ACL _acl = ACL(_dao.acl());
         _transferPermissionFromTemplate(_acl, _dao, _to, _dao.APP_MANAGER_ROLE(), _manager);
         _transferPermissionFromTemplate(_acl, _acl, _to, _acl.CREATE_PERMISSIONS_ROLE(), _manager);
-        emit SetupDao(_dao);
     }
 
     function _transferPermissionFromTemplate(ACL _acl, address _app, address _to, bytes32 _permission) private {
@@ -630,9 +707,13 @@ contract LidoTemplate3 is IsContract {
     /* APM and ENS */
 
     function _apmResolveLatest(bytes32 _appId) private view returns (AppVersion memory) {
-        Repo repo = Repo(PublicResolver(ens.resolver(_appId)).addr(_appId));
+        Repo repo = _resolveRepo(_appId);
         (uint16[3] memory semanticVersion, address contractAddress, bytes memory contentURI) = repo.getLatest();
         return AppVersion(semanticVersion, contractAddress, contentURI);
+    }
+
+    function _resolveRepo(bytes32 _appId) private view returns (Repo) {
+        return Repo(PublicResolver(ens.resolver(_appId)).addr(_appId));
     }
 
     /**
