@@ -428,7 +428,7 @@ contract LidoTemplate is IsContract {
         _removePermissionFromTemplate(state.acl, state.lido, LIDO_MANAGE_FEE);
 
         _setupPermissions(state, repos);
-        _transferRootPermissionsFromTemplateAndFinalizeDAO(state.dao, state.voting, state.voting);
+        _transferRootPermissionsFromTemplateAndFinalizeDAO(state.dao, state.voting);
         _resetState();
 
         aragonID.register(keccak256(abi.encodePacked(_daoName)), state.dao);
@@ -552,14 +552,17 @@ contract LidoTemplate is IsContract {
     /* PERMISSIONS */
 
     function _setupPermissions(DeployState memory _state, APMRepos memory _repos) private {
-        _removeTokenManagerPersissionsFromTemplate(_state.acl, _state.tokenManager);
+        ACL acl = _state.acl;
+        Voting voting = _state.voting;
 
-        _createAgentPermissions(_state.acl, _state.agent, _state.voting, _state.voting);
-        _createVaultPermissions(_state.acl, _state.agent, _state.finance, _state.voting);
-        _createFinancePermissions(_state.acl, _state.finance, _state.voting, _state.voting);
-        _createEvmScriptsRegistryPermissions(_state.acl, _state.voting, _state.voting);
-        _createVotingPermissions(_state.acl, _state.voting, _state.voting, _state.tokenManager, _state.voting);
-        _createTokenManagerPermissions(_state.acl, _state.tokenManager, _state.voting, _state.voting);
+        _removeTokenManagerPersissionsFromTemplate(acl, _state.tokenManager);
+
+        _createAgentPermissions(acl, _state.agent, voting);
+        _createVaultPermissions(acl, _state.agent, _state.finance, voting);
+        _createFinancePermissions(acl, _state.finance, voting);
+        _createEvmScriptsRegistryPermissions(acl, voting);
+        _createVotingPermissions(acl, voting, _state.tokenManager);
+        _createTokenManagerPermissions(acl, _state.tokenManager, voting);
 
         // APM
 
@@ -568,65 +571,69 @@ contract LidoTemplate is IsContract {
         bytes32 REPO_CREATE_VERSION_ROLE = _repos.lido.CREATE_VERSION_ROLE();
         ENSSubdomainRegistrar apmRegistrar = _state.lidoRegistry.registrar();
 
-        _transferPermissionFromTemplate(apmACL, _state.lidoRegistry, _state.voting, _state.lidoRegistry.CREATE_REPO_ROLE());
-        apmACL.setPermissionManager(_state.voting, apmDAO, apmDAO.APP_MANAGER_ROLE());
-        _transferPermissionFromTemplate(apmACL, apmACL, _state.voting, apmACL.CREATE_PERMISSIONS_ROLE());
-        apmACL.setPermissionManager(_state.voting, apmRegistrar, apmRegistrar.CREATE_NAME_ROLE());
-        apmACL.setPermissionManager(_state.voting, apmRegistrar, apmRegistrar.POINT_ROOTNODE_ROLE());
+        _transferPermissionFromTemplate(apmACL, _state.lidoRegistry, voting, _state.lidoRegistry.CREATE_REPO_ROLE());
+        apmACL.setPermissionManager(voting, apmDAO, apmDAO.APP_MANAGER_ROLE());
+        _transferPermissionFromTemplate(apmACL, apmACL, voting, apmACL.CREATE_PERMISSIONS_ROLE());
+        apmACL.setPermissionManager(voting, apmRegistrar, apmRegistrar.CREATE_NAME_ROLE());
+        apmACL.setPermissionManager(voting, apmRegistrar, apmRegistrar.POINT_ROOTNODE_ROLE());
 
         // APM repos
 
-        _transferPermissionFromTemplate(apmACL, _repos.lido, _state.voting, REPO_CREATE_VERSION_ROLE);
-        _transferPermissionFromTemplate(apmACL, _repos.oracle, _state.voting, REPO_CREATE_VERSION_ROLE);
-        _transferPermissionFromTemplate(apmACL, _repos.nodeOperatorsRegistry, _state.voting, REPO_CREATE_VERSION_ROLE);
-        _transferPermissionFromTemplate(apmACL, _repos.aragonAgent, _state.voting, REPO_CREATE_VERSION_ROLE);
-        _transferPermissionFromTemplate(apmACL, _repos.aragonFinance, _state.voting, REPO_CREATE_VERSION_ROLE);
-        _transferPermissionFromTemplate(apmACL, _repos.aragonTokenManager, _state.voting, REPO_CREATE_VERSION_ROLE);
-        _transferPermissionFromTemplate(apmACL, _repos.aragonVoting, _state.voting, REPO_CREATE_VERSION_ROLE);
+        // using loops to save contract size
+        Repo[10] memory repoAddrs;
 
-        _transferPermissionFromTemplate(
-            apmACL,
-            _resolveRepo(_getAppId(APM_APP_NAME, _state.lidoRegistryEnsNode)),
-            _state.voting,
-            REPO_CREATE_VERSION_ROLE
-        );
+        repoAddrs[0] = _repos.lido;
+        repoAddrs[1] = _repos.oracle;
+        repoAddrs[2] = _repos.nodeOperatorsRegistry;
+        repoAddrs[3] = _repos.aragonAgent;
+        repoAddrs[4] = _repos.aragonFinance;
+        repoAddrs[5] = _repos.aragonTokenManager;
+        repoAddrs[6] = _repos.aragonVoting;
+        repoAddrs[7] = _resolveRepo(_getAppId(APM_APP_NAME, _state.lidoRegistryEnsNode));
+        repoAddrs[8] = _resolveRepo(_getAppId(APM_REPO_APP_NAME, _state.lidoRegistryEnsNode));
+        repoAddrs[9] = _resolveRepo(_getAppId(APM_ENSSUB_APP_NAME, _state.lidoRegistryEnsNode));
 
-        _transferPermissionFromTemplate(
-            apmACL,
-            _resolveRepo(_getAppId(APM_REPO_APP_NAME, _state.lidoRegistryEnsNode)),
-            _state.voting,
-            REPO_CREATE_VERSION_ROLE
-        );
+        for (uint256 i = 0; i < repoAddrs.length; ++i) {
+            _transferPermissionFromTemplate(apmACL, repoAddrs[i], voting, REPO_CREATE_VERSION_ROLE);
+        }
 
-        _transferPermissionFromTemplate(
-            apmACL,
-            _resolveRepo(_getAppId(APM_ENSSUB_APP_NAME, _state.lidoRegistryEnsNode)),
-            _state.voting,
-            REPO_CREATE_VERSION_ROLE
-        );
+        // using loops to save contract size
+        bytes32[7] memory perms;
 
         // Oracle
-        _state.acl.createPermission(_state.voting, _state.oracle, _state.oracle.MANAGE_MEMBERS(), _state.voting);
-        _state.acl.createPermission(_state.voting, _state.oracle, _state.oracle.MANAGE_QUORUM(), _state.voting);
-        _state.acl.createPermission(_state.voting, _state.oracle, _state.oracle.SET_BEACON_SPEC(), _state.voting);
+        perms[0] = _state.oracle.MANAGE_MEMBERS();
+        perms[1] = _state.oracle.MANAGE_QUORUM();
+        perms[2] = _state.oracle.SET_BEACON_SPEC();
+
+        for (i = 0; i < 3; ++i) {
+            _createPermissionForVoting(acl, _state.oracle, perms[i], voting);
+        }
 
         // NodeOperatorsRegistry
-        _state.acl.createPermission(_state.voting, _state.operators, _state.operators.MANAGE_SIGNING_KEYS(), _state.voting);
-        _state.acl.createPermission(_state.voting, _state.operators, _state.operators.ADD_NODE_OPERATOR_ROLE(), _state.voting);
-        _state.acl.createPermission(_state.voting, _state.operators, _state.operators.SET_NODE_OPERATOR_ACTIVE_ROLE(), _state.voting);
-        _state.acl.createPermission(_state.voting, _state.operators, _state.operators.SET_NODE_OPERATOR_NAME_ROLE(), _state.voting);
-        _state.acl.createPermission(_state.voting, _state.operators, _state.operators.SET_NODE_OPERATOR_ADDRESS_ROLE(), _state.voting);
-        _state.acl.createPermission(_state.voting, _state.operators, _state.operators.SET_NODE_OPERATOR_LIMIT_ROLE(), _state.voting);
-        _state.acl.createPermission(_state.voting, _state.operators, _state.operators.REPORT_STOPPED_VALIDATORS_ROLE(), _state.voting);
+        perms[0] = _state.operators.MANAGE_SIGNING_KEYS();
+        perms[1] = _state.operators.ADD_NODE_OPERATOR_ROLE();
+        perms[2] = _state.operators.SET_NODE_OPERATOR_ACTIVE_ROLE();
+        perms[3] = _state.operators.SET_NODE_OPERATOR_NAME_ROLE();
+        perms[4] = _state.operators.SET_NODE_OPERATOR_ADDRESS_ROLE();
+        perms[5] = _state.operators.SET_NODE_OPERATOR_LIMIT_ROLE();
+        perms[6] = _state.operators.REPORT_STOPPED_VALIDATORS_ROLE();
+
+        for (i = 0; i < 7; ++i) {
+            _createPermissionForVoting(acl, _state.operators, perms[i], voting);
+        }
 
         // Lido
-        _state.acl.createPermission(_state.voting, _state.lido, _state.lido.PAUSE_ROLE(), _state.voting);
-        _state.acl.createPermission(_state.voting, _state.lido, _state.lido.MANAGE_FEE(), _state.voting);
-        _state.acl.createPermission(_state.voting, _state.lido, _state.lido.MANAGE_WITHDRAWAL_KEY(), _state.voting);
-        _state.acl.createPermission(_state.voting, _state.lido, _state.lido.SET_ORACLE(), _state.voting);
-        _state.acl.createPermission(_state.voting, _state.lido, _state.lido.BURN_ROLE(), _state.voting);
-        _state.acl.createPermission(_state.voting, _state.lido, _state.lido.SET_TREASURY(), _state.voting);
-        _state.acl.createPermission(_state.voting, _state.lido, _state.lido.SET_INSURANCE_FUND(), _state.voting);
+        perms[0] = _state.lido.PAUSE_ROLE();
+        perms[1] = _state.lido.MANAGE_FEE();
+        perms[2] = _state.lido.MANAGE_WITHDRAWAL_KEY();
+        perms[3] = _state.lido.SET_ORACLE();
+        perms[4] = _state.lido.BURN_ROLE();
+        perms[5] = _state.lido.SET_TREASURY();
+        perms[6] = _state.lido.SET_INSURANCE_FUND();
+
+        for (i = 0; i < 7; ++i) {
+            _createPermissionForVoting(acl, _state.lido, perms[i], voting);
+        }
     }
 
     function _createTokenManagerPersissionsForTemplate(ACL _acl, TokenManager _tokenManager) internal {
@@ -639,44 +646,40 @@ contract LidoTemplate is IsContract {
         _removePermissionFromTemplate(_acl, _tokenManager, _tokenManager.ASSIGN_ROLE());
     }
 
-    function _createAgentPermissions(ACL _acl, Agent _agent, address _grantee, address _manager) internal {
-        _acl.createPermission(_grantee, _agent, _agent.EXECUTE_ROLE(), _manager);
-        _acl.createPermission(_grantee, _agent, _agent.RUN_SCRIPT_ROLE(), _manager);
+    function _createPermissionForVoting(ACL _acl, address _app, bytes32 perm, address _voting) internal {
+       _acl.createPermission(_voting, _app, perm, _voting);
     }
 
-    function _createVaultPermissions(ACL _acl, Vault _vault, address _grantee, address _manager) internal {
-        _acl.createPermission(_grantee, _vault, _vault.TRANSFER_ROLE(), _manager);
+    function _createAgentPermissions(ACL _acl, Agent _agent, address _voting) internal {
+        _createPermissionForVoting(_acl, _agent, _agent.EXECUTE_ROLE(), _voting);
+        _createPermissionForVoting(_acl, _agent, _agent.RUN_SCRIPT_ROLE(), _voting);
     }
 
-    function _createFinancePermissions(ACL _acl, Finance _finance, address _grantee, address _manager) internal {
-        _acl.createPermission(_grantee, _finance, _finance.EXECUTE_PAYMENTS_ROLE(), _manager);
-        _acl.createPermission(_grantee, _finance, _finance.MANAGE_PAYMENTS_ROLE(), _manager);
-        _acl.createPermission(_grantee, _finance, _finance.CREATE_PAYMENTS_ROLE(), _manager);
+    function _createVaultPermissions(ACL _acl, Vault _vault, address _finance, address _voting) internal {
+        _acl.createPermission(_finance, _vault, _vault.TRANSFER_ROLE(), _voting);
     }
 
-    function _createEvmScriptsRegistryPermissions(ACL _acl, address _grantee, address _manager) internal {
+    function _createFinancePermissions(ACL _acl, Finance _finance, address _voting) internal {
+        _createPermissionForVoting(_acl, _finance, _finance.EXECUTE_PAYMENTS_ROLE(), _voting);
+        _createPermissionForVoting(_acl, _finance, _finance.MANAGE_PAYMENTS_ROLE(), _voting);
+        _createPermissionForVoting(_acl, _finance, _finance.CREATE_PAYMENTS_ROLE(), _voting);
+    }
+
+    function _createEvmScriptsRegistryPermissions(ACL _acl, address _voting) internal {
         EVMScriptRegistry registry = EVMScriptRegistry(_acl.getEVMScriptRegistry());
-        _acl.createPermission(_grantee, registry, registry.REGISTRY_MANAGER_ROLE(), _manager);
-        _acl.createPermission(_grantee, registry, registry.REGISTRY_ADD_EXECUTOR_ROLE(), _manager);
+        _createPermissionForVoting(_acl, registry, registry.REGISTRY_MANAGER_ROLE(), _voting);
+        _createPermissionForVoting(_acl, registry, registry.REGISTRY_ADD_EXECUTOR_ROLE(), _voting);
     }
 
-    function _createVotingPermissions(
-        ACL _acl,
-        Voting _voting,
-        address _settingsGrantee,
-        address _createVotesGrantee,
-        address _manager
-    )
-        internal
-    {
-        _acl.createPermission(_settingsGrantee, _voting, _voting.MODIFY_QUORUM_ROLE(), _manager);
-        _acl.createPermission(_settingsGrantee, _voting, _voting.MODIFY_SUPPORT_ROLE(), _manager);
-        _acl.createPermission(_createVotesGrantee, _voting, _voting.CREATE_VOTES_ROLE(), _manager);
+    function _createVotingPermissions(ACL _acl, Voting _voting, address _tokenManager) internal {
+        _createPermissionForVoting(_acl, _voting, _voting.MODIFY_QUORUM_ROLE(), _voting);
+        _createPermissionForVoting(_acl, _voting, _voting.MODIFY_SUPPORT_ROLE(), _voting);
+        _acl.createPermission(_tokenManager, _voting, _voting.CREATE_VOTES_ROLE(), _voting);
     }
 
-    function _createTokenManagerPermissions(ACL _acl, TokenManager _tokenManager, address _grantee, address _manager) internal {
-        _acl.createPermission(_grantee, _tokenManager, _tokenManager.MINT_ROLE(), _manager);
-        _acl.createPermission(_grantee, _tokenManager, _tokenManager.BURN_ROLE(), _manager);
+    function _createTokenManagerPermissions(ACL _acl, TokenManager _tokenManager, address _voting) internal {
+        _createPermissionForVoting(_acl, _tokenManager, _tokenManager.MINT_ROLE(), _voting);
+        _createPermissionForVoting(_acl, _tokenManager, _tokenManager.BURN_ROLE(), _voting);
     }
 
     function _createPermissionForTemplate(ACL _acl, address _app, bytes32 _permission) private {
@@ -688,10 +691,10 @@ contract LidoTemplate is IsContract {
         _acl.removePermissionManager(_app, _permission);
     }
 
-    function _transferRootPermissionsFromTemplateAndFinalizeDAO(Kernel _dao, address _to, address _manager) private {
+    function _transferRootPermissionsFromTemplateAndFinalizeDAO(Kernel _dao, address _voting) private {
         ACL _acl = ACL(_dao.acl());
-        _transferPermissionFromTemplate(_acl, _dao, _to, _dao.APP_MANAGER_ROLE(), _manager);
-        _transferPermissionFromTemplate(_acl, _acl, _to, _acl.CREATE_PERMISSIONS_ROLE(), _manager);
+        _transferPermissionFromTemplate(_acl, _dao, _voting, _dao.APP_MANAGER_ROLE(), _voting);
+        _transferPermissionFromTemplate(_acl, _acl, _voting, _acl.CREATE_PERMISSIONS_ROLE(), _voting);
     }
 
     function _transferPermissionFromTemplate(ACL _acl, address _app, address _to, bytes32 _permission) private {
