@@ -9,7 +9,7 @@ const { toChecksumAddress } = require('web3-utils')
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, yl } = require('../helpers/log')
 const { readNetworkState, persistNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
-const { assertRole } = require('../helpers/aragon')
+const { assertRole, assertMissingRole } = require('../helpers/aragon')
 const { assertLastEvent } = require('../helpers/events')
 const { assert } = require('../helpers/assert')
 const { percentToBP } = require('../helpers/index')
@@ -131,6 +131,19 @@ async function checkDAO({ web3, artifacts, networkStateFile = NETWORK_STATE_FILE
     voting,
     daoAragonId: state.daoAragonId,
     daoInitialSettings: state.daoInitialSettings
+  })
+
+  log.splitter()
+
+  await assertDaoPermissions({
+    kernel: dao,
+    lido,
+    oracle,
+    nopsRegistry,
+    agent,
+    finance,
+    tokenManager,
+    voting
   })
 
   log.splitter()
@@ -525,6 +538,190 @@ async function assertDAOConfig({
     0,
     `nopsRegistry.getActiveNodeOperatorsCount() is ${yl(0)}`
   )
+}
+
+async function assertDaoPermissions({
+  kernel,
+  lido,
+  oracle,
+  nopsRegistry,
+  agent,
+  finance,
+  tokenManager,
+  voting
+}) {
+  const aclAddress = await kernel.acl()
+  const acl = await artifacts.require('ACL').at(aclAddress)
+  const allAclEvents = await acl.getPastEvents('allEvents', { fromBlock: 0 })
+
+  const assertRoles = async ({ app, appName, groups, manager, missingRoleNames = [] }) => {
+    for (const group of groups) {
+      for (const roleName of group.roleNames) {
+        await assertRole({
+          acl,
+          allAclEvents,
+          app,
+          appName,
+          roleName,
+          granteeAddress: group.grantee.address,
+          managerAddress: group.manager === undefined ? manager.address : group.manager.address,
+          onlyGrantee: group.onlyGrantee === undefined ? true : group.onlyGrantee
+        })
+      }
+    }
+    for (const roleName of missingRoleNames) {
+      await assertMissingRole({ acl, allAclEvents, app, appName, roleName })
+    }
+  }
+
+  await assertRole({
+    acl,
+    allAclEvents,
+    app: acl,
+    appName: 'kernel.acl',
+    roleName: 'CREATE_PERMISSIONS_ROLE',
+    managerAddress: voting.address,
+    granteeAddress: voting.address,
+    onlyGrantee: true
+  })
+
+  await assertRole({
+    acl,
+    allAclEvents,
+    app: kernel,
+    appName: 'kernel',
+    roleName: 'APP_MANAGER_ROLE',
+    managerAddress: voting.address,
+    granteeAddress: voting.address,
+    onlyGrantee: true
+  })
+
+  log.splitter()
+
+  const evmScriptRegistryAddress = await acl.getEVMScriptRegistry()
+  const evmScriptRegistry = await artifacts.require('EVMScriptRegistry').at(evmScriptRegistryAddress)
+
+  await assertRoles({
+    app: evmScriptRegistry,
+    appName: 'evmScriptRegistry',
+    manager: voting,
+    groups: [{
+      roleNames: ['REGISTRY_MANAGER_ROLE', 'REGISTRY_ADD_EXECUTOR_ROLE'],
+      grantee: voting
+    }]
+  })
+
+  log.splitter()
+
+  await assertRoles({
+    app: agent,
+    appName: 'agent',
+    manager: voting,
+    groups: [{
+      roleNames: ['EXECUTE_ROLE', 'RUN_SCRIPT_ROLE'],
+      grantee: voting
+    }],
+    missingRoleNames: [
+      'SAFE_EXECUTE_ROLE',
+      'ADD_PROTECTED_TOKEN_ROLE',
+      'REMOVE_PROTECTED_TOKEN_ROLE',
+      'ADD_PRESIGNED_HASH_ROLE',
+      'DESIGNATE_SIGNER_ROLE'
+    ]
+  })
+
+  log.splitter()
+
+  await assertRoles({
+    app: finance,
+    appName: 'finance',
+    manager: voting,
+    groups: [{
+      roleNames: ['CREATE_PAYMENTS_ROLE', 'EXECUTE_PAYMENTS_ROLE', 'MANAGE_PAYMENTS_ROLE'],
+      grantee: voting
+    }],
+    missingRoleNames: ['CHANGE_PERIOD_ROLE', 'CHANGE_BUDGETS_ROLE']
+  })
+
+  log.splitter()
+
+  await assertRoles({
+    app: tokenManager,
+    appName: 'tokenManager',
+    manager: voting,
+    groups: [{
+      roleNames: ['ASSIGN_ROLE'],
+      grantee: voting
+    }],
+    missingRoleNames: ['MINT_ROLE', 'BURN_ROLE', 'ISSUE_ROLE', 'REVOKE_VESTINGS_ROLE']
+  })
+
+  log.splitter()
+
+  await assertRoles({
+    app: voting,
+    appName: 'voting',
+    manager: voting,
+    groups: [{
+      roleNames: ['MODIFY_SUPPORT_ROLE', 'MODIFY_QUORUM_ROLE'],
+      grantee: voting
+    }, {
+      roleNames: ['CREATE_VOTES_ROLE'],
+      grantee: tokenManager
+    }],
+  })
+
+  log.splitter()
+
+  await assertRoles({
+    app: lido,
+    appName: 'lido',
+    manager: voting,
+    groups: [{
+      roleNames: [
+        'PAUSE_ROLE',
+        'MANAGE_FEE',
+        'MANAGE_WITHDRAWAL_KEY',
+        'SET_ORACLE',
+        'BURN_ROLE',
+        'SET_TREASURY',
+        'SET_INSURANCE_FUND'
+      ],
+      grantee: voting
+    }]
+  })
+
+  log.splitter()
+
+  await assertRoles({
+    app: oracle,
+    appName: 'oracle',
+    manager: voting,
+    groups: [{
+      roleNames: ['MANAGE_MEMBERS', 'MANAGE_QUORUM', 'SET_BEACON_SPEC'],
+      grantee: voting
+    }]
+  })
+
+  log.splitter()
+
+  await assertRoles({
+    app: nopsRegistry,
+    appName: 'nopsRegistry',
+    manager: voting,
+    groups: [{
+      roleNames: [
+        'MANAGE_SIGNING_KEYS',
+        'ADD_NODE_OPERATOR_ROLE',
+        'SET_NODE_OPERATOR_ACTIVE_ROLE',
+        'SET_NODE_OPERATOR_NAME_ROLE',
+        'SET_NODE_OPERATOR_ADDRESS_ROLE',
+        'SET_NODE_OPERATOR_LIMIT_ROLE',
+        'REPORT_STOPPED_VALIDATORS_ROLE'
+      ],
+      grantee: voting
+    }]
+  })
 }
 
 module.exports = runOrWrapScript(checkDAO, module)
