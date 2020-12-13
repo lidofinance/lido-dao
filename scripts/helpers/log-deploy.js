@@ -1,7 +1,7 @@
 const chalk = require('chalk')
 
 module.exports = async (name, instance) => {
-  const { contractName, sourcePath, updatedAt: compiledAt } = instance.constructor._json
+  const { contractName } = instance.constructor._json
 
   const compilerVersion = config.solc.version
   const optimizer = config.solc.optimizer || null

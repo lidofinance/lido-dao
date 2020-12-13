@@ -113,6 +113,6 @@ function readJson(fileName) {
   }
 }
 
-if ('function' === typeof task) {
+if ((typeof task) === 'function') {
   require('./scripts/hardhat-tasks')
 }

@@ -1,5 +1,4 @@
 const { assert } = require('chai')
-const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 const { toChecksumAddress } = require('web3-utils')
 
 const { log } = require('./log')
