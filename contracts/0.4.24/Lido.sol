@@ -114,7 +114,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     */
     function() external payable {
         // protection against accidental submissions by calling non-existent function
-        require(msg.data.length == 0, "UNKNOWN_FUNCTION");
+        require(msg.data.length == 0, "NON_EMPTY_DATA");
         _submit(0);
     }
 
