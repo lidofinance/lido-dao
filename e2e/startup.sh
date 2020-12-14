@@ -254,20 +254,35 @@ if [ ! -d $VALIDATORS_DIR ] && [ $SNAPSHOT ]; then
   unzip -o -q -d $DATA_DIR $SNAPSHOTS_DIR/stage2/validators.zip
 fi
 
+DEPOSIT_CLI_IMG="lidofinance/deposit-cli:latest"
+docker pull $DEPOSIT_CLI_IMG
+
 if [ ! -d "$VALIDATORS1_VALIDATORS_KEYS_DIR" ]; then
   # TODO dkg
   echo "Generating $VALIDATOR1_COUNT validator1 keys... (this may take a while)"
-  KEYS_DIR=$VALIDATORS1_DATA_DIR ./deposit.sh --num_validators=$VALIDATOR1_COUNT --keystore_password=$PASSWORD --chain=medalla --mnemonic="$VALIDATOR_MNEMONIC1" --withdrawal_pk=$WITHDRAWAL_PK1
+  docker run -it --rm -v $VALIDATORS1_DATA_DIR:/data $DEPOSIT_CLI_IMG existing-mnemonic \
+    --quiet --validator_start_index 0 --folder /data \
+    --num_validators=$VALIDATOR1_COUNT --keystore_password=$PASSWORD \
+    --chain=medalla --mnemonic="$VALIDATOR_MNEMONIC1" \
+    --withdrawal_pk=$WITHDRAWAL_PK1
 fi
 
 if [ ! -d "$VALIDATORS2_VALIDATORS_KEYS_DIR" ]; then
   echo "Generating $VALIDATOR2_COUNT validator2 keys... (this may take a while)"
-  KEYS_DIR=$VALIDATORS2_DATA_DIR ./deposit.sh --num_validators=$VALIDATOR2_COUNT --keystore_password=$PASSWORD --chain=medalla --mnemonic="$VALIDATOR_MNEMONIC2" --withdrawal_pk=$WITHDRAWAL_PK2
+  docker run -it --rm -v $VALIDATORS2_DATA_DIR:/data $DEPOSIT_CLI_IMG existing-mnemonic \
+    --quiet --validator_start_index 0 --folder /data \
+    --num_validators=$VALIDATOR2_COUNT --keystore_password=$PASSWORD \
+    --chain=medalla --mnemonic="$VALIDATOR_MNEMONIC2" \
+    --withdrawal_pk=$WITHDRAWAL_PK2
 fi
 
 if [ ! -d "$VALIDATORS3_VALIDATORS_KEYS_DIR" ]; then
   echo "Generating $VALIDATOR3_COUNT validator2 keys... (this may take a while)"
-  KEYS_DIR=$VALIDATORS3_DATA_DIR ./deposit.sh --num_validators=$VALIDATOR3_COUNT --keystore_password=$PASSWORD --chain=medalla --mnemonic="$VALIDATOR_MNEMONIC3" --withdrawal_pk=$WITHDRAWAL_PK1
+  docker run -it --rm -v $VALIDATORS3_DATA_DIR:/data $DEPOSIT_CLI_IMG existing-mnemonic \
+    --quiet --validator_start_index 0 --folder /data \
+    --num_validators=$VALIDATOR3_COUNT --keystore_password=$PASSWORD \
+    --chain=medalla --mnemonic="$VALIDATOR_MNEMONIC3" \
+    --withdrawal_pk=$WITHDRAWAL_PK1
 fi
 
 if [ ! -d $TESTNET_DIR ]; then
@@ -343,7 +358,10 @@ if [ $ETH2_RESET ]; then
     if [ ! -d "$MOCK_VALIDATORS_KEYS_DIR" ]; then
       rm -rf $MOCK_VALIDATORS_DIR
       echo "Generating $MOCK_VALIDATOR_COUNT mock validator keys.. (this may take a while)"
-      KEYS_DIR=$MOCK_VALIDATORS_DATA_DIR ./deposit.sh --num_validators=$MOCK_VALIDATOR_COUNT --keystore_password=$PASSWORD --chain=medalla --mnemonic="$MOCK_VALIDATOR_MNEMONIC"
+      docker run -it --rm -v $MOCK_VALIDATORS_DATA_DIR:/data $DEPOSIT_CLI_IMG existing-mnemonic \
+        --quiet --validator_start_index 0 --folder /data \
+        --num_validators=$MOCK_VALIDATOR_COUNT --keystore_password=$PASSWORD \
+        --chain=medalla --mnemonic="$MOCK_VALIDATOR_MNEMONIC"
     fi
 
     if [ ! -d "$MOCK_VALIDATORS_DIR" ]; then
