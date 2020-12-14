@@ -160,7 +160,7 @@ async function deployDao({
     artifacts,
     ens,
     owner: state.owner,
-    stEthAppName: state.lido_app_steth_name,
+    stEthAppName: state.lido_app_lido_name,
     appProxies: state.appProxies,
     cstEthAddress: state.cstEthAddress
   })

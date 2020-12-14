@@ -24,7 +24,7 @@
           "epochsPerFrame": 20,
           "slotsPerEpoch": 8,
           "secondsPerSlot": 1,
-          "genesisTime": 1606813129
+          "genesisTime": 1607959551
         }
       },
       "aragonEnsLabelName": "aragonpm",

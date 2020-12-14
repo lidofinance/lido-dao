@@ -43,7 +43,6 @@
     "deploy:app-pool": "APPS=depool yarn deploy:apps",
     "deploy:app-oracle": "APPS=depooloracle yarn deploy:apps",
     "deploy:app-staking-providers-registry": "APPS=staking-providers-registry yarn deploy:apps",
-    "deploy:app-steth": "APPS=steth yarn deploy:apps",
     "deploy:dao": "buidler run --no-compile ./scripts/deploy-lido-dao.js",
     "deploy:e2e:dao": "NETWORK_NAME=e2e NETWORK_STATE_FILE=deployed-e2e.json buidler run --no-compile ./scripts/deploy-lido-dao.js"
   },
