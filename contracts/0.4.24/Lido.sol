@@ -256,7 +256,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     * @param _beaconValidators number of Lido's keys in the beacon state
     * @param _beaconBalance simmarized balance of Lido-controlled keys in wei
     */
-    function pushBeacon(uint256 _beaconValidators, uint256 _beaconBalance) external {
+    function pushBeacon(uint256 _beaconValidators, uint256 _beaconBalance) external whenNotStopped {
         require(msg.sender == getOracle(), "APP_AUTH_FAILED");
 
         uint256 depositedValidators = DEPOSITED_VALIDATORS_VALUE_POSITION.getStorageUint256();
