@@ -338,7 +338,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     const wrongMethodABI = '0x00'
     await assertRevert(
       web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(1), data: wrongMethodABI }),
-      'UNKNOWN_FUNCTION'
+      'NON_EMPTY_DATA'
     )
   })
 
