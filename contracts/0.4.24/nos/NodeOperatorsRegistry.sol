@@ -352,6 +352,10 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
                     ++numLoadedKeys;
                 }
             }
+
+            if (numLoadedKeys == numAssignedKeys) {
+                break;
+            }
         }
 
         assert(numLoadedKeys == numAssignedKeys);

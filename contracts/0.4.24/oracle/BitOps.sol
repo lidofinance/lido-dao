@@ -10,6 +10,7 @@ library BitOps {
       * @dev Gets n-th bit in a bitmask
       */
     function getBit(uint256 _mask, uint256 _bitIndex) internal pure returns (bool) {
+        require(_bitIndex < 256);
         return 0 != (_mask & (1 << _bitIndex));
     }
 
@@ -17,6 +18,7 @@ library BitOps {
       * @dev Sets n-th bit in a bitmask
       */
     function setBit(uint256 _mask, uint256 _bitIndex, bool bit) internal pure returns (uint256) {
+        require(_bitIndex < 256);
         if (bit) {
             return _mask | (1 << _bitIndex);
         } else {
