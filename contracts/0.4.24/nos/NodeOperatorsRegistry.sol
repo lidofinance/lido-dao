@@ -76,12 +76,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     // @dev Cached number of active operators
     bytes32 internal constant ACTIVE_OPERATORS_COUNT_POSITION = keccak256("lido.NodeOperatorsRegistry.activeOperatorsCount");
 
-    /// @dev link to the pool
-    bytes32 internal constant POOL_POSITION = keccak256("lido.NodeOperatorsRegistry.pool");
+    /// @dev link to the Lido contract
+    bytes32 internal constant LIDO_POSITION = keccak256("lido.NodeOperatorsRegistry.lido");
 
 
-    modifier onlyPool() {
-        require(msg.sender == POOL_POSITION.getStorageAddress(), "APP_AUTH_FAILED");
+    modifier onlyLido() {
+        require(msg.sender == LIDO_POSITION.getStorageAddress(), "APP_AUTH_FAILED");
         _;
     }
 
@@ -95,10 +95,10 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         _;
     }
 
-    function initialize(address _pool) public onlyInit {
+    function initialize(address _lido) public onlyInit {
         TOTAL_OPERATORS_COUNT_POSITION.setStorageUint256(0);
         ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(0);
-        POOL_POSITION.setStorageAddress(_pool);
+        LIDO_POSITION.setStorageAddress(_lido);
         initialized();
     }
 
@@ -202,9 +202,9 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
     /**
       * @notice Remove unused signing keys
-      * @dev Function is used by the pool
+      * @dev Function is used by the Lido contract
       */
-    function trimUnusedKeys() external onlyPool {
+    function trimUnusedKeys() external onlyLido {
         uint256 length = getNodeOperatorsCount();
         for (uint256 operatorId = 0; operatorId < length; ++operatorId) {
             if (operators[operatorId].totalSigningKeys != operators[operatorId].usedSigningKeys)  // write only if update is needed
@@ -277,12 +277,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     /**
      * @notice Selects and returns at most `_numKeys` signing keys (as well as the corresponding
      *         signatures) from the set of active keys and marks the selected keys as used.
-     *         May only be called by the pool contract.
+     *         May only be called by the Lido contract.
      *
      * @param _numKeys The number of keys to select. The actual number of selected keys may be less
      *        due to the lack of active keys.
      */
-    function assignNextSigningKeys(uint256 _numKeys) external onlyPool returns (bytes memory pubkeys, bytes memory signatures) {
+    function assignNextSigningKeys(uint256 _numKeys) external onlyLido returns (bytes memory pubkeys, bytes memory signatures) {
         // Memory is very cheap, although you don't want to grow it too much
         DepositLookupCacheEntry[] memory cache = _loadOperatorCache();
         if (0 == cache.length)
