@@ -2,6 +2,7 @@ import logger from './logger'
 import fs from 'fs'
 import path from 'path'
 import { toWei, isHex, toBN, fromWei } from 'web3-utils'
+import { exec } from 'child_process'
 
 export const sleep = (ms) => {
   return new Promise((resolve) => setTimeout(resolve, ms * 1000))
@@ -70,6 +71,45 @@ export function objHexlify(obj) {
     }
   })
   return obj
+}
+
+export function compareBN(number1, number2) {
+  logger.debug(`Comparing : ${number1} and  ${number2}`)
+  return BN(+number1).eq(BN(+number2))
+}
+
+export function isLessThanBN(number1, number2) {
+  return BN(+number1).lt(BN(+number2))
+}
+
+export function isGreaterThanBN(number1, number2) {
+  return BN(+number1).gt(BN(+number2))
+}
+
+export function stopValidatorsNodes() {
+  exec('cd e2e && ls -al && docker-compose stop validators1 validators2', (error, stdout, stderr) => {
+    if (error) {
+      logger.error(`error: ${error.message}`)
+      return
+    }
+    if (stderr) {
+      logger.error(`stderr: ${stderr}`)
+      return
+    }
+    logger.info('Validators nodes were stopped')
+  })
+}
+
+export function startValidatorsNodes() {
+  exec('cd e2e && ls -al && docker-compose start validators1 validators2', (error, stdout, stderr) => {
+    if (error) {
+      logger.error(`error: ${error.message}`)
+    }
+    if (stderr) {
+      logger.error(`stderr: ${stderr}`)
+    }
+    logger.info('Validators nodes were started')
+  })
 }
 
 export const BN = (value) => toBN(value)
