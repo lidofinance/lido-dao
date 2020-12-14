@@ -8,7 +8,6 @@ pragma solidity 0.4.24;
 import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 import "@aragon/os/contracts/lib/math/SafeMath64.sol";
-import "@aragon/os/contracts/common/IsContract.sol";
 
 import "../interfaces/ILidoOracle.sol";
 import "../interfaces/ILido.sol";
@@ -31,7 +30,7 @@ import "./BitOps.sol";
   * It's prohibited to add data to non-current data points whatever finalized or not.
   * It's prohibited to add data to the current finalized data point.
   */
-contract LidoOracle is ILidoOracle, IsContract, AragonApp {
+contract LidoOracle is ILidoOracle, AragonApp {
     using SafeMath for uint256;
     using SafeMath64 for uint64;
     using BitOps for uint256;
