@@ -32,13 +32,14 @@ const hexConcat = (first, ...rest) => {
 }
 
 // Divides a BN by 1e15
-const div15 = (bn) => bn.div(new BN(1000000)).div(new BN(1000000)).div(new BN(1000))
+
+const div15 = (bn) => bn.div(new BN('1000000000000000'))
 
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 const tokens = ETH
 
 contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
-  let appBase, nodeOperatorsRegistryBase, app, token, oracle, validatorRegistration, operators
+  let appBase, nodeOperatorsRegistryBase, app, oracle, validatorRegistration, operators
   let treasuryAddr, insuranceAddr
 
   before('deploy base app', async () => {
@@ -218,7 +219,10 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(await app.totalSupply(), tokens(1))
 
     // +2 ETH
-    await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2) }) // another form of a deposit call
+    const receipt = await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2) }) // another form of a deposit call
+
+    assertEvent(receipt, 'Transfer', { expectedArgs: { from: ZERO_ADDRESS, to: user2, value: ETH(2) } })
+
     await checkStat({ depositedValidators: 0, beaconValidators: 0, beaconBalance: ETH(0) })
     assertBn(await validatorRegistration.totalCalls(), 0)
     assertBn(await app.getTotalPooledEther(), ETH(3))
@@ -596,7 +600,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await oracle.reportBeacon(300, 1, ETH(36))
     await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(36) })
     assertBn(await app.totalSupply(), tokens(38)) // remote + buffered
-    await checkRewards({ treasury: 599, insurance: 399, operator: 1000 })
+    await checkRewards({ treasury: 600, insurance: 399, operator: 999 })
   })
 
   it('rewards distribution works', async () => {
@@ -659,7 +663,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await oracle.reportBeacon(300, 1, ETH(36))
     await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(36) })
     assertBn(await app.totalSupply(), tokens(68))
-    await checkRewards({ treasury: 599, insurance: 399, operator: 1000 })
+    await checkRewards({ treasury: 600, insurance: 399, operator: 999 })
   })
 
   it('Node Operators filtering during deposit works when doing a huge deposit', async () => {
@@ -972,11 +976,11 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
 
   context('treasury', () => {
     it('treasury adddress has been set after init', async () => {
-      assert.notEqual(await app.getTreasury(), ZERO_ADDRESS);
+      assert.notEqual(await app.getTreasury(), ZERO_ADDRESS)
     })
 
     it(`treasury can't be set by an arbitary address`, async () => {
-      await assertRevert(app.setTreasury(user1, { from: nobody  }))
+      await assertRevert(app.setTreasury(user1, { from: nobody }))
       await assertRevert(app.setTreasury(user1, { from: user1 }))
     })
 
@@ -986,20 +990,17 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     })
 
     it('reverts when treasury is zero address', async () => {
-      await assertRevert(
-        app.setTreasury(ZERO_ADDRESS, { from: voting }),
-        "SET_TREASURY_ZERO_ADDRESS"
-      )
+      await assertRevert(app.setTreasury(ZERO_ADDRESS, { from: voting }), 'SET_TREASURY_ZERO_ADDRESS')
     })
   })
 
   context('insurance fund', () => {
     it('insurance fund adddress has been set after init', async () => {
-      assert.notEqual(await app.getInsuranceFund(), ZERO_ADDRESS);
+      assert.notEqual(await app.getInsuranceFund(), ZERO_ADDRESS)
     })
 
     it(`insurance fund can't be set by an arbitary address`, async () => {
-      await assertRevert(app.setInsuranceFund(user1, { from: nobody   }))
+      await assertRevert(app.setInsuranceFund(user1, { from: nobody }))
       await assertRevert(app.setInsuranceFund(user1, { from: user1 }))
     })
 
@@ -1009,10 +1010,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     })
 
     it('reverts when insurance fund is zero address', async () => {
-      await assertRevert(
-        app.setInsuranceFund(ZERO_ADDRESS, { from: voting }),
-        "SET_INSURANCE_FUND_ZERO_ADDRESS"
-      )
+      await assertRevert(app.setInsuranceFund(ZERO_ADDRESS, { from: voting }), 'SET_INSURANCE_FUND_ZERO_ADDRESS')
     })
   })
 })
