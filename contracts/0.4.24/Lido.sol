@@ -113,6 +113,8 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     * depositBufferedEther() and pushes them to the ETH2 Deposit contract.
     */
     function() external payable {
+        // protection against accidental submissions by calling non-existent function
+        require(msg.data.length == 0, "NON_EMPTY_DATA");
         _submit(0);
     }
 
