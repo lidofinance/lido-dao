@@ -41,7 +41,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
     uint256 internal constant UINT64_MAX = uint256(uint64(-1));
 
-    bytes32 internal constant SIGNING_KEYS_MAPPING_NAME = keccak256("signingKeys.nodeOperatorsRegistry.lido.eth");
+    bytes32 internal constant SIGNING_KEYS_MAPPING_NAME = keccak256("lido.NodeOperatorsRegistry.signingKeysMappingName");
 
 
     /// @dev Node Operator parameters and internal state
@@ -71,17 +71,17 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     mapping(uint256 => NodeOperator) internal operators;
 
     // @dev Total number of operators
-    bytes32 internal constant TOTAL_OPERATORS_COUNT_VALUE_POSITION = keccak256("totalOperatorsCount.nodeOperatorsRegistry.lido.eth");
+    bytes32 internal constant TOTAL_OPERATORS_COUNT_POSITION = keccak256("lido.NodeOperatorsRegistry.totalOperatorsCount");
 
     // @dev Cached number of active operators
-    bytes32 internal constant ACTIVE_OPERATORS_COUNT_VALUE_POSITION = keccak256("activeOperatorsCount.nodeOperatorsRegistry.lido.eth");
+    bytes32 internal constant ACTIVE_OPERATORS_COUNT_POSITION = keccak256("lido.NodeOperatorsRegistry.activeOperatorsCount");
 
     /// @dev link to the pool
-    bytes32 internal constant POOL_VALUE_POSITION = keccak256("pool.nodeOperatorsRegistry.lido.eth");
+    bytes32 internal constant POOL_POSITION = keccak256("lido.NodeOperatorsRegistry.pool");
 
 
     modifier onlyPool() {
-        require(msg.sender == POOL_VALUE_POSITION.getStorageAddress(), "APP_AUTH_FAILED");
+        require(msg.sender == POOL_POSITION.getStorageAddress(), "APP_AUTH_FAILED");
         _;
     }
 
@@ -96,9 +96,9 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     function initialize(address _pool) public onlyInit {
-        TOTAL_OPERATORS_COUNT_VALUE_POSITION.setStorageUint256(0);
-        ACTIVE_OPERATORS_COUNT_VALUE_POSITION.setStorageUint256(0);
-        POOL_VALUE_POSITION.setStorageAddress(_pool);
+        TOTAL_OPERATORS_COUNT_POSITION.setStorageUint256(0);
+        ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(0);
+        POOL_POSITION.setStorageAddress(_pool);
         initialized();
     }
 
@@ -115,12 +115,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         returns (uint256 id)
     {
         id = getNodeOperatorsCount();
-        TOTAL_OPERATORS_COUNT_VALUE_POSITION.setStorageUint256(id.add(1));
+        TOTAL_OPERATORS_COUNT_POSITION.setStorageUint256(id.add(1));
 
         NodeOperator storage operator = operators[id];
 
         uint256 activeOperatorsCount = getActiveNodeOperatorsCount();
-        ACTIVE_OPERATORS_COUNT_VALUE_POSITION.setStorageUint256(activeOperatorsCount.add(1));
+        ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(activeOperatorsCount.add(1));
 
         operator.active = true;
         operator.name = _name;
@@ -142,9 +142,9 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         if (operators[_id].active != _active) {
             uint256 activeOperatorsCount = getActiveNodeOperatorsCount();
             if (_active)
-                ACTIVE_OPERATORS_COUNT_VALUE_POSITION.setStorageUint256(activeOperatorsCount.add(1));
+                ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(activeOperatorsCount.add(1));
             else
-                ACTIVE_OPERATORS_COUNT_VALUE_POSITION.setStorageUint256(activeOperatorsCount.sub(1));
+                ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(activeOperatorsCount.sub(1));
         }
 
         operators[_id].active = _active;
@@ -409,7 +409,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       * @notice Returns number of active node operators
       */
     function getActiveNodeOperatorsCount() public view returns (uint256) {
-        return ACTIVE_OPERATORS_COUNT_VALUE_POSITION.getStorageUint256();
+        return ACTIVE_OPERATORS_COUNT_POSITION.getStorageUint256();
     }
 
     /**
@@ -478,7 +478,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       * @notice Returns total number of node operators
       */
     function getNodeOperatorsCount() public view returns (uint256) {
-        return TOTAL_OPERATORS_COUNT_VALUE_POSITION.getStorageUint256();
+        return TOTAL_OPERATORS_COUNT_POSITION.getStorageUint256();
     }
 
     function _isEmptySigningKey(bytes memory _key) internal pure returns (bool) {
