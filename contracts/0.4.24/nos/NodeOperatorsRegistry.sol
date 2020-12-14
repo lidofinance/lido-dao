@@ -388,14 +388,21 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             effectiveStakeTotal = effectiveStakeTotal.add(effectiveStake);
 
             recipients[idx] = operator.rewardAddress;
-            shares[idx] = effectiveStake.mul(_totalRewardShares);
+            shares[idx] = effectiveStake;
 
             ++idx;
         }
 
+        if (effectiveStakeTotal == 0)
+            return (recipients, shares);
+
+        uint256 perValidatorReward = _totalRewardShares.div(effectiveStakeTotal);
+
         for (idx = 0; idx < activeCount; ++idx) {
-            shares[idx] = shares[idx].div(effectiveStakeTotal);
+            shares[idx] = shares[idx].mul(perValidatorReward);
         }
+
+        return (recipients, shares);
     }
 
     /**
