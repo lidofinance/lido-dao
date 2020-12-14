@@ -118,6 +118,15 @@ while test $# -gt 0; do
   esac
 done
 
+# echo "Check env..."
+CMDS="jq curl yarn node docker docker-compose unzip zip sed"
+for c in $CMDS; do
+  if ! type "$c" &> /dev/null; then
+    echo "$c not installed"
+    exit 1
+  fi
+done
+
 if test -f "$ACCOUNTS_FILE"; then
     echo "Accounts file $ACCOUNTS_FILE exists."
   else
