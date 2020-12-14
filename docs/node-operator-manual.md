@@ -15,7 +15,7 @@ of funds belonging to the protocol users and correctness of validator operations
 
 The general flow is the following:
 
-1. A Node Operator expresses their interest to the DAO members.
+1. A Node Operator expresses their interest to the DAO members. Their address gets proposed to the DAO vote for inclusion to the DAO's Node Operator list. Note that the Node Operator address should be supplied to the DAO with zero signing keys limit.
 
 2. The DAO votes for including the Operator to the list of active operators. After successful
    voting for inclusion, the Node Operator becomes active.
