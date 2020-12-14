@@ -13,6 +13,10 @@ import "../StETH.sol";
 contract StETHMock is StETH {
     uint256 private totalPooledEther;
 
+    constructor() public {
+        _resume();
+    }
+
     function _getTotalPooledEther() internal view returns (uint256) {
         return totalPooledEther;
     }
