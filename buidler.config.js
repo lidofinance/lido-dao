@@ -17,8 +17,12 @@ const accounts = readJson('./accounts.json') || {
 const stateByNetId = readJson('./deployed.json') || {
   networks: {}
 }
+const e2eStateByNetId = readJson('./deployed-e2e.json') || {
+  networks: {}
+}
 
 const getNetState = (netId) => stateByNetId.networks[netId] || {}
+const getE2ENetState = (netId) => e2eStateByNetId.networks[netId] || {}
 
 module.exports = {
   defaultNetwork: process.env.NETWORK_NAME || 'buidlerevm',
@@ -34,7 +38,7 @@ module.exports = {
     e2e: {
       url: 'http://localhost:8545',
       chainId: 1337,
-      ensAddress: getNetState('2020').ensAddress,
+      ensAddress: getE2ENetState('2020').ensAddress,
       accounts: accounts.e2e || 'remote',
       timeout: 60000,
       gas: 8000000 // the same as in Göerli
