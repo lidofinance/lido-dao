@@ -13,7 +13,9 @@ import {
   BN,
   compareBN,
   startValidatorsNodes,
-  stopValidatorsNodes
+  stopValidatorsNodes,
+  isGreaterThanBN,
+  isLessThanBN
 } from '../scripts/helpers/utils'
 
 import * as aclHelper from '../scripts/helpers/apps/aclHelper'
@@ -267,10 +269,14 @@ test('Full flow test ', async (t) => {
   t.true(await eth2Helper.isEth2NetworkProducingSlots())
 
   logger.info('Waiting for the validator to receive a rewards')
-  let oracleEvent = await lidoOracleHelper.waitForReportBeacon()
+  let oracleReport = await lidoOracleHelper.waitForReportBeacon()
   beaconStat = await lidoHelper.getBeaconStat()
-  t.is(oracleEvent.beaconBalance, beaconStat.beaconBalance, 'Check that the remote beacon balance changed correctly')
-  t.is(oracleEvent.beaconValidators, beaconStat.depositedValidators, 'Check that the remote deposited validators changed correctly')
+  t.is(oracleReport.reportedEvent.beaconBalance, beaconStat.beaconBalance, 'Check that the remote beacon balance changed correctly')
+  t.is(
+    oracleReport.reportedEvent.beaconValidators,
+    beaconStat.depositedValidators,
+    'Check that the remote deposited validators changed correctly'
+  )
   t.true(
     compareBN(await stEthHelper.getBalance(nosMember1), await nodeOperatorsHelper.calculateNewNodeOperatorBalance(nosMember1)),
     'Check that nodeOperator1 receive an appropriate amount of stEthTokens by validators rewards'
@@ -317,7 +323,94 @@ test('Full flow test ', async (t) => {
     +(await stEthHelper.getBalance(cstETHAddress)) < 3,
     'Check that the cstETHAddress balance is equal 0 after fully unwrap of cstEthToken'
   )
-  // TODO Report slashing, check that there is no reward and atoken balance decreases and ctoken stay the same
+
+  logger.info('Check penalties correctness by stop validators nodes and check that balances are reduced')
+  stopValidatorsNodes()
+  let oracleReports = await lidoOracleHelper.waitForDecreaseBeaconBalance()
+  let prevReport = oracleReports.prevEvent
+  let lastReport = oracleReports.lastEvent
+  t.true(isGreaterThanBN(prevReport.beaconBalance, lastReport.beaconBalance))
+  t.true(
+    isGreaterThanBN(
+      await stEthHelper.getBalance(user1, prevReport.blockNumber),
+      await stEthHelper.getBalance(user1, lastReport.blockNumber)
+    )
+  )
+  t.true(
+    isGreaterThanBN(
+      await stEthHelper.getBalance(user2, prevReport.blockNumber),
+      await stEthHelper.getBalance(user2, lastReport.blockNumber)
+    )
+  )
+  t.true(
+    isGreaterThanBN(
+      await stEthHelper.getBalance(user3, prevReport.blockNumber),
+      await stEthHelper.getBalance(user3, lastReport.blockNumber)
+    )
+  )
+  t.true(
+    isGreaterThanBN(
+      await stEthHelper.getBalance(nosMember1, prevReport.blockNumber),
+      await stEthHelper.getBalance(nosMember1, lastReport.blockNumber)
+    )
+  )
+  t.true(
+    isGreaterThanBN(
+      await stEthHelper.getBalance(nosMember2, prevReport.blockNumber),
+      await stEthHelper.getBalance(nosMember2, lastReport.blockNumber)
+    )
+  )
+  t.true(
+    isGreaterThanBN(
+      await stEthHelper.getBalance(nosMember3, prevReport.blockNumber),
+      await stEthHelper.getBalance(nosMember3, lastReport.blockNumber)
+    )
+  )
+  t.true(
+    isGreaterThanBN(
+      await stEthHelper.getBalance(await lidoHelper.getInsuranceFundAddress(), prevReport.blockNumber),
+      await stEthHelper.getBalance(await lidoHelper.getInsuranceFundAddress(), lastReport.blockNumber)
+    )
+  )
+
+  logger.info('Resume validators nodes and check that rewards are paid')
+  startValidatorsNodes()
+  oracleReports = await lidoOracleHelper.waitForIncreaseBeaconBalance()
+  prevReport = oracleReports.prevEvent
+  lastReport = oracleReports.lastEvent
+  t.true(
+    isLessThanBN(await stEthHelper.getBalance(user1, prevReport.blockNumber), await stEthHelper.getBalance(user1, lastReport.blockNumber))
+  )
+  t.true(
+    isLessThanBN(await stEthHelper.getBalance(user2, prevReport.blockNumber), await stEthHelper.getBalance(user2, lastReport.blockNumber))
+  )
+  t.true(
+    isLessThanBN(await stEthHelper.getBalance(user3, prevReport.blockNumber), await stEthHelper.getBalance(user3, lastReport.blockNumber))
+  )
+  t.true(
+    isLessThanBN(
+      await stEthHelper.getBalance(nosMember1, prevReport.blockNumber),
+      await stEthHelper.getBalance(nosMember1, lastReport.blockNumber)
+    )
+  )
+  t.true(
+    isLessThanBN(
+      await stEthHelper.getBalance(nosMember2, prevReport.blockNumber),
+      await stEthHelper.getBalance(nosMember2, lastReport.blockNumber)
+    )
+  )
+  t.true(
+    isLessThanBN(
+      await stEthHelper.getBalance(nosMember3, prevReport.blockNumber),
+      await stEthHelper.getBalance(nosMember3, lastReport.blockNumber)
+    )
+  )
+  t.true(
+    isLessThanBN(
+      await stEthHelper.getBalance(await lidoHelper.getInsuranceFundAddress(), prevReport.blockNumber),
+      await stEthHelper.getBalance(await lidoHelper.getInsuranceFundAddress(), lastReport.blockNumber)
+    )
+  )
 
   logger.info('Change withdrawal credentials')
   t.is(await nodeOperatorsHelper.getUnusedSigningKeyCount(0), '0')
@@ -427,10 +520,14 @@ test('Full flow test ', async (t) => {
   )
 
   logger.info('Waiting for the validator to receive a rewards and check that the deactivated provider balance not changed')
-  oracleEvent = await lidoOracleHelper.waitForReportBeacon()
+  oracleReport = await lidoOracleHelper.waitForReportBeacon()
   beaconStat = await lidoHelper.getBeaconStat()
-  t.is(oracleEvent.beaconBalance, beaconStat.beaconBalance, 'Check that the remote beacon balance changed correctly')
-  t.is(oracleEvent.beaconValidators, beaconStat.depositedValidators, 'Check that the remote deposited validators changed correctly')
+  t.is(oracleReport.reportedEvent.beaconBalance, beaconStat.beaconBalance, 'Check that the remote beacon balance changed correctly')
+  t.is(
+    oracleReport.reportedEvent.beaconValidators,
+    beaconStat.depositedValidators,
+    'Check that the remote deposited validators changed correctly'
+  )
 
   logger.info('Check that the rewards have been split between nos1,nos2,nos3 due to nos4 was deactivated')
   t.true(

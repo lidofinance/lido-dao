@@ -2,6 +2,7 @@ import { abi as LidoOracleAbi } from '../../../../artifacts/LidoOracle.json'
 import { createVote, voteForAction, init as votingInit } from './votingHelper'
 import { encodeCallScript } from '@aragon/contract-helpers-test/src/aragon-os'
 import logger from '../logger'
+import { BN } from '../utils'
 
 let web3
 let context
@@ -24,6 +25,7 @@ export async function hasInitialized() {
   return await lidoOracleContract.methods.hasInitialized().call()
 }
 
+// delete?
 export async function reportBeacon(epoch, oracleData, beaconValidatorsCount, sender) {
   return await lidoOracleContract.methods.reportBeacon(epoch, oracleData, beaconValidatorsCount).send({ from: sender, gas: '8000000' })
 }
@@ -84,14 +86,62 @@ export async function getQuorum() {
 }
 
 export async function waitForReportBeacon() {
-  const fromBlock = await web3.eth.getBlockNumber()
-  return new Promise((resolve, reject) => {
+  const txReportEvent = await new Promise((resolve, reject) => {
     lidoOracleContract.once(
       'Completed',
       {
-        fromBlock
+        fromBlock: 'latest'
       },
-      (error, event) => (error ? reject(error) : resolve(event.returnValues))
+      (error, event) => (error ? reject(error) : resolve(event))
     )
   })
+  const reportedEvent = txReportEvent.returnValues
+  const reportedBlock = txReportEvent.blockNumber
+  return { reportedEvent, reportedBlock }
+}
+
+export async function waitForDecreaseBeaconBalance() {
+  let prevEvent
+  let lastEvent
+  while (true) {
+    prevEvent = await waitForReportBeacon()
+    lastEvent = await waitForReportBeacon()
+    if (BN(prevEvent.reportedEvent.beaconBalance).gt(BN(lastEvent.reportedEvent.beaconBalance))) {
+      return {
+        prevEvent: {
+          beaconBalance: prevEvent.reportedEvent.beaconBalance,
+          blockNumber: prevEvent.reportedBlock
+        },
+        lastEvent: {
+          beaconBalance: lastEvent.reportedEvent.beaconBalance,
+          blockNumber: lastEvent.reportedBlock
+        }
+      }
+    }
+  }
+}
+
+export async function waitForIncreaseBeaconBalance() {
+  let prevEvent
+  let lastEvent
+  while (true) {
+    prevEvent = await waitForReportBeacon()
+    lastEvent = await waitForReportBeacon()
+    if (BN(prevEvent.reportedEvent.beaconBalance).lt(BN(lastEvent.reportedEvent.beaconBalance))) {
+      console.log('prev beacon balance ', prevEvent.reportedEvent.beaconBalance)
+      console.log('prev from block ', prevEvent.reportedBlock)
+      console.log('last beacon balance ', lastEvent.reportedEvent.beaconBalance)
+      console.log('last from block ', lastEvent.reportedBlock)
+      return {
+        prevEvent: {
+          beaconBalance: prevEvent.reportedEvent.beaconBalance,
+          blockNumber: prevEvent.reportedBlock
+        },
+        lastEvent: {
+          beaconBalance: lastEvent.reportedEvent.beaconBalance,
+          blockNumber: lastEvent.reportedBlock
+        }
+      }
+    }
+  }
 }

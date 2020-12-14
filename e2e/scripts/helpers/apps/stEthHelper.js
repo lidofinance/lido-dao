@@ -17,8 +17,8 @@ export async function hasInitialized() {
   return await stEthContract.methods.hasInitialized().call()
 }
 
-export async function getBalance(user) {
-  return await stEthContract.methods.balanceOf(user).call()
+export async function getBalance(user, block_identifier = context.web3.eth.defaultBlock) {
+  return await stEthContract.methods.balanceOf(user).call(block_identifier)
 }
 
 export async function getTotalSupply() {
