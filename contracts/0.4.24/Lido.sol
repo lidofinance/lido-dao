@@ -448,15 +448,12 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         if (sharesAmount == 0) {
             // totalControlledEther is 0: either the first-ever deposit or complete slashing
             // assume that shares correspond to Ether 1-to-1
-            _mintShares(sender, deposit);
-            _emitTransferAfterMintingShares(sender, deposit);
-        } else {
-            _mintShares(sender, sharesAmount);
-            _emitTransferAfterMintingShares(sender, sharesAmount);
+            sharesAmount = deposit;
         }
 
+        _mintShares(sender, sharesAmount);
         _submitted(sender, deposit, _referral);
-
+        _emitTransferAfterMintingShares(sender, sharesAmount);
         return sharesAmount;
     }
 
@@ -554,10 +551,10 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     * @param _totalRewards Total rewards accrued on the Ethereum 2.0 side in wei
     */
     function distributeRewards(uint256 _totalRewards) internal {
-        uint256 feeInEther = _totalRewards.mul(_getFee()).div(10000);
         // We need to take a defined percentage of the reported reward as a fee, and we do
         // this by minting new token shares and assigning them to the fee recipients (see
-        // StETH docs for the explanation of the shares mechanics).
+        // StETH docs for the explanation of the shares mechanics). The staking rewards fee
+        // is defined in basis points (1 basis point is equal to 0.01%, 10000 is 100%).
         //
         // Since we've increased totalPooledEther by _totalRewards (which is already
         // performed by the time this function is called), the combined cost of all holders'
@@ -567,48 +564,65 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         // Now we want to mint new shares to the fee recipient, so that the total cost of the
         // newly-minted shares exactly corresponds to the fee taken:
         //
-        // shares2mint * newShareCost = feeInEther
+        // shares2mint * newShareCost = (_totalRewards * feeBasis) / 10000
         // newShareCost = newTotalPooledEther / (prevTotalShares + shares2mint)
         //
         // which follows to:
         //
-        //                    feeInEther * prevTotalShares
-        // shares2mint = --------------------------------------
-        //                 newTotalPooledEther - feeInEther
+        //                        _totalRewards * feeBasis * prevTotalShares
+        // shares2mint = --------------------------------------------------------------
+        //                 (newTotalPooledEther * 10000) - (feeBasis * _totalRewards)
         //
         // The effect is that the given percentage of the reward goes to the fee recipient, and
         // the rest of the reward is distributed between token holders proportionally to their
         // token shares.
-        //
+        uint256 feeBasis = _getFee();
         uint256 shares2mint = (
-            feeInEther
-            .mul(_getTotalShares())
-            .div(_getTotalPooledEther().sub(feeInEther))
+            _totalRewards.mul(feeBasis).mul(_getTotalShares())
+            .div(
+                _getTotalPooledEther().mul(10000)
+                .sub(feeBasis.mul(_totalRewards))
+            )
         );
 
         // Mint the calculated amount of shares to this contract address. This will reduce the
         // balances of the holders, as if the fee was taken in parts from each of them.
         _mintShares(address(this), shares2mint);
 
-        (uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, ) = _getFeeDistribution();
-        uint256 toTreasury = shares2mint.mul(treasuryFeeBasisPoints).div(10000);
+        (,uint16 insuranceFeeBasisPoints, uint16 operatorsFeeBasisPoints) = _getFeeDistribution();
+
         uint256 toInsuranceFund = shares2mint.mul(insuranceFeeBasisPoints).div(10000);
-        // Transfer the rest of the fee to operators
-        uint256 toOperatorsRegistry = shares2mint.sub(toTreasury).sub(toInsuranceFund);
-
-        address treasury = getTreasury();
-        _transferShares(address(this), getTreasury(), toTreasury);
-        _emitTransferAfterMintingShares(treasury, toTreasury);
-
         address insuranceFund = getInsuranceFund();
-        _transferShares(address(this), getInsuranceFund(), toInsuranceFund);
+        _transferShares(address(this), insuranceFund, toInsuranceFund);
         _emitTransferAfterMintingShares(insuranceFund, toInsuranceFund);
 
-        INodeOperatorsRegistry operatorsRegistry = getOperators();
-        _transferShares(address(this), operatorsRegistry, toOperatorsRegistry);
-        _emitTransferAfterMintingShares(operatorsRegistry, toOperatorsRegistry);
+        uint256 distributedToOperatorsShares = _distributeNodeOperatorsReward(
+            shares2mint.mul(operatorsFeeBasisPoints).div(10000)
+        );
 
-        operatorsRegistry.distributeRewards(address(this), getPooledEthByShares(toOperatorsRegistry));
+        // Transfer the rest of the fee to treasury
+        uint256 toTreasury = shares2mint.sub(toInsuranceFund).sub(distributedToOperatorsShares);
+
+        address treasury = getTreasury();
+        _transferShares(address(this), treasury, toTreasury);
+        _emitTransferAfterMintingShares(treasury, toTreasury);
+    }
+
+    function _distributeNodeOperatorsReward(uint256 _sharesToDistribute) internal returns (uint256 distributed) {
+        (address[] memory recipients, uint256[] memory shares) = getOperators().getRewardsDistribution(_sharesToDistribute);
+
+        assert(recipients.length == shares.length);
+
+        distributed = 0;
+        for (uint256 idx = 0; idx < recipients.length; ++idx) {
+            _transferShares(
+                address(this),
+                recipients[idx],
+                shares[idx]
+            );
+            _emitTransferAfterMintingShares(recipients[idx], shares[idx]);
+            distributed = distributed.add(shares[idx]);
+        }
     }
 
     /**

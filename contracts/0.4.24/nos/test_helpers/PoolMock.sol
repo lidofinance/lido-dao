@@ -23,8 +23,4 @@ contract PoolMock {
     function trimUnusedKeys() external {
         operators.trimUnusedKeys();
     }
-
-    function distributeRewards(address _token, uint256 _totalReward) external {
-        operators.distributeRewards(_token, _totalReward);
-    }
 }

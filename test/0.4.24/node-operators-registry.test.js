@@ -613,7 +613,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await assertRevert(app.getSigningKey(1, 0, { from: nobody }), 'KEY_NOT_FOUND')
   })
 
-  it('distributeRewards works', async () => {
+  it('getRewardsDistribution works', async () => {
     await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
     await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
     await app.addNodeOperator('3', ADDRESS_3, UNLIMITED, { from: voting })
@@ -636,13 +636,9 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await app.reportStoppedValidators(0, 1, { from: voting })
     await app.setNodeOperatorActive(2, false, { from: voting })
 
-    const token = await ERC20Mock.new()
-    await token.mint(app.address, tokens(900))
-    await pool.distributeRewards(token.address, tokens(900))
+    const {recipients, shares} = await app.getRewardsDistribution(tokens(900));
 
-    assertBn(await token.balanceOf(ADDRESS_1, { from: nobody }), tokens(300))
-    assertBn(await token.balanceOf(ADDRESS_2, { from: nobody }), tokens(600))
-    assertBn(await token.balanceOf(ADDRESS_3, { from: nobody }), 0)
-    assertBn(await token.balanceOf(app.address, { from: nobody }), 0)
+    assert.sameOrderedMembers(recipients, [ADDRESS_1, ADDRESS_2], 'recipients')
+    assert.sameOrderedMembers(shares.map(x => String(x)), [tokens(300), tokens(600)], 'shares')
   })
 })

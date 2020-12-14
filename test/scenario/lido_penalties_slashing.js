@@ -179,7 +179,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
   it(`new validator doesn't get buffered ether even if there's 32 ETH deposit in the pool`, async () => {
     assertBn(await pool.getBufferedEther(), ETH(32), `all ether is buffered until there's a validator to deposit it`)
     assertBn(await pool.getTotalPooledEther(), ETH(32), 'total pooled ether')
-    assertBn(await nodeOperatorRegistry.getUnusedSigningKeyCount(0), 1, 'no more available keys for the first validator')
+    assertBn(await nodeOperatorRegistry.getUnusedSigningKeyCount(0), 1, 'one key available for the first validator')
   })
 
   it(`pushes pooled eth to the available validator`, async () => {
@@ -506,9 +506,62 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     )
   })
 
+  it(`voting stops the second operator`, async () => {
+    const activeOperatorsBefore = await nodeOperatorRegistry.getActiveNodeOperatorsCount()
+    await nodeOperatorRegistry.setNodeOperatorActive(1, false, { from: voting })
+    const activeOperatorsAfter = await nodeOperatorRegistry.getActiveNodeOperatorsCount()
+    assertBn(activeOperatorsAfter, activeOperatorsBefore.sub(new BN(1)), 'deactivated one operator')
+    assertBn(activeOperatorsAfter, new BN(0), 'no active operators')
+  })
+
+  it(`without active node operators node operator's fee is sent to treasury`, async () => {
+    const nodeOperator1TokenSharesBefore = await token.sharesOf(nodeOperator1.address)
+    const nodeOperator2TokenSharesBefore = await token.sharesOf(nodeOperator2.address)
+    const insuranceSharesBefore = await token.sharesOf(insuranceAddr)
+    const treasurySharesBefore = await token.sharesOf(treasuryAddr)
+    const prevTotalShares = await token.getTotalShares()
+
+    await oracleMock.reportBeacon(105, 2, tokens(98)) // 105 is an epoch number
+
+    const nodeOperator1TokenSharesAfter = await token.sharesOf(nodeOperator1.address)
+    const nodeOperator2TokenSharesAfter = await token.sharesOf(nodeOperator2.address)
+    const insuranceSharesAfter = await token.sharesOf(insuranceAddr)
+    const treasurySharesAfter = await token.sharesOf(treasuryAddr)
+    const totalPooledEther = await token.getTotalPooledEther()
+
+    assertBn(nodeOperator1TokenSharesAfter, nodeOperator1TokenSharesBefore, `first node operator hasn't got fees`)
+    assertBn(nodeOperator2TokenSharesAfter, nodeOperator2TokenSharesBefore, `second node operator hasn't got fees`)
+
+    const tenKBN = new BN(10000)
+    const totalFeeToDistribute = new BN(ETH(2)).mul(new BN(totalFeePoints)).div(tenKBN)
+
+    const sharesToMint = totalFeeToDistribute.mul(prevTotalShares).div(totalPooledEther.sub(totalFeeToDistribute))
+    const insuranceFee = sharesToMint.mul(new BN(insuranceFeePoints)).div(tenKBN)
+    const treasuryFeeTotalMinusInsurance = sharesToMint.sub(insuranceFee)
+
+    const treasuryFeeTotalTreasuryPlusNodeOperators = sharesToMint
+      .mul(new BN(treasuryFeePoints).add(new BN(nodeOperatorsFeePoints)))
+      .div(tenKBN)
+
+    assertBn(insuranceSharesAfter.sub(insuranceSharesBefore), insuranceFee, 'insurance got the regular fee')
+    assertBn(treasurySharesAfter.sub(treasurySharesBefore), treasuryFeeTotalMinusInsurance, 'treasury got the total fee - insurance fee')
+    assertBn(
+      treasurySharesAfter.sub(treasurySharesBefore),
+      treasuryFeeTotalTreasuryPlusNodeOperators.add(new BN(1)),
+      'treasury got the regular fee + node operators fee'
+    )
+  })
+
   it(`voting starts the first operator back`, async () => {
     const activeOperatorsBefore = await nodeOperatorRegistry.getActiveNodeOperatorsCount()
     await nodeOperatorRegistry.setNodeOperatorActive(0, true, { from: voting })
+    const activeOperatorsAfter = await nodeOperatorRegistry.getActiveNodeOperatorsCount()
+    assertBn(activeOperatorsAfter, activeOperatorsBefore.add(new BN(1)), 'activated one operator')
+  })
+
+  it(`voting starts the second operator back`, async () => {
+    const activeOperatorsBefore = await nodeOperatorRegistry.getActiveNodeOperatorsCount()
+    await nodeOperatorRegistry.setNodeOperatorActive(1, true, { from: voting })
     const activeOperatorsAfter = await nodeOperatorRegistry.getActiveNodeOperatorsCount()
     assertBn(activeOperatorsAfter, activeOperatorsBefore.add(new BN(1)), 'activated one operator')
   })
@@ -517,7 +570,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     const nodeOperator1TokenSharesBefore = await token.sharesOf(nodeOperator1.address)
     const nodeOperator2TokenSharesBefore = await token.sharesOf(nodeOperator2.address)
 
-    await oracleMock.reportBeacon(105, 2, tokens(100)) // 105 is an epoch number
+    await oracleMock.reportBeacon(106, 2, tokens(100)) // 106 is an epoch number
 
     const nodeOperator1TokenSharesAfter = await token.sharesOf(nodeOperator1.address)
     const nodeOperator2TokenSharesAfter = await token.sharesOf(nodeOperator2.address)
