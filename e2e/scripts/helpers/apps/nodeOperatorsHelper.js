@@ -1,8 +1,8 @@
 import { abi as nosAbi } from '../../../../artifacts/NodeOperatorsRegistry.json'
 import { encodeCallScript } from '@aragon/contract-helpers-test/src/aragon-os'
 import { createVote, voteForAction } from './votingHelper'
-import { BN, concatKeys, ETH } from '../utils'
-import { NODE_OPERATOR_BASIC_FEE } from '../constants'
+import { concatKeys } from '../utils'
+import { init as stEthHelperInit, getPooledEthByShares, getSharesByHolder } from './stEthHelper'
 import logger from '../logger'
 
 let web3
@@ -13,6 +13,7 @@ export function init(c) {
   if (!context) {
     context = c
     web3 = context.web3
+    stEthHelperInit(context)
     nodeOperatorsContract = new web3.eth.Contract(nosAbi, getProxyAddress())
   }
 }
@@ -133,18 +134,9 @@ export async function getTotalSigningKeyCount(nodeOperatorId) {
   return await nodeOperatorsContract.methods.getTotalSigningKeyCount(nodeOperatorId).call()
 }
 
-export function calculateSpReward(nosActiveSigningKeysCount, stakeProfit, totalUsedSigningKeysCount) {
-  return BN(stakeProfit)
-    .mul(BN(ETH(+nosActiveSigningKeysCount)))
-    .mul(BN(NODE_OPERATOR_BASIC_FEE / 100))
-    .div(BN(ETH(+totalUsedSigningKeysCount)))
-    .div(BN(100))
-}
-
-export function calculateNewNodeOperatorBalance(nodeOperator, stakeProfit, totalUsedSigningKeysCount, balanceBeforePushData) {
-  const nosActiveSigningKeys = +nodeOperator.usedSigningKeys - +nodeOperator.stoppedValidators
-  const reward = calculateSpReward(nosActiveSigningKeys, stakeProfit, totalUsedSigningKeysCount)
-  return BN(balanceBeforePushData).add(BN(reward)).toString()
+export async function calculateNewNodeOperatorBalance(holder) {
+  const sharesByHolder = await getSharesByHolder(holder)
+  return await getPooledEthByShares(sharesByHolder)
 }
 
 export async function getTotalActiveKeysCount() {
