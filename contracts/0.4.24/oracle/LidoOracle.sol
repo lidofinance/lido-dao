@@ -332,10 +332,10 @@ contract LidoOracle is ILidoOracle, AragonApp {
     )
         internal
     {
-        require(_epochsPerFrame > 0, "BAD_ARGUMENT");
-        require(_slotsPerEpoch > 0, "BAD_ARGUMENT");
-        require(_secondsPerSlot > 0, "BAD_ARGUMENT");
-        require(_genesisTime > 0, "BAD_ARGUMENT");
+        require(_epochsPerFrame > 0, "BAD_EPOCHS_PER_FRAME");
+        require(_slotsPerEpoch > 0, "BAD_SLOTS_PER_EPOCH");
+        require(_secondsPerSlot > 0, "BAD_SECONDS_PER_SLOT");
+        require(_genesisTime > 0, "BAD_GENESIS_TIME");
 
         uint256 data = (
             uint256(_epochsPerFrame) << 192 |

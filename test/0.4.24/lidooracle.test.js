@@ -61,25 +61,25 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
   })
 
   it('beaconSpec is correct', async () => {
-    const receipt = await app.getBeaconSpec()
-    assertBn(receipt.epochsPerFrame, 1)
-    assertBn(receipt.slotsPerEpoch, 32)
-    assertBn(receipt.secondsPerSlot, 12)
-    assertBn(receipt.genesisTime, 1606824000)
+    const beaconSpec = await app.getBeaconSpec()
+    assertBn(beaconSpec.epochsPerFrame, 1)
+    assertBn(beaconSpec.slotsPerEpoch, 32)
+    assertBn(beaconSpec.secondsPerSlot, 12)
+    assertBn(beaconSpec.genesisTime, 1606824000)
   })
 
   it('setBeaconSpec works', async () => {
-    await assertRevert(app.setBeaconSpec(0, 1, 1, 1, { from: voting }), 'BAD_ARGUMENT')
-    await assertRevert(app.setBeaconSpec(1, 0, 1, 1, { from: voting }), 'BAD_ARGUMENT')
-    await assertRevert(app.setBeaconSpec(1, 1, 0, 1, { from: voting }), 'BAD_ARGUMENT')
-    await assertRevert(app.setBeaconSpec(1, 1, 1, 0, { from: voting }), 'BAD_ARGUMENT')
+    await assertRevert(app.setBeaconSpec(0, 1, 1, 1, { from: voting }), 'BAD_EPOCHS_PER_FRAME')
+    await assertRevert(app.setBeaconSpec(1, 0, 1, 1, { from: voting }), 'BAD_SLOTS_PER_EPOCH')
+    await assertRevert(app.setBeaconSpec(1, 1, 0, 1, { from: voting }), 'BAD_SECONDS_PER_SLOT')
+    await assertRevert(app.setBeaconSpec(1, 1, 1, 0, { from: voting }), 'BAD_GENESIS_TIME')
 
     await app.setBeaconSpec(1, 1, 1, 1, { from: voting })
-    const receipt = await app.getBeaconSpec()
-    assertBn(receipt.epochsPerFrame, 1)
-    assertBn(receipt.slotsPerEpoch, 1)
-    assertBn(receipt.secondsPerSlot, 1)
-    assertBn(receipt.genesisTime, 1)
+    const beaconSpec = await app.getBeaconSpec()
+    assertBn(beaconSpec.epochsPerFrame, 1)
+    assertBn(beaconSpec.slotsPerEpoch, 1)
+    assertBn(beaconSpec.secondsPerSlot, 1)
+    assertBn(beaconSpec.genesisTime, 1)
   })
 
   describe('Test utility functions:', function () {
