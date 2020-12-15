@@ -3,7 +3,7 @@ const { newDao, newApp } = require('../../0.4.24/helpers/dao')
 const Lido = artifacts.require('TestLido.sol')
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 const OracleMock = artifacts.require('OracleMock.sol')
-const ValidatorRegistrationMock = artifacts.require('ValidatorRegistrationMock.sol')
+const DepositContractMock = artifacts.require('DepositContractMock.sol')
 
 module.exports = {
   deployDaoAndPool
@@ -13,10 +13,10 @@ async function deployDaoAndPool(appManager, voting) {
   // Deploy the DAO, oracle and validator registration mocks, and base contracts for
   // Lido (the pool) and NodeOperatorsRegistry (the Node Operators registry)
 
-  const [{ dao, acl }, oracleMock, validatorRegistrationMock, poolBase, nodeOperatorRegistryBase] = await Promise.all([
+  const [{ dao, acl }, oracleMock, depositContractMock, poolBase, nodeOperatorRegistryBase] = await Promise.all([
     newDao(appManager),
     OracleMock.new(),
-    ValidatorRegistrationMock.new(),
+    DepositContractMock.new(),
     Lido.new(),
     NodeOperatorsRegistry.new()
   ])
@@ -94,10 +94,10 @@ async function deployDaoAndPool(appManager, voting) {
     })
   ])
 
-  await pool.initialize(validatorRegistrationMock.address, oracleMock.address, nodeOperatorRegistry.address)
+  await pool.initialize(depositContractMock.address, oracleMock.address, nodeOperatorRegistry.address)
 
   await oracleMock.setPool(pool.address)
-  await validatorRegistrationMock.reset()
+  await depositContractMock.reset()
 
   const [treasuryAddr, insuranceAddr] = await Promise.all([pool.getTreasury(), pool.getInsuranceFund()])
 
@@ -105,7 +105,7 @@ async function deployDaoAndPool(appManager, voting) {
     dao,
     acl,
     oracleMock,
-    validatorRegistrationMock,
+    depositContractMock,
     token,
     pool,
     nodeOperatorRegistry,

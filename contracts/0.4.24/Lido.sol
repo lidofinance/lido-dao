@@ -13,7 +13,7 @@ import "solidity-bytes-utils/contracts/BytesLib.sol";
 
 import "./interfaces/ILido.sol";
 import "./interfaces/INodeOperatorsRegistry.sol";
-import "./interfaces/IValidatorRegistration.sol";
+import "./interfaces/IDepositContract.sol";
 
 import "./StETH.sol";
 
@@ -53,42 +53,42 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
 
     uint256 constant public DEPOSIT_SIZE = 32 ether;
 
-    uint256 internal constant DEPOSIT_AMOUNT_UNIT = 1000000000 wei;     // validator_registration.vy
+    uint256 internal constant DEPOSIT_AMOUNT_UNIT = 1000000000 wei;
 
     /// @dev default value for maximum number of Ethereum 2.0 validators registered in a single depositBufferedEther call
     uint256 internal constant DEFAULT_MAX_DEPOSITS_PER_CALL = 16;
 
-    bytes32 internal constant FEE_VALUE_POSITION = keccak256("lido.Lido.fee");
-    bytes32 internal constant TREASURY_FEE_VALUE_POSITION = keccak256("lido.Lido.treasuryFee");
-    bytes32 internal constant INSURANCE_FEE_VALUE_POSITION = keccak256("lido.Lido.insuranceFee");
-    bytes32 internal constant NODE_OPERATORS_FEE_VALUE_POSITION = keccak256("lido.Lido.operatorsFee");
+    bytes32 internal constant FEE_POSITION = keccak256("lido.Lido.fee");
+    bytes32 internal constant TREASURY_FEE_POSITION = keccak256("lido.Lido.treasuryFee");
+    bytes32 internal constant INSURANCE_FEE_POSITION = keccak256("lido.Lido.insuranceFee");
+    bytes32 internal constant NODE_OPERATORS_FEE_POSITION = keccak256("lido.Lido.nodeOperatorsFee");
 
-    bytes32 internal constant VALIDATOR_REGISTRATION_VALUE_POSITION = keccak256("lido.Lido.validatorRegistration");
-    bytes32 internal constant ORACLE_VALUE_POSITION = keccak256("lido.Lido.oracle");
-    bytes32 internal constant NODE_OPERATOR_REGISTRY_VALUE_POSITION = keccak256("lido.Lido.nodeOperatorRegistry");
-    bytes32 internal constant TREASURY_VALUE_POSITION = keccak256("lido.Lido.treasury");
-    bytes32 internal constant INSURANCE_FUND_VALUE_POSITION = keccak256("lido.Lido.insuranceFunds");
+    bytes32 internal constant DEPOSIT_CONTRACT_POSITION = keccak256("lido.Lido.depositContract");
+    bytes32 internal constant ORACLE_POSITION = keccak256("lido.Lido.oracle");
+    bytes32 internal constant NODE_OPERATORS_REGISTRY_POSITION = keccak256("lido.Lido.nodeOperatorsRegistry");
+    bytes32 internal constant TREASURY_POSITION = keccak256("lido.Lido.treasury");
+    bytes32 internal constant INSURANCE_FUND_POSITION = keccak256("lido.Lido.insuranceFund");
 
     /// @dev amount of Ether (on the current Ethereum side) buffered on this smart contract balance
-    bytes32 internal constant BUFFERED_ETHER_VALUE_POSITION = keccak256("lido.Lido.bufferedEther");
+    bytes32 internal constant BUFFERED_ETHER_POSITION = keccak256("lido.Lido.bufferedEther");
     /// @dev number of deposited validators (incrementing counter of deposit operations).
-    bytes32 internal constant DEPOSITED_VALIDATORS_VALUE_POSITION = keccak256("lido.Lido.depositedValidators");
+    bytes32 internal constant DEPOSITED_VALIDATORS_POSITION = keccak256("lido.Lido.depositedValidators");
     /// @dev total amount of Beacon-side Ether (sum of all the balances of Lido validators)
-    bytes32 internal constant BEACON_BALANCE_VALUE_POSITION = keccak256("lido.Lido.beaconBalance");
+    bytes32 internal constant BEACON_BALANCE_POSITION = keccak256("lido.Lido.beaconBalance");
     /// @dev number of Lido's validators available in the Beacon state
-    bytes32 internal constant BEACON_VALIDATORS_VALUE_POSITION = keccak256("lido.Lido.beaconValidators");
+    bytes32 internal constant BEACON_VALIDATORS_POSITION = keccak256("lido.Lido.beaconValidators");
 
     /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
     bytes32 internal constant WITHDRAWAL_CREDENTIALS_POSITION = keccak256("lido.Lido.withdrawalCredentials");
 
     /**
     * @dev As AragonApp, Lido contract must be initialized with following variables:
-    * @param validatorRegistration official ETH2 Deposit contract
+    * @param depositContract official ETH2 Deposit contract
     * @param _oracle oracle contract
     * @param _operators instance of Node Operators Registry
     */
     function initialize(
-        IValidatorRegistration validatorRegistration,
+        IDepositContract depositContract,
         address _oracle,
         INodeOperatorsRegistry _operators,
         address _treasury,
@@ -96,7 +96,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     )
         public onlyInit
     {
-        _setValidatorRegistrationContract(validatorRegistration);
+        _setDepositContract(depositContract);
         _setOracle(_oracle);
         _setOperators(_operators);
         _setTreasury(_treasury);
@@ -172,7 +172,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
       * @param _feeBasisPoints Fee rate, in basis points
       */
     function setFee(uint16 _feeBasisPoints) external auth(MANAGE_FEE) {
-        _setBPValue(FEE_VALUE_POSITION, _feeBasisPoints);
+        _setBPValue(FEE_POSITION, _feeBasisPoints);
         emit FeeSet(_feeBasisPoints);
     }
 
@@ -193,9 +193,9 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
             "FEES_DONT_ADD_UP"
         );
 
-        _setBPValue(TREASURY_FEE_VALUE_POSITION, _treasuryFeeBasisPoints);
-        _setBPValue(INSURANCE_FEE_VALUE_POSITION, _insuranceFeeBasisPoints);
-        _setBPValue(NODE_OPERATORS_FEE_VALUE_POSITION, _operatorsFeeBasisPoints);
+        _setBPValue(TREASURY_FEE_POSITION, _treasuryFeeBasisPoints);
+        _setBPValue(INSURANCE_FEE_POSITION, _insuranceFeeBasisPoints);
+        _setBPValue(NODE_OPERATORS_FEE_POSITION, _operatorsFeeBasisPoints);
 
         emit FeeDistributionSet(_treasuryFeeBasisPoints, _insuranceFeeBasisPoints, _operatorsFeeBasisPoints);
     }
@@ -232,7 +232,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
       * @notice Set credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched to `_withdrawalCredentials`
       * @dev Note that setWithdrawalCredentials discards all unused signing keys as the signatures are invalidated.
       * @param _withdrawalCredentials hash of withdrawal multisignature key as accepted by
-      *        the validator_registration.deposit function
+      *        the deposit_contract.deposit function
       */
     function setWithdrawalCredentials(bytes32 _withdrawalCredentials) external auth(MANAGE_WITHDRAWAL_KEY) {
         WITHDRAWAL_CREDENTIALS_POSITION.setStorageBytes32(_withdrawalCredentials);
@@ -261,10 +261,10 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     function pushBeacon(uint256 _beaconValidators, uint256 _beaconBalance) external whenNotStopped {
         require(msg.sender == getOracle(), "APP_AUTH_FAILED");
 
-        uint256 depositedValidators = DEPOSITED_VALIDATORS_VALUE_POSITION.getStorageUint256();
+        uint256 depositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256();
         require(_beaconValidators <= depositedValidators, "REPORTED_MORE_DEPOSITED");
 
-        uint256 beaconValidators = BEACON_VALIDATORS_VALUE_POSITION.getStorageUint256();
+        uint256 beaconValidators = BEACON_VALIDATORS_POSITION.getStorageUint256();
         // Since the calculation of funds in the ingress queue is based on the number of validators
         // that are in a transient state (deposited but not seen on beacon yet), we can't decrease the previously
         // reported number (we'll be unable to figure out who is in the queue and count them).
@@ -274,12 +274,12 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
 
         // RewardBase is the amount of money that is not included in the reward calculation
         // Just appeared validators * 32 added to the previously reported beacon balance
-        uint256 rewardBase = (appearedValidators.mul(DEPOSIT_SIZE)).add(BEACON_BALANCE_VALUE_POSITION.getStorageUint256());
+        uint256 rewardBase = (appearedValidators.mul(DEPOSIT_SIZE)).add(BEACON_BALANCE_POSITION.getStorageUint256());
 
         // Save the current beacon balance and validators to
         // calcuate rewards on the next push
-        BEACON_BALANCE_VALUE_POSITION.setStorageUint256(_beaconBalance);
-        BEACON_VALIDATORS_VALUE_POSITION.setStorageUint256(_beaconValidators);
+        BEACON_BALANCE_POSITION.setStorageUint256(_beaconBalance);
+        BEACON_VALIDATORS_POSITION.setStorageUint256(_beaconValidators);
 
         if (_beaconBalance > rewardBase) {
             uint256 rewards = _beaconBalance.sub(rewardBase);
@@ -350,10 +350,10 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     }
 
     /**
-      * @notice Gets validator registration contract handle
+      * @notice Gets deposit contract handle
       */
-    function getValidatorRegistrationContract() public view returns (IValidatorRegistration) {
-        return IValidatorRegistration(VALIDATOR_REGISTRATION_VALUE_POSITION.getStorageAddress());
+    function getDepositContract() public view returns (IDepositContract) {
+        return IDepositContract(DEPOSIT_CONTRACT_POSITION.getStorageAddress());
     }
 
     /**
@@ -361,28 +361,28 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     * @return address of oracle contract
     */
     function getOracle() public view returns (address) {
-        return ORACLE_VALUE_POSITION.getStorageAddress();
+        return ORACLE_POSITION.getStorageAddress();
     }
 
     /**
       * @notice Gets node operators registry interface handle
       */
     function getOperators() public view returns (INodeOperatorsRegistry) {
-        return INodeOperatorsRegistry(NODE_OPERATOR_REGISTRY_VALUE_POSITION.getStorageAddress());
+        return INodeOperatorsRegistry(NODE_OPERATORS_REGISTRY_POSITION.getStorageAddress());
     }
 
     /**
       * @notice Returns the treasury address
       */
     function getTreasury() public view returns (address) {
-        return TREASURY_VALUE_POSITION.getStorageAddress();
+        return TREASURY_POSITION.getStorageAddress();
     }
 
     /**
       * @notice Returns the insurance fund address
       */
     function getInsuranceFund() public view returns (address) {
-        return INSURANCE_FUND_VALUE_POSITION.getStorageAddress();
+        return INSURANCE_FUND_POSITION.getStorageAddress();
     }
 
     /**
@@ -392,18 +392,18 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     * @return beaconBalance - total amount of Beacon-side Ether (sum of all the balances of Lido validators)
     */
     function getBeaconStat() public view returns (uint256 depositedValidators, uint256 beaconValidators, uint256 beaconBalance) {
-        depositedValidators = DEPOSITED_VALIDATORS_VALUE_POSITION.getStorageUint256();
-        beaconValidators = BEACON_VALIDATORS_VALUE_POSITION.getStorageUint256();
-        beaconBalance = BEACON_BALANCE_VALUE_POSITION.getStorageUint256();
+        depositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256();
+        beaconValidators = BEACON_VALIDATORS_POSITION.getStorageUint256();
+        beaconBalance = BEACON_BALANCE_POSITION.getStorageUint256();
     }
 
     /**
     * @dev Sets the address of Deposit contract
     * @param _contract the address of Deposit contract
     */
-    function _setValidatorRegistrationContract(IValidatorRegistration _contract) internal {
+    function _setDepositContract(IDepositContract _contract) internal {
         require(isContract(address(_contract)), "NOT_A_CONTRACT");
-        VALIDATOR_REGISTRATION_VALUE_POSITION.setStorageAddress(address(_contract));
+        DEPOSIT_CONTRACT_POSITION.setStorageAddress(address(_contract));
     }
 
     /**
@@ -412,7 +412,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     */
     function _setOracle(address _oracle) internal {
         require(isContract(_oracle), "NOT_A_CONTRACT");
-        ORACLE_VALUE_POSITION.setStorageAddress(_oracle);
+        ORACLE_POSITION.setStorageAddress(_oracle);
     }
 
     /**
@@ -421,17 +421,17 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     */
     function _setOperators(INodeOperatorsRegistry _r) internal {
         require(isContract(_r), "NOT_A_CONTRACT");
-        NODE_OPERATOR_REGISTRY_VALUE_POSITION.setStorageAddress(_r);
+        NODE_OPERATORS_REGISTRY_POSITION.setStorageAddress(_r);
     }
 
     function _setTreasury(address _treasury) internal {
         require(_treasury != address(0), "SET_TREASURY_ZERO_ADDRESS");
-        TREASURY_VALUE_POSITION.setStorageAddress(_treasury);
+        TREASURY_POSITION.setStorageAddress(_treasury);
     }
 
     function _setInsuranceFund(address _insuranceFund) internal {
         require(_insuranceFund != address(0), "SET_INSURANCE_FUND_ZERO_ADDRESS");
-        INSURANCE_FUND_VALUE_POSITION.setStorageAddress(_insuranceFund);
+        INSURANCE_FUND_POSITION.setStorageAddress(_insuranceFund);
     }
 
     /**
@@ -501,8 +501,8 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
             _stake(pubkey, signature);
         }
 
-        DEPOSITED_VALIDATORS_VALUE_POSITION.setStorageUint256(
-            DEPOSITED_VALIDATORS_VALUE_POSITION.getStorageUint256().add(numKeys)
+        DEPOSITED_VALIDATORS_POSITION.setStorageUint256(
+            DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(numKeys)
         );
 
         return numKeys.mul(DEPOSIT_SIZE);
@@ -523,7 +523,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         uint256 depositAmount = value.div(DEPOSIT_AMOUNT_UNIT);
         assert(depositAmount.mul(DEPOSIT_AMOUNT_UNIT) == value);    // properly rounded
 
-        // Compute deposit data root (`DepositData` hash tree root) according to validator_registration.vy
+        // Compute deposit data root (`DepositData` hash tree root) according to deposit_contract.sol
         bytes32 pubkeyRoot = sha256(_pad64(_pubkey));
         bytes32 signatureRoot = sha256(
             abi.encodePacked(
@@ -541,7 +541,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
 
         uint256 targetBalance = address(this).balance.sub(value);
 
-        getValidatorRegistrationContract().deposit.value(value)(
+        getDepositContract().deposit.value(value)(
             _pubkey, abi.encodePacked(withdrawalCredentials), _signature, depositDataRoot);
         require(address(this).balance == targetBalance, "EXPECTING_DEPOSIT_TO_HAPPEN");
     }
@@ -632,18 +632,18 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     * @param _referral address of the referral
     */
     function _submitted(address _sender, uint256 _value, address _referral) internal {
-        BUFFERED_ETHER_VALUE_POSITION.setStorageUint256(_getBufferedEther().add(_value));
+        BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().add(_value));
 
         emit Submitted(_sender, _value, _referral);
     }
 
     /**
-      * @dev Records a deposit to the validator_registration.deposit function.
+      * @dev Records a deposit to the deposit_contract.deposit function.
       * @param _amount Total amount deposited to the ETH 2.0 side
       */
     function _markAsUnbuffered(uint256 _amount) internal {
-        BUFFERED_ETHER_VALUE_POSITION.setStorageUint256(
-            BUFFERED_ETHER_VALUE_POSITION.getStorageUint256().sub(_amount));
+        BUFFERED_ETHER_POSITION.setStorageUint256(
+            BUFFERED_ETHER_POSITION.getStorageUint256().sub(_amount));
 
         emit Unbuffered(_amount);
     }
@@ -660,7 +660,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
       * @dev Returns staking rewards fee rate
       */
     function _getFee() internal view returns (uint16) {
-        return _readBPValue(FEE_VALUE_POSITION);
+        return _readBPValue(FEE_POSITION);
     }
 
     /**
@@ -669,9 +669,9 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     function _getFeeDistribution() internal view
         returns (uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, uint16 operatorsFeeBasisPoints)
     {
-        treasuryFeeBasisPoints = _readBPValue(TREASURY_FEE_VALUE_POSITION);
-        insuranceFeeBasisPoints = _readBPValue(INSURANCE_FEE_VALUE_POSITION);
-        operatorsFeeBasisPoints = _readBPValue(NODE_OPERATORS_FEE_VALUE_POSITION);
+        treasuryFeeBasisPoints = _readBPValue(TREASURY_FEE_POSITION);
+        insuranceFeeBasisPoints = _readBPValue(INSURANCE_FEE_POSITION);
+        operatorsFeeBasisPoints = _readBPValue(NODE_OPERATORS_FEE_POSITION);
     }
 
     /**
@@ -687,7 +687,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
       * @dev Gets the amount of Ether temporary buffered on this contract balance
       */
     function _getBufferedEther() internal view returns (uint256) {
-        uint256 buffered = BUFFERED_ETHER_VALUE_POSITION.getStorageUint256();
+        uint256 buffered = BUFFERED_ETHER_POSITION.getStorageUint256();
         assert(address(this).balance >= buffered);
 
         return buffered;
@@ -706,8 +706,8 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     * @return transient balance in wei (1e-18 Ether)
     */
     function _getTransientBalance() internal view returns (uint256) {
-        uint256 depositedValidators = DEPOSITED_VALIDATORS_VALUE_POSITION.getStorageUint256();
-        uint256 beaconValidators = BEACON_VALIDATORS_VALUE_POSITION.getStorageUint256();
+        uint256 depositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256();
+        uint256 beaconValidators = BEACON_VALIDATORS_POSITION.getStorageUint256();
         // beaconValidators can never be less than deposited ones.
         assert(depositedValidators >= beaconValidators);
         uint256 transientValidators = depositedValidators.sub(beaconValidators);
@@ -720,7 +720,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     */
     function _getTotalPooledEther() internal view returns (uint256) {
         uint256 bufferedBalance = _getBufferedEther();
-        uint256 beaconBalance = BEACON_BALANCE_VALUE_POSITION.getStorageUint256();
+        uint256 beaconBalance = BEACON_BALANCE_POSITION.getStorageUint256();
         uint256 transientBalance = _getTransientBalance();
         return bufferedBalance.add(beaconBalance).add(transientBalance);
     }

@@ -41,7 +41,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
     uint256 internal constant UINT64_MAX = uint256(uint64(-1));
 
-    bytes32 internal constant SIGNING_KEYS_MAPPING_NAME = keccak256("lido.Lido.signingKeys");
+    bytes32 internal constant SIGNING_KEYS_MAPPING_NAME = keccak256("lido.NodeOperatorsRegistry.signingKeysMappingName");
 
 
     /// @dev Node Operator parameters and internal state
@@ -71,17 +71,17 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     mapping(uint256 => NodeOperator) internal operators;
 
     // @dev Total number of operators
-    bytes32 internal constant TOTAL_OPERATORS_COUNT_VALUE_POSITION = keccak256("lido.Lido.totalOperatorsCount");
+    bytes32 internal constant TOTAL_OPERATORS_COUNT_POSITION = keccak256("lido.NodeOperatorsRegistry.totalOperatorsCount");
 
     // @dev Cached number of active operators
-    bytes32 internal constant ACTIVE_OPERATORS_COUNT_VALUE_POSITION = keccak256("lido.Lido.activeOperatorsCount");
+    bytes32 internal constant ACTIVE_OPERATORS_COUNT_POSITION = keccak256("lido.NodeOperatorsRegistry.activeOperatorsCount");
 
-    /// @dev link to the pool
-    bytes32 internal constant POOL_VALUE_POSITION = keccak256("lido.Lido.pool");
+    /// @dev link to the Lido contract
+    bytes32 internal constant LIDO_POSITION = keccak256("lido.NodeOperatorsRegistry.lido");
 
 
-    modifier onlyPool() {
-        require(msg.sender == POOL_VALUE_POSITION.getStorageAddress(), "APP_AUTH_FAILED");
+    modifier onlyLido() {
+        require(msg.sender == LIDO_POSITION.getStorageAddress(), "APP_AUTH_FAILED");
         _;
     }
 
@@ -95,10 +95,10 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         _;
     }
 
-    function initialize(address _pool) public onlyInit {
-        TOTAL_OPERATORS_COUNT_VALUE_POSITION.setStorageUint256(0);
-        ACTIVE_OPERATORS_COUNT_VALUE_POSITION.setStorageUint256(0);
-        POOL_VALUE_POSITION.setStorageAddress(_pool);
+    function initialize(address _lido) public onlyInit {
+        TOTAL_OPERATORS_COUNT_POSITION.setStorageUint256(0);
+        ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(0);
+        LIDO_POSITION.setStorageAddress(_lido);
         initialized();
     }
 
@@ -115,12 +115,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         returns (uint256 id)
     {
         id = getNodeOperatorsCount();
-        TOTAL_OPERATORS_COUNT_VALUE_POSITION.setStorageUint256(id.add(1));
+        TOTAL_OPERATORS_COUNT_POSITION.setStorageUint256(id.add(1));
 
         NodeOperator storage operator = operators[id];
 
         uint256 activeOperatorsCount = getActiveNodeOperatorsCount();
-        ACTIVE_OPERATORS_COUNT_VALUE_POSITION.setStorageUint256(activeOperatorsCount.add(1));
+        ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(activeOperatorsCount.add(1));
 
         operator.active = true;
         operator.name = _name;
@@ -142,9 +142,9 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         if (operators[_id].active != _active) {
             uint256 activeOperatorsCount = getActiveNodeOperatorsCount();
             if (_active)
-                ACTIVE_OPERATORS_COUNT_VALUE_POSITION.setStorageUint256(activeOperatorsCount.add(1));
+                ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(activeOperatorsCount.add(1));
             else
-                ACTIVE_OPERATORS_COUNT_VALUE_POSITION.setStorageUint256(activeOperatorsCount.sub(1));
+                ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(activeOperatorsCount.sub(1));
         }
 
         operators[_id].active = _active;
@@ -202,9 +202,9 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
     /**
       * @notice Remove unused signing keys
-      * @dev Function is used by the pool
+      * @dev Function is used by the Lido contract
       */
-    function trimUnusedKeys() external onlyPool {
+    function trimUnusedKeys() external onlyLido {
         uint256 length = getNodeOperatorsCount();
         for (uint256 operatorId = 0; operatorId < length; ++operatorId) {
             if (operators[operatorId].totalSigningKeys != operators[operatorId].usedSigningKeys)  // write only if update is needed
@@ -217,7 +217,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       * @dev Along with each key the DAO has to provide a signatures for the
       *      (pubkey, withdrawal_credentials, 32000000000) message.
       *      Given that information, the contract'll be able to call
-      *      validator_registration.deposit on-chain.
+      *      deposit_contract.deposit on-chain.
       * @param _operator_id Node Operator id
       * @param _quantity Number of signing keys provided
       * @param _pubkeys Several concatenated validator signing keys
@@ -234,7 +234,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       * @dev Along with each key the DAO has to provide a signatures for the
       *      (pubkey, withdrawal_credentials, 32000000000) message.
       *      Given that information, the contract'll be able to call
-      *      validator_registration.deposit on-chain.
+      *      deposit_contract.deposit on-chain.
       * @param _operator_id Node Operator id
       * @param _quantity Number of signing keys provided
       * @param _pubkeys Several concatenated validator signing keys
@@ -277,12 +277,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     /**
      * @notice Selects and returns at most `_numKeys` signing keys (as well as the corresponding
      *         signatures) from the set of active keys and marks the selected keys as used.
-     *         May only be called by the pool contract.
+     *         May only be called by the Lido contract.
      *
      * @param _numKeys The number of keys to select. The actual number of selected keys may be less
      *        due to the lack of active keys.
      */
-    function assignNextSigningKeys(uint256 _numKeys) external onlyPool returns (bytes memory pubkeys, bytes memory signatures) {
+    function assignNextSigningKeys(uint256 _numKeys) external onlyLido returns (bytes memory pubkeys, bytes memory signatures) {
         // Memory is very cheap, although you don't want to grow it too much
         DepositLookupCacheEntry[] memory cache = _loadOperatorCache();
         if (0 == cache.length)
@@ -409,7 +409,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       * @notice Returns number of active node operators
       */
     function getActiveNodeOperatorsCount() public view returns (uint256) {
-        return ACTIVE_OPERATORS_COUNT_VALUE_POSITION.getStorageUint256();
+        return ACTIVE_OPERATORS_COUNT_POSITION.getStorageUint256();
     }
 
     /**
@@ -460,7 +460,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       * @param _operator_id Node Operator id
       * @param _index Index of the key, starting with 0
       * @return key Key
-      * @return depositSignature Signature needed for a validator_registration.deposit call
+      * @return depositSignature Signature needed for a deposit_contract.deposit call
       * @return used Flag indication if the key was used in the staking
       */
     function getSigningKey(uint256 _operator_id, uint256 _index) external view
@@ -478,7 +478,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       * @notice Returns total number of node operators
       */
     function getNodeOperatorsCount() public view returns (uint256) {
-        return TOTAL_OPERATORS_COUNT_VALUE_POSITION.getStorageUint256();
+        return TOTAL_OPERATORS_COUNT_POSITION.getStorageUint256();
     }
 
     function _isEmptySigningKey(bytes memory _key) internal pure returns (bool) {

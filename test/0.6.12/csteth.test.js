@@ -485,8 +485,7 @@ contract('CstETH', function ([deployer, initialHolder, recipient, anotherAccount
   See https://github.com/lidofinance/lido-dao/issues/192
   */
   it('has no burn and burnFrom functions (discarded)', async function () {
-    assert.isNotFunction(this.csteth.burn, 'no burn function');
-    assert.isNotFunction(this.csteth.burnFrom, 'no burnFrom function');
+    assert.isNotFunction(this.csteth.burn, 'no burn function')
+    assert.isNotFunction(this.csteth.burnFrom, 'no burnFrom function')
   })
-
 })

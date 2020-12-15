@@ -107,7 +107,7 @@ interface INodeOperatorsRegistry {
       * @dev Along with each key the DAO has to provide a signatures for the
       *      (pubkey, withdrawal_credentials, 32000000000) message.
       *      Given that information, the contract'll be able to call
-      *      validator_registration.deposit on-chain.
+      *      deposit_contract.deposit on-chain.
       * @param _operator_id Node Operator id
       * @param _quantity Number of signing keys provided
       * @param _pubkeys Several concatenated validator signing keys
@@ -137,7 +137,7 @@ interface INodeOperatorsRegistry {
       * @param _operator_id Node Operator id
       * @param _index Index of the key, starting with 0
       * @return key Key
-      * @return depositSignature Signature needed for a validator_registration.deposit call
+      * @return depositSignature Signature needed for a deposit_contract.deposit call
       * @return used Flag indication if the key was used in the staking
       */
     function getSigningKey(uint256 _operator_id, uint256 _index) external view returns
