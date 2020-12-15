@@ -10,7 +10,6 @@ import "@aragon/os/contracts/common/UnstructuredStorage.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 import "./lib/Pausable.sol";
 
-
 /**
  * @title Interest-bearing ERC20-like token for Lido Liquid Stacking protocol.
  *
