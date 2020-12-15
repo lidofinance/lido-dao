@@ -75,8 +75,8 @@ contract LidoOracle is ILidoOracle, AragonApp {
 
     /// @dev the most early epoch that can be reported
     bytes32 internal constant MIN_REPORTABLE_EPOCH_ID_POSITION = keccak256("lido.LidoOracle.minReportableEpochId");
-    /// @dev the last reported epoch
-    bytes32 internal constant LAST_REPORTED_EPOCH_ID_POSITION = keccak256("lido.LidoOracle.lastReportedEpochId");
+    /// @dev the max id of reported epochs
+    bytes32 internal constant MAX_REPORTED_EPOCH_ID_POSITION = keccak256("lido.LidoOracle.maxReportedEpochId");
     /// @dev storage for all gathered from reports data
     mapping(uint256 => EpochData) private gatheredEpochData;
 
@@ -144,14 +144,12 @@ contract LidoOracle is ILidoOracle, AragonApp {
         uint256 index = _getMemberId(_member);
         require(index != MEMBER_NOT_FOUND, "MEMBER_NOT_FOUND");
 
-        uint256 lastReportedEpochId = (
-            LAST_REPORTED_EPOCH_ID_POSITION.getStorageUint256()
-        );
+        uint256 maxReportedEpochId = MAX_REPORTED_EPOCH_ID_POSITION.getStorageUint256();
 
-        MIN_REPORTABLE_EPOCH_ID_POSITION.setStorageUint256(lastReportedEpochId);
+        MIN_REPORTABLE_EPOCH_ID_POSITION.setStorageUint256(maxReportedEpochId);
         uint256 last = members.length.sub(1);
 
-        uint256 bitMask = gatheredEpochData[lastReportedEpochId].reportsBitMask;
+        uint256 bitMask = gatheredEpochData[maxReportedEpochId].reportsBitMask;
         if (index != last) {
             members[index] = members[last];
             bitMask = bitMask.setBit(index, bitMask.getBit(last));
@@ -159,7 +157,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
             gatheredEpochData[lastReportedEpochId].reports[index] = lastIndexReport;
         }
         bitMask = bitMask.setBit(last, false);
-        gatheredEpochData[lastReportedEpochId].reportsBitMask = bitMask;
+        gatheredEpochData[maxReportedEpochId].reportsBitMask = bitMask;
 
         members.length--;
 
@@ -176,20 +174,16 @@ contract LidoOracle is ILidoOracle, AragonApp {
         QUORUM_POSITION.setStorageUint256(_quorum);
         emit QuorumChanged(_quorum);
 
-        uint256 minReportableEpochId = (
-            MIN_REPORTABLE_EPOCH_ID_POSITION.getStorageUint256()
-        );
-        uint256 lastReportedEpochId = (
-            LAST_REPORTED_EPOCH_ID_POSITION.getStorageUint256()
-        );
+        uint256 minReportableEpochId = MIN_REPORTABLE_EPOCH_ID_POSITION.getStorageUint256();
+        uint256 maxReportedEpochId = MAX_REPORTED_EPOCH_ID_POSITION.getStorageUint256();
 
-        assert(lastReportedEpochId <= getCurrentEpochId());
+        assert(maxReportedEpochId <= getCurrentEpochId());
 
-        if (lastReportedEpochId >= minReportableEpochId) {
-            if (lastReportedEpochId != minReportableEpochId) {
-                MIN_REPORTABLE_EPOCH_ID_POSITION.setStorageUint256(lastReportedEpochId);
+        if (maxReportedEpochId >= minReportableEpochId) {
+            if (maxReportedEpochId != minReportableEpochId) {
+                MIN_REPORTABLE_EPOCH_ID_POSITION.setStorageUint256(maxReportedEpochId);
             }
-            _tryPush(lastReportedEpochId);
+            _tryPush(maxReportedEpochId);
         }
 
         _assertInvariants();
@@ -213,8 +207,10 @@ contract LidoOracle is ILidoOracle, AragonApp {
         // check & set contribution flag
         uint256 bitMask = gatheredEpochData[_epochId].reportsBitMask;
         require(!bitMask.getBit(index), "ALREADY_SUBMITTED");
-
-        LAST_REPORTED_EPOCH_ID_POSITION.setStorageUint256(_epochId);
+        
+        if (_epochId > MAX_REPORTED_EPOCH_ID_POSITION.getStorageUint256()) {
+            MAX_REPORTED_EPOCH_ID_POSITION.setStorageUint256(_epochId);
+        }
 
         gatheredEpochData[_epochId].reportsBitMask = bitMask.setBit(index, true);
 
