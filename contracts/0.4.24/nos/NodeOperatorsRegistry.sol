@@ -409,13 +409,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     /**
-      * @notice Returns number of active node operators
-      */
-    function getActiveNodeOperatorsCount() public view returns (uint256) {
-        return ACTIVE_OPERATORS_COUNT_POSITION.getStorageUint256();
-    }
-
-    /**
       * @notice Returns the n-th node operator
       * @param _id Node Operator id
       * @param _fullInfo If true, name will be returned as well
@@ -484,6 +477,13 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         return TOTAL_OPERATORS_COUNT_POSITION.getStorageUint256();
     }
 
+    /**
+      * @notice Returns number of active node operators
+      */
+    function getActiveNodeOperatorsCount() public view returns (uint256) {
+        return ACTIVE_OPERATORS_COUNT_POSITION.getStorageUint256();
+    }
+    
     function _isEmptySigningKey(bytes memory _key) internal pure returns (bool) {
         assert(_key.length == PUBKEY_LENGTH);
         // algorithm applicability constraint
