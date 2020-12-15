@@ -1,7 +1,7 @@
 const { assert } = require('chai')
 const { hexSplit } = require('../helpers/utils')
 const { newDao, newApp } = require('./helpers/dao')
-const { getEventAt } = require('@aragon/contract-helpers-test')
+const { ZERO_ADDRESS, getEventAt } = require('@aragon/contract-helpers-test')
 const { assertBn, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry.sol')
@@ -68,6 +68,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
   it('addNodeOperator works', async () => {
     await assertRevert(app.addNodeOperator('1', ADDRESS_1, 10, { from: user1 }), 'APP_AUTH_FAILED')
     await assertRevert(app.addNodeOperator('1', ADDRESS_1, 10, { from: nobody }), 'APP_AUTH_FAILED')
+
+    await assertRevert(app.addNodeOperator('1', ZERO_ADDRESS, 10, { from: voting }), 'EMPTY_ADDRESS')
 
     await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
     await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
@@ -215,11 +217,17 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
   })
 
   it('assignNextSigningKeys works', async () => {
+    let result = await pool.assignNextSigningKeys(10)
+    let keysAssignedEvt = getEventAt(result, 'KeysAssigned').args
+
+    assert.equal(keysAssignedEvt.pubkeys, null, 'empty cache, no singing keys added: pubkeys')
+    assert.equal(keysAssignedEvt.signatures, null, 'empty cache, no singing keys added: signatures')
+
     await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
     await app.addNodeOperator(' bar', ADDRESS_2, 10, { from: voting })
 
-    let result = await pool.assignNextSigningKeys(10)
-    let keysAssignedEvt = getEventAt(result, 'KeysAssigned').args
+    result = await pool.assignNextSigningKeys(10)
+    keysAssignedEvt = getEventAt(result, 'KeysAssigned').args
 
     assert.equal(keysAssignedEvt.pubkeys, null, 'no singing keys added: pubkeys')
     assert.equal(keysAssignedEvt.signatures, null, 'no singing keys added: signatures')
@@ -371,6 +379,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     await assertRevert(app.reportStoppedValidators(0, 1, { from: user1 }), 'APP_AUTH_FAILED')
     await assertRevert(app.reportStoppedValidators(1, 1, { from: nobody }), 'APP_AUTH_FAILED')
+
+    await assertRevert(app.reportStoppedValidators(1, 0, { from: voting }), 'EMPTY_VALUE')
 
     assertBn((await app.getNodeOperator(0, false)).stoppedValidators, 0, 'before stop: op 0 stopped validators')
     assertBn((await app.getNodeOperator(1, false)).stoppedValidators, 0, 'before stop: op 1 stopped validators')
@@ -614,6 +624,11 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
   })
 
   it('getRewardsDistribution works', async () => {
+    const { empty_recipients, empty_shares } = await app.getRewardsDistribution(tokens(900))
+
+    assert.equal(empty_recipients, undefined, 'recipients')
+    assert.equal(empty_shares, undefined, 'shares')
+
     await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
     await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
     await app.addNodeOperator('3', ADDRESS_3, UNLIMITED, { from: voting })
@@ -636,9 +651,13 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await app.reportStoppedValidators(0, 1, { from: voting })
     await app.setNodeOperatorActive(2, false, { from: voting })
 
-    const {recipients, shares} = await app.getRewardsDistribution(tokens(900));
+    const { recipients, shares } = await app.getRewardsDistribution(tokens(900))
 
     assert.sameOrderedMembers(recipients, [ADDRESS_1, ADDRESS_2], 'recipients')
-    assert.sameOrderedMembers(shares.map(x => String(x)), [tokens(300), tokens(600)], 'shares')
+    assert.sameOrderedMembers(
+      shares.map((x) => String(x)),
+      [tokens(300), tokens(600)],
+      'shares'
+    )
   })
 })
