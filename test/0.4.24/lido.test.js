@@ -159,8 +159,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await app.setOracle(yetAnotherOracle.address, { from: voting })
   })
 
-  it('_setValidatorRegistrationContract reverts with invalid arg', async () => {
-    await assertRevert(app.setValidatorRegistrationContract(user1, { from: voting }), 'NOT_A_CONTRACT')
+  it('_setDepositContract reverts with invalid arg', async () => {
+    await assertRevert(app.setDepositContract(user1, { from: voting }), 'NOT_A_CONTRACT')
   })
 
   it('_setOperators reverts with invalid arg', async () => {

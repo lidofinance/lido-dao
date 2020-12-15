@@ -55,8 +55,8 @@ contract TestLido is Lido {
     * @dev Public wrapper of internal fun. Internal function sets the address of Deposit contract
     * @param _contract the address of Deposit contract
     */
-    function setValidatorRegistrationContract(IValidatorRegistration _contract) public {
-        _setValidatorRegistrationContract(_contract);
+    function setDepositContract(IDepositContract _contract) public {
+        _setDepositContract(_contract);
     }
 
     /**
