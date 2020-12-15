@@ -333,13 +333,6 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     }
 
     /**
-      * @notice Returns current credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
-      */
-    function getWithdrawalCredentials() public view returns (bytes32) {
-        return WITHDRAWAL_CREDENTIALS_POSITION.getStorageBytes32();
-    }
-
-    /**
     * @notice Get the amount of Ether temporary buffered on this contract balance
     * @dev Buffered balance is kept on the contract from the moment the funds are received from user
     * until the moment they are actually sent to the official Deposit contract.
@@ -347,6 +340,13 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     */
     function getBufferedEther() external view returns (uint256) {
         return _getBufferedEther();
+    }
+
+    /**
+      * @notice Returns current credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
+      */
+    function getWithdrawalCredentials() public view returns (bytes32) {
+        return WITHDRAWAL_CREDENTIALS_POSITION.getStorageBytes32();
     }
 
     /**
