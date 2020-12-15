@@ -132,8 +132,9 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
       await assertReportableEpochs(0, 5)
 
       await app.reportBeacon(0, 0, 0, { from: user1 })
-      await app.reportBeacon(1, 0, 0, { from: user1 })
       await app.reportBeacon(2, 0, 0, { from: user1 })
+      await app.reportBeacon(1, 0, 0, { from: user1 })
+
       await assertReportableEpochs(0, 5)
 
       await app.removeOracleMember(user1, { from: voting })
@@ -176,8 +177,8 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
       receipt = await app.setQuorum(2, { from: voting })
       await assertReportableEpochs(0, 5)
 
-      await app.reportBeacon(1, 0, 0, { from: user1 })
       await app.reportBeacon(2, 0, 0, { from: user1 })
+      await app.reportBeacon(1, 0, 0, { from: user1 })
 
       receipt = await app.setQuorum(1, { from: voting })
       assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 2, beaconBalance: 0, beaconValidators: 0 } })
