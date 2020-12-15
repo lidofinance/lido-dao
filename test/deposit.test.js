@@ -6,7 +6,7 @@ const { BN } = require('bn.js')
 const StETH = artifacts.require('StETH.sol') // we can just import due to StETH imported in test_helpers/Imports.sol
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
-const Lido = artifacts.require('TestLido.sol')
+const Lido = artifacts.require('LidoMock.sol')
 const OracleMock = artifacts.require('OracleMock.sol')
 const DepositContract = artifacts.require('DepositContract')
 

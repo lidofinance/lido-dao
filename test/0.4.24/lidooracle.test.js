@@ -3,8 +3,8 @@ const { newDao, newApp } = require('./helpers/dao')
 const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const { bn } = require('@aragon/contract-helpers-test')
 
-const LidoOracle = artifacts.require('TestLidoOracle.sol')
-const Algorithm = artifacts.require('TestAlgorithm.sol')
+const LidoOracle = artifacts.require('LidoOracleMock.sol')
+const Algorithm = artifacts.require('AlgorithmMock.sol')
 
 contract('Algorithm', ([testUser]) => {
   let algorithm

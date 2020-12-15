@@ -8,7 +8,7 @@ const { BN } = require('bn.js')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
-const Lido = artifacts.require('TestLido.sol')
+const Lido = artifacts.require('LidoMock.sol')
 const OracleMock = artifacts.require('OracleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
 const ERC20Mock = artifacts.require('ERC20Mock.sol')
@@ -385,14 +385,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
 
   it('reverts when trying to call unknown function', async () => {
     const wrongMethodABI = '0x00'
-    await assertRevert(
-      web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(1), data: wrongMethodABI }),
-      'NON_EMPTY_DATA'
-    )
-    await assertRevert(
-      web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(0), data: wrongMethodABI }),
-      'NON_EMPTY_DATA'
-    )
+    await assertRevert(web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(1), data: wrongMethodABI }), 'NON_EMPTY_DATA')
+    await assertRevert(web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(0), data: wrongMethodABI }), 'NON_EMPTY_DATA')
   })
 
   it('key removal is taken into account during deposit', async () => {
