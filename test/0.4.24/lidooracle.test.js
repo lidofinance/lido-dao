@@ -119,6 +119,28 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
       assert.deepStrictEqual(await app.getOracleMembers(), [user3])
     })
 
+    it('removeOracleMember updates minReportableEpochId', async () => {
+      await app.setTime(1606824000)
+
+      await app.addOracleMember(user1, { from: voting })
+      await app.addOracleMember(user2, { from: voting })
+      await app.addOracleMember(user3, { from: voting })
+
+      await app.setQuorum(2, { from: voting })
+
+      await app.setTime(1606824000 + 32 * 12 * 5)
+      await assertReportableEpochs(0, 5)
+
+      await app.reportBeacon(0, 0, 0, { from: user1 })
+      await app.reportBeacon(1, 0, 0, { from: user1 })
+      await app.reportBeacon(2, 0, 0, { from: user1 })
+      await assertReportableEpochs(0, 5)
+
+      await app.removeOracleMember(user1, { from: voting })
+
+      await assertReportableEpochs(2, 5)
+    })
+
     it('setQuorum works', async () => {
       await app.setTime(1606824000)
 
@@ -132,6 +154,35 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
 
       await app.setQuorum(3, { from: voting })
       assertBn(await app.getQuorum(), 3)
+    })
+
+    it('setQuorum updates minReportableEpochId and tryes to push', async () => {
+      let result
+
+      await app.setTime(1606824000)
+
+      await app.addOracleMember(user1, { from: voting })
+      await app.addOracleMember(user2, { from: voting })
+      await app.addOracleMember(user3, { from: voting })
+
+      await app.setQuorum(3, { from: voting })
+
+      await app.setTime(1606824000 + 32 * 12 * 5)
+      await assertReportableEpochs(0, 5)
+
+      await app.reportBeacon(0, 0, 0, { from: user1 })
+      await app.reportBeacon(0, 1, 0, { from: user2 })
+
+      receipt = await app.setQuorum(2, { from: voting })
+      await assertReportableEpochs(0, 5)
+
+      await app.reportBeacon(1, 0, 0, { from: user1 })
+      await app.reportBeacon(2, 0, 0, { from: user1 })
+
+      receipt = await app.setQuorum(1, { from: voting })
+      assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 2, beaconBalance: 0, beaconValidators: 0 } })
+
+      await assertReportableEpochs(3, 5)
     })
 
     it('getOracleMembers works', async () => {
