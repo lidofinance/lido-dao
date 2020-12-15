@@ -316,7 +316,10 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             if (bestOperatorIdx == cache.length)  // not found
                 break;
 
-            assert(++cache[bestOperatorIdx].usedSigningKeys <= UINT64_MAX);
+            entry = cache[bestOperatorIdx];
+            assert(entry.usedSigningKeys < UINT64_MAX);
+
+            ++entry.usedSigningKeys;
             ++numAssignedKeys;
         }
 
