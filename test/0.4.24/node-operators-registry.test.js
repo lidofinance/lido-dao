@@ -624,7 +624,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
   })
 
   it('getRewardsDistribution works', async () => {
-    const {empty_recipients, empty_shares} = await app.getRewardsDistribution(tokens(900))
+    const { empty_recipients, empty_shares } = await app.getRewardsDistribution(tokens(900))
 
     assert.equal(empty_recipients, undefined, 'recipients')
     assert.equal(empty_shares, undefined, 'shares')
@@ -651,9 +651,13 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await app.reportStoppedValidators(0, 1, { from: voting })
     await app.setNodeOperatorActive(2, false, { from: voting })
 
-    const {recipients, shares} = await app.getRewardsDistribution(tokens(900))
+    const { recipients, shares } = await app.getRewardsDistribution(tokens(900))
 
     assert.sameOrderedMembers(recipients, [ADDRESS_1, ADDRESS_2], 'recipients')
-    assert.sameOrderedMembers(shares.map(x => String(x)), [tokens(300), tokens(600)], 'shares')
+    assert.sameOrderedMembers(
+      shares.map((x) => String(x)),
+      [tokens(300), tokens(600)],
+      'shares'
+    )
   })
 })

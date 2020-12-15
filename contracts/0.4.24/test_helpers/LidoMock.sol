@@ -11,7 +11,7 @@ import "./VaultMock.sol";
 /**
   * @dev Only for testing purposes! Lido version with some functions exposed.
   */
-contract TestLido is Lido {
+contract LidoMock is Lido {
     function initialize(
         IDepositContract depositContract,
         address _oracle,

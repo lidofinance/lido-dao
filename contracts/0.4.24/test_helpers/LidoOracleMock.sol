@@ -10,7 +10,7 @@ import "../oracle/LidoOracle.sol";
 /**
   * @dev Only for testing purposes! LidoOracle version with some functions exposed.
   */
-contract TestLidoOracle is LidoOracle {
+contract LidoOracleMock is LidoOracle {
     uint256 private time;
 
     function setTime(uint256 _time) public {
