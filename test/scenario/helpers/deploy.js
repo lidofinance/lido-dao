@@ -10,7 +10,7 @@ module.exports = {
 }
 
 async function deployDaoAndPool(appManager, voting) {
-  // Deploy the DAO, oracle and validator registration mocks, and base contracts for
+  // Deploy the DAO, oracle and deposit contract mocks, and base contracts for
   // Lido (the pool) and NodeOperatorsRegistry (the Node Operators registry)
 
   const [{ dao, acl }, oracleMock, depositContractMock, poolBase, nodeOperatorRegistryBase] = await Promise.all([
