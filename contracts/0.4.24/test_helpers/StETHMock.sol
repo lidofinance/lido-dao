@@ -6,7 +6,6 @@ pragma solidity 0.4.24;
 
 import "../StETH.sol";
 
-
 /**
  * @dev Only for testing purposes!
  * StETH mock version of mintable/burnable/stoppable token.
@@ -16,6 +15,10 @@ contract StETHMock is StETH {
 
     constructor() public {
         _resume();
+    }
+
+    function _getTotalPooledEther() internal view returns (uint256) {
+        return totalPooledEther;
     }
 
     function stop() external {
@@ -43,10 +46,6 @@ contract StETHMock is StETH {
         returns (uint256 newTotalShares)
     {
         return _burnShares(_account, _sharesAmount);
-    }
-
-    function _getTotalPooledEther() internal view returns (uint256) {	
-        return totalPooledEther;	
     }
 
     function _emitTransferAfterMintingShares(address _to, uint256 _sharesAmount)
