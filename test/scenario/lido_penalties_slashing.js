@@ -584,4 +584,43 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
       `second node operator gained shares under fee distribution`
     )
   })
+
+  it(`voting reports first operator validators as stopped`, async () => {
+    await nodeOperatorRegistry.reportStoppedValidators(nodeOperator1.id, 1, { from: voting })
+  })
+
+  it(`oracle reports profit, which gets distributed with one operator validators stopped`, async () => {
+    const nodeOperator1TokenSharesBefore = await token.sharesOf(nodeOperator1.address)
+    const nodeOperator2TokenSharesBefore = await token.sharesOf(nodeOperator2.address)
+    const treasurySharesBefore = await token.sharesOf(treasuryAddr)
+    await oracleMock.reportBeacon(107, 2, tokens(102)) // 107 is an epoch number
+    const nodeOperator1TokenSharesAfter = await token.sharesOf(nodeOperator1.address)
+    const nodeOperator2TokenSharesAfter = await token.sharesOf(nodeOperator2.address)
+    const treasurySharesAfter = await token.sharesOf(treasuryAddr)
+
+    assertBn(nodeOperator1TokenSharesBefore, nodeOperator1TokenSharesAfter, `first node operator gained no shares under fee distribution`)
+    assert(
+      !nodeOperator2TokenSharesAfter.sub(nodeOperator2TokenSharesBefore).negative,
+      `second node operator gained shares under fee distribution`
+    )
+    assert(!treasurySharesAfter.sub(treasurySharesBefore).negative, 'treasury gained shares under fee distribution')
+  })
+
+  it(`voting reports second operator validators as stopped`, async () => {
+    await nodeOperatorRegistry.reportStoppedValidators(nodeOperator2.id, 1, { from: voting })
+  })
+
+  it(`oracle reports profit, which gets distributed with all validators stopped`, async () => {
+    const nodeOperator1TokenSharesBefore = await token.sharesOf(nodeOperator1.address)
+    const nodeOperator2TokenSharesBefore = await token.sharesOf(nodeOperator2.address)
+    const treasurySharesBefore = await token.sharesOf(treasuryAddr)
+    await oracleMock.reportBeacon(108, 2, tokens(103)) // 108 is an epoch number
+    const nodeOperator1TokenSharesAfter = await token.sharesOf(nodeOperator1.address)
+    const nodeOperator2TokenSharesAfter = await token.sharesOf(nodeOperator2.address)
+    const treasurySharesAfter = await token.sharesOf(treasuryAddr)
+
+    assertBn(nodeOperator1TokenSharesBefore, nodeOperator1TokenSharesAfter, `first node operator gained no shares under fee distribution`)
+    assertBn(nodeOperator2TokenSharesBefore, nodeOperator2TokenSharesAfter, `second node operator gained no shares under fee distribution`)
+    assert(!treasurySharesAfter.sub(treasurySharesBefore).negative, 'treasury gained shares under fee distribution')
+  })
 })
