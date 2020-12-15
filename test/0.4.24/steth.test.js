@@ -23,7 +23,7 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
     context('zero supply', async () => {
       it('initial total supply is correct', async () => {
         assertBn(await stEth.totalSupply(), tokens(0))
-     })
+      })
 
       it('initial balances are correct', async () => {
         assertBn(await stEth.balanceOf(user1), tokens(0))
@@ -88,21 +88,12 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
 
       context('transfer', async () => {
         it('reverts when recipient is the zero address', async () => {
-          await assertRevert(
-            stEth.transfer(ZERO_ADDRESS, tokens(1), { from: user1 }),
-            "TRANSFER_TO_THE_ZERO_ADDRESS"
-          )
+          await assertRevert(stEth.transfer(ZERO_ADDRESS, tokens(1), { from: user1 }), 'TRANSFER_TO_THE_ZERO_ADDRESS')
         })
 
         it('reverts when the sender does not have enough balance', async () => {
-          await assertRevert(
-            stEth.transfer(user2, tokens(101), { from: user1 }),
-            "TRANSFER_AMOUNT_EXCEEDS_BALANCE"
-          )
-          await assertRevert(
-            stEth.transfer(user1, bn('1'), { from: user2 }),
-            "TRANSFER_AMOUNT_EXCEEDS_BALANCE"
-          )
+          await assertRevert(stEth.transfer(user2, tokens(101), { from: user1 }), 'TRANSFER_AMOUNT_EXCEEDS_BALANCE')
+          await assertRevert(stEth.transfer(user1, bn('1'), { from: user2 }), 'TRANSFER_AMOUNT_EXCEEDS_BALANCE')
         })
 
         it('transfer all balance works and emits event', async () => {
@@ -160,17 +151,11 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
         })
 
         it('reverts when recipient is zero address', async () => {
-          await assertRevert(
-            stEth.transferFrom(user1, ZERO_ADDRESS, tokens(1), { from: user2 }),
-            "TRANSFER_TO_THE_ZERO_ADDRESS"
-          )
+          await assertRevert(stEth.transferFrom(user1, ZERO_ADDRESS, tokens(1), { from: user2 }), 'TRANSFER_TO_THE_ZERO_ADDRESS')
         })
 
         it('reverts when sender is zero address', async () => {
-          await assertRevert(
-            stEth.transferFrom(ZERO_ADDRESS, user3, tokens(0), { from: user2 }),
-            "TRANSFER_FROM_THE_ZERO_ADDRESS"
-          )
+          await assertRevert(stEth.transferFrom(ZERO_ADDRESS, user3, tokens(0), { from: user2 }), 'TRANSFER_FROM_THE_ZERO_ADDRESS')
         })
 
         it('reverts when amount exceeds allowance', async () => {
@@ -184,7 +169,7 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
         it('transferFrom works and emits events', async () => {
           const amount = tokens(50)
           const receipt = await stEth.transferFrom(user1, user3, amount, { from: user2 })
-          assertEvent(receipt, 'Approval', { expectedArgs: { owner: user1, spender: user2, value: bn(0)}})
+          assertEvent(receipt, 'Approval', { expectedArgs: { owner: user1, spender: user2, value: bn(0) } })
           assertEvent(receipt, 'Transfer', { expectedArgs: { from: user1, to: user3, value: amount } })
           assertBn(await stEth.allowance(user2, user1), bn(0))
           assertBn(await stEth.balanceOf(user1), tokens(50))
@@ -363,17 +348,11 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
       })
 
       it('reverts when burn from zero address', async () => {
-        await assertRevert(
-          stEth.burnShares(ZERO_ADDRESS, tokens(1), { from: user1 }),
-          "BURN_FROM_THE_ZERO_ADDRESS"
-        )
+        await assertRevert(stEth.burnShares(ZERO_ADDRESS, tokens(1), { from: user1 }), 'BURN_FROM_THE_ZERO_ADDRESS')
       })
 
       it('reverts when burn amount exceeds balance', async () => {
-        await assertRevert(
-          stEth.burnShares(user1, tokens(101)),
-          "BURN_AMOUNT_EXCEEDS_BALANCE"
-        )
+        await assertRevert(stEth.burnShares(user1, tokens(101)), 'BURN_AMOUNT_EXCEEDS_BALANCE')
       })
 
       it('burning zero value works', async () => {

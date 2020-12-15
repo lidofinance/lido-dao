@@ -6,9 +6,9 @@ pragma solidity 0.4.24;
 
 
 /**
-  * @title Validator registration contract interface
+  * @title Deposit contract interface
   */
-interface IValidatorRegistration {
+interface IDepositContract {
     /**
       * @notice Top-ups deposit of a validator on the ETH 2.0 side
       * @param pubkey Validator signing key

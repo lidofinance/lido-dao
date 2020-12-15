@@ -13,14 +13,14 @@ import "./VaultMock.sol";
   */
 contract TestLido is Lido {
     function initialize(
-        IValidatorRegistration validatorRegistration,
+        IDepositContract depositContract,
         address _oracle,
         INodeOperatorsRegistry _operators
     )
     public
     {
         super.initialize(
-          validatorRegistration,
+          depositContract,
           _oracle,
           _operators,
           new VaultMock(),
