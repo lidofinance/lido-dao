@@ -52,6 +52,8 @@ async function issueTokens({ web3, artifacts, networkStateFile = NETWORK_STATE_F
     log(`    ${addr}: ${chalk.yellow(web3.utils.fromWei(vesting.amounts[i], 'ether'))}`)
   })
 
+  log(`  Unvested tokens amount:`, chalk.yellow(vesting.unvestedTokensAmount))
+
   log.splitter()
 
   const holdersInOneTx = Math.min(MAX_HOLDERS_IN_ONE_TX, vesting.holders.length)
