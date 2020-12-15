@@ -155,6 +155,8 @@ contract LidoOracle is ILidoOracle, AragonApp {
         if (index != last) {
             members[index] = members[last];
             bitMask = bitMask.setBit(index, bitMask.getBit(last));
+            Report memory lastIndexReport = gatheredEpochData[lastReportedEpochId].reports[last];
+            gatheredEpochData[lastReportedEpochId].reports[index] = lastIndexReport;
         }
         bitMask = bitMask.setBit(last, false);
         gatheredEpochData[lastReportedEpochId].reportsBitMask = bitMask;
