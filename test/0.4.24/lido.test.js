@@ -1,14 +1,18 @@
+const { hash } = require('eth-ens-namehash')
 const { assert } = require('chai')
 const { newDao, newApp } = require('./helpers/dao')
+const { getInstalledApp } = require('@aragon/contract-helpers-test/src/aragon-os')
 const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 const { BN } = require('bn.js')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
-const Lido = artifacts.require('TestLido.sol')
+const Lido = artifacts.require('LidoMock.sol')
 const OracleMock = artifacts.require('OracleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
+const ERC20Mock = artifacts.require('ERC20Mock.sol')
+const VaultMock = artifacts.require('AragonVaultMock.sol')
 
 const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
 const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
@@ -41,17 +45,20 @@ const tokens = ETH
 contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
   let appBase, nodeOperatorsRegistryBase, app, oracle, depositContract, operators
   let treasuryAddr, insuranceAddr
+  let dao, acl
 
   before('deploy base app', async () => {
     // Deploy the app's base contract.
     appBase = await Lido.new()
     oracle = await OracleMock.new()
+    yetAnotherOracle = await OracleMock.new()
     depositContract = await DepositContractMock.new()
     nodeOperatorsRegistryBase = await NodeOperatorsRegistry.new()
+    anyToken = await ERC20Mock.new()
   })
 
   beforeEach('deploy dao and app', async () => {
-    const { dao, acl } = await newDao(appManager)
+    ;({ dao, acl } = await newDao(appManager))
 
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
     let proxyAddress = await newApp(dao, 'lido', appBase.address, appManager)
@@ -68,6 +75,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await acl.createPermission(voting, app.address, await app.MANAGE_WITHDRAWAL_KEY(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.BURN_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_TREASURY(), appManager, { from: appManager })
+    await acl.createPermission(voting, app.address, await app.SET_ORACLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_INSURANCE_FUND(), appManager, { from: appManager })
 
     await acl.createPermission(voting, operators.address, await operators.MANAGE_SIGNING_KEYS(), appManager, { from: appManager })
@@ -146,6 +154,19 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     assert.equal(await app.getWithdrawalCredentials({ from: nobody }), pad('0x0202', 32))
   })
 
+  it('setOracle works', async () => {
+    await assertRevert(app.setOracle(user1, { from: voting }), 'NOT_A_CONTRACT')
+    await app.setOracle(yetAnotherOracle.address, { from: voting })
+  })
+
+  it('_setDepositContract reverts with invalid arg', async () => {
+    await assertRevert(app.setDepositContract(user1, { from: voting }), 'NOT_A_CONTRACT')
+  })
+
+  it('_setOperators reverts with invalid arg', async () => {
+    await assertRevert(app.setOperators(user1, { from: voting }), 'NOT_A_CONTRACT')
+  })
+
   it('setWithdrawalCredentials resets unused keys', async () => {
     await operators.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
     await operators.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
@@ -194,7 +215,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await operators.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
     await operators.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
 
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
     await operators.addSigningKeys(
       0,
@@ -232,7 +252,23 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     // +30 ETH
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(30) })
+    // can not deposit with unset withdrawalCredentials
+    await assertRevert(app.depositBufferedEther(), 'EMPTY_WITHDRAWAL_CREDENTIALS')
+
+    // set withdrawalCredentials with keys, because they were trimmed
+    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+    await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
+    await operators.addSigningKeys(
+      0,
+      3,
+      hexConcat(pad('0x010204', 48), pad('0x010205', 48), pad('0x010206', 48)),
+      hexConcat(pad('0x01', 96), pad('0x01', 96), pad('0x01', 96)),
+      { from: voting }
+    )
+
+    // now deposit works
     await app.depositBufferedEther()
+
     await checkStat({ depositedValidators: 1, beaconValidators: 0, beaconBalance: ETH(0) })
     assertBn(await app.getTotalPooledEther(), ETH(33))
     assertBn(await app.getBufferedEther(), ETH(1))
@@ -248,8 +284,17 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     assert.equal(c0.signature, pad('0x01', 96))
     assertBn(c0.value, ETH(32))
 
-    // +100 ETH
+    // +100 ETH, test partial unbuffering
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(100) })
+    await app.depositBufferedEther(1)
+    await checkStat({ depositedValidators: 2, beaconValidators: 0, beaconBalance: ETH(0) })
+    assertBn(await app.getTotalPooledEther(), ETH(133))
+    assertBn(await app.getBufferedEther(), ETH(69))
+    assertBn(await app.balanceOf(user1), tokens(101))
+    assertBn(await app.balanceOf(user2), tokens(2))
+    assertBn(await app.balanceOf(user3), tokens(30))
+    assertBn(await app.totalSupply(), tokens(133))
+
     await app.depositBufferedEther()
     await checkStat({ depositedValidators: 4, beaconValidators: 0, beaconBalance: ETH(0) })
     assertBn(await app.getTotalPooledEther(), ETH(133))
@@ -340,14 +385,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
 
   it('reverts when trying to call unknown function', async () => {
     const wrongMethodABI = '0x00'
-    await assertRevert(
-      web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(1), data: wrongMethodABI }),
-      'NON_EMPTY_DATA'
-    )
-    await assertRevert(
-      web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(0), data: wrongMethodABI }),
-      'NON_EMPTY_DATA'
-    )
+    await assertRevert(web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(1), data: wrongMethodABI }), 'NON_EMPTY_DATA')
+    await assertRevert(web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(0), data: wrongMethodABI }), 'NON_EMPTY_DATA')
   })
 
   it('key removal is taken into account during deposit', async () => {
@@ -1011,6 +1050,43 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     it('reverts when insurance fund is zero address', async () => {
       await assertRevert(app.setInsuranceFund(ZERO_ADDRESS, { from: voting }), 'SET_INSURANCE_FUND_ZERO_ADDRESS')
+    })
+  })
+
+  context('recovery vault', () => {
+    beforeEach(async () => {
+      await anyToken.mint(app.address, 100)
+    })
+
+    it('reverts when vault is not set', async () => {
+      await assertRevert(app.transferToVault(anyToken.address, { from: nobody }), 'RECOVER_VAULT_NOT_CONTRACT')
+    })
+
+    context('recovery works with vault mock deployed', () => {
+      let vault
+
+      beforeEach(async () => {
+        // Create a new vault and set that vault as the default vault in the kernel
+        const vaultId = hash('vault.aragonpm.test')
+        const vaultBase = await VaultMock.new()
+        const vaultReceipt = await dao.newAppInstance(vaultId, vaultBase.address, '0x', true)
+        const vaultAddress = getInstalledApp(vaultReceipt)
+        vault = await VaultMock.at(vaultAddress)
+        await vault.initialize()
+
+        await dao.setRecoveryVaultAppId(vaultId)
+      })
+
+      it('recovery with erc20 tokens works and emits event', async () => {
+        const receipt = await app.transferToVault(anyToken.address, { from: nobody })
+        assertEvent(receipt, 'RecoverToVault', { expectedArgs: { vault: vault.address, token: anyToken.address, amount: 100 } })
+      })
+
+      it('recovery with unaccounted ether works and emits event', async () => {
+        await app.makeUnaccountedEther({ from: user1, value: ETH(10) })
+        const receipt = await app.transferToVault(ZERO_ADDRESS, { from: nobody })
+        assertEvent(receipt, 'RecoverToVault', { expectedArgs: { vault: vault.address, token: ZERO_ADDRESS, amount: ETH(10) } })
+      })
     })
   })
 })

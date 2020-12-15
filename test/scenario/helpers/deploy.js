@@ -1,6 +1,6 @@
 const { newDao, newApp } = require('../../0.4.24/helpers/dao')
 
-const Lido = artifacts.require('TestLido.sol')
+const Lido = artifacts.require('LidoMock.sol')
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 const OracleMock = artifacts.require('OracleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
@@ -10,7 +10,7 @@ module.exports = {
 }
 
 async function deployDaoAndPool(appManager, voting) {
-  // Deploy the DAO, oracle and validator registration mocks, and base contracts for
+  // Deploy the DAO, oracle and deposit contract mocks, and base contracts for
   // Lido (the pool) and NodeOperatorsRegistry (the Node Operators registry)
 
   const [{ dao, acl }, oracleMock, depositContractMock, poolBase, nodeOperatorRegistryBase] = await Promise.all([

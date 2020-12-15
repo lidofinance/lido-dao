@@ -3,8 +3,8 @@ const { newDao, newApp } = require('./helpers/dao')
 const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const { bn } = require('@aragon/contract-helpers-test')
 
-const LidoOracle = artifacts.require('TestLidoOracle.sol')
-const Algorithm = artifacts.require('TestAlgorithm.sol')
+const LidoOracle = artifacts.require('LidoOracleMock.sol')
+const Algorithm = artifacts.require('AlgorithmMock.sol')
 
 contract('Algorithm', ([testUser]) => {
   let algorithm
@@ -61,11 +61,25 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
   })
 
   it('beaconSpec is correct', async () => {
-    const receipt = await app.getBeaconSpec()
-    assertBn(receipt.epochsPerFrame, 1)
-    assertBn(receipt.slotsPerEpoch, 32)
-    assertBn(receipt.secondsPerSlot, 12)
-    assertBn(receipt.genesisTime, 1606824000)
+    const beaconSpec = await app.getBeaconSpec()
+    assertBn(beaconSpec.epochsPerFrame, 1)
+    assertBn(beaconSpec.slotsPerEpoch, 32)
+    assertBn(beaconSpec.secondsPerSlot, 12)
+    assertBn(beaconSpec.genesisTime, 1606824000)
+  })
+
+  it('setBeaconSpec works', async () => {
+    await assertRevert(app.setBeaconSpec(0, 1, 1, 1, { from: voting }), 'BAD_EPOCHS_PER_FRAME')
+    await assertRevert(app.setBeaconSpec(1, 0, 1, 1, { from: voting }), 'BAD_SLOTS_PER_EPOCH')
+    await assertRevert(app.setBeaconSpec(1, 1, 0, 1, { from: voting }), 'BAD_SECONDS_PER_SLOT')
+    await assertRevert(app.setBeaconSpec(1, 1, 1, 0, { from: voting }), 'BAD_GENESIS_TIME')
+
+    await app.setBeaconSpec(1, 1, 1, 1, { from: voting })
+    const beaconSpec = await app.getBeaconSpec()
+    assertBn(beaconSpec.epochsPerFrame, 1)
+    assertBn(beaconSpec.slotsPerEpoch, 1)
+    assertBn(beaconSpec.secondsPerSlot, 1)
+    assertBn(beaconSpec.genesisTime, 1)
   })
 
   describe('Test utility functions:', function () {

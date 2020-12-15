@@ -11,7 +11,7 @@ import "./VaultMock.sol";
 /**
   * @dev Only for testing purposes! Lido version with some functions exposed.
   */
-contract TestLido is Lido {
+contract LidoMock is Lido {
     function initialize(
         IDepositContract depositContract,
         address _oracle,
@@ -50,4 +50,25 @@ contract TestLido is Lido {
     function toLittleEndian64(uint256 _value) public pure returns (uint256 result) {
         return _toLittleEndian64(_value);
     }
+
+    /**
+    * @dev Public wrapper of internal fun. Internal function sets the address of Deposit contract
+    * @param _contract the address of Deposit contract
+    */
+    function setDepositContract(IDepositContract _contract) public {
+        _setDepositContract(_contract);
+    }
+
+    /**
+    * @dev Public wrapper of internal fun. Internal function sets node operator registry address
+    * @param _r registry of node operators
+    */
+    function setOperators(INodeOperatorsRegistry _r) public {
+        _setOperators(_r);
+    }
+
+    /**
+    * @dev Only for testing recovery vault
+    */
+    function makeUnaccountedEther() public payable {}
 }
