@@ -168,7 +168,8 @@ async function checkDAO({ web3, artifacts, networkStateFile = NETWORK_STATE_FILE
   await assertVesting({
     tokenManagerAddress,
     tokenAddress: daoToken.address,
-    vestingParams: state.vestingParams
+    vestingParams: state.vestingParams,
+    unvestedTokensManagerAddress: agentAddress
   })
 
   log.splitter()
