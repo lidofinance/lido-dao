@@ -5,7 +5,14 @@ const { log, yl, gr } = require('../helpers/log')
 const { saveDeployTx } = require('../helpers/deploy')
 const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
 
-const REQUIRED_NET_STATE = ['ensAddress', 'daoFactoryAddress', 'miniMeTokenFactoryAddress', 'aragonIDAddress', 'apmRegistryFactoryAddress']
+const REQUIRED_NET_STATE = [
+  'ensAddress',
+  'daoFactoryAddress',
+  'miniMeTokenFactoryAddress',
+  'aragonIDAddress',
+  'apmRegistryFactoryAddress',
+  'multisigAddress'
+]
 
 async function deployTemplate({ web3, artifacts }) {
   const netId = await web3.eth.net.getId()
