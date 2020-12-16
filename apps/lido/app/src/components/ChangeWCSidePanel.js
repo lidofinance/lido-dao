@@ -64,7 +64,7 @@ function Panel({ onClose, apiSetWC }) {
             >
               This action will change the withdrawal credentials.
             </Info>
-            <Field name="credentials" label="Referral" component={TextField} />
+            <Field name="credentials" label="Withdrawal credentials" component={TextField} />
             <Button mode="strong" type="submit" disabled={isSubmitting}>
               Set withdrawal credentials
             </Button>
