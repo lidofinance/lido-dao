@@ -5,6 +5,7 @@
 pragma solidity 0.4.24;
 
 import "../Lido.sol";
+import "./VaultMock.sol";
 
 
 /**
@@ -14,6 +15,24 @@ contract LidoPushableMock is Lido {
 
     uint256 public totalRewards;
     bool public distributeRewardsCalled;
+
+    function initialize(
+        IDepositContract depositContract,
+        address _oracle,
+        INodeOperatorsRegistry _operators
+    )
+    public
+    {
+        super.initialize(
+          depositContract,
+          _oracle,
+          _operators,
+          new VaultMock(),
+          new VaultMock()
+        );
+
+        _resume();
+    }
 
     function setDepositedValidators(uint256 _depositedValidators) public {
         DEPOSITED_VALIDATORS_POSITION.setStorageUint256(_depositedValidators);

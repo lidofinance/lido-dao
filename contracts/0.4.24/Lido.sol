@@ -102,8 +102,6 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         _setTreasury(_treasury);
         _setInsuranceFund(_insuranceFund);
 
-        _resume();
-
         initialized();
     }
 
