@@ -91,7 +91,6 @@ async function checkDAO({ web3, artifacts }) {
   })
 
   log.splitter()
-  return
 
   for (const appName of Object.keys(apps)) {
     const app = apps[appName]
