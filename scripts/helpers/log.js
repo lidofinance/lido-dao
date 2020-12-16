@@ -82,5 +82,6 @@ async function logDeployTxData(contractName, txData) {
 log.deployTxData = logDeployTxData
 
 const yl = (s) => chalk.yellow(s)
+const gr = (s) => chalk.green(s)
 
-module.exports = { log, logSplitter, logWideSplitter, logHeader, logDeploy, logDeployTxData, logTx, yl }
+module.exports = { log, logSplitter, logWideSplitter, logHeader, logDeploy, logDeployTxData, logTx, yl, gr }

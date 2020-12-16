@@ -16,10 +16,12 @@ async function saveCallTxData(txDesc, instance, methodName, filename, opts = {})
 }
 
 async function getCallTxData(instance, methodName, opts = {}) {
-  const { arguments: args = [], ...txOpts } = opts
+  const { arguments: args = [], estimateGas = true, ...txOpts } = opts
   const contract = instance.contract || instance
   const txObj = contract.methods[methodName](...args)
-  const txData = await getTxData(txObj, txOpts)
+  const txData = estimateGas
+    ? await getTxData(txObj, txOpts)
+    : { ...txOpts, data: txObj.encodeABI() }
   txData.to = instance.address
   return txData
 }

@@ -49,7 +49,7 @@ async function deployAPM({ web3, artifacts }) {
 
   logSplitter()
 
-  await saveCallTxData(`APM deploy`, template, 'deployLidoAPM', `tx-02-deploy-apm.json`, {
+  await saveCallTxData(`APM deploy`, template, 'deployLidoAPM', `tx-03-deploy-apm.json`, {
     arguments: [parentHash, subHash],
     from: state.multisigAddress
   })

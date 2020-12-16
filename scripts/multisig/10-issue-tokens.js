@@ -66,7 +66,7 @@ async function issueTokens({ web3, artifacts }) {
       `issueTokens (batch ${i + 1})`,
       template,
       'issueTokens',
-      `tx-05-${i + 1}-issue-tokens.json`,
+      `tx-06-${i + 1}-issue-tokens.json`,
       {
         arguments: [
           vesting.holders.slice(startIndex, startIndex + holdersInOneTx),

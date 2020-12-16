@@ -13,7 +13,7 @@ async function printDeployTx(artifactName, args, opts = {}) {
 
 async function saveDeployTx(artifactName, filename, args, opts = {}) {
   const txData = await getDeployTx(artifactName, args, opts)
-  log(`Saving deploy TX data for ${chalk.yellow(artifactName)} to ${chalk.yellow(filename)}`)
+  log(`Saving deploy TX data for ${artifactName} to ${chalk.yellow(filename)}`)
   await fs.writeFile(filename, JSON.stringify(txData, null, '  '))
   return txData
 }
