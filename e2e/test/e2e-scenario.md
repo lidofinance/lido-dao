@@ -1,20 +1,24 @@
-✅ token.test.js
+# Validating docker deploy before test
+✅token.test.js
 
 ✅deposit.test.js
 
 ✅dao.test.js
 
-✅dao apps are deployed
+✅voting.test.js
 
-✅add 3 oracle members
+# FullFlow test
+✅Check dao apps are deployed
 
-✅set quorum to 3
+✅Add oracle members'
 
-✅Set withdrawal credentials by generated dkg
+✅Set quorum
 
-✅Set basic fee 100%
+✅Set withdrawal credentials
 
-✅Set fee distribution(treasury - 10%,insurance -10%,nodeOperator - 80%)
+✅Set basic fee(10%)
+
+✅Set fee distribution(treasury - 0%,insurance -10%,nodeOperator - 90%)
 
 ✅Add nodeOperator1 and add signing keys
 
@@ -37,50 +41,58 @@ check that validator is up??
 
 ✅Deposit 288 ETH to Lido via Lido from user3
 
+✅Convert some stEthToken to cstToken
+
 ✅Chek that the nodeOperators keys became using
 
 ✅Wait for validators activation(~150 sec)
 
 ✅Check that the validators have been activated
 
-X Long tail
-
-X Convert some default token to ctoken
-
-X Deploy oracle daemons
-
 ✅Check that the network is producing and finalizing blocks
 
-X Waiting for the validator to receive a reward ~30 sec
+✅Waiting for the validator to receive a reward ~30 sec
 
-X Check validators data
+✅Check that the users balances in stEthToken changed and cStEthToken stay the same
 
-✅Push data to eth1
+✅Convert cstEthToken back to stEthToken
 
-X ctoken stay the same but is convertable to a right amount of atoken,
-      and fees are paid in right amount to the right validators
-    
-X Report slashing, check that there is no reward and atoken balance decreases and ctoken stay the same
+X Reproduce penalties and check that the users balances changed correctly due to mint/burn of token
 
-✅Add nodeOperator4 and add signing keys
+✅Change withdrawal credentials
 
-✅Check deposit iteration limit
+✅Check that unused signing keys removed from nodeOperators due to changed withdrawal credentials
 
-✅Add nodeOperator4 and add signing keys
+✅Set full nodeOperator permissions to nodeOperator4
 
 ✅Add nodeOperator4 and add signing keys
+
+✅Check the correctness of nodeOperator4
+
+✅Change nodeOperator4 name and rewardAddress
+
+✅Check deposit iteration limit(deposit more than 16 keys in one transaction)
+
+✅Check that the rest of buffered Ether in the pool can be submitted
+
+✅Check that the validators have been activated
 
 ✅Deactivate nodeOperator4 with currently using signing keys
 
-✅Push data and check that the deactivated provider balance not changed
+✅Waiting for the validator to receive a rewards and check that the deactivated provider balance not changed
+
+✅Check that the rewards have been split between nos1,nos2,nos3 due to nos4 was deactivated
+
+✅Check that the users receive appropriate amount of stEthTokens by validators rewards
 
 ✅Increase the staking limit for node operator
 
 ✅Reduce the staking limit for node operator
 
-✅Check that the validators do not activate if there are no unused signing keys
+✅Change withdrawal credentials.
 
-✅Check that the validators do not activate if there are no unused signing keys
+✅Check that unused signing keys removed from nodeOperators due to changed withdrawal credentials
+
+✅Check that the validators do not activate if there are no unused signing keys.
 
 X Test insurance (pending for the actual insurance)
-
