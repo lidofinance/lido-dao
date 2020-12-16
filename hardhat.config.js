@@ -13,7 +13,8 @@ const ETH_ACCOUNT_NAME = process.env.ETH_ACCOUNT_NAME
 
 const accounts = readJson(`./accounts.json`) || {
   eth: { dev: 'remote' },
-  etherscan: { apiKey: undefined }
+  etherscan: { apiKey: undefined },
+  infura: { projectId: undefined }
 }
 
 const getNetConfig = (networkName, ethAccountName) => {
@@ -48,8 +49,14 @@ const getNetConfig = (networkName, ethAccountName) => {
     },
     rinkeby: {
       ...base,
-      url: 'https://rinkeby.infura.io/v3/c9fdebbec8c44ad186038cedb3c0dc44',
+      url: 'https://rinkeby.infura.io/v3/' + accounts.infura.projectId,
       chainId: 4,
+      timeout: 60000 * 10
+    },
+    mainnet: {
+      ...base,
+      url: 'https://mainnet.infura.io/v3/' + accounts.infura.projectId,
+      chainId: 1,
       timeout: 60000 * 10
     }
   }

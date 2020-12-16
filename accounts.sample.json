@@ -13,6 +13,9 @@
       "count": 50
     }
   },
+  "infura": {
+    "projectId": "INFURA_PROJECT_ID"
+  },
   "etherscan": {
     "apiKey": "ETHERSCAN_API_KEY"
   }
