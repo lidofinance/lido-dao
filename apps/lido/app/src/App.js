@@ -82,7 +82,7 @@ export default function App() {
       withdrawalCredentials,
       bufferedEther,
       totalPooledEther,
-      token,
+      nodeOperatorsRegistry,
       depositContract,
       oracle,
       // operators,
@@ -242,8 +242,8 @@ export default function App() {
         content: <IdentityBadge entity={depositContract} />,
       },
       {
-        label: 'Token',
-        content: <IdentityBadge entity={token} />,
+        label: 'Node operators registry',
+        content: <IdentityBadge entity={nodeOperatorsRegistry} />,
       },
       {
         label: 'Oracle',

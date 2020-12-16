@@ -183,9 +183,9 @@ function renderCurrentReportableEpochs(epochs) {
   }
   return (
     <>
-      First: {epochs.firstReportableEpochId}
+      Min: {epochs.minReportableEpochId}
       <br />
-      Last: {epochs.lastReportableEpochId}
+      Max: {epochs.maxReportableEpochId}
     </>
   )
 }
