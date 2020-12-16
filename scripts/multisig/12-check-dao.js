@@ -8,7 +8,7 @@ const { toChecksumAddress } = require('web3-utils')
 
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, yl } = require('../helpers/log')
-const { readNetworkState, persistNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
+const { readNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
 const { assertRole, assertMissingRole } = require('../helpers/aragon')
 const { assertLastEvent } = require('../helpers/events')
 const { assert } = require('../helpers/assert')
@@ -52,15 +52,13 @@ const STETH_TOKEN_DECIMALS = 18
 const ZERO_WITHDRAWAL_CREDS = '0x0000000000000000000000000000000000000000000000000000000000000000'
 const PROTOCOL_PAUSED_AFTER_DEPLOY = false
 
-const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
-
-async function checkDAO({ web3, artifacts, networkStateFile = NETWORK_STATE_FILE }) {
+async function checkDAO({ web3, artifacts }) {
   const netId = await web3.eth.net.getId()
 
   log.splitter()
   log(`Network ID: ${yl(netId)}`)
 
-  const state = readNetworkState(networkStateFile, netId)
+  const state = readNetworkState(network.name, netId)
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
 
   log.splitter()
@@ -148,7 +146,7 @@ async function checkDAO({ web3, artifacts, networkStateFile = NETWORK_STATE_FILE
 
   log.splitter()
 
-  const { registryACL } = await checkAPM({ registry, votingAddress })
+  const { registryACL } = await assertLidoAPMPermissions({ registry, votingAddress })
 
   log.splitter()
 
@@ -175,7 +173,7 @@ async function checkDAO({ web3, artifacts, networkStateFile = NETWORK_STATE_FILE
   log.splitter()
 }
 
-async function checkAPM({ registry, votingAddress }) {
+async function assertLidoAPMPermissions({ registry, votingAddress }) {
   const [kernelAddress, registrarAddress] = await Promise.all([
     registry.kernel(),
     registry.registrar()

@@ -20,15 +20,13 @@ const REQUIRED_NET_STATE = [
   `app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`
 ]
 
-const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
-
-async function finalizeDAO({ web3, artifacts, networkStateFile = NETWORK_STATE_FILE }) {
+async function finalizeDAO({ web3, artifacts }) {
   const netId = await web3.eth.net.getId()
 
   log.splitter()
   log(`Network ID: ${chalk.yellow(netId)}`)
 
-  const state = readNetworkState(networkStateFile, netId)
+  const state = readNetworkState(network.name, netId)
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
 
   log.splitter()

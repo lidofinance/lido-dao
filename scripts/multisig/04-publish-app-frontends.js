@@ -24,14 +24,12 @@ const VALID_APP_NAMES = Object.entries(APP_NAMES).map((e) => e[1])
 
 const REQUIRED_NET_STATE = ['lidoApmEnsName', 'ipfsAPI']
 
-const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
 const APPS = process.env.APPS || '*'
 const APPS_DIR_PATH = process.env.APPS_DIR_PATH || path.resolve(__dirname, '..', '..', 'apps')
 
 async function publishAppFrontends({
   web3,
   artifacts,
-  networkStateFile = NETWORK_STATE_FILE,
   appsDirPath = APPS_DIR_PATH,
   appDirs = APPS
 }) {
@@ -41,9 +39,8 @@ async function publishAppFrontends({
   log(`Network ID: ${chalk.yellow(netId)}`)
 
   appsDirPath = path.resolve(appsDirPath)
-  networkStateFile = path.resolve(networkStateFile)
 
-  const state = readNetworkState(networkStateFile, netId)
+  const state = readNetworkState(network.name, netId)
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
 
   if (appDirs && appDirs !== '*') {
@@ -52,9 +49,16 @@ async function publishAppFrontends({
     appDirs = fs.readdirSync(appsDirPath)
   }
 
+  const cwd = process.cwd()
+
   for (const appDir of appDirs) {
-    const app = await publishAppFrotnend(appDir, appsDirPath, state.ipfsAPI, state.lidoApmEnsName)
-    persistNetworkState(networkStateFile, netId, state, {
+    let app
+    try {
+      app = await publishAppFrotnend(appDir, appsDirPath, state.ipfsAPI, state.lidoApmEnsName)
+    } finally {
+      process.chdir(cwd)
+    }
+    persistNetworkState(network.name, netId, state, {
       [`app:${app.name}`]: {
         ...state[`app:${app.name}`],
         ...app

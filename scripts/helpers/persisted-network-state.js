@@ -1,38 +1,29 @@
 const fs = require('fs')
+const path = require('path')
 
 const { log } = require('./log')
 
-const stateByFilename = {}
+const NETWORK_STATE_FILE_BASENAME = process.env.NETWORK_STATE_FILE_BASENAME || 'deployed'
+const NETWORK_STATE_FILE_DIR = process.env.NETWORK_STATE_FILE_DIR || '.'
 
-function readNetworkState(fileName, netId) {
+function readNetworkState(netName, netId) {
+  const fileName = _getFileName(netName, NETWORK_STATE_FILE_BASENAME, NETWORK_STATE_FILE_DIR)
   log(`Reading network state from ${fileName}...`)
   const state = _readNetworkStateFile(fileName)
-  return (state.networks || {})[netId] || {}
-}
-
-function _readNetworkStateFile(fileName) {
-  try {
-    if (!fs.existsSync(fileName)) {
-      return {}
-    }
-    const data = fs.readFileSync(fileName, 'utf8')
-    return (stateByFilename[fileName] = JSON.parse(data))
-  } catch (err) {
-    throw new Error(`malformed network state file ${fileName} (${err.message})`)
+  if (state.networkId !== netId) {
+    throw new Error(`network id (${netId}) doesn't match the one in the state file (${state.networkId})`)
   }
+  return state
 }
 
-function persistNetworkState(fileName, netId, netState, updates = undefined) {
+function persistNetworkState(netName, netId, state, updates = undefined) {
+  state.networkId = netId
   if (updates) {
-    updateNetworkState(netState, updates)
+    updateNetworkState(state, updates)
   }
+  const fileName = _getFileName(netName, NETWORK_STATE_FILE_BASENAME, NETWORK_STATE_FILE_DIR)
   log(`Writing network state to ${fileName}...`)
-  const state = stateByFilename[fileName] || _readNetworkStateFile(fileName)
-  const networks = state.networks || (state.networks = {})
-  networks[netId] = netState
-  stateByFilename[fileName] = state
-  const data = JSON.stringify(state, null, '  ') + '\n'
-  fs.writeFileSync(fileName, data, 'utf8')
+  _writeNetworkStateFile(fileName, state)
 }
 
 function updateNetworkState(state, newState) {
@@ -59,6 +50,29 @@ function assertRequiredNetworkState(state, requiredStateNames) {
       `missing following fields from the network state file, make sure you've run ` + `previous deployment steps: ${missingDesc}`
     )
   }
+}
+
+function _getFileName(netName, baseName, dir) {
+  return path.resolve(dir, `${baseName}-${netName}.json`)
+}
+
+function _readNetworkStateFile(fileName, netId) {
+  if (!fs.existsSync(fileName)) {
+    const state = { networkId: netId }
+    _writeNetworkStateFile(fileName, state)
+    return state
+  }
+  const data = fs.readFileSync(fileName, 'utf8')
+  try {
+    return JSON.parse(data)
+  } catch (err) {
+    throw new Error(`malformed network state file ${fileName}: ${err.message}`)
+  }
+}
+
+function _writeNetworkStateFile(fileName, state) {
+  const data = JSON.stringify(state, null, '  ')
+  fs.writeFileSync(fileName, data + '\n', 'utf8')
 }
 
 module.exports = { readNetworkState, persistNetworkState, updateNetworkState, assertRequiredNetworkState }

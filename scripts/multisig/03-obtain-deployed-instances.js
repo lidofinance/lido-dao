@@ -21,27 +21,25 @@ const REQUIRED_NET_STATE = [
   'nodeOperatorsRegistryBaseDeployTx'
 ]
 
-const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
-
-async function deployTemplate({ web3, artifacts, networkStateFile = NETWORK_STATE_FILE }) {
+async function deployTemplate({ web3, artifacts }) {
   const netId = await web3.eth.net.getId()
 
   logWideSplitter()
   log(`Network ID: ${chalk.yellow(netId)}`)
 
-  const state = readNetworkState(networkStateFile, netId)
+  const state = readNetworkState(network.name, netId)
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
 
   logHeader('DAO template')
   const daoTemplate = await obtainTemplate(state)
-  persistNetworkState(networkStateFile, netId, state, { daoTemplate })
+  persistNetworkState(network.name, netId, state, { daoTemplate })
 
   logHeader('Lido app base')
   const lidoBase = await useOrGetDeployed('Lido', state.lidoBaseAddress, state.lidoBaseDeployTx)
   log(`Checking...`)
   await assertDeployedBytecode(lidoBase.address, 'Lido')
   await assertAragonProxyBase(lidoBase, 'lidoBase')
-  persistNetworkState(networkStateFile, netId, state, {
+  persistNetworkState(network.name, netId, state, {
     [`app:${APP_NAMES.LIDO}`]: {
       ...state[`app:${APP_NAMES.LIDO}`],
       baseAddress: lidoBase.address
@@ -53,7 +51,7 @@ async function deployTemplate({ web3, artifacts, networkStateFile = NETWORK_STAT
   log(`Checking...`)
   await assertDeployedBytecode(oracleBase.address, 'LidoOracle')
   await assertAragonProxyBase(oracleBase, 'oracleBase')
-  persistNetworkState(networkStateFile, netId, state, {
+  persistNetworkState(network.name, netId, state, {
     [`app:${APP_NAMES.ORACLE}`]: {
       ...state[`app:${APP_NAMES.ORACLE}`],
       baseAddress: oracleBase.address
@@ -69,7 +67,7 @@ async function deployTemplate({ web3, artifacts, networkStateFile = NETWORK_STAT
   log(`Checking...`)
   await assertDeployedBytecode(nodeOperatorsRegistryBase.address, 'NodeOperatorsRegistry')
   await assertAragonProxyBase(nodeOperatorsRegistryBase, 'nodeOperatorsRegistryBase')
-  persistNetworkState(networkStateFile, netId, state, {
+  persistNetworkState(network.name, netId, state, {
     [`app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`]: {
       ...state[`app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`],
       baseAddress: nodeOperatorsRegistryBase.address
