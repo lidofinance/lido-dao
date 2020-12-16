@@ -1,3 +1,4 @@
+const BN = require('bn.js')
 const path = require('path')
 const chalk = require('chalk')
 const { assert } = require('chai')
@@ -45,13 +46,18 @@ async function issueTokens({ web3, artifacts }) {
   log(`  Cliff:`, chalk.yellow(formatDate(vesting.cliff)))
   log(`  End:`, chalk.yellow(formatDate(vesting.end)))
   log(`  Revokable:`, chalk.yellow(vesting.revokable))
+
+  const totalSupply = bigSum(vesting.amounts, vesting.unvestedTokensAmount)
+
+  log(`  Total supply:`, chalk.yellow(totalSupply.toString()))
+  log(`  Unvested tokens amount:`, chalk.yellow(vesting.unvestedTokensAmount))
   log(`  Token receivers (total ${chalk.yellow(vesting.holders.length)}):`)
 
   vesting.holders.forEach((addr, i) => {
-    log(`    ${addr}: ${chalk.yellow(web3.utils.fromWei(vesting.amounts[i], 'ether'))}`)
+    const amount = vesting.amounts[i]
+    const percentage = +new BN(amount).muln(10000).div(totalSupply) / 100
+    log(`    ${addr}: ${chalk.yellow(web3.utils.fromWei(amount, 'ether'))} (${percentage}%)`)
   })
-
-  log(`  Unvested tokens amount:`, chalk.yellow(vesting.unvestedTokensAmount))
 
   log.splitter()
 
@@ -60,8 +66,15 @@ async function issueTokens({ web3, artifacts }) {
 
   log(`Total batches:`, chalk.yellow(totalTxes))
 
+  const endTotalSupply = new BN(0)
+
   for (let i = 0; i < totalTxes; ++i) {
     const startIndex = i * holdersInOneTx
+    const holders = vesting.holders.slice(startIndex, startIndex + holdersInOneTx)
+    const amounts = vesting.amounts.slice(startIndex, startIndex + holdersInOneTx)
+
+    endTotalSupply.iadd(bigSum(amounts))
+
     await saveCallTxData(
       `issueTokens (batch ${i + 1})`,
       template,
@@ -69,17 +82,26 @@ async function issueTokens({ web3, artifacts }) {
       `tx-06-${i + 1}-issue-tokens.json`,
       {
         arguments: [
-          vesting.holders.slice(startIndex, startIndex + holdersInOneTx),
-          vesting.amounts.slice(startIndex, startIndex + holdersInOneTx),
+          holders,
+          amounts,
           vesting.start,
           vesting.cliff,
           vesting.end,
-          vesting.revokable
+          vesting.revokable,
+          endTotalSupply
         ],
         from: state.multisigAddress
       }
     )
   }
+}
+
+function bigSum(amounts, initialAmount = 0) {
+  const sum = new BN(initialAmount)
+  amounts.forEach(amount => {
+    sum.iadd(new BN(amount))
+  })
+  return sum
 }
 
 function formatDate(unixTimestamp) {
