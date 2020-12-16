@@ -59,7 +59,7 @@ export async function getAllOracleMembers() {
 }
 
 export async function getBeaconSpec() {
-  return await lidoOracleContract.methods.beaconSpec().call()
+  return await lidoOracleContract.methods.getBeaconSpec().call()
 }
 
 export async function addOracleMember(member, holder, holders) {

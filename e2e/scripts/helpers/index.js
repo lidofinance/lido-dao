@@ -33,7 +33,7 @@ export const prepareContext = async () => {
   const vaultApp = findApp(apps, AGENT_APP_ID)
   const nodeOperatorsApp = findApp(apps, NODE_OPERATORS_REGISTRY_APP_ID)
   const tokenManagerApp = findApp(apps, TOKEN_MANAGER_APP_ID)
-  const stEthApp = findApp(apps, STETH_APP_ID)
+  // const stEthApp = findApp(apps, STETH_APP_ID)
   const lidoOracleApp = findApp(apps, LIDOORACLE_APP_ID)
   const lidoApp = findApp(apps, LIDO_APP_ID)
 
@@ -51,7 +51,7 @@ export const prepareContext = async () => {
       financeApp,
       vaultApp,
       tokenManagerApp,
-      stEthApp,
+      // stEthApp,
       lidoOracleApp,
       lidoApp,
       nodeOperatorsApp

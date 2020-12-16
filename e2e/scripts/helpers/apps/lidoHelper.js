@@ -2,7 +2,7 @@ import { abi as LidoAbi } from '../../../../artifacts/Lido.json'
 import { createVote, voteForAction, init as voteInit } from './votingHelper'
 import { encodeCallScript } from '@aragon/contract-helpers-test/src/aragon-os'
 import { BN } from '../utils'
-import { init as stEthHelperInit, getPooledEthByShares, getSharesByHolder } from './stEthHelper'
+// import { init as stEthHelperInit, getPooledEthByShares, getSharesByHolder } from './stEthHelper'
 
 let context
 export let lidoContract
@@ -12,7 +12,7 @@ export function init(c) {
   if (!context) {
     context = c
     web3 = context.web3
-    stEthHelperInit(context)
+    // stEthHelperInit(context)
     lidoContract = new web3.eth.Contract(LidoAbi, getProxyAddress())
     voteInit(context)
   }
@@ -124,7 +124,35 @@ export function getBufferedEther() {
   return lidoContract.methods.getBufferedEther().call()
 }
 
-export async function calculateNewInsuranceBalance(holder) {
+export async function getTotalShares() {
+  return lidoContract.methods.getTotalShares().call()
+}
+
+export function getSharesByHolder(owner) {
+  return lidoContract.methods.getSharesByHolder(owner).call()
+}
+
+export function getPooledEthByShares(shares) {
+  return lidoContract.methods.getPooledEthByShares(shares).call()
+}
+
+export async function calculateNewHolderBalance(holder) {
   const sharesByHolder = await getSharesByHolder(holder)
   return await getPooledEthByShares(sharesByHolder)
+}
+
+export async function getBalance(user, block_identifier = context.web3.eth.defaultBlock) {
+  return await lidoContract.methods.balanceOf(user).call(block_identifier)
+}
+
+export async function getTotalSupply() {
+  return await lidoContract.methods.totalSupply().call()
+}
+
+export async function approve(address, amount, sender) {
+  await lidoContract.methods.approve(address, amount).send({ from: sender })
+}
+
+export async function allowance(user, address) {
+  return await lidoContract.methods.allowance(user, address).call()
 }

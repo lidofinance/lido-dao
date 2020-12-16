@@ -2,7 +2,7 @@ import { abi as nosAbi } from '../../../../artifacts/NodeOperatorsRegistry.json'
 import { encodeCallScript } from '@aragon/contract-helpers-test/src/aragon-os'
 import { createVote, voteForAction } from './votingHelper'
 import { concatKeys } from '../utils'
-import { init as stEthHelperInit, getPooledEthByShares, getSharesByHolder } from './stEthHelper'
+// import { init as stEthHelperInit, getPooledEthByShares, getSharesByHolder } from './stEthHelper'
 import logger from '../logger'
 
 let web3
@@ -13,7 +13,7 @@ export function init(c) {
   if (!context) {
     context = c
     web3 = context.web3
-    stEthHelperInit(context)
+    // stEthHelperInit(context)
     nodeOperatorsContract = new web3.eth.Contract(nosAbi, getProxyAddress())
   }
 }
