@@ -44,20 +44,17 @@ const getNetConfig = (networkName, ethAccountName) => {
     'goerli-pyrmont': {
       ...base,
       url: 'http://206.81.31.11/rpc',
-      chainId: 5,
-      gasPrice: 2000000000
+      chainId: 5
     },
     rinkeby: {
       ...base,
       url: 'https://rinkeby.infura.io/v3/c9fdebbec8c44ad186038cedb3c0dc44',
       chainId: 4,
-      timeout: 60000 * 10,
-      gasPrice: 10000000000
+      timeout: 60000 * 10
     }
   }
-  return {
-    [networkName]: byNetName[networkName]
-  }
+  const netConfig = byNetName[networkName]
+  return netConfig ? { [networkName]: netConfig } : {}
 }
 
 const solcSettings = {
@@ -111,13 +108,13 @@ module.exports = {
 
 function getNetworkName() {
   if (process.env.HARDHAT_NETWORK) {
-    // Hardhat communicates network to its subprocesses via this env var
+    // Hardhat passes the network to its subprocesses via this env var
     return process.env.HARDHAT_NETWORK
   }
   const networkArgIndex = process.argv.indexOf('--network')
   return networkArgIndex !== -1 && networkArgIndex + 1 < process.argv.length
     ? process.argv[networkArgIndex + 1]
-    : process.env.NETWORK_NAME
+    : process.env.NETWORK_NAME || 'hardhat'
 }
 
 function readJson(fileName) {
