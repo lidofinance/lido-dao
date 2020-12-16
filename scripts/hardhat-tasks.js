@@ -1,7 +1,8 @@
 task(`tx`, `Performs a transaction`)
   .addParam(`file`, `The transaction JSON file`)
   .addOptionalParam(`from`, `The transaction sender address`)
-  .setAction(async ({ file, from: fromArg }) => {
+  .addOptionalParam(`wait`, `The number of seconds to wait before sending the transaction`)
+  .setAction(async ({ file, from: fromArg, wait: waitSec = 5 }) => {
     const netId = await web3.eth.net.getId()
 
     console.error('====================')
@@ -27,8 +28,10 @@ task(`tx`, `Performs a transaction`)
     try {
       const gas = await web3.eth.estimateGas(data)
       console.error(`The projected gas usage is ${gas}`)
-      console.error(`Press Ctrl+C within 5 seconds to cancel sending the transaction...`)
-      await new Promise((r) => setTimeout(r, 5000))
+      if (waitSec !== 0) {
+        console.error(`Press Ctrl+C within ${waitSec} seconds to cancel sending the transaction...`)
+        await new Promise((r) => setTimeout(r, 1000 * waitSec))
+      }
     } catch (err) {
       console.error(`ERROR Gas estimation failed: ${err.message}`)
       process.exit(1)
