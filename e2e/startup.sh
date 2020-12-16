@@ -456,6 +456,10 @@ docker-compose rm -s -v -f oracle-2 > /dev/null
 docker-compose rm -s -v -f oracle-3 > /dev/null
 
 ./oracle_build.sh
+
+ORACLE_IMG="lidofinance/oracle:e2e"
+docker pull $ORACLE_IMG
+
 $NODE scripts/set_beacon_spec.js
 if [ $SEED ]; then
   $NODE scripts/mock_validators.js

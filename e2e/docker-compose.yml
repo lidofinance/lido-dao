@@ -256,7 +256,7 @@ services:
       eth2:
 
   oracle-1:
-    image: lido-oracle:e2e
+    image: lidofinance/oracle:e2e
     container_name: oracle-1
     #restart: unless-stopped
     environment:
@@ -269,7 +269,7 @@ services:
       eth2:
 
   oracle-2:
-    image: lido-oracle:e2e
+    image: lidofinance/oracle:e2e
     container_name: oracle-2
     #restart: unless-stopped
     environment:
@@ -282,7 +282,7 @@ services:
       eth2:
 
   oracle-3:
-    image: lido-oracle:e2e
+    image: lidofinance/oracle:e2e
     container_name: oracle-3
     #restart: unless-stopped
     environment:
