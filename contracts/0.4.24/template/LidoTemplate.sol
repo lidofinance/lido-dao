@@ -431,7 +431,9 @@ contract LidoTemplate is IsContract {
         _removePermissionFromTemplate(state.acl, state.lido, LIDO_MANAGE_FEE);
 
         if (unvestedTokensAmount != 0) {
+            // using issue + assign to avoid setting the additional MINT_ROLE for the template
             state.tokenManager.issue(unvestedTokensAmount);
+            state.tokenManager.assign(state.agent, unvestedTokensAmount);
             emit TmplTokensIssued(unvestedTokensAmount);
         }
 

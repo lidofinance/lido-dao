@@ -4,7 +4,12 @@ const BN = require('bn.js')
 const { assert } = require('../../helpers/assert')
 const { log, yl } = require('../../helpers/log')
 
-async function assertVesting({ tokenManagerAddress, tokenAddress, vestingParams }) {
+async function assertVesting({
+  tokenManagerAddress,
+  tokenAddress,
+  vestingParams,
+  unvestedTokensManagerAddress
+}) {
   const { holders, amounts } = vestingParams
 
   const tokenManager = await artifacts.require('TokenManager').at(tokenManagerAddress)
@@ -61,9 +66,9 @@ async function assertVesting({ tokenManagerAddress, tokenAddress, vestingParams 
   if (unvestedTokensAmount.gtn(0)) {
     assert.log(
       assert.bnEqual,
-      await token.balanceOf(tokenManagerAddress),
+      await token.balanceOf(unvestedTokensManagerAddress),
       unvestedTokensAmount,
-      `total ${yl('' + unvestedTokensAmount)} unvested tokens are held by the token manager app ${yl(tokenManagerAddress)}`
+      `total ${yl('' + unvestedTokensAmount)} unvested tokens are held by ${yl(unvestedTokensManagerAddress)}`
     )
   }
 
