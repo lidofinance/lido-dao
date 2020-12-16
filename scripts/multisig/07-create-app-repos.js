@@ -10,6 +10,7 @@ const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = re
 const { APP_NAMES } = require('./constants')
 
 const REQUIRED_NET_STATE = [
+  'ensAddress',
   'multisigAddress',
   'daoTemplateAddress',
   `app:${APP_NAMES.LIDO}`,
@@ -32,12 +33,18 @@ async function createAppRepos({ web3, artifacts }) {
   await assertLastEvent(template, 'TmplAPMDeployed')
   logSplitter()
 
+  const aragonEnsAddress = state.aragonEnsAddress || state.ensAddress
+  if (aragonEnsAddress !== state.ensAddress) {
+    log(`Using a non-standard ENS to fetch Aragon packages:`, chalk.yellow(aragonEnsAddress))
+  }
+
   const lidoAppState = state[`app:${APP_NAMES.LIDO}`]
   const oracleAppState = state[`app:${APP_NAMES.ORACLE}`]
   const nodeOperatorsAppState = state[`app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`]
 
   await saveCallTxData(`createRepos`, template, 'createRepos', `tx-04-create-app-repos.json`, {
     arguments: [
+      aragonEnsAddress,
       [1, 0, 0],
       // Lido app
       lidoAppState.baseAddress,
