@@ -5,20 +5,12 @@ const { assert } = require('../../helpers/assert')
 const { log, yl } = require('../../helpers/log')
 
 async function assertVesting({
-  tokenManagerAddress,
-  tokenAddress,
+  tokenManager,
+  token,
   vestingParams,
   unvestedTokensManagerAddress
 }) {
   const { holders, amounts } = vestingParams
-
-  const tokenManager = await artifacts.require('TokenManager').at(tokenManagerAddress)
-  log(`Using TokenManager: ${chalk.yellow(tokenManagerAddress)}`)
-
-  const token = await artifacts.require('MiniMeToken').at(tokenAddress)
-  log(`Using MiniMeToken: ${chalk.yellow(tokenAddress)}`)
-
-  log.splitter()
 
   const vestings = await Promise.all(
     holders.map(async (addr) => {

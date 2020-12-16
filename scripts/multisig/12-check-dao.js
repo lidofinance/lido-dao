@@ -10,7 +10,7 @@ const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, yl } = require('../helpers/log')
 const { readNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
 const { assertRole, assertMissingRole } = require('../helpers/aragon')
-const { assertLastEvent } = require('../helpers/events')
+const { assertLastEvent, assertSingleEvent } = require('../helpers/events')
 const { assert } = require('../helpers/assert')
 const { percentToBP } = require('../helpers/index')
 const { resolveEnsAddress } = require('../components/ens')
@@ -23,20 +23,11 @@ const { assertVesting } = require('./checks/dao-token')
 
 const REQUIRED_NET_STATE = [
   'ensAddress',
-  'lidoApmAddress',
   'lidoApmEnsName',
-  'daoAddress',
-  'daoTokenAddress',
   'daoAragonId',
   'vestingParams',
   'daoInitialSettings',
-  `app:${APP_NAMES.LIDO}`,
-  `app:${APP_NAMES.ORACLE}`,
-  `app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`,
-  `app:${APP_NAMES.ARAGON_AGENT}`,
-  `app:${APP_NAMES.ARAGON_FINANCE}`,
-  `app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`,
-  `app:${APP_NAMES.ARAGON_VOTING}`
+  'daoTemplateAddress'
 ]
 
 const TOKEN_TRANSFERABLE = true
@@ -63,14 +54,23 @@ async function checkDAO({ web3, artifacts }) {
 
   log.splitter()
 
+  log(`Using ENS:`, yl(state.ensAddress))
+  const ens = await artifacts.require('ENS').at(state.ensAddress)
+
+  log.splitter()
+
   log(`Using LidoTemplate: ${yl(state.daoTemplateAddress)}`)
   const template = await artifacts.require('LidoTemplate').at(state.daoTemplateAddress)
   await assertLastEvent(template, 'TmplDaoFinalized')
 
-  log.splitter()
+  const apmDeployedEvt = await assertSingleEvent(template, 'TmplAPMDeployed')
+  const daoDeployedEvt = await assertSingleEvent(template, 'TmplDAOAndTokenDeployed')
 
-  log(`Using ENS:`, yl(state.ensAddress))
-  const ens = await artifacts.require('ENS').at(state.ensAddress)
+  state.lidoApmAddress = apmDeployedEvt.args.apm
+  state.daoAddress = daoDeployedEvt.args.dao
+  state.daoTokenAddress = daoDeployedEvt.args.token
+
+  log.splitter()
 
   log(`Using APMRegistry:`, yl(state.lidoApmAddress))
   const registry = await artifacts.require('APMRegistry').at(state.lidoApmAddress)
@@ -83,35 +83,31 @@ async function checkDAO({ web3, artifacts }) {
 
   log.splitter()
 
-  const lidoAddress = state[`app:${APP_NAMES.LIDO}`].proxyAddress
-  log(`Using ${yl(APP_NAMES.LIDO)} app proxy: ${yl(lidoAddress)}`)
+  const apps = await assertInstalledApps({
+    template,
+    dao,
+    lidoApmEnsName: state.lidoApmEnsName,
+    appProxyUpgradeableArtifactName: 'external:AppProxyUpgradeable_DAO'
+  })
 
-  const oracleAddress = state[`app:${APP_NAMES.ORACLE}`].proxyAddress
-  log(`Using ${yl(APP_NAMES.ORACLE)} app proxy: ${yl(oracleAddress)}`)
+  log.splitter()
+  return
 
-  const nopsRegistryAddress = state[`app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`].proxyAddress
-  log(`Using ${yl(APP_NAMES.NODE_OPERATORS_REGISTRY)} app proxy: ${yl(nopsRegistryAddress)}`)
-
-  const agentAddress = state[`app:${APP_NAMES.ARAGON_AGENT}`].proxyAddress
-  log(`Using ${yl(APP_NAMES.ARAGON_AGENT)} app proxy: ${yl(agentAddress)}`)
-
-  const financeAddress = state[`app:${APP_NAMES.ARAGON_FINANCE}`].proxyAddress
-  log(`Using ${yl(APP_NAMES.ARAGON_FINANCE)} app proxy: ${yl(financeAddress)}`)
-
-  const tokenManagerAddress = state[`app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`].proxyAddress
-  log(`Using ${yl(APP_NAMES.ARAGON_TOKEN_MANAGER)} app proxy: ${yl(tokenManagerAddress)}`)
-
-  const votingAddress = state[`app:${APP_NAMES.ARAGON_VOTING}`].proxyAddress
-  log(`Using ${yl(APP_NAMES.ARAGON_VOTING)} app proxy: ${yl(votingAddress)}`)
+  for (const appName of Object.keys(apps)) {
+    const app = apps[appName]
+    log(`Using ${yl(appName)} app proxy: ${yl(app.proxyAddress)}`)
+    const key = `app:${appName}`
+    state[key] = { ...state[key], ...app }
+  }
 
   const [lido, oracle, nopsRegistry, agent, finance, tokenManager, voting] = await Promise.all([
-    artifacts.require('Lido').at(lidoAddress),
-    artifacts.require('LidoOracle').at(oracleAddress),
-    artifacts.require('NodeOperatorsRegistry').at(nopsRegistryAddress),
-    artifacts.require('Agent').at(agentAddress),
-    artifacts.require('Finance').at(financeAddress),
-    artifacts.require('TokenManager').at(tokenManagerAddress),
-    artifacts.require('Voting').at(votingAddress)
+    artifacts.require('Lido').at(apps[APP_NAMES.LIDO].proxyAddress),
+    artifacts.require('LidoOracle').at(apps[APP_NAMES.ORACLE].proxyAddress),
+    artifacts.require('NodeOperatorsRegistry').at(apps[APP_NAMES.NODE_OPERATORS_REGISTRY].proxyAddress),
+    artifacts.require('Agent').at(apps[APP_NAMES.ARAGON_AGENT].proxyAddress),
+    artifacts.require('Finance').at(apps[APP_NAMES.ARAGON_FINANCE].proxyAddress),
+    artifacts.require('TokenManager').at(apps[APP_NAMES.ARAGON_TOKEN_MANAGER].proxyAddress),
+    artifacts.require('Voting').at(apps[APP_NAMES.ARAGON_VOTING].proxyAddress)
   ])
 
   log.splitter()
@@ -146,28 +142,19 @@ async function checkDAO({ web3, artifacts }) {
 
   log.splitter()
 
-  const { registryACL } = await assertLidoAPMPermissions({ registry, votingAddress })
+  const { registryACL } = await assertLidoAPMPermissions({ registry, votingAddress: voting.address })
 
   log.splitter()
 
-  await assertReposPermissions({ registry, registryACL, votingAddress })
-
-  log.splitter()
-
-  await assertInstalledApps({
-    template,
-    dao,
-    lidoApmEnsName: state.lidoApmEnsName,
-    appProxyUpgradeableArtifactName: 'external:AppProxyUpgradeable_DAO'
-  })
+  await assertReposPermissions({ registry, registryACL, votingAddress: voting.address })
 
   log.splitter()
 
   await assertVesting({
-    tokenManagerAddress,
-    tokenAddress: daoToken.address,
+    tokenManager,
+    token: daoToken,
     vestingParams: state.vestingParams,
-    unvestedTokensManagerAddress: agentAddress
+    unvestedTokensManagerAddress: agent.address
   })
 
   log.splitter()

@@ -37,6 +37,13 @@ async function finalizeDAO({ web3, artifacts }) {
   await assertLastEvent(template, 'TmplTokensIssued')
   log.splitter()
 
+  const tokenManagerAddress = state[`app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`].proxyAddress
+  log(`Using TokenManager:`, chalk.yellow(tokenManagerAddress))
+  const tokenManager = await artifacts.require('TokenManager').at(tokenManagerAddress)
+
+  log(`Using MiniMeToken`, chalk.yellow(state.daoTokenAddress))
+  const daoToken = await artifacts.require('MiniMeToken').at(state.daoTokenAddress)
+
   const { fee } = state.daoInitialSettings
   log(`Using fee initial settings:`)
   log(`  total fee:`, chalk.yellow(`${fee.totalPercent}%`))
@@ -45,8 +52,8 @@ async function finalizeDAO({ web3, artifacts }) {
   log(`  node operators fee:`, chalk.yellow(`${fee.nodeOperatorsPercent}%`))
 
   await assertVesting({
-    tokenManagerAddress: state[`app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`].proxyAddress,
-    tokenAddress: state.daoTokenAddress,
+    tokenManager,
+    token: daoToken,
     vestingParams: {
       ...state.vestingParams,
       unvestedTokensAmount: '0' // since we're minting them during the finalizeDAO call below
