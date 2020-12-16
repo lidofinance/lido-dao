@@ -69,7 +69,7 @@ async function deployDAO({ web3, artifacts }) {
   log(`Using DAO voting settings:`, daoInitialSettings.voting)
   log(`Using beacon spec:`, daoInitialSettings.beaconSpec)
 
-  await saveCallTxData(`newDAO`, template, 'newDAO', `tx-04-deploy-dao.json`, {
+  await saveCallTxData(`newDAO`, template, 'newDAO', `tx-05-deploy-dao.json`, {
     arguments: [
       daoInitialSettings.token.name,
       daoInitialSettings.token.symbol,

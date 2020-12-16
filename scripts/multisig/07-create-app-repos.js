@@ -36,7 +36,7 @@ async function createAppRepos({ web3, artifacts }) {
   const oracleAppState = state[`app:${APP_NAMES.ORACLE}`]
   const nodeOperatorsAppState = state[`app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`]
 
-  await saveCallTxData(`createRepos`, template, 'createRepos', `tx-03-create-app-repos.json`, {
+  await saveCallTxData(`createRepos`, template, 'createRepos', `tx-04-create-app-repos.json`, {
     arguments: [
       [1, 0, 0],
       // Lido app

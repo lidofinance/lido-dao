@@ -62,7 +62,7 @@ async function finalizeDAO({ web3, artifacts }) {
 
   log.splitter()
 
-  await saveCallTxData(`finalizeDAO`, template, 'finalizeDAO', `tx-06-finalize-dao.json`, {
+  await saveCallTxData(`finalizeDAO`, template, 'finalizeDAO', `tx-07-finalize-dao.json`, {
     arguments: [
       state.daoAragonId,
       percentToBP(fee.totalPercent),
