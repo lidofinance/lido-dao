@@ -53,6 +53,7 @@ contract LidoTemplate is IsContract {
 
     // Aragon app IDs
     bytes32 constant private ARAGON_AGENT_APP_ID = 0x9ac98dc5f995bf0211ed589ef022719d1487e5cb2bab505676f0d084c07cf89a; // agent.aragonpm.eth
+    bytes32 constant private ARAGON_VAULT_APP_ID = 0x7e852e0fcfce6551c13800f1e7476f982525c2b5277ba14b24339c68416336d1; // vault.aragonpm.eth
     bytes32 constant private ARAGON_VOTING_APP_ID = 0x9fa3927f639745e587912d4b0fea7ef9013bf93fb907d29faeab57417ba6e1d4; // voting.aragonpm.eth
     bytes32 constant private ARAGON_FINANCE_APP_ID = 0xbf8491150dafc5dcaee5b861414dca922de09ccffa344964ae167212e8c673ae; // finance.aragonpm.eth
     bytes32 constant private ARAGON_TOKEN_MANAGER_APP_ID = 0x6b20a3010614eeebf2138ccec99f028a61c811b3b1a3343b6ff635985c75c91f; // token-manager.aragonpm.eth
@@ -212,7 +213,6 @@ contract LidoTemplate is IsContract {
     }
 
     function createRepos(
-        ENS _aragonEns,
         uint16[3] _initialSemanticVersion,
         address _lidoImplAddress,
         bytes _lidoContentURI,
@@ -256,7 +256,7 @@ contract LidoTemplate is IsContract {
 
         // create Aragon app repos pointing to latest upstream versions
 
-        AppVersion memory latest = _apmResolveLatest(ARAGON_AGENT_APP_ID, _aragonEns);
+        AppVersion memory latest = _apmResolveLatest(ARAGON_AGENT_APP_ID);
         apmRepos.aragonAgent = lidoRegistry.newRepoWithVersion(
             ARAGON_AGENT_APP_NAME,
             this,
@@ -265,7 +265,7 @@ contract LidoTemplate is IsContract {
             latest.contentURI
         );
 
-        latest = _apmResolveLatest(ARAGON_FINANCE_APP_ID, _aragonEns);
+        latest = _apmResolveLatest(ARAGON_FINANCE_APP_ID);
         apmRepos.aragonFinance = lidoRegistry.newRepoWithVersion(
             ARAGON_FINANCE_APP_NAME,
             this,
@@ -274,7 +274,7 @@ contract LidoTemplate is IsContract {
             latest.contentURI
         );
 
-        latest = _apmResolveLatest(ARAGON_TOKEN_MANAGER_APP_ID, _aragonEns);
+        latest = _apmResolveLatest(ARAGON_TOKEN_MANAGER_APP_ID);
         apmRepos.aragonTokenManager = lidoRegistry.newRepoWithVersion(
             ARAGON_TOKEN_MANAGER_APP_NAME,
             this,
@@ -283,7 +283,7 @@ contract LidoTemplate is IsContract {
             latest.contentURI
         );
 
-        latest = _apmResolveLatest(ARAGON_VOTING_APP_ID, _aragonEns);
+        latest = _apmResolveLatest(ARAGON_VOTING_APP_ID);
         apmRepos.aragonVoting = lidoRegistry.newRepoWithVersion(
             ARAGON_VOTING_APP_NAME,
             this,
@@ -526,7 +526,7 @@ contract LidoTemplate is IsContract {
     }
 
     function _installApp(Kernel _dao, bytes32 _appId, bytes memory _initializeData, bool _setDefault) internal returns (address) {
-        address latestBaseAppAddress = _apmResolveLatest(_appId, ens).contractAddress;
+        address latestBaseAppAddress = _apmResolveLatest(_appId).contractAddress;
         address instance = address(_dao.newAppInstance(_appId, latestBaseAppAddress, _initializeData, _setDefault));
         emit TmplAppInstalled(instance, _appId);
         return instance;
@@ -597,7 +597,6 @@ contract LidoTemplate is IsContract {
 
         // using loops to save contract size
         Repo[10] memory repoAddrs;
-        ENS ens_ = ens;
 
         repoAddrs[0] = _repos.lido;
         repoAddrs[1] = _repos.oracle;
@@ -606,9 +605,9 @@ contract LidoTemplate is IsContract {
         repoAddrs[4] = _repos.aragonFinance;
         repoAddrs[5] = _repos.aragonTokenManager;
         repoAddrs[6] = _repos.aragonVoting;
-        repoAddrs[7] = _resolveRepo(_getAppId(APM_APP_NAME, _state.lidoRegistryEnsNode), ens_);
-        repoAddrs[8] = _resolveRepo(_getAppId(APM_REPO_APP_NAME, _state.lidoRegistryEnsNode), ens_);
-        repoAddrs[9] = _resolveRepo(_getAppId(APM_ENSSUB_APP_NAME, _state.lidoRegistryEnsNode), ens_);
+        repoAddrs[7] = _resolveRepo(_getAppId(APM_APP_NAME, _state.lidoRegistryEnsNode));
+        repoAddrs[8] = _resolveRepo(_getAppId(APM_REPO_APP_NAME, _state.lidoRegistryEnsNode));
+        repoAddrs[9] = _resolveRepo(_getAppId(APM_ENSSUB_APP_NAME, _state.lidoRegistryEnsNode));
 
         for (uint256 i = 0; i < repoAddrs.length; ++i) {
             _transferPermissionFromTemplate(apmACL, repoAddrs[i], voting, REPO_CREATE_VERSION_ROLE);
@@ -722,14 +721,14 @@ contract LidoTemplate is IsContract {
 
     /* APM and ENS */
 
-    function _apmResolveLatest(bytes32 _appId, ENS _ens) private view returns (AppVersion memory) {
-        Repo repo = _resolveRepo(_appId, _ens);
+    function _apmResolveLatest(bytes32 _appId) private view returns (AppVersion memory) {
+        Repo repo = _resolveRepo(_appId);
         (, address contractAddress, bytes memory contentURI) = repo.getLatest();
         return AppVersion(contractAddress, contentURI);
     }
 
-    function _resolveRepo(bytes32 _appId, ENS _ens) private view returns (Repo) {
-        return Repo(PublicResolver(_ens.resolver(_appId)).addr(_appId));
+    function _resolveRepo(bytes32 _appId) private view returns (Repo) {
+        return Repo(PublicResolver(ens.resolver(_appId)).addr(_appId));
     }
 
     /**
