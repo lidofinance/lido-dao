@@ -41,6 +41,7 @@ contract LidoTemplate is IsContract {
     string constant private ERROR_EMPTY_HOLDERS = "TMPL_EMPTY_HOLDERS";
     string constant private ERROR_BAD_AMOUNTS_LEN = "TMPL_BAD_AMOUNTS_LEN";
     string constant private ERROR_INVALID_ID = "TMPL_INVALID_ID";
+    string constant private ERROR_UNEXPECTED_TOTAL_SUPPLY = "TMPL_UNEXPECTED_TOTAL_SUPPLY";
 
     // Operational errors
     string constant private ERROR_PERMISSION_DENIED = "TMPL_PERMISSION_DENIED";
@@ -391,7 +392,8 @@ contract LidoTemplate is IsContract {
         uint64 _vestingStart,
         uint64 _vestingCliff,
         uint64 _vestingEnd,
-        bool _vestingRevokable
+        bool _vestingRevokable,
+        uint256 _extectedFinalTotalSupply
     )
         onlyOwner
         external
@@ -404,12 +406,14 @@ contract LidoTemplate is IsContract {
 
         uint256 totalAmount = _issueTokens(
             tokenManager,
+            deployState.token,
             _holders,
             _amounts,
             _vestingStart,
             _vestingCliff,
             _vestingEnd,
-            _vestingRevokable
+            _vestingRevokable,
+            _extectedFinalTotalSupply
         );
 
         emit TmplTokensIssued(totalAmount);
@@ -421,7 +425,7 @@ contract LidoTemplate is IsContract {
         uint16 _treasuryFeeBP,
         uint16 _insuranceFeeBP,
         uint16 _operatorsFeeBP,
-        uint256 unvestedTokensAmount
+        uint256 _unvestedTokensAmount
     )
         onlyOwner
         external
@@ -439,11 +443,11 @@ contract LidoTemplate is IsContract {
         state.lido.setFeeDistribution(_treasuryFeeBP, _insuranceFeeBP, _operatorsFeeBP);
         _removePermissionFromTemplate(state.acl, state.lido, LIDO_MANAGE_FEE);
 
-        if (unvestedTokensAmount != 0) {
+        if (_unvestedTokensAmount != 0) {
             // using issue + assign to avoid setting the additional MINT_ROLE for the template
-            state.tokenManager.issue(unvestedTokensAmount);
-            state.tokenManager.assign(state.agent, unvestedTokensAmount);
-            emit TmplTokensIssued(unvestedTokensAmount);
+            state.tokenManager.issue(_unvestedTokensAmount);
+            state.tokenManager.assign(state.agent, _unvestedTokensAmount);
+            emit TmplTokensIssued(_unvestedTokensAmount);
         }
 
         _setupPermissions(state, repos);
@@ -541,12 +545,14 @@ contract LidoTemplate is IsContract {
 
     function _issueTokens(
         TokenManager _tokenManager,
+        MiniMeToken _token,
         address[] memory _holders,
         uint256[] memory _amounts,
         uint64 _vestingStart,
         uint64 _vestingCliff,
         uint64 _vestingEnd,
-        bool _vestingRevokable
+        bool _vestingRevokable,
+        uint256 _extectedFinalTotalSupply
     )
         private
         returns (uint256 totalAmount)
@@ -559,6 +565,7 @@ contract LidoTemplate is IsContract {
         }
 
         _tokenManager.issue(totalAmount);
+        require(_token.totalSupply() == _extectedFinalTotalSupply, ERROR_UNEXPECTED_TOTAL_SUPPLY);
 
         for (i = 0; i < _holders.length; ++i) {
             _tokenManager.assignVested(_holders[i], _amounts[i], _vestingStart, _vestingCliff, _vestingEnd, _vestingRevokable);
