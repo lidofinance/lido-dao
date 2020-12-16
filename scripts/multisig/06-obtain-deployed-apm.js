@@ -1,11 +1,10 @@
-const path = require('path')
 const chalk = require('chalk')
 const { getEvents } = require('@aragon/contract-helpers-test')
 const { hash: namehash } = require('eth-ens-namehash')
 const { toChecksumAddress } = require('web3-utils')
 
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
-const { readJSON } = require('../helpers/fs')
+const { loadArtifact } = require('../helpers/artifacts')
 const { log } = require('../helpers/log')
 const { assert } = require('../helpers/assert')
 const { assertProxiedContractBytecode } = require('../helpers/deploy')
@@ -17,15 +16,13 @@ const { assertAPMRegistryPermissions } = require('./checks/apm')
 
 const REQUIRED_NET_STATE = ['ensAddress', 'lidoApmEnsName', 'daoTemplateAddress', 'apmRegistryFactoryAddress']
 
-const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
-
-async function obtainDeployedAPM({ web3, artifacts, networkStateFile = NETWORK_STATE_FILE }) {
+async function obtainDeployedAPM({ web3, artifacts }) {
   const netId = await web3.eth.net.getId()
 
   log.wideSplitter()
   log(`Network ID: ${chalk.yellow(netId)}`)
 
-  const state = readNetworkState(networkStateFile, netId)
+  const state = readNetworkState(network.name, netId)
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
 
   log.splitter()
@@ -36,15 +33,15 @@ async function obtainDeployedAPM({ web3, artifacts, networkStateFile = NETWORK_S
   const apmDeployedEvt = await assertLastEvent(template, 'TmplAPMDeployed')
   state.lidoApmDeployTx = apmDeployedEvt.transactionHash
   log(`Using deployLidoAPM transaction: ${chalk.yellow(state.lidoApmDeployTx)}`)
-  persistNetworkState(networkStateFile, netId, state)
+  persistNetworkState(network.name, netId, state)
 
   const registryAddress = apmDeployedEvt.args.apm
   log.splitter(`Using APMRegistry: ${chalk.yellow(registryAddress)}`)
 
   const registry = await artifacts.require('APMRegistry').at(registryAddress)
 
-  const registryArtifact = await readJSON(path.join(__dirname, 'external-artifacts', 'APMRegistry.json'))
-  const proxyArtifact = await readJSON(path.join(__dirname, 'external-artifacts', 'AppProxyUpgradeable_APM.json'))
+  const registryArtifact = await loadArtifact('external:APMRegistry', network.name)
+  const proxyArtifact = await loadArtifact('external:AppProxyUpgradeable_APM', network.name)
   await assertProxiedContractBytecode(registry.address, proxyArtifact, registryArtifact)
 
   const ensAddress = await registry.ens()
@@ -90,7 +87,7 @@ async function obtainDeployedAPM({ web3, artifacts, networkStateFile = NETWORK_S
   })
 
   log.splitter()
-  persistNetworkState(networkStateFile, netId, state, { lidoApmAddress: registryAddress })
+  persistNetworkState(network.name, netId, state, { lidoApmAddress: registryAddress })
 }
 
 module.exports = runOrWrapScript(obtainDeployedAPM, module)

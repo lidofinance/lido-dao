@@ -1,11 +1,10 @@
-const path = require('path')
 const chalk = require('chalk')
-const { assert } = require('chai')
 const { hash: namehash } = require('eth-ens-namehash')
 const { toChecksumAddress } = require('web3-utils')
 
-const { readJSON } = require('../../helpers/fs')
 const { log } = require('../../helpers/log')
+const { assert } = require('../../helpers/assert')
+const { loadArtifact } = require('../../helpers/artifacts')
 const { assertProxiedContractBytecode } = require('../../helpers/deploy')
 
 const { APP_NAMES, APP_ARTIFACTS } = require('../constants')
@@ -34,7 +33,7 @@ async function assertInstalledApps({
   )
   log.success(idsCheckDesc)
 
-  const proxyArtifact = await loadArtifact(appProxyUpgradeableArtifactName)
+  const proxyArtifact = await loadArtifact(appProxyUpgradeableArtifactName, network.name)
   const AragonApp = artifacts.require(aragonAppArtifactName)
   const APP_BASES_NAMESPACE = await kernel.APP_BASES_NAMESPACE()
 
@@ -46,7 +45,7 @@ async function assertInstalledApps({
     const appName = appNameByAppId[evt.appId]
     const proxyAddress = toChecksumAddress(evt.appProxy)
 
-    const artifact = await loadArtifact(APP_ARTIFACTS[appName])
+    const artifact = await loadArtifact(APP_ARTIFACTS[appName], network.name)
     const implAddress = await assertProxiedContractBytecode(proxyAddress, proxyArtifact, artifact, appName)
 
     const kernelBaseAddr = await kernel.getApp(APP_BASES_NAMESPACE, evt.appId)
@@ -67,15 +66,6 @@ async function assertInstalledApps({
   }
 
   return dataByAppName
-}
-
-async function loadArtifact(artifactName) {
-  if (artifactName.startsWith('external:')) {
-    const artifactPath = path.join(__dirname, '..', 'external-artifacts', artifactName.substring(9) + '.json')
-    return await readJSON(artifactPath)
-  } else {
-    return await artifacts.readArtifact(artifactName)
-  }
 }
 
 async function assertInitializedAragonApp(instance, kernel, desc) {

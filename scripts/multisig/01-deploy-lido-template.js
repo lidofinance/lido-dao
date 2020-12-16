@@ -7,15 +7,13 @@ const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = re
 
 const REQUIRED_NET_STATE = ['ensAddress', 'daoFactoryAddress', 'miniMeTokenFactoryAddress', 'aragonIDAddress', 'apmRegistryFactoryAddress']
 
-const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
-
-async function deployTemplate({ web3, artifacts, networkStateFile = NETWORK_STATE_FILE }) {
+async function deployTemplate({ web3, artifacts }) {
   const netId = await web3.eth.net.getId()
 
   logWideSplitter()
   log(`Network ID: ${chalk.yellow(netId)}`)
 
-  const state = readNetworkState(networkStateFile, netId)
+  const state = readNetworkState(network.name, netId)
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
 
   const daoTemplateConstructorArgs = [
@@ -28,7 +26,7 @@ async function deployTemplate({ web3, artifacts, networkStateFile = NETWORK_STAT
   ]
 
   await saveDeployTx('LidoTemplate', 'tx-01-1-deploy-template.json', daoTemplateConstructorArgs)
-  persistNetworkState(networkStateFile, netId, state, { daoTemplateConstructorArgs })
+  persistNetworkState(network.name, netId, state, { daoTemplateConstructorArgs })
 }
 
 module.exports = runOrWrapScript(deployTemplate, module)

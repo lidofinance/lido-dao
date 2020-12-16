@@ -8,16 +8,57 @@ require('@nomiclabs/hardhat-etherscan')
 require('hardhat-gas-reporter')
 // require('solidity-coverage')
 
-const accounts = readJson('./accounts.json') || {
-  eth: 'remote',
+const NETWORK_NAME = getNetworkName()
+const ETH_ACCOUNT_NAME = process.env.ETH_ACCOUNT_NAME
+
+const accounts = readJson(`./accounts.json`) || {
+  eth: { dev: 'remote' },
   etherscan: { apiKey: undefined }
 }
 
-const stateByNetId = readJson('./deployed.json') || {
-  networks: {}
+const getNetConfig = (networkName, ethAccountName) => {
+  const netState = readJson(`./deployed-${networkName}.json`) || {}
+  const ethAccts = accounts.eth
+  const base = {
+    accounts: ethAccountName === 'remote'
+      ? 'remote'
+      : ethAccts[ethAccountName] || ethAccts[networkName] || ethAccts.dev || 'remote',
+    ensAddress: netState.ensAddress,
+    timeout: 60000
+  }
+  const dev = {
+    ...base,
+    url: 'http://localhost:8545',
+    chainId: 1337,
+    gas: 8000000 // the same as in Görli
+  }
+  const byNetName = {
+    dev,
+    e2e: {
+      ...dev,
+      accounts: accounts.eth.e2e
+    },
+    coverage: {
+      url: 'http://localhost:8555'
+    },
+    'goerli-pyrmont': {
+      ...base,
+      url: 'http://206.81.31.11/rpc',
+      chainId: 5,
+      gasPrice: 2000000000
+    },
+    rinkeby: {
+      ...base,
+      url: 'https://rinkeby.infura.io/v3/c9fdebbec8c44ad186038cedb3c0dc44',
+      chainId: 4,
+      timeout: 60000 * 10,
+      gasPrice: 10000000000
+    }
+  }
+  return {
+    [networkName]: byNetName[networkName]
+  }
 }
-
-const getNetState = (netId) => stateByNetId.networks[netId] || {}
 
 const solcSettings = {
   optimizer: {
@@ -28,44 +69,8 @@ const solcSettings = {
 }
 
 module.exports = {
-  defaultNetwork: process.env.NETWORK_NAME || 'hardhat',
-  networks: {
-    localhost_remote: {
-      url: 'http://localhost:8545',
-      chainId: 1337,
-      ensAddress: getNetState('1337').ensAddress,
-      accounts: 'remote',
-      timeout: 60000,
-      gas: 8000000 // the same as in Göerli
-    },
-    localhost: {
-      url: 'http://localhost:8545',
-      chainId: 1337,
-      ensAddress: getNetState('1337').ensAddress,
-      accounts: accounts.dev ? accounts.dev.eth : 'remote',
-      timeout: 60000,
-      gas: 8000000 // the same as in Göerli
-    },
-    e2e: {
-      url: 'http://localhost:8545',
-      chainId: 1337,
-      ensAddress: getNetState('2020').ensAddress,
-      accounts: accounts.e2e || 'remote',
-      timeout: 60000,
-      gas: 8000000 // the same as in Göerli
-    },
-    coverage: {
-      url: 'http://localhost:8555'
-    },
-    goerli: {
-      url: 'http://206.81.31.11/rpc',
-      chainId: 5,
-      ensAddress: getNetState('5').ensAddress,
-      timeout: 60000 * 10,
-      accounts: accounts.eth,
-      gasPrice: 2000000000
-    }
-  },
+  defaultNetwork: NETWORK_NAME,
+  networks: getNetConfig(NETWORK_NAME, ETH_ACCOUNT_NAME),
   solidity: {
     compilers: [
       {
@@ -104,13 +109,26 @@ module.exports = {
   }
 }
 
+function getNetworkName() {
+  if (process.env.HARDHAT_NETWORK) {
+    // Hardhat communicates network to its subprocesses via this env var
+    return process.env.HARDHAT_NETWORK
+  }
+  const networkArgIndex = process.argv.indexOf('--network')
+  return networkArgIndex !== -1 && networkArgIndex + 1 < process.argv.length
+    ? process.argv[networkArgIndex + 1]
+    : process.env.NETWORK_NAME
+}
+
 function readJson(fileName) {
+  let data
   try {
     const filePath = path.join(__dirname, fileName)
-    return JSON.parse(fs.readFileSync(filePath))
+    data = fs.readFileSync(filePath)
   } catch (err) {
     return null
   }
+  return JSON.parse(data)
 }
 
 if ((typeof task) === 'function') {

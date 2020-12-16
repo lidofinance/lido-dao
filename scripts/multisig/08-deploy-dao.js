@@ -25,16 +25,15 @@ const REQUIRED_NET_STATE = [
   'daoInitialSettings'
 ]
 
-const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
 const ARAGON_APM_ENS_DOMAIN = 'aragonpm.eth'
 
-async function deployDAO({ web3, artifacts, networkStateFile = NETWORK_STATE_FILE }) {
+async function deployDAO({ web3, artifacts }) {
   const netId = await web3.eth.net.getId()
 
   log.splitter()
   log(`Network ID: ${chalk.yellow(netId)}`)
 
-  const state = readNetworkState(networkStateFile, netId)
+  const state = readNetworkState(network.name, netId)
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
 
   log.splitter()
@@ -45,7 +44,7 @@ async function deployDAO({ web3, artifacts, networkStateFile = NETWORK_STATE_FIL
   const reposCreatedEvt = await assertLastEvent(template, 'TmplReposCreated')
   state.createAppReposTx = reposCreatedEvt.transactionHash
   log(`Using createRepos transaction: ${chalk.yellow(state.createAppReposTx)}`)
-  persistNetworkState(networkStateFile, netId, state)
+  persistNetworkState(network.name, netId, state)
 
   log.splitter()
   await checkAppRepos(state)

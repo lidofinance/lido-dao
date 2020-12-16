@@ -12,15 +12,13 @@ const { getENSNodeOwner } = require('../components/ens')
 
 const REQUIRED_NET_STATE = ['multisigAddress', 'daoTemplateAddress', 'ensAddress', 'lidoApmEnsName']
 
-const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
-
-async function deployAPM({ web3, artifacts, networkStateFile = NETWORK_STATE_FILE }) {
+async function deployAPM({ web3, artifacts }) {
   const netId = await web3.eth.net.getId()
 
   logWideSplitter()
   log(`Network ID: ${chalk.yellow(netId)}`)
 
-  const state = readNetworkState(networkStateFile, netId)
+  const state = readNetworkState(network.name, netId)
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
 
   logSplitter()

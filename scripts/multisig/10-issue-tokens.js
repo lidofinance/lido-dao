@@ -21,16 +21,15 @@ const REQUIRED_NET_STATE = [
   'vestingParams'
 ]
 
-const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
 const MAX_HOLDERS_IN_ONE_TX = 30
 
-async function issueTokens({ web3, artifacts, networkStateFile = NETWORK_STATE_FILE }) {
+async function issueTokens({ web3, artifacts }) {
   const netId = await web3.eth.net.getId()
 
   log.splitter()
   log(`Network ID: ${chalk.yellow(netId)}`)
 
-  const state = readNetworkState(networkStateFile, netId)
+  const state = readNetworkState(network.name, netId)
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
 
   log.splitter()

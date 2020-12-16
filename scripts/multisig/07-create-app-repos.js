@@ -21,15 +21,13 @@ const REQUIRED_NET_STATE = [
   `app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`
 ]
 
-const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
-
-async function createAppRepos({ web3, artifacts, networkStateFile = NETWORK_STATE_FILE }) {
+async function createAppRepos({ web3, artifacts }) {
   const netId = await web3.eth.net.getId()
 
   logWideSplitter()
   log(`Network ID: ${chalk.yellow(netId)}`)
 
-  const state = readNetworkState(networkStateFile, netId)
+  const state = readNetworkState(network.name, netId)
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
 
   logSplitter()
@@ -63,7 +61,7 @@ async function createAppRepos({ web3, artifacts, networkStateFile = NETWORK_STAT
   })
 
   logSplitter()
-  persistNetworkState(networkStateFile, netId, state)
+  persistNetworkState(network.name, netId, state)
 }
 
 function assignContentURI(appState) {
