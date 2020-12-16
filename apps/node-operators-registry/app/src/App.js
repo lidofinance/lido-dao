@@ -174,6 +174,7 @@ function App() {
         primary={
           <DataView
             fields={[
+              '#',
               'Node Operator',
               'Address',
               'Staking Limit',
@@ -191,6 +192,8 @@ function App() {
               active,
               id,
             }) => [
+              // eslint-disable-next-line react/jsx-key
+              <strong>{id} </strong>,
               // eslint-disable-next-line react/jsx-key
               <strong>
                 {name} {currentUserOperatorId === id && '(you)'}
