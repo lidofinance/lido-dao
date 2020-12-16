@@ -48,9 +48,9 @@
       "appName": "lido.lidopm.eth",
       "network": "rinkeby"
     },
-    "staging": {
-      "appName": "lido.lidopm.eth",
-      "network": "rinkeby"
+    "mainnet-test": {
+      "appName": "lido.lidopm-test.eth",
+      "network": "mainnet"
     },
     "mainnet": {
       "appName": "lido.lidopm.eth",
