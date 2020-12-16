@@ -92,7 +92,7 @@ async function getCurrentFrame() {
 async function getCurrentReportableEpochs() {
   const epochs = await app.call('getCurrentReportableEpochs').toPromise()
   return {
-    firstReportableEpochId: String(epochs.firstReportableEpochId),
-    lastReportableEpochId: String(epochs.lastReportableEpochId),
+    minReportableEpochId: String(epochs.minReportableEpochId),
+    maxReportableEpochId: String(epochs.maxReportableEpochId),
   }
 }
