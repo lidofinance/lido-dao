@@ -18,6 +18,7 @@ require('@aragon/buidler-aragon/dist/bootstrap-paths')
 
 const { generateArtifacts } = require('@aragon/buidler-aragon/dist/src/utils/artifact/generateArtifacts')
 const { uploadDirToIpfs } = require('@aragon/buidler-aragon/dist/src/utils/ipfs/uploadDirToIpfs')
+const { toContentUri } = require('@aragon/buidler-aragon/dist/src/utils/apm/utils')
 
 const { APP_NAMES } = require('./constants')
 const VALID_APP_NAMES = Object.entries(APP_NAMES).map((e) => e[1])
@@ -130,7 +131,8 @@ async function publishAppFrotnend(appDir, appsDirPath, ipfsAPI, lidoApmEnsName) 
     fullName: appFullName,
     name: appName,
     id: appId,
-    ipfsCid: rootCid
+    ipfsCid: rootCid,
+    contentURI: toContentUri('ipfs', rootCid)
   }
 }
 

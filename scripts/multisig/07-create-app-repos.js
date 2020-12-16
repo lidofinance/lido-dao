@@ -7,10 +7,6 @@ const { saveCallTxData } = require('../helpers/tx-data')
 const { assertLastEvent } = require('../helpers/events')
 const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
 
-// this is needed for the next `require` to work, some kind of typescript path magic
-require('@aragon/buidler-aragon/dist/bootstrap-paths')
-const apmUtils = require('@aragon/buidler-aragon/dist/src/utils/apm/utils')
-
 const { APP_NAMES } = require('./constants')
 
 const REQUIRED_NET_STATE = [
@@ -40,10 +36,6 @@ async function createAppRepos({ web3, artifacts }) {
   const oracleAppState = state[`app:${APP_NAMES.ORACLE}`]
   const nodeOperatorsAppState = state[`app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`]
 
-  assignContentURI(lidoAppState)
-  assignContentURI(oracleAppState)
-  assignContentURI(nodeOperatorsAppState)
-
   await saveCallTxData(`createRepos`, template, 'createRepos', `tx-03-create-app-repos.json`, {
     arguments: [
       [1, 0, 0],
@@ -62,10 +54,6 @@ async function createAppRepos({ web3, artifacts }) {
 
   logSplitter()
   persistNetworkState(network.name, netId, state)
-}
-
-function assignContentURI(appState) {
-  appState.contentURI = apmUtils.toContentUri('ipfs', appState.ipfsCid)
 }
 
 module.exports = runOrWrapScript(createAppRepos, module)
