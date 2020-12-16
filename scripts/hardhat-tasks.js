@@ -2,7 +2,9 @@ task(`tx`, `Performs a transaction`)
   .addParam(`file`, `The transaction JSON file`)
   .addOptionalParam(`from`, `The transaction sender address`)
   .addOptionalParam(`wait`, `The number of seconds to wait before sending the transaction`)
-  .setAction(async ({ file, from: fromArg, wait: waitSec = 5 }) => {
+  .addOptionalParam(`gasPrice`, `Gas price`)
+  .addOptionalParam(`nonce`, `Nonce`)
+  .setAction(async ({ file, from: fromArg, gasPrice, nonce, wait: waitSec = 5 }) => {
     const netId = await web3.eth.net.getId()
 
     console.error('====================')
@@ -35,6 +37,14 @@ task(`tx`, `Performs a transaction`)
     } catch (err) {
       console.error(`ERROR Gas estimation failed: ${err.message}`)
       process.exit(1)
+    }
+
+    if (gasPrice) {
+      data.gasPrice = gasPrice
+    }
+
+    if (nonce) {
+      data.nonce = nonce
     }
 
     console.error(`Sending the transaction...`)
