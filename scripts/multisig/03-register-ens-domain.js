@@ -14,9 +14,8 @@ const CONTROLLER_INTERFACE_ID = '0x018fac06'
 
 const REQUIRED_NET_STATE = [
   'ensAddress',
-  'lidoApmRootEnsLabel',
-  'lidoApmRootEnsRegDurationSec',
-  'lidoApmSubdomainLabel',
+  'lidoApmEnsName',
+  'lidoApmEnsRegDurationSec',
   'multisigAddress',
   'daoTemplateAddress'
 ]
@@ -56,39 +55,37 @@ async function deployTemplate({ web3, artifacts }) {
 
   log(`Controller min commitment age: ${yl(minCommitmentAge)} sec`)
   log(`Controller max commitment age: ${yl(maxCommitmentAge)} sec`)
-  log(`Controller min registration duration: ${yl(minRegistrationDuration)} sec`)
+  log(`Controller min registration duration: ${yl(formatTimeInterval(minRegistrationDuration))} (${minRegistrationDuration} sec)`)
 
   log.splitter()
 
-  const rootLabel = state.lidoApmRootEnsLabel
-  const rootOwner = state.multisigAddress
-  const rootRegDuration = state.lidoApmRootEnsRegDurationSec
-  const rootDomain = `${rootLabel}.${TLD}`
-  const rootNode = namehash(rootDomain)
+  const domain = state.lidoApmEnsName
+  const node = namehash(domain)
 
-  const subLabel = state.lidoApmSubdomainLabel
-  const subOwner = state.daoTemplateAddress
-  const subdomain = `${subLabel}.${rootDomain}`
-  const subNode = namehash(subdomain)
+  log(`ENS domain: ${yl(`${domain}`)} (${node})`)
 
-  log(`ENS root domain: ${yl(`${rootDomain}`)} (${rootNode})`)
-  log(`ENS root domain owner:`, yl(rootOwner))
-  log(`ENS root domain registration duration: ${yl(rootRegDuration)} sec`)
+  const domainParts = domain.split('.')
+  assert.lengthOf(domainParts, 2, `the domain is a second-level domain`)
+  assert.equal(domainParts[1], TLD, `the TLD is the expected one`)
 
-  log(`ENS subdomain: ${yl(subdomain)} (${subNode})`)
-  log(`ENS subdomain owner:`, yl(subOwner))
+  const domainLabel = domainParts[0]
+  const domainOwner = state.daoTemplateAddress
+  const domainRegDuration = state.lidoApmEnsRegDurationSec
+
+  log(`ENS domain owner:`, yl(domainOwner))
+  log(`ENS domain registration duration: ${yl(formatTimeInterval(domainRegDuration))} (${domainRegDuration} sec)`)
 
   log.splitter()
 
   assert.log(
     assert.isTrue,
-    await controller.available(rootLabel),
-    `the root domain is available`
+    await controller.available(domainLabel),
+    `the domain is available`
   )
 
   assert.log(
     assert.isAtLeast,
-    rootRegDuration,
+    domainRegDuration,
     minRegistrationDuration,
     `registration duration is at least the minimum one`
   )
@@ -98,10 +95,10 @@ async function deployTemplate({ web3, artifacts }) {
   const salt = '0x' + crypto.randomBytes(32).toString('hex')
   log(`Using salt:`, yl(salt))
 
-  const commitment = await controller.makeCommitment(rootLabel, rootOwner, salt)
+  const commitment = await controller.makeCommitment(domainLabel, domainOwner, salt)
   log(`Using commitment:`, yl(commitment))
 
-  const rentPrice = await controller.rentPrice(rootLabel, rootRegDuration)
+  const rentPrice = await controller.rentPrice(domainLabel, domainRegDuration)
   log(`Rent price:`, yl(`${web3.utils.fromWei(rentPrice, 'ether')} ETH`))
 
   // increasing by 15% to account for price fluctuation; the difference will be refunded
@@ -116,28 +113,39 @@ async function deployTemplate({ web3, artifacts }) {
   })
 
   await saveCallTxData(`register`, controller, 'register', `tx-02-2-make-ens-registration.json`, {
-    arguments: [rootLabel, rootOwner, rootRegDuration, salt],
+    arguments: [domainLabel, domainOwner, domainRegDuration, salt],
     from: state.multisigAddress,
     value: '0x' + registerTxValue.toString(16),
     estimateGas: false // estimation will fail since no commitment is actually made yet
   })
 
-  await saveCallTxData(`setSubnodeOwner`, ens, 'setSubnodeOwner', `tx-02-3-create-subdomain.json`, {
-    arguments: [rootNode, '0x' + keccak256(subLabel), subOwner],
-    from: state.multisigAddress,
-    estimateGas: false // estimation will fail since root domain is not registered yet
-  })
-
   log.splitter()
-  log(gr(`Before continuing the deployment, please send all transactions listed above`))
-  log(gr(`from the multisig address ${yl(state.multisigAddress)}.\n`))
+  log(gr(`Before continuing the deployment, please send all transactions listed above.\n`))
   log(gr(`Make sure to send the second transaction at least ${yl(minCommitmentAge)} seconds after the`))
   log(gr(`first one is included in a block, but no more than ${yl(maxCommitmentAge)} seconds after that.`))
   log.splitter()
+}
 
-  persistNetworkState(network.name, netId, state, {
-    lidoApmEnsName: subdomain
-  })
+const HOUR = 60 * 60
+const DAY = HOUR * 24
+const MONTH = DAY * 30
+const YEAR = DAY * 365
+
+function formatTimeInterval(sec) {
+  if (sec > YEAR) {
+    return floor(sec / YEAR, 100) + ' year(s)'
+  }
+  if (sec > MONTH) {
+    return floor(sec / MONTH, 10) + ' month(s)'
+  }
+  if (sec > DAY) {
+    return floor(sec / DAY, 10) + ' day(s)'
+  }
+  return `${sec} second(s)`
+}
+
+function floor(n, mult) {
+  return Math.floor(n * mult) / mult
 }
 
 module.exports = runOrWrapScript(deployTemplate, module)
