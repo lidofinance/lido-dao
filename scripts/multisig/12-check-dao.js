@@ -446,7 +446,7 @@ async function assertDAOConfig({
 
   assert.log(
     assert.addressEqual,
-    await lido.getValidatorRegistrationContract(),
+    await lido.getDepositContract(),
     settings.beaconSpec.depositContractAddress,
     `lido.getValidatorRegistrationContract() is ${yl(settings.beaconSpec.depositContractAddress)}`
   )
@@ -484,9 +484,9 @@ async function assertDAOConfig({
 
   assert.log(
     assert.addressEqual,
-    await oracle.getPool(),
+    await oracle.getLido(),
     lido.address,
-    `oracle.getPool() is ${yl(lido.address)}`
+    `oracle.getLido() is ${yl(lido.address)}`
   )
 
   assert.log(
