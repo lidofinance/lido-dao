@@ -90,3 +90,16 @@ task('ens-assign', `Assigns/transfers ENS node owner`)
     }
     console.error(chalk.green('✓'), `the ownsership was successfully updated`)
   })
+
+task('list-accts', `List accounts and their balances`)
+  .addOptionalParam(`max`, `Limit the number of listed accounts to the specified value`)
+  .setAction(async ({ max = undefined }) => {
+    const accts = (await web3.eth.getAccounts()).slice(0, max)
+    const balances = await Promise.all(accts.map(acct => web3.eth.getBalance(acct)))
+    const padLen = accts.length > 100 ? 3 : 2
+    const yl = require('chalk').yellow
+    accts.forEach((acct, i) => {
+      const balance = web3.utils.fromWei(balances[i], 'ether')
+      console.error(`${String(i).padStart(padLen, ' ')}, ${yl(acct)}: ${balance}`)
+    })
+  })
