@@ -26,6 +26,8 @@ contract LidoMock is Lido {
           new VaultMock(),
           new VaultMock()
         );
+
+        _resume();
     }
 
     /**
