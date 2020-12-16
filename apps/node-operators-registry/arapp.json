@@ -61,9 +61,9 @@
       "appName": "node-operators-registry.lidopm.eth",
       "network": "rinkeby"
     },
-    "staging": {
-      "appName": "node-operators-registry.lidopm.eth",
-      "network": "rinkeby"
+    "mainnet-test": {
+      "appName": "node-operators-registry.lidopm-test.eth",
+      "network": "mainnet"
     },
     "mainnet": {
       "appName": "node-operators-registry.lidopm.eth",

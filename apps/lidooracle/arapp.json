@@ -25,9 +25,9 @@
       "appName": "oracle.lidopm.eth",
       "network": "rinkeby"
     },
-    "staging": {
-      "appName": "oracle.lidopm.eth",
-      "network": "rinkeby"
+    "mainnet-test": {
+      "appName": "oracle.lidopm-test.eth",
+      "network": "mainnet"
     },
     "mainnet": {
       "appName": "oracle.lidopm.eth",
