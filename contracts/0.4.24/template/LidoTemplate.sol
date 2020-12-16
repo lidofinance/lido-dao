@@ -27,7 +27,7 @@ import "@aragon/id/contracts/IFIFSResolvingRegistrar.sol";
 import "../Lido.sol";
 import "../oracle/LidoOracle.sol";
 import "../nos/NodeOperatorsRegistry.sol";
-import "../interfaces/IValidatorRegistration.sol";
+import "../interfaces/IDepositContract.sol";
 
 
 contract LidoTemplate is IsContract {
@@ -290,7 +290,7 @@ contract LidoTemplate is IsContract {
         string _tokenName,
         string _tokenSymbol,
         uint64[3] _votingSettings,
-        IValidatorRegistration _beaconDepositContract,
+        IDepositContract _beaconDepositContract,
         uint32[4] _beaconSpec
     )
         onlyOwner
