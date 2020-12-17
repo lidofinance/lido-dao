@@ -18,7 +18,7 @@ async function assertInstalledApps({
   appProxyUpgradeableArtifactName = 'external:AppProxyUpgradeable',
   aragonAppArtifactName = 'AragonApp'
 }) {
-  const appInstalledEvts = (await template.getPastEvents('TmplAppInstalled', { fromBlock: 0 }))
+  const appInstalledEvts = (await template.getPastEvents('TmplAppInstalled', { fromBlock: 11472780 }))
     .map((evt) => evt.args)
 
   const appIdNameEntries = VALID_APP_NAMES.map((name) => [namehash(`${name}.${lidoApmEnsName}`), name])

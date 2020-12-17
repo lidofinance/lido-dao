@@ -6,7 +6,7 @@ const { log, yl } = require('../helpers/log')
 async function assertLastEvent(instance, eventName, instanceName = null) {
   instanceName = instanceName || instance.constructor.contractName
 
-  const allEvents = await instance.getPastEvents('allEvents', { fromBlock: 0 })
+  const allEvents = await instance.getPastEvents('allEvents', { fromBlock: 11472780 })
   assert.isAbove(allEvents.length, 0, `${instanceName} generated at least one event`)
 
   const lastEvent = allEvents[allEvents.length - 1]
@@ -21,7 +21,7 @@ async function assertSingleEvent(instance, eventName, instanceName = null) {
   instanceName = instanceName || instance.constructor.contractName
 
   const checkDesc = `${instanceName} at ${instance.address} generated exactly one ${yl(eventName)} event`
-  const allEvents = await instance.getPastEvents(eventName, { fromBlock: 0 })
+  const allEvents = await instance.getPastEvents(eventName, { fromBlock: 11472780 })
   assert.lengthOf(allEvents, 1, checkDesc)
   log.success(checkDesc)
 
@@ -29,7 +29,7 @@ async function assertSingleEvent(instance, eventName, instanceName = null) {
 }
 
 async function assertNoEvents(instance, instanceName = null) {
-  const allEvents = await instance.getPastEvents('allEvents', { fromBlock: 0 })
+  const allEvents = await instance.getPastEvents('allEvents', { fromBlock: 11472780 })
   const checkDesc = `${instanceName || instance.constructor.contractName} has generated no events`
   assert.equal(allEvents.length, 0, checkDesc)
   log.success(checkDesc)
