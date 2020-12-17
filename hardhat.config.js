@@ -19,7 +19,7 @@ const accounts = readJson(`./accounts.json`) || {
 
 const getNetConfig = (networkName, ethAccountName) => {
   const netState = readJson(`./deployed-${networkName}.json`) || {}
-  const ethAccts = accounts.eth
+  const ethAccts = accounts.eth || {}
   const base = {
     accounts: ethAccountName === 'remote'
       ? 'remote'

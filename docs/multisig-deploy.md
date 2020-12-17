@@ -395,16 +395,11 @@ Add the `vestingParams` key to the network state file containing the following:
   "vestingParams": {
     // unvested tokens will be held on the DAO Agent app
     "unvestedTokensAmount": "10000000000000000000000",
-    // token holder assresses
-    "holders": [
-      "0xaabbcc0000000000000000000000000000000000",
+    // token holder assresses and their respective amounts
+    "holders": {
+      "0xaabbcc0000000000000000000000000000000000": "100000000000000000000",
       // ...
-    ],
-    // token amounts
-    "amounts": [
-      "100000000000000000000",
-      // ...
-    ],
+    },
     // Vesting start date
     "start": 1608213253,
     // Vesting cliff date

@@ -40,6 +40,9 @@ async function issueTokens({ web3, artifacts }) {
   log.splitter()
 
   const { vestingParams: vesting } = state
+  const pairs = Object.entries(vesting.holders)
+  const holders = pairs.map(p => p[0])
+  const amounts = pairs.map(p => p[1])
 
   log(`Using vesting settings:`)
   log(`  Start:`, chalk.yellow(formatDate(vesting.start)))
@@ -47,22 +50,22 @@ async function issueTokens({ web3, artifacts }) {
   log(`  End:`, chalk.yellow(formatDate(vesting.end)))
   log(`  Revokable:`, chalk.yellow(vesting.revokable))
 
-  const totalSupply = bigSum(vesting.amounts, vesting.unvestedTokensAmount)
+  const totalSupply = bigSum(amounts, vesting.unvestedTokensAmount)
 
   log(`  Total supply:`, chalk.yellow(totalSupply.toString()))
   log(`  Unvested tokens amount:`, chalk.yellow(vesting.unvestedTokensAmount))
-  log(`  Token receivers (total ${chalk.yellow(vesting.holders.length)}):`)
+  log(`  Token receivers (total ${chalk.yellow(holders.length)}):`)
 
-  vesting.holders.forEach((addr, i) => {
-    const amount = vesting.amounts[i]
+  holders.forEach((addr, i) => {
+    const amount = amounts[i]
     const percentage = +new BN(amount).muln(10000).div(totalSupply) / 100
     log(`    ${addr}: ${chalk.yellow(web3.utils.fromWei(amount, 'ether'))} (${percentage}%)`)
   })
 
   log.splitter()
 
-  const holdersInOneTx = Math.min(MAX_HOLDERS_IN_ONE_TX, vesting.holders.length)
-  const totalTxes = Math.ceil(vesting.holders.length / holdersInOneTx)
+  const holdersInOneTx = Math.min(MAX_HOLDERS_IN_ONE_TX, holders.length)
+  const totalTxes = Math.ceil(holders.length / holdersInOneTx)
 
   log(`Total batches:`, chalk.yellow(totalTxes))
 
@@ -70,8 +73,8 @@ async function issueTokens({ web3, artifacts }) {
 
   for (let i = 0; i < totalTxes; ++i) {
     const startIndex = i * holdersInOneTx
-    const holders = vesting.holders.slice(startIndex, startIndex + holdersInOneTx)
-    const amounts = vesting.amounts.slice(startIndex, startIndex + holdersInOneTx)
+    const holders = holders.slice(startIndex, startIndex + holdersInOneTx)
+    const amounts = amounts.slice(startIndex, startIndex + holdersInOneTx)
 
     endTotalSupply.iadd(bigSum(amounts))
 

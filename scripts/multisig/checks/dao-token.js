@@ -10,7 +10,9 @@ async function assertVesting({
   vestingParams,
   unvestedTokensManagerAddress
 }) {
-  const { holders, amounts } = vestingParams
+  const pairs = Object.entries(vestingParams.holders)
+  const holders = pairs.map(p => p[0])
+  const amounts = pairs.map(p => p[1])
 
   const vestings = await Promise.all(
     holders.map(async (addr) => {
