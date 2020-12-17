@@ -88,9 +88,10 @@ async function issueTokens({ web3, artifacts }) {
           vesting.cliff,
           vesting.end,
           vesting.revokable,
-          endTotalSupply
+          '0x' + endTotalSupply.toString(16)
         ],
-        from: state.multisigAddress
+        from: state.multisigAddress,
+        estimateGas: i === 0
       }
     )
   }
