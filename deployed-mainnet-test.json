@@ -1,9 +1,9 @@
 {
   "networkId": 1,
   "ipfsAPI": "http://206.81.31.11/ipfs/api/v0",
-  "lidoApmEnsName": "lidopm-pre.eth",
+  "lidoApmEnsName": -----lido apm address-------,
   "lidoApmEnsRegDurationSec": 2592000,
-  "daoAragonId": "lido-dao-test",
+  "daoAragonId": "lido-dao",
   "ensAddress": "0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e",
   "daoFactoryAddress": "0x7378ad1ba8f3c8e64bbb2a04473edd35846360f1",
   "apmRegistryFactoryAddress": "0xa0BC4B67F5FacDE4E50EAFF48691Cfc43F4E280A",
