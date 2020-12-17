@@ -1,6 +1,6 @@
 {
   "networkId": 1,
-  "ipfsAPI": "http://206.81.31.11/ipfs/api/v0",
+  "ipfsAPI": "http://35.228.140.155/ipfs/api/v0",
   "lidoApmEnsName": "lidopm.eth",
   "lidoApmEnsRegDurationSec": 31536000,
   "daoAragonId": "lido-dao",
