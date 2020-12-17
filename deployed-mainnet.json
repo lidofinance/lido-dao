@@ -1,0 +1,45 @@
+{
+  "networkId": 1,
+  "ipfsAPI": "http://206.81.31.11/ipfs/api/v0",
+  "lidoApmEnsName": "lidopm.eth",
+  "lidoApmEnsRegDurationSec": 31536000,
+  "daoAragonId": "lido-dao",
+  "ensAddress": "0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e",
+  "daoFactoryAddress": "0x7378ad1ba8f3c8e64bbb2a04473edd35846360f1",
+  "apmRegistryFactoryAddress": "0xa0BC4B67F5FacDE4E50EAFF48691Cfc43F4E280A",
+  "miniMeTokenFactoryAddress": "0x909d05f384d0663ed4be59863815ab43b4f347ec",
+  "aragonIDAddress": "0x546aa2eae2514494eeadb7bbb35243348983c59d",
+  "daoInitialSettings": {
+    "token": {
+      "name": "Lido DAO Token",
+      "symbol": "LDO"
+    },
+    "beaconSpec": {
+      "depositContractAddress": "0x00000000219ab540356cBB839Cbe05303d7705Fa",
+      "epochsPerFrame": 225,
+      "slotsPerEpoch": 32,
+      "secondsPerSlot": 12,
+      "genesisTime": 1606824023
+    },
+    "voting": {
+      "minSupportRequired": "500000000000000000",
+      "minAcceptanceQuorum": "50000000000000000",
+      "voteDuration": 172800
+    },
+    "fee": {
+      "totalPercent": 10,
+      "treasuryPercent": 0,
+      "insurancePercent": 50,
+      "nodeOperatorsPercent": 50
+    }
+  },
+  "vestingParams": {
+    "unvestedTokensAmount": "0",
+    "holders": [],
+    "amounts": [],
+    "start": 1639881916,
+    "cliff": 1639881916,
+    "end": 1671417916,
+    "revokable": false
+  }
+}
