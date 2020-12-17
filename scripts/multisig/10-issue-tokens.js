@@ -73,10 +73,10 @@ async function issueTokens({ web3, artifacts }) {
 
   for (let i = 0; i < totalTxes; ++i) {
     const startIndex = i * holdersInOneTx
-    const holders = holders.slice(startIndex, startIndex + holdersInOneTx)
-    const amounts = amounts.slice(startIndex, startIndex + holdersInOneTx)
+    const iHolders = holders.slice(startIndex, startIndex + holdersInOneTx)
+    const iAmounts = amounts.slice(startIndex, startIndex + holdersInOneTx)
 
-    endTotalSupply.iadd(bigSum(amounts))
+    endTotalSupply.iadd(bigSum(iAmounts))
 
     await saveCallTxData(
       `issueTokens (batch ${i + 1})`,
@@ -85,8 +85,8 @@ async function issueTokens({ web3, artifacts }) {
       `tx-06-${i + 1}-issue-tokens.json`,
       {
         arguments: [
-          holders,
-          amounts,
+          iHolders,
+          iAmounts,
           vesting.start,
           vesting.cliff,
           vesting.end,
