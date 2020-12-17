@@ -62,7 +62,7 @@
       "network": "rinkeby"
     },
     "mainnet-test": {
-      "appName": "node-operators-registry.lidopm-test.eth",
+      "appName": "node-operators-registry.lidopm-pre.eth",
       "network": "mainnet"
     },
     "mainnet": {
