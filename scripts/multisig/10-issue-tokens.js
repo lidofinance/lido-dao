@@ -52,8 +52,8 @@ async function issueTokens({ web3, artifacts }) {
 
   const totalSupply = bigSum(amounts, vesting.unvestedTokensAmount)
 
-  log(`  Total supply:`, chalk.yellow(totalSupply.toString()))
-  log(`  Unvested tokens amount:`, chalk.yellow(vesting.unvestedTokensAmount))
+  log(`  Total supply:`, chalk.yellow(web3.utils.fromWei(totalSupply.toString(), 'ether')))
+  log(`  Unvested tokens amount:`, chalk.yellow(web3.utils.fromWei(vesting.unvestedTokensAmount, 'ether')))
   log(`  Token receivers (total ${chalk.yellow(holders.length)}):`)
 
   holders.forEach((addr, i) => {
