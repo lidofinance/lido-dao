@@ -207,8 +207,7 @@ contract LidoTemplate is IsContract {
     /**
      * @dev An escape hatch function to reclaim the domain if APM fails to deploy.
      */
-    function cancelAndTransferDomain(address _to) onlyOwner external {
-        bytes32 node = deployState.lidoRegistryEnsNode;
+    function cancelAndTransferDomain(bytes32 node, address _to) onlyOwner external {
         require(ens.owner(node) == address(this), ERROR_ENS_NODE_NOT_OWNED_BY_TEMPLATE);
         ens.setOwner(node, _to);
     }
