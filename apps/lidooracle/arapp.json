@@ -26,7 +26,7 @@
       "network": "rinkeby"
     },
     "mainnet-test": {
-      "appName": "oracle.lidopm-test.eth",
+      "appName": "oracle.lidopm-pre.eth",
       "network": "mainnet"
     },
     "mainnet": {

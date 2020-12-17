@@ -1,12 +1,12 @@
 {
   "networkId": 1,
   "ipfsAPI": "http://206.81.31.11/ipfs/api/v0",
-  "lidoApmEnsName": "lidopm-test.eth",
+  "lidoApmEnsName": "lidopm-pre.eth",
   "lidoApmEnsRegDurationSec": 2592000,
   "daoAragonId": "lido-dao-test",
   "ensAddress": "0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e",
   "daoFactoryAddress": "0x7378ad1ba8f3c8e64bbb2a04473edd35846360f1",
-  "apmRegistryFactoryAddress": "0xce5c6811bd801aa0cf72760534604f833cbcc0b9",
+  "apmRegistryFactoryAddress": "0xa0BC4B67F5FacDE4E50EAFF48691Cfc43F4E280A",
   "miniMeTokenFactoryAddress": "0x909d05f384d0663ed4be59863815ab43b4f347ec",
   "aragonIDAddress": "0x546aa2eae2514494eeadb7bbb35243348983c59d",
   "daoInitialSettings": {
