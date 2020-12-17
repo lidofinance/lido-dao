@@ -58,6 +58,12 @@ const getNetConfig = (networkName, ethAccountName) => {
       url: 'https://mainnet.infura.io/v3/' + accounts.infura.projectId,
       chainId: 1,
       timeout: 60000 * 10
+    },
+    mainnet: {
+      ...base,
+      url: 'https://mainnet.infura.io/v3/' + accounts.infura.projectId,
+      chainId: 1,
+      timeout: 60000 * 10
     }
   }
   const netConfig = byNetName[networkName]
