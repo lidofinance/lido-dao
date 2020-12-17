@@ -9,6 +9,7 @@
   "apmRegistryFactoryAddress": "0xa0BC4B67F5FacDE4E50EAFF48691Cfc43F4E280A",
   "miniMeTokenFactoryAddress": "0x909d05f384d0663ed4be59863815ab43b4f347ec",
   "aragonIDAddress": "0x546aa2eae2514494eeadb7bbb35243348983c59d",
+  "multisigAddress": "0x9cf651E5e8AF4a01E70E3c7E0135fF463790D20b",
   "daoInitialSettings": {
     "token": {
       "name": "Test DAO Token",
@@ -159,5 +160,75 @@
     "cliff": 1608213253,
     "end": 1608501253,
     "revokable": false
+  },
+  "daoTemplateConstructorArgs": [
+    "0x9cf651E5e8AF4a01E70E3c7E0135fF463790D20b",
+    "0x7378ad1ba8f3c8e64bbb2a04473edd35846360f1",
+    "0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e",
+    "0x909d05f384d0663ed4be59863815ab43b4f347ec",
+    "0x546aa2eae2514494eeadb7bbb35243348983c59d",
+    "0xa0BC4B67F5FacDE4E50EAFF48691Cfc43F4E280A"
+  ],
+  "daoTemplateDeployTx": "0x63fffd6f7453134f6d9c565f9badeaa84e08003e70333e73d4eb65bacd1dc0f5",
+  "lidoBaseDeployTx": "0x6caec2bbdbc76959c382ef612fe76fedceded1a7866b089c2d294d4b87a7cc84",
+  "oracleBaseDeployTx": "0x552103bac12af45c408e1900d4a913b8e484afbbdd9a4e14a63c1e51beb0bc1f",
+  "nodeOperatorsRegistryBaseDeployTx": "0x2541adaa2a4f31af4839f0201802306873c68093a6a0a3f8c39175ea5efbb075",
+  "daoTemplateAddress": "0xb72F2BbA4FDF1708D37Fdf3b90c6Acd646ECE900",
+  "app:lido": {
+    "baseAddress": "0x399F05DfAf722768C2b1DEe40F20Cbf28AE10640",
+    "fullName": "lido.lidopm-pre.eth",
+    "name": "lido",
+    "id": "0x570e830612da5d866f9f60eb8264a17c754ee05a2b2f6eb4891953347dc079d6",
+    "ipfsCid": "QmVJv4ELLGB8qEW9GtWp81g7SBtGmF7equM1PXdLuBWaUn",
+    "contentURI": "0x697066733a516d564a7634454c4c474238714557394774577038316737534274476d46376571754d315058644c75425761556e",
+    "proxyAddress": "0x4a758dD743D578d9E3b7d8652831Cc1351F952B7"
+  },
+  "app:oracle": {
+    "baseAddress": "0xF82E76F8a8575b3F1de981cc66911D26CD7d202F",
+    "fullName": "oracle.lidopm-pre.eth",
+    "name": "oracle",
+    "id": "0x466df7777afc739da876d09ac0a4956f51cda48eff02a9f4ca1c303e4361a1cf",
+    "ipfsCid": "QmbjTZ5X9VVr476uRq7WHQUEazyHh9Qu5tnUpZeiVYfvZV",
+    "contentURI": "0x697066733a516d626a545a355839565672343736755271375748515545617a79486839517535746e55705a6569565966765a56",
+    "proxyAddress": "0x15bc1CE858D50C4A013D4152d6aDc0A44f4B4CA3"
+  },
+  "app:node-operators-registry": {
+    "baseAddress": "0x5Fa4a27fd0DA4d573CF5590A571591B0957fcEF8",
+    "fullName": "node-operators-registry.lidopm-pre.eth",
+    "name": "node-operators-registry",
+    "id": "0xcba8f84213634e36e8d3c65261bc5a041d19d4df6e7db82a5833ddee59c05124",
+    "ipfsCid": "QmXmWh1XuPn5F3Gpg1ncqQiwaiEC6TyDkSLf8jeqZeGxaK",
+    "contentURI": "0x697066733a516d586d5768315875506e354633477067316e637151697761694543365479446b534c66386a65715a654778614b",
+    "proxyAddress": "0x2b679FB9968ff2da57EEfb28210A93a158B14096"
+  },
+  "lidoApmDeployTx": "0xf56adf8abedc087b2d5b6b937f0a1f469f7612fce21e1dc33fe8b0628912b828",
+  "lidoApmAddress": "0x9b1845E4550A673c6E2CCE472Ad8b3fA134Bc0C0",
+  "createAppReposTx": "0xca957c4c8c85e7eca54942a9141013b42250ba67234634b05672efe99e94e939",
+  "newDaoTx": "0xe7776e7fed1bf9af87d951a86a36f291dba5e7566ae142caef4804b201159ef8",
+  "daoAddress": "0x9442Bd6caE1fC80b518e9d3562947944C781F385",
+  "daoTokenAddress": "0x720C3b49088e5f030e98A948d39ee3ec2423b0f0",
+  "app:aragon-agent": {
+    "name": "aragon-agent",
+    "fullName": "aragon-agent.lidopm-pre.eth",
+    "id": "0xf2e5eb0f21694bf4e28f98a980dfc4d6a568b5b3e593cfe9cedfd0aed59d8148",
+    "proxyAddress": "0x360905CfbC374a481bC4DdA88a6061641c018A45"
+  },
+  "app:aragon-finance": {
+    "name": "aragon-finance",
+    "fullName": "aragon-finance.lidopm-pre.eth",
+    "id": "0xa9efdd08ab8a16b35803b9887d721f0b9cf17df8ff66b9e57f23bbe4ae5f18ba",
+    "proxyAddress": "0xc3D4373101870EBec0744354c438071F760b33cb"
+  },
+  "app:aragon-token-manager": {
+    "name": "aragon-token-manager",
+    "fullName": "aragon-token-manager.lidopm-pre.eth",
+    "id": "0xfd4babb3d2ffdffa99ad9e8a8c8e587cc360b2ea27ce9b25ec03d1fe86447a43",
+    "proxyAddress": "0xf6394F5aB13441485f650628B1BCC1029132DCd9"
+  },
+  "app:aragon-voting": {
+    "name": "aragon-voting",
+    "fullName": "aragon-voting.lidopm-pre.eth",
+    "id": "0x49bfe08a6de7e64744aad6d3a7e313cde39f92bf15fdfd38e53215953c0e5de1",
+    "proxyAddress": "0x037631f996c02E0D281726Ea1C8f7e4Ce57eAE33"
   }
 }
