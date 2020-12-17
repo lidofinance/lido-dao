@@ -9,11 +9,11 @@
   "apmRegistryFactoryAddress": "0xa0BC4B67F5FacDE4E50EAFF48691Cfc43F4E280A",
   "miniMeTokenFactoryAddress": "0x909d05f384d0663ed4be59863815ab43b4f347ec",
   "aragonIDAddress": "0x546aa2eae2514494eeadb7bbb35243348983c59d",
-  "multisigAddress": "0x9cf651E5e8AF4a01E70E3c7E0135fF463790D20b",
+  "multisigAddress": --------multisig address---------,
   "daoInitialSettings": {
     "token": {
-      "name": "Test DAO Token",
-      "symbol": "DDT"
+      "name": "Lido DAO Token",
+      "symbol": "LDO"
     },
     "beaconSpec": {
       "depositContractAddress": "0x00000000219ab540356cBB839Cbe05303d7705Fa",
@@ -23,9 +23,9 @@
       "genesisTime": 1606824023
     },
     "voting": {
-      "minSupportRequired": "100000000000000000",
-      "minAcceptanceQuorum": "100000000000000000",
-      "voteDuration": 600
+      "minSupportRequired": "500000000000000000",
+      "minAcceptanceQuorum": "50000000000000000",
+      "voteDuration": 86400,
     },
     "fee": {
       "totalPercent": 10,
