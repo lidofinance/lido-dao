@@ -35,8 +35,7 @@
   },
   "vestingParams": {
     "unvestedTokensAmount": "0",
-    "holders": [],
-    "amounts": [],
+    "holders": {},
     "start": 1639881916,
     "cliff": 1639881916,
     "end": 1671417916,
