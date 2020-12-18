@@ -13,29 +13,29 @@ contract Pausable {
     event Stopped();
     event Resumed();
 
-    bytes32 internal constant STOPPED_FLAG_POSITION = keccak256("lido.Pausable.stopped");
+    bytes32 internal constant ACTIVE_FLAG_POSITION = keccak256("lido.Pausable.activeFlag");
 
     modifier whenNotStopped() {
-        require(!STOPPED_FLAG_POSITION.getStorageBool(), "CONTRACT_IS_STOPPED");
+        require(ACTIVE_FLAG_POSITION.getStorageBool(), "CONTRACT_IS_STOPPED");
         _;
     }
 
     modifier whenStopped() {
-        require(STOPPED_FLAG_POSITION.getStorageBool());
+        require(!ACTIVE_FLAG_POSITION.getStorageBool(), "CONTRACT_IS_ACTIVE");
         _;
     }
 
     function isStopped() external view returns (bool) {
-        return STOPPED_FLAG_POSITION.getStorageBool();
+        return !ACTIVE_FLAG_POSITION.getStorageBool();
     }
 
     function _stop() internal whenNotStopped {
-        STOPPED_FLAG_POSITION.setStorageBool(true);
+        ACTIVE_FLAG_POSITION.setStorageBool(false);
         emit Stopped();
     }
 
     function _resume() internal whenStopped {
-        STOPPED_FLAG_POSITION.setStorageBool(false);
+        ACTIVE_FLAG_POSITION.setStorageBool(true);
         emit Resumed();
     }
 }

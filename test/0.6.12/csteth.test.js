@@ -5,7 +5,7 @@ const { ZERO_ADDRESS } = constants
 const { shouldBehaveLikeERC20 } = require('./helpers/ERC20.behavior')
 
 const CstETH = artifacts.require('CstETHMock')
-const StETH = artifacts.require('StETHMock')
+const StETH = artifacts.require('StETHMockERC20')
 
 contract('CstETH', function ([deployer, initialHolder, recipient, anotherAccount, ...otherAccounts]) {
   beforeEach(async function () {
@@ -485,8 +485,7 @@ contract('CstETH', function ([deployer, initialHolder, recipient, anotherAccount
   See https://github.com/lidofinance/lido-dao/issues/192
   */
   it('has no burn and burnFrom functions (discarded)', async function () {
-    assert.isNotFunction(this.csteth.burn, 'no burn function');
-    assert.isNotFunction(this.csteth.burnFrom, 'no burnFrom function');
+    assert.isNotFunction(this.csteth.burn, 'no burn function')
+    assert.isNotFunction(this.csteth.burnFrom, 'no burnFrom function')
   })
-
 })

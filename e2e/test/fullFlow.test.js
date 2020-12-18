@@ -10,7 +10,12 @@ import {
   getGeneratedWithdrawalAddress,
   concat0x,
   getDataToPerformDepositContract,
-  BN
+  BN,
+  compareBN,
+  startValidatorsNodes,
+  stopValidatorsNodes,
+  isGreaterThanBN,
+  isLessThanBN
 } from '../scripts/helpers/utils'
 
 import * as aclHelper from '../scripts/helpers/apps/aclHelper'
@@ -23,6 +28,7 @@ import * as nodeOperatorsHelper from '../scripts/helpers/apps/nodeOperatorsHelpe
 import * as vaultHelper from '../scripts/helpers/apps/vaultHelper'
 import * as tokenManagerHelper from '../scripts/helpers/apps/tokenManagerHelper'
 import * as depositContractHelper from '../scripts/helpers/apps/depositContractHelper'
+import * as cStEthHelper from '../scripts/helpers/apps/cstEthHelper'
 import {
   oracleAccounts as oracleMembers,
   nosAccounts as nosMembers,
@@ -37,7 +43,8 @@ import {
   SET_NODE_OPERATOR_ACTIVE_ROLE,
   SET_NODE_OPERATOR_LIMIT_ROLE,
   REPORT_STOPPED_VALIDATORS_ROLE,
-  ZERO_ADDRESS
+  ZERO_ADDRESS,
+  cstETHAddress
 } from '../scripts/helpers/constants'
 
 test.before('Connecting Web3', async (t) => {
@@ -51,6 +58,7 @@ test.before('Connecting Web3', async (t) => {
   vaultHelper.init(t.context)
   tokenManagerHelper.init(t.context)
   depositContractHelper.init(t.context)
+  cStEthHelper.init(t.context)
 })
 
 test('Full flow test ', async (t) => {
@@ -168,79 +176,88 @@ test('Full flow test ', async (t) => {
   logger.info('Deposit 2 ETH to Lido via Lido from user1')
   await lidoHelper.depositToLidoContract(user1, ETH(2))
   let user1Deposit = ETH(2)
-  t.is(await stEthHelper.getBalance(user1), ETH(2), 'Check that user receive an appropriate amount of stEth tokens')
+  t.is(await stEthHelper.getBalance(user1), ETH(2), 'Check that user receive an appropriate amount of stEthTokens')
   t.is(await lidoHelper.getBufferedEther(), ETH(2), 'Buffered ether in Lido')
   t.is(await lidoHelper.getTotalPooledEther(), ETH(2), 'Total pooled ether in Lido')
 
   logger.info('Deposit 30 ETH to Lido via Lido from user1')
   await lidoHelper.depositToLidoContract(user1, ETH(30))
   user1Deposit = (+user1Deposit + +ETH(30)).toString()
-  t.is(await stEthHelper.getBalance(user1), user1Deposit, 'Check that user receive an appropriate amount of stEth tokens')
+  t.is(await stEthHelper.getBalance(user1), user1Deposit, 'Check that user receive an appropriate amount of stEthTokens')
   t.is(await lidoHelper.getBufferedEther(), '0', 'Buffered ether in Lido')
   t.is(await lidoHelper.getTotalPooledEther(), ETH(32), 'Total pooled ether in Lido')
 
   logger.info('Deposit 2 ETH to Lido via Lido from user2')
   await lidoHelper.depositToLidoContract(user2, ETH(2))
   let user2Deposit = ETH(2)
-  t.is(await stEthHelper.getBalance(user2), ETH(2), 'Check that user receive an appropriate amount of stEth tokens')
+  t.is(await stEthHelper.getBalance(user2), ETH(2), 'Check that user receive an appropriate amount of stEthTokens')
   t.is(await lidoHelper.getBufferedEther(), ETH(2), 'Buffered ether in Lido')
   t.is(await lidoHelper.getTotalPooledEther(), ETH(34), 'Total pooled ether in Lido')
 
   logger.info('Deposit 32 ETH to Lido via Lido  from user2')
   user2Deposit = (+user2Deposit + +ETH(32)).toString()
   await lidoHelper.depositToLidoContract(user2, ETH(32))
-  t.is(await stEthHelper.getBalance(user2), user2Deposit, 'Check that user receive an appropriate amount of stEth tokens')
+  t.is(await stEthHelper.getBalance(user2), user2Deposit, 'Check that user receive an appropriate amount of stEthTokens')
   t.is(await lidoHelper.getBufferedEther(), ETH(2), 'Buffered ether in Lido')
   t.is(await lidoHelper.getTotalPooledEther(), ETH(66), 'Total pooled ether in Lido')
 
   logger.info('Deposit 222 ETH to Lido via Lido from user3')
   await lidoHelper.depositToLidoContract(user3, ETH(222))
   let user3Deposit = ETH(222)
-  t.is(await stEthHelper.getBalance(user3), user3Deposit, 'Check that user receive an appropriate amount of stEth tokens')
+  t.is(await stEthHelper.getBalance(user3), user3Deposit, 'Check that user receive an appropriate amount of stEthTokens')
   t.is(await lidoHelper.getBufferedEther(), '0', 'Buffered ether in Lido')
   t.is(await lidoHelper.getTotalPooledEther(), ETH(288), 'Total pooled ether in Lido')
 
-  logger.info('Deposit 32 ETH via validators deposit contract from user4')
+  logger.info('Deposit 32 ETH via validators deposit contract from user5')
   const depositData = getDataToPerformDepositContract('validators1')
-  const receipt = await depositContractHelper.deposit(user4, ETH(32), depositData)
+  const receipt = await depositContractHelper.deposit(user5, ETH(32), depositData)
   expectEvent(receipt, 'DepositEvent', {
     pubkey: depositData.pubkey,
     withdrawal_credentials: depositData.withdrawal_credentials,
     signature: depositData.signature,
     amount: '0x0040597307000000' // 32eth in gweis converted to little endian bytes
   })
-  t.is(await stEthHelper.getBalance(user4), '0', 'Check that user4 don`t receive tokens after transaction to deposit contract')
+  t.is(await stEthHelper.getBalance(user5), '0', 'Check that user5 don`t receive stEthTokens after transaction to deposit contract')
   // TODO check that validator is up/not up
 
   logger.info('Deposit 288 ETH to Lido via Lido from user3')
   await lidoHelper.depositToLidoContract(user3, ETH(288))
   user3Deposit = (+user3Deposit + +ETH(288)).toString()
 
-  let ether2Stat = await lidoHelper.getBeaconStat()
+  let beaconStat = await lidoHelper.getBeaconStat()
   let usersDeposits = (+user1Deposit + +user2Deposit + +user3Deposit).toString()
-  t.is(await stEthHelper.getBalance(user3), user3Deposit, 'Check that user receive an appropriate amount of stEth tokens')
+  t.is(await stEthHelper.getBalance(user3), user3Deposit, 'Check that user receive an appropriate amount of stEthTokens')
   t.is(await lidoHelper.getBufferedEther(), '0', 'Buffered ether in Lido')
   t.is(await lidoHelper.getTotalPooledEther(), usersDeposits, 'Total pooled ether in Lido')
-  t.is(await ether2Stat.depositedValidators, usersDeposits, 'Check that the ether2 stat is changed correctly')
+  t.is(await beaconStat.depositedValidators, (+usersDeposits / ETH(32)).toString(), 'Check that the ether2 stat is changed correctly')
 
   logger.info('Chek that the staking providers keys became using')
   operator1 = await nodeOperatorsHelper.getNodeOperator(0, true)
   operator2 = await nodeOperatorsHelper.getNodeOperator(1, true)
   operator3 = await nodeOperatorsHelper.getNodeOperator(2, true)
+  beaconStat = await lidoHelper.getBeaconStat()
+  let totalDepositedValidators = await nodeOperatorsHelper.getTotalActiveKeysCount()
   t.is(operator1.usedSigningKeys, '2', 'nodeOperators1 signing keys became using')
   t.is(await nodeOperatorsHelper.getUnusedSigningKeyCount(0), '0', 'Check unused nodeOperator1 keys')
   t.is(operator2.usedSigningKeys, '6', 'nodeOperators2 signing keys became using')
   t.is(await nodeOperatorsHelper.getUnusedSigningKeyCount(1), '0', 'Check unused nodeOperator2 keys')
   t.is(operator3.usedSigningKeys, '10', 'nodeOperators3 signing keys became using')
   t.is(await nodeOperatorsHelper.getUnusedSigningKeyCount(2), '10', 'Check unused nodeOperator3 keys')
+  t.is(beaconStat.depositedValidators, totalDepositedValidators, 'Check that the deposited validators count is correct')
 
-  // TODO long tail
-  // TODO Convert some default token to ctoken
-  // TODO deploy oracle daemons
+  logger.info('Convert some default token to cstToken')
+  const stEthTokenToWrap = ETH(32)
+  await stEthHelper.approve(cstETHAddress, stEthTokenToWrap, user1)
+  t.is(await stEthHelper.allowance(user1, cstETHAddress), stEthTokenToWrap, 'Check that stEthToken approved for convert to cSthToken ')
+  await cStEthHelper.wrap(ETH(32), user1)
+  t.is(await cStEthHelper.getBalance(user1), stEthTokenToWrap, 'Check that the stEthToken converted to cSthToken correctly')
+  t.is(await stEthHelper.getBalance(user1), '0', 'Check that the stEthToken balance equal 0 after convert to cStToken')
+  t.is(await stEthHelper.getBalance(cstETHAddress), stEthTokenToWrap, 'Check that the balance of cstEthAddress is calculated correctly')
 
   logger.info('Wait for validators activation')
   await waitFor(150)
 
+  // Oracle daemons have been deployed by ./startup.sh script
   logger.info('Check that the validators have been activated')
   const operator1UsedSigningKeys = await nodeOperatorsHelper.getActiveSigningKeys(operator1, operator1SigningKeys)
   const operator2UsedSigningKeys = await nodeOperatorsHelper.getActiveSigningKeys(operator2, nodeOperator2SigningKeys)
@@ -251,58 +268,149 @@ test('Full flow test ', async (t) => {
   logger.info('Check that the network is producing and finalizing blocks')
   t.true(await eth2Helper.isEth2NetworkProducingSlots())
 
-  // // logger.info('Waiting for the validator to receive a reward')
-  // // TODO check validators data
-  // // await waitFor(20000)
-
-  logger.info('Push data to eth1')
-  let oracleData = ETH(600)
-  const LidoUsedEther = await lidoHelper.getUsedEther()
-  let stakeProfit = +oracleData - +LidoUsedEther
-  let validatorsReward = stakeProfit
-  let totalUsedSigningKeys = await nodeOperatorsHelper.getTotalActiveKeysCount()
-  let operator1BalanceBeforePushData = await stEthHelper.getBalance(nosMember1)
-  let operator2BalanceBeforePushData = await stEthHelper.getBalance(nosMember2)
-  let operator3BalanceBeforePushData = await stEthHelper.getBalance(nosMember3)
-  let treasuryBalanceBeforePushData = await stEthHelper.getBalance(await lidoHelper.getTreasuryAddress())
-  let insuranceFundBalanceBeforePushData = await stEthHelper.getBalance(await lidoHelper.getInsuranceFundAddress())
-  await lidoOracleHelper.pushData(400, oracleData, oracleMember1)
-  await lidoOracleHelper.pushData(400, oracleData, oracleMember2)
-  await lidoOracleHelper.pushData(400, oracleData, oracleMember3)
-  let latestData = await lidoOracleHelper.getLatestData()
-  t.is(latestData.eth2balance, oracleData, 'Check that the oracle eth2 balance has been changed')
-  t.is(latestData.reportInterval, '400', 'Check that the oracle report interval has been changed')
+  logger.info('Waiting for the validator to receive a rewards')
+  let oracleReport = await lidoOracleHelper.waitForReportBeacon()
+  beaconStat = await lidoHelper.getBeaconStat()
+  t.is(oracleReport.reportedEvent.beaconBalance, beaconStat.beaconBalance, 'Check that the remote beacon balance changed correctly')
   t.is(
-    await stEthHelper.getBalance(nosMember1),
-    nodeOperatorsHelper.calculateNewNodeOperatorBalance(operator1, stakeProfit, totalUsedSigningKeys, operator1BalanceBeforePushData),
-    'Check that nodeOperator1 receive an appropriate amount of reward tokens'
+    oracleReport.reportedEvent.beaconValidators,
+    beaconStat.depositedValidators,
+    'Check that the remote deposited validators changed correctly'
   )
-  t.is(
-    await stEthHelper.getBalance(nosMember2),
-    nodeOperatorsHelper.calculateNewNodeOperatorBalance(operator2, stakeProfit, totalUsedSigningKeys, operator2BalanceBeforePushData),
-    'Check that nodeOperator2 receive an appropriate amount of reward tokens'
+  t.true(
+    compareBN(await stEthHelper.getBalance(nosMember1), await nodeOperatorsHelper.calculateNewNodeOperatorBalance(nosMember1)),
+    'Check that nodeOperator1 receive an appropriate amount of stEthTokens by validators rewards'
   )
-  t.is(
-    await stEthHelper.getBalance(nosMember3),
-    nodeOperatorsHelper.calculateNewNodeOperatorBalance(operator3, stakeProfit, totalUsedSigningKeys, operator3BalanceBeforePushData),
-    'Check that nodeOperator3 receive an appropriate amount of reward tokens'
+  t.true(
+    compareBN(await stEthHelper.getBalance(nosMember2), await nodeOperatorsHelper.calculateNewNodeOperatorBalance(nosMember2)),
+    'Check that nodeOperator2 receive an appropriate amount of stEthTokens by validators rewards'
   )
-  t.is(
-    await stEthHelper.getBalance(await lidoHelper.getTreasuryAddress()),
-    lidoHelper.calculateNewTreasuryBalance(stakeProfit, treasuryBalanceBeforePushData),
-    'Check that the treasury receive appropriate amount of tokens by validators rewards'
+  t.true(
+    compareBN(await stEthHelper.getBalance(nosMember3), await nodeOperatorsHelper.calculateNewNodeOperatorBalance(nosMember3)),
+    'Check that nodeOperator3 receive an appropriate amount of stEthTokens by validators rewards'
   )
-  t.is(
-    await stEthHelper.getBalance(await lidoHelper.getInsuranceFundAddress()),
-    lidoHelper.calculateNewTreasuryBalance(stakeProfit, insuranceFundBalanceBeforePushData),
-    'Check that the insurance fund receive appropriate amount of tokens by validators rewards'
+  t.true(
+    compareBN(
+      await stEthHelper.getBalance(await lidoHelper.getInsuranceFundAddress()),
+      await lidoHelper.calculateNewInsuranceBalance(await lidoHelper.getInsuranceFundAddress())
+    ),
+    'Check that the insurance fund receive appropriate amount of stEthTokens by validators rewards'
   )
 
-  // TODO Broad strokes:
-  // ctoken stay the same but is convertable to a right amount of atoken,
-  // and fees are paid in right amount to the right validators
+  logger.info('Check that the users receive appropriate amount of stEthTokens by validators rewards')
+  t.true(
+    compareBN(await stEthHelper.getBalance(user1), '0'),
+    'Check that the user1 balance was not changed due to it was converted to cstEth'
+  )
+  t.true(
+    compareBN(await stEthHelper.getBalance(user2), await stEthHelper.calculateNewUserBalance(user2)),
+    'Check that the user1 receive appropriate amount of stEthTokens by validators rewards'
+  )
+  t.true(
+    compareBN(await stEthHelper.getBalance(user3), await stEthHelper.calculateNewUserBalance(user3)),
+    'Check that the user2 receive appropriate amount of stEthTokens by validators rewards'
+  )
 
-  // TODO Report slashing, check that there is no reward and atoken balance decreases and ctoken stay the same
+  logger.info('Convert cstEthToken back to stEthToken')
+  const cstEthTokenToUnwrap = ETH(32)
+  await cStEthHelper.unwrap(cstEthTokenToUnwrap, user1)
+  t.is(await cStEthHelper.getBalance(user1), '0', 'Check that the user1 cstEthToken balance equal 0 after unwrap')
+  t.true(
+    compareBN(await stEthHelper.getBalance(user1), await stEthHelper.calculateNewUserBalance(user1)),
+    'Check that the stEthToken balance calculated correctly after push data and unwrap'
+  )
+  t.true(
+    +(await stEthHelper.getBalance(cstETHAddress)) < 3,
+    'Check that the cstETHAddress balance is equal 0 after fully unwrap of cstEthToken'
+  )
+
+  logger.info('Check penalties correctness by stop validators nodes and check that balances are reduced')
+  stopValidatorsNodes()
+  let oracleReports = await lidoOracleHelper.waitForDecreaseBeaconBalance()
+  let prevReport = oracleReports.prevEvent
+  let lastReport = oracleReports.lastEvent
+  t.true(isGreaterThanBN(prevReport.beaconBalance, lastReport.beaconBalance))
+  t.true(
+    isGreaterThanBN(
+      await stEthHelper.getBalance(user1, prevReport.blockNumber),
+      await stEthHelper.getBalance(user1, lastReport.blockNumber)
+    )
+  )
+  t.true(
+    isGreaterThanBN(
+      await stEthHelper.getBalance(user2, prevReport.blockNumber),
+      await stEthHelper.getBalance(user2, lastReport.blockNumber)
+    )
+  )
+  t.true(
+    isGreaterThanBN(
+      await stEthHelper.getBalance(user3, prevReport.blockNumber),
+      await stEthHelper.getBalance(user3, lastReport.blockNumber)
+    )
+  )
+  t.true(
+    isGreaterThanBN(
+      await stEthHelper.getBalance(nosMember1, prevReport.blockNumber),
+      await stEthHelper.getBalance(nosMember1, lastReport.blockNumber)
+    )
+  )
+  t.true(
+    isGreaterThanBN(
+      await stEthHelper.getBalance(nosMember2, prevReport.blockNumber),
+      await stEthHelper.getBalance(nosMember2, lastReport.blockNumber)
+    )
+  )
+  t.true(
+    isGreaterThanBN(
+      await stEthHelper.getBalance(nosMember3, prevReport.blockNumber),
+      await stEthHelper.getBalance(nosMember3, lastReport.blockNumber)
+    )
+  )
+  t.true(
+    isGreaterThanBN(
+      await stEthHelper.getBalance(await lidoHelper.getInsuranceFundAddress(), prevReport.blockNumber),
+      await stEthHelper.getBalance(await lidoHelper.getInsuranceFundAddress(), lastReport.blockNumber)
+    )
+  )
+
+  logger.info('Resume validators nodes and check that rewards are paid')
+  startValidatorsNodes()
+  oracleReports = await lidoOracleHelper.waitForIncreaseBeaconBalance()
+  prevReport = oracleReports.prevEvent
+  lastReport = oracleReports.lastEvent
+  t.true(
+    isLessThanBN(await stEthHelper.getBalance(user1, prevReport.blockNumber), await stEthHelper.getBalance(user1, lastReport.blockNumber))
+  )
+  t.true(
+    isLessThanBN(await stEthHelper.getBalance(user2, prevReport.blockNumber), await stEthHelper.getBalance(user2, lastReport.blockNumber))
+  )
+  t.true(
+    isLessThanBN(await stEthHelper.getBalance(user3, prevReport.blockNumber), await stEthHelper.getBalance(user3, lastReport.blockNumber))
+  )
+  t.true(
+    isLessThanBN(
+      await stEthHelper.getBalance(nosMember1, prevReport.blockNumber),
+      await stEthHelper.getBalance(nosMember1, lastReport.blockNumber)
+    )
+  )
+  t.true(
+    isLessThanBN(
+      await stEthHelper.getBalance(nosMember2, prevReport.blockNumber),
+      await stEthHelper.getBalance(nosMember2, lastReport.blockNumber)
+    )
+  )
+  t.true(
+    isLessThanBN(
+      await stEthHelper.getBalance(nosMember3, prevReport.blockNumber),
+      await stEthHelper.getBalance(nosMember3, lastReport.blockNumber)
+    )
+  )
+  t.true(
+    isLessThanBN(
+      await stEthHelper.getBalance(await lidoHelper.getInsuranceFundAddress(), prevReport.blockNumber),
+      await stEthHelper.getBalance(await lidoHelper.getInsuranceFundAddress(), lastReport.blockNumber)
+    )
+  )
 
   logger.info('Change withdrawal credentials')
   t.is(await nodeOperatorsHelper.getUnusedSigningKeyCount(0), '0')
@@ -367,41 +475,32 @@ test('Full flow test ', async (t) => {
   logger.info('Check deposit iteration limit')
   const user5Deposit = ETH(20 * 32)
   const maxDepositCalls = 16
-  await lidoHelper.depositToLidoContract(user5, user5Deposit, ZERO_ADDRESS, maxDepositCalls)
-  ether2Stat = await lidoHelper.getBeaconStat()
-  t.is(await stEthHelper.getBalance(user5), user5Deposit, 'Check that user receive an appropriate amount of stEth tokens')
+  await lidoHelper.depositToLidoContract(user4, user5Deposit, ZERO_ADDRESS, maxDepositCalls)
+  beaconStat = await lidoHelper.getBeaconStat()
+  totalDepositedValidators = (+totalDepositedValidators + +maxDepositCalls).toString()
+  t.true(compareBN(await stEthHelper.getBalance(user4), user5Deposit), 'Check that user receive an appropriate amount of stEthTokens')
   t.is(
     await lidoHelper.getBufferedEther(),
     (+ETH(20 * 32) - +ETH(16 * 32)).toString(),
     'Check that the rest of the deposited Ether is still buffered in the Lido due to iteration limit '
   )
-  // When oracle`s push data was submitted at the first time,
-  // the total  total controlled ether is changing after next oracle pushData,
-  // but buffered ether is displaying in total pooled ether
-  t.is(
-    await lidoHelper.getTotalPooledEther(),
-    BN(oracleData)
-      .add(BN(ETH(4 * 32)))
-      .toString(),
-    'Check that the total pooled ether in Lido is correct'
-  )
-  t.is(
-    ether2Stat.depositedValidators,
-    BN(usersDeposits)
-      .add(BN(ETH(16 * 32)))
-      .toString()
-  )
+  t.is(beaconStat.depositedValidators, totalDepositedValidators, 'Check that the deposited validators count is correct')
 
   logger.info('Check that the rest of buffered Ether in the pool can be submitted')
-
-  await lidoHelper.depositBufferedEther(user5)
+  await lidoHelper.depositBufferedEther(user4)
   operator4 = await nodeOperatorsHelper.getNodeOperator(3, true)
-  ether2Stat = await lidoHelper.getBeaconStat()
   usersDeposits = BN(usersDeposits).add(BN(user5Deposit))
+  beaconStat = await lidoHelper.getBeaconStat()
+  totalDepositedValidators = await nodeOperatorsHelper.getTotalActiveKeysCount()
   t.is(await lidoHelper.getBufferedEther(), '0', 'Check that the rest of buffered Ether became became active')
   t.is(operator4.usedSigningKeys, '20', 'nodeOperators4 signing keys became using')
   t.is(await nodeOperatorsHelper.getUnusedSigningKeyCount(3), '20', 'Check unused nodeOperator4 keys')
-  t.is(ether2Stat.depositedValidators, usersDeposits.toString(), 'Check that the Ether was deposited after submit buffered ether')
+  t.is(
+    beaconStat.depositedValidators,
+    totalDepositedValidators,
+    'Check that the deposited validators count is correct after deposit of rest of buffered Ether'
+  )
+  t.is(await beaconStat.depositedValidators, (+usersDeposits / ETH(32)).toString(), 'Check that the ether2 stat is changed correctly')
 
   logger.info('Wait for validators activation')
   await waitFor(150)
@@ -420,55 +519,54 @@ test('Full flow test ', async (t) => {
     'Check that the count of active providers is changed after deactivate one'
   )
 
-  logger.info('Push data and check that the deactivated provider balance not changed')
-  oracleData = ETH(2000)
-  ether2Stat = await lidoHelper.getBeaconStat()
-  stakeProfit = BN(oracleData).sub(BN(ether2Stat.depositedValidators)).sub(BN(validatorsReward)).toString()
-  validatorsReward = stakeProfit
-  totalUsedSigningKeys = await nodeOperatorsHelper.getTotalActiveKeysCount()
-  operator1BalanceBeforePushData = await stEthHelper.getBalance(nosMember1)
-  operator2BalanceBeforePushData = await stEthHelper.getBalance(nosMember2)
-  operator3BalanceBeforePushData = await stEthHelper.getBalance(nosMember3)
-  const nodeOperator4BalanceBeforePushData = await stEthHelper.getBalance(nosMember4)
-  treasuryBalanceBeforePushData = await stEthHelper.getBalance(await lidoHelper.getTreasuryAddress())
-  insuranceFundBalanceBeforePushData = await stEthHelper.getBalance(await lidoHelper.getInsuranceFundAddress())
-  await lidoOracleHelper.pushData(2500, oracleData, oracleMember1)
-  await lidoOracleHelper.pushData(2500, oracleData, oracleMember2)
-  await lidoOracleHelper.pushData(2500, oracleData, oracleMember3)
-  latestData = await lidoOracleHelper.getLatestData()
-  t.is(latestData.eth2balance, oracleData, 'Check that the oracle eth2 balance has been changed')
-  t.is(latestData.reportInterval, '2500', 'Check that the oracle report interval has been changed')
+  logger.info('Waiting for the validator to receive a rewards and check that the deactivated provider balance not changed')
+  oracleReport = await lidoOracleHelper.waitForReportBeacon()
+  beaconStat = await lidoHelper.getBeaconStat()
+  t.is(oracleReport.reportedEvent.beaconBalance, beaconStat.beaconBalance, 'Check that the remote beacon balance changed correctly')
+  t.is(
+    oracleReport.reportedEvent.beaconValidators,
+    beaconStat.depositedValidators,
+    'Check that the remote deposited validators changed correctly'
+  )
 
   logger.info('Check that the rewards have been split between nos1,nos2,nos3 due to nos4 was deactivated')
-  t.is(
-    await stEthHelper.getBalance(nosMember1),
-    nodeOperatorsHelper.calculateNewNodeOperatorBalance(operator1, stakeProfit, totalUsedSigningKeys, operator1BalanceBeforePushData),
-    'Check that nodeOperator1 receive an appropriate amount of reward tokens'
+  t.true(
+    compareBN(await stEthHelper.getBalance(nosMember1), await nodeOperatorsHelper.calculateNewNodeOperatorBalance(nosMember1)),
+    'Check that nodeOperator1 receive an appropriate amount of stEthTokens by validators rewards'
   )
-  t.is(
-    await stEthHelper.getBalance(nosMember2),
-    nodeOperatorsHelper.calculateNewNodeOperatorBalance(operator2, stakeProfit, totalUsedSigningKeys, operator2BalanceBeforePushData),
-    'Check that nodeOperator2 receive an appropriate amount of reward tokens'
+  t.true(
+    compareBN(await stEthHelper.getBalance(nosMember2), await nodeOperatorsHelper.calculateNewNodeOperatorBalance(nosMember2)),
+    'Check that nodeOperator2 receive an appropriate amount of stEthTokens by validators rewards'
   )
-  t.is(
-    await stEthHelper.getBalance(nosMember3),
-    nodeOperatorsHelper.calculateNewNodeOperatorBalance(operator3, stakeProfit, totalUsedSigningKeys, operator3BalanceBeforePushData),
-    'Check that nodeOperator3 receive an appropriate amount of reward tokens'
+  t.true(
+    compareBN(await stEthHelper.getBalance(nosMember3), await nodeOperatorsHelper.calculateNewNodeOperatorBalance(nosMember3)),
+    'Check that nodeOperator3 receive an appropriate amount of stEthTokens by validators rewards'
   )
-  t.is(
-    nodeOperator4BalanceBeforePushData,
-    await stEthHelper.getBalance(nosMember4),
-    'Check that nodeOperator4 don`t received reward due to deactivated'
+  t.is(await stEthHelper.getBalance(nosMember4), '0', 'Check that nodeOperator4 don`t received reward due to deactivated')
+  t.true(
+    compareBN(
+      await stEthHelper.getBalance(await lidoHelper.getInsuranceFundAddress()),
+      await lidoHelper.calculateNewInsuranceBalance(await lidoHelper.getInsuranceFundAddress())
+    ),
+    'Check that the insurance fund receive appropriate amount of stEthTokens by validators rewards'
   )
-  t.is(
-    await stEthHelper.getBalance(await lidoHelper.getTreasuryAddress()),
-    lidoHelper.calculateNewTreasuryBalance(stakeProfit, treasuryBalanceBeforePushData),
-    'Check that the treasury receive appropriate amount of tokens by validators rewards'
+
+  logger.info('Check that the users receive appropriate amount of stEthTokens by validators rewards')
+  t.true(
+    compareBN(await stEthHelper.getBalance(user1), await stEthHelper.calculateNewUserBalance(user1)),
+    'Check that the user1 receive appropriate amount of stEthTokens by validators rewards'
   )
-  t.is(
-    await stEthHelper.getBalance(await lidoHelper.getInsuranceFundAddress()),
-    lidoHelper.calculateNewTreasuryBalance(stakeProfit, insuranceFundBalanceBeforePushData),
-    'Check that the insurance fund receive appropriate amount of tokens by validators rewards'
+  t.true(
+    compareBN(await stEthHelper.getBalance(user2), await stEthHelper.calculateNewUserBalance(user2)),
+    'Check that the user2 receive appropriate amount of stEthTokens by validators rewards'
+  )
+  t.true(
+    compareBN(await stEthHelper.getBalance(user3), await stEthHelper.calculateNewUserBalance(user3)),
+    'Check that the user3 receive appropriate amount of stEthTokens by validators rewards'
+  )
+  t.true(
+    compareBN(await stEthHelper.getBalance(user4), await stEthHelper.calculateNewUserBalance(user4)),
+    'Check that the user4 receive appropriate amount of stEthTokens by validators rewards'
   )
 
   logger.info('Increase staking limit for nodeOperator4')
@@ -510,8 +608,8 @@ test('Full flow test ', async (t) => {
 
   logger.info('Check that the validators do not activate if there are no unused signing keys')
   await lidoHelper.depositToLidoContract(user2, ETH(64))
-  ether2Stat = await lidoHelper.getBeaconStat()
-  t.is(ether2Stat.depositedValidators, usersDeposits.toString(), 'Check that the deposit not performed')
+  beaconStat = await lidoHelper.getBeaconStat()
+  t.is(beaconStat.depositedValidators, totalDepositedValidators, 'Check that the deposit not performed')
   t.is(await lidoHelper.getBufferedEther(), ETH(64), 'Check that the deposited Ether is buffered due to no unused keys')
   // TODO Test insurance (pending for the actual insurance)
   t.pass()

@@ -1,1 +1,0 @@
-[{"constant":false,"inputs":[{"name":"pubkey","type":"bytes"},{"name":"withdrawal_credentials","type":"bytes"},{"name":"signature","type":"bytes"},{"name":"deposit_data_root","type":"bytes32"}],"name":"deposit","outputs":[],"payable":true,"stateMutability":"payable","type":"function"}]

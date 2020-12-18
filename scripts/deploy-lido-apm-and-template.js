@@ -97,7 +97,7 @@ async function deployDaoTemplate({
 }) {
   if (daoTemplateAddress) {
     log(`Using DAO template: ${chalk.yellow(daoTemplateAddress)}`)
-    const daoTemplate = await artifacts.require('LidoTemplate').at(daoTemplateAddress)
+    const daoTemplate = await artifacts.require('LidoTemplateE2E').at(daoTemplateAddress)
     return { daoTemplate }
   }
 
@@ -108,7 +108,7 @@ async function deployDaoTemplate({
   const latestDaoTemplateVersion = await resolveLatestVersion(daoTemplateNode, ens, artifacts)
   if (latestDaoTemplateVersion) {
     log(`Using DAO template resolved from ENS: ${chalk.yellow(latestDaoTemplateVersion.contractAddress)}`)
-    const daoTemplate = await artifacts.require('LidoTemplate').at(latestDaoTemplateVersion.contractAddress)
+    const daoTemplate = await artifacts.require('LidoTemplateE2E').at(latestDaoTemplateVersion.contractAddress)
     return { daoTemplate, daoTemplateNodeName, daoTemplateNode }
   }
 
@@ -123,7 +123,7 @@ async function deployDaoTemplate({
   }
 
   const daoTemplate = await deploy(
-    'LidoTemplate',
+    'LidoTemplateE2E',
     artifacts,
     withArgs(daoFactoryAddress, ens.address, miniMeTokenFactoryAddress, aragonIdAddress, { from: owner, gas: 6000000 })
   )

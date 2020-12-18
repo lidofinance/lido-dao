@@ -2,7 +2,7 @@ import { abi as LidoAbi } from '../../../../artifacts/Lido.json'
 import { createVote, voteForAction, init as voteInit } from './votingHelper'
 import { encodeCallScript } from '@aragon/contract-helpers-test/src/aragon-os'
 import { BN } from '../utils'
-import { TREASURY_FEE, INSURANCE_FEE, ZERO_ADDRESS } from '../constants'
+import { init as stEthHelperInit, getPooledEthByShares, getSharesByHolder } from './stEthHelper'
 
 let context
 export let lidoContract
@@ -12,6 +12,7 @@ export function init(c) {
   if (!context) {
     context = c
     web3 = context.web3
+    stEthHelperInit(context)
     lidoContract = new web3.eth.Contract(LidoAbi, getProxyAddress())
     voteInit(context)
   }
@@ -93,21 +94,16 @@ export async function getInsuranceFundAddress() {
 
 export async function submit(sender, value, referral, maxDepositCalls = 16) {
   await lidoContract.methods.submit(referral).send({ from: sender, value: value, gas: '8000000' })
-  await depositBufferedEther(sender, maxDepositCalls)
 }
 
-export async function getEther2Stat() {
-  return await lidoContract.methods.getEther2Stat().call()
+export async function getBeaconStat() {
+  return await lidoContract.methods.getBeaconStat().call()
 }
 
 export async function getUsedEther() {
-  const totalControledEther = await getTotalPooledEther()
+  const totalControlledEther = await getTotalPooledEther()
   const bufferedEther = await getBufferedEther()
-  return BN(totalControledEther).sub(BN(bufferedEther)).toString()
-}
-
-export async function getTreasury() {
-  return await lidoContract.methods.getTreasury().call()
+  return BN(totalControlledEther).sub(BN(bufferedEther)).toString()
 }
 
 export async function depositToLidoContract(from, value, referral = '0x0000000000000000000000000000000000000000', maxDepositCalls = 16) {
@@ -123,25 +119,12 @@ export async function depositBufferedEther(from, maxDepositCalls = 16) {
 export function getTotalPooledEther() {
   return lidoContract.methods.getTotalPooledEther().call()
 }
+
 export function getBufferedEther() {
   return lidoContract.methods.getBufferedEther().call()
 }
-export async function getBeaconStat() {
-  return await lidoContract.methods.getBeaconStat().call()
-}
 
-export function calculateNewTreasuryBalance(stakeProfit, balanceBeforePushData) {
-  const reward = calculateTreasuryReward(stakeProfit)
-  return BN(balanceBeforePushData).add(reward).toString()
-}
-
-export function calculateTreasuryReward(stakeProfit) {
-  // TODO change treasury/insurance
-  return BN(stakeProfit)
-    .mul(BN((TREASURY_FEE / 100) * 2))
-    .div(BN(100))
-}
-
-export function reportEther(sender, epoch, value) {
-  return lidoContract.methods.reportEther2(epoch, value).send({ from: sender, gas: '2000000' })
+export async function calculateNewInsuranceBalance(holder) {
+  const sharesByHolder = await getSharesByHolder(holder)
+  return await getPooledEthByShares(sharesByHolder)
 }

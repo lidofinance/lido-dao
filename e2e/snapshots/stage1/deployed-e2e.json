@@ -23,7 +23,7 @@
           "epochsPerFrame": 20,
           "slotsPerEpoch": 8,
           "secondsPerSlot": 1,
-          "genesisTime": 1606813129
+          "genesisTime": 1607959551
         },
         "depositIterationLimit": 16
       },
@@ -100,10 +100,8 @@
       "lido_app_lidooracle_id": "0xc62f68e3a6f657e08c27afe0f11d03375e5255f5845055d81c1281dbf139ce18",
       "lido_app_node-operators-registry_name": "node-operators-registry.lido.eth",
       "lido_app_node-operators-registry_id": "0x9a09c6bc9551dd5e194dc3f814ce4725494966d9cdc90ff6cb49fc94d8a034ab",
-      "lido_app_steth_name": "steth.lido.eth",
-      "lido_app_steth_id": "0x7a155a469b6e893b1e5d8f992f066474a74daf5ece6715948667ef3565e34ec2",
       "daoName": "lido-dao",
-      "depositContractAddress": "0x129c0C1AE94CB1d38d8DF24B5ec057f778dE607f",
+      "depositContractAddress": "0xdDbcB78EDb6c7bf26B131C16AB3bc71305B47653",
       "depositContractConstructorArgs": [],
       "daoAddress": "0xC1D74fb6AD7ddcf479A18958F789aAc674dD1A18",
       "tokenAddress": "0xD397cB1532Ed6ec194205E07229cc485a6aeeF09",
@@ -112,14 +110,13 @@
         "finance.aragonpm.eth": "0x63dEBDFF65aB2909e0bdc1C22BAc83Dc965112b7",
         "token-manager.aragonpm.eth": "0x010d867dA5AE81F541C24CFb94BA123022EAf092",
         "voting.aragonpm.eth": "0x1362c62534A96c6a38Ff8cdE703e088F2962faCB",
-        "steth.lido.eth": "0xAAFc08fe4Ea5DeFCcfE519D6070A902FE4d19cA6",
-        "lidooracle.lido.eth": "0xcD3db5ca818a645359e09543Cc0e5b7bB9593229",
-        "node-operators-registry.lido.eth": "0x7fAF80E96530e5cd13a1f35701fcc6b334B2FD75",
-        "lido.lido.eth": "0xc12e8e7adcEaF31c1Ca5F8aFD99AB88439628183"
+        "lidooracle.lido.eth": "0xAAFc08fe4Ea5DeFCcfE519D6070A902FE4d19cA6",
+        "node-operators-registry.lido.eth": "0xcD3db5ca818a645359e09543Cc0e5b7bB9593229",
+        "lido.lido.eth": "0x7fAF80E96530e5cd13a1f35701fcc6b334B2FD75"
       },
-      "cstEthAddress": "0x5aE47822Da849508020c25E2E92c4a4cC4E03001",
+      "cstEthAddress": "0xA6f48C8190be8F92A4c31aAE4756289Ef3d91477",
       "cstEthConstructorArgs": [
-        "0xAAFc08fe4Ea5DeFCcfE519D6070A902FE4d19cA6"
+        "0x7fAF80E96530e5cd13a1f35701fcc6b334B2FD75"
       ]
     }
   }
