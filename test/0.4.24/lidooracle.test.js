@@ -427,28 +427,39 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody,
   describe('Quorum tests', () => {
     it('all oracles reports random data, but 2 oracles reports same data', async () => {
       const ETH = (value) => web3.utils.toWei(value + '', 'ether')
-      let oracles = accounts
+      const oracles = accounts
       let receipt
       let i
 
       await app.setTime(1606824000)
 
-      for(i = 0; i < 10; i++) {
+      for (i = 0; i < 10; i++) {
         await app.addOracleMember(oracles[i], { from: voting })
       }
-      
+
       await app.setQuorum(10, { from: voting })
 
-      for(i = 0; i < 9; i++) {
+      for (i = 0; i < 9; i++) {
         await app.reportBeacon(0, i, i, { from: oracles[i] })
       }
-      
+
       await assertReportableEpochs(0, 0)
-      
+
       // Is it correct to submit that value?
       receipt = await app.reportBeacon(0, 8, 8, { from: oracles[9] }) // data is unimodal, quorum is reached
       assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 0, beaconBalance: 8, beaconValidators: 8 } })
       await assertReportableEpochs(1, 0)
+
+      gatheredEpochData0 = await app.getGatheredEpochData(0)
+
+      for (i = 0; i < 8; i++) {
+        assertBn(i, gatheredEpochData0.reportBalanceValues[i])
+        assertBn(i, gatheredEpochData0.reportValidatorsValues[i])
+        assertBn(1, gatheredEpochData0.reportValuesCount[i])
+      }
+      assertBn(8, gatheredEpochData0.reportBalanceValues[8])
+      assertBn(8, gatheredEpochData0.reportValidatorsValues[8])
+      assertBn(2, gatheredEpochData0.reportValuesCount[8])
     })
   })
 })

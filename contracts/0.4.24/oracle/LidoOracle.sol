@@ -12,7 +12,6 @@ import "@aragon/os/contracts/lib/math/SafeMath64.sol";
 import "../interfaces/ILidoOracle.sol";
 import "../interfaces/ILido.sol";
 
-import "./Algorithm.sol";
 import "./BitOps.sol";
 
 
@@ -42,14 +41,10 @@ contract LidoOracle is ILidoOracle, AragonApp {
         uint64 genesisTime;
     }
 
-    struct Report {
-        uint128 beaconBalance;
-        uint128 beaconValidators;
-    }
-
     struct EpochData {
-        uint256 reportsBitMask;
-        mapping (uint256 => Report) reports;
+        uint256 reportBitMask;
+        uint256[] reportValues;
+        mapping (uint256 => uint256) reportValuesCount;
     }
 
     /// ACL
@@ -144,21 +139,13 @@ contract LidoOracle is ILidoOracle, AragonApp {
         uint256 index = _getMemberId(_member);
         require(index != MEMBER_NOT_FOUND, "MEMBER_NOT_FOUND");
 
-        uint256 lastReportedEpochId = (
-            LAST_REPORTED_EPOCH_ID_POSITION.getStorageUint256()
-        );
-
-        MIN_REPORTABLE_EPOCH_ID_POSITION.setStorageUint256(lastReportedEpochId);
+        uint256 lastReportedEpochId = LAST_REPORTED_EPOCH_ID_POSITION.getStorageUint256();
+        MIN_REPORTABLE_EPOCH_ID_POSITION.setStorageUint256(lastReportedEpochId.add(1));
+        
         uint256 last = members.length.sub(1);
-
-        uint256 bitMask = gatheredEpochData[lastReportedEpochId].reportsBitMask;
         if (index != last) {
-            members[index] = members[last];
-            bitMask = bitMask.setBit(index, bitMask.getBit(last));
-        }
-        bitMask = bitMask.setBit(last, false);
-        gatheredEpochData[lastReportedEpochId].reportsBitMask = bitMask;
-
+            members[index] = members[last];    
+        }   
         members.length--;
 
         emit MemberRemoved(_member);
@@ -207,15 +194,19 @@ contract LidoOracle is ILidoOracle, AragonApp {
         require(index != MEMBER_NOT_FOUND, "MEMBER_NOT_FOUND");
 
         // check & set contribution flag
-        uint256 bitMask = gatheredEpochData[_epochId].reportsBitMask;
+        uint256 bitMask = gatheredEpochData[_epochId].reportBitMask;
         require(!bitMask.getBit(index), "ALREADY_SUBMITTED");
 
-        LAST_REPORTED_EPOCH_ID_POSITION.setStorageUint256(_epochId);
+        if (_epochId > LAST_REPORTED_EPOCH_ID_POSITION.getStorageUint256())
+            LAST_REPORTED_EPOCH_ID_POSITION.setStorageUint256(_epochId);
 
-        gatheredEpochData[_epochId].reportsBitMask = bitMask.setBit(index, true);
+        gatheredEpochData[_epochId].reportBitMask = bitMask.setBit(index, true);
 
-        Report memory currentReport = Report(_beaconBalance, _beaconValidators);
-        gatheredEpochData[_epochId].reports[index] = currentReport;
+        uint256 currentReportValue = _packReportToUint256(_beaconBalance, _beaconValidators);
+        uint256 currentReportValueCount = gatheredEpochData[_epochId].reportValuesCount[currentReportValue];
+        if (currentReportValueCount == 0)
+            gatheredEpochData[_epochId].reportValues.push(currentReportValue);
+        gatheredEpochData[_epochId].reportValuesCount[currentReportValue] = currentReportValueCount.add(1);
 
         _tryPush(_epochId);
     }
@@ -241,6 +232,28 @@ contract LidoOracle is ILidoOracle, AragonApp {
 
         uint256 nextFrameEpochId = frameEpochId.div(epochsPerFrame).add(1).mul(epochsPerFrame);
         frameEndTime = nextFrameEpochId.mul(secondsPerEpoch).add(genesisTime).sub(1);
+    }
+
+    function getGatheredEpochData(uint256 _epochId)
+        external view returns (
+            uint256 reportBitMask,
+            uint256[] reportBalanceValues,
+            uint256[] reportValidatorsValues,
+            uint256[] reportValuesCount
+        )
+    {
+        reportBitMask = gatheredEpochData[_epochId].reportBitMask;
+        uint256 reportValuesLength = gatheredEpochData[_epochId].reportValues.length;
+        reportBalanceValues = new uint256[](reportValuesLength);
+        reportValidatorsValues = new uint256[](reportValuesLength);
+        reportValuesCount = new uint256[](reportValuesLength);
+        uint256 reportValue;
+        for (uint256 i = 0; i < reportValuesLength; i++) {
+            reportValue = gatheredEpochData[_epochId].reportValues[i];
+            (reportBalanceValues[i], reportValidatorsValues[i]) = _unpackReportFromUint256(reportValue);
+            reportValuesCount[i] = gatheredEpochData[_epochId].reportValuesCount[reportValue];
+        }
+        return (reportBitMask, reportBalanceValues, reportValidatorsValues, reportValuesCount);
     }
 
     /**
@@ -380,33 +393,44 @@ contract LidoOracle is ILidoOracle, AragonApp {
      * @return isQuorum - true, when quorum is reached, false otherwise
      * @return modeReport - valid mode-value report when quorum is reached, 0-data otherwise
      */
-    function _getQuorumReport(uint256 _epochId) internal view returns (bool isQuorum, Report memory modeReport) {
-        uint256 mask = gatheredEpochData[_epochId].reportsBitMask;
+    function _getQuorumReport(uint256 _epochId) internal view returns (bool isQuorum, uint256 modeReport) {
+        uint256 mask = gatheredEpochData[_epochId].reportBitMask;
         uint256 popcnt = mask.popcnt();
         if (popcnt < getQuorum())
-            return (false, Report({beaconBalance: 0, beaconValidators: 0}));
+            return (false, 0);
 
         assert(0 != popcnt && popcnt <= members.length);
 
-        // pack current gatheredEpochData mapping to uint256 array
-        uint256[] memory data = new uint256[](popcnt);
-        uint256 i = 0;
-        uint256 membersLength = members.length;
-        for (uint256 index = 0; index < membersLength; ++index) {
-            if (mask.getBit(index)) {
-                data[i++] = reportToUint256(gatheredEpochData[_epochId].reports[index]);
+        uint256 reportValuesLength = gatheredEpochData[_epochId].reportValues.length;
+
+        if (reportValuesLength == 1) {
+            return (true, gatheredEpochData[_epochId].reportValues[0]);
+        }
+        
+        uint256[] memory reportValuesCount = new uint256[](reportValuesLength);
+        uint256 tmpReport;
+        uint256 modeReportCountIndex;
+        uint256 reportValuesCountMax;
+        
+        // find mode value
+        for (uint256 i = 0; i < reportValuesLength; i++) {
+            tmpReport = gatheredEpochData[_epochId].reportValues[i];
+            reportValuesCount[i] = gatheredEpochData[_epochId].reportValuesCount[tmpReport];
+            if (reportValuesCount[i] > reportValuesCountMax) {
+                reportValuesCountMax = reportValuesCount[i];
+                modeReport = tmpReport;
+                modeReportCountIndex = i;
             }
         }
+        
+        assert(modeReportCountIndex < reportValuesLength);
 
-        assert(i == data.length);
-
-        // find mode value of this array
-        (bool isUnimodal, uint256 mode) = Algorithm.mode(data);
-        if (!isUnimodal)
-            return (false, Report({beaconBalance: 0, beaconValidators: 0}));
-
-        // unpack Report struct from uint256
-        modeReport = uint256ToReport(mode);
+        // check if data is unimodal
+        for (i = 0; i < reportValuesLength; i++) {
+            if ((i != modeReportCountIndex) && (reportValuesCount[i] == reportValuesCountMax)) {
+                return (false, 0);
+            }
+        }
 
         return (true, modeReport);
     }
@@ -415,7 +439,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
      * @dev Pushes the current data point if quorum is reached
      */
     function _tryPush(uint256 _epochId) internal {
-        (bool isQuorum, Report memory modeReport) = _getQuorumReport(_epochId);
+        (bool isQuorum, uint256 modeReport) = _getQuorumReport(_epochId);
         if (!isQuorum)
             return;
 
@@ -429,22 +453,22 @@ contract LidoOracle is ILidoOracle, AragonApp {
             .mul(beaconSpec.epochsPerFrame)
         );
 
-        emit Completed(_epochId, modeReport.beaconBalance, modeReport.beaconValidators);
+        (uint128 beaconBalance, uint128 beaconValidators) = _unpackReportFromUint256(modeReport);
+        emit Completed(_epochId, beaconBalance, beaconValidators);
 
         ILido lido = getLido();
         if (address(0) != address(lido))
-            lido.pushBeacon(modeReport.beaconValidators, modeReport.beaconBalance);
+            lido.pushBeacon(beaconValidators, beaconBalance);
     }
 
-    function reportToUint256(Report _report) internal pure returns (uint256) {
-        return uint256(_report.beaconBalance) << 128 | uint256(_report.beaconValidators);
+    function _packReportToUint256(uint128 _beaconBalance, uint128 _beaconValidators) internal pure returns (uint256) {
+        return uint256(_beaconBalance) << 128 | uint256(_beaconValidators);
     }
 
-    function uint256ToReport(uint256 _report) internal pure returns (Report) {
-        Report memory report;
-        report.beaconBalance = uint128(_report >> 128);
-        report.beaconValidators = uint128(_report);
-        return report;
+    function _unpackReportFromUint256(uint256 _report) internal pure returns (uint128, uint128) {
+        uint128 beaconBalance = uint128(_report >> 128);
+        uint128 beaconValidators = uint128(_report);
+        return (beaconBalance, beaconValidators);
     }
 
     /**
