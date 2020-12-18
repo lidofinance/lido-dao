@@ -1,6 +1,6 @@
 const { assert } = require('chai')
 const { newDao, newApp } = require('./helpers/dao')
-const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertBn, assertRevert, assertEvent, assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
 const { bn } = require('@aragon/contract-helpers-test')
 
 const LidoOracle = artifacts.require('LidoOracleMock.sol')
@@ -30,7 +30,7 @@ contract('Algorithm', ([testUser]) => {
   })
 })
 
-contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]) => {
+contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody, ...accounts]) => {
   let appBase, app
 
   const assertReportableEpochs = async (startEpoch, endEpoch) => {
@@ -421,6 +421,57 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
           await assertReportableEpochs(5, 5)
         })
       })
+    })
+  })
+
+  describe('Quorum tests', () => {
+    it('all oracles reports random data', async () => {
+      let oracles = accounts
+      let txn
+      let i
+
+      await app.setTime(1606824000)
+
+      // Add 10 oracle members
+      for(i = 0; i < 10; i++) {
+        await app.addOracleMember(oracles[i], { from: voting })
+      }
+
+      // Set quorum value to 3
+      await app.setQuorum(3, { from: voting })
+
+      // All oracles are broken and provide random data. The first 8 oracles report
+      // different data.
+      for(i = 0; i < 8; i++) {
+        await app.reportBeacon(0, i, i, { from: oracles[i] })
+      }
+
+      await assertReportableEpochs(0, 0)
+
+      // But the 8th and the 9th oracles randomly report same values. We should
+      // not use that random matched value as quorum!
+      txn = await app.reportBeacon(0, 7, 7, { from: oracles[8] })
+      // there is no `Completed` event
+      assertAmountOfEvents(txn, 'Completed', { expectedAmount: 0 })
+      // min reportable epoch has not changed
+      await assertReportableEpochs(0, 0)
+
+      // The 10th oracle reports same value as the 8th and the 9th.
+      //
+      // Previous implementation:
+      //  if N members submitted some random garbage and the array is unimodal
+      //  (contains duplicate reports), it gets pushed (once N >= quorum).
+      // New implementation:
+      //  Report get pushed to lido only if N+ members submitted strictly same
+      //  numbers.
+      //
+      // Test checks that previous behaviour got fixed (unimodal data doesn't
+      // get submitted until the quantity of equal reports equals quorum).
+      txn = await app.reportBeacon(0, 7, 7, { from: oracles[9] })
+      // event exists
+      assertEvent(txn, 'Completed', { expectedArgs: { epochId: 0, beaconBalance: 7, beaconValidators: 7 } })
+      // min reportable epoch has changed
+      await assertReportableEpochs(1, 0)
     })
   })
 })
