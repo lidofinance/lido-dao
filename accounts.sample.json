@@ -1,15 +1,20 @@
 {
   "eth": {
-    "mnemonic": "BIP_39_15_WORD_MNEMONIC",
-    "path": "m/44'/60'/0'/0",
-    "initialIndex": 0,
-    "count": 10
+    "dev": {
+      "mnemonic": "rich dune dash tag exercise veteran sword speed spike absorb disease brush bracket doll noodle",
+      "path": "m/44'/60'/0'/0",
+      "initialIndex": 0,
+      "count": 20
+    },
+    "e2e": {
+      "mnemonic": "explain tackle mirror kit van hammer degree position ginger unfair soup bonus",
+      "path": "m/44'/60'/0'/0",
+      "initialIndex": 0,
+      "count": 50
+    }
   },
-  "e2e": {
-    "mnemonic": "explain tackle mirror kit van hammer degree position ginger unfair soup bonus",
-    "path": "m/44'/60'/0'/0",
-    "initialIndex": 0,
-    "count": 10
+  "infura": {
+    "projectId": "INFURA_PROJECT_ID"
   },
   "etherscan": {
     "apiKey": "ETHERSCAN_API_KEY"

@@ -18,8 +18,8 @@ async function deployAPM({ web3, artifacts, owner, labelName, ens, apmRegistryFa
   log(`Deploying APM for node ${labelName}.eth...`)
 
   logSplitter()
-  const { tldHash, labelHash, nodeName, node } = await assignENSName({
-    tldName: 'eth',
+  const { parentNode, labelHash, nodeName, node } = await assignENSName({
+    parentName: 'eth',
     labelName,
     owner,
     ens,
@@ -29,7 +29,7 @@ async function deployAPM({ web3, artifacts, owner, labelName, ens, apmRegistryFa
 
   logSplitter()
   log(`Using APMRegistryFactory: ${chalk.yellow(apmRegistryFactory.address)}`)
-  const receipt = await logTx(`Deploying APMRegistry`, apmRegistryFactory.newAPM(tldHash, labelHash, owner))
+  const receipt = await logTx(`Deploying APMRegistry`, apmRegistryFactory.newAPM(parentNode, labelHash, owner))
   const apmAddr = receipt.logs.filter((l) => l.event === 'DeployAPM')[0].args.apm
   log(`APMRegistry address: ${chalk.yellow(apmAddr)}`)
   logSplitter()

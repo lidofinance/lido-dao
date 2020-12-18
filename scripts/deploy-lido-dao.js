@@ -208,7 +208,7 @@ async function deployDAO({
 
   const { contractAddress: daoTemplateAddress } = templateLatestVersion
   log(`Using registered DAO template: ${chalk.yellow(daoTemplateAddress)}`)
-  const template = await artifacts.require('LidoTemplate').at(daoTemplateAddress)
+  const template = await artifacts.require('LidoTemplateE2E').at(daoTemplateAddress)
 
   log(`Using DepositContract at: ${chalk.yellow(depositContractAddress)}`)
 

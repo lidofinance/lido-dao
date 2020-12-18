@@ -1,5 +1,9 @@
+const chalk = require('chalk')
+
 const globalArtifacts = this.artifacts || global.artifacts
 const globalWeb3 = this.web3 || global.web3
+
+const NOT_OK = chalk.red('✗')
 
 // If executed directly by Node.js, calls the passed function.
 // Otherwise, returns a wrapped function that should support
@@ -11,11 +15,15 @@ module.exports = (scriptFn, mainModule) => {
     // Buidler executes scripts in a forked subprocess
     scriptFn({ artifacts: globalArtifacts, web3: globalWeb3 })
       .then(() => {
-        console.log('All done!')
+        console.error('All done!')
         process.exit(0)
       })
       .catch((err) => {
-        console.log(err.stack)
+        if (err && err.constructor && err.constructor.name === 'AssertionError') {
+          console.error(NOT_OK, err.message)
+        } else {
+          console.error(err.stack)
+        }
         process.exit(2)
       })
     return undefined
