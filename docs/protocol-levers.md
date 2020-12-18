@@ -11,7 +11,6 @@ All existing levers are listed below, grouped by the contract.
 
 The following contracts are upgradeable by the DAO voting:
 
-* `contracts/0.4.24/StETH.sol`
 * `contracts/0.4.24/Lido.sol`
 * `contracts/0.4.24/NodeOperatorsRegistry.sol`
 * `contracts/0.4.24/LidoOracle.sol`
@@ -27,38 +26,16 @@ The following contracts are not upgradeable and don't depend on the Aragon code:
 * `contracts/0.6.12/CstETH.sol`
 
 
-## [StETH.sol](/contracts/0.4.24/StETH.sol)
+## [Lido.sol](/contracts/0.4.24/Lido.sol)
 
-### Minting and burning
+### Burning stETH tokens
 
-* Mutator: `mint(address _to, uint256 _value)`
-  * Permission required: `MINT_ROLE`
-* Mutator: `burn(address _account, uint256 _value)`
+* Mutator: `burnShares(address _account, uint256 _sharesAmount)`
   * Permission required: `BURN_ROLE`
 
-Initially, only the `Lido.sol` contract is authorized to mint and burn tokens, but the DAO can
-vote to grant these permissions to other actors.
-
-
-### Pausing
-
-* Mutators: `stop()`, `resume()`
-  * Permission required: `PAUSE_ROLE`
-* Accessor: `isStopped() returns (bool)`
-
-When paused, the token contract won’t allow minting, burning, transferring tokens, approving token
-transfers and changing allowances. Calls of the following functions will revert:
-
-* `mint(address, uint256)`
-* `burn(address, uint256)`
-* `transfer(address, uint256)`
-* `transferFrom(address, address, uint256)`
-* `approve(address, uint256)`
-* `increaseAllowance(address, uint)`
-* `decreaseAllowance(address, uint)`
-
-
-## [Lido.sol](/contracts/0.4.24/Lido.sol)
+DAO members can burn token shares via DAO voting to offset slashings using insurance funds.
+E.g. protocol was slashed by 5 Ether; by burning the amount of shares corresponding to 5 stETH
+the stakers can be made whole.
 
 ### Oracle
 
@@ -103,7 +80,7 @@ Credentials to withdraw ETH on ETH 2.0 side after phase 2 is launched.
   * Permission required: `MANAGE_WITHDRAWAL_KEY`
 * Accessor: `getWithdrawalCredentials() returns (bytes)`
 
-The pool uses these credentials to register new ETH 2.0 validators.
+The protocol uses these credentials to register new ETH 2.0 validators.
 
 
 ### Deposit loop iteration limit
@@ -114,7 +91,7 @@ Controls how many ETH 2.0 deposits can be made in a single transaction.
 * Default value: `16`
 * [Scenario test](/test/scenario/lido_deposit_iteration_limit.js)
 
-When someone calls `depositBufferedEther`, the pool tries to register as many ETH 2.0 validators
+When someone calls `depositBufferedEther`, `Lido` tries to register as many ETH 2.0 validators
 as it can given the buffered Ether amount. The limit is passed as an argument to this function and
 is needed to prevent the transaction from [failing due to the block gas limit], which is possible
 if the amount of the buffered Ether becomes sufficiently large.
@@ -127,12 +104,21 @@ if the amount of the buffered Ether becomes sufficiently large.
   * Permission required: `PAUSE_ROLE`
 * Accessor: `isStopped() returns (bool)`
 
-When paused, the pool won’t accept user submissions and won’t allow user withdrawals. The following
-transactions will revert:
+When paused, `Lido` doesn't accept user submissions, doesn't allow user withdrawals and oracle
+report submissions. No token actions (burning, transferring, approving transfers and changing
+allowances) are allowed. The following transactions revert:
 
 * Plain Ether transfers;
-* Calls of the `submit(address)` function;
-* Calls of the `withdraw(uint256, bytes32)` function (withdrawals are not implemented yet).
+* calls to `submit(address)`;
+* calls to `depositBufferedEther(uint256)`;
+* calls to `withdraw(uint256, bytes32)` (withdrawals are not implemented yet).
+* calls to `pushBeacon(uint256, uint256)`;
+* calls to `burnShares(address, uint256)`
+* calls to `transfer(address, uint256)`
+* calls to `transferFrom(address, address, uint256)`
+* calls to `approve(address, uint256)`
+* calls to `increaseAllowance(address, uint)`
+* calls to `decreaseAllowance(address, uint)`
 
 
 ### TODO
@@ -143,12 +129,6 @@ transactions will revert:
 
 
 ## [NodeOperatorsRegistry.sol](/contracts/0.4.24/nos/NodeOperatorsRegistry.sol)
-
-### Pool
-
-Address of the pool contract.
-
-* Accessor: `pool() returns (address)`
 
 
 ### Node Operators list
@@ -164,7 +144,7 @@ Address of the pool contract.
 
 Node Operators act as validators on the Beacon chain for the benefit of the protocol. Each
 node operator submits no more than `_stakingLimit` signing keys that will be used later
-by the pool for registering the corresponding ETH 2.0 validators. As oracle committee
+by the protocol for registering the corresponding ETH 2.0 validators. As oracle committee
 reports rewards on the ETH 2.0 side, the fee is taken on these rewards, and part of that fee
 is sent to node operators’ reward addresses (`_rewardAddress`).
 
@@ -174,7 +154,7 @@ is sent to node operators’ reward addresses (`_rewardAddress`).
 * Mutator: `setNodeOperatorActive(uint256 _id, bool _active)`
   * Permission required: `SET_NODE_OPERATOR_ACTIVE_ROLE`
 
-Misbehaving node operators can be deactivated by calling this function. The pool skips
+Misbehaving node operators can be deactivated by calling this function. The protocol skips
 deactivated operators during validator registration; also, deactivated operators don’t
 take part in fee distribution.
 
@@ -202,11 +182,11 @@ Allows to report that `_stoppedIncrement` more validators of a node operator hav
 
 ## [LidoOracle.sol](/contracts/0.4.24/oracle/LidoOracle.sol)
 
-### Pool
+### Lido
 
-Address of the pool contract.
+Address of the Lido contract.
 
-* Accessor: `pool() returns (address)`
+* Accessor: `getLido() returns (address)`
 
 
 ### Members list

@@ -1,7 +1,8 @@
 import { abi as LidoOracleAbi } from '../../../../artifacts/LidoOracle.json'
-import { createVote, voteForAction } from './votingHelper'
+import { createVote, voteForAction, init as votingInit } from './votingHelper'
 import { encodeCallScript } from '@aragon/contract-helpers-test/src/aragon-os'
 import logger from '../logger'
+import { BN } from '../utils'
 
 let web3
 let context
@@ -10,6 +11,7 @@ export let lidoOracleContract
 export function init(c) {
   if (!context) {
     context = c
+    votingInit(context)
     web3 = context.web3
     lidoOracleContract = new web3.eth.Contract(LidoOracleAbi, getProxyAddress())
   }
@@ -23,6 +25,7 @@ export async function hasInitialized() {
   return await lidoOracleContract.methods.hasInitialized().call()
 }
 
+// delete?
 export async function reportBeacon(epoch, oracleData, beaconValidatorsCount, sender) {
   return await lidoOracleContract.methods.reportBeacon(epoch, oracleData, beaconValidatorsCount).send({ from: sender, gas: '8000000' })
 }
@@ -55,11 +58,6 @@ export async function getAllOracleMembers() {
   return await lidoOracleContract.methods.getOracleMembers().call()
 }
 
-// TODO delete?
-export async function getCurrentReportInterval() {
-  return await lidoOracleContract.methods.getCurrentReportInterval().call()
-}
-
 export async function getBeaconSpec() {
   return await lidoOracleContract.methods.beaconSpec().call()
 }
@@ -87,19 +85,63 @@ export async function getQuorum() {
   return await lidoOracleContract.methods.getQuorum().call()
 }
 
-export async function getLatestData() {
-  return await lidoOracleContract.methods.getLatestData().call()
-}
-
 export async function waitForReportBeacon() {
-  const fromBlock = await web3.eth.getBlockNumber()
-  return new Promise((resolve, reject) => {
+  const txReportEvent = await new Promise((resolve, reject) => {
     lidoOracleContract.once(
       'Completed',
       {
-        fromBlock
+        fromBlock: 'latest'
       },
-      (error, event) => (error ? reject(error) : resolve(event.returnValues))
+      (error, event) => (error ? reject(error) : resolve(event))
     )
   })
+  const reportedEvent = txReportEvent.returnValues
+  const reportedBlock = txReportEvent.blockNumber
+  return { reportedEvent, reportedBlock }
+}
+
+export async function waitForDecreaseBeaconBalance() {
+  let prevEvent
+  let lastEvent
+  while (true) {
+    prevEvent = await waitForReportBeacon()
+    lastEvent = await waitForReportBeacon()
+    if (BN(prevEvent.reportedEvent.beaconBalance).gt(BN(lastEvent.reportedEvent.beaconBalance))) {
+      return {
+        prevEvent: {
+          beaconBalance: prevEvent.reportedEvent.beaconBalance,
+          blockNumber: prevEvent.reportedBlock
+        },
+        lastEvent: {
+          beaconBalance: lastEvent.reportedEvent.beaconBalance,
+          blockNumber: lastEvent.reportedBlock
+        }
+      }
+    }
+  }
+}
+
+export async function waitForIncreaseBeaconBalance() {
+  let prevEvent
+  let lastEvent
+  while (true) {
+    prevEvent = await waitForReportBeacon()
+    lastEvent = await waitForReportBeacon()
+    if (BN(prevEvent.reportedEvent.beaconBalance).lt(BN(lastEvent.reportedEvent.beaconBalance))) {
+      console.log('prev beacon balance ', prevEvent.reportedEvent.beaconBalance)
+      console.log('prev from block ', prevEvent.reportedBlock)
+      console.log('last beacon balance ', lastEvent.reportedEvent.beaconBalance)
+      console.log('last from block ', lastEvent.reportedBlock)
+      return {
+        prevEvent: {
+          beaconBalance: prevEvent.reportedEvent.beaconBalance,
+          blockNumber: prevEvent.reportedBlock
+        },
+        lastEvent: {
+          beaconBalance: lastEvent.reportedEvent.beaconBalance,
+          blockNumber: lastEvent.reportedBlock
+        }
+      }
+    }
+  }
 }

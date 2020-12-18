@@ -41,10 +41,11 @@ export const UNLIMITED_STAKING_LIMIT = 1000000000
 export const ZERO_ADDRESS = '0x' + '0'.repeat(40)
 
 // fee 100% = 10000
-export const BASIC_FEE = 10000
-export const TREASURY_FEE = 1000
-export const INSURANCE_FEE = 1000
-export const NODE_OPERATOR_BASIC_FEE = 8000
+export const BASIC_FEE = 1000
+export const TREASURY_FEE = 0
+export const INSURANCE_FEE = 5000
+export const NODE_OPERATOR_BASIC_FEE = 5000
+export const USER_REWARDS = 10000 - BASIC_FEE
 
 // accounts
 export const holderAccounts = [
@@ -64,9 +65,9 @@ export const nosAccounts = [
 ]
 
 export const oracleAccounts = [
-  '0xBd7055AB500cD1b0b0B14c82BdBe83ADCc2e8D06', // 7
-  '0xe8898A4E589457D979Da4d1BDc35eC2aaf5a3f8E', // 8
-  '0xED6A91b1CFaae9882875614170CbC989fc5EfBF0' // 9
+  '0x656e544DeaB532e9f5B8b8079B3809Aa1757fb0D', // 30
+  '0xCf69181aFE6b75366d169d9B94f68D90E365Cc87', // 31
+  '0xF2De2b2dD8881DE68390Da81EDc6Ab93c8e13291' // 32
 
   // '0xceCFc058DB458c00d0e89D39B2F5e6EF0A473114',
   // '0x994e37F11c5E1A156a1d072De713f15D037349d4',

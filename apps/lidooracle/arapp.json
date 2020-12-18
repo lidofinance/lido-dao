@@ -18,22 +18,21 @@
   ],
   "environments": {
     "default": {
-      "appName": "lidooracle.lido.eth",
+      "appName": "oracle.lidopm.eth",
       "network": "development"
     },
     "rinkeby": {
-      "appName": "lidooracle.lido.eth",
+      "appName": "oracle.lidopm.eth",
       "network": "rinkeby"
     },
-    "staging": {
-      "appName": "lidooracle.lido.eth",
-      "network": "rinkeby"
+    "mainnet-test": {
+      "appName": "oracle.lidopm-pre.eth",
+      "network": "mainnet"
     },
     "mainnet": {
-      "appName": "lidooracle.lido.eth",
+      "appName": "oracle.lidopm.eth",
       "network": "mainnet"
     }
   },
-  "appName": "lidooracle.lido.eth",
-  "path": "../../contracts/oracle/LidoOracle.sol"
+  "path": "../../contracts/0.4.24/oracle/LidoOracle.sol"
 }

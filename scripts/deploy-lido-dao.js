@@ -160,7 +160,7 @@ async function deployDao({
     artifacts,
     ens,
     owner: state.owner,
-    stEthAppName: state.lido_app_steth_name,
+    stEthAppName: state.lido_app_lido_name,
     appProxies: state.appProxies,
     cstEthAddress: state.cstEthAddress
   })
@@ -208,7 +208,7 @@ async function deployDAO({
 
   const { contractAddress: daoTemplateAddress } = templateLatestVersion
   log(`Using registered DAO template: ${chalk.yellow(daoTemplateAddress)}`)
-  const template = await artifacts.require('LidoTemplate').at(daoTemplateAddress)
+  const template = await artifacts.require('LidoTemplateE2E').at(daoTemplateAddress)
 
   log(`Using DepositContract at: ${chalk.yellow(depositContractAddress)}`)
 

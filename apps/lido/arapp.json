@@ -19,26 +19,43 @@
       "name": "Set oracle contract address",
       "id": "SET_ORACLE",
       "params": []
+    },
+    {
+      "name": "Burn tokens",
+      "id": "BURN_ROLE",
+      "params": [
+        "Account which tokens are to be burnt",
+        "Token amount"
+      ]
+    },
+    {
+      "name": "Set treasury address",
+      "id": "SET_TREASURY",
+      "params": []
+    },
+    {
+      "name": "Set insurance fund address",
+      "id": "SET_INSURANCE_FUND",
+      "params": []
     }
   ],
   "environments": {
     "default": {
-      "appName": "lido.lido.eth",
+      "appName": "lido.lidopm.eth",
       "network": "development"
     },
     "rinkeby": {
-      "appName": "lido.lido.eth",
+      "appName": "lido.lidopm.eth",
       "network": "rinkeby"
     },
-    "staging": {
-      "appName": "lido.lido.eth",
-      "network": "rinkeby"
+    "mainnet-test": {
+      "appName": "lido.lidopm-pre.eth",
+      "network": "mainnet"
     },
     "mainnet": {
-      "appName": "lido.lido.eth",
+      "appName": "lido.lidopm.eth",
       "network": "mainnet"
     }
   },
-  "appName": "lido.lido.eth",
-  "path": "../../contracts/Lido.sol"
+  "path": "../../contracts/0.4.24/Lido.sol"
 }

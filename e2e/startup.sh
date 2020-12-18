@@ -61,8 +61,7 @@ while test $# -gt 0; do
       echo "  -1 | --eth1           start only eth1 part"
       echo "  -w | --web            also start Aragon web UI"
       echo "  -ms | --makesnapshots create stage snapshots"
-      echo "  -o | --oracles        start oracles"
-      echo "  -os | --seed          seed mock data"
+      echo "  --seed                seed mock data"
       exit 0
       ;;
     -r|--reset)
@@ -109,11 +108,7 @@ while test $# -gt 0; do
       MAKE_SNAPSHOT=true
       shift
       ;;
-    -o|--oracles)
-      ORACLES=true
-      shift
-      ;;
-    -os|--seed)
+    --seed)
       SEED=true
       shift
       ;;
@@ -121,6 +116,15 @@ while test $# -gt 0; do
       shift
       ;;
   esac
+done
+
+# echo "Check env..."
+CMDS="jq curl yarn node docker docker-compose unzip zip sed"
+for c in $CMDS; do
+  if ! type "$c" &> /dev/null; then
+    echo "$c not installed"
+    exit 1
+  fi
 done
 
 if test -f "$ACCOUNTS_FILE"; then
@@ -313,6 +317,9 @@ if [ $ETH2_RESET ]; then
     docker-compose rm -s -v -f validators1 > /dev/null
     docker-compose rm -s -v -f validators2 > /dev/null
     docker-compose rm -s -v -f validators3 > /dev/null
+    docker-compose rm -s -v -f oracle-1 > /dev/null
+    docker-compose rm -s -v -f oracle-2 > /dev/null
+    docker-compose rm -s -v -f oracle-3 > /dev/null
   fi
 
   
@@ -376,7 +383,6 @@ if [ $ETH2_RESET ]; then
         --datadir "/data/validators/mock_validators" \
         --directory "/data/validators/mock_validators/validator_keys" \
         --testnet-dir "/data/testnet"
-
     fi
 
     echo "Generating genesis"
@@ -428,7 +434,7 @@ if [ ! -d "$VALIDATORS3_VALIDATORS_DIR" ]; then
 fi
 
 STAGE_DIR="stage2"
-if [ $MAKE_SNAPSHOT ] && [ ! $SNAPSHOT ] && [ ! -d $SNAPSHOTS_DIR/$STAGE_DIR ]; then
+if [ $MAKE_SNAPSHOT ] && [ ! -d $SNAPSHOTS_DIR/$STAGE_DIR ]; then
   echo "Take snapshots for $STAGE_DIR"
   mkdir -p $SNAPSHOTS_DIR/$STAGE_DIR
   docker-compose stop node1
@@ -450,29 +456,21 @@ sleep 5
 docker-compose up -d mock-validators
 docker-compose up -d validators1
 docker-compose up -d validators2
-docker-compose up -d validators3
+#docker-compose up -d validators3
 
 # oracles
-if [ $ORACLES ]; then
-  echo "Building oracle container"
-  ./oracle_build.sh
-  if [ $SEED ]; then
-    $NODE scripts/mock_validators.js
-  fi
-  # STAGE_DIR="stage3"
-  # if [ $MAKE_SNAPSHOT ] && [ ! $SNAPSHOT ] && [ ! -d $SNAPSHOTS_DIR/$STAGE_DIR ]; then
-  #   echo "Take snapshots for $STAGE_DIR"
-  #   mkdir -p $SNAPSHOTS_DIR/$STAGE_DIR
-  #   docker-compose stop node1
-  #   cd $DATA_DIR
-  #   echo "Take snapshots for devchain"
-  #   zip -rqu $SNAPSHOTS_DIR/$STAGE_DIR/devchain.zip devchain
-  #   cd - > /dev/null
-  #   docker-compose start node1
-  # fi
-  LIDO=$(cat $DEPLOYED_FILE | jq -r ".networks[\"$NETWORK_ID\"].appProxies[\"lido.lido.eth\"]")
-  POOL_CONTRACT=$LIDO docker-compose up -d oracle-1 oracle-2 oracle-3
+echo "Building oracle container"
+docker-compose rm -s -v -f oracle-1 > /dev/null
+docker-compose rm -s -v -f oracle-2 > /dev/null
+docker-compose rm -s -v -f oracle-3 > /dev/null
+
+./oracle_build.sh
+$NODE scripts/set_beacon_spec.js
+if [ $SEED ]; then
+  $NODE scripts/mock_validators.js
 fi
+LIDO=$(cat $DEPLOYED_FILE | jq -r ".networks[\"$NETWORK_ID\"].appProxies[\"lido.lido.eth\"]")
+POOL_CONTRACT=$LIDO docker-compose up -d oracle-1 oracle-2 oracle-3
 
 if [ $NODES ]; then
   echo "Start extra nodes"

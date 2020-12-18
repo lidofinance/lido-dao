@@ -6,7 +6,7 @@ const { BN } = require('bn.js')
 const StETH = artifacts.require('StETH.sol') // we can just import due to StETH imported in test_helpers/Imports.sol
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
-const Lido = artifacts.require('TestLido.sol')
+const Lido = artifacts.require('LidoMock.sol')
 const OracleMock = artifacts.require('OracleMock.sol')
 const DepositContract = artifacts.require('DepositContract')
 
@@ -55,7 +55,7 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
   before('deploy base app', async () => {
     // Deploy the app's base contract.
     appBase = await Lido.new()
-    stEthBase = await StETH.new()
+    // stEthBase = await StETH.new()
     oracle = await OracleMock.new()
     nodeOperatorsRegistryBase = await NodeOperatorsRegistry.new()
   })
@@ -74,17 +74,17 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
     await operators.initialize(app.address)
 
     // token
-    proxyAddress = await newApp(dao, 'steth', stEthBase.address, appManager)
-    token = await StETH.at(proxyAddress)
-    await token.initialize(app.address)
+    // proxyAddress = await newApp(dao, 'steth', stEthBase.address, appManager)
+    token = app
+    // await token.initialize(app.address)
 
     // Set up the app's permissions.
     await acl.createPermission(voting, app.address, await app.PAUSE_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.MANAGE_FEE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.MANAGE_WITHDRAWAL_KEY(), appManager, { from: appManager })
 
-    await acl.createPermission(app.address, token.address, await token.MINT_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(app.address, token.address, await token.BURN_ROLE(), appManager, { from: appManager })
+    // await acl.createPermission(app.address, token.address, await token.MINT_ROLE(), appManager, { from: appManager })
+    // await acl.createPermission(app.address, token.address, await token.BURN_ROLE(), appManager, { from: appManager })
 
     await acl.createPermission(voting, operators.address, await operators.MANAGE_SIGNING_KEYS(), appManager, { from: appManager })
     await acl.createPermission(voting, operators.address, await operators.ADD_NODE_OPERATOR_ROLE(), appManager, { from: appManager })
@@ -99,7 +99,7 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
     })
 
     // Initialize the app's proxy.
-    await app.initialize(token.address, depositContract.address, oracle.address, operators.address)
+    await app.initialize(depositContract.address, oracle.address, operators.address)
     treasuryAddr = await app.getTreasury()
     insuranceAddr = await app.getInsuranceFund()
 

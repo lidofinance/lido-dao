@@ -82,8 +82,8 @@ export default function App() {
       withdrawalCredentials,
       bufferedEther,
       totalPooledEther,
-      token,
-      validatorRegistrationContract,
+      nodeOperatorsRegistry,
+      depositContract,
       oracle,
       // operators,
       // treasury,
@@ -238,12 +238,12 @@ export default function App() {
         content: <strong>{formatEth(totalPooledEther) || 'No data'}</strong>,
       },
       {
-        label: 'Validator Registration Contract',
-        content: <IdentityBadge entity={validatorRegistrationContract} />,
+        label: 'Deposit Contract',
+        content: <IdentityBadge entity={depositContract} />,
       },
       {
-        label: 'Token',
-        content: <IdentityBadge entity={token} />,
+        label: 'Node operators registry',
+        content: <IdentityBadge entity={nodeOperatorsRegistry} />,
       },
       {
         label: 'Oracle',

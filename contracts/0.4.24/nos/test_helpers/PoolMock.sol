@@ -7,21 +7,20 @@ import "../../interfaces/INodeOperatorsRegistry.sol";
   * @dev This is a mock. Don't use in production.
   */
 contract PoolMock {
+    event KeysAssigned(bytes pubkeys, bytes signatures);
+
     INodeOperatorsRegistry private operators;
 
     constructor(address _operators) public {
         operators = INodeOperatorsRegistry(_operators);
     }
 
-    function updateUsedKeys(uint256[] _ids, uint64[] _usedSigningKeys) external {
-        operators.updateUsedKeys(_ids, _usedSigningKeys);
+    function assignNextSigningKeys(uint256 _numKeys) external {
+        (bytes memory pubkeys, bytes memory signatures) = operators.assignNextSigningKeys(_numKeys);
+        emit KeysAssigned(pubkeys, signatures);
     }
 
     function trimUnusedKeys() external {
         operators.trimUnusedKeys();
-    }
-
-    function distributeRewards(address _token, uint256 _totalReward) external {
-        operators.distributeRewards(_token, _totalReward);
     }
 }
