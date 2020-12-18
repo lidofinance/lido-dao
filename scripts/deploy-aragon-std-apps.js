@@ -25,7 +25,7 @@ async function deployAragonStdApps({
   aragonAppsRepoRef = ARAGON_APPS_REPO_REF,
   releaseType = RELEASE_TYPE
 }) {
-  const buidlerConfig = path.resolve(buidlerArguments.config || 'buidler.config.js')
+  const hardhatConfig = path.resolve(hardhatArguments.config || 'hardhat.config.js')
   const netId = await web3.eth.net.getId()
   const netName = network.name
 
@@ -38,12 +38,12 @@ async function deployAragonStdApps({
   }
 
   if (!network.config.ensAddress) {
-    throw new Error(`ensAddress is not defined for network ${netName} in Buidler config file ${buidlerConfig}`)
+    throw new Error(`ensAddress is not defined for network ${netName} in Hardhat config file ${hardhatConfig}`)
   }
 
   if (network.config.ensAddress.toLowerCase() !== netState.ensAddress.toLowerCase()) {
     throw new Error(
-      `ensAddress for network ${netId} is different in Buidler config file ${buidlerConfig} ` + `and network state file ${networkStateFile}`
+      `ensAddress for network ${netId} is different in Hardhat config file ${hardhatConfig} ` + `and network state file ${networkStateFile}`
     )
   }
 
@@ -51,17 +51,17 @@ async function deployAragonStdApps({
   const appsRepoPath = './aragon-apps'
   await gitCloneRepo(appsRepoPath, aragonAppsRepo, aragonAppsRepoRef)
 
-  // prevent Buidler from passing the config to subprocesses
-  const env = filterObject(process.env, (key) => key.substr(0, 8) !== 'BUIDLER_')
+  // prevent Hardhat from passing the config to subprocesses
+  const env = filterObject(process.env, (key) => key.substr(0, 8) !== 'HARDHAT_')
 
   for (const appName of APPS) {
-    const results = await publishApp(appName, appsRepoPath, buidlerConfig, env, netName, releaseType)
+    const results = await publishApp(appName, appsRepoPath, hardhatConfig, env, netName, releaseType)
     updateNetworkState(netState, results)
     persistNetworkState(networkStateFile, netId, netState)
   }
 }
 
-async function publishApp(appName, appsRepoPath, buidlerConfig, env, netName, releaseType) {
+async function publishApp(appName, appsRepoPath, hardhatConfig, env, netName, releaseType) {
   logHeader(`Publishing new ${releaseType} release of app '${appName}'`)
 
   const appRootPath = path.resolve(appsRepoPath, 'apps', appName)
@@ -93,16 +93,16 @@ async function publishApp(appName, appsRepoPath, buidlerConfig, env, netName, re
     childEnv.APP_FRONTEND_DIST_PATH = path.join(appFrontendPath, 'build')
   }
 
-  await execLive('buidler', {
+  await execLive('hardhat', {
     args: [
       'publish',
       'major',
       '--config',
-      buidlerConfig,
+      hardhatConfig,
       '--network',
       netName,
       '--skip-validation',
-      // workaround: force to read URL from Buidler config
+      // workaround: force to read URL from Hardhat config
       '--ipfs-api-url',
       ''
     ],

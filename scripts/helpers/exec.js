@@ -2,9 +2,10 @@ const childProcess = require('child_process')
 
 const { log } = require('./log')
 
-function exec(cmdWithArgs, opts) {
+function exec(cmdWithArgs, opts = {}) {
+  log((opts.cwd ? `+ cd ${opts.cwd} && ` : '+ ') + cmdWithArgs)
   return new Promise((resolve, reject) => {
-    childProcess.exec(cmd, opts, (err, stdout, stderr) => {
+    childProcess.exec(cmdWithArgs, opts, (err, stdout, stderr) => {
       if (err) {
         reject(err)
       } else {

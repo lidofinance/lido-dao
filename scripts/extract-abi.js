@@ -6,35 +6,37 @@ const contractsPath = path.resolve(__dirname, '..', 'contracts')
 const abisPath = path.resolve(__dirname, '..', 'lib', 'abi')
 
 async function exportAbi() {
-  const solPaths = await iterToArray(getFiles(contractsPath))
-  const skipNames = /(Mock|test_helpers|Imports|deposit_contract|Pausable)/
+  const allArtifactPaths = await iterToArray(getFiles(artifactsPath))
+  const skipNames = /(Mock|test_helpers|Imports|deposit_contract|Pausable|.dbg.json|build-info|interfaces|oracle\/Algorithm.sol|oracle\/BitOps.sol|template\/LidoTemplate.sol)/
 
-  const lidoNames = solPaths
-    .filter((f) => {
-      const relpath = path.relative(contractsPath, f)
-      return /[.]sol$/.test(relpath) && !skipNames.test(relpath)
-    })
-    .map((f) => path.basename(f).replace(/[.]sol$/, ''))
+  const artifactPaths = allArtifactPaths.map((f) => path.relative(artifactsPath, f)).filter((relpath) => !skipNames.test(relpath))
 
-  const aragonNames = ['Voting', 'TokenManager', 'Vault', 'Finance']
-  await extractABIs(lidoNames.concat(aragonNames), abisPath)
+  const lidoArtifactPaths = artifactPaths.filter((p) => p.substr(0, 10) === 'contracts/')
+
+  const aragonAtrifactPaths = [
+    '@aragon/apps-finance/contracts/Finance.sol/Finance.json',
+    '@aragon/apps-token-manager/contracts/TokenManager.sol/TokenManager.json',
+    '@aragon/apps-vault/contracts/Vault.sol/Vault.json',
+    '@aragon/apps-voting/contracts/Voting.sol/Voting.json'
+  ]
+
+  await extractABIs(lidoArtifactPaths.concat(aragonAtrifactPaths), abisPath)
 }
 
-async function extractABIs(artifactNames, abisPath) {
+async function extractABIs(artifactPaths, abisPath) {
   if (await exists(abisPath)) {
     await fs.rmdir(abisPath, { recursive: true })
   }
 
   await fs.mkdir(abisPath, { recursive: true })
 
-  for (const artifactName of artifactNames) {
-    const jsonName = `${artifactName}.json`
-    const artifactContent = await fs.readFile(path.join(artifactsPath, jsonName))
+  for (const artifactPath of artifactPaths) {
+    const artifactContent = await fs.readFile(path.join(artifactsPath, artifactPath))
     const artifact = JSON.parse(artifactContent)
     if (artifact.abi && artifact.abi.length) {
-      console.log(`Extracting ABI for ${artifactName}...`)
+      console.log(`Extracting ABI for ${artifact.contractName}...`)
       const abiData = JSON.stringify(artifact.abi)
-      await fs.writeFile(path.join(abisPath, jsonName), abiData)
+      await fs.writeFile(path.join(abisPath, `${artifact.contractName}.json`), abiData)
     }
   }
 }

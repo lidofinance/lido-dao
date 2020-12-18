@@ -15,7 +15,7 @@ const RELEASE_TYPE = process.env.RELEASE_TYPE || 'major'
 const APPS = process.env.APPS || '*'
 const APPS_DIR_PATH = process.env.APPS_DIR_PATH || path.resolve(__dirname, '..', 'apps')
 
-async function deployAragonStdApps({
+async function deployLidoApps({
   web3,
   artifacts,
   networkStateFile = NETWORK_STATE_FILE,
@@ -23,7 +23,7 @@ async function deployAragonStdApps({
   appNames = APPS,
   releaseType = RELEASE_TYPE
 }) {
-  const buidlerConfig = path.resolve(buidlerArguments.config || 'buidler.config.js')
+  const hardhatConfig = path.resolve(hardhatArguments.config || 'hardhat.config.js')
   const netId = await web3.eth.net.getId()
   const netName = network.name
 
@@ -36,17 +36,17 @@ async function deployAragonStdApps({
   }
 
   if (!network.config.ensAddress) {
-    throw new Error(`ensAddress is not defined for network ${netName} in Buidler config file ${buidlerConfig}`)
+    throw new Error(`ensAddress is not defined for network ${netName} in Hardhat config file ${hardhatConfig}`)
   }
 
   if (network.config.ensAddress.toLowerCase() !== netState.ensAddress.toLowerCase()) {
     throw new Error(
-      `ensAddress for network ${netId} is different in Buidler config file ${buidlerConfig} ` + `and network state file ${networkStateFile}`
+      `ensAddress for network ${netId} is different in Hardhat config file ${hardhatConfig} ` + `and network state file ${networkStateFile}`
     )
   }
 
-  // prevent Buidler from passing the config to subprocesses
-  const env = filterObject(process.env, (key) => key.substr(0, 8) !== 'BUIDLER_')
+  // prevent Hardhat from passing the config to subprocesses
+  const env = filterObject(process.env, (key) => key.substr(0, 8) !== 'HARDHAT_')
 
   if (appNames && appNames !== '*') {
     appNames = appNames.split(',')
@@ -72,13 +72,13 @@ async function publishApp(appName, env, netName, appsDirPath, releaseType) {
   log(`App ID: ${chalk.yellow(appId)}`)
   logSplitter()
 
-  await execLive('buidler', {
+  await execLive('hardhat', {
     args: [
       'publish',
       releaseType,
       '--network',
       netName,
-      // workaround: force to read URL from Buidler config
+      // workaround: force to read URL from Hardhat config
       '--ipfs-api-url',
       ''
     ],
@@ -92,4 +92,4 @@ async function publishApp(appName, env, netName, appsDirPath, releaseType) {
   }
 }
 
-module.exports = runOrWrapScript(deployAragonStdApps, module)
+module.exports = runOrWrapScript(deployLidoApps, module)

@@ -1,6 +1,29 @@
+const fs = require('fs').promises
 const chalk = require('chalk')
+const { assert } = require('chai')
 
-const { log, logDeploy } = require('./log')
+const { log, logDeploy, logDeployTxData } = require('./log')
+const { getTxData } = require('./tx-data')
+
+async function printDeployTx(artifactName, args, opts = {}) {
+  const txData = await getDeployTx(artifactName, args, opts)
+  logDeployTxData(artifactName, txData)
+  return txData
+}
+
+async function saveDeployTx(artifactName, filename, args, opts = {}) {
+  const txData = await getDeployTx(artifactName, args, opts)
+  log(`Saving deploy TX data for ${artifactName} to ${chalk.yellow(filename)}`)
+  await fs.writeFile(filename, JSON.stringify(txData, null, '  '))
+  return txData
+}
+
+async function getDeployTx(artifactName, args = [], opts = {}) {
+  const artifactData = await artifacts.readArtifact(artifactName)
+  const contract = new web3.eth.Contract(artifactData.abi)
+  const txObj = contract.deploy({ data: artifactData.bytecode, arguments: args })
+  return await getTxData(txObj)
+}
 
 async function deploy(artifactName, artifacts, deploy) {
   const Artifact = artifacts.require(artifactName)
@@ -17,6 +40,57 @@ async function useOrDeploy(artifactName, artifacts, address, deploy) {
   }
 }
 
+async function useOrGetDeployed(artifactName, address, deployTxHash) {
+  const Artifact = artifacts.require(artifactName)
+  if (address) {
+    log(`Using ${artifactName}: ${chalk.yellow(address)}`)
+    return await Artifact.at(address)
+  } else {
+    return await getDeployed(artifactName, deployTxHash)
+  }
+}
+
+async function getDeployed(artifactName, deployTxHash) {
+  const Artifact = artifacts.require(artifactName)
+  log(`Using transaction: ${chalk.yellow(deployTxHash)}`)
+  const receipt = await web3.eth.getTransactionReceipt(deployTxHash)
+  if (!receipt) {
+    throw new Error(`transaction ${deployTxHash} not found`)
+  }
+  if (!receipt.contractAddress) {
+    throw new Error(`transaction ${deployTxHash} is not a contract creation transaction`)
+  }
+  log(`Using ${artifactName}: ${chalk.yellow(receipt.contractAddress)}`)
+  return await Artifact.at(receipt.contractAddress)
+}
+
+async function assertDeployedBytecode(address, artifact, desc = '') {
+  if (typeof artifact === 'string') {
+    const artifactName = artifact
+    artifact = await artifacts.readArtifact(artifactName)
+    if (!artifact.contractName) {
+      artifact.contractName = artifactName
+    }
+  }
+  if (!artifact.deployedBytecode) {
+    assert.isTrue(false, `the provided artifact doesn't contain deployedBytecode`)
+  }
+  const bytecode = await web3.eth.getCode(address)
+  const nameDesc = artifact.contractName ? chalk.yellow(artifact.contractName) : 'the expected one'
+  const checkDesc = `${desc ? desc + ': ' : ''}the bytecode at ${chalk.yellow(address)} matches ${nameDesc}`
+  assert.isTrue(bytecode.toLowerCase() === artifact.deployedBytecode.toLowerCase(), checkDesc)
+  log.success(checkDesc)
+}
+
+async function assertProxiedContractBytecode(proxyAddress, proxyArtifact, proxiedArtifact, desc) {
+  desc = desc ? `${desc} ` : ''
+  await assertDeployedBytecode(proxyAddress, proxyArtifact, `${desc}proxy`)
+  const proxy = await artifacts.require('ERCProxy').at(proxyAddress)
+  const implAddress = await proxy.implementation()
+  await assertDeployedBytecode(implAddress, proxiedArtifact, `${desc}impl`)
+  return implAddress
+}
+
 function withArgs(...args) {
   return async (Artifact) => {
     const instance = await Artifact.new(...args)
@@ -27,4 +101,15 @@ function withArgs(...args) {
   }
 }
 
-module.exports = { deploy, useOrDeploy, withArgs }
+module.exports = {
+  printDeployTx,
+  saveDeployTx,
+  getDeployTx,
+  deploy,
+  useOrDeploy,
+  useOrGetDeployed,
+  getDeployed,
+  assertDeployedBytecode,
+  assertProxiedContractBytecode,
+  withArgs
+}
