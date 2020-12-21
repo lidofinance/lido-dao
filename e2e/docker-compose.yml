@@ -252,6 +252,8 @@ services:
     image: lidofinance/oracle:e2e
     container_name: oracle-1
     #restart: unless-stopped
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
     environment:
       - ETH1_NODE=http://node1:8545
       - BEACON_NODE=http://node2-1:5052
@@ -265,6 +267,8 @@ services:
     image: lidofinance/oracle:e2e
     container_name: oracle-2
     #restart: unless-stopped
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
     environment:
       - ETH1_NODE=http://node1:8545
       - BEACON_NODE=http://node2-1:5052
@@ -278,6 +282,8 @@ services:
     image: lidofinance/oracle:e2e
     container_name: oracle-3
     #restart: unless-stopped
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
     environment:
       - ETH1_NODE=http://node1:8545
       - BEACON_NODE=http://node2-1:5052
