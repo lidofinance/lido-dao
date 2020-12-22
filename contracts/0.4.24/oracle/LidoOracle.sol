@@ -97,19 +97,14 @@ contract LidoOracle is ILidoOracle, AragonApp {
     {
         assert(1 == ((1 << (MAX_MEMBERS - 1)) >> (MAX_MEMBERS - 1)));  // static assert
 
-        require(_epochsPerFrame > 0, "BAD_EPOCHS_PER_FRAME");
-        require(_slotsPerEpoch > 0, "BAD_SLOTS_PER_EPOCH");
-        require(_secondsPerSlot > 0, "BAD_SECONDS_PER_SLOT");
-        require(_genesisTime > 0, "BAD_GENESIS_TIME");
-
-        LIDO_POSITION.setStorageAddress(_lido);
-
         _setBeaconSpec(
             _epochsPerFrame,
             _slotsPerEpoch,
             _secondsPerSlot,
             _genesisTime
         );
+
+        LIDO_POSITION.setStorageAddress(_lido);
 
         initialized();
     }
@@ -268,11 +263,6 @@ contract LidoOracle is ILidoOracle, AragonApp {
     )
         public auth(SET_BEACON_SPEC)
     {
-        require(_epochsPerFrame > 0, "BAD_EPOCHS_PER_FRAME");
-        require(_slotsPerEpoch > 0, "BAD_SLOTS_PER_EPOCH");
-        require(_secondsPerSlot > 0, "BAD_SECONDS_PER_SLOT");
-        require(_genesisTime > 0, "BAD_GENESIS_TIME");
-
         _setBeaconSpec(
             _epochsPerFrame,
             _slotsPerEpoch,
@@ -350,6 +340,11 @@ contract LidoOracle is ILidoOracle, AragonApp {
     )
         internal
     {
+        require(_epochsPerFrame > 0, "BAD_EPOCHS_PER_FRAME");
+        require(_slotsPerEpoch > 0, "BAD_SLOTS_PER_EPOCH");
+        require(_secondsPerSlot > 0, "BAD_SECONDS_PER_SLOT");
+        require(_genesisTime > 0, "BAD_GENESIS_TIME");
+
         uint256 data = (
             uint256(_epochsPerFrame) << 192 |
             uint256(_slotsPerEpoch) << 128 |
