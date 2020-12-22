@@ -360,54 +360,17 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody,
           await assertRevert(app.reportBeacon(2, 32, 1, { from: user3 }), 'EPOCH_IS_TOO_OLD')
         })
 
-        it("member removal dont affect other members' data in last reportable epoch, all other reportable epochs will be staled", async () => {
-          for (let epoch = 1; epoch < 6; epoch++) await app.reportBeacon(epoch, 32, 1, { from: user1 })
+        it("member removal stales all reportable epochs before last reported", async () => {
+          for (let epoch = 1; epoch < 4; epoch++) await app.reportBeacon(epoch, 32, 1, { from: user1 })
           await assertReportableEpochs(1, 5)
 
-          for (let epoch = 1; epoch < 6; epoch++) await app.reportBeacon(epoch, 32, 1, { from: user2 })
+          for (let epoch = 1; epoch < 3; epoch++) await app.reportBeacon(epoch, 32, 1, { from: user2 })
           await assertReportableEpochs(1, 5)
 
           await app.removeOracleMember(user3, { from: voting })
-          await assertReportableEpochs(5, 5)
+          await assertReportableEpochs(4, 5)
 
-          await assertRevert(app.reportBeacon(5, 32, 1, { from: user3 }), 'MEMBER_NOT_FOUND')
-
-          await app.reportBeacon(5, 32, 1, { from: user4 })
-          await assertReportableEpochs(6, 5)
-        })
-
-        it('member removal removes their data', async () => {
-          for (let epoch = 1; epoch < 6; epoch++) await app.reportBeacon(epoch, 32, 1, { from: user1 }) // this should be removed
-          await assertReportableEpochs(1, 5)
-
-          for (let epoch = 1; epoch < 6; epoch++) await app.reportBeacon(epoch, 64, 2, { from: user2 }) // this should be intact
-          await assertReportableEpochs(1, 5)
-
-          await app.removeOracleMember(user1, { from: voting })
-          await assertReportableEpochs(5, 5)
-
-          await app.reportBeacon(5, 64, 2, { from: user3 })
-          await assertReportableEpochs(5, 5)
-
-          await app.reportBeacon(5, 65, 2, { from: user4 })
-          await assertReportableEpochs(6, 5)
-        })
-
-        it('tail member removal works', async () => {
-          for (let epoch = 1; epoch < 6; epoch++) await app.reportBeacon(epoch, 32, 1, { from: user1 }) // this should be intact
-          await assertReportableEpochs(1, 5)
-
-          for (let epoch = 1; epoch < 6; epoch++) await app.reportBeacon(epoch, 64, 2, { from: user4 }) // this should be removed
-          await assertReportableEpochs(1, 5)
-
-          await app.removeOracleMember(user4, { from: voting })
-          await assertReportableEpochs(5, 5)
-
-          await app.reportBeacon(5, 32, 1, { from: user2 })
-          await assertReportableEpochs(5, 5)
-
-          await app.reportBeacon(5, 32, 1, { from: user3 })
-          await assertReportableEpochs(6, 5)
+          await assertRevert(app.reportBeacon(4, 32, 1, { from: user3 }), 'MEMBER_NOT_FOUND')
         })
 
         it('quorum change triggers finalization of last reported epoch, all other reportable epochs will be staled', async () => {
