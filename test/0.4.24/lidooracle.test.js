@@ -278,16 +278,16 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody,
         await assertReportableEpochs(1, 0)
       })
 
-      it('reportBeacon completes only if data is unimodal', async () => {
+      it('reportBeacon completes only if data were same quorum (3) times', async () => {
         let receipt
 
-        await app.reportBeacon(0, 32, 1, { from: user1 })
+        await app.reportBeacon(0, 32, 1, { from: user1 }) // one value
         await assertReportableEpochs(0, 0)
-        await app.reportBeacon(0, 33, 1, { from: user2 })
+        await app.reportBeacon(0, 65, 2, { from: user2 }) // 2 different values
         await assertReportableEpochs(0, 0)
-        await app.reportBeacon(0, 65, 2, { from: user3 }) // data is not unimodal, quorum is not reached
+        await app.reportBeacon(0, 65, 2, { from: user3 }) // one of them repeated 2 times
         await assertReportableEpochs(0, 0)
-        receipt = await app.reportBeacon(0, 65, 2, { from: user4 }) // data is unimodal, quorum is reached
+        receipt = await app.reportBeacon(0, 65, 2, { from: user4 }) // repeated 3 times, quorum reached
         assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 0, beaconBalance: 65, beaconValidators: 2 } })
         await assertReportableEpochs(1, 0)
 
@@ -301,7 +301,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody,
         await assertReportableEpochs(1, 1)
         await app.reportBeacon(1, 97, 3, { from: user3 })
         await assertReportableEpochs(1, 1)
-        await app.reportBeacon(1, 98, 3, { from: user4 }) // data is not unimodal, quorum is not reached
+        await app.reportBeacon(1, 98, 3, { from: user4 }) // all values are different
         await assertReportableEpochs(1, 1)
 
         await app.setTime(1606824000 + 32 * 12 * 2)
@@ -389,7 +389,8 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody,
           await app.reportBeacon(5, 64, 2, { from: user3 })
           await assertReportableEpochs(5, 5)
 
-          await app.reportBeacon(5, 65, 2, { from: user4 })
+          receipt = await app.reportBeacon(5, 64, 2, { from: user4 })
+          assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 5, beaconBalance: 64, beaconValidators: 2 } })
           await assertReportableEpochs(6, 5)
         })
 

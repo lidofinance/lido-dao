@@ -376,14 +376,102 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
+      * Computes mode of a non-empty array, if array is unimodal.
+      * Low gas cost.
+      */
+    function mode(uint256[] data) internal pure returns (bool, uint256) {
+
+        assert(0 != data.length);
+
+        // allocate arrays
+        uint256[] memory dataValues = new uint256[](data.length);
+        uint256[] memory dataValuesCounts = new uint256[](data.length);
+
+        // initialize first element
+        dataValues[0] = data[0];
+        dataValuesCounts[0] = 1;
+        uint256 dataValuesLength = 1;
+
+        // process data
+        uint256 i = 0;
+        uint256 j = 0;
+        bool complete;
+        for (i = 1; i < data.length; i++) {
+            complete = true;
+            for (j = 0; j < dataValuesLength; j++) {
+                if (data[i] == dataValues[j]) {
+                    dataValuesCounts[j]++;
+                    complete = false;
+                    break;
+                }
+            }
+            if (complete) {
+                dataValues[dataValuesLength] = data[i];
+                dataValuesCounts[dataValuesLength]++;
+                dataValuesLength++;
+            }
+        }
+
+        // find mode value index
+        uint256 mostFrequentValueIndex = 0;
+        for (i = 1; i < dataValuesLength; i++) {
+            if (dataValuesCounts[i] > dataValuesCounts[mostFrequentValueIndex])
+                mostFrequentValueIndex = i;
+        }
+
+        // check if data is unimodal
+        for (i = 0; i < dataValuesLength; i++) {
+            if ((i != mostFrequentValueIndex) && (dataValuesCounts[i] == dataValuesCounts[mostFrequentValueIndex]))
+                return (false, 0);
+        }
+
+        return (true, dataValues[mostFrequentValueIndex]);
+    }
+
+    function _isQuorum(uint256 quorum, uint256[] data) internal pure returns (bool isQuorum, uint256 quorumValue) {
+        // allocate arrays
+        uint256[] memory dataValues = new uint256[](data.length);
+        uint256[] memory dataValuesCounts = new uint256[](data.length);
+
+        uint256 dataValuesLength = 0;
+
+        // process data
+        uint256 i = 0;
+        uint256 j = 0;
+        bool complete;
+        for (i = 0; i < data.length; i++) {
+            complete = true;
+            for (j = 0; j < dataValuesLength; j++) {
+                if (data[i] == dataValues[j]) {
+                    dataValuesCounts[j]++;
+                    complete = false;
+                    break;
+                }
+            }
+            if (complete) {
+                dataValues[dataValuesLength] = data[i];
+                dataValuesCounts[dataValuesLength]++;
+                dataValuesLength++;
+            }
+            if (dataValuesCounts[j] == quorum) {
+                quorumValue = dataValues[j];
+                return (true, quorumValue);
+            }
+        }
+
+        return (false, 0);
+    }
+
+    /**
      * @dev Returns if quorum reached and mode-value report
      * @return isQuorum - true, when quorum is reached, false otherwise
      * @return modeReport - valid mode-value report when quorum is reached, 0-data otherwise
      */
-    function _getQuorumReport(uint256 _epochId) internal view returns (bool isQuorum, Report memory modeReport) {
+    function _getQuorumReport(uint256 _epochId) internal view returns (bool isQuorum, Report memory quorumReport) {
         uint256 mask = gatheredEpochData[_epochId].reportsBitMask;
         uint256 popcnt = mask.popcnt();
-        if (popcnt < getQuorum())
+        uint256 quorum = getQuorum();
+        if (popcnt < quorum)
             return (false, Report({beaconBalance: 0, beaconValidators: 0}));
 
         assert(0 != popcnt && popcnt <= members.length);
@@ -400,15 +488,14 @@ contract LidoOracle is ILidoOracle, AragonApp {
 
         assert(i == data.length);
 
-        // find mode value of this array
-        (bool isUnimodal, uint256 mode) = Algorithm.mode(data);
-        if (!isUnimodal)
-            return (false, Report({beaconBalance: 0, beaconValidators: 0}));
-
-        // unpack Report struct from uint256
-        modeReport = uint256ToReport(mode);
-
-        return (true, modeReport);
+        uint256 quorumValue;
+        (isQuorum, quorumValue) = _isQuorum(quorum, data);
+        if (isQuorum) {
+            quorumReport = uint256ToReport(quorumValue);
+            return (true, quorumReport);
+        }
+            
+        return (false, Report({beaconBalance: 0, beaconValidators: 0}));
     }
 
     /**
