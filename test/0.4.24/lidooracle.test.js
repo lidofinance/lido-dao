@@ -4,31 +4,6 @@ const { assertBn, assertRevert, assertEvent, assertAmountOfEvents } = require('@
 const { bn } = require('@aragon/contract-helpers-test')
 
 const LidoOracle = artifacts.require('LidoOracleMock.sol')
-const Algorithm = artifacts.require('AlgorithmMock.sol')
-
-contract('Algorithm', ([testUser]) => {
-  let algorithm
-
-  before('deploy base app', async () => {
-    algorithm = await Algorithm.new()
-  })
-
-  it('mode function works', async () => {
-    let r
-
-    r = await algorithm.modeTest(['1', '2', '3', '1'], { from: testUser })
-    assert(r.isUnimodal === true)
-    assertBn(r.mode, bn(1))
-
-    r = await algorithm.modeTest(['1', '1', '2', '2'], { from: testUser })
-    assert(r.isUnimodal === false)
-    assertBn(r.mode, bn(0))
-
-    r = await algorithm.modeTest(['1', '2', '2', '2'], { from: testUser })
-    assert(r.isUnimodal === true)
-    assertBn(r.mode, bn(2))
-  })
-})
 
 contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody, ...accounts]) => {
   let appBase, app
