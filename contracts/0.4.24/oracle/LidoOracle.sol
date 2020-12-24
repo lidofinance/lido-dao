@@ -12,7 +12,6 @@ import "@aragon/os/contracts/lib/math/SafeMath64.sol";
 import "../interfaces/ILidoOracle.sol";
 import "../interfaces/ILido.sol";
 
-import "./Algorithm.sol";
 import "./BitOps.sol";
 
 
@@ -428,17 +427,23 @@ contract LidoOracle is ILidoOracle, AragonApp {
         return (true, dataValues[mostFrequentValueIndex]);
     }
 
-    function _isQuorum(uint256 quorum, uint256[] data) internal pure returns (bool isQuorum, uint256 quorumValue) {
+    /**
+     * @dev Returns quorum-frequent value when it exists in `data`
+     * @return isQuorum - true, when value frequency equals to quorum
+     * @return quorumValue - quorum-frequent value
+     */
+    function _findQuorumValue(uint256 quorum, uint256[] data) internal pure returns (bool isQuorum, uint256 quorumValue) {
         // allocate arrays
         uint256[] memory dataValues = new uint256[](data.length);
         uint256[] memory dataValuesCounts = new uint256[](data.length);
 
+        // utility variables
         uint256 dataValuesLength = 0;
-
-        // process data
         uint256 i = 0;
         uint256 j = 0;
         bool complete;
+
+        // process data
         for (i = 0; i < data.length; i++) {
             complete = true;
             for (j = 0; j < dataValuesLength; j++) {
@@ -463,9 +468,9 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * @dev Returns if quorum reached and mode-value report
+     * @dev Returns if quorum reached and quorum report
      * @return isQuorum - true, when quorum is reached, false otherwise
-     * @return modeReport - valid mode-value report when quorum is reached, 0-data otherwise
+     * @return quorumReport - valid report value when quorum is reached, 0-data otherwise
      */
     function _getQuorumReport(uint256 _epochId) internal view returns (bool isQuorum, Report memory quorumReport) {
         uint256 mask = gatheredEpochData[_epochId].reportsBitMask;
@@ -487,9 +492,9 @@ contract LidoOracle is ILidoOracle, AragonApp {
         }
 
         assert(i == data.length);
-
+        
         uint256 quorumValue;
-        (isQuorum, quorumValue) = _isQuorum(quorum, data);
+        (isQuorum, quorumValue) = _findQuorumValue(quorum, data);
         if (isQuorum) {
             quorumReport = uint256ToReport(quorumValue);
             return (true, quorumReport);
