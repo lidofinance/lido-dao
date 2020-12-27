@@ -20,4 +20,13 @@ contract LidoOracleMock is LidoOracle {
     function _getTime() internal view returns (uint256) {
         return time;
     }
+
+    function findQuorumValue(uint256 _quorum, uint256[] _data) 
+        public
+        pure
+        returns (bool isQuorum, uint256 quorumValue)
+    {
+        (isQuorum, quorumValue) = _findQuorumValue(_quorum, _data);
+        return (isQuorum, quorumValue);
+    }
 }

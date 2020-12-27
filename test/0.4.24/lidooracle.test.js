@@ -172,6 +172,50 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody,
       assertBn(result.frameStartTime, 1606824000 + 32 * 12 * 120)
       assertBn(result.frameEndTime, 1606824000 + 32 * 12 * 130 - 1)
     })
+
+    it('_findQuorumValue works', async () => {
+      let result
+
+      await assertRevert(app.findQuorumValue(0, []))
+      await assertRevert(app.findQuorumValue(1, ['1', '2']))
+      await assertRevert(app.findQuorumValue(2, ['1']))
+
+      result = await app.findQuorumValue(1, ['1'])
+      assert(result.isQuorum === true)
+      assertBn(result.quorumValue, bn(1))
+
+      result = await app.findQuorumValue(2, ['1', '2'])
+      assert(result.isQuorum === false)
+      assertBn(result.quorumValue, bn(0))
+
+      result = await app.findQuorumValue(2, ['1', '2', '3'])
+      assert(result.isQuorum === false)
+      assertBn(result.quorumValue, bn(0))
+
+      result = await app.findQuorumValue(2, ['1', '1'])
+      assert(result.isQuorum === true)
+      assertBn(result.quorumValue, bn(1))
+
+      result = await app.findQuorumValue(2, ['1', '1', '1'])
+      assert(result.isQuorum === true)
+      assertBn(result.quorumValue, bn(1))
+
+      result = await app.findQuorumValue(3, ['1', '1', '2', '3'])
+      assert(result.isQuorum === false)
+      assertBn(result.quorumValue, bn(0))
+
+      result = await app.findQuorumValue(3, ['1', '2', '1', '3'])
+      assert(result.isQuorum === false)
+      assertBn(result.quorumValue, bn(0))
+
+      result = await app.findQuorumValue(3, ['2', '1', '1', '1'])
+      assert(result.isQuorum === true)
+      assertBn(result.quorumValue, bn(1))
+
+      result = await app.findQuorumValue(3, ['1', '2', '1', '1'])
+      assert(result.isQuorum === true)
+      assertBn(result.quorumValue, bn(1))
+    })
   })
 
   describe('When there is single-member setup', function () {
@@ -409,7 +453,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody,
       await app.setTime(1606824000)
 
       // Add 10 oracle members
-      for(i = 0; i < 10; i++) {
+      for (i = 0; i < 10; i++) {
         await app.addOracleMember(oracles[i], { from: voting })
       }
 
@@ -418,7 +462,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody,
 
       // All oracles are broken and provide random data. The first 8 oracles report
       // different data.
-      for(i = 0; i < 8; i++) {
+      for (i = 0; i < 8; i++) {
         await app.reportBeacon(0, i, i, { from: oracles[i] })
       }
 
