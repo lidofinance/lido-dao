@@ -1,6 +1,7 @@
 # Lido Ethereum Liquid Staking Protocol
 
 [![Tests](https://github.com/lidofinance/lido-dao/workflows/Tests/badge.svg)](https://github.com/lidofinance/lido-dao/actions)
+[![e2e tests](https://github.com/lidofinance/lido-nightly/workflows/e2e%20tests/badge.svg)](https://github.com/lidofinance/lido-nightly/actions)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 The Lido Ethereum Liquid Staking Protocol, built on Ethereum 2.0's Beacon chain, allows their users to earn staking rewards on the Beacon chain without locking Ether or maintaining staking infrastructure.
