@@ -13,20 +13,17 @@ contract('Algorithm', ([testUser]) => {
     algorithm = await Algorithm.new()
   })
 
-  it('mode function works', async () => {
+  it('quorum function works', async () => {
     let r
 
-    r = await algorithm.modeTest(['1', '2', '3', '1'], { from: testUser })
-    assert(r.isUnimodal === true)
-    assertBn(r.mode, bn(1))
+    r = await algorithm.frequentTest(['1', '2', '3', '1'], 2, { from: testUser })
+    assertBn(r, bn(1))
 
-    r = await algorithm.modeTest(['1', '1', '2', '2'], { from: testUser })
-    assert(r.isUnimodal === false)
-    assertBn(r.mode, bn(0))
+    r = await algorithm.frequentTest(['1', '1', '2', '2'], 3, { from: testUser })
+    assertBn(r, bn(0))
 
-    r = await algorithm.modeTest(['1', '2', '2', '2'], { from: testUser })
-    assert(r.isUnimodal === true)
-    assertBn(r.mode, bn(2))
+    r = await algorithm.frequentTest(['1', '2', '2', '2'], 3, { from: testUser })
+    assertBn(r, bn(2))
   })
 })
 
@@ -281,6 +278,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
       it('reportBeacon completes only if data is unimodal', async () => {
         let receipt
 
+        await app.setQuorum(2, { from: voting })
         await app.reportBeacon(0, 32, 1, { from: user1 })
         await assertReportableEpochs(0, 0)
         await app.reportBeacon(0, 33, 1, { from: user2 })
@@ -377,6 +375,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
         })
 
         it('member removal removes their data', async () => {
+          await app.setQuorum(3, { from: voting })
           for (let epoch = 1; epoch < 6; epoch++) await app.reportBeacon(epoch, 32, 1, { from: user1 }) // this should be removed
           await assertReportableEpochs(1, 5)
 
