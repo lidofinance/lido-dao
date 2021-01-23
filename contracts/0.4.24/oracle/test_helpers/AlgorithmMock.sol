@@ -8,7 +8,7 @@ import "../Algorithm.sol";
 
 
 contract AlgorithmMock {
-    function modeTest(uint256[] data) public pure returns (bool isUnimodal, uint256 mode) {
-        return Algorithm.mode(data);
+    function frequentTest(uint256[] data, uint256 quorum) public pure returns (uint256) {
+        return Algorithm.frequent(data, quorum);
     }
 }

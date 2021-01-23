@@ -11,55 +11,62 @@ library Algorithm {
     using SafeMath for uint256;
 
     /**
-      * Computes mode of a non-empty array, if array is unimodal.
-      * Low gas cost.
+      * @dev Finds the first element in the given array |data| that occures
+      * more that |quorum| times. Low gas cost for majority case. Returns the
+      * discovered element or 0 if no element is frequent enough.
       */
-    function mode(uint256[] data) internal pure returns (bool, uint256) {
-
+    function frequent(uint256[] data, uint256 quorum) internal pure returns (uint256) {
         assert(0 != data.length);
 
-        // allocate arrays
-        uint256[] memory dataValues = new uint256[](data.length);
-        uint256[] memory dataValuesCounts = new uint256[](data.length);
-
-        // initialize first element
-        dataValues[0] = data[0];
-        dataValuesCounts[0] = 1;
-        uint256 dataValuesLength = 1;
-
-        // process data
-        uint256 i = 0;
-        uint256 j = 0;
-        bool complete;
-        for (i = 1; i < data.length; i++) {
-            complete = true;
-            for (j = 0; j < dataValuesLength; j++) {
-                if (data[i] == dataValues[j]) {
-                    dataValuesCounts[j]++;
-                    complete = false;
-                    break;
+        uint256 acc = 0;
+        uint256 ctr = 0;
+        uint256 i;
+        if (quorum * 2 > data.length) {
+            
+            // If the expected quorum is more then half of data length, apply
+            // Boyer–Moore majority vote algorithm
+            for (i = 0; i < data.length; ++i) {
+                if (ctr == 0) {
+                    acc = data[i];
+                    ++ctr;
+                } else if (acc == data[i]) {
+                    if (++ctr == quorum) return acc;
+                } else {
+                    --ctr;
                 }
             }
-            if (complete) {
-                dataValues[dataValuesLength] = data[i];
-                dataValuesCounts[dataValuesLength]++;
-                dataValuesLength++;
+
+            // And make sure the resulted element is frequent enough
+            ctr = 0;
+            for (i = 0; i < data.length; ++i) {
+                if (data[i] == acc && ++ctr == quorum) return acc;
+            }
+        } else {
+            
+            // Otherwise, apply optimized insertion sort
+            uint256 j;
+            uint256 cur;
+            for (i = 1; i < data.length; ++i) {
+                j = i - 1;
+                cur = data[i];
+                while (j >= 0 && data[j] > cur) {
+                    data[j + 1] = data[j];
+                    --j;
+                }
+                data[j + 1] = cur;
+            }
+
+            // And locate the first element that is frequent enough
+            for (i = 0; i < data.length; ++i) {
+                if (acc == data[i]) {
+                    if (++ctr == quorum) return acc;
+                } else {
+                    acc = data[i];
+                    ctr = 1;
+                }
             }
         }
 
-        // find mode value index
-        uint256 mostFrequentValueIndex = 0;
-        for (i = 1; i < dataValuesLength; i++) {
-            if (dataValuesCounts[i] > dataValuesCounts[mostFrequentValueIndex])
-                mostFrequentValueIndex = i;
-        }
-
-        // check if data is unimodal
-        for (i = 0; i < dataValuesLength; i++) {
-            if ((i != mostFrequentValueIndex) && (dataValuesCounts[i] == dataValuesCounts[mostFrequentValueIndex]))
-                return (false, 0);
-        }
-
-        return (true, dataValues[mostFrequentValueIndex]);
+        return 0;
     }
 }

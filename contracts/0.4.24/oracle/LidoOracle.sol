@@ -383,7 +383,8 @@ contract LidoOracle is ILidoOracle, AragonApp {
     function _getQuorumReport(uint256 _epochId) internal view returns (bool isQuorum, Report memory modeReport) {
         uint256 mask = gatheredEpochData[_epochId].reportsBitMask;
         uint256 popcnt = mask.popcnt();
-        if (popcnt < getQuorum())
+        uint256 quorum = getQuorum();
+        if (popcnt < quorum)
             return (false, Report({beaconBalance: 0, beaconValidators: 0}));
 
         assert(0 != popcnt && popcnt <= members.length);
@@ -401,8 +402,8 @@ contract LidoOracle is ILidoOracle, AragonApp {
         assert(i == data.length);
 
         // find mode value of this array
-        (bool isUnimodal, uint256 mode) = Algorithm.mode(data);
-        if (!isUnimodal)
+        uint256 mode = Algorithm.frequent(data, quorum);
+        if (mode == 0)
             return (false, Report({beaconBalance: 0, beaconValidators: 0}));
 
         // unpack Report struct from uint256
