@@ -13,7 +13,7 @@ contract('Algorithm', ([testUser]) => {
     algorithm = await Algorithm.new()
   })
 
-  it('quorum function works', async () => {
+  it('frequent function works', async () => {
     let r
 
     r = await algorithm.frequentTest(['1', '2', '3', '1'], 2, { from: testUser })
@@ -24,6 +24,24 @@ contract('Algorithm', ([testUser]) => {
 
     r = await algorithm.frequentTest(['1', '2', '2', '2'], 3, { from: testUser })
     assertBn(r, bn(2))
+  })
+
+  it('frequent function with more then half quorum', async () => {
+    assertBn(await algorithm.frequentTest(['1', '2', '1', '3', '1'], 3, { from: testUser }), bn(1))
+    assertBn(await algorithm.frequentTest(['1', '1', '2', '2', '3'], 3, { from: testUser }), bn(0))
+    assertBn(await algorithm.frequentTest(['1', '2', '2', '2', '3'], 3, { from: testUser }), bn(2))
+    assertBn(await algorithm.frequentTest(['1', '2', '1', '3', '1'], 4, { from: testUser }), bn(0))
+    assertBn(await algorithm.frequentTest(['1', '1', '2', '2', '3'], 4, { from: testUser }), bn(0))
+    assertBn(await algorithm.frequentTest(['1', '2', '2', '2', '3', '2'], 4, { from: testUser }), bn(2))
+  })
+
+  it('frequent function with less then half quorum', async () => {
+    assertBn(await algorithm.frequentTest(['1', '2', '1', '3', '1'], 2, { from: testUser }), bn(1))
+    assertBn(await algorithm.frequentTest(['1', '1', '2', '2', '3'], 2, { from: testUser }), bn(1))
+    assertBn(await algorithm.frequentTest(['1', '2', '2', '2', '3'], 2, { from: testUser }), bn(2))
+    assertBn(await algorithm.frequentTest(['1', '2', '1', '3', '1', '3'], 3, { from: testUser }), bn(1))
+    assertBn(await algorithm.frequentTest(['1', '1', '2', '2', '3', '3'], 3, { from: testUser }), bn(0))
+    assertBn(await algorithm.frequentTest(['1', '2', '2', '2', '3', '2'], 3, { from: testUser }), bn(2))
   })
 })
 
@@ -197,7 +215,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
   })
 
   describe('When there is single-member setup', function () {
-    describe('current time: 1606824000 , current epoch: 0', function () {
+    describe('current time: 1606824000, current epoch: 0', function () {
       beforeEach(async () => {
         await app.setTime(1606824000)
         await app.addOracleMember(user1, { from: voting })
@@ -254,7 +272,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
       await app.addOracleMember(user4, { from: voting })
     })
 
-    describe('current time: 1606824000 , current epoch: 0', function () {
+    describe('current time: 1606824000, current epoch: 0', function () {
       beforeEach(async () => {
         await app.setTime(1606824000)
         await app.setQuorum(3, { from: voting })
@@ -307,7 +325,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
 
         await app.reportBeacon(2, 99, 3, { from: user1 })
         await assertReportableEpochs(1, 2)
-        receipt = await await app.setQuorum(1, { from: voting })
+        receipt = await app.setQuorum(1, { from: voting })
         assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 2, beaconBalance: 99, beaconValidators: 3 } })
         await assertReportableEpochs(3, 2)
       })
@@ -375,7 +393,6 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
         })
 
         it('member removal removes their data', async () => {
-          await app.setQuorum(3, { from: voting })
           for (let epoch = 1; epoch < 6; epoch++) await app.reportBeacon(epoch, 32, 1, { from: user1 }) // this should be removed
           await assertReportableEpochs(1, 5)
 
@@ -385,10 +402,10 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
           await app.removeOracleMember(user1, { from: voting })
           await assertReportableEpochs(5, 5)
 
-          await app.reportBeacon(5, 64, 2, { from: user3 })
+          await app.reportBeacon(5, 64, 2, { from: user3 }) // currently, quorum is 3
           await assertReportableEpochs(5, 5)
 
-          await app.reportBeacon(5, 65, 2, { from: user4 })
+          await app.reportBeacon(5, 64, 2, { from: user4 })
           await assertReportableEpochs(6, 5)
         })
 
