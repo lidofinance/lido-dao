@@ -37,11 +37,17 @@ contract('Algorithm', ([testUser]) => {
 
   it('frequent function with less then half quorum', async () => {
     assertBn(await algorithm.frequentTest(['1', '2', '1', '3', '1'], 2, { from: testUser }), bn(1))
-    assertBn(await algorithm.frequentTest(['1', '1', '2', '2', '3'], 2, { from: testUser }), bn(1))
+    assertBn(await algorithm.frequentTest(['1', '1', '2', '2', '3'], 2, { from: testUser }), bn(0))
     assertBn(await algorithm.frequentTest(['1', '2', '2', '2', '3'], 2, { from: testUser }), bn(2))
     assertBn(await algorithm.frequentTest(['1', '2', '1', '3', '1', '3'], 3, { from: testUser }), bn(1))
     assertBn(await algorithm.frequentTest(['1', '1', '2', '2', '3', '3'], 3, { from: testUser }), bn(0))
     assertBn(await algorithm.frequentTest(['1', '2', '2', '2', '3', '2'], 3, { from: testUser }), bn(2))
+    assertBn(await algorithm.frequentTest(['1', '2', '1', '3', '1', '3', '1', '4'], 4, { from: testUser }), bn(1))
+    assertBn(await algorithm.frequentTest(['1', '1', '2', '2', '3', '3', '3', '3'], 4, { from: testUser }), bn(3))
+    assertBn(await algorithm.frequentTest(['2', '1', '1', '1', '2', '2', '2', '1'], 4, { from: testUser }), bn(0))
+    assertBn(await algorithm.frequentTest(['2', '2', '2', '2', '1', '1', '1', '3'], 4, { from: testUser }), bn(2))
+    assertBn(await algorithm.frequentTest(['2', '1', '1', '1', '2', '2', '2', '3'], 4, { from: testUser }), bn(2))
+    assertBn(await algorithm.frequentTest(['2', '1', '1', '1', '2', '2', '3', '1'], 4, { from: testUser }), bn(1))
   })
 })
 

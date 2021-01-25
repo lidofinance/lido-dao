@@ -30,6 +30,7 @@ library Algorithm {
                     acc = data[i];
                     ++ctr;
                 } else if (acc == data[i]) {
+                    // If enough same elemnts in a row, immediately return them
                     if (++ctr == quorum) return acc;
                 } else {
                     --ctr;
@@ -47,24 +48,42 @@ library Algorithm {
             uint256 j;
             uint256 cur;
             for (i = 1; i < data.length; ++i) {
-                j = i - 1;
+                j = i;
                 cur = data[i];
-                while (j >= 0 && data[j] > cur) {
-                    data[j + 1] = data[j];
+                while (j > 0 && data[j - 1] > cur) {
+                    data[j] = data[j - 1];
                     --j;
                 }
-                data[j + 1] = cur;
+                data[j] = cur;
             }
 
             // And locate the first element that is frequent enough
+            uint256 longest = 0;
+            uint256 longest2 = 0;
             for (i = 0; i < data.length; ++i) {
                 if (acc == data[i]) {
-                    if (++ctr == quorum) return acc;
+                    ++ctr;
                 } else {
+                    if (ctr > longest) {
+                        cur = acc;
+                        longest2 = longest;
+                        longest = ctr;
+                    } else if (ctr > longest2) {
+                        longest2 = ctr;
+                    }
                     acc = data[i];
                     ctr = 1;
                 }
             }
+            if (ctr > longest) {
+                cur = acc;
+                longest2 = longest;
+                longest = ctr;
+            } else if (ctr > longest2) {
+                longest2 = ctr;
+            }
+
+            if (longest >= quorum && longest2 < longest) return cur;
         }
 
         return 0;
