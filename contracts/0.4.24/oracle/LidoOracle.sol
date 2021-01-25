@@ -402,8 +402,8 @@ contract LidoOracle is ILidoOracle, AragonApp {
         assert(i == data.length);
 
         // find mode value of this array
-        uint256 mode = Algorithm.frequent(data, quorum);
-        if (mode == 0)
+        (bool exists, uint256 mode) = Algorithm.frequent(data, quorum);
+        if (!exists)
             return (false, Report({beaconBalance: 0, beaconValidators: 0}));
 
         // unpack Report struct from uint256

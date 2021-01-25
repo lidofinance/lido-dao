@@ -17,37 +17,89 @@ contract('Algorithm', ([testUser]) => {
     let r
 
     r = await algorithm.frequentTest(['1', '2', '3', '1'], 2, { from: testUser })
-    assertBn(r, bn(1))
+    assert(r.exists === true)
+    assertBn(r.mode, bn(1))
 
     r = await algorithm.frequentTest(['1', '1', '2', '2'], 3, { from: testUser })
-    assertBn(r, bn(0))
+    assert(r.exists === false)
 
     r = await algorithm.frequentTest(['1', '2', '2', '2'], 3, { from: testUser })
-    assertBn(r, bn(2))
+    assert(r.exists === true)
+    assertBn(r.mode, bn(2))
   })
 
   it('frequent function with more then half quorum', async () => {
-    assertBn(await algorithm.frequentTest(['1', '2', '1', '3', '1'], 3, { from: testUser }), bn(1))
-    assertBn(await algorithm.frequentTest(['1', '1', '2', '2', '3'], 3, { from: testUser }), bn(0))
-    assertBn(await algorithm.frequentTest(['1', '2', '2', '2', '3'], 3, { from: testUser }), bn(2))
-    assertBn(await algorithm.frequentTest(['1', '2', '1', '3', '1'], 4, { from: testUser }), bn(0))
-    assertBn(await algorithm.frequentTest(['1', '1', '2', '2', '3'], 4, { from: testUser }), bn(0))
-    assertBn(await algorithm.frequentTest(['1', '2', '2', '2', '3', '2'], 4, { from: testUser }), bn(2))
+    let r
+
+    r = await algorithm.frequentTest(['1', '2', '1', '3', '1'], 3, { from: testUser })
+    assert(r.exists === true)
+    assertBn(r.mode, bn(1))
+
+    r = await algorithm.frequentTest(['1', '1', '2', '2', '3'], 3, { from: testUser })
+    assert(r.exists === false)
+
+    r = await algorithm.frequentTest(['1', '2', '2', '2', '3'], 3, { from: testUser })
+    assert(r.exists === true)
+    assertBn(r.mode, bn(2))
+
+    r = await algorithm.frequentTest(['1', '2', '1', '3', '1'], 4, { from: testUser })
+    assert(r.exists === false)
+
+    r = await algorithm.frequentTest(['1', '1', '2', '2', '3'], 4, { from: testUser })
+    assert(r.exists === false)
+
+    r = await algorithm.frequentTest(['1', '2', '2', '2', '3', '2'], 4, { from: testUser })
+    assert(r.exists === true)
+    assertBn(r.mode, bn(2))
   })
 
   it('frequent function with less then half quorum', async () => {
-    assertBn(await algorithm.frequentTest(['1', '2', '1', '3', '1'], 2, { from: testUser }), bn(1))
-    assertBn(await algorithm.frequentTest(['1', '1', '2', '2', '3'], 2, { from: testUser }), bn(0))
-    assertBn(await algorithm.frequentTest(['1', '2', '2', '2', '3'], 2, { from: testUser }), bn(2))
-    assertBn(await algorithm.frequentTest(['1', '2', '1', '3', '1', '3'], 3, { from: testUser }), bn(1))
-    assertBn(await algorithm.frequentTest(['1', '1', '2', '2', '3', '3'], 3, { from: testUser }), bn(0))
-    assertBn(await algorithm.frequentTest(['1', '2', '2', '2', '3', '2'], 3, { from: testUser }), bn(2))
-    assertBn(await algorithm.frequentTest(['1', '2', '1', '3', '1', '3', '1', '4'], 4, { from: testUser }), bn(1))
-    assertBn(await algorithm.frequentTest(['1', '1', '2', '2', '3', '3', '3', '3'], 4, { from: testUser }), bn(3))
-    assertBn(await algorithm.frequentTest(['2', '1', '1', '1', '2', '2', '2', '1'], 4, { from: testUser }), bn(0))
-    assertBn(await algorithm.frequentTest(['2', '2', '2', '2', '1', '1', '1', '3'], 4, { from: testUser }), bn(2))
-    assertBn(await algorithm.frequentTest(['2', '1', '1', '1', '2', '2', '2', '3'], 4, { from: testUser }), bn(2))
-    assertBn(await algorithm.frequentTest(['2', '1', '1', '1', '2', '2', '3', '1'], 4, { from: testUser }), bn(1))
+    let r
+
+    r = await algorithm.frequentTest(['1', '2', '1', '3', '1'], 2, { from: testUser })
+    assert(r.exists === true)
+    assertBn(r.mode, bn(1))
+
+    r = await algorithm.frequentTest(['1', '1', '2', '2', '3'], 2, { from: testUser })
+    assert(r.exists === false)
+
+    r = await algorithm.frequentTest(['1', '2', '2', '2', '3'], 2, { from: testUser })
+    assert(r.exists === true)
+    assertBn(r.mode, bn(2))
+
+    r = await algorithm.frequentTest(['1', '2', '1', '3', '1', '3'], 3, { from: testUser })
+    assert(r.exists === true)
+    assertBn(r.mode, bn(1))
+
+    r = await algorithm.frequentTest(['1', '1', '2', '2', '3', '3'], 3, { from: testUser })
+    assert(r.exists === false)
+
+    r = await algorithm.frequentTest(['1', '2', '2', '2', '3', '2'], 3, { from: testUser })
+    assert(r.exists === true)
+    assertBn(r.mode, bn(2))
+
+    r = await algorithm.frequentTest(['1', '2', '1', '3', '1', '3', '1', '4'], 4, { from: testUser })
+    assert(r.exists === true)
+    assertBn(r.mode, bn(1))
+
+    r = await algorithm.frequentTest(['1', '1', '2', '2', '3', '3', '3', '3'], 4, { from: testUser })
+    assert(r.exists === true)
+    assertBn(r.mode, bn(3))
+
+    r = await algorithm.frequentTest(['2', '1', '1', '1', '2', '2', '2', '1'], 4, { from: testUser })
+    assert(r.exists === false)
+
+    r = await algorithm.frequentTest(['2', '2', '2', '2', '1', '1', '1', '3'], 4, { from: testUser })
+    assert(r.exists === true)
+    assertBn(r.mode, bn(2))
+
+    r = await algorithm.frequentTest(['2', '1', '1', '1', '2', '2', '2', '3'], 4, { from: testUser })
+    assert(r.exists === true)
+    assertBn(r.mode, bn(2))
+
+    r = await algorithm.frequentTest(['2', '1', '1', '1', '2', '2', '3', '1'], 4, { from: testUser })
+    assert(r.exists === true)
+    assertBn(r.mode, bn(1))
   })
 })
 

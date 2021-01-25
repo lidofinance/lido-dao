@@ -15,7 +15,7 @@ library Algorithm {
       * more that |quorum| times. Low gas cost for majority case. Returns the
       * discovered element or 0 if no element is frequent enough.
       */
-    function frequent(uint256[] data, uint256 quorum) internal pure returns (uint256) {
+    function frequent(uint256[] data, uint256 quorum) internal pure returns (bool exists, uint256 mode) {
         assert(0 != data.length);
 
         uint256 acc = 0;
@@ -31,7 +31,7 @@ library Algorithm {
                     ++ctr;
                 } else if (acc == data[i]) {
                     // If enough same elemnts in a row, immediately return them
-                    if (++ctr == quorum) return acc;
+                    if (++ctr == quorum) return (true, acc);
                 } else {
                     --ctr;
                 }
@@ -40,7 +40,7 @@ library Algorithm {
             // And make sure the resulted element is frequent enough
             ctr = 0;
             for (i = 0; i < data.length; ++i) {
-                if (data[i] == acc && ++ctr == quorum) return acc;
+                if (data[i] == acc && ++ctr == quorum) return (true, acc);
             }
         } else {
             
@@ -83,9 +83,9 @@ library Algorithm {
                 longest2 = ctr;
             }
 
-            if (longest >= quorum && longest2 < longest) return cur;
+            if (longest >= quorum && longest2 < longest) return (true, cur);
         }
 
-        return 0;
+        return (false, 0);
     }
 }
