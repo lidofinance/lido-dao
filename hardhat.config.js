@@ -6,7 +6,7 @@ require('@nomiclabs/hardhat-truffle5')
 require('@nomiclabs/hardhat-ganache')
 require('@nomiclabs/hardhat-etherscan')
 require('hardhat-gas-reporter')
-// require('solidity-coverage')
+require('solidity-coverage')
 
 const NETWORK_NAME = getNetworkName()
 const ETH_ACCOUNT_NAME = process.env.ETH_ACCOUNT_NAME
@@ -21,9 +21,7 @@ const getNetConfig = (networkName, ethAccountName) => {
   const netState = readJson(`./deployed-${networkName}.json`) || {}
   const ethAccts = accounts.eth || {}
   const base = {
-    accounts: ethAccountName === 'remote'
-      ? 'remote'
-      : ethAccts[ethAccountName] || ethAccts[networkName] || ethAccts.dev || 'remote',
+    accounts: ethAccountName === 'remote' ? 'remote' : ethAccts[ethAccountName] || ethAccts[networkName] || ethAccts.dev || 'remote',
     ensAddress: netState.ensAddress,
     timeout: 60000
   }
@@ -141,6 +139,6 @@ function readJson(fileName) {
   return JSON.parse(data)
 }
 
-if ((typeof task) === 'function') {
+if (typeof task === 'function') {
   require('./scripts/hardhat-tasks')
 }
