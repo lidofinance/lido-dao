@@ -91,4 +91,4 @@ jobs:
 
     - name: Run Solidity test coverage
       run: yarn test:coverage
-      continue-on-error: true
+      continue-on-error: false
