@@ -4,8 +4,10 @@
 # python algorithm.generator.py
 # yarn test test/0.4.24/algorithm.test.generated.js
 #
+import argparse
 import collections
 import random
+import time
 
 
 NUM_TESTS = 100
@@ -23,6 +25,14 @@ def frequent(nums, quorum):
         return True, ctr[0][0]
     return False, 0
 
+
+parser = argparse.ArgumentParser(description='Process some integers.')
+parser.add_argument('--seed', type=int, default=int(time.time()),
+                    help='Random seed (optional)')
+args = parser.parse_args()
+
+print(f'Using random seed {args.seed}...')
+random.seed(args.seed, 2)
 
 with open('algorithm.test.template.js') as inp:
     template = inp.read()
