@@ -1,8 +1,7 @@
-const { assert } = require('chai')
 const { newDao, newApp } = require('../0.4.24/helpers/dao')
 const { assertBn, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 
-const LidoOracle = artifacts.require('TestLidoOracle.sol')
+const LidoOracle = artifacts.require('LidoOracleMock.sol')
 
 contract('LidoOracle', ([appManager, voting, malicious1, malicious2, user1, user2, user3]) => {
   let appBase, app
@@ -60,11 +59,7 @@ contract('LidoOracle', ([appManager, voting, malicious1, malicious2, user1, user
 
     const receipt = await app.reportBeacon(0, GOOD_DATA[0], GOOD_DATA[1], { from: user3 })
 
-    assertEvent(
-      receipt,
-      'Completed',
-      { expectedArgs: { epochId: 0, beaconBalance: GOOD_DATA[0], beaconValidators: GOOD_DATA[1] }
-    })
+    assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 0, beaconBalance: GOOD_DATA[0], beaconValidators: GOOD_DATA[1] } })
 
     await assertReportableEpochs(1, 0)
   })
