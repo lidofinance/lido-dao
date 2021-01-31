@@ -148,8 +148,8 @@ contract LidoOracle is ILidoOracle, AragonApp {
         if (index != last) {
             members[index] = members[last];
             bitMask = bitMask.setBit(index, bitMask.getBit(last));
-            Report memory lastIndexReport = gatheredEpochData[lastReportedEpochId].reports[last];
-            gatheredEpochData[lastReportedEpochId].reports[index] = lastIndexReport;
+            Report memory lastIndexReport = gatheredEpochData[maxReportedEpochId].reports[last];
+            gatheredEpochData[maxReportedEpochId].reports[index] = lastIndexReport;
         }
         bitMask = bitMask.setBit(last, false);
         gatheredEpochData[maxReportedEpochId].reportsBitMask = bitMask;
@@ -202,7 +202,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
         // check & set contribution flag
         uint256 bitMask = gatheredEpochData[_epochId].reportsBitMask;
         require(!bitMask.getBit(index), "ALREADY_SUBMITTED");
-        
+
         if (_epochId > MAX_REPORTED_EPOCH_ID_POSITION.getStorageUint256()) {
             MAX_REPORTED_EPOCH_ID_POSITION.setStorageUint256(_epochId);
         }
