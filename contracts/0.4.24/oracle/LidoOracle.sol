@@ -106,6 +106,9 @@ contract LidoOracle is ILidoOracle, AragonApp {
 
         LIDO_POSITION.setStorageAddress(_lido);
 
+        QUORUM_POSITION.setStorageUint256(1);
+        emit QuorumChanged(1);
+
         initialized();
     }
 
