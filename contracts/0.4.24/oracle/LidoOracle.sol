@@ -459,7 +459,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
      * @dev Returns current timestamp
      */
     function _getTime() internal view returns (uint256) {
-        return block.timestamp;
+        return block.timestamp; // solhint-disable-line not-rely-on-time
     }
 
     /**
