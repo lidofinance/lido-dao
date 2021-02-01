@@ -38,12 +38,12 @@ contract('LidoOracle', ([appManager, voting, malicious1, malicious2, user1, user
     const BAD_DATA = [42, 42]
     const GOOD_DATA = [32, 1]
 
+    await app.setQuorum(4, { from: voting })
+
     await app.addOracleMember(malicious1, { from: voting })
     await app.addOracleMember(malicious2, { from: voting })
     await app.addOracleMember(user1, { from: voting })
     await app.addOracleMember(user2, { from: voting })
-
-    await app.setQuorum(4, { from: voting })
 
     await app.reportBeacon(0, BAD_DATA[0], BAD_DATA[1], { from: malicious1 })
     await app.reportBeacon(0, BAD_DATA[0], BAD_DATA[1], { from: malicious2 })

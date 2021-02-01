@@ -111,6 +111,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
 
     /**
       * @notice Add `_member` to the oracle member committee
+      *         Note that `setQuorum` must have been already called by this time
       * @param _member Address of a member to add
       */
     function addOracleMember(address _member) external auth(MANAGE_MEMBERS) {
@@ -119,11 +120,6 @@ contract LidoOracle is ILidoOracle, AragonApp {
         require(MEMBER_NOT_FOUND == _getMemberId(_member), "MEMBER_EXISTS");
 
         members.push(_member);
-
-        // set quorum to 1 when first member added
-        if (1 == members.length) {
-            QUORUM_POSITION.setStorageUint256(1);
-        }
 
         emit MemberAdded(_member);
         _assertInvariants();
@@ -134,8 +130,6 @@ contract LidoOracle is ILidoOracle, AragonApp {
      * @param _member Address of a member to remove
      */
     function removeOracleMember(address _member) external auth(MANAGE_MEMBERS) {
-        require(members.length > getQuorum(), "QUORUM_WONT_BE_MADE");
-
         uint256 index = _getMemberId(_member);
         require(index != MEMBER_NOT_FOUND, "MEMBER_NOT_FOUND");
 
@@ -164,7 +158,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
      * @notice Set the number of oracle members required to form a data point to `_quorum`
      */
     function setQuorum(uint256 _quorum) external auth(MANAGE_QUORUM) {
-        require(members.length >= _quorum && 0 != _quorum, "QUORUM_WONT_BE_MADE");
+        require(0 != _quorum, "QUORUM_WONT_BE_MADE");
 
         QUORUM_POSITION.setStorageUint256(_quorum);
         emit QuorumChanged(_quorum);
@@ -174,7 +168,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
 
         assert(maxReportedEpochId <= getCurrentEpochId());
 
-        if (maxReportedEpochId >= minReportableEpochId) {
+        if (members.length > 0 && maxReportedEpochId >= minReportableEpochId) {
             if (maxReportedEpochId != minReportableEpochId) {
                 MIN_REPORTABLE_EPOCH_ID_POSITION.setStorageUint256(maxReportedEpochId);
             }
@@ -376,9 +370,13 @@ contract LidoOracle is ILidoOracle, AragonApp {
      * @return modeReport - valid mode-value report when quorum is reached, 0-data otherwise
      */
     function _getQuorumReport(uint256 _epochId) internal view returns (bool isQuorum, Report memory modeReport) {
+        uint256 quorum = getQuorum();
+        if (quorum > members.length)
+            return (false, Report({beaconBalance: 0, beaconValidators: 0}));
+
         uint256 mask = gatheredEpochData[_epochId].reportsBitMask;
         uint256 popcnt = mask.popcnt();
-        if (popcnt < getQuorum())
+        if (popcnt < quorum)
             return (false, Report({beaconBalance: 0, beaconValidators: 0}));
 
         assert(0 != popcnt && popcnt <= members.length);
@@ -467,7 +465,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
      */
     function _assertInvariants() private view {
         uint256 quorum = getQuorum();
-        assert(quorum != 0 && members.length >= quorum);
+        assert(quorum != 0);
         assert(members.length <= MAX_MEMBERS);
     }
 }
