@@ -80,12 +80,6 @@ contract LidoOracle is ILidoOracle, AragonApp {
     /// @dev storage for all gathered from reports data
     mapping(uint256 => EpochData) private gatheredEpochData;
 
-    event Completed(
-        uint256 epochId,
-        uint128 beaconBalance,
-        uint128 beaconValidators
-    );
-
     function initialize(
         address _lido,
         uint64 _epochsPerFrame,
@@ -207,6 +201,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
 
         Report memory currentReport = Report(_beaconBalance, _beaconValidators);
         gatheredEpochData[_epochId].reports[index] = currentReport;
+        emit BeaconReported(_epochId, _beaconBalance, _beaconValidators, member);
 
         _tryPush(_epochId);
     }

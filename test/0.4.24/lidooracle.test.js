@@ -325,11 +325,18 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
       })
 
       it('reportBeacon works and emits event', async () => {
-        await app.reportBeacon(0, 32, 1, { from: user1 })
+        let receipt
+
+        receipt = await app.reportBeacon(0, 32, 1, { from: user1 })
+        assertEvent(receipt, 'BeaconReported', { expectedArgs: { epochId: 0, beaconBalance: 32, beaconValidators: 1, caller: user1 } })
         await assertReportableEpochs(0, 0)
-        await app.reportBeacon(0, 32, 1, { from: user2 })
+
+        receipt = await app.reportBeacon(0, 32, 1, { from: user2 })
+        assertEvent(receipt, 'BeaconReported', { expectedArgs: { epochId: 0, beaconBalance: 32, beaconValidators: 1, caller: user2 } })
         await assertReportableEpochs(0, 0)
-        const receipt = await app.reportBeacon(0, 32, 1, { from: user3 })
+
+        receipt = await app.reportBeacon(0, 32, 1, { from: user3 })
+        assertEvent(receipt, 'BeaconReported', { expectedArgs: { epochId: 0, beaconBalance: 32, beaconValidators: 1, caller: user3 } })
         assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 0, beaconBalance: 32, beaconValidators: 1 } })
         await assertReportableEpochs(1, 0)
       })
