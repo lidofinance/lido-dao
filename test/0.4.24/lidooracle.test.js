@@ -89,7 +89,6 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
       await assertRevert(app.addOracleMember(user1, { from: user1 }), 'APP_AUTH_FAILED')
       await assertRevert(app.addOracleMember('0x0000000000000000000000000000000000000000', { from: voting }), 'BAD_ARGUMENT')
 
-      await app.setQuorum(1, { from: voting })
       await app.addOracleMember(user1, { from: voting })
       await assertRevert(app.addOracleMember(user2, { from: user2 }), 'APP_AUTH_FAILED')
       await assertRevert(app.addOracleMember(user3, { from: user2 }), 'APP_AUTH_FAILED')
@@ -147,7 +146,6 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
     it('setQuorum works', async () => {
       await app.setTime(1606824000)
 
-      await app.setQuorum(1, { from: voting })
       await app.addOracleMember(user1, { from: voting })
       await app.addOracleMember(user2, { from: voting })
       await app.addOracleMember(user3, { from: voting })
@@ -165,7 +163,6 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
 
       await app.setTime(1606824000)
 
-      await app.setQuorum(1, { from: voting })
       await app.addOracleMember(user1, { from: voting })
       await app.addOracleMember(user2, { from: voting })
       await app.addOracleMember(user3, { from: voting })
@@ -261,7 +258,6 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
     describe('current time: 1606824000 , current epoch: 0', function () {
       beforeEach(async () => {
         await app.setTime(1606824000)
-        await app.setQuorum(1, { from: voting })
         await app.addOracleMember(user1, { from: voting })
         assertBn(await app.getQuorum(), 1)
       })
