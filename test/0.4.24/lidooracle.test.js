@@ -120,7 +120,6 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
       await app.removeOracleMember(user2, { from: voting })
 
       await assertRevert(app.removeOracleMember(user2, { from: user1 }), 'APP_AUTH_FAILED')
-      app.removeOracleMember(user3, { from: voting })
 
       assert.deepStrictEqual(await app.getOracleMembers(), [user3])
     })
