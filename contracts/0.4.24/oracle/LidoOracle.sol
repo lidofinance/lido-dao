@@ -114,7 +114,6 @@ contract LidoOracle is ILidoOracle, AragonApp {
 
     /**
       * @notice Add `_member` to the oracle member committee
-      *         Note that `setQuorum` must have been already called by this time
       * @param _member Address of a member to add
       */
     function addOracleMember(address _member) external auth(MANAGE_MEMBERS) {
@@ -171,7 +170,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
 
         assert(maxReportedEpochId <= getCurrentEpochId());
 
-        if (members.length > 0 && maxReportedEpochId >= minReportableEpochId) {
+        if (maxReportedEpochId >= minReportableEpochId) {
             if (maxReportedEpochId != minReportableEpochId) {
                 MIN_REPORTABLE_EPOCH_ID_POSITION.setStorageUint256(maxReportedEpochId);
             }
