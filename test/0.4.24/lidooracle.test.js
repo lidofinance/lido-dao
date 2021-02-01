@@ -424,18 +424,22 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
         })
 
         it("member removal dont affect other members' data in last reportable epoch, all other reportable epochs will be staled", async () => {
+          let receipt
+
           for (let epoch = 1; epoch < 6; epoch++) await app.reportBeacon(epoch, 32, 1, { from: user1 })
           await assertReportableEpochs(1, 5)
 
           for (let epoch = 1; epoch < 6; epoch++) await app.reportBeacon(epoch, 32, 1, { from: user2 })
           await assertReportableEpochs(1, 5)
 
-          await app.removeOracleMember(user3, { from: voting })
+          receipt = await app.removeOracleMember(user3, { from: voting })
+          assertEvent(receipt, 'MinReportableEpochIdUpdated', { expectedArgs: { epochId: 5 } })
           await assertReportableEpochs(5, 5)
 
           await assertRevert(app.reportBeacon(5, 32, 1, { from: user3 }), 'MEMBER_NOT_FOUND')
 
-          await app.reportBeacon(5, 32, 1, { from: user4 })
+          receipt = await app.reportBeacon(5, 32, 1, { from: user4 })
+          assertEvent(receipt, 'MinReportableEpochIdUpdated', { expectedArgs: { epochId: 6 } })
           await assertReportableEpochs(6, 5)
         })
 
@@ -480,7 +484,8 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
           for (let epoch = 1; epoch < 5; epoch++) await app.reportBeacon(epoch, 32, 1, { from: user2 }) // this should be intact
           await assertReportableEpochs(1, 5)
 
-          await app.setQuorum(2, { from: voting })
+          const receipt = await app.setQuorum(2, { from: voting })
+          assertEvent(receipt, 'MinReportableEpochIdUpdated', { expectedArgs: { epochId: 5 } })
           await assertReportableEpochs(5, 5)
         })
       })
