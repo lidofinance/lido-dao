@@ -49,7 +49,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
 
     struct EpochData {
         uint256 reportsBitMask;
-        mapping (uint256 => Report) reports;
+        Report[] reports;
     }
 
     /// ACL
@@ -137,15 +137,18 @@ contract LidoOracle is ILidoOracle, AragonApp {
         }
         uint256 last = members.length.sub(1);
 
-        uint256 bitMask = gatheredEpochData[maxReportedEpochId].reportsBitMask;
+        EpochData storage epochData = gatheredEpochData[maxReportedEpochId];
+        uint256 bitMask = epochData.reportsBitMask;
         if (index != last) {
             members[index] = members[last];
             bitMask = bitMask.setBit(index, bitMask.getBit(last));
-            Report memory lastIndexReport = gatheredEpochData[maxReportedEpochId].reports[last];
-            gatheredEpochData[maxReportedEpochId].reports[index] = lastIndexReport;
+            if (epochData.reports.length > 0) {
+                Report memory lastIndexReport = epochData.reports[last];
+                epochData.reports[index] = lastIndexReport;
+            }
         }
         bitMask = bitMask.setBit(last, false);
-        gatheredEpochData[maxReportedEpochId].reportsBitMask = bitMask;
+        epochData.reportsBitMask = bitMask;
 
         members.length--;
 
@@ -194,17 +197,17 @@ contract LidoOracle is ILidoOracle, AragonApp {
         require(index != MEMBER_NOT_FOUND, "MEMBER_NOT_FOUND");
 
         // check & set contribution flag
-        uint256 bitMask = gatheredEpochData[_epochId].reportsBitMask;
+        EpochData storage epochData = gatheredEpochData[_epochId];
+        uint256 bitMask = epochData.reportsBitMask;
         require(!bitMask.getBit(index), "ALREADY_SUBMITTED");
 
         if (_epochId > MAX_REPORTED_EPOCH_ID_POSITION.getStorageUint256()) {
             MAX_REPORTED_EPOCH_ID_POSITION.setStorageUint256(_epochId);
         }
 
-        gatheredEpochData[_epochId].reportsBitMask = bitMask.setBit(index, true);
-
-        Report memory currentReport = Report(_beaconBalance, _beaconValidators);
-        gatheredEpochData[_epochId].reports[index] = currentReport;
+        epochData.reportsBitMask = bitMask.setBit(index, true);
+        if (epochData.reports.length == 0) epochData.reports.length = MAX_MEMBERS;
+        epochData.reports[index] = Report(_beaconBalance, _beaconValidators);
         emit BeaconReported(_epochId, _beaconBalance, _beaconValidators, member);
 
         _tryPush(_epochId);
