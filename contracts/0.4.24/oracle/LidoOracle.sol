@@ -431,6 +431,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
         ILido lido = getLido();
         if (address(0) != address(lido))
             lido.pushBeacon(modeReport.beaconValidators, modeReport.beaconBalance);
+        delete gatheredEpochData[_epochId];
         return true;
     }
 
