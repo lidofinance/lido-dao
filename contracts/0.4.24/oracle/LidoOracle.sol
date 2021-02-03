@@ -145,6 +145,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
             if (epochData.reports.length > 0) {
                 Report memory lastIndexReport = epochData.reports[last];
                 epochData.reports[index] = lastIndexReport;
+                delete epochData[last];
             }
         }
         bitMask = bitMask.setBit(last, false);
@@ -378,7 +379,8 @@ contract LidoOracle is ILidoOracle, AragonApp {
         if (quorum > members.length)
             return (false, Report({beaconBalance: 0, beaconValidators: 0}));
 
-        uint256 mask = gatheredEpochData[_epochId].reportsBitMask;
+        EpochData storage epochData = gatheredEpochData[_epochId];
+        uint256 mask = epochData.reportsBitMask;
         uint256 popcnt = mask.popcnt();
         if (popcnt < quorum)
             return (false, Report({beaconBalance: 0, beaconValidators: 0}));
@@ -391,7 +393,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
         uint256 membersLength = members.length;
         for (uint256 index = 0; index < membersLength; ++index) {
             if (mask.getBit(index)) {
-                data[i++] = reportToUint256(gatheredEpochData[_epochId].reports[index]);
+                data[i++] = reportToUint256(epochData.reports[index]);
             }
         }
 
