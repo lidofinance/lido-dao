@@ -626,8 +626,9 @@ contract LidoTemplate is IsContract {
         perms[0] = _state.oracle.MANAGE_MEMBERS();
         perms[1] = _state.oracle.MANAGE_QUORUM();
         perms[2] = _state.oracle.SET_BEACON_SPEC();
+        perms[3] = _state.oracle.SET_REPORT_BOUNDARIES();
 
-        for (i = 0; i < 3; ++i) {
+        for (i = 0; i < 4; ++i) {
             _createPermissionForVoting(acl, _state.oracle, perms[i], voting);
         }
 

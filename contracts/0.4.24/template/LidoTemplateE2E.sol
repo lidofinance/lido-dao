@@ -182,6 +182,7 @@ contract LidoTemplateE2E is BaseTemplate {
         state.acl.createPermission(state.voting, state.oracle, state.oracle.MANAGE_MEMBERS(), state.voting);
         state.acl.createPermission(state.voting, state.oracle, state.oracle.MANAGE_QUORUM(), state.voting);
         state.acl.createPermission(state.voting, state.oracle, state.oracle.SET_BEACON_SPEC(), state.voting);
+        state.acl.createPermission(state.voting, state.oracle, state.oracle.SET_REPORT_BOUNDARIES(), state.voting);
 
         // NodeOperatorsRegistry
         state.acl.createPermission(state.voting, state.operators, state.operators.MANAGE_SIGNING_KEYS(), state.voting);

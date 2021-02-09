@@ -28,6 +28,7 @@ contract('LidoOracle', ([appManager, voting, malicious1, malicious2, user1, user
     await acl.createPermission(voting, app.address, await app.MANAGE_MEMBERS(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.MANAGE_QUORUM(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_BEACON_SPEC(), appManager, { from: appManager })
+    await acl.createPermission(voting, app.address, await app.SET_REPORT_BOUNDARIES(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
     await app.initialize(appLido.address, 1, 32, 12, 1606824000)
