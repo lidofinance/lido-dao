@@ -76,7 +76,7 @@ async function upgradeApp({ web3, artifacts, appName = APP }) {
     }
   ])
   // finally forwarding call from TokenManager app to Voting
-  await saveCallTxData(`New voting: app ${appName} upgrade`, tokenManager, 'forward', `tx-15-1-create-vote-${appName}-upgrade.json`, {
+  await saveCallTxData(`New voting: ${appName} app upgrade`, tokenManager, 'forward', `tx-15-1-create-vote-${appName}-upgrade.json`, {
     arguments: [callData2],
     from: HOLDER || state.multisigAddress
   })
