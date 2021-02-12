@@ -96,6 +96,8 @@ async function upgradeAppImpl({ web3, artifacts, appName = APP }) {
 
   log.splitter()
   log(gr(`Before continuing the deployment, please send all transactions listed above.\n`))
+  log(gr(`A new voting will be created to add a new "${appName}" implementation to Lido APM.\n`))
+  log(gr(`You must complete it positively before continuing with the deployment!\n`))
   log.splitter()
 
   // persistNetworkState(network.name, netId, state)
