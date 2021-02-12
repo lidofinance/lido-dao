@@ -21,9 +21,7 @@ const getNetConfig = (networkName, ethAccountName) => {
   const netState = readJson(`./deployed-${networkName}.json`) || {}
   const ethAccts = accounts.eth || {}
   const base = {
-    accounts: ethAccountName === 'remote'
-      ? 'remote'
-      : ethAccts[ethAccountName] || ethAccts[networkName] || ethAccts.dev || 'remote',
+    accounts: ethAccountName === 'remote' ? 'remote' : ethAccts[ethAccountName] || ethAccts[networkName] || ethAccts.dev || 'remote',
     ensAddress: netState.ensAddress,
     timeout: 60000
   }
@@ -36,8 +34,10 @@ const getNetConfig = (networkName, ethAccountName) => {
   const byNetName = {
     dev,
     e2e: {
-      ...dev,
-      accounts: accounts.eth.e2e
+      ...base,
+      accounts: accounts.eth.e2e,
+      url: 'http://localhost:8545',
+      chainId: 1
     },
     coverage: {
       url: 'http://localhost:8555'
@@ -141,6 +141,6 @@ function readJson(fileName) {
   return JSON.parse(data)
 }
 
-if ((typeof task) === 'function') {
+if (typeof task === 'function') {
   require('./scripts/hardhat-tasks')
 }
