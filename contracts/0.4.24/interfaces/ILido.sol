@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2020 Lido <info@lido.fi>
+
+// SPDX-License-Identifier: GPL-3.0
+
 pragma solidity 0.4.24;
 
 
@@ -6,7 +10,7 @@ pragma solidity 0.4.24;
   *
   * For the high-level description of the pool operation please refer to the paper.
   * Pool manages withdrawal keys and fees. It receives ether submitted by users on the ETH 1 side
-  * and stakes it via the validator_registration.vy contract. It doesn't hold ether on it's balance,
+  * and stakes it via the deposit_contract.sol contract. It doesn't hold ether on it's balance,
   * only a small portion (buffer) of it.
   * It also mints new tokens for rewards generated at the ETH 2.0 side.
   */
@@ -60,9 +64,9 @@ interface ILido {
       * @notice Set credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched to `_withdrawalCredentials`
       * @dev Note that setWithdrawalCredentials discards all unused signing keys as the signatures are invalidated.
       * @param _withdrawalCredentials hash of withdrawal multisignature key as accepted by
-      *        the validator_registration.deposit function
+      *        the deposit_contract.deposit function
       */
-    function setWithdrawalCredentials(bytes _withdrawalCredentials) external;
+    function setWithdrawalCredentials(bytes32 _withdrawalCredentials) external;
 
     /**
       * @notice Returns current credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
@@ -70,7 +74,7 @@ interface ILido {
     function getWithdrawalCredentials() external view returns (bytes);
 
 
-    event WithdrawalCredentialsSet(bytes withdrawalCredentials);
+    event WithdrawalCredentialsSet(bytes32 withdrawalCredentials);
 
 
     /**
@@ -78,7 +82,7 @@ interface ILido {
       * @param _epoch Epoch id
       * @param _eth2balance Balance in wei on the ETH 2.0 side
       */
-    function reportEther2(uint256 _epoch, uint256 _eth2balance) external;
+    function pushBeacon(uint256 _epoch, uint256 _eth2balance) external;
 
 
     // User functions
@@ -92,7 +96,7 @@ interface ILido {
     // Records a deposit made by a user
     event Submitted(address indexed sender, uint256 amount, address referral);
 
-    // The `_amount` of ether was sent to the validator_registration.deposit function.
+    // The `_amount` of ether was sent to the deposit_contract.deposit function.
     event Unbuffered(uint256 amount);
 
     /**
@@ -113,7 +117,7 @@ interface ILido {
     /**
       * @notice Gets the amount of Ether controlled by the system
       */
-    function getTotalControlledEther() external view returns (uint256);
+    function getTotalPooledEther() external view returns (uint256);
 
     /**
       * @notice Gets the amount of Ether temporary buffered on this contract balance
@@ -121,9 +125,10 @@ interface ILido {
     function getBufferedEther() external view returns (uint256);
 
     /**
-      * @notice Gets the stat of the system's Ether on the Ethereum 2 side
-      * @return deposited Amount of Ether deposited from the current Ethereum
-      * @return remote Amount of Ether currently present on the Ethereum 2 side (can be 0 if the Ethereum 2 is yet to be launched)
+      * @notice Returns the key values related to Beacon-side
+      * @return depositedValidators - number of deposited validators
+      * @return beaconValidators - number of Lido's validators visible in the Beacon state, reported by oracles
+      * @return beaconBalance - total amount of Beacon-side Ether (sum of all the balances of Lido validators)
       */
-    function getEther2Stat() external view returns (uint256 deposited, uint256 remote);
+    function getBeaconStat() external view returns (uint256 depositedValidators, uint256 beaconValidators, uint256 beaconBalance);
 }

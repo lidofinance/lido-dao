@@ -27,6 +27,16 @@ app.store(
             activeNodeOperatorsCount: await getActiveNodeOperatorsCount(),
             nodeOperators: await getNodeOperators(nextState.nodeOperatorsCount),
           }
+        case 'SigningKeyAdded':
+          return {
+            ...nextState,
+            nodeOperators: await getNodeOperators(nextState.nodeOperatorsCount),
+          }
+        case 'NodeOperatorStakingLimitSet':
+          return {
+            ...nextState,
+            nodeOperators: await getNodeOperators(nextState.nodeOperatorsCount),
+          }
         case events.SYNC_STATUS_SYNCING:
           return { ...nextState, isSyncing: true }
         case events.SYNC_STATUS_SYNCED:

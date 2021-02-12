@@ -1,17 +1,18 @@
 # Lido Ethereum Liquid Staking Protocol
 
 [![Tests](https://github.com/lidofinance/lido-dao/workflows/Tests/badge.svg)](https://github.com/lidofinance/lido-dao/actions)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 The Lido Ethereum Liquid Staking Protocol, built on Ethereum 2.0's Beacon chain, allows their users to earn staking rewards on the Beacon chain without locking Ether or maintaining staking infrastructure.
 
-Users can deposit Ether to the Lido smart contract and receive stETH tokens in return. The smart contract then stakes tokens with the DAO-picked node operators. Users' deposited funds are controlled by the DAO, node operators never have direct access to the users' assets.
+Users can deposit Ether to the Lido smart contract and receive stETH tokens in return. The smart contract then stakes tokens with the DAO-picked node operators. Users' deposited funds are pooled by the DAO, node operators never have direct access to the users' assets.
 
 Unlike staked ether, the stETH token is free from the limitations associated with a lack of liquidity and can be transferred at any time. The stETH token balance corresponds to the amount of Beacon chain Ether that the holder could withdraw if state transitions were enabled right now in the Ethereum 2.0 network.
 
 Before getting started with this repo, please read:
 
-* Whitepaper (TODO: add a link here)
-* Documentation (TODO: add a link here)
+* [A Primer](https://lido.fi/static/Lido:Ethereum-Liquid-Staking.pdf)
+* [Documentation](/docs)
 
 ## Lido DAO
 
@@ -30,11 +31,10 @@ A full list of protocol levers that are controllable by the Aragon DAO can be fo
 Most of the protocol is implemented as a set of smart contracts that extend the [AragonApp](https://github.com/aragon/aragonOS/blob/next/contracts/apps/AragonApp.sol) base contract.
 These contracts are located in the [contracts/0.4.24](contracts/0.4.24) directory. Additionally, there are contracts that don't depend on the Aragon; they are located in the [contracts/0.6.12](contracts/0.6.12) directory.
 
-#### [StETH](contracts/0.4.24/StETH.sol)
-StETH is an ERC20 token which represents staked ether. Tokens are minted upon deposit and burned when redeemed. StETH tokens are pegged 1:1 to the Ethers that are held by Lido. StETH token’s balances are updated when the oracle reports change in total stake every day.
-
 #### [Lido](contracts/0.4.24/Lido.sol)
 Lido is the core contract which acts as a liquid staking pool. The contract is responsible for Ether deposits and withdrawals, minting and burning liquid tokens, delegating funds to node operators, applying fees, and accepting updates from the oracle contract. Node Operators' logic is extracted to a separate contract, NodeOperatorsRegistry.
+
+Lido also acts as an ERC20 token which represents staked ether, stETH. Tokens are minted upon deposit and burned when redeemed. stETH tokens are pegged 1:1 to the Ethers that are held by Lido. stETH token’s balances are updated when the oracle reports change in total stake every day.
 
 #### [NodeOperatorsRegistry](contracts/0.4.24/nos/NodeOperatorsRegistry.sol)
 Node Operators act as validators on the Beacon chain for the benefit of the protocol. The DAO selects node operators and adds their addresses to the NodeOperatorsRegistry contract. Authorized operators have to generate a set of keys for the validation and also provide them with the smart contract. As Ether is received from users, it is distributed in chunks of 32 Ether between all active Node Operators. The contract contains a list of operators, their keys, and the logic for distributing rewards between them. The DAO can deactivate misbehaving operators.
@@ -42,10 +42,38 @@ Node Operators act as validators on the Beacon chain for the benefit of the prot
 #### [LidoOracle](contracts/0.4.24/oracle/LidoOracle.sol)
 LidoOracle is a contract where oracles send addresses' balances controlled by the DAO on the ETH 2.0 side. The balances can go up because of reward accumulation and can go down due to slashing and staking penalties. Oracles are assigned by the DAO.
 
-#### [CStETH](contracts/0.6.12/CstETH.sol)
-It's an ERC20 token that represents the account's share of the total supply of StETH tokens. The balance of a CStETH token holder only changes on transfers, unlike the balance of StETH that is also changed when oracles report staking rewards, penalties, and slashings. It's a "power user" token that might be needed to work correctly with some DeFi protocols like Uniswap v2, cross-chain bridges, etc.
+#### [CstETH](contracts/0.6.12/CstETH.sol)
+It's an ERC20 token that represents the account's share of the total supply of stETH tokens. The balance of a cstETH token holder only changes on transfers, unlike the balance of stETH that is also changed when oracles report staking rewards, penalties, and slashings. It's a "power user" token that might be needed to work correctly with some DeFi protocols like Uniswap v2, cross-chain bridges, etc.
 
-The contract also works as a wrapper that accepts StETH tokens and mints CStETH in return. The reverse exchange works exactly the opposite, the received CStETH tokens are burned, and StETH tokens are returned to the user.
+The contract also works as a wrapper that accepts stETH tokens and mints cstETH in return. The reverse exchange works exactly the opposite, the received cstETH tokens are burned, and stETH tokens are returned to the user.
+
+## Deployments
+
+### Mainnet
+
+* Lido DAO: [`0xb8FFC3Cd6e7Cf5a098A1c92F48009765B24088Dc`](https://etherscan.io/address/0xb8FFC3Cd6e7Cf5a098A1c92F48009765B24088Dc) (proxy)
+* LDO token: [`0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32`](https://etherscan.io/address/0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32)
+* Lido and stETH token: [`0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84`](https://etherscan.io/address/0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84) (proxy)
+* Node Operators registry: [`0x55032650b14df07b85bF18A3a3eC8E0Af2e028d5`](https://etherscan.io/address/0x55032650b14df07b85bF18A3a3eC8E0Af2e028d5) (proxy)
+* Oracle: [`0x442af784A788A5bd6F42A01Ebe9F287a871243fb`](https://etherscan.io/address/0x442af784A788A5bd6F42A01Ebe9F287a871243fb) (proxy)
+* Aragon Voting: [`0x2e59A20f205bB85a89C53f1936454680651E618e`](https://etherscan.io/address/0x2e59A20f205bB85a89C53f1936454680651E618e) (proxy)
+* Aragon Token Manager: [`0xf73a1260d222f447210581DDf212D915c09a3249`](https://etherscan.io/address/0xf73a1260d222f447210581DDf212D915c09a3249) (proxy)
+* Aragon Finance: [`0xB9E5CBB9CA5b0d659238807E84D0176930753d86`](https://etherscan.io/address/0xB9E5CBB9CA5b0d659238807E84D0176930753d86) (proxy)
+* Aragon Agent: [`0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c`](https://etherscan.io/address/0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c) (proxy)
+
+### Görli+Pyrmont testnet
+
+* Lido DAO: [`0xE9c991d2c9Ac29b041C8D05484C2104bD00CFF4b`](https://goerli.etherscan.io/address/0xE9c991d2c9Ac29b041C8D05484C2104bD00CFF4b) (proxy)
+* LDO token: [`0xF837FBd803Ad6EdA0a89c5acF8785034F5aB33f2`](https://goerli.etherscan.io/address/0xF837FBd803Ad6EdA0a89c5acF8785034F5aB33f2)
+* stETH token: [`0xA0cA1c13721BAB3371E0609FFBdB6A6B8e155CC0`](https://goerli.etherscan.io/address/0xA0cA1c13721BAB3371E0609FFBdB6A6B8e155CC0) (proxy)
+* cstETH token: [`0x259d1D7058db3C7cB2aa15f60c1f40f261e9A009`](https://goerli.etherscan.io/address/0x259d1D7058db3C7cB2aa15f60c1f40f261e9A009)
+* Lido: [`0xA5d26F68130c989ef3e063c9bdE33BC50a86629D`](https://goerli.etherscan.io/address/0xA5d26F68130c989ef3e063c9bdE33BC50a86629D) (proxy)
+* Node Operators registry: [`0xB1e7Fb9E9A71063ab552dDEE87Ea8C6eEc7F5c7A`](https://goerli.etherscan.io/address/0xB1e7Fb9E9A71063ab552dDEE87Ea8C6eEc7F5c7A) (proxy)
+* Oracle: [`0x8aA931352fEdC2A5a5b3E20ed3A546414E40D86C`](https://goerli.etherscan.io/address/0x8aA931352fEdC2A5a5b3E20ed3A546414E40D86C) (proxy)
+* Aragon Voting: [`0xA54DBf1B494113fBDA2E593419eE7241EfE8B766`](https://goerli.etherscan.io/address/0xA54DBf1B494113fBDA2E593419eE7241EfE8B766) (proxy)
+* Aragon token manager: [`0xB90D5df4aBDf5F69a00088d43E4A0Fa8A8b44244`](https://goerli.etherscan.io/address/0xB90D5df4aBDf5F69a00088d43E4A0Fa8A8b44244) (proxy)
+* Aragon finance: [`0xfBfa38921d745FD7bE9fa657FFbcDFecC4Ab7Cd4`](https://goerli.etherscan.io/address/0xfBfa38921d745FD7bE9fa657FFbcDFecC4Ab7Cd4) (proxy)
+* Aragon agent: [`0xd616af91a0C3fE5AEeA0c1FaEfC2d73AcA82F0c9`](https://goerli.etherscan.io/address/0xd616af91a0C3fE5AEeA0c1FaEfC2d73AcA82F0c9) (proxy)
 
 ## Development
 
@@ -110,7 +138,7 @@ then go to [http://localhost:3000/#/lido-dao/](http://localhost:3000/#/lido-dao/
 As a result of the script execution, the following will be installed:
 
 * the Deposit Contract instance;
-* all Aragon App instances (contracts: Lido, NodeOperatorsRegistry, LidoOracle, and StETH)
+* all Aragon App instances (contracts: Lido, NodeOperatorsRegistry, and LidoOracle)
 * the Aragon PM for `lido.eth`;
 * the Lido DAO template;
 * and finally, the Lido DAO will be deployed.
@@ -195,7 +223,7 @@ so full branch coverage will never be reported until
 
 [solidity-coverage#219]: https://github.com/sc-forks/solidity-coverage/issues/269
 
-### Deploying
+## Deploying
 
 Networks are defined in `buidler.config.js` file. To select the target network for deployment,
 set `NETWORK_NAME` environment variable to a network name defined in that file. All examples
@@ -269,12 +297,17 @@ An example of `deployed.json` file prepared for a testnet deployment:
           "100000000000000000000",
           "100000000000000000000"
         ],
-        "tokenName": "Lido DAO Token",
+        "tokenName": "Lido DAO Testnet Token",
         "tokenSymbol": "LDO",
         "voteDuration": 86400,
         "votingSupportRequired": "500000000000000000",
-        "votingMinAcceptanceQuorum": "50000000000000000",
-        "depositIterationLimit": 16
+        "votingMinAcceptanceQuorum": "300000000000000000",
+        "beaconSpec": {
+          "epochsPerFrame": 225,
+          "slotsPerEpoch": 32,
+          "secondsPerSlot": 12,
+          "genesisTime": 1605700807
+        }
       }
     }
   }
@@ -287,7 +320,7 @@ An example of `deployed.json` file prepared for a testnet deployment:
 yarn compile
 ```
 
-#### Step 1: deploy Aragon environment and core apps (optional)
+#### Step 2: deploy Aragon environment and core apps (optional)
 
 This is required for test/dev networks that don't have Aragon environment deployed.
 
@@ -299,19 +332,19 @@ NETWORK_NAME=localhost yarn deploy:aragon-env
 NETWORK_NAME=localhost yarn deploy:aragon-std-apps
 ```
 
-#### Step 2: deploy Lido APM registry and DAO template
+#### Step 3: deploy Lido APM registry and DAO template
 
 ```bash
 NETWORK_NAME=localhost yarn deploy:apm-and-template
 ```
 
-#### Step 3: build and deploy Lido applications
+#### Step 4: build and deploy Lido applications
 
 ```bash
 NETWORK_NAME=localhost yarn deploy:apps
 ```
 
-#### Step 4: deploy the DAO
+#### Step 5: deploy the DAO
 
 ```bash
 NETWORK_NAME=localhost yarn deploy:dao
@@ -320,18 +353,18 @@ NETWORK_NAME=localhost yarn deploy:dao
 This step deploys `DepositContract` as well, if `depositContractAddress` is not specified
 in `deployed.json`.
 
-### E2E
+# License
 
-To reset the devchain state, use (indise the `e2e` dorectory):
+2020 Lido <info@lido.fi>
 
-```bash
-./shutdown.sh && ./startup.sh
-```
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, version 3 of the License, or any later version.
 
-or just do a clean restart by passing the `-r` flag:
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-```bash
-./startup.sh -r -s
-```
-
-You're free to mix the keys.
+You should have received a copy of the [GNU General Public License](LICENSE)
+along with this program. If not, see <https://www.gnu.org/licenses/>.

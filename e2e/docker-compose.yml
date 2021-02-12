@@ -2,17 +2,18 @@ version: '3.7'
 services:
   node1:
     build:
-      context: ./docker/devchain/
-#      args:
-#        ARAGON_PKG: aragen-6.0.0-beta.1.tgz
+      context: ./docker/geth/
     container_name: node1
     ports:
       - 8545:8545
+      - 8546:8546
     volumes:
       - ./data/devchain:/data
     environment:
-      - BLOCK_TIME=${BLOCK_TIME}
-      - GAS_LIMIT=12000000
+      - DATA_DIR=/data
+      - NETWORK_ID=${NETWORK_ID}
+      - GAS_PRICE=${GAS_PRICE}
+      - GAS_LIMIT=${GAS_LIMIT}
     networks:
       eth2:
 
@@ -26,10 +27,7 @@ services:
       - 5001:5001
       - 8080:8080
     volumes:
-      - ./data/export:/export
       - ./data/ipfs:/data/ipfs
-    environment:
-      - IPFS_PROFILE=server
     networks:
       eth2:
 
@@ -37,12 +35,12 @@ services:
   aragon:
     build:
       context: ./docker/aragon/
-#      args:
-#        - ARAGON_IPFS_GATEWAY=http://public_ipfs_hostname:8080/ipfs
-#        - ARAGON_DEFAULT_ETH_NODE=ws://public_eth1_node_hostname:8545
-#        - ARAGON_APP_LOCATOR=ipfs
-#        - ARAGON_ETH_NETWORK_TYPE=local
-#        - ARAGON_ENS_REGISTRY_ADDRESS=0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1
+      args:
+        - ARAGON_IPFS_GATEWAY=http://localhost:8080/ipfs
+        - ARAGON_DEFAULT_ETH_NODE=ws://localhost:8546
+        - ARAGON_APP_LOCATOR=ipfs
+        - ARAGON_ETH_NETWORK_TYPE=local
+        - ARAGON_ENS_REGISTRY_ADDRESS=0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1
     container_name: aragon
     ports:
       - 3000:8080
@@ -50,7 +48,7 @@ services:
       eth2:
 
   lh:
-    image: sigp/lighthouse
+    image: sigp/lighthouse:v0.3.5
     container_name: lh
     networks:
       eth2:
@@ -60,7 +58,7 @@ services:
       - ./data:/data
 
   node2-1:
-    image: sigp/lighthouse
+    image: sigp/lighthouse:v0.3.5
     container_name: node2-1
     ports:
       - 5052:5052
@@ -88,7 +86,7 @@ services:
       --eth1-endpoint http://node1:8545
 
   node2-2:
-    image: sigp/lighthouse
+    image: sigp/lighthouse:v0.3.5
     container_name: node2-2
     depends_on:
       - node2-1
@@ -112,12 +110,11 @@ services:
       --http-address 0.0.0.0
       --http-allow-origin *
       --libp2p-addresses /ip4/10.20.30.101/tcp/9000,/ip4/10.20.30.103/tcp/9000,/ip4/10.20.30.104/tcp/9000
-#      --eth1
-#      --eth1-endpoint http://node1:8545
-#      --boot-nodes $(cat $BEACON_DIR/beacon/network/enr.dat)
+      --eth1
+      --eth1-endpoint http://node1:8545
 
   node2-3:
-    image: sigp/lighthouse
+    image: sigp/lighthouse:v0.3.5
     container_name: node2-3
     depends_on:
       - node2-1
@@ -141,12 +138,11 @@ services:
       --http-address 0.0.0.0
       --http-allow-origin *
       --libp2p-addresses /ip4/10.20.30.102/tcp/9000,/ip4/10.20.30.101/tcp/9000,/ip4/10.20.30.104/tcp/9000
-#      --eth1
-#      --eth1-endpoint http://node1:8545
-#      --boot-nodes $(cat $BEACON_DIR/beacon/network/enr.dat)
+      --eth1
+      --eth1-endpoint http://node1:8545
 
   node2-4:
-    image: sigp/lighthouse
+    image: sigp/lighthouse:v0.3.5
     container_name: node2-4
     depends_on:
       - node2-1
@@ -170,12 +166,11 @@ services:
       --http-address 0.0.0.0
       --http-allow-origin *
       --libp2p-addresses /ip4/10.20.30.102/tcp/9000,/ip4/10.20.30.101/tcp/9000,/ip4/10.20.30.103/tcp/9000
-  #      --eth1
-  #      --eth1-endpoint http://node1:8545
-  #      --boot-nodes $(cat $BEACON_DIR/beacon/network/enr.dat)
+      --eth1
+      --eth1-endpoint http://node1:8545
 
   mock-validators:
-    image: sigp/lighthouse
+    image: sigp/lighthouse:v0.3.5
     container_name: mock-validators
     depends_on:
       - node2-1
@@ -195,7 +190,7 @@ services:
       eth2:
 
   validators1:
-    image: sigp/lighthouse
+    image: sigp/lighthouse:v0.3.5
     container_name: validators1
     depends_on:
       - node2-1
@@ -217,14 +212,12 @@ services:
       --server http://node2-1:5052
 
   validators2:
-    image: sigp/lighthouse
+    image: sigp/lighthouse:v0.3.5
     container_name: validators2
     depends_on:
       - node2-1
 #    ports:
 #      - 30303:30303
-    networks:
-      eth2:
     volumes:
       - ./data:/data
     command: >
@@ -237,6 +230,81 @@ services:
       --datadir "/data/validators/validators2"
       --testnet-dir "/data/testnet"
       --server http://node2-1:5052
+    networks:
+      eth2:
+
+  validators3:
+    image: sigp/lighthouse:v0.3.5
+    container_name: validators3
+    depends_on:
+      - node2-2
+#    ports:
+#      - 30303:30303
+    volumes:
+      - ./data:/data
+    command: >
+      lighthouse
+      --spec "${SPEC}"
+      validator_client
+      --delete-lockfiles 
+      --init-slashing-protection
+      --debug-level "${DEBUG_LEVEL}"
+      --datadir "/data/validators/validators3"
+      --testnet-dir "/data/testnet"
+      --server http://node2-2:5052
+    networks:
+      eth2:
+
+  oracle-1:
+    image: lido-oracle:e2e
+    container_name: oracle-1
+    #restart: unless-stopped
+    environment:
+      - ETH1_NODE=http://node1:8545
+      - BEACON_NODE=http://node2-1:5052
+      - POOL_CONTRACT=${POOL_CONTRACT}
+      - MEMBER_PRIV_KEY=${MEMBER1_PRIV_KEY}
+      - DAEMON=1
+    networks:
+      eth2:
+
+  oracle-2:
+    image: lido-oracle:e2e
+    container_name: oracle-2
+    #restart: unless-stopped
+    environment:
+      - ETH1_NODE=http://node1:8545
+      - BEACON_NODE=http://node2-1:5052
+      - POOL_CONTRACT=${POOL_CONTRACT}
+      - MEMBER_PRIV_KEY=${MEMBER2_PRIV_KEY}
+      - DAEMON=1
+    networks:
+      eth2:
+
+  oracle-3:
+    image: lido-oracle:e2e
+    container_name: oracle-3
+    #restart: unless-stopped
+    environment:
+      - ETH1_NODE=http://node1:8545
+      - BEACON_NODE=http://node2-1:5052
+      - POOL_CONTRACT=${POOL_CONTRACT}
+      - MEMBER_PRIV_KEY=${MEMBER3_PRIV_KEY}
+      - DAEMON=1
+    networks:
+      eth2:
+
+  slasher:
+    image: gcr.io/prysmaticlabs/prysm/slasher:latest
+    container_name: slasher
+    volumes:
+      - ./data/slasher:/data
+    command: >
+      --accept-terms-of-use
+      --beacon-rpc-provider=node2-1:5052
+      --datadir=/data
+    networks:
+      eth2:
 
 networks:
   eth2:

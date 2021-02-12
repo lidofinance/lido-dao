@@ -1,9 +1,13 @@
+// SPDX-FileCopyrightText: 2020 Lido <info@lido.fi>
+
+// SPDX-License-Identifier: GPL-3.0
+
 /* See contracts/COMPILERS.md */
 pragma solidity 0.4.24;
 
 import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
-import "@aragon/os/contracts/common/IsContract.sol";
+import "@aragon/os/contracts/lib/math/SafeMath64.sol";
 
 import "../interfaces/ILidoOracle.sol";
 import "../interfaces/ILido.sol";
@@ -26,44 +30,87 @@ import "./BitOps.sol";
   * It's prohibited to add data to non-current data points whatever finalized or not.
   * It's prohibited to add data to the current finalized data point.
   */
-contract LidoOracle is ILidoOracle, IsContract, AragonApp {
+contract LidoOracle is ILidoOracle, AragonApp {
     using SafeMath for uint256;
+    using SafeMath64 for uint64;
     using BitOps for uint256;
+
+    struct BeaconSpec {
+        uint64 epochsPerFrame;
+        uint64 slotsPerEpoch;
+        uint64 secondsPerSlot;
+        uint64 genesisTime;
+    }
+
+    struct Report {
+        uint128 beaconBalance;
+        uint128 beaconValidators;
+    }
+
+    struct EpochData {
+        uint256 reportsBitMask;
+        mapping (uint256 => Report) reports;
+    }
 
     /// ACL
     bytes32 constant public MANAGE_MEMBERS = keccak256("MANAGE_MEMBERS");
     bytes32 constant public MANAGE_QUORUM = keccak256("MANAGE_QUORUM");
-    bytes32 constant public SET_REPORT_INTERVAL_DURATION = keccak256("SET_REPORT_INTERVAL_DURATION");
+    bytes32 constant public SET_BEACON_SPEC = keccak256("SET_BEACON_SPEC");
 
     /// @dev Maximum number of oracle committee members
     uint256 public constant MAX_MEMBERS = 256;
 
-    uint256 internal constant REPORT_INTERVAL_DURATION = 1 days;
     uint256 internal constant MEMBER_NOT_FOUND = uint256(-1);
 
     /// @dev oracle committee members
     address[] private members;
     /// @dev number of the committee members required to finalize a data point
-    uint256 private quorum;
+    bytes32 internal constant QUORUM_POSITION = keccak256("lido.LidoOracle.quorum");
 
-    /// @dev link to the pool
-    ILido public pool;
+    /// @dev link to the Lido contract
+    bytes32 internal constant LIDO_POSITION = keccak256("lido.LidoOracle.lido");
 
-    // data describing last finalized data point
-    uint256 private lastFinalizedReportInterval;
-    uint256 private lastFinalizedData;
+    /// @dev storage for actual beacon chain specs
+    bytes32 internal constant BEACON_SPEC_POSITION = keccak256("lido.LidoOracle.beaconSpec");
 
-    // data of the current aggregation
-    uint256 private currentlyAggregatedReportInterval;
-    uint256 private contributionBitMask;
-    uint256[] private currentlyAggregatedData;  // only indexes set in contributionBitMask are valid
+    /// @dev the most early epoch that can be reported
+    bytes32 internal constant MIN_REPORTABLE_EPOCH_ID_POSITION = keccak256("lido.LidoOracle.minReportableEpochId");
+    /// @dev the last reported epoch
+    bytes32 internal constant LAST_REPORTED_EPOCH_ID_POSITION = keccak256("lido.LidoOracle.lastReportedEpochId");
+    /// @dev storage for all gathered from reports data
+    mapping(uint256 => EpochData) private gatheredEpochData;
 
-    uint256 private reportIntervalDuration;
+    event Completed(
+        uint256 epochId,
+        uint128 beaconBalance,
+        uint128 beaconValidators
+    );
 
-    function initialize(ILido _lido) public onlyInit {
-        assert(1 == ((1 << (MAX_MEMBERS - 1)) >> (MAX_MEMBERS - 1)));   // static assert
-        reportIntervalDuration = REPORT_INTERVAL_DURATION;
-        pool = _lido;
+    function initialize(
+        address _lido,
+        uint64 _epochsPerFrame,
+        uint64 _slotsPerEpoch,
+        uint64 _secondsPerSlot,
+        uint64 _genesisTime
+    )
+        public onlyInit
+    {
+        assert(1 == ((1 << (MAX_MEMBERS - 1)) >> (MAX_MEMBERS - 1)));  // static assert
+
+        require(_epochsPerFrame > 0, "BAD_EPOCHS_PER_FRAME");
+        require(_slotsPerEpoch > 0, "BAD_SLOTS_PER_EPOCH");
+        require(_secondsPerSlot > 0, "BAD_SECONDS_PER_SLOT");
+        require(_genesisTime > 0, "BAD_GENESIS_TIME");
+
+        LIDO_POSITION.setStorageAddress(_lido);
+
+        _setBeaconSpec(
+            _epochsPerFrame,
+            _slotsPerEpoch,
+            _secondsPerSlot,
+            _genesisTime
+        );
+
         initialized();
     }
 
@@ -74,15 +121,13 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
     function addOracleMember(address _member) external auth(MANAGE_MEMBERS) {
         require(members.length < MAX_MEMBERS, "TOO_MANY_MEMBERS");
         require(address(0) != _member, "BAD_ARGUMENT");
-        require(MEMBER_NOT_FOUND == _findMember(_member), "MEMBER_EXISTS");
+        require(MEMBER_NOT_FOUND == _getMemberId(_member), "MEMBER_EXISTS");
 
         members.push(_member);
-        // Unitialized data is fine since contributionBitMask tells which cells to use.
-        currentlyAggregatedData.length = members.length;
-        assert(!contributionBitMask.getBit(members.length.sub(1)));
 
+        // set quorum to 1 when first member added
         if (1 == members.length) {
-            quorum = 1;
+            QUORUM_POSITION.setStorageUint256(1);
         }
 
         emit MemberAdded(_member);
@@ -90,216 +135,343 @@ contract LidoOracle is ILidoOracle, IsContract, AragonApp {
     }
 
     /**
-      * @notice Remove `_member` from the oracle member committee
-      * @param _member Address of a member to remove
-      */
+     * @notice Remove `_member` from the oracle member committee
+     * @param _member Address of a member to remove
+     */
     function removeOracleMember(address _member) external auth(MANAGE_MEMBERS) {
-        require(members.length > quorum, "QUORUM_WONT_BE_MADE");
+        require(members.length > getQuorum(), "QUORUM_WONT_BE_MADE");
 
-        uint256 index = _findMember(_member);
+        uint256 index = _getMemberId(_member);
         require(index != MEMBER_NOT_FOUND, "MEMBER_NOT_FOUND");
 
+        uint256 lastReportedEpochId = (
+            LAST_REPORTED_EPOCH_ID_POSITION.getStorageUint256()
+        );
+
+        MIN_REPORTABLE_EPOCH_ID_POSITION.setStorageUint256(lastReportedEpochId);
         uint256 last = members.length.sub(1);
+
+        uint256 bitMask = gatheredEpochData[lastReportedEpochId].reportsBitMask;
         if (index != last) {
             members[index] = members[last];
-            currentlyAggregatedData[index] = currentlyAggregatedData[last];
-            contributionBitMask = contributionBitMask.setBit(index, contributionBitMask.getBit(last));
+            bitMask = bitMask.setBit(index, bitMask.getBit(last));
         }
-        contributionBitMask = contributionBitMask.setBit(last, false);
+        bitMask = bitMask.setBit(last, false);
+        gatheredEpochData[lastReportedEpochId].reportsBitMask = bitMask;
+
         members.length--;
-        currentlyAggregatedData.length--;
 
         emit MemberRemoved(_member);
         _assertInvariants();
     }
 
     /**
-      * @notice Set the number of oracle members required to form a data point to `_quorum`
-      */
+     * @notice Set the number of oracle members required to form a data point to `_quorum`
+     */
     function setQuorum(uint256 _quorum) external auth(MANAGE_QUORUM) {
         require(members.length >= _quorum && 0 != _quorum, "QUORUM_WONT_BE_MADE");
 
-        quorum = _quorum;
+        QUORUM_POSITION.setStorageUint256(_quorum);
         emit QuorumChanged(_quorum);
 
-        assert(currentlyAggregatedReportInterval <= _getCurrentReportInterval());
+        uint256 minReportableEpochId = (
+            MIN_REPORTABLE_EPOCH_ID_POSITION.getStorageUint256()
+        );
+        uint256 lastReportedEpochId = (
+            LAST_REPORTED_EPOCH_ID_POSITION.getStorageUint256()
+        );
 
-        if (currentlyAggregatedReportInterval > lastFinalizedReportInterval)
-            _tryFinalize(currentlyAggregatedReportInterval);
+        assert(lastReportedEpochId <= getCurrentEpochId());
+
+        if (lastReportedEpochId > minReportableEpochId) {
+            minReportableEpochId = lastReportedEpochId;
+            _tryPush(lastReportedEpochId);
+        }
 
         _assertInvariants();
     }
 
     /**
-      * @notice Set the new report interval duration to `_reportIntervalDuration`
-      */
-    function setReportIntervalDuration(uint256 _reportIntervalDuration) external auth(SET_REPORT_INTERVAL_DURATION) {
-        require(_reportIntervalDuration > 0, "ZERO_REPORT_INTERVAL_DURATION");
-        reportIntervalDuration = _reportIntervalDuration;
-        emit ReportIntervalDurationChanged(_reportIntervalDuration);
-    }
-
-    /**
-      * @notice An oracle committee member pushes data from the ETH 2.0 side
-      * @param _reportInterval ReportInterval id
-      * @param _eth2balance Balance in wei on the ETH 2.0 side
-      */
-    function pushData(uint256 _reportInterval, uint256 _eth2balance) external {
-        require(_reportInterval <= _getCurrentReportInterval(), "REPORT_INTERVAL_HAS_NOT_YET_BEGUN");
-        require(_reportInterval >= currentlyAggregatedReportInterval, "REPORT_INTERVAL_IS_TOO_OLD");
-        require(_reportInterval > lastFinalizedReportInterval, "REPORT_INTERVAL_IS_TOO_OLD");
+     * @notice An oracle committee member reports data from the ETH 2.0 side
+     * @param _epochId BeaconChain epoch id
+     * @param _beaconBalance Balance in wei on the ETH 2.0 side
+     * @param _beaconValidators Number of validators visible on this epoch
+     */
+    function reportBeacon(uint256 _epochId, uint128 _beaconBalance, uint128 _beaconValidators) external {
+        (uint256 startEpoch, uint256 endEpoch) = getCurrentReportableEpochs();
+        require(_epochId >= startEpoch, "EPOCH_IS_TOO_OLD");
+        require(_epochId <= endEpoch, "EPOCH_HAS_NOT_YET_BEGUN");
 
         address member = msg.sender;
-        uint256 index = _findMember(member);
+        uint256 index = _getMemberId(member);
         require(index != MEMBER_NOT_FOUND, "MEMBER_NOT_FOUND");
 
-        if (currentlyAggregatedReportInterval != _reportInterval) {
-            // reset aggregation on new reportInterval
-            currentlyAggregatedReportInterval = _reportInterval;
-            contributionBitMask = 0;
-            // We don't need to waste gas resetting currentlyAggregatedData since
-            // we cleared the index - contributionBitMask.
-            // Moreover, it's beneficial to keep the array populated with non-zero values
-            // since rewriting an existing value consumes less gas.
-        }
-
         // check & set contribution flag
-        require(!contributionBitMask.getBit(index), "ALREADY_SUBMITTED");
-        contributionBitMask = contributionBitMask.setBit(index, true);
+        uint256 bitMask = gatheredEpochData[_epochId].reportsBitMask;
+        require(!bitMask.getBit(index), "ALREADY_SUBMITTED");
 
-        currentlyAggregatedData[index] = _eth2balance;
+        LAST_REPORTED_EPOCH_ID_POSITION.setStorageUint256(_epochId);
 
-        _tryFinalize(_reportInterval);
+        gatheredEpochData[_epochId].reportsBitMask = bitMask.setBit(index, true);
+
+        Report memory currentReport = Report(_beaconBalance, _beaconValidators);
+        gatheredEpochData[_epochId].reports[index] = currentReport;
+
+        _tryPush(_epochId);
     }
 
     /**
-      * @notice Returns the current oracle member committee
-      */
+     * @notice Returns all needed to oracle daemons data
+     */
+    function getCurrentFrame()
+        external view
+        returns (
+            uint256 frameEpochId,
+            uint256 frameStartTime,
+            uint256 frameEndTime
+        )
+    {
+        BeaconSpec memory beaconSpec = _getBeaconSpec();
+        uint64 genesisTime = beaconSpec.genesisTime;
+        uint64 epochsPerFrame = beaconSpec.epochsPerFrame;
+        uint64 secondsPerEpoch = beaconSpec.secondsPerSlot.mul(beaconSpec.slotsPerEpoch);
+
+        frameEpochId = getCurrentEpochId().div(epochsPerFrame).mul(epochsPerFrame);
+        frameStartTime = frameEpochId.mul(secondsPerEpoch).add(genesisTime);
+
+        uint256 nextFrameEpochId = frameEpochId.div(epochsPerFrame).add(1).mul(epochsPerFrame);
+        frameEndTime = nextFrameEpochId.mul(secondsPerEpoch).add(genesisTime).sub(1);
+    }
+
+    /**
+     * @notice Returns the current oracle member committee
+     */
     function getOracleMembers() external view returns (address[]) {
         return members;
     }
 
     /**
-      * @notice Returns the number of oracle members required to form a data point
-      */
-    function getQuorum() external view returns (uint256) {
-        return quorum;
+     * @notice Returns the Lido contract address
+     */
+    function getLido() public view returns (ILido) {
+        return ILido(LIDO_POSITION.getStorageAddress());
     }
 
     /**
-      * @notice Returns reportInterval duration in seconds
-      * @dev ReportIntervals are consecutive time intervals. Oracle data is aggregated
-      *      and processed for each reportInterval independently.
-      */
-    function getReportIntervalDurationSeconds() external view returns (uint256) {
-        return reportIntervalDuration;
+     * @notice Set beacon specs
+     */
+    function setBeaconSpec(
+        uint64 _epochsPerFrame,
+        uint64 _slotsPerEpoch,
+        uint64 _secondsPerSlot,
+        uint64 _genesisTime
+    )
+        public auth(SET_BEACON_SPEC)
+    {
+        require(_epochsPerFrame > 0, "BAD_EPOCHS_PER_FRAME");
+        require(_slotsPerEpoch > 0, "BAD_SLOTS_PER_EPOCH");
+        require(_secondsPerSlot > 0, "BAD_SECONDS_PER_SLOT");
+        require(_genesisTime > 0, "BAD_GENESIS_TIME");
+
+        _setBeaconSpec(
+            _epochsPerFrame,
+            _slotsPerEpoch,
+            _secondsPerSlot,
+            _genesisTime
+        );
     }
 
     /**
-      * @notice Returns reportInterval id for a timestamp
-      * @param _timestamp Unix timestamp, seconds
-      */
-    function getReportIntervalForTimestamp(uint256 _timestamp) external view returns (uint256) {
-        return _getReportIntervalForTimestamp(_timestamp);
+     * @notice Returns beacon specs
+     */
+    function getBeaconSpec()
+        public
+        view
+        returns (
+            uint64 epochsPerFrame,
+            uint64 slotsPerEpoch,
+            uint64 secondsPerSlot,
+            uint64 genesisTime
+        )
+    {
+        BeaconSpec memory beaconSpec = _getBeaconSpec();
+        return (
+            beaconSpec.epochsPerFrame,
+            beaconSpec.slotsPerEpoch,
+            beaconSpec.secondsPerSlot,
+            beaconSpec.genesisTime
+        );
     }
 
     /**
-      * @notice Returns current reportInterval id
-      */
-    function getCurrentReportInterval() external view returns (uint256) {
-        return _getCurrentReportInterval();
+     * @notice Returns the number of oracle members required to form a data point
+     */
+    function getQuorum() public view returns (uint256) {
+        return QUORUM_POSITION.getStorageUint256();
     }
 
     /**
-      * @notice Returns the latest data from the ETH 2.0 side
-      * @dev Depending on the oracle member committee liveness, the data can be stale. See _reportInterval.
-      * @return _reportInterval ReportInterval id
-      * @return _eth2balance Balance in wei on the ETH 2.0 side
-      */
-    function getLatestData() external view returns (uint256 reportInterval, uint256 eth2balance) {
-        return (lastFinalizedReportInterval, lastFinalizedData);
+     * @notice Returns the epochId calculated from current timestamp
+     */
+    function getCurrentEpochId() public view returns (uint256) {
+        BeaconSpec memory beaconSpec = _getBeaconSpec();
+        return (
+            _getTime()
+            .sub(beaconSpec.genesisTime)
+            .div(beaconSpec.slotsPerEpoch)
+            .div(beaconSpec.secondsPerSlot)
+        );
     }
 
     /**
-      * @dev Finalizes the current data point if quorum is reached
-      */
-    function _tryFinalize(uint256 _reportInterval) internal {
-        uint256 mask = contributionBitMask;
+     * @notice Returns the fisrt and last epochs that can be reported
+     */
+    function getCurrentReportableEpochs()
+        public view
+        returns (
+            uint256 minReportableEpochId,
+            uint256 maxReportableEpochId
+        )
+    {
+        minReportableEpochId = (
+            MIN_REPORTABLE_EPOCH_ID_POSITION.getStorageUint256()
+        );
+        return (minReportableEpochId, getCurrentEpochId());
+    }
+
+    /**
+     * @dev Sets beacon spec
+     */
+    function _setBeaconSpec(
+        uint64 _epochsPerFrame,
+        uint64 _slotsPerEpoch,
+        uint64 _secondsPerSlot,
+        uint64 _genesisTime
+    )
+        internal
+    {
+        uint256 data = (
+            uint256(_epochsPerFrame) << 192 |
+            uint256(_slotsPerEpoch) << 128 |
+            uint256(_secondsPerSlot) << 64 |
+            uint256(_genesisTime)
+        );
+        BEACON_SPEC_POSITION.setStorageUint256(data);
+    }
+
+    /**
+     * @dev Returns beaconSpec struct
+     */
+    function _getBeaconSpec()
+        internal
+        view
+        returns (BeaconSpec memory beaconSpec)
+    {
+        uint256 data = BEACON_SPEC_POSITION.getStorageUint256();
+        beaconSpec.epochsPerFrame = uint64(data >> 192);
+        beaconSpec.slotsPerEpoch = uint64(data >> 128);
+        beaconSpec.secondsPerSlot = uint64(data >> 64);
+        beaconSpec.genesisTime = uint64(data);
+        return beaconSpec;
+    }
+
+    /**
+     * @dev Returns if quorum reached and mode-value report
+     * @return isQuorum - true, when quorum is reached, false otherwise
+     * @return modeReport - valid mode-value report when quorum is reached, 0-data otherwise
+     */
+    function _getQuorumReport(uint256 _epochId) internal view returns (bool isQuorum, Report memory modeReport) {
+        uint256 mask = gatheredEpochData[_epochId].reportsBitMask;
         uint256 popcnt = mask.popcnt();
-        if (popcnt < quorum)
-            return;
+        if (popcnt < getQuorum())
+            return (false, Report({beaconBalance: 0, beaconValidators: 0}));
 
         assert(0 != popcnt && popcnt <= members.length);
 
-        // getting reported data out of sparse currentlyAggregatedData
+        // pack current gatheredEpochData mapping to uint256 array
         uint256[] memory data = new uint256[](popcnt);
         uint256 i = 0;
-
         uint256 membersLength = members.length;
         for (uint256 index = 0; index < membersLength; ++index) {
             if (mask.getBit(index)) {
-                data[i++] = currentlyAggregatedData[index];
+                data[i++] = reportToUint256(gatheredEpochData[_epochId].reports[index]);
             }
         }
+
         assert(i == data.length);
 
-        bool isUnimodal;
-        uint256 mode;
-
-        (isUnimodal, mode) = Algorithm.mode(data);
+        // find mode value of this array
+        (bool isUnimodal, uint256 mode) = Algorithm.mode(data);
         if (!isUnimodal)
-            return;
+            return (false, Report({beaconBalance: 0, beaconValidators: 0}));
 
-        // finalizing and reporting mode value to lido
-        lastFinalizedData = mode;
-        lastFinalizedReportInterval = _reportInterval;
+        // unpack Report struct from uint256
+        modeReport = uint256ToReport(mode);
 
-        emit AggregatedData(lastFinalizedReportInterval, lastFinalizedData);
-
-        if (address(0) != address(pool))
-            pool.reportEther2(lastFinalizedReportInterval, lastFinalizedData);
+        return (true, modeReport);
     }
 
     /**
-      * @dev Returns member's index in the members array or MEMBER_NOT_FOUND
-      */
-    function _findMember(address _member) internal view returns (uint256) {
+     * @dev Pushes the current data point if quorum is reached
+     */
+    function _tryPush(uint256 _epochId) internal {
+        (bool isQuorum, Report memory modeReport) = _getQuorumReport(_epochId);
+        if (!isQuorum)
+            return;
+
+        // data for this frame is collected, now this frame is completed, so
+        // minReportableEpochId should be changed to first epoch from next frame
+        BeaconSpec memory beaconSpec = _getBeaconSpec();
+        MIN_REPORTABLE_EPOCH_ID_POSITION.setStorageUint256(
+            _epochId
+            .div(beaconSpec.epochsPerFrame)
+            .add(1)
+            .mul(beaconSpec.epochsPerFrame)
+        );
+
+        emit Completed(_epochId, modeReport.beaconBalance, modeReport.beaconValidators);
+
+        ILido lido = getLido();
+        if (address(0) != address(lido))
+            lido.pushBeacon(modeReport.beaconValidators, modeReport.beaconBalance);
+    }
+
+    function reportToUint256(Report _report) internal pure returns (uint256) {
+        return uint256(_report.beaconBalance) << 128 | uint256(_report.beaconValidators);
+    }
+
+    function uint256ToReport(uint256 _report) internal pure returns (Report) {
+        Report memory report;
+        report.beaconBalance = uint128(_report >> 128);
+        report.beaconValidators = uint128(_report);
+        return report;
+    }
+
+    /**
+     * @dev Returns member's index in the members array or MEMBER_NOT_FOUND
+     */
+    function _getMemberId(address _member) internal view returns (uint256) {
         uint256 length = members.length;
         for (uint256 i = 0; i < length; ++i) {
             if (members[i] == _member) {
                 return i;
             }
         }
-
         return MEMBER_NOT_FOUND;
     }
 
     /**
-      * @dev Returns current timestamp
-      */
+     * @dev Returns current timestamp
+     */
     function _getTime() internal view returns (uint256) {
         return block.timestamp;
     }
 
     /**
-      * @dev Returns current reportInterval id
-      */
-    function _getCurrentReportInterval() internal view returns (uint256) {
-        return _getReportIntervalForTimestamp(_getTime());
-    }
-
-    /**
-      * @dev Returns reportInterval id for a timestamp
-      * @param _timestamp Unix timestamp, seconds
-      */
-    function _getReportIntervalForTimestamp(uint256 _timestamp) internal view returns (uint256) {
-        return _timestamp.div(reportIntervalDuration);
-    }
-
-    /**
-      * @dev Checks code self-consistency
-      */
+     * @dev Checks code self-consistency
+     */
     function _assertInvariants() private view {
+        uint256 quorum = getQuorum();
         assert(quorum != 0 && members.length >= quorum);
         assert(members.length <= MAX_MEMBERS);
     }

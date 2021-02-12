@@ -3,20 +3,19 @@ import { abi as tokenManagerAbi } from '@aragon/apps-token-manager/abi/TokenMana
 const tokenManagerAbiExt = tokenManagerAbi.concat(votingAbi.filter((i) => i.type === 'event'))
 
 let context
-let tokenManagerContract
+export let tokenManagerContract
 
-function init(c) {
+export function init(c) {
   if (!context) {
     context = c
     tokenManagerContract = new context.web3.eth.Contract(tokenManagerAbiExt, getProxyAddress())
   }
 }
 
-function getProxyAddress() {
+export function getProxyAddress() {
   return context.apps.tokenManagerApp.proxyAddress
 }
 
-async function hasInitialized() {
+export async function hasInitialized() {
   return await tokenManagerContract.methods.hasInitialized().call()
 }
-export { init, tokenManagerContract, getProxyAddress, hasInitialized }

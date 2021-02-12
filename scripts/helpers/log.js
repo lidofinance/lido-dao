@@ -1,53 +1,87 @@
 const chalk = require('chalk')
 
-function log(...args) {
-  console.log(...args)
+const log = (...args) => console.error(...args)
+log.stdout = (...args) => console.log(...args)
+
+const OK = chalk.green('✓')
+
+log.success = (...args) => {
+  console.error(OK, ...args)
 }
 
 function logSplitter(...args) {
-  console.log('====================')
+  console.error('====================')
   if (args.length) {
-    console.log(...args)
+    console.error(...args)
   }
 }
 
+log.splitter = logSplitter
+
 function logWideSplitter(...args) {
-  console.log('========================================')
+  console.error('========================================')
   if (args.length) {
-    console.log(...args)
+    console.error(...args)
   }
 }
+
+log.wideSplitter = logWideSplitter
 
 function logHeader(msg) {
   logWideSplitter(msg)
   logWideSplitter()
 }
 
+log.header = logHeader
+
 async function logDeploy(name, promise) {
-  console.log('====================')
-  console.log(`Deploying ${name}...`)
+  console.error('====================')
+  console.error(`Deploying ${name}...`)
   const instance = await promise
   const receipt = await web3.eth.getTransactionReceipt(instance.transactionHash)
   const { contractName, sourcePath, updatedAt: compiledAt } = instance.constructor._json
 
-  const compilerVersion = config.solc.version
-  const optimizer = config.solc.optimizer || null
-  const optimizerStatus = optimizer && optimizer.enabled ? `${optimizer.runs} runs` : 'disabled'
+  // const compilerVersion = config.solc.version
+  // const optimizer = config.solc.optimizer || null
+  // const optimizerStatus = optimizer && optimizer.enabled ? `${optimizer.runs} runs` : 'disabled'
 
-  console.log(`${name} address: ${chalk.yellow(instance.address)}`)
-  console.log(`TX hash: ${instance.transactionHash}`)
-  console.log(`Compiler: solc@${compilerVersion} (optimizer: ${optimizerStatus})`)
-  console.log(`Gas used: ${receipt.gasUsed}`)
+  console.error(`${name} address: ${chalk.yellow(instance.address)}`)
+  console.error(`TX hash: ${instance.transactionHash}`)
+  // console.log(`Compiler: solc@${compilerVersion} (optimizer: ${optimizerStatus})`)
+  console.error(`Gas used: ${receipt.gasUsed}`)
 
   return instance
 }
 
+log.deploy = logDeploy
+
 async function logTx(desc, promise) {
-  console.log(`${desc}...`)
+  console.error(`${desc}...`)
   const result = await promise
-  console.log(`TX hash: ${result.tx}`)
-  console.log(`Gas used: ${result.receipt.gasUsed}`)
+  console.error(`TX hash: ${result.tx}`)
+  console.error(`Gas used: ${result.receipt.gasUsed}`)
   return result
 }
 
-module.exports = { log, logSplitter, logWideSplitter, logHeader, logDeploy, logTx }
+log.tx = logTx
+
+async function logDeployTxData(contractName, txData) {
+  console.error('====================')
+  console.error(`To deploy ${chalk.yellow(contractName)}, send the following transaction:`)
+  console.log(`{`)
+  if (txData.from) {
+    console.log(`  "from": "${chalk.yellow(txData.from)}",`)
+  }
+  if (txData.gas) {
+    console.log(`  "gas": "${chalk.yellow(txData.gas)}",`)
+  }
+  console.log(`  "data": "${chalk.yellow(txData.data)}"`)
+  console.log(`}`)
+}
+
+log.deployTxData = logDeployTxData
+
+const yl = (s) => chalk.yellow(s)
+const gr = (s) => chalk.green(s)
+
+module.exports = { log, logSplitter, logWideSplitter, logHeader, logDeploy, logDeployTxData, logTx, yl, gr }

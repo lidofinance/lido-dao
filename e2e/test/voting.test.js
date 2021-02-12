@@ -15,10 +15,10 @@ require('dotenv').config()
 const tokenManagerAbiExt = tokenManagerAbi.concat(votingAbi.filter((i) => i.type === 'event'))
 const financeAbiExt = financeAbi.concat(vaultAbi.filter((i) => i.type === 'event'))
 const votingAbiExt = votingAbi.concat(financeAbiExt.filter((i) => i.type === 'event'))
-const voteSettings = ['500000000000000000', '50000000000000000', '604800']
+const voteSettings = ['500000000000000000', '50000000000000000', '180']
 
 test.before('Connecting Web3', async (t) => {
-  t.context = await prepareContext()
+  t.context = await prepareContext({ numUnlock: 5 })
 })
 
 test('Voting ', async (t) => {
@@ -61,8 +61,8 @@ test('Voting ', async (t) => {
   t.is(minAcceptQuorumPct, voteSettings[1], 'minAcceptQuorumPct')
   t.is(voteTime, voteSettings[2], 'voteTime')
 
-  const [holder1, holder2, holder3, holder4, holder5, sender, recipient] = accounts
-  const holders = [holder1, holder2, holder3, holder4, holder5]
+  const [holder1, holder2, holder3, sender, recipient] = accounts
+  const holders = [holder1, holder2, holder3]
   let val, ref, receipt
 
   // New Vote
@@ -136,7 +136,7 @@ test('Voting ', async (t) => {
   // function newVote(bytes _executionScript, string _metadata) external auth(CREATE_VOTES_ROLE) returns (uint256 voteId) {
 
   // finally calling Tokens app for forward call
-  receipt = await TokenManager.methods.forward(callData2).send({ from: holder5, gas: '1000000' })
+  receipt = await TokenManager.methods.forward(callData2).send({ from: holder1, gas: '1000000' })
 
   // event StartVote(uint256 indexed voteId, address indexed creator, string metadata);
   expectEvent(receipt, 'StartVote', {
@@ -155,7 +155,7 @@ test('Voting ', async (t) => {
 
   // we have 5 holder, so 3 holders is enough to pass voting
   // last voted holder will execute vote
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 2; i++) {
     receipt = await Voting.methods.vote(voteId, true, true).send({ from: holders[i], gas: '1000000' })
     // event CastVote(uint256 indexed voteId, address indexed voter, bool supports, uint256 stake);
     expectEvent(receipt, 'CastVote', {

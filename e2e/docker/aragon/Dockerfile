@@ -19,10 +19,8 @@ WORKDIR /aragon
 RUN yarn global add http-server
 RUN yarn
 
-RUN npx copy-aragon-ui-assets -n aragon-ui ./public
-
 ENV NODE_OPTIONS=--max_old_space_size=4096
-# RUN yarn build:local
-RUN npx parcel build src/index.html --out-dir ./public --public-url ./ --no-cache --no-source-maps
+RUN npx copy-aragon-ui-assets -n aragon-ui ./public \
+ && npx parcel build src/index.html --out-dir ./public --public-url ./ --no-cache --no-source-maps
 
 ENTRYPOINT ["http-server"]

@@ -1,4 +1,6 @@
-// SPDX-License-Identifier: NONE
+// SPDX-FileCopyrightText: 2020 Lido <info@lido.fi>
+
+// SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.6.12; // latest available for using OZ
 

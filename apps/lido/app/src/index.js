@@ -11,17 +11,24 @@ const defaultValue = ''
 const defaultState = {
   isStopped: true,
   fee: defaultValue,
-  feeDistribution: defaultValue,
+  feeDistribution: {
+    insuranceFeeBasisPoints: defaultValue,
+    operatorsFeeBasisPoints: defaultValue,
+    treasuryFeeBasisPoints: defaultValue,
+  },
   withdrawalCredentials: defaultValue,
   bufferedEther: defaultValue,
-  totalControlledEther: defaultValue,
-  token: defaultValue,
-  validatorRegistrationContract: defaultValue,
+  totalPooledEther: defaultValue,
+  nodeOperatorsRegistry: defaultValue,
+  depositContract: defaultValue,
   oracle: defaultValue,
   operators: defaultValue,
   treasury: defaultValue,
   insuranceFund: defaultValue,
-  ether2Stat: defaultValue,
+  beaconStat: {
+    depositedValidators: defaultValue,
+    beaconBalance: defaultValue,
+  },
   isSyncing: true,
 }
 

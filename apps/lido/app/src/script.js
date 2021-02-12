@@ -1,7 +1,6 @@
 import 'core-js/stable'
 import 'regenerator-runtime/runtime'
 import Aragon, { events } from '@aragon/api'
-import { fromWei } from 'web3-utils'
 
 const app = new Aragon()
 
@@ -26,6 +25,8 @@ app.store(
             ...nextState,
             withdrawalCredentials: await getWithdrawalCredentials(),
           }
+        case 'Unbuffered':
+          return { ...nextState, bufferedEther: await getBufferedEther() }
         case events.SYNC_STATUS_SYNCING:
           return { ...nextState, isSyncing: true }
         case events.SYNC_STATUS_SYNCED:
@@ -54,56 +55,56 @@ function initializeState() {
       ...cachedState,
       isStopped: await isStopped(),
       fee: await getFee(),
-      // feeDistribution: await getFeeDistribution(),
+      feeDistribution: await getFeeDistribution(),
       withdrawalCredentials: await getWithdrawalCredentials(),
       bufferedEther: await getBufferedEther(),
-      totalControlledEther: await getTotalControlledEther(),
-      token: await getToken(),
-      validatorRegistrationContract: await getValidatorRegistrationContract(),
+      totalPooledEther: await getTotalPooledEther(),
+      nodeOperatorsRegistry: await getNodeOperatorsRegistry(),
+      depositContract: await getDepositContract(),
       oracle: await getOracle(),
       // operators: await getOperators(),
       // treasury: await getTreasury(),
       // insuranceFund: await getInsuranceFund(),
-      ether2Stat: await getEther2Stat(),
+      beaconStat: await getBeaconStat(),
     }
   }
 }
 
 // API
-async function isStopped() {
-  return await app.call('isStopped').toPromise()
+function isStopped() {
+  return app.call('isStopped').toPromise()
 }
 
-async function getFee() {
-  return await app.call('getFee').toPromise()
+function getFee() {
+  return app.call('getFee').toPromise()
 }
 
-async function getFeeDistribution() {
-  return await app.call('getFeeDistribution').toPromise()
+function getFeeDistribution() {
+  return app.call('getFeeDistribution').toPromise()
 }
 
-async function getWithdrawalCredentials() {
-  return await app.call('getWithdrawalCredentials').toPromise()
+function getWithdrawalCredentials() {
+  return app.call('getWithdrawalCredentials').toPromise()
 }
 
-async function getBufferedEther() {
-  return fromWei(await app.call('getBufferedEther').toPromise())
+function getBufferedEther() {
+  return app.call('getBufferedEther').toPromise()
 }
 
-async function getTotalControlledEther() {
-  return fromWei(await app.call('getTotalControlledEther').toPromise())
+function getTotalPooledEther() {
+  return app.call('getTotalPooledEther').toPromise()
 }
 
-async function getToken() {
-  return await app.call('getToken').toPromise()
+function getNodeOperatorsRegistry() {
+  return app.call('getOperators').toPromise()
 }
 
-async function getValidatorRegistrationContract() {
-  return await app.call('getValidatorRegistrationContract').toPromise()
+function getDepositContract() {
+  return app.call('getDepositContract').toPromise()
 }
 
-async function getOracle() {
-  return await app.call('getOracle').toPromise()
+function getOracle() {
+  return app.call('getOracle').toPromise()
 }
 
 // async function getOperators() {
@@ -118,10 +119,10 @@ async function getOracle() {
 //   return await app.call('getInsuranceFund').toPromise()
 // }
 
-async function getEther2Stat() {
-  const stat = await app.call('getEther2Stat').toPromise()
+async function getBeaconStat() {
+  const stat = await app.call('getBeaconStat').toPromise()
   return {
-    Deposited: fromWei(stat.deposited),
-    Remote: fromWei(stat.remote),
+    depositedValidators: +stat.depositedValidators,
+    beaconBalance: stat.beaconBalance,
   }
 }

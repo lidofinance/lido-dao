@@ -1,10 +1,11 @@
-// SPDX-License-Identifier: NONE
+// SPDX-FileCopyrightText: 2020 Lido <info@lido.fi>
+
+// SPDX-License-Identifier: GPL-3.0
+
 /* See contracts/COMPILERS.md */
 pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20Burnable.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./interfaces/IStETH.sol";
 
@@ -22,9 +23,7 @@ import "./interfaces/IStETH.sol";
  * CStETH in return. The reverse exchange works exactly the opposite, received
  * CStETH token is burned, and StETH token is returned to the user.
  */
-contract CstETH is ERC20, ERC20Burnable {
-    using SafeERC20 for ERC20;
-    using SafeERC20 for IStETH;
+contract CstETH is ERC20 {
     using SafeMath for uint256;
 
     IStETH public stETH;
@@ -53,7 +52,7 @@ contract CstETH is ERC20, ERC20Burnable {
         require(_stETHAmount > 0, "CstETH: zero amount wrap not allowed");
         uint256 cstETHAmount = getCstETHByStETH(_stETHAmount);
         _mint(msg.sender, cstETHAmount);
-        stETH.safeTransferFrom(msg.sender, address(this), _stETHAmount);
+        stETH.transferFrom(msg.sender, address(this), _stETHAmount);
     }
 
     /**
@@ -69,7 +68,7 @@ contract CstETH is ERC20, ERC20Burnable {
         require(_cstETHAmount > 0, "CstETH: zero amount unwrap not allowed");
         uint256 stETHAmount = getStETHByCstETH(_cstETHAmount);
         _burn(msg.sender, _cstETHAmount);
-        stETH.safeTransfer(msg.sender, stETHAmount);
+        stETH.transfer(msg.sender, stETHAmount);
     }
 
     /**

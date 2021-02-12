@@ -5,7 +5,13 @@ const errorOut = (message) => {
   throw new Error(message)
 }
 
+// 100% => 10,000 BP
+function percentToBP(percent) {
+  return Math.floor(percent * 100)
+}
+
 module.exports = {
   ZERO_ADDR,
-  errorOut
+  errorOut,
+  percentToBP
 }

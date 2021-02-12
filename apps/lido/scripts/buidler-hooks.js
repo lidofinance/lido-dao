@@ -35,8 +35,8 @@ module.exports = {
     token = await StETH.at(e.args.proxy)
 
     const OracleMock = artifacts.require('OracleMock')
-    const ValidatorRegistrationMock = artifacts.require('ValidatorRegistrationMock')
-    depositContract = await ValidatorRegistrationMock.new()
+    const DepositContractMock = artifacts.require('DepositContractMock')
+    depositContract = await DepositContractMock.new()
     oracle = await OracleMock.new()
   },
 

@@ -13,10 +13,13 @@ import {
   IconRemove,
 } from '@aragon/ui'
 import Button from '@aragon/ui/dist/Button'
+import { ListItem } from './components/ListItem'
 import ChangeFeeSidePanel from './components/ChangeFeeSidePanel'
 import ChangeWCSidePanel from './components/ChangeWCSidePanel'
-import { ListItem } from './components/ListItem'
-import StakeSidePanel from './components/StakeSidePanel'
+import DbeSidePanel from './components/DbeSidePanel'
+import ChangeFeeDistrSidePanel from './components/ChangeFeeDistrSidePanel'
+import WcBadge from './components/WcBadge'
+import { formatEth } from './utils'
 
 export default function App() {
   const { api, appState, currentApp, guiStyle } = useAragonApi()
@@ -30,7 +33,7 @@ export default function App() {
   const closeChangeFeePanel = () => setChangeFeePanelOpened(false)
   const apiSetFee = useCallback(
     (newFee) => {
-      return api.setFee(newFee)
+      return api.setFee(newFee).toPromise()
     },
     [api]
   )
@@ -55,21 +58,37 @@ export default function App() {
     api.stop().toPromise()
   }, [api])
 
+  const [changeFeeDistrPanelOpened, setChangeFeeDistrPanelOpened] = useState(
+    false
+  )
+  const openChangeFeeDistrPanel = useCallback(() => {
+    setChangeFeeDistrPanelOpened(true)
+  }, [])
+  const closeChangeFeeDistrPanel = useCallback(() => {
+    setChangeFeeDistrPanelOpened(false)
+  }, [])
+  const apiSetFeeDistr = useCallback(
+    (treasury, insurance, operators) => {
+      return api.setFeeDistribution(treasury, insurance, operators).toPromise()
+    },
+    [api]
+  )
+
   const data = useMemo(() => {
     const {
       isStopped,
       fee,
-      // feeDistribution,
+      feeDistribution,
       withdrawalCredentials,
       bufferedEther,
-      totalControlledEther,
-      token,
-      validatorRegistrationContract,
+      totalPooledEther,
+      nodeOperatorsRegistry,
+      depositContract,
       oracle,
       // operators,
       // treasury,
       // insuranceFund,
-      // ether2Stat,
+      // beaconStat,
     } = appState
 
     return [
@@ -127,7 +146,7 @@ export default function App() {
         label: 'Fee',
         content: (
           <span style={{ display: 'flex', alignItems: 'center' }}>
-            <strong>{fee || 'No data'}</strong>
+            <strong>{fee ? `${fee / 100}%` : 'No data'}</strong>
             <Button
               icon={<IconEdit />}
               label="Change fee"
@@ -139,10 +158,67 @@ export default function App() {
         ),
       },
       {
+        label: 'Fee distribution',
+        content: (
+          <span style={{ display: 'flex', alignItems: 'center' }}>
+            <Button
+              icon={<IconEdit />}
+              label="Change fee"
+              display="icon"
+              onClick={openChangeFeeDistrPanel}
+              style={{ marginLeft: 10 }}
+            />
+          </span>
+        ),
+      },
+      {
+        label: 'Treasury',
+        content: (
+          <span style={{ display: 'flex', alignItems: 'center' }}>
+            <strong>
+              {feeDistribution.treasuryFeeBasisPoints
+                ? `${feeDistribution.treasuryFeeBasisPoints / 100}%`
+                : 'No data'}
+            </strong>
+          </span>
+        ),
+        subBullet: true,
+      },
+      {
+        label: 'Insurance',
+        content: (
+          <span style={{ display: 'flex', alignItems: 'center' }}>
+            <strong>
+              {feeDistribution.insuranceFeeBasisPoints
+                ? `${feeDistribution.insuranceFeeBasisPoints / 100}%`
+                : 'No data'}
+            </strong>
+          </span>
+        ),
+        subBullet: true,
+      },
+      {
+        label: 'Operators',
+        content: (
+          <span style={{ display: 'flex', alignItems: 'center' }}>
+            <strong>
+              {feeDistribution.operatorsFeeBasisPoints
+                ? `${feeDistribution.operatorsFeeBasisPoints / 100}%`
+                : 'No data'}
+            </strong>
+          </span>
+        ),
+        subBullet: true,
+      },
+      {
         label: 'Withdrawal Credentials',
         content: (
           <span style={{ display: 'flex', alignItems: 'center' }}>
-            <strong>{withdrawalCredentials || 'Unset'}</strong>
+            {withdrawalCredentials ? (
+              <WcBadge wc={withdrawalCredentials} />
+            ) : (
+              <strong>None</strong>
+            )}
             <Button
               icon={<IconEdit />}
               label="Change withdrawal credentials"
@@ -155,52 +231,54 @@ export default function App() {
       },
       {
         label: 'Buffered Ether',
-        content: <strong>{bufferedEther || 'No data'}</strong>,
+        content: <strong>{formatEth(bufferedEther) || 'No data'}</strong>,
       },
       {
-        label: 'Total Controlled Ether',
-        content: <strong>{totalControlledEther || 'No data'}</strong>,
+        label: 'Total Pooled Ether',
+        content: <strong>{formatEth(totalPooledEther) || 'No data'}</strong>,
       },
       {
-        label: 'Validator Registration Contract',
-        content: <IdentityBadge entity={validatorRegistrationContract} />,
+        label: 'Deposit Contract',
+        content: <IdentityBadge entity={depositContract} />,
       },
       {
-        label: 'Token',
-        content: <IdentityBadge entity={token} />,
+        label: 'Node operators registry',
+        content: <IdentityBadge entity={nodeOperatorsRegistry} />,
       },
       {
         label: 'Oracle',
         content: <IdentityBadge entity={oracle} />,
       },
     ]
-  }, [appState, theme])
+  }, [
+    appState,
+    openChangeFeeDistrPanel,
+    resume,
+    stop,
+    theme.negative,
+    theme.positive,
+  ])
 
-  const ether2StatData = useMemo(() => {
-    const { ether2Stat } = appState
-
-    return Object.entries(ether2Stat).map(([key, value]) => ({
-      label: key,
-      content: <strong>{value}</strong>,
-    }))
+  const beaconStatData = useMemo(() => {
+    const { beaconStat: stat } = appState
+    return [
+      {
+        label: 'Deposits',
+        content: <strong>{stat.depositedValidators}</strong>,
+      },
+      {
+        label: 'Balance',
+        content: <strong>{formatEth(stat.beaconBalance)}</strong>,
+      },
+    ]
   }, [appState])
 
-  const [stakeSidePanelOpen, setStakeSidePanelOpen] = useState(false)
-  const openStakeSidePanel = useCallback(() => setStakeSidePanelOpen(true), [])
-  const closeStakeSidePanel = useCallback(
-    () => setStakeSidePanelOpen(false),
-    []
-  )
-  const stake = useCallback(
-    (address) => {
-      return api
-        .submit(address || '0x0000000000000000000000000000000000000000', {
-          value: '0x1bc16d674ec800000', // 32ETH
-        })
-        .toPromise()
-    },
-    [api]
-  )
+  const [dbePanelOpen, setDbePanelOpen] = useState(false)
+  const openDbePanel = useCallback(() => setDbePanelOpen(true), [])
+  const closeDbePanel = useCallback(() => setDbePanelOpen(false), [])
+  const apiDepositBufferedEther = useCallback(() => {
+    return api.depositBufferedEther()
+  }, [api])
 
   return (
     <Main theme={appearance} assetsUrl="./aragon-ui">
@@ -210,12 +288,12 @@ export default function App() {
         secondary={
           <Button
             mode="strong"
-            onClick={openStakeSidePanel}
+            onClick={openDbePanel}
             css={`
               background: ${theme.negative};
             `}
           >
-            STAKE
+            DEPOSIT BUFFERED ETHER
           </Button>
         }
       />
@@ -223,8 +301,8 @@ export default function App() {
         primary={
           <Box heading="Details" padding={20}>
             <ul>
-              {data.map(({ label, content }, index) => (
-                <ListItem key={label + index}>
+              {data.map(({ label, content, subBullet }, index) => (
+                <ListItem key={label + index} subBullet={subBullet}>
                   <span>{label}</span>
                   <span>:</span>
                   {content}
@@ -234,9 +312,9 @@ export default function App() {
           </Box>
         }
         secondary={
-          <Box heading="ether2Stat">
+          <Box heading="Beacon stat">
             <ul>
-              {ether2StatData.map(({ label, content }, index) => (
+              {beaconStatData.map(({ label, content }, index) => (
                 <ListItem key={label + index}>
                   <span>{label}</span>
                   <span>:</span>
@@ -247,21 +325,25 @@ export default function App() {
           </Box>
         }
       />
-      <StakeSidePanel
-        opened={stakeSidePanelOpen}
-        onClose={closeStakeSidePanel}
-        api={stake}
+      <DbeSidePanel
+        opened={dbePanelOpen}
+        onClose={closeDbePanel}
+        api={apiDepositBufferedEther}
       />
       <ChangeFeeSidePanel
         opened={changeFeePanelOpened}
         onClose={closeChangeFeePanel}
         apiSetFee={apiSetFee}
       />
-
       <ChangeWCSidePanel
         opened={changeWCPanelOpened}
         onClose={closeChangeWCPanel}
         apiSetWC={apiSetWC}
+      />
+      <ChangeFeeDistrSidePanel
+        opened={changeFeeDistrPanelOpened}
+        onClose={closeChangeFeeDistrPanel}
+        api={apiSetFeeDistr}
       />
     </Main>
   )

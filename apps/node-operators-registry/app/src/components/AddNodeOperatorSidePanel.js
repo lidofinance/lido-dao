@@ -17,18 +17,24 @@ const validationSchema = yup.object().shape({
 })
 
 function PanelContent({ addNodeOperatorApi, onClose }) {
-  const onSubmit = useCallback(({ name, address, limit }) => {
-    addNodeOperatorApi(name, address, limit).then(() => {
-      onClose()
-    })
-  }, [])
+  const onSubmit = useCallback(
+    ({ name, address, limit }) => {
+      addNodeOperatorApi(name, address, limit)
+        .catch(console.error)
+        .finally(() => {
+          onClose()
+        })
+    },
+    [addNodeOperatorApi, onClose]
+  )
 
   return (
     <Formik
       initialValues={initialValues}
       validationSchema={validationSchema}
       onSubmit={onSubmit}
-      validateOnBlur
+      validateOnBlur={false}
+      validateOnChange={false}
     >
       {({ submitForm, isSubmitting }) => {
         return (
@@ -52,7 +58,6 @@ function PanelContent({ addNodeOperatorApi, onClose }) {
               name="limit"
               label="Limit"
               type="number"
-              min="0"
               required
               component={TextField}
             />
