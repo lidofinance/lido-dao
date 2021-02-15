@@ -1,11 +1,13 @@
 const { newDao, newApp } = require('../0.4.24/helpers/dao')
-const { assertBn, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 
 const LidoOracle = artifacts.require('LidoOracleMock.sol')
 const Lido = artifacts.require('LidoMockForOracle.sol')
 
 contract('LidoOracle', ([appManager, voting, malicious1, malicious2, user1, user2, user3]) => {
   let appBase, appLido, app
+  const BAD_DATA = [42, 42]
+  const GOOD_DATA = [32, 1]
 
   const assertReportableEpochs = async (startEpoch, endEpoch) => {
     const result = await app.getCurrentReportableEpochs()
@@ -31,22 +33,18 @@ contract('LidoOracle', ([appManager, voting, malicious1, malicious2, user1, user
     await acl.createPermission(voting, app.address, await app.SET_REPORT_BOUNDARIES(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
-    await app.initialize(appLido.address, 1, 32, 12, 1606824000)
+    await app.initialize(appLido.address, 225, 32, 12, 1606824000)
 
-    // Initialize the oracle time
+    // Initialize the oracle time, quorum and basic oracles
     await app.setTime(1606824000)
+    await app.setQuorum(4, { from: voting })
+    await app.addOracleMember(user1, { from: voting })
+    await app.addOracleMember(user2, { from: voting })
   })
 
   it('oracle conract handles changing the oracles during epoch', async () => {
-    const BAD_DATA = [42, 42]
-    const GOOD_DATA = [32, 1]
-
-    await app.setQuorum(4, { from: voting })
-
     await app.addOracleMember(malicious1, { from: voting })
     await app.addOracleMember(malicious2, { from: voting })
-    await app.addOracleMember(user1, { from: voting })
-    await app.addOracleMember(user2, { from: voting })
 
     await app.reportBeacon(0, BAD_DATA[0], BAD_DATA[1], { from: malicious1 })
     await app.reportBeacon(0, BAD_DATA[0], BAD_DATA[1], { from: malicious2 })
@@ -65,7 +63,26 @@ contract('LidoOracle', ([appManager, voting, malicious1, malicious2, user1, user
     const receipt = await app.reportBeacon(0, GOOD_DATA[0], GOOD_DATA[1], { from: user3 })
 
     assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 0, beaconBalance: GOOD_DATA[0], beaconValidators: GOOD_DATA[1] } })
+    await assertReportableEpochs(225, 0)
+  })
 
-    await assertReportableEpochs(1, 0)
+  it('report in odd epoch reverts', async () => {
+    await app.setTime(1606824000 + 225 * 32 * 12)
+    await assertReportableEpochs(225, 225)
+    await app.reportBeacon(225, BAD_DATA[0], BAD_DATA[1], { from: user1 })
+    await app.reportBeacon(225, BAD_DATA[0], BAD_DATA[1], { from: user2 })
+
+    await app.setTime(1606824000 + 226 * 32 * 12)
+    await assertReportableEpochs(225, 226)
+    await assertRevert(app.reportBeacon(226, BAD_DATA[0], BAD_DATA[1], { from: user1 }), 'MUST_BE_FIRST_EPOCH_FRAME')
+
+    await app.setTime(1606824000 + 449 * 32 * 12)
+    await assertReportableEpochs(225, 449)
+    await assertRevert(app.reportBeacon(449, BAD_DATA[0], BAD_DATA[1], { from: user2 }), 'MUST_BE_FIRST_EPOCH_FRAME')
+
+    await app.setTime(1606824000 + 450 * 32 * 12)
+    await assertReportableEpochs(225, 450)
+    await app.reportBeacon(450, BAD_DATA[0], BAD_DATA[1], { from: user1 })
+    await app.reportBeacon(450, BAD_DATA[0], BAD_DATA[1], { from: user2 })
   })
 })

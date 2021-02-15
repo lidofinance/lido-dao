@@ -43,7 +43,7 @@ interface ILidoOracle {
     event MemberAdded(address member);
     event MemberRemoved(address member);
     event QuorumChanged(uint256 quorum);
-    event MinReportableEpochIdUpdated(uint256 epochId);
+    event ReportableEpochIdUpdated(uint256 epochId);
     event BeaconReported(
         uint256 epochId,
         uint128 beaconBalance,
