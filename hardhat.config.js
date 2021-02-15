@@ -94,6 +94,10 @@ module.exports = {
       {
         version: '0.6.12',
         settings: solcSettings
+      },
+      {
+        version: '0.8.0',
+        settings: solcSettings
       }
     ],
     overrides: {
