@@ -28,7 +28,8 @@ contract('WstETH.permit', function ([deployer, ...accounts]) {
     }
 
     beforeEach(async () => {
-      domainSeparator = makeDomainSeparator('wstETH', '1', 31337, wsteth.address)
+      const chainId = await web3.eth.getChainId()
+      domainSeparator = makeDomainSeparator('wstETH', '1', chainId, wsteth.address)
       await wsteth.mint(permitParams.owner, initialBalance, {
         from: deployer
       })
