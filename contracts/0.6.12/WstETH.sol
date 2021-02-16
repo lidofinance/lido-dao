@@ -51,7 +51,7 @@ contract WstETH is ERC20Permit {
      */
     function wrap(uint256 _stETHAmount) public {
         require(_stETHAmount > 0, "wstETH: zero amount wrap not allowed");
-        uint256 wstETHAmount = getWstETHByStETH(_stETHAmount);
+        uint256 wstETHAmount = stETH.getSharesByPooledEth(_stETHAmount);
         _mint(msg.sender, wstETHAmount);
         stETH.transferFrom(msg.sender, address(this), _stETHAmount);
     }
@@ -67,7 +67,7 @@ contract WstETH is ERC20Permit {
      */
     function unwrap(uint256 _wstETHAmount) public {
         require(_wstETHAmount > 0, "wstETH: zero amount unwrap not allowed");
-        uint256 stETHAmount = getStETHByWstETH(_wstETHAmount);
+        uint256 stETHAmount = stETH.getPooledEthByShares(_wstETHAmount);
         _burn(msg.sender, _wstETHAmount);
         stETH.transfer(msg.sender, stETHAmount);
     }
@@ -77,7 +77,7 @@ contract WstETH is ERC20Permit {
      * @param _stETHAmount amount of stETH
      * @return Returns amount of wstETH with given stETH amount
      */
-    function getWstETHByStETH(uint256 _stETHAmount) public view returns (uint256) {
+    function getWstETHByStETH(uint256 _stETHAmount) external view returns (uint256) {
         return stETH.getSharesByPooledEth(_stETHAmount);
     }
 
@@ -86,7 +86,7 @@ contract WstETH is ERC20Permit {
      * @param _wstETHAmount amount of wstETH
      * @return Returns amount of stETH with current ratio and given wstETH amount
      */
-    function getStETHByWstETH(uint256 _wstETHAmount) public view returns (uint256) {
+    function getStETHByWstETH(uint256 _wstETHAmount) external view returns (uint256) {
         return stETH.getPooledEthByShares(_wstETHAmount);
     }
 }
