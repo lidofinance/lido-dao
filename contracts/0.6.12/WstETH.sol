@@ -8,7 +8,6 @@ pragma solidity 0.6.12;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./permit/ERC20Permit.sol";
 import "./interfaces/IStETH.sol";
-import { EIP712 } from "./permit/EIP712.sol";
 
 /**
  * @title Token wrapper of stETH with static balances.
@@ -23,7 +22,7 @@ import { EIP712 } from "./permit/EIP712.sol";
  * wstETH in return. The reverse exchange works exactly the opposite, received
  * wstETH token is burned, and StETH token is returned to the user.
  */
-contract WstETH is ERC20Permit {
+contract WstETH is ERC20Permit() {
     using SafeMath for uint256;
 
     IStETH public stETH;
@@ -36,7 +35,6 @@ contract WstETH is ERC20Permit {
         ERC20("Wrapped Liquid staked Lido Ether", "wstETH")
     {
         stETH = _stETH;
-        DOMAIN_SEPARATOR = EIP712.makeDomainSeparator("wstETH", "1");
     }
 
     /**
