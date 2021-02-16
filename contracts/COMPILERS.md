@@ -11,7 +11,6 @@ Separately:
 ```bash
 yarn compile:4
 yarn compile:6
-yarn compile:8
 ```
 
 All at once:
