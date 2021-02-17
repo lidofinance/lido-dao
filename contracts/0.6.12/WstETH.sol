@@ -22,17 +22,17 @@ import "./interfaces/IStETH.sol";
  * wstETH token is burned, and StETH token is returned to the user.
  */
 contract WstETH is ERC20Permit {
-    IStETH public StETH;
+    IStETH public stETH;
 
     /**
-     * @param _StETH address of Lido/stETH token to wrap
+     * @param _stETH address of Lido/stETH token to wrap
      */
-    constructor(IStETH _StETH)
+    constructor(IStETH _stETH)
         public
         ERC20Permit("Wrapped liquid staked Ether 2.0")
         ERC20("Wrapped liquid staked Ether 2.0", "wstETH")
     {
-        StETH = _StETH;
+        stETH = _stETH;
     }
 
     /**
@@ -47,9 +47,9 @@ contract WstETH is ERC20Permit {
      */
     function wrap(uint256 _stETHAmount) external returns (uint256) {
         require(_stETHAmount > 0, "wstETH: can't wrap zero stETH");
-        uint256 wstETHAmount = StETH.getSharesByPooledEth(_stETHAmount);
+        uint256 wstETHAmount = stETH.getSharesByPooledEth(_stETHAmount);
         _mint(msg.sender, wstETHAmount);
-        StETH.transferFrom(msg.sender, address(this), _stETHAmount);
+        stETH.transferFrom(msg.sender, address(this), _stETHAmount);
         return wstETHAmount;
     }
 
@@ -64,9 +64,9 @@ contract WstETH is ERC20Permit {
      */
     function unwrap(uint256 _wstETHAmount) external returns (uint256) {
         require(_wstETHAmount > 0, "wstETH: zero amount unwrap not allowed");
-        uint256 stETHAmount = StETH.getPooledEthByShares(_wstETHAmount);
+        uint256 stETHAmount = stETH.getPooledEthByShares(_wstETHAmount);
         _burn(msg.sender, _wstETHAmount);
-        StETH.transfer(msg.sender, stETHAmount);
+        stETH.transfer(msg.sender, stETHAmount);
         return stETHAmount;
     }
 
@@ -74,7 +74,7 @@ contract WstETH is ERC20Permit {
     * @notice Send funds to the pool and get wrapped wstETH tokens
     */
     receive() external payable {
-        uint256 shares = StETH.submit{value: msg.value}(address(0));
+        uint256 shares = stETH.submit{value: msg.value}(address(0));
         _mint(msg.sender, shares);
     }
 
@@ -84,7 +84,7 @@ contract WstETH is ERC20Permit {
      * @return Returns amount of wstETH with given stETH amount
      */
     function getWstETHByStETH(uint256 _stETHAmount) external view returns (uint256) {
-        return StETH.getSharesByPooledEth(_stETHAmount);
+        return stETH.getSharesByPooledEth(_stETHAmount);
     }
 
     /**
@@ -93,6 +93,6 @@ contract WstETH is ERC20Permit {
      * @return Returns amount of stETH with current ratio and given wstETH amount
      */
     function getStETHByWstETH(uint256 _wstETHAmount) external view returns (uint256) {
-        return StETH.getPooledEthByShares(_wstETHAmount);
+        return stETH.getPooledEthByShares(_wstETHAmount);
     }
 }

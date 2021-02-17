@@ -34,7 +34,7 @@ contract('WstETH', function ([deployer, initialHolder, recipient, anotherAccount
     })
 
     it(`StETH is set correctly`, async function () {
-      expect(await this.wsteth.StETH()).to.be.equal(this.steth.address)
+      expect(await this.wsteth.stETH()).to.be.equal(this.steth.address)
     })
 
     it(`can't wrap zero amount`, async function () {
