@@ -34,7 +34,7 @@ contract('WstETH', function ([deployer, initialHolder, recipient, anotherAccount
     })
 
     it('stETH is set correctly', async function () {
-      expect(await this.wsteth.stETH()).to.be.equal(this.steth.address)
+      expect(await this.wsteth.Lido()).to.be.equal(this.steth.address)
     })
 
     it("can't wrap zero amount", async function () {
@@ -252,9 +252,40 @@ contract('WstETH', function ([deployer, initialHolder, recipient, anotherAccount
           expect(await this.wsteth.balanceOf(user1)).to.be.bignumber.equal('0')
         })
 
-        it("wstETH allowances isn't changed", async function () {
+        it("wstETH allowances aren't changed", async function () {
           expect(await this.wsteth.allowance(user1, any_contract)).to.be.bignumber.equal('25')
         })
+      })
+    })
+
+    describe('send ETH directly', function () {
+      it('allows to send ETH directly and get wrapped stETH', async function () {
+        const recipientBalanceBefore = await this.wsteth.balanceOf(recipient)
+        const wstETHBalanceBefore = await this.steth.balanceOf(this.wsteth.address)
+        const value = ETH(1)
+        await web3.eth.sendTransaction({ to: this.wsteth.address, from: recipient, value })
+
+        const recipientBalanceAfter = await this.wsteth.balanceOf(recipient)
+        const wstETHBalanceAfter = await this.steth.balanceOf(this.wsteth.address)
+
+        expect(wstETHBalanceAfter.sub(wstETHBalanceBefore)).to.be.bignumber.equal(value, 'wstETH has got some stETH on balance')
+        expect(recipientBalanceAfter.sub(recipientBalanceBefore)).to.be.bignumber.equal(value, 'recepient has got wrapped stETH')
+      })
+
+      it('can unwrap stETH received with direct transfer', async function () {
+        const value = ETH(1)
+        await web3.eth.sendTransaction({ to: this.wsteth.address, from: recipient, value })
+
+        const recepientWstETHBalance = await this.wsteth.balanceOf(recipient)
+
+        await this.steth.setTotalShares(new BN(value).add(new BN(value)))
+
+        const recepientStETHToUnwrap = await this.steth.getPooledEthByShares(recepientWstETHBalance)
+
+        await this.wsteth.unwrap(recepientWstETHBalance, { from: recipient })
+
+        expect(await this.wsteth.balanceOf(recipient)).to.be.bignumber.equal('0', 'funds unwrapped')
+        expect(await this.steth.balanceOf(recipient)).to.be.bignumber.equal(recepientStETHToUnwrap, 'received corrrect amount')
       })
     })
   })
@@ -491,3 +522,7 @@ contract('WstETH', function ([deployer, initialHolder, recipient, anotherAccount
     assert.isNotFunction(this.wsteth.burnFrom, 'no burnFrom function')
   })
 })
+
+function ETH(value) {
+  return web3.utils.toWei(value + '', 'ether')
+}

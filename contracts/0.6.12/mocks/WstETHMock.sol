@@ -5,11 +5,11 @@
 pragma solidity 0.6.12; // latest available for using OZ
 
 import "../WstETH.sol";
-import "../interfaces/IStETH.sol";
+import "../interfaces/ILido.sol";
 
 
 contract WstETHMock is WstETH {
-    constructor(IStETH _stETH) public WstETH(_stETH) {}
+    constructor(ILido _Lido) public WstETH(_Lido) {}
 
     function mint(address recipient, uint256 amount) public {
         _mint(recipient, amount);
