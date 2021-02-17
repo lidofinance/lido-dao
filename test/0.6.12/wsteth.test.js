@@ -288,6 +288,15 @@ contract('WstETH', function ([deployer, initialHolder, recipient, anotherAccount
         expect(await this.steth.balanceOf(recipient)).to.be.bignumber.equal(recepientStETHToUnwrap, 'received corrrect amount')
       })
     })
+
+    describe(`interface for wstETH stETH convertions`, function () {
+      it(`has method for getting stETH by wstETH amount`, async function () {
+        expect(await this.wsteth.getStETHByWstETH('1')).to.be.bignumber.least('1')
+      })
+      it(`has method for getting wstETH by stETH amount`, async function () {
+        expect(await this.wsteth.getWstETHByStETH('1')).to.be.bignumber.most('1')
+      })
+    })
   })
 
   describe(`ERC20 part`, function () {
