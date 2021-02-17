@@ -86,7 +86,7 @@
     "lint-staged": ">=10",
     "prettier": "^2.1.2",
     "solhint": "^3.2.2",
-    "solidity-coverage": "^0.7.11",
+    "solidity-coverage": "^0.7.15",
     "solium": "^1.2.5",
     "truffle": "^5.1.43",
     "truffle-extract": "^1.2.1",
