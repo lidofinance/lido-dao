@@ -300,7 +300,7 @@ contract('WstETH', function ([deployer, initialHolder, recipient, anotherAccount
   })
 
   describe(`ERC20 part`, function () {
-    const name = 'Wrapped Liquid staked Lido Ether'
+    const name = 'Wrapped liquid staked Ether 2.0'
     const symbol = 'wstETH'
 
     const initialSupply = new BN(100)

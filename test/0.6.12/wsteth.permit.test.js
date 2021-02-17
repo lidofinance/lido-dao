@@ -29,14 +29,10 @@ contract('WstETH.permit', function ([deployer, ...accounts]) {
 
     beforeEach(async () => {
       const chainId = (await web3.eth.getChainId()) === 31337 ? 31337 : 1
-      domainSeparator = makeDomainSeparator('wstETH', '1', chainId, wsteth.address)
+      domainSeparator = makeDomainSeparator('Wrapped liquid staked Ether 2.0', '1', chainId, wsteth.address)
       await wsteth.mint(permitParams.owner, initialBalance, {
         from: deployer
       })
-    })
-
-    it('has the expected type hash', async () => {
-      expect(await wsteth.PERMIT_TYPEHASH()).to.equal(permitTypeHash)
     })
 
     it('grants allowance when a valid permit is given', async () => {
@@ -105,7 +101,7 @@ contract('WstETH.permit', function ([deployer, ...accounts]) {
           s,
           { from: charlie }
         ),
-        'invalid signature'
+        'ERC20Permit: invalid signature'
       )
     })
 
@@ -121,7 +117,7 @@ contract('WstETH.permit', function ([deployer, ...accounts]) {
         wsteth.permit(owner, spender, value, deadline, v, r, s, {
           from: charlie
         }),
-        'invalid signature'
+        'ERC20Permit: invalid signature'
       )
     })
 
@@ -137,7 +133,7 @@ contract('WstETH.permit', function ([deployer, ...accounts]) {
         wsteth.permit(owner, spender, value, deadline, v, r, s, {
           from: charlie
         }),
-        'permit is expired'
+        'ERC20Permit: expired deadline'
       )
     })
 
@@ -154,7 +150,7 @@ contract('WstETH.permit', function ([deployer, ...accounts]) {
         wsteth.permit(owner, spender, value, deadline, v, r, s, {
           from: charlie
         }),
-        'invalid signature'
+        'ERC20Permit: invalid signature'
       )
     })
 
@@ -171,7 +167,7 @@ contract('WstETH.permit', function ([deployer, ...accounts]) {
         wsteth.permit(owner, spender, value, deadline, v, r, s, {
           from: charlie
         }),
-        'invalid signature'
+        'ERC20Permit: invalid signature'
       )
     })
 
@@ -190,7 +186,7 @@ contract('WstETH.permit', function ([deployer, ...accounts]) {
       // try to submit the permit again
       await expectRevert(
         wsteth.permit(owner, spender, 1e6, deadline, permit2.v, permit2.r, permit2.s, { from: charlie }),
-        'invalid signature'
+        'ERC20Permit: invalid signature'
       )
     })
 
@@ -222,7 +218,7 @@ contract('WstETH.permit', function ([deployer, ...accounts]) {
         wsteth.permit(from, to, value, validBefore, v, r, s, {
           from: charlie
         }),
-        'invalid signature'
+        'ERC20Permit: invalid signature'
       )
     })
   })

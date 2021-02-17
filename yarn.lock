@@ -3319,7 +3319,7 @@ __metadata:
     "@nomiclabs/hardhat-ganache": ^2.0.0
     "@nomiclabs/hardhat-truffle5": ^2.0.0
     "@nomiclabs/hardhat-web3": ^2.0.0
-    "@openzeppelin/contracts": 3.1.0
+    "@openzeppelin/contracts": 3.4.0
     "@openzeppelin/test-helpers": ^0.5.6
     "@truffle/contract": ^4.2.22
     ava: ^3.13.0
@@ -3349,7 +3349,7 @@ __metadata:
     prettier: ^2.1.2
     solhint: ^3.2.2
     solidity-bytes-utils: 0.0.6
-    solidity-coverage: ^0.7.15
+    solidity-coverage: ^0.7.11
     solium: ^1.2.5
     truffle: ^5.1.43
     truffle-extract: ^1.2.1
@@ -3720,6 +3720,13 @@ __metadata:
   version: 3.1.0
   resolution: "@openzeppelin/contracts@npm:3.1.0"
   checksum: 4bd0dbcc6afcbc964c7c162b233f74ac37eb68c02ef254792fb7728bf52d16de65420014c950b68771d1987206e928834998df9d612d38b7c055e46baaed0773
+  languageName: node
+  linkType: hard
+
+"@openzeppelin/contracts@npm:3.4.0":
+  version: 3.4.0
+  resolution: "@openzeppelin/contracts@npm:3.4.0"
+  checksum: 62774f79ac6479001f8755116693dbaad68c26d65c2efd4725cfbdac287d628d1c9dcc12c19477a092e33722c89a5c3c8e600a1656303a0e02cdff3643744b70
   languageName: node
   linkType: hard
 
@@ -22956,7 +22963,7 @@ resolve@1.1.x:
   languageName: node
   linkType: hard
 
-"solidity-coverage@npm:^0.7.15":
+"solidity-coverage@npm:^0.7.11":
   version: 0.7.15
   resolution: "solidity-coverage@npm:0.7.15"
   dependencies:
