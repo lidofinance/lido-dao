@@ -52,7 +52,11 @@ contract('WstETH', function ([deployer, initialHolder, recipient, anotherAccount
 
     describe(`After successful wrap`, function () {
       beforeEach(async function () {
+        const shouldMintWstETHAmount = await this.wsteth.wrap.call(50, { from: user1 })
+
         await this.wsteth.wrap(50, { from: user1 })
+
+        expect(await this.wsteth.balanceOf(user1)).to.be.bignumber.equal(shouldMintWstETHAmount, 'returns correct amount of wstETH')
 
         await this.wsteth.approve(any_contract, 25, { from: user1 })
         expect(await this.wsteth.allowance(user1, any_contract)).to.be.bignumber.equal('25')
@@ -70,11 +74,11 @@ contract('WstETH', function ([deployer, initialHolder, recipient, anotherAccount
         await expectRevert(this.wsteth.unwrap(0, { from: user1 }), 'wstETH: zero amount unwrap not allowed')
       })
 
-      it(`user can't unwrap more than his wsteth balance`, async function () {
+      it(`user can't unwrap more wsteth than the balance`, async function () {
         await expectRevert(this.wsteth.unwrap(51, { from: user1 }), 'ERC20: burn amount exceeds balance')
       })
 
-      it(`cant unwrap if sender hasn't any wstETH`, async function () {
+      it(`can't unwrap if sender hasn't any wstETH`, async function () {
         await expectRevert(this.wsteth.unwrap(1, { from: user2 }), 'ERC20: burn amount exceeds balance')
       })
 
@@ -88,9 +92,11 @@ contract('WstETH', function ([deployer, initialHolder, recipient, anotherAccount
         })
 
         it(`after full unwrap balances are correct`, async function () {
+          const user1StETHBalanceBefore = await this.steth.balanceOf(user1)
+          const shouldGetStETHAmount = await this.wsteth.unwrap.call(50, { from: user1 })
           await this.wsteth.unwrap(50, { from: user1 })
 
-          expect(await this.steth.balanceOf(user1)).to.be.bignumber.equal('100')
+          expect(await this.steth.balanceOf(user1)).to.be.bignumber.equal(user1StETHBalanceBefore.add(shouldGetStETHAmount))
           expect(await this.steth.balanceOf(this.wsteth.address)).to.be.bignumber.equal('0')
           expect(await this.wsteth.balanceOf(user1)).to.be.bignumber.equal('0')
         })
