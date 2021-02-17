@@ -6,15 +6,20 @@ const { signPermit, signTransferAuthorization, permitTypeHash, makeDomainSeparat
 const WstETH = artifacts.require('WstETHMock')
 const StETH = artifacts.require('StETHMockERC20')
 
-let steth, wsteth
+let steth, wsteth, chainId, domainSeparator
 
 contract('WstETH.permit', function ([deployer, ...accounts]) {
   beforeEach(async () => {
     steth = await StETH.new({ from: deployer })
     wsteth = await WstETH.new(steth.address, { from: deployer })
+
+    // We get the chain id from the contract because Ganache (used for coverage) does not return the same chain id
+    // from within the EVM as from the JSON RPC interface.
+    // See https://github.com/trufflesuite/ganache-core/issues/515
+    chainId = await wsteth.getChainId()
+    domainSeparator = makeDomainSeparator('Wrapped liquid staked Ether 2.0', '1', chainId, wsteth.address)
   })
   describe('permit', () => {
-    let domainSeparator
     const [alice, bob] = ACCOUNTS_AND_KEYS
     const charlie = accounts[1]
 
@@ -28,8 +33,6 @@ contract('WstETH.permit', function ([deployer, ...accounts]) {
     }
 
     beforeEach(async () => {
-      const chainId = (await web3.eth.getChainId()) === 31337 ? 31337 : 1
-      domainSeparator = makeDomainSeparator('Wrapped liquid staked Ether 2.0', '1', chainId, wsteth.address)
       await wsteth.mint(permitParams.owner, initialBalance, {
         from: deployer
       })

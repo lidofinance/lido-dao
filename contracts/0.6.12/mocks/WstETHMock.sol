@@ -14,4 +14,12 @@ contract WstETHMock is WstETH {
     function mint(address recipient, uint256 amount) public {
         _mint(recipient, amount);
     }
+
+    function getChainId() external view returns (uint256 chainId) {
+        this; // silence state mutability warning without generating bytecode - see https://github.com/ethereum/solidity/issues/2691
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            chainId := chainid()
+        }
+    }
 }
