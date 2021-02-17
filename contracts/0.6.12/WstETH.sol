@@ -45,7 +45,7 @@ contract WstETH is ERC20Permit {
      *    contract.
      *  - msg.sender must have at least `_stETHAmount` stETH.
      */
-    function wrap(uint256 _stETHAmount) public {
+    function wrap(uint256 _stETHAmount) external {
         require(_stETHAmount > 0, "wstETH: can't wrap zero stETH");
         uint256 wstETHAmount = StETH.getSharesByPooledEth(_stETHAmount);
         _mint(msg.sender, wstETHAmount);
@@ -61,7 +61,7 @@ contract WstETH is ERC20Permit {
      *  - msg.sender must have enough stETH.
      *  - msg.sender must have at least `_stETHAmount` stETH.
      */
-    function unwrap(uint256 _wstETHAmount) public {
+    function unwrap(uint256 _wstETHAmount) external {
         require(_wstETHAmount > 0, "wstETH: zero amount unwrap not allowed");
         uint256 stETHAmount = StETH.getPooledEthByShares(_wstETHAmount);
         _burn(msg.sender, _wstETHAmount);
