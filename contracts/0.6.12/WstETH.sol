@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2020 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2021 Lido <info@lido.fi>
 
 // SPDX-License-Identifier: GPL-3.0
 
@@ -9,23 +9,23 @@ import "@openzeppelin/contracts/drafts/ERC20Permit.sol";
 import "./interfaces/IStETH.sol";
 
 /**
- * @title Token wrapper of stETH with static balances.
+ * @title StETH token wrapper with static balances.
  * @dev It's an ERC20 token that represents the account's share of the total
- * supply of StETH tokens. wstETH token's balance only changes on transfers,
+ * supply of stETH tokens. WstETH token's balance only changes on transfers,
  * unlike StETH that is also changed when oracles report staking rewards,
  * penalties, and slashings. It's a "power user" token that might be needed to
  * work correctly with some DeFi protocols like Uniswap v2, cross-chain bridges,
  * etc.
  *
- * The contract also works as a wrapper that accepts StETH tokens and mints
- * wstETH in return. The reverse exchange works exactly the opposite, received
- * wstETH token is burned, and StETH token is returned to the user.
+ * The contract also works as a wrapper that accepts stETH tokens and mints
+ * wstETH in return. User can unwrap their wstETH, burning wstETH tokens and
+ * receiving stETH tokens in return.
  */
 contract WstETH is ERC20Permit {
     IStETH public stETH;
 
     /**
-     * @param _stETH address of Lido/stETH token to wrap
+     * @param _stETH address of the StETH token to wrap
      */
     constructor(IStETH _stETH)
         public
@@ -36,14 +36,14 @@ contract WstETH is ERC20Permit {
     }
 
     /**
-     * @dev Exchanges stETH to wstETH with current ratio.
-     * @param _stETHAmount amount of stETH to wrap and get wstETH
+     * @dev Exchanges stETH to wstETH
+     * @param _stETHAmount amount of stETH to wrap in exchange for wstETH
      *
      * Requirements:
      *  - `_stETHAmount` must be non-zero
      *  - msg.sender must approve at least `_stETHAmount` stETH to this
      *    contract.
-     *  - msg.sender must have at least `_stETHAmount` stETH.
+     *  - msg.sender must have at least `_stETHAmount` of stETH.
      */
     function wrap(uint256 _stETHAmount) external returns (uint256) {
         require(_stETHAmount > 0, "wstETH: can't wrap zero stETH");
@@ -54,8 +54,8 @@ contract WstETH is ERC20Permit {
     }
 
     /**
-     * @dev Exchanges wstETH to stETH with current ratio.
-     * @param _wstETHAmount amount of wstETH to uwrap and get stETH
+     * @dev Exchanges wstETH to stETH
+     * @param _wstETHAmount amount of wstETH to uwrap in exchange for stETH
      *
      * Requirements:
      *  - `_wstETHAmount` must be non-zero
@@ -71,7 +71,7 @@ contract WstETH is ERC20Permit {
     }
 
     /**
-    * @notice Send funds to the pool and get wrapped wstETH tokens
+    * @notice Send funds to the pool and get wstETH tokens
     */
     receive() external payable {
         uint256 shares = stETH.submit{value: msg.value}(address(0));
@@ -79,18 +79,18 @@ contract WstETH is ERC20Permit {
     }
 
     /**
-     * @dev wstETH is equivalent of shares
+     * @dev wstETH is the same as stETH shares
      * @param _stETHAmount amount of stETH
-     * @return Returns amount of wstETH with given stETH amount
+     * @return Returns amount of wstETH for a given stETH amount
      */
     function getWstETHByStETH(uint256 _stETHAmount) external view returns (uint256) {
         return stETH.getSharesByPooledEth(_stETHAmount);
     }
 
     /**
-     * @dev wstETH is equivalent of shares
+     * @dev wstETH is the same as stETH shares
      * @param _wstETHAmount amount of wstETH
-     * @return Returns amount of stETH with current ratio and given wstETH amount
+     * @return Returns amount of stETH for a given wstETH amount
      */
     function getStETHByWstETH(uint256 _wstETHAmount) external view returns (uint256) {
         return stETH.getPooledEthByShares(_wstETHAmount);
