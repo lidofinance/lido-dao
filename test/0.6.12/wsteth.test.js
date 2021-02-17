@@ -33,12 +33,12 @@ contract('WstETH', function ([deployer, initialHolder, recipient, anotherAccount
       expect(await this.steth.balanceOf(this.wsteth.address)).to.be.bignumber.equal('0')
     })
 
-    it(`Lido is set correctly`, async function () {
-      expect(await this.wsteth.Lido()).to.be.equal(this.steth.address)
+    it(`StETH is set correctly`, async function () {
+      expect(await this.wsteth.StETH()).to.be.equal(this.steth.address)
     })
 
     it(`can't wrap zero amount`, async function () {
-      await expectRevert(this.wsteth.wrap(0, { from: user1 }), 'wstETH: zero amount wrap not allowed')
+      await expectRevert(this.wsteth.wrap(0, { from: user1 }), `wstETH: can't wrap zero stETH`)
     })
 
     it(`can't wrap more than allowed`, async function () {

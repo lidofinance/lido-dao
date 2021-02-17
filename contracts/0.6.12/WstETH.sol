@@ -6,7 +6,7 @@
 pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/drafts/ERC20Permit.sol";
-import "./interfaces/ILido.sol";
+import "./interfaces/IStETH.sol";
 
 /**
  * @title Token wrapper of stETH with static balances.
@@ -22,17 +22,17 @@ import "./interfaces/ILido.sol";
  * wstETH token is burned, and StETH token is returned to the user.
  */
 contract WstETH is ERC20Permit {
-    ILido public Lido;
+    IStETH public StETH;
 
     /**
-     * @param _Lido address of Lido/stETH token to wrap
+     * @param _StETH address of Lido/stETH token to wrap
      */
-    constructor(ILido _Lido)
+    constructor(IStETH _StETH)
         public
         ERC20Permit("Wrapped liquid staked Ether 2.0")
         ERC20("Wrapped liquid staked Ether 2.0", "wstETH")
     {
-        Lido = _Lido;
+        StETH = _StETH;
     }
 
     /**
@@ -46,10 +46,10 @@ contract WstETH is ERC20Permit {
      *  - msg.sender must have at least `_stETHAmount` stETH.
      */
     function wrap(uint256 _stETHAmount) public {
-        require(_stETHAmount > 0, "wstETH: zero amount wrap not allowed");
-        uint256 wstETHAmount = Lido.getSharesByPooledEth(_stETHAmount);
+        require(_stETHAmount > 0, "wstETH: can't wrap zero stETH");
+        uint256 wstETHAmount = StETH.getSharesByPooledEth(_stETHAmount);
         _mint(msg.sender, wstETHAmount);
-        Lido.transferFrom(msg.sender, address(this), _stETHAmount);
+        StETH.transferFrom(msg.sender, address(this), _stETHAmount);
     }
 
     /**
@@ -63,16 +63,16 @@ contract WstETH is ERC20Permit {
      */
     function unwrap(uint256 _wstETHAmount) public {
         require(_wstETHAmount > 0, "wstETH: zero amount unwrap not allowed");
-        uint256 stETHAmount = Lido.getPooledEthByShares(_wstETHAmount);
+        uint256 stETHAmount = StETH.getPooledEthByShares(_wstETHAmount);
         _burn(msg.sender, _wstETHAmount);
-        Lido.transfer(msg.sender, stETHAmount);
+        StETH.transfer(msg.sender, stETHAmount);
     }
 
     /**
     * @notice Send funds to the pool and get wrapped wstETH tokens
     */
     receive() external payable {
-        uint256 shares = Lido.submit{value: msg.value}(address(0));
+        uint256 shares = StETH.submit{value: msg.value}(address(0));
         _mint(msg.sender, shares);
     }
 
@@ -82,7 +82,7 @@ contract WstETH is ERC20Permit {
      * @return Returns amount of wstETH with given stETH amount
      */
     function getWstETHByStETH(uint256 _stETHAmount) external view returns (uint256) {
-        return Lido.getSharesByPooledEth(_stETHAmount);
+        return StETH.getSharesByPooledEth(_stETHAmount);
     }
 
     /**
@@ -91,6 +91,6 @@ contract WstETH is ERC20Permit {
      * @return Returns amount of stETH with current ratio and given wstETH amount
      */
     function getStETHByWstETH(uint256 _wstETHAmount) external view returns (uint256) {
-        return Lido.getPooledEthByShares(_wstETHAmount);
+        return StETH.getPooledEthByShares(_wstETHAmount);
     }
 }
