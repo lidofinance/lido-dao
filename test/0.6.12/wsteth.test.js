@@ -302,6 +302,12 @@ contract('WstETH', function ([deployer, initialHolder, recipient, anotherAccount
       it(`has method for getting wstETH by stETH amount`, async function () {
         expect(await this.wsteth.getWstETHByStETH('1')).to.be.bignumber.most('1')
       })
+      it(`has method for getting stETH by 1 wstETH`, async function () {
+        expect(await this.wsteth.pricePerShare()).to.be.bignumber.least(ETH('1'))
+      })
+      it(`has method for getting wstETH by 1 stETH`, async function () {
+        expect(await this.wsteth.sharesPerStETH()).to.be.bignumber.most(ETH('1'))
+      })
     })
   })
 
