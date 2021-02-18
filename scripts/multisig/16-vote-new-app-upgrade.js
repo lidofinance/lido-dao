@@ -53,11 +53,13 @@ async function upgradeApp({ web3, artifacts, appName = APP }) {
 
   const oldBase = await kernel.getApp(APP_BASES_NAMESPACE, appId)
   const { contractAddress } = await repo.getLatest()
-  log(`Upgrading app:`, yl(appName), `appId:`, appId)
-  log(`Contract implementation:`, yl(oldBase), `->`, yl(contractAddress))
+  log(`Upgrading app:`, yl(appName))
+  log(`appId:`, appId)
+  log(`Using DAO app namespace:`, APP_BASES_NAMESPACE)
+  log(`App contract base:`, yl(oldBase), `->`, yl(contractAddress))
   log.splitter()
   if (oldBase === contractAddress) {
-    throw new Error('No new implementation')
+    throw new Error('No new implementation found')
   }
 
   // encode call to Repo app for newVersion
@@ -82,9 +84,9 @@ async function upgradeApp({ web3, artifacts, appName = APP }) {
   })
 
   log.splitter()
-  log(gr(`Before continuing the deployment, please send all transactions listed above.\n`))
-  log(gr(`A new voting will be created to upgrade "${appName}" app version.\n`))
-  log(gr(`You must complete it positively before continuing with the deployment!\n`))
+  log(gr(`Before continuing the deployment, please send all transactions listed above.`))
+  log(gr(`A new voting will be created to upgrade "${appName}" app to latest version.`))
+  log(gr(`You must complete it positively and execute before continuing with the deployment!`))
   log.splitter()
 
   // persistNetworkState(network.name, netId, state)

@@ -65,12 +65,13 @@ async function upgradeAppImpl({ web3, artifacts, appName = APP }) {
   }
   const versionTo = semanticVersion.map((n) => n.toNumber())
 
-  log(`Upgrading app:`, yl(appName), `appId:`, appId)
+  log(`Upgrading app:`, yl(appName))
+  log(`appId:`, appId)
   log(`Contract implementation:`, yl(contractAddress), `->`, yl(appBaseAddress))
   log(`Bump version:`, yl(versionFrom), `->`, yl(versionTo))
   log.splitter()
   if (contractAddress === appBaseAddress) {
-    throw new Error('No new implementation')
+    throw new Error('No new implementation found')
   }
 
   // encode call to Repo app for newVersion
@@ -95,9 +96,9 @@ async function upgradeAppImpl({ web3, artifacts, appName = APP }) {
   })
 
   log.splitter()
-  log(gr(`Before continuing the deployment, please send all transactions listed above.\n`))
-  log(gr(`A new voting will be created to add a new "${appName}" implementation to Lido APM.\n`))
-  log(gr(`You must complete it positively before continuing with the deployment!\n`))
+  log(gr(`Before continuing the deployment, please send all transactions listed above.`))
+  log(gr(`A new voting will be created to add a new "${appName}" implementation to Lido APM.`))
+  log(gr(`You must complete it positively and execute before continuing with the deployment!`))
   log.splitter()
 
   // persistNetworkState(network.name, netId, state)
