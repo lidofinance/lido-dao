@@ -303,10 +303,10 @@ contract('WstETH', function ([deployer, initialHolder, recipient, anotherAccount
         expect(await this.wsteth.getWstETHByStETH('1')).to.be.bignumber.most('1')
       })
       it(`has method for getting stETH by 1 wstETH`, async function () {
-        expect(await this.wsteth.pricePerShare()).to.be.bignumber.least(ETH('1'))
+        expect(await this.wsteth.stEthPerToken()).to.be.bignumber.least(ETH('1'))
       })
       it(`has method for getting wstETH by 1 stETH`, async function () {
-        expect(await this.wsteth.sharesPerStETH()).to.be.bignumber.most(ETH('1'))
+        expect(await this.wsteth.tokensPerStEth()).to.be.bignumber.most(ETH('1'))
       })
     })
   })

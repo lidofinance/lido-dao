@@ -97,14 +97,14 @@ contract WstETH is ERC20Permit {
     /**
      * @return Returns amount of stETH for 1 wstETH
      */
-    function pricePerShare() external view returns (uint256) {
+    function stEthPerToken() external view returns (uint256) {
         return stETH.getPooledEthByShares(1 ether);
     }
 
     /**
      * @return Returns amount of wstETH for a 1 stETH
      */
-    function sharesPerStETH() external view returns (uint256) {
+    function tokensPerStEth() external view returns (uint256) {
         return stETH.getSharesByPooledEth(1 ether);
     }
 }
