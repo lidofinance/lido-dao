@@ -10,13 +10,15 @@ Assuming we have correct `deployed-mainnet.json`.
 
 Script allows upgrade one of the custom Lido DAO apps. Valid application names are: `lido`, `oracle` or `node-operators-registry`. It possible update one application in one pass.
 
+> Hereinafter, we mean an upgrade of the `oracle` app.
+>
+> Pay attention to the explicit assignment of the app name hereinafter at the beginning of the some commands through an environment variable, i.e. `APP=oracle`.
+>
+> Also, be careful with files in which data for transactions is saved - the app name is automatically placed into the name, e.g. `tx-13-1-deploy-**oracle**-base.json`
+
 ## 1. Deploying the new app base implementations
 
 ### Generate transaction data files
-
-> Hereinafter, we mean an upgrade of the `oracle` app.
-> Pay attention to the explicit assignment of the app name hereinafter at the beginning of the some commands through an environment variable, i.e. `APP=oracle`.
-> Also, be careful with files in which data for transactions is saved - the app name is automatically placed into the name, e.g. `tx-13-1-deploy-**oracle**-base.json`
 
 ```text
 $ APP=oracle yarn hardhat --network mainnet run ./scripts/multisig/13-deploy-new-app-instance.js
