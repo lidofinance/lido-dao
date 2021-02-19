@@ -18,10 +18,10 @@ import "./interfaces/IStETH.sol";
  *
  * The contract is also a trustless wrapper that accepts stETH tokens and mints
  * wstETH in return. Then the user unwraps, the contract burns user's wstETH
- * and sends user staked stETH in return.
+ * and sends user locked stETH in return.
  *
  * The contract provides the staking shortcut: user can send ETH with regular
- * transfer and get wstETH in return. The contract will send ETH to StETH submit
+ * transfer and get wstETH in return. The contract will send ETH to Lido submit
  * method, staking it and wrapping the received stETH.
  *
  */
@@ -63,9 +63,8 @@ contract WstETH is ERC20Permit {
      * @param _wstETHAmount amount of wstETH to uwrap in exchange for stETH
      * @dev Requirements:
      *  - `_wstETHAmount` must be non-zero
-     *  - msg.sender must have enough wstETH.
      *  - msg.sender must have at least `_wstETHAmount` wstETH.
-     * @return Amount os stETH user receives after unwrap
+     * @return Amount of stETH user receives after unwrap
      */
     function unwrap(uint256 _wstETHAmount) external returns (uint256) {
         require(_wstETHAmount > 0, "wstETH: zero amount unwrap not allowed");
