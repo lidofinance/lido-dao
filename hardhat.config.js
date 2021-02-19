@@ -6,7 +6,7 @@ require('@nomiclabs/hardhat-truffle5')
 require('@nomiclabs/hardhat-ganache')
 require('@nomiclabs/hardhat-etherscan')
 require('hardhat-gas-reporter')
-// require('solidity-coverage')
+require('solidity-coverage')
 
 const NETWORK_NAME = getNetworkName()
 const ETH_ACCOUNT_NAME = process.env.ETH_ACCOUNT_NAME
@@ -70,12 +70,19 @@ const getNetConfig = (networkName, ethAccountName) => {
   return netConfig ? { [networkName]: netConfig } : {}
 }
 
-const solcSettings = {
+const solcSettings4 = {
   optimizer: {
     enabled: true,
     runs: 200
   },
   evmVersion: 'constantinople'
+}
+const solcSettings6 = {
+  optimizer: {
+    enabled: true,
+    runs: 200
+  },
+  evmVersion: 'istanbul'
 }
 
 module.exports = {
@@ -85,15 +92,15 @@ module.exports = {
     compilers: [
       {
         version: '0.4.24',
-        settings: solcSettings
+        settings: solcSettings4
       },
       {
         version: '0.6.11',
-        settings: solcSettings
+        settings: solcSettings6
       },
       {
         version: '0.6.12',
-        settings: solcSettings
+        settings: solcSettings6
       }
     ],
     overrides: {
