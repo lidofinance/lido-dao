@@ -43,6 +43,19 @@ interface ILidoOracle {
     event MemberAdded(address member);
     event MemberRemoved(address member);
     event QuorumChanged(uint256 quorum);
+    event MinReportableEpochIdUpdated(uint256 epochId);
+    event BeaconReported(
+        uint256 epochId,
+        uint128 beaconBalance,
+        uint128 beaconValidators,
+        address caller
+    );
+    event Completed(
+        uint256 epochId,
+        uint128 beaconBalance,
+        uint128 beaconValidators
+    );
+
 
     /**
       * @notice An oracle committee member reports data from the ETH 2.0 side

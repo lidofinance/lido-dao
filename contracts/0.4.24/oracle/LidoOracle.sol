@@ -80,12 +80,6 @@ contract LidoOracle is ILidoOracle, AragonApp {
     /// @dev storage for all gathered from reports data
     mapping(uint256 => EpochData) private gatheredEpochData;
 
-    event Completed(
-        uint256 epochId,
-        uint128 beaconBalance,
-        uint128 beaconValidators
-    );
-
     function initialize(
         address _lido,
         uint64 _epochsPerFrame,
@@ -136,8 +130,11 @@ contract LidoOracle is ILidoOracle, AragonApp {
         require(index != MEMBER_NOT_FOUND, "MEMBER_NOT_FOUND");
 
         uint256 maxReportedEpochId = MAX_REPORTED_EPOCH_ID_POSITION.getStorageUint256();
-
-        MIN_REPORTABLE_EPOCH_ID_POSITION.setStorageUint256(maxReportedEpochId);
+        uint256 minReportableEpochId = MIN_REPORTABLE_EPOCH_ID_POSITION.getStorageUint256();
+        if (maxReportedEpochId != minReportableEpochId) {
+            MIN_REPORTABLE_EPOCH_ID_POSITION.setStorageUint256(maxReportedEpochId);
+            emit MinReportableEpochIdUpdated(maxReportedEpochId);
+        }
         uint256 last = members.length.sub(1);
 
         uint256 bitMask = gatheredEpochData[maxReportedEpochId].reportsBitMask;
@@ -171,10 +168,11 @@ contract LidoOracle is ILidoOracle, AragonApp {
         assert(maxReportedEpochId <= getCurrentEpochId());
 
         if (maxReportedEpochId >= minReportableEpochId) {
-            if (maxReportedEpochId != minReportableEpochId) {
+            bool pushed = members.length > 0 && _tryPush(maxReportedEpochId);
+            if (!pushed && maxReportedEpochId != minReportableEpochId) {
                 MIN_REPORTABLE_EPOCH_ID_POSITION.setStorageUint256(maxReportedEpochId);
+                emit MinReportableEpochIdUpdated(maxReportedEpochId);
             }
-            _tryPush(maxReportedEpochId);
         }
 
         _assertInvariants();
@@ -207,6 +205,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
 
         Report memory currentReport = Report(_beaconBalance, _beaconValidators);
         gatheredEpochData[_epochId].reports[index] = currentReport;
+        emit BeaconReported(_epochId, _beaconBalance, _beaconValidators, member);
 
         _tryPush(_epochId);
     }
@@ -409,26 +408,27 @@ contract LidoOracle is ILidoOracle, AragonApp {
     /**
      * @dev Pushes the current data point if quorum is reached
      */
-    function _tryPush(uint256 _epochId) internal {
+    function _tryPush(uint256 _epochId) internal returns(bool) {
         (bool isQuorum, Report memory modeReport) = _getQuorumReport(_epochId);
         if (!isQuorum)
-            return;
+            return false;
 
         // data for this frame is collected, now this frame is completed, so
         // minReportableEpochId should be changed to first epoch from next frame
         BeaconSpec memory beaconSpec = _getBeaconSpec();
-        MIN_REPORTABLE_EPOCH_ID_POSITION.setStorageUint256(
+        uint256 minReportableEpochId =
             _epochId
             .div(beaconSpec.epochsPerFrame)
             .add(1)
-            .mul(beaconSpec.epochsPerFrame)
-        );
-
+            .mul(beaconSpec.epochsPerFrame);
+        MIN_REPORTABLE_EPOCH_ID_POSITION.setStorageUint256(minReportableEpochId);
+        emit MinReportableEpochIdUpdated(minReportableEpochId);
         emit Completed(_epochId, modeReport.beaconBalance, modeReport.beaconValidators);
 
         ILido lido = getLido();
         if (address(0) != address(lido))
             lido.pushBeacon(modeReport.beaconValidators, modeReport.beaconBalance);
+        return true;
     }
 
     function reportToUint256(Report _report) internal pure returns (uint256) {
