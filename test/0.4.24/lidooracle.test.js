@@ -433,22 +433,22 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
         const mock = await QuorumCallback.new()
         await app.setQuorumDelegate(mock.address, { from: voting })
 
-        let receipt = await app.reportBeacon(0, 35, 1, { from: user1 })
-        assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 0, beaconBalance: 35, beaconValidators: 1 } })
+        let receipt = await app.reportBeacon(0, START_BALANCE + 35, 1, { from: user1 })
+        assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 0, beaconBalance: START_BALANCE + 35, beaconValidators: 1 } })
         await assertReportableEpochs(1, 0)
 
         await app.setTime(1606824000 + 32 * 12 * 3) // 3 epochs later
-        receipt = await app.reportBeacon(2, 77, 3, { from: user1 })
-        assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 2, beaconBalance: 77, beaconValidators: 3 } })
+        receipt = await app.reportBeacon(2, START_BALANCE + 77, 3, { from: user1 })
+        assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 2, beaconBalance: START_BALANCE + 77, beaconValidators: 3 } })
         await assertReportableEpochs(3, 3)
 
-        assertBn(await mock.postTotalPooledEther(), 77)
-        assertBn(await mock.preTotalPooledEther(), 35)
+        assertBn(await mock.postTotalPooledEther(), START_BALANCE + 77)
+        assertBn(await mock.preTotalPooledEther(), START_BALANCE + 35)
         assertBn(await mock.timeElapsed(), 32 * 12 * 2)
 
         const res = await app.getLastCompletedReports()
-        assertBn(res.postTotalPooledEther, 77)
-        assertBn(res.preTotalPooledEther, 35)
+        assertBn(res.postTotalPooledEther, START_BALANCE + 77)
+        assertBn(res.preTotalPooledEther, START_BALANCE + 35)
         assertBn(res.timeElapsed, 32 * 12 * 2)
       })
 

@@ -58,6 +58,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     bytes32 constant public MANAGE_QUORUM = keccak256("MANAGE_QUORUM");
     bytes32 constant public SET_BEACON_SPEC = keccak256("SET_BEACON_SPEC");
     bytes32 constant public SET_REPORT_BOUNDARIES = keccak256("SET_REPORT_BOUNDARIES");
+    bytes32 constant public SET_QUORUM_CALLBACK = keccak256("SET_QUORUM_CALLBACK");
 
     /// @dev Maximum number of oracle committee members
     uint256 public constant MAX_MEMBERS = 256;
