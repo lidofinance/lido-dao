@@ -4,6 +4,7 @@ const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helper
 
 const LidoOracle = artifacts.require('LidoOracleMock.sol')
 const Lido = artifacts.require('LidoMockForOracle.sol')
+const QuorumCallback = artifacts.require('QuorumCallbackMock.sol')
 
 // initial pooled ether (it's required to smooth increase of balance
 // if you jump from 30 to 60 in one epoch it's a huge annual relative jump over 9000%
@@ -37,6 +38,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
     await acl.createPermission(voting, app.address, await app.MANAGE_QUORUM(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_BEACON_SPEC(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_REPORT_BOUNDARIES(), appManager, { from: appManager })
+    await acl.createPermission(voting, app.address, await app.SET_QUORUM_CALLBACK(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
     await app.initialize(appLido.address, 1, 32, 12, 1606824000)
@@ -425,6 +427,29 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
         await app.setTime(1606824000 + 32 * 12 * 4) // 4 epochs later (timeElapsed = 768*2)
         // check fails but 4 epochs passed
         await assertRevert(app.reportBeacon(2, nextPooledEther, 3, { from: user1 }), 'ALLOWED_BEACON_BALANCE_INCREASE')
+      })
+
+      it('quorum delegate called with same arguments as getLatestCompletedReports', async () => {
+        const mock = await QuorumCallback.new()
+        await app.setQuorumDelegate(mock.address, { from: voting })
+
+        let receipt = await app.reportBeacon(0, START_BALANCE + 35, 1, { from: user1 })
+        assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 0, beaconBalance: START_BALANCE + 35, beaconValidators: 1 } })
+        await assertReportableEpochs(1, 0)
+
+        await app.setTime(1606824000 + 32 * 12 * 3) // 3 epochs later
+        receipt = await app.reportBeacon(2, START_BALANCE + 77, 3, { from: user1 })
+        assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 2, beaconBalance: START_BALANCE + 77, beaconValidators: 3 } })
+        await assertReportableEpochs(3, 3)
+
+        assertBn(await mock.postTotalPooledEther(), START_BALANCE + 77)
+        assertBn(await mock.preTotalPooledEther(), START_BALANCE + 35)
+        assertBn(await mock.timeElapsed(), 32 * 12 * 2)
+
+        const res = await app.getLastCompletedReports()
+        assertBn(res.postTotalPooledEther, START_BALANCE + 77)
+        assertBn(res.preTotalPooledEther, START_BALANCE + 35)
+        assertBn(res.timeElapsed, 32 * 12 * 2)
       })
 
       it('reverts when trying to report this epoch again', async () => {

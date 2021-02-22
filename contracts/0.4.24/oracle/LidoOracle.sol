@@ -9,8 +9,9 @@ import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 import "@aragon/os/contracts/lib/math/SafeMath64.sol";
 
-import "../interfaces/ILidoOracle.sol";
 import "../interfaces/ILido.sol";
+import "../interfaces/ILidoOracle.sol";
+import "../interfaces/IQuorumCallback.sol";
 import "../interfaces/ISTETH.sol";
 
 import "./BitOps.sol";
@@ -57,6 +58,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     bytes32 constant public MANAGE_QUORUM = keccak256("MANAGE_QUORUM");
     bytes32 constant public SET_BEACON_SPEC = keccak256("SET_BEACON_SPEC");
     bytes32 constant public SET_REPORT_BOUNDARIES = keccak256("SET_REPORT_BOUNDARIES");
+    bytes32 constant public SET_QUORUM_CALLBACK = keccak256("SET_QUORUM_CALLBACK");
 
     /// @dev Maximum number of oracle committee members
     uint256 public constant MAX_MEMBERS = 256;
@@ -86,6 +88,9 @@ contract LidoOracle is ILidoOracle, AragonApp {
         keccak256("lido.LidoOracle.preCompletedTotalPooledEther");
     bytes32 internal constant LAST_COMPLETED_EPOCH_ID_POSITION = keccak256("lido.LidoOracle.lastCompletedEpochId");
     bytes32 internal constant PREV_COMPLETED_EPOCH_ID_POSITION = keccak256("lido.LidoOracle.prevCompletedEpochId");
+
+    /// @dev function credentials to be called when the quorum is reached
+    bytes32 internal constant QUORUM_CALLBACK_POSITION = keccak256("lido.LidoOracle.quorumCallback");
 
     /*
     If we use APR as a basic reference for increase, and expected range is below 10% APR.
@@ -193,6 +198,13 @@ contract LidoOracle is ILidoOracle, AragonApp {
         QUORUM_POSITION.setStorageUint256(_quorum);
         emit QuorumChanged(_quorum);
         _tryPush();
+    }
+
+    /**
+     * @notice Set the callback contract address to be called upon quorum
+     */
+    function setQuorumDelegate(address _addr) external auth(SET_QUORUM_CALLBACK) {
+        QUORUM_CALLBACK_POSITION.setStorageUint256(uint256(_addr));
     }
 
     /**
@@ -489,6 +501,17 @@ contract LidoOracle is ILidoOracle, AragonApp {
         PREV_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(LAST_COMPLETED_EPOCH_ID_POSITION.getStorageUint256());
         LAST_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(epochId);
         reportSanityChecks();  // rollback on boundaries violation (logical consistency)
+
+        // call the quorum delegate
+        IQuorumCallback quorumCallbackAddr = IQuorumCallback(QUORUM_CALLBACK_POSITION.getStorageUint256());
+        if (address(quorumCallbackAddr) != address(0)) {
+            (uint256 lastTotalPooledEther,
+             uint256 prevTotalPooledEther,
+             uint256 timeElapsed) = getLastCompletedReports();
+            quorumCallbackAddr.processLidoOracleReport(lastTotalPooledEther,
+                                                       prevTotalPooledEther,
+                                                       timeElapsed);
+        }
     }
 
     function _clearVotingAndAdvanceTo(uint256 _epochId) internal {
