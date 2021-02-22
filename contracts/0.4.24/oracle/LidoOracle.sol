@@ -12,7 +12,6 @@ import "@aragon/os/contracts/lib/math/SafeMath64.sol";
 import "../interfaces/ILidoOracle.sol";
 import "../interfaces/ILido.sol";
 
-import "./Algorithm.sol";
 import "./BitOps.sol";
 
 
@@ -47,9 +46,14 @@ contract LidoOracle is ILidoOracle, AragonApp {
         uint128 beaconValidators;
     }
 
+    struct ReportKind {
+        Report report;
+        uint256 count;
+    }
+
     struct EpochData {
         uint256 reportsBitMask;
-        mapping (uint256 => Report) reports;
+        ReportKind[] kinds;
     }
 
     /// ACL
@@ -128,6 +132,10 @@ contract LidoOracle is ILidoOracle, AragonApp {
     function removeOracleMember(address _member) external auth(MANAGE_MEMBERS) {
         uint256 index = _getMemberId(_member);
         require(index != MEMBER_NOT_FOUND, "MEMBER_NOT_FOUND");
+        uint256 last = members.length.sub(1);
+        if (index != last) members[index] = members[last];
+        members.length--;
+        emit MemberRemoved(_member);
 
         uint256 maxReportedEpochId = MAX_REPORTED_EPOCH_ID_POSITION.getStorageUint256();
         uint256 minReportableEpochId = MIN_REPORTABLE_EPOCH_ID_POSITION.getStorageUint256();
@@ -135,21 +143,10 @@ contract LidoOracle is ILidoOracle, AragonApp {
             MIN_REPORTABLE_EPOCH_ID_POSITION.setStorageUint256(maxReportedEpochId);
             emit MinReportableEpochIdUpdated(maxReportedEpochId);
         }
-        uint256 last = members.length.sub(1);
 
-        uint256 bitMask = gatheredEpochData[maxReportedEpochId].reportsBitMask;
-        if (index != last) {
-            members[index] = members[last];
-            bitMask = bitMask.setBit(index, bitMask.getBit(last));
-            Report memory lastIndexReport = gatheredEpochData[maxReportedEpochId].reports[last];
-            gatheredEpochData[maxReportedEpochId].reports[index] = lastIndexReport;
-        }
-        bitMask = bitMask.setBit(last, false);
-        gatheredEpochData[maxReportedEpochId].reportsBitMask = bitMask;
+        // Nullify the data for the last epoch. Remained oracles will report it again
+        delete gatheredEpochData[maxReportedEpochId];
 
-        members.length--;
-
-        emit MemberRemoved(_member);
         _assertInvariants();
     }
 
@@ -194,17 +191,24 @@ contract LidoOracle is ILidoOracle, AragonApp {
         require(index != MEMBER_NOT_FOUND, "MEMBER_NOT_FOUND");
 
         // check & set contribution flag
-        uint256 bitMask = gatheredEpochData[_epochId].reportsBitMask;
+        EpochData storage epochData = gatheredEpochData[_epochId];
+        uint256 bitMask = epochData.reportsBitMask;
         require(!bitMask.getBit(index), "ALREADY_SUBMITTED");
+        epochData.reportsBitMask = bitMask.setBit(index, true);
 
         if (_epochId > MAX_REPORTED_EPOCH_ID_POSITION.getStorageUint256()) {
             MAX_REPORTED_EPOCH_ID_POSITION.setStorageUint256(_epochId);
         }
 
-        gatheredEpochData[_epochId].reportsBitMask = bitMask.setBit(index, true);
-
-        Report memory currentReport = Report(_beaconBalance, _beaconValidators);
-        gatheredEpochData[_epochId].reports[index] = currentReport;
+        uint256 i = 0;
+        Report memory report = Report(_beaconBalance, _beaconValidators);
+        uint256 reportRaw = reportToUint256(report);
+        while (i < epochData.kinds.length && reportToUint256(epochData.kinds[i].report) != reportRaw) ++i;
+        if (i < epochData.kinds.length) {
+            ++epochData.kinds[i].count;
+        } else {
+            epochData.kinds.push(ReportKind(report, 1));
+        }
         emit BeaconReported(_epochId, _beaconBalance, _beaconValidators, member);
 
         _tryPush(_epochId);
@@ -371,38 +375,27 @@ contract LidoOracle is ILidoOracle, AragonApp {
      * @return modeReport - valid mode-value report when quorum is reached, 0-data otherwise
      */
     function _getQuorumReport(uint256 _epochId) internal view returns (bool isQuorum, Report memory modeReport) {
+        EpochData storage epochData = gatheredEpochData[_epochId];
         uint256 quorum = getQuorum();
-        if (quorum > members.length)
+
+        // check most frequent cases: all reports are the same or no reprts yet
+        if (epochData.kinds.length == 1) {
+            return (epochData.kinds[0].count >= quorum, epochData.kinds[0].report);
+        } else if (epochData.kinds.length == 0) {
             return (false, Report({beaconBalance: 0, beaconValidators: 0}));
-
-        uint256 mask = gatheredEpochData[_epochId].reportsBitMask;
-        uint256 popcnt = mask.popcnt();
-        if (popcnt < quorum)
-            return (false, Report({beaconBalance: 0, beaconValidators: 0}));
-
-        assert(0 != popcnt && popcnt <= members.length);
-
-        // pack current gatheredEpochData mapping to uint256 array
-        uint256[] memory data = new uint256[](popcnt);
-        uint256 i = 0;
-        uint256 membersLength = members.length;
-        for (uint256 index = 0; index < membersLength; ++index) {
-            if (mask.getBit(index)) {
-                data[i++] = reportToUint256(gatheredEpochData[_epochId].reports[index]);
-            }
         }
 
-        assert(i == data.length);
-
-        // find mode value of this array
-        (bool isUnimodal, uint256 mode) = Algorithm.mode(data);
-        if (!isUnimodal)
-            return (false, Report({beaconBalance: 0, beaconValidators: 0}));
-
-        // unpack Report struct from uint256
-        modeReport = uint256ToReport(mode);
-
-        return (true, modeReport);
+        // if more than 2 kind of reports exist, choose the most frequent
+        uint256 maxi = 0;
+        for (uint256 i = 1; i < epochData.kinds.length; ++i) {
+            if (epochData.kinds[i].count > epochData.kinds[maxi].count) maxi = i;
+        }
+        for (i = 0; i < epochData.kinds.length; ++i) {
+            if (i != maxi && epochData.kinds[i].count == epochData.kinds[maxi].count) {
+                return (false, Report({beaconBalance: 0, beaconValidators: 0}));
+            }
+        }
+        return (epochData.kinds[maxi].count >= quorum, epochData.kinds[maxi].report);
     }
 
     /**
@@ -428,6 +421,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
         ILido lido = getLido();
         if (address(0) != address(lido))
             lido.pushBeacon(modeReport.beaconValidators, modeReport.beaconBalance);
+        delete gatheredEpochData[_epochId];
         return true;
     }
 

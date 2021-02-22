@@ -50,13 +50,15 @@ contract('LidoOracle', ([appManager, voting, malicious1, malicious2, user1, user
     await app.reportBeacon(0, GOOD_DATA[0], GOOD_DATA[1], { from: user1 })
     await app.reportBeacon(0, GOOD_DATA[0], GOOD_DATA[1], { from: user2 })
 
-    await app.setQuorum(2, { from: voting })
+    await app.setQuorum(3, { from: voting })
 
     await app.removeOracleMember(malicious1, { from: voting })
     await app.removeOracleMember(malicious2, { from: voting })
 
-    await app.addOracleMember(user3, { from: voting })
+    await app.reportBeacon(0, GOOD_DATA[0], GOOD_DATA[1], { from: user1 }) // user1 reports again
+    await app.reportBeacon(0, GOOD_DATA[0], GOOD_DATA[1], { from: user2 }) // user2 reports again
 
+    await app.addOracleMember(user3, { from: voting })
     const receipt = await app.reportBeacon(0, GOOD_DATA[0], GOOD_DATA[1], { from: user3 })
 
     assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 0, beaconBalance: GOOD_DATA[0], beaconValidators: GOOD_DATA[1] } })
