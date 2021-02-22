@@ -11,6 +11,7 @@ import "@aragon/os/contracts/lib/math/SafeMath64.sol";
 
 import "../interfaces/ILidoOracle.sol";
 import "../interfaces/ILido.sol";
+import "../interfaces/ISTETH.sol";
 
 import "./BitOps.sol";
 
@@ -83,6 +84,13 @@ contract LidoOracle is ILidoOracle, AragonApp {
     bytes32 internal constant MAX_REPORTED_EPOCH_ID_POSITION = keccak256("lido.LidoOracle.maxReportedEpochId");
     /// @dev storage for all gathered from reports data
     mapping(uint256 => EpochData) private gatheredEpochData;
+    /// @dev historic data about 2 last completed reports
+    bytes32 internal constant POST_COMPLETED_TOTAL_POOLED_ETHER_POSITION =
+        keccak256("lido.LidoOracle.postCompletedTotalPooledEther");
+    bytes32 internal constant PRE_COMPLETED_TOTAL_POOLED_ETHER_POSITION =
+        keccak256("lido.LidoOracle.preCompletedTotalPooledEther");
+    bytes32 internal constant LAST_COMPLETED_EPOCH_ID_POSITION = keccak256("lido.LidoOracle.lastCompletedEpochId");
+    bytes32 internal constant PREV_COMPLETED_EPOCH_ID_POSITION = keccak256("lido.LidoOracle.prevCompletedEpochId");
 
     function initialize(
         address _lido,
@@ -329,6 +337,26 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
+     * @notice Reports beacon balance and its change
+     */
+    function getLastCompletedReports()
+        public view
+        returns (
+            uint256 postTotalPooledEther,
+            uint256 preTotalPooledEther,
+            uint256 timeElapsed
+        )
+    {
+        BeaconSpec memory beaconSpec = _getBeaconSpec();
+        postTotalPooledEther = POST_COMPLETED_TOTAL_POOLED_ETHER_POSITION.getStorageUint256();
+        preTotalPooledEther = PRE_COMPLETED_TOTAL_POOLED_ETHER_POSITION.getStorageUint256();
+        timeElapsed = (LAST_COMPLETED_EPOCH_ID_POSITION.getStorageUint256()
+                       .sub(PREV_COMPLETED_EPOCH_ID_POSITION.getStorageUint256()))
+            .mul(beaconSpec.slotsPerEpoch)
+            .mul(beaconSpec.secondsPerSlot);
+    }
+
+    /**
      * @dev Sets beacon spec
      */
     function _setBeaconSpec(
@@ -419,8 +447,11 @@ contract LidoOracle is ILidoOracle, AragonApp {
         emit Completed(_epochId, modeReport.beaconBalance, modeReport.beaconValidators);
 
         ILido lido = getLido();
-        if (address(0) != address(lido))
-            lido.pushBeacon(modeReport.beaconValidators, modeReport.beaconBalance);
+        PRE_COMPLETED_TOTAL_POOLED_ETHER_POSITION.setStorageUint256(ISTETH(lido).totalSupply());
+        lido.pushBeacon(modeReport.beaconValidators, modeReport.beaconBalance);
+        POST_COMPLETED_TOTAL_POOLED_ETHER_POSITION.setStorageUint256(ISTETH(lido).totalSupply());
+        PREV_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(LAST_COMPLETED_EPOCH_ID_POSITION.getStorageUint256());
+        LAST_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(_epochId);
         delete gatheredEpochData[_epochId];
         return true;
     }
@@ -436,6 +467,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
         return report;
     }
 
+
     /**
      * @dev Returns member's index in the members array or MEMBER_NOT_FOUND
      */
@@ -448,6 +480,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
         }
         return MEMBER_NOT_FOUND;
     }
+
 
     /**
      * @dev Returns current timestamp

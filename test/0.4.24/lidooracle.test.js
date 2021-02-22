@@ -3,9 +3,10 @@ const { newDao, newApp } = require('./helpers/dao')
 const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 
 const LidoOracle = artifacts.require('LidoOracleMock.sol')
+const Lido = artifacts.require('LidoMockForOracle.sol')
 
 contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]) => {
-  let appBase, app
+  let appBase, appLido, app
 
   const assertReportableEpochs = async (startEpoch, endEpoch) => {
     const result = await app.getCurrentReportableEpochs()
@@ -16,6 +17,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
   before('deploy base app', async () => {
     // Deploy the app's base contract.
     appBase = await LidoOracle.new()
+    appLido = await Lido.new()
   })
 
   beforeEach('deploy dao and app', async () => {
@@ -31,7 +33,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
     await acl.createPermission(voting, app.address, await app.SET_BEACON_SPEC(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
-    await app.initialize('0x0000000000000000000000000000000000000000', 1, 32, 12, 1606824000)
+    await app.initialize(appLido.address, 1, 32, 12, 1606824000)
   })
 
   it('beaconSpec is correct', async () => {
@@ -229,7 +231,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
   })
 
   describe('When there is single-member setup', function () {
-    describe('current time: 1606824000 , current epoch: 0', function () {
+    describe('current time: 1606824000, current epoch: 0', function () {
       beforeEach(async () => {
         await app.setTime(1606824000)
         await app.addOracleMember(user1, { from: voting })
@@ -241,10 +243,25 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
           await assertRevert(app.reportBeacon(0, 32, 1, { from: account }), 'MEMBER_NOT_FOUND')
       })
 
-      it('reportBeacon works and emits event', async () => {
-        const receipt = await app.reportBeacon(0, 32, 1, { from: user1 })
+      it('reportBeacon works and emits event, getLastCompletedReports tracks last 2 reports', async () => {
+        let receipt = await app.reportBeacon(0, 32, 1, { from: user1 })
         assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 0, beaconBalance: 32, beaconValidators: 1 } })
         await assertReportableEpochs(1, 0)
+
+        let res = await app.getLastCompletedReports()
+        assertBn(res.postTotalPooledEther, 32)
+        assertBn(res.preTotalPooledEther, 0)
+        assertBn(res.timeElapsed, 0)
+
+        await app.setTime(1606824000 + 32 * 12 * 2) // 2 epochs later
+        receipt = await app.reportBeacon(2, 99, 3, { from: user1 })
+        assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 2, beaconBalance: 99, beaconValidators: 3 } })
+        await assertReportableEpochs(3, 2)
+
+        res = await app.getLastCompletedReports()
+        assertBn(res.postTotalPooledEther, 99)
+        assertBn(res.preTotalPooledEther, 32)
+        assertBn(res.timeElapsed, 32 * 12 * 2)
       })
 
       it('reverts when trying to report this epoch again', async () => {
