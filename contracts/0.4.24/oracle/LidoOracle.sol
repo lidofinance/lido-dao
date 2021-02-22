@@ -61,6 +61,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     bytes32 constant public MANAGE_MEMBERS = keccak256("MANAGE_MEMBERS");
     bytes32 constant public MANAGE_QUORUM = keccak256("MANAGE_QUORUM");
     bytes32 constant public SET_BEACON_SPEC = keccak256("SET_BEACON_SPEC");
+    bytes32 constant public SET_REPORT_BOUNDARIES = keccak256("SET_REPORT_BOUNDARIES");
 
     /// @dev Maximum number of oracle committee members
     uint256 public constant MAX_MEMBERS = 256;
@@ -91,6 +92,48 @@ contract LidoOracle is ILidoOracle, AragonApp {
         keccak256("lido.LidoOracle.preCompletedTotalPooledEther");
     bytes32 internal constant LAST_COMPLETED_EPOCH_ID_POSITION = keccak256("lido.LidoOracle.lastCompletedEpochId");
     bytes32 internal constant PREV_COMPLETED_EPOCH_ID_POSITION = keccak256("lido.LidoOracle.prevCompletedEpochId");
+
+    /*
+    If we use APR as a basic reference for increase, and expected range is below 10% APR.
+    May be changed by Gov.
+    */
+    bytes32 internal constant ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION =
+        keccak256("lido.LidoOracle.allowedBeaconBalanceAnnualRelativeIncrease");
+    uint256 public constant DEFAULT_ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE = 100000;  // PPM ~ 10%
+
+    /*
+    When slashing happens, the balance may decrease at a much faster pace.
+    Slashing are one-time events that decrease the balance a fair amount - a few percent
+    at a time in a realistic scenario. Thus, instead of sanity check for an APR,
+    we check if the plain relative decrease is within bounds.
+    Note that it's not annual value, its just one-jump value.
+    May be changed by Gov.
+    */
+    bytes32 internal constant ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION =
+        keccak256("lido.LidoOracle.allowedBeaconBalanceDecrease");
+    uint256 public constant DEFAULT_ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE = 50000;  // 5% ~ 50000 PPM
+
+    function getAllowedBeaconBalanceAnnualRelativeIncrease() public view returns(uint256) {
+        uint256 result = ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION.getStorageUint256();
+        if (result == 0) return DEFAULT_ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE;
+        return result;
+    }
+
+    function getAllowedBeaconBalanceRelativeDecrease() public view returns(uint256) {
+        uint256 result = ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION.getStorageUint256();
+        if (result == 0) return DEFAULT_ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE;
+        return result;
+    }
+
+    function setAllowedBeaconBalanceAnnualRelativeIncrease(uint256 value) public auth(SET_REPORT_BOUNDARIES) {
+        ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION.setStorageUint256(value);
+        emit AllowedBeaconBalanceAnnualRelativeIncreaseSet(value);
+    }
+
+    function setAllowedBeaconBalanceRelativeDecrease(uint256 value) public auth(SET_REPORT_BOUNDARIES) {
+        ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION.setStorageUint256(value);
+        emit AllowedBeaconBalanceRelativeDecreaseSet(value);
+    }
 
     function initialize(
         address _lido,
@@ -220,6 +263,37 @@ contract LidoOracle is ILidoOracle, AragonApp {
         emit BeaconReported(_epochId, _beaconBalance, _beaconValidators, member);
 
         _tryPush(_epochId);
+    }
+
+    /**
+     * @notice To make oracles less dangerous,
+     *  we can bound rewards report by 0.1% increase in stake and 15% decrease in stake,
+     *  with both values configurable by DAO voting in case of extremely unusual circumstances.
+     *  daily_reward_rate_PPM = 1e6 * reward / totalPooledEther / days
+     * @dev Note, if you deploy the contract fresh (e.g. on testnet) it may fail at the beginning of the work
+     *  because initial pooledEther may be small and it's allowed tiny in absolute number,
+     *  but significant in relative numbers. E.g. if initial balance is as small as 1e12 and then it increases to 2*1e12
+     *  it is very small jump in absolute money but in relative number it will be +100% increase,
+     *  so just relax boundaries in such case.
+     *  This problem should never occur in real-world application because the previous contract version is
+     *  already working and huge balances are already gathered.
+     **/
+    function reportSanityChecks() private {
+        (uint256 postTotalPooledEther,
+         uint256 preTotalPooledEther,
+         uint256 timeElapsed) = getLastCompletedReports();
+        if (postTotalPooledEther == 0 || timeElapsed == 0) return;  // it's possible at the beginning of the work with the contract or in tests
+        if (postTotalPooledEther >= preTotalPooledEther) {  // check profit constraint
+            uint256 reward = postTotalPooledEther - preTotalPooledEther;  // safeMath is not require because of the if-condition
+            uint256 allowedBeaconBalanceAnnualIncreasePPM = getAllowedBeaconBalanceAnnualRelativeIncrease().mul(postTotalPooledEther);
+            uint256 rewardAnnualizedPPM = uint256(1e6 * 365 days).mul(reward).div(timeElapsed);
+            require(rewardAnnualizedPPM <= allowedBeaconBalanceAnnualIncreasePPM, "ALLOWED_BEACON_BALANCE_INCREASE");
+        } else {  // check loss constraint
+            uint256 loss = preTotalPooledEther - postTotalPooledEther;  // safeMath is not require because of the if-condition
+            uint256 allowedBeaconBalanceDecreasePPM = getAllowedBeaconBalanceRelativeDecrease().mul(postTotalPooledEther);
+            uint256 lossPPM = uint256(1e6).mul(loss);
+            require(lossPPM <= allowedBeaconBalanceDecreasePPM, "ALLOWED_BEACON_BALANCE_DECREASE");
+        }
     }
 
     /**
@@ -453,6 +527,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
         PREV_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(LAST_COMPLETED_EPOCH_ID_POSITION.getStorageUint256());
         LAST_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(_epochId);
         delete gatheredEpochData[_epochId];
+        reportSanityChecks();  // rollback on boundaries violation (logical consistency)
         return true;
     }
 
