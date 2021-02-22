@@ -2,9 +2,10 @@ const { newDao, newApp } = require('../0.4.24/helpers/dao')
 const { assertBn, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 
 const LidoOracle = artifacts.require('LidoOracleMock.sol')
+const Lido = artifacts.require('LidoMockForOracle.sol')
 
 contract('LidoOracle', ([appManager, voting, malicious1, malicious2, user1, user2, user3]) => {
-  let appBase, app
+  let appBase, appLido, app
 
   const assertReportableEpochs = async (startEpoch, endEpoch) => {
     const result = await app.getCurrentReportableEpochs()
@@ -15,6 +16,7 @@ contract('LidoOracle', ([appManager, voting, malicious1, malicious2, user1, user
   before('Deploy and init Lido and oracle', async () => {
     // Deploy the app's base contract.
     appBase = await LidoOracle.new()
+    appLido = await Lido.new()
 
     const { dao, acl } = await newDao(appManager)
 
@@ -28,7 +30,7 @@ contract('LidoOracle', ([appManager, voting, malicious1, malicious2, user1, user
     await acl.createPermission(voting, app.address, await app.SET_BEACON_SPEC(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
-    await app.initialize('0x0000000000000000000000000000000000000000', 1, 32, 12, 1606824000)
+    await app.initialize(appLido.address, 1, 32, 12, 1606824000)
 
     // Initialize the oracle time
     await app.setTime(1606824000)
