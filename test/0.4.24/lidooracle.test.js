@@ -253,7 +253,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
       })
 
       it('reportBeacon works and emits event, getLastCompletedReports tracks last 2 reports', async () => {
-        const prePooledEther = START_BALANCE+32
+        const prePooledEther = START_BALANCE + 32
         let receipt = await app.reportBeacon(0, prePooledEther, 1, { from: user1 })
         assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 0, beaconBalance: prePooledEther, beaconValidators: 1 } })
         await assertReportableEpochs(1, 0)
@@ -281,7 +281,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
         assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 0, beaconBalance: beginPooledEther, beaconValidators: 1 } })
         await assertReportableEpochs(1, 0)
 
-        const reward = Math.round(START_BALANCE * (768 / 365 / 24 / 3600) * 9/100)  // annual increase by 9%
+        const reward = Math.round((START_BALANCE * (768 / 365 / 24 / 3600) * 9) / 100) // annual increase by 9%
         const nextPooledEther = beginPooledEther + reward
         await app.setTime(1606824000 + 32 * 12 * 2) // 2 epochs later (timeElapsed = 768)
         receipt = await app.reportBeacon(2, nextPooledEther, 3, { from: user1 })
@@ -290,11 +290,11 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
 
       it('reportBeacon reverts on too high pooledEther increase', async () => {
         const beginPooledEther = START_BALANCE
-        let receipt = await app.reportBeacon(0, beginPooledEther, 1, { from: user1 })
+        const receipt = await app.reportBeacon(0, beginPooledEther, 1, { from: user1 })
         assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 0, beaconBalance: beginPooledEther, beaconValidators: 1 } })
         await assertReportableEpochs(1, 0)
 
-        const reward = Math.round(START_BALANCE * (768 / 365 / 24 / 3600) * 11/100)  // annual increase by 11%
+        const reward = Math.round((START_BALANCE * (768 / 365 / 24 / 3600) * 11) / 100) // annual increase by 11%
         const nextPooledEther = beginPooledEther + reward
         await app.setTime(1606824000 + 32 * 12 * 2) // 2 epochs later (timeElapsed = 768)
         await assertRevert(app.reportBeacon(2, nextPooledEther, 3, { from: user1 }), 'ALLOWED_BEACON_BALANCE_INCREASE')
@@ -307,7 +307,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
         await assertReportableEpochs(1, 0)
 
         await app.setTime(1606824000 + 32 * 12 * 2) // 2 epochs later (timeElapsed = 768)
-        const loss = Math.round(START_BALANCE * 4/100)  // decrease by 4%
+        const loss = Math.round((START_BALANCE * 4) / 100) // decrease by 4%
         const nextPooledEther = beginPooledEther - loss
         receipt = await app.reportBeacon(2, nextPooledEther, 3, { from: user1 })
         assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 2, beaconBalance: nextPooledEther, beaconValidators: 3 } })
@@ -315,20 +315,20 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
 
       it('reportBeacon reverts on too high pooledEther decrease', async () => {
         const beginPooledEther = START_BALANCE
-        let receipt = await app.reportBeacon(0, beginPooledEther, 1, { from: user1 })
+        const receipt = await app.reportBeacon(0, beginPooledEther, 1, { from: user1 })
         assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 0, beaconBalance: beginPooledEther, beaconValidators: 1 } })
         await assertReportableEpochs(1, 0)
 
-        const loss = Math.round(START_BALANCE * 6/100)  // decrease by 6%
+        const loss = Math.round((START_BALANCE * 6) / 100) // decrease by 6%
         const nextPooledEther = beginPooledEther - loss
         await app.setTime(1606824000 + 32 * 12 * 2) // 2 epochs later (timeElapsed = 768)
         await assertRevert(app.reportBeacon(2, nextPooledEther, 3, { from: user1 }), 'ALLOWED_BEACON_BALANCE_DECREASE')
       })
 
       it('reportBeacon change increase limit works', async () => {
-        res = await app.setAllowedBeaconBalanceAnnualRelativeIncrease(42, { from: voting })
+        let res = await app.setAllowedBeaconBalanceAnnualRelativeIncrease(42, { from: voting })
         assertEvent(res, 'AllowedBeaconBalanceAnnualRelativeIncreaseSet', { expectedArgs: { value: 42 } })
-        limit = await app.getAllowedBeaconBalanceAnnualRelativeIncrease()
+        let limit = await app.getAllowedBeaconBalanceAnnualRelativeIncrease()
         assertBn(limit, 42)
 
         res = await app.setAllowedBeaconBalanceAnnualRelativeIncrease(777, { from: voting })
@@ -338,9 +338,9 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
       })
 
       it('reportBeacon change decrease limit works', async () => {
-        res = await app.setAllowedBeaconBalanceRelativeDecrease(42, { from: voting })
+        let res = await app.setAllowedBeaconBalanceRelativeDecrease(42, { from: voting })
         assertEvent(res, 'AllowedBeaconBalanceRelativeDecreaseSet', { expectedArgs: { value: 42 } })
-        limit = await app.getAllowedBeaconBalanceRelativeDecrease()
+        let limit = await app.getAllowedBeaconBalanceRelativeDecrease()
         assertBn(limit, 42)
 
         res = await app.setAllowedBeaconBalanceRelativeDecrease(777, { from: voting })
@@ -355,7 +355,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
         assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 0, beaconBalance: beginPooledEther, beaconValidators: 1 } })
         await assertReportableEpochs(1, 0)
 
-        const reward = Math.round(START_BALANCE * (768 / 365 / 24 / 3600) * 11/100)  // annual increase by 11%
+        const reward = Math.round((START_BALANCE * (768 / 365 / 24 / 3600) * 11) / 100) // annual increase by 11%
         const nextPooledEther = beginPooledEther + reward
         await app.setTime(1606824000 + 32 * 12 * 2) // 2 epochs later (timeElapsed = 768)
 
@@ -363,7 +363,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
         await assertRevert(app.reportBeacon(2, nextPooledEther, 3, { from: user1 }), 'ALLOWED_BEACON_BALANCE_INCREASE')
 
         // set limit up to 12%
-        res = await app.setAllowedBeaconBalanceAnnualRelativeIncrease(120000, { from: voting })
+        const res = await app.setAllowedBeaconBalanceAnnualRelativeIncrease(120000, { from: voting })
         assertEvent(res, 'AllowedBeaconBalanceAnnualRelativeIncreaseSet', { expectedArgs: { value: 120000 } })
 
         // check OK
@@ -377,7 +377,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
         assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 0, beaconBalance: beginPooledEther, beaconValidators: 1 } })
         await assertReportableEpochs(1, 0)
 
-        const loss = Math.round(START_BALANCE * 6/100)  // decrease by 6%
+        const loss = Math.round((START_BALANCE * 6) / 100) // decrease by 6%
         const nextPooledEther = beginPooledEther - loss
         await app.setTime(1606824000 + 32 * 12 * 2) // 2 epochs later (timeElapsed = 768)
 
@@ -385,7 +385,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
         await assertRevert(app.reportBeacon(2, nextPooledEther, 3, { from: user1 }), 'ALLOWED_BEACON_BALANCE_DECREASE')
 
         // set limit up to 7%
-        res = await app.setAllowedBeaconBalanceRelativeDecrease(70000, { from: voting })
+        const res = await app.setAllowedBeaconBalanceRelativeDecrease(70000, { from: voting })
         assertEvent(res, 'AllowedBeaconBalanceRelativeDecreaseSet', { expectedArgs: { value: 70000 } })
 
         // check OK
@@ -399,7 +399,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
         assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 0, beaconBalance: beginPooledEther, beaconValidators: 1 } })
         await assertReportableEpochs(1, 0)
 
-        const reward = Math.round(START_BALANCE * (768 / 365 / 24 / 3600) * 19/100)  // annual increase by 19%
+        const reward = Math.round((START_BALANCE * (768 / 365 / 24 / 3600) * 19) / 100) // annual increase by 19%
         const nextPooledEther = beginPooledEther + reward
         await app.setTime(1606824000 + 32 * 12 * 2) // 2 epochs later (timeElapsed = 768)
 
@@ -414,7 +414,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
 
       it('reportBeacon time does not affect decrease sanity checks', async () => {
         const beginPooledEther = START_BALANCE
-        let receipt = await app.reportBeacon(0, beginPooledEther, 1, { from: user1 })
+        const receipt = await app.reportBeacon(0, beginPooledEther, 1, { from: user1 })
         assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 0, beaconBalance: beginPooledEther, beaconValidators: 1 } })
         await assertReportableEpochs(1, 0)
 
@@ -501,36 +501,35 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
       it('reportBeacon completes only if data reaches quorum', async () => {
         let receipt
 
-        await app.reportBeacon(0, START_BALANCE+32, 1, { from: user1 })
+        await app.reportBeacon(0, START_BALANCE + 32, 1, { from: user1 })
         await assertReportableEpochs(0, 0)
-        await app.reportBeacon(0, START_BALANCE+65, 2, { from: user2 })
+        await app.reportBeacon(0, START_BALANCE + 65, 2, { from: user2 })
         await assertReportableEpochs(0, 0)
-        await app.reportBeacon(0, START_BALANCE+65, 2, { from: user3 }) // quorum is 3 here, not yet reached
+        await app.reportBeacon(0, START_BALANCE + 65, 2, { from: user3 }) // quorum is 3 here, not yet reached
         await assertReportableEpochs(0, 0)
-        receipt = await app.reportBeacon(0, START_BALANCE+65, 2, { from: user4 }) // quorum is reached
-        assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 0, beaconBalance: START_BALANCE+65, beaconValidators: 2 } })
+        receipt = await app.reportBeacon(0, START_BALANCE + 65, 2, { from: user4 }) // quorum is reached
+        assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 0, beaconBalance: START_BALANCE + 65, beaconValidators: 2 } })
         await assertReportableEpochs(1, 0)
 
         await app.setTime(1606824000 + 32 * 12) // 1 epoch
         await app.setQuorum(4, { from: voting })
         await assertReportableEpochs(1, 1)
-        return
-        await app.reportBeacon(1, START_BALANCE+64, 2, { from: user1 })
+        await app.reportBeacon(1, START_BALANCE + 64, 2, { from: user1 })
         await assertReportableEpochs(1, 1)
-        await app.reportBeacon(1, START_BALANCE+65, 2, { from: user2 })
+        await app.reportBeacon(1, START_BALANCE + 65, 2, { from: user2 })
         await assertReportableEpochs(1, 1)
-        await app.reportBeacon(1, START_BALANCE+97, 3, { from: user3 })
+        await app.reportBeacon(1, START_BALANCE + 97, 3, { from: user3 })
         await assertReportableEpochs(1, 1)
-        await app.reportBeacon(1, START_BALANCE+98, 3, { from: user4 }) // data is not unimodal, quorum is not reached
+        await app.reportBeacon(1, START_BALANCE + 98, 3, { from: user4 }) // data is not unimodal, quorum is not reached
         await assertReportableEpochs(1, 1)
 
         await app.setTime(1606824000 + 32 * 12 * 2) // 2nd epoch
         await assertReportableEpochs(1, 2)
 
-        await app.reportBeacon(2, START_BALANCE+99, 3, { from: user1 })
+        await app.reportBeacon(2, START_BALANCE + 99, 3, { from: user1 })
         await assertReportableEpochs(1, 2)
         receipt = await app.setQuorum(1, { from: voting })
-        assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 2, beaconBalance: START_BALANCE+99, beaconValidators: 3 } })
+        assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 2, beaconBalance: START_BALANCE + 99, beaconValidators: 3 } })
         await assertReportableEpochs(3, 2)
       })
 
@@ -561,9 +560,9 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
           await app.setAllowedBeaconBalanceAnnualRelativeIncrease(100000, { from: voting }) // default value from contract
           await app.setAllowedBeaconBalanceRelativeDecrease(50000, { from: voting }) // default value from contract
 
-          await app.reportBeacon(0, START_BALANCE+32, 1, { from: user1 })
-          await app.reportBeacon(0, START_BALANCE+32, 1, { from: user2 })
-          await app.reportBeacon(0, START_BALANCE+32, 1, { from: user3 })
+          await app.reportBeacon(0, START_BALANCE + 32, 1, { from: user1 })
+          await app.reportBeacon(0, START_BALANCE + 32, 1, { from: user2 })
+          await app.reportBeacon(0, START_BALANCE + 32, 1, { from: user3 })
 
           await app.setTime(1606824000 + 32 * 12 * 5)
 
@@ -571,81 +570,81 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
         })
 
         it('members can reports to all reportable epochs, the earliest reportable epoch is the last completed, the latest is current', async () => {
-          for (let epoch = 1; epoch < 6; epoch++) await app.reportBeacon(epoch, START_BALANCE+32, 1, { from: user1 })
+          for (let epoch = 1; epoch < 6; epoch++) await app.reportBeacon(epoch, START_BALANCE + 32, 1, { from: user1 })
           await assertReportableEpochs(1, 5)
 
-          for (let epoch = 1; epoch < 6; epoch++) await app.reportBeacon(epoch, START_BALANCE+32, 1, { from: user2 })
+          for (let epoch = 1; epoch < 6; epoch++) await app.reportBeacon(epoch, START_BALANCE + 32, 1, { from: user2 })
           await assertReportableEpochs(1, 5)
 
-          await app.reportBeacon(3, START_BALANCE+32, 1, { from: user3 })
+          await app.reportBeacon(3, START_BALANCE + 32, 1, { from: user3 })
           await assertReportableEpochs(4, 5)
 
-          await assertRevert(app.reportBeacon(2, START_BALANCE+32, 1, { from: user3 }), 'EPOCH_IS_TOO_OLD')
+          await assertRevert(app.reportBeacon(2, START_BALANCE + 32, 1, { from: user3 }), 'EPOCH_IS_TOO_OLD')
         })
 
         it("member removal dont affect other members' data in last reportable epoch, all other reportable epochs will be staled", async () => {
           let receipt
 
-          for (let epoch = 1; epoch < 6; epoch++) await app.reportBeacon(epoch, START_BALANCE+32, 1, { from: user1 })
+          for (let epoch = 1; epoch < 6; epoch++) await app.reportBeacon(epoch, START_BALANCE + 32, 1, { from: user1 })
           await assertReportableEpochs(1, 5)
 
-          for (let epoch = 1; epoch < 6; epoch++) await app.reportBeacon(epoch, START_BALANCE+32, 1, { from: user2 })
+          for (let epoch = 1; epoch < 6; epoch++) await app.reportBeacon(epoch, START_BALANCE + 32, 1, { from: user2 })
           await assertReportableEpochs(1, 5)
 
           receipt = await app.removeOracleMember(user3, { from: voting })
           assertEvent(receipt, 'MinReportableEpochIdUpdated', { expectedArgs: { epochId: 5 } })
           await assertReportableEpochs(5, 5)
 
-          await assertRevert(app.reportBeacon(5, START_BALANCE+32, 1, { from: user3 }), 'MEMBER_NOT_FOUND')
+          await assertRevert(app.reportBeacon(5, START_BALANCE + 32, 1, { from: user3 }), 'MEMBER_NOT_FOUND')
 
-          await app.reportBeacon(5, START_BALANCE+32, 1, { from: user1 }) // user1 reports again
-          await app.reportBeacon(5, START_BALANCE+32, 1, { from: user2 }) // user2 reports again
-          receipt = await app.reportBeacon(5, START_BALANCE+32, 1, { from: user4 })
+          await app.reportBeacon(5, START_BALANCE + 32, 1, { from: user1 }) // user1 reports again
+          await app.reportBeacon(5, START_BALANCE + 32, 1, { from: user2 }) // user2 reports again
+          receipt = await app.reportBeacon(5, START_BALANCE + 32, 1, { from: user4 })
           assertEvent(receipt, 'MinReportableEpochIdUpdated', { expectedArgs: { epochId: 6 } })
           await assertReportableEpochs(6, 5)
         })
 
         it('member removal removes all data', async () => {
-          for (let epoch = 1; epoch < 6; epoch++) await app.reportBeacon(epoch, START_BALANCE+32, 1, { from: user1 })
+          for (let epoch = 1; epoch < 6; epoch++) await app.reportBeacon(epoch, START_BALANCE + 32, 1, { from: user1 })
           await assertReportableEpochs(1, 5)
 
-          for (let epoch = 1; epoch < 6; epoch++) await app.reportBeacon(epoch, START_BALANCE+33, 2, { from: user2 })
+          for (let epoch = 1; epoch < 6; epoch++) await app.reportBeacon(epoch, START_BALANCE + 33, 2, { from: user2 })
           await assertReportableEpochs(1, 5)
 
           await app.removeOracleMember(user1, { from: voting })
           await assertReportableEpochs(5, 5)
 
-          await app.reportBeacon(5, START_BALANCE+33, 2, { from: user2 }) // user2 reports again
-          await app.reportBeacon(5, START_BALANCE+33, 2, { from: user3 })
+          await app.reportBeacon(5, START_BALANCE + 33, 2, { from: user2 }) // user2 reports again
+          await app.reportBeacon(5, START_BALANCE + 33, 2, { from: user3 })
           await assertReportableEpochs(5, 5)
 
-          await app.reportBeacon(5, START_BALANCE+33, 2, { from: user4 })
+          await app.reportBeacon(5, START_BALANCE + 33, 2, { from: user4 })
           await assertReportableEpochs(6, 5)
         })
 
         it('tail member removal works', async () => {
-          for (let epoch = 1; epoch < 6; epoch++) await app.reportBeacon(epoch, START_BALANCE+32, 1, { from: user1 })
+          for (let epoch = 1; epoch < 6; epoch++) await app.reportBeacon(epoch, START_BALANCE + 32, 1, { from: user1 })
           await assertReportableEpochs(1, 5)
 
-          for (let epoch = 1; epoch < 6; epoch++) await app.reportBeacon(epoch, START_BALANCE+64, 2, { from: user4 })
+          for (let epoch = 1; epoch < 6; epoch++) await app.reportBeacon(epoch, START_BALANCE + 64, 2, { from: user4 })
           await assertReportableEpochs(1, 5)
 
           await app.removeOracleMember(user4, { from: voting })
           await assertReportableEpochs(5, 5)
 
-          await app.reportBeacon(5, START_BALANCE+32, 1, { from: user1 }) // user1 reports again
-          await app.reportBeacon(5, START_BALANCE+32, 1, { from: user2 })
+          await app.reportBeacon(5, START_BALANCE + 32, 1, { from: user1 }) // user1 reports again
+          await app.reportBeacon(5, START_BALANCE + 32, 1, { from: user2 })
           await assertReportableEpochs(5, 5)
 
-          await app.reportBeacon(5, START_BALANCE+32, 1, { from: user3 })
+          await app.reportBeacon(5, START_BALANCE + 32, 1, { from: user3 })
           await assertReportableEpochs(6, 5)
         })
 
         it('quorum change triggers finalization of last reported epoch, all other reportable epochs will be staled', async () => {
-          for (let epoch = 1; epoch < 5; epoch++) await app.reportBeacon(epoch, START_BALANCE+32, 1, { from: user1 })
+          for (let epoch = 1; epoch < 5; epoch++) await app.reportBeacon(epoch, START_BALANCE + 32, 1, { from: user1 })
           await assertReportableEpochs(1, 5)
 
-          for (let epoch = 1; epoch < 5; epoch++) await app.reportBeacon(epoch, START_BALANCE+32, 1, { from: user2 })
+          for (let epoch = 1; epoch < 5; epoch++) await app.reportBeacon(epoch, START_BALANCE + 32, 1, { from: user2 })
           await assertReportableEpochs(1, 5)
 
           const receipt = await app.setQuorum(2, { from: voting })
