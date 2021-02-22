@@ -115,13 +115,11 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
       await assertReportableEpochs(0, 5)
 
       await app.reportBeacon(0, 0, 0, { from: user1 })
-      await app.reportBeacon(2, 0, 0, { from: user1 })
       await app.reportBeacon(1, 0, 0, { from: user1 })
+      await app.reportBeacon(2, 0, 0, { from: user1 })
 
-      await assertReportableEpochs(0, 5)
-
+      await assertReportableEpochs(2, 5)
       await app.removeOracleMember(user1, { from: voting })
-
       await assertReportableEpochs(2, 5)
     })
 
@@ -160,12 +158,11 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
       receipt = await app.setQuorum(2, { from: voting })
       await assertReportableEpochs(0, 5)
 
-      await app.reportBeacon(2, 0, 0, { from: user1 })
       await app.reportBeacon(1, 0, 0, { from: user1 })
+      await app.reportBeacon(2, 0, 0, { from: user1 })
 
       receipt = await app.setQuorum(1, { from: voting })
       assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 2, beaconBalance: 0, beaconValidators: 0 } })
-
       await assertReportableEpochs(3, 5)
     })
 
@@ -527,7 +524,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
         await assertReportableEpochs(1, 2)
 
         await app.reportBeacon(2, START_BALANCE + 99, 3, { from: user1 })
-        await assertReportableEpochs(1, 2)
+        await assertReportableEpochs(2, 2)
         receipt = await app.setQuorum(1, { from: voting })
         assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 2, beaconBalance: START_BALANCE + 99, beaconValidators: 3 } })
         await assertReportableEpochs(3, 2)
@@ -570,29 +567,27 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
         })
 
         it('members can reports to all reportable epochs, the earliest reportable epoch is the last completed, the latest is current', async () => {
-          for (let epoch = 1; epoch < 6; epoch++) await app.reportBeacon(epoch, START_BALANCE + 32, 1, { from: user1 })
-          await assertReportableEpochs(1, 5)
+          for (let epoch = 1; epoch < 6; epoch++) {
+            await app.reportBeacon(epoch, START_BALANCE + 32, 1, { from: user1 })
+            await app.reportBeacon(epoch, START_BALANCE + 32, 1, { from: user2 })
+          }
+          await assertReportableEpochs(5, 5)
 
-          for (let epoch = 1; epoch < 6; epoch++) await app.reportBeacon(epoch, START_BALANCE + 32, 1, { from: user2 })
-          await assertReportableEpochs(1, 5)
+          await app.reportBeacon(5, START_BALANCE + 32, 1, { from: user3 })
+          await assertReportableEpochs(6, 5)
 
-          await app.reportBeacon(3, START_BALANCE + 32, 1, { from: user3 })
-          await assertReportableEpochs(4, 5)
-
-          await assertRevert(app.reportBeacon(2, START_BALANCE + 32, 1, { from: user3 }), 'EPOCH_IS_TOO_OLD')
+          await assertRevert(app.reportBeacon(3, START_BALANCE + 32, 1, { from: user3 }), 'EPOCH_IS_TOO_OLD')
         })
 
         it("member removal dont affect other members' data in last reportable epoch, all other reportable epochs will be staled", async () => {
           let receipt
-
-          for (let epoch = 1; epoch < 6; epoch++) await app.reportBeacon(epoch, START_BALANCE + 32, 1, { from: user1 })
-          await assertReportableEpochs(1, 5)
-
-          for (let epoch = 1; epoch < 6; epoch++) await app.reportBeacon(epoch, START_BALANCE + 32, 1, { from: user2 })
-          await assertReportableEpochs(1, 5)
+          for (let epoch = 1; epoch < 6; epoch++) {
+            await app.reportBeacon(epoch, 32, 1, { from: user1 })
+            await app.reportBeacon(epoch, 32, 1, { from: user2 })
+          }
+          await assertReportableEpochs(5, 5)
 
           receipt = await app.removeOracleMember(user3, { from: voting })
-          assertEvent(receipt, 'MinReportableEpochIdUpdated', { expectedArgs: { epochId: 5 } })
           await assertReportableEpochs(5, 5)
 
           await assertRevert(app.reportBeacon(5, START_BALANCE + 32, 1, { from: user3 }), 'MEMBER_NOT_FOUND')
@@ -600,16 +595,16 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
           await app.reportBeacon(5, START_BALANCE + 32, 1, { from: user1 }) // user1 reports again
           await app.reportBeacon(5, START_BALANCE + 32, 1, { from: user2 }) // user2 reports again
           receipt = await app.reportBeacon(5, START_BALANCE + 32, 1, { from: user4 })
-          assertEvent(receipt, 'MinReportableEpochIdUpdated', { expectedArgs: { epochId: 6 } })
+          assertEvent(receipt, 'ReportableEpochIdUpdated', { expectedArgs: { epochId: 6 } })
           await assertReportableEpochs(6, 5)
         })
 
         it('member removal removes all data', async () => {
-          for (let epoch = 1; epoch < 6; epoch++) await app.reportBeacon(epoch, START_BALANCE + 32, 1, { from: user1 })
-          await assertReportableEpochs(1, 5)
-
-          for (let epoch = 1; epoch < 6; epoch++) await app.reportBeacon(epoch, START_BALANCE + 33, 2, { from: user2 })
-          await assertReportableEpochs(1, 5)
+          for (let epoch = 1; epoch < 6; epoch++) {
+            await app.reportBeacon(epoch, START_BALANCE + 32, 1, { from: user1 })
+            await app.reportBeacon(epoch, START_BALANCE + 64, 2, { from: user2 })
+          }
+          await assertReportableEpochs(5, 5)
 
           await app.removeOracleMember(user1, { from: voting })
           await assertReportableEpochs(5, 5)
@@ -623,11 +618,11 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
         })
 
         it('tail member removal works', async () => {
-          for (let epoch = 1; epoch < 6; epoch++) await app.reportBeacon(epoch, START_BALANCE + 32, 1, { from: user1 })
-          await assertReportableEpochs(1, 5)
-
-          for (let epoch = 1; epoch < 6; epoch++) await app.reportBeacon(epoch, START_BALANCE + 64, 2, { from: user4 })
-          await assertReportableEpochs(1, 5)
+          for (let epoch = 1; epoch < 6; epoch++) {
+            await app.reportBeacon(epoch, START_BALANCE + 32, 1, { from: user1 })
+            await app.reportBeacon(epoch, START_BALANCE + 64, 2, { from: user4 })
+          }
+          await assertReportableEpochs(5, 5)
 
           await app.removeOracleMember(user4, { from: voting })
           await assertReportableEpochs(5, 5)
@@ -641,14 +636,14 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
         })
 
         it('quorum change triggers finalization of last reported epoch, all other reportable epochs will be staled', async () => {
-          for (let epoch = 1; epoch < 5; epoch++) await app.reportBeacon(epoch, START_BALANCE + 32, 1, { from: user1 })
-          await assertReportableEpochs(1, 5)
-
-          for (let epoch = 1; epoch < 5; epoch++) await app.reportBeacon(epoch, START_BALANCE + 32, 1, { from: user2 })
-          await assertReportableEpochs(1, 5)
+          for (let epoch = 1; epoch < 5; epoch++) {
+            await app.reportBeacon(epoch, START_BALANCE + 32, 1, { from: user1 })
+            await app.reportBeacon(epoch, START_BALANCE + 32, 1, { from: user2 })
+          }
+          await assertReportableEpochs(4, 5)
 
           const receipt = await app.setQuorum(2, { from: voting })
-          assertEvent(receipt, 'MinReportableEpochIdUpdated', { expectedArgs: { epochId: 5 } })
+          assertEvent(receipt, 'ReportableEpochIdUpdated', { expectedArgs: { epochId: 5 } })
           await assertReportableEpochs(5, 5)
         })
       })
