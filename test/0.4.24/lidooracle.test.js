@@ -408,8 +408,8 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
 
         await app.setTime(1606824000 + 32 * 12 * 4) // 4 epochs later (timeElapsed = 768*2)
         // check OK because 4 epochs passed
-        receipt = await app.reportBeacon(2, nextPooledEther, 3, { from: user1 })
-        assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 2, beaconBalance: nextPooledEther, beaconValidators: 3 } })
+        receipt = await app.reportBeacon(4, nextPooledEther, 3, { from: user1 })
+        assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 4, beaconBalance: nextPooledEther, beaconValidators: 3 } })
       })
 
       it('reportBeacon time does not affect decrease sanity checks', async () => {
