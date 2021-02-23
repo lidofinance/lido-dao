@@ -55,6 +55,11 @@ interface ILidoOracle {
         uint128 beaconBalance,
         uint128 beaconValidators
     );
+    event ReportPushed(
+         uint256 postTotalPooledEther,
+         uint256 preTotalPooledEther,
+         uint256 timeElapsed,
+         uint256 totalShares);
     event AllowedBeaconBalanceAnnualRelativeIncreaseSet(uint256 value);
     event AllowedBeaconBalanceRelativeDecreaseSet(uint256 value);
 
