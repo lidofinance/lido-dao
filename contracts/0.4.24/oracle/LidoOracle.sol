@@ -396,7 +396,6 @@ contract LidoOracle is ILidoOracle, AragonApp {
             uint256 timeElapsed
         )
     {
-        BeaconSpec memory beaconSpec = _getBeaconSpec();
         postTotalPooledEther = POST_COMPLETED_TOTAL_POOLED_ETHER_POSITION.getStorageUint256();
         preTotalPooledEther = PRE_COMPLETED_TOTAL_POOLED_ETHER_POSITION.getStorageUint256();
         timeElapsed = TIME_ELAPSED_POSITION.getStorageUint256();
