@@ -87,7 +87,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     bytes32 internal constant PRE_COMPLETED_TOTAL_POOLED_ETHER_POSITION =
         keccak256("lido.LidoOracle.preCompletedTotalPooledEther");
     bytes32 internal constant LAST_COMPLETED_EPOCH_ID_POSITION = keccak256("lido.LidoOracle.lastCompletedEpochId");
-    bytes32 internal constant PREV_COMPLETED_EPOCH_ID_POSITION = keccak256("lido.LidoOracle.prevCompletedEpochId");
+    bytes32 internal constant TIME_ELAPSED_POSITION = keccak256("lido.LidoOracle.timeElapsed");
 
     /// @dev function credentials to be called when the quorum is reached
     bytes32 internal constant QUORUM_CALLBACK_POSITION = keccak256("lido.LidoOracle.quorumCallback");
@@ -257,10 +257,9 @@ contract LidoOracle is ILidoOracle, AragonApp {
      *  This problem should never occur in real-world application because the previous contract version is
      *  already working and huge balances are already gathered.
      **/
-    function reportSanityChecks() private {
-        (uint256 postTotalPooledEther,
-         uint256 preTotalPooledEther,
-         uint256 timeElapsed) = getLastCompletedReports();
+    function _reportSanityChecks(uint256 postTotalPooledEther,
+                                 uint256 preTotalPooledEther,
+                                 uint256 timeElapsed) internal view {
         if (postTotalPooledEther == 0 || timeElapsed == 0) return;  // it's possible at the beginning of the work with the contract or in tests
         if (postTotalPooledEther >= preTotalPooledEther) {  // check profit constraint
             uint256 reward = postTotalPooledEther - preTotalPooledEther;  // safeMath is not require because of the if-condition
@@ -397,13 +396,9 @@ contract LidoOracle is ILidoOracle, AragonApp {
             uint256 timeElapsed
         )
     {
-        BeaconSpec memory beaconSpec = _getBeaconSpec();
         postTotalPooledEther = POST_COMPLETED_TOTAL_POOLED_ETHER_POSITION.getStorageUint256();
         preTotalPooledEther = PRE_COMPLETED_TOTAL_POOLED_ETHER_POSITION.getStorageUint256();
-        timeElapsed = (LAST_COMPLETED_EPOCH_ID_POSITION.getStorageUint256()
-                       .sub(PREV_COMPLETED_EPOCH_ID_POSITION.getStorageUint256()))
-            .mul(beaconSpec.slotsPerEpoch)
-            .mul(beaconSpec.secondsPerSlot);
+        timeElapsed = TIME_ELAPSED_POSITION.getStorageUint256();
     }
 
     /**
@@ -495,20 +490,26 @@ contract LidoOracle is ILidoOracle, AragonApp {
 
         // report to the lido and collect stats
         ILido lido = getLido();
-        PRE_COMPLETED_TOTAL_POOLED_ETHER_POSITION.setStorageUint256(ISTETH(lido).totalSupply());
+        uint256 prevTotalPooledEther = ISTETH(lido).totalSupply();
         lido.pushBeacon(modeReport.beaconValidators, modeReport.beaconBalance);
-        POST_COMPLETED_TOTAL_POOLED_ETHER_POSITION.setStorageUint256(ISTETH(lido).totalSupply());
-        PREV_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(LAST_COMPLETED_EPOCH_ID_POSITION.getStorageUint256());
-        LAST_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(epochId);
-        reportSanityChecks();  // rollback on boundaries violation (logical consistency)
+        uint256 postTotalPooledEther = ISTETH(lido).totalSupply();
 
-        // call the quorum delegate
+        PRE_COMPLETED_TOTAL_POOLED_ETHER_POSITION.setStorageUint256(prevTotalPooledEther);
+        POST_COMPLETED_TOTAL_POOLED_ETHER_POSITION.setStorageUint256(postTotalPooledEther);
+        uint256 timeElapsed = (epochId.sub(LAST_COMPLETED_EPOCH_ID_POSITION.getStorageUint256()))
+            .mul(beaconSpec.slotsPerEpoch)
+            .mul(beaconSpec.secondsPerSlot);
+        TIME_ELAPSED_POSITION.setStorageUint256(timeElapsed);
+        LAST_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(epochId);
+
+        // rollback on boundaries violation (logical consistency)
+        _reportSanityChecks(postTotalPooledEther, prevTotalPooledEther, timeElapsed);
+
+        // emit detailed stat and call the quorum delegate with this data
+        emit PostTotalShares(postTotalPooledEther, prevTotalPooledEther, timeElapsed, ISTETH(lido).getTotalShares());
         IQuorumCallback quorumCallbackAddr = IQuorumCallback(QUORUM_CALLBACK_POSITION.getStorageUint256());
         if (address(quorumCallbackAddr) != address(0)) {
-            (uint256 lastTotalPooledEther,
-             uint256 prevTotalPooledEther,
-             uint256 timeElapsed) = getLastCompletedReports();
-            quorumCallbackAddr.processLidoOracleReport(lastTotalPooledEther,
+            quorumCallbackAddr.processLidoOracleReport(postTotalPooledEther,
                                                        prevTotalPooledEther,
                                                        timeElapsed);
         }

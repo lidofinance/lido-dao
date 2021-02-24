@@ -252,21 +252,40 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
       })
 
       it('reportBeacon works and emits event, getLastCompletedReports tracks last 2 reports', async () => {
+        await app.reportBeacon(0, START_BALANCE, 1, { from: user1 })
+
+        await app.setTime(1606824000 + 32 * 12 * 1) // 1 epoch later
         const prePooledEther = START_BALANCE + 32
-        let receipt = await app.reportBeacon(0, prePooledEther, 1, { from: user1 })
-        assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 0, beaconBalance: prePooledEther, beaconValidators: 1 } })
-        await assertReportableEpochs(1, 0)
+        let receipt = await app.reportBeacon(1, prePooledEther, 1, { from: user1 })
+        assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 1, beaconBalance: prePooledEther, beaconValidators: 1 } })
+        assertEvent(receipt, 'PostTotalShares', {
+          expectedArgs: {
+            postTotalPooledEther: prePooledEther,
+            preTotalPooledEther: START_BALANCE,
+            timeElapsed: 32 * 12 * 1,
+            totalShares: 42
+          }
+        })
+        await assertReportableEpochs(2, 1)
 
         let res = await app.getLastCompletedReports()
         assertBn(res.postTotalPooledEther, prePooledEther)
-        assertBn(res.preTotalPooledEther, 0)
-        assertBn(res.timeElapsed, 0)
+        assertBn(res.preTotalPooledEther, START_BALANCE)
+        assertBn(res.timeElapsed, 32 * 12 * 1)
 
-        await app.setTime(1606824000 + 32 * 12 * 2) // 2 epochs later
+        await app.setTime(1606824000 + 32 * 12 * 3) // 2 epochs later
         const postPooledEther = prePooledEther + 99
-        receipt = await app.reportBeacon(2, postPooledEther, 3, { from: user1 })
-        assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 2, beaconBalance: postPooledEther, beaconValidators: 3 } })
-        await assertReportableEpochs(3, 2)
+        receipt = await app.reportBeacon(3, postPooledEther, 3, { from: user1 })
+        assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 3, beaconBalance: postPooledEther, beaconValidators: 3 } })
+        assertEvent(receipt, 'PostTotalShares', {
+          expectedArgs: {
+            postTotalPooledEther: postPooledEther,
+            preTotalPooledEther: prePooledEther,
+            timeElapsed: 32 * 12 * 2,
+            totalShares: 42
+          }
+        })
+        await assertReportableEpochs(4, 3)
 
         res = await app.getLastCompletedReports()
         assertBn(res.postTotalPooledEther, postPooledEther)
