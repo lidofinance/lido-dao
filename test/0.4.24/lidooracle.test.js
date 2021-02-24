@@ -58,7 +58,15 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
     await assertRevert(app.setBeaconSpec(1, 1, 0, 1, { from: voting }), 'BAD_SECONDS_PER_SLOT')
     await assertRevert(app.setBeaconSpec(1, 1, 1, 0, { from: voting }), 'BAD_GENESIS_TIME')
 
-    await app.setBeaconSpec(1, 1, 1, 1, { from: voting })
+    const receipt = await app.setBeaconSpec(1, 1, 1, 1, { from: voting })
+    assertEvent(receipt, 'BeaconSpecSet', {
+      expectedArgs: {
+        epochsPerFrame: 1,
+        slotsPerEpoch: 1,
+        secondsPerSlot: 1,
+        genesisTime: 1
+      }
+    })
     const beaconSpec = await app.getBeaconSpec()
     assertBn(beaconSpec.epochsPerFrame, 1)
     assertBn(beaconSpec.slotsPerEpoch, 1)
@@ -450,9 +458,11 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
 
       it('quorum delegate called with same arguments as getLatestCompletedReports', async () => {
         const mock = await QuorumCallback.new()
-        await app.setQuorumCallback(mock.address, { from: voting })
+        let receipt = await app.setQuorumCallback(mock.address, { from: voting })
+        assertEvent(receipt, 'QuorumCallbackSet', { expectedArgs: { callback: mock.address } })
+        assert((await app.getQuorumCallback()) === mock.address)
 
-        let receipt = await app.reportBeacon(0, START_BALANCE + 35, 1, { from: user1 })
+        receipt = await app.reportBeacon(0, START_BALANCE + 35, 1, { from: user1 })
         assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 0, beaconBalance: START_BALANCE + 35, beaconValidators: 1 } })
         await assertReportableEpochs(1, 0)
 
