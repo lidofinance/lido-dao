@@ -450,7 +450,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
 
       it('quorum delegate called with same arguments as getLatestCompletedReports', async () => {
         const mock = await QuorumCallback.new()
-        await app.setQuorumDelegate(mock.address, { from: voting })
+        await app.setQuorumCallback(mock.address, { from: voting })
 
         let receipt = await app.reportBeacon(0, START_BALANCE + 35, 1, { from: user1 })
         assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 0, beaconBalance: START_BALANCE + 35, beaconValidators: 1 } })

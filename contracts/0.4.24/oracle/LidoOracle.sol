@@ -134,31 +134,8 @@ contract LidoOracle is ILidoOracle, AragonApp {
         emit AllowedBeaconBalanceRelativeDecreaseSet(value);
     }
 
-    function initialize(
-        address _lido,
-        uint64 _epochsPerFrame,
-        uint64 _slotsPerEpoch,
-        uint64 _secondsPerSlot,
-        uint64 _genesisTime
-    )
-        public onlyInit
-    {
-        assert(1 == ((1 << (MAX_MEMBERS - 1)) >> (MAX_MEMBERS - 1)));  // static assert
-
-        _setBeaconSpec(
-            _epochsPerFrame,
-            _slotsPerEpoch,
-            _secondsPerSlot,
-            _genesisTime
-        );
-
-        LIDO_POSITION.setStorageAddress(_lido);
-
-        QUORUM_POSITION.setStorageUint256(1);
-        emit QuorumChanged(1);
-
-        initialized();
-    }
+    /// @dev Initialize function removed from v2 because it is invoked only once
+    function initialize(address, uint64, uint64, uint64, uint64) public {}
 
     /**
       * @notice Add `_member` to the oracle member committee
@@ -203,7 +180,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     /**
      * @notice Set the callback contract address to be called upon quorum
      */
-    function setQuorumDelegate(address _addr) external auth(SET_QUORUM_CALLBACK) {
+    function setQuorumCallback(address _addr) external auth(SET_QUORUM_CALLBACK) {
         QUORUM_CALLBACK_POSITION.setStorageUint256(uint256(_addr));
     }
 
@@ -509,9 +486,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
         emit PostTotalShares(postTotalPooledEther, prevTotalPooledEther, timeElapsed, ISTETH(lido).getTotalShares());
         IQuorumCallback quorumCallbackAddr = IQuorumCallback(QUORUM_CALLBACK_POSITION.getStorageUint256());
         if (address(quorumCallbackAddr) != address(0)) {
-            quorumCallbackAddr.processLidoOracleReport(postTotalPooledEther,
-                                                       prevTotalPooledEther,
-                                                       timeElapsed);
+            quorumCallbackAddr.processLidoOracleReport(postTotalPooledEther, prevTotalPooledEther, timeElapsed);
         }
     }
 
