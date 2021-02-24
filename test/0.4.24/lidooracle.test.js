@@ -258,7 +258,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
         const prePooledEther = START_BALANCE + 32
         let receipt = await app.reportBeacon(1, prePooledEther, 1, { from: user1 })
         assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 1, beaconBalance: prePooledEther, beaconValidators: 1 } })
-        assertEvent(receipt, 'ReportPushed', {
+        assertEvent(receipt, 'PostTotalShares', {
           expectedArgs: {
             postTotalPooledEther: prePooledEther,
             preTotalPooledEther: START_BALANCE,
@@ -277,7 +277,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
         const postPooledEther = prePooledEther + 99
         receipt = await app.reportBeacon(3, postPooledEther, 3, { from: user1 })
         assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 3, beaconBalance: postPooledEther, beaconValidators: 3 } })
-        assertEvent(receipt, 'ReportPushed', {
+        assertEvent(receipt, 'PostTotalShares', {
           expectedArgs: {
             postTotalPooledEther: postPooledEther,
             preTotalPooledEther: prePooledEther,

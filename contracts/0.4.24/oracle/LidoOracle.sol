@@ -506,7 +506,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
         _reportSanityChecks(postTotalPooledEther, prevTotalPooledEther, timeElapsed);
 
         // emit detailed stat and call the quorum delegate with this data
-        emit ReportPushed(postTotalPooledEther, prevTotalPooledEther, timeElapsed, ISTETH(lido).getTotalShares());
+        emit PostTotalShares(postTotalPooledEther, prevTotalPooledEther, timeElapsed, ISTETH(lido).getTotalShares());
         IQuorumCallback quorumCallbackAddr = IQuorumCallback(QUORUM_CALLBACK_POSITION.getStorageUint256());
         if (address(quorumCallbackAddr) != address(0)) {
             quorumCallbackAddr.processLidoOracleReport(postTotalPooledEther,
