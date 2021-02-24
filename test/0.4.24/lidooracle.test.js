@@ -176,6 +176,46 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
       await assertReportableEpochs(3, 5)
     })
 
+    it('getCurrentOraclesReportStatus/KindsSize/Kind', async () => {
+      await app.setTime(1606824000)
+      await app.addOracleMember(user1, { from: voting })
+      await app.addOracleMember(user2, { from: voting })
+      await app.addOracleMember(user3, { from: voting })
+      await app.setQuorum(4, { from: voting })
+
+      assertBn(await app.getCurrentOraclesReportStatus(), 0b000)
+      assertBn(await app.getCurrentReportKindsSize(), 0)
+
+      await app.reportBeacon(0, 100, 10, { from: user1 })
+      assertBn(await app.getCurrentOraclesReportStatus(), 0b001)
+      assertBn(await app.getCurrentReportKindsSize(), 1)
+
+      await app.reportBeacon(0, 101, 11, { from: user2 })
+      assertBn(await app.getCurrentOraclesReportStatus(), 0b011)
+      assertBn(await app.getCurrentReportKindsSize(), 2)
+
+      await app.reportBeacon(0, 100, 10, { from: user3 })
+      assertBn(await app.getCurrentOraclesReportStatus(), 0b111)
+      assertBn(await app.getCurrentReportKindsSize(), 2)
+
+      const firstKind = await app.getCurrentReportKind(0)
+      assertBn(firstKind.beaconBalance, 100)
+      assertBn(firstKind.beaconValidators, 10)
+      assertBn(firstKind.count, 2)
+      const secondKind = await app.getCurrentReportKind(1)
+      assertBn(secondKind.beaconBalance, 101)
+      assertBn(secondKind.beaconValidators, 11)
+      assertBn(secondKind.count, 1)
+
+      await assertReportableEpochs(0, 0)
+
+      const receipt = await app.setQuorum(2, { from: voting })
+      assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 0, beaconBalance: 100, beaconValidators: 10 } })
+      await assertReportableEpochs(1, 0)
+      assertBn(await app.getCurrentOraclesReportStatus(), 0b000)
+      assertBn(await app.getCurrentReportKindsSize(), 0)
+    })
+
     it('getOracleMembers works', async () => {
       await app.setTime(1606824000)
 

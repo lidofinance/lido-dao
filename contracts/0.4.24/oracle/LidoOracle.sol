@@ -137,6 +137,21 @@ contract LidoOracle is ILidoOracle, AragonApp {
         return REPORTS_BITMASK_POSITION.getStorageUint256();
     }
 
+    function getCurrentReportKindsSize() public view returns(uint256) {
+        return gatheredReportKinds.length;
+    }
+
+    function getCurrentReportKind(uint256 index)
+        public view
+        returns(
+            uint128 beaconBalance,
+            uint128 beaconValidators,
+            uint256 count
+        ) {
+        ReportKind storage kind = gatheredReportKinds[index];
+        return (kind.report.beaconBalance, kind.report.beaconValidators, kind.count);
+    }
+
     /// @dev Initialize function removed from v2 because it is invoked only once
     function initialize(address, uint64, uint64, uint64, uint64) public {}
 
