@@ -173,7 +173,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
         require(0 != _quorum, "QUORUM_WONT_BE_MADE");
         QUORUM_POSITION.setStorageUint256(_quorum);
         emit QuorumChanged(_quorum);
-        _tryPush();
+        _tryPush(REPORTABLE_EPOCH_ID_POSITION.getStorageUint256());
     }
 
     /**
@@ -219,7 +219,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
             gatheredReportKinds.push(ReportKind(report, 1));
         }
         emit BeaconReported(_epochId, _beaconBalance, _beaconValidators, msg.sender);
-        _tryPush();
+        _tryPush(_epochId);
     }
 
     /**
@@ -452,14 +452,13 @@ contract LidoOracle is ILidoOracle, AragonApp {
     /**
      * @dev Pushes the current data point if quorum is reached
      */
-    function _tryPush() internal {
+    function _tryPush(uint256 epochId) internal {
         (bool isQuorum, Report memory modeReport) = _getQuorumReport();
         if (!isQuorum) return;
 
         // data for this frame is collected, now this frame is completed, so
-        // minReportableEpochId should be changed to first epoch from next frame
+        // reportableEpochId should be changed to first epoch from the next frame
         BeaconSpec memory beaconSpec = _getBeaconSpec();
-        uint256 epochId = REPORTABLE_EPOCH_ID_POSITION.getStorageUint256();
         emit Completed(epochId, modeReport.beaconBalance, modeReport.beaconValidators);
         _clearReportingAndAdvanceTo(
             epochId
