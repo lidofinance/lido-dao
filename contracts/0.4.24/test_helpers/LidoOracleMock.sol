@@ -13,6 +13,37 @@ import "../oracle/LidoOracle.sol";
 contract LidoOracleMock is LidoOracle {
     uint256 private time;
 
+    // Original initialize function from v1
+    function initialize(
+        address _lido,
+        uint64 _epochsPerFrame,
+        uint64 _slotsPerEpoch,
+        uint64 _secondsPerSlot,
+        uint64 _genesisTime
+    )
+        public onlyInit
+    {
+        assert(1 == ((1 << (MAX_MEMBERS - 1)) >> (MAX_MEMBERS - 1)));  // static assert
+        _setBeaconSpec(
+            _epochsPerFrame,
+            _slotsPerEpoch,
+            _secondsPerSlot,
+            _genesisTime
+        );
+        LIDO_POSITION.setStorageAddress(_lido);
+        QUORUM_POSITION.setStorageUint256(1);
+        emit QuorumChanged(1);
+        initialized();
+    }
+
+    function _reportSanityChecks(uint256 postTotalPooledEther,
+                                 uint256 preTotalPooledEther,
+                                 uint256 timeElapsed) internal view {
+        // it's possible at the beginning of the work with the contract or in tests
+        if (postTotalPooledEther == 0 || timeElapsed == 0) return;
+        LidoOracle._reportSanityChecks(postTotalPooledEther, preTotalPooledEther, timeElapsed);
+    }
+
     function setTime(uint256 _time) public {
         time = _time;
     }

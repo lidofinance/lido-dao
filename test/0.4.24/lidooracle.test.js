@@ -251,7 +251,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
           await assertRevert(app.reportBeacon(0, 32, 1, { from: account }), 'MEMBER_NOT_FOUND')
       })
 
-      it('reportBeacon works and emits event, getLastCompletedReports tracks last 2 reports', async () => {
+      it('reportBeacon works and emits event, getLastCompletedReportDelta tracks last 2 reports', async () => {
         await app.reportBeacon(0, START_BALANCE, 1, { from: user1 })
 
         await app.setTime(1606824000 + 32 * 12 * 1) // 1 epoch later
@@ -268,7 +268,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
         })
         await assertReportableEpochs(2, 1)
 
-        let res = await app.getLastCompletedReports()
+        let res = await app.getLastCompletedReportDelta()
         assertBn(res.postTotalPooledEther, prePooledEther)
         assertBn(res.preTotalPooledEther, START_BALANCE)
         assertBn(res.timeElapsed, 32 * 12 * 1)
@@ -287,7 +287,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
         })
         await assertReportableEpochs(4, 3)
 
-        res = await app.getLastCompletedReports()
+        res = await app.getLastCompletedReportDelta()
         assertBn(res.postTotalPooledEther, postPooledEther)
         assertBn(res.preTotalPooledEther, prePooledEther)
         assertBn(res.timeElapsed, 32 * 12 * 2)
@@ -450,7 +450,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
 
       it('quorum delegate called with same arguments as getLatestCompletedReports', async () => {
         const mock = await QuorumCallback.new()
-        await app.setQuorumDelegate(mock.address, { from: voting })
+        await app.setQuorumCallback(mock.address, { from: voting })
 
         let receipt = await app.reportBeacon(0, START_BALANCE + 35, 1, { from: user1 })
         assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 0, beaconBalance: START_BALANCE + 35, beaconValidators: 1 } })
@@ -465,7 +465,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
         assertBn(await mock.preTotalPooledEther(), START_BALANCE + 35)
         assertBn(await mock.timeElapsed(), 32 * 12 * 2)
 
-        const res = await app.getLastCompletedReports()
+        const res = await app.getLastCompletedReportDelta()
         assertBn(res.postTotalPooledEther, START_BALANCE + 77)
         assertBn(res.preTotalPooledEther, START_BALANCE + 35)
         assertBn(res.timeElapsed, 32 * 12 * 2)
