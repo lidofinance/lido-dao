@@ -58,7 +58,15 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
     await assertRevert(app.setBeaconSpec(1, 1, 0, 1, { from: voting }), 'BAD_SECONDS_PER_SLOT')
     await assertRevert(app.setBeaconSpec(1, 1, 1, 0, { from: voting }), 'BAD_GENESIS_TIME')
 
-    await app.setBeaconSpec(1, 1, 1, 1, { from: voting })
+    const receipt = await app.setBeaconSpec(1, 1, 1, 1, { from: voting })
+    assertEvent(receipt, 'BeaconSpecSet', {
+      expectedArgs: {
+        epochsPerFrame: 1,
+        slotsPerEpoch: 1,
+        secondsPerSlot: 1,
+        genesisTime: 1
+      }
+    })
     const beaconSpec = await app.getBeaconSpec()
     assertBn(beaconSpec.epochsPerFrame, 1)
     assertBn(beaconSpec.slotsPerEpoch, 1)
@@ -166,6 +174,46 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
       receipt = await app.setQuorum(1, { from: voting })
       assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 2, beaconBalance: 0, beaconValidators: 0 } })
       await assertReportableEpochs(3, 5)
+    })
+
+    it('getCurrentOraclesReportStatus/KindsSize/Kind', async () => {
+      await app.setTime(1606824000)
+      await app.addOracleMember(user1, { from: voting })
+      await app.addOracleMember(user2, { from: voting })
+      await app.addOracleMember(user3, { from: voting })
+      await app.setQuorum(4, { from: voting })
+
+      assertBn(await app.getCurrentOraclesReportStatus(), 0b000)
+      assertBn(await app.getCurrentReportKindsSize(), 0)
+
+      await app.reportBeacon(0, 100, 10, { from: user1 })
+      assertBn(await app.getCurrentOraclesReportStatus(), 0b001)
+      assertBn(await app.getCurrentReportKindsSize(), 1)
+
+      await app.reportBeacon(0, 101, 11, { from: user2 })
+      assertBn(await app.getCurrentOraclesReportStatus(), 0b011)
+      assertBn(await app.getCurrentReportKindsSize(), 2)
+
+      await app.reportBeacon(0, 100, 10, { from: user3 })
+      assertBn(await app.getCurrentOraclesReportStatus(), 0b111)
+      assertBn(await app.getCurrentReportKindsSize(), 2)
+
+      const firstKind = await app.getCurrentReportKind(0)
+      assertBn(firstKind.beaconBalance, 100)
+      assertBn(firstKind.beaconValidators, 10)
+      assertBn(firstKind.count, 2)
+      const secondKind = await app.getCurrentReportKind(1)
+      assertBn(secondKind.beaconBalance, 101)
+      assertBn(secondKind.beaconValidators, 11)
+      assertBn(secondKind.count, 1)
+
+      await assertReportableEpochs(0, 0)
+
+      const receipt = await app.setQuorum(2, { from: voting })
+      assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 0, beaconBalance: 100, beaconValidators: 10 } })
+      await assertReportableEpochs(1, 0)
+      assertBn(await app.getCurrentOraclesReportStatus(), 0b000)
+      assertBn(await app.getCurrentReportKindsSize(), 0)
     })
 
     it('getOracleMembers works', async () => {
@@ -450,9 +498,11 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, nobody]
 
       it('quorum delegate called with same arguments as getLatestCompletedReports', async () => {
         const mock = await QuorumCallback.new()
-        await app.setQuorumCallback(mock.address, { from: voting })
+        let receipt = await app.setQuorumCallback(mock.address, { from: voting })
+        assertEvent(receipt, 'QuorumCallbackSet', { expectedArgs: { callback: mock.address } })
+        assert((await app.getQuorumCallback()) === mock.address)
 
-        let receipt = await app.reportBeacon(0, START_BALANCE + 35, 1, { from: user1 })
+        receipt = await app.reportBeacon(0, START_BALANCE + 35, 1, { from: user1 })
         assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 0, beaconBalance: START_BALANCE + 35, beaconValidators: 1 } })
         await assertReportableEpochs(1, 0)
 

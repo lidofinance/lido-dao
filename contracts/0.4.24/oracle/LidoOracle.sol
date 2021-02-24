@@ -133,6 +133,25 @@ contract LidoOracle is ILidoOracle, AragonApp {
         emit AllowedBeaconBalanceRelativeDecreaseSet(value);
     }
 
+    function getCurrentOraclesReportStatus() public view returns(uint256) {
+        return REPORTS_BITMASK_POSITION.getStorageUint256();
+    }
+
+    function getCurrentReportKindsSize() public view returns(uint256) {
+        return gatheredReportKinds.length;
+    }
+
+    function getCurrentReportKind(uint256 index)
+        public view
+        returns(
+            uint128 beaconBalance,
+            uint128 beaconValidators,
+            uint256 count
+        ) {
+        ReportKind storage kind = gatheredReportKinds[index];
+        return (kind.report.beaconBalance, kind.report.beaconValidators, kind.count);
+    }
+
     /// @dev Initialize function removed from v2 because it is invoked only once
     function initialize(address, uint64, uint64, uint64, uint64) public {}
 
@@ -177,10 +196,18 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
+     * @notice Returns the callback contract address to be called upon quorum
+     */
+    function getQuorumCallback() public view returns(address) {
+        return address(QUORUM_CALLBACK_POSITION.getStorageUint256());
+    }
+
+    /**
      * @notice Set the callback contract address to be called upon quorum
      */
     function setQuorumCallback(address _addr) external auth(SET_QUORUM_CALLBACK) {
         QUORUM_CALLBACK_POSITION.setStorageUint256(uint256(_addr));
+        emit QuorumCallbackSet(_addr);
     }
 
     /**
@@ -404,6 +431,11 @@ contract LidoOracle is ILidoOracle, AragonApp {
             uint256(_genesisTime)
         );
         BEACON_SPEC_POSITION.setStorageUint256(data);
+        emit BeaconSpecSet(
+            _epochsPerFrame,
+            _slotsPerEpoch,
+            _secondsPerSlot,
+            _genesisTime);
     }
 
     /**
