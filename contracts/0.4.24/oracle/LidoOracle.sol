@@ -23,7 +23,7 @@ import "./BitOps.sol";
   * The goal of the oracle is to inform other parts of the system about balances controlled
   * by the DAO on the ETH 2.0 side. The balances can go up because of reward accumulation
   * and can go down because of slashing.
-  *
+  * ----!!!!!!!!!!!! need to actualize comments !!!!!!!!!!!!!!-----
   * The timeline is divided into consecutive reportIntervals. At most one data point is produced per reportInterval.
   * A data point is considered finalized (produced) as soon as `quorum` oracle committee members
   * send data.
@@ -78,7 +78,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
 
     /// @dev storage for all gathered reports for the last epoch
     bytes32 internal constant REPORTABLE_EPOCH_ID_POSITION = keccak256("lido.LidoOracle.reportableEpochId");
-    bytes32 internal constant REPORTS_BITMASK_POSITION = keccak256("lido.LidoOracle.reoirtsBitMask");
+    bytes32 internal constant REPORTS_BITMASK_POSITION = keccak256("lido.LidoOracle.reportsBitMask");
     ReportKind[] private gatheredReportKinds;
 
     /// @dev historic data about 2 last completed reports
@@ -94,7 +94,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
 
     /*
     If we use APR as a basic reference for increase, and expected range is below 10% APR.
-    May be changed by Gov.
+    May be changed by the governance.
     */
     bytes32 internal constant ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION =
         keccak256("lido.LidoOracle.allowedBeaconBalanceAnnualRelativeIncrease");
@@ -106,7 +106,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     at a time in a realistic scenario. Thus, instead of sanity check for an APR,
     we check if the plain relative decrease is within bounds.
     Note that it's not annual value, its just one-jump value.
-    May be changed by Gov.
+    May be changed by the governance.
     */
     bytes32 internal constant ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION =
         keccak256("lido.LidoOracle.allowedBeaconBalanceDecrease");
@@ -389,7 +389,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     /**
      * @notice Reports beacon balance and its change
      */
-    function getLastCompletedReports()
+    function getLastCompletedReportDelta()
         public view
         returns (
             uint256 postTotalPooledEther,
