@@ -92,22 +92,21 @@ contract LidoOracle is ILidoOracle, AragonApp {
     /// @dev function credentials to be called when the quorum is reached
     bytes32 internal constant QUORUM_CALLBACK_POSITION = keccak256("lido.LidoOracle.quorumCallback");
 
-    /*
-    If we use APR as a basic reference for increase, and expected range is below 10% APR.
-    May be changed by the governance.
-    */
+    /**
+      * If we use APR as a basic reference for increase, and expected range is below 10% APR.
+      * May be changed by the governance.
+      */
     bytes32 internal constant ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION =
         keccak256("lido.LidoOracle.allowedBeaconBalanceAnnualRelativeIncrease");
     uint256 public constant DEFAULT_ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE = 100000;  // PPM ~ 10%
 
-    /*
-    When slashing happens, the balance may decrease at a much faster pace.
-    Slashing are one-time events that decrease the balance a fair amount - a few percent
-    at a time in a realistic scenario. Thus, instead of sanity check for an APR,
-    we check if the plain relative decrease is within bounds.
-    Note that it's not annual value, its just one-jump value.
-    May be changed by the governance.
-    */
+    /**
+      * When slashing happens, the balance may decrease at a much faster pace.  Slashing are
+      * one-time events that decrease the balance a fair amount - a few percent at a time in a
+      * realistic scenario. Thus, instead of sanity check for an APR, we check if the plain relative
+      * decrease is within bounds.  Note that it's not annual value, its just one-jump value.  May
+      * be changed by the governance.
+      */
     bytes32 internal constant ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION =
         keccak256("lido.LidoOracle.allowedBeaconBalanceDecrease");
     uint256 public constant DEFAULT_ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE = 50000;  // 5% ~ 50000 PPM
