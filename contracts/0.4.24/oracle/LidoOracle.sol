@@ -240,13 +240,15 @@ contract LidoOracle is ILidoOracle, AragonApp {
                                  uint256 preTotalPooledEther,
                                  uint256 timeElapsed) internal view {
         if (postTotalPooledEther >= preTotalPooledEther) {  // check profit constraint
-            uint256 reward = postTotalPooledEther - preTotalPooledEther;  // safeMath is not require because of the if-condition
-            uint256 allowedBeaconBalanceAnnualIncreasePPM = getAllowedBeaconBalanceAnnualRelativeIncrease().mul(postTotalPooledEther);
+            uint256 reward = postTotalPooledEther - preTotalPooledEther;
+            uint256 allowedBeaconBalanceAnnualIncreasePPM = getAllowedBeaconBalanceAnnualRelativeIncrease()
+                .mul(postTotalPooledEther);
             uint256 rewardAnnualizedPPM = uint256(1e6 * 365 days).mul(reward).div(timeElapsed);
             require(rewardAnnualizedPPM <= allowedBeaconBalanceAnnualIncreasePPM, "ALLOWED_BEACON_BALANCE_INCREASE");
         } else {  // check loss constraint
-            uint256 loss = preTotalPooledEther - postTotalPooledEther;  // safeMath is not require because of the if-condition
-            uint256 allowedBeaconBalanceDecreasePPM = getAllowedBeaconBalanceRelativeDecrease().mul(postTotalPooledEther);
+            uint256 loss = preTotalPooledEther - postTotalPooledEther;
+            uint256 allowedBeaconBalanceDecreasePPM = getAllowedBeaconBalanceRelativeDecrease()
+                .mul(postTotalPooledEther);
             uint256 lossPPM = uint256(1e6).mul(loss);
             require(lossPPM <= allowedBeaconBalanceDecreasePPM, "ALLOWED_BEACON_BALANCE_DECREASE");
         }
