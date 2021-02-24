@@ -20,16 +20,16 @@ import "./BitOps.sol";
 /**
   * @title Implementation of an ETH 2.0 -> ETH oracle
   *
-  * The goal of the oracle is to inform other parts of the system about balances controlled
-  * by the DAO on the ETH 2.0 side. The balances can go up because of reward accumulation
-  * and can go down because of slashing.
-  * ----!!!!!!!!!!!! need to actualize comments !!!!!!!!!!!!!!-----
-  * The timeline is divided into consecutive reportIntervals. At most one data point is produced per reportInterval.
-  * A data point is considered finalized (produced) as soon as `quorum` oracle committee members
-  * send data.
-  * There can be gaps in data points if for some point `quorum` is not reached.
-  * It's prohibited to add data to non-current data points whatever finalized or not.
-  * It's prohibited to add data to the current finalized data point.
+  * The goal of the oracle is to inform other parts of the system about balances controlled by the
+  * DAO on the ETH 2.0 side. The balances can go up because of reward accumulation and can go down
+  * because of slashing.
+  *
+  * The timeline is divided into consecutive frames. Every oracle member may push its report once
+  * per frame. When the equal reports reach the configurable 'quorum' value, this frame is
+  * considered finalized and the resulting report is pushed to Lido.
+  *
+  * Not all frames may come to a quorum. Oracles may report only to the first epoch of the frame and
+  * either to the current 'reportable' epoch or any later one up to now.
   */
 contract LidoOracle is ILidoOracle, AragonApp {
     using SafeMath for uint256;
@@ -186,7 +186,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
 
     /**
      * @notice An oracle committee member reports data from the ETH 2.0 side
-     * @param _epochId BeaconChain epoch id
+     * @param _epochId Beacon Chain epoch id
      * @param _beaconBalance Balance in wei on the ETH 2.0 side
      * @param _beaconValidators Number of validators visible on this epoch
      */
@@ -197,8 +197,8 @@ contract LidoOracle is ILidoOracle, AragonApp {
         require(_epochId <= endEpoch, "EPOCH_HAS_NOT_YET_BEGUN");
         require(_epochId.mod(beaconSpec.epochsPerFrame) == 0, "MUST_BE_FIRST_EPOCH_FRAME");
 
-        // If reported epoch advanced, clear last unsuccessfull voting
-        if (_epochId > currentEpoch) _clearVotingAndAdvanceTo(_epochId);
+        // If reported epoch has advanced, clear the last unsuccessful reporting
+        if (_epochId > currentEpoch) _clearReportingAndAdvanceTo(_epochId);
 
         // Make sure the oracle is from members list and has not yet voted
         uint256 index = _getMemberId(msg.sender);
@@ -211,6 +211,8 @@ contract LidoOracle is ILidoOracle, AragonApp {
         uint256 i = 0;
         Report memory report = Report(_beaconBalance, _beaconValidators);
         uint256 reportRaw = reportToUint256(report);
+
+        // so iterate on all report kinds we alredy have, not more then oracle members maximum
         while (i < gatheredReportKinds.length && reportToUint256(gatheredReportKinds[i].report) != reportRaw) ++i;
         if (i < gatheredReportKinds.length) {
             ++gatheredReportKinds[i].count;
@@ -222,17 +224,18 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * @notice To make oracles less dangerous,
-     *  we can bound rewards report by 0.1% increase in stake and 15% decrease in stake,
-     *  with both values configurable by DAO voting in case of extremely unusual circumstances.
-     *  daily_reward_rate_PPM = 1e6 * reward / totalPooledEther / days
-     * @dev Note, if you deploy the contract fresh (e.g. on testnet) it may fail at the beginning of the work
-     *  because initial pooledEther may be small and it's allowed tiny in absolute number,
-     *  but significant in relative numbers. E.g. if initial balance is as small as 1e12 and then it increases to 2*1e12
-     *  it is very small jump in absolute money but in relative number it will be +100% increase,
-     *  so just relax boundaries in such case.
-     *  This problem should never occur in real-world application because the previous contract version is
-     *  already working and huge balances are already gathered.
+     * @notice To make oracles less dangerous, we can limit rewards report by 0.1% increase in stake
+     * and 15% decrease in stake, with both values configurable by the governance in case of
+     * extremely unusual circumstances.
+     * daily_reward_rate_PPM = 1e6 * reward / totalPooledEther / days
+     *
+     * @dev Note, if you deploy the fresh contract (e.g. on testnet) it may fail at the beginning of
+     * the work because the initial pooledEther may be small and it's allowed tiny in absolute
+     * numbers, but significant in relative numbers. E.g. if the initial balance is as small as 1e12
+     * and then it increases to 2*1e12 it is a very small jump in absolute money but in relative
+     * numbers, it will be a +100% increase, so just relax boundaries in such case. This problem
+     * should never occur in real-world application because the previous contract version is already
+     * working and huge balances are already gathered.
      **/
     function _reportSanityChecks(uint256 postTotalPooledEther,
                                  uint256 preTotalPooledEther,
@@ -350,7 +353,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * @notice Returns the fisrt and last epochs that can be reported
+     * @notice Returns the first and last epochs that can be reported
      */
     function getCurrentReportableEpochs()
         public view
@@ -427,7 +430,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     function _getQuorumReport() internal view returns (bool isQuorum, Report memory modeReport) {
         uint256 quorum = getQuorum();
 
-        // check most frequent cases: all reports are the same or no reprts yet
+        // check most frequent cases: all reports are the same or no reports yet
         if (gatheredReportKinds.length == 1) {
             return (gatheredReportKinds[0].count >= quorum, gatheredReportKinds[0].report);
         } else if (gatheredReportKinds.length == 0) {
@@ -459,13 +462,13 @@ contract LidoOracle is ILidoOracle, AragonApp {
         BeaconSpec memory beaconSpec = _getBeaconSpec();
         uint256 epochId = REPORTABLE_EPOCH_ID_POSITION.getStorageUint256();
         emit Completed(epochId, modeReport.beaconBalance, modeReport.beaconValidators);
-        _clearVotingAndAdvanceTo(
+        _clearReportingAndAdvanceTo(
             epochId
             .div(beaconSpec.epochsPerFrame)
             .add(1)
             .mul(beaconSpec.epochsPerFrame));
 
-        // report to the lido and collect stats
+        // report to the Lido and collect stats
         ILido lido = getLido();
         uint256 prevTotalPooledEther = ISTETH(lido).totalSupply();
         lido.pushBeacon(modeReport.beaconValidators, modeReport.beaconBalance);
@@ -482,7 +485,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
         // rollback on boundaries violation (logical consistency)
         _reportSanityChecks(postTotalPooledEther, prevTotalPooledEther, timeElapsed);
 
-        // emit detailed stat and call the quorum delegate with this data
+        // emit detailed statistics and call the quorum delegate with this data
         emit PostTotalShares(postTotalPooledEther, prevTotalPooledEther, timeElapsed, ISTETH(lido).getTotalShares());
         IQuorumCallback quorumCallbackAddr = IQuorumCallback(QUORUM_CALLBACK_POSITION.getStorageUint256());
         if (address(quorumCallbackAddr) != address(0)) {
@@ -490,7 +493,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
         }
     }
 
-    function _clearVotingAndAdvanceTo(uint256 _epochId) internal {
+    function _clearReportingAndAdvanceTo(uint256 _epochId) internal {
         REPORTS_BITMASK_POSITION.setStorageUint256(0);
         REPORTABLE_EPOCH_ID_POSITION.setStorageUint256(_epochId);
         delete gatheredReportKinds;
