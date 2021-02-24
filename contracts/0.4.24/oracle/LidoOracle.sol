@@ -239,7 +239,6 @@ contract LidoOracle is ILidoOracle, AragonApp {
     function _reportSanityChecks(uint256 postTotalPooledEther,
                                  uint256 preTotalPooledEther,
                                  uint256 timeElapsed) internal view {
-        if (postTotalPooledEther == 0 || timeElapsed == 0) return;  // it's possible at the beginning of the work with the contract or in tests
         if (postTotalPooledEther >= preTotalPooledEther) {  // check profit constraint
             uint256 reward = postTotalPooledEther - preTotalPooledEther;  // safeMath is not require because of the if-condition
             uint256 allowedBeaconBalanceAnnualIncreasePPM = getAllowedBeaconBalanceAnnualRelativeIncrease().mul(postTotalPooledEther);

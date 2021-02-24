@@ -36,6 +36,14 @@ contract LidoOracleMock is LidoOracle {
         initialized();
     }
 
+    function _reportSanityChecks(uint256 postTotalPooledEther,
+                                 uint256 preTotalPooledEther,
+                                 uint256 timeElapsed) internal view {
+        // it's possible at the beginning of the work with the contract or in tests
+        if (postTotalPooledEther == 0 || timeElapsed == 0) return;
+        LidoOracle._reportSanityChecks(postTotalPooledEther, preTotalPooledEther, timeElapsed);
+    }
+
     function setTime(uint256 _time) public {
         time = _time;
     }
