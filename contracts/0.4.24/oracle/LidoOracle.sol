@@ -18,19 +18,19 @@ import "./BitOps.sol";
 
 
 /**
-  * @title Implementation of an ETH 2.0 -> ETH oracle
-  *
-  * The goal of the oracle is to inform other parts of the system about balances controlled by the
-  * DAO on the ETH 2.0 side. The balances can go up because of reward accumulation and can go down
-  * because of slashing.
-  *
-  * The timeline is divided into consecutive frames. Every oracle member may push its report once
-  * per frame. When the equal reports reach the configurable 'quorum' value, this frame is
-  * considered finalized and the resulting report is pushed to Lido.
-  *
-  * Not all frames may come to a quorum. Oracles may report only to the first epoch of the frame and
-  * either to the current 'reportable' epoch or any later one up to now.
-  */
+ * @title Implementation of an ETH 2.0 -> ETH oracle
+ *
+ * The goal of the oracle is to inform other parts of the system about balances controlled by the
+ * DAO on the ETH 2.0 side. The balances can go up because of reward accumulation and can go down
+ * because of slashing.
+ *
+ * The timeline is divided into consecutive frames. Every oracle member may push its report once
+ * per frame. When the equal reports reach the configurable 'quorum' value, this frame is
+ * considered finalized and the resulting report is pushed to Lido.
+ *
+ * Not all frames may come to a quorum. Oracles may report only to the first epoch of the frame and
+ * either to the current 'reportable' epoch or any later one up to now.
+ */
 contract LidoOracle is ILidoOracle, AragonApp {
     using SafeMath for uint256;
     using SafeMath64 for uint64;
@@ -93,20 +93,20 @@ contract LidoOracle is ILidoOracle, AragonApp {
     bytes32 internal constant QUORUM_CALLBACK_POSITION = keccak256("lido.LidoOracle.quorumCallback");
 
     /**
-      * If we use APR as a basic reference for increase, and expected range is below 10% APR.
-      * May be changed by the governance.
-      */
+     * If we use APR as a basic reference for increase, and expected range is below 10% APR.
+     * May be changed by the governance.
+     */
     bytes32 internal constant ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION =
         keccak256("lido.LidoOracle.allowedBeaconBalanceAnnualRelativeIncrease");
     uint256 public constant DEFAULT_ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE = 100000;  // PPM ~ 10%
 
     /**
-      * When slashing happens, the balance may decrease at a much faster pace.  Slashing are
-      * one-time events that decrease the balance a fair amount - a few percent at a time in a
-      * realistic scenario. Thus, instead of sanity check for an APR, we check if the plain relative
-      * decrease is within bounds.  Note that it's not annual value, its just one-jump value.  May
-      * be changed by the governance.
-      */
+     * When slashing happens, the balance may decrease at a much faster pace.  Slashing are
+     * one-time events that decrease the balance a fair amount - a few percent at a time in a
+     * realistic scenario. Thus, instead of sanity check for an APR, we check if the plain relative
+     * decrease is within bounds.  Note that it's not annual value, its just one-jump value.  May
+     * be changed by the governance.
+     */
     bytes32 internal constant ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION =
         keccak256("lido.LidoOracle.allowedBeaconBalanceDecrease");
     uint256 public constant DEFAULT_ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE = 50000;  // 5% ~ 50000 PPM
@@ -137,9 +137,9 @@ contract LidoOracle is ILidoOracle, AragonApp {
     function initialize(address, uint64, uint64, uint64, uint64) public {}
 
     /**
-      * @notice Add `_member` to the oracle member committee
-      * @param _member Address of a member to add
-      */
+     * @notice Add `_member` to the oracle member committee
+     * @param _member Address of a member to add
+     */
     function addOracleMember(address _member) external auth(MANAGE_MEMBERS) {
         require(members.length < MAX_MEMBERS, "TOO_MANY_MEMBERS");
         require(address(0) != _member, "BAD_ARGUMENT");
