@@ -269,13 +269,13 @@ contract LidoOracle is ILidoOracle, AragonApp {
         if (postTotalPooledEther >= preTotalPooledEther) {  // check profit constraint
             uint256 reward = postTotalPooledEther - preTotalPooledEther;
             uint256 allowedBeaconBalanceAnnualIncreasePPM = getAllowedBeaconBalanceAnnualRelativeIncrease()
-                .mul(postTotalPooledEther);
+                .mul(preTotalPooledEther);
             uint256 rewardAnnualizedPPM = uint256(1e6 * 365 days).mul(reward).div(timeElapsed);
             require(rewardAnnualizedPPM <= allowedBeaconBalanceAnnualIncreasePPM, "ALLOWED_BEACON_BALANCE_INCREASE");
         } else {  // check loss constraint
             uint256 loss = preTotalPooledEther - postTotalPooledEther;
             uint256 allowedBeaconBalanceDecreasePPM = getAllowedBeaconBalanceRelativeDecrease()
-                .mul(postTotalPooledEther);
+                .mul(preTotalPooledEther);
             uint256 lossPPM = uint256(1e6).mul(loss);
             require(lossPPM <= allowedBeaconBalanceDecreasePPM, "ALLOWED_BEACON_BALANCE_DECREASE");
         }
