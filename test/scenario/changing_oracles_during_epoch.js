@@ -74,11 +74,11 @@ contract('LidoOracle', ([appManager, voting, malicious1, malicious2, user1, user
 
     await app.setTime(1606824000 + 226 * 32 * 12)
     await assertReportableEpochs(225, 226)
-    await assertRevert(app.reportBeacon(226, BAD_DATA[0], BAD_DATA[1], { from: user1 }), 'MUST_BE_FIRST_EPOCH_FRAME')
+    await assertRevert(app.reportBeacon(226, BAD_DATA[0], BAD_DATA[1], { from: user1 }), 'UNEXPECTED_EPOCH')
 
     await app.setTime(1606824000 + 449 * 32 * 12)
     await assertReportableEpochs(225, 449)
-    await assertRevert(app.reportBeacon(449, BAD_DATA[0], BAD_DATA[1], { from: user2 }), 'MUST_BE_FIRST_EPOCH_FRAME')
+    await assertRevert(app.reportBeacon(449, BAD_DATA[0], BAD_DATA[1], { from: user2 }), 'UNEXPECTED_EPOCH')
 
     await app.setTime(1606824000 + 450 * 32 * 12)
     await assertReportableEpochs(225, 450)
