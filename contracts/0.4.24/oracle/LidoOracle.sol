@@ -14,8 +14,6 @@ import "../interfaces/ILidoOracle.sol";
 import "../interfaces/IQuorumCallback.sol";
 import "../interfaces/ISTETH.sol";
 
-import "./BitOps.sol";
-
 
 /**
  * @title Implementation of an ETH 2.0 -> ETH oracle
@@ -34,7 +32,6 @@ import "./BitOps.sol";
 contract LidoOracle is ILidoOracle, AragonApp {
     using SafeMath for uint256;
     using SafeMath64 for uint64;
-    using BitOps for uint256;
 
     struct BeaconSpec {
         uint64 epochsPerFrame;
@@ -230,8 +227,9 @@ contract LidoOracle is ILidoOracle, AragonApp {
         uint256 index = _getMemberId(msg.sender);
         require(index != MEMBER_NOT_FOUND, "MEMBER_NOT_FOUND");
         uint256 bitMask = REPORTS_BITMASK_POSITION.getStorageUint256();
-        require(!bitMask.getBit(index), "ALREADY_SUBMITTED");
-        REPORTS_BITMASK_POSITION.setStorageUint256(bitMask.setBit(index, true));
+        uint256 mask = 1 << index;
+        require(bitMask & mask == 0, "ALREADY_SUBMITTED");
+        REPORTS_BITMASK_POSITION.setStorageUint256(bitMask | mask);
 
         // Push this report to the matching kind
         uint256 i = 0;
