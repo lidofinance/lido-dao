@@ -76,5 +76,5 @@ interface ILidoOracle {
       * @param _beaconBalance Balance in wei on the ETH 2.0 side
       * @param _beaconValidators Number of validators visible on this epoch
       */
-    function reportBeacon(uint256 _epochId, uint128 _beaconBalance, uint128 _beaconValidators) external;
+    function reportBeacon(uint256 _epochId, uint64 _beaconBalance, uint32 _beaconValidators) external;
 }
