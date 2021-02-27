@@ -223,14 +223,16 @@ contract LidoOracle is ILidoOracle, AragonApp {
      */
     function reportBeacon(uint256 _epochId, uint128 _beaconBalance, uint128 _beaconValidators) external {
         BeaconSpec memory beaconSpec = _getBeaconSpec();
-        (uint256 currentEpoch, uint256 endEpoch) = getCurrentReportableEpochs();
-        require(_epochId >= currentEpoch, "EPOCH_IS_TOO_OLD");
-        require(_epochId <= endEpoch, "EPOCH_HAS_NOT_YET_BEGUN");
-        require(_epochId.mod(beaconSpec.epochsPerFrame) == 0, "MUST_BE_FIRST_EPOCH_FRAME");
+        uint256 reportableEpoch = REPORTABLE_EPOCH_ID_POSITION.getStorageUint256();
+        require(_epochId >= reportableEpoch, "EPOCH_IS_TOO_OLD");
+        require(
+             _epochId == getCurrentEpochId() / beaconSpec.epochsPerFrame * beaconSpec.epochsPerFrame,
+             "UNEXPECTED_EPOCH"
+        );
         emit BeaconReported(_epochId, _beaconBalance, _beaconValidators, msg.sender);
 
         // If reported epoch has advanced, clear the last unsuccessful reporting
-        if (_epochId > currentEpoch) _clearReportingAndAdvanceTo(_epochId);
+        if (_epochId > reportableEpoch) _clearReportingAndAdvanceTo(_epochId);
 
         // Make sure the oracle is from members list and has not yet voted
         uint256 index = _getMemberId(msg.sender);
