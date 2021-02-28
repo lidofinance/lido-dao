@@ -16,6 +16,12 @@ pragma solidity 0.4.24;
   */
 interface ILido {
     /**
+     * @dev From ISTETH interface, because "Interfaces cannot inherit".
+     */
+    function totalSupply() external view returns (uint256);
+    function getTotalShares() external view returns (uint256);
+
+    /**
       * @notice Stop pool routine operations
       */
     function stop() external;

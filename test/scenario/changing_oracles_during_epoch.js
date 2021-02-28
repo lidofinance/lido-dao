@@ -4,16 +4,13 @@ const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helper
 const LidoOracle = artifacts.require('LidoOracleMock.sol')
 const Lido = artifacts.require('LidoMockForOracle.sol')
 
+const GENESIS_TIME = 1606824000
+const EPOCH_LENGTH = 32 * 12
+
 contract('LidoOracle', ([appManager, voting, malicious1, malicious2, user1, user2, user3]) => {
   let appBase, appLido, app
   const BAD_DATA = [42, 42]
   const GOOD_DATA = [32, 1]
-
-  const assertReportableEpochs = async (startEpoch, endEpoch) => {
-    const result = await app.getCurrentReportableEpochs()
-    assertBn(result.minReportableEpochId, startEpoch)
-    assertBn(result.maxReportableEpochId, endEpoch)
-  }
 
   before('Deploy and init Lido and oracle', async () => {
     // Deploy the app's base contract.
@@ -31,12 +28,13 @@ contract('LidoOracle', ([appManager, voting, malicious1, malicious2, user1, user
     await acl.createPermission(voting, app.address, await app.MANAGE_QUORUM(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_BEACON_SPEC(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_REPORT_BOUNDARIES(), appManager, { from: appManager })
+    await acl.createPermission(voting, app.address, await app.SET_BEACON_REPORT_RECEIVER(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
-    await app.initialize(appLido.address, 225, 32, 12, 1606824000)
+    await app.initialize(appLido.address, 225, 32, 12, GENESIS_TIME)
 
     // Initialize the oracle time, quorum and basic oracles
-    await app.setTime(1606824000)
+    await app.setTime(GENESIS_TIME)
     await app.setQuorum(4, { from: voting })
     await app.addOracleMember(user1, { from: voting })
     await app.addOracleMember(user2, { from: voting })
@@ -63,26 +61,27 @@ contract('LidoOracle', ([appManager, voting, malicious1, malicious2, user1, user
     const receipt = await app.reportBeacon(0, GOOD_DATA[0], GOOD_DATA[1], { from: user3 })
 
     assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 0, beaconBalance: GOOD_DATA[0], beaconValidators: GOOD_DATA[1] } })
-    await assertReportableEpochs(225, 0)
+    assertBn(await app.getExpectedEpochId(), 225)
   })
 
   it('report in odd epoch reverts', async () => {
-    await app.setTime(1606824000 + 225 * 32 * 12)
-    await assertReportableEpochs(225, 225)
+    await app.setTime(GENESIS_TIME + 225 * EPOCH_LENGTH)
+    assertBn(await app.getExpectedEpochId(), 225)
     await app.reportBeacon(225, BAD_DATA[0], BAD_DATA[1], { from: user1 })
     await app.reportBeacon(225, BAD_DATA[0], BAD_DATA[1], { from: user2 })
 
-    await app.setTime(1606824000 + 226 * 32 * 12)
-    await assertReportableEpochs(225, 226)
+    await app.setTime(GENESIS_TIME + 226 * EPOCH_LENGTH)
+    assertBn(await app.getExpectedEpochId(), 225)
     await assertRevert(app.reportBeacon(226, BAD_DATA[0], BAD_DATA[1], { from: user1 }), 'UNEXPECTED_EPOCH')
 
-    await app.setTime(1606824000 + 449 * 32 * 12)
-    await assertReportableEpochs(225, 449)
+    await app.setTime(GENESIS_TIME + 449 * EPOCH_LENGTH)
+    assertBn(await app.getExpectedEpochId(), 225)
     await assertRevert(app.reportBeacon(449, BAD_DATA[0], BAD_DATA[1], { from: user2 }), 'UNEXPECTED_EPOCH')
 
-    await app.setTime(1606824000 + 450 * 32 * 12)
-    await assertReportableEpochs(225, 450)
+    await app.setTime(GENESIS_TIME + 450 * EPOCH_LENGTH)
+    assertBn(await app.getExpectedEpochId(), 225)
     await app.reportBeacon(450, BAD_DATA[0], BAD_DATA[1], { from: user1 })
     await app.reportBeacon(450, BAD_DATA[0], BAD_DATA[1], { from: user2 })
+    assertBn(await app.getExpectedEpochId(), 450)
   })
 })
