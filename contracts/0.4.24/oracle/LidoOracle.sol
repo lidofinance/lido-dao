@@ -62,6 +62,9 @@ contract LidoOracle is ILidoOracle, AragonApp {
     /// @dev storage for actual beacon chain specs
     bytes32 internal constant BEACON_SPEC_POSITION = keccak256("lido.LidoOracle.beaconSpec");
 
+    /// @dev version of the initialized contract, 0 = v1
+    bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.LidoOracle.contractVersion");
+
     /// @dev epoch that we currently collect reports
     bytes32 internal constant EXPECTED_EPOCH_ID_POSITION = keccak256("lido.LidoOracle.expectedEpochId");
 
@@ -139,6 +142,13 @@ contract LidoOracle is ILidoOracle, AragonApp {
         )
     {
         return currentReportVariants[index].decodeWithCount();
+    }
+
+    /**
+     * @notice Returns the initialized version of this contract starting from 0
+     */
+    function getVersion() public view returns(uint256) {
+        return CONTRACT_VERSION_POSITION.getStorageUint256();
     }
 
     /**
@@ -225,9 +235,10 @@ contract LidoOracle is ILidoOracle, AragonApp {
      * @dev Original initialize function removed from v2 because it is invoked only once
      */
     function initialize_v2() public {
-        // TODO: guard
+        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "ALREADY_INITIALIZED");
         ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION.setStorageUint256(DEFAULT_ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE);
         ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION.setStorageUint256(DEFAULT_ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE);
+        CONTRACT_VERSION_POSITION.setStorageUint256(1);
     }
 
     /**
