@@ -4,10 +4,10 @@
 
 pragma solidity 0.4.24;
 
-import "../interfaces/IQuorumCallback.sol";
+import "../interfaces/IBeaconReportReceiver.sol";
 
 
-contract QuorumCallbackMock is IQuorumCallback {
+contract BeaconReportReceiverMock is IBeaconReportReceiver {
     uint256 public postTotalPooledEther;
     uint256 public preTotalPooledEther;
     uint256 public timeElapsed;

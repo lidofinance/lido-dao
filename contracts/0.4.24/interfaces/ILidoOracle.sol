@@ -40,10 +40,13 @@ interface ILidoOracle {
       */
     function getQuorum() external view returns (uint256);
 
+    event AllowedBeaconBalanceAnnualRelativeIncreaseSet(uint256 value);
+    event AllowedBeaconBalanceRelativeDecreaseSet(uint256 value);
+    event BeaconReportReceiverSet(address callback);
     event MemberAdded(address member);
     event MemberRemoved(address member);
     event QuorumChanged(uint256 quorum);
-    event ReportableEpochIdUpdated(uint256 epochId);
+    event ExpectedEpochIdUpdated(uint256 epochId);
     event BeaconSpecSet(
         uint64 epochsPerFrame,
         uint64 slotsPerEpoch,
@@ -66,9 +69,6 @@ interface ILidoOracle {
          uint256 preTotalPooledEther,
          uint256 timeElapsed,
          uint256 totalShares);
-    event AllowedBeaconBalanceAnnualRelativeIncreaseSet(uint256 value);
-    event AllowedBeaconBalanceRelativeDecreaseSet(uint256 value);
-    event QuorumCallbackSet(address callback);
 
     /**
       * @notice An oracle committee member reports data from the ETH 2.0 side

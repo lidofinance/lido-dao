@@ -159,13 +159,7 @@ contract LidoTemplateE2E is BaseTemplate {
         );
         state.lido = Lido(_installNonDefaultApp(state.dao, LIDO_APP_ID, initializeData));
 
-        state.oracle.initialize(
-            state.lido,
-            _epochsPerFrame,
-            _slotsPerEpoch,
-            _secondsPerSlot,
-            _genesisTime
-        );
+        state.oracle.initialize_v2();
         state.operators.initialize(state.lido);
     }
 
@@ -183,6 +177,7 @@ contract LidoTemplateE2E is BaseTemplate {
         state.acl.createPermission(state.voting, state.oracle, state.oracle.MANAGE_QUORUM(), state.voting);
         state.acl.createPermission(state.voting, state.oracle, state.oracle.SET_BEACON_SPEC(), state.voting);
         state.acl.createPermission(state.voting, state.oracle, state.oracle.SET_REPORT_BOUNDARIES(), state.voting);
+        state.acl.createPermission(state.voting, state.oracle, state.oracle.SET_BEACON_REPORT_RECEIVER(), state.voting);
 
         // NodeOperatorsRegistry
         state.acl.createPermission(state.voting, state.operators, state.operators.MANAGE_SIGNING_KEYS(), state.voting);

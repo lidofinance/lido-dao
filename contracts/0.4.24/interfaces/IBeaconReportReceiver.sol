@@ -8,9 +8,9 @@ pragma solidity 0.4.24;
 /**
   * @title Interface defining a callback that the quorum will call on every quorum reached
   */
-interface IQuorumCallback {
+interface IBeaconReportReceiver {
     /**
-      * @notice Callback to be called by the oracle contract upon quorum is reached
+      * @notice Callback to be called by the oracle contract upon the quorum is reached
       * @param _postTotalPooledEther total pooled ether on Lido right after the quorum value was reported
       * @param _preTotalPooledEther total pooled ether on Lido right before the quorum value was reported
       * @param _timeElapsed time elapsed in seconds between the last and the previous quorum
