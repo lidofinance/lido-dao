@@ -14,6 +14,7 @@ import "../interfaces/ILidoOracle.sol";
 import "../interfaces/IQuorumCallback.sol";
 import "../interfaces/ISTETH.sol";
 
+import "./ReportUtils.sol";
 
 /**
  * @title Implementation of an ETH 2.0 -> ETH oracle
@@ -32,22 +33,13 @@ import "../interfaces/ISTETH.sol";
 contract LidoOracle is ILidoOracle, AragonApp {
     using SafeMath for uint256;
     using SafeMath64 for uint64;
+    using ReportUtils for uint256;
 
     struct BeaconSpec {
         uint64 epochsPerFrame;
         uint64 slotsPerEpoch;
         uint64 secondsPerSlot;
         uint64 genesisTime;
-    }
-
-    struct Report {
-        uint128 beaconBalance;
-        uint128 beaconValidators;
-    }
-
-    struct ReportKind {
-        Report report;
-        uint256 count;
     }
 
     /// ACL
@@ -62,8 +54,6 @@ contract LidoOracle is ILidoOracle, AragonApp {
 
     uint256 internal constant MEMBER_NOT_FOUND = uint256(-1);
 
-    /// @dev oracle committee members
-    address[] private members;
     /// @dev number of the committee members required to finalize a data point
     bytes32 internal constant QUORUM_POSITION = keccak256("lido.LidoOracle.quorum");
 
@@ -73,10 +63,11 @@ contract LidoOracle is ILidoOracle, AragonApp {
     /// @dev storage for actual beacon chain specs
     bytes32 internal constant BEACON_SPEC_POSITION = keccak256("lido.LidoOracle.beaconSpec");
 
-    /// @dev storage for all gathered reports for the last epoch
+    /// @dev epoch that we currently collect reports
     bytes32 internal constant REPORTABLE_EPOCH_ID_POSITION = keccak256("lido.LidoOracle.reportableEpochId");
+
+    /// @dev bitmask of oracle members that pushed their reports
     bytes32 internal constant REPORTS_BITMASK_POSITION = keccak256("lido.LidoOracle.reportsBitMask");
-    ReportKind[] private gatheredReportKinds;
 
     /// @dev historic data about 2 last completed reports
     bytes32 internal constant POST_COMPLETED_TOTAL_POOLED_ETHER_POSITION =
@@ -88,6 +79,12 @@ contract LidoOracle is ILidoOracle, AragonApp {
 
     /// @dev function credentials to be called when the quorum is reached
     bytes32 internal constant QUORUM_CALLBACK_POSITION = keccak256("lido.LidoOracle.quorumCallback");
+
+
+    /// @dev structured storage
+    address[] private members;                // slot 0: oracle committee members
+    uint256[] private currentReportVariants;  // slot 1: reporting storage
+
 
     /**
      * If we use APR as a basic reference for increase, and expected range is below 10% APR.
@@ -134,19 +131,18 @@ contract LidoOracle is ILidoOracle, AragonApp {
         return REPORTS_BITMASK_POSITION.getStorageUint256();
     }
 
-    function getCurrentReportKindsSize() public view returns(uint256) {
-        return gatheredReportKinds.length;
+    function getCurrentReportVariantsSize() public view returns(uint256) {
+        return currentReportVariants.length;
     }
 
-    function getCurrentReportKind(uint256 index)
+    function getCurrentReportVariant(uint256 index)
         public view
         returns(
-            uint128 beaconBalance,
-            uint128 beaconValidators,
-            uint256 count
+            uint64 beaconBalance,
+            uint32 beaconValidators,
+            uint16 count
         ) {
-        ReportKind storage kind = gatheredReportKinds[index];
-        return (kind.report.beaconBalance, kind.report.beaconValidators, kind.count);
+        return currentReportVariants[index].decodeWithCount();
     }
 
     /// @dev Initialize function removed from v2 because it is invoked only once
@@ -157,11 +153,11 @@ contract LidoOracle is ILidoOracle, AragonApp {
      * @param _member Address of a member to add
      */
     function addOracleMember(address _member) external auth(MANAGE_MEMBERS) {
-        require(members.length < MAX_MEMBERS, "TOO_MANY_MEMBERS");
         require(address(0) != _member, "BAD_ARGUMENT");
         require(MEMBER_NOT_FOUND == _getMemberId(_member), "MEMBER_EXISTS");
 
         members.push(_member);
+        require(members.length < MAX_MEMBERS, "TOO_MANY_MEMBERS");
         emit MemberAdded(_member);
     }
 
@@ -179,7 +175,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
 
         // Nullify the data for the last epoch. Remained oracles will report it again
         REPORTS_BITMASK_POSITION.setStorageUint256(0);
-        delete gatheredReportKinds;
+        delete currentReportVariants;
     }
 
     /**
@@ -193,9 +189,9 @@ contract LidoOracle is ILidoOracle, AragonApp {
 
         // If the quorum value lowered, check existing reports whether it is time to push
         if (oldQuorum > _quorum) {
-            (bool isQuorum, Report memory modeReport) = _getQuorumReport();
+            (bool isQuorum, uint256 report) = _getQuorumReport(_quorum);
             if (isQuorum) {
-                _push(REPORTABLE_EPOCH_ID_POSITION.getStorageUint256(), modeReport, _getBeaconSpec());
+                _push(REPORTABLE_EPOCH_ID_POSITION.getStorageUint256(), report, _getBeaconSpec());
             }
         }
     }
@@ -221,7 +217,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
      * @param _beaconBalance Balance in wei on the ETH 2.0 side
      * @param _beaconValidators Number of validators visible on this epoch
      */
-    function reportBeacon(uint256 _epochId, uint128 _beaconBalance, uint128 _beaconValidators) external {
+    function reportBeacon(uint256 _epochId, uint64 _beaconBalance, uint32 _beaconValidators) external {
         BeaconSpec memory beaconSpec = _getBeaconSpec();
         uint256 reportableEpoch = REPORTABLE_EPOCH_ID_POSITION.getStorageUint256();
         require(_epochId >= reportableEpoch, "EPOCH_IS_TOO_OLD");
@@ -243,25 +239,23 @@ contract LidoOracle is ILidoOracle, AragonApp {
         REPORTS_BITMASK_POSITION.setStorageUint256(bitMask | mask);
 
         // Push this report to the matching kind
-        Report memory report = Report(_beaconBalance, _beaconValidators);
-        uint256 reportRaw = reportToUint256(report);
-
-        // so iterate on all report kinds we alredy have, not more then oracle members maximum
+        uint256 report = ReportUtils.encode(_beaconBalance, _beaconValidators);
         uint256 quorum = getQuorum();
         uint256 i = 0;
-        while (i < gatheredReportKinds.length && reportToUint256(gatheredReportKinds[i].report) != reportRaw) ++i;
-        if (i < gatheredReportKinds.length) {
-            uint256 newCount = gatheredReportKinds[i].count + 1;
-            if (newCount >= quorum) {
-                _push(_epochId, gatheredReportKinds[i].report, beaconSpec);
+
+        // so iterate on all report variants we alredy have, not more then oracle members maximum
+        while (i < currentReportVariants.length && currentReportVariants[i].isDifferent(report)) ++i;
+        if (i < currentReportVariants.length) {
+            if (currentReportVariants[i].getCount() + 1 >= quorum) {
+                _push(_epochId, currentReportVariants[i], beaconSpec);
             } else {
-                gatheredReportKinds[i].count = newCount;
+                ++currentReportVariants[i];
             }
         } else {
             if (quorum == 1) {
                 _push(_epochId, report, beaconSpec);
             } else {
-                gatheredReportKinds.push(ReportKind(report, 1));
+                currentReportVariants.push(report + 1);
             }
         }
     }
@@ -474,48 +468,44 @@ contract LidoOracle is ILidoOracle, AragonApp {
     /**
      * @dev Returns if quorum reached and mode-value report
      * @return isQuorum - true, when quorum is reached, false otherwise
-     * @return modeReport - valid mode-value report when quorum is reached, 0-data otherwise
+     * @return report - final report value when quorum is reached
      */
-    function _getQuorumReport() internal view returns (bool isQuorum, Report memory modeReport) {
-        uint256 quorum = getQuorum();
-
+    function _getQuorumReport(uint256 quorum) internal view returns (bool isQuorum, uint256 report) {
         // check most frequent cases: all reports are the same or no reports yet
-        if (gatheredReportKinds.length == 1) {
-            return (gatheredReportKinds[0].count >= quorum, gatheredReportKinds[0].report);
-        } else if (gatheredReportKinds.length == 0) {
-            return (false, Report({beaconBalance: 0, beaconValidators: 0}));
+        if (currentReportVariants.length == 1) {
+            return (currentReportVariants[0].getCount() >= quorum, currentReportVariants[0]);
+        } else if (currentReportVariants.length == 0) {
+            return (false, 0);
         }
 
         // if more than 2 kind of reports exist, choose the most frequent
         uint256 maxi = 0;
-        for (uint256 i = 1; i < gatheredReportKinds.length; ++i) {
-            if (gatheredReportKinds[i].count > gatheredReportKinds[maxi].count) maxi = i;
+        for (uint256 i = 1; i < currentReportVariants.length; ++i) {
+            if (currentReportVariants[i].getCount() > currentReportVariants[maxi].getCount()) maxi = i;
         }
-        for (i = 0; i < gatheredReportKinds.length; ++i) {
-            if (i != maxi && gatheredReportKinds[i].count == gatheredReportKinds[maxi].count) {
-                return (false, Report({beaconBalance: 0, beaconValidators: 0}));
+        for (i = 0; i < currentReportVariants.length; ++i) {
+            if (i != maxi && currentReportVariants[i].getCount() == currentReportVariants[maxi].getCount()) {
+                return (false, 0);
             }
         }
-        return (gatheredReportKinds[maxi].count >= quorum, gatheredReportKinds[maxi].report);
+        return (currentReportVariants[maxi].getCount() >= quorum, currentReportVariants[maxi]);
     }
 
     /**
      * @dev Pushes the given report to Lido and performs accompanying accounting
      */
-    function _push(uint256 epochId, Report memory modeReport, BeaconSpec memory beaconSpec) internal {
+    function _push(uint256 epochId, uint256 report, BeaconSpec memory beaconSpec) internal {
+        (uint64 beaconBalance, uint32 beaconValidators) = report.decode();
+        emit Completed(epochId, beaconBalance, beaconValidators);
+
         // data for this frame is collected, now this frame is completed, so
         // reportableEpochId should be changed to first epoch from the next frame
-        emit Completed(epochId, modeReport.beaconBalance, modeReport.beaconValidators);
-        _clearReportingAndAdvanceTo(
-            epochId
-            .div(beaconSpec.epochsPerFrame)
-            .add(1)
-            .mul(beaconSpec.epochsPerFrame));
+        _clearReportingAndAdvanceTo((epochId / beaconSpec.epochsPerFrame + 1) * beaconSpec.epochsPerFrame);
 
         // report to the Lido and collect stats
         ILido lido = getLido();
         uint256 prevTotalPooledEther = ISTETH(lido).totalSupply();
-        lido.pushBeacon(modeReport.beaconValidators, modeReport.beaconBalance);
+        lido.pushBeacon(beaconValidators, beaconBalance);
         uint256 postTotalPooledEther = ISTETH(lido).totalSupply();
 
         PRE_COMPLETED_TOTAL_POOLED_ETHER_POSITION.setStorageUint256(prevTotalPooledEther);
@@ -540,21 +530,9 @@ contract LidoOracle is ILidoOracle, AragonApp {
     function _clearReportingAndAdvanceTo(uint256 _epochId) internal {
         REPORTS_BITMASK_POSITION.setStorageUint256(0);
         REPORTABLE_EPOCH_ID_POSITION.setStorageUint256(_epochId);
-        delete gatheredReportKinds;
+        delete currentReportVariants;
         emit ReportableEpochIdUpdated(_epochId);
     }
-
-    function reportToUint256(Report _report) internal pure returns (uint256) {
-        return uint256(_report.beaconBalance) << 128 | uint256(_report.beaconValidators);
-    }
-
-    function uint256ToReport(uint256 _report) internal pure returns (Report) {
-        Report memory report;
-        report.beaconBalance = uint128(_report >> 128);
-        report.beaconValidators = uint128(_report);
-        return report;
-    }
-
 
     /**
      * @dev Returns member's index in the members array or MEMBER_NOT_FOUND
@@ -568,7 +546,6 @@ contract LidoOracle is ILidoOracle, AragonApp {
         }
         return MEMBER_NOT_FOUND;
     }
-
 
     /**
      * @dev Returns current timestamp
