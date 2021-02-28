@@ -125,14 +125,24 @@ contract LidoOracle is ILidoOracle, AragonApp {
         emit AllowedBeaconBalanceRelativeDecreaseSet(value);
     }
 
+    /**
+     * @notice Returns the current reporting bitmap, representing oracles who have already pushed
+     * their version of report during the expected epoch
+     */
     function getCurrentOraclesReportStatus() public view returns(uint256) {
         return REPORTS_BITMASK_POSITION.getStorageUint256();
     }
 
+    /**
+     * @notice Returns the current reporting array size
+     */
     function getCurrentReportVariantsSize() public view returns(uint256) {
         return currentReportVariants.length;
     }
 
+    /**
+     * @notice Returns the current reporting array element with the given index
+     */
     function getCurrentReportVariant(uint256 index)
         public view
         returns(
