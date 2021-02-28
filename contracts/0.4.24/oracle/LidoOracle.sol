@@ -14,8 +14,6 @@ import "../interfaces/ILidoOracle.sol";
 import "../interfaces/IQuorumCallback.sol";
 import "../interfaces/ISTETH.sol";
 
-import "./BitOps.sol";
-
 
 /**
  * @title Implementation of an ETH 2.0 -> ETH oracle
@@ -34,7 +32,6 @@ import "./BitOps.sol";
 contract LidoOracle is ILidoOracle, AragonApp {
     using SafeMath for uint256;
     using SafeMath64 for uint64;
-    using BitOps for uint256;
 
     struct BeaconSpec {
         uint64 epochsPerFrame;
@@ -190,9 +187,17 @@ contract LidoOracle is ILidoOracle, AragonApp {
      */
     function setQuorum(uint256 _quorum) external auth(MANAGE_QUORUM) {
         require(0 != _quorum, "QUORUM_WONT_BE_MADE");
+        uint256 oldQuorum = QUORUM_POSITION.getStorageUint256();
         QUORUM_POSITION.setStorageUint256(_quorum);
         emit QuorumChanged(_quorum);
-        _tryPush(REPORTABLE_EPOCH_ID_POSITION.getStorageUint256());
+
+        // If the quorum value lowered, check existing reports whether it is time to push
+        if (oldQuorum > _quorum) {
+            (bool isQuorum, Report memory modeReport) = _getQuorumReport();
+            if (isQuorum) {
+                _push(REPORTABLE_EPOCH_ID_POSITION.getStorageUint256(), modeReport, _getBeaconSpec());
+            }
+        }
     }
 
     /**
@@ -218,35 +223,47 @@ contract LidoOracle is ILidoOracle, AragonApp {
      */
     function reportBeacon(uint256 _epochId, uint128 _beaconBalance, uint128 _beaconValidators) external {
         BeaconSpec memory beaconSpec = _getBeaconSpec();
-        (uint256 currentEpoch, uint256 endEpoch) = getCurrentReportableEpochs();
-        require(_epochId >= currentEpoch, "EPOCH_IS_TOO_OLD");
-        require(_epochId <= endEpoch, "EPOCH_HAS_NOT_YET_BEGUN");
-        require(_epochId.mod(beaconSpec.epochsPerFrame) == 0, "MUST_BE_FIRST_EPOCH_FRAME");
+        uint256 reportableEpoch = REPORTABLE_EPOCH_ID_POSITION.getStorageUint256();
+        require(_epochId >= reportableEpoch, "EPOCH_IS_TOO_OLD");
+        require(
+             _epochId == getCurrentEpochId() / beaconSpec.epochsPerFrame * beaconSpec.epochsPerFrame,
+             "UNEXPECTED_EPOCH"
+        );
+        emit BeaconReported(_epochId, _beaconBalance, _beaconValidators, msg.sender);
 
         // If reported epoch has advanced, clear the last unsuccessful reporting
-        if (_epochId > currentEpoch) _clearReportingAndAdvanceTo(_epochId);
+        if (_epochId > reportableEpoch) _clearReportingAndAdvanceTo(_epochId);
 
         // Make sure the oracle is from members list and has not yet voted
         uint256 index = _getMemberId(msg.sender);
         require(index != MEMBER_NOT_FOUND, "MEMBER_NOT_FOUND");
         uint256 bitMask = REPORTS_BITMASK_POSITION.getStorageUint256();
-        require(!bitMask.getBit(index), "ALREADY_SUBMITTED");
-        REPORTS_BITMASK_POSITION.setStorageUint256(bitMask.setBit(index, true));
+        uint256 mask = 1 << index;
+        require(bitMask & mask == 0, "ALREADY_SUBMITTED");
+        REPORTS_BITMASK_POSITION.setStorageUint256(bitMask | mask);
 
         // Push this report to the matching kind
-        uint256 i = 0;
         Report memory report = Report(_beaconBalance, _beaconValidators);
         uint256 reportRaw = reportToUint256(report);
 
         // so iterate on all report kinds we alredy have, not more then oracle members maximum
+        uint256 quorum = getQuorum();
+        uint256 i = 0;
         while (i < gatheredReportKinds.length && reportToUint256(gatheredReportKinds[i].report) != reportRaw) ++i;
         if (i < gatheredReportKinds.length) {
-            ++gatheredReportKinds[i].count;
+            uint256 newCount = gatheredReportKinds[i].count + 1;
+            if (newCount >= quorum) {
+                _push(_epochId, gatheredReportKinds[i].report, beaconSpec);
+            } else {
+                gatheredReportKinds[i].count = newCount;
+            }
         } else {
-            gatheredReportKinds.push(ReportKind(report, 1));
+            if (quorum == 1) {
+                _push(_epochId, report, beaconSpec);
+            } else {
+                gatheredReportKinds.push(ReportKind(report, 1));
+            }
         }
-        emit BeaconReported(_epochId, _beaconBalance, _beaconValidators, msg.sender);
-        _tryPush(_epochId);
     }
 
     /**
@@ -483,15 +500,11 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * @dev Pushes the current data point if quorum is reached
+     * @dev Pushes the given report to Lido and performs accompanying accounting
      */
-    function _tryPush(uint256 epochId) internal {
-        (bool isQuorum, Report memory modeReport) = _getQuorumReport();
-        if (!isQuorum) return;
-
+    function _push(uint256 epochId, Report memory modeReport, BeaconSpec memory beaconSpec) internal {
         // data for this frame is collected, now this frame is completed, so
         // reportableEpochId should be changed to first epoch from the next frame
-        BeaconSpec memory beaconSpec = _getBeaconSpec();
         emit Completed(epochId, modeReport.beaconBalance, modeReport.beaconValidators);
         _clearReportingAndAdvanceTo(
             epochId
