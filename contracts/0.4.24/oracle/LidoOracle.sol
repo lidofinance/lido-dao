@@ -122,11 +122,11 @@ contract LidoOracle is ILidoOracle, AragonApp {
         return QUORUM_POSITION.getStorageUint256();
     }
 
-    function getAllowedBeaconBalanceAnnualRelativeIncrease() public view returns(uint256) {
+    function getAllowedBeaconBalanceAnnualRelativeIncrease() public view returns (uint256) {
         return ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION.getStorageUint256();
     }
 
-    function getAllowedBeaconBalanceRelativeDecrease() public view returns(uint256) {
+    function getAllowedBeaconBalanceRelativeDecrease() public view returns (uint256) {
         return ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION.getStorageUint256();
     }
 
@@ -143,7 +143,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     /**
      * @notice Returns the receiver contract address to be called upon quorum
      */
-    function getBeaconReportReceiver() external view returns(address) {
+    function getBeaconReportReceiver() external view returns (address) {
         return address(BEACON_REPORT_RECEIVER_POSITION.getStorageUint256());
     }
 
@@ -160,14 +160,14 @@ contract LidoOracle is ILidoOracle, AragonApp {
      * @notice Returns the current reporting bitmap, representing oracles who have already pushed
      * their version of report during the expected epoch
      */
-    function getCurrentOraclesReportStatus() external view returns(uint256) {
+    function getCurrentOraclesReportStatus() external view returns (uint256) {
         return REPORTS_BITMASK_POSITION.getStorageUint256();
     }
 
     /**
      * @notice Returns the current reporting array size
      */
-    function getCurrentReportVariantsSize() external view returns(uint256) {
+    function getCurrentReportVariantsSize() external view returns (uint256) {
         return currentReportVariants.length;
     }
 
@@ -175,7 +175,8 @@ contract LidoOracle is ILidoOracle, AragonApp {
      * @notice Returns the current reporting array element with the given index
      */
     function getCurrentReportVariant(uint256 index)
-        external view
+        external
+        view
         returns (
             uint64 beaconBalance,
             uint32 beaconValidators,
@@ -202,7 +203,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     /**
      * @notice Returns the initialized version of this contract starting from 0
      */
-    function getVersion() external view returns(uint256) {
+    function getVersion() external view returns (uint256) {
         return CONTRACT_VERSION_POSITION.getStorageUint256();
     }
 
@@ -210,7 +211,8 @@ contract LidoOracle is ILidoOracle, AragonApp {
      * @notice Returns beacon specs
      */
     function getBeaconSpec()
-        external view
+        external
+        view
         returns (
             uint64 epochsPerFrame,
             uint64 slotsPerEpoch,
@@ -236,7 +238,8 @@ contract LidoOracle is ILidoOracle, AragonApp {
         uint64 _secondsPerSlot,
         uint64 _genesisTime
     )
-        external auth(SET_BEACON_SPEC)
+        external
+        auth(SET_BEACON_SPEC)
     {
         _setBeaconSpec(
             _epochsPerFrame,
@@ -258,7 +261,8 @@ contract LidoOracle is ILidoOracle, AragonApp {
      * @notice Returns all needed to oracle daemons data
      */
     function getCurrentFrame()
-        external view
+        external
+        view
         returns (
             uint256 frameEpochId,
             uint256 frameStartTime,
@@ -281,7 +285,8 @@ contract LidoOracle is ILidoOracle, AragonApp {
      * @notice Reports beacon balance and its change
      */
     function getLastCompletedReportDelta()
-        external view
+        external
+        view
         returns (
             uint256 postTotalPooledEther,
             uint256 preTotalPooledEther,
@@ -329,7 +334,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
         members.length--;
         emit MemberRemoved(_member);
 
-        // Nullify the data for the last epoch. Remained oracles will report it again
+        // delete the data for the last epoch, let remained oracles report it again
         REPORTS_BITMASK_POSITION.setStorageUint256(0);
         delete currentReportVariants;
     }
@@ -422,7 +427,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
      * @dev Returns whether the quorum is reached and the final report
      */
     function _getQuorumReport(uint256 quorum) internal view returns (bool isQuorum, uint256 report) {
-        // check most frequent cases: all reports are the same or no reports yet
+        // check most frequent cases first: all reports are the same or no reports yet
         if (currentReportVariants.length == 1) {
             return (currentReportVariants[0].getCount() >= quorum, currentReportVariants[0]);
         } else if (currentReportVariants.length == 0) {
@@ -539,9 +544,13 @@ contract LidoOracle is ILidoOracle, AragonApp {
      * should never occur in real-world application because the previous contract version is already
      * working and huge balances are already gathered.
      **/
-    function _reportSanityChecks(uint256 postTotalPooledEther,
-                                 uint256 preTotalPooledEther,
-                                 uint256 timeElapsed) internal view {
+    function _reportSanityChecks(
+        uint256 postTotalPooledEther,
+        uint256 preTotalPooledEther,
+        uint256 timeElapsed)
+        internal
+        view
+    {
         if (postTotalPooledEther >= preTotalPooledEther) {  // check profit constraint
             uint256 reward = postTotalPooledEther - preTotalPooledEther;
             uint256 allowedBeaconBalanceAnnualIncreasePPM =
