@@ -360,7 +360,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     /**
      * @notice An oracle committee member reports data from the ETH 2.0 side
      * @param _epochId Beacon Chain epoch id
-     * @param _beaconBalance Balance in wei on the ETH 2.0 side
+     * @param _beaconBalance Balance in wei on the ETH 2.0 side (9-digit denomination)
      * @param _beaconValidators Number of validators visible on this epoch
      */
     function reportBeacon(uint256 _epochId, uint64 _beaconBalance, uint32 _beaconValidators) external {
@@ -498,7 +498,8 @@ contract LidoOracle is ILidoOracle, AragonApp {
         // report to the Lido and collect stats
         ILido lido = getLido();
         uint256 prevTotalPooledEther = lido.totalSupply();
-        lido.pushBeacon(beaconValidators, beaconBalance);
+        // remember to convert balance to 18-digit denimination, as oracles work with 9-digit
+        lido.pushBeacon(beaconValidators, uint256(beaconBalance) * 1e9);
         uint256 postTotalPooledEther = lido.totalSupply();
 
         PRE_COMPLETED_TOTAL_POOLED_ETHER_POSITION.setStorageUint256(prevTotalPooledEther);
