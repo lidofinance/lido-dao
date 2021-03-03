@@ -51,6 +51,11 @@ contract LidoOracle is ILidoOracle, AragonApp {
     /// @dev Maximum number of oracle committee members
     uint256 public constant MAX_MEMBERS = 256;
 
+    /// @dev Eth1 denomination is 18 digits, while Eth2 has 9 digits. Because we work with Eth2
+    /// balances and to support old interfaces expecting eth1 format, we multiply by this
+    /// coefficient.
+    uint128 internal constant DENOMINATION_OFFSET = 1e9;
+
     uint256 internal constant MEMBER_NOT_FOUND = uint256(-1);
 
     /// @dev number of the committee members required to finalize a data point
@@ -371,7 +376,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
              _epochId == _getCurrentEpochId(beaconSpec) / beaconSpec.epochsPerFrame * beaconSpec.epochsPerFrame,
              "UNEXPECTED_EPOCH"
         );
-        emit BeaconReported(_epochId, _beaconBalance, _beaconValidators, msg.sender);
+        emit BeaconReported(_epochId, DENOMINATION_OFFSET * uint128(_beaconBalance), _beaconValidators, msg.sender);
 
         // If reported epoch has advanced, clear the last unsuccessful reporting
         if (_epochId > expectedEpoch) _clearReportingAndAdvanceTo(_epochId);
@@ -489,7 +494,8 @@ contract LidoOracle is ILidoOracle, AragonApp {
      */
     function _push(uint256 epochId, uint256 report, BeaconSpec memory beaconSpec) internal {
         (uint64 beaconBalance, uint32 beaconValidators) = report.decode();
-        emit Completed(epochId, beaconBalance, beaconValidators);
+        uint128 beaconBalanceEth1 = DENOMINATION_OFFSET * uint128(beaconBalance);
+        emit Completed(epochId, beaconBalanceEth1, beaconValidators);
 
         // data for this frame is collected, now this frame is completed, so
         // expectedEpochId should be changed to first epoch from the next frame
@@ -499,14 +505,13 @@ contract LidoOracle is ILidoOracle, AragonApp {
         ILido lido = getLido();
         uint256 prevTotalPooledEther = lido.totalSupply();
         // remember to convert balance to 18-digit denimination, as oracles work with 9-digit
-        lido.pushBeacon(beaconValidators, uint256(beaconBalance) * 1e9);
+        lido.pushBeacon(beaconValidators, beaconBalanceEth1);
         uint256 postTotalPooledEther = lido.totalSupply();
 
         PRE_COMPLETED_TOTAL_POOLED_ETHER_POSITION.setStorageUint256(prevTotalPooledEther);
         POST_COMPLETED_TOTAL_POOLED_ETHER_POSITION.setStorageUint256(postTotalPooledEther);
-        uint256 timeElapsed = (epochId.sub(LAST_COMPLETED_EPOCH_ID_POSITION.getStorageUint256()))
-            .mul(beaconSpec.slotsPerEpoch)
-            .mul(beaconSpec.secondsPerSlot);
+        uint256 timeElapsed = (epochId - LAST_COMPLETED_EPOCH_ID_POSITION.getStorageUint256()) *
+             beaconSpec.slotsPerEpoch * beaconSpec.secondsPerSlot;
         TIME_ELAPSED_POSITION.setStorageUint256(timeElapsed);
         LAST_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(epochId);
 
