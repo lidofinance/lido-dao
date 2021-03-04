@@ -4,6 +4,7 @@ const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helper
 const LidoOracle = artifacts.require('LidoOracleMock.sol')
 const Lido = artifacts.require('LidoMockForOracle.sol')
 
+const DENOMINATION_OFFSET = 1e9
 const GENESIS_TIME = 1606824000
 const EPOCH_LENGTH = 32 * 12
 
@@ -60,7 +61,9 @@ contract('LidoOracle', ([appManager, voting, malicious1, malicious2, user1, user
     await app.addOracleMember(user3, { from: voting })
     const receipt = await app.reportBeacon(0, GOOD_DATA[0], GOOD_DATA[1], { from: user3 })
 
-    assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 0, beaconBalance: GOOD_DATA[0], beaconValidators: GOOD_DATA[1] } })
+    assertEvent(receipt, 'Completed', {
+      expectedArgs: { epochId: 0, beaconBalance: GOOD_DATA[0] * DENOMINATION_OFFSET, beaconValidators: GOOD_DATA[1] }
+    })
     assertBn(await app.getExpectedEpochId(), 225)
   })
 
