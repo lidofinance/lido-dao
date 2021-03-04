@@ -51,6 +51,11 @@ contract LidoOracle is ILidoOracle, AragonApp {
     /// @dev Maximum number of oracle committee members
     uint256 public constant MAX_MEMBERS = 256;
 
+    /// @dev Eth1 denomination is 18 digits, while Eth2 has 9 digits. Because we work with Eth2
+    /// balances and to support old interfaces expecting eth1 format, we multiply by this
+    /// coefficient.
+    uint128 internal constant DENOMINATION_OFFSET = 1e9;
+
     uint256 internal constant MEMBER_NOT_FOUND = uint256(-1);
 
     /// @dev number of the committee members required to finalize a data point
@@ -130,14 +135,14 @@ contract LidoOracle is ILidoOracle, AragonApp {
         return ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION.getStorageUint256();
     }
 
-    function setAllowedBeaconBalanceAnnualRelativeIncrease(uint256 value) external auth(SET_REPORT_BOUNDARIES) {
-        ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION.setStorageUint256(value);
-        emit AllowedBeaconBalanceAnnualRelativeIncreaseSet(value);
+    function setAllowedBeaconBalanceAnnualRelativeIncrease(uint256 _value) external auth(SET_REPORT_BOUNDARIES) {
+        ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION.setStorageUint256(_value);
+        emit AllowedBeaconBalanceAnnualRelativeIncreaseSet(_value);
     }
 
-    function setAllowedBeaconBalanceRelativeDecrease(uint256 value) external auth(SET_REPORT_BOUNDARIES) {
-        ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION.setStorageUint256(value);
-        emit AllowedBeaconBalanceRelativeDecreaseSet(value);
+    function setAllowedBeaconBalanceRelativeDecrease(uint256 _value) external auth(SET_REPORT_BOUNDARIES) {
+        ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION.setStorageUint256(_value);
+        emit AllowedBeaconBalanceRelativeDecreaseSet(_value);
     }
 
     /**
@@ -174,7 +179,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     /**
      * @notice Returns the current reporting array element with the given index
      */
-    function getCurrentReportVariant(uint256 index)
+    function getCurrentReportVariant(uint256 _index)
         external
         view
         returns (
@@ -183,7 +188,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
             uint16 count
         )
     {
-        return currentReportVariants[index].decodeWithCount();
+        return currentReportVariants[_index].decodeWithCount();
     }
 
     /**
@@ -208,7 +213,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * @notice Returns beacon specs
+     * @notice Returns beacon specification data
      */
     function getBeaconSpec()
         external
@@ -230,7 +235,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * @notice Set beacon spec
+     * @notice Set beacon specification data
      */
     function setBeaconSpec(
         uint64 _epochsPerFrame,
@@ -352,7 +357,13 @@ contract LidoOracle is ILidoOracle, AragonApp {
         if (oldQuorum > _quorum) {
             (bool isQuorum, uint256 report) = _getQuorumReport(_quorum);
             if (isQuorum) {
-                _push(EXPECTED_EPOCH_ID_POSITION.getStorageUint256(), report, _getBeaconSpec());
+                (uint64 beaconBalance, uint32 beaconValidators) = report.decode();
+                _push(
+                     EXPECTED_EPOCH_ID_POSITION.getStorageUint256(),
+                     DENOMINATION_OFFSET * uint128(beaconBalance),
+                     beaconValidators,
+                     _getBeaconSpec()
+                );
             }
         }
     }
@@ -360,7 +371,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     /**
      * @notice An oracle committee member reports data from the ETH 2.0 side
      * @param _epochId Beacon Chain epoch id
-     * @param _beaconBalance Balance in wei on the ETH 2.0 side
+     * @param _beaconBalance Balance in wei on the ETH 2.0 side (9-digit denomination)
      * @param _beaconValidators Number of validators visible on this epoch
      */
     function reportBeacon(uint256 _epochId, uint64 _beaconBalance, uint32 _beaconValidators) external {
@@ -371,7 +382,8 @@ contract LidoOracle is ILidoOracle, AragonApp {
              _epochId == _getCurrentEpochId(beaconSpec) / beaconSpec.epochsPerFrame * beaconSpec.epochsPerFrame,
              "UNEXPECTED_EPOCH"
         );
-        emit BeaconReported(_epochId, _beaconBalance, _beaconValidators, msg.sender);
+        uint128 beaconBalanceEth1 = DENOMINATION_OFFSET * uint128(_beaconBalance);
+        emit BeaconReported(_epochId, beaconBalanceEth1, _beaconValidators, msg.sender);
 
         // If reported epoch has advanced, clear the last unsuccessful reporting
         if (_epochId > expectedEpoch) _clearReportingAndAdvanceTo(_epochId);
@@ -393,13 +405,13 @@ contract LidoOracle is ILidoOracle, AragonApp {
         while (i < currentReportVariants.length && currentReportVariants[i].isDifferent(report)) ++i;
         if (i < currentReportVariants.length) {
             if (currentReportVariants[i].getCount() + 1 >= quorum) {
-                _push(_epochId, currentReportVariants[i], beaconSpec);
+                _push(_epochId, beaconBalanceEth1, _beaconValidators, beaconSpec);
             } else {
                 ++currentReportVariants[i];
             }
         } else {
             if (quorum == 1) {
-                _push(_epochId, report, beaconSpec);
+                _push(_epochId, beaconBalanceEth1, _beaconValidators, beaconSpec);
             } else {
                 currentReportVariants.push(report + 1);
             }
@@ -426,10 +438,10 @@ contract LidoOracle is ILidoOracle, AragonApp {
     /**
      * @dev Returns whether the quorum is reached and the final report
      */
-    function _getQuorumReport(uint256 quorum) internal view returns (bool isQuorum, uint256 report) {
+    function _getQuorumReport(uint256 _quorum) internal view returns (bool isQuorum, uint256 report) {
         // check most frequent cases first: all reports are the same or no reports yet
         if (currentReportVariants.length == 1) {
-            return (currentReportVariants[0].getCount() >= quorum, currentReportVariants[0]);
+            return (currentReportVariants[0].getCount() >= _quorum, currentReportVariants[0]);
         } else if (currentReportVariants.length == 0) {
             return (false, 0);
         }
@@ -451,7 +463,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
                 }
             }
         }
-        return (maxval >= quorum && repeat == 0, currentReportVariants[maxind]);
+        return (maxval >= _quorum && repeat == 0, currentReportVariants[maxind]);
     }
 
     /**
@@ -486,28 +498,38 @@ contract LidoOracle is ILidoOracle, AragonApp {
 
     /**
      * @dev Pushes the given report to Lido and performs accompanying accounting
+     * @param _epochId Beacon chain epoch ID
+     * @param _beaconBalanceEth1 Validators balace in eth1 (18-digit denomination)
+     * @param _beaconValidators Number of validators visible on this epoch
+     * @param _beaconSpec current beacon specification data
      */
-    function _push(uint256 epochId, uint256 report, BeaconSpec memory beaconSpec) internal {
-        (uint64 beaconBalance, uint32 beaconValidators) = report.decode();
-        emit Completed(epochId, beaconBalance, beaconValidators);
+    function _push(
+        uint256 _epochId,
+        uint128 _beaconBalanceEth1,
+        uint128 _beaconValidators,
+        BeaconSpec memory _beaconSpec
+    )
+        internal
+    {
+        emit Completed(_epochId, _beaconBalanceEth1, _beaconValidators);
 
         // data for this frame is collected, now this frame is completed, so
         // expectedEpochId should be changed to first epoch from the next frame
-        _clearReportingAndAdvanceTo((epochId / beaconSpec.epochsPerFrame + 1) * beaconSpec.epochsPerFrame);
+        _clearReportingAndAdvanceTo((_epochId / _beaconSpec.epochsPerFrame + 1) * _beaconSpec.epochsPerFrame);
 
         // report to the Lido and collect stats
         ILido lido = getLido();
         uint256 prevTotalPooledEther = lido.totalSupply();
-        lido.pushBeacon(beaconValidators, beaconBalance);
+        // remember to convert balance to 18-digit denimination, as oracles work with 9-digit
+        lido.pushBeacon(_beaconValidators, _beaconBalanceEth1);
         uint256 postTotalPooledEther = lido.totalSupply();
 
         PRE_COMPLETED_TOTAL_POOLED_ETHER_POSITION.setStorageUint256(prevTotalPooledEther);
         POST_COMPLETED_TOTAL_POOLED_ETHER_POSITION.setStorageUint256(postTotalPooledEther);
-        uint256 timeElapsed = (epochId.sub(LAST_COMPLETED_EPOCH_ID_POSITION.getStorageUint256()))
-            .mul(beaconSpec.slotsPerEpoch)
-            .mul(beaconSpec.secondsPerSlot);
+        uint256 timeElapsed = (_epochId - LAST_COMPLETED_EPOCH_ID_POSITION.getStorageUint256())
+            .mul(_beaconSpec.slotsPerEpoch).mul(_beaconSpec.secondsPerSlot);
         TIME_ELAPSED_POSITION.setStorageUint256(timeElapsed);
-        LAST_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(epochId);
+        LAST_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(_epochId);
 
         // rollback on boundaries violation (logical consistency)
         _reportSanityChecks(postTotalPooledEther, prevTotalPooledEther, timeElapsed);
@@ -545,22 +567,22 @@ contract LidoOracle is ILidoOracle, AragonApp {
      * working and huge balances are already gathered.
      **/
     function _reportSanityChecks(
-        uint256 postTotalPooledEther,
-        uint256 preTotalPooledEther,
-        uint256 timeElapsed)
+        uint256 _postTotalPooledEther,
+        uint256 _preTotalPooledEther,
+        uint256 _timeElapsed)
         internal
         view
     {
-        if (postTotalPooledEther >= preTotalPooledEther) {  // check profit constraint
-            uint256 reward = postTotalPooledEther - preTotalPooledEther;
+        if (_postTotalPooledEther >= _preTotalPooledEther) {  // check profit constraint
+            uint256 reward = _postTotalPooledEther - _preTotalPooledEther;
             uint256 allowedBeaconBalanceAnnualIncreasePPM =
-                getAllowedBeaconBalanceAnnualRelativeIncrease().mul(preTotalPooledEther);
-            uint256 rewardAnnualizedPPM = uint256(1e6 * 365 days).mul(reward).div(timeElapsed);
+                getAllowedBeaconBalanceAnnualRelativeIncrease().mul(_preTotalPooledEther);
+            uint256 rewardAnnualizedPPM = uint256(1e6 * 365 days).mul(reward).div(_timeElapsed);
             require(rewardAnnualizedPPM <= allowedBeaconBalanceAnnualIncreasePPM, "ALLOWED_BEACON_BALANCE_INCREASE");
         } else {  // check loss constraint
-            uint256 loss = preTotalPooledEther - postTotalPooledEther;
+            uint256 loss = _preTotalPooledEther - _postTotalPooledEther;
             uint256 allowedBeaconBalanceDecreasePPM =
-                getAllowedBeaconBalanceRelativeDecrease().mul(preTotalPooledEther);
+                getAllowedBeaconBalanceRelativeDecrease().mul(_preTotalPooledEther);
             uint256 lossPPM = uint256(1e6).mul(loss);
             require(lossPPM <= allowedBeaconBalanceDecreasePPM, "ALLOWED_BEACON_BALANCE_DECREASE");
         }
@@ -582,12 +604,12 @@ contract LidoOracle is ILidoOracle, AragonApp {
     /**
      * @notice Returns the epochId calculated from current timestamp
      */
-    function _getCurrentEpochId(BeaconSpec memory beaconSpec) internal view returns (uint256) {
+    function _getCurrentEpochId(BeaconSpec memory _beaconSpec) internal view returns (uint256) {
         return (
             _getTime()
-            .sub(beaconSpec.genesisTime)
-            .div(beaconSpec.slotsPerEpoch)
-            .div(beaconSpec.secondsPerSlot)
+            .sub(_beaconSpec.genesisTime)
+            .div(_beaconSpec.slotsPerEpoch)
+            .div(_beaconSpec.secondsPerSlot)
         );
     }
 
