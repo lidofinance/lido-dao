@@ -211,8 +211,28 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, user5, 
       beforeEach(async () => {
         await app.setTime(GENESIS_TIME)
         await app.addOracleMember(user1, { from: voting })
-        await app.setAllowedBeaconBalanceAnnualRelativeIncrease(100000, { from: voting }) // default value from contract
-        await app.setAllowedBeaconBalanceRelativeDecrease(50000, { from: voting }) // default value from contract
+      })
+
+      it('if given old eth1 denominated balances just truncates them to 64 bits', async () => {
+        const BALANCE = toBN('183216444408705000000000')
+        const INT64_MASK = toBN('0xFFFFFFFFFFFFFFFF')
+        const receipt = await app.reportBeacon(0, BALANCE, 5692, { from: user1 })
+        assertEvent(receipt, 'BeaconReported', {
+          expectedArgs: {
+            epochId: 0,
+            beaconBalance: BALANCE.and(INT64_MASK).mul(toBN(DENOMINATION_OFFSET)),
+            beaconValidators: 5692,
+            caller: user1
+          }
+        })
+      })
+
+      it('accepts new eth2 denominated balances, no trunc', async () => {
+        const BALANCE = toBN('183216444408705')
+        const receipt = await app.reportBeacon(0, BALANCE, 5692, { from: user1 })
+        assertEvent(receipt, 'BeaconReported', {
+          expectedArgs: { epochId: 0, beaconBalance: BALANCE.mul(toBN(DENOMINATION_OFFSET)), beaconValidators: 5692, caller: user1 }
+        })
       })
 
       it('reverts when trying to report from non-member', async () => {
