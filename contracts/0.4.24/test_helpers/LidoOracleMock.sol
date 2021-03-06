@@ -36,7 +36,7 @@ contract LidoOracleMock is LidoOracle {
         initialized();
 
         // initialize the second version
-        this.initialize_v2();
+        this.initialize_v2(100000, 50000);
     }
 
     function _reportSanityChecks(uint256 postTotalPooledEther,

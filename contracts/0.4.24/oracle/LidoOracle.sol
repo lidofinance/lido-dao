@@ -93,7 +93,6 @@ contract LidoOracle is ILidoOracle, AragonApp {
      */
     bytes32 internal constant ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION =
         keccak256("lido.LidoOracle.allowedBeaconBalanceAnnualRelativeIncrease");
-    uint256 public constant DEFAULT_ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE = 100000;  // PPM ~ 10%
 
     /**
      * @dev When slashing happens, the balance may decrease at a much faster pace. Slashing are
@@ -104,7 +103,6 @@ contract LidoOracle is ILidoOracle, AragonApp {
      */
     bytes32 internal constant ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION =
         keccak256("lido.LidoOracle.allowedBeaconBalanceDecrease");
-    uint256 public constant DEFAULT_ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE = 50000;  // 5% ~ 50000 PPM
 
 
     /// @dev structured storage
@@ -304,14 +302,17 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * @notice Initialize data added to v2
+     * @notice Initialize data new to v2
      * @dev Original initialize function removed from v2 because it is invoked only once
      */
-    function initialize_v2() external {
+    function initialize_v2(uint256 _allowedBeaconBalanceAnnualRelativeIncrease, uint256 _allowedBeaconBalanceRelativeDecrease) external {
         require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "ALREADY_INITIALIZED");
-        ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION.setStorageUint256(DEFAULT_ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE);
-        ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION.setStorageUint256(DEFAULT_ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE);
         CONTRACT_VERSION_POSITION.setStorageUint256(1);
+        ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION.setStorageUint256(_allowedBeaconBalanceAnnualRelativeIncrease);
+        ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION.setStorageUint256(_allowedBeaconBalanceRelativeDecrease);
+        emit AllowedBeaconBalanceAnnualRelativeIncreaseSet(_allowedBeaconBalanceAnnualRelativeIncrease);
+        emit AllowedBeaconBalanceRelativeDecreaseSet(_allowedBeaconBalanceRelativeDecrease);
+        emit ContractVersionSet(1);
     }
 
     /**
@@ -345,7 +346,8 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * @notice Set the number of oracle members required to form a data point to `_quorum`
+     * @notice Sets the oracle parameter, the number of exectly the same reports needed to
+     * finalize the epoch
      */
     function setQuorum(uint256 _quorum) external auth(MANAGE_QUORUM) {
         require(0 != _quorum, "QUORUM_WONT_BE_MADE");

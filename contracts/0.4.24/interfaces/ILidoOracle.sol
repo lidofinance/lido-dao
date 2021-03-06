@@ -69,6 +69,7 @@ interface ILidoOracle {
          uint256 preTotalPooledEther,
          uint256 timeElapsed,
          uint256 totalShares);
+    event ContractVersionSet(uint256 version);
 
     /**
       * @notice An oracle committee member reports data from the ETH 2.0 side
