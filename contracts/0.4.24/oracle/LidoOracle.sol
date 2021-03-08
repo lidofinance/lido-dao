@@ -145,14 +145,14 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * Returns the receiver contract address to be called upon quorum
+     * Returns the receiver contract address to be called when the report is pushed to Lido
      */
     function getBeaconReportReceiver() external view returns (address) {
         return address(BEACON_REPORT_RECEIVER_POSITION.getStorageUint256());
     }
 
     /**
-     * Set the receiver contract address to be called upon quorum
+     * Set the receiver contract address to be called when the report is pushed to Lido
      * @dev Specify 0 to disable this functionality
      */
     function setBeaconReportReceiver(address _addr) external auth(SET_BEACON_REPORT_RECEIVER) {
@@ -306,18 +306,25 @@ contract LidoOracle is ILidoOracle, AragonApp {
      * Initialize contract data, that is new to v2
      * @dev Original initialize function removed from v2 because it is invoked only once
      */
-    function initialize_v2(uint256 _allowedBeaconBalanceAnnualRelativeIncrease, uint256 _allowedBeaconBalanceRelativeDecrease) external {
+    function initialize_v2(
+        uint256 _allowedBeaconBalanceAnnualRelativeIncrease,
+        uint256 _allowedBeaconBalanceRelativeDecrease
+    )
+        external
+    {
         require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "ALREADY_INITIALIZED");
         CONTRACT_VERSION_POSITION.setStorageUint256(1);
-        ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION.setStorageUint256(_allowedBeaconBalanceAnnualRelativeIncrease);
-        ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION.setStorageUint256(_allowedBeaconBalanceRelativeDecrease);
+        ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION
+            .setStorageUint256(_allowedBeaconBalanceAnnualRelativeIncrease);
+        ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION
+            .setStorageUint256(_allowedBeaconBalanceRelativeDecrease);
         emit AllowedBeaconBalanceAnnualRelativeIncreaseSet(_allowedBeaconBalanceAnnualRelativeIncrease);
         emit AllowedBeaconBalanceRelativeDecreaseSet(_allowedBeaconBalanceRelativeDecrease);
         emit ContractVersionSet(1);
     }
 
     /**
-     * Add the given address to the oracle member committee list
+     * Adds the given address to the oracle member committee list
      */
     function addOracleMember(address _member) external auth(MANAGE_MEMBERS) {
         require(address(0) != _member, "BAD_ARGUMENT");
@@ -329,7 +336,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * Remove the given address from the oracle member committee list
+     * Removes the given address from the oracle member committee list
      */
     function removeOracleMember(address _member) external auth(MANAGE_MEMBERS) {
         uint256 index = _getMemberId(_member);
@@ -379,11 +386,12 @@ contract LidoOracle is ILidoOracle, AragonApp {
         uint256 expectedEpoch = EXPECTED_EPOCH_ID_POSITION.getStorageUint256();
         require(_epochId >= expectedEpoch, "EPOCH_IS_TOO_OLD");
 
-        // if expected epoch has advanced, check that this is the first epoch of the current frame and
-        // clear the last unsuccessful reporting
+        // if expected epoch has advanced, check that this is the first epoch of the current frame
+        // and clear the last unsuccessful reporting
         if (_epochId > expectedEpoch) {
             require(
-                 _epochId == _getCurrentEpochId(beaconSpec) / beaconSpec.epochsPerFrame * beaconSpec.epochsPerFrame,
+                 _epochId ==
+                 _getCurrentEpochId(beaconSpec) / beaconSpec.epochsPerFrame * beaconSpec.epochsPerFrame,
                  "UNEXPECTED_EPOCH"
             );
             _clearReportingAndAdvanceTo(_epochId);
