@@ -3349,7 +3349,7 @@ __metadata:
     prettier: ^2.1.2
     solhint: ^3.2.2
     solidity-bytes-utils: 0.0.6
-    solidity-coverage: ^0.7.11
+    solidity-coverage: ^0.7.15
     solium: ^1.2.5
     truffle: ^5.1.43
     truffle-extract: ^1.2.1
@@ -3937,10 +3937,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@solidity-parser/parser@npm:^0.11.0":
-  version: 0.11.1
-  resolution: "@solidity-parser/parser@npm:0.11.1"
-  checksum: 0a172138cffa3de4594f6b74d815c7a1e8f5cc3a89bb72441f05a79d72c312913b0fac0591b19a9d84ccd12a3a52067b5121b6e5023ed5264a516ee50804d830
+"@solidity-parser/parser@npm:^0.12.0":
+  version: 0.12.0
+  resolution: "@solidity-parser/parser@npm:0.12.0"
+  checksum: a46e2a3b28bd9cd541595f1fa2ba423d6df6b0b4be6184682163ad55d71764411ae611cb225369004734c3a25afe6b116e5141437832fdefe101d5d2c4451edf
   languageName: node
   linkType: hard
 
@@ -22963,11 +22963,11 @@ resolve@1.1.x:
   languageName: node
   linkType: hard
 
-"solidity-coverage@npm:^0.7.11":
-  version: 0.7.15
-  resolution: "solidity-coverage@npm:0.7.15"
+"solidity-coverage@npm:^0.7.15":
+  version: 0.7.16
+  resolution: "solidity-coverage@npm:0.7.16"
   dependencies:
-    "@solidity-parser/parser": ^0.11.0
+    "@solidity-parser/parser": ^0.12.0
     "@truffle/provider": ^0.2.24
     chalk: ^2.4.2
     death: ^1.1.0
@@ -22988,7 +22988,7 @@ resolve@1.1.x:
     web3-utils: ^1.3.0
   bin:
     solidity-coverage: plugins/bin.js
-  checksum: 0c0cea92c4ff1c8ec4857f13e6e0e9494032bbb1c6a12bf5f0efd213386f9be8b5e6d77af0ad67faaa08b357f7bfbe1e3055b8060449d8de8b07943299cf3034
+  checksum: a9a49c9320b776bc4ba725b41bcca6bdc97fd8b83abc633833490373cd3a8cf20817f16faa32a7bf550918979c445894d1f7a2b02381e61f811dc3f6d66a9060
   languageName: node
   linkType: hard
 
