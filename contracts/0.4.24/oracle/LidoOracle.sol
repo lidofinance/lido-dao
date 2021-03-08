@@ -275,14 +275,11 @@ contract LidoOracle is ILidoOracle, AragonApp {
     {
         BeaconSpec memory beaconSpec = _getBeaconSpec();
         uint64 genesisTime = beaconSpec.genesisTime;
-        uint64 epochsPerFrame = beaconSpec.epochsPerFrame;
         uint64 secondsPerEpoch = beaconSpec.secondsPerSlot.mul(beaconSpec.slotsPerEpoch);
 
-        frameEpochId = _getCurrentEpochId(beaconSpec).div(epochsPerFrame).mul(epochsPerFrame);
+        frameEpochId = _getCurrentFrameFirstEpochId(beaconSpec);
         frameStartTime = frameEpochId.mul(secondsPerEpoch).add(genesisTime);
-
-        uint256 nextFrameEpochId = frameEpochId.div(epochsPerFrame).add(1).mul(epochsPerFrame);
-        frameEndTime = nextFrameEpochId.mul(secondsPerEpoch).add(genesisTime).sub(1);
+        frameEndTime = (frameEpochId + beaconSpec.epochsPerFrame).mul(secondsPerEpoch).add(genesisTime).sub(1);
     }
 
     /**
@@ -314,13 +311,19 @@ contract LidoOracle is ILidoOracle, AragonApp {
     {
         require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "ALREADY_INITIALIZED");
         CONTRACT_VERSION_POSITION.setStorageUint256(1);
+        emit ContractVersionSet(1);
+
+        uint256 expectedEpoch = _getCurrentFrameFirstEpochId(_getBeaconSpec());
+        EXPECTED_EPOCH_ID_POSITION.setStorageUint256(expectedEpoch);
+        emit ExpectedEpochIdUpdated(expectedEpoch);
+
         ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION
             .setStorageUint256(_allowedBeaconBalanceAnnualRelativeIncrease);
+        emit AllowedBeaconBalanceAnnualRelativeIncreaseSet(_allowedBeaconBalanceAnnualRelativeIncrease);
+
         ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION
             .setStorageUint256(_allowedBeaconBalanceRelativeDecrease);
-        emit AllowedBeaconBalanceAnnualRelativeIncreaseSet(_allowedBeaconBalanceAnnualRelativeIncrease);
         emit AllowedBeaconBalanceRelativeDecreaseSet(_allowedBeaconBalanceRelativeDecrease);
-        emit ContractVersionSet(1);
     }
 
     /**
@@ -389,11 +392,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
         // if expected epoch has advanced, check that this is the first epoch of the current frame
         // and clear the last unsuccessful reporting
         if (_epochId > expectedEpoch) {
-            require(
-                 _epochId ==
-                 _getCurrentEpochId(beaconSpec) / beaconSpec.epochsPerFrame * beaconSpec.epochsPerFrame,
-                 "UNEXPECTED_EPOCH"
-            );
+            require(_epochId == _getCurrentFrameFirstEpochId(beaconSpec), "UNEXPECTED_EPOCH");
             _clearReportingAndAdvanceTo(_epochId);
         }
         
@@ -429,7 +428,6 @@ contract LidoOracle is ILidoOracle, AragonApp {
             }
         }
     }
-
 
     /**
      * Returns BeaconSpec structure
@@ -613,7 +611,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * Returns the epochId calculated from current timestamp
+     * Returns the epoch calculated from current timestamp
      */
     function _getCurrentEpochId(BeaconSpec memory _beaconSpec) internal view returns (uint256) {
         return (
@@ -622,6 +620,13 @@ contract LidoOracle is ILidoOracle, AragonApp {
             .div(_beaconSpec.slotsPerEpoch)
             .div(_beaconSpec.secondsPerSlot)
         );
+    }
+
+    /**
+     * Returns the first epoch of the current frame
+     */
+    function _getCurrentFrameFirstEpochId(BeaconSpec memory _beaconSpec) internal view returns (uint256) {
+        return _getCurrentEpochId(_beaconSpec) / _beaconSpec.epochsPerFrame * _beaconSpec.epochsPerFrame;
     }
 
     /**

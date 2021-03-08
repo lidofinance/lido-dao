@@ -17,7 +17,9 @@ contract('LidoOracle', ([appManager, voting, malicious1, malicious2, user1, user
     // Deploy the app's base contract.
     appBase = await LidoOracle.new()
     appLido = await Lido.new()
+  })
 
+  beforeEach('deploy dao and app', async () => {
     const { dao, acl } = await newDao(appManager)
 
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
@@ -32,43 +34,47 @@ contract('LidoOracle', ([appManager, voting, malicious1, malicious2, user1, user
     await acl.createPermission(voting, app.address, await app.SET_BEACON_REPORT_RECEIVER(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
+    await app.setTime(GENESIS_TIME + 225 * EPOCH_LENGTH)
     await app.initialize(appLido.address, 225, 32, 12, GENESIS_TIME)
 
     // Initialize the oracle time, quorum and basic oracles
-    await app.setTime(GENESIS_TIME)
     await app.setQuorum(4, { from: voting })
     await app.addOracleMember(user1, { from: voting })
     await app.addOracleMember(user2, { from: voting })
+  })
+
+  it('reverts epoch zero', async () => {
+    assertBn(await app.getExpectedEpochId(), 225)
+    await assertRevert(app.reportBeacon(0, 0, 0, { from: user1 }), 'EPOCH_IS_TOO_OLD')
   })
 
   it('oracle conract handles changing the oracles during epoch', async () => {
     await app.addOracleMember(malicious1, { from: voting })
     await app.addOracleMember(malicious2, { from: voting })
 
-    await app.reportBeacon(0, BAD_DATA[0], BAD_DATA[1], { from: malicious1 })
-    await app.reportBeacon(0, BAD_DATA[0], BAD_DATA[1], { from: malicious2 })
-    await app.reportBeacon(0, GOOD_DATA[0], GOOD_DATA[1], { from: user1 })
-    await app.reportBeacon(0, GOOD_DATA[0], GOOD_DATA[1], { from: user2 })
+    await app.reportBeacon(225, BAD_DATA[0], BAD_DATA[1], { from: malicious1 })
+    await app.reportBeacon(225, BAD_DATA[0], BAD_DATA[1], { from: malicious2 })
+    await app.reportBeacon(225, GOOD_DATA[0], GOOD_DATA[1], { from: user1 })
+    await app.reportBeacon(225, GOOD_DATA[0], GOOD_DATA[1], { from: user2 })
 
     await app.setQuorum(3, { from: voting })
 
     await app.removeOracleMember(malicious1, { from: voting })
     await app.removeOracleMember(malicious2, { from: voting })
 
-    await app.reportBeacon(0, GOOD_DATA[0], GOOD_DATA[1], { from: user1 }) // user1 reports again
-    await app.reportBeacon(0, GOOD_DATA[0], GOOD_DATA[1], { from: user2 }) // user2 reports again
+    await app.reportBeacon(225, GOOD_DATA[0], GOOD_DATA[1], { from: user1 }) // user1 reports again
+    await app.reportBeacon(225, GOOD_DATA[0], GOOD_DATA[1], { from: user2 }) // user2 reports again
 
     await app.addOracleMember(user3, { from: voting })
-    const receipt = await app.reportBeacon(0, GOOD_DATA[0], GOOD_DATA[1], { from: user3 })
+    const receipt = await app.reportBeacon(225, GOOD_DATA[0], GOOD_DATA[1], { from: user3 })
 
     assertEvent(receipt, 'Completed', {
-      expectedArgs: { epochId: 0, beaconBalance: GOOD_DATA[0] * DENOMINATION_OFFSET, beaconValidators: GOOD_DATA[1] }
+      expectedArgs: { epochId: 225, beaconBalance: GOOD_DATA[0] * DENOMINATION_OFFSET, beaconValidators: GOOD_DATA[1] }
     })
-    assertBn(await app.getExpectedEpochId(), 225)
+    assertBn(await app.getExpectedEpochId(), 450)
   })
 
   it('report in odd epoch reverts', async () => {
-    await app.setTime(GENESIS_TIME + 225 * EPOCH_LENGTH)
     assertBn(await app.getExpectedEpochId(), 225)
     await app.reportBeacon(225, BAD_DATA[0], BAD_DATA[1], { from: user1 })
     await app.reportBeacon(225, BAD_DATA[0], BAD_DATA[1], { from: user2 })

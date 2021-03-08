@@ -45,6 +45,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, user5, 
     await acl.createPermission(voting, app.address, await app.SET_BEACON_REPORT_RECEIVER(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
+    await app.setTime(GENESIS_TIME)
     await app.initialize(appLido.address, 1, 32, 12, GENESIS_TIME)
   })
 
