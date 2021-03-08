@@ -4,6 +4,8 @@
 
 pragma solidity 0.4.24;
 
+import "../interfaces/ILido.sol";
+
 
 /**
   * @title ETH 2.0 -> ETH oracle
@@ -43,6 +45,11 @@ interface ILidoOracle {
          uint256 timeElapsed,
          uint256 totalShares);
     event ContractVersionSet(uint256 version);
+
+    /**
+     * Returns the Lido contract address
+     */
+    function getLido() public view returns (ILido);
 
     /**
      * Returns the number of exectly the same reports needed to finalize the epoch
