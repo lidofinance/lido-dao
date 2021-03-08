@@ -58,7 +58,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
 
     uint256 internal constant MEMBER_NOT_FOUND = uint256(-1);
 
-    /// Number of exectly the same reports needed to finalize the epoch
+    /// Number of exactly the same reports needed to finalize the epoch
     bytes32 internal constant QUORUM_POSITION = keccak256("lido.LidoOracle.quorum");
 
     /// Address of the Lido contract
@@ -114,7 +114,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * Returns the number of exectly the same reports needed to finalize the epoch
+     * Returns the number of erectly the same reports needed to finalize the epoch
      */
     function getQuorum() public view returns (uint256) {
         return QUORUM_POSITION.getStorageUint256();
@@ -352,7 +352,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * Sets the number of exectly the same reports needed to finalize the epoch
+     * Sets the number of exactly the same reports needed to finalize the epoch
      */
     function setQuorum(uint256 _quorum) external auth(MANAGE_QUORUM) {
         require(0 != _quorum, "QUORUM_WONT_BE_MADE");
@@ -413,7 +413,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
         uint256 quorum = getQuorum();
         uint256 i = 0;
 
-        // iterate on all report variants we alredy have, limited by the oracle members maximum
+        // iterate on all report variants we already have, limited by the oracle members maximum
         while (i < currentReportVariants.length && currentReportVariants[i].isDifferent(report)) ++i;
         if (i < currentReportVariants.length) {
             if (currentReportVariants[i].getCount() + 1 >= quorum) {
@@ -511,7 +511,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     /**
      * Pushes the given report to Lido and performs accompanying accounting
      * @param _epochId Beacon chain epoch, proven to be >= expected epoch and <= current epoch
-     * @param _beaconBalanceEth1 Validators balace in eth1 (18-digit denomination)
+     * @param _beaconBalanceEth1 Validators balance in eth1 (18-digit denomination)
      * @param _beaconValidators Number of validators visible on this epoch
      * @param _beaconSpec current beacon specification data
      */
@@ -525,8 +525,8 @@ contract LidoOracle is ILidoOracle, AragonApp {
     {
         emit Completed(_epochId, _beaconBalanceEth1, _beaconValidators);
 
-        // data for this frame is collected, now this frame is completed, so
-        // expectedEpochId should be changed to first epoch from the next frame
+        // now this frame is completed, so the expected epoch should be advanced to the first epoch
+        // of the next frame
         _clearReportingAndAdvanceTo((_epochId / _beaconSpec.epochsPerFrame + 1) * _beaconSpec.epochsPerFrame);
 
         // report to the Lido and collect stats
