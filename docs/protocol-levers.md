@@ -17,7 +17,7 @@ The following contracts are upgradeable by the DAO voting:
 
 Upgradeability is implemented by the Aragon kernel and base contracts. To upgrade an app, one needs
 the `dao.APP_MANAGER_ROLE` permission provided by Aragon. All upgradeable contracts use the
-[Unstructured Storage pattern] in order to provide stable storage structure accross upgrades.
+[Unstructured Storage pattern] in order to provide stable storage structure across upgrades.
 
 [Unstructured Storage pattern]: https://blog.openzeppelin.com/upgradeability-using-unstructured-storage
 
@@ -87,7 +87,7 @@ The protocol uses these credentials to register new ETH 2.0 validators.
 
 Controls how many ETH 2.0 deposits can be made in a single transaction.
 
-* A parameter of the `depositBufferedEther(uint256)` funciton
+* A parameter of the `depositBufferedEther(uint256)` function
 * Default value: `16`
 * [Scenario test](/test/scenario/lido_deposit_iteration_limit.js)
 
@@ -188,7 +188,6 @@ Address of the Lido contract.
 
 * Accessor: `getLido() returns (address)`
 
-
 ### Members list
 
 The list of oracle committee members.
@@ -197,19 +196,41 @@ The list of oracle committee members.
   * Permission required: `MANAGE_MEMBERS`
 * Accessor: `getOracleMembers() returns (address[])`
 
-
 ### The quorum
 
-The number of oracle committee members required to form a data point.
+The number of exactly the same reports needed to finalize the epoch.
 
 * Mutator: `setQuorum(uint256)`
   * Permission required: `MANAGE_QUORUM`
 * Accessor: `getQuorum() returns (uint256)`
 
-The data point for a given report interval is formed when:
+When the `quorum` number of the same reports is collected for the current epoch,
 
-1. No less than `quorum` oracle committee members have reported their value
-   for the given report interval;
-2. Among these values, there is some value that occurs more frequently than
-   the others, i.e. the set of reported values is unimodal. This value is
-   then used for the resulting data point.
+* the epoch is finalized (no more reports are accepted for it),
+* the final report is pushed to the Lido,
+* statistics collected and the sanity check (see below) is evaluated,
+* beacon report receiver (see below) is called.
+
+### Sanity check
+
+To make oracles less dangerous, we can limit rewards report by 0.1% increase in stake and 15%
+decrease in stake, with both values configurable by the governance in case of extremely unusual
+circumstances.
+
+* Mutators: `setAllowedBeaconBalanceAnnualRelativeIncrease(uint256)` and
+  `setAllowedBeaconBalanceRelativeDecrease(uint256)`
+  * Permission required: `SET_REPORT_BOUNDARIES`
+* Accessors: `getAllowedBeaconBalanceAnnualRelativeIncrease() returns (uint256)` and
+  `getAllowedBeaconBalanceRelativeDecrease() returns (uint256)`
+
+### Beacon report receiver
+
+It is possible to register a contract to be notified of the report push to Lido (when the quorum is
+reached). The contract should provide
+[IBeaconReportReceiver](/contracts/0.4.24/interfaces/IBeaconReceiver.sol] interface.
+
+* Mutator: `setBeaconReportReceiver(address)`
+  * Permission required: `SET_BEACON_REPORT_RECEIVER`
+* Accessor: `getBeaconReportReceiver() returns (address)`
+
+Note that setting zero address disables this functionality.

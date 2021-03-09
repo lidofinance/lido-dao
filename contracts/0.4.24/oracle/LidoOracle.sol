@@ -112,7 +112,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * Returns the number of erectly the same reports needed to finalize the epoch
+     * Returns the number of exactly the same reports needed to finalize the epoch
      */
     function getQuorum() public view returns (uint256) {
         return QUORUM_POSITION.getStorageUint256();
