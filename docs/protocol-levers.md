@@ -208,8 +208,8 @@ When the `quorum` number of the same reports is collected for the current epoch,
 
 * the epoch is finalized (no more reports are accepted for it),
 * the final report is pushed to the Lido,
-* statistics collected and the sanity check (see below) is evaluated,
-* beacon report receiver (see below) is called.
+* statistics collected and the [sanity check](#sanity-check) is evaluated,
+* [beacon report receiver](#beacon-report-receiver) is called.
 
 ### Sanity check
 
@@ -227,7 +227,7 @@ circumstances.
 
 It is possible to register a contract to be notified of the report push to Lido (when the quorum is
 reached). The contract should provide
-[IBeaconReportReceiver](/contracts/0.4.24/interfaces/IBeaconReceiver.sol] interface.
+[IBeaconReportReceiver](/contracts/0.4.24/interfaces/IBeaconReceiver.sol) interface.
 
 * Mutator: `setBeaconReportReceiver(address)`
   * Permission required: `SET_BEACON_REPORT_RECEIVER`
