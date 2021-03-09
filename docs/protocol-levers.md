@@ -227,7 +227,7 @@ circumstances.
 
 It is possible to register a contract to be notified of the report push to Lido (when the quorum is
 reached). The contract should provide
-[IBeaconReportReceiver](/contracts/0.4.24/interfaces/IBeaconReceiver.sol) interface.
+[IBeaconReportReceiver](/contracts/0.4.24/interfaces/IBeaconReportReceiver.sol) interface.
 
 * Mutator: `setBeaconReportReceiver(address)`
   * Permission required: `SET_BEACON_REPORT_RECEIVER`
