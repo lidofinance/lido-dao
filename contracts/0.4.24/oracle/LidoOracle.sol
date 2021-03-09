@@ -7,7 +7,6 @@ pragma solidity 0.4.24;
 
 import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
-import "@aragon/os/contracts/lib/math/SafeMath64.sol";
 
 import "../interfaces/IBeaconReportReceiver.sol";
 import "../interfaces/ILido.sol";
@@ -31,7 +30,6 @@ import "./ReportUtils.sol";
  */
 contract LidoOracle is ILidoOracle, AragonApp {
     using SafeMath for uint256;
-    using SafeMath64 for uint64;
     using ReportUtils for uint256;
 
     struct BeaconSpec {
@@ -275,11 +273,11 @@ contract LidoOracle is ILidoOracle, AragonApp {
     {
         BeaconSpec memory beaconSpec = _getBeaconSpec();
         uint64 genesisTime = beaconSpec.genesisTime;
-        uint64 secondsPerEpoch = beaconSpec.secondsPerSlot.mul(beaconSpec.slotsPerEpoch);
+        uint64 secondsPerEpoch = beaconSpec.secondsPerSlot * beaconSpec.slotsPerEpoch;
 
         frameEpochId = _getCurrentFrameFirstEpochId(beaconSpec);
-        frameStartTime = frameEpochId.mul(secondsPerEpoch).add(genesisTime);
-        frameEndTime = (frameEpochId + beaconSpec.epochsPerFrame).mul(secondsPerEpoch).add(genesisTime).sub(1);
+        frameStartTime = frameEpochId * secondsPerEpoch + genesisTime;
+        frameEndTime = (frameEpochId + beaconSpec.epochsPerFrame) * secondsPerEpoch + genesisTime - 1;
     }
 
     /**
@@ -510,7 +508,6 @@ contract LidoOracle is ILidoOracle, AragonApp {
      * Pushes the given report to Lido and performs accompanying accounting
      * @param _epochId Beacon chain epoch, proven to be >= expected epoch and <= current epoch
      * @param _beaconBalanceEth1 Validators balance in eth1 (18-digit denomination)
-     * @param _beaconValidators Number of validators visible on this epoch
      * @param _beaconSpec current beacon specification data
      */
     function _push(
@@ -535,8 +532,8 @@ contract LidoOracle is ILidoOracle, AragonApp {
 
         PRE_COMPLETED_TOTAL_POOLED_ETHER_POSITION.setStorageUint256(prevTotalPooledEther);
         POST_COMPLETED_TOTAL_POOLED_ETHER_POSITION.setStorageUint256(postTotalPooledEther);
-        uint256 timeElapsed = (_epochId - LAST_COMPLETED_EPOCH_ID_POSITION.getStorageUint256())
-            .mul(_beaconSpec.slotsPerEpoch).mul(_beaconSpec.secondsPerSlot);
+        uint256 timeElapsed = (_epochId - LAST_COMPLETED_EPOCH_ID_POSITION.getStorageUint256()) *
+            _beaconSpec.slotsPerEpoch * _beaconSpec.secondsPerSlot;
         TIME_ELAPSED_POSITION.setStorageUint256(timeElapsed);
         LAST_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(_epochId);
 
@@ -614,12 +611,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
      * Returns the epoch calculated from current timestamp
      */
     function _getCurrentEpochId(BeaconSpec memory _beaconSpec) internal view returns (uint256) {
-        return (
-            _getTime()
-            .sub(_beaconSpec.genesisTime)
-            .div(_beaconSpec.slotsPerEpoch)
-            .div(_beaconSpec.secondsPerSlot)
-        );
+        return (_getTime() - _beaconSpec.genesisTime) / (_beaconSpec.slotsPerEpoch * _beaconSpec.secondsPerSlot);
     }
 
     /**
