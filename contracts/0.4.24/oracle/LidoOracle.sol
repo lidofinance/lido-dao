@@ -276,8 +276,8 @@ contract LidoOracle is ILidoOracle, AragonApp {
         uint64 secondsPerEpoch = beaconSpec.secondsPerSlot * beaconSpec.slotsPerEpoch;
 
         frameEpochId = _getCurrentFrameFirstEpochId(beaconSpec);
-        frameStartTime = frameEpochId.mul(secondsPerEpoch).add(genesisTime);
-        frameEndTime = (frameEpochId + beaconSpec.epochsPerFrame) * secondsPerEpoch) + genesisTime - 1;
+        frameStartTime = frameEpochId * secondsPerEpoch + genesisTime;
+        frameEndTime = (frameEpochId + beaconSpec.epochsPerFrame) * secondsPerEpoch + genesisTime - 1;
     }
 
     /**
