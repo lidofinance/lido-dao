@@ -1,6 +1,6 @@
 # Protocol levers
 
-The protocol provides a number of settings controllable by the DAO. Modifying each of them requires
+The protocol provies a number of settings controllable by the DAO. Modifying each of them requires
 the caller to have a specific permission. After deploying the DAO, all permissions belong to the DAO
 `Voting` app, which can also manage them. This means that, initially, levers can only be changed by
 the DAO voting, and other entities can be allowed to do the same only as a result of the voting.
@@ -168,7 +168,7 @@ take part in fee distribution.
 
 Allow to manage signing keys for the given node operator.
 
-> Signing keys can also be managed by the reward address of a signing provier by calling
+> Signing keys can also be managed by the reward address of a signing provider by calling
 > the equivalent functions with the `OperatorBH` suffix: `addSigningKeysOperatorBH`, `removeSigningKeyOperatorBH`.
 
 
@@ -268,11 +268,38 @@ Returns the initialized version of this contract starting from 0.
 
 * Accessor: `getVersion() returns (uint256)`.
 
+### Beacon specification
+
+Sets and queries configurable beacon chain specification.
+
+* Mutator: `setBeaconSpec( uint64 _epochsPerFrame, uint64 _slotsPerEpoch, uint64 _secondsPerSlot,
+        uint64 _genesisTime )`,
+  * Permission required: `SET_BEACON_SPEC`,
+* Accessor: `getBeaconSpec() returns (uint64 epochsPerFrame, uint64 slotsPerEpoch,
+        uint64 secondsPerSlot, uint64 genesisTime)`.
+
 ### Current epoch
 
 Returns the epoch calculated from current timestamp.
 
 * Accessor: `getCurrentEpochId() returns (uint256)`.
+
+
+### Supplemental epoch information
+
+Returns currently reportable epoch (the first epoch of the current frame) as well as its start and
+end times in seconds.
+
+* Accessor: `getCurrentFrame() returns (uint256 frameEpochId, uint256 frameStartTime, uint256
+  frameEndTime)`.
+
+
+###  Supplemental rewards information
+
+Reports beacon balance and its change during the last frame.
+
+* Accessor: `getLastCompletedReportDelta() returns (uint256 postTotalPooledEther, uint256
+        preTotalPooledEther, uint256 timeElapsed)`.
 
 [1]: #sanity-check
 [2]: #beacon-report-receiver

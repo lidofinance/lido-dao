@@ -261,7 +261,8 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * Returns all needed to oracle daemons data
+     * Returns currently reportable epoch (the first epoch of the current frame) as well as its
+     * start and end times in seconds
      */
     function getCurrentFrame()
         external
@@ -282,7 +283,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * Reports beacon balance and its change
+     * Reports beacon balance and its change during the last frame
      */
     function getLastCompletedReportDelta()
         external
