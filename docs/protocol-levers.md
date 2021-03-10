@@ -208,8 +208,8 @@ When the `quorum` number of the same reports is collected for the current epoch,
 
 * the epoch is finalized (no more reports are accepted for it),
 * the final report is pushed to the Lido,
-* statistics collected and the [sanity check](#sanity-check) is evaluated,
-* [beacon report receiver](#beacon-report-receiver) is called.
+* statistics collected and the [sanity check][1] is evaluated,
+* [beacon report receiver][2] is called.
 
 ### Sanity check
 
@@ -234,3 +234,46 @@ reached). The contract should provide
 * Accessor: `getBeaconReportReceiver() returns (address)`
 
 Note that setting zero address disables this functionality.
+
+### Current reporting status
+
+For transparency we provide accessors to return status of the oracle daemons reporting for the
+current "[expected epoch][3]".
+
+* Accessors: 
+  * `getCurrentOraclesReportStatus() returns (uint256)` - returns the current reporting bitmap,
+    representing oracles who have already pushed their version of report during the [expected][3]
+    epoch, every oracle bit corresponds to the index of the oracle in the current members list,
+  * `getCurrentReportVariantsSize() returns (uint256)` - returns the current reporting variants
+    array size,
+  * `getCurrentReportVariant(uint256 _index) returns (uint64 beaconBalance, uint32
+    beaconValidators, uint16 count)` - returns the current reporting array element with the given
+    index.
+
+### Expected epoch
+
+The oracle daemons may provide their reports only for the one epoch in every frame: the first
+one. The following accessor can be used to look up the current epoch that this contract expects
+reports.
+
+* Accessor: `getExpectedEpochId() returns (uint256)`.
+
+Note that any later epoch, that has already come *and* is also the first epoch of its frame, is
+also eligible for reporting. If some oracle daemon reports it, the contract discards any results of
+this epoch and advances to the just reported one.
+
+### Version of the contract
+
+Returns the initialized version of this contract starting from 0.
+
+* Accessor: `getVersion() returns (uint256)`.
+
+### Current epoch
+
+Returns the epoch calculated from current timestamp.
+
+* Accessor: `getCurrentEpochId() returns (uint256)`.
+
+[1]: #sanity-check
+[2]: #beacon-report-receiver
+[3]: #expected-epoch
