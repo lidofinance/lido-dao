@@ -47,16 +47,12 @@ interface ILidoOracle {
     event ContractVersionSet(uint256 version);
 
     /**
-<<<<<<< Updated upstream
      * Returns the Lido contract address
      */
     function getLido() public view returns (ILido);
 
     /**
      * Returns the number of exectly the same reports needed to finalize the epoch
-=======
-     * Returns the number of erectly the same reports needed to finalize the epoch
->>>>>>> Stashed changes
      */
     function getQuorum() public view returns (uint256);
 
