@@ -150,7 +150,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * Set the receiver contract address to be called when the report is pushed to Lido
+     * Sets the receiver contract address to be called when the report is pushed to Lido
      * @dev Specify 0 to disable this functionality
      */
     function setBeaconReportReceiver(address _addr) external auth(SET_BEACON_REPORT_RECEIVER) {
@@ -233,7 +233,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * Sets beacon specification data
+     * Updates beacon specification data
      */
     function setBeaconSpec(
         uint64 _epochsPerFrame,
