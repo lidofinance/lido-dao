@@ -524,7 +524,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
 
         // now this frame is completed, so the expected epoch should be advanced to the first epoch
         // of the next frame
-        _clearReportingAndAdvanceTo((_epochId / _beaconSpec.epochsPerFrame + 1) * _beaconSpec.epochsPerFrame);
+        _clearReportingAndAdvanceTo(_epochId + _beaconSpec.epochsPerFrame);
 
         // report to the Lido and collect stats
         ILido lido = getLido();
