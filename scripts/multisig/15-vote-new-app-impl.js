@@ -45,7 +45,9 @@ async function upgradeAppImpl({ web3, artifacts, appName = APP }) {
   const votingAddress = state[`app:${APP_NAMES.ARAGON_VOTING}`].proxyAddress
   const tokenManagerAddress = state[`app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`].proxyAddress
   const appBaseAddress = state[`app:${appName}`].baseAddress
-
+  const oracleAddress = state[`app:${APP}`].proxyAddress
+  
+  const oracle = await artifacts.require('LidoOracle').at(oracleAddress)
   const kernel = await artifacts.require('Kernel').at(state.daoAddress)
   const repo = await artifacts.require('Repo').at(repoAddress)
   const voting = await artifacts.require('Voting').at(votingAddress)
@@ -72,6 +74,7 @@ async function upgradeAppImpl({ web3, artifacts, appName = APP }) {
   log(`appId:`, appId)
   log(`Contract implementation:`, yl(contractAddress), `->`, yl(appBaseAddress))
   log(`Bump version:`, yl(versionFrom), `->`, yl(versionTo))
+  log(`Oracle proxy address:`, yl(oracleAddress))
   log.splitter()
   if (contractAddress === appBaseAddress) {
     throw new Error('No new implementation found')
@@ -80,14 +83,18 @@ async function upgradeAppImpl({ web3, artifacts, appName = APP }) {
   // encode call to Repo app for newVersion
   const callData1 = encodeCallScript([
     {
-      to: state.daoAddress,
-      calldata: await kernel.contract.methods.setApp(APP_BASES_NAMESPACE, appId, appBaseAddress).encodeABI()
-    },
-    {
       to: repoAddress,
       // function newVersion(uint16[] _newSemanticVersion, address _contractAddress, bytes _contentURI)
       calldata: await repo.contract.methods.newVersion(versionTo, appBaseAddress, contentURI).encodeABI()
-    }
+    },
+    {
+      to: state.daoAddress,
+      calldata: await kernel.contract.methods.setApp(APP_BASES_NAMESPACE, appId, appBaseAddress).encodeABI()
+    },
+    // {
+    //   to: oracleAddress,
+    //   calldata: await oracle.contract.methods.initialize_v2(100000, 50000).encodeABI()
+    // }
   ])
   // encode forwarding call from Voting app to app Repo (new Vote will be created under the hood)
   const callData2 = encodeCallScript([
