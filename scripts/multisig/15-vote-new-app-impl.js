@@ -46,9 +46,12 @@ async function upgradeAppImpl({ web3, artifacts, appName = APP }) {
   const tokenManagerAddress = state[`app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`].proxyAddress
   const appBaseAddress = state[`app:${appName}`].baseAddress
 
+  const kernel = await artifacts.require('Kernel').at(state.daoAddress)
   const repo = await artifacts.require('Repo').at(repoAddress)
   const voting = await artifacts.require('Voting').at(votingAddress)
   const tokenManager = await artifacts.require('TokenManager').at(tokenManagerAddress)
+
+  const APP_BASES_NAMESPACE = await kernel.APP_BASES_NAMESPACE()
 
   const { semanticVersion, contractAddress, contentURI } = await repo.getLatest()
   const versionFrom = semanticVersion.map((n) => n.toNumber())
@@ -76,6 +79,10 @@ async function upgradeAppImpl({ web3, artifacts, appName = APP }) {
 
   // encode call to Repo app for newVersion
   const callData1 = encodeCallScript([
+    {
+      to: state.daoAddress,
+      calldata: await kernel.contract.methods.setApp(APP_BASES_NAMESPACE, appId, appBaseAddress).encodeABI()
+    },
     {
       to: repoAddress,
       // function newVersion(uint16[] _newSemanticVersion, address _contractAddress, bytes _contentURI)
