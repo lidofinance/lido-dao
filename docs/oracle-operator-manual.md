@@ -17,7 +17,7 @@ This document is intended for those who wish to participate in the Lido protocol
     export DAEMON=1
     export MEMBER_PRIV_KEY=$ORACLE_PRIVATE_KEY_0X_PREFIXED
     export ORACLE_FROM_BLOCK=11595281
-    docker run -d --name lido-oracle -e ETH1_NODE -e BEACON_NODE -e POOL_CONTRACT -e DAEMON -e MEMBER_PRIV_KEY -e ORACLE_FROM_BLOCK -it lidofinance/oracle:latest
+    docker run -d --name lido-oracle -e ETH1_NODE -e BEACON_NODE -e POOL_CONTRACT -e DAEMON -e MEMBER_PRIV_KEY -e ORACLE_FROM_BLOCK -it lidofinance/oracle:0.1.4
     ```
 
 Here, `ORACLE_PRIVATE_KEY_0X_PREFIXED` environment variable should be populated with the private key of the address from step 1.
@@ -78,7 +78,7 @@ export POOL_CONTRACT=0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84
 export DAEMON=1
 export MEMBER_PRIV_KEY=$ORACLE_PRIVATE_KEY_0X_PREFIXED
 export ORACLE_FROM_BLOCK=11595281
-docker run -d --name lido-oracle -e ETH1_NODE -e BEACON_NODE -e POOL_CONTRACT -e DAEMON -e MEMBER_PRIV_KEY -e ORACLE_FROM_BLOCK -it lidofinance/oracle:latest
+docker run -d --name lido-oracle -e ETH1_NODE -e BEACON_NODE -e POOL_CONTRACT -e DAEMON -e MEMBER_PRIV_KEY -e ORACLE_FROM_BLOCK -it lidofinance/oracle:0.1.4
 ```
 
 This will start the oracle in daemon mode. You can also run it in a one-off mode, for example if you’d prefer to trigger oracle execution as a `cron` job. In this case, skip passing the `--daemon` flag to the oracle and the `-d` flag to `docker run`.
@@ -90,5 +90,5 @@ export ETH1_NODE=$ETH1_NODE_RPC_ADDRESS
 export BEACON_NODE=$BEACON_NODE_RPC_ADDRESS
 export POOL_CONTRACT=0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84
 export ORACLE_FROM_BLOCK=11595281
-docker run --rm -e ETH1_NODE -e BEACON_NODE -e POOL_CONTRACT -e ORACLE_FROM_BLOCK -it lidofinance/oracle:latest
+docker run --rm -e ETH1_NODE -e BEACON_NODE -e POOL_CONTRACT -e ORACLE_FROM_BLOCK -it lidofinance/oracle:0.1.4
 ```
