@@ -112,7 +112,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * Returns the number of erectly the same reports needed to finalize the epoch
+     * Returns the number of exactly the same reports needed to finalize the epoch
      */
     function getQuorum() public view returns (uint256) {
         return QUORUM_POSITION.getStorageUint256();
@@ -150,7 +150,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * Set the receiver contract address to be called when the report is pushed to Lido
+     * Sets the receiver contract address to be called when the report is pushed to Lido
      * @dev Specify 0 to disable this functionality
      */
     function setBeaconReportReceiver(address _addr) external auth(SET_BEACON_REPORT_RECEIVER) {
@@ -161,13 +161,14 @@ contract LidoOracle is ILidoOracle, AragonApp {
     /**
      * Returns the current reporting bitmap, representing oracles who have already pushed their
      * version of report during the expected epoch
+     * @dev Every oracle bit corresponds to the index of the oracle in the current members list
      */
     function getCurrentOraclesReportStatus() external view returns (uint256) {
         return REPORTS_BITMASK_POSITION.getStorageUint256();
     }
 
     /**
-     * Returns the current reporting array size
+     * Returns the current reporting variants array size
      */
     function getCurrentReportVariantsSize() external view returns (uint256) {
         return currentReportVariants.length;
@@ -232,7 +233,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * Sets beacon specification data
+     * Updates beacon specification data
      */
     function setBeaconSpec(
         uint64 _epochsPerFrame,
@@ -260,7 +261,8 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * Returns all needed to oracle daemons data
+     * Returns currently reportable epoch (the first epoch of the current frame) as well as its
+     * start and end times in seconds
      */
     function getCurrentFrame()
         external
@@ -281,7 +283,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * Reports beacon balance and its change
+     * Reports beacon balance and its change during the last frame
      */
     function getLastCompletedReportDelta()
         external
@@ -522,7 +524,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
 
         // now this frame is completed, so the expected epoch should be advanced to the first epoch
         // of the next frame
-        _clearReportingAndAdvanceTo((_epochId / _beaconSpec.epochsPerFrame + 1) * _beaconSpec.epochsPerFrame);
+        _clearReportingAndAdvanceTo(_epochId + _beaconSpec.epochsPerFrame);
 
         // report to the Lido and collect stats
         ILido lido = getLido();

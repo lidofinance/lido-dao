@@ -1,6 +1,6 @@
 # Protocol levers
 
-The protocol provides a number of settings controllable by the DAO. Modifying each of them requires
+The protocol provies a number of settings controllable by the DAO. Modifying each of them requires
 the caller to have a specific permission. After deploying the DAO, all permissions belong to the DAO
 `Voting` app, which can also manage them. This means that, initially, levers can only be changed by
 the DAO voting, and other entities can be allowed to do the same only as a result of the voting.
@@ -17,7 +17,7 @@ The following contracts are upgradeable by the DAO voting:
 
 Upgradeability is implemented by the Aragon kernel and base contracts. To upgrade an app, one needs
 the `dao.APP_MANAGER_ROLE` permission provided by Aragon. All upgradeable contracts use the
-[Unstructured Storage pattern] in order to provide stable storage structure accross upgrades.
+[Unstructured Storage pattern] in order to provide stable storage structure across upgrades.
 
 [Unstructured Storage pattern]: https://blog.openzeppelin.com/upgradeability-using-unstructured-storage
 
@@ -87,7 +87,7 @@ The protocol uses these credentials to register new ETH 2.0 validators.
 
 Controls how many ETH 2.0 deposits can be made in a single transaction.
 
-* A parameter of the `depositBufferedEther(uint256)` funciton
+* A parameter of the `depositBufferedEther(uint256)` function
 * Default value: `16`
 * [Scenario test](/test/scenario/lido_deposit_iteration_limit.js)
 
@@ -168,7 +168,7 @@ take part in fee distribution.
 
 Allow to manage signing keys for the given node operator.
 
-> Signing keys can also be managed by the reward address of a signing provier by calling
+> Signing keys can also be managed by the reward address of a signing provider by calling
 > the equivalent functions with the `OperatorBH` suffix: `addSigningKeysOperatorBH`, `removeSigningKeyOperatorBH`.
 
 
@@ -188,7 +188,6 @@ Address of the Lido contract.
 
 * Accessor: `getLido() returns (address)`
 
-
 ### Members list
 
 The list of oracle committee members.
@@ -197,19 +196,111 @@ The list of oracle committee members.
   * Permission required: `MANAGE_MEMBERS`
 * Accessor: `getOracleMembers() returns (address[])`
 
-
 ### The quorum
 
-The number of oracle committee members required to form a data point.
+The number of exactly the same reports needed to finalize the epoch.
 
 * Mutator: `setQuorum(uint256)`
   * Permission required: `MANAGE_QUORUM`
 * Accessor: `getQuorum() returns (uint256)`
 
-The data point for a given report interval is formed when:
+When the `quorum` number of the same reports is collected for the current epoch,
 
-1. No less than `quorum` oracle committee members have reported their value
-   for the given report interval;
-2. Among these values, there is some value that occurs more frequently than
-   the others, i.e. the set of reported values is unimodal. This value is
-   then used for the resulting data point.
+* the epoch is finalized (no more reports are accepted for it),
+* the final report is pushed to the Lido,
+* statistics collected and the [sanity check][1] is evaluated,
+* [beacon report receiver][2] is called.
+
+### Sanity check
+
+To make oracles less dangerous, we can limit rewards report by 0.1% increase in stake and 15%
+decrease in stake, with both values configurable by the governance in case of extremely unusual
+circumstances.
+
+* Mutators: `setAllowedBeaconBalanceAnnualRelativeIncrease(uint256)` and
+  `setAllowedBeaconBalanceRelativeDecrease(uint256)`
+  * Permission required: `SET_REPORT_BOUNDARIES`
+* Accessors: `getAllowedBeaconBalanceAnnualRelativeIncrease() returns (uint256)` and
+  `getAllowedBeaconBalanceRelativeDecrease() returns (uint256)`
+
+### Beacon report receiver
+
+It is possible to register a contract to be notified of the report push to Lido (when the quorum is
+reached). The contract should provide
+[IBeaconReportReceiver](/contracts/0.4.24/interfaces/IBeaconReportReceiver.sol) interface.
+
+* Mutator: `setBeaconReportReceiver(address)`
+  * Permission required: `SET_BEACON_REPORT_RECEIVER`
+* Accessor: `getBeaconReportReceiver() returns (address)`
+
+Note that setting zero address disables this functionality.
+
+### Current reporting status
+
+For transparency we provide accessors to return status of the oracle daemons reporting for the
+current "[expected epoch][3]".
+
+* Accessors: 
+  * `getCurrentOraclesReportStatus() returns (uint256)` - returns the current reporting bitmap,
+    representing oracles who have already pushed their version of report during the [expected][3]
+    epoch, every oracle bit corresponds to the index of the oracle in the current members list,
+  * `getCurrentReportVariantsSize() returns (uint256)` - returns the current reporting variants
+    array size,
+  * `getCurrentReportVariant(uint256 _index) returns (uint64 beaconBalance, uint32
+    beaconValidators, uint16 count)` - returns the current reporting array element with the given
+    index.
+
+### Expected epoch
+
+The oracle daemons may provide their reports only for the one epoch in every frame: the first
+one. The following accessor can be used to look up the current epoch that this contract expects
+reports.
+
+* Accessor: `getExpectedEpochId() returns (uint256)`.
+
+Note that any later epoch, that has already come *and* is also the first epoch of its frame, is
+also eligible for reporting. If some oracle daemon reports it, the contract discards any results of
+this epoch and advances to the just reported one.
+
+### Version of the contract
+
+Returns the initialized version of this contract starting from 0.
+
+* Accessor: `getVersion() returns (uint256)`.
+
+### Beacon specification
+
+Sets and queries configurable beacon chain specification.
+
+* Mutator: `setBeaconSpec( uint64 _epochsPerFrame, uint64 _slotsPerEpoch, uint64 _secondsPerSlot,
+        uint64 _genesisTime )`,
+  * Permission required: `SET_BEACON_SPEC`,
+* Accessor: `getBeaconSpec() returns (uint64 epochsPerFrame, uint64 slotsPerEpoch,
+        uint64 secondsPerSlot, uint64 genesisTime)`.
+
+### Current epoch
+
+Returns the epoch calculated from current timestamp.
+
+* Accessor: `getCurrentEpochId() returns (uint256)`.
+
+
+### Supplemental epoch information
+
+Returns currently reportable epoch (the first epoch of the current frame) as well as its start and
+end times in seconds.
+
+* Accessor: `getCurrentFrame() returns (uint256 frameEpochId, uint256 frameStartTime, uint256
+  frameEndTime)`.
+
+
+###  Supplemental rewards information
+
+Reports beacon balance and its change during the last frame.
+
+* Accessor: `getLastCompletedReportDelta() returns (uint256 postTotalPooledEther, uint256
+        preTotalPooledEther, uint256 timeElapsed)`.
+
+[1]: #sanity-check
+[2]: #beacon-report-receiver
+[3]: #expected-epoch

@@ -47,16 +47,12 @@ interface ILidoOracle {
     event ContractVersionSet(uint256 version);
 
     /**
-<<<<<<< Updated upstream
      * Returns the Lido contract address
      */
     function getLido() public view returns (ILido);
 
     /**
-     * Returns the number of exectly the same reports needed to finalize the epoch
-=======
-     * Returns the number of erectly the same reports needed to finalize the epoch
->>>>>>> Stashed changes
+     * Returns the number of exactly the same reports needed to finalize the epoch
      */
     function getQuorum() public view returns (uint256);
 
@@ -135,7 +131,7 @@ interface ILidoOracle {
         );
 
     /**
-     * Sets beacon specification data
+     * Updates beacon specification data
      */
     function setBeaconSpec(
         uint64 _epochsPerFrame,
@@ -163,7 +159,7 @@ interface ILidoOracle {
         );
 
     /**
-     * Reports beacon balance and its change
+     * Reports beacon balance and its change during the last frame
      */
     function getLastCompletedReportDelta()
         external

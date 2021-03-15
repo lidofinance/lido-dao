@@ -11,14 +11,13 @@ This document is intended for those who wish to participate in the Lido protocol
 5. Launch the oracle daemon as a docker container:
 
     ```sh
-    docker run -d --name lido-oracle \
-      --env "ETH1_NODE=http://$ETH1_NODE_RPC_ADDRESS" \
-      --env "ETH2_NODE=http://$ETH2_NODE_RPC_ADDRESS" \
-      --env "LIDO_CONTRACT=0xA5d26F68130c989ef3e063c9bdE33BC50a86629D" \
-      --env "MANAGER_PRIV_KEY=$ORACLE_PRIVATE_KEY_0X_PREFIXED" \
-      lidofinance/oracle:latest \
-        --daemon \
-        --submit-tx
+    export ETH1_NODE=http://localhost:8545
+    export BEACON_NODE=http://lighthouse:5052
+    export POOL_CONTRACT=0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84
+    export DAEMON=1
+    export MEMBER_PRIV_KEY=$ORACLE_PRIVATE_KEY_0X_PREFIXED
+    export ORACLE_FROM_BLOCK=11595281
+    docker run -d --name lido-oracle -e ETH1_NODE -e BEACON_NODE -e POOL_CONTRACT -e DAEMON -e MEMBER_PRIV_KEY -e ORACLE_FROM_BLOCK -it lidofinance/oracle:0.1.4
     ```
 
 Here, `ORACLE_PRIVATE_KEY_0X_PREFIXED` environment variable should be populated with the private key of the address from step 1.
@@ -64,8 +63,8 @@ Keep in mind that some of these transactions may revert. This happens when a tra
 The oracle daemon requires the following environment variables:
 
 * `ETH1_NODE` the ETH1 JSON-RPC endpoint.
-* `ETH2_NODE` the Lighthouse RPC endpoint.
-* `LIDO_CONTRACT` the address of the Lido contract (`0xA5d26F68130c989ef3e063c9bdE33BC50a86629D` in Görli/Pyrmont).
+* `BEACON_NODE` the Lighthouse RPC endpoint.
+* `POOL_CONTRACT` the address of the Lido contract (`0xA5d26F68130c989ef3e063c9bdE33BC50a86629D` in Görli/Pyrmont).
 * `MANAGER_PRIV_KEY` 0x-prefixed private key of the address used by the oracle (should be in the DAO-approved list).
 
 #### Running the daemon
@@ -73,25 +72,23 @@ The oracle daemon requires the following environment variables:
 You can use the public Docker image to launch the daemon:
 
 ```sh
-docker run -d --name lido-oracle \
-  --env "ETH1_NODE=http://$ETH1_NODE_RPC_ADDRESS" \
-  --env "ETH2_NODE=http://$ETH2_NODE_RPC_ADDRESS" \
-  --env "LIDO_CONTRACT=0xA5d26F68130c989ef3e063c9bdE33BC50a86629D" \
-  --env "MANAGER_PRIV_KEY=$ORACLE_PRIVATE_KEY_0X_PREFIXED" \
-  lidofinance/oracle:latest \
-    --daemon \
-    --submit-tx
+export ETH1_NODE=$ETH1_NODE_RPC_ADDRESS
+export BEACON_NODE=$BEACON_NODE_RPC_ADDRESS
+export POOL_CONTRACT=0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84
+export DAEMON=1
+export MEMBER_PRIV_KEY=$ORACLE_PRIVATE_KEY_0X_PREFIXED
+export ORACLE_FROM_BLOCK=11595281
+docker run -d --name lido-oracle -e ETH1_NODE -e BEACON_NODE -e POOL_CONTRACT -e DAEMON -e MEMBER_PRIV_KEY -e ORACLE_FROM_BLOCK -it lidofinance/oracle:0.1.4
 ```
 
 This will start the oracle in daemon mode. You can also run it in a one-off mode, for example if you’d prefer to trigger oracle execution as a `cron` job. In this case, skip passing the `--daemon` flag to the oracle and the `-d` flag to `docker run`.
 
-To skip sending the transaction and just see what oracle is going to report, don’t pass the `--submit-tx` flag:
+To skip sending the transaction and just see what oracle is going to report, don’t pass the `DAEMON` flag:
 
 ```sh
-docker run --rm \
-  --env "ETH1_NODE=http://$ETH1_NODE_RPC_ADDRESS" \
-  --env "ETH2_NODE=http://$ETH2_NODE_RPC_ADDRESS" \
-  --env "LIDO_CONTRACT=0xA5d26F68130c989ef3e063c9bdE33BC50a86629D" \
-  --env "MANAGER_PRIV_KEY=$ORACLE_PRIVATE_KEY_0X_PREFIXED" \
-  lidofinance/oracle:latest
+export ETH1_NODE=$ETH1_NODE_RPC_ADDRESS
+export BEACON_NODE=$BEACON_NODE_RPC_ADDRESS
+export POOL_CONTRACT=0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84
+export ORACLE_FROM_BLOCK=11595281
+docker run --rm -e ETH1_NODE -e BEACON_NODE -e POOL_CONTRACT -e ORACLE_FROM_BLOCK -it lidofinance/oracle:0.1.4
 ```
