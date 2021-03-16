@@ -101,14 +101,14 @@ async function upgradeAppImpl({ web3, artifacts, appName = APP }) {
       calldata: await kernel.contract.methods.setApp(APP_BASES_NAMESPACE, appId, appBaseAddress).encodeABI()
     },
     {
-      // acl.createPermission(voting, oracle, SET_REPORT_BOUNDARIES, coting)
+      // acl.createPermission(voting, oracle, SET_REPORT_BOUNDARIES, voting)
       to: aclAddress,
-      calldata: await acl.contract.methods.createPermission(votingAddress, appBaseAddress, SET_REPORT_BOUNDARIES, votingAddress).encodeABI()
+      calldata: await acl.contract.methods.createPermission(votingAddress, oracleAddress, SET_REPORT_BOUNDARIES, votingAddress).encodeABI()
     },
     {
-      // acl.createPermission(voting, oracle, SET_BEACON_REPORT_RECEIVER, coting)
+      // acl.createPermission(voting, oracle, SET_BEACON_REPORT_RECEIVER, voting)
       to: aclAddress,
-      calldata: await acl.contract.methods.createPermission(votingAddress, appBaseAddress, SET_BEACON_REPORT_RECEIVER, votingAddress).encodeABI()
+      calldata: await acl.contract.methods.createPermission(votingAddress, oracleAddress, SET_BEACON_REPORT_RECEIVER, votingAddress).encodeABI()
     },
     // {
     //   *** This test call works ***
