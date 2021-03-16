@@ -46,7 +46,7 @@ async function upgradeAppImpl({ web3, artifacts, appName = APP }) {
   const tokenManagerAddress = state[`app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`].proxyAddress
   const appBaseAddress = state[`app:${appName}`].baseAddress
   const oracleAddress = state[`app:${APP}`].proxyAddress
-  
+
   const oracle = await artifacts.require('LidoOracle').at(oracleAddress)
   const kernel = await artifacts.require('Kernel').at(state.daoAddress)
   const repo = await artifacts.require('Repo').at(repoAddress)
@@ -91,10 +91,16 @@ async function upgradeAppImpl({ web3, artifacts, appName = APP }) {
       to: state.daoAddress,
       calldata: await kernel.contract.methods.setApp(APP_BASES_NAMESPACE, appId, appBaseAddress).encodeABI()
     },
+    // *** This test call works ***
+    // {
+    //   to: oracleAddress,
+    //   calldata: await oracle.contract.methods.removeOracleMember("0x007DE4a5F7bc37E2F26c0cb2E8A95006EE9B89b5").encodeABI()
+    // },
+    // *** This call fails: VM Exception while processing transaction: revert EVMCALLS_CALL_REVERTED' ***
     // {
     //   to: oracleAddress,
     //   calldata: await oracle.contract.methods.initialize_v2(100000, 50000).encodeABI()
-    // }
+    // },
   ])
   // encode forwarding call from Voting app to app Repo (new Vote will be created under the hood)
   const callData2 = encodeCallScript([
