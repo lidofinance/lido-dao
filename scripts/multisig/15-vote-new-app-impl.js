@@ -91,7 +91,7 @@ async function upgradeAppImpl({ web3, artifacts, appName = APP }) {
   // encode call to Repo app for newVersion
   const callData1 = encodeCallScript([
     {
-      // function newVersion(uint16[] _newSemanticVersion, address _contractAddress, bytes _contentURI)
+      // repo.newVersion(versionTo, address oracle_impl, contentURI)
       to: repoAddress,
       calldata: await repo.contract.methods.newVersion(versionTo, appBaseAddress, contentURI).encodeABI()
     },
