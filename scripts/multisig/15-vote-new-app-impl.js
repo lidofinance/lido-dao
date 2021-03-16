@@ -53,7 +53,13 @@ async function upgradeAppImpl({ web3, artifacts, appName = APP }) {
   const voting = await artifacts.require('Voting').at(votingAddress)
   const tokenManager = await artifacts.require('TokenManager').at(tokenManagerAddress)
 
+  const aclAddress = await kernel.acl()
   const APP_BASES_NAMESPACE = await kernel.APP_BASES_NAMESPACE()
+
+  const SET_REPORT_BOUNDARIES = "0x44adaee26c92733e57241cb0b26ffaa2d182ed7120ba3ecd7e0dce3635c01dc1";
+  const SET_BEACON_REPORT_RECEIVER = "0xe22a455f1bfbaf705ac3e891a64e156da92cb0b42cfc389158e6e82bd57f37be";
+
+  const acl = await artifacts.require('ACL').at(aclAddress)
 
   const { semanticVersion, contractAddress, contentURI } = await repo.getLatest()
   const versionFrom = semanticVersion.map((n) => n.toNumber())
@@ -75,6 +81,8 @@ async function upgradeAppImpl({ web3, artifacts, appName = APP }) {
   log(`Contract implementation:`, yl(contractAddress), `->`, yl(appBaseAddress))
   log(`Bump version:`, yl(versionFrom), `->`, yl(versionTo))
   log(`Oracle proxy address:`, yl(oracleAddress))
+  log(`Voting address:`, yl(votingAddress))
+  log(`ACL address:`, yl(aclAddress))
   log.splitter()
   if (contractAddress === appBaseAddress) {
     throw new Error('No new implementation found')
@@ -83,21 +91,32 @@ async function upgradeAppImpl({ web3, artifacts, appName = APP }) {
   // encode call to Repo app for newVersion
   const callData1 = encodeCallScript([
     {
-      to: repoAddress,
       // function newVersion(uint16[] _newSemanticVersion, address _contractAddress, bytes _contentURI)
+      to: repoAddress,
       calldata: await repo.contract.methods.newVersion(versionTo, appBaseAddress, contentURI).encodeABI()
     },
     {
+      // kernel.setApp(APP_BASES_NAMESPACE, appId, oracle)
       to: state.daoAddress,
       calldata: await kernel.contract.methods.setApp(APP_BASES_NAMESPACE, appId, appBaseAddress).encodeABI()
     },
-    // *** This test call works ***
+    {
+      // acl.createPermission(voting, oracle, SET_REPORT_BOUNDARIES, coting)
+      to: aclAddress,
+      calldata: await acl.contract.methods.createPermission(votingAddress, appBaseAddress, SET_REPORT_BOUNDARIES, votingAddress).encodeABI()
+    },
+    {
+      // acl.createPermission(voting, oracle, SET_BEACON_REPORT_RECEIVER, coting)
+      to: aclAddress,
+      calldata: await acl.contract.methods.createPermission(votingAddress, appBaseAddress, SET_BEACON_REPORT_RECEIVER, votingAddress).encodeABI()
+    },
     // {
+    //   *** This test call works ***
     //   to: oracleAddress,
     //   calldata: await oracle.contract.methods.removeOracleMember("0x007DE4a5F7bc37E2F26c0cb2E8A95006EE9B89b5").encodeABI()
     // },
-    // *** This call fails: VM Exception while processing transaction: revert EVMCALLS_CALL_REVERTED' ***
     // {
+    //   *** This call fails: VM Exception while processing transaction: revert EVMCALLS_CALL_REVERTED' ***
     //   to: oracleAddress,
     //   calldata: await oracle.contract.methods.initialize_v2(100000, 50000).encodeABI()
     // },
