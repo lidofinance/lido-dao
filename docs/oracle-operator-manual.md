@@ -16,10 +16,12 @@ This document is intended for those who wish to participate in the Lido protocol
       --env "ETH2_NODE=http://$ETH2_NODE_RPC_ADDRESS" \
       --env "LIDO_CONTRACT=0xA5d26F68130c989ef3e063c9bdE33BC50a86629D" \
       --env "MANAGER_PRIV_KEY=$ORACLE_PRIVATE_KEY_0X_PREFIXED" \
-      lidofinance/oracle:latest \
+      lidofinance/oracle:0.1.4 \
         --daemon \
         --submit-tx
     ```
+    
+Make sure to specify an [appropriate version](https://github.com/lidofinance/lido-oracle/releases) of the image.
 
 Here, `ORACLE_PRIVATE_KEY_0X_PREFIXED` environment variable should be populated with the private key of the address from step 1.
 
@@ -78,10 +80,12 @@ docker run -d --name lido-oracle \
   --env "ETH2_NODE=http://$ETH2_NODE_RPC_ADDRESS" \
   --env "LIDO_CONTRACT=0xA5d26F68130c989ef3e063c9bdE33BC50a86629D" \
   --env "MANAGER_PRIV_KEY=$ORACLE_PRIVATE_KEY_0X_PREFIXED" \
-  lidofinance/oracle:latest \
+  lidofinance/oracle:0.1.4 \
     --daemon \
     --submit-tx
 ```
+
+Make sure to specify an [appropriate version](https://github.com/lidofinance/lido-oracle/releases) of the image.
 
 This will start the oracle in daemon mode. You can also run it in a one-off mode, for example if you’d prefer to trigger oracle execution as a `cron` job. In this case, skip passing the `--daemon` flag to the oracle and the `-d` flag to `docker run`.
 
@@ -93,5 +97,5 @@ docker run --rm \
   --env "ETH2_NODE=http://$ETH2_NODE_RPC_ADDRESS" \
   --env "LIDO_CONTRACT=0xA5d26F68130c989ef3e063c9bdE33BC50a86629D" \
   --env "MANAGER_PRIV_KEY=$ORACLE_PRIVATE_KEY_0X_PREFIXED" \
-  lidofinance/oracle:latest
+  lidofinance/oracle:0.1.4
 ```
