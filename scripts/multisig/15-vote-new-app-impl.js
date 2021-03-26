@@ -56,8 +56,8 @@ async function upgradeAppImpl({ web3, artifacts, appName = APP }) {
   const aclAddress = await kernel.acl()
   const APP_BASES_NAMESPACE = await kernel.APP_BASES_NAMESPACE()
 
-  const SET_REPORT_BOUNDARIES = "0x44adaee26c92733e57241cb0b26ffaa2d182ed7120ba3ecd7e0dce3635c01dc1";
-  const SET_BEACON_REPORT_RECEIVER = "0xe22a455f1bfbaf705ac3e891a64e156da92cb0b42cfc389158e6e82bd57f37be";
+  const SET_REPORT_BOUNDARIES = '0x44adaee26c92733e57241cb0b26ffaa2d182ed7120ba3ecd7e0dce3635c01dc1'
+  const SET_BEACON_REPORT_RECEIVER = '0xe22a455f1bfbaf705ac3e891a64e156da92cb0b42cfc389158e6e82bd57f37be'
 
   const acl = await artifacts.require('ACL').at(aclAddress)
 
@@ -108,18 +108,15 @@ async function upgradeAppImpl({ web3, artifacts, appName = APP }) {
     {
       // acl.createPermission(voting, oracle, SET_BEACON_REPORT_RECEIVER, voting)
       to: aclAddress,
-      calldata: await acl.contract.methods.createPermission(votingAddress, oracleAddress, SET_BEACON_REPORT_RECEIVER, votingAddress).encodeABI()
+      calldata: await acl.contract.methods
+        .createPermission(votingAddress, oracleAddress, SET_BEACON_REPORT_RECEIVER, votingAddress)
+        .encodeABI()
     },
-    // {
-    //   *** This test call works ***
-    //   to: oracleAddress,
-    //   calldata: await oracle.contract.methods.removeOracleMember("0x007DE4a5F7bc37E2F26c0cb2E8A95006EE9B89b5").encodeABI()
-    // },
-    // {
-    //   *** This call fails: VM Exception while processing transaction: revert EVMCALLS_CALL_REVERTED' ***
-    //   to: oracleAddress,
-    //   calldata: await oracle.contract.methods.initialize_v2(100000, 50000).encodeABI()
-    // },
+    {
+      // oracle.initialize_v2(...)
+      to: oracleAddress,
+      calldata: await oracle.contract.methods.initialize_v2(100000, 50000).encodeABI()
+    }
   ])
   // encode forwarding call from Voting app to app Repo (new Vote will be created under the hood)
   const callData2 = encodeCallScript([
