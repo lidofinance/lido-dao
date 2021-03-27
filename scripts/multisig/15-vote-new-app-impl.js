@@ -65,10 +65,10 @@ async function upgradeAppImpl({ web3, artifacts, appName = APP }) {
   const versionFrom = semanticVersion.map((n) => n.toNumber())
   switch (BUMP) {
     case 'patch':
-      semanticVersion[2] = semanticVersion[0].addn(1)
+      semanticVersion[2] = semanticVersion[2].addn(1)
       break
     case 'minor':
-      semanticVersion[1] = semanticVersion[0].addn(1)
+      semanticVersion[1] = semanticVersion[1].addn(1)
       break
     case 'major':
     default:
