@@ -45,19 +45,30 @@ async function upgradeAppImpl({ web3, artifacts, appName = APP }) {
   const votingAddress = state[`app:${APP_NAMES.ARAGON_VOTING}`].proxyAddress
   const tokenManagerAddress = state[`app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`].proxyAddress
   const appBaseAddress = state[`app:${appName}`].baseAddress
+  const oracleAddress = state[`app:${APP}`].proxyAddress
 
+  const oracle = await artifacts.require('LidoOracle').at(oracleAddress)
+  const kernel = await artifacts.require('Kernel').at(state.daoAddress)
   const repo = await artifacts.require('Repo').at(repoAddress)
   const voting = await artifacts.require('Voting').at(votingAddress)
   const tokenManager = await artifacts.require('TokenManager').at(tokenManagerAddress)
+
+  const aclAddress = await kernel.acl()
+  const APP_BASES_NAMESPACE = await kernel.APP_BASES_NAMESPACE()
+
+  const SET_REPORT_BOUNDARIES = '0x44adaee26c92733e57241cb0b26ffaa2d182ed7120ba3ecd7e0dce3635c01dc1'
+  const SET_BEACON_REPORT_RECEIVER = '0xe22a455f1bfbaf705ac3e891a64e156da92cb0b42cfc389158e6e82bd57f37be'
+
+  const acl = await artifacts.require('ACL').at(aclAddress)
 
   const { semanticVersion, contractAddress, contentURI } = await repo.getLatest()
   const versionFrom = semanticVersion.map((n) => n.toNumber())
   switch (BUMP) {
     case 'patch':
-      semanticVersion[2] = semanticVersion[0].addn(1)
+      semanticVersion[2] = semanticVersion[2].addn(1)
       break
     case 'minor':
-      semanticVersion[1] = semanticVersion[0].addn(1)
+      semanticVersion[1] = semanticVersion[1].addn(1)
       break
     case 'major':
     default:
@@ -69,6 +80,9 @@ async function upgradeAppImpl({ web3, artifacts, appName = APP }) {
   log(`appId:`, appId)
   log(`Contract implementation:`, yl(contractAddress), `->`, yl(appBaseAddress))
   log(`Bump version:`, yl(versionFrom), `->`, yl(versionTo))
+  log(`Oracle proxy address:`, yl(oracleAddress))
+  log(`Voting address:`, yl(votingAddress))
+  log(`ACL address:`, yl(aclAddress))
   log.splitter()
   if (contractAddress === appBaseAddress) {
     throw new Error('No new implementation found')
@@ -77,9 +91,31 @@ async function upgradeAppImpl({ web3, artifacts, appName = APP }) {
   // encode call to Repo app for newVersion
   const callData1 = encodeCallScript([
     {
+      // repo.newVersion(versionTo, address oracle_impl, contentURI)
       to: repoAddress,
-      // function newVersion(uint16[] _newSemanticVersion, address _contractAddress, bytes _contentURI)
       calldata: await repo.contract.methods.newVersion(versionTo, appBaseAddress, contentURI).encodeABI()
+    },
+    {
+      // kernel.setApp(APP_BASES_NAMESPACE, appId, oracle)
+      to: state.daoAddress,
+      calldata: await kernel.contract.methods.setApp(APP_BASES_NAMESPACE, appId, appBaseAddress).encodeABI()
+    },
+    {
+      // acl.createPermission(voting, oracle, SET_REPORT_BOUNDARIES, voting)
+      to: aclAddress,
+      calldata: await acl.contract.methods.createPermission(votingAddress, oracleAddress, SET_REPORT_BOUNDARIES, votingAddress).encodeABI()
+    },
+    {
+      // acl.createPermission(voting, oracle, SET_BEACON_REPORT_RECEIVER, voting)
+      to: aclAddress,
+      calldata: await acl.contract.methods
+        .createPermission(votingAddress, oracleAddress, SET_BEACON_REPORT_RECEIVER, votingAddress)
+        .encodeABI()
+    },
+    {
+      // oracle.initialize_v2(...)
+      to: oracleAddress,
+      calldata: await oracle.contract.methods.initialize_v2(100000, 50000).encodeABI()
     }
   ])
   // encode forwarding call from Voting app to app Repo (new Vote will be created under the hood)
