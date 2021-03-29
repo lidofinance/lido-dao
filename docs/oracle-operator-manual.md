@@ -55,7 +55,7 @@ Keep in mind that some of these transactions may revert. This happens when a tra
 The oracle daemon requires the following environment variables:
 
 * `ETH1_NODE` for `0.1.4` or `WEB3_PROVIDER_URI` for `0.1.5-prerelease` the ETH1 JSON-RPC endpoint.
-* `ETH2_NODE` the Lighthouse RPC endpoint.
+* `BEACON_NODE` the Lighthouse RPC endpoint.
 * `LIDO_CONTRACT` the address of the Lido contract (`0x442af784A788A5bd6F42A01Ebe9F287a871243fb` in Mainnet and `0x97668Baa98A249c6f6b4D0Fc6cDa1740635B8f7C` in Görli Testnet).
 * `MEMBER_PRIV_KEY` 0x-prefixed private key of the address used by the oracle (should be in the DAO-approved list).
 * `DAEMON` run Oracle in a daemon mode
@@ -69,7 +69,7 @@ You can use the public Docker image to launch the daemon.
 ```sh
 docker run -d --name lido-oracle \
   --env "ETH1_NODE=http://$ETH1_NODE_RPC_ADDRESS" \
-  --env "ETH2_NODE=http://$ETH2_NODE_RPC_ADDRESS" \
+  --env "BEACON_NODE=http://$ETH2_NODE_RPC_ADDRESS" \
   --env "LIDO_CONTRACT=0x442af784A788A5bd6F42A01Ebe9F287a871243fb" \
   --env "MEMBER_PRIV_KEY=$ORACLE_PRIVATE_KEY_0X_PREFIXED" \
   --env "DAEMON=1"
@@ -81,7 +81,7 @@ docker run -d --name lido-oracle \
 ```sh
 docker run -d --name lido-oracle \
   --env "WEB3_PROVIDER_URI=http://$ETH1_NODE_RPC_ADDRESS" \
-  --env "ETH2_NODE=http://$ETH2_NODE_RPC_ADDRESS" \
+  --env "BEACON_NODE=http://$ETH2_NODE_RPC_ADDRESS" \
   --env "LIDO_CONTRACT=0x97668Baa98A249c6f6b4D0Fc6cDa1740635B8f7C" \
   --env "MEMBER_PRIV_KEY=$ORACLE_PRIVATE_KEY_0X_PREFIXED" \
   --env "DAEMON=1"
