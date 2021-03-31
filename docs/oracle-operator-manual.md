@@ -4,26 +4,14 @@ This document is intended for those who wish to participate in the Lido protocol
 
 ## TL;DR
 
-1. Generate an Ethereum address and propose it as an oracle address via the "Add Member" button [in the app UI].
+1. Generate an Ethereum address and propose it as an oracle address via the "Add Member" button in the app UI: [Mainnet] / [Görli].
 2. Facilitate the DAO members to approve your oracle address.
-3. Launch and sync an Ethereum 1.0 node pointed to Görli with JSON-RPC endpoint enabled.
-4. Launch and sync a Lighthouse node pointed to Pyrmont with RPC endpoint enabled (Prysm is not yet supported).
-5. Launch the oracle daemon as a docker container:
+3. Launch and sync an Ethereum 1.0 node with JSON-RPC endpoint enabled.
+4. Launch and sync a Lighthouse node with RPC endpoint enabled (Prysm is not yet supported).
+5. Launch the oracle daemon as a docker container.
 
-    ```sh
-    docker run -d --name lido-oracle \
-      --env "ETH1_NODE=http://$ETH1_NODE_RPC_ADDRESS" \
-      --env "ETH2_NODE=http://$ETH2_NODE_RPC_ADDRESS" \
-      --env "LIDO_CONTRACT=0xA5d26F68130c989ef3e063c9bdE33BC50a86629D" \
-      --env "MANAGER_PRIV_KEY=$ORACLE_PRIVATE_KEY_0X_PREFIXED" \
-      lidofinance/oracle:latest \
-        --daemon \
-        --submit-tx
-    ```
-
-Here, `ORACLE_PRIVATE_KEY_0X_PREFIXED` environment variable should be populated with the private key of the address from step 1.
-
-[in the app UI]: https://goerli.lido.fi/#/lido-dao-testnet/0x8aa931352fedc2a5a5b3e20ed3a546414e40d86c
+[Mainnet]: https://mainnet.lido.fi/#/lido-dao/0x442af784a788a5bd6f42a01ebe9f287a871243fb/
+[Görli]: https://testnet.lido.fi/#/lido-testnet-prater/0xbc0b67b4553f4cf52a913de9a6ed0057e2e758db/
 
 ## Intro
 
@@ -37,13 +25,16 @@ Upon every update submitted by the `LidoOracle` contract, the system recalculate
 
 In order to launch oracle daemon on your machine, you need to have several things:
 
-1. A synced Ethereum 1.0 client pointed to the Görli testnet and with JSON-RPC endpoint enabled.
-2. A synced Lighthouse client pointed to Pyrmont testnet and with RPC endpoint enabled (Prysm client not yet supported).
-3) An address that’s added to the approved oracles list here: https://goerli.lido.fi/#/lido-dao-testnet/0x8aa931352fedc2a5a5b3e20ed3a546414e40d86c. You have to initiate the DAO voting on adding your address there by pressing the "Add Member" button.
+1. A synced Ethereum 1.0 client with JSON-RPC endpoint enabled.
+2. A synced Lighthouse client with RPC endpoint enabled (Prysm client not yet supported).
+3) An address that’s added to the approved oracles list here: [Mainnet] / [Görli]. You have to initiate the DAO voting on adding your address there by pressing the "Add Member" button.
+
+[Mainnet]: https://mainnet.lido.fi/#/lido-dao/0x442af784a788a5bd6f42a01ebe9f287a871243fb/
+[Görli]: https://testnet.lido.fi/#/lido-testnet-prater/0xbc0b67b4553f4cf52a913de9a6ed0057e2e758db/
 
 ## The oracle daemon
 
-The oracle daemon is a simple Python app that watches the Beacon chain and pushes the data to the [`LidoOracle` Smart Contract](https://goerli.etherscan.io/address/0x8aA931352fEdC2A5a5b3E20ed3A546414E40D86C).
+The oracle daemon is a simple Python app that watches the Beacon chain and pushes the data to the LidoOracle Smart Contract: [Mainnet](https://etherscan.io/address/0x442af784A788A5bd6F42A01Ebe9F287a871243fb) / [Görli](https://goerli.etherscan.io/address/0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F).
 
 The oracle source code is available at https://github.com/lidofinance/lido-oracle. The docker image is available in the public Docker Hub registry: https://hub.docker.com/r/lidofinance/oracle.
 
@@ -63,35 +54,38 @@ Keep in mind that some of these transactions may revert. This happens when a tra
 
 The oracle daemon requires the following environment variables:
 
-* `ETH1_NODE` the ETH1 JSON-RPC endpoint.
-* `ETH2_NODE` the Lighthouse RPC endpoint.
-* `LIDO_CONTRACT` the address of the Lido contract (`0xA5d26F68130c989ef3e063c9bdE33BC50a86629D` in Görli/Pyrmont).
-* `MANAGER_PRIV_KEY` 0x-prefixed private key of the address used by the oracle (should be in the DAO-approved list).
+* `ETH1_NODE` for `0.1.4` or `WEB3_PROVIDER_URI` for `0.1.5-prerelease` the ETH1 JSON-RPC endpoint.
+* `BEACON_NODE` the Lighthouse RPC endpoint.
+* `POOL_CONTRACT` the address of the Lido contract (`0x442af784A788A5bd6F42A01Ebe9F287a871243fb` in Mainnet and `0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F` in Görli Testnet).
+* `MEMBER_PRIV_KEY` 0x-prefixed private key of the address used by the oracle (should be in the DAO-approved list).
+* `DAEMON` run Oracle in a daemon mode
 
 #### Running the daemon
 
-You can use the public Docker image to launch the daemon:
+You can use the public Docker image to launch the daemon.
+
+0.1.4 for Mainnet:
 
 ```sh
 docker run -d --name lido-oracle \
   --env "ETH1_NODE=http://$ETH1_NODE_RPC_ADDRESS" \
-  --env "ETH2_NODE=http://$ETH2_NODE_RPC_ADDRESS" \
-  --env "LIDO_CONTRACT=0xA5d26F68130c989ef3e063c9bdE33BC50a86629D" \
-  --env "MANAGER_PRIV_KEY=$ORACLE_PRIVATE_KEY_0X_PREFIXED" \
-  lidofinance/oracle:latest \
-    --daemon \
-    --submit-tx
+  --env "BEACON_NODE=http://$ETH2_NODE_RPC_ADDRESS" \
+  --env "POOL_CONTRACT=0x442af784A788A5bd6F42A01Ebe9F287a871243fb" \
+  --env "MEMBER_PRIV_KEY=$ORACLE_PRIVATE_KEY_0X_PREFIXED" \
+  --env "DAEMON=1"
+  lidofinance/oracle:0.1.4
 ```
 
-This will start the oracle in daemon mode. You can also run it in a one-off mode, for example if you’d prefer to trigger oracle execution as a `cron` job. In this case, skip passing the `--daemon` flag to the oracle and the `-d` flag to `docker run`.
-
-To skip sending the transaction and just see what oracle is going to report, don’t pass the `--submit-tx` flag:
+0.1.5-prerelease for Görli Testnet
 
 ```sh
-docker run --rm \
-  --env "ETH1_NODE=http://$ETH1_NODE_RPC_ADDRESS" \
-  --env "ETH2_NODE=http://$ETH2_NODE_RPC_ADDRESS" \
-  --env "LIDO_CONTRACT=0xA5d26F68130c989ef3e063c9bdE33BC50a86629D" \
-  --env "MANAGER_PRIV_KEY=$ORACLE_PRIVATE_KEY_0X_PREFIXED" \
-  lidofinance/oracle:latest
+docker run -d --name lido-oracle \
+  --env "WEB3_PROVIDER_URI=http://$ETH1_NODE_RPC_ADDRESS" \
+  --env "BEACON_NODE=http://$ETH2_NODE_RPC_ADDRESS" \
+  --env "POOL_CONTRACT=0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F" \
+  --env "MEMBER_PRIV_KEY=$ORACLE_PRIVATE_KEY_0X_PREFIXED" \
+  --env "DAEMON=1"
+  lidofinance/oracle:0.1.5-prerelease
 ```
+
+This will start the oracle in daemon mode. You can also run it in a one-off mode, for example if you’d prefer to trigger oracle execution as a `cron` job. In this case, set the `DAEMON` environment variable to 0.
