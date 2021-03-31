@@ -40,11 +40,11 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /// ACL
-    bytes32 constant public MANAGE_MEMBERS = keccak256("MANAGE_MEMBERS");
-    bytes32 constant public MANAGE_QUORUM = keccak256("MANAGE_QUORUM");
-    bytes32 constant public SET_BEACON_SPEC = keccak256("SET_BEACON_SPEC");
-    bytes32 constant public SET_REPORT_BOUNDARIES = keccak256("SET_REPORT_BOUNDARIES");
-    bytes32 constant public SET_BEACON_REPORT_RECEIVER = keccak256("SET_BEACON_REPORT_RECEIVER");
+    bytes32 constant public MANAGE_MEMBERS = 0xbf6336045918ae0015f4cdb3441a2fdbfaa4bcde6558c8692aac7f56c69fb067; // keccak256("MANAGE_MEMBERS")
+    bytes32 constant public MANAGE_QUORUM = 0xa5ffa9f45fa52c446078e834e1914561bd9c2ab1e833572d62af775da092ccbc; // keccak256("MANAGE_QUORUM")
+    bytes32 constant public SET_BEACON_SPEC = 0x16a273d48baf8111397316e6d961e6836913acb23b181e6c5fb35ec0bd2648fc; // keccak256("SET_BEACON_SPEC")
+    bytes32 constant public SET_REPORT_BOUNDARIES = 0x44adaee26c92733e57241cb0b26ffaa2d182ed7120ba3ecd7e0dce3635c01dc1; // keccak256("SET_REPORT_BOUNDARIES")
+    bytes32 constant public SET_BEACON_REPORT_RECEIVER = 0xe22a455f1bfbaf705ac3e891a64e156da92cb0b42cfc389158e6e82bd57f37be; // keccak256("SET_BEACON_REPORT_RECEIVER")
 
     /// Maximum number of oracle committee members
     uint256 public constant MAX_MEMBERS = 256;
@@ -57,37 +57,37 @@ contract LidoOracle is ILidoOracle, AragonApp {
     uint256 internal constant MEMBER_NOT_FOUND = uint256(-1);
 
     /// Number of exactly the same reports needed to finalize the epoch
-    bytes32 internal constant QUORUM_POSITION = keccak256("lido.LidoOracle.quorum");
+    bytes32 internal constant QUORUM_POSITION = 0xd43b42c1ba05a1ab3c178623a49b2cdb55f000ec70b9ccdba5740b3339a7589e; // keccak256("lido.LidoOracle.quorum")
 
     /// Address of the Lido contract
-    bytes32 internal constant LIDO_POSITION = keccak256("lido.LidoOracle.lido");
+    bytes32 internal constant LIDO_POSITION = 0xf6978a4f7e200f6d3a24d82d44c48bddabce399a3b8ec42a480ea8a2d5fe6ec5; // keccak256("lido.LidoOracle.lido")
 
     /// Storage for the actual beacon chain specification
-    bytes32 internal constant BEACON_SPEC_POSITION = keccak256("lido.LidoOracle.beaconSpec");
+    bytes32 internal constant BEACON_SPEC_POSITION = 0x805e82d53a51be3dfde7cfed901f1f96f5dad18e874708b082adb8841e8ca909; // keccak256("lido.LidoOracle.beaconSpec")
 
     /// Version of the initialized contract data, v1 is 0
-    bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.LidoOracle.contractVersion");
+    bytes32 internal constant CONTRACT_VERSION_POSITION = 0x75be19a3f314d89bd1f84d30a6c84e2f1cd7afc7b6ca21876564c265113bb7e4; // keccak256("lido.LidoOracle.contractVersion")
 
     /// Epoch that we currently collect reports
-    bytes32 internal constant EXPECTED_EPOCH_ID_POSITION = keccak256("lido.LidoOracle.expectedEpochId");
+    bytes32 internal constant EXPECTED_EPOCH_ID_POSITION = 0x65f1a0ee358a8a4000a59c2815dc768eb87d24146ca1ac5555cb6eb871aee915; // keccak256("lido.LidoOracle.expectedEpochId")
 
     /// The bitmask of the oracle members that pushed their reports
-    bytes32 internal constant REPORTS_BITMASK_POSITION = keccak256("lido.LidoOracle.reportsBitMask");
+    bytes32 internal constant REPORTS_BITMASK_POSITION = 0xea6fa022365e4737a3bb52facb00ddc693a656fb51ffb2b4bd24fb85bdc888be; // keccak256("lido.LidoOracle.reportsBitMask")
 
     /// Historic data about 2 last completed reports and their times
     bytes32 internal constant POST_COMPLETED_TOTAL_POOLED_ETHER_POSITION =
-        keccak256("lido.LidoOracle.postCompletedTotalPooledEther");
+        0xaa8433b13d2b111d4f84f6f374bc7acbe20794944308876aa250fa9a73dc7f53; // keccak256("lido.LidoOracle.postCompletedTotalPooledEther")
     bytes32 internal constant PRE_COMPLETED_TOTAL_POOLED_ETHER_POSITION =
-        keccak256("lido.LidoOracle.preCompletedTotalPooledEther");
-    bytes32 internal constant LAST_COMPLETED_EPOCH_ID_POSITION = keccak256("lido.LidoOracle.lastCompletedEpochId");
-    bytes32 internal constant TIME_ELAPSED_POSITION = keccak256("lido.LidoOracle.timeElapsed");
+        0x1043177539af09a67d747435df3ff1155a64cd93a347daaac9132a591442d43e; // keccak256("lido.LidoOracle.preCompletedTotalPooledEther")
+    bytes32 internal constant LAST_COMPLETED_EPOCH_ID_POSITION = 0xdad15c0beecd15610092d84427258e369d2582df22869138b4c5265f049f574c; // keccak256("lido.LidoOracle.lastCompletedEpochId")
+    bytes32 internal constant TIME_ELAPSED_POSITION = 0x8fe323f4ecd3bf0497252a90142003855cc5125cee76a5b5ba5d508c7ec28c3a; // keccak256("lido.LidoOracle.timeElapsed")
 
     /// Receiver address to be called when the report is pushed to Lido
-    bytes32 internal constant BEACON_REPORT_RECEIVER_POSITION = keccak256("lido.LidoOracle.beaconReportReceiver");
+    bytes32 internal constant BEACON_REPORT_RECEIVER_POSITION = 0xb59039ed37776bc23c5d272e10b525a957a1dfad97f5006c84394b6b512c1564; // keccak256("lido.LidoOracle.beaconReportReceiver")
 
     /// Upper bound of the reported balance possible increase in APR, controlled by the governance
     bytes32 internal constant ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION =
-        keccak256("lido.LidoOracle.allowedBeaconBalanceAnnualRelativeIncrease");
+        0x613075ab597bed8ce2e18342385ce127d3e5298bc7a84e3db68dc64abd4811ac; // keccak256("lido.LidoOracle.allowedBeaconBalanceAnnualRelativeIncrease")
 
     /// Lower bound of the reported balance possible decrease, controlled by the governance
     ///
@@ -96,7 +96,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     /// realistic scenario. Thus, instead of sanity check for an APR, we check if the plain relative
     /// decrease is within bounds.  Note that it's not annual value, its just one-jump value.
     bytes32 internal constant ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION =
-        keccak256("lido.LidoOracle.allowedBeaconBalanceDecrease");
+        0x92ba7776ed6c5d13cf023555a94e70b823a4aebd56ed522a77345ff5cd8a9109; // keccak256("lido.LidoOracle.allowedBeaconBalanceDecrease")
 
 
     /// Contract structured storage
@@ -395,7 +395,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
             require(_epochId == _getCurrentFrameFirstEpochId(beaconSpec), "UNEXPECTED_EPOCH");
             _clearReportingAndAdvanceTo(_epochId);
         }
-        
+
         uint128 beaconBalanceEth1 = DENOMINATION_OFFSET * uint128(_beaconBalance);
         emit BeaconReported(_epochId, beaconBalanceEth1, _beaconValidators, msg.sender);
 
@@ -561,7 +561,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * To make oracles less dangerous, we can limit rewards report by 0.1% increase in stake and 
+     * To make oracles less dangerous, we can limit rewards report by 0.1% increase in stake and
      * 15% decrease in stake, with both values configurable by the governance in case of extremely
      * unusual circumstances.
      *
