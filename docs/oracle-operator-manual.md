@@ -11,7 +11,7 @@ This document is intended for those who wish to participate in the Lido protocol
 5. Launch the oracle daemon as a docker container.
 
 [Mainnet]: https://mainnet.lido.fi/#/lido-dao/0x442af784a788a5bd6f42a01ebe9f287a871243fb/
-[Görli]: https://goerli.lido.fi/#/lido-testnet/0x97668baa98a249c6f6b4d0fc6cda1740635b8f7c/
+[Görli]: https://testnet.lido.fi/#/lido-testnet-prater/0xbc0b67b4553f4cf52a913de9a6ed0057e2e758db/
 
 ## Intro
 
@@ -30,11 +30,11 @@ In order to launch oracle daemon on your machine, you need to have several thing
 3) An address that’s added to the approved oracles list here: [Mainnet] / [Görli]. You have to initiate the DAO voting on adding your address there by pressing the "Add Member" button.
 
 [Mainnet]: https://mainnet.lido.fi/#/lido-dao/0x442af784a788a5bd6f42a01ebe9f287a871243fb/
-[Görli]: https://goerli.lido.fi/#/lido-testnet/0x97668baa98a249c6f6b4d0fc6cda1740635b8f7c/
+[Görli]: https://testnet.lido.fi/#/lido-testnet-prater/0xbc0b67b4553f4cf52a913de9a6ed0057e2e758db/
 
 ## The oracle daemon
 
-The oracle daemon is a simple Python app that watches the Beacon chain and pushes the data to the LidoOracle Smart Contract: [Mainnet](https://etherscan.io/address/0x442af784A788A5bd6F42A01Ebe9F287a871243fb) / [Görli](https://goerli.etherscan.io/address/0x97668Baa98A249c6f6b4D0Fc6cDa1740635B8f7C).
+The oracle daemon is a simple Python app that watches the Beacon chain and pushes the data to the LidoOracle Smart Contract: [Mainnet](https://etherscan.io/address/0x442af784A788A5bd6F42A01Ebe9F287a871243fb) / [Görli](https://goerli.etherscan.io/address/0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F).
 
 The oracle source code is available at https://github.com/lidofinance/lido-oracle. The docker image is available in the public Docker Hub registry: https://hub.docker.com/r/lidofinance/oracle.
 
@@ -56,7 +56,7 @@ The oracle daemon requires the following environment variables:
 
 * `ETH1_NODE` for `0.1.4` or `WEB3_PROVIDER_URI` for `0.1.5-prerelease` the ETH1 JSON-RPC endpoint.
 * `BEACON_NODE` the Lighthouse RPC endpoint.
-* `POOL_CONTRACT` the address of the Lido contract (`0x442af784A788A5bd6F42A01Ebe9F287a871243fb` in Mainnet and `0x97668Baa98A249c6f6b4D0Fc6cDa1740635B8f7C` in Görli Testnet).
+* `POOL_CONTRACT` the address of the Lido contract (`0x442af784A788A5bd6F42A01Ebe9F287a871243fb` in Mainnet and `0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F` in Görli Testnet).
 * `MEMBER_PRIV_KEY` 0x-prefixed private key of the address used by the oracle (should be in the DAO-approved list).
 * `DAEMON` run Oracle in a daemon mode
 
@@ -82,7 +82,7 @@ docker run -d --name lido-oracle \
 docker run -d --name lido-oracle \
   --env "WEB3_PROVIDER_URI=http://$ETH1_NODE_RPC_ADDRESS" \
   --env "BEACON_NODE=http://$ETH2_NODE_RPC_ADDRESS" \
-  --env "POOL_CONTRACT=0x97668Baa98A249c6f6b4D0Fc6cDa1740635B8f7C" \
+  --env "POOL_CONTRACT=0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F" \
   --env "MEMBER_PRIV_KEY=$ORACLE_PRIVATE_KEY_0X_PREFIXED" \
   --env "DAEMON=1"
   lidofinance/oracle:0.1.5-prerelease
