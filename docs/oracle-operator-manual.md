@@ -1,6 +1,8 @@
 # Oracle Operator Manual
 
-This document is intended for those who wish to participate in the Lido protocol as Oracle—an entity who runs a daemon synchronizing state from ETH2 to ETH1 part of the protocol. To be precise, the daemon fetches the number of validators participating in the protocol, as well as their combined balance, from the Beacon chain and submits this data to the `LidoOracle` ETH1 smart contract. Also the daemon checks the price of StETH token in Curve ETH/StETH pool and report about significant changes to the `StableSwapOracle` contract. This helps to keep the StETH token strong against attacks on pools via borrowed money and flash loans.
+This document is intended for those who wish to participate in the Lido protocol as Oracle—an entity who runs a daemon synchronizing state from ETH2 to ETH1 part of the protocol. To be precise, the daemon fetches the number of validators participating in the protocol, as well as their combined balance, from the Beacon chain and submits this data to the `LidoOracle` ETH1 smart contract.
+
+Also the daemon checks the price of StETH token in Curve ETH/StETH pool and report about significant changes to the `StableSwapOracle` contract. This helps to keep the StETH token strong against attacks on pools via borrowed money and flash loans.
 
 ## TL;DR
 
@@ -38,7 +40,7 @@ In order to launch oracle daemon on your machine, you need to have several thing
 
 The oracle daemon is a simple Python app that watches the Beacon chain and pushes the data to the LidoOracle Smart Contract: [Mainnet](https://etherscan.io/address/0x442af784A788A5bd6F42A01Ebe9F287a871243fb) / [Görli](https://goerli.etherscan.io/address/0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F).
 
-The oracle source code is available at https://github.com/lidofinance/lido-oracle. The `StableSwapOracle` source code can be found at https://github.com/skozin/curve-merkle-oracle.  The docker image is available in the public Docker Hub registry: https://hub.docker.com/r/lidofinance/oracle.
+The oracle source code is available at https://github.com/lidofinance/lido-oracle. The `StableSwapOracle` source code can be found at https://github.com/lidofinance/curve-merkle-oracle.  The docker image is available in the public Docker Hub registry: https://hub.docker.com/r/lidofinance/oracle.
 
 The algorithm of the above oracle implementation is simple and each step of an infinite loop can be broken down into two sub-steps: update beacon data and update StETH price data.
 
