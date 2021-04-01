@@ -57,10 +57,16 @@ The oracle daemon requires the following environment variables:
 * `ETH1_NODE` for `0.1.4` or `WEB3_PROVIDER_URI` for `0.1.5-prerelease` the ETH1 JSON-RPC endpoint.
 * `BEACON_NODE` the Lighthouse RPC endpoint.
 * `POOL_CONTRACT` the address of the Lido contract (`0x442af784A788A5bd6F42A01Ebe9F287a871243fb` in Mainnet and `0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F` in Görli Testnet).
+* `STETH_PRICE_ORACLE_CONTRACT` the address of stETH price oracle contract (`0x4522dB9A6f804cb837E5fC9F547D320Da3edD49a` in Görli Testnet).
+* `STETH_CURVE_POOL_CONTRACT` the address of Curve ETH/stETH Pool (`0xCEB67769c63cfFc6C8a6c68e85aBE1Df396B7aDA` in Görli Testnet)
 * `MEMBER_PRIV_KEY` 0x-prefixed private key of the address used by the oracle (should be in the DAO-approved list).
 * `DAEMON` run Oracle in a daemon mode
 
 #### Running the daemon
+
+To run script you have to export three required env variables: `ETH1_NODE_RPC_ADDRESS`, `ETH2_NODE_RPC_ADDRESS`, `ORACLE_PRIVATE_KEY_0X_PREFIXED`
+Before run daemon check that you've set all required env variables.
+To run script you have to export three env variables: MEMBER_PRIV_KEY - 
 
 You can use the public Docker image to launch the daemon.
 
@@ -72,20 +78,23 @@ docker run -d --name lido-oracle \
   --env "BEACON_NODE=http://$ETH2_NODE_RPC_ADDRESS" \
   --env "POOL_CONTRACT=0x442af784A788A5bd6F42A01Ebe9F287a871243fb" \
   --env "MEMBER_PRIV_KEY=$ORACLE_PRIVATE_KEY_0X_PREFIXED" \
-  --env "DAEMON=1"
+  --env "DAEMON=1" \
   lidofinance/oracle:0.1.4
 ```
 
-0.1.5-prerelease for Görli Testnet
+
+2.0.0-pre1 for Görli Testnet
 
 ```sh
 docker run -d --name lido-oracle \
-  --env "WEB3_PROVIDER_URI=http://$ETH1_NODE_RPC_ADDRESS" \
-  --env "BEACON_NODE=http://$ETH2_NODE_RPC_ADDRESS" \
-  --env "POOL_CONTRACT=0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F" \
+  --env "WEB3_PROVIDER_URI=$ETH1_NODE_RPC_ADDRESS" \
+  --env "BEACON_NODE=$ETH2_NODE_RPC_ADDRESS" \
   --env "MEMBER_PRIV_KEY=$ORACLE_PRIVATE_KEY_0X_PREFIXED" \
-  --env "DAEMON=1"
-  lidofinance/oracle:0.1.5-prerelease
+  --env "POOL_CONTRACT=0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F" \
+  --env "STETH_PRICE_ORACLE_CONTRACT=0x4522dB9A6f804cb837E5fC9F547D320Da3edD49a" \
+  --env "STETH_CURVE_POOL_CONTRACT=0xCEB67769c63cfFc6C8a6c68e85aBE1Df396B7aDA" \
+  --env "DAEMON=1" \
+  lidofinance/oracle:2.0.0-pre1
 ```
 
 This will start the oracle in daemon mode. You can also run it in a one-off mode, for example if you’d prefer to trigger oracle execution as a `cron` job. In this case, set the `DAEMON` environment variable to 0.
