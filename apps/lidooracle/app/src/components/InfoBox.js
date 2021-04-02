@@ -10,15 +10,15 @@ export default function InfoBox({
 }) {
   return (
     <Box heading={heading}>
-      <p
+      <div
         css={`
           font-size: ${largeText ? '1.5rem' : '1rem'};
-          margin-bottom: ${largeText ? '20px' : '13px'};
+          margin-bottom: ${onClick ? '20px' : '0px'};
           text-align: center;
         `}
       >
         {value}
-      </p>
+      </div>
       {onClick && <Button wide mode="strong" onClick={onClick} label={label} />}
     </Box>
   )

@@ -13,11 +13,14 @@ const validationSchema = yup.object().shape({
 })
 
 function PanelContent({ api, onClose }) {
-  const onSubmit = useCallback(({ address }) => {
-    api(address).then(() => {
-      onClose()
-    })
-  }, [])
+  const onSubmit = useCallback(
+    ({ address }) => {
+      api(address).then(() => {
+        onClose()
+      })
+    },
+    [api, onClose]
+  )
 
   return (
     <Formik

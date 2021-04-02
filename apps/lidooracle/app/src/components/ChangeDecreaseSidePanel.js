@@ -5,17 +5,17 @@ import * as yup from 'yup'
 import TextField from './TextField'
 
 const initialValues = {
-  quorum: '',
+  value: '',
 }
 
 const validationSchema = yup.object().shape({
-  quorum: yup.number().integer().required().min(0),
+  value: yup.number().integer().required().min(0),
 })
 
 function PanelContent({ api, onClose }) {
   const onSubmit = useCallback(
-    ({ quorum }) => {
-      api(quorum).finally(() => {
+    ({ value }) => {
+      api(value).finally(() => {
         onClose()
       })
     },
@@ -41,8 +41,8 @@ function PanelContent({ api, onClose }) {
             }}
           >
             <Field
-              name="quorum"
-              label="Quorum"
+              name="value"
+              label="Value"
               type="number"
               min="0"
               required
@@ -53,7 +53,7 @@ function PanelContent({ api, onClose }) {
               wide
               required
               disabled={isSubmitting}
-              label="Change Quorum"
+              label="Change Decrease"
               type="submit"
             />
           </form>
@@ -64,7 +64,7 @@ function PanelContent({ api, onClose }) {
 }
 
 export default (props) => (
-  <SidePanel title="ADD ORACLE MEMBER" {...props}>
+  <SidePanel title="Change Relative Decrease" {...props}>
     <PanelContent {...props} />
   </SidePanel>
 )

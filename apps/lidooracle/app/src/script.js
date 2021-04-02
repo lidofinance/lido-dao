@@ -1,7 +1,6 @@
 import 'core-js/stable'
 import 'regenerator-runtime/runtime'
 import Aragon, { events } from '@aragon/api'
-import { fromWei } from 'web3-utils'
 
 const app = new Aragon()
 
@@ -19,14 +18,23 @@ app.store(
           return { ...nextState, oracleMembers: await getOracleMembers() }
         case 'QuorumChanged':
           return { ...nextState, quorum: await getQuorum() }
-        case 'Completed':
-        case 'UI:UpdateReportableEpochs':
+        case 'AllowedBeaconBalanceAnnualRelativeIncreaseSet':
           return {
             ...nextState,
-            currentReportableEpochs: await getCurrentReportableEpochs(),
+            allowedBeaconBalanceAnnualRelativeIncrease: await getAllowedBeaconBalanceAnnualRelativeIncrease(),
+          }
+        case 'AllowedBeaconBalanceRelativeDecreaseSet':
+          return {
+            ...nextState,
+            allowedBeaconBalanceRelativeDecrease: await getAllowedBeaconBalanceRelativeDecrease(),
           }
         case 'UI:UpdateFrame':
           return { ...nextState, currentFrame: await getCurrentFrame() }
+        case 'BeaconReportReceiverSet':
+          return {
+            ...nextState,
+            beaconReportReceiver: await getBeaconReportReceiver(),
+          }
         case events.SYNC_STATUS_SYNCING:
           return { ...nextState, isSyncing: true }
         case events.SYNC_STATUS_SYNCED:
@@ -55,19 +63,41 @@ function initializeState() {
       oracleMembers,
       quorum,
       currentFrame,
-      currentReportableEpochs,
+      expectedEpochId,
+      currentOraclesReportStatus,
+      allowedBeaconBalanceAnnualRelativeIncrease,
+      allowedBeaconBalanceRelativeDecrease,
+      beaconReportReceiver,
+      currentReportVariants,
+      lastCompletedReportDelta,
+      version,
     ] = await Promise.all([
       getOracleMembers(),
       getQuorum(),
       getCurrentFrame(),
-      getCurrentReportableEpochs(),
+      getExpectedEpochId(),
+      getCurrentOraclesReportStatus(),
+      getAllowedBeaconBalanceAnnualRelativeIncrease(),
+      getAllowedBeaconBalanceRelativeDecrease(),
+      getBeaconReportReceiver(),
+      getCurrentReportVariants(),
+      getLastCompletedReportDelta(),
+      getVersion(),
     ])
+
     return {
       ...cachedState,
       oracleMembers,
       quorum,
       currentFrame,
-      currentReportableEpochs,
+      expectedEpochId,
+      currentOraclesReportStatus,
+      allowedBeaconBalanceAnnualRelativeIncrease,
+      allowedBeaconBalanceRelativeDecrease,
+      beaconReportReceiver,
+      currentReportVariants,
+      lastCompletedReportDelta,
+      version,
     }
   }
 }
@@ -89,10 +119,50 @@ async function getCurrentFrame() {
   }
 }
 
-async function getCurrentReportableEpochs() {
-  const epochs = await app.call('getCurrentReportableEpochs').toPromise()
-  return {
-    minReportableEpochId: String(epochs.minReportableEpochId),
-    maxReportableEpochId: String(epochs.maxReportableEpochId),
+function getExpectedEpochId() {
+  return app.call('getExpectedEpochId').toPromise()
+}
+
+function getCurrentOraclesReportStatus() {
+  return app.call('getCurrentOraclesReportStatus').toPromise()
+}
+
+function getCurrentReportVariantsSize() {
+  return app.call('getCurrentReportVariantsSize').toPromise()
+}
+
+async function getCurrentReportVariant(index) {
+  return app.call('getCurrentReportVariant', index).toPromise()
+}
+
+async function getCurrentReportVariants() {
+  const size = await getCurrentReportVariantsSize()
+
+  const variants = []
+  for (let i = 0; i < size; i++) {
+    const variant = await getCurrentReportVariant(i)
+    variants.push(variant)
   }
+
+  return variants
+}
+
+function getLastCompletedReportDelta() {
+  return app.call('getLastCompletedReportDelta').toPromise()
+}
+
+function getAllowedBeaconBalanceAnnualRelativeIncrease() {
+  return app.call('getAllowedBeaconBalanceAnnualRelativeIncrease').toPromise()
+}
+
+function getAllowedBeaconBalanceRelativeDecrease() {
+  return app.call('getAllowedBeaconBalanceRelativeDecrease').toPromise()
+}
+
+function getBeaconReportReceiver() {
+  return app.call('getBeaconReportReceiver').toPromise()
+}
+
+async function getVersion() {
+  return app.call('getVersion').toPromise()
 }

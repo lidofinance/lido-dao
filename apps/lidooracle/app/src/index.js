@@ -12,7 +12,14 @@ const reducer = (state) => {
       oracleMembers: [],
       quorum: null,
       currentFrame: null,
-      currentReportableEpochs: null,
+      expectedEpochId: null,
+      currentOraclesReportStatus: null,
+      allowedBeaconBalanceAnnualRelativeIncrease: null,
+      allowedBeaconBalanceRelativeDecrease: null,
+      beaconReportReceiver: null,
+      currentReportVariants: [],
+      lastCompletedReportDelta: null,
+      version: null,
       isSyncing: true,
     }
   }
