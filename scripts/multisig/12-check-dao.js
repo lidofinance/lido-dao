@@ -186,7 +186,7 @@ async function assertLidoAPMPermissions({ registry, votingAddress }) {
 
 async function assertReposPermissions({ registry, registryACL, votingAddress }) {
   const Repo = artifacts.require('Repo')
-  const newRepoEvts = await registry.getPastEvents('NewRepo', { fromBlock: 11472780 })
+  const newRepoEvts = await registry.getPastEvents('NewRepo', { fromBlock: 4532202 })
 
   for (const evt of newRepoEvts) {
     const repo = await Repo.at(evt.args.repo)
@@ -542,7 +542,7 @@ async function assertDaoPermissions({
 }) {
   const aclAddress = await kernel.acl()
   const acl = await artifacts.require('ACL').at(aclAddress)
-  const allAclEvents = await acl.getPastEvents('allEvents', { fromBlock: 11472780 })
+  const allAclEvents = await acl.getPastEvents('allEvents', { fromBlock: 4532202 })
 
   const assertRoles = async ({ app, appName, groups, manager, missingRoleNames = [] }) => {
     for (const group of groups) {
