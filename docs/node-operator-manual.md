@@ -131,6 +131,7 @@ To generate the keys and signatures, run the following:
 
 ```sh
 docker run -it --rm -v "$(pwd):/data" lidofinance/deposit-cli \
+  new-mnemonic \
   --folder /data \
   --chain="$CHAIN_NAME" \
   --withdrawal_credentials="$WITHDRAWAL_CREDENTIALS"
@@ -270,14 +271,14 @@ If you’ve used the forked `eth2.0-deposit-cli` to generate the keys, you can i
 Lighthouse validator client by running this command:
 
 ```
-docker run --rm \
- --name validator_keys_import \
- -v "$KEYS_DIR":/root/validator_keys \
- -v "$DATA_DIR":/root/.lighthouse \
- sigp/lighthouse \
+docker run --rm -it \
+  --name validator_keys_import \
+  -v "$KEYS_DIR":/root/validator_keys \
+  -v "$DATA_DIR":/root/.lighthouse \
+  sigp/lighthouse \
   lighthouse account validator import \
   --reuse-password \
-  --testnet "$TESTNET_NAME" \
+  --network "$TESTNET_NAME" \
   --datadir /root/.lighthouse/data \
   --directory /root/validator_keys
 ```
