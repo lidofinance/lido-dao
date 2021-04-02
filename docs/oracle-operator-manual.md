@@ -2,7 +2,7 @@
 
 This document is intended for those who wish to participate in the Lido protocol as Oracle—an entity who runs a daemon synchronizing state from ETH2 to ETH1 part of the protocol. To be precise, the daemon fetches the number of validators participating in the protocol, as well as their combined balance, from the Beacon chain and submits this data to the `LidoOracle` ETH1 smart contract.
 
-Also the daemon checks the price of StETH token in Curve ETH/StETH pool and report about significant changes to the `StableSwapOracle` contract. This helps to keep the StETH token strong against attacks on pools via borrowed money and flash loans.
+The daemon also fetches StETH token price in Curve ETH/StETH pool and reports any significant changes to the `StableSwapOracle` contract. This helps to keep StETH token flash-loan resistant by reducing balance shifts due to flash loans, and also records the balances based on the previous block, to avoid recording flashloan data.
 
 ## TL;DR
 
@@ -23,7 +23,7 @@ Communication between Ethereum 1.0 part of the system and the Beacon network is 
 
 Upon every update submitted by the `LidoOracle` contract, the system recalculates the total StETH token balance. If the overall staking rewards are bigger than the slashing penalties, the system registers profit, and fee is taken from the profit and distributed between the insurance fund, the treasury, and node operators.
 
-To protect StETH token price from attacks with borrowed money or flash loans `StableSwapOracle` keeps valid StETH stats from Curve Pool (ETH balance, StETH Balance and StETHPrice) onchain. To support this stats in actual state daemon reports necessary data to oracle when price difference between current StETH pool price and last reported price crosses specific threshold. Threshold chosen so that to prevent unnecessary transactions sending. `StableSwapOracle` guaranteed the validity of sent data with  cryptographic proofs.
+To protect StETH token price from attacks with borrowed money or flash loans `StableSwapOracle` keeps valid StETH stats from Curve Pool (ETH balance, StETH Balance and StETHPrice) onchain. To keep this stats in actual state daemon reports required data to oracle when price difference between current StETH pool price and last reported price exceeds threshold limit. Threshold limit is set to prevent sending unnecessary transactions. `StableSwapOracle` validates all of the recorded data using cryptographic proofs.
 
 ## Prerequisites
 
@@ -60,9 +60,9 @@ Keep in mind that some of these transactions may revert. This happens when a tra
 
 Update Steth Price Data
 
-The daemon checks price of StETH token in Curve ETH/StETH pool and evaluate how mush price differs from  current `StableSwapOracle` state. If the threshold was crossed, daemon generates offchain proof for new stats and sent it to the `StableSwapOracle` contract. `StableSwapOracle` validates provided proof and if checks passes store new StETH stats onchain.
+The daemon checks price of StETH token in Curve ETH/StETH pool and evaluate how much price differs from  current `StableSwapOracle` state. If the threshold has been exceeded, daemon generates offchain proof for new stats and sends it to the `StableSwapOracle` contract. `StableSwapOracle` validates proof provided and records new StETH stats onchain.
 
-This transaction also can fail, if between price check and sending of new state someone of other lido oracles submitted updated state
+This transaction can also fail, in case another Lido oracle submits updated state between price check and new state push.
 
 #### Environment variables
 
@@ -84,19 +84,6 @@ To run script you have to export three env variables: MEMBER_PRIV_KEY -
 
 You can use the public Docker image to launch the daemon.
 
-0.1.4 for Mainnet:
-
-```sh
-docker run -d --name lido-oracle \
-  --env "ETH1_NODE=http://$ETH1_NODE_RPC_ADDRESS" \
-  --env "BEACON_NODE=http://$ETH2_NODE_RPC_ADDRESS" \
-  --env "POOL_CONTRACT=0x442af784A788A5bd6F42A01Ebe9F287a871243fb" \
-  --env "MEMBER_PRIV_KEY=$ORACLE_PRIVATE_KEY_0X_PREFIXED" \
-  --env "DAEMON=1" \
-  lidofinance/oracle:0.1.4
-```
-
-
 2.0.0-pre1 for Görli Testnet
 
 ```sh
@@ -109,6 +96,18 @@ docker run -d --name lido-oracle \
   --env "STETH_CURVE_POOL_CONTRACT=0xCEB67769c63cfFc6C8a6c68e85aBE1Df396B7aDA" \
   --env "DAEMON=1" \
   lidofinance/oracle:2.0.0-pre1
+```
+
+0.1.4 for Mainnet:
+
+```sh
+docker run -d --name lido-oracle \
+  --env "ETH1_NODE=http://$ETH1_NODE_RPC_ADDRESS" \
+  --env "BEACON_NODE=http://$ETH2_NODE_RPC_ADDRESS" \
+  --env "POOL_CONTRACT=0x442af784A788A5bd6F42A01Ebe9F287a871243fb" \
+  --env "MEMBER_PRIV_KEY=$ORACLE_PRIVATE_KEY_0X_PREFIXED" \
+  --env "DAEMON=1" \
+  lidofinance/oracle:0.1.4
 ```
 
 This will start the oracle in daemon mode. You can also run it in a one-off mode, for example if you’d prefer to trigger oracle execution as a `cron` job. In this case, set the `DAEMON` environment variable to 0.
