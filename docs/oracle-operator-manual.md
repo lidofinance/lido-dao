@@ -2,7 +2,7 @@
 
 This document is intended for those who wish to participate in the Lido protocol as Oracle—an entity who runs a daemon synchronizing state from ETH2 to ETH1 part of the protocol. To be precise, the daemon fetches the number of validators participating in the protocol, as well as their combined balance, from the Beacon chain and submits this data to the `LidoOracle` ETH1 smart contract.
 
-The daemon also fetches StETH token price in Curve ETH/StETH pool and reports any significant changes to the `StableSwapOracle` contract. This helps to keep StETH token flash-loan resistant by reducing balance shifts due to flash loans, and also records the balances based on the previous block, to avoid recording flashloan data.
+The daemon also fetches historical stETH token price (shifted by fifteen blocks) from Curve ETH/stETH pool and reports any significant changes to the `StableSwapOracle` contract. Using price data from this oracle as a safeguard helps to keep stETH token price resistant to flash-loan and sandwich attacks by removing the ability to significantly change the price in a single block.
 
 ## TL;DR
 
@@ -21,9 +21,9 @@ Total supply of the StETH token always corresponds to the amount of Ether in con
 
 Communication between Ethereum 1.0 part of the system and the Beacon network is performed by the DAO-assigned oracles. They monitor staking providers’ Beacon chain accounts and submit corresponding data to the `LidoOracle` contract. The latter takes care of making sure that quorum about the data being pushed is reached within the oracles and enforcing data submission order (so that oracle contract never pushes data that is older than the already pushed one).
 
-Upon every update submitted by the `LidoOracle` contract, the system recalculates the total StETH token balance. If the overall staking rewards are bigger than the slashing penalties, the system registers profit, and fee is taken from the profit and distributed between the insurance fund, the treasury, and node operators.
+Upon every update submitted by the `LidoOracle` contract, the system recalculates the total stETH token balance. If the overall staking rewards are bigger than the slashing penalties, the system registers profit, and fee is taken from the profit and distributed between the insurance fund, the treasury, and node operators.
 
-To protect StETH token price from attacks with borrowed money or flash loans `StableSwapOracle` keeps valid StETH stats from Curve Pool (ETH balance, StETH Balance and StETHPrice) onchain. To keep this stats in actual state daemon reports required data to oracle when price difference between current StETH pool price and last reported price exceeds threshold limit. Threshold limit is set to prevent sending unnecessary transactions. `StableSwapOracle` validates all of the recorded data using cryptographic proofs.
+To protect stETH token price from attacks with borrowed money or flash loans, `StableSwapOracle` keeps valid stETH stats from Curve Pool (ETH balance, stETH balance and stETH price), shifted by fifteen blocks, onchain. To keep these stats in actual state, the daemon reports required data to the oracle when price difference between the time-shifted stETH pool price and the last reported price exceeds the threshold limit. `StableSwapOracle` validates all of the recorded data using cryptographic proofs. The threshold limit is set in the oracle contract and is purely advisory. It's introduced to prevent sending large number transactions which are pretty costly due to the Partricia Merkle proof verification.
 
 ## Prerequisites
 
@@ -40,9 +40,9 @@ In order to launch oracle daemon on your machine, you need to have several thing
 
 The oracle daemon is a simple Python app that watches the Beacon chain and pushes the data to the LidoOracle Smart Contract: [Mainnet](https://etherscan.io/address/0x442af784A788A5bd6F42A01Ebe9F287a871243fb) / [Görli](https://goerli.etherscan.io/address/0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F).
 
-The oracle source code is available at https://github.com/lidofinance/lido-oracle. The `StableSwapOracle` source code can be found at https://github.com/lidofinance/curve-merkle-oracle.  The docker image is available in the public Docker Hub registry: https://hub.docker.com/r/lidofinance/oracle.
+The oracle source code is available at https://github.com/lidofinance/lido-oracle. The `StableSwapOracle` source code can be found at https://github.com/lidofinance/curve-merkle-oracle. The docker image is available in the public Docker Hub registry: https://hub.docker.com/r/lidofinance/oracle.
 
-The algorithm of the above oracle implementation is simple and each step of an infinite loop can be broken down into two sub-steps: update beacon data and update StETH price data.
+The algorithm of the above oracle implementation is simple and each step of an infinite loop can be broken down into two sub-steps: update beacon data and update stETH price data.
 
 Update Beacon Data
 
@@ -58,11 +58,10 @@ The daemon fetches the reportable epoch from the `LidoOracle` contract, and if t
 
 Keep in mind that some of these transactions may revert. This happens when a transaction finalizing the current frame gets included in a block before your oracle's transaction. For example, such a transaction might had already been submitted by another oracle (but not yet included in a block) when your oracle fetched the current reportable epoch.
 
-Update Steth Price Data
+Update stETH Price Data
 
-The daemon checks price of StETH token in Curve ETH/StETH pool and evaluate how much price differs from  current `StableSwapOracle` state. If the threshold has been exceeded, daemon generates offchain proof for new stats and sends it to the `StableSwapOracle` contract. `StableSwapOracle` validates proof provided and records new StETH stats onchain.
-
-This transaction can also fail, in case another Lido oracle submits updated state between price check and new state push.
+The daemon checks the time-shifted price of stETH token in Curve ETH/stETH pool and evaluates how much this price differs from the current `StableSwapOracle` state. If the difference exceeds the threshold set in the `StableSwapOracle` contract, the daemon generates offchain proof for the new stats and sends it to the contract. The contract validates the proof and records new stETH stats onchain.
+This transaction can also fail in the case when another Lido oracle submits the updated state between the check and transaction submission.
 
 #### Environment variables
 
@@ -79,8 +78,7 @@ The oracle daemon requires the following environment variables:
 #### Running the daemon
 
 To run script you have to export three required env variables: `ETH1_NODE_RPC_ADDRESS`, `ETH2_NODE_RPC_ADDRESS`, `ORACLE_PRIVATE_KEY_0X_PREFIXED`
-Before run daemon check that you've set all required env variables.
-To run script you have to export three env variables: MEMBER_PRIV_KEY - 
+Before running the daemon, check that you've set all required env variables.
 
 You can use the public Docker image to launch the daemon.
 
