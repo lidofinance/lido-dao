@@ -133,11 +133,11 @@ To generate the keys and signatures, run the following:
 docker run -it --rm -v "$(pwd):/data" lidofinance/deposit-cli \
   --folder /data \
   --chain="$CHAIN_NAME" \
-  --withdrawal_pk="$PROTOCOL_WITHDRAWAL_PUBLIC_KEY"
+  --withdrawal_credentials="$WITHDRAWAL_CREDENTIALS"
 ```
 
 Here, `CHAIN_NAME` is one of the public Beacon chain names (run the container with the `--help` flag
-to see the possible values) and `PROTOCOL_WITHDRAWAL_PUBLIC_KEY` is the withdrawal public key
+to see the possible values) and `WITHDRAWAL_CREDENTIALS` is the withdrawal credentials
 from the protocol documentation.
 
 As a result of running this, the `validator_keys` directory will be created in the current working
