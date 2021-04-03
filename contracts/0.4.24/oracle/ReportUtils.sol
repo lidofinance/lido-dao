@@ -5,7 +5,7 @@
 pragma solidity 0.4.24;
 
 /**
- * @dev Utility functions for effectively storing reports within a single storage slot
+ * Utility functions for effectively storing reports within a single storage slot
  *
  * +00 | uint16 | count            | 0..256  | number of reports received exactly like this
  * +16 | uint32 | beaconValidators | 0..1e9  | number of Lido's validators in beacon chain
@@ -38,7 +38,7 @@ library ReportUtils {
         count = uint16(value);
     }
 
-    /// @dev Checks if the given reports are different, not considering the counter of the first
+    /// @notice Check if the given reports are different, not considering the counter of the first
     function isDifferent(uint256 value, uint256 that) internal pure returns(bool) {
         return (value & COUNT_OUTMASK) != that;
     }
