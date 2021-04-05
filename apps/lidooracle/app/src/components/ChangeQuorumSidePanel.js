@@ -3,6 +3,7 @@ import React, { useCallback } from 'react'
 import { Formik, Field } from 'formik'
 import * as yup from 'yup'
 import TextField from './TextField'
+import Info from '@aragon/ui/dist/Info'
 
 const initialValues = {
   quorum: '',
@@ -40,6 +41,14 @@ function PanelContent({ api, onClose }) {
               submitForm()
             }}
           >
+            <Info
+              title="Action"
+              css={`
+                margin-bottom: ${3 * GU}px;
+              `}
+            >
+              This action will set a new quorum value.
+            </Info>
             <Field
               name="quorum"
               label="Quorum"

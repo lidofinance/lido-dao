@@ -3,6 +3,7 @@ import React, { useCallback } from 'react'
 import { Formik, Field } from 'formik'
 import * as yup from 'yup'
 import TextField from './TextField'
+import Info from '@aragon/ui/dist/Info'
 
 const initialValues = {
   value: '',
@@ -40,6 +41,15 @@ function PanelContent({ api, onClose }) {
               submitForm()
             }}
           >
+            <Info
+              title="Action"
+              css={`
+                margin-bottom: ${3 * GU}px;
+              `}
+            >
+              This action will set a new allowed beacon balance annual relative
+              increase.
+            </Info>
             <Field
               name="value"
               label="Value"
