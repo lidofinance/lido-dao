@@ -1,0 +1,126 @@
+{
+  "networkId": 5,
+  "daoAragonId": "lido-testnet",
+  "ensAddress": "0x043e6DBC5CAd60874727d21ecC2aAeBf50A0de80",
+  "daoFactoryAddress": "0x0B6769F500b293e3adacD97c3961189565069902",
+  "apmRegistryFactoryAddress": "0x70B3284fD016a570146cE48fC54D7A81bCd94BBa",
+  "miniMeTokenFactoryAddress": "0x92E2750729e04c9a5CF21A830Bd00cbd5139D992",
+  "aragonIDAddress": "0x673cB86B60B9768Eebb05517fbF5a7F9f1Ab62C4",
+  "multisigAddress": "0x8303B3A462F4Cb4d2468DDcBD4c9f212914A3a7F",
+  "daoTemplateConstructorArgs": [
+    "0x8303B3A462F4Cb4d2468DDcBD4c9f212914A3a7F",
+    "0x0B6769F500b293e3adacD97c3961189565069902",
+    "0x043e6DBC5CAd60874727d21ecC2aAeBf50A0de80",
+    "0x92E2750729e04c9a5CF21A830Bd00cbd5139D992",
+    "0x673cB86B60B9768Eebb05517fbF5a7F9f1Ab62C4",
+    "0x70B3284fD016a570146cE48fC54D7A81bCd94BBa"
+  ],
+  "daoTemplateDeployTx": "0xe766e877ae57d9a9d08ba14d746558f51264cbb19f3df16ec649e91b775774db",
+  "lidoBaseDeployTx": "0x3a4bcd8042142b44267b0ed0482ff36085d0459cf8915f8d2fe5f0a6705bd81b",
+  "oracleBaseDeployTx": "0x7e4b115b347bd2a29e659f72aa6e1ac7d8b52da031f11cd7ea1a7abbb5a3d10c",
+  "nodeOperatorsRegistryBaseDeployTx": "0x498386b2dd10d40b172dcc9f96592cb8743ea57191bc43858ba8c17f0a1a8ce0",
+  "daoTemplateAddress": "0x5B337137043EE00D0927e496D3E942c21B7D03B4",
+  "app:lido": {
+    "baseAddress": "0x10095FB11aE3501A88FDAa5bECBEF854d079E8e7",
+    "ipfsCid": "QmbmPW5r9HMdyUARNJjjE7MNqBUGrXashwoWvqRZhc1t5b",
+    "contentURI": "0x697066733a516d626d5057357239484d64795541524e4a6a6a45374d4e714255477258617368776f577671525a686331743562",
+    "name": "lido",
+    "fullName": "lido.lidopm-testnet.eth",
+    "id": "0xd35c6f98505649ec27db3105cd88cc70b140d32cd2f2cafc4f00b2a67caf3b66",
+    "proxyAddress": "0x5feB011F04Ec47cA42E75F5AC2bea4C50A646054"
+  },
+  "app:oracle": {
+    "baseAddress": "0xC0acFc2F4AA264E844C06Deb24D0A409c81e5392",
+    "ipfsCid": "QmYb8VDjam4AHNoNe7Fvuprc7qV6Ez9fjRLLWmRqU2wSZT",
+    "contentURI": "0x697066733a516d59623856446a616d3441484e6f4e653746767570726337715636457a39666a524c4c576d5271553277535a54",
+    "name": "oracle",
+    "fullName": "oracle.lidopm-testnet.eth",
+    "id": "0x4a7adba13903f80bc9552be515306475240617f383ab17383db8cbe4feefdadc",
+    "proxyAddress": "0x97668Baa98A249c6f6b4D0Fc6cDa1740635B8f7C"
+  },
+  "app:node-operators-registry": {
+    "baseAddress": "0x0002d130EE352497BD39E14d9Eb33e295D27B5eD",
+    "ipfsCid": "QmQExJkoyg7xWXJjLaYC75UAmsGY1STY41YTG3wEK7q8dd",
+    "contentURI": "0x697066733a516d5145784a6b6f7967377857584a6a4c615943373555416d7347593153545934315954473377454b3771386464",
+    "name": "node-operators-registry",
+    "fullName": "node-operators-registry.lidopm-testnet.eth",
+    "id": "0x6c3d08f27bfab809669685fb2ab8c9a79d2a33742a72a579acd6d94aae3364f6",
+    "proxyAddress": "0xc210F98F7BF724ad1ec14064137AbcE4403f7e4f"
+  },
+  "lidoApmEnsName": "lidopm-testnet.eth",
+  "lidoApmDeployTx": "0x122c8ea2bc289c51b8a7a2f674d87ff3bf68e4519c3043fcc05fd0781345302b",
+  "lidoApmAddress": "0x51C31A7491D7b56770CdA9Cd8BA40156Feb3e817",
+  "daoInitialSettings": {
+    "token": {
+      "name": "Test Lido DAO Token",
+      "symbol": "TESTLDO"
+    },
+    "beaconSpec": {
+      "depositContractAddress": "0x8c5fecdC472E27Bc447696F431E425D02dd46a8c",
+      "epochsPerFrame": 10,
+      "slotsPerEpoch": 32,
+      "secondsPerSlot": 12,
+      "genesisTime": 1605700807
+    },
+    "voting": {
+      "minSupportRequired": "500000000000000000",
+      "minAcceptanceQuorum": "50000000000000000",
+      "voteDuration": 14400
+    },
+    "fee": {
+      "totalPercent": 10,
+      "treasuryPercent": 0,
+      "insurancePercent": 50,
+      "nodeOperatorsPercent": 50
+    }
+  },
+  "vestingParams": {
+    "unvestedTokensAmount": "235000000000000000000000",
+    "holders": {
+      "0xa5F1d7D49F581136Cf6e58B32cBE9a2039C48bA1": "600000000000000000000000",
+      "0x00444797Ba158A7BdB8302e72da98dCbCCef0Fbc": "15000000000000000000000",
+      "0x9F188809b2ba2e29653693C4069c212a95C1B8c4": "15000000000000000000000",
+      "0xeC2d2E81721A477798e938924266f92c4E5Fc54e": "15000000000000000000000",
+      "0x401FD888B5E41113B7c0C47725A742bbc3A083EF": "15000000000000000000000",
+      "0x36c648351274bb4455ba6aAabF3F976824a93aF4": "15000000000000000000000",
+      "0x75936b355942D89d9B59798dacD70d70Ded93B78": "15000000000000000000000",
+      "0xAA566f0eB53F26db5E15aC5B42685361B4e0d9F4": "15000000000000000000000",
+      "0xCd3975FC68Aa71eDebfef7442cF8e91ce407DEEE": "15000000000000000000000",
+      "0xfd0dd5c3b72528e8f581a8544309706d1c2d9206": "15000000000000000000000",
+      "0x161EE6a03D52ee176a514C88Cf07dcAcF248155f": "15000000000000000000000",
+      "0x88431a61133eB1a9070F83Cb2c313774E9a998dE": "15000000000000000000000"
+    },
+    "start": 1616144400,
+    "cliff": 1616230800,
+    "end": 1616317200,
+    "revokable": false
+  },
+  "createAppReposTx": "0x3deb5f798af3ce76eb15331d86662f3c456a291a4323dece9897c3456687c1c7",
+  "newDaoTx": "0x69ca22ac976ca738881b8c9bc368d2fcc5b26b08025202837fbe277a32f60d53",
+  "daoAddress": "0xE2Bb0843167da9672534cc939c59D6F6F31d3D42",
+  "daoTokenAddress": "0xBd3FAF948B3F63741f10BbC3120Fbd2a4D4B20c2",
+  "app:aragon-agent": {
+    "name": "aragon-agent",
+    "fullName": "aragon-agent.lidopm-testnet.eth",
+    "id": "0xefde2aeb2dc62d41fea5b8aeb94cc8b52a1ca18415c042cb63dde871c82de8be",
+    "proxyAddress": "0x0A9879494d2f2AC749cf84bD043E295DA5b83623"
+  },
+  "app:aragon-finance": {
+    "name": "aragon-finance",
+    "fullName": "aragon-finance.lidopm-testnet.eth",
+    "id": "0x904b562d02be97fcd23e5f671da6bf2687ac6083945d9614007b03c19ecb9cf1",
+    "proxyAddress": "0x0325092056449c729A07065739dfD37B3a434B45"
+  },
+  "app:aragon-token-manager": {
+    "name": "aragon-token-manager",
+    "fullName": "aragon-token-manager.lidopm-testnet.eth",
+    "id": "0xdad352030c20858cf93687336e2ec5a4ae1f4fcec9ebf45af9cddadd4ee7d2f1",
+    "proxyAddress": "0x9A59ca00921a51751524a908CE4d4723489894B6"
+  },
+  "app:aragon-voting": {
+    "name": "aragon-voting",
+    "fullName": "aragon-voting.lidopm-testnet.eth",
+    "id": "0xf4bb2ec5390cd58accf6356da992250c304d301695186294764509cf5cf1753c",
+    "proxyAddress": "0x8613BBca79D1B7d36Bca0889bc5836dAa0F5F96a"
+  }
+}
