@@ -35,8 +35,8 @@ contract LidoOracleMock is LidoOracle {
         emit QuorumChanged(1);
         initialized();
 
-        // initialize the second version
-        this.initialize_v2(100000, 50000);
+        // initialize the second version: 10% yearly increase, 5% moment decrease
+        this.initialize_v2(1000, 500);
     }
 
     function _reportSanityChecks(uint256 postTotalPooledEther,

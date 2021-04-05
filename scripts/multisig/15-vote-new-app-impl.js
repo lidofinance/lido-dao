@@ -115,7 +115,7 @@ async function upgradeAppImpl({ web3, artifacts, appName = APP }) {
     {
       // oracle.initialize_v2(...)
       to: oracleAddress,
-      calldata: await oracle.contract.methods.initialize_v2(100000, 50000).encodeABI()
+      calldata: await oracle.contract.methods.initialize_v2(1000, 500).encodeABI()
     }
   ])
   // encode forwarding call from Voting app to app Repo (new Vote will be created under the hood)

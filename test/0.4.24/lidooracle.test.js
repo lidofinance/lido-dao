@@ -393,8 +393,8 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, user5, 
         await assertRevert(app.reportBeacon(2, nextPooledEther, 3, { from: user1 }), 'ALLOWED_BEACON_BALANCE_INCREASE')
 
         // set limit up to 12%
-        const res = await app.setAllowedBeaconBalanceAnnualRelativeIncrease(120000, { from: voting })
-        assertEvent(res, 'AllowedBeaconBalanceAnnualRelativeIncreaseSet', { expectedArgs: { value: 120000 } })
+        const res = await app.setAllowedBeaconBalanceAnnualRelativeIncrease(1200, { from: voting })
+        assertEvent(res, 'AllowedBeaconBalanceAnnualRelativeIncreaseSet', { expectedArgs: { value: 1200 } })
 
         // check OK
         receipt = await app.reportBeacon(2, nextPooledEther, 3, { from: user1 })
@@ -419,8 +419,8 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, user5, 
         await assertRevert(app.reportBeacon(2, nextPooledEther, 3, { from: user1 }), 'ALLOWED_BEACON_BALANCE_DECREASE')
 
         // set limit up to 7%
-        const res = await app.setAllowedBeaconBalanceRelativeDecrease(70000, { from: voting })
-        assertEvent(res, 'AllowedBeaconBalanceRelativeDecreaseSet', { expectedArgs: { value: 70000 } })
+        const res = await app.setAllowedBeaconBalanceRelativeDecrease(700, { from: voting })
+        assertEvent(res, 'AllowedBeaconBalanceRelativeDecreaseSet', { expectedArgs: { value: 700 } })
 
         // check OK
         receipt = await app.reportBeacon(2, nextPooledEther, 3, { from: user1 })
