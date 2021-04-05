@@ -1,7 +1,7 @@
 const { assertRole, assertMissingRole } = require('../../helpers/aragon')
 
 async function assertAPMRegistryPermissions({ registry, registrar, registryACL, registryKernel, rootAddress }) {
-  const allAclEvents = await registryACL.getPastEvents('allEvents', { fromBlock: 11472780 })
+  const allAclEvents = await registryACL.getPastEvents('allEvents', { fromBlock: 4532202 })
 
   await assertRole({
     acl: registryACL,
