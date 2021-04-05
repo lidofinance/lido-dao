@@ -6,7 +6,6 @@ import {
   DataView,
   GU,
   Header,
-  IconCircleMinus,
   IconTrash,
   IdentityBadge,
   Main,
@@ -24,7 +23,8 @@ import IconEdit from '@aragon/ui/dist/IconEdit'
 import ChangeIncreaseSidePanel from './components/ChangeIncreaseSidePanel'
 import ChangeDecreaseSidePanel from './components/ChangeDecreaseSidePanel'
 import { constants, ethers } from 'ethers'
-import IconCircleCheck from '@aragon/ui/dist/IconCircleCheck'
+import IconSquarePlus from '@aragon/ui/dist/IconSquarePlus'
+import IconSquareMinus from '@aragon/ui/dist/IconSquareMinus'
 
 export default function App() {
   const { api, appState, currentApp, guiStyle } = useAragonApi()
@@ -165,6 +165,75 @@ export default function App() {
     lastCompletedReportDelta
   )
 
+  const renderSettings = useCallback(
+    (value, i) => {
+      switch (i) {
+        case 0:
+          return ['Expected Epoch Id', value]
+        case 1:
+          return [
+            'Allowed Beacon Balance Annual Relative Increase',
+            <div
+              css={`
+                display: flex;
+                align-items: center;
+              `}
+            >
+              <span>{value}</span>
+              <Button
+                icon={<IconEdit />}
+                label="Change increase"
+                display="icon"
+                onClick={openIncreaseSidePanel}
+                style={{ marginLeft: 10 }}
+              />
+            </div>,
+          ]
+        case 2:
+          return [
+            'Allowed Beacon Balance Relative Decrease',
+            <div
+              css={`
+                display: flex;
+                align-items: center;
+              `}
+            >
+              <span>{value}</span>
+              <Button
+                icon={<IconEdit />}
+                label="Change decrease"
+                display="icon"
+                onClick={openDecreaseSidePanel}
+                style={{ marginLeft: 10 }}
+              />
+            </div>,
+          ]
+        case 3:
+          return [
+            'Beacon Report Receiver',
+            <div
+              css={`
+                display: flex;
+                align-items: center;
+              `}
+            >
+              <IdentityBadge entity={value} />
+              <Button
+                icon={<IconEdit />}
+                label="Change receiver"
+                display="icon"
+                onClick={openReportReceiverSidePanel}
+                style={{ marginLeft: 10 }}
+              />
+            </div>,
+          ]
+        default:
+          return null
+      }
+    },
+    [openDecreaseSidePanel, openIncreaseSidePanel, openReportReceiverSidePanel]
+  )
+
   return (
     <Main theme={appearance} assetsUrl="./aragon-ui">
       {isSyncing && <SyncIndicator />}
@@ -182,10 +251,28 @@ export default function App() {
         primary={
           <>
             <DataView
-              fields={['Oracle Members']}
+              fields={[
+                'Oracle Members',
+                `Report Status (${currentOraclesReportStatus})`,
+              ]}
               entries={oracleMembers}
-              renderEntry={(memberAddress) => [
+              renderEntry={(memberAddress, i) => [
                 <IdentityBadge entity={memberAddress} />,
+                <span>
+                  {(2 ** i) & currentOraclesReportStatus ? (
+                    <IconSquarePlus
+                      css={`
+                        color: ${theme.positive};
+                      `}
+                    />
+                  ) : (
+                    <IconSquareMinus
+                      css={`
+                        color: ${theme.disabledIcon};
+                      `}
+                    />
+                  )}
+                </span>,
               ]}
               renderEntryActions={(memberAddress) => (
                 <ContextMenu>
@@ -211,7 +298,7 @@ export default function App() {
               entries={currentReportVariants}
               renderEntry={({ beaconBalance, beaconValidators, count }, i) => [
                 <strong>{i}</strong>,
-                <strong>{beaconBalance}</strong>,
+                <strong>{beaconBalance} gwei</strong>,
                 <strong>{beaconValidators}</strong>,
                 <strong>{count}</strong>,
               ]}
@@ -228,22 +315,11 @@ export default function App() {
               fields={['', '']}
               entries={[
                 expectedEpochId,
-                currentOraclesReportStatus,
                 allowedBeaconBalanceAnnualRelativeIncrease,
                 allowedBeaconBalanceRelativeDecrease,
                 beaconReportReceiver,
               ]}
-              renderEntry={(value, i) =>
-                renderInfo(
-                  value,
-                  i,
-                  openIncreaseSidePanel,
-                  openDecreaseSidePanel,
-                  openReportReceiverSidePanel,
-                  oracleMembers.length,
-                  theme
-                )
-              }
+              renderEntry={renderSettings}
             />
           </>
         }
@@ -279,7 +355,7 @@ export default function App() {
                   text-align: right;
                 `}
               >
-                Lido Oracle v{version}
+                Lido Oracle v{+version + 1}
               </p>
             )}
           </>
@@ -327,119 +403,24 @@ function renderCurrentFrame(frame) {
   )
 }
 
-function renderInfo(
-  value,
-  i,
-  openIncreaseSidePanel,
-  openDecreaseSidePanel,
-  openReportReceiverSidePanel,
-  oraclesCount,
-  theme
-) {
-  switch (i) {
-    case 0:
-      return ['Expected epoch id', value]
-    case 1:
-      return [
-        'Current Oracles Report Status',
-        <div>
-          {oraclesCount <= 10
-            ? convertOraclesReportStatus(value, oraclesCount).map((num) =>
-                num ? (
-                  <IconCircleCheck
-                    css={`
-                      color: ${theme.positive};
-                    `}
-                  />
-                ) : (
-                  <IconCircleMinus
-                    css={`
-                      color: ${theme.negative};
-                    `}
-                  />
-                )
-              )
-            : value}
-        </div>,
-      ]
-    case 2:
-      return [
-        'Allowed Beacon Balance Annual Increase',
-        <div
-          css={`
-            display: flex;
-            align-items: center;
-          `}
-        >
-          <span>{value}</span>
-          <Button
-            icon={<IconEdit />}
-            label="Change increase"
-            display="icon"
-            onClick={openIncreaseSidePanel}
-            style={{ marginLeft: 10 }}
-          />
-        </div>,
-      ]
-    case 3:
-      return [
-        'Allowed Beacon Balance Relative Decrease',
-        <div
-          css={`
-            display: flex;
-            align-items: center;
-          `}
-        >
-          <span>{value}</span>
-          <Button
-            icon={<IconEdit />}
-            label="Change decrease"
-            display="icon"
-            onClick={openDecreaseSidePanel}
-            style={{ marginLeft: 10 }}
-          />
-        </div>,
-      ]
-    case 4:
-      return [
-        'Beacon Report Receiver',
-        <div
-          css={`
-            display: flex;
-            align-items: center;
-          `}
-        >
-          <IdentityBadge entity={value} />
-          <Button
-            icon={<IconEdit />}
-            label="Change receiver"
-            display="icon"
-            onClick={openReportReceiverSidePanel}
-            style={{ marginLeft: 10 }}
-          />
-        </div>,
-      ]
-    default:
-      return null
-  }
-}
-
 function renderLastCompletedReportDelta(lastCompletedReportDelta) {
   if (!lastCompletedReportDelta) return null
 
   return (
     <>
       <LabelValue
-        label="Post-total:"
-        value={`${constants.EtherSymbol}${ethers.utils.formatEther(
-          lastCompletedReportDelta.postTotalPooledEther
-        )}`}
+        label="Pre-total:"
+        value={`${constants.EtherSymbol}${Number(
+          ethers.utils.formatEther(lastCompletedReportDelta.preTotalPooledEther)
+        ).toFixed(4)}`}
       />
       <LabelValue
-        label="Pre-total:"
-        value={`${constants.EtherSymbol}${ethers.utils.formatEther(
-          lastCompletedReportDelta.preTotalPooledEther
-        )}`}
+        label="Post-total:"
+        value={`${constants.EtherSymbol}${Number(
+          ethers.utils.formatEther(
+            lastCompletedReportDelta.postTotalPooledEther
+          )
+        ).toFixed(4)}`}
       />
       <LabelValue
         label="Time elapsed:"
@@ -484,16 +465,4 @@ function LabelValue({ label, value }) {
 
 function formatUnixTime(unixTime) {
   return new Date(1000 * unixTime).toISOString().replace(/[.]\d+Z$/, 'Z')
-}
-
-function convertOraclesReportStatus(uint256, oraclesCount) {
-  const reported = []
-  let cursor = 1
-
-  for (let i = 0; i < oraclesCount; i++) {
-    reported.push(uint256 & cursor)
-    cursor *= 2
-  }
-
-  return reported
 }
