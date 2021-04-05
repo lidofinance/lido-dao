@@ -40,11 +40,11 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /// ACL
-    bytes32 constant public MANAGE_MEMBERS = keccak256("MANAGE_MEMBERS");
-    bytes32 constant public MANAGE_QUORUM = keccak256("MANAGE_QUORUM");
-    bytes32 constant public SET_BEACON_SPEC = keccak256("SET_BEACON_SPEC");
-    bytes32 constant public SET_REPORT_BOUNDARIES = keccak256("SET_REPORT_BOUNDARIES");
-    bytes32 constant public SET_BEACON_REPORT_RECEIVER = keccak256("SET_BEACON_REPORT_RECEIVER");
+    bytes32 constant public MANAGE_MEMBERS = 0xbf6336045918ae0015f4cdb3441a2fdbfaa4bcde6558c8692aac7f56c69fb067; // keccak256("MANAGE_MEMBERS")
+    bytes32 constant public MANAGE_QUORUM = 0xa5ffa9f45fa52c446078e834e1914561bd9c2ab1e833572d62af775da092ccbc; // keccak256("MANAGE_QUORUM")
+    bytes32 constant public SET_BEACON_SPEC = 0x16a273d48baf8111397316e6d961e6836913acb23b181e6c5fb35ec0bd2648fc; // keccak256("SET_BEACON_SPEC")
+    bytes32 constant public SET_REPORT_BOUNDARIES = 0x44adaee26c92733e57241cb0b26ffaa2d182ed7120ba3ecd7e0dce3635c01dc1; // keccak256("SET_REPORT_BOUNDARIES")
+    bytes32 constant public SET_BEACON_REPORT_RECEIVER = 0xe22a455f1bfbaf705ac3e891a64e156da92cb0b42cfc389158e6e82bd57f37be; // keccak256("SET_BEACON_REPORT_RECEIVER")
 
     /// Maximum number of oracle committee members
     uint256 public constant MAX_MEMBERS = 256;
@@ -57,37 +57,46 @@ contract LidoOracle is ILidoOracle, AragonApp {
     uint256 internal constant MEMBER_NOT_FOUND = uint256(-1);
 
     /// Number of exactly the same reports needed to finalize the epoch
-    bytes32 internal constant QUORUM_POSITION = keccak256("lido.LidoOracle.quorum");
+    bytes32 internal constant QUORUM_POSITION =
+        0xd43b42c1ba05a1ab3c178623a49b2cdb55f000ec70b9ccdba5740b3339a7589e; // keccak256("lido.LidoOracle.quorum")
 
     /// Address of the Lido contract
-    bytes32 internal constant LIDO_POSITION = keccak256("lido.LidoOracle.lido");
+    bytes32 internal constant LIDO_POSITION =
+        0xf6978a4f7e200f6d3a24d82d44c48bddabce399a3b8ec42a480ea8a2d5fe6ec5; // keccak256("lido.LidoOracle.lido")
 
     /// Storage for the actual beacon chain specification
-    bytes32 internal constant BEACON_SPEC_POSITION = keccak256("lido.LidoOracle.beaconSpec");
+    bytes32 internal constant BEACON_SPEC_POSITION =
+        0x805e82d53a51be3dfde7cfed901f1f96f5dad18e874708b082adb8841e8ca909; // keccak256("lido.LidoOracle.beaconSpec")
 
     /// Version of the initialized contract data, v1 is 0
-    bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.LidoOracle.contractVersion");
+    bytes32 internal constant CONTRACT_VERSION_POSITION =
+        0x75be19a3f314d89bd1f84d30a6c84e2f1cd7afc7b6ca21876564c265113bb7e4; // keccak256("lido.LidoOracle.contractVersion")
 
     /// Epoch that we currently collect reports
-    bytes32 internal constant EXPECTED_EPOCH_ID_POSITION = keccak256("lido.LidoOracle.expectedEpochId");
+    bytes32 internal constant EXPECTED_EPOCH_ID_POSITION =
+        0x65f1a0ee358a8a4000a59c2815dc768eb87d24146ca1ac5555cb6eb871aee915; // keccak256("lido.LidoOracle.expectedEpochId")
 
     /// The bitmask of the oracle members that pushed their reports
-    bytes32 internal constant REPORTS_BITMASK_POSITION = keccak256("lido.LidoOracle.reportsBitMask");
+    bytes32 internal constant REPORTS_BITMASK_POSITION =
+        0xea6fa022365e4737a3bb52facb00ddc693a656fb51ffb2b4bd24fb85bdc888be; // keccak256("lido.LidoOracle.reportsBitMask")
 
     /// Historic data about 2 last completed reports and their times
     bytes32 internal constant POST_COMPLETED_TOTAL_POOLED_ETHER_POSITION =
-        keccak256("lido.LidoOracle.postCompletedTotalPooledEther");
+        0xaa8433b13d2b111d4f84f6f374bc7acbe20794944308876aa250fa9a73dc7f53; // keccak256("lido.LidoOracle.postCompletedTotalPooledEther")
     bytes32 internal constant PRE_COMPLETED_TOTAL_POOLED_ETHER_POSITION =
-        keccak256("lido.LidoOracle.preCompletedTotalPooledEther");
-    bytes32 internal constant LAST_COMPLETED_EPOCH_ID_POSITION = keccak256("lido.LidoOracle.lastCompletedEpochId");
-    bytes32 internal constant TIME_ELAPSED_POSITION = keccak256("lido.LidoOracle.timeElapsed");
+        0x1043177539af09a67d747435df3ff1155a64cd93a347daaac9132a591442d43e; // keccak256("lido.LidoOracle.preCompletedTotalPooledEther")
+    bytes32 internal constant LAST_COMPLETED_EPOCH_ID_POSITION =
+        0xdad15c0beecd15610092d84427258e369d2582df22869138b4c5265f049f574c; // keccak256("lido.LidoOracle.lastCompletedEpochId")
+    bytes32 internal constant TIME_ELAPSED_POSITION =
+        0x8fe323f4ecd3bf0497252a90142003855cc5125cee76a5b5ba5d508c7ec28c3a; // keccak256("lido.LidoOracle.timeElapsed")
 
     /// Receiver address to be called when the report is pushed to Lido
-    bytes32 internal constant BEACON_REPORT_RECEIVER_POSITION = keccak256("lido.LidoOracle.beaconReportReceiver");
+    bytes32 internal constant BEACON_REPORT_RECEIVER_POSITION =
+        0xb59039ed37776bc23c5d272e10b525a957a1dfad97f5006c84394b6b512c1564; // keccak256("lido.LidoOracle.beaconReportReceiver")
 
     /// Upper bound of the reported balance possible increase in APR, controlled by the governance
     bytes32 internal constant ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION =
-        keccak256("lido.LidoOracle.allowedBeaconBalanceAnnualRelativeIncrease");
+        0x613075ab597bed8ce2e18342385ce127d3e5298bc7a84e3db68dc64abd4811ac; // keccak256("lido.LidoOracle.allowedBeaconBalanceAnnualRelativeIncrease")
 
     /// Lower bound of the reported balance possible decrease, controlled by the governance
     ///
@@ -96,7 +105,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     /// realistic scenario. Thus, instead of sanity check for an APR, we check if the plain relative
     /// decrease is within bounds.  Note that it's not annual value, its just one-jump value.
     bytes32 internal constant ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION =
-        keccak256("lido.LidoOracle.allowedBeaconBalanceDecrease");
+        0x92ba7776ed6c5d13cf023555a94e70b823a4aebd56ed522a77345ff5cd8a9109; // keccak256("lido.LidoOracle.allowedBeaconBalanceDecrease")
 
 
     /// Contract structured storage
@@ -105,52 +114,58 @@ contract LidoOracle is ILidoOracle, AragonApp {
 
 
     /**
-     * Returns the Lido contract address
+     * @notice Return the Lido contract address
      */
     function getLido() public view returns (ILido) {
         return ILido(LIDO_POSITION.getStorageAddress());
     }
 
     /**
-     * Returns the number of exactly the same reports needed to finalize the epoch
+     * @notice Return the number of exactly the same reports needed to finalize the epoch
      */
     function getQuorum() public view returns (uint256) {
         return QUORUM_POSITION.getStorageUint256();
     }
 
     /**
-     * Returns the upper bound of the reported balance possible increase in APR
+     * @notice Return the upper bound of the reported balance possible increase in APR
      */
     function getAllowedBeaconBalanceAnnualRelativeIncrease() public view returns (uint256) {
         return ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION.getStorageUint256();
     }
 
     /**
-     * Returns the lower bound of the reported balance possible decrease
+     * @notice Return the lower bound of the reported balance possible decrease
      */
     function getAllowedBeaconBalanceRelativeDecrease() public view returns (uint256) {
         return ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION.getStorageUint256();
     }
 
+    /**
+     * @notice Set the upper bound of the reported balance possible increase in APR to `_value`
+     */
     function setAllowedBeaconBalanceAnnualRelativeIncrease(uint256 _value) external auth(SET_REPORT_BOUNDARIES) {
         ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION.setStorageUint256(_value);
         emit AllowedBeaconBalanceAnnualRelativeIncreaseSet(_value);
     }
 
+    /**
+     * @notice Set the lower bound of the reported balance possible decrease to `_value`
+     */
     function setAllowedBeaconBalanceRelativeDecrease(uint256 _value) external auth(SET_REPORT_BOUNDARIES) {
         ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION.setStorageUint256(_value);
         emit AllowedBeaconBalanceRelativeDecreaseSet(_value);
     }
 
     /**
-     * Returns the receiver contract address to be called when the report is pushed to Lido
+     * @notice Return the receiver contract address to be called when the report is pushed to Lido
      */
     function getBeaconReportReceiver() external view returns (address) {
         return address(BEACON_REPORT_RECEIVER_POSITION.getStorageUint256());
     }
 
     /**
-     * Sets the receiver contract address to be called when the report is pushed to Lido
+     * @notice Set the receiver contract address to `_addr` to be called when the report is pushed
      * @dev Specify 0 to disable this functionality
      */
     function setBeaconReportReceiver(address _addr) external auth(SET_BEACON_REPORT_RECEIVER) {
@@ -159,8 +174,8 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * Returns the current reporting bitmap, representing oracles who have already pushed their
-     * version of report during the expected epoch
+     * @notice Return the current reporting bitmap, representing oracles who have already pushed
+     * their version of report during the expected epoch
      * @dev Every oracle bit corresponds to the index of the oracle in the current members list
      */
     function getCurrentOraclesReportStatus() external view returns (uint256) {
@@ -168,14 +183,14 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * Returns the current reporting variants array size
+     * @notice Return the current reporting variants array size
      */
     function getCurrentReportVariantsSize() external view returns (uint256) {
         return currentReportVariants.length;
     }
 
     /**
-     * Returns the current reporting array element with the given index
+     * @notice Return the current reporting array element with index `_index`
      */
     function getCurrentReportVariant(uint256 _index)
         external
@@ -190,28 +205,28 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * Returns epoch that can be reported by oracles
+     * @notice Returns epoch that can be reported by oracles
      */
     function getExpectedEpochId() external view returns (uint256) {
         return EXPECTED_EPOCH_ID_POSITION.getStorageUint256();
     }
 
     /**
-     * Returns the current oracle member committee list
+     * @notice Return the current oracle member committee list
      */
     function getOracleMembers() external view returns (address[]) {
         return members;
     }
 
     /**
-     * Returns the initialized version of this contract starting from 0
+     * @notice Return the initialized version of this contract starting from 0
      */
     function getVersion() external view returns (uint256) {
         return CONTRACT_VERSION_POSITION.getStorageUint256();
     }
 
     /**
-     * Returns beacon specification data
+     * @notice Return beacon specification data
      */
     function getBeaconSpec()
         external
@@ -233,7 +248,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * Updates beacon specification data
+     * @notice Update beacon specification data
      */
     function setBeaconSpec(
         uint64 _epochsPerFrame,
@@ -253,7 +268,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * Returns the epoch calculated from current timestamp
+     * @notice Return the epoch calculated from current timestamp
      */
     function getCurrentEpochId() external view returns (uint256) {
         BeaconSpec memory beaconSpec = _getBeaconSpec();
@@ -261,8 +276,8 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * Returns currently reportable epoch (the first epoch of the current frame) as well as its
-     * start and end times in seconds
+     * @notice Return currently reportable epoch (the first epoch of the current frame) as well as
+     * its start and end times in seconds
      */
     function getCurrentFrame()
         external
@@ -283,7 +298,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * Reports beacon balance and its change during the last frame
+     * @notice Report beacon balance and its change during the last frame
      */
     function getLastCompletedReportDelta()
         external
@@ -300,7 +315,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * Initialize contract data, that is new to v2
+     * @notice Initialize the contract data, that is new to v2
      * @dev Original initialize function removed from v2 because it is invoked only once
      */
     function initialize_v2(
@@ -327,7 +342,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * Adds the given address to the oracle member committee list
+     * @notice Add `_member` to the oracle member committee list
      */
     function addOracleMember(address _member) external auth(MANAGE_MEMBERS) {
         require(address(0) != _member, "BAD_ARGUMENT");
@@ -339,7 +354,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * Removes the given address from the oracle member committee list
+     * @notice Remove '_member` from the oracle member committee list
      */
     function removeOracleMember(address _member) external auth(MANAGE_MEMBERS) {
         uint256 index = _getMemberId(_member);
@@ -355,7 +370,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * Sets the number of exactly the same reports needed to finalize the epoch
+     * @notice Set the number of exactly the same reports needed to finalize the epoch to `_quorum`
      */
     function setQuorum(uint256 _quorum) external auth(MANAGE_QUORUM) {
         require(0 != _quorum, "QUORUM_WONT_BE_MADE");
@@ -379,7 +394,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * Accepts oracle committee member reports from the ETH 2.0 side
+     * @notice Accept oracle committee member reports from the ETH 2.0 side
      * @param _epochId Beacon chain epoch
      * @param _beaconBalance Balance in wei on the ETH 2.0 side (9-digit denomination)
      * @param _beaconValidators Number of validators visible in this epoch
@@ -395,7 +410,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
             require(_epochId == _getCurrentFrameFirstEpochId(beaconSpec), "UNEXPECTED_EPOCH");
             _clearReportingAndAdvanceTo(_epochId);
         }
-        
+
         uint128 beaconBalanceEth1 = DENOMINATION_OFFSET * uint128(_beaconBalance);
         emit BeaconReported(_epochId, beaconBalanceEth1, _beaconValidators, msg.sender);
 
@@ -430,7 +445,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * Returns BeaconSpec structure
+     * @notice Return beacon specification data
      */
     function _getBeaconSpec()
         internal
@@ -446,7 +461,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * Returns whether the quorum is reached and the final report
+     * @notice Return whether the `_quorum` is reached and the final report
      */
     function _getQuorumReport(uint256 _quorum) internal view returns (bool isQuorum, uint256 report) {
         // check most frequent cases first: all reports are the same or no reports yet
@@ -477,7 +492,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * Sets beacon specification data
+     * @notice Set beacon specification data
      */
     function _setBeaconSpec(
         uint64 _epochsPerFrame,
@@ -507,7 +522,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * Pushes the given report to Lido and performs accompanying accounting
+     * @notice Push the given report to Lido and performs accompanying accounting
      * @param _epochId Beacon chain epoch, proven to be >= expected epoch and <= current epoch
      * @param _beaconBalanceEth1 Validators balance in eth1 (18-digit denomination)
      * @param _beaconSpec current beacon specification data
@@ -539,7 +554,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
         TIME_ELAPSED_POSITION.setStorageUint256(timeElapsed);
         LAST_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(_epochId);
 
-        // rollback on boundaries violation (logical consistency)
+        // rollback on boundaries violation
         _reportSanityChecks(postTotalPooledEther, prevTotalPooledEther, timeElapsed);
 
         // emit detailed statistics and call the quorum delegate with this data
@@ -551,7 +566,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * Removes the current reporting progress and advances to accept later epoch
+     * @notice Remove the current reporting progress and advances to accept the later epoch `_epochId`
      */
     function _clearReportingAndAdvanceTo(uint256 _epochId) internal {
         REPORTS_BITMASK_POSITION.setStorageUint256(0);
@@ -561,9 +576,11 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * To make oracles less dangerous, we can limit rewards report by 0.1% increase in stake and 
-     * 15% decrease in stake, with both values configurable by the governance in case of extremely
-     * unusual circumstances.
+     * @notice Performs logical consistency check of the Lido changes as the result of our push
+     *
+     * @dev To make oracles less dangerous, we can limit rewards report by 0.1% increase in stake
+     * and 15% decrease in stake, with both values configurable by the governance in case of
+     * extremely unusual circumstances.
      *
      * daily_reward_rate_PPM = 1e6 * reward / totalPooledEther / days
      *
@@ -597,7 +614,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * Returns member's index in the members list or MEMBER_NOT_FOUND
+     * @notice Return `_member` index in the members list or MEMBER_NOT_FOUND
      */
     function _getMemberId(address _member) internal view returns (uint256) {
         uint256 length = members.length;
@@ -610,21 +627,21 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * Returns the epoch calculated from current timestamp
+     * @notice Return the epoch calculated from current timestamp
      */
     function _getCurrentEpochId(BeaconSpec memory _beaconSpec) internal view returns (uint256) {
         return (_getTime() - _beaconSpec.genesisTime) / (_beaconSpec.slotsPerEpoch * _beaconSpec.secondsPerSlot);
     }
 
     /**
-     * Returns the first epoch of the current frame
+     * @notice Return the first epoch of the current frame
      */
     function _getCurrentFrameFirstEpochId(BeaconSpec memory _beaconSpec) internal view returns (uint256) {
         return _getCurrentEpochId(_beaconSpec) / _beaconSpec.epochsPerFrame * _beaconSpec.epochsPerFrame;
     }
 
     /**
-     * Returns the current timestamp
+     * @notice Return the current timestamp
      */
     function _getTime() internal view returns (uint256) {
         return block.timestamp; // solhint-disable-line not-rely-on-time
