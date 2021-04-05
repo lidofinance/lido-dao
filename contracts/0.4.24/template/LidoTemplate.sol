@@ -359,13 +359,7 @@ contract LidoTemplate is IsContract {
             noInit
         ));
 
-        state.oracle.initialize(
-            state.lido,
-            _beaconSpec[0], // epochsPerFrame
-            _beaconSpec[1], // slotsPerEpoch
-            _beaconSpec[2], // secondsPerSlot
-            _beaconSpec[3]  // genesisTime
-        );
+        state.oracle.initialize_v2(100000, 50000);
 
         state.operators.initialize(state.lido);
 
@@ -626,8 +620,10 @@ contract LidoTemplate is IsContract {
         perms[0] = _state.oracle.MANAGE_MEMBERS();
         perms[1] = _state.oracle.MANAGE_QUORUM();
         perms[2] = _state.oracle.SET_BEACON_SPEC();
+        perms[3] = _state.oracle.SET_REPORT_BOUNDARIES();
+        perms[4] = _state.oracle.SET_BEACON_REPORT_RECEIVER();
 
-        for (i = 0; i < 3; ++i) {
+        for (i = 0; i < 5; ++i) {
             _createPermissionForVoting(acl, _state.oracle, perms[i], voting);
         }
 
