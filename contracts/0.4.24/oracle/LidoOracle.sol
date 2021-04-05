@@ -582,7 +582,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
      * and 15% decrease in stake, with both values configurable by the governance in case of
      * extremely unusual circumstances.
      *
-     * daily_reward_rate_PPM = 1e6 * reward / totalPooledEther / days
+     * daily_reward_rate = 10000 * reward / totalPooledEther / days, in 0.01% basis points
      *
      * Note, if you deploy the fresh contract (e.g. on testnet) it may fail at the beginning of the
      * work because the initial pooledEther may be small and it's allowed tiny in absolute numbers,
@@ -600,16 +600,16 @@ contract LidoOracle is ILidoOracle, AragonApp {
     {
         if (_postTotalPooledEther >= _preTotalPooledEther) {  // check profit constraint
             uint256 reward = _postTotalPooledEther - _preTotalPooledEther;
-            uint256 allowedBeaconBalanceAnnualIncreasePPM =
+            uint256 allowedBeaconBalanceAnnualIncrease =
                 getAllowedBeaconBalanceAnnualRelativeIncrease().mul(_preTotalPooledEther);
-            uint256 rewardAnnualizedPPM = uint256(1e6 * 365 days).mul(reward).div(_timeElapsed);
-            require(rewardAnnualizedPPM <= allowedBeaconBalanceAnnualIncreasePPM, "ALLOWED_BEACON_BALANCE_INCREASE");
+            uint256 rewardAnnualized = uint256(10000 * 365 days).mul(reward).div(_timeElapsed);
+            require(rewardAnnualized <= allowedBeaconBalanceAnnualIncrease, "ALLOWED_BEACON_BALANCE_INCREASE");
         } else {  // check loss constraint
-            uint256 loss = _preTotalPooledEther - _postTotalPooledEther;
-            uint256 allowedBeaconBalanceDecreasePPM =
+            uint256 delta = _preTotalPooledEther - _postTotalPooledEther;
+            uint256 allowedBeaconBalanceDecrease =
                 getAllowedBeaconBalanceRelativeDecrease().mul(_preTotalPooledEther);
-            uint256 lossPPM = uint256(1e6).mul(loss);
-            require(lossPPM <= allowedBeaconBalanceDecreasePPM, "ALLOWED_BEACON_BALANCE_DECREASE");
+            uint256 loss = uint256(10000).mul(delta);
+            require(loss <= allowedBeaconBalanceDecrease, "ALLOWED_BEACON_BALANCE_DECREASE");
         }
     }
 
