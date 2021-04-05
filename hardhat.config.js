@@ -53,6 +53,12 @@ const getNetConfig = (networkName, ethAccountName) => {
       chainId: 4,
       timeout: 60000 * 10
     },
+    goerli: {
+      ...base,
+      url: 'https://goerli.infura.io/v3/' + accounts.infura.projectId,
+      chainId: 5,
+      timeout: 60000 * 10
+    },
     'mainnet-test': {
       ...base,
       url: 'https://mainnet.infura.io/v3/' + accounts.infura.projectId,

@@ -67,7 +67,7 @@ async function assertRole({
 }
 
 async function getAllAclEvents(acl) {
-  return await acl.getPastEvents('allEvents', { fromBlock: 11472780 })
+  return await acl.getPastEvents('allEvents', { fromBlock: 4532202 })
 }
 
 async function assertMissingRole({ roleName, acl, app, appName, allAclEvents = null }) {

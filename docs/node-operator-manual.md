@@ -110,13 +110,13 @@ The fork version used for generating the signature must correspond to the fork v
 chain the instance of Lido protocol is targeted to.
 
 You can obtain the protocol withdrawal credentials by calling [`Lido.getWithdrawalCredentials()`].
-On the [Etherscan page for the Pyrmont-deployed Lido], it’s the field number 17. The ABI of the
+On the [Etherscan page for the Prater-deployed Lido], it’s the field number 19. The ABI of the
 `Lido` contract can be found in [`lib/abi/Lido.json`].
 
 [BLS12-381]: https://ethresear.ch/t/pragmatic-signature-aggregation-with-bls/2105
 [as defined in the spec]: https://github.com/ethereum/annotated-spec/blob/master/phase0/beacon-chain.md#depositmessage
 [`Lido.getWithdrawalCredentials()`]: https://github.com/lidofinance/lido-dao/blob/971ac8f/contracts/0.4.24/Lido.sol#L312
-[Etherscan page for the Pyrmont-deployed Lido]: https://goerli.etherscan.io/address/0xA5d26F68130c989ef3e063c9bdE33BC50a86629D#readProxyContract
+[Etherscan page for the Prater-deployed Lido]: https://goerli.etherscan.io/address/0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F#readProxyContract
 [`lib/abi/Lido.json`]: https://github.com/lidofinance/lido-dao/blob/971ac8f/lib/abi/Lido.json
 
 #### Using the forked eth2.0-deposit-cli
@@ -131,13 +131,14 @@ To generate the keys and signatures, run the following:
 
 ```sh
 docker run -it --rm -v "$(pwd):/data" lidofinance/deposit-cli \
+  new-mnemonic \
   --folder /data \
   --chain="$CHAIN_NAME" \
-  --withdrawal_pk="$PROTOCOL_WITHDRAWAL_PUBLIC_KEY"
+  --withdrawal_credentials="$WITHDRAWAL_CREDENTIALS"
 ```
 
 Here, `CHAIN_NAME` is one of the public Beacon chain names (run the container with the `--help` flag
-to see the possible values) and `PROTOCOL_WITHDRAWAL_PUBLIC_KEY` is the withdrawal public key
+to see the possible values) and `WITHDRAWAL_CREDENTIALS` is the withdrawal credentials
 from the protocol documentation.
 
 As a result of running this, the `validator_keys` directory will be created in the current working
@@ -177,22 +178,54 @@ Operator ID for a given reward address can be obtained by successively calling
 [`NodeOperatorsRegistry.getNodeOperator`] with the increasing `_id` argument until you get the
 operator with the matching `rewardAddress`.
 
-Etherscan pages for the Görli/Pyrmont contracts:
+Etherscan pages for the Görli/Prater contracts:
 
-* [`Lido`](https://goerli.etherscan.io/address/0xA5d26F68130c989ef3e063c9bdE33BC50a86629D#readProxyContract)
-* [`NodeOperatorsRegistry`](https://goerli.etherscan.io/address/0xb1e7fb9e9a71063ab552ddee87ea8c6eec7f5c7a#readProxyContract)
+* [`Lido`](https://goerli.etherscan.io/address/0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F#readProxyContract)
+* [`NodeOperatorsRegistry`](https://goerli.etherscan.io/address/0x9D4AF1Ee19Dad8857db3a45B0374c81c8A1C6320)
 
 [`addSigningKeysOperatorBH` function]: https://github.com/lidofinance/lido-dao/blob/971ac8f/contracts/0.4.24/nos/NodeOperatorsRegistry.sol#L250
 [`getOperators()` function]: https://github.com/lidofinance/lido-dao/blob/971ac8f/contracts/0.4.24/Lido.sol#L361
 [`lib/abi/NodeOperatorsRegistry.json`]: https://github.com/lidofinance/lido-dao/blob/971ac8f/lib/abi/NodeOperatorsRegistry.json
 [`NodeOperatorsRegistry.getNodeOperator`]: https://github.com/lidofinance/lido-dao/blob/971ac8f/contracts/0.4.24/nos/NodeOperatorsRegistry.sol#L335
 
-#### Using the UI
+#### Using the key submitter UI
+
+Lido has the specialized [web interface for submitting the keys].
+
+<img width="1280" alt="image" src="https://user-images.githubusercontent.com/4445523/113226738-8b522480-9299-11eb-84eb-186bb6f198dc.png">
+
+Prepare a JSON data of the following structure and paste it to the textarea that will appear in the center of the screen:
+
+```js
+[
+   {
+     "pubkey": "PUBLIC_KEY_1",
+     "signature": "SIGNATURE_1"
+   },
+   {
+     "pubkey": "PUBLIC_KEY_2",
+     "signature": "SIGNATURE_2"
+   },
+   // ... etc.
+]
+```
+
+If you’ve used the forked `eth2.0-deposit-cli`, you can paste the content of the generated
+`deposit-data-*.json` file as-is.
+
+Click `Check` button, and then the interface would run required checks connect the MetaMask and click `Submit` button.
+
+Once the keys are submitted, Node Operators can check whether the supplied keys are valid with the [web interface for checking the submitted keys]. If the keys are valid, they can vote for increasing the key limit for the Node Operator.
+
+* [web interface for submitting the keys](https://stake.testnet.lido.fi/key-checker/submit)
+* [web interface for checking the submitted keys](https://stake.testnet.lido.fi/key-checker/existing)
+
+#### Using the Aragon UI
 
 Alternatively, you can use the Node Operators Registry app UI for submitting the keys. For the
-Görli/Pyrmont deployment, you can find it here:
+Görli/Prater deployment, you can find it here:
 
-https://goerli.lido.fi/#/lido-dao-testnet/0xb1e7fb9e9a71063ab552ddee87ea8c6eec7f5c7a
+https://testnet.lido.fi/#/lido-testnet-prater/0x9d4af1ee19dad8857db3a45b0374c81c8a1c6320/
 
 Make sure you’re using a browser that exposes a Web3 provider allowing to sign transactions on
 behalf of the Node Operator’s reward address. Press the Connect account button in the top-right and
@@ -238,14 +271,14 @@ If you’ve used the forked `eth2.0-deposit-cli` to generate the keys, you can i
 Lighthouse validator client by running this command:
 
 ```
-docker run --rm \
- --name validator_keys_import \
- -v "$KEYS_DIR":/root/validator_keys \
- -v "$DATA_DIR":/root/.lighthouse \
- sigp/lighthouse \
+docker run --rm -it \
+  --name validator_keys_import \
+  -v "$KEYS_DIR":/root/validator_keys \
+  -v "$DATA_DIR":/root/.lighthouse \
+  sigp/lighthouse \
   lighthouse account validator import \
   --reuse-password \
-  --testnet "$TESTNET_NAME" \
+  --network "$TESTNET_NAME" \
   --datadir /root/.lighthouse/data \
   --directory /root/validator_keys
 ```
