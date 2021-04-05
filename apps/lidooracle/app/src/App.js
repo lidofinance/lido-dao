@@ -23,8 +23,6 @@ import IconEdit from '@aragon/ui/dist/IconEdit'
 import ChangeIncreaseSidePanel from './components/ChangeIncreaseSidePanel'
 import ChangeDecreaseSidePanel from './components/ChangeDecreaseSidePanel'
 import { constants, ethers } from 'ethers'
-import IconSquarePlus from '@aragon/ui/dist/IconSquarePlus'
-import IconSquareMinus from '@aragon/ui/dist/IconSquareMinus'
 
 export default function App() {
   const { api, appState, currentApp, guiStyle } = useAragonApi()
@@ -169,8 +167,6 @@ export default function App() {
     (value, i) => {
       switch (i) {
         case 0:
-          return ['Expected Epoch Id', value]
-        case 1:
           return [
             'Allowed Beacon Balance Annual Relative Increase',
             <div
@@ -179,7 +175,7 @@ export default function App() {
                 align-items: center;
               `}
             >
-              <span>{value}</span>
+              <span>{value ? `${value / 10000}%` : 'Unavailable'}</span>
               <Button
                 icon={<IconEdit />}
                 label="Change increase"
@@ -189,7 +185,7 @@ export default function App() {
               />
             </div>,
           ]
-        case 2:
+        case 1:
           return [
             'Allowed Beacon Balance Relative Decrease',
             <div
@@ -198,7 +194,7 @@ export default function App() {
                 align-items: center;
               `}
             >
-              <span>{value}</span>
+              <span>{value ? `${value / 10000}%` : 'Unavailable'}</span>
               <Button
                 icon={<IconEdit />}
                 label="Change decrease"
@@ -208,7 +204,7 @@ export default function App() {
               />
             </div>,
           ]
-        case 3:
+        case 2:
           return [
             'Beacon Report Receiver',
             <div
@@ -259,19 +255,7 @@ export default function App() {
               renderEntry={(memberAddress, i) => [
                 <IdentityBadge entity={memberAddress} />,
                 <span>
-                  {(2 ** i) & currentOraclesReportStatus ? (
-                    <IconSquarePlus
-                      css={`
-                        color: ${theme.positive};
-                      `}
-                    />
-                  ) : (
-                    <IconSquareMinus
-                      css={`
-                        color: ${theme.disabledIcon};
-                      `}
-                    />
-                  )}
+                  {(2 ** i) & currentOraclesReportStatus ? 'Submitted' : ''}
                 </span>,
               ]}
               renderEntryActions={(memberAddress) => (
@@ -314,7 +298,6 @@ export default function App() {
             <DataView
               fields={['', '']}
               entries={[
-                expectedEpochId,
                 allowedBeaconBalanceAnnualRelativeIncrease,
                 allowedBeaconBalanceRelativeDecrease,
                 beaconReportReceiver,
@@ -331,6 +314,7 @@ export default function App() {
               onClick={openChangeQuorumSidePanel}
               label="Change Quorum"
             />
+            <InfoBox heading="Expected Epoch Id" value={expectedEpochId} />
             {currentFrameEl && (
               <InfoBox
                 heading="Frame"

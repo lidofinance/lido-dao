@@ -10,13 +10,22 @@ const initialValues = {
 }
 
 const validationSchema = yup.object().shape({
-  value: yup.number().integer().required().min(0),
+  value: yup
+    .number()
+    .positive()
+    .required()
+    .min(0)
+    .max(100)
+    .test('Value', `Value can have up to 4 decimal places.`, (value) => {
+      const regex = /^\d{1,3}(\.\d{1,4})?$/
+      return regex.test(value)
+    }),
 })
 
 function PanelContent({ api, onClose }) {
   const onSubmit = useCallback(
     ({ value }) => {
-      api(value).finally(() => {
+      api(value * 10000).finally(() => {
         onClose()
       })
     },
@@ -48,13 +57,26 @@ function PanelContent({ api, onClose }) {
               `}
             >
               This action will set a new allowed beacon balance annual relative
-              increase.
+              increase. Please specify the value as a percentage. The value will
+              automatically be converted to basis points upon submission.
+              <br />
+              <br />
+              i.e.
+              <br />
+              <strong>
+                100% = 1 000 000 basis points
+                <br />
+                1% = 10 000 basis points
+                <br />
+                Minimal step: 0.0001% (1 basis point)
+              </strong>
             </Info>
             <Field
               name="value"
-              label="Value"
+              label="Value (%)"
               type="number"
               min="0"
+              step="0.0001"
               required
               component={TextField}
             />
