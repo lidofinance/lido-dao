@@ -249,7 +249,7 @@ export default function App() {
             <DataView
               fields={[
                 'Oracle Members',
-                `Report Status (${currentOraclesReportStatus})`,
+                `Current Report Status (${currentOraclesReportStatus})`,
               ]}
               entries={oracleMembers}
               renderEntry={(memberAddress, i) => [
