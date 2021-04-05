@@ -16,8 +16,8 @@ const validationSchema = yup.object().shape({
     .required()
     .min(0)
     .max(100)
-    .test('Value', `Value can have up to 4 decimal places.`, (value) => {
-      const regex = /^\d{1,3}(\.\d{1,4})?$/
+    .test('Value', `Value can have up to 2 decimal places.`, (value) => {
+      const regex = /^\d{1,3}(\.\d{1,2})?$/
       return regex.test(value)
     }),
 })
@@ -25,7 +25,7 @@ const validationSchema = yup.object().shape({
 function PanelContent({ api, onClose }) {
   const onSubmit = useCallback(
     ({ value }) => {
-      api(value * 10000).finally(() => {
+      api(value * 100).finally(() => {
         onClose()
       })
     },
@@ -64,11 +64,11 @@ function PanelContent({ api, onClose }) {
               i.e.
               <br />
               <strong>
-                100% = 1 000 000 basis points
+                100% = 10 000 basis points
                 <br />
-                1% = 10 000 basis points
+                1% = 100 basis points
                 <br />
-                Minimal step: 0.0001% (1 basis point)
+                Minimal step: 0.01% (1 basis point)
               </strong>
             </Info>
             <Field
@@ -76,7 +76,7 @@ function PanelContent({ api, onClose }) {
               label="Value (%)"
               type="number"
               min="0"
-              step="0.0001"
+              step="0.01"
               required
               component={TextField}
             />

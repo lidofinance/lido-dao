@@ -175,7 +175,7 @@ export default function App() {
                 align-items: center;
               `}
             >
-              <span>{value ? `${value / 10000}%` : 'Unavailable'}</span>
+              <span>{value ? `${value / 100}%` : 'Unavailable'}</span>
               <Button
                 icon={<IconEdit />}
                 label="Change increase"
@@ -194,7 +194,7 @@ export default function App() {
                 align-items: center;
               `}
             >
-              <span>{value ? `${value / 10000}%` : 'Unavailable'}</span>
+              <span>{value ? `${value / 100}%` : 'Unavailable'}</span>
               <Button
                 icon={<IconEdit />}
                 label="Change decrease"
