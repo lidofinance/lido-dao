@@ -1,5 +1,6 @@
 {
   "networkId": 5,
+  "ipfsAPI": "http://206.81.31.11/ipfs/api/v0",
   "daoAragonId": "lido-testnet",
   "ensAddress": "0x043e6DBC5CAd60874727d21ecC2aAeBf50A0de80",
   "daoFactoryAddress": "0x0B6769F500b293e3adacD97c3961189565069902",
@@ -31,8 +32,8 @@
   },
   "app:oracle": {
     "baseAddress": "0xC0acFc2F4AA264E844C06Deb24D0A409c81e5392",
-    "ipfsCid": "QmYb8VDjam4AHNoNe7Fvuprc7qV6Ez9fjRLLWmRqU2wSZT",
-    "contentURI": "0x697066733a516d59623856446a616d3441484e6f4e653746767570726337715636457a39666a524c4c576d5271553277535a54",
+    "ipfsCid": "QmcUKa4eHpbDiWR7R6EtKVyPFXzX34jePtfyAFUAAUotY1",
+    "contentURI": "0x697066733a516d63554b6134654870624469575237523645744b56795046587a5833346a65507466794146554141556f745931",
     "name": "oracle",
     "fullName": "oracle.lidopm-testnet.eth",
     "id": "0x4a7adba13903f80bc9552be515306475240617f383ab17383db8cbe4feefdadc",
