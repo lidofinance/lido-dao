@@ -316,10 +316,10 @@ export default function App() {
               onClick={openChangeQuorumSidePanel}
               label="Change Quorum"
             />
-            <InfoBox heading="Expected Epoch Id" value={expectedEpochId} />
+            <InfoBox heading="Expected Epoch" value={expectedEpochId} />
             {currentFrameEl && (
               <InfoBox
-                heading="Frame"
+                heading="Current Frame"
                 value={currentFrameEl}
                 largeText={false}
                 label="Update"
