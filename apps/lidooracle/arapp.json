@@ -28,19 +28,19 @@
   ],
   "environments": {
     "default": {
-      "appName": "lido.lidopm-testnet-prater.eth",
+      "appName": "oracle.lidopm-testnet-prater.eth",
       "network": "development"
     },
     "rinkeby": {
-      "appName": "lido.lidopm-testnet-prater.eth",
+      "appName": "oracle.lidopm-testnet-prater.eth",
       "network": "rinkeby"
     },
     "mainnet-test": {
-      "appName": "lido.lidopm-testnet-prater.eth",
+      "appName": "oracle.lidopm-testnet-prater.eth",
       "network": "mainnet"
     },
     "mainnet": {
-      "appName": "lido.lidopm-testnet-prater.eth",
+      "appName": "oracle.lidopm-testnet-prater.eth",
       "network": "mainnet"
     }
   },
