@@ -64,31 +64,45 @@ This step will verify the deployed contract and update the following field to th
 
 * `app:oracle.baseAddress` address of the `LidoOracle` implementation contract
 
-## 3. Create new voting to update PM app version
+## 3. Create new voting for upgrade
 
-To further update the application, you must first perform the version update procedure in the Package Manager.
-Since the rights to the Package Manager have been transferred to the DAO, a voting must be started to perform the version update.
+To further update the application, you must perform several actions:
+    * run the version update procedure in the Aragon Package Manager,
+    * upgrade the version of the application inside the DAO as well as its frontend,
+    * add newly introced access rights,
+    * initialize new data.
 
-> Note: this script so far only updates the contract address of the app, not the contentUri of the web part of the app.
+Since the rights to the some of these have been transferred to the DAO, a voting must be started to
+perform the version update. All these actions are applied atomically as the voting is accepted and
+entacted.
 
 Run the script to generate data for the create voting transaction:
 
 ```text
-$ APP=oracle yarn hardhat --network mainnet run ./scripts/multisig/15-vote-new-app-impl.js
-...
+$ APP=oracle CONTENT_CID="QmPWVU6GaMRhiUhR5SSXxMWuQ9jxqSv1d6K2afyyaJT1Rb" yarn hardhat --network mainnet run ./scripts/multisig/15-vote-new-app-impl.js
+========================================
+Network ID: 1
+Reading network state from /Users/me/lido-e2e/oracle_upgrade1/lido-dao/deployed-e2e.json...
 ====================
 Upgrading app: oracle
-appId: 0x8b47ba2a8454ec799cd91646e7ec47168e91fd139b23f017455f3e5898aaba93
-Contract implementation: 0xd7aca8b7F5E6668b2D7349C52390e206249cFb04 -> 0x9b2bd23CC47A75Cb3Bae88EB7384F01b3ae53bC8
+appId: 0xb2977cfc13b000b6807b9ae3cf4d938f4cc8ba98e1d68ad911c58924d6aa4f11
+Contract implementation: 0xa892CCce358748429188b1554C3999a552a99cD8 -> 0x869E3cB508200D3bE0e946613a8986E8eb3E64d7
 Bump version: 1,0,0 -> 2,0,0
+Content URI: 0x697066733a516d505756553647614d52686955685235535358784d577551396a787153763164364b3261667979614a54315262 -> 0x697066733a516d505756553647614d52686955685235535358784d577551396a787153763164364b3261667979614a54315262
+Oracle proxy address: 0x24d8451BC07e7aF4Ba94F69aCDD9ad3c6579D9FB
+Voting address: 0xbc0B67b4553f4CF52a913DE9A6eD0057E2E758Db
+ACL address: 0xb3CF58412a00282934D3C3E73F49347567516E98
 ====================
-Saving data for New voting: oracle new impl transaction to tx-15-1-create-vote-new-oracle-version.json (projected gas usage is 1988060)
+Saving data for New voting: oracle new impl transaction to tx-15-1-create-vote-new-oracle-version.json (projected gas usage is 851790)
 ====================
 Before continuing the deployment, please send all transactions listed above.
 A new voting will be created to add a new "oracle" implementation to Lido APM.
-You must complete and execute it positively before continuing with the deployment!
+You must complete it positively and execute before continuing with the deployment!
 ====================
 ```
+
+You may also want to explicitly specify `HOLDER=0x...`, the account that holds LDO tokens and thus
+have the right to create a voting. By default, `multisigAddress` value is used here.
 
 The step will generate the transaction file. You'll need to send these transaction:
 
@@ -97,35 +111,3 @@ $ yarn hardhat --network mainnet tx --from $DEPLOYER --file tx-15-1-create-vote-
 ```
 
 New voting will be created. The voting must complete successfully before proceeding next.
-
-## 4. Create new voting to upgrade DAO app
-
-After updating the app version in the Package Manager, you need to upgrade the version of the application inside the DAO. To do this, you need to vote again.
-
-Run the script to generate data for the create voting transaction:
-
-```text
-$ yarn hardhat --network mainnet run ./scripts/multisig/16-vote-new-app-upgrade.js
-...
-====================
-Upgrading app: oracle
-appId: 0x8b47ba2a8454ec799cd91646e7ec47168e91fd139b23f017455f3e5898aaba93
-Using DAO app namespace: 0xf1f3eb40f5bc1ad1344716ced8b8a0431d840b5783aea1fd01786bc26f35ac0f
-App contract base: 0xd7aca8b7F5E6668b2D7349C52390e206249cFb04 -> 0x9b2bd23CC47A75Cb3Bae88EB7384F01b3ae53bC8
-====================
-Saving data for New voting: oracle app upgrade transaction to tx-16-1-create-vote-oracle-upgrade.json (projected gas usage is 1663035)
-====================
-Before continuing the deployment, please send all transactions listed above.
-A new voting will be created to upgrade "oracle" app to latest version.
-You must complete it positively and execute before continuing with the deployment!
-====================
-...
-```
-
-The step will generate the transaction file. You'll need to send these transaction:
-
-```text
-$ yarn hardhat --network mainnet tx --from $DEPLOYER --file tx-16-1-create-vote-oracle-upgrade.json
-```
-
-New voting will be created. The voting must complete successfully to finish app upgrade.
