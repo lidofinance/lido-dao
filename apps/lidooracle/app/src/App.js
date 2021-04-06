@@ -170,7 +170,7 @@ export default function App() {
       switch (i) {
         case 0:
           return [
-            'Allowed Beacon Balance Annual Relative Increase',
+            'Max Allowed APR',
             <div
               css={`
                 display: flex;
@@ -189,7 +189,7 @@ export default function App() {
           ]
         case 1:
           return [
-            'Allowed Beacon Balance Relative Decrease',
+            'Drop Limit Between Frames',
             <div
               css={`
                 display: flex;
