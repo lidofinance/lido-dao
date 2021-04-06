@@ -18,6 +18,8 @@ app.store(
           return { ...nextState, oracleMembers: await getOracleMembers() }
         case 'QuorumChanged':
           return { ...nextState, quorum: await getQuorum() }
+        case 'ExpectedEpochIdUpdated':
+          return { ...nextState, expectedEpochId: await getExpectedEpochId() }
         case 'AllowedBeaconBalanceAnnualRelativeIncreaseSet':
           return {
             ...nextState,
@@ -34,6 +36,17 @@ app.store(
           return {
             ...nextState,
             beaconReportReceiver: await getBeaconReportReceiver(),
+          }
+        case 'BeaconReported':
+          return {
+            ...nextState,
+            currentReportVariants: await getCurrentReportVariants(),
+            currentOraclesReportStatus: await getCurrentOraclesReportStatus(),
+          }
+        case 'ContractVersionSet':
+          return {
+            ...nextState,
+            version: await getVersion(),
           }
         case events.SYNC_STATUS_SYNCING:
           return { ...nextState, isSyncing: true }
