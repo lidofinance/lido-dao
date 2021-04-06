@@ -67,7 +67,7 @@ export default function App() {
 
   const removeOracleMember = useCallback(
     (address) => {
-      api.removeOracleMember(address).toPromise()
+      return api.removeOracleMember(address).toPromise()
     },
     [api]
   )
@@ -87,7 +87,9 @@ export default function App() {
 
   const changeIncrease = useCallback(
     (value) => {
-      api.setAllowedBeaconBalanceAnnualRelativeIncrease(value).toPromise()
+      return api
+        .setAllowedBeaconBalanceAnnualRelativeIncrease(value)
+        .toPromise()
     },
     [api]
   )
@@ -107,7 +109,7 @@ export default function App() {
 
   const changeDecrease = useCallback(
     (value) => {
-      api.setAllowedBeaconBalanceRelativeDecrease(value).toPromise()
+      return api.setAllowedBeaconBalanceRelativeDecrease(value).toPromise()
     },
     [api]
   )
