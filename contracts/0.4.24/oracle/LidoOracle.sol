@@ -40,11 +40,16 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /// ACL
-    bytes32 constant public MANAGE_MEMBERS = 0xbf6336045918ae0015f4cdb3441a2fdbfaa4bcde6558c8692aac7f56c69fb067; // keccak256("MANAGE_MEMBERS")
-    bytes32 constant public MANAGE_QUORUM = 0xa5ffa9f45fa52c446078e834e1914561bd9c2ab1e833572d62af775da092ccbc; // keccak256("MANAGE_QUORUM")
-    bytes32 constant public SET_BEACON_SPEC = 0x16a273d48baf8111397316e6d961e6836913acb23b181e6c5fb35ec0bd2648fc; // keccak256("SET_BEACON_SPEC")
-    bytes32 constant public SET_REPORT_BOUNDARIES = 0x44adaee26c92733e57241cb0b26ffaa2d182ed7120ba3ecd7e0dce3635c01dc1; // keccak256("SET_REPORT_BOUNDARIES")
-    bytes32 constant public SET_BEACON_REPORT_RECEIVER = 0xe22a455f1bfbaf705ac3e891a64e156da92cb0b42cfc389158e6e82bd57f37be; // keccak256("SET_BEACON_REPORT_RECEIVER")
+    bytes32 constant public MANAGE_MEMBERS =
+        0xbf6336045918ae0015f4cdb3441a2fdbfaa4bcde6558c8692aac7f56c69fb067; // keccak256("MANAGE_MEMBERS")
+    bytes32 constant public MANAGE_QUORUM =
+        0xa5ffa9f45fa52c446078e834e1914561bd9c2ab1e833572d62af775da092ccbc; // keccak256("MANAGE_QUORUM")
+    bytes32 constant public SET_BEACON_SPEC =
+        0x16a273d48baf8111397316e6d961e6836913acb23b181e6c5fb35ec0bd2648fc; // keccak256("SET_BEACON_SPEC")
+    bytes32 constant public SET_REPORT_BOUNDARIES =
+        0x44adaee26c92733e57241cb0b26ffaa2d182ed7120ba3ecd7e0dce3635c01dc1; // keccak256("SET_REPORT_BOUNDARIES")
+    bytes32 constant public SET_BEACON_REPORT_RECEIVER =
+        0xe22a455f1bfbaf705ac3e891a64e156da92cb0b42cfc389158e6e82bd57f37be; // keccak256("SET_BEACON_REPORT_RECEIVER")
 
     /// Maximum number of oracle committee members
     uint256 public constant MAX_MEMBERS = 256;
@@ -396,7 +401,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     /**
      * @notice Accept oracle committee member reports from the ETH 2.0 side
      * @param _epochId Beacon chain epoch
-     * @param _beaconBalance Balance in wei on the ETH 2.0 side (9-digit denomination)
+     * @param _beaconBalance Balance in gwei on the ETH 2.0 side (9-digit denomination)
      * @param _beaconValidators Number of validators visible in this epoch
      */
     function reportBeacon(uint256 _epochId, uint64 _beaconBalance, uint32 _beaconValidators) external {
