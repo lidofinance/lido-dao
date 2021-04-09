@@ -112,6 +112,9 @@ contract LidoOracle is ILidoOracle, AragonApp {
     bytes32 internal constant ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION =
         0x92ba7776ed6c5d13cf023555a94e70b823a4aebd56ed522a77345ff5cd8a9109; // keccak256("lido.LidoOracle.allowedBeaconBalanceDecrease")
 
+    /// This variable is from v1: the last reported epoch, used only in the initializer
+    bytes32 internal constant V1_LAST_REPORTED_EPOCH_ID_POSITION =
+        0xfe0250ed0c5d8af6526c6d133fccb8e5a55dd6b1aa6696ed0c327f8e517b5a94; // keccak256("lido.LidoOracle.lastReportedEpochId")
 
     /// Contract structured storage
     address[] private members;                /// slot 0: oracle committee members
@@ -303,6 +306,13 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
+     * @notice Return last completed epoch
+     */
+    function getLastCompletedEpochId() external view returns (uint256) {
+        return LAST_COMPLETED_EPOCH_ID_POSITION.getStorageUint256();
+    }
+
+    /**
      * @notice Report beacon balance and its change during the last frame
      */
     function getLastCompletedReportDelta()
@@ -333,10 +343,6 @@ contract LidoOracle is ILidoOracle, AragonApp {
         CONTRACT_VERSION_POSITION.setStorageUint256(1);
         emit ContractVersionSet(1);
 
-        uint256 expectedEpoch = _getCurrentFrameFirstEpochId(_getBeaconSpec());
-        EXPECTED_EPOCH_ID_POSITION.setStorageUint256(expectedEpoch);
-        emit ExpectedEpochIdUpdated(expectedEpoch);
-
         ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION
             .setStorageUint256(_allowedBeaconBalanceAnnualRelativeIncrease);
         emit AllowedBeaconBalanceAnnualRelativeIncreaseSet(_allowedBeaconBalanceAnnualRelativeIncrease);
@@ -344,6 +350,16 @@ contract LidoOracle is ILidoOracle, AragonApp {
         ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION
             .setStorageUint256(_allowedBeaconBalanceRelativeDecrease);
         emit AllowedBeaconBalanceRelativeDecreaseSet(_allowedBeaconBalanceRelativeDecrease);
+
+        // set expected epoch to the first epoch in current frame
+        uint256 expectedEpoch = _getCurrentFrameFirstEpochId(_getBeaconSpec());
+        EXPECTED_EPOCH_ID_POSITION.setStorageUint256(expectedEpoch);
+        emit ExpectedEpochIdUpdated(expectedEpoch);
+
+        // set last completed epoch as V1's contract last reported epoch, in the vast majority of
+        // cases this is true, in others the error is within a frame
+        LAST_COMPLETED_EPOCH_ID_POSITION
+            .setStorageUint256(V1_LAST_REPORTED_EPOCH_ID_POSITION.getStorageUint256());
     }
 
     /**
