@@ -138,14 +138,14 @@ contract LidoOracle is ILidoOracle, AragonApp {
     /**
      * @notice Return the upper bound of the reported balance possible increase in APR
      */
-    function getAllowedBeaconBalanceAnnualRelativeIncrease() public view returns (uint256) {
+    function getAllowedBeaconBalanceAnnualRelativeIncrease() external view returns (uint256) {
         return ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION.getStorageUint256();
     }
 
     /**
      * @notice Return the lower bound of the reported balance possible decrease
      */
-    function getAllowedBeaconBalanceRelativeDecrease() public view returns (uint256) {
+    function getAllowedBeaconBalanceRelativeDecrease() external view returns (uint256) {
         return ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION.getStorageUint256();
     }
 
@@ -330,7 +330,8 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * @notice Initialize the contract data, that is new to v2
+     * @notice Initialize the contract v2 data, with sanity check bounds
+     * (`_allowedBeaconBalanceAnnualRelativeIncrease`, `_allowedBeaconBalanceRelativeDecrease`)
      * @dev Original initialize function removed from v2 because it is invoked only once
      */
     function initialize_v2(
@@ -623,13 +624,13 @@ contract LidoOracle is ILidoOracle, AragonApp {
         if (_postTotalPooledEther >= _preTotalPooledEther) {  // check profit constraint
             uint256 reward = _postTotalPooledEther - _preTotalPooledEther;
             uint256 allowedBeaconBalanceAnnualIncrease =
-                getAllowedBeaconBalanceAnnualRelativeIncrease().mul(_preTotalPooledEther);
+                ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION.getStorageUint256().mul(_preTotalPooledEther);
             uint256 rewardAnnualized = uint256(10000 * 365 days).mul(reward).div(_timeElapsed);
             require(rewardAnnualized <= allowedBeaconBalanceAnnualIncrease, "ALLOWED_BEACON_BALANCE_INCREASE");
         } else {  // check loss constraint
             uint256 delta = _preTotalPooledEther - _postTotalPooledEther;
             uint256 allowedBeaconBalanceDecrease =
-                getAllowedBeaconBalanceRelativeDecrease().mul(_preTotalPooledEther);
+                ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION.getStorageUint256().mul(_preTotalPooledEther);
             uint256 loss = uint256(10000).mul(delta);
             require(loss <= allowedBeaconBalanceDecrease, "ALLOWED_BEACON_BALANCE_DECREASE");
         }
@@ -656,10 +657,10 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * @notice Return the first epoch of the frame that `_epoch` belongs to
+     * @notice Return the first epoch of the frame that `_epochId` belongs to
      */
-    function _getFrameFirstEpochId(uint256 epoch, BeaconSpec memory _beaconSpec) internal view returns (uint256) {
-        return epoch / _beaconSpec.epochsPerFrame * _beaconSpec.epochsPerFrame;
+    function _getFrameFirstEpochId(uint256 _epochId, BeaconSpec memory _beaconSpec) internal view returns (uint256) {
+        return _epochId / _beaconSpec.epochsPerFrame * _beaconSpec.epochsPerFrame;
     }
 
     /**

@@ -59,14 +59,21 @@ interface ILidoOracle {
     /**
      * Returns the upper bound of the reported balance possible increase in APR
      */
-    function getAllowedBeaconBalanceAnnualRelativeIncrease() public view returns (uint256);
+    function getAllowedBeaconBalanceAnnualRelativeIncrease() external view returns (uint256);
 
     /**
      * Returns the lower bound of the reported balance possible decrease
      */
-    function getAllowedBeaconBalanceRelativeDecrease() public view returns (uint256);
+    function getAllowedBeaconBalanceRelativeDecrease() external view returns (uint256);
 
+    /**
+     * @notice Set the upper bound of the reported balance possible increase in APR to `_value`
+     */
     function setAllowedBeaconBalanceAnnualRelativeIncrease(uint256 _value) external;
+
+    /**
+     * @notice Set the lower bound of the reported balance possible decrease to `_value`
+     */
     function setAllowedBeaconBalanceRelativeDecrease(uint256 _value) external;
 
     /**
