@@ -300,7 +300,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
         uint64 genesisTime = beaconSpec.genesisTime;
         uint64 secondsPerEpoch = beaconSpec.secondsPerSlot * beaconSpec.slotsPerEpoch;
 
-        frameEpochId = _getCurrentFrameFirstEpochId(beaconSpec);
+        frameEpochId = _getFrameFirstEpochId(_getCurrentEpochId(beaconSpec), beaconSpec);
         frameStartTime = frameEpochId * secondsPerEpoch + genesisTime;
         frameEndTime = (frameEpochId + beaconSpec.epochsPerFrame) * secondsPerEpoch + genesisTime - 1;
     }
@@ -351,15 +351,16 @@ contract LidoOracle is ILidoOracle, AragonApp {
             .setStorageUint256(_allowedBeaconBalanceRelativeDecrease);
         emit AllowedBeaconBalanceRelativeDecreaseSet(_allowedBeaconBalanceRelativeDecrease);
 
-        // set expected epoch to the first epoch in current frame
-        uint256 expectedEpoch = _getCurrentFrameFirstEpochId(_getBeaconSpec());
-        EXPECTED_EPOCH_ID_POSITION.setStorageUint256(expectedEpoch);
-        emit ExpectedEpochIdUpdated(expectedEpoch);
-
         // set last completed epoch as V1's contract last reported epoch, in the vast majority of
         // cases this is true, in others the error is within a frame
-        LAST_COMPLETED_EPOCH_ID_POSITION
-            .setStorageUint256(V1_LAST_REPORTED_EPOCH_ID_POSITION.getStorageUint256());
+        uint256 lastReportedEpoch = V1_LAST_REPORTED_EPOCH_ID_POSITION.getStorageUint256();
+        LAST_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(lastReportedEpoch);
+
+        // set expected epoch to the first epoch for the next frame
+        BeaconSpec memory beaconSpec = _getBeaconSpec();
+        uint256 expectedEpoch = _getFrameFirstEpochId(lastReportedEpoch, beaconSpec) + beaconSpec.epochsPerFrame;
+        EXPECTED_EPOCH_ID_POSITION.setStorageUint256(expectedEpoch);
+        emit ExpectedEpochIdUpdated(expectedEpoch);
     }
 
     /**
@@ -428,7 +429,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
         // if expected epoch has advanced, check that this is the first epoch of the current frame
         // and clear the last unsuccessful reporting
         if (_epochId > expectedEpoch) {
-            require(_epochId == _getCurrentFrameFirstEpochId(beaconSpec), "UNEXPECTED_EPOCH");
+            require(_epochId == _getFrameFirstEpochId(_getCurrentEpochId(beaconSpec), beaconSpec), "UNEXPECTED_EPOCH");
             _clearReportingAndAdvanceTo(_epochId);
         }
 
@@ -655,10 +656,10 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * @notice Return the first epoch of the current frame
+     * @notice Return the first epoch of the frame that `_epoch` belongs to
      */
-    function _getCurrentFrameFirstEpochId(BeaconSpec memory _beaconSpec) internal view returns (uint256) {
-        return _getCurrentEpochId(_beaconSpec) / _beaconSpec.epochsPerFrame * _beaconSpec.epochsPerFrame;
+    function _getFrameFirstEpochId(uint256 epoch, BeaconSpec memory _beaconSpec) internal view returns (uint256) {
+        return epoch / _beaconSpec.epochsPerFrame * _beaconSpec.epochsPerFrame;
     }
 
     /**
