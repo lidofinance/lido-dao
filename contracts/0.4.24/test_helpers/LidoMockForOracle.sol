@@ -22,4 +22,8 @@ contract LidoMockForOracle {
     function getTotalShares() public view returns (uint256) {
         return 42;
     }
+
+    function pretendTotalPooledEtherGweiForTest(uint256 _val) public {
+        totalPooledEther = _val * 1e9; // gwei to wei
+    }
 }

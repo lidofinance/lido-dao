@@ -59,14 +59,21 @@ interface ILidoOracle {
     /**
      * Returns the upper bound of the reported balance possible increase in APR
      */
-    function getAllowedBeaconBalanceAnnualRelativeIncrease() public view returns (uint256);
+    function getAllowedBeaconBalanceAnnualRelativeIncrease() external view returns (uint256);
 
     /**
      * Returns the lower bound of the reported balance possible decrease
      */
-    function getAllowedBeaconBalanceRelativeDecrease() public view returns (uint256);
+    function getAllowedBeaconBalanceRelativeDecrease() external view returns (uint256);
 
+    /**
+     * @notice Set the upper bound of the reported balance possible increase in APR to `_value`
+     */
     function setAllowedBeaconBalanceAnnualRelativeIncrease(uint256 _value) external;
+
+    /**
+     * @notice Set the lower bound of the reported balance possible decrease to `_value`
+     */
     function setAllowedBeaconBalanceRelativeDecrease(uint256 _value) external;
 
     /**
@@ -138,7 +145,7 @@ interface ILidoOracle {
         uint64 _slotsPerEpoch,
         uint64 _secondsPerSlot,
         uint64 _genesisTime
-    )              
+    )
         external;
 
     /**
@@ -159,6 +166,11 @@ interface ILidoOracle {
         );
 
     /**
+     * @notice Return last completed epoch
+     */
+    function getLastCompletedEpochId() external view returns (uint256);
+
+    /**
      * Reports beacon balance and its change during the last frame
      */
     function getLastCompletedReportDelta()
@@ -169,7 +181,7 @@ interface ILidoOracle {
             uint256 preTotalPooledEther,
             uint256 timeElapsed
         );
-    
+
     /**
      * Initialize contract data, that is new to v2
      */
@@ -178,7 +190,7 @@ interface ILidoOracle {
         uint256 _allowedBeaconBalanceRelativeDecrease
     )
         external;
-    
+
     /**
      * Adds the given address to the oracle member committee list
      */
