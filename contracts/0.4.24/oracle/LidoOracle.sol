@@ -600,9 +600,9 @@ contract LidoOracle is ILidoOracle, AragonApp {
 
     /**
      * @notice Performs logical consistency check of the Lido changes as the result of reports push
-     * @dev To make oracles less dangerous, we limit rewards report by 0.1% _annual_ increase in
-     * stake and 15% _instant_ decrease in stake, with both values configurable by the governance
-     * in case of extremely unusual circumstances.
+     * @dev To make oracles less dangerous, we limit rewards report by 10% _annual_ increase and 5%
+     * _instant_ decrease in stake, with both values configurable by the governance in case of
+     * extremely unusual circumstances.
      **/
     function _reportSanityChecks(
         uint256 _postTotalPooledEther,

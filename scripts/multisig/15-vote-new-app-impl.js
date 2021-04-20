@@ -120,7 +120,7 @@ async function upgradeAppImpl({ web3, artifacts, appName = APP }) {
         .encodeABI()
     },
     {
-      // oracle.initialize_v2(...)
+      // oracle.initialize_v2(1000, 500) - beacon balance bounds 10% annual increase, 5% instant decrease
       to: oracleAddress,
       calldata: await oracle.contract.methods.initialize_v2(1000, 500).encodeABI()
     }
