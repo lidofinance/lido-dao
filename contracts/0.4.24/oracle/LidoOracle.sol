@@ -612,25 +612,25 @@ contract LidoOracle is ILidoOracle, AragonApp {
         view
     {
         if (_postTotalPooledEther >= _preTotalPooledEther) {
-            // increase                        = _postTotalPooledEther - _preTotalPooledEther,
-            // relativeIncrease                = increase / _preTotalPooledEther,
-            // annualRelativeIncrease          = relativeIncrease / (timeElapsed / 365 days),
-            // annualRelativeIncreasePermyriad = annualRelativeIncrease * 10000
-            uint256 allowedAnnualRelativeIncreasPermyriad =
+            // increase                 = _postTotalPooledEther - _preTotalPooledEther,
+            // relativeIncrease         = increase / _preTotalPooledEther,
+            // annualRelativeIncrease   = relativeIncrease / (timeElapsed / 365 days),
+            // annualRelativeIncreaseBp = annualRelativeIncrease * 10000, in basis points 0.01% (1e-4)
+            uint256 allowedAnnualRelativeIncreasBp =
                 ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION.getStorageUint256();
-            // check that annualRelativeIncreasePermyriad <= allowedAnnualRelativeIncreasePermyriad
+            // check that annualRelativeIncreaseBp <= allowedAnnualRelativeIncreaseBp
             require(uint256(10000 * 365 days).mul(_postTotalPooledEther - _preTotalPooledEther) <=
-                    allowedAnnualRelativeIncreasPermyriad.mul(_preTotalPooledEther).mul(_timeElapsed),
+                    allowedAnnualRelativeIncreasBp.mul(_preTotalPooledEther).mul(_timeElapsed),
                     "ALLOWED_BEACON_BALANCE_INCREASE");
         } else {
-            // decrease                  = _preTotalPooledEther - _postTotalPooledEther
-            // relativeDecrease          = decrease / _preTotalPooledEther
-            // relativeDecreasePermyriad = relativeDecrease * 10000
-            uint256 allowedRelativeDecreasePermyriad =
+            // decrease           = _preTotalPooledEther - _postTotalPooledEther
+            // relativeDecrease   = decrease / _preTotalPooledEther
+            // relativeDecreaseBp = relativeDecrease * 10000, in basis points 0.01% (1e-4)
+            uint256 allowedRelativeDecreaseBp =
                 ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION.getStorageUint256();
-            // check that relativeDecreasePermyriad <= allowedRelativeDecreasePermyriad
+            // check that relativeDecreaseBp <= allowedRelativeDecreaseBp
             require(uint256(10000).mul(_preTotalPooledEther - _postTotalPooledEther) <=
-                    allowedRelativeDecreasePermyriad.mul(_preTotalPooledEther),
+                    allowedRelativeDecreaseBp.mul(_preTotalPooledEther),
                     "ALLOWED_BEACON_BALANCE_DECREASE");
         }
     }
