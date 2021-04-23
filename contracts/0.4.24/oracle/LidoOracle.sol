@@ -599,20 +599,10 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * @notice Performs logical consistency check of the Lido changes as the result of our push
-     *
-     * @dev To make oracles less dangerous, we can limit rewards report by 0.1% increase in stake
-     * and 15% decrease in stake, with both values configurable by the governance in case of
+     * @notice Performs logical consistency check of the Lido changes as the result of reports push
+     * @dev To make oracles less dangerous, we limit rewards report by 10% _annual_ increase and 5%
+     * _instant_ decrease in stake, with both values configurable by the governance in case of
      * extremely unusual circumstances.
-     *
-     * daily_reward_rate = 10000 * reward / totalPooledEther / days, in 0.01% basis points
-     *
-     * Note, if you deploy the fresh contract (e.g. on testnet) it may fail at the beginning of the
-     * work because the initial pooledEther may be small and it's allowed tiny in absolute numbers,
-     * but significant in relative numbers. E.g. if the initial balance is as small as 1e12 and then
-     * it raises to 2 * 1e12, in relative numbers, it will be a 100% increase, so just relax
-     * boundaries in such case. This problem should never occur in real-world application because
-     * the previous contract version is already working and huge balances are already collected.
      **/
     function _reportSanityChecks(
         uint256 _postTotalPooledEther,
@@ -621,18 +611,27 @@ contract LidoOracle is ILidoOracle, AragonApp {
         internal
         view
     {
-        if (_postTotalPooledEther >= _preTotalPooledEther) {  // check profit constraint
-            uint256 reward = _postTotalPooledEther - _preTotalPooledEther;
-            uint256 allowedBeaconBalanceAnnualIncrease =
-                ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION.getStorageUint256().mul(_preTotalPooledEther);
-            uint256 rewardAnnualized = uint256(10000 * 365 days).mul(reward).div(_timeElapsed);
-            require(rewardAnnualized <= allowedBeaconBalanceAnnualIncrease, "ALLOWED_BEACON_BALANCE_INCREASE");
-        } else {  // check loss constraint
-            uint256 delta = _preTotalPooledEther - _postTotalPooledEther;
-            uint256 allowedBeaconBalanceDecrease =
-                ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION.getStorageUint256().mul(_preTotalPooledEther);
-            uint256 loss = uint256(10000).mul(delta);
-            require(loss <= allowedBeaconBalanceDecrease, "ALLOWED_BEACON_BALANCE_DECREASE");
+        if (_postTotalPooledEther >= _preTotalPooledEther) {
+            // increase                 = _postTotalPooledEther - _preTotalPooledEther,
+            // relativeIncrease         = increase / _preTotalPooledEther,
+            // annualRelativeIncrease   = relativeIncrease / (timeElapsed / 365 days),
+            // annualRelativeIncreaseBp = annualRelativeIncrease * 10000, in basis points 0.01% (1e-4)
+            uint256 allowedAnnualRelativeIncreaseBp =
+                ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION.getStorageUint256();
+            // check that annualRelativeIncreaseBp <= allowedAnnualRelativeIncreaseBp
+            require(uint256(10000 * 365 days).mul(_postTotalPooledEther - _preTotalPooledEther) <=
+                    allowedAnnualRelativeIncreaseBp.mul(_preTotalPooledEther).mul(_timeElapsed),
+                    "ALLOWED_BEACON_BALANCE_INCREASE");
+        } else {
+            // decrease           = _preTotalPooledEther - _postTotalPooledEther
+            // relativeDecrease   = decrease / _preTotalPooledEther
+            // relativeDecreaseBp = relativeDecrease * 10000, in basis points 0.01% (1e-4)
+            uint256 allowedRelativeDecreaseBp =
+                ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION.getStorageUint256();
+            // check that relativeDecreaseBp <= allowedRelativeDecreaseBp
+            require(uint256(10000).mul(_preTotalPooledEther - _postTotalPooledEther) <=
+                    allowedRelativeDecreaseBp.mul(_preTotalPooledEther),
+                    "ALLOWED_BEACON_BALANCE_DECREASE");
         }
     }
 
