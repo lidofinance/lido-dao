@@ -616,11 +616,11 @@ contract LidoOracle is ILidoOracle, AragonApp {
             // relativeIncrease         = increase / _preTotalPooledEther,
             // annualRelativeIncrease   = relativeIncrease / (timeElapsed / 365 days),
             // annualRelativeIncreaseBp = annualRelativeIncrease * 10000, in basis points 0.01% (1e-4)
-            uint256 allowedAnnualRelativeIncreasBp =
+            uint256 allowedAnnualRelativeIncreaseBp =
                 ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION.getStorageUint256();
             // check that annualRelativeIncreaseBp <= allowedAnnualRelativeIncreaseBp
             require(uint256(10000 * 365 days).mul(_postTotalPooledEther - _preTotalPooledEther) <=
-                    allowedAnnualRelativeIncreasBp.mul(_preTotalPooledEther).mul(_timeElapsed),
+                    allowedAnnualRelativeIncreaseBp.mul(_preTotalPooledEther).mul(_timeElapsed),
                     "ALLOWED_BEACON_BALANCE_INCREASE");
         } else {
             // decrease           = _preTotalPooledEther - _postTotalPooledEther
