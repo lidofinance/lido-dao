@@ -456,7 +456,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
             if (currentReportVariants[i].getCount() + 1 >= quorum) {
                 _push(_epochId, beaconBalanceEth1, _beaconValidators, beaconSpec);
             } else {
-                ++currentReportVariants[i];
+                ++currentReportVariants[i]; // increment report counter, see ReportUtils for details
             }
         } else {
             if (quorum == 1) {
