@@ -294,6 +294,13 @@ end times in seconds.
   frameEndTime)`.
 
 
+### Last completed epoch
+
+Return the last epoch that has been pushed to Lido.
+
+* Accessor: `function getLastCompletedEpochId() returns (uint256)`.
+
+
 ###  Supplemental rewards information
 
 Reports beacon balance and its change during the last frame.
