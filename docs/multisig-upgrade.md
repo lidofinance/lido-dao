@@ -24,7 +24,7 @@ Script allows upgrade one of the custom Lido DAO apps. Valid application names a
 $ APP=oracle yarn hardhat --network mainnet run ./scripts/multisig/13-deploy-new-app-instance.js
 ========================================
 Network ID: 1
-Reading network state from /Users/me/lido-e2e/oracle_upgrade1/lido-dao/deployed-e2e.json...
+Reading network state from /Users/me/lido-e2e/oracle_upgrade1/lido-dao/deployed-mainnet.json...
 ====================
 Saving deploy TX data for LidoOracle to tx-13-1-deploy-oracle-base.json
 ====================
@@ -82,7 +82,7 @@ Run the script to generate data for the create voting transaction:
 $ APP=oracle CONTENT_CID="QmPWVU6GaMRhiUhR5SSXxMWuQ9jxqSv1d6K2afyyaJT1Rb" yarn hardhat --network mainnet run ./scripts/multisig/15-vote-new-app-impl.js
 ========================================
 Network ID: 1
-Reading network state from /Users/me/lido-e2e/oracle_upgrade1/lido-dao/deployed-e2e.json...
+Reading network state from /Users/me/lido-e2e/oracle_upgrade1/lido-dao/deployed-mainnet.json...
 ====================
 Upgrading app: oracle
 appId: 0xb2977cfc13b000b6807b9ae3cf4d938f4cc8ba98e1d68ad911c58924d6aa4f11
@@ -111,3 +111,19 @@ $ yarn hardhat --network mainnet tx --from $DEPLOYER --file tx-15-1-create-vote-
 ```
 
 New voting will be created. The voting must complete successfully before proceeding next.
+
+## 4. Verify the created voting.
+
+Collect the transaction ID from the previous step and run the 16th script like the following.
+
+```
+TX=0xf968fcc552b95e641cff14ed68101ed96dbcd9ec85609f3c70c1b849418c94ff yarn hardhat --network mainnet run ./scripts/multisig/16-verify-vote-tx.js
+========================================
+Network ID: 1
+Reading network state from /Users/me/lido-e2e/oracle_upgrade1/lido-dao/deployed-mainnet.json...
+====================
+Voting contract: 0x2e59A20f205bB85a89C53f1936454680651E618e
+Voting no: 63
+Creator: 0xf73a1260d222f447210581DDf212D915c09a3249
+All done!
+```
