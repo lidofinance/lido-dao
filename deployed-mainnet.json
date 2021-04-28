@@ -12,7 +12,7 @@
   "multisigAddress": "0x55Bc991b2edF3DDb4c520B222bE4F378418ff0fA",
   "daoTemplateDeployTx": "0xdcd4ebe028aa3663a1fe8bbc92ae8489045e29d2a6ef5284083d9be5c3fa5f19",
   "lidoBaseDeployTx": "0xe9f81f1094c2247aa1a2db0cf588900b9d2ce29be7d8b04ef1e8b2885b12f336",
-  "oracleBaseDeployTx": "0x1d89798cd8fedcd33023664d57ff6d0674659ccf636113ee5f47a5eeb6c760a4",
+  "oracleBaseDeployTx": "0x5fcabf4acccda63ade02e82916f769423b1042624a2d043bc063824147dc60c0",
   "nodeOperatorsRegistryBaseDeployTx": "0xecd18f545f6b495d20a85003c54a17b9127730855e881c5a7ae8a10b1f971199",
   "daoInitialSettings": {
     "token": {
@@ -126,12 +126,12 @@
     "proxyAddress": "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84"
   },
   "app:oracle": {
-    "baseAddress": "0xd7aca8b7F5E6668b2D7349C52390e206249cFb04",
+    "baseAddress": "0xADa6E33aa65590934870bFD204Fe8efe9c6Aa4bC",
     "fullName": "oracle.lidopm.eth",
     "name": "oracle",
     "id": "0x8b47ba2a8454ec799cd91646e7ec47168e91fd139b23f017455f3e5898aaba93",
-    "ipfsCid": "QmPWVU6GaMRhiUhR5SSXxMWuQ9jxqSv1d6K2afyyaJT1Rb",
-    "contentURI": "0x697066733a516d505756553647614d52686955685235535358784d577551396a787153763164364b3261667979614a54315262",
+    "ipfsCid": "QmUMPfiEKq5Mxm8y2GYQPLujGaJiWz1tvep5W7EdAGgCR8",
+    "contentURI": "0x697066733a516d554d506669454b71354d786d387932475951504c756a47614a69577a31747665703557374564414767435238",
     "proxyAddress": "0x442af784A788A5bd6F42A01Ebe9F287a871243fb"
   },
   "app:node-operators-registry": {
