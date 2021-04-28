@@ -3,6 +3,7 @@ import React, { useCallback } from 'react'
 import { Formik, Field } from 'formik'
 import * as yup from 'yup'
 import TextField from './TextField'
+import Info from '@aragon/ui/dist/Info'
 
 const initialValues = {
   address: '',
@@ -13,11 +14,14 @@ const validationSchema = yup.object().shape({
 })
 
 function PanelContent({ api, onClose }) {
-  const onSubmit = useCallback(({ address }) => {
-    api(address).then(() => {
-      onClose()
-    })
-  }, [])
+  const onSubmit = useCallback(
+    ({ address }) => {
+      api(address).then(() => {
+        onClose()
+      })
+    },
+    [api, onClose]
+  )
 
   return (
     <Formik
@@ -37,6 +41,14 @@ function PanelContent({ api, onClose }) {
               submitForm()
             }}
           >
+            <Info
+              title="Action"
+              css={`
+                margin-bottom: ${3 * GU}px;
+              `}
+            >
+              This action will add an oracle member.
+            </Info>
             <Field
               name="address"
               label="Address"

@@ -14,23 +14,33 @@
       "name": "Set the Beacon chain spec",
       "id": "SET_BEACON_SPEC",
       "params": []
+    },
+    {
+      "name": "Set the sanity check bounds",
+      "id": "SET_REPORT_BOUNDARIES",
+      "params": []
+    },
+    {
+      "name": "Set the beacon receiver contract address",
+      "id": "SET_BEACON_REPORT_RECEIVER",
+      "params": []
     }
   ],
   "environments": {
     "default": {
-      "appName": "oracle.lidopm.eth",
+      "appName": "oracle.lidopm-testnet-prater.eth",
       "network": "development"
     },
     "rinkeby": {
-      "appName": "oracle.lidopm.eth",
+      "appName": "oracle.lidopm-testnet-prater.eth",
       "network": "rinkeby"
     },
     "mainnet-test": {
-      "appName": "oracle.lidopm-pre.eth",
+      "appName": "oracle.lidopm-testnet-prater.eth",
       "network": "mainnet"
     },
     "mainnet": {
-      "appName": "oracle.lidopm.eth",
+      "appName": "oracle.lidopm-testnet-prater.eth",
       "network": "mainnet"
     }
   },
