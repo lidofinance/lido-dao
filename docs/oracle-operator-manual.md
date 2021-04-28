@@ -109,3 +109,8 @@ docker run -d --name lido-oracle \
 ```
 
 This will start the oracle in daemon mode. You can also run it in a one-off mode, for example if you’d prefer to trigger oracle execution as a `cron` job. In this case, set the `DAEMON` environment variable to 0.
+
+#### Prometheus metrics
+
+Lido Oracle 2.0.0 incorporates Prometheus exporter. It is a route to fetch numerous metrics from the Oracle, and we encourage Oracle operators to use it for monitoring daemon stats and overall health. 
+Prometheus exporter is running on port 8000 and provides 5 logical groups of metrics. Please check Lido oracle readme for full list of available Prometheus metrics.
