@@ -1,6 +1,5 @@
 {
   "networkId": 5,
-  "ipfsAPI": "http://206.81.31.11/ipfs/api/v0",
   "daoAragonId": "lido-testnet-prater",
   "ensAddress": "0x043e6DBC5CAd60874727d21ecC2aAeBf50A0de80",
   "daoFactoryAddress": "0x0B6769F500b293e3adacD97c3961189565069902",
@@ -18,13 +17,13 @@
   ],
   "daoTemplateDeployTx": "0xda8746bca23c7a4f7c58e1a3370cb1ffa1e250ace90fd4684dbb1842ee6ac921",
   "lidoBaseDeployTx": "0x3a4bcd8042142b44267b0ed0482ff36085d0459cf8915f8d2fe5f0a6705bd81b",
-  "oracleBaseDeployTx": "0x7e4b115b347bd2a29e659f72aa6e1ac7d8b52da031f11cd7ea1a7abbb5a3d10c",
+  "oracleBaseDeployTx": "0x4ff91791cc0f969cf9fe0cc9a6241593d26b20ee27f785a2eb002258e25f4e43",
   "nodeOperatorsRegistryBaseDeployTx": "0x498386b2dd10d40b172dcc9f96592cb8743ea57191bc43858ba8c17f0a1a8ce0",
   "daoTemplateAddress": "0x9A4a36B5fe517f98BD6529d4317B0b723F600AaD",
   "app:lido": {
     "baseAddress": "0x10095FB11aE3501A88FDAa5bECBEF854d079E8e7",
-    "ipfsCid": "QmaMGaNKUSgfbfkmJhVGgcXhDWoyzCE5ADo5nKxgqZEA28",
-    "contentURI": "0x697066733a516d614d47614e4b5553676662666b6d4a6856476763586844576f797a43453541446f356e4b7867715a45413238",
+    "ipfsCid": "QmbmPW5r9HMdyUARNJjjE7MNqBUGrXashwoWvqRZhc1t5b",
+    "contentURI": "0x697066733a516d626d5057357239484d64795541524e4a6a6a45374d4e714255477258617368776f577671525a686331743562",
     "name": "lido",
     "fullName": "lido.lidopm-testnet-prater.eth",
     "id": "0x79ac01111b462384f1b7fba84a17b9ec1f5d2fddcfcb99487d71b443832556ea",
@@ -128,5 +127,9 @@
     "cliff": 1617139500,
     "end": 1617139900,
     "revokable": false
-  }
+  },
+  "wstethContractAddress": "0x6320cD32aA674d2898A68ec82e869385Fc5f7E2f",
+  "wstethContractConstructorArgs": [
+    "0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F"
+  ]
 }
