@@ -114,7 +114,7 @@ This will start the oracle in daemon mode. You can also run it in a one-off mode
 
 #### Prometheus metrics
 
-Lido Oracle daemon 2.0.0 incorporates Prometheus exporter. We encourage Oracle operators to use them to monitor daemon reports and process status.
+Lido Oracle daemon 2.0.0 exposes metrics via Prometheus exporter. We encourage Oracle operators to use them to monitor daemon reports and process status.
 Prometheus exporter is running on port 8000 and provides 5 logical metrics groups.  
 For the full list of available Prometheus metrics please check the Lido oracle readme. We recommend to monitor at least the following ones:
 
