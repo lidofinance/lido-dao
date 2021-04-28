@@ -114,9 +114,9 @@ This will start the oracle in daemon mode. You can also run it in a one-off mode
 
 #### Prometheus metrics
 
-Lido Oracle 2.0.0 incorporates Prometheus exporter. It is a route to fetch numerous metrics from the Oracle, and we encourage Oracle operators to use it for monitoring daemon stats and overall health.  
-Prometheus exporter is running on port 8000 and provides 5 logical groups of metrics.  
-For full list of available Prometheus metrics please check Lido oracle readme. Recommended list of metrics to monitor is as follows:
+Lido Oracle daemon 2.0.0 incorporates Prometheus exporter. We encourage Oracle operators to use them to monitor daemon reports and process status.
+Prometheus exporter is running on port 8000 and provides 5 logical metrics groups.  
+For the full list of available Prometheus metrics please check the Lido oracle readme. We recommend to monitor at least the following ones:
 
 | name                            | description                                                      | frequency                                 | goal                                                                                                                                                                   |
 |---------------------------------|------------------------------------------------------------------|-------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -129,7 +129,7 @@ For full list of available Prometheus metrics please check Lido oracle readme. R
 | **process_virtual_memory_bytes**  <br> *gauge* | Virtual memory size in bytes.                               | every call             | normal RAM consumption is ~200Mb               |
 | **process_resident_memory_bytes** <br> *gauge* | Resident memory size in bytes.                               | every call             | normal RAM consumption is ~200Mb               |
 
-These additional exception counters might be helpful for furture oracle improvements:
+Exception counters for debugging any errors which may arise:
 
 | name                                           | description                                                       |
 | ---------------------------------------------- | ------------------------------------------------------------------|
