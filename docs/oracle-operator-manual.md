@@ -114,5 +114,26 @@ This will start the oracle in daemon mode. You can also run it in a one-off mode
 
 #### Prometheus metrics
 
-Lido Oracle 2.0.0 incorporates Prometheus exporter. It is a route to fetch numerous metrics from the Oracle, and we encourage Oracle operators to use it for monitoring daemon stats and overall health. 
-Prometheus exporter is running on port 8000 and provides 5 logical groups of metrics. Please check Lido oracle readme for full list of available Prometheus metrics.
+Lido Oracle 2.0.0 incorporates Prometheus exporter. It is a route to fetch numerous metrics from the Oracle, and we encourage Oracle operators to use it for monitoring daemon stats and overall health.  
+Prometheus exporter is running on port 8000 and provides 5 logical groups of metrics.  
+For full list of available Prometheus metrics please check Lido oracle readme. Recommended list of metrics to monitor is as follows:
+
+| name                            | description                                                      | frequency                                 | goal                                                                                                                                                                   |
+|---------------------------------|------------------------------------------------------------------|-------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **reportableFrame** <br> *gauge*      | the report could be sent or is sending                     |                                           |                                                                                 |
+| **nowEthV1BlockNumber**  <br> *gauge* | ETH1 latest block number                                   | every COUNTDOWN_SLEEP seconds             | should be increasing constantly and be aligned with https://etherscan.io/blocks |
+| **daemonCountDown** <br> *gauge*      | time till the next oracle run in seconds                   | every COUNTDOWN_SLEEP seconds             | should be decreasing down to 0                                                  |
+| **finalizedEpoch** <br> *gauge*       | last finalized ETH2 epoch                                  | every COUNTDOWN_SLEEP seconds             | should go up at a rate of 1 per six munites                                     |
+| **txSuccess**                     <br> *histogram* | number of successful transactions                           | every SLEEP seconds             |                                       |
+| **txRevert**                      <br> *histogram* | number of failed transactions                           | every SLEEP seconds             |                                       |
+| **process_virtual_memory_bytes**  <br> *gauge* | Virtual memory size in bytes.                               | every call             | normal RAM consumption is ~200Mb               |
+| **process_resident_memory_bytes** <br> *gauge* | Resident memory size in bytes.                               | every call             | normal RAM consumption is ~200Mb               |
+
+These additional exception counters might be helpful for furture oracle improvements:
+
+| name                                           | description                                                       |
+| ---------------------------------------------- | ------------------------------------------------------------------|
+| **underpricedExceptionsCount**    <br> *gauge* | count of ValueError: replacement transaction underpriced          |
+| **transactionTimeoutCount**       <br> *gauge* | count of web3.exceptions.TimeExhausted                            |
+| **beaconNodeTimeoutCount**        <br> *gauge* | count of beacon node connection timeouts                          |
+| **exceptionsCount**               <br> *gauge* | count of all other exceptions                                     |
