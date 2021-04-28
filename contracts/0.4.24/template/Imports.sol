@@ -17,5 +17,9 @@ import "@aragon/os/contracts/lib/ens/AbstractENS.sol";
 import "@aragon/os/contracts/lib/ens/PublicResolver.sol";
 import "@aragon/id/contracts/FIFSResolvingRegistrar.sol";
 
+import "@aragon/apps-vault/contracts/Vault.sol";
+import "@aragon/apps-voting/contracts/Voting.sol";
+import "@aragon/apps-finance/contracts/Finance.sol";
+import "@aragon/apps-token-manager/contracts/TokenManager.sol";
 
 contract Imports {} /* solium-disable-line no-empty-blocks */

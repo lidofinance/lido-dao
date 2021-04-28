@@ -34,17 +34,10 @@ contract LidoOracleMock is LidoOracle {
         QUORUM_POSITION.setStorageUint256(1);
         emit QuorumChanged(1);
         initialized();
-
-        // initialize the second version
-        this.initialize_v2(100000, 50000);
     }
 
-    function _reportSanityChecks(uint256 postTotalPooledEther,
-                                 uint256 preTotalPooledEther,
-                                 uint256 timeElapsed) internal view {
-        // it's possible at the beginning of the work with the contract or in tests
-        if (preTotalPooledEther == 0 || postTotalPooledEther == 0 || timeElapsed == 0) return;
-        LidoOracle._reportSanityChecks(postTotalPooledEther, preTotalPooledEther, timeElapsed);
+    function setV1LastReportedEpochForTest(uint256 _epoch) public {
+        V1_LAST_REPORTED_EPOCH_ID_POSITION.setStorageUint256(_epoch);
     }
 
     function setTime(uint256 _time) public {

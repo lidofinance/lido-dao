@@ -240,7 +240,7 @@ Note that setting zero address disables this functionality.
 For transparency we provide accessors to return status of the oracle daemons reporting for the
 current "[expected epoch][3]".
 
-* Accessors: 
+* Accessors:
   * `getCurrentOraclesReportStatus() returns (uint256)` - returns the current reporting bitmap,
     representing oracles who have already pushed their version of report during the [expected][3]
     epoch, every oracle bit corresponds to the index of the oracle in the current members list,
@@ -292,6 +292,13 @@ end times in seconds.
 
 * Accessor: `getCurrentFrame() returns (uint256 frameEpochId, uint256 frameStartTime, uint256
   frameEndTime)`.
+
+
+### Last completed epoch
+
+Return the last epoch that has been pushed to Lido.
+
+* Accessor: `getLastCompletedEpochId() returns (uint256)`.
 
 
 ###  Supplemental rewards information

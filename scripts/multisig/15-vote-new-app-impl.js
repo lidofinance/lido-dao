@@ -7,12 +7,17 @@ const { saveCallTxData } = require('../helpers/tx-data')
 const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
 const { resolveEnsAddress } = require('../components/ens')
 
+// this is needed for the following `require`s to work, some kind of typescript path magic
+require('@aragon/buidler-aragon/dist/bootstrap-paths')
+const { toContentUri } = require('@aragon/buidler-aragon/dist/src/utils/apm/utils')
+
 const { APP_NAMES } = require('./constants')
 const VALID_APP_NAMES = Object.entries(APP_NAMES).map((e) => e[1])
 
 const APP = process.env.APP || ''
 const BUMP = process.env.BUMP || 'major'
 const HOLDER = process.env.HOLDER || ''
+const CONTENT_CID = process.env.CONTENT_CID
 const REQUIRED_NET_STATE = [
   'lidoApmEnsName',
   'ensAddress',
@@ -52,6 +57,7 @@ async function upgradeAppImpl({ web3, artifacts, appName = APP }) {
   const repo = await artifacts.require('Repo').at(repoAddress)
   const voting = await artifacts.require('Voting').at(votingAddress)
   const tokenManager = await artifacts.require('TokenManager').at(tokenManagerAddress)
+  const newContentURI = toContentUri('ipfs', CONTENT_CID)
 
   const aclAddress = await kernel.acl()
   const APP_BASES_NAMESPACE = await kernel.APP_BASES_NAMESPACE()
@@ -80,6 +86,7 @@ async function upgradeAppImpl({ web3, artifacts, appName = APP }) {
   log(`appId:`, appId)
   log(`Contract implementation:`, yl(contractAddress), `->`, yl(appBaseAddress))
   log(`Bump version:`, yl(versionFrom), `->`, yl(versionTo))
+  log(`Content URI:`, yl(contentURI), `->`, yl(newContentURI))
   log(`Oracle proxy address:`, yl(oracleAddress))
   log(`Voting address:`, yl(votingAddress))
   log(`ACL address:`, yl(aclAddress))
@@ -91,9 +98,9 @@ async function upgradeAppImpl({ web3, artifacts, appName = APP }) {
   // encode call to Repo app for newVersion
   const callData1 = encodeCallScript([
     {
-      // repo.newVersion(versionTo, address oracle_impl, contentURI)
+      // repo.newVersion(versionTo, address oracle_impl, newContentURI)
       to: repoAddress,
-      calldata: await repo.contract.methods.newVersion(versionTo, appBaseAddress, contentURI).encodeABI()
+      calldata: await repo.contract.methods.newVersion(versionTo, appBaseAddress, newContentURI).encodeABI()
     },
     {
       // kernel.setApp(APP_BASES_NAMESPACE, appId, oracle)
@@ -113,9 +120,9 @@ async function upgradeAppImpl({ web3, artifacts, appName = APP }) {
         .encodeABI()
     },
     {
-      // oracle.initialize_v2(...)
+      // oracle.initialize_v2(1000, 500) - beacon balance bounds 10% annual increase, 5% instant decrease
       to: oracleAddress,
-      calldata: await oracle.contract.methods.initialize_v2(100000, 50000).encodeABI()
+      calldata: await oracle.contract.methods.initialize_v2(1000, 500).encodeABI()
     }
   ])
   // encode forwarding call from Voting app to app Repo (new Vote will be created under the hood)

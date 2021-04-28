@@ -8,12 +8,12 @@ import "../interfaces/ILido.sol";
 
 
 /**
-  * @title ETH 2.0 -> ETH oracle
-  *
-  * The goal of the oracle is to inform other parts of the system about balances controlled by the
-  * DAO on the ETH 2.0 side. The balances can go up because of reward accumulation and can go down
-  * because of slashing.
-  */
+ * @title ETH 2.0 -> ETH oracle
+ *
+ * The goal of the oracle is to inform other parts of the system about balances controlled by the
+ * DAO on the ETH 2.0 side. The balances can go up because of reward accumulation and can go down
+ * because of slashing.
+ */
 interface ILidoOracle {
     event AllowedBeaconBalanceAnnualRelativeIncreaseSet(uint256 value);
     event AllowedBeaconBalanceRelativeDecreaseSet(uint256 value);
@@ -47,51 +47,58 @@ interface ILidoOracle {
     event ContractVersionSet(uint256 version);
 
     /**
-     * Returns the Lido contract address
+     * @notice Return the Lido contract address
      */
     function getLido() public view returns (ILido);
 
     /**
-     * Returns the number of exactly the same reports needed to finalize the epoch
+     * @notice Return the number of exactly the same reports needed to finalize the epoch
      */
     function getQuorum() public view returns (uint256);
 
     /**
-     * Returns the upper bound of the reported balance possible increase in APR
+     * @notice Return the upper bound of the reported balance possible increase in APR
      */
-    function getAllowedBeaconBalanceAnnualRelativeIncrease() public view returns (uint256);
+    function getAllowedBeaconBalanceAnnualRelativeIncrease() external view returns (uint256);
 
     /**
-     * Returns the lower bound of the reported balance possible decrease
+     * @notice Return the lower bound of the reported balance possible decrease
      */
-    function getAllowedBeaconBalanceRelativeDecrease() public view returns (uint256);
+    function getAllowedBeaconBalanceRelativeDecrease() external view returns (uint256);
 
+    /**
+     * @notice Set the upper bound of the reported balance possible increase in APR to `_value`
+     */
     function setAllowedBeaconBalanceAnnualRelativeIncrease(uint256 _value) external;
+
+    /**
+     * @notice Set the lower bound of the reported balance possible decrease to `_value`
+     */
     function setAllowedBeaconBalanceRelativeDecrease(uint256 _value) external;
 
     /**
-     * Returns the receiver contract address to be called when the report is pushed to Lido
+     * @notice Return the receiver contract address to be called when the report is pushed to Lido
      */
     function getBeaconReportReceiver() external view returns (address);
 
     /**
-     * Sets the receiver contract address to be called when the report is pushed to Lido
+     * @notice Set the receiver contract address to be called when the report is pushed to Lido
      */
     function setBeaconReportReceiver(address _addr) external;
 
     /**
-     * Returns the current reporting bitmap, representing oracles who have already pushed their
-     * version of report during the expected epoch
+     * @notice Return the current reporting bitmap, representing oracles who have already pushed
+     * their version of report during the expected epoch
      */
     function getCurrentOraclesReportStatus() external view returns (uint256);
 
     /**
-     * Returns the current reporting array size
+     * @notice Return the current reporting array size
      */
     function getCurrentReportVariantsSize() external view returns (uint256);
 
     /**
-     * Returns the current reporting array element with the given index
+     * @notice Return the current reporting array element with the given index
      */
     function getCurrentReportVariant(uint256 _index)
         external
@@ -103,22 +110,22 @@ interface ILidoOracle {
         );
 
     /**
-     * Returns epoch that can be reported by oracles
+     * @notice Return epoch that can be reported by oracles
      */
     function getExpectedEpochId() external view returns (uint256);
 
     /**
-     * Returns the current oracle member committee list
+     * @notice Return the current oracle member committee list
      */
     function getOracleMembers() external view returns (address[]);
 
     /**
-     * Returns the initialized version of this contract starting from 0
+     * @notice Return the initialized version of this contract starting from 0
      */
     function getVersion() external view returns (uint256);
 
     /**
-     * Returns beacon specification data
+     * @notice Return beacon specification data
      */
     function getBeaconSpec()
         external
@@ -138,7 +145,7 @@ interface ILidoOracle {
         uint64 _slotsPerEpoch,
         uint64 _secondsPerSlot,
         uint64 _genesisTime
-    )              
+    )
         external;
 
     /**
@@ -147,7 +154,8 @@ interface ILidoOracle {
     function getCurrentEpochId() external view returns (uint256);
 
     /**
-     * Returns all needed to oracle daemons data
+     * @notice Return currently reportable epoch (the first epoch of the current frame) as well as
+     * its start and end times in seconds
      */
     function getCurrentFrame()
         external
@@ -159,7 +167,12 @@ interface ILidoOracle {
         );
 
     /**
-     * Reports beacon balance and its change during the last frame
+     * @notice Return last completed epoch
+     */
+    function getLastCompletedEpochId() external view returns (uint256);
+
+    /**
+     * @notice Report beacon balance and its change during the last frame
      */
     function getLastCompletedReportDelta()
         external
@@ -169,35 +182,37 @@ interface ILidoOracle {
             uint256 preTotalPooledEther,
             uint256 timeElapsed
         );
-    
+
     /**
-     * Initialize contract data, that is new to v2
+     * @notice Initialize the contract v2 data, with sanity check bounds
+     * (`_allowedBeaconBalanceAnnualRelativeIncrease`, `_allowedBeaconBalanceRelativeDecrease`)
+     * @dev Original initialize function removed from v2 because it is invoked only once
      */
     function initialize_v2(
         uint256 _allowedBeaconBalanceAnnualRelativeIncrease,
         uint256 _allowedBeaconBalanceRelativeDecrease
     )
         external;
-    
+
     /**
-     * Adds the given address to the oracle member committee list
+     * @notice Add `_member` to the oracle member committee list
      */
     function addOracleMember(address _member) external;
 
     /**
-     * Removes the given address from the oracle member committee list
+     * @notice Remove '_member` from the oracle member committee list
      */
     function removeOracleMember(address _member) external;
 
     /**
-      * Sets the number of erectly the same reports needed to finalize the epoch
-      */
+     * @notice Set the number of exactly the same reports needed to finalize the epoch to `_quorum`
+     */
     function setQuorum(uint256 _quorum) external;
 
     /**
-     * Accepts oracle committee member reports from the ETH 2.0 side
+     * @notice Accept oracle committee member reports from the ETH 2.0 side
      * @param _epochId Beacon chain epoch
-     * @param _beaconBalance Balance in wei on the ETH 2.0 side (9-digit denomination)
+     * @param _beaconBalance Balance in gwei on the ETH 2.0 side (9-digit denomination)
      * @param _beaconValidators Number of validators visible in this epoch
      */
     function reportBeacon(uint256 _epochId, uint64 _beaconBalance, uint32 _beaconValidators) external;
