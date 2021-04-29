@@ -90,7 +90,7 @@ docker run -d --name lido-oracle \
   --env "BEACON_NODE=$ETH2_NODE_RPC_ADDRESS" \
   --env "MEMBER_PRIV_KEY=$ORACLE_PRIVATE_KEY_0X_PREFIXED" \
   --env "POOL_CONTRACT=0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84" \
-  --env "STETH_PRICE_ORACLE_CONTRACT=0x3a6bd15abf19581e411621d669b6a2bbe741ffd6" \
+  --env "STETH_PRICE_ORACLE_CONTRACT=0x3A6Bd15abf19581e411621D669B6a2bbe741ffD6" \
   --env "STETH_CURVE_POOL_CONTRACT=0xDC24316b9AE028F1497c275EB9192a3Ea0f67022" \
   --env "DAEMON=1" \
   lidofinance/oracle:2.0.0
@@ -112,11 +112,11 @@ docker run -d --name lido-oracle \
 
 This will start the oracle in daemon mode. You can also run it in a one-off mode, for example if you’d prefer to trigger oracle execution as a `cron` job. In this case, set the `DAEMON` environment variable to 0.
 
-#### Prometheus metrics
+## Prometheus metrics
 
 Lido Oracle daemon 2.0.0 exposes metrics via Prometheus exporter. We encourage Oracle operators to use them to monitor daemon reports and process status.
 Prometheus exporter is running on port 8000 and provides 5 logical metrics groups.  
-For the full list of available Prometheus metrics please check the Lido oracle readme. We recommend to monitor at least the following ones:
+For the full list of available Prometheus metrics please check [the Lido oracle readme](https://github.com/lidofinance/lido-oracle#prometheus-metrics). We recommend to monitor at least the following ones:
 
 | name                            | description                                                      | frequency                                 | goal                                                                                                                                                                   |
 |---------------------------------|------------------------------------------------------------------|-------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
