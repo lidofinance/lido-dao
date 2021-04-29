@@ -16,7 +16,7 @@ const VALID_APP_NAMES = Object.entries(APP_NAMES).map((e) => e[1])
 
 const APP = process.env.APP || ''
 const BUMP = process.env.BUMP || 'major'
-const HOLDER = process.env.HOLDER || ''
+const DEPLOYER = process.env.DEPLOYER || ''
 const CONTENT_CID = process.env.CONTENT_CID
 const REQUIRED_NET_STATE = [
   'lidoApmEnsName',
@@ -82,18 +82,33 @@ async function upgradeAppImpl({ web3, artifacts, appName = APP }) {
   }
   const versionTo = semanticVersion.map((n) => n.toNumber())
 
+  log(`Using voting address:`, yl(votingAddress))
+  log(`Using repo address:`, yl(repoAddress))
+  log(`Using oracle proxy address:`, yl(oracleAddress))
+  log(`DEPLOYER:`, yl(DEPLOYER))
+  log.splitter()
+  log(`repo.newVersion`)
   log(`Upgrading app:`, yl(appName))
-  log(`appId:`, appId)
   log(`Contract implementation:`, yl(contractAddress), `->`, yl(appBaseAddress))
   log(`Bump version:`, yl(versionFrom), `->`, yl(versionTo))
   log(`Content URI:`, yl(contentURI), `->`, yl(newContentURI))
-  log(`Oracle proxy address:`, yl(oracleAddress))
-  log(`Voting address:`, yl(votingAddress))
-  log(`ACL address:`, yl(aclAddress))
   log.splitter()
   if (contractAddress === appBaseAddress) {
     throw new Error('No new implementation found')
   }
+  log(`repo.setApp`)
+  APP_BASES_NAMESPACE
+  log(`APP_BASES_NAMESPACE:`, yl(APP_BASES_NAMESPACE))
+  log(`AppId:`, yl(appId))
+  log(`appBaseAddress:`, yl(appBaseAddress))
+  log.splitter()
+  log(`acl.createPermission for SET_REPORT_BOUNDARIES and SET_BEACON_REPORT_RECEIVER`)
+  log(`ACL address:`, yl(aclAddress))
+  log(`SET_REPORT_BOUNDARIES:`, yl(SET_REPORT_BOUNDARIES))
+  log(`SET_BEACON_REPORT_RECEIVER:`, yl(SET_BEACON_REPORT_RECEIVER))
+  log.splitter()
+  log(`oracle.initialize_v2(1000, 500)`)
+  log.splitter()
 
   // encode call to Repo app for newVersion
   const callData1 = encodeCallScript([
@@ -135,7 +150,7 @@ async function upgradeAppImpl({ web3, artifacts, appName = APP }) {
   // finally forwarding call from TokenManager app to Voting
   await saveCallTxData(`New voting: ${appName} new impl`, tokenManager, 'forward', `tx-15-1-create-vote-new-${appName}-version.json`, {
     arguments: [callData2],
-    from: HOLDER || state.multisigAddress
+    from: DEPLOYER
   })
 
   log.splitter()
