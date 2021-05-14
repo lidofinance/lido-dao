@@ -43,6 +43,8 @@ const STETH_TOKEN_DECIMALS = 18
 const ZERO_WITHDRAWAL_CREDS = '0x0000000000000000000000000000000000000000000000000000000000000000'
 const PROTOCOL_PAUSED_AFTER_DEPLOY = true
 
+const DAO_LIVE = /^true|1$/i.test(process.env.DAO_LIVE)
+
 async function checkDAO({ web3, artifacts }) {
   const netId = await web3.eth.net.getId()
 
@@ -311,7 +313,7 @@ async function assertDAOConfig({
     `voting.voteTime is ${yl(settings.voting.voteDuration)}`
   )
 
-  assert.log(
+  DAO_LIVE || assert.log(
     assert.bnEqual,
     await voting.votesLength(),
     0,
@@ -376,21 +378,21 @@ async function assertDAOConfig({
     `lido.decimals is ${yl(STETH_TOKEN_DECIMALS)}`
   )
 
-  assert.log(
+  DAO_LIVE || assert.log(
     assert.bnEqual,
     await lido.totalSupply(),
     0,
     `lido.totalSupply() is ${yl(0)}`
   )
 
-  assert.log(
+  DAO_LIVE || assert.log(
     assert.equal,
     await lido.isStopped(),
     PROTOCOL_PAUSED_AFTER_DEPLOY,
     `lido.isStopped is ${yl(PROTOCOL_PAUSED_AFTER_DEPLOY)}`
   )
 
-  assert.log(
+  DAO_LIVE || assert.log(
     assert.bnEqual,
     await lido.getWithdrawalCredentials(),
     ZERO_WITHDRAWAL_CREDS,
@@ -473,7 +475,7 @@ async function assertDAOConfig({
     `oracle.getLido() is ${yl(lido.address)}`
   )
 
-  assert.log(
+  DAO_LIVE || assert.log(
     assert.isEmpty,
     await oracle.getOracleMembers(),
     `oracle.getOracleMembers() is []`
@@ -505,7 +507,7 @@ async function assertDAOConfig({
     `oracle.getBeaconSpec().genesisTime is ${yl(settings.beaconSpec.genesisTime)}`
   )
 
-  assert.log(
+  DAO_LIVE || assert.log(
     assert.bnEqual,
     await oracle.getQuorum(),
     0,
@@ -515,14 +517,14 @@ async function assertDAOConfig({
   log.splitter()
   await assertKernel(nopsRegistry, 'nopsRegistry')
 
-  assert.log(
+  DAO_LIVE || assert.log(
     assert.bnEqual,
     await nopsRegistry.getNodeOperatorsCount(),
     0,
     `nopsRegistry.getNodeOperatorsCount() is ${yl(0)}`
   )
 
-  assert.log(
+  DAO_LIVE || assert.log(
     assert.bnEqual,
     await nopsRegistry.getActiveNodeOperatorsCount(),
     0,

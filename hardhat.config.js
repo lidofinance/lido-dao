@@ -6,7 +6,7 @@ require('@nomiclabs/hardhat-truffle5')
 require('@nomiclabs/hardhat-ganache')
 require('@nomiclabs/hardhat-etherscan')
 require('hardhat-gas-reporter')
-// require('solidity-coverage')
+require('solidity-coverage')
 
 const NETWORK_NAME = getNetworkName()
 const ETH_ACCOUNT_NAME = process.env.ETH_ACCOUNT_NAME
@@ -21,9 +21,7 @@ const getNetConfig = (networkName, ethAccountName) => {
   const netState = readJson(`./deployed-${networkName}.json`) || {}
   const ethAccts = accounts.eth || {}
   const base = {
-    accounts: ethAccountName === 'remote'
-      ? 'remote'
-      : ethAccts[ethAccountName] || ethAccts[networkName] || ethAccts.dev || 'remote',
+    accounts: ethAccountName === 'remote' ? 'remote' : ethAccts[ethAccountName] || ethAccts[networkName] || ethAccts.dev || 'remote',
     ensAddress: netState.ensAddress,
     timeout: 60000
   }
@@ -36,8 +34,10 @@ const getNetConfig = (networkName, ethAccountName) => {
   const byNetName = {
     dev,
     e2e: {
-      ...dev,
-      accounts: accounts.eth.e2e
+      ...base,
+      accounts: accounts.eth.e2e,
+      url: 'http://localhost:8545',
+      chainId: 1
     },
     coverage: {
       url: 'http://localhost:8555'
@@ -76,12 +76,19 @@ const getNetConfig = (networkName, ethAccountName) => {
   return netConfig ? { [networkName]: netConfig } : {}
 }
 
-const solcSettings = {
+const solcSettings4 = {
   optimizer: {
     enabled: true,
     runs: 200
   },
   evmVersion: 'constantinople'
+}
+const solcSettings6 = {
+  optimizer: {
+    enabled: true,
+    runs: 200
+  },
+  evmVersion: 'istanbul'
 }
 
 module.exports = {
@@ -91,15 +98,15 @@ module.exports = {
     compilers: [
       {
         version: '0.4.24',
-        settings: solcSettings
+        settings: solcSettings4
       },
       {
         version: '0.6.11',
-        settings: solcSettings
+        settings: solcSettings6
       },
       {
         version: '0.6.12',
-        settings: solcSettings
+        settings: solcSettings6
       }
     ],
     overrides: {
@@ -147,6 +154,6 @@ function readJson(fileName) {
   return JSON.parse(data)
 }
 
-if ((typeof task) === 'function') {
+if (typeof task === 'function') {
   require('./scripts/hardhat-tasks')
 }

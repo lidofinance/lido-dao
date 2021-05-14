@@ -67,11 +67,11 @@ This transaction can also fail in the case when another Lido oracle submits the 
 
 The oracle daemon requires the following environment variables:
 
-* `ETH1_NODE` for `0.1.4` or `WEB3_PROVIDER_URI` for `0.1.5-prerelease` the ETH1 JSON-RPC endpoint.
+* `WEB3_PROVIDER_URI` the ETH1 JSON-RPC endpoint.
 * `BEACON_NODE` the Lighthouse RPC endpoint.
-* `POOL_CONTRACT` the address of the Lido contract (`0x442af784A788A5bd6F42A01Ebe9F287a871243fb` in Mainnet and `0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F` in Görli Testnet).
-* `STETH_PRICE_ORACLE_CONTRACT` the address of `StableSwapOracle` contract (`0x4522dB9A6f804cb837E5fC9F547D320Da3edD49a` in Görli Testnet).
-* `STETH_CURVE_POOL_CONTRACT` the address of Curve ETH/StETH Pool (`0xCEB67769c63cfFc6C8a6c68e85aBE1Df396B7aDA` in Görli Testnet)
+* `POOL_CONTRACT` the address of the Lido contract (`0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84` in Mainnet and `0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F` in Görli Testnet).
+* `STETH_PRICE_ORACLE_CONTRACT` the address of `StableSwapOracle` contract (`0x3A6Bd15abf19581e411621D669B6a2bbe741ffD6` in Mainnet and `0x4522dB9A6f804cb837E5fC9F547D320Da3edD49a` in Görli Testnet).
+* `STETH_CURVE_POOL_CONTRACT` the address of Curve ETH/StETH Pool (`0xDC24316b9AE028F1497c275EB9192a3Ea0f67022` in Mainnet and `0xCEB67769c63cfFc6C8a6c68e85aBE1Df396B7aDA` in Görli Testnet)
 * `MEMBER_PRIV_KEY` 0x-prefixed private key of the address used by the oracle (should be in the DAO-approved list).
 * `DAEMON` run Oracle in a daemon mode
 
@@ -81,6 +81,20 @@ To run script you have to export three required env variables: `ETH1_NODE_RPC_AD
 Before running the daemon, check that you've set all required env variables.
 
 You can use the public Docker image to launch the daemon.
+
+2.0.0 for Mainnet:
+
+```sh
+docker run -d --name lido-oracle \
+  --env "WEB3_PROVIDER_URI=$ETH1_NODE_RPC_ADDRESS" \
+  --env "BEACON_NODE=$ETH2_NODE_RPC_ADDRESS" \
+  --env "MEMBER_PRIV_KEY=$ORACLE_PRIVATE_KEY_0X_PREFIXED" \
+  --env "POOL_CONTRACT=0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84" \
+  --env "STETH_PRICE_ORACLE_CONTRACT=0x3A6Bd15abf19581e411621D669B6a2bbe741ffD6" \
+  --env "STETH_CURVE_POOL_CONTRACT=0xDC24316b9AE028F1497c275EB9192a3Ea0f67022" \
+  --env "DAEMON=1" \
+  lidofinance/oracle:2.0.0
+```
 
 2.0.0-pre1 for Görli Testnet
 
@@ -96,16 +110,30 @@ docker run -d --name lido-oracle \
   lidofinance/oracle:2.0.0-pre1
 ```
 
-0.1.4 for Mainnet:
-
-```sh
-docker run -d --name lido-oracle \
-  --env "ETH1_NODE=http://$ETH1_NODE_RPC_ADDRESS" \
-  --env "BEACON_NODE=http://$ETH2_NODE_RPC_ADDRESS" \
-  --env "POOL_CONTRACT=0x442af784A788A5bd6F42A01Ebe9F287a871243fb" \
-  --env "MEMBER_PRIV_KEY=$ORACLE_PRIVATE_KEY_0X_PREFIXED" \
-  --env "DAEMON=1" \
-  lidofinance/oracle:0.1.4
-```
-
 This will start the oracle in daemon mode. You can also run it in a one-off mode, for example if you’d prefer to trigger oracle execution as a `cron` job. In this case, set the `DAEMON` environment variable to 0.
+
+## Prometheus metrics
+
+Lido Oracle daemon 2.0.0 exposes metrics via Prometheus exporter. We encourage Oracle operators to use them to monitor daemon reports and process status.
+Prometheus exporter is running on port 8000 and provides 5 logical metrics groups.  
+For the full list of available Prometheus metrics please check [the Lido oracle readme](https://github.com/lidofinance/lido-oracle#prometheus-metrics). We recommend to monitor at least the following ones:
+
+| name                            | description                                                      | frequency                                 | goal                                                                                                                                                                   |
+|---------------------------------|------------------------------------------------------------------|-------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **reportableFrame** <br> *gauge*      | the report could be sent or is sending                     |                                           |                                                                                 |
+| **nowEthV1BlockNumber**  <br> *gauge* | ETH1 latest block number                                   | every COUNTDOWN_SLEEP seconds             | should be increasing constantly and be aligned with https://etherscan.io/blocks |
+| **daemonCountDown** <br> *gauge*      | time till the next oracle run in seconds                   | every COUNTDOWN_SLEEP seconds             | should be decreasing down to 0                                                  |
+| **finalizedEpoch** <br> *gauge*       | last finalized ETH2 epoch                                  | every COUNTDOWN_SLEEP seconds             | should go up at a rate of 1 per six munites                                     |
+| **txSuccess**                     <br> *histogram* | number of successful transactions                           | every SLEEP seconds             |                                       |
+| **txRevert**                      <br> *histogram* | number of failed transactions                           | every SLEEP seconds             |                                       |
+| **process_virtual_memory_bytes**  <br> *gauge* | Virtual memory size in bytes.                               | every call             | normal RAM consumption is ~200Mb               |
+| **process_resident_memory_bytes** <br> *gauge* | Resident memory size in bytes.                               | every call             | normal RAM consumption is ~200Mb               |
+
+Exception counters for debugging any errors which may arise:
+
+| name                                           | description                                                       |
+| ---------------------------------------------- | ------------------------------------------------------------------|
+| **underpricedExceptionsCount**    <br> *gauge* | count of ValueError: replacement transaction underpriced          |
+| **transactionTimeoutCount**       <br> *gauge* | count of web3.exceptions.TimeExhausted                            |
+| **beaconNodeTimeoutCount**        <br> *gauge* | count of beacon node connection timeouts                          |
+| **exceptionsCount**               <br> *gauge* | count of all other exceptions                                     |

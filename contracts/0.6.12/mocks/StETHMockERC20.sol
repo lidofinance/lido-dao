@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2020 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2021 Lido <info@lido.fi>
 
 // SPDX-License-Identifier: GPL-3.0
 
@@ -20,6 +20,12 @@ contract StETHMockERC20 is ERC20, ERC20Burnable {
 
     function slash(address holder, uint256 amount) public {
         _burn(holder, amount);
+    }
+
+    function submit(address referral) external payable returns (uint256) {
+        uint256 sharesToMint = getSharesByPooledEth(msg.value);
+        _mint(msg.sender, sharesToMint);
+        return sharesToMint;
     }
 
     function setTotalShares(uint256 _totalShares) public {

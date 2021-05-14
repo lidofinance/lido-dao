@@ -169,5 +169,9 @@
     "fullName": "aragon-voting.test-2.lidopm.aragonid.eth",
     "id": "0xf33b551399f8c5c80c7a723db47d9a4000c6fb41d46f30aa41f4b76f6d729523",
     "proxyAddress": "0x01Fd0BA7C2E8c7D2c3EB12e273079d60f94bbdf2"
-  }
+  },
+  "wstethContractAddress": "0x2Ca788280fB10384946D3ECC838D94DeCa505CF4",
+  "wstethContractConstructorArgs": [
+    "0xbA453033d328bFdd7799a4643611b616D80ddd97"
+  ]
 }

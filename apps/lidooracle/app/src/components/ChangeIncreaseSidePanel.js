@@ -6,17 +6,26 @@ import TextField from './TextField'
 import Info from '@aragon/ui/dist/Info'
 
 const initialValues = {
-  quorum: '',
+  value: '',
 }
 
 const validationSchema = yup.object().shape({
-  quorum: yup.number().integer().required().min(0),
+  value: yup
+    .number()
+    .positive()
+    .required()
+    .min(0)
+    .max(100)
+    .test('Value', `Value can have up to 2 decimal places.`, (value) => {
+      const regex = /^\d{1,3}(\.\d{1,2})?$/
+      return regex.test(value)
+    }),
 })
 
 function PanelContent({ api, onClose }) {
   const onSubmit = useCallback(
-    ({ quorum }) => {
-      api(quorum).finally(() => {
+    ({ value }) => {
+      api(value * 100).finally(() => {
         onClose()
       })
     },
@@ -47,13 +56,27 @@ function PanelContent({ api, onClose }) {
                 margin-bottom: ${3 * GU}px;
               `}
             >
-              This action will set a new quorum value.
+              This action will set a new allowed beacon balance annual relative
+              increase. Please specify the value as a percentage. The value will
+              automatically be converted to basis points upon submission.
+              <br />
+              <br />
+              i.e.
+              <br />
+              <strong>
+                100% = 10 000 basis points
+                <br />
+                1% = 100 basis points
+                <br />
+                Minimal step: 0.01% (1 basis point)
+              </strong>
             </Info>
             <Field
-              name="quorum"
-              label="Quorum"
+              name="value"
+              label="Value (%)"
               type="number"
               min="0"
+              step="0.01"
               required
               component={TextField}
             />
@@ -62,7 +85,7 @@ function PanelContent({ api, onClose }) {
               wide
               required
               disabled={isSubmitting}
-              label="Change Quorum"
+              label="Change Increase"
               type="submit"
             />
           </form>
@@ -73,7 +96,7 @@ function PanelContent({ api, onClose }) {
 }
 
 export default (props) => (
-  <SidePanel title="ADD ORACLE MEMBER" {...props}>
+  <SidePanel title="Change Annual Increase" {...props}>
     <PanelContent {...props} />
   </SidePanel>
 )
