@@ -4,6 +4,7 @@
 
 /* See contracts/COMPILERS.md */
 pragma solidity 0.4.24;
+pragma experimental ABIEncoderV2;
 
 import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/common/IsContract.sol";
@@ -38,6 +39,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
     uint256 constant public PUBKEY_LENGTH = 48;
     uint256 constant public SIGNATURE_LENGTH = 96;
+    uint256 constant public KEYS_LEAF_SIZE = 8;
 
     uint256 internal constant UINT64_MAX = uint256(uint64(-1));
 
@@ -58,7 +60,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         bytes32 keysMerkleRoot;     // root of merkle tree containing operator's unused keys
     }
 
-    /// @dev Memory cache entry used in the assignNextKeys function
+    /// @dev Memory cache entry used in the verifyNextKeys function
     struct DepositLookupCacheEntry {
         // Makes no sense to pack types since reading memory is as fast as any op
         uint256 id;
@@ -67,6 +69,15 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         uint256 totalSigningKeys;
         uint256 usedSigningKeys;
         uint256 initialUsedSigningKeys;
+        bytes32 keysMerkleRoot;
+    }
+
+    /// @dev Format for key verification data used in the verifyNextKeys function
+    struct KeysData{
+        uint256 operatorId;
+        bytes publicKeys;
+        bytes signatures;
+        bytes proofData;
     }
 
     /// @dev Mapping of all node operators. Mapping is used to be able to extend the struct.
@@ -279,27 +290,34 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     /**
-     * @notice Selects and returns at most `_numKeys` signing keys (as well as the corresponding
-     *         signatures) from the set of active keys and marks the selected keys as used.
+     * @notice Verifies a number of provided signing keys (as well as the corresponding signatures)
+     *         against the set of active keys and marks the selected keys as used.
      *         May only be called by the Lido contract.
      *
-     * @param _numKeys The number of keys to select. The actual number of selected keys may be less
-     *        due to the lack of active keys.
+     * @param _keysData array of KeysData structs containing signing keys+sigs along with merkle proofs
+     *
+     * @return Two byte arrays of the validated keys and signatures.
      */
-    function assignNextSigningKeys(uint256 _numKeys) external onlyLido returns (bytes memory pubkeys, bytes memory signatures) {
+    function verifyNextSigningKeys(KeysData[] _keysData) external onlyLido returns (bytes memory pubkeys, bytes memory signatures) {
         // Memory is very cheap, although you don't want to grow it too much
         DepositLookupCacheEntry[] memory cache = _loadOperatorCache();
         if (0 == cache.length)
             return (new bytes(0), new bytes(0));
 
+        // TODO: rename these to correspond to multiple keys
+        uint256 numKeys = _keysData.length;
         uint256 numAssignedKeys = 0;
         DepositLookupCacheEntry memory entry;
 
-        while (numAssignedKeys < _numKeys) {
-            // Finding the best suitable operator
+        // We can allocate without zeroing out since we're going to rewrite the whole array
+        pubkeys = MemUtils.unsafeAllocateBytes(numKeys * PUBKEY_LENGTH);
+        signatures = MemUtils.unsafeAllocateBytes(numKeys * SIGNATURE_LENGTH);
+
+        while (numAssignedKeys < numKeys) {
+            // Find the node operator with the fewest active validators and spare capacity
             uint256 bestOperatorIdx = cache.length;   // 'not found' flag
             uint256 smallestStake;
-            // The loop is ligthweight comparing to an ether transfer and .deposit invocation
+            // The loop is lightweight comparing to an ether transfer and .deposit invocation
             for (uint256 idx = 0; idx < cache.length; ++idx) {
                 entry = cache[idx];
 
@@ -317,54 +335,43 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
                 }
             }
 
-            if (bestOperatorIdx == cache.length)  // not found
-                break;
+            assert(bestOperatorIdx < cache.length);
+
+            // Verify that the provided signing keys correspond to the keys provided by this node operator
+
+            KeysData memory keyData = _keysData[numAssignedKeys];
+            require(keyData.operatorId == bestOperatorIdx, "Must choose operator with smallest stake");
 
             entry = cache[bestOperatorIdx];
             assert(entry.usedSigningKeys < UINT64_MAX);
 
-            ++entry.usedSigningKeys;
+            require(entry.keysMerkleRoot != bytes32(0), "merkle root must be initialised");
+
+            // TODO: Check merkle proof is unused
+
+            // TODO: Verify proof
+
+            // TODO: Invalidate proof
+
+            // Copy verified keys and signatures into array to be passed back to Lido
+
+            MemUtils.copyBytes(keyData.publicKeys, pubkeys, numAssignedKeys * PUBKEY_LENGTH * KEYS_LEAF_SIZE);
+            MemUtils.copyBytes(keyData.signatures, signatures, numAssignedKeys * SIGNATURE_LENGTH * KEYS_LEAF_SIZE);
+
+            entry.usedSigningKeys += KEYS_LEAF_SIZE;
             ++numAssignedKeys;
         }
 
-        if (numAssignedKeys == 0) {
-            return (new bytes(0), new bytes(0));
-        }
-
-        if (numAssignedKeys > 1) {
-            // we can allocate without zeroing out since we're going to rewrite the whole array
-            pubkeys = MemUtils.unsafeAllocateBytes(numAssignedKeys * PUBKEY_LENGTH);
-            signatures = MemUtils.unsafeAllocateBytes(numAssignedKeys * SIGNATURE_LENGTH);
-        }
-
-        uint256 numLoadedKeys = 0;
-
+        // Update the number of used keys for each operator
         for (uint256 i = 0; i < cache.length; ++i) {
             entry = cache[i];
 
-            if (entry.usedSigningKeys == entry.initialUsedSigningKeys) {
-                continue;
-            }
-
-            operators[entry.id].usedSigningKeys = uint64(entry.usedSigningKeys);
-
-            for (uint256 keyIndex = entry.initialUsedSigningKeys; keyIndex < entry.usedSigningKeys; ++keyIndex) {
-                (bytes memory pubkey, bytes memory signature) = _loadSigningKey(entry.id, keyIndex);
-                if (numAssignedKeys == 1) {
-                    return (pubkey, signature);
-                } else {
-                    MemUtils.copyBytes(pubkey, pubkeys, numLoadedKeys * PUBKEY_LENGTH);
-                    MemUtils.copyBytes(signature, signatures, numLoadedKeys * SIGNATURE_LENGTH);
-                    ++numLoadedKeys;
-                }
-            }
-
-            if (numLoadedKeys == numAssignedKeys) {
-                break;
+            if (entry.usedSigningKeys != entry.initialUsedSigningKeys) {
+                operators[entry.id].usedSigningKeys = uint64(entry.usedSigningKeys);
             }
         }
 
-        assert(numLoadedKeys == numAssignedKeys);
+        assert(numAssignedKeys == numKeys); // Make sure that every key has been validated
         return (pubkeys, signatures);
     }
 
