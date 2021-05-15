@@ -54,6 +54,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
         uint64 totalSigningKeys;    // total amount of signing keys of this operator
         uint64 usedSigningKeys;     // number of signing keys of this operator which were used in deposits to the Ethereum 2
+
+        bytes32 keysMerkleRoot;     // root of merkle tree containing operator's unused keys
     }
 
     /// @dev Memory cache entry used in the assignNextKeys function
@@ -207,6 +209,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     function trimUnusedKeys() external onlyLido {
         uint256 length = getNodeOperatorsCount();
         for (uint256 operatorId = 0; operatorId < length; ++operatorId) {
+            operators[operatorId].credentialsMerkleRoot = bytes32(0); // clear merkle root
             if (operators[operatorId].totalSigningKeys != operators[operatorId].usedSigningKeys)  // write only if update is needed
                 operators[operatorId].totalSigningKeys = operators[operatorId].usedSigningKeys;  // discard unused keys
         }
@@ -253,22 +256,26 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     /**
-      * @notice Removes a validator signing key #`_index` of operator #`_id` from the set of usable keys. Executed on behalf of DAO.
+      * @notice Clears an operator's merkle tree root, invalidating all unused keys. Executed on behalf of DAO.
       * @param _operator_id Node Operator id
-      * @param _index Index of the key, starting with 0
       */
-    function removeSigningKey(uint256 _operator_id, uint256 _index)
+    function clearMerkleRoot(uint256 _operator_id)
         external
         authP(MANAGE_SIGNING_KEYS, arr(_operator_id))
-    {}
+    {
+        operators[_operator_id].keysMerkleRoot = bytes32(0);
+        operators[_operator_id].totalSigningKeys = operators[_operator_id].usedSigningKeys;  // discard unused keys
+    }
 
     /**
-      * @notice Removes a validator signing key #`_index` of operator #`_id` from the set of usable keys. Executed on behalf of Node Operator.
+      * @notice Clears an operator's merkle tree root, invalidating all unused keys. Executed on behalf of Node Operator.
       * @param _operator_id Node Operator id
       * @param _index Index of the key, starting with 0
       */
     function removeSigningKeyOperatorBH(uint256 _operator_id, uint256 _index) external {
         require(msg.sender == operators[_operator_id].rewardAddress, "APP_AUTH_FAILED");
+        operators[_operator_id].keysMerkleRoot = bytes32(0);
+        operators[_operator_id].totalSigningKeys = operators[_operator_id].usedSigningKeys;  // discard unused keys
     }
 
     /**
@@ -539,6 +546,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             entry.totalSigningKeys = operator.totalSigningKeys;
             entry.usedSigningKeys = operator.usedSigningKeys;
             entry.initialUsedSigningKeys = entry.usedSigningKeys;
+            entry.keysMerkleRoot = entry.keysMerkleRoot;
         }
         require(idx == cache.length, "INCOSISTENT_ACTIVE_COUNT");
 
