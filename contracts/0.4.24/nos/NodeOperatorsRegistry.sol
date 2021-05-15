@@ -260,9 +260,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     function removeSigningKey(uint256 _operator_id, uint256 _index)
         external
         authP(MANAGE_SIGNING_KEYS, arr(_operator_id))
-    {
-        _removeSigningKey(_operator_id, _index);
-    }
+    {}
 
     /**
       * @notice Removes a validator signing key #`_index` of operator #`_id` from the set of usable keys. Executed on behalf of Node Operator.
@@ -271,7 +269,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       */
     function removeSigningKeyOperatorBH(uint256 _operator_id, uint256 _index) external {
         require(msg.sender == operators[_operator_id].rewardAddress, "APP_AUTH_FAILED");
-        _removeSigningKey(_operator_id, _index);
     }
 
     /**
@@ -504,35 +501,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         return uint64(v);
     }
 
-    function _signingKeyOffset(uint256 _operator_id, uint256 _keyIndex) internal pure returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(SIGNING_KEYS_MAPPING_NAME, _operator_id, _keyIndex)));
-    }
-
-    function _storeSigningKey(uint256 _operator_id, uint256 _keyIndex, bytes memory _key, bytes memory _signature) internal {
-        assert(_key.length == PUBKEY_LENGTH);
-        assert(_signature.length == SIGNATURE_LENGTH);
-        // algorithm applicability constraints
-        assert(PUBKEY_LENGTH >= 32 && PUBKEY_LENGTH <= 64);
-        assert(0 == SIGNATURE_LENGTH % 32);
-
-        // key
-        uint256 offset = _signingKeyOffset(_operator_id, _keyIndex);
-        uint256 keyExcessBits = (2 * 32 - PUBKEY_LENGTH) * 8;
-        assembly {
-            sstore(offset, mload(add(_key, 0x20)))
-            sstore(add(offset, 1), shl(keyExcessBits, shr(keyExcessBits, mload(add(_key, 0x40)))))
-        }
-        offset += 2;
-
-        // signature
-        for (uint256 i = 0; i < SIGNATURE_LENGTH; i += 32) {
-            assembly {
-                sstore(offset, mload(add(_signature, add(0x20, i))))
-            }
-            offset++;
-        }
-    }
-
     function _addSigningKeys(uint256 _operator_id, uint256 _quantity, bytes _pubkeys, bytes _signatures) internal
         operatorExists(_operator_id)
     {
@@ -545,68 +513,10 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             require(!_isEmptySigningKey(key), "EMPTY_KEY");
             bytes memory sig = BytesLib.slice(_signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
 
-            _storeSigningKey(_operator_id, operators[_operator_id].totalSigningKeys + i, key, sig);
             emit SigningKeyAdded(_operator_id, key);
         }
 
         operators[_operator_id].totalSigningKeys = operators[_operator_id].totalSigningKeys.add(to64(_quantity));
-    }
-
-    function _removeSigningKey(uint256 _operator_id, uint256 _index) internal
-        operatorExists(_operator_id)
-    {
-        require(_index < operators[_operator_id].totalSigningKeys, "KEY_NOT_FOUND");
-        require(_index >= operators[_operator_id].usedSigningKeys, "KEY_WAS_USED");
-
-        (bytes memory removedKey, ) = _loadSigningKey(_operator_id, _index);
-
-        uint256 lastIndex = operators[_operator_id].totalSigningKeys.sub(1);
-        if (_index < lastIndex) {
-            (bytes memory key, bytes memory signature) = _loadSigningKey(_operator_id, lastIndex);
-            _storeSigningKey(_operator_id, _index, key, signature);
-        }
-
-        _deleteSigningKey(_operator_id, lastIndex);
-        operators[_operator_id].totalSigningKeys = operators[_operator_id].totalSigningKeys.sub(1);
-
-        emit SigningKeyRemoved(_operator_id, removedKey);
-    }
-
-    function _deleteSigningKey(uint256 _operator_id, uint256 _keyIndex) internal {
-        uint256 offset = _signingKeyOffset(_operator_id, _keyIndex);
-        for (uint256 i = 0; i < (PUBKEY_LENGTH + SIGNATURE_LENGTH) / 32 + 1; ++i) {
-            assembly {
-                sstore(add(offset, i), 0)
-            }
-        }
-    }
-
-    function _loadSigningKey(uint256 _operator_id, uint256 _keyIndex) internal view returns (bytes memory key, bytes memory signature) {
-        // algorithm applicability constraints
-        assert(PUBKEY_LENGTH >= 32 && PUBKEY_LENGTH <= 64);
-        assert(0 == SIGNATURE_LENGTH % 32);
-
-        uint256 offset = _signingKeyOffset(_operator_id, _keyIndex);
-
-        // key
-        bytes memory tmpKey = new bytes(64);
-        assembly {
-            mstore(add(tmpKey, 0x20), sload(offset))
-            mstore(add(tmpKey, 0x40), sload(add(offset, 1)))
-        }
-        offset += 2;
-        key = BytesLib.slice(tmpKey, 0, PUBKEY_LENGTH);
-
-        // signature
-        signature = new bytes(SIGNATURE_LENGTH);
-        for (uint256 i = 0; i < SIGNATURE_LENGTH; i += 32) {
-            assembly {
-                mstore(add(signature, add(0x20, i)), sload(offset))
-            }
-            offset++;
-        }
-
-        return (key, signature);
     }
 
     function _loadOperatorCache() internal view returns (DepositLookupCacheEntry[] memory cache) {
