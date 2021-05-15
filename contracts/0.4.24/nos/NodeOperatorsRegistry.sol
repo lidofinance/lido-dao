@@ -468,7 +468,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             uint64 stakingLimit,
             uint64 stoppedValidators,
             uint64 totalSigningKeys,
-            uint64 usedSigningKeys
+            uint64 usedSigningKeys,
+            bytes32 keysMerkleRoot
         )
     {
         NodeOperator storage operator = operators[_id];
@@ -480,6 +481,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         stoppedValidators = operator.stoppedValidators;
         totalSigningKeys = operator.totalSigningKeys;
         usedSigningKeys = operator.usedSigningKeys;
+        keysMerkleRoot = operator.keysMerkleRoot;
     }
 
     /**
