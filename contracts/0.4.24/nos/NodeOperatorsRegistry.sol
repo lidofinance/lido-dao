@@ -272,7 +272,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       * @param _operator_id Node Operator id
       * @param _index Index of the key, starting with 0
       */
-    function removeSigningKeyOperatorBH(uint256 _operator_id, uint256 _index) external {
+    function clearMerkleRootOperatorBH(uint256 _operator_id, uint256 _index) external {
         require(msg.sender == operators[_operator_id].rewardAddress, "APP_AUTH_FAILED");
         operators[_operator_id].keysMerkleRoot = bytes32(0);
         operators[_operator_id].totalSigningKeys = operators[_operator_id].usedSigningKeys;  // discard unused keys
