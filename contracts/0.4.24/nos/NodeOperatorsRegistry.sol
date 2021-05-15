@@ -209,7 +209,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     function trimUnusedKeys() external onlyLido {
         uint256 length = getNodeOperatorsCount();
         for (uint256 operatorId = 0; operatorId < length; ++operatorId) {
-            operators[operatorId].credentialsMerkleRoot = bytes32(0); // clear merkle root
+            operators[operatorId].keysMerkleRoot = bytes32(0); // clear merkle root
             if (operators[operatorId].totalSigningKeys != operators[operatorId].usedSigningKeys)  // write only if update is needed
                 operators[operatorId].totalSigningKeys = operators[operatorId].usedSigningKeys;  // discard unused keys
         }
