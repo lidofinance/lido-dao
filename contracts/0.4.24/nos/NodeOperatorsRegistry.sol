@@ -43,7 +43,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
     uint256 internal constant UINT64_MAX = uint256(uint64(-1));
 
-    bytes32 internal constant SIGNING_KEYS_MAPPING_NAME = keccak256("lido.NodeOperatorsRegistry.signingKeysMappingName");
+    bytes32 internal constant MERKLE_LEAVES_MAPPING_NAME = keccak256("lido.NodeOperatorsRegistry.merkleLeavesMappingName");
 
 
     /// @dev Node Operator parameters and internal state
@@ -345,13 +345,14 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             entry = cache[bestOperatorIdx];
             assert(entry.usedSigningKeys < UINT64_MAX);
 
-            require(entry.keysMerkleRoot != bytes32(0), "merkle root must be initialised");
+            require(entry.keysMerkleRoot != bytes32(0), "Merkle root must be initialised");
 
-            // TODO: Check merkle proof is unused
+            bytes32 leafHash = keccak256("TODO: HASH KEYS AND SIGS");
+            require(!_leafHashUsed(bestOperatorIdx, leafHash), "Signing keys already used");
 
             // TODO: Verify proof
 
-            // TODO: Invalidate proof
+            _markLeafUsed(bestOperatorIdx, leafHash);
 
             // Copy verified keys and signatures into array to be passed back to Lido
 
@@ -373,6 +374,32 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
         assert(numAssignedKeys == numKeys); // Make sure that every key has been validated
         return (pubkeys, signatures);
+    }
+
+    function _merkleLeafOffset(uint256 _operator_id,  bytes32 _leafHash) internal pure returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(MERKLE_LEAVES_MAPPING_NAME, _operator_id, _leafHash)));
+    }
+
+    /**
+     * @notice Returns whether a given leaf hash has been used in a merkle proof already
+     * @dev Used to prevent the same signing keys being used multiple times
+     */
+    function _leafHashUsed(uint256 _operator_id, bytes32 _leafHash) internal returns (bool leafUsed) {
+        uint256 offset = _merkleLeafOffset(_operator_id, _leafHash);
+        assembly {
+           mstore(leafUsed, sload(offset))
+        }
+    }
+
+    /**
+     * @notice Marks provided leaf hash as used
+     * @dev Used to prevent the same signing keys being used multiple times
+     */
+    function _markLeafUsed(uint256 _operator_id, bytes32 _leafHash) internal {
+        uint256 offset = _merkleLeafOffset(_operator_id, _leafHash);
+        assembly {
+            sstore(offset, 1)
+        }
     }
 
     /**
