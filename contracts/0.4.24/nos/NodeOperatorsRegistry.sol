@@ -463,25 +463,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     /**
-      * @notice Returns n-th signing key of the node operator #`_operator_id`
-      * @param _operator_id Node Operator id
-      * @param _index Index of the key, starting with 0
-      * @return key Key
-      * @return depositSignature Signature needed for a deposit_contract.deposit call
-      * @return used Flag indication if the key was used in the staking
-      */
-    function getSigningKey(uint256 _operator_id, uint256 _index) external view
-        operatorExists(_operator_id)
-        returns (bytes key, bytes depositSignature, bool used)
-    {
-        require(_index < operators[_operator_id].totalSigningKeys, "KEY_NOT_FOUND");
-
-        (bytes memory key_, bytes memory signature) = _loadSigningKey(_operator_id, _index);
-
-        return (key_, signature, _index < operators[_operator_id].usedSigningKeys);
-    }
-
-    /**
       * @notice Returns total number of node operators
       */
     function getNodeOperatorsCount() public view returns (uint256) {
