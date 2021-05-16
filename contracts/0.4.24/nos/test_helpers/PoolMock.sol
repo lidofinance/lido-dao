@@ -1,4 +1,5 @@
 pragma solidity 0.4.24;
+pragma experimental ABIEncoderV2;
 
 import "../../interfaces/INodeOperatorsRegistry.sol";
 
@@ -15,8 +16,8 @@ contract PoolMock {
         operators = INodeOperatorsRegistry(_operators);
     }
 
-    function assignNextSigningKeys(uint256 _numKeys) external {
-        (bytes memory pubkeys, bytes memory signatures) = operators.assignNextSigningKeys(_numKeys);
+    function assignNextSigningKeys(INodeOperatorsRegistry.KeysData[] _keysData) public {
+        (bytes memory pubkeys, bytes memory signatures) = operators.verifyNextSigningKeys(_keysData);
         emit KeysAssigned(pubkeys, signatures);
     }
 

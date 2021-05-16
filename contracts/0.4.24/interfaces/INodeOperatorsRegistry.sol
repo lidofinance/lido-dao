@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.4.24;
-
+pragma experimental ABIEncoderV2;
 
 /**
   * @title Node Operator registry
@@ -11,7 +11,7 @@ pragma solidity 0.4.24;
   * Node Operator registry manages signing keys and other node operator data.
   * It's also responsible for distributing rewards to node operators.
   */
-interface INodeOperatorsRegistry {
+contract INodeOperatorsRegistry {
     /**
       * @notice Add node operator named `name` with reward address `rewardAddress` and staking limit `stakingLimit` validators
       * @param _name Human-readable name
@@ -55,12 +55,12 @@ interface INodeOperatorsRegistry {
     /**
       * @notice Returns total number of node operators
       */
-    function getNodeOperatorsCount() external view returns (uint256);
+    function getNodeOperatorsCount() public view returns (uint256);
 
     /**
       * @notice Returns number of active node operators
       */
-    function getActiveNodeOperatorsCount() external view returns (uint256);
+    function getActiveNodeOperatorsCount() public view returns (uint256);
 
     /**
       * @notice Returns the n-th node operator
@@ -93,15 +93,26 @@ interface INodeOperatorsRegistry {
     event NodeOperatorStakingLimitSet(uint256 indexed id, uint64 stakingLimit);
     event NodeOperatorTotalStoppedValidatorsReported(uint256 indexed id, uint64 totalStopped);
 
+
+    /// @dev Format for key verification data used in the verifyNextKeys function
+    struct KeysData{
+        uint256 operatorId;
+        uint256 leafIndex;
+        bytes publicKeys;
+        bytes signatures;
+        bytes proofData;
+    }
+
     /**
-     * @notice Selects and returns at most `_numKeys` signing keys (as well as the corresponding
-     *         signatures) from the set of active keys and marks the selected keys as used.
-     *         May only be called by the pool contract.
+     * @notice Verifies a number of provided signing keys (as well as the corresponding signatures)
+     *         against the set of active keys and marks the selected keys as used.
+     *         May only be called by the Lido contract.
      *
-     * @param _numKeys The number of keys to select. The actual number of selected keys may be less
-     *        due to the lack of active keys.
+     * @param _keysData array of KeysData structs containing signing keys+sigs along with merkle proofs
+     *
+     * @return Two byte arrays of the validated keys and signatures.
      */
-    function assignNextSigningKeys(uint256 _numKeys) external returns (bytes memory pubkeys, bytes memory signatures);
+    function verifyNextSigningKeys(KeysData[] _keysData) public returns (bytes memory pubkeys, bytes memory signatures);
 
     /**
       * @notice Add `_quantity` validator signing keys to the keys of the node operator #`_operator_id`. Concatenated keys are: `_pubkeys`

@@ -72,14 +72,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         bytes32 keysMerkleRoot;
     }
 
-    /// @dev Format for key verification data used in the verifyNextKeys function
-    struct KeysData{
-        uint256 operatorId;
-        bytes publicKeys;
-        bytes signatures;
-        bytes proofData;
-    }
-
     /// @dev Mapping of all node operators. Mapping is used to be able to extend the struct.
     mapping(uint256 => NodeOperator) internal operators;
 
@@ -297,7 +289,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
      *
      * @return Two byte arrays of the validated keys and signatures.
      */
-    function verifyNextSigningKeys(KeysData[] _keysData) external onlyLido returns (bytes memory pubkeys, bytes memory signatures) {
+    function verifyNextSigningKeys(KeysData[] _keysData) public onlyLido returns (bytes memory pubkeys, bytes memory signatures) {
         // Memory is very cheap, although you don't want to grow it too much
         DepositLookupCacheEntry[] memory cache = _loadOperatorCache();
         if (0 == cache.length)
@@ -528,6 +520,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         operatorExists(_operator_id)
     {
         require(_quantity != 0, "NO_KEYS");
+        require(_quantity % KEYS_LEAF_SIZE == 0, "INVALID_LENGTH"); // Prevent half filled merkle leaves
         require(_pubkeys.length == _quantity.mul(PUBKEY_LENGTH), "INVALID_LENGTH");
         require(_signatures.length == _quantity.mul(SIGNATURE_LENGTH), "INVALID_LENGTH");
 

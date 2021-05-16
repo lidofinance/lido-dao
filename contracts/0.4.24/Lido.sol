@@ -4,6 +4,7 @@
 
 /* See contracts/COMPILERS.md */
 pragma solidity 0.4.24;
+pragma experimental ABIEncoderV2;
 
 import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
@@ -54,9 +55,6 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     uint256 constant public DEPOSIT_SIZE = 32 ether;
 
     uint256 internal constant DEPOSIT_AMOUNT_UNIT = 1000000000 wei;
-
-    /// @dev default value for maximum number of Ethereum 2.0 validators registered in a single depositBufferedEther call
-    uint256 internal constant DEFAULT_MAX_DEPOSITS_PER_CALL = 16;
 
     bytes32 internal constant FEE_POSITION = keccak256("lido.Lido.fee");
     bytes32 internal constant TREASURY_FEE_POSITION = keccak256("lido.Lido.treasuryFee");
@@ -127,20 +125,13 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         return _submit(_referral);
     }
 
-    /**
-    * @notice Deposits buffered ethers to the official DepositContract.
-    * @dev This function is separated from submit() to reduce the cost of sending funds.
-    */
-    function depositBufferedEther() external {
-        return _depositBufferedEther(DEFAULT_MAX_DEPOSITS_PER_CALL);
-    }
 
     /**
-      * @notice Deposits buffered ethers to the official DepositContract, making no more than `_maxDeposits` deposit calls.
+      * @notice Deposits buffered ethers to the official DepositContract using the provided signing keys.
       * @dev This function is separated from submit() to reduce the cost of sending funds.
       */
-    function depositBufferedEther(uint256 _maxDeposits) external {
-        return _depositBufferedEther(_maxDeposits);
+    function depositBufferedEther(INodeOperatorsRegistry.KeysData[] _keysData) public {
+        return _depositBufferedEther(_keysData);
     }
 
     function burnShares(address _account, uint256 _sharesAmount)
@@ -465,23 +456,25 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     /**
     * @dev Deposits buffered eth to the DepositContract and assigns chunked deposits to node operators
     */
-    function _depositBufferedEther(uint256 _maxDeposits) internal whenNotStopped {
+    function _depositBufferedEther(INodeOperatorsRegistry.KeysData[] _keysData) internal whenNotStopped {
         uint256 buffered = _getBufferedEther();
         if (buffered >= DEPOSIT_SIZE) {
             uint256 unaccounted = _getUnaccountedEther();
             uint256 numDeposits = buffered.div(DEPOSIT_SIZE);
-            _markAsUnbuffered(_ETH2Deposit(numDeposits < _maxDeposits ? numDeposits : _maxDeposits));
+            // TODO: Remove magic number for number of keys per KeysData
+            require(numDeposits > _keysData.length * 8, "Too many keys provided");
+            _markAsUnbuffered(_ETH2Deposit(_keysData));
             assert(_getUnaccountedEther() == unaccounted);
         }
     }
 
     /**
     * @dev Performs deposits to the ETH 2.0 side
-    * @param _numDeposits Number of deposits to perform
+    * @param _keysData signing keys+sigs along with necessary merkle proofs
     * @return actually deposited Ether amount
     */
-    function _ETH2Deposit(uint256 _numDeposits) internal returns (uint256) {
-        (bytes memory pubkeys, bytes memory signatures) = getOperators().assignNextSigningKeys(_numDeposits);
+    function _ETH2Deposit(INodeOperatorsRegistry.KeysData[] _keysData) internal returns (uint256) {
+        (bytes memory pubkeys, bytes memory signatures) = getOperators().verifyNextSigningKeys(_keysData);
 
         if (pubkeys.length == 0) {
             return 0;

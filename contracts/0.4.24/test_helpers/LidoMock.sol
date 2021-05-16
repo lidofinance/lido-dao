@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.4.24;
+pragma experimental ABIEncoderV2;
 
 import "../Lido.sol";
 import "./VaultMock.sol";
