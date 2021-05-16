@@ -14,6 +14,7 @@ import "solidity-bytes-utils/contracts/BytesLib.sol";
 
 import "../interfaces/INodeOperatorsRegistry.sol";
 import "../lib/MemUtils.sol";
+import "../lib/Merkle.sol";
 
 
 /**
@@ -338,10 +339,10 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
             require(entry.keysMerkleRoot != bytes32(0), "Merkle root must be initialised");
 
-            bytes32 leafHash = keccak256("TODO: HASH KEYS AND SIGS");
+            bytes32 leafHash = keccak256(abi.encodePacked(keyData.publicKeys, keyData.signatures));
             require(!_leafHashUsed(bestOperatorIdx, leafHash), "Signing keys already used");
 
-            // TODO: Verify proof
+            require(Merkle.checkMembership(leafHash, keyData.leafIndex, entry.keysMerkleRoot, keyData.proofData), "Invalid Merkle Proof");
 
             _markLeafUsed(bestOperatorIdx, leafHash);
 
