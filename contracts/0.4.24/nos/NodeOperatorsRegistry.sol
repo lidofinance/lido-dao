@@ -545,15 +545,22 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             emit SigningKeyMerkleRootCleared(_operator_id, clearedMerkleRoot);
         }
 
+        // Emit the batches of keys as events and calculate batch hashes
+        uint256 numKeyBatches = _quantity.div(KEYS_LEAF_SIZE);
+        bytes32[] memory batchHashes = new bytes32[](numKeyBatches);
+        for (uint256 i = 0; i < numKeyBatches; ++i) {
+            bytes memory keys = BytesLib.slice(_pubkeys, i * PUBKEY_LENGTH * KEYS_LEAF_SIZE, PUBKEY_LENGTH * KEYS_LEAF_SIZE);
+            // TODO: check for empty keys
+            bytes memory sigs = BytesLib.slice(_signatures, i * SIGNATURE_LENGTH * KEYS_LEAF_SIZE, SIGNATURE_LENGTH * KEYS_LEAF_SIZE);
 
-        for (uint256 i = 0; i < _quantity; ++i) {
-            bytes memory key = BytesLib.slice(_pubkeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
-            require(!_isEmptySigningKey(key), "EMPTY_KEY");
-            bytes memory sig = BytesLib.slice(_signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
+            batchHashes[i] = _keyLeafHash(keys, sigs);
 
-            emit SigningKeyAdded(_operator_id, key);
+            // TODO: break down batch into individual keys?
+            emit SigningKeysBatchAdded(_operator_id, keys, sigs);
         }
 
+        // Update operator status
+        operators[_operator_id].keysMerkleRoot = Merkle.calcRootHash(batchHashes);
         operators[_operator_id].totalSigningKeys = operators[_operator_id].usedSigningKeys.add(to64(_quantity));
     }
 

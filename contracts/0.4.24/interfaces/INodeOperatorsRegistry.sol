@@ -137,6 +137,6 @@ contract INodeOperatorsRegistry {
       */
     function getUnusedSigningKeyCount(uint256 _operator_id) external view returns (uint256);
 
-    event SigningKeyAdded(uint256 indexed operatorId, bytes pubkey);
+    event SigningKeysBatchAdded(uint256 indexed operatorId, bytes pubkeys, bytes signatures);
     event SigningKeyMerkleRootCleared(uint256 indexed operatorId, bytes32 merkleRoot);
 }

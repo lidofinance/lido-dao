@@ -43,15 +43,19 @@ library Merkle {
     /**
      * @notice Calculates the root hash of a merkle tree made up of the provided set of leaves.
      */
-    function calcRootHash(bytes32[] leafHashes) internal returns (bytes32 rootHash) {
-        // TODO: replace pseudocode
-        uint treeDepth = 4; // ceil(log2(leafHashes.length));
-        uint256 numLeaves = 1 << treeDepth;
-        bytes32[] memory hashes = new bytes32[](numLeaves);
+    function calcRootHash(bytes32[] leafHashes) internal pure returns (bytes32 rootHash) {
+        // Find the smallest merkle tree which will accomodate leafHashes
+        uint256 treeDepth = 0;
+        uint256 numLeaves = 1;
+        while (numLeaves < leafHashes.length) {
+            treeDepth += 1;
+            numLeaves <<= 1;
+        }
 
-        // Populate leaf values
-        for (uint256 i = 0; i < leafHashes.length; i++){
-            hashes[i] = leafHashes[i];
+        // create a new array of leaves padded to a power-of-two length with zero hashes
+        bytes32[] memory hashes = new bytes32[](numLeaves);
+        for (uint256 index = 0; index < leafHashes.length; index++){
+            hashes[index] = leafHashes[index];
         }
 
         // Repeatedly hash until we reach the top of the tree
