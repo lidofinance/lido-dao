@@ -383,7 +383,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
      * @notice Returns whether a given leaf hash has been used in a merkle proof already
      * @dev Used to prevent the same signing keys being used multiple times
      */
-    function _leafHashUsed(uint256 _operator_id, bytes32 _leafHash) internal returns (bool leafUsed) {
+    function _leafHashUsed(uint256 _operator_id, bytes32 _leafHash) internal view returns (bool leafUsed) {
         uint256 offset = _merkleLeafOffset(_operator_id, _leafHash);
         assembly {
            mstore(leafUsed, sload(offset))
