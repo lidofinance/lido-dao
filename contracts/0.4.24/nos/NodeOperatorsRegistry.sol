@@ -351,7 +351,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
             require(entry.keysMerkleRoot != bytes32(0), "Merkle root must be initialised");
 
-            bytes32 leafHash = keccak256(abi.encodePacked(keyData.publicKeys, keyData.signatures));
+            bytes32 leafHash = _keyLeafHash(keyData.publicKeys, keyData.signatures);
             require(!_leafHashUsed(bestOperatorIdx, leafHash), "Signing keys already used");
 
             require(Merkle.checkMembership(leafHash, keyData.leafIndex, entry.keysMerkleRoot, keyData.proofData), "Invalid Merkle Proof");
@@ -378,6 +378,10 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
         assert(numAssignedKeys == numKeys); // Make sure that every key has been validated
         return (pubkeys, signatures);
+    }
+
+    function _keyLeafHash(bytes publicKeys,  bytes signatures) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(publicKeys, signatures));
     }
 
     function _merkleLeafOffset(uint256 _operator_id,  bytes32 _leafHash) internal pure returns (uint256) {
