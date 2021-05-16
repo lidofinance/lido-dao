@@ -236,7 +236,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     function addSigningKeys(uint256 _operator_id, uint256 _quantity, bytes _pubkeys, bytes _signatures) external
         authP(MANAGE_SIGNING_KEYS, arr(_operator_id))
     {
-        emit SigningKeyMerkleRootCleared(_operator_id, operators[_operator_id].keysMerkleRoot);
         _addSigningKeys(_operator_id, _quantity, _pubkeys, _signatures);
     }
 
@@ -260,7 +259,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         external
     {
         require(msg.sender == operators[_operator_id].rewardAddress, "APP_AUTH_FAILED");
-        emit SigningKeyMerkleRootCleared(_operator_id, operators[_operator_id].keysMerkleRoot);
         _addSigningKeys(_operator_id, _quantity, _pubkeys, _signatures);
     }
 
@@ -540,6 +538,13 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         require(_quantity % KEYS_LEAF_SIZE == 0, "INVALID_LENGTH"); // Prevent half filled merkle leaves
         require(_pubkeys.length == _quantity.mul(PUBKEY_LENGTH), "INVALID_LENGTH");
         require(_signatures.length == _quantity.mul(SIGNATURE_LENGTH), "INVALID_LENGTH");
+
+        // If we're overwriting an existing merkle root then emit an event to signal it's been invalidated
+        bytes32 clearedMerkleRoot = operators[_operator_id].keysMerkleRoot;
+        if (clearedMerkleRoot != bytes32(0)){
+            emit SigningKeyMerkleRootCleared(_operator_id, clearedMerkleRoot);
+        }
+
 
         for (uint256 i = 0; i < _quantity; ++i) {
             bytes memory key = BytesLib.slice(_pubkeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
