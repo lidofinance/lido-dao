@@ -539,7 +539,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             emit SigningKeyAdded(_operator_id, key);
         }
 
-        operators[_operator_id].totalSigningKeys = operators[_operator_id].totalSigningKeys.add(to64(_quantity));
+        operators[_operator_id].totalSigningKeys = operators[_operator_id].usedSigningKeys.add(to64(_quantity));
     }
 
     function _loadOperatorCache() internal view returns (DepositLookupCacheEntry[] memory cache) {
