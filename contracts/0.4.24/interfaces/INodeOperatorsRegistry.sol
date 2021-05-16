@@ -117,13 +117,6 @@ interface INodeOperatorsRegistry {
     function addSigningKeys(uint256 _operator_id, uint256 _quantity, bytes _pubkeys, bytes _signatures) external;
 
     /**
-      * @notice Removes a validator signing key #`_index` from the keys of the node operator #`_operator_id`
-      * @param _operator_id Node Operator id
-      * @param _index Index of the key, starting with 0
-      */
-    function removeSigningKey(uint256 _operator_id, uint256 _index) external;
-
-    /**
       * @notice Returns total number of signing keys of the node operator #`_operator_id`
       */
     function getTotalSigningKeyCount(uint256 _operator_id) external view returns (uint256);
@@ -132,17 +125,6 @@ interface INodeOperatorsRegistry {
       * @notice Returns number of usable signing keys of the node operator #`_operator_id`
       */
     function getUnusedSigningKeyCount(uint256 _operator_id) external view returns (uint256);
-
-    /**
-      * @notice Returns n-th signing key of the node operator #`_operator_id`
-      * @param _operator_id Node Operator id
-      * @param _index Index of the key, starting with 0
-      * @return key Key
-      * @return depositSignature Signature needed for a deposit_contract.deposit call
-      * @return used Flag indication if the key was used in the staking
-      */
-    function getSigningKey(uint256 _operator_id, uint256 _index) external view returns
-            (bytes key, bytes depositSignature, bool used);
 
     event SigningKeyAdded(uint256 indexed operatorId, bytes pubkey);
     event SigningKeyRemoved(uint256 indexed operatorId, bytes pubkey);
