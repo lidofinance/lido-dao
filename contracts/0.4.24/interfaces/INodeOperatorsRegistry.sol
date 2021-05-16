@@ -74,7 +74,8 @@ interface INodeOperatorsRegistry {
         uint64 stakingLimit,
         uint64 stoppedValidators,
         uint64 totalSigningKeys,
-        uint64 usedSigningKeys);
+        uint64 usedSigningKeys,
+        bytes32 keysMerkleRoot);
 
     /**
       * @notice Returns the rewards distribution proportional to the effective stake for each node operator.
