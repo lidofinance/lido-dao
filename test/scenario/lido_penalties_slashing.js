@@ -3,7 +3,7 @@ const { BN } = require('bn.js')
 const { assertBn, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
 const { getEventArgument } = require('@aragon/contract-helpers-test')
 
-const { pad, toBN, ETH, tokens, hexConcat } = require('../helpers/utils')
+const { padHash, padKey, padSig, ETH, tokens } = require('../helpers/utils')
 const { deployDaoAndPool } = require('./helpers/deploy')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
@@ -79,7 +79,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     assertBn(distribution.operatorsFeeBasisPoints, nodeOperatorsFeePoints, 'node operators fee')
   })
 
-  const withdrawalCredentials = pad('0x0202', 32)
+  const withdrawalCredentials = padHash('0x0202')
 
   it('voting sets withdrawal credentials', async () => {
     await pool.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
@@ -96,12 +96,12 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     address: operator_1,
     validators: [
       {
-        key: pad('0x010101', 48),
-        sig: pad('0x01', 96)
+        key: padKey('0x010101'),
+        sig: padSig('0x01')
       },
       {
-        key: pad('0x030303', 48),
-        sig: pad('0x03', 96)
+        key: padKey('0x030303'),
+        sig: padSig('0x03')
       }
     ]
   }
@@ -292,8 +292,8 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     address: operator_2,
     validators: [
       {
-        key: pad('0x020202', 48),
-        sig: pad('0x02', 96)
+        key: padKey('0x020202'),
+        sig: padSig('0x02')
       }
     ]
   }

@@ -2,7 +2,7 @@ const { assert } = require('chai')
 const { assertBn, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
 const { getEvents, getEventArgument, ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 
-const { pad, ETH, hexConcat } = require('../helpers/utils')
+const { pad, padHash, ETH, hexConcat } = require('../helpers/utils')
 const { deployDaoAndPool } = require('./helpers/deploy')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
@@ -44,7 +44,7 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
 
     await pool.setFee(0.01 * 10000, { from: voting })
     await pool.setFeeDistribution(0.3 * 10000, 0.2 * 10000, 0.5 * 10000, { from: voting })
-    await pool.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+    await pool.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
   })
 
   it('voting adds a node operator with 16 signing keys', async () => {

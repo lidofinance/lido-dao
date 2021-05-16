@@ -1,4 +1,5 @@
 const { newDao, newApp } = require('./0.4.24/helpers/dao')
+const { padHash, padKey, padSig, ETH, hexConcat, tokens } = require('./helpers/utils')
 const { assertBn, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 const { BN } = require('bn.js')
@@ -17,20 +18,6 @@ const ADDRESS_4 = '0x0000000000000000000000000000000000000004'
 
 const UNLIMITED = 1000000000
 
-const pad = (hex, bytesLength) => {
-  const absentZeroes = bytesLength * 2 + 2 - hex.length
-  if (absentZeroes > 0) hex = '0x' + '0'.repeat(absentZeroes) + hex.substr(2)
-  return hex
-}
-
-const hexConcat = (first, ...rest) => {
-  let result = first.startsWith('0x') ? first : '0x' + first
-  rest.forEach((item) => {
-    result += item.startsWith('0x') ? item.substr(2) : item
-  })
-  return result
-}
-
 const changeEndianness = (string) => {
   string = string.replace('0x', '')
   const result = []
@@ -44,9 +31,6 @@ const changeEndianness = (string) => {
 
 // Divides a BN by 1e15
 const div15 = (bn) => bn.div(new BN(1000000)).div(new BN(1000000)).div(new BN(1000))
-
-const ETH = (value) => web3.utils.toWei(value + '', 'ether')
-const tokens = ETH
 
 contract('Lido with official deposit contract', ([appManager, voting, user1, user2, user3, nobody]) => {
   let appBase, stEthBase, nodeOperatorsRegistryBase, app, token, oracle, depositContract, operators
@@ -134,13 +118,13 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
     await operators.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
     await operators.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
 
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
-    await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
+    await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
+    await operators.addSigningKeys(0, 1, padKey('0x010203'), padSig('0x01'), { from: voting })
     await operators.addSigningKeys(
       0,
       3,
-      hexConcat(pad('0x010204', 48), pad('0x010205', 48), pad('0x010206', 48)),
-      hexConcat(pad('0x01', 96), pad('0x01', 96), pad('0x01', 96)),
+      hexConcat(padKey('0x010204'), padKey('0x010205'), padKey('0x010206')),
+      hexConcat(padSig('0x01'), padSig('0x01'), padSig('0x01')),
       { from: voting }
     )
 
@@ -199,13 +183,13 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
     await operators.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
     await operators.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
 
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
-    await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
+    await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
+    await operators.addSigningKeys(0, 1, padKey('0x010203'), padSig('0x01'), { from: voting })
     await operators.addSigningKeys(
       0,
       3,
-      hexConcat(pad('0x010204', 48), pad('0x010205', 48), pad('0x010206', 48)),
-      hexConcat(pad('0x01', 96), pad('0x01', 96), pad('0x01', 96)),
+      hexConcat(padKey('0x010204'), padKey('0x010205'), padKey('0x010206')),
+      hexConcat(padSig('0x01'), padSig('0x01'), padSig('0x01')),
       { from: voting }
     )
 
@@ -228,20 +212,20 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
   })
 
   it('Node Operators filtering during deposit works when doing a huge deposit', async () => {
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+    await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
 
     await operators.addNodeOperator('good', ADDRESS_1, UNLIMITED, { from: voting }) // 0
-    await operators.addSigningKeys(0, 2, hexConcat(pad('0x0001', 48), pad('0x0002', 48)), hexConcat(pad('0x01', 96), pad('0x01', 96)), {
+    await operators.addSigningKeys(0, 2, hexConcat(padKey('0x0001'), padKey('0x0002')), hexConcat(padSig('0x01'), padSig('0x01')), {
       from: voting
     })
 
     await operators.addNodeOperator('limited', ADDRESS_2, 1, { from: voting }) // 1
-    await operators.addSigningKeys(1, 2, hexConcat(pad('0x0101', 48), pad('0x0102', 48)), hexConcat(pad('0x01', 96), pad('0x01', 96)), {
+    await operators.addSigningKeys(1, 2, hexConcat(padKey('0x0101'), padKey('0x0102')), hexConcat(padSig('0x01'), padSig('0x01')), {
       from: voting
     })
 
     await operators.addNodeOperator('deactivated', ADDRESS_3, UNLIMITED, { from: voting }) // 2
-    await operators.addSigningKeys(2, 2, hexConcat(pad('0x0201', 48), pad('0x0202', 48)), hexConcat(pad('0x01', 96), pad('0x01', 96)), {
+    await operators.addSigningKeys(2, 2, hexConcat(padKey('0x0201'), padKey('0x0202')), hexConcat(padSig('0x01'), padSig('0x01')), {
       from: voting
     })
     await operators.setNodeOperatorActive(2, false, { from: voting })
@@ -310,7 +294,7 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
     assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
 
     // Adding a key will help
-    await operators.addSigningKeys(0, 1, pad('0x0003', 48), pad('0x01', 96), { from: voting })
+    await operators.addSigningKeys(0, 1, padKey('0x0003'), padSig('0x01'), { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(1) })
     await app.depositBufferedEther()
 
@@ -351,20 +335,20 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
   })
 
   it('Node Operators filtering during deposit works when doing small deposits', async () => {
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+    await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
 
     await operators.addNodeOperator('good', ADDRESS_1, UNLIMITED, { from: voting }) // 0
-    await operators.addSigningKeys(0, 2, hexConcat(pad('0x0001', 48), pad('0x0002', 48)), hexConcat(pad('0x01', 96), pad('0x01', 96)), {
+    await operators.addSigningKeys(0, 2, hexConcat(padKey('0x0001'), padKey('0x0002')), hexConcat(padSig('0x01'), padSig('0x01')), {
       from: voting
     })
 
     await operators.addNodeOperator('limited', ADDRESS_2, 1, { from: voting }) // 1
-    await operators.addSigningKeys(1, 2, hexConcat(pad('0x0101', 48), pad('0x0102', 48)), hexConcat(pad('0x01', 96), pad('0x01', 96)), {
+    await operators.addSigningKeys(1, 2, hexConcat(padKey('0x0101'), padKey('0x0102')), hexConcat(padSig('0x01'), padSig('0x01')), {
       from: voting
     })
 
     await operators.addNodeOperator('deactivated', ADDRESS_3, UNLIMITED, { from: voting }) // 2
-    await operators.addSigningKeys(2, 2, hexConcat(pad('0x0201', 48), pad('0x0202', 48)), hexConcat(pad('0x01', 96), pad('0x01', 96)), {
+    await operators.addSigningKeys(2, 2, hexConcat(padKey('0x0201'), padKey('0x0202')), hexConcat(padSig('0x01'), padSig('0x01')), {
       from: voting
     })
     await operators.setNodeOperatorActive(2, false, { from: voting })
@@ -436,7 +420,7 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
     assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
 
     // Adding a key will help
-    await operators.addSigningKeys(0, 1, pad('0x0003', 48), pad('0x01', 96), { from: voting })
+    await operators.addSigningKeys(0, 1, padKey('0x0003'), padSig('0x01'), { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(1) })
     await app.depositBufferedEther()
 
@@ -477,20 +461,20 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
   })
 
   it('Deposit finds the right operator', async () => {
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+    await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
 
     await operators.addNodeOperator('good', ADDRESS_1, UNLIMITED, { from: voting }) // 0
-    await operators.addSigningKeys(0, 2, hexConcat(pad('0x0001', 48), pad('0x0002', 48)), hexConcat(pad('0x01', 96), pad('0x01', 96)), {
+    await operators.addSigningKeys(0, 2, hexConcat(padKey('0x0001'), padKey('0x0002')), hexConcat(padSig('0x01'), padSig('0x01')), {
       from: voting
     })
 
     await operators.addNodeOperator('2nd good', ADDRESS_2, UNLIMITED, { from: voting }) // 1
-    await operators.addSigningKeys(1, 2, hexConcat(pad('0x0101', 48), pad('0x0102', 48)), hexConcat(pad('0x01', 96), pad('0x01', 96)), {
+    await operators.addSigningKeys(1, 2, hexConcat(padKey('0x0101'), padKey('0x0102')), hexConcat(padSig('0x01'), padSig('0x01')), {
       from: voting
     })
 
     await operators.addNodeOperator('deactivated', ADDRESS_3, UNLIMITED, { from: voting }) // 2
-    await operators.addSigningKeys(2, 2, hexConcat(pad('0x0201', 48), pad('0x0202', 48)), hexConcat(pad('0x01', 96), pad('0x01', 96)), {
+    await operators.addSigningKeys(2, 2, hexConcat(padKey('0x0201'), padKey('0x0202')), hexConcat(padSig('0x01'), padSig('0x01')), {
       from: voting
     })
     await operators.setNodeOperatorActive(2, false, { from: voting })

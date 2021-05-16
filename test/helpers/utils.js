@@ -1,10 +1,17 @@
 const { BN } = require('bn.js')
 
+const HASH_LENGTH = 32
+const PUBKEY_LENGTH = 48
+const SIGNATURE_LENGTH = 96
+
 const pad = (hex, bytesLength, fill = '0') => {
   const absentZeroes = bytesLength * 2 + 2 - hex.length
   if (absentZeroes > 0) hex = '0x' + fill.repeat(absentZeroes) + hex.substr(2)
   return hex
 }
+const padHash = (key) => pad(key, HASH_LENGTH)
+const padKey = (key) => pad(key, PUBKEY_LENGTH)
+const padSig = (key) => pad(key, SIGNATURE_LENGTH)
 
 const hexConcat = (first, ...rest) => {
   let result = first.startsWith('0x') ? first : '0x' + first
@@ -44,7 +51,13 @@ const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 const tokens = ETH
 
 module.exports = {
+  HASH_LENGTH,
+  PUBKEY_LENGTH,
+  SIGNATURE_LENGTH,
   pad,
+  padHash,
+  padKey,
+  padSig,
   hexConcat,
   hexSplit,
   toBN,
