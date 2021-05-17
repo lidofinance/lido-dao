@@ -585,7 +585,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             entry.totalSigningKeys = operator.totalSigningKeys;
             entry.usedSigningKeys = operator.usedSigningKeys;
             entry.initialUsedSigningKeys = entry.usedSigningKeys;
-            entry.keysMerkleRoot = entry.keysMerkleRoot;
+            entry.keysMerkleRoot = operator.keysMerkleRoot;
         }
         require(idx == cache.length, "INCONSISTENT_ACTIVE_COUNT");
 
