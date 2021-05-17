@@ -344,17 +344,17 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             // Verify that the provided signing keys correspond to the keys provided by this node operator
 
             KeysData memory keyData = _keysData[batchIndex];
-            require(keyData.operatorId == bestOperatorIdx, "Must choose operator with smallest stake");
-
             entry = cache[bestOperatorIdx];
+            require(keyData.operatorId == entry.id, "Must choose operator with smallest stake");
+
             assert(entry.usedSigningKeys < UINT64_MAX);
 
             bytes32 leafHash = _keyLeafHash(keyData.publicKeys, keyData.signatures);
-            require(!_leafHashUsed(bestOperatorIdx, leafHash), "Signing keys already used");
+            require(!_leafHashUsed(entry.id, leafHash), "Signing keys already used");
 
             require(Merkle.checkMembership(leafHash, keyData.leafIndex, entry.keysMerkleRoot, keyData.proofData), "Invalid Merkle Proof");
 
-            _markLeafUsed(bestOperatorIdx, leafHash);
+            _markLeafUsed(entry.id, leafHash);
 
             // Copy verified keys and signatures into array to be passed back to Lido
 
