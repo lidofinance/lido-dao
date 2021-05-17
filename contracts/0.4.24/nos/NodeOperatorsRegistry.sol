@@ -348,7 +348,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             entry = cache[bestOperatorIdx];
             assert(entry.usedSigningKeys < UINT64_MAX);
 
-            require(entry.keysMerkleRoot != bytes32(0), "Merkle root must be initialised");
+            require(entry.keysMerkleRoot != bytes32(0), "UNINITIALISED_MERKLE_ROOT");
 
             bytes32 leafHash = _keyLeafHash(keyData.publicKeys, keyData.signatures);
             require(!_leafHashUsed(bestOperatorIdx, leafHash), "Signing keys already used");
