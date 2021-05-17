@@ -338,34 +338,39 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await operators.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
 
     const op0 = {
-      keys: Array.from({ length: 3 }, (_, i) => `0x11${i}${i}` + 'abcd'.repeat(46 / 2)),
-      sigs: Array.from({ length: 3 }, (_, i) => `0x11${i}${i}` + 'cdef'.repeat(94 / 2))
+      keys: createKeyBatches(3),
+      sigs: createSigBatches(3)
+    }
+    const op1 = {
+      keys: createKeyBatches(3, 3 * KEYS_BATCH_SIZE),
+      sigs: createSigBatches(3, 3 * KEYS_BATCH_SIZE)
     }
 
-    const op1 = {
-      keys: Array.from({ length: 3 }, (_, i) => `0x22${i}${i}` + 'efab'.repeat(46 / 2)),
-      sigs: Array.from({ length: 3 }, (_, i) => `0x22${i}${i}` + 'fcde'.repeat(94 / 2))
-    }
+    const operatorArray = [op0, op1]
 
     await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
-    await operators.addSigningKeys(0, 3, hexConcat(...op0.keys), hexConcat(...op0.sigs), { from: voting })
-    await operators.addSigningKeys(1, 3, hexConcat(...op1.keys), hexConcat(...op1.sigs), { from: voting })
+    await operators.addSigningKeys(0, 3 * KEYS_BATCH_SIZE, sanitiseKeyArray(op0.keys), sanitiseSigArray(op0.sigs), { from: voting })
+    await operators.addSigningKeys(1, 3 * KEYS_BATCH_SIZE, sanitiseKeyArray(op1.keys), sanitiseSigArray(op1.sigs), { from: voting })
 
-    await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(32) })
-    await app.depositBufferedEther()
-    assertBn(await depositContract.totalCalls(), 1, 'first submit: total deposits')
+    await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(8 * 32) })
+    await app.depositBufferedEther([buildKeyData(operatorArray, 0, 0)])
+    assertBn(await depositContract.totalCalls(), 8, 'first submit: total deposits')
 
-    await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2 * 32) })
-    await app.depositBufferedEther()
-    assertBn(await depositContract.totalCalls(), 3, 'second submit: total deposits')
+    await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2 * 8 * 32) })
+    await app.depositBufferedEther([buildKeyData(operatorArray, 1, 0), buildKeyData(operatorArray, 0, 1)])
+    assertBn(await depositContract.totalCalls(), 24, 'second submit: total deposits')
 
-    await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(3 * 32) })
-    await app.depositBufferedEther()
-    assertBn(await depositContract.totalCalls(), 6, 'third submit: total deposits')
+    await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(3 * 8 * 32) })
+    await app.depositBufferedEther([
+      buildKeyData(operatorArray, 1, 1),
+      buildKeyData(operatorArray, 0, 2),
+      buildKeyData(operatorArray, 1, 2)
+    ])
+    assertBn(await depositContract.totalCalls(), 48, 'third submit: total deposits')
 
-    const calls = await Promise.all(Array.from({ length: 6 }, (_, i) => depositContract.calls(i)))
-    const keys = [...op0.keys, ...op1.keys]
-    const sigs = [...op0.sigs, ...op1.sigs]
+    const calls = await Promise.all(Array.from({ length: 48 }, (_, i) => depositContract.calls(i)))
+    const keys = [...op0.keys.flat(), ...op1.keys.flat()]
+    const sigs = [...op0.sigs.flat(), ...op1.sigs.flat()]
     const pairs = keys.map((key, i) => `${key}|${sigs[i]}`)
 
     assert.sameMembers(
