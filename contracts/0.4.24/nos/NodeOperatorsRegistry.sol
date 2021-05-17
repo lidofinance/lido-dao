@@ -306,16 +306,14 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         if (0 == cache.length)
             return (new bytes(0), new bytes(0));
 
-        // TODO: rename these to correspond to multiple keys
-        uint256 numKeys = _keysData.length * KEYS_LEAF_SIZE;
-        uint256 numAssignedKeys = 0;
+        uint256 numBatches = _keysData.length;
         DepositLookupCacheEntry memory entry;
 
         // We can allocate without zeroing out since we're going to rewrite the whole array
-        pubkeys = MemUtils.unsafeAllocateBytes(numKeys * PUBKEY_LENGTH);
-        signatures = MemUtils.unsafeAllocateBytes(numKeys * SIGNATURE_LENGTH);
+        pubkeys = MemUtils.unsafeAllocateBytes(numBatches * PUBKEY_LENGTH * KEYS_LEAF_SIZE);
+        signatures = MemUtils.unsafeAllocateBytes(numBatches * SIGNATURE_LENGTH * KEYS_LEAF_SIZE);
 
-        while (numAssignedKeys < numKeys) {
+        for(uint256 batchIndex = 0; batchIndex < numBatches; batchIndex++) {
             // Find the node operator with the fewest active validators and spare capacity
             uint256 bestOperatorIdx = cache.length;   // 'not found' flag
             uint256 smallestStake;
@@ -345,7 +343,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
             // Verify that the provided signing keys correspond to the keys provided by this node operator
 
-            KeysData memory keyData = _keysData[numAssignedKeys];
+            KeysData memory keyData = _keysData[batchIndex];
             require(keyData.operatorId == bestOperatorIdx, "Must choose operator with smallest stake");
 
             entry = cache[bestOperatorIdx];
@@ -360,11 +358,10 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
             // Copy verified keys and signatures into array to be passed back to Lido
 
-            MemUtils.copyBytes(keyData.publicKeys, pubkeys, numAssignedKeys * PUBKEY_LENGTH * KEYS_LEAF_SIZE);
-            MemUtils.copyBytes(keyData.signatures, signatures, numAssignedKeys * SIGNATURE_LENGTH * KEYS_LEAF_SIZE);
+            MemUtils.copyBytes(keyData.publicKeys, pubkeys, batchIndex * PUBKEY_LENGTH * KEYS_LEAF_SIZE);
+            MemUtils.copyBytes(keyData.signatures, signatures, batchIndex * SIGNATURE_LENGTH * KEYS_LEAF_SIZE);
 
             entry.usedSigningKeys += KEYS_LEAF_SIZE;
-            numAssignedKeys += KEYS_LEAF_SIZE;
         }
 
         // Update the number of used keys for each operator
@@ -376,7 +373,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             }
         }
 
-        assert(numAssignedKeys == numKeys); // Make sure that every key has been validated
         return (pubkeys, signatures);
     }
 
