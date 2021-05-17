@@ -461,8 +461,9 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         if (buffered >= DEPOSIT_SIZE) {
             uint256 unaccounted = _getUnaccountedEther();
             uint256 numDeposits = buffered.div(DEPOSIT_SIZE);
+            // We do not allow a deposit which does not make use of a full merkle root leaf
             // TODO: Remove magic number for number of keys per KeysData
-            require(numDeposits > _keysData.length * 8, "Too many keys provided");
+            require(numDeposits >= _keysData.length * 8, "Too many keys provided");
             _markAsUnbuffered(_ETH2Deposit(_keysData));
             assert(_getUnaccountedEther() == unaccounted);
         }
