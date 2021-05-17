@@ -3,6 +3,7 @@ const { BN } = require('bn.js')
 const HASH_LENGTH = 32
 const PUBKEY_LENGTH = 48
 const SIGNATURE_LENGTH = 96
+const KEYS_BATCH_SIZE = 8
 
 const pad = (hex, bytesLength, fill = '0') => {
   const absentZeroes = bytesLength * 2 + 2 - hex.length
@@ -54,6 +55,7 @@ module.exports = {
   HASH_LENGTH,
   PUBKEY_LENGTH,
   SIGNATURE_LENGTH,
+  KEYS_BATCH_SIZE,
   pad,
   padHash,
   padKey,

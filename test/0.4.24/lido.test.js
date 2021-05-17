@@ -1,8 +1,16 @@
 const { hash } = require('eth-ens-namehash')
 const { assert } = require('chai')
 const { newDao, newApp } = require('./helpers/dao')
-const { sanitiseKeyArray, sanitiseSigArray } = require('./helpers/publicKeyArrays')
-const { hexConcat, pad, padHash, padKey, padSig } = require('../helpers/utils')
+const { calcLeafHash, MerkleTree } = require('./helpers/merkleTree')
+const {
+  sanitiseKeyArray,
+  sanitiseSigArray,
+  createKeys,
+  createSigs,
+  createKeyBatches,
+  createSigBatches
+} = require('./helpers/publicKeyArrays')
+const { KEYS_BATCH_SIZE, hexConcat, pad, padHash, padKey, padSig } = require('../helpers/utils')
 
 const { getInstalledApp } = require('@aragon/contract-helpers-test/src/aragon-os')
 const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
@@ -162,14 +170,28 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
 
-    await operators.addSigningKeys(0, 1, padKey('0x010203'), padSig('0x01'), { from: voting })
-    await operators.addSigningKeys(1, 2, sanitiseKeyArray(['0x050505', '0x060606']), sanitiseSigArray(['0x02', '0x03']), {
-      from: voting
-    })
-    assertBn(await operators.getTotalSigningKeyCount(0, { from: nobody }), 1)
-    assertBn(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 1)
-    assertBn(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
-    assertBn(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 2)
+    await operators.addSigningKeys(
+      0,
+      1 * KEYS_BATCH_SIZE,
+      sanitiseKeyArray(createKeys(KEYS_BATCH_SIZE)),
+      sanitiseKeyArray(createSigs(KEYS_BATCH_SIZE)),
+      {
+        from: voting
+      }
+    )
+    await operators.addSigningKeys(
+      1,
+      2 * KEYS_BATCH_SIZE,
+      sanitiseKeyArray(createKeys(2 * KEYS_BATCH_SIZE)),
+      sanitiseKeyArray(createSigs(2 * KEYS_BATCH_SIZE)),
+      {
+        from: voting
+      }
+    )
+    assertBn(await operators.getTotalSigningKeyCount(0, { from: nobody }), 1 * KEYS_BATCH_SIZE)
+    assertBn(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 1 * KEYS_BATCH_SIZE)
+    assertBn(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2 * KEYS_BATCH_SIZE)
+    assertBn(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 2 * KEYS_BATCH_SIZE)
 
     await app.setWithdrawalCredentials(padHash('0x0203'), { from: voting })
 
@@ -204,22 +226,41 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await operators.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
     await operators.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
 
-    await operators.addSigningKeys(0, 1, padKey('0x010203'), padSig('0x01'), { from: voting })
-    await operators.addSigningKeys(
-      0,
-      3,
-      sanitiseKeyArray(['0x010204', '0x010205', '0x010206']),
-      sanitiseSigArray(['0x01', '0x01', '0x01']),
-      { from: voting }
-    )
+    const op0 = {
+      keys: createKeyBatches(2),
+      sigs: createSigBatches(2)
+    }
+    const op1 = {
+      keys: createKeyBatches(3, KEYS_BATCH_SIZE),
+      sigs: createSigBatches(3, KEYS_BATCH_SIZE)
+    }
+
+    await operators.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, sanitiseKeyArray(op0.keys), sanitiseSigArray(op0.sigs), {
+      from: voting
+    })
+    await operators.addSigningKeys(1, 3 * KEYS_BATCH_SIZE, sanitiseKeyArray(op1.keys), sanitiseSigArray(op1.sigs), { from: voting })
 
     // zero deposits revert
     await assertRevert(app.submit(ZERO_ADDRESS, { from: user1, value: ETH(0) }), 'ZERO_DEPOSIT')
     await assertRevert(web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(0) }), 'ZERO_DEPOSIT')
 
+    const leafHash = calcLeafHash(op0.keys[0], op0.sigs[0])
+    const merkleProof = MerkleTree.fromKeysAndSignatures(op0.keys, op0.sigs).getProof(leafHash)
+
+    const keyData = [
+      {
+        operatorId: 0,
+        leafIndex: 0,
+        publicKeys: hexConcat(...op0.keys[0]),
+        signatures: hexConcat(...op0.sigs[0]),
+        proofData: hexConcat(...merkleProof)
+      }
+    ]
+
     // +1 ETH
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(1) })
-    await app.depositBufferedEther()
+    await app.depositBufferedEther(keyData)
+
     await checkStat({ depositedValidators: 0, beaconValidators: 0, beaconBalance: ETH(0) })
     assertBn(await depositContract.totalCalls(), 0)
     assertBn(await app.getTotalPooledEther(), ETH(1))
@@ -239,71 +280,68 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(await app.balanceOf(user2), tokens(2))
     assertBn(await app.totalSupply(), tokens(3))
 
-    // +30 ETH
-    await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(30) })
+    // +256 ETH
+    await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(256) })
+
     // can not deposit with unset withdrawalCredentials
-    await assertRevert(app.depositBufferedEther(), 'EMPTY_WITHDRAWAL_CREDENTIALS')
+    await assertRevert(app.depositBufferedEther(keyData), 'EMPTY_WITHDRAWAL_CREDENTIALS')
 
     // set withdrawalCredentials with keys, because they were trimmed
     await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
-    await operators.addSigningKeys(0, 1, padKey('0x010203'), padSig('0x01'), { from: voting })
-    await operators.addSigningKeys(
-      0,
-      3,
-      sanitiseKeyArray(['0x010204', '0x010205', '0x010206']),
-      sanitiseSigArray(['0x01', '0x01', '0x01']),
-      { from: voting }
-    )
+    await operators.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, sanitiseKeyArray(op0.keys), sanitiseSigArray(op0.sigs), { from: voting })
+    await operators.addSigningKeys(1, 3 * KEYS_BATCH_SIZE, sanitiseKeyArray(op1.keys), sanitiseSigArray(op1.sigs), { from: voting })
 
     // now deposit works
-    await app.depositBufferedEther()
+    await app.depositBufferedEther(keyData)
 
-    await checkStat({ depositedValidators: 1, beaconValidators: 0, beaconBalance: ETH(0) })
-    assertBn(await app.getTotalPooledEther(), ETH(33))
-    assertBn(await app.getBufferedEther(), ETH(1))
+    await checkStat({ depositedValidators: 8, beaconValidators: 0, beaconBalance: ETH(0) })
+    assertBn(await app.getTotalPooledEther(), ETH(259))
+    assertBn(await app.getBufferedEther(), ETH(3))
     assertBn(await app.balanceOf(user1), tokens(1))
     assertBn(await app.balanceOf(user2), tokens(2))
-    assertBn(await app.balanceOf(user3), tokens(30))
-    assertBn(await app.totalSupply(), tokens(33))
+    assertBn(await app.balanceOf(user3), tokens(256))
+    assertBn(await app.totalSupply(), tokens(259))
 
-    assertBn(await depositContract.totalCalls(), 1)
+    assertBn(await depositContract.totalCalls(), 8)
     const c0 = await depositContract.calls.call(0)
-    assert.equal(c0.pubkey, padKey('0x010203'))
+    assert.equal(c0.pubkey, op0.keys[0][0])
     assert.equal(c0.withdrawal_credentials, padHash('0x0202'))
-    assert.equal(c0.signature, padSig('0x01'))
+    assert.equal(c0.signature, op0.sigs[0][0])
     assertBn(c0.value, ETH(32))
 
-    // +100 ETH, test partial unbuffering
-    await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(100) })
-    await app.depositBufferedEther(1)
-    await checkStat({ depositedValidators: 2, beaconValidators: 0, beaconBalance: ETH(0) })
-    assertBn(await app.getTotalPooledEther(), ETH(133))
-    assertBn(await app.getBufferedEther(), ETH(69))
-    assertBn(await app.balanceOf(user1), tokens(101))
-    assertBn(await app.balanceOf(user2), tokens(2))
-    assertBn(await app.balanceOf(user3), tokens(30))
-    assertBn(await app.totalSupply(), tokens(133))
+    // TODO: delete these lines? Looks irrelevant in offchain regime
 
-    await app.depositBufferedEther()
-    await checkStat({ depositedValidators: 4, beaconValidators: 0, beaconBalance: ETH(0) })
-    assertBn(await app.getTotalPooledEther(), ETH(133))
-    assertBn(await app.getBufferedEther(), ETH(5))
-    assertBn(await app.balanceOf(user1), tokens(101))
-    assertBn(await app.balanceOf(user2), tokens(2))
-    assertBn(await app.balanceOf(user3), tokens(30))
-    assertBn(await app.totalSupply(), tokens(133))
+    // // +100 ETH, test partial unbuffering
+    // await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(100) })
+    // await app.depositBufferedEther(1)
+    // await checkStat({ depositedValidators: 2, beaconValidators: 0, beaconBalance: ETH(0) })
+    // assertBn(await app.getTotalPooledEther(), ETH(133))
+    // assertBn(await app.getBufferedEther(), ETH(69))
+    // assertBn(await app.balanceOf(user1), tokens(101))
+    // assertBn(await app.balanceOf(user2), tokens(2))
+    // assertBn(await app.balanceOf(user3), tokens(30))
+    // assertBn(await app.totalSupply(), tokens(133))
 
-    assertBn(await depositContract.totalCalls(), 4)
-    const calls = {}
-    for (const i of [1, 2, 3]) {
-      calls[i] = await depositContract.calls.call(i)
-      assert.equal(calls[i].withdrawal_credentials, padHash('0x0202'))
-      assert.equal(calls[i].signature, padSig('0x01'))
-      assertBn(calls[i].value, ETH(32))
-    }
-    assert.equal(calls[1].pubkey, padKey('0x010204'))
-    assert.equal(calls[2].pubkey, padKey('0x010205'))
-    assert.equal(calls[3].pubkey, padKey('0x010206'))
+    // await app.depositBufferedEther()
+    // await checkStat({ depositedValidators: 4, beaconValidators: 0, beaconBalance: ETH(0) })
+    // assertBn(await app.getTotalPooledEther(), ETH(133))
+    // assertBn(await app.getBufferedEther(), ETH(5))
+    // assertBn(await app.balanceOf(user1), tokens(101))
+    // assertBn(await app.balanceOf(user2), tokens(2))
+    // assertBn(await app.balanceOf(user3), tokens(30))
+    // assertBn(await app.totalSupply(), tokens(133))
+
+    // assertBn(await depositContract.totalCalls(), 4)
+    // const calls = {}
+    // for (const i of [1, 2, 3]) {
+    //   calls[i] = await depositContract.calls.call(i)
+    //   assert.equal(calls[i].withdrawal_credentials, padHash('0x0202'))
+    //   assert.equal(calls[i].signature, padSig('0x01'))
+    //   assertBn(calls[i].value, ETH(32))
+    // }
+    // assert.equal(calls[1].pubkey, padKey('0x010204'))
+    // assert.equal(calls[2].pubkey, padKey('0x010205'))
+    // assert.equal(calls[3].pubkey, padKey('0x010206'))
   })
 
   it('deposit uses the expected signing keys', async () => {
