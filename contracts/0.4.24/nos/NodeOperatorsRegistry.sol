@@ -307,7 +307,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             return (new bytes(0), new bytes(0));
 
         // TODO: rename these to correspond to multiple keys
-        uint256 numKeys = _keysData.length;
+        uint256 numKeys = _keysData.length * KEYS_LEAF_SIZE;
         uint256 numAssignedKeys = 0;
         DepositLookupCacheEntry memory entry;
 
@@ -328,7 +328,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
                     continue;
 
                 uint256 stake = entry.usedSigningKeys.sub(entry.stoppedValidators);
-                if (stake + 1 > entry.stakingLimit)
+                // Require that operator can utilise all of the keys
+                if (stake + KEYS_LEAF_SIZE > entry.stakingLimit)
                     continue;
 
                 if (bestOperatorIdx == cache.length || stake < smallestStake) {
@@ -362,7 +363,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             MemUtils.copyBytes(keyData.signatures, signatures, numAssignedKeys * SIGNATURE_LENGTH * KEYS_LEAF_SIZE);
 
             entry.usedSigningKeys += KEYS_LEAF_SIZE;
-            ++numAssignedKeys;
+            numAssignedKeys += KEYS_LEAF_SIZE;
         }
 
         // Update the number of used keys for each operator
