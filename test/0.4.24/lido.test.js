@@ -1,7 +1,7 @@
 const { hash } = require('eth-ens-namehash')
 const { assert } = require('chai')
 const { newDao, newApp } = require('./helpers/dao')
-const { calcLeafHash, MerkleTree } = require('./helpers/merkleTree')
+const { buildKeyData } = require('./helpers/keyData')
 const {
   sanitiseKeyArray,
   sanitiseSigArray,
@@ -235,6 +235,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
       sigs: createSigBatches(3, KEYS_BATCH_SIZE)
     }
 
+    const operatorArray = [op0, op1]
+
     await operators.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, sanitiseKeyArray(op0.keys), sanitiseSigArray(op0.sigs), {
       from: voting
     })
@@ -244,22 +246,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await assertRevert(app.submit(ZERO_ADDRESS, { from: user1, value: ETH(0) }), 'ZERO_DEPOSIT')
     await assertRevert(web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(0) }), 'ZERO_DEPOSIT')
 
-    const leafHash = calcLeafHash(op0.keys[0], op0.sigs[0])
-    const merkleProof = MerkleTree.fromKeysAndSignatures(op0.keys, op0.sigs).getProof(leafHash)
-
-    const keyData = [
-      {
-        operatorId: 0,
-        leafIndex: 0,
-        publicKeys: hexConcat(...op0.keys[0]),
-        signatures: hexConcat(...op0.sigs[0]),
-        proofData: hexConcat(...merkleProof)
-      }
-    ]
-
     // +1 ETH
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(1) })
-    await app.depositBufferedEther(keyData)
+    await app.depositBufferedEther([buildKeyData(operatorArray, 0, 0)])
 
     await checkStat({ depositedValidators: 0, beaconValidators: 0, beaconBalance: ETH(0) })
     assertBn(await depositContract.totalCalls(), 0)
@@ -284,7 +273,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(256) })
 
     // can not deposit with unset withdrawalCredentials
-    await assertRevert(app.depositBufferedEther(keyData), 'EMPTY_WITHDRAWAL_CREDENTIALS')
+    await assertRevert(app.depositBufferedEther([buildKeyData(operatorArray, 0, 0)]), 'EMPTY_WITHDRAWAL_CREDENTIALS')
 
     // set withdrawalCredentials with keys, because they were trimmed
     await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
@@ -292,7 +281,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await operators.addSigningKeys(1, 3 * KEYS_BATCH_SIZE, sanitiseKeyArray(op1.keys), sanitiseSigArray(op1.sigs), { from: voting })
 
     // now deposit works
-    await app.depositBufferedEther(keyData)
+    await app.depositBufferedEther([buildKeyData(operatorArray, 0, 0)])
 
     await checkStat({ depositedValidators: 8, beaconValidators: 0, beaconBalance: ETH(0) })
     assertBn(await app.getTotalPooledEther(), ETH(259))
