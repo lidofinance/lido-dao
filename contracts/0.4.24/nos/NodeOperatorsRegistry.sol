@@ -327,6 +327,9 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
                 if (entry.usedSigningKeys == entry.totalSigningKeys)
                     continue;
 
+                if (entry.keysMerkleRoot == bytes32(0))
+                    continue;
+
                 uint256 stake = entry.usedSigningKeys.sub(entry.stoppedValidators);
                 // Require that operator can utilise all of the keys
                 if (stake + KEYS_LEAF_SIZE > entry.stakingLimit)
@@ -347,8 +350,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
             entry = cache[bestOperatorIdx];
             assert(entry.usedSigningKeys < UINT64_MAX);
-
-            require(entry.keysMerkleRoot != bytes32(0), "UNINITIALISED_MERKLE_ROOT");
 
             bytes32 leafHash = _keyLeafHash(keyData.publicKeys, keyData.signatures);
             require(!_leafHashUsed(bestOperatorIdx, leafHash), "Signing keys already used");
