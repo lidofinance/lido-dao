@@ -391,7 +391,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     function _leafHashUsed(uint256 _operator_id, bytes32 _leafHash) internal view returns (bool leafUsed) {
         uint256 offset = _merkleLeafOffset(_operator_id, _leafHash);
         assembly {
-           mstore(leafUsed, sload(offset))
+            leafUsed := sload(offset)
         }
     }
 
