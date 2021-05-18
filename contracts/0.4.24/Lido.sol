@@ -442,10 +442,12 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         uint256 deposit = msg.value;
         require(deposit != 0, "ZERO_DEPOSIT");
 
-        uint256 sharesAmount = getSharesByPooledEth(deposit);
-        if (sharesAmount == 0) {
-            // totalControlledEther is 0: either the first-ever deposit or complete slashing
-            // assume that shares correspond to Ether 1-to-1
+        uint256 sharesAmount;
+        if (_getTotalPooledEther() != 0) {
+            sharesAmount = getSharesByPooledEth(deposit);
+        } else {
+            // totalPooledEther is 0: for first-ever deposit assume
+            // that shares correspond to Ether 1-to-1
             sharesAmount = deposit;
         }
 
