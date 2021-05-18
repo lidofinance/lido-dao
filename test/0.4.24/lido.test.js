@@ -481,21 +481,21 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(await app.getBufferedEther(), ETH(5))
   })
 
-  it('withrawal method reverts', async () => {
+  it('withdrawal method reverts', async () => {
     await operators.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
-    await operators.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
+
+    const op0 = {
+      keys: createKeyBatches(2),
+      sigs: createSigBatches(2)
+    }
+
+    const operatorArray = [op0]
 
     await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
-    await operators.addSigningKeys(
-      0,
-      6,
-      sanitiseKeyArray(['0x010203', '0x010204', '0x010205', '0x010206', '0x010207', '0x010208']),
-      sanitiseSigArray(['0x01', '0x01', '0x01', '0x01', '0x01', '0x01']),
-      { from: voting }
-    )
+    await operators.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, sanitiseKeyArray(op0.keys), sanitiseSigArray(op0.sigs), { from: voting })
 
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(1) })
-    await app.depositBufferedEther()
+    await app.depositBufferedEther([buildKeyData(operatorArray, 0, 0)])
     assertBn(await app.getTotalPooledEther(), ETH(1))
     assertBn(await app.totalSupply(), tokens(1))
     assertBn(await app.getBufferedEther(), ETH(1))
@@ -510,86 +510,87 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await operators.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
     await operators.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
 
+    const op0 = {
+      keys: createKeyBatches(2),
+      sigs: createSigBatches(2)
+    }
+
+    const operatorArray = [op0]
+
     await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
-    await operators.addSigningKeys(0, 1, padKey('0x010203'), padSig('0x01'), { from: voting })
-    await operators.addSigningKeys(
-      0,
-      3,
-      sanitiseKeyArray(['0x010204', '0x010205', '0x010206']),
-      sanitiseSigArray(['0x01', '0x01', '0x01']),
-      { from: voting }
-    )
+    await operators.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, sanitiseKeyArray(op0.keys), sanitiseSigArray(op0.sigs), { from: voting })
 
-    await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(34) })
-    await app.depositBufferedEther()
-    await checkStat({ depositedValidators: 1, beaconValidators: 0, beaconBalance: ETH(0) })
+    await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(KEYS_BATCH_SIZE * 32) })
+    await app.depositBufferedEther([buildKeyData(operatorArray, 0, 0)])
+    await checkStat({ depositedValidators: KEYS_BATCH_SIZE, beaconValidators: 0, beaconBalance: ETH(0) })
 
-    await assertRevert(app.pushBeacon(1, ETH(30), { from: appManager }), 'APP_AUTH_FAILED')
+    await assertRevert(app.pushBeacon(KEYS_BATCH_SIZE, ETH(KEYS_BATCH_SIZE * 30), { from: appManager }), 'APP_AUTH_FAILED')
 
-    await oracle.reportBeacon(100, 1, ETH(30))
-    await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(30) })
+    await oracle.reportBeacon(100, KEYS_BATCH_SIZE, ETH(KEYS_BATCH_SIZE * 30))
+    await checkStat({ depositedValidators: KEYS_BATCH_SIZE, beaconValidators: KEYS_BATCH_SIZE, beaconBalance: ETH(KEYS_BATCH_SIZE * 30) })
 
-    await assertRevert(app.pushBeacon(1, ETH(29), { from: nobody }), 'APP_AUTH_FAILED')
+    await assertRevert(app.pushBeacon(KEYS_BATCH_SIZE, ETH(KEYS_BATCH_SIZE * 29), { from: nobody }), 'APP_AUTH_FAILED')
 
-    await oracle.reportBeacon(50, 1, ETH(100)) // stale data
-    await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(100) })
+    await oracle.reportBeacon(50, KEYS_BATCH_SIZE, ETH(KEYS_BATCH_SIZE * 100)) // stale data
+    await checkStat({ depositedValidators: KEYS_BATCH_SIZE, beaconValidators: KEYS_BATCH_SIZE, beaconBalance: ETH(KEYS_BATCH_SIZE * 100) })
 
-    await oracle.reportBeacon(200, 1, ETH(33))
-    await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(33) })
+    await oracle.reportBeacon(200, KEYS_BATCH_SIZE, ETH(KEYS_BATCH_SIZE * 33))
+    await checkStat({ depositedValidators: KEYS_BATCH_SIZE, beaconValidators: KEYS_BATCH_SIZE, beaconBalance: ETH(KEYS_BATCH_SIZE * 33) })
   })
 
   it('oracle data affects deposits', async () => {
     await operators.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
     await operators.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
 
+    const op0 = {
+      keys: createKeyBatches(2),
+      sigs: createSigBatches(2)
+    }
+
+    const operatorArray = [op0]
+
     await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
-    await operators.addSigningKeys(0, 1, padKey('0x010203'), padSig('0x01'), { from: voting })
-    await operators.addSigningKeys(
-      0,
-      3,
-      sanitiseKeyArray(['0x010204', '0x010205', '0x010206']),
-      sanitiseSigArray(['0x01', '0x01', '0x01']),
-      { from: voting }
-    )
+    await operators.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, sanitiseKeyArray(op0.keys), sanitiseSigArray(op0.sigs), { from: voting })
+
     await app.setFee(5000, { from: voting })
     await app.setFeeDistribution(3000, 2000, 5000, { from: voting })
 
-    await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(34) })
-    await app.depositBufferedEther()
-    await checkStat({ depositedValidators: 1, beaconValidators: 0, beaconBalance: ETH(0) })
-    assertBn(await depositContract.totalCalls(), 1)
-    assertBn(await app.getTotalPooledEther(), ETH(34))
-    assertBn(await app.getBufferedEther(), ETH(2))
+    await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(34 * KEYS_BATCH_SIZE) })
+    await app.depositBufferedEther([buildKeyData(operatorArray, 0, 0)])
+    await checkStat({ depositedValidators: KEYS_BATCH_SIZE, beaconValidators: 0, beaconBalance: ETH(0) })
+    assertBn(await depositContract.totalCalls(), KEYS_BATCH_SIZE)
+    assertBn(await app.getTotalPooledEther(), ETH(34 * KEYS_BATCH_SIZE))
+    assertBn(await app.getBufferedEther(), ETH(2 * KEYS_BATCH_SIZE))
 
     // down
-    await oracle.reportBeacon(100, 1, ETH(15))
+    await oracle.reportBeacon(100, KEYS_BATCH_SIZE, ETH(15 * KEYS_BATCH_SIZE))
 
-    await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(15) })
-    assertBn(await depositContract.totalCalls(), 1)
-    assertBn(await app.getTotalPooledEther(), ETH(17))
-    assertBn(await app.getBufferedEther(), ETH(2))
-    assertBn(await app.totalSupply(), tokens(17))
+    await checkStat({ depositedValidators: KEYS_BATCH_SIZE, beaconValidators: KEYS_BATCH_SIZE, beaconBalance: ETH(15 * KEYS_BATCH_SIZE) })
+    assertBn(await depositContract.totalCalls(), KEYS_BATCH_SIZE)
+    assertBn(await app.getTotalPooledEther(), ETH(17 * KEYS_BATCH_SIZE))
+    assertBn(await app.getBufferedEther(), ETH(2 * KEYS_BATCH_SIZE))
+    assertBn(await app.totalSupply(), tokens(17 * KEYS_BATCH_SIZE))
 
     // deposit, ratio is 0.5
-    await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(2) })
-    await app.depositBufferedEther()
+    await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(2 * KEYS_BATCH_SIZE) })
+    // await app.depositBufferedEther([buildKeyData(operatorArray, 0, 1)])
 
-    await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(15) })
-    assertBn(await depositContract.totalCalls(), 1)
-    assertBn(await app.getTotalPooledEther(), ETH(19))
-    assertBn(await app.getBufferedEther(), ETH(4))
-    assertBn(await app.balanceOf(user1), tokens(2))
-    assertBn(await app.totalSupply(), tokens(19))
+    await checkStat({ depositedValidators: KEYS_BATCH_SIZE, beaconValidators: KEYS_BATCH_SIZE, beaconBalance: ETH(15 * KEYS_BATCH_SIZE) })
+    assertBn(await depositContract.totalCalls(), KEYS_BATCH_SIZE)
+    assertBn(await app.getTotalPooledEther(), ETH(19 * KEYS_BATCH_SIZE))
+    assertBn(await app.getBufferedEther(), ETH(4 * KEYS_BATCH_SIZE))
+    assertBn(await app.balanceOf(user1), tokens(2 * KEYS_BATCH_SIZE))
+    assertBn(await app.totalSupply(), tokens(19 * KEYS_BATCH_SIZE))
 
-    // up
-    await assertRevert(oracle.reportBeacon(200, 2, ETH(48)), 'REPORTED_MORE_DEPOSITED')
-    await oracle.reportBeacon(200, 1, ETH(48))
+    // // up
+    await assertRevert(oracle.reportBeacon(200, 2 * KEYS_BATCH_SIZE, ETH(48 * KEYS_BATCH_SIZE)), 'REPORTED_MORE_DEPOSITED')
+    await oracle.reportBeacon(200, KEYS_BATCH_SIZE, ETH(48 * KEYS_BATCH_SIZE))
 
-    await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(48) })
-    assertBn(await depositContract.totalCalls(), 1)
-    assertBn(await app.getTotalPooledEther(), ETH(52))
-    assertBn(await app.getBufferedEther(), ETH(4))
-    assertBn(await app.totalSupply(), tokens(52))
+    await checkStat({ depositedValidators: KEYS_BATCH_SIZE, beaconValidators: KEYS_BATCH_SIZE, beaconBalance: ETH(48 * KEYS_BATCH_SIZE) })
+    assertBn(await depositContract.totalCalls(), KEYS_BATCH_SIZE)
+    assertBn(await app.getTotalPooledEther(), ETH(52 * KEYS_BATCH_SIZE))
+    assertBn(await app.getBufferedEther(), ETH(4 * KEYS_BATCH_SIZE))
+    assertBn(await app.totalSupply(), tokens(52 * KEYS_BATCH_SIZE))
     /*
 
     // 2nd deposit, ratio is 2
@@ -610,20 +611,20 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await operators.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
     await operators.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
 
-    await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
-    await operators.addSigningKeys(0, 1, padKey('0x010203'), padSig('0x01'), { from: voting })
-    await operators.addSigningKeys(
-      0,
-      3,
-      sanitiseKeyArray(['0x010204', '0x010205', '0x010206']),
-      sanitiseSigArray(['0x01', '0x01', '0x01']),
-      { from: voting }
-    )
+    const op0 = {
+      keys: createKeyBatches(2),
+      sigs: createSigBatches(2)
+    }
 
-    await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(40) })
-    await app.depositBufferedEther()
-    await checkStat({ depositedValidators: 1, beaconValidators: 0, beaconBalance: ETH(0) })
-    assertBn(await app.getBufferedEther(), ETH(8))
+    const operatorArray = [op0]
+
+    await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
+    await operators.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, sanitiseKeyArray(op0.keys), sanitiseSigArray(op0.sigs), { from: voting })
+
+    await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(40 * KEYS_BATCH_SIZE) })
+    await app.depositBufferedEther([buildKeyData(operatorArray, 0, 0)])
+    await checkStat({ depositedValidators: KEYS_BATCH_SIZE, beaconValidators: 0, beaconBalance: ETH(0) })
+    assertBn(await app.getBufferedEther(), ETH(8 * KEYS_BATCH_SIZE))
 
     await assertRevert(app.stop({ from: user2 }), 'APP_AUTH_FAILED')
     await app.stop({ from: voting })
@@ -635,74 +636,75 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await assertRevert(app.resume({ from: user2 }), 'APP_AUTH_FAILED')
     await app.resume({ from: voting })
 
-    await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(4) })
-    await app.depositBufferedEther()
-    await checkStat({ depositedValidators: 1, beaconValidators: 0, beaconBalance: ETH(0) })
-    assertBn(await app.getBufferedEther(), ETH(12))
+    await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(4 * KEYS_BATCH_SIZE) })
+    // Will revert as there's not enough ETH
+    // await app.depositBufferedEther([buildKeyData(operatorArray, 0, 1)])
+    await checkStat({ depositedValidators: KEYS_BATCH_SIZE, beaconValidators: 0, beaconBalance: ETH(0) })
+    assertBn(await app.getBufferedEther(), ETH(12 * KEYS_BATCH_SIZE))
   })
 
   it('rewards distribution works in a simple case', async () => {
     await operators.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
     await operators.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
 
+    const op0 = {
+      keys: createKeyBatches(2),
+      sigs: createSigBatches(2)
+    }
+
+    const operatorArray = [op0]
+
     await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
-    await operators.addSigningKeys(0, 1, padKey('0x010203'), padSig('0x01'), { from: voting })
-    await operators.addSigningKeys(
-      0,
-      3,
-      sanitiseKeyArray(['0x010204', '0x010205', '0x010206']),
-      sanitiseSigArray(['0x01', '0x01', '0x01']),
-      { from: voting }
-    )
+    await operators.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, sanitiseKeyArray(op0.keys), sanitiseSigArray(op0.sigs), { from: voting })
 
     await app.setFee(5000, { from: voting })
     await app.setFeeDistribution(3000, 2000, 5000, { from: voting })
 
-    await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(34) })
-    await app.depositBufferedEther()
+    await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(34 * KEYS_BATCH_SIZE) })
+    await app.depositBufferedEther([buildKeyData(operatorArray, 0, 0)])
 
-    await oracle.reportBeacon(300, 1, ETH(36))
-    await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(36) })
-    assertBn(await app.totalSupply(), tokens(38)) // remote + buffered
-    await checkRewards({ treasury: 600, insurance: 399, operator: 999 })
+    await oracle.reportBeacon(300, KEYS_BATCH_SIZE, ETH(36 * KEYS_BATCH_SIZE))
+    await checkStat({ depositedValidators: KEYS_BATCH_SIZE, beaconValidators: KEYS_BATCH_SIZE, beaconBalance: ETH(36 * KEYS_BATCH_SIZE) })
+    assertBn(await app.totalSupply(), tokens(38 * KEYS_BATCH_SIZE)) // remote + buffered
+    await checkRewards({ treasury: 4800, insurance: 3199, operator: 7999 })
   })
 
   it('rewards distribution works', async () => {
     await operators.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
     await operators.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
 
+    const op0 = {
+      keys: createKeyBatches(2),
+      sigs: createSigBatches(2)
+    }
+
+    const operatorArray = [op0]
+
     await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
-    await operators.addSigningKeys(0, 1, padKey('0x010203'), padSig('0x01'), { from: voting })
-    await operators.addSigningKeys(
-      0,
-      3,
-      sanitiseKeyArray(['0x010204', '0x010205', '0x010206']),
-      sanitiseSigArray(['0x01', '0x01', '0x01']),
-      { from: voting }
-    )
+    await operators.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, sanitiseKeyArray(op0.keys), sanitiseSigArray(op0.sigs), { from: voting })
 
     await app.setFee(5000, { from: voting })
     await app.setFeeDistribution(3000, 2000, 5000, { from: voting })
 
-    await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(34) })
-    await app.depositBufferedEther()
+    await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(34 * KEYS_BATCH_SIZE) })
+    await app.depositBufferedEther([buildKeyData(operatorArray, 0, 0)])
     // some slashing occured
-    await oracle.reportBeacon(100, 1, ETH(30))
+    await oracle.reportBeacon(100, KEYS_BATCH_SIZE, ETH(30 * KEYS_BATCH_SIZE))
 
-    await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(30) })
+    await checkStat({ depositedValidators: KEYS_BATCH_SIZE, beaconValidators: KEYS_BATCH_SIZE, beaconBalance: ETH(30 * KEYS_BATCH_SIZE) })
     // ToDo check buffer=2
-    assertBn(await app.totalSupply(), tokens(32)) // 30 remote (slashed) + 2 buffered = 32
+    assertBn(await app.totalSupply(), tokens(32 * KEYS_BATCH_SIZE)) // 30 remote (slashed) + 2 buffered = 32
     await checkRewards({ treasury: 0, insurance: 0, operator: 0 })
 
-    // rewarded 200 Ether (was 30, became 230)
-    await oracle.reportBeacon(200, 1, ETH(130))
-    await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(130) })
+    // rewarded 1600 Ether (was 240, became 1840)
+    await oracle.reportBeacon(200, KEYS_BATCH_SIZE, ETH(130 * KEYS_BATCH_SIZE))
+    await checkStat({ depositedValidators: KEYS_BATCH_SIZE, beaconValidators: KEYS_BATCH_SIZE, beaconBalance: ETH(130 * KEYS_BATCH_SIZE) })
     // Todo check reward effects
     // await checkRewards({ treasury: 0, insurance: 0, operator: 0 })
 
-    await oracle.reportBeacon(300, 1, ETH(2230))
-    await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(2230) })
-    assertBn(await app.totalSupply(), tokens(2232))
+    await oracle.reportBeacon(300, KEYS_BATCH_SIZE, ETH(2230 * KEYS_BATCH_SIZE))
+    await checkStat({ depositedValidators: KEYS_BATCH_SIZE, beaconValidators: KEYS_BATCH_SIZE, beaconBalance: ETH(2230 * KEYS_BATCH_SIZE) })
+    assertBn(await app.totalSupply(), tokens(2232 * KEYS_BATCH_SIZE))
     // Todo check reward effects
     // await checkRewards({ treasury: tokens(33), insurance: tokens(22), operator: tokens(55) })
   })
@@ -711,40 +713,70 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await operators.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
     await operators.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
 
+    const op0 = {
+      keys: createKeyBatches(2),
+      sigs: createSigBatches(2)
+    }
+
+    const operatorArray = [op0]
+
     await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
-    await operators.addSigningKeys(0, 1, padKey('0x010203'), padSig('0x01'), { from: voting })
+    await operators.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, sanitiseKeyArray(op0.keys), sanitiseSigArray(op0.sigs), { from: voting })
 
     await app.setFee(5000, { from: voting })
     await app.setFeeDistribution(3000, 2000, 5000, { from: voting })
 
-    // Only 32 ETH deposited
-    await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(32) })
-    await app.depositBufferedEther()
-    await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(32) })
-    await app.depositBufferedEther()
-    assertBn(await app.totalSupply(), tokens(64))
+    // Only 32*8 ETH deposited
+    await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(32 * KEYS_BATCH_SIZE) })
+    await app.depositBufferedEther([buildKeyData(operatorArray, 0, 0)])
+    await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(32 * KEYS_BATCH_SIZE) })
+    await app.depositBufferedEther([buildKeyData(operatorArray, 0, 1)])
+    assertBn(await app.totalSupply(), tokens(64 * KEYS_BATCH_SIZE))
 
-    await oracle.reportBeacon(300, 1, ETH(36))
-    await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(36) })
-    assertBn(await app.totalSupply(), tokens(68))
-    await checkRewards({ treasury: 600, insurance: 399, operator: 999 })
+    await oracle.reportBeacon(300, KEYS_BATCH_SIZE, ETH(36 * KEYS_BATCH_SIZE))
+    await checkStat({
+      depositedValidators: 2 * KEYS_BATCH_SIZE,
+      beaconValidators: KEYS_BATCH_SIZE,
+      beaconBalance: ETH(36 * KEYS_BATCH_SIZE)
+    })
+    assertBn(await app.totalSupply(), tokens(68 * KEYS_BATCH_SIZE))
+    await checkRewards({ treasury: 4800, insurance: 3199, operator: 7999 })
   })
 
   it('Node Operators filtering during deposit works when doing a huge deposit', async () => {
     await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
 
+    const op0 = {
+      keys: createKeyBatches(2),
+      sigs: createSigBatches(2)
+    }
+    const op1 = {
+      keys: createKeyBatches(2, 2 * KEYS_BATCH_SIZE),
+      sigs: createSigBatches(2, 2 * KEYS_BATCH_SIZE)
+    }
+    const op2 = {
+      keys: createKeyBatches(2, 4 * KEYS_BATCH_SIZE),
+      sigs: createSigBatches(2, 4 * KEYS_BATCH_SIZE)
+    }
+    const op3 = {
+      keys: createKeyBatches(2, 6 * KEYS_BATCH_SIZE),
+      sigs: createSigBatches(2, 6 * KEYS_BATCH_SIZE)
+    }
+
+    const operatorArray = [op0, op1, op2, op3]
+
     await operators.addNodeOperator('good', ADDRESS_1, UNLIMITED, { from: voting }) // 0
-    await operators.addSigningKeys(0, 2, hexConcat(padKey('0x0001'), padKey('0x0002')), hexConcat(padSig('0x01'), padSig('0x01')), {
+    await operators.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, sanitiseKeyArray(op0.keys), sanitiseSigArray(op0.sigs), {
       from: voting
     })
 
-    await operators.addNodeOperator('limited', ADDRESS_2, 1, { from: voting }) // 1
-    await operators.addSigningKeys(1, 2, hexConcat(padKey('0x0101'), padKey('0x0102')), hexConcat(padSig('0x01'), padSig('0x01')), {
+    await operators.addNodeOperator('limited', ADDRESS_2, KEYS_BATCH_SIZE, { from: voting }) // 1
+    await operators.addSigningKeys(1, 2 * KEYS_BATCH_SIZE, sanitiseKeyArray(op1.keys), sanitiseSigArray(op1.sigs), {
       from: voting
     })
 
     await operators.addNodeOperator('deactivated', ADDRESS_3, UNLIMITED, { from: voting }) // 2
-    await operators.addSigningKeys(2, 2, hexConcat(padKey('0x0201'), padKey('0x0202')), hexConcat(padSig('0x01'), padSig('0x01')), {
+    await operators.addSigningKeys(2, 2 * KEYS_BATCH_SIZE, sanitiseKeyArray(op2.keys), sanitiseSigArray(op2.sigs), {
       from: voting
     })
     await operators.setNodeOperatorActive(2, false, { from: voting })
@@ -755,40 +787,45 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await app.setFeeDistribution(3000, 2000, 5000, { from: voting })
 
     // Deposit huge chunk
-    await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(32 * 3 + 50) })
-    await app.depositBufferedEther()
-    await checkStat({ depositedValidators: 3, beaconValidators: 0, beaconBalance: ETH(0) })
-    assertBn(await app.getTotalPooledEther(), ETH(146))
-    assertBn(await app.getBufferedEther(), ETH(50))
-    assertBn(await depositContract.totalCalls(), 3)
+    await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH((32 * 3 + 50) * KEYS_BATCH_SIZE) })
+    await app.depositBufferedEther([
+      buildKeyData(operatorArray, 0, 0),
+      buildKeyData(operatorArray, 1, 0),
+      buildKeyData(operatorArray, 0, 1)
+    ])
+    await checkStat({ depositedValidators: 3 * KEYS_BATCH_SIZE, beaconValidators: 0, beaconBalance: ETH(0) })
+    assertBn(await app.getTotalPooledEther(), ETH(146 * KEYS_BATCH_SIZE))
+    assertBn(await app.getBufferedEther(), ETH(50 * KEYS_BATCH_SIZE))
+    assertBn(await depositContract.totalCalls(), 3 * KEYS_BATCH_SIZE)
 
-    assertBn(await operators.getTotalSigningKeyCount(0, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(2, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(3, { from: nobody }), 0)
+    assertBn(await operators.getTotalSigningKeyCount(0, { from: nobody }), 2 * KEYS_BATCH_SIZE)
+    assertBn(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2 * KEYS_BATCH_SIZE)
+    assertBn(await operators.getTotalSigningKeyCount(2, { from: nobody }), 2 * KEYS_BATCH_SIZE)
+    assertBn(await operators.getTotalSigningKeyCount(3, { from: nobody }), 0 * KEYS_BATCH_SIZE)
 
-    assertBn(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0)
-    assertBn(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
-    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
-    assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
+    assertBn(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0 * KEYS_BATCH_SIZE)
+    assertBn(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1 * KEYS_BATCH_SIZE)
+    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2 * KEYS_BATCH_SIZE)
+    assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0 * KEYS_BATCH_SIZE)
 
-    // Next deposit changes nothing
-    await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(32) })
-    await app.depositBufferedEther()
-    await checkStat({ depositedValidators: 3, beaconValidators: 0, beaconBalance: ETH(0) })
-    assertBn(await app.getTotalPooledEther(), ETH(178))
-    assertBn(await app.getBufferedEther(), ETH(82))
-    assertBn(await depositContract.totalCalls(), 3)
+    // This isn't relevant in offchain regime
+    // // Next deposit changes nothing
+    // await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(32) })
+    // await app.depositBufferedEther()
+    // await checkStat({ depositedValidators: 3, beaconValidators: 0, beaconBalance: ETH(0) })
+    // assertBn(await app.getTotalPooledEther(), ETH(178))
+    // assertBn(await app.getBufferedEther(), ETH(82))
+    // assertBn(await depositContract.totalCalls(), 3)
 
-    assertBn(await operators.getTotalSigningKeyCount(0, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(2, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(3, { from: nobody }), 0)
+    // assertBn(await operators.getTotalSigningKeyCount(0, { from: nobody }), 2)
+    // assertBn(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
+    // assertBn(await operators.getTotalSigningKeyCount(2, { from: nobody }), 2)
+    // assertBn(await operators.getTotalSigningKeyCount(3, { from: nobody }), 0)
 
-    assertBn(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0)
-    assertBn(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
-    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
-    assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
+    // assertBn(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0)
+    // assertBn(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
+    // assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
+    // assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
 
     // #1 goes below the limit
     await operators.reportStoppedValidators(1, 1, { from: voting })
