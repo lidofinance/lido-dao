@@ -42,10 +42,10 @@ Node Operators act as validators on the Beacon chain for the benefit of the prot
 #### [LidoOracle](contracts/0.4.24/oracle/LidoOracle.sol)
 LidoOracle is a contract where oracles send addresses' balances controlled by the DAO on the ETH 2.0 side. The balances can go up because of reward accumulation and can go down due to slashing and staking penalties. Oracles are assigned by the DAO.
 
-#### [CstETH](contracts/0.6.12/CstETH.sol)
-It's an ERC20 token that represents the account's share of the total supply of stETH tokens. The balance of a cstETH token holder only changes on transfers, unlike the balance of stETH that is also changed when oracles report staking rewards, penalties, and slashings. It's a "power user" token that might be needed to work correctly with some DeFi protocols like Uniswap v2, cross-chain bridges, etc.
+#### [WstETH](contracts/0.6.12/WstETH.sol)
+It's an ERC20 token that represents the account's share of the total supply of stETH tokens. The balance of a wstETH token holder only changes on transfers, unlike the balance of stETH that is also changed when oracles report staking rewards, penalties, and slashings. It's a "power user" token that is required for some DeFi protocols like Uniswap v2, cross-chain bridges, etc.
 
-The contract also works as a wrapper that accepts stETH tokens and mints cstETH in return. The reverse exchange works exactly the opposite, the received cstETH tokens are burned, and stETH tokens are returned to the user.
+The contract also works as a wrapper that accepts stETH tokens and mints wstETH in return. The reverse exchange works exactly the opposite, the received wstETH tokens are burned, and stETH tokens are returned to the user with any accrued rebalance results.
 
 ## Deployments
 
@@ -56,6 +56,7 @@ The contract also works as a wrapper that accepts stETH tokens and mints cstETH 
 * Lido and stETH token: [`0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84`](https://etherscan.io/address/0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84) (proxy)
 * Node Operators registry: [`0x55032650b14df07b85bF18A3a3eC8E0Af2e028d5`](https://etherscan.io/address/0x55032650b14df07b85bF18A3a3eC8E0Af2e028d5) (proxy)
 * Oracle: [`0x442af784A788A5bd6F42A01Ebe9F287a871243fb`](https://etherscan.io/address/0x442af784A788A5bd6F42A01Ebe9F287a871243fb) (proxy)
+* WstETH token: [`0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0`](https://etherscan.io/token/0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0)
 * Aragon Voting: [`0x2e59A20f205bB85a89C53f1936454680651E618e`](https://etherscan.io/address/0x2e59A20f205bB85a89C53f1936454680651E618e) (proxy)
 * Aragon Token Manager: [`0xf73a1260d222f447210581DDf212D915c09a3249`](https://etherscan.io/address/0xf73a1260d222f447210581DDf212D915c09a3249) (proxy)
 * Aragon Finance: [`0xB9E5CBB9CA5b0d659238807E84D0176930753d86`](https://etherscan.io/address/0xB9E5CBB9CA5b0d659238807E84D0176930753d86) (proxy)
@@ -65,13 +66,14 @@ The contract also works as a wrapper that accepts stETH tokens and mints cstETH 
 
 * Lido DAO: [`0x1dD91b354Ebd706aB3Ac7c727455C7BAA164945A`](https://goerli.etherscan.io/address/0x1dD91b354Ebd706aB3Ac7c727455C7BAA164945A) (proxy)
 * LDO token: [`0x56340274fB5a72af1A3C6609061c451De7961Bd4`](https://goerli.etherscan.io/address/0x56340274fB5a72af1A3C6609061c451De7961Bd4)
-* Lido and stETH token: [`0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F`](https://etherscan.io/address/0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F) (proxy)
-* Node Operators registry: [`0x9D4AF1Ee19Dad8857db3a45B0374c81c8A1C6320`](https://etherscan.io/address/0x9D4AF1Ee19Dad8857db3a45B0374c81c8A1C6320) (proxy)
-* Oracle: [`0x24d8451BC07e7aF4Ba94F69aCDD9ad3c6579D9FB`](https://etherscan.io/address/0x24d8451BC07e7aF4Ba94F69aCDD9ad3c6579D9FB) (proxy)
-* Aragon Voting: [`0xbc0B67b4553f4CF52a913DE9A6eD0057E2E758Db`](https://etherscan.io/address/0xbc0B67b4553f4CF52a913DE9A6eD0057E2E758Db) (proxy)
-* Aragon Token Manager: [`0xDfe76d11b365f5e0023343A367f0b311701B3bc1`](https://etherscan.io/address/0xDfe76d11b365f5e0023343A367f0b311701B3bc1) (proxy)
-* Aragon Finance: [`0x75c7b1D23f1cad7Fb4D60281d7069E46440BC179`](https://etherscan.io/address/0x75c7b1D23f1cad7Fb4D60281d7069E46440BC179) (proxy)
-* Aragon Agent: [`0x4333218072D5d7008546737786663c38B4D561A4`](https://etherscan.io/address/0x4333218072D5d7008546737786663c38B4D561A4) (proxy)
+* Lido and stETH token: [`0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F`](https://goerli.etherscan.io/address/0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F) (proxy)
+* Node Operators registry: [`0x9D4AF1Ee19Dad8857db3a45B0374c81c8A1C6320`](https://goerli.etherscan.io/address/0x9D4AF1Ee19Dad8857db3a45B0374c81c8A1C6320) (proxy)
+* Oracle: [`0x24d8451BC07e7aF4Ba94F69aCDD9ad3c6579D9FB`](https://goerli.etherscan.io/address/0x24d8451BC07e7aF4Ba94F69aCDD9ad3c6579D9FB) (proxy)
+* WstETH token: [`0x1643e812ae58766192cf7d2cf9567df2c37e9b7f`](https://goerli.etherscan.io/address/0x1643e812ae58766192cf7d2cf9567df2c37e9b7f)
+* Aragon Voting: [`0xbc0B67b4553f4CF52a913DE9A6eD0057E2E758Db`](https://goerli.etherscan.io/address/0xbc0B67b4553f4CF52a913DE9A6eD0057E2E758Db) (proxy)
+* Aragon Token Manager: [`0xDfe76d11b365f5e0023343A367f0b311701B3bc1`](https://goerli.etherscan.io/address/0xDfe76d11b365f5e0023343A367f0b311701B3bc1) (proxy)
+* Aragon Finance: [`0x75c7b1D23f1cad7Fb4D60281d7069E46440BC179`](https://goerli.etherscan.io/address/0x75c7b1D23f1cad7Fb4D60281d7069E46440BC179) (proxy)
+* Aragon Agent: [`0x4333218072D5d7008546737786663c38B4D561A4`](https://goerli.etherscan.io/address/0x4333218072D5d7008546737786663c38B4D561A4) (proxy)
 
 ### Görli+Pyrmont testnet
 
