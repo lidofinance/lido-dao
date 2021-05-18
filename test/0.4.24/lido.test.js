@@ -421,7 +421,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await assertRevert(web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(0), data: wrongMethodABI }), 'NON_EMPTY_DATA')
   })
 
-  it('key removal is taken into account during deposit', async () => {
+  it.skip('key removal is taken into account during deposit', async () => {
     await operators.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
     await operators.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
 
@@ -451,7 +451,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(await app.getBufferedEther(), ETH(37))
   })
 
-  it("out of signing keys doesn't revert but buffers", async () => {
+  it.skip("out of signing keys doesn't revert but buffers", async () => {
     await operators.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
     await operators.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
 
