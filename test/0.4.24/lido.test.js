@@ -1,12 +1,11 @@
 const { hash } = require('eth-ens-namehash')
 const { assert } = require('chai')
 const { newDao, newApp } = require('./helpers/dao')
-const { hexConcat, pad, padHash, padKey, padSig } = require('../helpers/utils')
+const { hexConcat, pad, padHash, padKey, padSig, ETH, tokens, div15 } = require('../helpers/utils')
 
 const { getInstalledApp } = require('@aragon/contract-helpers-test/src/aragon-os')
 const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
-const { BN } = require('bn.js')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
@@ -22,13 +21,6 @@ const ADDRESS_3 = '0x0000000000000000000000000000000000000003'
 const ADDRESS_4 = '0x0000000000000000000000000000000000000004'
 
 const UNLIMITED = 1000000000
-
-// Divides a BN by 1e15
-
-const div15 = (bn) => bn.div(new BN('1000000000000000'))
-
-const ETH = (value) => web3.utils.toWei(value + '', 'ether')
-const tokens = ETH
 
 const packKeyArray = (keys) => hexConcat(...keys.map((key) => padKey(key)))
 const packSigArray = (sigs) => hexConcat(...sigs.map((key) => padSig(key)))
