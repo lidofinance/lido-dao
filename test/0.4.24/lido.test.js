@@ -1,7 +1,7 @@
 const { hash } = require('eth-ens-namehash')
 const { assert } = require('chai')
 const { newDao, newApp } = require('./helpers/dao')
-const { sanitiseKeyArray, sanitiseSigArray } = require('./helpers/publicKeyArrays')
+const { packKeyArray, packSigArray } = require('./helpers/publicKeyArrays')
 const { hexConcat, pad, padHash, padKey, padSig } = require('../helpers/utils')
 
 const { getInstalledApp } = require('@aragon/contract-helpers-test/src/aragon-os')
@@ -163,7 +163,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
 
     await operators.addSigningKeys(0, 1, padKey('0x010203'), padSig('0x01'), { from: voting })
-    await operators.addSigningKeys(1, 2, sanitiseKeyArray(['0x050505', '0x060606']), sanitiseSigArray(['0x02', '0x03']), {
+    await operators.addSigningKeys(1, 2, packKeyArray(['0x050505', '0x060606']), packSigArray(['0x02', '0x03']), {
       from: voting
     })
     assertBn(await operators.getTotalSigningKeyCount(0, { from: nobody }), 1)
@@ -205,13 +205,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await operators.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
 
     await operators.addSigningKeys(0, 1, padKey('0x010203'), padSig('0x01'), { from: voting })
-    await operators.addSigningKeys(
-      0,
-      3,
-      sanitiseKeyArray(['0x010204', '0x010205', '0x010206']),
-      sanitiseSigArray(['0x01', '0x01', '0x01']),
-      { from: voting }
-    )
+    await operators.addSigningKeys(0, 3, packKeyArray(['0x010204', '0x010205', '0x010206']), packSigArray(['0x01', '0x01', '0x01']), {
+      from: voting
+    })
 
     // zero deposits revert
     await assertRevert(app.submit(ZERO_ADDRESS, { from: user1, value: ETH(0) }), 'ZERO_DEPOSIT')
@@ -247,13 +243,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     // set withdrawalCredentials with keys, because they were trimmed
     await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
     await operators.addSigningKeys(0, 1, padKey('0x010203'), padSig('0x01'), { from: voting })
-    await operators.addSigningKeys(
-      0,
-      3,
-      sanitiseKeyArray(['0x010204', '0x010205', '0x010206']),
-      sanitiseSigArray(['0x01', '0x01', '0x01']),
-      { from: voting }
-    )
+    await operators.addSigningKeys(0, 3, packKeyArray(['0x010204', '0x010205', '0x010206']), packSigArray(['0x01', '0x01', '0x01']), {
+      from: voting
+    })
 
     // now deposit works
     await app.depositBufferedEther()
@@ -384,13 +376,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
     await operators.addSigningKeys(0, 1, padKey('0x010203'), padSig('0x01'), { from: voting })
-    await operators.addSigningKeys(
-      0,
-      3,
-      sanitiseKeyArray(['0x010204', '0x010205', '0x010206']),
-      sanitiseSigArray(['0x01', '0x01', '0x01']),
-      { from: voting }
-    )
+    await operators.addSigningKeys(0, 3, packKeyArray(['0x010204', '0x010205', '0x010206']), packSigArray(['0x01', '0x01', '0x01']), {
+      from: voting
+    })
 
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(33) })
     await app.depositBufferedEther()
@@ -423,13 +411,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(await app.getBufferedEther(), ETH(100 - 32))
 
     // buffer unwinds
-    await operators.addSigningKeys(
-      0,
-      3,
-      sanitiseKeyArray(['0x010204', '0x010205', '0x010206']),
-      sanitiseSigArray(['0x01', '0x01', '0x01']),
-      { from: voting }
-    )
+    await operators.addSigningKeys(0, 3, packKeyArray(['0x010204', '0x010205', '0x010206']), packSigArray(['0x01', '0x01', '0x01']), {
+      from: voting
+    })
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(1) })
     await app.depositBufferedEther()
     await checkStat({ depositedValidators: 3, beaconValidators: 0, beaconBalance: ETH(0) })
@@ -446,8 +430,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await operators.addSigningKeys(
       0,
       6,
-      sanitiseKeyArray(['0x010203', '0x010204', '0x010205', '0x010206', '0x010207', '0x010208']),
-      sanitiseSigArray(['0x01', '0x01', '0x01', '0x01', '0x01', '0x01']),
+      packKeyArray(['0x010203', '0x010204', '0x010205', '0x010206', '0x010207', '0x010208']),
+      packSigArray(['0x01', '0x01', '0x01', '0x01', '0x01', '0x01']),
       { from: voting }
     )
 
@@ -469,13 +453,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
     await operators.addSigningKeys(0, 1, padKey('0x010203'), padSig('0x01'), { from: voting })
-    await operators.addSigningKeys(
-      0,
-      3,
-      sanitiseKeyArray(['0x010204', '0x010205', '0x010206']),
-      sanitiseSigArray(['0x01', '0x01', '0x01']),
-      { from: voting }
-    )
+    await operators.addSigningKeys(0, 3, packKeyArray(['0x010204', '0x010205', '0x010206']), packSigArray(['0x01', '0x01', '0x01']), {
+      from: voting
+    })
 
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(34) })
     await app.depositBufferedEther()
@@ -501,13 +481,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
     await operators.addSigningKeys(0, 1, padKey('0x010203'), padSig('0x01'), { from: voting })
-    await operators.addSigningKeys(
-      0,
-      3,
-      sanitiseKeyArray(['0x010204', '0x010205', '0x010206']),
-      sanitiseSigArray(['0x01', '0x01', '0x01']),
-      { from: voting }
-    )
+    await operators.addSigningKeys(0, 3, packKeyArray(['0x010204', '0x010205', '0x010206']), packSigArray(['0x01', '0x01', '0x01']), {
+      from: voting
+    })
     await app.setFee(5000, { from: voting })
     await app.setFeeDistribution(3000, 2000, 5000, { from: voting })
 
@@ -569,13 +545,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
     await operators.addSigningKeys(0, 1, padKey('0x010203'), padSig('0x01'), { from: voting })
-    await operators.addSigningKeys(
-      0,
-      3,
-      sanitiseKeyArray(['0x010204', '0x010205', '0x010206']),
-      sanitiseSigArray(['0x01', '0x01', '0x01']),
-      { from: voting }
-    )
+    await operators.addSigningKeys(0, 3, packKeyArray(['0x010204', '0x010205', '0x010206']), packSigArray(['0x01', '0x01', '0x01']), {
+      from: voting
+    })
 
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(40) })
     await app.depositBufferedEther()
@@ -604,13 +576,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
     await operators.addSigningKeys(0, 1, padKey('0x010203'), padSig('0x01'), { from: voting })
-    await operators.addSigningKeys(
-      0,
-      3,
-      sanitiseKeyArray(['0x010204', '0x010205', '0x010206']),
-      sanitiseSigArray(['0x01', '0x01', '0x01']),
-      { from: voting }
-    )
+    await operators.addSigningKeys(0, 3, packKeyArray(['0x010204', '0x010205', '0x010206']), packSigArray(['0x01', '0x01', '0x01']), {
+      from: voting
+    })
 
     await app.setFee(5000, { from: voting })
     await app.setFeeDistribution(3000, 2000, 5000, { from: voting })
@@ -630,13 +598,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
     await operators.addSigningKeys(0, 1, padKey('0x010203'), padSig('0x01'), { from: voting })
-    await operators.addSigningKeys(
-      0,
-      3,
-      sanitiseKeyArray(['0x010204', '0x010205', '0x010206']),
-      sanitiseSigArray(['0x01', '0x01', '0x01']),
-      { from: voting }
-    )
+    await operators.addSigningKeys(0, 3, packKeyArray(['0x010204', '0x010205', '0x010206']), packSigArray(['0x01', '0x01', '0x01']), {
+      from: voting
+    })
 
     await app.setFee(5000, { from: voting })
     await app.setFeeDistribution(3000, 2000, 5000, { from: voting })
