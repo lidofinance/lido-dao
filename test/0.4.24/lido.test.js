@@ -1,7 +1,6 @@
 const { hash } = require('eth-ens-namehash')
 const { assert } = require('chai')
 const { newDao, newApp } = require('./helpers/dao')
-const { packKeyArray, packSigArray } = require('./helpers/publicKeyArrays')
 const { hexConcat, pad, padHash, padKey, padSig } = require('../helpers/utils')
 
 const { getInstalledApp } = require('@aragon/contract-helpers-test/src/aragon-os')
@@ -30,6 +29,9 @@ const div15 = (bn) => bn.div(new BN('1000000000000000'))
 
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 const tokens = ETH
+
+const packKeyArray = (keys) => hexConcat(...keys.map((key) => padKey(key)))
+const packSigArray = (sigs) => hexConcat(...sigs.map((key) => padSig(key)))
 
 contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
   let appBase, nodeOperatorsRegistryBase, app, oracle, depositContract, operators
