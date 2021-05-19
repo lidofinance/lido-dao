@@ -214,150 +214,169 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await assertRevert(app.setNodeOperatorStakingLimit(10, 40, { from: voting }), 'NODE_OPERATOR_NOT_FOUND')
   })
 
-  it('assignNextSigningKeys works', async () => {
-    let result = await pool.assignNextSigningKeys(10)
+  it('verifyNextSigningKeys works', async () => {
+    let result = await pool.verifyNextSigningKeys([])
     let keysAssignedEvt = getEventAt(result, 'KeysAssigned').args
 
     assert.equal(keysAssignedEvt.pubkeys, null, 'empty cache, no singing keys added: pubkeys')
     assert.equal(keysAssignedEvt.signatures, null, 'empty cache, no singing keys added: signatures')
 
-    await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
-    await app.addNodeOperator(' bar', ADDRESS_2, 10, { from: voting })
+    await app.addNodeOperator('fo o', ADDRESS_1, 80, { from: voting })
+    await app.addNodeOperator(' bar', ADDRESS_2, 80, { from: voting })
 
-    result = await pool.assignNextSigningKeys(10)
+    result = await pool.verifyNextSigningKeys([])
     keysAssignedEvt = getEventAt(result, 'KeysAssigned').args
 
     assert.equal(keysAssignedEvt.pubkeys, null, 'no singing keys added: pubkeys')
     assert.equal(keysAssignedEvt.signatures, null, 'no singing keys added: signatures')
 
     const op0 = {
-      keys: [padKey('0xaa0101'), padKey('0xaa0202'), padKey('0xaa0303')],
-      sigs: [padSig('0xa1'), padSig('0xa2'), padSig('0xa3')]
+      keys: createKeyBatches(3),
+      sigs: createSigBatches(3)
     }
-
     const op1 = {
-      keys: [padKey('0xbb0505'), padKey('0xbb0606'), padKey('0xbb0707')],
-      sigs: [padSig('0xb5'), padSig('0xb6'), padSig('0xb7')]
+      keys: createKeyBatches(3, 3 * KEYS_BATCH_SIZE),
+      sigs: createSigBatches(3, 3 * KEYS_BATCH_SIZE)
+    }
+    const op2 = {
+      keys: createKeyBatches(3, 6 * KEYS_BATCH_SIZE),
+      sigs: createSigBatches(3, 6 * KEYS_BATCH_SIZE)
     }
 
-    await app.addSigningKeys(0, 3, hexConcat(...op0.keys), hexConcat(...op0.sigs), { from: voting })
-    await app.addSigningKeys(1, 3, hexConcat(...op1.keys), hexConcat(...op1.sigs), { from: voting })
+    const operatorArray = [op0, op1, op2]
 
-    result = await pool.assignNextSigningKeys(1)
+    await app.addSigningKeys(0, 3 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: voting })
+    await app.addSigningKeys(1, 3 * KEYS_BATCH_SIZE, packKeyArray(op1.keys), packSigArray(op1.sigs), { from: voting })
+
+    result = await pool.verifyNextSigningKeys([buildKeyData(operatorArray, 0, 0)])
     keysAssignedEvt = getEventAt(result, 'KeysAssigned').args
 
-    assert.equal(keysAssignedEvt.pubkeys, op0.keys[0], 'assignment 1: pubkeys')
-    assert.equal(keysAssignedEvt.signatures, op0.sigs[0], 'assignment 1: signatures')
+    assert.equal(keysAssignedEvt.pubkeys, packKeyArray(op0.keys[0]), 'assignment 1: pubkeys')
+    assert.equal(keysAssignedEvt.signatures, packKeyArray(op0.sigs[0]), 'assignment 1: signatures')
 
-    result = await pool.assignNextSigningKeys(2)
+    result = await pool.verifyNextSigningKeys([buildKeyData(operatorArray, 1, 0), buildKeyData(operatorArray, 0, 1)])
     keysAssignedEvt = getEventAt(result, 'KeysAssigned').args
 
-    assert.sameMembers(hexSplit(keysAssignedEvt.pubkeys, PUBKEY_LENGTH_BYTES), [op0.keys[1], op1.keys[0]], 'assignment 2: pubkeys')
-    assert.sameMembers(hexSplit(keysAssignedEvt.signatures, SIGNATURE_LENGTH_BYTES), [op0.sigs[1], op1.sigs[0]], 'assignment 2: signatures')
+    assert.sameMembers(hexSplit(keysAssignedEvt.pubkeys, PUBKEY_LENGTH_BYTES), [...op0.keys[1], ...op1.keys[0]], 'assignment 2: pubkeys')
+    assert.sameMembers(
+      hexSplit(keysAssignedEvt.signatures, SIGNATURE_LENGTH_BYTES),
+      [...op0.sigs[1], ...op1.sigs[0]],
+      'assignment 2: signatures'
+    )
 
-    result = await pool.assignNextSigningKeys(10)
+    result = await pool.verifyNextSigningKeys([
+      buildKeyData(operatorArray, 1, 1),
+      buildKeyData(operatorArray, 0, 2),
+      buildKeyData(operatorArray, 1, 2)
+    ])
     keysAssignedEvt = getEventAt(result, 'KeysAssigned').args
 
     assert.sameMembers(
       hexSplit(keysAssignedEvt.pubkeys, PUBKEY_LENGTH_BYTES),
-      [op0.keys[2], op1.keys[1], op1.keys[2]],
+      [...op0.keys[2], ...op1.keys[1], ...op1.keys[2]],
       'assignment 2: pubkeys'
     )
 
     assert.sameMembers(
       hexSplit(keysAssignedEvt.signatures, SIGNATURE_LENGTH_BYTES),
-      [op0.sigs[2], op1.sigs[1], op1.sigs[2]],
+      [...op0.sigs[2], ...op1.sigs[1], ...op1.sigs[2]],
       'assignment 2: signatures'
     )
-
-    result = await pool.assignNextSigningKeys(10)
-    keysAssignedEvt = getEventAt(result, 'KeysAssigned').args
-
-    assert.equal(keysAssignedEvt.pubkeys, null, 'no singing keys left: pubkeys')
-    assert.equal(keysAssignedEvt.signatures, null, 'no singing keys left: signatures')
   })
 
   it('assignNextSigningKeys skips stopped operators', async () => {
-    await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
-    await app.addNodeOperator(' bar', ADDRESS_2, 10, { from: voting })
+    await app.addNodeOperator('fo o', ADDRESS_1, 10 * KEYS_BATCH_SIZE, { from: voting })
+    await app.addNodeOperator(' bar', ADDRESS_2, 10 * KEYS_BATCH_SIZE, { from: voting })
 
     const op0 = {
-      keys: [padKey('0xaa0101'), padKey('0xaa0202'), padKey('0xaa0303')],
-      sigs: [padSig('0xa1'), padSig('0xa2'), padSig('0xa3')]
+      keys: createKeyBatches(3),
+      sigs: createSigBatches(3)
     }
-
     const op1 = {
-      keys: [padKey('0xbb0505'), padKey('0xbb0606'), padKey('0xbb0707')],
-      sigs: [padSig('0xb5'), padSig('0xb6'), padSig('0xb7')]
+      keys: createKeyBatches(3, 3 * KEYS_BATCH_SIZE),
+      sigs: createSigBatches(3, 3 * KEYS_BATCH_SIZE)
     }
 
-    await app.addSigningKeys(0, 3, hexConcat(...op0.keys), hexConcat(...op0.sigs), { from: voting })
-    await app.addSigningKeys(1, 3, hexConcat(...op1.keys), hexConcat(...op1.sigs), { from: voting })
+    const operatorArray = [op0, op1]
 
-    let result = await pool.assignNextSigningKeys(2)
+    await app.addSigningKeys(0, 3 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: voting })
+    await app.addSigningKeys(1, 3 * KEYS_BATCH_SIZE, packKeyArray(op1.keys), packSigArray(op1.sigs), { from: voting })
+
+    let result = await pool.verifyNextSigningKeys([buildKeyData(operatorArray, 0, 0), buildKeyData(operatorArray, 1, 0)])
     let keysAssignedEvt = getEventAt(result, 'KeysAssigned').args
 
-    assert.sameMembers(hexSplit(keysAssignedEvt.pubkeys, PUBKEY_LENGTH_BYTES), [op0.keys[0], op1.keys[0]], 'assignment 1: pubkeys')
-    assert.sameMembers(hexSplit(keysAssignedEvt.signatures, SIGNATURE_LENGTH_BYTES), [op0.sigs[0], op1.sigs[0]], 'assignment 1: signatures')
+    assert.sameMembers(hexSplit(keysAssignedEvt.pubkeys, PUBKEY_LENGTH_BYTES), [...op0.keys[0], ...op1.keys[0]], 'assignment 1: pubkeys')
+    assert.sameMembers(
+      hexSplit(keysAssignedEvt.signatures, SIGNATURE_LENGTH_BYTES),
+      [...op0.sigs[0], ...op1.sigs[0]],
+      'assignment 1: signatures'
+    )
 
     await app.setNodeOperatorActive(0, false, { from: voting })
 
-    result = await pool.assignNextSigningKeys(2)
+    result = await pool.verifyNextSigningKeys([buildKeyData(operatorArray, 1, 1), buildKeyData(operatorArray, 1, 2)])
     keysAssignedEvt = getEventAt(result, 'KeysAssigned').args
 
-    assert.sameMembers(hexSplit(keysAssignedEvt.pubkeys, PUBKEY_LENGTH_BYTES), [op1.keys[1], op1.keys[2]], 'assignment 2: pubkeys')
-    assert.sameMembers(hexSplit(keysAssignedEvt.signatures, SIGNATURE_LENGTH_BYTES), [op1.sigs[1], op1.sigs[2]], 'assignment 2: signatures')
-
-    result = await pool.assignNextSigningKeys(2)
-    keysAssignedEvt = getEventAt(result, 'KeysAssigned').args
-
-    assert.equal(keysAssignedEvt.pubkeys, null, 'assignment 3: pubkeys')
-    assert.equal(keysAssignedEvt.signatures, null, 'assignment 3: signatures')
+    assert.sameMembers(hexSplit(keysAssignedEvt.pubkeys, PUBKEY_LENGTH_BYTES), [...op1.keys[1], ...op1.keys[2]], 'assignment 2: pubkeys')
+    assert.sameMembers(
+      hexSplit(keysAssignedEvt.signatures, SIGNATURE_LENGTH_BYTES),
+      [...op1.sigs[1], ...op1.sigs[2]],
+      'assignment 2: signatures'
+    )
   })
 
   it('assignNextSigningKeys respects staking limit', async () => {
-    await app.addNodeOperator('fo o', ADDRESS_1, 4, { from: voting })
-    await app.addNodeOperator(' bar', ADDRESS_2, 1, { from: voting })
+    await app.addNodeOperator('fo o', ADDRESS_1, 4 * KEYS_BATCH_SIZE, { from: voting })
+    await app.addNodeOperator(' bar', ADDRESS_2, 1 * KEYS_BATCH_SIZE, { from: voting })
 
     const op0 = {
-      keys: [padKey('0xaa0101'), padKey('0xaa0202'), padKey('0xaa0303'), padKey('0xaa0404')],
-      sigs: [padSig('0xa1'), padSig('0xa2'), padSig('0xa3'), padSig('0xa4')]
+      keys: createKeyBatches(4),
+      sigs: createSigBatches(4)
     }
-
     const op1 = {
-      keys: [padKey('0xbb0505'), padKey('0xbb0606'), padKey('0xbb0707')],
-      sigs: [padSig('0xb5'), padSig('0xb6'), padSig('0xb7')]
+      keys: createKeyBatches(3, 4 * KEYS_BATCH_SIZE),
+      sigs: createSigBatches(3, 4 * KEYS_BATCH_SIZE)
     }
 
-    await app.addSigningKeys(0, 4, hexConcat(...op0.keys), hexConcat(...op0.sigs), { from: voting })
-    await app.addSigningKeys(1, 3, hexConcat(...op1.keys), hexConcat(...op1.sigs), { from: voting })
+    const operatorArray = [op0, op1]
 
-    let result = await pool.assignNextSigningKeys(3)
+    await app.addSigningKeys(0, 4 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: voting })
+    await app.addSigningKeys(1, 3 * KEYS_BATCH_SIZE, packKeyArray(op1.keys), packSigArray(op1.sigs), { from: voting })
+
+    let result = await pool.verifyNextSigningKeys([
+      buildKeyData(operatorArray, 0, 0),
+      buildKeyData(operatorArray, 1, 0),
+      buildKeyData(operatorArray, 0, 1)
+    ])
     let keysAssignedEvt = getEventAt(result, 'KeysAssigned').args
 
     assert.sameMembers(
       hexSplit(keysAssignedEvt.pubkeys, PUBKEY_LENGTH_BYTES),
-      [op0.keys[0], op0.keys[1], op1.keys[0]],
+      [...op0.keys[0], ...op0.keys[1], ...op1.keys[0]],
       'assignment 1: pubkeys'
     )
 
     assert.sameMembers(
       hexSplit(keysAssignedEvt.signatures, SIGNATURE_LENGTH_BYTES),
-      [op0.sigs[0], op0.sigs[1], op1.sigs[0]],
+      [...op0.sigs[0], ...op0.sigs[1], ...op1.sigs[0]],
       'assignment 1: signatures'
     )
 
-    assertBn((await app.getNodeOperator(0, false)).usedSigningKeys, 2, 'assignment 1: op 0 used keys')
-    assertBn((await app.getNodeOperator(1, false)).usedSigningKeys, 1, 'assignment 1: op 1 used keys')
+    assertBn((await app.getNodeOperator(0, false)).usedSigningKeys, 2 * KEYS_BATCH_SIZE, 'assignment 1: op 0 used keys')
+    assertBn((await app.getNodeOperator(1, false)).usedSigningKeys, 1 * KEYS_BATCH_SIZE, 'assignment 1: op 1 used keys')
 
-    result = await pool.assignNextSigningKeys(3)
+    result = await pool.verifyNextSigningKeys([buildKeyData(operatorArray, 0, 2), buildKeyData(operatorArray, 0, 3)])
     keysAssignedEvt = getEventAt(result, 'KeysAssigned').args
 
-    assert.sameMembers(hexSplit(keysAssignedEvt.pubkeys, PUBKEY_LENGTH_BYTES), [op0.keys[2], op0.keys[3]], 'assignment 2: pubkeys')
-    assert.sameMembers(hexSplit(keysAssignedEvt.signatures, SIGNATURE_LENGTH_BYTES), [op0.sigs[2], op0.sigs[3]], 'assignment 2: signatures')
+    assert.sameMembers(hexSplit(keysAssignedEvt.pubkeys, PUBKEY_LENGTH_BYTES), [...op0.keys[2], ...op0.keys[3]], 'assignment 2: pubkeys')
+    assert.sameMembers(
+      hexSplit(keysAssignedEvt.signatures, SIGNATURE_LENGTH_BYTES),
+      [...op0.sigs[2], ...op0.sigs[3]],
+      'assignment 2: signatures'
+    )
 
-    assertBn((await app.getNodeOperator(0, false)).usedSigningKeys, 4, 'assignment 2: op 0 used keys')
-    assertBn((await app.getNodeOperator(1, false)).usedSigningKeys, 1, 'assignment 2: op 1 used keys')
+    assertBn((await app.getNodeOperator(0, false)).usedSigningKeys, 4 * KEYS_BATCH_SIZE, 'assignment 2: op 0 used keys')
+    assertBn((await app.getNodeOperator(1, false)).usedSigningKeys, 1 * KEYS_BATCH_SIZE, 'assignment 2: op 1 used keys')
   })
 
   it('reportStoppedValidators works', async () => {
@@ -494,60 +513,114 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await app.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
     await app.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
 
+    const op0 = {
+      keys: createKeyBatches(2),
+      sigs: createSigBatches(2)
+    }
+
     // first
-    await assertRevert(app.addSigningKeys(0, 1, padKey('0x01'), padSig('0x01'), { from: user1 }), 'APP_AUTH_FAILED')
-    await assertRevert(app.addSigningKeys(0, 1, padKey('0x01'), padSig('0x01'), { from: nobody }), 'APP_AUTH_FAILED')
+    await assertRevert(
+      app.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: user1 }),
+      'APP_AUTH_FAILED'
+    )
+    await assertRevert(
+      app.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: nobody }),
+      'APP_AUTH_FAILED'
+    )
 
     await assertRevert(app.addSigningKeys(0, 0, '0x', '0x', { from: voting }), 'NO_KEYS')
-    await assertRevert(app.addSigningKeys(0, 1, padKey('0x00'), padSig('0x01'), { from: voting }), 'EMPTY_KEY')
+    // await assertRevert(app.addSigningKeys(0, 1, padKey('0x00'), padSig('0x01'), { from: voting }), 'EMPTY_KEY')
     await assertRevert(app.addSigningKeys(0, 1, pad('0x01', 32), padSig('0x01'), { from: voting }), 'INVALID_LENGTH')
     await assertRevert(app.addSigningKeys(0, 1, padKey('0x01'), pad('0x01', 90), { from: voting }), 'INVALID_LENGTH')
 
-    await app.addSigningKeys(0, 1, padKey('0x010203'), padSig('0x01'), { from: voting })
+    await app.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: voting })
+
+    const op0Next = {
+      keys: createKeyBatches(2, 2 * KEYS_BATCH_SIZE),
+      sigs: createSigBatches(2, 2 * KEYS_BATCH_SIZE)
+    }
 
     // second
-    await assertRevert(app.addSigningKeys(0, 1, padKey('0x01'), padSig('0x01'), { from: user1 }), 'APP_AUTH_FAILED')
-    await assertRevert(app.addSigningKeys(0, 1, padKey('0x01'), padSig('0x01'), { from: nobody }), 'APP_AUTH_FAILED')
+    await assertRevert(
+      app.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, packKeyArray(op0Next.keys), packSigArray(op0Next.sigs), { from: user1 }),
+      'APP_AUTH_FAILED'
+    )
+    await assertRevert(
+      app.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, packKeyArray(op0Next.keys), packSigArray(op0Next.sigs), { from: nobody }),
+      'APP_AUTH_FAILED'
+    )
 
-    await assertRevert(app.addSigningKeys(0, 1, pad('0x01', 32), padSig('0x01'), { from: voting }), 'INVALID_LENGTH')
-    await assertRevert(app.addSigningKeys(0, 1, padKey('0x01'), pad('0x01', 90), { from: voting }), 'INVALID_LENGTH')
+    await assertRevert(
+      app.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, packKeyArray(op0Next.keys).slice(0, -2), packSigArray(op0Next.sigs), { from: voting }),
+      'INVALID_LENGTH'
+    )
+    await assertRevert(
+      app.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, packKeyArray(op0Next.keys), packSigArray(op0Next.sigs).slice(0, -2), { from: voting }),
+      'INVALID_LENGTH'
+    )
 
-    await app.addSigningKeys(0, 2, hexConcat(padKey('0x050505'), padKey('0x060606')), hexConcat(padSig('0x02'), padSig('0x03')), {
+    await app.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, packKeyArray(op0Next.keys), packSigArray(op0Next.sigs), {
       from: voting
     })
 
-    // to the second operator
-    await app.addSigningKeys(1, 1, padKey('0x070707'), padSig('0x01'), { from: voting })
-    await assertRevert(app.addSigningKeys(2, 1, padKey('0x080808'), padSig('0x01'), { from: voting }), 'NODE_OPERATOR_NOT_FOUND')
+    const op1 = {
+      keys: createKeyBatches(2),
+      sigs: createSigBatches(2)
+    }
 
-    assertBn(await app.getTotalSigningKeyCount(0, { from: nobody }), 3)
-    assertBn(await app.getTotalSigningKeyCount(1, { from: nobody }), 1)
+    // to the second operator
+    await app.addSigningKeys(1, 2 * KEYS_BATCH_SIZE, packKeyArray(op1.keys), packSigArray(op1.sigs), { from: voting })
+    await assertRevert(
+      app.addSigningKeys(2, 2 * KEYS_BATCH_SIZE, packKeyArray(op1.keys), packSigArray(op1.sigs), { from: voting }),
+      'NODE_OPERATOR_NOT_FOUND'
+    )
+
+    assertBn(await app.getTotalSigningKeyCount(0, { from: nobody }), 2 * KEYS_BATCH_SIZE)
+    assertBn(await app.getTotalSigningKeyCount(1, { from: nobody }), 2 * KEYS_BATCH_SIZE)
   })
 
-  it('rewardAddress can add & remove signing keys', async () => {
+  it('rewardAddress can add & remove merkle roots', async () => {
     await app.addNodeOperator('1', user1, UNLIMITED, { from: voting })
     await app.addNodeOperator('2', user2, UNLIMITED, { from: voting })
 
+    const op0 = {
+      keys: createKeyBatches(2),
+      sigs: createSigBatches(2)
+    }
+    const op1 = {
+      keys: createKeyBatches(2, 2 * KEYS_BATCH_SIZE),
+      sigs: createSigBatches(2, 2 * KEYS_BATCH_SIZE)
+    }
+
     // add to the first operator
-    await assertRevert(app.addSigningKeysOperatorBH(0, 1, padKey('0x01'), padSig('0x01'), { from: nobody }), 'APP_AUTH_FAILED')
-    await app.addSigningKeysOperatorBH(0, 1, padKey('0x010203'), padSig('0x01'), { from: user1 })
+    await assertRevert(
+      app.addSigningKeysOperatorBH(0, 2 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: nobody }),
+      'APP_AUTH_FAILED'
+    )
+    await app.addSigningKeysOperatorBH(0, 2 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: user1 })
 
     // add to the second operator
-    await assertRevert(app.addSigningKeysOperatorBH(1, 1, padKey('0x070707'), padSig('0x01'), { from: nobody }), 'APP_AUTH_FAILED')
-    await assertRevert(app.addSigningKeysOperatorBH(1, 1, padKey('0x070707'), padSig('0x01'), { from: user1 }), 'APP_AUTH_FAILED')
+    await assertRevert(
+      app.addSigningKeysOperatorBH(1, 2 * KEYS_BATCH_SIZE, packKeyArray(op1.keys), packSigArray(op1.sigs), { from: nobody }),
+      'APP_AUTH_FAILED'
+    )
+    await assertRevert(
+      app.addSigningKeysOperatorBH(1, 2 * KEYS_BATCH_SIZE, packKeyArray(op1.keys), packSigArray(op1.sigs), { from: user1 }),
+      'APP_AUTH_FAILED'
+    )
 
-    await app.addSigningKeysOperatorBH(1, 1, padKey('0x070707'), padSig('0x01'), { from: user2 })
+    await app.addSigningKeysOperatorBH(1, 2 * KEYS_BATCH_SIZE, packKeyArray(op1.keys), packSigArray(op1.sigs), { from: user2 })
 
-    assertBn(await app.getTotalSigningKeyCount(0, { from: nobody }), 1)
-    assertBn(await app.getTotalSigningKeyCount(1, { from: nobody }), 1)
+    assertBn(await app.getTotalSigningKeyCount(0, { from: nobody }), 2 * KEYS_BATCH_SIZE)
+    assertBn(await app.getTotalSigningKeyCount(1, { from: nobody }), 2 * KEYS_BATCH_SIZE)
 
     // removal
-    await assertRevert(app.removeSigningKeyOperatorBH(0, 0, { from: nobody }), 'APP_AUTH_FAILED')
-    await app.removeSigningKeyOperatorBH(0, 0, { from: user1 })
+    await assertRevert(app.clearMerkleRootOperatorBH(0, { from: nobody }), 'APP_AUTH_FAILED')
+    await app.clearMerkleRootOperatorBH(0, { from: user1 })
 
-    await assertRevert(app.removeSigningKeyOperatorBH(1, 0, { from: nobody }), 'APP_AUTH_FAILED')
-    await assertRevert(app.removeSigningKeyOperatorBH(1, 0, { from: user1 }), 'APP_AUTH_FAILED')
-    await app.removeSigningKeyOperatorBH(1, 0, { from: user2 })
+    await assertRevert(app.clearMerkleRootOperatorBH(1, { from: nobody }), 'APP_AUTH_FAILED')
+    await assertRevert(app.clearMerkleRootOperatorBH(1, { from: user1 }), 'APP_AUTH_FAILED')
+    await app.clearMerkleRootOperatorBH(1, { from: user2 })
 
     assertBn(await app.getTotalSigningKeyCount(0, { from: nobody }), 0)
     assertBn(await app.getTotalSigningKeyCount(1, { from: nobody }), 0)
@@ -559,26 +632,48 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     assert.equal(empty_recipients, undefined, 'recipients')
     assert.equal(empty_shares, undefined, 'shares')
 
-    await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
+    await app.addNodeOperator('fo o', ADDRESS_1, 16, { from: voting })
     await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
     await app.addNodeOperator('3', ADDRESS_3, UNLIMITED, { from: voting })
 
-    await app.addSigningKeys(0, 2, hexConcat(padKey('0x010101'), padKey('0x020202')), hexConcat(padSig('0x01'), padSig('0x02')), {
+    const op0 = {
+      keys: createKeyBatches(2),
+      sigs: createSigBatches(2)
+    }
+    const op1 = {
+      keys: createKeyBatches(2, 2 * KEYS_BATCH_SIZE),
+      sigs: createSigBatches(2, 2 * KEYS_BATCH_SIZE)
+    }
+    const op2 = {
+      keys: createKeyBatches(2, 4 * KEYS_BATCH_SIZE),
+      sigs: createSigBatches(2, 4 * KEYS_BATCH_SIZE)
+    }
+
+    const operatorArray = [op0, op1, op2]
+
+    await app.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), {
       from: voting
     })
-    await app.addSigningKeys(1, 2, hexConcat(padKey('0x050505'), padKey('0x060606')), hexConcat(padSig('0x04'), padSig('0x03')), {
+    await app.addSigningKeys(1, 2 * KEYS_BATCH_SIZE, packKeyArray(op1.keys), packSigArray(op1.sigs), {
       from: voting
     })
-    await app.addSigningKeys(2, 2, hexConcat(padKey('0x070707'), padKey('0x080808')), hexConcat(padSig('0x05'), padSig('0x06')), {
+    await app.addSigningKeys(2, 2 * KEYS_BATCH_SIZE, packKeyArray(op2.keys), packSigArray(op2.sigs), {
       from: voting
     })
 
-    await pool.assignNextSigningKeys(6)
-    assertBn((await app.getNodeOperator(0, false)).usedSigningKeys, 2, 'op 0 used keys')
-    assertBn((await app.getNodeOperator(1, false)).usedSigningKeys, 2, 'op 1 used keys')
-    assertBn((await app.getNodeOperator(2, false)).usedSigningKeys, 2, 'op 2 used keys')
+    await pool.verifyNextSigningKeys([
+      buildKeyData(operatorArray, 0, 0),
+      buildKeyData(operatorArray, 1, 0),
+      buildKeyData(operatorArray, 2, 0),
+      buildKeyData(operatorArray, 0, 1),
+      buildKeyData(operatorArray, 1, 1),
+      buildKeyData(operatorArray, 2, 1)
+    ])
+    assertBn((await app.getNodeOperator(0, false)).usedSigningKeys, 2 * KEYS_BATCH_SIZE, 'op 0 used keys')
+    assertBn((await app.getNodeOperator(1, false)).usedSigningKeys, 2 * KEYS_BATCH_SIZE, 'op 1 used keys')
+    assertBn((await app.getNodeOperator(2, false)).usedSigningKeys, 2 * KEYS_BATCH_SIZE, 'op 2 used keys')
 
-    await app.reportStoppedValidators(0, 1, { from: voting })
+    await app.reportStoppedValidators(0, KEYS_BATCH_SIZE, { from: voting })
     await app.setNodeOperatorActive(2, false, { from: voting })
 
     const { recipients, shares } = await app.getRewardsDistribution(tokens(900))
