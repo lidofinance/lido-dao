@@ -16,7 +16,7 @@ contract PoolMock {
         operators = INodeOperatorsRegistry(_operators);
     }
 
-    function assignNextSigningKeys(INodeOperatorsRegistry.KeysData[] _keysData) public {
+    function verifyNextSigningKeys(INodeOperatorsRegistry.KeysData[] _keysData) public {
         (bytes memory pubkeys, bytes memory signatures) = operators.verifyNextSigningKeys(_keysData);
         emit KeysAssigned(pubkeys, signatures);
     }

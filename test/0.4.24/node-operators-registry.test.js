@@ -1,5 +1,8 @@
 const { assert } = require('chai')
-const { pad, padKey, padSig, hexConcat, hexSplit, tokens } = require('../helpers/utils')
+const { KEYS_BATCH_SIZE, pad, padKey, padSig, hexConcat, hexSplit, tokens } = require('../helpers/utils')
+const { packKeyArray, packSigArray, createKeyBatches, createSigBatches } = require('./helpers/publicKeyArrays')
+const { buildKeyData } = require('./helpers/keyData')
+
 const { newDao, newApp } = require('./helpers/dao')
 const { ZERO_ADDRESS, getEventAt } = require('@aragon/contract-helpers-test')
 const { assertBn, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
@@ -68,7 +71,14 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
     await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
 
-    await app.addSigningKeys(0, 1, padKey('0x010203'), padSig('0x01'), { from: voting })
+    const op0 = {
+      keys: createKeyBatches(1),
+      sigs: createSigBatches(1)
+    }
+
+    await app.addSigningKeys(0, KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), {
+      from: voting
+    })
 
     let operator = await app.getNodeOperator(0, true)
     assert.equal(operator.active, true)
@@ -76,7 +86,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     assert.equal(operator.rewardAddress, ADDRESS_1)
     assertBn(operator.stakingLimit, 10)
     assertBn(operator.stoppedValidators, 0)
-    assertBn(operator.totalSigningKeys, 1)
+    assertBn(operator.totalSigningKeys, KEYS_BATCH_SIZE)
     assertBn(operator.usedSigningKeys, 0)
 
     operator = await app.getNodeOperator(1, true)
@@ -103,7 +113,12 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
     await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
 
-    await app.addSigningKeys(0, 1, padKey('0x010203'), padSig('0x01'), { from: voting })
+    const op0 = {
+      keys: createKeyBatches(1),
+      sigs: createSigBatches(1)
+    }
+
+    await app.addSigningKeys(0, KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: voting })
 
     assert.equal((await app.getNodeOperator(0, false)).active, true)
     assert.equal((await app.getNodeOperator(1, false)).active, true)
@@ -346,19 +361,34 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
   })
 
   it('reportStoppedValidators works', async () => {
-    await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
+    await app.addNodeOperator('fo o', ADDRESS_1, 20, { from: voting })
     await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
 
-    await app.addSigningKeys(0, 2, hexConcat(padKey('0x010101'), padKey('0x020202')), hexConcat(padSig('0x01'), padSig('0x02')), {
+    const op0 = {
+      keys: createKeyBatches(2),
+      sigs: createSigBatches(2)
+    }
+    const op1 = {
+      keys: createKeyBatches(3, 2 * KEYS_BATCH_SIZE),
+      sigs: createSigBatches(3, 2 * KEYS_BATCH_SIZE)
+    }
+
+    const operatorArray = [op0, op1]
+
+    await app.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), {
       from: voting
     })
-    await app.addSigningKeys(1, 2, hexConcat(padKey('0x050505'), padKey('0x060606')), hexConcat(padSig('0x04'), padSig('0x03')), {
+    await app.addSigningKeys(1, 3 * KEYS_BATCH_SIZE, packKeyArray(op1.keys), packSigArray(op1.sigs), {
       from: voting
     })
 
-    await pool.assignNextSigningKeys(3)
-    assertBn((await app.getNodeOperator(0, false)).usedSigningKeys, 2, 'op 0 used keys')
-    assertBn((await app.getNodeOperator(1, false)).usedSigningKeys, 1, 'op 1 used keys')
+    await pool.verifyNextSigningKeys([
+      buildKeyData(operatorArray, 0, 0),
+      buildKeyData(operatorArray, 1, 0),
+      buildKeyData(operatorArray, 0, 1)
+    ])
+    assertBn((await app.getNodeOperator(0, false)).usedSigningKeys, 2 * KEYS_BATCH_SIZE, 'op 0 used keys')
+    assertBn((await app.getNodeOperator(1, false)).usedSigningKeys, 1 * KEYS_BATCH_SIZE, 'op 1 used key')
 
     await assertRevert(app.reportStoppedValidators(0, 1, { from: user1 }), 'APP_AUTH_FAILED')
     await assertRevert(app.reportStoppedValidators(1, 1, { from: nobody }), 'APP_AUTH_FAILED')
@@ -378,62 +408,85 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     assertBn((await app.getNodeOperator(0, false)).stoppedValidators, 1, 'after stop 2: op 0 stopped validators')
     assertBn((await app.getNodeOperator(1, false)).stoppedValidators, 1, 'after stop 2: op 1 stopped validators')
 
-    await app.reportStoppedValidators(0, 1, { from: voting })
+    await app.reportStoppedValidators(0, 2 * KEYS_BATCH_SIZE - 1, { from: voting })
 
-    assertBn((await app.getNodeOperator(0, false)).stoppedValidators, 2, 'after stop 3: op 0 stopped validators')
+    assertBn((await app.getNodeOperator(0, false)).stoppedValidators, 2 * KEYS_BATCH_SIZE, 'after stop 3: op 0 stopped validators')
     assertBn((await app.getNodeOperator(1, false)).stoppedValidators, 1, 'after stop 3: op 1 stopped validators')
 
     await assertRevert(app.reportStoppedValidators(0, 1, { from: voting }), 'STOPPED_MORE_THAN_LAUNCHED')
-    await assertRevert(app.reportStoppedValidators(1, 12, { from: voting }), 'STOPPED_MORE_THAN_LAUNCHED')
+    await assertRevert(app.reportStoppedValidators(1, 22, { from: voting }), 'STOPPED_MORE_THAN_LAUNCHED')
 
     await assertRevert(app.reportStoppedValidators(10, 1, { from: voting }), 'NODE_OPERATOR_NOT_FOUND')
   })
 
   it('reportStoppedValidators decreases stake', async () => {
-    await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
+    await app.addNodeOperator('fo o', ADDRESS_1, 22, { from: voting })
     await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
 
-    await app.addSigningKeys(0, 2, hexConcat(padKey('0x010101'), padKey('0x020202')), hexConcat(padSig('0x01'), padSig('0x02')), {
+    const op0 = {
+      keys: createKeyBatches(2),
+      sigs: createSigBatches(2)
+    }
+    const op1 = {
+      keys: createKeyBatches(2, 2 * KEYS_BATCH_SIZE),
+      sigs: createSigBatches(2, 2 * KEYS_BATCH_SIZE)
+    }
+
+    const operatorArray = [op0, op1]
+
+    await app.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), {
       from: voting
     })
-    await app.addSigningKeys(1, 2, hexConcat(padKey('0x050505'), padKey('0x060606')), hexConcat(padSig('0x04'), padSig('0x03')), {
+    await app.addSigningKeys(1, 2 * KEYS_BATCH_SIZE, packKeyArray(op1.keys), packSigArray(op1.sigs), {
       from: voting
     })
 
-    await pool.assignNextSigningKeys(1)
+    await pool.verifyNextSigningKeys([buildKeyData(operatorArray, 0, 0)])
 
-    assertBn((await app.getNodeOperator(0, false)).usedSigningKeys, 1, 'before the report: op 0 used keys')
+    assertBn((await app.getNodeOperator(0, false)).usedSigningKeys, KEYS_BATCH_SIZE, 'before the report: op 0 used keys')
     assertBn((await app.getNodeOperator(1, false)).usedSigningKeys, 0, 'before the report: op 1 used keys')
 
-    await app.reportStoppedValidators(0, 1, { from: voting })
-    assertBn((await app.getNodeOperator(0, false)).stoppedValidators, 1, 'op 0 stopped validators')
+    // Operator must lose a whole batch of validators before becoming eligbile again
+    await app.reportStoppedValidators(0, KEYS_BATCH_SIZE, { from: voting })
+    assertBn((await app.getNodeOperator(0, false)).stoppedValidators, KEYS_BATCH_SIZE, 'op 0 stopped validators')
 
-    await pool.assignNextSigningKeys(1)
+    await pool.verifyNextSigningKeys([buildKeyData(operatorArray, 0, 1)])
 
-    assertBn((await app.getNodeOperator(0, false)).usedSigningKeys, 2, 'after the report: op 0 used keys')
+    assertBn((await app.getNodeOperator(0, false)).usedSigningKeys, 2 * KEYS_BATCH_SIZE, 'after the report: op 0 used keys')
     assertBn((await app.getNodeOperator(1, false)).usedSigningKeys, 0, 'after the report: op 1 used keys')
   })
 
   it('trimUnusedKeys works', async () => {
-    await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
+    await app.addNodeOperator('fo o', ADDRESS_1, 20, { from: voting })
     await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
 
-    await app.addSigningKeys(0, 2, hexConcat(padKey('0x010101'), padKey('0x020202')), hexConcat(padSig('0x01'), padSig('0x02')), {
+    const op0 = {
+      keys: createKeyBatches(2),
+      sigs: createSigBatches(2)
+    }
+    const op1 = {
+      keys: createKeyBatches(2, 2 * KEYS_BATCH_SIZE),
+      sigs: createSigBatches(2, 2 * KEYS_BATCH_SIZE)
+    }
+
+    const operatorArray = [op0, op1]
+
+    await app.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), {
       from: voting
     })
-    await app.addSigningKeys(1, 2, hexConcat(padKey('0x050505'), padKey('0x060606')), hexConcat(padSig('0x04'), padSig('0x03')), {
+    await app.addSigningKeys(1, 2 * KEYS_BATCH_SIZE, packKeyArray(op1.keys), packSigArray(op1.sigs), {
       from: voting
     })
 
-    await pool.assignNextSigningKeys(1)
-    assertBn((await app.getNodeOperator(0, false)).usedSigningKeys, 1, 'op 0 used keys')
+    await pool.verifyNextSigningKeys([buildKeyData(operatorArray, 0, 0)])
+    assertBn((await app.getNodeOperator(0, false)).usedSigningKeys, KEYS_BATCH_SIZE, 'op 0 used keys')
 
     await pool.trimUnusedKeys()
 
     assertBn(await app.getUnusedSigningKeyCount(0, { from: nobody }), 0, 'op 0 unused keys')
     assertBn(await app.getUnusedSigningKeyCount(1, { from: nobody }), 0, 'op 1 unused keys')
 
-    assertBn(await app.getTotalSigningKeyCount(0, { from: nobody }), 1, 'op 0 total keys')
+    assertBn(await app.getTotalSigningKeyCount(0, { from: nobody }), KEYS_BATCH_SIZE, 'op 0 total keys')
     assertBn(await app.getTotalSigningKeyCount(1, { from: nobody }), 0, 'op 1 total keys')
   })
 
