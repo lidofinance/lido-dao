@@ -2,20 +2,12 @@ const { hash } = require('eth-ens-namehash')
 const { assert } = require('chai')
 const { newDao, newApp } = require('./helpers/dao')
 const { buildKeyData } = require('./helpers/keyData')
-const {
-  sanitiseKeyArray,
-  sanitiseSigArray,
-  createKeys,
-  createSigs,
-  createKeyBatches,
-  createSigBatches
-} = require('./helpers/publicKeyArrays')
-const { KEYS_BATCH_SIZE, hexConcat, pad, padHash, padKey, padSig } = require('../helpers/utils')
+const { packKeyArray, packSigArray, createKeys, createSigs, createKeyBatches, createSigBatches } = require('./helpers/publicKeyArrays')
+const { KEYS_BATCH_SIZE, hexConcat, pad, padHash, padKey, padSig, ETH, tokens, div15 } = require('../helpers/utils')
 
 const { getInstalledApp } = require('@aragon/contract-helpers-test/src/aragon-os')
 const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
-const { BN } = require('bn.js')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
@@ -31,13 +23,6 @@ const ADDRESS_3 = '0x0000000000000000000000000000000000000003'
 const ADDRESS_4 = '0x0000000000000000000000000000000000000004'
 
 const UNLIMITED = 1000000000
-
-// Divides a BN by 1e15
-
-const div15 = (bn) => bn.div(new BN('1000000000000000'))
-
-const ETH = (value) => web3.utils.toWei(value + '', 'ether')
-const tokens = ETH
 
 contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
   let appBase, nodeOperatorsRegistryBase, app, oracle, depositContract, operators
@@ -173,8 +158,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await operators.addSigningKeys(
       0,
       1 * KEYS_BATCH_SIZE,
-      sanitiseKeyArray(createKeys(KEYS_BATCH_SIZE)),
-      sanitiseKeyArray(createSigs(KEYS_BATCH_SIZE)),
+      packKeyArray(createKeys(KEYS_BATCH_SIZE)),
+      packKeyArray(createSigs(KEYS_BATCH_SIZE)),
       {
         from: voting
       }
@@ -182,8 +167,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     await operators.addSigningKeys(
       1,
       2 * KEYS_BATCH_SIZE,
-      sanitiseKeyArray(createKeys(2 * KEYS_BATCH_SIZE)),
-      sanitiseKeyArray(createSigs(2 * KEYS_BATCH_SIZE)),
+      packKeyArray(createKeys(2 * KEYS_BATCH_SIZE)),
+      packKeyArray(createSigs(2 * KEYS_BATCH_SIZE)),
       {
         from: voting
       }
@@ -237,10 +222,10 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     const operatorArray = [op0, op1]
 
-    await operators.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, sanitiseKeyArray(op0.keys), sanitiseSigArray(op0.sigs), {
+    await operators.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), {
       from: voting
     })
-    await operators.addSigningKeys(1, 3 * KEYS_BATCH_SIZE, sanitiseKeyArray(op1.keys), sanitiseSigArray(op1.sigs), { from: voting })
+    await operators.addSigningKeys(1, 3 * KEYS_BATCH_SIZE, packKeyArray(op1.keys), packSigArray(op1.sigs), { from: voting })
 
     // zero deposits revert
     await assertRevert(app.submit(ZERO_ADDRESS, { from: user1, value: ETH(0) }), 'ZERO_DEPOSIT')
@@ -277,8 +262,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     // set withdrawalCredentials with keys, because they were trimmed
     await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
-    await operators.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, sanitiseKeyArray(op0.keys), sanitiseSigArray(op0.sigs), { from: voting })
-    await operators.addSigningKeys(1, 3 * KEYS_BATCH_SIZE, sanitiseKeyArray(op1.keys), sanitiseSigArray(op1.sigs), { from: voting })
+    await operators.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: voting })
+    await operators.addSigningKeys(1, 3 * KEYS_BATCH_SIZE, packKeyArray(op1.keys), packSigArray(op1.sigs), { from: voting })
 
     // now deposit works
     await app.depositBufferedEther([buildKeyData(operatorArray, 0, 0)])
@@ -349,8 +334,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     const operatorArray = [op0, op1]
 
     await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
-    await operators.addSigningKeys(0, 3 * KEYS_BATCH_SIZE, sanitiseKeyArray(op0.keys), sanitiseSigArray(op0.sigs), { from: voting })
-    await operators.addSigningKeys(1, 3 * KEYS_BATCH_SIZE, sanitiseKeyArray(op1.keys), sanitiseSigArray(op1.sigs), { from: voting })
+    await operators.addSigningKeys(0, 3 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: voting })
+    await operators.addSigningKeys(1, 3 * KEYS_BATCH_SIZE, packKeyArray(op1.keys), packSigArray(op1.sigs), { from: voting })
 
     await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(8 * 32) })
     await app.depositBufferedEther([buildKeyData(operatorArray, 0, 0)])
@@ -396,8 +381,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     const operatorArray = [op0, op1]
 
     await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
-    await operators.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, sanitiseKeyArray(op0.keys), sanitiseSigArray(op0.sigs), { from: voting })
-    await operators.addSigningKeys(1, 2 * KEYS_BATCH_SIZE, sanitiseKeyArray(op1.keys), sanitiseSigArray(op1.sigs), { from: voting })
+    await operators.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: voting })
+    await operators.addSigningKeys(1, 2 * KEYS_BATCH_SIZE, packKeyArray(op1.keys), packSigArray(op1.sigs), { from: voting })
 
     await operators.setNodeOperatorActive(0, false, { from: voting })
     await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(KEYS_BATCH_SIZE * 32) })
@@ -427,13 +412,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
 
     await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
     await operators.addSigningKeys(0, 1, padKey('0x010203'), padSig('0x01'), { from: voting })
-    await operators.addSigningKeys(
-      0,
-      3,
-      sanitiseKeyArray(['0x010204', '0x010205', '0x010206']),
-      sanitiseSigArray(['0x01', '0x01', '0x01']),
-      { from: voting }
-    )
+    await operators.addSigningKeys(0, 3, packKeyArray(['0x010204', '0x010205', '0x010206']), packSigArray(['0x01', '0x01', '0x01']), {
+      from: voting
+    })
 
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(33) })
     await app.depositBufferedEther()
@@ -466,13 +447,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(await app.getBufferedEther(), ETH(100 - 32))
 
     // buffer unwinds
-    await operators.addSigningKeys(
-      0,
-      3,
-      sanitiseKeyArray(['0x010204', '0x010205', '0x010206']),
-      sanitiseSigArray(['0x01', '0x01', '0x01']),
-      { from: voting }
-    )
+    await operators.addSigningKeys(0, 3, packKeyArray(['0x010204', '0x010205', '0x010206']), packSigArray(['0x01', '0x01', '0x01']), {
+      from: voting
+    })
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(1) })
     await app.depositBufferedEther()
     await checkStat({ depositedValidators: 3, beaconValidators: 0, beaconBalance: ETH(0) })
@@ -492,7 +469,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     const operatorArray = [op0]
 
     await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
-    await operators.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, sanitiseKeyArray(op0.keys), sanitiseSigArray(op0.sigs), { from: voting })
+    await operators.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: voting })
 
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(1) })
     await app.depositBufferedEther([buildKeyData(operatorArray, 0, 0)])
@@ -518,7 +495,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     const operatorArray = [op0]
 
     await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
-    await operators.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, sanitiseKeyArray(op0.keys), sanitiseSigArray(op0.sigs), { from: voting })
+    await operators.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: voting })
 
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(KEYS_BATCH_SIZE * 32) })
     await app.depositBufferedEther([buildKeyData(operatorArray, 0, 0)])
@@ -550,7 +527,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     const operatorArray = [op0]
 
     await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
-    await operators.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, sanitiseKeyArray(op0.keys), sanitiseSigArray(op0.sigs), { from: voting })
+    await operators.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: voting })
 
     await app.setFee(5000, { from: voting })
     await app.setFeeDistribution(3000, 2000, 5000, { from: voting })
@@ -619,7 +596,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     const operatorArray = [op0]
 
     await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
-    await operators.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, sanitiseKeyArray(op0.keys), sanitiseSigArray(op0.sigs), { from: voting })
+    await operators.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: voting })
 
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(40 * KEYS_BATCH_SIZE) })
     await app.depositBufferedEther([buildKeyData(operatorArray, 0, 0)])
@@ -655,7 +632,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     const operatorArray = [op0]
 
     await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
-    await operators.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, sanitiseKeyArray(op0.keys), sanitiseSigArray(op0.sigs), { from: voting })
+    await operators.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: voting })
 
     await app.setFee(5000, { from: voting })
     await app.setFeeDistribution(3000, 2000, 5000, { from: voting })
@@ -681,7 +658,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     const operatorArray = [op0]
 
     await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
-    await operators.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, sanitiseKeyArray(op0.keys), sanitiseSigArray(op0.sigs), { from: voting })
+    await operators.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: voting })
 
     await app.setFee(5000, { from: voting })
     await app.setFeeDistribution(3000, 2000, 5000, { from: voting })
@@ -721,7 +698,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     const operatorArray = [op0]
 
     await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
-    await operators.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, sanitiseKeyArray(op0.keys), sanitiseSigArray(op0.sigs), { from: voting })
+    await operators.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: voting })
 
     await app.setFee(5000, { from: voting })
     await app.setFeeDistribution(3000, 2000, 5000, { from: voting })
@@ -766,17 +743,17 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     const operatorArray = [op0, op1, op2, op3]
 
     await operators.addNodeOperator('good', ADDRESS_1, UNLIMITED, { from: voting }) // 0
-    await operators.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, sanitiseKeyArray(op0.keys), sanitiseSigArray(op0.sigs), {
+    await operators.addSigningKeys(0, 2 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), {
       from: voting
     })
 
     await operators.addNodeOperator('limited', ADDRESS_2, KEYS_BATCH_SIZE, { from: voting }) // 1
-    await operators.addSigningKeys(1, 2 * KEYS_BATCH_SIZE, sanitiseKeyArray(op1.keys), sanitiseSigArray(op1.sigs), {
+    await operators.addSigningKeys(1, 2 * KEYS_BATCH_SIZE, packKeyArray(op1.keys), packSigArray(op1.sigs), {
       from: voting
     })
 
     await operators.addNodeOperator('deactivated', ADDRESS_3, UNLIMITED, { from: voting }) // 2
-    await operators.addSigningKeys(2, 2 * KEYS_BATCH_SIZE, sanitiseKeyArray(op2.keys), sanitiseSigArray(op2.sigs), {
+    await operators.addSigningKeys(2, 2 * KEYS_BATCH_SIZE, packKeyArray(op2.keys), packSigArray(op2.sigs), {
       from: voting
     })
     await operators.setNodeOperatorActive(2, false, { from: voting })
