@@ -1,5 +1,5 @@
 const { assert } = require('chai')
-const { hexSplit } = require('../helpers/utils')
+const { pad, padKey, padSig, hexConcat, hexSplit, tokens } = require('../helpers/utils')
 const { newDao, newApp } = require('./helpers/dao')
 const { ZERO_ADDRESS, getEventAt } = require('@aragon/contract-helpers-test')
 const { assertBn, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
@@ -17,23 +17,6 @@ const ADDRESS_3 = '0x0000000000000000000000000000000000000003'
 const ADDRESS_4 = '0x0000000000000000000000000000000000000004'
 
 const UNLIMITED = 1000000000
-
-const pad = (hex, bytesLength) => {
-  const absentZeroes = bytesLength * 2 + 2 - hex.length
-  if (absentZeroes > 0) hex = '0x' + '0'.repeat(absentZeroes) + hex.substr(2)
-  return hex
-}
-
-const hexConcat = (first, ...rest) => {
-  let result = first.startsWith('0x') ? first : '0x' + first
-  rest.forEach((item) => {
-    result += item.startsWith('0x') ? item.substr(2) : item
-  })
-  return result
-}
-
-const ETH = (value) => web3.utils.toWei(value + '', 'ether')
-const tokens = ETH
 
 contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nobody]) => {
   let appBase, app, pool
@@ -85,7 +68,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
     await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
 
-    await app.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
+    await app.addSigningKeys(0, 1, padKey('0x010203'), padSig('0x01'), { from: voting })
 
     let operator = await app.getNodeOperator(0, true)
     assert.equal(operator.active, true)
@@ -120,7 +103,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
     await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
 
-    await app.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
+    await app.addSigningKeys(0, 1, padKey('0x010203'), padSig('0x01'), { from: voting })
 
     assert.equal((await app.getNodeOperator(0, false)).active, true)
     assert.equal((await app.getNodeOperator(1, false)).active, true)
@@ -233,13 +216,13 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     assert.equal(keysAssignedEvt.signatures, null, 'no singing keys added: signatures')
 
     const op0 = {
-      keys: [pad('0xaa0101', 48), pad('0xaa0202', 48), pad('0xaa0303', 48)],
-      sigs: [pad('0xa1', 96), pad('0xa2', 96), pad('0xa3', 96)]
+      keys: [padKey('0xaa0101'), padKey('0xaa0202'), padKey('0xaa0303')],
+      sigs: [padSig('0xa1'), padSig('0xa2'), padSig('0xa3')]
     }
 
     const op1 = {
-      keys: [pad('0xbb0505', 48), pad('0xbb0606', 48), pad('0xbb0707', 48)],
-      sigs: [pad('0xb5', 96), pad('0xb6', 96), pad('0xb7', 96)]
+      keys: [padKey('0xbb0505'), padKey('0xbb0606'), padKey('0xbb0707')],
+      sigs: [padSig('0xb5'), padSig('0xb6'), padSig('0xb7')]
     }
 
     await app.addSigningKeys(0, 3, hexConcat(...op0.keys), hexConcat(...op0.sigs), { from: voting })
@@ -284,13 +267,13 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await app.addNodeOperator(' bar', ADDRESS_2, 10, { from: voting })
 
     const op0 = {
-      keys: [pad('0xaa0101', 48), pad('0xaa0202', 48), pad('0xaa0303', 48)],
-      sigs: [pad('0xa1', 96), pad('0xa2', 96), pad('0xa3', 96)]
+      keys: [padKey('0xaa0101'), padKey('0xaa0202'), padKey('0xaa0303')],
+      sigs: [padSig('0xa1'), padSig('0xa2'), padSig('0xa3')]
     }
 
     const op1 = {
-      keys: [pad('0xbb0505', 48), pad('0xbb0606', 48), pad('0xbb0707', 48)],
-      sigs: [pad('0xb5', 96), pad('0xb6', 96), pad('0xb7', 96)]
+      keys: [padKey('0xbb0505'), padKey('0xbb0606'), padKey('0xbb0707')],
+      sigs: [padSig('0xb5'), padSig('0xb6'), padSig('0xb7')]
     }
 
     await app.addSigningKeys(0, 3, hexConcat(...op0.keys), hexConcat(...op0.sigs), { from: voting })
@@ -322,13 +305,13 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await app.addNodeOperator(' bar', ADDRESS_2, 1, { from: voting })
 
     const op0 = {
-      keys: [pad('0xaa0101', 48), pad('0xaa0202', 48), pad('0xaa0303', 48), pad('0xaa0404', 48)],
-      sigs: [pad('0xa1', 96), pad('0xa2', 96), pad('0xa3', 96), pad('0xa4', 96)]
+      keys: [padKey('0xaa0101'), padKey('0xaa0202'), padKey('0xaa0303'), padKey('0xaa0404')],
+      sigs: [padSig('0xa1'), padSig('0xa2'), padSig('0xa3'), padSig('0xa4')]
     }
 
     const op1 = {
-      keys: [pad('0xbb0505', 48), pad('0xbb0606', 48), pad('0xbb0707', 48)],
-      sigs: [pad('0xb5', 96), pad('0xb6', 96), pad('0xb7', 96)]
+      keys: [padKey('0xbb0505'), padKey('0xbb0606'), padKey('0xbb0707')],
+      sigs: [padSig('0xb5'), padSig('0xb6'), padSig('0xb7')]
     }
 
     await app.addSigningKeys(0, 4, hexConcat(...op0.keys), hexConcat(...op0.sigs), { from: voting })
@@ -366,10 +349,10 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
     await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
 
-    await app.addSigningKeys(0, 2, hexConcat(pad('0x010101', 48), pad('0x020202', 48)), hexConcat(pad('0x01', 96), pad('0x02', 96)), {
+    await app.addSigningKeys(0, 2, hexConcat(padKey('0x010101'), padKey('0x020202')), hexConcat(padSig('0x01'), padSig('0x02')), {
       from: voting
     })
-    await app.addSigningKeys(1, 2, hexConcat(pad('0x050505', 48), pad('0x060606', 48)), hexConcat(pad('0x04', 96), pad('0x03', 96)), {
+    await app.addSigningKeys(1, 2, hexConcat(padKey('0x050505'), padKey('0x060606')), hexConcat(padSig('0x04'), padSig('0x03')), {
       from: voting
     })
 
@@ -410,10 +393,10 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
     await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
 
-    await app.addSigningKeys(0, 2, hexConcat(pad('0x010101', 48), pad('0x020202', 48)), hexConcat(pad('0x01', 96), pad('0x02', 96)), {
+    await app.addSigningKeys(0, 2, hexConcat(padKey('0x010101'), padKey('0x020202')), hexConcat(padSig('0x01'), padSig('0x02')), {
       from: voting
     })
-    await app.addSigningKeys(1, 2, hexConcat(pad('0x050505', 48), pad('0x060606', 48)), hexConcat(pad('0x04', 96), pad('0x03', 96)), {
+    await app.addSigningKeys(1, 2, hexConcat(padKey('0x050505'), padKey('0x060606')), hexConcat(padSig('0x04'), padSig('0x03')), {
       from: voting
     })
 
@@ -435,10 +418,10 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
     await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
 
-    await app.addSigningKeys(0, 2, hexConcat(pad('0x010101', 48), pad('0x020202', 48)), hexConcat(pad('0x01', 96), pad('0x02', 96)), {
+    await app.addSigningKeys(0, 2, hexConcat(padKey('0x010101'), padKey('0x020202')), hexConcat(padSig('0x01'), padSig('0x02')), {
       from: voting
     })
-    await app.addSigningKeys(1, 2, hexConcat(pad('0x050505', 48), pad('0x060606', 48)), hexConcat(pad('0x04', 96), pad('0x03', 96)), {
+    await app.addSigningKeys(1, 2, hexConcat(padKey('0x050505'), padKey('0x060606')), hexConcat(padSig('0x04'), padSig('0x03')), {
       from: voting
     })
 
@@ -459,30 +442,30 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await app.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
 
     // first
-    await assertRevert(app.addSigningKeys(0, 1, pad('0x01', 48), pad('0x01', 96), { from: user1 }), 'APP_AUTH_FAILED')
-    await assertRevert(app.addSigningKeys(0, 1, pad('0x01', 48), pad('0x01', 96), { from: nobody }), 'APP_AUTH_FAILED')
+    await assertRevert(app.addSigningKeys(0, 1, padKey('0x01'), padSig('0x01'), { from: user1 }), 'APP_AUTH_FAILED')
+    await assertRevert(app.addSigningKeys(0, 1, padKey('0x01'), padSig('0x01'), { from: nobody }), 'APP_AUTH_FAILED')
 
     await assertRevert(app.addSigningKeys(0, 0, '0x', '0x', { from: voting }), 'NO_KEYS')
-    await assertRevert(app.addSigningKeys(0, 1, pad('0x00', 48), pad('0x01', 96), { from: voting }), 'EMPTY_KEY')
-    await assertRevert(app.addSigningKeys(0, 1, pad('0x01', 32), pad('0x01', 96), { from: voting }), 'INVALID_LENGTH')
-    await assertRevert(app.addSigningKeys(0, 1, pad('0x01', 48), pad('0x01', 90), { from: voting }), 'INVALID_LENGTH')
+    await assertRevert(app.addSigningKeys(0, 1, padKey('0x00'), padSig('0x01'), { from: voting }), 'EMPTY_KEY')
+    await assertRevert(app.addSigningKeys(0, 1, pad('0x01', 32), padSig('0x01'), { from: voting }), 'INVALID_LENGTH')
+    await assertRevert(app.addSigningKeys(0, 1, padKey('0x01'), pad('0x01', 90), { from: voting }), 'INVALID_LENGTH')
 
-    await app.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
+    await app.addSigningKeys(0, 1, padKey('0x010203'), padSig('0x01'), { from: voting })
 
     // second
-    await assertRevert(app.addSigningKeys(0, 1, pad('0x01', 48), pad('0x01', 96), { from: user1 }), 'APP_AUTH_FAILED')
-    await assertRevert(app.addSigningKeys(0, 1, pad('0x01', 48), pad('0x01', 96), { from: nobody }), 'APP_AUTH_FAILED')
+    await assertRevert(app.addSigningKeys(0, 1, padKey('0x01'), padSig('0x01'), { from: user1 }), 'APP_AUTH_FAILED')
+    await assertRevert(app.addSigningKeys(0, 1, padKey('0x01'), padSig('0x01'), { from: nobody }), 'APP_AUTH_FAILED')
 
-    await assertRevert(app.addSigningKeys(0, 1, pad('0x01', 32), pad('0x01', 96), { from: voting }), 'INVALID_LENGTH')
-    await assertRevert(app.addSigningKeys(0, 1, pad('0x01', 48), pad('0x01', 90), { from: voting }), 'INVALID_LENGTH')
+    await assertRevert(app.addSigningKeys(0, 1, pad('0x01', 32), padSig('0x01'), { from: voting }), 'INVALID_LENGTH')
+    await assertRevert(app.addSigningKeys(0, 1, padKey('0x01'), pad('0x01', 90), { from: voting }), 'INVALID_LENGTH')
 
-    await app.addSigningKeys(0, 2, hexConcat(pad('0x050505', 48), pad('0x060606', 48)), hexConcat(pad('0x02', 96), pad('0x03', 96)), {
+    await app.addSigningKeys(0, 2, hexConcat(padKey('0x050505'), padKey('0x060606')), hexConcat(padSig('0x02'), padSig('0x03')), {
       from: voting
     })
 
     // to the second operator
-    await app.addSigningKeys(1, 1, pad('0x070707', 48), pad('0x01', 96), { from: voting })
-    await assertRevert(app.addSigningKeys(2, 1, pad('0x080808', 48), pad('0x01', 96), { from: voting }), 'NODE_OPERATOR_NOT_FOUND')
+    await app.addSigningKeys(1, 1, padKey('0x070707'), padSig('0x01'), { from: voting })
+    await assertRevert(app.addSigningKeys(2, 1, padKey('0x080808'), padSig('0x01'), { from: voting }), 'NODE_OPERATOR_NOT_FOUND')
 
     assertBn(await app.getTotalSigningKeyCount(0, { from: nobody }), 3)
     assertBn(await app.getTotalSigningKeyCount(1, { from: nobody }), 1)
@@ -493,14 +476,14 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await app.addNodeOperator('2', user2, UNLIMITED, { from: voting })
 
     // add to the first operator
-    await assertRevert(app.addSigningKeysOperatorBH(0, 1, pad('0x01', 48), pad('0x01', 96), { from: nobody }), 'APP_AUTH_FAILED')
-    await app.addSigningKeysOperatorBH(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: user1 })
+    await assertRevert(app.addSigningKeysOperatorBH(0, 1, padKey('0x01'), padSig('0x01'), { from: nobody }), 'APP_AUTH_FAILED')
+    await app.addSigningKeysOperatorBH(0, 1, padKey('0x010203'), padSig('0x01'), { from: user1 })
 
     // add to the second operator
-    await assertRevert(app.addSigningKeysOperatorBH(1, 1, pad('0x070707', 48), pad('0x01', 96), { from: nobody }), 'APP_AUTH_FAILED')
-    await assertRevert(app.addSigningKeysOperatorBH(1, 1, pad('0x070707', 48), pad('0x01', 96), { from: user1 }), 'APP_AUTH_FAILED')
+    await assertRevert(app.addSigningKeysOperatorBH(1, 1, padKey('0x070707'), padSig('0x01'), { from: nobody }), 'APP_AUTH_FAILED')
+    await assertRevert(app.addSigningKeysOperatorBH(1, 1, padKey('0x070707'), padSig('0x01'), { from: user1 }), 'APP_AUTH_FAILED')
 
-    await app.addSigningKeysOperatorBH(1, 1, pad('0x070707', 48), pad('0x01', 96), { from: user2 })
+    await app.addSigningKeysOperatorBH(1, 1, padKey('0x070707'), padSig('0x01'), { from: user2 })
 
     assertBn(await app.getTotalSigningKeyCount(0, { from: nobody }), 1)
     assertBn(await app.getTotalSigningKeyCount(1, { from: nobody }), 1)
@@ -522,36 +505,36 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await app.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
 
     // first
-    await app.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
+    await app.addSigningKeys(0, 1, padKey('0x010203'), padSig('0x01'), { from: voting })
 
     assertBn(await app.getTotalSigningKeyCount(0, { from: nobody }), 1)
     assertBn(await app.getUnusedSigningKeyCount(0, { from: nobody }), 1)
     {
       const { key, depositSignature: sig, used } = await app.getSigningKey(0, 0, { from: nobody })
-      assert.equal(key, pad('0x010203', 48))
-      assert.equal(sig, pad('0x01', 96))
+      assert.equal(key, padKey('0x010203'))
+      assert.equal(sig, padSig('0x01'))
       assert.equal(used, false)
     }
 
     // second
-    await app.addSigningKeys(0, 2, hexConcat(pad('0x050505', 48), pad('0x060606', 48)), hexConcat(pad('0x02', 96), pad('0x03', 96)), {
+    await app.addSigningKeys(0, 2, hexConcat(padKey('0x050505'), padKey('0x060606')), hexConcat(padSig('0x02'), padSig('0x03')), {
       from: voting
     })
 
     assertBn(await app.getTotalSigningKeyCount(0, { from: nobody }), 3)
     assertBn(await app.getUnusedSigningKeyCount(0, { from: nobody }), 3)
-    assert.equal((await app.getSigningKey(0, 0, { from: nobody })).key, pad('0x010203', 48))
+    assert.equal((await app.getSigningKey(0, 0, { from: nobody })).key, padKey('0x010203'))
 
     {
       const { key, depositSignature: sig, used } = await app.getSigningKey(0, 1, { from: nobody })
-      assert.equal(key, pad('0x050505', 48))
-      assert.equal(sig, pad('0x02', 96))
+      assert.equal(key, padKey('0x050505'))
+      assert.equal(sig, padSig('0x02'))
       assert.equal(used, false)
     }
     {
       const { key, depositSignature: sig, used } = await app.getSigningKey(0, 2, { from: nobody })
-      assert.equal(key, pad('0x060606', 48))
-      assert.equal(sig, pad('0x03', 96))
+      assert.equal(key, padKey('0x060606'))
+      assert.equal(sig, padSig('0x03'))
       assert.equal(used, false)
     }
 
@@ -559,21 +542,21 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await assertRevert(app.getSigningKey(0, 1000, { from: nobody }), 'KEY_NOT_FOUND')
 
     // to the second operator
-    await app.addSigningKeys(1, 1, pad('0x070707', 48), pad('0x01', 96), { from: voting })
+    await app.addSigningKeys(1, 1, padKey('0x070707'), padSig('0x01'), { from: voting })
     assertBn(await app.getTotalSigningKeyCount(1, { from: nobody }), 1)
     assertBn(await app.getUnusedSigningKeyCount(1, { from: nobody }), 1)
     {
       const { key, depositSignature: sig, used } = await app.getSigningKey(1, 0, { from: nobody })
-      assert.equal(key, pad('0x070707', 48))
-      assert.equal(sig, pad('0x01', 96))
+      assert.equal(key, padKey('0x070707'))
+      assert.equal(sig, padSig('0x01'))
       assert.equal(used, false)
     }
 
     // the first is untouched
     assertBn(await app.getTotalSigningKeyCount(0, { from: nobody }), 3)
     assertBn(await app.getUnusedSigningKeyCount(0, { from: nobody }), 3)
-    assert.equal((await app.getSigningKey(0, 0, { from: nobody })).key, pad('0x010203', 48))
-    assert.equal((await app.getSigningKey(0, 1, { from: nobody })).key, pad('0x050505', 48))
+    assert.equal((await app.getSigningKey(0, 0, { from: nobody })).key, padKey('0x010203'))
+    assert.equal((await app.getSigningKey(0, 1, { from: nobody })).key, padKey('0x050505'))
 
     await assertRevert(app.getTotalSigningKeyCount(2, { from: nobody }), 'NODE_OPERATOR_NOT_FOUND')
     await assertRevert(app.getUnusedSigningKeyCount(2, { from: nobody }), 'NODE_OPERATOR_NOT_FOUND')
@@ -583,7 +566,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await app.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
     await app.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
 
-    await app.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
+    await app.addSigningKeys(0, 1, padKey('0x010203'), padSig('0x01'), { from: voting })
 
     await assertRevert(app.removeSigningKey(0, 0, { from: user1 }), 'APP_AUTH_FAILED')
     await assertRevert(app.removeSigningKey(0, 0, { from: nobody }), 'APP_AUTH_FAILED')
@@ -594,20 +577,20 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await assertRevert(app.removeSigningKey(0, 0, { from: voting }), 'KEY_NOT_FOUND')
 
     // to the second operator
-    await app.addSigningKeys(1, 1, pad('0x070707', 48), pad('0x01', 96), { from: voting })
+    await app.addSigningKeys(1, 1, padKey('0x070707'), padSig('0x01'), { from: voting })
 
     // again to the first
-    await app.addSigningKeys(0, 1, pad('0x010204', 48), pad('0x01', 96), { from: voting })
-    await app.addSigningKeys(0, 1, pad('0x010205', 48), pad('0x01', 96), { from: voting })
-    await app.addSigningKeys(0, 1, pad('0x010206', 48), pad('0x01', 96), { from: voting })
+    await app.addSigningKeys(0, 1, padKey('0x010204'), padSig('0x01'), { from: voting })
+    await app.addSigningKeys(0, 1, padKey('0x010205'), padSig('0x01'), { from: voting })
+    await app.addSigningKeys(0, 1, padKey('0x010206'), padSig('0x01'), { from: voting })
     assertBn(await app.getTotalSigningKeyCount(0, { from: nobody }), 3)
     assertBn(await app.getUnusedSigningKeyCount(0, { from: nobody }), 3)
 
     await app.removeSigningKey(0, 0, { from: voting })
     assertBn(await app.getTotalSigningKeyCount(0, { from: nobody }), 2)
     assertBn(await app.getUnusedSigningKeyCount(0, { from: nobody }), 2)
-    assert.equal((await app.getSigningKey(0, 0, { from: nobody })).key, pad('0x010206', 48))
-    assert.equal((await app.getSigningKey(0, 1, { from: nobody })).key, pad('0x010205', 48))
+    assert.equal((await app.getSigningKey(0, 0, { from: nobody })).key, padKey('0x010206'))
+    assert.equal((await app.getSigningKey(0, 1, { from: nobody })).key, padKey('0x010205'))
 
     await app.removeSigningKey(0, 1, { from: voting })
     await assertRevert(app.removeSigningKey(0, 1, { from: voting }), 'KEY_NOT_FOUND')
@@ -615,10 +598,10 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     assertBn(await app.getTotalSigningKeyCount(0, { from: nobody }), 1)
     assertBn(await app.getUnusedSigningKeyCount(0, { from: nobody }), 1)
-    assert.equal((await app.getSigningKey(0, 0, { from: nobody })).key, pad('0x010206', 48))
+    assert.equal((await app.getSigningKey(0, 0, { from: nobody })).key, padKey('0x010206'))
 
     // back to the second operator
-    assert.equal((await app.getSigningKey(1, 0, { from: nobody })).key, pad('0x070707', 48))
+    assert.equal((await app.getSigningKey(1, 0, { from: nobody })).key, padKey('0x070707'))
     await app.removeSigningKey(1, 0, { from: voting })
     await assertRevert(app.getSigningKey(1, 0, { from: nobody }), 'KEY_NOT_FOUND')
   })
@@ -633,13 +616,13 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
     await app.addNodeOperator('3', ADDRESS_3, UNLIMITED, { from: voting })
 
-    await app.addSigningKeys(0, 2, hexConcat(pad('0x010101', 48), pad('0x020202', 48)), hexConcat(pad('0x01', 96), pad('0x02', 96)), {
+    await app.addSigningKeys(0, 2, hexConcat(padKey('0x010101'), padKey('0x020202')), hexConcat(padSig('0x01'), padSig('0x02')), {
       from: voting
     })
-    await app.addSigningKeys(1, 2, hexConcat(pad('0x050505', 48), pad('0x060606', 48)), hexConcat(pad('0x04', 96), pad('0x03', 96)), {
+    await app.addSigningKeys(1, 2, hexConcat(padKey('0x050505'), padKey('0x060606')), hexConcat(padSig('0x04'), padSig('0x03')), {
       from: voting
     })
-    await app.addSigningKeys(2, 2, hexConcat(pad('0x070707', 48), pad('0x080808', 48)), hexConcat(pad('0x05', 96), pad('0x06', 96)), {
+    await app.addSigningKeys(2, 2, hexConcat(padKey('0x070707'), padKey('0x080808')), hexConcat(padSig('0x05'), padSig('0x06')), {
       from: voting
     })
 

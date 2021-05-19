@@ -1,10 +1,9 @@
 const { assert } = require('chai')
 const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
+const { tokens } = require('../helpers/utils')
 
 const StETH = artifacts.require('StETHMock')
-
-const tokens = (value) => web3.utils.toWei(value + '', 'ether')
 
 contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
   let stEth

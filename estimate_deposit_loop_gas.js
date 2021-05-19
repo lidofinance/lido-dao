@@ -1,7 +1,7 @@
 const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 const { getEventArgument, ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 
-const { pad, ETH, hexConcat, toBN } = require('./test/helpers/utils')
+const { pad, padHash, ETH, hexConcat, toBN } = require('./test/helpers/utils')
 const { deployDaoAndPool } = require('./test/scenario/helpers/deploy')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
@@ -24,7 +24,7 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
   let pool, nodeOperatorRegistry, depositContractMock
 
   const arbitraryN = toBN('0x0159e2036050fb43f6ecaca13a7b53b23ea54a623e47fb2bd89a5b4a18da3295')
-  const withdrawalCredentials = pad('0x0202', 32)
+  const withdrawalCredentials = padHash('0x0202')
   const validatorData = []
 
   it('DAO, node operators registry, token, and pool are deployed and initialized', async () => {
