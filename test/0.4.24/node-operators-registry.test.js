@@ -1,18 +1,15 @@
 const { assert } = require('chai')
-const { KEYS_BATCH_SIZE, pad, padKey, padSig, hexConcat, hexSplit, tokens } = require('../helpers/utils')
+const { KEYS_BATCH_SIZE, pad, padKey, padSig, tokens } = require('../helpers/utils')
 const { packKeyArray, packSigArray, createKeyBatches, createSigBatches } = require('./helpers/publicKeyArrays')
 const { buildKeyData } = require('./helpers/keyData')
 
 const { newDao, newApp } = require('./helpers/dao')
-const { ZERO_ADDRESS, getEventAt } = require('@aragon/contract-helpers-test')
+const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 const { assertBn, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry.sol')
 const PoolMock = artifacts.require('PoolMock.sol')
 const ERC20Mock = artifacts.require('ERC20Mock.sol')
-
-const PUBKEY_LENGTH_BYTES = 48
-const SIGNATURE_LENGTH_BYTES = 96
 
 const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
 const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
@@ -215,20 +212,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
   })
 
   it('verifyNextSigningKeys works', async () => {
-    let result = await pool.verifyNextSigningKeys([])
-    let keysAssignedEvt = getEventAt(result, 'KeysAssigned').args
-
-    assert.equal(keysAssignedEvt.pubkeys, null, 'empty cache, no singing keys added: pubkeys')
-    assert.equal(keysAssignedEvt.signatures, null, 'empty cache, no singing keys added: signatures')
-
     await app.addNodeOperator('fo o', ADDRESS_1, 80, { from: voting })
     await app.addNodeOperator(' bar', ADDRESS_2, 80, { from: voting })
-
-    result = await pool.verifyNextSigningKeys([])
-    keysAssignedEvt = getEventAt(result, 'KeysAssigned').args
-
-    assert.equal(keysAssignedEvt.pubkeys, null, 'no singing keys added: pubkeys')
-    assert.equal(keysAssignedEvt.signatures, null, 'no singing keys added: signatures')
 
     const op0 = {
       keys: createKeyBatches(3),
@@ -248,40 +233,15 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await app.addSigningKeys(0, 3 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: voting })
     await app.addSigningKeys(1, 3 * KEYS_BATCH_SIZE, packKeyArray(op1.keys), packSigArray(op1.sigs), { from: voting })
 
-    result = await pool.verifyNextSigningKeys([buildKeyData(operatorArray, 0, 0)])
-    keysAssignedEvt = getEventAt(result, 'KeysAssigned').args
+    await pool.verifyNextSigningKeys([buildKeyData(operatorArray, 0, 0)])
 
-    assert.equal(keysAssignedEvt.pubkeys, packKeyArray(op0.keys[0]), 'assignment 1: pubkeys')
-    assert.equal(keysAssignedEvt.signatures, packKeyArray(op0.sigs[0]), 'assignment 1: signatures')
+    await pool.verifyNextSigningKeys([buildKeyData(operatorArray, 1, 0), buildKeyData(operatorArray, 0, 1)])
 
-    result = await pool.verifyNextSigningKeys([buildKeyData(operatorArray, 1, 0), buildKeyData(operatorArray, 0, 1)])
-    keysAssignedEvt = getEventAt(result, 'KeysAssigned').args
-
-    assert.sameMembers(hexSplit(keysAssignedEvt.pubkeys, PUBKEY_LENGTH_BYTES), [...op0.keys[1], ...op1.keys[0]], 'assignment 2: pubkeys')
-    assert.sameMembers(
-      hexSplit(keysAssignedEvt.signatures, SIGNATURE_LENGTH_BYTES),
-      [...op0.sigs[1], ...op1.sigs[0]],
-      'assignment 2: signatures'
-    )
-
-    result = await pool.verifyNextSigningKeys([
+    await pool.verifyNextSigningKeys([
       buildKeyData(operatorArray, 1, 1),
       buildKeyData(operatorArray, 0, 2),
       buildKeyData(operatorArray, 1, 2)
     ])
-    keysAssignedEvt = getEventAt(result, 'KeysAssigned').args
-
-    assert.sameMembers(
-      hexSplit(keysAssignedEvt.pubkeys, PUBKEY_LENGTH_BYTES),
-      [...op0.keys[2], ...op1.keys[1], ...op1.keys[2]],
-      'assignment 2: pubkeys'
-    )
-
-    assert.sameMembers(
-      hexSplit(keysAssignedEvt.signatures, SIGNATURE_LENGTH_BYTES),
-      [...op0.sigs[2], ...op1.sigs[1], ...op1.sigs[2]],
-      'assignment 2: signatures'
-    )
   })
 
   it('assignNextSigningKeys skips stopped operators', async () => {
@@ -302,27 +262,10 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await app.addSigningKeys(0, 3 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: voting })
     await app.addSigningKeys(1, 3 * KEYS_BATCH_SIZE, packKeyArray(op1.keys), packSigArray(op1.sigs), { from: voting })
 
-    let result = await pool.verifyNextSigningKeys([buildKeyData(operatorArray, 0, 0), buildKeyData(operatorArray, 1, 0)])
-    let keysAssignedEvt = getEventAt(result, 'KeysAssigned').args
-
-    assert.sameMembers(hexSplit(keysAssignedEvt.pubkeys, PUBKEY_LENGTH_BYTES), [...op0.keys[0], ...op1.keys[0]], 'assignment 1: pubkeys')
-    assert.sameMembers(
-      hexSplit(keysAssignedEvt.signatures, SIGNATURE_LENGTH_BYTES),
-      [...op0.sigs[0], ...op1.sigs[0]],
-      'assignment 1: signatures'
-    )
-
+    await pool.verifyNextSigningKeys([buildKeyData(operatorArray, 0, 0), buildKeyData(operatorArray, 1, 0)])
     await app.setNodeOperatorActive(0, false, { from: voting })
 
-    result = await pool.verifyNextSigningKeys([buildKeyData(operatorArray, 1, 1), buildKeyData(operatorArray, 1, 2)])
-    keysAssignedEvt = getEventAt(result, 'KeysAssigned').args
-
-    assert.sameMembers(hexSplit(keysAssignedEvt.pubkeys, PUBKEY_LENGTH_BYTES), [...op1.keys[1], ...op1.keys[2]], 'assignment 2: pubkeys')
-    assert.sameMembers(
-      hexSplit(keysAssignedEvt.signatures, SIGNATURE_LENGTH_BYTES),
-      [...op1.sigs[1], ...op1.sigs[2]],
-      'assignment 2: signatures'
-    )
+    await pool.verifyNextSigningKeys([buildKeyData(operatorArray, 1, 1), buildKeyData(operatorArray, 1, 2)])
   })
 
   it('assignNextSigningKeys respects staking limit', async () => {
@@ -343,37 +286,16 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await app.addSigningKeys(0, 4 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: voting })
     await app.addSigningKeys(1, 3 * KEYS_BATCH_SIZE, packKeyArray(op1.keys), packSigArray(op1.sigs), { from: voting })
 
-    let result = await pool.verifyNextSigningKeys([
+    await pool.verifyNextSigningKeys([
       buildKeyData(operatorArray, 0, 0),
       buildKeyData(operatorArray, 1, 0),
       buildKeyData(operatorArray, 0, 1)
     ])
-    let keysAssignedEvt = getEventAt(result, 'KeysAssigned').args
-
-    assert.sameMembers(
-      hexSplit(keysAssignedEvt.pubkeys, PUBKEY_LENGTH_BYTES),
-      [...op0.keys[0], ...op0.keys[1], ...op1.keys[0]],
-      'assignment 1: pubkeys'
-    )
-
-    assert.sameMembers(
-      hexSplit(keysAssignedEvt.signatures, SIGNATURE_LENGTH_BYTES),
-      [...op0.sigs[0], ...op0.sigs[1], ...op1.sigs[0]],
-      'assignment 1: signatures'
-    )
 
     assertBn((await app.getNodeOperator(0, false)).usedSigningKeys, 2 * KEYS_BATCH_SIZE, 'assignment 1: op 0 used keys')
     assertBn((await app.getNodeOperator(1, false)).usedSigningKeys, 1 * KEYS_BATCH_SIZE, 'assignment 1: op 1 used keys')
 
-    result = await pool.verifyNextSigningKeys([buildKeyData(operatorArray, 0, 2), buildKeyData(operatorArray, 0, 3)])
-    keysAssignedEvt = getEventAt(result, 'KeysAssigned').args
-
-    assert.sameMembers(hexSplit(keysAssignedEvt.pubkeys, PUBKEY_LENGTH_BYTES), [...op0.keys[2], ...op0.keys[3]], 'assignment 2: pubkeys')
-    assert.sameMembers(
-      hexSplit(keysAssignedEvt.signatures, SIGNATURE_LENGTH_BYTES),
-      [...op0.sigs[2], ...op0.sigs[3]],
-      'assignment 2: signatures'
-    )
+    await pool.verifyNextSigningKeys([buildKeyData(operatorArray, 0, 2), buildKeyData(operatorArray, 0, 3)])
 
     assertBn((await app.getNodeOperator(0, false)).usedSigningKeys, 4 * KEYS_BATCH_SIZE, 'assignment 2: op 0 used keys')
     assertBn((await app.getNodeOperator(1, false)).usedSigningKeys, 1 * KEYS_BATCH_SIZE, 'assignment 2: op 1 used keys')
