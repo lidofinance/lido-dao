@@ -211,94 +211,100 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await assertRevert(app.setNodeOperatorStakingLimit(10, 40, { from: voting }), 'NODE_OPERATOR_NOT_FOUND')
   })
 
-  it('verifyNextSigningKeys works', async () => {
-    await app.addNodeOperator('fo o', ADDRESS_1, 80, { from: voting })
-    await app.addNodeOperator(' bar', ADDRESS_2, 80, { from: voting })
+  describe('verifyNextSigningKeys', () => {
+    it('reverts when passed an empty array', async () => {
+      await assertRevert(pool.verifyNextSigningKeys([]), 'No keys provided')
+    })
 
-    const op0 = {
-      keys: createKeyBatches(3),
-      sigs: createSigBatches(3)
-    }
-    const op1 = {
-      keys: createKeyBatches(3, 3 * KEYS_BATCH_SIZE),
-      sigs: createSigBatches(3, 3 * KEYS_BATCH_SIZE)
-    }
-    const op2 = {
-      keys: createKeyBatches(3, 6 * KEYS_BATCH_SIZE),
-      sigs: createSigBatches(3, 6 * KEYS_BATCH_SIZE)
-    }
+    it('works', async () => {
+      await app.addNodeOperator('fo o', ADDRESS_1, 80, { from: voting })
+      await app.addNodeOperator(' bar', ADDRESS_2, 80, { from: voting })
 
-    const operatorArray = [op0, op1, op2]
+      const op0 = {
+        keys: createKeyBatches(3),
+        sigs: createSigBatches(3)
+      }
+      const op1 = {
+        keys: createKeyBatches(3, 3 * KEYS_BATCH_SIZE),
+        sigs: createSigBatches(3, 3 * KEYS_BATCH_SIZE)
+      }
+      const op2 = {
+        keys: createKeyBatches(3, 6 * KEYS_BATCH_SIZE),
+        sigs: createSigBatches(3, 6 * KEYS_BATCH_SIZE)
+      }
 
-    await app.addSigningKeys(0, 3 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: voting })
-    await app.addSigningKeys(1, 3 * KEYS_BATCH_SIZE, packKeyArray(op1.keys), packSigArray(op1.sigs), { from: voting })
+      const operatorArray = [op0, op1, op2]
 
-    await pool.verifyNextSigningKeys([buildKeyData(operatorArray, 0, 0)])
+      await app.addSigningKeys(0, 3 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: voting })
+      await app.addSigningKeys(1, 3 * KEYS_BATCH_SIZE, packKeyArray(op1.keys), packSigArray(op1.sigs), { from: voting })
 
-    await pool.verifyNextSigningKeys([buildKeyData(operatorArray, 1, 0), buildKeyData(operatorArray, 0, 1)])
+      await pool.verifyNextSigningKeys([buildKeyData(operatorArray, 0, 0)])
 
-    await pool.verifyNextSigningKeys([
-      buildKeyData(operatorArray, 1, 1),
-      buildKeyData(operatorArray, 0, 2),
-      buildKeyData(operatorArray, 1, 2)
-    ])
-  })
+      await pool.verifyNextSigningKeys([buildKeyData(operatorArray, 1, 0), buildKeyData(operatorArray, 0, 1)])
 
-  it('assignNextSigningKeys skips stopped operators', async () => {
-    await app.addNodeOperator('fo o', ADDRESS_1, 10 * KEYS_BATCH_SIZE, { from: voting })
-    await app.addNodeOperator(' bar', ADDRESS_2, 10 * KEYS_BATCH_SIZE, { from: voting })
+      await pool.verifyNextSigningKeys([
+        buildKeyData(operatorArray, 1, 1),
+        buildKeyData(operatorArray, 0, 2),
+        buildKeyData(operatorArray, 1, 2)
+      ])
+    })
 
-    const op0 = {
-      keys: createKeyBatches(3),
-      sigs: createSigBatches(3)
-    }
-    const op1 = {
-      keys: createKeyBatches(3, 3 * KEYS_BATCH_SIZE),
-      sigs: createSigBatches(3, 3 * KEYS_BATCH_SIZE)
-    }
+    it('skips stopped operators', async () => {
+      await app.addNodeOperator('fo o', ADDRESS_1, 10 * KEYS_BATCH_SIZE, { from: voting })
+      await app.addNodeOperator(' bar', ADDRESS_2, 10 * KEYS_BATCH_SIZE, { from: voting })
 
-    const operatorArray = [op0, op1]
+      const op0 = {
+        keys: createKeyBatches(3),
+        sigs: createSigBatches(3)
+      }
+      const op1 = {
+        keys: createKeyBatches(3, 3 * KEYS_BATCH_SIZE),
+        sigs: createSigBatches(3, 3 * KEYS_BATCH_SIZE)
+      }
 
-    await app.addSigningKeys(0, 3 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: voting })
-    await app.addSigningKeys(1, 3 * KEYS_BATCH_SIZE, packKeyArray(op1.keys), packSigArray(op1.sigs), { from: voting })
+      const operatorArray = [op0, op1]
 
-    await pool.verifyNextSigningKeys([buildKeyData(operatorArray, 0, 0), buildKeyData(operatorArray, 1, 0)])
-    await app.setNodeOperatorActive(0, false, { from: voting })
+      await app.addSigningKeys(0, 3 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: voting })
+      await app.addSigningKeys(1, 3 * KEYS_BATCH_SIZE, packKeyArray(op1.keys), packSigArray(op1.sigs), { from: voting })
 
-    await pool.verifyNextSigningKeys([buildKeyData(operatorArray, 1, 1), buildKeyData(operatorArray, 1, 2)])
-  })
+      await pool.verifyNextSigningKeys([buildKeyData(operatorArray, 0, 0), buildKeyData(operatorArray, 1, 0)])
+      await app.setNodeOperatorActive(0, false, { from: voting })
 
-  it('assignNextSigningKeys respects staking limit', async () => {
-    await app.addNodeOperator('fo o', ADDRESS_1, 4 * KEYS_BATCH_SIZE, { from: voting })
-    await app.addNodeOperator(' bar', ADDRESS_2, 1 * KEYS_BATCH_SIZE, { from: voting })
+      await pool.verifyNextSigningKeys([buildKeyData(operatorArray, 1, 1), buildKeyData(operatorArray, 1, 2)])
+    })
 
-    const op0 = {
-      keys: createKeyBatches(4),
-      sigs: createSigBatches(4)
-    }
-    const op1 = {
-      keys: createKeyBatches(3, 4 * KEYS_BATCH_SIZE),
-      sigs: createSigBatches(3, 4 * KEYS_BATCH_SIZE)
-    }
+    it('respects staking limit', async () => {
+      await app.addNodeOperator('fo o', ADDRESS_1, 4 * KEYS_BATCH_SIZE, { from: voting })
+      await app.addNodeOperator(' bar', ADDRESS_2, 1 * KEYS_BATCH_SIZE, { from: voting })
 
-    const operatorArray = [op0, op1]
+      const op0 = {
+        keys: createKeyBatches(4),
+        sigs: createSigBatches(4)
+      }
+      const op1 = {
+        keys: createKeyBatches(3, 4 * KEYS_BATCH_SIZE),
+        sigs: createSigBatches(3, 4 * KEYS_BATCH_SIZE)
+      }
 
-    await app.addSigningKeys(0, 4 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: voting })
-    await app.addSigningKeys(1, 3 * KEYS_BATCH_SIZE, packKeyArray(op1.keys), packSigArray(op1.sigs), { from: voting })
+      const operatorArray = [op0, op1]
 
-    await pool.verifyNextSigningKeys([
-      buildKeyData(operatorArray, 0, 0),
-      buildKeyData(operatorArray, 1, 0),
-      buildKeyData(operatorArray, 0, 1)
-    ])
+      await app.addSigningKeys(0, 4 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: voting })
+      await app.addSigningKeys(1, 3 * KEYS_BATCH_SIZE, packKeyArray(op1.keys), packSigArray(op1.sigs), { from: voting })
 
-    assertBn((await app.getNodeOperator(0, false)).usedSigningKeys, 2 * KEYS_BATCH_SIZE, 'assignment 1: op 0 used keys')
-    assertBn((await app.getNodeOperator(1, false)).usedSigningKeys, 1 * KEYS_BATCH_SIZE, 'assignment 1: op 1 used keys')
+      await pool.verifyNextSigningKeys([
+        buildKeyData(operatorArray, 0, 0),
+        buildKeyData(operatorArray, 1, 0),
+        buildKeyData(operatorArray, 0, 1)
+      ])
 
-    await pool.verifyNextSigningKeys([buildKeyData(operatorArray, 0, 2), buildKeyData(operatorArray, 0, 3)])
+      assertBn((await app.getNodeOperator(0, false)).usedSigningKeys, 2 * KEYS_BATCH_SIZE, 'assignment 1: op 0 used keys')
+      assertBn((await app.getNodeOperator(1, false)).usedSigningKeys, 1 * KEYS_BATCH_SIZE, 'assignment 1: op 1 used keys')
 
-    assertBn((await app.getNodeOperator(0, false)).usedSigningKeys, 4 * KEYS_BATCH_SIZE, 'assignment 2: op 0 used keys')
-    assertBn((await app.getNodeOperator(1, false)).usedSigningKeys, 1 * KEYS_BATCH_SIZE, 'assignment 2: op 1 used keys')
+      await pool.verifyNextSigningKeys([buildKeyData(operatorArray, 0, 2), buildKeyData(operatorArray, 0, 3)])
+
+      assertBn((await app.getNodeOperator(0, false)).usedSigningKeys, 4 * KEYS_BATCH_SIZE, 'assignment 2: op 0 used keys')
+      assertBn((await app.getNodeOperator(1, false)).usedSigningKeys, 1 * KEYS_BATCH_SIZE, 'assignment 2: op 1 used keys')
+    })
   })
 
   it('reportStoppedValidators works', async () => {
