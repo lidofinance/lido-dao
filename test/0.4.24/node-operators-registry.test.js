@@ -1,11 +1,12 @@
 const { assert } = require('chai')
-const { KEYS_BATCH_SIZE, pad, padKey, padSig, tokens } = require('../helpers/utils')
+const { KEYS_BATCH_SIZE, pad, padKey, padSig, tokens, padHash } = require('../helpers/utils')
 const { packKeyArray, packSigArray, createKeyBatches, createSigBatches } = require('./helpers/publicKeyArrays')
 const { buildKeyData } = require('./helpers/keyData')
 
 const { newDao, newApp } = require('./helpers/dao')
 const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 const { assertBn, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
+const { MerkleTree } = require('./helpers/merkleTree')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry.sol')
 const PoolMock = artifacts.require('PoolMock.sol')
@@ -48,167 +49,221 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await app.initialize(pool.address)
   })
 
-  it('addNodeOperator works', async () => {
-    await assertRevert(app.addNodeOperator('1', ADDRESS_1, 10, { from: user1 }), 'APP_AUTH_FAILED')
-    await assertRevert(app.addNodeOperator('1', ADDRESS_1, 10, { from: nobody }), 'APP_AUTH_FAILED')
-
-    await assertRevert(app.addNodeOperator('1', ZERO_ADDRESS, 10, { from: voting }), 'EMPTY_ADDRESS')
-
-    await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
-    await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
-
-    assertBn(await app.getNodeOperatorsCount({ from: nobody }), 2)
-    assertBn(await app.getActiveNodeOperatorsCount({ from: nobody }), 2)
-
-    await assertRevert(app.addNodeOperator('1', ADDRESS_3, 10, { from: user1 }), 'APP_AUTH_FAILED')
-    await assertRevert(app.addNodeOperator('1', ADDRESS_3, 10, { from: nobody }), 'APP_AUTH_FAILED')
-  })
-
-  it('getNodeOperator works', async () => {
-    await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
-    await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
-
-    const op0 = {
-      keys: createKeyBatches(1),
-      sigs: createSigBatches(1)
-    }
-
-    await app.addSigningKeys(0, KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), {
-      from: voting
+  describe('addNodeOperator', () => {
+    it('reverts when not called by Lido', async () => {
+      await assertRevert(app.addNodeOperator('1', ADDRESS_1, 10, { from: user1 }), 'APP_AUTH_FAILED')
+      await assertRevert(app.addNodeOperator('1', ADDRESS_1, 10, { from: nobody }), 'APP_AUTH_FAILED')
     })
 
-    let operator = await app.getNodeOperator(0, true)
-    assert.equal(operator.active, true)
-    assert.equal(operator.name, 'fo o')
-    assert.equal(operator.rewardAddress, ADDRESS_1)
-    assertBn(operator.stakingLimit, 10)
-    assertBn(operator.stoppedValidators, 0)
-    assertBn(operator.totalSigningKeys, KEYS_BATCH_SIZE)
-    assertBn(operator.usedSigningKeys, 0)
+    it('reverts when given an empty address for the operator', async () => {
+      await assertRevert(app.addNodeOperator('1', ZERO_ADDRESS, 10, { from: voting }), 'EMPTY_ADDRESS')
+    })
 
-    operator = await app.getNodeOperator(1, true)
-    assert.equal(operator.active, true)
-    assert.equal(operator.name, ' bar')
-    assert.equal(operator.rewardAddress, ADDRESS_2)
-    assertBn(operator.stakingLimit, UNLIMITED)
-    assertBn(operator.stoppedValidators, 0)
-    assertBn(operator.totalSigningKeys, 0)
-    assertBn(operator.usedSigningKeys, 0)
+    it('increments the total and active node operator counts', async () => {
+      await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
+      await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
 
-    operator = await app.getNodeOperator(0, false)
-    assert.equal(operator.name, '')
-    assert.equal(operator.rewardAddress, ADDRESS_1)
-
-    operator = await app.getNodeOperator(1, false)
-    assert.equal(operator.name, '')
-    assert.equal(operator.rewardAddress, ADDRESS_2)
-
-    await assertRevert(app.getNodeOperator(10, false), 'NODE_OPERATOR_NOT_FOUND')
+      assertBn(await app.getNodeOperatorsCount({ from: nobody }), 2)
+      assertBn(await app.getActiveNodeOperatorsCount({ from: nobody }), 2)
+    })
   })
 
-  it('setNodeOperatorActive works', async () => {
-    await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
-    await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
+  describe('getNodeOperator', () => {
+    beforeEach(async () => {
+      await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
+      await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
 
-    const op0 = {
-      keys: createKeyBatches(1),
-      sigs: createSigBatches(1)
-    }
+      const op0 = {
+        keys: createKeyBatches(1),
+        sigs: createSigBatches(1)
+      }
 
-    await app.addSigningKeys(0, KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: voting })
+      await app.addSigningKeys(0, KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), {
+        from: voting
+      })
+    })
 
-    assert.equal((await app.getNodeOperator(0, false)).active, true)
-    assert.equal((await app.getNodeOperator(1, false)).active, true)
-    assertBn(await app.getNodeOperatorsCount({ from: nobody }), 2)
-    assertBn(await app.getActiveNodeOperatorsCount({ from: nobody }), 2)
+    it('reverts on non-existant operators', async () => {
+      await assertRevert(app.getNodeOperator(10, false), 'NODE_OPERATOR_NOT_FOUND')
+    })
 
-    await assertRevert(app.setNodeOperatorActive(0, false, { from: user1 }), 'APP_AUTH_FAILED')
-    await assertRevert(app.setNodeOperatorActive(0, true, { from: nobody }), 'APP_AUTH_FAILED')
+    it('returns the expected data', async () => {
+      let operator = await app.getNodeOperator(0, true)
+      assert.equal(operator.active, true)
+      assert.equal(operator.name, 'fo o')
+      assert.equal(operator.rewardAddress, ADDRESS_1)
+      assertBn(operator.stakingLimit, 10)
+      assertBn(operator.stoppedValidators, 0)
+      assertBn(operator.totalSigningKeys, KEYS_BATCH_SIZE)
+      assertBn(operator.usedSigningKeys, 0)
 
-    // switch off #0
-    await app.setNodeOperatorActive(0, false, { from: voting })
-    assert.equal((await app.getNodeOperator(0, false)).active, false)
-    assert.equal((await app.getNodeOperator(1, false)).active, true)
-    assertBn(await app.getNodeOperatorsCount({ from: nobody }), 2)
-    assertBn(await app.getActiveNodeOperatorsCount({ from: nobody }), 1)
+      operator = await app.getNodeOperator(1, true)
+      assert.equal(operator.active, true)
+      assert.equal(operator.name, ' bar')
+      assert.equal(operator.rewardAddress, ADDRESS_2)
+      assertBn(operator.stakingLimit, UNLIMITED)
+      assertBn(operator.stoppedValidators, 0)
+      assertBn(operator.totalSigningKeys, 0)
+      assertBn(operator.usedSigningKeys, 0)
+    })
 
-    await app.setNodeOperatorActive(0, false, { from: voting })
-    assert.equal((await app.getNodeOperator(0, false)).active, false)
-    assertBn(await app.getActiveNodeOperatorsCount({ from: nobody }), 1)
+    it('returns empty strings for names if not asking for full data', async () => {
+      let operator = await app.getNodeOperator(0, false)
+      assert.equal(operator.name, '')
+      assert.equal(operator.rewardAddress, ADDRESS_1)
 
-    // switch off #1
-    await app.setNodeOperatorActive(1, false, { from: voting })
-    assert.equal((await app.getNodeOperator(0, false)).active, false)
-    assert.equal((await app.getNodeOperator(1, false)).active, false)
-    assertBn(await app.getNodeOperatorsCount({ from: nobody }), 2)
-    assertBn(await app.getActiveNodeOperatorsCount({ from: nobody }), 0)
-
-    // switch #0 back on
-    await app.setNodeOperatorActive(0, true, { from: voting })
-    assert.equal((await app.getNodeOperator(0, false)).active, true)
-    assert.equal((await app.getNodeOperator(1, false)).active, false)
-    assertBn(await app.getNodeOperatorsCount({ from: nobody }), 2)
-    assertBn(await app.getActiveNodeOperatorsCount({ from: nobody }), 1)
-
-    await app.setNodeOperatorActive(0, true, { from: voting })
-    assert.equal((await app.getNodeOperator(0, false)).active, true)
-    assertBn(await app.getActiveNodeOperatorsCount({ from: nobody }), 1)
-
-    await assertRevert(app.setNodeOperatorActive(10, false, { from: voting }), 'NODE_OPERATOR_NOT_FOUND')
+      operator = await app.getNodeOperator(1, false)
+      assert.equal(operator.name, '')
+      assert.equal(operator.rewardAddress, ADDRESS_2)
+    })
   })
 
-  it('setNodeOperatorName works', async () => {
-    await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
-    await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
+  describe('setNodeOperatorActive', () => {
+    beforeEach(async () => {
+      await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
+      await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
 
-    await assertRevert(app.setNodeOperatorName(0, 'zzz', { from: user1 }), 'APP_AUTH_FAILED')
-    await assertRevert(app.setNodeOperatorName(0, 'zzz', { from: nobody }), 'APP_AUTH_FAILED')
+      const op0 = {
+        keys: createKeyBatches(1),
+        sigs: createSigBatches(1)
+      }
 
-    assert.equal((await app.getNodeOperator(0, true)).name, 'fo o')
-    assert.equal((await app.getNodeOperator(1, true)).name, ' bar')
+      await app.addSigningKeys(0, KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: voting })
+    })
 
-    await app.setNodeOperatorName(0, 'zzz', { from: voting })
+    it('reverts when not called by Lido', async () => {
+      await assertRevert(app.setNodeOperatorActive(0, false, { from: user1 }), 'APP_AUTH_FAILED')
+      await assertRevert(app.setNodeOperatorActive(0, true, { from: nobody }), 'APP_AUTH_FAILED')
+    })
 
-    assert.equal((await app.getNodeOperator(0, true)).name, 'zzz')
-    assert.equal((await app.getNodeOperator(1, true)).name, ' bar')
+    it('reverts when called on non-existant operators', async () => {
+      await assertRevert(app.setNodeOperatorActive(10, false, { from: voting }), 'NODE_OPERATOR_NOT_FOUND')
+    })
 
-    await assertRevert(app.setNodeOperatorName(10, 'foo', { from: voting }), 'NODE_OPERATOR_NOT_FOUND')
+    it('correctly updates the operator status', async () => {
+      // switch off #0
+      await app.setNodeOperatorActive(0, false, { from: voting })
+      assert.equal((await app.getNodeOperator(0, false)).active, false)
+      assert.equal((await app.getNodeOperator(1, false)).active, true)
+
+      // switch off #1
+      await app.setNodeOperatorActive(1, false, { from: voting })
+      assert.equal((await app.getNodeOperator(0, false)).active, false)
+      assert.equal((await app.getNodeOperator(1, false)).active, false)
+
+      // switch #0 back on
+      await app.setNodeOperatorActive(0, true, { from: voting })
+      assert.equal((await app.getNodeOperator(0, false)).active, true)
+      assert.equal((await app.getNodeOperator(1, false)).active, false)
+    })
+
+    it('correctly updates the operator counts', async () => {
+      // switch off #0
+      await app.setNodeOperatorActive(0, false, { from: voting })
+      assertBn(await app.getNodeOperatorsCount({ from: nobody }), 2)
+      assertBn(await app.getActiveNodeOperatorsCount({ from: nobody }), 1)
+
+      // switch #0 off (redundant)
+      await app.setNodeOperatorActive(0, false, { from: voting })
+      assert.equal((await app.getNodeOperator(0, false)).active, false)
+      assertBn(await app.getActiveNodeOperatorsCount({ from: nobody }), 1)
+
+      // switch off #1
+      await app.setNodeOperatorActive(1, false, { from: voting })
+      assertBn(await app.getNodeOperatorsCount({ from: nobody }), 2)
+      assertBn(await app.getActiveNodeOperatorsCount({ from: nobody }), 0)
+
+      // switch #0 back on
+      await app.setNodeOperatorActive(0, true, { from: voting })
+      assertBn(await app.getNodeOperatorsCount({ from: nobody }), 2)
+      assertBn(await app.getActiveNodeOperatorsCount({ from: nobody }), 1)
+
+      // switch #0 on (redundant)
+      await app.setNodeOperatorActive(0, true, { from: voting })
+      assert.equal((await app.getNodeOperator(0, false)).active, true)
+      assertBn(await app.getActiveNodeOperatorsCount({ from: nobody }), 1)
+    })
   })
 
-  it('setNodeOperatorRewardAddress works', async () => {
-    await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
-    await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
+  describe('setNodeOperatorName', () => {
+    beforeEach(async () => {
+      await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
+      await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
+    })
 
-    await assertRevert(app.setNodeOperatorRewardAddress(0, ADDRESS_4, { from: user1 }), 'APP_AUTH_FAILED')
-    await assertRevert(app.setNodeOperatorRewardAddress(1, ADDRESS_4, { from: nobody }), 'APP_AUTH_FAILED')
+    it('reverts when not called by Lido', async () => {
+      await assertRevert(app.setNodeOperatorName(0, 'zzz', { from: user1 }), 'APP_AUTH_FAILED')
+      await assertRevert(app.setNodeOperatorName(0, 'zzz', { from: nobody }), 'APP_AUTH_FAILED')
+    })
 
-    assert.equal((await app.getNodeOperator(0, false)).rewardAddress, ADDRESS_1)
-    assert.equal((await app.getNodeOperator(1, false)).rewardAddress, ADDRESS_2)
+    it('reverts when called on non-existant operators', async () => {
+      await assertRevert(app.setNodeOperatorName(10, 'foo', { from: voting }), 'NODE_OPERATOR_NOT_FOUND')
+    })
 
-    await app.setNodeOperatorRewardAddress(0, ADDRESS_4, { from: voting })
+    it("updates the node operator's name", async () => {
+      assert.equal((await app.getNodeOperator(0, true)).name, 'fo o')
+      assert.equal((await app.getNodeOperator(1, true)).name, ' bar')
 
-    assert.equal((await app.getNodeOperator(0, false)).rewardAddress, ADDRESS_4)
-    assert.equal((await app.getNodeOperator(1, false)).rewardAddress, ADDRESS_2)
+      await app.setNodeOperatorName(0, 'zzz', { from: voting })
 
-    await assertRevert(app.setNodeOperatorRewardAddress(10, ADDRESS_4, { from: voting }), 'NODE_OPERATOR_NOT_FOUND')
+      assert.equal((await app.getNodeOperator(0, true)).name, 'zzz')
+      assert.equal((await app.getNodeOperator(1, true)).name, ' bar')
+    })
   })
 
-  it('setNodeOperatorStakingLimit works', async () => {
-    await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
-    await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
+  describe('setNodeOperatorRewardAddress', () => {
+    beforeEach(async () => {
+      await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
+      await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
+    })
 
-    await assertRevert(app.setNodeOperatorStakingLimit(0, 40, { from: user1 }), 'APP_AUTH_FAILED')
-    await assertRevert(app.setNodeOperatorStakingLimit(1, 40, { from: nobody }), 'APP_AUTH_FAILED')
+    it('reverts when not called by Lido', async () => {
+      await assertRevert(app.setNodeOperatorRewardAddress(0, ADDRESS_4, { from: user1 }), 'APP_AUTH_FAILED')
+      await assertRevert(app.setNodeOperatorRewardAddress(1, ADDRESS_4, { from: nobody }), 'APP_AUTH_FAILED')
+    })
 
-    assertBn((await app.getNodeOperator(0, false)).stakingLimit, 10)
-    assertBn((await app.getNodeOperator(1, false)).stakingLimit, UNLIMITED)
+    it('reverts when called on non-existant operators', async () => {
+      await assertRevert(app.setNodeOperatorRewardAddress(10, ADDRESS_4, { from: voting }), 'NODE_OPERATOR_NOT_FOUND')
+    })
 
-    await app.setNodeOperatorStakingLimit(0, 40, { from: voting })
+    it("updates the node operator's reward address", async () => {
+      assert.equal((await app.getNodeOperator(0, false)).rewardAddress, ADDRESS_1)
+      assert.equal((await app.getNodeOperator(1, false)).rewardAddress, ADDRESS_2)
 
-    assertBn((await app.getNodeOperator(0, false)).stakingLimit, 40)
-    assertBn((await app.getNodeOperator(1, false)).stakingLimit, UNLIMITED)
+      await app.setNodeOperatorRewardAddress(0, ADDRESS_4, { from: voting })
 
-    await assertRevert(app.setNodeOperatorStakingLimit(10, 40, { from: voting }), 'NODE_OPERATOR_NOT_FOUND')
+      assert.equal((await app.getNodeOperator(0, false)).rewardAddress, ADDRESS_4)
+      assert.equal((await app.getNodeOperator(1, false)).rewardAddress, ADDRESS_2)
+    })
+  })
+
+  describe('setNodeOperatorStakingLimit', () => {
+    beforeEach(async () => {
+      await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
+      await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
+    })
+
+    it('reverts when called on non-existant operator', async () => {
+      await assertRevert(app.setNodeOperatorStakingLimit(10, 40, { from: voting }), 'NODE_OPERATOR_NOT_FOUND')
+    })
+
+    it('reverts when not called by Lido', async () => {
+      await assertRevert(app.setNodeOperatorStakingLimit(0, 40, { from: user1 }), 'APP_AUTH_FAILED')
+      await assertRevert(app.setNodeOperatorStakingLimit(1, 40, { from: nobody }), 'APP_AUTH_FAILED')
+    })
+
+    it('correctly updates node operator staking limit', async () => {
+      await app.addNodeOperator('fo o', ADDRESS_1, 10, { from: voting })
+      await app.addNodeOperator(' bar', ADDRESS_2, UNLIMITED, { from: voting })
+
+      assertBn((await app.getNodeOperator(0, false)).stakingLimit, 10)
+      assertBn((await app.getNodeOperator(1, false)).stakingLimit, UNLIMITED)
+
+      await app.setNodeOperatorStakingLimit(0, 40, { from: voting })
+
+      assertBn((await app.getNodeOperator(0, false)).stakingLimit, 40)
+      assertBn((await app.getNodeOperator(1, false)).stakingLimit, UNLIMITED)
+    })
   })
 
   describe('getNextOperators', () => {
@@ -591,51 +646,84 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     assertBn(await app.getTotalSigningKeyCount(1, { from: nobody }), 2 * KEYS_BATCH_SIZE)
   })
 
-  it('rewardAddress can add & remove merkle roots', async () => {
-    await app.addNodeOperator('1', user1, UNLIMITED, { from: voting })
-    await app.addNodeOperator('2', user2, UNLIMITED, { from: voting })
+  describe('addSigningKeysOperatorBH', () => {
+    it('increases totalSigningKeys by the expected amount', async () => {
+      await app.addNodeOperator('1', user1, UNLIMITED, { from: voting })
+      await app.addSigningKeysOperatorBH(0, KEYS_BATCH_SIZE, packKeyArray(createKeyBatches(1)), packSigArray(createSigBatches(1)), {
+        from: user1
+      })
 
-    const op0 = {
-      keys: createKeyBatches(2),
-      sigs: createSigBatches(2)
-    }
-    const op1 = {
-      keys: createKeyBatches(2, 2 * KEYS_BATCH_SIZE),
-      sigs: createSigBatches(2, 2 * KEYS_BATCH_SIZE)
-    }
+      assertBn(await app.getTotalSigningKeyCount(0, { from: nobody }), KEYS_BATCH_SIZE)
+    })
 
-    // add to the first operator
-    await assertRevert(
-      app.addSigningKeysOperatorBH(0, 2 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: nobody }),
-      'APP_AUTH_FAILED'
-    )
-    await app.addSigningKeysOperatorBH(0, 2 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: user1 })
+    it('stores the expected merkle root', async () => {
+      await app.addNodeOperator('1', user1, UNLIMITED, { from: voting })
 
-    // add to the second operator
-    await assertRevert(
-      app.addSigningKeysOperatorBH(1, 2 * KEYS_BATCH_SIZE, packKeyArray(op1.keys), packSigArray(op1.sigs), { from: nobody }),
-      'APP_AUTH_FAILED'
-    )
-    await assertRevert(
-      app.addSigningKeysOperatorBH(1, 2 * KEYS_BATCH_SIZE, packKeyArray(op1.keys), packSigArray(op1.sigs), { from: user1 }),
-      'APP_AUTH_FAILED'
-    )
+      const singleBatch = {
+        keys: createKeyBatches(1),
+        sigs: createSigBatches(1)
+      }
 
-    await app.addSigningKeysOperatorBH(1, 2 * KEYS_BATCH_SIZE, packKeyArray(op1.keys), packSigArray(op1.sigs), { from: user2 })
+      await app.addSigningKeysOperatorBH(0, KEYS_BATCH_SIZE, packKeyArray(singleBatch.keys), packSigArray(singleBatch.keys), {
+        from: user1
+      })
 
-    assertBn(await app.getTotalSigningKeyCount(0, { from: nobody }), 2 * KEYS_BATCH_SIZE)
-    assertBn(await app.getTotalSigningKeyCount(1, { from: nobody }), 2 * KEYS_BATCH_SIZE)
+      let expectedMerkleRoot = MerkleTree.fromKeysAndSignatures(singleBatch.keys, singleBatch.sigs).getRoot()
+      let nodeInfo = await app.getNodeOperator(0, false)
+      assert.equal(nodeInfo.keysMerkleRoot, expectedMerkleRoot)
 
-    // removal
-    await assertRevert(app.clearMerkleRootOperatorBH(0, { from: nobody }), 'APP_AUTH_FAILED')
-    await app.clearMerkleRootOperatorBH(0, { from: user1 })
+      const multiBatch = {
+        keys: createKeyBatches(4),
+        sigs: createSigBatches(4)
+      }
 
-    await assertRevert(app.clearMerkleRootOperatorBH(1, { from: nobody }), 'APP_AUTH_FAILED')
-    await assertRevert(app.clearMerkleRootOperatorBH(1, { from: user1 }), 'APP_AUTH_FAILED')
-    await app.clearMerkleRootOperatorBH(1, { from: user2 })
+      await app.addSigningKeysOperatorBH(0, 4 * KEYS_BATCH_SIZE, packKeyArray(multiBatch.keys), packSigArray(multiBatch.keys), {
+        from: user1
+      })
 
-    assertBn(await app.getTotalSigningKeyCount(0, { from: nobody }), 0)
-    assertBn(await app.getTotalSigningKeyCount(1, { from: nobody }), 0)
+      expectedMerkleRoot = MerkleTree.fromKeysAndSignatures(multiBatch.keys, multiBatch.sigs).getRoot()
+      nodeInfo = await app.getNodeOperator(0, false)
+      assert.equal(nodeInfo.keysMerkleRoot, expectedMerkleRoot)
+    })
+
+    it('reverts when not called by the rewardAddress', async () => {
+      await app.addNodeOperator('1', user1, UNLIMITED, { from: voting })
+      await assertRevert(
+        app.addSigningKeysOperatorBH(0, KEYS_BATCH_SIZE, packKeyArray(createKeyBatches(1)), packSigArray(createSigBatches(1)), {
+          from: nobody
+        }),
+        'APP_AUTH_FAILED'
+      )
+    })
+  })
+
+  describe('clearMerkleRootOperatorBH', () => {
+    beforeEach(async () => {
+      await app.addNodeOperator('1', user1, UNLIMITED, { from: voting })
+      await app.addSigningKeysOperatorBH(0, KEYS_BATCH_SIZE, packKeyArray(createKeyBatches(1)), packSigArray(createSigBatches(1)), {
+        from: user1
+      })
+    })
+
+    it('clears the stored merkle root', async () => {
+      await app.clearMerkleRootOperatorBH(0, { from: user1 })
+      const nodeInfo = await app.getNodeOperator(0, false)
+      assert.equal(nodeInfo.keysMerkleRoot, padHash('0x'))
+    })
+
+    it('resets totalSigningKeys to equal usedSigningKeys', async () => {
+      let nodeInfo = await app.getNodeOperator(0, false)
+      assert.notEqual(nodeInfo.totalSigningKeys.toString(), nodeInfo.usedSigningKeys.toString())
+
+      await app.clearMerkleRootOperatorBH(0, { from: user1 })
+
+      nodeInfo = await app.getNodeOperator(0, false)
+      assertBn(nodeInfo.totalSigningKeys, nodeInfo.usedSigningKeys)
+    })
+
+    it('reverts when not called by the rewardAddress', async () => {
+      await assertRevert(app.clearMerkleRootOperatorBH(0, { from: nobody }), 'APP_AUTH_FAILED')
+    })
   })
 
   it('getRewardsDistribution works', async () => {
