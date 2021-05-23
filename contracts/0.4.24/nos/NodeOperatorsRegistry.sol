@@ -385,7 +385,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             require(keyData.operatorId == entry.id, "Must choose operator with smallest stake");
 
             bytes32 leafHash = _keyLeafHash(keyData.publicKeys, keyData.signatures);
-            require(!_leafHashUsed(entry.id, leafHash), "Signing keys already used");
+            require(!leafHashUsed(entry.id, leafHash), "Signing keys already used");
 
             require(Merkle.checkMembership(leafHash, keyData.leafIndex, entry.keysMerkleRoot, keyData.proofData), "Invalid Merkle Proof");
 
@@ -416,7 +416,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
      * @notice Returns whether a given leaf hash has been used in a merkle proof already
      * @dev Used to prevent the same signing keys being used multiple times
      */
-    function _leafHashUsed(uint256 _operator_id, bytes32 _leafHash) internal view returns (bool leafUsed) {
+    function leafHashUsed(uint256 _operator_id, bytes32 _leafHash) public view returns (bool leafUsed) {
         uint256 offset = _merkleLeafOffset(_operator_id, _leafHash);
         assembly {
             leafUsed := sload(offset)
