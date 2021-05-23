@@ -211,6 +211,88 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await assertRevert(app.setNodeOperatorStakingLimit(10, 40, { from: voting }), 'NODE_OPERATOR_NOT_FOUND')
   })
 
+  describe('getNextOperators', () => {
+    it('picks operators according to lowest stake', async () => {
+      await app.addNodeOperator('fo o', ADDRESS_1, 10 * KEYS_BATCH_SIZE, { from: voting })
+      await app.addNodeOperator(' bar', ADDRESS_2, 10 * KEYS_BATCH_SIZE, { from: voting })
+
+      const op0 = {
+        keys: createKeyBatches(3),
+        sigs: createSigBatches(3)
+      }
+      const op1 = {
+        keys: createKeyBatches(3, 3 * KEYS_BATCH_SIZE),
+        sigs: createSigBatches(3, 3 * KEYS_BATCH_SIZE)
+      }
+
+      await app.addSigningKeys(0, 3 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: voting })
+      await app.addSigningKeys(1, 3 * KEYS_BATCH_SIZE, packKeyArray(op1.keys), packSigArray(op1.sigs), { from: voting })
+
+      const expectedNextOperators = [0, 1, 0, 1, 0, 1]
+      const result = await app.getNextOperators(6)
+      expectedNextOperators.forEach((expected, i) => assertBn(result[i], expected))
+    })
+
+    it('skips stopped operators', async () => {
+      await app.addNodeOperator('fo o', ADDRESS_1, 10 * KEYS_BATCH_SIZE, { from: voting })
+      await app.addNodeOperator(' bar', ADDRESS_2, 10 * KEYS_BATCH_SIZE, { from: voting })
+
+      const op0 = {
+        keys: createKeyBatches(3),
+        sigs: createSigBatches(3)
+      }
+      const op1 = {
+        keys: createKeyBatches(3, 3 * KEYS_BATCH_SIZE),
+        sigs: createSigBatches(3, 3 * KEYS_BATCH_SIZE)
+      }
+
+      const operatorArray = [op0, op1]
+
+      await app.addSigningKeys(0, 3 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: voting })
+      await app.addSigningKeys(1, 3 * KEYS_BATCH_SIZE, packKeyArray(op1.keys), packSigArray(op1.sigs), { from: voting })
+
+      let expectedNextOperators = [0, 1, 0, 1]
+      let result = await app.getNextOperators(4)
+      expectedNextOperators.forEach((expected, i) => assertBn(result[i], expected))
+
+      await pool.verifyNextSigningKeys([buildKeyData(operatorArray, 0, 0), buildKeyData(operatorArray, 1, 0)])
+      await app.setNodeOperatorActive(0, false, { from: voting })
+
+      expectedNextOperators = [1, 1]
+      result = await app.getNextOperators(2)
+      expectedNextOperators.forEach((expected, i) => assertBn(result[i], expected))
+    })
+
+    it('respects staking limit', async () => {
+      await app.addNodeOperator('fo o', ADDRESS_1, 4 * KEYS_BATCH_SIZE, { from: voting })
+      await app.addNodeOperator(' bar', ADDRESS_2, 1 * KEYS_BATCH_SIZE, { from: voting })
+
+      const op0 = {
+        keys: createKeyBatches(4),
+        sigs: createSigBatches(4)
+      }
+      const op1 = {
+        keys: createKeyBatches(3, 4 * KEYS_BATCH_SIZE),
+        sigs: createSigBatches(3, 4 * KEYS_BATCH_SIZE)
+      }
+
+      await app.addSigningKeys(0, 4 * KEYS_BATCH_SIZE, packKeyArray(op0.keys), packSigArray(op0.sigs), { from: voting })
+      await app.addSigningKeys(1, 3 * KEYS_BATCH_SIZE, packKeyArray(op1.keys), packSigArray(op1.sigs), { from: voting })
+
+      const expectedNextOperators = [0, 1, 0, 0]
+      const result = await app.getNextOperators(4)
+      expectedNextOperators.forEach((expected, i) => assertBn(result[i], expected))
+    })
+
+    it('reverts when passed a number for which no assignment of operators is possible', async () => {
+      await app.addNodeOperator('fo o', ADDRESS_1, KEYS_BATCH_SIZE, { from: voting })
+      await app.addSigningKeys(0, KEYS_BATCH_SIZE, packKeyArray(createKeyBatches(1)), packSigArray(createSigBatches(1)), {
+        from: voting
+      })
+      await assertRevert(app.getNextOperators(2))
+    })
+  })
+
   describe('verifyNextSigningKeys', () => {
     it('reverts when passed an empty array', async () => {
       await assertRevert(pool.verifyNextSigningKeys([]), 'No keys provided')
