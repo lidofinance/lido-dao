@@ -16,7 +16,6 @@ import "../interfaces/INodeOperatorsRegistry.sol";
 import "../lib/MemUtils.sol";
 import "../lib/Merkle.sol";
 
-
 /**
   * @title Node Operator registry implementation
   *
@@ -367,14 +366,9 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
      *
      * @return Two byte arrays of the validated keys and signatures.
      */
-    function verifyNextSigningKeys(KeysData[] _keysData) public onlyLido returns (bytes memory pubkeys, bytes memory signatures) {
+    function verifyNextSigningKeys(KeysData[] _keysData) public onlyLido returns (bool) {
         uint256 numBatches = _keysData.length;
         (DepositLookupCacheEntry[] memory cache, uint256[] memory operatorIndices) = _getNextOperatorsData(numBatches);
-
-        // TODO: change Lido.sol to use the keys stored in the KeysData directly. 
-        // We can allocate without zeroing out since we're going to rewrite the whole array
-        pubkeys = MemUtils.unsafeAllocateBytes(numBatches * PUBKEY_LENGTH * KEYS_LEAF_SIZE);
-        signatures = MemUtils.unsafeAllocateBytes(numBatches * SIGNATURE_LENGTH * KEYS_LEAF_SIZE);
 
         DepositLookupCacheEntry memory entry;
 
@@ -391,11 +385,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             require(Merkle.checkMembership(leafHash, keyData.leafIndex, entry.keysMerkleRoot, keyData.proofData), "Invalid Merkle Proof");
 
             _markLeafUsed(entry.id, leafHash);
-
-            // Copy verified keys and signatures into array to be passed back to Lido
-
-            MemUtils.copyBytes(keyData.publicKeys, pubkeys, batchIndex * PUBKEY_LENGTH * KEYS_LEAF_SIZE);
-            MemUtils.copyBytes(keyData.signatures, signatures, batchIndex * SIGNATURE_LENGTH * KEYS_LEAF_SIZE);
         }
 
         // Update the number of used keys for each operator
@@ -407,7 +396,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             }
         }
 
-        return (pubkeys, signatures);
+        return true;
     }
 
     function _keyLeafHash(bytes publicKeys,  bytes signatures) internal pure returns (bytes32) {

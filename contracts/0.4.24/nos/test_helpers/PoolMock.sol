@@ -17,8 +17,7 @@ contract PoolMock {
     }
 
     function verifyNextSigningKeys(INodeOperatorsRegistry.KeysData[] _keysData) public {
-        (bytes memory pubkeys, bytes memory signatures) = operators.verifyNextSigningKeys(_keysData);
-        emit KeysAssigned(pubkeys, signatures);
+        operators.verifyNextSigningKeys(_keysData);
     }
 
     function trimUnusedKeys() external {

@@ -18,7 +18,6 @@ import "./interfaces/IDepositContract.sol";
 
 import "./StETH.sol";
 
-
 /**
 * @title Liquid staking pool implementation
 *
@@ -475,29 +474,35 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     * @return actually deposited Ether amount
     */
     function _ETH2Deposit(INodeOperatorsRegistry.KeysData[] _keysData) internal returns (uint256) {
-        (bytes memory pubkeys, bytes memory signatures) = getOperators().verifyNextSigningKeys(_keysData);
+        getOperators().verifyNextSigningKeys(_keysData);
 
-        if (pubkeys.length == 0) {
-            return 0;
-        }
+        uint256 totalKeysUsed;
+        for (uint256 batchIndex = 0; batchIndex < _keysData.length; ++batchIndex) {
+            bytes memory pubkeys = _keysData[batchIndex].publicKeys;
+            bytes memory signatures = _keysData[batchIndex].signatures;
 
-        require(pubkeys.length.mod(PUBKEY_LENGTH) == 0, "REGISTRY_INCONSISTENT_PUBKEYS_LEN");
-        require(signatures.length.mod(SIGNATURE_LENGTH) == 0, "REGISTRY_INCONSISTENT_SIG_LEN");
+            require(pubkeys.length.mod(PUBKEY_LENGTH) == 0, "REGISTRY_INCONSISTENT_PUBKEYS_LEN");
+            require(signatures.length.mod(SIGNATURE_LENGTH) == 0, "REGISTRY_INCONSISTENT_SIG_LEN");
+            
+            uint256 numKeys = pubkeys.length.div(PUBKEY_LENGTH);
+            require(numKeys == signatures.length.div(SIGNATURE_LENGTH), "REGISTRY_INCONSISTENT_SIG_COUNT");
+            
+            bytes memory pubkey;
+            bytes memory signature;
+            for (uint256 i = 0; i < numKeys; ++i) {
+                pubkey = BytesLib.slice(pubkeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
+                signature = BytesLib.slice(signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
+                _stake(pubkey, signature);
+            }
 
-        uint256 numKeys = pubkeys.length.div(PUBKEY_LENGTH);
-        require(numKeys == signatures.length.div(SIGNATURE_LENGTH), "REGISTRY_INCONSISTENT_SIG_COUNT");
-
-        for (uint256 i = 0; i < numKeys; ++i) {
-            bytes memory pubkey = BytesLib.slice(pubkeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
-            bytes memory signature = BytesLib.slice(signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
-            _stake(pubkey, signature);
+            totalKeysUsed += numKeys;
         }
 
         DEPOSITED_VALIDATORS_POSITION.setStorageUint256(
-            DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(numKeys)
+            DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(totalKeysUsed)
         );
 
-        return numKeys.mul(DEPOSIT_SIZE);
+        return totalKeysUsed.mul(DEPOSIT_SIZE);
     }
 
     /**

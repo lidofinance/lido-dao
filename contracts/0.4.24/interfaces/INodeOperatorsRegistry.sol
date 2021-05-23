@@ -112,7 +112,7 @@ contract INodeOperatorsRegistry {
      *
      * @return Two byte arrays of the validated keys and signatures.
      */
-    function verifyNextSigningKeys(KeysData[] _keysData) public returns (bytes memory pubkeys, bytes memory signatures);
+    function verifyNextSigningKeys(KeysData[] _keysData) public returns (bool);
 
     /**
       * @notice Add `_quantity` validator signing keys to the keys of the node operator #`_operator_id`. Concatenated keys are: `_pubkeys`
