@@ -373,6 +373,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
      */
     function verifyNextSigningKeys(KeysData[] _keysData) public onlyLido returns (bool) {
         uint256 numBatches = _keysData.length;
+        require(numBatches > 0, "No keys provided");
         (DepositLookupCacheEntry[] memory cache, uint256[] memory operatorIndices) = _getNextOperatorsData(numBatches);
 
         DepositLookupCacheEntry memory entry;
