@@ -292,28 +292,38 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     /**
-     * @notice Verifies a number of provided signing keys (as well as the corresponding signatures)
-     *         against the set of active keys and marks the selected keys as used.
-     *         May only be called by the Lido contract.
+     * @param _numBatches The number of batches of keys for which to find out the operators for
      *
-     * @param _keysData array of KeysData structs containing signing keys+sigs along with merkle proofs
-     *
-     * @return Two byte arrays of the validated keys and signatures.
+     * @return array of the next `_numBatches` operator ids to be used next
      */
-    function verifyNextSigningKeys(KeysData[] _keysData) public onlyLido returns (bytes memory pubkeys, bytes memory signatures) {
-        // Memory is very cheap, although you don't want to grow it too much
-        DepositLookupCacheEntry[] memory cache = _loadOperatorCache();
-        if (0 == cache.length)
-            return (new bytes(0), new bytes(0));
+    function getNextOperators(uint256 _numBatches) external view returns (uint256[] memory) {
+        (DepositLookupCacheEntry[] memory cache, uint256[] memory operatorIndices) = _getNextOperatorsData(_numBatches);
 
-        uint256 numBatches = _keysData.length;
+        // Convert from indices to operator ids
+        uint256[] memory operatorIds = new uint256[](_numBatches); 
+        for (uint256 i = 0; i < _numBatches; ++i) {
+            operatorIds[i] = cache[operatorIndices[i]].id;
+        }
+
+        return operatorIds;
+    }
+
+
+    /**
+     * @notice Calculates the effect of assigning `_numBatches` batches of keys and returns the new operator states and the order in which they are used
+     *
+     * @return Returns two arrays:
+     *         cache - an array of information on the state of each operator after the next `_numBatches` batches of keys are applied.
+     *         operatorIndices - array of the indices of operators within `cache` which will receive the next `_numBatches` batches of keys.
+     */
+    function _getNextOperatorsData(uint256 _numBatches) internal view returns (DepositLookupCacheEntry[] memory cache, uint256[] memory operatorIndices) {
+        cache = _loadOperatorCache();
+        require(cache.length > 0, "No valid operators");
+
+        operatorIndices = new uint256[](_numBatches);
+
         DepositLookupCacheEntry memory entry;
-
-        // We can allocate without zeroing out since we're going to rewrite the whole array
-        pubkeys = MemUtils.unsafeAllocateBytes(numBatches * PUBKEY_LENGTH * KEYS_LEAF_SIZE);
-        signatures = MemUtils.unsafeAllocateBytes(numBatches * SIGNATURE_LENGTH * KEYS_LEAF_SIZE);
-
-        for(uint256 batchIndex = 0; batchIndex < numBatches; batchIndex++) {
+        for(uint256 batchIndex = 0; batchIndex < _numBatches; batchIndex++) {
             // Find the node operator with the fewest active validators and spare capacity
             uint256 bestOperatorIdx = cache.length;   // 'not found' flag
             uint256 smallestStake;
@@ -340,14 +350,40 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             }
 
             assert(bestOperatorIdx < cache.length);
+            
+            // record that we are assigning keys to this operators
+            operatorIndices[batchIndex] = bestOperatorIdx;
+            cache[bestOperatorIdx].usedSigningKeys += KEYS_LEAF_SIZE;
+            assert(cache[bestOperatorIdx].usedSigningKeys < UINT64_MAX);
+        }
+    }
 
-            // Verify that the provided signing keys correspond to the keys provided by this node operator
+    /**
+     * @notice Verifies a number of provided signing keys (as well as the corresponding signatures)
+     *         against the set of active keys and marks the selected keys as used.
+     *         May only be called by the Lido contract.
+     *
+     * @param _keysData array of KeysData structs containing signing keys+sigs along with merkle proofs
+     *
+     * @return Two byte arrays of the validated keys and signatures.
+     */
+    function verifyNextSigningKeys(KeysData[] _keysData) public onlyLido returns (bytes memory pubkeys, bytes memory signatures) {
+        uint256 numBatches = _keysData.length;
+        (DepositLookupCacheEntry[] memory cache, uint256[] memory operatorIndices) = _getNextOperatorsData(numBatches);
 
+        // TODO: change Lido.sol to use the keys stored in the KeysData directly. 
+        // We can allocate without zeroing out since we're going to rewrite the whole array
+        pubkeys = MemUtils.unsafeAllocateBytes(numBatches * PUBKEY_LENGTH * KEYS_LEAF_SIZE);
+        signatures = MemUtils.unsafeAllocateBytes(numBatches * SIGNATURE_LENGTH * KEYS_LEAF_SIZE);
+
+        DepositLookupCacheEntry memory entry;
+
+        // Verify that the provided signing keys correspond to the keys provided by this node operator
+        for(uint256 batchIndex = 0; batchIndex < numBatches; batchIndex++) {
             KeysData memory keyData = _keysData[batchIndex];
-            entry = cache[bestOperatorIdx];
-            require(keyData.operatorId == entry.id, "Must choose operator with smallest stake");
+            entry = cache[operatorIndices[batchIndex]];
 
-            assert(entry.usedSigningKeys < UINT64_MAX);
+            require(keyData.operatorId == entry.id, "Must choose operator with smallest stake");
 
             bytes32 leafHash = _keyLeafHash(keyData.publicKeys, keyData.signatures);
             require(!_leafHashUsed(entry.id, leafHash), "Signing keys already used");
@@ -360,8 +396,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
             MemUtils.copyBytes(keyData.publicKeys, pubkeys, batchIndex * PUBKEY_LENGTH * KEYS_LEAF_SIZE);
             MemUtils.copyBytes(keyData.signatures, signatures, batchIndex * SIGNATURE_LENGTH * KEYS_LEAF_SIZE);
-
-            entry.usedSigningKeys += KEYS_LEAF_SIZE;
         }
 
         // Update the number of used keys for each operator
