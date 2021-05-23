@@ -213,11 +213,16 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         uint256 length = getNodeOperatorsCount();
         for (uint256 operatorId = 0; operatorId < length; ++operatorId) {
             bytes32 clearedMerkleRoot = operators[operatorId].keysMerkleRoot;
-            operators[operatorId].keysMerkleRoot = bytes32(0); // clear merkle root
-            if (operators[operatorId].totalSigningKeys != operators[operatorId].usedSigningKeys)  // write only if update is needed
-                operators[operatorId].totalSigningKeys = operators[operatorId].usedSigningKeys;  // discard unused keys
+            if (clearedMerkleRoot != bytes32(0)){
+                // Clear merkle root
+                operators[operatorId].keysMerkleRoot = bytes32(0);
+                emit SigningKeyMerkleRootCleared(operatorId, clearedMerkleRoot);
 
-            emit SigningKeyMerkleRootCleared(operatorId, clearedMerkleRoot);
+                // Only update totalSigningKeys if there are unused keys being discarded
+                if (operators[operatorId].totalSigningKeys != operators[operatorId].usedSigningKeys){
+                    operators[operatorId].totalSigningKeys = operators[operatorId].usedSigningKeys;
+                }  
+            }
         }
     }
 
