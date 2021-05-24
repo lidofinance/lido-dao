@@ -3,7 +3,9 @@ const { BN } = require('bn.js')
 const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 const { getEventArgument } = require('@aragon/contract-helpers-test')
 
-const { padHash, padKey, padSig, toBN, ETH, tokens } = require('../helpers/utils')
+const { buildKeyData } = require('../0.4.24/helpers/keyData')
+const { packKeyArray, packSigArray, createKeyBatches, createSigBatches } = require('../0.4.24/helpers/publicKeyArrays')
+const { KEYS_BATCH_SIZE, padHash, toBN, ETH, tokens } = require('../helpers/utils')
 const { deployDaoAndPool } = require('./helpers/deploy')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
@@ -91,12 +93,8 @@ contract('Lido: happy path', (addresses) => {
   const nodeOperator1 = {
     name: 'operator_1',
     address: operator_1,
-    validators: [
-      {
-        key: padKey('0x010101'),
-        sig: padSig('0x01')
-      }
-    ]
+    keys: createKeyBatches(1),
+    sigs: createSigBatches(1)
   }
 
   it('voting adds the first node operator', async () => {
@@ -112,33 +110,30 @@ contract('Lido: happy path', (addresses) => {
     assertBn(await nodeOperatorRegistry.getNodeOperatorsCount(), 1, 'total node operators')
   })
 
-  it('the first node operator registers one validator', async () => {
-    const numKeys = 1
-
+  it('the first node operator registers one batch of validators', async () => {
     await nodeOperatorRegistry.addSigningKeysOperatorBH(
       nodeOperator1.id,
-      numKeys,
-      nodeOperator1.validators[0].key,
-      nodeOperator1.validators[0].sig,
+      KEYS_BATCH_SIZE,
+      packKeyArray(nodeOperator1.keys),
+      packSigArray(nodeOperator1.sigs),
       {
         from: nodeOperator1.address
       }
     )
 
-    // The key was added
+    // The batch of keys was added
 
     const totalKeys = await nodeOperatorRegistry.getTotalSigningKeyCount(nodeOperator1.id, { from: nobody })
-    assertBn(totalKeys, 1, 'total signing keys')
+    assertBn(totalKeys, KEYS_BATCH_SIZE, 'total signing keys')
 
-    // The key was not used yet
+    // The batch of keys was not used yet
 
     const unusedKeys = await nodeOperatorRegistry.getUnusedSigningKeyCount(nodeOperator1.id, { from: nobody })
-    assertBn(unusedKeys, 1, 'unused signing keys')
+    assertBn(unusedKeys, KEYS_BATCH_SIZE, 'unused signing keys')
   })
 
   it('the first user deposits 3 ETH to the pool', async () => {
     await web3.eth.sendTransaction({ to: pool.address, from: user1, value: ETH(3) })
-    await pool.depositBufferedEther()
 
     // No Ether was deposited yet to the validator contract
 
@@ -160,36 +155,37 @@ contract('Lido: happy path', (addresses) => {
     assertBn(await token.totalSupply(), tokens(3), 'token total supply')
   })
 
-  it('the second user deposits 30 ETH to the pool', async () => {
-    await web3.eth.sendTransaction({ to: pool.address, from: user2, value: ETH(30) })
-    await pool.depositBufferedEther()
+  it('the second user deposits 8*32 ETH to the pool', async () => {
+    await web3.eth.sendTransaction({ to: pool.address, from: user2, value: ETH(32 * KEYS_BATCH_SIZE) })
+
+    await pool.depositBufferedEther([buildKeyData([nodeOperator1], 0, 0)])
 
     // The first 32 ETH chunk was deposited to the deposit contract,
     // using public key and signature of the only validator of the first operator
 
-    assertBn(await depositContractMock.totalCalls(), 1)
+    assertBn(await depositContractMock.totalCalls(), KEYS_BATCH_SIZE)
 
     const regCall = await depositContractMock.calls.call(0)
-    assert.equal(regCall.pubkey, nodeOperator1.validators[0].key)
+    assert.equal(regCall.pubkey, nodeOperator1.keys[0][0])
     assert.equal(regCall.withdrawal_credentials, withdrawalCredentials)
-    assert.equal(regCall.signature, nodeOperator1.validators[0].sig)
+    assert.equal(regCall.signature, nodeOperator1.sigs[0][0])
     assertBn(regCall.value, ETH(32))
 
     const ether2Stat = await pool.getBeaconStat()
-    assertBn(ether2Stat.depositedValidators, 1, 'deposited ether2')
+    assertBn(ether2Stat.depositedValidators, KEYS_BATCH_SIZE, 'deposited ether2')
     assertBn(ether2Stat.beaconBalance, 0, 'remote ether2')
 
     // Some Ether remained buffered within the pool contract
 
-    assertBn(await pool.getBufferedEther(), ETH(1), 'buffered ether')
-    assertBn(await pool.getTotalPooledEther(), ETH(1 + 32), 'total pooled ether')
+    assertBn(await pool.getBufferedEther(), ETH(3), 'buffered ether')
+    assertBn(await pool.getTotalPooledEther(), ETH(3 + 32 * KEYS_BATCH_SIZE), 'total pooled ether')
 
     // The amount of tokens corresponding to the deposited ETH value was minted to the users
 
     assertBn(await token.balanceOf(user1), tokens(3), 'user1 tokens')
-    assertBn(await token.balanceOf(user2), tokens(30), 'user2 tokens')
+    assertBn(await token.balanceOf(user2), tokens(32 * KEYS_BATCH_SIZE), 'user2 tokens')
 
-    assertBn(await token.totalSupply(), tokens(3 + 30), 'token total supply')
+    assertBn(await token.totalSupply(), tokens(3 + 32 * KEYS_BATCH_SIZE), 'token total supply')
   })
 
   it('at this point, the pool has ran out of signing keys', async () => {
@@ -200,15 +196,11 @@ contract('Lido: happy path', (addresses) => {
   const nodeOperator2 = {
     name: 'operator_2',
     address: operator_2,
-    validators: [
-      {
-        key: padKey('0x020202'),
-        sig: padSig('0x02')
-      }
-    ]
+    keys: createKeyBatches(1, KEYS_BATCH_SIZE),
+    sigs: createSigBatches(1, KEYS_BATCH_SIZE)
   }
 
-  it('voting adds the second node operator who registers one validator', async () => {
+  it('voting adds the second node operator who registers one batch of validators', async () => {
     // TODO: we have to submit operators with 0 validators allowed only
     const validatorsLimit = 1000000000
 
@@ -220,13 +212,11 @@ contract('Lido: happy path', (addresses) => {
 
     assertBn(await nodeOperatorRegistry.getNodeOperatorsCount(), 2, 'total node operators')
 
-    const numKeys = 1
-
     await nodeOperatorRegistry.addSigningKeysOperatorBH(
       nodeOperator2.id,
-      numKeys,
-      nodeOperator2.validators[0].key,
-      nodeOperator2.validators[0].sig,
+      KEYS_BATCH_SIZE,
+      packKeyArray(nodeOperator2.keys),
+      packSigArray(nodeOperator2.sigs),
       {
         from: nodeOperator2.address
       }
@@ -235,46 +225,46 @@ contract('Lido: happy path', (addresses) => {
     // The key was added
 
     const totalKeys = await nodeOperatorRegistry.getTotalSigningKeyCount(nodeOperator2.id, { from: nobody })
-    assertBn(totalKeys, 1, 'total signing keys')
+    assertBn(totalKeys, KEYS_BATCH_SIZE, 'total signing keys')
 
     // The key was not used yet
 
     const unusedKeys = await nodeOperatorRegistry.getUnusedSigningKeyCount(nodeOperator2.id, { from: nobody })
-    assertBn(unusedKeys, 1, 'unused signing keys')
+    assertBn(unusedKeys, KEYS_BATCH_SIZE, 'unused signing keys')
   })
 
   it('the third user deposits 64 ETH to the pool', async () => {
-    await web3.eth.sendTransaction({ to: pool.address, from: user3, value: ETH(64) })
-    await pool.depositBufferedEther()
+    await web3.eth.sendTransaction({ to: pool.address, from: user3, value: ETH(2 * 32 * KEYS_BATCH_SIZE) })
 
+    await pool.depositBufferedEther([buildKeyData([nodeOperator1, nodeOperator2], 1, 0)])
     // The first 32 ETH chunk was deposited to the deposit contract,
     // using public key and signature of the only validator of the second operator
 
-    assertBn(await depositContractMock.totalCalls(), 2)
+    assertBn(await depositContractMock.totalCalls(), 2 * KEYS_BATCH_SIZE)
 
-    const regCall = await depositContractMock.calls.call(1)
-    assert.equal(regCall.pubkey, nodeOperator2.validators[0].key)
+    const regCall = await depositContractMock.calls.call(KEYS_BATCH_SIZE)
+    assert.equal(regCall.pubkey, nodeOperator2.keys[0][0])
     assert.equal(regCall.withdrawal_credentials, withdrawalCredentials)
-    assert.equal(regCall.signature, nodeOperator2.validators[0].sig)
+    assert.equal(regCall.signature, nodeOperator2.sigs[0][0])
     assertBn(regCall.value, ETH(32))
 
     const ether2Stat = await pool.getBeaconStat()
-    assertBn(ether2Stat.depositedValidators, 2, 'deposited ether2')
+    assertBn(ether2Stat.depositedValidators, 2 * KEYS_BATCH_SIZE, 'deposited ether2')
     assertBn(ether2Stat.beaconBalance, 0, 'remote ether2')
 
     // The pool ran out of validator keys, so the remaining 32 ETH were added to the
     // pool buffer
 
-    assertBn(await pool.getBufferedEther(), ETH(1 + 32), 'buffered ether')
-    assertBn(await pool.getTotalPooledEther(), ETH(33 + 64), 'total pooled ether')
+    assertBn(await pool.getBufferedEther(), ETH(3 + 32 * KEYS_BATCH_SIZE), 'buffered ether')
+    assertBn(await pool.getTotalPooledEther(), ETH(3 + 3 * 32 * KEYS_BATCH_SIZE), 'total pooled ether')
 
     // The amount of tokens corresponding to the deposited ETH value was minted to the users
 
     assertBn(await token.balanceOf(user1), tokens(3), 'user1 tokens')
-    assertBn(await token.balanceOf(user2), tokens(30), 'user2 tokens')
-    assertBn(await token.balanceOf(user3), tokens(64), 'user3 tokens')
+    assertBn(await token.balanceOf(user2), tokens(32 * KEYS_BATCH_SIZE), 'user2 tokens')
+    assertBn(await token.balanceOf(user3), tokens(64 * KEYS_BATCH_SIZE), 'user3 tokens')
 
-    assertBn(await token.totalSupply(), tokens(3 + 30 + 64), 'token total supply')
+    assertBn(await token.totalSupply(), tokens(3 + (32 + 64) * KEYS_BATCH_SIZE), 'token total supply')
   })
 
   it('the oracle reports balance increase on Ethereum2 side', async () => {
