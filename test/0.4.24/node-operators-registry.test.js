@@ -668,7 +668,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         from: user1
       })
 
-      let expectedMerkleRoot = MerkleTree.fromKeysAndSignatures(singleBatch.keys, singleBatch.sigs).getRoot()
+      let expectedMerkleRoot = MerkleTree.fromKeysAndSignatures(singleBatch.keys, singleBatch.sigs, 0, KEYS_BATCH_SIZE).getRoot()
       let nodeInfo = await app.getNodeOperator(0, false)
       assert.equal(nodeInfo.keysMerkleRoot, expectedMerkleRoot)
 
@@ -681,7 +681,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         from: user1
       })
 
-      expectedMerkleRoot = MerkleTree.fromKeysAndSignatures(multiBatch.keys, multiBatch.sigs).getRoot()
+      expectedMerkleRoot = MerkleTree.fromKeysAndSignatures(multiBatch.keys, multiBatch.sigs, 0, KEYS_BATCH_SIZE).getRoot()
       nodeInfo = await app.getNodeOperator(0, false)
       assert.equal(nodeInfo.keysMerkleRoot, expectedMerkleRoot)
     })
