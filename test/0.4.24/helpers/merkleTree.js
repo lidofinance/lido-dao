@@ -1,9 +1,12 @@
+const { solidityKeccak256 } = require('ethers/lib/utils')
 const { hexConcat } = require('../../helpers/utils')
 
 const HASH_ZERO = '0x0000000000000000000000000000000000000000000000000000000000000000'
 
-const calcLeafHash = (keysBatch, sigsBatch) => web3.utils.keccak256(hexConcat(hexConcat(...keysBatch), hexConcat(...sigsBatch)))
-const hashNodes = (left, right) => web3.utils.keccak256(web3.eth.abi.encodeParameters(['bytes32', 'bytes32'], [left, right]))
+const calcLeafHash = (startKeyIndex, keysBatch, sigsBatch) =>
+  solidityKeccak256(['uint64', 'bytes', 'bytes'], [startKeyIndex, hexConcat(...keysBatch), hexConcat(...sigsBatch)])
+
+const hashNodes = (left, right) => solidityKeccak256(['bytes32', 'bytes32'], [left, right])
 
 class MerkleTree {
   constructor(leaves) {
@@ -21,8 +24,8 @@ class MerkleTree {
     this.createHashes(this.leaves)
   }
 
-  static fromKeysAndSignatures(keyBatches, sigBatches, batchSize = 8) {
-    const leaves = keyBatches.map((keyBatch, index) => calcLeafHash(keyBatch, sigBatches[index]))
+  static fromKeysAndSignatures(keyBatches, sigBatches, usedSigningKeys, batchSize) {
+    const leaves = keyBatches.map((keyBatch, index) => calcLeafHash(usedSigningKeys + index * batchSize, keyBatch, sigBatches[index]))
     return new MerkleTree(leaves)
   }
 

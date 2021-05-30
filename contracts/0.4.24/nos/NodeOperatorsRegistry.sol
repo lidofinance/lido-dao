@@ -378,6 +378,9 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
         DepositLookupCacheEntry memory entry;
 
+        // Track how many keys have been used in this transaction
+        uint256[] memory keysUsed = new uint256[](cache.length);
+
         // Verify that the provided signing keys correspond to the keys provided by this node operator
         for(uint256 batchIndex = 0; batchIndex < numBatches; batchIndex++) {
             KeysData memory keyData = _keysData[batchIndex];
@@ -385,12 +388,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
             require(keyData.operatorId == entry.id, "Must choose operator with smallest stake");
 
-            bytes32 leafHash = _keyLeafHash(keyData.publicKeys, keyData.signatures);
-            require(!leafHashUsed(entry.id, leafHash), "Signing keys already used");
-
+            // startKeyIndex prevents merkle proofs for the same keys being reused by acting as a nonce  
+            uint64 startKeyIndex = to64(entry.initialUsedSigningKeys.add(keysUsed[operatorIndices[batchIndex]]));
+            bytes32 leafHash = _keyLeafHash(startKeyIndex, keyData.publicKeys, keyData.signatures);
             require(Merkle.checkMembership(leafHash, keyData.leafIndex, entry.keysMerkleRoot, keyData.proofData), "Invalid Merkle Proof");
-
-            _markLeafUsed(entry.id, leafHash);
+            
+            keysUsed[operatorIndices[batchIndex]] += KEYS_LEAF_SIZE;
         }
 
         // Update the number of used keys for each operator
@@ -405,34 +408,15 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         return true;
     }
 
-    function _keyLeafHash(bytes publicKeys,  bytes signatures) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(publicKeys, signatures));
-    }
-
-    function _merkleLeafOffset(uint256 _operator_id,  bytes32 _leafHash) internal pure returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(MERKLE_LEAVES_MAPPING_NAME, _operator_id, _leafHash)));
-    }
-
     /**
-     * @notice Returns whether a given leaf hash has been used in a merkle proof already
-     * @dev Used to prevent the same signing keys being used multiple times
+     * @dev Inclusion of startKeyIndex acts as a nonce to prevent a set of keys being reused
+     * @param startKeyIndex - The number of keys which have currently been used by the given operator.
+     * @param publicKeys - The set of concatenated public keys under consideration.
+     * @param signatures - The set of concatenated signatures under consideration.
+     * @return The hash of the merkle tree leaf specified by the provided data.
      */
-    function leafHashUsed(uint256 _operator_id, bytes32 _leafHash) public view returns (bool leafUsed) {
-        uint256 offset = _merkleLeafOffset(_operator_id, _leafHash);
-        assembly {
-            leafUsed := sload(offset)
-        }
-    }
-
-    /**
-     * @notice Marks provided leaf hash as used
-     * @dev Used to prevent the same signing keys being used multiple times
-     */
-    function _markLeafUsed(uint256 _operator_id, bytes32 _leafHash) internal {
-        uint256 offset = _merkleLeafOffset(_operator_id, _leafHash);
-        assembly {
-            sstore(offset, 1)
-        }
+    function _keyLeafHash(uint64 startKeyIndex, bytes publicKeys,  bytes signatures) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(startKeyIndex, publicKeys, signatures));
     }
 
     /**
@@ -572,6 +556,9 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             emit SigningKeyMerkleRootCleared(_operator_id, clearedMerkleRoot);
         }
 
+        // Cache to save gas
+        uint256 operatorUsedKeys = operators[_operator_id].usedSigningKeys;
+        
         // Emit the batches of keys as events and calculate batch hashes
         uint256 numKeyBatches = _quantity.div(KEYS_LEAF_SIZE);
         bytes32[] memory batchHashes = new bytes32[](numKeyBatches);
@@ -580,7 +567,9 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             // TODO: check for empty keys
             bytes memory sigs = BytesLib.slice(_signatures, i * SIGNATURE_LENGTH * KEYS_LEAF_SIZE, SIGNATURE_LENGTH * KEYS_LEAF_SIZE);
 
-            batchHashes[i] = _keyLeafHash(keys, sigs);
+            // Each set of keys is prepended with the index of the first key in the batch
+            // The tracked number of used keys now acts as a nonce to prevent replay attacks
+            batchHashes[i] = _keyLeafHash(to64(operatorUsedKeys.add(KEYS_LEAF_SIZE.mul(i))), keys, sigs);
 
             // TODO: break down batch into individual keys?
             emit SigningKeysBatchAdded(_operator_id, keys, sigs);
@@ -588,7 +577,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
         // Update operator status
         operators[_operator_id].keysMerkleRoot = Merkle.calcRootHash(batchHashes);
-        operators[_operator_id].totalSigningKeys = operators[_operator_id].usedSigningKeys.add(to64(_quantity));
+        operators[_operator_id].totalSigningKeys = to64(operatorUsedKeys.add(_quantity));
     }
 
     function _loadOperatorCache() internal view returns (DepositLookupCacheEntry[] memory cache) {
