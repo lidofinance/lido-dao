@@ -513,21 +513,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         return TOTAL_OPERATORS_COUNT_POSITION.getStorageUint256();
     }
 
-    function _isEmptySigningKey(bytes memory _key) internal pure returns (bool) {
-        assert(_key.length == PUBKEY_LENGTH);
-        // algorithm applicability constraint
-        assert(PUBKEY_LENGTH >= 32 && PUBKEY_LENGTH <= 64);
-
-        uint256 k1;
-        uint256 k2;
-        assembly {
-            k1 := mload(add(_key, 0x20))
-            k2 := mload(add(_key, 0x40))
-        }
-
-        return 0 == k1 && 0 == (k2 >> ((2 * 32 - PUBKEY_LENGTH) * 8));
-    }
-
     function to64(uint256 v) internal pure returns (uint64) {
         assert(v <= uint256(uint64(-1)));
         return uint64(v);
@@ -555,7 +540,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         bytes32[] memory batchHashes = new bytes32[](numKeyBatches);
         for (uint256 i = 0; i < numKeyBatches; ++i) {
             bytes memory keys = BytesLib.slice(_pubkeys, i * PUBKEY_LENGTH * KEYS_LEAF_SIZE, PUBKEY_LENGTH * KEYS_LEAF_SIZE);
-            // TODO: check for empty keys
             bytes memory sigs = BytesLib.slice(_signatures, i * SIGNATURE_LENGTH * KEYS_LEAF_SIZE, SIGNATURE_LENGTH * KEYS_LEAF_SIZE);
 
             // Each set of keys is prepended with the index of the first key in the batch
