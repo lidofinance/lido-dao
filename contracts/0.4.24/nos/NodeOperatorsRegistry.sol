@@ -212,16 +212,19 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     function trimUnusedKeys() external onlyLido {
         uint256 length = getNodeOperatorsCount();
         for (uint256 operatorId = 0; operatorId < length; ++operatorId) {
-            bytes32 clearedMerkleRoot = operators[operatorId].keysMerkleRoot;
-            if (clearedMerkleRoot != bytes32(0)){
-                // Clear merkle root
-                operators[operatorId].keysMerkleRoot = bytes32(0);
-                emit SigningKeyMerkleRootCleared(operatorId, clearedMerkleRoot);
+            _clearMerkleRoot(operatorId);
+        }
+    }
 
-                // Only update totalSigningKeys if there are unused keys being discarded
-                if (operators[operatorId].totalSigningKeys != operators[operatorId].usedSigningKeys){
-                    operators[operatorId].totalSigningKeys = operators[operatorId].usedSigningKeys;
-                }  
+    function _clearMerkleRoot(uint256 _operator_id) internal {
+        bytes32 clearedMerkleRoot = operators[_operator_id].keysMerkleRoot;
+        if (clearedMerkleRoot != bytes32(0)){
+            operators[_operator_id].keysMerkleRoot = bytes32(0);
+            emit SigningKeyMerkleRootCleared(_operator_id, clearedMerkleRoot);
+
+            // Only update totalSigningKeys if there are unused keys being discarded
+            if (operators[_operator_id].totalSigningKeys != operators[_operator_id].usedSigningKeys){
+                operators[_operator_id].totalSigningKeys = operators[_operator_id].usedSigningKeys;
             }
         }
     }
@@ -274,11 +277,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         external
         authP(MANAGE_SIGNING_KEYS, arr(_operator_id))
     {
-        bytes32 clearedMerkleRoot = operators[_operator_id].keysMerkleRoot;
-        operators[_operator_id].keysMerkleRoot = bytes32(0);
-        operators[_operator_id].totalSigningKeys = operators[_operator_id].usedSigningKeys;  // discard unused keys
-
-        emit SigningKeyMerkleRootCleared(_operator_id, clearedMerkleRoot);
+        _clearMerkleRoot(_operator_id);
     }
 
     /**
@@ -287,12 +286,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       */
     function clearMerkleRootOperatorBH(uint256 _operator_id) external {
         require(msg.sender == operators[_operator_id].rewardAddress, "APP_AUTH_FAILED");
-
-        bytes32 clearedMerkleRoot = operators[_operator_id].keysMerkleRoot;
-        operators[_operator_id].keysMerkleRoot = bytes32(0);
-        operators[_operator_id].totalSigningKeys = operators[_operator_id].usedSigningKeys;  // discard unused keys
-
-        emit SigningKeyMerkleRootCleared(_operator_id, clearedMerkleRoot);
+        _clearMerkleRoot(_operator_id);
     }
 
     /**
