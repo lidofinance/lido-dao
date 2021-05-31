@@ -377,9 +377,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             KeysData memory keyData = _keysData[batchIndex];
             entry = cache[operatorIndices[batchIndex]];
 
-            //TODO: Remove this line (and inclusion of operatorId in KeyData) as it is unused
-            require(keyData.operatorId == entry.id, "Must choose operator with smallest stake");
-
             // startKeyIndex prevents merkle proofs for the same keys being reused by acting as a nonce  
             uint64 startKeyIndex = to64(entry.initialUsedSigningKeys.add(keysUsed[operatorIndices[batchIndex]]));
             bytes32 leafHash = _keyLeafHash(startKeyIndex, keyData.publicKeys, keyData.signatures);

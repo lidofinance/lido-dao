@@ -96,7 +96,6 @@ contract INodeOperatorsRegistry {
 
     /// @dev Format for key verification data used in the verifyNextKeys function
     struct KeysData{
-        uint256 operatorId;
         uint256 leafIndex;
         bytes publicKeys;
         bytes signatures;

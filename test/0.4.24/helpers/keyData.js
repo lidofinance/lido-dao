@@ -11,7 +11,6 @@ const buildKeyData = (operators, operatorId, leafIndex, usedSigningKeysArray = o
   )
   const proofData = merkleProof.length > 0 ? hexConcat(...merkleProof) : '0x'
   return {
-    operatorId,
     leafIndex,
     publicKeys,
     signatures,
