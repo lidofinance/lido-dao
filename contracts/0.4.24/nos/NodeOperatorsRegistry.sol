@@ -397,6 +397,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
             if (entry.usedSigningKeys != entry.initialUsedSigningKeys) {
                 operators[entry.id].usedSigningKeys = uint64(entry.usedSigningKeys);
+
+                // Automatically clear any depleted merkle trees
+                if (entry.totalSigningKeys == entry.usedSigningKeys){
+                    _clearMerkleRoot(entry.id);
+                }
             }
         }
 
