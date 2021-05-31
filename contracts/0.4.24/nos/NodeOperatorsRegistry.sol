@@ -544,10 +544,10 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
             // Each set of keys is prepended with the index of the first key in the batch
             // The tracked number of used keys now acts as a nonce to prevent replay attacks
-            batchHashes[i] = _keyLeafHash(to64(operatorUsedKeys.add(KEYS_LEAF_SIZE.mul(i))), keys, sigs);
+            uint64 startKeyIndex = to64(operatorUsedKeys.add(KEYS_LEAF_SIZE.mul(i)));
+            batchHashes[i] = _keyLeafHash(startKeyIndex, keys, sigs);
 
-            // TODO: break down batch into individual keys?
-            emit SigningKeysBatchAdded(_operator_id, keys, sigs);
+            emit SigningKeysBatchAdded(_operator_id, keys, sigs, startKeyIndex);
         }
 
         // Update operator status
