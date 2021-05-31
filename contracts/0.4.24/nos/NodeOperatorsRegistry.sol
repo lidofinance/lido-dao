@@ -333,9 +333,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
                 if (entry.usedSigningKeys == entry.totalSigningKeys)
                     continue;
 
-                if (entry.keysMerkleRoot == bytes32(0))
-                    continue;
-
                 uint256 stake = entry.usedSigningKeys.sub(entry.stoppedValidators);
                 // Require that operator can utilise all of the keys
                 if (stake + KEYS_LEAF_SIZE > entry.stakingLimit)
