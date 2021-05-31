@@ -275,40 +275,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     assert.equal(c0.withdrawal_credentials, padHash('0x0202'))
     assert.equal(c0.signature, op0.sigs[0][0])
     assertBn(c0.value, ETH(32))
-
-    // TODO: delete these lines? Looks irrelevant in offchain regime
-
-    // // +100 ETH, test partial unbuffering
-    // await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(100) })
-    // await app.depositBufferedEther(1)
-    // await checkStat({ depositedValidators: 2, beaconValidators: 0, beaconBalance: ETH(0) })
-    // assertBn(await app.getTotalPooledEther(), ETH(133))
-    // assertBn(await app.getBufferedEther(), ETH(69))
-    // assertBn(await app.balanceOf(user1), tokens(101))
-    // assertBn(await app.balanceOf(user2), tokens(2))
-    // assertBn(await app.balanceOf(user3), tokens(30))
-    // assertBn(await app.totalSupply(), tokens(133))
-
-    // await app.depositBufferedEther()
-    // await checkStat({ depositedValidators: 4, beaconValidators: 0, beaconBalance: ETH(0) })
-    // assertBn(await app.getTotalPooledEther(), ETH(133))
-    // assertBn(await app.getBufferedEther(), ETH(5))
-    // assertBn(await app.balanceOf(user1), tokens(101))
-    // assertBn(await app.balanceOf(user2), tokens(2))
-    // assertBn(await app.balanceOf(user3), tokens(30))
-    // assertBn(await app.totalSupply(), tokens(133))
-
-    // assertBn(await depositContract.totalCalls(), 4)
-    // const calls = {}
-    // for (const i of [1, 2, 3]) {
-    //   calls[i] = await depositContract.calls.call(i)
-    //   assert.equal(calls[i].withdrawal_credentials, padHash('0x0202'))
-    //   assert.equal(calls[i].signature, padSig('0x01'))
-    //   assertBn(calls[i].value, ETH(32))
-    // }
-    // assert.equal(calls[1].pubkey, padKey('0x010204'))
-    // assert.equal(calls[2].pubkey, padKey('0x010205'))
-    // assert.equal(calls[3].pubkey, padKey('0x010206'))
   })
 
   it('deposit uses the expected signing keys', async () => {
@@ -423,32 +389,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody]) => {
     assertBn(await depositContract.totalCalls(), 3)
     assertBn(await app.getTotalPooledEther(), ETH(133))
     assertBn(await app.getBufferedEther(), ETH(37))
-  })
-
-  it.skip("out of signing keys doesn't revert but buffers", async () => {
-    await operators.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
-    await operators.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
-
-    await app.setWithdrawalCredentials(padHash('0x0202'), { from: voting })
-    await operators.addSigningKeys(0, 1, padKey('0x010203'), padSig('0x01'), { from: voting })
-
-    await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(100) })
-    await app.depositBufferedEther()
-    await checkStat({ depositedValidators: 1, beaconValidators: 0, beaconBalance: ETH(0) })
-    assertBn(await depositContract.totalCalls(), 1)
-    assertBn(await app.getTotalPooledEther(), ETH(100))
-    assertBn(await app.getBufferedEther(), ETH(100 - 32))
-
-    // buffer unwinds
-    await operators.addSigningKeys(0, 3, packKeyArray(['0x010204', '0x010205', '0x010206']), packSigArray(['0x01', '0x01', '0x01']), {
-      from: voting
-    })
-    await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(1) })
-    await app.depositBufferedEther()
-    await checkStat({ depositedValidators: 3, beaconValidators: 0, beaconBalance: ETH(0) })
-    assertBn(await depositContract.totalCalls(), 3)
-    assertBn(await app.getTotalPooledEther(), ETH(101))
-    assertBn(await app.getBufferedEther(), ETH(5))
   })
 
   it('withdrawal method reverts', async () => {
