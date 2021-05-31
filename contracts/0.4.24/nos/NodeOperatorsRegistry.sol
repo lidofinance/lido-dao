@@ -326,12 +326,15 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             for (uint256 idx = 0; idx < cache.length; ++idx) {
                 entry = cache[idx];
 
+                // TODO: remove redundant check
                 assert(entry.usedSigningKeys <= entry.totalSigningKeys);
-                if (entry.usedSigningKeys == entry.totalSigningKeys)
+                
+                // Require that operator has enough keys to perform a deposit
+                if (entry.usedSigningKeys + KEYS_LEAF_SIZE > entry.totalSigningKeys)
                     continue;
 
+                // Require that operator is authorised to perform a deposit
                 uint256 stake = entry.usedSigningKeys.sub(entry.stoppedValidators);
-                // Require that operator can utilise all of the keys
                 if (stake + KEYS_LEAF_SIZE > entry.stakingLimit)
                     continue;
 
