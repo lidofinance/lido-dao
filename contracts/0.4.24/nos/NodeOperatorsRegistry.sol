@@ -43,9 +43,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
     uint256 internal constant UINT64_MAX = uint256(uint64(-1));
 
-    bytes32 internal constant MERKLE_LEAVES_MAPPING_NAME = keccak256("lido.NodeOperatorsRegistry.merkleLeavesMappingName");
-
-
     /// @dev Node Operator parameters and internal state
     struct NodeOperator {
         bool active;    // a flag indicating if the operator can participate in further staking and reward distribution
