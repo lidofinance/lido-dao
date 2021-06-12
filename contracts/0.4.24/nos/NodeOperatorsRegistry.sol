@@ -359,8 +359,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
      *         May only be called by the Lido contract.
      *
      * @param _keysData array of KeysData structs containing signing keys+sigs along with merkle proofs
-     *
-     * @return Two byte arrays of the validated keys and signatures.
      */
     function verifyNextSigningKeys(KeysData[] _keysData) public onlyLido returns (bool) {
         uint256 numBatches = _keysData.length;
