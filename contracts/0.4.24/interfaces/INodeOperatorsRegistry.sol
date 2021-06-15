@@ -13,6 +13,11 @@ pragma experimental ABIEncoderV2;
   */
 contract INodeOperatorsRegistry {
     /**
+      * @notice returns the number of public keys per KeysData struct
+      */
+    uint256 constant public KEYS_LEAF_SIZE = 8;
+
+    /**
       * @notice Add node operator named `name` with reward address `rewardAddress` and staking limit `stakingLimit` validators
       * @param _name Human-readable name
       * @param _rewardAddress Ethereum 1 address which receives stETH rewards for this operator
