@@ -4,6 +4,7 @@
 
 /* See contracts/COMPILERS.md */
 pragma solidity 0.4.24;
+pragma experimental ABIEncoderV2;
 
 import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/common/IsContract.sol";
@@ -13,7 +14,7 @@ import "solidity-bytes-utils/contracts/BytesLib.sol";
 
 import "../interfaces/INodeOperatorsRegistry.sol";
 import "../lib/MemUtils.sol";
-
+import "../lib/Merkle.sol";
 
 /**
   * @title Node Operator registry implementation
@@ -41,9 +42,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
     uint256 internal constant UINT64_MAX = uint256(uint64(-1));
 
-    bytes32 internal constant SIGNING_KEYS_MAPPING_NAME = keccak256("lido.NodeOperatorsRegistry.signingKeysMappingName");
-
-
     /// @dev Node Operator parameters and internal state
     struct NodeOperator {
         bool active;    // a flag indicating if the operator can participate in further staking and reward distribution
@@ -54,9 +52,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
         uint64 totalSigningKeys;    // total amount of signing keys of this operator
         uint64 usedSigningKeys;     // number of signing keys of this operator which were used in deposits to the Ethereum 2
+
+        bytes32 keysMerkleRoot;     // root of merkle tree containing operator's unused keys
     }
 
-    /// @dev Memory cache entry used in the assignNextKeys function
+    /// @dev Memory cache entry used in the verifyNextKeys function
     struct DepositLookupCacheEntry {
         // Makes no sense to pack types since reading memory is as fast as any op
         uint256 id;
@@ -65,15 +65,16 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         uint256 totalSigningKeys;
         uint256 usedSigningKeys;
         uint256 initialUsedSigningKeys;
+        bytes32 keysMerkleRoot;
     }
 
     /// @dev Mapping of all node operators. Mapping is used to be able to extend the struct.
     mapping(uint256 => NodeOperator) internal operators;
 
-    // @dev Total number of operators
+    /// @dev Total number of operators
     bytes32 internal constant TOTAL_OPERATORS_COUNT_POSITION = keccak256("lido.NodeOperatorsRegistry.totalOperatorsCount");
 
-    // @dev Cached number of active operators
+    /// @dev Cached number of active operators
     bytes32 internal constant ACTIVE_OPERATORS_COUNT_POSITION = keccak256("lido.NodeOperatorsRegistry.activeOperatorsCount");
 
     /// @dev link to the Lido contract
@@ -207,8 +208,20 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     function trimUnusedKeys() external onlyLido {
         uint256 length = getNodeOperatorsCount();
         for (uint256 operatorId = 0; operatorId < length; ++operatorId) {
-            if (operators[operatorId].totalSigningKeys != operators[operatorId].usedSigningKeys)  // write only if update is needed
-                operators[operatorId].totalSigningKeys = operators[operatorId].usedSigningKeys;  // discard unused keys
+            _clearMerkleRoot(operatorId);
+        }
+    }
+
+    function _clearMerkleRoot(uint256 _operator_id) internal {
+        bytes32 clearedMerkleRoot = operators[_operator_id].keysMerkleRoot;
+        if (clearedMerkleRoot != bytes32(0)){
+            operators[_operator_id].keysMerkleRoot = bytes32(0);
+            emit SigningKeyMerkleRootCleared(_operator_id, clearedMerkleRoot);
+
+            // Only update totalSigningKeys if there are unused keys being discarded
+            if (operators[_operator_id].totalSigningKeys != operators[_operator_id].usedSigningKeys){
+                operators[_operator_id].totalSigningKeys = operators[_operator_id].usedSigningKeys;
+            }
         }
     }
 
@@ -253,58 +266,75 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     /**
-      * @notice Removes a validator signing key #`_index` of operator #`_id` from the set of usable keys. Executed on behalf of DAO.
+      * @notice Clears an operator's merkle tree root, invalidating all unused keys. Executed on behalf of DAO.
       * @param _operator_id Node Operator id
-      * @param _index Index of the key, starting with 0
       */
-    function removeSigningKey(uint256 _operator_id, uint256 _index)
+    function clearMerkleRoot(uint256 _operator_id)
         external
         authP(MANAGE_SIGNING_KEYS, arr(_operator_id))
     {
-        _removeSigningKey(_operator_id, _index);
+        _clearMerkleRoot(_operator_id);
     }
 
     /**
-      * @notice Removes a validator signing key #`_index` of operator #`_id` from the set of usable keys. Executed on behalf of Node Operator.
+      * @notice Clears an operator's merkle tree root, invalidating all unused keys. Executed on behalf of Node Operator.
       * @param _operator_id Node Operator id
-      * @param _index Index of the key, starting with 0
       */
-    function removeSigningKeyOperatorBH(uint256 _operator_id, uint256 _index) external {
+    function clearMerkleRootOperatorBH(uint256 _operator_id) external {
         require(msg.sender == operators[_operator_id].rewardAddress, "APP_AUTH_FAILED");
-        _removeSigningKey(_operator_id, _index);
+        _clearMerkleRoot(_operator_id);
     }
 
     /**
-     * @notice Selects and returns at most `_numKeys` signing keys (as well as the corresponding
-     *         signatures) from the set of active keys and marks the selected keys as used.
-     *         May only be called by the Lido contract.
+     * @param _numBatches The number of batches of keys for which to find out the operators for
      *
-     * @param _numKeys The number of keys to select. The actual number of selected keys may be less
-     *        due to the lack of active keys.
+     * @return array of the next `_numBatches` operator ids to be used next
      */
-    function assignNextSigningKeys(uint256 _numKeys) external onlyLido returns (bytes memory pubkeys, bytes memory signatures) {
-        // Memory is very cheap, although you don't want to grow it too much
-        DepositLookupCacheEntry[] memory cache = _loadOperatorCache();
-        if (0 == cache.length)
-            return (new bytes(0), new bytes(0));
+    function getNextOperators(uint256 _numBatches) external view returns (uint256[] memory) {
+        (DepositLookupCacheEntry[] memory cache, uint256[] memory operatorIndices) = _getNextOperatorsData(_numBatches);
 
-        uint256 numAssignedKeys = 0;
+        // Convert from indices to operator ids
+        uint256[] memory operatorIds = new uint256[](_numBatches); 
+        for (uint256 i = 0; i < _numBatches; ++i) {
+            operatorIds[i] = cache[operatorIndices[i]].id;
+        }
+
+        return operatorIds;
+    }
+
+
+    /**
+     * @notice Calculates the effect of assigning `_numBatches` batches of keys and returns the new operator states and the order in which they are used
+     *
+     * @return Returns two arrays:
+     *         cache - an array of information on the state of each operator after the next `_numBatches` batches of keys are applied.
+     *         operatorIndices - array of the indices of operators within `cache` which will receive the next `_numBatches` batches of keys.
+     */
+    function _getNextOperatorsData(uint256 _numBatches) internal view returns (DepositLookupCacheEntry[] memory cache, uint256[] memory operatorIndices) {
+        cache = _loadOperatorCache();
+        require(cache.length > 0, "No valid operators");
+
+        operatorIndices = new uint256[](_numBatches);
+
         DepositLookupCacheEntry memory entry;
-
-        while (numAssignedKeys < _numKeys) {
-            // Finding the best suitable operator
+        for(uint256 batchIndex = 0; batchIndex < _numBatches; batchIndex++) {
+            // Find the node operator with the fewest active validators and spare capacity
             uint256 bestOperatorIdx = cache.length;   // 'not found' flag
             uint256 smallestStake;
-            // The loop is ligthweight comparing to an ether transfer and .deposit invocation
+            // The loop is lightweight comparing to an ether transfer and .deposit invocation
             for (uint256 idx = 0; idx < cache.length; ++idx) {
                 entry = cache[idx];
 
+                // TODO: remove redundant check
                 assert(entry.usedSigningKeys <= entry.totalSigningKeys);
-                if (entry.usedSigningKeys == entry.totalSigningKeys)
+                
+                // Require that operator has enough keys to perform a deposit
+                if (entry.usedSigningKeys + KEYS_LEAF_SIZE > entry.totalSigningKeys)
                     continue;
 
+                // Require that operator is authorised to perform a deposit
                 uint256 stake = entry.usedSigningKeys.sub(entry.stoppedValidators);
-                if (stake + 1 > entry.stakingLimit)
+                if (stake + KEYS_LEAF_SIZE > entry.stakingLimit)
                     continue;
 
                 if (bestOperatorIdx == cache.length || stake < smallestStake) {
@@ -313,55 +343,71 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
                 }
             }
 
-            if (bestOperatorIdx == cache.length)  // not found
-                break;
+            assert(bestOperatorIdx < cache.length);
+            
+            // record that we are assigning keys to this operators
+            operatorIndices[batchIndex] = bestOperatorIdx;
+            cache[bestOperatorIdx].usedSigningKeys += KEYS_LEAF_SIZE;
+            assert(cache[bestOperatorIdx].usedSigningKeys < UINT64_MAX);
+        }
+    }
 
-            entry = cache[bestOperatorIdx];
-            assert(entry.usedSigningKeys < UINT64_MAX);
+    /**
+     * @notice Verifies a number of provided signing keys (as well as the corresponding signatures)
+     *         against the set of active keys and marks the selected keys as used.
+     *         May only be called by the Lido contract.
+     *
+     * @param _keysData array of KeysData structs containing signing keys+sigs along with merkle proofs
+     */
+    function verifyNextSigningKeys(KeysData[] _keysData) public onlyLido returns (bool) {
+        uint256 numBatches = _keysData.length;
+        require(numBatches > 0, "No keys provided");
+        (DepositLookupCacheEntry[] memory cache, uint256[] memory operatorIndices) = _getNextOperatorsData(numBatches);
 
-            ++entry.usedSigningKeys;
-            ++numAssignedKeys;
+        DepositLookupCacheEntry memory entry;
+
+        // Track how many keys have been used in this transaction
+        uint256[] memory keysUsed = new uint256[](cache.length);
+
+        // Verify that the provided signing keys correspond to the keys provided by this node operator
+        for(uint256 batchIndex = 0; batchIndex < numBatches; batchIndex++) {
+            KeysData memory keyData = _keysData[batchIndex];
+            entry = cache[operatorIndices[batchIndex]];
+
+            // startKeyIndex prevents merkle proofs for the same keys being reused by acting as a nonce  
+            uint64 startKeyIndex = to64(entry.initialUsedSigningKeys.add(keysUsed[operatorIndices[batchIndex]]));
+            bytes32 leafHash = _keyLeafHash(startKeyIndex, keyData.publicKeys, keyData.signatures);
+            require(Merkle.checkMembership(leafHash, keyData.leafIndex, entry.keysMerkleRoot, keyData.proofData), "Invalid Merkle Proof");
+            
+            keysUsed[operatorIndices[batchIndex]] += KEYS_LEAF_SIZE;
         }
 
-        if (numAssignedKeys == 0) {
-            return (new bytes(0), new bytes(0));
-        }
-
-        if (numAssignedKeys > 1) {
-            // we can allocate without zeroing out since we're going to rewrite the whole array
-            pubkeys = MemUtils.unsafeAllocateBytes(numAssignedKeys * PUBKEY_LENGTH);
-            signatures = MemUtils.unsafeAllocateBytes(numAssignedKeys * SIGNATURE_LENGTH);
-        }
-
-        uint256 numLoadedKeys = 0;
-
+        // Update the number of used keys for each operator
         for (uint256 i = 0; i < cache.length; ++i) {
             entry = cache[i];
 
-            if (entry.usedSigningKeys == entry.initialUsedSigningKeys) {
-                continue;
-            }
+            if (entry.usedSigningKeys != entry.initialUsedSigningKeys) {
+                operators[entry.id].usedSigningKeys = uint64(entry.usedSigningKeys);
 
-            operators[entry.id].usedSigningKeys = uint64(entry.usedSigningKeys);
-
-            for (uint256 keyIndex = entry.initialUsedSigningKeys; keyIndex < entry.usedSigningKeys; ++keyIndex) {
-                (bytes memory pubkey, bytes memory signature) = _loadSigningKey(entry.id, keyIndex);
-                if (numAssignedKeys == 1) {
-                    return (pubkey, signature);
-                } else {
-                    MemUtils.copyBytes(pubkey, pubkeys, numLoadedKeys * PUBKEY_LENGTH);
-                    MemUtils.copyBytes(signature, signatures, numLoadedKeys * SIGNATURE_LENGTH);
-                    ++numLoadedKeys;
+                // Automatically clear any depleted merkle trees
+                if (entry.totalSigningKeys == entry.usedSigningKeys){
+                    _clearMerkleRoot(entry.id);
                 }
-            }
-
-            if (numLoadedKeys == numAssignedKeys) {
-                break;
             }
         }
 
-        assert(numLoadedKeys == numAssignedKeys);
-        return (pubkeys, signatures);
+        return true;
+    }
+
+    /**
+     * @dev Inclusion of startKeyIndex acts as a nonce to prevent a set of keys being reused
+     * @param startKeyIndex - The number of keys which have currently been used by the given operator.
+     * @param publicKeys - The set of concatenated public keys under consideration.
+     * @param signatures - The set of concatenated signatures under consideration.
+     * @return The hash of the merkle tree leaf specified by the provided data.
+     */
+    function _keyLeafHash(uint64 startKeyIndex, bytes publicKeys,  bytes signatures) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(startKeyIndex, publicKeys, signatures));
     }
 
     /**
@@ -430,7 +476,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             uint64 stakingLimit,
             uint64 stoppedValidators,
             uint64 totalSigningKeys,
-            uint64 usedSigningKeys
+            uint64 usedSigningKeys,
+            bytes32 keysMerkleRoot
         )
     {
         NodeOperator storage operator = operators[_id];
@@ -442,6 +489,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         stoppedValidators = operator.stoppedValidators;
         totalSigningKeys = operator.totalSigningKeys;
         usedSigningKeys = operator.usedSigningKeys;
+        keysMerkleRoot = operator.keysMerkleRoot;
     }
 
     /**
@@ -459,44 +507,10 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     /**
-      * @notice Returns n-th signing key of the node operator #`_operator_id`
-      * @param _operator_id Node Operator id
-      * @param _index Index of the key, starting with 0
-      * @return key Key
-      * @return depositSignature Signature needed for a deposit_contract.deposit call
-      * @return used Flag indication if the key was used in the staking
-      */
-    function getSigningKey(uint256 _operator_id, uint256 _index) external view
-        operatorExists(_operator_id)
-        returns (bytes key, bytes depositSignature, bool used)
-    {
-        require(_index < operators[_operator_id].totalSigningKeys, "KEY_NOT_FOUND");
-
-        (bytes memory key_, bytes memory signature) = _loadSigningKey(_operator_id, _index);
-
-        return (key_, signature, _index < operators[_operator_id].usedSigningKeys);
-    }
-
-    /**
       * @notice Returns total number of node operators
       */
     function getNodeOperatorsCount() public view returns (uint256) {
         return TOTAL_OPERATORS_COUNT_POSITION.getStorageUint256();
-    }
-
-    function _isEmptySigningKey(bytes memory _key) internal pure returns (bool) {
-        assert(_key.length == PUBKEY_LENGTH);
-        // algorithm applicability constraint
-        assert(PUBKEY_LENGTH >= 32 && PUBKEY_LENGTH <= 64);
-
-        uint256 k1;
-        uint256 k2;
-        assembly {
-            k1 := mload(add(_key, 0x20))
-            k2 := mload(add(_key, 0x40))
-        }
-
-        return 0 == k1 && 0 == (k2 >> ((2 * 32 - PUBKEY_LENGTH) * 8));
     }
 
     function to64(uint256 v) internal pure returns (uint64) {
@@ -504,109 +518,41 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         return uint64(v);
     }
 
-    function _signingKeyOffset(uint256 _operator_id, uint256 _keyIndex) internal pure returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(SIGNING_KEYS_MAPPING_NAME, _operator_id, _keyIndex)));
-    }
-
-    function _storeSigningKey(uint256 _operator_id, uint256 _keyIndex, bytes memory _key, bytes memory _signature) internal {
-        assert(_key.length == PUBKEY_LENGTH);
-        assert(_signature.length == SIGNATURE_LENGTH);
-        // algorithm applicability constraints
-        assert(PUBKEY_LENGTH >= 32 && PUBKEY_LENGTH <= 64);
-        assert(0 == SIGNATURE_LENGTH % 32);
-
-        // key
-        uint256 offset = _signingKeyOffset(_operator_id, _keyIndex);
-        uint256 keyExcessBits = (2 * 32 - PUBKEY_LENGTH) * 8;
-        assembly {
-            sstore(offset, mload(add(_key, 0x20)))
-            sstore(add(offset, 1), shl(keyExcessBits, shr(keyExcessBits, mload(add(_key, 0x40)))))
-        }
-        offset += 2;
-
-        // signature
-        for (uint256 i = 0; i < SIGNATURE_LENGTH; i += 32) {
-            assembly {
-                sstore(offset, mload(add(_signature, add(0x20, i))))
-            }
-            offset++;
-        }
-    }
-
     function _addSigningKeys(uint256 _operator_id, uint256 _quantity, bytes _pubkeys, bytes _signatures) internal
         operatorExists(_operator_id)
     {
         require(_quantity != 0, "NO_KEYS");
+        require(_quantity % KEYS_LEAF_SIZE == 0, "INVALID_LENGTH"); // Prevent half filled merkle leaves
         require(_pubkeys.length == _quantity.mul(PUBKEY_LENGTH), "INVALID_LENGTH");
         require(_signatures.length == _quantity.mul(SIGNATURE_LENGTH), "INVALID_LENGTH");
 
-        for (uint256 i = 0; i < _quantity; ++i) {
-            bytes memory key = BytesLib.slice(_pubkeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
-            require(!_isEmptySigningKey(key), "EMPTY_KEY");
-            bytes memory sig = BytesLib.slice(_signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
-
-            _storeSigningKey(_operator_id, operators[_operator_id].totalSigningKeys + i, key, sig);
-            emit SigningKeyAdded(_operator_id, key);
+        // If we're overwriting an existing merkle root then emit an event to signal it's been invalidated
+        bytes32 clearedMerkleRoot = operators[_operator_id].keysMerkleRoot;
+        if (clearedMerkleRoot != bytes32(0)){
+            emit SigningKeyMerkleRootCleared(_operator_id, clearedMerkleRoot);
         }
 
-        operators[_operator_id].totalSigningKeys = operators[_operator_id].totalSigningKeys.add(to64(_quantity));
-    }
+        // Cache to save gas
+        uint256 operatorUsedKeys = operators[_operator_id].usedSigningKeys;
+        
+        // Emit the batches of keys as events and calculate batch hashes
+        uint256 numKeyBatches = _quantity.div(KEYS_LEAF_SIZE);
+        bytes32[] memory batchHashes = new bytes32[](numKeyBatches);
+        for (uint256 i = 0; i < numKeyBatches; ++i) {
+            bytes memory keys = BytesLib.slice(_pubkeys, i * PUBKEY_LENGTH * KEYS_LEAF_SIZE, PUBKEY_LENGTH * KEYS_LEAF_SIZE);
+            bytes memory sigs = BytesLib.slice(_signatures, i * SIGNATURE_LENGTH * KEYS_LEAF_SIZE, SIGNATURE_LENGTH * KEYS_LEAF_SIZE);
 
-    function _removeSigningKey(uint256 _operator_id, uint256 _index) internal
-        operatorExists(_operator_id)
-    {
-        require(_index < operators[_operator_id].totalSigningKeys, "KEY_NOT_FOUND");
-        require(_index >= operators[_operator_id].usedSigningKeys, "KEY_WAS_USED");
+            // Each set of keys is prepended with the index of the first key in the batch
+            // The tracked number of used keys now acts as a nonce to prevent replay attacks
+            uint64 startKeyIndex = to64(operatorUsedKeys.add(KEYS_LEAF_SIZE.mul(i)));
+            batchHashes[i] = _keyLeafHash(startKeyIndex, keys, sigs);
 
-        (bytes memory removedKey, ) = _loadSigningKey(_operator_id, _index);
-
-        uint256 lastIndex = operators[_operator_id].totalSigningKeys.sub(1);
-        if (_index < lastIndex) {
-            (bytes memory key, bytes memory signature) = _loadSigningKey(_operator_id, lastIndex);
-            _storeSigningKey(_operator_id, _index, key, signature);
+            emit SigningKeysBatchAdded(_operator_id, keys, sigs, startKeyIndex);
         }
 
-        _deleteSigningKey(_operator_id, lastIndex);
-        operators[_operator_id].totalSigningKeys = operators[_operator_id].totalSigningKeys.sub(1);
-
-        emit SigningKeyRemoved(_operator_id, removedKey);
-    }
-
-    function _deleteSigningKey(uint256 _operator_id, uint256 _keyIndex) internal {
-        uint256 offset = _signingKeyOffset(_operator_id, _keyIndex);
-        for (uint256 i = 0; i < (PUBKEY_LENGTH + SIGNATURE_LENGTH) / 32 + 1; ++i) {
-            assembly {
-                sstore(add(offset, i), 0)
-            }
-        }
-    }
-
-    function _loadSigningKey(uint256 _operator_id, uint256 _keyIndex) internal view returns (bytes memory key, bytes memory signature) {
-        // algorithm applicability constraints
-        assert(PUBKEY_LENGTH >= 32 && PUBKEY_LENGTH <= 64);
-        assert(0 == SIGNATURE_LENGTH % 32);
-
-        uint256 offset = _signingKeyOffset(_operator_id, _keyIndex);
-
-        // key
-        bytes memory tmpKey = new bytes(64);
-        assembly {
-            mstore(add(tmpKey, 0x20), sload(offset))
-            mstore(add(tmpKey, 0x40), sload(add(offset, 1)))
-        }
-        offset += 2;
-        key = BytesLib.slice(tmpKey, 0, PUBKEY_LENGTH);
-
-        // signature
-        signature = new bytes(SIGNATURE_LENGTH);
-        for (uint256 i = 0; i < SIGNATURE_LENGTH; i += 32) {
-            assembly {
-                mstore(add(signature, add(0x20, i)), sload(offset))
-            }
-            offset++;
-        }
-
-        return (key, signature);
+        // Update operator status
+        operators[_operator_id].keysMerkleRoot = Merkle.calcRootHash(batchHashes);
+        operators[_operator_id].totalSigningKeys = to64(operatorUsedKeys.add(_quantity));
     }
 
     function _loadOperatorCache() internal view returns (DepositLookupCacheEntry[] memory cache) {
@@ -629,8 +575,9 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             entry.totalSigningKeys = operator.totalSigningKeys;
             entry.usedSigningKeys = operator.usedSigningKeys;
             entry.initialUsedSigningKeys = entry.usedSigningKeys;
+            entry.keysMerkleRoot = operator.keysMerkleRoot;
         }
-        require(idx == cache.length, "INCOSISTENT_ACTIVE_COUNT");
+        require(idx == cache.length, "INCONSISTENT_ACTIVE_COUNT");
 
         return cache;
     }
