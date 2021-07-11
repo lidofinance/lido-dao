@@ -33,7 +33,7 @@ import "./StMATIC.sol";
 * rewards, no Transfer events are generated: doing so would require emitting an event
 * for each token holder and thus running an unbounded loop.
 */
-contract Lido is ILido, IsContract, StMatic, AragonApp {
+contract Lido is ILido, IsContract, StMATIC, AragonApp {
     using SafeMath for uint256;
     using SafeMath64 for uint64;
     using UnstructuredStorage for bytes32;

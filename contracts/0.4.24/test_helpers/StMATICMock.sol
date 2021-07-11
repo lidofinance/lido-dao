@@ -10,7 +10,7 @@ import "../StMATIC.sol";
  * @dev Only for testing purposes!
  * StETH mock version of mintable/burnable/stoppable token.
  */
-contract StMATICMock is StMatic {
+contract StMATICMock is StMATIC {
     uint256 private totalPooledMatic;
 
     constructor() public {

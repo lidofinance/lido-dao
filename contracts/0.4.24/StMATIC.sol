@@ -47,7 +47,7 @@ import "./lib/Pausable.sol";
  * DAO. This is useful for emergency scenarios, e.g. a protocol bug, where one might want
  * to freeze all token transfers and approvals until the emergency is resolved.
  */
-contract StMatic is IERC20, Pausable {
+contract StMATIC is IERC20, Pausable {
     using SafeMath for uint256;
     using UnstructuredStorage for bytes32;
 
