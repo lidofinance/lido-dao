@@ -21,8 +21,8 @@ import "./StMATIC.sol";
 /**
 * @title Liquid staking pool implementation
 *
-* Lido is an Ethereum 2.0 liquid staking protocol solving the problem of frozen staked Ethers
-* until transfers become available in Ethereum 2.0.
+* Lido is a Matic liquid staking protocol solving the problem of frozen staked Ethers
+* until transfers become available in Matic 2.0.
 * Whitepaper: https://lido.fi/static/Lido:Ethereum-Liquid-Staking.pdf
 *
 * NOTE: the code below assumes moderate amount of node operators, e.g. up to 50.
@@ -55,7 +55,7 @@ contract Lido is ILido, IsContract, StMatic, AragonApp {
 
     uint256 internal constant DEPOSIT_AMOUNT_UNIT = 1000000000 wei;
 
-    /// @dev default value for maximum number of Ethereum 2.0 validators registered in a single depositBufferedEther call
+    /// @dev default value for maximum number of Matic validators registered in a single depositBufferedMatic call
     uint256 internal constant DEFAULT_MAX_DEPOSITS_PER_CALL = 16;
 
     bytes32 internal constant FEE_POSITION = keccak256("lido.Lido.fee");
@@ -69,21 +69,21 @@ contract Lido is ILido, IsContract, StMatic, AragonApp {
     bytes32 internal constant TREASURY_POSITION = keccak256("lido.Lido.treasury");
     bytes32 internal constant INSURANCE_FUND_POSITION = keccak256("lido.Lido.insuranceFund");
 
-    /// @dev amount of Ether (on the current Ethereum side) buffered on this smart contract balance
-    bytes32 internal constant BUFFERED_ETHER_POSITION = keccak256("lido.Lido.bufferedEther");
+    /// @dev amount of Matic (on the current Matic side) buffered on this smart contract balance
+    bytes32 internal constant BUFFERED_MATIC_POSITION = keccak256("lido.Lido.bufferedMatic");
     /// @dev number of deposited validators (incrementing counter of deposit operations).
     bytes32 internal constant DEPOSITED_VALIDATORS_POSITION = keccak256("lido.Lido.depositedValidators");
-    /// @dev total amount of Beacon-side Ether (sum of all the balances of Lido validators)
+    /// @dev total amount of Beacon-side Matic (sum of all the balances of Lido validators)
     bytes32 internal constant BEACON_BALANCE_POSITION = keccak256("lido.Lido.beaconBalance");
     /// @dev number of Lido's validators available in the Beacon state
     bytes32 internal constant BEACON_VALIDATORS_POSITION = keccak256("lido.Lido.beaconValidators");
 
-    /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
+    /// @dev Credentials which allows the DAO to withdraw Matic on the Matic side
     bytes32 internal constant WITHDRAWAL_CREDENTIALS_POSITION = keccak256("lido.Lido.withdrawalCredentials");
 
     /**
     * @dev As AragonApp, Lido contract must be initialized with following variables:
-    * @param depositContract official ETH2 Deposit contract
+    * @param depositContract official Matic Deposit contract
     * @param _oracle oracle contract
     * @param _operators instance of Node Operators Registry
     */
@@ -110,7 +110,7 @@ contract Lido is ILido, IsContract, StMatic, AragonApp {
     * @dev Users are able to submit their funds by transacting to the fallback function.
     * Unlike vanilla Eth2.0 Deposit contract, accepting only 32-Ether transactions, Lido
     * accepts payments of any size. Submitted Ethers are stored in Buffer until someone calls
-    * depositBufferedEther() and pushes them to the ETH2 Deposit contract.
+    * depositBufferedMatic() and pushes them to the Matic Deposit contract.
     */
     function() external payable {
         // protection against accidental submissions by calling non-existent function
@@ -121,26 +121,26 @@ contract Lido is ILido, IsContract, StMatic, AragonApp {
     /**
     * @notice Send funds to the pool with optional _referral parameter
     * @dev This function is alternative way to submit funds. Supports optional referral address.
-    * @return Amount of StETH shares generated
+    * @return Amount of StMATIC shares generated
     */
     function submit(address _referral) external payable returns (uint256) {
         return _submit(_referral);
     }
 
     /**
-    * @notice Deposits buffered ethers to the official DepositContract.
+    * @notice Deposits buffered matics to the official DepositContract.
     * @dev This function is separated from submit() to reduce the cost of sending funds.
     */
-    function depositBufferedEther() external {
-        return _depositBufferedEther(DEFAULT_MAX_DEPOSITS_PER_CALL);
+    function depositBufferedMatic() external {
+        return _depositBufferedMatic(DEFAULT_MAX_DEPOSITS_PER_CALL);
     }
 
     /**
-      * @notice Deposits buffered ethers to the official DepositContract, making no more than `_maxDeposits` deposit calls.
+      * @notice Deposits buffered matics to the official DepositContract, making no more than `_maxDeposits` deposit calls.
       * @dev This function is separated from submit() to reduce the cost of sending funds.
       */
-    function depositBufferedEther(uint256 _maxDeposits) external {
-        return _depositBufferedEther(_maxDeposits);
+    function depositBufferedMatic(uint256 _maxDeposits) external {
+        return _depositBufferedMatic(_maxDeposits);
     }
 
     function burnShares(address _account, uint256 _sharesAmount)
@@ -227,7 +227,7 @@ contract Lido is ILido, IsContract, StMatic, AragonApp {
     }
 
     /**
-      * @notice Set credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched to `_withdrawalCredentials`
+      * @notice Set credentials to withdraw MATIC on Matic side after the phase 2 is launched to `_withdrawalCredentials`
       * @dev Note that setWithdrawalCredentials discards all unused signing keys as the signatures are invalidated.
       * @param _withdrawalCredentials hash of withdrawal multisignature key as accepted by
       *        the deposit_contract.deposit function
@@ -241,7 +241,7 @@ contract Lido is ILido, IsContract, StMatic, AragonApp {
 
     /**
       * @notice Issues withdrawal request. Not implemented.
-      * @param _amount Amount of StETH to withdraw
+      * @param _amount Amount of StMATIC to withdraw
       * @param _pubkeyHash Receiving address
       */
     function withdraw(uint256 _amount, bytes32 _pubkeyHash) external whenNotStopped { /* solhint-disable-line no-unused-vars */
@@ -296,7 +296,7 @@ contract Lido is ILido, IsContract, StMatic, AragonApp {
 
         uint256 balance;
         if (_token == ETH) {
-            balance = _getUnaccountedEther();
+            balance = _getUnaccountedMatic();
             vault.transfer(balance);
         } else {
             ERC20 token = ERC20(_token);
@@ -331,20 +331,20 @@ contract Lido is ILido, IsContract, StMatic, AragonApp {
     }
 
     /**
-      * @notice Returns current credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
+      * @notice Returns current credentials to withdraw MATIC on Matic side
       */
     function getWithdrawalCredentials() public view returns (bytes32) {
         return WITHDRAWAL_CREDENTIALS_POSITION.getStorageBytes32();
     }
 
     /**
-    * @notice Get the amount of Ether temporary buffered on this contract balance
+    * @notice Get the amount of Matic temporary buffered on this contract balance
     * @dev Buffered balance is kept on the contract from the moment the funds are received from user
     * until the moment they are actually sent to the official Deposit contract.
     * @return uint256 of buffered funds in wei
     */
-    function getBufferedEther() external view returns (uint256) {
-        return _getBufferedEther();
+    function getBufferedMatic() external view returns (uint256) {
+        return _getBufferedMatic();
     }
 
     /**
@@ -387,7 +387,7 @@ contract Lido is ILido, IsContract, StMatic, AragonApp {
     * @notice Returns the key values related to Beacon-side
     * @return depositedValidators - number of deposited validators
     * @return beaconValidators - number of Lido's validators visible in the Beacon state, reported by oracles
-    * @return beaconBalance - total amount of Beacon-side Ether (sum of all the balances of Lido validators)
+    * @return beaconBalance - total amount of Beacon-side Matic (sum of all the balances of Lido validators)
     */
     function getBeaconStat() public view returns (uint256 depositedValidators, uint256 beaconValidators, uint256 beaconBalance) {
         depositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256();
@@ -435,7 +435,7 @@ contract Lido is ILido, IsContract, StMatic, AragonApp {
     /**
     * @dev Process user deposit, mints liquid tokens and increase the pool buffer
     * @param _referral address of referral.
-    * @return amount of StETH shares generated
+    * @return amount of StMATIC shares generated
     */
     function _submit(address _referral) internal whenNotStopped returns (uint256) {
         address sender = msg.sender;
@@ -444,8 +444,8 @@ contract Lido is ILido, IsContract, StMatic, AragonApp {
 
         uint256 sharesAmount = getSharesByPooledMatic(deposit);
         if (sharesAmount == 0) {
-            // totalControlledEther is 0: either the first-ever deposit or complete slashing
-            // assume that shares correspond to Ether 1-to-1
+            // totalControlledMatic is 0: either the first-ever deposit or complete slashing
+            // assume that shares correspond to Matic 1-to-1
             sharesAmount = deposit;
         }
 
@@ -463,24 +463,24 @@ contract Lido is ILido, IsContract, StMatic, AragonApp {
     }
 
     /**
-    * @dev Deposits buffered eth to the DepositContract and assigns chunked deposits to node operators
+    * @dev Deposits buffered matic to the DepositContract and assigns chunked deposits to node operators
     */
-    function _depositBufferedEther(uint256 _maxDeposits) internal whenNotStopped {
-        uint256 buffered = _getBufferedEther();
+    function _depositBufferedMatic(uint256 _maxDeposits) internal whenNotStopped {
+        uint256 buffered = _getBufferedMatic();
         if (buffered >= DEPOSIT_SIZE) {
-            uint256 unaccounted = _getUnaccountedEther();
+            uint256 unaccounted = _getUnaccountedMatic();
             uint256 numDeposits = buffered.div(DEPOSIT_SIZE);
-            _markAsUnbuffered(_ETH2Deposit(numDeposits < _maxDeposits ? numDeposits : _maxDeposits));
-            assert(_getUnaccountedEther() == unaccounted);
+            _markAsUnbuffered(_maticDeposit(numDeposits < _maxDeposits ? numDeposits : _maxDeposits));
+            assert(_getUnaccountedMatic() == unaccounted);
         }
     }
 
     /**
-    * @dev Performs deposits to the ETH 2.0 side
+    * @dev Performs deposits to the Matic side
     * @param _numDeposits Number of deposits to perform
-    * @return actually deposited Ether amount
+    * @return actually deposited Matic amount
     */
-    function _ETH2Deposit(uint256 _numDeposits) internal returns (uint256) {
+    function _maticDeposit(uint256 _numDeposits) internal returns (uint256) {
         (bytes memory pubkeys, bytes memory signatures) = getOperators().assignNextSigningKeys(_numDeposits);
 
         if (pubkeys.length == 0) {
@@ -546,30 +546,30 @@ contract Lido is ILido, IsContract, StMatic, AragonApp {
 
     /**
     * @dev Distributes rewards by minting and distributing corresponding amount of liquid tokens.
-    * @param _totalRewards Total rewards accrued on the Ethereum 2.0 side in wei
+    * @param _totalRewards Total rewards accrued on the Matic side
     */
     function distributeRewards(uint256 _totalRewards) internal {
         // We need to take a defined percentage of the reported reward as a fee, and we do
         // this by minting new token shares and assigning them to the fee recipients (see
-        // StETH docs for the explanation of the shares mechanics). The staking rewards fee
+        // StMATIC docs for the explanation of the shares mechanics). The staking rewards fee
         // is defined in basis points (1 basis point is equal to 0.01%, 10000 is 100%).
         //
-        // Since we've increased totalPooledEther by _totalRewards (which is already
+        // Since we've increased totalPooledMatic by _totalRewards (which is already
         // performed by the time this function is called), the combined cost of all holders'
-        // shares has became _totalRewards StETH tokens more, effectively splitting the reward
+        // shares has became _totalRewards StMATIC tokens more, effectively splitting the reward
         // between each token holder proportionally to their token share.
         //
         // Now we want to mint new shares to the fee recipient, so that the total cost of the
         // newly-minted shares exactly corresponds to the fee taken:
         //
         // shares2mint * newShareCost = (_totalRewards * feeBasis) / 10000
-        // newShareCost = newTotalPooledEther / (prevTotalShares + shares2mint)
+        // newShareCost = newTotalPooledMatic / (prevTotalShares + shares2mint)
         //
         // which follows to:
         //
         //                        _totalRewards * feeBasis * prevTotalShares
         // shares2mint = --------------------------------------------------------------
-        //                 (newTotalPooledEther * 10000) - (feeBasis * _totalRewards)
+        //                 (newTotalPooledMatic * 10000) - (feeBasis * _totalRewards)
         //
         // The effect is that the given percentage of the reward goes to the fee recipient, and
         // the rest of the reward is distributed between token holders proportionally to their
@@ -578,7 +578,7 @@ contract Lido is ILido, IsContract, StMatic, AragonApp {
         uint256 shares2mint = (
             _totalRewards.mul(feeBasis).mul(_getTotalShares())
             .div(
-                _getTotalPooledEther().mul(10000)
+                _getTotalPooledMatic().mul(10000)
                 .sub(feeBasis.mul(_totalRewards))
             )
         );
@@ -630,18 +630,18 @@ contract Lido is ILido, IsContract, StMatic, AragonApp {
     * @param _referral address of the referral
     */
     function _submitted(address _sender, uint256 _value, address _referral) internal {
-        BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().add(_value));
+        BUFFERED_MATIC_POSITION.setStorageUint256(_getBufferedMatic().add(_value));
 
         emit Submitted(_sender, _value, _referral);
     }
 
     /**
       * @dev Records a deposit to the deposit_contract.deposit function.
-      * @param _amount Total amount deposited to the ETH 2.0 side
+      * @param _amount Total amount deposited to the MATIC side
       */
     function _markAsUnbuffered(uint256 _amount) internal {
-        BUFFERED_ETHER_POSITION.setStorageUint256(
-            BUFFERED_ETHER_POSITION.getStorageUint256().sub(_amount));
+        BUFFERED_MATIC_POSITION.setStorageUint256(
+            BUFFERED_MATIC_POSITION.getStorageUint256().sub(_amount));
 
         emit Unbuffered(_amount);
     }
@@ -682,26 +682,26 @@ contract Lido is ILido, IsContract, StMatic, AragonApp {
     }
 
     /**
-      * @dev Gets the amount of Ether temporary buffered on this contract balance
+      * @dev Gets the amount of Matic temporary buffered on this contract balance
       */
-    function _getBufferedEther() internal view returns (uint256) {
-        uint256 buffered = BUFFERED_ETHER_POSITION.getStorageUint256();
+    function _getBufferedMatic() internal view returns (uint256) {
+        uint256 buffered = BUFFERED_MATIC_POSITION.getStorageUint256();
         assert(address(this).balance >= buffered);
 
         return buffered;
     }
 
     /**
-      * @dev Gets unaccounted (excess) Ether on this contract balance
+      * @dev Gets unaccounted (excess) Matic on this contract balance
       */
-    function _getUnaccountedEther() internal view returns (uint256) {
-        return address(this).balance.sub(_getBufferedEther());
+    function _getUnaccountedMatic() internal view returns (uint256) {
+        return address(this).balance.sub(_getBufferedMatic());
     }
 
     /**
     * @dev Calculates and returns the total base balance (multiple of 32) of validators in transient state,
     *      i.e. submitted to the official Deposit contract but not yet visible in the beacon state.
-    * @return transient balance in wei (1e-18 Ether)
+    * @return transient balance in wei (1e-18 Matic)
     */
     function _getTransientBalance() internal view returns (uint256) {
         uint256 depositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256();
@@ -713,11 +713,11 @@ contract Lido is ILido, IsContract, StMatic, AragonApp {
     }
 
     /**
-    * @dev Gets the total amount of Ether controlled by the system
+    * @dev Gets the total amount of Matic controlled by the system
     * @return total balance in wei
     */
-    function _getTotalPooledEther() internal view returns (uint256) {
-        uint256 bufferedBalance = _getBufferedEther();
+    function _getTotalPooledMatic() internal view returns (uint256) {
+        uint256 bufferedBalance = _getBufferedMatic();
         uint256 beaconBalance = BEACON_BALANCE_POSITION.getStorageUint256();
         uint256 transientBalance = _getTransientBalance();
         return bufferedBalance.add(beaconBalance).add(transientBalance);

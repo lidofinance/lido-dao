@@ -44,7 +44,7 @@ contract LidoPushableMock is Lido {
 
     // value sent to this function becomes buffered
     function setBufferedEther() public payable {
-        BUFFERED_ETHER_POSITION.setStorageUint256(msg.value);
+        BUFFERED_MATIC_POSITION.setStorageUint256(msg.value);
     }
 
     function setBeaconValidators(uint256 _beaconValidators) public {
