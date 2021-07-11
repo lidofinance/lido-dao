@@ -15,7 +15,7 @@ import "./interfaces/ILido.sol";
 import "./interfaces/INodeOperatorsRegistry.sol";
 import "./interfaces/IDepositContract.sol";
 
-import "./StETH.sol";
+import "./StMATIC.sol";
 
 
 /**
@@ -33,7 +33,7 @@ import "./StETH.sol";
 * rewards, no Transfer events are generated: doing so would require emitting an event
 * for each token holder and thus running an unbounded loop.
 */
-contract Lido is ILido, IsContract, StETH, AragonApp {
+contract Lido is ILido, IsContract, StMatic, AragonApp {
     using SafeMath for uint256;
     using SafeMath64 for uint64;
     using UnstructuredStorage for bytes32;
@@ -442,7 +442,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         uint256 deposit = msg.value;
         require(deposit != 0, "ZERO_DEPOSIT");
 
-        uint256 sharesAmount = getSharesByPooledEth(deposit);
+        uint256 sharesAmount = getSharesByPooledMatic(deposit);
         if (sharesAmount == 0) {
             // totalControlledEther is 0: either the first-ever deposit or complete slashing
             // assume that shares correspond to Ether 1-to-1
@@ -459,7 +459,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
      * @dev Emits an {Transfer} event where from is 0 address. Indicates mint events.
      */
     function _emitTransferAfterMintingShares(address _to, uint256 _sharesAmount) internal {
-        emit Transfer(address(0), _to, getPooledEthByShares(_sharesAmount));
+        emit Transfer(address(0), _to, getSharesByPooledMatic(_sharesAmount));
     }
 
     /**

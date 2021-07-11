@@ -14,31 +14,31 @@ import "./lib/Pausable.sol";
  * @title Interest-bearing ERC20-like token for Lido Liquid Stacking protocol.
  *
  * This contract is abstract. To make the contract deployable override the
- * `_getTotalPooledEther` function. `Lido.sol` contract inherits StETH and defines
- * the `_getTotalPooledEther` function.
+ * `_getTotalPooledMatic` function. `Lido.sol` contract inherits StMatic and defines
+ * the `_getTotalPooledMatic` function.
  *
- * StETH balances are dynamic and represent the holder's share in the total amount
- * of Ether controlled by the protocol. Account shares aren't normalized, so the
+ * StMatic balances are dynamic and represent the holder's share in the total amount
+ * of Matic controlled by the protocol. Account shares aren't normalized, so the
  * contract also stores the sum of all shares to calculate each account's token balance
  * which equals to:
  *
- *   shares[account] * _getTotalPooledEther() / _getTotalShares()
+ *   shares[account] * _getTotalPooledMatic() / _getTotalShares()
  *
  * For example, assume that we have:
  *
- *   _getTotalPooledEther() -> 10 ETH
+ *   _getTotalPooledMatic() -> 10 MATIC
  *   sharesOf(user1) -> 100
  *   sharesOf(user2) -> 400
  *
  * Therefore:
  *
- *   balanceOf(user1) -> 2 tokens which corresponds 2 ETH
- *   balanceOf(user2) -> 8 tokens which corresponds 8 ETH
+ *   balanceOf(user1) -> 2 tokens which corresponds 2 MATIC
+ *   balanceOf(user2) -> 8 tokens which corresponds 8 MATIC
  *
- * Since balances of all token holders change when the amount of total pooled Ether
+ * Since balances of all token holders change when the amount of total pooled Matic
  * changes, this token cannot fully implement ERC20 standard: it only emits `Transfer`
  * events upon explicit transfer between holders. In contrast, when total amount of
- * pooled Ether increases, no `Transfer` events are generated: doing so would require
+ * pooled Matic increases, no `Transfer` events are generated: doing so would require
  * emitting an event for each token holder and thus running an unbounded loop.
  *
  * The token inherits from `Pausable` and uses `whenNotStopped` modifier for methods
@@ -47,17 +47,17 @@ import "./lib/Pausable.sol";
  * DAO. This is useful for emergency scenarios, e.g. a protocol bug, where one might want
  * to freeze all token transfers and approvals until the emergency is resolved.
  */
-contract StETH is IERC20, Pausable {
+contract StMatic is IERC20, Pausable {
     using SafeMath for uint256;
     using UnstructuredStorage for bytes32;
 
     /**
-     * @dev StETH balances are dynamic and are calculated based on the accounts' shares
-     * and the total amount of Ether controlled by the protocol. Account shares aren't
+     * @dev StMatic balances are dynamic and are calculated based on the accounts' shares
+     * and the total amount of Matic controlled by the protocol. Account shares aren't
      * normalized, so the contract also stores the sum of all shares to calculate
      * each account's token balance which equals to:
      *
-     *   shares[account] * _getTotalPooledEther() / _getTotalShares()
+     *   shares[account] * _getTotalPooledMatic() / _getTotalShares()
     */
     mapping (address => uint256) private shares;
 
@@ -79,13 +79,13 @@ contract StETH is IERC20, Pausable {
      * and error-prone to implement reference-type unstructured storage using Solidity v0.4;
      * see https://github.com/lidofinance/lido-dao/issues/181#issuecomment-736098834
      */
-    bytes32 internal constant TOTAL_SHARES_POSITION = keccak256("lido.StETH.totalShares");
+    bytes32 internal constant TOTAL_SHARES_POSITION = keccak256("lido.St.totalShares");
 
     /**
      * @return the name of the token.
      */
     function name() public pure returns (string) {
-        return "Liquid staked Ether 2.0";
+        return "Liquid staked Matic";
     }
 
     /**
@@ -93,7 +93,7 @@ contract StETH is IERC20, Pausable {
      * name.
      */
     function symbol() public pure returns (string) {
-        return "stETH";
+        return "StMatic";
     }
 
     /**
@@ -106,30 +106,30 @@ contract StETH is IERC20, Pausable {
     /**
      * @return the amount of tokens in existence.
      *
-     * @dev Always equals to `_getTotalPooledEther()` since token amount
-     * is pegged to the total amount of Ether controlled by the protocol.
+     * @dev Always equals to `_getTotalPooledMatic()` since token amount
+     * is pegged to the total amount of Matic controlled by the protocol.
      */
     function totalSupply() public view returns (uint256) {
-        return _getTotalPooledEther();
+        return _getTotalPooledMatic();
     }
 
     /**
-     * @return the entire amount of Ether controlled by the protocol.
+     * @return the entire amount of Matic controlled by the protocol.
      *
-     * @dev The sum of all ETH balances in the protocol, equals to the total supply of stETH.
+     * @dev The sum of all MATIC balances in the protocol, equals to the total supply of StMatic.
      */
-    function getTotalPooledEther() public view returns (uint256) {
-        return _getTotalPooledEther();
+    function getTotalPooledMatic() public view returns (uint256) {
+        return _getTotalPooledMatic();
     }
 
     /**
      * @return the amount of tokens owned by the `_account`.
      *
      * @dev Balances are dynamic and equal the `_account`'s share in the amount of the
-     * total Ether controlled by the protocol. See `sharesOf`.
+     * total Matic controlled by the protocol. See `sharesOf`.
      */
     function balanceOf(address _account) public view returns (uint256) {
-        return getPooledEthByShares(_sharesOf(_account));
+        return getPooledMaticByShares(_sharesOf(_account));
     }
 
     /**
@@ -264,46 +264,46 @@ contract StETH is IERC20, Pausable {
     }
 
     /**
-     * @return the amount of shares that corresponds to `_ethAmount` protocol-controlled Ether.
+     * @return the amount of shares that corresponds to `_maticAmount` protocol-controlled Matic.
      */
-    function getSharesByPooledEth(uint256 _ethAmount) public view returns (uint256) {
-        uint256 totalPooledEther = _getTotalPooledEther();
-        if (totalPooledEther == 0) {
+    function getSharesByPooledMatic(uint256 _maticAmount) public view returns (uint256) {
+        uint256 totalPooledMatic = _getTotalPooledMatic();
+        if (totalPooledMatic == 0) {
             return 0;
         } else {
-            return _ethAmount
+            return _maticAmount
                 .mul(_getTotalShares())
-                .div(totalPooledEther);
+                .div(totalPooledMatic);
         }
     }
 
     /**
-     * @return the amount of Ether that corresponds to `_sharesAmount` token shares.
+     * @return the amount of Matic that corresponds to `_sharesAmount` token shares.
      */
-    function getPooledEthByShares(uint256 _sharesAmount) public view returns (uint256) {
+    function getPooledMaticByShares(uint256 _sharesAmount) public view returns (uint256) {
         uint256 totalShares = _getTotalShares();
         if (totalShares == 0) {
             return 0;
         } else {
             return _sharesAmount
-                .mul(_getTotalPooledEther())
+                .mul(_getTotalPooledMatic())
                 .div(totalShares);
         }
     }
 
     /**
-     * @return the total amount (in wei) of Ether controlled by the protocol.
+     * @return the total amount (in wei) of Matic controlled by the protocol.
      * @dev This is used for calaulating tokens from shares and vice versa.
      * @dev This function is required to be implemented in a derived contract.
      */
-    function _getTotalPooledEther() internal view returns (uint256);
+    function _getTotalPooledMatic() internal view returns (uint256);
 
     /**
      * @notice Moves `_amount` tokens from `_sender` to `_recipient`.
      * Emits a `Transfer` event.
      */
     function _transfer(address _sender, address _recipient, uint256 _amount) internal {
-        uint256 _sharesToTransfer = getSharesByPooledEth(_amount);
+        uint256 _sharesToTransfer = getSharesByPooledMatic(_amount);
         _transferShares(_sender, _recipient, _sharesToTransfer);
         emit Transfer(_sender, _recipient, _amount);
     }
