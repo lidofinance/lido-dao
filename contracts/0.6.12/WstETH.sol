@@ -101,7 +101,7 @@ contract WstETH is ERC20Permit {
     }
 
     /**
-     * @notice Get amount of wstETH for a one stETH
+     * @notice Get amount of stETH for a one wstETH
      * @return Amount of stETH for 1 wstETH
      */
     function stEthPerToken() external view returns (uint256) {
@@ -109,7 +109,7 @@ contract WstETH is ERC20Permit {
     }
 
     /**
-     * @notice Get amount of stETH for a one wstETH
+     * @notice Get amount of wstETH for a one stETH
      * @return Amount of wstETH for a 1 stETH
      */
     function tokensPerStEth() external view returns (uint256) {
