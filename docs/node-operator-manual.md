@@ -217,15 +217,15 @@ Click `Check` button, and then the interface would run required checks connect t
 
 Once the keys are submitted, Node Operators can check whether the supplied keys are valid with the [web interface for checking the submitted keys]. If the keys are valid, they can vote for increasing the key limit for the Node Operator.
 
-* [web interface for submitting the keys](https://stake.testnet.lido.fi/key-checker/submit)
-* [web interface for checking the submitted keys](https://stake.testnet.lido.fi/key-checker/existing)
+* [web interface for submitting the keys](https://operators.testnet.fi/submit)
+* [web interface for checking the submitted keys](https://operators.testnet.fi/)
 
 #### Using the Aragon UI
 
 Alternatively, you can use the Node Operators Registry app UI for submitting the keys. For the
 Görli/Prater deployment, you can find it here:
 
-https://testnet.lido.fi/#/lido-testnet-prater/0x9d4af1ee19dad8857db3a45b0374c81c8a1c6320/
+https://testnet.testnet.fi/#/lido-testnet-prater/0x9d4af1ee19dad8857db3a45b0374c81c8a1c6320/
 
 Make sure you’re using a browser that exposes a Web3 provider allowing to sign transactions on
 behalf of the Node Operator’s reward address. Press the Connect account button in the top-right and
