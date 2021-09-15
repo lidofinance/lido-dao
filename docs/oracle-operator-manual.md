@@ -13,7 +13,7 @@ The daemon also fetches historical stETH token price (shifted by fifteen blocks)
 5. Launch the oracle daemon as a docker container.
 
 [Mainnet]: https://mainnet.lido.fi/#/lido-dao/0x442af784a788a5bd6f42a01ebe9f287a871243fb/
-[Görli]: https://testnet.lido.fi/#/lido-testnet-prater/0xbc0b67b4553f4cf52a913de9a6ed0057e2e758db/
+[Görli]: https://testnet.testnet.fi/#/lido-testnet-prater/0xbc0b67b4553f4cf52a913de9a6ed0057e2e758db/
 
 ## Intro
 
@@ -34,7 +34,7 @@ In order to launch oracle daemon on your machine, you need to have several thing
 3) An address that’s added to the approved oracles list here: [Mainnet] / [Görli]. You have to initiate the DAO voting on adding your address there by pressing the "Add Member" button.
 
 [Mainnet]: https://mainnet.lido.fi/#/lido-dao/0x442af784a788a5bd6f42a01ebe9f287a871243fb/
-[Görli]: https://testnet.lido.fi/#/lido-testnet-prater/0xbc0b67b4553f4cf52a913de9a6ed0057e2e758db/
+[Görli]: https://testnet.testnet.fi/#/lido-testnet-prater/0xbc0b67b4553f4cf52a913de9a6ed0057e2e758db/
 
 ## The oracle daemon
 
