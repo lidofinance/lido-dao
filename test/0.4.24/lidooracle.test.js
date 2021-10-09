@@ -10,6 +10,7 @@ const BeaconReportReceiver = artifacts.require('BeaconReportReceiverMock.sol')
 const GENESIS_TIME = 1606824000
 const EPOCH_LENGTH = 32 * 12
 const DENOMINATION_OFFSET = 1e9
+const DEPOSIT_FRONTRUN_PROTECTION_ADDRESS = '0x0000000000000000000000000000000000000000'
 
 // initial pooled ether (it's required to smooth increase of balance
 // if you jump from 30 to 60 in one epoch it's a huge annual relative jump over 9000%
@@ -46,7 +47,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, user5, 
 
     // Initialize the app's proxy.
     await app.setTime(GENESIS_TIME)
-    await app.initialize(appLido.address, 1, 32, 12, GENESIS_TIME)
+    await app.initialize(appLido.address, 1, 32, 12, GENESIS_TIME, DEPOSIT_FRONTRUN_PROTECTION_ADDRESS)
     await app.initialize_v2(1000, 500) // initialize the second version: 10% yearly increase, 5% moment decrease
   })
 

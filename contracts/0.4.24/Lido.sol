@@ -81,6 +81,14 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
     bytes32 internal constant WITHDRAWAL_CREDENTIALS_POSITION = keccak256("lido.Lido.withdrawalCredentials");
 
+    /// @dev Version of the initialized contract data, v1 is 0
+    bytes32 internal constant CONTRACT_VERSION_POSITION =
+        0x5b4d9796e2ff9b25393b63bff142e4b6af5209d8eda84365f4b9861152894ca4; // keccak256("lido.Lido.contractVersion")
+
+    /// @dev Address of contract that verifies deposit data 
+    bytes32 internal constant DEPOSIT_FRONTRUN_PROTECTION_ADDRESS_POSIOTION =
+        0x3d6facd4e5b84470105442865dcc8b446ab367fa29385c3660f90f0f2aab42e1; // keccak256("lido.Lido.depositFrontrunProtectionAddress")
+
     /**
     * @dev As AragonApp, Lido contract must be initialized with following variables:
     * @param depositContract official ETH2 Deposit contract
@@ -92,7 +100,8 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         address _oracle,
         INodeOperatorsRegistry _operators,
         address _treasury,
-        address _insuranceFund
+        address _insuranceFund,
+        address _depositFrontrunProtectionAddress
     )
         public onlyInit
     {
@@ -102,7 +111,26 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         _setTreasury(_treasury);
         _setInsuranceFund(_insuranceFund);
 
+        initialize_v2(_depositFrontrunProtectionAddress);
+
         initialized();
+    }
+
+
+    /**
+     * @notice Initialize the contract v2 data,e
+     */
+    function initialize_v2(
+        address _depositFrontrunProtectionAddress
+    )
+        public
+    {
+        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "ALREADY_INITIALIZED");
+        CONTRACT_VERSION_POSITION.setStorageUint256(1);
+        emit ContractVersionSet(1);
+
+        DEPOSIT_FRONTRUN_PROTECTION_ADDRESS_POSIOTION.setStorageAddress(_depositFrontrunProtectionAddress);
+
     }
 
     /**
@@ -306,6 +334,20 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         }
 
         emit RecoverToVault(vault, _token, balance);
+    }
+
+    /**
+     * @notice Returns the initialized version of this contract starting from 0
+     */
+    function getVersion() external view returns (uint256) {
+        return CONTRACT_VERSION_POSITION.getStorageUint256();
+    }
+
+    /**
+     * @notice Returns address of deposit frontrun protection contract
+     */
+    function getDepositFrontrunProtectionAddress() external view returns (address) {
+        return DEPOSIT_FRONTRUN_PROTECTION_ADDRESS_POSIOTION.getStorageAddress();
     }
 
     /**
