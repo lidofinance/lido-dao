@@ -212,6 +212,10 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     assertBn(await app.toLittleEndian64('0x10'), bn('0x1000000000000000' + '0'.repeat(48)))
   })
 
+  it('deposit reverts when called by account without DEPOSIT_ROLE granted', async () => {
+    await assertRevert(app.methods['depositBufferedEther()']({ from: nobody }), 'APP_AUTH_FAILED')
+  })
+
   it('deposit works', async () => {
     await operators.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
     await operators.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
