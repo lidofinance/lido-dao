@@ -4,6 +4,7 @@ const { getEvents, getEventArgument, ZERO_ADDRESS } = require('@aragon/contract-
 
 const { pad, ETH, hexConcat } = require('../helpers/utils')
 const { deployDaoAndPool } = require('./helpers/deploy')
+const { newDao } = require('@aragon/toolkit/dist/dao')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
@@ -19,7 +20,8 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
     user1,
     user2,
     // an unrelated address
-    nobody
+    nobody,
+    depositor
   ] = addresses
 
   // Limits the number of validators assigned in a single transaction, regardless the amount
@@ -31,7 +33,7 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
   let pool, nodeOperatorRegistry, depositContractMock
 
   it('DAO, node operators registry, token, and pool are deployed and initialized', async () => {
-    const deployed = await deployDaoAndPool(appManager, voting)
+    const deployed = await deployDaoAndPool(appManager, voting, depositor)
 
     // contracts/Lido.sol
     pool = deployed.pool
@@ -89,7 +91,7 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
 
   it('one can assign the buffered ether to validators by calling depositBufferedEther() and passing deposit iteration limit', async () => {
     const depositIterationLimit = 5
-    await pool.depositBufferedEther(depositIterationLimit)
+    await pool.depositBufferedEther(depositIterationLimit, { from: depositor })
 
     // no more than depositIterationLimit validators are assigned in a single transaction
     assertBn(await depositContractMock.totalCalls(), 5, 'total validators assigned')
@@ -103,7 +105,7 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
 
   it('one can advance the deposit loop further by calling depositBufferedEther() once again', async () => {
     const depositIterationLimit = 10
-    await pool.depositBufferedEther(depositIterationLimit)
+    await pool.depositBufferedEther(depositIterationLimit, { from: depositor })
 
     assertBn(await depositContractMock.totalCalls(), 15, 'total validators assigned')
 
@@ -115,7 +117,7 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
 
   it('the number of assigned validators is limited by the remaining ether', async () => {
     const depositIterationLimit = 10
-    await pool.depositBufferedEther(depositIterationLimit)
+    await pool.depositBufferedEther(depositIterationLimit, { from: depositor })
 
     assertBn(await depositContractMock.totalCalls(), 20)
 
@@ -136,7 +138,7 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
 
   it('the number of assigned validators is still limited by the number of available validator keys', async () => {
     const depositIterationLimit = 10
-    await pool.depositBufferedEther(depositIterationLimit)
+    await pool.depositBufferedEther(depositIterationLimit, { from: depositor })
 
     assertBn(await depositContractMock.totalCalls(), 21)
 
@@ -149,7 +151,7 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
 
   it('depositBufferedEther is a nop if there are no signing keys available', async () => {
     const depositIterationLimit = 10
-    await pool.depositBufferedEther(depositIterationLimit)
+    await pool.depositBufferedEther(depositIterationLimit, { from: depositor })
 
     assertBn(await depositContractMock.totalCalls(), 21, 'total validators assigned')
 

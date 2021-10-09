@@ -22,7 +22,8 @@ contract('Lido: happy path', (addresses) => {
     user2,
     user3,
     // unrelated address
-    nobody
+    nobody,
+    depositor
   ] = addresses
 
   let pool, nodeOperatorRegistry, token
@@ -30,7 +31,7 @@ contract('Lido: happy path', (addresses) => {
   let treasuryAddr, insuranceAddr
 
   it('DAO, node operators registry, token, and pool are deployed and initialized', async () => {
-    const deployed = await deployDaoAndPool(appManager, voting)
+    const deployed = await deployDaoAndPool(appManager, voting, depositor)
 
     // contracts/StETH.sol
     token = deployed.pool
@@ -138,7 +139,7 @@ contract('Lido: happy path', (addresses) => {
 
   it('the first user deposits 3 ETH to the pool', async () => {
     await web3.eth.sendTransaction({ to: pool.address, from: user1, value: ETH(3) })
-    await pool.depositBufferedEther()
+    await pool.methods['depositBufferedEther()']({ from: depositor })
 
     // No Ether was deposited yet to the validator contract
 
@@ -162,7 +163,7 @@ contract('Lido: happy path', (addresses) => {
 
   it('the second user deposits 30 ETH to the pool', async () => {
     await web3.eth.sendTransaction({ to: pool.address, from: user2, value: ETH(30) })
-    await pool.depositBufferedEther()
+    await pool.methods['depositBufferedEther()']({ from: depositor })
 
     // The first 32 ETH chunk was deposited to the deposit contract,
     // using public key and signature of the only validator of the first operator
@@ -245,7 +246,7 @@ contract('Lido: happy path', (addresses) => {
 
   it('the third user deposits 64 ETH to the pool', async () => {
     await web3.eth.sendTransaction({ to: pool.address, from: user3, value: ETH(64) })
-    await pool.depositBufferedEther()
+    await pool.methods['depositBufferedEther()']({ from: depositor })
 
     // The first 32 ETH chunk was deposited to the deposit contract,
     // using public key and signature of the only validator of the second operator

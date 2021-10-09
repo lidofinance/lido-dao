@@ -22,7 +22,8 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     user2,
     user3,
     // unrelated address
-    nobody
+    nobody,
+    depositor
   ] = addresses
 
   let pool, nodeOperatorRegistry, token
@@ -30,7 +31,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
   let treasuryAddr, insuranceAddr
 
   it('DAO, node operators registry, token, and pool are deployed and initialized', async () => {
-    const deployed = await deployDaoAndPool(appManager, voting)
+    const deployed = await deployDaoAndPool(appManager, voting, depositor)
 
     // contracts/StETH.sol
     token = deployed.pool
@@ -148,7 +149,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     awaitingTotalShares = new BN(depositAmount)
     awaitingUser1Balance = new BN(depositAmount)
     await web3.eth.sendTransaction({ to: pool.address, from: user1, value: depositAmount })
-    await pool.depositBufferedEther()
+    await pool.methods['depositBufferedEther()']({ from: depositor })
 
     // No Ether was deposited yet to the validator contract
 
@@ -183,7 +184,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
   })
 
   it(`pushes pooled eth to the available validator`, async () => {
-    await pool.depositBufferedEther()
+    await pool.methods['depositBufferedEther()']({ from: depositor })
   })
 
   it('new validator gets the 32 ETH deposit from the pool', async () => {
@@ -337,7 +338,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     awaitingUser1Balance = awaitingUser1Balance.add(new BN(depositAmount))
     const tokenSupplyBefore = await token.totalSupply()
     await web3.eth.sendTransaction({ to: pool.address, from: user1, value: depositAmount })
-    await pool.depositBufferedEther()
+    await pool.methods['depositBufferedEther()']({ from: depositor })
 
     assertBn(await depositContractMock.totalCalls(), 2)
 
@@ -474,7 +475,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     awaitingUser1Balance = awaitingUser1Balance.add(new BN(depositAmount))
 
     await web3.eth.sendTransaction({ to: pool.address, from: user1, value: depositAmount })
-    await pool.depositBufferedEther()
+    await pool.methods['depositBufferedEther()']({ from: depositor })
 
     const ether2Stat = await pool.getBeaconStat()
     assertBn(ether2Stat.depositedValidators, 2, 'no validators have received the current deposit')

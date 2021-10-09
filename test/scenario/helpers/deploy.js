@@ -9,7 +9,7 @@ module.exports = {
   deployDaoAndPool
 }
 
-async function deployDaoAndPool(appManager, voting) {
+async function deployDaoAndPool(appManager, voting, depositor) {
   // Deploy the DAO, oracle and deposit contract mocks, and base contracts for
   // Lido (the pool) and NodeOperatorsRegistry (the Node Operators registry)
 
@@ -43,6 +43,7 @@ async function deployDaoAndPool(appManager, voting) {
     POOL_MANAGE_FEE,
     POOL_MANAGE_WITHDRAWAL_KEY,
     POOL_BURN_ROLE,
+    DEPOSIT_ROLE,
     NODE_OPERATOR_REGISTRY_MANAGE_SIGNING_KEYS,
     NODE_OPERATOR_REGISTRY_ADD_NODE_OPERATOR_ROLE,
     NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_ACTIVE_ROLE,
@@ -55,6 +56,7 @@ async function deployDaoAndPool(appManager, voting) {
     pool.MANAGE_FEE(),
     pool.MANAGE_WITHDRAWAL_KEY(),
     pool.BURN_ROLE(),
+    pool.DEPOSIT_ROLE(),
     nodeOperatorRegistry.MANAGE_SIGNING_KEYS(),
     nodeOperatorRegistry.ADD_NODE_OPERATOR_ROLE(),
     nodeOperatorRegistry.SET_NODE_OPERATOR_ACTIVE_ROLE(),
@@ -70,6 +72,10 @@ async function deployDaoAndPool(appManager, voting) {
     acl.createPermission(voting, pool.address, POOL_MANAGE_FEE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, POOL_MANAGE_WITHDRAWAL_KEY, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, POOL_BURN_ROLE, appManager, { from: appManager }),
+
+    // Allow depositor to deposit buffered ether
+    acl.createPermission(depositor, pool.address, DEPOSIT_ROLE, appManager, { from: appManager }),
+
     // Allow voting to manage node operators registry
     acl.createPermission(voting, nodeOperatorRegistry.address, NODE_OPERATOR_REGISTRY_MANAGE_SIGNING_KEYS, appManager, {
       from: appManager

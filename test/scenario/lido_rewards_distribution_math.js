@@ -36,7 +36,8 @@ contract('Lido: rewards distribution math', (addresses) => {
     user2,
     user3,
     // unrelated address
-    nobody
+    nobody,
+    depositor
   ] = addresses
 
   let pool, nodeOperatorRegistry, token
@@ -79,7 +80,7 @@ contract('Lido: rewards distribution math', (addresses) => {
   }
 
   before(async () => {
-    const deployed = await deployDaoAndPool(appManager, voting)
+    const deployed = await deployDaoAndPool(appManager, voting, depositor)
 
     // contracts/StETH.sol
     token = deployed.pool
@@ -176,7 +177,7 @@ contract('Lido: rewards distribution math', (addresses) => {
   })
 
   it(`the first deposit gets deployed`, async () => {
-    await pool.depositBufferedEther()
+    await pool.methods['depositBufferedEther()']({ from: depositor })
 
     assertBn(await nodeOperatorRegistry.getUnusedSigningKeyCount(0), 0, 'no more available keys for the first validator')
     assertBn(await token.balanceOf(user1), ETH(34), 'user1 balance is equal first reported value + their buffered deposit value')
@@ -313,7 +314,7 @@ contract('Lido: rewards distribution math', (addresses) => {
 
   it(`the second deposit gets deployed`, async () => {
     const [_, deltas] = await getSharesTokenDeltas(
-      () => pool.depositBufferedEther(),
+      () => pool.methods['depositBufferedEther()']({ from: depositor }),
       treasuryAddr,
       insuranceAddr,
       nodeOperator1.address,
