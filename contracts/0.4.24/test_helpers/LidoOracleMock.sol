@@ -19,8 +19,7 @@ contract LidoOracleMock is LidoOracle {
         uint64 _epochsPerFrame,
         uint64 _slotsPerEpoch,
         uint64 _secondsPerSlot,
-        uint64 _genesisTime,
-        address _depositFrontrunProtectionAddress
+        uint64 _genesisTime
     )
         public onlyInit
     {

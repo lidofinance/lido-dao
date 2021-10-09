@@ -19,8 +19,7 @@ contract LidoPushableMock is Lido {
     function initialize(
         IDepositContract depositContract,
         address _oracle,
-        INodeOperatorsRegistry _operators,
-        address _depositFrontrunProtectionAddress
+        INodeOperatorsRegistry _operators
     )
     public
     {
@@ -29,8 +28,7 @@ contract LidoPushableMock is Lido {
           _oracle,
           _operators,
           new VaultMock(),
-          new VaultMock(),
-          _depositFrontrunProtectionAddress
+          new VaultMock()
         );
 
         _resume();
