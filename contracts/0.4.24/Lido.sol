@@ -57,7 +57,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     uint256 internal constant DEPOSIT_AMOUNT_UNIT = 1000000000 wei;
 
     /// @dev default value for maximum number of Ethereum 2.0 validators registered in a single depositBufferedEther call
-    uint256 internal constant DEFAULT_MAX_DEPOSITS_PER_CALL = 16;
+    uint256 internal constant DEFAULT_MAX_DEPOSITS_PER_CALL = 100;
 
     bytes32 internal constant FEE_POSITION = keccak256("lido.Lido.fee");
     bytes32 internal constant TREASURY_FEE_POSITION = keccak256("lido.Lido.treasuryFee");
