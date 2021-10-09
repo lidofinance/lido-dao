@@ -143,6 +143,16 @@ interface INodeOperatorsRegistry {
     function getSigningKey(uint256 _operator_id, uint256 _index) external view returns
             (bytes key, bytes depositSignature, bool used);
 
+    
+    /**
+     * @notice Returns a monotonically increasing counter that gets incremented when any of the following happens:
+     *   1. a node operator's key(s) is added;
+     *   2. a node operator's key(s) is removed;
+     *   3. a node operator's approved keys limit is changed.
+     */
+    function getKeysOpIndex() external view returns (uint256);
+
     event SigningKeyAdded(uint256 indexed operatorId, bytes pubkey);
     event SigningKeyRemoved(uint256 indexed operatorId, bytes pubkey);
+    event KeysOpIndexSet(uint256 oldKeysOpIndex, uint256 newKeysOpIndex);
 }
