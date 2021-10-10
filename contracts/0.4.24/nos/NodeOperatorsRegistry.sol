@@ -588,6 +588,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         _deleteSigningKey(_operator_id, lastIndex);
         operators[_operator_id].totalSigningKeys = operators[_operator_id].totalSigningKeys.sub(1);
 
+        if (_index < operators[_operator_id].stakingLimit) {
+            // decreasing the staking limit so the key at _index can't be used anymore
+            operators[_operator_id].stakingLimit = uint64(_index);
+        }
+
         emit SigningKeyRemoved(_operator_id, removedKey);
     }
 

@@ -421,11 +421,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
 
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(100) })
     await app.methods['depositBufferedEther()']({ from: depositor })
-    await assertRevert(operators.removeSigningKey(0, 1, { from: voting }), 'KEY_WAS_USED')
-    await assertRevert(operators.removeSigningKey(0, 2, { from: voting }), 'KEY_WAS_USED')
-    assertBn(await depositContract.totalCalls(), 3)
+    assertBn(await depositContract.totalCalls(), 1)
     assertBn(await app.getTotalPooledEther(), ETH(133))
-    assertBn(await app.getBufferedEther(), ETH(37))
+    assertBn(await app.getBufferedEther(), ETH(101))
   })
 
   it("out of signing keys doesn't revert but buffers", async () => {

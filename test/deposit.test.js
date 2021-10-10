@@ -210,6 +210,14 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
       { from: voting }
     )
 
+    await operators.addSigningKeys(
+      1,
+      3,
+      hexConcat(pad('0x020204', 48), pad('0x020205', 48), pad('0x020206', 48)),
+      hexConcat(pad('0x02', 96), pad('0x02', 96), pad('0x02', 96)),
+      { from: voting }
+    )
+
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(33) })
     await app.methods['depositBufferedEther()']({ from: depositor })
 
@@ -221,11 +229,12 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(100) })
     await app.methods['depositBufferedEther()']({ from: depositor })
 
-    await assertRevert(operators.removeSigningKey(0, 1, { from: voting }), 'KEY_WAS_USED')
-    await assertRevert(operators.removeSigningKey(0, 2, { from: voting }), 'KEY_WAS_USED')
-    assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 3)
+    // deposit should go to second operator, as the first one got their key limits set to 1
+    await assertRevert(operators.removeSigningKey(1, 0, { from: voting }), 'KEY_WAS_USED')
+    await assertRevert(operators.removeSigningKey(1, 1, { from: voting }), 'KEY_WAS_USED')
+    assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 4)
     assertBn(await app.getTotalPooledEther(), ETH(133))
-    assertBn(await app.getBufferedEther(), ETH(37))
+    assertBn(await app.getBufferedEther(), ETH(5))
   })
 
   it('Node Operators filtering during deposit works when doing a huge deposit', async () => {

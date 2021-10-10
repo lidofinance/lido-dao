@@ -690,6 +690,25 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     assertBn(await app.getKeysOpIndex(), 9)
 
     await assertRevert(app.getSigningKey(1, 0, { from: nobody }), 'KEY_NOT_FOUND')
+
+    assertBn(await app.getTotalSigningKeyCount(0, { from: nobody }), 1)
+    assertBn(await app.getUnusedSigningKeyCount(0, { from: nobody }), 1)
+
+    await app.addSigningKeys(
+      0,
+      3,
+      hexConcat(pad('0x010101', 48), pad('0x020202', 48), pad('0x030303', 48)),
+      hexConcat(pad('0x01', 96), pad('0x02', 96), pad('0x03', 96)),
+      { from: voting }
+    )
+    await app.setNodeOperatorStakingLimit(0, 3, { from: voting })
+    await app.removeSigningKey(0, 3, { from: voting })
+    const { stakingLimit: stakingLimitAfter } = await app.getNodeOperator(0, false)
+    assertBn(stakingLimitAfter, 3, 'Staking limit not changed on non-approved key removal')
+
+    await app.removeSigningKey(0, 1, { from: voting })
+    const { stakingLimit: stakingLimitAfter2 } = await app.getNodeOperator(0, false)
+    assertBn(stakingLimitAfter2, 1, 'Staking limit set on removed index on removal')
   })
 
   it('getRewardsDistribution works', async () => {
