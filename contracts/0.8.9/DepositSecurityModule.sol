@@ -319,7 +319,7 @@ contract DepositSecurityModule {
         require(keysOpIndex == onchainKeysOpIndex, "keys op index changed");
 
         uint256 numValidSignatures = _verifySignatures(depositRoot, keysOpIndex, guardianSignatures);
-        require(numValidSignatures >= quorum, "no guardian quorum");
+        require(quorum > 0 && numValidSignatures >= quorum, "no guardian quorum");
 
         ILido(lido).depositBufferedEther(maxDeposits);
         lastDepositBlock = block.number;
