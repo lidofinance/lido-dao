@@ -254,6 +254,11 @@ contract DepositSecurityModule {
             require(signerAddr == guardianAddr, "invalid signature");
         }
 
+        require(
+            block.number - blockHeight <= pauseIntentValidityPeriodBlocks,
+            "pause intent expired"
+        );
+
         if (!paused) {
             paused = true;
             emit DepositsPaused(guardianAddr);
