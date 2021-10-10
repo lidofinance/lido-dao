@@ -301,7 +301,7 @@ contract DepositSecurityModule {
      *
      * | ATTEST_MESSAGE_PREFIX: bytes32 | depositRoot: bytes32 | keysOpIndex: uint256 |
      */
-    function despositBufferedEther(
+    function depositBufferedEther(
         uint256 maxDeposits,
         bytes32 depositRoot,
         uint256 keysOpIndex,
