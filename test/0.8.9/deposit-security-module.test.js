@@ -300,7 +300,8 @@ contract('DepositSecurityModule', ([owner, stranger]) => {
         )
       })
     })
-
+  })
+  describe('Guardians', () => {
     context(`guardians checks`, async () => {
       it(`getGuardians returns empty list initially`, async () => {
         assert.equal((await depositSecurityModule.getGuardians()).length, 0)
@@ -398,6 +399,20 @@ contract('DepositSecurityModule', ([owner, stranger]) => {
 
         assert.isTrue(quorum > guardians.length)
       })
+    })
+  })
+  describe('Owner', () => {
+    beforeEach('check initial owner', async () => {
+      assert.equal(await depositSecurityModule.getOwner(), owner, 'wrong initial owner')
+    })
+    it('not owner cannot change', async () => {
+      await assertRevert(depositSecurityModule.setOwner(stranger, { from: stranger }), 'not an owner')
+    })
+    it('set new owner by owner', async () => {
+      assertEvent(await depositSecurityModule.setOwner(stranger, { from: owner }), 'OwnerChanged', {
+        expectedArgs: { newValue: stranger }
+      })
+      assert.equal(await depositSecurityModule.getOwner(), stranger, 'owner not changed')
     })
   })
 })
