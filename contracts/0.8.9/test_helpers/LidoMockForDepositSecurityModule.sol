@@ -6,5 +6,9 @@
 pragma solidity 0.8.9;
 
 contract LidoMockForDepositSecurityModule {
-    function depositBufferedEther(uint256 maxDeposits) external {}
+    event Deposited(uint256 maxDeposits);
+
+    function depositBufferedEther(uint256 maxDeposits) external {
+        emit Deposited(maxDeposits);
+    }
 }
