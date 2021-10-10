@@ -232,12 +232,14 @@ contract DepositSecurityModule {
     /**
      * Pauses deposits given that both conditions are satisfied (reverts otherwise):
      *
-     *   1. The function is called by the guardian with index guardianIndex OR (v, r, s) is a
-     *      valid signature by the member with index guardianIndex of blockHeight.
+     *   1. The function is called by the guardian with index guardianIndex OR (v, r, s)
+     *      is a valid signature by the guardian with index guardianIndex of the data
+     *      defined below.
      *
      *   2. block.number - blockHeight <= PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS
      *
-     * The signature, if present, must be produced for the message with the following layout:
+     * The signature, if present, must be produced for keccak256 hash of a message with
+     * the following layout:
      *
      * | PAUSE_MESSAGE_PREFIX: bytes32 | blockHeight: uint256 |
      */
@@ -294,7 +296,8 @@ contract DepositSecurityModule {
      * guardianSignatures := | sig... |
      * sig := | memberIndex: uint8 | v: uint8 | r: bytes32 | s: bytes32 |
      *
-     * Each of guardian signatures must be produced for the message with the following layout:
+     * Each of guardian signatures must be produced for keccak256 hash of a message
+     * with the following layout:
      *
      * | ATTEST_MESSAGE_PREFIX: bytes32 | depositRoot: bytes32 | keysOpIndex: uint256 |
      */
