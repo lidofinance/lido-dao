@@ -680,6 +680,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     await assertRevert(app.removeSigningKeysOperatorBH(0, 4, 1, { from: voting }), 'APP_AUTH_FAILED')
     await assertRevert(app.removeSigningKeysOperatorBH(0, 4, 1, { from: user1 }), 'KEY_NOT_FOUND')
+    await assertRevert(app.removeSigningKeysOperatorBH(0, 0, 5, { from: user1 }), 'KEY_NOT_FOUND')
 
     assertBn(await app.getTotalSigningKeyCount(0, { from: nobody }), 4)
     assertBn(await app.getUnusedSigningKeyCount(0, { from: nobody }), 4)
@@ -689,6 +690,10 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     assert.equal((await app.getSigningKey(0, 0, { from: nobody })).key, op0.keys[7])
     assert.equal((await app.getSigningKey(0, 1, { from: nobody })).key, op0.keys[5])
+
+    await app.removeSigningKeysOperatorBH(0, 0, 2, { from: user1 })
+    assertBn(await app.getTotalSigningKeyCount(0, { from: nobody }), 0)
+    assertBn(await app.getUnusedSigningKeyCount(0, { from: nobody }), 0)
   })
 
   it('getRewardsDistribution works', async () => {
