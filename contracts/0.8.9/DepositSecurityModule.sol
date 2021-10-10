@@ -39,10 +39,10 @@ contract DepositSecurityModule {
 
 
     // keccak256("lido.DepositSecurityModule.ATTEST_MESSAGE")
-    bytes32 public constant ATTEST_MESSAGE_PREFIX = 0x585dab5b17d69b94f861fa20eb1176f38b9339d4624672d5d660efbcf6eb940f;
+    bytes32 public constant ATTEST_MESSAGE_PREFIX = 0x1085395a994e25b1b3d0ea7937b7395495fb405b31c7d22dbc3976a6bd01f2bf;
 
     // keccak256("lido.DepositSecurityModule.PAUSE_MESSAGE");
-    bytes32 public constant PAUSE_MESSAGE_PREFIX = 0xaeb9c41ecd5ed3c9edfff098e452a16beb77888faf41a22694cd16c151efc6c2;
+    bytes32 public constant PAUSE_MESSAGE_PREFIX = 0x9c4c40205558f12027f21204d6218b8006985b7a6359bcab15404bcc3e3fa122;
 
     uint256 constant ATTEST_SIGNATURE_LEN = 1 + 1 + 32 + 32;
 
