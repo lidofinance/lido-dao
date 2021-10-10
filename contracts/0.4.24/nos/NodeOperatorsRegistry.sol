@@ -42,7 +42,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     uint256 internal constant UINT64_MAX = uint256(uint64(-1));
 
     bytes32 internal constant SIGNING_KEYS_MAPPING_NAME = keccak256("lido.NodeOperatorsRegistry.signingKeysMappingName");
-    bytes32 internal constant KEYS_OP_INDEX_NAME = keccak256("lido.NodeOperatorsRegistry.keysOpIndex");
 
 
     /// @dev Node Operator parameters and internal state
@@ -80,6 +79,9 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     /// @dev link to the Lido contract
     bytes32 internal constant LIDO_POSITION = keccak256("lido.NodeOperatorsRegistry.lido");
 
+    /// @dev link to the index of operations with keys
+    bytes32 internal constant KEYS_OP_INDEX_POSITION = keccak256("lido.NodeOperatorsRegistry.keysOpIndex");
+
 
     modifier onlyLido() {
         require(msg.sender == LIDO_POSITION.getStorageAddress(), "APP_AUTH_FAILED");
@@ -99,7 +101,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     function initialize(address _lido) public onlyInit {
         TOTAL_OPERATORS_COUNT_POSITION.setStorageUint256(0);
         ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(0);
-        KEYS_OP_INDEX_NAME.setStorageUint256(0);
+        KEYS_OP_INDEX_POSITION.setStorageUint256(0);
         LIDO_POSITION.setStorageAddress(_lido);
         initialized();
     }
@@ -116,7 +118,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         validAddress(_rewardAddress)
         returns (uint256 id)
     {
-        _increaseKeysOpIndex();
         id = getNodeOperatorsCount();
         TOTAL_OPERATORS_COUNT_POSITION.setStorageUint256(id.add(1));
 
@@ -209,7 +210,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       * @dev Function is used by the Lido contract
       */
     function trimUnusedKeys() external onlyLido {
-        _increaseKeysOpIndex();
         uint256 length = getNodeOperatorsCount();
         for (uint256 operatorId = 0; operatorId < length; ++operatorId) {
             if (operators[operatorId].totalSigningKeys != operators[operatorId].usedSigningKeys)  // write only if update is needed
@@ -331,8 +331,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         if (numAssignedKeys == 0) {
             return (new bytes(0), new bytes(0));
         }
-
-        _increaseKeysOpIndex();
 
         if (numAssignedKeys > 1) {
             // we can allocate without zeroing out since we're going to rewrite the whole array
@@ -498,7 +496,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
      *   3. a node operator's approved keys limit is changed.
      */
     function getKeysOpIndex() public view returns (uint256) {
-        return KEYS_OP_INDEX_NAME.getStorageUint256();
+        return KEYS_OP_INDEX_POSITION.getStorageUint256();
     }
 
     function _isEmptySigningKey(bytes memory _key) internal pure returns (bool) {
@@ -658,7 +656,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
     function _increaseKeysOpIndex() internal {
         uint256 keysOpIndex = getKeysOpIndex();
-        KEYS_OP_INDEX_NAME.setStorageUint256(keysOpIndex + 1);
+        KEYS_OP_INDEX_POSITION.setStorageUint256(keysOpIndex + 1);
         emit KeysOpIndexSet(keysOpIndex, keysOpIndex + 1);
     }
 }
