@@ -90,6 +90,13 @@ const solcSettings6 = {
   },
   evmVersion: 'istanbul'
 }
+const solcSettings8 = {
+  optimizer: {
+    enabled: true,
+    runs: 200
+  },
+  evmVersion: 'istanbul'
+}
 
 module.exports = {
   defaultNetwork: NETWORK_NAME,
@@ -107,6 +114,10 @@ module.exports = {
       {
         version: '0.6.12',
         settings: solcSettings6
+      },
+      {
+        version: '0.8.9',
+        settings: solcSettings8
       }
     ],
     overrides: {
