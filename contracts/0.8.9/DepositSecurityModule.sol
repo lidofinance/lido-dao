@@ -28,6 +28,7 @@ contract DepositSecurityModule {
 
 
     event OwnerChanged(address newValue);
+    event NodeOperatorsRegistryChanged(address newValue);
     event PauseIntentValidityPeriodBlocksChanged(uint256 newValue);
     event MaxDepositsChanged(uint256 newValue);
     event MinDepositBlockDistanceChanged(uint256 newValue);
@@ -46,11 +47,10 @@ contract DepositSecurityModule {
 
     uint256 constant ATTEST_SIGNATURE_LEN = 1 + 1 + 32 + 32;
 
-    address internal immutable lido;
-    address internal immutable depositContract;
-    address internal immutable nodeOperatorsRegistry;
+    address internal immutable LIDO;
+    address internal immutable DEPOSIT_CONTRACT;
 
-
+    address internal nodeOperatorsRegistry;
     uint256 internal maxDepositsPerBlock;
     uint256 internal minDepositBlockDistance;
     uint256 internal pauseIntentValidityPeriodBlocks;
@@ -59,7 +59,6 @@ contract DepositSecurityModule {
 
     address[] internal guardians;
     mapping(address => bool) guardianFlags;
-
     uint256 internal quorum;
 
     bool internal paused;
@@ -67,12 +66,11 @@ contract DepositSecurityModule {
 
 
     constructor(address _lido, address _depositContract, address _nodeOperatorsRegistry) {
-        lido = _lido;
-        depositContract = _depositContract;
-        nodeOperatorsRegistry = _nodeOperatorsRegistry;
+        LIDO = _lido;
+        DEPOSIT_CONTRACT = _depositContract;
 
-        owner = msg.sender;
-        emit OwnerChanged(msg.sender);
+        _setOwner(msg.sender);
+        _setNodeOperatorsRegistry(_nodeOperatorsRegistry);
 
         paused = false;
         lastDepositBlock = 0;
@@ -95,8 +93,32 @@ contract DepositSecurityModule {
      * Sets new owner. Only callable by the current owner.
      */
     function setOwner(address newValue) external onlyOwner {
+        _setOwner(newValue);
+    }
+
+    function _setOwner(address newValue) internal {
         owner = newValue;
         emit OwnerChanged(newValue);
+    }
+
+
+    /**
+     * Returns NodeOperatorsRegistry contract address.
+     */
+    function getNodeOperatorsRegistry() external view returns (address) {
+        return nodeOperatorsRegistry;
+    }
+
+    /**
+     * Sets NodeOperatorsRegistry contract address. Only callable by the owner.
+     */
+    function setNodeOperatorsRegistry(address newValue) external onlyOwner {
+        _setNodeOperatorsRegistry(newValue);
+    }
+
+    function _setNodeOperatorsRegistry(address newValue) internal {
+        nodeOperatorsRegistry = newValue;
+        emit NodeOperatorsRegistryChanged(newValue);
     }
 
 
@@ -313,7 +335,7 @@ contract DepositSecurityModule {
         require(maxDeposits <= maxDepositsPerBlock, "too many deposits");
         require(block.number - lastDepositBlock >= minDepositBlockDistance, "too frequent deposits");
 
-        bytes32 onchainDepositRoot = IDepositContract(depositContract).get_deposit_root();
+        bytes32 onchainDepositRoot = IDepositContract(DEPOSIT_CONTRACT).get_deposit_root();
         require(depositRoot == onchainDepositRoot, "deposit root changed");
 
         uint256 onchainKeysOpIndex = INodeOperatorsRegistry(nodeOperatorsRegistry).getKeysOpIndex();
@@ -322,7 +344,7 @@ contract DepositSecurityModule {
         uint256 numValidSignatures = _verifySignatures(depositRoot, keysOpIndex, guardianSignatures);
         require(quorum > 0 && numValidSignatures >= quorum, "no guardian quorum");
 
-        ILido(lido).depositBufferedEther(maxDeposits);
+        ILido(LIDO).depositBufferedEther(maxDeposits);
         lastDepositBlock = block.number;
     }
 
