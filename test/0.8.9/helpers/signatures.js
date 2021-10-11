@@ -8,6 +8,16 @@ function generateGuardianSignatures(guardianIndexesWithSignatures) {
   }, '0x')
 }
 
+function signPauseData(pauseMessagePrefix, blockHeight, guardianPrivateKey) {
+  const hash = keccak256(encodePauseData(pauseMessagePrefix, blockHeight))
+  return ecSign(hash, guardianPrivateKey)
+}
+
+function encodePauseData(pauseMessagePrefix, blockHeight) {
+  const uint256Size = 64
+  return hexToBytes(strip0x(pauseMessagePrefix) + new BN(blockHeight).toString('hex', uint256Size))
+}
+
 function signDepositData(attestMessagePrefix, depositRoot, keysOpIndex, guardianPrivateKey) {
   const hash = keccak256(encodeDepositRootAndKeysOpIndex(attestMessagePrefix, depositRoot, keysOpIndex))
   return ecSign(hash, guardianPrivateKey)
@@ -33,5 +43,6 @@ function hexToBytes(hex) {
 
 module.exports = {
   generateGuardianSignatures,
-  signDepositData
+  signDepositData,
+  signPauseData
 }

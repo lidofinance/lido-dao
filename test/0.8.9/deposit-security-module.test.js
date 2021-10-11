@@ -1,6 +1,6 @@
 const { assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const { assert } = require('chai')
-const { generateGuardianSignatures, signDepositData } = require('./helpers/signatures')
+const { generateGuardianSignatures, signDepositData, signPauseData } = require('./helpers/signatures')
 
 const DepositSecurityModule = artifacts.require('DepositSecurityModule.sol')
 const LidoMockForDepositSecurityModule = artifacts.require('LidoMockForDepositSecurityModule.sol')
@@ -8,6 +8,7 @@ const NodeOperatorsRegistryMockForSecurityModule = artifacts.require('NodeOperat
 const DepositContractMockForDepositSecurityModule = artifacts.require('DepositContractMockForDepositSecurityModule.sol')
 
 const MAX_DEPOSITS_PER_BLOCK = 100
+const PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS = 10
 const GUARDIAN1 = '0x8516Cbb5ABe73D775bfc0d21Af226e229F7181A3'
 const GUARDIAN2 = '0x5Fc0E75BF6502009943590492B02A1d08EAc9C43'
 const GUARDIAN3 = '0xdaEAd0E0194abd565d28c1013399801d79627c14'
@@ -24,7 +25,7 @@ const UNRELATED_SIGNER_PRIVATE_KEYS = {
   [UNRELATED_SIGNER2]: '0xbabec7d3867c72f6c275135b1e1423ca8f565d6e21a1947d056a195b1c3cae27'
 }
 
-contract('DepositSecurityModule', ([owner, stranger]) => {
+contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
   let depositSecurityModule, depositContractMock, lidoMock, nodeOperatorsRegistryMock
 
   before('deploy mock contracts', async () => {
@@ -299,6 +300,57 @@ contract('DepositSecurityModule', ([owner, stranger]) => {
           'no guardian quorum'
         )
       })
+    })
+  })
+  describe('pauseDeposits, total_guardians=2', () => {
+    let pauseMessagePrefix
+    before('set pauseMessagePrefix value', async () => {
+      pauseMessagePrefix = await depositSecurityModule.PAUSE_MESSAGE_PREFIX()
+    })
+    beforeEach('add guardians and check that not paused', async () => {
+      await depositSecurityModule.addGuardian(guardian, { from: owner })
+      await depositSecurityModule.addGuardian(GUARDIAN2, { from: owner })
+      const guardians = await depositSecurityModule.getGuardians()
+      assert.equal(guardians.length, 2, 'invariant failed: guardians != 2')
+      assert.equal(await depositSecurityModule.isPaused(), false, 'invariant failed: isPaused')
+      await depositSecurityModule.setPauseIntentValidityPeriodBlocks(PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS, { from: owner })
+    })
+    it('if called by a guardian 1 or 2', async () => {
+      const guardianIndex = 0
+      const blockHeight = await web3.eth.getBlockNumber()
+      await depositSecurityModule.pauseDeposits(blockHeight, guardianIndex, 0, '0x', '0x', { from: guardian })
+      assert.equal(await depositSecurityModule.isPaused(), true, 'invalid result: not paused')
+    })
+
+    it('pauses if called by an anon submitting sig of guardian 1 or 2', async () => {
+      const guardianIndex = 1
+      const blockHeight = await web3.eth.getBlockNumber()
+      const { v, r, s } = signPauseData(pauseMessagePrefix, blockHeight, GUARDIAN_PRIVATE_KEYS[GUARDIAN2])
+      await depositSecurityModule.pauseDeposits(blockHeight, guardianIndex, v, r, s)
+      assert.equal(await depositSecurityModule.isPaused(), true, 'invalid result: not paused')
+    })
+    it('reverts if called by an anon submitting an unrelated sig', async () => {
+      const guardianIndex = 1
+      const blockHeight = await web3.eth.getBlockNumber()
+      const { v, r, s } = signPauseData(pauseMessagePrefix, blockHeight, GUARDIAN_PRIVATE_KEYS[GUARDIAN3])
+      await assertRevert(depositSecurityModule.pauseDeposits(blockHeight, guardianIndex, v, r, s), 'invalid signature')
+    })
+    it('reverts if called by a guardian with an expired blockNumber', async () => {
+      const guardianIndex = 0
+      const blockHeight = (await web3.eth.getBlockNumber()) - PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS
+      await assertRevert(
+        depositSecurityModule.pauseDeposits(blockHeight, guardianIndex, 0, '0x', '0x', { from: guardian }),
+        'pause intent expired'
+      )
+    })
+    it("reverts is called by an anon submitting a guardian's sig but with an expired `blockNumber`", async () => {
+      const guardianIndex = 1
+      const blockHeight = (await web3.eth.getBlockNumber()) - PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS
+      const { v, r, s } = signPauseData(pauseMessagePrefix, blockHeight, GUARDIAN_PRIVATE_KEYS[GUARDIAN2])
+      await assertRevert(
+        depositSecurityModule.pauseDeposits(blockHeight, guardianIndex, v, r, s, { from: guardian }),
+        'pause intent expired'
+      )
     })
   })
   describe('Guardians', () => {
