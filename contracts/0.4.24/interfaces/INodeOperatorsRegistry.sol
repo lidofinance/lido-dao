@@ -84,7 +84,7 @@ interface INodeOperatorsRegistry {
         uint256[] memory shares
     );
 
-    event NodeOperatorAdded(uint256 id, string name, address rewardAddress);
+    event NodeOperatorAdded(uint256 id, string name, address rewardAddress, uint64 stakingLimit);
     event NodeOperatorActiveSet(uint256 indexed id, bool active);
     event NodeOperatorNameSet(uint256 indexed id, string name);
     event NodeOperatorRewardAddressSet(uint256 indexed id, address rewardAddress);

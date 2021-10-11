@@ -130,7 +130,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         operator.rewardAddress = _rewardAddress;
         operator.stakingLimit = 0;
 
-        emit NodeOperatorAdded(id, _name, _rewardAddress);
+        emit NodeOperatorAdded(id, _name, _rewardAddress, 0);
 
         return id;
     }
