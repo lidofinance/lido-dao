@@ -7,6 +7,7 @@ const { APP_NAMES, APP_ARTIFACTS } = require('./constants')
 const VALID_APP_NAMES = Object.entries(APP_NAMES).map((e) => e[1])
 
 const APP = process.env.APP || ''
+const DEPLOYER = process.env.DEPLOYER || ''
 const REQUIRED_NET_STATE = ['lidoApmEnsName', 'lidoApmAddress']
 
 async function upgradeApp({ web3, artifacts, appName = APP }) {
@@ -24,7 +25,9 @@ async function upgradeApp({ web3, artifacts, appName = APP }) {
 
   logSplitter()
 
-  await saveDeployTx(appArtifact, `tx-13-1-deploy-${appName}-base.json`)
+  await saveDeployTx(appArtifact, `tx-13-1-deploy-${appName}-base.json`, {
+    from: DEPLOYER || state.multisigAddress
+  })
 
   logSplitter()
   log(gr(`Before continuing the deployment, please send all contract creation transactions`))

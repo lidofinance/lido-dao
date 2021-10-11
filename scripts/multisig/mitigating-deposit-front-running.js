@@ -37,8 +37,10 @@ async function upgradeAppImpl({ web3, artifacts }) {
   const ens = await artifacts.require('ENS').at(state.ensAddress)
   const votingAddress = state[`app:${APP_NAMES.ARAGON_VOTING}`].proxyAddress
   const tokenManagerAddress = state[`app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`].proxyAddress
+  const nosRegistryAddress = state[`app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`].proxyAddress
   const voting = await artifacts.require('Voting').at(votingAddress)
   const tokenManager = await artifacts.require('TokenManager').at(tokenManagerAddress)
+  const nosRegistry = await artifacts.require('NodeOperatorsRegistry').at(nosRegistryAddress)
   const kernel = await artifacts.require('Kernel').at(state.daoAddress)
   const aclAddress = await kernel.acl()
   const acl = await artifacts.require('ACL').at(aclAddress)
@@ -57,13 +59,25 @@ async function upgradeAppImpl({ web3, artifacts }) {
     to: aclAddress,
     calldata: await acl.contract.methods.createPermission(
       DEPOSITOR, 
-      state[`app:lido`].baseAddress, 
+      state[`app:lido`].proxyAddress, 
       '0x2561bf26f818282a3be40719542054d2173eb0d38539e8a8d3cff22f29fd2384', // keccak256(DEPOSIT_ROLE)
       votingAddress
     ).encodeABI()  
   }
 
-  encodedUpgradeCallData = encodeCallScript([...lidoUpgradeCallData, ...NOSUpgradeCallData, grantRoleCallData])
+  const nosIncreaseLimitsCallData = []  
+  const nosLimits = require(process.env.NOS_LIMITS) 
+  for ({id, limit} of nosLimits) {
+    nosIncreaseLimitsCallData.push({
+      to: nosRegistryAddress,
+      calldata: await nosRegistry.contract.methods.setNodeOperatorStakingLimit(
+        id, 
+        limit
+      ).encodeABI()  
+    })
+  }
+
+  encodedUpgradeCallData = encodeCallScript([...lidoUpgradeCallData, ...NOSUpgradeCallData, grantRoleCallData, ...nosIncreaseLimitsCallData ])
 
   log(`encodedUpgradeCallData:`, yl(encodedUpgradeCallData))
   const votingCallData = encodeCallScript([
@@ -75,10 +89,11 @@ async function upgradeAppImpl({ web3, artifacts }) {
 
   const txName = `tx-mitigating-deposit-front-running.json`
   const votingDesc = `1) Publishing new implementation in lido app APM repo
-  2) Updating implementaion of lido app with new one
-  3) Publishing new implementation in node operators registry app APM repo
-  4) Updating implementaion of node operators registry app with new one
-  5) Granting new permission DEPOSIT_ROLE for 0x0000000000 
+2) Updating implementaion of lido app with new one
+3) Publishing new implementation in node operators registry app APM repo
+4) Updating implementaion of node operators registry app with new one
+5) Granting new permission DEPOSIT_ROLE for ${DEPOSITOR}
+${nosLimits.map(({id, limit}, index) => `${index + 6}) Set staking limit of operator ${id} to ${limit}`).join('\n')}
   `
 
   await saveCallTxData(votingDesc, tokenManager, 'forward', txName, {
