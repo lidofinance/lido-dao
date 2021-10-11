@@ -272,8 +272,8 @@ contract DepositSecurityModule {
         address addr = guardians[index];
         guardianFlags[addr] = false;
 
-        for (uint256 j = index; j < totalGuardians; ++j) {
-            guardians[j] = guardians[j + 1];
+        if (index != totalGuardians) {
+            guardians[index] = guardians[totalGuardians];
         }
 
         if (quorum > totalGuardians) {
