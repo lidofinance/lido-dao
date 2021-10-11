@@ -107,13 +107,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     /**
-      * @notice Add node operator named `_name` with reward address `_rewardAddress` and staking limit `_stakingLimit`
+      * @notice Add node operator named `_name` with reward address `_rewardAddress` and staking limit = 0
       * @param _name Human-readable name
       * @param _rewardAddress Ethereum 1 address which receives stETH rewards for this operator
-      * @param _stakingLimit the maximum number of validators to stake for this operator
       * @return a unique key of the added operator
       */
-    function addNodeOperator(string _name, address _rewardAddress, uint64 _stakingLimit) external
+    function addNodeOperator(string _name, address _rewardAddress) external
         auth(ADD_NODE_OPERATOR_ROLE)
         validAddress(_rewardAddress)
         returns (uint256 id)
@@ -129,9 +128,9 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         operator.active = true;
         operator.name = _name;
         operator.rewardAddress = _rewardAddress;
-        operator.stakingLimit = _stakingLimit;
+        operator.stakingLimit = 0;
 
-        emit NodeOperatorAdded(id, _name, _rewardAddress, _stakingLimit);
+        emit NodeOperatorAdded(id, _name, _rewardAddress);
 
         return id;
     }
