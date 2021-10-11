@@ -366,6 +366,16 @@ contract DepositSecurityModule {
 
 
     /**
+     * Returns whether depositBufferedEther can be called, given that the caller will provide
+     * guardian attestations of non-stale deposit root and `keysOpIndex`, and the number of
+     * such attestations will be enough to reach quorum.
+     */
+    function canDeposit() external view returns (bool) {
+        return !paused && quorum > 0 && block.number - lastDepositBlock >= minDepositBlockDistance;
+    }
+
+
+    /**
      * Calls Lido.depositBufferedEther(maxDeposits), which is not
      * callable in any other way.
      *
