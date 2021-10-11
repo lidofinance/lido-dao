@@ -134,9 +134,11 @@
   "wstethContractConstructorArgs": [
     "0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F"
   ],
+  "depositorDeployTx": "0x4828f4cbdddad1da88edb4def23d007245ecd3942cf2e5cc2ef02f0bf375d8f1",
   "depositorParams": {
     "maxDepositsPerBlock": 100,
     "minDepositBlockDistance": 14,
     "pauseIntentValidityPeriodBlocks": 10
-  }
+  },
+  "depositorAddress": "0x49Ee4D7C9Ede042aCcFcFfa5FBa3262dbee6986B"
 }
