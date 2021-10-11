@@ -296,6 +296,7 @@ contract DepositSecurityModule {
      * guardianSignatures := | sig... |
      * sig := | memberIndex: uint8 | v: uint8 | r: bytes32 | s: bytes32 |
      *
+     * Signatures must be sorted in ascending order by the memberIndex.
      * Each of guardian signatures must be produced for keccak256 hash of a message
      * with the following layout:
      *
@@ -361,10 +362,14 @@ contract DepositSecurityModule {
         address[] memory members = guardians;
         uint256 numValidSignatures = 0;
         uint256 offset = 0;
+        uint256 prevGuardianIndex = 0;
 
         for (uint256 i = 0; i < numSignatures; ++i) {
             uint256 guardianIndex = sigs.toUint8(offset);
             offset += 1;
+
+            require(i == 0 || guardianIndex > prevGuardianIndex, "signature indices not in ascending order");
+            prevGuardianIndex = guardianIndex;
 
             uint8 v = sigs.toUint8(offset);
             offset += 1;

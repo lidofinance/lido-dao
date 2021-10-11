@@ -228,15 +228,15 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
           'no guardian quorum'
         )
       })
-      it("cannot deposit with guardian's sigs (0,0,0)", async () => {
+      it("cannot deposit with guardian's sigs (0,0,1)", async () => {
         const signature = generateGuardianSignatures([
           [0, signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN1])],
           [0, signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN1])],
-          [0, signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN1])]
+          [1, signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN2])]
         ])
         await assertRevert(
           depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, signature),
-          'no guardian quorum'
+          'signature indices not in ascending order'
         )
       })
       it('cannot deposit with partially-unrelated sigs, e.g. (0,U,U)', async () => {
