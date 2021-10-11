@@ -396,13 +396,13 @@ contract DepositSecurityModule {
         uint256 maxDeposits,
         bytes32 depositRoot,
         uint256 keysOpIndex,
-        Signature[] memory guardianSignatures
+        Signature[] memory sortedGuardianSignatures
     ) external {
         bytes32 onchainDepositRoot = IDepositContract(DEPOSIT_CONTRACT).get_deposit_root();
         require(depositRoot == onchainDepositRoot, "deposit root changed");
 
         require(!paused, "deposits are paused");
-        require(quorum > 0 && guardianSignatures.length >= quorum, "no guardian quorum");
+        require(quorum > 0 && sortedGuardianSignatures.length >= quorum, "no guardian quorum");
 
         require(maxDeposits <= maxDepositsPerBlock, "too many deposits");
         require(block.number - lastDepositBlock >= minDepositBlockDistance, "too frequent deposits");
@@ -410,7 +410,7 @@ contract DepositSecurityModule {
         uint256 onchainKeysOpIndex = INodeOperatorsRegistry(nodeOperatorsRegistry).getKeysOpIndex();
         require(keysOpIndex == onchainKeysOpIndex, "keys op index changed");
 
-        _verifySignatures(depositRoot, keysOpIndex, guardianSignatures);
+        _verifySignatures(depositRoot, keysOpIndex, sortedGuardianSignatures);
 
         ILido(LIDO).depositBufferedEther(maxDeposits);
         lastDepositBlock = block.number;
