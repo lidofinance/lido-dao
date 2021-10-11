@@ -485,4 +485,66 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       assert.equal(await depositSecurityModule.getOwner(), stranger, 'owner not changed')
     })
   })
+  describe('levers', () => {
+    it('setNodeOperatorsRegistry', async () => {
+      const newNodeOperatorsRegistry = await NodeOperatorsRegistryMockForSecurityModule.new()
+      assert.notEqual(
+        await depositSecurityModule.getNodeOperatorsRegistry(),
+        newNodeOperatorsRegistry.address,
+        'invariant failed: nodeOperatorsRegistry'
+      )
+      const tx = await depositSecurityModule.setNodeOperatorsRegistry(newNodeOperatorsRegistry.address, { from: owner })
+      assert.equal(
+        await depositSecurityModule.getNodeOperatorsRegistry(),
+        newNodeOperatorsRegistry.address,
+        'invalid result: setNodeOperatorsRegistry'
+      )
+      assertEvent(tx, 'NodeOperatorsRegistryChanged', {
+        expectedArgs: { newValue: newNodeOperatorsRegistry.address }
+      })
+    })
+    it('setPauseIntentValidityPeriodBlocks', async () => {
+      const newPauseIntentValidityPeriodBlocks = PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS + 1
+      assert.notEqual(
+        await depositSecurityModule.getPauseIntentValidityPeriodBlocks(),
+        newPauseIntentValidityPeriodBlocks.address,
+        'invariant failed: pauseIntentValidityPeriodBlocks'
+      )
+      const tx = await depositSecurityModule.setPauseIntentValidityPeriodBlocks(newPauseIntentValidityPeriodBlocks, { from: owner })
+      assert.equal(
+        await depositSecurityModule.getPauseIntentValidityPeriodBlocks(),
+        newPauseIntentValidityPeriodBlocks,
+        'invalid result: pauseIntentValidityPeriodBlocks'
+      )
+      assertEvent(tx, 'PauseIntentValidityPeriodBlocksChanged', {
+        expectedArgs: { newValue: newPauseIntentValidityPeriodBlocks }
+      })
+    })
+    it('setMaxDeposits', async () => {
+      const newMaxDeposits = MAX_DEPOSITS_PER_BLOCK + 1
+      assert.notEqual(await depositSecurityModule.getMaxDeposits(), newMaxDeposits, 'invariant failed: maxDeposits')
+      const tx = await depositSecurityModule.setMaxDeposits(newMaxDeposits, { from: owner })
+      assert.equal(await depositSecurityModule.getMaxDeposits(), newMaxDeposits, 'invalid result: setMaxDeposits')
+      assertEvent(tx, 'MaxDepositsChanged', {
+        expectedArgs: { newValue: newMaxDeposits }
+      })
+    })
+    it('setMinDepositBlockDistance', async () => {
+      const newMinDepositBlockDistance = MIN_DEPOSIT_BLOCK_DISTANCE + 1
+      assert.notEqual(
+        await depositSecurityModule.getMinDepositBlockDistance(),
+        newMinDepositBlockDistance,
+        'invariant failed: minDepositBlockDistance'
+      )
+      const tx = await depositSecurityModule.setMinDepositBlockDistance(newMinDepositBlockDistance, { from: owner })
+      assert.equal(
+        await depositSecurityModule.getMinDepositBlockDistance(),
+        newMinDepositBlockDistance,
+        'invalid result: setMinDepositBlockDistance'
+      )
+      assertEvent(tx, 'MinDepositBlockDistanceChanged', {
+        expectedArgs: { newValue: newMinDepositBlockDistance }
+      })
+    })
+  })
 })
