@@ -545,4 +545,96 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       })
     })
   })
+  describe('canDeposit', () => {
+    it('true if not paused and quorum > 0 and currentBlock - lastDepositBlock >= minDepositBlockDistance', async () => {
+      const MAX_DEPOSITS = 24
+      const KEYS_OP_INDEX = 12
+      const DEPOSIT_ROOT = '0xd151867719c94ad8458feaf491809f9bc8096c702a72747403ecaac30c179137'
+
+      await depositSecurityModule.addGuardian(GUARDIAN1, 1, { from: owner })
+
+      assert.equal(await depositSecurityModule.isPaused(), false, 'invariant failed: isPaused')
+      assert.isTrue((await depositSecurityModule.getGuardianQuorum()) > 0, 'invariant failed: quorum > 0')
+
+      const signatures = [signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN1])]
+      await depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, signatures)
+
+      const lastDepositBlockNumber = await web3.eth.getBlockNumber()
+      await waitBlocks(2 * MIN_DEPOSIT_BLOCK_DISTANCE)
+
+      const currentBlockNumber = await web3.eth.getBlockNumber()
+      const minDepositBlockDistance = await depositSecurityModule.getMinDepositBlockDistance()
+
+      assert.isTrue(currentBlockNumber - lastDepositBlockNumber >= minDepositBlockDistance)
+      assert.isTrue(await depositSecurityModule.canDeposit())
+    })
+    it('false if paused and quorum > 0 and currentBlock - lastDepositBlock >= minDepositBlockDistance', async () => {
+      const MAX_DEPOSITS = 24
+      const KEYS_OP_INDEX = 12
+      const DEPOSIT_ROOT = '0xd151867719c94ad8458feaf491809f9bc8096c702a72747403ecaac30c179137'
+
+      await depositSecurityModule.addGuardians([GUARDIAN1, guardian], 1, { from: owner })
+      assert.isTrue((await depositSecurityModule.getGuardianQuorum()) > 0, 'invariant failed: quorum > 0')
+
+      const signatures = [signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN1])]
+      await depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, signatures)
+
+      const lastDepositBlockNumber = await web3.eth.getBlockNumber()
+      await waitBlocks(2 * MIN_DEPOSIT_BLOCK_DISTANCE)
+
+      const currentBlockNumber = await web3.eth.getBlockNumber()
+      const minDepositBlockDistance = await depositSecurityModule.getMinDepositBlockDistance()
+
+      assert.isTrue(currentBlockNumber - lastDepositBlockNumber >= minDepositBlockDistance)
+
+      const sig = signPauseData(PAUSE_MESSAGE_PREFIX, currentBlockNumber, GUARDIAN_PRIVATE_KEYS[GUARDIAN1])
+      await depositSecurityModule.pauseDeposits(currentBlockNumber, sig, { from: guardian })
+      assert.isTrue(await depositSecurityModule.isPaused(), 'invariant failed: isPaused')
+      assert.isFalse(await depositSecurityModule.canDeposit())
+    })
+    it('false if not paused and quorum == 0 and currentBlock - lastDepositBlock >= minDepositBlockDistance', async () => {
+      const MAX_DEPOSITS = 24
+      const KEYS_OP_INDEX = 12
+      const DEPOSIT_ROOT = '0xd151867719c94ad8458feaf491809f9bc8096c702a72747403ecaac30c179137'
+
+      await depositSecurityModule.addGuardians([GUARDIAN1, guardian], 1, { from: owner })
+      assert.isTrue((await depositSecurityModule.getGuardianQuorum()) > 0, 'invariant failed: quorum > 0')
+
+      const signatures = [signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN1])]
+      await depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, signatures)
+
+      const lastDepositBlockNumber = await web3.eth.getBlockNumber()
+      await waitBlocks(2 * MIN_DEPOSIT_BLOCK_DISTANCE)
+
+      const currentBlockNumber = await web3.eth.getBlockNumber()
+      const minDepositBlockDistance = await depositSecurityModule.getMinDepositBlockDistance()
+
+      assert.isTrue(currentBlockNumber - lastDepositBlockNumber >= minDepositBlockDistance)
+      await depositSecurityModule.setGuardianQuorum(0, { from: owner })
+      assert.equal(await depositSecurityModule.getGuardianQuorum(), 0, 'invariant failed: quorum == 0')
+      assert.isFalse(await depositSecurityModule.canDeposit())
+    })
+    it('false if not paused and quorum > 0 and currentBlock - lastDepositBlock < minDepositBlockDistance', async () => {
+      const MAX_DEPOSITS = 24
+      const KEYS_OP_INDEX = 12
+      const DEPOSIT_ROOT = '0xd151867719c94ad8458feaf491809f9bc8096c702a72747403ecaac30c179137'
+
+      await depositSecurityModule.addGuardian(GUARDIAN1, 1, { from: owner })
+
+      assert.equal(await depositSecurityModule.isPaused(), false, 'invariant failed: isPaused')
+      assert.isTrue((await depositSecurityModule.getGuardianQuorum()) > 0, 'invariant failed: quorum > 0')
+
+      const signatures = [signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN1])]
+      await depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, signatures)
+
+      const lastDepositBlockNumber = await web3.eth.getBlockNumber()
+      await waitBlocks(Math.floor(MIN_DEPOSIT_BLOCK_DISTANCE / 2))
+
+      const currentBlockNumber = await web3.eth.getBlockNumber()
+      const minDepositBlockDistance = await depositSecurityModule.getMinDepositBlockDistance()
+
+      assert.isTrue(currentBlockNumber - lastDepositBlockNumber < minDepositBlockDistance)
+      assert.isFalse(await depositSecurityModule.canDeposit())
+    })
+  })
 })
