@@ -134,11 +134,20 @@
   "wstethContractConstructorArgs": [
     "0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F"
   ],
-  "depositorDeployTx": "0x4828f4cbdddad1da88edb4def23d007245ecd3942cf2e5cc2ef02f0bf375d8f1",
   "depositorParams": {
     "maxDepositsPerBlock": 100,
     "minDepositBlockDistance": 14,
     "pauseIntentValidityPeriodBlocks": 10
   },
+  "depositorConstructorArgs": [
+    "0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F",
+    "0xff50ed3d0ec03aC01D4C79aAd74928BFF48a7b2b",
+    "0x9D4AF1Ee19Dad8857db3a45B0374c81c8A1C6320",
+    5,
+    100,
+    14,
+    10
+  ],
+  "depositorDeployTx": "0x4828f4cbdddad1da88edb4def23d007245ecd3942cf2e5cc2ef02f0bf375d8f1",
   "depositorAddress": "0x49Ee4D7C9Ede042aCcFcFfa5FBa3262dbee6986B"
 }

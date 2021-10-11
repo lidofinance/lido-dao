@@ -1,7 +1,7 @@
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, logSplitter, logWideSplitter, yl, gr } = require('../helpers/log')
 const { saveDeployTx } = require('../helpers/deploy')
-const { readNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
+const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
 
 const { APP_NAMES } = require('./constants')
 
@@ -26,17 +26,21 @@ async function upgradeApp({ web3, artifacts }) {
   logSplitter()
 
   const { maxDepositsPerBlock, minDepositBlockDistance, pauseIntentValidityPeriodBlocks } = state.depositorParams
+  const args = [
+    lidoAddress,
+    depositContractAddress,
+    nosAddress,
+    netId,
+    maxDepositsPerBlock,
+    minDepositBlockDistance,
+    pauseIntentValidityPeriodBlocks
+  ]
   await saveDeployTx(appArtifact, `tx-16-deploy-depositor.json`, {
-    arguments: [
-      lidoAddress,
-      depositContractAddress,
-      nosAddress,
-      netId,
-      maxDepositsPerBlock,
-      minDepositBlockDistance,
-      pauseIntentValidityPeriodBlocks
-    ],
+    arguments: args,
     from: DEPLOYER || state.multisigAddress
+  })
+  persistNetworkState(network.name, netId, state, {
+    depositorConstructorArgs: args
   })
 
   logSplitter()
