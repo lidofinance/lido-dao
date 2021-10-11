@@ -18,8 +18,8 @@ const validationSchema = yup.object().shape({
 
 function PanelContent({ addNodeOperatorApi, onClose }) {
   const onSubmit = useCallback(
-    ({ name, address, limit }) => {
-      addNodeOperatorApi(name, address, limit)
+    ({ name, address }) => {
+      addNodeOperatorApi(name, address)
         .catch(console.error)
         .finally(() => {
           onClose()
