@@ -65,12 +65,22 @@ contract DepositSecurityModule {
     uint256 internal lastDepositBlock;
 
 
-    constructor(address _lido, address _depositContract, address _nodeOperatorsRegistry) {
+    constructor(
+        address _lido,
+        address _depositContract,
+        address _nodeOperatorsRegistry,
+        uint256 _maxDepositsPerBlock,
+        uint256 _minDepositBlockDistance,
+        uint256 _pauseIntentValidityPeriodBlocks
+    ) {
         LIDO = _lido;
         DEPOSIT_CONTRACT = _depositContract;
 
         _setOwner(msg.sender);
         _setNodeOperatorsRegistry(_nodeOperatorsRegistry);
+        _setMaxDeposits(_maxDepositsPerBlock);
+        _setMinDepositBlockDistance(_minDepositBlockDistance);
+        _setPauseIntentValidityPeriodBlocks(_pauseIntentValidityPeriodBlocks);
 
         paused = false;
         lastDepositBlock = 0;
@@ -130,9 +140,13 @@ contract DepositSecurityModule {
     }
 
     /**
-     * Returns `PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS`. Only callable by the owner.
+     * Sets `PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS`. Only callable by the owner.
      */
     function setPauseIntentValidityPeriodBlocks(uint256 newValue) external onlyOwner {
+        _setPauseIntentValidityPeriodBlocks(newValue);
+    }
+
+    function _setPauseIntentValidityPeriodBlocks(uint256 newValue) internal {
         pauseIntentValidityPeriodBlocks = newValue;
         emit PauseIntentValidityPeriodBlocksChanged(newValue);
     }
@@ -149,6 +163,10 @@ contract DepositSecurityModule {
      * Sets `MAX_DEPOSITS`. Only callable by the owner.
      */
     function setMaxDeposits(uint256 newValue) external onlyOwner {
+        _setMaxDeposits(newValue);
+    }
+
+    function _setMaxDeposits(uint256 newValue) internal {
         maxDepositsPerBlock = newValue;
         emit MaxDepositsChanged(newValue);
     }
@@ -165,6 +183,10 @@ contract DepositSecurityModule {
      * Sets `MIN_DEPOSIT_BLOCK_DISTANCE`. Only callable by the owner.
      */
     function setMinDepositBlockDistance(uint256 newValue) external onlyOwner {
+        _setMinDepositBlockDistance(newValue);
+    }
+
+    function _setMinDepositBlockDistance(uint256 newValue) internal {
         minDepositBlockDistance = newValue;
         emit MinDepositBlockDistanceChanged(newValue);
     }
@@ -181,6 +203,12 @@ contract DepositSecurityModule {
         _setGuardianQuorum(newValue);
     }
 
+    function _setGuardianQuorum(uint256 newValue) internal {
+        // we're intentionally allowing setting quorum value higher than the number of quardians
+        quorum = newValue;
+        emit GuardianQuorumChanged(newValue);
+    }
+
 
     /**
      * Returns guardian committee member list.
@@ -194,6 +222,10 @@ contract DepositSecurityModule {
      */
     function isGuardian(address addr) external view returns (bool) {
         return _isGuardian(addr);
+    }
+
+    function _isGuardian(address addr) internal view returns (bool) {
+        return guardianFlags[addr];
     }
 
     /**
@@ -241,6 +273,13 @@ contract DepositSecurityModule {
         guardians.pop();
 
         emit GuardianRemoved(addr);
+    }
+
+    function _addGuardian(address addr) internal {
+        require(!_isGuardian(addr), "duplicate address");
+        guardians.push(addr);
+        guardianFlags[addr] = true;
+        emit GuardianAdded(addr);
     }
 
 
@@ -346,26 +385,6 @@ contract DepositSecurityModule {
 
         ILido(LIDO).depositBufferedEther(maxDeposits);
         lastDepositBlock = block.number;
-    }
-
-
-    function _isGuardian(address addr) internal view returns (bool) {
-        return guardianFlags[addr];
-    }
-
-
-    function _addGuardian(address addr) internal {
-        require(!_isGuardian(addr), "duplicate address");
-        guardians.push(addr);
-        guardianFlags[addr] = true;
-        emit GuardianAdded(addr);
-    }
-
-
-    function _setGuardianQuorum(uint256 newValue) internal {
-        // we're intentionally allowing setting quorum value higher than the number of quardians
-        quorum = newValue;
-        emit GuardianQuorumChanged(newValue);
     }
 
 

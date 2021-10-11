@@ -40,11 +40,21 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       lidoMock.address,
       depositContractMock.address,
       nodeOperatorsRegistryMock.address,
+      MAX_DEPOSITS_PER_BLOCK,
+      MIN_DEPOSIT_BLOCK_DISTANCE,
+      PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS,
       { from: owner }
     )
-
-    await depositSecurityModule.setMaxDeposits(MAX_DEPOSITS_PER_BLOCK, { from: owner })
+    for (let i = 0; i < MIN_DEPOSIT_BLOCK_DISTANCE; ++i) {
+      await waitBlocks(MIN_DEPOSIT_BLOCK_DISTANCE)
+    }
   })
+
+  async function waitBlocks(numBlocksToMine) {
+    for (let i = 0; i < numBlocksToMine; ++i) {
+      await network.provider.send('evm_mine')
+    }
+  }
 
   describe('depositBufferedEther', () => {
     const MAX_DEPOSITS = 24
@@ -147,7 +157,6 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       })
 
       it('cannot deposit more frequently than allowed', async () => {
-        await depositSecurityModule.setMinDepositBlockDistance(MIN_DEPOSIT_BLOCK_DISTANCE, { from: owner })
         const signature = generateGuardianSignatures([
           [0, signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN1])]
         ])
@@ -260,7 +269,6 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       const guardians = await depositSecurityModule.getGuardians()
       assert.equal(guardians.length, 2, 'invariant failed: guardians != 2')
       assert.equal(await depositSecurityModule.isPaused(), false, 'invariant failed: isPaused')
-      await depositSecurityModule.setPauseIntentValidityPeriodBlocks(PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS, { from: owner })
     })
     it('if called by a guardian 1 or 2', async () => {
       const guardianIndex = 0
@@ -306,7 +314,6 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       const guardians = await depositSecurityModule.getGuardians()
       assert.equal(guardians.length, 1, 'invariant failed: guardians != 1')
       assert.equal(await depositSecurityModule.isPaused(), false, 'invariant failed: isPaused')
-      await depositSecurityModule.setPauseIntentValidityPeriodBlocks(PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS, { from: owner })
     })
     it('unpauses paused deposits', async () => {
       const guardianIndex = 0
