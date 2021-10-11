@@ -94,11 +94,11 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
     })
     context('total_guardians=1, quorum=1', () => {
       beforeEach('set total_guardians=1, quorum=1', async () => {
-        await depositSecurityModule.addGuardian(GUARDIAN1, { from: owner })
+        await depositSecurityModule.addGuardian(GUARDIAN1, 1, { from: owner })
+
         const guardians = await depositSecurityModule.getGuardians()
         assert.equal(guardians.length, 1, 'invariant failed: guardians != 1')
 
-        await depositSecurityModule.setGuardianQuorum(1, { from: owner })
         const quorum = await depositSecurityModule.getGuardianQuorum()
         assert.equal(quorum, 1, 'invariant failed: quorum != 1')
       })
@@ -167,13 +167,11 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
     })
     context('total_guardians=3, quorum=2', () => {
       beforeEach('set total_guardians=3, quorum=2', async () => {
-        await depositSecurityModule.addGuardian(GUARDIAN1, { from: owner })
-        await depositSecurityModule.addGuardian(GUARDIAN2, { from: owner })
-        await depositSecurityModule.addGuardian(GUARDIAN3, { from: owner })
+        await depositSecurityModule.addGuardians([GUARDIAN1, GUARDIAN2, GUARDIAN3], 2, { from: owner })
+
         const guardians = await depositSecurityModule.getGuardians()
         assert.equal(guardians.length, 3, 'invariant failed: guardians != 3')
 
-        await depositSecurityModule.setGuardianQuorum(2, { from: owner })
         const quorum = await depositSecurityModule.getGuardianQuorum()
         assert.equal(quorum, 2, 'invariant failed: quorum != 2')
       })
@@ -254,8 +252,8 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
   })
   describe('pauseDeposits, total_guardians=2', () => {
     beforeEach('add guardians and check that not paused', async () => {
-      await depositSecurityModule.addGuardian(guardian, { from: owner })
-      await depositSecurityModule.addGuardian(GUARDIAN2, { from: owner })
+      await depositSecurityModule.addGuardian(guardian, 1, { from: owner })
+      await depositSecurityModule.addGuardian(GUARDIAN2, 1, { from: owner })
       const guardians = await depositSecurityModule.getGuardians()
       assert.equal(guardians.length, 2, 'invariant failed: guardians != 2')
       assert.equal(await depositSecurityModule.isPaused(), false, 'invariant failed: isPaused')
@@ -289,7 +287,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
   })
   describe('unpauseDeposits', () => {
     beforeEach('add guardians and check that not paused', async () => {
-      await depositSecurityModule.addGuardian(guardian, { from: owner })
+      await depositSecurityModule.addGuardian(guardian, 1, { from: owner })
       const guardians = await depositSecurityModule.getGuardians()
       assert.equal(guardians.length, 1, 'invariant failed: guardians != 1')
       assert.equal(await depositSecurityModule.isPaused(), false, 'invariant failed: isPaused')
@@ -311,46 +309,46 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
         assert.equal((await depositSecurityModule.getGuardians()).length, 0)
       })
       it(`addGuardian can't be called by non-admin`, async () => {
-        await assertRevert(depositSecurityModule.addGuardian(GUARDIAN1, { from: stranger }), 'not an owner')
+        await assertRevert(depositSecurityModule.addGuardian(GUARDIAN1, 0, { from: stranger }), 'not an owner')
       })
-      it(`addGuardian adds guardian`, async () => {
-        await depositSecurityModule.addGuardian(GUARDIAN1, { from: owner })
+      it(`addGuardian adds a guardian`, async () => {
+        await depositSecurityModule.addGuardian(GUARDIAN1, 0, { from: owner })
         assert.equal((await depositSecurityModule.getGuardians()).length, 1)
         assert.isTrue(await depositSecurityModule.isGuardian(GUARDIAN1))
         assert.isTrue((await depositSecurityModule.getGuardians()).includes(GUARDIAN1))
       })
       it(`isGuardian is true for guardian`, async () => {
-        await depositSecurityModule.addGuardian(GUARDIAN1, { from: owner })
+        await depositSecurityModule.addGuardian(GUARDIAN1, 0, { from: owner })
         assert.isTrue(await depositSecurityModule.isGuardian(GUARDIAN1))
       })
       it(`isGuardian is false for non-guardian`, async () => {
-        await depositSecurityModule.addGuardian(GUARDIAN1, { from: owner })
+        await depositSecurityModule.addGuardian(GUARDIAN1, 0, { from: owner })
         assert.isFalse(await depositSecurityModule.isGuardian(GUARDIAN2))
       })
       it(`getGuardianIndex works`, async () => {
         assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN1), -1)
 
-        await depositSecurityModule.addGuardian(GUARDIAN1, { from: owner })
+        await depositSecurityModule.addGuardian(GUARDIAN1, 0, { from: owner })
         assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN1), 0)
 
-        await depositSecurityModule.addGuardian(GUARDIAN2, { from: owner })
+        await depositSecurityModule.addGuardian(GUARDIAN2, 0, { from: owner })
         assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN1), 0)
         assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN2), 1)
 
-        await depositSecurityModule.addGuardian(GUARDIAN3, { from: owner })
+        await depositSecurityModule.addGuardian(GUARDIAN3, 0, { from: owner })
         assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN1), 0)
         assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN2), 1)
         assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN3), 2)
       })
       it(`addGuardian doesn't add duplicate`, async () => {
-        await depositSecurityModule.addGuardian(GUARDIAN1, { from: owner })
-        await assertRevert(depositSecurityModule.addGuardian(GUARDIAN1, { from: owner }), 'duplicate address')
+        await depositSecurityModule.addGuardian(GUARDIAN1, 0, { from: owner })
+        await assertRevert(depositSecurityModule.addGuardian(GUARDIAN1, 0, { from: owner }), 'duplicate address')
       })
       it(`addGuardians can't be called by non-admin`, async () => {
-        await assertRevert(depositSecurityModule.addGuardians([GUARDIAN1], { from: stranger }), 'not an owner')
+        await assertRevert(depositSecurityModule.addGuardians([GUARDIAN1], 0, { from: stranger }), 'not an owner')
       })
       it(`addGuardians adds set of guardians`, async () => {
-        await depositSecurityModule.addGuardians([GUARDIAN1, GUARDIAN2], { from: owner })
+        await depositSecurityModule.addGuardians([GUARDIAN1, GUARDIAN2], 0, { from: owner })
         assert.equal((await depositSecurityModule.getGuardians()).length, 2)
         assert.isTrue(await depositSecurityModule.isGuardian(GUARDIAN1))
         assert.isTrue((await depositSecurityModule.getGuardians()).includes(GUARDIAN1))
@@ -358,94 +356,94 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
         assert.isTrue((await depositSecurityModule.getGuardians()).includes(GUARDIAN2))
       })
       it(`addGuardians doesn't add a set with duplicate`, async () => {
-        await assertRevert(depositSecurityModule.addGuardians([GUARDIAN1, GUARDIAN1], { from: owner }), 'duplicate address')
-        await depositSecurityModule.addGuardians([GUARDIAN1], { from: owner })
-        await assertRevert(depositSecurityModule.addGuardians([GUARDIAN1, GUARDIAN2], { from: owner }), 'duplicate address')
+        await assertRevert(depositSecurityModule.addGuardians([GUARDIAN1, GUARDIAN1], 0, { from: owner }), 'duplicate address')
+        await depositSecurityModule.addGuardians([GUARDIAN1], 0, { from: owner })
+        await assertRevert(depositSecurityModule.addGuardians([GUARDIAN1, GUARDIAN2], 0, { from: owner }), 'duplicate address')
       })
       it(`removeGuardian can't be called by non-admin`, async () => {
-        await assertRevert(depositSecurityModule.removeGuardian(0, { from: stranger }), 'not an owner')
+        await assertRevert(depositSecurityModule.removeGuardian(GUARDIAN1, 0, { from: stranger }), 'not an owner')
       })
-      it(`removeGuardian reverts on incorrect index`, async () => {
-        await assertRevert(depositSecurityModule.removeGuardian(0, { from: owner }), 'invalid index')
+      it(`removeGuardian reverts on incorrect address`, async () => {
+        await assertRevert(depositSecurityModule.removeGuardian(GUARDIAN1, 0, { from: owner }), 'not a guardian')
       })
-      it(`removeGuardian removes guardian`, async () => {
-        await depositSecurityModule.addGuardian(GUARDIAN1, { from: owner })
-        await depositSecurityModule.removeGuardian(0, { from: owner })
+      it(`removeGuardian removes guardian and sets new quorum`, async () => {
+        await depositSecurityModule.addGuardian(GUARDIAN1, 1, { from: owner })
+        await depositSecurityModule.removeGuardian(GUARDIAN1, 0, { from: owner })
         assert.equal((await depositSecurityModule.getGuardians()).length, 0)
         assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN1), -1)
+        assert.equal(await depositSecurityModule.getGuardianQuorum(), 0)
       })
       it(`removeGuardian can be used to remove all guardians going from head`, async () => {
-        await depositSecurityModule.addGuardians([GUARDIAN1, GUARDIAN2, GUARDIAN3], { from: owner })
+        await depositSecurityModule.addGuardians([GUARDIAN1, GUARDIAN2, GUARDIAN3], 0, { from: owner })
 
-        await depositSecurityModule.removeGuardian(0, { from: owner })
+        await depositSecurityModule.removeGuardian(GUARDIAN1, 0, { from: owner })
         assert.deepEqual(await depositSecurityModule.getGuardians(), [GUARDIAN3, GUARDIAN2])
         assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN1), -1)
         assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN2), 1)
         assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN3), 0)
 
-        await depositSecurityModule.removeGuardian(0, { from: owner })
+        await depositSecurityModule.removeGuardian(GUARDIAN3, 0, { from: owner })
         assert.deepEqual(await depositSecurityModule.getGuardians(), [GUARDIAN2])
         assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN1), -1)
         assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN2), 0)
         assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN3), -1)
 
-        await depositSecurityModule.removeGuardian(0, { from: owner })
+        await depositSecurityModule.removeGuardian(GUARDIAN2, 0, { from: owner })
         assert.deepEqual(await depositSecurityModule.getGuardians(), [])
         assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN1), -1)
         assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN2), -1)
         assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN3), -1)
       })
       it(`removeGuardian can be used to remove all guardians going from tail`, async () => {
-        await depositSecurityModule.addGuardians([GUARDIAN1, GUARDIAN2, GUARDIAN3], { from: owner })
+        await depositSecurityModule.addGuardians([GUARDIAN1, GUARDIAN2, GUARDIAN3], 0, { from: owner })
 
-        await depositSecurityModule.removeGuardian(2, { from: owner })
+        await depositSecurityModule.removeGuardian(GUARDIAN3, 0, { from: owner })
         assert.deepEqual(await depositSecurityModule.getGuardians(), [GUARDIAN1, GUARDIAN2])
         assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN1), 0)
         assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN2), 1)
         assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN3), -1)
 
-        await depositSecurityModule.removeGuardian(1, { from: owner })
+        await depositSecurityModule.removeGuardian(GUARDIAN2, 0, { from: owner })
         assert.deepEqual(await depositSecurityModule.getGuardians(), [GUARDIAN1])
         assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN1), 0)
         assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN2), -1)
         assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN3), -1)
 
-        await depositSecurityModule.removeGuardian(0, { from: owner })
+        await depositSecurityModule.removeGuardian(GUARDIAN1, 0, { from: owner })
         assert.deepEqual(await depositSecurityModule.getGuardians(), [])
         assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN1), -1)
         assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN2), -1)
         assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN3), -1)
       })
       it(`removeGuardian can be used to a guardian from the middle`, async () => {
-        await depositSecurityModule.addGuardians([GUARDIAN1, GUARDIAN2, GUARDIAN3], { from: owner })
-        await depositSecurityModule.removeGuardian(1, { from: owner })
+        await depositSecurityModule.addGuardians([GUARDIAN1, GUARDIAN2, GUARDIAN3], 0, { from: owner })
+        await depositSecurityModule.removeGuardian(GUARDIAN2, 0, { from: owner })
         assert.sameMembers(await depositSecurityModule.getGuardians(), [GUARDIAN1, GUARDIAN3])
         assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN1), 0)
         assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN2), -1)
         assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN3), 1)
       })
-      it(`removeGuardian updates quorum if the new guardians count is less than quorum`, async () => {
-        await depositSecurityModule.addGuardians([GUARDIAN1, GUARDIAN2], { from: owner })
-        await depositSecurityModule.setGuardianQuorum(2, { from: owner })
+      it(`removeGuardian updates quorum`, async () => {
+        await depositSecurityModule.addGuardians([GUARDIAN1, GUARDIAN2], 2, { from: owner })
         assert.equal(await depositSecurityModule.getGuardianQuorum(), 2)
-        await depositSecurityModule.removeGuardian(0, { from: owner })
+        await depositSecurityModule.removeGuardian(GUARDIAN1, 1, { from: owner })
         assert.equal(await depositSecurityModule.getGuardianQuorum(), 1)
       })
       it(`addGuardian re-adds deleted guardian`, async () => {
-        await depositSecurityModule.addGuardians([GUARDIAN1, GUARDIAN2], { from: owner })
-        await depositSecurityModule.removeGuardian(0, { from: owner })
+        await depositSecurityModule.addGuardians([GUARDIAN1, GUARDIAN2], 0, { from: owner })
+        await depositSecurityModule.removeGuardian(GUARDIAN1, 0, { from: owner })
 
-        await depositSecurityModule.addGuardian(GUARDIAN1, { from: owner })
+        await depositSecurityModule.addGuardian(GUARDIAN1, 0, { from: owner })
 
         assert.equal((await depositSecurityModule.getGuardians()).length, 2)
         assert.isTrue(await depositSecurityModule.isGuardian(GUARDIAN1))
         assert.isTrue((await depositSecurityModule.getGuardians()).includes(GUARDIAN1))
       })
       it(`addGuardians re-adds deleted guardian`, async () => {
-        await depositSecurityModule.addGuardians([GUARDIAN1, GUARDIAN2], { from: owner })
-        await depositSecurityModule.removeGuardian(0, { from: owner })
+        await depositSecurityModule.addGuardians([GUARDIAN1, GUARDIAN2], 0, { from: owner })
+        await depositSecurityModule.removeGuardian(GUARDIAN1, 0, { from: owner })
 
-        await depositSecurityModule.addGuardians([GUARDIAN1], { from: owner })
+        await depositSecurityModule.addGuardians([GUARDIAN1], 0, { from: owner })
 
         assert.equal((await depositSecurityModule.getGuardians()).length, 2)
         assert.isTrue(await depositSecurityModule.isGuardian(GUARDIAN1))

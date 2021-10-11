@@ -58,7 +58,7 @@ contract DepositSecurityModule {
     address internal owner;
 
     address[] internal guardians;
-    mapping(address => uint256) guardianIndices; // 1-based
+    mapping(address => uint256) guardianIndicesOneBased; // 1-based
     uint256 internal quorum;
 
     bool internal paused;
@@ -238,7 +238,7 @@ contract DepositSecurityModule {
     }
 
     function _isGuardian(address addr) internal view returns (bool) {
-        return guardianIndices[addr] > 0;
+        return guardianIndicesOneBased[addr] > 0;
     }
 
     /**
@@ -249,61 +249,62 @@ contract DepositSecurityModule {
     }
 
     function _getGuardianIndex(address addr) internal view returns (int256) {
-        return int256(guardianIndices[addr]) - 1;
+        return int256(guardianIndicesOneBased[addr]) - 1;
     }
 
     /**
-     * Adds a guardian address. Reverts if the address is already a guardian.
+     * Adds a guardian address and sets a new quorum value.
+     * Reverts if the address is already a guardian.
      *
      * Only callable by the owner.
      */
-    function addGuardian(address addr) external onlyOwner {
+    function addGuardian(address addr, uint256 newQuorum) external onlyOwner {
         _addGuardian(addr);
+        _setGuardianQuorum(newQuorum);
     }
 
     /**
-     * Adds a set of guardian addresses. Reverts any of them is already a guardian.
+     * Adds a set of guardian addresses and sets a new quorum value.
+     * Reverts any of them is already a guardian.
      *
      * Only callable by the owner.
      */
-    function addGuardians(address[] memory addresses) external onlyOwner {
+    function addGuardians(address[] memory addresses, uint256 newQuorum) external onlyOwner {
         for (uint256 i = 0; i < addresses.length; ++i) {
             _addGuardian(addresses[i]);
         }
+        _setGuardianQuorum(newQuorum);
     }
 
     function _addGuardian(address addr) internal {
         require(!_isGuardian(addr), "duplicate address");
         guardians.push(addr);
-        guardianIndices[addr] = guardians.length;
+        guardianIndicesOneBased[addr] = guardians.length;
         emit GuardianAdded(addr);
     }
 
     /**
-     * Removes a guardian with the given index.
+     * Removes a guardian with the given address and sets a new quorum value.
      *
      * Only callable by the owner.
      */
-    function removeGuardian(uint256 index) external onlyOwner {
+    function removeGuardian(address addr, uint256 newQuorum) external onlyOwner {
+        uint256 indexOneBased = guardianIndicesOneBased[addr];
+        require(indexOneBased != 0, "not a guardian");
+
         uint256 totalGuardians = guardians.length;
+        assert(indexOneBased <= totalGuardians);
 
-        require(index < totalGuardians, "invalid index");
-        --totalGuardians;
-
-        address addr = guardians[index];
-        guardianIndices[addr] = 0;
-
-        if (index != totalGuardians) {
-            address addrToMove = guardians[totalGuardians];
-            guardians[index] = addrToMove;
-            guardianIndices[addrToMove] = index + 1;
+        if (indexOneBased != totalGuardians) {
+            address addrToMove = guardians[totalGuardians - 1];
+            guardians[indexOneBased - 1] = addrToMove;
+            guardianIndicesOneBased[addrToMove] = indexOneBased;
         }
 
-        if (quorum > totalGuardians) {
-            _setGuardianQuorum(totalGuardians);
-        }
-
+        guardianIndicesOneBased[addr] = 0;
         guardians.pop();
+
+        _setGuardianQuorum(newQuorum);
 
         emit GuardianRemoved(addr);
     }
