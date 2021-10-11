@@ -20,7 +20,7 @@ async function obtainInstance({ web3, artifacts }) {
 
   const { guardians, quorum } = state.depositorParams
 
-  await saveCallTxData(`Set guardians`, depositor, 'addGuardians', `tx-19-depositor-add-guardians.json`, {
+  await saveCallTxData(`Set guardians`, depositor, 'addGuardians', `tx-18-depositor-add-guardians.json`, {
     arguments: [guardians, quorum],
     from: DEPLOYER || state.multisigAddress
   })
