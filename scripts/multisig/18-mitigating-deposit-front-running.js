@@ -10,13 +10,13 @@ const { resolveEnsAddress } = require('../components/ens')
 const { APP_NAMES } = require('./constants')
 
 const DEPLOYER = process.env.DEPLOYER || ''
-const DEPOSITOR = process.env.DEPOSITOR || ''
 const REQUIRED_NET_STATE = [
   'lidoApmEnsName',
   'ensAddress',
   'daoAddress',
+  'depositorAddress',
   `app:${APP_NAMES.ARAGON_VOTING}`,
-  `app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`,
+  `app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`
 ]
 
 async function upgradeAppImpl({ web3, artifacts }) {
@@ -26,11 +26,7 @@ async function upgradeAppImpl({ web3, artifacts }) {
   log(`Network ID:`, yl(netId))
 
   const state = readNetworkState(network.name, netId)
-  assertRequiredNetworkState(state, REQUIRED_NET_STATE.concat([
-      'app:lido',
-      'app:node-operators-registry'
-    ])
-  )
+  assertRequiredNetworkState(state, REQUIRED_NET_STATE.concat(['app:lido', 'app:node-operators-registry']))
 
   logSplitter()
 
@@ -44,40 +40,46 @@ async function upgradeAppImpl({ web3, artifacts }) {
   const kernel = await artifacts.require('Kernel').at(state.daoAddress)
   const aclAddress = await kernel.acl()
   const acl = await artifacts.require('ACL').at(aclAddress)
+  const depositorAddress = state.depositorAddress
 
   log(`Using ENS:`, yl(state.ensAddress))
   log(`TokenManager address:`, yl(tokenManagerAddress))
   log(`Voting address:`, yl(votingAddress))
   log(`Kernel`, yl(kernel.address))
   log(`ACL`, yl(acl.address))
+  log(`Using Depositor`, yl(depositorAddress))
 
   log.splitter()
 
-  lidoUpgradeCallData = await buildUpgradeTransaction('lido', state, ens, kernel)
-  NOSUpgradeCallData = await buildUpgradeTransaction('node-operators-registry', state, ens, kernel)
-  grantRoleCallData = {
+  const lidoUpgradeCallData = await buildUpgradeTransaction('lido', state, ens, kernel)
+  const NOSUpgradeCallData = await buildUpgradeTransaction('node-operators-registry', state, ens, kernel)
+  const grantRoleCallData = {
     to: aclAddress,
-    calldata: await acl.contract.methods.createPermission(
-      DEPOSITOR, 
-      state[`app:lido`].proxyAddress, 
-      '0x2561bf26f818282a3be40719542054d2173eb0d38539e8a8d3cff22f29fd2384', // keccak256(DEPOSIT_ROLE)
-      votingAddress
-    ).encodeABI()  
+    calldata: await acl.contract.methods
+      .createPermission(
+        depositorAddress,
+        state[`app:lido`].proxyAddress,
+        '0x2561bf26f818282a3be40719542054d2173eb0d38539e8a8d3cff22f29fd2384', // keccak256(DEPOSIT_ROLE)
+        votingAddress
+      )
+      .encodeABI()
   }
 
-  const nosIncreaseLimitsCallData = []  
-  const nosLimits = require(process.env.NOS_LIMITS) 
-  for ({id, limit} of nosLimits) {
+  const nosIncreaseLimitsCallData = []
+  const nosLimits = require(process.env.NOS_LIMITS)
+  for (const { id, limit } of nosLimits) {
     nosIncreaseLimitsCallData.push({
       to: nosRegistryAddress,
-      calldata: await nosRegistry.contract.methods.setNodeOperatorStakingLimit(
-        id, 
-        limit
-      ).encodeABI()  
+      calldata: await nosRegistry.contract.methods.setNodeOperatorStakingLimit(id, limit).encodeABI()
     })
   }
 
-  encodedUpgradeCallData = encodeCallScript([...lidoUpgradeCallData, ...NOSUpgradeCallData, grantRoleCallData, ...nosIncreaseLimitsCallData ])
+  const encodedUpgradeCallData = encodeCallScript([
+    ...lidoUpgradeCallData,
+    ...NOSUpgradeCallData,
+    grantRoleCallData,
+    ...nosIncreaseLimitsCallData
+  ])
 
   log(`encodedUpgradeCallData:`, yl(encodedUpgradeCallData))
   const votingCallData = encodeCallScript([
@@ -92,8 +94,8 @@ async function upgradeAppImpl({ web3, artifacts }) {
 2) Updating implementaion of lido app with new one
 3) Publishing new implementation in node operators registry app APM repo
 4) Updating implementaion of node operators registry app with new one
-5) Granting new permission DEPOSIT_ROLE for ${DEPOSITOR}
-${nosLimits.map(({id, limit}, index) => `${index + 6}) Set staking limit of operator ${id} to ${limit}`).join('\n')}
+5) Granting new permission DEPOSIT_ROLE for ${depositorAddress}
+${nosLimits.map(({ id, limit }, index) => `${index + 6}) Set staking limit of operator ${id} to ${limit}`).join('\n')}
   `
 
   await saveCallTxData(votingDesc, tokenManager, 'forward', txName, {
@@ -108,8 +110,7 @@ ${nosLimits.map(({id, limit}, index) => `${index + 6}) Set staking limit of oper
   log.splitter()
 }
 
-
-async function buildUpgradeTransaction(appName, state, ens, kernel){
+async function buildUpgradeTransaction(appName, state, ens, kernel) {
   const appId = namehash(`${appName}.${state.lidoApmEnsName}`)
   const repoAddress = await resolveEnsAddress(artifacts, ens, appId)
   const newContractAddress = state[`app:${appName}`].baseAddress
@@ -117,11 +118,7 @@ async function buildUpgradeTransaction(appName, state, ens, kernel){
   const repo = await artifacts.require('Repo').at(repoAddress)
   const APP_BASES_NAMESPACE = await kernel.APP_BASES_NAMESPACE()
 
-  const {
-    semanticVersion: currentVersion,
-    contractAddress: currentContractAddress,
-    contentURI: currentContentURI
-  } = await repo.getLatest()
+  const { semanticVersion: currentVersion, contractAddress: currentContractAddress, contentURI: currentContentURI } = await repo.getLatest()
 
   const versionFrom = currentVersion.map((n) => n.toNumber())
   currentVersion[0] = currentVersion[0].addn(1)
@@ -136,17 +133,13 @@ async function buildUpgradeTransaction(appName, state, ens, kernel){
   log(`Bump version:`, yl(versionFrom.join('.')), `->`, yl(versionTo.join('.')))
   log(`Repo:`, yl(repoAddress))
   log(`APP_BASES_NAMESPACE`, yl(APP_BASES_NAMESPACE))
-  
+
   log.splitter()
   const upgradeCallData = [
     {
       // repo.newVersion(versionTo, contractAddress, contentURI)
       to: repoAddress,
-      calldata: await repo.contract.methods.newVersion(
-        versionTo,
-        newContractAddress,
-        newContentURI
-      ).encodeABI()
+      calldata: await repo.contract.methods.newVersion(versionTo, newContractAddress, newContentURI).encodeABI()
     },
 
     {
