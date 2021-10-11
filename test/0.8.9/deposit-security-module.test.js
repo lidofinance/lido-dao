@@ -7,6 +7,7 @@ const LidoMockForDepositSecurityModule = artifacts.require('LidoMockForDepositSe
 const NodeOperatorsRegistryMockForSecurityModule = artifacts.require('NodeOperatorsRegistryMockForSecurityModule.sol')
 const DepositContractMockForDepositSecurityModule = artifacts.require('DepositContractMockForDepositSecurityModule.sol')
 
+const NETWORK_ID = 1000
 const MAX_DEPOSITS_PER_BLOCK = 100
 const MIN_DEPOSIT_BLOCK_DISTANCE = 14
 const PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS = 10
@@ -28,6 +29,7 @@ const UNRELATED_SIGNER_PRIVATE_KEYS = {
 
 contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
   let depositSecurityModule, depositContractMock, lidoMock, nodeOperatorsRegistryMock
+  let ATTEST_MESSAGE_PREFIX, PAUSE_MESSAGE_PREFIX
 
   before('deploy mock contracts', async () => {
     lidoMock = await LidoMockForDepositSecurityModule.new()
@@ -40,11 +42,16 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       lidoMock.address,
       depositContractMock.address,
       nodeOperatorsRegistryMock.address,
+      NETWORK_ID,
       MAX_DEPOSITS_PER_BLOCK,
       MIN_DEPOSIT_BLOCK_DISTANCE,
       PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS,
       { from: owner }
     )
+
+    ATTEST_MESSAGE_PREFIX = await depositSecurityModule.ATTEST_MESSAGE_PREFIX()
+    PAUSE_MESSAGE_PREFIX = await depositSecurityModule.PAUSE_MESSAGE_PREFIX()
+
     for (let i = 0; i < MIN_DEPOSIT_BLOCK_DISTANCE; ++i) {
       await waitBlocks(MIN_DEPOSIT_BLOCK_DISTANCE)
     }
@@ -60,7 +67,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
     const MAX_DEPOSITS = 24
     const KEYS_OP_INDEX = 12
     const DEPOSIT_ROOT = '0xd151867719c94ad8458feaf491809f9bc8096c702a72747403ecaac30c179137'
-    const ATTEST_MESSAGE_PREFIX = '0x1085395a994e25b1b3d0ea7937b7395495fb405b31c7d22dbc3976a6bd01f2bf'
+
     beforeEach('init attestMessagePrefix and setup mocks', async () => {
       await nodeOperatorsRegistryMock.setKeysOpIndex(KEYS_OP_INDEX)
       assert.equal(await nodeOperatorsRegistryMock.getKeysOpIndex(), KEYS_OP_INDEX, 'invariant failed: keysOpIndex')
@@ -262,7 +269,6 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
     })
   })
   describe('pauseDeposits, total_guardians=2', () => {
-    const PAUSE_MESSAGE_PREFIX = '0x9c4c40205558f12027f21204d6218b8006985b7a6359bcab15404bcc3e3fa122'
     beforeEach('add guardians and check that not paused', async () => {
       await depositSecurityModule.addGuardian(guardian, { from: owner })
       await depositSecurityModule.addGuardian(GUARDIAN2, { from: owner })

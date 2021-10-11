@@ -39,16 +39,13 @@ contract DepositSecurityModule {
     event DepositsUnpaused();
 
 
-    // keccak256("lido.DepositSecurityModule.ATTEST_MESSAGE")
-    bytes32 public constant ATTEST_MESSAGE_PREFIX = 0x1085395a994e25b1b3d0ea7937b7395495fb405b31c7d22dbc3976a6bd01f2bf;
-
-    // keccak256("lido.DepositSecurityModule.PAUSE_MESSAGE");
-    bytes32 public constant PAUSE_MESSAGE_PREFIX = 0x9c4c40205558f12027f21204d6218b8006985b7a6359bcab15404bcc3e3fa122;
-
     uint256 constant ATTEST_SIGNATURE_LEN = 1 + 1 + 32 + 32;
 
-    address internal immutable LIDO;
-    address internal immutable DEPOSIT_CONTRACT;
+    bytes32 public immutable ATTEST_MESSAGE_PREFIX;
+    bytes32 public immutable PAUSE_MESSAGE_PREFIX;
+
+    address public immutable LIDO;
+    address public immutable DEPOSIT_CONTRACT;
 
     address internal nodeOperatorsRegistry;
     uint256 internal maxDepositsPerBlock;
@@ -69,12 +66,25 @@ contract DepositSecurityModule {
         address _lido,
         address _depositContract,
         address _nodeOperatorsRegistry,
+        uint256 _networkId,
         uint256 _maxDepositsPerBlock,
         uint256 _minDepositBlockDistance,
         uint256 _pauseIntentValidityPeriodBlocks
     ) {
         LIDO = _lido;
         DEPOSIT_CONTRACT = _depositContract;
+
+        ATTEST_MESSAGE_PREFIX = keccak256(abi.encodePacked(
+            // keccak256("lido.DepositSecurityModule.ATTEST_MESSAGE")
+            bytes32(0x1085395a994e25b1b3d0ea7937b7395495fb405b31c7d22dbc3976a6bd01f2bf),
+            _networkId
+        ));
+
+        PAUSE_MESSAGE_PREFIX = keccak256(abi.encodePacked(
+            // keccak256("lido.DepositSecurityModule.PAUSE_MESSAGE")
+            bytes32(0x9c4c40205558f12027f21204d6218b8006985b7a6359bcab15404bcc3e3fa122),
+            _networkId
+        ));
 
         _setOwner(msg.sender);
         _setNodeOperatorsRegistry(_nodeOperatorsRegistry);
