@@ -53,7 +53,8 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
     const validatorsLimit = 1000
     const numKeys = 21
 
-    const txn = await nodeOperatorRegistry.addNodeOperator('operator_1', nodeOperator, validatorsLimit, { from: voting })
+    const txn = await nodeOperatorRegistry.addNodeOperator('operator_1', nodeOperator, { from: voting })
+    await nodeOperatorRegistry.setNodeOperatorStakingLimit(0, validatorsLimit, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
     const nodeOperatorId = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
