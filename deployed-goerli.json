@@ -100,7 +100,9 @@
     "name": "aragon-voting",
     "fullName": "aragon-voting.lidopm-testnet-prater.eth",
     "id": "0xee7f2abf043afe722001aaa900627a6e29adcbcce63a561fbd97e0a0c6429b94",
-    "proxyAddress": "0xbc0B67b4553f4CF52a913DE9A6eD0057E2E758Db"
+    "proxyAddress": "0xbc0B67b4553f4CF52a913DE9A6eD0057E2E758Db",
+    "baseAddress": "0x3DB95165e8efaF08a97A35F297FbCBd57a97aFe4",
+    "contentURI": "0x697066733a516d5962774366374d6e6932797a31553358334769485667396f35316a6b53586731533877433257547755684859"
   },
   "vestingParams": {
     "unvestedTokensAmount": "230000000000000000000000",
