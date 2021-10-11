@@ -66,13 +66,21 @@ async function upgradeAppImpl({ web3, artifacts }) {
   }
 
   const nosIncreaseLimitsCallData = []
-  const nosLimits = require(process.env.NOS_LIMITS)
-  for (const { id, limit } of nosLimits) {
-    nosIncreaseLimitsCallData.push({
-      to: nosRegistryAddress,
-      calldata: await nosRegistry.contract.methods.setNodeOperatorStakingLimit(id, limit).encodeABI()
-    })
-  }
+  const nosIncreaseLimitsDesc = []
+  const numberOfNOs = (await nosRegistry.getNodeOperatorsCount()).toNumber()
+  for (var i = 0; i < numberOfNOs; i++) {
+    const nodeOperator = await nosRegistry.getNodeOperator(i, true)
+    const totalSigningKeys = nodeOperator.totalSigningKeys.toNumber()
+    const stakingLimit = nodeOperator.stakingLimit.toNumber()
+
+    if (nodeOperator.active && stakingLimit < totalSigningKeys) {
+      nosIncreaseLimitsCallData.push({
+        to: nosRegistryAddress,
+        calldata: await nosRegistry.contract.methods.setNodeOperatorStakingLimit(i, totalSigningKeys).encodeABI()
+      })
+      nosIncreaseLimitsDesc.push(`Set staking limit of operator ${i} to ${totalSigningKeys}`)
+    }
+  } 
 
   const encodedUpgradeCallData = encodeCallScript([
     ...lidoUpgradeCallData,
@@ -95,12 +103,12 @@ async function upgradeAppImpl({ web3, artifacts }) {
 3) Publishing new implementation in node operators registry app APM repo
 4) Updating implementaion of node operators registry app with new one
 5) Granting new permission DEPOSIT_ROLE for ${depositorAddress}
-${nosLimits.map(({ id, limit }, index) => `${index + 6}) Set staking limit of operator ${id} to ${limit}`).join('\n')}
+${nosIncreaseLimitsDesc.map((desc, index) => `${index + 6}) ${desc}`).join('\n')}
   `
 
   await saveCallTxData(votingDesc, tokenManager, 'forward', txName, {
     arguments: [votingCallData],
-    from: DEPLOYER
+    from: DEPLOYER || state.multisigAddress
   })
 
   log.splitter()
