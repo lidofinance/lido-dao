@@ -26,14 +26,18 @@ async function upgradeApp({ web3, artifacts }) {
   logSplitter()
 
   const { maxDepositsPerBlock, minDepositBlockDistance, pauseIntentValidityPeriodBlocks } = state.depositorParams
-  await saveDeployTx(
-    appArtifact,
-    `tx-16-deploy-depositor.json`,
-    [lidoAddress, depositContractAddress, nosAddress, netId, maxDepositsPerBlock, minDepositBlockDistance, pauseIntentValidityPeriodBlocks],
-    {
-      from: DEPLOYER || state.multisigAddress
-    }
-  )
+  await saveDeployTx(appArtifact, `tx-16-deploy-depositor.json`, {
+    arguments: [
+      lidoAddress,
+      depositContractAddress,
+      nosAddress,
+      netId,
+      maxDepositsPerBlock,
+      minDepositBlockDistance,
+      pauseIntentValidityPeriodBlocks
+    ],
+    from: DEPLOYER || state.multisigAddress
+  })
 
   logSplitter()
   log(gr(`Before continuing the deployment, please send all contract creation transactions`))
