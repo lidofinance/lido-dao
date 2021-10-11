@@ -8,6 +8,7 @@ const NodeOperatorsRegistryMockForSecurityModule = artifacts.require('NodeOperat
 const DepositContractMockForDepositSecurityModule = artifacts.require('DepositContractMockForDepositSecurityModule.sol')
 
 const MAX_DEPOSITS_PER_BLOCK = 100
+const MIN_DEPOSIT_BLOCK_DISTANCE = 14
 const PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS = 10
 const GUARDIAN1 = '0x8516Cbb5ABe73D775bfc0d21Af226e229F7181A3'
 const GUARDIAN2 = '0x5Fc0E75BF6502009943590492B02A1d08EAc9C43'
@@ -120,6 +121,44 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
         await assertRevert(
           depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, signature),
           'deposit root changed'
+        )
+      })
+      it('cannot deposit if keysOpIndex changed', async () => {
+        const newKeysOpIndex = 11
+        await nodeOperatorsRegistryMock.setKeysOpIndex(newKeysOpIndex)
+        assert.equal(await nodeOperatorsRegistryMock.getKeysOpIndex(), newKeysOpIndex, 'invariant failed: keysOpIndex')
+
+        const signature = generateGuardianSignatures([
+          [0, signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN1])]
+        ])
+        await assertRevert(
+          depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, signature),
+          'keys op index changed'
+        )
+      })
+      it('cannot deposit more than allowed number of validators', async () => {
+        const signature = generateGuardianSignatures([
+          [0, signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN1])]
+        ])
+        await assertRevert(
+          depositSecurityModule.depositBufferedEther(MAX_DEPOSITS_PER_BLOCK + 1, DEPOSIT_ROOT, KEYS_OP_INDEX, signature),
+          'too many deposits'
+        )
+      })
+
+      it('cannot deposit more frequently than allowed', async () => {
+        await depositSecurityModule.setMinDepositBlockDistance(MIN_DEPOSIT_BLOCK_DISTANCE, { from: owner })
+        const signature = generateGuardianSignatures([
+          [0, signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN1])]
+        ])
+        const tx = await depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, signature)
+        assertEvent(tx.receipt, 'Deposited', {
+          expectedArgs: { maxDeposits: MAX_DEPOSITS },
+          decodeForAbi: LidoMockForDepositSecurityModule._json.abi
+        })
+        await assertRevert(
+          depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, signature),
+          'too frequent deposits'
         )
       })
     })
@@ -259,6 +298,26 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
         depositSecurityModule.pauseDeposits(blockHeight, guardianIndex, v, r, s, { from: guardian }),
         'pause intent expired'
       )
+    })
+  })
+  describe('unpauseDeposits', () => {
+    beforeEach('add guardians and check that not paused', async () => {
+      await depositSecurityModule.addGuardian(guardian, { from: owner })
+      const guardians = await depositSecurityModule.getGuardians()
+      assert.equal(guardians.length, 1, 'invariant failed: guardians != 1')
+      assert.equal(await depositSecurityModule.isPaused(), false, 'invariant failed: isPaused')
+      await depositSecurityModule.setPauseIntentValidityPeriodBlocks(PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS, { from: owner })
+    })
+    it('unpauses paused deposits', async () => {
+      const guardianIndex = 0
+      const blockHeight = await web3.eth.getBlockNumber()
+      await depositSecurityModule.pauseDeposits(blockHeight, guardianIndex, 0, '0x', '0x', { from: guardian })
+      assert.equal(await depositSecurityModule.isPaused(), true, 'invariant failed: isPaused')
+      await depositSecurityModule.unpauseDeposits({ from: owner })
+      assert.equal(await depositSecurityModule.isPaused(), false, 'invalid result: isPaused')
+    })
+    it('cannot be called by non-admin', async () => {
+      await assertRevert(depositSecurityModule.unpauseDeposits({ from: stranger }), 'not an owner')
     })
   })
   describe('Guardians', () => {
