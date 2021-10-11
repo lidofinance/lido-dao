@@ -355,6 +355,21 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
         await depositSecurityModule.addGuardian(GUARDIAN1, { from: owner })
         assert.isFalse(await depositSecurityModule.isGuardian(GUARDIAN2))
       })
+      it(`getGuardianIndex works`, async () => {
+        assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN1), -1)
+
+        await depositSecurityModule.addGuardian(GUARDIAN1, { from: owner })
+        assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN1), 0)
+
+        await depositSecurityModule.addGuardian(GUARDIAN2, { from: owner })
+        assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN1), 0)
+        assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN2), 1)
+
+        await depositSecurityModule.addGuardian(GUARDIAN3, { from: owner })
+        assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN1), 0)
+        assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN2), 1)
+        assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN3), 2)
+      })
       it(`addGuardian doesn't add duplicate`, async () => {
         await depositSecurityModule.addGuardian(GUARDIAN1, { from: owner })
         await assertRevert(depositSecurityModule.addGuardian(GUARDIAN1, { from: owner }), 'duplicate address')
@@ -385,29 +400,57 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
         await depositSecurityModule.addGuardian(GUARDIAN1, { from: owner })
         await depositSecurityModule.removeGuardian(0, { from: owner })
         assert.equal((await depositSecurityModule.getGuardians()).length, 0)
+        assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN1), -1)
       })
       it(`removeGuardian can be used to remove all guardians going from head`, async () => {
         await depositSecurityModule.addGuardians([GUARDIAN1, GUARDIAN2, GUARDIAN3], { from: owner })
+
         await depositSecurityModule.removeGuardian(0, { from: owner })
         assert.deepEqual(await depositSecurityModule.getGuardians(), [GUARDIAN3, GUARDIAN2])
+        assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN1), -1)
+        assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN2), 1)
+        assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN3), 0)
+
         await depositSecurityModule.removeGuardian(0, { from: owner })
         assert.deepEqual(await depositSecurityModule.getGuardians(), [GUARDIAN2])
+        assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN1), -1)
+        assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN2), 0)
+        assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN3), -1)
+
         await depositSecurityModule.removeGuardian(0, { from: owner })
         assert.deepEqual(await depositSecurityModule.getGuardians(), [])
+        assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN1), -1)
+        assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN2), -1)
+        assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN3), -1)
       })
       it(`removeGuardian can be used to remove all guardians going from tail`, async () => {
         await depositSecurityModule.addGuardians([GUARDIAN1, GUARDIAN2, GUARDIAN3], { from: owner })
+
         await depositSecurityModule.removeGuardian(2, { from: owner })
         assert.deepEqual(await depositSecurityModule.getGuardians(), [GUARDIAN1, GUARDIAN2])
+        assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN1), 0)
+        assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN2), 1)
+        assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN3), -1)
+
         await depositSecurityModule.removeGuardian(1, { from: owner })
         assert.deepEqual(await depositSecurityModule.getGuardians(), [GUARDIAN1])
+        assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN1), 0)
+        assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN2), -1)
+        assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN3), -1)
+
         await depositSecurityModule.removeGuardian(0, { from: owner })
         assert.deepEqual(await depositSecurityModule.getGuardians(), [])
+        assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN1), -1)
+        assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN2), -1)
+        assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN3), -1)
       })
       it(`removeGuardian can be used to a guardian from the middle`, async () => {
         await depositSecurityModule.addGuardians([GUARDIAN1, GUARDIAN2, GUARDIAN3], { from: owner })
         await depositSecurityModule.removeGuardian(1, { from: owner })
         assert.sameMembers(await depositSecurityModule.getGuardians(), [GUARDIAN1, GUARDIAN3])
+        assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN1), 0)
+        assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN2), -1)
+        assert.equal(await depositSecurityModule.getGuardianIndex(GUARDIAN3), 1)
       })
       it(`removeGuardian updates quorum if the new guardians count is less than quorum`, async () => {
         await depositSecurityModule.addGuardians([GUARDIAN1, GUARDIAN2], { from: owner })

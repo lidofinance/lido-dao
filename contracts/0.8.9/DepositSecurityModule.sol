@@ -55,7 +55,7 @@ contract DepositSecurityModule {
     address internal owner;
 
     address[] internal guardians;
-    mapping(address => bool) guardianFlags;
+    mapping(address => uint256) guardianIndices; // 1-based
     uint256 internal quorum;
 
     bool internal paused;
@@ -235,7 +235,18 @@ contract DepositSecurityModule {
     }
 
     function _isGuardian(address addr) internal view returns (bool) {
-        return guardianFlags[addr];
+        return guardianIndices[addr] > 0;
+    }
+
+    /**
+     * Returns index of the guardian, or -1 if the address is not a guardian.
+     */
+    function getGuardianIndex(address addr) external view returns (int256) {
+        return _getGuardianIndex(addr);
+    }
+
+    function _getGuardianIndex(address addr) internal view returns (int256) {
+        return int256(guardianIndices[addr]) - 1;
     }
 
     /**
@@ -258,6 +269,13 @@ contract DepositSecurityModule {
         }
     }
 
+    function _addGuardian(address addr) internal {
+        require(!_isGuardian(addr), "duplicate address");
+        guardians.push(addr);
+        guardianIndices[addr] = guardians.length;
+        emit GuardianAdded(addr);
+    }
+
     /**
      * Removes a guardian with the given index.
      *
@@ -270,10 +288,12 @@ contract DepositSecurityModule {
         --totalGuardians;
 
         address addr = guardians[index];
-        guardianFlags[addr] = false;
+        guardianIndices[addr] = 0;
 
         if (index != totalGuardians) {
-            guardians[index] = guardians[totalGuardians];
+            address addrToMove = guardians[totalGuardians];
+            guardians[index] = addrToMove;
+            guardianIndices[addrToMove] = index + 1;
         }
 
         if (quorum > totalGuardians) {
@@ -283,13 +303,6 @@ contract DepositSecurityModule {
         guardians.pop();
 
         emit GuardianRemoved(addr);
-    }
-
-    function _addGuardian(address addr) internal {
-        require(!_isGuardian(addr), "duplicate address");
-        guardians.push(addr);
-        guardianFlags[addr] = true;
-        emit GuardianAdded(addr);
     }
 
 
