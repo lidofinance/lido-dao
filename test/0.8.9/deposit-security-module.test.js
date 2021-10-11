@@ -1,6 +1,8 @@
 const { assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const { assert } = require('chai')
-const { generateGuardianSignatures, signDepositData, signPauseData } = require('./helpers/signatures')
+const { signDepositData, signPauseData } = require('./helpers/signatures')
+
+// generateGuardianSignatures
 
 const DepositSecurityModule = artifacts.require('DepositSecurityModule.sol')
 const LidoMockForDepositSecurityModule = artifacts.require('LidoMockForDepositSecurityModule.sol')
@@ -85,7 +87,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       })
       it('deposits are impossible', async () => {
         await assertRevert(
-          depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, '0x', { from: stranger }),
+          depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, [], { from: stranger }),
           'no guardian quorum'
         )
       })
@@ -101,30 +103,23 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
         assert.equal(quorum, 1, 'invariant failed: quorum != 1')
       })
       it("can deposit with the guardian's sig", async () => {
-        const signature = generateGuardianSignatures([
-          [0, signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN1])]
-        ])
-        const tx = await depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, signature)
+        const signatures = [signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN1])]
+        const tx = await depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, signatures)
         assertEvent(tx.receipt, 'Deposited', {
           expectedArgs: { maxDeposits: MAX_DEPOSITS },
           decodeForAbi: LidoMockForDepositSecurityModule._json.abi
         })
       })
       it('cannot deposit with an unrelated sig', async () => {
-        const unrelatedSignature = generateGuardianSignatures([
-          [0, signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN2])]
-        ])
+        const signatures = [signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN2])]
 
         await assertRevert(
-          depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, unrelatedSignature),
-          'no guardian quorum'
+          depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, signatures),
+          'invalid signature'
         )
       })
       it('cannot deposit with no sigs', async () => {
-        await assertRevert(
-          depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, '0x'),
-          'no guardian quorum'
-        )
+        await assertRevert(depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, []), 'no guardian quorum')
       })
       it('cannot deposit if deposit contract root changed', async () => {
         const newDepositRoot = '0x9daddc4daa5915981fd9f1bcc367a2be1389b017d5c24a58d44249a5dbb60289'
@@ -132,11 +127,9 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
         await depositContractMock.set_deposit_root(newDepositRoot)
         assert.equal(await depositContractMock.get_deposit_root(), newDepositRoot, 'invariant failed: depositRoot')
 
-        const signature = generateGuardianSignatures([
-          [0, signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN1])]
-        ])
+        const signatures = [signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN1])]
         await assertRevert(
-          depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, signature),
+          depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, signatures),
           'deposit root changed'
         )
       })
@@ -145,35 +138,29 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
         await nodeOperatorsRegistryMock.setKeysOpIndex(newKeysOpIndex)
         assert.equal(await nodeOperatorsRegistryMock.getKeysOpIndex(), newKeysOpIndex, 'invariant failed: keysOpIndex')
 
-        const signature = generateGuardianSignatures([
-          [0, signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN1])]
-        ])
+        const signatures = [signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN1])]
         await assertRevert(
-          depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, signature),
+          depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, signatures),
           'keys op index changed'
         )
       })
       it('cannot deposit more than allowed number of validators', async () => {
-        const signature = generateGuardianSignatures([
-          [0, signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN1])]
-        ])
+        const signatures = [signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN1])]
         await assertRevert(
-          depositSecurityModule.depositBufferedEther(MAX_DEPOSITS_PER_BLOCK + 1, DEPOSIT_ROOT, KEYS_OP_INDEX, signature),
+          depositSecurityModule.depositBufferedEther(MAX_DEPOSITS_PER_BLOCK + 1, DEPOSIT_ROOT, KEYS_OP_INDEX, signatures),
           'too many deposits'
         )
       })
 
       it('cannot deposit more frequently than allowed', async () => {
-        const signature = generateGuardianSignatures([
-          [0, signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN1])]
-        ])
-        const tx = await depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, signature)
+        const signatures = [signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN1])]
+        const tx = await depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, signatures)
         assertEvent(tx.receipt, 'Deposited', {
           expectedArgs: { maxDeposits: MAX_DEPOSITS },
           decodeForAbi: LidoMockForDepositSecurityModule._json.abi
         })
         await assertRevert(
-          depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, signature),
+          depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, signatures),
           'too frequent deposits'
         )
       })
@@ -191,79 +178,76 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
         assert.equal(quorum, 2, 'invariant failed: quorum != 2')
       })
       it("can deposit with guardian's sigs (0,1,2)", async () => {
-        const signature = generateGuardianSignatures([
-          [0, signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN1])],
-          [1, signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN2])],
-          [2, signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN3])]
-        ])
+        const signatures = [
+          signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN1]),
+          signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN2]),
+          signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN3])
+        ]
 
-        const tx = await depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, signature)
+        const tx = await depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, signatures)
         assertEvent(tx.receipt, 'Deposited', {
           expectedArgs: { maxDeposits: MAX_DEPOSITS },
           decodeForAbi: LidoMockForDepositSecurityModule._json.abi
         })
       })
       it("can deposit with guardian's sigs (0,1)", async () => {
-        const signature = generateGuardianSignatures([
-          [0, signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN1])],
-          [1, signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN2])]
-        ])
+        const signatures = [
+          signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN1]),
+          signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN2])
+        ]
 
-        const tx = await depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, signature)
+        const tx = await depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, signatures)
         assertEvent(tx.receipt, 'Deposited', {
           expectedArgs: { maxDeposits: MAX_DEPOSITS },
           decodeForAbi: LidoMockForDepositSecurityModule._json.abi
         })
       })
       it("can deposit with guardian's sigs (0,2)", async () => {
-        const signature = generateGuardianSignatures([
-          [0, signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN1])],
-          [2, signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN3])]
-        ])
+        const signatures = [
+          signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN1]),
+          signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN3])
+        ]
 
-        const tx = await depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, signature)
+        const tx = await depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, signatures)
         assertEvent(tx.receipt, 'Deposited', {
           expectedArgs: { maxDeposits: MAX_DEPOSITS },
           decodeForAbi: LidoMockForDepositSecurityModule._json.abi
         })
       })
       it("can deposit with guardian's sigs (1,2)", async () => {
-        const signature = generateGuardianSignatures([
-          [1, signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN2])],
-          [2, signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN3])]
-        ])
-        const tx = await depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, signature)
+        const signatures = [
+          signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN2]),
+          signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN3])
+        ]
+        const tx = await depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, signatures)
         assertEvent(tx.receipt, 'Deposited', {
           expectedArgs: { maxDeposits: MAX_DEPOSITS },
           decodeForAbi: LidoMockForDepositSecurityModule._json.abi
         })
       })
       it('cannot deposit with no sigs', async () => {
-        await assertRevert(
-          depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, '0x'),
-          'no guardian quorum'
-        )
+        await assertRevert(depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, []), 'no guardian quorum')
       })
       it("cannot deposit with guardian's sigs (0,0,1)", async () => {
-        const signature = generateGuardianSignatures([
-          [0, signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN1])],
-          [0, signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN1])],
-          [1, signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN2])]
-        ])
+        const signatures = [
+          signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN1]),
+          signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN1]),
+          signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN2])
+        ]
         await assertRevert(
-          depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, signature),
-          'signature indices not in ascending order'
+          depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, signatures),
+          'signatures not sorted'
         )
       })
       it('cannot deposit with partially-unrelated sigs, e.g. (0,U,U)', async () => {
-        const signature = generateGuardianSignatures([
-          [0, signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN1])],
-          [1, signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, UNRELATED_SIGNER_PRIVATE_KEYS[UNRELATED_SIGNER1])],
-          [2, signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, UNRELATED_SIGNER_PRIVATE_KEYS[UNRELATED_SIGNER2])]
-        ])
+        const signature = [
+          signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, GUARDIAN_PRIVATE_KEYS[GUARDIAN1]),
+          signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, UNRELATED_SIGNER_PRIVATE_KEYS[UNRELATED_SIGNER1]),
+          signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, UNRELATED_SIGNER_PRIVATE_KEYS[UNRELATED_SIGNER2])
+        ]
         await assertRevert(
           depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, signature),
-          'no guardian quorum'
+          'invalid signature'
         )
       })
     })
@@ -277,41 +261,30 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       assert.equal(await depositSecurityModule.isPaused(), false, 'invariant failed: isPaused')
     })
     it('if called by a guardian 1 or 2', async () => {
-      const guardianIndex = 0
       const blockHeight = await web3.eth.getBlockNumber()
-      await depositSecurityModule.pauseDeposits(blockHeight, guardianIndex, 0, '0x', '0x', { from: guardian })
+      await depositSecurityModule.pauseDeposits(blockHeight, ['0x', '0x'], { from: guardian })
       assert.equal(await depositSecurityModule.isPaused(), true, 'invalid result: not paused')
     })
 
     it('pauses if called by an anon submitting sig of guardian 1 or 2', async () => {
-      const guardianIndex = 1
       const blockHeight = await web3.eth.getBlockNumber()
-      const { v, r, s } = signPauseData(PAUSE_MESSAGE_PREFIX, blockHeight, GUARDIAN_PRIVATE_KEYS[GUARDIAN2])
-      await depositSecurityModule.pauseDeposits(blockHeight, guardianIndex, v, r, s)
+      const sig = signPauseData(PAUSE_MESSAGE_PREFIX, blockHeight, GUARDIAN_PRIVATE_KEYS[GUARDIAN2])
+      await depositSecurityModule.pauseDeposits(blockHeight, sig)
       assert.equal(await depositSecurityModule.isPaused(), true, 'invalid result: not paused')
     })
     it('reverts if called by an anon submitting an unrelated sig', async () => {
-      const guardianIndex = 1
       const blockHeight = await web3.eth.getBlockNumber()
-      const { v, r, s } = signPauseData(PAUSE_MESSAGE_PREFIX, blockHeight, GUARDIAN_PRIVATE_KEYS[GUARDIAN3])
-      await assertRevert(depositSecurityModule.pauseDeposits(blockHeight, guardianIndex, v, r, s), 'invalid signature')
+      const sig = signPauseData(PAUSE_MESSAGE_PREFIX, blockHeight, GUARDIAN_PRIVATE_KEYS[GUARDIAN3])
+      await assertRevert(depositSecurityModule.pauseDeposits(blockHeight, sig), 'invalid signature')
     })
     it('reverts if called by a guardian with an expired blockNumber', async () => {
-      const guardianIndex = 0
       const blockHeight = (await web3.eth.getBlockNumber()) - PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS
-      await assertRevert(
-        depositSecurityModule.pauseDeposits(blockHeight, guardianIndex, 0, '0x', '0x', { from: guardian }),
-        'pause intent expired'
-      )
+      await assertRevert(depositSecurityModule.pauseDeposits(blockHeight, ['0x', '0x'], { from: guardian }), 'pause intent expired')
     })
     it("reverts is called by an anon submitting a guardian's sig but with an expired `blockNumber`", async () => {
-      const guardianIndex = 1
       const blockHeight = (await web3.eth.getBlockNumber()) - PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS
-      const { v, r, s } = signPauseData(PAUSE_MESSAGE_PREFIX, blockHeight, GUARDIAN_PRIVATE_KEYS[GUARDIAN2])
-      await assertRevert(
-        depositSecurityModule.pauseDeposits(blockHeight, guardianIndex, v, r, s, { from: guardian }),
-        'pause intent expired'
-      )
+      const sig = signPauseData(PAUSE_MESSAGE_PREFIX, blockHeight, GUARDIAN_PRIVATE_KEYS[GUARDIAN2])
+      await assertRevert(depositSecurityModule.pauseDeposits(blockHeight, sig, { from: guardian }), 'pause intent expired')
     })
   })
   describe('unpauseDeposits', () => {
@@ -322,9 +295,8 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       assert.equal(await depositSecurityModule.isPaused(), false, 'invariant failed: isPaused')
     })
     it('unpauses paused deposits', async () => {
-      const guardianIndex = 0
       const blockHeight = await web3.eth.getBlockNumber()
-      await depositSecurityModule.pauseDeposits(blockHeight, guardianIndex, 0, '0x', '0x', { from: guardian })
+      await depositSecurityModule.pauseDeposits(blockHeight, ['0x', '0x'], { from: guardian })
       assert.equal(await depositSecurityModule.isPaused(), true, 'invariant failed: isPaused')
       await depositSecurityModule.unpauseDeposits({ from: owner })
       assert.equal(await depositSecurityModule.isPaused(), false, 'invalid result: isPaused')

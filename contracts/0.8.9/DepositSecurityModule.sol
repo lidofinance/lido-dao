@@ -5,7 +5,7 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
-import {BytesLib} from "./lib/BytesLib.sol";
+import {ECDSA} from "./lib/ECDSA.sol";
 
 
 interface IDepositContract {
@@ -24,8 +24,13 @@ interface INodeOperatorsRegistry {
 
 
 contract DepositSecurityModule {
-    using BytesLib for bytes;
-
+    /**
+     * Short ECDSA signature as defined in https://eips.ethereum.org/EIPS/eip-2098.
+     */
+    struct Signature {
+        bytes32 r;
+        bytes32 vs;
+    }
 
     event OwnerChanged(address newValue);
     event NodeOperatorsRegistryChanged(address newValue);
@@ -38,8 +43,6 @@ contract DepositSecurityModule {
     event DepositsPaused(address guardian);
     event DepositsUnpaused();
 
-
-    uint256 constant ATTEST_SIGNATURE_LEN = 1 + 1 + 32 + 32;
 
     bytes32 public immutable ATTEST_MESSAGE_PREFIX;
     bytes32 public immutable PAUSE_MESSAGE_PREFIX;
@@ -316,7 +319,7 @@ contract DepositSecurityModule {
     /**
      * Pauses deposits given that both conditions are satisfied (reverts otherwise):
      *
-     *   1. The function is called by the guardian with index guardianIndex OR (v, r, s)
+     *   1. The function is called by the guardian with index guardianIndex OR sig
      *      is a valid signature by the guardian with index guardianIndex of the data
      *      defined below.
      *
@@ -327,17 +330,15 @@ contract DepositSecurityModule {
      *
      * | PAUSE_MESSAGE_PREFIX: bytes32 | blockHeight: uint256 |
      */
-    function pauseDeposits(
-        uint256 blockHeight,
-        uint256 guardianIndex,
-        uint8 v, bytes32 r, bytes32 s
-    ) external {
-        address guardianAddr = guardians[guardianIndex];
+    function pauseDeposits(uint256 blockHeight, Signature memory sig) external {
+        address guardianAddr = msg.sender;
+        int256 guardianIndex = _getGuardianIndex(msg.sender);
 
-        if (msg.sender != guardianAddr) {
+        if (guardianIndex == -1) {
             bytes32 msgHash = keccak256(abi.encodePacked(PAUSE_MESSAGE_PREFIX, blockHeight));
-            address signerAddr = _recoverSignature(msgHash, v, r, s);
-            require(signerAddr == guardianAddr, "invalid signature");
+            guardianAddr = ECDSA.recover(msgHash, sig.r, sig.vs);
+            guardianIndex = _getGuardianIndex(guardianAddr);
+            require(guardianIndex != -1, "invalid signature");
         }
 
         require(
@@ -371,18 +372,13 @@ contract DepositSecurityModule {
      * Reverts if any of the following is true:
      *   1. IDepositContract.get_deposit_root() != depositRoot.
      *   2. INodeOperatorsRegistry.getKeysOpIndex() != keysOpIndex.
-     *   3. The number of valid guardian signatures is less than getGuardianQuorum().
-     *   4. maxDeposits > MAX_DEPOSITS
-     *   5. block.number - lastLidoDepositBlock < MIN_DEPOSIT_BLOCK_DISTANCE
+     *   3. The number of guardian signatures is less than getGuardianQuorum().
+     *   4. An invalid or non-guardian signature received.
+     *   5. maxDeposits > MAX_DEPOSITS
+     *   6. block.number - lastLidoDepositBlock < MIN_DEPOSIT_BLOCK_DISTANCE
      *
-     * Layout of guardianSignatures:
-     *
-     * guardianSignatures := | sig... |
-     * sig := | memberIndex: uint8 | v: uint8 | r: bytes32 | s: bytes32 |
-     *
-     * Signatures must be sorted in ascending order by the memberIndex.
-     * Each of guardian signatures must be produced for keccak256 hash of a message
-     * with the following layout:
+     * Signatures must be sorted in ascending order by index of the guardian. Each signature
+     * must be produced for keccak256 hash of a message with the following layout:
      *
      * | ATTEST_MESSAGE_PREFIX: bytes32 | depositRoot: bytes32 | keysOpIndex: uint256 |
      */
@@ -390,91 +386,41 @@ contract DepositSecurityModule {
         uint256 maxDeposits,
         bytes32 depositRoot,
         uint256 keysOpIndex,
-        bytes memory guardianSignatures
+        Signature[] memory guardianSignatures
     ) external {
+        bytes32 onchainDepositRoot = IDepositContract(DEPOSIT_CONTRACT).get_deposit_root();
+        require(depositRoot == onchainDepositRoot, "deposit root changed");
+
         require(!paused, "deposits are paused");
+        require(quorum > 0 && guardianSignatures.length >= quorum, "no guardian quorum");
 
         require(maxDeposits <= maxDepositsPerBlock, "too many deposits");
         require(block.number - lastDepositBlock >= minDepositBlockDistance, "too frequent deposits");
 
-        bytes32 onchainDepositRoot = IDepositContract(DEPOSIT_CONTRACT).get_deposit_root();
-        require(depositRoot == onchainDepositRoot, "deposit root changed");
-
         uint256 onchainKeysOpIndex = INodeOperatorsRegistry(nodeOperatorsRegistry).getKeysOpIndex();
         require(keysOpIndex == onchainKeysOpIndex, "keys op index changed");
 
-        uint256 numValidSignatures = _verifySignatures(depositRoot, keysOpIndex, guardianSignatures);
-        require(quorum > 0 && numValidSignatures >= quorum, "no guardian quorum");
+        _verifySignatures(depositRoot, keysOpIndex, guardianSignatures);
 
         ILido(LIDO).depositBufferedEther(maxDeposits);
         lastDepositBlock = block.number;
     }
 
 
-    function _verifySignatures(
-        bytes32 depositRoot,
-        uint256 keysOpIndex,
-        bytes memory sigs
-    )
-        internal view returns (uint256)
+    function _verifySignatures(bytes32 depositRoot, uint256 keysOpIndex, Signature[] memory sigs)
+        internal view
     {
-        require(sigs.length % ATTEST_SIGNATURE_LEN == 0, "invalid sigs length");
-        uint256 numSignatures = sigs.length / ATTEST_SIGNATURE_LEN;
-
         bytes32 msgHash = keccak256(abi.encodePacked(ATTEST_MESSAGE_PREFIX, depositRoot, keysOpIndex));
+        int256 prevGuardianIndex = -1;
 
-        address[] memory members = guardians;
-        uint256 numValidSignatures = 0;
-        uint256 offset = 0;
-        uint256 prevGuardianIndex = 0;
+        for (uint256 i = 0; i < sigs.length; ++i) {
+            address signerAddr = ECDSA.recover(msgHash, sigs[i].r, sigs[i].vs);
+            int256 guardianIndex = _getGuardianIndex(signerAddr);
 
-        for (uint256 i = 0; i < numSignatures; ++i) {
-            uint256 guardianIndex = sigs.toUint8(offset);
-            offset += 1;
+            require(guardianIndex != -1, "invalid signature");
+            require(guardianIndex > prevGuardianIndex, "signatures not sorted");
 
-            require(i == 0 || guardianIndex > prevGuardianIndex, "signature indices not in ascending order");
             prevGuardianIndex = guardianIndex;
-
-            uint8 v = sigs.toUint8(offset);
-            offset += 1;
-
-            bytes32 r = sigs.toBytes32(offset);
-            offset += 32;
-
-            bytes32 s = sigs.toBytes32(offset);
-            offset += 32;
-
-            address signerAddr = _recoverSignature(msgHash, v, r, s);
-            if (signerAddr == members[guardianIndex]) {
-                ++numValidSignatures;
-            }
         }
-
-        return numValidSignatures;
-    }
-
-
-    function _recoverSignature(bytes32 hash, uint8 v, bytes32 r, bytes32 s)
-        internal pure returns (address)
-    {
-        // Copied from: https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.4.0/contracts/cryptography/ECDSA.sol#L53
-
-        // EIP-2 still allows signature malleability for ecrecover(). Remove this possibility and make the signature
-        // unique. Appendix F in the Ethereum Yellow paper (https://ethereum.github.io/yellowpaper/paper.pdf), defines
-        // the valid range for s in (281): 0 < s < secp256k1n ÷ 2 + 1, and for v in (282): v ∈ {27, 28}. Most
-        // signatures from current libraries generate a unique signature with an s-value in the lower half order.
-        //
-        // If your library generates malleable signatures, such as s-values in the upper range, calculate a new s-value
-        // with 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141 - s1 and flip v from 27 to 28 or
-        // vice versa. If your library also generates signatures with 0/1 for v instead 27/28, add 27 to v to accept
-        // these malleable signatures as well.
-        require(uint256(s) <= 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0, "ECDSA: invalid signature 's' value");
-        require(v == 27 || v == 28, "ECDSA: invalid signature 'v' value");
-
-        // If the signature is valid (and not malleable), return the signer address
-        address signer = ecrecover(hash, v, r, s);
-        require(signer != address(0), "ECDSA: invalid signature");
-
-        return signer;
     }
 }

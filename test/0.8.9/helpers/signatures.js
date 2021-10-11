@@ -1,16 +1,20 @@
 const BN = require('bn.js')
 const { keccak256 } = require('js-sha3')
-const { ecSign, strip0x } = require('../../0.6.12/helpers')
+const { ecSign, strip0x, bufferFromHexString, hexStringFromBuffer } = require('../../0.6.12/helpers')
 
-function generateGuardianSignatures(guardianIndexesWithSignatures) {
-  return guardianIndexesWithSignatures.reduce((combinedSignatures, [guardianIndex, { v, r, s }]) => {
-    return combinedSignatures + uint8ToHex(guardianIndex, true) + uint8ToHex(v, true) + strip0x(r) + strip0x(s)
-  }, '0x')
+// Converts a ECDSA signature to the format provided in https://eips.ethereum.org/EIPS/eip-2098.
+function toEip2098({ v, r, s }) {
+  const vs = bufferFromHexString(s)
+  if (vs[0] >> 7 === 1) {
+    throw new Error(`invalid signature 's' value`)
+  }
+  vs[0] |= v % 27 << 7 // set the first bit of vs to the v parity bit
+  return [r, hexStringFromBuffer(vs)]
 }
 
 function signPauseData(pauseMessagePrefix, blockHeight, guardianPrivateKey) {
   const hash = keccak256(encodePauseData(pauseMessagePrefix, blockHeight))
-  return ecSign(hash, guardianPrivateKey)
+  return toEip2098(ecSign(hash, guardianPrivateKey))
 }
 
 function encodePauseData(pauseMessagePrefix, blockHeight) {
@@ -20,7 +24,7 @@ function encodePauseData(pauseMessagePrefix, blockHeight) {
 
 function signDepositData(attestMessagePrefix, depositRoot, keysOpIndex, guardianPrivateKey) {
   const hash = keccak256(encodeDepositRootAndKeysOpIndex(attestMessagePrefix, depositRoot, keysOpIndex))
-  return ecSign(hash, guardianPrivateKey)
+  return toEip2098(ecSign(hash, guardianPrivateKey))
 }
 
 function uint8ToHex(value) {
@@ -42,7 +46,6 @@ function hexToBytes(hex) {
 }
 
 module.exports = {
-  generateGuardianSignatures,
   signDepositData,
   signPauseData
 }
