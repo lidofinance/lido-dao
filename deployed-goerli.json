@@ -144,7 +144,7 @@
       "0x3db460F33838fDC91e804D7fcE2aDf9e61E9d654"
     ],
     "quorum": 1
-},
+  },
   "depositorConstructorArgs": [
     "0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F",
     "0xff50ed3d0ec03aC01D4C79aAd74928BFF48a7b2b",
@@ -154,6 +154,6 @@
     14,
     10
   ],
-  "depositorDeployTx": "0x4828f4cbdddad1da88edb4def23d007245ecd3942cf2e5cc2ef02f0bf375d8f1",
-  "depositorAddress": "0x49Ee4D7C9Ede042aCcFcFfa5FBa3262dbee6986B"
+  "depositorDeployTx": "0xb5117059faf454efc4d5b73e4b8268ec998563d101eb6373c1bd00e57505d289",
+  "depositorAddress": "0xdC016348fad1Db202E7a301112D9aC8f67ce6354"
 }
