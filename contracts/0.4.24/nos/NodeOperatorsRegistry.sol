@@ -209,16 +209,15 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
       * @dev Function is used by the Lido contract
       */
     function trimUnusedKeys() external onlyLido {
-        uint64  numRemovedKeys = 0;
         uint256 length = getNodeOperatorsCount();
         for (uint256 operatorId = 0; operatorId < length; ++operatorId) {
-            if (operators[operatorId].totalSigningKeys != operators[operatorId].usedSigningKeys) { // write only if update is needed
-                numRemovedKeys += operators[operatorId].totalSigningKeys - operators[operatorId].usedSigningKeys;
+            uint64 totalSigningKeys = operators[operatorId].totalSigningKeys;
+            uint64 usedSigningKeys = operators[operatorId].usedSigningKeys;
+            if (totalSigningKeys != usedSigningKeys) { // write only if update is needed
                 operators[operatorId].totalSigningKeys = operators[operatorId].usedSigningKeys;  // discard unused keys
+                emit NodeOperatorTotalKeysTrimmed(operatorId, totalSigningKeys - usedSigningKeys);
             }
         }
-
-        emit NodeOperatorTotalTrimUnusedKeys(numRemovedKeys);
     }
 
     /**

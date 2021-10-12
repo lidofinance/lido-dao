@@ -455,13 +455,6 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await app.setNodeOperatorStakingLimit(0, 10, { from: voting })
     await app.setNodeOperatorStakingLimit(1, 10, { from: voting })
 
-    const res1 = await pool.trimUnusedKeys()
-    const totalTrimZeroUnusedKeys = getEventArgument(res1, 'NodeOperatorTotalTrimUnusedKeys', 'totalTrimUnusedKeys', {
-      decodeForAbi: NodeOperatorsRegistry._json.abi
-    })
-
-    assertBn(totalTrimZeroUnusedKeys, 0, 'op trim 0 unused keys')
-
     await app.addSigningKeys(0, 2, hexConcat(pad('0x010101', 48), pad('0x020202', 48)), hexConcat(pad('0x01', 96), pad('0x02', 96)), {
       from: voting
     })
@@ -472,12 +465,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await pool.assignNextSigningKeys(1)
     assertBn((await app.getNodeOperator(0, false)).usedSigningKeys, 1, 'op 0 used keys')
 
-    const res2 = await pool.trimUnusedKeys()
-    const totalTrimUnusedKeys = getEventArgument(res2, 'NodeOperatorTotalTrimUnusedKeys', 'totalTrimUnusedKeys', {
-      decodeForAbi: NodeOperatorsRegistry._json.abi
-    })
-
-    assertBn(totalTrimUnusedKeys, 3, 'op trim 3 unused keys')
+    await pool.trimUnusedKeys()
 
     assertBn(await app.getUnusedSigningKeyCount(0, { from: nobody }), 0, 'op 0 unused keys')
     assertBn(await app.getUnusedSigningKeyCount(1, { from: nobody }), 0, 'op 1 unused keys')

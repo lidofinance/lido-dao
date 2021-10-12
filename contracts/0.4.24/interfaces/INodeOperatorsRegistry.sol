@@ -90,7 +90,7 @@ interface INodeOperatorsRegistry {
     event NodeOperatorRewardAddressSet(uint256 indexed id, address rewardAddress);
     event NodeOperatorStakingLimitSet(uint256 indexed id, uint64 stakingLimit);
     event NodeOperatorTotalStoppedValidatorsReported(uint256 indexed id, uint64 totalStopped);
-    event NodeOperatorTotalTrimUnusedKeys(uint64 totalTrimUnusedKeys);
+    event NodeOperatorTotalKeysTrimmed(uint256 indexed id, uint64 totalKeysTrimmed);
 
     /**
      * @notice Selects and returns at most `_numKeys` signing keys (as well as the corresponding
