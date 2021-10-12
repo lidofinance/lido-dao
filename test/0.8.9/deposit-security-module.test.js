@@ -13,12 +13,12 @@ const NETWORK_ID = 1000
 const MAX_DEPOSITS_PER_BLOCK = 100
 const MIN_DEPOSIT_BLOCK_DISTANCE = 14
 const PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS = 10
-const GUARDIAN1 = '0x8516Cbb5ABe73D775bfc0d21Af226e229F7181A3'
-const GUARDIAN2 = '0x5Fc0E75BF6502009943590492B02A1d08EAc9C43'
+const GUARDIAN1 = '0x5Fc0E75BF6502009943590492B02A1d08EAc9C43'
+const GUARDIAN2 = '0x8516Cbb5ABe73D775bfc0d21Af226e229F7181A3'
 const GUARDIAN3 = '0xdaEAd0E0194abd565d28c1013399801d79627c14'
 const GUARDIAN_PRIVATE_KEYS = {
-  [GUARDIAN1]: '0x88868f0fb667cfe50261bb385be8987e0ce62faee934af33c3026cf65f25f09e',
-  [GUARDIAN2]: '0x3578665169e03e05a26bd5c565ffd12c81a1e0df7d0679f8aee4153110a83c8c',
+  [GUARDIAN1]: '0x3578665169e03e05a26bd5c565ffd12c81a1e0df7d0679f8aee4153110a83c8c',
+  [GUARDIAN2]: '0x88868f0fb667cfe50261bb385be8987e0ce62faee934af33c3026cf65f25f09e',
   [GUARDIAN3]: '0x75e6f508b637327debc90962cd38943ddb9cfc1fc4a8572fc5e3d0984e1261de'
 }
 
@@ -209,7 +209,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
     })
     context('total_guardians=3, quorum=2', () => {
       beforeEach('set total_guardians=3, quorum=2', async () => {
-        await depositSecurityModule.addGuardians([GUARDIAN1, GUARDIAN2, GUARDIAN3], 2, { from: owner })
+        await depositSecurityModule.addGuardians([GUARDIAN3, GUARDIAN1, GUARDIAN2], 2, { from: owner })
 
         const guardians = await depositSecurityModule.getGuardians()
         assert.equal(guardians.length, 3, 'invariant failed: guardians != 3')
@@ -297,6 +297,16 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
         await assertRevert(
           depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, block.number, block.hash, []),
           'no guardian quorum'
+        )
+      })
+      it("cannot deposit with guardian's sigs (1,0)", async () => {
+        const signatures = [
+          signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, block.number, block.hash, GUARDIAN_PRIVATE_KEYS[GUARDIAN2]),
+          signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, block.number, block.hash, GUARDIAN_PRIVATE_KEYS[GUARDIAN1])
+        ]
+        await assertRevert(
+          depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, block.number, block.hash, signatures),
+          'signatures not sorted'
         )
       })
       it("cannot deposit with guardian's sigs (0,0,1)", async () => {

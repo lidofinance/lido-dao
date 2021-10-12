@@ -452,16 +452,13 @@ contract DepositSecurityModule {
             blockHash
         ));
 
-        int256 prevGuardianIndex = -1;
+        address prevSignerAddr = address(0);
 
         for (uint256 i = 0; i < sigs.length; ++i) {
             address signerAddr = ECDSA.recover(msgHash, sigs[i].r, sigs[i].vs);
-            int256 guardianIndex = _getGuardianIndex(signerAddr);
-
-            require(guardianIndex != -1, "invalid signature");
-            require(guardianIndex > prevGuardianIndex, "signatures not sorted");
-
-            prevGuardianIndex = guardianIndex;
+            require(_isGuardian(signerAddr), "invalid signature");
+            require(signerAddr > prevSignerAddr, "signatures not sorted");
+            prevSignerAddr = signerAddr;
         }
     }
 }
