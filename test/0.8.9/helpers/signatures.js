@@ -12,18 +12,18 @@ function toEip2098({ v, r, s }) {
   return [r, hexStringFromBuffer(vs)]
 }
 
-function signPauseData(pauseMessagePrefix, blockHeight, guardianPrivateKey) {
-  const hash = keccak256(encodePauseData(pauseMessagePrefix, blockHeight))
+function signPauseData(pauseMessagePrefix, blockNumber, blockHash, guardianPrivateKey) {
+  const hash = keccak256(encodePauseData(pauseMessagePrefix, blockNumber, blockHash))
   return toEip2098(ecSign(hash, guardianPrivateKey))
 }
 
-function encodePauseData(pauseMessagePrefix, blockHeight) {
+function encodePauseData(pauseMessagePrefix, blockNumber, blockHash) {
   const uint256Size = 64
-  return hexToBytes(strip0x(pauseMessagePrefix) + new BN(blockHeight).toString('hex', uint256Size))
+  return hexToBytes(strip0x(pauseMessagePrefix) + new BN(blockNumber).toString('hex', uint256Size) + strip0x(blockHash))
 }
 
-function signDepositData(attestMessagePrefix, depositRoot, keysOpIndex, guardianPrivateKey) {
-  const hash = keccak256(encodeDepositRootAndKeysOpIndex(attestMessagePrefix, depositRoot, keysOpIndex))
+function signDepositData(attestMessagePrefix, depositRoot, keysOpIndex, blockNumber, blockHash, guardianPrivateKey) {
+  const hash = keccak256(encodeAttestMessage(attestMessagePrefix, depositRoot, keysOpIndex, blockNumber, blockHash))
   return toEip2098(ecSign(hash, guardianPrivateKey))
 }
 
@@ -35,9 +35,15 @@ function uint8ToHex(value) {
   return hexedValue.length === 2 ? hexedValue : '0' + hexedValue
 }
 
-function encodeDepositRootAndKeysOpIndex(attestMessagePrefix, depositRoot, keysOpIndex) {
+function encodeAttestMessage(attestMessagePrefix, depositRoot, keysOpIndex, blockNumber, blockHash) {
   const uint256Size = 64
-  return hexToBytes(strip0x(attestMessagePrefix) + strip0x(depositRoot) + new BN(keysOpIndex).toString('hex', uint256Size))
+  return hexToBytes(
+    strip0x(attestMessagePrefix) +
+      strip0x(depositRoot) +
+      new BN(keysOpIndex).toString('hex', uint256Size) +
+      new BN(blockNumber).toString('hex', uint256Size) +
+      strip0x(blockHash)
+  )
 }
 
 function hexToBytes(hex) {

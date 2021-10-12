@@ -324,28 +324,36 @@ contract DepositSecurityModule {
      *      is a valid signature by the guardian with index guardianIndex of the data
      *      defined below.
      *
-     *   2. block.number - blockHeight <= PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS
+     *   2. block.number - blockNumber <= PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS
      *
-     * The signature, if present, must be produced for keccak256 hash of a message with
-     * the following layout:
+     *   3. blockhash(blockNumber) == blockHash
      *
-     * | PAUSE_MESSAGE_PREFIX: bytes32 | blockHeight: uint256 |
+     * The signature, if present, must be produced for keccak256 hash of the following
+     * message (each component taking 32 bytes):
+     *
+     * | PAUSE_MESSAGE_PREFIX | blockNumber | blockHash |
      */
-    function pauseDeposits(uint256 blockHeight, Signature memory sig) external {
+    function pauseDeposits(uint256 blockNumber, bytes32 blockHash, Signature memory sig) external {
         address guardianAddr = msg.sender;
         int256 guardianIndex = _getGuardianIndex(msg.sender);
 
         if (guardianIndex == -1) {
-            bytes32 msgHash = keccak256(abi.encodePacked(PAUSE_MESSAGE_PREFIX, blockHeight));
+            bytes32 msgHash = keccak256(abi.encodePacked(
+                PAUSE_MESSAGE_PREFIX,
+                blockNumber,
+                blockHash
+            ));
             guardianAddr = ECDSA.recover(msgHash, sig.r, sig.vs);
             guardianIndex = _getGuardianIndex(guardianAddr);
             require(guardianIndex != -1, "invalid signature");
         }
 
         require(
-            block.number - blockHeight <= pauseIntentValidityPeriodBlocks,
+            block.number - blockNumber <= pauseIntentValidityPeriodBlocks,
             "pause intent expired"
         );
+
+        require(blockhash(blockNumber) == blockHash, "unexpected block hash");
 
         if (!paused) {
             paused = true;
@@ -377,8 +385,7 @@ contract DepositSecurityModule {
 
 
     /**
-     * Calls Lido.depositBufferedEther(maxDeposits), which is not
-     * callable in any other way.
+     * Calls Lido.depositBufferedEther(maxDeposits).
      *
      * Reverts if any of the following is true:
      *   1. IDepositContract.get_deposit_root() != depositRoot.
@@ -387,16 +394,19 @@ contract DepositSecurityModule {
      *   4. An invalid or non-guardian signature received.
      *   5. maxDeposits > MAX_DEPOSITS
      *   6. block.number - lastLidoDepositBlock < MIN_DEPOSIT_BLOCK_DISTANCE
+     *   7. blockhash(blockNumber) == blockHash
      *
-     * Signatures must be sorted in ascending order by index of the guardian. Each signature
-     * must be produced for keccak256 hash of a message with the following layout:
+     * Signatures must be sorted in ascending order by index of the guardian. Each signature must
+     * be produced for keccak256 hash of the following message (each component taking 32 bytes):
      *
-     * | ATTEST_MESSAGE_PREFIX: bytes32 | depositRoot: bytes32 | keysOpIndex: uint256 |
+     * | ATTEST_MESSAGE_PREFIX | depositRoot | keysOpIndex | blockNumber | blockHash |
      */
     function depositBufferedEther(
         uint256 maxDeposits,
         bytes32 depositRoot,
         uint256 keysOpIndex,
+        uint256 blockNumber,
+        bytes32 blockHash,
         Signature[] memory sortedGuardianSignatures
     ) external {
         bytes32 onchainDepositRoot = IDepositContract(DEPOSIT_CONTRACT).get_deposit_root();
@@ -407,21 +417,41 @@ contract DepositSecurityModule {
 
         require(maxDeposits <= maxDepositsPerBlock, "too many deposits");
         require(block.number - lastDepositBlock >= minDepositBlockDistance, "too frequent deposits");
+        require(blockhash(blockNumber) == blockHash, "unexpected block hash");
 
         uint256 onchainKeysOpIndex = INodeOperatorsRegistry(nodeOperatorsRegistry).getKeysOpIndex();
         require(keysOpIndex == onchainKeysOpIndex, "keys op index changed");
 
-        _verifySignatures(depositRoot, keysOpIndex, sortedGuardianSignatures);
+        _verifySignatures(
+            depositRoot,
+            keysOpIndex,
+            blockNumber,
+            blockHash,
+            sortedGuardianSignatures
+        );
 
         ILido(LIDO).depositBufferedEther(maxDeposits);
         lastDepositBlock = block.number;
     }
 
 
-    function _verifySignatures(bytes32 depositRoot, uint256 keysOpIndex, Signature[] memory sigs)
+    function _verifySignatures(
+        bytes32 depositRoot,
+        uint256 keysOpIndex,
+        uint256 blockNumber,
+        bytes32 blockHash,
+        Signature[] memory sigs
+    )
         internal view
     {
-        bytes32 msgHash = keccak256(abi.encodePacked(ATTEST_MESSAGE_PREFIX, depositRoot, keysOpIndex));
+        bytes32 msgHash = keccak256(abi.encodePacked(
+            ATTEST_MESSAGE_PREFIX,
+            depositRoot,
+            keysOpIndex,
+            blockNumber,
+            blockHash
+        ));
+
         int256 prevGuardianIndex = -1;
 
         for (uint256 i = 0; i < sigs.length; ++i) {
