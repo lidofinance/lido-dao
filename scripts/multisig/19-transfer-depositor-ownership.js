@@ -1,5 +1,5 @@
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
-const { log, logSplitter, logWideSplitter, logHeader, yl } = require('../helpers/log')
+const { log, logSplitter, logWideSplitter, logHeader, yl, gr } = require('../helpers/log')
 const { saveCallTxData } = require('../helpers/tx-data')
 const { readNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
 
