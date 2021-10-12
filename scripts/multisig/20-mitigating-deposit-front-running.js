@@ -113,7 +113,6 @@ ${nosIncreaseLimitsDesc.map((desc, index) => `${index + 6}) ${desc}`).join('\n')
 
   log.splitter()
   log(gr(`Before continuing the deployment, please send all transactions listed above.`))
-  log(gr(`A new voting will be created to add a new "${appName}" implementation to Lido APM.`))
   log(gr(`You must complete it positively and execute before continuing with the deployment!`))
   log.splitter()
 }

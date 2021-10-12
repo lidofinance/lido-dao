@@ -140,7 +140,8 @@
     "pauseIntentValidityPeriodBlocks": 10,
     "guardians": [
       "0x3dc4cF780F2599B528F37dedB34449Fb65Ef7d4A",
-      "0x401FD888B5E41113B7c0C47725A742bbc3A083EF"
+      "0x401FD888B5E41113B7c0C47725A742bbc3A083EF",
+      "0x3db460F33838fDC91e804D7fcE2aDf9e61E9d654"
     ],
     "quorum": 1
 },

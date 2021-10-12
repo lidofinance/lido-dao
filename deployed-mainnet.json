@@ -180,6 +180,8 @@
   "depositorParams": {
     "maxDepositsPerBlock": 100,
     "minDepositBlockDistance": 14,
-    "pauseIntentValidityPeriodBlocks": 10
+    "pauseIntentValidityPeriodBlocks": 10,
+    "guardians": [],
+    "quorum": 1
   }
 }

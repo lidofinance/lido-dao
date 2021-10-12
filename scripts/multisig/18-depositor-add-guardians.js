@@ -18,7 +18,7 @@ async function obtainInstance({ web3, artifacts }) {
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
   const depositor = await artifacts.require(appArtifact).at(state.depositorAddress)
 
-  const { guardians, quorum } = state.depositorParams
+  const { guardians = [], quorum = 1 } = state.depositorParams
 
   await saveCallTxData(`Set guardians`, depositor, 'addGuardians', `tx-18-depositor-add-guardians.json`, {
     arguments: [guardians, quorum],
