@@ -386,6 +386,17 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       const sig = signPauseData(PAUSE_MESSAGE_PREFIX, futureBlockNumber, GUARDIAN_PRIVATE_KEYS[GUARDIAN2])
       await assertRevert(depositSecurityModule.pauseDeposits(futureBlockNumber, sig, { from: guardian }))
     })
+    it("pauseDeposits emits DepositsPaused(guardianAddr) event if wasn't paused before", async () => {
+      assert.isFalse(await depositSecurityModule.isPaused(), 'invariant failed: isPaused != true')
+      const tx = await depositSecurityModule.pauseDeposits(block.number, ['0x', '0x'], { from: guardian })
+      assertEvent(tx, 'DepositsPaused', { expectedArgs: { guardian: guardian } })
+    })
+    it("pauseDeposits doesn't emit DepositsPaused(guardianAddr) event if was paused before", async () => {
+      await depositSecurityModule.pauseDeposits(block.number, ['0x', '0x'], { from: guardian })
+      assert.isTrue(await depositSecurityModule.isPaused(), 'invariant failed: isPaused != true')
+      const tx = await depositSecurityModule.pauseDeposits(block.number, ['0x', '0x'], { from: guardian })
+      assert.equal(tx.logs.length, 0, 'invalid result: logs not empty')
+    })
   })
   describe('unpauseDeposits', () => {
     beforeEach('add guardians and check that not paused', async () => {
