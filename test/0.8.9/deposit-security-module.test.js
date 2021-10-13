@@ -206,6 +206,17 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
           'too frequent deposits'
         )
       })
+      it('cannot deposit when blockHash and blockNumber from different blocks', async () => {
+        const signatures = [
+          signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, block.number, block.hash, GUARDIAN_PRIVATE_KEYS[GUARDIAN1])
+        ]
+        const staleBlockHash = block.hash
+        await waitBlocks(1)
+        await assertRevert(
+          depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, block.number, staleBlockHash, signatures),
+          'unexpected block hash'
+        )
+      })
     })
     context('total_guardians=3, quorum=2', () => {
       beforeEach('set total_guardians=3, quorum=2', async () => {
