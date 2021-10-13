@@ -132,8 +132,11 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
   }
 
   it('deposit works', async () => {
-    await operators.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
-    await operators.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
+    await operators.addNodeOperator('1', ADDRESS_1, { from: voting })
+    await operators.addNodeOperator('2', ADDRESS_2, { from: voting })
+
+    await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
+    await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
     await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
@@ -197,8 +200,11 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
   })
 
   it('key removal is taken into account during deposit', async () => {
-    await operators.addNodeOperator('1', ADDRESS_1, UNLIMITED, { from: voting })
-    await operators.addNodeOperator('2', ADDRESS_2, UNLIMITED, { from: voting })
+    await operators.addNodeOperator('1', ADDRESS_1, { from: voting })
+    await operators.addNodeOperator('2', ADDRESS_2, { from: voting })
+
+    await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
+    await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
     await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
@@ -240,23 +246,27 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
   it('Node Operators filtering during deposit works when doing a huge deposit', async () => {
     await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
-    await operators.addNodeOperator('good', ADDRESS_1, UNLIMITED, { from: voting }) // 0
+    await operators.addNodeOperator('good', ADDRESS_1, { from: voting }) // 0
+    await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
     await operators.addSigningKeys(0, 2, hexConcat(pad('0x0001', 48), pad('0x0002', 48)), hexConcat(pad('0x01', 96), pad('0x01', 96)), {
       from: voting
     })
 
-    await operators.addNodeOperator('limited', ADDRESS_2, 1, { from: voting }) // 1
+    await operators.addNodeOperator('limited', ADDRESS_2, { from: voting }) // 1
+    await operators.setNodeOperatorStakingLimit(1, 1, { from: voting })
     await operators.addSigningKeys(1, 2, hexConcat(pad('0x0101', 48), pad('0x0102', 48)), hexConcat(pad('0x01', 96), pad('0x01', 96)), {
       from: voting
     })
 
-    await operators.addNodeOperator('deactivated', ADDRESS_3, UNLIMITED, { from: voting }) // 2
+    await operators.addNodeOperator('deactivated', ADDRESS_3, { from: voting }) // 2
+    await operators.setNodeOperatorStakingLimit(2, UNLIMITED, { from: voting })
     await operators.addSigningKeys(2, 2, hexConcat(pad('0x0201', 48), pad('0x0202', 48)), hexConcat(pad('0x01', 96), pad('0x01', 96)), {
       from: voting
     })
     await operators.setNodeOperatorActive(2, false, { from: voting })
 
-    await operators.addNodeOperator('short on keys', ADDRESS_4, UNLIMITED, { from: voting }) // 3
+    await operators.addNodeOperator('short on keys', ADDRESS_4, { from: voting }) // 3
+    await operators.setNodeOperatorStakingLimit(3, UNLIMITED, { from: voting })
 
     await app.setFee(5000, { from: voting })
     await app.setFeeDistribution(3000, 2000, 5000, { from: voting })
@@ -363,23 +373,27 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
   it('Node Operators filtering during deposit works when doing small deposits', async () => {
     await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
-    await operators.addNodeOperator('good', ADDRESS_1, UNLIMITED, { from: voting }) // 0
+    await operators.addNodeOperator('good', ADDRESS_1, { from: voting }) // 0
+    await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
     await operators.addSigningKeys(0, 2, hexConcat(pad('0x0001', 48), pad('0x0002', 48)), hexConcat(pad('0x01', 96), pad('0x01', 96)), {
       from: voting
     })
 
-    await operators.addNodeOperator('limited', ADDRESS_2, 1, { from: voting }) // 1
+    await operators.addNodeOperator('limited', ADDRESS_2, { from: voting }) // 1
+    await operators.setNodeOperatorStakingLimit(1, 1, { from: voting })
     await operators.addSigningKeys(1, 2, hexConcat(pad('0x0101', 48), pad('0x0102', 48)), hexConcat(pad('0x01', 96), pad('0x01', 96)), {
       from: voting
     })
 
-    await operators.addNodeOperator('deactivated', ADDRESS_3, UNLIMITED, { from: voting }) // 2
+    await operators.addNodeOperator('deactivated', ADDRESS_3, { from: voting }) // 2
+    await operators.setNodeOperatorStakingLimit(2, UNLIMITED, { from: voting })
     await operators.addSigningKeys(2, 2, hexConcat(pad('0x0201', 48), pad('0x0202', 48)), hexConcat(pad('0x01', 96), pad('0x01', 96)), {
       from: voting
     })
     await operators.setNodeOperatorActive(2, false, { from: voting })
 
-    await operators.addNodeOperator('short on keys', ADDRESS_4, UNLIMITED, { from: voting }) // 3
+    await operators.addNodeOperator('short on keys', ADDRESS_4, { from: voting }) // 3
+    await operators.setNodeOperatorStakingLimit(3, UNLIMITED, { from: voting })
 
     await app.setFee(5000, { from: voting })
     await app.setFeeDistribution(3000, 2000, 5000, { from: voting })
@@ -489,23 +503,27 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
   it('Deposit finds the right operator', async () => {
     await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
-    await operators.addNodeOperator('good', ADDRESS_1, UNLIMITED, { from: voting }) // 0
+    await operators.addNodeOperator('good', ADDRESS_1, { from: voting }) // 0
+    await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
     await operators.addSigningKeys(0, 2, hexConcat(pad('0x0001', 48), pad('0x0002', 48)), hexConcat(pad('0x01', 96), pad('0x01', 96)), {
       from: voting
     })
 
-    await operators.addNodeOperator('2nd good', ADDRESS_2, UNLIMITED, { from: voting }) // 1
+    await operators.addNodeOperator('2nd good', ADDRESS_2, { from: voting }) // 1
+    await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
     await operators.addSigningKeys(1, 2, hexConcat(pad('0x0101', 48), pad('0x0102', 48)), hexConcat(pad('0x01', 96), pad('0x01', 96)), {
       from: voting
     })
 
-    await operators.addNodeOperator('deactivated', ADDRESS_3, UNLIMITED, { from: voting }) // 2
+    await operators.addNodeOperator('deactivated', ADDRESS_3, { from: voting }) // 2
+    await operators.setNodeOperatorStakingLimit(2, UNLIMITED, { from: voting })
     await operators.addSigningKeys(2, 2, hexConcat(pad('0x0201', 48), pad('0x0202', 48)), hexConcat(pad('0x01', 96), pad('0x01', 96)), {
       from: voting
     })
     await operators.setNodeOperatorActive(2, false, { from: voting })
 
-    await operators.addNodeOperator('short on keys', ADDRESS_4, UNLIMITED, { from: voting }) // 3
+    await operators.addNodeOperator('short on keys', ADDRESS_4, { from: voting }) // 3
+    await operators.setNodeOperatorStakingLimit(3, UNLIMITED, { from: voting })
 
     await app.setFee(5000, { from: voting })
     await app.setFeeDistribution(3000, 2000, 5000, { from: voting })

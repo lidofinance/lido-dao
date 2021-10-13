@@ -50,8 +50,7 @@ function App() {
     []
   )
   const addNodeOperatorApi = useCallback(
-    (name, address, limit) =>
-      api.addNodeOperator(name, address, limit).toPromise(),
+    (name, address) => api.addNodeOperator(name, address).toPromise(),
     [api]
   )
 

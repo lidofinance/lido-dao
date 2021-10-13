@@ -13,13 +13,12 @@ pragma solidity 0.4.24;
   */
 interface INodeOperatorsRegistry {
     /**
-      * @notice Add node operator named `name` with reward address `rewardAddress` and staking limit `stakingLimit` validators
+      * @notice Add node operator named `name` with reward address `rewardAddress` and staking limit = 0 validators
       * @param _name Human-readable name
       * @param _rewardAddress Ethereum 1 address which receives stETH rewards for this operator
-      * @param _stakingLimit the maximum number of validators to stake for this operator
       * @return a unique key of the added operator
       */
-    function addNodeOperator(string _name, address _rewardAddress, uint64 _stakingLimit) external returns (uint256 id);
+    function addNodeOperator(string _name, address _rewardAddress) external returns (uint256 id);
 
     /**
       * @notice `_active ? 'Enable' : 'Disable'` the node operator #`_id`
@@ -91,6 +90,7 @@ interface INodeOperatorsRegistry {
     event NodeOperatorRewardAddressSet(uint256 indexed id, address rewardAddress);
     event NodeOperatorStakingLimitSet(uint256 indexed id, uint64 stakingLimit);
     event NodeOperatorTotalStoppedValidatorsReported(uint256 indexed id, uint64 totalStopped);
+    event NodeOperatorTotalKeysTrimmed(uint256 indexed id, uint64 totalKeysTrimmed);
 
     /**
      * @notice Selects and returns at most `_numKeys` signing keys (as well as the corresponding
@@ -143,7 +143,7 @@ interface INodeOperatorsRegistry {
     function getSigningKey(uint256 _operator_id, uint256 _index) external view returns
             (bytes key, bytes depositSignature, bool used);
 
-    
+
     /**
      * @notice Returns a monotonically increasing counter that gets incremented when any of the following happens:
      *   1. a node operator's key(s) is added;
