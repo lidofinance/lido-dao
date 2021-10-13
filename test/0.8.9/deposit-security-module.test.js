@@ -359,7 +359,6 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       await depositSecurityModule.pauseDeposits(block.number, ['0x', '0x'], { from: guardian })
       assert.equal(await depositSecurityModule.isPaused(), true, 'invalid result: not paused')
     })
-
     it('pauses if called by an anon submitting sig of guardian 1 or 2', async () => {
       const sig = signPauseData(PAUSE_MESSAGE_PREFIX, block.number, GUARDIAN_PRIVATE_KEYS[GUARDIAN2])
       await depositSecurityModule.pauseDeposits(block.number, sig, { from: stranger })
@@ -370,13 +369,22 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       await assertRevert(depositSecurityModule.pauseDeposits(block.number, sig), 'invalid signature')
     })
     it('reverts if called by a guardian with an expired blockNumber', async () => {
-      const staleBlock = await web3.eth.getBlock(block.number - PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS)
-      await assertRevert(depositSecurityModule.pauseDeposits(staleBlock.number, ['0x', '0x'], { from: guardian }), 'pause intent expired')
+      const staleBlockNumber = block.number - PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS
+      await assertRevert(depositSecurityModule.pauseDeposits(staleBlockNumber, ['0x', '0x'], { from: guardian }), 'pause intent expired')
     })
-    it("reverts is called by an anon submitting a guardian's sig but with an expired `blockNumber`", async () => {
-      const staleBlock = await web3.eth.getBlock(block.number - PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS)
-      const sig = signPauseData(PAUSE_MESSAGE_PREFIX, staleBlock.number, GUARDIAN_PRIVATE_KEYS[GUARDIAN2])
-      await assertRevert(depositSecurityModule.pauseDeposits(staleBlock.number, sig, { from: stranger }), 'pause intent expired')
+    it("reverts if called by an anon submitting a guardian's sig but with an expired `blockNumber`", async () => {
+      const staleBlockNumber = block.number - PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS
+      const sig = signPauseData(PAUSE_MESSAGE_PREFIX, staleBlockNumber, GUARDIAN_PRIVATE_KEYS[GUARDIAN2])
+      await assertRevert(depositSecurityModule.pauseDeposits(staleBlockNumber, sig, { from: stranger }), 'pause intent expired')
+    })
+    it('reverts if called by a guardian with a future blockNumber', async () => {
+      const futureBlockNumber = block.number + 100
+      await assertRevert(depositSecurityModule.pauseDeposits(futureBlockNumber, ['0x', '0x'], { from: guardian }))
+    })
+    it("reverts if called by an anon submitting a guardian's sig with a future blockNumber", async () => {
+      const futureBlockNumber = block.number + 100
+      const sig = signPauseData(PAUSE_MESSAGE_PREFIX, futureBlockNumber, GUARDIAN_PRIVATE_KEYS[GUARDIAN2])
+      await assertRevert(depositSecurityModule.pauseDeposits(futureBlockNumber, sig, { from: guardian }))
     })
   })
   describe('unpauseDeposits', () => {
