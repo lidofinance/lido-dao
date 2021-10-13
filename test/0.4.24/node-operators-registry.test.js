@@ -667,7 +667,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
   })
 
   it('removeSigningKeys works', async () => {
-    await app.addNodeOperator('1', user1, UNLIMITED, { from: voting })
+    await app.addNodeOperator('1', user1, { from: voting })
+    await app.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
 
     const op0 = {
       keys: [
