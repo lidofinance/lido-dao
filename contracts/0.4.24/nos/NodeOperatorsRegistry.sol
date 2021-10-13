@@ -695,6 +695,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     function _increaseKeysOpIndex() internal {
         uint256 keysOpIndex = getKeysOpIndex();
         KEYS_OP_INDEX_POSITION.setStorageUint256(keysOpIndex + 1);
-        emit KeysOpIndexSet(keysOpIndex, keysOpIndex + 1);
+        emit KeysOpIndexSet(keysOpIndex + 1);
     }
 }

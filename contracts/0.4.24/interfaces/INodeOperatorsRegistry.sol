@@ -154,5 +154,5 @@ interface INodeOperatorsRegistry {
 
     event SigningKeyAdded(uint256 indexed operatorId, bytes pubkey);
     event SigningKeyRemoved(uint256 indexed operatorId, bytes pubkey);
-    event KeysOpIndexSet(uint256 oldKeysOpIndex, uint256 newKeysOpIndex);
+    event KeysOpIndexSet(uint256 keysOpIndex);
 }
