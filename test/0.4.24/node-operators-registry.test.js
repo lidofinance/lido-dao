@@ -666,6 +666,79 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     assertBn(stakingLimitAfter2, 1, 'Staking limit set on removed index on removal')
   })
 
+  it('removeSigningKeys works', async () => {
+    await app.addNodeOperator('1', user1, UNLIMITED, { from: voting })
+
+    const op0 = {
+      keys: [
+        pad('0xaa0101', 48),
+        pad('0xaa0202', 48),
+        pad('0xaa0303', 48),
+        pad('0xaa0404', 48),
+        pad('0xbb0505', 48),
+        pad('0xbb0606', 48),
+        pad('0xbb0707', 48),
+        pad('0xbb0808', 48)
+      ],
+      sigs: [
+        pad('0xa1', 96),
+        pad('0xa2', 96),
+        pad('0xa3', 96),
+        pad('0xa4', 96),
+        pad('0xb5', 96),
+        pad('0xb6', 96),
+        pad('0xb7', 96),
+        pad('0xb8', 96)
+      ]
+    }
+
+    await app.addSigningKeys(0, 8, hexConcat(...op0.keys), hexConcat(...op0.sigs), { from: voting })
+
+    assertBn(await app.getTotalSigningKeyCount(0, { from: nobody }), 8)
+    assertBn(await app.getUnusedSigningKeyCount(0, { from: nobody }), 8)
+
+    await assertRevert(app.removeSigningKeys(0, 0, 1, { from: user1 }), 'APP_AUTH_FAILED')
+    await assertRevert(app.removeSigningKeys(0, 0, 1, { from: nobody }), 'APP_AUTH_FAILED')
+
+    await app.removeSigningKeys(0, 0, 1, { from: voting })
+
+    assertBn(await app.getTotalSigningKeyCount(0, { from: nobody }), 7)
+    assertBn(await app.getUnusedSigningKeyCount(0, { from: nobody }), 7)
+    assert.equal((await app.getSigningKey(0, 0, { from: nobody })).key, op0.keys[7])
+    await assertRevert(app.removeSigningKeys(0, 7, 1, { from: voting }), 'KEY_NOT_FOUND')
+    await assertRevert(app.removeSigningKeys(0, 0, 8, { from: voting }), 'KEY_NOT_FOUND')
+
+    await app.removeSigningKeys(0, 1, 2, { from: voting })
+    assertBn(await app.getTotalSigningKeyCount(0, { from: nobody }), 5)
+    assertBn(await app.getUnusedSigningKeyCount(0, { from: nobody }), 5)
+
+    assert.equal((await app.getSigningKey(0, 0, { from: nobody })).key, op0.keys[7])
+    assert.equal((await app.getSigningKey(0, 1, { from: nobody })).key, op0.keys[5])
+    assert.equal((await app.getSigningKey(0, 2, { from: nobody })).key, op0.keys[6])
+
+    await assertRevert(app.removeSigningKeysOperatorBH(0, 3, 1, { from: voting }), 'APP_AUTH_FAILED')
+    await assertRevert(app.removeSigningKeysOperatorBH(0, 3, 1, { from: nobody }), 'APP_AUTH_FAILED')
+
+    await app.removeSigningKeysOperatorBH(0, 3, 1, { from: user1 })
+
+    await assertRevert(app.removeSigningKeysOperatorBH(0, 4, 1, { from: voting }), 'APP_AUTH_FAILED')
+    await assertRevert(app.removeSigningKeysOperatorBH(0, 4, 1, { from: user1 }), 'KEY_NOT_FOUND')
+    await assertRevert(app.removeSigningKeysOperatorBH(0, 0, 5, { from: user1 }), 'KEY_NOT_FOUND')
+
+    assertBn(await app.getTotalSigningKeyCount(0, { from: nobody }), 4)
+    assertBn(await app.getUnusedSigningKeyCount(0, { from: nobody }), 4)
+    assert.equal((await app.getSigningKey(0, 3, { from: nobody })).key, op0.keys[4])
+
+    await app.removeSigningKeysOperatorBH(0, 2, 2, { from: user1 })
+
+    assert.equal((await app.getSigningKey(0, 0, { from: nobody })).key, op0.keys[7])
+    assert.equal((await app.getSigningKey(0, 1, { from: nobody })).key, op0.keys[5])
+
+    await app.removeSigningKeysOperatorBH(0, 0, 2, { from: user1 })
+    assertBn(await app.getTotalSigningKeyCount(0, { from: nobody }), 0)
+    assertBn(await app.getUnusedSigningKeyCount(0, { from: nobody }), 0)
+  })
+
   it('getRewardsDistribution works', async () => {
     const { empty_recipients, empty_shares } = await app.getRewardsDistribution(tokens(900))
 

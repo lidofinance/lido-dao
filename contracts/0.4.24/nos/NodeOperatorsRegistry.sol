@@ -273,6 +273,22 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     /**
+      * @notice Removes an #`_amount` of validator signing keys starting from #`_index` of operator #`_id` usable keys. Executed on behalf of DAO.
+      * @param _operator_id Node Operator id
+      * @param _index Index of the key, starting with 0
+      * @param _amount Number of keys to remove
+      */
+    function removeSigningKeys(uint256 _operator_id, uint256 _index, uint256 _amount)
+        external
+        authP(MANAGE_SIGNING_KEYS, arr(_operator_id))
+    {
+        // removing from the last index to the highest one, so we won't get outside the array
+        for (uint256 i = _index + _amount; i > _index ; --i) {
+            _removeSigningKey(_operator_id, i - 1);
+        }
+    }
+
+    /**
       * @notice Removes a validator signing key #`_index` of operator #`_id` from the set of usable keys. Executed on behalf of Node Operator.
       * @param _operator_id Node Operator id
       * @param _index Index of the key, starting with 0
@@ -280,6 +296,20 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     function removeSigningKeyOperatorBH(uint256 _operator_id, uint256 _index) external {
         require(msg.sender == operators[_operator_id].rewardAddress, "APP_AUTH_FAILED");
         _removeSigningKey(_operator_id, _index);
+    }
+
+    /**
+      * @notice Removes an #`_amount` of validator signing keys starting from #`_index` of operator #`_id` usable keys. Executed on behalf of Node Operator.
+      * @param _operator_id Node Operator id
+      * @param _index Index of the key, starting with 0
+      * @param _amount Number of keys to remove
+      */
+    function removeSigningKeysOperatorBH(uint256 _operator_id, uint256 _index, uint256 _amount) external {
+        require(msg.sender == operators[_operator_id].rewardAddress, "APP_AUTH_FAILED");
+        // removing from the last index to the highest one, so we won't get outside the array
+        for (uint256 i = _index + _amount; i > _index ; --i) {
+            _removeSigningKey(_operator_id, i - 1);
+        }
     }
 
     /**
