@@ -817,5 +817,11 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await app.removeSigningKeyOperatorBH(0, 0, { from: user1 })
       assertBn(await app.getKeysOpIndex(), 2)
     })
+    it('must increases on setNodeOperatorActive', async () => {
+      await app.addNodeOperator('1', user1, { from: voting })
+      assertBn(await app.getKeysOpIndex(), 0)
+      await app.setNodeOperatorActive(0, false, { from: voting })
+      assertBn(await app.getKeysOpIndex(), 1)
+    })
   })
 })

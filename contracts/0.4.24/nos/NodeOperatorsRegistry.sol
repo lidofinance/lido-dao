@@ -142,6 +142,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         authP(SET_NODE_OPERATOR_ACTIVE_ROLE, arr(_id, _active ? uint256(1) : uint256(0)))
         operatorExists(_id)
     {
+        _increaseKeysOpIndex();
         if (operators[_id].active != _active) {
             uint256 activeOperatorsCount = getActiveNodeOperatorsCount();
             if (_active)
@@ -527,6 +528,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
      *   1. a node operator's key(s) is added;
      *   2. a node operator's key(s) is removed;
      *   3. a node operator's approved keys limit is changed.
+     *   4. a node operator was activated/deactivated. Activation or deactivation of node operator
+     *      might lead to usage of unvalidated keys in the assignNextSigningKeys method.
      */
     function getKeysOpIndex() public view returns (uint256) {
         return KEYS_OP_INDEX_POSITION.getStorageUint256();
