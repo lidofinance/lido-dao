@@ -600,6 +600,12 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
         expectedArgs: { newValue: newNodeOperatorsRegistry.address }
       })
     })
+    it('pauseIntentValidityPeriodBlocks should be gt 0', async () => {
+      await assertRevert(
+        depositSecurityModule.setPauseIntentValidityPeriodBlocks(0, { from: owner }),
+        'invalid value for pauseIntentValidityPeriodBlocks: must be greater then 0'
+      )
+    })
     it('setPauseIntentValidityPeriodBlocks', async () => {
       const newPauseIntentValidityPeriodBlocks = PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS + 1
       assert.notEqual(
@@ -625,6 +631,12 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       assertEvent(tx, 'MaxDepositsChanged', {
         expectedArgs: { newValue: newMaxDeposits }
       })
+    })
+    it('minDepositBlockDistance should be gt 0', async () => {
+      await assertRevert(
+        depositSecurityModule.setMinDepositBlockDistance(0, { from: owner }),
+        'invalid value for minDepositBlockDistance: must be greater then 0'
+      )
     })
     it('setMinDepositBlockDistance', async () => {
       const newMinDepositBlockDistance = MIN_DEPOSIT_BLOCK_DISTANCE + 1
