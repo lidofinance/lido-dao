@@ -596,7 +596,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
     })
   })
   describe('levers', () => {
-    it('setNodeOperatorsRegistry', async () => {
+    it('setNodeOperatorsRegistry sets new value for nodeOperatorsRegistry if called by owner', async () => {
       const newNodeOperatorsRegistry = await NodeOperatorsRegistryMockForSecurityModule.new()
       assert.notEqual(
         await depositSecurityModule.getNodeOperatorsRegistry(),
@@ -613,7 +613,11 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
         expectedArgs: { newValue: newNodeOperatorsRegistry.address }
       })
     })
-    it('setPauseIntentValidityPeriodBlocks', async () => {
+    it('setNodeOperatorsRegistry reverts if called not by owner', async () => {
+      const newNodeOperatorsRegistry = await NodeOperatorsRegistryMockForSecurityModule.new()
+      await assertRevert(depositSecurityModule.setNodeOperatorsRegistry(newNodeOperatorsRegistry.address, { from: stranger }))
+    })
+    it('setPauseIntentValidityPeriodBlocks sets new value for pauseIntentValidityPeriodBlocks if called by owner', async () => {
       const newPauseIntentValidityPeriodBlocks = PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS + 1
       assert.notEqual(
         await depositSecurityModule.getPauseIntentValidityPeriodBlocks(),
@@ -630,7 +634,11 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
         expectedArgs: { newValue: newPauseIntentValidityPeriodBlocks }
       })
     })
-    it('setMaxDeposits', async () => {
+    it('setPauseIntentValidityPeriodBlocks reverts if called not by owner', async () => {
+      const newPauseIntentValidityPeriodBlocks = PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS + 1
+      await assertRevert(depositSecurityModule.setPauseIntentValidityPeriodBlocks(newPauseIntentValidityPeriodBlocks, { from: stranger }))
+    })
+    it('setMaxDeposits sets new value maxDepositsPerBlock if called by owner', async () => {
       const newMaxDeposits = MAX_DEPOSITS_PER_BLOCK + 1
       assert.notEqual(await depositSecurityModule.getMaxDeposits(), newMaxDeposits, 'invariant failed: maxDeposits')
       const tx = await depositSecurityModule.setMaxDeposits(newMaxDeposits, { from: owner })
@@ -639,7 +647,11 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
         expectedArgs: { newValue: newMaxDeposits }
       })
     })
-    it('setMinDepositBlockDistance', async () => {
+    it('setMaxDeposits reverts if called not by owner', async () => {
+      const newMaxDeposits = MAX_DEPOSITS_PER_BLOCK + 1
+      await assertRevert(depositSecurityModule.setMaxDeposits(newMaxDeposits, { from: stranger }))
+    })
+    it('setMinDepositBlockDistance sets new value for minDepositBlockDistance if called by owner', async () => {
       const newMinDepositBlockDistance = MIN_DEPOSIT_BLOCK_DISTANCE + 1
       assert.notEqual(
         await depositSecurityModule.getMinDepositBlockDistance(),
@@ -655,6 +667,10 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       assertEvent(tx, 'MinDepositBlockDistanceChanged', {
         expectedArgs: { newValue: newMinDepositBlockDistance }
       })
+    })
+    it('setMinDepositBlockDistance reverts if called not by owner', async () => {
+      const newMinDepositBlockDistance = MIN_DEPOSIT_BLOCK_DISTANCE + 1
+      await assertRevert(depositSecurityModule.setMinDepositBlockDistance(newMinDepositBlockDistance, { from: stranger }))
     })
   })
   describe('canDeposit', () => {
