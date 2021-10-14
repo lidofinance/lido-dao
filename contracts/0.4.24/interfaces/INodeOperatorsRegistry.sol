@@ -149,6 +149,8 @@ interface INodeOperatorsRegistry {
      *   1. a node operator's key(s) is added;
      *   2. a node operator's key(s) is removed;
      *   3. a node operator's approved keys limit is changed.
+     *   4. a node operator was activated/deactivated. Activation or deactivation of node operator
+     *      might lead to usage of unvalidated keys in the assignNextSigningKeys method.
      */
     function getKeysOpIndex() external view returns (uint256);
 
