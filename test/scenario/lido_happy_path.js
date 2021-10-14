@@ -3,7 +3,7 @@ const { BN } = require('bn.js')
 const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 const { getEventArgument } = require('@aragon/contract-helpers-test')
 
-const { pad, toBN, ETH, tokens } = require('../helpers/utils')
+const { pad, toBN, ETH, tokens, hexConcat } = require('../helpers/utils')
 const { deployDaoAndPool } = require('./helpers/deploy')
 
 const { signDepositData } = require('../0.8.9/helpers/signatures')
@@ -20,6 +20,7 @@ contract('Lido: happy path', (addresses) => {
     // node operators
     operator_1,
     operator_2,
+    operator_3,
     // users who deposit Ether to the pool
     user1,
     user2,
@@ -448,5 +449,83 @@ contract('Lido: happy path', (addresses) => {
         )
         .lt(mintedAmount.divn(100))
     )
+  })
+
+  // node operator with 10 validators
+  const nodeOperator3 = {
+    id: 2,
+    name: 'operator_3',
+    address: operator_3,
+    validators: [...Array(10).keys()].map((i) => ({
+      key: pad('0xaa01' + i.toString(16), 48),
+      sig: pad('0x' + i.toString(16), 96)
+    }))
+  }
+
+  it('nodeOperator3 registered in NodeOperatorsRegistry and adds 10 signing keys', async () => {
+    const validatorsCount = 10
+    await nodeOperatorRegistry.addNodeOperator(nodeOperator3.name, nodeOperator3.address, { from: voting })
+    await nodeOperatorRegistry.setNodeOperatorStakingLimit(nodeOperator3.id, validatorsCount, { from: voting })
+    await nodeOperatorRegistry.addSigningKeysOperatorBH(
+      nodeOperator3.id,
+      validatorsCount,
+      hexConcat(...nodeOperator3.validators.map((v) => v.key)),
+      hexConcat(...nodeOperator3.validators.map((v) => v.sig)),
+      {
+        from: nodeOperator3.address
+      }
+    )
+  })
+
+  it('nodeOperator3 removes signing key with id 5', async () => {
+    const signingKeyIndexToRemove = 5
+    await nodeOperatorRegistry.removeSigningKeyOperatorBH(nodeOperator3.id, signingKeyIndexToRemove, { from: nodeOperator3.address })
+    const nodeOperatorInfo = await nodeOperatorRegistry.getNodeOperator(nodeOperator3.id, false)
+    assertBn(nodeOperatorInfo.stakingLimit, 5)
+  })
+
+  it('deposit to nodeOperator3 validators', async () => {
+    const amountToDeposit = ETH(32 * 10)
+    await web3.eth.sendTransaction({ to: pool.address, from: user1, value: amountToDeposit })
+    await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
+    const block = await web3.eth.getBlock('latest')
+    const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+    const signatures = [
+      signDepositData(
+        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
+        depositRoot,
+        keysOpIndex,
+        block.number,
+        block.hash,
+        guardians.privateKeys[guardians.addresses[0]]
+      ),
+      signDepositData(
+        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
+        depositRoot,
+        keysOpIndex,
+        block.number,
+        block.hash,
+        guardians.privateKeys[guardians.addresses[1]]
+      )
+    ]
+    await depositSecurityModule.depositBufferedEther(
+      await depositSecurityModule.getMaxDeposits(),
+      depositRoot,
+      keysOpIndex,
+      block.number,
+      block.hash,
+      signatures
+    )
+    let nodeOperatorInfo = await nodeOperatorRegistry.getNodeOperator(nodeOperator3.id, false)
+
+    // validate that only 5 signing keys used after key removing
+    assertBn(nodeOperatorInfo.stakingLimit, nodeOperatorInfo.usedSigningKeys)
+    assertBn(nodeOperatorInfo.totalSigningKeys, 9)
+
+    // validate that all other validators used and pool still has buffered ether
+    nodeOperatorInfo = await nodeOperatorRegistry.getNodeOperator(nodeOperator1.id, false)
+    assertBn(nodeOperatorInfo.totalSigningKeys, nodeOperatorInfo.usedSigningKeys)
+    nodeOperatorInfo = await nodeOperatorRegistry.getNodeOperator(nodeOperator2.id, false)
+    assertBn(nodeOperatorInfo.totalSigningKeys, nodeOperatorInfo.usedSigningKeys)
   })
 })
