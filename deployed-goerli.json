@@ -16,12 +16,12 @@
     "0x70B3284fD016a570146cE48fC54D7A81bCd94BBa"
   ],
   "daoTemplateDeployTx": "0xda8746bca23c7a4f7c58e1a3370cb1ffa1e250ace90fd4684dbb1842ee6ac921",
-  "lidoBaseDeployTx": "0xe6a8a995c432b762d854d96d1c165ff05b5a5a957153fb43c6f9af397a842a1f",
+  "lidoBaseDeployTx": "0xedff0d82dd32fdafa30a62388898e35b8c98759c15aa92ab1ba87b779d86c0bb",
   "oracleBaseDeployTx": "0x4ff91791cc0f969cf9fe0cc9a6241593d26b20ee27f785a2eb002258e25f4e43",
-  "nodeOperatorsRegistryBaseDeployTx": "0x4e6c51e6cde3bb47ae421d7853068ca2e0cbb882b1887b343bf54b65ed2c44c4",
+  "nodeOperatorsRegistryBaseDeployTx": "0x25cf4db41a4159e94826fd0495bafe02e4a015a9bcf0ffbc0e684a5cafe6eefc",
   "daoTemplateAddress": "0x9A4a36B5fe517f98BD6529d4317B0b723F600AaD",
   "app:lido": {
-    "baseAddress": "0x6b944F12ACFEd9fFb5Cfd9b80Fa419903Bf6816b",
+    "baseAddress": "0x25C29642Aa0263B8Bf0A621a264Be6b6238B90E6",
     "ipfsCid": "QmbmPW5r9HMdyUARNJjjE7MNqBUGrXashwoWvqRZhc1t5b",
     "contentURI": "0x697066733a516d626d5057357239484d64795541524e4a6a6a45374d4e714255477258617368776f577671525a686331743562",
     "name": "lido",
@@ -39,7 +39,7 @@
     "proxyAddress": "0x24d8451BC07e7aF4Ba94F69aCDD9ad3c6579D9FB"
   },
   "app:node-operators-registry": {
-    "baseAddress": "0xd5190f5A1dF45bD25609f1FF2215A4BeBcFA1229",
+    "baseAddress": "0x98945cf857ed8c0A0Df0ce5DeE85842b2409e64B",
     "ipfsCid": "QmQExJkoyg7xWXJjLaYC75UAmsGY1STY41YTG3wEK7q8dd",
     "contentURI": "0x697066733a516d5145784a6b6f7967377857584a6a4c615943373555416d7347593153545934315954473377454b3771386464",
     "name": "node-operators-registry",
@@ -154,6 +154,6 @@
     14,
     10
   ],
-  "depositorDeployTx": "0x4e0206f6b1e045780f6dcd158de7f26f2d405d478772504835a6288922363c94",
-  "depositorAddress": "0x071954e987ee02BCAF4b29D6bD533A32E11607f3"
+  "depositorDeployTx": "0x7b7a1cff39b57afe48f101a804753222fcab96dba381616d0cc959ba8a41e8bb",
+  "depositorAddress": "0x3E4Fa99107aD166380A9F5523BbacAcD1e24909C"
 }
