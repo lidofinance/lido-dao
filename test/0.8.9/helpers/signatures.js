@@ -12,27 +12,19 @@ function toEip2098({ v, r, s }) {
   return [r, hexStringFromBuffer(vs)]
 }
 
-function signPauseData(pauseMessagePrefix, blockNumber, blockHash, guardianPrivateKey) {
-  const hash = keccak256(encodePauseData(pauseMessagePrefix, blockNumber, blockHash))
+function signPauseData(pauseMessagePrefix, blockNumber, guardianPrivateKey) {
+  const hash = keccak256(encodePauseData(pauseMessagePrefix, blockNumber))
   return toEip2098(ecSign(hash, guardianPrivateKey))
 }
 
-function encodePauseData(pauseMessagePrefix, blockNumber, blockHash) {
+function encodePauseData(pauseMessagePrefix, blockNumber) {
   const uint256Size = 64
-  return hexToBytes(strip0x(pauseMessagePrefix) + new BN(blockNumber).toString('hex', uint256Size) + strip0x(blockHash))
+  return hexToBytes(strip0x(pauseMessagePrefix) + new BN(blockNumber).toString('hex', uint256Size))
 }
 
 function signDepositData(attestMessagePrefix, depositRoot, keysOpIndex, blockNumber, blockHash, guardianPrivateKey) {
   const hash = keccak256(encodeAttestMessage(attestMessagePrefix, depositRoot, keysOpIndex, blockNumber, blockHash))
   return toEip2098(ecSign(hash, guardianPrivateKey))
-}
-
-function uint8ToHex(value) {
-  if (value < 0 || value > 2 ** 8 - 1) {
-    throw new Error('Overflow: value out of uint8 bounds')
-  }
-  const hexedValue = value.toString(16)
-  return hexedValue.length === 2 ? hexedValue : '0' + hexedValue
 }
 
 function encodeAttestMessage(attestMessagePrefix, depositRoot, keysOpIndex, blockNumber, blockHash) {

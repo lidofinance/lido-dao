@@ -328,23 +328,17 @@ contract DepositSecurityModule {
      *
      *   2. block.number - blockNumber <= PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS
      *
-     *   3. blockhash(blockNumber) == blockHash
-     *
      * The signature, if present, must be produced for keccak256 hash of the following
      * message (each component taking 32 bytes):
      *
-     * | PAUSE_MESSAGE_PREFIX | blockNumber | blockHash |
+     * | PAUSE_MESSAGE_PREFIX | blockNumber
      */
-    function pauseDeposits(uint256 blockNumber, bytes32 blockHash, Signature memory sig) external {
+    function pauseDeposits(uint256 blockNumber, Signature memory sig) external {
         address guardianAddr = msg.sender;
         int256 guardianIndex = _getGuardianIndex(msg.sender);
 
         if (guardianIndex == -1) {
-            bytes32 msgHash = keccak256(abi.encodePacked(
-                PAUSE_MESSAGE_PREFIX,
-                blockNumber,
-                blockHash
-            ));
+            bytes32 msgHash = keccak256(abi.encodePacked(PAUSE_MESSAGE_PREFIX, blockNumber));
             guardianAddr = ECDSA.recover(msgHash, sig.r, sig.vs);
             guardianIndex = _getGuardianIndex(guardianAddr);
             require(guardianIndex != -1, "invalid signature");
@@ -354,8 +348,6 @@ contract DepositSecurityModule {
             block.number - blockNumber <= pauseIntentValidityPeriodBlocks,
             "pause intent expired"
         );
-
-        require(blockhash(blockNumber) == blockHash, "unexpected block hash");
 
         if (!paused) {
             paused = true;

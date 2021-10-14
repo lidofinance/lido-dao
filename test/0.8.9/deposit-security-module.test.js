@@ -206,6 +206,17 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
           'too frequent deposits'
         )
       })
+      it('cannot deposit when blockHash and blockNumber from different blocks', async () => {
+        const signatures = [
+          signDepositData(ATTEST_MESSAGE_PREFIX, DEPOSIT_ROOT, KEYS_OP_INDEX, block.number, block.hash, GUARDIAN_PRIVATE_KEYS[GUARDIAN1])
+        ]
+        const staleBlockHash = block.hash
+        await waitBlocks(1)
+        await assertRevert(
+          depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, block.number, staleBlockHash, signatures),
+          'unexpected block hash'
+        )
+      })
     })
     context('total_guardians=3, quorum=2', () => {
       beforeEach('set total_guardians=3, quorum=2', async () => {
@@ -356,33 +367,46 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       assert.equal(await depositSecurityModule.isPaused(), false, 'invariant failed: isPaused')
     })
     it('if called by a guardian 1 or 2', async () => {
-      await depositSecurityModule.pauseDeposits(block.number, block.hash, ['0x', '0x'], { from: guardian })
+      await depositSecurityModule.pauseDeposits(block.number, ['0x', '0x'], { from: guardian })
       assert.equal(await depositSecurityModule.isPaused(), true, 'invalid result: not paused')
     })
-
     it('pauses if called by an anon submitting sig of guardian 1 or 2', async () => {
-      const sig = signPauseData(PAUSE_MESSAGE_PREFIX, block.number, block.hash, GUARDIAN_PRIVATE_KEYS[GUARDIAN2])
-      await depositSecurityModule.pauseDeposits(block.number, block.hash, sig)
+      const sig = signPauseData(PAUSE_MESSAGE_PREFIX, block.number, GUARDIAN_PRIVATE_KEYS[GUARDIAN2])
+      await depositSecurityModule.pauseDeposits(block.number, sig, { from: stranger })
       assert.equal(await depositSecurityModule.isPaused(), true, 'invalid result: not paused')
     })
     it('reverts if called by an anon submitting an unrelated sig', async () => {
-      const sig = signPauseData(PAUSE_MESSAGE_PREFIX, block.number, block.hash, GUARDIAN_PRIVATE_KEYS[GUARDIAN3])
-      await assertRevert(depositSecurityModule.pauseDeposits(block.number, block.hash, sig), 'invalid signature')
+      const sig = signPauseData(PAUSE_MESSAGE_PREFIX, block.number, UNRELATED_SIGNER_PRIVATE_KEYS[UNRELATED_SIGNER1])
+      await assertRevert(depositSecurityModule.pauseDeposits(block.number, sig), 'invalid signature')
     })
     it('reverts if called by a guardian with an expired blockNumber', async () => {
-      const staleBlock = await web3.eth.getBlock(block.number - PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS)
-      await assertRevert(
-        depositSecurityModule.pauseDeposits(staleBlock.number, staleBlock.hash, ['0x', '0x'], { from: guardian }),
-        'pause intent expired'
-      )
+      const staleBlockNumber = block.number - PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS
+      await assertRevert(depositSecurityModule.pauseDeposits(staleBlockNumber, ['0x', '0x'], { from: guardian }), 'pause intent expired')
     })
-    it("reverts is called by an anon submitting a guardian's sig but with an expired `blockNumber`", async () => {
-      const staleBlock = await web3.eth.getBlock(block.number - PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS)
-      const sig = signPauseData(PAUSE_MESSAGE_PREFIX, staleBlock.number, staleBlock.hash, GUARDIAN_PRIVATE_KEYS[GUARDIAN2])
-      await assertRevert(
-        depositSecurityModule.pauseDeposits(staleBlock.number, staleBlock.hash, sig, { from: guardian }),
-        'pause intent expired'
-      )
+    it("reverts if called by an anon submitting a guardian's sig but with an expired `blockNumber`", async () => {
+      const staleBlockNumber = block.number - PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS
+      const sig = signPauseData(PAUSE_MESSAGE_PREFIX, staleBlockNumber, GUARDIAN_PRIVATE_KEYS[GUARDIAN2])
+      await assertRevert(depositSecurityModule.pauseDeposits(staleBlockNumber, sig, { from: stranger }), 'pause intent expired')
+    })
+    it('reverts if called by a guardian with a future blockNumber', async () => {
+      const futureBlockNumber = block.number + 100
+      await assertRevert(depositSecurityModule.pauseDeposits(futureBlockNumber, ['0x', '0x'], { from: guardian }))
+    })
+    it("reverts if called by an anon submitting a guardian's sig with a future blockNumber", async () => {
+      const futureBlockNumber = block.number + 100
+      const sig = signPauseData(PAUSE_MESSAGE_PREFIX, futureBlockNumber, GUARDIAN_PRIVATE_KEYS[GUARDIAN2])
+      await assertRevert(depositSecurityModule.pauseDeposits(futureBlockNumber, sig, { from: guardian }))
+    })
+    it("pauseDeposits emits DepositsPaused(guardianAddr) event if wasn't paused before", async () => {
+      assert.isFalse(await depositSecurityModule.isPaused(), 'invariant failed: isPaused != true')
+      const tx = await depositSecurityModule.pauseDeposits(block.number, ['0x', '0x'], { from: guardian })
+      assertEvent(tx, 'DepositsPaused', { expectedArgs: { guardian: guardian } })
+    })
+    it("pauseDeposits doesn't emit DepositsPaused(guardianAddr) event if was paused before", async () => {
+      await depositSecurityModule.pauseDeposits(block.number, ['0x', '0x'], { from: guardian })
+      assert.isTrue(await depositSecurityModule.isPaused(), 'invariant failed: isPaused != true')
+      const tx = await depositSecurityModule.pauseDeposits(block.number, ['0x', '0x'], { from: guardian })
+      assert.equal(tx.logs.length, 0, 'invalid result: logs not empty')
     })
   })
   describe('unpauseDeposits', () => {
@@ -393,7 +417,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       assert.equal(await depositSecurityModule.isPaused(), false, 'invariant failed: isPaused')
     })
     it('unpauses paused deposits', async () => {
-      await depositSecurityModule.pauseDeposits(block.number, block.hash, ['0x', '0x'], { from: guardian })
+      await depositSecurityModule.pauseDeposits(block.number, ['0x', '0x'], { from: guardian })
       assert.equal(await depositSecurityModule.isPaused(), true, 'invariant failed: isPaused')
       await depositSecurityModule.unpauseDeposits({ from: owner })
       assert.equal(await depositSecurityModule.isPaused(), false, 'invalid result: isPaused')
@@ -583,7 +607,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
     })
   })
   describe('levers', () => {
-    it('setNodeOperatorsRegistry', async () => {
+    it('setNodeOperatorsRegistry sets new value for nodeOperatorsRegistry if called by owner', async () => {
       const newNodeOperatorsRegistry = await NodeOperatorsRegistryMockForSecurityModule.new()
       assert.notEqual(
         await depositSecurityModule.getNodeOperatorsRegistry(),
@@ -600,13 +624,17 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
         expectedArgs: { newValue: newNodeOperatorsRegistry.address }
       })
     })
+    it('setNodeOperatorsRegistry reverts if called not by owner', async () => {
+      const newNodeOperatorsRegistry = await NodeOperatorsRegistryMockForSecurityModule.new()
+      await assertRevert(depositSecurityModule.setNodeOperatorsRegistry(newNodeOperatorsRegistry.address, { from: stranger }))
+    })
     it('pauseIntentValidityPeriodBlocks should be gt 0', async () => {
       await assertRevert(
         depositSecurityModule.setPauseIntentValidityPeriodBlocks(0, { from: owner }),
         'invalid value for pauseIntentValidityPeriodBlocks: must be greater then 0'
       )
     })
-    it('setPauseIntentValidityPeriodBlocks', async () => {
+    it('setPauseIntentValidityPeriodBlocks sets new value for pauseIntentValidityPeriodBlocks if called by owner', async () => {
       const newPauseIntentValidityPeriodBlocks = PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS + 1
       assert.notEqual(
         await depositSecurityModule.getPauseIntentValidityPeriodBlocks(),
@@ -623,7 +651,11 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
         expectedArgs: { newValue: newPauseIntentValidityPeriodBlocks }
       })
     })
-    it('setMaxDeposits', async () => {
+    it('setPauseIntentValidityPeriodBlocks reverts if called not by owner', async () => {
+      const newPauseIntentValidityPeriodBlocks = PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS + 1
+      await assertRevert(depositSecurityModule.setPauseIntentValidityPeriodBlocks(newPauseIntentValidityPeriodBlocks, { from: stranger }))
+    })
+    it('setMaxDeposits sets new value maxDepositsPerBlock if called by owner', async () => {
       const newMaxDeposits = MAX_DEPOSITS_PER_BLOCK + 1
       assert.notEqual(await depositSecurityModule.getMaxDeposits(), newMaxDeposits, 'invariant failed: maxDeposits')
       const tx = await depositSecurityModule.setMaxDeposits(newMaxDeposits, { from: owner })
@@ -632,13 +664,17 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
         expectedArgs: { newValue: newMaxDeposits }
       })
     })
+    it('setMaxDeposits reverts if called not by owner', async () => {
+      const newMaxDeposits = MAX_DEPOSITS_PER_BLOCK + 1
+      await assertRevert(depositSecurityModule.setMaxDeposits(newMaxDeposits, { from: stranger }))
+    })
     it('minDepositBlockDistance should be gt 0', async () => {
       await assertRevert(
         depositSecurityModule.setMinDepositBlockDistance(0, { from: owner }),
         'invalid value for minDepositBlockDistance: must be greater then 0'
       )
     })
-    it('setMinDepositBlockDistance', async () => {
+    it('setMinDepositBlockDistance sets new value for minDepositBlockDistance if called by owner', async () => {
       const newMinDepositBlockDistance = MIN_DEPOSIT_BLOCK_DISTANCE + 1
       assert.notEqual(
         await depositSecurityModule.getMinDepositBlockDistance(),
@@ -654,6 +690,10 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       assertEvent(tx, 'MinDepositBlockDistanceChanged', {
         expectedArgs: { newValue: newMinDepositBlockDistance }
       })
+    })
+    it('setMinDepositBlockDistance reverts if called not by owner', async () => {
+      const newMinDepositBlockDistance = MIN_DEPOSIT_BLOCK_DISTANCE + 1
+      await assertRevert(depositSecurityModule.setMinDepositBlockDistance(newMinDepositBlockDistance, { from: stranger }))
     })
   })
   describe('canDeposit', () => {
@@ -701,8 +741,8 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
 
       assert.isTrue(block.number - lastDepositBlockNumber >= minDepositBlockDistance)
 
-      const sig = signPauseData(PAUSE_MESSAGE_PREFIX, block.number, block.hash, GUARDIAN_PRIVATE_KEYS[GUARDIAN1])
-      await depositSecurityModule.pauseDeposits(block.number, block.hash, sig, { from: guardian })
+      const sig = signPauseData(PAUSE_MESSAGE_PREFIX, block.number, GUARDIAN_PRIVATE_KEYS[GUARDIAN1])
+      await depositSecurityModule.pauseDeposits(block.number, sig, { from: guardian })
       assert.isTrue(await depositSecurityModule.isPaused(), 'invariant failed: isPaused')
       assert.isFalse(await depositSecurityModule.canDeposit())
     })
