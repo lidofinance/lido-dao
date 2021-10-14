@@ -41,7 +41,7 @@ const getNetConfig = (networkName, ethAccountName) => {
       chainId: 1
     },
     hardhat: {
-      blockGasLimit: 12000000,
+      blockGasLimit: 20000000,
       gasPrice: 1
     },
     coverage: {
@@ -88,7 +88,6 @@ const getNetConfig = (networkName, ethAccountName) => {
     }
   }
   const netConfig = byNetName[networkName]
-  console.log('Net config', networkName, netConfig)
   return netConfig ? { [networkName]: netConfig } : {}
 }
 

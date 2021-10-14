@@ -96,7 +96,6 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
   it('guardians can assign the buffered ether to validators by calling depositBufferedEther() and passing deposit iteration limit', async () => {
     const depositIterationLimit = 5
     let bufferedEther = await pool.getBufferedEther()
-    console.log('Buffered Ether:', bufferedEther.toString())
 
     const block = await web3.eth.getBlock('latest')
     const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
