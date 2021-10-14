@@ -561,7 +561,6 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
   it('depositBufferedEther() deposits less then DEFAULT_MAX_DEPOSITS_PER_CALL', async () => {
     const defaultMaxDepositPerCall = 150 * 32
     const amountToDeposit = defaultMaxDepositPerCall - 1
-    const depositedETH = Math.floor(amountToDeposit / 32) * 32
 
     await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
@@ -584,7 +583,7 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
 
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(amountToDeposit) })
 
-    await app.methods['depositBufferedEther()']({ from: depositor, gas: 12000000 })
+    await app.methods['depositBufferedEther()']({ from: depositor, gas: 20000000 })
 
     assertBn(await app.getTotalPooledEther(), ETH(amountToDeposit))
     assertBn(await app.getBufferedEther(), ETH(31))
@@ -617,7 +616,7 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
     await web3.eth.sendTransaction({ to: user1, from: user2, value: ETH(2000) })
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(amountToDeposit) })
 
-    await app.methods['depositBufferedEther()']({ from: depositor, gas: 12000000 })
+    await app.methods['depositBufferedEther()']({ from: depositor, gas: 20000000 })
 
     assertBn(await app.getTotalPooledEther(), ETH(amountToDeposit))
     assertBn(await app.getBufferedEther(), ETH(33))

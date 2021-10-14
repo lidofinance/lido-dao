@@ -45,6 +45,7 @@ const getNetConfig = (networkName, ethAccountName) => {
       gasPrice: 1
     },
     coverage: {
+      blockGasLimit: 20000000,
       url: 'http://localhost:8555'
     },
     'goerli-pyrmont': {
@@ -87,6 +88,7 @@ const getNetConfig = (networkName, ethAccountName) => {
     }
   }
   const netConfig = byNetName[networkName]
+  console.log('Net config', networkName, netConfig)
   return netConfig ? { [networkName]: netConfig } : {}
 }
 
