@@ -215,7 +215,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             uint64 totalSigningKeys = operators[operatorId].totalSigningKeys;
             uint64 usedSigningKeys = operators[operatorId].usedSigningKeys;
             if (totalSigningKeys != usedSigningKeys) { // write only if update is needed
-                operators[operatorId].totalSigningKeys = operators[operatorId].usedSigningKeys;  // discard unused keys
+                operators[operatorId].totalSigningKeys = usedSigningKeys;  // discard unused keys
                 emit NodeOperatorTotalKeysTrimmed(operatorId, totalSigningKeys - usedSigningKeys);
             }
         }
