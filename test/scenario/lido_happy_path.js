@@ -6,6 +6,9 @@ const { getEventArgument } = require('@aragon/contract-helpers-test')
 const { pad, toBN, ETH, tokens } = require('../helpers/utils')
 const { deployDaoAndPool } = require('./helpers/deploy')
 
+const { signDepositData } = require('../0.8.9/helpers/signatures')
+const { waitBlocks } = require('../helpers/blockchain')
+
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
 contract('Lido: happy path', (addresses) => {
@@ -22,16 +25,16 @@ contract('Lido: happy path', (addresses) => {
     user2,
     user3,
     // unrelated address
-    nobody,
-    depositor
+    nobody
   ] = addresses
 
   let pool, nodeOperatorRegistry, token
   let oracleMock, depositContractMock
-  let treasuryAddr, insuranceAddr
+  let treasuryAddr, insuranceAddr, guardians
+  let depositSecurityModule, depositRoot
 
-  it('DAO, node operators registry, token, and pool are deployed and initialized', async () => {
-    const deployed = await deployDaoAndPool(appManager, voting, depositor)
+  it('DAO, node operators registry, token, pool and deposit security module are deployed and initialized', async () => {
+    const deployed = await deployDaoAndPool(appManager, voting)
 
     // contracts/StETH.sol
     token = deployed.pool
@@ -49,6 +52,10 @@ contract('Lido: happy path', (addresses) => {
     // addresses
     treasuryAddr = deployed.treasuryAddr
     insuranceAddr = deployed.insuranceAddr
+    depositSecurityModule = deployed.depositSecurityModule
+    guardians = deployed.guardians
+
+    depositRoot = await depositContractMock.get_deposit_root()
   })
 
   // Fee and its distribution are in basis points, 10000 corresponding to 100%
@@ -140,7 +147,34 @@ contract('Lido: happy path', (addresses) => {
 
   it('the first user deposits 3 ETH to the pool', async () => {
     await web3.eth.sendTransaction({ to: pool.address, from: user1, value: ETH(3) })
-    await pool.methods['depositBufferedEther()']({ from: depositor })
+    const block = await web3.eth.getBlock('latest')
+    const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+    const signatures = [
+      signDepositData(
+        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
+        depositRoot,
+        keysOpIndex,
+        block.number,
+        block.hash,
+        guardians.privateKeys[guardians.addresses[0]]
+      ),
+      signDepositData(
+        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
+        depositRoot,
+        keysOpIndex,
+        block.number,
+        block.hash,
+        guardians.privateKeys[guardians.addresses[1]]
+      )
+    ]
+    await depositSecurityModule.depositBufferedEther(
+      await depositSecurityModule.getMaxDeposits(),
+      depositRoot,
+      keysOpIndex,
+      block.number,
+      block.hash,
+      signatures
+    )
 
     // No Ether was deposited yet to the validator contract
 
@@ -164,7 +198,34 @@ contract('Lido: happy path', (addresses) => {
 
   it('the second user deposits 30 ETH to the pool', async () => {
     await web3.eth.sendTransaction({ to: pool.address, from: user2, value: ETH(30) })
-    await pool.methods['depositBufferedEther()']({ from: depositor })
+    const block = await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
+    const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+    const signatures = [
+      signDepositData(
+        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
+        depositRoot,
+        keysOpIndex,
+        block.number,
+        block.hash,
+        guardians.privateKeys[guardians.addresses[0]]
+      ),
+      signDepositData(
+        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
+        depositRoot,
+        keysOpIndex,
+        block.number,
+        block.hash,
+        guardians.privateKeys[guardians.addresses[1]]
+      )
+    ]
+    await depositSecurityModule.depositBufferedEther(
+      await depositSecurityModule.getMaxDeposits(),
+      depositRoot,
+      keysOpIndex,
+      block.number,
+      block.hash,
+      signatures
+    )
 
     // The first 32 ETH chunk was deposited to the deposit contract,
     // using public key and signature of the only validator of the first operator
@@ -248,7 +309,35 @@ contract('Lido: happy path', (addresses) => {
 
   it('the third user deposits 64 ETH to the pool', async () => {
     await web3.eth.sendTransaction({ to: pool.address, from: user3, value: ETH(64) })
-    await pool.methods['depositBufferedEther()']({ from: depositor })
+
+    const block = await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
+    const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+    const signatures = [
+      signDepositData(
+        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
+        depositRoot,
+        keysOpIndex,
+        block.number,
+        block.hash,
+        guardians.privateKeys[guardians.addresses[0]]
+      ),
+      signDepositData(
+        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
+        depositRoot,
+        keysOpIndex,
+        block.number,
+        block.hash,
+        guardians.privateKeys[guardians.addresses[1]]
+      )
+    ]
+    await depositSecurityModule.depositBufferedEther(
+      await depositSecurityModule.getMaxDeposits(),
+      depositRoot,
+      keysOpIndex,
+      block.number,
+      block.hash,
+      signatures
+    )
 
     // The first 32 ETH chunk was deposited to the deposit contract,
     // using public key and signature of the only validator of the second operator
