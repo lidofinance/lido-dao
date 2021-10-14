@@ -160,6 +160,7 @@ contract DepositSecurityModule {
     }
 
     function _setPauseIntentValidityPeriodBlocks(uint256 newValue) internal {
+        require(newValue > 0, "invalid value for pauseIntentValidityPeriodBlocks: must be greater then 0");
         pauseIntentValidityPeriodBlocks = newValue;
         emit PauseIntentValidityPeriodBlocksChanged(newValue);
     }
@@ -200,6 +201,7 @@ contract DepositSecurityModule {
     }
 
     function _setMinDepositBlockDistance(uint256 newValue) internal {
+        require(newValue > 0, "invalid value for minDepositBlockDistance: must be greater then 0");
         minDepositBlockDistance = newValue;
         emit MinDepositBlockDistanceChanged(newValue);
     }

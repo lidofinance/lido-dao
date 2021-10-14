@@ -628,6 +628,12 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       const newNodeOperatorsRegistry = await NodeOperatorsRegistryMockForSecurityModule.new()
       await assertRevert(depositSecurityModule.setNodeOperatorsRegistry(newNodeOperatorsRegistry.address, { from: stranger }))
     })
+    it('pauseIntentValidityPeriodBlocks should be gt 0', async () => {
+      await assertRevert(
+        depositSecurityModule.setPauseIntentValidityPeriodBlocks(0, { from: owner }),
+        'invalid value for pauseIntentValidityPeriodBlocks: must be greater then 0'
+      )
+    })
     it('setPauseIntentValidityPeriodBlocks sets new value for pauseIntentValidityPeriodBlocks if called by owner', async () => {
       const newPauseIntentValidityPeriodBlocks = PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS + 1
       assert.notEqual(
@@ -661,6 +667,12 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
     it('setMaxDeposits reverts if called not by owner', async () => {
       const newMaxDeposits = MAX_DEPOSITS_PER_BLOCK + 1
       await assertRevert(depositSecurityModule.setMaxDeposits(newMaxDeposits, { from: stranger }))
+    })
+    it('minDepositBlockDistance should be gt 0', async () => {
+      await assertRevert(
+        depositSecurityModule.setMinDepositBlockDistance(0, { from: owner }),
+        'invalid value for minDepositBlockDistance: must be greater then 0'
+      )
     })
     it('setMinDepositBlockDistance sets new value for minDepositBlockDistance if called by owner', async () => {
       const newMinDepositBlockDistance = MIN_DEPOSIT_BLOCK_DISTANCE + 1

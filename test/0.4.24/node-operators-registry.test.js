@@ -2,11 +2,10 @@ const { assert } = require('chai')
 const { hexSplit } = require('../helpers/utils')
 const { newDao, newApp } = require('./helpers/dao')
 const { ZERO_ADDRESS, getEventAt, getEventArgument } = require('@aragon/contract-helpers-test')
-const { assertBn, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry.sol')
 const PoolMock = artifacts.require('PoolMock.sol')
-const ERC20Mock = artifacts.require('ERC20Mock.sol')
 
 const PUBKEY_LENGTH_BYTES = 48
 const SIGNATURE_LENGTH_BYTES = 96
@@ -786,19 +785,22 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     it('must increases on setNodeOperatorStakingLimit', async () => {
       await app.addNodeOperator('1', user1, { from: voting })
       assertBn(await app.getKeysOpIndex(), 0)
-      await app.setNodeOperatorStakingLimit(0, 40, { from: voting })
+      const tx = await app.setNodeOperatorStakingLimit(0, 40, { from: voting })
+      assertEvent(tx, 'KeysOpIndexSet', { expectedArgs: { keysOpIndex: 1 } })
       assertBn(await app.getKeysOpIndex(), 1)
     })
     it('must increases on addSigningKeys', async () => {
       await app.addNodeOperator('1', user1, { from: voting })
       assertBn(await app.getKeysOpIndex(), 0)
-      await app.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
+      const tx = await app.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
+      assertEvent(tx, 'KeysOpIndexSet', { expectedArgs: { keysOpIndex: 1 } })
       assertBn(await app.getKeysOpIndex(), 1)
     })
     it('must increases on addSigningKeysOperatorBH', async () => {
       await app.addNodeOperator('1', user1, { from: voting })
       assertBn(await app.getKeysOpIndex(), 0)
-      await app.addSigningKeysOperatorBH(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: user1 })
+      const tx = await app.addSigningKeysOperatorBH(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: user1 })
+      assertEvent(tx, 'KeysOpIndexSet', { expectedArgs: { keysOpIndex: 1 } })
       assertBn(await app.getKeysOpIndex(), 1)
     })
     it('must increases on removeSigningKey', async () => {
@@ -806,7 +808,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assertBn(await app.getKeysOpIndex(), 0)
       await app.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
       assertBn(await app.getKeysOpIndex(), 1)
-      await app.removeSigningKey(0, 0, { from: voting })
+      const tx = await app.removeSigningKey(0, 0, { from: voting })
+      assertEvent(tx, 'KeysOpIndexSet', { expectedArgs: { keysOpIndex: 2 } })
       assertBn(await app.getKeysOpIndex(), 2)
     })
     it('must increases on removeSigningKeyOperatorBH', async () => {
@@ -814,8 +817,16 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assertBn(await app.getKeysOpIndex(), 0)
       await app.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
       assertBn(await app.getKeysOpIndex(), 1)
-      await app.removeSigningKeyOperatorBH(0, 0, { from: user1 })
+      const tx = await app.removeSigningKeyOperatorBH(0, 0, { from: user1 })
+      assertEvent(tx, 'KeysOpIndexSet', { expectedArgs: { keysOpIndex: 2 } })
       assertBn(await app.getKeysOpIndex(), 2)
+    })
+    it('must increases on setNodeOperatorActive', async () => {
+      await app.addNodeOperator('1', user1, { from: voting })
+      assertBn(await app.getKeysOpIndex(), 0)
+      const tx = await app.setNodeOperatorActive(0, false, { from: voting })
+      assertEvent(tx, 'KeysOpIndexSet', { expectedArgs: { keysOpIndex: 1 } })
+      assertBn(await app.getKeysOpIndex(), 1)
     })
   })
 })
