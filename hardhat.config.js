@@ -40,6 +40,10 @@ const getNetConfig = (networkName, ethAccountName) => {
       url: 'http://localhost:8545',
       chainId: 1
     },
+    hardhat: {
+      blockGasLimit: 12000000,
+      gasPrice: 1
+    },
     coverage: {
       url: 'http://localhost:8555'
     },
