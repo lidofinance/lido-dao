@@ -116,11 +116,47 @@ interface INodeOperatorsRegistry {
     function addSigningKeys(uint256 _operator_id, uint256 _quantity, bytes _pubkeys, bytes _signatures) external;
 
     /**
+      * @notice Add `_quantity` validator signing keys of operator #`_id` to the set of usable keys. Concatenated keys are: `_pubkeys`. Can be done by node operator in question by using the designated rewards address.
+      * @dev Along with each key the DAO has to provide a signatures for the
+      *      (pubkey, withdrawal_credentials, 32000000000) message.
+      *      Given that information, the contract'll be able to call
+      *      deposit_contract.deposit on-chain.
+      * @param _operator_id Node Operator id
+      * @param _quantity Number of signing keys provided
+      * @param _pubkeys Several concatenated validator signing keys
+      * @param _signatures Several concatenated signatures for (pubkey, withdrawal_credentials, 32000000000) messages
+      */
+    function addSigningKeysOperatorBH(uint256 _operator_id, uint256 _quantity, bytes _pubkeys, bytes _signatures) external;
+
+    /**
       * @notice Removes a validator signing key #`_index` from the keys of the node operator #`_operator_id`
       * @param _operator_id Node Operator id
       * @param _index Index of the key, starting with 0
       */
     function removeSigningKey(uint256 _operator_id, uint256 _index) external;
+
+    /**
+      * @notice Removes a validator signing key #`_index` of operator #`_id` from the set of usable keys. Executed on behalf of Node Operator.
+      * @param _operator_id Node Operator id
+      * @param _index Index of the key, starting with 0
+      */
+    function removeSigningKeyOperatorBH(uint256 _operator_id, uint256 _index) external;
+
+    /**
+      * @notice Removes an #`_amount` of validator signing keys starting from #`_index` of operator #`_id` usable keys. Executed on behalf of DAO.
+      * @param _operator_id Node Operator id
+      * @param _index Index of the key, starting with 0
+      * @param _amount Number of keys to remove
+      */
+    function removeSigningKeys(uint256 _operator_id, uint256 _index, uint256 _amount) external;
+
+    /**
+      * @notice Removes an #`_amount` of validator signing keys starting from #`_index` of operator #`_id` usable keys. Executed on behalf of Node Operator.
+      * @param _operator_id Node Operator id
+      * @param _index Index of the key, starting with 0
+      * @param _amount Number of keys to remove
+      */
+    function removeSigningKeysOperatorBH(uint256 _operator_id, uint256 _index, uint256 _amount) external;
 
     /**
       * @notice Returns total number of signing keys of the node operator #`_operator_id`
