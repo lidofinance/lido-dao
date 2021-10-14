@@ -20,6 +20,7 @@ contract DepositContractMock is IDepositContract {
     }
 
     Call[] public calls;
+    bytes32 internal depositRoot;
 
     function deposit(
         bytes /* 48 */ pubkey,
@@ -39,5 +40,13 @@ contract DepositContractMock is IDepositContract {
 
     function reset() external {
         calls.length = 0;
+    }
+
+    function get_deposit_root() external view returns (bytes32) {
+        return depositRoot;
+    }
+
+    function set_deposit_root(bytes32 _newRoot) external {
+        depositRoot = _newRoot;
     }
 }
