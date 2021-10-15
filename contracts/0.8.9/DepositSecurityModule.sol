@@ -411,7 +411,7 @@ contract DepositSecurityModule {
 
         require(maxDeposits <= maxDepositsPerBlock, "too many deposits");
         require(block.number - lastDepositBlock >= minDepositBlockDistance, "too frequent deposits");
-        require(blockhash(blockNumber) == blockHash, "unexpected block hash");
+        require(blockHash != bytes32(0) && blockhash(blockNumber) == blockHash, "unexpected block hash");
 
         uint256 onchainKeysOpIndex = INodeOperatorsRegistry(nodeOperatorsRegistry).getKeysOpIndex();
         require(keysOpIndex == onchainKeysOpIndex, "keys op index changed");

@@ -217,6 +217,24 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
           'unexpected block hash'
         )
       })
+      it('cannot deposit with zero block hash', async () => {
+        const staleBlock = block
+        await waitBlocks(255)
+        const signatures = [
+          signDepositData(
+            ATTEST_MESSAGE_PREFIX,
+            DEPOSIT_ROOT,
+            KEYS_OP_INDEX,
+            staleBlock.number,
+            staleBlock.hash,
+            GUARDIAN_PRIVATE_KEYS[GUARDIAN1]
+          )
+        ]
+        await assertRevert(
+          depositSecurityModule.depositBufferedEther(MAX_DEPOSITS, DEPOSIT_ROOT, KEYS_OP_INDEX, staleBlock.number, '0x', signatures),
+          'unexpected block hash'
+        )
+      })
     })
     context('total_guardians=3, quorum=2', () => {
       beforeEach('set total_guardians=3, quorum=2', async () => {
