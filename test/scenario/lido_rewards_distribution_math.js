@@ -205,14 +205,7 @@ contract('Lido: rewards distribution math', (addresses) => {
         guardians.privateKeys[guardians.addresses[1]]
       )
     ]
-    await depositSecurityModule.depositBufferedEther(
-      await depositSecurityModule.getMaxDeposits(),
-      depositRoot,
-      keysOpIndex,
-      block.number,
-      block.hash,
-      signatures
-    )
+    await depositSecurityModule.depositBufferedEther(depositRoot, keysOpIndex, block.number, block.hash, signatures)
 
     assertBn(await nodeOperatorRegistry.getUnusedSigningKeyCount(0), 0, 'no more available keys for the first validator')
     assertBn(await token.balanceOf(user1), ETH(34), 'user1 balance is equal first reported value + their buffered deposit value')
@@ -369,9 +362,8 @@ contract('Lido: rewards distribution math', (addresses) => {
         guardians.privateKeys[guardians.addresses[1]]
       )
     ]
-    const maxDeposits = await depositSecurityModule.getMaxDeposits()
     const [_, deltas] = await getSharesTokenDeltas(
-      () => depositSecurityModule.depositBufferedEther(maxDeposits, depositRoot, keysOpIndex, block.number, block.hash, signatures),
+      () => depositSecurityModule.depositBufferedEther(depositRoot, keysOpIndex, block.number, block.hash, signatures),
       treasuryAddr,
       insuranceAddr,
       nodeOperator1.address,

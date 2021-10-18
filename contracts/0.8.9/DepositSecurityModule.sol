@@ -167,14 +167,14 @@ contract DepositSecurityModule {
 
 
     /**
-     * Returns `MAX_DEPOSITS` (see `depositBufferedEther`).
+     * Returns `maxDepositsPerBlock` (see `depositBufferedEther`).
      */
     function getMaxDeposits() external view returns (uint256) {
         return maxDepositsPerBlock;
     }
 
     /**
-     * Sets `MAX_DEPOSITS`. Only callable by the owner.
+     * Sets `maxDepositsPerBlock`. Only callable by the owner.
      */
     function setMaxDeposits(uint256 newValue) external onlyOwner {
         _setMaxDeposits(newValue);
@@ -386,9 +386,8 @@ contract DepositSecurityModule {
      *   2. INodeOperatorsRegistry.getKeysOpIndex() != keysOpIndex.
      *   3. The number of guardian signatures is less than getGuardianQuorum().
      *   4. An invalid or non-guardian signature received.
-     *   5. maxDeposits > MAX_DEPOSITS
-     *   6. block.number - lastLidoDepositBlock < MIN_DEPOSIT_BLOCK_DISTANCE
-     *   7. blockhash(blockNumber) == blockHash
+     *   5. block.number - lastLidoDepositBlock < MIN_DEPOSIT_BLOCK_DISTANCE
+     *   6. blockhash(blockNumber) == blockHash
      *
      * Signatures must be sorted in ascending order by index of the guardian. Each signature must
      * be produced for keccak256 hash of the following message (each component taking 32 bytes):
@@ -396,7 +395,6 @@ contract DepositSecurityModule {
      * | ATTEST_MESSAGE_PREFIX | depositRoot | keysOpIndex | blockNumber | blockHash |
      */
     function depositBufferedEther(
-        uint256 maxDeposits,
         bytes32 depositRoot,
         uint256 keysOpIndex,
         uint256 blockNumber,
@@ -409,7 +407,6 @@ contract DepositSecurityModule {
         require(!paused, "deposits are paused");
         require(quorum > 0 && sortedGuardianSignatures.length >= quorum, "no guardian quorum");
 
-        require(maxDeposits <= maxDepositsPerBlock, "too many deposits");
         require(block.number - lastDepositBlock >= minDepositBlockDistance, "too frequent deposits");
         require(blockHash != bytes32(0) && blockhash(blockNumber) == blockHash, "unexpected block hash");
 
@@ -424,7 +421,7 @@ contract DepositSecurityModule {
             sortedGuardianSignatures
         );
 
-        ILido(LIDO).depositBufferedEther(maxDeposits);
+        ILido(LIDO).depositBufferedEther(maxDepositsPerBlock);
         lastDepositBlock = block.number;
     }
 

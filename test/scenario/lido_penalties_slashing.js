@@ -175,14 +175,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
         guardians.privateKeys[guardians.addresses[1]]
       )
     ]
-    await depositSecurityModule.depositBufferedEther(
-      await depositSecurityModule.getMaxDeposits(),
-      depositRoot,
-      keysOpIndex,
-      block.number,
-      block.hash,
-      signatures
-    )
+    await depositSecurityModule.depositBufferedEther(depositRoot, keysOpIndex, block.number, block.hash, signatures)
 
     // No Ether was deposited yet to the validator contract
 
@@ -237,14 +230,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
         guardians.privateKeys[guardians.addresses[1]]
       )
     ]
-    await depositSecurityModule.depositBufferedEther(
-      await depositSecurityModule.getMaxDeposits(),
-      depositRoot,
-      keysOpIndex,
-      block.number,
-      block.hash,
-      signatures
-    )
+    await depositSecurityModule.depositBufferedEther(depositRoot, keysOpIndex, block.number, block.hash, signatures)
   })
 
   it('new validator gets the 32 ETH deposit from the pool', async () => {
@@ -419,14 +405,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
         guardians.privateKeys[guardians.addresses[1]]
       )
     ]
-    await depositSecurityModule.depositBufferedEther(
-      await depositSecurityModule.getMaxDeposits(),
-      depositRoot,
-      keysOpIndex,
-      block.number,
-      block.hash,
-      signatures
-    )
+    await depositSecurityModule.depositBufferedEther(depositRoot, keysOpIndex, block.number, block.hash, signatures)
 
     assertBn(await depositContractMock.totalCalls(), 2)
 
@@ -583,14 +562,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
         guardians.privateKeys[guardians.addresses[1]]
       )
     ]
-    await depositSecurityModule.depositBufferedEther(
-      await depositSecurityModule.getMaxDeposits(),
-      depositRoot,
-      keysOpIndex,
-      block.number,
-      block.hash,
-      signatures
-    )
+    await depositSecurityModule.depositBufferedEther(depositRoot, keysOpIndex, block.number, block.hash, signatures)
 
     const ether2Stat = await pool.getBeaconStat()
     assertBn(ether2Stat.depositedValidators, 2, 'no validators have received the current deposit')

@@ -93,8 +93,7 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
     assertBn(ether2Stat.depositedValidators, 0, 'deposited validators')
   })
 
-  it('guardians can assign the buffered ether to validators by calling depositBufferedEther() and passing deposit iteration limit', async () => {
-    const depositIterationLimit = 5
+  it('guardians can assign the buffered ether to validators by calling depositBufferedEther()', async () => {
     let bufferedEther = await pool.getBufferedEther()
 
     const block = await web3.eth.getBlock('latest')
@@ -117,7 +116,7 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
         guardians.privateKeys[guardians.addresses[1]]
       )
     ]
-    await depositSecurityModule.depositBufferedEther(depositIterationLimit, depositRoot, keysOpIndex, block.number, block.hash, signatures)
+    await depositSecurityModule.depositBufferedEther(depositRoot, keysOpIndex, block.number, block.hash, signatures)
 
     // no more than depositIterationLimit validators are assigned in a single transaction
     assertBn(await depositContractMock.totalCalls(), 5, 'total validators assigned')
@@ -134,59 +133,6 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
   it('guardians can advance the deposit loop further by calling depositBufferedEther() once again', async () => {
     const depositIterationLimit = 10
 
-    let block = await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
-    let keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
-    let signatures = [
-      signDepositData(
-        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
-        depositRoot,
-        keysOpIndex,
-        block.number,
-        block.hash,
-        guardians.privateKeys[guardians.addresses[0]]
-      ),
-      signDepositData(
-        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
-        depositRoot,
-        keysOpIndex,
-        block.number,
-        block.hash,
-        guardians.privateKeys[guardians.addresses[1]]
-      )
-    ]
-    await depositSecurityModule.depositBufferedEther(depositIterationLimit, depositRoot, keysOpIndex, block.number, block.hash, signatures)
-
-    block = await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
-    keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
-    signatures = [
-      signDepositData(
-        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
-        depositRoot,
-        keysOpIndex,
-        block.number,
-        block.hash,
-        guardians.privateKeys[guardians.addresses[0]]
-      ),
-      signDepositData(
-        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
-        depositRoot,
-        keysOpIndex,
-        block.number,
-        block.hash,
-        guardians.privateKeys[guardians.addresses[1]]
-      )
-    ]
-
-    assertBn(await depositContractMock.totalCalls(), 15, 'total validators assigned')
-
-    const ether2Stat = await pool.getBeaconStat()
-    assertBn(ether2Stat.depositedValidators, 15, 'deposited validators')
-
-    assertBn(await pool.getBufferedEther(), ETH(5 * 32), 'buffered ether')
-  })
-
-  it('the number of assigned validators is limited by the remaining ether', async () => {
-    const depositIterationLimit = 10
     const block = await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
     const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
     const signatures = [
@@ -207,7 +153,38 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
         guardians.privateKeys[guardians.addresses[1]]
       )
     ]
-    await depositSecurityModule.depositBufferedEther(depositIterationLimit, depositRoot, keysOpIndex, block.number, block.hash, signatures)
+    await depositSecurityModule.depositBufferedEther(depositRoot, keysOpIndex, block.number, block.hash, signatures)
+
+    assertBn(await depositContractMock.totalCalls(), 15, 'total validators assigned')
+
+    const ether2Stat = await pool.getBeaconStat()
+    assertBn(ether2Stat.depositedValidators, 15, 'deposited validators')
+
+    assertBn(await pool.getBufferedEther(), ETH(5 * 32), 'buffered ether')
+  })
+
+  it('the number of assigned validators is limited by the remaining ether', async () => {
+    const block = await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
+    const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+    const signatures = [
+      signDepositData(
+        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
+        depositRoot,
+        keysOpIndex,
+        block.number,
+        block.hash,
+        guardians.privateKeys[guardians.addresses[0]]
+      ),
+      signDepositData(
+        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
+        depositRoot,
+        keysOpIndex,
+        block.number,
+        block.hash,
+        guardians.privateKeys[guardians.addresses[1]]
+      )
+    ]
+    await depositSecurityModule.depositBufferedEther(depositRoot, keysOpIndex, block.number, block.hash, signatures)
 
     assertBn(await depositContractMock.totalCalls(), 20)
 
@@ -227,7 +204,6 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
   })
 
   it('the number of assigned validators is still limited by the number of available validator keys', async () => {
-    const depositIterationLimit = 10
     const block = await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
     const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
     const signatures = [
@@ -248,7 +224,7 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
         guardians.privateKeys[guardians.addresses[1]]
       )
     ]
-    await depositSecurityModule.depositBufferedEther(depositIterationLimit, depositRoot, keysOpIndex, block.number, block.hash, signatures)
+    await depositSecurityModule.depositBufferedEther(depositRoot, keysOpIndex, block.number, block.hash, signatures)
 
     assertBn(await depositContractMock.totalCalls(), 21)
 
@@ -260,7 +236,6 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
   })
 
   it('depositBufferedEther is a nop if there are no signing keys available', async () => {
-    const depositIterationLimit = 10
     const block = await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
     const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
     const signatures = [
@@ -281,7 +256,7 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
         guardians.privateKeys[guardians.addresses[1]]
       )
     ]
-    await depositSecurityModule.depositBufferedEther(depositIterationLimit, depositRoot, keysOpIndex, block.number, block.hash, signatures)
+    await depositSecurityModule.depositBufferedEther(depositRoot, keysOpIndex, block.number, block.hash, signatures)
 
     assertBn(await depositContractMock.totalCalls(), 21, 'total validators assigned')
 
