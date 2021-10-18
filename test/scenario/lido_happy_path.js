@@ -168,14 +168,7 @@ contract('Lido: happy path', (addresses) => {
         guardians.privateKeys[guardians.addresses[1]]
       )
     ]
-    await depositSecurityModule.depositBufferedEther(
-      await depositSecurityModule.getMaxDeposits(),
-      depositRoot,
-      keysOpIndex,
-      block.number,
-      block.hash,
-      signatures
-    )
+    await depositSecurityModule.depositBufferedEther(depositRoot, keysOpIndex, block.number, block.hash, signatures)
 
     // No Ether was deposited yet to the validator contract
 
@@ -219,14 +212,7 @@ contract('Lido: happy path', (addresses) => {
         guardians.privateKeys[guardians.addresses[1]]
       )
     ]
-    await depositSecurityModule.depositBufferedEther(
-      await depositSecurityModule.getMaxDeposits(),
-      depositRoot,
-      keysOpIndex,
-      block.number,
-      block.hash,
-      signatures
-    )
+    await depositSecurityModule.depositBufferedEther(depositRoot, keysOpIndex, block.number, block.hash, signatures)
 
     // The first 32 ETH chunk was deposited to the deposit contract,
     // using public key and signature of the only validator of the first operator
@@ -331,14 +317,7 @@ contract('Lido: happy path', (addresses) => {
         guardians.privateKeys[guardians.addresses[1]]
       )
     ]
-    await depositSecurityModule.depositBufferedEther(
-      await depositSecurityModule.getMaxDeposits(),
-      depositRoot,
-      keysOpIndex,
-      block.number,
-      block.hash,
-      signatures
-    )
+    await depositSecurityModule.depositBufferedEther(depositRoot, keysOpIndex, block.number, block.hash, signatures)
 
     // The first 32 ETH chunk was deposited to the deposit contract,
     // using public key and signature of the only validator of the second operator
@@ -508,14 +487,7 @@ contract('Lido: happy path', (addresses) => {
         guardians.privateKeys[guardians.addresses[1]]
       )
     ]
-    await depositSecurityModule.depositBufferedEther(
-      await depositSecurityModule.getMaxDeposits(),
-      depositRoot,
-      keysOpIndex,
-      block.number,
-      block.hash,
-      signatures
-    )
+    await depositSecurityModule.depositBufferedEther(depositRoot, keysOpIndex, block.number, block.hash, signatures)
     let nodeOperatorInfo = await nodeOperatorRegistry.getNodeOperator(nodeOperator3.id, false)
 
     // validate that only 5 signing keys used after key removing
