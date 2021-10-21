@@ -1,6 +1,7 @@
 const { assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const { assert } = require('chai')
 const { signDepositData, signPauseData } = require('./helpers/signatures')
+const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 
 // generateGuardianSignatures
 
@@ -557,6 +558,12 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
     })
     it('not owner cannot change', async () => {
       await assertRevert(depositSecurityModule.setOwner(stranger, { from: stranger }), 'not an owner')
+    })
+    it('set new owner to zero address should reverts', async () => {
+      await assertRevert(
+        depositSecurityModule.setOwner(ZERO_ADDRESS, { from: owner }),
+        'invalid value for owner: must be different from zero address'
+      )
     })
     it('set new owner by owner', async () => {
       assertEvent(await depositSecurityModule.setOwner(stranger, { from: owner }), 'OwnerChanged', {

@@ -120,6 +120,7 @@ contract DepositSecurityModule {
     }
 
     function _setOwner(address newValue) internal {
+        require(newValue != address(0), "invalid value for owner: must be different from zero address");
         owner = newValue;
         emit OwnerChanged(newValue);
     }
