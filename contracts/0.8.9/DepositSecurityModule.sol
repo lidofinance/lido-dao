@@ -372,6 +372,14 @@ contract DepositSecurityModule {
 
 
     /**
+     * Returns the last block that contains a deposit performed via this security module.
+     */
+    function getLastDepositBlock() external view returns (uint256) {
+        return lastDepositBlock;
+    }
+
+
+    /**
      * Returns whether depositBufferedEther can be called, given that the caller will provide
      * guardian attestations of non-stale deposit root and `keysOpIndex`, and the number of
      * such attestations will be enough to reach quorum.
@@ -389,7 +397,7 @@ contract DepositSecurityModule {
      *   2. INodeOperatorsRegistry.getKeysOpIndex() != keysOpIndex.
      *   3. The number of guardian signatures is less than getGuardianQuorum().
      *   4. An invalid or non-guardian signature received.
-     *   5. block.number - lastLidoDepositBlock < MIN_DEPOSIT_BLOCK_DISTANCE
+     *   5. block.number - getLastDepositBlock() < MIN_DEPOSIT_BLOCK_DISTANCE
      *   6. blockhash(blockNumber) == blockHash
      *
      * Signatures must be sorted in ascending order by index of the guardian. Each signature must
