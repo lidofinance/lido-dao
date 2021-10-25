@@ -2,6 +2,7 @@ const fs = require('fs')
 const path = require('path')
 
 require('@nomiclabs/hardhat-web3')
+require('@nomiclabs/hardhat-ethers')
 require('@nomiclabs/hardhat-truffle5')
 require('@nomiclabs/hardhat-ganache')
 require('@nomiclabs/hardhat-etherscan')
@@ -39,7 +40,12 @@ const getNetConfig = (networkName, ethAccountName) => {
       url: 'http://localhost:8545',
       chainId: 1
     },
+    hardhat: {
+      blockGasLimit: 20000000,
+      gasPrice: 1
+    },
     coverage: {
+      blockGasLimit: 20000000,
       url: 'http://localhost:8555'
     },
     'goerli-pyrmont': {
@@ -70,6 +76,15 @@ const getNetConfig = (networkName, ethAccountName) => {
       url: 'https://mainnet.infura.io/v3/' + accounts.infura.projectId,
       chainId: 1,
       timeout: 60000 * 10
+    },
+    fork: {
+      ...base,
+      chainId: 1,
+      timeout: 60000 * 10,
+      forking: {
+        url: 'https://mainnet.infura.io/v3/' + accounts.infura.projectId
+        // url: 'https://eth-mainnet.alchemyapi.io/v2/' + accounts.alchemy.apiKey
+      }
     }
   }
   const netConfig = byNetName[networkName]
@@ -84,6 +99,13 @@ const solcSettings4 = {
   evmVersion: 'constantinople'
 }
 const solcSettings6 = {
+  optimizer: {
+    enabled: true,
+    runs: 200
+  },
+  evmVersion: 'istanbul'
+}
+const solcSettings8 = {
   optimizer: {
     enabled: true,
     runs: 200
@@ -107,6 +129,10 @@ module.exports = {
       {
         version: '0.6.12',
         settings: solcSettings6
+      },
+      {
+        version: '0.8.9',
+        settings: solcSettings8
       }
     ],
     overrides: {

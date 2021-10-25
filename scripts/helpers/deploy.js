@@ -5,22 +5,23 @@ const { assert } = require('chai')
 const { log, logDeploy, logDeployTxData } = require('./log')
 const { getTxData } = require('./tx-data')
 
-async function printDeployTx(artifactName, args, opts = {}) {
-  const txData = await getDeployTx(artifactName, args, opts)
+async function printDeployTx(artifactName, opts = {}) {
+  const txData = await getDeployTx(artifactName, opts)
   logDeployTxData(artifactName, txData)
   return txData
 }
 
-async function saveDeployTx(artifactName, filename, args, opts = {}) {
-  const txData = await getDeployTx(artifactName, args, opts)
+async function saveDeployTx(artifactName, filename, opts = {}) {
+  const txData = await getDeployTx(artifactName, opts)
   log(`Saving deploy TX data for ${artifactName} to ${chalk.yellow(filename)}`)
   await fs.writeFile(filename, JSON.stringify(txData, null, '  '))
   return txData
 }
 
-async function getDeployTx(artifactName, args = [], opts = {}) {
+async function getDeployTx(artifactName, opts = {}) {
+  const { arguments: args = [], ...txOpts } = opts
   const artifactData = await artifacts.readArtifact(artifactName)
-  const contract = new web3.eth.Contract(artifactData.abi)
+  const contract = new web3.eth.Contract(artifactData.abi, txOpts)
   const txObj = contract.deploy({ data: artifactData.bytecode, arguments: args })
   return await getTxData(txObj)
 }

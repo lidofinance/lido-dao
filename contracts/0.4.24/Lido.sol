@@ -46,6 +46,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     bytes32 constant public BURN_ROLE = keccak256("BURN_ROLE");
     bytes32 constant public SET_TREASURY = keccak256("SET_TREASURY");
     bytes32 constant public SET_INSURANCE_FUND = keccak256("SET_INSURANCE_FUND");
+    bytes32 constant public DEPOSIT_ROLE = keccak256("DEPOSIT_ROLE");
 
     uint256 constant public PUBKEY_LENGTH = 48;
     uint256 constant public WITHDRAWAL_CREDENTIALS_LENGTH = 32;
@@ -56,7 +57,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     uint256 internal constant DEPOSIT_AMOUNT_UNIT = 1000000000 wei;
 
     /// @dev default value for maximum number of Ethereum 2.0 validators registered in a single depositBufferedEther call
-    uint256 internal constant DEFAULT_MAX_DEPOSITS_PER_CALL = 16;
+    uint256 internal constant DEFAULT_MAX_DEPOSITS_PER_CALL = 150;
 
     bytes32 internal constant FEE_POSITION = keccak256("lido.Lido.fee");
     bytes32 internal constant TREASURY_FEE_POSITION = keccak256("lido.Lido.treasuryFee");
@@ -131,7 +132,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     * @notice Deposits buffered ethers to the official DepositContract.
     * @dev This function is separated from submit() to reduce the cost of sending funds.
     */
-    function depositBufferedEther() external {
+    function depositBufferedEther() external auth(DEPOSIT_ROLE) {
         return _depositBufferedEther(DEFAULT_MAX_DEPOSITS_PER_CALL);
     }
 
@@ -139,7 +140,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
       * @notice Deposits buffered ethers to the official DepositContract, making no more than `_maxDeposits` deposit calls.
       * @dev This function is separated from submit() to reduce the cost of sending funds.
       */
-    function depositBufferedEther(uint256 _maxDeposits) external {
+    function depositBufferedEther(uint256 _maxDeposits) external auth(DEPOSIT_ROLE) {
         return _depositBufferedEther(_maxDeposits);
     }
 
@@ -297,7 +298,8 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         uint256 balance;
         if (_token == ETH) {
             balance = _getUnaccountedEther();
-            vault.transfer(balance);
+            // Transfer replaced by call to prevent transfer gas amount issue    
+            require(vault.call.value(balance)(), "RECOVER_TRANSFER_FAILED");
         } else {
             ERC20 token = ERC20(_token);
             balance = token.staticBalanceOf(this);

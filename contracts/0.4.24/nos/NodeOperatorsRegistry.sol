@@ -79,6 +79,9 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     /// @dev link to the Lido contract
     bytes32 internal constant LIDO_POSITION = keccak256("lido.NodeOperatorsRegistry.lido");
 
+    /// @dev link to the index of operations with keys
+    bytes32 internal constant KEYS_OP_INDEX_POSITION = keccak256("lido.NodeOperatorsRegistry.keysOpIndex");
+
 
     modifier onlyLido() {
         require(msg.sender == LIDO_POSITION.getStorageAddress(), "APP_AUTH_FAILED");
@@ -98,18 +101,18 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     function initialize(address _lido) public onlyInit {
         TOTAL_OPERATORS_COUNT_POSITION.setStorageUint256(0);
         ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(0);
+        KEYS_OP_INDEX_POSITION.setStorageUint256(0);
         LIDO_POSITION.setStorageAddress(_lido);
         initialized();
     }
 
     /**
-      * @notice Add node operator named `_name` with reward address `_rewardAddress` and staking limit `_stakingLimit`
+      * @notice Add node operator named `_name` with reward address `_rewardAddress` and staking limit = 0
       * @param _name Human-readable name
       * @param _rewardAddress Ethereum 1 address which receives stETH rewards for this operator
-      * @param _stakingLimit the maximum number of validators to stake for this operator
       * @return a unique key of the added operator
       */
-    function addNodeOperator(string _name, address _rewardAddress, uint64 _stakingLimit) external
+    function addNodeOperator(string _name, address _rewardAddress) external
         auth(ADD_NODE_OPERATOR_ROLE)
         validAddress(_rewardAddress)
         returns (uint256 id)
@@ -125,9 +128,9 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         operator.active = true;
         operator.name = _name;
         operator.rewardAddress = _rewardAddress;
-        operator.stakingLimit = _stakingLimit;
+        operator.stakingLimit = 0;
 
-        emit NodeOperatorAdded(id, _name, _rewardAddress, _stakingLimit);
+        emit NodeOperatorAdded(id, _name, _rewardAddress, 0);
 
         return id;
     }
@@ -139,6 +142,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         authP(SET_NODE_OPERATOR_ACTIVE_ROLE, arr(_id, _active ? uint256(1) : uint256(0)))
         operatorExists(_id)
     {
+        _increaseKeysOpIndex();
         if (operators[_id].active != _active) {
             uint256 activeOperatorsCount = getActiveNodeOperatorsCount();
             if (_active)
@@ -182,6 +186,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         authP(SET_NODE_OPERATOR_LIMIT_ROLE, arr(_id, uint256(_stakingLimit)))
         operatorExists(_id)
     {
+        _increaseKeysOpIndex();
         operators[_id].stakingLimit = _stakingLimit;
         emit NodeOperatorStakingLimitSet(_id, _stakingLimit);
     }
@@ -207,8 +212,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     function trimUnusedKeys() external onlyLido {
         uint256 length = getNodeOperatorsCount();
         for (uint256 operatorId = 0; operatorId < length; ++operatorId) {
-            if (operators[operatorId].totalSigningKeys != operators[operatorId].usedSigningKeys)  // write only if update is needed
-                operators[operatorId].totalSigningKeys = operators[operatorId].usedSigningKeys;  // discard unused keys
+            uint64 totalSigningKeys = operators[operatorId].totalSigningKeys;
+            uint64 usedSigningKeys = operators[operatorId].usedSigningKeys;
+            if (totalSigningKeys != usedSigningKeys) { // write only if update is needed
+                operators[operatorId].totalSigningKeys = usedSigningKeys;  // discard unused keys
+                emit NodeOperatorTotalKeysTrimmed(operatorId, totalSigningKeys - usedSigningKeys);
+            }
         }
     }
 
@@ -265,6 +274,22 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     /**
+      * @notice Removes an #`_amount` of validator signing keys starting from #`_index` of operator #`_id` usable keys. Executed on behalf of DAO.
+      * @param _operator_id Node Operator id
+      * @param _index Index of the key, starting with 0
+      * @param _amount Number of keys to remove
+      */
+    function removeSigningKeys(uint256 _operator_id, uint256 _index, uint256 _amount)
+        external
+        authP(MANAGE_SIGNING_KEYS, arr(_operator_id))
+    {
+        // removing from the last index to the highest one, so we won't get outside the array
+        for (uint256 i = _index + _amount; i > _index ; --i) {
+            _removeSigningKey(_operator_id, i - 1);
+        }
+    }
+
+    /**
       * @notice Removes a validator signing key #`_index` of operator #`_id` from the set of usable keys. Executed on behalf of Node Operator.
       * @param _operator_id Node Operator id
       * @param _index Index of the key, starting with 0
@@ -272,6 +297,20 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     function removeSigningKeyOperatorBH(uint256 _operator_id, uint256 _index) external {
         require(msg.sender == operators[_operator_id].rewardAddress, "APP_AUTH_FAILED");
         _removeSigningKey(_operator_id, _index);
+    }
+
+    /**
+      * @notice Removes an #`_amount` of validator signing keys starting from #`_index` of operator #`_id` usable keys. Executed on behalf of Node Operator.
+      * @param _operator_id Node Operator id
+      * @param _index Index of the key, starting with 0
+      * @param _amount Number of keys to remove
+      */
+    function removeSigningKeysOperatorBH(uint256 _operator_id, uint256 _index, uint256 _amount) external {
+        require(msg.sender == operators[_operator_id].rewardAddress, "APP_AUTH_FAILED");
+        // removing from the last index to the highest one, so we won't get outside the array
+        for (uint256 i = _index + _amount; i > _index ; --i) {
+            _removeSigningKey(_operator_id, i - 1);
+        }
     }
 
     /**
@@ -484,6 +523,18 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         return TOTAL_OPERATORS_COUNT_POSITION.getStorageUint256();
     }
 
+    /**
+     * @notice Returns a monotonically increasing counter that gets incremented when any of the following happens:
+     *   1. a node operator's key(s) is added;
+     *   2. a node operator's key(s) is removed;
+     *   3. a node operator's approved keys limit is changed.
+     *   4. a node operator was activated/deactivated. Activation or deactivation of node operator
+     *      might lead to usage of unvalidated keys in the assignNextSigningKeys method.
+     */
+    function getKeysOpIndex() public view returns (uint256) {
+        return KEYS_OP_INDEX_POSITION.getStorageUint256();
+    }
+
     function _isEmptySigningKey(bytes memory _key) internal pure returns (bool) {
         assert(_key.length == PUBKEY_LENGTH);
         // algorithm applicability constraint
@@ -540,6 +591,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         require(_pubkeys.length == _quantity.mul(PUBKEY_LENGTH), "INVALID_LENGTH");
         require(_signatures.length == _quantity.mul(SIGNATURE_LENGTH), "INVALID_LENGTH");
 
+        _increaseKeysOpIndex();
+
         for (uint256 i = 0; i < _quantity; ++i) {
             bytes memory key = BytesLib.slice(_pubkeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
             require(!_isEmptySigningKey(key), "EMPTY_KEY");
@@ -558,6 +611,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         require(_index < operators[_operator_id].totalSigningKeys, "KEY_NOT_FOUND");
         require(_index >= operators[_operator_id].usedSigningKeys, "KEY_WAS_USED");
 
+        _increaseKeysOpIndex();
+
         (bytes memory removedKey, ) = _loadSigningKey(_operator_id, _index);
 
         uint256 lastIndex = operators[_operator_id].totalSigningKeys.sub(1);
@@ -568,6 +623,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
         _deleteSigningKey(_operator_id, lastIndex);
         operators[_operator_id].totalSigningKeys = operators[_operator_id].totalSigningKeys.sub(1);
+
+        if (_index < operators[_operator_id].stakingLimit) {
+            // decreasing the staking limit so the key at _index can't be used anymore
+            operators[_operator_id].stakingLimit = uint64(_index);
+        }
 
         emit SigningKeyRemoved(_operator_id, removedKey);
     }
@@ -633,5 +693,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         require(idx == cache.length, "INCOSISTENT_ACTIVE_COUNT");
 
         return cache;
+    }
+
+    function _increaseKeysOpIndex() internal {
+        uint256 keysOpIndex = getKeysOpIndex();
+        KEYS_OP_INDEX_POSITION.setStorageUint256(keysOpIndex + 1);
+        emit KeysOpIndexSet(keysOpIndex + 1);
     }
 }
