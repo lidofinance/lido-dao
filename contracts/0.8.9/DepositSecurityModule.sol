@@ -58,7 +58,7 @@ contract DepositSecurityModule {
     address internal owner;
 
     address[] internal guardians;
-    mapping(address => uint256) guardianIndicesOneBased; // 1-based
+    mapping(address => uint256) internal guardianIndicesOneBased; // 1-based
     uint256 internal quorum;
 
     bool internal paused;
