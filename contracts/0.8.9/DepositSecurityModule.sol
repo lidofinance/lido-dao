@@ -335,6 +335,10 @@ contract DepositSecurityModule {
      * | PAUSE_MESSAGE_PREFIX | blockNumber
      */
     function pauseDeposits(uint256 blockNumber, Signature memory sig) external {
+        if (paused) {
+            return;
+        }
+
         address guardianAddr = msg.sender;
         int256 guardianIndex = _getGuardianIndex(msg.sender);
 
@@ -350,10 +354,8 @@ contract DepositSecurityModule {
             "pause intent expired"
         );
 
-        if (!paused) {
-            paused = true;
-            emit DepositsPaused(guardianAddr);
-        }
+        paused = true;
+        emit DepositsPaused(guardianAddr);
     }
 
     /**
