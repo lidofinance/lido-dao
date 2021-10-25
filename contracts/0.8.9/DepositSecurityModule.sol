@@ -168,14 +168,14 @@ contract DepositSecurityModule {
 
 
     /**
-     * Returns `maxDepositsPerBlock` (see `depositBufferedEther`).
+     * Returns `MAX_DEPOSITS_PER_BLOCK` (see `depositBufferedEther`).
      */
     function getMaxDeposits() external view returns (uint256) {
         return maxDepositsPerBlock;
     }
 
     /**
-     * Sets `maxDepositsPerBlock`. Only callable by the owner.
+     * Sets `MAX_DEPOSITS_PER_BLOCK`. Only callable by the owner.
      */
     function setMaxDeposits(uint256 newValue) external onlyOwner {
         _setMaxDeposits(newValue);
@@ -390,15 +390,15 @@ contract DepositSecurityModule {
 
 
     /**
-     * Calls Lido.depositBufferedEther(maxDeposits).
+     * Calls Lido.depositBufferedEther(MAX_DEPOSITS_PER_BLOCK).
      *
      * Reverts if any of the following is true:
      *   1. IDepositContract.get_deposit_root() != depositRoot.
      *   2. INodeOperatorsRegistry.getKeysOpIndex() != keysOpIndex.
      *   3. The number of guardian signatures is less than getGuardianQuorum().
      *   4. An invalid or non-guardian signature received.
-     *   5. block.number - getLastDepositBlock() < MIN_DEPOSIT_BLOCK_DISTANCE
-     *   6. blockhash(blockNumber) == blockHash
+     *   5. block.number - getLastDepositBlock() < MIN_DEPOSIT_BLOCK_DISTANCE.
+     *   6. blockhash(blockNumber) != blockHash.
      *
      * Signatures must be sorted in ascending order by index of the guardian. Each signature must
      * be produced for keccak256 hash of the following message (each component taking 32 bytes):
