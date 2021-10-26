@@ -20,7 +20,7 @@
     "test": "yarn run test:unit",
     "test:unit": "hardhat test --network hardhat",
     "test:gas": "REPORT_GAS=true hardhat test --network localhost",
-    "test:coverage": "hardhat coverage --network coverage --testfiles test",
+    "test:coverage": "hardhat coverage --testfiles test",
     "test:e2e": "npm run compile && ava -T 1000000 -v",
     "estimate-deposit-loop-gas": "yarn run test:unit ./estimate_deposit_loop_gas.js",
     "compile": "hardhat compile && yarn extract-abi",

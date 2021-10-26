@@ -42,11 +42,13 @@ const getNetConfig = (networkName, ethAccountName) => {
     },
     hardhat: {
       blockGasLimit: 20000000,
-      gasPrice: 1
-    },
-    coverage: {
-      blockGasLimit: 20000000,
-      url: 'http://localhost:8555'
+      gasPrice: 0,
+      accounts: {
+        mnemonic: 'hardhat',
+        count: 20,
+        accountsBalance: '100000000000000000000000',
+        gasPrice: 0
+      }
     },
     'goerli-pyrmont': {
       ...base,
