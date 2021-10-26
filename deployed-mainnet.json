@@ -181,7 +181,12 @@
     "maxDepositsPerBlock": 150,
     "minDepositBlockDistance": 25,
     "pauseIntentValidityPeriodBlocks": 6646,
-    "guardians": [],
-    "quorum": 1
+    "guardians": [
+      "0x5fd0dDbC3351d009eb3f88DE7Cd081a614C519F1",
+      "0x7912Fa976BcDe9c2cf728e213e892AD7588E6AaF",
+      "0x14D5d5B71E048d2D75a39FfC5B407e3a3AB6F314",
+      "0x5fd0dDbC3351d009eb3f88DE7Cd081a614C519F1"
+    ],
+    "quorum": 3
   }
 }
