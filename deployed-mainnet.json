@@ -178,9 +178,9 @@
     "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84"
   ],
   "depositorParams": {
-    "maxDepositsPerBlock": 100,
-    "minDepositBlockDistance": 14,
-    "pauseIntentValidityPeriodBlocks": 10,
+    "maxDepositsPerBlock": 150,
+    "minDepositBlockDistance": 25,
+    "pauseIntentValidityPeriodBlocks": 6646,
     "guardians": [],
     "quorum": 1
   }
