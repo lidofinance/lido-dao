@@ -25,6 +25,10 @@ async function exportAbi() {
 
 async function extractABIs(artifactPaths, abisPath) {
   if (await exists(abisPath)) {
+    const files = await fs.readdir(abisPath)
+    for (const file of files) {
+      await fs.unlink(path.join(abisPath, file))
+    }
     await fs.rmdir(abisPath, { recursive: true })
   }
 

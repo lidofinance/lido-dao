@@ -3,8 +3,11 @@ const { BN } = require('bn.js')
 const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 const { getEventArgument } = require('@aragon/contract-helpers-test')
 
-const { pad, toBN, ETH, tokens } = require('../helpers/utils')
+const { pad, toBN, ETH, tokens, hexConcat } = require('../helpers/utils')
 const { deployDaoAndPool } = require('./helpers/deploy')
+
+const { signDepositData } = require('../0.8.9/helpers/signatures')
+const { waitBlocks } = require('../helpers/blockchain')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
@@ -17,6 +20,7 @@ contract('Lido: happy path', (addresses) => {
     // node operators
     operator_1,
     operator_2,
+    operator_3,
     // users who deposit Ether to the pool
     user1,
     user2,
@@ -27,9 +31,10 @@ contract('Lido: happy path', (addresses) => {
 
   let pool, nodeOperatorRegistry, token
   let oracleMock, depositContractMock
-  let treasuryAddr, insuranceAddr
+  let treasuryAddr, insuranceAddr, guardians
+  let depositSecurityModule, depositRoot
 
-  it('DAO, node operators registry, token, and pool are deployed and initialized', async () => {
+  it('DAO, node operators registry, token, pool and deposit security module are deployed and initialized', async () => {
     const deployed = await deployDaoAndPool(appManager, voting)
 
     // contracts/StETH.sol
@@ -48,6 +53,10 @@ contract('Lido: happy path', (addresses) => {
     // addresses
     treasuryAddr = deployed.treasuryAddr
     insuranceAddr = deployed.insuranceAddr
+    depositSecurityModule = deployed.depositSecurityModule
+    guardians = deployed.guardians
+
+    depositRoot = await depositContractMock.get_deposit_root()
   })
 
   // Fee and its distribution are in basis points, 10000 corresponding to 100%
@@ -103,7 +112,8 @@ contract('Lido: happy path', (addresses) => {
     // How many validators can this node operator register
     const validatorsLimit = 1000000000
 
-    const txn = await nodeOperatorRegistry.addNodeOperator(nodeOperator1.name, nodeOperator1.address, validatorsLimit, { from: voting })
+    const txn = await nodeOperatorRegistry.addNodeOperator(nodeOperator1.name, nodeOperator1.address, { from: voting })
+    await nodeOperatorRegistry.setNodeOperatorStakingLimit(0, validatorsLimit, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
     nodeOperator1.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
@@ -138,7 +148,27 @@ contract('Lido: happy path', (addresses) => {
 
   it('the first user deposits 3 ETH to the pool', async () => {
     await web3.eth.sendTransaction({ to: pool.address, from: user1, value: ETH(3) })
-    await pool.depositBufferedEther()
+    const block = await web3.eth.getBlock('latest')
+    const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+    const signatures = [
+      signDepositData(
+        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
+        depositRoot,
+        keysOpIndex,
+        block.number,
+        block.hash,
+        guardians.privateKeys[guardians.addresses[0]]
+      ),
+      signDepositData(
+        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
+        depositRoot,
+        keysOpIndex,
+        block.number,
+        block.hash,
+        guardians.privateKeys[guardians.addresses[1]]
+      )
+    ]
+    await depositSecurityModule.depositBufferedEther(depositRoot, keysOpIndex, block.number, block.hash, signatures)
 
     // No Ether was deposited yet to the validator contract
 
@@ -162,7 +192,27 @@ contract('Lido: happy path', (addresses) => {
 
   it('the second user deposits 30 ETH to the pool', async () => {
     await web3.eth.sendTransaction({ to: pool.address, from: user2, value: ETH(30) })
-    await pool.depositBufferedEther()
+    const block = await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
+    const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+    const signatures = [
+      signDepositData(
+        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
+        depositRoot,
+        keysOpIndex,
+        block.number,
+        block.hash,
+        guardians.privateKeys[guardians.addresses[0]]
+      ),
+      signDepositData(
+        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
+        depositRoot,
+        keysOpIndex,
+        block.number,
+        block.hash,
+        guardians.privateKeys[guardians.addresses[1]]
+      )
+    ]
+    await depositSecurityModule.depositBufferedEther(depositRoot, keysOpIndex, block.number, block.hash, signatures)
 
     // The first 32 ETH chunk was deposited to the deposit contract,
     // using public key and signature of the only validator of the first operator
@@ -212,7 +262,8 @@ contract('Lido: happy path', (addresses) => {
     // TODO: we have to submit operators with 0 validators allowed only
     const validatorsLimit = 1000000000
 
-    const txn = await nodeOperatorRegistry.addNodeOperator(nodeOperator2.name, nodeOperator2.address, validatorsLimit, { from: voting })
+    const txn = await nodeOperatorRegistry.addNodeOperator(nodeOperator2.name, nodeOperator2.address, { from: voting })
+    await nodeOperatorRegistry.setNodeOperatorStakingLimit(1, validatorsLimit, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
     nodeOperator2.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
@@ -245,7 +296,28 @@ contract('Lido: happy path', (addresses) => {
 
   it('the third user deposits 64 ETH to the pool', async () => {
     await web3.eth.sendTransaction({ to: pool.address, from: user3, value: ETH(64) })
-    await pool.depositBufferedEther()
+
+    const block = await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
+    const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+    const signatures = [
+      signDepositData(
+        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
+        depositRoot,
+        keysOpIndex,
+        block.number,
+        block.hash,
+        guardians.privateKeys[guardians.addresses[0]]
+      ),
+      signDepositData(
+        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
+        depositRoot,
+        keysOpIndex,
+        block.number,
+        block.hash,
+        guardians.privateKeys[guardians.addresses[1]]
+      )
+    ]
+    await depositSecurityModule.depositBufferedEther(depositRoot, keysOpIndex, block.number, block.hash, signatures)
 
     // The first 32 ETH chunk was deposited to the deposit contract,
     // using public key and signature of the only validator of the second operator
@@ -356,5 +428,76 @@ contract('Lido: happy path', (addresses) => {
         )
         .lt(mintedAmount.divn(100))
     )
+  })
+
+  // node operator with 10 validators
+  const nodeOperator3 = {
+    id: 2,
+    name: 'operator_3',
+    address: operator_3,
+    validators: [...Array(10).keys()].map((i) => ({
+      key: pad('0xaa01' + i.toString(16), 48),
+      sig: pad('0x' + i.toString(16), 96)
+    }))
+  }
+
+  it('nodeOperator3 registered in NodeOperatorsRegistry and adds 10 signing keys', async () => {
+    const validatorsCount = 10
+    await nodeOperatorRegistry.addNodeOperator(nodeOperator3.name, nodeOperator3.address, { from: voting })
+    await nodeOperatorRegistry.setNodeOperatorStakingLimit(nodeOperator3.id, validatorsCount, { from: voting })
+    await nodeOperatorRegistry.addSigningKeysOperatorBH(
+      nodeOperator3.id,
+      validatorsCount,
+      hexConcat(...nodeOperator3.validators.map((v) => v.key)),
+      hexConcat(...nodeOperator3.validators.map((v) => v.sig)),
+      {
+        from: nodeOperator3.address
+      }
+    )
+  })
+
+  it('nodeOperator3 removes signing key with id 5', async () => {
+    const signingKeyIndexToRemove = 5
+    await nodeOperatorRegistry.removeSigningKeyOperatorBH(nodeOperator3.id, signingKeyIndexToRemove, { from: nodeOperator3.address })
+    const nodeOperatorInfo = await nodeOperatorRegistry.getNodeOperator(nodeOperator3.id, false)
+    assertBn(nodeOperatorInfo.stakingLimit, 5)
+  })
+
+  it('deposit to nodeOperator3 validators', async () => {
+    const amountToDeposit = ETH(32 * 10)
+    await web3.eth.sendTransaction({ to: pool.address, from: user1, value: amountToDeposit })
+    await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
+    const block = await web3.eth.getBlock('latest')
+    const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+    const signatures = [
+      signDepositData(
+        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
+        depositRoot,
+        keysOpIndex,
+        block.number,
+        block.hash,
+        guardians.privateKeys[guardians.addresses[0]]
+      ),
+      signDepositData(
+        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
+        depositRoot,
+        keysOpIndex,
+        block.number,
+        block.hash,
+        guardians.privateKeys[guardians.addresses[1]]
+      )
+    ]
+    await depositSecurityModule.depositBufferedEther(depositRoot, keysOpIndex, block.number, block.hash, signatures)
+    let nodeOperatorInfo = await nodeOperatorRegistry.getNodeOperator(nodeOperator3.id, false)
+
+    // validate that only 5 signing keys used after key removing
+    assertBn(nodeOperatorInfo.stakingLimit, nodeOperatorInfo.usedSigningKeys)
+    assertBn(nodeOperatorInfo.totalSigningKeys, 9)
+
+    // validate that all other validators used and pool still has buffered ether
+    nodeOperatorInfo = await nodeOperatorRegistry.getNodeOperator(nodeOperator1.id, false)
+    assertBn(nodeOperatorInfo.totalSigningKeys, nodeOperatorInfo.usedSigningKeys)
+    nodeOperatorInfo = await nodeOperatorRegistry.getNodeOperator(nodeOperator2.id, false)
+    assertBn(nodeOperatorInfo.totalSigningKeys, nodeOperatorInfo.usedSigningKeys)
   })
 })

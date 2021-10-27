@@ -11,9 +11,10 @@
   "aragonIDAddress": "0x546aa2eae2514494eeadb7bbb35243348983c59d",
   "multisigAddress": "0x55Bc991b2edF3DDb4c520B222bE4F378418ff0fA",
   "daoTemplateDeployTx": "0xdcd4ebe028aa3663a1fe8bbc92ae8489045e29d2a6ef5284083d9be5c3fa5f19",
-  "lidoBaseDeployTx": "0xe9f81f1094c2247aa1a2db0cf588900b9d2ce29be7d8b04ef1e8b2885b12f336",
+  "lidoBaseDeployTx": "0x35a637d55d663d9cf88c69bb83fbc1c8a5050fda73596f872f8043fce830de7a",
   "oracleBaseDeployTx": "0x5fcabf4acccda63ade02e82916f769423b1042624a2d043bc063824147dc60c0",
-  "nodeOperatorsRegistryBaseDeployTx": "0xecd18f545f6b495d20a85003c54a17b9127730855e881c5a7ae8a10b1f971199",
+  "nodeOperatorsRegistryBaseDeployTx": "0xd70b0189e52958e5ca98fd6f0550309e3c5e533a2a95fbd27fc2694a188ae56f",
+  "depositorDeployTx": "0x9c10852a83c77204f255705e581c21ebcc28c021dfaff4c02707a4cee1eedde2",
   "daoInitialSettings": {
     "token": {
       "name": "Lido DAO Token",
@@ -117,7 +118,7 @@
   ],
   "daoTemplateAddress": "0x752350797CB92Ad3BF1295Faf904B27585e66BF5",
   "app:lido": {
-    "baseAddress": "0x20dC62D5904633cC6a5E34bEc87A048E80C92e97",
+    "baseAddress": "0xC7B5aF82B05Eb3b64F12241B04B2cF14469E39F7",
     "fullName": "lido.lidopm.eth",
     "name": "lido",
     "id": "0x3ca7c3e38968823ccb4c78ea688df41356f182ae1d159e4ee608d30d68cef320",
@@ -135,7 +136,7 @@
     "proxyAddress": "0x442af784A788A5bd6F42A01Ebe9F287a871243fb"
   },
   "app:node-operators-registry": {
-    "baseAddress": "0x203e0B2Ae692669EC2a6f980401A8239596346Cb",
+    "baseAddress": "0xec3567ae258639a0FF5A02F7eAF4E4aE4416C5fe",
     "fullName": "node-operators-registry.lidopm.eth",
     "name": "node-operators-registry",
     "id": "0x7071f283424072341f856ac9e947e7ec0eb68719f757a7e785979b6b8717579d",
@@ -176,5 +177,29 @@
   "wstethContractAddress": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
   "wstethContractConstructorArgs": [
     "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84"
-  ]
+  ],
+  "depositorParams": {
+    "maxDepositsPerBlock": 150,
+    "minDepositBlockDistance": 25,
+    "pauseIntentValidityPeriodBlocks": 6646,
+    "guardians": [
+      "0x5fd0dDbC3351d009eb3f88DE7Cd081a614C519F1",
+      "0x7912Fa976BcDe9c2cf728e213e892AD7588E6AaF",
+      "0x14D5d5B71E048d2D75a39FfC5B407e3a3AB6F314",
+      "0xf82D88217C249297C6037BA77CE34b3d8a90ab43",
+      "0xa56b128Ea2Ea237052b0fA2a96a387C0E43157d8",
+      "0xd4EF84b638B334699bcf5AF4B0410B8CCD71943f"
+    ],
+    "quorum": 4
+  },
+  "depositorConstructorArgs": [
+    "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
+    "0x00000000219ab540356cBB839Cbe05303d7705Fa",
+    "0x55032650b14df07b85bF18A3a3eC8E0Af2e028d5",
+    1,
+    150,
+    25,
+    6646
+  ],
+  "depositorAddress": "0xDb149235B6F40dC08810AA69869783Be101790e7"
 }
