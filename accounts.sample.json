@@ -18,5 +18,9 @@
   },
   "etherscan": {
     "apiKey": "ETHERSCAN_API_KEY"
+  },
+  "infura_ipfs": {
+    "projectId": "",
+    "projectSecret": ""
   }
 }

@@ -9,7 +9,7 @@ const { readNetworkState, persistNetworkState, updateNetworkState } = require('.
 const { deployAPM, resolveLatestVersion } = require('./components/apm')
 const { getENSNodeOwner } = require('./components/ens')
 
-const LIDO_ENS_LABEL = process.env.LIDO_ENS_LABEL || 'lido'
+const LIDO_ENS_LABEL = process.env.LIDO_ENS_LABEL || 'lidopm'
 const DAO_TEMPLATE_ENS_LABEL = process.env.DAO_TEMPLATE_ENS_LABEL || 'template'
 const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
 
@@ -27,7 +27,7 @@ async function deployApmAndTemplate({
   logWideSplitter()
   log(`Network ID: ${chalk.yellow(netId)}`)
 
-  const state = readNetworkState(networkStateFile, netId)
+  const state = readNetworkState(network.name, netId)
 
   const missingState = REQUIRED_NET_STATE.filter((key) => !state[key])
   if (missingState.length) {
@@ -66,7 +66,7 @@ async function deployApmAndTemplate({
     lidoEnsNodeName: apmResults.ensNodeName,
     lidoEnsNode: apmResults.ensNode
   })
-  persistNetworkState(networkStateFile, netId, state)
+  persistNetworkState(network.name, netId, state)
 
   logHeader(`DAO template`)
   const daoTemplateResults = await deployDaoTemplate({
@@ -81,7 +81,7 @@ async function deployApmAndTemplate({
     daoTemplateAddress: state.daoTemplateAddress
   })
   updateNetworkState(state, daoTemplateResults)
-  persistNetworkState(networkStateFile, netId, state)
+  persistNetworkState(network.name, netId, state)
 }
 
 async function deployDaoTemplate({

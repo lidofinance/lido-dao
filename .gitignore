@@ -19,10 +19,7 @@ tmp/
 
 # Yarn stuff
 .yarn/*
-!.yarn/releases
-!.yarn/plugins
-!.yarn/sdks
-!.yarn/versions
+
 .pnp.*
 
 # Optional npm cache directory

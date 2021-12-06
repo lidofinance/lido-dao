@@ -24,7 +24,7 @@ async function deployAragonEnv({ web3, artifacts, networkStateFile = NETWORK_STA
   logWideSplitter()
   log(`Network ID: ${chalk.yellow(netId)}`)
 
-  const state = readNetworkState(networkStateFile, netId)
+  const state = readNetworkState(network.name, netId)
 
   if (state.owner) {
     const lowercaseOwner = state.owner.toLowerCase()
@@ -48,7 +48,7 @@ async function deployAragonEnv({ web3, artifacts, networkStateFile = NETWORK_STA
     ensAddress: state.ensAddress
   })
   updateNetworkState(state, ensResults)
-  persistNetworkState(networkStateFile, netId, state)
+  persistNetworkState(network.name, netId, state)
 
   logHeader(`DAO factory`)
   const daoFactoryResults = await useOrDeployDaoFactory({
@@ -57,7 +57,7 @@ async function deployAragonEnv({ web3, artifacts, networkStateFile = NETWORK_STA
     daoFactoryAddress: state.daoFactoryAddress
   })
   updateNetworkState(state, daoFactoryResults)
-  persistNetworkState(networkStateFile, netId, state)
+  persistNetworkState(network.name, netId, state)
 
   logHeader(`APM registry factory`)
   const apmRegistryFactoryResults = await useOrDeployAPMRegistryFactory({
@@ -71,7 +71,7 @@ async function deployAragonEnv({ web3, artifacts, networkStateFile = NETWORK_STA
     ensSubdomainRegistrarBaseAddress: state.ensSubdomainRegistrarBaseAddress
   })
   updateNetworkState(state, apmRegistryFactoryResults)
-  persistNetworkState(networkStateFile, netId, state)
+  persistNetworkState(network.name, netId, state)
 
   logHeader(`Aragon APM`)
   const apmResults = await deployAPM({
@@ -88,7 +88,7 @@ async function deployAragonEnv({ web3, artifacts, networkStateFile = NETWORK_STA
     aragonEnsNodeName: apmResults.ensNodeName,
     aragonEnsNode: apmResults.ensNode
   })
-  persistNetworkState(networkStateFile, netId, state)
+  persistNetworkState(network.name, netId, state)
 
   logHeader(`MiniMeTokenFactory`)
   const tokenFactoryResults = await deployMiniMeTokenFactory({
@@ -97,7 +97,7 @@ async function deployAragonEnv({ web3, artifacts, networkStateFile = NETWORK_STA
     miniMeTokenFactoryAddress: state.miniMeTokenFactoryAddress
   })
   updateNetworkState(state, tokenFactoryResults)
-  persistNetworkState(networkStateFile, netId, state)
+  persistNetworkState(network.name, netId, state)
 
   logHeader('AragonID')
   const aragonIDResults = await deployAragonID({
@@ -107,7 +107,7 @@ async function deployAragonEnv({ web3, artifacts, networkStateFile = NETWORK_STA
     aragonIDAddress: state.aragonIDAddress
   })
   updateNetworkState(state, aragonIDResults)
-  persistNetworkState(networkStateFile, netId, state)
+  persistNetworkState(network.name, netId, state)
 }
 
 async function useOrDeployENS({ artifacts, owner, ensAddress }) {

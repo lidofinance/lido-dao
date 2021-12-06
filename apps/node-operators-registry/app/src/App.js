@@ -103,28 +103,6 @@ function App() {
     return currentUserAmongOperators.id
   }, [connectedAccount, nodeOperators])
 
-  const [addMySKSidePanelOpen, setAddMySkSidePanelOpen] = useState(false)
-  const openAddMySKSidePanelOpen = useCallback(
-    () => setAddMySkSidePanelOpen(true),
-    []
-  )
-  const closeAddMySKSidePanelOpen = useCallback(
-    () => setAddMySkSidePanelOpen(false),
-    []
-  )
-  const addSKApi = useCallback(
-    (quantity, pubkeys, signatures) =>
-      api
-        .addSigningKeysOperatorBH(
-          currentUserOperatorId,
-          quantity,
-          pubkeys,
-          signatures
-        )
-        .toPromise(),
-    [api, currentUserOperatorId]
-  )
-
   // CHANGING STAKING LIMIT
   const [changeLimitOperatorId, setChangeLimitOperatorId] = useState(null)
   const openChangeLimitPanel = useCallback(
@@ -239,18 +217,6 @@ function App() {
                   />
                 )}
                 <MenuItem
-                  onClick={() => openAddSKSidePanel(id)}
-                  icon={<IconWrite />}
-                  label="add signing keys (Manager)"
-                />
-                {currentUserOperatorId === id && (
-                  <MenuItem
-                    onClick={openAddMySKSidePanelOpen}
-                    icon={<IconWrite />}
-                    label="add my signing keys"
-                  />
-                )}
-                <MenuItem
                   onClick={() => openChangeLimitPanel(id)}
                   icon={<IconGroup />}
                   label="change staking limit"
@@ -315,12 +281,6 @@ function App() {
         opened={addSigningKeysToOperatorId !== null}
         onClose={closeAddSKSidePanel}
         api={addSKManagerApi}
-      />
-      <AddSigningKeysSidePanel
-        title="Add my signing keys"
-        opened={addMySKSidePanelOpen}
-        onClose={closeAddMySKSidePanelOpen}
-        api={addSKApi}
       />
       <ChangeLimitPanel
         title="Change staking limit"

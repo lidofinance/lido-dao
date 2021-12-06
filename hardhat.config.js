@@ -1,6 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 
+require('@aragon/hardhat-aragon')
 require('@nomiclabs/hardhat-web3')
 require('@nomiclabs/hardhat-ethers')
 require('@nomiclabs/hardhat-truffle5')
@@ -15,7 +16,8 @@ const ETH_ACCOUNT_NAME = process.env.ETH_ACCOUNT_NAME
 const accounts = readJson(`./accounts.json`) || {
   eth: { dev: 'remote' },
   etherscan: { apiKey: undefined },
-  infura: { projectId: undefined }
+  infura: { projectId: undefined },
+  infura_ipfs: { projectId: undefined, projectSecret: undefined }
 }
 
 const getNetConfig = (networkName, ethAccountName) => {
@@ -26,14 +28,14 @@ const getNetConfig = (networkName, ethAccountName) => {
     ensAddress: netState.ensAddress,
     timeout: 60000
   }
-  const dev = {
+  const localhost = {
     ...base,
     url: 'http://localhost:8545',
-    chainId: 1337,
+    chainId: 31337,
     gas: 8000000 // the same as in Görli
   }
   const byNetName = {
-    dev,
+    localhost,
     e2e: {
       ...base,
       accounts: accounts.eth.e2e,

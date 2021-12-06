@@ -40,7 +40,14 @@
     "deploy:app-oracle": "APPS=depooloracle yarn deploy:apps",
     "deploy:app-staking-providers-registry": "APPS=staking-providers-registry yarn deploy:apps",
     "deploy:dao": "hardhat run --no-compile ./scripts/deploy-lido-dao.js",
-    "deploy:e2e:dao": "NETWORK_NAME=e2e NETWORK_STATE_FILE=deployed-e2e.json hardhat run --no-compile ./scripts/deploy-lido-dao.js"
+    "deploy:e2e:dao": "NETWORK_NAME=e2e NETWORK_STATE_FILE=deployed-e2e.json hardhat run --no-compile ./scripts/deploy-lido-dao.js",
+    "deploy:wsteth": "hardhat run --no-compile ./scripts/deploy-wsteth.js",
+    "apps:lido": "yarn --cwd ./apps/lido/app/ cli",
+    "apps:oracle": "yarn --cwd ./apps/lidooracle/app/ cli",
+    "apps:nos": "yarn --cwd ./apps/node-operators-registry/app/ cli",
+    "lido:apps": "concurrently \"yarn apps:lido\" \"yarn apps:oracle\" \"yarn apps:nos\" ",
+    "aragon:start": "hardhat run --no-compile scripts/start-aragon.js",
+    "lido:start": "hardhat node& yarn deploy:all && yarn lido:apps& hardhat run --no-compile scripts/start-aragon.js"
   },
   "author": "Lido <info@lido.fi>",
   "homepage": "https://lido.fi/",
@@ -59,7 +66,7 @@
     "@babel/preset-env": "^7.11.5",
     "@babel/register": "^7.12.1",
     "@nomiclabs/hardhat-ethers": "^2.0.2",
-    "@nomiclabs/hardhat-etherscan": "^2.0.1",
+    "@nomiclabs/hardhat-etherscan": "^2.1.7",
     "@nomiclabs/hardhat-ganache": "^2.0.1",
     "@nomiclabs/hardhat-truffle5": "^2.0.2",
     "@nomiclabs/hardhat-web3": "^2.0.0",
@@ -96,11 +103,14 @@
     "winston": "^3.3.3"
   },
   "dependencies": {
+    "@aragon/hardhat-aragon": "^1.0.0",
     "@aragon/os": "^4.4.0",
     "@openzeppelin/contracts": "3.4.0",
     "@truffle/contract": "^4.2.22",
+    "concurrently": "^6.4.0",
     "ethereumjs-util": "^7.0.8",
     "ethers": "^5.0.19",
+    "node-gyp": "^8.4.1",
     "openzeppelin-solidity": "2.0.0",
     "solidity-bytes-utils": "0.0.6",
     "yargs": "^16.0.3"

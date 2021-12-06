@@ -2,9 +2,11 @@ const fs = require('fs')
 const path = require('path')
 const chalk = require('chalk')
 const namehash = require('eth-ens-namehash').hash
+const getAccounts = require('@aragon/os/scripts/helpers/get-accounts')
+
 
 const runOrWrapScript = require('./helpers/run-or-wrap-script')
-const { log, logSplitter, logWideSplitter, logHeader, logTx, logDeploy } = require('./helpers/log')
+const { log, logSplitter, logWideSplitter, logHeader, logTx, logDeploy, yl } = require('./helpers/log')
 const { deploy, useOrDeploy, withArgs } = require('./helpers/deploy')
 const { readNetworkState, persistNetworkState, updateNetworkState } = require('./helpers/persisted-network-state')
 
@@ -46,9 +48,9 @@ async function deployDao({
   const netId = await web3.eth.net.getId()
 
   logWideSplitter()
-  log(`Network ID: ${chalk.yellow(netId)}`)
+  log(`Network ID: ${yl(netId)}`)
 
-  const state = readNetworkState(networkStateFile, netId)
+  const state = readNetworkState(network.name, netId)
 
   const missingState = REQUIRED_NET_STATE.filter((key) => !state[key])
   if (missingState.length) {
@@ -56,16 +58,16 @@ async function deployDao({
     throw new Error(`missing following fields from network state file, make sure you've run previous deployment steps: ${missingDesc}`)
   }
 
-  const missingApps = LIDO_APP_NAMES.filter((name) => !state[`lido_app_${name}_id`])
+  const missingApps = LIDO_APP_NAMES.filter((name) => !state[`app:${name}`])
   if (missingApps.length) {
     const missingDesc = missingApps.join(', ')
     throw new Error(`missing following apps from network state file, make sure you've deployed them: ${missingDesc}`)
   }
 
-  log(`Owner: ${chalk.yellow(state.owner)}`)
+  log(`Owner: ${yl(state.owner)}`)
 
   const ens = await artifacts.require('ENS').at(state.ensAddress)
-  log(`Using ENS: ${chalk.yellow(ens.address)}`)
+  log(`Using ENS: ${yl(ens.address)}`)
 
   if (!state.daoName) {
     state.daoName = defaultDaoName
@@ -103,45 +105,45 @@ async function deployDao({
     depositContractAddress: state.depositContractAddress
   })
   updateNetworkState(state, depositContractResults)
-  persistNetworkState(networkStateFile, netId, state)
+  persistNetworkState(network.name, netId, state)
 
   logHeader(`The DAO`)
 
-  const aragonApps = {}
-  const lidoApps = {}
+  const apps = {}
 
   Object.keys(state).forEach((key) => {
-    if (key.substr(0, 11) === 'aragon_app_') {
-      const appName = key.substring(11, key.lastIndexOf('_'))
-      aragonApps[appName] = aragonApps[appName] || {
-        fullName: state[`aragon_app_${appName}_name`],
-        ensNode: state[`aragon_app_${appName}_id`]
-      }
-    } else if (key.substr(0, 9) === 'lido_app_') {
-      const appName = key.substring(9, key.lastIndexOf('_'))
-      lidoApps[appName] = lidoApps[appName] || {
-        fullName: state[`lido_app_${appName}_name`],
-        ensNode: state[`lido_app_${appName}_id`]
+    if (key.match('app:.*')) {
+      let app = state[key]
+      apps[`app:${app.name}`] = apps[app.name] || {
+        name: app.name,
+        fullName: app.fullName,
+        id: app.id
       }
     }
   })
 
   log(`Checking app impls...`)
-  for (const [name, { fullName, ensNode }] of Object.entries(lidoApps)) {
-    const latest = await resolveLatestVersion(ensNode, ens, artifacts)
+  for (const [appKey, { name, fullName, id }] of Object.entries(apps)) {
+    const latest = await resolveLatestVersion(id, ens, artifacts)
     if (latest) {
       const vDesc = latest.semanticVersion.map((x) => `${x}`).join('.')
-      log(`Found an impl v${vDesc} for app '${name}' (${fullName}): ${chalk.yellow(latest.contractAddress)}`)
+      log(`Found an impl v${vDesc} for app '${name}' (${fullName}): ${yl(latest.contractAddress)}`)
+
+      if (!apps[`app:${name}`].baseAddress) {
+        apps[`app:${name}`].baseAddress = latest.contractAddress
+      }
     } else {
       throw new Error(`failed to resolve an impl for app '${name}' (${fullName})`)
     }
   }
+  updateNetworkState(state, apps)
+  persistNetworkState(network.name, netId, state)
   logSplitter()
 
   const daoResults = await deployDAO({
     artifacts,
     ens,
-    knownApps: { ...aragonApps, ...lidoApps },
+    knownApps: { ...apps },
     owner: state.owner,
     lidoApmRegistryAddress: state.lidoApmRegistryAddress,
     depositContractAddress: state.depositContractAddress,
@@ -153,27 +155,17 @@ async function deployDao({
     daoAddress: state.daoAddress
   })
   updateNetworkState(state, daoResults)
-  persistNetworkState(networkStateFile, netId, state)
+  persistNetworkState(network.name, netId, state)
 
-  logHeader(`CstETH`)
-  const cstEthResults = await deployCstETH({
-    artifacts,
-    ens,
-    owner: state.owner,
-    stEthAppName: state.lido_app_lido_name,
-    appProxies: state.appProxies,
-    cstEthAddress: state.cstEthAddress
-  })
-  updateNetworkState(state, cstEthResults)
-  persistNetworkState(networkStateFile, netId, state)
+  log(`Try to open aragon: http://localhost:3000/#/${state.daoAddress}`)
 
   logWideSplitter()
 }
 
 async function useOrDeployDepositContract({ artifacts, owner, depositContractAddress }) {
   if (depositContractAddress) {
-    log(`Using DepositContract at: ${chalk.yellow(depositContractAddress)}`)
-    const depositContract = await artifacts.require('IDepositContract').at(depositContractAddress)
+    log(`Using DepositContract at: ${yl(depositContractAddress)}`)
+    const depositContract = await artifacts.require('contracts/0.4.24/interfaces/IDepositContract.sol:IDepositContract').at(depositContractAddress)
     return { depositContract }
   }
   log(chalk.red(`WARN deploying a new instance of DepositContract`))
@@ -196,7 +188,7 @@ async function deployDAO({
   daoAddress
 }) {
   if (daoAddress) {
-    log(`Using DAO at: ${chalk.yellow(daoAddress)}`)
+    log(`Using DAO at: ${yl(daoAddress)}`)
     const dao = await artifacts.require('Kernel').at(daoAddress)
     return { dao }
   }
@@ -207,15 +199,15 @@ async function deployDAO({
   }
 
   const { contractAddress: daoTemplateAddress } = templateLatestVersion
-  log(`Using registered DAO template: ${chalk.yellow(daoTemplateAddress)}`)
+  log(`Using registered DAO template: ${yl(daoTemplateAddress)}`)
   const template = await artifacts.require('LidoTemplateE2E').at(daoTemplateAddress)
 
-  log(`Using DepositContract at: ${chalk.yellow(depositContractAddress)}`)
+  log(`Using DepositContract at: ${yl(depositContractAddress)}`)
 
   const daoEnsName = `${daoName}.${aragonIDEnsNodeName}`
 
-  log(`Using DAO name: ${chalk.yellow(daoName)}`)
-  log(`Using ENS name: ${chalk.yellow(daoEnsName)}`)
+  log(`Using DAO name: ${yl(daoName)}`)
+  log(`Using ENS name: ${yl(daoEnsName)}`)
   log(`Using DAO initial settings:`, daoInitialSettings)
 
   logSplitter()
@@ -255,54 +247,45 @@ async function deployDAO({
   const installedApps = newDaoResult.logs.filter((l) => l.event === 'InstalledApp').map((l) => l.args)
 
   const dao = await artifacts.require('Kernel').at(daoEvent.args.dao)
-  const token = await artifacts.require('ERC20').at(tokenEvent.args.token)
+  const token = await artifacts.require('@aragon/os/contracts/lib/token/ERC20.sol:ERC20').at(tokenEvent.args.token)
 
-  log(`Deployed DAO: ${chalk.yellow(dao.address)}`)
-  log(`Deployed DAO share token ${daoInitialSettings.tokenSymbol}: ${chalk.yellow(token.address)}`)
+  log(`Deployed DAO: ${yl(dao.address)}`)
+  log(`Deployed DAO share token ${daoInitialSettings.tokenSymbol}: ${yl(token.address)}`)
 
   logSplitter()
   const appProxies = getAppProxies(installedApps, knownApps)
+
+  Object.keys(appProxies).forEach((key) => {
+    if (knownApps[key]) {
+      knownApps[key].proxyAddress = appProxies[key]
+    }
+  })
   logSplitter()
 
   await logTx(`Finalizing DAO`, template.finalizeDAO({ from: owner }))
 
-  return { dao, token, appProxies }
+  return { dao, token, knownApps }
 }
 
 function getAppProxies(installedApps, knownApps) {
   const appProxies = {}
 
   const knownAppsByEnsNode = Object.fromEntries(
-    Object.entries(knownApps).map(([appName, { ensNode, fullName }]) => [ensNode, { name: appName, fullName }])
+    Object.entries(knownApps).map(([appName, { name, id, fullName }]) => [id, { name, fullName }])
   )
 
   for (const app of installedApps) {
     const knownApp = knownAppsByEnsNode[app.appId]
     if (knownApp) {
-      log(`App ${knownApp.fullName}: ${chalk.yellow(app.appProxy)}`)
-      appProxies[knownApp.fullName] = app.appProxy
+      log(`App ${knownApp.fullName}: ${yl(app.appProxy)}`)
+      appProxies[`app:${knownApp.name}`] = app.appProxy
     } else {
-      log(`Unknown app ${app.appId}: ${chalk.yellow(app.appProxy)}`)
+      log(`Unknown app ${app.appId}: ${yl(app.appProxy)}`)
       appProxies[app.appId] = app.appProxy
     }
   }
 
   return appProxies
-}
-
-async function deployCstETH({ artifacts, owner, ens, stEthAppName, appProxies, cstEthAddress }) {
-  if (cstEthAddress) {
-    log(`Using CstETH at: ${chalk.yellow(cstEthAddress)}`)
-    const cstEth = await artifacts.require('CstETH').at(cstEthAddress)
-    return { cstEth }
-  }
-  const stEthAppProxy = appProxies[stEthAppName]
-  if (!stEthAppProxy) {
-    throw new Error(`proxy address for StETH app ${stEthAppName} not found in network state`)
-  }
-  log(`Using StETH app proxy: ${chalk.yellow(stEthAppProxy)}`)
-  const cstEth = await deploy('CstETH', artifacts, withArgs(stEthAppProxy, { from: owner }))
-  return { cstEth }
 }
 
 module.exports = runOrWrapScript(deployDao, module)

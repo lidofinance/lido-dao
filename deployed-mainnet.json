@@ -1,6 +1,6 @@
 {
   "networkId": 1,
-  "ipfsAPI": "http://206.81.31.11/ipfs/api/v0",
+  "ipfsAPI": "https://ipfs.infura.io:5001/api/v0",
   "lidoApmEnsName": "lidopm.eth",
   "lidoApmEnsRegDurationSec": 94608000,
   "daoAragonId": "lido-dao",
@@ -122,8 +122,8 @@
     "fullName": "lido.lidopm.eth",
     "name": "lido",
     "id": "0x3ca7c3e38968823ccb4c78ea688df41356f182ae1d159e4ee608d30d68cef320",
-    "ipfsCid": "QmbmPW5r9HMdyUARNJjjE7MNqBUGrXashwoWvqRZhc1t5b",
-    "contentURI": "0x697066733a516d626d5057357239484d64795541524e4a6a6a45374d4e714255477258617368776f577671525a686331743562",
+    "ipfsCid": "QmPR28q1qWFDcd1aYjnwqpFQYkUofoyBzQ6KCHE6PSQY6P",
+    "contentURI": "0x697066733a516d5052323871317157464463643161596a6e7771704651596b556f666f79427a51364b43484536505351593650",
     "proxyAddress": "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84"
   },
   "app:oracle": {
@@ -140,8 +140,8 @@
     "fullName": "node-operators-registry.lidopm.eth",
     "name": "node-operators-registry",
     "id": "0x7071f283424072341f856ac9e947e7ec0eb68719f757a7e785979b6b8717579d",
-    "ipfsCid": "QmQExJkoyg7xWXJjLaYC75UAmsGY1STY41YTG3wEK7q8dd",
-    "contentURI": "0x697066733a516d5145784a6b6f7967377857584a6a4c615943373555416d7347593153545934315954473377454b3771386464",
+    "ipfsCid": "QmavVvQ1owa14nvpiwHa2WowAjGv5qt93itQoQxFzHi7se",
+    "contentURI": "0x697066733a516d6176567651316f776131346e76706977486132576f77416a477635717439336974516f5178467a4869377365",
     "proxyAddress": "0x55032650b14df07b85bF18A3a3eC8E0Af2e028d5"
   },
   "lidoApmDeployTx": "0xfa66476569ecef5790f2d0634997b952862bbca56aa088f151b8049421eeb87b",

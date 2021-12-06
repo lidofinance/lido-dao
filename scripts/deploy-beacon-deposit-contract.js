@@ -13,7 +13,7 @@ async function deployBeaconDepositContract({ web3, artifacts, networkStateFile =
   logWideSplitter()
   log(`Network ID: ${chalk.yellow(netId)}`)
 
-  const state = readNetworkState(networkStateFile, netId)
+  const state = readNetworkState(network.name, netId)
   const [firstAccount] = await web3.eth.getAccounts()
 
   const depositContractResults = await useOrDeployDepositContract({
@@ -23,7 +23,7 @@ async function deployBeaconDepositContract({ web3, artifacts, networkStateFile =
   })
 
   logSplitter()
-  persistNetworkState(networkStateFile, netId, state, depositContractResults)
+  persistNetworkState(network.name, netId, state, depositContractResults)
 }
 
 async function useOrDeployDepositContract({ artifacts, owner, depositContractAddress }) {
