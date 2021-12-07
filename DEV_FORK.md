@@ -14,7 +14,7 @@ Next there are 2 options to run Aragon client
 ### Approach 1 - auto
 
 ```bash
-NETWORK_NAME=localhost RUN_CMD=mainnet hardhat run scripts/start-aragon.js
+NETWORK_NAME=mainnet RUN_CMD=mainnet node scripts/start-aragon.js
 ```
 
 That script set the right environment variables, download and start aragon client at `http://localhost:3000/#/lido-dao.aragonid.eth`

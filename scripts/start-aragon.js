@@ -5,8 +5,7 @@ const namehash = require('eth-ens-namehash').hash
 const { execLive } = require('./helpers/exec')
 const { log, logHeader, yl, gr } = require('./helpers/log')
 const { gitCloneRepo } = require('./helpers/git')
-const { readJSON } = require('./helpers/fs')
-const { readNetworkState } = require('./helpers/persisted-network-state')
+const { readJSON, fileExists } = require('./helpers/fs')
 
 const runOrWrapScript = require('./helpers/run-or-wrap-script')
 
@@ -15,6 +14,8 @@ const APPS_DIR_PATH = process.env.APPS_DIR_PATH || path.resolve(__dirname, '..',
 const ARAGON_APPS_REPO = process.env.ARAGON_APPS_REPO || 'https://github.com/lidofinance/aragon-client'
 const ARAGON_APPS_REPO_REF = process.env.ARAGON_APPS_REPO_REF || 'master'
 const RUN_CMD = process.env.RUN_CMD || 'local'
+const NETWORK_NAME = process.env.NETWORK_NAME || 'localhost'
+const ENS_ADDRESS = process.env.ENS_ADDRESS || '0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e'
 
 const appsRepoPath = './aragon-client'
 
@@ -27,7 +28,6 @@ const CMD_XDAI = 'xdai'
 const AVAILIABLE_RUN_CMDS = [CMD_LOCAL, CMD_MAINNET, CMD_RINKEBY, CMD_STAGING, CMD_ROPSTEN, CMD_XDAI]
 
 async function startAragonClient(
-  aragonAppsRepo1 = 'test',
   aragonAppsRepoRef = ARAGON_APPS_REPO_REF,
   appsDirPath = APPS_DIR_PATH,
   appNames = APPS,
@@ -36,14 +36,16 @@ async function startAragonClient(
 
   assertRequiredRunCmd(runCmd, AVAILIABLE_RUN_CMDS)
 
-  const netId = await web3.eth.net.getId()
-  const netState = readNetworkState(network.name, netId)
-
-  let ensAddress = netState.ensAddress
-
-  if (!ensAddress) {
-    throw new Error("Can't find ensAddress")
+  var deployedFileName = `deployed-${NETWORK_NAME}.json`
+  var deployedFileExists = await fileExists(deployedFileName)
+  if (!deployedFileExists) {
+    log(`File ${deployedFileName} doesn't exists`)
+    return 
   }
+
+  const deployedFile = await readJSON(deployedFileName)
+  const ensAddress = process.env.ENS_ADDRESS || deployedFile.ensAddress || '0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e'
+  
 
   logHeader(`Checking out aragon-client repo...`)
   await gitCloneRepo(appsRepoPath, ARAGON_APPS_REPO, aragonAppsRepoRef)
@@ -58,7 +60,6 @@ async function startAragonClient(
     appNames = fs.readdirSync(appsDirPath)
   }
 
-  console.log(3)
   const appLocations = []
   let port = 3000
   for (const appName of appNames) {
@@ -93,7 +94,6 @@ async function startAragonClient(
   }
 
   if (runCmd === CMD_MAINNET) {
-    aragonEnv.ARAGON_ENS_REGISTRY_ADDRESS = '0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e'
     aragonEnv.ARAGON_DEFAULT_ETH_NODE = 'ws://localhost:8545'
     aragonEnv.ARAGON_IPFS_GATEWAY = 'https://mainnet.lido.fi/ipfs'
   }
@@ -112,4 +112,4 @@ function assertRequiredRunCmd(runCmd, availableCmd) {
   }
 }
 
-module.exports = runOrWrapScript(startAragonClient, module)
+startAragonClient()

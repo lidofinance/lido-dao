@@ -8,6 +8,7 @@
     "gasprofile"
   ],
   "scripts": {
+    "postinstall": "patch-package",
     "lint": "yarn lint:sol && yarn lint:js",
     "lint:sol": "yarn lint:sol:solhint && yarn lint:sol:solium",
     "lint:js": "yarn lint:js:cmd .",
@@ -40,7 +41,14 @@
     "deploy:app-oracle": "APPS=depooloracle yarn deploy:apps",
     "deploy:app-staking-providers-registry": "APPS=staking-providers-registry yarn deploy:apps",
     "deploy:dao": "hardhat run --no-compile ./scripts/deploy-lido-dao.js",
-    "deploy:e2e:dao": "NETWORK_NAME=e2e NETWORK_STATE_FILE=deployed-e2e.json hardhat run --no-compile ./scripts/deploy-lido-dao.js"
+    "deploy:e2e:dao": "NETWORK_NAME=e2e NETWORK_STATE_FILE=deployed-e2e.json hardhat run --no-compile ./scripts/deploy-lido-dao.js",
+    "deploy:wsteth": "hardhat run --no-compile ./scripts/deploy-wsteth.js",
+    "apps:lido": "yarn --cwd ./apps/lido/app/ cli",
+    "apps:oracle": "yarn --cwd ./apps/lidooracle/app/ cli",
+    "apps:nos": "yarn --cwd ./apps/node-operators-registry/app/ cli",
+    "lido:apps": "concurrently \"yarn apps:lido\" \"yarn apps:oracle\" \"yarn apps:nos\" ",
+    "aragon:start": "node scripts/start-aragon.js",
+    "lido:start": "hardhat node& yarn deploy:all && yarn lido:apps& hardhat run --no-compile scripts/start-aragon.js"
   },
   "author": "Lido <info@lido.fi>",
   "homepage": "https://lido.fi/",
@@ -80,7 +88,7 @@
     "eth-ens-namehash": "^2.0.8",
     "eth-gas-reporter": "^0.2.17",
     "ethereumjs-testrpc-sc": "^6.5.1-sc.1",
-    "hardhat": "2.0.3",
+    "hardhat": "^2.7.0",
     "hardhat-gas-reporter": "^1.0.1",
     "husky": "^4.3.0",
     "lerna": "^3.22.1",
@@ -104,6 +112,7 @@
     "ethereumjs-util": "^7.0.8",
     "ethers": "^5.0.19",
     "openzeppelin-solidity": "2.0.0",
+    "patch-package": "^6.4.7",
     "solidity-bytes-utils": "0.0.6",
     "yargs": "^16.0.3"
   },

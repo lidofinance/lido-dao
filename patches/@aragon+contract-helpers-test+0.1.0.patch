@@ -1,0 +1,130 @@
+diff --git a/node_modules/@aragon/contract-helpers-test/src/asserts/assertThrow.js b/node_modules/@aragon/contract-helpers-test/src/asserts/assertThrow.js
+index 8f6790e..7a8e7ca 100644
+--- a/node_modules/@aragon/contract-helpers-test/src/asserts/assertThrow.js
++++ b/node_modules/@aragon/contract-helpers-test/src/asserts/assertThrow.js
+@@ -4,17 +4,18 @@ const { decodeErrorReasonFromTx } = require('../decoding')
+ 
+ const ERROR_PREFIX = 'Returned error:'
+ const THROW_PREFIX = 'VM Exception while processing transaction: revert'
++const THROW_PREFIX_V2 = 'VM Exception while processing transaction: reverted with reason string'
+ 
+ async function assertThrows(
+-  blockOrPromise,
+-  expectedErrorCode,
+-  expectedReason,
+-  ctx
++    blockOrPromise,
++    expectedErrorCode,
++    expectedReason,
++    ctx
+ ) {
+   try {
+     typeof blockOrPromise === 'function'
+-      ? await blockOrPromise()
+-      : await blockOrPromise
++        ? await blockOrPromise()
++        : await blockOrPromise
+   } catch (error) {
+     if (await isGeth(ctx)) {
+       // With geth, we are only provided the transaction receipt and have to decode the failure
+@@ -22,9 +23,9 @@ async function assertThrows(
+       const status = error.receipt.status
+ 
+       assert.equal(
+-        status,
+-        '0x0',
+-        `Expected transaction to revert but it executed with status ${status}`
++          status,
++          '0x0',
++          `Expected transaction to revert but it executed with status ${status}`
+       )
+       if (!expectedReason.length) {
+         // Note that it is difficult to ascertain invalid jumps or out of gas scenarios
+@@ -34,9 +35,9 @@ async function assertThrows(
+ 
+       const { tx } = error
+       assert.notEqual(
+-        tx,
+-        undefined,
+-        `Expected error to include transaction hash, cannot assert revert reason ${expectedReason}: ${error}`
++          tx,
++          undefined,
++          `Expected error to include transaction hash, cannot assert revert reason ${expectedReason}: ${error}`
+       )
+ 
+       error.reason = decodeErrorReasonFromTx(tx, ctx)
+@@ -44,18 +45,18 @@ async function assertThrows(
+     } else {
+       const errorMatchesExpected = error.message.search(expectedErrorCode) > -1
+       assert(
+-        errorMatchesExpected,
+-        `Expected error code "${expectedErrorCode}" but failed with "${error}" instead.`
++          errorMatchesExpected,
++          `Expected error code "${expectedErrorCode}" but failed with "${error}" instead.`
+       )
+       return error
+     }
+   }
+   // assert.fail() for some reason does not have its error string printed 🤷
+   assert(
+-    false,
+-    `Expected "${expectedErrorCode}"${
+-      expectedReason ? ` (with reason: "${expectedReason}")` : ''
+-    } but it did not fail`
++      false,
++      `Expected "${expectedErrorCode}"${
++          expectedReason ? ` (with reason: "${expectedReason}")` : ''
++      } but it did not fail`
+   )
+ }
+ 
+@@ -73,10 +74,10 @@ async function assertOutOfGas(blockOrPromise, ctx) {
+ 
+ async function assertRevert(blockOrPromise, expectedReason, ctx) {
+   const error = await assertThrows(
+-    blockOrPromise,
+-    'revert',
+-    expectedReason,
+-    ctx
++      blockOrPromise,
++      'revert',
++      expectedReason,
++      ctx
+   )
+ 
+   if (!expectedReason) {
+@@ -86,22 +87,24 @@ async function assertRevert(blockOrPromise, expectedReason, ctx) {
+   // Truffle v5 provides `error.reason`, but truffle v4 and buidler do not.
+   if (!error.reason && error.message.includes(THROW_PREFIX)) {
+     error.reason = error.message
+-      .replace(ERROR_PREFIX, '')
+-      .replace(THROW_PREFIX, '')
+-      .trim()
++        .replace(ERROR_PREFIX, '')
++        .replace(THROW_PREFIX_V2, '')
++        .replace(THROW_PREFIX, '')
++        .trim()
++        .replace(/^'|'$/g,"")
+   }
+ 
+   // Truffle v5 sometimes adds an extra ' -- Reason given: reason.' to the error message 🤷
+   error.reason = error.reason
+-    .replace(` -- Reason given: ${expectedReason}.`, '')
+-    .trim()
++      .replace(` -- Reason given: ${expectedReason}.`, '')
++      .trim()
+ 
+   assert.equal(
+-    error.reason,
+-    expectedReason,
+-    `Expected revert reason "${expectedReason}" but failed with "${
+-      error.reason || 'no reason'
+-    }" instead.`
++      error.reason,
++      expectedReason,
++      `Expected revert reason "${expectedReason}" but failed with "${
++          error.reason || 'no reason'
++      }" instead.`
+   )
+ }
+ 
