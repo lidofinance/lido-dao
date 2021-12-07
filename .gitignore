@@ -12,7 +12,8 @@ tmp/
 /coverage.json
 .coverage_*/
 
-/aragon-apps
+aragon-apps/
+aragon-client/
 
 **/data/
 *.log

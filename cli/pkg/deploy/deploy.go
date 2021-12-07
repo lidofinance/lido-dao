@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"lido-cli/pkg/logs"
-	"log"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -53,22 +53,23 @@ func (node *Deploy) AragonEnv() error {
 	s, _ := pterm.DefaultSpinner.Start("Deploy: Aragon env...")
 
 	node.Cmd = exec.Command("yarn", "deploy:aragon-env")
-	node.Cmd.Stdout = &node.Outb
-	node.Cmd.Stderr = &node.Errb
+
+	if logs.Verbose {
+		node.Cmd.Stdout = os.Stdout
+		node.Cmd.Stderr = os.Stderr
+	} else {
+		node.Cmd.Stdout = &node.Outb
+		node.Cmd.Stderr = &node.Errb
+	}
+
 	err := node.Cmd.Run()
 	if err != nil {
 		if strings.Contains(node.Errb.String(), "Error: Cannot create instance of ENS") {
 			s.UpdateText("Error: Cannot create instance of ENS, remove deployed-localhost.json file and try again")
 		}
-		fmt.Print(node.Errb.String())
+		pterm.Error.Print(node.Errb.String())
 		s.Fail()
 		return err
-	}
-
-	//need to use different buffers
-	if logs.Verbose {
-		fmt.Print(node.Outb.String())
-		node.Outb.Reset()
 	}
 
 	s.Success("Deploy: Aragon env... done")
@@ -80,8 +81,13 @@ func (node *Deploy) AragonStdApps() error {
 	s, _ := pterm.DefaultSpinner.Start("Deploy: Aragon standart apps...")
 
 	node.Cmd = exec.Command("yarn", "deploy:aragon-std-apps")
-	node.Cmd.Stdout = &node.Outb
-	node.Cmd.Stderr = &node.Errb
+	if logs.Verbose {
+		node.Cmd.Stdout = os.Stdout
+		node.Cmd.Stderr = os.Stderr
+	} else {
+		node.Cmd.Stdout = &node.Outb
+		node.Cmd.Stderr = &node.Errb
+	}
 	err := node.Cmd.Run()
 	if err != nil {
 		return err
@@ -98,15 +104,21 @@ func (node *Deploy) AragonStdApps() error {
 	return nil
 }
 
-func (node *Deploy) ApmAndTemplates() {
+func (node *Deploy) ApmAndTemplates() error {
 	s, _ := pterm.DefaultSpinner.Start("Deploy: apm and template...")
 
 	node.Cmd = exec.Command("yarn", "deploy:apm-and-template")
-	node.Cmd.Stdout = &node.Outb
-	node.Cmd.Stderr = &node.Errb
+	if logs.Verbose {
+		node.Cmd.Stdout = os.Stdout
+		node.Cmd.Stderr = os.Stderr
+	} else {
+		node.Cmd.Stdout = &node.Outb
+		node.Cmd.Stderr = &node.Errb
+	}
 	err := node.Cmd.Run()
 	if err != nil {
-		log.Panic(err)
+		pterm.Error.Println(err)
+		return err
 	}
 
 	//need to use different buffers
@@ -116,17 +128,25 @@ func (node *Deploy) ApmAndTemplates() {
 	}
 
 	s.Success("Deploy: apm and template... done")
+
+	return nil
 }
 
-func (node *Deploy) DeployApps() {
+func (node *Deploy) DeployApps() error {
 	s, _ := pterm.DefaultSpinner.Start("Deploy: lido apps...")
 
 	node.Cmd = exec.Command("yarn", "deploy:apps")
-	node.Cmd.Stdout = &node.Outb
-	node.Cmd.Stderr = &node.Errb
+	if logs.Verbose {
+		node.Cmd.Stdout = os.Stdout
+		node.Cmd.Stderr = os.Stderr
+	} else {
+		node.Cmd.Stdout = &node.Outb
+		node.Cmd.Stderr = &node.Errb
+	}
 	err := node.Cmd.Run()
 	if err != nil {
-		log.Panic(err)
+		pterm.Error.Println(err)
+		return err
 	}
 
 	//need to use different buffers
@@ -136,17 +156,25 @@ func (node *Deploy) DeployApps() {
 	}
 
 	s.Success("Deploy: lido apps... done")
+
+	return nil
 }
 
-func (node *Deploy) DeployDAO() {
+func (node *Deploy) DeployDAO() error {
 	s, _ := pterm.DefaultSpinner.Start("Deploy: DAO...")
 
 	node.Cmd = exec.Command("yarn", "deploy:dao")
-	node.Cmd.Stdout = &node.Outb
-	node.Cmd.Stderr = &node.Errb
+	if logs.Verbose {
+		node.Cmd.Stdout = os.Stdout
+		node.Cmd.Stderr = os.Stderr
+	} else {
+		node.Cmd.Stdout = &node.Outb
+		node.Cmd.Stderr = &node.Errb
+	}
 	err := node.Cmd.Run()
 	if err != nil {
-		log.Panic(err)
+		pterm.Error.Println(err)
+		return err
 	}
 
 	//need to use different buffers
@@ -156,4 +184,6 @@ func (node *Deploy) DeployDAO() {
 	}
 
 	s.Success("Deploy: DAO... done")
+
+	return nil
 }

@@ -3,6 +3,7 @@ package cmd
 import (
 	"lido-cli/pkg/apps"
 	"lido-cli/pkg/aragon"
+	"lido-cli/pkg/contracts"
 	"lido-cli/pkg/deploy"
 	"lido-cli/pkg/hardhat"
 	"lido-cli/pkg/ipfs"
@@ -14,6 +15,7 @@ import (
 type LidoExecutor struct {
 	HardhatNode  *hardhat.HardhatNode
 	IPFS         *ipfs.IPFS
+	Contracts    *contracts.Contracts
 	Deploy       *deploy.Deploy
 	AragonClient *aragon.AragonClient
 	LidoApps     *apps.LidoAppsClient
@@ -25,6 +27,7 @@ var (
 	Lido = &LidoExecutor{
 		HardhatNode:  &hardhat.HardhatNode{},
 		IPFS:         &ipfs.IPFS{},
+		Contracts:    &contracts.Contracts{},
 		Deploy:       &deploy.Deploy{},
 		AragonClient: &aragon.AragonClient{},
 		LidoApps:     &apps.LidoAppsClient{},
@@ -53,7 +56,7 @@ func Execute() error {
 	rootCmd.PersistentFlags().StringVar(&Lido.NetworkName, "network", "localhost", "Set deploy network name")
 	rootCmd.PersistentFlags().BoolVarP(&logs.Verbose, "verbose", "v", false, "Verbose output all of services")
 	rootCmd.PersistentFlags().StringVar(&Lido.LidoApps.AppsLocator, "apps", "", "Which source to load app frontend assets from")
-	rootCmd.PersistentFlags().StringVar(&Lido.LidoApps.Path, "apps-path", "apps/", "Lido apps path")
+	rootCmd.PersistentFlags().StringVar(&Lido.LidoApps.Path, "apps-path", "", "Lido apps path")
 	rootCmd.PersistentFlags().StringVar(&Lido.HardhatNode.Fork, "fork", "", "Fork endpoint ttps://mainnet.infura.io/v3/{WEB3_INFURA_PROJECT_ID}")
 
 	return rootCmd.Execute()

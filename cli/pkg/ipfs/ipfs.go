@@ -37,14 +37,12 @@ func (node *IPFS) Start() {
 
 		if strings.Contains(node.Outb.String(), "Daemon is ready") {
 			s.Success("IPFS: Started")
-			fmt.Println()
 			break
 		}
 
 		if strings.Contains(node.Errb.String(), "Error:") {
 			s.Fail()
-			fmt.Println(node.Errb.String())
-			fmt.Println()
+			pterm.Error.Println(node.Errb.String())
 			break
 		}
 

@@ -7,6 +7,7 @@ import (
 	"lido-cli/pkg/aragon"
 	"lido-cli/pkg/daemon"
 	"lido-cli/pkg/deploy"
+	"log"
 	"os"
 
 	"github.com/pterm/pterm"
@@ -30,19 +31,30 @@ var startAllCmd = &cobra.Command{
 	Short: "Start hardhat node, start ipfs, deploy contracts, start lido apps, start aragon",
 	Run: func(cmd *cobra.Command, args []string) {
 
+		os.Setenv("NETWORK_NAME", Lido.NetworkName)
+
+		Lido.Contracts.Start()
 		Lido.HardhatNode.Start("")
 		Lido.IPFS.Start()
 		if err := Lido.Deploy.Start(); err != nil {
+			log.Println(err)
+			return
+		}
+		if err := Lido.LidoApps.Start(); err != nil {
+			log.Println(err)
 			return
 		}
 		if err := Lido.AragonClient.Start("", Lido.LidoApps.AppsLocator, nil); err != nil {
+			log.Println(err)
 			return
 		}
 
 		Lido.Deploy.DeployedFile, _ = getDeployedFile(Lido.NetworkName)
 
-		pterm.Println()
-		pterm.FgYellow.Println("Start aragon at: " + Lido.AragonClient.RunningUrl + "/#/" + Lido.Deploy.DeployedFile.DaoAddress)
+		if Lido.AragonClient.RunningUrl != "" && Lido.Deploy.DeployedFile.DaoAddress != "" {
+			pterm.Println()
+			pterm.FgYellow.Println("Start aragon at: " + Lido.AragonClient.RunningUrl + "/#/" + Lido.Deploy.DeployedFile.DaoAddress)
+		}
 
 		daemon.WaitCtrlC()
 	},
@@ -52,6 +64,8 @@ var startForkCmd = &cobra.Command{
 	Use:   "fork",
 	Short: "Deploy API artifacts",
 	Run: func(cmd *cobra.Command, args []string) {
+
+		os.Setenv("NETWORK_NAME", Lido.NetworkName)
 
 		fork, err := cmd.Flags().GetString("fork")
 		if err != nil {

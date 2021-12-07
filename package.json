@@ -87,7 +87,7 @@
     "eth-ens-namehash": "^2.0.8",
     "eth-gas-reporter": "^0.2.17",
     "ethereumjs-testrpc-sc": "^6.5.1-sc.1",
-    "hardhat": "^2.0.3",
+    "hardhat": "^2.7.0",
     "hardhat-gas-reporter": "^1.0.1",
     "husky": "^4.3.0",
     "lerna": "^3.22.1",
@@ -122,5 +122,6 @@
   },
   "lint-staged": {
     "*.{js,jsx}": "yarn lint:js:fix"
-  }
+  },
+  "packageManager": "yarn@2.4.3"
 }

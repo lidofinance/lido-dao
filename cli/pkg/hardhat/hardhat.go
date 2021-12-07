@@ -42,7 +42,7 @@ func (node *HardhatNode) Start(infuraProjectUrl string) {
 	}
 
 	for {
-		if logs.Verbose && outb.String() != "" {
+		if logs.Verbose {
 			fmt.Print(outb.String())
 		}
 
@@ -53,9 +53,7 @@ func (node *HardhatNode) Start(infuraProjectUrl string) {
 
 		if strings.Contains(errb.String(), "Error:") {
 			s.Fail()
-			fmt.Println(errb.String())
-			fmt.Println()
-			fmt.Println("✕ Hardhat node: Error")
+			pterm.Error.Println(errb.String())
 			break
 		}
 		outb.Reset()

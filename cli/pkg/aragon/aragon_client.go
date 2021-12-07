@@ -63,6 +63,25 @@ func checkApp(name string, address string, appInfo deploy.AppInfo, appLocatorArr
 	*appLocatorArr = append(*appLocatorArr, fmt.Sprintf("%s:%s", appId, appAddress))
 }
 
+func getAppsLocator(lidoApps string, deployedFile *deploy.DeployedFile) []string {
+	if lidoApps == "" {
+		return nil
+	}
+	var appLocatorArr []string
+
+	lidoAppsArray := strings.Split(lidoApps, ",")
+
+	for _, app := range lidoAppsArray {
+		tmp := strings.Split(app, ":")
+
+		checkApp(tmp[0], tmp[1], deployedFile.AppLido, &appLocatorArr)
+		checkApp(tmp[0], tmp[1], deployedFile.AppOracle, &appLocatorArr)
+		checkApp(tmp[0], tmp[1], deployedFile.AppNodeOperatorsRegistry, &appLocatorArr)
+	}
+
+	return appLocatorArr
+}
+
 func (node *AragonClient) Start(network AragonNetwork, lidoApps string, deployedFile *deploy.DeployedFile) error {
 	s, _ := pterm.DefaultSpinner.Start("Aragon client: starting...")
 
@@ -72,33 +91,7 @@ func (node *AragonClient) Start(network AragonNetwork, lidoApps string, deployed
 		os.Setenv("RUN_CMD", "mainnet")
 	}
 
-	var appLocatorArr []string
-	lidoAppsArray := strings.Split(lidoApps, ",")
-	for _, app := range lidoAppsArray {
-		tmp := strings.Split(app, ":")
-
-		checkApp(tmp[0], tmp[1], deployedFile.AppLido, &appLocatorArr)
-
-		if tmp[0] == deployedFile.AppLido.Name {
-			if strings.HasPrefix(tmp[0], "0x") {
-				appLocatorArr = append(appLocatorArr, fmt.Sprintf("%s:%s", tmp[0], tmp[1]))
-			} else if deployedFile.AppLido.ID != "" {
-				appLocatorArr = append(appLocatorArr, fmt.Sprintf("%s:%s", deployedFile.AppLido.ID, tmp[1]))
-			}
-		} else if tmp[0] == deployedFile.AppOracle.Name {
-			if strings.HasPrefix(tmp[0], "0x") {
-				appLocatorArr = append(appLocatorArr, fmt.Sprintf("%s:%s", tmp[0], tmp[1]))
-			} else if deployedFile.AppOracle.ID != "" {
-				appLocatorArr = append(appLocatorArr, fmt.Sprintf("%s:%s", deployedFile.AppOracle.ID, tmp[1]))
-			}
-		} else if tmp[0] == deployedFile.AppNodeOperatorsRegistry.Name {
-			if strings.HasPrefix(tmp[0], "0x") {
-				appLocatorArr = append(appLocatorArr, fmt.Sprintf("%s:%s", tmp[0], tmp[1]))
-			} else if deployedFile.AppNodeOperatorsRegistry.ID != "" {
-				appLocatorArr = append(appLocatorArr, fmt.Sprintf("%s:%s", deployedFile.AppNodeOperatorsRegistry.ID, tmp[1]))
-			}
-		}
-	}
+	appLocatorArr := getAppsLocator(lidoApps, deployedFile)
 
 	if len(appLocatorArr) != 0 {
 		os.Setenv("ARAGON_APP_LOCATOR", strings.Join(appLocatorArr, ","))
@@ -119,7 +112,6 @@ func (node *AragonClient) Start(network AragonNetwork, lidoApps string, deployed
 
 	re, _ := regexp.Compile(`Server running at (.*?)\s`)
 
-	timeout := 100
 	for {
 		if logs.Verbose {
 			fmt.Print(node.Outb.String())
@@ -144,15 +136,6 @@ func (node *AragonClient) Start(network AragonNetwork, lidoApps string, deployed
 		}
 		node.Outb.Reset()
 		time.Sleep(1 * time.Second)
-
-		timeout--
-		if timeout <= 0 {
-			pterm.Print("timeout")
-			s.Fail()
-
-			node.Stop()
-			break
-		}
 	}
 
 	return nil

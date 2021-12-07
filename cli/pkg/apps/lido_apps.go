@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"lido-cli/pkg/logs"
+	"log"
 	"os"
 	"os/exec"
 	"regexp"
@@ -37,19 +39,42 @@ type Manifest struct {
 	Name string `json:"name"`
 }
 
+func (node *LidoAppsClient) getAppPath() (string, error) {
+	if node.Path != "" {
+		return node.Path, nil
+	}
+
+	paths := []string{"apps/", "../apps/"}
+
+	fmt.Println(paths)
+	for _, path := range paths {
+		_, err := ioutil.ReadDir(path)
+		if err == nil {
+			return path, nil
+		}
+	}
+
+	return "", nil
+}
+
 func (node *LidoAppsClient) Start() error {
 	pterm.Info.Println("Lido apps: checking apps...")
 
 	apps := make([]*LidoApp, 0)
 
-	files, err := ioutil.ReadDir(node.Path)
+	appPath, err := node.getAppPath()
+	if err != nil {
+		return err
+	}
+
+	files, err := ioutil.ReadDir(appPath)
 	if err != nil {
 		return err
 	}
 
 	for _, f := range files {
 
-		path := node.Path + "/" + f.Name()
+		path := appPath + "/" + f.Name()
 		appPath := path + "/app/"
 		maninfestPath := path + "/manifest.json"
 
@@ -72,10 +97,15 @@ func (node *LidoAppsClient) Start() error {
 
 		apps = append(apps, &LidoApp{
 			Name:    manifest.Name,
-			Command: fmt.Sprintf("yarn --cwd %s dev", appPath),
+			Command: fmt.Sprintf("yarn --cwd %s run dev-fallback", appPath),
 		})
 
 		pterm.Info.Printfln("Found app: %s", manifest.Name)
+	}
+
+	if len(apps) == 0 {
+		log.Println("No apps")
+		return nil
 	}
 
 	pterm.Info.Println("Try to start apps")
@@ -92,8 +122,10 @@ func (node *LidoAppsClient) Start() error {
 
 		app.Cmd = exec.Command("/bin/sh", "-c", app.Command)
 		app.Cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+
 		app.Cmd.Stdout = &app.Outb
 		app.Cmd.Stderr = &app.Errb
+
 		err := app.Cmd.Start()
 		if err != nil {
 			return err
@@ -115,8 +147,11 @@ func (node *LidoAppsClient) CheckRunningUrl(wg *sync.WaitGroup, app *LidoApp) er
 
 	re, _ := regexp.Compile(`Server running at (.*?)\s`)
 
-	timeout := 60
 	for {
+		if logs.Verbose && app.Outb.String() != "" {
+			log.Println(app.Outb.String())
+		}
+
 		if strings.Contains(app.Outb.String(), "Built in") {
 
 			res := re.FindAllStringSubmatch(app.Outb.String(), -1)
@@ -132,14 +167,8 @@ func (node *LidoAppsClient) CheckRunningUrl(wg *sync.WaitGroup, app *LidoApp) er
 			pterm.Error.Println(app.Errb.String())
 			return errors.New(app.Errb.String())
 		}
+		app.Outb.Reset()
 		time.Sleep(1 * time.Second)
-		timeout--
-		if timeout <= 0 {
-			pterm.Print("timeout")
-
-			app.Stop()
-			break
-		}
 	}
 
 	return nil
