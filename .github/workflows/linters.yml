@@ -14,10 +14,10 @@ jobs:
       uses: actions/setup-node@v1
       with:
         node-version: 12.x
-    
+
     - name: Get yarn cache directory path
       id: yarn-cache-dir-path
-      run: echo "::set-output name=dir::$(yarn cache dir)"
+      run: echo "::set-output name=dir::$(yarn config get cacheFolder)"
 
     - name: Cache yarn cache
       id: cache-yarn-cache
@@ -42,8 +42,8 @@ jobs:
         steps.cache-node-modules.outputs.cache-hit != 'true'
 
     - name: Run Solidity tests
-      run: yarn test:unit    
-    
+      run: yarn test:unit
+
     - name: Run Solidity linters
       run: yarn lint:sol:solhint
 
@@ -62,7 +62,7 @@ jobs:
       uses: actions/setup-node@v1
       with:
         node-version: 12.x
-    
+
     - name: Get yarn cache directory path
       id: yarn-cache-dir-path
       run: echo "::set-output name=dir::$(yarn cache dir)"
