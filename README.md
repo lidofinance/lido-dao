@@ -241,9 +241,14 @@ so full branch coverage will never be reported until
 
 ## Deploying
 
-For local development, please see [local documentation](/DEV_LOCAL.md)
+We have several ways to deploying lido cmartcontracts and run DAO localy, you can find documents here:
 
-For develop/test on fork, please see [fork documentation](/DEV_FORK.md)
+`Lido-cli` [documentation](/docs/lido-cli.md)
+
+For local development, please see [local documentation](/docs/dev-local.md)
+
+For develop/test on fork, please see [fork documentation](/docs/dev-fork.md)
+
 
 # License
 
