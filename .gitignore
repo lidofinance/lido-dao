@@ -14,6 +14,7 @@ tmp/
 
 aragon-apps/
 aragon-client/
+cli/vendor
 
 **/data/
 *.log
