@@ -36,7 +36,7 @@ type AragonClient struct {
 }
 
 func checkApp(name string, address string, appInfo deploy.AppInfo, appLocatorArr *[]string) {
-	if name != appInfo.Name {
+	if name == "" || address == "" {
 		return
 	}
 
@@ -44,20 +44,22 @@ func checkApp(name string, address string, appInfo deploy.AppInfo, appLocatorArr
 	var appAddress string
 
 	//check name
-	if strings.HasPrefix(name, "0x") {
+	if strings.HasPrefix(name, "0x") && name == appInfo.ID {
 		appId = name
-	} else if appInfo.ID != "" {
+	} else if appInfo.ID != "" && name == appInfo.Name {
 		appId = appInfo.ID
+	} else {
+		return
 	}
 
 	//check address
 	if strings.Contains(address, "http://") || strings.Contains(address, "https://") {
-		appAddress = address
+		appAddress = address + "/"
 
 		//check fo IPFS CID v0 - https://docs.ipfs.io/concepts/content-addressing/#identifier-formats
 	} else if strings.HasPrefix(address, "Qm") && len(address) == 46 {
 		//@todo load from flags
-		appAddress = "https://mainnet.lido.fi/ipfs/" + address
+		appAddress = fmt.Sprintf("https://mainnet.lido.fi/ipfs/%s/", address)
 	}
 
 	*appLocatorArr = append(*appLocatorArr, fmt.Sprintf("%s:%s", appId, appAddress))
@@ -72,7 +74,7 @@ func getAppsLocator(lidoApps string, deployedFile *deploy.DeployedFile) []string
 	lidoAppsArray := strings.Split(lidoApps, ",")
 
 	for _, app := range lidoAppsArray {
-		tmp := strings.Split(app, ":")
+		tmp := strings.SplitN(app, ":", 2)
 
 		checkApp(tmp[0], tmp[1], deployedFile.AppLido, &appLocatorArr)
 		checkApp(tmp[0], tmp[1], deployedFile.AppOracle, &appLocatorArr)
@@ -84,7 +86,6 @@ func getAppsLocator(lidoApps string, deployedFile *deploy.DeployedFile) []string
 
 func (node *AragonClient) Start(network AragonNetwork, lidoApps string, deployedFile *deploy.DeployedFile) error {
 	s, _ := pterm.DefaultSpinner.Start("Aragon client: starting...")
-
 	defer s.Stop()
 
 	if network == CMD_MAINNET {

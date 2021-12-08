@@ -23,7 +23,7 @@ compile-releases: clean vendor## Compile vsh binaries for multiple platforms and
 	for GOOS in $(SUPPORTED_PLATFORMS); do \
 		for GOARCH in $(SUPPORTED_ARCHS); do \
 			GOOS=$$GOOS GOARCH=$$GOARCH \
-				go build -mod vendor -ldflags "-X main.vshVersion=$(VERSION)" -o build/${APP_NAME}_$${GOOS}_$${GOARCH}; \
+				go build -mod vendor -ldflags "-X main.version=$(VERSION)" -o build/${APP_NAME}_$${GOOS}_$${GOARCH}; \
 		done \
 	done
 	cd build/ && sha256sum * > SHA256SUM
