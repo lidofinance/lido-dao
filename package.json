@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "postinstall": "patch-package",
-    "build:apps": "hardhat run --no-compile scripts/build-apps-frontend.js",
+    "build:apps": "yarn compile && hardhat --no-compile run scripts/build-apps-frontend.js",
     "lint": "yarn lint:sol && yarn lint:js",
     "lint:sol": "yarn lint:sol:solhint && yarn lint:sol:solium",
     "lint:js": "yarn lint:js:cmd .",

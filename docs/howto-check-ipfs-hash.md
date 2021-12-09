@@ -2,7 +2,7 @@
 
 This HOWTO describes how to check IPFS apps hash
 
-### Step 1. Clone official repo and go to folder
+### Step 1. Clone the official repo and go to the folder
 
 ```bash
 git clone git@github.com:lidofinance/lido-dao.git && cd lido-dao
@@ -26,11 +26,11 @@ After that you can check next folder:
 
 ### Step 4. Install IPFS
 
-This step need for create and check IPFS hash
+This step needs to create and check the IPFS hash
 
 See ipfs install instructions [here](https://docs.ipfs.io/install/ipfs-desktop/#ubuntu)
 
-For example install via Homebrew
+For example, install via Homebrew
 ```bash
 brew install ipfs --cask
 ```

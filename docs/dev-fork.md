@@ -9,7 +9,7 @@ To run Aragon client and check apps on the fork, run `hardhat node`
 npx hardhat node --fork https://mainnet.infura.io/v3/{WEB3_INFURA_PROJECT_ID}
 ```
 
-Next there are 2 options to run Aragon client
+Next, there are 2 options to run Aragon client
 
 ### Approach 1 - auto
 
@@ -17,9 +17,9 @@ Next there are 2 options to run Aragon client
 NETWORK_NAME=mainnet RUN_CMD=mainnet node scripts/start-aragon.js
 ```
 
-That script set the right environment variables, download and start aragon client at `http://localhost:3000/#/lido-dao.aragonid.eth`
+That script set the right environment variables, download and start Aragon client at `http://localhost:3000/#/lido-dao.aragonid.eth`
 
-Sync data on fork is not very fast, so you need to waiting ~90sec
+Sync data on the fork is not very fast, so you need to wait ~90sec
 
 
 ### Approach 2 - manual
@@ -48,7 +48,7 @@ Where:
 * **ARAGON_DEFAULT_ETH_NODE** - local fork
 * **ARAGON_APP_LOCATOR** - which source to load app frontend assets from, see more [here](https://github.com/lidofinance/aragon-client/blob/master/docs/CONFIGURATION.md#aragon_app_locator)
 
-Actual information about AppID you can find in `deployed-mainnet.json`, for example id of Lido app:
+Actual information about AppID you can find in `deployed-mainnet.json`, for example, id of Lido app:
 ```javascript
 "app:lido": {
     ...
@@ -57,7 +57,7 @@ Actual information about AppID you can find in `deployed-mainnet.json`, for exam
 },
 ```
 
-So if you want to load app frontend from localhost (not ipfs), you need to start lido app and change **ARAGON_APP_LOCATOR**:
+So if you want to load the app frontend from localhost (not ipfs), you need to start the lido app and change **ARAGON_APP_LOCATOR**:
 ```bash
 cd apps/lido/app && yarn && yarn dev
 
