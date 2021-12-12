@@ -14,6 +14,7 @@ import "solidity-bytes-utils/contracts/BytesLib.sol";
 import "./interfaces/ILido.sol";
 import "./interfaces/INodeOperatorsRegistry.sol";
 import "./interfaces/IDepositContract.sol";
+import "./interfaces/ILidoMevTipsVault.sol";
 
 import "./StETH.sol";
 
@@ -69,6 +70,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     bytes32 internal constant NODE_OPERATORS_REGISTRY_POSITION = keccak256("lido.Lido.nodeOperatorsRegistry");
     bytes32 internal constant TREASURY_POSITION = keccak256("lido.Lido.treasury");
     bytes32 internal constant INSURANCE_FUND_POSITION = keccak256("lido.Lido.insuranceFund");
+    bytes32 internal constant MEV_VAULT_POSITION = keccak256("lido.Lido.mevVault");
 
     /// @dev amount of Ether (on the current Ethereum side) buffered on this smart contract balance
     bytes32 internal constant BUFFERED_ETHER_POSITION = keccak256("lido.Lido.bufferedEther");
@@ -117,6 +119,10 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         // protection against accidental submissions by calling non-existent function
         require(msg.data.length == 0, "NON_EMPTY_DATA");
         _submit(0);
+    }
+
+    function mevReceiver() external payable {
+        // TODO: emit some event
     }
 
     /**
@@ -280,9 +286,16 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         BEACON_BALANCE_POSITION.setStorageUint256(_beaconBalance);
         BEACON_VALIDATORS_POSITION.setStorageUint256(_beaconValidators);
 
+        ILidoMevTipsVault mevVault = getMevVault();
+        uint256 mevFeesRewards = mevVault.withdrawAllFunds();
+
+        BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().add(mevFeesRewards));
+        _depositBufferedEther(DEFAULT_MAX_DEPOSITS_PER_CALL);
+
         if (_beaconBalance > rewardBase) {
             uint256 rewards = _beaconBalance.sub(rewardBase);
-            distributeRewards(rewards);
+            // distributeRewards(rewards);
+            distributeRewards(rewards.add(mevFeesRewards));
         }
     }
 
@@ -413,6 +426,19 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     function _setOracle(address _oracle) internal {
         require(isContract(_oracle), "NOT_A_CONTRACT");
         ORACLE_POSITION.setStorageAddress(_oracle);
+    }
+
+    /**
+    * @dev TODO
+    * @param _mevVault MEV and Tx Fees Vault contract
+    */
+    function setMevVault(address _mevVault) public {
+        require(isContract(_mevVault), "NOT_A_CONTRACT");
+        MEV_VAULT_POSITION.setStorageAddress(_mevVault);
+    }
+
+    function getMevVault() public view returns (ILidoMevTipsVault) {
+        return ILidoMevTipsVault(MEV_VAULT_POSITION.getStorageAddress());
     }
 
     /**
@@ -688,7 +714,8 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
       */
     function _getBufferedEther() internal view returns (uint256) {
         uint256 buffered = BUFFERED_ETHER_POSITION.getStorageUint256();
-        assert(address(this).balance >= buffered);
+        // assert(address(this).balance >= buffered);
+        // require(address(this).balance >= buffered, "address(this).balance >= buffered");
 
         return buffered;
     }
