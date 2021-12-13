@@ -68,7 +68,7 @@ contract.only('Lido: merge acceptance', (addresses) => {
 
   it('Mev and tx tips vault deployed and initialized', async () => {
     mevVault = await LidoMevTipsVault.new(pool.address)
-    await pool.setMevVault(mevVault.address)
+    await pool.setMevVault(mevVault.address, { from: voting })
   })
 
   it('Rewards emulator deployed and initialized', async () => {
