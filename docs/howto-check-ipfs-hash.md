@@ -8,6 +8,11 @@ This HOWTO describes how to check IPFS apps hash
 git clone git@github.com:lidofinance/lido-dao.git && cd lido-dao
 ```
 
+Switch to `aragon-dev` branch
+```bash
+git checkout aragon-dev
+```
+
 ### Step 2. Install dependencies
 
 ```bash
