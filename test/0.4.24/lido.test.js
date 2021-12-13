@@ -7,6 +7,7 @@ const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 const { BN } = require('bn.js')
 const { ethers } = require('ethers')
 const { formatEther } = require('ethers/lib/utils')
+const { getEthBalance, formatStEth: formamtStEth, formatBN } = require('../helpers/utils')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
@@ -39,7 +40,6 @@ const hexConcat = (first, ...rest) => {
 }
 
 // Divides a BN by 1e15
-
 const div15 = (bn) => bn.div(new BN('1000000000000000'))
 
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
@@ -70,12 +70,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     app = await Lido.at(proxyAddress)
 
     mevVault = await MevVault.new(app.address)
-    await app.setMevVault(mevVault.address)
-
-    console.log(`LIDO ADDRESS: ${app.address}`)
-    console.log(`MEV_VAULT ADDRESS: ${mevVault.address}`)
-    console.log(`ORACLE ADDRESS: ${oracle.address}`)
-    console.log()
 
     // NodeOperatorsRegistry
     proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)
@@ -111,6 +105,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
 
     await oracle.setPool(app.address)
     await depositContract.reset()
+
+    await app.setMevVault(mevVault.address, { from: voting })
   })
 
   const checkStat = async ({ depositedValidators, beaconValidators, beaconBalance }) => {
@@ -137,48 +133,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     assertBn(div15(operators_b.add(a1).add(a2).add(a3).add(a4)), operator, 'node operators token balance check')
   }
 
-  function formatWei(weiString) {
-    return ethers.utils.formatEther(ethers.utils.parseUnits(weiString, 'wei'), { commify: true }) + ' ETH'
-  }
-
-  function formatBN(bn) {
-    return formatWei(bn.toString())
-  }
-
-  async function getEthBalance(address) {
-    return formatWei(await web3.eth.getBalance(address))
-  }
-
-  function formamtStEth(bn) {
-    return ethers.utils.formatEther(ethers.utils.parseUnits(bn.toString(), 'wei'), { commify: true }) + ' stETH'
-  }
-
   async function getStEthBalance(address) {
     return formamtStEth(await app.balanceOf(address))
-  }
-
-  const setupNodeOperatorsForMevVaultTests = async (userAddress, initialDepositAmount) => {
-    await app.setFee(1000, { from: voting }) // 10%
-
-    await operators.addNodeOperator('1', ADDRESS_1, { from: voting })
-    await operators.addNodeOperator('2', ADDRESS_2, { from: voting })
-
-    await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
-    await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
-
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
-    await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
-    await operators.addSigningKeys(
-      0,
-      3,
-      hexConcat(pad('0x010204', 48), pad('0x010205', 48), pad('0x010206', 48)),
-      hexConcat(pad('0x01', 96), pad('0x01', 96), pad('0x01', 96)),
-      { from: voting }
-    )
-
-    await web3.eth.sendTransaction({ to: app.address, from: userAddress, value: initialDepositAmount })
-    await app.methods['depositBufferedEther()']({ from: depositor })
-    // await checkStat({ depositedValidators: 1, beaconValidators: 0, beaconBalance: ETH(0) })
   }
 
   const logLidoState = async () => {
@@ -218,6 +174,36 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await logBalances()
     console.log()
   }
+
+  const setupNodeOperatorsForMevVaultTests = async (userAddress, initialDepositAmount) => {
+    await app.setFee(1000, { from: voting }) // 10%
+
+    await operators.addNodeOperator('1', ADDRESS_1, { from: voting })
+    await operators.addNodeOperator('2', ADDRESS_2, { from: voting })
+
+    await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
+    await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
+
+    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+    await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
+    await operators.addSigningKeys(
+      0,
+      3,
+      hexConcat(pad('0x010204', 48), pad('0x010205', 48), pad('0x010206', 48)),
+      hexConcat(pad('0x01', 96), pad('0x01', 96), pad('0x01', 96)),
+      { from: voting }
+    )
+
+    await web3.eth.sendTransaction({ to: app.address, from: userAddress, value: initialDepositAmount })
+    await app.methods['depositBufferedEther()']({ from: depositor })
+    // await checkStat({ depositedValidators: 1, beaconValidators: 0, beaconBalance: ETH(0) })
+  }
+
+  it.only('Addresses which are not Lido contract cannot withdraw from MEV vault', async () => {
+    await assertRevert(mevVault.withdrawAllFunds({ from: user1 }), 'Nobody except Lido contract can withdraw')
+    await assertRevert(mevVault.withdrawAllFunds({ from: voting }), 'Nobody except Lido contract can withdraw')
+    await assertRevert(mevVault.withdrawAllFunds({ from: appManager }), 'Nobody except Lido contract can withdraw')
+  })
 
   it.only('MEV distribution works when zero rewards reported', async () => {
     const depositAmount = 32
@@ -271,7 +257,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     assertBn(await app.getTotalPooledEther(), ETH(depositAmount + mevAmount + beaconRewards))
     assertBn(await app.getBufferedEther(), ETH(mevAmount))
     assertBn(await app.balanceOf(user2), STETH(41))
-    // TODO: assertBn(await app.balanceOf(treasuryAddr), STETH(1))
+    // TODO: assertBn(await app.balanceOf(treasuryAddr), STETH(1) - 1 wei)
   })
 
   it('setFee works', async () => {
