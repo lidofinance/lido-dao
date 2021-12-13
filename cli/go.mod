@@ -1,4 +1,4 @@
-module lido-cli
+module lido-aragon
 
 go 1.16
 

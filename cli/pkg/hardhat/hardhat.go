@@ -3,7 +3,7 @@ package hardhat
 import (
 	"bytes"
 	"fmt"
-	"lido-cli/pkg/logs"
+	"lido-aragon/pkg/logs"
 	"log"
 	"os/exec"
 	"strings"

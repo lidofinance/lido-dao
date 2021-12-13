@@ -3,7 +3,7 @@ package ipfs
 import (
 	"bytes"
 	"fmt"
-	"lido-cli/pkg/logs"
+	"lido-aragon/pkg/logs"
 	"log"
 	"os/exec"
 	"strings"

@@ -3,7 +3,7 @@ package contracts
 import (
 	"bytes"
 	"fmt"
-	"lido-cli/pkg/logs"
+	"lido-aragon/pkg/logs"
 	"os/exec"
 
 	"github.com/pterm/pterm"

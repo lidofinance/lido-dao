@@ -1,4 +1,4 @@
-APP_NAME := lido-cli
+APP_NAME := lido-aragon
 SUPPORTED_PLATFORMS := linux darwin
 SUPPORTED_ARCHS := amd64 arm64
 VERSION := $(shell git describe --tags --abbrev=0)
@@ -24,7 +24,7 @@ compile-releases: clean vendor## Compile vsh binaries for multiple platforms and
 	for GOOS in $(SUPPORTED_PLATFORMS); do \
 		for GOARCH in $(SUPPORTED_ARCHS); do \
 			GOOS=$$GOOS GOARCH=$$GOARCH \
-				go build -mod vendor -ldflags "-X lido-cli/cmd.version=$(VERSION) -X lido-cli/cmd.revision=$(REVISION)" -o build/${APP_NAME}_$${GOOS}_$${GOARCH}; \
+				go build -mod vendor -ldflags "-X lido-aragon/cmd.version=$(VERSION) -X lido-aragon/cmd.revision=$(REVISION)" -o build/${APP_NAME}_$${GOOS}_$${GOARCH}; \
 		done \
 	done
 	cd build/ && sha256sum * > SHA256SUM

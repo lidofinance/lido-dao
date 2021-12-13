@@ -3,7 +3,7 @@ package deploy
 import (
 	"bytes"
 	"fmt"
-	"lido-cli/pkg/logs"
+	"lido-aragon/pkg/logs"
 	"os"
 	"os/exec"
 	"strings"

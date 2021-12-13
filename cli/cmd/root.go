@@ -2,13 +2,13 @@ package cmd
 
 import (
 	"fmt"
-	"lido-cli/pkg/apps"
-	"lido-cli/pkg/aragon"
-	"lido-cli/pkg/contracts"
-	"lido-cli/pkg/deploy"
-	"lido-cli/pkg/hardhat"
-	"lido-cli/pkg/ipfs"
-	"lido-cli/pkg/logs"
+	"lido-aragon/pkg/apps"
+	"lido-aragon/pkg/aragon"
+	"lido-aragon/pkg/contracts"
+	"lido-aragon/pkg/deploy"
+	"lido-aragon/pkg/hardhat"
+	"lido-aragon/pkg/ipfs"
+	"lido-aragon/pkg/logs"
 
 	"github.com/spf13/cobra"
 )
@@ -49,8 +49,8 @@ func (ld *LidoExecutor) Shutdown() {
 
 var (
 	rootCmd = &cobra.Command{
-		Use:   "lido-cli",
-		Short: "lido-cli: lido tool to start aragon env",
+		Use:   "lido-aragon",
+		Short: "lido-aragon: lido tool to start aragon env",
 	}
 )
 

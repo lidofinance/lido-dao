@@ -1,7 +1,7 @@
 package main
 
 import (
-	"lido-cli/cmd"
+	"lido-aragon/cmd"
 )
 
 func main() {

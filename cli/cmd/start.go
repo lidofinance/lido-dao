@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"lido-cli/pkg/aragon"
-	"lido-cli/pkg/daemon"
-	"lido-cli/pkg/deploy"
+	"lido-aragon/pkg/aragon"
+	"lido-aragon/pkg/daemon"
+	"lido-aragon/pkg/deploy"
 	"log"
 	"os"
 

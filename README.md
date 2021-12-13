@@ -243,7 +243,7 @@ so full branch coverage will never be reported until
 
 We have several ways to deploying lido cmartcontracts and run DAO localy, you can find documents here:
 
-`Lido-cli` [documentation](/docs/lido-cli.md)
+`lido-aragon` [documentation](/docs/lido-aragon.md)
 
 For local development, please see [local documentation](/docs/dev-local.md)
 

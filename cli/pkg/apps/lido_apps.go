@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"lido-cli/pkg/logs"
+	"lido-aragon/pkg/logs"
 	"log"
 	"os"
 	"os/exec"
