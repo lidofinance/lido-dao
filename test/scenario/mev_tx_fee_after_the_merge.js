@@ -30,7 +30,7 @@ contract.only('Lido: merge acceptance', (addresses) => {
     user3,
     // unrelated address
     nobody,
-    // mev source
+    // MEV source
     userMev
   ] = addresses
 
@@ -107,7 +107,7 @@ contract.only('Lido: merge acceptance', (addresses) => {
     rewarder = await RewardEmulatorMock.new(mevVault.address)
 
     assertBn(await web3.eth.getBalance(mevVault.address), ETH(0), 'rewarder balance')
-    assertBn(await web3.eth.getBalance(mevVault.address), ETH(0), 'mev vault balance')
+    assertBn(await web3.eth.getBalance(mevVault.address), ETH(0), 'MEV vault balance')
 
     // Fee and its distribution are in basis points, 10000 corresponding to 100%
 
@@ -341,12 +341,12 @@ contract.only('Lido: merge acceptance', (addresses) => {
     assertBn(await token.totalSupply(), tokens(3 + 30 + 64), 'token total supply')
   })
 
-  it('collect 9 ETH mev and tx rewards to the vault', async () => {
+  it('collect 9 ETH MEV and tx rewards to the vault', async () => {
     await rewarder.reward({ from: userMev, value: ETH(9) })
-    assertBn(await web3.eth.getBalance(mevVault.address), ETH(9), 'mev vault balance')
+    assertBn(await web3.eth.getBalance(mevVault.address), ETH(9), 'MEV vault balance')
   })
 
-  it('the oracle reports balance increase on Ethereum2 side (+32ETH) and claims collected mev and tx fee rewards (+9ETH)', async () => {
+  it('the oracle reports balance increase on Ethereum2 side (+32 ETH) and claims collected MEV and tx fee rewards (+9 ETH)', async () => {
     const epoch = 100
 
     // Total shares are equal to deposited eth before ratio change and fee mint
@@ -364,7 +364,7 @@ contract.only('Lido: merge acceptance', (addresses) => {
     await oracleMock.reportBeacon(epoch, 2, ETH(96))
 
     // Mev and tx rewards just claimed
-    assertBn(await web3.eth.getBalance(mevVault.address), ETH(0), 'mev vault balance')
+    assertBn(await web3.eth.getBalance(mevVault.address), ETH(0), 'MEV vault balance')
 
     // Total shares increased because fee minted (fee shares added)
     // shares ~= oldTotalShares + reward * oldTotalShares / (newTotalPooledEther - reward)
@@ -430,15 +430,15 @@ contract.only('Lido: merge acceptance', (addresses) => {
     )
   })
 
-  it('collect another 7ETH mev and tx rewards to the vault', async () => {
+  it('collect another 7 ETH MEV and tx rewards to the vault', async () => {
     await rewarder.reward({ from: userMev, value: ETH(2) })
-    assertBn(await web3.eth.getBalance(mevVault.address), ETH(2), 'mev vault balance')
+    assertBn(await web3.eth.getBalance(mevVault.address), ETH(2), 'MEV vault balance')
 
     await rewarder.reward({ from: userMev, value: ETH(5) })
-    assertBn(await web3.eth.getBalance(mevVault.address), ETH(7), 'mev vault balance')
+    assertBn(await web3.eth.getBalance(mevVault.address), ETH(7), 'MEV vault balance')
   })
 
-  it('the oracle reports balance is the same on Ethereum2 side (+0ETH) and claims collected mev and tx fee rewards (+7ETH)', async () => {
+  it('the oracle reports same balance on Ethereum2 side (+0 ETH) and claims collected MEV and tx fee rewards (+7 ETH)', async () => {
     const epoch = 101
 
     // Total shares are equal to deposited eth before ratio change and fee mint
@@ -454,7 +454,7 @@ contract.only('Lido: merge acceptance', (addresses) => {
     await oracleMock.reportBeacon(epoch, 2, ETH(96))
 
     // Mev and tx rewards just claimed
-    assertBn(await web3.eth.getBalance(mevVault.address), ETH(0), 'mev vault balance')
+    assertBn(await web3.eth.getBalance(mevVault.address), ETH(0), 'MEV vault balance')
 
     // Total shares preserved because fee shares NOT minted
     // shares ~= oldTotalShares + reward * oldTotalShares / (newTotalPooledEther - reward)
@@ -494,12 +494,12 @@ contract.only('Lido: merge acceptance', (addresses) => {
     assertBn(await token.balanceOf(nodeOperator2.address), new BN('107699275362318839'), 'operator_2 tokens')
   })
 
-  it('collect another 5ETH mev and tx rewards to the vault', async () => {
+  it('collect another 5 ETH MEV and tx rewards to the vault', async () => {
     await rewarder.reward({ from: userMev, value: ETH(5) })
-    assertBn(await web3.eth.getBalance(mevVault.address), ETH(5), 'mev vault balance')
+    assertBn(await web3.eth.getBalance(mevVault.address), ETH(5), 'MEV vault balance')
   })
 
-  it('the oracle reports loss on Ethereum2 side (-2ETH) and claims collected mev and tx fee rewards (+5ETH)', async () => {
+  it('the oracle reports loss on Ethereum2 side (-2 ETH) and claims collected MEV and tx fee rewards (+5 ETH)', async () => {
     const epoch = 102
 
     // Total shares are equal to deposited eth before ratio change and fee mint
@@ -515,7 +515,7 @@ contract.only('Lido: merge acceptance', (addresses) => {
     await oracleMock.reportBeacon(epoch, 2, ETH(94))
 
     // Mev and tx rewards just claimed
-    assertBn(await web3.eth.getBalance(mevVault.address), ETH(0), 'mev vault balance')
+    assertBn(await web3.eth.getBalance(mevVault.address), ETH(0), 'MEV vault balance')
 
     // Total shares preserved because fee shares NOT minted
     // shares ~= oldTotalShares + reward * oldTotalShares / (newTotalPooledEther - reward)
@@ -552,12 +552,12 @@ contract.only('Lido: merge acceptance', (addresses) => {
     assertBn(await token.balanceOf(nodeOperator2.address), new BN('109927536231884057'), 'operator_2 tokens')
   })
 
-  it('collect another 3ETH mev and tx rewards to the vault', async () => {
+  it('collect another 3 ETH MEV and tx rewards to the vault', async () => {
     await rewarder.reward({ from: userMev, value: ETH(3) })
-    assertBn(await web3.eth.getBalance(mevVault.address), ETH(3), 'mev vault balance')
+    assertBn(await web3.eth.getBalance(mevVault.address), ETH(3), 'MEV vault balance')
   })
 
-  it('the oracle reports loss on Ethereum2 side (-3ETH) and claims collected mev and tx fee rewards (+3ETH)', async () => {
+  it('the oracle reports loss on Ethereum2 side (-3 ETH) and claims collected MEV and tx fee rewards (+3 ETH)', async () => {
     const epoch = 103
 
     // Total shares are equal to deposited eth before ratio change and fee mint
@@ -573,7 +573,7 @@ contract.only('Lido: merge acceptance', (addresses) => {
     await oracleMock.reportBeacon(epoch, 2, ETH(91))
 
     // Mev and tx rewards just claimed
-    assertBn(await web3.eth.getBalance(mevVault.address), ETH(0), 'mev vault balance')
+    assertBn(await web3.eth.getBalance(mevVault.address), ETH(0), 'MEV vault balance')
 
     // Total shares preserved because fee shares NOT minted
     // shares ~= oldTotalShares + reward * oldTotalShares / (newTotalPooledEther - reward)
@@ -608,12 +608,12 @@ contract.only('Lido: merge acceptance', (addresses) => {
     assertBn(await token.balanceOf(nodeOperator2.address), new BN('109927536231884057'), 'operator_2 tokens')
   })
 
-  it('collect another 2ETH mev and tx rewards to the vault', async () => {
+  it('collect another 2 ETH MEV and tx rewards to the vault', async () => {
     await rewarder.reward({ from: userMev, value: ETH(2) })
-    assertBn(await web3.eth.getBalance(mevVault.address), ETH(2), 'mev vault balance')
+    assertBn(await web3.eth.getBalance(mevVault.address), ETH(2), 'MEV vault balance')
   })
 
-  it('the oracle reports loss on Ethereum2 side (-8ETH) and claims collected mev and tx fee rewards (+2ETH)', async () => {
+  it('the oracle reports loss on Ethereum2 side (-8 ETH) and claims collected MEV and tx fee rewards (+2 ETH)', async () => {
     const epoch = 104
 
     // Total shares are equal to deposited eth before ratio change and fee mint
@@ -629,7 +629,7 @@ contract.only('Lido: merge acceptance', (addresses) => {
     await oracleMock.reportBeacon(epoch, 2, ETH(83))
 
     // Mev and tx rewards just claimed
-    assertBn(await web3.eth.getBalance(mevVault.address), ETH(0), 'mev vault balance')
+    assertBn(await web3.eth.getBalance(mevVault.address), ETH(0), 'MEV vault balance')
 
     // Total shares preserved because fee shares NOT minted
     // shares ~= oldTotalShares + reward * oldTotalShares / (newTotalPooledEther - reward)
@@ -665,12 +665,12 @@ contract.only('Lido: merge acceptance', (addresses) => {
     assertBn(await token.balanceOf(nodeOperator2.address), new BN('105471014492753622'), 'operator_2 tokens')
   })
 
-  it('collect another 3ETH mev and tx rewards to the vault', async () => {
+  it('collect another 3 ETH MEV and tx rewards to the vault', async () => {
     await rewarder.reward({ from: userMev, value: ETH(3) })
-    assertBn(await web3.eth.getBalance(mevVault.address), ETH(3), 'mev vault balance')
+    assertBn(await web3.eth.getBalance(mevVault.address), ETH(3), 'MEV vault balance')
   })
 
-  it('the oracle reports balance increase on Ethereum2 side (+2ETH) and claims collected mev and tx fee rewards (+3ETH)', async () => {
+  it('the oracle reports balance increase on Ethereum2 side (+2 ETH) and claims collected MEV and tx fee rewards (+3 ETH)', async () => {
     const epoch = 105
 
     // Total shares are equal to deposited eth before ratio change and fee mint
@@ -686,7 +686,7 @@ contract.only('Lido: merge acceptance', (addresses) => {
     await oracleMock.reportBeacon(epoch, 2, ETH(85))
 
     // Mev and tx rewards just claimed
-    assertBn(await web3.eth.getBalance(mevVault.address), ETH(0), 'mev vault balance')
+    assertBn(await web3.eth.getBalance(mevVault.address), ETH(0), 'MEV vault balance')
 
     // Total shares increased because fee minted (fee shares added)
     // shares ~= oldTotalShares + reward * oldTotalShares / (newTotalPooledEther - reward)
