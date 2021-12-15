@@ -112,7 +112,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
     }
     
     function requestStETHBurn(uint256 stETH2Burn, bool isCover) external {
-        require(stETH2Burn > 0);
+        require(stETH2Burn > 0, "ZERO_BURN_AMOUNT");
         require(IStETH(LIDO).transferFrom(msg.sender, address(this), stETH2Burn));
         
         uint256 sharesAmount = IStETH(LIDO).getSharesByPooledEth(stETH2Burn);
@@ -144,9 +144,9 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
     }
    
     function recoverERC20(address token, uint256 amount) external {
-        require(amount > 0);
-        require(token != address(0));
-        require(token != LIDO);
+        require(amount > 0, "ZERO_RECOVERY_AMOUNT");
+        require(token != address(0), "ZERO_ERC20_ADDRESS");
+        require(token != LIDO, "STETH_RECOVER_WRONG_FUNC");
 
         emit ERC20Recovered(msg.sender, token, amount);
         
@@ -154,7 +154,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
     }
 
     function recoverERC721(address token, uint256 token_id) external {
-        require(token != address(0));
+        require(token != address(0), "ZERO_ERC721_ADDRESS");
 
         emit ERC721Recovered(msg.sender, token, token_id);
 
