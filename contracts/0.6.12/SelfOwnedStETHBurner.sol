@@ -78,6 +78,12 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
         address indexed token,
         uint256 amount
     );
+
+    event ERC721Recovered(
+        address indexed requestedBy,
+        address indexed token,
+        uint256 token_id
+    );
         
     function getCoverSharesBurnt() external view returns (uint256) {
         return totalCoverSharesBurnt;
@@ -105,13 +111,13 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
         LIDO = _lido;
     }
     
-    function requestStETHBurn(uint256 stEth2Burn, bool isCover) external {
-        require(stEth2Burn > 0);
-        require(IStETH(LIDO).transferFrom(msg.sender, address(this), stEth2Burn));
+    function requestStETHBurn(uint256 stETH2Burn, bool isCover) external {
+        require(stETH2Burn > 0);
+        require(IStETH(LIDO).transferFrom(msg.sender, address(this), stETH2Burn));
         
-        uint256 sharesAmount = IStETH(LIDO).getSharesByPooledEth(stEth2Burn);
+        uint256 sharesAmount = IStETH(LIDO).getSharesByPooledEth(stETH2Burn);
         
-        emit StETHBurnRequested(isCover, msg.sender, stEth2Burn, sharesAmount);
+        emit StETHBurnRequested(isCover, msg.sender, stETH2Burn, sharesAmount);
 
         if (isCover) { 
             coverSharesBurnRequested += sharesAmount;
@@ -133,8 +139,8 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
     }
     
     //don't accept ether
-    fallback () external {
-        revert ();
+    fallback () payable external {
+        revert ("INCOMING_ETH_IS_FORBIDDEN");
     }
    
     function recoverERC20(address token, uint256 amount) external {
@@ -145,6 +151,14 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
         emit ERC20Recovered(msg.sender, token, amount);
         
         IERC20(token).transfer(TREASURY, amount);
+    }
+
+    function recoverERC721(address token, uint256 token_id) external {
+        require(token != address(0));
+
+        emit ERC721Recovered(msg.sender, token, token_id);
+
+        IERC721(token).transferFrom(address(this), TREASURY, token_id);
     }
     
     function processLidoOracleReport(uint256 _postTotalPooledEther,
