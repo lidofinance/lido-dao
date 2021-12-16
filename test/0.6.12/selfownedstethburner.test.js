@@ -5,6 +5,7 @@ const { newDao, newApp } = require('../0.4.24/helpers/dao')
 const { BN } = require('bn.js')
 
 const { assert } = require('chai')
+const { AlchemyWebSocketProvider } = require('@ethersproject/providers')
 
 const SelfOwnerStETHBurner = artifacts.require('SelfOwnedStETHBurner.sol')
 
@@ -20,11 +21,11 @@ const ERC721OZMock = artifacts.require('ERC721OZMock.sol')
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 const stETH = ETH
 
-contract.only('SelfOwnedStETHBurner', function ([appManager, voting, deployer, depositor, anotherAccount, ...otherAccounts]) {
+contract('SelfOwnedStETHBurner', function ([appManager, voting, deployer, depositor, anotherAccount, ...otherAccounts]) {
   let oracle, lido, burner
   let treasuryAddr
 
-  before('deploy lido with dao', async () => {
+  beforeEach('deploy lido with dao', async () => {
     const lidoBase = await LidoMock.new({ from: deployer })
     oracle = await LidoOracleMock.new({ from: deployer })
     const depositContract = await DepositContractMock.new({ from: deployer })
@@ -69,45 +70,187 @@ contract.only('SelfOwnedStETHBurner', function ([appManager, voting, deployer, d
 
     await oracle.setPool(lido.address)
     await depositContract.reset()
-  })
 
-  beforeEach('deploy dao and set acl', async () => {
     burner = await SelfOwnerStETHBurner.new(treasuryAddr, lido.address, { from: deployer })
   })
 
-  describe('Requests and burn invocation', function () {
+  describe.only('Requests and burn invocation', function () {
+    beforeEach(async function () {
+      assertBn(await lido.balanceOf(anotherAccount), stETH(0))
+
+      await web3.eth.sendTransaction({ from: anotherAccount, to: lido.address, value: ETH(20) })
+      await web3.eth.sendTransaction({ from: deployer, to: lido.address, value: ETH(30) })
+
+      assertBn(await lido.balanceOf(anotherAccount), stETH(20))
+      assertBn(await lido.balanceOf(deployer), stETH(30))
+
+      await ethers.provider.send('hardhat_impersonateAccount', [oracle.address])
+    })
+
     it(`request shares burn for cover`, async function () {
-      assert.fail('Not implemented yet')
+      // allowance should be set explicitly to request burning
+      assertRevert(burner.requestStETHBurn(stETH(8), true, { from: anotherAccount }), `TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE`)
+
+      await lido.approve(burner.address, stETH(8), { from: anotherAccount })
+      await burner.requestStETHBurn(stETH(8), true, { from: anotherAccount })
+
+      assertBn(await lido.balanceOf(burner.address), stETH(8))
+      assertBn(await lido.balanceOf(anotherAccount), stETH(12))
+      assertBn(await lido.balanceOf(deployer), stETH(30))
+
+      // allowance should be set explicitly to request burning even for the deployer
+      assertRevert(burner.requestStETHBurn(stETH(12), false, { from: deployer }), `TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE`)
+      await lido.approve(burner.address, stETH(12), { from: deployer })
+      await burner.requestStETHBurn(stETH(12), false, { from: deployer })
+
+      assertBn(await lido.balanceOf(burner.address), stETH(20))
+      assertBn(await lido.balanceOf(anotherAccount), stETH(12))
+      assertBn(await lido.balanceOf(deployer), stETH(18))
     })
 
-    it(`request shares burn for non-cover`, async function () {
-      assert.fail('Not implemented yet')
+    const constGasOffset = 21000
+
+    it(`invoke an oracle without requested burn`, async function () {
+      // someone accidentally transferred stETH
+      await lido.transfer(burner.address, stETH(5.6), { from: deployer })
+      await lido.transfer(burner.address, stETH(4.1), { from: anotherAccount })
+
+      assertBn(await lido.balanceOf(burner.address), stETH(9.7))
+
+      assertRevert(burner.processLidoOracleReport(ETH(10), ETH(12), new BN('1000'), { from: deployer }), `APP_AUTH_FAILED`)
+
+      // mimic Lido oracle for the callback invocation
+      await burner.processLidoOracleReport(ETH(10), ETH(12), new BN('1000'), { from: oracle.address })
+
+      // the balance should be the same
+      assertBn(await lido.balanceOf(burner.address), stETH(9.7))
     })
 
-    it(`invoke an oracle without requested burn + measure gas`, async function () {
-      assert.fail('Not implemented yet')
+    it(`invoke an oracle with the one type (cover/non-cover) pending requests`, async function () {
+      // someone accidentally transferred stETH
+      await lido.transfer(burner.address, stETH(3.1), { from: deployer })
+      await lido.transfer(burner.address, stETH(4.0), { from: anotherAccount })
+
+      await lido.approve(burner.address, stETH(6), { from: anotherAccount })
+      await burner.requestStETHBurn(stETH(6), false, { from: anotherAccount })
+
+      burner_shares = await lido.sharesOf(burner.address)
+      shares_to_burn = await lido.getSharesByPooledEth(stETH(6))
+
+      assertBn(await lido.balanceOf(burner.address), stETH(6 + 3.1 + 4.0))
+
+      assertRevert(burner.processLidoOracleReport(ETH(10), ETH(12), new BN('1000'), { from: deployer }), `APP_AUTH_FAILED`)
+
+      assertRevert(
+        // even
+        burner.processLidoOracleReport(ETH(10), ETH(12), new BN('1000'), { from: oracle.address }),
+        `APP_AUTH_FAILED`
+      )
+
+      await acl.grantPermission(burner.address, lido.address, await lido.BURN_ROLE())
+      await burner.processLidoOracleReport(ETH(10), ETH(12), new BN('1000'), { from: oracle.address })
+
+      // the balance should be the same
+      assertBn(await lido.sharesOf(burner.address), burner_shares.sub(shares_to_burn))
     })
 
-    it(`invoke an oracle with requested cover OR non-cover burn + measure gas`, async function () {
-      assert.fail('Not implemented yet')
-    })
-
-    it(`invoke an oracle with requested cover AND non-cover burn + measure gas`, async function () {
+    it(`invoke an oracle with requested cover AND non-cover burn`, async function () {
       assert.fail('Not implemented yet')
     })
 
     it(`check burnt counters`, async function () {
       assert.fail('Not implemented yet')
     })
+
+    it(`check if positive rebase happened after the burn application`, async function () {})
   })
 
   describe('Recover excess stETH', function () {
-    it(`can't recover requested for burn stETH`, async function () {
-      assert.fail('Not implemented yet')
+    beforeEach(async function () {
+      // initial stETH balance is zero
+      assertBn(await lido.balanceOf(anotherAccount), stETH(0))
+      // submit 10 ETH to mint 10 stETH
+      await web3.eth.sendTransaction({ from: anotherAccount, to: lido.address, value: ETH(10) })
+      // check 10 stETH minted on balance
+      assertBn(await lido.balanceOf(anotherAccount), stETH(10))
     })
 
-    it(`recover some stETH`, async function () {
-      assert.fail('Not implemented yet')
+    it(`can't recover requested for burn stETH`, async function () {
+      // request to burn 7.1 stETH
+      await lido.approve(burner.address, stETH(7.1), { from: anotherAccount })
+      await burner.requestStETHBurn(stETH(7.1), true, { from: anotherAccount })
+
+      // excess stETH amount should be zero
+      assertBn(await burner.getExcessStETH(), stETH(0))
+      assertBn(await lido.balanceOf(treasuryAddr), stETH(0))
+      assertBn(await lido.balanceOf(burner.address), stETH(7.1))
+
+      // should change nothing
+      await burner.recoverExcessStETH()
+
+      // excess stETH amount didn't changed
+      assertBn(await burner.getExcessStETH(), stETH(0))
+
+      // treasury and burner stETH balances are same
+      assertBn(await lido.balanceOf(treasuryAddr), stETH(0))
+      assertBn(await lido.balanceOf(burner.address), stETH(7.1))
+    })
+
+    it('recover some stETH', async function () {
+      // 'accidentally' sent stETH from anotherAccount
+      await lido.transfer(burner.address, stETH(2.3), { from: anotherAccount })
+
+      // check burner and treasury balances before recovery
+      assertBn(await lido.balanceOf(burner.address), stETH(2.3))
+      assertBn(await lido.balanceOf(treasuryAddr), stETH(0))
+
+      await burner.recoverExcessStETH({ from: deployer })
+
+      // check burner and treasury balances after recovery
+      assertBn(await lido.balanceOf(burner.address), stETH(0))
+      assertBn(await lido.balanceOf(treasuryAddr), stETH(2.3))
+    })
+
+    it(`recover some stETH, some burning requests happens in the middle`, async function () {
+      // 'accidentally' sent stETH from anotherAccount
+      await lido.transfer(burner.address, stETH(5), { from: anotherAccount })
+
+      // check balances
+      assertBn(await lido.balanceOf(anotherAccount), stETH(5))
+      assertBn(await lido.balanceOf(burner.address), stETH(5))
+
+      // all of the burner's current stETH amount (5) can be recovered
+      assertBn(await lido.balanceOf(burner.address), stETH(5))
+      assertBn(await burner.getExcessStETH(), stETH(5))
+
+      // approve burn request and check actual transferred amount
+      await lido.approve(burner.address, stETH(3), { from: anotherAccount })
+      await burner.requestStETHBurn(stETH(3), true, { from: anotherAccount })
+      assertBn(await lido.balanceOf(anotherAccount), stETH(2))
+
+      // excess stETH amount preserved
+      assertBn(await burner.getExcessStETH(), stETH(5))
+
+      // approve another burn request and check actual transferred amount
+      await lido.approve(burner.address, stETH(1), { from: anotherAccount })
+      await burner.requestStETHBurn(stETH(1), false, { from: anotherAccount })
+      assertBn(await lido.balanceOf(anotherAccount), stETH(1))
+
+      // excess stETH amount preserved
+      assertBn(await burner.getExcessStETH(), stETH(5))
+
+      // finally burner balance is 5 stETH
+      assertBn(await lido.balanceOf(burner.address), stETH(9))
+      assertBn(await lido.balanceOf(treasuryAddr), stETH(0))
+
+      // run recovery process, excess stETH amount (5)
+      // should be transferred to the treasury
+      await burner.recoverExcessStETH({ from: anotherAccount })
+
+      assertBn(await burner.getExcessStETH(), stETH(0))
+
+      assertBn(await lido.balanceOf(treasuryAddr), stETH(5))
+      assertBn(await lido.balanceOf(burner.address), stETH(4))
     })
   })
 
