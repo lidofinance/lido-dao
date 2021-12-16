@@ -15,7 +15,6 @@ const ARAGON_APPS_REPO = process.env.ARAGON_APPS_REPO || 'https://github.com/lid
 const ARAGON_APPS_REPO_REF = process.env.ARAGON_APPS_REPO_REF || 'master'
 const RUN_CMD = process.env.RUN_CMD || 'local'
 const NETWORK_NAME = process.env.NETWORK_NAME || 'localhost'
-const ENS_ADDRESS = process.env.ENS_ADDRESS || '0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e'
 
 const appsRepoPath = './aragon-client'
 
@@ -97,6 +96,11 @@ async function startAragonClient(
     aragonEnv.ARAGON_DEFAULT_ETH_NODE = 'ws://localhost:8545'
     aragonEnv.ARAGON_IPFS_GATEWAY = 'https://mainnet.lido.fi/ipfs'
   }
+  
+  console.log(`ARAGON_APP_LOCATOR=${appLocator}`)
+  console.log(`ARAGON_ENS_REGISTRY_ADDRESS=${ensAddress}`)
+  console.log(`ARAGON_DEFAULT_ETH_NODE=${aragonEnv.ARAGON_DEFAULT_ETH_NODE}`)
+  console.log(`ARAGON_IPFS_GATEWAY=${aragonEnv.ARAGON_IPFS_GATEWAY}`)
 
   await execLive('yarn', {
     args: [`start:${runCmd}`],

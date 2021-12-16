@@ -32,7 +32,8 @@ type AragonClient struct {
 	Outb bytes.Buffer
 	Errb bytes.Buffer
 
-	RunningUrl string
+	RunningUrl  string
+	EnsRegistry string
 }
 
 func checkApp(name string, address string, appInfo deploy.AppInfo, appLocatorArr *[]string) {
@@ -112,6 +113,7 @@ func (node *AragonClient) Start(network AragonNetwork, lidoApps string, deployed
 	}
 
 	re, _ := regexp.Compile(`Server running at (.*?)\s`)
+	reEns, _ := regexp.Compile(`ARAGON_ENS_REGISTRY_ADDRESS=(.*?)`)
 
 	for {
 		if logs.Verbose {
@@ -122,10 +124,10 @@ func (node *AragonClient) Start(network AragonNetwork, lidoApps string, deployed
 			s.Success()
 
 			res := re.FindAllStringSubmatch(node.Outb.String(), -1)
-
 			node.RunningUrl = string(res[0][1])
 
-			// pterm.Info.Printf("Server running at %v\n", node.RunningUrl)
+			res2 := reEns.FindAllStringSubmatch(node.Outb.String(), -1)
+			node.EnsRegistry = string(res2[0][1])
 
 			return nil
 		}

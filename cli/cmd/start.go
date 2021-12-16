@@ -12,13 +12,45 @@ import (
 
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
+	"github.com/ttacon/chalk"
 )
 
 func init() {
 	rootCmd.AddCommand(startCmd)
+	rootCmd.AddCommand(startAragon)
+	rootCmd.AddCommand(startNode)
 
 	startCmd.AddCommand(startAllCmd)
 	startCmd.AddCommand(startForkCmd)
+}
+
+var startAragon = &cobra.Command{
+	Use:   "aragon",
+	Short: "Start aragon client only",
+	Run: func(cmd *cobra.Command, args []string) {
+		os.Setenv("NETWORK_NAME", Lido.NetworkName)
+
+		var aragonCmd aragon.AragonNetwork
+
+		if Lido.NetworkName == "mainnet" {
+			aragonCmd = aragon.CMD_MAINNET
+		}
+
+		pterm.Info.Printf("Network: %s\n", Lido.NetworkName)
+
+		Lido.Deploy.DeployedFile, _ = getDeployedFile(Lido.NetworkName)
+
+		err := Lido.AragonClient.Start(aragonCmd, Lido.LidoApps.AppsLocator, Lido.Deploy.DeployedFile)
+		if err != nil {
+			return
+		}
+
+		pterm.Println()
+		pterm.FgWhite.Println("ARAGON_ENS_REGISTRY_ADDRESS = " + Lido.AragonClient.EnsRegistry)
+		pterm.FgWhite.Println("Start aragon at: ", chalk.Yellow, Lido.AragonClient.RunningUrl+"/#/"+Lido.Deploy.DeployedFile.DaoAddress)
+
+		daemon.WaitCtrlC()
+	},
 }
 
 var startCmd = &cobra.Command{
