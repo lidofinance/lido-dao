@@ -241,7 +241,7 @@ so full branch coverage will never be reported until
 
 ## Deploying
 
-We have several ways to deploying lido cmartcontracts and run DAO localy, you can find documents here:
+We have several ways to deploying lido smartcontracts and run DAO localy, you can find documents here:
 
 `lido-aragon` [documentation](/docs/lido-aragon.md)
 
