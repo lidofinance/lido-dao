@@ -12,11 +12,12 @@ const { getEthBalance, formatStEth: formamtStEth, formatBN } = require('../helpe
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
 const Lido = artifacts.require('LidoMock.sol')
-const MevVault = artifacts.require('LidoMevTipsVault.sol')
+const MevVault = artifacts.require('LidoMevTxFeeVault.sol')
 const OracleMock = artifacts.require('OracleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
 const ERC20Mock = artifacts.require('ERC20Mock.sol')
 const VaultMock = artifacts.require('AragonVaultMock.sol')
+const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
 
 const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
 const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
@@ -50,7 +51,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
   let appBase, nodeOperatorsRegistryBase, app, oracle, depositContract, operators
   let treasuryAddr, insuranceAddr
   let dao, acl
-  let mevVault
+  let mevVault, rewarder
 
   before('deploy base app', async () => {
     // Deploy the app's base contract.
@@ -70,6 +71,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     app = await Lido.at(proxyAddress)
 
     mevVault = await MevVault.new(app.address)
+    rewarder = await RewardEmulatorMock.new(mevVault.address)
 
     // NodeOperatorsRegistry
     proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)
@@ -84,6 +86,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await acl.createPermission(voting, app.address, await app.SET_TREASURY(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_ORACLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_INSURANCE_FUND(), appManager, { from: appManager })
+    await acl.createPermission(voting, app.address, await app.SET_MEV_TX_FEE_VAULT_ROLE(), appManager, { from: appManager })
 
     await acl.createPermission(voting, operators.address, await operators.MANAGE_SIGNING_KEYS(), appManager, { from: appManager })
     await acl.createPermission(voting, operators.address, await operators.ADD_NODE_OPERATOR_ROLE(), appManager, { from: appManager })
@@ -200,9 +203,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
   }
 
   it.only('Addresses which are not Lido contract cannot withdraw from MEV vault', async () => {
-    await assertRevert(mevVault.withdrawAllFunds({ from: user1 }), 'Nobody except Lido contract can withdraw')
-    await assertRevert(mevVault.withdrawAllFunds({ from: voting }), 'Nobody except Lido contract can withdraw')
-    await assertRevert(mevVault.withdrawAllFunds({ from: appManager }), 'Nobody except Lido contract can withdraw')
+    await assertRevert(mevVault.withdrawRewards({ from: user1 }), 'Nobody except Lido contract can withdraw')
+    await assertRevert(mevVault.withdrawRewards({ from: voting }), 'Nobody except Lido contract can withdraw')
+    await assertRevert(mevVault.withdrawRewards({ from: appManager }), 'Nobody except Lido contract can withdraw')
   })
 
   it.only('MEV distribution works when zero rewards reported', async () => {
@@ -214,7 +217,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await oracle.reportBeacon(100, 1, ETH(depositAmount))
     await logAll()
 
-    await web3.eth.sendTransaction({ to: mevVault.address, from: user1, value: ETH(mevAmount) })
+    await rewarder.reward({ from: user1, value: ETH(mevAmount) })
     await oracle.reportBeacon(101, 1, ETH(depositAmount + beaconRewards))
     await logAll()
 
@@ -232,7 +235,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await oracle.reportBeacon(100, 1, ETH(depositAmount))
     await logAll()
 
-    await web3.eth.sendTransaction({ to: mevVault.address, from: user1, value: ETH(mevAmount) })
+    await rewarder.reward({ from: user1, value: ETH(mevAmount) })
     await oracle.reportBeacon(101, 1, ETH(depositAmount + beaconRewards))
     await logAll()
 
@@ -250,7 +253,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await oracle.reportBeacon(100, 1, ETH(depositAmount))
     await logAll()
 
-    await web3.eth.sendTransaction({ to: mevVault.address, from: user1, value: ETH(mevAmount) })
+    await rewarder.reward({ from: user1, value: ETH(mevAmount) })
     await oracle.reportBeacon(101, 1, ETH(depositAmount + beaconRewards))
     await logAll()
 

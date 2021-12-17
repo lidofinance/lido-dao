@@ -10,7 +10,7 @@ const { signDepositData } = require('../0.8.9/helpers/signatures')
 const { waitBlocks } = require('../helpers/blockchain')
 const addresses = require('@aragon/contract-helpers-test/src/addresses')
 
-const LidoMevTipsVault = artifacts.require('LidoMevTipsVault.sol')
+const LidoMevTxFeeVault = artifacts.require('LidoMevTxFeeVault.sol')
 const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
@@ -101,12 +101,12 @@ contract.only('Lido: merge acceptance', (addresses) => {
 
     depositRoot = await depositContractMock.get_deposit_root()
 
-    mevVault = await LidoMevTipsVault.new(pool.address)
+    mevVault = await LidoMevTxFeeVault.new(pool.address)
     await pool.setMevVault(mevVault.address, { from: voting })
 
     rewarder = await RewardEmulatorMock.new(mevVault.address)
 
-    assertBn(await web3.eth.getBalance(mevVault.address), ETH(0), 'rewarder balance')
+    assertBn(await web3.eth.getBalance(rewarder.address), ETH(0), 'rewarder balance')
     assertBn(await web3.eth.getBalance(mevVault.address), ETH(0), 'MEV vault balance')
 
     // Fee and its distribution are in basis points, 10000 corresponding to 100%
