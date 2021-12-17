@@ -6,9 +6,9 @@ pragma solidity 0.4.24;
 /**
   * @title TODO
   */
-interface ILidoMevTipsVault {
+interface ILidoMevTxFeeVault {
     /**
       * @notice TODO
       */
-    function withdrawAllFunds() external returns (uint256);
+    function withdrawRewards() external returns (uint256);
 }
