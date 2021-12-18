@@ -356,7 +356,9 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
       })
 
       it('burning zero value works', async () => {
-        await stEth.burnShares(user1, tokens(0))
+        const receipt = await stEth.burnShares(user1, tokens(0))
+        assertEvent(receipt, 'StETHBurnt', { expectedArgs: { account: user1, amount: tokens(0), sharesAmount: tokens(0) } })
+
         assertBn(await stEth.totalSupply(), tokens(300))
         assertBn(await stEth.balanceOf(user1), tokens(100))
         assertBn(await stEth.balanceOf(user2), tokens(100))
@@ -377,7 +379,10 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
           totalSupply.mul(totalShares.sub(user1Shares)).div(totalSupply.sub(user1Balance).add(bn(tokens(10))))
         )
 
-        await stEth.burnShares(user1, sharesToBurn)
+        const expectedAmount = await stEth.getPooledEthByShares(sharesToBurn)
+        const receipt = await stEth.burnShares(user1, sharesToBurn)
+        assertEvent(receipt, 'StETHBurnt', { expectedArgs: { account: user1, amount: expectedAmount, sharesAmount: sharesToBurn } })
+
         assertBn(await stEth.totalSupply(), tokens(300))
         assertBn(await stEth.balanceOf(user1), bn(tokens(90)).subn(1)) // expected round error
         assertBn(await stEth.balanceOf(user2), tokens(105))
@@ -400,7 +405,10 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
           totalSupply.mul(totalShares.sub(user1Shares)).div(totalSupply.sub(user1Balance).add(bn(tokens(50))))
         )
 
-        await stEth.burnShares(user1, sharesToBurn)
+        const expectedAmount = await stEth.getPooledEthByShares(sharesToBurn)
+        const receipt = await stEth.burnShares(user1, sharesToBurn)
+        assertEvent(receipt, 'StETHBurnt', { expectedArgs: { account: user1, amount: expectedAmount, sharesAmount: sharesToBurn } })
+
         assertBn(await stEth.balanceOf(user1), tokens(50))
 
         assertBn(await stEth.allowance(user1, user2), tokens(75))
