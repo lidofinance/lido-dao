@@ -21,7 +21,7 @@ const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 // semantic alias
 const stETH = ETH
 
-contract('SelfOwnedStETHBurner', function ([appManager, voting, deployer, depositor, anotherAccount, ...otherAccounts]) {
+contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anotherAccount, ...otherAccounts]) => {
   let oracle, lido, burner
   let treasuryAddr
 
@@ -74,8 +74,8 @@ contract('SelfOwnedStETHBurner', function ([appManager, voting, deployer, deposi
     burner = await SelfOwnerStETHBurner.new(treasuryAddr, lido.address, { from: deployer })
   })
 
-  describe('Requests and burn invocation', function () {
-    beforeEach(async function () {
+  describe('Requests and burn invocation', () => {
+    beforeEach(async () => {
       // initial balance is zero
       assertBn(await lido.balanceOf(anotherAccount), stETH(0))
 
@@ -91,7 +91,7 @@ contract('SelfOwnedStETHBurner', function ([appManager, voting, deployer, deposi
       await ethers.provider.send('hardhat_impersonateAccount', [oracle.address])
     })
 
-    it(`reverts on zero stETH amount cover/non-cover request`, async function () {
+    it(`reverts on zero stETH amount cover/non-cover request`, async () => {
       // provide non-zero allowance
       await lido.approve(burner.address, stETH(1), { from: anotherAccount })
 
@@ -101,7 +101,7 @@ contract('SelfOwnedStETHBurner', function ([appManager, voting, deployer, deposi
       assertRevert(burner.requestStETHBurn(stETH(0), false, { from: anotherAccount }), `ZERO_BURN_AMOUNT`)
     })
 
-    it(`request shares burn for cover`, async function () {
+    it(`request shares burn for cover`, async () => {
       // allowance should be set explicitly to request burning
       assertRevert(burner.requestStETHBurn(stETH(8), true, { from: anotherAccount }), `TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE`)
 
@@ -136,7 +136,7 @@ contract('SelfOwnedStETHBurner', function ([appManager, voting, deployer, deposi
       assertBn(await lido.balanceOf(deployer), stETH(18))
     })
 
-    it(`invoke an oracle without requested burn`, async function () {
+    it(`invoke an oracle without requested burn`, async () => {
       // someone accidentally transferred stETH
       await lido.transfer(burner.address, stETH(5.6), { from: deployer })
       await lido.transfer(burner.address, stETH(4.1), { from: anotherAccount })
@@ -156,7 +156,7 @@ contract('SelfOwnedStETHBurner', function ([appManager, voting, deployer, deposi
       assertBn(await lido.balanceOf(burner.address), stETH(9.7))
     })
 
-    it(`invoke an oracle with the one type (cover/non-cover) pending requests`, async function () {
+    it(`invoke an oracle with the one type (cover/non-cover) pending requests`, async () => {
       // someone accidentally transferred stETH
       await lido.transfer(burner.address, stETH(3.1), { from: deployer })
       await lido.transfer(burner.address, stETH(4.0), { from: anotherAccount })
@@ -178,7 +178,7 @@ contract('SelfOwnedStETHBurner', function ([appManager, voting, deployer, deposi
       )
 
       // grant permissions to the Lido.burnShares method
-      await acl.grantPermission(burner.address, lido.address, await lido.BURN_ROLE())
+      await acl.grantPermission(burner.address, lido.address, await lido.BURN_ROLE(), { from: appManager })
       const receipt = await burner.processLidoOracleReport(ETH(10), ETH(12), bn(1000), { from: oracle.address })
 
       assertEvent(receipt, `StETHBurnt`, { expectedArgs: { isCover: false, amount: stETH(6), sharesAmount: sharesToBurn } })
@@ -189,7 +189,7 @@ contract('SelfOwnedStETHBurner', function ([appManager, voting, deployer, deposi
       assertBn(await lido.sharesOf(burner.address), burnerShares.sub(sharesToBurn))
     })
 
-    it(`invoke an oracle with requested cover AND non-cover burn`, async function () {
+    it(`invoke an oracle with requested cover AND non-cover burn`, async () => {
       // someone accidentally transferred stETH
       await lido.transfer(burner.address, stETH(2.1), { from: deployer })
       await lido.transfer(burner.address, stETH(3.1), { from: anotherAccount })
@@ -224,7 +224,7 @@ contract('SelfOwnedStETHBurner', function ([appManager, voting, deployer, deposi
         `APP_AUTH_FAILED`
       )
 
-      await acl.grantPermission(burner.address, lido.address, await lido.BURN_ROLE())
+      await acl.grantPermission(burner.address, lido.address, await lido.BURN_ROLE(), { from: appManager })
       const receipt = await burner.processLidoOracleReport(ETH(3), ETH(4), bn(100), { from: oracle.address })
 
       assertEvent(receipt, `StETHBurnt`, {
@@ -244,7 +244,7 @@ contract('SelfOwnedStETHBurner', function ([appManager, voting, deployer, deposi
       assertBn(await lido.sharesOf(burner.address), burnerShares.sub(sharesToBurn))
     })
 
-    it(`check the burnt shares counters`, async function () {
+    it(`check the burnt shares counters`, async () => {
       const coverSharesAmount = [bn(10000000), bn(200000000), bn(30500000000)]
       const nonCoverSharesAmount = [bn(500000000), bn(370000000), bn(4210000000)]
 
@@ -261,7 +261,7 @@ contract('SelfOwnedStETHBurner', function ([appManager, voting, deployer, deposi
       assertBn(await burner.getNonCoverSharesBurnt(), expectedNonCoverSharesBurnt)
 
       await lido.approve(burner.address, allowance, { from: anotherAccount })
-      await acl.grantPermission(burner.address, lido.address, await lido.BURN_ROLE())
+      await acl.grantPermission(burner.address, lido.address, await lido.BURN_ROLE(), { from: appManager })
 
       // going through the defined arrays to check the burnt counters
       while (coverSharesAmount.length > 0) {
@@ -287,7 +287,7 @@ contract('SelfOwnedStETHBurner', function ([appManager, voting, deployer, deposi
       }
     })
 
-    it(`check if a positive rebase happened after the burn application`, async function () {
+    it(`check if a positive rebase happened after the burn application`, async () => {
       const totalETH = await lido.getTotalPooledEther()
       const totalShares = await lido.getTotalShares()
 
@@ -298,7 +298,7 @@ contract('SelfOwnedStETHBurner', function ([appManager, voting, deployer, deposi
       assertBn(await lido.balanceOf(anotherAccount), stETH(0))
       assertBn(await lido.balanceOf(deployer), stETH(30))
 
-      await acl.grantPermission(burner.address, lido.address, await lido.BURN_ROLE())
+      await acl.grantPermission(burner.address, lido.address, await lido.BURN_ROLE(), { from: appManager })
       await burner.processLidoOracleReport(ETH(1), ETH(1), bn(100), { from: oracle.address })
 
       assertBn(await lido.balanceOf(burner.address), stETH(0))
@@ -311,10 +311,16 @@ contract('SelfOwnedStETHBurner', function ([appManager, voting, deployer, deposi
     })
   })
 
-  describe('Granular permissions setup works', function () {
+  describe('Granular permissions setup works', () => {
     let sharesToBurn = 0
 
-    beforeEach('Setup permissions', async function () {
+    const padWithoutPrefix = (hex, bytesLength) => {
+      const absentZeroes = bytesLength * 2 + 2 - hex.length
+      if (absentZeroes > 0) hex = '0'.repeat(absentZeroes) + hex.substr(2)
+      return hex
+    }
+
+    beforeEach('Setup permissions', async () => {
       assertBn(await lido.balanceOf(anotherAccount), stETH(0))
       await web3.eth.sendTransaction({ from: anotherAccount, to: lido.address, value: ETH(21) })
       assertBn(await lido.balanceOf(anotherAccount), stETH(21))
@@ -328,38 +334,67 @@ contract('SelfOwnedStETHBurner', function ([appManager, voting, deployer, deposi
       assertBn(await lido.balanceOf(anotherAccount), stETH(11))
       assertBn(await lido.balanceOf(burner.address), stETH(10))
 
-      sharesToBurn = lido.getSharesByPooledEth(stETH(10))
+      sharesToBurn = await lido.getSharesByPooledEth(stETH(10))
 
-      // actual permissions setup
-
-      // 1. Revoke BURN_ROLE from voting
       await acl.revokePermission(voting, lido.address, await lido.BURN_ROLE())
 
-      // 2. Assign BURN_ROLE to burner + params
-      await acl.grantPermissionP(voting, lido.address, await lido.BURN_ROLE(), 0)
+      /*
+       * Granular permissions setup.
+       * Depends on Aragon OS ACL parameters interpretation.
+       *
+       * See: https://hack.aragon.org/docs/aragonos-ref#parameter-interpretation
+       *
+       * See also one the most relevant examples:
+       * https://github.com/aragon/aragonOS/blob/4bbe3e96fc5a3aa6340b11ec67e6550029da7af9/test/contracts/apps/app_acl.js#L123
+       *
+       * We need to allow burn if and only if the `_account` param equals to `burner.address`
+       * function burnShares(address _account, uint256 _sharesAmount)
+       *
+       * `_account` is the arg0 (uint8)
+       * 'equals' means Op.Eq (uint8)
+       * burner.address should be extended from uint160 to uint240
+       * 8 bits code
+       * So the composed permission param is just a uint256 (uint8 + uint8 + uint240) value
+       */
+
+      const composePermissionParam = (addr) => {
+        const argId = '0x00' // arg 0
+        const op = '01' // operation eq (Op.Eq == 1)
+        const value = padWithoutPrefix(burner.address, 240 / 8) // pad 160bit -> 240bit, remove '0x'
+        assert.equal(value.length, (240 / 8) * 2) // check the value length explicitly
+
+        const paramStr = `${argId}${op}${value}`
+        assert.equal(paramStr.length, (256 / 8) * 2 + 2)
+
+        return bn(paramStr)
+      }
+
+      const param = composePermissionParam(burner.address)
+
+      await acl.grantPermissionP(burner.address, lido.address, await lido.BURN_ROLE(), [param], { from: appManager })
     })
 
-    it(`can burn ownable requested stETH`, async function () {
-      assertBn(await lido.sharesOf(burner), sharesToBurn)
+    it(`the burner can burn ownable requested stETH`, async () => {
+      assertBn(await lido.sharesOf(burner.address), sharesToBurn)
       await lido.burnShares(burner.address, sharesToBurn, { from: burner.address })
-      assertBn(await lido.sharesOf(burner), bn(0))
+      assertBn(await lido.sharesOf(burner.address), bn(0))
     })
 
-    it(`others can't burn even ownable`, async function () {
+    it(`others can't burn, even ownable stETH`, async () => {
       assertRevert(lido.burnShares(anotherAccount, sharesToBurn, { from: anotherAccount }), `APP_AUTH_FAILED`)
     })
 
-    it(`can't burn non-ownable stETH`, async function () {
+    it(`no one can burn non-ownable stETH`, async () => {
       assertRevert(lido.burnShares(anotherAccount, sharesToBurn, { from: burner.address }), `APP_AUTH_FAILED`)
     })
 
-    it(`voting also can't burn stETH since new permissions setup`, async function () {
-      assertRevert(lido.burnShares(burn.address, sharesToBurn, { from: voting }), `APP_AUTH_FAILED`)
+    it(`voting also can't burn stETH since new permissions setup`, async () => {
+      assertRevert(lido.burnShares(burner.address, sharesToBurn, { from: voting }), `APP_AUTH_FAILED`)
     })
   })
 
-  describe('Recover excess stETH', function () {
-    beforeEach(async function () {
+  describe('Recover excess stETH', () => {
+    beforeEach(async () => {
       // initial stETH balance is zero
       assertBn(await lido.balanceOf(anotherAccount), stETH(0))
       // submit 10 ETH to mint 10 stETH
@@ -368,7 +403,7 @@ contract('SelfOwnedStETHBurner', function ([appManager, voting, deployer, deposi
       assertBn(await lido.balanceOf(anotherAccount), stETH(10))
     })
 
-    it(`can't recover requested for burn stETH`, async function () {
+    it(`can't recover requested for burn stETH`, async () => {
       // request to burn 7.1 stETH
       await lido.approve(burner.address, stETH(8), { from: anotherAccount })
       await burner.requestStETHBurn(stETH(7.1), true, { from: anotherAccount })
@@ -390,7 +425,7 @@ contract('SelfOwnedStETHBurner', function ([appManager, voting, deployer, deposi
       assertBn(await lido.balanceOf(burner.address), stETH(7.1))
     })
 
-    it('recover some stETH', async function () {
+    it('recover some stETH', async () => {
       // 'accidentally' sent stETH from anotherAccount
       await lido.transfer(burner.address, stETH(2.3), { from: anotherAccount })
 
@@ -409,7 +444,7 @@ contract('SelfOwnedStETHBurner', function ([appManager, voting, deployer, deposi
       assertBn(await lido.balanceOf(treasuryAddr), stETH(2.3))
     })
 
-    it(`recover some stETH, while some burning requests happens in the middle`, async function () {
+    it(`recover some stETH, while burning requests happens in the middle`, async () => {
       // 'accidentally' sent stETH from anotherAccount
       await lido.transfer(burner.address, stETH(5), { from: anotherAccount })
 
@@ -456,12 +491,12 @@ contract('SelfOwnedStETHBurner', function ([appManager, voting, deployer, deposi
     })
   })
 
-  describe('Recover ERC20 / ERC721', function () {
+  describe('Recover ERC20 / ERC721', () => {
     let mockERC20Token, mockNFT
     let nft1, nft2
     let totalERC20Supply
 
-    beforeEach(async function () {
+    beforeEach(async () => {
       // setup ERC20 token with total supply 100,000 units
       // mint two NFTs
       // the deployer solely holds newly created ERC20 and ERC721 items on setup
@@ -487,15 +522,15 @@ contract('SelfOwnedStETHBurner', function ([appManager, voting, deployer, deposi
       assert.equal(await mockNFT.ownerOf(nft2), deployer)
     })
 
-    it(`can't recover zero ERC20 amount`, async function () {
+    it(`can't recover zero ERC20 amount`, async () => {
       assertRevert(burner.recoverERC20(mockERC20Token.address, bn(0)), `ZERO_RECOVERY_AMOUNT`)
     })
 
-    it(`can't recover zero-address ERC20`, async function () {
+    it(`can't recover zero-address ERC20`, async () => {
       assertRevert(burner.recoverERC20(ZERO_ADDRESS, bn(10)), `ZERO_ERC20_ADDRESS`)
     })
 
-    it(`can't recover stETH by recoverERC20`, async function () {
+    it(`can't recover stETH by recoverERC20`, async () => {
       // initial stETH balance is zero
       assertBn(await lido.balanceOf(anotherAccount), stETH(0))
       // submit 10 ETH to mint 10 stETH
@@ -517,7 +552,7 @@ contract('SelfOwnedStETHBurner', function ([appManager, voting, deployer, deposi
       assertRevert(burner.recoverERC20(lido.address, stETH(1), { from: deployer }), `STETH_RECOVER_WRONG_FUNC`)
     })
 
-    it(`recover some ERC20 amount`, async function () {
+    it(`recover some ERC20 amount`, async () => {
       // distribute deployer's balance among anotherAccount and burner
       await mockERC20Token.transfer(anotherAccount, bn(400000), { from: deployer })
       await mockERC20Token.transfer(burner.address, bn(600000), { from: deployer })
@@ -554,11 +589,11 @@ contract('SelfOwnedStETHBurner', function ([appManager, voting, deployer, deposi
       assertRevert(burner.recoverERC20(mockERC20Token.address, bn(1), { from: deployer }), `ERC20: transfer amount exceeds balance`)
     })
 
-    it(`can't recover zero-address ERC721(NFT)`, async function () {
+    it(`can't recover zero-address ERC721(NFT)`, async () => {
       assertRevert(burner.recoverERC721(ZERO_ADDRESS, 0), `ZERO_ERC721_ADDRESS`)
     })
 
-    it(`recover some NFTs`, async function () {
+    it(`recover some NFTs`, async () => {
       // send nft1 to anotherAccount and nft2 to the burner address
       await mockNFT.transferFrom(deployer, anotherAccount, nft1, { from: deployer })
       await mockNFT.transferFrom(deployer, burner.address, nft2, { from: deployer })
@@ -588,7 +623,7 @@ contract('SelfOwnedStETHBurner', function ([appManager, voting, deployer, deposi
     })
   })
 
-  it(`Don't accept ETH`, async function () {
+  it(`Don't accept accidentally sent ETH`, async () => {
     const burner_addr = burner.address
 
     // try send 1 ETH, should be reverted with fallback defined reason
