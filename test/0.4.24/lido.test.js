@@ -202,13 +202,13 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     // await checkStat({ depositedValidators: 1, beaconValidators: 0, beaconBalance: ETH(0) })
   }
 
-  it.only('Addresses which are not Lido contract cannot withdraw from MEV vault', async () => {
+  it('Addresses which are not Lido contract cannot withdraw from MEV vault', async () => {
     await assertRevert(mevVault.withdrawRewards({ from: user1 }), 'Nobody except Lido contract can withdraw')
     await assertRevert(mevVault.withdrawRewards({ from: voting }), 'Nobody except Lido contract can withdraw')
     await assertRevert(mevVault.withdrawRewards({ from: appManager }), 'Nobody except Lido contract can withdraw')
   })
 
-  it.only('MEV distribution works when zero rewards reported', async () => {
+  it('MEV distribution works when zero rewards reported', async () => {
     const depositAmount = 32
     const mevAmount = 10
     const beaconRewards = 0
@@ -226,7 +226,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     assertBn(await app.balanceOf(user2), STETH(depositAmount + mevAmount))
   })
 
-  it.only('MEV distribution works when negative rewards reported', async () => {
+  it('MEV distribution works when negative rewards reported', async () => {
     const depositAmount = 32
     const mevAmount = 12
     const beaconRewards = -2
@@ -244,7 +244,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     assertBn(await app.balanceOf(user2), STETH(depositAmount + mevAmount + beaconRewards))
   })
 
-  it.only('MEV distribution works when positive rewards reported', async () => {
+  it('MEV distribution works when positive rewards reported', async () => {
     const depositAmount = 32
     const mevAmount = 7
     const beaconRewards = 3
@@ -648,7 +648,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await assertRevert(app.withdraw(tokens(1), pad('0x1000', 32), { from: user1 }), 'NOT_IMPLEMENTED_YET')
   })
 
-  it('pushBeacon works', async () => {
+  it('pushRewards works', async () => {
     await operators.addNodeOperator('1', ADDRESS_1, { from: voting })
     await operators.addNodeOperator('2', ADDRESS_2, { from: voting })
 
@@ -669,12 +669,12 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await app.methods['depositBufferedEther()']({ from: depositor })
     await checkStat({ depositedValidators: 1, beaconValidators: 0, beaconBalance: ETH(0) })
 
-    await assertRevert(app.pushBeacon(1, ETH(30), { from: appManager }), 'APP_AUTH_FAILED')
+    await assertRevert(app.pushRewards(1, ETH(30), { from: appManager }), 'APP_AUTH_FAILED')
 
     await oracle.reportBeacon(100, 1, ETH(30))
     await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(30) })
 
-    await assertRevert(app.pushBeacon(1, ETH(29), { from: nobody }), 'APP_AUTH_FAILED')
+    await assertRevert(app.pushRewards(1, ETH(29), { from: nobody }), 'APP_AUTH_FAILED')
 
     await oracle.reportBeacon(50, 1, ETH(100)) // stale data
     await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(100) })

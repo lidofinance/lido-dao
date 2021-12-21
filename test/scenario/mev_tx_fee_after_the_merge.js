@@ -15,7 +15,7 @@ const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
-contract.only('Lido: merge acceptance', (addresses) => {
+contract('Lido: merge acceptance', (addresses) => {
   const [
     // the root account which deployed the DAO
     appManager,
