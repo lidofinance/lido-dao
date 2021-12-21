@@ -81,7 +81,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     bytes32 internal constant BEACON_BALANCE_POSITION = keccak256("lido.Lido.beaconBalance");
     /// @dev number of Lido's validators available in the Beacon state
     bytes32 internal constant BEACON_VALIDATORS_POSITION = keccak256("lido.Lido.beaconValidators");
-    /// @dev amount of Ether received by the contract as MEV and transaction Fees
+    /// @dev total amount of Ether MEV and transaction rewards received by Lido contract
     bytes32 internal constant MEV_TX_FEE_ETHER_POSITION = keccak256("lido.Lido.mevTxFeeEther");
 
     /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
@@ -304,10 +304,16 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         BEACON_BALANCE_POSITION.setStorageUint256(_beaconBalance);
         BEACON_VALIDATORS_POSITION.setStorageUint256(_beaconValidators);
 
-        uint256 mevFeesRewards = ILidoMevTxFeeVault(getMevVault()).withdrawRewards();
-
-        BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().add(mevFeesRewards));
-        MEV_TX_FEE_ETHER_POSITION.setStorageUint256(MEV_TX_FEE_ETHER_POSITION.getStorageUint256().add(mevFeesRewards));
+        // If LidoMevTxFeeVault is not connected just do as if there are no mevTxFee rewards
+        // If the vault is connected withdraw all rewards and put them to the buffer for further staking
+        // Also increase counter of total mevTxFee rewards collected by Lido account
+        uint256 mevFeesRewards = 0;
+        address mevVaultAddress = getMevVault();
+        if (mevVaultAddress != address(0x0)) {
+            mevFeesRewards = ILidoMevTxFeeVault(getMevVault()).withdrawRewards();
+            BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().add(mevFeesRewards));
+            MEV_TX_FEE_ETHER_POSITION.setStorageUint256(MEV_TX_FEE_ETHER_POSITION.getStorageUint256().add(mevFeesRewards));
+        }
 
         if (_beaconBalance > rewardBase) {
             uint256 rewards = _beaconBalance.sub(rewardBase);

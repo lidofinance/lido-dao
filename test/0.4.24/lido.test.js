@@ -199,7 +199,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
 
     await web3.eth.sendTransaction({ to: app.address, from: userAddress, value: initialDepositAmount })
     await app.methods['depositBufferedEther()']({ from: depositor })
-    // await checkStat({ depositedValidators: 1, beaconValidators: 0, beaconBalance: ETH(0) })
   }
 
   it('Addresses which are not Lido contract cannot withdraw from MEV vault', async () => {
@@ -215,11 +214,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
 
     await setupNodeOperatorsForMevVaultTests(user2, ETH(depositAmount))
     await oracle.reportBeacon(100, 1, ETH(depositAmount))
-    await logAll()
 
     await rewarder.reward({ from: user1, value: ETH(mevAmount) })
     await oracle.reportBeacon(101, 1, ETH(depositAmount + beaconRewards))
-    await logAll()
 
     assertBn(await app.getTotalPooledEther(), ETH(depositAmount + mevAmount + beaconRewards))
     assertBn(await app.getBufferedEther(), ETH(mevAmount))
@@ -233,11 +230,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
 
     await setupNodeOperatorsForMevVaultTests(user2, ETH(depositAmount))
     await oracle.reportBeacon(100, 1, ETH(depositAmount))
-    await logAll()
 
     await rewarder.reward({ from: user1, value: ETH(mevAmount) })
     await oracle.reportBeacon(101, 1, ETH(depositAmount + beaconRewards))
-    await logAll()
 
     assertBn(await app.getTotalPooledEther(), ETH(depositAmount + mevAmount + beaconRewards))
     assertBn(await app.getBufferedEther(), ETH(mevAmount))
@@ -251,16 +246,13 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
 
     await setupNodeOperatorsForMevVaultTests(user2, ETH(depositAmount))
     await oracle.reportBeacon(100, 1, ETH(depositAmount))
-    await logAll()
 
     await rewarder.reward({ from: user1, value: ETH(mevAmount) })
     await oracle.reportBeacon(101, 1, ETH(depositAmount + beaconRewards))
-    await logAll()
 
     assertBn(await app.getTotalPooledEther(), ETH(depositAmount + mevAmount + beaconRewards))
     assertBn(await app.getBufferedEther(), ETH(mevAmount))
     assertBn(await app.balanceOf(user2), STETH(41))
-    // TODO: assertBn(await app.balanceOf(treasuryAddr), STETH(1) - 1 wei)
   })
 
   it('setFee works', async () => {
