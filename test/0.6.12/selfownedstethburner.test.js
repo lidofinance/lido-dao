@@ -13,6 +13,7 @@ const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 const LidoMock = artifacts.require('LidoMock.sol')
 const LidoOracleMock = artifacts.require('OracleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
+const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
 
 const ERC20OZMock = artifacts.require('ERC20OZMock.sol')
 const ERC721OZMock = artifacts.require('ERC721OZMock.sol')
@@ -21,7 +22,7 @@ const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 // semantic alias
 const stETH = ETH
 
-contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anotherAccount, ...otherAccounts]) => {
+contract.only('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anotherAccount, ...otherAccounts]) => {
   let oracle, lido, burner
   let treasuryAddr
 
@@ -89,6 +90,14 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
 
       // unlock oracle account (allow transactions originated from oracle.address)
       await ethers.provider.send('hardhat_impersonateAccount', [oracle.address])
+
+      // TRICK: send ether to oracle.address without fallback func invocation
+      // the positive balance needed to pass github CI checks when starting transactions from oracle.address
+      // P.S. `hardhat_setBalance` doesn't exist for the our HardHat version
+      const rewarder = await RewardEmulatorMock.new(oracle.address, { from: anotherAccount })
+      await rewarder.reward({ from: anotherAccount, value: ETH(1) })
+
+      assertBn(await web3.eth.getBalance(oracle.address), ETH(1))
     })
 
     it(`reverts on zero stETH amount cover/non-cover request`, async () => {
@@ -327,6 +336,15 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
 
       await ethers.provider.send('hardhat_impersonateAccount', [oracle.address])
       await ethers.provider.send('hardhat_impersonateAccount', [burner.address])
+
+      // TRICK: send ether to oracle.address and burner.address without fallback func invocation
+      // the positive balance needed to pass github CI checks when starting transactions from oracle.address and burner.address
+      // P.S. `hardhat_setBalance` doesn't exist for the our HardHat version
+      const oracleRewarder = await RewardEmulatorMock.new(oracle.address, { from: anotherAccount })
+      await oracleRewarder.reward({ from: anotherAccount, value: ETH(1) })
+
+      const burnerRewarder = await RewardEmulatorMock.new(burner.address, { from: anotherAccount })
+      await burnerRewarder.reward({ from: anotherAccount, value: ETH(1) })
 
       await lido.approve(burner.address, stETH(10), { from: anotherAccount })
       await burner.requestStETHBurn(stETH(10), true, { from: anotherAccount })
