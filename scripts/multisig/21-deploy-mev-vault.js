@@ -8,7 +8,6 @@ const { APP_NAMES } = require('./constants')
 const DEPLOYER = process.env.DEPLOYER || ''
 const REQUIRED_NET_STATE = ['daoInitialSettings', 'depositorParams', `app:${APP_NAMES.LIDO}`, `app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`]
 
-const SET_MEV_TX_FEE_VAULT_ROLE = web3.utils.soliditySha3("SET_MEV_TX_FEE_VAULT_ROLE");
 
 async function upgradeApp({ web3, artifacts }) {
   const appArtifact = 'LidoMevTxFeeVault'

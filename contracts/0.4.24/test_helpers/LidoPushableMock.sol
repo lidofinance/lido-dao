@@ -9,7 +9,7 @@ import "./VaultMock.sol";
 
 
 /**
- * @dev Mock for unit-testing pushBeacon and how reward get calculated
+ * @dev Mock for unit-testing pushRewards and how reward get calculated
  */
 contract LidoPushableMock is Lido {
 

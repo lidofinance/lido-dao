@@ -112,7 +112,7 @@ allowances) are allowed. The following transactions revert:
 * calls to `submit(address)`;
 * calls to `depositBufferedEther(uint256)`;
 * calls to `withdraw(uint256, bytes32)` (withdrawals are not implemented yet).
-* calls to `pushBeacon(uint256, uint256)`;
+* calls to `pushRewards(uint256, uint256)`;
 * calls to `burnShares(address, uint256)`
 * calls to `transfer(address, uint256)`
 * calls to `transferFrom(address, address, uint256)`
