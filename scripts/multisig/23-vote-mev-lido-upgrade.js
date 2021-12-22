@@ -66,7 +66,7 @@ async function upgradeAppImpl({ web3, artifacts }) {
 
   const setMevTxFeeVaultToLidoCallData = {
     to: lidoAddress,
-    calldata: await lido.contract.methods.setMevVault(mevTxFeeVaultAddress).encodeABI()
+    calldata: await lido.contract.methods.setMevTxFeeVault(mevTxFeeVaultAddress).encodeABI()
   }
 
   const encodedUpgradeCallData = encodeCallScript([

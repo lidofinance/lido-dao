@@ -71,7 +71,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     bytes32 internal constant NODE_OPERATORS_REGISTRY_POSITION = keccak256("lido.Lido.nodeOperatorsRegistry");
     bytes32 internal constant TREASURY_POSITION = keccak256("lido.Lido.treasury");
     bytes32 internal constant INSURANCE_FUND_POSITION = keccak256("lido.Lido.insuranceFund");
-    bytes32 internal constant MEV_VAULT_POSITION = keccak256("lido.Lido.mevVault");
+    bytes32 internal constant MEV_TX_FEE_VAULT_POSITION = keccak256("lido.Lido.mevTxFeeVault");
 
     /// @dev amount of Ether (on the current Ethereum side) buffered on this smart contract balance
     bytes32 internal constant BUFFERED_ETHER_POSITION = keccak256("lido.Lido.bufferedEther");
@@ -125,12 +125,12 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     }
 
     /**
-    * @notice A payable function supposed to be funded by LidoMevTxFeeVault contract
+    * @notice A payable function supposed to be funded only by LidoMevTxFeeVault contract
     * @dev We need a separate function because funds received by default payable function
-    * go through deposit algorithm
+    * will go through entire deposit algorithm
     */
-    function mevReceiver() external payable {
-        require(msg.sender == MEV_VAULT_POSITION.getStorageAddress());
+    function mevTxFeeReceiver() external payable {
+        require(msg.sender == MEV_TX_FEE_VAULT_POSITION.getStorageAddress());
         emit MevTxFeeReceived(msg.value);
     }
 
@@ -257,11 +257,11 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
 
     /**
     * @dev Sets given address as an address of LidoMevTxFeeVault contract
-    * @param _mevVault MEV and Tx Fees Vault contract address
+    * @param _mevTxFeeVault MEV and Tx Fees Vault contract address
     */
-    function setMevVault(address _mevVault) external auth(SET_MEV_TX_FEE_VAULT_ROLE) {
-        require(isContract(_mevVault), "NOT_A_CONTRACT");
-        MEV_VAULT_POSITION.setStorageAddress(_mevVault);
+    function setMevTxFeeVault(address _mevTxFeeVault) external auth(SET_MEV_TX_FEE_VAULT_ROLE) {
+        require(isContract(_mevTxFeeVault), "NOT_A_CONTRACT");
+        MEV_TX_FEE_VAULT_POSITION.setStorageAddress(_mevTxFeeVault);
     }
 
     /**
@@ -308,9 +308,9 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         // If the vault is connected withdraw all rewards and put them to the buffer for further staking
         // Also increase counter of total mevTxFee rewards collected by Lido account
         uint256 mevFeesRewards = 0;
-        address mevVaultAddress = getMevVault();
+        address mevVaultAddress = getMevTxFeeVault();
         if (mevVaultAddress != address(0x0)) {
-            mevFeesRewards = ILidoMevTxFeeVault(getMevVault()).withdrawRewards();
+            mevFeesRewards = ILidoMevTxFeeVault(getMevTxFeeVault()).withdrawRewards();
             BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().add(mevFeesRewards));
             MEV_TX_FEE_ETHER_POSITION.setStorageUint256(MEV_TX_FEE_ETHER_POSITION.getStorageUint256().add(mevFeesRewards));
         }
@@ -387,7 +387,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     /**
     * @notice Get the total amount of MEV and transaction fees Ether buffered on this contract balance
     * @dev Ether got through MevTxFeeVault is kept on this contract's balance the same way as buffered
-    * Ether is kept till being deposited 
+    * Ether is kept until it gets deposited
     * @return uint256 of funds received as MEV and Transaction fees in wei
     */
     function getMevTxFeeEther() external view returns (uint256) {
@@ -445,8 +445,8 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     /**
     * @notice Returns address of a contract set as LidoMevTxFeeVault
     */
-    function getMevVault() public view returns (address) {
-        return MEV_VAULT_POSITION.getStorageAddress();
+    function getMevTxFeeVault() public view returns (address) {
+        return MEV_TX_FEE_VAULT_POSITION.getStorageAddress();
     }
 
     /**

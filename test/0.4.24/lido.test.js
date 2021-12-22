@@ -12,7 +12,7 @@ const { getEthBalance, formatStEth: formamtStEth, formatBN } = require('../helpe
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
 const Lido = artifacts.require('LidoMock.sol')
-const MevVault = artifacts.require('LidoMevTxFeeVault.sol')
+const MevTxFeeVault = artifacts.require('LidoMevTxFeeVault.sol')
 const OracleMock = artifacts.require('OracleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
 const ERC20Mock = artifacts.require('ERC20Mock.sol')
@@ -70,7 +70,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     let proxyAddress = await newApp(dao, 'lido', appBase.address, appManager)
     app = await Lido.at(proxyAddress)
 
-    mevVault = await MevVault.new(app.address)
+    mevVault = await MevTxFeeVault.new(app.address)
     rewarder = await RewardEmulatorMock.new(mevVault.address)
 
     // NodeOperatorsRegistry
@@ -109,7 +109,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await oracle.setPool(app.address)
     await depositContract.reset()
 
-    await app.setMevVault(mevVault.address, { from: voting })
+    await app.setMevTxFeeVault(mevVault.address, { from: voting })
   })
 
   const checkStat = async ({ depositedValidators, beaconValidators, beaconBalance }) => {
@@ -178,7 +178,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     console.log()
   }
 
-  const setupNodeOperatorsForMevVaultTests = async (userAddress, initialDepositAmount) => {
+  const setupNodeOperatorsForMevTxFeeVaultTests = async (userAddress, initialDepositAmount) => {
     await app.setFee(1000, { from: voting }) // 10%
 
     await operators.addNodeOperator('1', ADDRESS_1, { from: voting })
@@ -212,7 +212,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     const mevAmount = 10
     const beaconRewards = 0
 
-    await setupNodeOperatorsForMevVaultTests(user2, ETH(depositAmount))
+    await setupNodeOperatorsForMevTxFeeVaultTests(user2, ETH(depositAmount))
     await oracle.reportBeacon(100, 1, ETH(depositAmount))
 
     await rewarder.reward({ from: user1, value: ETH(mevAmount) })
@@ -228,7 +228,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     const mevAmount = 12
     const beaconRewards = -2
 
-    await setupNodeOperatorsForMevVaultTests(user2, ETH(depositAmount))
+    await setupNodeOperatorsForMevTxFeeVaultTests(user2, ETH(depositAmount))
     await oracle.reportBeacon(100, 1, ETH(depositAmount))
 
     await rewarder.reward({ from: user1, value: ETH(mevAmount) })
@@ -244,7 +244,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     const mevAmount = 7
     const beaconRewards = 3
 
-    await setupNodeOperatorsForMevVaultTests(user2, ETH(depositAmount))
+    await setupNodeOperatorsForMevTxFeeVaultTests(user2, ETH(depositAmount))
     await oracle.reportBeacon(100, 1, ETH(depositAmount))
 
     await rewarder.reward({ from: user1, value: ETH(mevAmount) })
