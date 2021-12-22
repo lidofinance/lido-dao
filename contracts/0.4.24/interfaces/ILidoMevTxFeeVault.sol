@@ -9,7 +9,7 @@ interface ILidoMevTxFeeVault {
 
     /**
     * @notice Withdraw all accumulated rewards to Lido contract
-    * @return balance uint256 of funds received as MEV and transaction fees in wei
+    * @return amount uint256 of funds received as MEV and transaction fees in wei
     */
-    function withdrawRewards() external returns (uint256);
+    function withdrawRewards() external returns (uint256 amount);
 }
