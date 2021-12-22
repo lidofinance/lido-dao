@@ -256,7 +256,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     }
 
     /**
-    * @dev Sets given address as an address of LidoMevTxFeeVault contract
+    * @dev Sets given address as the address of LidoMevTxFeeVault contract
     * @param _mevTxFeeVault MEV and Tx Fees Vault contract address
     */
     function setMevTxFeeVault(address _mevTxFeeVault) external auth(SET_MEV_TX_FEE_VAULT_ROLE) {
@@ -304,20 +304,20 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         BEACON_BALANCE_POSITION.setStorageUint256(_beaconBalance);
         BEACON_VALIDATORS_POSITION.setStorageUint256(_beaconValidators);
 
-        // If LidoMevTxFeeVault is not connected just do as if there are no mevTxFee rewards
-        // If the vault is connected withdraw all rewards and put them to the buffer for further staking
-        // Also increase counter of total mevTxFee rewards collected by Lido account
-        uint256 mevFeesRewards = 0;
+        // If LidoMevTxFeeVault's address is not set just do as if there were no mevTxFee rewards at all
+        // Otherwise withdraw all rewards and put them to the buffer for further staking
+        // and increase counter of total mevTxFee rewards collected by Lido account
+        uint256 mevRewards = 0;
         address mevVaultAddress = getMevTxFeeVault();
         if (mevVaultAddress != address(0x0)) {
-            mevFeesRewards = ILidoMevTxFeeVault(getMevTxFeeVault()).withdrawRewards();
-            BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().add(mevFeesRewards));
-            MEV_TX_FEE_ETHER_POSITION.setStorageUint256(MEV_TX_FEE_ETHER_POSITION.getStorageUint256().add(mevFeesRewards));
+            mevRewards = ILidoMevTxFeeVault(mevVaultAddress).withdrawRewards();
+            BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().add(mevRewards));
+            MEV_TX_FEE_ETHER_POSITION.setStorageUint256(MEV_TX_FEE_ETHER_POSITION.getStorageUint256().add(mevRewards));
         }
 
         if (_beaconBalance > rewardBase) {
             uint256 rewards = _beaconBalance.sub(rewardBase);
-            distributeRewards(rewards.add(mevFeesRewards));
+            distributeRewards(rewards.add(mevRewards));
         }
     }
 
@@ -385,9 +385,9 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     }
 
     /**
-    * @notice Get the total amount of MEV and transaction fees Ether buffered on this contract balance
-    * @dev Ether got through MevTxFeeVault is kept on this contract's balance the same way as buffered
-    * Ether is kept until it gets deposited
+    * @notice Get total amount of MEV and transaction fees Ether buffered on this contract's balance
+    * @dev Ether got through LidoMevTxFeeVault is kept on this contract's balance the same way
+    * as other buffered Ether is kept (until it gets deposited)
     * @return uint256 of funds received as MEV and Transaction fees in wei
     */
     function getMevTxFeeEther() external view returns (uint256) {
@@ -443,7 +443,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     }
 
     /**
-    * @notice Returns address of a contract set as LidoMevTxFeeVault
+    * @notice Returns address of the contract set as LidoMevTxFeeVault
     */
     function getMevTxFeeVault() public view returns (address) {
         return MEV_TX_FEE_VAULT_POSITION.getStorageAddress();

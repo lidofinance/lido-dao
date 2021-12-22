@@ -34,15 +34,15 @@ contract LidoMevTxFeeVault {
 
     /**
     * @notice Withdraw all accumulated rewards to Lido contract
-    * @return balance uint256 of funds received as MEV and transaction fees in wei
+    * @return amount uint256 of funds received as MEV and transaction fees in wei
     */
-    function withdrawRewards() external returns (uint256 balance) {
+    function withdrawRewards() external returns (uint256 amount) {
         require(msg.sender == lidoAddress, "Nobody except Lido contract can withdraw");
 
-        balance = address(this).balance;
-        if (balance > 0) {
-            ILido(lidoAddress).mevTxFeeReceiver{value: balance}();
+        amount = address(this).balance;
+        if (amount > 0) {
+            ILido(lidoAddress).mevTxFeeReceiver{value: amount}();
         }
-        return balance;
+        return amount;
     }
 }
