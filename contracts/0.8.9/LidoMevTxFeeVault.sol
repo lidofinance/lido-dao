@@ -6,9 +6,25 @@
 pragma solidity 0.8.9;
 
 interface ILido {
-    function mevReceiver() external payable;
+
+    /**
+    * @notice A payable function supposed to be funded only by LidoMevTxFeeVault contract
+    * @dev We need a separate function because funds received by default payable function
+    * will go through entire deposit algorithm
+    */
+    function mevTxFeeReceiver() external payable;
 }
 
+
+/**
+* @title A vault for temporary storage of MEV and transaction fees
+*
+* This contract has no payable functions because it's balance is supposed to be
+* increased directly by ethereum protocol when transaction priority fees and extracted MEV
+* rewards are earned by a validator.
+* These vault replenishments happen continuously throught a day, while withdrawals
+* happen much less often, only on LidoOracle beacon balance reports
+*/
 contract LidoMevTxFeeVault {
     address public immutable lidoAddress;
 
@@ -18,14 +34,14 @@ contract LidoMevTxFeeVault {
 
     /**
     * @notice Withdraw all accumulated rewards to Lido contract
-    * @return balance uint256 of funds received as MEV and Transaction fees in wei
+    * @return balance uint256 of funds received as MEV and transaction fees in wei
     */
     function withdrawRewards() external returns (uint256 balance) {
         require(msg.sender == lidoAddress, "Nobody except Lido contract can withdraw");
 
         balance = address(this).balance;
         if (balance > 0) {
-            ILido(lidoAddress).mevReceiver{value: balance}();
+            ILido(lidoAddress).mevTxFeeReceiver{value: balance}();
         }
         return balance;
     }
