@@ -37,8 +37,6 @@ contract('LidoOracle', ([appManager, voting, malicious1, malicious2, user1, user
     await app.setTime(GENESIS_TIME + 225 * EPOCH_LENGTH)
     await app.initialize(appLido.address, 225, 32, 12, GENESIS_TIME, 1000, 500)
 
-    await app.setV1LastReportedEpochForTest(123) // pretend we had epoch 123 completed in v1
-
     // Initialize the oracle time, quorum and basic oracles
     await app.setQuorum(4, { from: voting })
     await app.addOracleMember(user1, { from: voting })

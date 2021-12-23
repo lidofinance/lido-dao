@@ -183,6 +183,7 @@ interface ILidoOracle {
             uint256 timeElapsed
         );
 
+    
     /**
      * @notice Initialize the contract (version 3 for now) from scratch
      * @dev TODO: Add link to the related LIP
@@ -201,7 +202,8 @@ interface ILidoOracle {
         uint64 _secondsPerSlot,
         uint64 _genesisTime,
         uint256 _allowedBeaconBalanceAnnualRelativeIncrease,
-        uint256 _allowedBeaconBalanceRelativeDecrease) external;
+        uint256 _allowedBeaconBalanceRelativeDecrease
+    ) external;
 
     /**
      * @notice A function to finalize upgrade to v3 (from v1). Can be called only once
