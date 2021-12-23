@@ -340,6 +340,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
      * @param _genesisTime Genesis time
      * @param _allowedBeaconBalanceAnnualRelativeIncrease Allowed beacon balance annual relative increase (e.g. 1000 means 10% yearly increase)
      * @param _allowedBeaconBalanceRelativeDecrease Allowed beacon balance moment descreat (e.g. 500 means 5% moment decrease)
+     * @param _lastCompletedEpochId Id of the last completed epoch TODO can it always be zero?
      */
     function initialize(
         address _lido,
@@ -348,14 +349,15 @@ contract LidoOracle is ILidoOracle, AragonApp {
         uint64 _secondsPerSlot,
         uint64 _genesisTime,
         uint256 _allowedBeaconBalanceAnnualRelativeIncrease,
-        uint256 _allowedBeaconBalanceRelativeDecrease
+        uint256 _allowedBeaconBalanceRelativeDecrease,
+        uint256 _lastCompletedEpochId
     )
-        external
+        external onlyInit
     {
         assert(1 == ((1 << (MAX_MEMBERS - 1)) >> (MAX_MEMBERS - 1)));  // static assert
 
         // Initializations for v0 --> v1
-        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "ALREADY_INITIALIZED");
+        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "BASE_VERSION_MUST_BE_ZERO");
 
         _setBeaconSpec(
             _epochsPerFrame,
@@ -379,21 +381,18 @@ contract LidoOracle is ILidoOracle, AragonApp {
             .setStorageUint256(_allowedBeaconBalanceRelativeDecrease);
         emit AllowedBeaconBalanceRelativeDecreaseSet(_allowedBeaconBalanceRelativeDecrease);
 
-        // // set last completed epoch as V1's contract last reported epoch, in the vast majority of
-        // // cases this is true, in others the error is within a frame
-        // // TODO: restore value of V1_LAST_REPORTED_EPOCH_ID_POSITION
-        // uint256 lastReportedEpoch = V1_LAST_REPORTED_EPOCH_ID_POSITION.getStorageUint256();
-        // LAST_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(lastReportedEpoch);
-
-        // // set expected epoch to the first epoch for the next frame
-        // BeaconSpec memory beaconSpec = _getBeaconSpec();
-        // uint256 expectedEpoch = _getFrameFirstEpochId(lastReportedEpoch, beaconSpec) + beaconSpec.epochsPerFrame;
-        // EXPECTED_EPOCH_ID_POSITION.setStorageUint256(expectedEpoch);
-        // emit ExpectedEpochIdUpdated(expectedEpoch);
-
+        LAST_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(_lastCompletedEpochId);
+        // set expected epoch to the first epoch for the next frame
+        BeaconSpec memory beaconSpec = _getBeaconSpec();
+        uint256 expectedEpoch = _getFrameFirstEpochId(_lastCompletedEpochId, beaconSpec) + beaconSpec.epochsPerFrame;
+        EXPECTED_EPOCH_ID_POSITION.setStorageUint256(expectedEpoch);
+        emit ExpectedEpochIdUpdated(expectedEpoch);
 
         // Initializations for v2 --> v3
         _initialize_v3();
+
+        // Need this despite contract version check as Aragon requires it to handle auth() modificators properly
+        initialized();
     }
 
 
