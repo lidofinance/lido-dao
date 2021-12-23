@@ -159,8 +159,17 @@ contract LidoTemplateE2E is BaseTemplate {
             recoveryVault
         );
         state.lido = Lido(_installNonDefaultApp(state.dao, LIDO_APP_ID, initializeData));
-
+        
 //        state.oracle.initialize_v2(100000, 50000);
+        state.oracle.initialize(
+            state.lido,
+            _epochsPerFrame, // epochsPerFrame
+            _slotsPerEpoch, // slotsPerEpoch
+            _secondsPerSlot, // secondsPerSlot
+            _genesisTime,  // genesisTime
+            100000,
+            50000
+        );
         state.operators.initialize(state.lido);
     }
 
