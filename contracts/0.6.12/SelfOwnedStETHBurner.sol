@@ -93,7 +93,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
         TREASURY = _treasury;
         LIDO = _lido;
     }
-    
+
     function getCoverSharesBurnt() external view returns (uint256) {
         return totalCoverSharesBurnt;
     }
@@ -165,33 +165,30 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
                                      uint256 _preTotalPooledEther,
                                      uint256 _timeElapsed) external override(IBeaconReportReceiver) {
         
-        require(msg.sender == ILido(LIDO).getOracle(), "APP_AUTH_FAILED");
-
         uint256 memCoverSharesBurnRequested = coverSharesBurnRequested;
         uint256 memNonCoverSharesBurnRequested = nonCoverSharesBurnRequested;
 
         uint256 burnAmount = memCoverSharesBurnRequested + memNonCoverSharesBurnRequested;
 
-        if (burnAmount > 0) {
-            if (memCoverSharesBurnRequested > 0) {            
-                totalCoverSharesBurnt += memCoverSharesBurnRequested;   
-
-                uint256 coverStETHBurnAmountRequested = IStETH(LIDO).getPooledEthByShares(memCoverSharesBurnRequested);
-                emit StETHBurnt(true /* isCover */, coverStETHBurnAmountRequested, memCoverSharesBurnRequested);
-
-                coverSharesBurnRequested = 0;        
-            }
-
-            if (memNonCoverSharesBurnRequested > 0) {            
-                totalNonCoverSharesBurnt += memNonCoverSharesBurnRequested;
-
-                uint256 nonCoverStETHBurnAmountRequested = IStETH(LIDO).getPooledEthByShares(memNonCoverSharesBurnRequested);
-                emit StETHBurnt(false /* isCover */, nonCoverStETHBurnAmountRequested, memNonCoverSharesBurnRequested);
-
-                nonCoverSharesBurnRequested = 0;
-            }        
-            
-            ILido(LIDO).burnShares(address(this), burnAmount);
+        if (burnAmount < 0) {
+            return;
         }
+
+        require(msg.sender == ILido(LIDO).getOracle(), "APP_AUTH_FAILED");
+
+        if (memCoverSharesBurnRequested > 0) {
+            totalCoverSharesBurnt += memCoverSharesBurnRequested;
+            uint256 coverStETHBurnAmountRequested = IStETH(LIDO).getPooledEthByShares(memCoverSharesBurnRequested);
+            emit StETHBurnt(true /* isCover */, coverStETHBurnAmountRequested, memCoverSharesBurnRequested);
+            coverSharesBurnRequested = 0;
+        }
+        if (memNonCoverSharesBurnRequested > 0) {
+            totalNonCoverSharesBurnt += memNonCoverSharesBurnRequested;
+            uint256 nonCoverStETHBurnAmountRequested = IStETH(LIDO).getPooledEthByShares(memNonCoverSharesBurnRequested);
+            emit StETHBurnt(false /* isCover */, nonCoverStETHBurnAmountRequested, memNonCoverSharesBurnRequested);
+            nonCoverSharesBurnRequested = 0;
+        }
+
+        ILido(LIDO).burnShares(address(this), burnAmount);
     }
 }
