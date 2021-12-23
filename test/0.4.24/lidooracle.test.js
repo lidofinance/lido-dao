@@ -48,7 +48,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, user5, 
     await app.setTime(GENESIS_TIME)
 
     // 1000 and 500 stand for 10% yearly increase, 5% moment decrease
-    await app.initialize(appLido.address, 1, 32, 12, GENESIS_TIME, 1000, 500)
+    await app.initialize(appLido.address, 1, 32, 12, GENESIS_TIME, 1000, 500, 0)
   })
 
   it('beaconSpec is correct', async () => {
