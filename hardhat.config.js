@@ -42,6 +42,15 @@ const getNetConfig = (networkName, ethAccountName) => {
       url: 'http://localhost:8545',
       chainId: 1
     },
+    // kintsugi local
+    kl: {
+      ...base,
+      accounts: {
+        mnemonic: 'explain tackle mirror kit van hammer degree position ginger unfair soup bonus'
+      },
+      url: 'http://localhost:8545',
+      chainId: 1337
+    },
     hardhat: {
       blockGasLimit: 20000000,
       gasPrice: 0,

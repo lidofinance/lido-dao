@@ -1,4 +1,4 @@
-FROM ethereum/client-go:v1.9.24
+FROM ethereum/client-go:latest
 
 COPY ./genesis.json /root
 COPY ./password.txt /root
