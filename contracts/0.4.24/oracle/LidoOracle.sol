@@ -350,6 +350,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
         uint256 _allowedBeaconBalanceAnnualRelativeIncrease,
         uint256 _allowedBeaconBalanceRelativeDecrease
     )
+        external
     {
         assert(1 == ((1 << (MAX_MEMBERS - 1)) >> (MAX_MEMBERS - 1)));  // static assert
 
@@ -392,17 +393,27 @@ contract LidoOracle is ILidoOracle, AragonApp {
 
 
         // Initializations for v2 --> v3
-        initialize_v3();
+        _initialize_v3();
+    }
+
+
+    /**
+     * @notice A function to finalize upgrade to v3 (from v1). Can be called only once
+     * @dev For more details see _initialize_v3()
+     */
+    function finalizeUpgrade_v3() external {
+        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 1, "WRONG_BASE_VERSION");
+
+        _initialize_v3();
     }
 
     /**
-     * @notice A dummy incremental v2 --> v3 initialize function. Just corrects version number
+     * @notice A dummy incremental v1/v2 --> v3 initialize function. Just corrects version number
      * @dev This function is introduced just for the sake of clarity and correspondence between number
      * of version in initialize function name and number is CONTRACT_VERSION_POSITION.
      * NB, that thus version 2 is skipped 
      */
-    function initialize_v3() {
-        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 1, "ALREADY_INITIALIZED");
+    function _initialize_v3() {
         CONTRACT_VERSION_POSITION.setStorageUint256(3);
         emit ContractVersionSet(3);
     }
