@@ -5,7 +5,7 @@ This HOWTO describes how to check IPFS apps hash
 ### Step 1. Clone the official repo and go to the folder
 
 ```bash
-git clone git@github.com:lidofinance/lido-dao.git && cd lido-dao
+git clone https://github.com/lidofinance/lido-dao.git && cd lido-dao
 ```
 
 Switch to `aragon-dev` branch
