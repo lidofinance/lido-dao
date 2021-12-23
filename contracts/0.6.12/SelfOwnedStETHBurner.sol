@@ -35,6 +35,7 @@ interface ILido {
       * @return address of oracle contract
       */
     function getOracle() external view returns (address);
+
     /**
       * @notice Destroys given amount of shares from account's holdings, 
       * @param _account address of the shares holder
@@ -163,7 +164,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
     
     function processLidoOracleReport(uint256 _postTotalPooledEther,
                                      uint256 _preTotalPooledEther,
-                                     uint256 _timeElapsed) external override(IBeaconReportReceiver) {
+                                     uint256 _timeElapsed) external override {
         
         uint256 memCoverSharesBurnRequested = coverSharesBurnRequested;
         uint256 memNonCoverSharesBurnRequested = nonCoverSharesBurnRequested;
