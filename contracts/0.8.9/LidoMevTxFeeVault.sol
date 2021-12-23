@@ -26,10 +26,12 @@ interface ILido {
 * happen much less often, only on LidoOracle beacon balance reports
 */
 contract LidoMevTxFeeVault {
-    address public immutable lidoAddress;
+    address public immutable LIDO;
 
     constructor(address _lidoAddress) {
-        lidoAddress = _lidoAddress;
+        require(_lidoAddress != address(0x0), "LIDO_ZERO_ADDRESS");
+
+        LIDO = _lidoAddress;
     }
 
     /**
@@ -37,11 +39,11 @@ contract LidoMevTxFeeVault {
     * @return amount uint256 of funds received as MEV and transaction fees in wei
     */
     function withdrawRewards() external returns (uint256 amount) {
-        require(msg.sender == lidoAddress, "Nobody except Lido contract can withdraw");
+        require(msg.sender == LIDO, "Nobody except Lido contract can withdraw");
 
         amount = address(this).balance;
         if (amount > 0) {
-            ILido(lidoAddress).mevTxFeeReceiver{value: amount}();
+            ILido(LIDO).mevTxFeeReceiver{value: amount}();
         }
         return amount;
     }
