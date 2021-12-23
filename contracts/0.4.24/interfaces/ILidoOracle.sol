@@ -194,7 +194,6 @@ interface ILidoOracle {
      * @param _genesisTime Genesis time
      * @param _allowedBeaconBalanceAnnualRelativeIncrease Allowed beacon balance annual relative increase (e.g. 1000 means 10% yearly increase)
      * @param _allowedBeaconBalanceRelativeDecrease Allowed beacon balance moment descreat (e.g. 500 means 5% moment decrease)
-     * @param _lastCompletedEpochId Id of the last completed epoch TODO can it always be zero?
      */
     function initialize(
         address _lido,
@@ -203,8 +202,7 @@ interface ILidoOracle {
         uint64 _secondsPerSlot,
         uint64 _genesisTime,
         uint256 _allowedBeaconBalanceAnnualRelativeIncrease,
-        uint256 _allowedBeaconBalanceRelativeDecrease,
-        uint256 _lastCompletedEpochId
+        uint256 _allowedBeaconBalanceRelativeDecrease
     ) external;
 
     /**
