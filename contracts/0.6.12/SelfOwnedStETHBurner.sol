@@ -82,9 +82,18 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
     event ERC721Recovered(
         address indexed requestedBy,
         address indexed token,
-        uint256 token_id
+        uint256 tokenId
     );
+
+    constructor(address _treasury, address _lido) public
+    {
+        require(_treasury != address(0), "TREASURY_ZERO_ADDRESS");
+        require(_lido != address(0), "LIDO_ZERO_ADDRESS");
         
+        TREASURY = _treasury;
+        LIDO = _lido;
+    }
+    
     function getCoverSharesBurnt() external view returns (uint256) {
         return totalCoverSharesBurnt;
     }
@@ -102,24 +111,15 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
         return IStETH(LIDO).getPooledEthByShares(totalShares - sharesBurnRequested);
     }    
     
-    constructor(address _treasury, address _lido) public
-    {
-        require(_treasury != address(0), "TREASURY_ZERO_ADDRESS");
-        require(_lido != address(0), "LIDO_ZERO_ADDRESS");
+    function requestStETHBurn(uint256 _stETH2Burn, bool _isCover) external {
+        require(_stETH2Burn > 0, "ZERO_BURN_AMOUNT");
+        require(IStETH(LIDO).transferFrom(msg.sender, address(this), _stETH2Burn));
         
-        TREASURY = _treasury;
-        LIDO = _lido;
-    }
-    
-    function requestStETHBurn(uint256 stETH2Burn, bool isCover) external {
-        require(stETH2Burn > 0, "ZERO_BURN_AMOUNT");
-        require(IStETH(LIDO).transferFrom(msg.sender, address(this), stETH2Burn));
+        uint256 sharesAmount = IStETH(LIDO).getSharesByPooledEth(_stETH2Burn);
         
-        uint256 sharesAmount = IStETH(LIDO).getSharesByPooledEth(stETH2Burn);
-        
-        emit StETHBurnRequested(isCover, msg.sender, stETH2Burn, sharesAmount);
+        emit StETHBurnRequested(_isCover, msg.sender, _stETH2Burn, sharesAmount);
 
-        if (isCover) { 
+        if (_isCover) { 
             coverSharesBurnRequested += sharesAmount;
         } else {
             nonCoverSharesBurnRequested += sharesAmount;
@@ -139,26 +139,26 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
     }
     
     //don't accept ether
-    fallback () payable external {
+    fallback() payable external {
         revert ("INCOMING_ETH_IS_FORBIDDEN");
     }
    
-    function recoverERC20(address token, uint256 amount) external {
-        require(amount > 0, "ZERO_RECOVERY_AMOUNT");
-        require(token != address(0), "ZERO_ERC20_ADDRESS");
-        require(token != LIDO, "STETH_RECOVER_WRONG_FUNC");
+    function recoverERC20(address _token, uint256 _amount) external {
+        require(_amount > 0, "ZERO_RECOVERY_AMOUNT");
+        require(_token != address(0), "ZERO_ERC20_ADDRESS");
+        require(_token != LIDO, "STETH_RECOVER_WRONG_FUNC");
 
-        emit ERC20Recovered(msg.sender, token, amount);
+        emit ERC20Recovered(msg.sender, _token, _amount);
         
-        IERC20(token).transfer(TREASURY, amount);
+        IERC20(_token).transfer(TREASURY, _amount);
     }
 
-    function recoverERC721(address token, uint256 token_id) external {
-        require(token != address(0), "ZERO_ERC721_ADDRESS");
+    function recoverERC721(address _token, uint256 _tokenId) external {
+        require(_token != address(0), "ZERO_ERC721_ADDRESS");
 
-        emit ERC721Recovered(msg.sender, token, token_id);
+        emit ERC721Recovered(msg.sender, _token, _tokenId);
 
-        IERC721(token).transferFrom(address(this), TREASURY, token_id);
+        IERC721(_token).transferFrom(address(this), TREASURY, _tokenId);
     }
     
     function processLidoOracleReport(uint256 _postTotalPooledEther,
@@ -191,7 +191,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
                 nonCoverSharesBurnRequested = 0;
             }        
             
-            ILido(LIDO).burnShares (address(this), burnAmount);
+            ILido(LIDO).burnShares(address(this), burnAmount);
         }
     }
 }
