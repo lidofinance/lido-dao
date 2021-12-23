@@ -338,8 +338,8 @@ contract LidoOracle is ILidoOracle, AragonApp {
      * @param _slotsPerEpoch Number of slots per epoch
      * @param _secondsPerSlot Number of seconds per slot
      * @param _genesisTime Genesis time
-     * @param _allowedBeaconBalanceAnnualRelativeIncrease
-     * @param _allowedBeaconBalanceRelativeDecrease 
+     * @param _allowedBeaconBalanceAnnualRelativeIncrease Allowed beacon balance annual relative increase (e.g. 1000 means 10% yearly increase)
+     * @param _allowedBeaconBalanceRelativeDecrease Allowed beacon balance moment descreat (e.g. 500 means 5% moment decrease)
      */
     function initialize(
         address _lido,
@@ -379,17 +379,17 @@ contract LidoOracle is ILidoOracle, AragonApp {
             .setStorageUint256(_allowedBeaconBalanceRelativeDecrease);
         emit AllowedBeaconBalanceRelativeDecreaseSet(_allowedBeaconBalanceRelativeDecrease);
 
-        // set last completed epoch as V1's contract last reported epoch, in the vast majority of
-        // cases this is true, in others the error is within a frame
-        // TODO: restore value of V1_LAST_REPORTED_EPOCH_ID_POSITION
-        uint256 lastReportedEpoch = V1_LAST_REPORTED_EPOCH_ID_POSITION.getStorageUint256();
-        LAST_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(lastReportedEpoch);
+        // // set last completed epoch as V1's contract last reported epoch, in the vast majority of
+        // // cases this is true, in others the error is within a frame
+        // // TODO: restore value of V1_LAST_REPORTED_EPOCH_ID_POSITION
+        // uint256 lastReportedEpoch = V1_LAST_REPORTED_EPOCH_ID_POSITION.getStorageUint256();
+        // LAST_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(lastReportedEpoch);
 
-        // set expected epoch to the first epoch for the next frame
-        BeaconSpec memory beaconSpec = _getBeaconSpec();
-        uint256 expectedEpoch = _getFrameFirstEpochId(lastReportedEpoch, beaconSpec) + beaconSpec.epochsPerFrame;
-        EXPECTED_EPOCH_ID_POSITION.setStorageUint256(expectedEpoch);
-        emit ExpectedEpochIdUpdated(expectedEpoch);
+        // // set expected epoch to the first epoch for the next frame
+        // BeaconSpec memory beaconSpec = _getBeaconSpec();
+        // uint256 expectedEpoch = _getFrameFirstEpochId(lastReportedEpoch, beaconSpec) + beaconSpec.epochsPerFrame;
+        // EXPECTED_EPOCH_ID_POSITION.setStorageUint256(expectedEpoch);
+        // emit ExpectedEpochIdUpdated(expectedEpoch);
 
 
         // Initializations for v2 --> v3
