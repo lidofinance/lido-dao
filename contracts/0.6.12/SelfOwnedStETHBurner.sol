@@ -170,7 +170,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
 
         uint256 burnAmount = memCoverSharesBurnRequested + memNonCoverSharesBurnRequested;
 
-        if (burnAmount < 0) {
+        if (burnAmount == 0) {
             return;
         }
 
