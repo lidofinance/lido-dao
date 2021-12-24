@@ -73,6 +73,11 @@
       "appName": "node-operators-registry.lidopm.eth",
       "network": "development",
       "registry": "0xa16E02E87b7454126E5E10d957A927A7F5B5d2be"
+    },
+    "kl": {
+      "appName": "node-operators-registry.lidopm.eth",
+      "network": "development",
+      "registry": "0x5f6F7E8cc7346a11ca2dEf8f827b7a0b612c56a1"
     }
   },
   "appName": "node-operators-registry.lidopm.eth",

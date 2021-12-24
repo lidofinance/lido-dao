@@ -107,12 +107,12 @@ async function publishApp(appName, appsRepoPath, hardhatConfig, env, netName, re
     })
     logSplitter()
 
-    logSplitter(`Build app ${appName}`)
-    await execLive('yarn', {
-      args: ['build'],
-      cwd: appFrontendPath
-    })
-    logSplitter()
+    // logSplitter(`Build app ${appName}`)
+    // await execLive('yarn', {
+    //   args: ['build'],
+    //   cwd: appFrontendPath
+    // })
+    // logSplitter()
 
   } else {
     log(`The app has no frontend`)
@@ -123,22 +123,22 @@ async function publishApp(appName, appsRepoPath, hardhatConfig, env, netName, re
     STD_APPS_DEPLOY: '1'
   }
 
-  if (hasFrontend) {
-    const distPath = path.join(appRootPath, 'dist')
-    childEnv.APP_FRONTEND_PATH = `aragon-apps/apps/${appName}/app`
-    childEnv.APP_FRONTEND_DIST_PATH = `aragon-apps/apps/${appName}/dist`
+  // if (hasFrontend) {
+  //   const distPath = path.join(appRootPath, 'dist')
+  //   childEnv.APP_FRONTEND_PATH = `aragon-apps/apps/${appName}/app`
+  //   childEnv.APP_FRONTEND_DIST_PATH = `aragon-apps/apps/${appName}/dist`
 
-    // Upload release directory to IPFS
-    log('Uploading release assets to IPFS...')
-    const contentHash = await uploadDirToIpfs({
-      dirPath: distPath,
-      ipfsApiUrl: netState.ipfsApi
-    })
-    log(`Release assets uploaded to IPFS: ${yl(contentHash)}`)
+  //   // Upload release directory to IPFS
+  //   log('Uploading release assets to IPFS...')
+  //   const contentHash = await uploadDirToIpfs({
+  //     dirPath: distPath,
+  //     ipfsApiUrl: netState.ipfsAPI
+  //   })
+  //   log(`Release assets uploaded to IPFS: ${yl(contentHash)}`)
 
-    result.ipfsCid = contentHash
-    result.contentURI = toContentUri('ipfs', contentHash)
-  }
+  //   result.ipfsCid = contentHash
+  //   result.contentURI = toContentUri('ipfs', contentHash)
+  // }
 
   await execLive('hardhat', {
     args: [
@@ -148,8 +148,8 @@ async function publishApp(appName, appsRepoPath, hardhatConfig, env, netName, re
       hardhatConfig,
       '--network',
       netName,
-      '--skip-validation',
-      '--skip-app-build',
+      // '--skip-validation',
+      // '--skip-app-build',
       // workaround: force to read URL from Hardhat config
       '--ipfs-api-url',
       ''

@@ -10,27 +10,22 @@ import "@aragon/templates-shared/contracts/BaseTemplate.sol";
 import "../oracle/LidoOracle.sol";
 import "../nos/NodeOperatorsRegistry.sol";
 import "../Lido.sol";
-import "hardhat/console.sol";
-
 
 contract LidoTemplateE2E is BaseTemplate {
-    // Hardcoded constants to save gas
-//    bytes32 internal constant LIDO_PM_NODE = keccak256(abi.encodePacked(ETH_TLD_NODE, keccak256(abi.encodePacked("lido"))));
-
-    bytes32 internal constant LIDO_PM_NODE = 0xbfc3884a938047d1e93d1dbd85bfcfb929a63a4ed292efc654596c10e96a88c9;
+    /* Hardcoded constants to save gas
+    bytes32 internal constant LIDO_PM_NODE = keccak256(abi.encodePacked(ETH_TLD_NODE, keccak256(abi.encodePacked("lidopm"))));
+    */
+    // bytes32 internal constant LIDO_PM_NODE = 0xbfc3884a938047d1e93d1dbd85bfcfb929a63a4ed292efc654596c10e96a88c9; // lidopm.eth
 
     /* Hardcoded constant to save gas
-    bytes32 internal constant STETH_APP_ID = (
-        keccak256(abi.encodePacked(LIDO_PM_NODE, keccak256(abi.encodePacked("steth")))) // steth.lido.eth
-    );
     bytes32 internal constant LIDOORACLE_APP_ID = (
-        keccak256(abi.encodePacked(LIDO_PM_NODE, keccak256(abi.encodePacked("lidooracle")))) // lidooracle.lido.eth
+        keccak256(abi.encodePacked(LIDO_PM_NODE, keccak256(abi.encodePacked("oracle")))) // oracle.lidopm.eth
     );
     bytes32 internal constant REGISTRY_APP_ID = (
-        keccak256(abi.encodePacked(LIDO_PM_NODE, keccak256(abi.encodePacked("node-operators-registry")))) // node-operators-registry.lido.eth
+        keccak256(abi.encodePacked(LIDO_PM_NODE, keccak256(abi.encodePacked("node-operators-registry")))) // node-operators-registry.lidopm.eth
     );
     bytes32 internal constant LIDO_APP_ID = (
-        keccak256(abi.encodePacked(LIDO_PM_NODE, keccak256(abi.encodePacked("lido")))) // lido.lido.eth
+        keccak256(abi.encodePacked(LIDO_PM_NODE, keccak256(abi.encodePacked("lido")))) // lido.lidopm.eth
     );
     */
     bytes32 constant internal LIDOORACLE_APP_ID = 0x8b47ba2a8454ec799cd91646e7ec47168e91fd139b23f017455f3e5898aaba93;
@@ -126,7 +121,7 @@ contract LidoTemplateE2E is BaseTemplate {
         _mintTokens(state.acl, state.tokenManager, state.holders, state.stakes);
         _setupPermissions(state);
         _transferRootPermissionsFromTemplateAndFinalizeDAO(state.dao, state.voting);
-//        _registerID(state.id, state.dao);
+        _registerID(state.id, state.dao);
     }
 
     function _setupApps(
@@ -159,7 +154,7 @@ contract LidoTemplateE2E is BaseTemplate {
             recoveryVault
         );
         state.lido = Lido(_installNonDefaultApp(state.dao, LIDO_APP_ID, initializeData));
-        
+
 //        state.oracle.initialize_v2(100000, 50000);
         state.oracle.initialize(
             state.lido,
