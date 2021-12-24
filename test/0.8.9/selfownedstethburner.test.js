@@ -22,7 +22,7 @@ const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 // semantic alias
 const stETH = ETH
 
-contract.only('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anotherAccount, ...otherAccounts]) => {
+contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anotherAccount, ...otherAccounts]) => {
   let oracle, lido, burner
   let treasuryAddr
 
