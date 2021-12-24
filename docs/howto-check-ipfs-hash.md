@@ -2,6 +2,13 @@
 
 This HOWTO describes how to check IPFS apps hash
 
+### Requirements
+
+- git
+- node v12
+- yarn
+- ipfs
+
 ### Step 1. Clone the official repo and go to the folder
 
 ```bash
@@ -33,11 +40,29 @@ After that you can check next folder:
 
 This step needs to create and check the IPFS hash
 
-See ipfs install instructions [here](https://docs.ipfs.io/install/ipfs-desktop/#ubuntu)
+See ipfs install instructions [here](https://docs.ipfs.io/install/command-line/#official-distributions)
 
-For example, install via Homebrew
+```
+M1-based Macs
+
+You can install IPFS on M1-based Macs by using the darwin-arm64 binary instead of the amd64 binary listed in these instructions.
+```
+
 ```bash
-brew install ipfs --cask
+#Download the macOS binary from https://dist.ipfs.io/#go-ipfs
+curl -O https://dist.ipfs.io/go-ipfs/v0.10.0/go-ipfs_v0.10.0_darwin-amd64.tar.gz
+
+#Unzip the file:
+tar -xvzf go-ipfs_v0.10.0_darwin-amd64.tar.gz
+
+#Move into the go-ipfs folder and run the install script:
+cd go-ipfs
+bash install.sh
+
+#Check that IPFS installed:
+ipfs --version
+
+> ipfs version 0.10.0   
 ```
 
 ## Step 4. Check IPFS hash for directory
