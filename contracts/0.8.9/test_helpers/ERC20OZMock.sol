@@ -2,12 +2,12 @@
 
 // SPDX-License-Identifier: GPL-3.0
 
-pragma solidity 0.6.12;
+pragma solidity 0.8.9;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts-4/token/ERC20/ERC20.sol";
 
 contract ERC20OZMock is ERC20 {
-    constructor(uint256 initialSupply) public ERC20("Mock ERC20 token", "mTKN") {
+    constructor(uint256 initialSupply) ERC20("Mock ERC20 token", "mTKN") {
         _mint(msg.sender, initialSupply);
     }
 }

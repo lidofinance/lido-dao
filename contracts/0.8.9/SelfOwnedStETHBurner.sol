@@ -3,10 +3,10 @@
 // SPDX-License-Identifier: GPL-3.0
 
 /* See contracts/COMPILERS.md */
-pragma solidity 0.6.12; // latest for the OZ versions [3.0; 4.0)
+pragma solidity 0.8.9;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts-4/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts-4/token/ERC721/IERC721.sol";
 
 import "./interfaces/IStETH.sol";
 
@@ -86,7 +86,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
         uint256 tokenId
     );
 
-    constructor(address _treasury, address _lido) public
+    constructor(address _treasury, address _lido)
     {
         require(_treasury != address(0), "TREASURY_ZERO_ADDRESS");
         require(_lido != address(0), "LIDO_ZERO_ADDRESS");
@@ -140,7 +140,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
     }
     
     //don't accept ether
-    fallback() payable external {
+    fallback() external payable {
         revert ("INCOMING_ETH_IS_FORBIDDEN");
     }
    
@@ -162,9 +162,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
         IERC721(_token).transferFrom(address(this), TREASURY, _tokenId);
     }
     
-    function processLidoOracleReport(uint256 _postTotalPooledEther,
-                                     uint256 _preTotalPooledEther,
-                                     uint256 _timeElapsed) external override {
+    function processLidoOracleReport(uint256, uint256, uint256) external override {
         
         uint256 memCoverSharesBurnRequested = coverSharesBurnRequested;
         uint256 memNonCoverSharesBurnRequested = nonCoverSharesBurnRequested;
