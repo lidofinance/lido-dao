@@ -42,6 +42,12 @@ const getNetConfig = (networkName, ethAccountName) => {
       url: 'http://localhost:8545',
       chainId: 1
     },
+    kintsugi: {
+      ...base,
+      accounts: accounts.eth.kintsugi,
+      url: 'http://kintsugi.testnet.fi/eth1rpc',
+      chainId: 1337702
+    },
     // kintsugi local
     kl: {
       ...base,
@@ -169,6 +175,14 @@ module.exports = {
   aragon: {
     ipfsApi: process.env.IPFS_API_URL || 'https://goerli.lido.fi/ipfs-api/v0',
     ipfsGateway: process.env.IPFS_GATEWAY_URL || 'https://goerli.lido.fi'
+  },
+  ipfs: {
+    url: 'https://ipfs.infura.io:5001/',
+    gateway: 'https://ipfs.io/',
+    pinata: {
+      key: 'YOUR_PINATA_API_KEY',
+      secret: 'YOUR_PINATA_API_SECRET_KEY'
+    }
   }
 }
 
