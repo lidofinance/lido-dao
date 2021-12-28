@@ -72,7 +72,7 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
     await oracle.setPool(lido.address)
     await depositContract.reset()
 
-    burner = await SelfOwnerStETHBurner.new(treasuryAddr, lido.address, { from: deployer })
+    burner = await SelfOwnerStETHBurner.new(treasuryAddr, lido.address, voting, { from: deployer })
   })
 
   describe('Requests and burn invocation', () => {
@@ -83,10 +83,12 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
       // stake ether to get an stETH in exchange
       await web3.eth.sendTransaction({ from: anotherAccount, to: lido.address, value: ETH(20) })
       await web3.eth.sendTransaction({ from: deployer, to: lido.address, value: ETH(30) })
+      await web3.eth.sendTransaction({ from: voting, to: lido.address, value: ETH(25) })
 
       // check stETH balances
       assertBn(await lido.balanceOf(anotherAccount), stETH(20))
       assertBn(await lido.balanceOf(deployer), stETH(30))
+      assertBn(await lido.balanceOf(voting), stETH(25))
 
       // unlock oracle account (allow transactions originated from oracle.address)
       await ethers.provider.send('hardhat_impersonateAccount', [oracle.address])
@@ -102,47 +104,56 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
 
     it(`reverts on zero stETH amount cover/non-cover request`, async () => {
       // provide non-zero allowance
-      await lido.approve(burner.address, stETH(1), { from: anotherAccount })
+      await lido.approve(burner.address, stETH(1), { from: voting })
 
       // but zero request on cover
-      assertRevert(burner.requestStETHBurn(stETH(0), true, { from: anotherAccount }), `ZERO_BURN_AMOUNT`)
+      assertRevert(burner.requestBurnMyStETHForCover(stETH(0), { from: voting }), `ZERO_BURN_AMOUNT`)
       // and zero request on non-cover
-      assertRevert(burner.requestStETHBurn(stETH(0), false, { from: anotherAccount }), `ZERO_BURN_AMOUNT`)
+      assertRevert(burner.requestBurnMyStETHForNonCover(stETH(0), { from: voting }), `ZERO_BURN_AMOUNT`)
+    })
+
+    it(`reverts on burn request from non-voting address`, async () => {
+      // provide allowance and request burn for cover
+      const sharesAmount8StETH = await lido.getSharesByPooledEth(stETH(8))
+      await lido.approve(burner.address, stETH(8), { from: anotherAccount })
+
+      // anotherAccount can't place burn request, only voting can
+      assertRevert(burner.requestBurnMyStETHForCover(stETH(8), { from: anotherAccount }), `MSG_SENDER_MUST_BE_VOTING`)
+
+      await lido.approve(burner.address, stETH(8), { from: deployer })
+
+      // event deployer can't place burn request
+      assertRevert(burner.requestBurnMyStETHForNonCover(stETH(8), { from: deployer }), `MSG_SENDER_MUST_BE_VOTING`)
     })
 
     it(`request shares burn for cover`, async () => {
       // allowance should be set explicitly to request burning
-      assertRevert(burner.requestStETHBurn(stETH(8), true, { from: anotherAccount }), `TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE`)
+      assertRevert(burner.requestBurnMyStETHForCover(stETH(8), { from: voting }), `TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE`)
 
       // provide allowance and request burn for cover
       const sharesAmount8StETH = await lido.getSharesByPooledEth(stETH(8))
-      await lido.approve(burner.address, stETH(8), { from: anotherAccount })
-      let receipt = await burner.requestStETHBurn(stETH(8), true, { from: anotherAccount })
+      await lido.approve(burner.address, stETH(8), { from: voting })
+      let receipt = await burner.requestBurnMyStETHForCover(stETH(8), { from: voting })
 
       assertEvent(receipt, `StETHBurnRequested`, {
-        expectedArgs: { isCover: true, requestedBy: anotherAccount, amount: stETH(8), sharesAmount: sharesAmount8StETH }
+        expectedArgs: { isCover: true, requestedBy: voting, amount: stETH(8), sharesAmount: sharesAmount8StETH }
       })
 
       // check stETH balances
       assertBn(await lido.balanceOf(burner.address), stETH(8))
-      assertBn(await lido.balanceOf(anotherAccount), stETH(12))
-      assertBn(await lido.balanceOf(deployer), stETH(30))
-
-      // allowance should be set explicitly to request burning even for the deployer
-      assertRevert(burner.requestStETHBurn(stETH(12), false, { from: deployer }), `TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE`)
+      assertBn(await lido.balanceOf(voting), stETH(17))
 
       const sharesAmount12 = sharesAmount8StETH.mul(bn(3)).div(bn(2))
-      await lido.approve(burner.address, stETH(13), { from: deployer })
-      receipt = await burner.requestStETHBurn(stETH(12), false, { from: deployer })
+      await lido.approve(burner.address, stETH(13), { from: voting })
+      receipt = await burner.requestBurnMyStETHForNonCover(stETH(12), { from: voting })
 
       assertEvent(receipt, `StETHBurnRequested`, {
-        expectedArgs: { isCover: false, requestedBy: deployer, amount: stETH(12), sharesAmount: sharesAmount12 }
+        expectedArgs: { isCover: false, requestedBy: voting, amount: stETH(12), sharesAmount: sharesAmount12 }
       })
 
       // check stETH balances again, we didn't execute the actual burn
       assertBn(await lido.balanceOf(burner.address), stETH(20))
-      assertBn(await lido.balanceOf(anotherAccount), stETH(12))
-      assertBn(await lido.balanceOf(deployer), stETH(18))
+      assertBn(await lido.balanceOf(voting), stETH(5))
     })
 
     it(`invoke an oracle without requested burn`, async () => {
@@ -171,8 +182,8 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
       await lido.transfer(burner.address, stETH(4.0), { from: anotherAccount })
 
       // request non-cover burn (accidentally approved more than needed)
-      await lido.approve(burner.address, stETH(7), { from: anotherAccount })
-      await burner.requestStETHBurn(stETH(6), false, { from: anotherAccount })
+      await lido.approve(burner.address, stETH(7), { from: voting })
+      await burner.requestBurnMyStETHForNonCover(stETH(6), { from: voting })
 
       const burnerShares = await lido.sharesOf(burner.address)
       const sharesToBurn = await lido.getSharesByPooledEth(stETH(6))
@@ -203,21 +214,21 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
       await lido.transfer(burner.address, stETH(2.1), { from: deployer })
       await lido.transfer(burner.address, stETH(3.1), { from: anotherAccount })
 
-      await lido.approve(burner.address, stETH(3), { from: anotherAccount })
+      await lido.approve(burner.address, stETH(3), { from: voting })
 
       const sharesAmount0_5StETH = await lido.getSharesByPooledEth(stETH(0.5))
       const sharesAmount1_5StETH = sharesAmount0_5StETH.mul(bn(3))
 
-      const receiptCover = await burner.requestStETHBurn(stETH(1.5), true, { from: anotherAccount })
+      const receiptCover = await burner.requestBurnMyStETHForCover(stETH(1.5), { from: voting })
 
       assertEvent(receiptCover, `StETHBurnRequested`, {
-        expectedArgs: { isCover: true, requestedBy: anotherAccount, amount: stETH(1.5), sharesAmount: sharesAmount1_5StETH }
+        expectedArgs: { isCover: true, requestedBy: voting, amount: stETH(1.5), sharesAmount: sharesAmount1_5StETH }
       })
 
-      const receiptNonCover = await burner.requestStETHBurn(stETH(0.5), false, { from: anotherAccount })
+      const receiptNonCover = await burner.requestBurnMyStETHForNonCover(stETH(0.5), { from: voting })
 
       assertEvent(receiptNonCover, `StETHBurnRequested`, {
-        expectedArgs: { isCover: false, requestedBy: anotherAccount, amount: stETH(0.5), sharesAmount: sharesAmount0_5StETH }
+        expectedArgs: { isCover: false, requestedBy: voting, amount: stETH(0.5), sharesAmount: sharesAmount0_5StETH }
       })
 
       const burnerShares = await lido.sharesOf(burner.address)
@@ -269,7 +280,7 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
       assertBn(await burner.getCoverSharesBurnt(), expectedCoverSharesBurnt)
       assertBn(await burner.getNonCoverSharesBurnt(), expectedNonCoverSharesBurnt)
 
-      await lido.approve(burner.address, allowance, { from: anotherAccount })
+      await lido.approve(burner.address, allowance, { from: voting })
       await acl.grantPermission(burner.address, lido.address, await lido.BURN_ROLE(), { from: appManager })
 
       // going through the defined arrays to check the burnt counters
@@ -281,8 +292,8 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
         const coverStETHAmountToBurn = await lido.getPooledEthByShares(currentCoverSharesAmount)
         const nonCoverStETHAmountToBurn = await lido.getPooledEthByShares(currentNonCoverSharesAmount)
 
-        await burner.requestStETHBurn(coverStETHAmountToBurn, true, { from: anotherAccount })
-        await burner.requestStETHBurn(nonCoverStETHAmountToBurn, false, { from: anotherAccount })
+        await burner.requestBurnMyStETHForCover(coverStETHAmountToBurn, { from: voting })
+        await burner.requestBurnMyStETHForNonCover(nonCoverStETHAmountToBurn, { from: voting })
 
         await burner.processLidoOracleReport(ETH(1), ETH(1), bn(100), { from: oracle.address })
 
@@ -300,23 +311,25 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
       const totalETH = await lido.getTotalPooledEther()
       const totalShares = await lido.getTotalShares()
 
-      await lido.approve(burner.address, stETH(20), { from: anotherAccount })
-      await burner.requestStETHBurn(stETH(20), true, { from: anotherAccount })
+      await lido.approve(burner.address, stETH(25), { from: voting })
+      await burner.requestBurnMyStETHForCover(stETH(25), { from: voting })
 
-      assertBn(await lido.balanceOf(burner.address), stETH(20))
-      assertBn(await lido.balanceOf(anotherAccount), stETH(0))
+      assertBn(await lido.balanceOf(burner.address), stETH(25))
+      assertBn(await lido.balanceOf(voting), stETH(0))
+      assertBn(await lido.balanceOf(anotherAccount), stETH(20))
       assertBn(await lido.balanceOf(deployer), stETH(30))
 
       await acl.grantPermission(burner.address, lido.address, await lido.BURN_ROLE(), { from: appManager })
       await burner.processLidoOracleReport(ETH(1), ETH(1), bn(100), { from: oracle.address })
 
       assertBn(await lido.balanceOf(burner.address), stETH(0))
-      assertBn(await lido.balanceOf(anotherAccount), stETH(0))
+      assertBn(await lido.balanceOf(voting), stETH(0))
 
-      // 2/5 of the shares amount was burnt, so remaining stETH becomes more expensive
-      // totalShares become 3/5 of the previous value
-      // so the new share price increases by 5/3
-      assertBn(await lido.balanceOf(deployer), bn(stETH(30)).mul(bn(5)).div(bn(3)))
+      // 1/3 of the shares amount was burnt, so remaining stETH becomes more expensive
+      // totalShares become 2/3 of the previous value
+      // so the new share price increases by 3/2
+      assertBn(await lido.balanceOf(deployer), bn(stETH(30)).mul(bn(3)).div(bn(2)))
+      assertBn(await lido.balanceOf(anotherAccount), bn(stETH(20)).mul(bn(3)).div(bn(2)))
     })
   })
 
@@ -330,9 +343,9 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
     }
 
     beforeEach('Setup permissions', async () => {
-      assertBn(await lido.balanceOf(anotherAccount), stETH(0))
-      await web3.eth.sendTransaction({ from: anotherAccount, to: lido.address, value: ETH(21) })
-      assertBn(await lido.balanceOf(anotherAccount), stETH(21))
+      assertBn(await lido.balanceOf(voting), stETH(0))
+      await web3.eth.sendTransaction({ from: voting, to: lido.address, value: ETH(21) })
+      assertBn(await lido.balanceOf(voting), stETH(21))
 
       await ethers.provider.send('hardhat_impersonateAccount', [oracle.address])
       await ethers.provider.send('hardhat_impersonateAccount', [burner.address])
@@ -340,16 +353,16 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
       // TRICK: send ether to oracle.address and burner.address without fallback func invocation
       // the positive balance needed to pass github CI checks when starting transactions from oracle.address and burner.address
       // P.S. `hardhat_setBalance` doesn't exist for the our HardHat version
-      const oracleRewarder = await RewardEmulatorMock.new(oracle.address, { from: anotherAccount })
-      await oracleRewarder.reward({ from: anotherAccount, value: ETH(1) })
+      const oracleRewarder = await RewardEmulatorMock.new(oracle.address, { from: voting })
+      await oracleRewarder.reward({ from: voting, value: ETH(1) })
 
-      const burnerRewarder = await RewardEmulatorMock.new(burner.address, { from: anotherAccount })
-      await burnerRewarder.reward({ from: anotherAccount, value: ETH(1) })
+      const burnerRewarder = await RewardEmulatorMock.new(burner.address, { from: voting })
+      await burnerRewarder.reward({ from: voting, value: ETH(1) })
 
-      await lido.approve(burner.address, stETH(10), { from: anotherAccount })
-      await burner.requestStETHBurn(stETH(10), true, { from: anotherAccount })
+      await lido.approve(burner.address, stETH(10), { from: voting })
+      await burner.requestBurnMyStETHForCover(stETH(10), { from: voting })
 
-      assertBn(await lido.balanceOf(anotherAccount), stETH(11))
+      assertBn(await lido.balanceOf(voting), stETH(11))
       assertBn(await lido.balanceOf(burner.address), stETH(10))
 
       sharesToBurn = await lido.getSharesByPooledEth(stETH(10))
@@ -371,7 +384,7 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
        * `_account` is the arg0 (uint8)
        * 'equals' means Op.Eq (uint8)
        * burner.address should be extended from uint160 to uint240
-       * 8 bits code
+       *
        * So the composed permission param is just a uint256 (uint8 + uint8 + uint240) value
        */
 
@@ -414,17 +427,17 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
   describe('Recover excess stETH', () => {
     beforeEach(async () => {
       // initial stETH balance is zero
-      assertBn(await lido.balanceOf(anotherAccount), stETH(0))
+      assertBn(await lido.balanceOf(voting), stETH(0))
       // submit 10 ETH to mint 10 stETH
-      await web3.eth.sendTransaction({ from: anotherAccount, to: lido.address, value: ETH(10) })
+      await web3.eth.sendTransaction({ from: voting, to: lido.address, value: ETH(10) })
       // check 10 stETH minted on balance
-      assertBn(await lido.balanceOf(anotherAccount), stETH(10))
+      assertBn(await lido.balanceOf(voting), stETH(10))
     })
 
     it(`can't recover requested for burn stETH`, async () => {
       // request to burn 7.1 stETH
-      await lido.approve(burner.address, stETH(8), { from: anotherAccount })
-      await burner.requestStETHBurn(stETH(7.1), true, { from: anotherAccount })
+      await lido.approve(burner.address, stETH(8), { from: voting })
+      await burner.requestBurnMyStETHForCover(stETH(7.1), { from: voting })
 
       // excess stETH amount should be zero
       assertBn(await burner.getExcessStETH(), stETH(0))
@@ -444,8 +457,8 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
     })
 
     it('recover some stETH', async () => {
-      // 'accidentally' sent stETH from anotherAccount
-      await lido.transfer(burner.address, stETH(2.3), { from: anotherAccount })
+      // 'accidentally' sent stETH from voting
+      await lido.transfer(burner.address, stETH(2.3), { from: voting })
 
       // check burner and treasury balances before recovery
       assertBn(await lido.balanceOf(burner.address), stETH(2.3))
@@ -463,11 +476,11 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
     })
 
     it(`recover some stETH, while burning requests happens in the middle`, async () => {
-      // 'accidentally' sent stETH from anotherAccount
-      await lido.transfer(burner.address, stETH(5), { from: anotherAccount })
+      // 'accidentally' sent stETH from voting
+      await lido.transfer(burner.address, stETH(5), { from: voting })
 
       // check balances
-      assertBn(await lido.balanceOf(anotherAccount), stETH(5))
+      assertBn(await lido.balanceOf(voting), stETH(5))
       assertBn(await lido.balanceOf(burner.address), stETH(5))
 
       // all of the burner's current stETH amount (5) can be recovered
@@ -475,17 +488,17 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
       assertBn(await burner.getExcessStETH(), stETH(5))
 
       // approve burn request and check actual transferred amount
-      await lido.approve(burner.address, stETH(3), { from: anotherAccount })
-      await burner.requestStETHBurn(stETH(3), true, { from: anotherAccount })
-      assertBn(await lido.balanceOf(anotherAccount), stETH(2))
+      await lido.approve(burner.address, stETH(3), { from: voting })
+      await burner.requestBurnMyStETHForCover(stETH(3), { from: voting })
+      assertBn(await lido.balanceOf(voting), stETH(2))
 
       // excess stETH amount preserved
       assertBn(await burner.getExcessStETH(), stETH(5))
 
       // approve another burn request and check actual transferred amount
-      await lido.approve(burner.address, stETH(1), { from: anotherAccount })
-      await burner.requestStETHBurn(stETH(1), false, { from: anotherAccount })
-      assertBn(await lido.balanceOf(anotherAccount), stETH(1))
+      await lido.approve(burner.address, stETH(1), { from: voting })
+      await burner.requestBurnMyStETHForNonCover(stETH(1), { from: voting })
+      assertBn(await lido.balanceOf(voting), stETH(1))
 
       // excess stETH amount preserved
       assertBn(await burner.getExcessStETH(), stETH(5))

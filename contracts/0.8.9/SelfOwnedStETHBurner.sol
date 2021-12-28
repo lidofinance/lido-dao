@@ -61,6 +61,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
     
     address public immutable LIDO;
     address public immutable TREASURY;
+    address public immutable VOTING;
 
     /**
       * Emitted when a new stETH burning request is added by the `requestedBy` address.
@@ -116,14 +117,17 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
       *
       * @param _treasury the Lido treasury address (see StETH/ERC20/ERC721-recovery interfaces)
       * @param _lido the Lido token (stETH) address
+      * @param _voting the Lido Aragon Voting address
       */
-    constructor(address _treasury, address _lido)
+    constructor(address _treasury, address _lido, address _voting)
     {
         require(_treasury != address(0), "TREASURY_ZERO_ADDRESS");
         require(_lido != address(0), "LIDO_ZERO_ADDRESS");
+        require(_voting != address(0), "VOTING_ZERO_ADDRESS");
         
         TREASURY = _treasury;
         LIDO = _lido;
+        VOTING = _voting;
     }
 
     /**
@@ -153,27 +157,31 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
     }    
     
     /**
+      * @notice BE CAREFUL, the provided stETH will be burnt permanently.
+      *
       * Transfers `_stETH2Burn` stETH tokens from the message sender and irreversibly locks these
       * on the burner contract address. Internally converts `_stETH2Burn` amount into underlying
-      * shares amount and marks the converted amount for burning by increasing `coverSharesBurnRequested`
-      * and `nonCoverSharesBurnRequested` counters.
+      * shares amount (`_stETH2BurnAsShares`) and marks the converted amount for burning
+      * by increasing the `coverSharesBurnRequested` counter.
       *
       * @param _stETH2Burn stETH tokens to burn
-      * @param _isCover the reason of burn request
       */
-    function requestStETHBurn(uint256 _stETH2Burn, bool _isCover) external {
-        require(_stETH2Burn > 0, "ZERO_BURN_AMOUNT");
-        require(IStETH(LIDO).transferFrom(msg.sender, address(this), _stETH2Burn));
-        
-        uint256 sharesAmount = IStETH(LIDO).getSharesByPooledEth(_stETH2Burn);
-        
-        emit StETHBurnRequested(_isCover, msg.sender, _stETH2Burn, sharesAmount);
+    function requestBurnMyStETHForCover(uint256 _stETH2Burn) external {
+        _requestBurnMyStETH(_stETH2Burn, true);
+    }
 
-        if (_isCover) { 
-            coverSharesBurnRequested += sharesAmount;
-        } else {
-            nonCoverSharesBurnRequested += sharesAmount;
-        }
+    /**
+      * @notice BE CAREFUL, the provided stETH will be burnt permanently.
+      *
+      * Transfers `_stETH2Burn` stETH tokens from the message sender and irreversibly locks these
+      * on the burner contract address. Internally converts `_stETH2Burn` amount into underlying
+      * shares amount (`_stETH2BurnAsShares`) and marks the converted amount for burning
+      * by increasing the `nonCoverSharesBurnRequested` counter.
+      *
+      * @param _stETH2Burn stETH tokens to burn
+      */
+    function requestBurnMyStETHForNonCover(uint256 _stETH2Burn) external {
+        _requestBurnMyStETH(_stETH2Burn, false);
     }
     
     /**
@@ -265,5 +273,21 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
         }
 
         ILido(LIDO).burnShares(address(this), burnAmount);
+    }
+
+    function _requestBurnMyStETH(uint256 _stETH2Burn, bool _isCover) private {
+        require(_stETH2Burn > 0, "ZERO_BURN_AMOUNT");
+        require(msg.sender == VOTING, "MSG_SENDER_MUST_BE_VOTING");
+        require(IStETH(LIDO).transferFrom(msg.sender, address(this), _stETH2Burn));
+
+        uint256 sharesAmount = IStETH(LIDO).getSharesByPooledEth(_stETH2Burn);
+
+        emit StETHBurnRequested(_isCover, msg.sender, _stETH2Burn, sharesAmount);
+
+        if (_isCover) {
+            coverSharesBurnRequested += sharesAmount;
+        } else {
+            nonCoverSharesBurnRequested += sharesAmount;
+        }
     }
 }
