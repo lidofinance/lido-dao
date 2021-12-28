@@ -107,9 +107,7 @@ async function deployDao({
     }
     const accounts = (await web3.eth.getAccounts()).slice(0, 3)
     state.daoInitialSettings = {
-      ...defaultDaoSettings,
-      // holders: accounts,
-      // stakes: defaultDaoSettings.stakes.slice(0, accounts.length)
+      ...defaultDaoSettings
     }
     log(`Using default DAO settings`)
   }
@@ -262,8 +260,8 @@ async function deployDAO({
     `Deploying DAO from template`,
     template.newDAO(
       daoAragonId,
-      daoInitialSettings.tokenName,
-      daoInitialSettings.tokenSymbol,
+      daoInitialSettings.token.name,
+      daoInitialSettings.token.symbol,
       votingSettings,
       depositContractAddress,
       beaconSpec,

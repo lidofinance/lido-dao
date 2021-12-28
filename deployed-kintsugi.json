@@ -5,14 +5,6 @@
   "lidoApmEnsRegDurationSec": 94608000,
   "daoAragonId": "lido-dao",
   "daoInitialSettings": {
-    "holders": [],
-    "stakes": [
-      "100000000000000000000",
-      "100000000000000000000",
-      "100000000000000000000"
-    ],
-    "tokenName": "TEST Lido DAO Token",
-    "tokenSymbol": "TLDO",
     "voting": {
       "minSupportRequired": "500000000000000000",
       "minAcceptanceQuorum": "50000000000000000",
