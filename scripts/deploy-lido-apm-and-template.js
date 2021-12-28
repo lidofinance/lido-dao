@@ -13,7 +13,14 @@ const LIDO_ENS_LABEL = process.env.LIDO_ENS_LABEL || 'lidopm'
 const DAO_TEMPLATE_ENS_LABEL = process.env.DAO_TEMPLATE_ENS_LABEL || 'template'
 const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
 
-const REQUIRED_NET_STATE = ['owner', 'ensAddress', 'apmRegistryFactoryAddress', 'daoFactoryAddress', 'miniMeTokenFactoryAddress']
+const REQUIRED_NET_STATE = [
+  'owner',
+  'multisigAddress',
+  'ensAddress',
+  'apmRegistryFactoryAddress',
+  'daoFactoryAddress',
+  'miniMeTokenFactoryAddress'
+]
 
 async function deployApmAndTemplate({
   web3,
@@ -97,7 +104,7 @@ async function deployDaoTemplate({
 }) {
   if (daoTemplateAddress) {
     log(`Using DAO template: ${chalk.yellow(daoTemplateAddress)}`)
-    const daoTemplate = await artifacts.require('LidoTemplateE2E').at(daoTemplateAddress)
+    const daoTemplate = await artifacts.require('LidoTemplate').at(daoTemplateAddress)
     return { daoTemplate }
   }
 
@@ -108,7 +115,7 @@ async function deployDaoTemplate({
   const latestDaoTemplateVersion = await resolveLatestVersion(daoTemplateNode, ens, artifacts)
   if (latestDaoTemplateVersion) {
     log(`Using DAO template resolved from ENS: ${chalk.yellow(latestDaoTemplateVersion.contractAddress)}`)
-    const daoTemplate = await artifacts.require('LidoTemplateE2E').at(latestDaoTemplateVersion.contractAddress)
+    const daoTemplate = await artifacts.require('LidoTemplate').at(latestDaoTemplateVersion.contractAddress)
     return { daoTemplate, daoTemplateNodeName, daoTemplateNode }
   }
 
@@ -123,9 +130,9 @@ async function deployDaoTemplate({
   }
 
   const daoTemplate = await deploy(
-    'LidoTemplateE2E',
+    'LidoTemplate',
     artifacts,
-    withArgs(daoFactoryAddress, ens.address, miniMeTokenFactoryAddress, aragonIdAddress, { from: owner, gas: 6000000 })
+    withArgs(owner, daoFactoryAddress, ens.address, miniMeTokenFactoryAddress, aragonIdAddress, { from: owner, gas: 6000000 })
   )
   logSplitter()
 

@@ -70,6 +70,11 @@
       "appName": "lido.lidopm.eth",
       "network": "development",
       "registry": "0x5f6F7E8cc7346a11ca2dEf8f827b7a0b612c56a1"
+    },
+    "kintsugi": {
+      "appName": "lido.lidopm.eth",
+      "network": "development",
+      "registry": "0x46fF67E6f5d419aB203A25e6A1AB8FaFDE137d68"
     }
   },
   "appName": "lido.lidopm.eth",
