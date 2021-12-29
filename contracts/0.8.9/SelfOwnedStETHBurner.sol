@@ -46,6 +46,17 @@ interface ILido {
 }
 
 /**
+  * @title Interface for the Lido Beacon Chain Oracle
+  */
+interface IOracle {
+    /**
+     * @notice Gets currently set beacon report receiver
+     * @return address of a beacon receiver
+     */
+    function getBeaconReportReceiver() external view returns (address);
+}
+
+/**
   * @title A dedicated contract for enacting stETH burning requests
   * @notice See the Lido improvement proposal #6 (LIP-6) spec.
   * @author Eugene Mamin <TheDZhon@gmail.com>
@@ -257,7 +268,13 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
             return;
         }
 
-        require(msg.sender == ILido(LIDO).getOracle(), "APP_AUTH_FAILED");
+        address oracle = ILido(LIDO).getOracle();
+
+        require(
+            msg.sender == oracle
+            || (msg.sender == IOracle(oracle).getBeaconReportReceiver()),
+            "APP_AUTH_FAILED"
+        );
 
         if (memCoverSharesBurnRequested > 0) {
             totalCoverSharesBurnt += memCoverSharesBurnRequested;
