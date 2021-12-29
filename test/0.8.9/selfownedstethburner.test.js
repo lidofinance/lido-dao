@@ -73,6 +73,8 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
     await depositContract.reset()
 
     burner = await SelfOwnerStETHBurner.new(treasuryAddr, lido.address, voting, { from: deployer })
+
+    await oracle.setBeaconReportReceiver(burner.address)
   })
 
   describe('Requests and burn invocation', () => {
@@ -163,7 +165,7 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
 
       assertBn(await lido.balanceOf(burner.address), stETH(9.7))
 
-      // only the Lido oracle can call this func
+      // only the Lido oracle can call this func, but there is nothing to burn
       await burner.processLidoOracleReport(ETH(10), ETH(12), bn(1000), { from: deployer })
 
       // mimic the Lido oracle for the callback invocation
@@ -189,7 +191,12 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
       const sharesToBurn = await lido.getSharesByPooledEth(stETH(6))
 
       assertBn(await lido.balanceOf(burner.address), stETH(6 + 3.1 + 4.0))
-      assertRevert(burner.processLidoOracleReport(ETH(10), ETH(12), bn(1000), { from: deployer }), `APP_AUTH_FAILED`)
+
+      assertRevert(
+        // should revert
+        burner.processLidoOracleReport(ETH(10), ETH(12), bn(1000), { from: deployer }),
+        `APP_AUTH_FAILED`
+      )
 
       assertRevert(
         // should revert even from oracle.address cause burner don't have BURN_ROLE yet
