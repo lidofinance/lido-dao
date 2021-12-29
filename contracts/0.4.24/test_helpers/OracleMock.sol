@@ -12,7 +12,7 @@ import "../interfaces/ILido.sol";
   */
 contract OracleMock {
     ILido private pool;
-    address beaconReceiver;
+    address private beaconReceiver;
 
     function setPool(address _pool) external {
         pool = ILido(_pool);

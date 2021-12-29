@@ -29,12 +29,12 @@ contract CompositeBeaconReceiver is IBeaconReportReceiver {
     event BeaconReceiverAdded(address indexed beaconReceiver);
     event BeaconReceiverRemoved(address indexed beaconReceiver);
 
-    modifier onlyVoting () {
+    modifier onlyVoting() {
         require(msg.sender == VOTING, "MSG_SENDER_MUST_BE_VOTING");
         _;
     }
 
-    modifier onlyOracle () {
+    modifier onlyOracle() {
         require(msg.sender == ORACLE, "MSG_SENDER_MUST_BE_ORACLE");
         _;
     }
