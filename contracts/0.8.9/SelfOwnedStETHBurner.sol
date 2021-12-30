@@ -9,21 +9,7 @@ import "@openzeppelin/contracts-4/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-4/token/ERC721/IERC721.sol";
 
 import "./interfaces/IStETH.sol";
-
-/**
-  * @title Interface defining a callback that the quorum will call on every quorum reached
-  */
-interface IBeaconReportReceiver {
-    /**
-      * @notice Callback to be called by the oracle contract upon the quorum is reached
-      * @param _postTotalPooledEther total pooled ether on Lido right after the quorum value was reported
-      * @param _preTotalPooledEther total pooled ether on Lido right before the quorum value was reported
-      * @param _timeElapsed time elapsed in seconds between the last and the previous quorum
-      */
-    function processLidoOracleReport(uint256 _postTotalPooledEther,
-                                     uint256 _preTotalPooledEther,
-                                     uint256 _timeElapsed) external;
-}
+import "./interfaces/IBeaconReportReceiver.sol";
 
 /**
   * @title Interface defining a Lido liquid staking pool
@@ -158,12 +144,15 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
     /**
       * Returns the stETH amount belonging to the burner contract address but not marked for burning.
       */
-    function getExcessStETH() external view returns (uint256)  {
+    function getExcessStETH() public view returns (uint256)  {
         uint256 sharesBurnRequested = (coverSharesBurnRequested + nonCoverSharesBurnRequested);
         uint256 totalShares = IStETH(LIDO).sharesOf(address(this));
 
-        require (totalShares >= sharesBurnRequested);
-        
+        // sanity check, don't revert
+        if (totalShares < sharesBurnRequested) {
+            return 0;
+        }
+
         return IStETH(LIDO).getPooledEthByShares(totalShares - sharesBurnRequested);
     }    
     
@@ -201,8 +190,8 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
       * contract construction.
       */
     function recoverExcessStETH() external {
-        uint256 excessStETH = this.getExcessStETH();
-        
+        uint256 excessStETH = getExcessStETH();
+
         if (excessStETH > 0) {
             uint256 excessSharesAmount = IStETH(LIDO).getSharesByPooledEth(excessStETH);
             
@@ -216,7 +205,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
       * Intentionally deny incoming ether
       */
     receive() external payable {
-        revert ("INCOMING_ETH_IS_FORBIDDEN");
+        revert("INCOMING_ETH_IS_FORBIDDEN");
     }
 
     /**
