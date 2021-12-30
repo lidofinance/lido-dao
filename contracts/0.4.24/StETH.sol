@@ -82,6 +82,15 @@ contract StETH is IERC20, Pausable {
     bytes32 internal constant TOTAL_SHARES_POSITION = keccak256("lido.StETH.totalShares");
 
     /**
+      * @notice An executed shares transfer from `sender` to `recipient`
+      */
+    event TransferShares(
+        address indexed from,
+        address indexed to,
+        uint256 sharesValue
+    );
+
+    /**
      * @return the name of the token.
      */
     function name() public pure returns (string) {
@@ -289,6 +298,29 @@ contract StETH is IERC20, Pausable {
                 .mul(_getTotalPooledEther())
                 .div(totalShares);
         }
+    }
+
+    /**
+     * @notice Moves `_sharesAmount` token shares from the caller's account to the `_recipient` account.
+     *
+     * @return a boolean value indicating whether the operation succeeded.
+     * Emits a `TransferShares` event.
+     * Emits a `Transfer` event.
+     *
+     * Requirements:
+     *
+     * - `_recipient` cannot be the zero address.
+     * - the caller must have at least `_sharesAmount` shares.
+     * - the contract must not be paused.
+     *
+     * @dev The `_sharesAmount` argument is the amount of shares, not tokens.
+     */
+    function transferShares(address _recipient, uint256 _sharesAmount) public returns (bool) {
+        _transferShares(msg.sender, _recipient, _sharesAmount);
+        emit TransferShares(msg.sender, _recipient, _sharesAmount);
+        uint256 tokensAmount = getPooledEthByShares(_sharesAmount);
+        emit Transfer(msg.sender, _recipient, tokensAmount);
+        return true;
     }
 
     /**
