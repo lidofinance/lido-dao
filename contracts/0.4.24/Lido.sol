@@ -217,7 +217,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     /**
       * @notice Set authorized oracle contract address to `_oracle`
       * @dev Contract specified here is allowed to make periodical updates of beacon states
-      * by calling pushRewards.
+      * by calling handleOracleReport.
       * @param _oracle oracle contract
       */
     function setOracle(address _oracle) external auth(SET_ORACLE) {
@@ -276,12 +276,12 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     }
 
     /**
-    * @notice Updates the number of Lido-controlled keys in the beacon validators set and their total balance.
+    * @notice Updates beacon states, collects rewards from MevTxFeeVault and distributes all rewards if beacon balance increased
     * @dev periodically called by the Oracle contract
     * @param _beaconValidators number of Lido's keys in the beacon state
-    * @param _beaconBalance simmarized balance of Lido-controlled keys in wei
+    * @param _beaconBalance summarized balance of Lido-controlled keys in wei
     */
-    function pushRewards(uint256 _beaconValidators, uint256 _beaconBalance) external whenNotStopped {
+    function handleOracleReport(uint256 _beaconValidators, uint256 _beaconBalance) external whenNotStopped {
         require(msg.sender == getOracle(), "APP_AUTH_FAILED");
 
         uint256 depositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256();

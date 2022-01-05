@@ -16,12 +16,12 @@
     "0x70B3284fD016a570146cE48fC54D7A81bCd94BBa"
   ],
   "daoTemplateDeployTx": "0xda8746bca23c7a4f7c58e1a3370cb1ffa1e250ace90fd4684dbb1842ee6ac921",
-  "lidoBaseDeployTx": "0x4553e47f6030b9b28a17e92b0e7cc9ac64964e48e3fe2c2077aec486b44508b1",
-  "oracleBaseDeployTx": "0x4ff91791cc0f969cf9fe0cc9a6241593d26b20ee27f785a2eb002258e25f4e43",
+  "lidoBaseDeployTx": "0x754584f974624d32310d68e6bda260b7200c31d4086b1416d421ad7b31f4ad0c",
+  "oracleBaseDeployTx": "0x171d09bc9bea4421db6c614c994c218c894dc028d807f8e7edd759a4ba148bbf",
   "nodeOperatorsRegistryBaseDeployTx": "0x25cf4db41a4159e94826fd0495bafe02e4a015a9bcf0ffbc0e684a5cafe6eefc",
   "daoTemplateAddress": "0x9A4a36B5fe517f98BD6529d4317B0b723F600AaD",
   "app:lido": {
-    "baseAddress": "0x5D3891E3015AED193eC4502D98524c4a94CfA6B5",
+    "baseAddress": "0xd2deB2210C1C4BcA5cb20081B7383278d84E009B",
     "ipfsCid": "QmbmPW5r9HMdyUARNJjjE7MNqBUGrXashwoWvqRZhc1t5b",
     "contentURI": "0x697066733a516d626d5057357239484d64795541524e4a6a6a45374d4e714255477258617368776f577671525a686331743562",
     "name": "lido",
@@ -30,7 +30,7 @@
     "proxyAddress": "0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F"
   },
   "app:oracle": {
-    "baseAddress": "0x869E3cB508200D3bE0e946613a8986E8eb3E64d7",
+    "baseAddress": "0x0fCdBaaC5dfEC479c8A9dEEaFe0B1BBc42E04706",
     "ipfsCid": "QmfACH9oSHFWgV81Dh8RSVcgaVBdhkZuHhZY2iZv5syBJK",
     "contentURI": "0x697066733a516d66414348396f5348465767563831446838525356636761564264686b5a7548685a5932695a76357379424a4b",
     "name": "oracle",
@@ -164,7 +164,7 @@
   ],
   "depositorDeployTx": "0x2811fab2d10abba764b672eb75f727e89a02f721af4e7fd1d153bad0b3c50d3b",
   "depositorAddress": "0xEd23AD3EA5Fb9d10e7371Caef1b141AD1C23A80c",
-  "mevTxFeeVaultDeployTx": "0xa93e29b3fc45eef335fcbe84c3587e93313281e2ff31a3df091400079a6b564c",
-  "mevTxFeeVaultAddress": "0x44D92F61E2236A7d0e9879aB87CF34622E85124e",
+  "mevTxFeeVaultDeployTx": "0x0cff10cc3830ff645032875eb895d4db007ce7cad9cfcd2668015f905ceb338f",
+  "mevTxFeeVaultAddress": "0xece7301B3aeEC2b2B6C41a55dE831D47c205AaCC",
   "mevTxFeeRewardsEmulator": "0x636ebc9dd60ef85bbaf2abb0bad789676aac12d0"
 }
