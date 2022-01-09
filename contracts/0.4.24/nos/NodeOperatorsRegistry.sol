@@ -386,6 +386,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             for (uint256 keyIndex = entry.initialUsedSigningKeys; keyIndex < entry.usedSigningKeys; ++keyIndex) {
                 (bytes memory pubkey, bytes memory signature) = _loadSigningKey(entry.id, keyIndex);
                 if (numAssignedKeys == 1) {
+                    _increaseKeysOpIndex();
                     return (pubkey, signature);
                 } else {
                     MemUtils.copyBytes(pubkey, pubkeys, numLoadedKeys * PUBKEY_LENGTH);
@@ -399,6 +400,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             }
         }
 
+        _increaseKeysOpIndex(); // numAssignedKeys is guaranteed to be > 0 here
         assert(numLoadedKeys == numAssignedKeys);
         return (pubkeys, signatures);
     }

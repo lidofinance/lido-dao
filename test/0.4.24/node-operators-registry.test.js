@@ -1,8 +1,8 @@
 const { assert } = require('chai')
-const { hexSplit } = require('../helpers/utils')
+const { hexSplit, toBN } = require('../helpers/utils')
 const { newDao, newApp } = require('./helpers/dao')
 const { ZERO_ADDRESS, getEventAt, getEventArgument } = require('@aragon/contract-helpers-test')
-const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertBn, assertRevert, assertEvent, assertNoEvent } = require('@aragon/contract-helpers-test/src/asserts')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry.sol')
 const PoolMock = artifacts.require('PoolMock.sol')
@@ -217,11 +217,14 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
   })
 
   it('assignNextSigningKeys works', async () => {
+    let keysOpIndex = await app.getKeysOpIndex()
     let result = await pool.assignNextSigningKeys(10)
     let keysAssignedEvt = getEventAt(result, 'KeysAssigned').args
 
     assert.equal(keysAssignedEvt.pubkeys, null, 'empty cache, no singing keys added: pubkeys')
     assert.equal(keysAssignedEvt.signatures, null, 'empty cache, no singing keys added: signatures')
+    assertBn(await app.getKeysOpIndex(), keysOpIndex, 'keysOpIndex must not increase if no keys were assigned')
+    assertNoEvent(result, 'KeysOpIndexSet')
 
     await app.addNodeOperator('fo o', ADDRESS_1, { from: voting })
     await app.addNodeOperator(' bar', ADDRESS_2, { from: voting })
@@ -229,11 +232,14 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await app.setNodeOperatorStakingLimit(0, 10, { from: voting })
     await app.setNodeOperatorStakingLimit(1, 10, { from: voting })
 
+    keysOpIndex = await app.getKeysOpIndex()
     result = await pool.assignNextSigningKeys(10)
     keysAssignedEvt = getEventAt(result, 'KeysAssigned').args
 
     assert.equal(keysAssignedEvt.pubkeys, null, 'no singing keys added: pubkeys')
     assert.equal(keysAssignedEvt.signatures, null, 'no singing keys added: signatures')
+    assertBn(await app.getKeysOpIndex(), keysOpIndex, 'keysOpIndex must not increase if no keys were assigned')
+    assertNoEvent(result, 'KeysOpIndexSet')
 
     const op0 = {
       keys: [pad('0xaa0101', 48), pad('0xaa0202', 48), pad('0xaa0303', 48)],
@@ -248,18 +254,25 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await app.addSigningKeys(0, 3, hexConcat(...op0.keys), hexConcat(...op0.sigs), { from: voting })
     await app.addSigningKeys(1, 3, hexConcat(...op1.keys), hexConcat(...op1.sigs), { from: voting })
 
+    keysOpIndex = await app.getKeysOpIndex()
     result = await pool.assignNextSigningKeys(1)
     keysAssignedEvt = getEventAt(result, 'KeysAssigned').args
 
     assert.equal(keysAssignedEvt.pubkeys, op0.keys[0], 'assignment 1: pubkeys')
     assert.equal(keysAssignedEvt.signatures, op0.sigs[0], 'assignment 1: signatures')
+    assertBn(await app.getKeysOpIndex(), keysOpIndex.add(toBN(1)), 'keysOpIndex must increase if any keys were assigned')
+    assertEvent(result, 'KeysOpIndexSet')
 
+    keysOpIndex = await app.getKeysOpIndex()
     result = await pool.assignNextSigningKeys(2)
     keysAssignedEvt = getEventAt(result, 'KeysAssigned').args
 
     assert.sameMembers(hexSplit(keysAssignedEvt.pubkeys, PUBKEY_LENGTH_BYTES), [op0.keys[1], op1.keys[0]], 'assignment 2: pubkeys')
     assert.sameMembers(hexSplit(keysAssignedEvt.signatures, SIGNATURE_LENGTH_BYTES), [op0.sigs[1], op1.sigs[0]], 'assignment 2: signatures')
+    assertBn(await app.getKeysOpIndex(), keysOpIndex.add(toBN(1)), 'keysOpIndex must increase if any keys were assigned')
+    assertEvent(result, 'KeysOpIndexSet')
 
+    keysOpIndex = await app.getKeysOpIndex()
     result = await pool.assignNextSigningKeys(10)
     keysAssignedEvt = getEventAt(result, 'KeysAssigned').args
 
@@ -268,18 +281,22 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       [op0.keys[2], op1.keys[1], op1.keys[2]],
       'assignment 2: pubkeys'
     )
-
     assert.sameMembers(
       hexSplit(keysAssignedEvt.signatures, SIGNATURE_LENGTH_BYTES),
       [op0.sigs[2], op1.sigs[1], op1.sigs[2]],
       'assignment 2: signatures'
     )
+    assertBn(await app.getKeysOpIndex(), keysOpIndex.add(toBN(1)), 'keysOpIndex must increase if any keys were assigned')
+    assertEvent(result, 'KeysOpIndexSet')
 
+    keysOpIndex = await app.getKeysOpIndex()
     result = await pool.assignNextSigningKeys(10)
     keysAssignedEvt = getEventAt(result, 'KeysAssigned').args
 
     assert.equal(keysAssignedEvt.pubkeys, null, 'no singing keys left: pubkeys')
     assert.equal(keysAssignedEvt.signatures, null, 'no singing keys left: signatures')
+    assertBn(await app.getKeysOpIndex(), keysOpIndex, 'keysOpIndex must not increase if no keys were assigned')
+    assertNoEvent(result, 'KeysOpIndexSet')
   })
 
   it('assignNextSigningKeys skips stopped operators', async () => {
