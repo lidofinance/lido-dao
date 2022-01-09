@@ -2,7 +2,7 @@ const { assert } = require('chai')
 const { hexSplit, toBN } = require('../helpers/utils')
 const { newDao, newApp } = require('./helpers/dao')
 const { ZERO_ADDRESS, getEventAt, getEventArgument } = require('@aragon/contract-helpers-test')
-const { assertBn, assertRevert, assertEvent, assertNoEvent } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry.sol')
 const PoolMock = artifacts.require('PoolMock.sol')
@@ -29,6 +29,11 @@ const hexConcat = (first, ...rest) => {
     result += item.startsWith('0x') ? item.substr(2) : item
   })
   return result
+}
+
+const assertNoEvent = (receipt, eventName, msg) => {
+  const event = getEventAt(receipt, eventName)
+  assert.equal(event, undefined, msg)
 }
 
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
