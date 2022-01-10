@@ -146,6 +146,7 @@ contract StETH is IERC20, Pausable {
      *
      * @return a boolean value indicating whether the operation succeeded.
      * Emits a `Transfer` event.
+     * Emits a `TransferShares` event.
      *
      * Requirements:
      *
@@ -196,6 +197,7 @@ contract StETH is IERC20, Pausable {
      * @return a boolean value indicating whether the operation succeeded.
      *
      * Emits a `Transfer` event.
+     * Emits a `TransferShares` event.
      * Emits an `Approval` event indicating the updated allowance.
      *
      * Requirements:
@@ -303,7 +305,7 @@ contract StETH is IERC20, Pausable {
     /**
      * @notice Moves `_sharesAmount` token shares from the caller's account to the `_recipient` account.
      *
-     * @return a boolean value indicating whether the operation succeeded.
+     * @return amount of transferred tokens.
      * Emits a `TransferShares` event.
      * Emits a `Transfer` event.
      *
@@ -315,12 +317,12 @@ contract StETH is IERC20, Pausable {
      *
      * @dev The `_sharesAmount` argument is the amount of shares, not tokens.
      */
-    function transferShares(address _recipient, uint256 _sharesAmount) public returns (bool) {
+    function transferShares(address _recipient, uint256 _sharesAmount) public returns (uint256) {
         _transferShares(msg.sender, _recipient, _sharesAmount);
         emit TransferShares(msg.sender, _recipient, _sharesAmount);
         uint256 tokensAmount = getPooledEthByShares(_sharesAmount);
         emit Transfer(msg.sender, _recipient, tokensAmount);
-        return true;
+        return tokensAmount;
     }
 
     /**
@@ -333,11 +335,13 @@ contract StETH is IERC20, Pausable {
     /**
      * @notice Moves `_amount` tokens from `_sender` to `_recipient`.
      * Emits a `Transfer` event.
+     * Emits a `TransferShares` event.
      */
     function _transfer(address _sender, address _recipient, uint256 _amount) internal {
         uint256 _sharesToTransfer = getSharesByPooledEth(_amount);
         _transferShares(_sender, _recipient, _sharesToTransfer);
         emit Transfer(_sender, _recipient, _amount);
+        emit TransferShares(_sender, _recipient, _sharesToTransfer);
     }
 
     /**
