@@ -228,5 +228,24 @@
       "baseAddress": "0x735B20352772E2815fc584f40ff0a1475B0a5659",
       "proxyAddress": "0xeb7D01f713F59EFfB350D05b7AF66720373D4F41"
     }
+  },
+  "depositorParams": {
+    "maxDepositsPerBlock": 100,
+    "minDepositBlockDistance": 14,
+    "pauseIntentValidityPeriodBlocks": 10,
+    "guardians": [
+      "0x3dc4cf780f2599b528f37dedb34449fb65ef7d4a",
+      "0x401fd888b5e41113b7c0c47725a742bbc3a083ef",
+      "0x3db460f33838fdc91e804d7fce2adf9e61e9d654",
+      "0x96fd3d127abd0d77724d49b7bddecdc89f684bb6",
+      "0xda1a296f9df18d04e0aefcff658b80b3ef824ec9",
+      "0xc34d33b95d7d6df2255d6051ddb12f8bd7aef64c",
+      "0xad5eecc863d88d5d848b89aa8517388a3ee432c8",
+      "0x6c83f70ed019fdcafe6c6f78cb33ce15943e4cb9",
+      "0x43464fe06c18848a2e2e913194d64c1970f4326a",
+      "0xf060ab3d5dcfdc6a0dfd5ca0645ac569b8f105ca",
+      "0x79a132be0c25ced09e745629d47cf05e531bb2bb"
+    ],
+    "quorum": 1
   }
 }
