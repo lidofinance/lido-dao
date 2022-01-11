@@ -95,14 +95,24 @@ async function createVoting({ web3, artifacts }) {
     }
   ])
 
+
+  ///////// ! IMPORTANT ! ///////////
+  // All these 7 steps are required only to upgrade "old" system on mainnet 
+  // To upgrade the system deployed from scatch ony steps
+  //   6) Grant role SENT_MEV_TX_FEE_VAULT_ROLE to voting
+  //   7) Set deployed MevTxFeeVault to Lido contract`
+  // are needed. There is no need in (1-5) as the latest version of contracts are already deployed
+  //
+  // TODO: include steps (6-7) to entire system deploy scripts
+  // 
   const txName = `tx-23-deploy-mev-upgrade.json`
   const votingDesc = `1) Publishing new implementation in lido app APM repo
 2) Updating implementaion of lido app with new one
 3) Publishing new implementation in oracle app APM repo
 4) Updating implementaion of oracle app with new one
 5) Call Oracle's finalizeUpgrade_v3() to update internal version counter
-5) Grant role SENT_MEV_TX_FEE_VAULT_ROLE to voting
-6) Set deployed MevTxFeeVault to Lido contract`
+6) Grant role SENT_MEV_TX_FEE_VAULT_ROLE to voting
+7) Set deployed MevTxFeeVault to Lido contract`
 
   await saveCallTxData(votingDesc, tokenManager, 'forward', txName, {
     arguments: [votingCallData],
