@@ -119,11 +119,15 @@ async function buildUpgradeTransaction(appName, state, ens, kernel) {
   const appId = namehash(`${appName}.${state.lidoApmEnsName}`)
   const repoAddress = await resolveEnsAddress(artifacts, ens, appId)
   const newContractAddress = state[`app:${appName}`].baseAddress
-  const newContentURI = state[`app:${appName}`].contentURI
+  let newContentURI = state[`app:${appName}`].contentURI
   const repo = await artifacts.require('Repo').at(repoAddress)
   const APP_BASES_NAMESPACE = await kernel.APP_BASES_NAMESPACE()
 
   const { semanticVersion: currentVersion, contractAddress: currentContractAddress, contentURI: currentContentURI } = await repo.getLatest()
+
+  if (!newContentURI) {
+    newContentURI = currentContentURI
+  }
 
   const versionFrom = currentVersion.map((n) => n.toNumber())
   console.log(currentVersion)

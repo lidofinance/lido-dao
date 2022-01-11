@@ -99,35 +99,35 @@
   ],
   "aragonIDEnsNodeName": "aragonid.eth",
   "aragonIDEnsNode": "0x7e74a86b6e146964fb965db04dc2590516da77f720bb6759337bf5632415fd86",
-  "app:agent": {
-    "name": "agent",
+  "app:aragon-agent": {
+    "name": "aragon-agent",
     "fullName": "agent.aragonpm.eth",
     "id": "0x9ac98dc5f995bf0211ed589ef022719d1487e5cb2bab505676f0d084c07cf89a",
     "baseAddress": "0x846b996EBDB12a944617Df6e0CABE750EBe3C164",
     "proxyAddress": "0x6871d1B0a2014969D58BE5ce776596C4663Da64B"
   },
-  "app:finance": {
-    "name": "finance",
+  "app:aragon-finance": {
+    "name": "aragon-finance",
     "fullName": "finance.aragonpm.eth",
     "id": "0xbf8491150dafc5dcaee5b861414dca922de09ccffa344964ae167212e8c673ae",
     "baseAddress": "0xFFfd9EBDFfaFB6F2E3D47E570092726c8a3940d0",
     "proxyAddress": "0x883B323AF9B58ca0ab8c44d66Bef97e496e9a13a"
   },
-  "app:token-manager": {
-    "name": "token-manager",
+  "app:aragon-token-manager": {
+    "name": "aragon-token-manager",
     "fullName": "token-manager.aragonpm.eth",
     "id": "0x6b20a3010614eeebf2138ccec99f028a61c811b3b1a3343b6ff635985c75c91f",
     "baseAddress": "0x871Df9aefa32656fda02A657A7eb77BC4C578485",
     "proxyAddress": "0x3843165069955FfB49ce888Fe4AB75335B769BCf"
   },
-  "app:vault": {
-    "name": "vault",
+  "app:aragon-vault": {
+    "name": "aragon-vault",
     "fullName": "vault.aragonpm.eth",
     "id": "0x7e852e0fcfce6551c13800f1e7476f982525c2b5277ba14b24339c68416336d1",
     "baseAddress": "0x8322C44eF834E12cDa8042fa4b8482E19b686a6A"
   },
-  "app:voting": {
-    "name": "voting",
+  "app:aragon-voting": {
+    "name": "aragon-voting",
     "fullName": "voting.aragonpm.eth",
     "id": "0x9fa3927f639745e587912d4b0fea7ef9013bf93fb907d29faeab57417ba6e1d4",
     "baseAddress": "0x37FfAb526ec8A023B6E2966877547E990e3dA56E",
@@ -142,14 +142,14 @@
     "name": "lido",
     "fullName": "lido.lidopm.eth",
     "id": "0x3ca7c3e38968823ccb4c78ea688df41356f182ae1d159e4ee608d30d68cef320",
-    "baseAddress": "0xca0810d80d00f9B7eB873860d23Dc5487065Da37",
+    "baseAddress": "0x06da6681A0735db5D7720aF2C37100Dc1a01A2a3",
     "proxyAddress": "0x3a6a994AC0CC96b6DDbaA99F10769384Fa14227B"
   },
-  "app:lidooracle": {
-    "name": "lidooracle",
+  "app:oracle": {
+    "name": "oracle",
     "fullName": "oracle.lidopm.eth",
     "id": "0x8b47ba2a8454ec799cd91646e7ec47168e91fd139b23f017455f3e5898aaba93",
-    "baseAddress": "0xA9Ee059559ED28837e1af943d5f5559b5233aBeB",
+    "baseAddress": "0x041619226Bf494543Cdf763Da184DB12CB8F3A2d",
     "proxyAddress": "0xc85e5d5D34fFb68d48FC138b0dbA0b05629E2e7c"
   },
   "app:node-operators-registry": {
@@ -173,29 +173,29 @@
   "daoAddress": "0x79064315626EA8972dc79712B94262cCbC1690bE",
   "tokenAddress": "0xb264bDd5e9813A17D0fb7e26A64370675807Ba89",
   "knownApps": {
-    "app:agent": {
-      "name": "agent",
+    "app:aragon-agent": {
+      "name": "aragon-agent",
       "fullName": "agent.aragonpm.eth",
       "id": "0x9ac98dc5f995bf0211ed589ef022719d1487e5cb2bab505676f0d084c07cf89a",
       "baseAddress": "0x846b996EBDB12a944617Df6e0CABE750EBe3C164",
       "proxyAddress": "0x6871d1B0a2014969D58BE5ce776596C4663Da64B"
     },
-    "app:finance": {
-      "name": "finance",
+    "app:aragon-finance": {
+      "name": "aragon-finance",
       "fullName": "finance.aragonpm.eth",
       "id": "0xbf8491150dafc5dcaee5b861414dca922de09ccffa344964ae167212e8c673ae",
       "baseAddress": "0xFFfd9EBDFfaFB6F2E3D47E570092726c8a3940d0",
       "proxyAddress": "0x883B323AF9B58ca0ab8c44d66Bef97e496e9a13a"
     },
-    "app:token-manager": {
-      "name": "token-manager",
+    "app:aragon-token-manager": {
+      "name": "aragon-token-manager",
       "fullName": "token-manager.aragonpm.eth",
       "id": "0x6b20a3010614eeebf2138ccec99f028a61c811b3b1a3343b6ff635985c75c91f",
       "baseAddress": "0x871Df9aefa32656fda02A657A7eb77BC4C578485",
       "proxyAddress": "0x3843165069955FfB49ce888Fe4AB75335B769BCf"
     },
-    "app:vault": {
-      "name": "vault",
+    "app:aragon-vault": {
+      "name": "aragon-vault",
       "fullName": "vault.aragonpm.eth",
       "id": "0x7e852e0fcfce6551c13800f1e7476f982525c2b5277ba14b24339c68416336d1",
       "baseAddress": "0x8322C44eF834E12cDa8042fa4b8482E19b686a6A"
@@ -214,8 +214,8 @@
       "baseAddress": "0xca0810d80d00f9B7eB873860d23Dc5487065Da37",
       "proxyAddress": "0x3a6a994AC0CC96b6DDbaA99F10769384Fa14227B"
     },
-    "app:lidooracle": {
-      "name": "lidooracle",
+    "app:oracle": {
+      "name": "oracle",
       "fullName": "oracle.lidopm.eth",
       "id": "0x8b47ba2a8454ec799cd91646e7ec47168e91fd139b23f017455f3e5898aaba93",
       "baseAddress": "0xA9Ee059559ED28837e1af943d5f5559b5233aBeB",
@@ -247,5 +247,10 @@
       "0x79a132be0c25ced09e745629d47cf05e531bb2bb"
     ],
     "quorum": 1
-  }
+  },
+  "lidoBaseDeployTx": "0x99f814a256ddedc706bb4b699fee8106ee3d12d2fa78da6d79544efd398aeac4",
+  "oracleBaseDeployTx": "0x195866659be58414ac4a8095c5f6c1b1edc8f24baa48384bc4baa4c77c555af3",
+  "nodeOperatorsRegistryBaseDeployTx": "0x8e16572b1b3fe7ea5b8d67d2af9176566169b706f470d4cbd4fd1d256e339a25",
+  "mevTxFeeVaultDeployTx": "0x3d5375b7a19c6c8391fe65b3dbaabce4d5cc95cdeb910230c516ff434f686889",
+  "mevTxFeeVaultAddress": "0xcDB3885e9680105c02FcC740B184eA98Ef14af42"
 }
