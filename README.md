@@ -72,6 +72,7 @@ The contract also works as a wrapper that accepts stETH tokens and mints wstETH 
 * Oracle: [`0x24d8451BC07e7aF4Ba94F69aCDD9ad3c6579D9FB`](https://goerli.etherscan.io/address/0x24d8451BC07e7aF4Ba94F69aCDD9ad3c6579D9FB) (proxy)
 * WstETH token: [`0x1643e812ae58766192cf7d2cf9567df2c37e9b7f`](https://goerli.etherscan.io/address/0x1643e812ae58766192cf7d2cf9567df2c37e9b7f)
 * Deposit Security Module: [`0xEd23AD3EA5Fb9d10e7371Caef1b141AD1C23A80c`](https://goerli.etherscan.io/address/0xEd23AD3EA5Fb9d10e7371Caef1b141AD1C23A80c)
+* MEV Transaction Fee Vault [`0xece7301B3aeEC2b2B6C41a55dE831D47c205AaCC`](https://goerli.etherscan.io/address/0xece7301B3aeEC2b2B6C41a55dE831D47c205AaCC)
 * Aragon Voting: [`0xbc0B67b4553f4CF52a913DE9A6eD0057E2E758Db`](https://goerli.etherscan.io/address/0xbc0B67b4553f4CF52a913DE9A6eD0057E2E758Db) (proxy)
 * Aragon Token Manager: [`0xDfe76d11b365f5e0023343A367f0b311701B3bc1`](https://goerli.etherscan.io/address/0xDfe76d11b365f5e0023343A367f0b311701B3bc1) (proxy)
 * Aragon Finance: [`0x75c7b1D23f1cad7Fb4D60281d7069E46440BC179`](https://goerli.etherscan.io/address/0x75c7b1D23f1cad7Fb4D60281d7069E46440BC179) (proxy)
