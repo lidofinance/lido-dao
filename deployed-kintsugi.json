@@ -135,7 +135,7 @@
   },
   "lidoEnsLabelName": "lidopm",
   "daoTemplateEnsLabel": "template2",
-  "lidoApmRegistryAddress": "0x21176ac9c7e252d009257445b9cc13bFfe3fd223",
+  "lidoApmAddress": "0x21176ac9c7e252d009257445b9cc13bFfe3fd223",
   "lidoEnsNodeName": "lidopm.eth",
   "lidoEnsNode": "0xbfc3884a938047d1e93d1dbd85bfcfb929a63a4ed292efc654596c10e96a88c9",
   "app:lido": {

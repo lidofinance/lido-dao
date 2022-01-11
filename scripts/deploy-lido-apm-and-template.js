@@ -66,7 +66,7 @@ async function deployApmAndTemplate({
     apmRegistryFactory,
     owner: state.owner,
     labelName: state.lidoEnsLabelName,
-    apmRegistryAddress: state.lidoApmRegistryAddress
+    apmRegistryAddress: state.lidoApmAddress
   })
   updateNetworkState(state, {
     lidoApmRegistry: apmResults.apmRegistry,
@@ -81,7 +81,7 @@ async function deployApmAndTemplate({
     ens,
     owner: state.owner,
     lidoEnsNodeName: state.lidoEnsNodeName,
-    lidoApmRegistryAddress: state.lidoApmRegistryAddress,
+    lidoApmAddress: state.lidoApmAddress,
     daoFactoryAddress: state.daoFactoryAddress,
     miniMeTokenFactoryAddress: state.miniMeTokenFactoryAddress,
     daoTemplateEnsLabel: state.daoTemplateEnsLabel,
@@ -95,7 +95,7 @@ async function deployDaoTemplate({
   artifacts,
   owner,
   ens,
-  lidoApmRegistryAddress,
+  lidoApmAddress,
   daoFactoryAddress,
   miniMeTokenFactoryAddress,
   lidoEnsNodeName,
@@ -119,8 +119,8 @@ async function deployDaoTemplate({
     return { daoTemplate, daoTemplateNodeName, daoTemplateNode }
   }
 
-  log(`Using Lido APM registry: ${chalk.yellow(lidoApmRegistryAddress)}`)
-  const lidoApmRegistry = await artifacts.require('APMRegistry').at(lidoApmRegistryAddress)
+  log(`Using Lido APM registry: ${chalk.yellow(lidoApmAddress)}`)
+  const lidoApmRegistry = await artifacts.require('APMRegistry').at(lidoApmAddress)
 
   const aragonIdAddress = await getENSNodeOwner(ens, namehash('aragonid.eth'))
   if (aragonIdAddress) {
