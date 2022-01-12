@@ -9,6 +9,7 @@ import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "@aragon/os/contracts/common/UnstructuredStorage.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 import "./lib/Pausable.sol";
+import "./interfaces/ISTETH.sol";
 
 /**
  * @title Interest-bearing ERC20-like token for Lido Liquid Stacking protocol.
@@ -47,7 +48,7 @@ import "./lib/Pausable.sol";
  * DAO. This is useful for emergency scenarios, e.g. a protocol bug, where one might want
  * to freeze all token transfers and approvals until the emergency is resolved.
  */
-contract StETH is IERC20, Pausable {
+contract StETH is IERC20, ISTETH, Pausable {
     using SafeMath for uint256;
     using UnstructuredStorage for bytes32;
 

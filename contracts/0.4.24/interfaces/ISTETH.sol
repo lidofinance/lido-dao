@@ -49,21 +49,6 @@ interface ISTETH /* is IERC20 */ {
     event Resumed();
 
     /**
-    * @notice Increases shares of a given address by the specified amount. Called by Lido
-    *         contract in two cases: 1) when a user submits an ETH1.0 deposit; 2) when
-    *         ETH2.0 rewards are reported by the oracle. Upon user deposit, Lido contract
-    *         mints the amount of shares that corresponds to the submitted Ether, so
-    *         token balances of other token holders don't change. Upon rewards report,
-    *         Lido contract mints new shares to distribute fee, effectively diluting the
-    *         amount of Ether that would otherwise correspond to each share.
-    *
-    * @param _to Receiver of new shares
-    * @param _sharesAmount Amount of shares to mint
-    * @return The total amount of all holders' shares after new shares are minted
-    */
-    function mintShares(address _to, uint256 _sharesAmount) external returns (uint256);
-
-    /**
       * @notice Burn is called by Lido contract when a user withdraws their Ether.
       * @param _account Account which tokens are to be burnt
       * @param _sharesAmount Amount of shares to burn
