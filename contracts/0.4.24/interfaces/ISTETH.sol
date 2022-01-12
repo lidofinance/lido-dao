@@ -34,6 +34,17 @@ interface ISTETH /* is IERC20 */ {
       */
     function isStopped() external view returns (bool);
 
+    /**
+      * @notice An executed shares transfer from `sender` to `recipient`.
+      *
+      * @dev emitted in pair with an ERC20-defined `Transfer` event.
+      */
+    event TransferShares(
+        address indexed from,
+        address indexed to,
+        uint256 sharesValue
+    );
+
     event Stopped();
     event Resumed();
 

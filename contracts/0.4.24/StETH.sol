@@ -82,15 +82,6 @@ contract StETH is IERC20, Pausable {
     bytes32 internal constant TOTAL_SHARES_POSITION = keccak256("lido.StETH.totalShares");
 
     /**
-      * @notice An executed shares transfer from `sender` to `recipient`
-      */
-    event TransferShares(
-        address indexed from,
-        address indexed to,
-        uint256 sharesValue
-    );
-
-    /**
      * @return the name of the token.
      */
     function name() public pure returns (string) {
