@@ -17,18 +17,18 @@ import "./interfaces/IBeaconReportReceiver.sol";
   */
 interface ILido {
     /**
-      * @notice Gets authorized oracle address
-      * @return address of oracle contract
-      */
-    function getOracle() external view returns (address);
-
-    /**
       * @notice Destroys given amount of shares from account's holdings, 
       * @param _account address of the shares holder
       * @param _sharesAmount shares amount to burn
       * @dev incurs stETH token rebase by decreasing the total amount of shares.
       */
     function burnShares(address _account, uint256 _sharesAmount) external returns (uint256 newTotalShares);
+
+    /**
+      * @notice Gets authorized oracle address
+      * @return address of oracle contract
+      */
+    function getOracle() external view returns (address);
 }
 
 /**
@@ -127,35 +127,6 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
     }
 
     /**
-      * Returns the total cover shares ever burnt.
-      */
-    function getCoverSharesBurnt() external view returns (uint256) {
-        return totalCoverSharesBurnt;
-    }
-    
-    /**
-      * Returns the total non-cover shares ever burnt.
-      */
-    function getNonCoverSharesBurnt() external view returns (uint256) {
-        return totalNonCoverSharesBurnt;
-    }
-    
-    /**
-      * Returns the stETH amount belonging to the burner contract address but not marked for burning.
-      */
-    function getExcessStETH() public view returns (uint256)  {
-        uint256 sharesBurnRequested = (coverSharesBurnRequested + nonCoverSharesBurnRequested);
-        uint256 totalShares = IStETH(LIDO).sharesOf(address(this));
-
-        // sanity check, don't revert
-        if (totalShares < sharesBurnRequested) {
-            return 0;
-        }
-
-        return IStETH(LIDO).getPooledEthByShares(totalShares - sharesBurnRequested);
-    }    
-    
-    /**
       * @notice BE CAREFUL, the provided stETH will be burnt permanently.
       *
       * Transfers `_stETH2Burn` stETH tokens from the message sender and irreversibly locks these
@@ -199,7 +170,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
             IStETH(LIDO).transfer(TREASURY, excessStETH);
         }
     }
-    
+
     /**
       * Intentionally deny incoming ether
       */
@@ -278,6 +249,35 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
 
         ILido(LIDO).burnShares(address(this), burnAmount);
     }
+
+        /**
+      * Returns the total cover shares ever burnt.
+      */
+    function getCoverSharesBurnt() external view returns (uint256) {
+        return totalCoverSharesBurnt;
+    }
+    
+    /**
+      * Returns the total non-cover shares ever burnt.
+      */
+    function getNonCoverSharesBurnt() external view returns (uint256) {
+        return totalNonCoverSharesBurnt;
+    }
+    
+    /**
+      * Returns the stETH amount belonging to the burner contract address but not marked for burning.
+      */
+    function getExcessStETH() public view returns (uint256)  {
+        uint256 sharesBurnRequested = (coverSharesBurnRequested + nonCoverSharesBurnRequested);
+        uint256 totalShares = IStETH(LIDO).sharesOf(address(this));
+
+        // sanity check, don't revert
+        if (totalShares < sharesBurnRequested) {
+            return 0;
+        }
+
+        return IStETH(LIDO).getPooledEthByShares(totalShares - sharesBurnRequested);
+    } 
 
     function _requestBurnMyStETH(uint256 _stETH2Burn, bool _isCover) private {
         require(_stETH2Burn > 0, "ZERO_BURN_AMOUNT");

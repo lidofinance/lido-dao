@@ -29,14 +29,6 @@ interface IOrderedCallbacksArray {
     function callbacksLength() external view returns (uint256);
 
     /**
-      * @notice Get callback at position
-      * @return Callback at the given `_atIndex`
-      *
-      * @dev function reverts if `_atIndex` is out of range
-      */
-    function callbacks(uint256 _atIndex) external view returns (address);
-
-    /**
       * @notice Add a `_callback` to the back of array
       * @param _callback callback address
       *
@@ -60,4 +52,12 @@ interface IOrderedCallbacksArray {
       * @dev remove gas cost is higher for the lower `_atIndex` values
       */
     function removeCallback(uint256 _atIndex) external;
+
+    /**
+      * @notice Get callback at position
+      * @return Callback at the given `_atIndex`
+      *
+      * @dev function reverts if `_atIndex` is out of range
+      */
+    function callbacks(uint256 _atIndex) external view returns (address);
 }
