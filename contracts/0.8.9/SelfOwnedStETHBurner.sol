@@ -116,8 +116,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
       * @param _lido the Lido token (stETH) address
       * @param _voting the Lido Aragon Voting address
       */
-    constructor(address _treasury, address _lido, address _voting)
-    {
+    constructor(address _treasury, address _lido, address _voting) {
         require(_treasury != address(0), "TREASURY_ZERO_ADDRESS");
         require(_lido != address(0), "LIDO_ZERO_ADDRESS");
         require(_voting != address(0), "VOTING_ZERO_ADDRESS");
@@ -247,7 +246,6 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
      * Does nothing if there are no pending burning requests.
      */
     function processLidoOracleReport(uint256, uint256, uint256) external override {
-        
         uint256 memCoverSharesBurnRequested = coverSharesBurnRequested;
         uint256 memNonCoverSharesBurnRequested = nonCoverSharesBurnRequested;
 
