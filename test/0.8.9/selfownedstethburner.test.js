@@ -14,6 +14,7 @@ const LidoMock = artifacts.require('LidoMock.sol')
 const LidoOracleMock = artifacts.require('OracleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
 const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
+const CompositePostRebaseBeaconReceiver = artifacts.require('CompositePostRebaseBeaconReceiver.sol')
 
 const ERC20OZMock = artifacts.require('ERC20OZMock.sol')
 const ERC721OZMock = artifacts.require('ERC721OZMock.sol')
@@ -73,8 +74,10 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
     await depositContract.reset()
 
     burner = await SelfOwnerStETHBurner.new(treasuryAddr, lido.address, voting, { from: deployer })
+    compositeBeaconReceiver = await CompositePostRebaseBeaconReceiver.new(voting, oracle.address, { from: deployer })
+    compositeBeaconReceiver.addCallback(burner.address, { from: voting })
 
-    await oracle.setBeaconReportReceiver(burner.address)
+    await oracle.setBeaconReportReceiver(compositeBeaconReceiver.address)
   })
 
   describe('Requests and burn invocation', () => {
