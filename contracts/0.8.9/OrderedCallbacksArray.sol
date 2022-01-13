@@ -7,9 +7,14 @@ pragma solidity 0.8.9;
 
 import "./interfaces/IOrderedCallbacksArray.sol";
 
-contract OrderedBeaconReportReceivers is IOrderedCallbacksArray {
+/**
+  * @title Contract defining an ordered callbacks array supporting add/insert/remove ops
+  *
+  * Contract adds permission modifiers ontop of `IOderedCallbacksArray` interface functions.
+  * Only the `VOTING` address can invoke storage mutating (add/insert/remove) functions.
+  */
+contract OrderedCallbacksArray is IOrderedCallbacksArray {
     address public immutable VOTING;
-    address public immutable ORACLE;
 
     address[] public callbacks;
 
@@ -18,17 +23,14 @@ contract OrderedBeaconReportReceivers is IOrderedCallbacksArray {
         _;
     }
 
-    modifier onlyOracle() {
-        require(msg.sender == ORACLE, "MSG_SENDER_MUST_BE_ORACLE");
-        _;
-    }
-
-    constructor(address _voting, address _oracle) {
+    constructor(address _voting) {
         require(_voting != address(0), "VOTING_ZERO_ADDRESS");
-        require(_oracle != address(0), "ORACLE_ZERO_ADDRESS");
 
         VOTING = _voting;
-        ORACLE = _oracle;
+    }
+
+    function callbacksLength() public view override returns (uint256) {
+        return callbacks.length;
     }
 
     function addCallback(address _callback) external override onlyVoting {

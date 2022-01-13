@@ -5,24 +5,46 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
-import "./OrderedBeaconReportReceivers.sol";
+import "./OrderedCallbacksArray.sol";
 import "./interfaces/IBeaconReportReceiver.sol";
 
-contract CompositePostRebaseBeaconReceiver is OrderedBeaconReportReceivers, IBeaconReportReceiver {
+/**
+  * @title Contract defining an composite post-rebase beacon receiver for the Lido oracle
+  *
+  * Contract adds permission modifiers.
+  * Only the `ORACLE` address can invoke `processLidoOracleReport` function.
+  */
+contract CompositePostRebaseBeaconReceiver is OrderedCallbacksArray, IBeaconReportReceiver {
+    address public immutable ORACLE;
 
-    constructor(address _voting, address _oracle) OrderedBeaconReportReceivers(_voting, _oracle) {
-        // nothing to do yet
+    modifier onlyOracle() {
+        require(msg.sender == ORACLE, "MSG_SENDER_MUST_BE_ORACLE");
+        _;
     }
 
-    function processLidoOracleReport(uint256 _postTotalPooledEther,
-                                     uint256 _preTotalPooledEther,
-                                     uint256 _timeElapsed) external override onlyOracle {
+    constructor(
+        address _voting, 
+        address _oracle
+    ) OrderedCallbacksArray(_voting) {
+        require(_oracle != address(0), "ORACLE_ZERO_ADDRESS");
 
-        uint256 callbacksLength = callbacks.length;
+        ORACLE = _oracle;
+    }
 
-        for (uint256 brIndex = 0; brIndex < callbacksLength; brIndex++) {
+    function processLidoOracleReport(
+        uint256 _postTotalPooledEther,
+        uint256 _preTotalPooledEther,
+        uint256 _timeElapsed
+    ) external override onlyOracle {
+        uint256 callbacksLen = callbacksLength();
+
+        for (uint256 brIndex = 0; brIndex < callbacksLen; brIndex++) {
             IBeaconReportReceiver(callbacks[brIndex])
-                .processLidoOracleReport(_postTotalPooledEther, _preTotalPooledEther, _timeElapsed);
+                .processLidoOracleReport(
+                    _postTotalPooledEther, 
+                    _preTotalPooledEther, 
+                    _timeElapsed
+                );
         }
     }
 }
