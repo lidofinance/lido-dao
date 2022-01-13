@@ -16,7 +16,7 @@ contract('CompositePostRebaseBeaconReceiver', ([deployer, voting, oracle, anothe
     compositeReceiver = await CompositePostRebaseBeaconReceiver.new(voting, oracle, { from: deployer })
 
     callbackMocks = []
-    for (id = 0; id < deployedCallbackCount; id++) {
+    for (let id = 0; id < deployedCallbackCount; id++) {
       const callback = await BeaconReceiverMock.new(id, { from: deployer })
       callbackMocks.push(callback.address)
     }
@@ -56,7 +56,7 @@ contract('CompositePostRebaseBeaconReceiver', ([deployer, voting, oracle, anothe
     })
 
     it(`batch callback add calls work`, async () => {
-      for (id = 0; id < deployedCallbackCount; id++) {
+      for (let id = 0; id < deployedCallbackCount; id++) {
         const nextCallback = callbackMocks[id]
         const addReceipt = await compositeReceiver.addCallback(nextCallback, { from: voting })
 
@@ -69,11 +69,11 @@ contract('CompositePostRebaseBeaconReceiver', ([deployer, voting, oracle, anothe
     })
 
     it(`batch callback add and remove from the front calls work`, async () => {
-      for (id = 0; id < deployedCallbackCount; id++) {
+      for (let id = 0; id < deployedCallbackCount; id++) {
         await compositeReceiver.addCallback(callbackMocks[id], { from: voting })
       }
 
-      for (id = 0; id < deployedCallbackCount; id++) {
+      for (let id = 0; id < deployedCallbackCount; id++) {
         const nextCallback = callbackMocks[id]
         const removeReceipt = await compositeReceiver.removeCallback(bn(0), { from: voting })
 
@@ -83,18 +83,18 @@ contract('CompositePostRebaseBeaconReceiver', ([deployer, voting, oracle, anothe
         const newLen = deployedCallbackCount - id - 1
         assertBn(await compositeReceiver.callbacksLength(), bn(newLen))
 
-        for (j = 0; j < newLen; j++) {
+        for (let j = 0; j < newLen; j++) {
           assertBn(await compositeReceiver.callbacks(bn(j)), callbackMocks[id + j + 1])
         }
       }
     })
 
     it(`batch callback add and remove from the back calls work`, async () => {
-      for (id = 0; id < deployedCallbackCount; id++) {
+      for (let id = 0; id < deployedCallbackCount; id++) {
         await compositeReceiver.addCallback(callbackMocks[id], { from: voting })
       }
 
-      for (id = 0; id < deployedCallbackCount; id++) {
+      for (let id = 0; id < deployedCallbackCount; id++) {
         const removePos = deployedCallbackCount - id - 1
 
         const nextCallback = callbackMocks[removePos]
@@ -106,14 +106,14 @@ contract('CompositePostRebaseBeaconReceiver', ([deployer, voting, oracle, anothe
         const newLen = removePos
         assertBn(await compositeReceiver.callbacksLength(), bn(newLen))
 
-        for (j = 0; j < newLen; j++) {
+        for (let j = 0; j < newLen; j++) {
           assertBn(await compositeReceiver.callbacks(bn(j)), callbackMocks[j])
         }
       }
     })
 
     it(`batch callback add and remove at arbitrary positions calls work`, async () => {
-      for (id = 0; id < deployedCallbackCount; id++) {
+      for (let id = 0; id < deployedCallbackCount; id++) {
         await compositeReceiver.addCallback(callbackMocks[id], { from: voting })
       }
 
@@ -127,7 +127,7 @@ contract('CompositePostRebaseBeaconReceiver', ([deployer, voting, oracle, anothe
 
       assertBn(await compositeReceiver.callbacksLength(), bn(callbackMocks.length))
 
-      for (id = 0; id < callbackMocks.length; id++) {
+      for (let id = 0; id < callbackMocks.length; id++) {
         assertBn(await compositeReceiver.callbacks(bn(id)), callbackMocks[id])
       }
     })
@@ -177,7 +177,7 @@ contract('CompositePostRebaseBeaconReceiver', ([deployer, voting, oracle, anothe
     })
 
     it(`batch callback insert in a direct order works`, async () => {
-      for (id = 0; id < deployedCallbackCount; ++id) {
+      for (let id = 0; id < deployedCallbackCount; ++id) {
         const nextCallback = callbackMocks[id]
         const insertReceipt = await compositeReceiver.insertCallback(nextCallback, id, { from: voting })
 
@@ -187,7 +187,7 @@ contract('CompositePostRebaseBeaconReceiver', ([deployer, voting, oracle, anothe
         assertBn(await compositeReceiver.callbacks(bn(id)), nextCallback)
       }
 
-      for (id = 0; id < deployedCallbackCount; ++id) {
+      for (let id = 0; id < deployedCallbackCount; ++id) {
         const nextCallback = callbackMocks[id]
 
         assertBn(await compositeReceiver.callbacks(bn(id)), nextCallback)
@@ -195,7 +195,7 @@ contract('CompositePostRebaseBeaconReceiver', ([deployer, voting, oracle, anothe
     })
 
     it(`batch callback insert in a reverse order works`, async () => {
-      for (id = 0; id < deployedCallbackCount; ++id) {
+      for (let id = 0; id < deployedCallbackCount; ++id) {
         const nextCallback = callbackMocks[id]
         const insertReceipt = await compositeReceiver.insertCallback(nextCallback, 0, { from: voting })
 
@@ -205,7 +205,7 @@ contract('CompositePostRebaseBeaconReceiver', ([deployer, voting, oracle, anothe
         assertBn(await compositeReceiver.callbacks(bn(0)), nextCallback)
       }
 
-      for (id = 0; id < deployedCallbackCount; ++id) {
+      for (let id = 0; id < deployedCallbackCount; ++id) {
         const nextCallback = callbackMocks[deployedCallbackCount - id - 1]
 
         assertBn(await compositeReceiver.callbacks(bn(id)), nextCallback)
@@ -220,9 +220,9 @@ contract('CompositePostRebaseBeaconReceiver', ([deployer, voting, oracle, anothe
       await compositeReceiver.insertCallback(callbackMocks[4], bn(2), { from: voting })
       await compositeReceiver.insertCallback(callbackMocks[5], bn(5), { from: voting })
 
-      expectedArr = [3, 1, 4, 2, 0, 5]
+      const expectedArr = [3, 1, 4, 2, 0, 5]
 
-      for (id = 0; id < expectedArr.length; id++) {
+      for (let id = 0; id < expectedArr.length; id++) {
         assertBn(await compositeReceiver.callbacks(bn(id)), callbackMocks[expectedArr[id]])
       }
     })
@@ -261,25 +261,25 @@ contract('CompositePostRebaseBeaconReceiver', ([deployer, voting, oracle, anothe
     it(`batch callback invocation works`, async () => {
       const insertOrderArray = [0, 1, 0, 2]
 
-      for (id = 0; id < insertOrderArray.length; id++) {
+      for (let id = 0; id < insertOrderArray.length; id++) {
         await compositeReceiver.insertCallback(callbackMocks[id], bn(insertOrderArray[id]), { from: voting })
       }
 
-      for (id = 0; id < insertOrderArray.length; id++) {
+      for (let id = 0; id < insertOrderArray.length; id++) {
         const callbackInstance = await BeaconReceiverMock.at(await compositeReceiver.callbacks(bn(id)))
         assertBn(await callbackInstance.processedCounter(), bn(0))
       }
 
       await compositeReceiver.processLidoOracleReport(bn(100), bn(101), bn(200), { from: oracle })
 
-      for (id = 0; id < insertOrderArray.length; id++) {
+      for (let id = 0; id < insertOrderArray.length; id++) {
         const callbackInstance = await BeaconReceiverMock.at(await compositeReceiver.callbacks(bn(id)))
         assertBn(await callbackInstance.processedCounter(), bn(1))
       }
 
       await compositeReceiver.processLidoOracleReport(bn(101), bn(105), bn(205), { from: oracle })
 
-      for (id = 0; id < insertOrderArray.length; id++) {
+      for (let id = 0; id < insertOrderArray.length; id++) {
         const callbackInstance = await BeaconReceiverMock.at(await compositeReceiver.callbacks(bn(id)))
         assertBn(await callbackInstance.processedCounter(), bn(2))
       }

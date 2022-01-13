@@ -2,8 +2,6 @@ const { assertBn, assertRevert, assertEvent, assertAmountOfEvents } = require('@
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 const { newDao, newApp } = require('../0.4.24/helpers/dao')
 
-const { BN } = require('bn.js')
-
 const { assert } = require('chai')
 
 const SelfOwnerStETHBurner = artifacts.require('SelfOwnedStETHBurner.sol')
@@ -26,6 +24,8 @@ const stETH = ETH
 contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anotherAccount, ...otherAccounts]) => {
   let oracle, lido, burner
   let treasuryAddr
+  let dao, acl, operators
+  let compositeBeaconReceiver
 
   beforeEach('deploy lido with dao', async () => {
     const lidoBase = await LidoMock.new({ from: deployer })
@@ -119,7 +119,6 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
 
     it(`reverts on burn request from non-voting address`, async () => {
       // provide allowance and request burn for cover
-      const sharesAmount8StETH = await lido.getSharesByPooledEth(stETH(8))
       await lido.approve(burner.address, stETH(8), { from: anotherAccount })
 
       // anotherAccount can't place burn request, only voting can
@@ -318,9 +317,6 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
     })
 
     it(`a positive rebase happens after the burn application`, async () => {
-      const totalETH = await lido.getTotalPooledEther()
-      const totalShares = await lido.getTotalShares()
-
       await lido.approve(burner.address, stETH(25), { from: voting })
       await burner.requestBurnMyStETHForCover(stETH(25), { from: voting })
 
