@@ -8,7 +8,7 @@ const BeaconReceiverMock = artifacts.require('BeaconReceiverMock.sol')
 
 const deployedCallbackCount = 8
 
-contract.only('CompositePostRebaseBeaconReceiver', ([deployer, voting, oracle, anotherAccount, ...otherAccounts]) => {
+contract('CompositePostRebaseBeaconReceiver', ([deployer, voting, oracle, anotherAccount, ...otherAccounts]) => {
   let compositeReceiver
   let callbackMocks
 
