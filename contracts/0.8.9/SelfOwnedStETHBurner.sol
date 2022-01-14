@@ -17,7 +17,7 @@ import "./interfaces/IBeaconReportReceiver.sol";
   */
 interface ILido {
     /**
-      * @notice Destroys given amount of shares from account's holdings, 
+      * @notice Destroys given amount of shares from account's holdings,
       * @param _account address of the shares holder
       * @param _sharesAmount shares amount to burn
       * @dev incurs stETH token rebase by decreasing the total amount of shares.
@@ -52,10 +52,10 @@ interface IOracle {
 contract SelfOwnedStETHBurner is IBeaconReportReceiver {
     uint256 private coverSharesBurnRequested;
     uint256 private nonCoverSharesBurnRequested;
-    
+
     uint256 private totalCoverSharesBurnt;
     uint256 private totalNonCoverSharesBurnt;
-    
+
     address public immutable LIDO;
     address public immutable TREASURY;
     address public immutable VOTING;
@@ -120,7 +120,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
         require(_treasury != address(0), "TREASURY_ZERO_ADDRESS");
         require(_lido != address(0), "LIDO_ZERO_ADDRESS");
         require(_voting != address(0), "VOTING_ZERO_ADDRESS");
-        
+
         TREASURY = _treasury;
         LIDO = _lido;
         VOTING = _voting;
@@ -153,7 +153,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
     function requestBurnMyStETHForNonCover(uint256 _stETH2Burn) external {
         _requestBurnMyStETH(_stETH2Burn, false);
     }
-    
+
     /**
       * Transfers the excess stETH amount (e.g. belonging to the burner contract address
       * but not marked for burning) to the Lido treasury address set upon the
@@ -164,7 +164,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
 
         if (excessStETH > 0) {
             uint256 excessSharesAmount = IStETH(LIDO).getSharesByPooledEth(excessStETH);
-            
+
             emit ExcessStETHRecovered(msg.sender, excessStETH, excessSharesAmount);
 
             IStETH(LIDO).transfer(TREASURY, excessStETH);
@@ -191,7 +191,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
         require(_token != LIDO, "STETH_RECOVER_WRONG_FUNC");
 
         emit ERC20Recovered(msg.sender, _token, _amount);
-        
+
         IERC20(_token).transfer(TREASURY, _amount);
     }
 
@@ -256,14 +256,14 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
     function getCoverSharesBurnt() external view returns (uint256) {
         return totalCoverSharesBurnt;
     }
-    
+
     /**
       * Returns the total non-cover shares ever burnt.
       */
     function getNonCoverSharesBurnt() external view returns (uint256) {
         return totalNonCoverSharesBurnt;
     }
-    
+
     /**
       * Returns the stETH amount belonging to the burner contract address but not marked for burning.
       */
@@ -277,7 +277,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
         }
 
         return IStETH(LIDO).getPooledEthByShares(totalShares - sharesBurnRequested);
-    } 
+    }
 
     function _requestBurnMyStETH(uint256 _stETH2Burn, bool _isCover) private {
         require(_stETH2Burn > 0, "ZERO_BURN_AMOUNT");

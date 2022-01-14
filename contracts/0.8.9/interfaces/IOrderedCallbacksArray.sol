@@ -48,7 +48,7 @@ interface IOrderedCallbacksArray {
     /**
       * @notice Remove a callback at the given `_atIndex` position
       * @param _atIndex callback remove position
-      *       
+      *
       * @dev remove gas cost is higher for the lower `_atIndex` values
       */
     function removeCallback(uint256 _atIndex) external;

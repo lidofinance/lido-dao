@@ -69,5 +69,5 @@ contract OrderedCallbacksArray is IOrderedCallbacksArray {
         }
 
         callbacks[_atIndex] = _callback;
-    }    
+    }
 }

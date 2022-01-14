@@ -23,7 +23,7 @@ contract CompositePostRebaseBeaconReceiver is OrderedCallbacksArray, IBeaconRepo
     }
 
     constructor(
-        address _voting, 
+        address _voting,
         address _oracle
     ) OrderedCallbacksArray(_voting) {
         require(_oracle != address(0), "ORACLE_ZERO_ADDRESS");
@@ -41,8 +41,8 @@ contract CompositePostRebaseBeaconReceiver is OrderedCallbacksArray, IBeaconRepo
         for (uint256 brIndex = 0; brIndex < callbacksLen; brIndex++) {
             IBeaconReportReceiver(callbacks[brIndex])
                 .processLidoOracleReport(
-                    _postTotalPooledEther, 
-                    _preTotalPooledEther, 
+                    _postTotalPooledEther,
+                    _preTotalPooledEther,
                     _timeElapsed
                 );
         }
