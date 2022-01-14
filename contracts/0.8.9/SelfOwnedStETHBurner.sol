@@ -161,7 +161,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
       *
       * @param _stETH2Burn stETH tokens to burn
       */
-    function requestNonCoverBurnMyStETH(uint256 _stETH2Burn) external {
+    function requestBurnMyStETH(uint256 _stETH2Burn) external {
         _requestBurnMyStETH(_stETH2Burn, false);
     }
 
