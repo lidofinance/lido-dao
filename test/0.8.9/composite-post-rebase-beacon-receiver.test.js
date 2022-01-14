@@ -1,7 +1,7 @@
 /* eslint no-unmodified-loop-condition: "warn" */
 
 const { assertBn, assertRevert, assertEvent, assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
-const { bn } = require('@aragon/contract-helpers-test')
+const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 
 const CompositePostRebaseBeaconReceiver = artifacts.require('CompositePostRebaseBeaconReceiver.sol')
 const BeaconReceiverMock = artifacts.require('BeaconReceiverMock.sol')
@@ -22,7 +22,15 @@ contract('CompositePostRebaseBeaconReceiver', ([deployer, voting, oracle, anothe
     }
   })
 
-  describe('add/remove calls work', async () => {
+  describe('add/remove calls', async () => {
+    it(`can't use zero addresses`, async () => {
+      assertRevert(CompositePostRebaseBeaconReceiver.new(ZERO_ADDRESS, oracle, { from: deployer }), `VOTING_ZERO_ADDRESS`)
+
+      assertRevert(CompositePostRebaseBeaconReceiver.new(voting, ZERO_ADDRESS, { from: deployer }), `ORACLE_ZERO_ADDRESS`)
+
+      assertRevert(compositeReceiver.addCallback(ZERO_ADDRESS, { from: voting }), `RECEIVER_ZERO_ADDRESS`)
+    })
+
     it(`add a single callback works`, async () => {
       const receipt = await compositeReceiver.addCallback(callbackMocks[0], { from: voting })
 
@@ -166,7 +174,7 @@ contract('CompositePostRebaseBeaconReceiver', ([deployer, voting, oracle, anothe
     })
   })
 
-  describe('insert callback at works', async () => {
+  describe('insert callbacks', async () => {
     it(`simple insert works`, async () => {
       const insertReceipt = await compositeReceiver.insertCallback(callbackMocks[0], bn(0), { from: voting })
 
@@ -240,7 +248,7 @@ contract('CompositePostRebaseBeaconReceiver', ([deployer, voting, oracle, anothe
     })
   })
 
-  describe('a callback invocation loop works', async () => {
+  describe('a callback invocation loop', async () => {
     it(`empty callbacks list works`, async () => {
       await compositeReceiver.processLidoOracleReport(bn(100), bn(101), bn(200), { from: oracle })
     })
@@ -286,7 +294,7 @@ contract('CompositePostRebaseBeaconReceiver', ([deployer, voting, oracle, anothe
     })
   })
 
-  describe('permission modifiers work', async () => {
+  describe('permission modifiers', async () => {
     it(`addCallback permission modifier works`, async () => {
       assertRevert(compositeReceiver.addCallback(callbackMocks[0], { from: deployer }), `MSG_SENDER_MUST_BE_VOTING`)
 

@@ -115,8 +115,16 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
       * @param _treasury the Lido treasury address (see StETH/ERC20/ERC721-recovery interfaces)
       * @param _lido the Lido token (stETH) address
       * @param _voting the Lido Aragon Voting address
+      * @param _totalCoverSharesBurnt Shares burnt counter init value (cover case)
+      * @param _totalNonCoverSharesBurnt Shares burnt counter init value (non-cover case)
       */
-    constructor(address _treasury, address _lido, address _voting) {
+    constructor(
+        address _treasury,
+        address _lido,
+        address _voting,
+        uint256 _totalCoverSharesBurnt,
+        uint256 _totalNonCoverSharesBurnt
+    ) {
         require(_treasury != address(0), "TREASURY_ZERO_ADDRESS");
         require(_lido != address(0), "LIDO_ZERO_ADDRESS");
         require(_voting != address(0), "VOTING_ZERO_ADDRESS");
@@ -124,6 +132,9 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
         TREASURY = _treasury;
         LIDO = _lido;
         VOTING = _voting;
+
+        totalCoverSharesBurnt = _totalCoverSharesBurnt;
+        totalNonCoverSharesBurnt = _totalNonCoverSharesBurnt;
     }
 
     /**
@@ -150,7 +161,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
       *
       * @param _stETH2Burn stETH tokens to burn
       */
-    function requestBurnMyStETHForNonCover(uint256 _stETH2Burn) external {
+    function requestNonCoverBurnMyStETH(uint256 _stETH2Burn) external {
         _requestBurnMyStETH(_stETH2Burn, false);
     }
 
@@ -228,6 +239,10 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
 
         address oracle = ILido(LIDO).getOracle();
 
+        /**
+          * Allow invocation only from `LidoOracle` or previously set composite beacon report receiver.
+          * The second condition provides a way to use multiple callbacks packed into a single composite container.
+          */
         require(
             msg.sender == oracle
             || (msg.sender == IOracle(oracle).getBeaconReportReceiver()),
@@ -250,7 +265,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
         ILido(LIDO).burnShares(address(this), burnAmount);
     }
 
-        /**
+    /**
       * Returns the total cover shares ever burnt.
       */
     function getCoverSharesBurnt() external view returns (uint256) {
@@ -272,7 +287,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
         uint256 totalShares = IStETH(LIDO).sharesOf(address(this));
 
         // sanity check, don't revert
-        if (totalShares < sharesBurnRequested) {
+        if (totalShares <= sharesBurnRequested) {
             return 0;
         }
 
