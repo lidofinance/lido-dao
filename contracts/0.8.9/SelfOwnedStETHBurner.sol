@@ -5,8 +5,8 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
-import "@openzeppelin/contracts-4/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts-4/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts-v4.4/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol";
 
 import "./interfaces/IStETH.sol";
 import "./interfaces/IBeaconReportReceiver.sol";

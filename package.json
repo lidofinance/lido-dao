@@ -98,7 +98,7 @@
   "dependencies": {
     "@aragon/os": "^4.4.0",
     "@openzeppelin/contracts": "3.4.0",
-    "@openzeppelin/contracts-4": "npm:@openzeppelin/contracts@4.4.1",
+    "@openzeppelin/contracts-v4.4": "npm:@openzeppelin/contracts@4.4.1",
     "@truffle/contract": "^4.2.22",
     "ethereumjs-util": "^7.0.8",
     "ethers": "^5.0.19",

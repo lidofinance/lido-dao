@@ -11,7 +11,7 @@ contract RewardEmulatorMock {
 
     event Rewarded(address target, uint256 amount);
 
-    constructor(address _target) public {
+    constructor(address _target) {
         target = payable(_target);
     }
 
