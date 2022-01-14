@@ -8,7 +8,7 @@ const BeaconReceiverMock = artifacts.require('BeaconReceiverMock.sol')
 
 const deployedCallbackCount = 8
 
-contract('CompositePostRebaseBeaconReceiver', ([deployer, voting, oracle, anotherAccount, ...otherAccounts]) => {
+contract.only('CompositePostRebaseBeaconReceiver', ([deployer, voting, oracle, anotherAccount, ...otherAccounts]) => {
   let compositeReceiver
   let callbackMocks
 
@@ -171,6 +171,17 @@ contract('CompositePostRebaseBeaconReceiver', ([deployer, voting, oracle, anothe
       await compositeReceiver.removeCallback(bn(2), { from: voting })
 
       assertRevert(compositeReceiver.removeCallback(bn(2), { from: voting }), `INDEX_IS_OUT_OF_RANGE`)
+    })
+
+    it(`max callbacks count limit works`, async () => {
+      // add 16 callbacks
+      for (let id = 0; id < deployedCallbackCount; id++) {
+        await compositeReceiver.addCallback(callbackMocks[id], { from: voting })
+        await compositeReceiver.addCallback(callbackMocks[id], { from: voting })
+      }
+
+      // should fail cause we have a 16 callbacks limit (MAX_CALLBACKS_COUNT)
+      assertRevert(compositeReceiver.addCallback(callbackMocks[0], { from: voting }), `MAX_CALLBACKS_COUNT_EXCEEDED`)
     })
   })
 

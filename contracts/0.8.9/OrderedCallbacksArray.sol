@@ -14,6 +14,8 @@ import "./interfaces/IOrderedCallbacksArray.sol";
   * Only the `VOTING` address can invoke storage mutating (add/insert/remove) functions.
   */
 contract OrderedCallbacksArray is IOrderedCallbacksArray {
+    uint256 public constant MAX_CALLBACKS_COUNT = 16;
+
     address public immutable VOTING;
 
     address[] public callbacks;
@@ -60,11 +62,13 @@ contract OrderedCallbacksArray is IOrderedCallbacksArray {
         emit CallbackAdded(_callback, _atIndex);
 
         uint256 oldCArrayLength = callbacks.length;
+        require(callbacks.length < MAX_CALLBACKS_COUNT, "MAX_CALLBACKS_COUNT_EXCEEDED");
+
         callbacks.push();
 
         if (oldCArrayLength > 0) {
-            for (uint256 cIndex = 0; cIndex < (oldCArrayLength - _atIndex); cIndex++) {
-                callbacks[oldCArrayLength - cIndex] = callbacks[(oldCArrayLength - cIndex) - 1];
+            for (uint256 cIndex = oldCArrayLength; cIndex > _atIndex; cIndex--) {
+                callbacks[cIndex] = callbacks[cIndex-1];
             }
         }
 
