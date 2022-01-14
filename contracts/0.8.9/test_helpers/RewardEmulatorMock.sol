@@ -7,19 +7,19 @@ pragma solidity 0.8.9;
 import "./ETHForwarderMock.sol";
 
 contract RewardEmulatorMock {
-    address payable private _target;
+    address payable private target;
 
     event Rewarded(address target, uint256 amount);
 
-    constructor(address target) public {
-        _target = payable(target);
+    constructor(address _target) public {
+        target = payable(_target);
     }
 
     function reward() public payable {
-        require(_target != address(0), "no target");
+        require(target != address(0), "no target");
         uint256 amount = msg.value;
-        uint256 balance = _target.balance + amount;
-        bytes memory bytecode = abi.encodePacked(type(ETHForwarderMock).creationCode, abi.encode(_target));
+        uint256 balance = target.balance + amount;
+        bytes memory bytecode = abi.encodePacked(type(ETHForwarderMock).creationCode, abi.encode(target));
         address addr;
 
         /*
@@ -40,7 +40,7 @@ contract RewardEmulatorMock {
                 0 // Salt
             )
         }
-        require(_target.balance == balance, "incorrect balance");
-        emit Rewarded(_target, msg.value);
+        require(target.balance == balance, "incorrect balance");
+        emit Rewarded(target, msg.value);
     }
 }

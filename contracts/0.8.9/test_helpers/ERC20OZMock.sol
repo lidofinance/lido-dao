@@ -7,7 +7,7 @@ pragma solidity 0.8.9;
 import "@openzeppelin/contracts-4/token/ERC20/ERC20.sol";
 
 contract ERC20OZMock is ERC20 {
-    constructor(uint256 initialSupply) ERC20("Mock ERC20 token", "mTKN") {
-        _mint(msg.sender, initialSupply);
+    constructor(uint256 _initialSupply) ERC20("Mock ERC20 token", "mTKN") {
+        _mint(msg.sender, _initialSupply);
     }
 }

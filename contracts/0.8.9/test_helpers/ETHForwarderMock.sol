@@ -4,7 +4,7 @@
 pragma solidity 0.8.9;
 
 contract ETHForwarderMock {
-    constructor(address payable target) public payable {
-        selfdestruct(target);
+    constructor(address payable _target) public payable {
+        selfdestruct(_target);
     }
 }

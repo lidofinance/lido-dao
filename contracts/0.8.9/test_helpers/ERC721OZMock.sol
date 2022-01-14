@@ -10,7 +10,7 @@ import "@openzeppelin/contracts-4/utils/Counters.sol";
 contract ERC721OZMock is ERC721 {
     constructor() ERC721("Mock NFT", "mNFT") {}
 
-    function mintToken(uint256 tokenId) public {
-        _mint(msg.sender, tokenId);
+    function mintToken(uint256 _tokenId) public {
+        _mint(msg.sender, _tokenId);
     }
 }
