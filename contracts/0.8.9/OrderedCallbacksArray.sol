@@ -57,12 +57,12 @@ contract OrderedCallbacksArray is IOrderedCallbacksArray {
 
     function _insertCallback(address _callback, uint256 _atIndex) private {
         require(_callback != address(0), "CALLBACK_ZERO_ADDRESS");
-        require(_atIndex <= callbacks.length, "INDEX_IS_OUT_OF_RANGE");
-
-        emit CallbackAdded(_callback, _atIndex);
 
         uint256 oldCArrayLength = callbacks.length;
+        require(_atIndex <= oldCArrayLength, "INDEX_IS_OUT_OF_RANGE");
         require(oldCArrayLength < MAX_CALLBACKS_COUNT, "MAX_CALLBACKS_COUNT_EXCEEDED");
+
+        emit CallbackAdded(_callback, _atIndex);
 
         callbacks.push();
 

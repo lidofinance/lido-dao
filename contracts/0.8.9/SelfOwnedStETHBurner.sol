@@ -7,8 +7,6 @@ pragma solidity 0.8.9;
 
 import "@openzeppelin/contracts-v4.4/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol";
-
-import "./interfaces/IStETH.sol";
 import "./interfaces/IBeaconReportReceiver.sol";
 
 /**
@@ -17,7 +15,7 @@ import "./interfaces/IBeaconReportReceiver.sol";
   */
 interface ILido {
     /**
-      * @notice Destroys given amount of shares from account's holdings,
+      * @notice Destroys given amount of shares from account's holdings
       * @param _account address of the shares holder
       * @param _sharesAmount shares amount to burn
       * @dev incurs stETH token rebase by decreasing the total amount of shares.
@@ -26,9 +24,29 @@ interface ILido {
 
     /**
       * @notice Gets authorized oracle address
-      * @return address of oracle contract
+      * @return address of oracle contract.
       */
     function getOracle() external view returns (address);
+
+    /**
+      * @notice Get stETH amount by the provided shares amount
+      * @param _sharesAmount shares amount
+      * @dev dual to `getSharesByPooledEth`.
+      */
+    function getPooledEthByShares(uint256 _sharesAmount) external view returns (uint256);
+
+    /**
+      * @notice Get shares amount by the provided stETH amount
+      * @param _pooledEthAmount stETH amount
+      * @dev dual to `getPooledEthByShares`.
+      */
+    function getSharesByPooledEth(uint256 _pooledEthAmount) external view returns (uint256);
+
+    /**
+      * @notice Get shares amount of the provided account
+      * @param _account provided account address.
+      */
+    function sharesOf(address _account) external view returns (uint256);
 }
 
 /**
@@ -139,6 +157,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
 
     /**
       * @notice BE CAREFUL, the provided stETH will be burnt permanently.
+      * @dev only `voting` allowed to call this function.
       *
       * Transfers `_stETH2Burn` stETH tokens from the message sender and irreversibly locks these
       * on the burner contract address. Internally converts `_stETH2Burn` amount into underlying
@@ -146,6 +165,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
       * by increasing the `coverSharesBurnRequested` counter.
       *
       * @param _stETH2Burn stETH tokens to burn
+      *
       */
     function requestBurnMyStETHForCover(uint256 _stETH2Burn) external {
         _requestBurnMyStETH(_stETH2Burn, true);
@@ -153,6 +173,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
 
     /**
       * @notice BE CAREFUL, the provided stETH will be burnt permanently.
+      * @dev only `voting` allowed to call this function.
       *
       * Transfers `_stETH2Burn` stETH tokens from the message sender and irreversibly locks these
       * on the burner contract address. Internally converts `_stETH2Burn` amount into underlying
@@ -160,6 +181,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
       * by increasing the `nonCoverSharesBurnRequested` counter.
       *
       * @param _stETH2Burn stETH tokens to burn
+      *
       */
     function requestBurnMyStETH(uint256 _stETH2Burn) external {
         _requestBurnMyStETH(_stETH2Burn, false);
@@ -174,11 +196,11 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
         uint256 excessStETH = getExcessStETH();
 
         if (excessStETH > 0) {
-            uint256 excessSharesAmount = IStETH(LIDO).getSharesByPooledEth(excessStETH);
+            uint256 excessSharesAmount = ILido(LIDO).getSharesByPooledEth(excessStETH);
 
             emit ExcessStETHRecovered(msg.sender, excessStETH, excessSharesAmount);
 
-            IStETH(LIDO).transfer(TREASURY, excessStETH);
+            IERC20(LIDO).transfer(TREASURY, excessStETH);
         }
     }
 
@@ -251,13 +273,13 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
 
         if (memCoverSharesBurnRequested > 0) {
             totalCoverSharesBurnt += memCoverSharesBurnRequested;
-            uint256 coverStETHBurnAmountRequested = IStETH(LIDO).getPooledEthByShares(memCoverSharesBurnRequested);
+            uint256 coverStETHBurnAmountRequested = ILido(LIDO).getPooledEthByShares(memCoverSharesBurnRequested);
             emit StETHBurnt(true /* isCover */, coverStETHBurnAmountRequested, memCoverSharesBurnRequested);
             coverSharesBurnRequested = 0;
         }
         if (memNonCoverSharesBurnRequested > 0) {
             totalNonCoverSharesBurnt += memNonCoverSharesBurnRequested;
-            uint256 nonCoverStETHBurnAmountRequested = IStETH(LIDO).getPooledEthByShares(memNonCoverSharesBurnRequested);
+            uint256 nonCoverStETHBurnAmountRequested = ILido(LIDO).getPooledEthByShares(memNonCoverSharesBurnRequested);
             emit StETHBurnt(false /* isCover */, nonCoverStETHBurnAmountRequested, memNonCoverSharesBurnRequested);
             nonCoverSharesBurnRequested = 0;
         }
@@ -284,22 +306,22 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
       */
     function getExcessStETH() public view returns (uint256)  {
         uint256 sharesBurnRequested = (coverSharesBurnRequested + nonCoverSharesBurnRequested);
-        uint256 totalShares = IStETH(LIDO).sharesOf(address(this));
+        uint256 totalShares = ILido(LIDO).sharesOf(address(this));
 
         // sanity check, don't revert
         if (totalShares <= sharesBurnRequested) {
             return 0;
         }
 
-        return IStETH(LIDO).getPooledEthByShares(totalShares - sharesBurnRequested);
+        return ILido(LIDO).getPooledEthByShares(totalShares - sharesBurnRequested);
     }
 
     function _requestBurnMyStETH(uint256 _stETH2Burn, bool _isCover) private {
         require(_stETH2Burn > 0, "ZERO_BURN_AMOUNT");
         require(msg.sender == VOTING, "MSG_SENDER_MUST_BE_VOTING");
-        require(IStETH(LIDO).transferFrom(msg.sender, address(this), _stETH2Burn));
+        require(IERC20(LIDO).transferFrom(msg.sender, address(this), _stETH2Burn));
 
-        uint256 sharesAmount = IStETH(LIDO).getSharesByPooledEth(_stETH2Burn);
+        uint256 sharesAmount = ILido(LIDO).getSharesByPooledEth(_stETH2Burn);
 
         emit StETHBurnRequested(_isCover, msg.sender, _stETH2Burn, sharesAmount);
 

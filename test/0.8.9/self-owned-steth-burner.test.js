@@ -33,7 +33,9 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
     const depositContract = await DepositContractMock.new({ from: deployer })
     const nodeOperatorsRegistryBase = await NodeOperatorsRegistry.new({ from: deployer })
 
-    ;({ dao, acl } = await newDao(appManager))
+    const daoAclObj = await newDao(appManager)
+    dao = daoAclObj.dao
+    acl = daoAclObj.acl
 
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
     let proxyAddress = await newApp(dao, 'lido', lidoBase.address, appManager)
@@ -44,27 +46,8 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
     operators = await NodeOperatorsRegistry.at(proxyAddress)
     await operators.initialize(lido.address)
 
-    // Set up the app's permissions.
-    await acl.createPermission(voting, lido.address, await lido.PAUSE_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, lido.address, await lido.MANAGE_FEE(), appManager, { from: appManager })
-    await acl.createPermission(voting, lido.address, await lido.MANAGE_WITHDRAWAL_KEY(), appManager, { from: appManager })
+    // Init the BURN_ROLE role and assign in to voting
     await acl.createPermission(voting, lido.address, await lido.BURN_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, lido.address, await lido.SET_TREASURY(), appManager, { from: appManager })
-    await acl.createPermission(voting, lido.address, await lido.SET_ORACLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, lido.address, await lido.SET_INSURANCE_FUND(), appManager, { from: appManager })
-
-    await acl.createPermission(voting, operators.address, await operators.MANAGE_SIGNING_KEYS(), appManager, { from: appManager })
-    await acl.createPermission(voting, operators.address, await operators.ADD_NODE_OPERATOR_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, operators.address, await operators.SET_NODE_OPERATOR_ACTIVE_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, operators.address, await operators.SET_NODE_OPERATOR_NAME_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, operators.address, await operators.SET_NODE_OPERATOR_ADDRESS_ROLE(), appManager, {
-      from: appManager
-    })
-    await acl.createPermission(voting, operators.address, await operators.SET_NODE_OPERATOR_LIMIT_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, operators.address, await operators.REPORT_STOPPED_VALIDATORS_ROLE(), appManager, {
-      from: appManager
-    })
-    await acl.createPermission(depositor, lido.address, await lido.DEPOSIT_ROLE(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
     await lido.initialize(depositContract.address, oracle.address, operators.address)
@@ -686,13 +669,7 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
   it(`Don't accept accidentally or intentionally sent ETH`, async () => {
     const burner_addr = burner.address
 
-    // try send 1 ETH, should be reverted with fallback defined reason
+    // try to send 1 ETH, should be reverted with fallback defined reason
     assertRevert(web3.eth.sendTransaction({ from: anotherAccount, to: burner_addr, value: ETH(1) }), `INCOMING_ETH_IS_FORBIDDEN`)
-
-    // try send 100 ETH, should be reverted with fallback defined reason
-    assertRevert(web3.eth.sendTransaction({ from: anotherAccount, to: burner_addr, value: ETH(100) }), `INCOMING_ETH_IS_FORBIDDEN`)
-
-    // try send 0.001 ETH, should be reverted with fallback defined reason
-    assertRevert(web3.eth.sendTransaction({ from: anotherAccount, to: burner_addr, value: ETH(0.001) }), `INCOMING_ETH_IS_FORBIDDEN`)
   })
 })
