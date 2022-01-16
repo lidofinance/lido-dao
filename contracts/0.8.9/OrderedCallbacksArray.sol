@@ -44,11 +44,12 @@ contract OrderedCallbacksArray is IOrderedCallbacksArray {
     }
 
     function removeCallback(uint256 _atIndex) external override onlyVoting {
-        require(_atIndex < callbacks.length, "INDEX_IS_OUT_OF_RANGE");
+        uint256 oldCArrayLength = callbacks.length;
+        require(_atIndex < oldCArrayLength, "INDEX_IS_OUT_OF_RANGE");
 
         emit CallbackRemoved(callbacks[_atIndex], _atIndex);
 
-        for (uint256 cIndex = _atIndex; cIndex < callbacks.length-1; cIndex++) {
+        for (uint256 cIndex = _atIndex; cIndex < oldCArrayLength-1; cIndex++) {
             callbacks[cIndex] = callbacks[cIndex+1];
         }
 
