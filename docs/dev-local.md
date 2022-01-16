@@ -2,7 +2,7 @@
 
 Networks are defined in `hardhat.config.js` file. To select the target network for deployment,
 set `NETWORK_NAME` environment variable to a network name defined in that file. All examples
-below assume `localhost` target network.
+below assume `localhost` is the target network.
 
 #### Network state file
 
@@ -29,7 +29,7 @@ deployment to avoid those values being set to default values:
 * `depositContractAddress` The address of the Beacon chain deposit contract (it will deployed otherwise).
 * `daoInitialSettings` Initial settings of the DAO; see below.
 
-You may specify any number additional keys inside any network state, they will be left intact by
+You may specify any number of additional keys inside any network state, they will be left intact by
 deployment scripts.
 
 #### DAO initial settings
@@ -122,7 +122,7 @@ and start in different terminal
 ipfs daemon
 ```
 
-IPFS needed to upload an Aragon Apps like (Finance, Voting, etc...) and Lido apps (Lido, LidoOracle,NOS)
+IPFS is needed to upload an Aragon Apps like (Finance, Voting, etc...) and Lido apps (Lido, LidoOracle,NOS)
 
 
 #### Step 3: start hardhat node in different terminal

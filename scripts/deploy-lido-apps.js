@@ -122,8 +122,6 @@ async function publishApp(appName, env, netName, appsDirPath, releaseType) {
     env
   })
 
-  // console.log({res})
-
   return {
     ...result,
     fullName: appFullName,

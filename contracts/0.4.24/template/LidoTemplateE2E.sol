@@ -160,6 +160,7 @@ contract LidoTemplateE2E is BaseTemplate {
         );
         state.lido = Lido(_installNonDefaultApp(state.dao, LIDO_APP_ID, initializeData));
 
+        //todo handle this init properly after merging in branch redo-oracle-initialization
 //        state.oracle.initialize_v2(100000, 50000);
         state.operators.initialize(state.lido);
     }
