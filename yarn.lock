@@ -3321,6 +3321,7 @@ __metadata:
     "@nomiclabs/hardhat-truffle5": ^2.0.2
     "@nomiclabs/hardhat-web3": ^2.0.0
     "@openzeppelin/contracts": 3.4.0
+    "@openzeppelin/contracts-v4.4": "npm:@openzeppelin/contracts@4.4.1"
     "@openzeppelin/test-helpers": ^0.5.6
     "@truffle/contract": ^4.2.22
     ava: ^3.13.0
@@ -3724,6 +3725,13 @@ __metadata:
     fs-extra: ^8.1.0
     try-require: ^1.2.1
   checksum: 75fbeb262c54cb76dbfd08bd0162ebb9d76efa461114556637bf7eb8b9d203c34adf94216b6a04c9d2e88f5ff754cba0b252fdef33084543cca356391f3f8c91
+  languageName: node
+  linkType: hard
+
+"@openzeppelin/contracts-v4.4@npm:@openzeppelin/contracts@4.4.1":
+  version: 4.4.1
+  resolution: "@openzeppelin/contracts@npm:4.4.1"
+  checksum: faf9f85ba84d1fdf9316940216abe7a6302d210ac4da72346a5f27460ee91cf950524808847d05cabe324dee307f41a3649951f25106b6f1543bc4b6dea120fd
   languageName: node
   linkType: hard
 
