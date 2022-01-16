@@ -28,7 +28,7 @@ contract('CompositePostRebaseBeaconReceiver', ([deployer, voting, oracle, anothe
 
       assertRevert(CompositePostRebaseBeaconReceiver.new(voting, ZERO_ADDRESS, { from: deployer }), `ORACLE_ZERO_ADDRESS`)
 
-      assertRevert(compositeReceiver.addCallback(ZERO_ADDRESS, { from: voting }), `RECEIVER_ZERO_ADDRESS`)
+      assertRevert(compositeReceiver.addCallback(ZERO_ADDRESS, { from: voting }), `CALLBACK_ZERO_ADDRESS`)
     })
 
     it(`add a single callback works`, async () => {
