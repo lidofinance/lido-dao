@@ -117,7 +117,7 @@ async function setPermissions(artifacts, owner, ens, ensNodeName, votingAddress,
 
   const appsAll = [APM_APP_NAME, REPO_APP_NAME, ENS_SUB_APP_NAME].concat(apps)
   for (const app of appsAll) {
-    console.log(`Transfer ${app}.${ensNodeName} roles:`)
+    log(`Transfer ${app}.${ensNodeName} roles:`)
     const appId = namehash(`${app}.${ensNodeName}`)
     const repoAddress = await resolver.addr(appId)
     // const repo = await artifacts.require('Repo').at(repoAddress)
