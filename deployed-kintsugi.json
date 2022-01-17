@@ -99,35 +99,35 @@
   ],
   "aragonIDEnsNodeName": "aragonid.eth",
   "aragonIDEnsNode": "0x7e74a86b6e146964fb965db04dc2590516da77f720bb6759337bf5632415fd86",
-  "app:aragon-agent": {
-    "name": "aragon-agent",
+  "app:agent": {
+    "name": "agent",
     "fullName": "agent.aragonpm.eth",
     "id": "0x9ac98dc5f995bf0211ed589ef022719d1487e5cb2bab505676f0d084c07cf89a",
     "baseAddress": "0x846b996EBDB12a944617Df6e0CABE750EBe3C164",
     "proxyAddress": "0x6871d1B0a2014969D58BE5ce776596C4663Da64B"
   },
-  "app:aragon-finance": {
-    "name": "aragon-finance",
+  "app:finance": {
+    "name": "finance",
     "fullName": "finance.aragonpm.eth",
     "id": "0xbf8491150dafc5dcaee5b861414dca922de09ccffa344964ae167212e8c673ae",
     "baseAddress": "0xFFfd9EBDFfaFB6F2E3D47E570092726c8a3940d0",
     "proxyAddress": "0x883B323AF9B58ca0ab8c44d66Bef97e496e9a13a"
   },
-  "app:aragon-token-manager": {
-    "name": "aragon-token-manager",
+  "app:token-manager": {
+    "name": "token-manager",
     "fullName": "token-manager.aragonpm.eth",
     "id": "0x6b20a3010614eeebf2138ccec99f028a61c811b3b1a3343b6ff635985c75c91f",
     "baseAddress": "0x871Df9aefa32656fda02A657A7eb77BC4C578485",
     "proxyAddress": "0x3843165069955FfB49ce888Fe4AB75335B769BCf"
   },
-  "app:aragon-vault": {
-    "name": "aragon-vault",
+  "app:vault": {
+    "name": "vault",
     "fullName": "vault.aragonpm.eth",
     "id": "0x7e852e0fcfce6551c13800f1e7476f982525c2b5277ba14b24339c68416336d1",
     "baseAddress": "0x8322C44eF834E12cDa8042fa4b8482E19b686a6A"
   },
-  "app:aragon-voting": {
-    "name": "aragon-voting",
+  "app:voting": {
+    "name": "voting",
     "fullName": "voting.aragonpm.eth",
     "id": "0x9fa3927f639745e587912d4b0fea7ef9013bf93fb907d29faeab57417ba6e1d4",
     "baseAddress": "0x37FfAb526ec8A023B6E2966877547E990e3dA56E",
@@ -173,29 +173,29 @@
   "daoAddress": "0x79064315626EA8972dc79712B94262cCbC1690bE",
   "tokenAddress": "0xb264bDd5e9813A17D0fb7e26A64370675807Ba89",
   "knownApps": {
-    "app:aragon-agent": {
-      "name": "aragon-agent",
+    "app:agent": {
+      "name": "agent",
       "fullName": "agent.aragonpm.eth",
       "id": "0x9ac98dc5f995bf0211ed589ef022719d1487e5cb2bab505676f0d084c07cf89a",
       "baseAddress": "0x846b996EBDB12a944617Df6e0CABE750EBe3C164",
       "proxyAddress": "0x6871d1B0a2014969D58BE5ce776596C4663Da64B"
     },
-    "app:aragon-finance": {
-      "name": "aragon-finance",
+    "app:finance": {
+      "name": "finance",
       "fullName": "finance.aragonpm.eth",
       "id": "0xbf8491150dafc5dcaee5b861414dca922de09ccffa344964ae167212e8c673ae",
       "baseAddress": "0xFFfd9EBDFfaFB6F2E3D47E570092726c8a3940d0",
       "proxyAddress": "0x883B323AF9B58ca0ab8c44d66Bef97e496e9a13a"
     },
-    "app:aragon-token-manager": {
-      "name": "aragon-token-manager",
+    "app:token-manager": {
+      "name": "token-manager",
       "fullName": "token-manager.aragonpm.eth",
       "id": "0x6b20a3010614eeebf2138ccec99f028a61c811b3b1a3343b6ff635985c75c91f",
       "baseAddress": "0x871Df9aefa32656fda02A657A7eb77BC4C578485",
       "proxyAddress": "0x3843165069955FfB49ce888Fe4AB75335B769BCf"
     },
-    "app:aragon-vault": {
-      "name": "aragon-vault",
+    "app:vault": {
+      "name": "vault",
       "fullName": "vault.aragonpm.eth",
       "id": "0x7e852e0fcfce6551c13800f1e7476f982525c2b5277ba14b24339c68416336d1",
       "baseAddress": "0x8322C44eF834E12cDa8042fa4b8482E19b686a6A"
