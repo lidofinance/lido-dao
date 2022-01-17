@@ -48,7 +48,7 @@ const getNetConfig = (networkName, ethAccountName) => {
       // url: '	https://rpc.kintsugi.themerge.dev',
       // url: 'http://kintsugi.testnet.fi/eth1rpc',
       // url: 'http://108.61.179.232:8545',
-      url: ' http://kintsugi.testnet.fi:8545',
+      url: 'http://kintsugi.testnet.fi:8545',
       chainId: 1337702,
       // gas: 10000000,
       gasPrice: 2000000000

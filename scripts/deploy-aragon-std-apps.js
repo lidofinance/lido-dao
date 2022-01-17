@@ -107,13 +107,12 @@ async function publishApp(appName, appsRepoPath, hardhatConfig, env, netName, re
     })
     logSplitter()
 
-    // logSplitter(`Build app ${appName}`)
-    // await execLive('yarn', {
-    //   args: ['build'],
-    //   cwd: appFrontendPath
-    // })
-    // logSplitter()
-
+    logSplitter(`Build app ${appName}`)
+    await execLive('yarn', {
+      args: ['build'],
+      cwd: appFrontendPath
+    })
+    logSplitter()
   } else {
     log(`The app has no frontend`)
   }
