@@ -65,7 +65,7 @@ func Execute() error {
 	rootCmd.PersistentFlags().StringVar(&Lido.LidoApps.AppsLocator, "apps", "", "Which source to load app frontend assets from")
 	rootCmd.PersistentFlags().StringVar(&Lido.LidoApps.Path, "apps-path", "", "Lido apps path")
 	rootCmd.PersistentFlags().StringVar(&Lido.HardhatNode.Fork, "fork", "", "Fork endpoint https://mainnet.infura.io/v3/{WEB3_INFURA_PROJECT_ID}")
-	// rootCmd.PersistentFlags().StringVar(&Lido.HardhatNode.Fork, "version", "", "Tool version")
+	rootCmd.PersistentFlags().IntVar(&Lido.IPFS.Timeout, "ipfs-timeout", 30, "IPFS daemon timeout")
 
 	return rootCmd.Execute()
 }

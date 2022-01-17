@@ -16,7 +16,7 @@ type Contracts struct {
 }
 
 func (node *Contracts) Start() error {
-	s, _ := pterm.DefaultSpinner.Start("Contracs: compile...")
+	s, _ := pterm.DefaultSpinner.Start("Contracts: compile...")
 
 	node.Cmd = exec.Command("yarn", "compile")
 	node.Cmd.Stdout = &node.Outb
@@ -34,6 +34,6 @@ func (node *Contracts) Start() error {
 		node.Outb.Reset()
 	}
 
-	s.Success("Contracs: compile...done")
+	s.Success("Contracts: compile...done")
 	return nil
 }

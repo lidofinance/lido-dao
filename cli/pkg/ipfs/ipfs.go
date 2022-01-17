@@ -13,9 +13,10 @@ import (
 )
 
 type IPFS struct {
-	Cmd  *exec.Cmd
-	Outb bytes.Buffer
-	Errb bytes.Buffer
+	Cmd     *exec.Cmd
+	Outb    bytes.Buffer
+	Errb    bytes.Buffer
+	Timeout int
 }
 
 func (node *IPFS) Start() {
@@ -29,7 +30,7 @@ func (node *IPFS) Start() {
 		log.Panic(err)
 	}
 
-	timeout := 10
+	timeout := node.Timeout
 	for {
 		if logs.Verbose && node.Outb.String() != "" {
 			fmt.Print(node.Outb.String())

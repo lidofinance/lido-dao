@@ -2,20 +2,36 @@
 
 `lido-aragon` tool is used to create, develop lido/aragon apps.
 
-#### Step 1. Install IPFS
+We already have a pre-build versions for linux/mac and amd/arm architecture.
 
 ```bash
-brew install ipfs
+#mac
+cli/build/lido-aragon_darwin_amd64
+cli/build/lido-aragon_darwin_arm64
+
+#linux
+cli/build/lido-aragon_linux_amd64
+cli/build/lido-lido-aragon_linux_arm64
 ```
+
+Please copy need version to `cli/` folder:
+```bash
+#apple m1
+cp cli/build/lido-aragon_darwin_arm64 cli/lido-aragon
+```
+
+#### Step 1. Install IPFS
+
+[https://docs.ipfs.io/install/](https://docs.ipfs.io/install/command-line/)
+
+
 
 #### Step 2. Install project dependencies
 ```bash
 yarn
 ```
 
-#### Step 3. Run cli 
-
-
+#### Step 3. Run cli
 
 ```bash
 cd cli/ && ./lido-aragon
