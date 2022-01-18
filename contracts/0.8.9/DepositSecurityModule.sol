@@ -280,6 +280,7 @@ contract DepositSecurityModule {
     }
 
     function _addGuardian(address addr) internal {
+        require(addr != address(0), "guardian zero address");
         require(!_isGuardian(addr), "duplicate address");
         guardians.push(addr);
         guardianIndicesOneBased[addr] = guardians.length;
