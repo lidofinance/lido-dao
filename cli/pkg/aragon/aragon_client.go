@@ -148,9 +148,11 @@ func (node *AragonClient) Stop() {
 	if node.Cmd == nil {
 		return
 	}
+
 	s, _ := pterm.DefaultSpinner.Start("Aragon client: Stopping...")
 	syscall.Kill(-node.Cmd.Process.Pid, syscall.SIGKILL)
 	node.Cmd.Process.Kill()
 	node.Cmd = nil
+
 	s.Success("Aragon client: Stopped")
 }
