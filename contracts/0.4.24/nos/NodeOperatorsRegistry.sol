@@ -551,7 +551,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     function to64(uint256 v) internal pure returns (uint64) {
-        assert(v <= uint256(uint64(-1)));
+        assert(v <= UINT64_MAX);
         return uint64(v);
     }
 
