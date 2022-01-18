@@ -18,8 +18,9 @@ const ERC20OZMock = artifacts.require('ERC20OZMock.sol')
 const ERC721OZMock = artifacts.require('ERC721OZMock.sol')
 
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
-// semantic alias
+// semantic aliases
 const stETH = ETH
+const stETHShares = ETH
 
 contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anotherAccount, ...otherAccounts]) => {
   let oracle, lido, burner
@@ -64,6 +65,8 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
   })
 
   describe('Requests and burn invocation', () => {
+    const bnRound10 = (value) => bn(value).add(bn(5)).div(bn(10)).mul(bn(10))
+
     beforeEach(async () => {
       // initial balance is zero
       assertBn(await lido.balanceOf(anotherAccount), stETH(0))
@@ -88,6 +91,11 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
       await rewarder.reward({ from: anotherAccount, value: ETH(1) })
 
       assertBn(await web3.eth.getBalance(oracle.address), ETH(1))
+      assertBn(await burner.getMaxBurnAmountPerRunBasePoints(), bn(4))
+
+      // maximize burn amount per single run
+      await burner.setMaxBurnAmountPerRunBasePoints(bn(10000), { from: voting })
+      assertBn(await burner.getMaxBurnAmountPerRunBasePoints(), bn(10000))
     })
 
     it(`init counters works`, async () => {
@@ -317,8 +325,8 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
         expectedNonCoverSharesBurnt = expectedNonCoverSharesBurnt.add(currentNonCoverSharesAmount)
 
         // to address finite precision issues we remove least significant digit
-        assertBn((await burner.getCoverSharesBurnt()).add(bn(9)).div(bn(10)), expectedCoverSharesBurnt.add(bn(9)).div(bn(10)))
-        assertBn((await burner.getNonCoverSharesBurnt()).add(bn(9)).div(bn(10)), expectedNonCoverSharesBurnt.add(bn(9)).div(bn(10)))
+        assertBn(bnRound10(await burner.getCoverSharesBurnt()), bnRound10(expectedCoverSharesBurnt))
+        assertBn(bnRound10(await burner.getNonCoverSharesBurnt()), bnRound10(expectedNonCoverSharesBurnt))
       }
     })
 
@@ -342,6 +350,152 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
       // so the new share price increases by 3/2
       assertBn(await lido.balanceOf(deployer), bn(stETH(30)).mul(bn(3)).div(bn(2)))
       assertBn(await lido.balanceOf(anotherAccount), bn(stETH(20)).mul(bn(3)).div(bn(2)))
+    })
+
+    it(`revert on illegal attempts to set the max burn amount per run`, async () => {
+      assertRevert(burner.setMaxBurnAmountPerRunBasePoints(bn(10000), { from: deployer }), `MSG_SENDER_MUST_BE_VOTING`)
+
+      assertRevert(burner.setMaxBurnAmountPerRunBasePoints(bn(0), { from: voting }), `ZERO_BURN_AMOUNT_PER_RUN`)
+
+      assertRevert(burner.setMaxBurnAmountPerRunBasePoints(bn(10001), { from: voting }), `TOO_LARGE_BURN_AMOUNT_PER_RUN`)
+    })
+
+    it(`set max burn amount per run works (cover)`, async () => {
+      // let the single burn be limited to a 120 base points (1.2%)
+      const setMaxBurnAmountReceipt = await burner.setMaxBurnAmountPerRunBasePoints(bn(120), { from: voting })
+      assertEvent(setMaxBurnAmountReceipt, `MaxBurnAmountPerRunChanged`, { expectedArgs: { maxBurnAmountPerRunBasePoints: bn(120) } })
+      assertAmountOfEvents(setMaxBurnAmountReceipt, `MaxBurnAmountPerRunChanged`, { expectedAmount: 1 })
+
+      // grant permissions to the Lido.burnShares method
+      await acl.grantPermission(burner.address, lido.address, await lido.BURN_ROLE(), { from: appManager })
+
+      assertBn(await lido.getTotalShares(), stETHShares(75))
+
+      // so the max amount to burn per single run is 75*10^18 * 0.012 = 0.9*10^18
+      await lido.approve(burner.address, stETH(25), { from: voting })
+      await burner.requestBurnMyStETHForCover(stETH(0.9), { from: voting })
+
+      assertBn(await lido.sharesOf(burner.address), stETHShares(0.9))
+      const receipt = await burner.processLidoOracleReport(bn(1), bn(2), bn(3), { from: oracle.address })
+      assertBn(await lido.sharesOf(burner.address), stETHShares(0))
+      assertEvent(receipt, `StETHBurnt`, { expectedArgs: { isCover: true, amount: stETH(0.9), sharesAmount: stETHShares(0.9) } })
+      assertAmountOfEvents(receipt, `StETHBurnt`, { expectedAmount: 1 })
+
+      await burner.requestBurnMyStETHForCover(await lido.getPooledEthByShares(stETHShares(0.1)), { from: voting })
+      assertBn(bnRound10(await lido.sharesOf(burner.address)), bnRound10(stETHShares(0.1)))
+      await burner.processLidoOracleReport(bn(1), bn(2), bn(3), { from: oracle.address })
+      assertBn(await lido.sharesOf(burner.address), stETHShares(0))
+
+      assertBn(bnRound10(await burner.getCoverSharesBurnt()), bnRound10(stETHShares(1)))
+      assertBn(await burner.getNonCoverSharesBurnt(), stETHShares(0))
+
+      assertBn(bnRound10(await lido.getTotalShares()), stETHShares(74))
+      await burner.requestBurnMyStETHForCover(await lido.getPooledEthByShares(stETHShares(1)), { from: voting })
+
+      assertBn(bnRound10(await lido.sharesOf(burner.address)), bnRound10(stETHShares(1)))
+      await burner.processLidoOracleReport(bn(1), bn(2), bn(3), { from: oracle.address })
+
+      // 1 - 74*10^18 * 0.012 = 0.112*10^18
+      assertBn(bnRound10(await lido.sharesOf(burner.address)), bnRound10(stETHShares(0.112)))
+      await burner.processLidoOracleReport(bn(1), bn(2), bn(3), { from: oracle.address })
+      assertBn(await lido.sharesOf(burner.address), stETHShares(0))
+
+      assertBn(bnRound10(await burner.getCoverSharesBurnt()), bnRound10(stETHShares(2)))
+      assertBn(await burner.getNonCoverSharesBurnt(), stETHShares(0))
+    })
+
+    it(`set max burn amount per run works (noncover)`, async () => {
+      // let the single burn be limited to a 120 base points (1.2%)
+      await burner.setMaxBurnAmountPerRunBasePoints(bn(120), { from: voting })
+      // grant permissions to the Lido.burnShares method
+      await acl.grantPermission(burner.address, lido.address, await lido.BURN_ROLE(), { from: appManager })
+
+      assertBn(await lido.getTotalShares(), stETHShares(75))
+
+      // so the max amount to burn per single run is 75*10^18 * 0.012 = 0.9*10^18
+      await lido.approve(burner.address, stETH(25), { from: voting })
+      await burner.requestBurnMyStETH(stETH(0.9), { from: voting })
+
+      assertBn(await lido.sharesOf(burner.address), stETHShares(0.9))
+      const receipt = await burner.processLidoOracleReport(bn(1), bn(2), bn(3), { from: oracle.address })
+      assertEvent(receipt, `StETHBurnt`, { expectedArgs: { isCover: false, amount: stETH(0.9), sharesAmount: stETHShares(0.9) } })
+      assertAmountOfEvents(receipt, `StETHBurnt`, { expectedAmount: 1 })
+      assertBn(await lido.sharesOf(burner.address), stETHShares(0))
+
+      await burner.requestBurnMyStETH(await lido.getPooledEthByShares(stETHShares(0.1)), { from: voting })
+      assertBn(bnRound10(await lido.sharesOf(burner.address)), bnRound10(stETHShares(0.1)))
+      await burner.processLidoOracleReport(bn(1), bn(2), bn(3), { from: oracle.address })
+      assertBn(await lido.sharesOf(burner.address), stETHShares(0))
+
+      assertBn(bnRound10(await lido.getTotalShares()), stETHShares(74))
+      await burner.requestBurnMyStETH(await lido.getPooledEthByShares(stETHShares(1)), { from: voting })
+
+      assertBn(bnRound10(await lido.sharesOf(burner.address)), bnRound10(stETHShares(1)))
+      await burner.processLidoOracleReport(bn(1), bn(2), bn(3), { from: oracle.address })
+
+      assertBn(bnRound10(await burner.getCoverSharesBurnt()), stETHShares(0))
+      assertBn(bnRound10(await burner.getNonCoverSharesBurnt()), bnRound10(stETHShares(1.888)))
+
+      // 1 - 74*10^18 * 0.012 = 0.112*10^18
+      assertBn(bnRound10(await lido.sharesOf(burner.address)), bnRound10(stETHShares(0.112)))
+      await burner.processLidoOracleReport(bn(1), bn(2), bn(3), { from: oracle.address })
+      assertBn(await lido.sharesOf(burner.address), stETHShares(0))
+
+      assertBn(await burner.getCoverSharesBurnt(), bnRound10(stETHShares(0)))
+      assertBn(bnRound10(await burner.getNonCoverSharesBurnt()), bnRound10(stETHShares(2)))
+    })
+
+    it(`set max burn amount per run works (mix cover/noncover)`, async () => {
+      // let the single burn be limited to a 120 base points (1.2%)
+      await burner.setMaxBurnAmountPerRunBasePoints(bn(120), { from: voting })
+      // grant permissions to the Lido.burnShares method
+      await acl.grantPermission(burner.address, lido.address, await lido.BURN_ROLE(), { from: appManager })
+
+      assertBn(await lido.getTotalShares(), stETH(75))
+
+      // so the max amount to burn per single run is 75*10^18 * 0.012 = 0.9*10^18
+      await lido.approve(burner.address, stETH(25), { from: voting })
+      await burner.requestBurnMyStETH(stETH(0.8), { from: voting })
+      await burner.requestBurnMyStETHForCover(stETH(0.1), { from: voting })
+
+      assertBn(await lido.sharesOf(burner.address), stETHShares(0.9))
+      const receipt = await burner.processLidoOracleReport(bn(1), bn(2), bn(3), { from: oracle.address })
+      assertBn(await lido.sharesOf(burner.address), stETHShares(0))
+      assertEvent(receipt, `StETHBurnt`, { index: 0, expectedArgs: { isCover: true, amount: stETH(0.1), sharesAmount: stETHShares(0.1) } })
+      assertEvent(receipt, `StETHBurnt`, { index: 1, expectedArgs: { isCover: false, amount: stETH(0.8), sharesAmount: stETHShares(0.8) } })
+      assertAmountOfEvents(receipt, `StETHBurnt`, { expectedAmount: 2 })
+      assertBn(await burner.getCoverSharesBurnt(), stETHShares(0.1))
+      assertBn(await burner.getNonCoverSharesBurnt(), stETHShares(0.8))
+
+      await burner.requestBurnMyStETHForCover(await lido.getPooledEthByShares(stETHShares(0.03)), { from: voting })
+      await burner.requestBurnMyStETH(await lido.getPooledEthByShares(stETHShares(0.07)), { from: voting })
+      assertBn(bnRound10(await lido.sharesOf(burner.address)), bnRound10(stETHShares(0.1)))
+      await burner.processLidoOracleReport(bn(1), bn(2), bn(3), { from: oracle.address })
+      assertBn(await lido.sharesOf(burner.address), stETHShares(0))
+      assertBn(bnRound10(await burner.getCoverSharesBurnt()), bnRound10(stETHShares(0.13)))
+      assertBn(bnRound10(await burner.getNonCoverSharesBurnt()), bnRound10(stETHShares(0.87)))
+
+      assertBn(bnRound10(await lido.getTotalShares()), stETHShares(74))
+      await burner.requestBurnMyStETHForCover(await lido.getPooledEthByShares(stETHShares(0.99)), { from: voting })
+      await burner.requestBurnMyStETH(await lido.getPooledEthByShares(stETHShares(0.01)), { from: voting })
+
+      assertBn(bnRound10(await lido.sharesOf(burner.address)), bnRound10(stETHShares(1)))
+      const middleReceipt = await burner.processLidoOracleReport(bn(1), bn(2), bn(3), { from: oracle.address })
+      assertAmountOfEvents(middleReceipt, `StETHBurnt`, { expectedAmount: 1 })
+      assertEvent(middleReceipt, `StETHBurnt`, { expectedArgs: { isCover: true } })
+      assertBn(bnRound10(await burner.getCoverSharesBurnt()), bnRound10(stETHShares(1.018)))
+      assertBn(bnRound10(await burner.getNonCoverSharesBurnt()), bnRound10(stETHShares(0.87)))
+
+      // 1 - 74*10^18 * 0.012 = 0.112*10^18
+      assertBn(bnRound10(await lido.sharesOf(burner.address)), bnRound10(stETHShares(0.112)))
+      const lastReceipt = await burner.processLidoOracleReport(bn(1), bn(2), bn(3), { from: oracle.address })
+      assertBn(await lido.sharesOf(burner.address), stETHShares(0))
+      assertAmountOfEvents(lastReceipt, `StETHBurnt`, { expectedAmount: 2 })
+      assertEvent(lastReceipt, `StETHBurnt`, { index: 0, expectedArgs: { isCover: true } })
+      assertEvent(lastReceipt, `StETHBurnt`, { index: 1, expectedArgs: { isCover: false } })
+
+      assertBn(bnRound10(await burner.getCoverSharesBurnt()), bnRound10(stETHShares(1.12)))
+      assertBn(bnRound10(await burner.getNonCoverSharesBurnt()), bnRound10(stETHShares(0.88)))
     })
   })
 

@@ -7,6 +7,7 @@ pragma solidity 0.8.9;
 
 import "@openzeppelin/contracts-v4.4/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts-v4.4/utils/math/Math.sol";
 import "./interfaces/IBeaconReportReceiver.sol";
 
 /**
@@ -47,6 +48,11 @@ interface ILido {
       * @param _account provided account address.
       */
     function sharesOf(address _account) external view returns (uint256);
+
+    /**
+      * @notice Get total amount of shares in existance
+      */
+    function getTotalShares() external view returns (uint256);
 }
 
 /**
@@ -68,15 +74,26 @@ interface IOracle {
   * @dev Burning stETH means 'decrease total underlying shares amount to perform stETH token rebase'
   */
 contract SelfOwnedStETHBurner is IBeaconReportReceiver {
+    uint256 private constant MAX_BASE_POINTS = 10000;
+
     uint256 private coverSharesBurnRequested;
     uint256 private nonCoverSharesBurnRequested;
 
     uint256 private totalCoverSharesBurnt;
     uint256 private totalNonCoverSharesBurnt;
 
+    uint256 private maxBurnAmountPerRunBasePoints = 4; // 0.04% by default for the biggest `stETH:ETH` curve pool
+
     address public immutable LIDO;
     address public immutable TREASURY;
     address public immutable VOTING;
+
+    /**
+      * Emitted when a new single burn ratio is set
+      */
+    event MaxBurnAmountPerRunChanged(
+        uint256 maxBurnAmountPerRunBasePoints
+    );
 
     /**
       * Emitted when a new stETH burning request is added by the `requestedBy` address.
@@ -153,6 +170,24 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
 
         totalCoverSharesBurnt = _totalCoverSharesBurnt;
         totalNonCoverSharesBurnt = _totalNonCoverSharesBurnt;
+    }
+
+    /**
+      * Sets the amount of shares allowed to burn per single run.
+      *
+      * @dev only `voting` allowed to call this function.
+      *
+      * @param _maxBurnAmountPerRunBasePoints base points (taken from Lido.totalSharesAmount)
+      *
+      */
+    function setMaxBurnAmountPerRunBasePoints(uint256 _maxBurnAmountPerRunBasePoints) external {
+        require(_maxBurnAmountPerRunBasePoints > 0, "ZERO_BURN_AMOUNT_PER_RUN");
+        require(_maxBurnAmountPerRunBasePoints <= MAX_BASE_POINTS, "TOO_LARGE_BURN_AMOUNT_PER_RUN");
+        require(msg.sender == VOTING, "MSG_SENDER_MUST_BE_VOTING");
+
+        emit MaxBurnAmountPerRunChanged(_maxBurnAmountPerRunBasePoints);
+
+        maxBurnAmountPerRunBasePoints = _maxBurnAmountPerRunBasePoints;
     }
 
     /**
@@ -271,20 +306,38 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
             "APP_AUTH_FAILED"
         );
 
+        uint256 maxSharesToBurnNow = (ILido(LIDO).getTotalShares() * maxBurnAmountPerRunBasePoints) / MAX_BASE_POINTS;
+
         if (memCoverSharesBurnRequested > 0) {
-            totalCoverSharesBurnt += memCoverSharesBurnRequested;
-            uint256 coverStETHBurnAmountRequested = ILido(LIDO).getPooledEthByShares(memCoverSharesBurnRequested);
-            emit StETHBurnt(true /* isCover */, coverStETHBurnAmountRequested, memCoverSharesBurnRequested);
-            coverSharesBurnRequested = 0;
-        }
-        if (memNonCoverSharesBurnRequested > 0) {
-            totalNonCoverSharesBurnt += memNonCoverSharesBurnRequested;
-            uint256 nonCoverStETHBurnAmountRequested = ILido(LIDO).getPooledEthByShares(memNonCoverSharesBurnRequested);
-            emit StETHBurnt(false /* isCover */, nonCoverStETHBurnAmountRequested, memNonCoverSharesBurnRequested);
-            nonCoverSharesBurnRequested = 0;
+            uint256 sharesToBurnNowForCover = Math.min(maxSharesToBurnNow, memCoverSharesBurnRequested);
+
+            totalCoverSharesBurnt += sharesToBurnNowForCover;
+            uint256 stETHToBurnNowForCover = ILido(LIDO).getPooledEthByShares(sharesToBurnNowForCover);
+            emit StETHBurnt(true /* isCover */, stETHToBurnNowForCover, sharesToBurnNowForCover);
+
+            coverSharesBurnRequested -= sharesToBurnNowForCover;
+
+            // early return if at least one of the conditions is TRUE:
+            // - we have reached a capacity per single run already
+            // - there are no pending non-cover requests
+            if ((sharesToBurnNowForCover == maxSharesToBurnNow) || (memNonCoverSharesBurnRequested == 0)) {
+                ILido(LIDO).burnShares(address(this), sharesToBurnNowForCover);
+                return;
+            }
         }
 
-        ILido(LIDO).burnShares(address(this), burnAmount);
+        // we're here only if memNonCoverSharesBurnRequested > 0
+        uint256 sharesToBurnNowForNonCover = Math.min(
+            maxSharesToBurnNow - memCoverSharesBurnRequested,
+            memNonCoverSharesBurnRequested
+        );
+
+        totalNonCoverSharesBurnt += sharesToBurnNowForNonCover;
+        uint256 stETHToBurnNowForNonCover = ILido(LIDO).getPooledEthByShares(sharesToBurnNowForNonCover);
+        emit StETHBurnt(false /* isCover */, stETHToBurnNowForNonCover, sharesToBurnNowForNonCover);
+        nonCoverSharesBurnRequested -= sharesToBurnNowForNonCover;
+
+        ILido(LIDO).burnShares(address(this), memCoverSharesBurnRequested + sharesToBurnNowForNonCover);
     }
 
     /**
@@ -299,6 +352,13 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
       */
     function getNonCoverSharesBurnt() external view returns (uint256) {
         return totalNonCoverSharesBurnt;
+    }
+
+    /**
+      * Returns the max amount of shares allowed to burn per single run
+      */
+    function getMaxBurnAmountPerRunBasePoints() external view returns (uint256) {
+        return maxBurnAmountPerRunBasePoints;
     }
 
     /**
