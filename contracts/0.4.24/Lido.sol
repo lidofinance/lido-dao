@@ -55,6 +55,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     uint256 constant public DEPOSIT_SIZE = 32 ether;
 
     uint256 internal constant DEPOSIT_AMOUNT_UNIT = 1000000000 wei;
+    uint256 internal constant TOTAL_BASIS_POINTS = 10000;
 
     /// @dev default value for maximum number of Ethereum 2.0 validators registered in a single depositBufferedEther call
     uint256 internal constant DEFAULT_MAX_DEPOSITS_PER_CALL = 150;
@@ -186,7 +187,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         external auth(MANAGE_FEE)
     {
         require(
-            10000 == uint256(_treasuryFeeBasisPoints)
+            TOTAL_BASIS_POINTS == uint256(_treasuryFeeBasisPoints)
             .add(uint256(_insuranceFeeBasisPoints))
             .add(uint256(_operatorsFeeBasisPoints)),
             "FEES_DONT_ADD_UP"
@@ -554,7 +555,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         // We need to take a defined percentage of the reported reward as a fee, and we do
         // this by minting new token shares and assigning them to the fee recipients (see
         // StETH docs for the explanation of the shares mechanics). The staking rewards fee
-        // is defined in basis points (1 basis point is equal to 0.01%, 10000 is 100%).
+        // is defined in basis points (1 basis point is equal to 0.01%, 10000 (TOTAL_BASIS_POINTS) is 100%).
         //
         // Since we've increased totalPooledEther by _totalRewards (which is already
         // performed by the time this function is called), the combined cost of all holders'
@@ -564,14 +565,14 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         // Now we want to mint new shares to the fee recipient, so that the total cost of the
         // newly-minted shares exactly corresponds to the fee taken:
         //
-        // shares2mint * newShareCost = (_totalRewards * feeBasis) / 10000
+        // shares2mint * newShareCost = (_totalRewards * feeBasis) / TOTAL_BASIS_POINTS
         // newShareCost = newTotalPooledEther / (prevTotalShares + shares2mint)
         //
         // which follows to:
         //
         //                        _totalRewards * feeBasis * prevTotalShares
         // shares2mint = --------------------------------------------------------------
-        //                 (newTotalPooledEther * 10000) - (feeBasis * _totalRewards)
+        //                 (newTotalPooledEther * TOTAL_BASIS_POINTS) - (feeBasis * _totalRewards)
         //
         // The effect is that the given percentage of the reward goes to the fee recipient, and
         // the rest of the reward is distributed between token holders proportionally to their
@@ -580,7 +581,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         uint256 shares2mint = (
             _totalRewards.mul(feeBasis).mul(_getTotalShares())
             .div(
-                _getTotalPooledEther().mul(10000)
+                _getTotalPooledEther().mul(TOTAL_BASIS_POINTS)
                 .sub(feeBasis.mul(_totalRewards))
             )
         );
@@ -591,13 +592,13 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
 
         (,uint16 insuranceFeeBasisPoints, uint16 operatorsFeeBasisPoints) = _getFeeDistribution();
 
-        uint256 toInsuranceFund = shares2mint.mul(insuranceFeeBasisPoints).div(10000);
+        uint256 toInsuranceFund = shares2mint.mul(insuranceFeeBasisPoints).div(TOTAL_BASIS_POINTS);
         address insuranceFund = getInsuranceFund();
         _transferShares(address(this), insuranceFund, toInsuranceFund);
         _emitTransferAfterMintingShares(insuranceFund, toInsuranceFund);
 
         uint256 distributedToOperatorsShares = _distributeNodeOperatorsReward(
-            shares2mint.mul(operatorsFeeBasisPoints).div(10000)
+            shares2mint.mul(operatorsFeeBasisPoints).div(TOTAL_BASIS_POINTS)
         );
 
         // Transfer the rest of the fee to treasury
@@ -652,7 +653,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
       * @dev Write a value nominated in basis points
       */
     function _setBPValue(bytes32 _slot, uint16 _value) internal {
-        require(_value <= 10000, "VALUE_OVER_100_PERCENT");
+        require(_value <= TOTAL_BASIS_POINTS, "VALUE_OVER_100_PERCENT");
         _slot.setStorageUint256(uint256(_value));
     }
 
@@ -679,7 +680,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
       */
     function _readBPValue(bytes32 _slot) internal view returns (uint16) {
         uint256 v = _slot.getStorageUint256();
-        assert(v <= 10000);
+        assert(v <= TOTAL_BASIS_POINTS);
         return uint16(v);
     }
 
