@@ -299,7 +299,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         uint256 balance;
         if (_token == ETH) {
             balance = _getUnaccountedEther();
-            // Transfer replaced by call to prevent transfer gas amount issue    
+            // Transfer replaced by call to prevent transfer gas amount issue
             require(vault.call.value(balance)(), "RECOVER_TRANSFER_FAILED");
         } else {
             ERC20 token = ERC20(_token);
@@ -425,11 +425,19 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         NODE_OPERATORS_REGISTRY_POSITION.setStorageAddress(_r);
     }
 
+    /**
+    *  @dev Internal function to set treasury address
+    *  @param _treasury treasury address
+    */
     function _setTreasury(address _treasury) internal {
         require(_treasury != address(0), "SET_TREASURY_ZERO_ADDRESS");
         TREASURY_POSITION.setStorageAddress(_treasury);
     }
 
+    /**
+    *  @dev Internal function to set insurance fund address
+    *  @param _insuranceFund insurance fund address
+    */
     function _setInsuranceFund(address _insuranceFund) internal {
         require(_insuranceFund != address(0), "SET_INSURANCE_FUND_ZERO_ADDRESS");
         INSURANCE_FUND_POSITION.setStorageAddress(_insuranceFund);
@@ -609,6 +617,11 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         _emitTransferAfterMintingShares(treasury, toTreasury);
     }
 
+    /**
+    *  @dev Internal function to distribute reward to node operators
+    *  @param _sharesToDistribute amount of shares to distribute
+    *  @return actual amount of shares that was transferred to node operators as a reward
+    */
     function _distributeNodeOperatorsReward(uint256 _sharesToDistribute) internal returns (uint256 distributed) {
         (address[] memory recipients, uint256[] memory shares) = getOperators().getRewardsDistribution(_sharesToDistribute);
 
