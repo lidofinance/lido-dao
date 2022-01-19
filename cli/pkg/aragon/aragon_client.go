@@ -104,7 +104,7 @@ func (node *AragonClient) Start(network AragonNetwork, lidoApps string, deployed
 	node.Errb.Reset()
 
 	node.Cmd = exec.Command("yarn", "aragon:start")
-	node.Cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	// node.Cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	node.Cmd.Stdout = &node.Outb
 	node.Cmd.Stderr = &node.Errb
 	err := node.Cmd.Start()

@@ -121,7 +121,7 @@ func (node *LidoAppsClient) Start() error {
 		app.Errb.Reset()
 
 		app.Cmd = exec.Command("/bin/sh", "-c", app.Command)
-		app.Cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+		// app.Cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
 		app.Cmd.Stdout = &app.Outb
 		app.Cmd.Stderr = &app.Errb

@@ -7,7 +7,6 @@ import (
 	"log"
 	"os/exec"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/pterm/pterm"
@@ -34,8 +33,6 @@ func (node *HardhatNode) Start(infuraProjectUrl string) {
 		//node.Cmd = exec.Command("/bin/sh", "-c", "cmd1; cmd2")
 		node.Cmd = exec.Command("npx", "hardhat", "node", "--fork", infuraProjectUrl)
 	}
-
-	node.Cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
 	node.Cmd.Stdout = &outb //os.Stdout
 	node.Cmd.Stderr = &errb //os.Stderr
@@ -70,7 +67,6 @@ func (node *HardhatNode) Stop() {
 	}
 
 	s, _ := pterm.DefaultSpinner.Start("Hardhat node: Stopping...")
-	syscall.Kill(-node.Cmd.Process.Pid, syscall.SIGKILL)
 	node.Cmd.Process.Kill()
 	node.Cmd = nil
 

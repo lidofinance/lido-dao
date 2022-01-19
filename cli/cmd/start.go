@@ -38,7 +38,7 @@ var startAragon = &cobra.Command{
 
 		pterm.Info.Printf("Network: %s\n", Lido.NetworkName)
 
-		Lido.Deploy.DeployedFile, _ = getDeployedFile(Lido.NetworkName)
+		Lido.Deploy.DeployedFile, _, _ = getDeployedFile(Lido.NetworkName)
 
 		err := Lido.AragonClient.Start(aragonCmd, Lido.LidoApps.AppsLocator, Lido.Deploy.DeployedFile)
 		if err != nil {
@@ -58,12 +58,34 @@ var startCmd = &cobra.Command{
 	Short: "Start local or form env",
 }
 
+func removeDeployedFile(deployedPath string) {
+	if deployedPath == "" {
+		return
+	}
+
+	if Lido.NetworkName == "mainnet" || Lido.NetworkName == "goerli" || Lido.NetworkName == "rinkeby" || Lido.NetworkName == "mainnet-test" {
+		fmt.Printf("Can't remove deployed file on network %s\n", Lido.NetworkName)
+	}
+
+	e := os.Remove(deployedPath)
+	if e != nil {
+		log.Panic(e)
+	}
+
+	fmt.Printf("removed %s\n", deployedPath)
+}
+
 var startAllCmd = &cobra.Command{
 	Use:   "all",
 	Short: "Start hardhat node, start ipfs, deploy contracts, start lido apps, start aragon",
 	Run: func(cmd *cobra.Command, args []string) {
 
 		os.Setenv("NETWORK_NAME", Lido.NetworkName)
+
+		var deployedPath string
+		Lido.Deploy.DeployedFile, deployedPath, _ = getDeployedFile(Lido.NetworkName)
+
+		removeDeployedFile(deployedPath)
 
 		Lido.Contracts.Start()
 		Lido.HardhatNode.Start("")
@@ -80,8 +102,6 @@ var startAllCmd = &cobra.Command{
 			log.Println(err)
 			return
 		}
-
-		Lido.Deploy.DeployedFile, _ = getDeployedFile(Lido.NetworkName)
 
 		if Lido.AragonClient.RunningUrl != "" && Lido.Deploy.DeployedFile.DaoAddress != "" {
 			pterm.Println()
@@ -111,7 +131,7 @@ var startForkCmd = &cobra.Command{
 
 		Lido.HardhatNode.Start(fork)
 
-		Lido.Deploy.DeployedFile, _ = getDeployedFile(Lido.NetworkName)
+		Lido.Deploy.DeployedFile, _, _ = getDeployedFile(Lido.NetworkName)
 
 		err = Lido.AragonClient.Start(aragon.CMD_MAINNET, Lido.LidoApps.AppsLocator, Lido.Deploy.DeployedFile)
 		if err != nil {
@@ -125,7 +145,7 @@ var startForkCmd = &cobra.Command{
 	},
 }
 
-func getDeployedFile(networkName string) (*deploy.DeployedFile, error) {
+func getDeployedFile(networkName string) (*deploy.DeployedFile, string, error) {
 
 	paths := []string{"./", "../"}
 	for _, path := range paths {
@@ -138,7 +158,7 @@ func getDeployedFile(networkName string) (*deploy.DeployedFile, error) {
 
 		jsonFile, err := os.Open(deployedPath)
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 		jsonResult, _ := ioutil.ReadAll(jsonFile)
 
@@ -147,8 +167,8 @@ func getDeployedFile(networkName string) (*deploy.DeployedFile, error) {
 		var deployedFile deploy.DeployedFile
 		json.Unmarshal(jsonResult, &deployedFile)
 
-		return &deployedFile, nil
+		return &deployedFile, deployedPath, nil
 	}
 
-	return nil, nil
+	return nil, "", nil
 }
