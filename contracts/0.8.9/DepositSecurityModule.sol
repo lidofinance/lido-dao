@@ -94,11 +94,7 @@ contract DepositSecurityModule {
         _setMaxDeposits(_maxDepositsPerBlock);
         _setMinDepositBlockDistance(_minDepositBlockDistance);
         _setPauseIntentValidityPeriodBlocks(_pauseIntentValidityPeriodBlocks);
-
-        paused = false;
-        lastDepositBlock = 0;
     }
-
 
     /**
      * Returns the owner address.
