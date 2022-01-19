@@ -143,14 +143,14 @@ contract DepositSecurityModule {
 
 
     /**
-     * Returns `PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS` (see `pauseDeposits`).
+     * Returns current `pauseIntentValidityPeriodBlocks` contract parameter (see `pauseDeposits`).
      */
     function getPauseIntentValidityPeriodBlocks() external view returns (uint256) {
         return pauseIntentValidityPeriodBlocks;
     }
 
     /**
-     * Sets `PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS`. Only callable by the owner.
+     * Sets `pauseIntentValidityPeriodBlocks`. Only callable by the owner.
      */
     function setPauseIntentValidityPeriodBlocks(uint256 newValue) external onlyOwner {
         _setPauseIntentValidityPeriodBlocks(newValue);
@@ -164,14 +164,14 @@ contract DepositSecurityModule {
 
 
     /**
-     * Returns `MAX_DEPOSITS_PER_BLOCK` (see `depositBufferedEther`).
+     * Returns `maxDepositsPerBlock` (see `depositBufferedEther`).
      */
     function getMaxDeposits() external view returns (uint256) {
         return maxDepositsPerBlock;
     }
 
     /**
-     * Sets `MAX_DEPOSITS_PER_BLOCK`. Only callable by the owner.
+     * Sets `maxDepositsPerBlock`. Only callable by the owner.
      */
     function setMaxDeposits(uint256 newValue) external onlyOwner {
         _setMaxDeposits(newValue);
@@ -184,14 +184,14 @@ contract DepositSecurityModule {
 
 
     /**
-     * Returns `MIN_DEPOSIT_BLOCK_DISTANCE`  (see `depositBufferedEther`).
+     * Returns `minDepositBlockDistance`  (see `depositBufferedEther`).
      */
     function getMinDepositBlockDistance() external view returns (uint256) {
         return minDepositBlockDistance;
     }
 
     /**
-     * Sets `MIN_DEPOSIT_BLOCK_DISTANCE`. Only callable by the owner.
+     * Sets `minDepositBlockDistance`. Only callable by the owner.
      */
     function setMinDepositBlockDistance(uint256 newValue) external onlyOwner {
         _setMinDepositBlockDistance(newValue);
@@ -324,7 +324,7 @@ contract DepositSecurityModule {
      *      is a valid signature by the guardian with index guardianIndex of the data
      *      defined below.
      *
-     *   2. block.number - blockNumber <= PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS
+     *   2. block.number - blockNumber <= pauseIntentValidityPeriodBlocks
      *
      * The signature, if present, must be produced for keccak256 hash of the following
      * message (each component taking 32 bytes):
@@ -387,14 +387,14 @@ contract DepositSecurityModule {
 
 
     /**
-     * Calls Lido.depositBufferedEther(MAX_DEPOSITS_PER_BLOCK).
+     * Calls Lido.depositBufferedEther(maxDepositsPerBlock).
      *
      * Reverts if any of the following is true:
      *   1. IDepositContract.get_deposit_root() != depositRoot.
      *   2. INodeOperatorsRegistry.getKeysOpIndex() != keysOpIndex.
      *   3. The number of guardian signatures is less than getGuardianQuorum().
      *   4. An invalid or non-guardian signature received.
-     *   5. block.number - getLastDepositBlock() < MIN_DEPOSIT_BLOCK_DISTANCE.
+     *   5. block.number - getLastDepositBlock() < minDepositBlockDistance.
      *   6. blockhash(blockNumber) != blockHash.
      *
      * Signatures must be sorted in ascending order by index of the guardian. Each signature must
