@@ -152,17 +152,21 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
       * @param _voting the Lido Aragon Voting address
       * @param _totalCoverSharesBurnt Shares burnt counter init value (cover case)
       * @param _totalNonCoverSharesBurnt Shares burnt counter init value (non-cover case)
+      * @param _maxBurnAmountPerRunBasePoints Max burn amount per single run
       */
     constructor(
         address _treasury,
         address _lido,
         address _voting,
         uint256 _totalCoverSharesBurnt,
-        uint256 _totalNonCoverSharesBurnt
+        uint256 _totalNonCoverSharesBurnt,
+        uint256 _maxBurnAmountPerRunBasePoints
     ) {
         require(_treasury != address(0), "TREASURY_ZERO_ADDRESS");
         require(_lido != address(0), "LIDO_ZERO_ADDRESS");
         require(_voting != address(0), "VOTING_ZERO_ADDRESS");
+        require(_maxBurnAmountPerRunBasePoints > 0, "ZERO_BURN_AMOUNT_PER_RUN");
+        require(_maxBurnAmountPerRunBasePoints <= MAX_BASE_POINTS, "TOO_LARGE_BURN_AMOUNT_PER_RUN");
 
         TREASURY = _treasury;
         LIDO = _lido;
@@ -170,6 +174,8 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
 
         totalCoverSharesBurnt = _totalCoverSharesBurnt;
         totalNonCoverSharesBurnt = _totalNonCoverSharesBurnt;
+
+        maxBurnAmountPerRunBasePoints = _maxBurnAmountPerRunBasePoints;
     }
 
     /**

@@ -57,7 +57,8 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
     await oracle.setPool(lido.address)
     await depositContract.reset()
 
-    burner = await SelfOwnerStETHBurner.new(treasuryAddr, lido.address, voting, bn(0), bn(0), { from: deployer })
+    burner = await SelfOwnerStETHBurner.new(treasuryAddr, lido.address, voting, bn(0), bn(0), bn(4), { from: deployer })
+
     compositeBeaconReceiver = await CompositePostRebaseBeaconReceiver.new(voting, oracle.address, { from: deployer })
     compositeBeaconReceiver.addCallback(burner.address, { from: voting })
 
@@ -98,27 +99,45 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
       assertBn(await burner.getMaxBurnAmountPerRunBasePoints(), bn(10000))
     })
 
-    it(`init counters works`, async () => {
-      let newBurner = await SelfOwnerStETHBurner.new(treasuryAddr, lido.address, voting, bn(0), bn(0), { from: deployer })
+    it(`init counters and burn amount per run works`, async () => {
+      let newBurner = await SelfOwnerStETHBurner.new(treasuryAddr, lido.address, voting, bn(0), bn(0), bn(5), { from: deployer })
 
       assertBn(await newBurner.getCoverSharesBurnt(), bn(0))
       assertBn(await newBurner.getNonCoverSharesBurnt(), bn(0))
+      assertBn(await newBurner.getMaxBurnAmountPerRunBasePoints(), bn(5))
 
-      newBurner = await SelfOwnerStETHBurner.new(treasuryAddr, lido.address, voting, bn(123), bn(456), { from: deployer })
+      newBurner = await SelfOwnerStETHBurner.new(treasuryAddr, lido.address, voting, bn(123), bn(456), bn(777), { from: deployer })
 
       assertBn(await newBurner.getCoverSharesBurnt(), bn(123))
       assertBn(await newBurner.getNonCoverSharesBurnt(), bn(456))
+      assertBn(await newBurner.getMaxBurnAmountPerRunBasePoints(), bn(777))
     })
 
-    it(`can't use zero init addresses`, async () => {
+    it(`can't use zero init addresses or bad burn amount per run`, async () => {
       assertRevert(
-        SelfOwnerStETHBurner.new(treasuryAddr, lido.address, ZERO_ADDRESS, bn(0), bn(0), { from: deployer }),
+        SelfOwnerStETHBurner.new(treasuryAddr, lido.address, ZERO_ADDRESS, bn(0), bn(0), bn(4), { from: deployer }),
         `VOTING_ZERO_ADDRESS`
       )
 
-      assertRevert(SelfOwnerStETHBurner.new(treasuryAddr, ZERO_ADDRESS, voting, bn(0), bn(0), { from: deployer }), `LIDO_ZERO_ADDRESS`)
+      assertRevert(
+        SelfOwnerStETHBurner.new(treasuryAddr, ZERO_ADDRESS, voting, bn(0), bn(0), bn(4), { from: deployer }),
+        `LIDO_ZERO_ADDRESS`
+      )
 
-      assertRevert(SelfOwnerStETHBurner.new(ZERO_ADDRESS, lido.address, voting, bn(0), bn(0), { from: deployer }), `TREASURY_ZERO_ADDRESS`)
+      assertRevert(
+        SelfOwnerStETHBurner.new(ZERO_ADDRESS, lido.address, voting, bn(0), bn(0), bn(4), { from: deployer }),
+        `TREASURY_ZERO_ADDRESS`
+      )
+
+      assertRevert(
+        SelfOwnerStETHBurner.new(treasuryAddr, lido.address, voting, bn(0), bn(0), bn(0), { from: deployer }),
+        `ZERO_BURN_AMOUNT_PER_RUN`
+      )
+
+      assertRevert(
+        SelfOwnerStETHBurner.new(treasuryAddr, lido.address, voting, bn(0), bn(0), bn(10001), { from: deployer }),
+        `TOO_LARGE_BURN_AMOUNT_PER_RUN`
+      )
     })
 
     it(`reverts on zero stETH amount cover/non-cover request`, async () => {
