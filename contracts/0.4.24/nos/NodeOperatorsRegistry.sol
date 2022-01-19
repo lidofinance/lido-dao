@@ -288,7 +288,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         authP(MANAGE_SIGNING_KEYS, arr(_operator_id))
     {
         // removing from the last index to the highest one, so we won't get outside the array
-        for (uint256 i = _index + _amount; i > _index ; --i) {
+        for (uint256 i = _index.add(_amount); i > _index; --i) {
             _removeSigningKey(_operator_id, i - 1);
         }
     }
@@ -312,7 +312,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     function removeSigningKeysOperatorBH(uint256 _operator_id, uint256 _index, uint256 _amount) external {
         require(msg.sender == operators[_operator_id].rewardAddress, "APP_AUTH_FAILED");
         // removing from the last index to the highest one, so we won't get outside the array
-        for (uint256 i = _index + _amount; i > _index ; --i) {
+        for (uint256 i = _index.add(_amount); i > _index; --i) {
             _removeSigningKey(_operator_id, i - 1);
         }
     }
