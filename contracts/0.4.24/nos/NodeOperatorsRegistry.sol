@@ -438,10 +438,10 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         if (effectiveStakeTotal == 0)
             return (recipients, shares);
 
-        uint256 perValidatorReward = _totalRewardShares.div(effectiveStakeTotal);
+        uint256 perStakeReward = _totalRewardShares.div(effectiveStakeTotal);
 
         for (idx = 0; idx < activeCount; ++idx) {
-            shares[idx] = shares[idx].mul(perValidatorReward);
+            shares[idx] = shares[idx].mul(perStakeReward);
         }
 
         return (recipients, shares);
