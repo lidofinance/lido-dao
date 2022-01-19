@@ -138,7 +138,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     assertBn(await app.getNodeOperatorsCount({ from: nobody }), 2)
     assertBn(await app.getActiveNodeOperatorsCount({ from: nobody }), 1)
 
-    await app.setNodeOperatorActive(0, false, { from: voting })
+    await assertRevert(app.setNodeOperatorActive(0, false, { from: voting }), 'NODE_OPERATOR_ACTIVITY_ALREADY_SET')
     assert.equal((await app.getNodeOperator(0, false)).active, false)
     assertBn(await app.getActiveNodeOperatorsCount({ from: nobody }), 1)
 
@@ -156,7 +156,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     assertBn(await app.getNodeOperatorsCount({ from: nobody }), 2)
     assertBn(await app.getActiveNodeOperatorsCount({ from: nobody }), 1)
 
-    await app.setNodeOperatorActive(0, true, { from: voting })
+    await assertRevert(app.setNodeOperatorActive(0, true, { from: voting }), 'NODE_OPERATOR_ACTIVITY_ALREADY_SET')
     assert.equal((await app.getNodeOperator(0, false)).active, true)
     assertBn(await app.getActiveNodeOperatorsCount({ from: nobody }), 1)
 
@@ -174,6 +174,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     assert.equal((await app.getNodeOperator(1, true)).name, ' bar')
 
     await app.setNodeOperatorName(0, 'zzz', { from: voting })
+    await assertRevert(app.setNodeOperatorName(0, 'zzz', { from: voting }), 'NODE_OPERATOR_NAME_IS_THE_SAME')
+
     assert.equal((await app.getNodeOperator(0, true)).name, 'zzz')
     assert.equal((await app.getNodeOperator(1, true)).name, ' bar')
 
@@ -191,6 +193,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     assert.equal((await app.getNodeOperator(1, false)).rewardAddress, ADDRESS_2)
 
     await app.setNodeOperatorRewardAddress(0, ADDRESS_4, { from: voting })
+    await assertRevert(app.setNodeOperatorRewardAddress(0, ADDRESS_4, { from: voting }), 'NODE_OPERATOR_ADDRESS_IS_THE_SAME')
 
     assert.equal((await app.getNodeOperator(0, false)).rewardAddress, ADDRESS_4)
     assert.equal((await app.getNodeOperator(1, false)).rewardAddress, ADDRESS_2)
@@ -209,6 +212,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     assertBn((await app.getNodeOperator(1, false)).stakingLimit, 0)
 
     await app.setNodeOperatorStakingLimit(0, 40, { from: voting })
+    await assertRevert(app.setNodeOperatorStakingLimit(0, 40, { from: voting }), 'NODE_OPERATOR_STAKING_LIMIT_IS_THE_SAME')
 
     assertBn((await app.getNodeOperator(0, false)).stakingLimit, 40)
     assertBn((await app.getNodeOperator(1, false)).stakingLimit, 0)
@@ -310,6 +314,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     assert.sameMembers(hexSplit(keysAssignedEvt.signatures, SIGNATURE_LENGTH_BYTES), [op0.sigs[0], op1.sigs[0]], 'assignment 1: signatures')
 
     await app.setNodeOperatorActive(0, false, { from: voting })
+    await assertRevert(app.setNodeOperatorActive(0, false, { from: voting }), 'NODE_OPERATOR_ACTIVITY_ALREADY_SET')
     result = await pool.assignNextSigningKeys(2)
 
     keysAssignedEvt = getEventAt(result, 'KeysAssigned').args

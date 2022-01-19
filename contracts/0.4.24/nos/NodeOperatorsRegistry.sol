@@ -142,14 +142,15 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         authP(SET_NODE_OPERATOR_ACTIVE_ROLE, arr(_id, _active ? uint256(1) : uint256(0)))
         operatorExists(_id)
     {
+        require(operators[_id].active != _active, "NODE_OPERATOR_ACTIVITY_ALREADY_SET");
+
         _increaseKeysOpIndex();
-        if (operators[_id].active != _active) {
-            uint256 activeOperatorsCount = getActiveNodeOperatorsCount();
-            if (_active)
-                ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(activeOperatorsCount.add(1));
-            else
-                ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(activeOperatorsCount.sub(1));
-        }
+
+        uint256 activeOperatorsCount = getActiveNodeOperatorsCount();
+        if (_active)
+            ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(activeOperatorsCount.add(1));
+        else
+            ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(activeOperatorsCount.sub(1));
 
         operators[_id].active = _active;
 
@@ -163,6 +164,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         authP(SET_NODE_OPERATOR_NAME_ROLE, arr(_id))
         operatorExists(_id)
     {
+        require(keccak256(operators[_id].name) != keccak256(_name), "NODE_OPERATOR_NAME_IS_THE_SAME");
         operators[_id].name = _name;
         emit NodeOperatorNameSet(_id, _name);
     }
@@ -175,6 +177,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         operatorExists(_id)
         validAddress(_rewardAddress)
     {
+        require(operators[_id].rewardAddress != _rewardAddress, "NODE_OPERATOR_ADDRESS_IS_THE_SAME");
         operators[_id].rewardAddress = _rewardAddress;
         emit NodeOperatorRewardAddressSet(_id, _rewardAddress);
     }
@@ -186,6 +189,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         authP(SET_NODE_OPERATOR_LIMIT_ROLE, arr(_id, uint256(_stakingLimit)))
         operatorExists(_id)
     {
+        require(operators[_id].stakingLimit != _stakingLimit, "NODE_OPERATOR_STAKING_LIMIT_IS_THE_SAME");
         _increaseKeysOpIndex();
         operators[_id].stakingLimit = _stakingLimit;
         emit NodeOperatorStakingLimitSet(_id, _stakingLimit);
