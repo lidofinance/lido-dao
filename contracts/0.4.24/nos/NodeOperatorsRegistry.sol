@@ -149,9 +149,9 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
                 ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(activeOperatorsCount.add(1));
             else
                 ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(activeOperatorsCount.sub(1));
-        }
 
-        operators[_id].active = _active;
+            operators[_id].active = _active;
+        }
 
         emit NodeOperatorActiveSet(_id, _active);
     }
