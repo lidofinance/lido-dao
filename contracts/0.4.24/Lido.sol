@@ -85,12 +85,12 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
 
     /**
     * @dev As AragonApp, Lido contract must be initialized with following variables:
-    * @param depositContract official ETH2 Deposit contract
+    * @param _depositContract official ETH2 Deposit contract
     * @param _oracle oracle contract
     * @param _operators instance of Node Operators Registry
     */
     function initialize(
-        IDepositContract depositContract,
+        IDepositContract _depositContract,
         address _oracle,
         INodeOperatorsRegistry _operators,
         address _treasury,
@@ -98,9 +98,13 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     )
         public onlyInit
     {
-        _setDepositContract(depositContract);
+        require(isContract(address(_operators)), "NOT_A_CONTRACT");
+        require(isContract(address(_depositContract)), "NOT_A_CONTRACT");
+
+        NODE_OPERATORS_REGISTRY_POSITION.setStorageAddress(_operators);
+        DEPOSIT_CONTRACT_POSITION.setStorageAddress(address(_depositContract));
+
         _setOracle(_oracle);
-        _setOperators(_operators);
         _setTreasury(_treasury);
         _setInsuranceFund(_insuranceFund);
 
@@ -208,6 +212,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
       */
     function setOracle(address _oracle) external auth(SET_ORACLE) {
         _setOracle(_oracle);
+        emit OracleSet(_oracle);
     }
 
     /**
@@ -217,6 +222,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
       */
     function setTreasury(address _treasury) external auth(SET_TREASURY) {
         _setTreasury(_treasury);
+        emit TreasurySet(_treasury);
     }
 
     /**
@@ -226,6 +232,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
       */
     function setInsuranceFund(address _insuranceFund) external auth(SET_INSURANCE_FUND) {
         _setInsuranceFund(_insuranceFund);
+        emit InsuranceFundSet(_insuranceFund);
     }
 
     /**
@@ -399,30 +406,12 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     }
 
     /**
-    * @dev Sets the address of Deposit contract
-    * @param _contract the address of Deposit contract
-    */
-    function _setDepositContract(IDepositContract _contract) internal {
-        require(isContract(address(_contract)), "NOT_A_CONTRACT");
-        DEPOSIT_CONTRACT_POSITION.setStorageAddress(address(_contract));
-    }
-
-    /**
     * @dev Internal function to set authorized oracle address
     * @param _oracle oracle contract
     */
     function _setOracle(address _oracle) internal {
         require(isContract(_oracle), "NOT_A_CONTRACT");
         ORACLE_POSITION.setStorageAddress(_oracle);
-    }
-
-    /**
-    * @dev Internal function to set node operator registry address
-    * @param _r registry of node operators
-    */
-    function _setOperators(INodeOperatorsRegistry _r) internal {
-        require(isContract(_r), "NOT_A_CONTRACT");
-        NODE_OPERATORS_REGISTRY_POSITION.setStorageAddress(_r);
     }
 
     /**
@@ -557,7 +546,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
 
     /**
     * @dev Distributes rewards by minting and distributing corresponding amount of liquid tokens.
-    * @param _totalRewards Total rewards accrued on the Ethereum 2.0 side in wei
+    * @param _totalRewards Total rewards accured on the Ethereum 2.0 side in wei
     */
     function distributeRewards(uint256 _totalRewards) internal {
         // We need to take a defined percentage of the reported reward as a fee, and we do
