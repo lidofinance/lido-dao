@@ -442,10 +442,10 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         if (effectiveStakeTotal == 0)
             return (recipients, shares);
 
-        uint256 perValidatorReward = _totalRewardShares.div(effectiveStakeTotal);
+        uint256 perStakeReward = _totalRewardShares.div(effectiveStakeTotal);
 
         for (idx = 0; idx < activeCount; ++idx) {
-            shares[idx] = shares[idx].mul(perValidatorReward);
+            shares[idx] = shares[idx].mul(perStakeReward);
         }
 
         return (recipients, shares);
@@ -541,8 +541,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
     function _isEmptySigningKey(bytes memory _key) internal pure returns (bool) {
         assert(_key.length == PUBKEY_LENGTH);
-        // algorithm applicability constraint
-        assert(PUBKEY_LENGTH >= 32 && PUBKEY_LENGTH <= 64);
 
         uint256 k1;
         uint256 k2;
@@ -555,7 +553,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     function to64(uint256 v) internal pure returns (uint64) {
-        assert(v <= uint256(uint64(-1)));
+        assert(v <= UINT64_MAX);
         return uint64(v);
     }
 
@@ -566,9 +564,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     function _storeSigningKey(uint256 _operator_id, uint256 _keyIndex, bytes memory _key, bytes memory _signature) internal {
         assert(_key.length == PUBKEY_LENGTH);
         assert(_signature.length == SIGNATURE_LENGTH);
-        // algorithm applicability constraints
-        assert(PUBKEY_LENGTH >= 32 && PUBKEY_LENGTH <= 64);
-        assert(0 == SIGNATURE_LENGTH % 32);
 
         // key
         uint256 offset = _signingKeyOffset(_operator_id, _keyIndex);
@@ -646,10 +641,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     }
 
     function _loadSigningKey(uint256 _operator_id, uint256 _keyIndex) internal view returns (bytes memory key, bytes memory signature) {
-        // algorithm applicability constraints
-        assert(PUBKEY_LENGTH >= 32 && PUBKEY_LENGTH <= 64);
-        assert(0 == SIGNATURE_LENGTH % 32);
-
         uint256 offset = _signingKeyOffset(_operator_id, _keyIndex);
 
         // key
