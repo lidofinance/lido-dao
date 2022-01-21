@@ -334,6 +334,10 @@ contract DepositSecurityModule {
      * | PAUSE_MESSAGE_PREFIX | blockNumber
      */
     function pauseDeposits(uint256 blockNumber, Signature memory sig) external {
+        // In case of an emergency function `pauseDeposits` is supposed to be called
+        // by all guardians. Thus only the first call will do the actual change. But
+        // the other calls would be OK operations from the point of view of protocol’s logic.
+        // Thus we prefer not to use “error” semantics which is implied by `require`.
         if (paused) {
             return;
         }
