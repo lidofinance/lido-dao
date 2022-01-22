@@ -424,28 +424,28 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         shares = new uint256[](activeCount);
         uint256 idx = 0;
 
-        uint256 effectiveStakeTotal = 0;
+        uint256 activeValidatorsTotal = 0;
         for (uint256 operatorId = 0; operatorId < nodeOperatorCount; ++operatorId) {
             NodeOperator storage operator = operators[operatorId];
             if (!operator.active)
                 continue;
 
-            uint256 effectiveStake = operator.usedSigningKeys.sub(operator.stoppedValidators);
-            effectiveStakeTotal = effectiveStakeTotal.add(effectiveStake);
+            uint256 activeValidators = operator.usedSigningKeys.sub(operator.stoppedValidators);
+            activeValidatorsTotal = activeValidatorsTotal.add(activeValidators);
 
             recipients[idx] = operator.rewardAddress;
-            shares[idx] = effectiveStake;
+            shares[idx] = activeValidators;
 
             ++idx;
         }
 
-        if (effectiveStakeTotal == 0)
+        if (activeValidatorsTotal == 0)
             return (recipients, shares);
 
-        uint256 perStakeReward = _totalRewardShares.div(effectiveStakeTotal);
+        uint256 perValidatorReward = _totalRewardShares.div(activeValidatorsTotal);
 
         for (idx = 0; idx < activeCount; ++idx) {
-            shares[idx] = shares[idx].mul(perStakeReward);
+            shares[idx] = shares[idx].mul(perValidatorReward);
         }
 
         return (recipients, shares);
