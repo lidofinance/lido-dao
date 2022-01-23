@@ -92,11 +92,11 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
       await rewarder.reward({ from: anotherAccount, value: ETH(1) })
 
       assertBn(await web3.eth.getBalance(oracle.address), ETH(1))
-      assertBn(await burner.getMaxBurnAmountPerRunBasePoints(), bn(4))
+      assertBn(await burner.getBurnAmountPerRunQuota(), bn(4))
 
       // maximize burn amount per single run
-      await burner.setMaxBurnAmountPerRunBasePoints(bn(10000), { from: voting })
-      assertBn(await burner.getMaxBurnAmountPerRunBasePoints(), bn(10000))
+      await burner.setBurnAmountPerRunQuota(bn(10000), { from: voting })
+      assertBn(await burner.getBurnAmountPerRunQuota(), bn(10000))
     })
 
     it(`init counters and burn amount per run works`, async () => {
@@ -104,13 +104,13 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
 
       assertBn(await newBurner.getCoverSharesBurnt(), bn(0))
       assertBn(await newBurner.getNonCoverSharesBurnt(), bn(0))
-      assertBn(await newBurner.getMaxBurnAmountPerRunBasePoints(), bn(5))
+      assertBn(await newBurner.getBurnAmountPerRunQuota(), bn(5))
 
       newBurner = await SelfOwnerStETHBurner.new(treasuryAddr, lido.address, voting, bn(123), bn(456), bn(777), { from: deployer })
 
       assertBn(await newBurner.getCoverSharesBurnt(), bn(123))
       assertBn(await newBurner.getNonCoverSharesBurnt(), bn(456))
-      assertBn(await newBurner.getMaxBurnAmountPerRunBasePoints(), bn(777))
+      assertBn(await newBurner.getBurnAmountPerRunQuota(), bn(777))
     })
 
     it(`can't use zero init addresses or bad burn amount per run`, async () => {
@@ -372,18 +372,18 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
     })
 
     it(`revert on illegal attempts to set the max burn amount per run`, async () => {
-      assertRevert(burner.setMaxBurnAmountPerRunBasePoints(bn(10000), { from: deployer }), `MSG_SENDER_MUST_BE_VOTING`)
+      assertRevert(burner.setBurnAmountPerRunQuota(bn(10000), { from: deployer }), `MSG_SENDER_MUST_BE_VOTING`)
 
-      assertRevert(burner.setMaxBurnAmountPerRunBasePoints(bn(0), { from: voting }), `ZERO_BURN_AMOUNT_PER_RUN`)
+      assertRevert(burner.setBurnAmountPerRunQuota(bn(0), { from: voting }), `ZERO_BURN_AMOUNT_PER_RUN`)
 
-      assertRevert(burner.setMaxBurnAmountPerRunBasePoints(bn(10001), { from: voting }), `TOO_LARGE_BURN_AMOUNT_PER_RUN`)
+      assertRevert(burner.setBurnAmountPerRunQuota(bn(10001), { from: voting }), `TOO_LARGE_BURN_AMOUNT_PER_RUN`)
     })
 
     it(`set max burn amount per run works (cover)`, async () => {
-      // let the single burn be limited to a 120 base points (1.2%)
-      const setMaxBurnAmountReceipt = await burner.setMaxBurnAmountPerRunBasePoints(bn(120), { from: voting })
-      assertEvent(setMaxBurnAmountReceipt, `MaxBurnAmountPerRunChanged`, { expectedArgs: { maxBurnAmountPerRunBasePoints: bn(120) } })
-      assertAmountOfEvents(setMaxBurnAmountReceipt, `MaxBurnAmountPerRunChanged`, { expectedAmount: 1 })
+      // let the single burn be limited to a 120 basis points (1.2%)
+      const setBurnAmountQuotaReceipt = await burner.setBurnAmountPerRunQuota(bn(120), { from: voting })
+      assertEvent(setBurnAmountQuotaReceipt, `BurnAmountPerRunQuotaChanged`, { expectedArgs: { maxBurnAmountPerRunBasisPoints: bn(120) } })
+      assertAmountOfEvents(setBurnAmountQuotaReceipt, `BurnAmountPerRunQuotaChanged`, { expectedAmount: 1 })
 
       // grant permissions to the Lido.burnShares method
       await acl.grantPermission(burner.address, lido.address, await lido.BURN_ROLE(), { from: appManager })
@@ -424,8 +424,8 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
     })
 
     it(`set max burn amount per run works (noncover)`, async () => {
-      // let the single burn be limited to a 120 base points (1.2%)
-      await burner.setMaxBurnAmountPerRunBasePoints(bn(120), { from: voting })
+      // let the single burn be limited to a 120 basis points (1.2%)
+      await burner.setBurnAmountPerRunQuota(bn(120), { from: voting })
       // grant permissions to the Lido.burnShares method
       await acl.grantPermission(burner.address, lido.address, await lido.BURN_ROLE(), { from: appManager })
 
@@ -455,7 +455,6 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
       assertBn(bnRound10(await burner.getCoverSharesBurnt()), stETHShares(0))
       assertBn(bnRound10(await burner.getNonCoverSharesBurnt()), bnRound10(stETHShares(1.888)))
 
-      // 1 - 74*10^18 * 0.012 = 0.112*10^18
       assertBn(bnRound10(await lido.sharesOf(burner.address)), bnRound10(stETHShares(0.112)))
       await burner.processLidoOracleReport(bn(1), bn(2), bn(3), { from: oracle.address })
       assertBn(await lido.sharesOf(burner.address), stETHShares(0))
@@ -465,8 +464,8 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
     })
 
     it(`set max burn amount per run works (mix cover/noncover)`, async () => {
-      // let the single burn be limited to a 120 base points (1.2%)
-      await burner.setMaxBurnAmountPerRunBasePoints(bn(120), { from: voting })
+      // let the single burn be limited to a 120 basis points (1.2%)
+      await burner.setBurnAmountPerRunQuota(bn(120), { from: voting })
       // grant permissions to the Lido.burnShares method
       await acl.grantPermission(burner.address, lido.address, await lido.BURN_ROLE(), { from: appManager })
 
@@ -505,7 +504,6 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
       assertBn(bnRound10(await burner.getCoverSharesBurnt()), bnRound10(stETHShares(1.018)))
       assertBn(bnRound10(await burner.getNonCoverSharesBurnt()), bnRound10(stETHShares(0.87)))
 
-      // 1 - 74*10^18 * 0.012 = 0.112*10^18
       assertBn(bnRound10(await lido.sharesOf(burner.address)), bnRound10(stETHShares(0.112)))
       const lastReceipt = await burner.processLidoOracleReport(bn(1), bn(2), bn(3), { from: oracle.address })
       assertBn(await lido.sharesOf(burner.address), stETHShares(0))

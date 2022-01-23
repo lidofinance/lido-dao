@@ -50,7 +50,7 @@ interface ILido {
     function sharesOf(address _account) external view returns (uint256);
 
     /**
-      * @notice Get total amount of shares in existance
+      * @notice Get total amount of shares in existence
       */
     function getTotalShares() external view returns (uint256);
 }
@@ -74,7 +74,7 @@ interface IOracle {
   * @dev Burning stETH means 'decrease total underlying shares amount to perform stETH token rebase'
   */
 contract SelfOwnedStETHBurner is IBeaconReportReceiver {
-    uint256 private constant MAX_BASE_POINTS = 10000;
+    uint256 private constant MAX_BASIS_POINTS = 10000;
 
     uint256 private coverSharesBurnRequested;
     uint256 private nonCoverSharesBurnRequested;
@@ -82,17 +82,17 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
     uint256 private totalCoverSharesBurnt;
     uint256 private totalNonCoverSharesBurnt;
 
-    uint256 private maxBurnAmountPerRunBasePoints = 4; // 0.04% by default for the biggest `stETH:ETH` curve pool
+    uint256 private maxBurnAmountPerRunBasisPoints = 4; // 0.04% by default for the biggest `stETH:ETH` curve pool
 
     address public immutable LIDO;
     address public immutable TREASURY;
     address public immutable VOTING;
 
     /**
-      * Emitted when a new single burn ratio is set
+      * Emitted when a new single burn quota is set
       */
-    event MaxBurnAmountPerRunChanged(
-        uint256 maxBurnAmountPerRunBasePoints
+    event BurnAmountPerRunQuotaChanged(
+        uint256 maxBurnAmountPerRunBasisPoints
     );
 
     /**
@@ -152,7 +152,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
       * @param _voting the Lido Aragon Voting address
       * @param _totalCoverSharesBurnt Shares burnt counter init value (cover case)
       * @param _totalNonCoverSharesBurnt Shares burnt counter init value (non-cover case)
-      * @param _maxBurnAmountPerRunBasePoints Max burn amount per single run
+      * @param _maxBurnAmountPerRunBasisPoints Max burn amount per single run
       */
     constructor(
         address _treasury,
@@ -160,13 +160,13 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
         address _voting,
         uint256 _totalCoverSharesBurnt,
         uint256 _totalNonCoverSharesBurnt,
-        uint256 _maxBurnAmountPerRunBasePoints
+        uint256 _maxBurnAmountPerRunBasisPoints
     ) {
         require(_treasury != address(0), "TREASURY_ZERO_ADDRESS");
         require(_lido != address(0), "LIDO_ZERO_ADDRESS");
         require(_voting != address(0), "VOTING_ZERO_ADDRESS");
-        require(_maxBurnAmountPerRunBasePoints > 0, "ZERO_BURN_AMOUNT_PER_RUN");
-        require(_maxBurnAmountPerRunBasePoints <= MAX_BASE_POINTS, "TOO_LARGE_BURN_AMOUNT_PER_RUN");
+        require(_maxBurnAmountPerRunBasisPoints > 0, "ZERO_BURN_AMOUNT_PER_RUN");
+        require(_maxBurnAmountPerRunBasisPoints <= MAX_BASIS_POINTS, "TOO_LARGE_BURN_AMOUNT_PER_RUN");
 
         TREASURY = _treasury;
         LIDO = _lido;
@@ -175,25 +175,25 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
         totalCoverSharesBurnt = _totalCoverSharesBurnt;
         totalNonCoverSharesBurnt = _totalNonCoverSharesBurnt;
 
-        maxBurnAmountPerRunBasePoints = _maxBurnAmountPerRunBasePoints;
+        maxBurnAmountPerRunBasisPoints = _maxBurnAmountPerRunBasisPoints;
     }
 
     /**
-      * Sets the amount of shares allowed to burn per single run.
+      * Sets the maximum amount of shares allowed to burn per single run (quota).
       *
       * @dev only `voting` allowed to call this function.
       *
-      * @param _maxBurnAmountPerRunBasePoints base points (taken from Lido.totalSharesAmount)
+      * @param _maxBurnAmountPerRunBasisPoints a fraction expressed in basis points (taken from Lido.totalSharesAmount)
       *
       */
-    function setMaxBurnAmountPerRunBasePoints(uint256 _maxBurnAmountPerRunBasePoints) external {
-        require(_maxBurnAmountPerRunBasePoints > 0, "ZERO_BURN_AMOUNT_PER_RUN");
-        require(_maxBurnAmountPerRunBasePoints <= MAX_BASE_POINTS, "TOO_LARGE_BURN_AMOUNT_PER_RUN");
+    function setBurnAmountPerRunQuota(uint256 _maxBurnAmountPerRunBasisPoints) external {
+        require(_maxBurnAmountPerRunBasisPoints > 0, "ZERO_BURN_AMOUNT_PER_RUN");
+        require(_maxBurnAmountPerRunBasisPoints <= MAX_BASIS_POINTS, "TOO_LARGE_BURN_AMOUNT_PER_RUN");
         require(msg.sender == VOTING, "MSG_SENDER_MUST_BE_VOTING");
 
-        emit MaxBurnAmountPerRunChanged(_maxBurnAmountPerRunBasePoints);
+        emit BurnAmountPerRunQuotaChanged(_maxBurnAmountPerRunBasisPoints);
 
-        maxBurnAmountPerRunBasePoints = _maxBurnAmountPerRunBasePoints;
+        maxBurnAmountPerRunBasisPoints = _maxBurnAmountPerRunBasisPoints;
     }
 
     /**
@@ -309,7 +309,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
             "APP_AUTH_FAILED"
         );
 
-        uint256 maxSharesToBurnNow = (ILido(LIDO).getTotalShares() * maxBurnAmountPerRunBasePoints) / MAX_BASE_POINTS;
+        uint256 maxSharesToBurnNow = (ILido(LIDO).getTotalShares() * maxBurnAmountPerRunBasisPoints) / MAX_BASIS_POINTS;
 
         if (memCoverSharesBurnRequested > 0) {
             uint256 sharesToBurnNowForCover = Math.min(maxSharesToBurnNow, memCoverSharesBurnRequested);
@@ -360,8 +360,8 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
     /**
       * Returns the max amount of shares allowed to burn per single run
       */
-    function getMaxBurnAmountPerRunBasePoints() external view returns (uint256) {
-        return maxBurnAmountPerRunBasePoints;
+    function getBurnAmountPerRunQuota() external view returns (uint256) {
+        return maxBurnAmountPerRunBasisPoints;
     }
 
     /**
