@@ -241,7 +241,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
 
             emit ExcessStETHRecovered(msg.sender, excessStETH, excessSharesAmount);
 
-            IERC20(LIDO).transfer(TREASURY, excessStETH);
+            require(IERC20(LIDO).transfer(TREASURY, excessStETH));
         }
     }
 
@@ -266,7 +266,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
 
         emit ERC20Recovered(msg.sender, _token, _amount);
 
-        IERC20(_token).transfer(TREASURY, _amount);
+        require(IERC20(_token).transfer(TREASURY, _amount));
     }
 
     /**
