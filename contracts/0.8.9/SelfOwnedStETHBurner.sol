@@ -261,7 +261,6 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
       */
     function recoverERC20(address _token, uint256 _amount) external {
         require(_amount > 0, "ZERO_RECOVERY_AMOUNT");
-        require(_token != address(0), "ZERO_ERC20_ADDRESS");
         require(_token != LIDO, "STETH_RECOVER_WRONG_FUNC");
 
         emit ERC20Recovered(msg.sender, _token, _amount);
@@ -277,8 +276,6 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
       * @param _tokenId minted token id
       */
     function recoverERC721(address _token, uint256 _tokenId) external {
-        require(_token != address(0), "ZERO_ERC721_ADDRESS");
-
         emit ERC721Recovered(msg.sender, _token, _tokenId);
 
         IERC721(_token).transferFrom(address(this), TREASURY, _tokenId);

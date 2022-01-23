@@ -743,7 +743,7 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
     })
 
     it(`can't recover zero-address ERC20`, async () => {
-      assertRevert(burner.recoverERC20(ZERO_ADDRESS, bn(10)), `ZERO_ERC20_ADDRESS`)
+      assertRevert(burner.recoverERC20(ZERO_ADDRESS, bn(10)))
     })
 
     it(`can't recover stETH by recoverERC20`, async () => {
@@ -806,7 +806,7 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
     })
 
     it(`can't recover zero-address ERC721(NFT)`, async () => {
-      assertRevert(burner.recoverERC721(ZERO_ADDRESS, 0), `ZERO_ERC721_ADDRESS`)
+      assertRevert(burner.recoverERC721(ZERO_ADDRESS, 0))
     })
 
     it(`recover some accidentally sent NFTs`, async () => {
