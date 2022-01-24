@@ -7,6 +7,7 @@ pragma solidity 0.8.9;
 
 import "@openzeppelin/contracts-v4.4/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts-v4.4/utils/math/Math.sol";
 import "./interfaces/IBeaconReportReceiver.sol";
 
 /**
@@ -47,6 +48,11 @@ interface ILido {
       * @param _account provided account address.
       */
     function sharesOf(address _account) external view returns (uint256);
+
+    /**
+      * @notice Get total amount of shares in existence
+      */
+    function getTotalShares() external view returns (uint256);
 }
 
 /**
@@ -68,15 +74,26 @@ interface IOracle {
   * @dev Burning stETH means 'decrease total underlying shares amount to perform stETH token rebase'
   */
 contract SelfOwnedStETHBurner is IBeaconReportReceiver {
+    uint256 private constant MAX_BASIS_POINTS = 10000;
+
     uint256 private coverSharesBurnRequested;
     uint256 private nonCoverSharesBurnRequested;
 
     uint256 private totalCoverSharesBurnt;
     uint256 private totalNonCoverSharesBurnt;
 
+    uint256 private maxBurnAmountPerRunBasisPoints = 4; // 0.04% by default for the biggest `stETH:ETH` curve pool
+
     address public immutable LIDO;
     address public immutable TREASURY;
     address public immutable VOTING;
+
+    /**
+      * Emitted when a new single burn quota is set
+      */
+    event BurnAmountPerRunQuotaChanged(
+        uint256 maxBurnAmountPerRunBasisPoints
+    );
 
     /**
       * Emitted when a new stETH burning request is added by the `requestedBy` address.
@@ -135,17 +152,21 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
       * @param _voting the Lido Aragon Voting address
       * @param _totalCoverSharesBurnt Shares burnt counter init value (cover case)
       * @param _totalNonCoverSharesBurnt Shares burnt counter init value (non-cover case)
+      * @param _maxBurnAmountPerRunBasisPoints Max burn amount per single run
       */
     constructor(
         address _treasury,
         address _lido,
         address _voting,
         uint256 _totalCoverSharesBurnt,
-        uint256 _totalNonCoverSharesBurnt
+        uint256 _totalNonCoverSharesBurnt,
+        uint256 _maxBurnAmountPerRunBasisPoints
     ) {
         require(_treasury != address(0), "TREASURY_ZERO_ADDRESS");
         require(_lido != address(0), "LIDO_ZERO_ADDRESS");
         require(_voting != address(0), "VOTING_ZERO_ADDRESS");
+        require(_maxBurnAmountPerRunBasisPoints > 0, "ZERO_BURN_AMOUNT_PER_RUN");
+        require(_maxBurnAmountPerRunBasisPoints <= MAX_BASIS_POINTS, "TOO_LARGE_BURN_AMOUNT_PER_RUN");
 
         TREASURY = _treasury;
         LIDO = _lido;
@@ -153,6 +174,26 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
 
         totalCoverSharesBurnt = _totalCoverSharesBurnt;
         totalNonCoverSharesBurnt = _totalNonCoverSharesBurnt;
+
+        maxBurnAmountPerRunBasisPoints = _maxBurnAmountPerRunBasisPoints;
+    }
+
+    /**
+      * Sets the maximum amount of shares allowed to burn per single run (quota).
+      *
+      * @dev only `voting` allowed to call this function.
+      *
+      * @param _maxBurnAmountPerRunBasisPoints a fraction expressed in basis points (taken from Lido.totalSharesAmount)
+      *
+      */
+    function setBurnAmountPerRunQuota(uint256 _maxBurnAmountPerRunBasisPoints) external {
+        require(_maxBurnAmountPerRunBasisPoints > 0, "ZERO_BURN_AMOUNT_PER_RUN");
+        require(_maxBurnAmountPerRunBasisPoints <= MAX_BASIS_POINTS, "TOO_LARGE_BURN_AMOUNT_PER_RUN");
+        require(msg.sender == VOTING, "MSG_SENDER_MUST_BE_VOTING");
+
+        emit BurnAmountPerRunQuotaChanged(_maxBurnAmountPerRunBasisPoints);
+
+        maxBurnAmountPerRunBasisPoints = _maxBurnAmountPerRunBasisPoints;
     }
 
     /**
@@ -200,7 +241,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
 
             emit ExcessStETHRecovered(msg.sender, excessStETH, excessSharesAmount);
 
-            IERC20(LIDO).transfer(TREASURY, excessStETH);
+            require(IERC20(LIDO).transfer(TREASURY, excessStETH));
         }
     }
 
@@ -220,12 +261,11 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
       */
     function recoverERC20(address _token, uint256 _amount) external {
         require(_amount > 0, "ZERO_RECOVERY_AMOUNT");
-        require(_token != address(0), "ZERO_ERC20_ADDRESS");
         require(_token != LIDO, "STETH_RECOVER_WRONG_FUNC");
 
         emit ERC20Recovered(msg.sender, _token, _amount);
 
-        IERC20(_token).transfer(TREASURY, _amount);
+        require(IERC20(_token).transfer(TREASURY, _amount));
     }
 
     /**
@@ -236,8 +276,6 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
       * @param _tokenId minted token id
       */
     function recoverERC721(address _token, uint256 _tokenId) external {
-        require(_token != address(0), "ZERO_ERC721_ADDRESS");
-
         emit ERC721Recovered(msg.sender, _token, _tokenId);
 
         IERC721(_token).transferFrom(address(this), TREASURY, _tokenId);
@@ -271,20 +309,38 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
             "APP_AUTH_FAILED"
         );
 
+        uint256 maxSharesToBurnNow = (ILido(LIDO).getTotalShares() * maxBurnAmountPerRunBasisPoints) / MAX_BASIS_POINTS;
+
         if (memCoverSharesBurnRequested > 0) {
-            totalCoverSharesBurnt += memCoverSharesBurnRequested;
-            uint256 coverStETHBurnAmountRequested = ILido(LIDO).getPooledEthByShares(memCoverSharesBurnRequested);
-            emit StETHBurnt(true /* isCover */, coverStETHBurnAmountRequested, memCoverSharesBurnRequested);
-            coverSharesBurnRequested = 0;
-        }
-        if (memNonCoverSharesBurnRequested > 0) {
-            totalNonCoverSharesBurnt += memNonCoverSharesBurnRequested;
-            uint256 nonCoverStETHBurnAmountRequested = ILido(LIDO).getPooledEthByShares(memNonCoverSharesBurnRequested);
-            emit StETHBurnt(false /* isCover */, nonCoverStETHBurnAmountRequested, memNonCoverSharesBurnRequested);
-            nonCoverSharesBurnRequested = 0;
+            uint256 sharesToBurnNowForCover = Math.min(maxSharesToBurnNow, memCoverSharesBurnRequested);
+
+            totalCoverSharesBurnt += sharesToBurnNowForCover;
+            uint256 stETHToBurnNowForCover = ILido(LIDO).getPooledEthByShares(sharesToBurnNowForCover);
+            emit StETHBurnt(true /* isCover */, stETHToBurnNowForCover, sharesToBurnNowForCover);
+
+            coverSharesBurnRequested -= sharesToBurnNowForCover;
+
+            // early return if at least one of the conditions is TRUE:
+            // - we have reached a capacity per single run already
+            // - there are no pending non-cover requests
+            if ((sharesToBurnNowForCover == maxSharesToBurnNow) || (memNonCoverSharesBurnRequested == 0)) {
+                ILido(LIDO).burnShares(address(this), sharesToBurnNowForCover);
+                return;
+            }
         }
 
-        ILido(LIDO).burnShares(address(this), burnAmount);
+        // we're here only if memNonCoverSharesBurnRequested > 0
+        uint256 sharesToBurnNowForNonCover = Math.min(
+            maxSharesToBurnNow - memCoverSharesBurnRequested,
+            memNonCoverSharesBurnRequested
+        );
+
+        totalNonCoverSharesBurnt += sharesToBurnNowForNonCover;
+        uint256 stETHToBurnNowForNonCover = ILido(LIDO).getPooledEthByShares(sharesToBurnNowForNonCover);
+        emit StETHBurnt(false /* isCover */, stETHToBurnNowForNonCover, sharesToBurnNowForNonCover);
+        nonCoverSharesBurnRequested -= sharesToBurnNowForNonCover;
+
+        ILido(LIDO).burnShares(address(this), memCoverSharesBurnRequested + sharesToBurnNowForNonCover);
     }
 
     /**
@@ -299,6 +355,13 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
       */
     function getNonCoverSharesBurnt() external view returns (uint256) {
         return totalNonCoverSharesBurnt;
+    }
+
+    /**
+      * Returns the max amount of shares allowed to burn per single run
+      */
+    function getBurnAmountPerRunQuota() external view returns (uint256) {
+        return maxBurnAmountPerRunBasisPoints;
     }
 
     /**
