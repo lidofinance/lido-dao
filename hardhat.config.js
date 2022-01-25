@@ -13,6 +13,14 @@ require('solidity-coverage')
 const NETWORK_NAME = getNetworkName()
 const ETH_ACCOUNT_NAME = process.env.ETH_ACCOUNT_NAME
 
+task('accounts', 'Prints the list of accounts', async (taskArgs, hre) => {
+  const accounts = await hre.ethers.getSigners()
+
+  for (const account of accounts) {
+    console.log(account.address)
+  }
+})
+
 const accounts = readJson(`./accounts.json`) || {
   eth: { dev: 'remote' },
   etherscan: { apiKey: undefined },
@@ -178,12 +186,12 @@ module.exports = {
   },
   etherscan: accounts.etherscan,
   aragon: {
-    ipfsApi: process.env.IPFS_API_URL || 'https://goerli.lido.fi/ipfs-api/v0',
-    ipfsGateway: process.env.IPFS_GATEWAY_URL || 'https://goerli.lido.fi'
+    ipfsApi: process.env.IPFS_API_URL || 'https://ipfs.infura.io:5001/api/v0',
+    ipfsGateway: process.env.IPFS_GATEWAY_URL || 'https://ipfs.io/'
   },
   ipfs: {
-    url: 'https://ipfs.infura.io:5001/',
-    gateway: 'https://ipfs.io/',
+    url: process.env.IPFS_API_URL || 'https://ipfs.infura.io:5001/api/v0',
+    gateway: process.env.IPFS_GATEWAY_URL || 'https://ipfs.io/',
     pinata: {
       key: 'YOUR_PINATA_API_KEY',
       secret: 'YOUR_PINATA_API_SECRET_KEY'
