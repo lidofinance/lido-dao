@@ -1,0 +1,32 @@
+version: '3.7'
+services:
+  eth:
+    build:
+      context: ./docker/geth/
+    container_name: eth
+    ports:
+      - 8545:8545
+      - 8546:8546
+    environment:
+      - NETWORK_ID=1337
+
+  ipfs:
+    image: ipfs/go-ipfs:latest
+    container_name: ipfs
+    ports:
+      - 5001:5001
+      - 8080:8080
+
+  # Aragon application node
+  aragon:
+    build:
+      context: ./docker/aragon/
+      args:
+        - ARAGON_IPFS_GATEWAY=http://localhost:8080/ipfs
+        - ARAGON_DEFAULT_ETH_NODE=ws://localhost:8546
+        - ARAGON_APP_LOCATOR=ipfs
+        - ARAGON_ETH_NETWORK_TYPE=local
+        - ARAGON_ENS_REGISTRY_ADDRESS=0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1
+    container_name: aragon
+    ports:
+      - 3000:8080
