@@ -11,16 +11,17 @@ const { APP_NAMES, APP_ARTIFACTS } = require('../constants')
 
 const VALID_APP_NAMES = Object.entries(APP_NAMES).map((e) => e[1])
 
-async function assertInstalledApps({
-  template,
-  dao: kernel,
-  lidoApmEnsName,
-  appProxyUpgradeableArtifactName = 'external:AppProxyUpgradeable',
-  aragonAppArtifactName = 'AragonApp'
-}) {
-  const appInstalledEvts = (await template.getPastEvents('TmplAppInstalled', { fromBlock: 4532202 }))
-    .map((evt) => evt.args)
-
+async function assertInstalledApps(
+  {
+    template,
+    dao: kernel,
+    lidoApmEnsName,
+    appProxyUpgradeableArtifactName = 'external:AppProxyUpgradeable',
+    aragonAppArtifactName = 'AragonApp'
+  },
+  fromBlock = 4532202
+) {
+  const appInstalledEvts = (await template.getPastEvents('TmplAppInstalled', { fromBlock })).map((evt) => evt.args)
   const appIdNameEntries = VALID_APP_NAMES.map((name) => [namehash(`${name}.${lidoApmEnsName}`), name])
   const appNameByAppId = Object.fromEntries(appIdNameEntries)
   const expectedAppIds = appIdNameEntries.map((e) => e[0])

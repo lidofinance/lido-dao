@@ -11,7 +11,7 @@ const { filterObject } = require('./helpers/collections')
 const { readAppName } = require('./helpers/aragon')
 const { gitCloneRepo } = require('./helpers/git')
 
-const { uploadDirToIpfs } = require('@aragon/buidler-aragon/dist/src/utils/ipfs/uploadDirToIpfs')
+const { uploadDirToIpfs } = require('./helpers/ipfs')
 const { toContentUri } = require('@aragon/buidler-aragon/dist/src/utils/apm/utils')
 
 const APPS = ['agent', 'finance', 'token-manager', 'vault', 'voting']
@@ -107,31 +107,32 @@ async function publishApp(appName, appsRepoPath, hardhatConfig, env, netName, re
     })
     logSplitter()
 
-    logSplitter(`Build app ${appName}`)
-    await execLive('yarn', {
-      args: ['build'],
-      cwd: appFrontendPath
-    })
-    logSplitter()
+    // logSplitter(`Build app ${appName}`)
+    // await execLive('yarn', {
+    //   args: ['build'],
+    //   cwd: appFrontendPath
+    // })
+    // logSplitter()
   } else {
     log(`The app has no frontend`)
   }
 
   const childEnv = {
     ...env,
-    STD_APPS_DEPLOY: '1'
+    STD_APPS_DEPLOY: '1',
+    APP_FRONTEND_PATH: `aragon-apps/apps/${appName}/app`,
+    APP_FRONTEND_DIST_PATH: `aragon-apps/apps/${appName}/dist`
   }
 
   // if (hasFrontend) {
   //   const distPath = path.join(appRootPath, 'dist')
-  //   childEnv.APP_FRONTEND_PATH = `aragon-apps/apps/${appName}/app`
-  //   childEnv.APP_FRONTEND_DIST_PATH = `aragon-apps/apps/${appName}/dist`
 
   //   // Upload release directory to IPFS
   //   log('Uploading release assets to IPFS...')
+
   //   const contentHash = await uploadDirToIpfs({
   //     dirPath: distPath,
-  //     ipfsApiUrl: netState.ipfsAPI
+  //     apiUrl: netState.ipfsAPI
   //   })
   //   log(`Release assets uploaded to IPFS: ${yl(contentHash)}`)
 
@@ -147,7 +148,7 @@ async function publishApp(appName, appsRepoPath, hardhatConfig, env, netName, re
       hardhatConfig,
       '--network',
       netName,
-      // '--skip-validation',
+      '--skip-validation',
       // '--skip-app-build',
       // workaround: force to read URL from Hardhat config
       '--ipfs-api-url',

@@ -15,21 +15,26 @@ async function deployBeaconDepositContract({ web3, artifacts, networkStateFile =
 
   const state = readNetworkState(network.name, netId)
   const [firstAccount] = await web3.eth.getAccounts()
-
-  const depositContractResults = await useOrDeployDepositContract({
+  const { daoInitialSettings = { beaconSpec: { depositContractAddress: '' } } } = state
+  let depositContractAddress
+  if (daoInitialSettings.beaconSpec && daoInitialSettings.beaconSpec.depositContractAddress) {
+    depositContractAddress = daoInitialSettings.beaconSpec.depositContractAddress
+  }
+  const { depositContract } = await useOrDeployDepositContract({
     artifacts,
     owner: firstAccount,
-    depositContractAddress: state.depositContractAddress
+    depositContractAddress: depositContractAddress || state.depositContractAddress
   })
 
+  daoInitialSettings.beaconSpec.depositContractAddress = depositContract.address
   logSplitter()
-  persistNetworkState(network.name, netId, state, depositContractResults)
+  persistNetworkState(network.name, netId, state, { depositContract, daoInitialSettings })
 }
 
 async function useOrDeployDepositContract({ artifacts, owner, depositContractAddress }) {
   if (depositContractAddress) {
     log(`Using DepositContract at: ${chalk.yellow(depositContractAddress)}`)
-    const depositContract = await artifacts.require('IDepositContract').at(depositContractAddress)
+    const depositContract = await artifacts.require('DepositContract').at(depositContractAddress)
     return { depositContract }
   }
   const depositContract = await deploy('DepositContract', artifacts, withArgs({ from: owner }))
