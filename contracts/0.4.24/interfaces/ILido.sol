@@ -65,6 +65,15 @@ interface ILido {
 
     event FeeDistributionSet(uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, uint16 operatorsFeeBasisPoints);
 
+    /**
+    * @notice A payable function supposed to be funded only by LidoMevTxFeeVault contract
+    * @dev We need a separate function because funds received by default payable function
+    * are considered as funds submitted by a user for staking
+    */
+    function receiveMevTxFee() external payable;
+
+
+    // The amount of ETH withdrawn from LidoMevTxFeeVault contract to Lido contract
     event MevTxFeeReceived(uint256 amount);
 
 

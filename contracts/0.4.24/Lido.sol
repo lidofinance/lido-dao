@@ -81,8 +81,10 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     bytes32 internal constant BEACON_BALANCE_POSITION = keccak256("lido.Lido.beaconBalance");
     /// @dev number of Lido's validators available in the Beacon state
     bytes32 internal constant BEACON_VALIDATORS_POSITION = keccak256("lido.Lido.beaconValidators");
-    /// @dev total amount of Ether MEV and transaction rewards received by Lido contract
-    bytes32 internal constant MEV_TX_FEE_ETHER_POSITION = keccak256("lido.Lido.mevTxFeeEther");
+
+    /// @dev Just a counter of total amount of MEV and transaction rewards received by Lido contract
+    /// Not used in the logic
+    bytes32 internal constant TOTAL_MEV_TX_FEE_COLLECTED_POSITION = keccak256("lido.Lido.totalMevTxFeeCollected");
 
     /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
     bytes32 internal constant WITHDRAWAL_CREDENTIALS_POSITION = keccak256("lido.Lido.withdrawalCredentials");
@@ -125,22 +127,26 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     }
 
     /**
-    * @notice A payable function supposed to be funded only by LidoMevTxFeeVault contract
-    * @dev We need a separate function because funds received by default payable function
-    * will go through entire deposit algorithm
-    */
-    function mevTxFeeReceiver() external payable {
-        require(msg.sender == MEV_TX_FEE_VAULT_POSITION.getStorageAddress());
-        emit MevTxFeeReceived(msg.value);
-    }
-
-    /**
     * @notice Send funds to the pool with optional _referral parameter
     * @dev This function is alternative way to submit funds. Supports optional referral address.
     * @return Amount of StETH shares generated
     */
     function submit(address _referral) external payable returns (uint256) {
         return _submit(_referral);
+    }
+
+    /**
+    * @notice A payable function for Mev Tx Fee rewards. Can be funded only by LidoMevTxFeeVault contract
+    * @dev We need a separate payable function because funds received by default payable function
+    * are considered as funds submitted for minting stETH
+    */
+    function receiveMevTxFee() external payable {
+        require(msg.sender == MEV_TX_FEE_VAULT_POSITION.getStorageAddress());
+
+        TOTAL_MEV_TX_FEE_COLLECTED_POSITION.setStorageUint256(
+            TOTAL_MEV_TX_FEE_COLLECTED_POSITION.getStorageUint256().add(msg.value));
+
+        emit MevTxFeeReceived(msg.value);
     }
 
     /**
@@ -304,17 +310,19 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         BEACON_BALANCE_POSITION.setStorageUint256(_beaconBalance);
         BEACON_VALIDATORS_POSITION.setStorageUint256(_beaconValidators);
 
-        // If LidoMevTxFeeVault's address is not set just do as if there were no mevTxFee rewards at all
-        // Otherwise withdraw all rewards and put them to the buffer for further staking
-        // and increase counter of total mevTxFee rewards collected by Lido account
+        // If LidoMevTxFeeVault address is not set just do as if there were no mevTxFee rewards at all
+        // Otherwise withdraw all rewards and put them to the buffer
+        // Thus, MEV tx fees are handled the same way as beacon rewards
         uint256 mevRewards = 0;
         address mevVaultAddress = getMevTxFeeVault();
-        if (mevVaultAddress != address(0x0)) {
+        if (mevVaultAddress != address(0)) {
             mevRewards = ILidoMevTxFeeVault(mevVaultAddress).withdrawRewards();
             BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().add(mevRewards));
-            MEV_TX_FEE_ETHER_POSITION.setStorageUint256(MEV_TX_FEE_ETHER_POSITION.getStorageUint256().add(mevRewards));
         }
 
+        // Don’t mint/distribute any protocol fee on the non-profitable Lido oracle report
+        // (when beacon chain balance delta is zero or negative).
+        // See ADR #3 for details: https://hackmd.io/Jyvwq8DKSAGjIlCk80YJ7w or https://research.lido.fi/t/rewards-distribution-after-the-merge-architecture-decision-record/1535
         if (_beaconBalance > rewardBase) {
             uint256 rewards = _beaconBalance.sub(rewardBase);
             distributeRewards(rewards.add(mevRewards));
@@ -385,13 +393,13 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     }
 
     /**
-    * @notice Get total amount of MEV and transaction fees Ether buffered on this contract's balance
+    * @notice Get total amount of MEV and transaction fees collected to Lido contract
     * @dev Ether got through LidoMevTxFeeVault is kept on this contract's balance the same way
     * as other buffered Ether is kept (until it gets deposited)
     * @return uint256 of funds received as MEV and Transaction fees in wei
     */
-    function getMevTxFeeEther() external view returns (uint256) {
-        return MEV_TX_FEE_ETHER_POSITION.getStorageUint256();
+    function getTotalMevTxFeeCollected() external view returns (uint256) {
+        return TOTAL_MEV_TX_FEE_COLLECTED_POSITION.getStorageUint256();
     }
 
     /**

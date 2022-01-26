@@ -12,7 +12,7 @@ interface ILido {
     * @dev We need a separate function because funds received by default payable function
     * will go through entire deposit algorithm
     */
-    function mevTxFeeReceiver() external payable;
+    function receiveMevTxFee() external payable;
 }
 
 
@@ -29,21 +29,29 @@ contract LidoMevTxFeeVault {
     address public immutable LIDO;
 
     constructor(address _lidoAddress) {
-        require(_lidoAddress != address(0x0), "LIDO_ZERO_ADDRESS");
+        require(_lidoAddress != address(0), "LIDO_ZERO_ADDRESS");
 
         LIDO = _lidoAddress;
     }
 
     /**
+    * @notice Allows the contract to receive ETH
+    * @dev MEV rewards may be sent as plain ETH transfers
+    */
+    receive() external payable {
+    }
+
+    /**
     * @notice Withdraw all accumulated rewards to Lido contract
+    * @dev Can be called only by the Lido contract
     * @return amount uint256 of funds received as MEV and transaction fees in wei
     */
     function withdrawRewards() external returns (uint256 amount) {
-        require(msg.sender == LIDO, "Nobody except Lido contract can withdraw");
+        require(msg.sender == LIDO, "ONLY_LIDO_CAN_WITHDRAW");
 
         amount = address(this).balance;
         if (amount > 0) {
-            ILido(LIDO).mevTxFeeReceiver{value: amount}();
+            ILido(LIDO).receiveMevTxFee{value: amount}();
         }
         return amount;
     }
