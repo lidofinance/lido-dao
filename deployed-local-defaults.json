@@ -1,0 +1,50 @@
+{
+  "networkId": 1337,
+  "ipfsAPI": "http://127.0.0.1:5001/api/v0",
+  "multisigAddress": "0xb4124cEB3451635DAcedd11767f004d8a28c6eE7",
+  "lidoApmEnsName": "lidopm.eth",
+  "lidoApmEnsRegDurationSec": 94608000,
+  "daoAragonId": "lido-dao",
+  "daoInitialSettings": {
+    "voting": {
+      "minSupportRequired": "500000000000000000",
+      "minAcceptanceQuorum": "50000000000000000",
+      "voteDuration": 14400
+    },
+    "beaconSpec": {
+      "depositContractAddress": "",
+      "epochsPerFrame": 225,
+      "slotsPerEpoch": 32,
+      "secondsPerSlot": 12,
+      "genesisTime": 1639659600
+    },
+    "fee": {
+      "totalPercent": 10,
+      "treasuryPercent": 0,
+      "insurancePercent": 50,
+      "nodeOperatorsPercent": 50
+    },
+    "token": {
+      "name": "TEST Lido DAO Token",
+      "symbol": "TLDO"
+    }
+  },
+  "vestingParams": {
+    "unvestedTokensAmount": "230000000000000000000000",
+    "holders": {
+      "0xb4124cEB3451635DAcedd11767f004d8a28c6eE7": "530000000000000000000000",
+      "0x8401Eb5ff34cc943f096A32EF3d5113FEbE8D4Eb": "15000000000000000000000",
+      "0x306469457266CBBe7c0505e8Aad358622235e768": "15000000000000000000000",
+      "0xd873F6DC68e3057e4B7da74c6b304d0eF0B484C7": "15000000000000000000000",
+      "0xDcC5dD922fb1D0fd0c450a0636a8cE827521f0eD": "15000000000000000000000",
+      "0x27E9727FD9b8CdDdd0854F56712AD9DF647FaB74": "15000000000000000000000",
+      "0x9766D2e7FFde358AD0A40BB87c4B88D9FAC3F4dd": "15000000000000000000000",
+      "0xBd7055AB500cD1b0b0B14c82BdBe83ADCc2e8D06": "15000000000000000000000",
+      "0xe8898A4E589457D979Da4d1BDc35eC2aaf5a3f8E": "15000000000000000000000"
+    },
+    "start": 1639659600,
+    "cliff": 1639660100,
+    "end": 1639660100,
+    "revokable": false
+  }
+}
