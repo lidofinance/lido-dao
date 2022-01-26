@@ -3646,7 +3646,7 @@ __metadata:
     "@babel/node": ^7.12.1
     "@babel/preset-env": ^7.11.5
     "@babel/register": ^7.12.1
-    "@nomiclabs/hardhat-ethers": 2.0.4
+    "@nomiclabs/hardhat-ethers": ^2.0.4
     "@nomiclabs/hardhat-etherscan": ^2.1.8
     "@nomiclabs/hardhat-ganache": ^2.0.1
     "@nomiclabs/hardhat-truffle5": ^2.0.2
@@ -3685,7 +3685,7 @@ __metadata:
     prettier: ^2.1.2
     solhint: ^3.2.2
     solidity-bytes-utils: 0.0.6
-    solidity-coverage: 0.7.18
+    solidity-coverage: ^0.7.18
     solium: ^1.2.5
     truffle: ^5.1.43
     truffle-extract: ^1.2.1
@@ -3834,7 +3834,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nomiclabs/hardhat-ethers@npm:2.0.4":
+"@nomiclabs/hardhat-ethers@npm:^2.0.4":
   version: 2.0.4
   resolution: "@nomiclabs/hardhat-ethers@npm:2.0.4"
   peerDependencies:
@@ -25001,7 +25001,7 @@ resolve@1.1.x:
   languageName: node
   linkType: hard
 
-"solidity-coverage@npm:0.7.18":
+"solidity-coverage@npm:^0.7.18":
   version: 0.7.18
   resolution: "solidity-coverage@npm:0.7.18"
   dependencies:
