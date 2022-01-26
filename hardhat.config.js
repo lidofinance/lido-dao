@@ -44,12 +44,6 @@ const getNetConfig = (networkName, ethAccountName) => {
   }
   const byNetName = {
     localhost,
-    e2e: {
-      ...base,
-      accounts: accounts.eth.e2e,
-      url: 'http://localhost:8545',
-      chainId: 1
-    },
     kintsugi: {
       ...base,
       accounts: accounts.eth.kintsugi,
@@ -61,8 +55,8 @@ const getNetConfig = (networkName, ethAccountName) => {
       // gas: 10000000,
       gasPrice: 2000000000
     },
-    // kintsugi local
-    kl: {
+    // local
+    local: {
       ...base,
       accounts: {
         mnemonic: 'explain tackle mirror kit van hammer degree position ginger unfair soup bonus'
