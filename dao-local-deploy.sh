@@ -72,7 +72,7 @@ msg "App repos created"
 yarn hardhat --network $NETWORK run ./scripts/multisig/08-deploy-dao.js
 yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-05-deploy-dao.json
 yarn hardhat --network $NETWORK run ./scripts/multisig/09-obtain-deployed-dao.js
-pause "DAO deploy started"
+msg "DAO deploy started"
 
 yarn hardhat --network $NETWORK run ./scripts/multisig/10-issue-tokens.js
 yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-06-1-issue-tokens.json

@@ -1,9 +1,10 @@
 # Deploy Lido protocol from scratch
 
+Video guide: [youtube](https://www.youtube.com/watch?v=dCMXcfglJv0)
+
 ## Requirements
 
 * shell - bash or zsh
-* docker
 * docker
 * node.js v14
 * yarn
@@ -37,23 +38,24 @@ Add to [`hardhat.config.js`](hardhat.config.js) your network connection paramete
 > Note: ETH2 Deposit contract is required. If the target network has one, you must use it. In this case, write it directly to the `deployed-{NETWORK_NAME}.json` file. Otherwise, own Deposit contract will be deployed.
 
 Steps for deploy:
-[] run environment docker containers
-[] set up network config
-[] prepare DAO config file
-[] deploy Aragon framework environment (including ENS)
-[] build and deploy standard Aragon apps (contracts and frontend files)
-[] deploy Deposit contract (if necessary)
-[] deploy Lido DAO template contract
-[] deploy Lido Apps contract implementations
-[] register Lido APM name in ENS
-[] build Lido Apps frontend files and upload it to IPFS
-[] deploy Lido APM contract (via Lido Template)
-[] deploy Lido Apps repo contracts (via Lido Template)
-[] deploy Lido DAO contract (via Lido Template)
-[] issue DAO tokens (via Lido Template)
-[] finalize DAO setup (via Lido Template)
-[] make final deployed DAO check via script
-[] open and check Lido DAO web interface (via Aragon client)
+
+* [ ] run environment docker containers
+* [ ] set up network config
+* [ ] prepare DAO config file
+* [ ] deploy Aragon framework environment (including ENS)
+* [ ] build and deploy standard Aragon apps (contracts and frontend files)
+* [ ] deploy Deposit contract (if necessary)
+* [ ] deploy Lido DAO template contract
+* [ ] deploy Lido Apps contract implementations
+* [ ] register Lido APM name in ENS
+* [ ] build Lido Apps frontend files and upload it to IPFS
+* [ ] deploy Lido APM contract (via Lido Template)
+* [ ] deploy Lido Apps repo contracts (via Lido Template)
+* [ ] deploy Lido DAO contract (via Lido Template)
+* [ ] issue DAO tokens (via Lido Template)
+* [ ] finalize DAO setup (via Lido Template)
+* [ ] make final deployed DAO check via script
+* [ ] open and check Lido DAO web interface (via Aragon client)
 
 All steps are automated via shell script [`dao-local-deploy.sh`](dao-local-deploy.sh) for local deploy process. The script be modified for any other network:
 
