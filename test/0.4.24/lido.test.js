@@ -1058,8 +1058,16 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await assertRevert(app.burnShares(user1, ETH(1), { from: nobody }), 'APP_AUTH_FAILED')
 
     // voting can burn shares of any user
-    await app.burnShares(user1, ETH(0.5), { from: voting })
-    await app.burnShares(user1, ETH(0.5), { from: voting })
+    const expectedAmount = await app.getPooledEthByShares(ETH(0.5))
+    let receipt = await app.burnShares(user1, ETH(0.5), { from: voting })
+    assertEvent(receipt, 'StETHBurnt', { expectedArgs: { account: user1, amount: expectedAmount, sharesAmount: ETH(0.5) } })
+
+    const expectedDoubledAmount = await app.getPooledEthByShares(ETH(0.5))
+    receipt = await app.burnShares(user1, ETH(0.5), { from: voting })
+    assertEvent(receipt, 'StETHBurnt', { expectedArgs: { account: user1, amount: expectedDoubledAmount, sharesAmount: ETH(0.5) } })
+
+    assertBn(expectedAmount.mul(bn(2)), expectedDoubledAmount)
+    assertBn(tokens(0), await app.getPooledEthByShares(ETH(0.5)))
 
     // user1 has zero shares afteralls
     assertBn(await app.sharesOf(user1), tokens(0))
