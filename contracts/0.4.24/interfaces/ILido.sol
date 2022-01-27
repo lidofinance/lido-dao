@@ -94,6 +94,17 @@ interface ILido {
 
     event FeeDistributionSet(uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, uint16 operatorsFeeBasisPoints);
 
+    /**
+    * @notice A payable function supposed to be funded only by LidoMevTxFeeVault contract
+    * @dev We need a separate function because funds received by default payable function
+    * are considered as funds submitted by a user for staking
+    */
+    function receiveMevTxFee() external payable;
+
+
+    // The amount of ETH withdrawn from LidoMevTxFeeVault contract to Lido contract
+    event MevTxFeeReceived(uint256 amount);
+
 
     /**
       * @notice Set credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched to `_withdrawalCredentials`
@@ -117,7 +128,7 @@ interface ILido {
       * @param _epoch Epoch id
       * @param _eth2balance Balance in wei on the ETH 2.0 side
       */
-    function pushBeacon(uint256 _epoch, uint256 _eth2balance) external;
+    function handleOracleReport(uint256 _epoch, uint256 _eth2balance) external;
 
 
     // User functions
