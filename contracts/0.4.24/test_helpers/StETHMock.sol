@@ -52,5 +52,6 @@ contract StETHMock is StETH {
         internal
     {
         emit Transfer(address(0), _to, getPooledEthByShares(_sharesAmount));
+        emit TransferShares(address(0), _to, _sharesAmount);
     }
 }

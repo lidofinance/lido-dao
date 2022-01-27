@@ -557,7 +557,7 @@ contract('Lido: rewards distribution math', (addresses) => {
   }
 
   async function readLastPoolEventLog() {
-    const events = await pool.getPastEvents()
+    const events = await pool.getPastEvents('Transfer')
     let reportedMintAmount = new BN(0)
     const tos = []
     const values = []
