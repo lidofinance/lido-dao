@@ -92,7 +92,10 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await acl.createPermission(depositor, app.address, await app.DEPOSIT_ROLE(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
+    await assertRevert(app.initialize(user1, oracle.address, operators.address), 'NOT_A_CONTRACT')
+    await assertRevert(app.initialize(depositContract.address, oracle.address, user1), 'NOT_A_CONTRACT')
     await app.initialize(depositContract.address, oracle.address, operators.address)
+
     treasuryAddr = await app.getTreasury()
     insuranceAddr = await app.getInsuranceFund()
 
@@ -157,15 +160,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
 
   it('setOracle works', async () => {
     await assertRevert(app.setOracle(user1, { from: voting }), 'NOT_A_CONTRACT')
-    await app.setOracle(yetAnotherOracle.address, { from: voting })
-  })
-
-  it('_setDepositContract reverts with invalid arg', async () => {
-    await assertRevert(app.setDepositContract(user1, { from: voting }), 'NOT_A_CONTRACT')
-  })
-
-  it('_setOperators reverts with invalid arg', async () => {
-    await assertRevert(app.setOperators(user1, { from: voting }), 'NOT_A_CONTRACT')
+    const receipt = await app.setOracle(yetAnotherOracle.address, { from: voting })
+    assertEvent(receipt, 'OracleSet', { expectedArgs: { oracle: yetAnotherOracle.address } })
+    assert.equal(await app.getOracle(), yetAnotherOracle.address)
   })
 
   it('setWithdrawalCredentials resets unused keys', async () => {
@@ -1082,7 +1079,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     })
 
     it('voting can set treasury', async () => {
-      await app.setTreasury(user1, { from: voting })
+      const receipt = await app.setTreasury(user1, { from: voting })
+      assertEvent(receipt, 'TreasurySet', { expectedArgs: { treasury: user1 } })
       assert.equal(await app.getTreasury(), user1)
     })
 
@@ -1102,7 +1100,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     })
 
     it('voting can set insurance fund', async () => {
-      await app.setInsuranceFund(user1, { from: voting })
+      const receipt = await app.setInsuranceFund(user1, { from: voting })
+      assertEvent(receipt, 'InsuranceFundSet', { expectedArgs: { insuranceFund: user1 } })
       assert.equal(await app.getInsuranceFund(), user1)
     })
 
