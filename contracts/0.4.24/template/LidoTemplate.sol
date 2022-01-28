@@ -359,15 +359,16 @@ contract LidoTemplate is IsContract {
             noInit
         ));
 
-        state.oracle.initialize(
-            state.lido,
-            _beaconSpec[0], // epochsPerFrame
-            _beaconSpec[1], // slotsPerEpoch
-            _beaconSpec[2], // secondsPerSlot
-            _beaconSpec[3],  // genesisTime
-            100000,
-            50000
-        );
+        // TODO: uncomment on merge of branch 'redo-oracle-initialization' 
+        // state.oracle.initialize(
+        //     state.lido,
+        //     _beaconSpec[0], // epochsPerFrame
+        //     _beaconSpec[1], // slotsPerEpoch
+        //     _beaconSpec[2], // secondsPerSlot
+        //     _beaconSpec[3],  // genesisTime
+        //     100000,
+        //     50000
+        // );
 
         state.operators.initialize(state.lido);
 

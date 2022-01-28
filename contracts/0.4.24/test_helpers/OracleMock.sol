@@ -18,6 +18,6 @@ contract OracleMock {
     }
 
     function reportBeacon(uint256 _epochId, uint128 _beaconValidators, uint128 _beaconBalance) external {
-        pool.handleOracleReport(_beaconValidators, _beaconBalance);
+        pool.pushBeacon(_beaconValidators, _beaconBalance);
     }
 }

@@ -183,33 +183,16 @@ interface ILidoOracle {
             uint256 timeElapsed
         );
 
-    
     /**
-     * @notice Initialize the contract (version 3 for now) from scratch
-     * @dev TODO: Add link to the related LIP
-     * @param _lido Address of Lido contract
-     * @param _epochsPerFrame Number of epochs per frame
-     * @param _slotsPerEpoch Number of slots per epoch
-     * @param _secondsPerSlot Number of seconds per slot
-     * @param _genesisTime Genesis time
-     * @param _allowedBeaconBalanceAnnualRelativeIncrease Allowed beacon balance annual relative increase (e.g. 1000 means 10% yearly increase)
-     * @param _allowedBeaconBalanceRelativeDecrease Allowed beacon balance moment descreat (e.g. 500 means 5% moment decrease)
+     * @notice Initialize the contract v2 data, with sanity check bounds
+     * (`_allowedBeaconBalanceAnnualRelativeIncrease`, `_allowedBeaconBalanceRelativeDecrease`)
+     * @dev Original initialize function removed from v2 because it is invoked only once
      */
-    function initialize(
-        address _lido,
-        uint64 _epochsPerFrame,
-        uint64 _slotsPerEpoch,
-        uint64 _secondsPerSlot,
-        uint64 _genesisTime,
+    function initialize_v2(
         uint256 _allowedBeaconBalanceAnnualRelativeIncrease,
         uint256 _allowedBeaconBalanceRelativeDecrease
-    ) external;
-
-    /**
-     * @notice A function to finalize upgrade to v3 (from v1). Can be called only once
-     * @dev For more details see _initialize_v3()
-     */
-    function finalizeUpgrade_v3() external;
+    )
+        external;
 
     /**
      * @notice Add `_member` to the oracle member committee list
