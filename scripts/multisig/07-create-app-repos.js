@@ -29,7 +29,11 @@ async function createAppRepos({ web3, artifacts }) {
   logSplitter()
   log(`Using LidoTemplate: ${chalk.yellow(state.daoTemplateAddress)}`)
   const template = await artifacts.require('LidoTemplate').at(state.daoTemplateAddress)
-  await assertLastEvent(template, 'TmplAPMDeployed')
+  if (state.daoTemplateDeployBlock) {
+    log(`Using LidoTemplate deploy block: ${chalk.yellow(state.daoTemplateDeployBlock)}`)
+  }
+
+  await assertLastEvent(template, 'TmplAPMDeployed', null, state.daoTemplateDeployBlock)
   logSplitter()
 
   const lidoAppState = state[`app:${APP_NAMES.LIDO}`]

@@ -1,10 +1,9 @@
+const BN = require('bn.js')
 const fs = require('fs')
 const path = require('path')
 const chalk = require('chalk')
 const namehash = require('eth-ens-namehash').hash
 const getAccounts = require('@aragon/os/scripts/helpers/get-accounts')
-
-
 const runOrWrapScript = require('./helpers/run-or-wrap-script')
 const { log, logSplitter, logWideSplitter, logHeader, logTx, logDeploy, yl } = require('./helpers/log')
 const { deploy, useOrDeploy, withArgs } = require('./helpers/deploy')
@@ -14,6 +13,7 @@ const { resolveLatestVersion } = require('./components/apm')
 
 const DAO_NAME = process.env.DAO_NAME || 'lido-dao'
 const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
+const MAX_HOLDERS_IN_ONE_TX = 30
 
 const DEFAULT_DAO_SETTINGS = {
   holders: [
@@ -22,27 +22,47 @@ const DEFAULT_DAO_SETTINGS = {
   stakes: ['100000000000000000000', '100000000000000000000', '100000000000000000000'], // 100e18
   tokenName: 'Lido DAO Token',
   tokenSymbol: 'LDO',
-  voteDuration: 60 * 3, // 3 minutes
-  votingSupportRequired: '500000000000000000', // 50e16 basis points === 50%
-  votingMinAcceptanceQuorum: '50000000000000000', // 5e16 basis points === 5%
+  // voteDuration: 60 * 3, // 3 minutes
+  // votingSupportRequired: '500000000000000000', // 50e16 basis points === 50%
+  // votingMinAcceptanceQuorum: '50000000000000000', // 5e16 basis points === 5%
+  voting: {
+    minSupportRequired: '500000000000000000', // 50e16 basis points === 50%
+    minAcceptanceQuorum: '50000000000000000', // 5e16 basis points === 5%
+    voteDuration: 60 * 3 // 3 minutes
+  },
   beaconSpec: {
     epochsPerFrame: 225,
     slotsPerEpoch: 32,
     secondsPerSlot: 12,
     genesisTime: 1606824000
+  },
+  fee: {
+    totalPercent: 10,
+    treasuryPercent: 0,
+    insurancePercent: 50,
+    nodeOperatorsPercent: 50
   }
 }
 
 const APPS_DIR_PATH = path.resolve(__dirname, '..', 'apps')
 const LIDO_APP_NAMES = fs.readdirSync(APPS_DIR_PATH)
 
-const REQUIRED_NET_STATE = ['owner', 'ensAddress', 'aragonIDEnsNodeName', 'lidoEnsNodeName', 'lidoApmRegistryAddress', 'daoTemplateNode']
+const REQUIRED_NET_STATE = [
+  'owner',
+  'ensAddress',
+  'aragonIDEnsNodeName',
+  'lidoEnsNodeName',
+  'lidoApmAddress',
+  'daoTemplateNode',
+  'vestingParams',
+  'daoInitialSettings'
+]
 
 async function deployDao({
   web3,
   artifacts,
   networkStateFile = NETWORK_STATE_FILE,
-  defaultDaoName = DAO_NAME,
+  defaultDaoAragonId = DAO_NAME,
   defaultDaoSettings = DEFAULT_DAO_SETTINGS
 }) {
   const netId = await web3.eth.net.getId()
@@ -69,9 +89,9 @@ async function deployDao({
   const ens = await artifacts.require('ENS').at(state.ensAddress)
   log(`Using ENS: ${yl(ens.address)}`)
 
-  if (!state.daoName) {
-    state.daoName = defaultDaoName
-    log(`Using default DAO name: ${state.daoName}`)
+  if (!state.daoAragonId) {
+    state.daoAragonId = defaultDaoAragonId
+    log(`Using default DAO name: ${state.daoAragonId}`)
   }
 
   const isPublicNet = netId <= 1000
@@ -87,14 +107,12 @@ async function deployDao({
     }
     const accounts = (await web3.eth.getAccounts()).slice(0, 3)
     state.daoInitialSettings = {
-      ...defaultDaoSettings,
-      holders: accounts,
-      stakes: defaultDaoSettings.stakes.slice(0, accounts.length)
+      ...defaultDaoSettings
     }
     log(`Using default DAO settings`)
   }
 
-  if (!state.depositContractAddress && isPublicNet) {
+  if (!state.depositContractAddress && !state.daoInitialSettings.beaconSpec.depositContractAddress && isPublicNet) {
     throw new Error(`please specify deposit contract address in state file ${networkStateFile}`)
   }
 
@@ -102,7 +120,7 @@ async function deployDao({
   const depositContractResults = await useOrDeployDepositContract({
     artifacts,
     owner: state.owner,
-    depositContractAddress: state.depositContractAddress
+    depositContractAddress: state.depositContractAddress || state.daoInitialSettings.beaconSpec.depositContractAddress
   })
   updateNetworkState(state, depositContractResults)
   persistNetworkState(network.name, netId, state)
@@ -113,7 +131,7 @@ async function deployDao({
 
   Object.keys(state).forEach((key) => {
     if (key.match('app:.*')) {
-      let app = state[key]
+      const app = state[key]
       apps[`app:${app.name}`] = apps[app.name] || {
         name: app.name,
         fullName: app.fullName,
@@ -145,14 +163,15 @@ async function deployDao({
     ens,
     knownApps: { ...apps },
     owner: state.owner,
-    lidoApmRegistryAddress: state.lidoApmRegistryAddress,
-    depositContractAddress: state.depositContractAddress,
+    lidoApmAddress: state.lidoApmAddress,
+    depositContractAddress: state.depositContractAddress || state.daoInitialSettings.beaconSpec.depositContractAddress,
     aragonIDEnsNodeName: state.aragonIDEnsNodeName,
     lidoEnsNodeName: state.lidoEnsNodeName,
     daoTemplateNode: state.daoTemplateNode,
-    daoName: state.daoName,
+    daoAragonId: state.daoAragonId,
     daoInitialSettings: state.daoInitialSettings,
-    daoAddress: state.daoAddress
+    daoAddress: state.daoAddress,
+    vestingParams: state.vestingParams
   })
   updateNetworkState(state, daoResults)
   persistNetworkState(network.name, netId, state)
@@ -165,7 +184,9 @@ async function deployDao({
 async function useOrDeployDepositContract({ artifacts, owner, depositContractAddress }) {
   if (depositContractAddress) {
     log(`Using DepositContract at: ${yl(depositContractAddress)}`)
-    const depositContract = await artifacts.require('contracts/0.4.24/interfaces/IDepositContract.sol:IDepositContract').at(depositContractAddress)
+    const depositContract = await artifacts
+      .require('contracts/0.4.24/interfaces/IDepositContract.sol:IDepositContract')
+      .at(depositContractAddress)
     return { depositContract }
   }
   log(chalk.red(`WARN deploying a new instance of DepositContract`))
@@ -177,15 +198,16 @@ async function deployDAO({
   artifacts,
   owner,
   ens,
-  lidoApmRegistryAddress,
+  lidoApmAddress,
   daoTemplateNode,
   aragonIDEnsNodeName,
   lidoEnsNodeName,
-  daoName,
+  daoAragonId,
   daoInitialSettings,
   depositContractAddress,
   knownApps,
-  daoAddress
+  daoAddress,
+  vestingParams
 }) {
   if (daoAddress) {
     log(`Using DAO at: ${yl(daoAddress)}`)
@@ -200,22 +222,22 @@ async function deployDAO({
 
   const { contractAddress: daoTemplateAddress } = templateLatestVersion
   log(`Using registered DAO template: ${yl(daoTemplateAddress)}`)
-  const template = await artifacts.require('LidoTemplateE2E').at(daoTemplateAddress)
+  const template = await artifacts.require('LidoTemplate').at(daoTemplateAddress)
 
   log(`Using DepositContract at: ${yl(depositContractAddress)}`)
 
-  const daoEnsName = `${daoName}.${aragonIDEnsNodeName}`
+  const daoEnsName = `${daoAragonId}.${aragonIDEnsNodeName}`
 
-  log(`Using DAO name: ${yl(daoName)}`)
+  log(`Using DAO name: ${yl(daoAragonId)}`)
   log(`Using ENS name: ${yl(daoEnsName)}`)
   log(`Using DAO initial settings:`, daoInitialSettings)
 
   logSplitter()
 
   const votingSettings = [
-    daoInitialSettings.votingSupportRequired,
-    daoInitialSettings.votingMinAcceptanceQuorum,
-    daoInitialSettings.voteDuration
+    daoInitialSettings.voting.minSupportRequired,
+    daoInitialSettings.voting.minAcceptanceQuorum,
+    daoInitialSettings.voting.voteDuration
   ]
 
   const beaconSpec = [
@@ -225,17 +247,25 @@ async function deployDAO({
     daoInitialSettings.beaconSpec.genesisTime
   ]
 
+  const { fee } = daoInitialSettings
+  log(`Using fee initial settings:`)
+  log(`  total fee:`, chalk.yellow(`${fee.totalPercent}%`))
+  log(`  treasury fee:`, chalk.yellow(`${fee.treasuryPercent}%`))
+  log(`  insurance fee:`, chalk.yellow(`${fee.insurancePercent}%`))
+  log(`  node operators fee:`, chalk.yellow(`${fee.nodeOperatorsPercent}%`))
+
+  const feeSettings = [fee.totalPercent, fee.treasuryPercent, fee.insurancePercent, fee.nodeOperatorsPercent]
+
   const newDaoResult = await logTx(
     `Deploying DAO from template`,
     template.newDAO(
-      daoName,
-      daoInitialSettings.tokenName,
-      daoInitialSettings.tokenSymbol,
-      daoInitialSettings.holders,
-      daoInitialSettings.stakes,
+      daoAragonId,
+      daoInitialSettings.token.name,
+      daoInitialSettings.token.symbol,
       votingSettings,
       depositContractAddress,
       beaconSpec,
+      feeSettings,
       { from: owner }
     )
   )
@@ -261,8 +291,10 @@ async function deployDAO({
     }
   })
   logSplitter()
+  await issueTokens(owner, template, vestingParams)
+  logSplitter()
 
-  await logTx(`Finalizing DAO`, template.finalizeDAO({ from: owner }))
+  await logTx(`Finalizing DAO`, template.finalizeDAO(vestingParams.unvestedTokensAmount, { from: owner }))
 
   return { dao, token, knownApps }
 }
@@ -286,6 +318,71 @@ function getAppProxies(installedApps, knownApps) {
   }
 
   return appProxies
+}
+async function issueTokens(owner, template, vestingParams) {
+  const pairs = Object.entries(vestingParams.holders)
+  const holders = pairs.map((p) => p[0])
+  const amounts = pairs.map((p) => p[1])
+
+  log(`Using vestingParams settings:`)
+  log(`  Start:`, chalk.yellow(formatDate(vestingParams.start)))
+  log(`  Cliff:`, chalk.yellow(formatDate(vestingParams.cliff)))
+  log(`  End:`, chalk.yellow(formatDate(vestingParams.end)))
+  log(`  Revokable:`, chalk.yellow(vestingParams.revokable))
+
+  const totalSupply = bigSum(amounts, vestingParams.unvestedTokensAmount)
+
+  log(`  Total supply:`, chalk.yellow(web3.utils.fromWei(totalSupply.toString(), 'ether')))
+  log(`  Unvested tokens amount:`, chalk.yellow(web3.utils.fromWei(vestingParams.unvestedTokensAmount, 'ether')))
+  log(`  Token receivers (total ${chalk.yellow(holders.length)}):`)
+
+  holders.forEach((addr, i) => {
+    const amount = amounts[i]
+    const percentage = +new BN(amount).muln(10000).div(totalSupply) / 100
+    log(`    ${addr}: ${chalk.yellow(web3.utils.fromWei(amount, 'ether'))} (${percentage}%)`)
+  })
+
+  log.splitter()
+
+  const holdersInOneTx = Math.min(MAX_HOLDERS_IN_ONE_TX, holders.length)
+  const totalTxs = Math.ceil(holders.length / holdersInOneTx)
+
+  log(`Total batches:`, chalk.yellow(totalTxs))
+
+  const endTotalSupply = new BN(0)
+
+  for (let i = 0; i < totalTxs; ++i) {
+    const startIndex = i * holdersInOneTx
+    const iHolders = holders.slice(startIndex, startIndex + holdersInOneTx)
+    const iAmounts = amounts.slice(startIndex, startIndex + holdersInOneTx)
+
+    endTotalSupply.iadd(bigSum(iAmounts))
+    await logTx(
+      `issueTokens (batch ${i + 1})`,
+      template.issueTokens(
+        iHolders,
+        iAmounts,
+        vestingParams.start,
+        vestingParams.cliff,
+        vestingParams.end,
+        vestingParams.revokable,
+        '0x' + endTotalSupply.toString(16),
+        { from: owner }
+      )
+    )
+  }
+}
+
+function bigSum(amounts, initialAmount = 0) {
+  const sum = new BN(initialAmount)
+  amounts.forEach((amount) => {
+    sum.iadd(new BN(amount))
+  })
+  return sum
+}
+
+function formatDate(unixTimestamp) {
+  return new Date(unixTimestamp * 1000).toUTCString()
 }
 
 module.exports = runOrWrapScript(deployDao, module)

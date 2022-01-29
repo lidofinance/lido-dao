@@ -30,8 +30,10 @@ async function obtainDeployedAPM({ web3, artifacts }) {
 
   log(`Using LidoTemplate: ${chalk.yellow(state.daoTemplateAddress)}`)
   const template = await artifacts.require('LidoTemplate').at(state.daoTemplateAddress)
-
-  const daoDeployedEvt = await assertLastEvent(template, 'TmplDAOAndTokenDeployed')
+  if (state.daoTemplateDeployBlock) {
+    log(`Using LidoTemplate deploy block: ${chalk.yellow(state.daoTemplateDeployBlock)}`)
+  }
+  const daoDeployedEvt = await assertLastEvent(template, 'TmplDAOAndTokenDeployed', null, state.daoTemplateDeployBlock)
   state.newDaoTx = daoDeployedEvt.transactionHash
   log(`Using newDao transaction: ${chalk.yellow(state.newDaoTx)}`)
   persistNetworkState(network.name, netId, state)
@@ -49,12 +51,15 @@ async function obtainDeployedAPM({ web3, artifacts }) {
   state.daoAddress = dao.address
   state.daoTokenAddress = daoToken.address
 
-  const dataByAppId = await assertInstalledApps({
-    template,
-    dao,
-    lidoApmEnsName: state.lidoApmEnsName,
-    appProxyUpgradeableArtifactName: 'external:AppProxyUpgradeable_DAO'
-  })
+  const dataByAppId = await assertInstalledApps(
+    {
+      template,
+      dao,
+      lidoApmEnsName: state.lidoApmEnsName,
+      appProxyUpgradeableArtifactName: 'external:AppProxyUpgradeable_DAO'
+    },
+    state.daoTemplateDeployBlock
+  )
 
   for (const [appName, appData] of Object.entries(dataByAppId)) {
     const key = `app:${appName}`

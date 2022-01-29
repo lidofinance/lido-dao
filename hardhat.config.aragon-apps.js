@@ -16,7 +16,3 @@ module.exports = {
     ...aragonConfig
   }
 }
-
-if (process.env.STD_APPS_DEPLOY) {
-  console.log(`Hardhat config:`, module.exports)
-}

@@ -40,8 +40,11 @@ async function deployDAO({ web3, artifacts }) {
 
   log(`Using LidoTemplate: ${chalk.yellow(state.daoTemplateAddress)}`)
   const template = await artifacts.require('LidoTemplate').at(state.daoTemplateAddress)
+  if (state.daoTemplateDeployBlock) {
+    log(`Using LidoTemplate deploy block: ${chalk.yellow(state.daoTemplateDeployBlock)}`)
+  }
 
-  const reposCreatedEvt = await assertLastEvent(template, 'TmplReposCreated')
+  const reposCreatedEvt = await assertLastEvent(template, 'TmplReposCreated', null, state.daoTemplateDeployBlock)
   state.createAppReposTx = reposCreatedEvt.transactionHash
   log(`Using createRepos transaction: ${chalk.yellow(state.createAppReposTx)}`)
   persistNetworkState(network.name, netId, state)
@@ -50,7 +53,7 @@ async function deployDAO({ web3, artifacts }) {
   await checkAppRepos(state)
   log.splitter()
 
-  const { daoInitialSettings } = state
+  const { daoInitialSettings, depositContractAddress } = state
 
   const votingSettings = [
     daoInitialSettings.voting.minSupportRequired,
@@ -74,7 +77,7 @@ async function deployDAO({ web3, artifacts }) {
       daoInitialSettings.token.name,
       daoInitialSettings.token.symbol,
       votingSettings,
-      daoInitialSettings.beaconSpec.depositContractAddress,
+      daoInitialSettings.beaconSpec.depositContractAddress || depositContractAddress,
       beaconSpec
     ],
     from: state.multisigAddress

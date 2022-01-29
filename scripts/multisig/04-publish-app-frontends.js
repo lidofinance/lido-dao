@@ -17,7 +17,7 @@ const { readJSON } = require('../helpers/fs')
 require('@aragon/buidler-aragon/dist/bootstrap-paths')
 
 const { generateArtifacts } = require('@aragon/buidler-aragon/dist/src/utils/artifact/generateArtifacts')
-const { uploadDirToIpfs } = require('@aragon/buidler-aragon/dist/src/utils/ipfs/uploadDirToIpfs')
+const { uploadDirToIpfs } = require('../helpers/ipfs')
 const { toContentUri } = require('@aragon/buidler-aragon/dist/src/utils/apm/utils')
 
 const { APP_NAMES } = require('./constants')
@@ -28,12 +28,7 @@ const REQUIRED_NET_STATE = ['lidoApmEnsName', 'ipfsAPI']
 const APPS = process.env.APPS || '*'
 const APPS_DIR_PATH = process.env.APPS_DIR_PATH || path.resolve(__dirname, '..', '..', 'apps')
 
-async function publishAppFrontends({
-  web3,
-  artifacts,
-  appsDirPath = APPS_DIR_PATH,
-  appDirs = APPS
-}) {
+async function publishAppFrontends({ web3, artifacts, appsDirPath = APPS_DIR_PATH, appDirs = APPS }) {
   const netId = await web3.eth.net.getId()
 
   logWideSplitter()

@@ -12,13 +12,7 @@ const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = re
 const TLD = 'eth'
 const CONTROLLER_INTERFACE_ID = '0x018fac06'
 
-const REQUIRED_NET_STATE = [
-  'ensAddress',
-  'lidoApmEnsName',
-  'lidoApmEnsRegDurationSec',
-  'multisigAddress',
-  'daoTemplateAddress'
-]
+const REQUIRED_NET_STATE = ['ensAddress', 'lidoApmEnsName', 'lidoApmEnsRegDurationSec', 'multisigAddress', 'daoTemplateAddress']
 
 async function deployTemplate({ web3, artifacts }) {
   const netId = await web3.eth.net.getId()
@@ -35,95 +29,110 @@ async function deployTemplate({ web3, artifacts }) {
   const ens = await artifacts.require('ENS').at(state.ensAddress)
 
   const tldNode = namehash(TLD)
-  const tldResolverAddr = await ens.resolver(tldNode)
 
-  log(`Using TLD resolver:`, yl(tldResolverAddr))
-  const tldResolver = await artifacts.require('IInterfaceResolver').at(tldResolverAddr)
-
-  const controllerAddr = await tldResolver.interfaceImplementer(tldNode, CONTROLLER_INTERFACE_ID)
-
-  log(`Using TLD controller:`, yl(controllerAddr))
-  const controller = await artifacts.require('IETHRegistrarController').at(controllerAddr)
-
-  const controllerParams = await Promise.all([
-    controller.minCommitmentAge(),
-    controller.maxCommitmentAge(),
-    controller.MIN_REGISTRATION_DURATION()
-  ])
-
-  const [minCommitmentAge, maxCommitmentAge, minRegistrationDuration] = controllerParams.map(x => +x)
-
-  log(`Controller min commitment age: ${yl(minCommitmentAge)} sec`)
-  log(`Controller max commitment age: ${yl(maxCommitmentAge)} sec`)
-  log(`Controller min registration duration: ${yl(formatTimeInterval(minRegistrationDuration))} (${minRegistrationDuration} sec)`)
-
-  log.splitter()
-
-  const domain = state.lidoApmEnsName
-  const node = namehash(domain)
-
-  log(`ENS domain: ${yl(`${domain}`)} (${node})`)
-
-  const domainParts = domain.split('.')
-  assert.lengthOf(domainParts, 2, `the domain is a second-level domain`)
-  assert.equal(domainParts[1], TLD, `the TLD is the expected one`)
-
-  const domainLabel = domainParts[0]
+  const domainName = state.lidoApmEnsName
   const domainOwner = state.daoTemplateAddress
   const domainRegDuration = state.lidoApmEnsRegDurationSec
 
-  log(`ENS domain owner:`, yl(domainOwner))
-  log(`ENS domain registration duration: ${yl(formatTimeInterval(domainRegDuration))} (${domainRegDuration} sec)`)
+  const node = namehash(domainName)
 
-  log.splitter()
+  log(`ENS domain: ${yl(`${domainName}`)} (${node})`)
 
-  assert.log(
-    assert.isTrue,
-    await controller.available(domainLabel),
-    `the domain is available`
-  )
+  const domainParts = domainName.split('.')
+  assert.lengthOf(domainParts, 2, `the domain is a second-level domain`)
+  assert.equal(domainParts[1], TLD, `the TLD is the expected one`)
+  const [domainLabel] = domainParts
 
-  assert.log(
-    assert.isAtLeast,
-    domainRegDuration,
-    minRegistrationDuration,
-    `registration duration is at least the minimum one`
-  )
+  const labelHash = '0x' + keccak256(domainLabel)
 
-  log.splitter()
+  log(`TLD node: ${chalk.yellow(TLD)} (${tldNode})`)
+  log(`Label: ${chalk.yellow(domainLabel)} (${labelHash})`)
 
-  const salt = '0x' + crypto.randomBytes(32).toString('hex')
-  log(`Using salt:`, yl(salt))
+  if ((await ens.owner(node)) !== state.multisigAddress && (await ens.owner(tldNode)) !== state.multisigAddress) {
+    const tldResolverAddr = await ens.resolver(tldNode)
+    log(`Using TLD resolver:`, yl(tldResolverAddr))
+    const tldResolver = await artifacts.require('IInterfaceResolver').at(tldResolverAddr)
 
-  const commitment = await controller.makeCommitment(domainLabel, domainOwner, salt)
-  log(`Using commitment:`, yl(commitment))
+    const controllerAddr = await tldResolver.interfaceImplementer(tldNode, CONTROLLER_INTERFACE_ID)
 
-  const rentPrice = await controller.rentPrice(domainLabel, domainRegDuration)
-  log(`Rent price:`, yl(`${web3.utils.fromWei(rentPrice, 'ether')} ETH`))
+    log(`Using TLD controller:`, yl(controllerAddr))
+    const controller = await artifacts.require('IETHRegistrarController').at(controllerAddr)
 
-  // increasing by 15% to account for price fluctuation; the difference will be refunded
-  const registerTxValue = rentPrice.muln(115).divn(100)
-  log(`Register TX value:`, yl(`${web3.utils.fromWei(registerTxValue, 'ether')} ETH`))
+    const controllerParams = await Promise.all([
+      controller.minCommitmentAge(),
+      controller.maxCommitmentAge(),
+      controller.MIN_REGISTRATION_DURATION()
+    ])
 
-  log.splitter()
+    const [minCommitmentAge, maxCommitmentAge, minRegistrationDuration] = controllerParams.map((x) => +x)
 
-  await saveCallTxData(`commit`, controller, 'commit', `tx-02-1-commit-ens-registration.json`, {
-    arguments: [commitment],
-    from: state.multisigAddress
-  })
+    log(`Controller min commitment age: ${yl(minCommitmentAge)} sec`)
+    log(`Controller max commitment age: ${yl(maxCommitmentAge)} sec`)
+    log(`Controller min registration duration: ${yl(formatTimeInterval(minRegistrationDuration))} (${minRegistrationDuration} sec)`)
 
-  await saveCallTxData(`register`, controller, 'register', `tx-02-2-make-ens-registration.json`, {
-    arguments: [domainLabel, domainOwner, domainRegDuration, salt],
-    from: state.multisigAddress,
-    value: '0x' + registerTxValue.toString(16),
-    estimateGas: false // estimation will fail since no commitment is actually made yet
-  })
+    log.splitter()
 
-  log.splitter()
-  log(gr(`Before continuing the deployment, please send all transactions listed above.\n`))
-  log(gr(`Make sure to send the second transaction at least ${yl(minCommitmentAge)} seconds after the`))
-  log(gr(`first one is included in a block, but no more than ${yl(maxCommitmentAge)} seconds after that.`))
-  log.splitter()
+    log(`ENS domain owner:`, yl(domainOwner))
+    log(`ENS domain registration duration: ${yl(formatTimeInterval(domainRegDuration))} (${domainRegDuration} sec)`)
+
+    log.splitter()
+    assert.log(assert.isTrue, await controller.available(domainLabel), `the domain is available`)
+    assert.log(assert.isAtLeast, domainRegDuration, minRegistrationDuration, `registration duration is at least the minimum one`)
+    log.splitter()
+
+    const salt = '0x' + crypto.randomBytes(32).toString('hex')
+    log(`Using salt:`, yl(salt))
+
+    const commitment = await controller.makeCommitment(domainLabel, domainOwner, salt)
+    log(`Using commitment:`, yl(commitment))
+
+    const rentPrice = await controller.rentPrice(domainLabel, domainRegDuration)
+    log(`Rent price:`, yl(`${web3.utils.fromWei(rentPrice, 'ether')} ETH`))
+
+    // increasing by 15% to account for price fluctuation; the difference will be refunded
+    const registerTxValue = rentPrice.muln(115).divn(100)
+    log(`Register TX value:`, yl(`${web3.utils.fromWei(registerTxValue, 'ether')} ETH`))
+
+    log.splitter()
+
+    await saveCallTxData(`commit`, controller, 'commit', `tx-02-1-commit-ens-registration.json`, {
+      arguments: [commitment],
+      from: state.multisigAddress
+    })
+
+    await saveCallTxData(`register`, controller, 'register', `tx-02-2-make-ens-registration.json`, {
+      arguments: [domainLabel, domainOwner, domainRegDuration, salt],
+      from: state.multisigAddress,
+      value: '0x' + registerTxValue.toString(16),
+      estimateGas: false // estimation will fail since no commitment is actually made yet
+    })
+
+    log.splitter()
+    log(gr(`Before continuing the deployment, please send all transactions listed above.\n`))
+    log(gr(`Make sure to send the second transaction at least ${yl(minCommitmentAge)} seconds after the`))
+    log(gr(`first one is included in a block, but no more than ${yl(maxCommitmentAge)} seconds after that.`))
+    log.splitter()
+  } else {
+    log(`ENS domain new owner:`, yl(domainOwner))
+
+    if ((await ens.owner(node)) === state.multisigAddress) {
+      log(`Transferring name ownership from owner ${chalk.yellow(state.multisigAddress)} to template ${chalk.yellow(domainOwner)}`)
+      await saveCallTxData(`setOwner`, ens, 'setOwner', `tx-02-2-make-ens-registration.json`, {
+        arguments: [node, domainOwner],
+        from: state.multisigAddress
+      })
+    } else {
+      log(`Creating the subdomain and assigning it to template ${chalk.yellow(domainOwner)}`)
+      await saveCallTxData(`setSubnodeOwner`, ens, 'setSubnodeOwner', `tx-02-2-make-ens-registration.json`, {
+        arguments: [tldNode, labelHash, domainOwner],
+        from: state.multisigAddress
+      })
+    }
+
+    log.splitter()
+    log(gr(`Before continuing the deployment, please send all transactions listed above.\n`))
+    log.splitter()
+  }
 }
 
 const HOUR = 60 * 60

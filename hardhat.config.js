@@ -13,6 +13,14 @@ require('solidity-coverage')
 const NETWORK_NAME = getNetworkName()
 const ETH_ACCOUNT_NAME = process.env.ETH_ACCOUNT_NAME
 
+task('accounts', 'Prints the list of accounts', async (taskArgs, hre) => {
+  const accounts = await hre.ethers.getSigners()
+
+  for (const account of accounts) {
+    console.log(account.address)
+  }
+})
+
 const accounts = readJson(`./accounts.json`) || {
   eth: { dev: 'remote' },
   etherscan: { apiKey: undefined },
@@ -36,11 +44,25 @@ const getNetConfig = (networkName, ethAccountName) => {
   }
   const byNetName = {
     localhost,
-    e2e: {
+    kintsugi: {
       ...base,
-      accounts: accounts.eth.e2e,
+      accounts: accounts.eth.kintsugi,
+      // url: '	https://rpc.kintsugi.themerge.dev',
+      // url: 'http://kintsugi.testnet.fi/eth1rpc',
+      // url: 'http://108.61.179.232:8545',
+      url: 'http://kintsugi.testnet.fi:8545',
+      chainId: 1337702,
+      // gas: 10000000,
+      gasPrice: 2000000000
+    },
+    // local
+    local: {
+      ...base,
+      accounts: {
+        mnemonic: 'explain tackle mirror kit van hammer degree position ginger unfair soup bonus'
+      },
       url: 'http://localhost:8545',
-      chainId: 1
+      chainId: 1337
     },
     hardhat: {
       blockGasLimit: 20000000,
@@ -158,8 +180,16 @@ module.exports = {
   },
   etherscan: accounts.etherscan,
   aragon: {
-    ipfsApi: process.env.IPFS_API_URL || 'https://goerli.lido.fi/ipfs-api/v0',
-    ipfsGateway: process.env.IPFS_GATEWAY_URL || 'https://goerli.lido.fi'
+    ipfsApi: process.env.IPFS_API_URL || 'https://ipfs.infura.io:5001/api/v0',
+    ipfsGateway: process.env.IPFS_GATEWAY_URL || 'https://ipfs.io/'
+  },
+  ipfs: {
+    url: process.env.IPFS_API_URL || 'https://ipfs.infura.io:5001/api/v0',
+    gateway: process.env.IPFS_GATEWAY_URL || 'https://ipfs.io/',
+    pinata: {
+      key: 'YOUR_PINATA_API_KEY',
+      secret: 'YOUR_PINATA_API_SECRET_KEY'
+    }
   }
 }
 
