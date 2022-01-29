@@ -4,7 +4,7 @@
       "name": "Manage signing keys",
       "id": "MANAGE_SIGNING_KEYS",
       "params": [
-         "Node Operator id"
+        "Node Operator id"
       ]
     },
     {
@@ -16,39 +16,39 @@
       "name": "Activate/deactivate node operators",
       "id": "SET_NODE_OPERATOR_ACTIVE_ROLE",
       "params": [
-         "Node Operator id",
-         "New state"
+        "Node Operator id",
+        "New state"
       ]
     },
     {
       "name": "Set name of a node operator",
       "id": "SET_NODE_OPERATOR_NAME_ROLE",
       "params": [
-         "Node Operator id"
+        "Node Operator id"
       ]
     },
     {
       "name": "Set rewards address of a node operator",
       "id": "SET_NODE_OPERATOR_ADDRESS_ROLE",
       "params": [
-         "Node Operator id",
-         "New rewards address"
+        "Node Operator id",
+        "New rewards address"
       ]
     },
     {
       "name": "Set staking limit of a node operator",
       "id": "SET_NODE_OPERATOR_LIMIT_ROLE",
       "params": [
-         "Node Operator id",
-         "New validators limit value"
+        "Node Operator id",
+        "New validators limit value"
       ]
     },
     {
       "name": "Report increments of stopped validators for a node operator",
       "id": "REPORT_STOPPED_VALIDATORS_ROLE",
       "params": [
-         "Node Operator id",
-         "Stopped validators increment"
+        "Node Operator id",
+        "Stopped validators increment"
       ]
     }
   ],
@@ -68,7 +68,13 @@
     "mainnet": {
       "appName": "node-operators-registry.lidopm.eth",
       "network": "mainnet"
+    },
+    "localhost": {
+      "appName": "node-operators-registry.lidopm.eth",
+      "network": "development",
+      "registry": "0xa16E02E87b7454126E5E10d957A927A7F5B5d2be"
     }
   },
+  "appName": "node-operators-registry.lidopm.eth",
   "path": "../../contracts/0.4.24/nos/NodeOperatorsRegistry.sol"
 }

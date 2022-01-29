@@ -15,8 +15,8 @@ module.exports = {
     ...baseConfig.aragon,
     appServePort: 3011,
     clientServePort: 3000,
-    appSrcPath: 'app/',
-    appBuildOutputPath: 'dist/',
+    appSrcPath: 'apps/lidooracle/app/',
+    appBuildOutputPath: 'apps/lidooracle/dist/',
     appName: 'lidooracle',
     hooks // Path to script hooks
   }

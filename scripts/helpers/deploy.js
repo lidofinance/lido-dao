@@ -65,6 +65,17 @@ async function getDeployed(artifactName, deployTxHash) {
   return await Artifact.at(receipt.contractAddress)
 }
 
+async function getTxBlock(txHash) {
+  const receipt = await web3.eth.getTransactionReceipt(txHash)
+  if (!receipt) {
+    throw new Error(`transaction ${txHash} not found`)
+  }
+  if (!receipt.blockNumber) {
+    throw new Error(`transaction ${txHash} does not contain blockNumber`)
+  }
+  return receipt.blockNumber
+}
+
 async function assertDeployedBytecode(address, artifact, desc = '') {
   if (typeof artifact === 'string') {
     const artifactName = artifact
@@ -110,6 +121,7 @@ module.exports = {
   useOrDeploy,
   useOrGetDeployed,
   getDeployed,
+  getTxBlock,
   assertDeployedBytecode,
   assertProxiedContractBytecode,
   withArgs

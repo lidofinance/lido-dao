@@ -285,17 +285,6 @@ export default function App() {
       {isSyncing && <SyncIndicator />}
       <Header
         primary={appName.toUpperCase()}
-        secondary={
-          <Button
-            mode="strong"
-            onClick={openDbePanel}
-            css={`
-              background: ${theme.negative};
-            `}
-          >
-            DEPOSIT BUFFERED ETHER
-          </Button>
-        }
       />
       <Split
         primary={
