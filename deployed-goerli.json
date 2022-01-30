@@ -16,14 +16,14 @@
     "0x70B3284fD016a570146cE48fC54D7A81bCd94BBa"
   ],
   "daoTemplateDeployTx": "0xda8746bca23c7a4f7c58e1a3370cb1ffa1e250ace90fd4684dbb1842ee6ac921",
-  "lidoBaseDeployTx": "0xedff0d82dd32fdafa30a62388898e35b8c98759c15aa92ab1ba87b779d86c0bb",
+  "lidoBaseDeployTx": "0x4553e47f6030b9b28a17e92b0e7cc9ac64964e48e3fe2c2077aec486b44508b1",
   "oracleBaseDeployTx": "0x4ff91791cc0f969cf9fe0cc9a6241593d26b20ee27f785a2eb002258e25f4e43",
   "nodeOperatorsRegistryBaseDeployTx": "0x25cf4db41a4159e94826fd0495bafe02e4a015a9bcf0ffbc0e684a5cafe6eefc",
   "compositePostRebaseBeaconReceiverDeployTx": "0xf0f2d207ac3693abb8aa58e885aeff12371bb033d64376a409a8dd43d28d85ea",
   "selfOwnedStETHBurnerDeployTx": "0xa6267ebc56579f0c9e3f3b55908b851db971a83d5f97d4d2df9984396ae03b2f",
   "daoTemplateAddress": "0x9A4a36B5fe517f98BD6529d4317B0b723F600AaD",
   "app:lido": {
-    "baseAddress": "0x25C29642Aa0263B8Bf0A621a264Be6b6238B90E6",
+    "baseAddress": "0x5D3891E3015AED193eC4502D98524c4a94CfA6B5",
     "ipfsCid": "QmbmPW5r9HMdyUARNJjjE7MNqBUGrXashwoWvqRZhc1t5b",
     "contentURI": "0x697066733a516d626d5057357239484d64795541524e4a6a6a45374d4e714255477258617368776f577671525a686331743562",
     "name": "lido",
@@ -184,5 +184,8 @@
     0,
     4
   ],
-  "selfOwnedStETHBurnerAddress": "0xf6a64DcB06Ef7eB1ee94aDfD7D10ACB44D9A9888"
+  "selfOwnedStETHBurnerAddress": "0xf6a64DcB06Ef7eB1ee94aDfD7D10ACB44D9A9888",
+  "mevTxFeeVaultDeployTx": "0xa93e29b3fc45eef335fcbe84c3587e93313281e2ff31a3df091400079a6b564c",
+  "mevTxFeeVaultAddress": "0x44D92F61E2236A7d0e9879aB87CF34622E85124e",
+  "mevTxFeeRewardsEmulator": "0x636ebc9dd60ef85bbaf2abb0bad789676aac12d0"
 }
