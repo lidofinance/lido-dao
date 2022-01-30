@@ -2,11 +2,14 @@
 
 // SPDX-License-Identifier: GPL-3.0
 
-
+/* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
-interface ILido {
+import "@openzeppelin/contracts-v4.4/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol";
 
+
+interface ILido {
     /**
     * @notice A payable function supposed to be funded only by LidoMevTxFeeVault contract
     * @dev We need a separate function because funds received by default payable function
@@ -27,11 +30,39 @@ interface ILido {
 */
 contract LidoMevTxFeeVault {
     address public immutable LIDO;
+    address public immutable TREASURY;
 
-    constructor(address _lidoAddress) {
-        require(_lidoAddress != address(0), "LIDO_ZERO_ADDRESS");
+    /**
+      * Emitted when the ERC20 `token` recovered (e.g. transferred)
+      * to the Lido treasure address by `requestedBy` sender.
+      */
+    event ERC20Recovered(
+        address indexed requestedBy,
+        address indexed token,
+        uint256 amount
+    );
 
-        LIDO = _lidoAddress;
+    /**
+      * Emitted when the ERC721-compatible `token` (NFT) recovered (e.g. transferred)
+      * to the Lido treasure address by `requestedBy` sender.
+      */
+    event ERC721Recovered(
+        address indexed requestedBy,
+        address indexed token,
+        uint256 tokenId
+    );
+
+    /**
+      * Ctor
+      *
+      * @param _lido the Lido token (stETH) address
+      * @param _treasury the Lido treasury address (see ERC20/ERC721-recovery interfaces)
+      */
+    constructor(address _lido, address _treasury) {
+        require(_lido != address(0), "LIDO_ZERO_ADDRESS");
+
+        LIDO = _lido;
+        TREASURY = _treasury;
     }
 
     /**
@@ -54,5 +85,33 @@ contract LidoMevTxFeeVault {
             ILido(LIDO).receiveMevTxFee{value: amount}();
         }
         return amount;
+    }
+
+    /**
+      * Transfers a given `_amount` of an ERC20-token (defined by the `_token` contract address)
+      * currently belonging to the burner contract address to the Lido treasury address.
+      *
+      * @param _token an ERC20-compatible token
+      * @param _amount token amount
+      */
+    function recoverERC20(address _token, uint256 _amount) external {
+        require(_amount > 0, "ZERO_RECOVERY_AMOUNT");
+
+        emit ERC20Recovered(msg.sender, _token, _amount);
+
+        require(IERC20(_token).transfer(TREASURY, _amount));
+    }
+
+    /**
+      * Transfers a given token_id of an ERC721-compatible NFT (defined by the token contract address)
+      * currently belonging to the burner contract address to the Lido treasury address.
+      *
+      * @param _token an ERC721-compatible token
+      * @param _tokenId minted token id
+      */
+    function recoverERC721(address _token, uint256 _tokenId) external {
+        emit ERC721Recovered(msg.sender, _token, _tokenId);
+
+        IERC721(_token).transferFrom(address(this), TREASURY, _tokenId);
     }
 }

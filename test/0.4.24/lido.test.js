@@ -204,25 +204,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await app.methods['depositBufferedEther()']({ from: depositor })
   }
 
-  it('Addresses which are not Lido contract cannot withdraw from MEV vault', async () => {
-    await assertRevert(mevVault.withdrawRewards({ from: user1 }), 'ONLY_LIDO_CAN_WITHDRAW')
-    await assertRevert(mevVault.withdrawRewards({ from: voting }), 'ONLY_LIDO_CAN_WITHDRAW')
-    await assertRevert(mevVault.withdrawRewards({ from: appManager }), 'ONLY_LIDO_CAN_WITHDRAW')
-  })
-
-  it('MEV Tx Fee vault can receive Ether by plain transfers (no call data)', async () => {
-    const before = +(await web3.eth.getBalance(mevVault.address)).toString()
-    const amount = 0.02
-    await web3.eth.sendTransaction({ to: mevVault.address, from: user2, value: ETH(amount) })
-    assertBn(await web3.eth.getBalance(mevVault.address), ETH(before + amount))
-  })
-
-  it('MEV Tx Fee vault refuses to receive Ether by transfers with call data', async () => {
-    const before = +(await web3.eth.getBalance(mevVault.address)).toString()
-    const amount = 0.02
-    await assertRevert(web3.eth.sendTransaction({ to: mevVault.address, from: user2, value: ETH(amount), data: '0x12345678' }))
-  })
-
   it('MEV distribution works when zero rewards reported', async () => {
     const depositAmount = 32
     const mevAmount = 10
