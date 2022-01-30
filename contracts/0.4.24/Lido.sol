@@ -456,10 +456,11 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     }
 
     /**
-     * @dev Emits an {Transfer} event where from is 0 address. Indicates mint events.
+     * @dev Emits {Transfer} and {TransferShares} events where `from` is 0 address. Indicates mint events.
      */
     function _emitTransferAfterMintingShares(address _to, uint256 _sharesAmount) internal {
         emit Transfer(address(0), _to, getPooledEthByShares(_sharesAmount));
+        emit TransferShares(address(0), _to, _sharesAmount);
     }
 
     /**
