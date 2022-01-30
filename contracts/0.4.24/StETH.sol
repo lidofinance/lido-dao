@@ -82,6 +82,22 @@ contract StETH is IERC20, Pausable {
     bytes32 internal constant TOTAL_SHARES_POSITION = keccak256("lido.StETH.totalShares");
 
     /**
+     * @notice An executed stETH burn event
+     *
+     * @dev Reports simultaneously stETH amount and shares amount.
+     * The stETH amount is calculated before the burning incurred rebase.
+     *
+     * @param account holder of the burnt stETH
+     * @param amount amount of burnt stETH
+     * @param sharesAmount amount of burnt shares
+     */
+    event StETHBurnt(
+        address indexed account,
+        uint256 amount,
+        uint256 sharesAmount
+    );
+
+    /**
      * @return the name of the token.
      */
     function name() public pure returns (string) {
@@ -403,6 +419,9 @@ contract StETH is IERC20, Pausable {
         uint256 accountShares = shares[_account];
         require(_sharesAmount <= accountShares, "BURN_AMOUNT_EXCEEDS_BALANCE");
 
+        uint256 amount = getPooledEthByShares(_sharesAmount);
+        emit StETHBurnt(_account, amount, _sharesAmount);
+
         newTotalShares = _getTotalShares().sub(_sharesAmount);
         TOTAL_SHARES_POSITION.setStorageUint256(newTotalShares);
 
@@ -413,5 +432,7 @@ contract StETH is IERC20, Pausable {
         // all other token holders. The total supply of the token doesn't change as the result.
         // This is equivalent to performing a send from `address` to each other token holder address,
         // but we cannot reflect this as it would require sending an unbounded number of events.
+
+        // We're emitting StETHBurnt event to provide an explicit rebase log record nonetheless.
     }
 }
