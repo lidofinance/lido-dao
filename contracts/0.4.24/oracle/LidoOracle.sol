@@ -73,7 +73,12 @@ contract LidoOracle is ILidoOracle, AragonApp {
     bytes32 internal constant BEACON_SPEC_POSITION =
         0x805e82d53a51be3dfde7cfed901f1f96f5dad18e874708b082adb8841e8ca909; // keccak256("lido.LidoOracle.beaconSpec")
 
-    /// Version of the initialized contract data, v1 is 0
+    /// Version of the initialized contract data
+    /// NB: Contract versioning starts from 1.
+    /// This version sotred in CONTRACT_VERSION_POSITION equals to
+    /// - 0 right after deployment when no initializer is invoked yet
+    /// - N after calling initialize() during  deployment from scratch, where N is the current contract version
+    /// - N after upgrading contract from the previous version (after calling finalize_vN())
     bytes32 internal constant CONTRACT_VERSION_POSITION =
         0x75be19a3f314d89bd1f84d30a6c84e2f1cd7afc7b6ca21876564c265113bb7e4; // keccak256("lido.LidoOracle.contractVersion")
 
@@ -112,7 +117,8 @@ contract LidoOracle is ILidoOracle, AragonApp {
     bytes32 internal constant ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION =
         0x92ba7776ed6c5d13cf023555a94e70b823a4aebd56ed522a77345ff5cd8a9109; // keccak256("lido.LidoOracle.allowedBeaconBalanceDecrease")
 
-    /// This variable is from v1: the last reported epoch, used only in the initializer
+    /// This is a dead variable: it was used only in v1 and in upgrade v1 --> v2
+    /// Just keep in mind that storage at this position is occupied but with no actual usage
     bytes32 internal constant V1_LAST_REPORTED_EPOCH_ID_POSITION =
         0xfe0250ed0c5d8af6526c6d133fccb8e5a55dd6b1aa6696ed0c327f8e517b5a94; // keccak256("lido.LidoOracle.lastReportedEpochId")
 
@@ -330,20 +336,48 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * @notice Initialize the contract v2 data, with sanity check bounds
-     * (`_allowedBeaconBalanceAnnualRelativeIncrease`, `_allowedBeaconBalanceRelativeDecrease`)
-     * @dev Original initialize function removed from v2 because it is invoked only once
+     * @notice Initialize the contract (version 3 for now) from scratch
+     * @dev TODO: Add link to the related LIP
+     * @param _lido Address of Lido contract
+     * @param _epochsPerFrame Number of epochs per frame
+     * @param _slotsPerEpoch Number of slots per epoch
+     * @param _secondsPerSlot Number of seconds per slot
+     * @param _genesisTime Genesis time
+     * @param _allowedBeaconBalanceAnnualRelativeIncrease Allowed beacon balance annual relative increase (e.g. 1000 means 10% yearly increase)
+     * @param _allowedBeaconBalanceRelativeDecrease Allowed beacon balance moment descreat (e.g. 500 means 5% moment decrease)
      */
-    function initialize_v2(
+    function initialize(
+        address _lido,
+        uint64 _epochsPerFrame,
+        uint64 _slotsPerEpoch,
+        uint64 _secondsPerSlot,
+        uint64 _genesisTime,
         uint256 _allowedBeaconBalanceAnnualRelativeIncrease,
         uint256 _allowedBeaconBalanceRelativeDecrease
     )
-        external
+        external onlyInit
     {
-        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "ALREADY_INITIALIZED");
-        CONTRACT_VERSION_POSITION.setStorageUint256(1);
-        emit ContractVersionSet(1);
+        assert(1 == ((1 << (MAX_MEMBERS - 1)) >> (MAX_MEMBERS - 1)));  // static assert
 
+        // We consider storage state right after deployment (no initialize() called yet) as version 0
+
+        // Initializations for v0 --> v1 (considering version semantically)
+        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "BASE_VERSION_MUST_BE_ZERO");
+
+        _setBeaconSpec(
+            _epochsPerFrame,
+            _slotsPerEpoch,
+            _secondsPerSlot,
+            _genesisTime
+        );
+
+        LIDO_POSITION.setStorageAddress(_lido);
+
+        QUORUM_POSITION.setStorageUint256(1);
+        emit QuorumChanged(1);
+
+
+        // Initializations for v1 --> v2 (considering version semantically)
         ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION
             .setStorageUint256(_allowedBeaconBalanceAnnualRelativeIncrease);
         emit AllowedBeaconBalanceAnnualRelativeIncreaseSet(_allowedBeaconBalanceAnnualRelativeIncrease);
@@ -352,16 +386,39 @@ contract LidoOracle is ILidoOracle, AragonApp {
             .setStorageUint256(_allowedBeaconBalanceRelativeDecrease);
         emit AllowedBeaconBalanceRelativeDecreaseSet(_allowedBeaconBalanceRelativeDecrease);
 
-        // set last completed epoch as V1's contract last reported epoch, in the vast majority of
-        // cases this is true, in others the error is within a frame
-        uint256 lastReportedEpoch = V1_LAST_REPORTED_EPOCH_ID_POSITION.getStorageUint256();
-        LAST_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(lastReportedEpoch);
-
-        // set expected epoch to the first epoch for the next frame
+        // // set expected epoch to the first epoch for the next frame
         BeaconSpec memory beaconSpec = _getBeaconSpec();
-        uint256 expectedEpoch = _getFrameFirstEpochId(lastReportedEpoch, beaconSpec) + beaconSpec.epochsPerFrame;
+        uint256 expectedEpoch = _getFrameFirstEpochId(0, beaconSpec) + beaconSpec.epochsPerFrame;
         EXPECTED_EPOCH_ID_POSITION.setStorageUint256(expectedEpoch);
         emit ExpectedEpochIdUpdated(expectedEpoch);
+
+        // Initializations for v2 --> v3 (considering version semantically)
+        _initialize_v3();
+
+        // Need this despite contract version check because Aragon requires it to handle auth() modificators properly
+        initialized();
+    }
+
+    /**
+     * @notice A function to finalize upgrade to v3 (from v1). Can be called only once
+     * @dev Value 2 in CONTRACT_VERSION_POSITION is skipped due to change in numbering
+     * .    For more details see LIP-??? _initialize_v3()
+     */
+    function finalizeUpgrade_v3() external {
+        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 1, "WRONG_BASE_VERSION");
+
+        _initialize_v3();
+    }
+
+    /**
+     * @notice A dummy incremental v1/v2 --> v3 initialize function. Just corrects version number in storage
+     * @dev This function is introduced just to set in correspondence version number in storage,
+     * semantic version of the contract and number N used in naming of _initialize_nN/finalizeUpgrade_vN.
+     * NB, that thus version 2 is skipped 
+     */
+    function _initialize_v3() {
+        CONTRACT_VERSION_POSITION.setStorageUint256(3);
+        emit ContractVersionSet(3);
     }
 
     /**
