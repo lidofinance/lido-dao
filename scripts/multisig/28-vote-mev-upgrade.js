@@ -1,5 +1,6 @@
 const { hash: namehash } = require('eth-ens-namehash')
 const { encodeCallScript } = require('@aragon/contract-helpers-test/src/aragon-os')
+const { BN } = require('bn.js')
 
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, logSplitter, logWideSplitter, yl, gr } = require('../helpers/log')
@@ -18,15 +19,15 @@ const REQUIRED_NET_STATE = [
   `app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`
 ]
 
-async function upgradeAppImpl({ web3, artifacts }) {
+async function createVoting({ web3, artifacts }) {
   const netId = await web3.eth.net.getId()
 
   logWideSplitter()
   log(`Network ID:`, yl(netId))
 
   const state = readNetworkState(network.name, netId)
-  // TODO: update assertRequiredNetworkState: remove nos, add mev, require for rewards emulator
-  assertRequiredNetworkState(state, REQUIRED_NET_STATE.concat(['app:lido', 'app:node-operators-registry']))
+  assertRequiredNetworkState(state, REQUIRED_NET_STATE.concat([
+    'app:lido', 'app:node-operators-registry', 'app:oracle', 'mevTxFeeVaultAddress']))
 
   logSplitter()
 
@@ -39,7 +40,9 @@ async function upgradeAppImpl({ web3, artifacts }) {
   const aclAddress = await kernel.acl()
   const acl = await artifacts.require('ACL').at(aclAddress)
   const lidoAddress = state[`app:lido`].proxyAddress
+  const oracleAddress = state[`app:oracle`].proxyAddress
   const lido = await artifacts.require('Lido').at(lidoAddress)
+  const oracle = await artifacts.require('LidoOracle').at(oracleAddress)
   const mevTxFeeVaultAddress = state.mevTxFeeVaultAddress
 
   log(`Using ENS:`, yl(state.ensAddress))
@@ -50,7 +53,9 @@ async function upgradeAppImpl({ web3, artifacts }) {
 
   log.splitter()
 
-  const lidoUpgradeCallData = await buildUpgradeTransaction('lido', state, ens, kernel)
+  const lidoUpgradeCallData = await buildUpgradeTransaction('lido', state, ens, kernel, 0)
+
+  const oracleUpgradeCallData = await buildUpgradeTransaction('oracle', state, ens, kernel, 2)
 
   const grantRoleCallData = {
     to: aclAddress,
@@ -69,8 +74,15 @@ async function upgradeAppImpl({ web3, artifacts }) {
     calldata: await lido.contract.methods.setMevTxFeeVault(mevTxFeeVaultAddress).encodeABI()
   }
 
+  const updateOracleVersionToV3CallData = {
+    to: oracleAddress,
+    calldata: await oracle.contract.methods.finalizeUpgrade_v3().encodeABI()
+  }
+
   const encodedUpgradeCallData = encodeCallScript([
     ...lidoUpgradeCallData,
+    ...oracleUpgradeCallData,
+    updateOracleVersionToV3CallData,
     grantRoleCallData,
     setMevTxFeeVaultToLidoCallData,
   ])
@@ -83,12 +95,14 @@ async function upgradeAppImpl({ web3, artifacts }) {
     }
   ])
 
-  const txName = `tx-23-deploy-mev-lido-upgrade.json`
+  const txName = `tx-23-deploy-mev-upgrade.json`
   const votingDesc = `1) Publishing new implementation in lido app APM repo
 2) Updating implementaion of lido app with new one
-3) Grant role SENT_MEV_TX_FEE_VAULT_ROLE to voting
-4) Set deployed MevTxFeeVault to Lido contract
-  `
+3) Publishing new implementation in oracle app APM repo
+4) Updating implementaion of oracle app with new one
+5) Call Oracle's finalizeUpgrade_v3() to update internal version counter
+5) Grant role SENT_MEV_TX_FEE_VAULT_ROLE to voting
+6) Set deployed MevTxFeeVault to Lido contract`
 
   await saveCallTxData(votingDesc, tokenManager, 'forward', txName, {
     arguments: [votingCallData],
@@ -112,7 +126,10 @@ async function buildUpgradeTransaction(appName, state, ens, kernel) {
   const { semanticVersion: currentVersion, contractAddress: currentContractAddress, contentURI: currentContentURI } = await repo.getLatest()
 
   const versionFrom = currentVersion.map((n) => n.toNumber())
+  console.log(currentVersion)
   currentVersion[0] = currentVersion[0].addn(1)
+  currentVersion[1] = new BN(0)
+  currentVersion[2] = new BN(0)
   const versionTo = currentVersion.map((n) => n.toNumber())
 
   log.splitter()
@@ -143,4 +160,4 @@ async function buildUpgradeTransaction(appName, state, ens, kernel) {
   return upgradeCallData
 }
 
-module.exports = runOrWrapScript(upgradeAppImpl, module)
+module.exports = runOrWrapScript(createVoting, module)

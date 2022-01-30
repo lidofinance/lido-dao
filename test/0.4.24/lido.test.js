@@ -640,7 +640,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await assertRevert(app.withdraw(tokens(1), pad('0x1000', 32), { from: user1 }), 'NOT_IMPLEMENTED_YET')
   })
 
-  it('pushRewards works', async () => {
+  it('handleOracleReport works', async () => {
     await operators.addNodeOperator('1', ADDRESS_1, { from: voting })
     await operators.addNodeOperator('2', ADDRESS_2, { from: voting })
 
@@ -661,12 +661,12 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await app.methods['depositBufferedEther()']({ from: depositor })
     await checkStat({ depositedValidators: 1, beaconValidators: 0, beaconBalance: ETH(0) })
 
-    await assertRevert(app.pushRewards(1, ETH(30), { from: appManager }), 'APP_AUTH_FAILED')
+    await assertRevert(app.handleOracleReport(1, ETH(30), { from: appManager }), 'APP_AUTH_FAILED')
 
     await oracle.reportBeacon(100, 1, ETH(30))
     await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(30) })
 
-    await assertRevert(app.pushRewards(1, ETH(29), { from: nobody }), 'APP_AUTH_FAILED')
+    await assertRevert(app.handleOracleReport(1, ETH(29), { from: nobody }), 'APP_AUTH_FAILED')
 
     await oracle.reportBeacon(50, 1, ETH(100)) // stale data
     await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(100) })

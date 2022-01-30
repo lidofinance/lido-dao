@@ -34,7 +34,7 @@ async function obtainInstance({ web3, artifacts }) {
 
 
 async function assertAddresses({ lidoAddress }, instance, desc) {
-  assert.equal(await instance.lidoAddress(), lidoAddress, `${desc}: wrong lido`)
+  assert.equal(await instance.LIDO(), lidoAddress, `${desc}: wrong lido`)
   log.success(`Lido address is correct`)
 }
 

@@ -90,7 +90,7 @@ interface ILido {
       * @param _epoch Epoch id
       * @param _eth2balance Balance in wei on the ETH 2.0 side
       */
-    function pushRewards(uint256 _epoch, uint256 _eth2balance) external;
+    function handleOracleReport(uint256 _epoch, uint256 _eth2balance) external;
 
 
     // User functions
