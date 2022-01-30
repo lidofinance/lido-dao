@@ -34,10 +34,27 @@ async function deployTemplate({ web3, artifacts }) {
 
   log.splitter()
 
-  await saveDeployTx('LidoTemplate', 'tx-01-1-deploy-template.json', daoTemplateConstructorArgs)
-  await saveDeployTx('Lido', 'tx-01-2-deploy-lido-base.json')
-  await saveDeployTx('LidoOracle', 'tx-01-3-deploy-oracle-base.json')
-  await saveDeployTx('NodeOperatorsRegistry', 'tx-01-4-deploy-nops-base.json')
+  await saveDeployTx('LidoTemplate', 'tx-01-1-deploy-template.json', {
+    arguments: daoTemplateConstructorArgs,
+    from: state.multisigAddress
+  })
+  await saveDeployTx('Lido', 'tx-01-2-deploy-lido-base.json', {
+    from: state.multisigAddress
+  })
+  await saveDeployTx('LidoOracle', 'tx-01-3-deploy-oracle-base.json', {
+    from: state.multisigAddress
+  })
+  await saveDeployTx('NodeOperatorsRegistry', 'tx-01-4-deploy-nops-base.json', {
+    from: state.multisigAddress
+  })
+
+  persistNetworkState(network.name, netId, state, {
+    daoTemplateConstructorArgs,
+    daoTemplateDeployTx: '',
+    lidoBaseDeployTx: '',
+    oracleBaseDeployTx: '',
+    nodeOperatorsRegistryBaseDeployTx: ''
+  })
 
   log.splitter()
   log(gr(`Before continuing the deployment, please send all contract creation transactions`))
@@ -45,7 +62,6 @@ async function deployTemplate({ web3, artifacts }) {
   log(gr(`if it supports deploying new contract instances.`))
   log.splitter()
 
-  persistNetworkState(network.name, netId, state, { daoTemplateConstructorArgs })
 }
 
 module.exports = runOrWrapScript(deployTemplate, module)

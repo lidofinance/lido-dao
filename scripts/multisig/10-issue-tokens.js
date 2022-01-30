@@ -16,11 +16,7 @@ const { resolveLatestVersion: apmResolveLatest } = require('../components/apm')
 const { APP_NAMES } = require('./constants')
 const VALID_APP_NAMES = Object.entries(APP_NAMES).map((e) => e[1])
 
-const REQUIRED_NET_STATE = [
-  'daoAddress',
-  'daoTemplateAddress',
-  'vestingParams'
-]
+const REQUIRED_NET_STATE = ['daoAddress', 'daoTemplateAddress', 'vestingParams']
 
 const MAX_HOLDERS_IN_ONE_TX = 30
 
@@ -36,13 +32,16 @@ async function issueTokens({ web3, artifacts }) {
   log.splitter()
   log(`Using LidoTemplate: ${chalk.yellow(state.daoTemplateAddress)}`)
   const template = await artifacts.require('LidoTemplate').at(state.daoTemplateAddress)
-  await assertLastEvent(template, 'TmplDAOAndTokenDeployed')
+  if (state.daoTemplateDeployBlock) {
+    log(`Using LidoTemplate deploy block: ${chalk.yellow(state.daoTemplateDeployBlock)}`)
+  }
+  await assertLastEvent(template, 'TmplDAOAndTokenDeployed', null, state.daoTemplateDeployBlock)
   log.splitter()
 
   const { vestingParams: vesting } = state
   const pairs = Object.entries(vesting.holders)
-  const holders = pairs.map(p => p[0])
-  const amounts = pairs.map(p => p[1])
+  const holders = pairs.map((p) => p[0])
+  const amounts = pairs.map((p) => p[1])
 
   log(`Using vesting settings:`)
   log(`  Start:`, chalk.yellow(formatDate(vesting.start)))
@@ -78,31 +77,17 @@ async function issueTokens({ web3, artifacts }) {
 
     endTotalSupply.iadd(bigSum(iAmounts))
 
-    await saveCallTxData(
-      `issueTokens (batch ${i + 1})`,
-      template,
-      'issueTokens',
-      `tx-06-${i + 1}-issue-tokens.json`,
-      {
-        arguments: [
-          iHolders,
-          iAmounts,
-          vesting.start,
-          vesting.cliff,
-          vesting.end,
-          vesting.revokable,
-          '0x' + endTotalSupply.toString(16)
-        ],
-        from: state.multisigAddress,
-        estimateGas: i === 0
-      }
-    )
+    await saveCallTxData(`issueTokens (batch ${i + 1})`, template, 'issueTokens', `tx-06-${i + 1}-issue-tokens.json`, {
+      arguments: [iHolders, iAmounts, vesting.start, vesting.cliff, vesting.end, vesting.revokable, '0x' + endTotalSupply.toString(16)],
+      from: state.multisigAddress,
+      estimateGas: i === 0
+    })
   }
 }
 
 function bigSum(amounts, initialAmount = 0) {
   const sum = new BN(initialAmount)
-  amounts.forEach(amount => {
+  amounts.forEach((amount) => {
     sum.iadd(new BN(amount))
   })
   return sum

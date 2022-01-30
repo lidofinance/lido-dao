@@ -19,6 +19,8 @@
   "lidoBaseDeployTx": "0x754584f974624d32310d68e6bda260b7200c31d4086b1416d421ad7b31f4ad0c",
   "oracleBaseDeployTx": "0x171d09bc9bea4421db6c614c994c218c894dc028d807f8e7edd759a4ba148bbf",
   "nodeOperatorsRegistryBaseDeployTx": "0x25cf4db41a4159e94826fd0495bafe02e4a015a9bcf0ffbc0e684a5cafe6eefc",
+  "compositePostRebaseBeaconReceiverDeployTx": "0xf0f2d207ac3693abb8aa58e885aeff12371bb033d64376a409a8dd43d28d85ea",
+  "selfOwnedStETHBurnerDeployTx": "0xa6267ebc56579f0c9e3f3b55908b851db971a83d5f97d4d2df9984396ae03b2f",
   "daoTemplateAddress": "0x9A4a36B5fe517f98BD6529d4317B0b723F600AaD",
   "app:lido": {
     "baseAddress": "0xd2deB2210C1C4BcA5cb20081B7383278d84E009B",
@@ -164,6 +166,25 @@
   ],
   "depositorDeployTx": "0x2811fab2d10abba764b672eb75f727e89a02f721af4e7fd1d153bad0b3c50d3b",
   "depositorAddress": "0xEd23AD3EA5Fb9d10e7371Caef1b141AD1C23A80c",
+  "compositePostRebaseBeaconReceiverConstructorArgs": [
+    "0xbc0B67b4553f4CF52a913DE9A6eD0057E2E758Db",
+    "0x24d8451BC07e7aF4Ba94F69aCDD9ad3c6579D9FB"
+  ],
+  "compositePostRebaseBeaconReceiverAddress": "0x1D2219E0A1e2F09309643fD8a69Ca0EF7093B739",
+  "selfOwnedStETHBurnerParams": {
+    "totalCoverSharesBurnt": 0,
+    "totalNonCoverSharesBurnt": 0,
+    "maxBurnAmountPerRunBasisPoints": 4
+  },
+  "selfOwnedStETHBurnerConstructorArgs": [
+    "0x4333218072D5d7008546737786663c38B4D561A4",
+    "0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F",
+    "0xbc0B67b4553f4CF52a913DE9A6eD0057E2E758Db",
+    0,
+    0,
+    4
+  ],
+  "selfOwnedStETHBurnerAddress": "0xf6a64DcB06Ef7eB1ee94aDfD7D10ACB44D9A9888",
   "mevTxFeeVaultDeployTx": "0x0cff10cc3830ff645032875eb895d4db007ce7cad9cfcd2668015f905ceb338f",
   "mevTxFeeVaultAddress": "0xece7301B3aeEC2b2B6C41a55dE831D47c205AaCC",
   "mevTxFeeRewardsEmulator": "0x636ebc9dd60ef85bbaf2abb0bad789676aac12d0"

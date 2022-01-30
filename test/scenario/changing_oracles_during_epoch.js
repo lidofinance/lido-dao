@@ -35,6 +35,8 @@ contract('LidoOracle', ([appManager, voting, malicious1, malicious2, user1, user
 
     // Initialize the app's proxy.
     await app.setTime(GENESIS_TIME + 225 * EPOCH_LENGTH)
+
+    // Arguments 1000, 500 stand for 10% yearly increase, 5% moment decrease respectively
     await app.initialize(appLido.address, 225, 32, 12, GENESIS_TIME, 1000, 500)
 
     // Initialize the oracle time, quorum and basic oracles

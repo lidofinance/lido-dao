@@ -12,17 +12,16 @@ tmp/
 /coverage.json
 .coverage_*/
 
-/aragon-apps
+aragon-apps/
+aragon-client/
+cli/vendor
 
 **/data/
 *.log
 
 # Yarn stuff
 .yarn/*
-!.yarn/releases
-!.yarn/plugins
-!.yarn/sdks
-!.yarn/versions
+
 .pnp.*
 
 # Optional npm cache directory

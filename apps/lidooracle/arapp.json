@@ -42,7 +42,13 @@
     "mainnet": {
       "appName": "oracle.lidopm.eth",
       "network": "mainnet"
+    },
+    "localhost": {
+      "appName": "oracle.lidopm.eth",
+      "network": "development",
+      "registry": "0xa16E02E87b7454126E5E10d957A927A7F5B5d2be"
     }
   },
+  "appName": "oracle.lidopm.eth",
   "path": "../../contracts/0.4.24/oracle/LidoOracle.sol"
 }

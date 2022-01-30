@@ -19,16 +19,10 @@ async function readAppName(appRoot, netName) {
   return (environments.default || {}).appName || null
 }
 
-async function assertRole({
-  roleName,
-  acl,
-  app,
-  appName,
-  managerAddress,
-  granteeAddress,
-  onlyGrantee = false,
-  allAclEvents = null
-}) {
+async function assertRole(
+  { roleName, acl, app, appName, managerAddress, granteeAddress, onlyGrantee = false, allAclEvents = null },
+  fromBlock = 4532202
+) {
   appName = appName || app.constructor.contractName
 
   assert.isTrue(
@@ -58,7 +52,7 @@ async function assertRole({
 
     if (onlyGrantee) {
       const checkDesc = `${appName}.${chalk.yellow(roleName)} perm is not accessible by any other entities`
-      const grantees = getAllGrantees(app, permission, allAclEvents || await getAllAclEvents(acl))
+      const grantees = getAllGrantees(app, permission, allAclEvents || (await getAllAclEvents(acl, fromBlock)))
       const expectedGrantees = granteeAddress.map(normalizeBytes)
       assert.sameMembers(grantees, expectedGrantees, checkDesc)
       log.success(checkDesc)
@@ -66,11 +60,11 @@ async function assertRole({
   }
 }
 
-async function getAllAclEvents(acl) {
-  return await acl.getPastEvents('allEvents', { fromBlock: 4532202 })
+async function getAllAclEvents(acl, fromBlock = 4532202) {
+  return await acl.getPastEvents('allEvents', { fromBlock })
 }
 
-async function assertMissingRole({ roleName, acl, app, appName, allAclEvents = null }) {
+async function assertMissingRole({ roleName, acl, app, appName, allAclEvents = null }, fromBlock = 4532202) {
   appName = appName || app.constructor.contractName
   const permission = normalizeBytes(await app[roleName]())
 
@@ -80,7 +74,7 @@ async function assertMissingRole({ roleName, acl, app, appName, allAclEvents = n
   log.success(managerCheckDesc)
 
   const granteesCheckDesc = `${appName}.${chalk.yellow(roleName)} has no grantees`
-  const grantees = getAllGrantees(app, permission, allAclEvents || await getAllAclEvents(acl))
+  const grantees = getAllGrantees(app, permission, allAclEvents || (await getAllAclEvents(acl, fromBlock)))
   assert.isEmpty(grantees, granteesCheckDesc)
   log.success(granteesCheckDesc)
 }
@@ -88,21 +82,18 @@ async function assertMissingRole({ roleName, acl, app, appName, allAclEvents = n
 function getAllGrantees(app, permission, allAclEvents) {
   const appAddress = normalizeBytes(app.address)
 
-  const setPermissionEvts = allAclEvents
-    .filter(evt =>
-      evt.event === 'SetPermission' &&
-      normalizeBytes(evt.args.app) === appAddress &&
-      normalizeBytes(evt.args.role) === permission
-    )
+  const setPermissionEvts = allAclEvents.filter(
+    (evt) => evt.event === 'SetPermission' && normalizeBytes(evt.args.app) === appAddress && normalizeBytes(evt.args.role) === permission
+  )
 
   const finalPermissionsByEntity = {}
 
-  setPermissionEvts.forEach(evt => {
+  setPermissionEvts.forEach((evt) => {
     const entity = normalizeBytes(evt.args.entity)
     finalPermissionsByEntity[entity] = evt.args.allowed
   })
 
-  return Object.keys(finalPermissionsByEntity).filter(entity => finalPermissionsByEntity[entity])
+  return Object.keys(finalPermissionsByEntity).filter((entity) => finalPermissionsByEntity[entity])
 }
 
 function normalizeBytes(s) {

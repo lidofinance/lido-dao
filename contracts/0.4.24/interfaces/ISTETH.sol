@@ -36,7 +36,6 @@ interface ISTETH /* is IERC20 */ {
 
     /**
       * @notice An executed shares transfer from `sender` to `recipient`.
-      *
       * @dev emitted in pair with an ERC20-defined `Transfer` event.
       */
     event TransferShares(

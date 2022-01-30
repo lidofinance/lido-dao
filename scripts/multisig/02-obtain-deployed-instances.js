@@ -2,7 +2,7 @@ const chalk = require('chalk')
 
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, logSplitter, logWideSplitter, logHeader, logTx } = require('../helpers/log')
-const { useOrGetDeployed, assertDeployedBytecode } = require('../helpers/deploy')
+const { useOrGetDeployed, assertDeployedBytecode, getTxBlock } = require('../helpers/deploy')
 const { assert } = require('../helpers/assert')
 const { readNetworkState, persistNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
 
@@ -31,8 +31,8 @@ async function deployTemplate({ web3, artifacts }) {
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
 
   logHeader('DAO template')
-  const daoTemplate = await obtainTemplate(state)
-  persistNetworkState(network.name, netId, state, { daoTemplate })
+  const { daoTemplate, daoTemplateDeployBlock } = await obtainTemplate(state)
+  persistNetworkState(network.name, netId, state, { daoTemplate, daoTemplateDeployBlock })
 
   logHeader('Lido app base')
   const lidoBase = await useOrGetDeployed('Lido', state.lidoBaseAddress, state.lidoBaseDeployTx)
@@ -77,10 +77,11 @@ async function deployTemplate({ web3, artifacts }) {
 
 async function obtainTemplate(state) {
   const daoTemplate = await useOrGetDeployed('LidoTemplate', state.daoTemplateAddress, state.daoTemplateDeployTx)
+  const daoTemplateDeployBlock = await getTxBlock(state.daoTemplateDeployTx)
+  log(`LidoTemplate deploy block: ${chalk.yellow(daoTemplateDeployBlock)}`)
 
   log(`Checking...`)
   await assertDeployedBytecode(daoTemplate.address, 'LidoTemplate')
-
   const templateConfig = await daoTemplate.getConfig()
   assert.addressEqual(templateConfig._owner, state.multisigAddress, 'tmpl: owner')
   assert.addressEqual(templateConfig._daoFactory, state.daoFactoryAddress, 'tmpl: daoFactory')
@@ -89,8 +90,7 @@ async function obtainTemplate(state) {
   assert.addressEqual(templateConfig._aragonID, state.aragonIDAddress, 'tmpl: aragonId')
   assert.addressEqual(templateConfig._apmRegistryFactory, state.apmRegistryFactoryAddress, 'tmpl: apmRegistryFactory')
   log.success(`the config`)
-
-  return daoTemplate
+  return { daoTemplate, daoTemplateDeployBlock }
 }
 
 async function assertAragonProxyBase(instance, desc) {

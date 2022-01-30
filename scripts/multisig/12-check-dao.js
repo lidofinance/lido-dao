@@ -21,14 +21,7 @@ const { assertAPMRegistryPermissions } = require('./checks/apm')
 const { assertInstalledApps } = require('./checks/apps')
 const { assertVesting } = require('./checks/dao-token')
 
-const REQUIRED_NET_STATE = [
-  'ensAddress',
-  'lidoApmEnsName',
-  'daoAragonId',
-  'vestingParams',
-  'daoInitialSettings',
-  'daoTemplateAddress'
-]
+const REQUIRED_NET_STATE = ['ensAddress', 'lidoApmEnsName', 'daoAragonId', 'vestingParams', 'daoInitialSettings', 'daoTemplateAddress']
 
 const TOKEN_TRANSFERABLE = true
 const TOKEN_DECIMALS = 18
@@ -63,10 +56,13 @@ async function checkDAO({ web3, artifacts }) {
 
   log(`Using LidoTemplate: ${yl(state.daoTemplateAddress)}`)
   const template = await artifacts.require('LidoTemplate').at(state.daoTemplateAddress)
-  await assertLastEvent(template, 'TmplDaoFinalized')
+  if (state.daoTemplateDeployBlock) {
+    log(`Using LidoTemplate deploy block: ${chalk.yellow(state.daoTemplateDeployBlock)}`)
+  }
+  await assertLastEvent(template, 'TmplDaoFinalized', null, state.daoTemplateDeployBlock)
 
-  const apmDeployedEvt = await assertSingleEvent(template, 'TmplAPMDeployed')
-  const daoDeployedEvt = await assertSingleEvent(template, 'TmplDAOAndTokenDeployed')
+  const apmDeployedEvt = await assertSingleEvent(template, 'TmplAPMDeployed', null, state.daoTemplateDeployBlock)
+  const daoDeployedEvt = await assertSingleEvent(template, 'TmplDAOAndTokenDeployed', null, state.daoTemplateDeployBlock)
 
   state.lidoApmAddress = apmDeployedEvt.args.apm
   state.daoAddress = daoDeployedEvt.args.dao
@@ -85,12 +81,15 @@ async function checkDAO({ web3, artifacts }) {
 
   log.splitter()
 
-  const apps = await assertInstalledApps({
-    template,
-    dao,
-    lidoApmEnsName: state.lidoApmEnsName,
-    appProxyUpgradeableArtifactName: 'external:AppProxyUpgradeable_DAO'
-  })
+  const apps = await assertInstalledApps(
+    {
+      template,
+      dao,
+      lidoApmEnsName: state.lidoApmEnsName,
+      appProxyUpgradeableArtifactName: 'external:AppProxyUpgradeable_DAO'
+    },
+    state.daoTemplateDeployBlock
+  )
 
   log.splitter()
 
@@ -130,24 +129,27 @@ async function checkDAO({ web3, artifacts }) {
 
   log.splitter()
 
-  await assertDaoPermissions({
-    kernel: dao,
-    lido,
-    oracle,
-    nopsRegistry,
-    agent,
-    finance,
-    tokenManager,
-    voting
-  })
+  await assertDaoPermissions(
+    {
+      kernel: dao,
+      lido,
+      oracle,
+      nopsRegistry,
+      agent,
+      finance,
+      tokenManager,
+      voting
+    },
+    state.daoTemplateDeployBlock
+  )
 
   log.splitter()
 
-  const { registryACL } = await assertLidoAPMPermissions({ registry, votingAddress: voting.address })
+  const { registryACL } = await assertLidoAPMPermissions({ registry, votingAddress: voting.address }, state.daoTemplateDeployBlock)
 
   log.splitter()
 
-  await assertReposPermissions({ registry, registryACL, votingAddress: voting.address })
+  await assertReposPermissions({ registry, registryACL, votingAddress: voting.address }, state.daoTemplateDeployBlock)
 
   log.splitter()
 
@@ -161,11 +163,8 @@ async function checkDAO({ web3, artifacts }) {
   log.splitter()
 }
 
-async function assertLidoAPMPermissions({ registry, votingAddress }) {
-  const [kernelAddress, registrarAddress] = await Promise.all([
-    registry.kernel(),
-    registry.registrar()
-  ])
+async function assertLidoAPMPermissions({ registry, votingAddress }, fromBlock = 4532202) {
+  const [kernelAddress, registrarAddress] = await Promise.all([registry.kernel(), registry.registrar()])
 
   const [registryKernel, registrar] = await Promise.all([
     artifacts.require('Kernel').at(kernelAddress),
@@ -175,31 +174,37 @@ async function assertLidoAPMPermissions({ registry, votingAddress }) {
   const registryACLAddress = await registryKernel.acl()
   const registryACL = await artifacts.require('ACL').at(registryACLAddress)
 
-  await assertAPMRegistryPermissions({
-    registry,
-    registrar,
-    registryACL,
-    registryKernel,
-    rootAddress: votingAddress
-  })
+  await assertAPMRegistryPermissions(
+    {
+      registry,
+      registrar,
+      registryACL,
+      registryKernel,
+      rootAddress: votingAddress
+    },
+    fromBlock
+  )
 
   return { registryKernel, registryACL, registrar }
 }
 
-async function assertReposPermissions({ registry, registryACL, votingAddress }) {
+async function assertReposPermissions({ registry, registryACL, votingAddress }, fromBlock = 4532202) {
   const Repo = artifacts.require('Repo')
-  const newRepoEvts = await registry.getPastEvents('NewRepo', { fromBlock: 4532202 })
+  const newRepoEvts = await registry.getPastEvents('NewRepo', { fromBlock })
 
   for (const evt of newRepoEvts) {
     const repo = await Repo.at(evt.args.repo)
-    await assertRole({
-      acl: registryACL,
-      app: repo,
-      appName: `repo<${evt.args.name}>`,
-      roleName: 'CREATE_VERSION_ROLE',
-      managerAddress: votingAddress,
-      granteeAddress: votingAddress
-    })
+    await assertRole(
+      {
+        acl: registryACL,
+        app: repo,
+        appName: `repo<${evt.args.name}>`,
+        roleName: 'CREATE_VERSION_ROLE',
+        managerAddress: votingAddress,
+        granteeAddress: votingAddress
+      },
+      fromBlock
+    )
   }
 }
 
@@ -218,12 +223,7 @@ async function assertDAOConfig({
   daoInitialSettings: settings
 }) {
   const assertKernel = async (app, appName) => {
-    assert.log(
-      assert.addressEqual,
-      await app.kernel(),
-      dao.address,
-      `${appName}.kernel is ${yl(dao.address)}`
-    )
+    assert.log(assert.addressEqual, await app.kernel(), dao.address, `${appName}.kernel is ${yl(dao.address)}`)
   }
 
   assert.log(
@@ -235,49 +235,19 @@ async function assertDAOConfig({
 
   log.splitter()
 
-  assert.log(
-    assert.addressEqual,
-    await dao.getRecoveryVault(),
-    agent.address,
-    `dao.getRecoveryVault() is ${yl(agent.address)}`
-  )
+  assert.log(assert.addressEqual, await dao.getRecoveryVault(), agent.address, `dao.getRecoveryVault() is ${yl(agent.address)}`)
 
   log.splitter()
 
-  assert.log(
-    assert.equal,
-    await daoToken.name(),
-    settings.token.name,
-    `daoToken.name is ${yl(settings.token.name)}`
-  )
+  assert.log(assert.equal, await daoToken.name(), settings.token.name, `daoToken.name is ${yl(settings.token.name)}`)
 
-  assert.log(
-    assert.equal,
-    await daoToken.symbol(),
-    settings.token.symbol,
-    `daoToken.symbol is ${yl(settings.token.symbol)}`
-  )
+  assert.log(assert.equal, await daoToken.symbol(), settings.token.symbol, `daoToken.symbol is ${yl(settings.token.symbol)}`)
 
-  assert.log(
-    assert.bnEqual,
-    await daoToken.decimals(),
-    TOKEN_DECIMALS,
-    `daoToken.decimals is ${yl(TOKEN_DECIMALS)}`
-  )
+  assert.log(assert.bnEqual, await daoToken.decimals(), TOKEN_DECIMALS, `daoToken.decimals is ${yl(TOKEN_DECIMALS)}`)
 
-  assert.log(
-    assert.addressEqual,
-    await daoToken.controller(),
-    tokenManager.address,
-    `daoToken.controller is ${yl(tokenManager.address)}`
-  )
+  assert.log(assert.addressEqual, await daoToken.controller(), tokenManager.address, `daoToken.controller is ${yl(tokenManager.address)}`)
 
-  assert.log(
-    assert.equal,
-    await daoToken.transfersEnabled(),
-    TOKEN_TRANSFERABLE,
-    `daoToken.transfersEnabled is ${yl(TOKEN_TRANSFERABLE)}`
-  )
+  assert.log(assert.equal, await daoToken.transfersEnabled(), TOKEN_TRANSFERABLE, `daoToken.transfersEnabled is ${yl(TOKEN_TRANSFERABLE)}`)
 
   log.splitter()
   await assertKernel(agent, 'agent')
@@ -285,12 +255,7 @@ async function assertDAOConfig({
   log.splitter()
   await assertKernel(voting, 'voting')
 
-  assert.log(
-    assert.addressEqual,
-    await voting.token(),
-    daoToken.address,
-    `voting.token is ${yl(daoToken.address)}`
-  )
+  assert.log(assert.addressEqual, await voting.token(), daoToken.address, `voting.token is ${yl(daoToken.address)}`)
 
   assert.log(
     assert.bnEqual,
@@ -313,22 +278,12 @@ async function assertDAOConfig({
     `voting.voteTime is ${yl(settings.voting.voteDuration)}`
   )
 
-  DAO_LIVE || assert.log(
-    assert.bnEqual,
-    await voting.votesLength(),
-    0,
-    `voting.votesLength is ${yl('0')}`
-  )
+  DAO_LIVE || assert.log(assert.bnEqual, await voting.votesLength(), 0, `voting.votesLength is ${yl('0')}`)
 
   log.splitter()
   await assertKernel(tokenManager, 'tokenManager')
 
-  assert.log(
-    assert.addressEqual,
-    await tokenManager.token(),
-    daoToken.address,
-    `tokenManager.token is ${yl(daoToken.address)}`
-  )
+  assert.log(assert.addressEqual, await tokenManager.token(), daoToken.address, `tokenManager.token is ${yl(daoToken.address)}`)
 
   assert.log(
     assert.bnEqual,
@@ -347,65 +302,32 @@ async function assertDAOConfig({
     `finance.getPeriodDuration() is ${yl(FINANCE_DEFAULT_PERIOD)}`
   )
 
-  assert.log(
-    assert.addressEqual,
-    await finance.vault(),
-    agent.address,
-    `finance.vault is ${yl(agent.address)}`
-  )
+  assert.log(assert.addressEqual, await finance.vault(), agent.address, `finance.vault is ${yl(agent.address)}`)
 
   log.splitter()
   await assertKernel(lido, 'lido')
 
-  assert.log(
-    assert.equal,
-    await lido.name(),
-    STETH_TOKEN_NAME,
-    `lido.name is ${yl(STETH_TOKEN_NAME)}`
-  )
+  assert.log(assert.equal, await lido.name(), STETH_TOKEN_NAME, `lido.name is ${yl(STETH_TOKEN_NAME)}`)
 
-  assert.log(
-    assert.equal,
-    await lido.symbol(),
-    STETH_TOKEN_SYMBOL,
-    `lido.symbol is ${yl(STETH_TOKEN_SYMBOL)}`
-  )
+  assert.log(assert.equal, await lido.symbol(), STETH_TOKEN_SYMBOL, `lido.symbol is ${yl(STETH_TOKEN_SYMBOL)}`)
 
-  assert.log(
-    assert.bnEqual,
-    await lido.decimals(),
-    STETH_TOKEN_DECIMALS,
-    `lido.decimals is ${yl(STETH_TOKEN_DECIMALS)}`
-  )
+  assert.log(assert.bnEqual, await lido.decimals(), STETH_TOKEN_DECIMALS, `lido.decimals is ${yl(STETH_TOKEN_DECIMALS)}`)
 
-  DAO_LIVE || assert.log(
-    assert.bnEqual,
-    await lido.totalSupply(),
-    0,
-    `lido.totalSupply() is ${yl(0)}`
-  )
+  DAO_LIVE || assert.log(assert.bnEqual, await lido.totalSupply(), 0, `lido.totalSupply() is ${yl(0)}`)
 
-  DAO_LIVE || assert.log(
-    assert.equal,
-    await lido.isStopped(),
-    PROTOCOL_PAUSED_AFTER_DEPLOY,
-    `lido.isStopped is ${yl(PROTOCOL_PAUSED_AFTER_DEPLOY)}`
-  )
+  DAO_LIVE ||
+    assert.log(assert.equal, await lido.isStopped(), PROTOCOL_PAUSED_AFTER_DEPLOY, `lido.isStopped is ${yl(PROTOCOL_PAUSED_AFTER_DEPLOY)}`)
 
-  DAO_LIVE || assert.log(
-    assert.bnEqual,
-    await lido.getWithdrawalCredentials(),
-    ZERO_WITHDRAWAL_CREDS,
-    `lido.getWithdrawalCredentials() is ${yl(ZERO_WITHDRAWAL_CREDS)}`
-  )
+  DAO_LIVE ||
+    assert.log(
+      assert.bnEqual,
+      await lido.getWithdrawalCredentials(),
+      ZERO_WITHDRAWAL_CREDS,
+      `lido.getWithdrawalCredentials() is ${yl(ZERO_WITHDRAWAL_CREDS)}`
+    )
 
   const expectedTotalFee = percentToBP(settings.fee.totalPercent)
-  assert.log(
-    assert.bnEqual,
-    await lido.getFee(),
-    expectedTotalFee,
-    `lido.getFee() is ${yl(expectedTotalFee)}`
-  )
+  assert.log(assert.bnEqual, await lido.getFee(), expectedTotalFee, `lido.getFee() is ${yl(expectedTotalFee)}`)
 
   const feeDistr = await lido.getFeeDistribution()
   const expectedTreasuryFee = percentToBP(settings.fee.treasuryPercent)
@@ -437,49 +359,20 @@ async function assertDAOConfig({
     `lido.getValidatorRegistrationContract() is ${yl(settings.beaconSpec.depositContractAddress)}`
   )
 
-  assert.log(
-    assert.addressEqual,
-    await lido.getOracle(),
-    oracle.address,
-    `lido.getOracle() is ${yl(oracle.address)}`
-  )
+  assert.log(assert.addressEqual, await lido.getOracle(), oracle.address, `lido.getOracle() is ${yl(oracle.address)}`)
 
-  assert.log(
-    assert.addressEqual,
-    await lido.getOperators(),
-    nopsRegistry.address,
-    `lido.getOperators() is ${yl(nopsRegistry.address)}`
-  )
+  assert.log(assert.addressEqual, await lido.getOperators(), nopsRegistry.address, `lido.getOperators() is ${yl(nopsRegistry.address)}`)
 
-  assert.log(
-    assert.addressEqual,
-    await lido.getTreasury(),
-    agent.address,
-    `lido.getTreasury() is ${yl(agent.address)}`
-  )
+  assert.log(assert.addressEqual, await lido.getTreasury(), agent.address, `lido.getTreasury() is ${yl(agent.address)}`)
 
-  assert.log(
-    assert.addressEqual,
-    await lido.getInsuranceFund(),
-    agent.address,
-    `lido.getInsuranceFund() is ${yl(agent.address)}`
-  )
+  assert.log(assert.addressEqual, await lido.getInsuranceFund(), agent.address, `lido.getInsuranceFund() is ${yl(agent.address)}`)
 
   log.splitter()
   await assertKernel(oracle, 'oracle')
 
-  assert.log(
-    assert.addressEqual,
-    await oracle.getLido(),
-    lido.address,
-    `oracle.getLido() is ${yl(lido.address)}`
-  )
+  assert.log(assert.addressEqual, await oracle.getLido(), lido.address, `oracle.getLido() is ${yl(lido.address)}`)
 
-  DAO_LIVE || assert.log(
-    assert.isEmpty,
-    await oracle.getOracleMembers(),
-    `oracle.getOracleMembers() is []`
-  )
+  DAO_LIVE || assert.log(assert.isEmpty, await oracle.getOracleMembers(), `oracle.getOracleMembers() is []`)
 
   const beaconSpec = await oracle.getBeaconSpec()
   assert.log(
@@ -507,86 +400,77 @@ async function assertDAOConfig({
     `oracle.getBeaconSpec().genesisTime is ${yl(settings.beaconSpec.genesisTime)}`
   )
 
-  DAO_LIVE || assert.log(
-    assert.bnEqual,
-    await oracle.getQuorum(),
-    0,
-    `oracle.getQuorum() is ${yl(0)}`
-  )
+  DAO_LIVE || assert.log(assert.bnEqual, await oracle.getQuorum(), 1, `oracle.getQuorum() is ${yl(1)}`)
 
   log.splitter()
   await assertKernel(nopsRegistry, 'nopsRegistry')
 
-  DAO_LIVE || assert.log(
-    assert.bnEqual,
-    await nopsRegistry.getNodeOperatorsCount(),
-    0,
-    `nopsRegistry.getNodeOperatorsCount() is ${yl(0)}`
-  )
+  DAO_LIVE || assert.log(assert.bnEqual, await nopsRegistry.getNodeOperatorsCount(), 0, `nopsRegistry.getNodeOperatorsCount() is ${yl(0)}`)
 
-  DAO_LIVE || assert.log(
-    assert.bnEqual,
-    await nopsRegistry.getActiveNodeOperatorsCount(),
-    0,
-    `nopsRegistry.getActiveNodeOperatorsCount() is ${yl(0)}`
-  )
+  DAO_LIVE ||
+    assert.log(
+      assert.bnEqual,
+      await nopsRegistry.getActiveNodeOperatorsCount(),
+      0,
+      `nopsRegistry.getActiveNodeOperatorsCount() is ${yl(0)}`
+    )
 }
 
-async function assertDaoPermissions({
-  kernel,
-  lido,
-  oracle,
-  nopsRegistry,
-  agent,
-  finance,
-  tokenManager,
-  voting
-}) {
+async function assertDaoPermissions({ kernel, lido, oracle, nopsRegistry, agent, finance, tokenManager, voting }, fromBlock = 4532202) {
   const aclAddress = await kernel.acl()
   const acl = await artifacts.require('ACL').at(aclAddress)
-  const allAclEvents = await acl.getPastEvents('allEvents', { fromBlock: 4532202 })
+  const allAclEvents = await acl.getPastEvents('allEvents', { fromBlock })
 
   const assertRoles = async ({ app, appName, groups, manager, missingRoleNames = [] }) => {
     for (const group of groups) {
       for (const roleName of group.roleNames) {
-        await assertRole({
-          acl,
-          allAclEvents,
-          app,
-          appName,
-          roleName,
-          granteeAddress: group.grantee.address,
-          managerAddress: group.manager === undefined ? manager.address : group.manager.address,
-          onlyGrantee: group.onlyGrantee === undefined ? true : group.onlyGrantee
-        })
+        await assertRole(
+          {
+            acl,
+            allAclEvents,
+            app,
+            appName,
+            roleName,
+            granteeAddress: group.grantee.address,
+            managerAddress: group.manager === undefined ? manager.address : group.manager.address,
+            onlyGrantee: group.onlyGrantee === undefined ? true : group.onlyGrantee
+          },
+          fromBlock
+        )
       }
     }
     for (const roleName of missingRoleNames) {
-      await assertMissingRole({ acl, allAclEvents, app, appName, roleName })
+      await assertMissingRole({ acl, allAclEvents, app, appName, roleName }, fromBlock)
     }
   }
 
-  await assertRole({
-    acl,
-    allAclEvents,
-    app: acl,
-    appName: 'kernel.acl',
-    roleName: 'CREATE_PERMISSIONS_ROLE',
-    managerAddress: voting.address,
-    granteeAddress: voting.address,
-    onlyGrantee: true
-  })
+  await assertRole(
+    {
+      acl,
+      allAclEvents,
+      app: acl,
+      appName: 'kernel.acl',
+      roleName: 'CREATE_PERMISSIONS_ROLE',
+      managerAddress: voting.address,
+      granteeAddress: voting.address,
+      onlyGrantee: true
+    },
+    fromBlock
+  )
 
-  await assertRole({
-    acl,
-    allAclEvents,
-    app: kernel,
-    appName: 'kernel',
-    roleName: 'APP_MANAGER_ROLE',
-    managerAddress: voting.address,
-    granteeAddress: voting.address,
-    onlyGrantee: true
-  })
+  await assertRole(
+    {
+      acl,
+      allAclEvents,
+      app: kernel,
+      appName: 'kernel',
+      roleName: 'APP_MANAGER_ROLE',
+      managerAddress: voting.address,
+      granteeAddress: voting.address,
+      onlyGrantee: true
+    },
+    fromBlock
+  )
 
   log.splitter()
 
@@ -597,10 +481,12 @@ async function assertDaoPermissions({
     app: evmScriptRegistry,
     appName: 'evmScriptRegistry',
     manager: voting,
-    groups: [{
-      roleNames: ['REGISTRY_MANAGER_ROLE', 'REGISTRY_ADD_EXECUTOR_ROLE'],
-      grantee: voting
-    }]
+    groups: [
+      {
+        roleNames: ['REGISTRY_MANAGER_ROLE', 'REGISTRY_ADD_EXECUTOR_ROLE'],
+        grantee: voting
+      }
+    ]
   })
 
   log.splitter()
@@ -609,10 +495,12 @@ async function assertDaoPermissions({
     app: agent,
     appName: 'agent',
     manager: voting,
-    groups: [{
-      roleNames: ['EXECUTE_ROLE', 'RUN_SCRIPT_ROLE'],
-      grantee: voting
-    }],
+    groups: [
+      {
+        roleNames: ['EXECUTE_ROLE', 'RUN_SCRIPT_ROLE'],
+        grantee: voting
+      }
+    ],
     missingRoleNames: [
       'SAFE_EXECUTE_ROLE',
       'ADD_PROTECTED_TOKEN_ROLE',
@@ -628,10 +516,12 @@ async function assertDaoPermissions({
     app: finance,
     appName: 'finance',
     manager: voting,
-    groups: [{
-      roleNames: ['CREATE_PAYMENTS_ROLE', 'EXECUTE_PAYMENTS_ROLE', 'MANAGE_PAYMENTS_ROLE'],
-      grantee: voting
-    }],
+    groups: [
+      {
+        roleNames: ['CREATE_PAYMENTS_ROLE', 'EXECUTE_PAYMENTS_ROLE', 'MANAGE_PAYMENTS_ROLE'],
+        grantee: voting
+      }
+    ],
     missingRoleNames: ['CHANGE_PERIOD_ROLE', 'CHANGE_BUDGETS_ROLE']
   })
 
@@ -641,10 +531,12 @@ async function assertDaoPermissions({
     app: tokenManager,
     appName: 'tokenManager',
     manager: voting,
-    groups: [{
-      roleNames: ['ASSIGN_ROLE'],
-      grantee: voting
-    }],
+    groups: [
+      {
+        roleNames: ['ASSIGN_ROLE'],
+        grantee: voting
+      }
+    ],
     missingRoleNames: ['MINT_ROLE', 'BURN_ROLE', 'ISSUE_ROLE', 'REVOKE_VESTINGS_ROLE']
   })
 
@@ -654,13 +546,16 @@ async function assertDaoPermissions({
     app: voting,
     appName: 'voting',
     manager: voting,
-    groups: [{
-      roleNames: ['MODIFY_SUPPORT_ROLE', 'MODIFY_QUORUM_ROLE'],
-      grantee: voting
-    }, {
-      roleNames: ['CREATE_VOTES_ROLE'],
-      grantee: tokenManager
-    }],
+    groups: [
+      {
+        roleNames: ['MODIFY_SUPPORT_ROLE', 'MODIFY_QUORUM_ROLE'],
+        grantee: voting
+      },
+      {
+        roleNames: ['CREATE_VOTES_ROLE'],
+        grantee: tokenManager
+      }
+    ]
   })
 
   log.splitter()
@@ -669,18 +564,12 @@ async function assertDaoPermissions({
     app: lido,
     appName: 'lido',
     manager: voting,
-    groups: [{
-      roleNames: [
-        'PAUSE_ROLE',
-        'MANAGE_FEE',
-        'MANAGE_WITHDRAWAL_KEY',
-        'SET_ORACLE',
-        'BURN_ROLE',
-        'SET_TREASURY',
-        'SET_INSURANCE_FUND'
-      ],
-      grantee: voting
-    }]
+    groups: [
+      {
+        roleNames: ['PAUSE_ROLE', 'MANAGE_FEE', 'MANAGE_WITHDRAWAL_KEY', 'SET_ORACLE', 'BURN_ROLE', 'SET_TREASURY', 'SET_INSURANCE_FUND'],
+        grantee: voting
+      }
+    ]
   })
 
   log.splitter()
@@ -689,10 +578,12 @@ async function assertDaoPermissions({
     app: oracle,
     appName: 'oracle',
     manager: voting,
-    groups: [{
-      roleNames: ['MANAGE_MEMBERS', 'MANAGE_QUORUM', 'SET_BEACON_SPEC'],
-      grantee: voting
-    }]
+    groups: [
+      {
+        roleNames: ['MANAGE_MEMBERS', 'MANAGE_QUORUM', 'SET_BEACON_SPEC'],
+        grantee: voting
+      }
+    ]
   })
 
   log.splitter()
@@ -701,18 +592,20 @@ async function assertDaoPermissions({
     app: nopsRegistry,
     appName: 'nopsRegistry',
     manager: voting,
-    groups: [{
-      roleNames: [
-        'MANAGE_SIGNING_KEYS',
-        'ADD_NODE_OPERATOR_ROLE',
-        'SET_NODE_OPERATOR_ACTIVE_ROLE',
-        'SET_NODE_OPERATOR_NAME_ROLE',
-        'SET_NODE_OPERATOR_ADDRESS_ROLE',
-        'SET_NODE_OPERATOR_LIMIT_ROLE',
-        'REPORT_STOPPED_VALIDATORS_ROLE'
-      ],
-      grantee: voting
-    }]
+    groups: [
+      {
+        roleNames: [
+          'MANAGE_SIGNING_KEYS',
+          'ADD_NODE_OPERATOR_ROLE',
+          'SET_NODE_OPERATOR_ACTIVE_ROLE',
+          'SET_NODE_OPERATOR_NAME_ROLE',
+          'SET_NODE_OPERATOR_ADDRESS_ROLE',
+          'SET_NODE_OPERATOR_LIMIT_ROLE',
+          'REPORT_STOPPED_VALIDATORS_ROLE'
+        ],
+        grantee: voting
+      }
+    ]
   })
 }
 
