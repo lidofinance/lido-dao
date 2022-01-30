@@ -15,9 +15,6 @@ pragma solidity 0.4.24;
   * It also mints new tokens for rewards generated at the ETH 2.0 side.
   */
 interface ILido {
-    /**
-     * @dev From ISTETH interface, because "Interfaces cannot inherit".
-     */
     function totalSupply() external view returns (uint256);
     function getTotalShares() external view returns (uint256);
 

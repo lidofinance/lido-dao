@@ -9,7 +9,6 @@ import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "@aragon/os/contracts/common/UnstructuredStorage.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 import "./lib/Pausable.sol";
-import "./interfaces/ISTETH.sol";
 
 /**
  * @title Interest-bearing ERC20-like token for Lido Liquid Stacking protocol.
@@ -48,7 +47,7 @@ import "./interfaces/ISTETH.sol";
  * DAO. This is useful for emergency scenarios, e.g. a protocol bug, where one might want
  * to freeze all token transfers and approvals until the emergency is resolved.
  */
-contract StETH is IERC20, ISTETH, Pausable {
+contract StETH is IERC20, Pausable {
     using SafeMath for uint256;
     using UnstructuredStorage for bytes32;
 
@@ -81,6 +80,17 @@ contract StETH is IERC20, ISTETH, Pausable {
      * see https://github.com/lidofinance/lido-dao/issues/181#issuecomment-736098834
      */
     bytes32 internal constant TOTAL_SHARES_POSITION = keccak256("lido.StETH.totalShares");
+
+    /**
+      * @notice An executed shares transfer from `sender` to `recipient`.
+      *
+      * @dev emitted in pair with an ERC20-defined `Transfer` event.
+      */
+    event TransferShares(
+        address indexed from,
+        address indexed to,
+        uint256 sharesValue
+    );
 
     /**
      * @notice An executed stETH burn event
