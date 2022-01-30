@@ -8,6 +8,7 @@ import "../../interfaces/INodeOperatorsRegistry.sol";
   */
 contract PoolMock {
     event KeysAssigned(bytes pubkeys, bytes signatures);
+    event KeysOpIndexSet(uint256 keysOpIndex);
 
     INodeOperatorsRegistry private operators;
 
