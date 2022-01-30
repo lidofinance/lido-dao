@@ -402,7 +402,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     /**
      * @notice A function to finalize upgrade to v3 (from v1). Can be called only once
      * @dev Value 2 in CONTRACT_VERSION_POSITION is skipped due to change in numbering
-     * .    For more details see LIP-??? _initialize_v3()
+     * For more details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md
      */
     function finalizeUpgrade_v3() external {
         require(CONTRACT_VERSION_POSITION.getStorageUint256() == 1, "WRONG_BASE_VERSION");
