@@ -20,7 +20,7 @@ const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 const stETH = ETH
 const stETHShares = ETH
 
-contract.only('LidoMevTxFeeVault', ([appManager, voting, deployer, depositor, anotherAccount, ...otherAccounts]) => {
+contract('LidoMevTxFeeVault', ([appManager, voting, deployer, depositor, anotherAccount, ...otherAccounts]) => {
   let oracle, lido, mevVault
   let treasuryAddr
   let dao, acl, operators

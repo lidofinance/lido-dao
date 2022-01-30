@@ -70,9 +70,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     let proxyAddress = await newApp(dao, 'lido', appBase.address, appManager)
     app = await Lido.at(proxyAddress)
 
-    mevVault = await MevTxFeeVault.new(app.address)
-    rewarder = await RewardEmulatorMock.new(mevVault.address)
-
     // NodeOperatorsRegistry
     proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)
     operators = await NodeOperatorsRegistry.at(proxyAddress)
@@ -112,6 +109,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await oracle.setPool(app.address)
     await depositContract.reset()
 
+    mevVault = await MevTxFeeVault.new(app.address, treasuryAddr)
+    rewarder = await RewardEmulatorMock.new(mevVault.address)
     await app.setMevTxFeeVault(mevVault.address, { from: voting })
   })
 

@@ -101,7 +101,7 @@ contract('Lido: merge acceptance', (addresses) => {
 
     depositRoot = await depositContractMock.get_deposit_root()
 
-    mevVault = await LidoMevTxFeeVault.new(pool.address)
+    mevVault = await LidoMevTxFeeVault.new(pool.address, treasuryAddr)
     await pool.setMevTxFeeVault(mevVault.address, { from: voting })
 
     rewarder = await RewardEmulatorMock.new(mevVault.address)
