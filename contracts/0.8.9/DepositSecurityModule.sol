@@ -74,8 +74,8 @@ contract DepositSecurityModule {
         uint256 _minDepositBlockDistance,
         uint256 _pauseIntentValidityPeriodBlocks
     ) {
-        require(_lido != address(0x0), "LIDO_ZERO_ADDRESS");
-        require(_depositContract != address(0x0), "DEPOSIT_CONTRACT_ZERO_ADDRESS");
+        require(_lido != address(0), "LIDO_ZERO_ADDRESS");
+        require(_depositContract != address(0), "DEPOSIT_CONTRACT_ZERO_ADDRESS");
         LIDO = _lido;
         DEPOSIT_CONTRACT = _depositContract;
 

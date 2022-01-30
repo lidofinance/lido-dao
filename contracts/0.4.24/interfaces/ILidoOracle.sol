@@ -186,7 +186,7 @@ interface ILidoOracle {
     
     /**
      * @notice Initialize the contract (version 3 for now) from scratch
-     * @dev TODO: Add link to the related LIP
+     * @dev For details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md
      * @param _lido Address of Lido contract
      * @param _epochsPerFrame Number of epochs per frame
      * @param _slotsPerEpoch Number of slots per epoch

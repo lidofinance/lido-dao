@@ -337,7 +337,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
 
     /**
      * @notice Initialize the contract (version 3 for now) from scratch
-     * @dev TODO: Add link to the related LIP
+     * @dev For details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md
      * @param _lido Address of Lido contract
      * @param _epochsPerFrame Number of epochs per frame
      * @param _slotsPerEpoch Number of slots per epoch
@@ -416,7 +416,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
      * semantic version of the contract and number N used in naming of _initialize_nN/finalizeUpgrade_vN.
      * NB, that thus version 2 is skipped 
      */
-    function _initialize_v3() {
+    function _initialize_v3() internal {
         CONTRACT_VERSION_POSITION.setStorageUint256(3);
         emit ContractVersionSet(3);
     }

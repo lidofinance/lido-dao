@@ -342,7 +342,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
 
         // Don’t mint/distribute any protocol fee on the non-profitable Lido oracle report
         // (when beacon chain balance delta is zero or negative).
-        // See ADR #3 for details: https://hackmd.io/Jyvwq8DKSAGjIlCk80YJ7w or https://research.lido.fi/t/rewards-distribution-after-the-merge-architecture-decision-record/1535
+        // See ADR #3 for details: https://research.lido.fi/t/rewards-distribution-after-the-merge-architecture-decision-record/1535
         if (_beaconBalance > rewardBase) {
             uint256 rewards = _beaconBalance.sub(rewardBase);
             distributeRewards(rewards.add(mevRewards));
