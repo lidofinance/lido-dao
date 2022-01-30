@@ -36,6 +36,35 @@ interface ILido {
 
 
     /**
+      * @notice Set authorized oracle contract address to `_oracle`
+      * @dev Contract specified here is allowed to make periodical updates of beacon states
+      * by calling pushBeacon.
+      * @param _oracle oracle contract
+      */
+    function setOracle(address _oracle) external;
+
+    event OracleSet(address oracle);
+
+    /**
+      * @notice Set treasury contract address to `_treasury`
+      * @dev Contract specified here is used to accumulate the protocol treasury fee.
+      * @param _treasury contract which accumulates treasury fee.
+      */
+    function setTreasury(address _treasury) external;
+
+    event TreasurySet(address treasury);
+
+    /**
+      * @notice Set insuranceFund contract address to `_insuranceFund`
+      * @dev Contract specified here is used to accumulate the protocol insurance fee.
+      * @param _insuranceFund contract which accumulates insurance fee.
+      */
+    function setInsuranceFund(address _insuranceFund) external;
+
+    event InsuranceFundSet(address insuranceFund);
+
+
+    /**
       * @notice Set fee rate to `_feeBasisPoints` basis points. The fees are accrued when oracles report staking results
       * @param _feeBasisPoints Fee rate, in basis points
       */
