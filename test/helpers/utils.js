@@ -43,6 +43,22 @@ const div15 = (bn) => bn.div(new BN(1000000)).div(new BN(1000000)).div(new BN(10
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 const tokens = ETH
 
+function formatWei(weiString) {
+  return ethers.utils.formatEther(ethers.utils.parseUnits(weiString, 'wei'), { commify: true }) + ' ETH'
+}
+
+function formatBN(bn) {
+  return formatWei(bn.toString())
+}
+
+async function getEthBalance(address) {
+  return formatWei(await web3.eth.getBalance(address))
+}
+
+function formatStEth(bn) {
+  return ethers.utils.formatEther(ethers.utils.parseUnits(bn.toString(), 'wei'), { commify: true }) + ' stETH'
+}
+
 module.exports = {
   pad,
   hexConcat,
@@ -50,5 +66,8 @@ module.exports = {
   toBN,
   div15,
   ETH,
-  tokens
+  tokens,
+  getEthBalance,
+  formatBN,
+  formatStEth: formatStEth
 }

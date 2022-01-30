@@ -41,7 +41,6 @@ const hexConcat = (first, ...rest) => {
 }
 
 // Divides a BN by 1e15
-
 const div15 = (bn) => bn.div(new BN('1000000000000000'))
 
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
