@@ -98,10 +98,8 @@ interface ILido {
     */
     function receiveMevTxFee() external payable;
 
-
     // The amount of ETH withdrawn from LidoMevTxFeeVault contract to Lido contract
     event MevTxFeeReceived(uint256 amount);
-
 
     /**
       * @notice Set credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched to `_withdrawalCredentials`
@@ -116,9 +114,15 @@ interface ILido {
       */
     function getWithdrawalCredentials() external view returns (bytes);
 
-
     event WithdrawalCredentialsSet(bytes32 withdrawalCredentials);
 
+    /**
+    * @dev Sets given address as the address of LidoMevTxFeeVault contract
+    * @param _mevTxFeeVault MEV and Tx Fees Vault contract address
+    */
+    function setMevTxFeeVault(address _mevTxFeeVault) external;
+
+    event LidoMevTxFeeVaultSet(address mevTxFeeVault);
 
     /**
       * @notice Ether on the ETH 2.0 side reported by the oracle

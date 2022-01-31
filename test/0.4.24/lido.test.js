@@ -111,7 +111,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
 
     mevVault = await MevTxFeeVault.new(app.address, treasuryAddr)
     rewarder = await RewardEmulatorMock.new(mevVault.address)
-    await app.setMevTxFeeVault(mevVault.address, { from: voting })
+    const receipt = await app.setMevTxFeeVault(mevVault.address, { from: voting })
+    assertEvent(receipt, 'LidoMevTxFeeVaultSet', { expectedArgs: { mevTxFeeVault: mevVault.address } })
   })
 
   const checkStat = async ({ depositedValidators, beaconValidators, beaconBalance }) => {

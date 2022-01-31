@@ -286,6 +286,8 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     function setMevTxFeeVault(address _mevTxFeeVault) external auth(SET_MEV_TX_FEE_VAULT_ROLE) {
         require(isContract(_mevTxFeeVault), "NOT_A_CONTRACT");
         MEV_TX_FEE_VAULT_POSITION.setStorageAddress(_mevTxFeeVault);
+
+        emit LidoMevTxFeeVaultSet(_mevTxFeeVault);
     }
 
     /**
