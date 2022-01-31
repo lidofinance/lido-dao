@@ -82,8 +82,6 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     bytes32 internal constant BEACON_BALANCE_POSITION = keccak256("lido.Lido.beaconBalance");
     /// @dev number of Lido's validators available in the Beacon state
     bytes32 internal constant BEACON_VALIDATORS_POSITION = keccak256("lido.Lido.beaconValidators");
-    /// @dev total amount of Ether MEV and transaction rewards received by Lido contract
-    bytes32 internal constant MEV_TX_FEE_ETHER_POSITION = keccak256("lido.Lido.mevTxFeeEther");
 
     /// @dev Just a counter of total amount of MEV and transaction rewards received by Lido contract
     /// Not used in the logic
