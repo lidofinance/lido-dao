@@ -201,5 +201,26 @@
     25,
     6646
   ],
-  "depositorAddress": "0xDb149235B6F40dC08810AA69869783Be101790e7"
+  "depositorAddress": "0xDb149235B6F40dC08810AA69869783Be101790e7",
+  "selfOwnedStETHBurnerParams": {
+    "totalCoverSharesBurnt": "0",
+    "totalNonCoverSharesBurnt": "32145684728326685744",
+    "maxBurnAmountPerRunBasisPoints": "4"
+  },
+  "compositePostRebaseBeaconReceiverConstructorArgs": [
+    "0x2e59A20f205bB85a89C53f1936454680651E618e",
+    "0x442af784A788A5bd6F42A01Ebe9F287a871243fb"
+  ],
+  "compositePostRebaseBeaconReceiverDeployTx": "0x9e9fd0e47efe3a860683c1a3982ffb5646a6f5f79d15a85920748077ccae6526",
+  "compositePostRebaseBeaconReceiverAddress": "0xEdd972c22870726F30253efa88a08608F9748907",
+  "selfOwnedStETHBurnerConstructorArgs": [
+    "0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c",
+    "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
+    "0x2e59A20f205bB85a89C53f1936454680651E618e",
+    "0",
+    "32145684728326685744",
+    "4"
+  ],
+  "selfOwnedStETHBurnerDeployTx": "0x30f76152cf0b6b600b49dd5851d7e14a21a52ab7b81de19c43ca051bb7354969",
+  "selfOwnedStETHBurnerAddress": "0x1e0C8542A59c286e73c30c45612d9C3a674A6cbC"
 }
