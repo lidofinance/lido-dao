@@ -95,6 +95,8 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     * @param _depositContract official ETH2 Deposit contract
     * @param _oracle oracle contract
     * @param _operators instance of Node Operators Registry
+    * @param _treasury contract which accumulates treasury fee
+    * @param _insuranceFund contract which accumulates insurance fee
     */
     function initialize(
         IDepositContract _depositContract,
