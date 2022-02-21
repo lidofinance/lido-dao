@@ -14,6 +14,7 @@ import "../interfaces/ILidoOracle.sol";
 
 import "./ReportUtils.sol";
 
+
 /**
  * @title Implementation of an ETH 2.0 -> ETH oracle
  *
@@ -75,9 +76,9 @@ contract LidoOracle is ILidoOracle, AragonApp {
 
     /// Version of the initialized contract data
     /// NB: Contract versioning starts from 1.
-    /// This version sotred in CONTRACT_VERSION_POSITION equals to
+    /// The version stored in CONTRACT_VERSION_POSITION equals to
     /// - 0 right after deployment when no initializer is invoked yet
-    /// - N after calling initialize() during  deployment from scratch, where N is the current contract version
+    /// - N after calling initialize() during deployment from scratch, where N is the current contract version
     /// - N after upgrading contract from the previous version (after calling finalize_vN())
     bytes32 internal constant CONTRACT_VERSION_POSITION =
         0x75be19a3f314d89bd1f84d30a6c84e2f1cd7afc7b6ca21876564c265113bb7e4; // keccak256("lido.LidoOracle.contractVersion")
@@ -343,8 +344,8 @@ contract LidoOracle is ILidoOracle, AragonApp {
      * @param _slotsPerEpoch Number of slots per epoch
      * @param _secondsPerSlot Number of seconds per slot
      * @param _genesisTime Genesis time
-     * @param _allowedBeaconBalanceAnnualRelativeIncrease Allowed beacon balance annual relative increase (e.g. 1000 means 10% yearly increase)
-     * @param _allowedBeaconBalanceRelativeDecrease Allowed beacon balance moment descreat (e.g. 500 means 5% moment decrease)
+     * @param _allowedBeaconBalanceAnnualRelativeIncrease Allowed beacon balance annual relative increase (e.g. 1000 means 10% increase)
+     * @param _allowedBeaconBalanceRelativeDecrease Allowed beacon balance instantaneous decrease (e.g. 500 means 5% decrease)
      */
     function initialize(
         address _lido,
@@ -361,7 +362,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
 
         // We consider storage state right after deployment (no initialize() called yet) as version 0
 
-        // Initializations for v0 --> v1 (considering version semantically)
+        // Initializations for v0 --> v1
         require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "BASE_VERSION_MUST_BE_ZERO");
 
         _setBeaconSpec(
@@ -376,8 +377,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
         QUORUM_POSITION.setStorageUint256(1);
         emit QuorumChanged(1);
 
-
-        // Initializations for v1 --> v2 (considering version semantically)
+        // Initializations for v1 --> v2
         ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION
             .setStorageUint256(_allowedBeaconBalanceAnnualRelativeIncrease);
         emit AllowedBeaconBalanceAnnualRelativeIncreaseSet(_allowedBeaconBalanceAnnualRelativeIncrease);
@@ -386,16 +386,16 @@ contract LidoOracle is ILidoOracle, AragonApp {
             .setStorageUint256(_allowedBeaconBalanceRelativeDecrease);
         emit AllowedBeaconBalanceRelativeDecreaseSet(_allowedBeaconBalanceRelativeDecrease);
 
-        // // set expected epoch to the first epoch for the next frame
+        // set expected epoch to the first epoch for the next frame
         BeaconSpec memory beaconSpec = _getBeaconSpec();
         uint256 expectedEpoch = _getFrameFirstEpochId(0, beaconSpec) + beaconSpec.epochsPerFrame;
         EXPECTED_EPOCH_ID_POSITION.setStorageUint256(expectedEpoch);
         emit ExpectedEpochIdUpdated(expectedEpoch);
 
-        // Initializations for v2 --> v3 (considering version semantically)
+        // Initializations for v2 --> v3
         _initialize_v3();
 
-        // Need this despite contract version check because Aragon requires it to handle auth() modificators properly
+        // Needed to finish the Aragon part of initialization (otherwise auth() modifiers will fail)
         initialized();
     }
 
