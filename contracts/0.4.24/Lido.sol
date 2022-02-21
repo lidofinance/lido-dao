@@ -110,7 +110,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         require(isContract(address(_operators)), "NOT_A_CONTRACT");
         require(isContract(address(_depositContract)), "NOT_A_CONTRACT");
 
-        NODE_OPERATORS_REGISTRY_POSITION.setStorageAddress(_operators);
+        NODE_OPERATORS_REGISTRY_POSITION.setStorageAddress(address(_operators));
         DEPOSIT_CONTRACT_POSITION.setStorageAddress(address(_depositContract));
 
         _setOracle(_oracle);
