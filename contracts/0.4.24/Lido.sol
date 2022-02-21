@@ -327,7 +327,9 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         address mevVaultAddress = getMevTxFeeVault();
         if (mevVaultAddress != address(0)) {
             mevRewards = ILidoMevTxFeeVault(mevVaultAddress).withdrawRewards();
-            BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().add(mevRewards));
+            if (mevRewards != 0) {
+                BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().add(mevRewards));
+            }
         }
 
         // Don’t mint/distribute any protocol fee on the non-profitable Lido oracle report
