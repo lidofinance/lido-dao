@@ -16,6 +16,7 @@ const MevTxFeeVault = artifacts.require('LidoMevTxFeeVault.sol')
 const OracleMock = artifacts.require('OracleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
 const ERC20Mock = artifacts.require('ERC20Mock.sol')
+const ERC721Mock = artifacts.require('ERC721Mock.sol')
 const VaultMock = artifacts.require('AragonVaultMock.sol')
 const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
 
@@ -1244,12 +1245,18 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
   })
 
   context('recovery vault', () => {
+    let nftToken
+
     beforeEach(async () => {
       await anyToken.mint(app.address, 100)
+
+      nftToken = await ERC721Mock.new()
+      await nftToken.mint(app.address, 777)
     })
 
     it('reverts when vault is not set', async () => {
       await assertRevert(app.transferToVault(anyToken.address, { from: nobody }), 'RECOVER_VAULT_NOT_CONTRACT')
+      await assertRevert(app.transferERC721ToVault(nftToken.address, 777, { from: nobody }), 'RECOVER_VAULT_NOT_CONTRACT')
     })
 
     context('recovery works with vault mock deployed', () => {
@@ -1270,6 +1277,17 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
       it('recovery with erc20 tokens works and emits event', async () => {
         const receipt = await app.transferToVault(anyToken.address, { from: nobody })
         assertEvent(receipt, 'RecoverToVault', { expectedArgs: { vault: vault.address, token: anyToken.address, amount: 100 } })
+      })
+
+      it('recovery with nft tokens works and emits event', async () => {
+        await assertRevert(app.transferERC721ToVault(ZERO_ADDRESS, 777, { from: nobody }))
+
+        assert.equal(await nftToken.ownerOf(777), app.address)
+
+        const receipt = await app.transferERC721ToVault(nftToken.address, 777, { from: nobody })
+        assertEvent(receipt, 'RecoverERC721ToVault', { expectedArgs: { vault: vault.address, token: nftToken.address, tokenId: 777 } })
+
+        assert.equal(await nftToken.ownerOf(777), vault.address)
       })
 
       it('recovery with unaccounted ether works and emits event', async () => {

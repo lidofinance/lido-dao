@@ -178,4 +178,7 @@ interface ILido {
       * @return beaconBalance - total amount of Beacon-side Ether (sum of all the balances of Lido validators)
       */
     function getBeaconStat() external view returns (uint256 depositedValidators, uint256 beaconValidators, uint256 beaconBalance);
+
+    // Requested ERC721 recovery from the `Lido` to the designated `recoveryVault` vault.
+    event RecoverERC721ToVault(address indexed vault, address indexed token, uint256 tokenId);
 }

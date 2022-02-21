@@ -19,6 +19,15 @@ import "./interfaces/ILidoMevTxFeeVault.sol";
 import "./StETH.sol";
 
 
+interface IERC721 {
+    /// @notice Transfer ownership of an NFT
+    /// @param _from The current owner of the NFT
+    /// @param _to The new owner
+    /// @param _tokenId The NFT to transfer
+    function transferFrom(address _from, address _to, uint256 _tokenId) external payable;
+}
+
+
 /**
 * @title Liquid staking pool implementation
 *
@@ -365,6 +374,23 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         }
 
         emit RecoverToVault(vault, _token, balance);
+    }
+
+    /**
+      * @notice Send NTFs to recovery Vault.
+      * @param _token Token to be sent to recovery vault.
+      * @param _tokenId Token Id
+      */
+    function transferERC721ToVault(address _token, uint256 _tokenId) external {
+        require(_token != address(0), "ZERO_ADDRESS");
+        require(allowRecoverability(_token), "RECOVER_DISALLOWED");
+
+        address vault = getRecoveryVault();
+        require(isContract(vault), "RECOVER_VAULT_NOT_CONTRACT");
+
+        IERC721(_token).transferFrom(address(this), vault, _tokenId);
+
+        emit RecoverERC721ToVault(vault, _token, _tokenId);
     }
 
     /**
