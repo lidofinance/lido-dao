@@ -132,16 +132,6 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     }
 
     /**
-    * @notice A payable function supposed to be funded only by LidoMevTxFeeVault contract
-    * @dev We need a separate function because funds received by default payable function
-    * will go through entire deposit algorithm
-    */
-    function mevTxFeeReceiver() external payable {
-        require(msg.sender == MEV_TX_FEE_VAULT_POSITION.getStorageAddress());
-        emit MevTxFeeReceived(msg.value);
-    }
-
-    /**
     * @notice Send funds to the pool with optional _referral parameter
     * @dev This function is alternative way to submit funds. Supports optional referral address.
     * @return Amount of StETH shares generated
