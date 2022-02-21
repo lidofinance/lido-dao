@@ -2,6 +2,7 @@ const { assert } = require('chai')
 const { newDao, newApp } = require('./helpers/dao')
 const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const { toBN } = require('../helpers/utils')
+const keccak256 = require('js-sha3').keccak_256
 
 const LidoOracle = artifacts.require('LidoOracleMock.sol')
 const Lido = artifacts.require('LidoMockForOracle.sol')
@@ -81,6 +82,8 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, user5, 
     assertBn(beaconSpec.genesisTime, 1)
   })
   describe('Test utility functions:', function () {
+    this.timeout(60000) // addOracleMember edge-case is heavy on execution time
+
     beforeEach(async () => {
       await app.setTime(GENESIS_TIME)
     })
@@ -98,6 +101,18 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, user5, 
 
       await assertRevert(app.addOracleMember(user1, { from: voting }), 'MEMBER_EXISTS')
       await assertRevert(app.addOracleMember(user2, { from: voting }), 'MEMBER_EXISTS')
+    })
+
+    it('addOracleMember edge-case', async () => {
+      const promises = []
+      const maxMembersCount = await app.MAX_MEMBERS()
+      for (let i = 0; i < maxMembersCount; ++i) {
+        const addr = '0x' + keccak256('member' + i).substring(0, 40)
+        promises.push(app.addOracleMember(addr, { from: voting }))
+      }
+      await Promise.all(promises)
+
+      assertRevert(app.addOracleMember(user4, { from: voting }), 'TOO_MANY_MEMBERS')
     })
 
     it('removeOracleMember works', async () => {

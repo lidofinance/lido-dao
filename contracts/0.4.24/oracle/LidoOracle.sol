@@ -414,7 +414,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
      * @notice A dummy incremental v1/v2 --> v3 initialize function. Just corrects version number in storage
      * @dev This function is introduced just to set in correspondence version number in storage,
      * semantic version of the contract and number N used in naming of _initialize_nN/finalizeUpgrade_vN.
-     * NB, that thus version 2 is skipped 
+     * NB, that thus version 2 is skipped
      */
     function _initialize_v3() internal {
         CONTRACT_VERSION_POSITION.setStorageUint256(3);
@@ -427,9 +427,10 @@ contract LidoOracle is ILidoOracle, AragonApp {
     function addOracleMember(address _member) external auth(MANAGE_MEMBERS) {
         require(address(0) != _member, "BAD_ARGUMENT");
         require(MEMBER_NOT_FOUND == _getMemberId(_member), "MEMBER_EXISTS");
+        require(members.length < MAX_MEMBERS, "TOO_MANY_MEMBERS");
 
         members.push(_member);
-        require(members.length < MAX_MEMBERS, "TOO_MANY_MEMBERS");
+
         emit MemberAdded(_member);
     }
 
