@@ -201,8 +201,10 @@ contract DepositSecurityModule {
 
     function _setMinDepositBlockDistance(uint256 newValue) internal {
         require(newValue > 0, "invalid value for minDepositBlockDistance: must be greater then 0");
-        minDepositBlockDistance = newValue;
-        emit MinDepositBlockDistanceChanged(newValue);
+        if (newValue != minDepositBlockDistance) {
+            minDepositBlockDistance = newValue;
+            emit MinDepositBlockDistanceChanged(newValue);
+        }
     }
 
 
