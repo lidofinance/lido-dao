@@ -3,6 +3,7 @@ const { hexSplit, toBN } = require('../helpers/utils')
 const { newDao, newApp } = require('./helpers/dao')
 const { ZERO_ADDRESS, getEventAt, getEventArgument } = require('@aragon/contract-helpers-test')
 const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
+const keccak256 = require('js-sha3').keccak_256
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry.sol')
 const PoolMock = artifacts.require('PoolMock.sol')
@@ -85,6 +86,20 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     await assertRevert(app.addNodeOperator('1', ADDRESS_3, { from: user1 }), 'APP_AUTH_FAILED')
     await assertRevert(app.addNodeOperator('1', ADDRESS_3, { from: nobody }), 'APP_AUTH_FAILED')
+  })
+
+  it('addNodeOperator limit works', async () => {
+    const maxOperatorsCount = await app.MAX_NODE_OPERATORS_COUNT()
+    const currentOperatorsCount = await app.getNodeOperatorsCount()
+
+    for (let opIndex = currentOperatorsCount; opIndex < maxOperatorsCount; opIndex++) {
+      const name = keccak256('op' + opIndex)
+      const addr = '0x' + name.substr(0, 40)
+
+      await app.addNodeOperator(name, addr, { from: voting })
+    }
+
+    await assertRevert(app.addNodeOperator('L', ADDRESS_4, { from: voting }), 'MAX_NODE_OPERATORS_COUNT_EXCEEDED')
   })
 
   it('getNodeOperator works', async () => {
