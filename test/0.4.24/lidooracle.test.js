@@ -6,7 +6,8 @@ const keccak256 = require('js-sha3').keccak_256
 
 const LidoOracle = artifacts.require('LidoOracleMock.sol')
 const Lido = artifacts.require('LidoMockForOracle.sol')
-const BeaconReportReceiver = artifacts.require('BeaconReportReceiverMock.sol')
+const BeaconReportReceiver = artifacts.require('BeaconReportReceiverMock')
+const BeaconReportReceiverWithoutERC165 = artifacts.require('BeaconReportReceiverMockWithoutERC165')
 
 const GENESIS_TIME = 1606824000
 const EPOCH_LENGTH = 32 * 12
@@ -497,6 +498,9 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, user5, 
       })
 
       it('quorum receiver called with same arguments as getLastCompletedReportDelta', async () => {
+        const badMock = await BeaconReportReceiverWithoutERC165.new()
+        await assertRevert(app.setBeaconReportReceiver(badMock.address, { from: voting }), 'BAD_BEACON_REPORT_RECEIVER')
+
         const mock = await BeaconReportReceiver.new()
         let receipt = await app.setBeaconReportReceiver(mock.address, { from: voting })
         assertEvent(receipt, 'BeaconReportReceiverSet', { expectedArgs: { callback: mock.address } })

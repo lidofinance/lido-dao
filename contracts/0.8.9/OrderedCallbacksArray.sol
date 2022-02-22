@@ -5,6 +5,8 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
+import "@openzeppelin/contracts-v4.4/utils/introspection/ERC165Checker.sol";
+
 import "./interfaces/IOrderedCallbacksArray.sol";
 
 /**
@@ -14,9 +16,13 @@ import "./interfaces/IOrderedCallbacksArray.sol";
   * Only the `VOTING` address can invoke storage mutating (add/insert/remove) functions.
   */
 contract OrderedCallbacksArray is IOrderedCallbacksArray {
+    using ERC165Checker for address;
+
     uint256 public constant MAX_CALLBACKS_COUNT = 16;
+    bytes4 constant INVALID_INTERFACE_ID = 0xffffffff;
 
     address public immutable VOTING;
+    bytes4 public immutable REQUIRED_INTERFACE;
 
     address[] public callbacks;
 
@@ -25,10 +31,12 @@ contract OrderedCallbacksArray is IOrderedCallbacksArray {
         _;
     }
 
-    constructor(address _voting) {
+    constructor(address _voting, bytes4 _requiredIface) {
+        require(_requiredIface != INVALID_INTERFACE_ID, "INVALID_IFACE");
         require(_voting != address(0), "VOTING_ZERO_ADDRESS");
 
         VOTING = _voting;
+        REQUIRED_INTERFACE = _requiredIface;
     }
 
     function callbacksLength() public view override returns (uint256) {
@@ -58,6 +66,7 @@ contract OrderedCallbacksArray is IOrderedCallbacksArray {
 
     function _insertCallback(address _callback, uint256 _atIndex) private {
         require(_callback != address(0), "CALLBACK_ZERO_ADDRESS");
+        require(_callback.supportsInterface(REQUIRED_INTERFACE), "BAD_CALLBACK_INTERFACE");
 
         uint256 oldCArrayLength = callbacks.length;
         require(_atIndex <= oldCArrayLength, "INDEX_IS_OUT_OF_RANGE");

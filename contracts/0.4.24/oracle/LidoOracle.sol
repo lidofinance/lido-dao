@@ -7,6 +7,7 @@ pragma solidity 0.4.24;
 
 import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/introspection/ERC165Checker.sol";
 
 import "../interfaces/IBeaconReportReceiver.sol";
 import "../interfaces/ILido.sol";
@@ -32,6 +33,7 @@ import "./ReportUtils.sol";
 contract LidoOracle is ILidoOracle, AragonApp {
     using SafeMath for uint256;
     using ReportUtils for uint256;
+    using ERC165Checker for address;
 
     struct BeaconSpec {
         uint64 epochsPerFrame;
@@ -184,6 +186,14 @@ contract LidoOracle is ILidoOracle, AragonApp {
      * @dev Specify 0 to disable this functionality
      */
     function setBeaconReportReceiver(address _addr) external auth(SET_BEACON_REPORT_RECEIVER) {
+        if(_addr != address(0)) {
+            IBeaconReportReceiver iBeacon;
+            require(
+                _addr._supportsInterface(iBeacon.processLidoOracleReport.selector),
+                "BAD_BEACON_REPORT_RECEIVER"
+            );
+        }
+
         BEACON_REPORT_RECEIVER_POSITION.setStorageUint256(uint256(_addr));
         emit BeaconReportReceiverSet(_addr);
     }
