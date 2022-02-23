@@ -27,7 +27,7 @@ contract BeaconReceiverMock is IBeaconReportReceiver, ERC165 {
 
     function supportsInterface(bytes4 _interfaceId) public view virtual override returns (bool) {
         return (
-            _interfaceId == type(IBeaconReportReceiver)._interfaceId
+            _interfaceId == type(IBeaconReportReceiver).interfaceId
             || super.supportsInterface(_interfaceId)
         );
     }
