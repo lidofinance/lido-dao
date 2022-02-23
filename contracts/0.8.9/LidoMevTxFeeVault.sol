@@ -84,12 +84,14 @@ contract LidoMevTxFeeVault {
     /**
     * @notice Withdraw all accumulated rewards to Lido contract
     * @dev Can be called only by the Lido contract
+    * @param _maxAmount Max amount of ETH to withdraw
     * @return amount uint256 of funds received as MEV and transaction fees in wei
     */
-    function withdrawRewards() external returns (uint256 amount) {
+    function withdrawRewards(uint256 _maxAmount) external returns (uint256 amount) {
         require(msg.sender == LIDO, "ONLY_LIDO_CAN_WITHDRAW");
 
-        amount = address(this).balance;
+        uint256 balance = address(this).balance;
+        amount = (balance > _maxAmount) ? _maxAmount : balance;
         if (amount > 0) {
             ILido(LIDO).receiveMevTxFee{value: amount}();
         }

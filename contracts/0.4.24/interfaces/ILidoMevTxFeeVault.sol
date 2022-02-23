@@ -9,7 +9,8 @@ interface ILidoMevTxFeeVault {
 
     /**
     * @notice Withdraw all accumulated rewards to Lido contract
+    * @param _maxAmount Max amount of ETH to withdraw
     * @return amount uint256 of funds received as MEV and transaction fees in wei
     */
-    function withdrawRewards() external returns (uint256 amount);
+    function withdrawRewards(uint256 _maxAmount) external returns (uint256 amount);
 }

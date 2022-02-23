@@ -101,6 +101,9 @@ interface ILido {
     // The amount of ETH withdrawn from LidoMevTxFeeVault contract to Lido contract
     event MevTxFeeReceived(uint256 amount);
 
+    // Percent in points of total pooled ether allowed to withdraw from MevTxFeeVault per LidoOracle report
+    event MevTxFeeWithdrawalLimitSet(uint256 limitPoints);
+
     /**
       * @notice Set credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched to `_withdrawalCredentials`
       * @dev Note that setWithdrawalCredentials discards all unused signing keys as the signatures are invalidated.

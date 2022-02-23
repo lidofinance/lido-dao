@@ -58,6 +58,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     bytes32 constant public SET_INSURANCE_FUND = keccak256("SET_INSURANCE_FUND");
     bytes32 constant public DEPOSIT_ROLE = keccak256("DEPOSIT_ROLE");
     bytes32 constant public SET_MEV_TX_FEE_VAULT_ROLE = keccak256("SET_MEV_TX_FEE_VAULT_ROLE");
+    bytes32 constant public SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE = keccak256("SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE");
 
     uint256 constant public PUBKEY_LENGTH = 48;
     uint256 constant public WITHDRAWAL_CREDENTIALS_LENGTH = 32;
@@ -91,6 +92,9 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     bytes32 internal constant BEACON_BALANCE_POSITION = keccak256("lido.Lido.beaconBalance");
     /// @dev number of Lido's validators available in the Beacon state
     bytes32 internal constant BEACON_VALIDATORS_POSITION = keccak256("lido.Lido.beaconValidators");
+
+    /// @dev percent in points of total pooled ether allowed to withdraw from MevTxFeeVault per LidoOracle report
+    bytes32 internal constant MEV_TX_FEE_WITHDRAWAL_LIMIT_POINTS = keccak256("lido.Lido.mevTxFeeWithdrawalLimitPoints");
 
     /// @dev Just a counter of total amount of MEV and transaction rewards received by Lido contract
     /// Not used in the logic
@@ -292,6 +296,16 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     }
 
     /**
+    * @dev Sets limit to amount of ETH to withdraw per LidoOracle report
+    * @param _limitPoints limit in points to amount of ETH to withdraw per LidoOracle report
+    */
+    function setMevTxFeeWithdrawalLimit(uint256 _limitPoints) external auth(SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE) {
+        require(_limitPoints <= TOTAL_BASIS_POINTS);
+        MEV_TX_FEE_WITHDRAWAL_LIMIT_POINTS.setStorageUint256(_limitPoints);
+        emit MevTxFeeWithdrawalLimitSet(_limitPoints);
+    }
+
+    /**
       * @notice Issues withdrawal request. Not implemented.
       * @param _amount Amount of StETH to withdraw
       * @param _pubkeyHash Receiving address
@@ -327,17 +341,21 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         uint256 rewardBase = (appearedValidators.mul(DEPOSIT_SIZE)).add(BEACON_BALANCE_POSITION.getStorageUint256());
 
         // Save the current beacon balance and validators to
-        // calcuate rewards on the next push
+        // calculate rewards on the next push
         BEACON_BALANCE_POSITION.setStorageUint256(_beaconBalance);
         BEACON_VALIDATORS_POSITION.setStorageUint256(_beaconValidators);
 
         // If LidoMevTxFeeVault address is not set just do as if there were no mevTxFee rewards at all
         // Otherwise withdraw all rewards and put them to the buffer
         // Thus, MEV tx fees are handled the same way as beacon rewards
-        uint256 mevRewards = 0;
+
+        // Calc max amount for this withdrawal
+        uint256 mevRewards = (_getTotalPooledEther() * MEV_TX_FEE_WITHDRAWAL_LIMIT_POINTS.getStorageUint256())
+            / TOTAL_BASIS_POINTS;
+
         address mevVaultAddress = getMevTxFeeVault();
         if (mevVaultAddress != address(0)) {
-            mevRewards = ILidoMevTxFeeVault(mevVaultAddress).withdrawRewards();
+            mevRewards = ILidoMevTxFeeVault(mevVaultAddress).withdrawRewards(mevRewards);
             if (mevRewards != 0) {
                 BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().add(mevRewards));
             }
@@ -440,6 +458,14 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     */
     function getTotalMevTxFeeCollected() external view returns (uint256) {
         return TOTAL_MEV_TX_FEE_COLLECTED_POSITION.getStorageUint256();
+    }
+
+    /**
+    * @notice Get limit in points to amount of ETH to withdraw per LidoOracle report
+    * @return uint256 limit in points to amount of ETH to withdraw per LidoOracle report
+    */
+    function getMevTxFeeWithdrawalLimitPoints() external view returns (uint256) {
+        return MEV_TX_FEE_WITHDRAWAL_LIMIT_POINTS.getStorageUint256();
     }
 
     /**
@@ -639,7 +665,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
 
     /**
     * @dev Distributes rewards by minting and distributing corresponding amount of liquid tokens.
-    * @param _totalRewards Total rewards accured on the Ethereum 2.0 side in wei
+    * @param _totalRewards Total rewards occurred on the Ethereum 2.0 side in wei
     */
     function distributeRewards(uint256 _totalRewards) internal {
         // We need to take a defined percentage of the reported reward as a fee, and we do
