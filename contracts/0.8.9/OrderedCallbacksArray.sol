@@ -12,7 +12,7 @@ import "./interfaces/IOrderedCallbacksArray.sol";
 /**
   * @title Contract defining an ordered callbacks array supporting add/insert/remove ops
   *
-  * Contract adds permission modifiers ontop of `IOderedCallbacksArray` interface functions.
+  * Contract adds permission modifiers atop of `IOrderedCallbacksArray` interface functions.
   * Only the `VOTING` address can invoke storage mutating (add/insert/remove) functions.
   */
 contract OrderedCallbacksArray is IOrderedCallbacksArray {

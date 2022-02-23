@@ -381,11 +381,11 @@ contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, IBeaconReportReceiver, E
         return ILido(LIDO).getPooledEthByShares(totalShares - sharesBurnRequested);
     }
 
-    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+    function supportsInterface(bytes4 _interfaceId) public view virtual override returns (bool) {
         return (
-          interfaceId == type(IBeaconReportReceiver).interfaceId
-          || interfaceId == type(ISelfOwnedStETHBurner).interfaceId
-          || super.supportsInterface(interfaceId)
+            _interfaceId == type(IBeaconReportReceiver).interfaceId
+            || _interfaceId == type(ISelfOwnedStETHBurner).interfaceId
+            || super.supportsInterface(_interfaceId)
         );
     }
 

@@ -49,10 +49,10 @@ contract CompositePostRebaseBeaconReceiver is OrderedCallbacksArray, IBeaconRepo
         }
     }
 
-    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+    function supportsInterface(bytes4 _interfaceId) public view virtual override returns (bool) {
         return (
-            interfaceId == type(IBeaconReportReceiver).interfaceId
-            || super.supportsInterface(interfaceId)
+            _interfaceId == type(IBeaconReportReceiver).interfaceId
+            || super.supportsInterface(_interfaceId)
         );
     }
 }
