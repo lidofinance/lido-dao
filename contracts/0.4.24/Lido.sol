@@ -353,8 +353,8 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     }
 
     /**
-      * @notice Send funds to recovery Vault. Overrides default AragonApp behaviour.
-      * @param _token Token to be sent to recovery vault.
+      * @notice Send funds to recovery Vault. Overrides default AragonApp behaviour
+      * @param _token Token to be sent to recovery vault
       */
     function transferToVault(address _token) external {
         require(allowRecoverability(_token), "RECOVER_DISALLOWED");
@@ -369,7 +369,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         } else {
             ERC20 token = ERC20(_token);
             balance = token.staticBalanceOf(this);
-            // safeTransfer comes from overriden default implementation
+            // safeTransfer comes from overridden default implementation
             require(token.safeTransfer(vault, balance), "RECOVER_TOKEN_TRANSFER_FAILED");
         }
 
@@ -377,8 +377,8 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     }
 
     /**
-      * @notice Send NTFs to recovery Vault.
-      * @param _token Token to be sent to recovery vault.
+      * @notice Send NTFs to recovery Vault
+      * @param _token Token to be sent to recovery vault
       * @param _tokenId Token Id
       */
     function transferERC721ToVault(address _token, uint256 _tokenId) external {
@@ -734,7 +734,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     }
 
     /**
-      * @dev Records a deposit to the deposit_contract.deposit function.
+      * @dev Records a deposit to the deposit_contract.deposit function
       * @param _amount Total amount deposited to the ETH 2.0 side
       */
     function _markAsUnbuffered(uint256 _amount) internal {
