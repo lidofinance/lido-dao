@@ -62,6 +62,8 @@ The contract also works as a wrapper that accepts stETH tokens and mints wstETH 
 * Aragon Token Manager: [`0xf73a1260d222f447210581DDf212D915c09a3249`](https://etherscan.io/address/0xf73a1260d222f447210581DDf212D915c09a3249) (proxy)
 * Aragon Finance: [`0xB9E5CBB9CA5b0d659238807E84D0176930753d86`](https://etherscan.io/address/0xB9E5CBB9CA5b0d659238807E84D0176930753d86) (proxy)
 * Aragon Agent: [`0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c`](https://etherscan.io/address/0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c) (proxy)
+* Coverage application mechanism: [`0x1e0C8542A59c286e73c30c45612d9C3a674A6cbC`](https://etherscan.io/address/0x1e0C8542A59c286e73c30c45612d9C3a674A6cbC)
+* Composite beacon report receiver (post-rebase): [`0xEdd972c22870726F30253efa88a08608F9748907`](https://etherscan.io/address/0xEdd972c22870726F30253efa88a08608F9748907)
 
 ### Görli+Prater testnet
 
@@ -76,6 +78,8 @@ The contract also works as a wrapper that accepts stETH tokens and mints wstETH 
 * Aragon Token Manager: [`0xDfe76d11b365f5e0023343A367f0b311701B3bc1`](https://goerli.etherscan.io/address/0xDfe76d11b365f5e0023343A367f0b311701B3bc1) (proxy)
 * Aragon Finance: [`0x75c7b1D23f1cad7Fb4D60281d7069E46440BC179`](https://goerli.etherscan.io/address/0x75c7b1D23f1cad7Fb4D60281d7069E46440BC179) (proxy)
 * Aragon Agent: [`0x4333218072D5d7008546737786663c38B4D561A4`](https://goerli.etherscan.io/address/0x4333218072D5d7008546737786663c38B4D561A4) (proxy)
+* Coverage application mechanism: [`0xf6a64DcB06Ef7eB1ee94aDfD7D10ACB44D9A9888`](https://goerli.etherscan.io/address/0xf6a64DcB06Ef7eB1ee94aDfD7D10ACB44D9A9888)
+* Composite beacon report receiver (post-rebase): [`0x1D2219E0A1e2F09309643fD8a69Ca0EF7093B739`](https://goerli.etherscan.io/address/0x1D2219E0A1e2F09309643fD8a69Ca0EF7093B739)
 
 ### Görli+Pyrmont testnet
 
