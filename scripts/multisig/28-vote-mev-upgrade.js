@@ -45,11 +45,14 @@ async function createVoting({ web3, artifacts }) {
   const oracle = await artifacts.require('LidoOracle').at(oracleAddress)
   const mevTxFeeVaultAddress = state.mevTxFeeVaultAddress
 
+  const mevTxFeeWithdrawalLimitPoints = 3
+
   log(`Using ENS:`, yl(state.ensAddress))
   log(`TokenManager address:`, yl(tokenManagerAddress))
   log(`Voting address:`, yl(votingAddress))
-  log(`Kernel`, yl(kernel.address))
-  log(`ACL`, yl(acl.address))
+  log(`Kernel:`, yl(kernel.address))
+  log(`ACL:`, yl(acl.address))
+  log(`mevTxFeeWithdrawalLimitPoints: `, yl(mevTxFeeWithdrawalLimitPoints))
 
   log.splitter()
 
@@ -57,7 +60,7 @@ async function createVoting({ web3, artifacts }) {
 
   const oracleUpgradeCallData = await buildUpgradeTransaction('oracle', state, ens, kernel, 2)
 
-  const grantRoleCallData = {
+  const grantSetMevVaultRoleCallData = {
     to: aclAddress,
     calldata: await acl.contract.methods
       .createPermission(
@@ -69,9 +72,26 @@ async function createVoting({ web3, artifacts }) {
       .encodeABI()
   }
 
-  const setMevTxFeeVaultToLidoCallData = {
+  const grantSetMevWithdrawalLimitRoleCallData = {
+    to: aclAddress,
+    calldata: await acl.contract.methods
+      .createPermission(
+        votingAddress,
+        state[`app:lido`].proxyAddress,
+        web3.utils.soliditySha3('SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE'),
+        votingAddress
+      )
+      .encodeABI()
+  }
+
+  const setMevTxFeeVaultCallData = {
     to: lidoAddress,
     calldata: await lido.contract.methods.setMevTxFeeVault(mevTxFeeVaultAddress).encodeABI()
+  }
+
+  const setMevWithdrawalLimitCallData = {
+    to: lidoAddress,
+    calldata: await lido.contract.methods.setMevTxFeeWithdrawalLimit(mevTxFeeWithdrawalLimitPoints).encodeABI()
   }
 
   const updateOracleVersionToV3CallData = {
@@ -83,8 +103,10 @@ async function createVoting({ web3, artifacts }) {
     ...lidoUpgradeCallData,
     ...oracleUpgradeCallData,
     updateOracleVersionToV3CallData,
-    grantRoleCallData,
-    setMevTxFeeVaultToLidoCallData,
+    grantSetMevVaultRoleCallData,
+    grantSetMevWithdrawalLimitRoleCallData,
+    setMevTxFeeVaultCallData,
+    setMevWithdrawalLimitCallData,
   ])
 
   log(`encodedUpgradeCallData:`, yl(encodedUpgradeCallData))
@@ -95,14 +117,16 @@ async function createVoting({ web3, artifacts }) {
     }
   ])
 
-  const txName = `tx-23-deploy-mev-upgrade.json`
+  const txName = `tx-28-deploy-mev-upgrade.json`
   const votingDesc = `1) Publishing new implementation in lido app APM repo
-2) Updating implementaion of lido app with new one
+2) Updating implementation of lido app with new one
 3) Publishing new implementation in oracle app APM repo
-4) Updating implementaion of oracle app with new one
+4) Updating implementation of oracle app with new one
 5) Call Oracle's finalizeUpgrade_v3() to update internal version counter
-5) Grant role SENT_MEV_TX_FEE_VAULT_ROLE to voting
-6) Set deployed MevTxFeeVault to Lido contract`
+5) Grant role SET_MEV_TX_FEE_VAULT_ROLE to voting
+6) Grant role SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE to voting
+7) Set deployed MevTxFeeVault to Lido contract
+8) Set MevTxFee Withdrawal Limit to ${mevTxFeeWithdrawalLimitPoints} basis points`
 
   await saveCallTxData(votingDesc, tokenManager, 'forward', txName, {
     arguments: [votingCallData],

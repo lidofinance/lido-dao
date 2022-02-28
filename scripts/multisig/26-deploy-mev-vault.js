@@ -25,7 +25,7 @@ async function upgradeApp({ web3, artifacts }) {
   const args = [
     lidoAddress,
   ]
-  await saveDeployTx(appArtifact, `tx-21-deploy-mev-vault.json`, {
+  await saveDeployTx(appArtifact, `tx-26-deploy-mev-vault.json`, {
     arguments: args,
     from: DEPLOYER || state.multisigAddress
   })
