@@ -101,7 +101,7 @@ interface ILido {
     // The amount of ETH withdrawn from LidoMevTxFeeVault contract to Lido contract
     event MevTxFeeReceived(uint256 amount);
 
-    // Percent in points of total pooled ether allowed to withdraw from MevTxFeeVault per LidoOracle report
+    // Percent in basis points of total pooled ether allowed to withdraw from MevTxFeeVault per LidoOracle report
     event MevTxFeeWithdrawalLimitSet(uint256 limitPoints);
 
     /**

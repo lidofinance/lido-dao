@@ -3,7 +3,7 @@ const { assert } = require('chai')
 const { newDao, newApp } = require('./helpers/dao')
 const { getInstalledApp } = require('@aragon/contract-helpers-test/src/aragon-os')
 const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
-const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
+const { ZERO_ADDRESS, bn, getEventAt } = require('@aragon/contract-helpers-test')
 const { BN } = require('bn.js')
 const { ethers } = require('ethers')
 const { formatEther } = require('ethers/lib/utils')
@@ -40,6 +40,11 @@ const hexConcat = (first, ...rest) => {
     result += item.startsWith('0x') ? item.substr(2) : item
   })
   return result
+}
+
+const assertNoEvent = (receipt, eventName, msg) => {
+  const event = getEventAt(receipt, eventName)
+  assert.equal(event, undefined, msg)
 }
 
 // Divides a BN by 1e15
@@ -259,6 +264,21 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     assertBn(await app.getTotalPooledEther(), ETH(depositAmount + mevAmount + beaconRewards))
     assertBn(await app.getBufferedEther(), ETH(mevAmount))
     assertBn(await app.balanceOf(user2), STETH(depositAmount + shareOfRewardsForStakers * (mevAmount + beaconRewards)))
+  })
+
+  it('Attempt to set invalid MEV Tx Fee withdrawal limit', async () => {
+    const initialValue = await app.getMevTxFeeWithdrawalLimitPoints()
+
+    assertEvent(await app.setMevTxFeeWithdrawalLimit(1, { from: voting }), 'MevTxFeeWithdrawalLimitSet', {
+      expectedArgs: { limitPoints: 1 }
+    })
+
+    await assertNoEvent(app.setMevTxFeeWithdrawalLimit(1, { from: voting }), 'MevTxFeeWithdrawalLimitSet')
+
+    await app.setMevTxFeeWithdrawalLimit(10000, { from: voting })
+    await assertRevert(app.setMevTxFeeWithdrawalLimit(10001, { from: voting }), 'INVALID_POINTS_AMOUNT')
+
+    await app.setMevTxFeeWithdrawalLimit(initialValue, { from: voting })
   })
 
   it('setFee works', async () => {
@@ -605,7 +625,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     assertBn(await app.getBufferedEther(), ETH(5))
   })
 
-  it('withrawal method reverts', async () => {
+  it('withdrawal method reverts', async () => {
     await operators.addNodeOperator('1', ADDRESS_1, { from: voting })
     await operators.addNodeOperator('2', ADDRESS_2, { from: voting })
 
@@ -835,7 +855,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
 
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(34) })
     await app.methods['depositBufferedEther()']({ from: depositor })
-    // some slashing occured
+    // some slashing occurred
     await oracle.reportBeacon(100, 1, ETH(30))
 
     await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(30) })
@@ -1188,7 +1208,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
   it('burnShares works', async () => {
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(1) })
 
-    // not permited from arbitary address
+    // not permitted from arbitrary address
     await assertRevert(app.burnShares(user1, ETH(1), { from: nobody }), 'APP_AUTH_FAILED')
 
     // voting can burn shares of any user
@@ -1211,11 +1231,11 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
   })
 
   context('treasury', () => {
-    it('treasury adddress has been set after init', async () => {
+    it('treasury address has been set after init', async () => {
       assert.notEqual(await app.getTreasury(), ZERO_ADDRESS)
     })
 
-    it(`treasury can't be set by an arbitary address`, async () => {
+    it(`treasury can't be set by an arbitrary address`, async () => {
       await assertRevert(app.setTreasury(user1, { from: nobody }))
       await assertRevert(app.setTreasury(user1, { from: user1 }))
     })
@@ -1232,11 +1252,11 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
   })
 
   context('insurance fund', () => {
-    it('insurance fund adddress has been set after init', async () => {
+    it('insurance fund address has been set after init', async () => {
       assert.notEqual(await app.getInsuranceFund(), ZERO_ADDRESS)
     })
 
-    it(`insurance fund can't be set by an arbitary address`, async () => {
+    it(`insurance fund can't be set by an arbitrary address`, async () => {
       await assertRevert(app.setInsuranceFund(user1, { from: nobody }))
       await assertRevert(app.setInsuranceFund(user1, { from: user1 }))
     })

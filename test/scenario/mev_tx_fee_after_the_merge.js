@@ -745,25 +745,39 @@ contract('Lido: merge acceptance', (addresses) => {
       return new BN(String(x))
     }
 
+    // Specify different withdrawal limits for a few epochs to test different values
+    const getMevWithdrawalLimitFromEpoch = (_epoch) => {
+      if (_epoch === 106) {
+        return 2
+      } else if (_epoch === 107) {
+        return 0
+      } else {
+        return 3
+      }
+    }
+
     const mevAmount = toE18(0.1)
     await rewarder.reward({ from: userMev, value: fromNum(mevAmount) })
     assertBn(await web3.eth.getBalance(mevVault.address), fromNum(mevAmount), 'MEV vault balance')
 
-    await pool.setMevTxFeeWithdrawalLimit(3, { from: voting })
-
-    const mevWithdrawalLimitPoints = toNum(await pool.getMevTxFeeWithdrawalLimitPoints())
-
+    let epoch = 106
     let lastBeaconBalance = toE18(85)
+    await pool.setMevTxFeeWithdrawalLimit(getMevWithdrawalLimitFromEpoch(epoch), { from: voting })
+
+    let mevWithdrawalLimitPoints = toNum(await pool.getMevTxFeeWithdrawalLimitPoints())
     let mevVaultBalance = toNum(await web3.eth.getBalance(mevVault.address))
     let totalPooledEther = toNum(await pool.getTotalPooledEther())
     let bufferedEther = toNum(await pool.getBufferedEther())
     let totalSupply = toNum(await pool.totalSupply())
     const beaconBalanceInc = toE18(1)
-    let epoch = 106
     let mevWithdrawn = 0
 
     // Do multiple oracle reports to withdraw all ETH from MEV Tx Fee Vault
     while (mevVaultBalance > 0) {
+      const mevWithdrawalLimit = getMevWithdrawalLimitFromEpoch(epoch)
+      await pool.setMevTxFeeWithdrawalLimit(mevWithdrawalLimit, { from: voting })
+      mevWithdrawalLimitPoints = toNum(await pool.getMevTxFeeWithdrawalLimitPoints())
+
       const maxMevAmountPerWithdrawal = Math.floor(((totalPooledEther + beaconBalanceInc) * mevWithdrawalLimitPoints) / TOTAL_BASIS_POINTS)
       const mevToWithdraw = Math.min(maxMevAmountPerWithdrawal, mevVaultBalance)
 
