@@ -93,7 +93,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     /// @dev number of Lido's validators available in the Beacon state
     bytes32 internal constant BEACON_VALIDATORS_POSITION = keccak256("lido.Lido.beaconValidators");
 
-    /// @dev percent in points of total pooled ether allowed to withdraw from MevTxFeeVault per LidoOracle report
+    /// @dev percent in basis points of total pooled ether allowed to withdraw from MevTxFeeVault per LidoOracle report
     bytes32 internal constant MEV_TX_FEE_WITHDRAWAL_LIMIT_POINTS = keccak256("lido.Lido.mevTxFeeWithdrawalLimitPoints");
 
     /// @dev Just a counter of total amount of MEV and transaction rewards received by Lido contract
@@ -297,12 +297,15 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
 
     /**
     * @dev Sets limit to amount of ETH to withdraw per LidoOracle report
-    * @param _limitPoints limit in points to amount of ETH to withdraw per LidoOracle report
+    * @param _limitPoints limit in basis points to amount of ETH to withdraw per LidoOracle report
     */
     function setMevTxFeeWithdrawalLimit(uint256 _limitPoints) external auth(SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE) {
-        require(_limitPoints <= TOTAL_BASIS_POINTS);
-        MEV_TX_FEE_WITHDRAWAL_LIMIT_POINTS.setStorageUint256(_limitPoints);
-        emit MevTxFeeWithdrawalLimitSet(_limitPoints);
+        require(_limitPoints <= TOTAL_BASIS_POINTS, "INVALID_POINTS_AMOUNT");
+
+        if (_limitPoints != MEV_TX_FEE_WITHDRAWAL_LIMIT_POINTS.getStorageUint256()) {
+            MEV_TX_FEE_WITHDRAWAL_LIMIT_POINTS.setStorageUint256(_limitPoints);
+            emit MevTxFeeWithdrawalLimitSet(_limitPoints);
+        }
     }
 
     /**
@@ -461,8 +464,8 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     }
 
     /**
-    * @notice Get limit in points to amount of ETH to withdraw per LidoOracle report
-    * @return uint256 limit in points to amount of ETH to withdraw per LidoOracle report
+    * @notice Get limit in basis points to amount of ETH to withdraw per LidoOracle report
+    * @return uint256 limit in basis points to amount of ETH to withdraw per LidoOracle report
     */
     function getMevTxFeeWithdrawalLimitPoints() external view returns (uint256) {
         return MEV_TX_FEE_WITHDRAWAL_LIMIT_POINTS.getStorageUint256();
