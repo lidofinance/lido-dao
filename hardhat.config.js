@@ -68,6 +68,7 @@ const getNetConfig = (networkName, ethAccountName) => {
       blockGasLimit: 20000000,
       gasPrice: 0,
       initialBaseFeePerGas: 0,
+      allowUnlimitedContractSize: true,
       accounts: {
         mnemonic: 'hardhat',
         count: 20,

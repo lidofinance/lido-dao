@@ -104,6 +104,9 @@ contract('Lido: merge acceptance', (addresses) => {
     mevVault = await LidoMevTxFeeVault.new(pool.address, treasuryAddr)
     await pool.setMevTxFeeVault(mevVault.address, { from: voting })
 
+    // At first go through tests assuming there is no withdrawal limit
+    await pool.setMevTxFeeWithdrawalLimit(TOTAL_BASIS_POINTS, { from: voting })
+
     rewarder = await RewardEmulatorMock.new(mevVault.address)
 
     assertBn(await web3.eth.getBalance(rewarder.address), ETH(0), 'rewarder balance')
@@ -406,7 +409,7 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(await token.balanceOf(insuranceAddr), new BN('81999999999999999'), 'insurance tokens')
 
     // The node operators' fee is distributed between all active node operators,
-    // proprotional to their effective stake (the amount of Ether staked by the operator's
+    // proportional to their effective stake (the amount of Ether staked by the operator's
     // used and non-stopped validators).
     //
     // In our case, both node operators received the same fee since they have the same

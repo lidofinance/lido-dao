@@ -26,6 +26,7 @@ const ADDRESS_3 = '0x0000000000000000000000000000000000000003'
 const ADDRESS_4 = '0x0000000000000000000000000000000000000004'
 
 const UNLIMITED = 1000000000
+const TOTAL_BASIS_POINTS = 10000
 
 const pad = (hex, bytesLength) => {
   const absentZeroes = bytesLength * 2 + 2 - hex.length
@@ -85,6 +86,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await acl.createPermission(voting, app.address, await app.SET_ORACLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_INSURANCE_FUND(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_MEV_TX_FEE_VAULT_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, app.address, await app.SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE(), appManager, { from: appManager })
 
     await acl.createPermission(voting, operators.address, await operators.MANAGE_SIGNING_KEYS(), appManager, { from: appManager })
     await acl.createPermission(voting, operators.address, await operators.ADD_NODE_OPERATOR_ROLE(), appManager, { from: appManager })
@@ -112,8 +114,12 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
 
     mevVault = await MevTxFeeVault.new(app.address, treasuryAddr)
     rewarder = await RewardEmulatorMock.new(mevVault.address)
-    const receipt = await app.setMevTxFeeVault(mevVault.address, { from: voting })
+    let receipt = await app.setMevTxFeeVault(mevVault.address, { from: voting })
     assertEvent(receipt, 'LidoMevTxFeeVaultSet', { expectedArgs: { mevTxFeeVault: mevVault.address } })
+
+    const mevTxFeeWithdrawalLimitPoints = 3
+    receipt = await app.setMevTxFeeWithdrawalLimit(mevTxFeeWithdrawalLimitPoints, { from: voting })
+    assertEvent(receipt, 'MevTxFeeWithdrawalLimitSet', { expectedArgs: { limitPoints: mevTxFeeWithdrawalLimitPoints } })
   })
 
   const checkStat = async ({ depositedValidators, beaconValidators, beaconBalance }) => {
@@ -207,7 +213,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
 
   it('MEV distribution works when zero rewards reported', async () => {
     const depositAmount = 32
-    const mevAmount = 10
+    const mevAmount = depositAmount / TOTAL_BASIS_POINTS
     const beaconRewards = 0
 
     await setupNodeOperatorsForMevTxFeeVaultTests(user2, ETH(depositAmount))
@@ -223,7 +229,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
 
   it('MEV distribution works when negative rewards reported', async () => {
     const depositAmount = 32
-    const mevAmount = 12
+    const mevAmount = depositAmount / TOTAL_BASIS_POINTS
     const beaconRewards = -2
 
     await setupNodeOperatorsForMevTxFeeVaultTests(user2, ETH(depositAmount))
@@ -239,7 +245,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
 
   it('MEV distribution works when positive rewards reported', async () => {
     const depositAmount = 32
-    const mevAmount = 7
+    const mevAmount = depositAmount / TOTAL_BASIS_POINTS
     const beaconRewards = 3
 
     await setupNodeOperatorsForMevTxFeeVaultTests(user2, ETH(depositAmount))
@@ -248,9 +254,11 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await rewarder.reward({ from: user1, value: ETH(mevAmount) })
     await oracle.reportBeacon(101, 1, ETH(depositAmount + beaconRewards))
 
+    const protocolFeePoints = await app.getFee()
+    const shareOfRewardsForStakers = (TOTAL_BASIS_POINTS - protocolFeePoints) / TOTAL_BASIS_POINTS
     assertBn(await app.getTotalPooledEther(), ETH(depositAmount + mevAmount + beaconRewards))
     assertBn(await app.getBufferedEther(), ETH(mevAmount))
-    assertBn(await app.balanceOf(user2), STETH(41))
+    assertBn(await app.balanceOf(user2), STETH(depositAmount + shareOfRewardsForStakers * (mevAmount + beaconRewards)))
   })
 
   it('setFee works', async () => {
