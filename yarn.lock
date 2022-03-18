@@ -215,6 +215,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@aragon/minime@npm:^1.0.0":
+  version: 1.0.0
+  resolution: "@aragon/minime@npm:1.0.0"
+  checksum: a6b5e574baadde1094cf7a1a0bf2ff6142f4e74e95d0991664b7c3f909e34eeedc8ea4f9e758d189ebf0ca54fefe7a4fe89e00dd4ddf831f7ffda3678be88b1c
+  languageName: node
+  linkType: hard
+
 "@aragon/os@npm:4.2.0":
   version: 4.2.0
   resolution: "@aragon/os@npm:4.2.0"
@@ -3638,6 +3645,7 @@ __metadata:
     "@aragon/buidler-aragon": ^0.2.9
     "@aragon/contract-helpers-test": ^0.1.0
     "@aragon/hardhat-aragon": ^1.0.0
+    "@aragon/minime": ^1.0.0
     "@aragon/os": ^4.4.0
     "@aragon/templates-shared": ^1.0.1
     "@aragon/test-helpers": ^2.1.0
