@@ -103,9 +103,6 @@ contract LDOProxy  {
 
         // emit DelegateChanged(delegator, currentDelegate, delegatee);
 
-        console.log("LDOProxy. Delegator %s, currentDelegate %s, delegatee %s", delegator, currentDelegate, delegatee);
-        console.log("LDOProxy. Balance %s", delegatorBalance );
-
         _moveDelegates(currentDelegate, delegatee, amount);
     }
 

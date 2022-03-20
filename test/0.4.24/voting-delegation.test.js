@@ -103,7 +103,7 @@ contract('Lido voting delegation', ([appManager, user1, user2, user3, nobody]) =
 
       await tokenManager.assign(user1, 100)
       await tokenManager.assign(user2, 200)
-      // await tokenManager.assign(user3, 300)
+      await tokenManager.assign(user3, 300)
     })
 
     it('check total supply', async () => {
@@ -134,25 +134,33 @@ contract('Lido voting delegation', ([appManager, user1, user2, user3, nobody]) =
 
       await tokenManager.setWrappedToken(tokenProxy.address)
 
-      // console.log('Issue 600 tokens')
-      // console.log('Sender ', appManager)
+      console.log('Issue 600 tokens')
+      console.log('Sender ', appManager)
 
-      // await tokenManager.issue(600)
+      await tokenManager.issue(600)
 
-      // await tokenManager.assign(user1, 100)
-      // await tokenManager.assign(user2, 200)
-      // await tokenManager.assign(user3, 300)
-
-      // console.log('power',(await tokenProxy.getCurrentVotes(user1)).toString())
-      // console.log('power',(await tokenProxy.getCurrentVotes(user2)).toString())
-      // console.log('power',(await tokenProxy.getCurrentVotes(user3)).toString())
+      await tokenManager.assign(user1, 100)
+      await tokenManager.assign(user2, 200)
+      await tokenManager.assign(user3, 300)
     })
 
-    it('user1 no voting power', async () => {
+    it('check total supply', async () => {
+      assert.equal(await token.totalSupply(), 600)
+      assert.equal(await tokenProxy.totalSupply(), 600)
+    })
+
+    it('user1 voting power after assifgn tokens', async () => {
       assert.equal(await tokenProxy.getCurrentVotes(user1), 0)
     })
 
     it('user1 delegate voting power to user1 (self)', async () => {
+      await tokenProxy.delegate(user1, { from: user1 })
+
+      assert.equal(await tokenProxy.getCurrentVotes(user1), 100)
+    })
+
+    it('user1 delegate to self multiple times', async () => {
+      await tokenProxy.delegate(user1, { from: user1 })
       await tokenProxy.delegate(user1, { from: user1 })
 
       assert.equal(await tokenProxy.getCurrentVotes(user1), 100)
@@ -206,25 +214,38 @@ contract('Lido voting delegation', ([appManager, user1, user2, user3, nobody]) =
     })
 
     it('delegate voting power and transfer token', async () => {
+      const userBalances = async (message) => {
+        console.log(message)
+        const users = []
+        const accs = [user1, user2, user3]
+        for (let i = 0; i < accs.length; i++) {
+          const tokenBalance = await token.balanceOf(accs[i])
+          const votingPower = await tokenProxy.getCurrentVotes(accs[i])
+          users.push({
+            tokenBalance: tokenBalance.toString(),
+            votingPower: votingPower.toString()
+          })
+        }
+
+        console.table(users)
+      }
+      await userBalances('current table')
+
       await tokenProxy.delegate(user1, { from: user1 })
+      await userBalances('delegate from user1 to user1')
+
       await tokenProxy.delegate(user1, { from: user2 })
+      await userBalances('user2 delegate VP to user1')
+
       await tokenProxy.delegate(user2, { from: user2 })
+      await userBalances('user2 delegate to user2')
+
       await tokenProxy.delegate(user1, { from: user3 })
+      await userBalances('user3 deleegate VP to user1')
 
       // user1 has 100-50=50 tokens, VP 400-50=350, user3 has 300+50=350 tokens
       await token.transfer(user3, 50, { from: user1 })
-
-      const accs = [user1, user2, user3]
-      for (let i = 0; i < accs.length; i++) {
-        const userVP = await tokenProxy.getCurrentVotes(accs[i])
-        const userTB = await token.balanceOf(accs[i])
-        const userTPB = await tokenProxy.balanceOf(accs[i])
-
-        console.log(`===user${i + 1}===`)
-        console.log(`User${i + 1} voting power: ` + userVP.toString())
-        console.log(`User${i + 1} token balance: ` + userTB.toString())
-        console.log(`User${i + 1} token proxy balance: ` + userTPB.toString())
-      }
+      await userBalances('user1 transfer 50 tokens to user3 ')
 
       assert.equal(await token.balanceOf(user1), 50)
       assert.equal(await tokenProxy.getCurrentVotes(user1), 350)
@@ -233,7 +254,7 @@ contract('Lido voting delegation', ([appManager, user1, user2, user3, nobody]) =
       assert.equal(await tokenProxy.getCurrentVotes(user2), 200)
 
       assert.equal(await token.balanceOf(user3), 350)
-      assert.equal(await tokenProxy.getCurrentVotes(user3), 0)
+      assert.equal(await tokenProxy.getCurrentVotes(user3), 50)
     })
   })
 })

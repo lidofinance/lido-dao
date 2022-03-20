@@ -132,8 +132,6 @@ contract TokenManager is ITokenController, IForwarder, AragonApp {
     * @param _amount Number of tokens transferred
     */
     function assign(address _receiver, uint256 _amount) external authP(ASSIGN_ROLE, arr(_receiver, _amount)) {
-        console.log("Assign external %s amount %s", _receiver, _amount);
-
         _assign(_receiver, _amount);
     }
 
@@ -235,10 +233,8 @@ contract TokenManager is ITokenController, IForwarder, AragonApp {
     * @return False if the controller does not authorize the transfer
     */
     function onTransfer(address _from, address _to, uint256 _amount) external onlyToken returns (bool) {
-        console.log("TokenManager. onTransfer from:%s, to:%s, amount: %s", _from, _to, _amount);
-        console.log("TokenManager. sender %s", msg.sender);
-
-        if (wrappedToken != address(0) && isContract(wrappedToken)) {
+ 
+        if (wrappedToken != address(0) && isContract(wrappedToken) && _from != address(this)) {
             ILDOProxy(wrappedToken).delegateFrom(_from, _to, _amount);
         }
         
