@@ -2,26 +2,22 @@ diff --git a/node_modules/@aragon/contract-helpers-test/src/asserts/assertThrow.
 index 8f6790e..7a8e7ca 100644
 --- a/node_modules/@aragon/contract-helpers-test/src/asserts/assertThrow.js
 +++ b/node_modules/@aragon/contract-helpers-test/src/asserts/assertThrow.js
-@@ -4,17 +4,18 @@ const { decodeErrorReasonFromTx } = require('../decoding')
-
+@@ -4,6 +4,7 @@
+ 
  const ERROR_PREFIX = 'Returned error:'
  const THROW_PREFIX = 'VM Exception while processing transaction: revert'
 +const THROW_PREFIX_V2 = 'VM Exception while processing transaction: reverted with reason string'
-
+ 
  async function assertThrows(
-
-@@ -86,22 +87,24 @@ async function assertRevert(blockOrPromise, expectedReason, ctx) {
-   // Truffle v5 provides `error.reason`, but truffle v4 and buidler do not.
+   blockOrPromise,
+@@ -87,8 +88,10 @@
    if (!error.reason && error.message.includes(THROW_PREFIX)) {
      error.reason = error.message
--      .replace(ERROR_PREFIX, '')
--      .replace(THROW_PREFIX, '')
--      .trim()
-+      .replace(ERROR_PREFIX, '')
+       .replace(ERROR_PREFIX, '')
 +      .replace(THROW_PREFIX_V2, '')
-+      .replace(THROW_PREFIX, '')
-+      .trim()
+       .replace(THROW_PREFIX, '')
+       .trim()
 +      .replace(/^'|'$/g,"")
    }
-
+ 
    // Truffle v5 sometimes adds an extra ' -- Reason given: reason.' to the error message 🤷
