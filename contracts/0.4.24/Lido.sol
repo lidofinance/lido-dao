@@ -50,7 +50,8 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
 
     /// ACL
     bytes32 constant public PAUSE_ROLE = keccak256("PAUSE_ROLE");
-    bytes32 constant public SUBMITS_BREAK_ROLE = keccak256("SUBMITS_BREAK_ROLE");
+    bytes32 constant public STAKING_PAUSE_ROLE = keccak256("STAKING_PAUSE_ROLE");
+    bytes32 constant public STAKING_RESUME_ROLE = keccak256("STAKING_RESUME_ROLE");
     bytes32 constant public MANAGE_FEE = keccak256("MANAGE_FEE");
     bytes32 constant public MANAGE_WITHDRAWAL_KEY = keccak256("MANAGE_WITHDRAWAL_KEY");
     bytes32 constant public SET_ORACLE = keccak256("SET_ORACLE");
@@ -86,7 +87,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     bytes32 internal constant MEV_TX_FEE_VAULT_POSITION = keccak256("lido.Lido.mevTxFeeVault");
 
     /// @dev dedicated switch to cut-off staking new funds without pausing the whole protocol
-    bytes32 internal constant SUBMITS_BREAK_POSITION = keccak256("lido.Lido.submitsBreak");
+    bytes32 internal constant STAKING_PAUSED_POSITION = keccak256("lido.Lido.stakingPaused");
     /// @dev amount of Ether (on the current Ethereum side) buffered on this smart contract balance
     bytes32 internal constant BUFFERED_ETHER_POSITION = keccak256("lido.Lido.bufferedEther");
     /// @dev number of deposited validators (incrementing counter of deposit operations).
@@ -137,33 +138,33 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     }
 
     /**
-    * @notice Cut-off new staking (every new submit transaction would revert if called)
-    * @dev Provides a way to stop staking without pushing PAUSE for the whole proto
+    * @notice Cut-off new staking (every new funds submit transaction would revert if called)
+    * @dev Provides a way to pause staking without pushing PAUSE for the whole proto
     * The main goal is to prevent huge APR losses for existing stakers due to high demands on entry queue
     */
-    function stopSubmits() external auth(SUBMITS_BREAK_ROLE) {
-        require(!isSubmitsStopped(), "SUBMITS_ALREADY_STOPPED");
-        SUBMITS_BREAK_POSITION.setStorageBool(true);
-        emit SubmitsStopped();
+    function pauseStaking() external auth(STAKING_PAUSE_ROLE) {
+        require(!isStakingPaused(), "STAKING_ALREADY_PAUSED");
+        STAKING_PAUSED_POSITION.setStorageBool(true);
+        emit StakingPaused();
     }
 
     /**
-    * @notice Resume staking if `stopSubmits` was called previously (allow new submit transactions)
-    * See `stopSubmits` for the details.
+    * @notice Resume staking if `pauseStaking` was called previously (allow new submit transactions)
+    * See `pauseStaking` for the details.
     */
-    function resumeSubmits() external auth(SUBMITS_BREAK_ROLE)  {
-        require(isSubmitsStopped(), "SUBMITS_ALREADY_RESUMED");
-        SUBMITS_BREAK_POSITION.setStorageBool(false);
-        emit SubmitsResumed();
+    function resumeStaking() external auth(STAKING_RESUME_ROLE)  {
+        require(isStakingPaused(), "STAKING_ALREADY_RESUMED");
+        STAKING_PAUSED_POSITION.setStorageBool(false);
+        emit StakingResumed();
     }
 
     /**
-    * @notice check staking break state
-    * Returns true if new staking is cutted-off
-    * See `stopSubmits` for the details.
+    * @notice check staking pause state
+    * Returns true if staking is on pause currently
+    * See `pauseStaking` for the details.
     */
-    function isSubmitsStopped() public view returns(bool) {
-        return SUBMITS_BREAK_POSITION.getStorageBool();
+    function isStakingPaused() public view returns(bool) {
+        return STAKING_PAUSED_POSITION.getStorageBool();
     }
 
     /**
@@ -592,7 +593,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     * @return amount of StETH shares generated
     */
     function _submit(address _referral) internal whenNotStopped returns (uint256) {
-        require(!isSubmitsStopped(), "SUBMITS_STOPPED");
+        require(!isStakingPaused(), "STAKING_PAUSED");
         address sender = msg.sender;
         uint256 deposit = msg.value;
         require(deposit != 0, "ZERO_DEPOSIT");

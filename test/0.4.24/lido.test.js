@@ -92,7 +92,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await acl.createPermission(voting, app.address, await app.SET_INSURANCE_FUND(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_MEV_TX_FEE_VAULT_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.SUBMITS_BREAK_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, app.address, await app.STAKING_PAUSE_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, app.address, await app.STAKING_RESUME_ROLE(), appManager, { from: appManager })
 
     await acl.createPermission(voting, operators.address, await operators.MANAGE_SIGNING_KEYS(), appManager, { from: appManager })
     await acl.createPermission(voting, operators.address, await operators.ADD_NODE_OPERATOR_ROLE(), appManager, { from: appManager })
@@ -556,25 +557,25 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     assertEvent(receipt, 'Submitted', { expectedArgs: { sender: user2, amount: ETH(5), referral: ZERO_ADDRESS } })
   })
 
-  it('submits break works', async () => {
+  it('staking pause/resume works', async () => {
     let receipt
 
     receipt = await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2) })
     assertEvent(receipt, 'Submitted', { expectedArgs: { sender: user2, amount: ETH(2), referral: ZERO_ADDRESS } })
 
-    assertRevert(app.stopSubmits(), 'APP_AUTH_FAILED')
-    receipt = await app.stopSubmits({ from: voting })
-    assertEvent(receipt, 'SubmitsStopped')
-    assertRevert(app.stopSubmits({ from: voting }), 'SUBMITS_ALREADY_STOPPED')
-    assert.equal(await app.isSubmitsStopped(), true)
-    assertRevert(web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(2) }), `SUBMITS_STOPPED`)
-    assertRevert(app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2) }), `SUBMITS_STOPPED`)
+    assertRevert(app.pauseStaking(), 'APP_AUTH_FAILED')
+    receipt = await app.pauseStaking({ from: voting })
+    assertEvent(receipt, 'StakingPaused')
+    assertRevert(app.pauseStaking({ from: voting }), 'STAKING_ALREADY_PAUSED')
+    assert.equal(await app.isStakingPaused(), true)
+    assertRevert(web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(2) }), `STAKING_PAUSED`)
+    assertRevert(app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2) }), `STAKING_PAUSED`)
 
-    assertRevert(app.resumeSubmits(), 'APP_AUTH_FAILED')
-    receipt = await app.resumeSubmits({ from: voting })
-    assertEvent(receipt, 'SubmitsResumed')
-    assertRevert(app.resumeSubmits({ from: voting }), 'SUBMITS_ALREADY_RESUMED')
-    assert.equal(await app.isSubmitsStopped(), false)
+    assertRevert(app.resumeStaking(), 'APP_AUTH_FAILED')
+    receipt = await app.resumeStaking({ from: voting })
+    assertEvent(receipt, 'StakingResumed')
+    assertRevert(app.resumeStaking({ from: voting }), 'STAKING_ALREADY_RESUMED')
+    assert.equal(await app.isStakingPaused(), false)
 
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(1.1) })
     receipt = await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(1.4) })
