@@ -92,6 +92,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await acl.createPermission(voting, app.address, await app.SET_INSURANCE_FUND(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_MEV_TX_FEE_VAULT_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, app.address, await app.SUBMITS_BREAK_ROLE(), appManager, { from: appManager })
 
     await acl.createPermission(voting, operators.address, await operators.MANAGE_SIGNING_KEYS(), appManager, { from: appManager })
     await acl.createPermission(voting, operators.address, await operators.ADD_NODE_OPERATOR_ROLE(), appManager, { from: appManager })
@@ -553,6 +554,31 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     assertEvent(receipt, 'Submitted', { expectedArgs: { sender: user2, amount: ETH(2), referral: REFERRAL } })
     receipt = await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(5) })
     assertEvent(receipt, 'Submitted', { expectedArgs: { sender: user2, amount: ETH(5), referral: ZERO_ADDRESS } })
+  })
+
+  it('submits break works', async () => {
+    let receipt
+
+    receipt = await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2) })
+    assertEvent(receipt, 'Submitted', { expectedArgs: { sender: user2, amount: ETH(2), referral: ZERO_ADDRESS } })
+
+    assertRevert(app.stopSubmits(), 'APP_AUTH_FAILED')
+    receipt = await app.stopSubmits({ from: voting })
+    assertEvent(receipt, 'SubmitsStopped')
+    assertRevert(app.stopSubmits({ from: voting }), 'SUBMITS_ALREADY_STOPPED')
+    assert.equal(await app.isSubmitsStopped(), true)
+    assertRevert(web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(2) }), `SUBMITS_STOPPED`)
+    assertRevert(app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2) }), `SUBMITS_STOPPED`)
+
+    assertRevert(app.resumeSubmits(), 'APP_AUTH_FAILED')
+    receipt = await app.resumeSubmits({ from: voting })
+    assertEvent(receipt, 'SubmitsResumed')
+    assertRevert(app.resumeSubmits({ from: voting }), 'SUBMITS_ALREADY_RESUMED')
+    assert.equal(await app.isSubmitsStopped(), false)
+
+    await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(1.1) })
+    receipt = await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(1.4) })
+    assertEvent(receipt, 'Submitted', { expectedArgs: { sender: user2, amount: ETH(1.4), referral: ZERO_ADDRESS } })
   })
 
   it('reverts when trying to call unknown function', async () => {

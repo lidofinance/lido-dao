@@ -50,6 +50,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
 
     /// ACL
     bytes32 constant public PAUSE_ROLE = keccak256("PAUSE_ROLE");
+    bytes32 constant public SUBMITS_BREAK_ROLE = keccak256("SUBMITS_BREAK_ROLE");
     bytes32 constant public MANAGE_FEE = keccak256("MANAGE_FEE");
     bytes32 constant public MANAGE_WITHDRAWAL_KEY = keccak256("MANAGE_WITHDRAWAL_KEY");
     bytes32 constant public SET_ORACLE = keccak256("SET_ORACLE");
@@ -84,6 +85,8 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     bytes32 internal constant INSURANCE_FUND_POSITION = keccak256("lido.Lido.insuranceFund");
     bytes32 internal constant MEV_TX_FEE_VAULT_POSITION = keccak256("lido.Lido.mevTxFeeVault");
 
+    /// @dev dedicated switch to cut-off staking new funds without pausing the whole protocol
+    bytes32 internal constant SUBMITS_BREAK_POSITION = keccak256("lido.Lido.submitsBreak");
     /// @dev amount of Ether (on the current Ethereum side) buffered on this smart contract balance
     bytes32 internal constant BUFFERED_ETHER_POSITION = keccak256("lido.Lido.bufferedEther");
     /// @dev number of deposited validators (incrementing counter of deposit operations).
@@ -131,6 +134,36 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         _setInsuranceFund(_insuranceFund);
 
         initialized();
+    }
+
+    /**
+    * @notice Cut-off new staking (every new submit transaction would revert if called)
+    * @dev Provides a way to stop staking without pushing PAUSE for the whole proto
+    * The main goal is to prevent huge APR losses for existing stakers due to high demands on entry queue
+    */
+    function stopSubmits() external auth(SUBMITS_BREAK_ROLE) {
+        require(!isSubmitsStopped(), "SUBMITS_ALREADY_STOPPED");
+        SUBMITS_BREAK_POSITION.setStorageBool(true);
+        emit SubmitsStopped();
+    }
+
+    /**
+    * @notice Resume staking if `stopSubmits` was called previously (allow new submit transactions)
+    * See `stopSubmits` for the details.
+    */
+    function resumeSubmits() external auth(SUBMITS_BREAK_ROLE)  {
+        require(isSubmitsStopped(), "SUBMITS_ALREADY_RESUMED");
+        SUBMITS_BREAK_POSITION.setStorageBool(false);
+        emit SubmitsResumed();
+    }
+
+    /**
+    * @notice check staking break state
+    * Returns true if new staking is cutted-off
+    * See `stopSubmits` for the details.
+    */
+    function isSubmitsStopped() public view returns(bool) {
+        return SUBMITS_BREAK_POSITION.getStorageBool();
     }
 
     /**
@@ -559,6 +592,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     * @return amount of StETH shares generated
     */
     function _submit(address _referral) internal whenNotStopped returns (uint256) {
+        require(!isSubmitsStopped(), "SUBMITS_STOPPED");
         address sender = msg.sender;
         uint256 deposit = msg.value;
         require(deposit != 0, "ZERO_DEPOSIT");

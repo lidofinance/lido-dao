@@ -28,8 +28,23 @@ interface ILido {
       */
     function resume() external;
 
+    /**
+      * @notice Cut-off new staking (every new submit transaction would revert if called)
+      * @dev Provides a way to stop staking without pushing PAUSE for the whole proto
+      * The main goal is to prevent huge APR losses for existing stakers due to high demands on entry queue
+      */
+    function stopSubmits() external;
+
+    /**
+      * @notice Resume staking if `stopSubmits` was called previously (allow new submit transactions)
+      * See `stopSubmits` for the details.
+      */
+    function resumeSubmits() external;
+
     event Stopped();
     event Resumed();
+    event SubmitsStopped();
+    event SubmitsResumed();
 
 
     /**
