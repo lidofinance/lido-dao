@@ -93,16 +93,17 @@ contract StETH is IERC20, Pausable {
     );
 
     /**
-     * @notice An executed stETH burn event
+     * @notice An executed `burnShares` request
      *
-     * @dev Reports simultaneously stETH amount and shares amount.
-     * The stETH amount is calculated before the burning incurred rebase.
+     * @dev Reports simultaneously burnt shares amount
+     * and corresponding stETH amount.
+     * The stETH amount is calculated just before the burning incurred rebase.
      *
-     * @param account holder of the burnt stETH
-     * @param amount amount of burnt stETH
-     * @param sharesAmount amount of burnt shares
+     * @param account holder of the burnt shares
+     * @param amount amount of burnt shares (expressed in stETH just before burning invocation)
+     * @param sharesAmount amount of burnt shares (expressed in shares themselves)
      */
-    event StETHBurnt(
+    event SharesBurnt(
         address indexed account,
         uint256 amount,
         uint256 sharesAmount
@@ -458,7 +459,7 @@ contract StETH is IERC20, Pausable {
         require(_sharesAmount <= accountShares, "BURN_AMOUNT_EXCEEDS_BALANCE");
 
         uint256 amount = getPooledEthByShares(_sharesAmount);
-        emit StETHBurnt(_account, amount, _sharesAmount);
+        emit SharesBurnt(_account, amount, _sharesAmount);
 
         newTotalShares = _getTotalShares().sub(_sharesAmount);
         TOTAL_SHARES_POSITION.setStorageUint256(newTotalShares);

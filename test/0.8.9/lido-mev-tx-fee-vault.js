@@ -58,9 +58,9 @@ contract('LidoMevTxFeeVault', ([appManager, voting, deployer, depositor, another
   })
 
   it('Addresses which are not Lido contract cannot withdraw from MEV vault', async () => {
-    await assertRevert(mevVault.withdrawRewards({ from: anotherAccount }), 'ONLY_LIDO_CAN_WITHDRAW')
-    await assertRevert(mevVault.withdrawRewards({ from: deployer }), 'ONLY_LIDO_CAN_WITHDRAW')
-    await assertRevert(mevVault.withdrawRewards({ from: appManager }), 'ONLY_LIDO_CAN_WITHDRAW')
+    await assertRevert(mevVault.withdrawRewards(12345, { from: anotherAccount }), 'ONLY_LIDO_CAN_WITHDRAW')
+    await assertRevert(mevVault.withdrawRewards(12345, { from: deployer }), 'ONLY_LIDO_CAN_WITHDRAW')
+    await assertRevert(mevVault.withdrawRewards(12345, { from: appManager }), 'ONLY_LIDO_CAN_WITHDRAW')
   })
 
   it('MEV Tx Fee Vault totalRewardsReceivedViaTransactions counter', async () => {

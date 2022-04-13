@@ -19,6 +19,15 @@ import "./interfaces/ILidoMevTxFeeVault.sol";
 import "./StETH.sol";
 
 
+interface IERC721 {
+    /// @notice Transfer ownership of an NFT
+    /// @param _from The current owner of the NFT
+    /// @param _to The new owner
+    /// @param _tokenId The NFT to transfer
+    function transferFrom(address _from, address _to, uint256 _tokenId) external payable;
+}
+
+
 /**
 * @title Liquid staking pool implementation
 *
@@ -49,6 +58,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     bytes32 constant public SET_INSURANCE_FUND = keccak256("SET_INSURANCE_FUND");
     bytes32 constant public DEPOSIT_ROLE = keccak256("DEPOSIT_ROLE");
     bytes32 constant public SET_MEV_TX_FEE_VAULT_ROLE = keccak256("SET_MEV_TX_FEE_VAULT_ROLE");
+    bytes32 constant public SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE = keccak256("SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE");
 
     uint256 constant public PUBKEY_LENGTH = 48;
     uint256 constant public WITHDRAWAL_CREDENTIALS_LENGTH = 32;
@@ -83,6 +93,9 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     /// @dev number of Lido's validators available in the Beacon state
     bytes32 internal constant BEACON_VALIDATORS_POSITION = keccak256("lido.Lido.beaconValidators");
 
+    /// @dev percent in basis points of total pooled ether allowed to withdraw from MevTxFeeVault per LidoOracle report
+    bytes32 internal constant MEV_TX_FEE_WITHDRAWAL_LIMIT_POINTS = keccak256("lido.Lido.mevTxFeeWithdrawalLimitPoints");
+
     /// @dev Just a counter of total amount of MEV and transaction rewards received by Lido contract
     /// Not used in the logic
     bytes32 internal constant TOTAL_MEV_TX_FEE_COLLECTED_POSITION = keccak256("lido.Lido.totalMevTxFeeCollected");
@@ -95,6 +108,8 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     * @param _depositContract official ETH2 Deposit contract
     * @param _oracle oracle contract
     * @param _operators instance of Node Operators Registry
+    * @param _treasury contract which accumulates treasury fee
+    * @param _insuranceFund contract which accumulates insurance fee
     */
     function initialize(
         IDepositContract _depositContract,
@@ -108,7 +123,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         require(isContract(address(_operators)), "NOT_A_CONTRACT");
         require(isContract(address(_depositContract)), "NOT_A_CONTRACT");
 
-        NODE_OPERATORS_REGISTRY_POSITION.setStorageAddress(_operators);
+        NODE_OPERATORS_REGISTRY_POSITION.setStorageAddress(address(_operators));
         DEPOSIT_CONTRACT_POSITION.setStorageAddress(address(_depositContract));
 
         _setOracle(_oracle);
@@ -129,16 +144,6 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         // protection against accidental submissions by calling non-existent function
         require(msg.data.length == 0, "NON_EMPTY_DATA");
         _submit(0);
-    }
-
-    /**
-    * @notice A payable function supposed to be funded only by LidoMevTxFeeVault contract
-    * @dev We need a separate function because funds received by default payable function
-    * will go through entire deposit algorithm
-    */
-    function mevTxFeeReceiver() external payable {
-        require(msg.sender == MEV_TX_FEE_VAULT_POSITION.getStorageAddress());
-        emit MevTxFeeReceived(msg.value);
     }
 
     /**
@@ -291,6 +296,19 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     }
 
     /**
+    * @dev Sets limit to amount of ETH to withdraw per LidoOracle report
+    * @param _limitPoints limit in basis points to amount of ETH to withdraw per LidoOracle report
+    */
+    function setMevTxFeeWithdrawalLimit(uint256 _limitPoints) external auth(SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE) {
+        require(_limitPoints <= TOTAL_BASIS_POINTS, "INVALID_POINTS_AMOUNT");
+
+        if (_limitPoints != MEV_TX_FEE_WITHDRAWAL_LIMIT_POINTS.getStorageUint256()) {
+            MEV_TX_FEE_WITHDRAWAL_LIMIT_POINTS.setStorageUint256(_limitPoints);
+            emit MevTxFeeWithdrawalLimitSet(_limitPoints);
+        }
+    }
+
+    /**
       * @notice Issues withdrawal request. Not implemented.
       * @param _amount Amount of StETH to withdraw
       * @param _pubkeyHash Receiving address
@@ -326,18 +344,24 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         uint256 rewardBase = (appearedValidators.mul(DEPOSIT_SIZE)).add(BEACON_BALANCE_POSITION.getStorageUint256());
 
         // Save the current beacon balance and validators to
-        // calcuate rewards on the next push
+        // calculate rewards on the next push
         BEACON_BALANCE_POSITION.setStorageUint256(_beaconBalance);
         BEACON_VALIDATORS_POSITION.setStorageUint256(_beaconValidators);
 
         // If LidoMevTxFeeVault address is not set just do as if there were no mevTxFee rewards at all
         // Otherwise withdraw all rewards and put them to the buffer
         // Thus, MEV tx fees are handled the same way as beacon rewards
-        uint256 mevRewards = 0;
+
+        // Calc max amount for this withdrawal
+        uint256 mevRewards = (_getTotalPooledEther() * MEV_TX_FEE_WITHDRAWAL_LIMIT_POINTS.getStorageUint256())
+            / TOTAL_BASIS_POINTS;
+
         address mevVaultAddress = getMevTxFeeVault();
         if (mevVaultAddress != address(0)) {
-            mevRewards = ILidoMevTxFeeVault(mevVaultAddress).withdrawRewards();
-            BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().add(mevRewards));
+            mevRewards = ILidoMevTxFeeVault(mevVaultAddress).withdrawRewards(mevRewards);
+            if (mevRewards != 0) {
+                BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().add(mevRewards));
+            }
         }
 
         // Don’t mint/distribute any protocol fee on the non-profitable Lido oracle report
@@ -350,8 +374,8 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     }
 
     /**
-      * @notice Send funds to recovery Vault. Overrides default AragonApp behaviour.
-      * @param _token Token to be sent to recovery vault.
+      * @notice Send funds to recovery Vault. Overrides default AragonApp behaviour
+      * @param _token Token to be sent to recovery vault
       */
     function transferToVault(address _token) external {
         require(allowRecoverability(_token), "RECOVER_DISALLOWED");
@@ -366,11 +390,28 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         } else {
             ERC20 token = ERC20(_token);
             balance = token.staticBalanceOf(this);
-            // safeTransfer comes from overriden default implementation
+            // safeTransfer comes from overridden default implementation
             require(token.safeTransfer(vault, balance), "RECOVER_TOKEN_TRANSFER_FAILED");
         }
 
         emit RecoverToVault(vault, _token, balance);
+    }
+
+    /**
+      * @notice Send NTFs to recovery Vault
+      * @param _token Token to be sent to recovery vault
+      * @param _tokenId Token Id
+      */
+    function transferERC721ToVault(address _token, uint256 _tokenId) external {
+        require(_token != address(0), "ZERO_ADDRESS");
+        require(allowRecoverability(_token), "RECOVER_DISALLOWED");
+
+        address vault = getRecoveryVault();
+        require(isContract(vault), "RECOVER_VAULT_NOT_CONTRACT");
+
+        IERC721(_token).transferFrom(address(this), vault, _tokenId);
+
+        emit RecoverERC721ToVault(vault, _token, _tokenId);
     }
 
     /**
@@ -420,6 +461,14 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     */
     function getTotalMevTxFeeCollected() external view returns (uint256) {
         return TOTAL_MEV_TX_FEE_COLLECTED_POSITION.getStorageUint256();
+    }
+
+    /**
+    * @notice Get limit in basis points to amount of ETH to withdraw per LidoOracle report
+    * @return uint256 limit in basis points to amount of ETH to withdraw per LidoOracle report
+    */
+    function getMevTxFeeWithdrawalLimitPoints() external view returns (uint256) {
+        return MEV_TX_FEE_WITHDRAWAL_LIMIT_POINTS.getStorageUint256();
     }
 
     /**
@@ -619,7 +668,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
 
     /**
     * @dev Distributes rewards by minting and distributing corresponding amount of liquid tokens.
-    * @param _totalRewards Total rewards accured on the Ethereum 2.0 side in wei
+    * @param _totalRewards Total rewards occurred on the Ethereum 2.0 side in wei
     */
     function distributeRewards(uint256 _totalRewards) internal {
         // We need to take a defined percentage of the reported reward as a fee, and we do
@@ -714,7 +763,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     }
 
     /**
-      * @dev Records a deposit to the deposit_contract.deposit function.
+      * @dev Records a deposit to the deposit_contract.deposit function
       * @param _amount Total amount deposited to the ETH 2.0 side
       */
     function _markAsUnbuffered(uint256 _amount) internal {

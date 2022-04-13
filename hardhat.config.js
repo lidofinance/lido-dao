@@ -9,6 +9,7 @@ require('@nomiclabs/hardhat-ganache')
 require('@nomiclabs/hardhat-etherscan')
 require('hardhat-gas-reporter')
 require('solidity-coverage')
+require('hardhat-contract-sizer')
 
 const NETWORK_NAME = getNetworkName()
 const ETH_ACCOUNT_NAME = process.env.ETH_ACCOUNT_NAME
@@ -68,6 +69,7 @@ const getNetConfig = (networkName, ethAccountName) => {
       blockGasLimit: 20000000,
       gasPrice: 0,
       initialBaseFeePerGas: 0,
+      allowUnlimitedContractSize: true,
       accounts: {
         mnemonic: 'hardhat',
         count: 20,

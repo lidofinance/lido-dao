@@ -7,6 +7,7 @@ pragma solidity 0.4.24;
 
 import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/introspection/ERC165Checker.sol";
 
 import "../interfaces/IBeaconReportReceiver.sol";
 import "../interfaces/ILido.sol";
@@ -32,6 +33,7 @@ import "./ReportUtils.sol";
 contract LidoOracle is ILidoOracle, AragonApp {
     using SafeMath for uint256;
     using ReportUtils for uint256;
+    using ERC165Checker for address;
 
     struct BeaconSpec {
         uint64 epochsPerFrame;
@@ -184,6 +186,14 @@ contract LidoOracle is ILidoOracle, AragonApp {
      * @dev Specify 0 to disable this functionality
      */
     function setBeaconReportReceiver(address _addr) external auth(SET_BEACON_REPORT_RECEIVER) {
+        if(_addr != address(0)) {
+            IBeaconReportReceiver iBeacon;
+            require(
+                _addr._supportsInterface(iBeacon.processLidoOracleReport.selector),
+                "BAD_BEACON_REPORT_RECEIVER"
+            );
+        }
+
         BEACON_REPORT_RECEIVER_POSITION.setStorageUint256(uint256(_addr));
         emit BeaconReportReceiverSet(_addr);
     }
@@ -414,7 +424,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
      * @notice A dummy incremental v1/v2 --> v3 initialize function. Just corrects version number in storage
      * @dev This function is introduced just to set in correspondence version number in storage,
      * semantic version of the contract and number N used in naming of _initialize_nN/finalizeUpgrade_vN.
-     * NB, that thus version 2 is skipped 
+     * NB, that thus version 2 is skipped
      */
     function _initialize_v3() internal {
         CONTRACT_VERSION_POSITION.setStorageUint256(3);
@@ -427,9 +437,10 @@ contract LidoOracle is ILidoOracle, AragonApp {
     function addOracleMember(address _member) external auth(MANAGE_MEMBERS) {
         require(address(0) != _member, "BAD_ARGUMENT");
         require(MEMBER_NOT_FOUND == _getMemberId(_member), "MEMBER_EXISTS");
+        require(members.length < MAX_MEMBERS, "TOO_MANY_MEMBERS");
 
         members.push(_member);
-        require(members.length < MAX_MEMBERS, "TOO_MANY_MEMBERS");
+
         emit MemberAdded(_member);
     }
 

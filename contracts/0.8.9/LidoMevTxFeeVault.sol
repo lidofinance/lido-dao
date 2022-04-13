@@ -25,7 +25,7 @@ interface ILido {
 * This contract has no payable functions because it's balance is supposed to be
 * increased directly by ethereum protocol when transaction priority fees and extracted MEV
 * rewards are earned by a validator.
-* These vault replenishments happen continuously throught a day, while withdrawals
+* These vault replenishments happen continuously through a day, while withdrawals
 * happen much less often, only on LidoOracle beacon balance reports
 */
 contract LidoMevTxFeeVault {
@@ -34,7 +34,7 @@ contract LidoMevTxFeeVault {
 
     /**
      * Total amount of rewards received via transactions
-     * Rewards received on this contract set as coinbase (fee receipient)
+     * Rewards received on this contract set as coinbase (fee recipient)
      * are not counted
      */
     uint256 public totalRewardsReceivedViaTransactions;
@@ -67,6 +67,7 @@ contract LidoMevTxFeeVault {
       */
     constructor(address _lido, address _treasury) {
         require(_lido != address(0), "LIDO_ZERO_ADDRESS");
+        require(_treasury != address(0), "TREASURY_ZERO_ADDRESS");
 
         LIDO = _lido;
         TREASURY = _treasury;
@@ -83,12 +84,14 @@ contract LidoMevTxFeeVault {
     /**
     * @notice Withdraw all accumulated rewards to Lido contract
     * @dev Can be called only by the Lido contract
+    * @param _maxAmount Max amount of ETH to withdraw
     * @return amount uint256 of funds received as MEV and transaction fees in wei
     */
-    function withdrawRewards() external returns (uint256 amount) {
+    function withdrawRewards(uint256 _maxAmount) external returns (uint256 amount) {
         require(msg.sender == LIDO, "ONLY_LIDO_CAN_WITHDRAW");
 
-        amount = address(this).balance;
+        uint256 balance = address(this).balance;
+        amount = (balance > _maxAmount) ? _maxAmount : balance;
         if (amount > 0) {
             ILido(LIDO).receiveMevTxFee{value: amount}();
         }

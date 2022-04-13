@@ -5,6 +5,7 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
+import "@openzeppelin/contracts-v4.4/utils/introspection/ERC165.sol";
 import "./OrderedCallbacksArray.sol";
 import "./interfaces/IBeaconReportReceiver.sol";
 
@@ -14,7 +15,7 @@ import "./interfaces/IBeaconReportReceiver.sol";
   * Contract adds permission modifiers.
   * Only the `ORACLE` address can invoke `processLidoOracleReport` function.
   */
-contract CompositePostRebaseBeaconReceiver is OrderedCallbacksArray, IBeaconReportReceiver {
+contract CompositePostRebaseBeaconReceiver is OrderedCallbacksArray, IBeaconReportReceiver, ERC165 {
     address public immutable ORACLE;
 
     modifier onlyOracle() {
@@ -25,7 +26,7 @@ contract CompositePostRebaseBeaconReceiver is OrderedCallbacksArray, IBeaconRepo
     constructor(
         address _voting,
         address _oracle
-    ) OrderedCallbacksArray(_voting) {
+    ) OrderedCallbacksArray(_voting, type(IBeaconReportReceiver).interfaceId) {
         require(_oracle != address(0), "ORACLE_ZERO_ADDRESS");
 
         ORACLE = _oracle;
@@ -35,7 +36,7 @@ contract CompositePostRebaseBeaconReceiver is OrderedCallbacksArray, IBeaconRepo
         uint256 _postTotalPooledEther,
         uint256 _preTotalPooledEther,
         uint256 _timeElapsed
-    ) external override onlyOracle {
+    ) external virtual override onlyOracle {
         uint256 callbacksLen = callbacksLength();
 
         for (uint256 brIndex = 0; brIndex < callbacksLen; brIndex++) {
@@ -46,5 +47,12 @@ contract CompositePostRebaseBeaconReceiver is OrderedCallbacksArray, IBeaconRepo
                     _timeElapsed
                 );
         }
+    }
+
+    function supportsInterface(bytes4 _interfaceId) public view virtual override returns (bool) {
+        return (
+            _interfaceId == type(IBeaconReportReceiver).interfaceId
+            || super.supportsInterface(_interfaceId)
+        );
     }
 }

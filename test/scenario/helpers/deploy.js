@@ -72,6 +72,7 @@ async function deployDaoAndPool(appManager, voting) {
     POOL_BURN_ROLE,
     DEPOSIT_ROLE,
     SET_MEV_TX_FEE_VAULT_ROLE,
+    SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE,
     NODE_OPERATOR_REGISTRY_MANAGE_SIGNING_KEYS,
     NODE_OPERATOR_REGISTRY_ADD_NODE_OPERATOR_ROLE,
     NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_ACTIVE_ROLE,
@@ -86,6 +87,7 @@ async function deployDaoAndPool(appManager, voting) {
     pool.BURN_ROLE(),
     pool.DEPOSIT_ROLE(),
     pool.SET_MEV_TX_FEE_VAULT_ROLE(),
+    pool.SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE(),
     nodeOperatorRegistry.MANAGE_SIGNING_KEYS(),
     nodeOperatorRegistry.ADD_NODE_OPERATOR_ROLE(),
     nodeOperatorRegistry.SET_NODE_OPERATOR_ACTIVE_ROLE(),
@@ -102,6 +104,7 @@ async function deployDaoAndPool(appManager, voting) {
     acl.createPermission(voting, pool.address, POOL_MANAGE_WITHDRAWAL_KEY, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, POOL_BURN_ROLE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, SET_MEV_TX_FEE_VAULT_ROLE, appManager, { from: appManager }),
+    acl.createPermission(voting, pool.address, SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE, appManager, { from: appManager }),
 
     // Allow depositor to deposit buffered ether
     acl.createPermission(depositSecurityModule.address, pool.address, DEPOSIT_ROLE, appManager, { from: appManager }),

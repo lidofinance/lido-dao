@@ -20,7 +20,7 @@ import "../lib/MemUtils.sol";
   *
   * See the comment of `INodeOperatorsRegistry`.
   *
-  * NOTE: the code below assumes moderate amount of node operators, e.g. up to 50.
+  * NOTE: the code below assumes moderate amount of node operators, i.e. up to 50 (MAX_NODE_OPERATORS_COUNT).
   */
 contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp {
     using SafeMath for uint256;
@@ -38,11 +38,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
     uint256 constant public PUBKEY_LENGTH = 48;
     uint256 constant public SIGNATURE_LENGTH = 96;
+    uint256 constant public MAX_NODE_OPERATORS_COUNT = 50;
 
     uint256 internal constant UINT64_MAX = uint256(uint64(-1));
 
     bytes32 internal constant SIGNING_KEYS_MAPPING_NAME = keccak256("lido.NodeOperatorsRegistry.signingKeysMappingName");
-
 
     /// @dev Node Operator parameters and internal state
     struct NodeOperator {
@@ -118,6 +118,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         returns (uint256 id)
     {
         id = getNodeOperatorsCount();
+        require(id < MAX_NODE_OPERATORS_COUNT, "MAX_NODE_OPERATORS_COUNT_EXCEEDED");
+
         TOTAL_OPERATORS_COUNT_POSITION.setStorageUint256(id.add(1));
 
         NodeOperator storage operator = operators[id];

@@ -8,7 +8,6 @@ const { APP_NAMES } = require('./constants')
 const DEPLOYER = process.env.DEPLOYER || ''
 const REQUIRED_NET_STATE = ['daoInitialSettings', 'depositorParams', `app:${APP_NAMES.LIDO}`, `app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`]
 
-
 async function upgradeApp({ web3, artifacts }) {
   const appArtifact = 'LidoMevTxFeeVault'
   const netId = await web3.eth.net.getId()
@@ -22,10 +21,11 @@ async function upgradeApp({ web3, artifacts }) {
   log(`Using Lido address:`, yl(lidoAddress))
   logSplitter()
 
-  const args = [
-    lidoAddress,
-  ]
-  await saveDeployTx(appArtifact, `tx-21-deploy-mev-vault.json`, {
+  const lido = await artifacts.require('Lido').at(lidoAddress)
+  const treasuryAddr = await lido.getTreasury()
+
+  const args = [lidoAddress, treasuryAddr]
+  await saveDeployTx(appArtifact, `tx-26-deploy-mev-vault.json`, {
     arguments: args,
     from: DEPLOYER || state.multisigAddress
   })

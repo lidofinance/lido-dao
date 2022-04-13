@@ -4,7 +4,8 @@ const { assertBn, assertRevert, assertEvent, assertAmountOfEvents } = require('@
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 
 const CompositePostRebaseBeaconReceiver = artifacts.require('CompositePostRebaseBeaconReceiver.sol')
-const BeaconReceiverMock = artifacts.require('BeaconReceiverMock.sol')
+const BeaconReceiverMock = artifacts.require('BeaconReceiverMock')
+const BeaconReceiverMockWithoutERC165 = artifacts.require('BeaconReceiverMockWithoutERC165')
 
 const deployedCallbackCount = 8
 
@@ -32,6 +33,9 @@ contract('CompositePostRebaseBeaconReceiver', ([deployer, voting, oracle, anothe
     })
 
     it(`add a single callback works`, async () => {
+      const invalidCallback = await BeaconReceiverMockWithoutERC165.new()
+      assertRevert(compositeReceiver.addCallback(invalidCallback.address, { from: voting }), `BAD_CALLBACK_INTERFACE`)
+
       const receipt = await compositeReceiver.addCallback(callbackMocks[0], { from: voting })
 
       assertBn(await compositeReceiver.callbacksLength(), bn(1))
