@@ -652,12 +652,10 @@ contract LidoTemplate is IsContract {
         perms[0] = _state.lido.PAUSE_ROLE();
         perms[1] = _state.lido.MANAGE_FEE();
         perms[2] = _state.lido.MANAGE_WITHDRAWAL_KEY();
-        perms[3] = _state.lido.SET_ORACLE();
+        perms[3] = _state.lido.MANAGE_DAO_CONTRACTS_ROLE();
         perms[4] = _state.lido.BURN_ROLE();
-        perms[5] = _state.lido.SET_TREASURY();
-        perms[6] = _state.lido.SET_INSURANCE_FUND();
 
-        for (i = 0; i < 7; ++i) {
+        for (i = 0; i < 5; ++i) {
             _createPermissionForVoting(acl, _state.lido, perms[i], voting);
         }
     }

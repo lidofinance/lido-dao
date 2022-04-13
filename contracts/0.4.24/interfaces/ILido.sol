@@ -46,50 +46,39 @@ interface ILido {
     event StakingPaused();
     event StakingResumed();
 
-
     /**
       * @notice Set authorized oracle contract address to `_oracle`
       * @dev Contract specified here is allowed to make periodical updates of beacon states
       * by calling pushBeacon.
       * @param _oracle oracle contract
       */
-    function setOracle(address _oracle) external;
+    function setDAOContracts(
+        address _oracle,
+        address _treasury,
+        address _insuranceFund
+    ) external;
 
-    event OracleSet(address oracle);
-
-    /**
-      * @notice Set treasury contract address to `_treasury`
-      * @dev Contract specified here is used to accumulate the protocol treasury fee.
-      * @param _treasury contract which accumulates treasury fee.
-      */
-    function setTreasury(address _treasury) external;
-
-    event TreasurySet(address treasury);
+    event DAOContactsSet(address oracle, address treasury, address insuranceFund);
 
     /**
-      * @notice Set insuranceFund contract address to `_insuranceFund`
-      * @dev Contract specified here is used to accumulate the protocol insurance fee.
-      * @param _insuranceFund contract which accumulates insurance fee.
-      */
-    function setInsuranceFund(address _insuranceFund) external;
-
-    event InsuranceFundSet(address insuranceFund);
-
-
-    /**
-      * @notice Set fee rate to `_feeBasisPoints` basis points. The fees are accrued when oracles report staking results
+      * @notice Set fee rate to `_feeBasisPoints` basis points.
+      * The fees are accrued when oracles report staking results.
       * @param _feeBasisPoints Fee rate, in basis points
       */
     function setFee(uint16 _feeBasisPoints) external;
 
     /**
-      * @notice Set fee distribution: `_treasuryFeeBasisPoints` basis points go to the treasury, `_insuranceFeeBasisPoints` basis points go to the insurance fund, `_operatorsFeeBasisPoints` basis points go to node operators. The sum has to be 10 000.
+      * @notice Set fee distribution:
+      * `_treasuryFeeBasisPoints` basis points go to the treasury,
+      * `_insuranceFeeBasisPoints` basis points go to the insurance fund,
+      * `_operatorsFeeBasisPoints` basis points go to node operators.
+      * The sum has to be 10 000.
       */
     function setFeeDistribution(
         uint16 _treasuryFeeBasisPoints,
         uint16 _insuranceFeeBasisPoints,
-        uint16 _operatorsFeeBasisPoints)
-        external;
+        uint16 _operatorsFeeBasisPoints
+    ) external;
 
     /**
       * @notice Returns staking rewards fee rate
@@ -99,8 +88,11 @@ interface ILido {
     /**
       * @notice Returns fee distribution proportion
       */
-    function getFeeDistribution() external view returns (uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints,
-                                                         uint16 operatorsFeeBasisPoints);
+    function getFeeDistribution() external view returns (
+        uint16 treasuryFeeBasisPoints,
+        uint16 insuranceFeeBasisPoints,
+        uint16 operatorsFeeBasisPoints
+    );
 
     event FeeSet(uint16 feeBasisPoints);
 
@@ -196,7 +188,4 @@ interface ILido {
       * @return beaconBalance - total amount of Beacon-side Ether (sum of all the balances of Lido validators)
       */
     function getBeaconStat() external view returns (uint256 depositedValidators, uint256 beaconValidators, uint256 beaconBalance);
-
-    // Requested ERC721 recovery from the `Lido` to the designated `recoveryVault` vault.
-    event RecoverERC721ToVault(address indexed vault, address indexed token, uint256 tokenId);
 }

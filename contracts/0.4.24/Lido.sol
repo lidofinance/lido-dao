@@ -43,21 +43,20 @@ interface IERC721 {
 * rewards, no Transfer events are generated: doing so would require emitting an event
 * for each token holder and thus running an unbounded loop.
 */
-contract Lido is ILido, IsContract, StETH, AragonApp {
+contract Lido is ILido, StETH, AragonApp {
     using SafeMath for uint256;
     using SafeMath64 for uint64;
     using UnstructuredStorage for bytes32;
 
     /// ACL
     bytes32 constant public PAUSE_ROLE = keccak256("PAUSE_ROLE");
+    bytes32 constant public RESUME_ROLE = keccak256("RESUME_ROLE");
     bytes32 constant public STAKING_PAUSE_ROLE = keccak256("STAKING_PAUSE_ROLE");
     bytes32 constant public STAKING_RESUME_ROLE = keccak256("STAKING_RESUME_ROLE");
     bytes32 constant public MANAGE_FEE = keccak256("MANAGE_FEE");
     bytes32 constant public MANAGE_WITHDRAWAL_KEY = keccak256("MANAGE_WITHDRAWAL_KEY");
-    bytes32 constant public SET_ORACLE = keccak256("SET_ORACLE");
+    bytes32 constant public MANAGE_DAO_CONTRACTS_ROLE = keccak256("MANAGE_DAO_CONTRACTS_ROLE");
     bytes32 constant public BURN_ROLE = keccak256("BURN_ROLE");
-    bytes32 constant public SET_TREASURY = keccak256("SET_TREASURY");
-    bytes32 constant public SET_INSURANCE_FUND = keccak256("SET_INSURANCE_FUND");
     bytes32 constant public DEPOSIT_ROLE = keccak256("DEPOSIT_ROLE");
     bytes32 constant public SET_MEV_TX_FEE_VAULT_ROLE = keccak256("SET_MEV_TX_FEE_VAULT_ROLE");
     bytes32 constant public SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE = keccak256("SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE");
@@ -124,15 +123,10 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     )
         public onlyInit
     {
-        require(isContract(address(_operators)), "NOT_A_CONTRACT");
-        require(isContract(address(_depositContract)), "NOT_A_CONTRACT");
-
         NODE_OPERATORS_REGISTRY_POSITION.setStorageAddress(address(_operators));
         DEPOSIT_CONTRACT_POSITION.setStorageAddress(address(_depositContract));
 
-        _setOracle(_oracle);
-        _setTreasury(_treasury);
-        _setInsuranceFund(_insuranceFund);
+        _setDAOContracts(_oracle, _treasury, _insuranceFund);
 
         initialized();
     }
@@ -237,12 +231,13 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     /**
       * @notice Resume pool routine operations
       */
-    function resume() external auth(PAUSE_ROLE) {
+    function resume() external auth(RESUME_ROLE) {
         _resume();
     }
 
     /**
-      * @notice Set fee rate to `_feeBasisPoints` basis points. The fees are accrued when oracles report staking results
+      * @notice Set fee rate to `_feeBasisPoints` basis points.
+      * The fees are accrued when oracles report staking results.
       * @param _feeBasisPoints Fee rate, in basis points
       */
     function setFee(uint16 _feeBasisPoints) external auth(MANAGE_FEE) {
@@ -251,10 +246,14 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     }
 
     /**
-      * @notice Set fee distribution: `_treasuryFeeBasisPoints` basis points go to the treasury, `_insuranceFeeBasisPoints` basis points go to the insurance fund, `_operatorsFeeBasisPoints` basis points go to node operators. The sum has to be 10 000.
+      * @notice Set fee distribution:
+      * `_treasuryFeeBasisPoints` basis points go to the treasury,
+      * `_insuranceFeeBasisPoints` basis points go to the insurance fund,
+      * `_operatorsFeeBasisPoints` basis points go to node operators.
+      * The sum has to be 10 000.
       */
     function setFeeDistribution(
-        uint16 _treasuryFeeBasisPoints,
+       uint16 _treasuryFeeBasisPoints,
         uint16 _insuranceFeeBasisPoints,
         uint16 _operatorsFeeBasisPoints
     )
@@ -280,29 +279,12 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
       * by calling handleOracleReport.
       * @param _oracle oracle contract
       */
-    function setOracle(address _oracle) external auth(SET_ORACLE) {
-        _setOracle(_oracle);
-        emit OracleSet(_oracle);
-    }
-
-    /**
-      * @notice Set treasury contract address to `_treasury`
-      * @dev Contract specified here is used to accumulate the protocol treasury fee.
-      * @param _treasury contract which accumulates treasury fee.
-      */
-    function setTreasury(address _treasury) external auth(SET_TREASURY) {
-        _setTreasury(_treasury);
-        emit TreasurySet(_treasury);
-    }
-
-    /**
-      * @notice Set insuranceFund contract address to `_insuranceFund`
-      * @dev Contract specified here is used to accumulate the protocol insurance fee.
-      * @param _insuranceFund contract which accumulates insurance fee.
-      */
-    function setInsuranceFund(address _insuranceFund) external auth(SET_INSURANCE_FUND) {
-        _setInsuranceFund(_insuranceFund);
-        emit InsuranceFundSet(_insuranceFund);
+    function setDAOContracts(
+        address _oracle,
+        address _treasury,
+        address _insuranceFund
+    ) external auth(MANAGE_DAO_CONTRACTS_ROLE) {
+        _setDAOContracts(_oracle, _treasury, _insuranceFund);
     }
 
     /**
@@ -333,13 +315,9 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     * @dev Sets limit to amount of ETH to withdraw per LidoOracle report
     * @param _limitPoints limit in basis points to amount of ETH to withdraw per LidoOracle report
     */
-    function setMevTxFeeWithdrawalLimit(uint256 _limitPoints) external auth(SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE) {
-        require(_limitPoints <= TOTAL_BASIS_POINTS, "INVALID_POINTS_AMOUNT");
-
-        if (_limitPoints != MEV_TX_FEE_WITHDRAWAL_LIMIT_POINTS.getStorageUint256()) {
-            MEV_TX_FEE_WITHDRAWAL_LIMIT_POINTS.setStorageUint256(_limitPoints);
-            emit MevTxFeeWithdrawalLimitSet(_limitPoints);
-        }
+    function setMevTxFeeWithdrawalLimit(uint16 _limitPoints) external auth(SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE) {
+        _setBPValue(MEV_TX_FEE_WITHDRAWAL_LIMIT_POINTS, _limitPoints);
+        emit MevTxFeeWithdrawalLimitSet(_limitPoints);
     }
 
     /**
@@ -348,7 +326,7 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
       * @param _pubkeyHash Receiving address
       */
     function withdraw(uint256 _amount, bytes32 _pubkeyHash) external whenNotStopped { /* solhint-disable-line no-unused-vars */
-        //will be upgraded to an actual implementation when withdrawals are enabled (Phase 1.5 or 2 of Eth2 launch, likely late 2021 or 2022).
+        //will be upgraded to an actual implementation when withdrawals are enabled (Phase 1.5 or 2 of Eth2 launch, likely late 2022).
         //at the moment withdrawals are not possible in the beacon chain and there's no workaround
         revert("NOT_IMPLEMENTED_YET");
     }
@@ -429,23 +407,6 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         }
 
         emit RecoverToVault(vault, _token, balance);
-    }
-
-    /**
-      * @notice Send NTFs to recovery Vault
-      * @param _token Token to be sent to recovery vault
-      * @param _tokenId Token Id
-      */
-    function transferERC721ToVault(address _token, uint256 _tokenId) external {
-        require(_token != address(0), "ZERO_ADDRESS");
-        require(allowRecoverability(_token), "RECOVER_DISALLOWED");
-
-        address vault = getRecoveryVault();
-        require(isContract(vault), "RECOVER_VAULT_NOT_CONTRACT");
-
-        IERC721(_token).transferFrom(address(this), vault, _tokenId);
-
-        emit RecoverERC721ToVault(vault, _token, _tokenId);
     }
 
     /**
@@ -564,27 +525,16 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
     * @dev Internal function to set authorized oracle address
     * @param _oracle oracle contract
     */
-    function _setOracle(address _oracle) internal {
+    function _setDAOContracts(address _oracle, address _treasury, address _insuranceFund) internal {
         require(isContract(_oracle), "NOT_A_CONTRACT");
-        ORACLE_POSITION.setStorageAddress(_oracle);
-    }
-
-    /**
-    *  @dev Internal function to set treasury address
-    *  @param _treasury treasury address
-    */
-    function _setTreasury(address _treasury) internal {
         require(_treasury != address(0), "SET_TREASURY_ZERO_ADDRESS");
-        TREASURY_POSITION.setStorageAddress(_treasury);
-    }
-
-    /**
-    *  @dev Internal function to set insurance fund address
-    *  @param _insuranceFund insurance fund address
-    */
-    function _setInsuranceFund(address _insuranceFund) internal {
         require(_insuranceFund != address(0), "SET_INSURANCE_FUND_ZERO_ADDRESS");
+
+        ORACLE_POSITION.setStorageAddress(_oracle);
+        TREASURY_POSITION.setStorageAddress(_treasury);
         INSURANCE_FUND_POSITION.setStorageAddress(_insuranceFund);
+
+        emit DAOContactsSet(_oracle, _treasury, _insuranceFund);
     }
 
     /**
@@ -917,10 +867,5 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
 
         assert(0 == temp_value);    // fully converted
         result <<= (24 * 8);
-    }
-
-    function to64(uint256 v) internal pure returns (uint64) {
-        assert(v <= uint256(uint64(-1)));
-        return uint64(v);
     }
 }

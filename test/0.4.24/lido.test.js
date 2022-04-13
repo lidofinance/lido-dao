@@ -5,7 +5,6 @@ const { getInstalledApp } = require('@aragon/contract-helpers-test/src/aragon-os
 const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const { ZERO_ADDRESS, bn, getEventAt } = require('@aragon/contract-helpers-test')
 const { BN } = require('bn.js')
-const { ethers } = require('ethers')
 const { formatEther } = require('ethers/lib/utils')
 const { getEthBalance, formatStEth: formamtStEth, formatBN } = require('../helpers/utils')
 
@@ -16,7 +15,6 @@ const MevTxFeeVault = artifacts.require('LidoMevTxFeeVault.sol')
 const OracleMock = artifacts.require('OracleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
 const ERC20Mock = artifacts.require('ERC20Mock.sol')
-const ERC721Mock = artifacts.require('ERC721Mock.sol')
 const VaultMock = artifacts.require('AragonVaultMock.sol')
 const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
 
@@ -84,12 +82,11 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
 
     // Set up the app's permissions.
     await acl.createPermission(voting, app.address, await app.PAUSE_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, app.address, await app.RESUME_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.MANAGE_FEE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.MANAGE_WITHDRAWAL_KEY(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.BURN_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.SET_TREASURY(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.SET_ORACLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.SET_INSURANCE_FUND(), appManager, { from: appManager })
+    await acl.createPermission(voting, app.address, await app.MANAGE_DAO_CONTRACTS_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_MEV_TX_FEE_VAULT_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.STAKING_PAUSE_ROLE(), appManager, { from: appManager })
@@ -109,8 +106,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await acl.createPermission(depositor, app.address, await app.DEPOSIT_ROLE(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
-    await assertRevert(app.initialize(user1, oracle.address, operators.address), 'NOT_A_CONTRACT')
-    await assertRevert(app.initialize(depositContract.address, oracle.address, user1), 'NOT_A_CONTRACT')
     await app.initialize(depositContract.address, oracle.address, operators.address)
 
     treasuryAddr = await app.getTreasury()
@@ -278,7 +273,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await assertNoEvent(app.setMevTxFeeWithdrawalLimit(1, { from: voting }), 'MevTxFeeWithdrawalLimitSet')
 
     await app.setMevTxFeeWithdrawalLimit(10000, { from: voting })
-    await assertRevert(app.setMevTxFeeWithdrawalLimit(10001, { from: voting }), 'INVALID_POINTS_AMOUNT')
+    await assertRevert(app.setMevTxFeeWithdrawalLimit(10001, { from: voting }), 'VALUE_OVER_100_PERCENT')
 
     await app.setMevTxFeeWithdrawalLimit(initialValue, { from: voting })
   })
@@ -315,9 +310,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
   })
 
   it('setOracle works', async () => {
-    await assertRevert(app.setOracle(user1, { from: voting }), 'NOT_A_CONTRACT')
-    const receipt = await app.setOracle(yetAnotherOracle.address, { from: voting })
-    assertEvent(receipt, 'OracleSet', { expectedArgs: { oracle: yetAnotherOracle.address } })
+    await assertRevert(app.setDAOContracts(user1, user2, user3, { from: voting }), 'NOT_A_CONTRACT')
+    const receipt = await app.setDAOContracts(yetAnotherOracle.address, oracle.address, oracle.address, { from: voting })
+    assertEvent(receipt, 'DAOContactsSet', { expectedArgs: { oracle: yetAnotherOracle.address } })
     assert.equal(await app.getOracle(), yetAnotherOracle.address)
   })
 
@@ -1263,18 +1258,21 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     })
 
     it(`treasury can't be set by an arbitrary address`, async () => {
-      await assertRevert(app.setTreasury(user1, { from: nobody }))
-      await assertRevert(app.setTreasury(user1, { from: user1 }))
+      await assertRevert(app.setDAOContracts(await app.getOracle(), user1, await app.getInsuranceFund(), { from: nobody }))
+      await assertRevert(app.setDAOContracts(await app.getOracle(), user1, await app.getInsuranceFund(), { from: user1 }))
     })
 
     it('voting can set treasury', async () => {
-      const receipt = await app.setTreasury(user1, { from: voting })
-      assertEvent(receipt, 'TreasurySet', { expectedArgs: { treasury: user1 } })
+      const receipt = await app.setDAOContracts(await app.getOracle(), user1, await app.getInsuranceFund(), { from: voting })
+      assertEvent(receipt, 'DAOContactsSet', { expectedArgs: { treasury: user1 } })
       assert.equal(await app.getTreasury(), user1)
     })
 
     it('reverts when treasury is zero address', async () => {
-      await assertRevert(app.setTreasury(ZERO_ADDRESS, { from: voting }), 'SET_TREASURY_ZERO_ADDRESS')
+      await assertRevert(
+        app.setDAOContracts(await app.getOracle(), ZERO_ADDRESS, await app.getInsuranceFund(), { from: voting }),
+        'SET_TREASURY_ZERO_ADDRESS'
+      )
     })
   })
 
@@ -1284,34 +1282,31 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     })
 
     it(`insurance fund can't be set by an arbitrary address`, async () => {
-      await assertRevert(app.setInsuranceFund(user1, { from: nobody }))
-      await assertRevert(app.setInsuranceFund(user1, { from: user1 }))
+      await assertRevert(app.setDAOContracts(await app.getOracle(), await app.getTreasury(), user1, { from: nobody }))
+      await assertRevert(app.setDAOContracts(await app.getOracle(), await app.getTreasury(), user1, { from: user1 }))
     })
 
     it('voting can set insurance fund', async () => {
-      const receipt = await app.setInsuranceFund(user1, { from: voting })
-      assertEvent(receipt, 'InsuranceFundSet', { expectedArgs: { insuranceFund: user1 } })
+      const receipt = await app.setDAOContracts(await app.getOracle(), await app.getTreasury(), user1, { from: voting })
+      assertEvent(receipt, 'DAOContactsSet', { expectedArgs: { insuranceFund: user1 } })
       assert.equal(await app.getInsuranceFund(), user1)
     })
 
     it('reverts when insurance fund is zero address', async () => {
-      await assertRevert(app.setInsuranceFund(ZERO_ADDRESS, { from: voting }), 'SET_INSURANCE_FUND_ZERO_ADDRESS')
+      await assertRevert(
+        app.setDAOContracts(await app.getOracle(), await app.getTreasury(), ZERO_ADDRESS, { from: voting }),
+        'SET_INSURANCE_FUND_ZERO_ADDRESS'
+      )
     })
   })
 
   context('recovery vault', () => {
-    let nftToken
-
     beforeEach(async () => {
       await anyToken.mint(app.address, 100)
-
-      nftToken = await ERC721Mock.new()
-      await nftToken.mint(app.address, 777)
     })
 
     it('reverts when vault is not set', async () => {
       await assertRevert(app.transferToVault(anyToken.address, { from: nobody }), 'RECOVER_VAULT_NOT_CONTRACT')
-      await assertRevert(app.transferERC721ToVault(nftToken.address, 777, { from: nobody }), 'RECOVER_VAULT_NOT_CONTRACT')
     })
 
     context('recovery works with vault mock deployed', () => {
@@ -1332,17 +1327,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
       it('recovery with erc20 tokens works and emits event', async () => {
         const receipt = await app.transferToVault(anyToken.address, { from: nobody })
         assertEvent(receipt, 'RecoverToVault', { expectedArgs: { vault: vault.address, token: anyToken.address, amount: 100 } })
-      })
-
-      it('recovery with nft tokens works and emits event', async () => {
-        await assertRevert(app.transferERC721ToVault(ZERO_ADDRESS, 777, { from: nobody }))
-
-        assert.equal(await nftToken.ownerOf(777), app.address)
-
-        const receipt = await app.transferERC721ToVault(nftToken.address, 777, { from: nobody })
-        assertEvent(receipt, 'RecoverERC721ToVault', { expectedArgs: { vault: vault.address, token: nftToken.address, tokenId: 777 } })
-
-        assert.equal(await nftToken.ownerOf(777), vault.address)
       })
 
       it('recovery with unaccounted ether works and emits event', async () => {
