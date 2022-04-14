@@ -55,7 +55,7 @@ contract Lido is ILido, StETH, AragonApp {
     bytes32 constant public STAKING_RESUME_ROLE = keccak256("STAKING_RESUME_ROLE");
     bytes32 constant public MANAGE_FEE = keccak256("MANAGE_FEE");
     bytes32 constant public MANAGE_WITHDRAWAL_KEY = keccak256("MANAGE_WITHDRAWAL_KEY");
-    bytes32 constant public MANAGE_DAO_CONTRACTS_ROLE = keccak256("MANAGE_DAO_CONTRACTS_ROLE");
+    bytes32 constant public MANAGE_PROTOCOL_CONTRACTS_ROLE = keccak256("MANAGE_PROTOCOL_CONTRACTS_ROLE");
     bytes32 constant public BURN_ROLE = keccak256("BURN_ROLE");
     bytes32 constant public DEPOSIT_ROLE = keccak256("DEPOSIT_ROLE");
     bytes32 constant public SET_MEV_TX_FEE_VAULT_ROLE = keccak256("SET_MEV_TX_FEE_VAULT_ROLE");
@@ -126,7 +126,7 @@ contract Lido is ILido, StETH, AragonApp {
         NODE_OPERATORS_REGISTRY_POSITION.setStorageAddress(address(_operators));
         DEPOSIT_CONTRACT_POSITION.setStorageAddress(address(_depositContract));
 
-        _setDAOContracts(_oracle, _treasury, _insuranceFund);
+        _setProtocolContracts(_oracle, _treasury, _insuranceFund);
 
         initialized();
     }
@@ -276,7 +276,7 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-    * @notice Set Lido DAO contracts (oracle, treasury, insurance fund).
+    * @notice Set Lido protocol contracts (oracle, treasury, insurance fund).
     *
     * @dev Oracle contract specified here is allowed to make
     * periodical updates of beacon states
@@ -288,12 +288,12 @@ contract Lido is ILido, StETH, AragonApp {
     * @param _treasury treasury contract which accumulates treasury fee
     * @param _insuranceFund insurance fund contract which accumulates insurance fee
     */
-    function setDAOContracts(
+    function setProtocolContracts(
         address _oracle,
         address _treasury,
         address _insuranceFund
-    ) external auth(MANAGE_DAO_CONTRACTS_ROLE) {
-        _setDAOContracts(_oracle, _treasury, _insuranceFund);
+    ) external auth(MANAGE_PROTOCOL_CONTRACTS_ROLE) {
+        _setProtocolContracts(_oracle, _treasury, _insuranceFund);
     }
 
     /**
@@ -534,7 +534,7 @@ contract Lido is ILido, StETH, AragonApp {
     * @dev Internal function to set authorized oracle address
     * @param _oracle oracle contract
     */
-    function _setDAOContracts(address _oracle, address _treasury, address _insuranceFund) internal {
+    function _setProtocolContracts(address _oracle, address _treasury, address _insuranceFund) internal {
         require(isContract(_oracle), "NOT_A_CONTRACT");
         require(_treasury != address(0), "SET_TREASURY_ZERO_ADDRESS");
         require(_insuranceFund != address(0), "SET_INSURANCE_FUND_ZERO_ADDRESS");
@@ -543,7 +543,7 @@ contract Lido is ILido, StETH, AragonApp {
         TREASURY_POSITION.setStorageAddress(_treasury);
         INSURANCE_FUND_POSITION.setStorageAddress(_insuranceFund);
 
-        emit DAOContactsSet(_oracle, _treasury, _insuranceFund);
+        emit ProtocolContactsSet(_oracle, _treasury, _insuranceFund);
     }
 
     /**

@@ -652,7 +652,7 @@ contract LidoTemplate is IsContract {
         perms[0] = _state.lido.PAUSE_ROLE();
         perms[1] = _state.lido.MANAGE_FEE();
         perms[2] = _state.lido.MANAGE_WITHDRAWAL_KEY();
-        perms[3] = _state.lido.MANAGE_DAO_CONTRACTS_ROLE();
+        perms[3] = _state.lido.MANAGE_PROTOCOL_CONTRACTS_ROLE();
         perms[4] = _state.lido.BURN_ROLE();
 
         for (i = 0; i < 5; ++i) {

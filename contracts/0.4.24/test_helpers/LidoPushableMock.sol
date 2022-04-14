@@ -52,7 +52,7 @@ contract LidoPushableMock is Lido {
     }
 
     function initialize(address _oracle) public onlyInit {
-        _setDAOContracts(_oracle, _oracle, _oracle);
+        _setProtocolContracts(_oracle, _oracle, _oracle);
         _resume();
         initialized();
     }

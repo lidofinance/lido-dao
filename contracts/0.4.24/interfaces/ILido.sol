@@ -49,7 +49,7 @@ interface ILido {
     event StakingResumed();
 
     /**
-      * @notice Set Lido DAO contracts (oracle, treasury, insurance fund).
+      * @notice Set Lido protocol contracts (oracle, treasury, insurance fund).
       *
       * @dev Oracle contract specified here is allowed to make
       * periodical updates of beacon states by calling pushBeacon.
@@ -60,13 +60,13 @@ interface ILido {
       * @param _treasury treasury contract which accumulates treasury fee
       * @param _insuranceFund insurance fund contract which accumulates insurance fee
       */
-    function setDAOContracts(
+    function setProtocolContracts(
         address _oracle,
         address _treasury,
         address _insuranceFund
     ) external;
 
-    event DAOContactsSet(address oracle, address treasury, address insuranceFund);
+    event ProtocolContactsSet(address oracle, address treasury, address insuranceFund);
 
     /**
       * @notice Set fee rate to `_feeBasisPoints` basis points.
