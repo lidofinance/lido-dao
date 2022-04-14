@@ -86,7 +86,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await acl.createPermission(voting, app.address, await app.MANAGE_FEE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.MANAGE_WITHDRAWAL_KEY(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.BURN_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.MANAGE_DAO_CONTRACTS_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, app.address, await app.MANAGE_PROTOCOL_CONTRACTS_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_MEV_TX_FEE_VAULT_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.STAKING_PAUSE_ROLE(), appManager, { from: appManager })
@@ -310,9 +310,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
   })
 
   it('setOracle works', async () => {
-    await assertRevert(app.setDAOContracts(user1, user2, user3, { from: voting }), 'NOT_A_CONTRACT')
-    const receipt = await app.setDAOContracts(yetAnotherOracle.address, oracle.address, oracle.address, { from: voting })
-    assertEvent(receipt, 'DAOContactsSet', { expectedArgs: { oracle: yetAnotherOracle.address } })
+    await assertRevert(app.setProtocolContracts(user1, user2, user3, { from: voting }), 'NOT_A_CONTRACT')
+    const receipt = await app.setProtocolContracts(yetAnotherOracle.address, oracle.address, oracle.address, { from: voting })
+    assertEvent(receipt, 'ProtocolContactsSet', { expectedArgs: { oracle: yetAnotherOracle.address } })
     assert.equal(await app.getOracle(), yetAnotherOracle.address)
   })
 
@@ -1258,19 +1258,19 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     })
 
     it(`treasury can't be set by an arbitrary address`, async () => {
-      await assertRevert(app.setDAOContracts(await app.getOracle(), user1, await app.getInsuranceFund(), { from: nobody }))
-      await assertRevert(app.setDAOContracts(await app.getOracle(), user1, await app.getInsuranceFund(), { from: user1 }))
+      await assertRevert(app.setProtocolContracts(await app.getOracle(), user1, await app.getInsuranceFund(), { from: nobody }))
+      await assertRevert(app.setProtocolContracts(await app.getOracle(), user1, await app.getInsuranceFund(), { from: user1 }))
     })
 
     it('voting can set treasury', async () => {
-      const receipt = await app.setDAOContracts(await app.getOracle(), user1, await app.getInsuranceFund(), { from: voting })
-      assertEvent(receipt, 'DAOContactsSet', { expectedArgs: { treasury: user1 } })
+      const receipt = await app.setProtocolContracts(await app.getOracle(), user1, await app.getInsuranceFund(), { from: voting })
+      assertEvent(receipt, 'ProtocolContactsSet', { expectedArgs: { treasury: user1 } })
       assert.equal(await app.getTreasury(), user1)
     })
 
     it('reverts when treasury is zero address', async () => {
       await assertRevert(
-        app.setDAOContracts(await app.getOracle(), ZERO_ADDRESS, await app.getInsuranceFund(), { from: voting }),
+        app.setProtocolContracts(await app.getOracle(), ZERO_ADDRESS, await app.getInsuranceFund(), { from: voting }),
         'SET_TREASURY_ZERO_ADDRESS'
       )
     })
@@ -1282,19 +1282,19 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     })
 
     it(`insurance fund can't be set by an arbitrary address`, async () => {
-      await assertRevert(app.setDAOContracts(await app.getOracle(), await app.getTreasury(), user1, { from: nobody }))
-      await assertRevert(app.setDAOContracts(await app.getOracle(), await app.getTreasury(), user1, { from: user1 }))
+      await assertRevert(app.setProtocolContracts(await app.getOracle(), await app.getTreasury(), user1, { from: nobody }))
+      await assertRevert(app.setProtocolContracts(await app.getOracle(), await app.getTreasury(), user1, { from: user1 }))
     })
 
     it('voting can set insurance fund', async () => {
-      const receipt = await app.setDAOContracts(await app.getOracle(), await app.getTreasury(), user1, { from: voting })
-      assertEvent(receipt, 'DAOContactsSet', { expectedArgs: { insuranceFund: user1 } })
+      const receipt = await app.setProtocolContracts(await app.getOracle(), await app.getTreasury(), user1, { from: voting })
+      assertEvent(receipt, 'ProtocolContactsSet', { expectedArgs: { insuranceFund: user1 } })
       assert.equal(await app.getInsuranceFund(), user1)
     })
 
     it('reverts when insurance fund is zero address', async () => {
       await assertRevert(
-        app.setDAOContracts(await app.getOracle(), await app.getTreasury(), ZERO_ADDRESS, { from: voting }),
+        app.setProtocolContracts(await app.getOracle(), await app.getTreasury(), ZERO_ADDRESS, { from: voting }),
         'SET_INSURANCE_FUND_ZERO_ADDRESS'
       )
     })
