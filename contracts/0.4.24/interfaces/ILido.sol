@@ -52,10 +52,9 @@ interface ILido {
       * @notice Set Lido DAO contracts (oracle, treasury, insurance fund).
       *
       * @dev Oracle contract specified here is allowed to make
-      * periodical updates of beacon states
-      * by calling pushBeacon. Treasury contract specified here is used
-      * to accumulate the protocol treasury fee.Insurance fund contract
-      * specified here is used to accumulate the protocol insurance fee.
+      * periodical updates of beacon states by calling pushBeacon.
+      * Treasury contract specified here is used to accumulate the protocol treasury fee.
+      * Insurance fund contract specified here is used to accumulate the protocol insurance fee.
       *
       * @param _oracle oracle contract
       * @param _treasury treasury contract which accumulates treasury fee
