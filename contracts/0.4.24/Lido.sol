@@ -132,7 +132,9 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-    * @notice Cut-off new staking (every new funds submit transaction would revert if called)
+    * @notice Cut-off new staking (every new submit ETH funds transaction would revert
+    * if `pauseStaking` was called previously)
+    *
     * @dev Provides a way to pause staking without pushing PAUSE for the whole proto
     * The main goal is to prevent huge APR losses for existing stakers due to high demands on entry queue
     */
@@ -143,7 +145,7 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-    * @notice Resume staking if `pauseStaking` was called previously (allow new submit transactions)
+    * @notice Resume staking if `pauseStaking` was called previously (allow new submits transactions)
     * See `pauseStaking` for the details.
     */
     function resumeStaking() external auth(STAKING_RESUME_ROLE)  {
@@ -253,7 +255,7 @@ contract Lido is ILido, StETH, AragonApp {
       * The sum has to be 10 000.
       */
     function setFeeDistribution(
-       uint16 _treasuryFeeBasisPoints,
+        uint16 _treasuryFeeBasisPoints,
         uint16 _insuranceFeeBasisPoints,
         uint16 _operatorsFeeBasisPoints
     )
@@ -274,11 +276,18 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-      * @notice Set authorized oracle contract address to `_oracle`
-      * @dev Contract specified here is allowed to make periodical updates of beacon states
-      * by calling handleOracleReport.
-      * @param _oracle oracle contract
-      */
+    * @notice Set Lido DAO contracts (oracle, treasury, insurance fund).
+    *
+    * @dev Oracle contract specified here is allowed to make
+    * periodical updates of beacon states
+    * by calling pushBeacon. Treasury contract specified here is used
+    * to accumulate the protocol treasury fee.Insurance fund contract
+    * specified here is used to accumulate the protocol insurance fee.
+    *
+    * @param _oracle oracle contract
+    * @param _treasury treasury contract which accumulates treasury fee
+    * @param _insuranceFund insurance fund contract which accumulates insurance fee
+    */
     function setDAOContracts(
         address _oracle,
         address _treasury,
@@ -326,7 +335,7 @@ contract Lido is ILido, StETH, AragonApp {
       * @param _pubkeyHash Receiving address
       */
     function withdraw(uint256 _amount, bytes32 _pubkeyHash) external whenNotStopped { /* solhint-disable-line no-unused-vars */
-        //will be upgraded to an actual implementation when withdrawals are enabled (Phase 1.5 or 2 of Eth2 launch, likely late 2022).
+        //will be upgraded to an actual implementation when withdrawals are enabled (Phase 1.5 or 2 of Eth2 launch, likely late 2022 or 2023).
         //at the moment withdrawals are not possible in the beacon chain and there's no workaround
         revert("NOT_IMPLEMENTED_YET");
     }
