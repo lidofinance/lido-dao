@@ -52,7 +52,7 @@ contract Lido is ILido, StETH, AragonApp {
     bytes32 constant public PAUSE_ROLE = keccak256("PAUSE_ROLE");
     bytes32 constant public RESUME_ROLE = keccak256("RESUME_ROLE");
     bytes32 constant public STAKING_PAUSE_ROLE = keccak256("STAKING_PAUSE_ROLE");
-    bytes32 constant public STAKING_RESUME_ROLE = keccak256("STAKING_RESUME_ROLE");
+    bytes32 constant public STAKING_RATE_LIMIT_ROLE = keccak256("STAKING_RATE_LIMIT_ROLE");
     bytes32 constant public MANAGE_FEE = keccak256("MANAGE_FEE");
     bytes32 constant public MANAGE_WITHDRAWAL_KEY = keccak256("MANAGE_WITHDRAWAL_KEY");
     bytes32 constant public MANAGE_PROTOCOL_CONTRACTS_ROLE = keccak256("MANAGE_PROTOCOL_CONTRACTS_ROLE");
@@ -85,8 +85,8 @@ contract Lido is ILido, StETH, AragonApp {
     bytes32 internal constant INSURANCE_FUND_POSITION = keccak256("lido.Lido.insuranceFund");
     bytes32 internal constant MEV_TX_FEE_VAULT_POSITION = keccak256("lido.Lido.mevTxFeeVault");
 
-    /// @dev dedicated switch to cut-off staking new funds without pausing the whole protocol
-    bytes32 internal constant STAKING_PAUSED_POSITION = keccak256("lido.Lido.stakingPaused");
+    /// @dev storage slot position of the staking rate limit structure
+    bytes32 internal constant STAKING_RATE_LIMIT_POSITION = keccak256("lido.Lido.stakingRateLimit");
     /// @dev amount of Ether (on the current Ethereum side) buffered on this smart contract balance
     bytes32 internal constant BUFFERED_ETHER_POSITION = keccak256("lido.Lido.bufferedEther");
     /// @dev number of deposited validators (incrementing counter of deposit operations).
@@ -127,6 +127,7 @@ contract Lido is ILido, StETH, AragonApp {
         DEPOSIT_CONTRACT_POSITION.setStorageAddress(address(_depositContract));
 
         _setProtocolContracts(_oracle, _treasury, _insuranceFund);
+        _writeStakingRateLimit(uint64(-1), 0, 0, 0);
 
         initialized();
     }
@@ -139,28 +140,57 @@ contract Lido is ILido, StETH, AragonApp {
     * The main goal is to prevent huge APR losses for existing stakers due to high demands on entry queue
     */
     function pauseStaking() external auth(STAKING_PAUSE_ROLE) {
-        require(!isStakingPaused(), "STAKING_ALREADY_PAUSED");
-        STAKING_PAUSED_POSITION.setStorageBool(true);
+        _writeStakingRateLimit(0, 0, 0, 0);
+
         emit StakingPaused();
     }
 
     /**
     * @notice Resume staking if `pauseStaking` was called previously (allow new submits transactions)
-    * See `pauseStaking` for the details.
+    * or if new rate limit is desired.
+    *
+    * @dev Reverts if `_rateLimitAmount` is zero.
+    * To disable the rate limit, set `_rateLimitPeriodMinutes` to zero.
+    *
+    * @param _rateLimitAmount amount of ETH per period
+    * @param _rateLimitPeriodMinutes period duration
     */
-    function resumeStaking() external auth(STAKING_RESUME_ROLE)  {
-        require(isStakingPaused(), "STAKING_ALREADY_RESUMED");
-        STAKING_PAUSED_POSITION.setStorageBool(false);
-        emit StakingResumed();
+    function resumeStaking(
+        uint64 _rateLimitAmount,
+        uint64 _rateLimitPeriodMinutes
+    ) external auth(STAKING_RATE_LIMIT_ROLE) {
+        require(_rateLimitAmount != 0, "ZERO_AMOUNT");
+
+        _writeStakingRateLimit(_rateLimitAmount, 0, 0, _rateLimitPeriodMinutes);
+
+        emit StakingResumed(_rateLimitAmount, _rateLimitPeriodMinutes);
+    }
+
+    /**
+    * @dev Read storage slot containing rate limit params and state.
+    */
+    function getStakingRateLimit() public view returns (
+        uint64 amountETH,
+        uint64 spentETH,
+        uint64 lastStakeMinutes,
+        uint64 periodMinutes
+    ) {
+        uint256 packedRateLimit = STAKING_RATE_LIMIT_POSITION.getStorageUint256();
+
+        amountETH = uint64(packedRateLimit >> 192);
+        spentETH = uint64(packedRateLimit >> 128);
+        lastStakeMinutes = uint64(packedRateLimit >> 64);
+        periodMinutes = uint64(packedRateLimit);
     }
 
     /**
     * @notice check staking pause state
     * Returns true if staking is on pause currently
-    * See `pauseStaking` for the details.
+    * See `pauseStaking` and `resumeStaking` for the details.
     */
     function isStakingPaused() public view returns(bool) {
-        return STAKING_PAUSED_POSITION.getStorageBool();
+        (uint64 amountETH,,,) = getStakingRateLimit();
+        return amountETH == 0;
     }
 
     /**
@@ -554,21 +584,55 @@ contract Lido is ILido, StETH, AragonApp {
     * @return amount of StETH shares generated
     */
     function _submit(address _referral) internal whenNotStopped returns (uint256) {
-        require(!isStakingPaused(), "STAKING_PAUSED");
-        address sender = msg.sender;
-        uint256 deposit = msg.value;
-        require(deposit != 0, "ZERO_DEPOSIT");
+        (
+            uint64 amountETH,
+            uint64 spentETH,
+            uint64 lastStakeMinutes,
+            uint64 periodMinutes
+        ) = getStakingRateLimit();
 
-        uint256 sharesAmount = getSharesByPooledEth(deposit);
+        require(amountETH > 0, "STAKING_PAUSED");
+        require(msg.value != 0, "ZERO_DEPOSIT");
+
+        if (periodMinutes > 0) {
+            uint256 amountWei = uint256(amountETH) * 10**18;
+            uint256 spentWei = uint256(spentETH) * 10**18;
+            uint256 currentMinutes = block.timestamp / 60;
+            uint256 amountIncreaseWei = (
+                amountWei * (currentMinutes - lastStakeMinutes)
+            ) / periodMinutes;
+
+            uint256 nowAvailableAmountWei = amountIncreaseWei + (amountWei - spentWei);
+            if (nowAvailableAmountWei > amountWei) {
+                nowAvailableAmountWei = amountWei;
+            }
+
+            require(msg.value <= nowAvailableAmountWei, "RATE_LIMIT_EXCESS");
+
+            if (amountIncreaseWei >= spentWei) {
+                spentWei = 0;
+            } else {
+                spentWei -= amountIncreaseWei;
+            }
+
+            spentWei += msg.value;
+            if (spentWei >= amountWei) {
+                spentWei = amountWei;
+            }
+
+            _writeStakingRateLimit(amountETH, uint64(spentWei / 10**18), uint64(currentMinutes), periodMinutes);
+        }
+
+        uint256 sharesAmount = getSharesByPooledEth(msg.value);
         if (sharesAmount == 0) {
             // totalControlledEther is 0: either the first-ever deposit or complete slashing
             // assume that shares correspond to Ether 1-to-1
-            sharesAmount = deposit;
+            sharesAmount = msg.value;
         }
 
-        _mintShares(sender, sharesAmount);
-        _submitted(sender, deposit, _referral);
-        _emitTransferAfterMintingShares(sender, sharesAmount);
+        _mintShares(msg.sender, sharesAmount);
+        _submitted(msg.sender, msg.value, _referral);
+        _emitTransferAfterMintingShares(msg.sender, sharesAmount);
         return sharesAmount;
     }
 
@@ -849,5 +913,22 @@ contract Lido is ILido, StETH, AragonApp {
 
         assert(0 == temp_value);    // fully converted
         result <<= (24 * 8);
+    }
+
+    /**
+    * @dev Write storage slot containing rate limit vars
+    */
+    function _writeStakingRateLimit(
+        uint64 _amountETH,
+        uint64 _spentETH,
+        uint64 _lastStakeMinutes,
+        uint64 _periodMinutes
+    ) internal {
+        STAKING_RATE_LIMIT_POSITION.setStorageUint256(
+            (uint256(_amountETH) << 192)
+            | (uint256(_spentETH) << 128)
+            | (uint256(_lastStakeMinutes) << 64)
+            | (uint256(_periodMinutes))
+        );
     }
 }

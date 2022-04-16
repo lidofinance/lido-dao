@@ -90,7 +90,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await acl.createPermission(voting, app.address, await app.SET_MEV_TX_FEE_VAULT_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.STAKING_PAUSE_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.STAKING_RESUME_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, app.address, await app.STAKING_RATE_LIMIT_ROLE(), appManager, { from: appManager })
 
     await acl.createPermission(voting, operators.address, await operators.MANAGE_SIGNING_KEYS(), appManager, { from: appManager })
     await acl.createPermission(voting, operators.address, await operators.ADD_NODE_OPERATOR_ROLE(), appManager, { from: appManager })
@@ -552,29 +552,88 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     assertEvent(receipt, 'Submitted', { expectedArgs: { sender: user2, amount: ETH(5), referral: ZERO_ADDRESS } })
   })
 
-  it('staking pause/resume works', async () => {
+  it('staking pause/unlimited resume works', async () => {
     let receipt
 
     receipt = await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2) })
     assertEvent(receipt, 'Submitted', { expectedArgs: { sender: user2, amount: ETH(2), referral: ZERO_ADDRESS } })
 
-    assertRevert(app.pauseStaking(), 'APP_AUTH_FAILED')
+    await assertRevert(app.pauseStaking(), 'APP_AUTH_FAILED')
     receipt = await app.pauseStaking({ from: voting })
     assertEvent(receipt, 'StakingPaused')
-    assertRevert(app.pauseStaking({ from: voting }), 'STAKING_ALREADY_PAUSED')
     assert.equal(await app.isStakingPaused(), true)
-    assertRevert(web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(2) }), `STAKING_PAUSED`)
-    assertRevert(app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2) }), `STAKING_PAUSED`)
+    await assertRevert(web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(2) }), `STAKING_PAUSED`)
+    await assertRevert(app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2) }), `STAKING_PAUSED`)
 
-    assertRevert(app.resumeStaking(), 'APP_AUTH_FAILED')
-    receipt = await app.resumeStaking({ from: voting })
+    const disableRateLimit = 0
+    await assertRevert(app.resumeStaking(1, disableRateLimit), 'APP_AUTH_FAILED')
+    receipt = await app.resumeStaking(1, disableRateLimit, { from: voting })
     assertEvent(receipt, 'StakingResumed')
-    assertRevert(app.resumeStaking({ from: voting }), 'STAKING_ALREADY_RESUMED')
     assert.equal(await app.isStakingPaused(), false)
 
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(1.1) })
     receipt = await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(1.4) })
     assertEvent(receipt, 'Submitted', { expectedArgs: { sender: user2, amount: ETH(1.4), referral: ZERO_ADDRESS } })
+  })
+
+  const getTimestampMinutes = async () => {
+    const blockNum = await ethers.provider.getBlockNumber()
+    const block = await ethers.provider.getBlock(blockNum)
+    return Math.trunc(block.timestamp / 60)
+  }
+
+  it('staking rate-limiting works', async () => {
+    let receipt
+
+    const oneHour = 60
+    const ethPerHour = 3
+
+    receipt = await app.resumeStaking(ethPerHour, oneHour, { from: voting })
+    assertEvent(receipt, 'StakingResumed', { expectedArgs: { rateLimitETHAmount: ethPerHour, rateLimitPeriodMinutes: oneHour } })
+    assert.equal(await app.isStakingPaused(), false)
+    ;({ amountETH, spentETH, lastStakeMinutes, periodMinutes } = await app.getStakingRateLimit())
+    assertBn(amountETH, ethPerHour)
+    assertBn(spentETH, 0)
+    assertBn(lastStakeMinutes, 0)
+    assertBn(periodMinutes, oneHour)
+
+    receipt = await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2) })
+    assertEvent(receipt, 'Submitted', { expectedArgs: { sender: user2, amount: ETH(2), referral: ZERO_ADDRESS } })
+    ;({ amountETH, spentETH, lastStakeMinutes, periodMinutes } = await app.getStakingRateLimit())
+    assertBn(amountETH, ethPerHour)
+    assertBn(spentETH, 2)
+    assertBn(lastStakeMinutes, await getTimestampMinutes())
+    assertBn(periodMinutes, oneHour)
+
+    await assertRevert(app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2.5) }), `RATE_LIMIT_EXCESS`)
+
+    const halfHour = 30 * 60
+    await ethers.provider.send('evm_increaseTime', [halfHour])
+    await ethers.provider.send('evm_mine')
+
+    await assertRevert(app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2.6) }), `RATE_LIMIT_EXCESS`)
+
+    receipt = await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2.5) })
+    assertEvent(receipt, 'Submitted', { expectedArgs: { sender: user2, amount: ETH(2.5), referral: ZERO_ADDRESS } })
+    ;({ amountETH, spentETH, lastStakeMinutes, periodMinutes } = await app.getStakingRateLimit())
+    assertBn(amountETH, ethPerHour)
+    assertBn(spentETH, 3)
+    assertBn(lastStakeMinutes, await getTimestampMinutes())
+    assertBn(periodMinutes, oneHour)
+
+    await assertRevert(app.submit(ZERO_ADDRESS, { from: user2, value: ETH(0.1) }), `RATE_LIMIT_EXCESS`)
+
+    const twentyMinutes = 20 * 60
+    await ethers.provider.send('evm_increaseTime', [twentyMinutes])
+    await ethers.provider.send('evm_mine')
+
+    receipt = await app.submit(ZERO_ADDRESS, { from: user1, value: ETH(1) })
+    assertEvent(receipt, 'Submitted', { expectedArgs: { sender: user1, amount: ETH(1), referral: ZERO_ADDRESS } })
+    ;({ amountETH, spentETH, lastStakeMinutes, periodMinutes } = await app.getStakingRateLimit())
+    assertBn(amountETH, ethPerHour)
+    assertBn(spentETH, 3)
+    assertBn(lastStakeMinutes, await getTimestampMinutes())
+    assertBn(periodMinutes, oneHour)
   })
 
   it('reverts when trying to call unknown function', async () => {
