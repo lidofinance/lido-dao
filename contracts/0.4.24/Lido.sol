@@ -314,7 +314,6 @@ contract Lido is ILido, StETH, AragonApp {
     * @param _mevTxFeeVault MEV and Tx Fees Vault contract address
     */
     function setMevTxFeeVault(address _mevTxFeeVault) external auth(SET_MEV_TX_FEE_VAULT_ROLE) {
-        require(isContract(_mevTxFeeVault), "NOT_A_CONTRACT");
         MEV_TX_FEE_VAULT_POSITION.setStorageAddress(_mevTxFeeVault);
 
         emit LidoMevTxFeeVaultSet(_mevTxFeeVault);
@@ -373,13 +372,14 @@ contract Lido is ILido, StETH, AragonApp {
         // Otherwise withdraw all rewards and put them to the buffer
         // Thus, MEV tx fees are handled the same way as beacon rewards
 
-        // Calc max amount for this withdrawal
-        uint256 mevRewards = (_getTotalPooledEther() * MEV_TX_FEE_WITHDRAWAL_LIMIT_POINTS.getStorageUint256())
-            / TOTAL_BASIS_POINTS;
-
+        uint256 mevRewards;
         address mevVaultAddress = getMevTxFeeVault();
+
         if (mevVaultAddress != address(0)) {
-            mevRewards = ILidoMevTxFeeVault(mevVaultAddress).withdrawRewards(mevRewards);
+            mevRewards = ILidoMevTxFeeVault(mevVaultAddress).withdrawRewards(
+                (_getTotalPooledEther() * MEV_TX_FEE_WITHDRAWAL_LIMIT_POINTS.getStorageUint256()) / TOTAL_BASIS_POINTS
+            );
+
             if (mevRewards != 0) {
                 BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().add(mevRewards));
             }
