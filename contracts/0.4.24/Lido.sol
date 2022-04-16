@@ -421,15 +421,15 @@ contract Lido is ILido, StETH, AragonApp {
     /**
       * @notice Returns staking rewards fee rate
       */
-    function getFee() external view returns (uint16 feeBasisPoints) {
-        return _getFee();
+    function getFee() public view returns (uint16 feeBasisPoints) {
+        return uint16(FEE_POSITION.getStorageUint256());
     }
 
     /**
       * @notice Returns fee distribution proportion
       */
     function getFeeDistribution()
-        external
+        public
         view
         returns (
             uint16 treasuryFeeBasisPoints,
@@ -437,7 +437,9 @@ contract Lido is ILido, StETH, AragonApp {
             uint16 operatorsFeeBasisPoints
         )
     {
-        return _getFeeDistribution();
+        treasuryFeeBasisPoints = uint16(TREASURY_FEE_POSITION.getStorageUint256());
+        insuranceFeeBasisPoints = uint16(INSURANCE_FEE_POSITION.getStorageUint256());
+        operatorsFeeBasisPoints = uint16(NODE_OPERATORS_FEE_POSITION.getStorageUint256());
     }
 
     /**
@@ -690,7 +692,7 @@ contract Lido is ILido, StETH, AragonApp {
         // The effect is that the given percentage of the reward goes to the fee recipient, and
         // the rest of the reward is distributed between token holders proportionally to their
         // token shares.
-        uint256 feeBasis = _getFee();
+        uint256 feeBasis = getFee();
         uint256 shares2mint = (
             _totalRewards.mul(feeBasis).mul(_getTotalShares())
             .div(
@@ -703,7 +705,7 @@ contract Lido is ILido, StETH, AragonApp {
         // balances of the holders, as if the fee was taken in parts from each of them.
         _mintShares(address(this), shares2mint);
 
-        (,uint16 insuranceFeeBasisPoints, uint16 operatorsFeeBasisPoints) = _getFeeDistribution();
+        (,uint16 insuranceFeeBasisPoints, uint16 operatorsFeeBasisPoints) = getFeeDistribution();
 
         uint256 toInsuranceFund = shares2mint.mul(insuranceFeeBasisPoints).div(TOTAL_BASIS_POINTS);
         address insuranceFund = getInsuranceFund();
@@ -776,33 +778,6 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-      * @dev Returns staking rewards fee rate
-      */
-    function _getFee() internal view returns (uint16) {
-        return _readBPValue(FEE_POSITION);
-    }
-
-    /**
-      * @dev Returns fee distribution proportion
-      */
-    function _getFeeDistribution() internal view
-        returns (uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, uint16 operatorsFeeBasisPoints)
-    {
-        treasuryFeeBasisPoints = _readBPValue(TREASURY_FEE_POSITION);
-        insuranceFeeBasisPoints = _readBPValue(INSURANCE_FEE_POSITION);
-        operatorsFeeBasisPoints = _readBPValue(NODE_OPERATORS_FEE_POSITION);
-    }
-
-    /**
-      * @dev Read a value nominated in basis points
-      */
-    function _readBPValue(bytes32 _slot) internal view returns (uint16) {
-        uint256 v = _slot.getStorageUint256();
-        assert(v <= TOTAL_BASIS_POINTS);
-        return uint16(v);
-    }
-
-    /**
       * @dev Gets the amount of Ether temporary buffered on this contract balance
       */
     function _getBufferedEther() internal view returns (uint256) {
@@ -829,8 +804,7 @@ contract Lido is ILido, StETH, AragonApp {
         uint256 beaconValidators = BEACON_VALIDATORS_POSITION.getStorageUint256();
         // beaconValidators can never be less than deposited ones.
         assert(depositedValidators >= beaconValidators);
-        uint256 transientValidators = depositedValidators.sub(beaconValidators);
-        return transientValidators.mul(DEPOSIT_SIZE);
+        return depositedValidators.sub(beaconValidators).mul(DEPOSIT_SIZE);
     }
 
     /**
@@ -838,10 +812,9 @@ contract Lido is ILido, StETH, AragonApp {
     * @return total balance in wei
     */
     function _getTotalPooledEther() internal view returns (uint256) {
-        uint256 bufferedBalance = _getBufferedEther();
-        uint256 beaconBalance = BEACON_BALANCE_POSITION.getStorageUint256();
-        uint256 transientBalance = _getTransientBalance();
-        return bufferedBalance.add(beaconBalance).add(transientBalance);
+        return _getBufferedEther().add(
+            BEACON_BALANCE_POSITION.getStorageUint256()
+        ).add(_getTransientBalance());
     }
 
     /**
