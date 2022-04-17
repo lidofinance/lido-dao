@@ -917,6 +917,10 @@ contract Lido is ILido, StETH, AragonApp {
 
     /**
     * @dev Write storage slot containing rate limit vars
+    * @param _amountETH amount of ETH per period
+    * @param _spentETH amount of already spent ETH
+    * @param _lastStakeMinutes timestamp (minutes) of the last stake
+    * @param _periodMinutes rate-limit period (minutes)
     */
     function _writeStakingRateLimit(
         uint64 _amountETH,
@@ -924,6 +928,18 @@ contract Lido is ILido, StETH, AragonApp {
         uint64 _lastStakeMinutes,
         uint64 _periodMinutes
     ) internal {
+        // We need to pack four variables into the same storage slot to lower the costs per each staking request.
+        // Since storage slot has 256bit size, we could proceed with 4 x 64bit vars.
+        //
+        // As a result, slot's memory aligned as follows:
+        //
+        // memory offset (bits)
+        // -------------------->
+        // 0________________64_________________128_________192__________256
+        // |________________|___________________|___________|____________|
+        // | _periodMinutes | _lastStakeMinutes | _spentETH | _amountETH |
+        //
+
         STAKING_RATE_LIMIT_POSITION.setStorageUint256(
             (uint256(_amountETH) << 192)
             | (uint256(_spentETH) << 128)
