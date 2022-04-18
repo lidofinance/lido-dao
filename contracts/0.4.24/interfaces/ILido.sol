@@ -44,19 +44,24 @@ interface ILido {
       * @dev Reverts if `_rateLimitAmount` is zero.
       * To disable the rate limit, set `_rateLimitPeriodMinutes` to zero.
       *
-      * @param _rateLimitETHAmount amount of ETH per period
+      * @param _rateLimitAmount amount per period
       * @param _rateLimitPeriodMinutes period duration (in minutes)
       */
-    function resumeStaking(uint64 _rateLimitETHAmount, uint64 _rateLimitPeriodMinutes) external;
+    function resumeStaking(uint96 _rateLimitAmount, uint32 _rateLimitPeriodMinutes) external;
 
     /**
       * @dev Read storage slot containing rate limit params and state.
+      * @return
+      * `amount` amount per period
+      * `spend` spent up to now
+      * `lastStakeMinutes` last executed staking timestamp (minutes)
+      * `periodMinutes` rate limit period duration (minutes)
       */
     function getStakingRateLimit() public view returns (
-        uint64 amountETH,
-        uint64 spentETH,
-        uint64 lastStakeMinutes,
-        uint64 periodMinutes
+        uint96 amount,
+        uint96 spent,
+        uint32 lastStakeMinutes,
+        uint32 periodMinutes
     );
 
     /**
@@ -69,7 +74,7 @@ interface ILido {
     event Stopped();
     event Resumed();
     event StakingPaused();
-    event StakingResumed(uint64 rateLimitETHAmount, uint64 rateLimitPeriodMinutes);
+    event StakingResumed(uint96 rateLimitAmount, uint96 rateLimitPeriodMinutes);
 
     /**
       * @notice Set Lido protocol contracts (oracle, treasury, insurance fund).
