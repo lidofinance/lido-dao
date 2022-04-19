@@ -29,52 +29,63 @@ interface ILido {
     function resume() external;
 
     /**
-      * @notice Cut-off new staking (every new submit ETH funds transaction would revert
-      * if `pauseStaking` was called previously)
+      * @notice Cut-off new stake (every new staking transaction submitting user-provided ETH
+      * would revert if `pauseStake` was called previously).
       *
-      * @dev Provides a way to pause staking without pushing PAUSE for the whole proto
-      * The main goal is to prevent huge APR losses for existing stakers due to high demands on entry queue
+      * @dev A way to pause stake without pushing PAUSE for the whole proto.
+      * The main goal is to prevent huge APR losses for existing stakers due to high demands
+      * on post-Merge entry queue.
+      *
+      * Emits `StakingPaused` event.
       */
     function pauseStaking() external;
 
     /**
       * @notice Resume staking if `pauseStaking` was called previously (allow new submits transactions)
-      * or if new rate limit is required.
+      * or if new rate-limit params are required.
       *
-      * @dev Reverts if `_rateLimitAmount` is zero.
-      * To disable the rate limit, set `_rateLimitPeriodMinutes` to zero.
+      * Staking could be rate-limited by imposing a limit on the stake amount
+      * at each moment in time.
       *
-      * @param _rateLimitAmount amount per period
-      * @param _rateLimitPeriodMinutes period duration (in minutes)
+      * ▲ Stake limit
+      * │.....  .....   ........ ...            ....     ... Stake limit = max
+      * │      .       .        .   .   .      .    . . .
+      * │     .       .              . .  . . .      . .
+      * │            .                .  . . .
+      * │──────────────────────────────────────────────────> Time
+      * │     ^      ^          ^   ^^^  ^ ^ ^     ^^^ ^     Stake events
+      *
+      * If `maxStakeLimit` is set to zero then rate-limit is disabled.
+      *
+      * Emits `StakeResumed` event
+      *
+      * @param _maxStakeLimit max stake limit value
+      * @param _stakeLimitIncreasePerBlock stake limit increase per single block
       */
-    function resumeStaking(uint96 _rateLimitAmount, uint32 _rateLimitPeriodMinutes) external;
+    function resumeStaking(uint96 _maxStakeLimit, uint96 _stakeLimitIncreasePerBlock) external;
 
     /**
-      * @dev Read storage slot containing rate limit params and state.
-      * @return
-      * `amount` amount per period
-      * `spend` spent up to now
-      * `lastStakeMinutes` last executed staking timestamp (minutes)
-      * `periodMinutes` rate limit period duration (minutes)
+      * @notice Check staking state: whether it's paused or not
       */
-    function getStakingRateLimit() public view returns (
-        uint96 amount,
-        uint96 spent,
-        uint32 lastStakeMinutes,
-        uint32 periodMinutes
+    function isStakingPaused() external view returns (bool);
+
+    /**
+      * @notice Get current stake limit value and main params.
+      * See `resumeStaking` for the details.
+      *
+      * @dev Reverts if staking is paused
+      * NB: returns zero `maxStakeLimit` if rate-limit is disabled
+      */
+    function getCurrentStakeLimit() external view returns (
+        uint256 currentStakeLimit,
+        uint256 maxStakeLimit,
+        uint256 stakeLimitIncreasePerBlock
     );
-
-    /**
-      * @notice check staking pause state
-      * Returns true if staking is on pause currently
-      * See `pauseStaking` and `resumeStaking` for the details.
-      */
-    function isStakingPaused() public view returns(bool);
 
     event Stopped();
     event Resumed();
     event StakingPaused();
-    event StakingResumed(uint96 rateLimitAmount, uint96 rateLimitPeriodMinutes);
+    event StakingResumed(uint96 maxStakeLimit, uint96 stakeLimitIncreasePerBlock);
 
     /**
       * @notice Set Lido protocol contracts (oracle, treasury, insurance fund).
@@ -135,10 +146,10 @@ interface ILido {
     event FeeDistributionSet(uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, uint16 operatorsFeeBasisPoints);
 
     /**
-    * @notice A payable function supposed to be funded only by LidoMevTxFeeVault contract
-    * @dev We need a separate function because funds received by default payable function
-    * are considered as funds submitted by a user for staking
-    */
+      * @notice A payable function supposed to be funded only by LidoMevTxFeeVault contract
+      * @dev We need a separate function because funds received by default payable function
+      * are considered as funds submitted by a user for staking
+      */
     function receiveMevTxFee() external payable;
 
     // The amount of ETH withdrawn from LidoMevTxFeeVault contract to Lido contract
