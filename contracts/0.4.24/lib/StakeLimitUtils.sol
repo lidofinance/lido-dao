@@ -28,6 +28,7 @@ library StakeLimitUtils {
     uint256 internal constant MAX_STAKE_LIMIT_GROWTH_BLOCKS_OFFSET = 128;
     uint256 internal constant PREV_STAKE_LIMIT_OFFSET = 32;
     uint256 internal constant PREV_STAKE_BLOCK_NUMBER_OFFSET = 0;
+    uint256 internal constant STAKE_LIMIT_PARAMS_MASK = uint256(-1) << MAX_STAKE_LIMIT_GROWTH_BLOCKS_OFFSET;
 
     /**
     * @notice Unpack the slot value into stake limit params and state.
@@ -51,32 +52,59 @@ library StakeLimitUtils {
     * @notice Pack stake limit params and state into a slot.
     */
     function encodeStakeLimitSlot(
-        uint96 maxStakeLimit,
-        uint96 stakeLimitIncPerBlock,
-        uint96 prevStakeLimit,
-        uint32 prevStakeBlockNumber
+        uint96 _maxStakeLimit,
+        uint96 _stakeLimitIncPerBlock,
+        uint96 _prevStakeLimit,
+        uint32 _prevStakeBlockNumber
     ) internal pure returns (uint256 ret) {
-        ret = uint256(maxStakeLimit) << MAX_STAKE_LIMIT_OFFSET
-            | uint256(prevStakeLimit) << PREV_STAKE_LIMIT_OFFSET
-            | uint256(prevStakeBlockNumber) << PREV_STAKE_BLOCK_NUMBER_OFFSET;
+        ret = uint256(_maxStakeLimit) << MAX_STAKE_LIMIT_OFFSET
+            | uint256(_prevStakeLimit) << PREV_STAKE_LIMIT_OFFSET
+            | uint256(_prevStakeBlockNumber) << PREV_STAKE_BLOCK_NUMBER_OFFSET;
 
-        if (stakeLimitIncPerBlock > 0) {
-            ret |= uint256(uint32(maxStakeLimit / stakeLimitIncPerBlock)) << MAX_STAKE_LIMIT_GROWTH_BLOCKS_OFFSET;
+        if (_stakeLimitIncPerBlock > 0) {
+            ret |= uint256(uint32(_maxStakeLimit / _stakeLimitIncPerBlock)) << MAX_STAKE_LIMIT_GROWTH_BLOCKS_OFFSET;
         }
     }
 
     /**
     * @notice Calculate stake limit for the current block.
     */
-    function getCurrentStakeLimit(
-        uint256 maxStakeLimit,
-        uint256 stakeLimitIncPerBlock,
-        uint256 prevStakeLimit,
-        uint256 prevBlockNumber
-    ) internal view returns(uint256 limit) {
-        limit = prevStakeLimit + ((block.number - prevBlockNumber) * stakeLimitIncPerBlock);
+    function getCurrentStakeLimit(uint256 _slotValue) internal view returns(uint256 limit) {
+        (
+            uint96 maxStakeLimit,
+            uint96 stakeLimitIncPerBlock,
+            uint96 prevStakeLimit,
+            uint32 prevStakeBlockNumber
+        ) = decodeStakeLimitSlot(_slotValue);
+
+        limit = prevStakeLimit + ((block.number - prevStakeBlockNumber) * stakeLimitIncPerBlock);
         if (limit > maxStakeLimit) {
             limit = maxStakeLimit;
         }
+    }
+
+    /**
+    * @notice Write new prev stake limit and current block number
+    */
+    function updatePrevStakeLimit(uint256 _slotValue, uint256 _newPrevLimit) internal view returns(uint256) {
+        return (
+            (_slotValue & STAKE_LIMIT_PARAMS_MASK)
+            | _newPrevLimit << PREV_STAKE_LIMIT_OFFSET
+            | block.number << PREV_STAKE_BLOCK_NUMBER_OFFSET
+        );
+    }
+
+    /**
+    * @notice check if staking is on pause (i.e. slot contains zero value)
+    */
+    function isStakingPaused(uint256 _slotValue) internal pure returns(bool) {
+        return (_slotValue == 0);
+    }
+
+    /**
+    * @notice check if rate limit is set (otherwise staking is unlimited)
+    */
+    function isStakingRateLimited(uint256 _slotValue) internal pure returns(bool) {
+        return uint96(_slotValue >> MAX_STAKE_LIMIT_OFFSET) != 0;
     }
 }

@@ -31,34 +31,13 @@ interface ILido {
     /**
       * @notice Cut-off new stake (every new staking transaction submitting user-provided ETH
       * would revert if `pauseStake` was called previously).
-      *
-      * @dev A way to pause stake without pushing PAUSE for the whole proto.
-      * The main goal is to prevent huge APR losses for existing stakers due to high demands
-      * on post-Merge entry queue.
-      *
-      * Emits `StakingPaused` event.
       */
     function pauseStaking() external;
 
     /**
       * @notice Resume staking if `pauseStaking` was called previously (allow new submits transactions)
       * or if new rate-limit params are required.
-      *
-      * Staking could be rate-limited by imposing a limit on the stake amount
-      * at each moment in time.
-      *
-      * ▲ Stake limit
-      * │.....  .....   ........ ...            ....     ... Stake limit = max
-      * │      .       .        .   .   .      .    . . .
-      * │     .       .              . .  . . .      . .
-      * │            .                .  . . .
-      * │──────────────────────────────────────────────────> Time
-      * │     ^      ^          ^   ^^^  ^ ^ ^     ^^^ ^     Stake events
-      *
-      * If `maxStakeLimit` is set to zero then rate-limit is disabled.
-      *
-      * Emits `StakeResumed` event
-      *
+      * To disable rate-limit pass zero arg values.
       * @param _maxStakeLimit max stake limit value
       * @param _stakeLimitIncreasePerBlock stake limit increase per single block
       */
@@ -71,10 +50,6 @@ interface ILido {
 
     /**
       * @notice Get current stake limit value and main params.
-      * See `resumeStaking` for the details.
-      *
-      * @dev Reverts if staking is paused
-      * NB: returns zero `maxStakeLimit` if rate-limit is disabled
       */
     function getCurrentStakeLimit() external view returns (
         uint256 currentStakeLimit,
@@ -89,12 +64,6 @@ interface ILido {
 
     /**
       * @notice Set Lido protocol contracts (oracle, treasury, insurance fund).
-      *
-      * @dev Oracle contract specified here is allowed to make
-      * periodical updates of beacon states by calling pushBeacon.
-      * Treasury contract specified here is used to accumulate the protocol treasury fee.
-      * Insurance fund contract specified here is used to accumulate the protocol insurance fee.
-      *
       * @param _oracle oracle contract
       * @param _treasury treasury contract which accumulates treasury fee
       * @param _insuranceFund insurance fund contract which accumulates insurance fee

@@ -552,9 +552,17 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     assertEvent(receipt, 'Submitted', { expectedArgs: { sender: user2, amount: ETH(5), referral: ZERO_ADDRESS } })
   })
 
+  const verifyRateLimitStake = async (expectedMaxStakeLimit, expectedLimitIncrease, expectedCurrentStakeLimit) => {
+    ;({ currentStakeLimit, maxStakeLimit, stakeLimitIncreasePerBlock } = await app.getCurrentStakeLimit())
+    assertBn(maxStakeLimit, expectedMaxStakeLimit)
+    assertBn(stakeLimitIncreasePerBlock, expectedLimitIncrease)
+    assertBn(currentStakeLimit, expectedCurrentStakeLimit)
+  }
+
   it('stake pause/unlimited resume works', async () => {
     let receipt
 
+    await verifyRateLimitStake(bn(0), bn(0), bn(0))
     receipt = await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2) })
     assertEvent(receipt, 'Submitted', { expectedArgs: { sender: user2, amount: ETH(2), referral: ZERO_ADDRESS } })
 
@@ -563,23 +571,23 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     assertEvent(receipt, 'StakingPaused')
 
     assert.equal(await app.isStakingPaused(), true)
+    await assertRevert(app.getCurrentStakeLimit(), 'STAKING_PAUSED')
+
     await assertRevert(web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(2) }), `STAKING_PAUSED`)
     await assertRevert(app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2) }), `STAKING_PAUSED`)
 
     const disableStakeLimit = 0
-    await assertRevert(app.resumeStaking(disableStakeLimit, 0), 'APP_AUTH_FAILED')
-    receipt = await app.resumeStaking(disableStakeLimit, 0, { from: voting })
+    await assertRevert(app.resumeStaking(disableStakeLimit, disableStakeLimit), 'APP_AUTH_FAILED')
+    receipt = await app.resumeStaking(disableStakeLimit, disableStakeLimit, { from: voting })
     assertEvent(receipt, 'StakingResumed')
     assert.equal(await app.isStakingPaused(), false)
+
+    await verifyRateLimitStake(bn(0), bn(0), bn(0))
 
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(1.1) })
     receipt = await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(1.4) })
     assertEvent(receipt, 'Submitted', { expectedArgs: { sender: user2, amount: ETH(1.4), referral: ZERO_ADDRESS } })
   })
-
-  const getBlockNumber = async () => {
-    return await ethers.provider.getBlockNumber()
-  }
 
   const mineNBlocks = async (n) => {
     for (let index = 0; index < n; index++) {
@@ -590,9 +598,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
   it('stake rate-limiting works', async () => {
     let receipt
 
-    const blocksToReachMaxStakeLimit = 250
+    const blocksToReachMaxStakeLimit = 300
     const expectedMaxStakeLimit = ETH(3)
-    const limitIncreasePerBlock = bn(expectedMaxStakeLimit).div(bn(blocksToReachMaxStakeLimit)) // 12 * 10**15
+    const limitIncreasePerBlock = bn(expectedMaxStakeLimit).div(bn(blocksToReachMaxStakeLimit)) // 1 * 10**16
 
     receipt = await app.resumeStaking(expectedMaxStakeLimit, limitIncreasePerBlock, { from: voting })
     assertEvent(receipt, 'StakingResumed', {
@@ -601,41 +609,43 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
         stakeLimitIncreasePerBlock: limitIncreasePerBlock
       }
     })
-    assert.equal(await app.isStakingPaused(), false)
-    ;({ currentStakeLimit, maxStakeLimit, stakeLimitIncreasePerBlock } = await app.getCurrentStakeLimit())
-    assertBn(maxStakeLimit, expectedMaxStakeLimit)
-    assertBn(stakeLimitIncreasePerBlock, limitIncreasePerBlock)
-    assertBn(currentStakeLimit, expectedMaxStakeLimit)
 
+    assert.equal(await app.isStakingPaused(), false)
+    await verifyRateLimitStake(expectedMaxStakeLimit, limitIncreasePerBlock, expectedMaxStakeLimit)
     receipt = await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2) })
     assertEvent(receipt, 'Submitted', { expectedArgs: { sender: user2, amount: ETH(2), referral: ZERO_ADDRESS } })
-    ;({ currentStakeLimit, maxStakeLimit, stakeLimitIncreasePerBlock } = await app.getCurrentStakeLimit())
-    assertBn(maxStakeLimit, expectedMaxStakeLimit)
-    assertBn(stakeLimitIncreasePerBlock, limitIncreasePerBlock)
-    assertBn(currentStakeLimit, ETH(1))
-
+    await verifyRateLimitStake(expectedMaxStakeLimit, limitIncreasePerBlock, ETH(1))
     await assertRevert(app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2.5) }), `STAKE_LIMIT`)
+    await verifyRateLimitStake(expectedMaxStakeLimit, limitIncreasePerBlock, bn(ETH(1)).add(limitIncreasePerBlock))
 
-    await mineNBlocks(122) // why not 125???
+    // expect to grow for another 1.5 ETH since last submit
+    // every revert produces new block, so we need to account that block
+    await mineNBlocks(blocksToReachMaxStakeLimit / 2 - 1)
+    await verifyRateLimitStake(expectedMaxStakeLimit, limitIncreasePerBlock, ETH(2.5))
     await assertRevert(app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2.6) }), `STAKE_LIMIT`)
-
     receipt = await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2.5) })
     assertEvent(receipt, 'Submitted', { expectedArgs: { sender: user2, amount: ETH(2.5), referral: ZERO_ADDRESS } })
-    ;({ currentStakeLimit, maxStakeLimit, stakeLimitIncreasePerBlock } = await app.getCurrentStakeLimit())
-    assertBn(maxStakeLimit, expectedMaxStakeLimit)
-    assertBn(stakeLimitIncreasePerBlock, limitIncreasePerBlock)
-    assertBn(currentStakeLimit, ETH(0))
+    await verifyRateLimitStake(expectedMaxStakeLimit, limitIncreasePerBlock, limitIncreasePerBlock.muln(2))
 
     await assertRevert(app.submit(ZERO_ADDRESS, { from: user2, value: ETH(0.1) }), `STAKE_LIMIT`)
-
-    await mineNBlocks(82) // why?
+    await verifyRateLimitStake(expectedMaxStakeLimit, limitIncreasePerBlock, limitIncreasePerBlock.muln(3))
+    // once again, we are subtracting blocks number induced by revert checks
+    await mineNBlocks(blocksToReachMaxStakeLimit / 3 - 4)
 
     receipt = await app.submit(ZERO_ADDRESS, { from: user1, value: ETH(1) })
     assertEvent(receipt, 'Submitted', { expectedArgs: { sender: user1, amount: ETH(1), referral: ZERO_ADDRESS } })
-    ;({ currentStakeLimit, maxStakeLimit, stakeLimitIncreasePerBlock } = await app.getCurrentStakeLimit())
-    assertBn(maxStakeLimit, expectedMaxStakeLimit)
-    assertBn(stakeLimitIncreasePerBlock, limitIncreasePerBlock)
-    // assertBn(currentStakeLimit, ETH(0))
+    await verifyRateLimitStake(expectedMaxStakeLimit, limitIncreasePerBlock, ETH(0))
+
+    // check that limit is restored completely
+    await mineNBlocks(blocksToReachMaxStakeLimit)
+    await verifyRateLimitStake(expectedMaxStakeLimit, limitIncreasePerBlock, expectedMaxStakeLimit)
+
+    // check that limit is capped by maxLimit value and doesn't grow infinitely
+    await mineNBlocks(10)
+    await verifyRateLimitStake(expectedMaxStakeLimit, limitIncreasePerBlock, expectedMaxStakeLimit)
+
+    await assertRevert(app.resumeStaking(ETH(1), ETH(1.1), { from: voting }), `TO_LARGE_INCREESE`)
+    await assertRevert(app.resumeStaking(ETH(1), bn(10), { from: voting }), `TO_SMALL_INCREASE`)
   })
 
   it('reverts when trying to call unknown function', async () => {

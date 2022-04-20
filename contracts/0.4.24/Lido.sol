@@ -139,11 +139,9 @@ contract Lido is ILido, StETH, AragonApp {
     /**
     * @notice Cut-off new stake (every new staking transaction submitting user-provided ETH
     * would revert if `pauseStake` was called previously).
-    *
     * @dev A way to pause stake without pushing PAUSE for the whole proto.
     * The main goal is to prevent huge APR losses for existing stakers due to high demands
     * on post-Merge entry queue.
-    *
     * Emits `StakingPaused` event.
     */
     function pauseStaking() external {
@@ -168,11 +166,11 @@ contract Lido is ILido, StETH, AragonApp {
     * │──────────────────────────────────────────────────> Time
     * │     ^      ^          ^   ^^^  ^ ^ ^     ^^^ ^     Stake events
     *
-    * If `maxStakeLimit` is set to zero then rate-limit is disabled.
-    * NB: Reverts if `_maxStakeLimit` / `_stakeLimitIncreasePerBlock` >= 2**64
-    *
+    * To disable rate-limit pass zero arg values.
+    * @dev Reverts if:
+    * - `_maxStakeLimit` < `_stakeLimitIncreasePerBlock`
+    * - `_maxStakeLimit` / `_stakeLimitIncreasePerBlock` >= 2^32 (only if `_stakeLimitIncreasePerBlock` != 0)
     * Emits `StakeResumed` event
-    *
     * @param _maxStakeLimit max stake limit value
     * @param _stakeLimitIncreasePerBlock stake limit increase per single block
     */
@@ -181,6 +179,13 @@ contract Lido is ILido, StETH, AragonApp {
         uint96 _stakeLimitIncreasePerBlock
     ) external {
         _auth(STAKING_RESUME_ROLE);
+
+        require(_maxStakeLimit >= _stakeLimitIncreasePerBlock, "TO_LARGE_INCREESE");
+        require(
+            (_stakeLimitIncreasePerBlock == 0)
+            || (_maxStakeLimit / _stakeLimitIncreasePerBlock <= uint32(-1)),
+            "TO_SMALL_INCREASE"
+        );
 
         (
             uint96 maxStakeLimit,,
@@ -211,15 +216,14 @@ contract Lido is ILido, StETH, AragonApp {
     * @notice Check staking state: whether it's paused or not
     */
     function isStakingPaused() external view returns (bool) {
-        return STAKE_LIMIT_POSITION.getStorageUint256() == 0;
+        return STAKE_LIMIT_POSITION.getStorageUint256().isStakingPaused();
     }
 
     /**
     * @notice Get current stake limit value and main params.
     * See `resumeStaking` for the details.
-    *
     * @dev Reverts if staking is paused
-    * NB: returns zero `maxStakeLimit` if rate-limit is disabled
+    * NB: returns all zeros if staking rate-limit is disabled
     */
     function getCurrentStakeLimit() external view returns (
         uint256 currentStakeLimit,
@@ -227,24 +231,10 @@ contract Lido is ILido, StETH, AragonApp {
         uint256 stakeLimitIncreasePerBlock
     ) {
         uint256 slotValue = STAKE_LIMIT_POSITION.getStorageUint256();
-        require(slotValue != 0);
+        require(!slotValue.isStakingPaused(), "STAKING_PAUSED");
 
-        uint256 prevStakeLimit;
-        uint256 prevStakeBlockNumber;
-
-        (
-            maxStakeLimit,
-            stakeLimitIncreasePerBlock,
-            prevStakeLimit,
-            prevStakeBlockNumber
-        ) = slotValue.decodeStakeLimitSlot();
-
-        currentStakeLimit = StakeLimitUtils.getCurrentStakeLimit(
-            maxStakeLimit,
-            stakeLimitIncreasePerBlock,
-            prevStakeLimit,
-            prevStakeBlockNumber
-        );
+        (maxStakeLimit, stakeLimitIncreasePerBlock,,) = slotValue.decodeStakeLimitSlot();
+        currentStakeLimit = slotValue.getCurrentStakeLimit();
     }
 
     /**
@@ -505,7 +495,7 @@ contract Lido is ILido, StETH, AragonApp {
     function transferToVault(address _token) external {
         require(allowRecoverability(_token), "RECOVER_DISALLOWED");
         address vault = getRecoveryVault();
-        require(vault != address(0));
+        require(vault != address(0), "RECOVER_VAULT_ZERO");
 
         uint256 balance;
         if (_token == ETH) {
@@ -660,33 +650,16 @@ contract Lido is ILido, StETH, AragonApp {
     function _submit(address _referral) internal whenNotStopped returns (uint256) {
         uint256 stakeLimitSlotValue = STAKE_LIMIT_POSITION.getStorageUint256();
 
-        require(stakeLimitSlotValue != 0, "STAKING_PAUSED");
+        require(!stakeLimitSlotValue.isStakingPaused(), "STAKING_PAUSED");
         require(msg.value != 0, "ZERO_DEPOSIT");
 
-        (
-            uint96 maxStakeLimit,
-            uint96 stakeLimitIncPerBlock,
-            uint96 prevStakeLimit,
-            uint32 prevStakeBlockNumber
-        ) = stakeLimitSlotValue.decodeStakeLimitSlot();
-
-        if (maxStakeLimit != 0) {
-            uint256 currentStakeLimit = StakeLimitUtils.getCurrentStakeLimit(
-                maxStakeLimit,
-                stakeLimitIncPerBlock,
-                prevStakeLimit,
-                prevStakeBlockNumber
-            );
+        if (stakeLimitSlotValue.isStakingRateLimited()) {
+            uint256 currentStakeLimit = stakeLimitSlotValue.getCurrentStakeLimit();
 
             require(msg.value <= currentStakeLimit, "STAKE_LIMIT");
 
             STAKE_LIMIT_POSITION.setStorageUint256(
-                StakeLimitUtils.encodeStakeLimitSlot(
-                    maxStakeLimit,
-                    stakeLimitIncPerBlock,
-                    uint96(currentStakeLimit - msg.value),
-                    uint32(block.number)
-                )
+                stakeLimitSlotValue.updatePrevStakeLimit(currentStakeLimit - msg.value)
             );
         }
 
