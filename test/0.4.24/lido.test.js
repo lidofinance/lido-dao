@@ -227,6 +227,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     assertBn(await app.getTotalPooledEther(), ETH(depositAmount + mevAmount + beaconRewards))
     assertBn(await app.getBufferedEther(), ETH(mevAmount))
     assertBn(await app.balanceOf(user2), STETH(depositAmount + mevAmount))
+    assertBn(await app.getTotalMevTxFeeCollected(), ETH(mevAmount))
   })
 
   it('MEV distribution works when negative rewards reported', async () => {
@@ -243,6 +244,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     assertBn(await app.getTotalPooledEther(), ETH(depositAmount + mevAmount + beaconRewards))
     assertBn(await app.getBufferedEther(), ETH(mevAmount))
     assertBn(await app.balanceOf(user2), STETH(depositAmount + mevAmount + beaconRewards))
+    assertBn(await app.getTotalMevTxFeeCollected(), ETH(mevAmount))
   })
 
   it('MEV distribution works when positive rewards reported', async () => {
@@ -261,6 +263,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     assertBn(await app.getTotalPooledEther(), ETH(depositAmount + mevAmount + beaconRewards))
     assertBn(await app.getBufferedEther(), ETH(mevAmount))
     assertBn(await app.balanceOf(user2), STETH(depositAmount + shareOfRewardsForStakers * (mevAmount + beaconRewards)))
+    assertBn(await app.getTotalMevTxFeeCollected(), ETH(mevAmount))
   })
 
   it('Attempt to set invalid MEV Tx Fee withdrawal limit', async () => {
@@ -276,6 +279,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await assertRevert(app.setMevTxFeeWithdrawalLimit(10001, { from: voting }), 'VALUE_OVER_100_PERCENT')
 
     await app.setMevTxFeeWithdrawalLimit(initialValue, { from: voting })
+
+    // unable to receive mev tx fee from arbitrary account
+    assertRevert(app.receiveMevTxFee({ from: user1, value: ETH(1) }))
   })
 
   it('setFee works', async () => {
