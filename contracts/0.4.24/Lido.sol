@@ -146,7 +146,9 @@ contract Lido is ILido, StETH, AragonApp {
     *
     * Emits `StakingPaused` event.
     */
-    function pauseStaking() external auth(STAKING_PAUSE_ROLE) {
+    function pauseStaking() external {
+        _auth(STAKING_PAUSE_ROLE);
+
         STAKE_LIMIT_POSITION.setStorageUint256(0);
         emit StakingPaused();
     }
@@ -167,6 +169,7 @@ contract Lido is ILido, StETH, AragonApp {
     * │     ^      ^          ^   ^^^  ^ ^ ^     ^^^ ^     Stake events
     *
     * If `maxStakeLimit` is set to zero then rate-limit is disabled.
+    * NB: Reverts if `_maxStakeLimit` / `_stakeLimitIncreasePerBlock` >= 2**64
     *
     * Emits `StakeResumed` event
     *
@@ -176,7 +179,9 @@ contract Lido is ILido, StETH, AragonApp {
     function resumeStaking(
         uint96 _maxStakeLimit,
         uint96 _stakeLimitIncreasePerBlock
-    ) external auth(STAKING_RESUME_ROLE) {
+    ) external {
+        _auth(STAKING_RESUME_ROLE);
+
         (
             uint96 maxStakeLimit,,
             uint96 prevStakeLimit,
@@ -282,7 +287,9 @@ contract Lido is ILido, StETH, AragonApp {
     * @notice Deposits buffered ethers to the official DepositContract.
     * @dev This function is separated from submit() to reduce the cost of sending funds.
     */
-    function depositBufferedEther() external auth(DEPOSIT_ROLE) {
+    function depositBufferedEther() external {
+        _auth(DEPOSIT_ROLE);
+
         return _depositBufferedEther(DEFAULT_MAX_DEPOSITS_PER_CALL);
     }
 
@@ -290,7 +297,9 @@ contract Lido is ILido, StETH, AragonApp {
       * @notice Deposits buffered ethers to the official DepositContract, making no more than `_maxDeposits` deposit calls.
       * @dev This function is separated from submit() to reduce the cost of sending funds.
       */
-    function depositBufferedEther(uint256 _maxDeposits) external auth(DEPOSIT_ROLE) {
+    function depositBufferedEther(uint256 _maxDeposits) external {
+        _auth(DEPOSIT_ROLE);
+
         return _depositBufferedEther(_maxDeposits);
     }
 
@@ -305,14 +314,18 @@ contract Lido is ILido, StETH, AragonApp {
     /**
       * @notice Stop pool routine operations
       */
-    function stop() external auth(PAUSE_ROLE) {
+    function stop() external {
+        _auth(PAUSE_ROLE);
+
         _stop();
     }
 
     /**
       * @notice Resume pool routine operations
       */
-    function resume() external auth(RESUME_ROLE) {
+    function resume() external {
+        _auth(RESUME_ROLE);
+
         _resume();
     }
 
@@ -321,7 +334,9 @@ contract Lido is ILido, StETH, AragonApp {
       * The fees are accrued when oracles report staking results.
       * @param _feeBasisPoints Fee rate, in basis points
       */
-    function setFee(uint16 _feeBasisPoints) external auth(MANAGE_FEE) {
+    function setFee(uint16 _feeBasisPoints) external {
+        _auth(MANAGE_FEE);
+
         _setBPValue(FEE_POSITION, _feeBasisPoints);
         emit FeeSet(_feeBasisPoints);
     }
@@ -338,8 +353,10 @@ contract Lido is ILido, StETH, AragonApp {
         uint16 _insuranceFeeBasisPoints,
         uint16 _operatorsFeeBasisPoints
     )
-        external auth(MANAGE_FEE)
+        external
     {
+        _auth(MANAGE_FEE);
+
         require(
             TOTAL_BASIS_POINTS == uint256(_treasuryFeeBasisPoints)
             .add(uint256(_insuranceFeeBasisPoints))
@@ -371,7 +388,9 @@ contract Lido is ILido, StETH, AragonApp {
         address _oracle,
         address _treasury,
         address _insuranceFund
-    ) external auth(MANAGE_PROTOCOL_CONTRACTS_ROLE) {
+    ) external {
+        _auth(MANAGE_PROTOCOL_CONTRACTS_ROLE);
+
         _setProtocolContracts(_oracle, _treasury, _insuranceFund);
     }
 
@@ -381,7 +400,9 @@ contract Lido is ILido, StETH, AragonApp {
       * @param _withdrawalCredentials hash of withdrawal multisignature key as accepted by
       *        the deposit_contract.deposit function
       */
-    function setWithdrawalCredentials(bytes32 _withdrawalCredentials) external auth(MANAGE_WITHDRAWAL_KEY) {
+    function setWithdrawalCredentials(bytes32 _withdrawalCredentials) external {
+        _auth(MANAGE_WITHDRAWAL_KEY);
+
         WITHDRAWAL_CREDENTIALS_POSITION.setStorageBytes32(_withdrawalCredentials);
         getOperators().trimUnusedKeys();
 
@@ -392,7 +413,9 @@ contract Lido is ILido, StETH, AragonApp {
     * @dev Sets given address as the address of LidoMevTxFeeVault contract
     * @param _mevTxFeeVault MEV and Tx Fees Vault contract address
     */
-    function setMevTxFeeVault(address _mevTxFeeVault) external auth(SET_MEV_TX_FEE_VAULT_ROLE) {
+    function setMevTxFeeVault(address _mevTxFeeVault) external {
+        _auth(SET_MEV_TX_FEE_VAULT_ROLE);
+
         MEV_TX_FEE_VAULT_POSITION.setStorageAddress(_mevTxFeeVault);
 
         emit LidoMevTxFeeVaultSet(_mevTxFeeVault);
@@ -402,7 +425,9 @@ contract Lido is ILido, StETH, AragonApp {
     * @dev Sets limit to amount of ETH to withdraw per LidoOracle report
     * @param _limitPoints limit in basis points to amount of ETH to withdraw per LidoOracle report
     */
-    function setMevTxFeeWithdrawalLimit(uint16 _limitPoints) external auth(SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE) {
+    function setMevTxFeeWithdrawalLimit(uint16 _limitPoints) external {
+        _auth(SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE);
+
         _setBPValue(MEV_TX_FEE_WITHDRAWAL_LIMIT_POINTS, _limitPoints);
         emit MevTxFeeWithdrawalLimitSet(_limitPoints);
     }
@@ -946,5 +971,10 @@ contract Lido is ILido, StETH, AragonApp {
 
         assert(0 == temp_value);    // fully converted
         result <<= (24 * 8);
+    }
+
+    // size-efficient analog of `auth(_role)` modifier
+    function _auth(bytes32 _role) internal view auth(_role) {
+        // no-op
     }
 }
