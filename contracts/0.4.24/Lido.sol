@@ -190,14 +190,13 @@ contract Lido is ILido, StETH, AragonApp {
         (
             uint96 maxStakeLimit,,
             uint96 prevStakeLimit,
-            uint32 prevStakeBlockNumber
         ) = STAKE_LIMIT_POSITION.getStorageUint256().decodeStakeLimitSlot();
 
         // if staking was paused or unlimited previously,
-        // reset current limit to max and save current block
-        if (maxStakeLimit == 0) {
+        // or new limit is lower than previous, then
+        // reset prev stake limit to max
+        if ((maxStakeLimit == 0) || (_maxStakeLimit < prevStakeLimit)) {
             prevStakeLimit = _maxStakeLimit;
-            prevStakeBlockNumber = uint32(block.number);
         }
 
         STAKE_LIMIT_POSITION.setStorageUint256(
@@ -205,7 +204,7 @@ contract Lido is ILido, StETH, AragonApp {
                 _maxStakeLimit,
                 _stakeLimitIncreasePerBlock,
                 prevStakeLimit,
-                prevStakeBlockNumber
+                uint32(block.number)
             )
         );
 

@@ -648,6 +648,80 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await assertRevert(app.resumeStaking(ETH(1), bn(10), { from: voting }), `TO_SMALL_INCREASE`)
   })
 
+  it('one-shot rate-limiting works', async () => {
+    let receipt
+
+    const expectedMaxStakeLimit = ETH(7)
+    const limitIncreasePerBlock = 0
+
+    receipt = await app.resumeStaking(expectedMaxStakeLimit, limitIncreasePerBlock, { from: voting })
+    assertEvent(receipt, 'StakingResumed', {
+      expectedArgs: {
+        maxStakeLimit: expectedMaxStakeLimit,
+        stakeLimitIncreasePerBlock: limitIncreasePerBlock
+      }
+    })
+
+    assert.equal(await app.isStakingPaused(), false)
+    await verifyRateLimitStake(expectedMaxStakeLimit, limitIncreasePerBlock, expectedMaxStakeLimit)
+    receipt = await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(5) })
+    assertEvent(receipt, 'Submitted', { expectedArgs: { sender: user2, amount: ETH(5), referral: ZERO_ADDRESS } })
+    await verifyRateLimitStake(expectedMaxStakeLimit, limitIncreasePerBlock, ETH(2))
+    receipt = await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2) })
+    assertEvent(receipt, 'Submitted', { expectedArgs: { sender: user2, amount: ETH(2), referral: ZERO_ADDRESS } })
+    await verifyRateLimitStake(expectedMaxStakeLimit, limitIncreasePerBlock, ETH(0))
+    await assertRevert(app.submit(ZERO_ADDRESS, { from: user2, value: ETH(0.1) }), `STAKE_LIMIT`)
+    await verifyRateLimitStake(expectedMaxStakeLimit, limitIncreasePerBlock, ETH(0))
+    await mineNBlocks(100)
+    await verifyRateLimitStake(expectedMaxStakeLimit, limitIncreasePerBlock, ETH(0))
+  })
+
+  it('changing various rate-limits work', async () => {
+    let receipt
+
+    const expectedMaxStakeLimit = ETH(9)
+    const limitIncreasePerBlock = bn(expectedMaxStakeLimit).divn(100)
+
+    receipt = await app.resumeStaking(expectedMaxStakeLimit, limitIncreasePerBlock, { from: voting })
+    assertEvent(receipt, 'StakingResumed', {
+      expectedArgs: {
+        maxStakeLimit: expectedMaxStakeLimit,
+        stakeLimitIncreasePerBlock: limitIncreasePerBlock
+      }
+    })
+
+    assert.equal(await app.isStakingPaused(), false)
+    await verifyRateLimitStake(expectedMaxStakeLimit, limitIncreasePerBlock, expectedMaxStakeLimit)
+
+    const smallerExpectedMaxStakeLimit = ETH(5)
+    const smallerLimitIncreasePerBlock = bn(smallerExpectedMaxStakeLimit).divn(200)
+
+    receipt = await app.resumeStaking(smallerExpectedMaxStakeLimit, smallerLimitIncreasePerBlock, { from: voting })
+    assertEvent(receipt, 'StakingResumed', {
+      expectedArgs: {
+        maxStakeLimit: smallerExpectedMaxStakeLimit,
+        stakeLimitIncreasePerBlock: smallerLimitIncreasePerBlock
+      }
+    })
+
+    assert.equal(await app.isStakingPaused(), false)
+    await verifyRateLimitStake(smallerExpectedMaxStakeLimit, smallerLimitIncreasePerBlock, smallerExpectedMaxStakeLimit)
+
+    const largerExpectedMaxStakeLimit = ETH(10)
+    const largerLimitIncreasePerBlock = bn(largerExpectedMaxStakeLimit).divn(1000)
+
+    receipt = await app.resumeStaking(largerExpectedMaxStakeLimit, largerLimitIncreasePerBlock, { from: voting })
+    assertEvent(receipt, 'StakingResumed', {
+      expectedArgs: {
+        maxStakeLimit: largerExpectedMaxStakeLimit,
+        stakeLimitIncreasePerBlock: largerLimitIncreasePerBlock
+      }
+    })
+
+    assert.equal(await app.isStakingPaused(), false)
+    await verifyRateLimitStake(largerExpectedMaxStakeLimit, largerLimitIncreasePerBlock, smallerExpectedMaxStakeLimit)
+  })
+
   it('reverts when trying to call unknown function', async () => {
     const wrongMethodABI = '0x00'
     await assertRevert(web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(1), data: wrongMethodABI }), 'NON_EMPTY_DATA')
