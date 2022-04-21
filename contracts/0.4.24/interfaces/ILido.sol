@@ -49,9 +49,9 @@ interface ILido {
     function isStakingPaused() external view returns (bool);
 
     /**
-      * @notice Get current stake limit value and main params.
+      * @notice Calculate current stake limit value and return main params.
       */
-    function getCurrentStakeLimit() external view returns (
+    function calculateCurrentStakeLimit() external view returns (
         uint256 currentStakeLimit,
         uint256 maxStakeLimit,
         uint256 stakeLimitIncreasePerBlock

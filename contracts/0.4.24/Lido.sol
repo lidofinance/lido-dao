@@ -219,12 +219,12 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-    * @notice Get current stake limit value and main params.
+    * @notice Calculate current stake limit value and return main params.
     * See `resumeStaking` for the details.
     * @dev Reverts if staking is paused
     * NB: returns all zeros if staking rate-limit is disabled
     */
-    function getCurrentStakeLimit() external view returns (
+    function calculateCurrentStakeLimit() external view returns (
         uint256 currentStakeLimit,
         uint256 maxStakeLimit,
         uint256 stakeLimitIncreasePerBlock
@@ -233,7 +233,7 @@ contract Lido is ILido, StETH, AragonApp {
         require(!slotValue.isStakingPaused(), "STAKING_PAUSED");
 
         (maxStakeLimit, stakeLimitIncreasePerBlock,,) = slotValue.decodeStakeLimitSlot();
-        currentStakeLimit = slotValue.getCurrentStakeLimit();
+        currentStakeLimit = slotValue.calculateCurrentStakeLimit();
     }
 
     /**
@@ -670,7 +670,7 @@ contract Lido is ILido, StETH, AragonApp {
         require(!stakeLimitSlotValue.isStakingPaused(), "STAKING_PAUSED");
 
         if (stakeLimitSlotValue.isStakingRateLimited()) {
-            uint256 currentStakeLimit = stakeLimitSlotValue.getCurrentStakeLimit();
+            uint256 currentStakeLimit = stakeLimitSlotValue.calculateCurrentStakeLimit();
 
             require(msg.value <= currentStakeLimit, "STAKE_LIMIT");
 

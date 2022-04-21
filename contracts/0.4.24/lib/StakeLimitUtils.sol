@@ -69,7 +69,7 @@ library StakeLimitUtils {
     /**
     * @notice Calculate stake limit for the current block.
     */
-    function getCurrentStakeLimit(uint256 _slotValue) internal view returns(uint256 limit) {
+    function calculateCurrentStakeLimit(uint256 _slotValue) internal view returns(uint256 limit) {
         (
             uint96 maxStakeLimit,
             uint96 stakeLimitIncPerBlock,

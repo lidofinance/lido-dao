@@ -560,7 +560,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
   })
 
   const verifyRateLimitStake = async (expectedMaxStakeLimit, expectedLimitIncrease, expectedCurrentStakeLimit) => {
-    ;({ currentStakeLimit, maxStakeLimit, stakeLimitIncreasePerBlock } = await app.getCurrentStakeLimit())
+    ;({ currentStakeLimit, maxStakeLimit, stakeLimitIncreasePerBlock } = await app.calculateCurrentStakeLimit())
     assertBn(maxStakeLimit, expectedMaxStakeLimit)
     assertBn(stakeLimitIncreasePerBlock, expectedLimitIncrease)
     assertBn(currentStakeLimit, expectedCurrentStakeLimit)
@@ -578,7 +578,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     assertEvent(receipt, 'StakingPaused')
 
     assert.equal(await app.isStakingPaused(), true)
-    await assertRevert(app.getCurrentStakeLimit(), 'STAKING_PAUSED')
+    await assertRevert(app.calculateCurrentStakeLimit(), 'STAKING_PAUSED')
 
     await assertRevert(web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(2) }), `STAKING_PAUSED`)
     await assertRevert(app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2) }), `STAKING_PAUSED`)
