@@ -512,6 +512,23 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
+      * @notice Send NTFs to recovery Vault
+      * @param _token Token to be sent to recovery vault
+      * @param _tokenId Token Id
+      */
+    function transferERC721ToVault(address _token, uint256 _tokenId) external {
+        require(_token != address(0), "ZERO_ADDRESS");
+        require(allowRecoverability(_token), "RECOVER_DISALLOWED");
+
+        address vault = getRecoveryVault();
+        require(vault != address(0), "RECOVER_VAULT_ZERO");
+
+        IERC721(_token).transferFrom(address(this), vault, _tokenId);
+
+        emit RecoverERC721ToVault(vault, _token, _tokenId);
+    }
+
+    /**
       * @notice Returns staking rewards fee rate
       */
     function getFee() public view returns (uint16 feeBasisPoints) {
@@ -945,7 +962,7 @@ contract Lido is ILido, StETH, AragonApp {
         result <<= (24 * 8);
     }
 
-    // size-efficient analog of `auth(_role)` modifier
+    // size-efficient analog of the `auth(_role)` modifier
     function _auth(bytes32 _role) internal view auth(_role) {
         // no-op
     }
