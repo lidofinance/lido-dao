@@ -664,10 +664,10 @@ contract Lido is ILido, StETH, AragonApp {
     * @return amount of StETH shares generated
     */
     function _submit(address _referral) internal whenNotStopped returns (uint256) {
-        uint256 stakeLimitSlotValue = STAKE_LIMIT_POSITION.getStorageUint256();
-
-        require(!stakeLimitSlotValue.isStakingPaused(), "STAKING_PAUSED");
         require(msg.value != 0, "ZERO_DEPOSIT");
+
+        uint256 stakeLimitSlotValue = STAKE_LIMIT_POSITION.getStorageUint256();
+        require(!stakeLimitSlotValue.isStakingPaused(), "STAKING_PAUSED");
 
         if (stakeLimitSlotValue.isStakingRateLimited()) {
             uint256 currentStakeLimit = stakeLimitSlotValue.getCurrentStakeLimit();

@@ -18,8 +18,8 @@ pragma solidity 0.4.24;
 // |<----- 32 bits ------>|<-- 96 bits --->|<---------- 32 bits ------>|<--- 96 bits -->|
 //
 //
-// NB: we represent `maxStakeLimitGrowthPeriod` as follows:
-// `maxStakeLimitGrowthPeriod` = `maxStakeLimit` / `stakeLimitIncPerBlock`
+// NB: we represent `maxStakeLimitGrowthBlocks` as follows:
+// `maxStakeLimitGrowthBlocks` = `maxStakeLimit` / `stakeLimitIncreasePerBlock`
 //           32 bits                 96 bits               96 bits
 //
 
