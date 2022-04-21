@@ -650,8 +650,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await mineNBlocks(10)
     await verifyRateLimitStake(expectedMaxStakeLimit, limitIncreasePerBlock, expectedMaxStakeLimit)
 
-    await assertRevert(app.resumeStaking(ETH(1), ETH(1.1), { from: voting }), `TO_LARGE_INCREESE`)
-    await assertRevert(app.resumeStaking(ETH(1), bn(10), { from: voting }), `TO_SMALL_INCREASE`)
+    await assertRevert(app.resumeStaking(ETH(1), ETH(1.1), { from: voting }), `TOO_LARGE_INCREASE`)
+    await assertRevert(app.resumeStaking(ETH(1), bn(10), { from: voting }), `TOO_SMALL_INCREASE`)
   })
 
   it('one-shot rate-limiting works', async () => {
