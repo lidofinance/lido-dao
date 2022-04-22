@@ -596,9 +596,10 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         _transferShares(address(this), insuranceFund, toInsuranceFund);
         _emitTransferAfterMintingShares(insuranceFund, toInsuranceFund);
 
-        uint256 distributedToOperatorsShares = _distributeNodeOperatorsReward(
-            shares2mint.mul(operatorsFeeBasisPoints).div(10000)
-        );
+        uint256 distributedToOperatorsShares = shares2mint.mul(operatorsFeeBasisPoints).div(10000);
+        // uint256 distributedToOperatorsShares = _distributeNodeOperatorsReward(
+        //     shares2mint.mul(operatorsFeeBasisPoints).div(10000)
+        // );
 
         // Transfer the rest of the fee to treasury
         uint256 toTreasury = shares2mint.sub(toInsuranceFund).sub(distributedToOperatorsShares);
@@ -608,22 +609,34 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         _emitTransferAfterMintingShares(treasury, toTreasury);
     }
 
-    function _distributeNodeOperatorsReward(uint256 _sharesToDistribute) internal returns (uint256 distributed) {
-        (address[] memory recipients, uint256[] memory shares) = getOperators().getRewardsDistribution(_sharesToDistribute);
+    event ClaimedShares(address indexed from, address indexed to, uint256 indexed sharesAmount);
 
-        assert(recipients.length == shares.length);
+    function claim(address _account, uint256 _sharesAmount) external returns(bool) {
+        // require(msg.sender == distributor, "Cant claim from current address");
+        _transferShares(address(this), _account, _sharesAmount);
+        emit ClaimedShares(address(this), _account, _sharesAmount);
 
-        distributed = 0;
-        for (uint256 idx = 0; idx < recipients.length; ++idx) {
-            _transferShares(
-                address(this),
-                recipients[idx],
-                shares[idx]
-            );
-            _emitTransferAfterMintingShares(recipients[idx], shares[idx]);
-            distributed = distributed.add(shares[idx]);
-        }
+         // _emitTransferAfterMintingShares(recipients[idx], shares[idx]);
+
+        return true;
     }
+
+    // function _distributeNodeOperatorsReward(uint256 _sharesToDistribute) internal returns (uint256 distributed) {
+    //     (address[] memory recipients, uint256[] memory shares) = getOperators().getRewardsDistribution(_sharesToDistribute);
+
+    //     assert(recipients.length == shares.length);
+
+    //     distributed = 0;
+    //     for (uint256 idx = 0; idx < recipients.length; ++idx) {
+    //         _transferShares(
+    //             address(this),
+    //             recipients[idx],
+    //             shares[idx]
+    //         );
+    //         _emitTransferAfterMintingShares(recipients[idx], shares[idx]);
+    //         distributed = distributed.add(shares[idx]);
+    //     }
+    // }
 
     /**
     * @dev Records a deposit made by a user with optional referral

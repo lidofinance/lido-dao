@@ -101,6 +101,8 @@
     "@truffle/contract": "^4.2.22",
     "ethereumjs-util": "^7.0.8",
     "ethers": "^5.0.19",
+    "keccak256": "^1.0.6",
+    "merkletreejs": "^0.2.31",
     "openzeppelin-solidity": "2.0.0",
     "solidity-bytes-utils": "0.0.6",
     "yargs": "^16.0.3"
