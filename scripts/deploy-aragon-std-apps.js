@@ -11,7 +11,7 @@ const { filterObject } = require('./helpers/collections')
 const { readAppName } = require('./helpers/aragon')
 const { gitCloneRepo } = require('./helpers/git')
 
-const { uploadDirToIpfs } = require('./helpers/ipfs')
+const { uploadDirToIpfs } = require('@aragon/buidler-aragon/dist/src/utils/ipfs')
 const { toContentUri } = require('@aragon/buidler-aragon/dist/src/utils/apm/utils')
 
 const APPS = ['agent', 'finance', 'token-manager', 'vault', 'voting']
