@@ -252,6 +252,8 @@ contract('MerkleRewards', (accounts) => {
       assert.equal(balanceOperatorAfter, ETH(1))
     })
 
+    it('check rewards distibution in general way', async () => {})
+
     // generate rewards
     // someone add eth
     // generate -> stETH
