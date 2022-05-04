@@ -1,7 +1,11 @@
 const { assert } = require('chai')
 const { BN } = require('bn.js')
-const { assertBn, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertBn, assertEvent, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
 const { getEventArgument, ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
+
+// create merkle
+const keccak256 = require('keccak256')
+const { MerkleTree } = require('merkletreejs')
 
 const { pad, ETH } = require('./helpers/utils')
 const { deployDaoAndPool } = require('./scenario/helpers/deploy')
@@ -9,20 +13,24 @@ const { signDepositData } = require('./0.8.9/helpers/signatures')
 const { waitBlocks } = require('./helpers/blockchain')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
+const MerkleDistributor = artifacts.require('MerkleDistributor')
 
 const tenKBN = new BN(10000)
 
 // Fee and its distribution are in basis points, 10000 corresponding to 100%
 
-// Total fee is 1%
-const totalFeePoints = 0.01 * 10000
+// Total fee is 10%
+const totalFeePoints = 0.1 * 10000
 
-// Of this 1%, 30% goes to the treasury
-const treasuryFeePoints = 0.3 * 10000
-// 20% goes to the insurance fund
-const insuranceFeePoints = 0.2 * 10000
+// Of this 10%, 0% goes to the treasury
+const treasuryFeePoints = 0
+// 50% goes to the insurance fund
+const insuranceFeePoints = 0.5 * 10000
 // 50% goes to node operators
 const nodeOperatorsFeePoints = 0.5 * 10000
+
+const operatorsRewards = {}
+const nodeOperators = []
 
 contract('Lido: rewards distribution math', (addresses) => {
   const [
@@ -45,6 +53,7 @@ contract('Lido: rewards distribution math', (addresses) => {
   let oracleMock
   let treasuryAddr, insuranceAddr, guardians
   let depositSecurityModule, depositRoot
+  let merkle
 
   const withdrawalCredentials = pad('0x0202', 32)
 
@@ -108,6 +117,8 @@ contract('Lido: rewards distribution math', (addresses) => {
     await pool.setFee(totalFeePoints, { from: voting })
     await pool.setFeeDistribution(treasuryFeePoints, insuranceFeePoints, nodeOperatorsFeePoints, { from: voting })
     await pool.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
+
+    merkle = await MerkleDistributor.new(pool.address)
   })
 
   it(`initial treasury & insurance balances are zero`, async () => {
@@ -211,63 +222,95 @@ contract('Lido: rewards distribution math', (addresses) => {
 
   it(`first report registers profit`, async () => {
     const profitAmountEth = 1
-    const profitAmount = ETH(profitAmountEth)
     const reportingValue = ETH(32 + profitAmountEth)
-    const prevTotalShares = await pool.getTotalShares()
 
-    // for some reason there's nothing in this receipt's log, so we're not going to use it
-    const [{ receipt }, deltas] = await getSharesTokenDeltas(
-      () => reportBeacon(1, reportingValue),
-      treasuryAddr,
-      insuranceAddr,
-      nodeOperator1.address,
-      user1
-    )
+    // report 32+1 ETH
+    await reportBeacon(1, reportingValue)
 
-    const [
-      treasuryTokenDelta,
-      treasurySharesDelta,
-      insuranceTokenDelta,
-      insuranceSharesDelta,
-      nodeOperator1TokenDelta,
-      nodeOperator1SharesDelta,
-      user1TokenDelta,
-      user1SharesDelta
-    ] = deltas
+    // generate MerkleRoot
+    const nodeOperatorsUndistributedShares = await pool.getNodeOperatorsUndistributedShares()
+    const operatorsDistribute = await nodeOperatorRegistry.getRewardsDistribution(nodeOperatorsUndistributedShares)
 
-    console.log({
-      treasuryTokenDelta: treasuryTokenDelta.toString(),
-      treasurySharesDelta: treasurySharesDelta.toString(),
-      insuranceTokenDelta: insuranceTokenDelta.toString(),
-      insuranceSharesDelta: insuranceSharesDelta.toString(),
-      nodeOperator1TokenDelta: nodeOperator1TokenDelta.toString(),
-      nodeOperator1SharesDelta: nodeOperator1SharesDelta.toString(),
-      user1TokenDelta: user1TokenDelta.toString(),
-      user1SharesDelta: user1SharesDelta.toString()
-    })
+    const { merkleRoot, tree } = generateMerkleRoot(operatorsDistribute)
+
+    await merkle.setMerkleRoot(merkleRoot)
+
+    // get operator leaf
+    const operatorAddress = nodeOperator1.address
+    const operatorSharesHex = '0xad0e08c044b00b'
+    const operatorSharesNum = new BN(operatorSharesHex.replace(/^0x/, ''), 16)
+
+    const leaf = MerkleTree.bufferToHex(keccak256(operatorAddress + operatorSharesNum.toString(16, 64)))
+    const claimProof = tree.getHexProof(leaf)
+
+    await merkle.claim(operatorSharesNum.toString(), claimProof, { from: operatorAddress })
+
+    const nodeOperatorsUndistributedSharesAfter = await pool.getNodeOperatorsUndistributedShares()
+
+    assert.equal(nodeOperatorsUndistributedSharesAfter, 0, 'shares exists')
+
+    // nothing to cliams
+    await assertRevert(merkle.claim(operatorSharesNum.toString(), claimProof, { from: operatorAddress }), 'Nothing to claim')
+
+    nodeOperator1Balance = await pool.balanceOf(nodeOperator1.address)
+    // console.log(nodeOperator1Balance.toString())
   })
 
-  async function getSharesTokenDeltas(tx, ...addresses) {
-    const valuesBefore = await Promise.all(addresses.flatMap((addr) => [token.balanceOf(addr), token.sharesOf(addr)]))
-    const receipt = await tx()
-    const valuesAfter = await Promise.all(addresses.flatMap((addr) => [token.balanceOf(addr), token.sharesOf(addr)]))
-    return [{ receipt, valuesBefore, valuesAfter }, valuesAfter.map((val, i) => val.sub(valuesBefore[i]))]
+  it('second report register profit', async () => {
+    const profitAmountEth = 1
+    const reportingValue = ETH(32 + 1 + profitAmountEth)
+
+    // 1 validor + 1ETH first report + 1ETH second report
+    await reportBeacon(1, reportingValue)
+
+    // genereate merkle root
+    const nodeOperatorsUndistributedShares = await pool.getNodeOperatorsUndistributedShares()
+    const operatorsDistribute = await nodeOperatorRegistry.getRewardsDistribution(nodeOperatorsUndistributedShares)
+
+    const { merkleRoot, tree, accounts } = generateMerkleRoot(operatorsDistribute)
+
+    await merkle.setMerkleRoot(merkleRoot)
+
+    // get operator leaf
+    const operatorAddress = nodeOperator1.address
+    const operatorSharesHex = '0x155c56eb29fe603'
+    const operatorSharesNum = new BN(operatorSharesHex.replace(/^0x/, ''), 16)
+
+    const leaf = MerkleTree.bufferToHex(keccak256(operatorAddress + operatorSharesNum.toString(16, 64)))
+    const claimProof = tree.getHexProof(leaf)
+
+    await merkle.claim(operatorSharesNum.toString(), claimProof, { from: operatorAddress })
+
+    const nodeOperatorsUndistributedSharesAfter = await pool.getNodeOperatorsUndistributedShares()
+
+    assert.equal(nodeOperatorsUndistributedSharesAfter, 0, 'shares exists')
+
+    nodeOperator1Balance = await pool.balanceOf(nodeOperator1.address)
+    // console.log(nodeOperator1Balance.toString())
+  })
+})
+
+function generateMerkleRoot(operatorsDistribute) {
+  const accounts = {}
+  for (let i = 0; i < operatorsDistribute.recipients.length; i++) {
+    const operator = operatorsDistribute.recipients[i]
+    const shares = operatorsDistribute.shares[i]
+
+    // offline part??
+
+    operatorsRewards[operator] = operatorsRewards[operator] ? new BN(operatorsRewards[operator]).add(shares) : new BN(shares)
+
+    accounts[operator] = `0x${new BN(operatorsRewards[operator]).toString(16)}`
   }
 
-  async function readLastPoolEventLog() {
-    const events = await pool.getPastEvents()
-    let reportedMintAmount = new BN(0)
-    const tos = []
-    const values = []
-    events.forEach(({ args }) => {
-      reportedMintAmount = reportedMintAmount.add(args.value)
-      tos.push(args.to)
-      values.push(args.value)
-    })
-    return {
-      reportedMintAmount,
-      tos,
-      values
-    }
-  }
-})
+  const total = Object.keys(accounts).reduce((memo, key) => memo.add(new BN(accounts[key].replace(/^0x/, ''), 16)), new BN(0))
+
+  const leaves = Object.keys(accounts).map((address) =>
+    keccak256(address + new BN(accounts[address].replace(/^0x/, ''), 16).toString(16, 64))
+  )
+  const tree = new MerkleTree(leaves, keccak256, { sort: true })
+  const merkleRoot = tree.getHexRoot()
+
+  const totalRewards = '0x' + total.toString(16)
+  return { merkleRoot, tree, accounts, totalRewards }
+}

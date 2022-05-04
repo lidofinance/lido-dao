@@ -18,11 +18,8 @@ contract MerkleDistributor {
     /**
      * set new merkle root
      */
-    function pushRewards(bytes32 _root) external {
+    function setMerkleRoot(bytes32 _root) external {
         merkleRoot = _root;
-
-        //mint rewards
-        // _mintShares()
     }
 
     /**

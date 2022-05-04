@@ -11,6 +11,8 @@ import "@aragon/os/contracts/lib/math/SafeMath64.sol";
 import "@aragon/os/contracts/common/IsContract.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
+import "hardhat/console.sol";
+
 import "./interfaces/ILido.sol";
 import "./interfaces/INodeOperatorsRegistry.sol";
 import "./interfaces/IDepositContract.sol";
@@ -81,6 +83,9 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
 
     /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
     bytes32 internal constant WITHDRAWAL_CREDENTIALS_POSITION = keccak256("lido.Lido.withdrawalCredentials");
+
+    /// @dev total amount of Beacon-side Ether (sum of all the balances of Lido validators)
+    bytes32 internal constant NODE_OPERATORS_UNDISTRIBUTED_SHARES_POSITION = keccak256("lido.Lido.nodeOperatorsRegistry.undistributedShares");
 
     /**
     * @dev As AragonApp, Lido contract must be initialized with following variables:
@@ -597,6 +602,8 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
         _emitTransferAfterMintingShares(insuranceFund, toInsuranceFund);
 
         uint256 distributedToOperatorsShares = shares2mint.mul(operatorsFeeBasisPoints).div(10000);
+        _setNodeOperatorsUndistributedShares(distributedToOperatorsShares);
+        
         // uint256 distributedToOperatorsShares = _distributeNodeOperatorsReward(
         //     shares2mint.mul(operatorsFeeBasisPoints).div(10000)
         // );
@@ -613,12 +620,28 @@ contract Lido is ILido, IsContract, StETH, AragonApp {
 
     function claim(address _account, uint256 _sharesAmount) external returns(bool) {
         // require(msg.sender == distributor, "Cant claim from current address");
-        _transferShares(address(this), _account, _sharesAmount);
-        emit ClaimedShares(address(this), _account, _sharesAmount);
+        uint256 undistributedShares = NODE_OPERATORS_UNDISTRIBUTED_SHARES_POSITION.getStorageUint256();
+        require(undistributedShares >= _sharesAmount, "no funds");
 
-         // _emitTransferAfterMintingShares(recipients[idx], shares[idx]);
+        NODE_OPERATORS_UNDISTRIBUTED_SHARES_POSITION.setStorageUint256(
+            NODE_OPERATORS_UNDISTRIBUTED_SHARES_POSITION.getStorageUint256().sub(_sharesAmount)
+        );
+
+        _transferShares(address(this), _account, _sharesAmount);
+    
+         _emitTransferAfterMintingShares(_account, _sharesAmount);
+         emit ClaimedShares(address(this), _account, _sharesAmount);
 
         return true;
+    }
+
+    function getNodeOperatorsUndistributedShares() external view returns(uint256) {
+        return NODE_OPERATORS_UNDISTRIBUTED_SHARES_POSITION.getStorageUint256();
+    }
+    function _setNodeOperatorsUndistributedShares(uint256 _sharesAmount) internal {
+        NODE_OPERATORS_UNDISTRIBUTED_SHARES_POSITION.setStorageUint256(
+            NODE_OPERATORS_UNDISTRIBUTED_SHARES_POSITION.getStorageUint256().add(_sharesAmount)
+        );
     }
 
     // function _distributeNodeOperatorsReward(uint256 _sharesToDistribute) internal returns (uint256 distributed) {
