@@ -28,53 +28,73 @@ interface ILido {
       */
     function resume() external;
 
+    /**
+      * @notice Cut-off new stake (every new staking transaction submitting user-provided ETH
+      * would revert if `pauseStake` was called previously).
+      */
+    function pauseStaking() external;
+
+    /**
+      * @notice Resume staking if `pauseStaking` was called previously (allow new submits transactions)
+      * or if new rate-limit params are required.
+      * To disable rate-limit pass zero arg values.
+      * @param _maxStakeLimit max stake limit value
+      * @param _stakeLimitIncreasePerBlock stake limit increase per single block
+      */
+    function resumeStaking(uint96 _maxStakeLimit, uint96 _stakeLimitIncreasePerBlock) external;
+
+    /**
+      * @notice Check staking state: whether it's paused or not
+      */
+    function isStakingPaused() external view returns (bool);
+
+    /**
+      * @notice Calculate current stake limit value and return main params.
+      */
+    function calculateCurrentStakeLimit() external view returns (
+        uint256 currentStakeLimit,
+        uint256 maxStakeLimit,
+        uint256 stakeLimitIncreasePerBlock
+    );
+
     event Stopped();
     event Resumed();
-
+    event StakingPaused();
+    event StakingResumed(uint96 maxStakeLimit, uint96 stakeLimitIncreasePerBlock);
 
     /**
-      * @notice Set authorized oracle contract address to `_oracle`
-      * @dev Contract specified here is allowed to make periodical updates of beacon states
-      * by calling pushBeacon.
+      * @notice Set Lido protocol contracts (oracle, treasury, insurance fund).
       * @param _oracle oracle contract
+      * @param _treasury treasury contract which accumulates treasury fee
+      * @param _insuranceFund insurance fund contract which accumulates insurance fee
       */
-    function setOracle(address _oracle) external;
+    function setProtocolContracts(
+        address _oracle,
+        address _treasury,
+        address _insuranceFund
+    ) external;
 
-    event OracleSet(address oracle);
+    event ProtocolContactsSet(address oracle, address treasury, address insuranceFund);
 
     /**
-      * @notice Set treasury contract address to `_treasury`
-      * @dev Contract specified here is used to accumulate the protocol treasury fee.
-      * @param _treasury contract which accumulates treasury fee.
-      */
-    function setTreasury(address _treasury) external;
-
-    event TreasurySet(address treasury);
-
-    /**
-      * @notice Set insuranceFund contract address to `_insuranceFund`
-      * @dev Contract specified here is used to accumulate the protocol insurance fee.
-      * @param _insuranceFund contract which accumulates insurance fee.
-      */
-    function setInsuranceFund(address _insuranceFund) external;
-
-    event InsuranceFundSet(address insuranceFund);
-
-
-    /**
-      * @notice Set fee rate to `_feeBasisPoints` basis points. The fees are accrued when oracles report staking results
+      * @notice Set fee rate to `_feeBasisPoints` basis points.
+      * The fees are accrued when oracles report staking results.
       * @param _feeBasisPoints Fee rate, in basis points
       */
     function setFee(uint16 _feeBasisPoints) external;
 
     /**
-      * @notice Set fee distribution: `_treasuryFeeBasisPoints` basis points go to the treasury, `_insuranceFeeBasisPoints` basis points go to the insurance fund, `_operatorsFeeBasisPoints` basis points go to node operators. The sum has to be 10 000.
+      * @notice Set fee distribution:
+      * `_treasuryFeeBasisPoints` basis points go to the treasury,
+      * `_insuranceFeeBasisPoints` basis points go to the insurance fund,
+      * `_operatorsFeeBasisPoints` basis points go to node operators.
+      * The sum has to be 10 000.
       */
     function setFeeDistribution(
         uint16 _treasuryFeeBasisPoints,
         uint16 _insuranceFeeBasisPoints,
-        uint16 _operatorsFeeBasisPoints)
-        external;
+        uint16 _operatorsFeeBasisPoints
+    ) external;
 
     /**
       * @notice Returns staking rewards fee rate
@@ -84,18 +104,21 @@ interface ILido {
     /**
       * @notice Returns fee distribution proportion
       */
-    function getFeeDistribution() external view returns (uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints,
-                                                         uint16 operatorsFeeBasisPoints);
+    function getFeeDistribution() external view returns (
+        uint16 treasuryFeeBasisPoints,
+        uint16 insuranceFeeBasisPoints,
+        uint16 operatorsFeeBasisPoints
+    );
 
     event FeeSet(uint16 feeBasisPoints);
 
     event FeeDistributionSet(uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, uint16 operatorsFeeBasisPoints);
 
     /**
-    * @notice A payable function supposed to be funded only by LidoMevTxFeeVault contract
-    * @dev We need a separate function because funds received by default payable function
-    * are considered as funds submitted by a user for staking
-    */
+      * @notice A payable function supposed to be funded only by LidoMevTxFeeVault contract
+      * @dev We need a separate function because funds received by default payable function
+      * are considered as funds submitted by a user for staking
+      */
     function receiveMevTxFee() external payable;
 
     // The amount of ETH withdrawn from LidoMevTxFeeVault contract to Lido contract
