@@ -33,13 +33,6 @@ contract LidoMevTxFeeVault {
     address public immutable TREASURY;
 
     /**
-     * Total amount of rewards received via transactions
-     * Rewards received on this contract set as coinbase (fee recipient)
-     * are not counted
-     */
-    uint256 public totalRewardsReceivedViaTransactions;
-
-    /**
       * Emitted when the ERC20 `token` recovered (e.g. transferred)
       * to the Lido treasure address by `requestedBy` sender.
       */
@@ -78,7 +71,7 @@ contract LidoMevTxFeeVault {
     * @dev MEV rewards may be sent as plain ETH transfers
     */
     receive() external payable {
-        totalRewardsReceivedViaTransactions = totalRewardsReceivedViaTransactions + msg.value;
+        // no-op
     }
 
     /**

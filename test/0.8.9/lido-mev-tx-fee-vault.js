@@ -63,13 +63,6 @@ contract('LidoMevTxFeeVault', ([appManager, voting, deployer, depositor, another
     await assertRevert(mevVault.withdrawRewards(12345, { from: appManager }), 'ONLY_LIDO_CAN_WITHDRAW')
   })
 
-  it('MEV Tx Fee Vault totalRewardsReceivedViaTransactions counter', async () => {
-    const counterBefore = +(await mevVault.totalRewardsReceivedViaTransactions()).toString()
-    await web3.eth.sendTransaction({ to: mevVault.address, from: anotherAccount, value: ETH(0.05) })
-    console.log({ counterBefore })
-    assertBn(await mevVault.totalRewardsReceivedViaTransactions(), ETH(counterBefore + 0.05))
-  })
-
   it('MEV Tx Fee Vault can receive Ether by plain transfers (no call data)', async () => {
     const before = +(await web3.eth.getBalance(mevVault.address)).toString()
     const amount = 0.02
