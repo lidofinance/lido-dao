@@ -38,7 +38,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
     uint256 constant public PUBKEY_LENGTH = 48;
     uint256 constant public SIGNATURE_LENGTH = 96;
-    uint256 constant public MAX_NODE_OPERATORS_COUNT = 50;
+    uint256 constant public MAX_NODE_OPERATORS_COUNT = 200;
 
     uint256 internal constant UINT64_MAX = uint256(uint64(-1));
 
