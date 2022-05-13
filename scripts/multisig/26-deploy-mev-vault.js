@@ -8,7 +8,7 @@ const { APP_NAMES } = require('./constants')
 const DEPLOYER = process.env.DEPLOYER || ''
 const REQUIRED_NET_STATE = ['daoInitialSettings', 'depositorParams', `app:${APP_NAMES.LIDO}`, `app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`]
 
-async function upgradeApp({ web3, artifacts }) {
+async function deployMevTxFeeVault({ web3, artifacts }) {
   const appArtifact = 'LidoMevTxFeeVault'
   const netId = await web3.eth.net.getId()
 
@@ -18,11 +18,13 @@ async function upgradeApp({ web3, artifacts }) {
   const state = readNetworkState(network.name, netId)
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
   const lidoAddress = state[`app:${APP_NAMES.LIDO}`].proxyAddress
-  log(`Using Lido address:`, yl(lidoAddress))
-  logSplitter()
+  log(`Using Lido contract address:`, yl(lidoAddress))
 
   const lido = await artifacts.require('Lido').at(lidoAddress)
   const treasuryAddr = await lido.getTreasury()
+
+  log(`Using Lido Treasury contract address:`, yl(lidoAddress))
+  logSplitter()
 
   const args = [lidoAddress, treasuryAddr]
   await saveDeployTx(appArtifact, `tx-26-deploy-mev-vault.json`, {
@@ -31,4 +33,4 @@ async function upgradeApp({ web3, artifacts }) {
   })
 }
 
-module.exports = runOrWrapScript(upgradeApp, module)
+module.exports = runOrWrapScript(deployMevTxFeeVault, module)
