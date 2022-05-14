@@ -20,7 +20,7 @@ pragma solidity 0.4.24;
 //
 // NB: Internal representation conventions:
 //
-//  represent `maxStakeLimitGrowthBlocks` as follows:
+//  the `maxStakeLimitGrowthBlocks` field above represented as follows:
 // `maxStakeLimitGrowthBlocks` = `maxStakeLimit` / `stakeLimitIncreasePerBlock`
 //           32 bits                 96 bits               96 bits
 //
@@ -40,10 +40,10 @@ library StakeLimitUtils {
     * @notice Unpack the slot value into stake limit params and state.
     */
     function decodeStakeLimitSlot(uint256 _slotValue) internal pure returns (
-        uint96 maxStakeLimit,
-        uint96 stakeLimitIncPerBlock,
-        uint96 prevStakeLimit,
-        uint32 prevStakeBlockNumber
+        uint256 maxStakeLimit,
+        uint256 stakeLimitIncPerBlock,
+        uint256 prevStakeLimit,
+        uint256 prevStakeBlockNumber
     ) {
         maxStakeLimit = uint96(_slotValue >> MAX_STAKE_LIMIT_OFFSET);
         uint32 growthBlocks = uint32(_slotValue >> MAX_STAKE_LIMIT_GROWTH_BLOCKS_OFFSET);
@@ -58,24 +58,28 @@ library StakeLimitUtils {
     * @notice Pack stake limit params and state into a slot.
     */
     function encodeStakeLimitSlot(
-        uint96 _maxStakeLimit,
-        uint96 _stakeLimitIncreasePerBlock,
-        uint96 _prevStakeLimit,
-        uint32 _prevStakeBlockNumber
+        uint256 _maxStakeLimit,
+        uint256 _stakeLimitIncreasePerBlock,
+        uint256 _prevStakeLimit,
+        uint256 _prevStakeBlockNumber
     ) internal pure returns (uint256 ret) {
-        require(_maxStakeLimit >= _stakeLimitIncreasePerBlock, "TOO_LARGE_INCREASE");
+        require(_maxStakeLimit <= uint96(-1), "TOO_LARGE_MAX_STAKE_LIMIT");
+        require(_maxStakeLimit >= _stakeLimitIncreasePerBlock, "TOO_LARGE_LIMIT_INCREASE");
+        require(_prevStakeLimit <= uint96(-1), "TOO_LARGE_PREV_STAKE_LIMIT");
+        require(_prevStakeBlockNumber <= uint32(-1), "TOO_LARGE_BLOCK_NUMBER");
+
         require(
             (_stakeLimitIncreasePerBlock == 0)
             || (_maxStakeLimit / _stakeLimitIncreasePerBlock <= uint32(-1)),
-            "TOO_SMALL_INCREASE"
+            "TOO_SMALL_LIMIT_INCREASE"
         );
 
-        ret = uint256(_maxStakeLimit) << MAX_STAKE_LIMIT_OFFSET
-            | uint256(_prevStakeLimit) << PREV_STAKE_LIMIT_OFFSET
-            | uint256(_prevStakeBlockNumber) << PREV_STAKE_BLOCK_NUMBER_OFFSET;
+        ret = _maxStakeLimit << MAX_STAKE_LIMIT_OFFSET
+            | _prevStakeLimit << PREV_STAKE_LIMIT_OFFSET
+            | _prevStakeBlockNumber << PREV_STAKE_BLOCK_NUMBER_OFFSET;
 
         if (_stakeLimitIncreasePerBlock > 0) {
-            ret |= uint256(uint32(_maxStakeLimit / _stakeLimitIncreasePerBlock)) << MAX_STAKE_LIMIT_GROWTH_BLOCKS_OFFSET;
+            ret |= (_maxStakeLimit / _stakeLimitIncreasePerBlock) << MAX_STAKE_LIMIT_GROWTH_BLOCKS_OFFSET;
         }
     }
 
@@ -84,10 +88,10 @@ library StakeLimitUtils {
     */
     function calculateCurrentStakeLimit(uint256 _slotValue) internal view returns(uint256 limit) {
         (
-            uint96 maxStakeLimit,
-            uint96 stakeLimitIncPerBlock,
-            uint96 prevStakeLimit,
-            uint32 prevStakeBlockNumber
+            uint256 maxStakeLimit,
+            uint256 stakeLimitIncPerBlock,
+            uint256 prevStakeLimit,
+            uint256 prevStakeBlockNumber
         ) = decodeStakeLimitSlot(_slotValue);
 
         limit = prevStakeLimit + ((block.number - prevStakeBlockNumber) * stakeLimitIncPerBlock);

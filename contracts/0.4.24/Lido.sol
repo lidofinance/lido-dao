@@ -168,6 +168,7 @@ contract Lido is ILido, StETH, AragonApp {
     *
     * To disable rate-limit pass zero arg values.
     * @dev Reverts if:
+    * - `_maxStakeLimit` >= 2^96
     * - `_maxStakeLimit` < `_stakeLimitIncreasePerBlock`
     * - `_maxStakeLimit` / `_stakeLimitIncreasePerBlock` >= 2^32 (only if `_stakeLimitIncreasePerBlock` != 0)
     * Emits `StakeResumed` event
@@ -175,14 +176,14 @@ contract Lido is ILido, StETH, AragonApp {
     * @param _stakeLimitIncreasePerBlock stake limit increase per single block
     */
     function resumeStaking(
-        uint96 _maxStakeLimit,
-        uint96 _stakeLimitIncreasePerBlock
+        uint256 _maxStakeLimit,
+        uint256 _stakeLimitIncreasePerBlock
     ) external {
         _auth(STAKING_RESUME_ROLE);
 
         (
-            uint96 maxStakeLimit,,
-            uint96 prevStakeLimit,
+            uint256 maxStakeLimit,,
+            uint256 prevStakeLimit,
         ) = STAKE_LIMIT_POSITION.getStorageUint256().decodeStakeLimitSlot();
 
         // if staking was paused or unlimited previously,
@@ -197,7 +198,7 @@ contract Lido is ILido, StETH, AragonApp {
                 _maxStakeLimit,
                 _stakeLimitIncreasePerBlock,
                 prevStakeLimit,
-                uint32(block.number)
+                block.number
             )
         );
 

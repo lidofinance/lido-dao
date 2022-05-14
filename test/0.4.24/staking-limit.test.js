@@ -83,7 +83,13 @@ contract('StakingLimits', () => {
     await limits.encodeStakeLimitSlot(5, 0, 0, 0)
     await limits.encodeStakeLimitSlot(5, 5, 0, 0)
 
-    assertRevert(limits.encodeStakeLimitSlot(5, 6, 0, 0), `TOO_LARGE_INCREASE`)
+    assertRevert(limits.encodeStakeLimitSlot(5, 6, 0, 0), `TOO_LARGE_LIMIT_INCREASE`)
+  })
+
+  it('stake limit reverts on large values', async () => {
+    assertRevert(limits.encodeStakeLimitSlot(toBN(2).pow(toBN(96)), 1, 1, 1), `TOO_LARGE_MAX_STAKE_LIMIT`)
+    assertRevert(limits.encodeStakeLimitSlot(1, 1, toBN(2).pow(toBN(96), 1), 1), `TOO_LARGE_PREV_STAKE_LIMIT`)
+    assertRevert(limits.encodeStakeLimitSlot(1, 1, 1, toBN(2).pow(toBN(32), 1)), `TOO_LARGE_BLOCK_NUMBER`)
   })
 
   it('check update calculate stake limit with different blocks', async () => {
@@ -144,12 +150,12 @@ contract('StakingLimits', () => {
     const maxPrevStakeLimit = toBN(2).pow(toBN(96)).sub(toBN(1)) // uint96
     const maxBlock = toBN(2).pow(toBN(32)).sub(toBN(1)) // uint32
 
-    assertRevert(limits.encodeStakeLimitSlot(maxLimit, minIncPerBlock, maxPrevStakeLimit, maxBlock), `TOO_SMALL_INCREASE`)
+    assertRevert(limits.encodeStakeLimitSlot(maxLimit, minIncPerBlock, maxPrevStakeLimit, maxBlock), `TOO_SMALL_LIMIT_INCREASE`)
 
     minIncPerBlock = maxLimit.div(toBN(2).pow(toBN(32)).sub(toBN(1)))
 
     minIncPerBlockForRevert = minIncPerBlock.div(toBN(2)) // reverts
-    assertRevert(limits.encodeStakeLimitSlot(maxLimit, minIncPerBlockForRevert, maxPrevStakeLimit, maxBlock), `TOO_SMALL_INCREASE`)
+    assertRevert(limits.encodeStakeLimitSlot(maxLimit, minIncPerBlockForRevert, maxPrevStakeLimit, maxBlock), `TOO_SMALL_LIMIT_INCREASE`)
 
     const maxSlot = await limits.encodeStakeLimitSlot(maxLimit, minIncPerBlock, maxPrevStakeLimit, maxBlock)
     const maxUint256 = toBN(2).pow(toBN(256)).sub(toBN(1))

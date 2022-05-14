@@ -41,7 +41,7 @@ interface ILido {
       * @param _maxStakeLimit max stake limit value
       * @param _stakeLimitIncreasePerBlock stake limit increase per single block
       */
-    function resumeStaking(uint96 _maxStakeLimit, uint96 _stakeLimitIncreasePerBlock) external;
+    function resumeStaking(uint256 _maxStakeLimit, uint256 _stakeLimitIncreasePerBlock) external;
 
     /**
       * @notice Check staking state: whether it's paused or not
@@ -60,7 +60,7 @@ interface ILido {
     event Stopped();
     event Resumed();
     event StakingPaused();
-    event StakingResumed(uint96 maxStakeLimit, uint96 stakeLimitIncreasePerBlock);
+    event StakingResumed(uint256 maxStakeLimit, uint256 stakeLimitIncreasePerBlock);
 
     /**
       * @notice Set Lido protocol contracts (oracle, treasury, insurance fund).

@@ -11,19 +11,19 @@ contract StakeLimitUtilsMock {
     using StakeLimitUtils for uint256;
 
     function decodeStakeLimitSlot(uint256 _slotValue) public pure returns (
-        uint96 maxStakeLimit,
-        uint96 stakeLimitIncPerBlock,
-        uint96 prevStakeLimit,
-        uint32 prevStakeBlockNumber
+        uint256 maxStakeLimit,
+        uint256 stakeLimitIncPerBlock,
+        uint256 prevStakeLimit,
+        uint256 prevStakeBlockNumber
     ) {
         return _slotValue.decodeStakeLimitSlot();
     }
 
     function encodeStakeLimitSlot(
-        uint96 _maxStakeLimit,
-        uint96 _stakeLimitIncPerBlock,
-        uint96 _prevStakeLimit,
-        uint32 _prevStakeBlockNumber
+        uint256 _maxStakeLimit,
+        uint256 _stakeLimitIncPerBlock,
+        uint256 _prevStakeLimit,
+        uint256 _prevStakeBlockNumber
     ) public pure returns (uint256 ret) {
         return StakeLimitUtils.encodeStakeLimitSlot(_maxStakeLimit, _stakeLimitIncPerBlock, _prevStakeLimit, _prevStakeBlockNumber);
     }
