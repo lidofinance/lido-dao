@@ -213,21 +213,53 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-    * @notice Calculate current stake limit value and return main params.
-    * See `resumeStaking` for the details.
-    * @dev Reverts if staking is paused
-    * NB: returns all zeros if staking rate-limit is disabled
-    */
-    function calculateCurrentStakeLimit() external view returns (
+      * @notice Returns how much Ether can be staked in the current block
+      * @dev Special return values:
+      * - max uint256 if staking is unlimited;
+      * - 0 if staking is paused or if limit is exhausted.
+      */
+    function getCurrentStakeLimit() public view returns (uint256) {
+        uint256 slotValue = STAKE_LIMIT_POSITION.getStorageUint256();
+        if (!slotValue.isStakingRateLimited()) {
+            return uint256(-1);
+        }
+
+        return slotValue.calculateCurrentStakeLimit();
+    }
+
+    /**
+      * @notice Returns full info about stake limit
+      * @dev Might be used for advanced-level integration requests
+      * @return
+      * `isStakingPaused` the value returned by `isStakingPaused()`
+      * `isStakingLimitApplied` true if staking limit is set and false otherwise
+      * `currentStakeLimit` the value returned by `getCurrentStakingLimit()`
+      *
+      * Internals:
+      * `maxStakeLimit` internal max stake limit repr
+      * `stakeLimitIncPerBlock` internal stake limit increase per block repr
+      * `prevStakeLimit` // internal previously reached stake limit
+      * `prevStakeBlockNumber` // internal prevously seen block number
+      */
+    function getStakeLimitFullInfo() external view returns (
+        bool isStakingPaused,
+        bool isStakingLimitApplied,
         uint256 currentStakeLimit,
         uint256 maxStakeLimit,
-        uint256 stakeLimitIncreasePerBlock
+        uint256 stakeLimitIncPerBlock,
+        uint256 prevStakeLimit,
+        uint256 prevStakeBlockNumber
     ) {
         uint256 slotValue = STAKE_LIMIT_POSITION.getStorageUint256();
-        require(!slotValue.isStakingPaused(), "STAKING_PAUSED");
-
-        (maxStakeLimit, stakeLimitIncreasePerBlock,,) = slotValue.decodeStakeLimitSlot();
-        currentStakeLimit = slotValue.calculateCurrentStakeLimit();
+        isStakingPaused = slotValue.isStakingPaused();
+        isStakingLimitApplied = slotValue.isStakingRateLimited();
+        currentStakeLimit = getCurrentStakeLimit();
+        (
+            maxStakeLimit,
+            stakeLimitIncPerBlock,
+            prevStakeLimit,
+            prevStakeBlockNumber
+        ) = slotValue.decodeStakeLimitSlot();
     }
 
     /**
