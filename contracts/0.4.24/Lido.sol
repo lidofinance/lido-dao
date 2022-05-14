@@ -180,13 +180,6 @@ contract Lido is ILido, StETH, AragonApp {
     ) external {
         _auth(STAKING_RESUME_ROLE);
 
-        require(_maxStakeLimit >= _stakeLimitIncreasePerBlock, "TOO_LARGE_INCREASE");
-        require(
-            (_stakeLimitIncreasePerBlock == 0)
-            || (_maxStakeLimit / _stakeLimitIncreasePerBlock <= uint32(-1)),
-            "TOO_SMALL_INCREASE"
-        );
-
         (
             uint96 maxStakeLimit,,
             uint96 prevStakeLimit,
