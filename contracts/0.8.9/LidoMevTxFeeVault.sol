@@ -7,7 +7,7 @@ pragma solidity 0.8.9;
 
 import "@openzeppelin/contracts-v4.4/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol";
-
+import "@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC20.sol";
 
 interface ILido {
     /**
@@ -29,6 +29,8 @@ interface ILido {
 * happen much less often, only on LidoOracle beacon balance reports
 */
 contract LidoMevTxFeeVault {
+    using SafeERC20 for IERC20;
+
     address public immutable LIDO;
     address public immutable TREASURY;
 
@@ -103,7 +105,7 @@ contract LidoMevTxFeeVault {
 
         emit ERC20Recovered(msg.sender, _token, _amount);
 
-        require(IERC20(_token).transfer(TREASURY, _amount));
+        IERC20(_token).safeTransfer(TREASURY, _amount);
     }
 
     /**
