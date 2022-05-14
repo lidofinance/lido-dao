@@ -573,7 +573,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     } = await app.getStakeLimitFullInfo())
 
     assert.equal(isStakingPaused, false)
-    assert.equal(isStakingLimitApplied, expectedMaxStakeLimit.cmp(bn(0)) !== 0)
+    assert.equal(isStakingLimitApplied, expectedMaxStakeLimit.toString() !== bn(0).toString())
     assertBn(currentStakeLimit, expectedCurrentStakeLimit)
     assertBn(maxStakeLimit, expectedMaxStakeLimit)
     assertBn(stakeLimitIncPerBlock, expectedLimitIncrease)
