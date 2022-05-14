@@ -53,16 +53,23 @@ library StakeLimitUtils {
     */
     function encodeStakeLimitSlot(
         uint96 _maxStakeLimit,
-        uint96 _stakeLimitIncPerBlock,
+        uint96 _stakeLimitIncreasePerBlock,
         uint96 _prevStakeLimit,
         uint32 _prevStakeBlockNumber
     ) internal pure returns (uint256 ret) {
+        require(_maxStakeLimit >= _stakeLimitIncreasePerBlock, "TOO_LARGE_INCREASE");
+        require(
+            (_stakeLimitIncreasePerBlock == 0)
+            || (_maxStakeLimit / _stakeLimitIncreasePerBlock <= uint32(-1)),
+            "TOO_SMALL_INCREASE"
+        );
+
         ret = uint256(_maxStakeLimit) << MAX_STAKE_LIMIT_OFFSET
             | uint256(_prevStakeLimit) << PREV_STAKE_LIMIT_OFFSET
             | uint256(_prevStakeBlockNumber) << PREV_STAKE_BLOCK_NUMBER_OFFSET;
 
-        if (_stakeLimitIncPerBlock > 0) {
-            ret |= uint256(uint32(_maxStakeLimit / _stakeLimitIncPerBlock)) << MAX_STAKE_LIMIT_GROWTH_BLOCKS_OFFSET;
+        if (_stakeLimitIncreasePerBlock > 0) {
+            ret |= uint256(uint32(_maxStakeLimit / _stakeLimitIncreasePerBlock)) << MAX_STAKE_LIMIT_GROWTH_BLOCKS_OFFSET;
         }
     }
 
