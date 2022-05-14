@@ -780,7 +780,7 @@ contract Lido is ILido, StETH, AragonApp {
 
     /**
     * @dev Distributes rewards by minting and distributing corresponding amount of liquid tokens.
-    * @param _totalRewards Total rewards occurred on the Ethereum 2.0 side in wei
+    * @param _totalRewards Total rewards accrued on the Ethereum 2.0 side in wei
     */
     function distributeRewards(uint256 _totalRewards) internal {
         // We need to take a defined percentage of the reported reward as a fee, and we do

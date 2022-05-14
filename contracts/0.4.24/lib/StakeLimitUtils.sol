@@ -18,9 +18,15 @@ pragma solidity 0.4.24;
 // |<----- 32 bits ------>|<-- 96 bits --->|<---------- 32 bits ------>|<--- 96 bits -->|
 //
 //
-// NB: we represent `maxStakeLimitGrowthBlocks` as follows:
+// NB: Internal representation conventions:
+//
+//  represent `maxStakeLimitGrowthBlocks` as follows:
 // `maxStakeLimitGrowthBlocks` = `maxStakeLimit` / `stakeLimitIncreasePerBlock`
 //           32 bits                 96 bits               96 bits
+//
+//
+// "staking paused" state is encoded by all fields being zero,
+// "staking unlimited" state is encoded by maxStakeLimit being zero and prevStakeBlockNumber being non-zero.
 //
 
 library StakeLimitUtils {
