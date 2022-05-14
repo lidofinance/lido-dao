@@ -22,9 +22,6 @@ interface ILido {
 /**
 * @title A vault for temporary storage of MEV and transaction fees
 *
-* This contract has no payable functions because it's balance is supposed to be
-* increased directly by ethereum protocol when transaction priority fees and extracted MEV
-* rewards are earned by a validator.
 * These vault replenishments happen continuously through a day, while withdrawals
 * happen much less often, only on LidoOracle beacon balance reports
 */
@@ -36,7 +33,7 @@ contract LidoMevTxFeeVault {
 
     /**
       * Emitted when the ERC20 `token` recovered (e.g. transferred)
-      * to the Lido treasure address by `requestedBy` sender.
+      * to the Lido treasury address by `requestedBy` sender.
       */
     event ERC20Recovered(
         address indexed requestedBy,
@@ -46,7 +43,7 @@ contract LidoMevTxFeeVault {
 
     /**
       * Emitted when the ERC721-compatible `token` (NFT) recovered (e.g. transferred)
-      * to the Lido treasure address by `requestedBy` sender.
+      * to the Lido treasury address by `requestedBy` sender.
       */
     event ERC721Recovered(
         address indexed requestedBy,
