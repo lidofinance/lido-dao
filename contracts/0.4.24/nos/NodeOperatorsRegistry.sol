@@ -20,7 +20,7 @@ import "../lib/MemUtils.sol";
   *
   * See the comment of `INodeOperatorsRegistry`.
   *
-  * NOTE: the code below assumes moderate amount of node operators, i.e. up to 50 (MAX_NODE_OPERATORS_COUNT).
+  * NOTE: the code below assumes moderate amount of node operators, i.e. up to `MAX_NODE_OPERATORS_COUNT`.
   */
 contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp {
     using SafeMath for uint256;
