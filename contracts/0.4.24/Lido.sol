@@ -168,6 +168,7 @@ contract Lido is ILido, StETH, AragonApp {
     *
     * To disable rate-limit pass zero arg values.
     * @dev Reverts if:
+    * - `_maxStakeLimit` >= 2^96
     * - `_maxStakeLimit` < `_stakeLimitIncreasePerBlock`
     * - `_maxStakeLimit` / `_stakeLimitIncreasePerBlock` >= 2^32 (only if `_stakeLimitIncreasePerBlock` != 0)
     * Emits `StakeResumed` event
@@ -175,14 +176,14 @@ contract Lido is ILido, StETH, AragonApp {
     * @param _stakeLimitIncreasePerBlock stake limit increase per single block
     */
     function resumeStaking(
-        uint96 _maxStakeLimit,
-        uint96 _stakeLimitIncreasePerBlock
+        uint256 _maxStakeLimit,
+        uint256 _stakeLimitIncreasePerBlock
     ) external {
         _auth(STAKING_RESUME_ROLE);
 
         (
-            uint96 maxStakeLimit,,
-            uint96 prevStakeLimit,
+            uint256 maxStakeLimit,,
+            uint256 prevStakeLimit,
         ) = STAKE_LIMIT_POSITION.getStorageUint256().decodeStakeLimitSlot();
 
         // if staking was paused or unlimited previously,
@@ -197,7 +198,7 @@ contract Lido is ILido, StETH, AragonApp {
                 _maxStakeLimit,
                 _stakeLimitIncreasePerBlock,
                 prevStakeLimit,
-                uint32(block.number)
+                block.number
             )
         );
 
@@ -212,21 +213,53 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-    * @notice Calculate current stake limit value and return main params.
-    * See `resumeStaking` for the details.
-    * @dev Reverts if staking is paused
-    * NB: returns all zeros if staking rate-limit is disabled
-    */
-    function calculateCurrentStakeLimit() external view returns (
+      * @notice Returns how much Ether can be staked in the current block
+      * @dev Special return values:
+      * - max uint256 if staking is unlimited;
+      * - 0 if staking is paused or if limit is exhausted.
+      */
+    function getCurrentStakeLimit() public view returns (uint256) {
+        uint256 slotValue = STAKE_LIMIT_POSITION.getStorageUint256();
+        if (!slotValue.isStakingRateLimited()) {
+            return uint256(-1);
+        }
+
+        return slotValue.calculateCurrentStakeLimit();
+    }
+
+    /**
+      * @notice Returns full info about stake limit
+      * @dev Might be used for advanced-level integration requests
+      * @return
+      * `isStakingPaused` the value returned by `isStakingPaused()`
+      * `isStakingLimitApplied` true if staking limit is set and false otherwise
+      * `currentStakeLimit` the value returned by `getCurrentStakingLimit()`
+      *
+      * Internals:
+      * `maxStakeLimit` internal max stake limit repr
+      * `stakeLimitIncPerBlock` internal stake limit increase per block repr
+      * `prevStakeLimit` // internal previously reached stake limit
+      * `prevStakeBlockNumber` // internal prevously seen block number
+      */
+    function getStakeLimitFullInfo() external view returns (
+        bool isStakingPaused,
+        bool isStakingLimitApplied,
         uint256 currentStakeLimit,
         uint256 maxStakeLimit,
-        uint256 stakeLimitIncreasePerBlock
+        uint256 stakeLimitIncPerBlock,
+        uint256 prevStakeLimit,
+        uint256 prevStakeBlockNumber
     ) {
         uint256 slotValue = STAKE_LIMIT_POSITION.getStorageUint256();
-        require(!slotValue.isStakingPaused(), "STAKING_PAUSED");
-
-        (maxStakeLimit, stakeLimitIncreasePerBlock,,) = slotValue.decodeStakeLimitSlot();
-        currentStakeLimit = slotValue.calculateCurrentStakeLimit();
+        isStakingPaused = slotValue.isStakingPaused();
+        isStakingLimitApplied = slotValue.isStakingRateLimited();
+        currentStakeLimit = getCurrentStakeLimit();
+        (
+            maxStakeLimit,
+            stakeLimitIncPerBlock,
+            prevStakeLimit,
+            prevStakeBlockNumber
+        ) = slotValue.decodeStakeLimitSlot();
     }
 
     /**
@@ -780,7 +813,7 @@ contract Lido is ILido, StETH, AragonApp {
 
     /**
     * @dev Distributes rewards by minting and distributing corresponding amount of liquid tokens.
-    * @param _totalRewards Total rewards occurred on the Ethereum 2.0 side in wei
+    * @param _totalRewards Total rewards accrued on the Ethereum 2.0 side in wei
     */
     function distributeRewards(uint256 _totalRewards) internal {
         // We need to take a defined percentage of the reported reward as a fee, and we do

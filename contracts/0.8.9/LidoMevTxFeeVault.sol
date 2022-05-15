@@ -7,7 +7,7 @@ pragma solidity 0.8.9;
 
 import "@openzeppelin/contracts-v4.4/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol";
-
+import "@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC20.sol";
 
 interface ILido {
     /**
@@ -22,19 +22,18 @@ interface ILido {
 /**
 * @title A vault for temporary storage of MEV and transaction fees
 *
-* This contract has no payable functions because it's balance is supposed to be
-* increased directly by ethereum protocol when transaction priority fees and extracted MEV
-* rewards are earned by a validator.
 * These vault replenishments happen continuously through a day, while withdrawals
 * happen much less often, only on LidoOracle beacon balance reports
 */
 contract LidoMevTxFeeVault {
+    using SafeERC20 for IERC20;
+
     address public immutable LIDO;
     address public immutable TREASURY;
 
     /**
       * Emitted when the ERC20 `token` recovered (e.g. transferred)
-      * to the Lido treasure address by `requestedBy` sender.
+      * to the Lido treasury address by `requestedBy` sender.
       */
     event ERC20Recovered(
         address indexed requestedBy,
@@ -44,7 +43,7 @@ contract LidoMevTxFeeVault {
 
     /**
       * Emitted when the ERC721-compatible `token` (NFT) recovered (e.g. transferred)
-      * to the Lido treasure address by `requestedBy` sender.
+      * to the Lido treasury address by `requestedBy` sender.
       */
     event ERC721Recovered(
         address indexed requestedBy,
@@ -103,7 +102,7 @@ contract LidoMevTxFeeVault {
 
         emit ERC20Recovered(msg.sender, _token, _amount);
 
-        require(IERC20(_token).transfer(TREASURY, _amount));
+        IERC20(_token).safeTransfer(TREASURY, _amount);
     }
 
     /**

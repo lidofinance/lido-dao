@@ -560,16 +560,30 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
   })
 
   const verifyRateLimitStake = async (expectedMaxStakeLimit, expectedLimitIncrease, expectedCurrentStakeLimit) => {
-    ;({ currentStakeLimit, maxStakeLimit, stakeLimitIncreasePerBlock } = await app.calculateCurrentStakeLimit())
-    assertBn(maxStakeLimit, expectedMaxStakeLimit)
-    assertBn(stakeLimitIncreasePerBlock, expectedLimitIncrease)
+    currentStakeLimit = await app.getCurrentStakeLimit()
     assertBn(currentStakeLimit, expectedCurrentStakeLimit)
+    ;({
+      isStakingPaused,
+      isStakingLimitApplied,
+      currentStakeLimit,
+      maxStakeLimit,
+      stakeLimitIncPerBlock,
+      prevStakeLimit,
+      prevStakeBlockNumber
+    } = await app.getStakeLimitFullInfo())
+
+    assert.equal(isStakingPaused, false)
+    assert.equal(isStakingLimitApplied, expectedMaxStakeLimit.toString() !== bn(0).toString())
+    assertBn(currentStakeLimit, expectedCurrentStakeLimit)
+    assertBn(maxStakeLimit, expectedMaxStakeLimit)
+    assertBn(stakeLimitIncPerBlock, expectedLimitIncrease)
   }
 
   it('stake pause/unlimited resume works', async () => {
     let receipt
 
-    await verifyRateLimitStake(bn(0), bn(0), bn(0))
+    const MAX_UINT256 = bn(2).pow(bn(256)).sub(bn(1))
+    await verifyRateLimitStake(bn(0), bn(0), MAX_UINT256)
     receipt = await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2) })
     assertEvent(receipt, 'Submitted', { expectedArgs: { sender: user2, amount: ETH(2), referral: ZERO_ADDRESS } })
 
@@ -578,7 +592,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     assertEvent(receipt, 'StakingPaused')
 
     assert.equal(await app.isStakingPaused(), true)
-    await assertRevert(app.calculateCurrentStakeLimit(), 'STAKING_PAUSED')
 
     await assertRevert(web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(2) }), `STAKING_PAUSED`)
     await assertRevert(app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2) }), `STAKING_PAUSED`)
@@ -589,7 +602,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     assertEvent(receipt, 'StakingResumed')
     assert.equal(await app.isStakingPaused(), false)
 
-    await verifyRateLimitStake(bn(0), bn(0), bn(0))
+    await verifyRateLimitStake(bn(0), bn(0), MAX_UINT256)
 
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(1.1) })
     receipt = await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(1.4) })
@@ -651,8 +664,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await mineNBlocks(10)
     await verifyRateLimitStake(expectedMaxStakeLimit, limitIncreasePerBlock, expectedMaxStakeLimit)
 
-    await assertRevert(app.resumeStaking(ETH(1), ETH(1.1), { from: voting }), `TOO_LARGE_INCREASE`)
-    await assertRevert(app.resumeStaking(ETH(1), bn(10), { from: voting }), `TOO_SMALL_INCREASE`)
+    await assertRevert(app.resumeStaking(ETH(1), ETH(1.1), { from: voting }), `TOO_LARGE_LIMIT_INCREASE`)
+    await assertRevert(app.resumeStaking(ETH(1), bn(10), { from: voting }), `TOO_SMALL_LIMIT_INCREASE`)
   })
 
   it('one-shot rate-limiting works', async () => {
