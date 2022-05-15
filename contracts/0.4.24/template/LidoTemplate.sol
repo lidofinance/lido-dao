@@ -622,7 +622,7 @@ contract LidoTemplate is IsContract {
         }
 
         // using loops to save contract size
-        bytes32[7] memory perms;
+        bytes32[10] memory perms;
 
         // Oracle
         perms[0] = _state.oracle.MANAGE_MEMBERS();
@@ -654,8 +654,13 @@ contract LidoTemplate is IsContract {
         perms[2] = _state.lido.MANAGE_WITHDRAWAL_KEY();
         perms[3] = _state.lido.MANAGE_PROTOCOL_CONTRACTS_ROLE();
         perms[4] = _state.lido.BURN_ROLE();
+        perms[5] = _state.lido.RESUME_ROLE();
+        perms[6] = _state.lido.STAKING_PAUSE_ROLE();
+        perms[7] = _state.lido.STAKING_RESUME_ROLE();
+        perms[8] = _state.lido.SET_MEV_TX_FEE_VAULT_ROLE();
+        perms[9] = _state.lido.SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE();
 
-        for (i = 0; i < 5; ++i) {
+        for (i = 0; i < 10; ++i) {
             _createPermissionForVoting(acl, _state.lido, perms[i], voting);
         }
     }
