@@ -229,17 +229,17 @@ contract Lido is ILido, StETH, AragonApp {
 
     /**
       * @notice Returns full info about stake limit
-      * @dev Might be used for advanced-level integration requests
+      * @dev Might be used for the advanced integration requests.
       * @return
       * `isStakingPaused` the value returned by `isStakingPaused()`
       * `isStakingLimitApplied` true if staking limit is set and false otherwise
       * `currentStakeLimit` the value returned by `getCurrentStakingLimit()`
       *
       * Internals:
-      * `maxStakeLimit` internal max stake limit repr
-      * `stakeLimitIncPerBlock` internal stake limit increase per block repr
-      * `prevStakeLimit` // internal previously reached stake limit
-      * `prevStakeBlockNumber` // internal prevously seen block number
+      * `maxStakeLimit` internal max stake limit represenation
+      * `stakeLimitIncPerBlock` internal stake limit increase per block represenation
+      * `prevStakeLimit` internal previously reached stake limit represenation
+      * `prevStakeBlockNumber` internal prevously seen block number represenation
       */
     function getStakeLimitFullInfo() external view returns (
         bool isStakingPaused,

@@ -51,14 +51,14 @@ interface ILido {
     /**
       * @notice Returns how much Ether can be staked in the current block
       * @dev Special return values:
-      * - `max uint256` if staking is unlimited
-      * - `0` if staking is paused or if limit is exhausted
+      * - max uint256 if staking is unlimited;
+      * - 0 if staking is paused or if limit is exhausted.
       */
     function getCurrentStakeLimit() external view returns (uint256);
 
     /**
       * @notice Returns full info about stake limit
-      * @dev Might be used for advanced-level integration requests
+      * @dev Might be used for the advanced integration requests.
       */
     function getStakeLimitFullInfo() external view returns (
         bool isStakingPaused,
