@@ -11,7 +11,7 @@ import "@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC20.sol";
 
 interface ILido {
     /**
-    * @notice A payable function supposed to be funded only by LidoExecLayerRewardsVault contract
+    * @notice A payable function supposed to be called only by LidoExecLayerRewardsVault contract
     * @dev We need a separate function because funds received by default payable function
     * will go through entire deposit algorithm
     */

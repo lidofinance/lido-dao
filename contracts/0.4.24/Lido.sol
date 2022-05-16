@@ -275,7 +275,7 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-    * @notice A payable function for execution layer rewards. Can be funded only by ExecLayerRewardsVault contract
+    * @notice A payable function for execution layer rewards. Can be called only by ExecLayerRewardsVault contract
     * @dev We need a separate payable function because funds received by default payable function
     * are considered as funds submitted for minting stETH
     */
@@ -349,11 +349,11 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-    * @notice Set fee distribution:
-    * `_treasuryFeeBasisPoints` basis points go to the treasury,
-    * `_insuranceFeeBasisPoints` basis points go to the insurance fund,
-    * `_operatorsFeeBasisPoints` basis points go to node operators.
-    * The sum has to be 10 000.
+    * @notice Set fee distribution
+    * @param _treasuryFeeBasisPoints basis points go to the treasury,
+    * @param _insuranceFeeBasisPoints basis points go to the insurance fund,
+    * @param _operatorsFeeBasisPoints basis points go to node operators.
+    * @dev The sum has to be 10 000.
     */
     function setFeeDistribution(
         uint16 _treasuryFeeBasisPoints,
@@ -417,7 +417,7 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-    * @dev Sets given address as the address of LidoExecLayerRewardsVault contract
+    * @dev Sets the address of LidoExecLayerRewardsVault contract
     * @param _execLayerRewardsVault Execution layer rewards vault contract address
     */
     function setExecLayerRewardsVault(address _execLayerRewardsVault) external {

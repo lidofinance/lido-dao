@@ -99,11 +99,11 @@ interface ILido {
     function setFee(uint16 _feeBasisPoints) external;
 
     /**
-      * @notice Set fee distribution:
-      * `_treasuryFeeBasisPoints` basis points go to the treasury,
-      * `_insuranceFeeBasisPoints` basis points go to the insurance fund,
-      * `_operatorsFeeBasisPoints` basis points go to node operators.
-      * The sum has to be 10 000.
+      * @notice Set fee distribution
+      * @param _treasuryFeeBasisPoints basis points go to the treasury,
+      * @param _insuranceFeeBasisPoints basis points go to the insurance fund,
+      * @param _operatorsFeeBasisPoints basis points go to node operators.
+      * @dev The sum has to be 10 000.
       */
     function setFeeDistribution(
         uint16 _treasuryFeeBasisPoints,
@@ -130,7 +130,7 @@ interface ILido {
     event FeeDistributionSet(uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, uint16 operatorsFeeBasisPoints);
 
     /**
-      * @notice A payable function supposed to be funded only by LidoExecLayerRewardsVault contract
+      * @notice A payable function supposed to be called only by LidoExecLayerRewardsVault contract
       * @dev We need a separate function because funds received by default payable function
       * are considered as funds submitted by a user for staking
       */
@@ -138,6 +138,12 @@ interface ILido {
 
     // The amount of ETH withdrawn from LidoExecLayerRewardsVault contract to Lido contract
     event ExecLayerRewardsReceived(uint256 amount);
+
+    /**
+      * @dev Sets limit to amount of ETH to withdraw from execution layer rewards vault per LidoOracle report
+      * @param _limitPoints limit in basis points to amount of ETH to withdraw per LidoOracle report
+      */
+    function setExecLayerRewardsWithdrawalLimit(uint16 _limitPoints) external;
 
     // Percent in basis points of total pooled ether allowed to withdraw from LidoExecLayerRewardsVault per LidoOracle report
     event ExecLayerRewardsWithdrawalLimitSet(uint256 limitPoints);
@@ -158,11 +164,12 @@ interface ILido {
     event WithdrawalCredentialsSet(bytes32 withdrawalCredentials);
 
     /**
-    * @dev Sets given address as the address of LidoExecLayerRewardsVault contract
+    * @dev Sets the address of LidoExecLayerRewardsVault contract
     * @param _execLayerRewardsVault Execution layer rewards vault contract address
     */
     function setExecLayerRewardsVault(address _execLayerRewardsVault) external;
 
+    // The `execLayerRewardsVault` was set as the execution layer rewards vault for Lido
     event LidoExecLayerRewardsVaultSet(address execLayerRewardsVault);
 
     /**
@@ -184,7 +191,7 @@ interface ILido {
     // Records a deposit made by a user
     event Submitted(address indexed sender, uint256 amount, address referral);
 
-    // The `_amount` of ether was sent to the deposit_contract.deposit function.
+    // The `amount` of ether was sent to the deposit_contract.deposit function
     event Unbuffered(uint256 amount);
 
     /**
