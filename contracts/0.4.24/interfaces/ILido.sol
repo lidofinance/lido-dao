@@ -91,7 +91,9 @@ interface ILido {
 
     /**
       * @notice Set fee rate to `_feeBasisPoints` basis points.
-      * The fees are accrued when oracles report staking results.
+      * The fees are accrued when:
+      * - oracles report staking results (beacon chain balance increase)
+      * - validators gain execution layer rewards (priority fees and MEV)
       * @param _feeBasisPoints Fee rate, in basis points
       */
     function setFee(uint16 _feeBasisPoints) external;
