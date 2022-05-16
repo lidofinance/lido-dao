@@ -220,7 +220,7 @@ contract DepositSecurityModule {
     }
 
     function _setGuardianQuorum(uint256 newValue) internal {
-        // we're intentionally allowing setting quorum value higher than the number of quardians
+        // we're intentionally allowing setting quorum value higher than the number of guardians
         quorum = newValue;
         emit GuardianQuorumChanged(newValue);
     }
@@ -381,6 +381,14 @@ contract DepositSecurityModule {
      */
     function getLastDepositBlock() external view returns (uint256) {
         return lastDepositBlock;
+    }
+
+
+    /**
+     * Sets `lastDepositBlock`. Only callable by the owner.
+     */
+    function setLastDepositBlock(uint256 newLastDepositBlock) external onlyOwner {
+        lastDepositBlock = newLastDepositBlock;
     }
 
 
