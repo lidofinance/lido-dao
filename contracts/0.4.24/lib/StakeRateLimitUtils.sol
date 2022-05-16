@@ -32,8 +32,11 @@ import "@aragon/os/contracts/common/UnstructuredStorage.sol";
 //
 
 // solidity <0.6 doesn't support top-level structs
-// using the sentinel library to derive from
+// using the library to have a proper namespace
 library StakeLimitState {
+    /**
+      * @dev Internal representation struct (slot-wide)
+      */
     struct Data {
         uint32 prevStakeBlockNumber;
         uint96 prevStakeLimit;
@@ -45,11 +48,19 @@ library StakeLimitState {
 library StakeLimitUnstructuredStorage {
     using UnstructuredStorage for bytes32;
 
+    /// @dev Storage offset for `maxStakeLimit` (bits)
     uint256 internal constant MAX_STAKE_LIMIT_OFFSET = 160;
+    /// @dev Storage offset for `maxStakeLimitGrowthBlocks` (bits)
     uint256 internal constant MAX_STAKE_LIMIT_GROWTH_BLOCKS_OFFSET = 128;
+    /// @dev Storage offset for `prevStakeLimit` (bits)
     uint256 internal constant PREV_STAKE_LIMIT_OFFSET = 32;
+    /// @dev Storage offset for `prevStakeBlockNumber` (bits)
     uint256 internal constant PREV_STAKE_BLOCK_NUMBER_OFFSET = 0;
 
+    /**
+    * @dev Read stake limit state from the unstructure storage position
+    * @param _position storage offset
+    */
     function getStorageStakeLimitStruct(bytes32 _position) internal view returns (StakeLimitState.Data memory ret) {
         uint256 slotValue = _position.getStorageUint256();
 
@@ -59,6 +70,11 @@ library StakeLimitUnstructuredStorage {
         ret.maxStakeLimit = uint96(slotValue >> MAX_STAKE_LIMIT_OFFSET);
     }
 
+     /**
+    * @dev Write stake limit state to the unstructure storage position
+    * @param _position storage offset
+    * @param _data stake limit state structure instance
+    */
     function setStorageStakeLimitStruct(bytes32 _position, StakeLimitState.Data memory _data) internal {
         _position.setStorageUint256(
             uint256(_data.prevStakeBlockNumber) << PREV_STAKE_BLOCK_NUMBER_OFFSET
@@ -72,6 +88,9 @@ library StakeLimitUnstructuredStorage {
 library StakeRateLimitUtils {
     /**
     * @notice Calculate stake limit for the current block.
+    * @dev special returns:
+    * - 0 if limit is exhausted or staking pause was set
+    * - 2^256 - 1 if there is no limit was set
     */
     function calculateCurrentStakeLimit(StakeLimitState.Data memory _data) internal view returns(uint256 limit) {
         if (!isStakingLimitApplied(_data)) {
@@ -90,7 +109,7 @@ library StakeRateLimitUtils {
     }
 
     /**
-    * @notice check if staking is on pause (i.e. slot contains zero value)
+    * @notice check if staking is on pause (i.e. every byte in the slot has a zero value)
     */
     function isStakingPaused(StakeLimitState.Data memory _data) internal pure returns(bool) {
         return (_data.maxStakeLimit == 0)
@@ -106,6 +125,11 @@ library StakeRateLimitUtils {
         return _data.maxStakeLimit != 0;
     }
 
+    /**
+    * @notice prepare stake limit repr to resume staking with the desired limits
+    * @param _maxStakeLimit stake limit max value
+    * @param _stakeLimitIncreasePerBlock stake limit increase (restoration) per block
+    */
     function resumeStakingWithNewLimit(
         StakeLimitState.Data memory _data,
         uint256 _maxStakeLimit,
@@ -133,6 +157,9 @@ library StakeRateLimitUtils {
         return _data;
     }
 
+    /**
+    * @notice update stake limit repr after submitting user's eth
+    */
     function updatePrevStakeLimit(
         StakeLimitState.Data memory _data,
         uint256 _newPrevLimit
