@@ -142,11 +142,11 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-    * @notice Cut-off new stake (every new staking transaction submitting user-provided ETH
-    * would revert if `pauseStake` was called previously).
-    * @dev A way to pause stake without pushing PAUSE for the whole proto.
-    * The main goal is to prevent huge APR losses for existing stakers due to high demands
-    * on post-Merge entry queue.
+    * @notice Stops accepting new Ether to the protocol.
+    *
+    * @dev While accepting new Ether is stopped, calls to the `submit` function,
+    * as well as to the default payable function, will revert.
+    *
     * Emits `StakingPaused` event.
     */
     function pauseStaking() external {

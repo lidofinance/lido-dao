@@ -29,8 +29,12 @@ interface ILido {
     function resume() external;
 
     /**
-      * @notice Cut-off new stake (every new staking transaction submitting user-provided ETH
-      * would revert if `pauseStake` was called previously).
+      * @notice Stops accepting new Ether to the protocol.
+      *
+      * @dev While accepting new Ether is stopped, calls to the `submit` function,
+      * as well as to the default payable function, will revert.
+      *
+      * Emits `StakingPaused` event.
       */
     function pauseStaking() external;
 
