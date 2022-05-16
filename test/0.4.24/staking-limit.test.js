@@ -74,13 +74,13 @@ contract.skip('StakingLimits', () => {
 
   it('check staking rate limit', async () => {
     const slot = 0
-    const limited = await limits.isStakingRateLimited(slot)
+    const limited = await limits.isStakingLimitApplied(slot)
 
     assert.equal(limited, false, 'limits not limited')
 
     const maxStakeLimit = 10
     const slot2 = await limits.encodeStakeLimitSlot(maxStakeLimit, 0, 0, 0)
-    const limited2 = await limits.isStakingRateLimited(slot2)
+    const limited2 = await limits.isStakingLimitApplied(slot2)
 
     assert.equal(limited2, true, 'limits not limited')
   })

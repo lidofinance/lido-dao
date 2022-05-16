@@ -41,7 +41,7 @@ interface ILido {
     /**
       * @notice Resumes accepting new Ether to the protocol (if `pauseStaking` was called previously)
       * and updates the staking rate limit.
-      * To disable rate-limit pass zero arg values.
+      * NB: To resume without limits pass zero arg values.
       * @param _maxStakeLimit max stake limit value
       * @param _stakeLimitIncreasePerBlock stake limit increase per single block
       */

@@ -96,9 +96,9 @@ library StakeRateLimitUtils {
     }
 
     /**
-    * @notice check if rate limit is set (otherwise staking is unlimited)
+    * @notice check if staking limit is applied (otherwise staking is unlimited)
     */
-    function isStakingRateLimited(StakeLimitState.Data memory _data) internal pure returns(bool) {
+    function isStakingLimitApplied(StakeLimitState.Data memory _data) internal pure returns(bool) {
         return _data.maxStakeLimit != 0;
     }
 

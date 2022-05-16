@@ -14,7 +14,7 @@ contract StakeLimitUtilsMock {
 
     bytes32 internal constant STAKE_LIMIT_POSITION = keccak256("abcdef");
 
-    function getStorageStakeRateLimit() public view returns (
+    function getStorageStakeLimit() public view returns (
         uint32 prevStakeBlockNumber,
         uint96 prevStakeLimit,
         uint32 maxStakeLimitGrowthBlocks,
@@ -28,7 +28,7 @@ contract StakeLimitUtilsMock {
         maxStakeLimit = data.maxStakeLimit;
     }
 
-    function setStorageStakeRateLimitStruct(
+    function setStorageStakeLimitStruct(
         uint32 _prevStakeBlockNumber,
         uint96 _prevStakeLimit,
         uint32 _maxStakeLimitGrowthBlocks,
@@ -53,8 +53,8 @@ contract StakeLimitUtilsMock {
         return STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().isStakingPaused();
     }
 
-    function isStakingRateLimited(uint256 _slotValue) public view returns(bool) {
-        return STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().isStakingRateLimited();
+    function isStakingLimitApplied(uint256 _slotValue) public view returns(bool) {
+        return STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().isStakingLimitApplied();
     }
 
     function resumeStakingWithNewLimit(uint256 _maxStakeLimit, uint256 _stakeLimitIncreasePerBlock) public view {

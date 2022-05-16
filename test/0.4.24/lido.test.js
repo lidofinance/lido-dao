@@ -581,7 +581,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     assertBn(maxStakeLimitGrowthBlocks, expectedLimitIncrease > 0 ? expectedMaxStakeLimit / expectedLimitIncrease : 0)
   }
 
-  it('stake pause/unlimited resume works', async () => {
+  it('staking pause & unlimited resume works', async () => {
     let receipt
 
     const MAX_UINT256 = bn(2).pow(bn(256)).sub(bn(1))
@@ -617,7 +617,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     }
   }
 
-  it('stake rate-limiting works', async () => {
+  it('staking resume with a limit works', async () => {
     let receipt
 
     const blocksToReachMaxStakeLimit = 300
@@ -670,7 +670,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await assertRevert(app.resumeStaking(ETH(1), bn(10), { from: voting }), `TOO_SMALL_LIMIT_INCREASE`)
   })
 
-  it('one-shot rate-limiting works', async () => {
+  it('resume staking with an one-shot limit works', async () => {
     let receipt
 
     const expectedMaxStakeLimit = ETH(7)
@@ -698,7 +698,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await verifyRateLimitStake(expectedMaxStakeLimit, limitIncreasePerBlock, ETH(0))
   })
 
-  it('changing various rate-limits work', async () => {
+  it('resume with various changing limits work', async () => {
     let receipt
 
     const expectedMaxStakeLimit = ETH(9)

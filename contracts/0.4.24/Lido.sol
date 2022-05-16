@@ -171,7 +171,7 @@ contract Lido is ILido, StETH, AragonApp {
     * │──────────────────────────────────────────────────> Time
     * │     ^      ^          ^   ^^^  ^ ^ ^     ^^^ ^     Stake events
     *
-    * To disable rate-limit pass zero arg values.
+    * NB: To resume without limits pass zero arg values.
     * @dev Reverts if:
     * - `_maxStakeLimit` >= 2^96
     * - `_maxStakeLimit` < `_stakeLimitIncreasePerBlock`
@@ -210,7 +210,7 @@ contract Lido is ILido, StETH, AragonApp {
     */
     function getCurrentStakeLimit() public view returns (uint256) {
         StakeLimitState.Data memory stakeLimitData = STAKE_LIMIT_POSITION.getStorageStakeLimitStruct();
-        if (!stakeLimitData.isStakingRateLimited()) {
+        if (!stakeLimitData.isStakingLimitApplied()) {
             return uint256(-1);
         }
 
@@ -243,7 +243,7 @@ contract Lido is ILido, StETH, AragonApp {
         StakeLimitState.Data memory stakeLimitData = STAKE_LIMIT_POSITION.getStorageStakeLimitStruct();
 
         isStakingPaused = stakeLimitData.isStakingPaused();
-        isStakingLimitApplied = stakeLimitData.isStakingRateLimited();
+        isStakingLimitApplied = stakeLimitData.isStakingLimitApplied();
         currentStakeLimit = getCurrentStakeLimit();
 
         maxStakeLimit = stakeLimitData.maxStakeLimit;
@@ -687,7 +687,7 @@ contract Lido is ILido, StETH, AragonApp {
         StakeLimitState.Data memory stakeLimitData = STAKE_LIMIT_POSITION.getStorageStakeLimitStruct();
         require(!stakeLimitData.isStakingPaused(), "STAKING_PAUSED");
 
-        if (stakeLimitData.isStakingRateLimited()) {
+        if (stakeLimitData.isStakingLimitApplied()) {
             uint256 currentStakeLimit = stakeLimitData.calculateCurrentStakeLimit();
 
             require(msg.value <= currentStakeLimit, "STAKE_LIMIT");
