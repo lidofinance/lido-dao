@@ -62,7 +62,7 @@ function initializeState() {
       nodeOperatorsRegistry: await getNodeOperatorsRegistry(),
       depositContract: await getDepositContract(),
       oracle: await getOracle(),
-      execLayerRewardsVault: await getExecLayerRewardsVault(),
+      executionLayerRewardsVault: await getExecutionLayerRewardsVault(),
       // operators: await getOperators(),
       // treasury: await getTreasury(),
       // insuranceFund: await getInsuranceFund(),
@@ -108,8 +108,8 @@ function getOracle() {
   return app.call('getOracle').toPromise()
 }
 
-function getExecLayerRewardsVault() {
-  return app.call('getExecLayerRewardsVault').toPromise()
+function getExecutionLayerRewardsVault() {
+  return app.call('getExecutionLayerRewardsVault').toPromise()
 }
 
 // async function getOperators() {

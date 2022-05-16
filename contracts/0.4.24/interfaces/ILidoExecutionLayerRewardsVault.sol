@@ -5,7 +5,7 @@
 pragma solidity 0.4.24;
 
 
-interface ILidoExecLayerRewardsVault {
+interface ILidoExecutionLayerRewardsVault {
 
     /**
     * @notice Withdraw all accumulated execution layer rewards to Lido contract

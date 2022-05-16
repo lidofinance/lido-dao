@@ -15,7 +15,7 @@ interface ILido {
     * @dev We need a separate function because funds received by default payable function
     * will go through entire deposit algorithm
     */
-    function receiveExecLayerRewards() external payable;
+    function receiveELRewards() external payable;
 }
 
 
@@ -25,7 +25,7 @@ interface ILido {
 * These vault replenishments happen continuously through a day, while withdrawals
 * happen much less often, only on LidoOracle beacon balance reports
 */
-contract LidoExecLayerRewardsVault {
+contract LidoExecutionLayerRewardsVault {
     using SafeERC20 for IERC20;
 
     address public immutable LIDO;
@@ -85,7 +85,7 @@ contract LidoExecLayerRewardsVault {
         uint256 balance = address(this).balance;
         amount = (balance > _maxAmount) ? _maxAmount : balance;
         if (amount > 0) {
-            ILido(LIDO).receiveExecLayerRewards{value: amount}();
+            ILido(LIDO).receiveELRewards{value: amount}();
         }
         return amount;
     }

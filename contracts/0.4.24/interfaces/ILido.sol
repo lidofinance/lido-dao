@@ -131,23 +131,23 @@ interface ILido {
     event FeeDistributionSet(uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, uint16 operatorsFeeBasisPoints);
 
     /**
-      * @notice A payable function supposed to be called only by LidoExecLayerRewardsVault contract
+      * @notice A payable function supposed to be called only by LidoExecutionLayerRewardsVault contract
       * @dev We need a separate function because funds received by default payable function
       * are considered as funds submitted by a user for staking
       */
-    function receiveExecLayerRewards() external payable;
+    function receiveELRewards() external payable;
 
-    // The amount of ETH withdrawn from LidoExecLayerRewardsVault contract to Lido contract
-    event ExecLayerRewardsReceived(uint256 amount);
+    // The amount of ETH withdrawn from LidoExecutionLayerRewardsVault contract to Lido contract
+    event ELRewardsReceived(uint256 amount);
 
     /**
       * @dev Sets limit to amount of ETH to withdraw from execution layer rewards vault per LidoOracle report
       * @param _limitPoints limit in basis points to amount of ETH to withdraw per LidoOracle report
       */
-    function setExecLayerRewardsWithdrawalLimit(uint16 _limitPoints) external;
+    function setELRewardsWithdrawalLimit(uint16 _limitPoints) external;
 
-    // Percent in basis points of total pooled ether allowed to withdraw from LidoExecLayerRewardsVault per LidoOracle report
-    event ExecLayerRewardsWithdrawalLimitSet(uint256 limitPoints);
+    // Percent in basis points of total pooled ether allowed to withdraw from LidoExecutionLayerRewardsVault per LidoOracle report
+    event ELRewardsWithdrawalLimitSet(uint256 limitPoints);
 
     /**
       * @notice Set credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched to `_withdrawalCredentials`
@@ -165,13 +165,13 @@ interface ILido {
     event WithdrawalCredentialsSet(bytes32 withdrawalCredentials);
 
     /**
-    * @dev Sets the address of LidoExecLayerRewardsVault contract
-    * @param _execLayerRewardsVault Execution layer rewards vault contract address
+    * @dev Sets the address of LidoExecutionLayerRewardsVault contract
+    * @param _executionLayerRewardsVault Execution layer rewards vault contract address
     */
-    function setExecLayerRewardsVault(address _execLayerRewardsVault) external;
+    function setELRewardsVault(address _executionLayerRewardsVault) external;
 
-    // The `execLayerRewardsVault` was set as the execution layer rewards vault for Lido
-    event LidoExecLayerRewardsVaultSet(address execLayerRewardsVault);
+    // The `executionLayerRewardsVault` was set as the execution layer rewards vault for Lido
+    event ELRewardsVaultSet(address executionLayerRewardsVault);
 
     /**
       * @notice Ether on the ETH 2.0 side reported by the oracle

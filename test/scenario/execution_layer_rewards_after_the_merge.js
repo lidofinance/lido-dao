@@ -10,7 +10,7 @@ const { signDepositData } = require('../0.8.9/helpers/signatures')
 const { waitBlocks } = require('../helpers/blockchain')
 const addresses = require('@aragon/contract-helpers-test/src/addresses')
 
-const LidoExecLayerRewardsVault = artifacts.require('LidoExecLayerRewardsVault.sol')
+const LidoELRewardsVault = artifacts.require('LidoExecutionLayerRewardsVault.sol')
 const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
@@ -33,14 +33,14 @@ contract('Lido: merge acceptance', (addresses) => {
     // unrelated address
     nobody,
     // Execution layer rewards source
-    userExecLayerRewards
+    userELRewards
   ] = addresses
 
   let pool, nodeOperatorRegistry, token
   let oracleMock, depositContractMock
   let treasuryAddr, insuranceAddr, guardians
   let depositSecurityModule, depositRoot
-  let rewarder, execLayerRewardsVault
+  let rewarder, elRewardsVault
 
   // Total fee is 1%
   const totalFeePoints = 0.01 * TOTAL_BASIS_POINTS
@@ -103,16 +103,16 @@ contract('Lido: merge acceptance', (addresses) => {
 
     depositRoot = await depositContractMock.get_deposit_root()
 
-    execLayerRewardsVault = await LidoExecLayerRewardsVault.new(pool.address, treasuryAddr)
-    await pool.setExecLayerRewardsVault(execLayerRewardsVault.address, { from: voting })
+    elRewardsVault = await LidoELRewardsVault.new(pool.address, treasuryAddr)
+    await pool.setELRewardsVault(elRewardsVault.address, { from: voting })
 
     // At first go through tests assuming there is no withdrawal limit
-    await pool.setExecLayerRewardsWithdrawalLimit(TOTAL_BASIS_POINTS, { from: voting })
+    await pool.setELRewardsWithdrawalLimit(TOTAL_BASIS_POINTS, { from: voting })
 
-    rewarder = await RewardEmulatorMock.new(execLayerRewardsVault.address)
+    rewarder = await RewardEmulatorMock.new(elRewardsVault.address)
 
     assertBn(await web3.eth.getBalance(rewarder.address), ETH(0), 'rewarder balance')
-    assertBn(await web3.eth.getBalance(execLayerRewardsVault.address), ETH(0), 'Execution layer rewards vault balance')
+    assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(0), 'Execution layer rewards vault balance')
 
     // Fee and its distribution are in basis points, 10000 corresponding to 100%
 
@@ -347,8 +347,8 @@ contract('Lido: merge acceptance', (addresses) => {
   })
 
   it('collect 9 ETH execution layer rewards to the vault', async () => {
-    await rewarder.reward({ from: userExecLayerRewards, value: ETH(9) })
-    assertBn(await web3.eth.getBalance(execLayerRewardsVault.address), ETH(9), 'Execution layer rewards vault balance')
+    await rewarder.reward({ from: userELRewards, value: ETH(9) })
+    assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(9), 'Execution layer rewards vault balance')
   })
 
   it('the oracle reports balance increase on Ethereum2 side (+32 ETH) and claims collected execution layer rewards (+9 ETH)', async () => {
@@ -369,7 +369,7 @@ contract('Lido: merge acceptance', (addresses) => {
     await oracleMock.reportBeacon(epoch, 2, ETH(96))
 
     // Execution layer rewards just claimed
-    assertBn(await web3.eth.getBalance(execLayerRewardsVault.address), ETH(0), 'Execution layer rewards vault balance')
+    assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(0), 'Execution layer rewards vault balance')
 
     // Total shares increased because fee minted (fee shares added)
     // shares ~= oldTotalShares + reward * oldTotalShares / (newTotalPooledEther - reward)
@@ -378,12 +378,12 @@ contract('Lido: merge acceptance', (addresses) => {
 
     assertBn(newTotalShares, new BN('97289047169125663202'), 'total shares')
 
-    const execLayerRewards = 9
+    const elRewards = 9
 
     // Total pooled Ether increased
 
     const newTotalPooledEther = await pool.getTotalPooledEther()
-    assertBn(newTotalPooledEther, ETH(33 + 96 + execLayerRewards), 'total pooled ether')
+    assertBn(newTotalPooledEther, ETH(33 + 96 + elRewards), 'total pooled ether')
 
     // Ether2 stat reported by the pool changed correspondingly
 
@@ -392,12 +392,12 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(ether2Stat.beaconBalance, ETH(96), 'remote ether2')
 
     // Buffered Ether amount changed on execution layer rewards
-    assertBn(await pool.getBufferedEther(), ETH(33 + execLayerRewards), 'buffered ether')
+    assertBn(await pool.getBufferedEther(), ETH(33 + elRewards), 'buffered ether')
 
     // New tokens was minted to distribute fee
-    assertBn(await token.totalSupply(), tokens(129 + execLayerRewards), 'token total supply')
+    assertBn(await token.totalSupply(), tokens(129 + elRewards), 'token total supply')
 
-    const reward = toBN(ETH(96 - 64 + execLayerRewards))
+    const reward = toBN(ETH(96 - 64 + elRewards))
     const mintedAmount = new BN(totalFeePoints).mul(reward).divn(TOTAL_BASIS_POINTS)
 
     // Token user balances increased
@@ -438,11 +438,11 @@ contract('Lido: merge acceptance', (addresses) => {
   })
 
   it('collect another 7 ETH execution layer rewards to the vault', async () => {
-    await rewarder.reward({ from: userExecLayerRewards, value: ETH(2) })
-    assertBn(await web3.eth.getBalance(execLayerRewardsVault.address), ETH(2), 'Execution layer rewards vault balance')
+    await rewarder.reward({ from: userELRewards, value: ETH(2) })
+    assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(2), 'Execution layer rewards vault balance')
 
-    await rewarder.reward({ from: userExecLayerRewards, value: ETH(5) })
-    assertBn(await web3.eth.getBalance(execLayerRewardsVault.address), ETH(7), 'Execution layer rewards vault balance')
+    await rewarder.reward({ from: userELRewards, value: ETH(5) })
+    assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(7), 'Execution layer rewards vault balance')
   })
 
   it('the oracle reports same balance on Ethereum2 side (+0 ETH) and claims collected execution layer rewards (+7 ETH)', async () => {
@@ -461,7 +461,7 @@ contract('Lido: merge acceptance', (addresses) => {
     await oracleMock.reportBeacon(epoch, 2, ETH(96))
 
     // Execution layer rewards just claimed
-    assertBn(await web3.eth.getBalance(execLayerRewardsVault.address), ETH(0), 'Execution layer rewards vault balance')
+    assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(0), 'Execution layer rewards vault balance')
 
     // Total shares preserved because fee shares NOT minted
     // shares ~= oldTotalShares + reward * oldTotalShares / (newTotalPooledEther - reward)
@@ -502,8 +502,8 @@ contract('Lido: merge acceptance', (addresses) => {
   })
 
   it('collect another 5 ETH execution layer rewards to the vault', async () => {
-    await rewarder.reward({ from: userExecLayerRewards, value: ETH(5) })
-    assertBn(await web3.eth.getBalance(execLayerRewardsVault.address), ETH(5), 'Execution layer rewards vault balance')
+    await rewarder.reward({ from: userELRewards, value: ETH(5) })
+    assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(5), 'Execution layer rewards vault balance')
   })
 
   it('the oracle reports loss on Ethereum2 side (-2 ETH) and claims collected execution layer rewards (+5 ETH)', async () => {
@@ -522,7 +522,7 @@ contract('Lido: merge acceptance', (addresses) => {
     await oracleMock.reportBeacon(epoch, 2, ETH(94))
 
     // Execution layer rewards just claimed
-    assertBn(await web3.eth.getBalance(execLayerRewardsVault.address), ETH(0), 'Execution layer rewards vault balance')
+    assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(0), 'Execution layer rewards vault balance')
 
     // Total shares preserved because fee shares NOT minted
     // shares ~= oldTotalShares + reward * oldTotalShares / (newTotalPooledEther - reward)
@@ -560,8 +560,8 @@ contract('Lido: merge acceptance', (addresses) => {
   })
 
   it('collect another 3 ETH execution layer rewards to the vault', async () => {
-    await rewarder.reward({ from: userExecLayerRewards, value: ETH(3) })
-    assertBn(await web3.eth.getBalance(execLayerRewardsVault.address), ETH(3), 'Execution layer rewards vault balance')
+    await rewarder.reward({ from: userELRewards, value: ETH(3) })
+    assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(3), 'Execution layer rewards vault balance')
   })
 
   it('the oracle reports loss on Ethereum2 side (-3 ETH) and claims collected execution layer rewards (+3 ETH)', async () => {
@@ -580,7 +580,7 @@ contract('Lido: merge acceptance', (addresses) => {
     await oracleMock.reportBeacon(epoch, 2, ETH(91))
 
     // Execution layer rewards just claimed
-    assertBn(await web3.eth.getBalance(execLayerRewardsVault.address), ETH(0), 'Execution layer rewards vault balance')
+    assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(0), 'Execution layer rewards vault balance')
 
     // Total shares preserved because fee shares NOT minted
     // shares ~= oldTotalShares + reward * oldTotalShares / (newTotalPooledEther - reward)
@@ -616,8 +616,8 @@ contract('Lido: merge acceptance', (addresses) => {
   })
 
   it('collect another 2 ETH execution layer rewards to the vault', async () => {
-    await rewarder.reward({ from: userExecLayerRewards, value: ETH(2) })
-    assertBn(await web3.eth.getBalance(execLayerRewardsVault.address), ETH(2), 'Execution layer rewards vault balance')
+    await rewarder.reward({ from: userELRewards, value: ETH(2) })
+    assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(2), 'Execution layer rewards vault balance')
   })
 
   it('the oracle reports loss on Ethereum2 side (-8 ETH) and claims collected execution layer rewards (+2 ETH)', async () => {
@@ -636,7 +636,7 @@ contract('Lido: merge acceptance', (addresses) => {
     await oracleMock.reportBeacon(epoch, 2, ETH(83))
 
     // Execution layer rewards just claimed
-    assertBn(await web3.eth.getBalance(execLayerRewardsVault.address), ETH(0), 'Execution layer rewards vault balance')
+    assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(0), 'Execution layer rewards vault balance')
 
     // Total shares preserved because fee shares NOT minted
     // shares ~= oldTotalShares + reward * oldTotalShares / (newTotalPooledEther - reward)
@@ -670,8 +670,8 @@ contract('Lido: merge acceptance', (addresses) => {
   })
 
   it('collect another 3 ETH execution layer rewards to the vault', async () => {
-    await rewarder.reward({ from: userExecLayerRewards, value: ETH(3) })
-    assertBn(await web3.eth.getBalance(execLayerRewardsVault.address), ETH(3), 'Execution layer vault balance')
+    await rewarder.reward({ from: userELRewards, value: ETH(3) })
+    assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(3), 'Execution layer vault balance')
   })
 
   it('the oracle reports balance increase on Ethereum2 side (+2 ETH) and claims collected execution layer rewards (+3 ETH)', async () => {
@@ -690,7 +690,7 @@ contract('Lido: merge acceptance', (addresses) => {
     await oracleMock.reportBeacon(epoch, 2, ETH(85))
 
     // Execution layer rewards just claimed
-    assertBn(await web3.eth.getBalance(execLayerRewardsVault.address), ETH(0), 'Execution layer rewards vault balance')
+    assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(0), 'Execution layer rewards vault balance')
 
     // Total shares increased because fee minted (fee shares added)
     // shares ~= oldTotalShares + reward * oldTotalShares / (newTotalPooledEther - reward)
@@ -734,7 +734,7 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn((await token.balanceOf(nodeOperator2.address)).divn(10), new BN('12164764492753623'), 'operator_2 tokens')
   })
 
-  it('collect 0.1 ETH execution layer rewards to execLayerRewardsVault and withdraw it entirely by means of multiple oracle reports (+1 ETH)', async () => {
+  it('collect 0.1 ETH execution layer rewards to elRewardsVault and withdraw it entirely by means of multiple oracle reports (+1 ETH)', async () => {
     const toNum = (bn) => {
       return +bn.toString()
     }
@@ -746,7 +746,7 @@ contract('Lido: merge acceptance', (addresses) => {
     }
 
     // Specify different withdrawal limits for a few epochs to test different values
-    const getExecLayerRewardsWithdrawalLimitFromEpoch = (_epoch) => {
+    const getELRewardsWithdrawalLimitFromEpoch = (_epoch) => {
       if (_epoch === 106) {
         return 2
       } else if (_epoch === 107) {
@@ -756,58 +756,58 @@ contract('Lido: merge acceptance', (addresses) => {
       }
     }
 
-    const execLayerRewards = toE18(0.1)
-    await rewarder.reward({ from: userExecLayerRewards, value: fromNum(execLayerRewards) })
-    assertBn(await web3.eth.getBalance(execLayerRewardsVault.address), fromNum(execLayerRewards), 'Execution layer rewards vault balance')
+    const elRewards = toE18(0.1)
+    await rewarder.reward({ from: userELRewards, value: fromNum(elRewards) })
+    assertBn(await web3.eth.getBalance(elRewardsVault.address), fromNum(elRewards), 'Execution layer rewards vault balance')
 
     let epoch = 106
     let lastBeaconBalance = toE18(85)
-    await pool.setExecLayerRewardsWithdrawalLimit(getExecLayerRewardsWithdrawalLimitFromEpoch(epoch), { from: voting })
+    await pool.setELRewardsWithdrawalLimit(getELRewardsWithdrawalLimitFromEpoch(epoch), { from: voting })
 
-    let execLayerRewardsWithdrawalLimitPoints = toNum(await pool.getExecLayerRewardsWithdrawalLimitPoints())
-    let execLayerRewardsVaultBalance = toNum(await web3.eth.getBalance(execLayerRewardsVault.address))
+    let elRewardsWithdrawalLimitPoints = toNum(await pool.getELRewardsWithdrawalLimitPoints())
+    let elRewardsVaultBalance = toNum(await web3.eth.getBalance(elRewardsVault.address))
     let totalPooledEther = toNum(await pool.getTotalPooledEther())
     let bufferedEther = toNum(await pool.getBufferedEther())
     let totalSupply = toNum(await pool.totalSupply())
     const beaconBalanceInc = toE18(1)
-    let execLayerRewardsWithdrawn = 0
+    let elRewardsWithdrawn = 0
 
     // Do multiple oracle reports to withdraw all ETH from execution layer rewards vault
-    while (execLayerRewardsVaultBalance > 0) {
-      const execLayerRewardsWithdrawalLimit = getExecLayerRewardsWithdrawalLimitFromEpoch(epoch)
-      await pool.setExecLayerRewardsWithdrawalLimit(execLayerRewardsWithdrawalLimit, { from: voting })
-      execLayerRewardsWithdrawalLimitPoints = toNum(await pool.getExecLayerRewardsWithdrawalLimitPoints())
+    while (elRewardsVaultBalance > 0) {
+      const elRewardsWithdrawalLimit = getELRewardsWithdrawalLimitFromEpoch(epoch)
+      await pool.setELRewardsWithdrawalLimit(elRewardsWithdrawalLimit, { from: voting })
+      elRewardsWithdrawalLimitPoints = toNum(await pool.getELRewardsWithdrawalLimitPoints())
 
-      const maxExecLayerRewardsAmountPerWithdrawal = Math.floor(
-        ((totalPooledEther + beaconBalanceInc) * execLayerRewardsWithdrawalLimitPoints) / TOTAL_BASIS_POINTS
+      const maxELRewardsAmountPerWithdrawal = Math.floor(
+        ((totalPooledEther + beaconBalanceInc) * elRewardsWithdrawalLimitPoints) / TOTAL_BASIS_POINTS
       )
-      const execLayerRewardsToWithdraw = Math.min(maxExecLayerRewardsAmountPerWithdrawal, execLayerRewardsVaultBalance)
+      const elRewardsToWithdraw = Math.min(maxELRewardsAmountPerWithdrawal, elRewardsVaultBalance)
 
       // Reporting balance increase
       await oracleMock.reportBeacon(epoch, 2, fromNum(lastBeaconBalance + beaconBalanceInc))
 
       assertBn(
-        await web3.eth.getBalance(execLayerRewardsVault.address),
-        execLayerRewardsVaultBalance - execLayerRewardsToWithdraw,
+        await web3.eth.getBalance(elRewardsVault.address),
+        elRewardsVaultBalance - elRewardsToWithdraw,
         'Execution layer rewards vault balance'
       )
 
-      assertBn(await pool.getTotalPooledEther(), totalPooledEther + beaconBalanceInc + execLayerRewardsToWithdraw, 'total pooled ether')
+      assertBn(await pool.getTotalPooledEther(), totalPooledEther + beaconBalanceInc + elRewardsToWithdraw, 'total pooled ether')
 
-      assertBn(await pool.totalSupply(), totalSupply + beaconBalanceInc + execLayerRewardsToWithdraw, 'token total supply')
+      assertBn(await pool.totalSupply(), totalSupply + beaconBalanceInc + elRewardsToWithdraw, 'token total supply')
 
-      assertBn(await pool.getBufferedEther(), bufferedEther + execLayerRewardsToWithdraw, 'buffered ether')
+      assertBn(await pool.getBufferedEther(), bufferedEther + elRewardsToWithdraw, 'buffered ether')
 
-      execLayerRewardsVaultBalance = toNum(await web3.eth.getBalance(execLayerRewardsVault.address))
+      elRewardsVaultBalance = toNum(await web3.eth.getBalance(elRewardsVault.address))
       totalPooledEther = toNum(await pool.getTotalPooledEther())
       bufferedEther = toNum(await pool.getBufferedEther())
       totalSupply = toNum(await pool.totalSupply())
 
       lastBeaconBalance += beaconBalanceInc
       epoch += 1
-      execLayerRewardsWithdrawn += execLayerRewardsToWithdraw
+      elRewardsWithdrawn += elRewardsToWithdraw
     }
 
-    assert.equal(execLayerRewardsWithdrawn, execLayerRewards)
+    assert.equal(elRewardsWithdrawn, elRewards)
   })
 })
