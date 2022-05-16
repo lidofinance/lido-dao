@@ -576,8 +576,8 @@ async function assertDaoPermissions({ kernel, lido, oracle, nopsRegistry, agent,
           'SET_INSURANCE_FUND',
           'STAKING_PAUSE_ROLE',
           'STAKING_RESUME_ROLE',
-          'SET_MEV_TX_FEE_VAULT_ROLE',
-          'SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE'
+          'SET_EXEC_LAYER_REWARDS_VAULT_ROLE',
+          'SET_EXEC_LAYER_REWARDS_WITHDRAWAL_LIMIT_ROLE'
         ],
         grantee: voting
       }

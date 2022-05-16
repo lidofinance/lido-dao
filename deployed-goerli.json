@@ -185,7 +185,4 @@
     4
   ],
   "selfOwnedStETHBurnerAddress": "0xf6a64DcB06Ef7eB1ee94aDfD7D10ACB44D9A9888",
-  "mevTxFeeVaultDeployTx": "0x0cff10cc3830ff645032875eb895d4db007ce7cad9cfcd2668015f905ceb338f",
-  "mevTxFeeVaultAddress": "0xece7301B3aeEC2b2B6C41a55dE831D47c205AaCC",
-  "mevTxFeeRewardsEmulator": "0x636ebc9dd60ef85bbaf2abb0bad789676aac12d0"
 }

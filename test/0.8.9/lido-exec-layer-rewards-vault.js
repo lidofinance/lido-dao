@@ -4,7 +4,7 @@ const { newDao, newApp } = require('../0.4.24/helpers/dao')
 
 const { assert } = require('chai')
 
-const LidoMevTxFeeVault = artifacts.require('LidoMevTxFeeVault.sol')
+const LidoExecLayerRewardsVault = artifacts.require('LidoExecLayerRewardsVault.sol')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
@@ -20,8 +20,8 @@ const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 const stETH = ETH
 const stETHShares = ETH
 
-contract('LidoMevTxFeeVault', ([appManager, voting, deployer, depositor, anotherAccount, ...otherAccounts]) => {
-  let oracle, lido, mevVault
+contract('LidoExecLayerRewardsVault', ([appManager, voting, deployer, depositor, anotherAccount, ...otherAccounts]) => {
+  let oracle, lido, execLayerRewardsVault
   let treasuryAddr
   let dao, acl, operators
 
@@ -54,26 +54,28 @@ contract('LidoMevTxFeeVault', ([appManager, voting, deployer, depositor, another
     await oracle.setPool(lido.address)
     await depositContract.reset()
 
-    mevVault = await LidoMevTxFeeVault.new(lido.address, treasuryAddr, { from: deployer })
+    execLayerRewardsVault = await LidoExecLayerRewardsVault.new(lido.address, treasuryAddr, { from: deployer })
   })
 
-  it('Addresses which are not Lido contract cannot withdraw from MEV vault', async () => {
-    await assertRevert(mevVault.withdrawRewards(12345, { from: anotherAccount }), 'ONLY_LIDO_CAN_WITHDRAW')
-    await assertRevert(mevVault.withdrawRewards(12345, { from: deployer }), 'ONLY_LIDO_CAN_WITHDRAW')
-    await assertRevert(mevVault.withdrawRewards(12345, { from: appManager }), 'ONLY_LIDO_CAN_WITHDRAW')
+  it('Addresses which are not Lido contract cannot withdraw from execution layer rewards vault', async () => {
+    await assertRevert(execLayerRewardsVault.withdrawRewards(12345, { from: anotherAccount }), 'ONLY_LIDO_CAN_WITHDRAW')
+    await assertRevert(execLayerRewardsVault.withdrawRewards(12345, { from: deployer }), 'ONLY_LIDO_CAN_WITHDRAW')
+    await assertRevert(execLayerRewardsVault.withdrawRewards(12345, { from: appManager }), 'ONLY_LIDO_CAN_WITHDRAW')
   })
 
-  it('MEV Tx Fee Vault can receive Ether by plain transfers (no call data)', async () => {
-    const before = +(await web3.eth.getBalance(mevVault.address)).toString()
+  it('Execution layer rewards vault can receive Ether by plain transfers (no call data)', async () => {
+    const before = +(await web3.eth.getBalance(execLayerRewardsVault.address)).toString()
     const amount = 0.02
-    await web3.eth.sendTransaction({ to: mevVault.address, from: anotherAccount, value: ETH(amount) })
-    assertBn(await web3.eth.getBalance(mevVault.address), ETH(before + amount))
+    await web3.eth.sendTransaction({ to: execLayerRewardsVault.address, from: anotherAccount, value: ETH(amount) })
+    assertBn(await web3.eth.getBalance(execLayerRewardsVault.address), ETH(before + amount))
   })
 
-  it('MEV Tx Fee Vault refuses to receive Ether by transfers with call data', async () => {
-    const before = +(await web3.eth.getBalance(mevVault.address)).toString()
+  it('Execution layer rewards vault refuses to receive Ether by transfers with call data', async () => {
+    const before = +(await web3.eth.getBalance(execLayerRewardsVault.address)).toString()
     const amount = 0.02
-    await assertRevert(web3.eth.sendTransaction({ to: mevVault.address, from: anotherAccount, value: ETH(amount), data: '0x12345678' }))
+    await assertRevert(
+      web3.eth.sendTransaction({ to: execLayerRewardsVault.address, from: anotherAccount, value: ETH(amount), data: '0x12345678' })
+    )
   })
 
   describe('Recover ERC20 / ERC721', () => {
@@ -108,11 +110,11 @@ contract('LidoMevTxFeeVault', ([appManager, voting, deployer, depositor, another
     })
 
     it(`can't recover zero ERC20 amount`, async () => {
-      assertRevert(mevVault.recoverERC20(mockERC20Token.address, bn(0)), `ZERO_RECOVERY_AMOUNT`)
+      assertRevert(execLayerRewardsVault.recoverERC20(mockERC20Token.address, bn(0)), `ZERO_RECOVERY_AMOUNT`)
     })
 
     it(`can't recover zero-address ERC20`, async () => {
-      assertRevert(mevVault.recoverERC20(ZERO_ADDRESS, bn(10)))
+      assertRevert(execLayerRewardsVault.recoverERC20(ZERO_ADDRESS, bn(10)))
     })
 
     it(`can't recover stETH by recoverERC20`, async () => {
@@ -122,74 +124,77 @@ contract('LidoMevTxFeeVault', ([appManager, voting, deployer, depositor, another
       await web3.eth.sendTransaction({ from: anotherAccount, to: lido.address, value: ETH(10) })
       // check 10 stETH minted on balance
       assertBn(await lido.balanceOf(anotherAccount), stETH(10))
-      // transfer 5 stETH to the mevVault account
-      await lido.transfer(mevVault.address, stETH(5), { from: anotherAccount })
+      // transfer 5 stETH to the execLayerRewardsVault account
+      await lido.transfer(execLayerRewardsVault.address, stETH(5), { from: anotherAccount })
 
       assertBn(await lido.balanceOf(anotherAccount), stETH(5))
-      assertBn(await lido.balanceOf(mevVault.address), stETH(5))
+      assertBn(await lido.balanceOf(execLayerRewardsVault.address), stETH(5))
     })
 
     it(`recover some accidentally sent ERC20`, async () => {
-      // distribute deployer's balance among anotherAccount and mevVault
+      // distribute deployer's balance among anotherAccount and execLayerRewardsVault
       await mockERC20Token.transfer(anotherAccount, bn(400000), { from: deployer })
-      await mockERC20Token.transfer(mevVault.address, bn(600000), { from: deployer })
+      await mockERC20Token.transfer(execLayerRewardsVault.address, bn(600000), { from: deployer })
 
       // check the resulted state
       assertBn(await mockERC20Token.balanceOf(deployer), bn(0))
       assertBn(await mockERC20Token.balanceOf(anotherAccount), bn(400000))
-      assertBn(await mockERC20Token.balanceOf(mevVault.address), bn(600000))
+      assertBn(await mockERC20Token.balanceOf(execLayerRewardsVault.address), bn(600000))
 
       // recover ERC20
-      const firstReceipt = await mevVault.recoverERC20(mockERC20Token.address, bn(100000), { from: deployer })
+      const firstReceipt = await execLayerRewardsVault.recoverERC20(mockERC20Token.address, bn(100000), { from: deployer })
       assertEvent(firstReceipt, `ERC20Recovered`, {
         expectedArgs: { requestedBy: deployer, token: mockERC20Token.address, amount: bn(100000) }
       })
 
-      const secondReceipt = await mevVault.recoverERC20(mockERC20Token.address, bn(400000), { from: anotherAccount })
+      const secondReceipt = await execLayerRewardsVault.recoverERC20(mockERC20Token.address, bn(400000), { from: anotherAccount })
       assertEvent(secondReceipt, `ERC20Recovered`, {
         expectedArgs: { requestedBy: anotherAccount, token: mockERC20Token.address, amount: bn(400000) }
       })
 
       // check balances again
-      assertBn(await mockERC20Token.balanceOf(mevVault.address), bn(100000))
+      assertBn(await mockERC20Token.balanceOf(execLayerRewardsVault.address), bn(100000))
       assertBn(await mockERC20Token.balanceOf(treasuryAddr), bn(500000))
       assertBn(await mockERC20Token.balanceOf(deployer), bn(0))
       assertBn(await mockERC20Token.balanceOf(anotherAccount), bn(400000))
 
       // recover last portion
-      const lastReceipt = await mevVault.recoverERC20(mockERC20Token.address, bn(100000), { from: anotherAccount })
+      const lastReceipt = await execLayerRewardsVault.recoverERC20(mockERC20Token.address, bn(100000), { from: anotherAccount })
       assertEvent(lastReceipt, `ERC20Recovered`, {
         expectedArgs: { requestedBy: anotherAccount, token: mockERC20Token.address, amount: bn(100000) }
       })
 
       // balance is zero already, have to be reverted
-      assertRevert(mevVault.recoverERC20(mockERC20Token.address, bn(1), { from: deployer }), `ERC20: transfer amount exceeds balance`)
+      assertRevert(
+        execLayerRewardsVault.recoverERC20(mockERC20Token.address, bn(1), { from: deployer }),
+        `ERC20: transfer amount exceeds balance`
+      )
     })
 
     it(`can't recover zero-address ERC721(NFT)`, async () => {
-      assertRevert(mevVault.recoverERC721(ZERO_ADDRESS, 0))
+      assertRevert(execLayerRewardsVault.recoverERC721(ZERO_ADDRESS, 0))
     })
 
     it(`recover some accidentally sent NFTs`, async () => {
-      // send nft1 to anotherAccount and nft2 to the mevVault address
+      // send nft1 to anotherAccount and nft2 to the execLayerRewardsVault address
       await mockNFT.transferFrom(deployer, anotherAccount, nft1, { from: deployer })
-      await mockNFT.transferFrom(deployer, mevVault.address, nft2, { from: deployer })
+      await mockNFT.transferFrom(deployer, execLayerRewardsVault.address, nft2, { from: deployer })
 
       // check the new holders' rights
       assertBn(await mockNFT.balanceOf(deployer), bn(0))
       assertBn(await mockNFT.balanceOf(anotherAccount), bn(1))
-      assertBn(await mockNFT.balanceOf(mevVault.address), bn(1))
+      assertBn(await mockNFT.balanceOf(execLayerRewardsVault.address), bn(1))
 
       // recover nft2 should work
-      const receiptNfc2 = await mevVault.recoverERC721(mockNFT.address, nft2, { from: anotherAccount })
+      const receiptNfc2 = await execLayerRewardsVault.recoverERC721(mockNFT.address, nft2, { from: anotherAccount })
       assertEvent(receiptNfc2, `ERC721Recovered`, { expectedArgs: { requestedBy: anotherAccount, token: mockNFT.address, tokenId: nft2 } })
 
       // but nft1 recovery should revert
-      assertRevert(mevVault.recoverERC721(mockNFT.address, nft1), `ERC721: transfer caller is not owner nor approved`)
+      assertRevert(execLayerRewardsVault.recoverERC721(mockNFT.address, nft1), `ERC721: transfer caller is not owner nor approved`)
 
-      // send nft1 to mevVault and recover it
-      await mockNFT.transferFrom(anotherAccount, mevVault.address, nft1, { from: anotherAccount })
-      const receiptNft1 = await mevVault.recoverERC721(mockNFT.address, nft1, { from: deployer })
+      // send nft1 to execLayerRewardsVault and recover it
+      await mockNFT.transferFrom(anotherAccount, execLayerRewardsVault.address, nft1, { from: anotherAccount })
+      const receiptNft1 = await execLayerRewardsVault.recoverERC721(mockNFT.address, nft1, { from: deployer })
 
       assertEvent(receiptNft1, `ERC721Recovered`, { expectedArgs: { requestedBy: deployer, token: mockNFT.address, tokenId: nft1 } })
 

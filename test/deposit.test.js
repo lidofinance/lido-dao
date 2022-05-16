@@ -83,8 +83,10 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
     await acl.createPermission(voting, app.address, await app.RESUME_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.MANAGE_FEE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.MANAGE_WITHDRAWAL_KEY(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.SET_MEV_TX_FEE_VAULT_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, app.address, await app.SET_EXEC_LAYER_REWARDS_VAULT_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, app.address, await app.SET_EXEC_LAYER_REWARDS_WITHDRAWAL_LIMIT_ROLE(), appManager, {
+      from: appManager
+    })
     await acl.createPermission(voting, app.address, await app.STAKING_PAUSE_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.STAKING_RESUME_ROLE(), appManager, { from: appManager })
 

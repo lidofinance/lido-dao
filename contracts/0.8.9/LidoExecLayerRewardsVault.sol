@@ -11,21 +11,21 @@ import "@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC20.sol";
 
 interface ILido {
     /**
-    * @notice A payable function supposed to be funded only by LidoMevTxFeeVault contract
+    * @notice A payable function supposed to be funded only by LidoExecLayerRewardsVault contract
     * @dev We need a separate function because funds received by default payable function
     * will go through entire deposit algorithm
     */
-    function receiveMevTxFee() external payable;
+    function receiveExecLayerRewards() external payable;
 }
 
 
 /**
-* @title A vault for temporary storage of MEV and transaction fees
+* @title A vault for temporary storage of execution layer rewards (MEV and tx priority fee)
 *
 * These vault replenishments happen continuously through a day, while withdrawals
 * happen much less often, only on LidoOracle beacon balance reports
 */
-contract LidoMevTxFeeVault {
+contract LidoExecLayerRewardsVault {
     using SafeERC20 for IERC20;
 
     address public immutable LIDO;
@@ -67,7 +67,7 @@ contract LidoMevTxFeeVault {
 
     /**
     * @notice Allows the contract to receive ETH
-    * @dev MEV rewards may be sent as plain ETH transfers
+    * @dev execution layer rewards may be sent as plain ETH transfers
     */
     receive() external payable {
         // no-op
@@ -77,7 +77,7 @@ contract LidoMevTxFeeVault {
     * @notice Withdraw all accumulated rewards to Lido contract
     * @dev Can be called only by the Lido contract
     * @param _maxAmount Max amount of ETH to withdraw
-    * @return amount uint256 of funds received as MEV and transaction fees in wei
+    * @return amount uint256 of funds received as execution layer rewards (in wei)
     */
     function withdrawRewards(uint256 _maxAmount) external returns (uint256 amount) {
         require(msg.sender == LIDO, "ONLY_LIDO_CAN_WITHDRAW");
@@ -85,7 +85,7 @@ contract LidoMevTxFeeVault {
         uint256 balance = address(this).balance;
         amount = (balance > _maxAmount) ? _maxAmount : balance;
         if (amount > 0) {
-            ILido(LIDO).receiveMevTxFee{value: amount}();
+            ILido(LIDO).receiveExecLayerRewards{value: amount}();
         }
         return amount;
     }

@@ -11,7 +11,7 @@ const { getEthBalance, formatStEth: formamtStEth, formatBN } = require('../helpe
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
 const Lido = artifacts.require('LidoMock.sol')
-const MevTxFeeVault = artifacts.require('LidoMevTxFeeVault.sol')
+const ExecLayerRewardsVault = artifacts.require('LidoExecLayerRewardsVault.sol')
 const OracleMock = artifacts.require('OracleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
 const ERC20Mock = artifacts.require('ERC20Mock.sol')
@@ -57,7 +57,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
   let appBase, nodeOperatorsRegistryBase, app, oracle, depositContract, operators
   let treasuryAddr, insuranceAddr
   let dao, acl
-  let mevVault, rewarder
+  let execLayerRewardsVault, rewarder
 
   before('deploy base app', async () => {
     // Deploy the app's base contract.
@@ -88,8 +88,10 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await acl.createPermission(voting, app.address, await app.MANAGE_WITHDRAWAL_KEY(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.BURN_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.MANAGE_PROTOCOL_CONTRACTS_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.SET_MEV_TX_FEE_VAULT_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, app.address, await app.SET_EXEC_LAYER_REWARDS_VAULT_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, app.address, await app.SET_EXEC_LAYER_REWARDS_WITHDRAWAL_LIMIT_ROLE(), appManager, {
+      from: appManager
+    })
     await acl.createPermission(voting, app.address, await app.STAKING_PAUSE_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.STAKING_RESUME_ROLE(), appManager, { from: appManager })
 
@@ -115,14 +117,14 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await oracle.setPool(app.address)
     await depositContract.reset()
 
-    mevVault = await MevTxFeeVault.new(app.address, treasuryAddr)
-    rewarder = await RewardEmulatorMock.new(mevVault.address)
-    let receipt = await app.setMevTxFeeVault(mevVault.address, { from: voting })
-    assertEvent(receipt, 'LidoMevTxFeeVaultSet', { expectedArgs: { mevTxFeeVault: mevVault.address } })
+    execLayerRewardsVault = await ExecLayerRewardsVault.new(app.address, treasuryAddr)
+    rewarder = await RewardEmulatorMock.new(execLayerRewardsVault.address)
+    let receipt = await app.setExecLayerRewardsVault(execLayerRewardsVault.address, { from: voting })
+    assertEvent(receipt, 'LidoExecLayerRewardsVaultSet', { expectedArgs: { execLayerRewardsVault: execLayerRewardsVault.address } })
 
-    const mevTxFeeWithdrawalLimitPoints = 3
-    receipt = await app.setMevTxFeeWithdrawalLimit(mevTxFeeWithdrawalLimitPoints, { from: voting })
-    assertEvent(receipt, 'MevTxFeeWithdrawalLimitSet', { expectedArgs: { limitPoints: mevTxFeeWithdrawalLimitPoints } })
+    const execLayerRewardsWithdrawalLimitPoints = 3
+    receipt = await app.setExecLayerRewardsWithdrawalLimit(execLayerRewardsWithdrawalLimitPoints, { from: voting })
+    assertEvent(receipt, 'ExecLayerRewardsWithdrawalLimitSet', { expectedArgs: { limitPoints: execLayerRewardsWithdrawalLimitPoints } })
   })
 
   const checkStat = async ({ depositedValidators, beaconValidators, beaconBalance }) => {
@@ -154,7 +156,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
   }
 
   const logLidoState = async () => {
-    const mevVaultBalance = await getEthBalance(mevVault.address)
+    const execLayerRewardsVaultBalance = await getEthBalance(execLayerRewardsVault.address)
     const lidoBalance = await getEthBalance(app.address)
     const lidoTotalSupply = formatBN(await app.totalSupply())
     const lidoTotalPooledEther = formatBN(await app.getTotalPooledEther())
@@ -166,7 +168,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     const beaconBalance = formatEther(beaconStat.beaconBalance)
 
     console.log({
-      mevVaultBalance,
+      execLayerRewardsVaultBalance,
       lidoBalance,
       lidoTotalSupply,
       lidoTotalPooledEther,
@@ -191,7 +193,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     console.log()
   }
 
-  const setupNodeOperatorsForMevTxFeeVaultTests = async (userAddress, initialDepositAmount) => {
+  const setupNodeOperatorsForExecLayerRewardsVaultTests = async (userAddress, initialDepositAmount) => {
     await app.setFee(1000, { from: voting }) // 10%
 
     await operators.addNodeOperator('1', ADDRESS_1, { from: voting })
@@ -214,75 +216,75 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await app.methods['depositBufferedEther()']({ from: depositor })
   }
 
-  it('MEV distribution works when zero rewards reported', async () => {
+  it('Execution layer rewards distribution works when zero rewards reported', async () => {
     const depositAmount = 32
-    const mevAmount = depositAmount / TOTAL_BASIS_POINTS
+    const execLayerRewards = depositAmount / TOTAL_BASIS_POINTS
     const beaconRewards = 0
 
-    await setupNodeOperatorsForMevTxFeeVaultTests(user2, ETH(depositAmount))
+    await setupNodeOperatorsForExecLayerRewardsVaultTests(user2, ETH(depositAmount))
     await oracle.reportBeacon(100, 1, ETH(depositAmount))
 
-    await rewarder.reward({ from: user1, value: ETH(mevAmount) })
+    await rewarder.reward({ from: user1, value: ETH(execLayerRewards) })
     await oracle.reportBeacon(101, 1, ETH(depositAmount + beaconRewards))
 
-    assertBn(await app.getTotalPooledEther(), ETH(depositAmount + mevAmount + beaconRewards))
-    assertBn(await app.getBufferedEther(), ETH(mevAmount))
-    assertBn(await app.balanceOf(user2), STETH(depositAmount + mevAmount))
-    assertBn(await app.getTotalMevTxFeeCollected(), ETH(mevAmount))
+    assertBn(await app.getTotalPooledEther(), ETH(depositAmount + execLayerRewards + beaconRewards))
+    assertBn(await app.getBufferedEther(), ETH(execLayerRewards))
+    assertBn(await app.balanceOf(user2), STETH(depositAmount + execLayerRewards))
+    assertBn(await app.getTotalExecLayerRewardsCollected(), ETH(execLayerRewards))
   })
 
-  it('MEV distribution works when negative rewards reported', async () => {
+  it('Execution layer rewards distribution works when negative rewards reported', async () => {
     const depositAmount = 32
-    const mevAmount = depositAmount / TOTAL_BASIS_POINTS
+    const execLayerRewards = depositAmount / TOTAL_BASIS_POINTS
     const beaconRewards = -2
 
-    await setupNodeOperatorsForMevTxFeeVaultTests(user2, ETH(depositAmount))
+    await setupNodeOperatorsForExecLayerRewardsVaultTests(user2, ETH(depositAmount))
     await oracle.reportBeacon(100, 1, ETH(depositAmount))
 
-    await rewarder.reward({ from: user1, value: ETH(mevAmount) })
+    await rewarder.reward({ from: user1, value: ETH(execLayerRewards) })
     await oracle.reportBeacon(101, 1, ETH(depositAmount + beaconRewards))
 
-    assertBn(await app.getTotalPooledEther(), ETH(depositAmount + mevAmount + beaconRewards))
-    assertBn(await app.getBufferedEther(), ETH(mevAmount))
-    assertBn(await app.balanceOf(user2), STETH(depositAmount + mevAmount + beaconRewards))
-    assertBn(await app.getTotalMevTxFeeCollected(), ETH(mevAmount))
+    assertBn(await app.getTotalPooledEther(), ETH(depositAmount + execLayerRewards + beaconRewards))
+    assertBn(await app.getBufferedEther(), ETH(execLayerRewards))
+    assertBn(await app.balanceOf(user2), STETH(depositAmount + execLayerRewards + beaconRewards))
+    assertBn(await app.getTotalExecLayerRewardsCollected(), ETH(execLayerRewards))
   })
 
-  it('MEV distribution works when positive rewards reported', async () => {
+  it('Execution layer rewards distribution works when positive rewards reported', async () => {
     const depositAmount = 32
-    const mevAmount = depositAmount / TOTAL_BASIS_POINTS
+    const execLayerRewards = depositAmount / TOTAL_BASIS_POINTS
     const beaconRewards = 3
 
-    await setupNodeOperatorsForMevTxFeeVaultTests(user2, ETH(depositAmount))
+    await setupNodeOperatorsForExecLayerRewardsVaultTests(user2, ETH(depositAmount))
     await oracle.reportBeacon(100, 1, ETH(depositAmount))
 
-    await rewarder.reward({ from: user1, value: ETH(mevAmount) })
+    await rewarder.reward({ from: user1, value: ETH(execLayerRewards) })
     await oracle.reportBeacon(101, 1, ETH(depositAmount + beaconRewards))
 
     const protocolFeePoints = await app.getFee()
     const shareOfRewardsForStakers = (TOTAL_BASIS_POINTS - protocolFeePoints) / TOTAL_BASIS_POINTS
-    assertBn(await app.getTotalPooledEther(), ETH(depositAmount + mevAmount + beaconRewards))
-    assertBn(await app.getBufferedEther(), ETH(mevAmount))
-    assertBn(await app.balanceOf(user2), STETH(depositAmount + shareOfRewardsForStakers * (mevAmount + beaconRewards)))
-    assertBn(await app.getTotalMevTxFeeCollected(), ETH(mevAmount))
+    assertBn(await app.getTotalPooledEther(), ETH(depositAmount + execLayerRewards + beaconRewards))
+    assertBn(await app.getBufferedEther(), ETH(execLayerRewards))
+    assertBn(await app.balanceOf(user2), STETH(depositAmount + shareOfRewardsForStakers * (execLayerRewards + beaconRewards)))
+    assertBn(await app.getTotalExecLayerRewardsCollected(), ETH(execLayerRewards))
   })
 
-  it('Attempt to set invalid MEV Tx Fee withdrawal limit', async () => {
-    const initialValue = await app.getMevTxFeeWithdrawalLimitPoints()
+  it('Attempt to set invalid execution layer rewards withdrawal limit', async () => {
+    const initialValue = await app.getExecLayerRewardsWithdrawalLimitPoints()
 
-    assertEvent(await app.setMevTxFeeWithdrawalLimit(1, { from: voting }), 'MevTxFeeWithdrawalLimitSet', {
+    assertEvent(await app.setExecLayerRewardsWithdrawalLimit(1, { from: voting }), 'ExecLayerRewardsWithdrawalLimitSet', {
       expectedArgs: { limitPoints: 1 }
     })
 
-    await assertNoEvent(app.setMevTxFeeWithdrawalLimit(1, { from: voting }), 'MevTxFeeWithdrawalLimitSet')
+    await assertNoEvent(app.setExecLayerRewardsWithdrawalLimit(1, { from: voting }), 'ExecLayerRewardsWithdrawalLimitSet')
 
-    await app.setMevTxFeeWithdrawalLimit(10000, { from: voting })
-    await assertRevert(app.setMevTxFeeWithdrawalLimit(10001, { from: voting }), 'VALUE_OVER_100_PERCENT')
+    await app.setExecLayerRewardsWithdrawalLimit(10000, { from: voting })
+    await assertRevert(app.setExecLayerRewardsWithdrawalLimit(10001, { from: voting }), 'VALUE_OVER_100_PERCENT')
 
-    await app.setMevTxFeeWithdrawalLimit(initialValue, { from: voting })
+    await app.setExecLayerRewardsWithdrawalLimit(initialValue, { from: voting })
 
-    // unable to receive mev tx fee from arbitrary account
-    assertRevert(app.receiveMevTxFee({ from: user1, value: ETH(1) }))
+    // unable to receive execution layer rewards from arbitrary account
+    assertRevert(app.receiveExecLayerRewards({ from: user1, value: ETH(1) }))
   })
 
   it('setFee works', async () => {

@@ -128,17 +128,17 @@ interface ILido {
     event FeeDistributionSet(uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, uint16 operatorsFeeBasisPoints);
 
     /**
-      * @notice A payable function supposed to be funded only by LidoMevTxFeeVault contract
+      * @notice A payable function supposed to be funded only by LidoExecLayerRewardsVault contract
       * @dev We need a separate function because funds received by default payable function
       * are considered as funds submitted by a user for staking
       */
-    function receiveMevTxFee() external payable;
+    function receiveExecLayerRewards() external payable;
 
-    // The amount of ETH withdrawn from LidoMevTxFeeVault contract to Lido contract
-    event MevTxFeeReceived(uint256 amount);
+    // The amount of ETH withdrawn from LidoExecLayerRewardsVault contract to Lido contract
+    event ExecLayerRewardsReceived(uint256 amount);
 
-    // Percent in basis points of total pooled ether allowed to withdraw from MevTxFeeVault per LidoOracle report
-    event MevTxFeeWithdrawalLimitSet(uint256 limitPoints);
+    // Percent in basis points of total pooled ether allowed to withdraw from LidoExecLayerRewardsVault per LidoOracle report
+    event ExecLayerRewardsWithdrawalLimitSet(uint256 limitPoints);
 
     /**
       * @notice Set credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched to `_withdrawalCredentials`
@@ -156,12 +156,12 @@ interface ILido {
     event WithdrawalCredentialsSet(bytes32 withdrawalCredentials);
 
     /**
-    * @dev Sets given address as the address of LidoMevTxFeeVault contract
-    * @param _mevTxFeeVault MEV and Tx Fees Vault contract address
+    * @dev Sets given address as the address of LidoExecLayerRewardsVault contract
+    * @param _execLayerRewardsVault Execution layer rewards vault contract address
     */
-    function setMevTxFeeVault(address _mevTxFeeVault) external;
+    function setExecLayerRewardsVault(address _execLayerRewardsVault) external;
 
-    event LidoMevTxFeeVaultSet(address mevTxFeeVault);
+    event LidoExecLayerRewardsVaultSet(address execLayerRewardsVault);
 
     /**
       * @notice Ether on the ETH 2.0 side reported by the oracle

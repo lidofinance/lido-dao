@@ -657,8 +657,8 @@ contract LidoTemplate is IsContract {
         perms[5] = _state.lido.RESUME_ROLE();
         perms[6] = _state.lido.STAKING_PAUSE_ROLE();
         perms[7] = _state.lido.STAKING_RESUME_ROLE();
-        perms[8] = _state.lido.SET_MEV_TX_FEE_VAULT_ROLE();
-        perms[9] = _state.lido.SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE();
+        perms[8] = _state.lido.SET_EXEC_LAYER_REWARDS_VAULT_ROLE();
+        perms[9] = _state.lido.SET_EXEC_LAYER_REWARDS_WITHDRAWAL_LIMIT_ROLE();
 
         for (i = 0; i < 10; ++i) {
             _createPermissionForVoting(acl, _state.lido, perms[i], voting);

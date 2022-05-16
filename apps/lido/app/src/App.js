@@ -85,7 +85,7 @@ export default function App() {
       nodeOperatorsRegistry,
       depositContract,
       oracle,
-      mevTxFeeVault,
+      execLayerRewardsVault,
       // operators,
       // treasury,
       // insuranceFund,
@@ -251,8 +251,8 @@ export default function App() {
         content: <IdentityBadge entity={oracle} />,
       },
       {
-        label: 'MEV and Transaction Fees Vault',
-        content: <IdentityBadge entity={mevTxFeeVault} />,
+        label: 'Execution layer rewards Vault',
+        content: <IdentityBadge entity={execLayerRewardsVault} />,
       },
     ]
   }, [

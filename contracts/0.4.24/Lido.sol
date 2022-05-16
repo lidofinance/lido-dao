@@ -13,7 +13,7 @@ import "solidity-bytes-utils/contracts/BytesLib.sol";
 import "./interfaces/ILido.sol";
 import "./interfaces/INodeOperatorsRegistry.sol";
 import "./interfaces/IDepositContract.sol";
-import "./interfaces/ILidoMevTxFeeVault.sol";
+import "./interfaces/ILidoExecLayerRewardsVault.sol";
 
 import "./StETH.sol";
 
@@ -60,8 +60,10 @@ contract Lido is ILido, StETH, AragonApp {
     bytes32 constant public MANAGE_PROTOCOL_CONTRACTS_ROLE = keccak256("MANAGE_PROTOCOL_CONTRACTS_ROLE");
     bytes32 constant public BURN_ROLE = keccak256("BURN_ROLE");
     bytes32 constant public DEPOSIT_ROLE = keccak256("DEPOSIT_ROLE");
-    bytes32 constant public SET_MEV_TX_FEE_VAULT_ROLE = keccak256("SET_MEV_TX_FEE_VAULT_ROLE");
-    bytes32 constant public SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE = keccak256("SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE");
+    bytes32 constant public SET_EXEC_LAYER_REWARDS_VAULT_ROLE = keccak256("SET_EXEC_LAYER_REWARDS_VAULT_ROLE");
+    bytes32 constant public SET_EXEC_LAYER_REWARDS_WITHDRAWAL_LIMIT_ROLE = keccak256(
+        "SET_EXEC_LAYER_REWARDS_WITHDRAWAL_LIMIT_ROLE"
+    );
 
     uint256 constant public PUBKEY_LENGTH = 48;
     uint256 constant public WITHDRAWAL_CREDENTIALS_LENGTH = 32;
@@ -85,7 +87,7 @@ contract Lido is ILido, StETH, AragonApp {
     bytes32 internal constant NODE_OPERATORS_REGISTRY_POSITION = keccak256("lido.Lido.nodeOperatorsRegistry");
     bytes32 internal constant TREASURY_POSITION = keccak256("lido.Lido.treasury");
     bytes32 internal constant INSURANCE_FUND_POSITION = keccak256("lido.Lido.insuranceFund");
-    bytes32 internal constant MEV_TX_FEE_VAULT_POSITION = keccak256("lido.Lido.mevTxFeeVault");
+    bytes32 internal constant EXEC_LAYER_REWARDS_VAULT_POSITION = keccak256("lido.Lido.execLayerRewardsVault");
 
     /// @dev storage slot position of the staking rate limit structure
     bytes32 internal constant STAKE_LIMIT_POSITION = keccak256("lido.Lido.stakeLimit");
@@ -98,12 +100,12 @@ contract Lido is ILido, StETH, AragonApp {
     /// @dev number of Lido's validators available in the Beacon state
     bytes32 internal constant BEACON_VALIDATORS_POSITION = keccak256("lido.Lido.beaconValidators");
 
-    /// @dev percent in basis points of total pooled ether allowed to withdraw from MevTxFeeVault per LidoOracle report
-    bytes32 internal constant MEV_TX_FEE_WITHDRAWAL_LIMIT_POINTS = keccak256("lido.Lido.mevTxFeeWithdrawalLimitPoints");
+    /// @dev percent in basis points of total pooled ether allowed to withdraw from ExecLayerRewardsVault per LidoOracle report
+    bytes32 internal constant EXEC_LAYER_REWARDS_WITHDRAWAL_LIMIT_POINTS_POSITION = keccak256("lido.Lido.execLayerRewardsWithdrawalLimitPoints");
 
-    /// @dev Just a counter of total amount of MEV and transaction rewards received by Lido contract
+    /// @dev Just a counter of total amount of execurion layer rewards received by Lido contract
     /// Not used in the logic
-    bytes32 internal constant TOTAL_MEV_TX_FEE_COLLECTED_POSITION = keccak256("lido.Lido.totalMevTxFeeCollected");
+    bytes32 internal constant TOTAL_EXEC_LAYER_REWARDS_COLLECTED_POSITION = keccak256("lido.Lido.totalExecLayerRewardsCollected");
 
     /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
     bytes32 internal constant WITHDRAWAL_CREDENTIALS_POSITION = keccak256("lido.Lido.withdrawalCredentials");
@@ -273,17 +275,17 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-    * @notice A payable function for Mev Tx Fee rewards. Can be funded only by LidoMevTxFeeVault contract
+    * @notice A payable function for execution layer rewards. Can be funded only by ExecLayerRewardsVault contract
     * @dev We need a separate payable function because funds received by default payable function
     * are considered as funds submitted for minting stETH
     */
-    function receiveMevTxFee() external payable {
-        require(msg.sender == MEV_TX_FEE_VAULT_POSITION.getStorageAddress());
+    function receiveExecLayerRewards() external payable {
+        require(msg.sender == EXEC_LAYER_REWARDS_VAULT_POSITION.getStorageAddress());
 
-        TOTAL_MEV_TX_FEE_COLLECTED_POSITION.setStorageUint256(
-            TOTAL_MEV_TX_FEE_COLLECTED_POSITION.getStorageUint256().add(msg.value));
+        TOTAL_EXEC_LAYER_REWARDS_COLLECTED_POSITION.setStorageUint256(
+            TOTAL_EXEC_LAYER_REWARDS_COLLECTED_POSITION.getStorageUint256().add(msg.value));
 
-        emit MevTxFeeReceived(msg.value);
+        emit ExecLayerRewardsReceived(msg.value);
     }
 
     /**
@@ -413,26 +415,26 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-    * @dev Sets given address as the address of LidoMevTxFeeVault contract
-    * @param _mevTxFeeVault MEV and Tx Fees Vault contract address
+    * @dev Sets given address as the address of LidoExecLayerRewardsVault contract
+    * @param _execLayerRewardsVault Execution layer rewards vault contract address
     */
-    function setMevTxFeeVault(address _mevTxFeeVault) external {
-        _auth(SET_MEV_TX_FEE_VAULT_ROLE);
+    function setExecLayerRewardsVault(address _execLayerRewardsVault) external {
+        _auth(SET_EXEC_LAYER_REWARDS_VAULT_ROLE);
 
-        MEV_TX_FEE_VAULT_POSITION.setStorageAddress(_mevTxFeeVault);
+        EXEC_LAYER_REWARDS_VAULT_POSITION.setStorageAddress(_execLayerRewardsVault);
 
-        emit LidoMevTxFeeVaultSet(_mevTxFeeVault);
+        emit LidoExecLayerRewardsVaultSet(_execLayerRewardsVault);
     }
 
     /**
-    * @dev Sets limit to amount of ETH to withdraw per LidoOracle report
+    * @dev Sets limit to amount of ETH to withdraw from execution layer rewards vault per LidoOracle report
     * @param _limitPoints limit in basis points to amount of ETH to withdraw per LidoOracle report
     */
-    function setMevTxFeeWithdrawalLimit(uint16 _limitPoints) external {
-        _auth(SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE);
+    function setExecLayerRewardsWithdrawalLimit(uint16 _limitPoints) external {
+        _auth(SET_EXEC_LAYER_REWARDS_WITHDRAWAL_LIMIT_ROLE);
 
-        _setBPValue(MEV_TX_FEE_WITHDRAWAL_LIMIT_POINTS, _limitPoints);
-        emit MevTxFeeWithdrawalLimitSet(_limitPoints);
+        _setBPValue(EXEC_LAYER_REWARDS_WITHDRAWAL_LIMIT_POINTS_POSITION, _limitPoints);
+        emit ExecLayerRewardsWithdrawalLimitSet(_limitPoints);
     }
 
     /**
@@ -447,7 +449,7 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-    * @notice Updates beacon states, collects rewards from MevTxFeeVault and distributes all rewards if beacon balance increased
+    * @notice Updates beacon states, collects rewards from LidoExecLayerRewardsVault and distributes all rewards if beacon balance increased
     * @dev periodically called by the Oracle contract
     * @param _beaconValidators number of Lido's keys in the beacon state
     * @param _beaconBalance summarized balance of Lido-controlled keys in wei
@@ -475,20 +477,20 @@ contract Lido is ILido, StETH, AragonApp {
         BEACON_BALANCE_POSITION.setStorageUint256(_beaconBalance);
         BEACON_VALIDATORS_POSITION.setStorageUint256(_beaconValidators);
 
-        // If LidoMevTxFeeVault address is not set just do as if there were no mevTxFee rewards at all
+        // If LidoExecLayerRewardsVault address is not set just do as if there were no execution layer rewards at all
         // Otherwise withdraw all rewards and put them to the buffer
-        // Thus, MEV tx fees are handled the same way as beacon rewards
+        // Thus, execution layer rewards are handled the same way as beacon rewards
 
-        uint256 mevRewards;
-        address mevVaultAddress = getMevTxFeeVault();
+        uint256 execLayerRewards;
+        address execLayerRewardsVaultAddress = getExecLayerRewardsVault();
 
-        if (mevVaultAddress != address(0)) {
-            mevRewards = ILidoMevTxFeeVault(mevVaultAddress).withdrawRewards(
-                (_getTotalPooledEther() * MEV_TX_FEE_WITHDRAWAL_LIMIT_POINTS.getStorageUint256()) / TOTAL_BASIS_POINTS
+        if (execLayerRewardsVaultAddress != address(0)) {
+            execLayerRewards = ILidoExecLayerRewardsVault(execLayerRewardsVaultAddress).withdrawRewards(
+                (_getTotalPooledEther() * EXEC_LAYER_REWARDS_WITHDRAWAL_LIMIT_POINTS_POSITION.getStorageUint256()) / TOTAL_BASIS_POINTS
             );
 
-            if (mevRewards != 0) {
-                BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().add(mevRewards));
+            if (execLayerRewards != 0) {
+                BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().add(execLayerRewards));
             }
         }
 
@@ -497,7 +499,7 @@ contract Lido is ILido, StETH, AragonApp {
         // See ADR #3 for details: https://research.lido.fi/t/rewards-distribution-after-the-merge-architecture-decision-record/1535
         if (_beaconBalance > rewardBase) {
             uint256 rewards = _beaconBalance.sub(rewardBase);
-            distributeRewards(rewards.add(mevRewards));
+            distributeRewards(rewards.add(execLayerRewards));
         }
     }
 
@@ -584,21 +586,21 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-    * @notice Get total amount of MEV and transaction fees collected to Lido contract
-    * @dev Ether got through LidoMevTxFeeVault is kept on this contract's balance the same way
+    * @notice Get total amount of execution level rewards collected to Lido contract
+    * @dev Ether got through LidoExecLayerRewardsVault is kept on this contract's balance the same way
     * as other buffered Ether is kept (until it gets deposited)
-    * @return uint256 of funds received as MEV and Transaction fees in wei
+    * @return uint256 of funds received as execution layer rewards (in wei)
     */
-    function getTotalMevTxFeeCollected() external view returns (uint256) {
-        return TOTAL_MEV_TX_FEE_COLLECTED_POSITION.getStorageUint256();
+    function getTotalExecLayerRewardsCollected() external view returns (uint256) {
+        return TOTAL_EXEC_LAYER_REWARDS_COLLECTED_POSITION.getStorageUint256();
     }
 
     /**
     * @notice Get limit in basis points to amount of ETH to withdraw per LidoOracle report
     * @return uint256 limit in basis points to amount of ETH to withdraw per LidoOracle report
     */
-    function getMevTxFeeWithdrawalLimitPoints() external view returns (uint256) {
-        return MEV_TX_FEE_WITHDRAWAL_LIMIT_POINTS.getStorageUint256();
+    function getExecLayerRewardsWithdrawalLimitPoints() external view returns (uint256) {
+        return EXEC_LAYER_REWARDS_WITHDRAWAL_LIMIT_POINTS_POSITION.getStorageUint256();
     }
 
     /**
@@ -650,10 +652,10 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-    * @notice Returns address of the contract set as LidoMevTxFeeVault
+    * @notice Returns address of the contract set as LidoExecLayerRewardsVault
     */
-    function getMevTxFeeVault() public view returns (address) {
-        return MEV_TX_FEE_VAULT_POSITION.getStorageAddress();
+    function getExecLayerRewardsVault() public view returns (address) {
+        return EXEC_LAYER_REWARDS_VAULT_POSITION.getStorageAddress();
     }
 
     /**
