@@ -14,16 +14,22 @@ const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 //
 // As a result, slot's memory aligned as follows:
 //
-// LSB ------------------------------------------------------------------------------> MSB
-// 0______________________32______________128_________________________160______________256
-// |______________________|________________|___________________________|________________|
-// | prevStakeBlockNumber | prevStakeLimit | maxStakeLimitGrowthBlocks | maxStakeLimit  |
-// |<----- 32 bits ------>|<-- 96 bits --->|<---------- 32 bits ------>|<--- 96 bits -->|
+// MSB ------------------------------------------------------------------------------> LSB
+// 256____________160_________________________128_______________32_____________________ 0
+// |_______________|___________________________|________________|_______________________|
+// | maxStakeLimit | maxStakeLimitGrowthBlocks | prevStakeLimit | prevStakeBlockNumber  |
+// |<-- 96 bits -->|<---------- 32 bits ------>|<-- 96 bits --->|<----- 32 bits ------->|
 //
 //
-// NB: we represent `maxStakeLimitGrowthBlocks` as follows:
+// NB: Internal representation conventions:
+//
+// - the `maxStakeLimitGrowthBlocks` field above represented as follows:
 // `maxStakeLimitGrowthBlocks` = `maxStakeLimit` / `stakeLimitIncreasePerBlock`
 //           32 bits                 96 bits               96 bits
+//
+//
+// - the "staking paused" state is encoded by all fields being zero,
+// - the "staking unlimited" state is encoded by maxStakeLimit being zero and prevStakeBlockNumber being non-zero.
 //
 
 contract.skip('StakingLimits', () => {
