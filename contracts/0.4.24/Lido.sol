@@ -157,8 +157,8 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-    * @notice Resume staking if `pauseStaking` was called previously (allow new submits transactions)
-    * or if new rate-limit params are required.
+    * @notice Resumes accepting new Ether to the protocol (if `pauseStaking` was called previously)
+    * and updates the staking rate limit.
     *
     * Staking could be rate-limited by imposing a limit on the stake amount
     * at each moment in time.
