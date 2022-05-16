@@ -26,7 +26,7 @@ const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 //           32 bits                 96 bits               96 bits
 //
 
-contract('StakingLimits', () => {
+contract.skip('StakingLimits', () => {
   let limits
 
   before('deploy base app', async () => {

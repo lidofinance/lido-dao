@@ -65,7 +65,7 @@ interface ILido {
         bool isStakingLimitApplied,
         uint256 currentStakeLimit,
         uint256 maxStakeLimit,
-        uint256 stakeLimitIncPerBlock,
+        uint256 maxStakeLimitGrowthBlocks,
         uint256 prevStakeLimit,
         uint256 prevStakeBlockNumber
     );

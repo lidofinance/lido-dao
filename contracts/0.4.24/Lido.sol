@@ -17,7 +17,7 @@ import "./interfaces/ILidoMevTxFeeVault.sol";
 
 import "./StETH.sol";
 
-import "./lib/StakeLimitUtils.sol";
+import "./lib/StakeRateLimitUtils.sol";
 
 
 interface IERC721 {
@@ -47,7 +47,8 @@ interface IERC721 {
 contract Lido is ILido, StETH, AragonApp {
     using SafeMath for uint256;
     using UnstructuredStorage for bytes32;
-    using StakeLimitUtils for uint256;
+    using StakeLimitUnstructuredStorage for bytes32;
+    using StakeRateLimitUtils for StakeLimitState.Data;
 
     /// ACL
     bytes32 constant public PAUSE_ROLE = keccak256("PAUSE_ROLE");
@@ -129,8 +130,10 @@ contract Lido is ILido, StETH, AragonApp {
 
         _setProtocolContracts(_oracle, _treasury, _insuranceFund);
 
-        STAKE_LIMIT_POSITION.setStorageUint256(
-            StakeLimitUtils.encodeStakeLimitSlot(0, 0, 0, uint32(block.number))
+        STAKE_LIMIT_POSITION.setStorageStakeLimitStruct(
+            STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().resumeStakingWithNewLimit(
+                0, 0 // STAKING IS UNLIMITED
+            )
         );
 
         initialized();
@@ -181,24 +184,9 @@ contract Lido is ILido, StETH, AragonApp {
     ) external {
         _auth(STAKING_RESUME_ROLE);
 
-        (
-            uint256 maxStakeLimit,,
-            uint256 prevStakeLimit,
-        ) = STAKE_LIMIT_POSITION.getStorageUint256().decodeStakeLimitSlot();
-
-        // if staking was paused or unlimited previously,
-        // or new limit is lower than previous, then
-        // reset prev stake limit to max
-        if ((maxStakeLimit == 0) || (_maxStakeLimit < prevStakeLimit)) {
-            prevStakeLimit = _maxStakeLimit;
-        }
-
-        STAKE_LIMIT_POSITION.setStorageUint256(
-            StakeLimitUtils.encodeStakeLimitSlot(
-                _maxStakeLimit,
-                _stakeLimitIncreasePerBlock,
-                prevStakeLimit,
-                block.number
+        STAKE_LIMIT_POSITION.setStorageStakeLimitStruct(
+            STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().resumeStakingWithNewLimit(
+                _maxStakeLimit, _stakeLimitIncreasePerBlock
             )
         );
 
@@ -209,7 +197,7 @@ contract Lido is ILido, StETH, AragonApp {
     * @notice Check staking state: whether it's paused or not
     */
     function isStakingPaused() external view returns (bool) {
-        return STAKE_LIMIT_POSITION.getStorageUint256().isStakingPaused();
+        return STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().isStakingPaused();
     }
 
     /**
@@ -219,12 +207,12 @@ contract Lido is ILido, StETH, AragonApp {
       * - 0 if staking is paused or if limit is exhausted.
       */
     function getCurrentStakeLimit() public view returns (uint256) {
-        uint256 slotValue = STAKE_LIMIT_POSITION.getStorageUint256();
-        if (!slotValue.isStakingRateLimited()) {
+        StakeLimitState.Data memory stakeLimitData = STAKE_LIMIT_POSITION.getStorageStakeLimitStruct();
+        if (!stakeLimitData.isStakingRateLimited()) {
             return uint256(-1);
         }
 
-        return slotValue.calculateCurrentStakeLimit();
+        return stakeLimitData.calculateCurrentStakeLimit();
     }
 
     /**
@@ -237,7 +225,7 @@ contract Lido is ILido, StETH, AragonApp {
       *
       * Internals:
       * `maxStakeLimit` internal max stake limit represenation
-      * `stakeLimitIncPerBlock` internal stake limit increase per block represenation
+      * `maxStakeLimitGrowthBlocks` internal max stake limit full restoration blocks
       * `prevStakeLimit` internal previously reached stake limit represenation
       * `prevStakeBlockNumber` internal prevously seen block number represenation
       */
@@ -246,20 +234,20 @@ contract Lido is ILido, StETH, AragonApp {
         bool isStakingLimitApplied,
         uint256 currentStakeLimit,
         uint256 maxStakeLimit,
-        uint256 stakeLimitIncPerBlock,
+        uint256 maxStakeLimitGrowthBlocks,
         uint256 prevStakeLimit,
         uint256 prevStakeBlockNumber
     ) {
-        uint256 slotValue = STAKE_LIMIT_POSITION.getStorageUint256();
-        isStakingPaused = slotValue.isStakingPaused();
-        isStakingLimitApplied = slotValue.isStakingRateLimited();
+        StakeLimitState.Data memory stakeLimitData = STAKE_LIMIT_POSITION.getStorageStakeLimitStruct();
+
+        isStakingPaused = stakeLimitData.isStakingPaused();
+        isStakingLimitApplied = stakeLimitData.isStakingRateLimited();
         currentStakeLimit = getCurrentStakeLimit();
-        (
-            maxStakeLimit,
-            stakeLimitIncPerBlock,
-            prevStakeLimit,
-            prevStakeBlockNumber
-        ) = slotValue.decodeStakeLimitSlot();
+
+        maxStakeLimit = stakeLimitData.maxStakeLimit;
+        maxStakeLimitGrowthBlocks = stakeLimitData.maxStakeLimitGrowthBlocks;
+        prevStakeLimit = stakeLimitData.prevStakeLimit;
+        prevStakeBlockNumber = stakeLimitData.prevStakeBlockNumber;
     }
 
     /**
@@ -692,16 +680,16 @@ contract Lido is ILido, StETH, AragonApp {
     function _submit(address _referral) internal whenNotStopped returns (uint256) {
         require(msg.value != 0, "ZERO_DEPOSIT");
 
-        uint256 stakeLimitSlotValue = STAKE_LIMIT_POSITION.getStorageUint256();
-        require(!stakeLimitSlotValue.isStakingPaused(), "STAKING_PAUSED");
+        StakeLimitState.Data memory stakeLimitData = STAKE_LIMIT_POSITION.getStorageStakeLimitStruct();
+        require(!stakeLimitData.isStakingPaused(), "STAKING_PAUSED");
 
-        if (stakeLimitSlotValue.isStakingRateLimited()) {
-            uint256 currentStakeLimit = stakeLimitSlotValue.calculateCurrentStakeLimit();
+        if (stakeLimitData.isStakingRateLimited()) {
+            uint256 currentStakeLimit = stakeLimitData.calculateCurrentStakeLimit();
 
             require(msg.value <= currentStakeLimit, "STAKE_LIMIT");
 
-            STAKE_LIMIT_POSITION.setStorageUint256(
-                stakeLimitSlotValue.updatePrevStakeLimit(currentStakeLimit - msg.value)
+            STAKE_LIMIT_POSITION.setStorageStakeLimitStruct(
+                stakeLimitData.updatePrevStakeLimit(currentStakeLimit - msg.value)
             );
         }
 

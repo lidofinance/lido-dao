@@ -567,7 +567,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
       isStakingLimitApplied,
       currentStakeLimit,
       maxStakeLimit,
-      stakeLimitIncPerBlock,
+      maxStakeLimitGrowthBlocks,
       prevStakeLimit,
       prevStakeBlockNumber
     } = await app.getStakeLimitFullInfo())
@@ -576,7 +576,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     assert.equal(isStakingLimitApplied, expectedMaxStakeLimit.toString() !== bn(0).toString())
     assertBn(currentStakeLimit, expectedCurrentStakeLimit)
     assertBn(maxStakeLimit, expectedMaxStakeLimit)
-    assertBn(stakeLimitIncPerBlock, expectedLimitIncrease)
+    assertBn(maxStakeLimitGrowthBlocks, expectedLimitIncrease > 0 ? expectedMaxStakeLimit / expectedLimitIncrease : 0)
   }
 
   it('stake pause/unlimited resume works', async () => {
