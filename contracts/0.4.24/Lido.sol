@@ -205,7 +205,7 @@ contract Lido is ILido, StETH, AragonApp {
     /**
       * @notice Returns how much Ether can be staked in the current block
       * @dev Special return values:
-      * - max uint256 if staking is unlimited;
+      * - 2^256 - 1 if staking is unlimited;
       * - 0 if staking is paused or if limit is exhausted.
       */
     function getCurrentStakeLimit() public view returns (uint256) {
