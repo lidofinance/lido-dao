@@ -564,19 +564,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
   const verifyRateLimitStake = async (expectedMaxStakeLimit, expectedLimitIncrease, expectedCurrentStakeLimit) => {
     currentStakeLimit = await app.getCurrentStakeLimit()
     assertBn(currentStakeLimit, expectedCurrentStakeLimit)
-    ;({
-      isStakingPaused,
-      isStakingLimitApplied,
-      currentStakeLimit,
-      maxStakeLimit,
-      maxStakeLimitGrowthBlocks,
-      prevStakeLimit,
-      prevStakeBlockNumber
-    } = await app.getStakeLimitFullInfo())
+    ;({ maxStakeLimit, maxStakeLimitGrowthBlocks, prevStakeLimit, prevStakeBlockNumber } = await app.getStakeLimitInternalInfo())
 
-    assert.equal(isStakingPaused, false)
-    assert.equal(isStakingLimitApplied, expectedMaxStakeLimit.toString() !== bn(0).toString())
-    assertBn(currentStakeLimit, expectedCurrentStakeLimit)
     assertBn(maxStakeLimit, expectedMaxStakeLimit)
     assertBn(maxStakeLimitGrowthBlocks, expectedLimitIncrease > 0 ? expectedMaxStakeLimit / expectedLimitIncrease : 0)
   }
@@ -980,12 +969,14 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await assertRevert(app.stop({ from: user2 }), 'APP_AUTH_FAILED')
     await app.stop({ from: voting })
 
-    await assertRevert(web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(4) }), 'CONTRACT_IS_STOPPED')
-    await assertRevert(web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(4) }), 'CONTRACT_IS_STOPPED')
-    await assertRevert(app.submit('0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef', { from: user1, value: ETH(4) }), 'CONTRACT_IS_STOPPED')
+    await assertRevert(web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(4) }), 'STAKING_PAUSED')
+    await assertRevert(web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(4) }), 'STAKING_PAUSED')
+    await assertRevert(app.submit('0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef', { from: user1, value: ETH(4) }), 'STAKING_PAUSED')
 
     await assertRevert(app.resume({ from: user2 }), 'APP_AUTH_FAILED')
     await app.resume({ from: voting })
+    await assertRevert(web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(4) }), 'STAKING_PAUSED')
+    await app.resumeStaking(0, 0, { from: voting })
 
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(4) })
     await app.methods['depositBufferedEther()']({ from: depositor })

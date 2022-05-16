@@ -74,6 +74,10 @@ library StakeRateLimitUtils {
     * @notice Calculate stake limit for the current block.
     */
     function calculateCurrentStakeLimit(StakeLimitState.Data memory _data) internal view returns(uint256 limit) {
+        if (!isStakingLimitApplied(_data)) {
+            return uint256(-1);
+        }
+
         uint256 stakeLimitIncPerBlock;
         if (_data.maxStakeLimitGrowthBlocks > 0) {
             stakeLimitIncPerBlock = _data.maxStakeLimit / _data.maxStakeLimitGrowthBlocks;
@@ -117,7 +121,7 @@ library StakeRateLimitUtils {
 
         // if staking was paused or unlimited previously,
         // or new limit is lower than previous, then
-        // reset prev stake limit to max
+        // reset prev stake limit to the new max stake limit
         if ((_data.maxStakeLimit == 0) || (_maxStakeLimit < _data.prevStakeLimit)) {
             _data.prevStakeLimit = uint96(_maxStakeLimit);
         }

@@ -152,8 +152,7 @@ contract Lido is ILido, StETH, AragonApp {
     function pauseStaking() external {
         _auth(STAKING_PAUSE_ROLE);
 
-        STAKE_LIMIT_POSITION.setStorageUint256(0);
-        emit StakingPaused();
+        _pauseStaking();
     }
 
     /**
@@ -208,43 +207,26 @@ contract Lido is ILido, StETH, AragonApp {
     * - 2^256 - 1 if staking is unlimited;
     * - 0 if staking is paused or if limit is exhausted.
     */
-    function getCurrentStakeLimit() public view returns (uint256) {
-        StakeLimitState.Data memory stakeLimitData = STAKE_LIMIT_POSITION.getStorageStakeLimitStruct();
-        if (!stakeLimitData.isStakingLimitApplied()) {
-            return uint256(-1);
-        }
-
-        return stakeLimitData.calculateCurrentStakeLimit();
+    function getCurrentStakeLimit() external view returns (uint256) {
+        return STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().calculateCurrentStakeLimit();
     }
 
     /**
     * @notice Returns full info about stake limit
     * @dev Might be used for the advanced integration requests.
     * @return
-    * `isStakingPaused` the value returned by `isStakingPaused()`
-    * `isStakingLimitApplied` true if staking limit is set and false otherwise
-    * `currentStakeLimit` the value returned by `getCurrentStakingLimit()`
-    *
-    * Internals:
     * `maxStakeLimit` internal max stake limit represenation
     * `maxStakeLimitGrowthBlocks` internal max stake limit full restoration blocks
     * `prevStakeLimit` internal previously reached stake limit represenation
     * `prevStakeBlockNumber` internal prevously seen block number represenation
     */
-    function getStakeLimitFullInfo() external view returns (
-        bool isStakingPaused,
-        bool isStakingLimitApplied,
-        uint256 currentStakeLimit,
+    function getStakeLimitInternalInfo() external view returns (
         uint256 maxStakeLimit,
         uint256 maxStakeLimitGrowthBlocks,
         uint256 prevStakeLimit,
         uint256 prevStakeBlockNumber
     ) {
         StakeLimitState.Data memory stakeLimitData = STAKE_LIMIT_POSITION.getStorageStakeLimitStruct();
-
-        isStakingPaused = stakeLimitData.isStakingPaused();
-        isStakingLimitApplied = stakeLimitData.isStakingLimitApplied();
-        currentStakeLimit = getCurrentStakeLimit();
 
         maxStakeLimit = stakeLimitData.maxStakeLimit;
         maxStakeLimitGrowthBlocks = stakeLimitData.maxStakeLimitGrowthBlocks;
@@ -323,10 +305,12 @@ contract Lido is ILido, StETH, AragonApp {
         _auth(PAUSE_ROLE);
 
         _stop();
+        _pauseStaking();
     }
 
     /**
     * @notice Resume pool routine operations
+    * @dev Staking should be resumed manually after this call using the desired limits
     */
     function resume() external {
         _auth(RESUME_ROLE);
@@ -681,7 +665,7 @@ contract Lido is ILido, StETH, AragonApp {
     * @param _referral address of referral.
     * @return amount of StETH shares generated
     */
-    function _submit(address _referral) internal whenNotStopped returns (uint256) {
+    function _submit(address _referral) internal returns (uint256) {
         require(msg.value != 0, "ZERO_DEPOSIT");
 
         StakeLimitState.Data memory stakeLimitData = STAKE_LIMIT_POSITION.getStorageStakeLimitStruct();
@@ -978,6 +962,12 @@ contract Lido is ILido, StETH, AragonApp {
 
         assert(0 == temp_value);    // fully converted
         result <<= (24 * 8);
+    }
+
+    function _pauseStaking() internal {
+        StakeLimitState.Data memory zeroState;
+        STAKE_LIMIT_POSITION.setStorageStakeLimitStruct(zeroState);
+        emit StakingPaused();
     }
 
     /**
