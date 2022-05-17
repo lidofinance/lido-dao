@@ -211,17 +211,8 @@ contract Lido is ILido, StETH, AragonApp {
     * - 2^256 - 1 if staking is unlimited;
     * - 0 if staking is paused or if limit is exhausted.
     */
-    function getCurrentStakeLimit() external view returns (uint256) {
-        StakeLimitState.Data memory stakeLimitData = STAKE_LIMIT_POSITION.getStorageStakeLimitStruct();
-
-        if (stakeLimitData.isStakingPaused()) {
-            return 0;
-        }
-        if (!stakeLimitData.isStakingLimitApplied()) {
-            return uint256(-1);
-        }
-
-        return stakeLimitData.calculateCurrentStakeLimit();
+    function getCurrentStakeLimit() public view returns (uint256) {
+        return _getCurrentStakeLimit(STAKE_LIMIT_POSITION.getStorageStakeLimitStruct());
     }
 
     /**
@@ -249,7 +240,7 @@ contract Lido is ILido, StETH, AragonApp {
         isStakingPaused = stakeLimitData.isStakingPaused();
         isStakingLimitApplied = stakeLimitData.isStakingLimitApplied();
 
-        currentStakeLimit = isStakingLimitApplied ? stakeLimitData.calculateCurrentStakeLimit() : uint256(-1);
+        currentStakeLimit = _getCurrentStakeLimit(stakeLimitData);
 
         maxStakeLimit = stakeLimitData.maxStakeLimit;
         maxStakeLimitGrowthBlocks = stakeLimitData.maxStakeLimitGrowthBlocks;
@@ -979,6 +970,17 @@ contract Lido is ILido, StETH, AragonApp {
         StakeLimitState.Data memory zeroState;
         STAKE_LIMIT_POSITION.setStorageStakeLimitStruct(zeroState);
         emit StakingPaused();
+    }
+
+    function _getCurrentStakeLimit(StakeLimitState.Data memory _stakeLimitData) internal view returns(uint256) {
+        if (_stakeLimitData.isStakingPaused()) {
+            return 0;
+        }
+        if (!_stakeLimitData.isStakingLimitApplied()) {
+            return uint256(-1);
+        }
+
+        return _stakeLimitData.calculateCurrentStakeLimit();
     }
 
     /**

@@ -93,10 +93,10 @@ interface ILido {
       * @notice resumeStaking was called with the provided params
       * @dev use `getCurrentStakeLimit()` and `getCurrentStakeLimit()` funcs to check the actual limit
       * NB: if limits are not set then both args have zero values.
-      * @param _maxStakeLimit max stake limit value
-      * @param _stakeLimitIncreasePerBlock stake limit increase per single block
+      * @param maxStakeLimit max stake limit value
+      * @param stakeLimitIncreasePerBlock stake limit increase per single block
       */
-    event StakingResumed(uint256 _maxStakeLimit, uint256 _stakeLimitIncreasePerBlock);
+    event StakingResumed(uint256 maxStakeLimit, uint256 stakeLimitIncreasePerBlock);
 
     /**
       * @notice Set Lido protocol contracts (oracle, treasury, insurance fund).
