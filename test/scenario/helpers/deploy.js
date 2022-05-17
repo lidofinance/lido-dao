@@ -67,12 +67,15 @@ async function deployDaoAndPool(appManager, voting) {
 
   const [
     POOL_PAUSE_ROLE,
+    POOL_RESUME_ROLE,
     POOL_MANAGE_FEE,
     POOL_MANAGE_WITHDRAWAL_KEY,
     POOL_BURN_ROLE,
     DEPOSIT_ROLE,
-    SET_MEV_TX_FEE_VAULT_ROLE,
-    SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE,
+    STAKING_PAUSE_ROLE,
+    STAKING_RESUME_ROLE,
+    SET_EL_REWARDS_VAULT_ROLE,
+    SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE,
     NODE_OPERATOR_REGISTRY_MANAGE_SIGNING_KEYS,
     NODE_OPERATOR_REGISTRY_ADD_NODE_OPERATOR_ROLE,
     NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_ACTIVE_ROLE,
@@ -82,12 +85,15 @@ async function deployDaoAndPool(appManager, voting) {
     NODE_OPERATOR_REGISTRY_REPORT_STOPPED_VALIDATORS_ROLE
   ] = await Promise.all([
     pool.PAUSE_ROLE(),
+    pool.RESUME_ROLE(),
     pool.MANAGE_FEE(),
     pool.MANAGE_WITHDRAWAL_KEY(),
     pool.BURN_ROLE(),
     pool.DEPOSIT_ROLE(),
-    pool.SET_MEV_TX_FEE_VAULT_ROLE(),
-    pool.SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE(),
+    pool.STAKING_PAUSE_ROLE(),
+    pool.STAKING_RESUME_ROLE(),
+    pool.SET_EL_REWARDS_VAULT_ROLE(),
+    pool.SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE(),
     nodeOperatorRegistry.MANAGE_SIGNING_KEYS(),
     nodeOperatorRegistry.ADD_NODE_OPERATOR_ROLE(),
     nodeOperatorRegistry.SET_NODE_OPERATOR_ACTIVE_ROLE(),
@@ -100,11 +106,14 @@ async function deployDaoAndPool(appManager, voting) {
   await Promise.all([
     // Allow voting to manage the pool
     acl.createPermission(voting, pool.address, POOL_PAUSE_ROLE, appManager, { from: appManager }),
+    acl.createPermission(voting, pool.address, POOL_RESUME_ROLE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, POOL_MANAGE_FEE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, POOL_MANAGE_WITHDRAWAL_KEY, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, POOL_BURN_ROLE, appManager, { from: appManager }),
-    acl.createPermission(voting, pool.address, SET_MEV_TX_FEE_VAULT_ROLE, appManager, { from: appManager }),
-    acl.createPermission(voting, pool.address, SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE, appManager, { from: appManager }),
+    acl.createPermission(voting, pool.address, STAKING_PAUSE_ROLE, appManager, { from: appManager }),
+    acl.createPermission(voting, pool.address, STAKING_RESUME_ROLE, appManager, { from: appManager }),
+    acl.createPermission(voting, pool.address, SET_EL_REWARDS_VAULT_ROLE, appManager, { from: appManager }),
+    acl.createPermission(voting, pool.address, SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE, appManager, { from: appManager }),
 
     // Allow depositor to deposit buffered ether
     acl.createPermission(depositSecurityModule.address, pool.address, DEPOSIT_ROLE, appManager, { from: appManager }),

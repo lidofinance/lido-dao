@@ -29,15 +29,19 @@ interface ILido {
     function resume() external;
 
     /**
-      * @notice Cut-off new stake (every new staking transaction submitting user-provided ETH
-      * would revert if `pauseStake` was called previously).
+      * @notice Stops accepting new Ether to the protocol.
+      *
+      * @dev While accepting new Ether is stopped, calls to the `submit` function,
+      * as well as to the default payable function, will revert.
+      *
+      * Emits `StakingPaused` event.
       */
     function pauseStaking() external;
 
     /**
-      * @notice Resume staking if `pauseStaking` was called previously (allow new submits transactions)
-      * or if new rate-limit params are required.
-      * To disable rate-limit pass zero arg values.
+      * @notice Resumes accepting new Ether to the protocol (if `pauseStaking` was called previously)
+      * and updates the staking rate limit.
+      * NB: To resume without limits pass zero arg values.
       * @param _maxStakeLimit max stake limit value
       * @param _stakeLimitIncreasePerBlock stake limit increase per single block
       */
@@ -51,21 +55,23 @@ interface ILido {
     /**
       * @notice Returns how much Ether can be staked in the current block
       * @dev Special return values:
-      * - max uint256 if staking is unlimited;
+      * - 2^256 - 1 if staking is unlimited;
       * - 0 if staking is paused or if limit is exhausted.
       */
     function getCurrentStakeLimit() external view returns (uint256);
 
     /**
-      * @notice Returns full info about stake limit
+      * @notice Returns internal info about stake limit
       * @dev Might be used for the advanced integration requests.
+      * @return
+      * `maxStakeLimit` max stake limit
+      * `maxStakeLimitGrowthBlocks` blocks needed to restore max stake limit from the fully exhausted state
+      * `prevStakeLimit` previously reached stake limit
+      * `prevStakeBlockNumber` prevously seen block number
       */
-    function getStakeLimitFullInfo() external view returns (
-        bool isStakingPaused,
-        bool isStakingLimitApplied,
-        uint256 currentStakeLimit,
+    function getStakeLimitInternalInfo() external view returns (
         uint256 maxStakeLimit,
-        uint256 stakeLimitIncPerBlock,
+        uint256 maxStakeLimitGrowthBlocks,
         uint256 prevStakeLimit,
         uint256 prevStakeBlockNumber
     );
@@ -91,17 +97,19 @@ interface ILido {
 
     /**
       * @notice Set fee rate to `_feeBasisPoints` basis points.
-      * The fees are accrued when oracles report staking results.
+      * The fees are accrued when:
+      * - oracles report staking results (beacon chain balance increase)
+      * - validators gain execution layer rewards (priority fees and MEV)
       * @param _feeBasisPoints Fee rate, in basis points
       */
     function setFee(uint16 _feeBasisPoints) external;
 
     /**
-      * @notice Set fee distribution:
-      * `_treasuryFeeBasisPoints` basis points go to the treasury,
-      * `_insuranceFeeBasisPoints` basis points go to the insurance fund,
-      * `_operatorsFeeBasisPoints` basis points go to node operators.
-      * The sum has to be 10 000.
+      * @notice Set fee distribution
+      * @param _treasuryFeeBasisPoints basis points go to the treasury,
+      * @param _insuranceFeeBasisPoints basis points go to the insurance fund,
+      * @param _operatorsFeeBasisPoints basis points go to node operators.
+      * @dev The sum has to be 10 000.
       */
     function setFeeDistribution(
         uint16 _treasuryFeeBasisPoints,
@@ -128,17 +136,23 @@ interface ILido {
     event FeeDistributionSet(uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, uint16 operatorsFeeBasisPoints);
 
     /**
-      * @notice A payable function supposed to be funded only by LidoMevTxFeeVault contract
+      * @notice A payable function supposed to be called only by LidoExecutionLayerRewardsVault contract
       * @dev We need a separate function because funds received by default payable function
       * are considered as funds submitted by a user for staking
       */
-    function receiveMevTxFee() external payable;
+    function receiveELRewards() external payable;
 
-    // The amount of ETH withdrawn from LidoMevTxFeeVault contract to Lido contract
-    event MevTxFeeReceived(uint256 amount);
+    // The amount of ETH withdrawn from LidoExecutionLayerRewardsVault contract to Lido contract
+    event ELRewardsReceived(uint256 amount);
 
-    // Percent in basis points of total pooled ether allowed to withdraw from MevTxFeeVault per LidoOracle report
-    event MevTxFeeWithdrawalLimitSet(uint256 limitPoints);
+    /**
+      * @dev Sets limit to amount of ETH to withdraw from execution layer rewards vault per LidoOracle report
+      * @param _limitPoints limit in basis points to amount of ETH to withdraw per LidoOracle report
+      */
+    function setELRewardsWithdrawalLimit(uint16 _limitPoints) external;
+
+    // Percent in basis points of total pooled ether allowed to withdraw from LidoExecutionLayerRewardsVault per LidoOracle report
+    event ELRewardsWithdrawalLimitSet(uint256 limitPoints);
 
     /**
       * @notice Set credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched to `_withdrawalCredentials`
@@ -156,12 +170,13 @@ interface ILido {
     event WithdrawalCredentialsSet(bytes32 withdrawalCredentials);
 
     /**
-    * @dev Sets given address as the address of LidoMevTxFeeVault contract
-    * @param _mevTxFeeVault MEV and Tx Fees Vault contract address
+    * @dev Sets the address of LidoExecutionLayerRewardsVault contract
+    * @param _executionLayerRewardsVault Execution layer rewards vault contract address
     */
-    function setMevTxFeeVault(address _mevTxFeeVault) external;
+    function setELRewardsVault(address _executionLayerRewardsVault) external;
 
-    event LidoMevTxFeeVaultSet(address mevTxFeeVault);
+    // The `executionLayerRewardsVault` was set as the execution layer rewards vault for Lido
+    event ELRewardsVaultSet(address executionLayerRewardsVault);
 
     /**
       * @notice Ether on the ETH 2.0 side reported by the oracle
@@ -182,7 +197,7 @@ interface ILido {
     // Records a deposit made by a user
     event Submitted(address indexed sender, uint256 amount, address referral);
 
-    // The `_amount` of ether was sent to the deposit_contract.deposit function.
+    // The `amount` of ether was sent to the deposit_contract.deposit function
     event Unbuffered(uint256 amount);
 
     /**

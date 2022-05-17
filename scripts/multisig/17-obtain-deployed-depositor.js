@@ -36,9 +36,16 @@ async function obtainInstance({ web3, artifacts, appName = APP }) {
 
   await assertParams(state.depositorParams, depositor, appArtifact)
   await assertAddresses({ lidoAddress, nosAddress, depositContractAddress }, depositor, appArtifact)
-  persistNetworkState(network.name, netId, state, {
+
+  // If the depositor is already deployed save its previous address
+  const depositorCurrentAddress = state['depositorAddress']
+  const newDepositorState =  {
     depositorAddress: depositor.address
-  })
+  }
+  if (depositorCurrentAddress !== undefined && depositor.address !== depositorCurrentAddress) {
+    newDepositorState['depositorPreviousAddress'] = depositorCurrentAddress
+  }
+  persistNetworkState(network.name, netId, state, newDepositorState)
 }
 
 async function assertParams({ maxDepositsPerBlock, minDepositBlockDistance, pauseIntentValidityPeriodBlocks }, instance, desc) {

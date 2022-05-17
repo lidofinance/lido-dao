@@ -472,6 +472,6 @@ contract StETH is IERC20, Pausable {
         // This is equivalent to performing a send from `address` to each other token holder address,
         // but we cannot reflect this as it would require sending an unbounded number of events.
 
-        // We're emitting StETHBurnt event to provide an explicit rebase log record nonetheless.
+        // We're emitting `SharesBurnt` event to provide an explicit rebase log record nonetheless.
     }
 }

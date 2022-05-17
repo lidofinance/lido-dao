@@ -566,7 +566,19 @@ async function assertDaoPermissions({ kernel, lido, oracle, nopsRegistry, agent,
     manager: voting,
     groups: [
       {
-        roleNames: ['PAUSE_ROLE', 'MANAGE_FEE', 'MANAGE_WITHDRAWAL_KEY', 'SET_ORACLE', 'BURN_ROLE', 'SET_TREASURY', 'SET_INSURANCE_FUND'],
+        roleNames: [
+          'PAUSE_ROLE',
+          'RESUME_ROLE',
+          'MANAGE_FEE',
+          'MANAGE_WITHDRAWAL_KEY',
+          'SET_ORACLE', 'BURN_ROLE',
+          'SET_TREASURY',
+          'SET_INSURANCE_FUND',
+          'STAKING_PAUSE_ROLE',
+          'STAKING_RESUME_ROLE',
+          'SET_EL_REWARDS_VAULT_ROLE',
+          'SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE'
+        ],
         grantee: voting
       }
     ]

@@ -8,8 +8,8 @@ const { APP_NAMES } = require('./constants')
 const DEPLOYER = process.env.DEPLOYER || ''
 const REQUIRED_NET_STATE = ['daoInitialSettings', 'depositorParams', `app:${APP_NAMES.LIDO}`, `app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`]
 
-async function deployMevTxFeeVault({ web3, artifacts }) {
-  const appArtifact = 'LidoMevTxFeeVault'
+async function deployELRewardsVault({ web3, artifacts }) {
+  const appArtifact = 'LidoExecutionLayerRewardsVault'
   const netId = await web3.eth.net.getId()
 
   logWideSplitter()
@@ -27,10 +27,10 @@ async function deployMevTxFeeVault({ web3, artifacts }) {
   logSplitter()
 
   const args = [lidoAddress, treasuryAddr]
-  await saveDeployTx(appArtifact, `tx-26-deploy-mev-vault.json`, {
+  await saveDeployTx(appArtifact, `tx-26-deploy-execution-layer-rewards-vault.json`, {
     arguments: args,
     from: DEPLOYER || state.multisigAddress
   })
 }
 
-module.exports = runOrWrapScript(deployMevTxFeeVault, module)
+module.exports = runOrWrapScript(deployELRewardsVault, module)

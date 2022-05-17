@@ -5,123 +5,176 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.4.24;
 
+import "@aragon/os/contracts/common/UnstructuredStorage.sol";
+
 //
 // We need to pack four variables into the same 256bit-wide storage slot
 // to lower the costs per each staking request.
 //
 // As a result, slot's memory aligned as follows:
 //
-// LSB ------------------------------------------------------------------------------> MSB
-// 0______________________32______________128_________________________160______________256
-// |______________________|________________|___________________________|________________|
-// | prevStakeBlockNumber | prevStakeLimit | maxStakeLimitGrowthBlocks | maxStakeLimit  |
-// |<----- 32 bits ------>|<-- 96 bits --->|<---------- 32 bits ------>|<--- 96 bits -->|
+// MSB ------------------------------------------------------------------------------> LSB
+// 256____________160_________________________128_______________32_____________________ 0
+// |_______________|___________________________|________________|_______________________|
+// | maxStakeLimit | maxStakeLimitGrowthBlocks | prevStakeLimit | prevStakeBlockNumber  |
+// |<-- 96 bits -->|<---------- 32 bits ------>|<-- 96 bits --->|<----- 32 bits ------->|
 //
 //
 // NB: Internal representation conventions:
 //
-//  the `maxStakeLimitGrowthBlocks` field above represented as follows:
+// - the `maxStakeLimitGrowthBlocks` field above represented as follows:
 // `maxStakeLimitGrowthBlocks` = `maxStakeLimit` / `stakeLimitIncreasePerBlock`
 //           32 bits                 96 bits               96 bits
 //
 //
-// "staking paused" state is encoded by all fields being zero,
-// "staking unlimited" state is encoded by maxStakeLimit being zero and prevStakeBlockNumber being non-zero.
+// - the "staking paused" state is encoded by all fields being zero,
+// - the "staking unlimited" state is encoded by `maxStakeLimit` being zero and `prevStakeBlockNumber` being non-zero.
 //
 
-library StakeLimitUtils {
+/**
+* @notice Library for the internal structs definitions
+* @dev solidity <0.6 doesn't support top-level structs
+* using the library to have a proper namespace
+*/
+library StakeLimitState {
+    /**
+      * @dev Internal representation struct (slot-wide)
+      */
+    struct Data {
+        uint32 prevStakeBlockNumber;
+        uint96 prevStakeLimit;
+        uint32 maxStakeLimitGrowthBlocks;
+        uint96 maxStakeLimit;
+    }
+}
+
+library StakeLimitUnstructuredStorage {
+    using UnstructuredStorage for bytes32;
+
+    /// @dev Storage offset for `maxStakeLimit` (bits)
     uint256 internal constant MAX_STAKE_LIMIT_OFFSET = 160;
+    /// @dev Storage offset for `maxStakeLimitGrowthBlocks` (bits)
     uint256 internal constant MAX_STAKE_LIMIT_GROWTH_BLOCKS_OFFSET = 128;
+    /// @dev Storage offset for `prevStakeLimit` (bits)
     uint256 internal constant PREV_STAKE_LIMIT_OFFSET = 32;
+    /// @dev Storage offset for `prevStakeBlockNumber` (bits)
     uint256 internal constant PREV_STAKE_BLOCK_NUMBER_OFFSET = 0;
-    uint256 internal constant STAKE_LIMIT_PARAMS_MASK = uint256(-1) << MAX_STAKE_LIMIT_GROWTH_BLOCKS_OFFSET;
 
     /**
-    * @notice Unpack the slot value into stake limit params and state.
+    * @dev Read stake limit state from the unstructure storage position
+    * @param _position storage offset
     */
-    function decodeStakeLimitSlot(uint256 _slotValue) internal pure returns (
-        uint256 maxStakeLimit,
-        uint256 stakeLimitIncPerBlock,
-        uint256 prevStakeLimit,
-        uint256 prevStakeBlockNumber
-    ) {
-        maxStakeLimit = uint96(_slotValue >> MAX_STAKE_LIMIT_OFFSET);
-        uint32 growthBlocks = uint32(_slotValue >> MAX_STAKE_LIMIT_GROWTH_BLOCKS_OFFSET);
-        if (growthBlocks > 0) {
-            stakeLimitIncPerBlock = maxStakeLimit / growthBlocks;
+    function getStorageStakeLimitStruct(bytes32 _position) internal view returns (StakeLimitState.Data memory ret) {
+        uint256 slotValue = _position.getStorageUint256();
+
+        ret.prevStakeBlockNumber = uint32(slotValue >> PREV_STAKE_BLOCK_NUMBER_OFFSET);
+        ret.prevStakeLimit = uint96(slotValue >> PREV_STAKE_LIMIT_OFFSET);
+        ret.maxStakeLimitGrowthBlocks = uint32(slotValue >> MAX_STAKE_LIMIT_GROWTH_BLOCKS_OFFSET);
+        ret.maxStakeLimit = uint96(slotValue >> MAX_STAKE_LIMIT_OFFSET);
+    }
+
+     /**
+    * @dev Write stake limit state to the unstructure storage position
+    * @param _position storage offset
+    * @param _data stake limit state structure instance
+    */
+    function setStorageStakeLimitStruct(bytes32 _position, StakeLimitState.Data memory _data) internal {
+        _position.setStorageUint256(
+            uint256(_data.prevStakeBlockNumber) << PREV_STAKE_BLOCK_NUMBER_OFFSET
+                | uint256(_data.prevStakeLimit) << PREV_STAKE_LIMIT_OFFSET
+                | uint256(_data.maxStakeLimitGrowthBlocks) << MAX_STAKE_LIMIT_GROWTH_BLOCKS_OFFSET
+                | uint256(_data.maxStakeLimit) << MAX_STAKE_LIMIT_OFFSET
+        );
+    }
+}
+
+/**
+* @notice Interface library with helper functions to deal with stake limit struct in a more high-level approach.
+*/
+library StakeLimitUtils {
+    /**
+    * @notice Calculate stake limit for the current block.
+    * @dev special return values:
+    * - 0 if limit is exhausted or staking pause was set
+    * - 2^256 - 1 if there is no limit was set
+    */
+    function calculateCurrentStakeLimit(StakeLimitState.Data memory _data) internal view returns(uint256 limit) {
+        if (!isStakingLimitApplied(_data)) {
+            return uint256(-1);
         }
-        prevStakeLimit = uint96(_slotValue >> PREV_STAKE_LIMIT_OFFSET);
-        prevStakeBlockNumber = uint32(_slotValue >> PREV_STAKE_BLOCK_NUMBER_OFFSET);
+
+        uint256 stakeLimitIncPerBlock;
+        if (_data.maxStakeLimitGrowthBlocks > 0) {
+            stakeLimitIncPerBlock = _data.maxStakeLimit / _data.maxStakeLimitGrowthBlocks;
+        }
+
+        limit = _data.prevStakeLimit + ((block.number - _data.prevStakeBlockNumber) * stakeLimitIncPerBlock);
+        if (limit > _data.maxStakeLimit) {
+            limit = _data.maxStakeLimit;
+        }
     }
 
     /**
-    * @notice Pack stake limit params and state into a slot.
+    * @notice check if staking is on pause (i.e. every byte in the slot has a zero value)
     */
-    function encodeStakeLimitSlot(
+    function isStakingPaused(StakeLimitState.Data memory _data) internal pure returns(bool) {
+        return (_data.maxStakeLimit == 0)
+            && (_data.maxStakeLimitGrowthBlocks == 0)
+            && (_data.prevStakeBlockNumber == 0)
+            && (_data.prevStakeLimit == 0);
+    }
+
+    /**
+    * @notice check if staking limit is applied (otherwise staking is unlimited)
+    */
+    function isStakingLimitApplied(StakeLimitState.Data memory _data) internal pure returns(bool) {
+        return _data.maxStakeLimit != 0;
+    }
+
+    /**
+    * @notice prepare stake limit repr to resume staking with the desired limits
+    * @param _maxStakeLimit stake limit max value
+    * @param _stakeLimitIncreasePerBlock stake limit increase (restoration) per block
+    */
+    function resumeStakingWithNewLimit(
+        StakeLimitState.Data memory _data,
         uint256 _maxStakeLimit,
-        uint256 _stakeLimitIncreasePerBlock,
-        uint256 _prevStakeLimit,
-        uint256 _prevStakeBlockNumber
-    ) internal pure returns (uint256 ret) {
+        uint256 _stakeLimitIncreasePerBlock
+    ) internal view returns (StakeLimitState.Data memory) {
         require(_maxStakeLimit <= uint96(-1), "TOO_LARGE_MAX_STAKE_LIMIT");
         require(_maxStakeLimit >= _stakeLimitIncreasePerBlock, "TOO_LARGE_LIMIT_INCREASE");
-        require(_prevStakeLimit <= uint96(-1), "TOO_LARGE_PREV_STAKE_LIMIT");
-        require(_prevStakeBlockNumber <= uint32(-1), "TOO_LARGE_BLOCK_NUMBER");
-
         require(
             (_stakeLimitIncreasePerBlock == 0)
             || (_maxStakeLimit / _stakeLimitIncreasePerBlock <= uint32(-1)),
             "TOO_SMALL_LIMIT_INCREASE"
         );
 
-        ret = _maxStakeLimit << MAX_STAKE_LIMIT_OFFSET
-            | _prevStakeLimit << PREV_STAKE_LIMIT_OFFSET
-            | _prevStakeBlockNumber << PREV_STAKE_BLOCK_NUMBER_OFFSET;
-
-        if (_stakeLimitIncreasePerBlock > 0) {
-            ret |= (_maxStakeLimit / _stakeLimitIncreasePerBlock) << MAX_STAKE_LIMIT_GROWTH_BLOCKS_OFFSET;
+        // if staking was paused or unlimited previously,
+        // or new limit is lower than previous, then
+        // reset prev stake limit to the new max stake limit
+        if ((_data.maxStakeLimit == 0) || (_maxStakeLimit < _data.prevStakeLimit)) {
+            _data.prevStakeLimit = uint96(_maxStakeLimit);
         }
+        _data.maxStakeLimitGrowthBlocks = _stakeLimitIncreasePerBlock > 0 ? uint32(_maxStakeLimit / _stakeLimitIncreasePerBlock) : 0;
+
+        _data.maxStakeLimit = uint96(_maxStakeLimit);
+        _data.prevStakeBlockNumber = uint32(block.number);
+
+        return _data;
     }
 
     /**
-    * @notice Calculate stake limit for the current block.
+    * @notice update stake limit repr after submitting user's eth
     */
-    function calculateCurrentStakeLimit(uint256 _slotValue) internal view returns(uint256 limit) {
-        (
-            uint256 maxStakeLimit,
-            uint256 stakeLimitIncPerBlock,
-            uint256 prevStakeLimit,
-            uint256 prevStakeBlockNumber
-        ) = decodeStakeLimitSlot(_slotValue);
+    function updatePrevStakeLimit(
+        StakeLimitState.Data memory _data,
+        uint256 _newPrevLimit
+    ) internal view returns (StakeLimitState.Data memory) {
+        assert(_newPrevLimit <= uint96(-1));
 
-        limit = prevStakeLimit + ((block.number - prevStakeBlockNumber) * stakeLimitIncPerBlock);
-        if (limit > maxStakeLimit) {
-            limit = maxStakeLimit;
-        }
-    }
+        _data.prevStakeLimit = uint96(_newPrevLimit);
+        _data.prevStakeBlockNumber = uint32(block.number);
 
-    /**
-    * @notice Write new prev stake limit and current block number
-    */
-    function updatePrevStakeLimit(uint256 _slotValue, uint256 _newPrevLimit) internal view returns(uint256) {
-        return (
-            (_slotValue & STAKE_LIMIT_PARAMS_MASK)
-            | _newPrevLimit << PREV_STAKE_LIMIT_OFFSET
-            | block.number << PREV_STAKE_BLOCK_NUMBER_OFFSET
-        );
-    }
-
-    /**
-    * @notice check if staking is on pause (i.e. slot contains zero value)
-    */
-    function isStakingPaused(uint256 _slotValue) internal pure returns(bool) {
-        return (_slotValue == 0);
-    }
-
-    /**
-    * @notice check if rate limit is set (otherwise staking is unlimited)
-    */
-    function isStakingRateLimited(uint256 _slotValue) internal pure returns(bool) {
-        return uint96(_slotValue >> MAX_STAKE_LIMIT_OFFSET) != 0;
+        return _data;
     }
 }
