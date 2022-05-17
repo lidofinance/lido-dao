@@ -36,13 +36,17 @@ interface IERC721 {
 * until transfers become available in Ethereum 2.0.
 * Whitepaper: https://lido.fi/static/Lido:Ethereum-Liquid-Staking.pdf
 *
-* NOTE: the code below assumes moderate amount of node operators, e.g. up to 50.
+* NOTE: the code below assumes moderate amount of node operators, e.g. up to 200.
 *
 * Since balances of all token holders change when the amount of total pooled Ether
 * changes, this token cannot fully implement ERC20 standard: it only emits `Transfer`
 * events upon explicit transfer between holders. In contrast, when Lido oracle reports
 * rewards, no Transfer events are generated: doing so would require emitting an event
 * for each token holder and thus running an unbounded loop.
+*
+* At the moment withdrawals are not possible in the beacon chain and there's no workaround.
+* Pool will be upgraded to an actual implementation when withdrawals are enabled
+* (Phase 1.5 or 2 of Eth2 launch, likely late 2022 or 2023).
 */
 contract Lido is ILido, StETH, AragonApp {
     using SafeMath for uint256;
@@ -430,17 +434,6 @@ contract Lido is ILido, StETH, AragonApp {
 
         _setBPValue(EL_REWARDS_WITHDRAWAL_LIMIT_POINTS_POSITION, _limitPoints);
         emit ELRewardsWithdrawalLimitSet(_limitPoints);
-    }
-
-    /**
-    * @notice Issues withdrawal request. Not implemented.
-    * @param _amount Amount of StETH to withdraw
-    * @param _pubkeyHash Receiving address
-    */
-    function withdraw(uint256 _amount, bytes32 _pubkeyHash) external whenNotStopped { /* solhint-disable-line no-unused-vars */
-        //will be upgraded to an actual implementation when withdrawals are enabled (Phase 1.5 or 2 of Eth2 launch, likely late 2022 or 2023).
-        //at the moment withdrawals are not possible in the beacon chain and there's no workaround
-        revert("NOT_IMPLEMENTED_YET");
     }
 
     /**

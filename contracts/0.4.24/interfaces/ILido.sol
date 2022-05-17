@@ -13,6 +13,10 @@ pragma solidity 0.4.24;
   * and stakes it via the deposit_contract.sol contract. It doesn't hold ether on it's balance,
   * only a small portion (buffer) of it.
   * It also mints new tokens for rewards generated at the ETH 2.0 side.
+  *
+  * At the moment withdrawals are not possible in the beacon chain and there's no workaround.
+  * Pool will be upgraded to an actual implementation when withdrawals are enabled
+  * (Phase 1.5 or 2 of Eth2 launch, likely late 2022 or 2023).
   */
 interface ILido {
     function totalSupply() external view returns (uint256);
@@ -199,13 +203,6 @@ interface ILido {
 
     // The `amount` of ether was sent to the deposit_contract.deposit function
     event Unbuffered(uint256 amount);
-
-    /**
-      * @notice Issues withdrawal request. Large withdrawals will be processed only after the phase 2 launch.
-      * @param _amount Amount of StETH to burn
-      * @param _pubkeyHash Receiving address
-      */
-    function withdraw(uint256 _amount, bytes32 _pubkeyHash) external;
 
     // Requested withdrawal of `etherAmount` to `pubkeyHash` on the ETH 2.0 side, `tokenAmount` burned by `sender`,
     // `sentFromBuffer` was sent on the current Ethereum side.
