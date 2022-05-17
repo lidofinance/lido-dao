@@ -97,11 +97,11 @@ contract StETH is IERC20, Pausable {
      *
      * @dev Reports simultaneously burnt shares amount
      * and corresponding stETH amount.
-     * The stETH amount is calculated just before the burning incurred rebase.
+     * The stETH amount is calculated twice: before and after the burning incurred rebase.
      *
      * @param account holder of the burnt shares
-     * @param preRebaseTokenAmount amount of stETH the burnt shares corresponded to before the burn-incurred token rebase
-     * @param postRebaseTokenAmount amount of stETH the burnt shares corresponded to after the burn-incurred token rebase
+     * @param preRebaseTokenAmount amount of stETH the burnt shares corresponded to before the burn
+     * @param postRebaseTokenAmount amount of stETH the burnt shares corresponded to after the burn
      * @param sharesAmount amount of burnt shares
      */
     event SharesBurnt(
