@@ -101,7 +101,7 @@ contract Lido is ILido, StETH, AragonApp {
     bytes32 internal constant BEACON_VALIDATORS_POSITION = keccak256("lido.Lido.beaconValidators");
 
     /// @dev percent in basis points of total pooled ether allowed to withdraw from LidoExecutionLayerRewardsVault per LidoOracle report
-    bytes32 internal constant EL_REWARDS_WITHDRAWAL_LIMIT_POINTS_POSITION = keccak256("lido.Lido.ELRewardsWithdrawalLimitPoints");
+    bytes32 internal constant EL_REWARDS_WITHDRAWAL_LIMIT_POSITION = keccak256("lido.Lido.ELRewardsWithdrawalLimit");
 
     /// @dev Just a counter of total amount of execution layer rewards received by Lido contract
     /// Not used in the logic
@@ -428,7 +428,7 @@ contract Lido is ILido, StETH, AragonApp {
     function setELRewardsWithdrawalLimit(uint16 _limitPoints) external {
         _auth(SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE);
 
-        _setBPValue(EL_REWARDS_WITHDRAWAL_LIMIT_POINTS_POSITION, _limitPoints);
+        _setBPValue(EL_REWARDS_WITHDRAWAL_LIMIT_POSITION, _limitPoints);
         emit ELRewardsWithdrawalLimitSet(_limitPoints);
     }
 
@@ -481,7 +481,7 @@ contract Lido is ILido, StETH, AragonApp {
 
         if (executionLayerRewardsVaultAddress != address(0)) {
             executionLayerRewards = ILidoExecutionLayerRewardsVault(executionLayerRewardsVaultAddress).withdrawRewards(
-                (_getTotalPooledEther() * EL_REWARDS_WITHDRAWAL_LIMIT_POINTS_POSITION.getStorageUint256()) / TOTAL_BASIS_POINTS
+                (_getTotalPooledEther() * EL_REWARDS_WITHDRAWAL_LIMIT_POSITION.getStorageUint256()) / TOTAL_BASIS_POINTS
             );
 
             if (executionLayerRewards != 0) {
@@ -594,8 +594,8 @@ contract Lido is ILido, StETH, AragonApp {
     * @notice Get limit in basis points to amount of ETH to withdraw per LidoOracle report
     * @return uint256 limit in basis points to amount of ETH to withdraw per LidoOracle report
     */
-    function getELRewardsWithdrawalLimitPoints() external view returns (uint256) {
-        return EL_REWARDS_WITHDRAWAL_LIMIT_POINTS_POSITION.getStorageUint256();
+    function getELRewardsWithdrawalLimit() external view returns (uint256) {
+        return EL_REWARDS_WITHDRAWAL_LIMIT_POSITION.getStorageUint256();
     }
 
     /**

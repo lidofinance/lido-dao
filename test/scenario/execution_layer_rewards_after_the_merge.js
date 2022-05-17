@@ -764,7 +764,7 @@ contract('Lido: merge acceptance', (addresses) => {
     let lastBeaconBalance = toE18(85)
     await pool.setELRewardsWithdrawalLimit(getELRewardsWithdrawalLimitFromEpoch(epoch), { from: voting })
 
-    let elRewardsWithdrawalLimitPoints = toNum(await pool.getELRewardsWithdrawalLimitPoints())
+    let elRewardsWithdrawalLimitPoints = toNum(await pool.getELRewardsWithdrawalLimit())
     let elRewardsVaultBalance = toNum(await web3.eth.getBalance(elRewardsVault.address))
     let totalPooledEther = toNum(await pool.getTotalPooledEther())
     let bufferedEther = toNum(await pool.getBufferedEther())
@@ -776,7 +776,7 @@ contract('Lido: merge acceptance', (addresses) => {
     while (elRewardsVaultBalance > 0) {
       const elRewardsWithdrawalLimit = getELRewardsWithdrawalLimitFromEpoch(epoch)
       await pool.setELRewardsWithdrawalLimit(elRewardsWithdrawalLimit, { from: voting })
-      elRewardsWithdrawalLimitPoints = toNum(await pool.getELRewardsWithdrawalLimitPoints())
+      elRewardsWithdrawalLimitPoints = toNum(await pool.getELRewardsWithdrawalLimit())
 
       const maxELRewardsAmountPerWithdrawal = Math.floor(
         ((totalPooledEther + beaconBalanceInc) * elRewardsWithdrawalLimitPoints) / TOTAL_BASIS_POINTS
