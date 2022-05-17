@@ -67,7 +67,7 @@ interface ILido {
       * `maxStakeLimit` max stake limit
       * `maxStakeLimitGrowthBlocks` blocks needed to restore max stake limit from the fully exhausted state
       * `prevStakeLimit` previously reached stake limit
-      * `prevStakeBlockNumber` prevously seen block number
+      * `prevStakeBlockNumber` previously seen block number
       */
     function getStakeLimitInternalInfo() external view returns (
         uint256 maxStakeLimit,

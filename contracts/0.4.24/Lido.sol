@@ -103,7 +103,7 @@ contract Lido is ILido, StETH, AragonApp {
     /// @dev percent in basis points of total pooled ether allowed to withdraw from LidoExecutionLayerRewardsVault per LidoOracle report
     bytes32 internal constant EL_REWARDS_WITHDRAWAL_LIMIT_POINTS_POSITION = keccak256("lido.Lido.ELRewardsWithdrawalLimitPoints");
 
-    /// @dev Just a counter of total amount of execurion layer rewards received by Lido contract
+    /// @dev Just a counter of total amount of execution layer rewards received by Lido contract
     /// Not used in the logic
     bytes32 internal constant TOTAL_EL_REWARDS_COLLECTED_POSITION = keccak256("lido.Lido.totalELRewardsCollected");
 
@@ -218,7 +218,7 @@ contract Lido is ILido, StETH, AragonApp {
     * `maxStakeLimit` max stake limit
     * `maxStakeLimitGrowthBlocks` blocks needed to restore max stake limit from the fully exhausted state
     * `prevStakeLimit` previously reached stake limit
-    * `prevStakeBlockNumber` prevously seen block number
+    * `prevStakeBlockNumber` previously seen block number
     */
     function getStakeLimitInternalInfo() external view returns (
         uint256 maxStakeLimit,

@@ -42,7 +42,7 @@ import "./lib/Pausable.sol";
  * emitting an event for each token holder and thus running an unbounded loop.
  *
  * The token inherits from `Pausable` and uses `whenNotStopped` modifier for methods
- * which change `shares` or `allowances`. `_stop` and `_resume` functions are overriden
+ * which change `shares` or `allowances`. `_stop` and `_resume` functions are overridden
  * in `Lido.sol` and might be called by an account with the `PAUSE_ROLE` assigned by the
  * DAO. This is useful for emergency scenarios, e.g. a protocol bug, where one might want
  * to freeze all token transfers and approvals until the emergency is resolved.
@@ -346,7 +346,7 @@ contract StETH is IERC20, Pausable {
 
     /**
      * @return the total amount (in wei) of Ether controlled by the protocol.
-     * @dev This is used for calaulating tokens from shares and vice versa.
+     * @dev This is used for calculating tokens from shares and vice versa.
      * @dev This function is required to be implemented in a derived contract.
      */
     function _getTotalPooledEther() internal view returns (uint256);

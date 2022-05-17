@@ -340,7 +340,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             // Finding the best suitable operator
             uint256 bestOperatorIdx = cache.length;   // 'not found' flag
             uint256 smallestStake;
-            // The loop is ligthweight comparing to an ether transfer and .deposit invocation
+            // The loop is lightweight comparing to an ether transfer and .deposit invocation
             for (uint256 idx = 0; idx < cache.length; ++idx) {
                 entry = cache[idx];
 

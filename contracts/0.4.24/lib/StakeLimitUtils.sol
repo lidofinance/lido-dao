@@ -61,7 +61,7 @@ library StakeLimitUnstructuredStorage {
     uint256 internal constant PREV_STAKE_BLOCK_NUMBER_OFFSET = 0;
 
     /**
-    * @dev Read stake limit state from the unstructure storage position
+    * @dev Read stake limit state from the unstructured storage position
     * @param _position storage offset
     */
     function getStorageStakeLimitStruct(bytes32 _position) internal view returns (StakeLimitState.Data memory ret) {
@@ -74,7 +74,7 @@ library StakeLimitUnstructuredStorage {
     }
 
      /**
-    * @dev Write stake limit state to the unstructure storage position
+    * @dev Write stake limit state to the unstructured storage position
     * @param _position storage offset
     * @param _data stake limit state structure instance
     */

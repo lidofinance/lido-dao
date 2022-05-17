@@ -394,7 +394,7 @@ contract LidoTemplate is IsContract {
         uint64 _vestingCliff,
         uint64 _vestingEnd,
         bool _vestingRevokable,
-        uint256 _extectedFinalTotalSupply
+        uint256 _expectedFinalTotalSupply
     )
         onlyOwner
         external
@@ -414,7 +414,7 @@ contract LidoTemplate is IsContract {
             _vestingCliff,
             _vestingEnd,
             _vestingRevokable,
-            _extectedFinalTotalSupply
+            _expectedFinalTotalSupply
         );
 
         emit TmplTokensIssued(totalAmount);
