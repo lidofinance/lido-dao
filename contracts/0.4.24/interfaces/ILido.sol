@@ -65,15 +65,20 @@ interface ILido {
     function getCurrentStakeLimit() external view returns (uint256);
 
     /**
-      * @notice Returns internal info about stake limit
+      * @notice Returns full info about current stake limit params and state
       * @dev Might be used for the advanced integration requests.
-      * @return
-      * `maxStakeLimit` max stake limit
-      * `maxStakeLimitGrowthBlocks` blocks needed to restore max stake limit from the fully exhausted state
-      * `prevStakeLimit` previously reached stake limit
-      * `prevStakeBlockNumber` previously seen block number
+      * @return isStakingPaused staking pause state (equivalent to return of isStakingPaused())
+      * @return isStakingLimitApplied whether the stake limit is set
+      * @return currentStakeLimit current stake limit (equivalent to return of getCurrentStakeLimit())
+      * @return maxStakeLimit max stake limit
+      * @return maxStakeLimitGrowthBlocks blocks needed to restore max stake limit from the fully exhausted state
+      * @return prevStakeLimit previously reached stake limit
+      * @return prevStakeBlockNumber previously seen block number
       */
-    function getStakeLimitInternalInfo() external view returns (
+    function getStakeLimitFullInfo() external view returns (
+        bool isStakingPaused,
+        bool isStakingLimitApplied,
+        uint256 currentStakeLimit,
         uint256 maxStakeLimit,
         uint256 maxStakeLimitGrowthBlocks,
         uint256 prevStakeLimit,

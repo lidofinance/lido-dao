@@ -225,21 +225,31 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-    * @notice Returns internal info about stake limit
+    * @notice Returns full info about current stake limit params and state
     * @dev Might be used for the advanced integration requests.
-    * @return
-    * `maxStakeLimit` max stake limit
-    * `maxStakeLimitGrowthBlocks` blocks needed to restore max stake limit from the fully exhausted state
-    * `prevStakeLimit` previously reached stake limit
-    * `prevStakeBlockNumber` previously seen block number
+    * @return isStakingPaused staking pause state (equivalent to return of isStakingPaused())
+    * @return isStakingLimitApplied whether the stake limit is set
+    * @return currentStakeLimit current stake limit (equivalent to return of getCurrentStakeLimit())
+    * @return maxStakeLimit max stake limit
+    * @return maxStakeLimitGrowthBlocks blocks needed to restore max stake limit from the fully exhausted state
+    * @return prevStakeLimit previously reached stake limit
+    * @return prevStakeBlockNumber previously seen block number
     */
-    function getStakeLimitInternalInfo() external view returns (
+    function getStakeLimitFullInfo() external view returns (
+        bool isStakingPaused,
+        bool isStakingLimitApplied,
+        uint256 currentStakeLimit,
         uint256 maxStakeLimit,
         uint256 maxStakeLimitGrowthBlocks,
         uint256 prevStakeLimit,
         uint256 prevStakeBlockNumber
     ) {
         StakeLimitState.Data memory stakeLimitData = STAKE_LIMIT_POSITION.getStorageStakeLimitStruct();
+
+        isStakingPaused = stakeLimitData.isStakingPaused();
+        isStakingLimitApplied = stakeLimitData.isStakingLimitApplied();
+
+        currentStakeLimit = isStakingLimitApplied ? stakeLimitData.calculateCurrentStakeLimit() : uint256(-1);
 
         maxStakeLimit = stakeLimitData.maxStakeLimit;
         maxStakeLimitGrowthBlocks = stakeLimitData.maxStakeLimitGrowthBlocks;
@@ -574,7 +584,7 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-    * @notice Get total amount of execution level rewards collected to Lido contract
+    * @notice Get total amount of execution layer rewards collected to Lido contract
     * @dev Ether got through LidoExecutionLayerRewardsVault is kept on this contract's balance the same way
     * as other buffered Ether is kept (until it gets deposited)
     * @return uint256 of funds received as execution layer rewards (in wei)
