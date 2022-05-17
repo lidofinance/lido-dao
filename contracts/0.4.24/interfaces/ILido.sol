@@ -88,13 +88,21 @@ interface ILido {
     event Stopped();
     event Resumed();
     event StakingPaused();
-    event StakingResumed();
+
+    /**
+      * @notice resumeStaking was called with the provided params
+      * @dev use `getCurrentStakeLimit()` and `getCurrentStakeLimit()` funcs to check the actual limit
+      * NB: if limits are not set then both args have zero values.
+      * @param _maxStakeLimit max stake limit value
+      * @param _stakeLimitIncreasePerBlock stake limit increase per single block
+      */
+    event StakingResumed(uint256 _maxStakeLimit, uint256 _stakeLimitIncreasePerBlock);
 
     /**
       * @notice Set Lido protocol contracts (oracle, treasury, insurance fund).
       * @param _oracle oracle contract
-      * @param _treasury treasury contract which accumulates treasury fee
-      * @param _insuranceFund insurance fund contract which accumulates insurance fee
+      * @param _treasury treasury contract
+      * @param _insuranceFund insurance fund contract
       */
     function setProtocolContracts(
         address _oracle,
@@ -146,8 +154,8 @@ interface ILido {
 
     /**
       * @notice A payable function supposed to be called only by LidoExecutionLayerRewardsVault contract
-      * @dev We need a separate function because funds received by default payable function
-      * are considered as funds submitted by a user for staking
+      * @dev We need a dedicated function because funds received by the default payable function
+      * are treated as a user deposit
       */
     function receiveELRewards() external payable;
 
@@ -155,7 +163,7 @@ interface ILido {
     event ELRewardsReceived(uint256 amount);
 
     /**
-      * @dev Sets limit to amount of ETH to withdraw from execution layer rewards vault per LidoOracle report
+      * @dev Sets limit on amount of ETH to withdraw from execution layer rewards vault per LidoOracle report
       * @param _limitPoints limit in basis points to amount of ETH to withdraw per LidoOracle report
       */
     function setELRewardsWithdrawalLimit(uint16 _limitPoints) external;
@@ -166,8 +174,7 @@ interface ILido {
     /**
       * @notice Set credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched to `_withdrawalCredentials`
       * @dev Note that setWithdrawalCredentials discards all unused signing keys as the signatures are invalidated.
-      * @param _withdrawalCredentials hash of withdrawal multisignature key as accepted by
-      *        the deposit_contract.deposit function
+      * @param _withdrawalCredentials withdrawal credentials field as defined in the Ethereum PoS consensus specs
       */
     function setWithdrawalCredentials(bytes32 _withdrawalCredentials) external;
 
@@ -179,9 +186,9 @@ interface ILido {
     event WithdrawalCredentialsSet(bytes32 withdrawalCredentials);
 
     /**
-    * @dev Sets the address of LidoExecutionLayerRewardsVault contract
-    * @param _executionLayerRewardsVault Execution layer rewards vault contract address
-    */
+      * @dev Sets the address of LidoExecutionLayerRewardsVault contract
+      * @param _executionLayerRewardsVault Execution layer rewards vault contract address
+      */
     function setELRewardsVault(address _executionLayerRewardsVault) external;
 
     // The `executionLayerRewardsVault` was set as the execution layer rewards vault for Lido

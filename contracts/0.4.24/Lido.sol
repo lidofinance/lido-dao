@@ -119,8 +119,8 @@ contract Lido is ILido, StETH, AragonApp {
     * @param _depositContract official ETH2 Deposit contract
     * @param _oracle oracle contract
     * @param _operators instance of Node Operators Registry
-    * @param _treasury contract which accumulates treasury fee
-    * @param _insuranceFund contract which accumulates insurance fee
+    * @param _treasury treasury contract
+    * @param _insuranceFund insurance fund contract
     */
     function initialize(
         IDepositContract _depositContract,
@@ -195,7 +195,7 @@ contract Lido is ILido, StETH, AragonApp {
             )
         );
 
-        emit StakingResumed();
+        emit StakingResumed(_maxStakeLimit, _stakeLimitIncreasePerBlock);
     }
 
     /**
@@ -281,8 +281,8 @@ contract Lido is ILido, StETH, AragonApp {
 
     /**
     * @notice A payable function for execution layer rewards. Can be called only by ExecutionLayerRewardsVault contract
-    * @dev We need a separate payable function because funds received by default payable function
-    * are considered as funds submitted for minting stETH
+    * @dev We need a dedicated function because funds received by the default payable function
+    * are treated as a user deposit
     */
     function receiveELRewards() external payable {
         require(msg.sender == EL_REWARDS_VAULT_POSITION.getStorageAddress());
@@ -389,14 +389,14 @@ contract Lido is ILido, StETH, AragonApp {
     * @notice Set Lido protocol contracts (oracle, treasury, insurance fund).
     *
     * @dev Oracle contract specified here is allowed to make
-    * periodical updates of beacon states
+    * periodical updates of beacon stats
     * by calling pushBeacon. Treasury contract specified here is used
-    * to accumulate the protocol treasury fee.Insurance fund contract
+    * to accumulate the protocol treasury fee. Insurance fund contract
     * specified here is used to accumulate the protocol insurance fee.
     *
     * @param _oracle oracle contract
-    * @param _treasury treasury contract which accumulates treasury fee
-    * @param _insuranceFund insurance fund contract which accumulates insurance fee
+    * @param _treasury treasury contract
+    * @param _insuranceFund insurance fund contract
     */
     function setProtocolContracts(
         address _oracle,
@@ -411,8 +411,7 @@ contract Lido is ILido, StETH, AragonApp {
     /**
     * @notice Set credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched to `_withdrawalCredentials`
     * @dev Note that setWithdrawalCredentials discards all unused signing keys as the signatures are invalidated.
-    * @param _withdrawalCredentials hash of withdrawal multisignature key as accepted by
-    *        the deposit_contract.deposit function
+    * @param _withdrawalCredentials withdrawal credentials field as defined in the Ethereum PoS consensus specs
     */
     function setWithdrawalCredentials(bytes32 _withdrawalCredentials) external {
         _auth(MANAGE_WITHDRAWAL_KEY);
@@ -436,7 +435,7 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-    * @dev Sets limit to amount of ETH to withdraw from execution layer rewards vault per LidoOracle report
+    * @dev Sets limit on amount of ETH to withdraw from execution layer rewards vault per LidoOracle report
     * @param _limitPoints limit in basis points to amount of ETH to withdraw per LidoOracle report
     */
     function setELRewardsWithdrawalLimit(uint16 _limitPoints) external {
@@ -447,7 +446,7 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-    * @notice Updates beacon states, collects rewards from LidoExecutionLayerRewardsVault and distributes all rewards if beacon balance increased
+    * @notice Updates beacon stats, collects rewards from LidoExecutionLayerRewardsVault and distributes all rewards if beacon balance increased
     * @dev periodically called by the Oracle contract
     * @param _beaconValidators number of Lido's keys in the beacon state
     * @param _beaconBalance summarized balance of Lido-controlled keys in wei
@@ -577,7 +576,7 @@ contract Lido is ILido, StETH, AragonApp {
     * @notice Get the amount of Ether temporary buffered on this contract balance
     * @dev Buffered balance is kept on the contract from the moment the funds are received from user
     * until the moment they are actually sent to the official Deposit contract.
-    * @return uint256 of buffered funds in wei
+    * @return amount of buffered funds in wei
     */
     function getBufferedEther() external view returns (uint256) {
         return _getBufferedEther();
@@ -587,7 +586,7 @@ contract Lido is ILido, StETH, AragonApp {
     * @notice Get total amount of execution layer rewards collected to Lido contract
     * @dev Ether got through LidoExecutionLayerRewardsVault is kept on this contract's balance the same way
     * as other buffered Ether is kept (until it gets deposited)
-    * @return uint256 of funds received as execution layer rewards (in wei)
+    * @return amount of funds received as execution layer rewards (in wei)
     */
     function getTotalELRewardsCollected() external view returns (uint256) {
         return TOTAL_EL_REWARDS_COLLECTED_POSITION.getStorageUint256();
@@ -595,7 +594,7 @@ contract Lido is ILido, StETH, AragonApp {
 
     /**
     * @notice Get limit in basis points to amount of ETH to withdraw per LidoOracle report
-    * @return uint256 limit in basis points to amount of ETH to withdraw per LidoOracle report
+    * @return limit in basis points to amount of ETH to withdraw per LidoOracle report
     */
     function getELRewardsWithdrawalLimit() external view returns (uint256) {
         return EL_REWARDS_WITHDRAWAL_LIMIT_POSITION.getStorageUint256();

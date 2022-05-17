@@ -11,20 +11,17 @@ import "@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC20.sol";
 
 interface ILido {
     /**
-    * @notice A payable function supposed to be called only by LidoExecLayerRewardsVault contract
-    * @dev We need a separate function because funds received by default payable function
-    * will go through entire deposit algorithm
-    */
+      * @notice A payable function supposed to be called only by LidoExecLayerRewardsVault contract
+      * @dev We need a dedicated function because funds received by the default payable function
+      * are treated as a user deposit
+      */
     function receiveELRewards() external payable;
 }
 
 
 /**
-* @title A vault for temporary storage of execution layer rewards (MEV and tx priority fee)
-*
-* These vault replenishments happen continuously through a day, while withdrawals
-* happen much less often, only on LidoOracle beacon balance reports
-*/
+ * @title A vault for temporary storage of execution layer rewards (MEV and tx priority fee)
+ */
 contract LidoExecutionLayerRewardsVault {
     using SafeERC20 for IERC20;
 
@@ -32,7 +29,7 @@ contract LidoExecutionLayerRewardsVault {
     address public immutable TREASURY;
 
     /**
-      * Emitted when the ERC20 `token` recovered (e.g. transferred)
+      * Emitted when the ERC20 `token` recovered (i.e. transferred)
       * to the Lido treasury address by `requestedBy` sender.
       */
     event ERC20Recovered(
@@ -42,7 +39,7 @@ contract LidoExecutionLayerRewardsVault {
     );
 
     /**
-      * Emitted when the ERC721-compatible `token` (NFT) recovered (e.g. transferred)
+      * Emitted when the ERC721-compatible `token` (NFT) recovered (i.e. transferred)
       * to the Lido treasury address by `requestedBy` sender.
       */
     event ERC721Recovered(
@@ -66,19 +63,19 @@ contract LidoExecutionLayerRewardsVault {
     }
 
     /**
-    * @notice Allows the contract to receive ETH
-    * @dev execution layer rewards may be sent as plain ETH transfers
-    */
+      * @notice Allows the contract to receive ETH
+      * @dev execution layer rewards may be sent as plain ETH transfers
+      */
     receive() external payable {
         // no-op
     }
 
     /**
-    * @notice Withdraw all accumulated rewards to Lido contract
-    * @dev Can be called only by the Lido contract
-    * @param _maxAmount Max amount of ETH to withdraw
-    * @return amount uint256 of funds received as execution layer rewards (in wei)
-    */
+      * @notice Withdraw all accumulated rewards to Lido contract
+      * @dev Can be called only by the Lido contract
+      * @param _maxAmount Max amount of ETH to withdraw
+      * @return amount of funds received as execution layer rewards (in wei)
+      */
     function withdrawRewards(uint256 _maxAmount) external returns (uint256 amount) {
         require(msg.sender == LIDO, "ONLY_LIDO_CAN_WITHDRAW");
 
