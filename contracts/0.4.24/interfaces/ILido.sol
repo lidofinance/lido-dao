@@ -79,7 +79,7 @@ interface ILido {
     event Stopped();
     event Resumed();
     event StakingPaused();
-    event StakingResumed(uint256 maxStakeLimit, uint256 stakeLimitIncreasePerBlock);
+    event StakingResumed();
 
     /**
       * @notice Set Lido protocol contracts (oracle, treasury, insurance fund).

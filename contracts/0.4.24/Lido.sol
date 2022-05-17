@@ -191,7 +191,7 @@ contract Lido is ILido, StETH, AragonApp {
             )
         );
 
-        emit StakingResumed(_maxStakeLimit, _stakeLimitIncreasePerBlock);
+        emit StakingResumed();
     }
 
     /**
