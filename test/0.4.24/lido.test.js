@@ -270,7 +270,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
   })
 
   it('Attempt to set invalid execution layer rewards withdrawal limit', async () => {
-    const initialValue = await app.getELRewardsWithdrawalLimitPoints()
+    const initialValue = await app.getELRewardsWithdrawalLimit()
 
     assertEvent(await app.setELRewardsWithdrawalLimit(1, { from: voting }), 'ELRewardsWithdrawalLimitSet', {
       expectedArgs: { limitPoints: 1 }
