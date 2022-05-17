@@ -94,17 +94,10 @@ library StakeLimitUnstructuredStorage {
 library StakeLimitUtils {
     /**
     * @notice Calculate stake limit for the current block.
-    * @dev special return values:
-    * - 0 if limit is exhausted or staking pause was set
-    * - 2^256 - 1 if there is no limit was set
     */
     function calculateCurrentStakeLimit(StakeLimitState.Data memory _data) internal view returns(uint256 limit) {
-        if (!isStakingLimitApplied(_data)) {
-            return uint256(-1);
-        }
-
         uint256 stakeLimitIncPerBlock;
-        if (_data.maxStakeLimitGrowthBlocks > 0) {
+        if (_data.maxStakeLimitGrowthBlocks != 0) {
             stakeLimitIncPerBlock = _data.maxStakeLimit / _data.maxStakeLimitGrowthBlocks;
         }
 
@@ -118,10 +111,12 @@ library StakeLimitUtils {
     * @notice check if staking is on pause (i.e. every byte in the slot has a zero value)
     */
     function isStakingPaused(StakeLimitState.Data memory _data) internal pure returns(bool) {
-        return (_data.maxStakeLimit == 0)
-            && (_data.maxStakeLimitGrowthBlocks == 0)
-            && (_data.prevStakeBlockNumber == 0)
-            && (_data.prevStakeLimit == 0);
+        return (
+            _data.maxStakeLimit
+            | _data.maxStakeLimitGrowthBlocks
+            | _data.prevStakeBlockNumber
+            | _data.prevStakeLimit
+        ) == 0;
     }
 
     /**
@@ -155,7 +150,7 @@ library StakeLimitUtils {
         if ((_data.maxStakeLimit == 0) || (_maxStakeLimit < _data.prevStakeLimit)) {
             _data.prevStakeLimit = uint96(_maxStakeLimit);
         }
-        _data.maxStakeLimitGrowthBlocks = _stakeLimitIncreasePerBlock > 0 ? uint32(_maxStakeLimit / _stakeLimitIncreasePerBlock) : 0;
+        _data.maxStakeLimitGrowthBlocks = _stakeLimitIncreasePerBlock != 0 ? uint32(_maxStakeLimit / _stakeLimitIncreasePerBlock) : 0;
 
         _data.maxStakeLimit = uint96(_maxStakeLimit);
         _data.prevStakeBlockNumber = uint32(block.number);

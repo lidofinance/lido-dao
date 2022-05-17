@@ -208,7 +208,16 @@ contract Lido is ILido, StETH, AragonApp {
     * - 0 if staking is paused or if limit is exhausted.
     */
     function getCurrentStakeLimit() external view returns (uint256) {
-        return STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().calculateCurrentStakeLimit();
+        StakeLimitState.Data memory stakeLimitData = STAKE_LIMIT_POSITION.getStorageStakeLimitStruct();
+
+        if (stakeLimitData.isStakingPaused()) {
+            return 0;
+        }
+        if (!stakeLimitData.isStakingLimitApplied()) {
+            return uint256(-1);
+        }
+
+        return stakeLimitData.calculateCurrentStakeLimit();
     }
 
     /**
