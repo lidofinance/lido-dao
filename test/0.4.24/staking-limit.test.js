@@ -29,7 +29,7 @@ const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 //
 //
 // - the "staking paused" state is encoded by all fields being zero,
-// - the "staking unlimited" state is encoded by maxStakeLimit being zero and prevStakeBlockNumber being non-zero.
+// - the "staking unlimited" state is encoded by `maxStakeLimit` being zero and `prevStakeBlockNumber` being non-zero.
 //
 
 contract.skip('StakingLimits', () => {

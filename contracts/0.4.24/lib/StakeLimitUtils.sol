@@ -28,11 +28,14 @@ import "@aragon/os/contracts/common/UnstructuredStorage.sol";
 //
 //
 // - the "staking paused" state is encoded by all fields being zero,
-// - the "staking unlimited" state is encoded by maxStakeLimit being zero and prevStakeBlockNumber being non-zero.
+// - the "staking unlimited" state is encoded by `maxStakeLimit` being zero and `prevStakeBlockNumber` being non-zero.
 //
 
-// solidity <0.6 doesn't support top-level structs
-// using the library to have a proper namespace
+/**
+* @notice Library for the internal structs definitions
+* @dev solidity <0.6 doesn't support top-level structs
+* using the library to have a proper namespace
+*/
 library StakeLimitState {
     /**
       * @dev Internal representation struct (slot-wide)
@@ -85,10 +88,13 @@ library StakeLimitUnstructuredStorage {
     }
 }
 
-library StakeRateLimitUtils {
+/**
+* @notice Interface library with helper functions to deal with stake limit struct in a more high-level approach.
+*/
+library StakeLimitUtils {
     /**
     * @notice Calculate stake limit for the current block.
-    * @dev special returns:
+    * @dev special return values:
     * - 0 if limit is exhausted or staking pause was set
     * - 2^256 - 1 if there is no limit was set
     */

@@ -17,7 +17,7 @@ import "./interfaces/ILidoExecutionLayerRewardsVault.sol";
 
 import "./StETH.sol";
 
-import "./lib/StakeRateLimitUtils.sol";
+import "./lib/StakeLimitUtils.sol";
 
 
 interface IERC721 {
@@ -48,7 +48,7 @@ contract Lido is ILido, StETH, AragonApp {
     using SafeMath for uint256;
     using UnstructuredStorage for bytes32;
     using StakeLimitUnstructuredStorage for bytes32;
-    using StakeRateLimitUtils for StakeLimitState.Data;
+    using StakeLimitUtils for StakeLimitState.Data;
 
     /// ACL
     bytes32 constant public PAUSE_ROLE = keccak256("PAUSE_ROLE");
@@ -212,13 +212,13 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-    * @notice Returns full info about stake limit
+    * @notice Returns internal info about stake limit
     * @dev Might be used for the advanced integration requests.
     * @return
-    * `maxStakeLimit` internal max stake limit represenation
-    * `maxStakeLimitGrowthBlocks` internal max stake limit full restoration blocks
-    * `prevStakeLimit` internal previously reached stake limit represenation
-    * `prevStakeBlockNumber` internal prevously seen block number represenation
+    * `maxStakeLimit` max stake limit
+    * `maxStakeLimitGrowthBlocks` blocks needed to restore max stake limit from the fully exhausted state
+    * `prevStakeLimit` previously reached stake limit
+    * `prevStakeBlockNumber` prevously seen block number
     */
     function getStakeLimitInternalInfo() external view returns (
         uint256 maxStakeLimit,

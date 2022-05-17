@@ -5,12 +5,12 @@
 
 pragma solidity 0.4.24;
 
-import "../lib/StakeRateLimitUtils.sol";
+import "../lib/StakeLimitUtils.sol";
 
 contract StakeLimitUtilsMock {
     using UnstructuredStorage for bytes32;
     using StakeLimitUnstructuredStorage for bytes32;
-    using StakeRateLimitUtils for StakeLimitState.Data;
+    using StakeLimitUtils for StakeLimitState.Data;
 
     bytes32 internal constant STAKE_LIMIT_POSITION = keccak256("abcdef");
 

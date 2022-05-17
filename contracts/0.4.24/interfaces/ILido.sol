@@ -63,6 +63,11 @@ interface ILido {
     /**
       * @notice Returns internal info about stake limit
       * @dev Might be used for the advanced integration requests.
+      * @return
+      * `maxStakeLimit` max stake limit
+      * `maxStakeLimitGrowthBlocks` blocks needed to restore max stake limit from the fully exhausted state
+      * `prevStakeLimit` previously reached stake limit
+      * `prevStakeBlockNumber` prevously seen block number
       */
     function getStakeLimitInternalInfo() external view returns (
         uint256 maxStakeLimit,
