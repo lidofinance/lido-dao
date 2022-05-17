@@ -23,10 +23,7 @@
     {
       "name": "Burn tokens",
       "id": "BURN_ROLE",
-      "params": [
-        "Account which tokens are to be burnt",
-        "Token amount"
-      ]
+      "params": ["Account which tokens are to be burnt", "Token amount"]
     },
     {
       "name": "Set treasury address",
@@ -41,6 +38,11 @@
     {
       "name": "Deposit role",
       "id": "DEPOSIT_ROLE",
+      "params": []
+    },
+    {
+      "name": "Set MEV tx fee withdrawal limit role",
+      "id": "SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE",
       "params": []
     }
   ],
@@ -62,6 +64,11 @@
       "network": "mainnet"
     },
     "localhost": {
+      "appName": "lido.lidopm.eth",
+      "network": "development",
+      "registry": "0xa16E02E87b7454126E5E10d957A927A7F5B5d2be"
+    },
+    "local": {
       "appName": "lido.lidopm.eth",
       "network": "development",
       "registry": "0xa16E02E87b7454126E5E10d957A927A7F5B5d2be"

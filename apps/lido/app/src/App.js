@@ -20,6 +20,7 @@ import DbeSidePanel from './components/DbeSidePanel'
 import ChangeFeeDistrSidePanel from './components/ChangeFeeDistrSidePanel'
 import WcBadge from './components/WcBadge'
 import { formatEth } from './utils'
+import ChangeMevTxFeeWithdrawalLimit from './components/ChangeMevTxFeeWithdrawalLimit'
 
 export default function App() {
   const { api, appState, currentApp, guiStyle } = useAragonApi()
@@ -74,6 +75,22 @@ export default function App() {
     [api]
   )
 
+  const [
+    mevWithdrawalLimitPanelOpened,
+    setMevWithdrawalLimitPanelOpened,
+  ] = useState(false)
+  const openMevWithdrawalLimitPanel = () =>
+    setMevWithdrawalLimitPanelOpened(true)
+  const closeMevWithdrawalLimitPanel = () =>
+    setMevWithdrawalLimitPanelOpened(false)
+
+  const apiSetMevWithdrawalLimit = useCallback(
+    (limit) => {
+      return api.setMevTxFeeWithdrawalLimit(limit).toPromise()
+    },
+    [api]
+  )
+
   const data = useMemo(() => {
     const {
       isStopped,
@@ -86,6 +103,7 @@ export default function App() {
       depositContract,
       oracle,
       mevTxFeeVault,
+      mevTxFeeWithdrawalLimitPoints,
       // operators,
       // treasury,
       // insuranceFund,
@@ -231,6 +249,25 @@ export default function App() {
         ),
       },
       {
+        label: 'MEV Tx Fee Withdrawal Limit',
+        content: (
+          <span style={{ display: 'flex', alignItems: 'center' }}>
+            <strong>
+              {mevTxFeeWithdrawalLimitPoints
+                ? `${mevTxFeeWithdrawalLimitPoints / 100}%`
+                : 'No data'}
+            </strong>
+            <Button
+              icon={<IconEdit />}
+              label="Change limit"
+              display="icon"
+              onClick={openMevWithdrawalLimitPanel}
+              style={{ marginLeft: 10 }}
+            />
+          </span>
+        ),
+      },
+      {
         label: 'Buffered Ether',
         content: <strong>{formatEth(bufferedEther) || 'No data'}</strong>,
       },
@@ -288,9 +325,7 @@ export default function App() {
   return (
     <Main theme={appearance} assetsUrl="./aragon-ui">
       {isSyncing && <SyncIndicator />}
-      <Header
-        primary={appName.toUpperCase()}
-      />
+      <Header primary={appName.toUpperCase()} />
       <Split
         primary={
           <Box heading="Details" padding={20}>
@@ -338,6 +373,11 @@ export default function App() {
         opened={changeFeeDistrPanelOpened}
         onClose={closeChangeFeeDistrPanel}
         api={apiSetFeeDistr}
+      />
+      <ChangeMevTxFeeWithdrawalLimit
+        opened={mevWithdrawalLimitPanelOpened}
+        onClose={closeMevWithdrawalLimitPanel}
+        api={apiSetMevWithdrawalLimit}
       />
     </Main>
   )

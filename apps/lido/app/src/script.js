@@ -27,6 +27,11 @@ app.store(
           }
         case 'Unbuffered':
           return { ...nextState, bufferedEther: await getBufferedEther() }
+        case 'MevTxFeeWithdrawalLimitSet':
+          return {
+            ...nextState,
+            mevTxFeeWithdrawalLimitPoints: await getMevTxFeeWithdrawalLimitPoints(),
+          }
         case events.SYNC_STATUS_SYNCING:
           return { ...nextState, isSyncing: true }
         case events.SYNC_STATUS_SYNCED:
@@ -67,6 +72,7 @@ function initializeState() {
       // treasury: await getTreasury(),
       // insuranceFund: await getInsuranceFund(),
       beaconStat: await getBeaconStat(),
+      mevTxFeeWithdrawalLimitPoints: await getMevTxFeeWithdrawalLimitPoints(),
     }
   }
 }
@@ -130,4 +136,8 @@ async function getBeaconStat() {
     depositedValidators: +stat.depositedValidators,
     beaconBalance: stat.beaconBalance,
   }
+}
+
+function getMevTxFeeWithdrawalLimitPoints() {
+  return app.call('getMevTxFeeWithdrawalLimitPoints').toPromise()
 }
