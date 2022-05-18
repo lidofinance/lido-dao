@@ -695,16 +695,7 @@ contract Lido is ILido, StETH, AragonApp {
         BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().add(msg.value));
         emit Submitted(msg.sender, msg.value, _referral);
 
-        _emitTransferAfterMintingShares(msg.sender, sharesAmount);
         return sharesAmount;
-    }
-
-    /**
-    * @dev Emits {Transfer} and {TransferShares} events where `from` is 0 address. Indicates mint events.
-    */
-    function _emitTransferAfterMintingShares(address _to, uint256 _sharesAmount) internal {
-        emit Transfer(address(0), _to, getPooledEthByShares(_sharesAmount));
-        emit TransferShares(address(0), _to, _sharesAmount);
     }
 
     /**
@@ -828,16 +819,14 @@ contract Lido is ILido, StETH, AragonApp {
             )
         );
 
-        // Mint the calculated amount of shares to this contract address. This will reduce the
-        // balances of the holders, as if the fee was taken in parts from each of them.
-        _mintShares(address(this), shares2mint);
+        // Part by part mint the calculated amount of shares to the recipients. This will reduce
+        // the balances of the holders, as if the fee was taken in parts from each of them.
 
         (,uint16 insuranceFeeBasisPoints, uint16 operatorsFeeBasisPoints) = getFeeDistribution();
 
         uint256 toInsuranceFund = shares2mint.mul(insuranceFeeBasisPoints).div(TOTAL_BASIS_POINTS);
         address insuranceFund = getInsuranceFund();
-        _transferShares(address(this), insuranceFund, toInsuranceFund);
-        _emitTransferAfterMintingShares(insuranceFund, toInsuranceFund);
+        _mintShares(insuranceFund, toInsuranceFund);
 
         uint256 distributedToOperatorsShares = _distributeNodeOperatorsReward(
             shares2mint.mul(operatorsFeeBasisPoints).div(TOTAL_BASIS_POINTS)
@@ -847,8 +836,7 @@ contract Lido is ILido, StETH, AragonApp {
         uint256 toTreasury = shares2mint.sub(toInsuranceFund).sub(distributedToOperatorsShares);
 
         address treasury = getTreasury();
-        _transferShares(address(this), treasury, toTreasury);
-        _emitTransferAfterMintingShares(treasury, toTreasury);
+        _mintShares(treasury, toTreasury);
     }
 
     /**
@@ -863,12 +851,7 @@ contract Lido is ILido, StETH, AragonApp {
 
         distributed = 0;
         for (uint256 idx = 0; idx < recipients.length; ++idx) {
-            _transferShares(
-                address(this),
-                recipients[idx],
-                shares[idx]
-            );
-            _emitTransferAfterMintingShares(recipients[idx], shares[idx]);
+            _mintShares(recipients[idx], shares[idx]);
             distributed = distributed.add(shares[idx]);
         }
     }

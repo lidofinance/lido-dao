@@ -338,12 +338,8 @@ contract StETH is IERC20, Pausable {
      *
      * @dev The `_sharesAmount` argument is the amount of shares, not tokens.
      */
-    function transferShares(address _recipient, uint256 _sharesAmount) public returns (uint256) {
-        _transferShares(msg.sender, _recipient, _sharesAmount);
-        emit TransferShares(msg.sender, _recipient, _sharesAmount);
-        uint256 tokensAmount = getPooledEthByShares(_sharesAmount);
-        emit Transfer(msg.sender, _recipient, tokensAmount);
-        return tokensAmount;
+    function transferShares(address _recipient, uint256 _sharesAmount) public returns (uint256 tokensAmount) {
+        return _transferShares(msg.sender, _recipient, _sharesAmount);
     }
 
     /**
@@ -360,9 +356,10 @@ contract StETH is IERC20, Pausable {
      */
     function _transfer(address _sender, address _recipient, uint256 _amount) internal {
         uint256 _sharesToTransfer = getSharesByPooledEth(_amount);
-        _transferShares(_sender, _recipient, _sharesToTransfer);
-        emit Transfer(_sender, _recipient, _amount);
-        emit TransferShares(_sender, _recipient, _sharesToTransfer);
+        uint256 tokenAmount = _transferShares(_sender, _recipient, _sharesToTransfer);
+
+        // TODO: this assertion is broken
+        // assert(tokenAmount == _amount);
     }
 
     /**
@@ -408,7 +405,7 @@ contract StETH is IERC20, Pausable {
      * - `_sender` must hold at least `_sharesAmount` shares.
      * - the contract must not be paused.
      */
-    function _transferShares(address _sender, address _recipient, uint256 _sharesAmount) internal whenNotStopped {
+    function _transferShares(address _sender, address _recipient, uint256 _sharesAmount) internal whenNotStopped returns (uint256 tokensAmount) {
         require(_sender != address(0), "TRANSFER_FROM_THE_ZERO_ADDRESS");
         require(_recipient != address(0), "TRANSFER_TO_THE_ZERO_ADDRESS");
 
@@ -417,6 +414,10 @@ contract StETH is IERC20, Pausable {
 
         shares[_sender] = currentSenderShares.sub(_sharesAmount);
         shares[_recipient] = shares[_recipient].add(_sharesAmount);
+
+        tokensAmount = getPooledEthByShares(_sharesAmount);
+        emit Transfer(_sender, _recipient, tokensAmount);
+        emit TransferShares(_sender, _recipient, _sharesAmount);
     }
 
     /**
@@ -431,10 +432,15 @@ contract StETH is IERC20, Pausable {
     function _mintShares(address _recipient, uint256 _sharesAmount) internal whenNotStopped returns (uint256 newTotalShares) {
         require(_recipient != address(0), "MINT_TO_THE_ZERO_ADDRESS");
 
+        // TODO: There is a contradiction between the events and the Notice comment below
+
         newTotalShares = _getTotalShares().add(_sharesAmount);
         TOTAL_SHARES_POSITION.setStorageUint256(newTotalShares);
 
         shares[_recipient] = shares[_recipient].add(_sharesAmount);
+
+        emit Transfer(address(0), _recipient, getPooledEthByShares(_sharesAmount));
+        emit TransferShares(address(0), _recipient, _sharesAmount);
 
         // Notice: we're not emitting a Transfer event from the zero address here since shares mint
         // works by taking the amount of tokens corresponding to the minted shares from all other
