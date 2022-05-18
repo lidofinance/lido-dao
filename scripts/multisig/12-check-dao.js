@@ -575,7 +575,7 @@ async function assertDaoPermissions({ kernel, lido, oracle, nopsRegistry, agent,
           'SET_TREASURY',
           'SET_INSURANCE_FUND',
           'STAKING_PAUSE_ROLE',
-          'STAKING_RESUME_ROLE',
+          'STAKING_CONTROL_ROLE',
           'SET_EL_REWARDS_VAULT_ROLE',
           'SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE'
         ],

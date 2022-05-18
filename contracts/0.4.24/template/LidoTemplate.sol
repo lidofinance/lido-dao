@@ -656,7 +656,7 @@ contract LidoTemplate is IsContract {
         perms[4] = _state.lido.BURN_ROLE();
         perms[5] = _state.lido.RESUME_ROLE();
         perms[6] = _state.lido.STAKING_PAUSE_ROLE();
-        perms[7] = _state.lido.STAKING_RESUME_ROLE();
+        perms[7] = _state.lido.STAKING_CONTROL_ROLE();
         perms[8] = _state.lido.SET_EL_REWARDS_VAULT_ROLE();
         perms[9] = _state.lido.SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE();
 

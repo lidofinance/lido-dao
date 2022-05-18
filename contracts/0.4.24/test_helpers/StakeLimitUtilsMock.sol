@@ -55,24 +55,40 @@ contract StakeLimitUtilsMock {
         return STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().isStakingPaused();
     }
 
-    function isStakingLimitApplied(uint256 _slotValue) public view returns(bool) {
+    function isStakingLimitSet(uint256 _slotValue) public view returns(bool) {
         STAKE_LIMIT_POSITION.setStorageUint256(_slotValue);
-        return STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().isStakingLimitApplied();
+        return STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().isStakingLimitSet();
     }
 
-    function resumeStakingWithNewLimit(uint256 _slotValue, uint256 _maxStakeLimit, uint256 _stakeLimitIncreasePerBlock) public view {
+    function setStakingLimit(uint256 _slotValue, uint256 _maxStakeLimit, uint256 _stakeLimitIncreasePerBlock) public view {
         STAKE_LIMIT_POSITION.setStorageUint256(_slotValue);
         STAKE_LIMIT_POSITION.setStorageStakeLimitStruct(
-            STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().resumeStakingWithNewLimit(
+            STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().setStakingLimit(
                 _maxStakeLimit, _stakeLimitIncreasePerBlock
             )
         );
     }
 
-    function updatePrevStakeLimit(uint256 _slotValue, uint256 _newPrevLimit) public view returns (uint256) {
+    function removeStakingLimit(uint256 _slotValue) public view returns(uint256) {
+        STAKE_LIMIT_POSITION.setStorageUint256(_slotValue);
+        STAKE_LIMIT_POSITION.setStorageStakeLimitStruct(
+            STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().removeStakingLimit()
+        );
+        return STAKE_LIMIT_POSITION.getStorageUint256();
+    }
+
+    function updatePrevStakeLimit(uint256 _slotValue, uint256 _newPrevLimit) public view returns(uint256) {
         STAKE_LIMIT_POSITION.setStorageUint256(_slotValue);
         STAKE_LIMIT_POSITION.setStorageStakeLimitStruct(
             STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().updatePrevStakeLimit(_newPrevLimit)
+        );
+        return STAKE_LIMIT_POSITION.getStorageUint256();
+    }
+
+    function setStakeLimitPauseState(uint256 _slotValue, bool _isPaused) public view returns(uint256) {
+        STAKE_LIMIT_POSITION.setStorageUint256(_slotValue);
+        STAKE_LIMIT_POSITION.setStorageStakeLimitStruct(
+            STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().setStakeLimitPauseState(_isPaused)
         );
         return STAKE_LIMIT_POSITION.getStorageUint256();
     }

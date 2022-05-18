@@ -97,15 +97,17 @@ contract StETH is IERC20, Pausable {
      *
      * @dev Reports simultaneously burnt shares amount
      * and corresponding stETH amount.
-     * The stETH amount is calculated just before the burning incurred rebase.
+     * The stETH amount is calculated twice: before and after the burning incurred rebase.
      *
      * @param account holder of the burnt shares
-     * @param amount amount of burnt shares (expressed in stETH just before burning invocation)
-     * @param sharesAmount amount of burnt shares (expressed in shares themselves)
+     * @param preRebaseTokenAmount amount of stETH the burnt shares corresponded to before the burn
+     * @param postRebaseTokenAmount amount of stETH the burnt shares corresponded to after the burn
+     * @param sharesAmount amount of burnt shares
      */
     event SharesBurnt(
         address indexed account,
-        uint256 amount,
+        uint256 preRebaseTokenAmount,
+        uint256 postRebaseTokenAmount,
         uint256 sharesAmount
     );
 
@@ -458,13 +460,16 @@ contract StETH is IERC20, Pausable {
         uint256 accountShares = shares[_account];
         require(_sharesAmount <= accountShares, "BURN_AMOUNT_EXCEEDS_BALANCE");
 
-        uint256 amount = getPooledEthByShares(_sharesAmount);
-        emit SharesBurnt(_account, amount, _sharesAmount);
+        uint256 preRebaseTokenAmount = getPooledEthByShares(_sharesAmount);
 
         newTotalShares = _getTotalShares().sub(_sharesAmount);
         TOTAL_SHARES_POSITION.setStorageUint256(newTotalShares);
 
         shares[_account] = accountShares.sub(_sharesAmount);
+
+        uint256 postRebaseTokenAmount = getPooledEthByShares(_sharesAmount);
+
+        emit SharesBurnt(_account, preRebaseTokenAmount, postRebaseTokenAmount, _sharesAmount);
 
         // Notice: we're not emitting a Transfer event to the zero address here since shares burn
         // works by redistributing the amount of tokens corresponding to the burned shares between
