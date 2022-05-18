@@ -58,7 +58,7 @@ contract Lido is ILido, StETH, AragonApp {
     bytes32 constant public PAUSE_ROLE = keccak256("PAUSE_ROLE");
     bytes32 constant public RESUME_ROLE = keccak256("RESUME_ROLE");
     bytes32 constant public STAKING_PAUSE_ROLE = keccak256("STAKING_PAUSE_ROLE");
-    bytes32 constant public STAKING_RESUME_ROLE = keccak256("STAKING_RESUME_ROLE");
+    bytes32 constant public STAKING_CONTROL_ROLE = keccak256("STAKING_CONTROL_ROLE");
     bytes32 constant public MANAGE_FEE = keccak256("MANAGE_FEE");
     bytes32 constant public MANAGE_WITHDRAWAL_KEY = keccak256("MANAGE_WITHDRAWAL_KEY");
     bytes32 constant public MANAGE_PROTOCOL_CONTRACTS_ROLE = keccak256("MANAGE_PROTOCOL_CONTRACTS_ROLE");
@@ -136,17 +136,11 @@ contract Lido is ILido, StETH, AragonApp {
 
         _setProtocolContracts(_oracle, _treasury, _insuranceFund);
 
-        STAKE_LIMIT_POSITION.setStorageStakeLimitStruct(
-            STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().resumeStakingWithNewLimit(
-                0, 0 // STAKING IS UNLIMITED
-            )
-        );
-
         initialized();
     }
 
     /**
-    * @notice Stops accepting new Ether to the protocol.
+    * @notice Stops accepting new Ether to the protocol
     *
     * @dev While accepting new Ether is stopped, calls to the `submit` function,
     * as well as to the default payable function, will revert.
@@ -161,10 +155,25 @@ contract Lido is ILido, StETH, AragonApp {
 
     /**
     * @notice Resumes accepting new Ether to the protocol (if `pauseStaking` was called previously)
-    * and updates the staking rate limit.
+    * NB: Staking could be rate-limited by imposing a limit on the stake amount
+    * at each moment in time, see `setStakingLimit()` and `removeStakingLimit()`
     *
-    * Staking could be rate-limited by imposing a limit on the stake amount
-    * at each moment in time.
+    * @dev Preserves staking limit if it was set previously
+    *
+    * Emits `StakingResumed` event
+    */
+    function resumeStaking() external {
+        _auth(STAKING_CONTROL_ROLE);
+
+        STAKE_LIMIT_POSITION.setStorageStakeLimitStruct(
+            STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().setStakeLimitPauseState(false)
+        );
+
+        emit StakingResumed();
+    }
+
+    /**
+    * @notice Sets the staking rate limit
     *
     * ▲ Stake limit
     * │.....  .....   ........ ...            ....     ... Stake limit = max
@@ -174,28 +183,43 @@ contract Lido is ILido, StETH, AragonApp {
     * │──────────────────────────────────────────────────> Time
     * │     ^      ^          ^   ^^^  ^ ^ ^     ^^^ ^     Stake events
     *
-    * NB: To resume without limits pass zero arg values.
     * @dev Reverts if:
+    * - `_maxStakeLimit` == 0
     * - `_maxStakeLimit` >= 2^96
     * - `_maxStakeLimit` < `_stakeLimitIncreasePerBlock`
     * - `_maxStakeLimit` / `_stakeLimitIncreasePerBlock` >= 2^32 (only if `_stakeLimitIncreasePerBlock` != 0)
-    * Emits `StakeResumed` event
+    *
+    * Emits `StakingLimitSet` event
+    *
     * @param _maxStakeLimit max stake limit value
     * @param _stakeLimitIncreasePerBlock stake limit increase per single block
     */
-    function resumeStaking(
-        uint256 _maxStakeLimit,
-        uint256 _stakeLimitIncreasePerBlock
-    ) external {
-        _auth(STAKING_RESUME_ROLE);
+    function setStakingLimit(uint256 _maxStakeLimit, uint256 _stakeLimitIncreasePerBlock) external {
+        _auth(STAKING_CONTROL_ROLE);
 
         STAKE_LIMIT_POSITION.setStorageStakeLimitStruct(
-            STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().resumeStakingWithNewLimit(
-                _maxStakeLimit, _stakeLimitIncreasePerBlock
+            STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().setStakingLimit(
+                _maxStakeLimit,
+                _stakeLimitIncreasePerBlock
             )
         );
 
-        emit StakingResumed(_maxStakeLimit, _stakeLimitIncreasePerBlock);
+        emit StakingLimitSet(_maxStakeLimit, _stakeLimitIncreasePerBlock);
+    }
+
+    /**
+    * @notice Removes the staking rate limit
+    *
+    * Emits `StakingLimitRemoved` event
+    */
+    function removeStakingLimit() external {
+        _auth(STAKING_CONTROL_ROLE);
+
+        STAKE_LIMIT_POSITION.setStorageStakeLimitStruct(
+            STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().removeStakingLimit()
+        );
+
+        emit StakingLimitRemoved();
     }
 
     /**
@@ -219,7 +243,7 @@ contract Lido is ILido, StETH, AragonApp {
     * @notice Returns full info about current stake limit params and state
     * @dev Might be used for the advanced integration requests.
     * @return isStakingPaused staking pause state (equivalent to return of isStakingPaused())
-    * @return isStakingLimitApplied whether the stake limit is set
+    * @return isStakingLimitSet whether the stake limit is set
     * @return currentStakeLimit current stake limit (equivalent to return of getCurrentStakeLimit())
     * @return maxStakeLimit max stake limit
     * @return maxStakeLimitGrowthBlocks blocks needed to restore max stake limit from the fully exhausted state
@@ -228,7 +252,7 @@ contract Lido is ILido, StETH, AragonApp {
     */
     function getStakeLimitFullInfo() external view returns (
         bool isStakingPaused,
-        bool isStakingLimitApplied,
+        bool isStakingLimitSet,
         uint256 currentStakeLimit,
         uint256 maxStakeLimit,
         uint256 maxStakeLimitGrowthBlocks,
@@ -238,7 +262,7 @@ contract Lido is ILido, StETH, AragonApp {
         StakeLimitState.Data memory stakeLimitData = STAKE_LIMIT_POSITION.getStorageStakeLimitStruct();
 
         isStakingPaused = stakeLimitData.isStakingPaused();
-        isStakingLimitApplied = stakeLimitData.isStakingLimitApplied();
+        isStakingLimitSet = stakeLimitData.isStakingLimitSet();
 
         currentStakeLimit = _getCurrentStakeLimit(stakeLimitData);
 
@@ -516,23 +540,6 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-    * @notice Send NTFs to recovery Vault
-    * @param _token Token to be sent to recovery vault
-    * @param _tokenId Token Id
-    */
-    function transferERC721ToVault(address _token, uint256 _tokenId) external {
-        require(_token != address(0), "ZERO_ADDRESS");
-        require(allowRecoverability(_token), "RECOVER_DISALLOWED");
-
-        address vault = getRecoveryVault();
-        require(vault != address(0), "RECOVER_VAULT_ZERO");
-
-        IERC721(_token).transferFrom(address(this), vault, _tokenId);
-
-        emit RecoverERC721ToVault(vault, _token, _tokenId);
-    }
-
-    /**
     * @notice Returns staking rewards fee rate
     */
     function getFee() public view returns (uint16 feeBasisPoints) {
@@ -673,7 +680,7 @@ contract Lido is ILido, StETH, AragonApp {
         StakeLimitState.Data memory stakeLimitData = STAKE_LIMIT_POSITION.getStorageStakeLimitStruct();
         require(!stakeLimitData.isStakingPaused(), "STAKING_PAUSED");
 
-        if (stakeLimitData.isStakingLimitApplied()) {
+        if (stakeLimitData.isStakingLimitSet()) {
             uint256 currentStakeLimit = stakeLimitData.calculateCurrentStakeLimit();
 
             require(msg.value <= currentStakeLimit, "STAKE_LIMIT");
@@ -967,8 +974,10 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     function _pauseStaking() internal {
-        StakeLimitState.Data memory zeroState;
-        STAKE_LIMIT_POSITION.setStorageStakeLimitStruct(zeroState);
+        STAKE_LIMIT_POSITION.setStorageStakeLimitStruct(
+            STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().setStakeLimitPauseState(true)
+        );
+
         emit StakingPaused();
     }
 
@@ -976,7 +985,7 @@ contract Lido is ILido, StETH, AragonApp {
         if (_stakeLimitData.isStakingPaused()) {
             return 0;
         }
-        if (!_stakeLimitData.isStakingLimitApplied()) {
+        if (!_stakeLimitData.isStakingLimitSet()) {
             return uint256(-1);
         }
 

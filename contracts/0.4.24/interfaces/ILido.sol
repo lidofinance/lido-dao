@@ -33,7 +33,7 @@ interface ILido {
     function resume() external;
 
     /**
-      * @notice Stops accepting new Ether to the protocol.
+      * @notice Stops accepting new Ether to the protocol
       *
       * @dev While accepting new Ether is stopped, calls to the `submit` function,
       * as well as to the default payable function, will revert.
@@ -44,12 +44,37 @@ interface ILido {
 
     /**
       * @notice Resumes accepting new Ether to the protocol (if `pauseStaking` was called previously)
-      * and updates the staking rate limit.
-      * NB: To resume without limits pass zero arg values.
+      * NB: Staking could be rate-limited by imposing a limit on the stake amount
+      * at each moment in time, see `setStakingLimit()` and `removeStakingLimit()`
+      *
+      * @dev Preserves staking limit if it was set previously
+      *
+      * Emits `StakingResumed` event
+      */
+    function resumeStaking() external;
+
+    /**
+      * @notice Sets the staking rate limit
+      *
+      * @dev Reverts if:
+      * - `_maxStakeLimit` == 0
+      * - `_maxStakeLimit` >= 2^96
+      * - `_maxStakeLimit` < `_stakeLimitIncreasePerBlock`
+      * - `_maxStakeLimit` / `_stakeLimitIncreasePerBlock` >= 2^32 (only if `_stakeLimitIncreasePerBlock` != 0)
+      *
+      * Emits `StakingLimitSet` event
+      *
       * @param _maxStakeLimit max stake limit value
       * @param _stakeLimitIncreasePerBlock stake limit increase per single block
       */
-    function resumeStaking(uint256 _maxStakeLimit, uint256 _stakeLimitIncreasePerBlock) external;
+    function setStakingLimit(uint256 _maxStakeLimit, uint256 _stakeLimitIncreasePerBlock) external;
+
+    /**
+      * @notice Removes the staking rate limit
+      *
+      * Emits `StakingLimitRemoved` event
+      */
+    function removeStakingLimit() external;
 
     /**
       * @notice Check staking state: whether it's paused or not
@@ -68,7 +93,7 @@ interface ILido {
       * @notice Returns full info about current stake limit params and state
       * @dev Might be used for the advanced integration requests.
       * @return isStakingPaused staking pause state (equivalent to return of isStakingPaused())
-      * @return isStakingLimitApplied whether the stake limit is set
+      * @return isStakingLimitSet whether the stake limit is set
       * @return currentStakeLimit current stake limit (equivalent to return of getCurrentStakeLimit())
       * @return maxStakeLimit max stake limit
       * @return maxStakeLimitGrowthBlocks blocks needed to restore max stake limit from the fully exhausted state
@@ -77,7 +102,7 @@ interface ILido {
       */
     function getStakeLimitFullInfo() external view returns (
         bool isStakingPaused,
-        bool isStakingLimitApplied,
+        bool isStakingLimitSet,
         uint256 currentStakeLimit,
         uint256 maxStakeLimit,
         uint256 maxStakeLimitGrowthBlocks,
@@ -87,16 +112,11 @@ interface ILido {
 
     event Stopped();
     event Resumed();
-    event StakingPaused();
 
-    /**
-      * @notice resumeStaking was called with the provided params
-      * @dev use `getCurrentStakeLimit()` and `getCurrentStakeLimit()` funcs to check the actual limit
-      * NB: if limits are not set then both args have zero values.
-      * @param maxStakeLimit max stake limit value
-      * @param stakeLimitIncreasePerBlock stake limit increase per single block
-      */
-    event StakingResumed(uint256 maxStakeLimit, uint256 stakeLimitIncreasePerBlock);
+    event StakingPaused();
+    event StakingResumed();
+    event StakingLimitSet(uint256 maxStakeLimit, uint256 stakeLimitIncreasePerBlock);
+    event StakingLimitRemoved();
 
     /**
       * @notice Set Lido protocol contracts (oracle, treasury, insurance fund).
@@ -241,7 +261,4 @@ interface ILido {
       * @return beaconBalance - total amount of Beacon-side Ether (sum of all the balances of Lido validators)
       */
     function getBeaconStat() external view returns (uint256 depositedValidators, uint256 beaconValidators, uint256 beaconBalance);
-
-    // Requested ERC721 recovery from the `Lido` to the designated `recoveryVault` vault.
-    event RecoverERC721ToVault(address indexed vault, address indexed token, uint256 tokenId);
 }

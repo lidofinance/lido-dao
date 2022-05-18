@@ -93,7 +93,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
       from: appManager
     })
     await acl.createPermission(voting, app.address, await app.STAKING_PAUSE_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.STAKING_RESUME_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, app.address, await app.STAKING_CONTROL_ROLE(), appManager, { from: appManager })
 
     await acl.createPermission(voting, operators.address, await operators.MANAGE_SIGNING_KEYS(), appManager, { from: appManager })
     await acl.createPermission(voting, operators.address, await operators.ADD_NODE_OPERATOR_ROLE(), appManager, { from: appManager })
@@ -572,7 +572,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     assertBn(currentStakeLimit, expectedCurrentStakeLimit)
     ;({
       isStakingPaused,
-      isStakingLimitApplied,
+      isStakingLimitSet,
       currentStakeLimit,
       maxStakeLimit,
       maxStakeLimitGrowthBlocks,
@@ -583,7 +583,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     assertBn(currentStakeLimit, expectedCurrentStakeLimit)
     assertBn(maxStakeLimit, expectedMaxStakeLimit)
     assert.equal(isStakingPaused, expectedIsStakingPaused)
-    assert.equal(isStakingLimitApplied, expectedIsStakingLimited)
+    assert.equal(isStakingLimitSet, expectedIsStakingLimited)
     assertBn(maxStakeLimitGrowthBlocks, expectedLimitIncrease > 0 ? expectedMaxStakeLimit / expectedLimitIncrease : 0)
   }
 

@@ -53,13 +53,13 @@ contract StakeLimitUtilsMock {
         return STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().isStakingPaused();
     }
 
-    function isStakingLimitApplied(uint256 _slotValue) public view returns(bool) {
-        return STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().isStakingLimitApplied();
+    function isStakingLimitSet(uint256 _slotValue) public view returns(bool) {
+        return STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().isStakingLimitSet();
     }
 
-    function resumeStakingWithNewLimit(uint256 _maxStakeLimit, uint256 _stakeLimitIncreasePerBlock) public view {
+    function setStakingLimit(uint256 _maxStakeLimit, uint256 _stakeLimitIncreasePerBlock) public view {
         STAKE_LIMIT_POSITION.setStorageStakeLimitStruct(
-            STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().resumeStakingWithNewLimit(
+            STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().setStakingLimit(
                 _maxStakeLimit, _stakeLimitIncreasePerBlock
             )
         );
@@ -68,6 +68,12 @@ contract StakeLimitUtilsMock {
     function updatePrevStakeLimit(uint256 _newPrevLimit) internal view returns (StakeLimitState.Data memory) {
         STAKE_LIMIT_POSITION.setStorageStakeLimitStruct(
             STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().updatePrevStakeLimit(_newPrevLimit)
+        );
+    }
+
+    function setStakeLimitPauseState(bool _isPaused) public view {
+        STAKE_LIMIT_POSITION.setStorageStakeLimitStruct(
+            STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().setStakeLimitPauseState(_isPaused)
         );
     }
 }

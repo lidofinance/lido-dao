@@ -28,7 +28,7 @@ const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 //           32 bits                 96 bits               96 bits
 //
 //
-// - the "staking paused" state is encoded by all fields being zero,
+// - the "staking paused" state is encoded by `prevStakeBlockNumber` being zero,
 // - the "staking unlimited" state is encoded by `maxStakeLimit` being zero and `prevStakeBlockNumber` being non-zero.
 //
 
@@ -74,13 +74,13 @@ contract.skip('StakingLimits', () => {
 
   it('check staking rate limit', async () => {
     const slot = 0
-    const limited = await limits.isStakingLimitApplied(slot)
+    const limited = await limits.isStakingLimitSet(slot)
 
     assert.equal(limited, false, 'limits not limited')
 
     const maxStakeLimit = 10
     const slot2 = await limits.encodeStakeLimitSlot(maxStakeLimit, 0, 0, 0)
-    const limited2 = await limits.isStakingLimitApplied(slot2)
+    const limited2 = await limits.isStakingLimitSet(slot2)
 
     assert.equal(limited2, true, 'limits not limited')
   })
