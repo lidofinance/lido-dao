@@ -14,7 +14,7 @@ import "./VaultMock.sol";
 contract LidoPushableMock is Lido {
 
     uint256 public totalRewards;
-    bool public distributeRewardsCalled;
+    bool public distributeFeeCalled;
 
     function initialize(
         IDepositContract depositContract,
@@ -57,13 +57,13 @@ contract LidoPushableMock is Lido {
         initialized();
     }
 
-    function resetDistributeRewards() public {
+    function resetDistributeFee() public {
         totalRewards = 0;
-        distributeRewardsCalled = false;
+        distributeFeeCalled = false;
     }
 
-    function distributeRewards(uint256 _totalRewards) internal {
+    function distributeFee(uint256 _totalRewards) internal {
         totalRewards = _totalRewards;
-        distributeRewardsCalled = true;
+        distributeFeeCalled = true;
     }
 }
