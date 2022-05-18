@@ -64,13 +64,13 @@ library StakeLimitUnstructuredStorage {
     * @dev Read stake limit state from the unstructured storage position
     * @param _position storage offset
     */
-    function getStorageStakeLimitStruct(bytes32 _position) internal view returns (StakeLimitState.Data memory ret) {
+    function getStorageStakeLimitStruct(bytes32 _position) internal view returns (StakeLimitState.Data memory stakeLimit) {
         uint256 slotValue = _position.getStorageUint256();
 
-        ret.prevStakeBlockNumber = uint32(slotValue >> PREV_STAKE_BLOCK_NUMBER_OFFSET);
-        ret.prevStakeLimit = uint96(slotValue >> PREV_STAKE_LIMIT_OFFSET);
-        ret.maxStakeLimitGrowthBlocks = uint32(slotValue >> MAX_STAKE_LIMIT_GROWTH_BLOCKS_OFFSET);
-        ret.maxStakeLimit = uint96(slotValue >> MAX_STAKE_LIMIT_OFFSET);
+        stakeLimit.prevStakeBlockNumber = uint32(slotValue >> PREV_STAKE_BLOCK_NUMBER_OFFSET);
+        stakeLimit.prevStakeLimit = uint96(slotValue >> PREV_STAKE_LIMIT_OFFSET);
+        stakeLimit.maxStakeLimitGrowthBlocks = uint32(slotValue >> MAX_STAKE_LIMIT_GROWTH_BLOCKS_OFFSET);
+        stakeLimit.maxStakeLimit = uint96(slotValue >> MAX_STAKE_LIMIT_OFFSET);
     }
 
      /**
@@ -128,6 +128,8 @@ library StakeLimitUtils {
 
     /**
     * @notice prepare stake limit repr to resume staking with the desired limits
+    * @dev input `_data` param is mutated and the func returns effectively the same pointer
+    * @param _data stake limit state struct
     * @param _maxStakeLimit stake limit max value
     * @param _stakeLimitIncreasePerBlock stake limit increase (restoration) per block
     */
@@ -160,14 +162,17 @@ library StakeLimitUtils {
 
     /**
     * @notice update stake limit repr after submitting user's eth
+    * @dev input `_data` param is mutated and the func returns effectively the same pointer
+    * @param _data stake limit state struct
+    * @param _newPrevStakeLimit new value for the `prevStakeLimit` field
     */
     function updatePrevStakeLimit(
         StakeLimitState.Data memory _data,
-        uint256 _newPrevLimit
+        uint256 _newPrevStakeLimit
     ) internal view returns (StakeLimitState.Data memory) {
-        assert(_newPrevLimit <= uint96(-1));
+        assert(_newPrevStakeLimit <= uint96(-1));
 
-        _data.prevStakeLimit = uint96(_newPrevLimit);
+        _data.prevStakeLimit = uint96(_newPrevStakeLimit);
         _data.prevStakeBlockNumber = uint32(block.number);
 
         return _data;
