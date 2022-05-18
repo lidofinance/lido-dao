@@ -10,7 +10,7 @@ const { signDepositData } = require('../0.8.9/helpers/signatures')
 const { waitBlocks } = require('../helpers/blockchain')
 const addresses = require('@aragon/contract-helpers-test/src/addresses')
 
-const LidoMevTxFeeVault = artifacts.require('LidoMevTxFeeVault.sol')
+const LidoELRewardsVault = artifacts.require('LidoExecutionLayerRewardsVault.sol')
 const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
@@ -32,15 +32,15 @@ contract('Lido: merge acceptance', (addresses) => {
     user3,
     // unrelated address
     nobody,
-    // MEV source
-    userMev
+    // Execution layer rewards source
+    userELRewards
   ] = addresses
 
   let pool, nodeOperatorRegistry, token
   let oracleMock, depositContractMock
   let treasuryAddr, insuranceAddr, guardians
   let depositSecurityModule, depositRoot
-  let rewarder, mevVault
+  let rewarder, elRewardsVault
 
   // Total fee is 1%
   const totalFeePoints = 0.01 * TOTAL_BASIS_POINTS
@@ -103,16 +103,16 @@ contract('Lido: merge acceptance', (addresses) => {
 
     depositRoot = await depositContractMock.get_deposit_root()
 
-    mevVault = await LidoMevTxFeeVault.new(pool.address, treasuryAddr)
-    await pool.setMevTxFeeVault(mevVault.address, { from: voting })
+    elRewardsVault = await LidoELRewardsVault.new(pool.address, treasuryAddr)
+    await pool.setELRewardsVault(elRewardsVault.address, { from: voting })
 
     // At first go through tests assuming there is no withdrawal limit
-    await pool.setMevTxFeeWithdrawalLimit(TOTAL_BASIS_POINTS, { from: voting })
+    await pool.setELRewardsWithdrawalLimit(TOTAL_BASIS_POINTS, { from: voting })
 
-    rewarder = await RewardEmulatorMock.new(mevVault.address)
+    rewarder = await RewardEmulatorMock.new(elRewardsVault.address)
 
     assertBn(await web3.eth.getBalance(rewarder.address), ETH(0), 'rewarder balance')
-    assertBn(await web3.eth.getBalance(mevVault.address), ETH(0), 'MEV vault balance')
+    assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(0), 'Execution layer rewards vault balance')
 
     // Fee and its distribution are in basis points, 10000 corresponding to 100%
 
@@ -346,12 +346,12 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(await token.totalSupply(), tokens(3 + 30 + 64), 'token total supply')
   })
 
-  it('collect 9 ETH MEV and tx rewards to the vault', async () => {
-    await rewarder.reward({ from: userMev, value: ETH(9) })
-    assertBn(await web3.eth.getBalance(mevVault.address), ETH(9), 'MEV vault balance')
+  it('collect 9 ETH execution layer rewards to the vault', async () => {
+    await rewarder.reward({ from: userELRewards, value: ETH(9) })
+    assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(9), 'Execution layer rewards vault balance')
   })
 
-  it('the oracle reports balance increase on Ethereum2 side (+32 ETH) and claims collected MEV and tx fee rewards (+9 ETH)', async () => {
+  it('the oracle reports balance increase on Ethereum2 side (+32 ETH) and claims collected execution layer rewards (+9 ETH)', async () => {
     const epoch = 100
 
     // Total shares are equal to deposited eth before ratio change and fee mint
@@ -368,8 +368,8 @@ contract('Lido: merge acceptance', (addresses) => {
 
     await oracleMock.reportBeacon(epoch, 2, ETH(96))
 
-    // Mev and tx rewards just claimed
-    assertBn(await web3.eth.getBalance(mevVault.address), ETH(0), 'MEV vault balance')
+    // Execution layer rewards just claimed
+    assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(0), 'Execution layer rewards vault balance')
 
     // Total shares increased because fee minted (fee shares added)
     // shares ~= oldTotalShares + reward * oldTotalShares / (newTotalPooledEther - reward)
@@ -378,12 +378,12 @@ contract('Lido: merge acceptance', (addresses) => {
 
     assertBn(newTotalShares, new BN('97289047169125663202'), 'total shares')
 
-    const mevAmount = 9
+    const elRewards = 9
 
     // Total pooled Ether increased
 
     const newTotalPooledEther = await pool.getTotalPooledEther()
-    assertBn(newTotalPooledEther, ETH(33 + 96 + mevAmount), 'total pooled ether')
+    assertBn(newTotalPooledEther, ETH(33 + 96 + elRewards), 'total pooled ether')
 
     // Ether2 stat reported by the pool changed correspondingly
 
@@ -391,13 +391,13 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(ether2Stat.depositedValidators, 2, 'deposited ether2')
     assertBn(ether2Stat.beaconBalance, ETH(96), 'remote ether2')
 
-    // Buffered Ether amount changed on MEV/tx rewards
-    assertBn(await pool.getBufferedEther(), ETH(33 + mevAmount), 'buffered ether')
+    // Buffered Ether amount changed on execution layer rewards
+    assertBn(await pool.getBufferedEther(), ETH(33 + elRewards), 'buffered ether')
 
     // New tokens was minted to distribute fee
-    assertBn(await token.totalSupply(), tokens(129 + mevAmount), 'token total supply')
+    assertBn(await token.totalSupply(), tokens(129 + elRewards), 'token total supply')
 
-    const reward = toBN(ETH(96 - 64 + mevAmount))
+    const reward = toBN(ETH(96 - 64 + elRewards))
     const mintedAmount = new BN(totalFeePoints).mul(reward).divn(TOTAL_BASIS_POINTS)
 
     // Token user balances increased
@@ -437,15 +437,15 @@ contract('Lido: merge acceptance', (addresses) => {
     )
   })
 
-  it('collect another 7 ETH MEV and tx rewards to the vault', async () => {
-    await rewarder.reward({ from: userMev, value: ETH(2) })
-    assertBn(await web3.eth.getBalance(mevVault.address), ETH(2), 'MEV vault balance')
+  it('collect another 7 ETH execution layer rewards to the vault', async () => {
+    await rewarder.reward({ from: userELRewards, value: ETH(2) })
+    assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(2), 'Execution layer rewards vault balance')
 
-    await rewarder.reward({ from: userMev, value: ETH(5) })
-    assertBn(await web3.eth.getBalance(mevVault.address), ETH(7), 'MEV vault balance')
+    await rewarder.reward({ from: userELRewards, value: ETH(5) })
+    assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(7), 'Execution layer rewards vault balance')
   })
 
-  it('the oracle reports same balance on Ethereum2 side (+0 ETH) and claims collected MEV and tx fee rewards (+7 ETH)', async () => {
+  it('the oracle reports same balance on Ethereum2 side (+0 ETH) and claims collected execution layer rewards (+7 ETH)', async () => {
     const epoch = 101
 
     // Total shares are equal to deposited eth before ratio change and fee mint
@@ -460,8 +460,8 @@ contract('Lido: merge acceptance', (addresses) => {
     // Reporting the same balance as it was before (96ETH => 96ETH)
     await oracleMock.reportBeacon(epoch, 2, ETH(96))
 
-    // Mev and tx rewards just claimed
-    assertBn(await web3.eth.getBalance(mevVault.address), ETH(0), 'MEV vault balance')
+    // Execution layer rewards just claimed
+    assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(0), 'Execution layer rewards vault balance')
 
     // Total shares preserved because fee shares NOT minted
     // shares ~= oldTotalShares + reward * oldTotalShares / (newTotalPooledEther - reward)
@@ -480,7 +480,7 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(ether2Stat.depositedValidators, 2, 'deposited ether2')
     assertBn(ether2Stat.beaconBalance, ETH(96), 'remote ether2')
 
-    // Buffered Ether amount changed on MEV/tx rewards
+    // Buffered Ether amount changed on execution layer rewards
     assertBn(await pool.getBufferedEther(), ETH(42 + 7), 'buffered ether')
 
     assertBn(await token.totalSupply(), tokens(145), 'token total supply')
@@ -501,12 +501,12 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(await token.balanceOf(nodeOperator2.address), new BN('107699275362318839'), 'operator_2 tokens')
   })
 
-  it('collect another 5 ETH MEV and tx rewards to the vault', async () => {
-    await rewarder.reward({ from: userMev, value: ETH(5) })
-    assertBn(await web3.eth.getBalance(mevVault.address), ETH(5), 'MEV vault balance')
+  it('collect another 5 ETH execution layer rewards to the vault', async () => {
+    await rewarder.reward({ from: userELRewards, value: ETH(5) })
+    assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(5), 'Execution layer rewards vault balance')
   })
 
-  it('the oracle reports loss on Ethereum2 side (-2 ETH) and claims collected MEV and tx fee rewards (+5 ETH)', async () => {
+  it('the oracle reports loss on Ethereum2 side (-2 ETH) and claims collected execution layer rewards (+5 ETH)', async () => {
     const epoch = 102
 
     // Total shares are equal to deposited eth before ratio change and fee mint
@@ -521,8 +521,8 @@ contract('Lido: merge acceptance', (addresses) => {
     // Reporting balance decrease (96ETH => 94ETH)
     await oracleMock.reportBeacon(epoch, 2, ETH(94))
 
-    // Mev and tx rewards just claimed
-    assertBn(await web3.eth.getBalance(mevVault.address), ETH(0), 'MEV vault balance')
+    // Execution layer rewards just claimed
+    assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(0), 'Execution layer rewards vault balance')
 
     // Total shares preserved because fee shares NOT minted
     // shares ~= oldTotalShares + reward * oldTotalShares / (newTotalPooledEther - reward)
@@ -538,7 +538,7 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(ether2Stat.depositedValidators, 2, 'deposited ether2')
     assertBn(ether2Stat.beaconBalance, ETH(94), 'remote ether2')
 
-    // Buffered Ether amount changed on MEV/tx rewards
+    // Buffered Ether amount changed on execution layer rewards
     assertBn(await pool.getBufferedEther(), ETH(49 + 5), 'buffered ether')
 
     assertBn(await token.totalSupply(), tokens(145 + 3), 'token total supply')
@@ -559,12 +559,12 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(await token.balanceOf(nodeOperator2.address), new BN('109927536231884057'), 'operator_2 tokens')
   })
 
-  it('collect another 3 ETH MEV and tx rewards to the vault', async () => {
-    await rewarder.reward({ from: userMev, value: ETH(3) })
-    assertBn(await web3.eth.getBalance(mevVault.address), ETH(3), 'MEV vault balance')
+  it('collect another 3 ETH execution layer rewards to the vault', async () => {
+    await rewarder.reward({ from: userELRewards, value: ETH(3) })
+    assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(3), 'Execution layer rewards vault balance')
   })
 
-  it('the oracle reports loss on Ethereum2 side (-3 ETH) and claims collected MEV and tx fee rewards (+3 ETH)', async () => {
+  it('the oracle reports loss on Ethereum2 side (-3 ETH) and claims collected execution layer rewards (+3 ETH)', async () => {
     const epoch = 103
 
     // Total shares are equal to deposited eth before ratio change and fee mint
@@ -579,8 +579,8 @@ contract('Lido: merge acceptance', (addresses) => {
     // Reporting balance decrease (94ETH => 91ETH)
     await oracleMock.reportBeacon(epoch, 2, ETH(91))
 
-    // Mev and tx rewards just claimed
-    assertBn(await web3.eth.getBalance(mevVault.address), ETH(0), 'MEV vault balance')
+    // Execution layer rewards just claimed
+    assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(0), 'Execution layer rewards vault balance')
 
     // Total shares preserved because fee shares NOT minted
     // shares ~= oldTotalShares + reward * oldTotalShares / (newTotalPooledEther - reward)
@@ -596,7 +596,7 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(ether2Stat.depositedValidators, 2, 'deposited ether2')
     assertBn(ether2Stat.beaconBalance, ETH(91), 'remote ether2')
 
-    // Buffered Ether amount changed on MEV/tx rewards
+    // Buffered Ether amount changed on execution layer rewards
     assertBn(await pool.getBufferedEther(), ETH(54 + 3), 'buffered ether')
 
     assertBn(await token.totalSupply(), tokens(148), 'token total supply')
@@ -615,12 +615,12 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(await token.balanceOf(nodeOperator2.address), new BN('109927536231884057'), 'operator_2 tokens')
   })
 
-  it('collect another 2 ETH MEV and tx rewards to the vault', async () => {
-    await rewarder.reward({ from: userMev, value: ETH(2) })
-    assertBn(await web3.eth.getBalance(mevVault.address), ETH(2), 'MEV vault balance')
+  it('collect another 2 ETH execution layer rewards to the vault', async () => {
+    await rewarder.reward({ from: userELRewards, value: ETH(2) })
+    assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(2), 'Execution layer rewards vault balance')
   })
 
-  it('the oracle reports loss on Ethereum2 side (-8 ETH) and claims collected MEV and tx fee rewards (+2 ETH)', async () => {
+  it('the oracle reports loss on Ethereum2 side (-8 ETH) and claims collected execution layer rewards (+2 ETH)', async () => {
     const epoch = 104
 
     // Total shares are equal to deposited eth before ratio change and fee mint
@@ -635,8 +635,8 @@ contract('Lido: merge acceptance', (addresses) => {
     // Reporting balance decrease (91ETH => 83ETH)
     await oracleMock.reportBeacon(epoch, 2, ETH(83))
 
-    // Mev and tx rewards just claimed
-    assertBn(await web3.eth.getBalance(mevVault.address), ETH(0), 'MEV vault balance')
+    // Execution layer rewards just claimed
+    assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(0), 'Execution layer rewards vault balance')
 
     // Total shares preserved because fee shares NOT minted
     // shares ~= oldTotalShares + reward * oldTotalShares / (newTotalPooledEther - reward)
@@ -652,7 +652,7 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(ether2Stat.depositedValidators, 2, 'deposited ether2')
     assertBn(ether2Stat.beaconBalance, ETH(83), 'remote ether2')
 
-    // Buffered Ether amount changed on MEV/tx rewards
+    // Buffered Ether amount changed on execution layer rewards
     assertBn(await pool.getBufferedEther(), ETH(57 + 2), 'buffered ether')
 
     assertBn(await token.totalSupply(), tokens(142), 'token total supply')
@@ -669,12 +669,12 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(await token.balanceOf(nodeOperator2.address), new BN('105471014492753622'), 'operator_2 tokens')
   })
 
-  it('collect another 3 ETH MEV and tx rewards to the vault', async () => {
-    await rewarder.reward({ from: userMev, value: ETH(3) })
-    assertBn(await web3.eth.getBalance(mevVault.address), ETH(3), 'MEV vault balance')
+  it('collect another 3 ETH execution layer rewards to the vault', async () => {
+    await rewarder.reward({ from: userELRewards, value: ETH(3) })
+    assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(3), 'Execution layer vault balance')
   })
 
-  it('the oracle reports balance increase on Ethereum2 side (+2 ETH) and claims collected MEV and tx fee rewards (+3 ETH)', async () => {
+  it('the oracle reports balance increase on Ethereum2 side (+2 ETH) and claims collected execution layer rewards (+3 ETH)', async () => {
     const epoch = 105
 
     // Total shares are equal to deposited eth before ratio change and fee mint
@@ -689,8 +689,8 @@ contract('Lido: merge acceptance', (addresses) => {
     // Reporting balance increase (83ETH => 85ETH)
     await oracleMock.reportBeacon(epoch, 2, ETH(85))
 
-    // Mev and tx rewards just claimed
-    assertBn(await web3.eth.getBalance(mevVault.address), ETH(0), 'MEV vault balance')
+    // Execution layer rewards just claimed
+    assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(0), 'Execution layer rewards vault balance')
 
     // Total shares increased because fee minted (fee shares added)
     // shares ~= oldTotalShares + reward * oldTotalShares / (newTotalPooledEther - reward)
@@ -707,7 +707,7 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(ether2Stat.depositedValidators, 2, 'deposited ether2')
     assertBn(ether2Stat.beaconBalance, ETH(85), 'remote ether2')
 
-    // Buffered Ether amount changed on MEV/tx rewards
+    // Buffered Ether amount changed on execution layer rewards
     assertBn(await pool.getBufferedEther(), ETH(59 + 3), 'buffered ether')
 
     assertBn(await token.totalSupply(), tokens(142 + 5), 'token total supply')
@@ -734,7 +734,7 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn((await token.balanceOf(nodeOperator2.address)).divn(10), new BN('12164764492753623'), 'operator_2 tokens')
   })
 
-  it('collect 0.1 ETH mevTxFee rewards to mevVault and withdraw it entirely by means of multiple oracle reports (+1 ETH)', async () => {
+  it('collect 0.1 ETH execution layer rewards to elRewardsVault and withdraw it entirely by means of multiple oracle reports (+1 ETH)', async () => {
     const toNum = (bn) => {
       return +bn.toString()
     }
@@ -746,7 +746,7 @@ contract('Lido: merge acceptance', (addresses) => {
     }
 
     // Specify different withdrawal limits for a few epochs to test different values
-    const getMevWithdrawalLimitFromEpoch = (_epoch) => {
+    const getELRewardsWithdrawalLimitFromEpoch = (_epoch) => {
       if (_epoch === 106) {
         return 2
       } else if (_epoch === 107) {
@@ -756,52 +756,58 @@ contract('Lido: merge acceptance', (addresses) => {
       }
     }
 
-    const mevAmount = toE18(0.1)
-    await rewarder.reward({ from: userMev, value: fromNum(mevAmount) })
-    assertBn(await web3.eth.getBalance(mevVault.address), fromNum(mevAmount), 'MEV vault balance')
+    const elRewards = toE18(0.1)
+    await rewarder.reward({ from: userELRewards, value: fromNum(elRewards) })
+    assertBn(await web3.eth.getBalance(elRewardsVault.address), fromNum(elRewards), 'Execution layer rewards vault balance')
 
     let epoch = 106
     let lastBeaconBalance = toE18(85)
-    await pool.setMevTxFeeWithdrawalLimit(getMevWithdrawalLimitFromEpoch(epoch), { from: voting })
+    await pool.setELRewardsWithdrawalLimit(getELRewardsWithdrawalLimitFromEpoch(epoch), { from: voting })
 
-    let mevWithdrawalLimitPoints = toNum(await pool.getMevTxFeeWithdrawalLimitPoints())
-    let mevVaultBalance = toNum(await web3.eth.getBalance(mevVault.address))
+    let elRewardsWithdrawalLimitPoints = toNum(await pool.getELRewardsWithdrawalLimitPoints())
+    let elRewardsVaultBalance = toNum(await web3.eth.getBalance(elRewardsVault.address))
     let totalPooledEther = toNum(await pool.getTotalPooledEther())
     let bufferedEther = toNum(await pool.getBufferedEther())
     let totalSupply = toNum(await pool.totalSupply())
     const beaconBalanceInc = toE18(1)
-    let mevWithdrawn = 0
+    let elRewardsWithdrawn = 0
 
-    // Do multiple oracle reports to withdraw all ETH from MEV Tx Fee Vault
-    while (mevVaultBalance > 0) {
-      const mevWithdrawalLimit = getMevWithdrawalLimitFromEpoch(epoch)
-      await pool.setMevTxFeeWithdrawalLimit(mevWithdrawalLimit, { from: voting })
-      mevWithdrawalLimitPoints = toNum(await pool.getMevTxFeeWithdrawalLimitPoints())
+    // Do multiple oracle reports to withdraw all ETH from execution layer rewards vault
+    while (elRewardsVaultBalance > 0) {
+      const elRewardsWithdrawalLimit = getELRewardsWithdrawalLimitFromEpoch(epoch)
+      await pool.setELRewardsWithdrawalLimit(elRewardsWithdrawalLimit, { from: voting })
+      elRewardsWithdrawalLimitPoints = toNum(await pool.getELRewardsWithdrawalLimitPoints())
 
-      const maxMevAmountPerWithdrawal = Math.floor(((totalPooledEther + beaconBalanceInc) * mevWithdrawalLimitPoints) / TOTAL_BASIS_POINTS)
-      const mevToWithdraw = Math.min(maxMevAmountPerWithdrawal, mevVaultBalance)
+      const maxELRewardsAmountPerWithdrawal = Math.floor(
+        ((totalPooledEther + beaconBalanceInc) * elRewardsWithdrawalLimitPoints) / TOTAL_BASIS_POINTS
+      )
+      const elRewardsToWithdraw = Math.min(maxELRewardsAmountPerWithdrawal, elRewardsVaultBalance)
 
       // Reporting balance increase
       await oracleMock.reportBeacon(epoch, 2, fromNum(lastBeaconBalance + beaconBalanceInc))
 
-      assertBn(await web3.eth.getBalance(mevVault.address), mevVaultBalance - mevToWithdraw, 'MEV vault balance')
+      assertBn(
+        await web3.eth.getBalance(elRewardsVault.address),
+        elRewardsVaultBalance - elRewardsToWithdraw,
+        'Execution layer rewards vault balance'
+      )
 
-      assertBn(await pool.getTotalPooledEther(), totalPooledEther + beaconBalanceInc + mevToWithdraw, 'total pooled ether')
+      assertBn(await pool.getTotalPooledEther(), totalPooledEther + beaconBalanceInc + elRewardsToWithdraw, 'total pooled ether')
 
-      assertBn(await pool.totalSupply(), totalSupply + beaconBalanceInc + mevToWithdraw, 'token total supply')
+      assertBn(await pool.totalSupply(), totalSupply + beaconBalanceInc + elRewardsToWithdraw, 'token total supply')
 
-      assertBn(await pool.getBufferedEther(), bufferedEther + mevToWithdraw, 'buffered ether')
+      assertBn(await pool.getBufferedEther(), bufferedEther + elRewardsToWithdraw, 'buffered ether')
 
-      mevVaultBalance = toNum(await web3.eth.getBalance(mevVault.address))
+      elRewardsVaultBalance = toNum(await web3.eth.getBalance(elRewardsVault.address))
       totalPooledEther = toNum(await pool.getTotalPooledEther())
       bufferedEther = toNum(await pool.getBufferedEther())
       totalSupply = toNum(await pool.totalSupply())
 
       lastBeaconBalance += beaconBalanceInc
       epoch += 1
-      mevWithdrawn += mevToWithdraw
+      elRewardsWithdrawn += elRewardsToWithdraw
     }
 
-    assert.equal(mevWithdrawn, mevAmount)
+    assert.equal(elRewardsWithdrawn, elRewards)
   })
 })

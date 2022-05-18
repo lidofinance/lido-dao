@@ -394,7 +394,7 @@ contract LidoTemplate is IsContract {
         uint64 _vestingCliff,
         uint64 _vestingEnd,
         bool _vestingRevokable,
-        uint256 _extectedFinalTotalSupply
+        uint256 _expectedFinalTotalSupply
     )
         onlyOwner
         external
@@ -414,7 +414,7 @@ contract LidoTemplate is IsContract {
             _vestingCliff,
             _vestingEnd,
             _vestingRevokable,
-            _extectedFinalTotalSupply
+            _expectedFinalTotalSupply
         );
 
         emit TmplTokensIssued(totalAmount);
@@ -622,7 +622,7 @@ contract LidoTemplate is IsContract {
         }
 
         // using loops to save contract size
-        bytes32[7] memory perms;
+        bytes32[10] memory perms;
 
         // Oracle
         perms[0] = _state.oracle.MANAGE_MEMBERS();
@@ -652,12 +652,15 @@ contract LidoTemplate is IsContract {
         perms[0] = _state.lido.PAUSE_ROLE();
         perms[1] = _state.lido.MANAGE_FEE();
         perms[2] = _state.lido.MANAGE_WITHDRAWAL_KEY();
-        perms[3] = _state.lido.SET_ORACLE();
+        perms[3] = _state.lido.MANAGE_PROTOCOL_CONTRACTS_ROLE();
         perms[4] = _state.lido.BURN_ROLE();
-        perms[5] = _state.lido.SET_TREASURY();
-        perms[6] = _state.lido.SET_INSURANCE_FUND();
+        perms[5] = _state.lido.RESUME_ROLE();
+        perms[6] = _state.lido.STAKING_PAUSE_ROLE();
+        perms[7] = _state.lido.STAKING_RESUME_ROLE();
+        perms[8] = _state.lido.SET_EL_REWARDS_VAULT_ROLE();
+        perms[9] = _state.lido.SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE();
 
-        for (i = 0; i < 7; ++i) {
+        for (i = 0; i < 10; ++i) {
             _createPermissionForVoting(acl, _state.lido, perms[i], voting);
         }
     }

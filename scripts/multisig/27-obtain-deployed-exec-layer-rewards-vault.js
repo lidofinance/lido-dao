@@ -7,13 +7,13 @@ const { readNetworkState, persistNetworkState, assertRequiredNetworkState } = re
 const { APP_NAMES, APP_ARTIFACTS } = require('./constants')
 
 const REQUIRED_NET_STATE = [
-  'mevTxFeeVaultDeployTx',
+  'executionLayerRewardsVaultDeployTx',
   `app:${APP_NAMES.LIDO}`,
 ]
 
 async function obtainInstance({ web3, artifacts }) {
   // convert dash-ed appName to camel case-d
-  const appArtifact = 'LidoMevTxFeeVault'
+  const appArtifact = 'LidoExecutionLayerRewardsVault'
   const netId = await web3.eth.net.getId()
 
   logWideSplitter()
@@ -23,12 +23,12 @@ async function obtainInstance({ web3, artifacts }) {
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
 
   logHeader(`${appArtifact} app base`)
-  const vault = await useOrGetDeployed(appArtifact, null, state.mevTxFeeVaultDeployTx)
+  const vault = await useOrGetDeployed(appArtifact, null, state.executionLayerRewardsVaultDeployTx)
   log(`Checking...`)
   const lidoAddress = state[`app:${APP_NAMES.LIDO}`].proxyAddress
   await assertAddresses({ lidoAddress }, vault, appArtifact)
   persistNetworkState(network.name, netId, state, {
-    mevTxFeeVaultAddress: vault.address
+    executionLayerRewardsVaultAddress: vault.address
   })
 }
 

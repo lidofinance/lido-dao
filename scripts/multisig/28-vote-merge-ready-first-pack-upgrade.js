@@ -10,6 +10,8 @@ const { resolveEnsAddress } = require('../components/ens')
 
 const { APP_NAMES } = require('./constants')
 
+const ETH = (value) => web3.utils.toWei(value + '', 'ether')
+
 const DEPLOYER = process.env.DEPLOYER || ''
 const REQUIRED_NET_STATE = [
   'lidoApmEnsName',
@@ -27,7 +29,7 @@ async function createVoting({ web3, artifacts }) {
 
   const state = readNetworkState(network.name, netId)
   assertRequiredNetworkState(state, REQUIRED_NET_STATE.concat([
-    'app:lido', 'app:node-operators-registry', 'app:oracle', 'mevTxFeeVaultAddress']))
+    'app:lido', 'app:node-operators-registry', 'app:oracle', 'executionLayerRewardsVaultAddress']))
 
   logSplitter()
 
@@ -43,55 +45,59 @@ async function createVoting({ web3, artifacts }) {
   const oracleAddress = state[`app:oracle`].proxyAddress
   const lido = await artifacts.require('Lido').at(lidoAddress)
   const oracle = await artifacts.require('LidoOracle').at(oracleAddress)
-  const mevTxFeeVaultAddress = state.mevTxFeeVaultAddress
+  const elRewardsVaultAddress = state.executionLayerRewardsVaultAddress
 
-  const mevTxFeeWithdrawalLimitPoints = 3
+  const elRewardsWithdrawalLimitPoints = 2  // see https://github.com/lidofinance/lido-dao/issues/405
+  const dailyStakingLimit = ETH(150000)
+  const stakeLimitIncreasePerBlock = calcStakeLimitIncreasePerBlock(dailyStakingLimit)
+
+  async function createGrantRoleForLidoAppCallData(roleName) {
+    return {
+      to: aclAddress,
+      calldata: await acl.contract.methods
+        .createPermission(
+          votingAddress,
+          state['app:lido'].proxyAddress,
+          web3.utils.soliditySha3(roleName),
+          votingAddress
+        )
+        .encodeABI()
+    }
+  }
+
 
   log(`Using ENS:`, yl(state.ensAddress))
   log(`TokenManager address:`, yl(tokenManagerAddress))
   log(`Voting address:`, yl(votingAddress))
   log(`Kernel:`, yl(kernel.address))
   log(`ACL:`, yl(acl.address))
-  log(`mevTxFeeWithdrawalLimitPoints: `, yl(mevTxFeeWithdrawalLimitPoints))
+  log(`ELRewardsWithdrawalLimitPoints: `, yl(elRewardsWithdrawalLimitPoints))
+  log(`dailyStakeLimit: `, yl(dailyStakingLimit))
+  log(`stakeLimitIncreasePerBlock: `, yl(stakeLimitIncreasePerBlock))
 
   log.splitter()
 
-  const lidoUpgradeCallData = await buildUpgradeTransaction('lido', state, ens, kernel, 0)
+  const lidoUpgradeCallData = await buildUpgradeTransaction('lido', state, ens, kernel)
 
-  const oracleUpgradeCallData = await buildUpgradeTransaction('oracle', state, ens, kernel, 2)
+  const nodeOperatorsRegistryUpgradeCallData = await buildUpgradeTransaction('node-operators-registry', state, ens, kernel)
 
-  const grantSetMevVaultRoleCallData = {
-    to: aclAddress,
-    calldata: await acl.contract.methods
-      .createPermission(
-        votingAddress,
-        state[`app:lido`].proxyAddress,
-        web3.utils.soliditySha3('SET_MEV_TX_FEE_VAULT_ROLE'),
-        votingAddress
-      )
-      .encodeABI()
-  }
+  const oracleUpgradeCallData = await buildUpgradeTransaction('oracle', state, ens, kernel)
 
-  const grantSetMevWithdrawalLimitRoleCallData = {
-    to: aclAddress,
-    calldata: await acl.contract.methods
-      .createPermission(
-        votingAddress,
-        state[`app:lido`].proxyAddress,
-        web3.utils.soliditySha3('SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE'),
-        votingAddress
-      )
-      .encodeABI()
-  }
+  const grantSetELRewardsVaultRoleCallData = await createGrantRoleForLidoAppCallData('SET_EL_REWARDS_VAULT_ROLE')
+  const grantSetELRewardsWithdrawalLimitRoleCallData = await createGrantRoleForLidoAppCallData('SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE')
+  const grantResumeRoleCallData = await createGrantRoleForLidoAppCallData('RESUME_ROLE')
+  const grantStakingPauseRoleCallData = await createGrantRoleForLidoAppCallData('STAKING_PAUSE_ROLE')
+  const grantStakingResumeRoleCallData = await createGrantRoleForLidoAppCallData('STAKING_RESUME_ROLE')
+  const grantManageProtocolContractsRoleCallData = await createGrantRoleForLidoAppCallData('MANAGE_PROTOCOL_CONTRACTS_ROLE')
 
-  const setMevTxFeeVaultCallData = {
+  const setELRewardsVaultCallData = {
     to: lidoAddress,
-    calldata: await lido.contract.methods.setMevTxFeeVault(mevTxFeeVaultAddress).encodeABI()
+    calldata: await lido.contract.methods.setELRewardsVault(elRewardsVaultAddress).encodeABI()
   }
 
-  const setMevWithdrawalLimitCallData = {
+  const setELRewardsWithdrawalLimitCallData = {
     to: lidoAddress,
-    calldata: await lido.contract.methods.setMevTxFeeWithdrawalLimit(mevTxFeeWithdrawalLimitPoints).encodeABI()
+    calldata: await lido.contract.methods.setELRewardsWithdrawalLimit(elRewardsWithdrawalLimitPoints).encodeABI()
   }
 
   const updateOracleVersionToV3CallData = {
@@ -99,14 +105,26 @@ async function createVoting({ web3, artifacts }) {
     calldata: await oracle.contract.methods.finalizeUpgrade_v3().encodeABI()
   }
 
+  const unpauseStakingCallData = {
+    to: lidoAddress,
+    calldata: await lido.contract.methods.resumeStaking(dailyStakingLimit, stakeLimitIncreasePerBlock).encodeABI()
+  }
+
+
   const encodedUpgradeCallData = encodeCallScript([
     ...lidoUpgradeCallData,
+    ...nodeOperatorsRegistryUpgradeCallData,
     ...oracleUpgradeCallData,
     updateOracleVersionToV3CallData,
-    grantSetMevVaultRoleCallData,
-    grantSetMevWithdrawalLimitRoleCallData,
-    setMevTxFeeVaultCallData,
-    setMevWithdrawalLimitCallData,
+    grantSetELRewardsVaultRoleCallData,
+    grantSetELRewardsWithdrawalLimitRoleCallData,
+    grantResumeRoleCallData,
+    grantStakingPauseRoleCallData,
+    grantStakingResumeRoleCallData,
+    grantManageProtocolContractsRoleCallData,
+    setELRewardsVaultCallData,
+    setELRewardsWithdrawalLimitCallData,
+    unpauseStakingCallData,
   ])
 
   log(`encodedUpgradeCallData:`, yl(encodedUpgradeCallData))
@@ -117,16 +135,24 @@ async function createVoting({ web3, artifacts }) {
     }
   ])
 
-  const txName = `tx-28-deploy-mev-upgrade.json`
+  // TODO: update the list
+  const txName = `tx-28-vote-merge-ready-first-pack-upgrade.json`
   const votingDesc = `1) Publishing new implementation in lido app APM repo
 2) Updating implementation of lido app with new one
-3) Publishing new implementation in oracle app APM repo
-4) Updating implementation of oracle app with new one
-5) Call Oracle's finalizeUpgrade_v3() to update internal version counter
-5) Grant role SET_MEV_TX_FEE_VAULT_ROLE to voting
-6) Grant role SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE to voting
-7) Set deployed MevTxFeeVault to Lido contract
-8) Set MevTxFee Withdrawal Limit to ${mevTxFeeWithdrawalLimitPoints} basis points`
+3) Publishing new implementation in node-operators-registry app APM repo
+4) Updating implementation of node-operators-registry app with new one
+5) Publishing new implementation in oracle app APM repo
+6) Updating implementation of oracle app with new one
+7) Call Oracle's finalizeUpgrade_v3() to update internal version counter
+8) Grant role SET_EL_REWARDS_VAULT_ROLE to voting
+9) Grant role SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE to voting
+10) Grant role RESUME_ROLE to voting
+11) Grant role STAKING_PAUSE_ROLE to voting
+12) Grant role STAKING_RESUME_ROLE to voting
+13) Grant role MANAGE_PROTOCOL_CONTRACTS_ROLE to voting
+14) Set deployed LidoExecutionLayerRewardsVault to Lido contract
+15) Set Execution Layer rewards withdrawal limit to ${elRewardsWithdrawalLimitPoints} basis points
+16) Unpause staking setting daily limit to ${fromE18ToString(dailyStakingLimit)}`
 
   await saveCallTxData(votingDesc, tokenManager, 'forward', txName, {
     arguments: [votingCallData],
@@ -150,7 +176,6 @@ async function buildUpgradeTransaction(appName, state, ens, kernel) {
   const { semanticVersion: currentVersion, contractAddress: currentContractAddress, contentURI: currentContentURI } = await repo.getLatest()
 
   const versionFrom = currentVersion.map((n) => n.toNumber())
-  console.log(currentVersion)
   currentVersion[0] = currentVersion[0].addn(1)
   currentVersion[1] = new BN(0)
   currentVersion[2] = new BN(0)
@@ -182,6 +207,17 @@ async function buildUpgradeTransaction(appName, state, ens, kernel) {
   ]
 
   return upgradeCallData
+}
+
+function calcStakeLimitIncreasePerBlock(dailyLimit) {
+  const secondsPerBlock = 12
+  const secondsPerDay = 24 * 60 * 60
+  const blocksPerDay = secondsPerDay / secondsPerBlock
+  return Math.floor(dailyLimit / blocksPerDay).toString()
+}
+
+function fromE18ToString(x) {
+  return `${(x / 1e18).toFixed(3)} ETH (${x} wei)`
 }
 
 module.exports = runOrWrapScript(createVoting, module)

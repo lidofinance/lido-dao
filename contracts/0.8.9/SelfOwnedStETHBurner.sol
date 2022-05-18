@@ -7,6 +7,7 @@ pragma solidity 0.8.9;
 
 import "@openzeppelin/contracts-v4.4/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-v4.4/utils/introspection/ERC165.sol";
 import "@openzeppelin/contracts-v4.4/utils/math/Math.sol";
 import "./interfaces/IBeaconReportReceiver.sol";
@@ -76,6 +77,8 @@ interface IOracle {
   * @dev Burning stETH means 'decrease total underlying shares amount to perform stETH token rebase'
   */
 contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, IBeaconReportReceiver, ERC165 {
+    using SafeERC20 for IERC20;
+
     uint256 private constant MAX_BASIS_POINTS = 10000;
 
     uint256 private coverSharesBurnRequested;
@@ -267,7 +270,7 @@ contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, IBeaconReportReceiver, E
 
         emit ERC20Recovered(msg.sender, _token, _amount);
 
-        require(IERC20(_token).transfer(TREASURY, _amount));
+        IERC20(_token).safeTransfer(TREASURY, _amount);
     }
 
     /**

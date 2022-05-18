@@ -7,41 +7,33 @@ pragma solidity 0.8.9;
 
 import "@openzeppelin/contracts-v4.4/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol";
-
+import "@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC20.sol";
 
 interface ILido {
     /**
-    * @notice A payable function supposed to be funded only by LidoMevTxFeeVault contract
+    * @notice A payable function supposed to be called only by LidoExecLayerRewardsVault contract
     * @dev We need a separate function because funds received by default payable function
     * will go through entire deposit algorithm
     */
-    function receiveMevTxFee() external payable;
+    function receiveELRewards() external payable;
 }
 
 
 /**
-* @title A vault for temporary storage of MEV and transaction fees
+* @title A vault for temporary storage of execution layer rewards (MEV and tx priority fee)
 *
-* This contract has no payable functions because it's balance is supposed to be
-* increased directly by ethereum protocol when transaction priority fees and extracted MEV
-* rewards are earned by a validator.
 * These vault replenishments happen continuously through a day, while withdrawals
 * happen much less often, only on LidoOracle beacon balance reports
 */
-contract LidoMevTxFeeVault {
+contract LidoExecutionLayerRewardsVault {
+    using SafeERC20 for IERC20;
+
     address public immutable LIDO;
     address public immutable TREASURY;
 
     /**
-     * Total amount of rewards received via transactions
-     * Rewards received on this contract set as coinbase (fee recipient)
-     * are not counted
-     */
-    uint256 public totalRewardsReceivedViaTransactions;
-
-    /**
       * Emitted when the ERC20 `token` recovered (e.g. transferred)
-      * to the Lido treasure address by `requestedBy` sender.
+      * to the Lido treasury address by `requestedBy` sender.
       */
     event ERC20Recovered(
         address indexed requestedBy,
@@ -51,7 +43,7 @@ contract LidoMevTxFeeVault {
 
     /**
       * Emitted when the ERC721-compatible `token` (NFT) recovered (e.g. transferred)
-      * to the Lido treasure address by `requestedBy` sender.
+      * to the Lido treasury address by `requestedBy` sender.
       */
     event ERC721Recovered(
         address indexed requestedBy,
@@ -75,17 +67,17 @@ contract LidoMevTxFeeVault {
 
     /**
     * @notice Allows the contract to receive ETH
-    * @dev MEV rewards may be sent as plain ETH transfers
+    * @dev execution layer rewards may be sent as plain ETH transfers
     */
     receive() external payable {
-        totalRewardsReceivedViaTransactions = totalRewardsReceivedViaTransactions + msg.value;
+        // no-op
     }
 
     /**
     * @notice Withdraw all accumulated rewards to Lido contract
     * @dev Can be called only by the Lido contract
     * @param _maxAmount Max amount of ETH to withdraw
-    * @return amount uint256 of funds received as MEV and transaction fees in wei
+    * @return amount uint256 of funds received as execution layer rewards (in wei)
     */
     function withdrawRewards(uint256 _maxAmount) external returns (uint256 amount) {
         require(msg.sender == LIDO, "ONLY_LIDO_CAN_WITHDRAW");
@@ -93,7 +85,7 @@ contract LidoMevTxFeeVault {
         uint256 balance = address(this).balance;
         amount = (balance > _maxAmount) ? _maxAmount : balance;
         if (amount > 0) {
-            ILido(LIDO).receiveMevTxFee{value: amount}();
+            ILido(LIDO).receiveELRewards{value: amount}();
         }
         return amount;
     }
@@ -110,7 +102,7 @@ contract LidoMevTxFeeVault {
 
         emit ERC20Recovered(msg.sender, _token, _amount);
 
-        require(IERC20(_token).transfer(TREASURY, _amount));
+        IERC20(_token).safeTransfer(TREASURY, _amount);
     }
 
     /**

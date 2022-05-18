@@ -20,7 +20,7 @@ import "../lib/MemUtils.sol";
   *
   * See the comment of `INodeOperatorsRegistry`.
   *
-  * NOTE: the code below assumes moderate amount of node operators, i.e. up to 50 (MAX_NODE_OPERATORS_COUNT).
+  * NOTE: the code below assumes moderate amount of node operators, i.e. up to `MAX_NODE_OPERATORS_COUNT`.
   */
 contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp {
     using SafeMath for uint256;
@@ -38,7 +38,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
     uint256 constant public PUBKEY_LENGTH = 48;
     uint256 constant public SIGNATURE_LENGTH = 96;
-    uint256 constant public MAX_NODE_OPERATORS_COUNT = 50;
+    uint256 constant public MAX_NODE_OPERATORS_COUNT = 200;
 
     uint256 internal constant UINT64_MAX = uint256(uint64(-1));
 
@@ -340,7 +340,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
             // Finding the best suitable operator
             uint256 bestOperatorIdx = cache.length;   // 'not found' flag
             uint256 smallestStake;
-            // The loop is ligthweight comparing to an ether transfer and .deposit invocation
+            // The loop is lightweight comparing to an ether transfer and .deposit invocation
             for (uint256 idx = 0; idx < cache.length; ++idx) {
                 entry = cache[idx];
 

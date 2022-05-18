@@ -100,8 +100,10 @@ if the amount of the buffered Ether becomes sufficiently large.
 
 ### Pausing
 
-* Mutators: `stop()`, `resume()`
+* Mutator: `stop()`
   * Permission required: `PAUSE_ROLE`
+* Mutator: `resume()`
+  * Permission required: `RESUME_ROLE`
 * Accessor: `isStopped() returns (bool)`
 
 When paused, `Lido` doesn't accept user submissions, doesn't allow user withdrawals and oracle

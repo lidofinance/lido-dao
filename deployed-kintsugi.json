@@ -250,7 +250,5 @@
   },
   "lidoBaseDeployTx": "0x99f814a256ddedc706bb4b699fee8106ee3d12d2fa78da6d79544efd398aeac4",
   "oracleBaseDeployTx": "0x195866659be58414ac4a8095c5f6c1b1edc8f24baa48384bc4baa4c77c555af3",
-  "nodeOperatorsRegistryBaseDeployTx": "0x8e16572b1b3fe7ea5b8d67d2af9176566169b706f470d4cbd4fd1d256e339a25",
-  "mevTxFeeVaultDeployTx": "0x3d5375b7a19c6c8391fe65b3dbaabce4d5cc95cdeb910230c516ff434f686889",
-  "mevTxFeeVaultAddress": "0xcDB3885e9680105c02FcC740B184eA98Ef14af42"
+  "nodeOperatorsRegistryBaseDeployTx": "0x8e16572b1b3fe7ea5b8d67d2af9176566169b706f470d4cbd4fd1d256e339a25"
 }

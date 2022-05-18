@@ -5,12 +5,12 @@
 pragma solidity 0.4.24;
 
 
-interface ILidoMevTxFeeVault {
+interface ILidoExecutionLayerRewardsVault {
 
     /**
-    * @notice Withdraw all accumulated rewards to Lido contract
+    * @notice Withdraw all accumulated execution layer rewards to Lido contract
     * @param _maxAmount Max amount of ETH to withdraw
-    * @return amount uint256 of funds received as MEV and transaction fees in wei
+    * @return amount uint256 of funds received as execution layer rewards (in wei)
     */
     function withdrawRewards(uint256 _maxAmount) external returns (uint256 amount);
 }

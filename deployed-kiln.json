@@ -226,8 +226,5 @@
     "fullName": "aragon-voting.lidopm.eth",
     "id": "0x0abcd104777321a82b010357f20887d61247493d89d2e987ff57bcecbde00e1e",
     "proxyAddress": "0x84633bf8e3AE2508a81F09F46a47774F5aFD16B9"
-  },
-  "mevTxFeeVaultDeployTx": "0x044a1aa15ed85bc58c9c27da391e74e3a21d0d5e47b9a657adb2b871627e88bd",
-  "mevTxFeeVaultAddress": "0xe3e01f9E940dDec242C3fdD7bbb855c3770bF999",
-  "mevTxFeeVaultUpgradeTx": "0xf6034ccfd75c67ce2392b6ddb1a7e6b2f3cced87cdf4747a86c295e857cd1c41"
+  }
 }
