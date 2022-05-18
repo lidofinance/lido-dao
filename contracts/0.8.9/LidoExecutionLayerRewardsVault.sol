@@ -49,6 +49,13 @@ contract LidoExecutionLayerRewardsVault {
     );
 
     /**
+      * Emitted when the vault received ETH
+      */
+    event ETHReceived(
+        uint256 amount
+    );
+
+    /**
       * Ctor
       *
       * @param _lido the Lido token (stETH) address
@@ -67,7 +74,7 @@ contract LidoExecutionLayerRewardsVault {
       * @dev execution layer rewards may be sent as plain ETH transfers
       */
     receive() external payable {
-        // no-op
+        emit ETHReceived(msg.value);
     }
 
     /**
