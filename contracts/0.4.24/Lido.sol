@@ -165,11 +165,7 @@ contract Lido is ILido, StETH, AragonApp {
     function resumeStaking() external {
         _auth(STAKING_CONTROL_ROLE);
 
-        STAKE_LIMIT_POSITION.setStorageStakeLimitStruct(
-            STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().setStakeLimitPauseState(false)
-        );
-
-        emit StakingResumed();
+        _resumeStaking();
     }
 
     /**
@@ -354,6 +350,7 @@ contract Lido is ILido, StETH, AragonApp {
         _auth(RESUME_ROLE);
 
         _resume();
+        _resumeStaking();
     }
 
     /**
@@ -979,6 +976,14 @@ contract Lido is ILido, StETH, AragonApp {
         );
 
         emit StakingPaused();
+    }
+
+    function _resumeStaking() internal {
+        STAKE_LIMIT_POSITION.setStorageStakeLimitStruct(
+            STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().setStakeLimitPauseState(false)
+        );
+
+        emit StakingResumed();
     }
 
     function _getCurrentStakeLimit(StakeLimitState.Data memory _stakeLimitData) internal view returns(uint256) {

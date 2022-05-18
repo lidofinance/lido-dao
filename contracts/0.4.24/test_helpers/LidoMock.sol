@@ -28,6 +28,7 @@ contract LidoMock is Lido {
         );
 
         _resume();
+        _resumeStaking();
     }
 
     /**
