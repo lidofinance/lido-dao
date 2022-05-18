@@ -87,7 +87,7 @@ async function createVoting({ web3, artifacts }) {
   const grantSetELRewardsWithdrawalLimitRoleCallData = await createGrantRoleForLidoAppCallData('SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE')
   const grantResumeRoleCallData = await createGrantRoleForLidoAppCallData('RESUME_ROLE')
   const grantStakingPauseRoleCallData = await createGrantRoleForLidoAppCallData('STAKING_PAUSE_ROLE')
-  const grantStakingResumeRoleCallData = await createGrantRoleForLidoAppCallData('STAKING_RESUME_ROLE')
+  const grantStakingControlRoleCallData = await createGrantRoleForLidoAppCallData('STAKING_CONTROL_ROLE')
   const grantManageProtocolContractsRoleCallData = await createGrantRoleForLidoAppCallData('MANAGE_PROTOCOL_CONTRACTS_ROLE')
 
   const setELRewardsVaultCallData = {
@@ -120,7 +120,7 @@ async function createVoting({ web3, artifacts }) {
     grantSetELRewardsWithdrawalLimitRoleCallData,
     grantResumeRoleCallData,
     grantStakingPauseRoleCallData,
-    grantStakingResumeRoleCallData,
+    grantStakingControlRoleCallData,
     grantManageProtocolContractsRoleCallData,
     setELRewardsVaultCallData,
     setELRewardsWithdrawalLimitCallData,
@@ -148,7 +148,7 @@ async function createVoting({ web3, artifacts }) {
 9) Grant role SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE to voting
 10) Grant role RESUME_ROLE to voting
 11) Grant role STAKING_PAUSE_ROLE to voting
-12) Grant role STAKING_RESUME_ROLE to voting
+12) Grant role STAKING_CONTROL_ROLE to voting
 13) Grant role MANAGE_PROTOCOL_CONTRACTS_ROLE to voting
 14) Set deployed LidoExecutionLayerRewardsVault to Lido contract
 15) Set Execution Layer rewards withdrawal limit to ${elRewardsWithdrawalLimitPoints} basis points

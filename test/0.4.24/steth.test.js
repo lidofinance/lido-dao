@@ -370,7 +370,14 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
 
       it('burning zero value works', async () => {
         const receipt = await stEth.burnShares(user1, tokens(0))
-        assertEvent(receipt, 'SharesBurnt', { expectedArgs: { account: user1, amount: tokens(0), sharesAmount: tokens(0) } })
+        assertEvent(receipt, 'SharesBurnt', {
+          expectedArgs: {
+            account: user1,
+            preRebaseTokenAmount: tokens(0),
+            postRebaseTokenAmount: tokens(0),
+            sharesAmount: tokens(0)
+          }
+        })
 
         assertBn(await stEth.totalSupply(), tokens(300))
         assertBn(await stEth.balanceOf(user1), tokens(100))
@@ -392,9 +399,17 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
           totalSupply.mul(totalShares.sub(user1Shares)).div(totalSupply.sub(user1Balance).add(bn(tokens(10))))
         )
 
-        const expectedAmount = await stEth.getPooledEthByShares(sharesToBurn)
+        const expectedPreTokenAmount = await stEth.getPooledEthByShares(sharesToBurn)
         const receipt = await stEth.burnShares(user1, sharesToBurn)
-        assertEvent(receipt, 'SharesBurnt', { expectedArgs: { account: user1, amount: expectedAmount, sharesAmount: sharesToBurn } })
+        const expectedPostTokenAmount = await stEth.getPooledEthByShares(sharesToBurn)
+        assertEvent(receipt, 'SharesBurnt', {
+          expectedArgs: {
+            account: user1,
+            preRebaseTokenAmount: expectedPreTokenAmount,
+            postRebaseTokenAmount: expectedPostTokenAmount,
+            sharesAmount: sharesToBurn
+          }
+        })
 
         assertBn(await stEth.totalSupply(), tokens(300))
         assertBn(await stEth.balanceOf(user1), bn(tokens(90)).subn(1)) // expected round error
@@ -418,9 +433,17 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
           totalSupply.mul(totalShares.sub(user1Shares)).div(totalSupply.sub(user1Balance).add(bn(tokens(50))))
         )
 
-        const expectedAmount = await stEth.getPooledEthByShares(sharesToBurn)
+        const expectedPreTokenAmount = await stEth.getPooledEthByShares(sharesToBurn)
         const receipt = await stEth.burnShares(user1, sharesToBurn)
-        assertEvent(receipt, 'SharesBurnt', { expectedArgs: { account: user1, amount: expectedAmount, sharesAmount: sharesToBurn } })
+        const expectedPostTokenAmount = await stEth.getPooledEthByShares(sharesToBurn)
+        assertEvent(receipt, 'SharesBurnt', {
+          expectedArgs: {
+            account: user1,
+            preRebaseTokenAmount: expectedPreTokenAmount,
+            postRebaseTokenAmount: expectedPostTokenAmount,
+            sharesAmount: sharesToBurn
+          }
+        })
 
         assertBn(await stEth.balanceOf(user1), tokens(50))
 

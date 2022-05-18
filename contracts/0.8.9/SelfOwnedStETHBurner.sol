@@ -120,7 +120,7 @@ contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, IBeaconReportReceiver, E
     );
 
     /**
-      * Emitted when the excessive stETH `amount` (corresponding to `sharesAmount` shares) recovered (e.g. transferred)
+      * Emitted when the excessive stETH `amount` (corresponding to `sharesAmount` shares) recovered (i.e. transferred)
       * to the Lido treasure address by `requestedBy` sender.
       */
     event ExcessStETHRecovered(
@@ -130,7 +130,7 @@ contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, IBeaconReportReceiver, E
     );
 
     /**
-      * Emitted when the ERC20 `token` recovered (e.g. transferred)
+      * Emitted when the ERC20 `token` recovered (i.e. transferred)
       * to the Lido treasure address by `requestedBy` sender.
       */
     event ERC20Recovered(
@@ -140,7 +140,7 @@ contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, IBeaconReportReceiver, E
     );
 
     /**
-      * Emitted when the ERC721-compatible `token` (NFT) recovered (e.g. transferred)
+      * Emitted when the ERC721-compatible `token` (NFT) recovered (i.e. transferred)
       * to the Lido treasure address by `requestedBy` sender.
       */
     event ERC721Recovered(

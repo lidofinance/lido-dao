@@ -88,7 +88,7 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
       from: appManager
     })
     await acl.createPermission(voting, app.address, await app.STAKING_PAUSE_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.STAKING_RESUME_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, app.address, await app.STAKING_CONTROL_ROLE(), appManager, { from: appManager })
 
     // await acl.createPermission(app.address, token.address, await token.MINT_ROLE(), appManager, { from: appManager })
     // await acl.createPermission(app.address, token.address, await token.BURN_ROLE(), appManager, { from: appManager })
