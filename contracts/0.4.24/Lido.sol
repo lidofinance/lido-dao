@@ -94,7 +94,7 @@ contract Lido is ILido, StETH, AragonApp {
     bytes32 internal constant EL_REWARDS_VAULT_POSITION = keccak256("lido.Lido.executionLayerRewardsVault");
 
     /// @dev storage slot position of the staking rate limit structure
-    bytes32 internal constant STAKE_LIMIT_POSITION = keccak256("lido.Lido.stakeLimit");
+    bytes32 internal constant STAKING_STATE_POSITION = keccak256("lido.Lido.stakeLimit");
     /// @dev amount of Ether (on the current Ethereum side) buffered on this smart contract balance
     bytes32 internal constant BUFFERED_ETHER_POSITION = keccak256("lido.Lido.bufferedEther");
     /// @dev number of deposited validators (incrementing counter of deposit operations).
@@ -121,6 +121,7 @@ contract Lido is ILido, StETH, AragonApp {
     * @param _operators instance of Node Operators Registry
     * @param _treasury treasury contract
     * @param _insuranceFund insurance fund contract
+    * NB: by default, staking and the whole Lido pool are in paused state
     */
     function initialize(
         IDepositContract _depositContract,
@@ -193,8 +194,8 @@ contract Lido is ILido, StETH, AragonApp {
     function setStakingLimit(uint256 _maxStakeLimit, uint256 _stakeLimitIncreasePerBlock) external {
         _auth(STAKING_CONTROL_ROLE);
 
-        STAKE_LIMIT_POSITION.setStorageStakeLimitStruct(
-            STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().setStakingLimit(
+        STAKING_STATE_POSITION.setStorageStakeLimitStruct(
+            STAKING_STATE_POSITION.getStorageStakeLimitStruct().setStakingLimit(
                 _maxStakeLimit,
                 _stakeLimitIncreasePerBlock
             )
@@ -211,8 +212,8 @@ contract Lido is ILido, StETH, AragonApp {
     function removeStakingLimit() external {
         _auth(STAKING_CONTROL_ROLE);
 
-        STAKE_LIMIT_POSITION.setStorageStakeLimitStruct(
-            STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().removeStakingLimit()
+        STAKING_STATE_POSITION.setStorageStakeLimitStruct(
+            STAKING_STATE_POSITION.getStorageStakeLimitStruct().removeStakingLimit()
         );
 
         emit StakingLimitRemoved();
@@ -222,7 +223,7 @@ contract Lido is ILido, StETH, AragonApp {
     * @notice Check staking state: whether it's paused or not
     */
     function isStakingPaused() external view returns (bool) {
-        return STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().isStakingPaused();
+        return STAKING_STATE_POSITION.getStorageStakeLimitStruct().isStakingPaused();
     }
 
     /**
@@ -232,7 +233,7 @@ contract Lido is ILido, StETH, AragonApp {
     * - 0 if staking is paused or if limit is exhausted.
     */
     function getCurrentStakeLimit() public view returns (uint256) {
-        return _getCurrentStakeLimit(STAKE_LIMIT_POSITION.getStorageStakeLimitStruct());
+        return _getCurrentStakeLimit(STAKING_STATE_POSITION.getStorageStakeLimitStruct());
     }
 
     /**
@@ -255,7 +256,7 @@ contract Lido is ILido, StETH, AragonApp {
         uint256 prevStakeLimit,
         uint256 prevStakeBlockNumber
     ) {
-        StakeLimitState.Data memory stakeLimitData = STAKE_LIMIT_POSITION.getStorageStakeLimitStruct();
+        StakeLimitState.Data memory stakeLimitData = STAKING_STATE_POSITION.getStorageStakeLimitStruct();
 
         isStakingPaused = stakeLimitData.isStakingPaused();
         isStakingLimitSet = stakeLimitData.isStakingLimitSet();
@@ -674,7 +675,7 @@ contract Lido is ILido, StETH, AragonApp {
     function _submit(address _referral) internal returns (uint256) {
         require(msg.value != 0, "ZERO_DEPOSIT");
 
-        StakeLimitState.Data memory stakeLimitData = STAKE_LIMIT_POSITION.getStorageStakeLimitStruct();
+        StakeLimitState.Data memory stakeLimitData = STAKING_STATE_POSITION.getStorageStakeLimitStruct();
         require(!stakeLimitData.isStakingPaused(), "STAKING_PAUSED");
 
         if (stakeLimitData.isStakingLimitSet()) {
@@ -682,7 +683,7 @@ contract Lido is ILido, StETH, AragonApp {
 
             require(msg.value <= currentStakeLimit, "STAKE_LIMIT");
 
-            STAKE_LIMIT_POSITION.setStorageStakeLimitStruct(
+            STAKING_STATE_POSITION.setStorageStakeLimitStruct(
                 stakeLimitData.updatePrevStakeLimit(currentStakeLimit - msg.value)
             );
         }
@@ -794,7 +795,7 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-    * @dev Distributes fee by minting and distributing corresponding amount of liquid tokens.
+    * @dev Distributes fee portion of the rewards by minting and distributing corresponding amount of liquid tokens.
     * @param _totalRewards Total rewards accrued on the Ethereum 2.0 side in wei
     */
     function distributeFee(uint256 _totalRewards) internal {
@@ -971,16 +972,16 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     function _pauseStaking() internal {
-        STAKE_LIMIT_POSITION.setStorageStakeLimitStruct(
-            STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().setStakeLimitPauseState(true)
+        STAKING_STATE_POSITION.setStorageStakeLimitStruct(
+            STAKING_STATE_POSITION.getStorageStakeLimitStruct().setStakeLimitPauseState(true)
         );
 
         emit StakingPaused();
     }
 
     function _resumeStaking() internal {
-        STAKE_LIMIT_POSITION.setStorageStakeLimitStruct(
-            STAKE_LIMIT_POSITION.getStorageStakeLimitStruct().setStakeLimitPauseState(false)
+        STAKING_STATE_POSITION.setStorageStakeLimitStruct(
+            STAKING_STATE_POSITION.getStorageStakeLimitStruct().setStakeLimitPauseState(false)
         );
 
         emit StakingResumed();
