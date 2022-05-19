@@ -27,10 +27,10 @@ app.store(
           }
         case 'Unbuffered':
           return { ...nextState, bufferedEther: await getBufferedEther() }
-        case 'MevTxFeeWithdrawalLimitSet':
+        case 'ELRewardsWithdrawalLimitSet':
           return {
             ...nextState,
-            mevTxFeeWithdrawalLimitPoints: await getMevTxFeeWithdrawalLimitPoints(),
+            elRewardsWithdrawalLimit: await getELRewardsWithdrawalLimit(),
           }
         case events.SYNC_STATUS_SYNCING:
           return { ...nextState, isSyncing: true }
@@ -56,28 +56,54 @@ app.store(
 
 function initializeState() {
   return async (cachedState) => {
+    const [
+      isStopped,
+      fee,
+      feeDistribution,
+      withdrawalCredentials,
+      bufferedEther,
+      totalPooledEther,
+      nodeOperatorsRegistry,
+      depositContract,
+      oracle,
+      executionLayerRewardsVault,
+      beaconStat,
+      elRewardsWithdrawalLimit,
+    ] = await Promise.all([
+      isStopped(),
+      getFee(),
+      getFeeDistribution(),
+      getWithdrawalCredentials(),
+      getBufferedEther(),
+      getTotalPooledEther(),
+      getNodeOperatorsRegistry(),
+      getDepositContract(),
+      getOracle(),
+      getExecutionLayerRewardsVault(),
+      getBeaconStat(),
+      getELRewardsWithdrawalLimit(),
+    ])
+
     return {
       ...cachedState,
-      isStopped: await isStopped(),
-      fee: await getFee(),
-      feeDistribution: await getFeeDistribution(),
-      withdrawalCredentials: await getWithdrawalCredentials(),
-      bufferedEther: await getBufferedEther(),
-      totalPooledEther: await getTotalPooledEther(),
-      nodeOperatorsRegistry: await getNodeOperatorsRegistry(),
-      depositContract: await getDepositContract(),
-      oracle: await getOracle(),
-      executionLayerRewardsVault: await getExecutionLayerRewardsVault(),
-      // operators: await getOperators(),
-      // treasury: await getTreasury(),
-      // insuranceFund: await getInsuranceFund(),
-      beaconStat: await getBeaconStat(),
-      mevTxFeeWithdrawalLimitPoints: await getMevTxFeeWithdrawalLimitPoints(),
+      isStopped,
+      fee,
+      feeDistribution,
+      withdrawalCredentials,
+      bufferedEther,
+      totalPooledEther,
+      nodeOperatorsRegistry,
+      depositContract,
+      oracle,
+      executionLayerRewardsVault,
+      beaconStat,
+      elRewardsWithdrawalLimit,
     }
   }
 }
 
 // API
+
 function isStopped() {
   return app.call('isStopped').toPromise()
 }
@@ -138,6 +164,6 @@ async function getBeaconStat() {
   }
 }
 
-function getMevTxFeeWithdrawalLimitPoints() {
-  return app.call('getMevTxFeeWithdrawalLimitPoints').toPromise()
+function getELRewardsWithdrawalLimit() {
+  return app.call('getELRewardsWithdrawalLimit').toPromise()
 }

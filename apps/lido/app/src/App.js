@@ -20,7 +20,7 @@ import DbeSidePanel from './components/DbeSidePanel'
 import ChangeFeeDistrSidePanel from './components/ChangeFeeDistrSidePanel'
 import WcBadge from './components/WcBadge'
 import { formatEth } from './utils'
-import ChangeMevTxFeeWithdrawalLimit from './components/ChangeMevTxFeeWithdrawalLimit'
+import ChangeELRewardsWithdrawalLimitSidePanel from './components/ChangeELRewardsWithdrawalLimitSidePanel'
 
 export default function App() {
   const { api, appState, currentApp, guiStyle } = useAragonApi()
@@ -75,18 +75,15 @@ export default function App() {
     [api]
   )
 
-  const [
-    mevWithdrawalLimitPanelOpened,
-    setMevWithdrawalLimitPanelOpened,
-  ] = useState(false)
-  const openMevWithdrawalLimitPanel = () =>
-    setMevWithdrawalLimitPanelOpened(true)
-  const closeMevWithdrawalLimitPanel = () =>
-    setMevWithdrawalLimitPanelOpened(false)
+  const [withdrawalLimitPanelOpened, setWithdrawalLimitPanelOpened] = useState(
+    false
+  )
+  const openWithdrawalLimitPanel = () => setWithdrawalLimitPanelOpened(true)
+  const closeWithdrawalLimitPanel = () => setWithdrawalLimitPanelOpened(false)
 
-  const apiSetMevWithdrawalLimit = useCallback(
+  const apiSetElRewardsWithdrawalLimit = useCallback(
     (limit) => {
-      return api.setMevTxFeeWithdrawalLimit(limit).toPromise()
+      return api.setELRewardsWithdrawalLimit(limit).toPromise()
     },
     [api]
   )
@@ -102,7 +99,7 @@ export default function App() {
       nodeOperatorsRegistry,
       depositContract,
       oracle,
-      mevTxFeeWithdrawalLimitPoints,
+      elRewardsWithdrawalLimit,
       executionLayerRewardsVault,
       // operators,
       // treasury,
@@ -249,19 +246,19 @@ export default function App() {
         ),
       },
       {
-        label: 'MEV Tx Fee Withdrawal Limit',
+        label: 'Execution Layer Rewards Withdrawal Limit',
         content: (
           <span style={{ display: 'flex', alignItems: 'center' }}>
             <strong>
-              {mevTxFeeWithdrawalLimitPoints
-                ? `${mevTxFeeWithdrawalLimitPoints / 100}%`
+              {elRewardsWithdrawalLimit
+                ? `${elRewardsWithdrawalLimit / 100}%`
                 : 'No data'}
             </strong>
             <Button
               icon={<IconEdit />}
               label="Change limit"
               display="icon"
-              onClick={openMevWithdrawalLimitPanel}
+              onClick={openWithdrawalLimitPanel}
               style={{ marginLeft: 10 }}
             />
           </span>
@@ -316,7 +313,6 @@ export default function App() {
   }, [appState])
 
   const [dbePanelOpen, setDbePanelOpen] = useState(false)
-  const openDbePanel = useCallback(() => setDbePanelOpen(true), [])
   const closeDbePanel = useCallback(() => setDbePanelOpen(false), [])
   const apiDepositBufferedEther = useCallback(() => {
     return api.depositBufferedEther()
@@ -374,10 +370,10 @@ export default function App() {
         onClose={closeChangeFeeDistrPanel}
         api={apiSetFeeDistr}
       />
-      <ChangeMevTxFeeWithdrawalLimit
-        opened={mevWithdrawalLimitPanelOpened}
-        onClose={closeMevWithdrawalLimitPanel}
-        api={apiSetMevWithdrawalLimit}
+      <ChangeELRewardsWithdrawalLimitSidePanel
+        opened={withdrawalLimitPanelOpened}
+        onClose={closeWithdrawalLimitPanel}
+        api={apiSetElRewardsWithdrawalLimit}
       />
     </Main>
   )

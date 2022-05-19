@@ -62,7 +62,8 @@ function Panel({ onClose, api }) {
                 margin-bottom: ${3 * GU}px;
               `}
             >
-              This action will change the MEV tx fee withdrawal limit.
+              This action will change the execution layer rewards withdrawal
+              limit.
             </Info>
             <Field
               name="limit"
@@ -84,7 +85,7 @@ function Panel({ onClose, api }) {
   )
 }
 
-export default function ChangeMevTxFeeWithdrawalLimit(props) {
+export default function ChangeELRewardsWithdrawalLimitSidePanel(props) {
   return (
     <SidePanel title="Change limit" {...props}>
       <Panel {...props} />

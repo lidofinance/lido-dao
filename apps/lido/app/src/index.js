@@ -17,6 +17,7 @@ const defaultState = {
     treasuryFeeBasisPoints: defaultValue,
   },
   withdrawalCredentials: defaultValue,
+  elRewardsWithdrawalLimit: defaultValue,
   bufferedEther: defaultValue,
   totalPooledEther: defaultValue,
   nodeOperatorsRegistry: defaultValue,
