@@ -9,12 +9,12 @@ import "./VaultMock.sol";
 
 
 /**
- * @dev Mock for unit-testing pushBeacon and how reward get calculated
+ * @dev Mock for unit-testing handleOracleReport and how reward get calculated
  */
 contract LidoPushableMock is Lido {
 
     uint256 public totalRewards;
-    bool public distributeRewardsCalled;
+    bool public distributeFeeCalled;
 
     function initialize(
         IDepositContract depositContract,
@@ -52,18 +52,18 @@ contract LidoPushableMock is Lido {
     }
 
     function initialize(address _oracle) public onlyInit {
-        _setOracle(_oracle);
+        _setProtocolContracts(_oracle, _oracle, _oracle);
         _resume();
         initialized();
     }
 
-    function resetDistributeRewards() public {
+    function resetDistributeFee() public {
         totalRewards = 0;
-        distributeRewardsCalled = false;
+        distributeFeeCalled = false;
     }
 
-    function distributeRewards(uint256 _totalRewards) internal {
+    function distributeFee(uint256 _totalRewards) internal {
         totalRewards = _totalRewards;
-        distributeRewardsCalled = true;
+        distributeFeeCalled = true;
     }
 }

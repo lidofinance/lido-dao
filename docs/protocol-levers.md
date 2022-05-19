@@ -100,8 +100,10 @@ if the amount of the buffered Ether becomes sufficiently large.
 
 ### Pausing
 
-* Mutators: `stop()`, `resume()`
+* Mutator: `stop()`
   * Permission required: `PAUSE_ROLE`
+* Mutator: `resume()`
+  * Permission required: `RESUME_ROLE`
 * Accessor: `isStopped() returns (bool)`
 
 When paused, `Lido` doesn't accept user submissions, doesn't allow user withdrawals and oracle
@@ -112,7 +114,7 @@ allowances) are allowed. The following transactions revert:
 * calls to `submit(address)`;
 * calls to `depositBufferedEther(uint256)`;
 * calls to `withdraw(uint256, bytes32)` (withdrawals are not implemented yet).
-* calls to `pushBeacon(uint256, uint256)`;
+* calls to `handleOracleReport(uint256, uint256)`;
 * calls to `burnShares(address, uint256)`
 * calls to `transfer(address, uint256)`
 * calls to `transferFrom(address, address, uint256)`

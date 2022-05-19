@@ -85,6 +85,7 @@ export default function App() {
       nodeOperatorsRegistry,
       depositContract,
       oracle,
+      executionLayerRewardsVault,
       // operators,
       // treasury,
       // insuranceFund,
@@ -248,6 +249,10 @@ export default function App() {
       {
         label: 'Oracle',
         content: <IdentityBadge entity={oracle} />,
+      },
+      {
+        label: 'Execution layer rewards Vault',
+        content: <IdentityBadge entity={executionLayerRewardsVault} />,
       },
     ]
   }, [

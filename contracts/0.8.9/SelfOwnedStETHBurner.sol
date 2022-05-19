@@ -7,8 +7,11 @@ pragma solidity 0.8.9;
 
 import "@openzeppelin/contracts-v4.4/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-v4.4/utils/introspection/ERC165.sol";
 import "@openzeppelin/contracts-v4.4/utils/math/Math.sol";
 import "./interfaces/IBeaconReportReceiver.sol";
+import "./interfaces/ISelfOwnedStETHBurner.sol";
 
 /**
   * @title Interface defining a Lido liquid staking pool
@@ -73,7 +76,9 @@ interface IOracle {
   *
   * @dev Burning stETH means 'decrease total underlying shares amount to perform stETH token rebase'
   */
-contract SelfOwnedStETHBurner is IBeaconReportReceiver {
+contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, IBeaconReportReceiver, ERC165 {
+    using SafeERC20 for IERC20;
+
     uint256 private constant MAX_BASIS_POINTS = 10000;
 
     uint256 private coverSharesBurnRequested;
@@ -115,7 +120,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
     );
 
     /**
-      * Emitted when the excessive stETH `amount` (corresponding to `sharesAmount` shares) recovered (e.g. transferred)
+      * Emitted when the excessive stETH `amount` (corresponding to `sharesAmount` shares) recovered (i.e. transferred)
       * to the Lido treasure address by `requestedBy` sender.
       */
     event ExcessStETHRecovered(
@@ -125,7 +130,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
     );
 
     /**
-      * Emitted when the ERC20 `token` recovered (e.g. transferred)
+      * Emitted when the ERC20 `token` recovered (i.e. transferred)
       * to the Lido treasure address by `requestedBy` sender.
       */
     event ERC20Recovered(
@@ -135,7 +140,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
     );
 
     /**
-      * Emitted when the ERC721-compatible `token` (NFT) recovered (e.g. transferred)
+      * Emitted when the ERC721-compatible `token` (NFT) recovered (i.e. transferred)
       * to the Lido treasure address by `requestedBy` sender.
       */
     event ERC721Recovered(
@@ -265,7 +270,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
 
         emit ERC20Recovered(msg.sender, _token, _amount);
 
-        require(IERC20(_token).transfer(TREASURY, _amount));
+        IERC20(_token).safeTransfer(TREASURY, _amount);
     }
 
     /**
@@ -287,7 +292,7 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
      * Resets `coverSharesBurnRequested` and `nonCoverSharesBurnRequested` counters to zero.
      * Does nothing if there are no pending burning requests.
      */
-    function processLidoOracleReport(uint256, uint256, uint256) external override {
+    function processLidoOracleReport(uint256, uint256, uint256) external virtual override {
         uint256 memCoverSharesBurnRequested = coverSharesBurnRequested;
         uint256 memNonCoverSharesBurnRequested = nonCoverSharesBurnRequested;
 
@@ -346,14 +351,14 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
     /**
       * Returns the total cover shares ever burnt.
       */
-    function getCoverSharesBurnt() external view returns (uint256) {
+    function getCoverSharesBurnt() external view virtual override returns (uint256) {
         return totalCoverSharesBurnt;
     }
 
     /**
       * Returns the total non-cover shares ever burnt.
       */
-    function getNonCoverSharesBurnt() external view returns (uint256) {
+    function getNonCoverSharesBurnt() external view virtual override returns (uint256) {
         return totalNonCoverSharesBurnt;
     }
 
@@ -377,6 +382,14 @@ contract SelfOwnedStETHBurner is IBeaconReportReceiver {
         }
 
         return ILido(LIDO).getPooledEthByShares(totalShares - sharesBurnRequested);
+    }
+
+    function supportsInterface(bytes4 _interfaceId) public view virtual override returns (bool) {
+        return (
+            _interfaceId == type(IBeaconReportReceiver).interfaceId
+            || _interfaceId == type(ISelfOwnedStETHBurner).interfaceId
+            || super.supportsInterface(_interfaceId)
+        );
     }
 
     function _requestBurnMyStETH(uint256 _stETH2Burn, bool _isCover) private {

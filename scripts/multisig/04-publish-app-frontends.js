@@ -17,7 +17,7 @@ const { readJSON } = require('../helpers/fs')
 require('@aragon/buidler-aragon/dist/bootstrap-paths')
 
 const { generateArtifacts } = require('@aragon/buidler-aragon/dist/src/utils/artifact/generateArtifacts')
-const { uploadDirToIpfs } = require('../helpers/ipfs')
+const { uploadDirToIpfs } = require('@aragon/buidler-aragon/dist/src/utils/ipfs')
 const { toContentUri } = require('@aragon/buidler-aragon/dist/src/utils/apm/utils')
 
 const { APP_NAMES } = require('./constants')

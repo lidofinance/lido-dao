@@ -22,6 +22,7 @@ const defaultState = {
   nodeOperatorsRegistry: defaultValue,
   depositContract: defaultValue,
   oracle: defaultValue,
+  executionLayerRewardsVault: defaultValue,
   operators: defaultValue,
   treasury: defaultValue,
   insuranceFund: defaultValue,

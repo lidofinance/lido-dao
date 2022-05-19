@@ -573,6 +573,12 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
     })
   })
   describe('levers', () => {
+    it('setLastDepositBlock', async () => {
+      assertRevert(depositSecurityModule.setLastDepositBlock(10, { from: stranger }), `not an owner`)
+
+      await depositSecurityModule.setLastDepositBlock(10, { from: owner })
+      assert.equal(await depositSecurityModule.getLastDepositBlock(), 10, 'wrong last deposit block')
+    })
     it('setNodeOperatorsRegistry sets new value for nodeOperatorsRegistry if called by owner', async () => {
       const newNodeOperatorsRegistry = await NodeOperatorsRegistryMockForSecurityModule.new()
       assert.notEqual(

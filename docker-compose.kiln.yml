@@ -1,0 +1,14 @@
+version: '3.7'
+services:
+  aragon:
+    build:
+      context: ./docker/aragon/
+      args:
+        - ARAGON_IPFS_GATEWAY=https://ipfs.infura.io/ipfs
+        - ARAGON_DEFAULT_ETH_NODE=ws://34.159.167.0:8546
+        - ARAGON_APP_LOCATOR=ipfs
+        - ARAGON_ETH_NETWORK_TYPE=local
+        - ARAGON_ENS_REGISTRY_ADDRESS=0xD3A23B83902066baC61e82bCe449fE1d3154Ab5D
+    container_name: aragon
+    ports:
+      - 3000:8080

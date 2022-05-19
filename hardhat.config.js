@@ -9,6 +9,7 @@ require('@nomiclabs/hardhat-ganache')
 require('@nomiclabs/hardhat-etherscan')
 require('hardhat-gas-reporter')
 require('solidity-coverage')
+require('hardhat-contract-sizer')
 
 const NETWORK_NAME = getNetworkName()
 const ETH_ACCOUNT_NAME = process.env.ETH_ACCOUNT_NAME
@@ -55,6 +56,14 @@ const getNetConfig = (networkName, ethAccountName) => {
       // gas: 10000000,
       gasPrice: 2000000000
     },
+    kiln: {
+      ...base,
+      accounts: accounts.eth.kiln,
+      url: 'http://34.159.167.0:8545',
+      chainId: 1337802,
+      // gas: 10000000,
+      gasPrice: 2000000000
+    },
     // local
     local: {
       ...base,
@@ -68,6 +77,7 @@ const getNetConfig = (networkName, ethAccountName) => {
       blockGasLimit: 20000000,
       gasPrice: 0,
       initialBaseFeePerGas: 0,
+      allowUnlimitedContractSize: true,
       accounts: {
         mnemonic: 'hardhat',
         count: 20,

@@ -42,7 +42,7 @@ import "./lib/Pausable.sol";
  * emitting an event for each token holder and thus running an unbounded loop.
  *
  * The token inherits from `Pausable` and uses `whenNotStopped` modifier for methods
- * which change `shares` or `allowances`. `_stop` and `_resume` functions are overriden
+ * which change `shares` or `allowances`. `_stop` and `_resume` functions are overridden
  * in `Lido.sol` and might be called by an account with the `PAUSE_ROLE` assigned by the
  * DAO. This is useful for emergency scenarios, e.g. a protocol bug, where one might want
  * to freeze all token transfers and approvals until the emergency is resolved.
@@ -80,6 +80,36 @@ contract StETH is IERC20, Pausable {
      * see https://github.com/lidofinance/lido-dao/issues/181#issuecomment-736098834
      */
     bytes32 internal constant TOTAL_SHARES_POSITION = keccak256("lido.StETH.totalShares");
+
+    /**
+      * @notice An executed shares transfer from `sender` to `recipient`.
+      *
+      * @dev emitted in pair with an ERC20-defined `Transfer` event.
+      */
+    event TransferShares(
+        address indexed from,
+        address indexed to,
+        uint256 sharesValue
+    );
+
+    /**
+     * @notice An executed `burnShares` request
+     *
+     * @dev Reports simultaneously burnt shares amount
+     * and corresponding stETH amount.
+     * The stETH amount is calculated twice: before and after the burning incurred rebase.
+     *
+     * @param account holder of the burnt shares
+     * @param preRebaseTokenAmount amount of stETH the burnt shares corresponded to before the burn
+     * @param postRebaseTokenAmount amount of stETH the burnt shares corresponded to after the burn
+     * @param sharesAmount amount of burnt shares
+     */
+    event SharesBurnt(
+        address indexed account,
+        uint256 preRebaseTokenAmount,
+        uint256 postRebaseTokenAmount,
+        uint256 sharesAmount
+    );
 
     /**
      * @return the name of the token.
@@ -137,6 +167,7 @@ contract StETH is IERC20, Pausable {
      *
      * @return a boolean value indicating whether the operation succeeded.
      * Emits a `Transfer` event.
+     * Emits a `TransferShares` event.
      *
      * Requirements:
      *
@@ -187,6 +218,7 @@ contract StETH is IERC20, Pausable {
      * @return a boolean value indicating whether the operation succeeded.
      *
      * Emits a `Transfer` event.
+     * Emits a `TransferShares` event.
      * Emits an `Approval` event indicating the updated allowance.
      *
      * Requirements:
@@ -292,8 +324,31 @@ contract StETH is IERC20, Pausable {
     }
 
     /**
+     * @notice Moves `_sharesAmount` token shares from the caller's account to the `_recipient` account.
+     *
+     * @return amount of transferred tokens.
+     * Emits a `TransferShares` event.
+     * Emits a `Transfer` event.
+     *
+     * Requirements:
+     *
+     * - `_recipient` cannot be the zero address.
+     * - the caller must have at least `_sharesAmount` shares.
+     * - the contract must not be paused.
+     *
+     * @dev The `_sharesAmount` argument is the amount of shares, not tokens.
+     */
+    function transferShares(address _recipient, uint256 _sharesAmount) public returns (uint256) {
+        _transferShares(msg.sender, _recipient, _sharesAmount);
+        emit TransferShares(msg.sender, _recipient, _sharesAmount);
+        uint256 tokensAmount = getPooledEthByShares(_sharesAmount);
+        emit Transfer(msg.sender, _recipient, tokensAmount);
+        return tokensAmount;
+    }
+
+    /**
      * @return the total amount (in wei) of Ether controlled by the protocol.
-     * @dev This is used for calaulating tokens from shares and vice versa.
+     * @dev This is used for calculating tokens from shares and vice versa.
      * @dev This function is required to be implemented in a derived contract.
      */
     function _getTotalPooledEther() internal view returns (uint256);
@@ -301,11 +356,13 @@ contract StETH is IERC20, Pausable {
     /**
      * @notice Moves `_amount` tokens from `_sender` to `_recipient`.
      * Emits a `Transfer` event.
+     * Emits a `TransferShares` event.
      */
     function _transfer(address _sender, address _recipient, uint256 _amount) internal {
         uint256 _sharesToTransfer = getSharesByPooledEth(_amount);
         _transferShares(_sender, _recipient, _sharesToTransfer);
         emit Transfer(_sender, _recipient, _amount);
+        emit TransferShares(_sender, _recipient, _sharesToTransfer);
     }
 
     /**
@@ -403,15 +460,23 @@ contract StETH is IERC20, Pausable {
         uint256 accountShares = shares[_account];
         require(_sharesAmount <= accountShares, "BURN_AMOUNT_EXCEEDS_BALANCE");
 
+        uint256 preRebaseTokenAmount = getPooledEthByShares(_sharesAmount);
+
         newTotalShares = _getTotalShares().sub(_sharesAmount);
         TOTAL_SHARES_POSITION.setStorageUint256(newTotalShares);
 
         shares[_account] = accountShares.sub(_sharesAmount);
+
+        uint256 postRebaseTokenAmount = getPooledEthByShares(_sharesAmount);
+
+        emit SharesBurnt(_account, preRebaseTokenAmount, postRebaseTokenAmount, _sharesAmount);
 
         // Notice: we're not emitting a Transfer event to the zero address here since shares burn
         // works by redistributing the amount of tokens corresponding to the burned shares between
         // all other token holders. The total supply of the token doesn't change as the result.
         // This is equivalent to performing a send from `address` to each other token holder address,
         // but we cannot reflect this as it would require sending an unbounded number of events.
+
+        // We're emitting `SharesBurnt` event to provide an explicit rebase log record nonetheless.
     }
 }
