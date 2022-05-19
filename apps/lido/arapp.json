@@ -41,8 +41,8 @@
       "params": []
     },
     {
-      "name": "Set MEV tx fee withdrawal limit role",
-      "id": "SET_MEV_TX_FEE_WITHDRAWAL_LIMIT_ROLE",
+      "name": "Set execution layer rewards withdrawal limit",
+      "id": "SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE",
       "params": []
     }
   ],
