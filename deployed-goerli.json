@@ -161,8 +161,8 @@
     "0xff50ed3d0ec03aC01D4C79aAd74928BFF48a7b2b",
     "0x9D4AF1Ee19Dad8857db3a45B0374c81c8A1C6320",
     5,
-    100,
-    14,
+    0,
+    1200,
     10
   ],
   "depositorDeployTx": "0x2811fab2d10abba764b672eb75f727e89a02f721af4e7fd1d153bad0b3c50d3b",
