@@ -17,7 +17,7 @@ const validationSchema = yup.object().shape({
     .max(100)
     .test(
       'limit',
-      `Limit must be an integer or have 1 or 2 decimal places.`,
+      `Limit must be a number with up to 2 optional decimal places.`,
       (value) => {
         const regex = /^\d{1,3}(\.\d{1,2})?$/
         return regex.test(value)
