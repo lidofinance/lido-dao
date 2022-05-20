@@ -5,10 +5,9 @@ const { readNetworkState, assertRequiredNetworkState } = require('../helpers/per
 const { assert } = require('chai')
 
 const DEPLOYER = process.env.DEPLOYER || ''
-const REQUIRED_NET_STATE = ['depositorAddress', 'depositorParams', 'depositorPreviousAddress']
+const REQUIRED_NET_STATE = ['depositorAddress', 'depositorPreviousAddress']
 
 async function initializeDepositor({ web3, artifacts }) {
-  // convert dash-ed appName to camel case-d
   const appArtifact = 'DepositSecurityModule'
   const netId = await web3.eth.net.getId()
 
