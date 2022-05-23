@@ -29,8 +29,8 @@ async function changeDepositor({ web3, artifacts }) {
 
   logSplitter()
 
-  const averageBlocksPerSecond = 13.8235 // average speed based on 14700000...14830000 range
-  const votingDurationBlocks = Math.floor((60 * 60 * 24 * 3) / averageBlocksPerSecond) // 3 days
+  const averageSecondsBetweenBlocks = 13.8235 // average speed based on 14700000...14830000 range
+  const votingDurationBlocks = Math.floor((60 * 60 * 24 * 3) / averageSecondsBetweenBlocks) // 3 days
 
   const votingAddress = state[`app:${APP_NAMES.ARAGON_VOTING}`].proxyAddress
   const tokenManagerAddress = state[`app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`].proxyAddress
