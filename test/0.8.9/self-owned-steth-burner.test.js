@@ -41,6 +41,7 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
     let proxyAddress = await newApp(dao, 'lido', lidoBase.address, appManager)
     lido = await LidoMock.at(proxyAddress)
+    await lido.resumeProtocolAndStaking()
 
     // NodeOperatorsRegistry
     proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)

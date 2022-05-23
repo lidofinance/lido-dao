@@ -67,6 +67,7 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
     let proxyAddress = await newApp(dao, 'lido', appBase.address, appManager)
     app = await Lido.at(proxyAddress)
+    await app.resumeProtocolAndStaking()
 
     // NodeOperatorsRegistry
     proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)

@@ -26,9 +26,14 @@ contract LidoMock is Lido {
           new VaultMock(),
           new VaultMock()
         );
+    }
 
-        _resume();
-        _resumeStaking();
+    /**
+      * @dev For use in tests to make protocol operational after deployment
+      */
+    function resumeProtocolAndStaking() {
+      _resume();
+      _resumeStaking();
     }
 
     /**

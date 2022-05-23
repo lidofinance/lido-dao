@@ -39,6 +39,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
 
     // contracts/Lido.sol
     pool = deployed.pool
+    await pool.resumeProtocolAndStaking()
 
     // contracts/nos/NodeOperatorsRegistry.sol
     nodeOperatorRegistry = deployed.nodeOperatorRegistry
