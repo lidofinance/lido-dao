@@ -44,7 +44,9 @@ async function changeDepositor({ web3, artifacts }) {
   const depositRole = await lido.DEPOSIT_ROLE()
   const filter = { app: lidoAddress, role: depositRole }
   const depositRoleEvents = await acl.getPastEvents('SetPermission', { filter, fromBlock: 0 })
-  const oldDepositorAddress = depositRoleEvents.sort((a, b) => b.blockNumber - a.blockNumber)[0].returnValues.entity
+  const oldDepositorAddress = depositRoleEvents
+    .filter((log) => log.returnValues.allowed === true)
+    .sort((a, b) => b.blockNumber - a.blockNumber)[0].returnValues.entity
   const newDepositorAddress = state.depositorAddress
   const newDepositor = await artifacts.require('DepositSecurityModule').at(newDepositorAddress)
   const currentBLock = await await web3.eth.getBlockNumber()
