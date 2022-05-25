@@ -15,11 +15,29 @@ const REQUIRED_NET_STATE = [
   `app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`
 ]
 
-function assertParameterIsTheSame(contractValue, stateValue, paramName) {
-  // console.log(typeof(contractValue))
-  // assert.equal(+contractValue.toString(), stateValue,
+function assertEqualParam(contractValue, stateValue, paramName) {
+  if (contractValue.constructor.name == 'BN') {
+    contractValue = +contractValue.toString()
+  }
+
   assert.equal(contractValue, stateValue,
-    `Value of ${paramName} in state and in the deployed contract differ`)
+    `Value of '${paramName}' in state and in the deployed contract differ`)
+}
+
+function assertEqualParamArrayOfAddresses(contractValue, stateValue, paramName) {
+  if (contractValue.constructor.name == 'BN') {
+    contractValue = +contractValue.toString()
+  }
+  assert(contractValue instanceof Array)
+  assert(stateValue instanceof Array)
+
+  const message = `Value of '${paramName}' in state and in the deployed contract differ`
+
+  assert.equal(contractValue.length, stateValue.length, message)
+
+  for (let i = 0; i < stateValue.length; i++) {
+    assert.addressEqual(contractValue[i], stateValue[i], message)
+  }
 }
 
 async function upgradeApp({ web3, artifacts }) {
@@ -52,17 +70,17 @@ async function upgradeApp({ web3, artifacts }) {
     minDepositBlockDistance,
     pauseIntentValidityPeriodBlocks
   ]
-  console.log("Constructor arguments (for use for source code verification): " + args.join(' '))
+  console.log("Constructor arguments (for use in source code verification): " + args.join(' '))
 
-  assertParameterIsTheSame(await depositor.LIDO(), lidoAddress, 'lidoAddress')
-  assertParameterIsTheSame(await depositor.DEPOSIT_CONTRACT(), depositContractAddress, 'depositContractAddress')
-  assertParameterIsTheSame(await depositor.getMaxDeposits(), maxDepositsPerBlock, 'maxDepositsPerBlock')
-  assertParameterIsTheSame(await depositor.getMinDepositBlockDistance(), minDepositBlockDistance, 'minDepositBlockDistance')
-  assertParameterIsTheSame(await depositor.getPauseIntentValidityPeriodBlocks(), pauseIntentValidityPeriodBlocks, 'pauseIntentValidityPeriodBlocks')
+  assertEqualParam(await depositor.LIDO(), lidoAddress, 'lidoAddress')
+  assertEqualParam(await depositor.DEPOSIT_CONTRACT(), depositContractAddress, 'depositContractAddress')
+  assertEqualParam(await depositor.getMaxDeposits(), maxDepositsPerBlock, 'maxDepositsPerBlock')
+  assertEqualParam(await depositor.getMinDepositBlockDistance(), minDepositBlockDistance, 'minDepositBlockDistance')
+  assertEqualParam(await depositor.getPauseIntentValidityPeriodBlocks(), pauseIntentValidityPeriodBlocks, 'pauseIntentValidityPeriodBlocks')
 
-  // Also check guardians and quorum in state file correspond to the values in the contract
-  assertParameterIsTheSame(await depositor.getGuardianQuorum(), quorum, 'quorum')
-  assertParameterIsTheSame(await depositor.getGuardians(), guardians, 'guardians')
+  // Uncomment if need to check guardians and quorum in the state file correspond to the on-chain values
+  assertEqualParam(await depositor.getGuardianQuorum(), quorum, 'quorum')
+  assertEqualParamArrayOfAddresses(await depositor.getGuardians(), guardians, 'guardians')
 
   await saveDeployTx(appArtifact, `tx-29-deploy-new-depositor-instance.json`, {
     arguments: args,

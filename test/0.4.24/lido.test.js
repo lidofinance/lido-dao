@@ -111,6 +111,12 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     // Initialize the app's proxy.
     await app.initialize(depositContract.address, oracle.address, operators.address)
 
+    assert((await app.isStakingPaused()) === true)
+    assert((await app.isStopped()) === true)
+    await app.resume({ from: voting })
+    assert((await app.isStakingPaused()) === false)
+    assert((await app.isStopped()) === false)
+
     treasuryAddr = await app.getTreasury()
     insuranceAddr = await app.getInsuranceFund()
 
@@ -119,10 +125,12 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
 
     elRewardsVault = await ELRewardsVault.new(app.address, treasuryAddr)
     rewarder = await RewardEmulatorMock.new(elRewardsVault.address)
+    await assertRevert(app.setELRewardsVault(elRewardsVault.address), 'APP_AUTH_FAILED')
     let receipt = await app.setELRewardsVault(elRewardsVault.address, { from: voting })
     assertEvent(receipt, 'ELRewardsVaultSet', { expectedArgs: { executionLayerRewardsVault: elRewardsVault.address } })
 
     const elRewardsWithdrawalLimitPoints = 3
+    await assertRevert(app.setELRewardsWithdrawalLimit(elRewardsWithdrawalLimitPoints), 'APP_AUTH_FAILED')
     receipt = await app.setELRewardsWithdrawalLimit(elRewardsWithdrawalLimitPoints, { from: voting })
     assertEvent(receipt, 'ELRewardsWithdrawalLimitSet', { expectedArgs: { limitPoints: elRewardsWithdrawalLimitPoints } })
   })
@@ -634,6 +642,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
 
     receipt = await app.resumeStaking({ from: voting })
     assertEvent(receipt, 'StakingResumed')
+
+    await assertRevert(app.setStakingLimit(expectedMaxStakeLimit, limitIncreasePerBlock), 'APP_AUTH_FAILED')
     receipt = await app.setStakingLimit(expectedMaxStakeLimit, limitIncreasePerBlock, { from: voting })
     assertEvent(receipt, 'StakingLimitSet', {
       expectedArgs: {
@@ -709,7 +719,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await verifyStakeLimitState(expectedMaxStakeLimit, limitIncreasePerBlock, ETH(0), false, true)
   })
 
-  it('resume with various changing limits work', async () => {
+  it('resume staking with various changing limits work', async () => {
     let receipt
 
     const expectedMaxStakeLimit = ETH(9)
@@ -753,6 +763,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
 
     await verifyStakeLimitState(largerExpectedMaxStakeLimit, largerLimitIncreasePerBlock, smallerExpectedMaxStakeLimit, false, true)
 
+    await assertRevert(app.removeStakingLimit(), 'APP_AUTH_FAILED')
     receipt = await app.removeStakingLimit({ from: voting })
     assertEvent(receipt, 'StakingLimitRemoved')
 
@@ -959,6 +970,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
 
     await assertRevert(app.stop({ from: user2 }), 'APP_AUTH_FAILED')
     await app.stop({ from: voting })
+    assert((await app.isStakingPaused()) === true)
 
     await assertRevert(web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(4) }), 'STAKING_PAUSED')
     await assertRevert(web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(4) }), 'STAKING_PAUSED')
@@ -966,6 +978,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
 
     await assertRevert(app.resume({ from: user2 }), 'APP_AUTH_FAILED')
     await app.resume({ from: voting })
+    assert((await app.isStakingPaused()) === false)
 
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(4) })
     await app.methods['depositBufferedEther()']({ from: depositor })

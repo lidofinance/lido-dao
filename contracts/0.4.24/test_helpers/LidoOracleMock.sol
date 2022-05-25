@@ -21,7 +21,15 @@ contract LidoOracleMock is LidoOracle {
         time = _time;
     }
 
+    function getTimeOriginal() external view returns (uint256) {
+        return LidoOracle._getTime();
+    }
+
     function _getTime() internal view returns (uint256) {
         return time;
+    }
+
+    function setVersion(uint256 _version) external {
+        CONTRACT_VERSION_POSITION.setStorageUint256(_version); 
     }
 }

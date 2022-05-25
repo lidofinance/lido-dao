@@ -23,7 +23,7 @@ async function deployELRewardsVault({ web3, artifacts }) {
   const lido = await artifacts.require('Lido').at(lidoAddress)
   const treasuryAddr = await lido.getTreasury()
 
-  log(`Using Lido Treasury contract address:`, yl(lidoAddress))
+  log(`Using Lido Treasury contract address:`, yl(treasuryAddr))
   logSplitter()
 
   const args = [lidoAddress, treasuryAddr]

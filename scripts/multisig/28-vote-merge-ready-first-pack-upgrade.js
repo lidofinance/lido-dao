@@ -29,7 +29,11 @@ async function createVoting({ web3, artifacts }) {
 
   const state = readNetworkState(network.name, netId)
   assertRequiredNetworkState(state, REQUIRED_NET_STATE.concat([
-    'app:lido', 'app:node-operators-registry', 'app:oracle', 'executionLayerRewardsVaultAddress']))
+    'app:lido',
+    'app:node-operators-registry',
+    'app:oracle',
+    'executionLayerRewardsVaultAddress'
+  ]))
 
   logSplitter()
 

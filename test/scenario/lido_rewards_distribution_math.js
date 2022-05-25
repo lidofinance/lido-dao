@@ -90,6 +90,7 @@ contract('Lido: rewards distribution math', (addresses) => {
 
     // contracts/Lido.sol
     pool = deployed.pool
+    await pool.resumeProtocolAndStaking()
 
     // contracts/nos/NodeOperatorsRegistry.sol
     nodeOperatorRegistry = deployed.nodeOperatorRegistry
