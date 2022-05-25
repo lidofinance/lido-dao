@@ -79,8 +79,8 @@ async function upgradeApp({ web3, artifacts }) {
   assertEqualParam(await depositor.getPauseIntentValidityPeriodBlocks(), pauseIntentValidityPeriodBlocks, 'pauseIntentValidityPeriodBlocks')
 
   // Uncomment if need to check guardians and quorum in the state file correspond to the on-chain values
-  // assertEqualParam(await depositor.getGuardianQuorum(), quorum, 'quorum')
-  // assertEqualParamArrayOfAddresses(await depositor.getGuardians(), guardians, 'guardians')
+  assertEqualParam(await depositor.getGuardianQuorum(), quorum, 'quorum')
+  assertEqualParamArrayOfAddresses(await depositor.getGuardians(), guardians, 'guardians')
 
   await saveDeployTx(appArtifact, `tx-29-deploy-new-depositor-instance.json`, {
     arguments: args,
