@@ -35,7 +35,9 @@ async function changeDepositor({ web3, artifacts }) {
   const votingAddress = state[`app:${APP_NAMES.ARAGON_VOTING}`].proxyAddress
   const tokenManagerAddress = state[`app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`].proxyAddress
   const lidoAddress = state[`app:${APP_NAMES.LIDO}`].proxyAddress
+  const agentAddress = state[`app:${APP_NAMES.ARAGON_AGENT}`].proxyAddress
   const voting = await artifacts.require('Voting').at(votingAddress)
+  const agent = await artifacts.require('Agent').at(agentAddress)
   const tokenManager = await artifacts.require('TokenManager').at(tokenManagerAddress)
   const kernel = await artifacts.require('Kernel').at(state.daoAddress)
   const aclAddress = await kernel.acl()
@@ -78,7 +80,12 @@ async function changeDepositor({ web3, artifacts }) {
     calldata: await newDepositor.contract.methods.setLastDepositBlock(newLastDepositBlock).encodeABI()
   }
 
-  const encodedUpgradeCallData = encodeCallScript([revokeCallData, grantCallData, setLastBlockCallData])
+  const agentCallData = {
+    to: agentAddress,
+    calldata: await agent.contract.methods.forward(encodeCallScript([setLastBlockCallData])).encodeABI()
+  }
+
+  const encodedUpgradeCallData = encodeCallScript([revokeCallData, grantCallData, agentCallData])
 
   log(`encodedUpgradeCallData:`, yl(encodedUpgradeCallData))
   const votingCallData = encodeCallScript([
