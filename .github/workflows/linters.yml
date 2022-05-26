@@ -92,3 +92,49 @@ jobs:
     - name: Run Solidity test coverage
       run: yarn test:coverage
       continue-on-error: false
+
+  abi-lint:
+    name: ABI actuality linter
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup node.js version
+      uses: actions/setup-node@v1
+      with:
+        node-version: 12.x
+
+    - name: Get yarn cache directory path
+      id: yarn-cache-dir-path
+      run: echo "::set-output name=dir::$(yarn config get cacheFolder)"
+
+    - name: Cache yarn cache
+      id: cache-yarn-cache
+      uses: actions/cache@v2
+      with:
+        path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+        key: yarn-${{ hashFiles('**/yarn.lock') }}
+        restore-keys: yarn-${{ hashFiles('**/yarn.lock') }}
+
+    - name: Cache node_modules
+      id: cache-node-modules
+      uses: actions/cache@v2
+      with:
+        path: '**/node_modules'
+        key: node_modules-${{ hashFiles('**/yarn.lock') }}
+        restore-keys: node_modules-${{ hashFiles('**/yarn.lock') }}
+
+    - name: Install modules
+      run: yarn
+      if: |
+        steps.cache-yarn-cache.outputs.cache-hit != 'true' ||
+        steps.cache-node-modules.outputs.cache-hit != 'true'
+    
+    - name: Compile code and extract ABI
+      run: yarn compile
+
+    - name: Check for ABI changes
+      run: .github/assert-git-changes.py
+      env:
+        TARGET_DIR: lib/abi/
