@@ -59,4 +59,4 @@ jobs:
         branch: fix-abi-${{ github.ref_name }}
         delete-branch: true
         title: "Fix ABI ${{ github.ref_name }}"
-        body: "This PR is generated automatically. Merge it ti apply fixes to the /lib/abi/"
+        body: "This PR is generated automatically. Merge it to apply fixes to the /lib/abi/"
