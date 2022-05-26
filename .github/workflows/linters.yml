@@ -135,5 +135,6 @@ jobs:
       run: yarn compile
 
     - name: Check for ABI changes
-      id: changes
       run: .github/assert-git-changes.py
+      env:
+        TARGET_DIR: lib/abi/
