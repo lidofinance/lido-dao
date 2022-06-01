@@ -20,8 +20,6 @@ async function assertByteCode(address, artifactName) {
   const artifact = await artifacts.readArtifact(artifactName)
   let bytecodeFromArtifact = artifact.deployedBytecode.toLowerCase()
   const bytecodeFromRpc = (await web3.eth.getCode(address)).toLowerCase()
-  // console.log(`From RPC:\n${bytecodeFromRpc}`)
-  // console.log(`From Artifact:\n${bytecodeFromArtifact}`)
   assert.isTrue(
     bytecodeFromRpc === bytecodeFromArtifact,
     `Compiled bytecode for ${chalk.yellow(address)}(${artifactName}) doesn't match deployed bytecode!`
@@ -71,4 +69,8 @@ async function assertDeployedByteCodeMain() {
   }
 }
 
-assertDeployedByteCodeMain()
+var myfunc = assertDeployedByteCodeMain();
+myfunc.catch(function (err) {
+     console.log(err);
+     process.exit([1])
+});
