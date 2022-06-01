@@ -3,7 +3,6 @@ name: CI
 on:
   # temporary
   push:
-    - 'master'
   pull_request:
     branches:    
       - 'master'
