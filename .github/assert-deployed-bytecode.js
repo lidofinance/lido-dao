@@ -4,12 +4,12 @@ const { web3 } = require('hardhat')
 const { readJSON } = require('../scripts/helpers/fs')
 const { APPS_TO_NAMES, CONTRACTS_TO_NAMES, IGNORE_METADATA_CONTRACTS } = require('./deployed-bytecode-consts')
 
-const empty32bytesSlot = '00000000000000000000000000000000'
+const empty32bytes = '00000000000000000000000000000000'
 
-function isEmpty32bytesSlot(byteCode, index) {
+function isInsideEmpty32bytes(byteCode, index) {
   const start = index - 31 >= 0 ? index - 31 : 0
   const end = index + 32 <= byteCode.length ? index + 32 : byteCode.length
-  return byteCode.slice(start, end).indexOf(empty32bytesSlot) >= 0
+  return byteCode.slice(start, end).indexOf(empty32bytes) >= 0
 }
 
 function stripMetadata(byteCode) {
@@ -29,7 +29,7 @@ function isBytecodeSimilar(first, second, ignoreMetadata) {
     return false
   }
   for (var i = 0; i < first.length; i++) {
-    if (first[i] != second[i] && !isEmpty32bytesSlot(first, i) && !isEmpty32bytesSlot(second, i)) {
+    if (first[i] != second[i] && !isInsideEmpty32bytes(first, i) && !isInsideEmpty32bytes(second, i)) {
       return false
     }
   }
