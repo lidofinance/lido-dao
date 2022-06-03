@@ -4,13 +4,32 @@ const { web3 } = require('hardhat')
 const { readJSON } = require('../scripts/helpers/fs')
 const { APPS_TO_NAMES, CONTRACTS_TO_NAMES, IGNORE_METADATA_CONTRACTS } = require('./deployed-bytecode-consts')
 
-function compareSymbolWise(first, second, ignoreMetadata) {
-  let compareEnd = first.length
-  if (ignoreMetadata) {
-    compareEnd = first.indexOf('a264')
+const empty32bytesSlot = '00000000000000000000000000000000'
+
+function isEmpty32bytesSlot(byteCode, index) {
+  const start = index - 31 >= 0 ? index - 31 : 0
+  const end = index + 32 <= byteCode.length ? index + 32 : byteCode.length
+  return byteCode.slice(start, end).indexOf(empty32bytesSlot) >= 0
+}
+
+function stripMetadata(byteCode) {
+  metaDataIndex = byteCode.indexOf('a264')
+  if (metaDataIndex > 0) {
+    return byteCode.slice(0, metaDataIndex)
   }
-  for (var i = 0; i < compareEnd; i++) {
-    if (first[i] != second[i] && first[i] != '0' && second[i] != '0') {
+  return byteCode
+}
+
+function isBytecodeSimilar(first, second, ignoreMetadata) {
+  if (ignoreMetadata) {
+    first = stripMetadata(first)
+    second = stripMetadata(second)
+  }
+  if (first.length != second.length) {
+    return false
+  }
+  for (var i = 0; i < first.length; i++) {
+    if (first[i] != second[i] && !isEmpty32bytesSlot(first, i) && !isEmpty32bytesSlot(second, i)) {
       return false
     }
   }
@@ -24,14 +43,11 @@ async function assertByteCode(address, artifactName, deployTx) {
   const ignoreMetadata = IGNORE_METADATA_CONTRACTS.includes(artifactName)
   if (bytecodeFromRpc === bytecodeFromArtifact) {
     console.log(chalk.green(`Compiled bytecode for ${chalk.yellow(address)}(${artifactName}) MATCHES deployed bytecode!`))
-  } else if (
-    bytecodeFromRpc.length == bytecodeFromArtifact.length &&
-    compareSymbolWise(bytecodeFromArtifact, bytecodeFromRpc, ignoreMetadata)
-  ) {
+  } else if (isBytecodeSimilar(bytecodeFromArtifact, bytecodeFromRpc, ignoreMetadata)) {
     console.log(chalk.hex('#FFA500')(`Compiled bytecode for ${chalk.yellow(address)}(${artifactName}) is SIMILAR to deployed bytecode!`))
     if (deployTx) {
-      await assertByteCodeByDeployTx(address, deployTx, artifact)
-    } else if (!ignoreMetadata) {
+      await assertByteCodeByDeployTx(address, deployTx, artifact, ignoreMetadata)
+    } else {
       throw new AssertionError(
         `No deployTx found for ${chalk.yellow(address)}(${artifactName}).\n` +
           `Double check is impossible, but required due to differences in the deployed bytecode`
@@ -42,15 +58,22 @@ async function assertByteCode(address, artifactName, deployTx) {
   }
 }
 
-async function assertByteCodeByDeployTx(address, deployTx, artifact) {
+async function assertByteCodeByDeployTx(address, deployTx, artifact, ignoreMetadata) {
   const tx = await web3.eth.getTransaction(deployTx)
   const txData = tx.input.toLowerCase()
-  if (!txData.startsWith(artifact.bytecode)) {
+  const byteCode = ignoreMetadata ? stripMetadata(artifact.bytecode) : artifact.bytecode
+  if (!txData.startsWith(byteCode)) {
     throw new AssertionError(
       `Bytecode from deploy TX DOESN'T MATCH compiled bytecode for ${chalk.yellow(address)}(${artifact.contractName})`
     )
   }
-  console.log(chalk.green(`Bytecode from deploy TX MATCHES compiled bytecode for ${chalk.yellow(address)}(${artifact.contractName})`))
+  console.log(
+    chalk.green(
+      `Bytecode from deploy TX ${ignoreMetadata ? 'SIMILAR to' : 'MATCHES'} compiled bytecode for ${chalk.yellow(address)}(${
+        artifact.contractName
+      })`
+    )
+  )
 }
 
 async function assertDeployedByteCodeMain() {
