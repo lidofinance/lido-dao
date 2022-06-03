@@ -2,10 +2,14 @@ const { AssertionError } = require('chai')
 const chalk = require('chalk')
 const { web3 } = require('hardhat')
 const { readJSON } = require('../scripts/helpers/fs')
-const { APPS_TO_NAMES, CONTRACTS_TO_NAMES } = require('./deployed-bytecode-consts')
+const { APPS_TO_NAMES, CONTRACTS_TO_NAMES, IGNORE_METADATA_CONTRACTS } = require('./deployed-bytecode-consts')
 
-function compareSymbolWise(first, second) {
-  for (var i = 0; i < first.length; i++) {
+function compareSymbolWise(first, second, ignoreMetadata) {
+  let compareEnd = first.length
+  if (ignoreMetadata) {
+    compareEnd = first.indexOf('a264')
+  }
+  for (var i = 0; i < compareEnd; i++) {
     if (first[i] != second[i] && first[i] != '0' && second[i] != '0') {
       return false
     }
@@ -17,13 +21,17 @@ async function assertByteCode(address, artifactName, deployTx) {
   const artifact = await artifacts.readArtifact(artifactName)
   let bytecodeFromArtifact = artifact.deployedBytecode.toLowerCase()
   const bytecodeFromRpc = (await web3.eth.getCode(address)).toLowerCase()
+  const ignoreMetadata = IGNORE_METADATA_CONTRACTS.includes(artifactName)
   if (bytecodeFromRpc === bytecodeFromArtifact) {
     console.log(chalk.green(`Compiled bytecode for ${chalk.yellow(address)}(${artifactName}) MATCHES deployed bytecode!`))
-  } else if (bytecodeFromRpc.length == bytecodeFromArtifact.length && compareSymbolWise(bytecodeFromArtifact, bytecodeFromRpc)) {
+  } else if (
+    bytecodeFromRpc.length == bytecodeFromArtifact.length &&
+    compareSymbolWise(bytecodeFromArtifact, bytecodeFromRpc, ignoreMetadata)
+  ) {
     console.log(chalk.hex('#FFA500')(`Compiled bytecode for ${chalk.yellow(address)}(${artifactName}) is SIMILAR to deployed bytecode!`))
     if (deployTx) {
       await assertByteCodeByDeployTx(address, deployTx, artifact)
-    } else {
+    } else if (!ignoreMetadata) {
       throw new AssertionError(
         `No deployTx found for ${chalk.yellow(address)}(${artifactName}).\n` +
           `Double check is impossible, but required due to differences in the deployed bytecode`
@@ -90,7 +98,7 @@ async function assertDeployedByteCodeMain() {
 }
 
 var myfunc = assertDeployedByteCodeMain()
-myfunc.catch(function (err) {
+myfunc.catch((err) => {
   console.log(err)
   process.exit([1])
 })

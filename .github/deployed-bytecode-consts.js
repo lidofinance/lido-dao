@@ -5,14 +5,17 @@ const APPS_TO_NAMES = new Map([
 ])
 
 const CONTRACTS_TO_NAMES = new Map([
-  //['wstethContract', 'WstETH'], // excluded due to https://github.com/lidofinance/lido-dao/commit/98c4821638ceab0ce84dbd3b7fdc7c1f83f07622
+  ['wstethContract', 'WstETH'],
   ['executionLayerRewardsVault', 'LidoExecutionLayerRewardsVault'],
   ['compositePostRebaseBeaconReceiver', 'CompositePostRebaseBeaconReceiver'],
   ['selfOwnedStETHBurner', 'SelfOwnedStETHBurner'],
-  ['depositor', 'DepositSecurityModule'],
+  ['depositor', 'DepositSecurityModule']
 ])
+
+const IGNORE_METADATA_CONTRACTS = ['WstETH']
 
 module.exports = {
   APPS_TO_NAMES,
-  CONTRACTS_TO_NAMES
+  CONTRACTS_TO_NAMES,
+  IGNORE_METADATA_CONTRACTS
 }
