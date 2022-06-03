@@ -13,7 +13,8 @@ function isInsideEmpty32bytes(byteCode, index) {
 }
 
 function stripMetadata(byteCode) {
-  metaDataIndex = byteCode.indexOf('a264')
+  let metaDataLength = parseInt(byteCode.slice(-4), 16) * 2
+  let metaDataIndex = byteCode.length - metaDataLength - 4
   if (metaDataIndex > 0) {
     return byteCode.slice(0, metaDataIndex)
   }
@@ -40,9 +41,6 @@ async function assertByteCode(address, artifactName, deployTx) {
   const artifact = await artifacts.readArtifact(artifactName)
   let bytecodeFromArtifact = artifact.deployedBytecode.toLowerCase()
   const bytecodeFromRpc = (await web3.eth.getCode(address)).toLowerCase()
-  if (artifactName == "Lido") {
-    console.log(bytecodeFromRpc)
-  }
   const ignoreMetadata = IGNORE_METADATA_CONTRACTS.includes(artifactName)
   if (bytecodeFromRpc === bytecodeFromArtifact) {
     console.log(chalk.green(`Compiled bytecode for ${chalk.yellow(address)}(${artifactName}) MATCHES deployed bytecode!`))
