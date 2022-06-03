@@ -1,8 +1,23 @@
 {
   "roles": [
     {
-      "name": "Stop/resume submissions and withdrawal requests",
+      "name": "Pause role",
       "id": "PAUSE_ROLE",
+      "params": []
+    },
+    {
+      "name": "Resume role",
+      "id": "RESUME_ROLE",
+      "params": []
+    },
+    {
+      "name": "Staking pause role",
+      "id": "STAKING_PAUSE_ROLE",
+      "params": []
+    },
+    {
+      "name": "Staking control role",
+      "id": "STAKING_CONTROL_ROLE",
       "params": []
     },
     {
@@ -16,6 +31,11 @@
       "params": []
     },
     {
+      "name": "Manage protocol contracts role",
+      "id": "MANAGE_PROTOCOL_CONTRACTS_ROLE",
+      "params": []
+    },
+    {
       "name": "Set oracle contract address",
       "id": "SET_ORACLE",
       "params": []
@@ -23,10 +43,7 @@
     {
       "name": "Burn tokens",
       "id": "BURN_ROLE",
-      "params": [
-        "Account which tokens are to be burnt",
-        "Token amount"
-      ]
+      "params": ["Account which tokens are to be burnt", "Token amount"]
     },
     {
       "name": "Set treasury address",
@@ -41,6 +58,16 @@
     {
       "name": "Deposit role",
       "id": "DEPOSIT_ROLE",
+      "params": []
+    },
+    {
+      "name": "Set EL rewards vault role",
+      "id": "SET_EL_REWARDS_VAULT_ROLE",
+      "params": []
+    },
+    {
+      "name": "Set EL rewards withdrawal limit role",
+      "id": "SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE",
       "params": []
     }
   ],
