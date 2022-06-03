@@ -4,11 +4,11 @@ const { web3 } = require('hardhat')
 const { readJSON } = require('../scripts/helpers/fs')
 const { APPS_TO_NAMES, CONTRACTS_TO_NAMES, IGNORE_METADATA_CONTRACTS } = require('./deployed-bytecode-consts')
 
-const empty32bytes = '00000000000000000000000000000000'
+const empty32bytes = '0000000000000000000000000000000000000000000000000000000000000000'
 
 function isInsideEmpty32bytes(byteCode, index) {
-  const start = index - 31 >= 0 ? index - 31 : 0
-  const end = index + 32 <= byteCode.length ? index + 32 : byteCode.length
+  const start = index - 63 >= 0 ? index - 63 : 0
+  const end = index + 64 <= byteCode.length ? index + 64 : byteCode.length
   return byteCode.slice(start, end).indexOf(empty32bytes) >= 0
 }
 
@@ -40,6 +40,9 @@ async function assertByteCode(address, artifactName, deployTx) {
   const artifact = await artifacts.readArtifact(artifactName)
   let bytecodeFromArtifact = artifact.deployedBytecode.toLowerCase()
   const bytecodeFromRpc = (await web3.eth.getCode(address)).toLowerCase()
+  if (artifactName == "Lido") {
+    console.log(bytecodeFromRpc)
+  }
   const ignoreMetadata = IGNORE_METADATA_CONTRACTS.includes(artifactName)
   if (bytecodeFromRpc === bytecodeFromArtifact) {
     console.log(chalk.green(`Compiled bytecode for ${chalk.yellow(address)}(${artifactName}) MATCHES deployed bytecode!`))
