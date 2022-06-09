@@ -22,7 +22,7 @@ const initialValues = {
 const validationSchema = yup.object().shape({
   vault: yup
     .string('Vault must be a string.')
-    .test(fieldName, 'Vault  must be a valid address.', (vault) => {
+    .test(fieldName, 'Vault must be a valid address.', (vault) => {
       return isAddress(vault)
     }),
 })
