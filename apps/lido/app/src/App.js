@@ -1,8 +1,9 @@
 import { useAragonApi } from '@aragon/api-react'
-import { Header, Main, Split, SyncIndicator, useTheme } from '@aragon/ui'
+import { Header, Main, SyncIndicator, useTheme } from '@aragon/ui'
 import React from 'react'
 import { ThemeProvider } from 'styled-components'
 import { BeaconStats } from './components/BeaconStats'
+import { Split } from './components/shared'
 import { StakingLimitState } from './components/StakingLimitState'
 import { State } from './components/state'
 
