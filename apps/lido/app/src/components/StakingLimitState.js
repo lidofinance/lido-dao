@@ -36,7 +36,7 @@ export const StakingLimitState = () => {
       </ListItem>
       <ListItem
         label={
-          <Tooltip tooltip="Rate at which the staking limit is passively restored on each block up until the max limit if no deposits are submitted.">
+          <Tooltip tooltip="Rate at which the staking limit is passively restored on each block up until the max limit if no user funds are submitted.">
             Restoration
           </Tooltip>
         }
