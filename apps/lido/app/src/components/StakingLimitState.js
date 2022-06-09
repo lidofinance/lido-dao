@@ -1,8 +1,8 @@
 import { useAppState } from '@aragon/api-react'
 import { Box } from '@aragon/ui'
 import React from 'react'
-import { formatEth } from '../utils'
 import { ListItem, LoadableElement } from './shared'
+import { Ether } from './shared/Ether'
 
 export const StakingLimitState = () => {
   const { stakingLimitInfo } = useAppState()
@@ -20,9 +20,7 @@ export const StakingLimitState = () => {
         </LoadableElement>
       </ListItem>
       <ListItem label="Max limit">
-        <LoadableElement value={stakingLimitInfo?.maxStakeLimit}>
-          Ξ{formatEth(stakingLimitInfo?.maxStakeLimit)}
-        </LoadableElement>
+        <Ether ether={stakingLimitInfo?.maxStakeLimit} />
       </ListItem>
       <ListItem label="Restoration rate">
         <LoadableElement value={stakingLimitInfo?.maxStakeLimitGrowthBlocks}>

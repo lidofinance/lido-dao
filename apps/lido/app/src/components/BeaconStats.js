@@ -1,9 +1,8 @@
 import { useAppState } from '@aragon/api-react'
 import { Box } from '@aragon/ui'
-import { constants } from 'ethers'
 import React from 'react'
-import { formatEth } from '../utils'
 import { ListItem, LoadableElement } from './shared'
+import { Ether } from './shared/Ether'
 
 export const BeaconStats = () => {
   const { beaconStat } = useAppState()
@@ -16,10 +15,7 @@ export const BeaconStats = () => {
         </LoadableElement>
       </ListItem>
       <ListItem label="Balance">
-        <LoadableElement value={beaconStat?.beaconBalance}>
-          {constants.EtherSymbol}
-          {formatEth(beaconStat?.beaconBalance)}
-        </LoadableElement>
+        <Ether ether={beaconStat?.beaconBalance} />
       </ListItem>
     </Box>
   )

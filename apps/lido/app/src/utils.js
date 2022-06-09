@@ -8,10 +8,6 @@ const TEN_TO_15 = new BN(10).pow(new BN(15))
  * @returns {string} equivalent value in Eth
  */
 export function formatEth(wei) {
-  if (typeof wei === 'undefined') {
-    return 0
-  }
-
   return String(new BN(wei).div(TEN_TO_15) / 1000)
 }
 
@@ -30,10 +26,6 @@ export function toBasisPoints(number) {
  * @returns {number} sum
  */
 export function fromBasisPoints(number) {
-  if (typeof number === 'string') {
-    number = parseInt(number)
-  }
-
   return Math.round(number / 100)
 }
 

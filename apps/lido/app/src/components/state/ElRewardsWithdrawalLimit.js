@@ -9,10 +9,10 @@ import {
   IconButton,
   InfoSpaced,
   ListItem,
-  LoadableElement,
   TextField,
 } from '../shared'
-import { fromBasisPoints, toBasisPoints } from '../../utils'
+import { toBasisPoints } from '../../utils'
+import { BasisPoints } from '../shared/BasisPoints'
 
 export const ElRewardsWithdrawalLimit = () => {
   const { api } = useAragonApi()
@@ -33,9 +33,7 @@ export const ElRewardsWithdrawalLimit = () => {
   return (
     <ListItem label="EL Rewards Withdrawal Limit">
       <Controls>
-        <LoadableElement value={elRewardsWithdrawalLimit}>
-          {fromBasisPoints(elRewardsWithdrawalLimit)}%
-        </LoadableElement>
+        <BasisPoints basisPoints={elRewardsWithdrawalLimit} />
         <IconButton label="edit" icon={<IconEdit />} onClick={openSidePanel} />
       </Controls>
       <SidePanel

@@ -4,19 +4,9 @@ import { Field, Form, Formik } from 'formik'
 import React, { useState } from 'react'
 import * as yup from 'yup'
 import BN from 'bn.js'
-import {
-  IconButton,
-  InfoSpaced,
-  ListItem,
-  LoadableElement,
-  TextField,
-} from '../shared'
-import {
-  capitalizeFirstLetter,
-  fromBasisPoints,
-  sum,
-  toBasisPoints,
-} from '../../utils'
+import { IconButton, InfoSpaced, ListItem, TextField } from '../shared'
+import { capitalizeFirstLetter, sum, toBasisPoints } from '../../utils'
+import { BasisPoints } from '../shared/BasisPoints'
 
 const TREASURY = 'treasury'
 const INSURANCE = 'insurance'
@@ -110,25 +100,19 @@ export const FeeDistribution = () => {
         label={<IdentityBadge label="Treasury" entity={treasury} />}
         nested
       >
-        <LoadableElement value={feeDistribution?.treasuryFeeBasisPoints}>
-          {fromBasisPoints(feeDistribution?.treasuryFeeBasisPoints)}%
-        </LoadableElement>
+        <BasisPoints basisPoints={feeDistribution?.treasuryFeeBasisPoints} />
       </ListItem>
       <ListItem
         label={<IdentityBadge label="Insurance" entity={insuranceFund} />}
         nested
       >
-        <LoadableElement value={feeDistribution?.insuranceFeeBasisPoints}>
-          {fromBasisPoints(feeDistribution?.insuranceFeeBasisPoints)}%
-        </LoadableElement>
+        <BasisPoints basisPoints={feeDistribution?.insuranceFeeBasisPoints} />
       </ListItem>
       <ListItem
         label={<IdentityBadge label="Operators" entity={operators} />}
         nested
       >
-        <LoadableElement value={feeDistribution?.operatorsFeeBasisPoints}>
-          {fromBasisPoints(feeDistribution?.operatorsFeeBasisPoints)}%
-        </LoadableElement>
+        <BasisPoints basisPoints={feeDistribution?.operatorsFeeBasisPoints} />
       </ListItem>
       <SidePanel
         opened={sidePanelOpen}

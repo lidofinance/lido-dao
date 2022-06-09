@@ -9,10 +9,10 @@ import {
   IconButton,
   InfoSpaced,
   ListItem,
-  LoadableElement,
   TextField,
 } from '../shared'
-import { fromBasisPoints, toBasisPoints } from '../../utils'
+import { toBasisPoints } from '../../utils'
+import { BasisPoints } from '../shared/BasisPoints'
 
 export const Fee = () => {
   const { api } = useAragonApi()
@@ -33,7 +33,7 @@ export const Fee = () => {
   return (
     <ListItem label="Fee">
       <Controls>
-        <LoadableElement value={fee}>{fromBasisPoints(fee)}%</LoadableElement>
+        <BasisPoints basisPoints={fee} />
         <IconButton label="edit" icon={<IconEdit />} onClick={openSidePanel} />
       </Controls>
       <SidePanel
