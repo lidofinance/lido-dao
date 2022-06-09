@@ -53,7 +53,7 @@ export const ElRewardsVault = () => {
       </Controls>
       <SidePanel
         opened={sidePanelOpen}
-        title="Change Withdrawal Credentials"
+        title="Change EL Rewards Vault"
         onClose={closeSidePanel}
       >
         <InfoSpaced title="Action">
