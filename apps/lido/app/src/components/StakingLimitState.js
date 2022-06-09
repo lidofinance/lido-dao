@@ -27,7 +27,7 @@ export const StakingLimitState = () => {
       </ListItem>
       <ListItem
         label={
-          <Tooltip tooltip="Staking limit will not be restored past this limit.">
+          <Tooltip tooltip="Hard cap on staking limit, i.e. staking limit will not be restored past this limit.">
             Max limit
           </Tooltip>
         }
@@ -36,7 +36,7 @@ export const StakingLimitState = () => {
       </ListItem>
       <ListItem
         label={
-          <Tooltip tooltip="Rate at which staking limit is passively restored. For example, a restoration rate of 150,000 ether per 6240 blocks means that the staking limit goes up by ">
+          <Tooltip tooltip="Rate at which the staking limit is passively restored on each block up until the max limit if no deposits are submitted.">
             Restoration
           </Tooltip>
         }
