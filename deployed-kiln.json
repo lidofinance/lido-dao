@@ -61,7 +61,9 @@
   "ensFactoryAddress": "0x66Ca44dDb0B9Ba49C7a153A4108F46C95E4693dD",
   "ensFactoryConstructorArgs": [],
   "kernelBaseAddress": "0xf76235B924b6749cB62129b45c69771996D078B1",
-  "kernelBaseConstructorArgs": [true],
+  "kernelBaseConstructorArgs": [
+    true
+  ],
   "aclBaseAddress": "0x31BbA6CCf72aA04f725602474614068fff2B3330",
   "aclBaseConstructorArgs": [],
   "evmScriptRegistryFactoryAddress": "0x19b424c26b36f2E7A9C6bA6d99243a2ECae7919F",
@@ -161,13 +163,16 @@
     "0xA160e5529Aa3cA0dE313B77C88671DD91D1C6B84"
   ],
   "daoTemplateDeployTx": "0x4437237c1b23538d48416ce38043e1030d71aa15a51e4e7af2205e7e08e64e33",
-  "lidoBaseDeployTx": "0xc1780accef35fab68aa7b62b09f8ae269690c8455d2704d1f2e5de367b89544e",
-  "oracleBaseDeployTx": "0x5680258689872a551dee4b67b117fff0bf75633e045b574c881d228357a5a190",
-  "nodeOperatorsRegistryBaseDeployTx": "0xe7449e5f98a6a20a44f5f70416a7a4191b559fcc5bc8ef7ab52cf178b0604dce",
+  "lidoBaseDeployTx": "0xb4e8f57da1346150bb298961103a34353c0e2f7b12b48d48ad0965ddf103476b",
+  "oracleBaseDeployTx": "0x4345275cf82ad3c7ab25b17064db8c814428d2447144f4d2f0c9b5f7b8ae8031",
+  "nodeOperatorsRegistryBaseDeployTx": "0x0fec5ea48709c43b7b6acf5927c89734ce1a5b3ded934b286ea710a67e9183fe",
+  "executionLayerRewardsVaultDeployTx": "0x4bef4161eaa7f510b866a2cb457f850f73e0fd84f932a6e6b9720ef2b6919011",
+  "compositePostRebaseBeaconReceiverDeployTx": "0xc39755ed64c124044ec96fa80d2fa473e5fca18d531124917a3fc53a32f3472c",
+  "selfOwnedStETHBurnerDeployTx": "0xafdf2298a90750410b897aca275fa049feaaef3084e2dc5112e39bfcb62c01a4",
   "daoTemplateAddress": "0xaD07B585F279A6b4F693fB5c81be3920b76a45EC",
   "daoTemplateDeployBlock": 161005,
   "app:lido": {
-    "baseAddress": "0xD9f9Da698b1F09BcfC46Ec24A489ff0b1FCF74f0",
+    "baseAddress": "0x51230C4D9539F62037Af867d81F0f592AC10fA0e",
     "fullName": "lido.lidopm.eth",
     "name": "lido",
     "id": "0x3ca7c3e38968823ccb4c78ea688df41356f182ae1d159e4ee608d30d68cef320",
@@ -176,7 +181,7 @@
     "proxyAddress": "0x3E50180cf438e185ec52Ade55855718584541476"
   },
   "app:oracle": {
-    "baseAddress": "0x92dfD7E1643A3Ab7eBBC68F399F4a62FabAaEa23",
+    "baseAddress": "0x777e00871e6614639C479D91978DF48Edd181112",
     "fullName": "oracle.lidopm.eth",
     "name": "oracle",
     "id": "0x8b47ba2a8454ec799cd91646e7ec47168e91fd139b23f017455f3e5898aaba93",
@@ -185,7 +190,7 @@
     "proxyAddress": "0x9633df55696561C4Cf8A260316A6e08113FA2164"
   },
   "app:node-operators-registry": {
-    "baseAddress": "0xaF87d30A3463280b486B239C7DecC4390C84DCBC",
+    "baseAddress": "0xC724596a59b83Df98cEc0df188e730e41b8a58FF",
     "fullName": "node-operators-registry.lidopm.eth",
     "name": "node-operators-registry",
     "id": "0x7071f283424072341f856ac9e947e7ec0eb68719f757a7e785979b6b8717579d",
@@ -226,5 +231,25 @@
     "fullName": "aragon-voting.lidopm.eth",
     "id": "0x0abcd104777321a82b010357f20887d61247493d89d2e987ff57bcecbde00e1e",
     "proxyAddress": "0x84633bf8e3AE2508a81F09F46a47774F5aFD16B9"
-  }
+  },
+  "executionLayerRewardsVaultAddress": "0x99F98fc958E775c69EFBA92f0ADD71123f1EDbCD",
+  "compositePostRebaseBeaconReceiverConstructorArgs": [
+    "0x84633bf8e3AE2508a81F09F46a47774F5aFD16B9",
+    "0x9633df55696561C4Cf8A260316A6e08113FA2164"
+  ],
+  "compositePostRebaseBeaconReceiverAddress": "0x7E34B3C2A4976053D2967F8fA8C2c31d69766E46",
+  "selfOwnedStETHBurnerParams": {
+    "totalCoverSharesBurnt": 0,
+    "totalNonCoverSharesBurnt": 0,
+    "maxBurnAmountPerRunBasisPoints": 4
+  },
+  "selfOwnedStETHBurnerConstructorArgs": [
+    "0xb98B21f9725F1deF45500c5D2D4D48eC5DF4B6AF",
+    "0x3E50180cf438e185ec52Ade55855718584541476",
+    "0x84633bf8e3AE2508a81F09F46a47774F5aFD16B9",
+    0,
+    0,
+    4
+  ],
+  "selfOwnedStETHBurnerAddress": "0x1f2abB4e2c54C010f7e4E539B9E043C5ae3aCAa5"
 }
