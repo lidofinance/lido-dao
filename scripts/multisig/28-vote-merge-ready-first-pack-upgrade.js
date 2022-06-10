@@ -69,7 +69,6 @@ async function createVoting({ web3, artifacts }) {
     }
   }
 
-
   log(`Using ENS:`, yl(state.ensAddress))
   log(`TokenManager address:`, yl(tokenManagerAddress))
   log(`Voting address:`, yl(votingAddress))
@@ -109,9 +108,14 @@ async function createVoting({ web3, artifacts }) {
     calldata: await oracle.contract.methods.finalizeUpgrade_v3().encodeABI()
   }
 
-  const unpauseStakingCallData = {
+  const resumeStakingCallData = {
     to: lidoAddress,
-    calldata: await lido.contract.methods.resumeStaking(dailyStakingLimit, stakeLimitIncreasePerBlock).encodeABI()
+    calldata: await lido.contract.methods.resumeStaking().encodeABI()
+  }
+
+  const setStakingLimitCallData = {
+    to: lidoAddress,
+    calldata: await lido.contract.methods.setStakingLimit(dailyStakingLimit, stakeLimitIncreasePerBlock).encodeABI()
   }
 
 
@@ -119,7 +123,7 @@ async function createVoting({ web3, artifacts }) {
     ...lidoUpgradeCallData,
     ...nodeOperatorsRegistryUpgradeCallData,
     ...oracleUpgradeCallData,
-    updateOracleVersionToV3CallData,
+    // updateOracleVersionToV3CallData, // Uncomment if needed
     grantSetELRewardsVaultRoleCallData,
     grantSetELRewardsWithdrawalLimitRoleCallData,
     grantResumeRoleCallData,
@@ -128,7 +132,8 @@ async function createVoting({ web3, artifacts }) {
     grantManageProtocolContractsRoleCallData,
     setELRewardsVaultCallData,
     setELRewardsWithdrawalLimitCallData,
-    unpauseStakingCallData,
+    resumeStakingCallData,
+    setStakingLimitCallData,
   ])
 
   log(`encodedUpgradeCallData:`, yl(encodedUpgradeCallData))
@@ -139,7 +144,6 @@ async function createVoting({ web3, artifacts }) {
     }
   ])
 
-  // TODO: update the list
   const txName = `tx-28-vote-merge-ready-first-pack-upgrade.json`
   const votingDesc = `1) Publishing new implementation in lido app APM repo
 2) Updating implementation of lido app with new one
@@ -147,16 +151,16 @@ async function createVoting({ web3, artifacts }) {
 4) Updating implementation of node-operators-registry app with new one
 5) Publishing new implementation in oracle app APM repo
 6) Updating implementation of oracle app with new one
-7) Call Oracle's finalizeUpgrade_v3() to update internal version counter
-8) Grant role SET_EL_REWARDS_VAULT_ROLE to voting
-9) Grant role SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE to voting
-10) Grant role RESUME_ROLE to voting
-11) Grant role STAKING_PAUSE_ROLE to voting
-12) Grant role STAKING_CONTROL_ROLE to voting
-13) Grant role MANAGE_PROTOCOL_CONTRACTS_ROLE to voting
-14) Set deployed LidoExecutionLayerRewardsVault to Lido contract
-15) Set Execution Layer rewards withdrawal limit to ${elRewardsWithdrawalLimitPoints} basis points
-16) Unpause staking setting daily limit to ${fromE18ToString(dailyStakingLimit)}`
+7) Grant role SET_EL_REWARDS_VAULT_ROLE to voting
+8) Grant role SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE to voting
+9) Grant role RESUME_ROLE to voting
+10) Grant role STAKING_PAUSE_ROLE to voting
+11) Grant role STAKING_CONTROL_ROLE to voting
+12) Grant role MANAGE_PROTOCOL_CONTRACTS_ROLE to voting
+13) Set deployed LidoExecutionLayerRewardsVault to Lido contract
+14) Set Execution Layer rewards withdrawal limit to ${elRewardsWithdrawalLimitPoints} basis points
+15) Unpause staking 
+16) Set daily staking limit to ${fromE18ToString(dailyStakingLimit)}`
 
   await saveCallTxData(votingDesc, tokenManager, 'forward', txName, {
     arguments: [votingCallData],
