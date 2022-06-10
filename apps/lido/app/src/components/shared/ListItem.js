@@ -1,4 +1,4 @@
-import { GU } from '@aragon/ui'
+import { GU, useTheme } from '@aragon/ui'
 import React from 'react'
 import styled from 'styled-components'
 
@@ -15,16 +15,21 @@ const ListItemStyle = styled.li`
 `
 
 const ListItemLabel = styled.span`
-  color: ${(props) => props.theme.surfaceContentSecondary};
+  color: ${(props) =>
+    props.isDark ? '#7C99D6' : props.theme.surfaceContentSecondary};
 `
 
 const ListItemValue = styled.strong`
   text-align: right;
 `
 
-export const ListItem = ({ label, children, nested }) => (
-  <ListItemStyle nested={nested}>
-    <ListItemLabel>{label}</ListItemLabel>
-    <ListItemValue>{children}</ListItemValue>
-  </ListItemStyle>
-)
+export const ListItem = ({ label, children, nested }) => {
+  const theme = useTheme()
+
+  return (
+    <ListItemStyle nested={nested}>
+      <ListItemLabel isDark={theme?._name === 'dark'}>{label}</ListItemLabel>
+      <ListItemValue>{children}</ListItemValue>
+    </ListItemStyle>
+  )
+}
