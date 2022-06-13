@@ -26,7 +26,7 @@ export function toBasisPoints(number) {
  * @returns {number} sum
  */
 export function fromBasisPoints(number) {
-  return Math.round(number / 100)
+  return number / 100
 }
 
 /**
