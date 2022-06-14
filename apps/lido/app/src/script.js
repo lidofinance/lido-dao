@@ -13,9 +13,9 @@ app.store(
     try {
       switch (event) {
         case 'Stopped':
-          return { ...nextState, isStopped: await isStopped() }
+          return { ...nextState, isStopped: await getIsStopped() }
         case 'Resumed':
-          return { ...nextState, isStopped: await isStopped() }
+          return { ...nextState, isStopped: await getIsStopped() }
         case 'FeeSet':
           return { ...nextState, fee: await getFee() }
         case 'FeeDistributionSet':
@@ -25,8 +25,26 @@ app.store(
             ...nextState,
             withdrawalCredentials: await getWithdrawalCredentials(),
           }
+        case 'ELRewardsWithdrawalLimitSet':
+          return {
+            ...nextState,
+            elRewardsWithdrawalLimit: await getElRewardsWithdrawalLimit(),
+          }
+        case 'ELRewardsVaultSet':
+          return {
+            ...nextState,
+            elRewardsVault: await getElRewardsVault(),
+          }
         case 'Unbuffered':
           return { ...nextState, bufferedEther: await getBufferedEther() }
+        case 'StakingPaused':
+          return { ...nextState, stakingLimitInfo: await getStakingLimitInfo() }
+        case 'StakingResumed':
+          return { ...nextState, stakingLimitInfo: await getStakingLimitInfo() }
+        case 'StakingLimitSet':
+          return { ...nextState, stakingLimitInfo: await getStakingLimitInfo() }
+        case 'StakingLimitRemoved':
+          return { ...nextState, stakingLimitInfo: await getStakingLimitInfo() }
         case events.SYNC_STATUS_SYNCING:
           return { ...nextState, isSyncing: true }
         case events.SYNC_STATUS_SYNCED:
@@ -51,28 +69,69 @@ app.store(
 
 function initializeState() {
   return async (cachedState) => {
+    // fetch in parallel
+    const allSettled = await Promise.allSettled([
+      getIsStopped(),
+      getFee(),
+      getFeeDistribution(),
+      getWithdrawalCredentials(),
+      getElRewardsWithdrawalLimit(),
+      getElRewardsVault(),
+      getBufferedEther(),
+      getTotalPooledEther(),
+      getNodeOperatorsRegistry(),
+      getDepositContract(),
+      getOracle(),
+      getOperators(),
+      getTreasury(),
+      getInsuranceFund(),
+      getBeaconStat(),
+      getStakingLimitInfo(),
+    ])
+
+    const [
+      isStopped,
+      fee,
+      feeDistribution,
+      withdrawalCredentials,
+      elRewardsWithdrawalLimit,
+      elRewardsVault,
+      bufferedEther,
+      totalPooledEther,
+      nodeOperatorsRegistry,
+      depositContract,
+      oracle,
+      operators,
+      treasury,
+      insuranceFund,
+      beaconStat,
+      stakingLimitInfo,
+    ] = allSettled.map((settled) => settled.value)
+
     return {
       ...cachedState,
-      isStopped: await isStopped(),
-      fee: await getFee(),
-      feeDistribution: await getFeeDistribution(),
-      withdrawalCredentials: await getWithdrawalCredentials(),
-      bufferedEther: await getBufferedEther(),
-      totalPooledEther: await getTotalPooledEther(),
-      nodeOperatorsRegistry: await getNodeOperatorsRegistry(),
-      depositContract: await getDepositContract(),
-      oracle: await getOracle(),
-      executionLayerRewardsVault: await getExecutionLayerRewardsVault(),
-      // operators: await getOperators(),
-      // treasury: await getTreasury(),
-      // insuranceFund: await getInsuranceFund(),
-      beaconStat: await getBeaconStat(),
+      isStopped,
+      fee,
+      feeDistribution,
+      withdrawalCredentials,
+      elRewardsWithdrawalLimit,
+      elRewardsVault,
+      bufferedEther,
+      totalPooledEther,
+      nodeOperatorsRegistry,
+      depositContract,
+      oracle,
+      operators,
+      treasury,
+      insuranceFund,
+      beaconStat,
+      stakingLimitInfo,
     }
   }
 }
 
 // API
-function isStopped() {
+function getIsStopped() {
   return app.call('isStopped').toPromise()
 }
 
@@ -86,6 +145,14 @@ function getFeeDistribution() {
 
 function getWithdrawalCredentials() {
   return app.call('getWithdrawalCredentials').toPromise()
+}
+
+function getElRewardsWithdrawalLimit() {
+  return app.call('getELRewardsWithdrawalLimit').toPromise()
+}
+
+function getElRewardsVault() {
+  return app.call('getELRewardsVault').toPromise()
 }
 
 function getBufferedEther() {
@@ -108,26 +175,22 @@ function getOracle() {
   return app.call('getOracle').toPromise()
 }
 
-function getExecutionLayerRewardsVault() {
-  return app.call('getExecutionLayerRewardsVault').toPromise()
+function getOperators() {
+  return app.call('getOperators').toPromise()
 }
 
-// async function getOperators() {
-//   return await app.call('getOperators').toPromise()
-// }
+function getTreasury() {
+  return app.call('getTreasury').toPromise()
+}
 
-// async function getTreasury() {
-//   return await app.call('getTreasury').toPromise()
-// }
+function getInsuranceFund() {
+  return app.call('getInsuranceFund').toPromise()
+}
 
-// async function getInsuranceFund() {
-//   return await app.call('getInsuranceFund').toPromise()
-// }
+function getBeaconStat() {
+  return app.call('getBeaconStat').toPromise()
+}
 
-async function getBeaconStat() {
-  const stat = await app.call('getBeaconStat').toPromise()
-  return {
-    depositedValidators: +stat.depositedValidators,
-    beaconBalance: stat.beaconBalance,
-  }
+function getStakingLimitInfo() {
+  return app.call('getStakeLimitFullInfo').toPromise()
 }

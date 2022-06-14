@@ -6,30 +6,7 @@ import ReactDOM from 'react-dom'
 import { AragonApi } from '@aragon/api-react'
 import App from './App'
 
-const defaultValue = ''
-
 const defaultState = {
-  isStopped: true,
-  fee: defaultValue,
-  feeDistribution: {
-    insuranceFeeBasisPoints: defaultValue,
-    operatorsFeeBasisPoints: defaultValue,
-    treasuryFeeBasisPoints: defaultValue,
-  },
-  withdrawalCredentials: defaultValue,
-  bufferedEther: defaultValue,
-  totalPooledEther: defaultValue,
-  nodeOperatorsRegistry: defaultValue,
-  depositContract: defaultValue,
-  oracle: defaultValue,
-  executionLayerRewardsVault: defaultValue,
-  operators: defaultValue,
-  treasury: defaultValue,
-  insuranceFund: defaultValue,
-  beaconStat: {
-    depositedValidators: defaultValue,
-    beaconBalance: defaultValue,
-  },
   isSyncing: true,
 }
 
