@@ -139,7 +139,7 @@ For ETH1 part: Ethereum single node (ganache), IPFS docker containers and Aragon
 
 For ETH2 part: Beacon chain node, genesis validators machine, and, optionally, 2nd and 3rd peer beacon chain nodes.
 
-To start the whole environment from predeployed snapshots, use:
+To start the whole environment from pre-deployed snapshots, use:
 
 ```bash
 ./startup.sh -r -s
@@ -233,7 +233,7 @@ Test coverage is reported to `coverage.json` and `coverage/index.html` files loc
 inside each app's folder.
 
 Keep in mind that the code uses `assert`s to check invariants that should always be kept
-unless the code is buggy (in contrast to `require` statements which check pre-coditions),
+unless the code is buggy (in contrast to `require` statements which check pre-conditions),
 so full branch coverage will never be reported until
 [solidity-coverage#219] is implemented.
 
@@ -241,7 +241,7 @@ so full branch coverage will never be reported until
 
 ## Deploying
 
-We have several ways to deploy lido smartcontracts and run DAO localy, you can find documents here:
+We have several ways to deploy lido smart-contracts and run DAO locally, you can find documents here:
 
 `lido-aragon` [documentation](/docs/lido-aragon.md)
 

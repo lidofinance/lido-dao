@@ -23,7 +23,7 @@ In case of local deploy this environment is set up with docker.
 
 ## DAO configuration
 
-Dao config is stored in `deployed-{NETWORK_NAME}.json` file, where  `{NETWORK_NAME}` is network name of your choice.See the [`deployed-local-defaults.json`](deployed-local-defaults.json) for basic parameters. Please refer to [`deployed-mainnet.json`](deployed-mainnet.json) for currently deployed Mainnet version of DAO.
+Dao config is stored in `deployed-{NETWORK_NAME}.json` file, where `{NETWORK_NAME}` is network name of your choice. See the [`deployed-local-defaults.json`](deployed-local-defaults.json) for basic parameters. Please refer to [`deployed-mainnet.json`](deployed-mainnet.json) for currently deployed Mainnet version of DAO.
 
 Copy `deployed-local-defaults.json` to `deployed-{NETWORK_NAME}.json` (e.g. `deployed-kintsugi.json`) and update it accordingly .
 

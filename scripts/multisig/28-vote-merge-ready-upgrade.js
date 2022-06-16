@@ -144,7 +144,7 @@ async function createVoting({ web3, artifacts }) {
     }
   ])
 
-  const txName = `tx-28-vote-merge-ready-first-pack-upgrade.json`
+  const txName = `tx-28-vote-merge-ready-upgrade.json`
   const votingDesc = `1) Publishing new implementation in lido app APM repo
 2) Updating implementation of lido app with new one
 3) Publishing new implementation in node-operators-registry app APM repo
@@ -181,7 +181,11 @@ async function buildUpgradeTransaction(appName, state, ens, kernel) {
   const repo = await artifacts.require('Repo').at(repoAddress)
   const APP_BASES_NAMESPACE = await kernel.APP_BASES_NAMESPACE()
 
-  const { semanticVersion: currentVersion, contractAddress: currentContractAddress, contentURI: currentContentURI } = await repo.getLatest()
+  const {
+    semanticVersion: currentVersion,
+    contractAddress: currentContractAddress,
+    contentURI: currentContentURI
+  } = await repo.getLatest()
 
   const versionFrom = currentVersion.map((n) => n.toNumber())
   currentVersion[0] = currentVersion[0].addn(1)
