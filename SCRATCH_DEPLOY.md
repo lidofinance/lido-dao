@@ -66,3 +66,14 @@ So, one-click local deploy from scratch command is:
 ```
 
 > Note: some steps require manually updating some transaction hashes in the `deployed-{NETWORK_NAME}.json` file. The script will pause the process in this case, please follow the script tips.
+
+## Aragon dependency issue
+
+`ipfs-http-client` version has been strictly pinned to `43.0.0` in [this commit](https://github.com/lidofinance/lido-dao/commit/38bf0232fbc59ec6d69d27e170e3e75cfbe1ba11) because `/scripts/multisig/04-publish-app-frontends.js` used to crash at 
+```javascript
+const rootCid = await uploadDirToIpfs({ dirPath: distPath, ipfsApiUrl: ipfsAPI })
+```
+
+It appeared that `@aragon/buidler-aragon@npm:^0.2.9` uses `ipfs-http-client`.
+
+`ipfs-http-client` has a brittle API. Neither `41.0.0` nor `50.0.0` versions of it will work with `@aragon/buidler-aragon@npm:^0.2.9`.
