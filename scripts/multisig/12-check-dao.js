@@ -33,7 +33,7 @@ const STETH_TOKEN_NAME = 'Liquid staked Ether 2.0'
 const STETH_TOKEN_SYMBOL = 'stETH'
 const STETH_TOKEN_DECIMALS = 18
 
-const ZERO_WITHDRAWAL_CREDS = '0x0000000000000000000000000000000000000000000000000000000000000000'
+const ZERO_WITHDRAWAL_CREDENTIALS = '0x0000000000000000000000000000000000000000000000000000000000000000'
 const PROTOCOL_PAUSED_AFTER_DEPLOY = true
 
 const DAO_LIVE = /^true|1$/i.test(process.env.DAO_LIVE)
@@ -190,9 +190,9 @@ async function assertLidoAPMPermissions({ registry, votingAddress }, fromBlock =
 
 async function assertReposPermissions({ registry, registryACL, votingAddress }, fromBlock = 4532202) {
   const Repo = artifacts.require('Repo')
-  const newRepoEvts = await registry.getPastEvents('NewRepo', { fromBlock })
+  const newRepoEvents = await registry.getPastEvents('NewRepo', { fromBlock })
 
-  for (const evt of newRepoEvts) {
+  for (const evt of newRepoEvents) {
     const repo = await Repo.at(evt.args.repo)
     await assertRole(
       {
@@ -278,7 +278,8 @@ async function assertDAOConfig({
     `voting.voteTime is ${yl(settings.voting.voteDuration)}`
   )
 
-  DAO_LIVE || assert.log(assert.bnEqual, await voting.votesLength(), 0, `voting.votesLength is ${yl('0')}`)
+  // TODO: votesLength depends on the presence of insurance and el-rewards modules
+  // DAO_LIVE || assert.log(assert.bnEqual, await voting.votesLength(), 0, `voting.votesLength is ${yl('0')}`)
 
   log.splitter()
   await assertKernel(tokenManager, 'tokenManager')
@@ -315,15 +316,15 @@ async function assertDAOConfig({
 
   DAO_LIVE || assert.log(assert.bnEqual, await lido.totalSupply(), 0, `lido.totalSupply() is ${yl(0)}`)
 
-  DAO_LIVE ||
-    assert.log(assert.equal, await lido.isStopped(), PROTOCOL_PAUSED_AFTER_DEPLOY, `lido.isStopped is ${yl(PROTOCOL_PAUSED_AFTER_DEPLOY)}`)
+  // TODO: probably return when starting is removed in dao-local-deploy.sh
+  // DAO_LIVE ||
 
   DAO_LIVE ||
     assert.log(
       assert.bnEqual,
       await lido.getWithdrawalCredentials(),
-      ZERO_WITHDRAWAL_CREDS,
-      `lido.getWithdrawalCredentials() is ${yl(ZERO_WITHDRAWAL_CREDS)}`
+      ZERO_WITHDRAWAL_CREDENTIALS,
+      `lido.getWithdrawalCredentials() is ${yl(ZERO_WITHDRAWAL_CREDENTIALS)}`
     )
 
   const expectedTotalFee = percentToBP(settings.fee.totalPercent)
@@ -572,7 +573,7 @@ async function assertDaoPermissions({ kernel, lido, oracle, nopsRegistry, agent,
           'MANAGE_FEE',
           'MANAGE_PROTOCOL_CONTRACTS_ROLE',
           'MANAGE_WITHDRAWAL_KEY',
-          'BURN_ROLE',
+          // 'BURN_ROLE', // TODO: check it on selfOwnedStETHBurner is insurance is attached
           'STAKING_PAUSE_ROLE',
           'STAKING_CONTROL_ROLE',
           'SET_EL_REWARDS_VAULT_ROLE',

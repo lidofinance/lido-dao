@@ -7,6 +7,8 @@ DEPLOYER=${DEPLOYER:=0xb4124cEB3451635DAcedd11767f004d8a28c6eE7}
 # NETWORK=kintsugi
 NETWORK=${NETWORK:=local}
 
+VOTE_ID=0
+
 function msg() {
   MSG=$1
   if [ ! -z "$MSG" ]; then
@@ -79,9 +81,52 @@ yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-06-1-issue-tokens.
 msg "Tokens issued"
 
 yarn hardhat --network $NETWORK run ./scripts/multisig/11-finalize-dao.js
-yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-07-finalize-dao.json
+yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-11-finalize-dao.json
 msg "DAO deploy finalized"
 
+# Insurance: deploy CompositePostRebaseBeaconReceiver
+yarn hardhat --network $NETWORK run ./scripts/multisig/21-deploy-composite-post-rebase-beacon-receiver.js
+yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-21-deploy-composite-post-rebase-beacon-receiver.json
+pause "!!! Now set the compositePostRebaseBeaconReceiverDeployTx hash value in deployed-$NETWORK.json"
+yarn hardhat --network $NETWORK run ./scripts/multisig/22-obtain-composite-post-rebase-beacon-receiver.js
+msg "CompositePostRebaseBeaconReceiver deployed"
+
+# Insurance: deploy SelfOwnedStETHBurner
+yarn hardhat --network $NETWORK run ./scripts/multisig/23-deploy-self-owned-steth-burner.js
+yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-23-deploy-self-owned-steth-burner.json
+pause "!!! Now set the selfOwnedStETHBurnerDeployTx hash value in deployed-$NETWORK.json"
+yarn hardhat --network $NETWORK run ./scripts/multisig/24-obtain-self-owned-steth-burner.js
+msg "SelfOwnedStETHBurner deployed"
+
+# Insurance: attach the contracts to the protocol
+yarn hardhat --network $NETWORK run ./scripts/multisig/25-vote-self-owned-steth-burner.js
+yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-25-vote-self-owned-steth-burner.json
+VOTE_ID=$VOTE_ID yarn hardhat --network $NETWORK run ./scripts/multisig/vote-and-enact.js
+msg "Vote $VOTE_ID executed"
+VOTE_ID=$((VOTE_ID+1))
+
+# Execution Layer Rewards: deploy 
+yarn hardhat --network $NETWORK run ./scripts/multisig/26-deploy-execution-layer-rewards-vault.js
+yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-26-deploy-execution-layer-rewards-vault.json
+pause "!!! Now set the executionLayerRewardsVaultDeployTx hash value in deployed-$NETWORK.json"
+yarn hardhat --network $NETWORK run ./scripts/multisig/27-obtain-deployed-execution-layer-rewards-vault.js
+msg "ExecutionLayerRewardsVault deployed"
+
+# Execution Layer Rewards: attach the contracts to the protocol
+yarn hardhat --network $NETWORK run ./scripts/multisig/28-vote-el-rewards.js
+yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-28-vote-el-rewards.json
+VOTE_ID=$VOTE_ID yarn hardhat --network $NETWORK run ./scripts/multisig/vote-and-enact.js
+msg "Vote $VOTE_ID executed"
+VOTE_ID=$((VOTE_ID+1))
+
+# Start the protocol
+yarn hardhat --network $NETWORK run ./scripts/multisig/31-start-protocol.js
+yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-31-start-protocol.json
+VOTE_ID=$VOTE_ID yarn hardhat --network $NETWORK run ./scripts/multisig/vote-and-enact.js
+msg "Vote $VOTE_ID executed"
+VOTE_ID=$((VOTE_ID+1))
+
+# Check the deployed protocol
 yarn hardhat --network $NETWORK run ./scripts/multisig/12-check-dao.js
 msg "Check completed! Clening up..."
 

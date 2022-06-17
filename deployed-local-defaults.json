@@ -46,5 +46,10 @@
     "cliff": 1639660100,
     "end": 1639660100,
     "revokable": false
+  },
+  "selfOwnedStETHBurnerParams": {
+    "totalCoverSharesBurnt": "0",
+    "totalNonCoverSharesBurnt": "0",
+    "maxBurnAmountPerRunBasisPoints": "4"
   }
 }
