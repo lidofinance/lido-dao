@@ -12,7 +12,7 @@ To verify that the Lido app deployed at [Lido DAO](https://mainnet.lido.fi) was 
 - Node.js 14+
 - ipfs 0.12.0
 
-### Steps
+### 1. Replicating IPFS hash and content URI
 
 Clone the Lido DAO repo,
 
@@ -52,19 +52,25 @@ Get the IPFS hash of the build folder,
 ipfs add -qr --only-hash apps/lido/dist/ | tail -n 1
 ```
 
-This command should output `QmScYxzmmrAV1cDBjL3i7jzaZuiJ76UqdaFZiMgsxoFGzC`. Now that we have the IPFS hash, let's see that it is, in fact, the one that's used on the DAO website.
+This command should output `QmScYxzmmrAV1cDBjL3i7jzaZuiJ76UqdaFZiMgsxoFGzC`. Now we have to obtain the content URI, which is this hash encoded for Aragon. We can do this by running,
 
-Open the [Lido app](https://mainnet.lido.fi/#/lido-dao/0xae7ab96520de3a18e5e111b5eaab095312d7fe84/) in your browser,
-*screenshot here*
+```bash
+export IPFS_HASH=QmScYxzmmrAV1cDBjL3i7jzaZuiJ76UqdaFZiMgsxoFGzC
+npx hardhat run scripts/helpers/getContentUri.js
+```
 
-Open the network inspector,
-*screenshot here*
+This command should print `0x697066733a516d536359787a6d6d724156316344426a4c3369376a7a615a75694a373655716461465a694d6773786f46477a43`, which is our content URI.
 
-Filter by `index.html`,
-*screenshot here*
+### 2. Verifying on-chain Lido App content URI
 
-You will find that one of the HTML files has, in fact, been loaded from `https://ipfs.mainnet.fi/ipfs/QmScYxzmmrAV1cDBjL3i7jzaZuiJ76UqdaFZiMgsxoFGzC/index.html`.
+Open the [Lido App Repo](https://etherscan.io/address/0xF5Dc67E54FC96F993CD06073f71ca732C1E654B1#readProxyContract) and scroll down to `getLatest` method, open the dropdown and click "Query". This will give you the Lido app version, contract address and the content URI. Now check that the content URI that you've obtained in the previous step matches the one that Etherscan fetched for you from the Lido protocol.  
 
-You are done!
+### 3. Verifying client-side resources
 
-*screenshot here*
+Now that we have the IPFS hash and content URI, let's see that it is, in fact, the one that's used on the DAO website.
+
+Open the [Lido app](https://mainnet.lido.fi/#/lido-dao/0xae7ab96520de3a18e5e111b5eaab095312d7fe84/) in your browser, then open the network inspector and refresh the page to track all of the network requests that the website makes.
+
+You will find that one of the two HTML files has, in fact, been loaded from `https://ipfs.mainnet.fi/ipfs/QmScYxzmmrAV1cDBjL3i7jzaZuiJ76UqdaFZiMgsxoFGzC/index.html`.
+
+You are done! ✨
