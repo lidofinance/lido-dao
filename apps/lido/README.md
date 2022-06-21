@@ -53,3 +53,18 @@ ipfs add -qr --only-hash apps/lido/dist/ | tail -n 1
 ```
 
 This command should output `QmScYxzmmrAV1cDBjL3i7jzaZuiJ76UqdaFZiMgsxoFGzC`. Now that we have the IPFS hash, let's see that it is, in fact, the one that's used on the DAO website.
+
+Open the [Lido app](https://mainnet.lido.fi/#/lido-dao/0xae7ab96520de3a18e5e111b5eaab095312d7fe84/) in your browser,
+*screenshot here*
+
+Open the network inspector,
+*screenshot here*
+
+Filter by `index.html`,
+*screenshot here*
+
+You will find that one of the HTML files has, in fact, been loaded from `https://ipfs.mainnet.fi/ipfs/QmScYxzmmrAV1cDBjL3i7jzaZuiJ76UqdaFZiMgsxoFGzC/index.html`.
+
+You are done!
+
+*screenshot here*
