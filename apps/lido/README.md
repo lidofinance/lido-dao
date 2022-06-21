@@ -52,7 +52,16 @@ Get the IPFS hash of the build folder,
 ipfs add -qr --only-hash apps/lido/dist/ | tail -n 1
 ```
 
-This command should output `QmScYxzmmrAV1cDBjL3i7jzaZuiJ76UqdaFZiMgsxoFGzC`. Now we have to obtain the content URI, which is this hash encoded for Aragon. We can do this by running,
+
+This command should output `QmScYxzmmrAV1cDBjL3i7jzaZuiJ76UqdaFZiMgsxoFGzC`.
+
+
+Now we have to obtain the content URI, which is this hash encoded for Aragon. The script that can do that for us is in [this commit](2d5b5d93d019838c91bdb9085e00af3358fbaecd), so we check it out.
+```
+git checkout 2d5b5d93d019838c91bdb9085e00af3358fbaecd
+```
+
+Now we run the script,
 
 ```bash
 export IPFS_HASH=QmScYxzmmrAV1cDBjL3i7jzaZuiJ76UqdaFZiMgsxoFGzC
