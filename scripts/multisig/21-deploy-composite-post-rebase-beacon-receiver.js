@@ -37,7 +37,8 @@ async function upgradeApp({ web3, artifacts }) {
     from: DEPLOYER || state.multisigAddress
   })
   persistNetworkState(network.name, netId, state, {
-    compositePostRebaseBeaconReceiverConstructorArgs: args
+    compositePostRebaseBeaconReceiverConstructorArgs: args,
+    compositePostRebaseBeaconReceiverDeployTx: ''
   })
 
   logSplitter()

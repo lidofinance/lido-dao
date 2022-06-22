@@ -68,7 +68,8 @@ async function upgradeApp({ web3, artifacts }) {
     from: DEPLOYER || state.multisigAddress
   })
   persistNetworkState(network.name, netId, state, {
-    selfOwnedStETHBurnerConstructorArgs: args
+    selfOwnedStETHBurnerConstructorArgs: args,
+    selfOwnedStETHBurnerDeployTx: ''
   })
 
   logSplitter()

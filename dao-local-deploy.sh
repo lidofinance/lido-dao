@@ -50,7 +50,7 @@ pause "!!! Now set the oracleBaseDeployTx hash value in deployed-$NETWORK.json"
 yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-01-4-deploy-nops-base.json
 pause "!!! Now set the nodeOperatorsRegistryBaseDeployTx hash value in deployed-$NETWORK.json"
 yarn hardhat --network $NETWORK run ./scripts/multisig/02-obtain-deployed-instances.js
-msg "Apps instances deployd"
+msg "Apps instances deployed"
 
 yarn hardhat --network $NETWORK run ./scripts/multisig/03-register-ens-domain.js
 if [ -f "tx-02-1-commit-ens-registration.json" ]; then
@@ -119,17 +119,9 @@ VOTE_ID=$VOTE_ID yarn hardhat --network $NETWORK run ./scripts/multisig/vote-and
 msg "Vote $VOTE_ID executed"
 VOTE_ID=$((VOTE_ID+1))
 
-# Start the protocol
-yarn hardhat --network $NETWORK run ./scripts/multisig/31-start-protocol.js
-yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-31-start-protocol.json
-VOTE_ID=$VOTE_ID yarn hardhat --network $NETWORK run ./scripts/multisig/vote-and-enact.js
-msg "Vote $VOTE_ID executed"
-VOTE_ID=$((VOTE_ID+1))
-
 # Check the deployed protocol
 yarn hardhat --network $NETWORK run ./scripts/multisig/12-check-dao.js
 msg "Check completed! Clening up..."
 
 rm tx-*.json
 msg "Deploy completed!"
-

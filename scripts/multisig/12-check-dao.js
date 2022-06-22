@@ -110,6 +110,10 @@ async function checkDAO({ web3, artifacts }) {
     artifacts.require('Voting').at(apps[APP_NAMES.ARAGON_VOTING].proxyAddress)
   ])
 
+  const compositePostRebaseBeaconReceiver = await artifacts.require('CompositePostRebaseBeaconReceiver').at(state.compositePostRebaseBeaconReceiverAddress)
+  const selfOwnedStETHBurner = await artifacts.require('SelfOwnedStETHBurner').at(state.selfOwnedStETHBurnerAddress)
+  const elRewardsVault = await artifacts.require('LidoExecutionLayerRewardsVault').at(state.executionLayerRewardsVaultAddress)
+
   log.splitter()
 
   await assertDAOConfig({
@@ -123,6 +127,9 @@ async function checkDAO({ web3, artifacts }) {
     finance,
     tokenManager,
     voting,
+    compositePostRebaseBeaconReceiver,
+    selfOwnedStETHBurner,
+    elRewardsVault,
     daoAragonId: state.daoAragonId,
     daoInitialSettings: state.daoInitialSettings
   })
@@ -138,7 +145,8 @@ async function checkDAO({ web3, artifacts }) {
       agent,
       finance,
       tokenManager,
-      voting
+      voting,
+      selfOwnedStETHBurner,
     },
     state.daoTemplateDeployBlock
   )
@@ -220,6 +228,9 @@ async function assertDAOConfig({
   finance,
   tokenManager,
   voting,
+  compositePostRebaseBeaconReceiver,
+  selfOwnedStETHBurner,
+  elRewardsVault,
   daoInitialSettings: settings
 }) {
   const assertKernel = async (app, appName) => {
@@ -278,8 +289,8 @@ async function assertDAOConfig({
     `voting.voteTime is ${yl(settings.voting.voteDuration)}`
   )
 
-  // TODO: votesLength depends on the presence of insurance and el-rewards modules
-  // DAO_LIVE || assert.log(assert.bnEqual, await voting.votesLength(), 0, `voting.votesLength is ${yl('0')}`)
+  // NB: votesLength depends on the presence of insurance and el-rewards modules
+  DAO_LIVE || assert.log(assert.bnEqual, await voting.votesLength(), 2, `voting.votesLength is ${yl('2')}`)
 
   log.splitter()
   await assertKernel(tokenManager, 'tokenManager')
@@ -316,8 +327,8 @@ async function assertDAOConfig({
 
   DAO_LIVE || assert.log(assert.bnEqual, await lido.totalSupply(), 0, `lido.totalSupply() is ${yl(0)}`)
 
-  // TODO: probably return when starting is removed in dao-local-deploy.sh
-  // DAO_LIVE ||
+  DAO_LIVE ||
+    assert.log(assert.equal, await lido.isStopped(), PROTOCOL_PAUSED_AFTER_DEPLOY, `lido.isStopped is ${yl(PROTOCOL_PAUSED_AFTER_DEPLOY)}`)
 
   DAO_LIVE ||
     assert.log(
@@ -368,12 +379,19 @@ async function assertDAOConfig({
 
   assert.log(assert.addressEqual, await lido.getInsuranceFund(), agent.address, `lido.getInsuranceFund() is ${yl(agent.address)}`)
 
+  assert.log(assert.addressEqual, await lido.getELRewardsVault(), elRewardsVault.address,
+    `lido.getELRewardsVault() is ${yl(elRewardsVault.address)}`)
+
   log.splitter()
   await assertKernel(oracle, 'oracle')
 
   assert.log(assert.addressEqual, await oracle.getLido(), lido.address, `oracle.getLido() is ${yl(lido.address)}`)
 
   DAO_LIVE || assert.log(assert.isEmpty, await oracle.getOracleMembers(), `oracle.getOracleMembers() is []`)
+
+  assert.log(assert.addressEqual, await oracle.getBeaconReportReceiver(),
+    compositePostRebaseBeaconReceiver.address,
+    `oracle.getBeaconReportReceiver() is ${yl(compositePostRebaseBeaconReceiver.address)}`)
 
   const beaconSpec = await oracle.getBeaconSpec()
   assert.log(
@@ -417,7 +435,7 @@ async function assertDAOConfig({
     )
 }
 
-async function assertDaoPermissions({ kernel, lido, oracle, nopsRegistry, agent, finance, tokenManager, voting }, fromBlock = 4532202) {
+async function assertDaoPermissions({ kernel, lido, oracle, nopsRegistry, agent, finance, tokenManager, voting, selfOwnedStETHBurner }, fromBlock = 4532202) {
   const aclAddress = await kernel.acl()
   const acl = await artifacts.require('ACL').at(aclAddress)
   const allAclEvents = await acl.getPastEvents('allEvents', { fromBlock })
@@ -573,7 +591,6 @@ async function assertDaoPermissions({ kernel, lido, oracle, nopsRegistry, agent,
           'MANAGE_FEE',
           'MANAGE_PROTOCOL_CONTRACTS_ROLE',
           'MANAGE_WITHDRAWAL_KEY',
-          // 'BURN_ROLE', // TODO: check it on selfOwnedStETHBurner is insurance is attached
           'STAKING_PAUSE_ROLE',
           'STAKING_CONTROL_ROLE',
           'SET_EL_REWARDS_VAULT_ROLE',
@@ -583,6 +600,20 @@ async function assertDaoPermissions({ kernel, lido, oracle, nopsRegistry, agent,
       }
     ]
   })
+
+  { // Check BURN_ROLE on selfOwnedStETHBurner 
+    const burnRoleName = 'BURN_ROLE'
+    const burnRoleGrantee = selfOwnedStETHBurner.address
+    const burnRoleHash = await lido[burnRoleName]()
+    const burnPermissionParams = `0x000100000000000000000000${selfOwnedStETHBurner.address.substring(2)}`
+    const description = `lido.${burnRoleName} perm is accessible by ${chalk.yellow(burnRoleGrantee)} with params ${burnPermissionParams}`
+    assert.isTrue(
+      await acl.methods['hasPermission(address,address,bytes32,uint256[])'](
+        burnRoleGrantee, lido.address, burnRoleHash, [burnPermissionParams]),
+        description
+    )
+    log.success(description)
+  }
 
   log.splitter()
 

@@ -26,11 +26,21 @@ async function deployELRewardsVault({ web3, artifacts }) {
   log(`Using Lido Treasury contract address:`, yl(treasuryAddr))
   logSplitter()
 
+  persistNetworkState(network.name, netId, state, {
+    executionLayerRewardsVaultDeployTx: ''
+  })
+
   const args = [lidoAddress, treasuryAddr]
   await saveDeployTx(appArtifact, `tx-26-deploy-execution-layer-rewards-vault.json`, {
     arguments: args,
     from: DEPLOYER || state.multisigAddress
   })
+
+  logSplitter()
+  log(gr(`Before continuing the deployment, please send all contract creation transactions`))
+  log(gr(`that you can find in the files listed above. You may use a multisig address`))
+  log(gr(`if it supports deploying new contract instances.`))
+  logSplitter()
 }
 
 module.exports = runOrWrapScript(deployELRewardsVault, module)
