@@ -31,6 +31,7 @@ docker-compose up --build -d
 rm -f deployed-$NETWORK.json
 cp deployed-local-defaults.json deployed-$NETWORK.json
 
+yarn install --immutable
 yarn compile
 yarn deploy:$NETWORK:aragon-env
 msg "Aragon ENV deployed."
