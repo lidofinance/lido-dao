@@ -34,7 +34,10 @@ async function finalizeDAO({ web3, artifacts }) {
 
   log(`Using LidoTemplate: ${chalk.yellow(state.daoTemplateAddress)}`)
   const template = await artifacts.require('LidoTemplate').at(state.daoTemplateAddress)
-  await assertLastEvent(template, 'TmplTokensIssued')
+  if (state.daoTemplateDeployBlock) {
+    log(`Using LidoTemplate deploy block: ${chalk.yellow(state.daoTemplateDeployBlock)}`)
+  }
+  await assertLastEvent(template, 'TmplTokensIssued', null, state.daoTemplateDeployBlock)
   log.splitter()
 
   const tokenManagerAddress = state[`app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`].proxyAddress
@@ -62,7 +65,7 @@ async function finalizeDAO({ web3, artifacts }) {
 
   log.splitter()
 
-  await saveCallTxData(`finalizeDAO`, template, 'finalizeDAO', `tx-07-finalize-dao.json`, {
+  await saveCallTxData(`finalizeDAO`, template, 'finalizeDAO', `tx-11-finalize-dao.json`, {
     arguments: [
       state.daoAragonId,
       percentToBP(fee.totalPercent),

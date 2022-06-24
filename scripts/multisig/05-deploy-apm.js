@@ -26,9 +26,11 @@ async function deployAPM({ web3, artifacts }) {
   log(`Using DAO template: ${chalk.yellow(state.daoTemplateAddress)}`)
 
   const template = await artifacts.require('LidoTemplate').at(state.daoTemplateAddress)
-
+  if (state.daoTemplateDeployBlock) {
+    log(`Using LidoTemplate deploy block: ${chalk.yellow(state.daoTemplateDeployBlock)}`)
+  }
   log.splitter()
-  await assertNoEvents(template)
+  await assertNoEvents(template, null, state.daoTemplateDeployBlock)
 
   const ens = await artifacts.require('ENS').at(state.ensAddress)
   const lidoApmEnsNode = namehash(state.lidoApmEnsName)
@@ -49,9 +51,15 @@ async function deployAPM({ web3, artifacts }) {
 
   logSplitter()
 
+  const lidoApmDeployArguments = [parentHash, subHash]
   await saveCallTxData(`APM deploy`, template, 'deployLidoAPM', `tx-03-deploy-apm.json`, {
-    arguments: [parentHash, subHash],
+    arguments: lidoApmDeployArguments,
     from: state.multisigAddress
+  })
+
+  persistNetworkState(network.name, netId, state, {
+    lidoApmDeployArguments,
+    lidoApmDeployTx: ''
   })
 }
 

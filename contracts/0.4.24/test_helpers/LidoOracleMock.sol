@@ -13,29 +13,6 @@ import "../oracle/LidoOracle.sol";
 contract LidoOracleMock is LidoOracle {
     uint256 private time;
 
-    // Original initialize function from v1
-    function initialize(
-        address _lido,
-        uint64 _epochsPerFrame,
-        uint64 _slotsPerEpoch,
-        uint64 _secondsPerSlot,
-        uint64 _genesisTime
-    )
-        public onlyInit
-    {
-        assert(1 == ((1 << (MAX_MEMBERS - 1)) >> (MAX_MEMBERS - 1)));  // static assert
-        _setBeaconSpec(
-            _epochsPerFrame,
-            _slotsPerEpoch,
-            _secondsPerSlot,
-            _genesisTime
-        );
-        LIDO_POSITION.setStorageAddress(_lido);
-        QUORUM_POSITION.setStorageUint256(1);
-        emit QuorumChanged(1);
-        initialized();
-    }
-
     function setV1LastReportedEpochForTest(uint256 _epoch) public {
         V1_LAST_REPORTED_EPOCH_ID_POSITION.setStorageUint256(_epoch);
     }
@@ -44,7 +21,15 @@ contract LidoOracleMock is LidoOracle {
         time = _time;
     }
 
+    function getTimeOriginal() external view returns (uint256) {
+        return LidoOracle._getTime();
+    }
+
     function _getTime() internal view returns (uint256) {
         return time;
+    }
+
+    function setVersion(uint256 _version) external {
+        CONTRACT_VERSION_POSITION.setStorageUint256(_version); 
     }
 }

@@ -1,8 +1,23 @@
 {
   "roles": [
     {
-      "name": "Stop/resume submissions and withdrawal requests",
+      "name": "Pause role",
       "id": "PAUSE_ROLE",
+      "params": []
+    },
+    {
+      "name": "Resume role",
+      "id": "RESUME_ROLE",
+      "params": []
+    },
+    {
+      "name": "Staking pause role",
+      "id": "STAKING_PAUSE_ROLE",
+      "params": []
+    },
+    {
+      "name": "Staking control role",
+      "id": "STAKING_CONTROL_ROLE",
       "params": []
     },
     {
@@ -16,26 +31,28 @@
       "params": []
     },
     {
-      "name": "Set oracle contract address",
-      "id": "SET_ORACLE",
+      "name": "Manage protocol contracts role",
+      "id": "MANAGE_PROTOCOL_CONTRACTS_ROLE",
       "params": []
     },
     {
       "name": "Burn tokens",
       "id": "BURN_ROLE",
-      "params": [
-        "Account which tokens are to be burnt",
-        "Token amount"
-      ]
+      "params": ["Account which tokens are to be burnt", "Token amount"]
     },
     {
-      "name": "Set treasury address",
-      "id": "SET_TREASURY",
+      "name": "Deposit role",
+      "id": "DEPOSIT_ROLE",
       "params": []
     },
     {
-      "name": "Set insurance fund address",
-      "id": "SET_INSURANCE_FUND",
+      "name": "Set EL rewards vault role",
+      "id": "SET_EL_REWARDS_VAULT_ROLE",
+      "params": []
+    },
+    {
+      "name": "Set EL rewards withdrawal limit role",
+      "id": "SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE",
       "params": []
     }
   ],
@@ -55,7 +72,13 @@
     "mainnet": {
       "appName": "lido.lidopm.eth",
       "network": "mainnet"
+    },
+    "localhost": {
+      "appName": "lido.lidopm.eth",
+      "network": "development",
+      "registry": "0xa16E02E87b7454126E5E10d957A927A7F5B5d2be"
     }
   },
+  "appName": "lido.lidopm.eth",
   "path": "../../contracts/0.4.24/Lido.sol"
 }

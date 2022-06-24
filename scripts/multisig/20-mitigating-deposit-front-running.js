@@ -99,9 +99,9 @@ async function upgradeAppImpl({ web3, artifacts }) {
 
   const txName = `tx-20-mitigating-deposit-front-running.json`
   const votingDesc = `1) Publishing new implementation in lido app APM repo
-2) Updating implementaion of lido app with new one
+2) Updating implementation of lido app with new one
 3) Publishing new implementation in node operators registry app APM repo
-4) Updating implementaion of node operators registry app with new one
+4) Updating implementation of node operators registry app with new one
 5) Granting new permission DEPOSIT_ROLE for ${depositorAddress}
 ${nosIncreaseLimitsDesc.map((desc, index) => `${index + 6}) ${desc}`).join('\n')}
   `

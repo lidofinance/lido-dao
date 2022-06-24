@@ -74,6 +74,8 @@ contract DepositSecurityModule {
         uint256 _minDepositBlockDistance,
         uint256 _pauseIntentValidityPeriodBlocks
     ) {
+        require(_lido != address(0), "LIDO_ZERO_ADDRESS");
+        require(_depositContract != address(0), "DEPOSIT_CONTRACT_ZERO_ADDRESS");
         LIDO = _lido;
         DEPOSIT_CONTRACT = _depositContract;
 
@@ -94,11 +96,7 @@ contract DepositSecurityModule {
         _setMaxDeposits(_maxDepositsPerBlock);
         _setMinDepositBlockDistance(_minDepositBlockDistance);
         _setPauseIntentValidityPeriodBlocks(_pauseIntentValidityPeriodBlocks);
-
-        paused = false;
-        lastDepositBlock = 0;
     }
-
 
     /**
      * Returns the owner address.
@@ -147,14 +145,14 @@ contract DepositSecurityModule {
 
 
     /**
-     * Returns `PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS` (see `pauseDeposits`).
+     * Returns current `pauseIntentValidityPeriodBlocks` contract parameter (see `pauseDeposits`).
      */
     function getPauseIntentValidityPeriodBlocks() external view returns (uint256) {
         return pauseIntentValidityPeriodBlocks;
     }
 
     /**
-     * Sets `PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS`. Only callable by the owner.
+     * Sets `pauseIntentValidityPeriodBlocks`. Only callable by the owner.
      */
     function setPauseIntentValidityPeriodBlocks(uint256 newValue) external onlyOwner {
         _setPauseIntentValidityPeriodBlocks(newValue);
@@ -168,14 +166,14 @@ contract DepositSecurityModule {
 
 
     /**
-     * Returns `MAX_DEPOSITS_PER_BLOCK` (see `depositBufferedEther`).
+     * Returns `maxDepositsPerBlock` (see `depositBufferedEther`).
      */
     function getMaxDeposits() external view returns (uint256) {
         return maxDepositsPerBlock;
     }
 
     /**
-     * Sets `MAX_DEPOSITS_PER_BLOCK`. Only callable by the owner.
+     * Sets `maxDepositsPerBlock`. Only callable by the owner.
      */
     function setMaxDeposits(uint256 newValue) external onlyOwner {
         _setMaxDeposits(newValue);
@@ -188,14 +186,14 @@ contract DepositSecurityModule {
 
 
     /**
-     * Returns `MIN_DEPOSIT_BLOCK_DISTANCE`  (see `depositBufferedEther`).
+     * Returns `minDepositBlockDistance`  (see `depositBufferedEther`).
      */
     function getMinDepositBlockDistance() external view returns (uint256) {
         return minDepositBlockDistance;
     }
 
     /**
-     * Sets `MIN_DEPOSIT_BLOCK_DISTANCE`. Only callable by the owner.
+     * Sets `minDepositBlockDistance`. Only callable by the owner.
      */
     function setMinDepositBlockDistance(uint256 newValue) external onlyOwner {
         _setMinDepositBlockDistance(newValue);
@@ -203,8 +201,10 @@ contract DepositSecurityModule {
 
     function _setMinDepositBlockDistance(uint256 newValue) internal {
         require(newValue > 0, "invalid value for minDepositBlockDistance: must be greater then 0");
-        minDepositBlockDistance = newValue;
-        emit MinDepositBlockDistanceChanged(newValue);
+        if (newValue != minDepositBlockDistance) {
+            minDepositBlockDistance = newValue;
+            emit MinDepositBlockDistanceChanged(newValue);
+        }
     }
 
 
@@ -220,7 +220,7 @@ contract DepositSecurityModule {
     }
 
     function _setGuardianQuorum(uint256 newValue) internal {
-        // we're intentionally allowing setting quorum value higher than the number of quardians
+        // we're intentionally allowing setting quorum value higher than the number of guardians
         quorum = newValue;
         emit GuardianQuorumChanged(newValue);
     }
@@ -280,6 +280,7 @@ contract DepositSecurityModule {
     }
 
     function _addGuardian(address addr) internal {
+        require(addr != address(0), "guardian zero address");
         require(!_isGuardian(addr), "duplicate address");
         guardians.push(addr);
         guardianIndicesOneBased[addr] = guardians.length;
@@ -327,7 +328,7 @@ contract DepositSecurityModule {
      *      is a valid signature by the guardian with index guardianIndex of the data
      *      defined below.
      *
-     *   2. block.number - blockNumber <= PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS
+     *   2. block.number - blockNumber <= pauseIntentValidityPeriodBlocks
      *
      * The signature, if present, must be produced for keccak256 hash of the following
      * message (each component taking 32 bytes):
@@ -335,6 +336,10 @@ contract DepositSecurityModule {
      * | PAUSE_MESSAGE_PREFIX | blockNumber
      */
     function pauseDeposits(uint256 blockNumber, Signature memory sig) external {
+        // In case of an emergency function `pauseDeposits` is supposed to be called
+        // by all guardians. Thus only the first call will do the actual change. But
+        // the other calls would be OK operations from the point of view of protocol’s logic.
+        // Thus we prefer not to use “error” semantics which is implied by `require`.
         if (paused) {
             return;
         }
@@ -380,6 +385,14 @@ contract DepositSecurityModule {
 
 
     /**
+     * Sets `lastDepositBlock`. Only callable by the owner.
+     */
+    function setLastDepositBlock(uint256 newLastDepositBlock) external onlyOwner {
+        lastDepositBlock = newLastDepositBlock;
+    }
+
+
+    /**
      * Returns whether depositBufferedEther can be called, given that the caller will provide
      * guardian attestations of non-stale deposit root and `keysOpIndex`, and the number of
      * such attestations will be enough to reach quorum.
@@ -390,14 +403,14 @@ contract DepositSecurityModule {
 
 
     /**
-     * Calls Lido.depositBufferedEther(MAX_DEPOSITS_PER_BLOCK).
+     * Calls Lido.depositBufferedEther(maxDepositsPerBlock).
      *
      * Reverts if any of the following is true:
      *   1. IDepositContract.get_deposit_root() != depositRoot.
      *   2. INodeOperatorsRegistry.getKeysOpIndex() != keysOpIndex.
      *   3. The number of guardian signatures is less than getGuardianQuorum().
      *   4. An invalid or non-guardian signature received.
-     *   5. block.number - getLastDepositBlock() < MIN_DEPOSIT_BLOCK_DISTANCE.
+     *   5. block.number - getLastDepositBlock() < minDepositBlockDistance.
      *   6. blockhash(blockNumber) != blockHash.
      *
      * Signatures must be sorted in ascending order by index of the guardian. Each signature must

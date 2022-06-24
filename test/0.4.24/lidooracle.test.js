@@ -2,10 +2,13 @@ const { assert } = require('chai')
 const { newDao, newApp } = require('./helpers/dao')
 const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const { toBN } = require('../helpers/utils')
+const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
+const keccak256 = require('js-sha3').keccak_256
 
 const LidoOracle = artifacts.require('LidoOracleMock.sol')
 const Lido = artifacts.require('LidoMockForOracle.sol')
-const BeaconReportReceiver = artifacts.require('BeaconReportReceiverMock.sol')
+const BeaconReportReceiver = artifacts.require('BeaconReportReceiverMock')
+const BeaconReportReceiverWithoutERC165 = artifacts.require('BeaconReportReceiverMockWithoutERC165')
 
 const GENESIS_TIME = 1606824000
 const EPOCH_LENGTH = 32 * 12
@@ -46,8 +49,39 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, user5, 
 
     // Initialize the app's proxy.
     await app.setTime(GENESIS_TIME)
-    await app.initialize(appLido.address, 1, 32, 12, GENESIS_TIME)
-    await app.initialize_v2(1000, 500) // initialize the second version: 10% yearly increase, 5% moment decrease
+
+    assertBn(await app.getVersion(), 0)
+    await app.setVersion(1)
+    await assertRevert(app.initialize(appLido.address, 1, 32, 12, GENESIS_TIME, 1000, 500), 'BASE_VERSION_MUST_BE_ZERO')
+    await app.setVersion(0)
+
+    // 1000 and 500 stand for 10% yearly increase, 5% moment decrease
+    await app.initialize(appLido.address, 1, 32, 12, GENESIS_TIME, 1000, 500)
+    assertBn(await app.getVersion(), 3)
+  })
+
+  it('finalizeUpgrade', async () => {
+    const baseVersionRequired = 1
+    const latestVersion = 3
+
+    assertBn(await app.getVersion(), latestVersion)
+    await assertRevert(app.finalizeUpgrade_v3(), 'WRONG_BASE_VERSION')
+
+    await app.setVersion(baseVersionRequired)
+
+    const receipt = await app.finalizeUpgrade_v3()
+    assertEvent(receipt, 'ContractVersionSet', {
+      expectedArgs: {
+        version: latestVersion
+      }
+    })
+
+    assertBn(await app.getVersion(), latestVersion)
+  })
+
+  it('check not-mocked _getTime()', async () => {
+    const block = await ethers.provider.getBlock('latest')
+    assertBn(block.timestamp, await app.getTimeOriginal())
   })
 
   it('beaconSpec is correct', async () => {
@@ -80,6 +114,8 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, user5, 
     assertBn(beaconSpec.genesisTime, 1)
   })
   describe('Test utility functions:', function () {
+    this.timeout(60000) // addOracleMember edge-case is heavy on execution time
+
     beforeEach(async () => {
       await app.setTime(GENESIS_TIME)
     })
@@ -97,6 +133,18 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, user5, 
 
       await assertRevert(app.addOracleMember(user1, { from: voting }), 'MEMBER_EXISTS')
       await assertRevert(app.addOracleMember(user2, { from: voting }), 'MEMBER_EXISTS')
+    })
+
+    it('addOracleMember edge-case', async () => {
+      const promises = []
+      const maxMembersCount = await app.MAX_MEMBERS()
+      for (let i = 0; i < maxMembersCount; ++i) {
+        const addr = '0x' + keccak256('member' + i).substring(0, 40)
+        promises.push(app.addOracleMember(addr, { from: voting }))
+      }
+      await Promise.all(promises)
+
+      assertRevert(app.addOracleMember(user4, { from: voting }), 'TOO_MANY_MEMBERS')
     })
 
     it('removeOracleMember works', async () => {
@@ -480,7 +528,20 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, user5, 
         await assertRevert(app.reportBeacon(5, nextPooledEther, 3, { from: user1 }), 'ALLOWED_BEACON_BALANCE_INCREASE')
       })
 
+      it('setBeaconReportReceiver to 0x0', async () => {
+        const receipt = await app.setBeaconReportReceiver(ZERO_ADDRESS, { from: voting })
+        assertEvent(receipt, 'BeaconReportReceiverSet', { expectedArgs: { callback: ZERO_ADDRESS } })
+        assert((await app.getBeaconReportReceiver()) === ZERO_ADDRESS)
+      })
+
+      it('setBeaconReportReceiver failed auth', async () => {
+        await assertRevert(app.setBeaconReportReceiver(ZERO_ADDRESS, { from: user1 }), 'APP_AUTH_FAILED')
+      })
+
       it('quorum receiver called with same arguments as getLastCompletedReportDelta', async () => {
+        const badMock = await BeaconReportReceiverWithoutERC165.new()
+        await assertRevert(app.setBeaconReportReceiver(badMock.address, { from: voting }), 'BAD_BEACON_REPORT_RECEIVER')
+
         const mock = await BeaconReportReceiver.new()
         let receipt = await app.setBeaconReportReceiver(mock.address, { from: voting })
         assertEvent(receipt, 'BeaconReportReceiverSet', { expectedArgs: { callback: mock.address } })

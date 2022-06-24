@@ -1,5 +1,11 @@
 {
   "eth": {
+    "localhost": {
+      "mnemonic": "test test test test test test test test test test test junk",
+      "path": "m/44'/60'/0'/0",
+      "initialIndex": 0,
+      "count": 20
+    },
     "dev": {
       "mnemonic": "rich dune dash tag exercise veteran sword speed spike absorb disease brush bracket doll noodle",
       "path": "m/44'/60'/0'/0",
@@ -18,5 +24,9 @@
   },
   "etherscan": {
     "apiKey": "ETHERSCAN_API_KEY"
+  },
+  "infura_ipfs": {
+    "projectId": "",
+    "projectSecret": ""
   }
 }

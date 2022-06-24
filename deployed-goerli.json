@@ -16,12 +16,15 @@
     "0x70B3284fD016a570146cE48fC54D7A81bCd94BBa"
   ],
   "daoTemplateDeployTx": "0xda8746bca23c7a4f7c58e1a3370cb1ffa1e250ace90fd4684dbb1842ee6ac921",
-  "lidoBaseDeployTx": "0xedff0d82dd32fdafa30a62388898e35b8c98759c15aa92ab1ba87b779d86c0bb",
-  "oracleBaseDeployTx": "0x4ff91791cc0f969cf9fe0cc9a6241593d26b20ee27f785a2eb002258e25f4e43",
-  "nodeOperatorsRegistryBaseDeployTx": "0x25cf4db41a4159e94826fd0495bafe02e4a015a9bcf0ffbc0e684a5cafe6eefc",
+  "lidoBaseDeployTx": "0xf436778ae95e6ef6c49789dc6489310b8685b14f10724a9b526dd3229254e22f",
+  "oracleBaseDeployTx": "0x6001a00ff13a7ec36d054af4b499da4ae0f77f8be3a507cb637fde54724df13a",
+  "nodeOperatorsRegistryBaseDeployTx": "0x92746e44f6a31a26b29e042ad377757f7b9475570f1e08de0fa22a5ad9394ea4",
+  "compositePostRebaseBeaconReceiverDeployTx": "0x1c301d51d66e20403915bf5f44359470a1f847560d8d22c9d2c99aaffbae50d7",
+  "executionLayerRewardsVaultDeployTx": "0x3bce97664f6003ddf4e3cf7178527dbff6098b1a6fc9ba7c337cb6aca4ea91fb",
+  "selfOwnedStETHBurnerDeployTx": "0x02428a5edd7fc5c4cadbf126a345a401cf2a46ea98116894828d90255e4b27e4",
   "daoTemplateAddress": "0x9A4a36B5fe517f98BD6529d4317B0b723F600AaD",
   "app:lido": {
-    "baseAddress": "0x25C29642Aa0263B8Bf0A621a264Be6b6238B90E6",
+    "baseAddress": "0xb16876f11324Fbf02b9B294FBE307B3DB0C02DBB",
     "ipfsCid": "QmbmPW5r9HMdyUARNJjjE7MNqBUGrXashwoWvqRZhc1t5b",
     "contentURI": "0x697066733a516d626d5057357239484d64795541524e4a6a6a45374d4e714255477258617368776f577671525a686331743562",
     "name": "lido",
@@ -30,7 +33,7 @@
     "proxyAddress": "0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F"
   },
   "app:oracle": {
-    "baseAddress": "0x869E3cB508200D3bE0e946613a8986E8eb3E64d7",
+    "baseAddress": "0x7FDef26e3bBB8206135071A52e44f8460A243De5",
     "ipfsCid": "QmfACH9oSHFWgV81Dh8RSVcgaVBdhkZuHhZY2iZv5syBJK",
     "contentURI": "0x697066733a516d66414348396f5348465767563831446838525356636761564264686b5a7548685a5932695a76357379424a4b",
     "name": "oracle",
@@ -39,7 +42,7 @@
     "proxyAddress": "0x24d8451BC07e7aF4Ba94F69aCDD9ad3c6579D9FB"
   },
   "app:node-operators-registry": {
-    "baseAddress": "0x98945cf857ed8c0A0Df0ce5DeE85842b2409e64B",
+    "baseAddress": "0xbb001978bD0d5b36D95c54025ac6a5822b2b1Aec",
     "ipfsCid": "QmQExJkoyg7xWXJjLaYC75UAmsGY1STY41YTG3wEK7q8dd",
     "contentURI": "0x697066733a516d5145784a6b6f7967377857584a6a4c615943373555416d7347593153545934315954473377454b3771386464",
     "name": "node-operators-registry",
@@ -135,21 +138,18 @@
     "0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F"
   ],
   "depositorParams": {
-    "maxDepositsPerBlock": 100,
-    "minDepositBlockDistance": 14,
+    "maxDepositsPerBlock": 0,
+    "minDepositBlockDistance": 1200,
     "pauseIntentValidityPeriodBlocks": 10,
     "guardians": [
-      "0x3dc4cf780f2599b528f37dedb34449fb65ef7d4a", 
-      "0x401fd888b5e41113b7c0c47725a742bbc3a083ef", 
-      "0x3db460f33838fdc91e804d7fce2adf9e61e9d654", 
-      "0x96fd3d127abd0d77724d49b7bddecdc89f684bb6", 
-      "0xda1a296f9df18d04e0aefcff658b80b3ef824ec9", 
-      "0xc34d33b95d7d6df2255d6051ddb12f8bd7aef64c", 
-      "0xad5eecc863d88d5d848b89aa8517388a3ee432c8", 
-      "0x6c83f70ed019fdcafe6c6f78cb33ce15943e4cb9", 
-      "0x43464fe06c18848a2e2e913194d64c1970f4326a", 
-      "0xf060ab3d5dcfdc6a0dfd5ca0645ac569b8f105ca", 
-      "0x79a132be0c25ced09e745629d47cf05e531bb2bb"
+      "0x3dc4cf780f2599b528f37dedb34449fb65ef7d4a",
+      "0x96fd3d127abd0d77724d49b7bddecdc89f684bb6",
+      "0x79a132be0c25ced09e745629d47cf05e531bb2bb",
+      "0x43464fe06c18848a2e2e913194d64c1970f4326a",
+      "0xd15b778e954b02d44f343c2fc7b54d4b08d9b1be",
+      "0xf060ab3d5dcfdc6a0dfd5ca0645ac569b8f105ca",
+      "0xc34d33b95d7d6df2255d6051ddb12f8bd7aef64c",
+      "0xda1a296f9df18d04e0aefcff658b80b3ef824ec9"
     ],
     "quorum": 1
   },
@@ -158,10 +158,31 @@
     "0xff50ed3d0ec03aC01D4C79aAd74928BFF48a7b2b",
     "0x9D4AF1Ee19Dad8857db3a45B0374c81c8A1C6320",
     5,
-    100,
-    14,
+    0,
+    1200,
     10
   ],
-  "depositorDeployTx": "0x2811fab2d10abba764b672eb75f727e89a02f721af4e7fd1d153bad0b3c50d3b",
-  "depositorAddress": "0xEd23AD3EA5Fb9d10e7371Caef1b141AD1C23A80c"
+  "depositorDeployTx": "0xde769b6dc18e4e9925805fd69d42cceb312771a86814cee29efc4fe879f611ab",
+  "depositorAddress": "0x7DC1C1ff64078f73C98338e2f17D1996ffBb2eDe",
+  "compositePostRebaseBeaconReceiverConstructorArgs": [
+    "0xbc0B67b4553f4CF52a913DE9A6eD0057E2E758Db",
+    "0x24d8451BC07e7aF4Ba94F69aCDD9ad3c6579D9FB"
+  ],
+  "compositePostRebaseBeaconReceiverAddress": "0x5d2113f7691ac6Df5E3f41Fb938429ACEAD2C94f",
+  "selfOwnedStETHBurnerParams": {
+    "totalCoverSharesBurnt": 0,
+    "totalNonCoverSharesBurnt": 0,
+    "maxBurnAmountPerRunBasisPoints": 4
+  },
+  "selfOwnedStETHBurnerConstructorArgs": [
+    "0x4333218072D5d7008546737786663c38B4D561A4",
+    "0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F",
+    "0xbc0B67b4553f4CF52a913DE9A6eD0057E2E758Db",
+    0,
+    0,
+    4
+  ],
+  "selfOwnedStETHBurnerAddress": "0x6432756feF0fb527C06eFd4689A7CE0E195bD327",
+  "executionLayerRewardsVaultAddress": "0x94750381bE1AbA0504C666ee1DB118F68f0780D4",
+  "depositorPreviousAddress": "0xEd23AD3EA5Fb9d10e7371Caef1b141AD1C23A80c"
 }

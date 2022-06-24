@@ -15,8 +15,8 @@ module.exports = {
     ...baseConfig.aragon,
     appServePort: 3010,
     clientServePort: 3000,
-    appSrcPath: 'app/',
-    appBuildOutputPath: 'dist/',
+    appSrcPath: 'apps/lido/app/',
+    appBuildOutputPath: 'apps/lido/dist/',
     appName: 'lido',
     hooks // Path to script hooks
   }

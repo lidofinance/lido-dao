@@ -7,12 +7,14 @@ pragma solidity 0.4.24;
 
 import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/introspection/ERC165Checker.sol";
 
 import "../interfaces/IBeaconReportReceiver.sol";
 import "../interfaces/ILido.sol";
 import "../interfaces/ILidoOracle.sol";
 
 import "./ReportUtils.sol";
+
 
 /**
  * @title Implementation of an ETH 2.0 -> ETH oracle
@@ -31,6 +33,7 @@ import "./ReportUtils.sol";
 contract LidoOracle is ILidoOracle, AragonApp {
     using SafeMath for uint256;
     using ReportUtils for uint256;
+    using ERC165Checker for address;
 
     struct BeaconSpec {
         uint64 epochsPerFrame;
@@ -73,7 +76,12 @@ contract LidoOracle is ILidoOracle, AragonApp {
     bytes32 internal constant BEACON_SPEC_POSITION =
         0x805e82d53a51be3dfde7cfed901f1f96f5dad18e874708b082adb8841e8ca909; // keccak256("lido.LidoOracle.beaconSpec")
 
-    /// Version of the initialized contract data, v1 is 0
+    /// Version of the initialized contract data
+    /// NB: Contract versioning starts from 1.
+    /// The version stored in CONTRACT_VERSION_POSITION equals to
+    /// - 0 right after deployment when no initializer is invoked yet
+    /// - N after calling initialize() during deployment from scratch, where N is the current contract version
+    /// - N after upgrading contract from the previous version (after calling finalize_vN())
     bytes32 internal constant CONTRACT_VERSION_POSITION =
         0x75be19a3f314d89bd1f84d30a6c84e2f1cd7afc7b6ca21876564c265113bb7e4; // keccak256("lido.LidoOracle.contractVersion")
 
@@ -112,7 +120,8 @@ contract LidoOracle is ILidoOracle, AragonApp {
     bytes32 internal constant ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION =
         0x92ba7776ed6c5d13cf023555a94e70b823a4aebd56ed522a77345ff5cd8a9109; // keccak256("lido.LidoOracle.allowedBeaconBalanceDecrease")
 
-    /// This variable is from v1: the last reported epoch, used only in the initializer
+    /// This is a dead variable: it was used only in v1 and in upgrade v1 --> v2
+    /// Just keep in mind that storage at this position is occupied but with no actual usage
     bytes32 internal constant V1_LAST_REPORTED_EPOCH_ID_POSITION =
         0xfe0250ed0c5d8af6526c6d133fccb8e5a55dd6b1aa6696ed0c327f8e517b5a94; // keccak256("lido.LidoOracle.lastReportedEpochId")
 
@@ -177,6 +186,14 @@ contract LidoOracle is ILidoOracle, AragonApp {
      * @dev Specify 0 to disable this functionality
      */
     function setBeaconReportReceiver(address _addr) external auth(SET_BEACON_REPORT_RECEIVER) {
+        if(_addr != address(0)) {
+            IBeaconReportReceiver iBeacon;
+            require(
+                _addr._supportsInterface(iBeacon.processLidoOracleReport.selector),
+                "BAD_BEACON_REPORT_RECEIVER"
+            );
+        }
+
         BEACON_REPORT_RECEIVER_POSITION.setStorageUint256(uint256(_addr));
         emit BeaconReportReceiverSet(_addr);
     }
@@ -330,20 +347,47 @@ contract LidoOracle is ILidoOracle, AragonApp {
     }
 
     /**
-     * @notice Initialize the contract v2 data, with sanity check bounds
-     * (`_allowedBeaconBalanceAnnualRelativeIncrease`, `_allowedBeaconBalanceRelativeDecrease`)
-     * @dev Original initialize function removed from v2 because it is invoked only once
+     * @notice Initialize the contract (version 3 for now) from scratch
+     * @dev For details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md
+     * @param _lido Address of Lido contract
+     * @param _epochsPerFrame Number of epochs per frame
+     * @param _slotsPerEpoch Number of slots per epoch
+     * @param _secondsPerSlot Number of seconds per slot
+     * @param _genesisTime Genesis time
+     * @param _allowedBeaconBalanceAnnualRelativeIncrease Allowed beacon balance annual relative increase (e.g. 1000 means 10% increase)
+     * @param _allowedBeaconBalanceRelativeDecrease Allowed beacon balance instantaneous decrease (e.g. 500 means 5% decrease)
      */
-    function initialize_v2(
+    function initialize(
+        address _lido,
+        uint64 _epochsPerFrame,
+        uint64 _slotsPerEpoch,
+        uint64 _secondsPerSlot,
+        uint64 _genesisTime,
         uint256 _allowedBeaconBalanceAnnualRelativeIncrease,
         uint256 _allowedBeaconBalanceRelativeDecrease
     )
-        external
+        external onlyInit
     {
-        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "ALREADY_INITIALIZED");
-        CONTRACT_VERSION_POSITION.setStorageUint256(1);
-        emit ContractVersionSet(1);
+        assert(1 == ((1 << (MAX_MEMBERS - 1)) >> (MAX_MEMBERS - 1)));  // static assert
 
+        // We consider storage state right after deployment (no initialize() called yet) as version 0
+
+        // Initializations for v0 --> v1
+        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "BASE_VERSION_MUST_BE_ZERO");
+
+        _setBeaconSpec(
+            _epochsPerFrame,
+            _slotsPerEpoch,
+            _secondsPerSlot,
+            _genesisTime
+        );
+
+        LIDO_POSITION.setStorageAddress(_lido);
+
+        QUORUM_POSITION.setStorageUint256(1);
+        emit QuorumChanged(1);
+
+        // Initializations for v1 --> v2
         ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION
             .setStorageUint256(_allowedBeaconBalanceAnnualRelativeIncrease);
         emit AllowedBeaconBalanceAnnualRelativeIncreaseSet(_allowedBeaconBalanceAnnualRelativeIncrease);
@@ -352,16 +396,39 @@ contract LidoOracle is ILidoOracle, AragonApp {
             .setStorageUint256(_allowedBeaconBalanceRelativeDecrease);
         emit AllowedBeaconBalanceRelativeDecreaseSet(_allowedBeaconBalanceRelativeDecrease);
 
-        // set last completed epoch as V1's contract last reported epoch, in the vast majority of
-        // cases this is true, in others the error is within a frame
-        uint256 lastReportedEpoch = V1_LAST_REPORTED_EPOCH_ID_POSITION.getStorageUint256();
-        LAST_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(lastReportedEpoch);
-
         // set expected epoch to the first epoch for the next frame
         BeaconSpec memory beaconSpec = _getBeaconSpec();
-        uint256 expectedEpoch = _getFrameFirstEpochId(lastReportedEpoch, beaconSpec) + beaconSpec.epochsPerFrame;
+        uint256 expectedEpoch = _getFrameFirstEpochId(0, beaconSpec) + beaconSpec.epochsPerFrame;
         EXPECTED_EPOCH_ID_POSITION.setStorageUint256(expectedEpoch);
         emit ExpectedEpochIdUpdated(expectedEpoch);
+
+        // Initializations for v2 --> v3
+        _initialize_v3();
+
+        // Needed to finish the Aragon part of initialization (otherwise auth() modifiers will fail)
+        initialized();
+    }
+
+    /**
+     * @notice A function to finalize upgrade to v3 (from v1). Can be called only once
+     * @dev Value 2 in CONTRACT_VERSION_POSITION is skipped due to change in numbering
+     * For more details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md
+     */
+    function finalizeUpgrade_v3() external {
+        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 1, "WRONG_BASE_VERSION");
+
+        _initialize_v3();
+    }
+
+    /**
+     * @notice A dummy incremental v1/v2 --> v3 initialize function. Just corrects version number in storage
+     * @dev This function is introduced just to set in correspondence version number in storage,
+     * semantic version of the contract and number N used in naming of _initialize_nN/finalizeUpgrade_vN.
+     * NB, that thus version 2 is skipped
+     */
+    function _initialize_v3() internal {
+        CONTRACT_VERSION_POSITION.setStorageUint256(3);
+        emit ContractVersionSet(3);
     }
 
     /**
@@ -370,9 +437,10 @@ contract LidoOracle is ILidoOracle, AragonApp {
     function addOracleMember(address _member) external auth(MANAGE_MEMBERS) {
         require(address(0) != _member, "BAD_ARGUMENT");
         require(MEMBER_NOT_FOUND == _getMemberId(_member), "MEMBER_EXISTS");
+        require(members.length < MAX_MEMBERS, "TOO_MANY_MEMBERS");
 
         members.push(_member);
-        require(members.length < MAX_MEMBERS, "TOO_MANY_MEMBERS");
+
         emit MemberAdded(_member);
     }
 
@@ -567,7 +635,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
         // report to the Lido and collect stats
         ILido lido = getLido();
         uint256 prevTotalPooledEther = lido.totalSupply();
-        lido.pushBeacon(_beaconValidators, _beaconBalanceEth1);
+        lido.handleOracleReport(_beaconValidators, _beaconBalanceEth1);
         uint256 postTotalPooledEther = lido.totalSupply();
 
         PRE_COMPLETED_TOTAL_POOLED_ETHER_POSITION.setStorageUint256(prevTotalPooledEther);

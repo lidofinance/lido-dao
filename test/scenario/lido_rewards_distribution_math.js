@@ -1,6 +1,6 @@
 const { assert } = require('chai')
 const { BN } = require('bn.js')
-const { assertBn, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertBn, assertEvent, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
 const { getEventArgument, ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 
 const { pad, ETH } = require('../helpers/utils')
@@ -90,6 +90,7 @@ contract('Lido: rewards distribution math', (addresses) => {
 
     // contracts/Lido.sol
     pool = deployed.pool
+    await pool.resumeProtocolAndStaking()
 
     // contracts/nos/NodeOperatorsRegistry.sol
     nodeOperatorRegistry = deployed.nodeOperatorRegistry
@@ -120,7 +121,10 @@ contract('Lido: rewards distribution math', (addresses) => {
     const validatorsLimit = 0
 
     const txn = await nodeOperatorRegistry.addNodeOperator(nodeOperator1.name, nodeOperator1.address, { from: voting })
-    await nodeOperatorRegistry.setNodeOperatorStakingLimit(0, validatorsLimit, { from: voting })
+    await assertRevert(
+      nodeOperatorRegistry.setNodeOperatorStakingLimit(0, validatorsLimit, { from: voting }),
+      'NODE_OPERATOR_STAKING_LIMIT_IS_THE_SAME'
+    )
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
     nodeOperator1.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
@@ -554,7 +558,7 @@ contract('Lido: rewards distribution math', (addresses) => {
   }
 
   async function readLastPoolEventLog() {
-    const events = await pool.getPastEvents()
+    const events = await pool.getPastEvents('Transfer')
     let reportedMintAmount = new BN(0)
     const tos = []
     const values = []

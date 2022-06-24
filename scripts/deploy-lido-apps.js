@@ -1,19 +1,25 @@
 const fs = require('fs')
 const path = require('path')
-const chalk = require('chalk')
 const namehash = require('eth-ens-namehash').hash
 
 const runOrWrapScript = require('./helpers/run-or-wrap-script')
-const { log, logSplitter, logWideSplitter, logHeader } = require('./helpers/log')
+const { log, logSplitter, logWideSplitter, logHeader, yl } = require('./helpers/log')
 const { readNetworkState, persistNetworkState, updateNetworkState } = require('./helpers/persisted-network-state')
 const { execLive } = require('./helpers/exec')
 const { filterObject } = require('./helpers/collections')
 const { readAppName } = require('./helpers/aragon')
+const { readJSON } = require('./helpers/fs')
+
 
 const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
 const RELEASE_TYPE = process.env.RELEASE_TYPE || 'major'
 const APPS = process.env.APPS || '*'
 const APPS_DIR_PATH = process.env.APPS_DIR_PATH || path.resolve(__dirname, '..', 'apps')
+
+function writeNetworkStateFile(fileName, state) {
+  const data = JSON.stringify(state, null, '  ')
+  fs.writeFileSync(fileName, data + '\n', 'utf8')
+}
 
 async function deployLidoApps({
   web3,
@@ -28,9 +34,9 @@ async function deployLidoApps({
   const netName = network.name
 
   logWideSplitter()
-  log(`Network ID: ${chalk.yellow(netId)}`)
+  log(`Network ID: ${yl(netId)}`)
 
-  const netState = readNetworkState(networkStateFile, netId)
+  const netState = readNetworkState(network.name, netId)
   if (!netState.ensAddress) {
     throw new Error(`ensAddress for network ${netId} is missing from network state file ${networkStateFile}`)
   }
@@ -55,22 +61,51 @@ async function deployLidoApps({
   }
 
   for (const appName of appNames) {
-    const results = await publishApp(appName, env, netName, appsDirPath, releaseType)
-    updateNetworkState(netState, results)
-    persistNetworkState(networkStateFile, netId, netState)
+    const app = await publishApp(appName, env, netName, appsDirPath, releaseType)
+    persistNetworkState(network.name, netId, netState, {
+      [`app:${app.name}`]: {
+        ...netState[`app:${app.name}`],
+        ...app
+      }
+    })
   }
 }
 
 async function publishApp(appName, env, netName, appsDirPath, releaseType) {
   logHeader(`Publishing new ${releaseType} release of app '${appName}'`)
 
+  let result = {}
   const appRootPath = path.resolve(appsDirPath, appName)
   const appFullName = await readAppName(appRootPath, netName)
   const appId = namehash(appFullName)
+  const appFrontendPath = path.join(appRootPath, 'app')
 
-  log(`App name: ${chalk.yellow(appFullName)}`)
-  log(`App ID: ${chalk.yellow(appId)}`)
+  log(`App name: ${yl(appFullName)}`)
+  log(`App ID: ${yl(appId)}`)
   logSplitter()
+
+  logSplitter(`Change registry app ${appName}`)
+  const arappFile = `${appRootPath}/arapp.json`
+  const arapp = await readJSON(arappFile)
+
+  if (!arapp.environments[network.name]) {
+    arapp.environments[network.name] = { ...arapp.environments.default }
+  }
+  arapp.environments[network.name].registry = network.config.ensAddress
+
+  logSplitter(`Write state app ${appName}`)
+  writeNetworkStateFile(arappFile, arapp)
+
+  log(`Installing frontend deps for app ${appName}`)
+  await execLive('yarn', {
+    cwd: appFrontendPath
+  })
+
+  log(`Build app ${appName}`)
+  await execLive('yarn', {
+    args: ['build'],
+    cwd: appFrontendPath
+  })
 
   await execLive('hardhat', {
     args: [
@@ -78,6 +113,7 @@ async function publishApp(appName, env, netName, appsDirPath, releaseType) {
       releaseType,
       '--network',
       netName,
+      // '--skip-app-build',
       // workaround: force to read URL from Hardhat config
       '--ipfs-api-url',
       ''
@@ -87,8 +123,10 @@ async function publishApp(appName, env, netName, appsDirPath, releaseType) {
   })
 
   return {
-    [`lido_app_${appName}_name`]: appFullName,
-    [`lido_app_${appName}_id`]: appId
+    ...result,
+    fullName: appFullName,
+    name: appName,
+    id: appId
   }
 }
 

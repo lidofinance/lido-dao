@@ -14,7 +14,7 @@ const { getENSNodeOwner } = require('../components/ens')
 
 const { assertAPMRegistryPermissions } = require('./checks/apm')
 
-const REQUIRED_NET_STATE = ['ensAddress', 'lidoApmEnsName', 'daoTemplateAddress', 'apmRegistryFactoryAddress']
+const REQUIRED_NET_STATE = ['ensAddress', 'lidoApmEnsName', 'daoTemplateAddress']
 
 async function obtainDeployedAPM({ web3, artifacts }) {
   const netId = await web3.eth.net.getId()
@@ -30,8 +30,14 @@ async function obtainDeployedAPM({ web3, artifacts }) {
   log(`Using LidoTemplate: ${chalk.yellow(state.daoTemplateAddress)}`)
   const template = await artifacts.require('LidoTemplate').at(state.daoTemplateAddress)
 
-  const apmDeployedEvt = await assertLastEvent(template, 'TmplAPMDeployed')
+  if (state.daoTemplateDeployBlock) {
+    log(`Using LidoTemplate deploy block: ${chalk.yellow(state.daoTemplateDeployBlock)}`)
+  }
+
+  // if (!state.lidoApmDeployTx) {
+  const apmDeployedEvt = await assertLastEvent(template, 'TmplAPMDeployed', null, state.daoTemplateDeployBlock)
   state.lidoApmDeployTx = apmDeployedEvt.transactionHash
+  // }
   log(`Using deployLidoAPM transaction: ${chalk.yellow(state.lidoApmDeployTx)}`)
   persistNetworkState(network.name, netId, state)
 
@@ -78,13 +84,16 @@ async function obtainDeployedAPM({ web3, artifacts }) {
   assert.addressEqual(registrarKernelAddress, registryKernelAddress, 'registrar kernel')
   log.success(`registry.registrar.kernel: ${chalk.yellow(registrarKernelAddress)}`)
 
-  await assertAPMRegistryPermissions({
-    registry,
-    registrar,
-    registryACL,
-    registryKernel,
-    rootAddress: state.daoTemplateAddress
-  })
+  await assertAPMRegistryPermissions(
+    {
+      registry,
+      registrar,
+      registryACL,
+      registryKernel,
+      rootAddress: state.daoTemplateAddress
+    },
+    state.daoTemplateDeployBlock
+  )
 
   log.splitter()
   persistNetworkState(network.name, netId, state, { lidoApmAddress: registryAddress })

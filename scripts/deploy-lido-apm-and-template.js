@@ -9,11 +9,18 @@ const { readNetworkState, persistNetworkState, updateNetworkState } = require('.
 const { deployAPM, resolveLatestVersion } = require('./components/apm')
 const { getENSNodeOwner } = require('./components/ens')
 
-const LIDO_ENS_LABEL = process.env.LIDO_ENS_LABEL || 'lido'
+const LIDO_ENS_LABEL = process.env.LIDO_ENS_LABEL || 'lidopm'
 const DAO_TEMPLATE_ENS_LABEL = process.env.DAO_TEMPLATE_ENS_LABEL || 'template'
 const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
 
-const REQUIRED_NET_STATE = ['owner', 'ensAddress', 'apmRegistryFactoryAddress', 'daoFactoryAddress', 'miniMeTokenFactoryAddress']
+const REQUIRED_NET_STATE = [
+  'owner',
+  'multisigAddress',
+  'ensAddress',
+  'apmRegistryFactoryAddress',
+  'daoFactoryAddress',
+  'miniMeTokenFactoryAddress'
+]
 
 async function deployApmAndTemplate({
   web3,
@@ -27,7 +34,7 @@ async function deployApmAndTemplate({
   logWideSplitter()
   log(`Network ID: ${chalk.yellow(netId)}`)
 
-  const state = readNetworkState(networkStateFile, netId)
+  const state = readNetworkState(network.name, netId)
 
   const missingState = REQUIRED_NET_STATE.filter((key) => !state[key])
   if (missingState.length) {
@@ -59,14 +66,14 @@ async function deployApmAndTemplate({
     apmRegistryFactory,
     owner: state.owner,
     labelName: state.lidoEnsLabelName,
-    apmRegistryAddress: state.lidoApmRegistryAddress
+    apmRegistryAddress: state.lidoApmAddress
   })
   updateNetworkState(state, {
     lidoApmRegistry: apmResults.apmRegistry,
     lidoEnsNodeName: apmResults.ensNodeName,
     lidoEnsNode: apmResults.ensNode
   })
-  persistNetworkState(networkStateFile, netId, state)
+  persistNetworkState(network.name, netId, state)
 
   logHeader(`DAO template`)
   const daoTemplateResults = await deployDaoTemplate({
@@ -74,21 +81,21 @@ async function deployApmAndTemplate({
     ens,
     owner: state.owner,
     lidoEnsNodeName: state.lidoEnsNodeName,
-    lidoApmRegistryAddress: state.lidoApmRegistryAddress,
+    lidoApmAddress: state.lidoApmAddress,
     daoFactoryAddress: state.daoFactoryAddress,
     miniMeTokenFactoryAddress: state.miniMeTokenFactoryAddress,
     daoTemplateEnsLabel: state.daoTemplateEnsLabel,
     daoTemplateAddress: state.daoTemplateAddress
   })
   updateNetworkState(state, daoTemplateResults)
-  persistNetworkState(networkStateFile, netId, state)
+  persistNetworkState(network.name, netId, state)
 }
 
 async function deployDaoTemplate({
   artifacts,
   owner,
   ens,
-  lidoApmRegistryAddress,
+  lidoApmAddress,
   daoFactoryAddress,
   miniMeTokenFactoryAddress,
   lidoEnsNodeName,
@@ -97,7 +104,7 @@ async function deployDaoTemplate({
 }) {
   if (daoTemplateAddress) {
     log(`Using DAO template: ${chalk.yellow(daoTemplateAddress)}`)
-    const daoTemplate = await artifacts.require('LidoTemplateE2E').at(daoTemplateAddress)
+    const daoTemplate = await artifacts.require('LidoTemplate').at(daoTemplateAddress)
     return { daoTemplate }
   }
 
@@ -108,12 +115,12 @@ async function deployDaoTemplate({
   const latestDaoTemplateVersion = await resolveLatestVersion(daoTemplateNode, ens, artifacts)
   if (latestDaoTemplateVersion) {
     log(`Using DAO template resolved from ENS: ${chalk.yellow(latestDaoTemplateVersion.contractAddress)}`)
-    const daoTemplate = await artifacts.require('LidoTemplateE2E').at(latestDaoTemplateVersion.contractAddress)
+    const daoTemplate = await artifacts.require('LidoTemplate').at(latestDaoTemplateVersion.contractAddress)
     return { daoTemplate, daoTemplateNodeName, daoTemplateNode }
   }
 
-  log(`Using Lido APM registry: ${chalk.yellow(lidoApmRegistryAddress)}`)
-  const lidoApmRegistry = await artifacts.require('APMRegistry').at(lidoApmRegistryAddress)
+  log(`Using Lido APM registry: ${chalk.yellow(lidoApmAddress)}`)
+  const lidoApmRegistry = await artifacts.require('APMRegistry').at(lidoApmAddress)
 
   const aragonIdAddress = await getENSNodeOwner(ens, namehash('aragonid.eth'))
   if (aragonIdAddress) {
@@ -123,9 +130,9 @@ async function deployDaoTemplate({
   }
 
   const daoTemplate = await deploy(
-    'LidoTemplateE2E',
+    'LidoTemplate',
     artifacts,
-    withArgs(daoFactoryAddress, ens.address, miniMeTokenFactoryAddress, aragonIdAddress, { from: owner, gas: 6000000 })
+    withArgs(owner, daoFactoryAddress, ens.address, miniMeTokenFactoryAddress, aragonIdAddress, { from: owner, gas: 6000000 })
   )
   logSplitter()
 

@@ -26,7 +26,6 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
   // of Ether submitted to/buffered in the contract and the number of spare validator keys.
   // This is needed to prevent the deposit loop from failing due to it using more gas than
   // available in a single block and to protect from possible attacks exploiting this.
-  const depositIterationLimit = 5
 
   let pool, nodeOperatorRegistry, depositContractMock
   let depositSecurityModule, depositRoot, guardians
@@ -36,6 +35,7 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
 
     // contracts/Lido.sol
     pool = deployed.pool
+    await pool.resumeProtocolAndStaking()
 
     // contracts/nos/NodeOperatorsRegistry.sol
     nodeOperatorRegistry = deployed.nodeOperatorRegistry

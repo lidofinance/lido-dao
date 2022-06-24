@@ -11,15 +11,18 @@ async function obtainInstance({ web3, artifacts }) {
   const appArtifact = 'DepositSecurityModule'
   const netId = await web3.eth.net.getId()
 
-  logWideSplitter()
-  log(`Network ID:`, yl(netId))
-
   const state = readNetworkState(network.name, netId)
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
-  const depositor = await artifacts.require(appArtifact).at(state.depositorAddress)
 
   const { guardians = [], quorum = 1 } = state.depositorParams
+  
+  logWideSplitter()
+  log(`Network ID:`, yl(netId))
+  console.log("Going to set these params in addGuardians(guardians, quorum):")
+  console.log({ guardians, quorum })
+  console.log()
 
+  const depositor = await artifacts.require(appArtifact).at(state.depositorAddress)
   await saveCallTxData(`Set guardians`, depositor, 'addGuardians', `tx-18-depositor-add-guardians.json`, {
     arguments: [guardians, quorum],
     from: DEPLOYER || state.multisigAddress

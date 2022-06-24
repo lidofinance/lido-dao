@@ -17,7 +17,7 @@ const { readJSON } = require('../helpers/fs')
 require('@aragon/buidler-aragon/dist/bootstrap-paths')
 
 const { generateArtifacts } = require('@aragon/buidler-aragon/dist/src/utils/artifact/generateArtifacts')
-const { uploadDirToIpfs } = require('@aragon/buidler-aragon/dist/src/utils/ipfs/uploadDirToIpfs')
+const { uploadDirToIpfs } = require('@aragon/buidler-aragon/dist/src/utils/ipfs')
 const { toContentUri } = require('@aragon/buidler-aragon/dist/src/utils/apm/utils')
 
 const { APP_NAMES } = require('./constants')
@@ -28,12 +28,7 @@ const REQUIRED_NET_STATE = ['lidoApmEnsName', 'ipfsAPI']
 const APPS = process.env.APPS || '*'
 const APPS_DIR_PATH = process.env.APPS_DIR_PATH || path.resolve(__dirname, '..', '..', 'apps')
 
-async function publishAppFrontends({
-  web3,
-  artifacts,
-  appsDirPath = APPS_DIR_PATH,
-  appDirs = APPS
-}) {
+async function publishAppFrontends({ web3, artifacts, appsDirPath = APPS_DIR_PATH, appDirs = APPS }) {
   const netId = await web3.eth.net.getId()
 
   logWideSplitter()
@@ -55,10 +50,11 @@ async function publishAppFrontends({
   for (const appDir of appDirs) {
     let app
     try {
-      app = await publishAppFrotnend(appDir, appsDirPath, state.ipfsAPI, state.lidoApmEnsName)
+      app = await publishAppFrontend(appDir, appsDirPath, state.ipfsAPI, state.lidoApmEnsName)
     } finally {
       process.chdir(cwd)
     }
+    console.log(app)
     persistNetworkState(network.name, netId, state, {
       [`app:${app.name}`]: {
         ...state[`app:${app.name}`],
@@ -68,7 +64,7 @@ async function publishAppFrontends({
   }
 }
 
-async function publishAppFrotnend(appDir, appsDirPath, ipfsAPI, lidoApmEnsName) {
+async function publishAppFrontend(appDir, appsDirPath, ipfsAPI, lidoApmEnsName) {
   logHeader(`Publishing frontend of the app '${appDir}'`)
 
   const appRootPath = path.resolve(appsDirPath, appDir)
@@ -111,7 +107,7 @@ async function publishAppFrotnend(appDir, appsDirPath, ipfsAPI, lidoApmEnsName) 
       return await run(taskName)
     }
     // buidler-aragon tries to get flattened source code of all contracts and fails to
-    // parce Solidity syntax newer than 0.4 (which we have in non-Aragon contracts), so
+    // parse Solidity syntax newer than 0.4 (which we have in non-Aragon contracts), so
     // here we're flattening only the app's dependency graph instead
     return await run(hardhatTaskNames.TASK_FLATTEN_GET_FLATTENED_SOURCE, {
       files: [contractPath]

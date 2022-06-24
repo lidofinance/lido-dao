@@ -1,14 +1,18 @@
 const path = require('path')
-const chalk = require('chalk')
+const fs = require('fs')
 const namehash = require('eth-ens-namehash').hash
 
 const runOrWrapScript = require('./helpers/run-or-wrap-script')
-const { log, logSplitter, logWideSplitter, logHeader } = require('./helpers/log')
+const { log, logSplitter, logWideSplitter, logHeader, yl, gr } = require('./helpers/log')
 const { readNetworkState, persistNetworkState, updateNetworkState } = require('./helpers/persisted-network-state')
 const { readJSON, directoryExists } = require('./helpers/fs')
-const { exec, execLive } = require('./helpers/exec')
+const { execLive } = require('./helpers/exec')
 const { filterObject } = require('./helpers/collections')
 const { readAppName } = require('./helpers/aragon')
+const { gitCloneRepo } = require('./helpers/git')
+
+const { uploadDirToIpfs } = require('@aragon/buidler-aragon/dist/src/utils/ipfs')
+const { toContentUri } = require('@aragon/buidler-aragon/dist/src/utils/apm/utils')
 
 const APPS = ['agent', 'finance', 'token-manager', 'vault', 'voting']
 
@@ -16,6 +20,11 @@ const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
 const ARAGON_APPS_REPO = process.env.ARAGON_APPS_REPO || 'https://github.com/aragon/aragon-apps.git'
 const ARAGON_APPS_REPO_REF = process.env.ARAGON_APPS_REPO_REF || 'master'
 const RELEASE_TYPE = 'major'
+
+function writeNetworkStateFile(fileName, state) {
+  const data = JSON.stringify(state, null, '  ')
+  fs.writeFileSync(fileName, data + '\n', 'utf8')
+}
 
 async function deployAragonStdApps({
   web3,
@@ -30,9 +39,9 @@ async function deployAragonStdApps({
   const netName = network.name
 
   logWideSplitter()
-  log(`Network ID: ${chalk.yellow(netId)}`)
+  log(`Network ID: ${yl(netId)}`)
 
-  const netState = readNetworkState(networkStateFile, netId)
+  const netState = readNetworkState(network.name, netId)
   if (!netState.ensAddress) {
     throw new Error(`ensAddress for network ${netId} is missing from network state file ${networkStateFile}`)
   }
@@ -55,43 +64,81 @@ async function deployAragonStdApps({
   const env = filterObject(process.env, (key) => key.substr(0, 8) !== 'HARDHAT_')
 
   for (const appName of APPS) {
-    const results = await publishApp(appName, appsRepoPath, hardhatConfig, env, netName, releaseType)
-    updateNetworkState(netState, results)
-    persistNetworkState(networkStateFile, netId, netState)
+    const app = await publishApp(appName, appsRepoPath, hardhatConfig, env, netName, releaseType, netState)
+    persistNetworkState(network.name, netId, netState, {
+      [`app:${app.name}`]: {
+        ...netState[`app:${app.name}`],
+        ...app
+      }
+    })
   }
 }
 
-async function publishApp(appName, appsRepoPath, hardhatConfig, env, netName, releaseType) {
+async function publishApp(appName, appsRepoPath, hardhatConfig, env, netName, releaseType, netState) {
   logHeader(`Publishing new ${releaseType} release of app '${appName}'`)
 
+  let result = {}
   const appRootPath = path.resolve(appsRepoPath, 'apps', appName)
   const appFullName = await readAppName(appRootPath, netName)
   const appId = namehash(appFullName)
 
-  log(`App name: ${chalk.yellow(appFullName)}`)
-  log(`App ID: ${chalk.yellow(appId)}`)
+  log(`App name: ${yl(appFullName)}`)
+  log(`App ID: ${yl(appId)}`)
   logSplitter()
 
   const appFrontendPath = path.join(appRootPath, 'app')
   const hasFrontend = await directoryExists(appFrontendPath)
 
+  logSplitter(`Change registry app ${appName}`)
+  const arappFile = `${appRootPath}/arapp.json`
+  const arapp = await readJSON(arappFile)
+  if (!arapp.environments[network.name]) {
+    arapp.environments[network.name] = { ...arapp.environments.default }
+    arapp.environments[network.name].registry = network.config.ensAddress
+  }
+
+  logSplitter(`Write state app ${appName}`)
+  writeNetworkStateFile(arappFile, arapp)
+
   if (hasFrontend) {
     logSplitter(`Installing frontend deps for app ${appName}`)
-    await execLive('yarn', { cwd: appFrontendPath })
+    await execLive('yarn', {
+      cwd: appFrontendPath
+    })
     logSplitter()
+
+    // logSplitter(`Build app ${appName}`)
+    // await execLive('yarn', {
+    //   args: ['build'],
+    //   cwd: appFrontendPath
+    // })
+    // logSplitter()
   } else {
     log(`The app has no frontend`)
   }
 
   const childEnv = {
     ...env,
-    STD_APPS_DEPLOY: '1'
+    STD_APPS_DEPLOY: '1',
+    APP_FRONTEND_PATH: `aragon-apps/apps/${appName}/app`,
+    APP_FRONTEND_DIST_PATH: `aragon-apps/apps/${appName}/dist`
   }
 
-  if (hasFrontend) {
-    childEnv.APP_FRONTEND_PATH = appFrontendPath
-    childEnv.APP_FRONTEND_DIST_PATH = path.join(appFrontendPath, 'build')
-  }
+  // if (hasFrontend) {
+  //   const distPath = path.join(appRootPath, 'dist')
+
+  //   // Upload release directory to IPFS
+  //   log('Uploading release assets to IPFS...')
+
+  //   const contentHash = await uploadDirToIpfs({
+  //     dirPath: distPath,
+  //     apiUrl: netState.ipfsAPI
+  //   })
+  //   log(`Release assets uploaded to IPFS: ${yl(contentHash)}`)
+
+  //   result.ipfsCid = contentHash
+  //   result.contentURI = toContentUri('ipfs', contentHash)
+  // }
 
   await execLive('hardhat', {
     args: [
@@ -102,6 +149,7 @@ async function publishApp(appName, appsRepoPath, hardhatConfig, env, netName, re
       '--network',
       netName,
       '--skip-validation',
+      // '--skip-app-build',
       // workaround: force to read URL from Hardhat config
       '--ipfs-api-url',
       ''
@@ -111,18 +159,11 @@ async function publishApp(appName, appsRepoPath, hardhatConfig, env, netName, re
   })
 
   return {
-    [`aragon_app_${appName}_name`]: appFullName,
-    [`aragon_app_${appName}_id`]: appId
+    ...result,
+    fullName: appFullName,
+    name: appName,
+    id: appId
   }
-}
-
-async function gitCloneRepo(targetPath, repoLink, gitRef) {
-  const targetAbsPath = path.resolve(targetPath)
-  if (!(await directoryExists(targetAbsPath))) {
-    await execLive('git', { args: ['clone', repoLink, targetAbsPath] })
-  }
-  await execLive('git', { args: ['reset', '--hard'], cwd: targetAbsPath })
-  await execLive('git', { args: ['checkout', gitRef], cwd: targetAbsPath })
 }
 
 module.exports = runOrWrapScript(deployAragonStdApps, module)

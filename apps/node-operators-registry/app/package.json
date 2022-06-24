@@ -44,6 +44,7 @@
     "watch": "yarn watch:script",
     "sync-assets": "copy-aragon-ui-assets ../dist && copyfiles -u 1 './public/**/*' ../dist",
     "start": "yarn sync-assets && yarn watch:script & yarn serve",
-    "dev": "yarn sync-assets && yarn watch:script & yarn serve -- --port 3010"
+    "dev": "yarn sync-assets && yarn watch:script & yarn serve -- --port 3012",
+    "dev-fallback": "bash -c 'yarn sync-assets && yarn watch:script & yarn serve --port 3012'"
   }
 }
