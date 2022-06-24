@@ -21,14 +21,14 @@ async function assertInstalledApps(
   },
   fromBlock = 4532202
 ) {
-  const appInstalledEvts = (await template.getPastEvents('TmplAppInstalled', { fromBlock })).map((evt) => evt.args)
+  const appInstalledEvents = (await template.getPastEvents('TmplAppInstalled', { fromBlock })).map((evt) => evt.args)
   const appIdNameEntries = VALID_APP_NAMES.map((name) => [namehash(`${name}.${lidoApmEnsName}`), name])
   const appNameByAppId = Object.fromEntries(appIdNameEntries)
   const expectedAppIds = appIdNameEntries.map((e) => e[0])
 
   const idsCheckDesc = `all (and only) expected apps are installed`
   assert.sameMembers(
-    appInstalledEvts.map((evt) => evt.appId),
+    appInstalledEvents.map((evt) => evt.appId),
     expectedAppIds,
     idsCheckDesc
   )
@@ -40,7 +40,7 @@ async function assertInstalledApps(
 
   const dataByAppName = {}
 
-  for (const evt of appInstalledEvts) {
+  for (const evt of appInstalledEvents) {
     log.splitter()
 
     const appName = appNameByAppId[evt.appId]
