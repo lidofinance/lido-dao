@@ -4,7 +4,6 @@ set -o pipefail
 
 # first local account by default
 DEPLOYER=${DEPLOYER:=0xb4124cEB3451635DAcedd11767f004d8a28c6eE7}
-# NETWORK=kintsugi
 NETWORK=${NETWORK:=local}
 
 VOTE_ID=0
