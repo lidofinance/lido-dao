@@ -34,9 +34,15 @@ async function voteAndEnact({ web3, artifacts }) {
 
   const ldoMegaHolder = state['owner']
   log.splitter()
-  log(`Executing vote ${voteId}`)
+  log(`Executing vote ${voteId}...`)
   await voting.vote(voteId, true, false, { from: ldoMegaHolder })
+
+  // NB: the vote won't execute till the voting time passes
+  //     for a local hardhat node we can trick the time with
+  //     `await ethers.provider.send("evm_mine", [newTimestampInSeconds]);`
+  //     but cannot for a geth node 
   await voting.executeVote(voteId, { from: ldoMegaHolder })
+  log(`Vote ${voteId} executed!`)
 
 }
 

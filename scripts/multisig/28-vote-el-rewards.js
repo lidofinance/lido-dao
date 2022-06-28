@@ -18,7 +18,8 @@ const REQUIRED_NET_STATE = [
   'ensAddress',
   'daoAddress',
   `app:${APP_NAMES.ARAGON_VOTING}`,
-  `app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`
+  `app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`,
+  'executionLayerRewardsParams'
 ]
 
 async function createVoting({ web3, artifacts }) {
@@ -37,7 +38,6 @@ async function createVoting({ web3, artifacts }) {
 
   logSplitter()
 
-  const ens = await artifacts.require('ENS').at(state.ensAddress)
   const votingAddress = state[`app:${APP_NAMES.ARAGON_VOTING}`].proxyAddress
   const tokenManagerAddress = state[`app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`].proxyAddress
   const voting = await artifacts.require('Voting').at(votingAddress)
@@ -49,7 +49,8 @@ async function createVoting({ web3, artifacts }) {
   const lido = await artifacts.require('Lido').at(lidoAddress)
   const elRewardsVaultAddress = state.executionLayerRewardsVaultAddress
 
-  const elRewardsWithdrawalLimitPoints = 2  // see https://github.com/lidofinance/lido-dao/issues/405
+  // About the value see https://github.com/lidofinance/lido-dao/issues/405
+  const elRewardsWithdrawalLimitPoints = state.executionLayerRewardsParams.withdrawalLimit
 
   log(`Using ENS:`, yl(state.ensAddress))
   log(`TokenManager address:`, yl(tokenManagerAddress))

@@ -6,8 +6,6 @@ set -o pipefail
 DEPLOYER=${DEPLOYER:=0xb4124cEB3451635DAcedd11767f004d8a28c6eE7}
 NETWORK=${NETWORK:=local}
 
-VOTE_ID=0
-
 function msg() {
   MSG=$1
   if [ ! -z "$MSG" ]; then
@@ -80,6 +78,13 @@ yarn hardhat --network $NETWORK run ./scripts/multisig/10-issue-tokens.js
 yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-06-1-issue-tokens.json
 msg "Tokens issued"
 
+# Execution Layer Rewards: deploy the vault
+yarn hardhat --network $NETWORK run ./scripts/multisig/26-deploy-execution-layer-rewards-vault.js
+yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-26-deploy-execution-layer-rewards-vault.json
+pause "!!! Now set the executionLayerRewardsVaultDeployTx hash value in deployed-$NETWORK.json"
+yarn hardhat --network $NETWORK run ./scripts/multisig/27-obtain-deployed-execution-layer-rewards-vault.js
+msg "ExecutionLayerRewardsVault deployed"
+
 yarn hardhat --network $NETWORK run ./scripts/multisig/11-finalize-dao.js
 yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-11-finalize-dao.json
 msg "DAO deploy finalized"
@@ -102,22 +107,7 @@ msg "SelfOwnedStETHBurner deployed"
 yarn hardhat --network $NETWORK run ./scripts/multisig/25-vote-self-owned-steth-burner.js
 yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-25-vote-self-owned-steth-burner.json
 VOTE_ID=$VOTE_ID yarn hardhat --network $NETWORK run ./scripts/multisig/vote-and-enact.js
-msg "Vote $VOTE_ID executed"
-VOTE_ID=$((VOTE_ID+1))
-
-# Execution Layer Rewards: deploy 
-yarn hardhat --network $NETWORK run ./scripts/multisig/26-deploy-execution-layer-rewards-vault.js
-yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-26-deploy-execution-layer-rewards-vault.json
-pause "!!! Now set the executionLayerRewardsVaultDeployTx hash value in deployed-$NETWORK.json"
-yarn hardhat --network $NETWORK run ./scripts/multisig/27-obtain-deployed-execution-layer-rewards-vault.js
-msg "ExecutionLayerRewardsVault deployed"
-
-# Execution Layer Rewards: attach the contracts to the protocol
-yarn hardhat --network $NETWORK run ./scripts/multisig/28-vote-el-rewards.js
-yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-28-vote-el-rewards.json
-VOTE_ID=$VOTE_ID yarn hardhat --network $NETWORK run ./scripts/multisig/vote-and-enact.js
-msg "Vote $VOTE_ID executed"
-VOTE_ID=$((VOTE_ID+1))
+msg "Vote for attaching the insurance module is executed"
 
 # Check the deployed protocol
 yarn hardhat --network $NETWORK run ./scripts/multisig/12-check-dao.js
