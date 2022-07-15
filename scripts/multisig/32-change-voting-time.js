@@ -55,8 +55,19 @@ async function createVoting({ web3, artifacts }) {
 
 
   // This script grants and revokes the role so checking it is absent at the beginning
-  assert.isFalse(await acl.hasPermission(votingAddress, votingAddress, voteRoleId))
+  // assert.isFalse(await acl.hasPermission(votingAddress, votingAddress, voteRoleId))
 
+  const createChangeVoteTimePermission = {
+    to: acl.address,
+    calldata: await acl.contract.methods
+      .createPermission(
+        votingAddress,
+        votingAddress,
+        voteRoleId,
+        votingAddress
+      )
+      .encodeABI()
+  }
 
   const grantChangeVoteTimePermission = {
     to: acl.address,
@@ -91,10 +102,11 @@ async function createVoting({ web3, artifacts }) {
   }
 
   const encodedUpgradeCallData = encodeCallScript([
-    grantChangeVoteTimePermission,
+    // createChangeVoteTimePermission,
+    // grantChangeVoteTimePermission,
     changeObjectionTime,
     changeVoteTime,
-    revokeChangeVoteTimePermission,
+    // revokeChangeVoteTimePermission,
   ])
 
   log(`encodedUpgradeCallData:`, yl(encodedUpgradeCallData))
@@ -107,10 +119,10 @@ async function createVoting({ web3, artifacts }) {
 
   const txName = `tx-32-change-voting-time.json`
   const votingDesc =
-`1) Grant permission UNSAFELY_MODIFY_VOTE_TIME_ROLE to Voting
-2) Set objection phase time to ${objectionPhaseTimeSec} seconds
-3) Set total vote time to ${voteTimeSec} seconds
-4) Revoke permission UNSAFELY_MODIFY_VOTE_TIME_ROLE frm Voting`
+// `1) Grant permission UNSAFELY_MODIFY_VOTE_TIME_ROLE to Voting
+`1) Set objection phase time to ${objectionPhaseTimeSec} seconds
+2) Set total vote time to ${voteTimeSec} seconds`
+// 4) Revoke permission UNSAFELY_MODIFY_VOTE_TIME_ROLE from Voting`
 
   await saveCallTxData(votingDesc, tokenManager, 'forward', txName, {
     arguments: [votingCallData],
@@ -128,7 +140,7 @@ const { readNetworkState, assertRequiredNetworkState } = require('./scripts/help
 const { APP_NAMES, APP_ARTIFACTS } = require('./scripts/multisig/constants')
 const netId = await web3.eth.net.getId()
 const state = readNetworkState(network.name, netId)
-const voting = await artifacts.require('Voting').at(state[\`app:${APP_NAMES.ARAGON_VOTING}\`].proxyAddress)
+const voting = await artifacts.require('Voting').at(state[\`app:\${APP_NAMES.ARAGON_VOTING}\`].proxyAddress)
 
 const ldoMegaHolder = '0xc0e1418de75cD11B4C5cF60B9F86713e80689517'
 
@@ -140,9 +152,5 @@ await voting.vote(<voteId>, true, false, { from: ldoMegaHolder })
 await voting.executeVote(<voteId>, { from: ldoMegaHolder })`)
 }
 
-
-function fromE18ToString(x) {
-  return `${(x / 1e18).toFixed(3)} ETH (${x} wei)`
-}
 
 module.exports = runOrWrapScript(createVoting, module)
