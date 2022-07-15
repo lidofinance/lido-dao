@@ -65,10 +65,11 @@
   "license": "GPL-3.0",
   "devDependencies": {
     "@aragon/apps-finance": "^3.0.0",
+    "@aragon/apps-lido": "lidofinance/aragon-apps#feature/two_phase_voting",
     "@aragon/apps-token-manager": "^2.1.0",
-    "@aragon/apps-voting": "^2.1.0",
     "@aragon/buidler-aragon": "^0.2.9",
     "@aragon/contract-helpers-test": "^0.1.0",
+    "@aragon/minime": "1.0.0",
     "@aragon/templates-shared": "^1.0.1",
     "@aragon/test-helpers": "^2.1.0",
     "@aragon/toolkit": "0.0.7",

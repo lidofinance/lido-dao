@@ -67,6 +67,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@aragon/apps-lido@lidofinance/aragon-apps#feature/two_phase_voting":
+  version: 1.0.0
+  resolution: "@aragon/apps-lido@https://github.com/lidofinance/aragon-apps.git#commit=c184458b8d27992bf55d70d394285e13f81dcb24"
+  checksum: dd0ab16832072b96afef85c64e614f8cbafeeed02ea42ee5184a98f5f659c85121a28f876302e4914f238bcb253e02cba6ffe11c79b32107dbbb67a0db74cb2c
+  languageName: node
+  linkType: hard
+
 "@aragon/apps-payroll@npm:^1.0.0":
   version: 1.0.0
   resolution: "@aragon/apps-payroll@npm:1.0.0"
@@ -212,6 +219,13 @@ __metadata:
   dependencies:
     "@aragon/os": ^4.0.0
   checksum: aa9135b50656a91f179b632a886b562debacbce1941811d8c28d33e7ee118521864f443e21957049365e7ade5edc85d6c82709ab0e68192061aa430d2d948c13
+  languageName: node
+  linkType: hard
+
+"@aragon/minime@npm:1.0.0":
+  version: 1.0.0
+  resolution: "@aragon/minime@npm:1.0.0"
+  checksum: a6b5e574baadde1094cf7a1a0bf2ff6142f4e74e95d0991664b7c3f909e34eeedc8ea4f9e758d189ebf0ca54fefe7a4fe89e00dd4ddf831f7ffda3678be88b1c
   languageName: node
   linkType: hard
 
@@ -3665,11 +3679,12 @@ __metadata:
   resolution: "@lido/dao@workspace:."
   dependencies:
     "@aragon/apps-finance": ^3.0.0
+    "@aragon/apps-lido": "lidofinance/aragon-apps#feature/two_phase_voting"
     "@aragon/apps-token-manager": ^2.1.0
-    "@aragon/apps-voting": ^2.1.0
     "@aragon/buidler-aragon": ^0.2.9
     "@aragon/contract-helpers-test": ^0.1.0
     "@aragon/hardhat-aragon": ^1.0.0
+    "@aragon/minime": 1.0.0
     "@aragon/os": ^4.4.0
     "@aragon/templates-shared": ^1.0.1
     "@aragon/test-helpers": ^2.1.0

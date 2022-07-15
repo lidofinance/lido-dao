@@ -17,7 +17,8 @@ async function exportAbi() {
     '@aragon/apps-finance/contracts/Finance.sol/Finance.json',
     '@aragon/apps-token-manager/contracts/TokenManager.sol/TokenManager.json',
     '@aragon/apps-vault/contracts/Vault.sol/Vault.json',
-    '@aragon/apps-voting/contracts/Voting.sol/Voting.json'
+    '@aragon/apps-lido/apps/voting/contracts/Voting.sol/Voting.json'
+    // '@aragon/apps-voting/contracts/Voting.sol/Voting.json'
   ]
 
   await extractABIs(lidoArtifactPaths.concat(aragonAtrifactPaths), abisPath)
