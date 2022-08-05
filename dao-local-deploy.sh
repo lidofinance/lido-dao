@@ -5,6 +5,10 @@ set -o pipefail
 # first local account by default
 DEPLOYER=${DEPLOYER:=0xb4124cEB3451635DAcedd11767f004d8a28c6eE7}
 NETWORK=${NETWORK:=local}
+ARAGON_APPS_REPO_REF=import-shared-minime
+
+echo "DEPLOYER is $DEPLOYER"
+echo "NETWORK is $NETWORK"
 
 function msg() {
   MSG=$1
@@ -26,10 +30,11 @@ docker-compose down -v
 docker-compose up --build -d
 
 rm -f deployed-$NETWORK.json
-cp deployed-local-defaults.json deployed-$NETWORK.json
+cp deployed-$NETWORK-defaults.json deployed-$NETWORK.json
 
 yarn install --immutable
 yarn compile
+
 yarn deploy:$NETWORK:aragon-env
 msg "Aragon ENV deployed."
 yarn deploy:$NETWORK:aragon-std-apps
@@ -66,7 +71,7 @@ yarn hardhat --network $NETWORK run ./scripts/multisig/06-obtain-deployed-apm.js
 msg "APM deployed"
 
 yarn hardhat --network $NETWORK run ./scripts/multisig/07-create-app-repos.js
-yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-04-create-app-repos.json
+yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-07-create-app-repos.json
 msg "App repos created"
 
 yarn hardhat --network $NETWORK run ./scripts/multisig/08-deploy-dao.js
@@ -106,8 +111,10 @@ msg "SelfOwnedStETHBurner deployed"
 # Insurance: attach the contracts to the protocol
 yarn hardhat --network $NETWORK run ./scripts/multisig/25-vote-self-owned-steth-burner.js
 yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-25-vote-self-owned-steth-burner.json
-VOTE_ID=$VOTE_ID yarn hardhat --network $NETWORK run ./scripts/multisig/vote-and-enact.js
+yarn hardhat --network $NETWORK run ./scripts/multisig/vote-and-enact.js
 msg "Vote for attaching the insurance module is executed"
+
+# MAYBE TODO: Create and auto execute vote to increase vote time (like 10+5 minute)
 
 # Check the deployed protocol
 yarn hardhat --network $NETWORK run ./scripts/multisig/12-check-dao.js

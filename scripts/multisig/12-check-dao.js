@@ -290,7 +290,7 @@ async function assertDAOConfig({
   )
 
   // NB: votesLength depends on the presence of insurance and el-rewards modules
-  DAO_LIVE || assert.log(assert.bnEqual, await voting.votesLength(), 2, `voting.votesLength is ${yl('2')}`)
+  DAO_LIVE || assert.log(assert.bnEqual, await voting.votesLength(), 1, `voting.votesLength is ${yl('1')}`)
 
   log.splitter()
   await assertKernel(tokenManager, 'tokenManager')
@@ -601,7 +601,7 @@ async function assertDaoPermissions({ kernel, lido, oracle, nopsRegistry, agent,
     ]
   })
 
-  { // Check BURN_ROLE on selfOwnedStETHBurner 
+  { // Check BURN_ROLE on selfOwnedStETHBurner
     const burnRoleName = 'BURN_ROLE'
     const burnRoleGrantee = selfOwnedStETHBurner.address
     const burnRoleHash = await lido[burnRoleName]()

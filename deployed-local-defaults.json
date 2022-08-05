@@ -10,7 +10,7 @@
       "minSupportRequired": "500000000000000000",
       "minAcceptanceQuorum": "50000000000000000",
       "voteDuration": 30,
-      "objectionPhaseDuration": 5
+      "objectionPhaseDuration": 1
     },
     "beaconSpec": {
       "depositContractAddress": "",
