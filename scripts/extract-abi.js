@@ -13,15 +13,14 @@ async function exportAbi() {
 
   const lidoArtifactPaths = artifactPaths.filter((p) => p.substr(0, 10) === 'contracts/')
 
-  const aragonAtrifactPaths = [
+  const aragonArtifactPaths = [
     '@aragon/apps-finance/contracts/Finance.sol/Finance.json',
-    '@aragon/apps-token-manager/contracts/TokenManager.sol/TokenManager.json',
     '@aragon/apps-vault/contracts/Vault.sol/Vault.json',
-    '@aragon/apps-lido/apps/voting/contracts/Voting.sol/Voting.json'
-    // '@aragon/apps-voting/contracts/Voting.sol/Voting.json'
+    '@aragon/apps-lido/apps/voting/contracts/Voting.sol/Voting.json',
+    '@aragon/apps-lido/apps/token-manager/contracts/TokenManager.sol/TokenManager.json'
   ]
 
-  await extractABIs(lidoArtifactPaths.concat(aragonAtrifactPaths), abisPath)
+  await extractABIs(lidoArtifactPaths.concat(aragonArtifactPaths), abisPath)
 }
 
 async function extractABIs(artifactPaths, abisPath) {

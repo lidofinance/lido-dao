@@ -18,12 +18,10 @@ import "@aragon/os/contracts/common/IsContract.sol";
 import "@aragon/apps-agent/contracts/Agent.sol";
 import "@aragon/apps-vault/contracts/Vault.sol";
 
-// import "@aragon/apps-voting/contracts/Voting.sol";
 import "@aragon/apps-lido/apps/voting/contracts/Voting.sol";
 
 import "@aragon/apps-finance/contracts/Finance.sol";
-import "@aragon/apps-token-manager/contracts/TokenManager.sol";
-// import "@aragon/apps-shared-minime/contracts/MiniMeToken.sol";
+import "@aragon/apps-lido/apps/token-manager/contracts/TokenManager.sol";
 
 import "@aragon/id/contracts/IFIFSResolvingRegistrar.sol";
 
