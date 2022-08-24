@@ -19,10 +19,17 @@ contract Withdrawal is QueueNFT {
   address public immutable LIDO;
 
   uint256 public lockedStETHAmount;
-
   uint256 public nextTokenId = 0;
 
-  event StETHQueued(address indexed owner, uint id, uint amount);
+  // Can shrink to one slot
+  struct Ticket {
+    uint256 amount ;
+    bool redeemable;
+  }
+  mapping(uint256 => Ticket) queue;
+
+  event Requested(address indexed owner, uint tokenId, uint amount);
+  event Redeemed(address indexed owner, uint tokenId, uint amount);
 
   constructor(address _lido) {
     LIDO = _lido;
@@ -31,25 +38,37 @@ contract Withdrawal is QueueNFT {
   /**
    * @notice Locks provided stETH amounts and reserve a place in queue for withdrawal
    */
-  function enqueue(uint256 _stethAmount) external returns (uint256) {
+  function request(uint256 stethAmount) external returns (uint256) {
+    require(stethAmount >= MIN_WITHDRAWAL, "NO_DUST_WITHDRAWAL");
+
     // Lock steth to Withdrawal 
-    if (ILido(LIDO).transferFrom(msg.sender, address(this), _stethAmount)) {
-      lockedStETHAmount += _stethAmount;
+    if (ILido(LIDO).transferFrom(msg.sender, address(this), stethAmount)) {
+      lockedStETHAmount += stethAmount;
     }
 
-    // Issue NFT
+    // Issue a proto-NFT
     _mint(msg.sender, nextTokenId);
-    emit StETHQueued(msg.sender, nextTokenId, _stethAmount);
+    queue[nextTokenId] = Ticket(stethAmount, false);
+
+    emit Requested(msg.sender, nextTokenId, stethAmount);
     return nextTokenId++;
   }
 
-  function withdraw(uint256 tokenId) external {
+  function redeem(uint256 tokenId) external {
     // check if NFT is withdrawable
+    require(msg.sender == ownerOf(tokenId), "SENDER_NOT_OWNER");
+    require(queue[tokenId].redeemable, "TOKEN_NOT_REDEEMABLE");
     // burn an NFT
+    _burn(tokenId);
     // send money to msg.sender
+    emit Redeemed(msg.sender, tokenId, queue[tokenId].amount);
   }
 
   function handleOracleReport() external {
+    for (uint i = 0; i < nextTokenId; i++) {
+      queue[i].redeemable = true;
+    }
+
     // check if slashing
     // secure funds
     // make some NFTs withdrawable

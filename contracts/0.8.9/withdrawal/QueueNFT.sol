@@ -32,7 +32,7 @@ contract QueueNFT {
    *
    * - `tokenId` must exist.
    */
-  function ownerOf(uint256 tokenId) external view returns (address) {
+  function ownerOf(uint256 tokenId) public view returns (address) {
     address owner = _owners[tokenId];
     require(owner != address(0), "ERC721: owner query for nonexistent token");
     return owner;
@@ -48,5 +48,19 @@ contract QueueNFT {
    */
   function _exists(uint256 tokenId) internal view returns (bool) {
       return _owners[tokenId] != address(0);
+  }
+
+    /**
+   * @dev Destroys `tokenId`.
+   * The approval is cleared when the token is burned.
+   *
+   * Requirements:
+   *
+   * - `tokenId` must exist.
+   *
+   * Emits a {Transfer} event.
+   */
+  function _burn(uint256 tokenId) internal virtual {
+    delete _owners[tokenId];
   }
 }
