@@ -1,7 +1,8 @@
 const { artifacts, contract } = require('hardhat')
-const { bn, ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
+const { bn } = require('@aragon/contract-helpers-test')
 const { assertBn, assertEvent, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
 const { getEvents } = require('@aragon/contract-helpers-test/src/events')
+const { forceTransfer } = require('./helpers/transfer')
 
 const Withdrawal = artifacts.require('Withdrawal.sol')
 const ERC20OZMock = artifacts.require('ERC20OZMock.sol')
@@ -29,6 +30,8 @@ contract('Withdrawal', ([deployer, user]) => {
     const setup = await Setup.new(stETH.address, { from: deployer })
 
     withdrawal = await Withdrawal.at(await setup.withdrawal())
+
+    forceTransfer(deployer, withdrawal.address, ETH(10))
   })
 
   it('One can enqueue stEth to Withdrawal and get an NFT', async () => {
@@ -52,6 +55,8 @@ contract('Withdrawal', ([deployer, user]) => {
   })
 
   it('One can redeem token for ETH', async () => {
+    const balanceBefore = bn(await web3.eth.getBalance(user))
+
     const amount = ETH(1)
     const tokenId = await newToken(amount)
     await withdrawal.handleOracleReport() // make ETH redeemable
@@ -59,19 +64,20 @@ contract('Withdrawal', ([deployer, user]) => {
     const receipt = await withdrawal.redeem(tokenId, { from: user })
 
     assertEvent(receipt, 'Redeemed', { expectedArgs: { owner: user, tokenId, amount: amount } })
+    assertBn(await web3.eth.getBalance(user), balanceBefore.add(amount))
   })
 
   it('One cant redeem non-redeemable token', async () => {
     await assertRevert(withdrawal.redeem(await newToken(ETH(1)), { from: user }), 'TOKEN_NOT_REDEEMABLE')
   })
 
-  it("One cant withdraw other guy's ETH", async () => {
+  it("Cant redeem other guy's token", async () => {
     const tokenId = await newToken(ETH(1))
     await withdrawal.handleOracleReport()
     await assertRevert(withdrawal.redeem(tokenId, { from: deployer }), 'SENDER_NOT_OWNER')
   })
 
-  it('One cant withdraw ETH two times', async () => {
+  it('Cant redeem token two times', async () => {
     const tokenId = await newToken(ETH(1))
     await withdrawal.handleOracleReport()
     await withdrawal.redeem(tokenId, { from: user })
@@ -79,7 +85,7 @@ contract('Withdrawal', ([deployer, user]) => {
     await assertRevert(withdrawal.redeem(tokenId, { from: user }), 'ERC721: owner query for nonexistent token')
   })
 
-  it('Cant withdraw dust', async () => await assertRevert(newToken(ETH(0.01)), 'NO_DUST_WITHDRAWAL'))
+  it('Cant request dust withdrawal', async () => await assertRevert(newToken(ETH(0.01)), 'NO_DUST_WITHDRAWAL'))
 
   // TODO: Add some ERC721 acceptance tests
 })

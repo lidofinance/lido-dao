@@ -57,10 +57,12 @@ contract Withdrawal is QueueNFT {
   function redeem(uint256 tokenId) external {
     // check if NFT is withdrawable
     require(msg.sender == ownerOf(tokenId), "SENDER_NOT_OWNER");
-    require(queue[tokenId].redeemable, "TOKEN_NOT_REDEEMABLE");
+    Ticket storage ticket = queue[tokenId]; 
+    require(ticket.redeemable, "TOKEN_NOT_REDEEMABLE");
     // burn an NFT
     _burn(tokenId);
     // send money to msg.sender
+    payable(msg.sender).transfer(ticket.amount);
     emit Redeemed(msg.sender, tokenId, queue[tokenId].amount);
   }
 
