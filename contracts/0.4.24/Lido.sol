@@ -837,24 +837,23 @@ contract Lido is ILido, StETH, AragonApp {
         // balances of the holders, as if the fee was taken in parts from each of them.
         _mintShares(address(this), shares2mint);
 
-        (,uint16 insuranceFeeBasisPoints, uint16 operatorsFeeBasisPoints) = getFeeDistribution();
 
-        uint256 toInsuranceFund = shares2mint.mul(insuranceFeeBasisPoints).div(TOTAL_BASIS_POINTS);
-        address insuranceFund = getInsuranceFund();
-        _transferShares(address(this), insuranceFund, toInsuranceFund);
-        _emitTransferAfterMintingShares(insuranceFund, toInsuranceFund);
+        // StakingRouter.distibuteRewards(shares2mint);
 
-        uint256 distributedToOperatorsShares = _distributeNodeOperatorsReward(
-            shares2mint.mul(operatorsFeeBasisPoints).div(TOTAL_BASIS_POINTS)
-        );
-
-        // Transfer the rest of the fee to treasury
-        uint256 toTreasury = shares2mint.sub(toInsuranceFund).sub(distributedToOperatorsShares);
-
-        address treasury = getTreasury();
-        _transferShares(address(this), treasury, toTreasury);
-        _emitTransferAfterMintingShares(treasury, toTreasury);
     }
+
+    function mintShares(uint256 _shares2mint) external {
+        _mintShares(address(this), _shares2mint);
+    } 
+
+    function transferModuleShares(address _recipient, uint256 _sharesAmount) public returns (uint256) {
+        _transferShares(
+            address(this),
+            _recipient,
+            _sharesAmount
+        );
+        _emitTransferAfterMintingShares(_recipient, _sharesAmount);
+    } 
 
     /**
     *  @dev Internal function to distribute reward to node operators
