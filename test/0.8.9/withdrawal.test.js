@@ -6,11 +6,11 @@ const { forceTransfer } = require('./helpers/transfer')
 
 const Withdrawal = artifacts.require('Withdrawal.sol')
 const ERC20OZMock = artifacts.require('ERC20OZMock.sol')
-const Setup = artifacts.require('withdrawal/Setup.sol')
 
 const ETH = (value) => bn(web3.utils.toWei(value + '', 'ether'))
+const tokens = ETH
 
-contract('Withdrawal', ([deployer, user]) => {
+contract('Withdrawal', ([deployer, user, stranger]) => {
   console.log('Addresses:')
   console.log(`Deployer: ${deployer}`)
   console.log(`User: ${user}`)
@@ -18,74 +18,82 @@ contract('Withdrawal', ([deployer, user]) => {
   let withdrawal
   let stETH
 
-  const newToken = async (amount) => {
-    await stETH.approve(withdrawal.address, amount, { from: user })
-    return getEvents(await withdrawal.request(amount, { from: user }), 'Requested')[0].args.tokenId
-  }
-
   beforeEach('Deploy Withdrawal', async () => {
-    totalERC20Supply = ETH(10)
+    totalERC20Supply = tokens(10)
     stETH = await ERC20OZMock.new(totalERC20Supply, { from: user })
 
-    const setup = await Setup.new(stETH.address, { from: deployer })
+    // unlock stETH account (allow transactions originated from stETH.address)
+    await ethers.provider.send('hardhat_impersonateAccount', [stETH.address])
 
-    withdrawal = await Withdrawal.at(await setup.withdrawal())
+    withdrawal = await Withdrawal.new(stETH.address)
 
-    forceTransfer(deployer, withdrawal.address, ETH(10))
+    forceTransfer(withdrawal.address, ETH(10))
   })
 
-  it('One can enqueue stEth to Withdrawal and get an NFT', async () => {
-    const amount = ETH(1)
-    const lockedStETHBefore = await withdrawal.lockedStETHAmount()
-    const balanceBefore = await stETH.balanceOf(withdrawal.address)
-    const nextTokenId = await withdrawal.nextTokenId()
+  context('Request', async () => {
+    let amount, lockedStETHBefore, balanceBefore, ticketId
 
-    await stETH.approve(withdrawal.address, amount, { from: user })
+    beforeEach('Read some state', async () => {
+      amount = tokens(1)
+      lockedStETHBefore = await withdrawal.lockedStETHAmount()
+      balanceBefore = await stETH.balanceOf(withdrawal.address)
+      ticketId = await withdrawal.nextTicketId()
+    })
 
-    const receipt = await withdrawal.request(amount, { from: user })
+    it('Lido can request withdrawal and get a ticket', async () => {
+      const receipt = await withdrawal.request(user, amount, { from: stETH.address })
 
-    // How to parse ERC20 Transfer from receipt ?
-    // assertEvent(receipt, 'Transfer', { expectedArgs: { from: user, to: withdrawal,  value: amount }})
+      assertEvent(receipt, 'WithdrawalRequested', { expectedArgs: { owner: user, ticketId, amountOfStETH: amount } })
+      assertBn(await withdrawal.ownerOf(ticketId), user)
+      assertBn(await withdrawal.nextTicketId(), +ticketId + 1)
+      assertBn(await stETH.balanceOf(withdrawal.address), balanceBefore)
+      assertBn(await withdrawal.lockedStETHAmount(), amount.add(bn(lockedStETHBefore)))
+    })
 
-    assertEvent(receipt, 'Requested', { expectedArgs: { owner: user, tokenId: nextTokenId, amount } })
-    assertBn(await withdrawal.ownerOf(nextTokenId), user)
-    assertBn(await withdrawal.nextTokenId(), +nextTokenId + 1)
-    assertBn(await stETH.balanceOf(withdrawal.address), amount.add(balanceBefore))
-    assertBn(await withdrawal.lockedStETHAmount(), amount.add(bn(lockedStETHBefore)))
+    it('Only Lido can request withdrawal', async () => {
+      await assertRevert(withdrawal.request(user, amount, { from: user }), 'NOT_OWNER')
+
+      await assertRevert(withdrawal.ownerOf(ticketId), 'ERC721: owner query for nonexistent token')
+      assertBn(await withdrawal.nextTicketId(), ticketId)
+      assertBn(await stETH.balanceOf(withdrawal.address), balanceBefore)
+      assertBn(await withdrawal.lockedStETHAmount(), lockedStETHBefore)
+    })
   })
 
-  it('One can redeem token for ETH', async () => {
-    const balanceBefore = bn(await web3.eth.getBalance(user))
+  context('Withdraw', async () => {
+    let ticketId, amount
+    beforeEach('Create a ticket', async () => {
+      amount = tokens(1)
+      const receipt = await withdrawal.request(user, amount, { from: stETH.address })
+      ticketId = getEvents(receipt, 'WithdrawalRequested')[0].args.ticketId
+    })
 
-    const amount = ETH(1)
-    const tokenId = await newToken(amount)
-    await withdrawal.handleOracleReport() // make ETH redeemable
+    it('One cant redeem not finalized ticket', async () => {
+      await assertRevert(withdrawal.cashout(user, ticketId, { from: stETH.address }), 'TICKET_NOT_FINALIZED')
+    })
 
-    const receipt = await withdrawal.redeem(tokenId, { from: user })
+    it('One can redeem token for ETH', async () => {
+      const balanceBefore = bn(await web3.eth.getBalance(user))
+      await withdrawal.handleOracleReport({ from: stETH.address })
 
-    assertEvent(receipt, 'Redeemed', { expectedArgs: { owner: user, tokenId, amount: amount } })
-    assertBn(await web3.eth.getBalance(user), balanceBefore.add(amount))
+      const receipt = await withdrawal.cashout(user, ticketId, { from: stETH.address })
+
+      assertEvent(receipt, 'Cashout', { expectedArgs: { owner: user, ticketId, amountOfETH: amount } })
+      assertBn(await web3.eth.getBalance(user), balanceBefore.add(amount))
+    })
+
+    it("Cant redeem other guy's token", async () => {
+      await withdrawal.handleOracleReport({ from: stETH.address })
+
+      await assertRevert(withdrawal.cashout(stranger, ticketId, { from: stETH.address }), 'NOT_TICKET_OWNER')
+    })
+
+    it('Cant redeem token two times', async () => {
+      await withdrawal.handleOracleReport({ from: stETH.address })
+
+      await withdrawal.cashout(user, ticketId, { from: stETH.address })
+
+      await assertRevert(withdrawal.cashout(user, ticketId, { from: stETH.address }), 'ERC721: owner query for nonexistent token')
+    })
   })
-
-  it('One cant redeem non-redeemable token', async () => {
-    await assertRevert(withdrawal.redeem(await newToken(ETH(1)), { from: user }), 'TOKEN_NOT_REDEEMABLE')
-  })
-
-  it("Cant redeem other guy's token", async () => {
-    const tokenId = await newToken(ETH(1))
-    await withdrawal.handleOracleReport()
-    await assertRevert(withdrawal.redeem(tokenId, { from: deployer }), 'SENDER_NOT_OWNER')
-  })
-
-  it('Cant redeem token two times', async () => {
-    const tokenId = await newToken(ETH(1))
-    await withdrawal.handleOracleReport()
-    await withdrawal.redeem(tokenId, { from: user })
-
-    await assertRevert(withdrawal.redeem(tokenId, { from: user }), 'ERC721: owner query for nonexistent token')
-  })
-
-  it('Cant request dust withdrawal', async () => await assertRevert(newToken(ETH(0.01)), 'NO_DUST_WITHDRAWAL'))
-
-  // TODO: Add some ERC721 acceptance tests
 })

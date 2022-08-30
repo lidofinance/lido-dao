@@ -5,76 +5,108 @@ pragma solidity =0.8.9;
 
 import "./QueueNFT.sol";
 
-interface ILido {
-  function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
-}
+/**
+ * TODO: 
+ * - check slashing on oracle report
+ * - manage timelock for slashing cooldown 
+ * - algorithm for discounting the StETH based on slashing/penalties
+ * - figure out an NOR interface to intiate validator ejecting
+ * - ...
+ * - PROFIT!!
+ */
+
 
 /**
-  * @title A dedicated contract for handling stETH withdrawal requests
+  * @title A dedicated contract for handling stETH withdrawal request queue
   * @notice Here we try to figure out how does the withdrawal queue should work
   */
 contract Withdrawal is QueueNFT {
+  /**
+   * We don't want to deel with small amounts because there is a gas spent on oracle 
+   * for each request. 
+   * But exact threshhold should be defined later when it will be clear how much will 
+   * it cost to withdraw.
+   */
   uint256 public constant MIN_WITHDRAWAL = 0.1 ether;
-  // We need a lido address to burn and lock shares
-  address public immutable LIDO;
+  // some calls are allowed only from Lido protocol
+  address public immutable OWNER;
 
+  /**
+   * We need to count the relevant amount
+   */
   uint256 public lockedStETHAmount;
-  uint256 public nextTokenId = 0;
+  uint256 public nextTicketId = 0;
 
-  // Can shrink to one slot
   struct Ticket {
-    uint256 amount ;
-    bool redeemable;
+    uint256 amountOfStETH ;
+    bool finalized;
   }
-  mapping(uint256 => Ticket) queue;
+  mapping(uint256 => Ticket) public queue;
 
-  event Requested(address indexed owner, uint tokenId, uint amount);
-  event Redeemed(address indexed owner, uint tokenId, uint amount);
+  event WithdrawalRequested(address indexed owner, uint ticketId, uint amountOfStETH);
+  event Cashout(address indexed owner, uint ticketId, uint amountOfETH);
 
-  constructor(address _lido) {
-    LIDO = _lido;
+  constructor(address _owner) {
+    OWNER = _owner;
   }
 
   /**
-   * @notice Locks provided stETH amounts and reserve a place in queue for withdrawal
+   * @notice reserve a place in queue for withdrawal
+   * @dev Assuming that stETH is locked before invoking this function 
+   * @return ticketId id of a ticket to withdraw funds once it is available
    */
-  function request(uint256 stethAmount) external returns (uint256) {
-    require(stethAmount >= MIN_WITHDRAWAL, "NO_DUST_WITHDRAWAL");
+  function request(address _from, uint256 _stethAmount) onlyLido external returns (uint256) {
+    // do accounting
+    lockedStETHAmount += _stethAmount;
 
-    // Lock steth to Withdrawal 
-    if (ILido(LIDO).transferFrom(msg.sender, address(this), stethAmount)) {
-      lockedStETHAmount += stethAmount;
-    }
+    // issue a ticket
+    uint256 ticketId = nextTicketId++;
+    queue[ticketId] = Ticket(_stethAmount, false);
+    _mint(_from, ticketId);
 
-    // Issue a proto-NFT
-    _mint(msg.sender, nextTokenId);
-    queue[nextTokenId] = Ticket(stethAmount, false);
+    emit WithdrawalRequested(_from, ticketId, _stethAmount);
 
-    emit Requested(msg.sender, nextTokenId, stethAmount);
-    return nextTokenId++;
+    return ticketId;
   }
 
-  function redeem(uint256 tokenId) external {
-    // check if NFT is withdrawable
-    require(msg.sender == ownerOf(tokenId), "SENDER_NOT_OWNER");
-    Ticket storage ticket = queue[tokenId]; 
-    require(ticket.redeemable, "TOKEN_NOT_REDEEMABLE");
+  /**
+   * @notice Burns a `_ticketId` ticket and transfer reserver ether to `_to` address
+   */
+  function cashout(address _to, uint256 _ticketId) onlyLido external {
+    // check if ticket is 
+    address _ticketOwner = ownerOf(_ticketId);
+    require(_to == _ticketOwner, "NOT_TICKET_OWNER");
+    Ticket memory ticket = queue[_ticketId]; 
+    require(ticket.finalized, "TICKET_NOT_FINALIZED");
     // burn an NFT
-    _burn(tokenId);
-    // send money to msg.sender
-    payable(msg.sender).transfer(ticket.amount);
-    emit Redeemed(msg.sender, tokenId, queue[tokenId].amount);
+    _burn(_ticketId);
+    // payback
+    payable(_ticketOwner).transfer(ticket.amountOfStETH);
+    
+    // to save some gas
+    delete queue[_ticketId];
+
+    emit Cashout(_to, _ticketId, ticket.amountOfStETH);
   }
 
-  function handleOracleReport() external {
-    for (uint i = 0; i < nextTokenId; i++) {
-      queue[i].redeemable = true;
+  /**
+   * @notice Use data from oracle report to fulfill requests and request validators' eject if required
+   */
+  function handleOracleReport() onlyLido external {
+    // just mock report for testing
+    for (uint i = 0; i < nextTicketId; i++) {
+      queue[i].finalized = true;
     }
 
     // check if slashing
     // secure funds
-    // make some NFTs withdrawable
-    // burn respective amt of StETH
+    // make some tickets withdrawable
+    // burn respective amt of StETH if ticket becomes redeemable
     // then we can go to rewards accruing
+  }
+
+  modifier onlyLido() {
+    require(msg.sender == OWNER, "NOT_OWNER");
+    _;
   }
 }
