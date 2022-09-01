@@ -81,7 +81,7 @@ const getNetConfig = (networkName, ethAccountName) => {
       accounts: {
         mnemonic: 'hardhat',
         count: 20,
-        accountsBalance: '100000000000000000000000',
+        accountsBalance: '10000000000000000000000000000',
         gasPrice: 0
       }
     },
