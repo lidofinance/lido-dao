@@ -102,7 +102,11 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
       const totalShares = new BN('3954885183194715680671922')
       const totalPooledEther = new BN('42803292811181753711139770')
 
-      await app.submit(ZERO_ADDRESS, { from: user2, value: totalShares })
+      try {
+        await app.submit(ZERO_ADDRESS, { from: user2, value: totalShares })
+      } catch (err2) {
+        console.log(err2)
+      }
       await app.methods['depositBufferedEther()']({ from: depositor })
       await oracle.reportBeacon(100, 0, totalPooledEther.sub(totalShares))
 

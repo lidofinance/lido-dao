@@ -688,19 +688,21 @@ contract Lido is ILido, StETH, AragonApp {
             );
         }
 
-        uint256 sharesAmount = getSharesByPooledEth(msg.value);
-        if (sharesAmount == 0) {
+        uint256 sharesAmountWithPrecisionShifted = _getSharesByPooledEthWithPrecisionShifted(msg.value);
+        if (sharesAmountWithPrecisionShifted == 0) {
             // totalControlledEther is 0: either the first-ever deposit or complete slashing
             // assume that shares correspond to Ether 1-to-1
-            sharesAmount = msg.value;
+            sharesAmountWithPrecisionShifted = msg.value << 128;
         }
 
-        _mintShares(msg.sender, sharesAmount);
+        _mintShares(msg.sender, sharesAmountWithPrecisionShifted);
 
         BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().add(msg.value));
         emit Submitted(msg.sender, msg.value, _referral);
 
+        uint256 sharesAmount = sharesAmountWithPrecisionShifted >> 128;
         _emitTransferAfterMintingShares(msg.sender, sharesAmount);
+
         return sharesAmount;
     }
 
@@ -825,8 +827,8 @@ contract Lido is ILido, StETH, AragonApp {
         // the rest of the reward is distributed between token holders proportionally to their
         // token shares.
         uint256 feeBasis = getFee();
-        uint256 shares2mint = (
-            _totalRewards.mul(feeBasis).mul(_getTotalShares())
+        uint256 shares2mintShifted = (
+            _totalRewards.mul(feeBasis).mul(_getTotalSharesWithPrecisionShifted())
             .div(
                 _getTotalPooledEther().mul(TOTAL_BASIS_POINTS)
                 .sub(feeBasis.mul(_totalRewards))
@@ -835,25 +837,25 @@ contract Lido is ILido, StETH, AragonApp {
 
         // Mint the calculated amount of shares to this contract address. This will reduce the
         // balances of the holders, as if the fee was taken in parts from each of them.
-        _mintShares(address(this), shares2mint);
+        _mintShares(address(this), shares2mintShifted);
 
         (,uint16 insuranceFeeBasisPoints, uint16 operatorsFeeBasisPoints) = getFeeDistribution();
 
-        uint256 toInsuranceFund = shares2mint.mul(insuranceFeeBasisPoints).div(TOTAL_BASIS_POINTS);
+        uint256 toInsuranceFundShifted = shares2mintShifted.mul(insuranceFeeBasisPoints).div(TOTAL_BASIS_POINTS);
         address insuranceFund = getInsuranceFund();
-        _transferShares(address(this), insuranceFund, toInsuranceFund);
-        _emitTransferAfterMintingShares(insuranceFund, toInsuranceFund);
+        _transferSharesWithPrecisionShifted(address(this), insuranceFund, toInsuranceFundShifted);
+        _emitTransferAfterMintingShares(insuranceFund, toInsuranceFundShifted >> 128);
 
-        uint256 distributedToOperatorsShares = _distributeNodeOperatorsReward(
-            shares2mint.mul(operatorsFeeBasisPoints).div(TOTAL_BASIS_POINTS)
+        uint256 distributedToOperatorsSharesShifted = _distributeNodeOperatorsReward(
+            shares2mintShifted.mul(operatorsFeeBasisPoints).div(TOTAL_BASIS_POINTS)
         );
 
         // Transfer the rest of the fee to treasury
-        uint256 toTreasury = shares2mint.sub(toInsuranceFund).sub(distributedToOperatorsShares);
+        uint256 toTreasuryShifted = shares2mintShifted.sub(toInsuranceFundShifted).sub(distributedToOperatorsSharesShifted);
 
         address treasury = getTreasury();
-        _transferShares(address(this), treasury, toTreasury);
-        _emitTransferAfterMintingShares(treasury, toTreasury);
+        _transferSharesWithPrecisionShifted(address(this), treasury, toTreasuryShifted);
+        _emitTransferAfterMintingShares(treasury, toTreasuryShifted >> 128);
     }
 
     /**

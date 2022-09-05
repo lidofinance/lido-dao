@@ -159,7 +159,7 @@ contract StETH is IERC20, Pausable {
      * total Ether controlled by the protocol. See `sharesOf`.
      */
     function balanceOf(address _account) public view returns (uint256) {
-        return getPooledEthByShares(_sharesOf(_account));
+        return getPooledEthByShares(_sharesOfWithPrecisionShifted(_account));
     }
 
     /**
@@ -299,27 +299,43 @@ contract StETH is IERC20, Pausable {
      * @return the amount of shares that corresponds to `_ethAmount` protocol-controlled Ether.
      */
     function getSharesByPooledEth(uint256 _ethAmount) public view returns (uint256) {
-        uint256 totalPooledEther = _getTotalPooledEther();
-        if (totalPooledEther == 0) {
-            return 0;
-        } else {
-            return _ethAmount
-                .mul(_getTotalShares())
-                .div(totalPooledEther);
-        }
+        return _getSharesByPooledEthWithPrecisionShifted(_ethAmount) >> 128;
     }
 
     /**
      * @return the amount of Ether that corresponds to `_sharesAmount` token shares.
      */
     function getPooledEthByShares(uint256 _sharesAmount) public view returns (uint256) {
-        uint256 totalShares = _getTotalShares();
-        if (totalShares == 0) {
+        return getPooledEthBySharesWithPrecisionShifted(_sharesAmount << 128) >> 128;
+    }
+
+    /**
+    * @return the amount of shares that corresponds to `_ethAmount` protocol-controlled Ether.
+     */
+    function _getSharesByPooledEthWithPrecisionShifted(uint256 _ethAmount) internal view returns (uint256) {
+        uint256 totalPooledEther = _getTotalPooledEther();
+        if (totalPooledEther == 0) {
             return 0;
         } else {
-            return _sharesAmount
-                .mul(_getTotalPooledEther())
-                .div(totalShares);
+            revert(string(abi.encodePacked(uint2str(_ethAmount), " ", uint2str(_getTotalSharesWithPrecisionShifted()))));
+
+            return _ethAmount
+            .mul(_getTotalSharesWithPrecisionShifted())
+            .div(totalPooledEther);
+        }
+    }
+
+    /**
+     * @return the amount of Ether that corresponds to `_sharesAmountWithPrecisionShifted` token shares.
+     */
+    function getPooledEthBySharesWithPrecisionShifted(uint256 _sharesAmountWithPrecisionShifted) internal view returns (uint256) {
+        uint256 totalSharesWithPrecisionShifted = _getTotalSharesWithPrecisionShifted();
+        if (totalSharesWithPrecisionShifted == 0) {
+            return 0;
+        } else {
+            return _sharesAmountWithPrecisionShifted
+            .div(totalSharesWithPrecisionShifted)
+            .mul(_getTotalPooledEther());
         }
     }
 
@@ -388,14 +404,32 @@ contract StETH is IERC20, Pausable {
      * @return the total amount of shares in existence.
      */
     function _getTotalShares() internal view returns (uint256) {
-        return TOTAL_SHARES_POSITION.getStorageUint256();
+        return TOTAL_SHARES_POSITION.getStorageUint256() << 128 >> 128;
+    }
+
+    /**
+    * @return the total amount of shares in existence.
+    */
+    function _getTotalSharesWithPrecisionShifted() internal view returns (uint256) {
+        uint256 totalSharesWithPrecisionFromStorage = TOTAL_SHARES_POSITION.getStorageUint256();
+        uint256 totalSharesPrecision = totalSharesWithPrecisionFromStorage >> 128;
+        return (totalSharesWithPrecisionFromStorage << 128).add(totalSharesPrecision);
     }
 
     /**
      * @return the amount of shares owned by `_account`.
      */
     function _sharesOf(address _account) internal view returns (uint256) {
-        return shares[_account];
+        return shares[_account] << 128 >> 128;
+    }
+
+    /**
+    * @return `_sharesOf` with precision.
+    */
+    function _sharesOfWithPrecisionShifted(address _account) internal view returns (uint256) {
+        uint256 sharesWithPrecisionFromStorage = shares[_account];
+        uint256 sharesPrecision = sharesWithPrecisionFromStorage >> 128;
+        return (sharesWithPrecisionFromStorage << 128).add(sharesPrecision);
     }
 
     /**
@@ -412,11 +446,39 @@ contract StETH is IERC20, Pausable {
         require(_sender != address(0), "TRANSFER_FROM_THE_ZERO_ADDRESS");
         require(_recipient != address(0), "TRANSFER_TO_THE_ZERO_ADDRESS");
 
-        uint256 currentSenderShares = shares[_sender];
+        uint256 currentSenderShares = shares[_sender] << 128 >> 128;
         require(_sharesAmount <= currentSenderShares, "TRANSFER_AMOUNT_EXCEEDS_BALANCE");
 
-        shares[_sender] = currentSenderShares.sub(_sharesAmount);
-        shares[_recipient] = shares[_recipient].add(_sharesAmount);
+        uint256 currentSenderPrecision = shares[_sender] >> 128 << 128;
+        uint256 currentRecipientShares = shares[_recipient] << 128 >> 128;
+        uint256 currentRecipientPrecision = shares[_recipient] >> 128 << 128;
+
+        shares[_sender] = currentSenderShares.sub(_sharesAmount).add(currentSenderPrecision);
+        shares[_recipient] = currentRecipientShares.add(_sharesAmount).add(currentRecipientPrecision);
+    }
+
+    /**
+     * @notice Moves `_sharesAmount` shares from `_sender` to `_recipient`.
+     *
+     * Requirements:
+     *
+     * - `_sender` cannot be the zero address.
+     * - `_recipient` cannot be the zero address.
+     * - `_sender` must hold at least `_sharesAmount` shares.
+     * - the contract must not be paused.
+     */
+    function _transferSharesWithPrecisionShifted(address _sender, address _recipient, uint256 _sharesAmountShifted) internal whenNotStopped {
+        require(_sender != address(0), "TRANSFER_FROM_THE_ZERO_ADDRESS");
+        require(_recipient != address(0), "TRANSFER_TO_THE_ZERO_ADDRESS");
+
+        uint256 currentSenderShares = _sharesOfWithPrecisionShifted(_sender);
+        require(_sharesAmountShifted <= currentSenderShares, "TRANSFER_AMOUNT_EXCEEDS_BALANCE");
+
+        uint256 newSenderShares = currentSenderShares.sub(_sharesAmountShifted);
+        shares[_sender] = (newSenderShares << 128).add(newSenderShares >> 128);
+
+        uint256 newRecipientShares = _sharesOfWithPrecisionShifted(_recipient).add(_sharesAmountShifted);
+        shares[_recipient] = (newRecipientShares << 128).add(newRecipientShares >> 128);
     }
 
     /**
@@ -426,15 +488,24 @@ contract StETH is IERC20, Pausable {
      * Requirements:
      *
      * - `_recipient` cannot be the zero address.
+     * - `_sharesAmountWithPrecision` should include precision
      * - the contract must not be paused.
      */
-    function _mintShares(address _recipient, uint256 _sharesAmount) internal whenNotStopped returns (uint256 newTotalShares) {
+    function _mintShares(address _recipient, uint256 _sharesAmountShifted)
+        internal
+        whenNotStopped
+        returns (uint256 newTotalShares) {
+
         require(_recipient != address(0), "MINT_TO_THE_ZERO_ADDRESS");
 
-        newTotalShares = _getTotalShares().add(_sharesAmount);
+        uint256 newTotalSharesShifted = _getTotalSharesWithPrecisionShifted().add(_sharesAmountShifted);
+
+        newTotalShares = (newTotalSharesShifted << 128).add(newTotalSharesShifted >> 128);
         TOTAL_SHARES_POSITION.setStorageUint256(newTotalShares);
 
-        shares[_recipient] = shares[_recipient].add(_sharesAmount);
+        uint256 _sharesOfRecipientWithPrecisionShifted = _sharesOfWithPrecisionShifted(_recipient);
+        uint256 newSharesOfRecipientWithPrecisionShifted = _sharesOfRecipientWithPrecisionShifted.add(_sharesAmountShifted);
+        shares[_recipient] = (newSharesOfRecipientWithPrecisionShifted << 128).add(newSharesOfRecipientWithPrecisionShifted >> 128);
 
         // Notice: we're not emitting a Transfer event from the zero address here since shares mint
         // works by taking the amount of tokens corresponding to the minted shares from all other
@@ -478,5 +549,27 @@ contract StETH is IERC20, Pausable {
         // but we cannot reflect this as it would require sending an unbounded number of events.
 
         // We're emitting `SharesBurnt` event to provide an explicit rebase log record nonetheless.
+    }
+
+    function uint2str(uint256 _i) internal pure returns (string memory _uintAsString) {
+        if (_i == 0) {
+            return "0";
+        }
+        uint j = _i;
+        uint len;
+        while (j != 0) {
+            len++;
+            j /= 10;
+        }
+        bytes memory bstr = new bytes(len);
+        uint k = len;
+        while (_i != 0) {
+            k = k-1;
+            uint8 temp = (48 + uint8(_i - _i / 10 * 10));
+            bytes1 b1 = bytes1(temp);
+            bstr[k] = b1;
+            _i /= 10;
+        }
+        return string(bstr);
     }
 }
