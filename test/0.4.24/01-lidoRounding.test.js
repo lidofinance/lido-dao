@@ -102,21 +102,36 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
       const totalShares = new BN('3954885183194715680671922')
       const totalPooledEther = new BN('42803292811181753711139770')
 
-      try {
-        await app.submit(ZERO_ADDRESS, { from: user2, value: totalShares })
-      } catch (err2) {
-        console.log(err2)
-      }
+      console.log(totalShares.toString(16))
+
+      const aaa1 = await app._getSharesByPooledEthWithPrecisionShifted(totalShares)
+      console.log('aaa1')
+      console.log(aaa1.toString(16))
+
+      await app.submit(ZERO_ADDRESS, { from: user2, value: totalShares })
+
+      const aa = await app._sharesOfWithPrecisionShifted(user2)
+
+      console.log(aa.toString(16))
+
       await app.methods['depositBufferedEther()']({ from: depositor })
       await oracle.reportBeacon(100, 0, totalPooledEther.sub(totalShares))
 
       const stranger_steth_balance_before = await app.balanceOf(user3)
+      console.log(stranger_steth_balance_before.toString())
+
       const ethToDeposit = new BN('10000000000000000000')
+      const bb = await app._getTotalSharesWithPrecisionShifted()
+      console.log(bb.toString(16))
+
+      const aaa = await app._getSharesByPooledEthWithPrecisionShifted(ethToDeposit)
+      console.log(aaa.toString(16))
+
       await app.submit(ZERO_ADDRESS, { from: user3, value: ethToDeposit })
       const stranger_steth_balance_after = await app.balanceOf(user3)
 
       console.log('stranger_steth_balance_before')
-      console.log(stranger_steth_balance_before.toString())
+
       console.log('stranger_steth_balance_after')
       console.log(stranger_steth_balance_after.toString())
 
