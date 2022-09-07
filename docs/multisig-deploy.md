@@ -439,7 +439,7 @@ Run the following:
 yarn hardhat --network mainnet run ./scripts/multisig/11-finalize-dao.js
 ...
 ====================
-Saving data for finalizeDAO transaction to tx-07-finalize-dao.json (projected gas usage is 5011582)
+Saving data for finalizeDAO transaction to tx-11-finalize-dao.json (projected gas usage is 5011582)
 ```
 
 Send the generated transaction from the contract at `multisigAddress`. After the transaction

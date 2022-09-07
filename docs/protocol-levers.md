@@ -1,6 +1,6 @@
 # Protocol levers
 
-The protocol provies a number of settings controllable by the DAO. Modifying each of them requires
+The protocol provides a number of settings controllable by the DAO. Modifying each of them requires
 the caller to have a specific permission. After deploying the DAO, all permissions belong to the DAO
 `Voting` app, which can also manage them. This means that, initially, levers can only be changed by
 the DAO voting, and other entities can be allowed to do the same only as a result of the voting.

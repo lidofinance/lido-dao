@@ -6,7 +6,7 @@ const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = re
 const { APP_NAMES } = require('./constants')
 
 const DEPLOYER = process.env.DEPLOYER || ''
-const REQUIRED_NET_STATE = ['daoInitialSettings', 'depositorParams', `app:${APP_NAMES.LIDO}`, `app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`]
+const REQUIRED_NET_STATE = ['daoInitialSettings', `app:${APP_NAMES.LIDO}`]
 
 async function deployELRewardsVault({ web3, artifacts }) {
   const appArtifact = 'LidoExecutionLayerRewardsVault'
@@ -26,11 +26,21 @@ async function deployELRewardsVault({ web3, artifacts }) {
   log(`Using Lido Treasury contract address:`, yl(treasuryAddr))
   logSplitter()
 
+  persistNetworkState(network.name, netId, state, {
+    executionLayerRewardsVaultDeployTx: ''
+  })
+
   const args = [lidoAddress, treasuryAddr]
   await saveDeployTx(appArtifact, `tx-26-deploy-execution-layer-rewards-vault.json`, {
     arguments: args,
     from: DEPLOYER || state.multisigAddress
   })
+
+  logSplitter()
+  log(gr(`Before continuing the deployment, please send all contract creation transactions`))
+  log(gr(`that you can find in the files listed above. You may use a multisig address`))
+  log(gr(`if it supports deploying new contract instances.`))
+  logSplitter()
 }
 
 module.exports = runOrWrapScript(deployELRewardsVault, module)
