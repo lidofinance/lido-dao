@@ -18,6 +18,7 @@ import "./interfaces/ILidoExecutionLayerRewardsVault.sol";
 import "./StETH.sol";
 
 import "./lib/StakeLimitUtils.sol";
+import "./lib/SharesRoundingMath.sol";
 
 
 interface IERC721 {
@@ -50,6 +51,7 @@ interface IERC721 {
 */
 contract Lido is ILido, StETH, AragonApp {
     using SafeMath for uint256;
+    using SharesRoundingMath for uint256;
     using UnstructuredStorage for bytes32;
     using StakeLimitUnstructuredStorage for bytes32;
     using StakeLimitUtils for StakeLimitState.Data;
@@ -692,7 +694,7 @@ contract Lido is ILido, StETH, AragonApp {
         if (sharesAmountWithPrecisionShifted == 0) {
             // totalControlledEther is 0: either the first-ever deposit or complete slashing
             // assume that shares correspond to Ether 1-to-1
-            sharesAmountWithPrecisionShifted = msg.value << 20;
+            sharesAmountWithPrecisionShifted = msg.value.fromStoredSharesToShiftedSharesValue();
         }
 
         _mintShares(msg.sender, sharesAmountWithPrecisionShifted);
@@ -700,7 +702,7 @@ contract Lido is ILido, StETH, AragonApp {
         BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().add(msg.value));
         emit Submitted(msg.sender, msg.value, _referral);
 
-        uint256 sharesAmount = sharesAmountWithPrecisionShifted >> 20;
+        uint256 sharesAmount = sharesAmountWithPrecisionShifted.fromShiftedSharesToStoredSharesValue();
         _emitTransferAfterMintingShares(msg.sender, sharesAmount);
 
         return sharesAmount;
@@ -844,7 +846,7 @@ contract Lido is ILido, StETH, AragonApp {
         uint256 toInsuranceFundShifted = shares2mintShifted.mul(insuranceFeeBasisPoints).div(TOTAL_BASIS_POINTS);
         address insuranceFund = getInsuranceFund();
         _transferSharesWithPrecisionShifted(address(this), insuranceFund, toInsuranceFundShifted);
-        _emitTransferAfterMintingShares(insuranceFund, toInsuranceFundShifted >> 20);
+        _emitTransferAfterMintingShares(insuranceFund, toInsuranceFundShifted.fromShiftedSharesToStoredSharesValue());
 
         uint256 distributedToOperatorsSharesShifted = _distributeNodeOperatorsReward(
             shares2mintShifted.mul(operatorsFeeBasisPoints).div(TOTAL_BASIS_POINTS)
@@ -855,7 +857,7 @@ contract Lido is ILido, StETH, AragonApp {
 
         address treasury = getTreasury();
         _transferSharesWithPrecisionShifted(address(this), treasury, toTreasuryShifted);
-        _emitTransferAfterMintingShares(treasury, toTreasuryShifted >> 20);
+        _emitTransferAfterMintingShares(treasury, toTreasuryShifted.fromShiftedSharesToStoredSharesValue());
     }
 
     /**

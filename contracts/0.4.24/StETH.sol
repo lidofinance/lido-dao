@@ -9,6 +9,7 @@ import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "@aragon/os/contracts/common/UnstructuredStorage.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 import "./lib/Pausable.sol";
+import "./lib/SharesRoundingMath.sol";
 
 /**
  * @title Interest-bearing ERC20-like token for Lido Liquid Stacking protocol.
@@ -49,6 +50,7 @@ import "./lib/Pausable.sol";
  */
 contract StETH is IERC20, Pausable {
     using SafeMath for uint256;
+    using SharesRoundingMath for uint256;
     using UnstructuredStorage for bytes32;
 
     /**
@@ -159,7 +161,7 @@ contract StETH is IERC20, Pausable {
      * total Ether controlled by the protocol. See `sharesOf`.
      */
     function balanceOf(address _account) public view returns (uint256) {
-        return getPooledEthByShares(_sharesOfWithPrecisionShifted(_account));
+        return getPooledEthBySharesWithPrecisionShifted(_sharesOfWithPrecisionShifted(_account));
     }
 
     /**
@@ -299,14 +301,15 @@ contract StETH is IERC20, Pausable {
      * @return the amount of shares that corresponds to `_ethAmount` protocol-controlled Ether.
      */
     function getSharesByPooledEth(uint256 _ethAmount) public view returns (uint256) {
-        return _getSharesByPooledEthWithPrecisionShifted(_ethAmount) >> 20;
+        return _getSharesByPooledEthWithPrecisionShifted(_ethAmount).fromShiftedSharesToStoredSharesValue();
     }
 
     /**
      * @return the amount of Ether that corresponds to `_sharesAmount` token shares.
      */
     function getPooledEthByShares(uint256 _sharesAmount) public view returns (uint256) {
-        return getPooledEthBySharesWithPrecisionShifted(_sharesAmount << 20) >> 20;
+        return getPooledEthBySharesWithPrecisionShifted(_sharesAmount.fromStoredSharesToShiftedSharesValue())
+            .fromShiftedSharesToStoredSharesValue();
     }
 
     /**
@@ -404,30 +407,32 @@ contract StETH is IERC20, Pausable {
      * @return the total amount of shares in existence.
      */
     function _getTotalShares() internal view returns (uint256) {
-        return TOTAL_SHARES_POSITION.getStorageUint256() << 20 >> 20;
+        return TOTAL_SHARES_POSITION.getStorageUint256().fromStoredSharesToStoredSharesValue();
     }
 
     /**
     * @return the total amount of shares in existence.
     */
     function _getTotalSharesWithPrecisionShifted() public view returns (uint256) {
-        uint256 totalSharesWithPrecisionFromStorage = TOTAL_SHARES_POSITION.getStorageUint256();
-        return (totalSharesWithPrecisionFromStorage << 20).add(totalSharesWithPrecisionFromStorage >> 236);
+        return TOTAL_SHARES_POSITION.getStorageUint256().fromStoredSharesToShiftedShares();
+    }
+
+    function _getTotalSharesStorage() public view returns (uint256) {
+        return TOTAL_SHARES_POSITION.getStorageUint256();
     }
 
     /**
      * @return the amount of shares owned by `_account`.
      */
     function _sharesOf(address _account) public view returns (uint256) {
-        return shares[_account] << 20 >> 20;
+        return shares[_account].fromStoredSharesToStoredSharesValue();
     }
 
     /**
     * @return `_sharesOf` with precision.
     */
     function _sharesOfWithPrecisionShifted(address _account) public view returns (uint256) {
-        uint256 sharesWithPrecisionFromStorage = shares[_account];
-        return (sharesWithPrecisionFromStorage << 20).add(sharesWithPrecisionFromStorage >> 236);
+        return shares[_account].fromStoredSharesToShiftedShares();
     }
 
     /**
@@ -444,15 +449,15 @@ contract StETH is IERC20, Pausable {
         require(_sender != address(0), "TRANSFER_FROM_THE_ZERO_ADDRESS");
         require(_recipient != address(0), "TRANSFER_TO_THE_ZERO_ADDRESS");
 
-        uint256 currentSenderShares = shares[_sender] << 20 >> 20;
-        require(_sharesAmount <= currentSenderShares, "TRANSFER_AMOUNT_EXCEEDS_BALANCE");
+        uint256 senderStoredSharesValue = shares[_sender].fromStoredSharesToStoredSharesValue();
+        require(_sharesAmount <= senderStoredSharesValue, "TRANSFER_AMOUNT_EXCEEDS_BALANCE");
 
-        uint256 currentSenderPrecision = shares[_sender] >> 236 << 236;
-        uint256 currentRecipientShares = shares[_recipient] << 20 >> 20;
-        uint256 currentRecipientPrecision = shares[_recipient] >> 236 << 236;
+        uint256 senderStoredPrecision = shares[_sender].fromStoredSharesToStoredPrecision();
+        uint256 recipientStoredSharesValue = shares[_recipient].fromStoredSharesToStoredSharesValue();
+        uint256 recipientStoredPrecision = shares[_recipient].fromStoredSharesToStoredPrecision();
 
-        shares[_sender] = currentSenderShares.sub(_sharesAmount).add(currentSenderPrecision);
-        shares[_recipient] = currentRecipientShares.add(_sharesAmount).add(currentRecipientPrecision);
+        shares[_sender] = senderStoredSharesValue.sub(_sharesAmount).add(senderStoredPrecision);
+        shares[_recipient] = recipientStoredSharesValue.add(_sharesAmount).add(recipientStoredPrecision);
     }
 
     /**
@@ -469,14 +474,11 @@ contract StETH is IERC20, Pausable {
         require(_sender != address(0), "TRANSFER_FROM_THE_ZERO_ADDRESS");
         require(_recipient != address(0), "TRANSFER_TO_THE_ZERO_ADDRESS");
 
-        uint256 currentSenderSharesShifted = _sharesOfWithPrecisionShifted(_sender);
-        require(_sharesAmountShifted <= currentSenderSharesShifted, "TRANSFER_AMOUNT_EXCEEDS_BALANCE");
+        uint256 senderSharesShifted = _sharesOfWithPrecisionShifted(_sender);
+        require(_sharesAmountShifted <= senderSharesShifted, "TRANSFER_AMOUNT_EXCEEDS_BALANCE");
 
-        uint256 newSenderSharesShifted = currentSenderSharesShifted.sub(_sharesAmountShifted);
-        shares[_sender] = (newSenderSharesShifted << 236).add(newSenderSharesShifted >> 20);
-
-        uint256 newRecipientSharesShifted = _sharesOfWithPrecisionShifted(_recipient).add(_sharesAmountShifted);
-        shares[_recipient] = (newRecipientSharesShifted << 236).add(newRecipientSharesShifted >> 20);
+        shares[_sender] = senderSharesShifted.sub(_sharesAmountShifted).fromShiftedSharesToStoredShares();
+        shares[_recipient] = _sharesOfWithPrecisionShifted(_recipient).add(_sharesAmountShifted).fromShiftedSharesToStoredShares();
     }
 
     /**
@@ -496,14 +498,15 @@ contract StETH is IERC20, Pausable {
 
         require(_recipient != address(0), "MINT_TO_THE_ZERO_ADDRESS");
 
-        uint256 newTotalSharesShifted = _getTotalSharesWithPrecisionShifted().add(_sharesAmountShifted);
+        newTotalShares = _getTotalSharesWithPrecisionShifted()
+                        .add(_sharesAmountShifted)
+                        .fromShiftedSharesToStoredShares();
 
-        newTotalShares = (newTotalSharesShifted << 236).add(newTotalSharesShifted >> 20);
         TOTAL_SHARES_POSITION.setStorageUint256(newTotalShares);
 
-        uint256 _sharesOfRecipientWithPrecisionShifted = _sharesOfWithPrecisionShifted(_recipient);
-        uint256 newSharesOfRecipientWithPrecisionShifted = _sharesOfRecipientWithPrecisionShifted.add(_sharesAmountShifted);
-        shares[_recipient] = (newSharesOfRecipientWithPrecisionShifted << 236).add(newSharesOfRecipientWithPrecisionShifted >> 20);
+        shares[_recipient] = _sharesOfWithPrecisionShifted(_recipient)
+                            .add(_sharesAmountShifted)
+                            .fromShiftedSharesToStoredShares();
 
         // Notice: we're not emitting a Transfer event from the zero address here since shares mint
         // works by taking the amount of tokens corresponding to the minted shares from all other
@@ -528,17 +531,16 @@ contract StETH is IERC20, Pausable {
 
         uint256 accountSharesShifted = _sharesOfWithPrecisionShifted(_account);
 
-        uint256 _sharesAmountShifted = _sharesAmount << 20;
+        uint256 _sharesAmountShifted = _sharesAmount.fromStoredSharesToShiftedSharesValue();
         require(_sharesAmountShifted <= accountSharesShifted, "BURN_AMOUNT_EXCEEDS_BALANCE");
 
         uint256 preRebaseTokenAmount = getPooledEthByShares(_sharesAmount);
 
         uint256 newTotalSharesShifted = _getTotalSharesWithPrecisionShifted().sub(_sharesAmountShifted);
-        newTotalShares = newTotalSharesShifted >> 20;
-        TOTAL_SHARES_POSITION.setStorageUint256((newTotalSharesShifted << 236).add(newTotalSharesShifted >> 20));
+        newTotalShares = newTotalSharesShifted.fromShiftedSharesToStoredSharesValue();
+        TOTAL_SHARES_POSITION.setStorageUint256(newTotalSharesShifted.fromShiftedSharesToStoredShares());
 
-        uint256 newAccountSharesShifted = accountSharesShifted.sub(_sharesAmountShifted);
-        shares[_account] = (newAccountSharesShifted << 236).add(newAccountSharesShifted >> 20);
+        shares[_account] = accountSharesShifted.sub(_sharesAmountShifted).fromShiftedSharesToStoredShares();
 
         uint256 postRebaseTokenAmount = getPooledEthByShares(_sharesAmount);
 
