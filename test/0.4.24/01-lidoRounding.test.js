@@ -109,6 +109,20 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await app.submit(ZERO_ADDRESS, { from: user3, value: ethToDeposit })
     const stranger_steth_balance_after = await app.balanceOf(user3)
 
-    assertBn(ethToDeposit.sub(new BN(1)), stranger_steth_balance_after)
+    assertBn(stranger_steth_balance_after, ethToDeposit.sub(new BN(1)))
+  })
+
+  it('getSharesByPooledEth then getPooledEthByShares behave as before rounding fixes', async () => {
+    const totalShares = new BN('3954885183194715680671922')
+    const totalPooledEther = new BN('42803292811181753711139770')
+
+    await app.submit(ZERO_ADDRESS, { from: user2, value: totalShares })
+    await app.methods['depositBufferedEther()']({ from: depositor })
+    await oracle.reportBeacon(100, 0, totalPooledEther.sub(totalShares))
+
+    const ethToDeposit = new BN('10000000000000000000')
+    const shares = await app.getSharesByPooledEth(ethToDeposit)
+    const eth = await app.getPooledEthByShares(shares)
+    assertBn(eth, ethToDeposit.sub(new BN(9)))
   })
 })

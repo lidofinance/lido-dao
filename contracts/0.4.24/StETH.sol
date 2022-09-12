@@ -301,15 +301,15 @@ contract StETH is IERC20, Pausable {
      * @return the amount of shares that corresponds to `_ethAmount` protocol-controlled Ether.
      */
     function getSharesByPooledEth(uint256 _ethAmount) public view returns (uint256) {
-        return _getSharesByPooledEthWithPrecisionShifted(_ethAmount).fromShiftedSharesToStoredSharesValue();
+        return _getSharesByPooledEthWithPrecisionShifted(_ethAmount)
+            .fromShiftedSharesToStoredSharesValue();
     }
 
     /**
      * @return the amount of Ether that corresponds to `_sharesAmount` token shares.
      */
     function getPooledEthByShares(uint256 _sharesAmount) public view returns (uint256) {
-        return getPooledEthBySharesWithPrecisionShifted(_sharesAmount.fromStoredSharesToShiftedSharesValue())
-            .fromShiftedSharesToStoredSharesValue();
+        return getPooledEthBySharesWithPrecisionShifted(_sharesAmount.fromStoredSharesToShiftedSharesValue());
     }
 
     /**
@@ -320,8 +320,6 @@ contract StETH is IERC20, Pausable {
         if (totalPooledEther == 0) {
             return 0;
         } else {
-            // revert(string(abi.encodePacked(uint2str(_ethAmount), " ", uint2str(_getTotalSharesWithPrecisionShifted()))));
-
             return _ethAmount
             .mul(_getTotalSharesWithPrecisionShifted())
             .div(totalPooledEther);
