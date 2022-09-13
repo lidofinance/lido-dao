@@ -125,4 +125,78 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     const eth = await app.getPooledEthByShares(shares)
     assertBn(eth, ethToDeposit.sub(new BN(9)))
   })
+
+  it('getPooledEthByShares then getSharesByPooledEth behave as before rounding fixes', async () => {
+    const totalShares = new BN('3954885183194715680671922')
+    const totalPooledEther = new BN('42803292811181753711139770')
+
+    await app.submit(ZERO_ADDRESS, { from: user2, value: totalShares })
+    await app.methods['depositBufferedEther()']({ from: depositor })
+    await oracle.reportBeacon(100, 0, totalPooledEther.sub(totalShares))
+
+    const eth = await app.getPooledEthByShares(totalShares)
+    const shares = await app.getSharesByPooledEth(eth)
+
+    assertBn(shares, totalShares)
+  })
+
+  it('tests submitting total ETH supply twice', async () => {
+    // There are under 123M of circulating ETH right now.
+    // Less than 20M can be produced each year.
+    // Thus, in 100 years, we can expect no more than 2500M ETH.
+
+    const totalEthSupplyIn100Years = new BN('2500000000000000000000000000')
+
+    await app.submit(ZERO_ADDRESS, { from: user2, value: totalEthSupplyIn100Years })
+    await app.methods['depositBufferedEther()']({ from: depositor })
+    const user2_steth_balance_after = await app.balanceOf(user2)
+    assertBn(user2_steth_balance_after, totalEthSupplyIn100Years)
+
+    await oracle.reportBeacon(100, 0, ETH(42))
+
+    await app.submit(ZERO_ADDRESS, { from: user3, value: totalEthSupplyIn100Years })
+    await app.methods['depositBufferedEther()']({ from: depositor })
+    const user3_steth_balance_after = await app.balanceOf(user3)
+    assertBn(user3_steth_balance_after, totalEthSupplyIn100Years.sub(new BN(1)))
+  })
+
+  it('sum of Transfer events goes farther away from balanceOf', async () => {
+    const eth10 = new BN('10000000000000000000')
+
+    await app.submit(ZERO_ADDRESS, { from: user2, value: eth10 })
+    await app.methods['depositBufferedEther()']({ from: depositor })
+    const user2_steth_balance_after = await app.balanceOf(user2)
+    assertBn(user2_steth_balance_after, eth10)
+
+    await oracle.reportBeacon(100, 0, ETH(42))
+
+    let sumByTransferEvents = new BN(0)
+
+    const receipt = await app.submit(ZERO_ADDRESS, { from: user3, value: eth10 })
+    await app.methods['depositBufferedEther()']({ from: depositor })
+    const user3_steth_balance_after = await app.balanceOf(user3)
+
+    assertBn(user3_steth_balance_after, eth10.sub(new BN(1)))
+
+    const valueInTranferEvent = eth10.sub(new BN(5))
+
+    assertEvent(receipt, 'Transfer', {
+      expectedArgs: { value: valueInTranferEvent }
+    })
+    sumByTransferEvents = sumByTransferEvents.add(valueInTranferEvent)
+
+    assertBn(user3_steth_balance_after, sumByTransferEvents.add(new BN(4)))
+
+    const receipt2 = await app.submit(ZERO_ADDRESS, { from: user3, value: eth10 })
+    await app.methods['depositBufferedEther()']({ from: depositor })
+    const user3_steth_balance_after2 = await app.balanceOf(user3)
+
+    assertBn(user3_steth_balance_after2, eth10.add(eth10).sub(new BN(1)))
+    assertEvent(receipt2, 'Transfer', {
+      expectedArgs: { value: valueInTranferEvent }
+    })
+    sumByTransferEvents = sumByTransferEvents.add(valueInTranferEvent)
+
+    assertBn(user3_steth_balance_after2, sumByTransferEvents.add(new BN(9)))
+  })
 })
