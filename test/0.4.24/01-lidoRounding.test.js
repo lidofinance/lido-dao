@@ -199,4 +199,30 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
 
     assertBn(user3_steth_balance_after2, sumByTransferEvents.add(new BN(9)))
   })
+
+  it('tests submitting by 1 wei', async () => {
+    const wei1 = new BN(1)
+
+    await app.submit(ZERO_ADDRESS, { from: user2, value: wei1 })
+    await app.methods['depositBufferedEther()']({ from: depositor })
+    const user2_steth_balance_after = await app.balanceOf(user2)
+    assertBn(user2_steth_balance_after, wei1)
+
+    await app.submit(ZERO_ADDRESS, { from: user2, value: wei1 })
+    await app.methods['depositBufferedEther()']({ from: depositor })
+    const user2_steth_balance_after2 = await app.balanceOf(user2)
+    assertBn(user2_steth_balance_after2, new BN(2))
+
+    await oracle.reportBeacon(100, 0, new BN(2))
+
+    await app.submit(ZERO_ADDRESS, { from: user3, value: wei1 })
+    await app.methods['depositBufferedEther()']({ from: depositor })
+    const user3_steth_balance_after = await app.balanceOf(user3)
+    assertBn(user3_steth_balance_after, wei1)
+
+    await app.submit(ZERO_ADDRESS, { from: user3, value: wei1 })
+    await app.methods['depositBufferedEther()']({ from: depositor })
+    const user3_steth_balance_after2 = await app.balanceOf(user3)
+    assertBn(user3_steth_balance_after2, new BN(2))
+  })
 })
