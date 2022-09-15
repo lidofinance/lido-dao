@@ -1,10 +1,13 @@
 // SPDX-FileCopyrightText: 2022 Lido <info@lido.fi>
 // SPDX-License-Identifier: MIT
 
-pragma solidity =0.8.9;
+pragma solidity 0.8.9;
 
-import "@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol";
-
+/**
+ * @title Simplest subset of ERC721 to use as a ticket for withdrawal queue
+ * @dev Can be extended in the future if required
+ * @author folkyatina
+ */
 contract QueueNFT {
 
   mapping (uint => address) private _owners;

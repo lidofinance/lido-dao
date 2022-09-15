@@ -14,6 +14,7 @@ import "./interfaces/ILido.sol";
 import "./interfaces/INodeOperatorsRegistry.sol";
 import "./interfaces/IDepositContract.sol";
 import "./interfaces/ILidoExecutionLayerRewardsVault.sol";
+import "./interfaces/IWithdrawal.sol";
 
 import "./StETH.sol";
 
@@ -456,6 +457,24 @@ contract Lido is ILido, StETH, AragonApp {
 
         _setBPValue(EL_REWARDS_WITHDRAWAL_LIMIT_POSITION, _limitPoints);
         emit ELRewardsWithdrawalLimitSet(_limitPoints);
+    }
+
+    // TODO:
+    function requestWithdrawal(uint256 _amountOfStETH) external whenNotStopped returns (uint256) {
+      address withdrawal = address(uint160(getWithdrawalCredentials()));
+      // lock StETH
+      transferFrom(msg.sender, withdrawal, _amountOfStETH);
+
+      return IWithdrawal(withdrawal).request(msg.sender, _amountOfStETH, getSharesByPooledEth(_amountOfStETH));
+    }
+
+    // TODO:
+    // add withdrawed subtraction in TotalPooledEther
+    function withdraw(uint256 _ticketId) { // whenNotStopped ??
+      address withdrawal = address(uint160(getWithdrawalCredentials()));
+      IWithdrawal(withdrawal).cashout(msg.sender, _ticketId);
+
+      // burnSomeShares
     }
 
     /**
