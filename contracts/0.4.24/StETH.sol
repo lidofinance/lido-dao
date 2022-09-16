@@ -314,8 +314,10 @@ contract StETH is IERC20, Pausable {
 
     /**
     * @return the amount of shares that corresponds to `_ethAmount` protocol-controlled Ether.
+    *
+    * @dev Shifted means MSB contain the integer part of shares, LSB contain the fractional part of shares (Precision)
      */
-    function _getSharesByPooledEthWithPrecisionShifted(uint256 _ethAmount) public view returns (uint256) {
+    function _getSharesByPooledEthWithPrecisionShifted(uint256 _ethAmount) internal view returns (uint256) {
         uint256 totalPooledEther = _getTotalPooledEther();
         if (totalPooledEther == 0) {
             return 0;
@@ -328,15 +330,21 @@ contract StETH is IERC20, Pausable {
 
     /**
      * @return the amount of Ether that corresponds to `_sharesAmountWithPrecisionShifted` token shares.
+     *
+     * @dev Shifted means MSB contain the integer part of shares, LSB contain the fractional part of shares (Precision)
      */
-    function getPooledEthBySharesWithPrecisionShifted(uint256 _sharesAmountWithPrecisionShifted) public view returns (uint256) {
+    function getPooledEthBySharesWithPrecisionShifted(uint256 _sharesAmountWithPrecisionShifted) internal view returns (uint256) {
         uint256 totalSharesWithPrecisionShifted = _getTotalSharesWithPrecisionShifted();
         if (totalSharesWithPrecisionShifted == 0) {
             return 0;
         } else {
             uint256 product = _sharesAmountWithPrecisionShifted.mul(_getTotalPooledEther());
             uint256 quotient = product.div(totalSharesWithPrecisionShifted);
+
+            // if (totalShares - _sharesAmount * totalPooledEther % totalShares < totalShares / 2)
+            // i.e. if the remainder is greater than a half of the divisor, then round up
             if (totalSharesWithPrecisionShifted.sub(product.mod(totalSharesWithPrecisionShifted)) < totalSharesWithPrecisionShifted.div(2)) {
+                // mathematical rounding
                 return quotient.add(1);
             }
             return quotient;
@@ -414,25 +422,25 @@ contract StETH is IERC20, Pausable {
     /**
     * @return the total amount of shares in existence.
     */
-    function _getTotalSharesWithPrecisionShifted() public view returns (uint256) {
+    function _getTotalSharesWithPrecisionShifted() internal view returns (uint256) {
         return TOTAL_SHARES_POSITION.getStorageUint256().fromStoredSharesToShiftedShares();
     }
 
-    function _getTotalSharesStorage() public view returns (uint256) {
+    function _getTotalSharesStorage() internal view returns (uint256) {
         return TOTAL_SHARES_POSITION.getStorageUint256();
     }
 
     /**
      * @return the amount of shares owned by `_account`.
      */
-    function _sharesOf(address _account) public view returns (uint256) {
+    function _sharesOf(address _account) internal view returns (uint256) {
         return shares[_account].fromStoredSharesToStoredSharesValue();
     }
 
     /**
     * @return `_sharesOf` with precision.
     */
-    function _sharesOfWithPrecisionShifted(address _account) public view returns (uint256) {
+    function _sharesOfWithPrecisionShifted(address _account) internal view returns (uint256) {
         return shares[_account].fromStoredSharesToShiftedShares();
     }
 
@@ -446,7 +454,7 @@ contract StETH is IERC20, Pausable {
      * - `_sender` must hold at least `_sharesAmount` shares.
      * - the contract must not be paused.
      */
-    function _transferShares(address _sender, address _recipient, uint256 _sharesAmount) public whenNotStopped {
+    function _transferShares(address _sender, address _recipient, uint256 _sharesAmount) internal whenNotStopped {
         require(_sender != address(0), "TRANSFER_FROM_THE_ZERO_ADDRESS");
         require(_recipient != address(0), "TRANSFER_TO_THE_ZERO_ADDRESS");
 
@@ -471,7 +479,7 @@ contract StETH is IERC20, Pausable {
      * - `_sender` must hold at least `_sharesAmount` shares.
      * - the contract must not be paused.
      */
-    function _transferSharesWithPrecisionShifted(address _sender, address _recipient, uint256 _sharesAmountShifted) public whenNotStopped {
+    function _transferSharesWithPrecisionShifted(address _sender, address _recipient, uint256 _sharesAmountShifted) internal whenNotStopped {
         require(_sender != address(0), "TRANSFER_FROM_THE_ZERO_ADDRESS");
         require(_recipient != address(0), "TRANSFER_TO_THE_ZERO_ADDRESS");
 
@@ -493,7 +501,7 @@ contract StETH is IERC20, Pausable {
      * - the contract must not be paused.
      */
     function _mintShares(address _recipient, uint256 _sharesAmountShifted)
-        public
+        internal
         whenNotStopped
         returns (uint256 newTotalShares) {
 
@@ -527,7 +535,7 @@ contract StETH is IERC20, Pausable {
      * - `_account` must hold at least `_sharesAmount` shares.
      * - the contract must not be paused.
      */
-    function _burnShares(address _account, uint256 _sharesAmount) public whenNotStopped returns (uint256 newTotalShares) {
+    function _burnShares(address _account, uint256 _sharesAmount) internal whenNotStopped returns (uint256 newTotalShares) {
         require(_account != address(0), "BURN_FROM_THE_ZERO_ADDRESS");
 
         uint256 accountSharesShifted = _sharesOfWithPrecisionShifted(_account);
@@ -554,27 +562,5 @@ contract StETH is IERC20, Pausable {
         // but we cannot reflect this as it would require sending an unbounded number of events.
 
         // We're emitting `SharesBurnt` event to provide an explicit rebase log record nonetheless.
-    }
-
-    function uint2str(uint256 _i) internal pure returns (string memory _uintAsString) {
-        if (_i == 0) {
-            return "0";
-        }
-        uint j = _i;
-        uint len;
-        while (j != 0) {
-            len++;
-            j /= 10;
-        }
-        bytes memory bstr = new bytes(len);
-        uint k = len;
-        while (_i != 0) {
-            k = k-1;
-            uint8 temp = (48 + uint8(_i - _i / 10 * 10));
-            bytes1 b1 = bytes1(temp);
-            bstr[k] = b1;
-            _i /= 10;
-        }
-        return string(bstr);
     }
 }
