@@ -334,9 +334,12 @@ contract StETH is IERC20, Pausable {
         if (totalSharesWithPrecisionShifted == 0) {
             return 0;
         } else {
-            return _sharesAmountWithPrecisionShifted
-            .mul(_getTotalPooledEther())
-            .div(totalSharesWithPrecisionShifted);
+            uint256 product = _sharesAmountWithPrecisionShifted.mul(_getTotalPooledEther());
+            uint256 quotient = product.div(totalSharesWithPrecisionShifted);
+            if (totalSharesWithPrecisionShifted.sub(product.mod(totalSharesWithPrecisionShifted)) < totalSharesWithPrecisionShifted.div(2)) {
+                return quotient.add(1);
+            }
+            return quotient;
         }
     }
 

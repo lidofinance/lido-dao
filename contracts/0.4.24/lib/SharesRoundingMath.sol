@@ -16,6 +16,15 @@ library SharesRoundingMath {
         return _storedShares << PRECISION_LENGTH >> PRECISION_LENGTH;
     }
 
+    function fromStoredSharesToStoredSharesValueRounded(uint256 _storedShares) internal pure returns (uint256) {
+        uint256 value = fromStoredSharesToStoredSharesValue(_storedShares);
+        uint256 precision = _storedShares >> VALUE_LENGTH;
+        if (precision >= (2 ** PRECISION_LENGTH) / 2) {
+            value++;
+        }
+        return value;
+    }
+
     function fromStoredSharesToShiftedShares(uint256 _storedShares) internal pure returns (uint256) {
         return (_storedShares << PRECISION_LENGTH) + (_storedShares >> VALUE_LENGTH);
     }

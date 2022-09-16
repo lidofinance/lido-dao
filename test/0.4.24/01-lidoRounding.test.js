@@ -100,6 +100,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
   it('balanceOf error after submit should not be greater than 1 wei', async () => {
     const totalShares = new BN('3954885183194715680671922')
     const totalPooledEther = new BN('42803292811181753711139770')
+    // rate = 10.822891393424902
 
     await app.submit(ZERO_ADDRESS, { from: user2, value: totalShares })
     await app.methods['depositBufferedEther()']({ from: depositor })
@@ -109,7 +110,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await app.submit(ZERO_ADDRESS, { from: user3, value: ethToDeposit })
     const stranger_steth_balance_after = await app.balanceOf(user3)
 
-    assertBn(stranger_steth_balance_after, ethToDeposit.sub(new BN(1)))
+    assertBn(stranger_steth_balance_after, ethToDeposit)
   })
 
   it('getSharesByPooledEth then getPooledEthByShares behave as before rounding fixes', async () => {
@@ -123,7 +124,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     const ethToDeposit = new BN('10000000000000000000')
     const shares = await app.getSharesByPooledEth(ethToDeposit)
     const eth = await app.getPooledEthByShares(shares)
-    assertBn(eth, ethToDeposit.sub(new BN(9)))
+
+    assertBn(eth, ethToDeposit.sub(new BN(8)))
   })
 
   it('getPooledEthByShares then getSharesByPooledEth behave as before rounding fixes', async () => {
@@ -157,7 +159,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await app.submit(ZERO_ADDRESS, { from: user3, value: totalEthSupplyIn100Years })
     await app.methods['depositBufferedEther()']({ from: depositor })
     const user3_steth_balance_after = await app.balanceOf(user3)
-    assertBn(user3_steth_balance_after, totalEthSupplyIn100Years.sub(new BN(1)))
+    assertBn(user3_steth_balance_after, totalEthSupplyIn100Years)
   })
 
   it('sum of Transfer events goes farther away from balanceOf', async () => {
@@ -176,7 +178,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await app.methods['depositBufferedEther()']({ from: depositor })
     const user3_steth_balance_after = await app.balanceOf(user3)
 
-    assertBn(user3_steth_balance_after, eth10.sub(new BN(1)))
+    assertBn(user3_steth_balance_after, eth10)
 
     const valueInTranferEvent = eth10.sub(new BN(5))
 
@@ -185,19 +187,19 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     })
     sumByTransferEvents = sumByTransferEvents.add(valueInTranferEvent)
 
-    assertBn(user3_steth_balance_after, sumByTransferEvents.add(new BN(4)))
+    assertBn(user3_steth_balance_after, sumByTransferEvents.add(new BN(5)))
 
     const receipt2 = await app.submit(ZERO_ADDRESS, { from: user3, value: eth10 })
     await app.methods['depositBufferedEther()']({ from: depositor })
     const user3_steth_balance_after2 = await app.balanceOf(user3)
 
-    assertBn(user3_steth_balance_after2, eth10.add(eth10).sub(new BN(1)))
+    assertBn(user3_steth_balance_after2, eth10.add(eth10))
     assertEvent(receipt2, 'Transfer', {
       expectedArgs: { value: valueInTranferEvent }
     })
     sumByTransferEvents = sumByTransferEvents.add(valueInTranferEvent)
 
-    assertBn(user3_steth_balance_after2, sumByTransferEvents.add(new BN(9)))
+    assertBn(user3_steth_balance_after2, sumByTransferEvents.add(new BN(10)))
   })
 
   it('tests submitting by 1 wei', async () => {
@@ -225,4 +227,22 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     const user3_steth_balance_after2 = await app.balanceOf(user3)
     assertBn(user3_steth_balance_after2, new BN(2))
   })
+
+  it('fix 1 wei rounding error', async () => {
+    const totalShares = new BN('3954')
+    const totalPooledEther = new BN('42800')
+    // rate = 10.824481537683359
+
+    await app.submit(ZERO_ADDRESS, { from: user2, value: totalShares })
+    await app.methods['depositBufferedEther()']({ from: depositor })
+    await oracle.reportBeacon(100, 0, totalPooledEther.sub(totalShares))
+
+    const ethToDeposit = new BN('10')
+    await app.submit(ZERO_ADDRESS, { from: user3, value: ethToDeposit })
+    const stranger_steth_balance_after = await app.balanceOf(user3)
+
+    assertBn(stranger_steth_balance_after, ethToDeposit)
+  })
+
+  // need for rounding in public functions ?
 })
