@@ -161,7 +161,7 @@ contract StETH is IERC20, Pausable {
      * total Ether controlled by the protocol. See `sharesOf`.
      */
     function balanceOf(address _account) public view returns (uint256) {
-        return getPooledEthBySharesWithPrecisionShifted(_sharesOfWithPrecisionShifted(_account));
+        return _getPooledEthBySharesWithPrecisionShifted(_sharesOfWithPrecisionShifted(_account));
     }
 
     /**
@@ -309,7 +309,7 @@ contract StETH is IERC20, Pausable {
      * @return the amount of Ether that corresponds to `_sharesAmount` token shares.
      */
     function getPooledEthByShares(uint256 _sharesAmount) public view returns (uint256) {
-        return getPooledEthBySharesWithPrecisionShifted(_sharesAmount.fromStoredSharesToShiftedSharesValue());
+        return _getPooledEthBySharesWithPrecisionShifted(_sharesAmount.fromStoredSharesToShiftedSharesValue());
     }
 
     /**
@@ -333,7 +333,7 @@ contract StETH is IERC20, Pausable {
      *
      * @dev Shifted means MSB contain the integer part of shares, LSB contain the fractional part of shares (Precision)
      */
-    function getPooledEthBySharesWithPrecisionShifted(uint256 _sharesAmountWithPrecisionShifted) internal view returns (uint256) {
+    function _getPooledEthBySharesWithPrecisionShifted(uint256 _sharesAmountWithPrecisionShifted) internal view returns (uint256) {
         uint256 totalSharesWithPrecisionShifted = _getTotalSharesWithPrecisionShifted();
         if (totalSharesWithPrecisionShifted == 0) {
             return 0;
