@@ -848,12 +848,16 @@ contract Lido is ILido, StETH, AragonApp {
         _transferSharesWithPrecisionShifted(address(this), insuranceFund, toInsuranceFundShifted);
         _emitTransferAfterMintingShares(insuranceFund, toInsuranceFundShifted.fromShiftedSharesToStoredSharesValue());
 
-        uint256 distributedToOperatorsSharesShifted = _distributeNodeOperatorsReward(
-            shares2mintShifted.mul(operatorsFeeBasisPoints).div(TOTAL_BASIS_POINTS)
+        uint256 distributedToOperatorsShares = _distributeNodeOperatorsReward(
+            shares2mintShifted.fromShiftedSharesToStoredSharesValue()
+            .mul(operatorsFeeBasisPoints)
+            .div(TOTAL_BASIS_POINTS)
         );
 
         // Transfer the rest of the fee to treasury
-        uint256 toTreasuryShifted = shares2mintShifted.sub(toInsuranceFundShifted).sub(distributedToOperatorsSharesShifted);
+        uint256 toTreasuryShifted = shares2mintShifted
+            .sub(toInsuranceFundShifted)
+            .sub(distributedToOperatorsShares.fromStoredSharesToShiftedSharesValue());
 
         address treasury = getTreasury();
         _transferSharesWithPrecisionShifted(address(this), treasury, toTreasuryShifted);
