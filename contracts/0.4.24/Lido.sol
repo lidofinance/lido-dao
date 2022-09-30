@@ -14,7 +14,7 @@ import "./interfaces/ILido.sol";
 import "./interfaces/INodeOperatorsRegistry.sol";
 import "./interfaces/IDepositContract.sol";
 import "./interfaces/ILidoExecutionLayerRewardsVault.sol";
-import "./interfaces/IWithdrawal.sol";
+import "./interfaces/IWithdrawalQueue.sol";
 
 import "./StETH.sol";
 
@@ -459,22 +459,49 @@ contract Lido is ILido, StETH, AragonApp {
         emit ELRewardsWithdrawalLimitSet(_limitPoints);
     }
 
-    // TODO:
-    function requestWithdrawal(uint256 _amountOfStETH) external whenNotStopped returns (uint256) {
-      address withdrawal = address(uint160(getWithdrawalCredentials()));
-      // lock StETH
-      transferFrom(msg.sender, withdrawal, _amountOfStETH);
+    /**
+    * @notice this method is responsible for locking StETH and placing user 
+    * in the queue  
+    * @param _amountOfStETH StETH to be locked. `msg.sender` should have the `_amountOfStETH` StETH balance upon this call
+    * @return ticketId id string that can be used by user to claim their ETH later
+    */
+    function requestWithdrawal(uint256 _amountOfStETH) external returns (uint256 ticketId) {
+        address withdrawal = address(uint160(getWithdrawalCredentials()));
+        // lock StETH to withdrawal contract
+        _transfer(msg.sender, withdrawal, _amountOfStETH);
 
-      return IWithdrawal(withdrawal).request(msg.sender, _amountOfStETH, getSharesByPooledEth(_amountOfStETH));
+        ticketId = IWithdrawalQueue(withdrawal)
+            .createTicket(msg.sender, _amountOfStETH, getSharesByPooledEth(_amountOfStETH));
     }
 
-    // TODO:
-    // add withdrawed subtraction in TotalPooledEther
-    function withdraw(uint256 _ticketId) { // whenNotStopped ??
-      address withdrawal = address(uint160(getWithdrawalCredentials()));
-      IWithdrawal(withdrawal).cashout(msg.sender, _ticketId);
+    /**
+     * @notice Burns a ticket and transfer ETH to ticket owner address
+     * @param _ticketId id of the ticket to burn
+     * Permissionless.
+     */
+    function claimWithdrawal(uint256 _ticketId) {
+        /// Just forward it to withdrawals
+        address withdrawal = address(uint160(getWithdrawalCredentials()));
+        IWithdrawalQueue(withdrawal).withdraw(_ticketId);
 
-      // burnSomeShares
+        /// fire an event here or in withdrawal? 
+    }
+
+    function withdrawalRequestStatus(uint _ticketId) external view 
+        returns (
+            bool finalized,
+            uint256 ethToWithdraw,
+            address holder
+        ) 
+    {
+        IWithdrawalQueue withdrawal = IWithdrawalQueue(address(uint160(getWithdrawalCredentials())));
+
+        (holder, ethToWithdraw,) = withdrawal.queue(_ticketId);
+        finalized = _ticketId < withdrawal.finalizedQueueLength();
+    }
+
+    function getWithdrawalRequests(address _holder) external view returns (uint[]) {
+        //TBD
     }
 
     /**
