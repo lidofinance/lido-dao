@@ -1,7 +1,6 @@
 const { artifacts, contract } = require('hardhat')
 const { bn } = require('@aragon/contract-helpers-test')
-const { assertBn, assertEvent, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
-const { getEvents } = require('@aragon/contract-helpers-test/src/events')
+const { assertBn, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
 
 const WithdrawalQueue = artifacts.require('WithdrawalQueue.sol')
 
@@ -46,8 +45,25 @@ contract('WithdrawalQueue', ([deployer, owner, holder, stranger]) => {
     })
   })
 
+  context('Finalization', async () => {
+    let ticketId
+    beforeEach('Create a ticket', async () => {
+      ticketId = await withdrawal.queueLength()
+      await withdrawal.createTicket(holder, 1, 1, { from: owner })
+    })
+
+    it('Only owner can finalize a ticket', async () => {
+      await withdrawal.finalizeTickets(0, 1, { from: owner, value: 1 })
+      await assertRevert(withdrawal.finalizeTickets(0, 1, { from: stranger, value: 1 }), 'NOT_OWNER')
+    })
+
+    it('One cannot finalize tickets with no ether', async () => {
+      await assertRevert(withdrawal.finalizeTickets(0, 1, { from: owner, value: 0 }), 'NOT_ENOUGH_ETHER')
+    })
+  })
+
   context('Withdraw', async () => {
-    let ticketId, amount
+    let ticketId
     beforeEach('Create a ticket', async () => {
       ticketId = await withdrawal.queueLength()
       await withdrawal.createTicket(holder, 1, 1, { from: owner })
