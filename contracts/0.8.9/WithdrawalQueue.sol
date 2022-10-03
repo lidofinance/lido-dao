@@ -96,9 +96,10 @@ contract WithdrawalQueue {
         
         // check that tickets are came before report and move lastNonFinalizedTicketId 
         // to last ticket that came before report and we have enough ETH for
-        
-        finalizedQueueLength = lastTicketIdToFinalize + 1; 
+        require(lockedETHAmount + ethToLock <= address(this).balance, "NOT_ENOUGH_ETHER");
+
         lockedETHAmount += ethToLock;
+        finalizedQueueLength = lastTicketIdToFinalize + 1; 
     }
 
     /**
