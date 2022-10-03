@@ -23,7 +23,7 @@ jobs:
       - name: Install poetry requirements
         run: >
           curl -sSL https://install.python-poetry.org | python - &&
-          poetry add slither
+          poetry install
 
       - name: Run slither
         run: >
