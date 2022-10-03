@@ -1,0 +1,45 @@
+name: Code Analysis
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  slither:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.10.1"
+
+      - name: Install poetry requirements
+        run: >
+          curl -sSL https://install.python-poetry.org | python - &&
+          poetry add slither
+
+      - name: Run slither
+        run: >
+          poetry run slither . --sarif results.sarif || true
+
+      - name: Check results.sarif presence
+        id: results
+        if: always()
+        shell: bash
+        run: >
+          test -f results.sarif && 
+          echo '::set-output name=value::present' || 
+          echo '::set-output name=value::not'
+
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@v2
+        if: ${{ always() && steps.results.outputs.value == 'present' }}
+        with:
+          sarif_file: results.sarif
