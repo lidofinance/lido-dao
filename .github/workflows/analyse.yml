@@ -2,9 +2,9 @@ name: Code Analysis
 
 on:
   push:
-    branches: [main]
+    branches: [master, develop]
   pull_request:
-    branches: [main]
+    branches: [master]
 
 jobs:
   slither:
