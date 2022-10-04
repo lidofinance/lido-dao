@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2022 Lido <info@lido.fi>
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.9;
 
@@ -84,16 +84,25 @@ contract WithdrawalQueue {
      */
     function finalizeTickets(
         uint256 lastTicketIdToFinalize, 
-        uint256 sharePrice
+        uint256 totalPooledEther,
+        uint256 totalShares
     ) external payable onlyOwner returns (uint sharesToBurn) {
-        // discount for slashing 
-
         uint ethToLock = 0;
         for (uint i = finalizedQueueLength; i < queueLength; i++) {
-            ethToLock += queue[i].maxETHToClaim;
-            sharesToBurn += queue[i].sharesToBurn;
+            uint ticketShares = queue[i].sharesToBurn;
+            uint ticketETH = queue[i].maxETHToClaim;
+
+             // discount for slashing
+            uint256 currentEth = totalPooledEther * ticketShares / totalShares;
+            if (currentEth < ticketETH) {
+                queue[i].maxETHToClaim = currentEth;
+                ticketETH = currentEth;
+            }
+
+            sharesToBurn += ticketShares;
+            ethToLock += ticketETH;
         }
-        
+
         // check that tickets are came before report and move lastNonFinalizedTicketId 
         // to last ticket that came before report and we have enough ETH for
         require(lockedETHAmount + ethToLock <= address(this).balance, "NOT_ENOUGH_ETHER");
