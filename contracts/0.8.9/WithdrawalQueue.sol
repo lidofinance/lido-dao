@@ -5,8 +5,6 @@ pragma solidity 0.8.9;
 
 /**
  * TODO: 
- * - check slashing on oracle report (should be done by oracle or other party and just finalize nothing)
- * - manage timelock for slashing cooldown (can be done on oracle side also, report only on finalized blocks ???)
  * 
  * - discounting the StETH based on slashing/penalties
  * 
@@ -81,6 +79,9 @@ contract WithdrawalQueue {
 
     /**
      * @notice Mark next tickets finalized up to `lastTicketIdToFinalize` index in the queue.
+     * @dev expected that `lastTicketIdToFinalize` is chosen by criteria:
+     *  - it is the last ticket that come before the oracle report block
+     *  - we have enough money to fullfill it
      */
     function finalizeTickets(
         uint256 lastTicketIdToFinalize, 
