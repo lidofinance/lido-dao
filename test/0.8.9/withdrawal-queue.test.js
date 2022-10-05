@@ -4,9 +4,6 @@ const { assertBn, assertRevert } = require('@aragon/contract-helpers-test/src/as
 
 const WithdrawalQueue = artifacts.require('WithdrawalQueue.sol')
 
-const ETH = (value) => bn(web3.utils.toWei(value + '', 'ether'))
-const tokens = ETH
-
 contract('WithdrawalQueue', ([deployer, owner, holder, stranger]) => {
   console.log('Addresses:')
   console.log(`Deployer: ${deployer}`)
