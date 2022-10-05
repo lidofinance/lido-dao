@@ -4,18 +4,6 @@
 pragma solidity 0.8.9;
 
 /**
- * TODO: 
- * 
- * - discounting the StETH based on slashing/penalties
- * 
- * - rebase limit and burn (goes to Lido/StETH as it's responsible for balance management)
- * - MIN_WITHDRAWAL looks like it should be reasonably small, but no dust, indeed. 
- * Can be adjusted later to minimize oracle spendings on queue processing. 
- * My guess that 0.1 ETH should be ok
- * - PROFIT!
- */
-
-/**
   * @title A dedicated contract for handling stETH withdrawal request queue
   * @notice it responsible for:
   * - taking withdrawal requests, issuing a ticket in return
@@ -49,7 +37,6 @@ contract WithdrawalQueue {
      * @dev We want to delete items on after cashout to save some gas, so we don't use array here.
      */ 
     mapping(uint => Ticket) public queue;
-    //mapping(address => uint[]) internal registry;
     
     uint256 public queueLength = 0;
     uint256 public finalizedQueueLength = 0;

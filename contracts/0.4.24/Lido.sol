@@ -500,10 +500,6 @@ contract Lido is ILido, StETH, AragonApp {
         finalized = _ticketId < withdrawal.finalizedQueueLength();
     }
 
-    function getWithdrawalRequests(address _holder) external view returns (uint[]) {
-        //TBD
-    }
-
     /**
     * @notice Updates beacon stats, collects rewards from LidoExecutionLayerRewardsVault and distributes all rewards if beacon balance increased
     * @dev periodically called by the Oracle contract
