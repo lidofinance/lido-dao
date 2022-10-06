@@ -76,7 +76,7 @@ contract WithdrawalQueue {
         uint256 totalShares
     ) external payable onlyOwner returns (uint sharesToBurn) {
         uint ethToLock = 0;
-        for (uint i = finalizedQueueLength; i < queueLength; i++) {
+        for (uint i = finalizedQueueLength; i <= lastTicketIdToFinalize; i++) {
             uint ticketShares = queue[i].sharesToBurn;
             uint ticketETH = queue[i].maxETHToClaim;
 

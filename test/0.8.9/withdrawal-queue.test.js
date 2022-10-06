@@ -1,6 +1,7 @@
 const { artifacts, contract } = require('hardhat')
 const { bn } = require('@aragon/contract-helpers-test')
 const { assertBn, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
+const { assert } = require('chai')
 
 const WithdrawalQueue = artifacts.require('WithdrawalQueue.sol')
 
@@ -58,6 +59,8 @@ contract('WithdrawalQueue', ([deployer, owner, holder, stranger]) => {
         withdrawal.finalizeTickets(0, amountOfStETH, amountOfShares, { from: stranger, value: amountOfStETH }),
         'NOT_OWNER'
       )
+
+      assertBn(await withdrawal.lockedETHAmount(), bn(amountOfStETH))
     })
 
     it('One cannot finalize tickets with no ether', async () => {
@@ -65,11 +68,26 @@ contract('WithdrawalQueue', ([deployer, owner, holder, stranger]) => {
         withdrawal.finalizeTickets(0, amountOfStETH, amountOfShares, { from: owner, value: amountOfStETH - 1 }),
         'NOT_ENOUGH_ETHER'
       )
+
+      assertBn(await withdrawal.lockedETHAmount(), bn(0))
     })
 
     it('One can finalize tickets with discount', async () => {
       shares = 2
-      withdrawal.finalizeTickets(0, amountOfStETH, shares, { from: owner, value: 50 })
+
+      await withdrawal.finalizeTickets(0, amountOfStETH, shares, { from: owner, value: amountOfStETH / shares })
+
+      assertBn(await withdrawal.lockedETHAmount(), bn(amountOfStETH / shares))
+    })
+
+    it('One can finalize part of the queue', async () => {
+      await withdrawal.createTicket(holder, amountOfStETH, amountOfShares, { from: owner })
+
+      await withdrawal.finalizeTickets(0, amountOfStETH, amountOfShares, { from: owner, value: amountOfStETH })
+
+      assertBn(await withdrawal.queueLength(), +ticketId + 2)
+      assertBn(await withdrawal.finalizedQueueLength(), +ticketId + 1)
+      assertBn(await withdrawal.lockedETHAmount(), bn(amountOfStETH))
     })
   })
 
