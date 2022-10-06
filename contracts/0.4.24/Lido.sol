@@ -470,8 +470,10 @@ contract Lido is ILido, StETH, AragonApp {
         // lock StETH to withdrawal contract
         _transfer(msg.sender, withdrawal, _amountOfStETH);
 
-        ticketId = IWithdrawalQueue(withdrawal)
-            .createTicket(msg.sender, _amountOfStETH, getSharesByPooledEth(_amountOfStETH));
+        uint shares = getSharesByPooledEth(_amountOfStETH);
+        ticketId = IWithdrawalQueue(withdrawal).createTicket(msg.sender, _amountOfStETH, shares);
+
+        emit WithdrawalRequested(msg.sender, _amountOfStETH, shares, ticketId);
     }
 
     /**
@@ -479,24 +481,22 @@ contract Lido is ILido, StETH, AragonApp {
      * @param _ticketId id of the ticket to burn
      * Permissionless.
      */
-    function claimWithdrawal(uint256 _ticketId) {
+    function claimWithdrawal(uint256 _ticketId) external {
         /// Just forward it to withdrawals
         address withdrawal = address(uint160(getWithdrawalCredentials()));
-        IWithdrawalQueue(withdrawal).withdraw(_ticketId);
+        address recipient = IWithdrawalQueue(withdrawal).withdraw(_ticketId);
 
-        /// fire an event here or in withdrawal? 
+        emit WithdrawalClaimed(_ticketId, recipient, msg.sender);
     }
 
-    function withdrawalRequestStatus(uint _ticketId) external view 
-        returns (
-            bool finalized,
-            uint256 ethToWithdraw,
-            address holder
-        ) 
-    {
+    function withdrawalRequestStatus(uint _ticketId) external view returns (
+        bool finalized,
+        uint256 ethToWithdraw,
+        address recipient
+    ) {
         IWithdrawalQueue withdrawal = IWithdrawalQueue(address(uint160(getWithdrawalCredentials())));
 
-        (holder, ethToWithdraw,) = withdrawal.queue(_ticketId);
+        (recipient, ethToWithdraw,) = withdrawal.queue(_ticketId);
         finalized = _ticketId < withdrawal.finalizedQueueLength();
     }
 

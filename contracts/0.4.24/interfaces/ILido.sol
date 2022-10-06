@@ -230,17 +230,25 @@ interface ILido {
       */
     function submit(address _referral) external payable returns (uint256 StETH);
 
+    function requestWithdrawal(uint256 _amountOfStETH) external returns (uint256 ticketId);
+
+    function claimWithdrawal(uint256 _ticketId) external;
+
+    function withdrawalRequestStatus(uint _ticketId) external view returns (
+        bool finalized,
+        uint256 ethToWithdraw,
+        address recipient
+    );
+
     // Records a deposit made by a user
     event Submitted(address indexed sender, uint256 amount, address referral);
 
     // The `amount` of ether was sent to the deposit_contract.deposit function
     event Unbuffered(uint256 amount);
 
-    // Requested withdrawal of `etherAmount` to `pubkeyHash` on the ETH 2.0 side, `tokenAmount` burned by `sender`,
-    // `sentFromBuffer` was sent on the current Ethereum side.
-    event Withdrawal(address indexed sender, uint256 tokenAmount, uint256 sentFromBuffer,
-                     bytes32 indexed pubkeyHash, uint256 etherAmount);
+    event WithdrawalRequested(address indexed receiver, uint256 amountOfStETH, uint256 amountOfShares, uint256 ticketId);
 
+    event WithdrawalClaimed(uint256 indexed ticketId, address indexed receiver, address initiator);
 
     // Info functions
 

@@ -102,19 +102,19 @@ contract WithdrawalQueue {
     /**
      * @notice Burns a `_ticketId` ticket and transfer reserver ether to `_to` address. 
      */
-    function withdraw(uint256 _ticketId) external {
+    function withdraw(uint256 _ticketId) external returns (address recipient) {
         // ticket must be finalized
         require(finalizedQueueLength > _ticketId, "TICKET_NOT_FINALIZED");
 
         // transfer designated amount to ticket owner
-        address ticketHolder = holderOf(_ticketId);
+        recipient = holderOf(_ticketId);
         uint256 ethAmount = queue[_ticketId].maxETHToClaim;
 
         // find a discount if applicable
 
         lockedETHAmount -= ethAmount;
 
-        payable(ticketHolder).transfer(ethAmount);
+        payable(recipient).transfer(ethAmount);
         
         // free storage to save some gas
         delete queue[_ticketId];
