@@ -6,9 +6,9 @@ pragma solidity 0.8.9;
 /**
   * @title A dedicated contract for handling stETH withdrawal request queue
   * @notice it responsible for:
-  * - taking withdrawal requests, issuing a ticket in return
-  * - finalizing tickets in queue (making tickets withdrawable)
-  * - processing claims for finalized tickets
+  * - taking withdrawal requests and placing them in the queue
+  * - finalizing requesuts in queue (making them claimable)
+  * - processing claims for finalized requests
   * @author folkyatina
   */
 contract WithdrawalQueue {
@@ -27,24 +27,23 @@ contract WithdrawalQueue {
     address public immutable OWNER;
 
     /**
-     * @notice amount of ETH on this contract balance that is locked for withdrawal and waiting for cashout
-     * @dev Invariant: `lockedETHAmount <= this.balance`
+     * @notice amount of ETH on this contract balance that is locked for withdrawal and waiting for claim
+     * @dev Invariant: `lockedEtherAmount <= this.balance`
      */
-    uint256 public lockedETHAmount = 0;
+    uint256 public lockedEtherAmount = 0;
 
     /**
-     * @notice queue for withdrawas, implemented as mapping of incremental index to respective Ticket
-     * @dev We want to delete items on after cashout to save some gas, so we don't use array here.
+     * @notice queue for withdrawal requests
      */ 
-    mapping(uint => Ticket) public queue;
+    mapping(uint => Request) public queue;
     
     uint256 public queueLength = 0;
     uint256 public finalizedQueueLength = 0;
 
-    struct Ticket {
-        address holder;
-        uint256 maxETHToClaim;
-        uint256 sharesToBurn;
+    struct Request {
+        address requestor;
+        uint256 etherAmount;
+        uint256 sharesAmount;
     }
 
     constructor(address _owner) {
@@ -52,82 +51,78 @@ contract WithdrawalQueue {
     }
 
     /**
-     * @notice reserve a place in queue for withdrawal and assign a Ticket to `_from` address
-     * @dev Assuming that _stethAmount is locked before invoking this function 
-     * @return ticketId id of a ticket to withdraw funds once it is available
+     * @notice reserve a place in queue for withdrawal request and associate it with `_recipient` address
+     * @dev Assumes that `_ethAmount` of stETH is locked before invoking this function 
+     * @return requestId unique id to withdraw funds once it is available
      */
-    function createTicket(address _from, uint256 _ETHToClaim, uint256 _shares) external onlyOwner returns (uint256) {
-        // issue a ticket
-        uint256 ticketId = queueLength++;
-        queue[ticketId] = Ticket(_from, _ETHToClaim, _shares);
-
-        return ticketId;
+    function enqueue(
+        address _requestor, 
+        uint256 _etherAmount, 
+        uint256 _sharesAmount
+    ) external onlyOwner returns (uint256 requestId) {
+        requestId = queueLength++;
+        queue[requestId] = Request(_requestor, _etherAmount, _sharesAmount);
     }
 
     /**
-     * @notice Mark next tickets finalized up to `lastTicketIdToFinalize` index in the queue.
-     * @dev expected that `lastTicketIdToFinalize` is chosen by criteria:
-     *  - it is the last ticket that come before the oracle report block
-     *  - we have enough money to fullfill it
+     * @notice Mark next requests in queue as finalized and lock the respective amount of ether for withdrawal.
+     * @dev expected that `lastIdToFinalize` is chosen by following criteria:
+     *  - it was created before the oracle report block
+     *  - we have enough money on wc balance to fullfill it
      */
-    function finalizeTickets(
-        uint256 lastTicketIdToFinalize, 
-        uint256 totalPooledEther,
-        uint256 totalShares
+    function finalize(
+        uint256 _lastIdToFinalize, 
+        uint256 _totalPooledEther,
+        uint256 _totalShares
     ) external payable onlyOwner returns (uint sharesToBurn) {
-        uint ethToLock = 0;
-        for (uint i = finalizedQueueLength; i <= lastTicketIdToFinalize; i++) {
-            uint ticketShares = queue[i].sharesToBurn;
-            uint ticketETH = queue[i].maxETHToClaim;
+        uint etherToLock = 0;
+        for (uint i = finalizedQueueLength; i <= _lastIdToFinalize; i++) {
+            uint requestShares = queue[i].sharesAmount;
+            uint requestEther = queue[i].etherAmount;
 
              // discount for slashing
-            uint256 currentEth = totalPooledEther * ticketShares / totalShares;
-            if (currentEth < ticketETH) {
-                queue[i].maxETHToClaim = currentEth;
-                ticketETH = currentEth;
+            uint256 discountedEther = _totalPooledEther * requestShares / _totalShares;
+            if (discountedEther < requestEther) {
+                queue[i].etherAmount = discountedEther;
+                requestEther = discountedEther;
             }
 
-            sharesToBurn += ticketShares;
-            ethToLock += ticketETH;
+            sharesToBurn += requestShares;
+            etherToLock += requestEther;
         }
 
-        // check that tickets are came before report and move lastNonFinalizedTicketId 
-        // to last ticket that came before report and we have enough ETH for
-        require(lockedETHAmount + ethToLock <= address(this).balance, "NOT_ENOUGH_ETHER");
+        require(lockedEtherAmount + etherToLock <= address(this).balance, "NOT_ENOUGH_ETHER");
 
-        lockedETHAmount += ethToLock;
-        finalizedQueueLength = lastTicketIdToFinalize + 1; 
+        lockedEtherAmount += etherToLock;
+        finalizedQueueLength = _lastIdToFinalize + 1; 
     }
 
     /**
-     * @notice Burns a `_ticketId` ticket and transfer reserver ether to `_to` address. 
+     * @notice Evict a `_requestId` request from the queue and transfer reserved ether to `_to` address. 
      */
-    function withdraw(uint256 _ticketId) external returns (address recipient) {
-        // ticket must be finalized
-        require(finalizedQueueLength > _ticketId, "TICKET_NOT_FINALIZED");
+    function claim(uint256 _requestId) external returns (address recipient) {
+        // request must be finalized
+        require(finalizedQueueLength > _requestId, "REQUEST_NOT_FINALIZED");
 
-        // transfer designated amount to ticket owner
-        recipient = holderOf(_ticketId);
-        uint256 ethAmount = queue[_ticketId].maxETHToClaim;
+        // transfer designated amount to request owner
+        recipient = requestor(_requestId);
+        uint256 etherAmount = queue[_requestId].etherAmount;
 
-        // find a discount if applicable
+        lockedEtherAmount -= etherAmount;
 
-        lockedETHAmount -= ethAmount;
-
-        payable(recipient).transfer(ethAmount);
+        payable(recipient).transfer(etherAmount);
         
         // free storage to save some gas
-        delete queue[_ticketId];
+        delete queue[_requestId];
     }
 
-    function holderOf(uint256 _ticketId) public view returns (address) {
-        address holder = queue[_ticketId].holder;
-        require(holder != address(0), "TICKET_NOT_FOUND");
-        return holder;
+    function requestor(uint256 _requestId) public view returns (address requestor) {
+        requestor = queue[_requestId].requestor;
+        require(requestor != address(0), "REQUEST_NOT_FOUND");
     }
 
-    function _exists(uint256 _ticketId) internal view returns (bool) {
-        return queue[_ticketId].holder != address(0);
+    function _exists(uint256 _requestId) internal view returns (bool) {
+        return queue[_requestId].requestor != address(0);
     }
 
     modifier onlyOwner() {

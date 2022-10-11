@@ -4,10 +4,23 @@
 
 pragma solidity 0.4.24;
 
-
+/**
+ * @notice an interface for witdrawal queue. See `WithdrawalQueue.sol` for docs
+ */
 interface IWithdrawalQueue {
-  function createTicket(address _from, uint256 _maxETHToWithdraw, uint256 _sharesToBurn) external returns (uint256);
-  function withdraw(uint256 _ticketId) external returns (address);
-  function queue(uint256 _ticketId) external view returns (address, uint, uint);
-  function finalizedQueueLength() external view returns (uint);
+    function enqueue(
+        address _requestor, 
+        uint256 _etherAmount, 
+        uint256 _sharesAmount
+    ) external returns (uint256 requestId);
+
+    function finalize(
+        uint256 _lastIdToFinalize, 
+        uint256 _totalPooledEther,
+        uint256 _totalShares
+    ) external payable returns (uint sharesToBurn);
+
+    function claim(uint256 _requestId) external returns (address recipient);
+    function queue(uint256 _requestId) external view returns (address, uint, uint);
+    function finalizedQueueLength() external view returns (uint);
 }

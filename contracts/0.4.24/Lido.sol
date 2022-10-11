@@ -465,39 +465,39 @@ contract Lido is ILido, StETH, AragonApp {
     * @param _amountOfStETH StETH to be locked. `msg.sender` should have the `_amountOfStETH` StETH balance upon this call
     * @return ticketId id string that can be used by user to claim their ETH later
     */
-    function requestWithdrawal(uint256 _amountOfStETH) external returns (uint256 ticketId) {
+    function requestWithdrawal(uint256 _amountOfStETH) external returns (uint256 requestId) {
         address withdrawal = address(uint160(getWithdrawalCredentials()));
         // lock StETH to withdrawal contract
         _transfer(msg.sender, withdrawal, _amountOfStETH);
 
         uint shares = getSharesByPooledEth(_amountOfStETH);
-        ticketId = IWithdrawalQueue(withdrawal).createTicket(msg.sender, _amountOfStETH, shares);
+        requestId = IWithdrawalQueue(withdrawal).enqueue(msg.sender, _amountOfStETH, shares);
 
-        emit WithdrawalRequested(msg.sender, _amountOfStETH, shares, ticketId);
+        emit WithdrawalRequested(msg.sender, _amountOfStETH, shares, requestId);
     }
 
     /**
      * @notice Burns a ticket and transfer ETH to ticket owner address
-     * @param _ticketId id of the ticket to burn
+     * @param _requestId id of the ticket to burn
      * Permissionless.
      */
-    function claimWithdrawal(uint256 _ticketId) external {
+    function claimWithdrawal(uint256 _requestId) external {
         /// Just forward it to withdrawals
         address withdrawal = address(uint160(getWithdrawalCredentials()));
-        address recipient = IWithdrawalQueue(withdrawal).withdraw(_ticketId);
+        address recipient = IWithdrawalQueue(withdrawal).claim(_requestId);
 
-        emit WithdrawalClaimed(_ticketId, recipient, msg.sender);
+        emit WithdrawalClaimed(_requestId, recipient, msg.sender);
     }
 
-    function withdrawalRequestStatus(uint _ticketId) external view returns (
+    function withdrawalRequestStatus(uint _requestId) external view returns (
         bool finalized,
-        uint256 ethToWithdraw,
+        uint256 etherToWithdraw,
         address recipient
     ) {
         IWithdrawalQueue withdrawal = IWithdrawalQueue(address(uint160(getWithdrawalCredentials())));
 
-        (recipient, ethToWithdraw,) = withdrawal.queue(_ticketId);
-        finalized = _ticketId < withdrawal.finalizedQueueLength();
+        (recipient, etherToWithdraw,) = withdrawal.queue(_requestId);
+        finalized = _requestId < withdrawal.finalizedQueueLength();
     }
 
     /**

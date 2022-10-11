@@ -230,25 +230,26 @@ interface ILido {
       */
     function submit(address _referral) external payable returns (uint256 StETH);
 
-    function requestWithdrawal(uint256 _amountOfStETH) external returns (uint256 ticketId);
-
-    function claimWithdrawal(uint256 _ticketId) external;
-
-    function withdrawalRequestStatus(uint _ticketId) external view returns (
-        bool finalized,
-        uint256 ethToWithdraw,
-        address recipient
-    );
-
     // Records a deposit made by a user
     event Submitted(address indexed sender, uint256 amount, address referral);
 
     // The `amount` of ether was sent to the deposit_contract.deposit function
     event Unbuffered(uint256 amount);
 
-    event WithdrawalRequested(address indexed receiver, uint256 amountOfStETH, uint256 amountOfShares, uint256 ticketId);
+    // Withdrawal functions
+    function requestWithdrawal(uint256 _amountOfStETH) external returns (uint256 requestId);
 
-    event WithdrawalClaimed(uint256 indexed ticketId, address indexed receiver, address initiator);
+    function claimWithdrawal(uint256 _requestId) external;
+
+    function withdrawalRequestStatus(uint _requestId) external view returns (
+        bool finalized,
+        uint256 ethToWithdraw,
+        address recipient
+    );
+
+    event WithdrawalRequested(address indexed receiver, uint256 amountOfStETH, uint256 amountOfShares, uint256 requestId);
+
+    event WithdrawalClaimed(uint256 indexed requestId, address indexed receiver, address initiator);
 
     // Info functions
 
