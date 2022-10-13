@@ -110,10 +110,10 @@ contract WithdrawalQueue {
 
         lockedEtherAmount -= etherAmount;
 
-        payable(recipient).transfer(etherAmount);
-        
-        // free storage to save some gas
+         // free storage to save some gas
         delete queue[_requestId];
+
+        payable(recipient).transfer(etherAmount);
     }
 
     function requestor(uint256 _requestId) public view returns (address requestor) {
