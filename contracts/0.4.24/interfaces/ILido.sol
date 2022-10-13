@@ -216,10 +216,13 @@ interface ILido {
 
     /**
       * @notice Ether on the ETH 2.0 side reported by the oracle
-      * @param _epoch Epoch id
-      * @param _eth2balance Balance in wei on the ETH 2.0 side
       */
-    function handleOracleReport(uint256 _epoch, uint256 _eth2balance) external;
+    function handleOracleReport(
+        uint256 _beaconValidators, 
+        uint256 _beaconBalance, 
+        uint256 _exitedValidators, 
+        uint256 _wcBufferedEther
+    ) external;
 
 
     // User functions
