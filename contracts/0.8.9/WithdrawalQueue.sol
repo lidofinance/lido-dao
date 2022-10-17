@@ -3,6 +3,10 @@
 
 pragma solidity 0.8.9;
 
+//TODO(security): Replace to in-repo copy of the lib
+import "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
+
+
 /**
   * @title A dedicated contract for handling stETH withdrawal request queue
   * @notice it responsible for:
@@ -12,6 +16,7 @@ pragma solidity 0.8.9;
   * @author folkyatina
   */
 contract WithdrawalQueue {
+    using SafeCast for uint256;
     /**
      * We don't want to deal with small amounts because there is a gas spent on oracle 
      * for each request. 
@@ -42,8 +47,9 @@ contract WithdrawalQueue {
 
     struct Request {
         address requestor;
-        uint256 etherAmount;
-        uint256 sharesAmount;
+        uint96 requestBlockNumber;
+        uint128 etherAmount;
+        uint128 sharesAmount;
     }
 
     constructor(address _owner) {
@@ -61,7 +67,12 @@ contract WithdrawalQueue {
         uint256 _sharesAmount
     ) external onlyOwner returns (uint256 requestId) {
         requestId = queueLength++;
-        queue[requestId] = Request(_requestor, _etherAmount, _sharesAmount);
+        queue[requestId] = Request(
+            _requestor, 
+            block.number.toUint96(), 
+            _etherAmount.toUint128(), 
+            _sharesAmount.toUint128()
+        );
     }
 
     /**
@@ -83,7 +94,7 @@ contract WithdrawalQueue {
              // discount for slashing
             uint256 discountedEther = _totalPooledEther * requestShares / _totalShares;
             if (discountedEther < requestEther) {
-                queue[i].etherAmount = discountedEther;
+                queue[i].etherAmount = discountedEther.toUint128();
                 requestEther = discountedEther;
             }
 
@@ -116,9 +127,9 @@ contract WithdrawalQueue {
         payable(recipient).transfer(etherAmount);
     }
 
-    function requestor(uint256 _requestId) public view returns (address requestor) {
-        requestor = queue[_requestId].requestor;
-        require(requestor != address(0), "REQUEST_NOT_FOUND");
+    function requestor(uint256 _requestId) public view returns (address result) {
+        result = queue[_requestId].requestor;
+        require(result != address(0), "REQUEST_NOT_FOUND");
     }
 
     function _exists(uint256 _requestId) internal view returns (bool) {
