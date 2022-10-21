@@ -14,13 +14,21 @@ interface IWithdrawalQueue {
         uint256 _sharesAmount
     ) external returns (uint256 requestId);
 
-    function finalize(
-        uint256 _lastIdToFinalize, 
+    function claim(uint256 _requestId, uint256 _priceIndexHint) external returns (address recipient);
+
+    function calculateFinalizationParams(
+        uint256 _lastIdToFinalize,
         uint256 _totalPooledEther,
         uint256 _totalShares
-    ) external payable returns (uint sharesToBurn);
+    ) view returns (uint256 sharesToBurn, uint256 etherToLock);
 
-    function claim(uint256 _requestId) external returns (address recipient);
+    function finalize(
+        uint256 _lastIdToFinalize,
+        uint256 _etherToLock, 
+        uint256 _totalPooledEther,
+        uint256 _totalShares
+    ) external payable;
+
     function queue(uint256 _requestId) external view returns (address, uint, uint);
     function finalizedQueueLength() external view returns (uint);
 }

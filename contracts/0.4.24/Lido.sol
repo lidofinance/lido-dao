@@ -486,14 +486,15 @@ contract Lido is ILido, StETH, AragonApp {
      * @param _requestId id of the ticket to burn
      * Permissionless.
      */
-    function claimWithdrawal(uint256 _requestId) external {
+    function claimWithdrawal(uint256 _requestId, uint256 _priceIndexHint) external {
         /// Just forward it to withdrawals
         address withdrawal = address(uint160(getWithdrawalCredentials()));
-        address recipient = IWithdrawalQueue(withdrawal).claim(_requestId);
+        address recipient = IWithdrawalQueue(withdrawal).claim(_requestId, _priceIndexHint);
 
         emit WithdrawalClaimed(_requestId, recipient, msg.sender);
     }
 
+    // TODO:
     function withdrawalRequestStatus(uint _requestId) external view returns (
         bool finalized,
         uint256 etherToWithdraw,
@@ -515,7 +516,9 @@ contract Lido is ILido, StETH, AragonApp {
         uint256 _beaconBalance,
         uint256 _exitedValidators,
         // EL values
-        uint256 _wcBufferedEther
+        uint256 _wcBufferedEther,
+        // decision
+        uint256 _requestIdToFinalizeUpTo
     ) external whenNotStopped {
         require(msg.sender == getOracle(), "APP_AUTH_FAILED");
 
@@ -560,6 +563,31 @@ contract Lido is ILido, StETH, AragonApp {
             if (executionLayerRewards != 0) {
                 BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().add(executionLayerRewards));
             }
+        }
+
+        // simple finalization flow
+        address withdrawalAddress = address(uint160(getWithdrawalCredentials()));
+        IWithdrawalQueue withdrawal = IWithdrawalQueue(withdrawalAddress);
+
+        if (_requestIdToFinalizeUpTo >= withdrawal.finalizedQueueLength()) {
+            uint256 totalPooledEther = getTotalPooledEther();
+            uint256 totalShares = getTotalShares();
+
+            (uint256 sharesToBurn, uint256 etherToLock) = withdrawal.calculateFinalizationParams(
+                _requestIdToFinalizeUpTo,
+                totalPooledEther,
+                totalShares 
+            );
+
+            _burnShares(withdrawalAddress, sharesToBurn);
+
+            uint256 additionalFundsForWithdrawal = etherToLock.sub(_wcBufferedEther);
+            withdrawal.finalize.value(additionalFundsForWithdrawal)(
+                _requestIdToFinalizeUpTo,
+                etherToLock, 
+                totalPooledEther,
+                totalShares
+            );
         }
 
         // Don’t mint/distribute any protocol fee on the non-profitable Lido oracle report

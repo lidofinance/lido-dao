@@ -40,16 +40,24 @@ contract WithdrawalQueue {
     /**
      * @notice queue for withdrawal requests
      */ 
-    mapping(uint => Request) public queue;
+    Request[] public queue;
     
-    uint256 public queueLength = 0;
     uint256 public finalizedQueueLength = 0;
 
     struct Request {
         address requestor;
         uint96 requestBlockNumber;
-        uint128 etherAmount;
-        uint128 sharesAmount;
+        uint256 cumulativeEther;
+        uint256 cumulativeShares;
+        bool claimed;
+    }
+
+    Price[] public priceHistory;
+
+    struct Price {
+        uint128 totalPooledEther;
+        uint128 totalShares;
+        uint256 index;
     }
 
     constructor(address _owner) {
@@ -66,13 +74,24 @@ contract WithdrawalQueue {
         uint256 _etherAmount, 
         uint256 _sharesAmount
     ) external onlyOwner returns (uint256 requestId) {
-        requestId = queueLength++;
-        queue[requestId] = Request(
+        require(_etherAmount > MIN_WITHDRAWAL, "WITHDRAWAL_IS_TOO_SMALL");
+        requestId = queue.length;
+
+        uint256 cumulativeEther = _etherAmount;
+        uint256 cumulativeShares = _sharesAmount;
+        
+        if (requestId > 0) {
+            cumulativeEther += queue[requestId - 1].cumulativeEther;
+            cumulativeShares += queue[requestId - 1].cumulativeShares;
+        }
+        
+        queue.push(Request(
             _requestor, 
             block.number.toUint96(), 
-            _etherAmount.toUint128(), 
-            _sharesAmount.toUint128()
-        );
+            cumulativeEther,
+            cumulativeShares,
+            false
+        ));
     }
 
     /**
@@ -83,53 +102,63 @@ contract WithdrawalQueue {
      */
     function finalize(
         uint256 _lastIdToFinalize, 
+        uint256 _etherToLock,
         uint256 _totalPooledEther,
         uint256 _totalShares
-    ) external payable onlyOwner returns (uint sharesToBurn) {
-        uint etherToLock = 0;
-        for (uint i = finalizedQueueLength; i <= _lastIdToFinalize; i++) {
-            uint requestShares = queue[i].sharesAmount;
-            uint requestEther = queue[i].etherAmount;
+    ) external payable onlyOwner {
+        require(
+            _lastIdToFinalize >= finalizedQueueLength && _lastIdToFinalize < queue.length, 
+            "INVALID_FINALIZATION_ID"
+        );
+        require(lockedEtherAmount + _etherToLock <= address(this).balance, "NOT_ENOUGH_ETHER");
 
-             // discount for slashing
-            uint256 discountedEther = _totalPooledEther * requestShares / _totalShares;
-            if (discountedEther < requestEther) {
-                queue[i].etherAmount = discountedEther.toUint128();
-                requestEther = discountedEther;
-            }
+        _updatePriceHistory(_totalPooledEther, _totalShares, _lastIdToFinalize);
 
-            sharesToBurn += requestShares;
-            etherToLock += requestEther;
-        }
-
-        require(lockedEtherAmount + etherToLock <= address(this).balance, "NOT_ENOUGH_ETHER");
-
-        lockedEtherAmount += etherToLock;
+        lockedEtherAmount += _etherToLock;
         finalizedQueueLength = _lastIdToFinalize + 1; 
     }
 
     /**
      * @notice Evict a `_requestId` request from the queue and transfer reserved ether to `_to` address. 
      */
-    function claim(uint256 _requestId) external returns (address recipient) {
+    function claim(uint256 _requestId, uint256 _priceIndexHint) external returns (address recipient) {
         // request must be finalized
         require(finalizedQueueLength > _requestId, "REQUEST_NOT_FINALIZED");
 
-        // transfer designated amount to request owner
-        recipient = requestor(_requestId);
-        uint256 etherAmount = queue[_requestId].etherAmount;
-
-        lockedEtherAmount -= etherAmount;
-
-         // free storage to save some gas
-        delete queue[_requestId];
-
-        payable(recipient).transfer(etherAmount);
+        // TODO: find a right price in history, mark request as claimed and transfer ether
     }
 
-    function requestor(uint256 _requestId) public view returns (address result) {
-        result = queue[_requestId].requestor;
-        require(result != address(0), "REQUEST_NOT_FOUND");
+    function requestor(uint256 _requestId) public view returns (address) {
+        require(_requestId < queue.length, "REQUEST_NOT_FOUND");
+        return queue[_requestId].requestor;
+    }
+
+    function calculateFinalizationParams(
+        uint256 _lastIdToFinalize,
+        uint256 _totalPooledEther,
+        uint256 _totalShares
+    ) external view returns (uint256 sharesToBurn, uint256 etherToLock) {
+        Request storage lastFinalized = queue[finalizedQueueLength - 1];
+        Request storage toFinalize = queue[_lastIdToFinalize];
+        
+        uint256 batchEther = toFinalize.cumulativeEther - lastFinalized.cumulativeEther;
+
+        sharesToBurn = toFinalize.cumulativeShares - lastFinalized.cumulativeShares;
+        etherToLock = _totalPooledEther * sharesToBurn / _totalShares;
+
+        if (batchEther < etherToLock) {
+            etherToLock = batchEther;
+        }
+    }
+
+    function _updatePriceHistory(uint256 _totalPooledEther, uint256 _totalShares, uint256 index) internal {
+        Price storage lastPrice = priceHistory[priceHistory.length - 1];
+
+        if (_totalPooledEther/_totalShares == lastPrice.totalPooledEther/lastPrice.totalShares) {
+            lastPrice.index = index;
+        } else {
+            priceHistory.push(Price(_totalPooledEther.toUint128(), _totalShares.toUint128(), index));
+        }
     }
 
     function _exists(uint256 _requestId) internal view returns (bool) {
