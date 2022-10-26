@@ -21,7 +21,7 @@ jobs:
       - name: Install yarn deps
         run: yarn install --immutable
 
-      - name: Check storage-layout
+      - name: Generate new .storage-layout
         uses: lidofinance/storage-layout-action@inputs-fix
         with:
           mode: generate
