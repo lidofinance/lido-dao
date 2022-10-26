@@ -24,7 +24,7 @@ jobs:
         run: yarn install --immutable
       
       - name: Check storage-layout
-        uses: lidofinance/storage-layout-action@inputs-fix
+        uses: lidofinance/storage-layout-action@v1
         with:
           mode: check
           src-folder: ./contracts

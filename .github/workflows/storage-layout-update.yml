@@ -22,7 +22,7 @@ jobs:
         run: yarn install --immutable
 
       - name: Generate new .storage-layout
-        uses: lidofinance/storage-layout-action@inputs-fix
+        uses: lidofinance/storage-layout-action@v1
         with:
           mode: generate
           src-folder: ./contracts
