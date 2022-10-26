@@ -21,7 +21,7 @@ jobs:
           cache: 'yarn'
 
       - name: Install yarn deps
-        run: yarn install --frozen-lockfile
+        run: yarn install --immutable
       
       - name: Check storage-layout
         uses: lidofinance/storage-layout-action@inputs-fix
