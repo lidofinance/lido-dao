@@ -1,8 +1,7 @@
 name: Update .storage-layout
 
 on:
-  # workflow_dispatch:
-  push:
+  workflow_dispatch:
 
 jobs:
   assert:
