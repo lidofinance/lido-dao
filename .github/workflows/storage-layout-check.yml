@@ -19,4 +19,4 @@ jobs:
         with:
           mode: check
           src-folder: ./contracts
-          ignore-folders: {test_helpers,template,mocks}
+          ignore-folders: "{test_helpers,template,mocks}"
