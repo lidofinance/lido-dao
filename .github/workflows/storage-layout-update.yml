@@ -32,8 +32,6 @@ jobs:
         id: changes
         continue-on-error: true
         run: .github/assert-git-changes.py
-        env:
-          TARGET_DIR: ./
 
       - name: Create Pull Request
         if: steps.changes.outcome != 'success'
