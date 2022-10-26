@@ -7,7 +7,7 @@ on:
 jobs:
   assert:
     runs-on: ubuntu-latest
-    name: Assert storage layout
+    name: Update storage layout
     steps:
       - name: Checkout
         uses: actions/checkout@v3
