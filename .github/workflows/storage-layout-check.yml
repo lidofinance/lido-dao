@@ -24,7 +24,7 @@ jobs:
         run: yarn install --frozen-lockfile
       
       - name: Check storage-layout
-        uses: lidofinance/storage-layout-action@v1
+        uses: lidofinance/storage-layout-action@inputs-fix
         with:
           mode: check
           src-folder: ./contracts
