@@ -1,0 +1,3544 @@
+{
+  "abi": [
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getCurrentOraclesReportStatus",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_value",
+          "type": "uint256"
+        }
+      ],
+      "name": "setAllowedBeaconBalanceAnnualRelativeIncrease",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getVersion",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_epochId",
+          "type": "uint256"
+        },
+        {
+          "name": "_beaconBalance",
+          "type": "uint64"
+        },
+        {
+          "name": "_beaconValidators",
+          "type": "uint32"
+        }
+      ],
+      "name": "reportBeacon",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getAllowedBeaconBalanceAnnualRelativeIncrease",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getAllowedBeaconBalanceRelativeDecrease",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getExpectedEpochId",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getLastCompletedReportDelta",
+      "outputs": [
+        {
+          "name": "postTotalPooledEther",
+          "type": "uint256"
+        },
+        {
+          "name": "preTotalPooledEther",
+          "type": "uint256"
+        },
+        {
+          "name": "timeElapsed",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_lido",
+          "type": "address"
+        },
+        {
+          "name": "_epochsPerFrame",
+          "type": "uint64"
+        },
+        {
+          "name": "_slotsPerEpoch",
+          "type": "uint64"
+        },
+        {
+          "name": "_secondsPerSlot",
+          "type": "uint64"
+        },
+        {
+          "name": "_genesisTime",
+          "type": "uint64"
+        },
+        {
+          "name": "_allowedBeaconBalanceAnnualRelativeIncrease",
+          "type": "uint256"
+        },
+        {
+          "name": "_allowedBeaconBalanceRelativeDecrease",
+          "type": "uint256"
+        }
+      ],
+      "name": "initialize",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getLido",
+      "outputs": [
+        {
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [],
+      "name": "finalizeUpgrade_v3",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getCurrentFrame",
+      "outputs": [
+        {
+          "name": "frameEpochId",
+          "type": "uint256"
+        },
+        {
+          "name": "frameStartTime",
+          "type": "uint256"
+        },
+        {
+          "name": "frameEndTime",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "_index",
+          "type": "uint256"
+        }
+      ],
+      "name": "getCurrentReportVariant",
+      "outputs": [
+        {
+          "name": "beaconBalance",
+          "type": "uint64"
+        },
+        {
+          "name": "beaconValidators",
+          "type": "uint32"
+        },
+        {
+          "name": "count",
+          "type": "uint16"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getLastCompletedEpochId",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_addr",
+          "type": "address"
+        }
+      ],
+      "name": "setBeaconReportReceiver",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getCurrentEpochId",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_member",
+          "type": "address"
+        }
+      ],
+      "name": "addOracleMember",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getBeaconReportReceiver",
+      "outputs": [
+        {
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_quorum",
+          "type": "uint256"
+        }
+      ],
+      "name": "setQuorum",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getQuorum",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getOracleMembers",
+      "outputs": [
+        {
+          "name": "",
+          "type": "address[]"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_value",
+          "type": "uint256"
+        }
+      ],
+      "name": "setAllowedBeaconBalanceRelativeDecrease",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getBeaconSpec",
+      "outputs": [
+        {
+          "name": "epochsPerFrame",
+          "type": "uint64"
+        },
+        {
+          "name": "slotsPerEpoch",
+          "type": "uint64"
+        },
+        {
+          "name": "secondsPerSlot",
+          "type": "uint64"
+        },
+        {
+          "name": "genesisTime",
+          "type": "uint64"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_epochsPerFrame",
+          "type": "uint64"
+        },
+        {
+          "name": "_slotsPerEpoch",
+          "type": "uint64"
+        },
+        {
+          "name": "_secondsPerSlot",
+          "type": "uint64"
+        },
+        {
+          "name": "_genesisTime",
+          "type": "uint64"
+        }
+      ],
+      "name": "setBeaconSpec",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getCurrentReportVariantsSize",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_member",
+          "type": "address"
+        }
+      ],
+      "name": "removeOracleMember",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "name": "value",
+          "type": "uint256"
+        }
+      ],
+      "name": "AllowedBeaconBalanceAnnualRelativeIncreaseSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "name": "value",
+          "type": "uint256"
+        }
+      ],
+      "name": "AllowedBeaconBalanceRelativeDecreaseSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "name": "callback",
+          "type": "address"
+        }
+      ],
+      "name": "BeaconReportReceiverSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "name": "member",
+          "type": "address"
+        }
+      ],
+      "name": "MemberAdded",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "name": "member",
+          "type": "address"
+        }
+      ],
+      "name": "MemberRemoved",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "name": "quorum",
+          "type": "uint256"
+        }
+      ],
+      "name": "QuorumChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "name": "epochId",
+          "type": "uint256"
+        }
+      ],
+      "name": "ExpectedEpochIdUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "name": "epochsPerFrame",
+          "type": "uint64"
+        },
+        {
+          "indexed": false,
+          "name": "slotsPerEpoch",
+          "type": "uint64"
+        },
+        {
+          "indexed": false,
+          "name": "secondsPerSlot",
+          "type": "uint64"
+        },
+        {
+          "indexed": false,
+          "name": "genesisTime",
+          "type": "uint64"
+        }
+      ],
+      "name": "BeaconSpecSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "name": "epochId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "beaconBalance",
+          "type": "uint128"
+        },
+        {
+          "indexed": false,
+          "name": "beaconValidators",
+          "type": "uint128"
+        },
+        {
+          "indexed": false,
+          "name": "caller",
+          "type": "address"
+        }
+      ],
+      "name": "BeaconReported",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "name": "epochId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "beaconBalance",
+          "type": "uint128"
+        },
+        {
+          "indexed": false,
+          "name": "beaconValidators",
+          "type": "uint128"
+        }
+      ],
+      "name": "Completed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "name": "postTotalPooledEther",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "preTotalPooledEther",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "timeElapsed",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "totalShares",
+          "type": "uint256"
+        }
+      ],
+      "name": "PostTotalShares",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "name": "version",
+          "type": "uint256"
+        }
+      ],
+      "name": "ContractVersionSet",
+      "type": "event"
+    }
+  ],
+  "bytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "addOracleMember(address)": "b164e437",
+    "finalizeUpgrade_v3()": "6d395b7e",
+    "getAllowedBeaconBalanceAnnualRelativeIncrease()": "43125b02",
+    "getAllowedBeaconBalanceRelativeDecrease()": "43d21789",
+    "getBeaconReportReceiver()": "b2480603",
+    "getBeaconSpec()": "e547c77c",
+    "getCurrentEpochId()": "a29a839f",
+    "getCurrentFrame()": "72f79b13",
+    "getCurrentOraclesReportStatus()": "03cda963",
+    "getCurrentReportVariant(uint256)": "7ffb1472",
+    "getCurrentReportVariantsSize()": "ed9767d9",
+    "getExpectedEpochId()": "4b47b74f",
+    "getLastCompletedEpochId()": "89896aef",
+    "getLastCompletedReportDelta()": "534649c4",
+    "getLido()": "6a516b47",
+    "getOracleMembers()": "dabb5757",
+    "getQuorum()": "c26c12eb",
+    "getVersion()": "0d8e6e2c",
+    "initialize(address,uint64,uint64,uint64,uint64,uint256,uint256)": "59ae8e9e",
+    "removeOracleMember(address)": "f98fae81",
+    "reportBeacon(uint256,uint64,uint32)": "31f208b3",
+    "setAllowedBeaconBalanceAnnualRelativeIncrease(uint256)": "0719d531",
+    "setAllowedBeaconBalanceRelativeDecrease(uint256)": "de50700f",
+    "setBeaconReportReceiver(address)": "9a3cb2ca",
+    "setBeaconSpec(uint64,uint64,uint64,uint64)": "e90b2da1",
+    "setQuorum(uint256)": "c1ba4e59"
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": {}
+  },
+  "ast": {
+    "absolutePath": "contracts/0.4.24/interfaces/ILidoOracle.sol",
+    "id": 3340,
+    "exportedSymbols": {
+      "ILidoOracle": [
+        3339
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "90:7436:7",
+    "nodes": [
+      {
+        "id": 3096,
+        "nodeType": "PragmaDirective",
+        "src": "90:23:7",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "0.4",
+          ".24"
+        ]
+      },
+      {
+        "id": 3097,
+        "nodeType": "ImportDirective",
+        "src": "115:33:7",
+        "nodes": [],
+        "absolutePath": "contracts/0.4.24/interfaces/ILido.sol",
+        "file": "../interfaces/ILido.sol",
+        "scope": 3340,
+        "sourceUnit": 3085,
+        "symbolAliases": [],
+        "unitAlias": ""
+      },
+      {
+        "id": 3339,
+        "nodeType": "ContractDefinition",
+        "src": "414:7111:7",
+        "nodes": [
+          {
+            "id": 3101,
+            "nodeType": "EventDefinition",
+            "src": "442:67:7",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "AllowedBeaconBalanceAnnualRelativeIncreaseSet",
+            "parameters": {
+              "id": 3100,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3099,
+                  "indexed": false,
+                  "name": "value",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3101,
+                  "src": "494:13:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3098,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "494:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "493:15:7"
+            }
+          },
+          {
+            "id": 3105,
+            "nodeType": "EventDefinition",
+            "src": "514:61:7",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "AllowedBeaconBalanceRelativeDecreaseSet",
+            "parameters": {
+              "id": 3104,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3103,
+                  "indexed": false,
+                  "name": "value",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3105,
+                  "src": "560:13:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3102,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "560:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "559:15:7"
+            }
+          },
+          {
+            "id": 3109,
+            "nodeType": "EventDefinition",
+            "src": "580:48:7",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "BeaconReportReceiverSet",
+            "parameters": {
+              "id": 3108,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3107,
+                  "indexed": false,
+                  "name": "callback",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3109,
+                  "src": "610:16:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 3106,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "610:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "609:18:7"
+            }
+          },
+          {
+            "id": 3113,
+            "nodeType": "EventDefinition",
+            "src": "633:34:7",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "MemberAdded",
+            "parameters": {
+              "id": 3112,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3111,
+                  "indexed": false,
+                  "name": "member",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3113,
+                  "src": "651:14:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 3110,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "651:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "650:16:7"
+            }
+          },
+          {
+            "id": 3117,
+            "nodeType": "EventDefinition",
+            "src": "672:36:7",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "MemberRemoved",
+            "parameters": {
+              "id": 3116,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3115,
+                  "indexed": false,
+                  "name": "member",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3117,
+                  "src": "692:14:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 3114,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "692:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "691:16:7"
+            }
+          },
+          {
+            "id": 3121,
+            "nodeType": "EventDefinition",
+            "src": "713:36:7",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "QuorumChanged",
+            "parameters": {
+              "id": 3120,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3119,
+                  "indexed": false,
+                  "name": "quorum",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3121,
+                  "src": "733:14:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3118,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "733:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "732:16:7"
+            }
+          },
+          {
+            "id": 3125,
+            "nodeType": "EventDefinition",
+            "src": "754:46:7",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "ExpectedEpochIdUpdated",
+            "parameters": {
+              "id": 3124,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3123,
+                  "indexed": false,
+                  "name": "epochId",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3125,
+                  "src": "783:15:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3122,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "783:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "782:17:7"
+            }
+          },
+          {
+            "id": 3135,
+            "nodeType": "EventDefinition",
+            "src": "805:146:7",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "BeaconSpecSet",
+            "parameters": {
+              "id": 3134,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3127,
+                  "indexed": false,
+                  "name": "epochsPerFrame",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3135,
+                  "src": "834:21:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint64",
+                    "typeString": "uint64"
+                  },
+                  "typeName": {
+                    "id": 3126,
+                    "name": "uint64",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "834:6:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint64",
+                      "typeString": "uint64"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3129,
+                  "indexed": false,
+                  "name": "slotsPerEpoch",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3135,
+                  "src": "865:20:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint64",
+                    "typeString": "uint64"
+                  },
+                  "typeName": {
+                    "id": 3128,
+                    "name": "uint64",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "865:6:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint64",
+                      "typeString": "uint64"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3131,
+                  "indexed": false,
+                  "name": "secondsPerSlot",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3135,
+                  "src": "895:21:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint64",
+                    "typeString": "uint64"
+                  },
+                  "typeName": {
+                    "id": 3130,
+                    "name": "uint64",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "895:6:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint64",
+                      "typeString": "uint64"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3133,
+                  "indexed": false,
+                  "name": "genesisTime",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3135,
+                  "src": "926:18:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint64",
+                    "typeString": "uint64"
+                  },
+                  "typeName": {
+                    "id": 3132,
+                    "name": "uint64",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "926:6:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint64",
+                      "typeString": "uint64"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "824:126:7"
+            }
+          },
+          {
+            "id": 3145,
+            "nodeType": "EventDefinition",
+            "src": "956:141:7",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "BeaconReported",
+            "parameters": {
+              "id": 3144,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3137,
+                  "indexed": false,
+                  "name": "epochId",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3145,
+                  "src": "986:15:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3136,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "986:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3139,
+                  "indexed": false,
+                  "name": "beaconBalance",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3145,
+                  "src": "1011:21:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint128",
+                    "typeString": "uint128"
+                  },
+                  "typeName": {
+                    "id": 3138,
+                    "name": "uint128",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1011:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint128",
+                      "typeString": "uint128"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3141,
+                  "indexed": false,
+                  "name": "beaconValidators",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3145,
+                  "src": "1042:24:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint128",
+                    "typeString": "uint128"
+                  },
+                  "typeName": {
+                    "id": 3140,
+                    "name": "uint128",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1042:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint128",
+                      "typeString": "uint128"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3143,
+                  "indexed": false,
+                  "name": "caller",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3145,
+                  "src": "1076:14:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 3142,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1076:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "976:120:7"
+            }
+          },
+          {
+            "id": 3153,
+            "nodeType": "EventDefinition",
+            "src": "1102:112:7",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "Completed",
+            "parameters": {
+              "id": 3152,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3147,
+                  "indexed": false,
+                  "name": "epochId",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3153,
+                  "src": "1127:15:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3146,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1127:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3149,
+                  "indexed": false,
+                  "name": "beaconBalance",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3153,
+                  "src": "1152:21:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint128",
+                    "typeString": "uint128"
+                  },
+                  "typeName": {
+                    "id": 3148,
+                    "name": "uint128",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1152:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint128",
+                      "typeString": "uint128"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3151,
+                  "indexed": false,
+                  "name": "beaconValidators",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3153,
+                  "src": "1183:24:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint128",
+                    "typeString": "uint128"
+                  },
+                  "typeName": {
+                    "id": 3150,
+                    "name": "uint128",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1183:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint128",
+                      "typeString": "uint128"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1117:96:7"
+            }
+          },
+          {
+            "id": 3163,
+            "nodeType": "EventDefinition",
+            "src": "1219:160:7",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "PostTotalShares",
+            "parameters": {
+              "id": 3162,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3155,
+                  "indexed": false,
+                  "name": "postTotalPooledEther",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3163,
+                  "src": "1251:28:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3154,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1251:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3157,
+                  "indexed": false,
+                  "name": "preTotalPooledEther",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3163,
+                  "src": "1290:27:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3156,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1290:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3159,
+                  "indexed": false,
+                  "name": "timeElapsed",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3163,
+                  "src": "1328:19:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3158,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1328:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3161,
+                  "indexed": false,
+                  "name": "totalShares",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3163,
+                  "src": "1358:19:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3160,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1358:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1240:138:7"
+            }
+          },
+          {
+            "id": 3167,
+            "nodeType": "EventDefinition",
+            "src": "1384:42:7",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "ContractVersionSet",
+            "parameters": {
+              "id": 3166,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3165,
+                  "indexed": false,
+                  "name": "version",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3167,
+                  "src": "1409:15:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3164,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1409:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1408:17:7"
+            }
+          },
+          {
+            "id": 3172,
+            "nodeType": "FunctionDefinition",
+            "src": "1496:47:7",
+            "nodes": [],
+            "documentation": "@notice Return the Lido contract address",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getLido",
+            "parameters": {
+              "id": 3168,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1512:2:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3171,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3170,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3172,
+                  "src": "1536:5:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_contract$_ILido_$3084",
+                    "typeString": "contract ILido"
+                  },
+                  "typeName": {
+                    "contractScope": null,
+                    "id": 3169,
+                    "name": "ILido",
+                    "nodeType": "UserDefinedTypeName",
+                    "referencedDeclaration": 3084,
+                    "src": "1536:5:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_contract$_ILido_$3084",
+                      "typeString": "contract ILido"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1535:7:7"
+            },
+            "scope": 3339,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "public"
+          },
+          {
+            "id": 3177,
+            "nodeType": "FunctionDefinition",
+            "src": "1655:51:7",
+            "nodes": [],
+            "documentation": "@notice Return the number of exactly the same reports needed to finalize the epoch",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getQuorum",
+            "parameters": {
+              "id": 3173,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1673:2:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3176,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3175,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3177,
+                  "src": "1697:7:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3174,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1697:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1696:9:7"
+            },
+            "scope": 3339,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "public"
+          },
+          {
+            "id": 3182,
+            "nodeType": "FunctionDefinition",
+            "src": "1815:89:7",
+            "nodes": [],
+            "documentation": "@notice Return the upper bound of the reported balance possible increase in APR",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getAllowedBeaconBalanceAnnualRelativeIncrease",
+            "parameters": {
+              "id": 3178,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1869:2:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3181,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3180,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3182,
+                  "src": "1895:7:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3179,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1895:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1894:9:7"
+            },
+            "scope": 3339,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3187,
+            "nodeType": "FunctionDefinition",
+            "src": "2006:83:7",
+            "nodes": [],
+            "documentation": "@notice Return the lower bound of the reported balance possible decrease",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getAllowedBeaconBalanceRelativeDecrease",
+            "parameters": {
+              "id": 3183,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2054:2:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3186,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3185,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3187,
+                  "src": "2080:7:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3184,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2080:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2079:9:7"
+            },
+            "scope": 3339,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3192,
+            "nodeType": "FunctionDefinition",
+            "src": "2207:80:7",
+            "nodes": [],
+            "documentation": "@notice Set the upper bound of the reported balance possible increase in APR to `_value`",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "setAllowedBeaconBalanceAnnualRelativeIncrease",
+            "parameters": {
+              "id": 3190,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3189,
+                  "name": "_value",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3192,
+                  "src": "2262:14:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3188,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2262:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2261:16:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3191,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2286:0:7"
+            },
+            "scope": 3339,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3197,
+            "nodeType": "FunctionDefinition",
+            "src": "2398:74:7",
+            "nodes": [],
+            "documentation": "@notice Set the lower bound of the reported balance possible decrease to `_value`",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "setAllowedBeaconBalanceRelativeDecrease",
+            "parameters": {
+              "id": 3195,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3194,
+                  "name": "_value",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3197,
+                  "src": "2447:14:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3193,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2447:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2446:16:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3196,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2471:0:7"
+            },
+            "scope": 3339,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3202,
+            "nodeType": "FunctionDefinition",
+            "src": "2593:67:7",
+            "nodes": [],
+            "documentation": "@notice Return the receiver contract address to be called when the report is pushed to Lido",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getBeaconReportReceiver",
+            "parameters": {
+              "id": 3198,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2625:2:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3201,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3200,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3202,
+                  "src": "2651:7:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 3199,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2651:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2650:9:7"
+            },
+            "scope": 3339,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3207,
+            "nodeType": "FunctionDefinition",
+            "src": "2778:57:7",
+            "nodes": [],
+            "documentation": "@notice Set the receiver contract address to be called when the report is pushed to Lido",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "setBeaconReportReceiver",
+            "parameters": {
+              "id": 3205,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3204,
+                  "name": "_addr",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3207,
+                  "src": "2811:13:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 3203,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2811:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2810:15:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3206,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2834:0:7"
+            },
+            "scope": 3339,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3212,
+            "nodeType": "FunctionDefinition",
+            "src": "3011:73:7",
+            "nodes": [],
+            "documentation": "@notice Return the current reporting bitmap, representing oracles who have already pushed\ntheir version of report during the expected epoch",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getCurrentOraclesReportStatus",
+            "parameters": {
+              "id": 3208,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3049:2:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3211,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3210,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3212,
+                  "src": "3075:7:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3209,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3075:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "3074:9:7"
+            },
+            "scope": 3339,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3217,
+            "nodeType": "FunctionDefinition",
+            "src": "3161:72:7",
+            "nodes": [],
+            "documentation": "@notice Return the current reporting array size",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getCurrentReportVariantsSize",
+            "parameters": {
+              "id": 3213,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3198:2:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3216,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3215,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3217,
+                  "src": "3224:7:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3214,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3224:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "3223:9:7"
+            },
+            "scope": 3339,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3228,
+            "nodeType": "FunctionDefinition",
+            "src": "3334:203:7",
+            "nodes": [],
+            "documentation": "@notice Return the current reporting array element with the given index",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getCurrentReportVariant",
+            "parameters": {
+              "id": 3220,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3219,
+                  "name": "_index",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3228,
+                  "src": "3367:14:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3218,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3367:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "3366:16:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3227,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3222,
+                  "name": "beaconBalance",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3228,
+                  "src": "3443:20:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint64",
+                    "typeString": "uint64"
+                  },
+                  "typeName": {
+                    "id": 3221,
+                    "name": "uint64",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3443:6:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint64",
+                      "typeString": "uint64"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3224,
+                  "name": "beaconValidators",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3228,
+                  "src": "3477:23:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint32",
+                    "typeString": "uint32"
+                  },
+                  "typeName": {
+                    "id": 3223,
+                    "name": "uint32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3477:6:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint32",
+                      "typeString": "uint32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3226,
+                  "name": "count",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3228,
+                  "src": "3514:12:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint16",
+                    "typeString": "uint16"
+                  },
+                  "typeName": {
+                    "id": 3225,
+                    "name": "uint16",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3514:6:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint16",
+                      "typeString": "uint16"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "3429:107:7"
+            },
+            "scope": 3339,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3233,
+            "nodeType": "FunctionDefinition",
+            "src": "3619:62:7",
+            "nodes": [],
+            "documentation": "@notice Return epoch that can be reported by oracles",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getExpectedEpochId",
+            "parameters": {
+              "id": 3229,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3646:2:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3232,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3231,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3233,
+                  "src": "3672:7:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3230,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3672:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "3671:9:7"
+            },
+            "scope": 3339,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3239,
+            "nodeType": "FunctionDefinition",
+            "src": "3766:62:7",
+            "nodes": [],
+            "documentation": "@notice Return the current oracle member committee list",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getOracleMembers",
+            "parameters": {
+              "id": 3234,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3791:2:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3238,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3237,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3239,
+                  "src": "3817:9:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_array$_t_address_$dyn_memory_ptr",
+                    "typeString": "address[]"
+                  },
+                  "typeName": {
+                    "baseType": {
+                      "id": 3235,
+                      "name": "address",
+                      "nodeType": "ElementaryTypeName",
+                      "src": "3817:7:7",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_address",
+                        "typeString": "address"
+                      }
+                    },
+                    "id": 3236,
+                    "length": null,
+                    "nodeType": "ArrayTypeName",
+                    "src": "3817:9:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_array$_t_address_$dyn_storage_ptr",
+                      "typeString": "address[]"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "3816:11:7"
+            },
+            "scope": 3339,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3244,
+            "nodeType": "FunctionDefinition",
+            "src": "3929:54:7",
+            "nodes": [],
+            "documentation": "@notice Return the initialized version of this contract starting from 0",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getVersion",
+            "parameters": {
+              "id": 3240,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3948:2:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3243,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3242,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3244,
+                  "src": "3974:7:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3241,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3974:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "3973:9:7"
+            },
+            "scope": 3339,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3255,
+            "nodeType": "FunctionDefinition",
+            "src": "4053:218:7",
+            "nodes": [],
+            "documentation": "@notice Return beacon specification data",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getBeaconSpec",
+            "parameters": {
+              "id": 3245,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "4075:2:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3254,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3247,
+                  "name": "epochsPerFrame",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3255,
+                  "src": "4138:21:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint64",
+                    "typeString": "uint64"
+                  },
+                  "typeName": {
+                    "id": 3246,
+                    "name": "uint64",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4138:6:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint64",
+                      "typeString": "uint64"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3249,
+                  "name": "slotsPerEpoch",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3255,
+                  "src": "4173:20:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint64",
+                    "typeString": "uint64"
+                  },
+                  "typeName": {
+                    "id": 3248,
+                    "name": "uint64",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4173:6:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint64",
+                      "typeString": "uint64"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3251,
+                  "name": "secondsPerSlot",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3255,
+                  "src": "4207:21:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint64",
+                    "typeString": "uint64"
+                  },
+                  "typeName": {
+                    "id": 3250,
+                    "name": "uint64",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4207:6:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint64",
+                      "typeString": "uint64"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3253,
+                  "name": "genesisTime",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3255,
+                  "src": "4242:18:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint64",
+                    "typeString": "uint64"
+                  },
+                  "typeName": {
+                    "id": 3252,
+                    "name": "uint64",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4242:6:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint64",
+                      "typeString": "uint64"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "4124:146:7"
+            },
+            "scope": 3339,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3266,
+            "nodeType": "FunctionDefinition",
+            "src": "4334:170:7",
+            "nodes": [],
+            "documentation": "Updates beacon specification data",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "setBeaconSpec",
+            "parameters": {
+              "id": 3264,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3257,
+                  "name": "_epochsPerFrame",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3266,
+                  "src": "4366:22:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint64",
+                    "typeString": "uint64"
+                  },
+                  "typeName": {
+                    "id": 3256,
+                    "name": "uint64",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4366:6:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint64",
+                      "typeString": "uint64"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3259,
+                  "name": "_slotsPerEpoch",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3266,
+                  "src": "4398:21:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint64",
+                    "typeString": "uint64"
+                  },
+                  "typeName": {
+                    "id": 3258,
+                    "name": "uint64",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4398:6:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint64",
+                      "typeString": "uint64"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3261,
+                  "name": "_secondsPerSlot",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3266,
+                  "src": "4429:22:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint64",
+                    "typeString": "uint64"
+                  },
+                  "typeName": {
+                    "id": 3260,
+                    "name": "uint64",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4429:6:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint64",
+                      "typeString": "uint64"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3263,
+                  "name": "_genesisTime",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3266,
+                  "src": "4461:19:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint64",
+                    "typeString": "uint64"
+                  },
+                  "typeName": {
+                    "id": 3262,
+                    "name": "uint64",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4461:6:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint64",
+                      "typeString": "uint64"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "4356:130:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3265,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "4503:0:7"
+            },
+            "scope": 3339,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3271,
+            "nodeType": "FunctionDefinition",
+            "src": "4585:61:7",
+            "nodes": [],
+            "documentation": "Returns the epoch calculated from current timestamp",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getCurrentEpochId",
+            "parameters": {
+              "id": 3267,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "4611:2:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3270,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3269,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3271,
+                  "src": "4637:7:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3268,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4637:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "4636:9:7"
+            },
+            "scope": 3339,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3280,
+            "nodeType": "FunctionDefinition",
+            "src": "4809:188:7",
+            "nodes": [],
+            "documentation": "@notice Return currently reportable epoch (the first epoch of the current frame) as well as\nits start and end times in seconds",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getCurrentFrame",
+            "parameters": {
+              "id": 3272,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "4833:2:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3279,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3274,
+                  "name": "frameEpochId",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3280,
+                  "src": "4896:20:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3273,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4896:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3276,
+                  "name": "frameStartTime",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3280,
+                  "src": "4930:22:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3275,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4930:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3278,
+                  "name": "frameEndTime",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3280,
+                  "src": "4966:20:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3277,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4966:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "4882:114:7"
+            },
+            "scope": 3339,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3285,
+            "nodeType": "FunctionDefinition",
+            "src": "5062:67:7",
+            "nodes": [],
+            "documentation": "@notice Return last completed epoch",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getLastCompletedEpochId",
+            "parameters": {
+              "id": 3281,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "5094:2:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3284,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3283,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3285,
+                  "src": "5120:7:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3282,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "5120:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "5119:9:7"
+            },
+            "scope": 3339,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3294,
+            "nodeType": "FunctionDefinition",
+            "src": "5225:212:7",
+            "nodes": [],
+            "documentation": "@notice Report beacon balance and its change during the last frame",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getLastCompletedReportDelta",
+            "parameters": {
+              "id": 3286,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "5261:2:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3293,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3288,
+                  "name": "postTotalPooledEther",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3294,
+                  "src": "5324:28:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3287,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "5324:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3290,
+                  "name": "preTotalPooledEther",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3294,
+                  "src": "5366:27:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3289,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "5366:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3292,
+                  "name": "timeElapsed",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3294,
+                  "src": "5407:19:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3291,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "5407:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "5310:126:7"
+            },
+            "scope": 3339,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3311,
+            "nodeType": "FunctionDefinition",
+            "src": "6175:298:7",
+            "nodes": [],
+            "documentation": "@notice Initialize the contract (version 3 for now) from scratch\n@dev For details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md\n@param _lido Address of Lido contract\n@param _epochsPerFrame Number of epochs per frame\n@param _slotsPerEpoch Number of slots per epoch\n@param _secondsPerSlot Number of seconds per slot\n@param _genesisTime Genesis time\n@param _allowedBeaconBalanceAnnualRelativeIncrease Allowed beacon balance annual relative increase (e.g. 1000 means 10% yearly increase)\n@param _allowedBeaconBalanceRelativeDecrease Allowed beacon balance moment descreat (e.g. 500 means 5% moment decrease)",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "initialize",
+            "parameters": {
+              "id": 3309,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3296,
+                  "name": "_lido",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3311,
+                  "src": "6204:13:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 3295,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "6204:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3298,
+                  "name": "_epochsPerFrame",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3311,
+                  "src": "6227:22:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint64",
+                    "typeString": "uint64"
+                  },
+                  "typeName": {
+                    "id": 3297,
+                    "name": "uint64",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "6227:6:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint64",
+                      "typeString": "uint64"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3300,
+                  "name": "_slotsPerEpoch",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3311,
+                  "src": "6259:21:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint64",
+                    "typeString": "uint64"
+                  },
+                  "typeName": {
+                    "id": 3299,
+                    "name": "uint64",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "6259:6:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint64",
+                      "typeString": "uint64"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3302,
+                  "name": "_secondsPerSlot",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3311,
+                  "src": "6290:22:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint64",
+                    "typeString": "uint64"
+                  },
+                  "typeName": {
+                    "id": 3301,
+                    "name": "uint64",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "6290:6:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint64",
+                      "typeString": "uint64"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3304,
+                  "name": "_genesisTime",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3311,
+                  "src": "6322:19:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint64",
+                    "typeString": "uint64"
+                  },
+                  "typeName": {
+                    "id": 3303,
+                    "name": "uint64",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "6322:6:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint64",
+                      "typeString": "uint64"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3306,
+                  "name": "_allowedBeaconBalanceAnnualRelativeIncrease",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3311,
+                  "src": "6351:51:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3305,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "6351:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3308,
+                  "name": "_allowedBeaconBalanceRelativeDecrease",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3311,
+                  "src": "6412:45:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3307,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "6412:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "6194:269:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3310,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "6472:0:7"
+            },
+            "scope": 3339,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3314,
+            "nodeType": "FunctionDefinition",
+            "src": "6632:39:7",
+            "nodes": [],
+            "documentation": "@notice A function to finalize upgrade to v3 (from v1). Can be called only once\n@dev For more details see _initialize_v3()",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "finalizeUpgrade_v3",
+            "parameters": {
+              "id": 3312,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "6659:2:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3313,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "6670:0:7"
+            },
+            "scope": 3339,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3319,
+            "nodeType": "FunctionDefinition",
+            "src": "6758:51:7",
+            "nodes": [],
+            "documentation": "@notice Add `_member` to the oracle member committee list",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "addOracleMember",
+            "parameters": {
+              "id": 3317,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3316,
+                  "name": "_member",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3319,
+                  "src": "6783:15:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 3315,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "6783:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "6782:17:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3318,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "6808:0:7"
+            },
+            "scope": 3339,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3324,
+            "nodeType": "FunctionDefinition",
+            "src": "6901:54:7",
+            "nodes": [],
+            "documentation": "@notice Remove '_member` from the oracle member committee list",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "removeOracleMember",
+            "parameters": {
+              "id": 3322,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3321,
+                  "name": "_member",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3324,
+                  "src": "6929:15:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 3320,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "6929:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "6928:17:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3323,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "6954:0:7"
+            },
+            "scope": 3339,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3329,
+            "nodeType": "FunctionDefinition",
+            "src": "7077:45:7",
+            "nodes": [],
+            "documentation": "@notice Set the number of exactly the same reports needed to finalize the epoch to `_quorum`",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "setQuorum",
+            "parameters": {
+              "id": 3327,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3326,
+                  "name": "_quorum",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3329,
+                  "src": "7096:15:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3325,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "7096:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "7095:17:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3328,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "7121:0:7"
+            },
+            "scope": 3339,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3338,
+            "nodeType": "FunctionDefinition",
+            "src": "7425:98:7",
+            "nodes": [],
+            "documentation": "@notice Accept oracle committee member reports from the ETH 2.0 side\n@param _epochId Beacon chain epoch\n@param _beaconBalance Balance in gwei on the ETH 2.0 side (9-digit denomination)\n@param _beaconValidators Number of validators visible in this epoch",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "reportBeacon",
+            "parameters": {
+              "id": 3336,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3331,
+                  "name": "_epochId",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3338,
+                  "src": "7447:16:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3330,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "7447:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3333,
+                  "name": "_beaconBalance",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3338,
+                  "src": "7465:21:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint64",
+                    "typeString": "uint64"
+                  },
+                  "typeName": {
+                    "id": 3332,
+                    "name": "uint64",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "7465:6:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint64",
+                      "typeString": "uint64"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3335,
+                  "name": "_beaconValidators",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3338,
+                  "src": "7488:24:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint32",
+                    "typeString": "uint32"
+                  },
+                  "typeName": {
+                    "id": 3334,
+                    "name": "uint32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "7488:6:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint32",
+                      "typeString": "uint32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "7446:67:7"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3337,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "7522:0:7"
+            },
+            "scope": 3339,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          }
+        ],
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "interface",
+        "documentation": "@title ETH 2.0 -> ETH oracle\n * The goal of the oracle is to inform other parts of the system about balances controlled by the\nDAO on the ETH 2.0 side. The balances can go up because of reward accumulation and can go down\nbecause of slashing.",
+        "fullyImplemented": false,
+        "linearizedBaseContracts": [
+          3339
+        ],
+        "name": "ILidoOracle",
+        "scope": 3340
+      }
+    ]
+  },
+  "id": 7
+}

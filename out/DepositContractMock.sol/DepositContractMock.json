@@ -1,0 +1,1322 @@
+{
+  "abi": [
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "pubkey",
+          "type": "bytes"
+        },
+        {
+          "name": "withdrawal_credentials",
+          "type": "bytes"
+        },
+        {
+          "name": "signature",
+          "type": "bytes"
+        },
+        {
+          "name": "deposit_data_root",
+          "type": "bytes32"
+        }
+      ],
+      "name": "deposit",
+      "outputs": [],
+      "payable": true,
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "totalCalls",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_newRoot",
+          "type": "bytes32"
+        }
+      ],
+      "name": "set_deposit_root",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "get_deposit_root",
+      "outputs": [
+        {
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "calls",
+      "outputs": [
+        {
+          "name": "pubkey",
+          "type": "bytes"
+        },
+        {
+          "name": "withdrawal_credentials",
+          "type": "bytes"
+        },
+        {
+          "name": "signature",
+          "type": "bytes"
+        },
+        {
+          "name": "deposit_data_root",
+          "type": "bytes32"
+        },
+        {
+          "name": "value",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [],
+      "name": "reset",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": {
+    "object": "0x608060405234801561001057600080fd5b50610739806100206000396000f30060806040526004361061005b5760003560e01c63ffffffff16806322895118146100605780633af3f24f14610090578063651bb8fb146100b7578063c5f2892f146100cf578063d183ce14146100e4578063d826f88f1461024f575b600080fd5b61008e6024600480358281019290820135918135808301929082013591604435918201910135606435610264565b005b34801561009c57600080fd5b506100a56103a5565b60408051918252519081900360200190f35b3480156100c357600080fd5b5061008e6004356103ac565b3480156100db57600080fd5b506100a56103b1565b3480156100f057600080fd5b506100fc6004356103b7565b60408051606081018490526080810183905260a080825287519082015286519091829160208084019284019160c08501918b019080838360005b8381101561014e578181015183820152602001610136565b50505050905090810190601f16801561017b5780820380516001836020036101000a031916815260200191505b5084810383528851815288516020918201918a019080838360005b838110156101ae578181015183820152602001610196565b50505050905090810190601f1680156101db5780820380516001836020036101000a031916815260200191505b50848103825287518152875160209182019189019080838360005b8381101561020e5781810151838201526020016101f6565b50505050905090810190601f16801561023b5780820380516001836020036101000a031916815260200191505b509850505050505050505060405180910390f35b34801561025b57600080fd5b5061008e6105a4565b6040805160c06020601f8a01819004028201810190925260a081018881526000928291908b908b9081908501838280828437820191505050505050815260200187878080601f016020809104026020016040519081016040528093929190818152602001838380828437820191505050505050815260200185858080601f0160208091040260200160405190810160405280939291908181526020018383808284375050509284525050506020808201859052346040909201919091528254600181018085556000948552938290208351805160059093029091019261034f928492909101906105b3565b50602082810151805161036892600185019201906105b3565b50604082015180516103849160028401916020909101906105b3565b50606082015160038201556080909101516004909101555050505050505050565b6000545b90565b600155565b60015490565b60008054829081106103c557fe5b60009182526020918290206005919091020180546040805160026001841615610100026000190190931692909204601f81018590048502830185019091528082529193509183919083018282801561045e5780601f106104335761010080835404028352916020019161045e565b820191906000526020600020905b81548152906001019060200180831161044157829003601f168201915b505050505090806001018054600181600116156101000203166002900480601f0160208091040260200160405190810160405280929190818152602001828054600181600116156101000203166002900480156104fc5780601f106104d1576101008083540402835291602001916104fc565b820191906000526020600020905b8154815290600101906020018083116104df57829003601f168201915b50505060028085018054604080516020601f600019610100600187161502019094169590950492830185900485028101850190915281815295969594509092509083018282801561058e5780601f106105635761010080835404028352916020019161058e565b820191906000526020600020905b81548152906001019060200180831161057157829003601f168201915b5050505050908060030154908060040154905085565b60006105b08180610631565b50565b828054600181600116156101000203166002900490600052602060002090601f016020900481019282601f106105f457805160ff1916838001178555610621565b82800160010185558215610621579182015b82811115610621578251825591602001919060010190610606565b5061062d929150610662565b5090565b81548183558181111561065d5760050281600502836000526020600020918201910161065d919061067c565b505050565b6103a991905b8082111561062d5760008155600101610668565b6103a991905b8082111561062d57600061069682826106c9565b6106a46001830160006106c9565b6106b26002830160006106c9565b506000600382018190556004820155600501610682565b50805460018160011615610100020316600290046000825580601f106106ef57506105b0565b601f0160209004906000526020600020908101906105b091906106625600a165627a7a723058205bc22df986684e1c7b2abe3e121fafe8d1e1ba0f9b46f5e2006384e7fdeaedfa0029",
+    "sourceMap": "221:958:24:-;;;;8:9:-1;5:2;;;30:1;27;20:12;5:2;221:958:24;;;;;;;",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x60806040526004361061005b5760003560e01c63ffffffff16806322895118146100605780633af3f24f14610090578063651bb8fb146100b7578063c5f2892f146100cf578063d183ce14146100e4578063d826f88f1461024f575b600080fd5b61008e6024600480358281019290820135918135808301929082013591604435918201910135606435610264565b005b34801561009c57600080fd5b506100a56103a5565b60408051918252519081900360200190f35b3480156100c357600080fd5b5061008e6004356103ac565b3480156100db57600080fd5b506100a56103b1565b3480156100f057600080fd5b506100fc6004356103b7565b60408051606081018490526080810183905260a080825287519082015286519091829160208084019284019160c08501918b019080838360005b8381101561014e578181015183820152602001610136565b50505050905090810190601f16801561017b5780820380516001836020036101000a031916815260200191505b5084810383528851815288516020918201918a019080838360005b838110156101ae578181015183820152602001610196565b50505050905090810190601f1680156101db5780820380516001836020036101000a031916815260200191505b50848103825287518152875160209182019189019080838360005b8381101561020e5781810151838201526020016101f6565b50505050905090810190601f16801561023b5780820380516001836020036101000a031916815260200191505b509850505050505050505060405180910390f35b34801561025b57600080fd5b5061008e6105a4565b6040805160c06020601f8a01819004028201810190925260a081018881526000928291908b908b9081908501838280828437820191505050505050815260200187878080601f016020809104026020016040519081016040528093929190818152602001838380828437820191505050505050815260200185858080601f0160208091040260200160405190810160405280939291908181526020018383808284375050509284525050506020808201859052346040909201919091528254600181018085556000948552938290208351805160059093029091019261034f928492909101906105b3565b50602082810151805161036892600185019201906105b3565b50604082015180516103849160028401916020909101906105b3565b50606082015160038201556080909101516004909101555050505050505050565b6000545b90565b600155565b60015490565b60008054829081106103c557fe5b60009182526020918290206005919091020180546040805160026001841615610100026000190190931692909204601f81018590048502830185019091528082529193509183919083018282801561045e5780601f106104335761010080835404028352916020019161045e565b820191906000526020600020905b81548152906001019060200180831161044157829003601f168201915b505050505090806001018054600181600116156101000203166002900480601f0160208091040260200160405190810160405280929190818152602001828054600181600116156101000203166002900480156104fc5780601f106104d1576101008083540402835291602001916104fc565b820191906000526020600020905b8154815290600101906020018083116104df57829003601f168201915b50505060028085018054604080516020601f600019610100600187161502019094169590950492830185900485028101850190915281815295969594509092509083018282801561058e5780601f106105635761010080835404028352916020019161058e565b820191906000526020600020905b81548152906001019060200180831161057157829003601f168201915b5050505050908060030154908060040154905085565b60006105b08180610631565b50565b828054600181600116156101000203166002900490600052602060002090601f016020900481019282601f106105f457805160ff1916838001178555610621565b82800160010185558215610621579182015b82811115610621578251825591602001919060010190610606565b5061062d929150610662565b5090565b81548183558181111561065d5760050281600502836000526020600020918201910161065d919061067c565b505050565b6103a991905b8082111561062d5760008155600101610668565b6103a991905b8082111561062d57600061069682826106c9565b6106a46001830160006106c9565b6106b26002830160006106c9565b506000600382018190556004820155600501610682565b50805460018160011615610100020316600290046000825580601f106106ef57506105b0565b601f0160209004906000526020600020908101906105b091906106625600a165627a7a723058205bc22df986684e1c7b2abe3e121fafe8d1e1ba0f9b46f5e2006384e7fdeaedfa0029",
+    "sourceMap": "221:958:24:-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;504:313;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;823:90;;8:9:-1;5:2;;;30:1;27;20:12;5:2;823:90:24;;;;;;;;;;;;;;;;;;;;1085:92;;8:9:-1;5:2;;;30:1;27;20:12;5:2;-1:-1;1085:92:24;;;;;984:95;;8:9:-1;5:2;;;30:1;27;20:12;5:2;984:95:24;;;;444:19;;8:9:-1;5:2;;;30:1;27;20:12;5:2;-1:-1;444:19:24;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;8:100:-1;33:3;30:1;27:10;8:100;;;90:11;;;84:18;71:11;;;64:39;52:2;45:10;8:100;;;12:14;444:19:24;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;444:19:24;;;;;;;;;;;;;;;;;;;;;;23:1:-1;8:100;33:3;30:1;27:10;8:100;;;90:11;;;84:18;71:11;;;64:39;52:2;45:10;8:100;;;12:14;444:19:24;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;444:19:24;;;;;;;;;;;;;;;;;;;;;;23:1:-1;8:100;33:3;30:1;27:10;8:100;;;90:11;;;84:18;71:11;;;64:39;52:2;45:10;8:100;;;12:14;444:19:24;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;919:59;;8:9:-1;5:2;;;30:1;27;20:12;5:2;919:59:24;;;;504:313;732:77;;;;;;;;;;;;;;;;;;;;;;;;;721:5;;732:77;;;737:6;;;;;;732:77;;737:6;;;;732:77;;;;;;;;;;;;;;;745:22;;732:77;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;769:9;;732:77;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;;;732:77:24;;;-1:-1:-1;;;732:77:24;;;;;;;799:9;732:77;;;;;;;;27:10:-1;;39:1;23:18;;45:23;;;732:77:24;721:89;;;;;;;;;;;;;;;;;;;;;;;;;;;;:::i;:::-;-1:-1:-1;721:89:24;;;;;;;;;;;;;;;;:::i;:::-;-1:-1:-1;721:89:24;;;;;;;;;;;;;;;;;;:::i;:::-;-1:-1:-1;721:89:24;;;;;;;;;;;;;;;;;;-1:-1:-1;;;;;;;;504:313:24:o;823:90::-;868:7;894:12;823:90;;:::o;1085:92::-;1148:11;:22;1085:92::o;984:95::-;1061:11;;984:95;:::o;444:19::-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;;444:19:24;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;444:19:24;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;;;444:19:24;;;;;;;;;;;-1:-1:-1;;444:19:24;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;444:19:24;;-1:-1:-1;444:19:24;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;:::o;919:59::-;970:1;955:16;970:1;;955:16;:::i;:::-;;919:59::o;221:958::-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;221:958:24;;;-1:-1:-1;221:958:24;:::i;:::-;;;:::o;:::-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;:::i;:::-;;;;:::o;:::-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;:::i;:::-;;;;;;;:::i;:::-;;;;;;;:::i;:::-;-1:-1:-1;221:958:24;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;:::i",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "calls(uint256)": "d183ce14",
+    "deposit(bytes,bytes,bytes,bytes32)": "22895118",
+    "get_deposit_root()": "c5f2892f",
+    "reset()": "d826f88f",
+    "set_deposit_root(bytes32)": "651bb8fb",
+    "totalCalls()": "3af3f24f"
+  },
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.4.24+commit.e67f0147\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"constant\":false,\"inputs\":[{\"name\":\"pubkey\",\"type\":\"bytes\"},{\"name\":\"withdrawal_credentials\",\"type\":\"bytes\"},{\"name\":\"signature\",\"type\":\"bytes\"},{\"name\":\"deposit_data_root\",\"type\":\"bytes32\"}],\"name\":\"deposit\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"totalCalls\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_newRoot\",\"type\":\"bytes32\"}],\"name\":\"set_deposit_root\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"get_deposit_root\",\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"calls\",\"outputs\":[{\"name\":\"pubkey\",\"type\":\"bytes\"},{\"name\":\"withdrawal_credentials\",\"type\":\"bytes\"},{\"name\":\"signature\",\"type\":\"bytes\"},{\"name\":\"deposit_data_root\",\"type\":\"bytes32\"},{\"name\":\"value\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"reset\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"methods\":{}},\"userdoc\":{\"methods\":{}}},\"settings\":{\"compilationTarget\":{\"contracts/0.4.24/test_helpers/DepositContractMock.sol\":\"DepositContractMock\"},\"evmVersion\":\"constantinople\",\"libraries\":{},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":@aragon/=node_modules/@aragon/\",\":@nomiclabs/=node_modules/@nomiclabs/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@solidity-parser/=node_modules/@solidity-parser/\",\":ens/=node_modules/@aragon/os/contracts/lib/ens/\",\":eth-gas-reporter/=node_modules/eth-gas-reporter/\",\":gasprofile/=node_modules/gasprofile/\",\":hardhat/=node_modules/hardhat/\",\":math/=node_modules/@aragon/os/contracts/lib/math/\",\":misc/=node_modules/@aragon/os/contracts/lib/misc/\",\":openzeppelin-solidity/=node_modules/openzeppelin-solidity/\",\":sol-explore/=node_modules/sol-explore/\",\":solhint/=node_modules/solhint/\",\":solidity-bytes-utils/=node_modules/solidity-bytes-utils/\",\":token/=node_modules/@aragon/os/contracts/lib/token/\",\":truffle/=node_modules/truffle/\"]},\"sources\":{\"contracts/0.4.24/interfaces/IDepositContract.sol\":{\"keccak256\":\"0x829814c6d8e83cf4bedc452fbfc2ece0ce1ef58c041de51ab3cda4ac931ee896\",\"urls\":[\"bzzr://02bd80e953e691cb513f981d0292ea20c9fab802cf8df7cdfd7b7ee7dc4ea43b\"]},\"contracts/0.4.24/test_helpers/DepositContractMock.sol\":{\"keccak256\":\"0xe1be3568eb478ae49073d85c5530c65315698f29bdead4a7fc28fd9e096151e7\",\"urls\":[\"bzzr://bec3a66db460fe74483a420f1447b020e06d410670998a2977f436821efa437a\"]}},\"version\":1}",
+  "metadata": {
+    "compiler": {
+      "version": "0.4.24+commit.e67f0147"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": null,
+              "name": "pubkey",
+              "type": "bytes"
+            },
+            {
+              "internalType": null,
+              "name": "withdrawal_credentials",
+              "type": "bytes"
+            },
+            {
+              "internalType": null,
+              "name": "signature",
+              "type": "bytes"
+            },
+            {
+              "internalType": null,
+              "name": "deposit_data_root",
+              "type": "bytes32"
+            }
+          ],
+          "stateMutability": "payable",
+          "type": "function",
+          "name": "deposit"
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "totalCalls",
+          "outputs": [
+            {
+              "internalType": null,
+              "name": "",
+              "type": "uint256"
+            }
+          ]
+        },
+        {
+          "inputs": [
+            {
+              "internalType": null,
+              "name": "_newRoot",
+              "type": "bytes32"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "set_deposit_root"
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "get_deposit_root",
+          "outputs": [
+            {
+              "internalType": null,
+              "name": "",
+              "type": "bytes32"
+            }
+          ]
+        },
+        {
+          "inputs": [
+            {
+              "internalType": null,
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "calls",
+          "outputs": [
+            {
+              "internalType": null,
+              "name": "pubkey",
+              "type": "bytes"
+            },
+            {
+              "internalType": null,
+              "name": "withdrawal_credentials",
+              "type": "bytes"
+            },
+            {
+              "internalType": null,
+              "name": "signature",
+              "type": "bytes"
+            },
+            {
+              "internalType": null,
+              "name": "deposit_data_root",
+              "type": "bytes32"
+            },
+            {
+              "internalType": null,
+              "name": "value",
+              "type": "uint256"
+            }
+          ]
+        },
+        {
+          "inputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "reset"
+        }
+      ],
+      "devdoc": {
+        "methods": {}
+      },
+      "userdoc": {
+        "methods": {}
+      }
+    },
+    "settings": {
+      "remappings": [
+        ":@aragon/=node_modules/@aragon/",
+        ":@nomiclabs/=node_modules/@nomiclabs/",
+        ":@openzeppelin/=node_modules/@openzeppelin/",
+        ":@solidity-parser/=node_modules/@solidity-parser/",
+        ":ens/=node_modules/@aragon/os/contracts/lib/ens/",
+        ":eth-gas-reporter/=node_modules/eth-gas-reporter/",
+        ":gasprofile/=node_modules/gasprofile/",
+        ":hardhat/=node_modules/hardhat/",
+        ":math/=node_modules/@aragon/os/contracts/lib/math/",
+        ":misc/=node_modules/@aragon/os/contracts/lib/misc/",
+        ":openzeppelin-solidity/=node_modules/openzeppelin-solidity/",
+        ":sol-explore/=node_modules/sol-explore/",
+        ":solhint/=node_modules/solhint/",
+        ":solidity-bytes-utils/=node_modules/solidity-bytes-utils/",
+        ":token/=node_modules/@aragon/os/contracts/lib/token/",
+        ":truffle/=node_modules/truffle/"
+      ],
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "compilationTarget": {
+        "contracts/0.4.24/test_helpers/DepositContractMock.sol": "DepositContractMock"
+      },
+      "libraries": {}
+    },
+    "sources": {
+      "contracts/0.4.24/interfaces/IDepositContract.sol": {
+        "keccak256": "0x829814c6d8e83cf4bedc452fbfc2ece0ce1ef58c041de51ab3cda4ac931ee896",
+        "urls": [
+          "bzzr://02bd80e953e691cb513f981d0292ea20c9fab802cf8df7cdfd7b7ee7dc4ea43b"
+        ],
+        "license": null
+      },
+      "contracts/0.4.24/test_helpers/DepositContractMock.sol": {
+        "keccak256": "0xe1be3568eb478ae49073d85c5530c65315698f29bdead4a7fc28fd9e096151e7",
+        "urls": [
+          "bzzr://bec3a66db460fe74483a420f1447b020e06d410670998a2977f436821efa437a"
+        ],
+        "license": null
+      }
+    },
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": {}
+  },
+  "ast": {
+    "absolutePath": "contracts/0.4.24/test_helpers/DepositContractMock.sol",
+    "id": 10837,
+    "exportedSymbols": {
+      "DepositContractMock": [
+        10836
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "90:1090:24",
+    "nodes": [
+      {
+        "id": 10754,
+        "nodeType": "PragmaDirective",
+        "src": "90:23:24",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "0.4",
+          ".24"
+        ]
+      },
+      {
+        "id": 10755,
+        "nodeType": "ImportDirective",
+        "src": "115:44:24",
+        "nodes": [],
+        "absolutePath": "contracts/0.4.24/interfaces/IDepositContract.sol",
+        "file": "../interfaces/IDepositContract.sol",
+        "scope": 10837,
+        "sourceUnit": 2854,
+        "symbolAliases": [],
+        "unitAlias": ""
+      },
+      {
+        "id": 10836,
+        "nodeType": "ContractDefinition",
+        "src": "221:958:24",
+        "nodes": [
+          {
+            "id": 10768,
+            "nodeType": "StructDefinition",
+            "src": "276:162:24",
+            "nodes": [],
+            "canonicalName": "DepositContractMock.Call",
+            "members": [
+              {
+                "constant": false,
+                "id": 10759,
+                "name": "pubkey",
+                "nodeType": "VariableDeclaration",
+                "scope": 10768,
+                "src": "298:12:24",
+                "stateVariable": false,
+                "storageLocation": "default",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_bytes_storage_ptr",
+                  "typeString": "bytes"
+                },
+                "typeName": {
+                  "id": 10758,
+                  "name": "bytes",
+                  "nodeType": "ElementaryTypeName",
+                  "src": "298:5:24",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes_storage_ptr",
+                    "typeString": "bytes"
+                  }
+                },
+                "value": null,
+                "visibility": "internal"
+              },
+              {
+                "constant": false,
+                "id": 10761,
+                "name": "withdrawal_credentials",
+                "nodeType": "VariableDeclaration",
+                "scope": 10768,
+                "src": "320:28:24",
+                "stateVariable": false,
+                "storageLocation": "default",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_bytes_storage_ptr",
+                  "typeString": "bytes"
+                },
+                "typeName": {
+                  "id": 10760,
+                  "name": "bytes",
+                  "nodeType": "ElementaryTypeName",
+                  "src": "320:5:24",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes_storage_ptr",
+                    "typeString": "bytes"
+                  }
+                },
+                "value": null,
+                "visibility": "internal"
+              },
+              {
+                "constant": false,
+                "id": 10763,
+                "name": "signature",
+                "nodeType": "VariableDeclaration",
+                "scope": 10768,
+                "src": "358:15:24",
+                "stateVariable": false,
+                "storageLocation": "default",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_bytes_storage_ptr",
+                  "typeString": "bytes"
+                },
+                "typeName": {
+                  "id": 10762,
+                  "name": "bytes",
+                  "nodeType": "ElementaryTypeName",
+                  "src": "358:5:24",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes_storage_ptr",
+                    "typeString": "bytes"
+                  }
+                },
+                "value": null,
+                "visibility": "internal"
+              },
+              {
+                "constant": false,
+                "id": 10765,
+                "name": "deposit_data_root",
+                "nodeType": "VariableDeclaration",
+                "scope": 10768,
+                "src": "383:25:24",
+                "stateVariable": false,
+                "storageLocation": "default",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_bytes32",
+                  "typeString": "bytes32"
+                },
+                "typeName": {
+                  "id": 10764,
+                  "name": "bytes32",
+                  "nodeType": "ElementaryTypeName",
+                  "src": "383:7:24",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes32",
+                    "typeString": "bytes32"
+                  }
+                },
+                "value": null,
+                "visibility": "internal"
+              },
+              {
+                "constant": false,
+                "id": 10767,
+                "name": "value",
+                "nodeType": "VariableDeclaration",
+                "scope": 10768,
+                "src": "418:13:24",
+                "stateVariable": false,
+                "storageLocation": "default",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_uint256",
+                  "typeString": "uint256"
+                },
+                "typeName": {
+                  "id": 10766,
+                  "name": "uint256",
+                  "nodeType": "ElementaryTypeName",
+                  "src": "418:7:24",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  }
+                },
+                "value": null,
+                "visibility": "internal"
+              }
+            ],
+            "name": "Call",
+            "scope": 10836,
+            "visibility": "public"
+          },
+          {
+            "id": 10771,
+            "nodeType": "VariableDeclaration",
+            "src": "444:19:24",
+            "nodes": [],
+            "constant": false,
+            "name": "calls",
+            "scope": 10836,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_array$_t_struct$_Call_$10768_storage_$dyn_storage",
+              "typeString": "struct DepositContractMock.Call[]"
+            },
+            "typeName": {
+              "baseType": {
+                "contractScope": null,
+                "id": 10769,
+                "name": "Call",
+                "nodeType": "UserDefinedTypeName",
+                "referencedDeclaration": 10768,
+                "src": "444:4:24",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_struct$_Call_$10768_storage_ptr",
+                  "typeString": "struct DepositContractMock.Call"
+                }
+              },
+              "id": 10770,
+              "length": null,
+              "nodeType": "ArrayTypeName",
+              "src": "444:6:24",
+              "typeDescriptions": {
+                "typeIdentifier": "t_array$_t_struct$_Call_$10768_storage_$dyn_storage_ptr",
+                "typeString": "struct DepositContractMock.Call[]"
+              }
+            },
+            "value": null,
+            "visibility": "public"
+          },
+          {
+            "id": 10773,
+            "nodeType": "VariableDeclaration",
+            "src": "469:28:24",
+            "nodes": [],
+            "constant": false,
+            "name": "depositRoot",
+            "scope": 10836,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_bytes32",
+              "typeString": "bytes32"
+            },
+            "typeName": {
+              "id": 10772,
+              "name": "bytes32",
+              "nodeType": "ElementaryTypeName",
+              "src": "469:7:24",
+              "typeDescriptions": {
+                "typeIdentifier": "t_bytes32",
+                "typeString": "bytes32"
+              }
+            },
+            "value": null,
+            "visibility": "internal"
+          },
+          {
+            "id": 10798,
+            "nodeType": "FunctionDefinition",
+            "src": "504:313:24",
+            "nodes": [],
+            "body": {
+              "id": 10797,
+              "nodeType": "Block",
+              "src": "711:106:24",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "arguments": [
+                      {
+                        "argumentTypes": null,
+                        "arguments": [
+                          {
+                            "argumentTypes": null,
+                            "id": 10788,
+                            "name": "pubkey",
+                            "nodeType": "Identifier",
+                            "overloadedDeclarations": [],
+                            "referencedDeclaration": 10775,
+                            "src": "737:6:24",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_bytes_calldata_ptr",
+                              "typeString": "bytes calldata"
+                            }
+                          },
+                          {
+                            "argumentTypes": null,
+                            "id": 10789,
+                            "name": "withdrawal_credentials",
+                            "nodeType": "Identifier",
+                            "overloadedDeclarations": [],
+                            "referencedDeclaration": 10777,
+                            "src": "745:22:24",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_bytes_calldata_ptr",
+                              "typeString": "bytes calldata"
+                            }
+                          },
+                          {
+                            "argumentTypes": null,
+                            "id": 10790,
+                            "name": "signature",
+                            "nodeType": "Identifier",
+                            "overloadedDeclarations": [],
+                            "referencedDeclaration": 10779,
+                            "src": "769:9:24",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_bytes_calldata_ptr",
+                              "typeString": "bytes calldata"
+                            }
+                          },
+                          {
+                            "argumentTypes": null,
+                            "id": 10791,
+                            "name": "deposit_data_root",
+                            "nodeType": "Identifier",
+                            "overloadedDeclarations": [],
+                            "referencedDeclaration": 10781,
+                            "src": "780:17:24",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_bytes32",
+                              "typeString": "bytes32"
+                            }
+                          },
+                          {
+                            "argumentTypes": null,
+                            "expression": {
+                              "argumentTypes": null,
+                              "id": 10792,
+                              "name": "msg",
+                              "nodeType": "Identifier",
+                              "overloadedDeclarations": [],
+                              "referencedDeclaration": 27823,
+                              "src": "799:3:24",
+                              "typeDescriptions": {
+                                "typeIdentifier": "t_magic_message",
+                                "typeString": "msg"
+                              }
+                            },
+                            "id": 10793,
+                            "isConstant": false,
+                            "isLValue": false,
+                            "isPure": false,
+                            "lValueRequested": false,
+                            "memberName": "value",
+                            "nodeType": "MemberAccess",
+                            "referencedDeclaration": null,
+                            "src": "799:9:24",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_uint256",
+                              "typeString": "uint256"
+                            }
+                          }
+                        ],
+                        "expression": {
+                          "argumentTypes": [
+                            {
+                              "typeIdentifier": "t_bytes_calldata_ptr",
+                              "typeString": "bytes calldata"
+                            },
+                            {
+                              "typeIdentifier": "t_bytes_calldata_ptr",
+                              "typeString": "bytes calldata"
+                            },
+                            {
+                              "typeIdentifier": "t_bytes_calldata_ptr",
+                              "typeString": "bytes calldata"
+                            },
+                            {
+                              "typeIdentifier": "t_bytes32",
+                              "typeString": "bytes32"
+                            },
+                            {
+                              "typeIdentifier": "t_uint256",
+                              "typeString": "uint256"
+                            }
+                          ],
+                          "id": 10787,
+                          "name": "Call",
+                          "nodeType": "Identifier",
+                          "overloadedDeclarations": [],
+                          "referencedDeclaration": 10768,
+                          "src": "732:4:24",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_type$_t_struct$_Call_$10768_storage_ptr_$",
+                            "typeString": "type(struct DepositContractMock.Call storage pointer)"
+                          }
+                        },
+                        "id": 10794,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": false,
+                        "kind": "structConstructorCall",
+                        "lValueRequested": false,
+                        "names": [],
+                        "nodeType": "FunctionCall",
+                        "src": "732:77:24",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_struct$_Call_$10768_memory",
+                          "typeString": "struct DepositContractMock.Call memory"
+                        }
+                      }
+                    ],
+                    "expression": {
+                      "argumentTypes": [
+                        {
+                          "typeIdentifier": "t_struct$_Call_$10768_memory",
+                          "typeString": "struct DepositContractMock.Call memory"
+                        }
+                      ],
+                      "expression": {
+                        "argumentTypes": null,
+                        "id": 10784,
+                        "name": "calls",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 10771,
+                        "src": "721:5:24",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_array$_t_struct$_Call_$10768_storage_$dyn_storage",
+                          "typeString": "struct DepositContractMock.Call storage ref[] storage ref"
+                        }
+                      },
+                      "id": 10786,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": false,
+                      "lValueRequested": false,
+                      "memberName": "push",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": null,
+                      "src": "721:10:24",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_arraypush_nonpayable$_t_struct$_Call_$10768_storage_$returns$_t_uint256_$",
+                        "typeString": "function (struct DepositContractMock.Call storage ref) returns (uint256)"
+                      }
+                    },
+                    "id": 10795,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "721:89:24",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "id": 10796,
+                  "nodeType": "ExpressionStatement",
+                  "src": "721:89:24"
+                }
+              ]
+            },
+            "documentation": null,
+            "implemented": true,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "deposit",
+            "parameters": {
+              "id": 10782,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 10775,
+                  "name": "pubkey",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 10798,
+                  "src": "530:21:24",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes_calldata_ptr",
+                    "typeString": "bytes"
+                  },
+                  "typeName": {
+                    "id": 10774,
+                    "name": "bytes",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "530:5:24",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes_storage_ptr",
+                      "typeString": "bytes"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 10777,
+                  "name": "withdrawal_credentials",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 10798,
+                  "src": "561:37:24",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes_calldata_ptr",
+                    "typeString": "bytes"
+                  },
+                  "typeName": {
+                    "id": 10776,
+                    "name": "bytes",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "561:5:24",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes_storage_ptr",
+                      "typeString": "bytes"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 10779,
+                  "name": "signature",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 10798,
+                  "src": "608:24:24",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes_calldata_ptr",
+                    "typeString": "bytes"
+                  },
+                  "typeName": {
+                    "id": 10778,
+                    "name": "bytes",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "608:5:24",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes_storage_ptr",
+                      "typeString": "bytes"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 10781,
+                  "name": "deposit_data_root",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 10798,
+                  "src": "642:25:24",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes32",
+                    "typeString": "bytes32"
+                  },
+                  "typeName": {
+                    "id": 10780,
+                    "name": "bytes32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "642:7:24",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "520:153:24"
+            },
+            "payable": true,
+            "returnParameters": {
+              "id": 10783,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "711:0:24"
+            },
+            "scope": 10836,
+            "stateMutability": "payable",
+            "superFunction": 2852,
+            "visibility": "external"
+          },
+          {
+            "id": 10807,
+            "nodeType": "FunctionDefinition",
+            "src": "823:90:24",
+            "nodes": [],
+            "body": {
+              "id": 10806,
+              "nodeType": "Block",
+              "src": "877:36:24",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "expression": {
+                      "argumentTypes": null,
+                      "id": 10803,
+                      "name": "calls",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 10771,
+                      "src": "894:5:24",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_array$_t_struct$_Call_$10768_storage_$dyn_storage",
+                        "typeString": "struct DepositContractMock.Call storage ref[] storage ref"
+                      }
+                    },
+                    "id": 10804,
+                    "isConstant": false,
+                    "isLValue": true,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "memberName": "length",
+                    "nodeType": "MemberAccess",
+                    "referencedDeclaration": null,
+                    "src": "894:12:24",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "functionReturnParameters": 10802,
+                  "id": 10805,
+                  "nodeType": "Return",
+                  "src": "887:19:24"
+                }
+              ]
+            },
+            "documentation": null,
+            "implemented": true,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "totalCalls",
+            "parameters": {
+              "id": 10799,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "842:2:24"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 10802,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 10801,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 10807,
+                  "src": "868:7:24",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 10800,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "868:7:24",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "867:9:24"
+            },
+            "scope": 10836,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 10817,
+            "nodeType": "FunctionDefinition",
+            "src": "919:59:24",
+            "nodes": [],
+            "body": {
+              "id": 10816,
+              "nodeType": "Block",
+              "src": "945:33:24",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "id": 10814,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftHandSide": {
+                      "argumentTypes": null,
+                      "expression": {
+                        "argumentTypes": null,
+                        "id": 10810,
+                        "name": "calls",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 10771,
+                        "src": "955:5:24",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_array$_t_struct$_Call_$10768_storage_$dyn_storage",
+                          "typeString": "struct DepositContractMock.Call storage ref[] storage ref"
+                        }
+                      },
+                      "id": 10812,
+                      "isConstant": false,
+                      "isLValue": true,
+                      "isPure": false,
+                      "lValueRequested": true,
+                      "memberName": "length",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": null,
+                      "src": "955:12:24",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "nodeType": "Assignment",
+                    "operator": "=",
+                    "rightHandSide": {
+                      "argumentTypes": null,
+                      "hexValue": "30",
+                      "id": 10813,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": true,
+                      "kind": "number",
+                      "lValueRequested": false,
+                      "nodeType": "Literal",
+                      "src": "970:1:24",
+                      "subdenomination": null,
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_rational_0_by_1",
+                        "typeString": "int_const 0"
+                      },
+                      "value": "0"
+                    },
+                    "src": "955:16:24",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "id": 10815,
+                  "nodeType": "ExpressionStatement",
+                  "src": "955:16:24"
+                }
+              ]
+            },
+            "documentation": null,
+            "implemented": true,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "reset",
+            "parameters": {
+              "id": 10808,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "933:2:24"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 10809,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "945:0:24"
+            },
+            "scope": 10836,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 10825,
+            "nodeType": "FunctionDefinition",
+            "src": "984:95:24",
+            "nodes": [],
+            "body": {
+              "id": 10824,
+              "nodeType": "Block",
+              "src": "1044:35:24",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "id": 10822,
+                    "name": "depositRoot",
+                    "nodeType": "Identifier",
+                    "overloadedDeclarations": [],
+                    "referencedDeclaration": 10773,
+                    "src": "1061:11:24",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "functionReturnParameters": 10821,
+                  "id": 10823,
+                  "nodeType": "Return",
+                  "src": "1054:18:24"
+                }
+              ]
+            },
+            "documentation": null,
+            "implemented": true,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "get_deposit_root",
+            "parameters": {
+              "id": 10818,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1009:2:24"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 10821,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 10820,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 10825,
+                  "src": "1035:7:24",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes32",
+                    "typeString": "bytes32"
+                  },
+                  "typeName": {
+                    "id": 10819,
+                    "name": "bytes32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1035:7:24",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1034:9:24"
+            },
+            "scope": 10836,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 10835,
+            "nodeType": "FunctionDefinition",
+            "src": "1085:92:24",
+            "nodes": [],
+            "body": {
+              "id": 10834,
+              "nodeType": "Block",
+              "src": "1138:39:24",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "id": 10832,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftHandSide": {
+                      "argumentTypes": null,
+                      "id": 10830,
+                      "name": "depositRoot",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 10773,
+                      "src": "1148:11:24",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_bytes32",
+                        "typeString": "bytes32"
+                      }
+                    },
+                    "nodeType": "Assignment",
+                    "operator": "=",
+                    "rightHandSide": {
+                      "argumentTypes": null,
+                      "id": 10831,
+                      "name": "_newRoot",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 10827,
+                      "src": "1162:8:24",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_bytes32",
+                        "typeString": "bytes32"
+                      }
+                    },
+                    "src": "1148:22:24",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "id": 10833,
+                  "nodeType": "ExpressionStatement",
+                  "src": "1148:22:24"
+                }
+              ]
+            },
+            "documentation": null,
+            "implemented": true,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "set_deposit_root",
+            "parameters": {
+              "id": 10828,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 10827,
+                  "name": "_newRoot",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 10835,
+                  "src": "1111:16:24",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes32",
+                    "typeString": "bytes32"
+                  },
+                  "typeName": {
+                    "id": 10826,
+                    "name": "bytes32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1111:7:24",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1110:18:24"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 10829,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1138:0:24"
+            },
+            "scope": 10836,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          }
+        ],
+        "baseContracts": [
+          {
+            "arguments": null,
+            "baseName": {
+              "contractScope": null,
+              "id": 10756,
+              "name": "IDepositContract",
+              "nodeType": "UserDefinedTypeName",
+              "referencedDeclaration": 2853,
+              "src": "253:16:24",
+              "typeDescriptions": {
+                "typeIdentifier": "t_contract$_IDepositContract_$2853",
+                "typeString": "contract IDepositContract"
+              }
+            },
+            "id": 10757,
+            "nodeType": "InheritanceSpecifier",
+            "src": "253:16:24"
+          }
+        ],
+        "contractDependencies": [
+          2853
+        ],
+        "contractKind": "contract",
+        "documentation": "@dev This is a mock. Don't use in production.",
+        "fullyImplemented": true,
+        "linearizedBaseContracts": [
+          10836,
+          2853
+        ],
+        "name": "DepositContractMock",
+        "scope": 10837
+      }
+    ]
+  },
+  "id": 24
+}

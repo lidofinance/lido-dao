@@ -1,0 +1,3638 @@
+{
+  "abi": [
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_operator_id",
+          "type": "uint256"
+        },
+        {
+          "name": "_quantity",
+          "type": "uint256"
+        },
+        {
+          "name": "_pubkeys",
+          "type": "bytes"
+        },
+        {
+          "name": "_signatures",
+          "type": "bytes"
+        }
+      ],
+      "name": "addSigningKeys",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_numKeys",
+          "type": "uint256"
+        }
+      ],
+      "name": "assignNextSigningKeys",
+      "outputs": [
+        {
+          "name": "pubkeys",
+          "type": "bytes"
+        },
+        {
+          "name": "signatures",
+          "type": "bytes"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_operator_id",
+          "type": "uint256"
+        },
+        {
+          "name": "_index",
+          "type": "uint256"
+        },
+        {
+          "name": "_amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "removeSigningKeysOperatorBH",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_id",
+          "type": "uint256"
+        },
+        {
+          "name": "_name",
+          "type": "string"
+        }
+      ],
+      "name": "setNodeOperatorName",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "_totalRewardShares",
+          "type": "uint256"
+        }
+      ],
+      "name": "getRewardsDistribution",
+      "outputs": [
+        {
+          "name": "recipients",
+          "type": "address[]"
+        },
+        {
+          "name": "shares",
+          "type": "uint256[]"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_id",
+          "type": "uint256"
+        },
+        {
+          "name": "_active",
+          "type": "bool"
+        }
+      ],
+      "name": "setNodeOperatorActive",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_operator_id",
+          "type": "uint256"
+        },
+        {
+          "name": "_index",
+          "type": "uint256"
+        }
+      ],
+      "name": "removeSigningKey",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_operator_id",
+          "type": "uint256"
+        },
+        {
+          "name": "_index",
+          "type": "uint256"
+        },
+        {
+          "name": "_amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "removeSigningKeys",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_operator_id",
+          "type": "uint256"
+        },
+        {
+          "name": "_quantity",
+          "type": "uint256"
+        },
+        {
+          "name": "_pubkeys",
+          "type": "bytes"
+        },
+        {
+          "name": "_signatures",
+          "type": "bytes"
+        }
+      ],
+      "name": "addSigningKeysOperatorBH",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getActiveNodeOperatorsCount",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_name",
+          "type": "string"
+        },
+        {
+          "name": "_rewardAddress",
+          "type": "address"
+        }
+      ],
+      "name": "addNodeOperator",
+      "outputs": [
+        {
+          "name": "id",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "_operator_id",
+          "type": "uint256"
+        }
+      ],
+      "name": "getUnusedSigningKeyCount",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_id",
+          "type": "uint256"
+        },
+        {
+          "name": "_rewardAddress",
+          "type": "address"
+        }
+      ],
+      "name": "setNodeOperatorRewardAddress",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "_id",
+          "type": "uint256"
+        },
+        {
+          "name": "_fullInfo",
+          "type": "bool"
+        }
+      ],
+      "name": "getNodeOperator",
+      "outputs": [
+        {
+          "name": "active",
+          "type": "bool"
+        },
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "rewardAddress",
+          "type": "address"
+        },
+        {
+          "name": "stakingLimit",
+          "type": "uint64"
+        },
+        {
+          "name": "stoppedValidators",
+          "type": "uint64"
+        },
+        {
+          "name": "totalSigningKeys",
+          "type": "uint64"
+        },
+        {
+          "name": "usedSigningKeys",
+          "type": "uint64"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getNodeOperatorsCount",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_id",
+          "type": "uint256"
+        },
+        {
+          "name": "_stakingLimit",
+          "type": "uint64"
+        }
+      ],
+      "name": "setNodeOperatorStakingLimit",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "_operator_id",
+          "type": "uint256"
+        },
+        {
+          "name": "_index",
+          "type": "uint256"
+        }
+      ],
+      "name": "getSigningKey",
+      "outputs": [
+        {
+          "name": "key",
+          "type": "bytes"
+        },
+        {
+          "name": "depositSignature",
+          "type": "bytes"
+        },
+        {
+          "name": "used",
+          "type": "bool"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_id",
+          "type": "uint256"
+        },
+        {
+          "name": "_stoppedIncrement",
+          "type": "uint64"
+        }
+      ],
+      "name": "reportStoppedValidators",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getKeysOpIndex",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "_operator_id",
+          "type": "uint256"
+        }
+      ],
+      "name": "getTotalSigningKeyCount",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_operator_id",
+          "type": "uint256"
+        },
+        {
+          "name": "_index",
+          "type": "uint256"
+        }
+      ],
+      "name": "removeSigningKeyOperatorBH",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [],
+      "name": "trimUnusedKeys",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "name": "id",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "indexed": false,
+          "name": "rewardAddress",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "name": "stakingLimit",
+          "type": "uint64"
+        }
+      ],
+      "name": "NodeOperatorAdded",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "name": "id",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "active",
+          "type": "bool"
+        }
+      ],
+      "name": "NodeOperatorActiveSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "name": "id",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "name",
+          "type": "string"
+        }
+      ],
+      "name": "NodeOperatorNameSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "name": "id",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "rewardAddress",
+          "type": "address"
+        }
+      ],
+      "name": "NodeOperatorRewardAddressSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "name": "id",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "stakingLimit",
+          "type": "uint64"
+        }
+      ],
+      "name": "NodeOperatorStakingLimitSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "name": "id",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "totalStopped",
+          "type": "uint64"
+        }
+      ],
+      "name": "NodeOperatorTotalStoppedValidatorsReported",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "name": "id",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "totalKeysTrimmed",
+          "type": "uint64"
+        }
+      ],
+      "name": "NodeOperatorTotalKeysTrimmed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "name": "operatorId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "pubkey",
+          "type": "bytes"
+        }
+      ],
+      "name": "SigningKeyAdded",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "name": "operatorId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "pubkey",
+          "type": "bytes"
+        }
+      ],
+      "name": "SigningKeyRemoved",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "name": "keysOpIndex",
+          "type": "uint256"
+        }
+      ],
+      "name": "KeysOpIndexSet",
+      "type": "event"
+    }
+  ],
+  "bytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "addNodeOperator(string,address)": "85fa63d7",
+    "addSigningKeys(uint256,uint256,bytes,bytes)": "096b7b35",
+    "addSigningKeysOperatorBH(uint256,uint256,bytes,bytes)": "805911ae",
+    "assignNextSigningKeys(uint256)": "41bc716f",
+    "getActiveNodeOperatorsCount()": "8469cbd3",
+    "getKeysOpIndex()": "d07442f1",
+    "getNodeOperator(uint256,bool)": "9a56983c",
+    "getNodeOperatorsCount()": "a70c70e4",
+    "getRewardsDistribution(uint256)": "62dcfda1",
+    "getSigningKey(uint256,uint256)": "b449402a",
+    "getTotalSigningKeyCount(uint256)": "db9887ea",
+    "getUnusedSigningKeyCount(uint256)": "8ca7c052",
+    "removeSigningKey(uint256,uint256)": "6ef355f1",
+    "removeSigningKeyOperatorBH(uint256,uint256)": "ed5cfa41",
+    "removeSigningKeys(uint256,uint256,uint256)": "7038b141",
+    "removeSigningKeysOperatorBH(uint256,uint256,uint256)": "5ddde810",
+    "reportStoppedValidators(uint256,uint64)": "be726da2",
+    "setNodeOperatorActive(uint256,bool)": "687ca337",
+    "setNodeOperatorName(uint256,string)": "5e57d742",
+    "setNodeOperatorRewardAddress(uint256,address)": "973e9328",
+    "setNodeOperatorStakingLimit(uint256,uint64)": "ae962acf",
+    "trimUnusedKeys()": "f778021e"
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": {}
+  },
+  "ast": {
+    "absolutePath": "contracts/0.4.24/interfaces/INodeOperatorsRegistry.sol",
+    "id": 3589,
+    "exportedSymbols": {
+      "INodeOperatorsRegistry": [
+        3588
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "90:8863:8",
+    "nodes": [
+      {
+        "id": 3341,
+        "nodeType": "PragmaDirective",
+        "src": "90:23:8",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "0.4",
+          ".24"
+        ]
+      },
+      {
+        "id": 3588,
+        "nodeType": "ContractDefinition",
+        "src": "311:8641:8",
+        "nodes": [
+          {
+            "id": 3350,
+            "nodeType": "FunctionDefinition",
+            "src": "671:93:8",
+            "nodes": [],
+            "documentation": "@notice Add node operator named `name` with reward address `rewardAddress` and staking limit = 0 validators\n@param _name Human-readable name\n@param _rewardAddress Ethereum 1 address which receives stETH rewards for this operator\n@return a unique key of the added operator",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "addNodeOperator",
+            "parameters": {
+              "id": 3346,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3343,
+                  "name": "_name",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3350,
+                  "src": "696:12:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_string_calldata_ptr",
+                    "typeString": "string"
+                  },
+                  "typeName": {
+                    "id": 3342,
+                    "name": "string",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "696:6:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_string_storage_ptr",
+                      "typeString": "string"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3345,
+                  "name": "_rewardAddress",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3350,
+                  "src": "710:22:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 3344,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "710:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "695:38:8"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3349,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3348,
+                  "name": "id",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3350,
+                  "src": "752:10:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3347,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "752:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "751:12:8"
+            },
+            "scope": 3588,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3357,
+            "nodeType": "FunctionDefinition",
+            "src": "861:67:8",
+            "nodes": [],
+            "documentation": "@notice `_active ? 'Enable' : 'Disable'` the node operator #`_id`",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "setNodeOperatorActive",
+            "parameters": {
+              "id": 3355,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3352,
+                  "name": "_id",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3357,
+                  "src": "892:11:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3351,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "892:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3354,
+                  "name": "_active",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3357,
+                  "src": "905:12:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bool",
+                    "typeString": "bool"
+                  },
+                  "typeName": {
+                    "id": 3353,
+                    "name": "bool",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "905:4:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "891:27:8"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3356,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "927:0:8"
+            },
+            "scope": 3588,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3364,
+            "nodeType": "FunctionDefinition",
+            "src": "1033:65:8",
+            "nodes": [],
+            "documentation": "@notice Change human-readable name of the node operator #`_id` to `_name`",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "setNodeOperatorName",
+            "parameters": {
+              "id": 3362,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3359,
+                  "name": "_id",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3364,
+                  "src": "1062:11:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3358,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1062:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3361,
+                  "name": "_name",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3364,
+                  "src": "1075:12:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_string_calldata_ptr",
+                    "typeString": "string"
+                  },
+                  "typeName": {
+                    "id": 3360,
+                    "name": "string",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1075:6:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_string_storage_ptr",
+                      "typeString": "string"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1061:27:8"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3363,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1097:0:8"
+            },
+            "scope": 3588,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3371,
+            "nodeType": "FunctionDefinition",
+            "src": "1207:84:8",
+            "nodes": [],
+            "documentation": "@notice Change reward address of the node operator #`_id` to `_rewardAddress`",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "setNodeOperatorRewardAddress",
+            "parameters": {
+              "id": 3369,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3366,
+                  "name": "_id",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3371,
+                  "src": "1245:11:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3365,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1245:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3368,
+                  "name": "_rewardAddress",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3371,
+                  "src": "1258:22:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 3367,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1258:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1244:37:8"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3370,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1290:0:8"
+            },
+            "scope": 3588,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3378,
+            "nodeType": "FunctionDefinition",
+            "src": "1424:81:8",
+            "nodes": [],
+            "documentation": "@notice Set the maximum number of validators to stake for the node operator #`_id` to `_stakingLimit`",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "setNodeOperatorStakingLimit",
+            "parameters": {
+              "id": 3376,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3373,
+                  "name": "_id",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3378,
+                  "src": "1461:11:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3372,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1461:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3375,
+                  "name": "_stakingLimit",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3378,
+                  "src": "1474:20:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint64",
+                    "typeString": "uint64"
+                  },
+                  "typeName": {
+                    "id": 3374,
+                    "name": "uint64",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1474:6:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint64",
+                      "typeString": "uint64"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1460:35:8"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3377,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1504:0:8"
+            },
+            "scope": 3588,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3385,
+            "nodeType": "FunctionDefinition",
+            "src": "1623:81:8",
+            "nodes": [],
+            "documentation": "@notice Report `_stoppedIncrement` more stopped validators of the node operator #`_id`",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "reportStoppedValidators",
+            "parameters": {
+              "id": 3383,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3380,
+                  "name": "_id",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3385,
+                  "src": "1656:11:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3379,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1656:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3382,
+                  "name": "_stoppedIncrement",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3385,
+                  "src": "1669:24:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint64",
+                    "typeString": "uint64"
+                  },
+                  "typeName": {
+                    "id": 3381,
+                    "name": "uint64",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1669:6:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint64",
+                      "typeString": "uint64"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1655:39:8"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3384,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1703:0:8"
+            },
+            "scope": 3588,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3388,
+            "nodeType": "FunctionDefinition",
+            "src": "1812:35:8",
+            "nodes": [],
+            "documentation": "@notice Remove unused signing keys\n@dev Function is used by the pool",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "trimUnusedKeys",
+            "parameters": {
+              "id": 3386,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1835:2:8"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3387,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1846:0:8"
+            },
+            "scope": 3588,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3393,
+            "nodeType": "FunctionDefinition",
+            "src": "1925:65:8",
+            "nodes": [],
+            "documentation": "@notice Returns total number of node operators",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getNodeOperatorsCount",
+            "parameters": {
+              "id": 3389,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1955:2:8"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3392,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3391,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3393,
+                  "src": "1981:7:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3390,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1981:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1980:9:8"
+            },
+            "scope": 3588,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3398,
+            "nodeType": "FunctionDefinition",
+            "src": "2069:71:8",
+            "nodes": [],
+            "documentation": "@notice Returns number of active node operators",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getActiveNodeOperatorsCount",
+            "parameters": {
+              "id": 3394,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2105:2:8"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3397,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3396,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3398,
+                  "src": "2131:7:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3395,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2131:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2130:9:8"
+            },
+            "scope": 3588,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3419,
+            "nodeType": "FunctionDefinition",
+            "src": "2310:279:8",
+            "nodes": [],
+            "documentation": "@notice Returns the n-th node operator\n@param _id Node Operator id\n@param _fullInfo If true, name will be returned as well",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getNodeOperator",
+            "parameters": {
+              "id": 3403,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3400,
+                  "name": "_id",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3419,
+                  "src": "2335:11:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3399,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2335:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3402,
+                  "name": "_fullInfo",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3419,
+                  "src": "2348:14:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bool",
+                    "typeString": "bool"
+                  },
+                  "typeName": {
+                    "id": 3401,
+                    "name": "bool",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2348:4:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2334:29:8"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3418,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3405,
+                  "name": "active",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3419,
+                  "src": "2396:11:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bool",
+                    "typeString": "bool"
+                  },
+                  "typeName": {
+                    "id": 3404,
+                    "name": "bool",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2396:4:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3407,
+                  "name": "name",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3419,
+                  "src": "2417:11:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_string_memory_ptr",
+                    "typeString": "string"
+                  },
+                  "typeName": {
+                    "id": 3406,
+                    "name": "string",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2417:6:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_string_storage_ptr",
+                      "typeString": "string"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3409,
+                  "name": "rewardAddress",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3419,
+                  "src": "2438:21:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 3408,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2438:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3411,
+                  "name": "stakingLimit",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3419,
+                  "src": "2469:19:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint64",
+                    "typeString": "uint64"
+                  },
+                  "typeName": {
+                    "id": 3410,
+                    "name": "uint64",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2469:6:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint64",
+                      "typeString": "uint64"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3413,
+                  "name": "stoppedValidators",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3419,
+                  "src": "2498:24:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint64",
+                    "typeString": "uint64"
+                  },
+                  "typeName": {
+                    "id": 3412,
+                    "name": "uint64",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2498:6:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint64",
+                      "typeString": "uint64"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3415,
+                  "name": "totalSigningKeys",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3419,
+                  "src": "2532:23:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint64",
+                    "typeString": "uint64"
+                  },
+                  "typeName": {
+                    "id": 3414,
+                    "name": "uint64",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2532:6:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint64",
+                      "typeString": "uint64"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3417,
+                  "name": "usedSigningKeys",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3419,
+                  "src": "2565:22:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint64",
+                    "typeString": "uint64"
+                  },
+                  "typeName": {
+                    "id": 3416,
+                    "name": "uint64",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2565:6:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint64",
+                      "typeString": "uint64"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2386:202:8"
+            },
+            "scope": 3588,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3430,
+            "nodeType": "FunctionDefinition",
+            "src": "2800:159:8",
+            "nodes": [],
+            "documentation": "@notice Returns the rewards distribution proportional to the effective stake for each node operator.\n@param _totalRewardShares Total amount of reward shares to distribute.",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getRewardsDistribution",
+            "parameters": {
+              "id": 3422,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3421,
+                  "name": "_totalRewardShares",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3430,
+                  "src": "2832:26:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3420,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2832:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2831:28:8"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3429,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3425,
+                  "name": "recipients",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3430,
+                  "src": "2892:27:8",
+                  "stateVariable": false,
+                  "storageLocation": "memory",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_array$_t_address_$dyn_memory_ptr",
+                    "typeString": "address[]"
+                  },
+                  "typeName": {
+                    "baseType": {
+                      "id": 3423,
+                      "name": "address",
+                      "nodeType": "ElementaryTypeName",
+                      "src": "2892:7:8",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_address",
+                        "typeString": "address"
+                      }
+                    },
+                    "id": 3424,
+                    "length": null,
+                    "nodeType": "ArrayTypeName",
+                    "src": "2892:9:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_array$_t_address_$dyn_storage_ptr",
+                      "typeString": "address[]"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3428,
+                  "name": "shares",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3430,
+                  "src": "2929:23:8",
+                  "stateVariable": false,
+                  "storageLocation": "memory",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_array$_t_uint256_$dyn_memory_ptr",
+                    "typeString": "uint256[]"
+                  },
+                  "typeName": {
+                    "baseType": {
+                      "id": 3426,
+                      "name": "uint256",
+                      "nodeType": "ElementaryTypeName",
+                      "src": "2929:7:8",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "id": 3427,
+                    "length": null,
+                    "nodeType": "ArrayTypeName",
+                    "src": "2929:9:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_array$_t_uint256_$dyn_storage_ptr",
+                      "typeString": "uint256[]"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2882:76:8"
+            },
+            "scope": 3588,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3440,
+            "nodeType": "EventDefinition",
+            "src": "2965:93:8",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "NodeOperatorAdded",
+            "parameters": {
+              "id": 3439,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3432,
+                  "indexed": false,
+                  "name": "id",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3440,
+                  "src": "2989:10:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3431,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2989:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3434,
+                  "indexed": false,
+                  "name": "name",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3440,
+                  "src": "3001:11:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_string_memory_ptr",
+                    "typeString": "string"
+                  },
+                  "typeName": {
+                    "id": 3433,
+                    "name": "string",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3001:6:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_string_storage_ptr",
+                      "typeString": "string"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3436,
+                  "indexed": false,
+                  "name": "rewardAddress",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3440,
+                  "src": "3014:21:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 3435,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3014:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3438,
+                  "indexed": false,
+                  "name": "stakingLimit",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3440,
+                  "src": "3037:19:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint64",
+                    "typeString": "uint64"
+                  },
+                  "typeName": {
+                    "id": 3437,
+                    "name": "uint64",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3037:6:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint64",
+                      "typeString": "uint64"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2988:69:8"
+            }
+          },
+          {
+            "id": 3446,
+            "nodeType": "EventDefinition",
+            "src": "3063:61:8",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "NodeOperatorActiveSet",
+            "parameters": {
+              "id": 3445,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3442,
+                  "indexed": true,
+                  "name": "id",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3446,
+                  "src": "3091:18:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3441,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3091:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3444,
+                  "indexed": false,
+                  "name": "active",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3446,
+                  "src": "3111:11:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bool",
+                    "typeString": "bool"
+                  },
+                  "typeName": {
+                    "id": 3443,
+                    "name": "bool",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3111:4:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "3090:33:8"
+            }
+          },
+          {
+            "id": 3452,
+            "nodeType": "EventDefinition",
+            "src": "3129:59:8",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "NodeOperatorNameSet",
+            "parameters": {
+              "id": 3451,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3448,
+                  "indexed": true,
+                  "name": "id",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3452,
+                  "src": "3155:18:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3447,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3155:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3450,
+                  "indexed": false,
+                  "name": "name",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3452,
+                  "src": "3175:11:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_string_memory_ptr",
+                    "typeString": "string"
+                  },
+                  "typeName": {
+                    "id": 3449,
+                    "name": "string",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3175:6:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_string_storage_ptr",
+                      "typeString": "string"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "3154:33:8"
+            }
+          },
+          {
+            "id": 3458,
+            "nodeType": "EventDefinition",
+            "src": "3193:78:8",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "NodeOperatorRewardAddressSet",
+            "parameters": {
+              "id": 3457,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3454,
+                  "indexed": true,
+                  "name": "id",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3458,
+                  "src": "3228:18:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3453,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3228:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3456,
+                  "indexed": false,
+                  "name": "rewardAddress",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3458,
+                  "src": "3248:21:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 3455,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3248:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "3227:43:8"
+            }
+          },
+          {
+            "id": 3464,
+            "nodeType": "EventDefinition",
+            "src": "3276:75:8",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "NodeOperatorStakingLimitSet",
+            "parameters": {
+              "id": 3463,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3460,
+                  "indexed": true,
+                  "name": "id",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3464,
+                  "src": "3310:18:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3459,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3310:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3462,
+                  "indexed": false,
+                  "name": "stakingLimit",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3464,
+                  "src": "3330:19:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint64",
+                    "typeString": "uint64"
+                  },
+                  "typeName": {
+                    "id": 3461,
+                    "name": "uint64",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3330:6:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint64",
+                      "typeString": "uint64"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "3309:41:8"
+            }
+          },
+          {
+            "id": 3470,
+            "nodeType": "EventDefinition",
+            "src": "3356:90:8",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "NodeOperatorTotalStoppedValidatorsReported",
+            "parameters": {
+              "id": 3469,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3466,
+                  "indexed": true,
+                  "name": "id",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3470,
+                  "src": "3405:18:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3465,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3405:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3468,
+                  "indexed": false,
+                  "name": "totalStopped",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3470,
+                  "src": "3425:19:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint64",
+                    "typeString": "uint64"
+                  },
+                  "typeName": {
+                    "id": 3467,
+                    "name": "uint64",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3425:6:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint64",
+                      "typeString": "uint64"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "3404:41:8"
+            }
+          },
+          {
+            "id": 3476,
+            "nodeType": "EventDefinition",
+            "src": "3451:80:8",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "NodeOperatorTotalKeysTrimmed",
+            "parameters": {
+              "id": 3475,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3472,
+                  "indexed": true,
+                  "name": "id",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3476,
+                  "src": "3486:18:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3471,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3486:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3474,
+                  "indexed": false,
+                  "name": "totalKeysTrimmed",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3476,
+                  "src": "3506:23:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint64",
+                    "typeString": "uint64"
+                  },
+                  "typeName": {
+                    "id": 3473,
+                    "name": "uint64",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3506:6:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint64",
+                      "typeString": "uint64"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "3485:45:8"
+            }
+          },
+          {
+            "id": 3485,
+            "nodeType": "FunctionDefinition",
+            "src": "3951:114:8",
+            "nodes": [],
+            "documentation": "@notice Selects and returns at most `_numKeys` signing keys (as well as the corresponding\n        signatures) from the set of active keys and marks the selected keys as used.\n        May only be called by the pool contract.\n     * @param _numKeys The number of keys to select. The actual number of selected keys may be less\n       due to the lack of active keys.",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "assignNextSigningKeys",
+            "parameters": {
+              "id": 3479,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3478,
+                  "name": "_numKeys",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3485,
+                  "src": "3982:16:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3477,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3982:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "3981:18:8"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3484,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3481,
+                  "name": "pubkeys",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3485,
+                  "src": "4018:20:8",
+                  "stateVariable": false,
+                  "storageLocation": "memory",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes_memory_ptr",
+                    "typeString": "bytes"
+                  },
+                  "typeName": {
+                    "id": 3480,
+                    "name": "bytes",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4018:5:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes_storage_ptr",
+                      "typeString": "bytes"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3483,
+                  "name": "signatures",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3485,
+                  "src": "4040:23:8",
+                  "stateVariable": false,
+                  "storageLocation": "memory",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes_memory_ptr",
+                    "typeString": "bytes"
+                  },
+                  "typeName": {
+                    "id": 3482,
+                    "name": "bytes",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4040:5:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes_storage_ptr",
+                      "typeString": "bytes"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "4017:47:8"
+            },
+            "scope": 3588,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3496,
+            "nodeType": "FunctionDefinition",
+            "src": "4777:109:8",
+            "nodes": [],
+            "documentation": "@notice Add `_quantity` validator signing keys to the keys of the node operator #`_operator_id`. Concatenated keys are: `_pubkeys`\n@dev Along with each key the DAO has to provide a signatures for the\n     (pubkey, withdrawal_credentials, 32000000000) message.\n     Given that information, the contract'll be able to call\n     deposit_contract.deposit on-chain.\n@param _operator_id Node Operator id\n@param _quantity Number of signing keys provided\n@param _pubkeys Several concatenated validator signing keys\n@param _signatures Several concatenated signatures for (pubkey, withdrawal_credentials, 32000000000) messages",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "addSigningKeys",
+            "parameters": {
+              "id": 3494,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3487,
+                  "name": "_operator_id",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3496,
+                  "src": "4801:20:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3486,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4801:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3489,
+                  "name": "_quantity",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3496,
+                  "src": "4823:17:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3488,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4823:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3491,
+                  "name": "_pubkeys",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3496,
+                  "src": "4842:14:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes_calldata_ptr",
+                    "typeString": "bytes"
+                  },
+                  "typeName": {
+                    "id": 3490,
+                    "name": "bytes",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4842:5:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes_storage_ptr",
+                      "typeString": "bytes"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3493,
+                  "name": "_signatures",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3496,
+                  "src": "4858:17:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes_calldata_ptr",
+                    "typeString": "bytes"
+                  },
+                  "typeName": {
+                    "id": 3492,
+                    "name": "bytes",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4858:5:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes_storage_ptr",
+                      "typeString": "bytes"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "4800:76:8"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3495,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "4885:0:8"
+            },
+            "scope": 3588,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3507,
+            "nodeType": "FunctionDefinition",
+            "src": "5677:119:8",
+            "nodes": [],
+            "documentation": "@notice Add `_quantity` validator signing keys of operator #`_id` to the set of usable keys. Concatenated keys are: `_pubkeys`. Can be done by node operator in question by using the designated rewards address.\n@dev Along with each key the DAO has to provide a signatures for the\n     (pubkey, withdrawal_credentials, 32000000000) message.\n     Given that information, the contract'll be able to call\n     deposit_contract.deposit on-chain.\n@param _operator_id Node Operator id\n@param _quantity Number of signing keys provided\n@param _pubkeys Several concatenated validator signing keys\n@param _signatures Several concatenated signatures for (pubkey, withdrawal_credentials, 32000000000) messages",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "addSigningKeysOperatorBH",
+            "parameters": {
+              "id": 3505,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3498,
+                  "name": "_operator_id",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3507,
+                  "src": "5711:20:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3497,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "5711:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3500,
+                  "name": "_quantity",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3507,
+                  "src": "5733:17:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3499,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "5733:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3502,
+                  "name": "_pubkeys",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3507,
+                  "src": "5752:14:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes_calldata_ptr",
+                    "typeString": "bytes"
+                  },
+                  "typeName": {
+                    "id": 3501,
+                    "name": "bytes",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "5752:5:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes_storage_ptr",
+                      "typeString": "bytes"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3504,
+                  "name": "_signatures",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3507,
+                  "src": "5768:17:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes_calldata_ptr",
+                    "typeString": "bytes"
+                  },
+                  "typeName": {
+                    "id": 3503,
+                    "name": "bytes",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "5768:5:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes_storage_ptr",
+                      "typeString": "bytes"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "5710:76:8"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3506,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "5795:0:8"
+            },
+            "scope": 3588,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3514,
+            "nodeType": "FunctionDefinition",
+            "src": "6029:73:8",
+            "nodes": [],
+            "documentation": "@notice Removes a validator signing key #`_index` from the keys of the node operator #`_operator_id`\n@param _operator_id Node Operator id\n@param _index Index of the key, starting with 0",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "removeSigningKey",
+            "parameters": {
+              "id": 3512,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3509,
+                  "name": "_operator_id",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3514,
+                  "src": "6055:20:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3508,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "6055:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3511,
+                  "name": "_index",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3514,
+                  "src": "6077:14:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3510,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "6077:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "6054:38:8"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3513,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "6101:0:8"
+            },
+            "scope": 3588,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3521,
+            "nodeType": "FunctionDefinition",
+            "src": "6369:83:8",
+            "nodes": [],
+            "documentation": "@notice Removes a validator signing key #`_index` of operator #`_id` from the set of usable keys. Executed on behalf of Node Operator.\n@param _operator_id Node Operator id\n@param _index Index of the key, starting with 0",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "removeSigningKeyOperatorBH",
+            "parameters": {
+              "id": 3519,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3516,
+                  "name": "_operator_id",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3521,
+                  "src": "6405:20:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3515,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "6405:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3518,
+                  "name": "_index",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3521,
+                  "src": "6427:14:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3517,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "6427:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "6404:38:8"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3520,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "6451:0:8"
+            },
+            "scope": 3588,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3530,
+            "nodeType": "FunctionDefinition",
+            "src": "6771:91:8",
+            "nodes": [],
+            "documentation": "@notice Removes an #`_amount` of validator signing keys starting from #`_index` of operator #`_id` usable keys. Executed on behalf of DAO.\n@param _operator_id Node Operator id\n@param _index Index of the key, starting with 0\n@param _amount Number of keys to remove",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "removeSigningKeys",
+            "parameters": {
+              "id": 3528,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3523,
+                  "name": "_operator_id",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3530,
+                  "src": "6798:20:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3522,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "6798:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3525,
+                  "name": "_index",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3530,
+                  "src": "6820:14:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3524,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "6820:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3527,
+                  "name": "_amount",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3530,
+                  "src": "6836:15:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3526,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "6836:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "6797:55:8"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3529,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "6861:0:8"
+            },
+            "scope": 3588,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3539,
+            "nodeType": "FunctionDefinition",
+            "src": "7191:101:8",
+            "nodes": [],
+            "documentation": "@notice Removes an #`_amount` of validator signing keys starting from #`_index` of operator #`_id` usable keys. Executed on behalf of Node Operator.\n@param _operator_id Node Operator id\n@param _index Index of the key, starting with 0\n@param _amount Number of keys to remove",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "removeSigningKeysOperatorBH",
+            "parameters": {
+              "id": 3537,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3532,
+                  "name": "_operator_id",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3539,
+                  "src": "7228:20:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3531,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "7228:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3534,
+                  "name": "_index",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3539,
+                  "src": "7250:14:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3533,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "7250:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3536,
+                  "name": "_amount",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3539,
+                  "src": "7266:15:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3535,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "7266:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "7227:55:8"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3538,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "7291:0:8"
+            },
+            "scope": 3588,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3546,
+            "nodeType": "FunctionDefinition",
+            "src": "7405:87:8",
+            "nodes": [],
+            "documentation": "@notice Returns total number of signing keys of the node operator #`_operator_id`",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getTotalSigningKeyCount",
+            "parameters": {
+              "id": 3542,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3541,
+                  "name": "_operator_id",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3546,
+                  "src": "7438:20:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3540,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "7438:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "7437:22:8"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3545,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3544,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3546,
+                  "src": "7483:7:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3543,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "7483:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "7482:9:8"
+            },
+            "scope": 3588,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3553,
+            "nodeType": "FunctionDefinition",
+            "src": "7606:88:8",
+            "nodes": [],
+            "documentation": "@notice Returns number of usable signing keys of the node operator #`_operator_id`",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getUnusedSigningKeyCount",
+            "parameters": {
+              "id": 3549,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3548,
+                  "name": "_operator_id",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3553,
+                  "src": "7640:20:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3547,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "7640:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "7639:22:8"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3552,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3551,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3553,
+                  "src": "7685:7:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3550,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "7685:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "7684:9:8"
+            },
+            "scope": 3588,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3566,
+            "nodeType": "FunctionDefinition",
+            "src": "8078:142:8",
+            "nodes": [],
+            "documentation": "@notice Returns n-th signing key of the node operator #`_operator_id`\n@param _operator_id Node Operator id\n@param _index Index of the key, starting with 0\n@return key Key\n@return depositSignature Signature needed for a deposit_contract.deposit call\n@return used Flag indication if the key was used in the staking",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getSigningKey",
+            "parameters": {
+              "id": 3558,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3555,
+                  "name": "_operator_id",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3566,
+                  "src": "8101:20:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3554,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "8101:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3557,
+                  "name": "_index",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3566,
+                  "src": "8123:14:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3556,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "8123:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "8100:38:8"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3565,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3560,
+                  "name": "key",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3566,
+                  "src": "8174:9:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes_memory_ptr",
+                    "typeString": "bytes"
+                  },
+                  "typeName": {
+                    "id": 3559,
+                    "name": "bytes",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "8174:5:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes_storage_ptr",
+                      "typeString": "bytes"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3562,
+                  "name": "depositSignature",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3566,
+                  "src": "8185:22:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes_memory_ptr",
+                    "typeString": "bytes"
+                  },
+                  "typeName": {
+                    "id": 3561,
+                    "name": "bytes",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "8185:5:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes_storage_ptr",
+                      "typeString": "bytes"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3564,
+                  "name": "used",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3566,
+                  "src": "8209:9:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bool",
+                    "typeString": "bool"
+                  },
+                  "typeName": {
+                    "id": 3563,
+                    "name": "bool",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "8209:4:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "8173:46:8"
+            },
+            "scope": 3588,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3571,
+            "nodeType": "FunctionDefinition",
+            "src": "8704:58:8",
+            "nodes": [],
+            "documentation": "@notice Returns a monotonically increasing counter that gets incremented when any of the following happens:\n  1. a node operator's key(s) is added;\n  2. a node operator's key(s) is removed;\n  3. a node operator's approved keys limit is changed.\n  4. a node operator was activated/deactivated. Activation or deactivation of node operator\n     might lead to usage of unvalidated keys in the assignNextSigningKeys method.",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getKeysOpIndex",
+            "parameters": {
+              "id": 3567,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "8727:2:8"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3570,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3569,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3571,
+                  "src": "8753:7:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3568,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "8753:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "8752:9:8"
+            },
+            "scope": 3588,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3577,
+            "nodeType": "EventDefinition",
+            "src": "8768:64:8",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "SigningKeyAdded",
+            "parameters": {
+              "id": 3576,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3573,
+                  "indexed": true,
+                  "name": "operatorId",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3577,
+                  "src": "8790:26:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3572,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "8790:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3575,
+                  "indexed": false,
+                  "name": "pubkey",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3577,
+                  "src": "8818:12:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes_memory_ptr",
+                    "typeString": "bytes"
+                  },
+                  "typeName": {
+                    "id": 3574,
+                    "name": "bytes",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "8818:5:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes_storage_ptr",
+                      "typeString": "bytes"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "8789:42:8"
+            }
+          },
+          {
+            "id": 3583,
+            "nodeType": "EventDefinition",
+            "src": "8837:66:8",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "SigningKeyRemoved",
+            "parameters": {
+              "id": 3582,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3579,
+                  "indexed": true,
+                  "name": "operatorId",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3583,
+                  "src": "8861:26:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3578,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "8861:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3581,
+                  "indexed": false,
+                  "name": "pubkey",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3583,
+                  "src": "8889:12:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes_memory_ptr",
+                    "typeString": "bytes"
+                  },
+                  "typeName": {
+                    "id": 3580,
+                    "name": "bytes",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "8889:5:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes_storage_ptr",
+                      "typeString": "bytes"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "8860:42:8"
+            }
+          },
+          {
+            "id": 3587,
+            "nodeType": "EventDefinition",
+            "src": "8908:42:8",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "KeysOpIndexSet",
+            "parameters": {
+              "id": 3586,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3585,
+                  "indexed": false,
+                  "name": "keysOpIndex",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3587,
+                  "src": "8929:19:8",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3584,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "8929:7:8",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "8928:21:8"
+            }
+          }
+        ],
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "interface",
+        "documentation": "@title Node Operator registry\n  * Node Operator registry manages signing keys and other node operator data.\nIt's also responsible for distributing rewards to node operators.",
+        "fullyImplemented": false,
+        "linearizedBaseContracts": [
+          3588
+        ],
+        "name": "INodeOperatorsRegistry",
+        "scope": 3589
+      }
+    ]
+  },
+  "id": 8
+}

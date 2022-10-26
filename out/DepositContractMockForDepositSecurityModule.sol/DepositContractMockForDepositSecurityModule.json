@@ -1,0 +1,420 @@
+{
+  "abi": [
+    {
+      "inputs": [],
+      "name": "get_deposit_root",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "_newRoot",
+          "type": "bytes32"
+        }
+      ],
+      "name": "set_deposit_root",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": {
+    "object": "0x6080604052348015600f57600080fd5b5060ac8061001e6000396000f3fe6080604052348015600f57600080fd5b506004361060325760003560e01c8063651bb8fb146037578063c5f2892f146049575b600080fd5b60476042366004605e565b600055565b005b60005460405190815260200160405180910390f35b600060208284031215606f57600080fd5b503591905056fea26469706673582212207da9a32715042963a57664f88a803032251a92ff7ce4024f8c9889b46373c13864736f6c63430008090033",
+    "sourceMap": "206:289:10:-:0;;;;;;;;;;;;;;;;;;;",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x6080604052348015600f57600080fd5b506004361060325760003560e01c8063651bb8fb146037578063c5f2892f146049575b600080fd5b60476042366004605e565b600055565b005b60005460405190815260200160405180910390f35b600060208284031215606f57600080fd5b503591905056fea26469706673582212207da9a32715042963a57664f88a803032251a92ff7ce4024f8c9889b46373c13864736f6c63430008090033",
+    "sourceMap": "206:289:10:-:0;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;401:92;;;;;;:::i;:::-;464:11;:22;401:92;;;300:95;351:7;377:11;300:95;;345:25:33;;;333:2;318:18;300:95:10;;;;;;;14:180:33;73:6;126:2;114:9;105:7;101:23;97:32;94:52;;;142:1;139;132:12;94:52;-1:-1:-1;165:23:33;;14:180;-1:-1:-1;14:180:33:o",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "get_deposit_root()": "c5f2892f",
+    "set_deposit_root(bytes32)": "651bb8fb"
+  },
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.9+commit.e5eed63a\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"name\":\"get_deposit_root\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_newRoot\",\"type\":\"bytes32\"}],\"name\":\"set_deposit_root\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"details\":\"This is a mock. Don't use in production.\",\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/0.8.9/test_helpers/DepositContractMockForDepositSecurityModule.sol\":\"DepositContractMockForDepositSecurityModule\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":@aragon/=node_modules/@aragon/\",\":@nomiclabs/=node_modules/@nomiclabs/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@solidity-parser/=node_modules/@solidity-parser/\",\":ens/=node_modules/@aragon/os/contracts/lib/ens/\",\":eth-gas-reporter/=node_modules/eth-gas-reporter/\",\":gasprofile/=node_modules/gasprofile/\",\":hardhat/=node_modules/hardhat/\",\":math/=node_modules/@aragon/os/contracts/lib/math/\",\":misc/=node_modules/@aragon/os/contracts/lib/misc/\",\":openzeppelin-solidity/=node_modules/openzeppelin-solidity/\",\":sol-explore/=node_modules/sol-explore/\",\":solhint/=node_modules/solhint/\",\":solidity-bytes-utils/=node_modules/solidity-bytes-utils/\",\":token/=node_modules/@aragon/os/contracts/lib/token/\",\":truffle/=node_modules/truffle/\"]},\"sources\":{\"contracts/0.8.9/test_helpers/DepositContractMockForDepositSecurityModule.sol\":{\"keccak256\":\"0xface6d326325aac7e2934af0224176e47823b961bf55784961de2bfffee62031\",\"license\":\"GPL-3.0\",\"urls\":[\"bzz-raw://529c39677c0c8457ca6619de54af068b35f531e3a96782fb7b33d38186fe504d\",\"dweb:/ipfs/QmX36KzKj7g4Yz6V77ForLNerAXnHRUW8AsCjqMA2NXMnd\"]}},\"version\":1}",
+  "metadata": {
+    "compiler": {
+      "version": "0.8.9+commit.e5eed63a"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "get_deposit_root",
+          "outputs": [
+            {
+              "internalType": "bytes32",
+              "name": "",
+              "type": "bytes32"
+            }
+          ]
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "bytes32",
+              "name": "_newRoot",
+              "type": "bytes32"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "set_deposit_root"
+        }
+      ],
+      "devdoc": {
+        "kind": "dev",
+        "methods": {},
+        "version": 1
+      },
+      "userdoc": {
+        "kind": "user",
+        "methods": {},
+        "version": 1
+      }
+    },
+    "settings": {
+      "remappings": [
+        ":@aragon/=node_modules/@aragon/",
+        ":@nomiclabs/=node_modules/@nomiclabs/",
+        ":@openzeppelin/=node_modules/@openzeppelin/",
+        ":@solidity-parser/=node_modules/@solidity-parser/",
+        ":ens/=node_modules/@aragon/os/contracts/lib/ens/",
+        ":eth-gas-reporter/=node_modules/eth-gas-reporter/",
+        ":gasprofile/=node_modules/gasprofile/",
+        ":hardhat/=node_modules/hardhat/",
+        ":math/=node_modules/@aragon/os/contracts/lib/math/",
+        ":misc/=node_modules/@aragon/os/contracts/lib/misc/",
+        ":openzeppelin-solidity/=node_modules/openzeppelin-solidity/",
+        ":sol-explore/=node_modules/sol-explore/",
+        ":solhint/=node_modules/solhint/",
+        ":solidity-bytes-utils/=node_modules/solidity-bytes-utils/",
+        ":token/=node_modules/@aragon/os/contracts/lib/token/",
+        ":truffle/=node_modules/truffle/"
+      ],
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "metadata": {
+        "bytecodeHash": "ipfs"
+      },
+      "compilationTarget": {
+        "contracts/0.8.9/test_helpers/DepositContractMockForDepositSecurityModule.sol": "DepositContractMockForDepositSecurityModule"
+      },
+      "libraries": {}
+    },
+    "sources": {
+      "contracts/0.8.9/test_helpers/DepositContractMockForDepositSecurityModule.sol": {
+        "keccak256": "0xface6d326325aac7e2934af0224176e47823b961bf55784961de2bfffee62031",
+        "urls": [
+          "bzz-raw://529c39677c0c8457ca6619de54af068b35f531e3a96782fb7b33d38186fe504d",
+          "dweb:/ipfs/QmX36KzKj7g4Yz6V77ForLNerAXnHRUW8AsCjqMA2NXMnd"
+        ],
+        "license": "GPL-3.0"
+      }
+    },
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [
+      {
+        "astId": 2610,
+        "contract": "contracts/0.8.9/test_helpers/DepositContractMockForDepositSecurityModule.sol:DepositContractMockForDepositSecurityModule",
+        "label": "depositRoot",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_bytes32"
+      }
+    ],
+    "types": {
+      "t_bytes32": {
+        "encoding": "inplace",
+        "label": "bytes32",
+        "numberOfBytes": "32"
+      }
+    }
+  },
+  "ast": {
+    "absolutePath": "contracts/0.8.9/test_helpers/DepositContractMockForDepositSecurityModule.sol",
+    "id": 2630,
+    "exportedSymbols": {
+      "DepositContractMockForDepositSecurityModule": [
+        2629
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "123:373:10",
+    "nodes": [
+      {
+        "id": 2607,
+        "nodeType": "PragmaDirective",
+        "src": "123:22:10",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "0.8",
+          ".9"
+        ]
+      },
+      {
+        "id": 2629,
+        "nodeType": "ContractDefinition",
+        "src": "206:289:10",
+        "nodes": [
+          {
+            "id": 2610,
+            "nodeType": "VariableDeclaration",
+            "src": "265:28:10",
+            "nodes": [],
+            "constant": false,
+            "mutability": "mutable",
+            "name": "depositRoot",
+            "nameLocation": "282:11:10",
+            "scope": 2629,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_bytes32",
+              "typeString": "bytes32"
+            },
+            "typeName": {
+              "id": 2609,
+              "name": "bytes32",
+              "nodeType": "ElementaryTypeName",
+              "src": "265:7:10",
+              "typeDescriptions": {
+                "typeIdentifier": "t_bytes32",
+                "typeString": "bytes32"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "id": 2618,
+            "nodeType": "FunctionDefinition",
+            "src": "300:95:10",
+            "nodes": [],
+            "body": {
+              "id": 2617,
+              "nodeType": "Block",
+              "src": "360:35:10",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "id": 2615,
+                    "name": "depositRoot",
+                    "nodeType": "Identifier",
+                    "overloadedDeclarations": [],
+                    "referencedDeclaration": 2610,
+                    "src": "377:11:10",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "functionReturnParameters": 2614,
+                  "id": 2616,
+                  "nodeType": "Return",
+                  "src": "370:18:10"
+                }
+              ]
+            },
+            "functionSelector": "c5f2892f",
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "get_deposit_root",
+            "nameLocation": "309:16:10",
+            "parameters": {
+              "id": 2611,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "325:2:10"
+            },
+            "returnParameters": {
+              "id": 2614,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2613,
+                  "mutability": "mutable",
+                  "name": "",
+                  "nameLocation": "-1:-1:-1",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2618,
+                  "src": "351:7:10",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes32",
+                    "typeString": "bytes32"
+                  },
+                  "typeName": {
+                    "id": 2612,
+                    "name": "bytes32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "351:7:10",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "350:9:10"
+            },
+            "scope": 2629,
+            "stateMutability": "view",
+            "virtual": false,
+            "visibility": "external"
+          },
+          {
+            "id": 2628,
+            "nodeType": "FunctionDefinition",
+            "src": "401:92:10",
+            "nodes": [],
+            "body": {
+              "id": 2627,
+              "nodeType": "Block",
+              "src": "454:39:10",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "id": 2625,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftHandSide": {
+                      "id": 2623,
+                      "name": "depositRoot",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 2610,
+                      "src": "464:11:10",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_bytes32",
+                        "typeString": "bytes32"
+                      }
+                    },
+                    "nodeType": "Assignment",
+                    "operator": "=",
+                    "rightHandSide": {
+                      "id": 2624,
+                      "name": "_newRoot",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 2620,
+                      "src": "478:8:10",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_bytes32",
+                        "typeString": "bytes32"
+                      }
+                    },
+                    "src": "464:22:10",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "id": 2626,
+                  "nodeType": "ExpressionStatement",
+                  "src": "464:22:10"
+                }
+              ]
+            },
+            "functionSelector": "651bb8fb",
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "set_deposit_root",
+            "nameLocation": "410:16:10",
+            "parameters": {
+              "id": 2621,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2620,
+                  "mutability": "mutable",
+                  "name": "_newRoot",
+                  "nameLocation": "435:8:10",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2628,
+                  "src": "427:16:10",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes32",
+                    "typeString": "bytes32"
+                  },
+                  "typeName": {
+                    "id": 2619,
+                    "name": "bytes32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "427:7:10",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "426:18:10"
+            },
+            "returnParameters": {
+              "id": 2622,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "454:0:10"
+            },
+            "scope": 2629,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "external"
+          }
+        ],
+        "abstract": false,
+        "baseContracts": [],
+        "canonicalName": "DepositContractMockForDepositSecurityModule",
+        "contractDependencies": [],
+        "contractKind": "contract",
+        "documentation": {
+          "id": 2608,
+          "nodeType": "StructuredDocumentation",
+          "src": "147:58:10",
+          "text": " @dev This is a mock. Don't use in production."
+        },
+        "fullyImplemented": true,
+        "linearizedBaseContracts": [
+          2629
+        ],
+        "name": "DepositContractMockForDepositSecurityModule",
+        "nameLocation": "215:43:10",
+        "scope": 2630,
+        "usedErrors": []
+      }
+    ],
+    "license": "GPL-3.0"
+  },
+  "id": 10
+}

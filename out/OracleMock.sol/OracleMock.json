@@ -1,0 +1,861 @@
+{
+  "abi": [
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_pool",
+          "type": "address"
+        }
+      ],
+      "name": "setPool",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_epochId",
+          "type": "uint256"
+        },
+        {
+          "name": "_beaconValidators",
+          "type": "uint128"
+        },
+        {
+          "name": "_beaconBalance",
+          "type": "uint128"
+        }
+      ],
+      "name": "reportBeacon",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_receiver",
+          "type": "address"
+        }
+      ],
+      "name": "setBeaconReportReceiver",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getBeaconReportReceiver",
+      "outputs": [
+        {
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": {
+    "object": "0x608060405234801561001057600080fd5b50610222806100206000396000f3006080604052600436106100455760003560e01c63ffffffff1680634437152a1461004a57806362eeb7321461006d5780639a3cb2ca146100a0578063b2480603146100c1575b600080fd5b34801561005657600080fd5b5061006b600160a060020a03600435166100f2565b005b34801561007957600080fd5b5061006b6004356fffffffffffffffffffffffffffffffff60243581169060443516610121565b3480156100ac57600080fd5b5061006b600160a060020a03600435166101b8565b3480156100cd57600080fd5b506100d66101e7565b60408051600160a060020a039092168252519081900360200190f35b6000805473ffffffffffffffffffffffffffffffffffffffff1916600160a060020a0392909216919091179055565b60008054604080517f64f9991a0000000000000000000000000000000000000000000000000000000081526fffffffffffffffffffffffffffffffff8087166004830152851660248201529051600160a060020a03909216926364f9991a9260448084019382900301818387803b15801561019b57600080fd5b505af11580156101af573d6000803e3d6000fd5b50505050505050565b6001805473ffffffffffffffffffffffffffffffffffffffff1916600160a060020a0392909216919091179055565b600154600160a060020a0316905600a165627a7a72305820d8eb2cad0a4d6fbd555ffe361b596d765db41f72b18cd20d7fa80e84eced7f060029",
+    "sourceMap": "210:559:29:-;;;;8:9:-1;5:2;;;30:1;27;20:12;5:2;210:559:29;;;;;;;",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x6080604052600436106100455760003560e01c63ffffffff1680634437152a1461004a57806362eeb7321461006d5780639a3cb2ca146100a0578063b2480603146100c1575b600080fd5b34801561005657600080fd5b5061006b600160a060020a03600435166100f2565b005b34801561007957600080fd5b5061006b6004356fffffffffffffffffffffffffffffffff60243581169060443516610121565b3480156100ac57600080fd5b5061006b600160a060020a03600435166101b8565b3480156100cd57600080fd5b506100d66101e7565b60408051600160a060020a039092168252519081900360200190f35b6000805473ffffffffffffffffffffffffffffffffffffffff1916600160a060020a0392909216919091179055565b60008054604080517f64f9991a0000000000000000000000000000000000000000000000000000000081526fffffffffffffffffffffffffffffffff8087166004830152851660248201529051600160a060020a03909216926364f9991a9260448084019382900301818387803b15801561019b57600080fd5b505af11580156101af573d6000803e3d6000fd5b50505050505050565b6001805473ffffffffffffffffffffffffffffffffffffffff1916600160a060020a0392909216919091179055565b600154600160a060020a0316905600a165627a7a72305820d8eb2cad0a4d6fbd555ffe361b596d765db41f72b18cd20d7fa80e84eced7f060029",
+    "sourceMap": "210:559:29:-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;297:77;;8:9:-1;5:2;;;30:1;27;20:12;5:2;-1:-1;297:77:29;-1:-1:-1;;;;;297:77:29;;;;;;;380:175;;8:9:-1;5:2;;;30:1;27;20:12;5:2;-1:-1;380:175:29;;;;;;;;;;;;;;561:95;;8:9:-1;5:2;;;30:1;27;20:12;5:2;-1:-1;561:95:29;-1:-1:-1;;;;;561:95:29;;;;;662:105;;8:9:-1;5:2;;;30:1;27;20:12;5:2;662:105:29;;;;;;;;-1:-1:-1;;;;;662:105:29;;;;;;;;;;;;;;297:77;348:4;:19;;-1:-1:-1;;348:19:29;-1:-1:-1;;;;;348:19:29;;;;;;;;;;297:77::o;380:175::-;490:4;;;:58;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;;;;;490:4:29;;;;:23;;:58;;;;;;;;;;:4;;:58;;;5:2:-1;;;;30:1;27;20:12;5:2;490:58:29;;;;8:9:-1;5:2;;;45:16;42:1;39;24:38;77:16;74:1;67:27;5:2;490:58:29;;;;380:175;;;:::o;561:95::-;623:14;:26;;-1:-1:-1;;623:26:29;-1:-1:-1;;;;;623:26:29;;;;;;;;;;561:95::o;662:105::-;746:14;;-1:-1:-1;;;;;746:14:29;662:105;:::o",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "getBeaconReportReceiver()": "b2480603",
+    "reportBeacon(uint256,uint128,uint128)": "62eeb732",
+    "setBeaconReportReceiver(address)": "9a3cb2ca",
+    "setPool(address)": "4437152a"
+  },
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.4.24+commit.e67f0147\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"constant\":false,\"inputs\":[{\"name\":\"_pool\",\"type\":\"address\"}],\"name\":\"setPool\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_epochId\",\"type\":\"uint256\"},{\"name\":\"_beaconValidators\",\"type\":\"uint128\"},{\"name\":\"_beaconBalance\",\"type\":\"uint128\"}],\"name\":\"reportBeacon\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_receiver\",\"type\":\"address\"}],\"name\":\"setBeaconReportReceiver\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getBeaconReportReceiver\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"methods\":{}},\"userdoc\":{\"methods\":{}}},\"settings\":{\"compilationTarget\":{\"contracts/0.4.24/test_helpers/OracleMock.sol\":\"OracleMock\"},\"evmVersion\":\"constantinople\",\"libraries\":{},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":@aragon/=node_modules/@aragon/\",\":@nomiclabs/=node_modules/@nomiclabs/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@solidity-parser/=node_modules/@solidity-parser/\",\":ens/=node_modules/@aragon/os/contracts/lib/ens/\",\":eth-gas-reporter/=node_modules/eth-gas-reporter/\",\":gasprofile/=node_modules/gasprofile/\",\":hardhat/=node_modules/hardhat/\",\":math/=node_modules/@aragon/os/contracts/lib/math/\",\":misc/=node_modules/@aragon/os/contracts/lib/misc/\",\":openzeppelin-solidity/=node_modules/openzeppelin-solidity/\",\":sol-explore/=node_modules/sol-explore/\",\":solhint/=node_modules/solhint/\",\":solidity-bytes-utils/=node_modules/solidity-bytes-utils/\",\":token/=node_modules/@aragon/os/contracts/lib/token/\",\":truffle/=node_modules/truffle/\"]},\"sources\":{\"contracts/0.4.24/interfaces/ILido.sol\":{\"keccak256\":\"0x14d6b63fd5c0e442a9f8869ce43a335deeddf95d94d4b21d9f8b986b2b863032\",\"urls\":[\"bzzr://ed34cbd848695514a9285bbdbfcee0f50fce8e810a3c433dfb088e9a34ae0007\"]},\"contracts/0.4.24/test_helpers/OracleMock.sol\":{\"keccak256\":\"0x316ec9f1e9cd77755a406312b369094591f6144d3c019ae24fb6e3b2365f8ff3\",\"urls\":[\"bzzr://108cbe24ba2b026e4352692cf11420c329c5feff54f4cf9ec51b271a1abfff53\"]}},\"version\":1}",
+  "metadata": {
+    "compiler": {
+      "version": "0.4.24+commit.e67f0147"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": null,
+              "name": "_pool",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "setPool"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": null,
+              "name": "_epochId",
+              "type": "uint256"
+            },
+            {
+              "internalType": null,
+              "name": "_beaconValidators",
+              "type": "uint128"
+            },
+            {
+              "internalType": null,
+              "name": "_beaconBalance",
+              "type": "uint128"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "reportBeacon"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": null,
+              "name": "_receiver",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "setBeaconReportReceiver"
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "getBeaconReportReceiver",
+          "outputs": [
+            {
+              "internalType": null,
+              "name": "",
+              "type": "address"
+            }
+          ]
+        }
+      ],
+      "devdoc": {
+        "methods": {}
+      },
+      "userdoc": {
+        "methods": {}
+      }
+    },
+    "settings": {
+      "remappings": [
+        ":@aragon/=node_modules/@aragon/",
+        ":@nomiclabs/=node_modules/@nomiclabs/",
+        ":@openzeppelin/=node_modules/@openzeppelin/",
+        ":@solidity-parser/=node_modules/@solidity-parser/",
+        ":ens/=node_modules/@aragon/os/contracts/lib/ens/",
+        ":eth-gas-reporter/=node_modules/eth-gas-reporter/",
+        ":gasprofile/=node_modules/gasprofile/",
+        ":hardhat/=node_modules/hardhat/",
+        ":math/=node_modules/@aragon/os/contracts/lib/math/",
+        ":misc/=node_modules/@aragon/os/contracts/lib/misc/",
+        ":openzeppelin-solidity/=node_modules/openzeppelin-solidity/",
+        ":sol-explore/=node_modules/sol-explore/",
+        ":solhint/=node_modules/solhint/",
+        ":solidity-bytes-utils/=node_modules/solidity-bytes-utils/",
+        ":token/=node_modules/@aragon/os/contracts/lib/token/",
+        ":truffle/=node_modules/truffle/"
+      ],
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "compilationTarget": {
+        "contracts/0.4.24/test_helpers/OracleMock.sol": "OracleMock"
+      },
+      "libraries": {}
+    },
+    "sources": {
+      "contracts/0.4.24/interfaces/ILido.sol": {
+        "keccak256": "0x14d6b63fd5c0e442a9f8869ce43a335deeddf95d94d4b21d9f8b986b2b863032",
+        "urls": [
+          "bzzr://ed34cbd848695514a9285bbdbfcee0f50fce8e810a3c433dfb088e9a34ae0007"
+        ],
+        "license": null
+      },
+      "contracts/0.4.24/test_helpers/OracleMock.sol": {
+        "keccak256": "0x316ec9f1e9cd77755a406312b369094591f6144d3c019ae24fb6e3b2365f8ff3",
+        "urls": [
+          "bzzr://108cbe24ba2b026e4352692cf11420c329c5feff54f4cf9ec51b271a1abfff53"
+        ],
+        "license": null
+      }
+    },
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": {}
+  },
+  "ast": {
+    "absolutePath": "contracts/0.4.24/test_helpers/OracleMock.sol",
+    "id": 11206,
+    "exportedSymbols": {
+      "OracleMock": [
+        11205
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "90:680:29",
+    "nodes": [
+      {
+        "id": 11152,
+        "nodeType": "PragmaDirective",
+        "src": "90:23:29",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "0.4",
+          ".24"
+        ]
+      },
+      {
+        "id": 11153,
+        "nodeType": "ImportDirective",
+        "src": "115:33:29",
+        "nodes": [],
+        "absolutePath": "contracts/0.4.24/interfaces/ILido.sol",
+        "file": "../interfaces/ILido.sol",
+        "scope": 11206,
+        "sourceUnit": 3085,
+        "symbolAliases": [],
+        "unitAlias": ""
+      },
+      {
+        "id": 11205,
+        "nodeType": "ContractDefinition",
+        "src": "210:559:29",
+        "nodes": [
+          {
+            "id": 11155,
+            "nodeType": "VariableDeclaration",
+            "src": "236:18:29",
+            "nodes": [],
+            "constant": false,
+            "name": "pool",
+            "scope": 11205,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_contract$_ILido_$3084",
+              "typeString": "contract ILido"
+            },
+            "typeName": {
+              "contractScope": null,
+              "id": 11154,
+              "name": "ILido",
+              "nodeType": "UserDefinedTypeName",
+              "referencedDeclaration": 3084,
+              "src": "236:5:29",
+              "typeDescriptions": {
+                "typeIdentifier": "t_contract$_ILido_$3084",
+                "typeString": "contract ILido"
+              }
+            },
+            "value": null,
+            "visibility": "private"
+          },
+          {
+            "id": 11157,
+            "nodeType": "VariableDeclaration",
+            "src": "260:30:29",
+            "nodes": [],
+            "constant": false,
+            "name": "beaconReceiver",
+            "scope": 11205,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_address",
+              "typeString": "address"
+            },
+            "typeName": {
+              "id": 11156,
+              "name": "address",
+              "nodeType": "ElementaryTypeName",
+              "src": "260:7:29",
+              "typeDescriptions": {
+                "typeIdentifier": "t_address",
+                "typeString": "address"
+              }
+            },
+            "value": null,
+            "visibility": "private"
+          },
+          {
+            "id": 11169,
+            "nodeType": "FunctionDefinition",
+            "src": "297:77:29",
+            "nodes": [],
+            "body": {
+              "id": 11168,
+              "nodeType": "Block",
+              "src": "338:36:29",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "id": 11166,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftHandSide": {
+                      "argumentTypes": null,
+                      "id": 11162,
+                      "name": "pool",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 11155,
+                      "src": "348:4:29",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_contract$_ILido_$3084",
+                        "typeString": "contract ILido"
+                      }
+                    },
+                    "nodeType": "Assignment",
+                    "operator": "=",
+                    "rightHandSide": {
+                      "argumentTypes": null,
+                      "arguments": [
+                        {
+                          "argumentTypes": null,
+                          "id": 11164,
+                          "name": "_pool",
+                          "nodeType": "Identifier",
+                          "overloadedDeclarations": [],
+                          "referencedDeclaration": 11159,
+                          "src": "361:5:29",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_address",
+                            "typeString": "address"
+                          }
+                        }
+                      ],
+                      "expression": {
+                        "argumentTypes": [
+                          {
+                            "typeIdentifier": "t_address",
+                            "typeString": "address"
+                          }
+                        ],
+                        "id": 11163,
+                        "name": "ILido",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 3084,
+                        "src": "355:5:29",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_type$_t_contract$_ILido_$3084_$",
+                          "typeString": "type(contract ILido)"
+                        }
+                      },
+                      "id": 11165,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": false,
+                      "kind": "typeConversion",
+                      "lValueRequested": false,
+                      "names": [],
+                      "nodeType": "FunctionCall",
+                      "src": "355:12:29",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_contract$_ILido_$3084",
+                        "typeString": "contract ILido"
+                      }
+                    },
+                    "src": "348:19:29",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_contract$_ILido_$3084",
+                      "typeString": "contract ILido"
+                    }
+                  },
+                  "id": 11167,
+                  "nodeType": "ExpressionStatement",
+                  "src": "348:19:29"
+                }
+              ]
+            },
+            "documentation": null,
+            "implemented": true,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "setPool",
+            "parameters": {
+              "id": 11160,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 11159,
+                  "name": "_pool",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 11169,
+                  "src": "314:13:29",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 11158,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "314:7:29",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "313:15:29"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 11161,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "338:0:29"
+            },
+            "scope": 11205,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 11186,
+            "nodeType": "FunctionDefinition",
+            "src": "380:175:29",
+            "nodes": [],
+            "body": {
+              "id": 11185,
+              "nodeType": "Block",
+              "src": "480:75:29",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "arguments": [
+                      {
+                        "argumentTypes": null,
+                        "id": 11181,
+                        "name": "_beaconValidators",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11173,
+                        "src": "514:17:29",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint128",
+                          "typeString": "uint128"
+                        }
+                      },
+                      {
+                        "argumentTypes": null,
+                        "id": 11182,
+                        "name": "_beaconBalance",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11175,
+                        "src": "533:14:29",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint128",
+                          "typeString": "uint128"
+                        }
+                      }
+                    ],
+                    "expression": {
+                      "argumentTypes": [
+                        {
+                          "typeIdentifier": "t_uint128",
+                          "typeString": "uint128"
+                        },
+                        {
+                          "typeIdentifier": "t_uint128",
+                          "typeString": "uint128"
+                        }
+                      ],
+                      "expression": {
+                        "argumentTypes": null,
+                        "id": 11178,
+                        "name": "pool",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11155,
+                        "src": "490:4:29",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_contract$_ILido_$3084",
+                          "typeString": "contract ILido"
+                        }
+                      },
+                      "id": 11180,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": false,
+                      "lValueRequested": false,
+                      "memberName": "handleOracleReport",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": 3033,
+                      "src": "490:23:29",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_external_nonpayable$_t_uint256_$_t_uint256_$returns$__$",
+                        "typeString": "function (uint256,uint256) external"
+                      }
+                    },
+                    "id": 11183,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "490:58:29",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_tuple$__$",
+                      "typeString": "tuple()"
+                    }
+                  },
+                  "id": 11184,
+                  "nodeType": "ExpressionStatement",
+                  "src": "490:58:29"
+                }
+              ]
+            },
+            "documentation": null,
+            "implemented": true,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "reportBeacon",
+            "parameters": {
+              "id": 11176,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 11171,
+                  "name": "_epochId",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 11186,
+                  "src": "402:16:29",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 11170,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "402:7:29",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 11173,
+                  "name": "_beaconValidators",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 11186,
+                  "src": "420:25:29",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint128",
+                    "typeString": "uint128"
+                  },
+                  "typeName": {
+                    "id": 11172,
+                    "name": "uint128",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "420:7:29",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint128",
+                      "typeString": "uint128"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 11175,
+                  "name": "_beaconBalance",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 11186,
+                  "src": "447:22:29",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint128",
+                    "typeString": "uint128"
+                  },
+                  "typeName": {
+                    "id": 11174,
+                    "name": "uint128",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "447:7:29",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint128",
+                      "typeString": "uint128"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "401:69:29"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 11177,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "480:0:29"
+            },
+            "scope": 11205,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 11196,
+            "nodeType": "FunctionDefinition",
+            "src": "561:95:29",
+            "nodes": [],
+            "body": {
+              "id": 11195,
+              "nodeType": "Block",
+              "src": "613:43:29",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "id": 11193,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftHandSide": {
+                      "argumentTypes": null,
+                      "id": 11191,
+                      "name": "beaconReceiver",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 11157,
+                      "src": "623:14:29",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_address",
+                        "typeString": "address"
+                      }
+                    },
+                    "nodeType": "Assignment",
+                    "operator": "=",
+                    "rightHandSide": {
+                      "argumentTypes": null,
+                      "id": 11192,
+                      "name": "_receiver",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 11188,
+                      "src": "640:9:29",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_address",
+                        "typeString": "address"
+                      }
+                    },
+                    "src": "623:26:29",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "id": 11194,
+                  "nodeType": "ExpressionStatement",
+                  "src": "623:26:29"
+                }
+              ]
+            },
+            "documentation": null,
+            "implemented": true,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "setBeaconReportReceiver",
+            "parameters": {
+              "id": 11189,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 11188,
+                  "name": "_receiver",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 11196,
+                  "src": "594:17:29",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 11187,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "594:7:29",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "593:19:29"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 11190,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "613:0:29"
+            },
+            "scope": 11205,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "public"
+          },
+          {
+            "id": 11204,
+            "nodeType": "FunctionDefinition",
+            "src": "662:105:29",
+            "nodes": [],
+            "body": {
+              "id": 11203,
+              "nodeType": "Block",
+              "src": "729:38:29",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "id": 11201,
+                    "name": "beaconReceiver",
+                    "nodeType": "Identifier",
+                    "overloadedDeclarations": [],
+                    "referencedDeclaration": 11157,
+                    "src": "746:14:29",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "functionReturnParameters": 11200,
+                  "id": 11202,
+                  "nodeType": "Return",
+                  "src": "739:21:29"
+                }
+              ]
+            },
+            "documentation": null,
+            "implemented": true,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getBeaconReportReceiver",
+            "parameters": {
+              "id": 11197,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "694:2:29"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 11200,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 11199,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 11204,
+                  "src": "720:7:29",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 11198,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "720:7:29",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "719:9:29"
+            },
+            "scope": 11205,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          }
+        ],
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "contract",
+        "documentation": "@dev This is a mock. Don't use in production.",
+        "fullyImplemented": true,
+        "linearizedBaseContracts": [
+          11205
+        ],
+        "name": "OracleMock",
+        "scope": 11206
+      }
+    ]
+  },
+  "id": 29
+}

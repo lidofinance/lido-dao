@@ -1,0 +1,373 @@
+{
+  "abi": [],
+  "bytecode": {
+    "object": "0x6080604052348015600f57600080fd5b50603580601d6000396000f3006080604052600080fd00a165627a7a7230582002620f5ede2601abcfa97b78b0d834483d21e72c86bc01ccd012c9a8ca94c6040029",
+    "sourceMap": "70:1006:77:-;;;;8:9:-1;5:2;;;30:1;27;20:12;5:2;70:1006:77;;;;;;;",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x6080604052600080fd00a165627a7a7230582002620f5ede2601abcfa97b78b0d834483d21e72c86bc01ccd012c9a8ca94c6040029",
+    "sourceMap": "70:1006:77:-;;;;;",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {},
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.4.24+commit.e67f0147\"},\"language\":\"Solidity\",\"output\":{\"abi\":[],\"devdoc\":{\"methods\":{}},\"userdoc\":{\"methods\":{}}},\"settings\":{\"compilationTarget\":{\"node_modules/@aragon/os/contracts/ens/ENSConstants.sol\":\"ENSConstants\"},\"evmVersion\":\"constantinople\",\"libraries\":{},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":@aragon/=node_modules/@aragon/\",\":@nomiclabs/=node_modules/@nomiclabs/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@solidity-parser/=node_modules/@solidity-parser/\",\":ens/=node_modules/@aragon/os/contracts/lib/ens/\",\":eth-gas-reporter/=node_modules/eth-gas-reporter/\",\":gasprofile/=node_modules/gasprofile/\",\":hardhat/=node_modules/hardhat/\",\":math/=node_modules/@aragon/os/contracts/lib/math/\",\":misc/=node_modules/@aragon/os/contracts/lib/misc/\",\":openzeppelin-solidity/=node_modules/openzeppelin-solidity/\",\":sol-explore/=node_modules/sol-explore/\",\":solhint/=node_modules/solhint/\",\":solidity-bytes-utils/=node_modules/solidity-bytes-utils/\",\":token/=node_modules/@aragon/os/contracts/lib/token/\",\":truffle/=node_modules/truffle/\"]},\"sources\":{\"node_modules/@aragon/os/contracts/ens/ENSConstants.sol\":{\"keccak256\":\"0xbe3fd8edef616224482756562d30b3ed7e19d39115f9a6ef5bb86c7ed9c7ea81\",\"urls\":[\"bzzr://c605d00b855f29fda7217625a75612b92a8afd5c4f272f7094556aff1560326b\"]}},\"version\":1}",
+  "metadata": {
+    "compiler": {
+      "version": "0.4.24+commit.e67f0147"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [],
+      "devdoc": {
+        "methods": {}
+      },
+      "userdoc": {
+        "methods": {}
+      }
+    },
+    "settings": {
+      "remappings": [
+        ":@aragon/=node_modules/@aragon/",
+        ":@nomiclabs/=node_modules/@nomiclabs/",
+        ":@openzeppelin/=node_modules/@openzeppelin/",
+        ":@solidity-parser/=node_modules/@solidity-parser/",
+        ":ens/=node_modules/@aragon/os/contracts/lib/ens/",
+        ":eth-gas-reporter/=node_modules/eth-gas-reporter/",
+        ":gasprofile/=node_modules/gasprofile/",
+        ":hardhat/=node_modules/hardhat/",
+        ":math/=node_modules/@aragon/os/contracts/lib/math/",
+        ":misc/=node_modules/@aragon/os/contracts/lib/misc/",
+        ":openzeppelin-solidity/=node_modules/openzeppelin-solidity/",
+        ":sol-explore/=node_modules/sol-explore/",
+        ":solhint/=node_modules/solhint/",
+        ":solidity-bytes-utils/=node_modules/solidity-bytes-utils/",
+        ":token/=node_modules/@aragon/os/contracts/lib/token/",
+        ":truffle/=node_modules/truffle/"
+      ],
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "compilationTarget": {
+        "node_modules/@aragon/os/contracts/ens/ENSConstants.sol": "ENSConstants"
+      },
+      "libraries": {}
+    },
+    "sources": {
+      "node_modules/@aragon/os/contracts/ens/ENSConstants.sol": {
+        "keccak256": "0xbe3fd8edef616224482756562d30b3ed7e19d39115f9a6ef5bb86c7ed9c7ea81",
+        "urls": [
+          "bzzr://c605d00b855f29fda7217625a75612b92a8afd5c4f272f7094556aff1560326b"
+        ],
+        "license": null
+      }
+    },
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": {}
+  },
+  "ast": {
+    "absolutePath": "node_modules/@aragon/os/contracts/ens/ENSConstants.sol",
+    "id": 22338,
+    "exportedSymbols": {
+      "ENSConstants": [
+        22337
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "43:1034:77",
+    "nodes": [
+      {
+        "id": 22319,
+        "nodeType": "PragmaDirective",
+        "src": "43:24:77",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "^",
+          "0.4",
+          ".24"
+        ]
+      },
+      {
+        "id": 22337,
+        "nodeType": "ContractDefinition",
+        "src": "70:1006:77",
+        "nodes": [
+          {
+            "id": 22324,
+            "nodeType": "VariableDeclaration",
+            "src": "556:47:77",
+            "nodes": [],
+            "constant": true,
+            "name": "ENS_ROOT",
+            "scope": 22337,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_bytes32",
+              "typeString": "bytes32"
+            },
+            "typeName": {
+              "id": 22320,
+              "name": "bytes32",
+              "nodeType": "ElementaryTypeName",
+              "src": "556:7:77",
+              "typeDescriptions": {
+                "typeIdentifier": "t_bytes32",
+                "typeString": "bytes32"
+              }
+            },
+            "value": {
+              "argumentTypes": null,
+              "arguments": [
+                {
+                  "argumentTypes": null,
+                  "hexValue": "30",
+                  "id": 22322,
+                  "isConstant": false,
+                  "isLValue": false,
+                  "isPure": true,
+                  "kind": "number",
+                  "lValueRequested": false,
+                  "nodeType": "Literal",
+                  "src": "601:1:77",
+                  "subdenomination": null,
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_rational_0_by_1",
+                    "typeString": "int_const 0"
+                  },
+                  "value": "0"
+                }
+              ],
+              "expression": {
+                "argumentTypes": [
+                  {
+                    "typeIdentifier": "t_rational_0_by_1",
+                    "typeString": "int_const 0"
+                  }
+                ],
+                "id": 22321,
+                "isConstant": false,
+                "isLValue": false,
+                "isPure": true,
+                "lValueRequested": false,
+                "nodeType": "ElementaryTypeNameExpression",
+                "src": "593:7:77",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_type$_t_bytes32_$",
+                  "typeString": "type(bytes32)"
+                },
+                "typeName": "bytes32"
+              },
+              "id": 22323,
+              "isConstant": false,
+              "isLValue": false,
+              "isPure": true,
+              "kind": "typeConversion",
+              "lValueRequested": false,
+              "names": [],
+              "nodeType": "FunctionCall",
+              "src": "593:10:77",
+              "typeDescriptions": {
+                "typeIdentifier": "t_bytes32",
+                "typeString": "bytes32"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "id": 22327,
+            "nodeType": "VariableDeclaration",
+            "src": "609:108:77",
+            "nodes": [],
+            "constant": true,
+            "name": "ETH_TLD_LABEL",
+            "scope": 22337,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_bytes32",
+              "typeString": "bytes32"
+            },
+            "typeName": {
+              "id": 22325,
+              "name": "bytes32",
+              "nodeType": "ElementaryTypeName",
+              "src": "609:7:77",
+              "typeDescriptions": {
+                "typeIdentifier": "t_bytes32",
+                "typeString": "bytes32"
+              }
+            },
+            "value": {
+              "argumentTypes": null,
+              "hexValue": "307834663562383132373839666336303662653162336231363930386462313366633761396164663763613732363431663834643735623437303639643364376630",
+              "id": 22326,
+              "isConstant": false,
+              "isLValue": false,
+              "isPure": true,
+              "kind": "number",
+              "lValueRequested": false,
+              "nodeType": "Literal",
+              "src": "651:66:77",
+              "subdenomination": null,
+              "typeDescriptions": {
+                "typeIdentifier": "t_rational_35894389512221139346028120028875095598761990588366713962827482865185691260912_by_1",
+                "typeString": "int_const 3589...(69 digits omitted)...0912"
+              },
+              "value": "0x4f5b812789fc606be1b3b16908db13fc7a9adf7ca72641f84d75b47069d3d7f0"
+            },
+            "visibility": "internal"
+          },
+          {
+            "id": 22330,
+            "nodeType": "VariableDeclaration",
+            "src": "723:107:77",
+            "nodes": [],
+            "constant": true,
+            "name": "ETH_TLD_NODE",
+            "scope": 22337,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_bytes32",
+              "typeString": "bytes32"
+            },
+            "typeName": {
+              "id": 22328,
+              "name": "bytes32",
+              "nodeType": "ElementaryTypeName",
+              "src": "723:7:77",
+              "typeDescriptions": {
+                "typeIdentifier": "t_bytes32",
+                "typeString": "bytes32"
+              }
+            },
+            "value": {
+              "argumentTypes": null,
+              "hexValue": "307839336364656237303862373534356463363638656239323830313736313639643163333363666438656436663034363930613062636338386139336663346165",
+              "id": 22329,
+              "isConstant": false,
+              "isLValue": false,
+              "isPure": true,
+              "kind": "number",
+              "lValueRequested": false,
+              "nodeType": "Literal",
+              "src": "764:66:77",
+              "subdenomination": null,
+              "typeDescriptions": {
+                "typeIdentifier": "t_rational_66853817334611902194238164484889819180315942402426128563245745834960013477038_by_1",
+                "typeString": "int_const 6685...(69 digits omitted)...7038"
+              },
+              "value": "0x93cdeb708b7545dc668eb9280176169d1c33cfd8ed6f04690a0bcc88a93fc4ae"
+            },
+            "visibility": "internal"
+          },
+          {
+            "id": 22333,
+            "nodeType": "VariableDeclaration",
+            "src": "836:116:77",
+            "nodes": [],
+            "constant": true,
+            "name": "PUBLIC_RESOLVER_LABEL",
+            "scope": 22337,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_bytes32",
+              "typeString": "bytes32"
+            },
+            "typeName": {
+              "id": 22331,
+              "name": "bytes32",
+              "nodeType": "ElementaryTypeName",
+              "src": "836:7:77",
+              "typeDescriptions": {
+                "typeIdentifier": "t_bytes32",
+                "typeString": "bytes32"
+              }
+            },
+            "value": {
+              "argumentTypes": null,
+              "hexValue": "307833323935333961316432336166313831306334386130376665376663363661336233346662633862333765396233636462393762623838636561623765346266",
+              "id": 22332,
+              "isConstant": false,
+              "isLValue": false,
+              "isPure": true,
+              "kind": "number",
+              "lValueRequested": false,
+              "nodeType": "Literal",
+              "src": "886:66:77",
+              "subdenomination": null,
+              "typeDescriptions": {
+                "typeIdentifier": "t_rational_22879300404048308305757162459128213448943868079942207640504119322069238801599_by_1",
+                "typeString": "int_const 2287...(69 digits omitted)...1599"
+              },
+              "value": "0x329539a1d23af1810c48a07fe7fc66a3b34fbc8b37e9b3cdb97bb88ceab7e4bf"
+            },
+            "visibility": "internal"
+          },
+          {
+            "id": 22336,
+            "nodeType": "VariableDeclaration",
+            "src": "958:115:77",
+            "nodes": [],
+            "constant": true,
+            "name": "PUBLIC_RESOLVER_NODE",
+            "scope": 22337,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_bytes32",
+              "typeString": "bytes32"
+            },
+            "typeName": {
+              "id": 22334,
+              "name": "bytes32",
+              "nodeType": "ElementaryTypeName",
+              "src": "958:7:77",
+              "typeDescriptions": {
+                "typeIdentifier": "t_bytes32",
+                "typeString": "bytes32"
+              }
+            },
+            "value": {
+              "argumentTypes": null,
+              "hexValue": "307866646435643564653664643633646237326262633264343837393434626131336266373735623530613830383035666536666361626139623066626138386635",
+              "id": 22335,
+              "isConstant": false,
+              "isLValue": false,
+              "isPure": true,
+              "kind": "number",
+              "lValueRequested": false,
+              "nodeType": "Literal",
+              "src": "1007:66:77",
+              "subdenomination": null,
+              "typeDescriptions": {
+                "typeIdentifier": "t_rational_114812965185011392076873128859489552324200221744912745687941328642703980398837_by_1",
+                "typeString": "int_const 1148...(70 digits omitted)...8837"
+              },
+              "value": "0xfdd5d5de6dd63db72bbc2d487944ba13bf775b50a80805fe6fcaba9b0fba88f5"
+            },
+            "visibility": "internal"
+          }
+        ],
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "contract",
+        "documentation": null,
+        "fullyImplemented": true,
+        "linearizedBaseContracts": [
+          22337
+        ],
+        "name": "ENSConstants",
+        "scope": 22338
+      }
+    ]
+  },
+  "id": 77
+}

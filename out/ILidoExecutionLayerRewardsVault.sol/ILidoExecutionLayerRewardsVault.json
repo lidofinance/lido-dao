@@ -1,0 +1,165 @@
+{
+  "abi": [
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_maxAmount",
+          "type": "uint256"
+        }
+      ],
+      "name": "withdrawRewards",
+      "outputs": [
+        {
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "withdrawRewards(uint256)": "9342c8f4"
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": {}
+  },
+  "ast": {
+    "absolutePath": "contracts/0.4.24/interfaces/ILidoExecutionLayerRewardsVault.sol",
+    "id": 3095,
+    "exportedSymbols": {
+      "ILidoExecutionLayerRewardsVault": [
+        3094
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "90:381:6",
+    "nodes": [
+      {
+        "id": 3086,
+        "nodeType": "PragmaDirective",
+        "src": "90:23:6",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "0.4",
+          ".24"
+        ]
+      },
+      {
+        "id": 3094,
+        "nodeType": "ContractDefinition",
+        "src": "116:354:6",
+        "nodes": [
+          {
+            "id": 3093,
+            "nodeType": "FunctionDefinition",
+            "src": "389:79:6",
+            "nodes": [],
+            "documentation": "@notice Withdraw all accumulated execution layer rewards to Lido contract\n@param _maxAmount Max amount of ETH to withdraw\n@return amount of funds received as execution layer rewards (in wei)",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "withdrawRewards",
+            "parameters": {
+              "id": 3089,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3088,
+                  "name": "_maxAmount",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3093,
+                  "src": "414:18:6",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3087,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "414:7:6",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "413:20:6"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3092,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3091,
+                  "name": "amount",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3093,
+                  "src": "452:14:6",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3090,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "452:7:6",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "451:16:6"
+            },
+            "scope": 3094,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          }
+        ],
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "interface",
+        "documentation": null,
+        "fullyImplemented": false,
+        "linearizedBaseContracts": [
+          3094
+        ],
+        "name": "ILidoExecutionLayerRewardsVault",
+        "scope": 3095
+      }
+    ]
+  },
+  "id": 6
+}

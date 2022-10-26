@@ -1,0 +1,414 @@
+{
+  "abi": [
+    {
+      "inputs": [],
+      "name": "getKeysOpIndex",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "index",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_newKeysOpIndex",
+          "type": "uint256"
+        }
+      ],
+      "name": "setKeysOpIndex",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": {
+    "object": "0x6080604052348015600f57600080fd5b5060ac8061001e6000396000f3fe6080604052348015600f57600080fd5b506004361060325760003560e01c80638a1b1801146037578063d07442f1146049575b600080fd5b60476042366004605e565b600055565b005b60005460405190815260200160405180910390f35b600060208284031215606f57600080fd5b503591905056fea264697066735822122028ebff3c84aca78e37c0798ca5fea749b12f6cd2c0aa90704e84f4a4d62bed0f64736f6c63430008090033",
+    "sourceMap": "147:304:15:-:0;;;;;;;;;;;;;;;;;;;",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x6080604052348015600f57600080fd5b506004361060325760003560e01c80638a1b1801146037578063d07442f1146049575b600080fd5b60476042366004605e565b600055565b005b60005460405190815260200160405180910390f35b600060208284031215606f57600080fd5b503591905056fea264697066735822122028ebff3c84aca78e37c0798ca5fea749b12f6cd2c0aa90704e84f4a4d62bed0f64736f6c63430008090033",
+    "sourceMap": "147:304:15:-:0;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;345:104;;;;;;:::i;:::-;413:11;:29;345:104;;;240:99;289:13;321:11;240:99;;345:25:33;;;333:2;318:18;240:99:15;;;;;;;14:180:33;73:6;126:2;114:9;105:7;101:23;97:32;94:52;;;142:1;139;132:12;94:52;-1:-1:-1;165:23:33;;14:180;-1:-1:-1;14:180:33:o",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "getKeysOpIndex()": "d07442f1",
+    "setKeysOpIndex(uint256)": "8a1b1801"
+  },
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.9+commit.e5eed63a\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"name\":\"getKeysOpIndex\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_newKeysOpIndex\",\"type\":\"uint256\"}],\"name\":\"setKeysOpIndex\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/0.8.9/test_helpers/NodeOperatorsRegistryMockForSecurityModule.sol\":\"NodeOperatorsRegistryMockForSecurityModule\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":@aragon/=node_modules/@aragon/\",\":@nomiclabs/=node_modules/@nomiclabs/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@solidity-parser/=node_modules/@solidity-parser/\",\":ens/=node_modules/@aragon/os/contracts/lib/ens/\",\":eth-gas-reporter/=node_modules/eth-gas-reporter/\",\":gasprofile/=node_modules/gasprofile/\",\":hardhat/=node_modules/hardhat/\",\":math/=node_modules/@aragon/os/contracts/lib/math/\",\":misc/=node_modules/@aragon/os/contracts/lib/misc/\",\":openzeppelin-solidity/=node_modules/openzeppelin-solidity/\",\":sol-explore/=node_modules/sol-explore/\",\":solhint/=node_modules/solhint/\",\":solidity-bytes-utils/=node_modules/solidity-bytes-utils/\",\":token/=node_modules/@aragon/os/contracts/lib/token/\",\":truffle/=node_modules/truffle/\"]},\"sources\":{\"contracts/0.8.9/test_helpers/NodeOperatorsRegistryMockForSecurityModule.sol\":{\"keccak256\":\"0x1d817fda6166d1b3ee1e8057462b4fbc141c5e545e7d22172f9b9d7c2ec2e6a1\",\"license\":\"GPL-3.0\",\"urls\":[\"bzz-raw://9b29f72a18d48921628423a21c14d7f9149925ab532352d10645ad8b64535b58\",\"dweb:/ipfs/QmNqi26zL6Ma4bzeDH6gDF6r83XnUay2Trbinfn51ziynz\"]}},\"version\":1}",
+  "metadata": {
+    "compiler": {
+      "version": "0.8.9+commit.e5eed63a"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "getKeysOpIndex",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "index",
+              "type": "uint256"
+            }
+          ]
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "_newKeysOpIndex",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "setKeysOpIndex"
+        }
+      ],
+      "devdoc": {
+        "kind": "dev",
+        "methods": {},
+        "version": 1
+      },
+      "userdoc": {
+        "kind": "user",
+        "methods": {},
+        "version": 1
+      }
+    },
+    "settings": {
+      "remappings": [
+        ":@aragon/=node_modules/@aragon/",
+        ":@nomiclabs/=node_modules/@nomiclabs/",
+        ":@openzeppelin/=node_modules/@openzeppelin/",
+        ":@solidity-parser/=node_modules/@solidity-parser/",
+        ":ens/=node_modules/@aragon/os/contracts/lib/ens/",
+        ":eth-gas-reporter/=node_modules/eth-gas-reporter/",
+        ":gasprofile/=node_modules/gasprofile/",
+        ":hardhat/=node_modules/hardhat/",
+        ":math/=node_modules/@aragon/os/contracts/lib/math/",
+        ":misc/=node_modules/@aragon/os/contracts/lib/misc/",
+        ":openzeppelin-solidity/=node_modules/openzeppelin-solidity/",
+        ":sol-explore/=node_modules/sol-explore/",
+        ":solhint/=node_modules/solhint/",
+        ":solidity-bytes-utils/=node_modules/solidity-bytes-utils/",
+        ":token/=node_modules/@aragon/os/contracts/lib/token/",
+        ":truffle/=node_modules/truffle/"
+      ],
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "metadata": {
+        "bytecodeHash": "ipfs"
+      },
+      "compilationTarget": {
+        "contracts/0.8.9/test_helpers/NodeOperatorsRegistryMockForSecurityModule.sol": "NodeOperatorsRegistryMockForSecurityModule"
+      },
+      "libraries": {}
+    },
+    "sources": {
+      "contracts/0.8.9/test_helpers/NodeOperatorsRegistryMockForSecurityModule.sol": {
+        "keccak256": "0x1d817fda6166d1b3ee1e8057462b4fbc141c5e545e7d22172f9b9d7c2ec2e6a1",
+        "urls": [
+          "bzz-raw://9b29f72a18d48921628423a21c14d7f9149925ab532352d10645ad8b64535b58",
+          "dweb:/ipfs/QmNqi26zL6Ma4bzeDH6gDF6r83XnUay2Trbinfn51ziynz"
+        ],
+        "license": "GPL-3.0"
+      }
+    },
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [
+      {
+        "astId": 2712,
+        "contract": "contracts/0.8.9/test_helpers/NodeOperatorsRegistryMockForSecurityModule.sol:NodeOperatorsRegistryMockForSecurityModule",
+        "label": "keysOpIndex",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_uint256"
+      }
+    ],
+    "types": {
+      "t_uint256": {
+        "encoding": "inplace",
+        "label": "uint256",
+        "numberOfBytes": "32"
+      }
+    }
+  },
+  "ast": {
+    "absolutePath": "contracts/0.8.9/test_helpers/NodeOperatorsRegistryMockForSecurityModule.sol",
+    "id": 2732,
+    "exportedSymbols": {
+      "NodeOperatorsRegistryMockForSecurityModule": [
+        2731
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "123:328:15",
+    "nodes": [
+      {
+        "id": 2710,
+        "nodeType": "PragmaDirective",
+        "src": "123:22:15",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "0.8",
+          ".9"
+        ]
+      },
+      {
+        "id": 2731,
+        "nodeType": "ContractDefinition",
+        "src": "147:304:15",
+        "nodes": [
+          {
+            "id": 2712,
+            "nodeType": "VariableDeclaration",
+            "src": "205:28:15",
+            "nodes": [],
+            "constant": false,
+            "mutability": "mutable",
+            "name": "keysOpIndex",
+            "nameLocation": "222:11:15",
+            "scope": 2731,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 2711,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "205:7:15",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "id": 2720,
+            "nodeType": "FunctionDefinition",
+            "src": "240:99:15",
+            "nodes": [],
+            "body": {
+              "id": 2719,
+              "nodeType": "Block",
+              "src": "304:35:15",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "id": 2717,
+                    "name": "keysOpIndex",
+                    "nodeType": "Identifier",
+                    "overloadedDeclarations": [],
+                    "referencedDeclaration": 2712,
+                    "src": "321:11:15",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "functionReturnParameters": 2716,
+                  "id": 2718,
+                  "nodeType": "Return",
+                  "src": "314:18:15"
+                }
+              ]
+            },
+            "functionSelector": "d07442f1",
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "getKeysOpIndex",
+            "nameLocation": "249:14:15",
+            "parameters": {
+              "id": 2713,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "263:2:15"
+            },
+            "returnParameters": {
+              "id": 2716,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2715,
+                  "mutability": "mutable",
+                  "name": "index",
+                  "nameLocation": "297:5:15",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2720,
+                  "src": "289:13:15",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2714,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "289:7:15",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "288:15:15"
+            },
+            "scope": 2731,
+            "stateMutability": "view",
+            "virtual": false,
+            "visibility": "external"
+          },
+          {
+            "id": 2730,
+            "nodeType": "FunctionDefinition",
+            "src": "345:104:15",
+            "nodes": [],
+            "body": {
+              "id": 2729,
+              "nodeType": "Block",
+              "src": "403:46:15",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "id": 2727,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftHandSide": {
+                      "id": 2725,
+                      "name": "keysOpIndex",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 2712,
+                      "src": "413:11:15",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "nodeType": "Assignment",
+                    "operator": "=",
+                    "rightHandSide": {
+                      "id": 2726,
+                      "name": "_newKeysOpIndex",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 2722,
+                      "src": "427:15:15",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "src": "413:29:15",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "id": 2728,
+                  "nodeType": "ExpressionStatement",
+                  "src": "413:29:15"
+                }
+              ]
+            },
+            "functionSelector": "8a1b1801",
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "setKeysOpIndex",
+            "nameLocation": "354:14:15",
+            "parameters": {
+              "id": 2723,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2722,
+                  "mutability": "mutable",
+                  "name": "_newKeysOpIndex",
+                  "nameLocation": "377:15:15",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2730,
+                  "src": "369:23:15",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2721,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "369:7:15",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "368:25:15"
+            },
+            "returnParameters": {
+              "id": 2724,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "403:0:15"
+            },
+            "scope": 2731,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "external"
+          }
+        ],
+        "abstract": false,
+        "baseContracts": [],
+        "canonicalName": "NodeOperatorsRegistryMockForSecurityModule",
+        "contractDependencies": [],
+        "contractKind": "contract",
+        "fullyImplemented": true,
+        "linearizedBaseContracts": [
+          2731
+        ],
+        "name": "NodeOperatorsRegistryMockForSecurityModule",
+        "nameLocation": "156:42:15",
+        "scope": 2732,
+        "usedErrors": []
+      }
+    ],
+    "license": "GPL-3.0"
+  },
+  "id": 15
+}

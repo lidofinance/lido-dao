@@ -1,0 +1,193 @@
+{
+  "abi": [
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_postTotalPooledEther",
+          "type": "uint256"
+        },
+        {
+          "name": "_preTotalPooledEther",
+          "type": "uint256"
+        },
+        {
+          "name": "_timeElapsed",
+          "type": "uint256"
+        }
+      ],
+      "name": "processLidoOracleReport",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "processLidoOracleReport(uint256,uint256,uint256)": "34212e5f"
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": {}
+  },
+  "ast": {
+    "absolutePath": "contracts/0.4.24/interfaces/IBeaconReportReceiver.sol",
+    "id": 2840,
+    "exportedSymbols": {
+      "IBeaconReportReceiver": [
+        2839
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "90:776:3",
+    "nodes": [
+      {
+        "id": 2829,
+        "nodeType": "PragmaDirective",
+        "src": "90:23:3",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "0.4",
+          ".24"
+        ]
+      },
+      {
+        "id": 2839,
+        "nodeType": "ContractDefinition",
+        "src": "216:649:3",
+        "nodes": [
+          {
+            "id": 2838,
+            "nodeType": "FunctionDefinition",
+            "src": "664:199:3",
+            "nodes": [],
+            "documentation": "@notice Callback to be called by the oracle contract upon the quorum is reached\n@param _postTotalPooledEther total pooled ether on Lido right after the quorum value was reported\n@param _preTotalPooledEther total pooled ether on Lido right before the quorum value was reported\n@param _timeElapsed time elapsed in seconds between the last and the previous quorum",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "processLidoOracleReport",
+            "parameters": {
+              "id": 2836,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2831,
+                  "name": "_postTotalPooledEther",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2838,
+                  "src": "697:29:3",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2830,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "697:7:3",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2833,
+                  "name": "_preTotalPooledEther",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2838,
+                  "src": "765:28:3",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2832,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "765:7:3",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2835,
+                  "name": "_timeElapsed",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2838,
+                  "src": "832:20:3",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2834,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "832:7:3",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "696:157:3"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 2837,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "862:0:3"
+            },
+            "scope": 2839,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          }
+        ],
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "interface",
+        "documentation": "@title Interface defining a callback that the quorum will call on every quorum reached",
+        "fullyImplemented": false,
+        "linearizedBaseContracts": [
+          2839
+        ],
+        "name": "IBeaconReportReceiver",
+        "scope": 2840
+      }
+    ]
+  },
+  "id": 3
+}

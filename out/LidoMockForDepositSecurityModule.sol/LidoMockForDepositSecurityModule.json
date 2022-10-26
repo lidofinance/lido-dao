@@ -1,0 +1,342 @@
+{
+  "abi": [
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "maxDeposits",
+          "type": "uint256"
+        }
+      ],
+      "name": "Deposited",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "maxDeposits",
+          "type": "uint256"
+        }
+      ],
+      "name": "depositBufferedEther",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": {
+    "object": "0x608060405234801561001057600080fd5b5060c28061001f6000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c806390adc83b14602d575b600080fd5b603c60383660046074565b603e565b005b6040518181527f2a89b2e3d580398d6dc2db5e0f336b52602bbaa51afa9bb5cdf59239cf0d2bea9060200160405180910390a150565b600060208284031215608557600080fd5b503591905056fea264697066735822122038b09dca6c65aecc06d079a2ae49539ea9c22383486adf47098fbbfbcad283f564736f6c63430008090033",
+    "sourceMap": "147:197:14:-:0;;;;;;;;;;;;;;;;;;;",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x6080604052348015600f57600080fd5b506004361060285760003560e01c806390adc83b14602d575b600080fd5b603c60383660046074565b603e565b005b6040518181527f2a89b2e3d580398d6dc2db5e0f336b52602bbaa51afa9bb5cdf59239cf0d2bea9060200160405180910390a150565b600060208284031215608557600080fd5b503591905056fea264697066735822122038b09dca6c65aecc06d079a2ae49539ea9c22383486adf47098fbbfbcad283f564736f6c63430008090033",
+    "sourceMap": "147:197:14:-:0;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;238:104;;;;;;:::i;:::-;;:::i;:::-;;;313:22;;345:25:33;;;313:22:14;;333:2:33;318:18;313:22:14;;;;;;;238:104;:::o;14:180:33:-;73:6;126:2;114:9;105:7;101:23;97:32;94:52;;;142:1;139;132:12;94:52;-1:-1:-1;165:23:33;;14:180;-1:-1:-1;14:180:33:o",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "depositBufferedEther(uint256)": "90adc83b"
+  },
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.9+commit.e5eed63a\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"maxDeposits\",\"type\":\"uint256\"}],\"name\":\"Deposited\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"maxDeposits\",\"type\":\"uint256\"}],\"name\":\"depositBufferedEther\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/0.8.9/test_helpers/LidoMockForDepositSecurityModule.sol\":\"LidoMockForDepositSecurityModule\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":@aragon/=node_modules/@aragon/\",\":@nomiclabs/=node_modules/@nomiclabs/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@solidity-parser/=node_modules/@solidity-parser/\",\":ens/=node_modules/@aragon/os/contracts/lib/ens/\",\":eth-gas-reporter/=node_modules/eth-gas-reporter/\",\":gasprofile/=node_modules/gasprofile/\",\":hardhat/=node_modules/hardhat/\",\":math/=node_modules/@aragon/os/contracts/lib/math/\",\":misc/=node_modules/@aragon/os/contracts/lib/misc/\",\":openzeppelin-solidity/=node_modules/openzeppelin-solidity/\",\":sol-explore/=node_modules/sol-explore/\",\":solhint/=node_modules/solhint/\",\":solidity-bytes-utils/=node_modules/solidity-bytes-utils/\",\":token/=node_modules/@aragon/os/contracts/lib/token/\",\":truffle/=node_modules/truffle/\"]},\"sources\":{\"contracts/0.8.9/test_helpers/LidoMockForDepositSecurityModule.sol\":{\"keccak256\":\"0x0a8bd04765927d80b15016797b81f30bdbf35e68a2218c9278f9895caaab8efc\",\"license\":\"GPL-3.0\",\"urls\":[\"bzz-raw://f79a7165f53fac9801b10abaa8b6f4560657549b3f851d3307c05dab6e0d4bdf\",\"dweb:/ipfs/QmVo4m4jg2tZJn1x8EFgqcYJTJjskoERnwW9JMDzoBuJL7\"]}},\"version\":1}",
+  "metadata": {
+    "compiler": {
+      "version": "0.8.9+commit.e5eed63a"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "maxDeposits",
+              "type": "uint256",
+              "indexed": false
+            }
+          ],
+          "type": "event",
+          "name": "Deposited",
+          "anonymous": false
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "maxDeposits",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "depositBufferedEther"
+        }
+      ],
+      "devdoc": {
+        "kind": "dev",
+        "methods": {},
+        "version": 1
+      },
+      "userdoc": {
+        "kind": "user",
+        "methods": {},
+        "version": 1
+      }
+    },
+    "settings": {
+      "remappings": [
+        ":@aragon/=node_modules/@aragon/",
+        ":@nomiclabs/=node_modules/@nomiclabs/",
+        ":@openzeppelin/=node_modules/@openzeppelin/",
+        ":@solidity-parser/=node_modules/@solidity-parser/",
+        ":ens/=node_modules/@aragon/os/contracts/lib/ens/",
+        ":eth-gas-reporter/=node_modules/eth-gas-reporter/",
+        ":gasprofile/=node_modules/gasprofile/",
+        ":hardhat/=node_modules/hardhat/",
+        ":math/=node_modules/@aragon/os/contracts/lib/math/",
+        ":misc/=node_modules/@aragon/os/contracts/lib/misc/",
+        ":openzeppelin-solidity/=node_modules/openzeppelin-solidity/",
+        ":sol-explore/=node_modules/sol-explore/",
+        ":solhint/=node_modules/solhint/",
+        ":solidity-bytes-utils/=node_modules/solidity-bytes-utils/",
+        ":token/=node_modules/@aragon/os/contracts/lib/token/",
+        ":truffle/=node_modules/truffle/"
+      ],
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "metadata": {
+        "bytecodeHash": "ipfs"
+      },
+      "compilationTarget": {
+        "contracts/0.8.9/test_helpers/LidoMockForDepositSecurityModule.sol": "LidoMockForDepositSecurityModule"
+      },
+      "libraries": {}
+    },
+    "sources": {
+      "contracts/0.8.9/test_helpers/LidoMockForDepositSecurityModule.sol": {
+        "keccak256": "0x0a8bd04765927d80b15016797b81f30bdbf35e68a2218c9278f9895caaab8efc",
+        "urls": [
+          "bzz-raw://f79a7165f53fac9801b10abaa8b6f4560657549b3f851d3307c05dab6e0d4bdf",
+          "dweb:/ipfs/QmVo4m4jg2tZJn1x8EFgqcYJTJjskoERnwW9JMDzoBuJL7"
+        ],
+        "license": "GPL-3.0"
+      }
+    },
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": {}
+  },
+  "ast": {
+    "absolutePath": "contracts/0.8.9/test_helpers/LidoMockForDepositSecurityModule.sol",
+    "id": 2709,
+    "exportedSymbols": {
+      "LidoMockForDepositSecurityModule": [
+        2708
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "123:221:14",
+    "nodes": [
+      {
+        "id": 2693,
+        "nodeType": "PragmaDirective",
+        "src": "123:22:14",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "0.8",
+          ".9"
+        ]
+      },
+      {
+        "id": 2708,
+        "nodeType": "ContractDefinition",
+        "src": "147:197:14",
+        "nodes": [
+          {
+            "id": 2697,
+            "nodeType": "EventDefinition",
+            "src": "195:37:14",
+            "nodes": [],
+            "anonymous": false,
+            "name": "Deposited",
+            "nameLocation": "201:9:14",
+            "parameters": {
+              "id": 2696,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2695,
+                  "indexed": false,
+                  "mutability": "mutable",
+                  "name": "maxDeposits",
+                  "nameLocation": "219:11:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2697,
+                  "src": "211:19:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2694,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "211:7:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "210:21:14"
+            }
+          },
+          {
+            "id": 2707,
+            "nodeType": "FunctionDefinition",
+            "src": "238:104:14",
+            "nodes": [],
+            "body": {
+              "id": 2706,
+              "nodeType": "Block",
+              "src": "298:44:14",
+              "nodes": [],
+              "statements": [
+                {
+                  "eventCall": {
+                    "arguments": [
+                      {
+                        "id": 2703,
+                        "name": "maxDeposits",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 2699,
+                        "src": "323:11:14",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        }
+                      }
+                    ],
+                    "expression": {
+                      "argumentTypes": [
+                        {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        }
+                      ],
+                      "id": 2702,
+                      "name": "Deposited",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 2697,
+                      "src": "313:9:14",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_event_nonpayable$_t_uint256_$returns$__$",
+                        "typeString": "function (uint256)"
+                      }
+                    },
+                    "id": 2704,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "313:22:14",
+                    "tryCall": false,
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_tuple$__$",
+                      "typeString": "tuple()"
+                    }
+                  },
+                  "id": 2705,
+                  "nodeType": "EmitStatement",
+                  "src": "308:27:14"
+                }
+              ]
+            },
+            "functionSelector": "90adc83b",
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "depositBufferedEther",
+            "nameLocation": "247:20:14",
+            "parameters": {
+              "id": 2700,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2699,
+                  "mutability": "mutable",
+                  "name": "maxDeposits",
+                  "nameLocation": "276:11:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2707,
+                  "src": "268:19:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2698,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "268:7:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "267:21:14"
+            },
+            "returnParameters": {
+              "id": 2701,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "298:0:14"
+            },
+            "scope": 2708,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "external"
+          }
+        ],
+        "abstract": false,
+        "baseContracts": [],
+        "canonicalName": "LidoMockForDepositSecurityModule",
+        "contractDependencies": [],
+        "contractKind": "contract",
+        "fullyImplemented": true,
+        "linearizedBaseContracts": [
+          2708
+        ],
+        "name": "LidoMockForDepositSecurityModule",
+        "nameLocation": "156:32:14",
+        "scope": 2709,
+        "usedErrors": []
+      }
+    ],
+    "license": "GPL-3.0"
+  },
+  "id": 14
+}

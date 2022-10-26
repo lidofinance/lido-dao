@@ -1,0 +1,614 @@
+{
+  "abi": [
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "hasInitialized",
+      "outputs": [
+        {
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getInitializationBlock",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "isPetrified",
+      "outputs": [
+        {
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": {
+    "object": "0x608060405234801561001057600080fd5b50610144806100206000396000f30060806040526004361061003a5760003560e01c63ffffffff1680630803fac01461003f5780638b3dd74914610068578063de4796ed1461008f575b600080fd5b34801561004b57600080fd5b506100546100a4565b604080519115158252519081900360200190f35b34801561007457600080fd5b5061007d6100cd565b60408051918252519081900360200190f35b34801561009b57600080fd5b506100546100fd565b6000806100af6100cd565b905080158015906100c75750806100c4610110565b10155b91505090565b60006100f87febb05b386a8d34882b8711d156f463690983dc47815980fb82aeeff1aa43579e610114565b905090565b600060001961010a6100cd565b14905090565b4390565b54905600a165627a7a72305820152ac9f1d8320b30f131146939aa69298d04a50659645b0208639abf98f52a410029",
+    "sourceMap": "101:574:70:-;;;;8:9:-1;5:2;;;30:1;27;20:12;5:2;101:574:70;;;;;;;",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x60806040526004361061003a5760003560e01c63ffffffff1680630803fac01461003f5780638b3dd74914610068578063de4796ed1461008f575b600080fd5b34801561004b57600080fd5b506100546100a4565b604080519115158252519081900360200190f35b34801561007457600080fd5b5061007d6100cd565b60408051918252519081900360200190f35b34801561009b57600080fd5b506100546100fd565b6000806100af6100cd565b905080158015906100c75750806100c4610110565b10155b91505090565b60006100f87febb05b386a8d34882b8711d156f463690983dc47815980fb82aeeff1aa43579e610114565b905090565b600060001961010a6100cd565b14905090565b4390565b54905600a165627a7a72305820152ac9f1d8320b30f131146939aa69298d04a50659645b0208639abf98f52a410029",
+    "sourceMap": "101:574:70:-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;1127:208:68;;8:9:-1;5:2;;;30:1;27;20:12;5:2;1127:208:68;;;;;;;;;;;;;;;;;;;;;;880:137;;8:9:-1;5:2;;;30:1;27;20:12;5:2;880:137:68;;;;;;;;;;;;;;;;;;;;286:117:70;;8:9:-1;5:2;;;30:1;27;20:12;5:2;286:117:70;;;;1127:208:68;1174:4;1190:27;1220:24;:22;:24::i;:::-;1190:54;-1:-1:-1;1261:24:68;;;;;:67;;;1309:19;1289:16;:14;:16::i;:::-;:39;;1261:67;1254:74;;1127:208;;:::o;880:137::-;935:7;961:49;344:66;961:47;:49::i;:::-;954:56;;880:137;:::o;286:117:70:-;330:4;-1:-1:-1;;353:24:70;:22;:24::i;:::-;:43;346:50;;286:117;:::o;346:94:73:-;421:12;346:94;:::o;518:134:75:-;629:15;;619:27::o",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "getInitializationBlock()": "8b3dd749",
+    "hasInitialized()": "0803fac0",
+    "isPetrified()": "de4796ed"
+  },
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.4.24+commit.e67f0147\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"constant\":true,\"inputs\":[],\"name\":\"hasInitialized\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getInitializationBlock\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"isPetrified\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"methods\":{\"getInitializationBlock()\":{\"return\":\"Block number in which the contract was initialized\"},\"hasInitialized()\":{\"return\":\"Whether the contract has been initialized by the time of the current block\"}}},\"userdoc\":{\"methods\":{}}},\"settings\":{\"compilationTarget\":{\"node_modules/@aragon/os/contracts/common/Petrifiable.sol\":\"Petrifiable\"},\"evmVersion\":\"constantinople\",\"libraries\":{},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":@aragon/=node_modules/@aragon/\",\":@nomiclabs/=node_modules/@nomiclabs/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@solidity-parser/=node_modules/@solidity-parser/\",\":ens/=node_modules/@aragon/os/contracts/lib/ens/\",\":eth-gas-reporter/=node_modules/eth-gas-reporter/\",\":gasprofile/=node_modules/gasprofile/\",\":hardhat/=node_modules/hardhat/\",\":math/=node_modules/@aragon/os/contracts/lib/math/\",\":misc/=node_modules/@aragon/os/contracts/lib/misc/\",\":openzeppelin-solidity/=node_modules/openzeppelin-solidity/\",\":sol-explore/=node_modules/sol-explore/\",\":solhint/=node_modules/solhint/\",\":solidity-bytes-utils/=node_modules/solidity-bytes-utils/\",\":token/=node_modules/@aragon/os/contracts/lib/token/\",\":truffle/=node_modules/truffle/\"]},\"sources\":{\"node_modules/@aragon/os/contracts/common/Initializable.sol\":{\"keccak256\":\"0xc859366d3143499d1458ea55cb5374ae1ca1faf41763cad5e051dea2da373ba1\",\"urls\":[\"bzzr://8654c49806681deba0f245832394b13970e6d8163de4090e65c565619dc0d3b5\"]},\"node_modules/@aragon/os/contracts/common/Petrifiable.sol\":{\"keccak256\":\"0x797d3a58b782032f6afc51725326c0b51dceb00f3af6b85b25bd91cc10d22504\",\"urls\":[\"bzzr://9b9b7a635630b71c74447a7d4e3246aace9585b450d7981308da3b195374ddc2\"]},\"node_modules/@aragon/os/contracts/common/TimeHelpers.sol\":{\"keccak256\":\"0xfaba85207f0bb4bb5d7b6685a963c39a3258641bda6e523175640c3f9aeb2045\",\"urls\":[\"bzzr://709b5e54b8c4cabb5ec944c817f133076e3631cf009b36886c1725326b9fe92f\"]},\"node_modules/@aragon/os/contracts/common/Uint256Helpers.sol\":{\"keccak256\":\"0x83033025a3f4402be3b7bcc9a23ce96ae4fadc7f251da8f139d73a13a3400b0c\",\"urls\":[\"bzzr://bd0e059eff36a66c3a28298ed5a2e1b058ce93057866ab36063e9f3095cef36f\"]},\"node_modules/@aragon/os/contracts/common/UnstructuredStorage.sol\":{\"keccak256\":\"0xe497dcb85bbbf10224623247f39a4aeed7d3b230de2a811f3b69cb0e7d0a64d4\",\"urls\":[\"bzzr://8c619ede2c79a61baf84f9018ecebd86658ed8e26805141a53dec092e5e9a986\"]}},\"version\":1}",
+  "metadata": {
+    "compiler": {
+      "version": "0.4.24+commit.e67f0147"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "hasInitialized",
+          "outputs": [
+            {
+              "internalType": null,
+              "name": "",
+              "type": "bool"
+            }
+          ]
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "getInitializationBlock",
+          "outputs": [
+            {
+              "internalType": null,
+              "name": "",
+              "type": "uint256"
+            }
+          ]
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "isPetrified",
+          "outputs": [
+            {
+              "internalType": null,
+              "name": "",
+              "type": "bool"
+            }
+          ]
+        }
+      ],
+      "devdoc": {
+        "methods": {
+          "getInitializationBlock()": {
+            "return": "Block number in which the contract was initialized"
+          },
+          "hasInitialized()": {
+            "return": "Whether the contract has been initialized by the time of the current block"
+          }
+        }
+      },
+      "userdoc": {
+        "methods": {}
+      }
+    },
+    "settings": {
+      "remappings": [
+        ":@aragon/=node_modules/@aragon/",
+        ":@nomiclabs/=node_modules/@nomiclabs/",
+        ":@openzeppelin/=node_modules/@openzeppelin/",
+        ":@solidity-parser/=node_modules/@solidity-parser/",
+        ":ens/=node_modules/@aragon/os/contracts/lib/ens/",
+        ":eth-gas-reporter/=node_modules/eth-gas-reporter/",
+        ":gasprofile/=node_modules/gasprofile/",
+        ":hardhat/=node_modules/hardhat/",
+        ":math/=node_modules/@aragon/os/contracts/lib/math/",
+        ":misc/=node_modules/@aragon/os/contracts/lib/misc/",
+        ":openzeppelin-solidity/=node_modules/openzeppelin-solidity/",
+        ":sol-explore/=node_modules/sol-explore/",
+        ":solhint/=node_modules/solhint/",
+        ":solidity-bytes-utils/=node_modules/solidity-bytes-utils/",
+        ":token/=node_modules/@aragon/os/contracts/lib/token/",
+        ":truffle/=node_modules/truffle/"
+      ],
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "compilationTarget": {
+        "node_modules/@aragon/os/contracts/common/Petrifiable.sol": "Petrifiable"
+      },
+      "libraries": {}
+    },
+    "sources": {
+      "node_modules/@aragon/os/contracts/common/Initializable.sol": {
+        "keccak256": "0xc859366d3143499d1458ea55cb5374ae1ca1faf41763cad5e051dea2da373ba1",
+        "urls": [
+          "bzzr://8654c49806681deba0f245832394b13970e6d8163de4090e65c565619dc0d3b5"
+        ],
+        "license": null
+      },
+      "node_modules/@aragon/os/contracts/common/Petrifiable.sol": {
+        "keccak256": "0x797d3a58b782032f6afc51725326c0b51dceb00f3af6b85b25bd91cc10d22504",
+        "urls": [
+          "bzzr://9b9b7a635630b71c74447a7d4e3246aace9585b450d7981308da3b195374ddc2"
+        ],
+        "license": null
+      },
+      "node_modules/@aragon/os/contracts/common/TimeHelpers.sol": {
+        "keccak256": "0xfaba85207f0bb4bb5d7b6685a963c39a3258641bda6e523175640c3f9aeb2045",
+        "urls": [
+          "bzzr://709b5e54b8c4cabb5ec944c817f133076e3631cf009b36886c1725326b9fe92f"
+        ],
+        "license": null
+      },
+      "node_modules/@aragon/os/contracts/common/Uint256Helpers.sol": {
+        "keccak256": "0x83033025a3f4402be3b7bcc9a23ce96ae4fadc7f251da8f139d73a13a3400b0c",
+        "urls": [
+          "bzzr://bd0e059eff36a66c3a28298ed5a2e1b058ce93057866ab36063e9f3095cef36f"
+        ],
+        "license": null
+      },
+      "node_modules/@aragon/os/contracts/common/UnstructuredStorage.sol": {
+        "keccak256": "0xe497dcb85bbbf10224623247f39a4aeed7d3b230de2a811f3b69cb0e7d0a64d4",
+        "urls": [
+          "bzzr://8c619ede2c79a61baf84f9018ecebd86658ed8e26805141a53dec092e5e9a986"
+        ],
+        "license": null
+      }
+    },
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": {}
+  },
+  "ast": {
+    "absolutePath": "node_modules/@aragon/os/contracts/common/Petrifiable.sol",
+    "id": 21767,
+    "exportedSymbols": {
+      "Petrifiable": [
+        21766
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "43:633:70",
+    "nodes": [
+      {
+        "id": 21735,
+        "nodeType": "PragmaDirective",
+        "src": "43:24:70",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "^",
+          "0.4",
+          ".24"
+        ]
+      },
+      {
+        "id": 21736,
+        "nodeType": "ImportDirective",
+        "src": "69:29:70",
+        "nodes": [],
+        "absolutePath": "node_modules/@aragon/os/contracts/common/Initializable.sol",
+        "file": "./Initializable.sol",
+        "scope": 21767,
+        "sourceUnit": 21706,
+        "symbolAliases": [],
+        "unitAlias": ""
+      },
+      {
+        "id": 21766,
+        "nodeType": "ContractDefinition",
+        "src": "101:574:70",
+        "nodes": [
+          {
+            "id": 21744,
+            "nodeType": "VariableDeclaration",
+            "src": "224:55:70",
+            "nodes": [],
+            "constant": true,
+            "name": "PETRIFIED_BLOCK",
+            "scope": 21766,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 21739,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "224:7:70",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "value": {
+              "argumentTypes": null,
+              "arguments": [
+                {
+                  "argumentTypes": null,
+                  "id": 21742,
+                  "isConstant": false,
+                  "isLValue": false,
+                  "isPure": true,
+                  "lValueRequested": false,
+                  "nodeType": "UnaryOperation",
+                  "operator": "-",
+                  "prefix": true,
+                  "src": "276:2:70",
+                  "subExpression": {
+                    "argumentTypes": null,
+                    "hexValue": "31",
+                    "id": 21741,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": true,
+                    "kind": "number",
+                    "lValueRequested": false,
+                    "nodeType": "Literal",
+                    "src": "277:1:70",
+                    "subdenomination": null,
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_rational_1_by_1",
+                      "typeString": "int_const 1"
+                    },
+                    "value": "1"
+                  },
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_rational_-1_by_1",
+                    "typeString": "int_const -1"
+                  }
+                }
+              ],
+              "expression": {
+                "argumentTypes": [
+                  {
+                    "typeIdentifier": "t_rational_-1_by_1",
+                    "typeString": "int_const -1"
+                  }
+                ],
+                "id": 21740,
+                "isConstant": false,
+                "isLValue": false,
+                "isPure": true,
+                "lValueRequested": false,
+                "nodeType": "ElementaryTypeNameExpression",
+                "src": "268:7:70",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_type$_t_uint256_$",
+                  "typeString": "type(uint256)"
+                },
+                "typeName": "uint256"
+              },
+              "id": 21743,
+              "isConstant": false,
+              "isLValue": false,
+              "isPure": true,
+              "kind": "typeConversion",
+              "lValueRequested": false,
+              "names": [],
+              "nodeType": "FunctionCall",
+              "src": "268:11:70",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "id": 21755,
+            "nodeType": "FunctionDefinition",
+            "src": "286:117:70",
+            "nodes": [],
+            "body": {
+              "id": 21754,
+              "nodeType": "Block",
+              "src": "336:67:70",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "commonType": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    },
+                    "id": 21752,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftExpression": {
+                      "argumentTypes": null,
+                      "arguments": [],
+                      "expression": {
+                        "argumentTypes": [],
+                        "id": 21749,
+                        "name": "getInitializationBlock",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 21657,
+                        "src": "353:22:70",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_function_internal_view$__$returns$_t_uint256_$",
+                          "typeString": "function () view returns (uint256)"
+                        }
+                      },
+                      "id": 21750,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": false,
+                      "kind": "functionCall",
+                      "lValueRequested": false,
+                      "names": [],
+                      "nodeType": "FunctionCall",
+                      "src": "353:24:70",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "nodeType": "BinaryOperation",
+                    "operator": "==",
+                    "rightExpression": {
+                      "argumentTypes": null,
+                      "id": 21751,
+                      "name": "PETRIFIED_BLOCK",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 21744,
+                      "src": "381:15:70",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "src": "353:43:70",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "functionReturnParameters": 21748,
+                  "id": 21753,
+                  "nodeType": "Return",
+                  "src": "346:50:70"
+                }
+              ]
+            },
+            "documentation": null,
+            "implemented": true,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "isPetrified",
+            "parameters": {
+              "id": 21745,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "306:2:70"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 21748,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 21747,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 21755,
+                  "src": "330:4:70",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bool",
+                    "typeString": "bool"
+                  },
+                  "typeName": {
+                    "id": 21746,
+                    "name": "bool",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "330:4:70",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "329:6:70"
+            },
+            "scope": 21766,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "public"
+          },
+          {
+            "id": 21765,
+            "nodeType": "FunctionDefinition",
+            "src": "589:84:70",
+            "nodes": [],
+            "body": {
+              "id": 21764,
+              "nodeType": "Block",
+              "src": "626:47:70",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "arguments": [
+                      {
+                        "argumentTypes": null,
+                        "id": 21761,
+                        "name": "PETRIFIED_BLOCK",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 21744,
+                        "src": "650:15:70",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        }
+                      }
+                    ],
+                    "expression": {
+                      "argumentTypes": [
+                        {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        }
+                      ],
+                      "id": 21760,
+                      "name": "initializedAt",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 21704,
+                      "src": "636:13:70",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_internal_nonpayable$_t_uint256_$returns$__$",
+                        "typeString": "function (uint256)"
+                      }
+                    },
+                    "id": 21762,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "636:30:70",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_tuple$__$",
+                      "typeString": "tuple()"
+                    }
+                  },
+                  "id": 21763,
+                  "nodeType": "ExpressionStatement",
+                  "src": "636:30:70"
+                }
+              ]
+            },
+            "documentation": "@dev Function to be called by top level contract to prevent being initialized.\n     Useful for freezing base contracts when they're used behind proxies.",
+            "implemented": true,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [
+              {
+                "arguments": null,
+                "id": 21758,
+                "modifierName": {
+                  "argumentTypes": null,
+                  "id": 21757,
+                  "name": "onlyInit",
+                  "nodeType": "Identifier",
+                  "overloadedDeclarations": [],
+                  "referencedDeclaration": 21637,
+                  "src": "617:8:70",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_modifier$__$",
+                    "typeString": "modifier ()"
+                  }
+                },
+                "nodeType": "ModifierInvocation",
+                "src": "617:8:70"
+              }
+            ],
+            "name": "petrify",
+            "parameters": {
+              "id": 21756,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "605:2:70"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 21759,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "626:0:70"
+            },
+            "scope": 21766,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "internal"
+          }
+        ],
+        "baseContracts": [
+          {
+            "arguments": null,
+            "baseName": {
+              "contractScope": null,
+              "id": 21737,
+              "name": "Initializable",
+              "nodeType": "UserDefinedTypeName",
+              "referencedDeclaration": 21705,
+              "src": "125:13:70",
+              "typeDescriptions": {
+                "typeIdentifier": "t_contract$_Initializable_$21705",
+                "typeString": "contract Initializable"
+              }
+            },
+            "id": 21738,
+            "nodeType": "InheritanceSpecifier",
+            "src": "125:13:70"
+          }
+        ],
+        "contractDependencies": [
+          21705,
+          22095
+        ],
+        "contractKind": "contract",
+        "documentation": null,
+        "fullyImplemented": true,
+        "linearizedBaseContracts": [
+          21766,
+          21705,
+          22095
+        ],
+        "name": "Petrifiable",
+        "scope": 21767
+      }
+    ]
+  },
+  "id": 70
+}

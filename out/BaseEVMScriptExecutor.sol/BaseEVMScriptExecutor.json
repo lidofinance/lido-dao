@@ -1,0 +1,267 @@
+{
+  "abi": [
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "hasInitialized",
+      "outputs": [
+        {
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "script",
+          "type": "bytes"
+        },
+        {
+          "name": "input",
+          "type": "bytes"
+        },
+        {
+          "name": "blacklist",
+          "type": "address[]"
+        }
+      ],
+      "name": "execScript",
+      "outputs": [
+        {
+          "name": "",
+          "type": "bytes"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "executorType",
+      "outputs": [
+        {
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getInitializationBlock",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "isPetrified",
+      "outputs": [
+        {
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "execScript(bytes,bytes,address[])": "279cea35",
+    "executorType()": "8333d9b2",
+    "getInitializationBlock()": "8b3dd749",
+    "hasInitialized()": "0803fac0",
+    "isPetrified()": "de4796ed"
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": {}
+  },
+  "ast": {
+    "absolutePath": "node_modules/@aragon/os/contracts/evmscript/executors/BaseEVMScriptExecutor.sol",
+    "id": 23204,
+    "exportedSymbols": {
+      "BaseEVMScriptExecutor": [
+        23203
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "43:234:84",
+    "nodes": [
+      {
+        "id": 23193,
+        "nodeType": "PragmaDirective",
+        "src": "43:24:84",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "^",
+          "0.4",
+          ".24"
+        ]
+      },
+      {
+        "id": 23194,
+        "nodeType": "ImportDirective",
+        "src": "69:40:84",
+        "nodes": [],
+        "absolutePath": "node_modules/@aragon/os/contracts/common/Autopetrified.sol",
+        "file": "../../common/Autopetrified.sol",
+        "scope": 23204,
+        "sourceUnit": 21398,
+        "symbolAliases": [],
+        "unitAlias": ""
+      },
+      {
+        "id": 23195,
+        "nodeType": "ImportDirective",
+        "src": "110:35:84",
+        "nodes": [],
+        "absolutePath": "node_modules/@aragon/os/contracts/evmscript/IEVMScriptExecutor.sol",
+        "file": "../IEVMScriptExecutor.sol",
+        "scope": 23204,
+        "sourceUnit": 23073,
+        "symbolAliases": [],
+        "unitAlias": ""
+      },
+      {
+        "id": 23203,
+        "nodeType": "ContractDefinition",
+        "src": "148:128:84",
+        "nodes": [
+          {
+            "id": 23202,
+            "nodeType": "VariableDeclaration",
+            "src": "222:51:84",
+            "nodes": [],
+            "constant": true,
+            "name": "SCRIPT_START_LOCATION",
+            "scope": 23203,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 23200,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "222:7:84",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "value": {
+              "argumentTypes": null,
+              "hexValue": "34",
+              "id": 23201,
+              "isConstant": false,
+              "isLValue": false,
+              "isPure": true,
+              "kind": "number",
+              "lValueRequested": false,
+              "nodeType": "Literal",
+              "src": "272:1:84",
+              "subdenomination": null,
+              "typeDescriptions": {
+                "typeIdentifier": "t_rational_4_by_1",
+                "typeString": "int_const 4"
+              },
+              "value": "4"
+            },
+            "visibility": "internal"
+          }
+        ],
+        "baseContracts": [
+          {
+            "arguments": null,
+            "baseName": {
+              "contractScope": null,
+              "id": 23196,
+              "name": "IEVMScriptExecutor",
+              "nodeType": "UserDefinedTypeName",
+              "referencedDeclaration": 23072,
+              "src": "182:18:84",
+              "typeDescriptions": {
+                "typeIdentifier": "t_contract$_IEVMScriptExecutor_$23072",
+                "typeString": "contract IEVMScriptExecutor"
+              }
+            },
+            "id": 23197,
+            "nodeType": "InheritanceSpecifier",
+            "src": "182:18:84"
+          },
+          {
+            "arguments": null,
+            "baseName": {
+              "contractScope": null,
+              "id": 23198,
+              "name": "Autopetrified",
+              "nodeType": "UserDefinedTypeName",
+              "referencedDeclaration": 21397,
+              "src": "202:13:84",
+              "typeDescriptions": {
+                "typeIdentifier": "t_contract$_Autopetrified_$21397",
+                "typeString": "contract Autopetrified"
+              }
+            },
+            "id": 23199,
+            "nodeType": "InheritanceSpecifier",
+            "src": "202:13:84"
+          }
+        ],
+        "contractDependencies": [
+          21397,
+          21705,
+          21766,
+          22095,
+          23072
+        ],
+        "contractKind": "contract",
+        "documentation": null,
+        "fullyImplemented": false,
+        "linearizedBaseContracts": [
+          23203,
+          21397,
+          21766,
+          21705,
+          22095,
+          23072
+        ],
+        "name": "BaseEVMScriptExecutor",
+        "scope": 23204
+      }
+    ]
+  },
+  "id": 84
+}

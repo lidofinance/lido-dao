@@ -1,0 +1,307 @@
+{
+  "abi": [
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "script",
+          "type": "bytes"
+        },
+        {
+          "name": "input",
+          "type": "bytes"
+        },
+        {
+          "name": "blacklist",
+          "type": "address[]"
+        }
+      ],
+      "name": "execScript",
+      "outputs": [
+        {
+          "name": "",
+          "type": "bytes"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "executorType",
+      "outputs": [
+        {
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "pure",
+      "type": "function"
+    }
+  ],
+  "bytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "execScript(bytes,bytes,address[])": "279cea35",
+    "executorType()": "8333d9b2"
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": {}
+  },
+  "ast": {
+    "absolutePath": "node_modules/@aragon/os/contracts/evmscript/IEVMScriptExecutor.sol",
+    "id": 23073,
+    "exportedSymbols": {
+      "IEVMScriptExecutor": [
+        23072
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "43:219:81",
+    "nodes": [
+      {
+        "id": 23054,
+        "nodeType": "PragmaDirective",
+        "src": "43:24:81",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "^",
+          "0.4",
+          ".24"
+        ]
+      },
+      {
+        "id": 23072,
+        "nodeType": "ContractDefinition",
+        "src": "70:191:81",
+        "nodes": [
+          {
+            "id": 23066,
+            "nodeType": "FunctionDefinition",
+            "src": "105:93:81",
+            "nodes": [],
+            "documentation": null,
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "execScript",
+            "parameters": {
+              "id": 23062,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 23056,
+                  "name": "script",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 23066,
+                  "src": "125:12:81",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes_calldata_ptr",
+                    "typeString": "bytes"
+                  },
+                  "typeName": {
+                    "id": 23055,
+                    "name": "bytes",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "125:5:81",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes_storage_ptr",
+                      "typeString": "bytes"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 23058,
+                  "name": "input",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 23066,
+                  "src": "139:11:81",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes_calldata_ptr",
+                    "typeString": "bytes"
+                  },
+                  "typeName": {
+                    "id": 23057,
+                    "name": "bytes",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "139:5:81",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes_storage_ptr",
+                      "typeString": "bytes"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 23061,
+                  "name": "blacklist",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 23066,
+                  "src": "152:19:81",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_array$_t_address_$dyn_calldata_ptr",
+                    "typeString": "address[]"
+                  },
+                  "typeName": {
+                    "baseType": {
+                      "id": 23059,
+                      "name": "address",
+                      "nodeType": "ElementaryTypeName",
+                      "src": "152:7:81",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_address",
+                        "typeString": "address"
+                      }
+                    },
+                    "id": 23060,
+                    "length": null,
+                    "nodeType": "ArrayTypeName",
+                    "src": "152:9:81",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_array$_t_address_$dyn_storage_ptr",
+                      "typeString": "address[]"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "124:48:81"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 23065,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 23064,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 23066,
+                  "src": "191:5:81",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes_memory_ptr",
+                    "typeString": "bytes"
+                  },
+                  "typeName": {
+                    "id": 23063,
+                    "name": "bytes",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "191:5:81",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes_storage_ptr",
+                      "typeString": "bytes"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "190:7:81"
+            },
+            "scope": 23072,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 23071,
+            "nodeType": "FunctionDefinition",
+            "src": "203:56:81",
+            "nodes": [],
+            "documentation": null,
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "executorType",
+            "parameters": {
+              "id": 23067,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "224:2:81"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 23070,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 23069,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 23071,
+                  "src": "250:7:81",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes32",
+                    "typeString": "bytes32"
+                  },
+                  "typeName": {
+                    "id": 23068,
+                    "name": "bytes32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "250:7:81",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "249:9:81"
+            },
+            "scope": 23072,
+            "stateMutability": "pure",
+            "superFunction": null,
+            "visibility": "external"
+          }
+        ],
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "interface",
+        "documentation": null,
+        "fullyImplemented": false,
+        "linearizedBaseContracts": [
+          23072
+        ],
+        "name": "IEVMScriptExecutor",
+        "scope": 23073
+      }
+    ]
+  },
+  "id": 81
+}

@@ -1,0 +1,938 @@
+{
+  "abi": [
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "callback",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "atIndex",
+          "type": "uint256"
+        }
+      ],
+      "name": "CallbackAdded",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "callback",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "atIndex",
+          "type": "uint256"
+        }
+      ],
+      "name": "CallbackRemoved",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_callback",
+          "type": "address"
+        }
+      ],
+      "name": "addCallback",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_atIndex",
+          "type": "uint256"
+        }
+      ],
+      "name": "callbacks",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "callbacksLength",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_callback",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_atIndex",
+          "type": "uint256"
+        }
+      ],
+      "name": "insertCallback",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_atIndex",
+          "type": "uint256"
+        }
+      ],
+      "name": "removeCallback",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "addCallback(address)": "33657836",
+    "callbacks(uint256)": "00e0d3b5",
+    "callbacksLength()": "91b33614",
+    "insertCallback(address,uint256)": "fd2f1a44",
+    "removeCallback(uint256)": "9fb56ad2"
+  },
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.9+commit.e5eed63a\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"callback\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"atIndex\",\"type\":\"uint256\"}],\"name\":\"CallbackAdded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"callback\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"atIndex\",\"type\":\"uint256\"}],\"name\":\"CallbackRemoved\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_callback\",\"type\":\"address\"}],\"name\":\"addCallback\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_atIndex\",\"type\":\"uint256\"}],\"name\":\"callbacks\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"callbacksLength\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_callback\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_atIndex\",\"type\":\"uint256\"}],\"name\":\"insertCallback\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_atIndex\",\"type\":\"uint256\"}],\"name\":\"removeCallback\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"events\":{\"CallbackAdded(address,uint256)\":{\"details\":\"emitted by `addCallback` and `insertCallback` functions\"},\"CallbackRemoved(address,uint256)\":{\"details\":\"emitted by `removeCallback` function\"}},\"kind\":\"dev\",\"methods\":{\"addCallback(address)\":{\"details\":\"cheapest way to insert new item (doesn't incur additional moves)\",\"params\":{\"_callback\":\"callback address\"}},\"callbacks(uint256)\":{\"details\":\"function reverts if `_atIndex` is out of range\",\"returns\":{\"_0\":\"Callback at the given `_atIndex`\"}},\"callbacksLength()\":{\"returns\":{\"_0\":\"Added callbacks count\"}},\"insertCallback(address,uint256)\":{\"details\":\"insertion gas cost is higher for the lower `_atIndex` values\",\"params\":{\"_atIndex\":\"callback insert position\",\"_callback\":\"callback address\"}},\"removeCallback(uint256)\":{\"details\":\"remove gas cost is higher for the lower `_atIndex` values\",\"params\":{\"_atIndex\":\"callback remove position\"}}},\"title\":\"Interface defining an ordered callbacks array supporting add/insert/remove ops\",\"version\":1},\"userdoc\":{\"events\":{\"CallbackAdded(address,uint256)\":{\"notice\":\"Callback added event\"},\"CallbackRemoved(address,uint256)\":{\"notice\":\"Callback removed event\"}},\"kind\":\"user\",\"methods\":{\"addCallback(address)\":{\"notice\":\"Add a `_callback` to the back of array\"},\"callbacks(uint256)\":{\"notice\":\"Get callback at position\"},\"callbacksLength()\":{\"notice\":\"Callback length\"},\"insertCallback(address,uint256)\":{\"notice\":\"Insert a `_callback` at the given `_atIndex` position\"},\"removeCallback(uint256)\":{\"notice\":\"Remove a callback at the given `_atIndex` position\"}},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/0.8.9/interfaces/IOrderedCallbacksArray.sol\":\"IOrderedCallbacksArray\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":@aragon/=node_modules/@aragon/\",\":@nomiclabs/=node_modules/@nomiclabs/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@solidity-parser/=node_modules/@solidity-parser/\",\":ens/=node_modules/@aragon/os/contracts/lib/ens/\",\":eth-gas-reporter/=node_modules/eth-gas-reporter/\",\":gasprofile/=node_modules/gasprofile/\",\":hardhat/=node_modules/hardhat/\",\":math/=node_modules/@aragon/os/contracts/lib/math/\",\":misc/=node_modules/@aragon/os/contracts/lib/misc/\",\":openzeppelin-solidity/=node_modules/openzeppelin-solidity/\",\":sol-explore/=node_modules/sol-explore/\",\":solhint/=node_modules/solhint/\",\":solidity-bytes-utils/=node_modules/solidity-bytes-utils/\",\":token/=node_modules/@aragon/os/contracts/lib/token/\",\":truffle/=node_modules/truffle/\"]},\"sources\":{\"contracts/0.8.9/interfaces/IOrderedCallbacksArray.sol\":{\"keccak256\":\"0x70211c286ca5bfd33acb6d90fbfef5dd2538101dbf85ea650fc91647dc7f5b44\",\"license\":\"GPL-3.0\",\"urls\":[\"bzz-raw://545e9735d3e20b99e86c569c1e6f20916a2bec485d9ec6f608eb01cc11a51758\",\"dweb:/ipfs/QmXDfX9MWcdzNQGL35D3tVfLY2MFHj6DYw4uVcQ8nyQuKi\"]}},\"version\":1}",
+  "metadata": {
+    "compiler": {
+      "version": "0.8.9+commit.e5eed63a"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "callback",
+              "type": "address",
+              "indexed": true
+            },
+            {
+              "internalType": "uint256",
+              "name": "atIndex",
+              "type": "uint256",
+              "indexed": false
+            }
+          ],
+          "type": "event",
+          "name": "CallbackAdded",
+          "anonymous": false
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "callback",
+              "type": "address",
+              "indexed": true
+            },
+            {
+              "internalType": "uint256",
+              "name": "atIndex",
+              "type": "uint256",
+              "indexed": false
+            }
+          ],
+          "type": "event",
+          "name": "CallbackRemoved",
+          "anonymous": false
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "_callback",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "addCallback"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "_atIndex",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "callbacks",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ]
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "callbacksLength",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ]
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "_callback",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "_atIndex",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "insertCallback"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "_atIndex",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "removeCallback"
+        }
+      ],
+      "devdoc": {
+        "kind": "dev",
+        "methods": {
+          "addCallback(address)": {
+            "details": "cheapest way to insert new item (doesn't incur additional moves)",
+            "params": {
+              "_callback": "callback address"
+            }
+          },
+          "callbacks(uint256)": {
+            "details": "function reverts if `_atIndex` is out of range",
+            "returns": {
+              "_0": "Callback at the given `_atIndex`"
+            }
+          },
+          "callbacksLength()": {
+            "returns": {
+              "_0": "Added callbacks count"
+            }
+          },
+          "insertCallback(address,uint256)": {
+            "details": "insertion gas cost is higher for the lower `_atIndex` values",
+            "params": {
+              "_atIndex": "callback insert position",
+              "_callback": "callback address"
+            }
+          },
+          "removeCallback(uint256)": {
+            "details": "remove gas cost is higher for the lower `_atIndex` values",
+            "params": {
+              "_atIndex": "callback remove position"
+            }
+          }
+        },
+        "version": 1
+      },
+      "userdoc": {
+        "kind": "user",
+        "methods": {
+          "addCallback(address)": {
+            "notice": "Add a `_callback` to the back of array"
+          },
+          "callbacks(uint256)": {
+            "notice": "Get callback at position"
+          },
+          "callbacksLength()": {
+            "notice": "Callback length"
+          },
+          "insertCallback(address,uint256)": {
+            "notice": "Insert a `_callback` at the given `_atIndex` position"
+          },
+          "removeCallback(uint256)": {
+            "notice": "Remove a callback at the given `_atIndex` position"
+          }
+        },
+        "version": 1
+      }
+    },
+    "settings": {
+      "remappings": [
+        ":@aragon/=node_modules/@aragon/",
+        ":@nomiclabs/=node_modules/@nomiclabs/",
+        ":@openzeppelin/=node_modules/@openzeppelin/",
+        ":@solidity-parser/=node_modules/@solidity-parser/",
+        ":ens/=node_modules/@aragon/os/contracts/lib/ens/",
+        ":eth-gas-reporter/=node_modules/eth-gas-reporter/",
+        ":gasprofile/=node_modules/gasprofile/",
+        ":hardhat/=node_modules/hardhat/",
+        ":math/=node_modules/@aragon/os/contracts/lib/math/",
+        ":misc/=node_modules/@aragon/os/contracts/lib/misc/",
+        ":openzeppelin-solidity/=node_modules/openzeppelin-solidity/",
+        ":sol-explore/=node_modules/sol-explore/",
+        ":solhint/=node_modules/solhint/",
+        ":solidity-bytes-utils/=node_modules/solidity-bytes-utils/",
+        ":token/=node_modules/@aragon/os/contracts/lib/token/",
+        ":truffle/=node_modules/truffle/"
+      ],
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "metadata": {
+        "bytecodeHash": "ipfs"
+      },
+      "compilationTarget": {
+        "contracts/0.8.9/interfaces/IOrderedCallbacksArray.sol": "IOrderedCallbacksArray"
+      },
+      "libraries": {}
+    },
+    "sources": {
+      "contracts/0.8.9/interfaces/IOrderedCallbacksArray.sol": {
+        "keccak256": "0x70211c286ca5bfd33acb6d90fbfef5dd2538101dbf85ea650fc91647dc7f5b44",
+        "urls": [
+          "bzz-raw://545e9735d3e20b99e86c569c1e6f20916a2bec485d9ec6f608eb01cc11a51758",
+          "dweb:/ipfs/QmXDfX9MWcdzNQGL35D3tVfLY2MFHj6DYw4uVcQ8nyQuKi"
+        ],
+        "license": "GPL-3.0"
+      }
+    },
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": {}
+  },
+  "ast": {
+    "absolutePath": "contracts/0.8.9/interfaces/IOrderedCallbacksArray.sol",
+    "id": 2429,
+    "exportedSymbols": {
+      "IOrderedCallbacksArray": [
+        2428
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "90:1806:6",
+    "nodes": [
+      {
+        "id": 2378,
+        "nodeType": "PragmaDirective",
+        "src": "90:22:6",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "0.8",
+          ".9"
+        ]
+      },
+      {
+        "id": 2428,
+        "nodeType": "ContractDefinition",
+        "src": "213:1682:6",
+        "nodes": [
+          {
+            "id": 2386,
+            "nodeType": "EventDefinition",
+            "src": "383:63:6",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": {
+              "id": 2380,
+              "nodeType": "StructuredDocumentation",
+              "src": "252:126:6",
+              "text": " @notice Callback added event\n @dev emitted by `addCallback` and `insertCallback` functions"
+            },
+            "name": "CallbackAdded",
+            "nameLocation": "389:13:6",
+            "parameters": {
+              "id": 2385,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2382,
+                  "indexed": true,
+                  "mutability": "mutable",
+                  "name": "callback",
+                  "nameLocation": "419:8:6",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2386,
+                  "src": "403:24:6",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 2381,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "403:7:6",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2384,
+                  "indexed": false,
+                  "mutability": "mutable",
+                  "name": "atIndex",
+                  "nameLocation": "437:7:6",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2386,
+                  "src": "429:15:6",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2383,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "429:7:6",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "402:43:6"
+            }
+          },
+          {
+            "id": 2393,
+            "nodeType": "EventDefinition",
+            "src": "566:65:6",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": {
+              "id": 2387,
+              "nodeType": "StructuredDocumentation",
+              "src": "452:109:6",
+              "text": " @notice Callback removed event\n @dev emitted by `removeCallback` function"
+            },
+            "name": "CallbackRemoved",
+            "nameLocation": "572:15:6",
+            "parameters": {
+              "id": 2392,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2389,
+                  "indexed": true,
+                  "mutability": "mutable",
+                  "name": "callback",
+                  "nameLocation": "604:8:6",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2393,
+                  "src": "588:24:6",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 2388,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "588:7:6",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2391,
+                  "indexed": false,
+                  "mutability": "mutable",
+                  "name": "atIndex",
+                  "nameLocation": "622:7:6",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2393,
+                  "src": "614:15:6",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2390,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "614:7:6",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "587:43:6"
+            }
+          },
+          {
+            "id": 2399,
+            "nodeType": "FunctionDefinition",
+            "src": "724:59:6",
+            "nodes": [],
+            "documentation": {
+              "id": 2394,
+              "nodeType": "StructuredDocumentation",
+              "src": "637:82:6",
+              "text": " @notice Callback length\n @return Added callbacks count"
+            },
+            "functionSelector": "91b33614",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "callbacksLength",
+            "nameLocation": "733:15:6",
+            "parameters": {
+              "id": 2395,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "748:2:6"
+            },
+            "returnParameters": {
+              "id": 2398,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2397,
+                  "mutability": "mutable",
+                  "name": "",
+                  "nameLocation": "-1:-1:-1",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2399,
+                  "src": "774:7:6",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2396,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "774:7:6",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "773:9:6"
+            },
+            "scope": 2428,
+            "stateMutability": "view",
+            "virtual": false,
+            "visibility": "external"
+          },
+          {
+            "id": 2405,
+            "nodeType": "FunctionDefinition",
+            "src": "989:49:6",
+            "nodes": [],
+            "documentation": {
+              "id": 2400,
+              "nodeType": "StructuredDocumentation",
+              "src": "789:195:6",
+              "text": " @notice Add a `_callback` to the back of array\n @param _callback callback address\n @dev cheapest way to insert new item (doesn't incur additional moves)"
+            },
+            "functionSelector": "33657836",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "addCallback",
+            "nameLocation": "998:11:6",
+            "parameters": {
+              "id": 2403,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2402,
+                  "mutability": "mutable",
+                  "name": "_callback",
+                  "nameLocation": "1018:9:6",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2405,
+                  "src": "1010:17:6",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 2401,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1010:7:6",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1009:19:6"
+            },
+            "returnParameters": {
+              "id": 2404,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1037:0:6"
+            },
+            "scope": 2428,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "external"
+          },
+          {
+            "id": 2413,
+            "nodeType": "FunctionDefinition",
+            "src": "1304:70:6",
+            "nodes": [],
+            "documentation": {
+              "id": 2406,
+              "nodeType": "StructuredDocumentation",
+              "src": "1044:255:6",
+              "text": " @notice Insert a `_callback` at the given `_atIndex` position\n @param _callback callback address\n @param _atIndex callback insert position\n @dev insertion gas cost is higher for the lower `_atIndex` values"
+            },
+            "functionSelector": "fd2f1a44",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "insertCallback",
+            "nameLocation": "1313:14:6",
+            "parameters": {
+              "id": 2411,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2408,
+                  "mutability": "mutable",
+                  "name": "_callback",
+                  "nameLocation": "1336:9:6",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2413,
+                  "src": "1328:17:6",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 2407,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1328:7:6",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2410,
+                  "mutability": "mutable",
+                  "name": "_atIndex",
+                  "nameLocation": "1355:8:6",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2413,
+                  "src": "1347:16:6",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2409,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1347:7:6",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1327:37:6"
+            },
+            "returnParameters": {
+              "id": 2412,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1373:0:6"
+            },
+            "scope": 2428,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "external"
+          },
+          {
+            "id": 2419,
+            "nodeType": "FunctionDefinition",
+            "src": "1592:51:6",
+            "nodes": [],
+            "documentation": {
+              "id": 2414,
+              "nodeType": "StructuredDocumentation",
+              "src": "1380:207:6",
+              "text": " @notice Remove a callback at the given `_atIndex` position\n @param _atIndex callback remove position\n @dev remove gas cost is higher for the lower `_atIndex` values"
+            },
+            "functionSelector": "9fb56ad2",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "removeCallback",
+            "nameLocation": "1601:14:6",
+            "parameters": {
+              "id": 2417,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2416,
+                  "mutability": "mutable",
+                  "name": "_atIndex",
+                  "nameLocation": "1624:8:6",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2419,
+                  "src": "1616:16:6",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2415,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1616:7:6",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1615:18:6"
+            },
+            "returnParameters": {
+              "id": 2418,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1642:0:6"
+            },
+            "scope": 2428,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "external"
+          },
+          {
+            "id": 2427,
+            "nodeType": "FunctionDefinition",
+            "src": "1824:69:6",
+            "nodes": [],
+            "documentation": {
+              "id": 2420,
+              "nodeType": "StructuredDocumentation",
+              "src": "1649:170:6",
+              "text": " @notice Get callback at position\n @return Callback at the given `_atIndex`\n @dev function reverts if `_atIndex` is out of range"
+            },
+            "functionSelector": "00e0d3b5",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "callbacks",
+            "nameLocation": "1833:9:6",
+            "parameters": {
+              "id": 2423,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2422,
+                  "mutability": "mutable",
+                  "name": "_atIndex",
+                  "nameLocation": "1851:8:6",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2427,
+                  "src": "1843:16:6",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2421,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1843:7:6",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1842:18:6"
+            },
+            "returnParameters": {
+              "id": 2426,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2425,
+                  "mutability": "mutable",
+                  "name": "",
+                  "nameLocation": "-1:-1:-1",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2427,
+                  "src": "1884:7:6",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 2424,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1884:7:6",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1883:9:6"
+            },
+            "scope": 2428,
+            "stateMutability": "view",
+            "virtual": false,
+            "visibility": "external"
+          }
+        ],
+        "abstract": false,
+        "baseContracts": [],
+        "canonicalName": "IOrderedCallbacksArray",
+        "contractDependencies": [],
+        "contractKind": "interface",
+        "documentation": {
+          "id": 2379,
+          "nodeType": "StructuredDocumentation",
+          "src": "114:98:6",
+          "text": " @title Interface defining an ordered callbacks array supporting add/insert/remove ops"
+        },
+        "fullyImplemented": false,
+        "linearizedBaseContracts": [
+          2428
+        ],
+        "name": "IOrderedCallbacksArray",
+        "nameLocation": "223:22:6",
+        "scope": 2429,
+        "usedErrors": []
+      }
+    ],
+    "license": "GPL-3.0"
+  },
+  "id": 6
+}

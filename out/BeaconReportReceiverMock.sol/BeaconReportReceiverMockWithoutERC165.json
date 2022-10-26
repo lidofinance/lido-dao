@@ -1,0 +1,993 @@
+{
+  "abi": [
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_postTotalPooledEther",
+          "type": "uint256"
+        },
+        {
+          "name": "_preTotalPooledEther",
+          "type": "uint256"
+        },
+        {
+          "name": "_timeElapsed",
+          "type": "uint256"
+        }
+      ],
+      "name": "processLidoOracleReport",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": {
+    "object": "0x6080604052348015600f57600080fd5b5060758061001e6000396000f30060806040526004361060225760003560e01c63ffffffff16806334212e5f146027575b600080fd5b348015603257600080fd5b5060426004356024356044356044565b005b5050505600a165627a7a723058204ff18440a9fa1e7b4cdf0136057639f43f06cf24d9f22aaa24943fee61cb974f0029",
+    "sourceMap": "959:286:23:-;;;;8:9:-1;5:2;;;30:1;27;20:12;5:2;959:286:23;;;;;;;",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x60806040526004361060225760003560e01c63ffffffff16806334212e5f146027575b600080fd5b348015603257600080fd5b5060426004356024356044356044565b005b5050505600a165627a7a723058204ff18440a9fa1e7b4cdf0136057639f43f06cf24d9f22aaa24943fee61cb974f0029",
+    "sourceMap": "959:286:23:-;;;;;;;;;;;;;;;;;;;;;;;1037:206;;8:9:-1;5:2;;;30:1;27;20:12;5:2;-1:-1;1037:206:23;;;;;;;;;;;;;;;:::o",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "processLidoOracleReport(uint256,uint256,uint256)": "34212e5f"
+  },
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.4.24+commit.e67f0147\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"constant\":false,\"inputs\":[{\"name\":\"_postTotalPooledEther\",\"type\":\"uint256\"},{\"name\":\"_preTotalPooledEther\",\"type\":\"uint256\"},{\"name\":\"_timeElapsed\",\"type\":\"uint256\"}],\"name\":\"processLidoOracleReport\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"methods\":{}},\"userdoc\":{\"methods\":{}}},\"settings\":{\"compilationTarget\":{\"contracts/0.4.24/test_helpers/BeaconReportReceiverMock.sol\":\"BeaconReportReceiverMockWithoutERC165\"},\"evmVersion\":\"constantinople\",\"libraries\":{},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":@aragon/=node_modules/@aragon/\",\":@nomiclabs/=node_modules/@nomiclabs/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@solidity-parser/=node_modules/@solidity-parser/\",\":ens/=node_modules/@aragon/os/contracts/lib/ens/\",\":eth-gas-reporter/=node_modules/eth-gas-reporter/\",\":gasprofile/=node_modules/gasprofile/\",\":hardhat/=node_modules/hardhat/\",\":math/=node_modules/@aragon/os/contracts/lib/math/\",\":misc/=node_modules/@aragon/os/contracts/lib/misc/\",\":openzeppelin-solidity/=node_modules/openzeppelin-solidity/\",\":sol-explore/=node_modules/sol-explore/\",\":solhint/=node_modules/solhint/\",\":solidity-bytes-utils/=node_modules/solidity-bytes-utils/\",\":token/=node_modules/@aragon/os/contracts/lib/token/\",\":truffle/=node_modules/truffle/\"]},\"sources\":{\"contracts/0.4.24/interfaces/IBeaconReportReceiver.sol\":{\"keccak256\":\"0x4203f350a7c44dea211db180d08d3af4b0f4a3519def68bc06ae995a0da51c13\",\"urls\":[\"bzzr://8ab4c4d6ab1a9c8ae8bafb0f44efc7a2b8d64be82c6839778f15ae03063a2758\"]},\"contracts/0.4.24/test_helpers/BeaconReportReceiverMock.sol\":{\"keccak256\":\"0xff53d53da414440a5b67d17d8dab4422eb966be9b5d0b486ef43f84068d53e33\",\"urls\":[\"bzzr://b4722e50aa38855857d56356b18d8019c1f16bb9107fd62f7c9d6a02a131cc24\"]},\"node_modules/openzeppelin-solidity/contracts/introspection/ERC165.sol\":{\"keccak256\":\"0x4b7afe6f95236ed0194bb9c00175821af7a10247aebb61fbf87a3f91b71417e8\",\"urls\":[\"bzzr://1198bd8d76d65bedfa02a8c82a17329d5eabdd1f1fe9b7611755d847c514621c\"]},\"node_modules/openzeppelin-solidity/contracts/introspection/IERC165.sol\":{\"keccak256\":\"0x7b56777abad551b0d6f2644d9a45ee2c33fa1fdbb39783afc5d080c6009cadd5\",\"urls\":[\"bzzr://f92df08157533aebd638fec5dca9e51e64daba1194eab298ad498832b5267819\"]}},\"version\":1}",
+  "metadata": {
+    "compiler": {
+      "version": "0.4.24+commit.e67f0147"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": null,
+              "name": "_postTotalPooledEther",
+              "type": "uint256"
+            },
+            {
+              "internalType": null,
+              "name": "_preTotalPooledEther",
+              "type": "uint256"
+            },
+            {
+              "internalType": null,
+              "name": "_timeElapsed",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "processLidoOracleReport"
+        }
+      ],
+      "devdoc": {
+        "methods": {}
+      },
+      "userdoc": {
+        "methods": {}
+      }
+    },
+    "settings": {
+      "remappings": [
+        ":@aragon/=node_modules/@aragon/",
+        ":@nomiclabs/=node_modules/@nomiclabs/",
+        ":@openzeppelin/=node_modules/@openzeppelin/",
+        ":@solidity-parser/=node_modules/@solidity-parser/",
+        ":ens/=node_modules/@aragon/os/contracts/lib/ens/",
+        ":eth-gas-reporter/=node_modules/eth-gas-reporter/",
+        ":gasprofile/=node_modules/gasprofile/",
+        ":hardhat/=node_modules/hardhat/",
+        ":math/=node_modules/@aragon/os/contracts/lib/math/",
+        ":misc/=node_modules/@aragon/os/contracts/lib/misc/",
+        ":openzeppelin-solidity/=node_modules/openzeppelin-solidity/",
+        ":sol-explore/=node_modules/sol-explore/",
+        ":solhint/=node_modules/solhint/",
+        ":solidity-bytes-utils/=node_modules/solidity-bytes-utils/",
+        ":token/=node_modules/@aragon/os/contracts/lib/token/",
+        ":truffle/=node_modules/truffle/"
+      ],
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "compilationTarget": {
+        "contracts/0.4.24/test_helpers/BeaconReportReceiverMock.sol": "BeaconReportReceiverMockWithoutERC165"
+      },
+      "libraries": {}
+    },
+    "sources": {
+      "contracts/0.4.24/interfaces/IBeaconReportReceiver.sol": {
+        "keccak256": "0x4203f350a7c44dea211db180d08d3af4b0f4a3519def68bc06ae995a0da51c13",
+        "urls": [
+          "bzzr://8ab4c4d6ab1a9c8ae8bafb0f44efc7a2b8d64be82c6839778f15ae03063a2758"
+        ],
+        "license": null
+      },
+      "contracts/0.4.24/test_helpers/BeaconReportReceiverMock.sol": {
+        "keccak256": "0xff53d53da414440a5b67d17d8dab4422eb966be9b5d0b486ef43f84068d53e33",
+        "urls": [
+          "bzzr://b4722e50aa38855857d56356b18d8019c1f16bb9107fd62f7c9d6a02a131cc24"
+        ],
+        "license": null
+      },
+      "node_modules/openzeppelin-solidity/contracts/introspection/ERC165.sol": {
+        "keccak256": "0x4b7afe6f95236ed0194bb9c00175821af7a10247aebb61fbf87a3f91b71417e8",
+        "urls": [
+          "bzzr://1198bd8d76d65bedfa02a8c82a17329d5eabdd1f1fe9b7611755d847c514621c"
+        ],
+        "license": null
+      },
+      "node_modules/openzeppelin-solidity/contracts/introspection/IERC165.sol": {
+        "keccak256": "0x7b56777abad551b0d6f2644d9a45ee2c33fa1fdbb39783afc5d080c6009cadd5",
+        "urls": [
+          "bzzr://f92df08157533aebd638fec5dca9e51e64daba1194eab298ad498832b5267819"
+        ],
+        "license": null
+      }
+    },
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": {}
+  },
+  "ast": {
+    "absolutePath": "contracts/0.4.24/test_helpers/BeaconReportReceiverMock.sol",
+    "id": 10753,
+    "exportedSymbols": {
+      "BeaconReportReceiverMock": [
+        10739
+      ],
+      "BeaconReportReceiverMockWithoutERC165": [
+        10752
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "90:1156:23",
+    "nodes": [
+      {
+        "id": 10684,
+        "nodeType": "PragmaDirective",
+        "src": "90:23:23",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "0.4",
+          ".24"
+        ]
+      },
+      {
+        "id": 10685,
+        "nodeType": "ImportDirective",
+        "src": "115:66:23",
+        "nodes": [],
+        "absolutePath": "node_modules/openzeppelin-solidity/contracts/introspection/ERC165.sol",
+        "file": "openzeppelin-solidity/contracts/introspection/ERC165.sol",
+        "scope": 10753,
+        "sourceUnit": 26092,
+        "symbolAliases": [],
+        "unitAlias": ""
+      },
+      {
+        "id": 10686,
+        "nodeType": "ImportDirective",
+        "src": "183:49:23",
+        "nodes": [],
+        "absolutePath": "contracts/0.4.24/interfaces/IBeaconReportReceiver.sol",
+        "file": "../interfaces/IBeaconReportReceiver.sol",
+        "scope": 10753,
+        "sourceUnit": 2840,
+        "symbolAliases": [],
+        "unitAlias": ""
+      },
+      {
+        "id": 10739,
+        "nodeType": "ContractDefinition",
+        "src": "235:722:23",
+        "nodes": [
+          {
+            "id": 10692,
+            "nodeType": "VariableDeclaration",
+            "src": "308:35:23",
+            "nodes": [],
+            "constant": false,
+            "name": "postTotalPooledEther",
+            "scope": 10739,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 10691,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "308:7:23",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "value": null,
+            "visibility": "public"
+          },
+          {
+            "id": 10694,
+            "nodeType": "VariableDeclaration",
+            "src": "349:34:23",
+            "nodes": [],
+            "constant": false,
+            "name": "preTotalPooledEther",
+            "scope": 10739,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 10693,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "349:7:23",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "value": null,
+            "visibility": "public"
+          },
+          {
+            "id": 10696,
+            "nodeType": "VariableDeclaration",
+            "src": "389:26:23",
+            "nodes": [],
+            "constant": false,
+            "name": "timeElapsed",
+            "scope": 10739,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 10695,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "389:7:23",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "value": null,
+            "visibility": "public"
+          },
+          {
+            "id": 10698,
+            "nodeType": "VariableDeclaration",
+            "src": "421:18:23",
+            "nodes": [],
+            "constant": false,
+            "name": "gas",
+            "scope": 10739,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 10697,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "421:7:23",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "value": null,
+            "visibility": "public"
+          },
+          {
+            "id": 10711,
+            "nodeType": "FunctionDefinition",
+            "src": "446:130:23",
+            "nodes": [],
+            "body": {
+              "id": 10710,
+              "nodeType": "Block",
+              "src": "460:116:23",
+              "nodes": [],
+              "statements": [
+                {
+                  "assignments": [],
+                  "declarations": [
+                    {
+                      "constant": false,
+                      "id": 10702,
+                      "name": "iBeacon",
+                      "nodeType": "VariableDeclaration",
+                      "scope": 10711,
+                      "src": "470:29:23",
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_contract$_IBeaconReportReceiver_$2839",
+                        "typeString": "contract IBeaconReportReceiver"
+                      },
+                      "typeName": {
+                        "contractScope": null,
+                        "id": 10701,
+                        "name": "IBeaconReportReceiver",
+                        "nodeType": "UserDefinedTypeName",
+                        "referencedDeclaration": 2839,
+                        "src": "470:21:23",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_contract$_IBeaconReportReceiver_$2839",
+                          "typeString": "contract IBeaconReportReceiver"
+                        }
+                      },
+                      "value": null,
+                      "visibility": "internal"
+                    }
+                  ],
+                  "id": 10703,
+                  "initialValue": null,
+                  "nodeType": "VariableDeclarationStatement",
+                  "src": "470:29:23"
+                },
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "arguments": [
+                      {
+                        "argumentTypes": null,
+                        "expression": {
+                          "argumentTypes": null,
+                          "expression": {
+                            "argumentTypes": null,
+                            "id": 10705,
+                            "name": "iBeacon",
+                            "nodeType": "Identifier",
+                            "overloadedDeclarations": [],
+                            "referencedDeclaration": 10702,
+                            "src": "528:7:23",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_contract$_IBeaconReportReceiver_$2839",
+                              "typeString": "contract IBeaconReportReceiver"
+                            }
+                          },
+                          "id": 10706,
+                          "isConstant": false,
+                          "isLValue": false,
+                          "isPure": false,
+                          "lValueRequested": false,
+                          "memberName": "processLidoOracleReport",
+                          "nodeType": "MemberAccess",
+                          "referencedDeclaration": 2838,
+                          "src": "528:31:23",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_function_external_nonpayable$_t_uint256_$_t_uint256_$_t_uint256_$returns$__$",
+                            "typeString": "function (uint256,uint256,uint256) external"
+                          }
+                        },
+                        "id": 10707,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": false,
+                        "lValueRequested": false,
+                        "memberName": "selector",
+                        "nodeType": "MemberAccess",
+                        "referencedDeclaration": null,
+                        "src": "528:40:23",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bytes4",
+                          "typeString": "bytes4"
+                        }
+                      }
+                    ],
+                    "expression": {
+                      "argumentTypes": [
+                        {
+                          "typeIdentifier": "t_bytes4",
+                          "typeString": "bytes4"
+                        }
+                      ],
+                      "id": 10704,
+                      "name": "_registerInterface",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 26090,
+                      "src": "509:18:23",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_internal_nonpayable$_t_bytes4_$returns$__$",
+                        "typeString": "function (bytes4)"
+                      }
+                    },
+                    "id": 10708,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "509:60:23",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_tuple$__$",
+                      "typeString": "tuple()"
+                    }
+                  },
+                  "id": 10709,
+                  "nodeType": "ExpressionStatement",
+                  "src": "509:60:23"
+                }
+              ]
+            },
+            "documentation": null,
+            "implemented": true,
+            "isConstructor": true,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "",
+            "parameters": {
+              "id": 10699,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "457:2:23"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 10700,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "460:0:23"
+            },
+            "scope": 10739,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "public"
+          },
+          {
+            "id": 10738,
+            "nodeType": "FunctionDefinition",
+            "src": "582:373:23",
+            "nodes": [],
+            "body": {
+              "id": 10737,
+              "nodeType": "Block",
+              "src": "781:174:23",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "id": 10723,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftHandSide": {
+                      "argumentTypes": null,
+                      "id": 10720,
+                      "name": "gas",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 10698,
+                      "src": "791:3:23",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "nodeType": "Assignment",
+                    "operator": "=",
+                    "rightHandSide": {
+                      "argumentTypes": null,
+                      "arguments": [],
+                      "expression": {
+                        "argumentTypes": [],
+                        "id": 10721,
+                        "name": "gasleft",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 27816,
+                        "src": "797:7:23",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_function_gasleft_view$__$returns$_t_uint256_$",
+                          "typeString": "function () view returns (uint256)"
+                        }
+                      },
+                      "id": 10722,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": false,
+                      "kind": "functionCall",
+                      "lValueRequested": false,
+                      "names": [],
+                      "nodeType": "FunctionCall",
+                      "src": "797:9:23",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "src": "791:15:23",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "id": 10724,
+                  "nodeType": "ExpressionStatement",
+                  "src": "791:15:23"
+                },
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "id": 10727,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftHandSide": {
+                      "argumentTypes": null,
+                      "id": 10725,
+                      "name": "postTotalPooledEther",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 10692,
+                      "src": "816:20:23",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "nodeType": "Assignment",
+                    "operator": "=",
+                    "rightHandSide": {
+                      "argumentTypes": null,
+                      "id": 10726,
+                      "name": "_postTotalPooledEther",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 10713,
+                      "src": "839:21:23",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "src": "816:44:23",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "id": 10728,
+                  "nodeType": "ExpressionStatement",
+                  "src": "816:44:23"
+                },
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "id": 10731,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftHandSide": {
+                      "argumentTypes": null,
+                      "id": 10729,
+                      "name": "preTotalPooledEther",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 10694,
+                      "src": "870:19:23",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "nodeType": "Assignment",
+                    "operator": "=",
+                    "rightHandSide": {
+                      "argumentTypes": null,
+                      "id": 10730,
+                      "name": "_preTotalPooledEther",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 10715,
+                      "src": "892:20:23",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "src": "870:42:23",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "id": 10732,
+                  "nodeType": "ExpressionStatement",
+                  "src": "870:42:23"
+                },
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "id": 10735,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftHandSide": {
+                      "argumentTypes": null,
+                      "id": 10733,
+                      "name": "timeElapsed",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 10696,
+                      "src": "922:11:23",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "nodeType": "Assignment",
+                    "operator": "=",
+                    "rightHandSide": {
+                      "argumentTypes": null,
+                      "id": 10734,
+                      "name": "_timeElapsed",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 10717,
+                      "src": "936:12:23",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "src": "922:26:23",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "id": 10736,
+                  "nodeType": "ExpressionStatement",
+                  "src": "922:26:23"
+                }
+              ]
+            },
+            "documentation": null,
+            "implemented": true,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "processLidoOracleReport",
+            "parameters": {
+              "id": 10718,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 10713,
+                  "name": "_postTotalPooledEther",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 10738,
+                  "src": "615:29:23",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 10712,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "615:7:23",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 10715,
+                  "name": "_preTotalPooledEther",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 10738,
+                  "src": "683:28:23",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 10714,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "683:7:23",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 10717,
+                  "name": "_timeElapsed",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 10738,
+                  "src": "750:20:23",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 10716,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "750:7:23",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "614:157:23"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 10719,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "781:0:23"
+            },
+            "scope": 10739,
+            "stateMutability": "nonpayable",
+            "superFunction": 2838,
+            "visibility": "external"
+          }
+        ],
+        "baseContracts": [
+          {
+            "arguments": null,
+            "baseName": {
+              "contractScope": null,
+              "id": 10687,
+              "name": "IBeaconReportReceiver",
+              "nodeType": "UserDefinedTypeName",
+              "referencedDeclaration": 2839,
+              "src": "272:21:23",
+              "typeDescriptions": {
+                "typeIdentifier": "t_contract$_IBeaconReportReceiver_$2839",
+                "typeString": "contract IBeaconReportReceiver"
+              }
+            },
+            "id": 10688,
+            "nodeType": "InheritanceSpecifier",
+            "src": "272:21:23"
+          },
+          {
+            "arguments": null,
+            "baseName": {
+              "contractScope": null,
+              "id": 10689,
+              "name": "ERC165",
+              "nodeType": "UserDefinedTypeName",
+              "referencedDeclaration": 26091,
+              "src": "295:6:23",
+              "typeDescriptions": {
+                "typeIdentifier": "t_contract$_ERC165_$26091",
+                "typeString": "contract ERC165"
+              }
+            },
+            "id": 10690,
+            "nodeType": "InheritanceSpecifier",
+            "src": "295:6:23"
+          }
+        ],
+        "contractDependencies": [
+          2839,
+          26091,
+          26238
+        ],
+        "contractKind": "contract",
+        "documentation": null,
+        "fullyImplemented": true,
+        "linearizedBaseContracts": [
+          10739,
+          26091,
+          26238,
+          2839
+        ],
+        "name": "BeaconReportReceiverMock",
+        "scope": 10753
+      },
+      {
+        "id": 10752,
+        "nodeType": "ContractDefinition",
+        "src": "959:286:23",
+        "nodes": [
+          {
+            "id": 10751,
+            "nodeType": "FunctionDefinition",
+            "src": "1037:206:23",
+            "nodes": [],
+            "body": {
+              "id": 10750,
+              "nodeType": "Block",
+              "src": "1236:7:23",
+              "nodes": [],
+              "statements": []
+            },
+            "documentation": null,
+            "implemented": true,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "processLidoOracleReport",
+            "parameters": {
+              "id": 10748,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 10743,
+                  "name": "_postTotalPooledEther",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 10751,
+                  "src": "1070:29:23",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 10742,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1070:7:23",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 10745,
+                  "name": "_preTotalPooledEther",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 10751,
+                  "src": "1138:28:23",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 10744,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1138:7:23",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 10747,
+                  "name": "_timeElapsed",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 10751,
+                  "src": "1205:20:23",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 10746,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1205:7:23",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1069:157:23"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 10749,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1236:0:23"
+            },
+            "scope": 10752,
+            "stateMutability": "nonpayable",
+            "superFunction": 2838,
+            "visibility": "external"
+          }
+        ],
+        "baseContracts": [
+          {
+            "arguments": null,
+            "baseName": {
+              "contractScope": null,
+              "id": 10740,
+              "name": "IBeaconReportReceiver",
+              "nodeType": "UserDefinedTypeName",
+              "referencedDeclaration": 2839,
+              "src": "1009:21:23",
+              "typeDescriptions": {
+                "typeIdentifier": "t_contract$_IBeaconReportReceiver_$2839",
+                "typeString": "contract IBeaconReportReceiver"
+              }
+            },
+            "id": 10741,
+            "nodeType": "InheritanceSpecifier",
+            "src": "1009:21:23"
+          }
+        ],
+        "contractDependencies": [
+          2839
+        ],
+        "contractKind": "contract",
+        "documentation": null,
+        "fullyImplemented": true,
+        "linearizedBaseContracts": [
+          10752,
+          2839
+        ],
+        "name": "BeaconReportReceiverMockWithoutERC165",
+        "scope": 10753
+      }
+    ]
+  },
+  "id": 23
+}

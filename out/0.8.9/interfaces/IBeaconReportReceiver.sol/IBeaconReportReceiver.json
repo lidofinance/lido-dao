@@ -1,0 +1,309 @@
+{
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_postTotalPooledEther",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_preTotalPooledEther",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_timeElapsed",
+          "type": "uint256"
+        }
+      ],
+      "name": "processLidoOracleReport",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "processLidoOracleReport(uint256,uint256,uint256)": "34212e5f"
+  },
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.9+commit.e5eed63a\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_postTotalPooledEther\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_preTotalPooledEther\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_timeElapsed\",\"type\":\"uint256\"}],\"name\":\"processLidoOracleReport\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{\"processLidoOracleReport(uint256,uint256,uint256)\":{\"params\":{\"_postTotalPooledEther\":\"total pooled ether on Lido right after the quorum value was reported\",\"_preTotalPooledEther\":\"total pooled ether on Lido right before the quorum value was reported\",\"_timeElapsed\":\"time elapsed in seconds between the last and the previous quorum\"}}},\"title\":\"Interface defining a callback that the quorum will call on every quorum reached\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"processLidoOracleReport(uint256,uint256,uint256)\":{\"notice\":\"Callback to be called by the oracle contract upon the quorum is reached\"}},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/0.8.9/interfaces/IBeaconReportReceiver.sol\":\"IBeaconReportReceiver\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":@aragon/=node_modules/@aragon/\",\":@nomiclabs/=node_modules/@nomiclabs/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@solidity-parser/=node_modules/@solidity-parser/\",\":ens/=node_modules/@aragon/os/contracts/lib/ens/\",\":eth-gas-reporter/=node_modules/eth-gas-reporter/\",\":gasprofile/=node_modules/gasprofile/\",\":hardhat/=node_modules/hardhat/\",\":math/=node_modules/@aragon/os/contracts/lib/math/\",\":misc/=node_modules/@aragon/os/contracts/lib/misc/\",\":openzeppelin-solidity/=node_modules/openzeppelin-solidity/\",\":sol-explore/=node_modules/sol-explore/\",\":solhint/=node_modules/solhint/\",\":solidity-bytes-utils/=node_modules/solidity-bytes-utils/\",\":token/=node_modules/@aragon/os/contracts/lib/token/\",\":truffle/=node_modules/truffle/\"]},\"sources\":{\"contracts/0.8.9/interfaces/IBeaconReportReceiver.sol\":{\"keccak256\":\"0x3cb64d730562dad7a7e4923ca7fa17957857a0ee614fff22eebde5576c630557\",\"license\":\"GPL-3.0\",\"urls\":[\"bzz-raw://9939875f501a46a8ec049cee9c9b2ac78f6d99826e71166491dc3b4e71a3b4c0\",\"dweb:/ipfs/QmTRfxr4xh6seBFqfk8czd85YbM9n5kjXbveFK12QipQcK\"]}},\"version\":1}",
+  "metadata": {
+    "compiler": {
+      "version": "0.8.9+commit.e5eed63a"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "_postTotalPooledEther",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "_preTotalPooledEther",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "_timeElapsed",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "processLidoOracleReport"
+        }
+      ],
+      "devdoc": {
+        "kind": "dev",
+        "methods": {
+          "processLidoOracleReport(uint256,uint256,uint256)": {
+            "params": {
+              "_postTotalPooledEther": "total pooled ether on Lido right after the quorum value was reported",
+              "_preTotalPooledEther": "total pooled ether on Lido right before the quorum value was reported",
+              "_timeElapsed": "time elapsed in seconds between the last and the previous quorum"
+            }
+          }
+        },
+        "version": 1
+      },
+      "userdoc": {
+        "kind": "user",
+        "methods": {
+          "processLidoOracleReport(uint256,uint256,uint256)": {
+            "notice": "Callback to be called by the oracle contract upon the quorum is reached"
+          }
+        },
+        "version": 1
+      }
+    },
+    "settings": {
+      "remappings": [
+        ":@aragon/=node_modules/@aragon/",
+        ":@nomiclabs/=node_modules/@nomiclabs/",
+        ":@openzeppelin/=node_modules/@openzeppelin/",
+        ":@solidity-parser/=node_modules/@solidity-parser/",
+        ":ens/=node_modules/@aragon/os/contracts/lib/ens/",
+        ":eth-gas-reporter/=node_modules/eth-gas-reporter/",
+        ":gasprofile/=node_modules/gasprofile/",
+        ":hardhat/=node_modules/hardhat/",
+        ":math/=node_modules/@aragon/os/contracts/lib/math/",
+        ":misc/=node_modules/@aragon/os/contracts/lib/misc/",
+        ":openzeppelin-solidity/=node_modules/openzeppelin-solidity/",
+        ":sol-explore/=node_modules/sol-explore/",
+        ":solhint/=node_modules/solhint/",
+        ":solidity-bytes-utils/=node_modules/solidity-bytes-utils/",
+        ":token/=node_modules/@aragon/os/contracts/lib/token/",
+        ":truffle/=node_modules/truffle/"
+      ],
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "metadata": {
+        "bytecodeHash": "ipfs"
+      },
+      "compilationTarget": {
+        "contracts/0.8.9/interfaces/IBeaconReportReceiver.sol": "IBeaconReportReceiver"
+      },
+      "libraries": {}
+    },
+    "sources": {
+      "contracts/0.8.9/interfaces/IBeaconReportReceiver.sol": {
+        "keccak256": "0x3cb64d730562dad7a7e4923ca7fa17957857a0ee614fff22eebde5576c630557",
+        "urls": [
+          "bzz-raw://9939875f501a46a8ec049cee9c9b2ac78f6d99826e71166491dc3b4e71a3b4c0",
+          "dweb:/ipfs/QmTRfxr4xh6seBFqfk8czd85YbM9n5kjXbveFK12QipQcK"
+        ],
+        "license": "GPL-3.0"
+      }
+    },
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": {}
+  },
+  "ast": {
+    "absolutePath": "contracts/0.8.9/interfaces/IBeaconReportReceiver.sol",
+    "id": 2377,
+    "exportedSymbols": {
+      "IBeaconReportReceiver": [
+        2376
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "90:774:5",
+    "nodes": [
+      {
+        "id": 2364,
+        "nodeType": "PragmaDirective",
+        "src": "90:22:5",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "0.8",
+          ".9"
+        ]
+      },
+      {
+        "id": 2376,
+        "nodeType": "ContractDefinition",
+        "src": "214:649:5",
+        "nodes": [
+          {
+            "id": 2375,
+            "nodeType": "FunctionDefinition",
+            "src": "662:199:5",
+            "nodes": [],
+            "documentation": {
+              "id": 2366,
+              "nodeType": "StructuredDocumentation",
+              "src": "252:405:5",
+              "text": " @notice Callback to be called by the oracle contract upon the quorum is reached\n @param _postTotalPooledEther total pooled ether on Lido right after the quorum value was reported\n @param _preTotalPooledEther total pooled ether on Lido right before the quorum value was reported\n @param _timeElapsed time elapsed in seconds between the last and the previous quorum"
+            },
+            "functionSelector": "34212e5f",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "processLidoOracleReport",
+            "nameLocation": "671:23:5",
+            "parameters": {
+              "id": 2373,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2368,
+                  "mutability": "mutable",
+                  "name": "_postTotalPooledEther",
+                  "nameLocation": "703:21:5",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2375,
+                  "src": "695:29:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2367,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "695:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2370,
+                  "mutability": "mutable",
+                  "name": "_preTotalPooledEther",
+                  "nameLocation": "771:20:5",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2375,
+                  "src": "763:28:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2369,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "763:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2372,
+                  "mutability": "mutable",
+                  "name": "_timeElapsed",
+                  "nameLocation": "838:12:5",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2375,
+                  "src": "830:20:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2371,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "830:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "694:157:5"
+            },
+            "returnParameters": {
+              "id": 2374,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "860:0:5"
+            },
+            "scope": 2376,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "external"
+          }
+        ],
+        "abstract": false,
+        "baseContracts": [],
+        "canonicalName": "IBeaconReportReceiver",
+        "contractDependencies": [],
+        "contractKind": "interface",
+        "documentation": {
+          "id": 2365,
+          "nodeType": "StructuredDocumentation",
+          "src": "114:99:5",
+          "text": " @title Interface defining a callback that the quorum will call on every quorum reached"
+        },
+        "fullyImplemented": false,
+        "linearizedBaseContracts": [
+          2376
+        ],
+        "name": "IBeaconReportReceiver",
+        "nameLocation": "224:21:5",
+        "scope": 2377,
+        "usedErrors": []
+      }
+    ],
+    "license": "GPL-3.0"
+  },
+  "id": 5
+}

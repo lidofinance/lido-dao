@@ -1,0 +1,165 @@
+{
+  "abi": [
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "interfaceId",
+          "type": "bytes4"
+        }
+      ],
+      "name": "supportsInterface",
+      "outputs": [
+        {
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "pure",
+      "type": "function"
+    }
+  ],
+  "bytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "supportsInterface(bytes4)": "01ffc9a7"
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": {}
+  },
+  "ast": {
+    "absolutePath": "node_modules/@aragon/apps-agent/contracts/standards/IERC165.sol",
+    "id": 12934,
+    "exportedSymbols": {
+      "IERC165": [
+        12933
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "0:129:37",
+    "nodes": [
+      {
+        "id": 12925,
+        "nodeType": "PragmaDirective",
+        "src": "0:23:37",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "0.4",
+          ".24"
+        ]
+      },
+      {
+        "id": 12933,
+        "nodeType": "ContractDefinition",
+        "src": "26:102:37",
+        "nodes": [
+          {
+            "id": 12932,
+            "nodeType": "FunctionDefinition",
+            "src": "50:76:37",
+            "nodes": [],
+            "documentation": null,
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "supportsInterface",
+            "parameters": {
+              "id": 12928,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 12927,
+                  "name": "interfaceId",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 12932,
+                  "src": "77:18:37",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes4",
+                    "typeString": "bytes4"
+                  },
+                  "typeName": {
+                    "id": 12926,
+                    "name": "bytes4",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "77:6:37",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes4",
+                      "typeString": "bytes4"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "76:20:37"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 12931,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 12930,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 12932,
+                  "src": "120:4:37",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bool",
+                    "typeString": "bool"
+                  },
+                  "typeName": {
+                    "id": 12929,
+                    "name": "bool",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "120:4:37",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "119:6:37"
+            },
+            "scope": 12933,
+            "stateMutability": "pure",
+            "superFunction": null,
+            "visibility": "external"
+          }
+        ],
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "interface",
+        "documentation": null,
+        "fullyImplemented": false,
+        "linearizedBaseContracts": [
+          12933
+        ],
+        "name": "IERC165",
+        "scope": 12934
+      }
+    ]
+  },
+  "id": 37
+}

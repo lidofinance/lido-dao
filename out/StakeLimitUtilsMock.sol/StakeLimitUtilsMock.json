@@ -1,0 +1,4118 @@
+{
+  "abi": [
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "_slotValue",
+          "type": "uint256"
+        },
+        {
+          "name": "_newPrevLimit",
+          "type": "uint256"
+        }
+      ],
+      "name": "updatePrevStakeLimit",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "_slotValue",
+          "type": "uint256"
+        },
+        {
+          "name": "_maxStakeLimit",
+          "type": "uint256"
+        },
+        {
+          "name": "_stakeLimitIncreasePerBlock",
+          "type": "uint256"
+        }
+      ],
+      "name": "setStakingLimit",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "_prevStakeBlockNumber",
+          "type": "uint32"
+        },
+        {
+          "name": "_prevStakeLimit",
+          "type": "uint96"
+        },
+        {
+          "name": "_maxStakeLimitGrowthBlocks",
+          "type": "uint32"
+        },
+        {
+          "name": "_maxStakeLimit",
+          "type": "uint96"
+        }
+      ],
+      "name": "setStorageStakeLimitStruct",
+      "outputs": [
+        {
+          "name": "ret",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "_slotValue",
+          "type": "uint256"
+        }
+      ],
+      "name": "getStorageStakeLimit",
+      "outputs": [
+        {
+          "name": "prevStakeBlockNumber",
+          "type": "uint32"
+        },
+        {
+          "name": "prevStakeLimit",
+          "type": "uint96"
+        },
+        {
+          "name": "maxStakeLimitGrowthBlocks",
+          "type": "uint32"
+        },
+        {
+          "name": "maxStakeLimit",
+          "type": "uint96"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "_slotValue",
+          "type": "uint256"
+        }
+      ],
+      "name": "isStakingPaused",
+      "outputs": [
+        {
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "_slotValue",
+          "type": "uint256"
+        }
+      ],
+      "name": "calculateCurrentStakeLimit",
+      "outputs": [
+        {
+          "name": "limit",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "_slotValue",
+          "type": "uint256"
+        }
+      ],
+      "name": "isStakingLimitSet",
+      "outputs": [
+        {
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "_slotValue",
+          "type": "uint256"
+        },
+        {
+          "name": "_isPaused",
+          "type": "bool"
+        }
+      ],
+      "name": "setStakeLimitPauseState",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "_slotValue",
+          "type": "uint256"
+        }
+      ],
+      "name": "removeStakingLimit",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": {
+    "object": "0x608060405234801561001057600080fd5b50610aa4806100206000396000f30060806040526004361061007c5760003560e01c63ffffffff16806319e9612414610081578063311a4c8c146100ae5780633d6d31ab146100ce5780634251ebef146101055780635b76954214610157578063874b5c1014610183578063912b38bc1461019b578063edc2c657146101b3578063f0e21ae7146101d0575b600080fd5b34801561008d57600080fd5b5061009c6004356024356101e8565b60408051918252519081900360200190f35b3480156100ba57600080fd5b506100cc6004356024356044356102ae565b005b3480156100da57600080fd5b5061009c63ffffffff6004358116906001606060020a03602435811691604435169060643516610321565b34801561011157600080fd5b5061011d6004356103b2565b6040805163ffffffff95861681526001606060020a0394851660208201529290941682850152909116606082015290519081900360800190f35b34801561016357600080fd5b5061016f600435610437565b604080519115158252519081900360200190f35b34801561018f57600080fd5b5061009c60043561049e565b3480156101a757600080fd5b5061016f6004356104ff565b3480156101bf57600080fd5b5061009c6004356024351515610560565b3480156101dc57600080fd5b5061009c6004356105ce565b6040805160d160020a6530b131b232b30281529051908190036006019020600090610219908463ffffffff61065a16565b6040805160d160020a6530b131b232b302815290519081900360060190206102809061025690849061024a9061065e565b9063ffffffff6106b116565b6040805160d160020a6530b131b232b302815290519081900360060190209063ffffffff6106f516565b6040805160d160020a6530b131b232b302815290519081900360060190206102a790610754565b9392505050565b6040805160d160020a6530b131b232b302815290519081900360060190206102dc908463ffffffff61065a16565b6040805160d160020a6530b131b232b3028152905190819003600601902061031c90610256908490849061030f9061065e565b919063ffffffff61075816565b505050565b600061032b610a51565b63ffffffff80871682526001606060020a0380871660208401528582166040808501919091529085166060840152805160d160020a6530b131b232b302815290519081900360060190206103819183906106f516565b6040805160d160020a6530b131b232b302815290519081900360060190206103a890610754565b9695505050505050565b6000806000806103c0610a51565b6040805160d160020a6530b131b232b302815290519081900360060190206103ee908763ffffffff61065a16565b6040805160d160020a6530b131b232b302815290519081900360060190206104159061065e565b8051602082015160408301516060909301519199909850919650945092505050565b6040805160d160020a6530b131b232b30281529051908190036006019020600090610468908363ffffffff61065a16565b6040805160d160020a6530b131b232b30281529051908190036006019020610498906104939061065e565b61096c565b92915050565b6040805160d160020a6530b131b232b302815290519081900360060190206000906104cf908363ffffffff61065a16565b6040805160d160020a6530b131b232b30281529051908190036006019020610498906104fa9061065e565b610977565b6040805160d160020a6530b131b232b30281529051908190036006019020600090610530908363ffffffff61065a16565b6040805160d160020a6530b131b232b302815290519081900360060190206104989061055b9061065e565b610a07565b6040805160d160020a6530b131b232b30281529051908190036006019020600090610591908463ffffffff61065a16565b6040805160d160020a6530b131b232b30281529051908190036006019020610280906102569084906105c29061065e565b9063ffffffff610a1916565b6040805160d160020a6530b131b232b302815290519081900360060190206000906105ff908363ffffffff61065a16565b6040805160d160020a6530b131b232b30281529051908190036006019020610633906102569061062e9061065e565b610a3e565b6040805160d160020a6530b131b232b3028152905190819003600601902061049890610754565b9055565b610666610a51565b600061067183610754565b63ffffffff600082901c811684526001606060020a03602083811c821690860152608083901c909116604085015260a09190911c16606083015250919050565b6106b9610a51565b6001606060020a038211156106ca57fe5b825163ffffffff1615156106da57fe5b506001606060020a031660208201524363ffffffff16815290565b61075060a082606001516001606060020a0316901b6080836040015163ffffffff16901b602084602001516001606060020a0316901b6000856000015163ffffffff16901b171717836000191661065a90919063ffffffff16565b5050565b5490565b610760610a51565b8215156107b7576040805160e560020a62461bcd02815260206004820152601460248201527f5a45524f5f4d41585f5354414b455f4c494d4954000000000000000000000000604482015290519081900360640190fd5b6001606060020a03831115610816576040805160e560020a62461bcd02815260206004820152601960248201527f544f4f5f4c415247455f4d41585f5354414b455f4c494d495400000000000000604482015290519081900360640190fd5b8183101561086e576040805160e560020a62461bcd02815260206004820152601860248201527f544f4f5f4c415247455f4c494d49545f494e4352454153450000000000000000604482015290519081900360640190fd5b81158061088a575063ffffffff828481151561088657fe5b0411155b15156108e0576040805160e560020a62461bcd02815260206004820152601860248201527f544f4f5f534d414c4c5f4c494d49545f494e4352454153450000000000000000604482015290519081900360640190fd5b60608401516001606060020a03161580610906575083602001516001606060020a031683105b1561091b576001606060020a03831660208501525b811515610929576000610936565b818381151561093457fe5b045b63ffffffff90811660408601526001606060020a0384166060860152845116156109645763ffffffff431684525b509192915050565b5163ffffffff161590565b6040810151600090819063ffffffff16156109bb57826040015163ffffffff1683606001516001606060020a03168115156109ae57fe5b046001606060020a031690505b80836000015163ffffffff1643030283602001516001606060020a031601915082606001516001606060020a0316821115610a015782606001516001606060020a031691505b50919050565b606001516001606060020a0316151590565b610a21610a51565b81610a2c5743610a2f565b60005b63ffffffff1683525090919050565b610a46610a51565b506000606082015290565b604080516080810182526000808252602082018190529181018290526060810191909152905600a165627a7a723058202b043a0504cd99e086251487c8471beeba0a3a0c1135be9c20e7cf757495afe20029",
+    "sourceMap": "154:3804:32:-;;;;8:9:-1;5:2;;;30:1;27;20:12;5:2;154:3804:32;;;;;;;",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x60806040526004361061007c5760003560e01c63ffffffff16806319e9612414610081578063311a4c8c146100ae5780633d6d31ab146100ce5780634251ebef146101055780635b76954214610157578063874b5c1014610183578063912b38bc1461019b578063edc2c657146101b3578063f0e21ae7146101d0575b600080fd5b34801561008d57600080fd5b5061009c6004356024356101e8565b60408051918252519081900360200190f35b3480156100ba57600080fd5b506100cc6004356024356044356102ae565b005b3480156100da57600080fd5b5061009c63ffffffff6004358116906001606060020a03602435811691604435169060643516610321565b34801561011157600080fd5b5061011d6004356103b2565b6040805163ffffffff95861681526001606060020a0394851660208201529290941682850152909116606082015290519081900360800190f35b34801561016357600080fd5b5061016f600435610437565b604080519115158252519081900360200190f35b34801561018f57600080fd5b5061009c60043561049e565b3480156101a757600080fd5b5061016f6004356104ff565b3480156101bf57600080fd5b5061009c6004356024351515610560565b3480156101dc57600080fd5b5061009c6004356105ce565b6040805160d160020a6530b131b232b30281529051908190036006019020600090610219908463ffffffff61065a16565b6040805160d160020a6530b131b232b302815290519081900360060190206102809061025690849061024a9061065e565b9063ffffffff6106b116565b6040805160d160020a6530b131b232b302815290519081900360060190209063ffffffff6106f516565b6040805160d160020a6530b131b232b302815290519081900360060190206102a790610754565b9392505050565b6040805160d160020a6530b131b232b302815290519081900360060190206102dc908463ffffffff61065a16565b6040805160d160020a6530b131b232b3028152905190819003600601902061031c90610256908490849061030f9061065e565b919063ffffffff61075816565b505050565b600061032b610a51565b63ffffffff80871682526001606060020a0380871660208401528582166040808501919091529085166060840152805160d160020a6530b131b232b302815290519081900360060190206103819183906106f516565b6040805160d160020a6530b131b232b302815290519081900360060190206103a890610754565b9695505050505050565b6000806000806103c0610a51565b6040805160d160020a6530b131b232b302815290519081900360060190206103ee908763ffffffff61065a16565b6040805160d160020a6530b131b232b302815290519081900360060190206104159061065e565b8051602082015160408301516060909301519199909850919650945092505050565b6040805160d160020a6530b131b232b30281529051908190036006019020600090610468908363ffffffff61065a16565b6040805160d160020a6530b131b232b30281529051908190036006019020610498906104939061065e565b61096c565b92915050565b6040805160d160020a6530b131b232b302815290519081900360060190206000906104cf908363ffffffff61065a16565b6040805160d160020a6530b131b232b30281529051908190036006019020610498906104fa9061065e565b610977565b6040805160d160020a6530b131b232b30281529051908190036006019020600090610530908363ffffffff61065a16565b6040805160d160020a6530b131b232b302815290519081900360060190206104989061055b9061065e565b610a07565b6040805160d160020a6530b131b232b30281529051908190036006019020600090610591908463ffffffff61065a16565b6040805160d160020a6530b131b232b30281529051908190036006019020610280906102569084906105c29061065e565b9063ffffffff610a1916565b6040805160d160020a6530b131b232b302815290519081900360060190206000906105ff908363ffffffff61065a16565b6040805160d160020a6530b131b232b30281529051908190036006019020610633906102569061062e9061065e565b610a3e565b6040805160d160020a6530b131b232b3028152905190819003600601902061049890610754565b9055565b610666610a51565b600061067183610754565b63ffffffff600082901c811684526001606060020a03602083811c821690860152608083901c909116604085015260a09190911c16606083015250919050565b6106b9610a51565b6001606060020a038211156106ca57fe5b825163ffffffff1615156106da57fe5b506001606060020a031660208201524363ffffffff16815290565b61075060a082606001516001606060020a0316901b6080836040015163ffffffff16901b602084602001516001606060020a0316901b6000856000015163ffffffff16901b171717836000191661065a90919063ffffffff16565b5050565b5490565b610760610a51565b8215156107b7576040805160e560020a62461bcd02815260206004820152601460248201527f5a45524f5f4d41585f5354414b455f4c494d4954000000000000000000000000604482015290519081900360640190fd5b6001606060020a03831115610816576040805160e560020a62461bcd02815260206004820152601960248201527f544f4f5f4c415247455f4d41585f5354414b455f4c494d495400000000000000604482015290519081900360640190fd5b8183101561086e576040805160e560020a62461bcd02815260206004820152601860248201527f544f4f5f4c415247455f4c494d49545f494e4352454153450000000000000000604482015290519081900360640190fd5b81158061088a575063ffffffff828481151561088657fe5b0411155b15156108e0576040805160e560020a62461bcd02815260206004820152601860248201527f544f4f5f534d414c4c5f4c494d49545f494e4352454153450000000000000000604482015290519081900360640190fd5b60608401516001606060020a03161580610906575083602001516001606060020a031683105b1561091b576001606060020a03831660208501525b811515610929576000610936565b818381151561093457fe5b045b63ffffffff90811660408601526001606060020a0384166060860152845116156109645763ffffffff431684525b509192915050565b5163ffffffff161590565b6040810151600090819063ffffffff16156109bb57826040015163ffffffff1683606001516001606060020a03168115156109ae57fe5b046001606060020a031690505b80836000015163ffffffff1643030283602001516001606060020a031601915082606001516001606060020a0316821115610a015782606001516001606060020a031691505b50919050565b606001516001606060020a0316151590565b610a21610a51565b81610a2c5743610a2f565b60005b63ffffffff1683525090919050565b610a46610a51565b506000606082015290565b604080516080810182526000808252602082018190529181018290526060810191909152905600a165627a7a723058202b043a0504cd99e086251487c8471beeba0a3a0c1135be9c20e7cf757495afe20029",
+    "sourceMap": "154:3804:32:-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;3155:400;;8:9:-1;5:2;;;30:1;27;20:12;5:2;-1:-1;3155:400:32;;;;;;;;;;;;;;;;;;;;;;;2371:412;;8:9:-1;5:2;;;30:1;27;20:12;5:2;-1:-1;2371:412:32;;;;;;;;;;;1020:614;;8:9:-1;5:2;;;30:1;27;20:12;5:2;-1:-1;1020:614:32;;;;;;;-1:-1:-1;;;;;1020:614:32;;;;;;;;;;;;;;415:599;;8:9:-1;5:2;;;30:1;27;20:12;5:2;-1:-1;415:599:32;;;;;;;;;;;;;;;-1:-1:-1;;;;;415:599:32;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;1903:226;;8:9:-1;5:2;;;30:1;27;20:12;5:2;-1:-1;1903:226:32;;;;;;;;;;;;;;;;;;;;;;;1640:257;;8:9:-1;5:2;;;30:1;27;20:12;5:2;-1:-1;1640:257:32;;;;;2135:230;;8:9:-1;5:2;;;30:1;27;20:12;5:2;-1:-1;2135:230:32;;;;;3561:395;;8:9:-1;5:2;;;30:1;27;20:12;5:2;-1:-1;3561:395:32;;;;;;;;;2789:360;;8:9:-1;5:2;;;30:1;27;20:12;5:2;-1:-1;2789:360:32;;;;;3155:400;389:19;;;-1:-1:-1;;;;;389:19:32;;;;;;;;;;;;3248:7;;3267:52;;3308:10;3267:52;:40;:52;:::i;:::-;389:19;;;-1:-1:-1;;;;;389:19:32;;;;;;;;;;;;3329:160;;3392:87;;3465:13;;3392:51;;:49;:51::i;:::-;:72;:87;:72;:87;:::i;:::-;389:19;;;-1:-1:-1;;;;;389:19:32;;;;;;;;;;;;;3329:160;:49;:160;:::i;:::-;389:19;;;-1:-1:-1;;;;;389:19:32;;;;;;;;;;;;3506:42;;:40;:42::i;:::-;3499:49;3155:400;-1:-1:-1;;;3155:400:32:o;2371:412::-;389:19;;;-1:-1:-1;;;;;389:19:32;;;;;;;;;;;;2499:52;;2540:10;2499:52;:40;:52;:::i;:::-;389:19;;;-1:-1:-1;;;;;389:19:32;;;;;;;;;;;;2561:215;;2624:142;;2709:14;;2725:27;;2624:51;;:49;:51::i;:::-;:67;:142;;:67;:142;:::i;2561:215::-;2371:412;;;:::o;1020:614::-;1227:11;1250:32;;:::i;:::-;1292:49;;;;;;-1:-1:-1;;;;;1351:37:32;;;:19;;;:37;1398:59;;;:30;;;;:59;;;;1467:35;;;:18;;;:35;389:19;;-1:-1:-1;;;;;389:19:32;;;;;;;;;;;;1513:55;;1292:4;;1513:49;:55;:::i;:::-;389:19;;;-1:-1:-1;;;;;389:19:32;;;;;;;;;;;;1585:42;;:40;:42::i;:::-;1578:49;1020:614;-1:-1:-1;;;;;;1020:614:32:o;415:599::-;495:27;532:21;563:32;605:20;704:32;;:::i;:::-;389:19;;;-1:-1:-1;;;;;389:19:32;;;;;;;;;;;;642:52;;683:10;642:52;:40;:52;:::i;:::-;389:19;;;-1:-1:-1;;;;;389:19:32;;;;;;;;;;;;739:51;;:49;:51::i;:::-;824:25;;876:19;;;;933:30;;;;989:18;;;;;824:25;;876:19;;-1:-1:-1;933:30:32;;-1:-1:-1;989:18:32;-1:-1:-1;415:599:32;-1:-1:-1;;;415:599:32:o;1903:226::-;389:19;;;-1:-1:-1;;;;;389:19:32;;;;;;;;;;;;1968:4;;1984:52;;2025:10;1984:52;:40;:52;:::i;:::-;389:19;;;-1:-1:-1;;;;;389:19:32;;;;;;;;;;;;2053:69;;:51;;:49;:51::i;:::-;:67;:69::i;:::-;2046:76;1903:226;-1:-1:-1;;1903:226:32:o;1640:257::-;389:19;;;-1:-1:-1;;;;;389:19:32;;;;;;;;;;;;1716:13;;1741:52;;1782:10;1741:52;:40;:52;:::i;:::-;389:19;;;-1:-1:-1;;;;;389:19:32;;;;;;;;;;;;1810:80;;:51;;:49;:51::i;:::-;:78;:80::i;2135:230::-;389:19;;;-1:-1:-1;;;;;389:19:32;;;;;;;;;;;;2202:4;;2218:52;;2259:10;2218:52;:40;:52;:::i;:::-;389:19;;;-1:-1:-1;;;;;389:19:32;;;;;;;;;;;;2287:71;;:51;;:49;:51::i;:::-;:69;:71::i;3561:395::-;389:19;;;-1:-1:-1;;;;;389:19:32;;;;;;;;;;;;3650:7;;3669:52;;3710:10;3669:52;:40;:52;:::i;:::-;389:19;;;-1:-1:-1;;;;;389:19:32;;;;;;;;;;;;3731:159;;3794:86;;3870:9;;3794:51;;:49;:51::i;:::-;:75;:86;:75;:86;:::i;2789:360::-;389:19;;;-1:-1:-1;;;;;389:19:32;;;;;;;;;;;;2857:7;;2876:52;;2917:10;2876:52;:40;:52;:::i;:::-;389:19;;;-1:-1:-1;;;;;389:19:32;;;;;;;;;;;;2938:145;;3001:72;;:51;;:49;:51::i;:::-;:70;:72::i;2938:145::-;389:19;;;-1:-1:-1;;;;;389:19:32;;;;;;;;;;;;3100:42;;:40;:42::i;1027:119:75:-;1116:22;;1114:26::o;2470:548:11:-;2548:38;;:::i;:::-;2598:17;2618:29;:9;:27;:29::i;:::-;2658:85;2336:1;2699:43;;;2658:85;;;;-1:-1:-1;;;;;2207:2:11;2788:36;;;2753:72;;:25;;;:72;2090:3;2881:49;;;2835:96;;;:36;;;:96;1949:3;2975:35;;;;2941:70;:24;;;:70;-1:-1:-1;2658:10:11;2470:548;-1:-1:-1;2470:548:11:o;7222:415::-;7360:20;;:::i;:::-;-1:-1:-1;;;;;7406:32:11;;;7399:40;;;;7456:26;;:31;;;;7449:39;;;;-1:-1:-1;;;;;;7499:49:11;:20;;;:49;7594:12;7558:49;;;;7499:20;7222:415::o;3206:483::-;3315:367;1949:3;3626:5;:19;;;-1:-1:-1;;;;;3618:28:11;:54;;2090:3;3527:5;:31;;;3519:40;;:80;;2207:2;3452:5;:20;;;-1:-1:-1;;;;;3444:29:11;:56;;2336:1;3364:5;:26;;;3356:35;;:69;;:144;:243;:316;3315:9;:27;;;;;:367;;;;:::i;:::-;3206:483;;:::o;518:134:75:-;629:15;;619:27::o;5227:1292:11:-;5401:20;;:::i;:::-;5448:19;;;5440:52;;;;;-1:-1:-1;;;;;5440:52:11;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;;;;;5510:28:11;;;5502:66;;;;;-1:-1:-1;;;;;5502:66:11;;;;;;;;;;;;;;;;;;;;;;;;;;;;5586:45;;;;5578:82;;;;;-1:-1:-1;;;;;5578:82:11;;;;;;;;;;;;;;;;;;;;;;;;;;;;5692:32;;;5691:110;;-1:-1:-1;5742:58:11;5759:27;5742:14;:44;;;;;;;;:58;;5691:110;5670:181;;;;;;;-1:-1:-1;;;;;5670:181:11;;;;;;;;;;;;;;;;;;;;;;;;;;;;6039:19;;;;-1:-1:-1;;;;;6039:24:11;;;6038:69;;;6086:5;:20;;;-1:-1:-1;;;;;6069:37:11;:14;:37;6038:69;6034:145;;;-1:-1:-1;;;;;6123:45:11;;:20;;;:45;6034:145;6222:32;;;:91;;6312:1;6222:91;;;6281:27;6264:14;:44;;;;;;;;6222:91;6188:125;;;;:31;;;:125;-1:-1:-1;;;;;6324:44:11;;:19;;;:44;6383:26;;:31;;6379:111;;6430:49;6466:12;6430:49;;;6379:111;-1:-1:-1;6507:5:11;;5227:1292;-1:-1:-1;;5227:1292:11:o;4493:143::-;4598:26;:31;;;;4493:143::o;3917:512::-;4078:31;;;;4010:13;;;;4078:36;;;4074:144;;4176:5;:31;;;4154:53;;:5;:19;;;-1:-1:-1;;;;;4154:53:11;;;;;;;;;-1:-1:-1;;;;;4130:77:11;;;4074:144;4306:21;4276:5;:26;;;4261:41;;:12;:41;4260:67;4236:5;:20;;;-1:-1:-1;;;;;4236:92:11;;4228:100;;4350:5;:19;;;-1:-1:-1;;;;;4342:27:11;:5;:27;4338:85;;;4393:5;:19;;;-1:-1:-1;;;;;4385:27:11;;;4338:85;3917:512;;;;:::o;4734:138::-;4841:19;;;-1:-1:-1;;;;;4841:24:11;;;;4734:138::o;7888:263::-;8017:20;;:::i;:::-;8092:9;:28;;8108:12;8092:28;;;8104:1;8092:28;8056:65;;;;-1:-1:-1;8056:65:11;;7888:263;-1:-1:-1;7888:263:11:o;6734:192::-;6834:20;;:::i;:::-;-1:-1:-1;6895:1:11;6873:19;;;:23;:19;6734:192::o;154:3804:32:-;;;;;;;;;-1:-1:-1;154:3804:32;;;;;;;;;;;;;;;;;;;;;;;:::o",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "calculateCurrentStakeLimit(uint256)": "874b5c10",
+    "getStorageStakeLimit(uint256)": "4251ebef",
+    "isStakingLimitSet(uint256)": "912b38bc",
+    "isStakingPaused(uint256)": "5b769542",
+    "removeStakingLimit(uint256)": "f0e21ae7",
+    "setStakeLimitPauseState(uint256,bool)": "edc2c657",
+    "setStakingLimit(uint256,uint256,uint256)": "311a4c8c",
+    "setStorageStakeLimitStruct(uint32,uint96,uint32,uint96)": "3d6d31ab",
+    "updatePrevStakeLimit(uint256,uint256)": "19e96124"
+  },
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.4.24+commit.e67f0147\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"constant\":true,\"inputs\":[{\"name\":\"_slotValue\",\"type\":\"uint256\"},{\"name\":\"_newPrevLimit\",\"type\":\"uint256\"}],\"name\":\"updatePrevStakeLimit\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"_slotValue\",\"type\":\"uint256\"},{\"name\":\"_maxStakeLimit\",\"type\":\"uint256\"},{\"name\":\"_stakeLimitIncreasePerBlock\",\"type\":\"uint256\"}],\"name\":\"setStakingLimit\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"_prevStakeBlockNumber\",\"type\":\"uint32\"},{\"name\":\"_prevStakeLimit\",\"type\":\"uint96\"},{\"name\":\"_maxStakeLimitGrowthBlocks\",\"type\":\"uint32\"},{\"name\":\"_maxStakeLimit\",\"type\":\"uint96\"}],\"name\":\"setStorageStakeLimitStruct\",\"outputs\":[{\"name\":\"ret\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"_slotValue\",\"type\":\"uint256\"}],\"name\":\"getStorageStakeLimit\",\"outputs\":[{\"name\":\"prevStakeBlockNumber\",\"type\":\"uint32\"},{\"name\":\"prevStakeLimit\",\"type\":\"uint96\"},{\"name\":\"maxStakeLimitGrowthBlocks\",\"type\":\"uint32\"},{\"name\":\"maxStakeLimit\",\"type\":\"uint96\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"_slotValue\",\"type\":\"uint256\"}],\"name\":\"isStakingPaused\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"_slotValue\",\"type\":\"uint256\"}],\"name\":\"calculateCurrentStakeLimit\",\"outputs\":[{\"name\":\"limit\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"_slotValue\",\"type\":\"uint256\"}],\"name\":\"isStakingLimitSet\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"_slotValue\",\"type\":\"uint256\"},{\"name\":\"_isPaused\",\"type\":\"bool\"}],\"name\":\"setStakeLimitPauseState\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"_slotValue\",\"type\":\"uint256\"}],\"name\":\"removeStakingLimit\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"methods\":{}},\"userdoc\":{\"methods\":{}}},\"settings\":{\"compilationTarget\":{\"contracts/0.4.24/test_helpers/StakeLimitUtilsMock.sol\":\"StakeLimitUtilsMock\"},\"evmVersion\":\"constantinople\",\"libraries\":{},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":@aragon/=node_modules/@aragon/\",\":@nomiclabs/=node_modules/@nomiclabs/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@solidity-parser/=node_modules/@solidity-parser/\",\":ens/=node_modules/@aragon/os/contracts/lib/ens/\",\":eth-gas-reporter/=node_modules/eth-gas-reporter/\",\":gasprofile/=node_modules/gasprofile/\",\":hardhat/=node_modules/hardhat/\",\":math/=node_modules/@aragon/os/contracts/lib/math/\",\":misc/=node_modules/@aragon/os/contracts/lib/misc/\",\":openzeppelin-solidity/=node_modules/openzeppelin-solidity/\",\":sol-explore/=node_modules/sol-explore/\",\":solhint/=node_modules/solhint/\",\":solidity-bytes-utils/=node_modules/solidity-bytes-utils/\",\":token/=node_modules/@aragon/os/contracts/lib/token/\",\":truffle/=node_modules/truffle/\"]},\"sources\":{\"contracts/0.4.24/lib/StakeLimitUtils.sol\":{\"keccak256\":\"0x80c6f0ebe5b912dc358fd6a3a5f929b704d4ea5400bd2a13240cd58683787e41\",\"urls\":[\"bzzr://16b7bbd1b4b4730d3819531b1b12e83b0715d3ccc9c3e6f83e1f247beb3293bf\"]},\"contracts/0.4.24/test_helpers/StakeLimitUtilsMock.sol\":{\"keccak256\":\"0x5e0e3cefbf3d7da3699d68bf44da29a5d58ba8717319507c16456674ab7cb832\",\"urls\":[\"bzzr://1495a24dbba929c0022f28634a31928a3a721118850ab0635b1dd015c9676096\"]},\"node_modules/@aragon/os/contracts/common/UnstructuredStorage.sol\":{\"keccak256\":\"0xe497dcb85bbbf10224623247f39a4aeed7d3b230de2a811f3b69cb0e7d0a64d4\",\"urls\":[\"bzzr://8c619ede2c79a61baf84f9018ecebd86658ed8e26805141a53dec092e5e9a986\"]}},\"version\":1}",
+  "metadata": {
+    "compiler": {
+      "version": "0.4.24+commit.e67f0147"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": null,
+              "name": "_slotValue",
+              "type": "uint256"
+            },
+            {
+              "internalType": null,
+              "name": "_newPrevLimit",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "updatePrevStakeLimit",
+          "outputs": [
+            {
+              "internalType": null,
+              "name": "",
+              "type": "uint256"
+            }
+          ]
+        },
+        {
+          "inputs": [
+            {
+              "internalType": null,
+              "name": "_slotValue",
+              "type": "uint256"
+            },
+            {
+              "internalType": null,
+              "name": "_maxStakeLimit",
+              "type": "uint256"
+            },
+            {
+              "internalType": null,
+              "name": "_stakeLimitIncreasePerBlock",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "setStakingLimit"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": null,
+              "name": "_prevStakeBlockNumber",
+              "type": "uint32"
+            },
+            {
+              "internalType": null,
+              "name": "_prevStakeLimit",
+              "type": "uint96"
+            },
+            {
+              "internalType": null,
+              "name": "_maxStakeLimitGrowthBlocks",
+              "type": "uint32"
+            },
+            {
+              "internalType": null,
+              "name": "_maxStakeLimit",
+              "type": "uint96"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "setStorageStakeLimitStruct",
+          "outputs": [
+            {
+              "internalType": null,
+              "name": "ret",
+              "type": "uint256"
+            }
+          ]
+        },
+        {
+          "inputs": [
+            {
+              "internalType": null,
+              "name": "_slotValue",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "getStorageStakeLimit",
+          "outputs": [
+            {
+              "internalType": null,
+              "name": "prevStakeBlockNumber",
+              "type": "uint32"
+            },
+            {
+              "internalType": null,
+              "name": "prevStakeLimit",
+              "type": "uint96"
+            },
+            {
+              "internalType": null,
+              "name": "maxStakeLimitGrowthBlocks",
+              "type": "uint32"
+            },
+            {
+              "internalType": null,
+              "name": "maxStakeLimit",
+              "type": "uint96"
+            }
+          ]
+        },
+        {
+          "inputs": [
+            {
+              "internalType": null,
+              "name": "_slotValue",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "isStakingPaused",
+          "outputs": [
+            {
+              "internalType": null,
+              "name": "",
+              "type": "bool"
+            }
+          ]
+        },
+        {
+          "inputs": [
+            {
+              "internalType": null,
+              "name": "_slotValue",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "calculateCurrentStakeLimit",
+          "outputs": [
+            {
+              "internalType": null,
+              "name": "limit",
+              "type": "uint256"
+            }
+          ]
+        },
+        {
+          "inputs": [
+            {
+              "internalType": null,
+              "name": "_slotValue",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "isStakingLimitSet",
+          "outputs": [
+            {
+              "internalType": null,
+              "name": "",
+              "type": "bool"
+            }
+          ]
+        },
+        {
+          "inputs": [
+            {
+              "internalType": null,
+              "name": "_slotValue",
+              "type": "uint256"
+            },
+            {
+              "internalType": null,
+              "name": "_isPaused",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "setStakeLimitPauseState",
+          "outputs": [
+            {
+              "internalType": null,
+              "name": "",
+              "type": "uint256"
+            }
+          ]
+        },
+        {
+          "inputs": [
+            {
+              "internalType": null,
+              "name": "_slotValue",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "removeStakingLimit",
+          "outputs": [
+            {
+              "internalType": null,
+              "name": "",
+              "type": "uint256"
+            }
+          ]
+        }
+      ],
+      "devdoc": {
+        "methods": {}
+      },
+      "userdoc": {
+        "methods": {}
+      }
+    },
+    "settings": {
+      "remappings": [
+        ":@aragon/=node_modules/@aragon/",
+        ":@nomiclabs/=node_modules/@nomiclabs/",
+        ":@openzeppelin/=node_modules/@openzeppelin/",
+        ":@solidity-parser/=node_modules/@solidity-parser/",
+        ":ens/=node_modules/@aragon/os/contracts/lib/ens/",
+        ":eth-gas-reporter/=node_modules/eth-gas-reporter/",
+        ":gasprofile/=node_modules/gasprofile/",
+        ":hardhat/=node_modules/hardhat/",
+        ":math/=node_modules/@aragon/os/contracts/lib/math/",
+        ":misc/=node_modules/@aragon/os/contracts/lib/misc/",
+        ":openzeppelin-solidity/=node_modules/openzeppelin-solidity/",
+        ":sol-explore/=node_modules/sol-explore/",
+        ":solhint/=node_modules/solhint/",
+        ":solidity-bytes-utils/=node_modules/solidity-bytes-utils/",
+        ":token/=node_modules/@aragon/os/contracts/lib/token/",
+        ":truffle/=node_modules/truffle/"
+      ],
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "compilationTarget": {
+        "contracts/0.4.24/test_helpers/StakeLimitUtilsMock.sol": "StakeLimitUtilsMock"
+      },
+      "libraries": {}
+    },
+    "sources": {
+      "contracts/0.4.24/lib/StakeLimitUtils.sol": {
+        "keccak256": "0x80c6f0ebe5b912dc358fd6a3a5f929b704d4ea5400bd2a13240cd58683787e41",
+        "urls": [
+          "bzzr://16b7bbd1b4b4730d3819531b1b12e83b0715d3ccc9c3e6f83e1f247beb3293bf"
+        ],
+        "license": null
+      },
+      "contracts/0.4.24/test_helpers/StakeLimitUtilsMock.sol": {
+        "keccak256": "0x5e0e3cefbf3d7da3699d68bf44da29a5d58ba8717319507c16456674ab7cb832",
+        "urls": [
+          "bzzr://1495a24dbba929c0022f28634a31928a3a721118850ab0635b1dd015c9676096"
+        ],
+        "license": null
+      },
+      "node_modules/@aragon/os/contracts/common/UnstructuredStorage.sol": {
+        "keccak256": "0xe497dcb85bbbf10224623247f39a4aeed7d3b230de2a811f3b69cb0e7d0a64d4",
+        "urls": [
+          "bzzr://8c619ede2c79a61baf84f9018ecebd86658ed8e26805141a53dec092e5e9a986"
+        ],
+        "license": null
+      }
+    },
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": {}
+  },
+  "ast": {
+    "absolutePath": "contracts/0.4.24/test_helpers/StakeLimitUtilsMock.sol",
+    "id": 11693,
+    "exportedSymbols": {
+      "StakeLimitUtilsMock": [
+        11692
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "91:3868:32",
+    "nodes": [
+      {
+        "id": 11397,
+        "nodeType": "PragmaDirective",
+        "src": "91:23:32",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "0.4",
+          ".24"
+        ]
+      },
+      {
+        "id": 11398,
+        "nodeType": "ImportDirective",
+        "src": "116:36:32",
+        "nodes": [],
+        "absolutePath": "contracts/0.4.24/lib/StakeLimitUtils.sol",
+        "file": "../lib/StakeLimitUtils.sol",
+        "scope": 11693,
+        "sourceUnit": 4128,
+        "symbolAliases": [],
+        "unitAlias": ""
+      },
+      {
+        "id": 11692,
+        "nodeType": "ContractDefinition",
+        "src": "154:3804:32",
+        "nodes": [
+          {
+            "id": 11401,
+            "nodeType": "UsingForDirective",
+            "src": "189:38:32",
+            "nodes": [],
+            "libraryName": {
+              "contractScope": null,
+              "id": 11399,
+              "name": "UnstructuredStorage",
+              "nodeType": "UserDefinedTypeName",
+              "referencedDeclaration": 22201,
+              "src": "195:19:32",
+              "typeDescriptions": {
+                "typeIdentifier": "t_contract$_UnstructuredStorage_$22201",
+                "typeString": "library UnstructuredStorage"
+              }
+            },
+            "typeName": {
+              "id": 11400,
+              "name": "bytes32",
+              "nodeType": "ElementaryTypeName",
+              "src": "219:7:32",
+              "typeDescriptions": {
+                "typeIdentifier": "t_bytes32",
+                "typeString": "bytes32"
+              }
+            }
+          },
+          {
+            "id": 11404,
+            "nodeType": "UsingForDirective",
+            "src": "232:48:32",
+            "nodes": [],
+            "libraryName": {
+              "contractScope": null,
+              "id": 11402,
+              "name": "StakeLimitUnstructuredStorage",
+              "nodeType": "UserDefinedTypeName",
+              "referencedDeclaration": 3849,
+              "src": "238:29:32",
+              "typeDescriptions": {
+                "typeIdentifier": "t_contract$_StakeLimitUnstructuredStorage_$3849",
+                "typeString": "library StakeLimitUnstructuredStorage"
+              }
+            },
+            "typeName": {
+              "id": 11403,
+              "name": "bytes32",
+              "nodeType": "ElementaryTypeName",
+              "src": "272:7:32",
+              "typeDescriptions": {
+                "typeIdentifier": "t_bytes32",
+                "typeString": "bytes32"
+              }
+            }
+          },
+          {
+            "id": 11407,
+            "nodeType": "UsingForDirective",
+            "src": "285:47:32",
+            "nodes": [],
+            "libraryName": {
+              "contractScope": null,
+              "id": 11405,
+              "name": "StakeLimitUtils",
+              "nodeType": "UserDefinedTypeName",
+              "referencedDeclaration": 4127,
+              "src": "291:15:32",
+              "typeDescriptions": {
+                "typeIdentifier": "t_contract$_StakeLimitUtils_$4127",
+                "typeString": "library StakeLimitUtils"
+              }
+            },
+            "typeName": {
+              "contractScope": null,
+              "id": 11406,
+              "name": "StakeLimitState.Data",
+              "nodeType": "UserDefinedTypeName",
+              "referencedDeclaration": 3738,
+              "src": "311:20:32",
+              "typeDescriptions": {
+                "typeIdentifier": "t_struct$_Data_$3738_storage_ptr",
+                "typeString": "struct StakeLimitState.Data"
+              }
+            }
+          },
+          {
+            "id": 11412,
+            "nodeType": "VariableDeclaration",
+            "src": "338:70:32",
+            "nodes": [],
+            "constant": true,
+            "name": "STAKING_STATE_POSITION",
+            "scope": 11692,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_bytes32",
+              "typeString": "bytes32"
+            },
+            "typeName": {
+              "id": 11408,
+              "name": "bytes32",
+              "nodeType": "ElementaryTypeName",
+              "src": "338:7:32",
+              "typeDescriptions": {
+                "typeIdentifier": "t_bytes32",
+                "typeString": "bytes32"
+              }
+            },
+            "value": {
+              "argumentTypes": null,
+              "arguments": [
+                {
+                  "argumentTypes": null,
+                  "hexValue": "616263646566",
+                  "id": 11410,
+                  "isConstant": false,
+                  "isLValue": false,
+                  "isPure": true,
+                  "kind": "string",
+                  "lValueRequested": false,
+                  "nodeType": "Literal",
+                  "src": "399:8:32",
+                  "subdenomination": null,
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_stringliteral_acd0c377fe36d5b209125185bc3ac41155ed1bf7103ef9f0c2aff4320460b6df",
+                    "typeString": "literal_string \"abcdef\""
+                  },
+                  "value": "abcdef"
+                }
+              ],
+              "expression": {
+                "argumentTypes": [
+                  {
+                    "typeIdentifier": "t_stringliteral_acd0c377fe36d5b209125185bc3ac41155ed1bf7103ef9f0c2aff4320460b6df",
+                    "typeString": "literal_string \"abcdef\""
+                  }
+                ],
+                "id": 11409,
+                "name": "keccak256",
+                "nodeType": "Identifier",
+                "overloadedDeclarations": [],
+                "referencedDeclaration": 27817,
+                "src": "389:9:32",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_function_sha3_pure$__$returns$_t_bytes32_$",
+                  "typeString": "function () pure returns (bytes32)"
+                }
+              },
+              "id": 11411,
+              "isConstant": false,
+              "isLValue": false,
+              "isPure": true,
+              "kind": "functionCall",
+              "lValueRequested": false,
+              "names": [],
+              "nodeType": "FunctionCall",
+              "src": "389:19:32",
+              "typeDescriptions": {
+                "typeIdentifier": "t_bytes32",
+                "typeString": "bytes32"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "id": 11460,
+            "nodeType": "FunctionDefinition",
+            "src": "415:599:32",
+            "nodes": [],
+            "body": {
+              "id": 11459,
+              "nodeType": "Block",
+              "src": "632:382:32",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "arguments": [
+                      {
+                        "argumentTypes": null,
+                        "id": 11428,
+                        "name": "_slotValue",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11414,
+                        "src": "683:10:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        }
+                      }
+                    ],
+                    "expression": {
+                      "argumentTypes": [
+                        {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        }
+                      ],
+                      "expression": {
+                        "argumentTypes": null,
+                        "id": 11425,
+                        "name": "STAKING_STATE_POSITION",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11412,
+                        "src": "642:22:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bytes32",
+                          "typeString": "bytes32"
+                        }
+                      },
+                      "id": 11427,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": false,
+                      "lValueRequested": false,
+                      "memberName": "setStorageUint256",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": 22200,
+                      "src": "642:40:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_internal_nonpayable$_t_bytes32_$_t_uint256_$returns$__$bound_to$_t_bytes32_$",
+                        "typeString": "function (bytes32,uint256)"
+                      }
+                    },
+                    "id": 11429,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "642:52:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_tuple$__$",
+                      "typeString": "tuple()"
+                    }
+                  },
+                  "id": 11430,
+                  "nodeType": "ExpressionStatement",
+                  "src": "642:52:32"
+                },
+                {
+                  "assignments": [
+                    11434
+                  ],
+                  "declarations": [
+                    {
+                      "constant": false,
+                      "id": 11434,
+                      "name": "data",
+                      "nodeType": "VariableDeclaration",
+                      "scope": 11460,
+                      "src": "704:32:32",
+                      "stateVariable": false,
+                      "storageLocation": "memory",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_struct$_Data_$3738_memory_ptr",
+                        "typeString": "struct StakeLimitState.Data"
+                      },
+                      "typeName": {
+                        "contractScope": null,
+                        "id": 11433,
+                        "name": "StakeLimitState.Data",
+                        "nodeType": "UserDefinedTypeName",
+                        "referencedDeclaration": 3738,
+                        "src": "704:20:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_struct$_Data_$3738_storage_ptr",
+                          "typeString": "struct StakeLimitState.Data"
+                        }
+                      },
+                      "value": null,
+                      "visibility": "internal"
+                    }
+                  ],
+                  "id": 11438,
+                  "initialValue": {
+                    "argumentTypes": null,
+                    "arguments": [],
+                    "expression": {
+                      "argumentTypes": [],
+                      "expression": {
+                        "argumentTypes": null,
+                        "id": 11435,
+                        "name": "STAKING_STATE_POSITION",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11412,
+                        "src": "739:22:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bytes32",
+                          "typeString": "bytes32"
+                        }
+                      },
+                      "id": 11436,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": false,
+                      "lValueRequested": false,
+                      "memberName": "getStorageStakeLimitStruct",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": 3808,
+                      "src": "739:49:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_internal_view$_t_bytes32_$returns$_t_struct$_Data_$3738_memory_ptr_$bound_to$_t_bytes32_$",
+                        "typeString": "function (bytes32) view returns (struct StakeLimitState.Data memory)"
+                      }
+                    },
+                    "id": 11437,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "739:51:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_struct$_Data_$3738_memory_ptr",
+                      "typeString": "struct StakeLimitState.Data memory"
+                    }
+                  },
+                  "nodeType": "VariableDeclarationStatement",
+                  "src": "704:86:32"
+                },
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "id": 11442,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftHandSide": {
+                      "argumentTypes": null,
+                      "id": 11439,
+                      "name": "prevStakeBlockNumber",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 11417,
+                      "src": "801:20:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint32",
+                        "typeString": "uint32"
+                      }
+                    },
+                    "nodeType": "Assignment",
+                    "operator": "=",
+                    "rightHandSide": {
+                      "argumentTypes": null,
+                      "expression": {
+                        "argumentTypes": null,
+                        "id": 11440,
+                        "name": "data",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11434,
+                        "src": "824:4:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_struct$_Data_$3738_memory_ptr",
+                          "typeString": "struct StakeLimitState.Data memory"
+                        }
+                      },
+                      "id": 11441,
+                      "isConstant": false,
+                      "isLValue": true,
+                      "isPure": false,
+                      "lValueRequested": false,
+                      "memberName": "prevStakeBlockNumber",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": 3731,
+                      "src": "824:25:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint32",
+                        "typeString": "uint32"
+                      }
+                    },
+                    "src": "801:48:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint32",
+                      "typeString": "uint32"
+                    }
+                  },
+                  "id": 11443,
+                  "nodeType": "ExpressionStatement",
+                  "src": "801:48:32"
+                },
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "id": 11447,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftHandSide": {
+                      "argumentTypes": null,
+                      "id": 11444,
+                      "name": "prevStakeLimit",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 11419,
+                      "src": "859:14:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint96",
+                        "typeString": "uint96"
+                      }
+                    },
+                    "nodeType": "Assignment",
+                    "operator": "=",
+                    "rightHandSide": {
+                      "argumentTypes": null,
+                      "expression": {
+                        "argumentTypes": null,
+                        "id": 11445,
+                        "name": "data",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11434,
+                        "src": "876:4:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_struct$_Data_$3738_memory_ptr",
+                          "typeString": "struct StakeLimitState.Data memory"
+                        }
+                      },
+                      "id": 11446,
+                      "isConstant": false,
+                      "isLValue": true,
+                      "isPure": false,
+                      "lValueRequested": false,
+                      "memberName": "prevStakeLimit",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": 3733,
+                      "src": "876:19:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint96",
+                        "typeString": "uint96"
+                      }
+                    },
+                    "src": "859:36:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint96",
+                      "typeString": "uint96"
+                    }
+                  },
+                  "id": 11448,
+                  "nodeType": "ExpressionStatement",
+                  "src": "859:36:32"
+                },
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "id": 11452,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftHandSide": {
+                      "argumentTypes": null,
+                      "id": 11449,
+                      "name": "maxStakeLimitGrowthBlocks",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 11421,
+                      "src": "905:25:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint32",
+                        "typeString": "uint32"
+                      }
+                    },
+                    "nodeType": "Assignment",
+                    "operator": "=",
+                    "rightHandSide": {
+                      "argumentTypes": null,
+                      "expression": {
+                        "argumentTypes": null,
+                        "id": 11450,
+                        "name": "data",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11434,
+                        "src": "933:4:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_struct$_Data_$3738_memory_ptr",
+                          "typeString": "struct StakeLimitState.Data memory"
+                        }
+                      },
+                      "id": 11451,
+                      "isConstant": false,
+                      "isLValue": true,
+                      "isPure": false,
+                      "lValueRequested": false,
+                      "memberName": "maxStakeLimitGrowthBlocks",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": 3735,
+                      "src": "933:30:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint32",
+                        "typeString": "uint32"
+                      }
+                    },
+                    "src": "905:58:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint32",
+                      "typeString": "uint32"
+                    }
+                  },
+                  "id": 11453,
+                  "nodeType": "ExpressionStatement",
+                  "src": "905:58:32"
+                },
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "id": 11457,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftHandSide": {
+                      "argumentTypes": null,
+                      "id": 11454,
+                      "name": "maxStakeLimit",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 11423,
+                      "src": "973:13:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint96",
+                        "typeString": "uint96"
+                      }
+                    },
+                    "nodeType": "Assignment",
+                    "operator": "=",
+                    "rightHandSide": {
+                      "argumentTypes": null,
+                      "expression": {
+                        "argumentTypes": null,
+                        "id": 11455,
+                        "name": "data",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11434,
+                        "src": "989:4:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_struct$_Data_$3738_memory_ptr",
+                          "typeString": "struct StakeLimitState.Data memory"
+                        }
+                      },
+                      "id": 11456,
+                      "isConstant": false,
+                      "isLValue": true,
+                      "isPure": false,
+                      "lValueRequested": false,
+                      "memberName": "maxStakeLimit",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": 3737,
+                      "src": "989:18:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint96",
+                        "typeString": "uint96"
+                      }
+                    },
+                    "src": "973:34:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint96",
+                      "typeString": "uint96"
+                    }
+                  },
+                  "id": 11458,
+                  "nodeType": "ExpressionStatement",
+                  "src": "973:34:32"
+                }
+              ]
+            },
+            "documentation": null,
+            "implemented": true,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getStorageStakeLimit",
+            "parameters": {
+              "id": 11415,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 11414,
+                  "name": "_slotValue",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 11460,
+                  "src": "445:18:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 11413,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "445:7:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "444:20:32"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 11424,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 11417,
+                  "name": "prevStakeBlockNumber",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 11460,
+                  "src": "495:27:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint32",
+                    "typeString": "uint32"
+                  },
+                  "typeName": {
+                    "id": 11416,
+                    "name": "uint32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "495:6:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint32",
+                      "typeString": "uint32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 11419,
+                  "name": "prevStakeLimit",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 11460,
+                  "src": "532:21:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint96",
+                    "typeString": "uint96"
+                  },
+                  "typeName": {
+                    "id": 11418,
+                    "name": "uint96",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "532:6:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint96",
+                      "typeString": "uint96"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 11421,
+                  "name": "maxStakeLimitGrowthBlocks",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 11460,
+                  "src": "563:32:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint32",
+                    "typeString": "uint32"
+                  },
+                  "typeName": {
+                    "id": 11420,
+                    "name": "uint32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "563:6:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint32",
+                      "typeString": "uint32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 11423,
+                  "name": "maxStakeLimit",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 11460,
+                  "src": "605:20:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint96",
+                    "typeString": "uint96"
+                  },
+                  "typeName": {
+                    "id": 11422,
+                    "name": "uint96",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "605:6:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint96",
+                      "typeString": "uint96"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "485:146:32"
+            },
+            "scope": 11692,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "public"
+          },
+          {
+            "id": 11513,
+            "nodeType": "FunctionDefinition",
+            "src": "1020:614:32",
+            "nodes": [],
+            "body": {
+              "id": 11512,
+              "nodeType": "Block",
+              "src": "1240:394:32",
+              "nodes": [],
+              "statements": [
+                {
+                  "assignments": [],
+                  "declarations": [
+                    {
+                      "constant": false,
+                      "id": 11476,
+                      "name": "data",
+                      "nodeType": "VariableDeclaration",
+                      "scope": 11513,
+                      "src": "1250:32:32",
+                      "stateVariable": false,
+                      "storageLocation": "memory",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_struct$_Data_$3738_memory_ptr",
+                        "typeString": "struct StakeLimitState.Data"
+                      },
+                      "typeName": {
+                        "contractScope": null,
+                        "id": 11475,
+                        "name": "StakeLimitState.Data",
+                        "nodeType": "UserDefinedTypeName",
+                        "referencedDeclaration": 3738,
+                        "src": "1250:20:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_struct$_Data_$3738_storage_ptr",
+                          "typeString": "struct StakeLimitState.Data"
+                        }
+                      },
+                      "value": null,
+                      "visibility": "internal"
+                    }
+                  ],
+                  "id": 11477,
+                  "initialValue": null,
+                  "nodeType": "VariableDeclarationStatement",
+                  "src": "1250:32:32"
+                },
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "id": 11482,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftHandSide": {
+                      "argumentTypes": null,
+                      "expression": {
+                        "argumentTypes": null,
+                        "id": 11478,
+                        "name": "data",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11476,
+                        "src": "1292:4:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_struct$_Data_$3738_memory_ptr",
+                          "typeString": "struct StakeLimitState.Data memory"
+                        }
+                      },
+                      "id": 11480,
+                      "isConstant": false,
+                      "isLValue": true,
+                      "isPure": false,
+                      "lValueRequested": true,
+                      "memberName": "prevStakeBlockNumber",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": 3731,
+                      "src": "1292:25:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint32",
+                        "typeString": "uint32"
+                      }
+                    },
+                    "nodeType": "Assignment",
+                    "operator": "=",
+                    "rightHandSide": {
+                      "argumentTypes": null,
+                      "id": 11481,
+                      "name": "_prevStakeBlockNumber",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 11462,
+                      "src": "1320:21:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint32",
+                        "typeString": "uint32"
+                      }
+                    },
+                    "src": "1292:49:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint32",
+                      "typeString": "uint32"
+                    }
+                  },
+                  "id": 11483,
+                  "nodeType": "ExpressionStatement",
+                  "src": "1292:49:32"
+                },
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "id": 11488,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftHandSide": {
+                      "argumentTypes": null,
+                      "expression": {
+                        "argumentTypes": null,
+                        "id": 11484,
+                        "name": "data",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11476,
+                        "src": "1351:4:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_struct$_Data_$3738_memory_ptr",
+                          "typeString": "struct StakeLimitState.Data memory"
+                        }
+                      },
+                      "id": 11486,
+                      "isConstant": false,
+                      "isLValue": true,
+                      "isPure": false,
+                      "lValueRequested": true,
+                      "memberName": "prevStakeLimit",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": 3733,
+                      "src": "1351:19:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint96",
+                        "typeString": "uint96"
+                      }
+                    },
+                    "nodeType": "Assignment",
+                    "operator": "=",
+                    "rightHandSide": {
+                      "argumentTypes": null,
+                      "id": 11487,
+                      "name": "_prevStakeLimit",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 11464,
+                      "src": "1373:15:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint96",
+                        "typeString": "uint96"
+                      }
+                    },
+                    "src": "1351:37:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint96",
+                      "typeString": "uint96"
+                    }
+                  },
+                  "id": 11489,
+                  "nodeType": "ExpressionStatement",
+                  "src": "1351:37:32"
+                },
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "id": 11494,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftHandSide": {
+                      "argumentTypes": null,
+                      "expression": {
+                        "argumentTypes": null,
+                        "id": 11490,
+                        "name": "data",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11476,
+                        "src": "1398:4:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_struct$_Data_$3738_memory_ptr",
+                          "typeString": "struct StakeLimitState.Data memory"
+                        }
+                      },
+                      "id": 11492,
+                      "isConstant": false,
+                      "isLValue": true,
+                      "isPure": false,
+                      "lValueRequested": true,
+                      "memberName": "maxStakeLimitGrowthBlocks",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": 3735,
+                      "src": "1398:30:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint32",
+                        "typeString": "uint32"
+                      }
+                    },
+                    "nodeType": "Assignment",
+                    "operator": "=",
+                    "rightHandSide": {
+                      "argumentTypes": null,
+                      "id": 11493,
+                      "name": "_maxStakeLimitGrowthBlocks",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 11466,
+                      "src": "1431:26:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint32",
+                        "typeString": "uint32"
+                      }
+                    },
+                    "src": "1398:59:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint32",
+                      "typeString": "uint32"
+                    }
+                  },
+                  "id": 11495,
+                  "nodeType": "ExpressionStatement",
+                  "src": "1398:59:32"
+                },
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "id": 11500,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftHandSide": {
+                      "argumentTypes": null,
+                      "expression": {
+                        "argumentTypes": null,
+                        "id": 11496,
+                        "name": "data",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11476,
+                        "src": "1467:4:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_struct$_Data_$3738_memory_ptr",
+                          "typeString": "struct StakeLimitState.Data memory"
+                        }
+                      },
+                      "id": 11498,
+                      "isConstant": false,
+                      "isLValue": true,
+                      "isPure": false,
+                      "lValueRequested": true,
+                      "memberName": "maxStakeLimit",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": 3737,
+                      "src": "1467:18:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint96",
+                        "typeString": "uint96"
+                      }
+                    },
+                    "nodeType": "Assignment",
+                    "operator": "=",
+                    "rightHandSide": {
+                      "argumentTypes": null,
+                      "id": 11499,
+                      "name": "_maxStakeLimit",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 11468,
+                      "src": "1488:14:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint96",
+                        "typeString": "uint96"
+                      }
+                    },
+                    "src": "1467:35:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint96",
+                      "typeString": "uint96"
+                    }
+                  },
+                  "id": 11501,
+                  "nodeType": "ExpressionStatement",
+                  "src": "1467:35:32"
+                },
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "arguments": [
+                      {
+                        "argumentTypes": null,
+                        "id": 11505,
+                        "name": "data",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11476,
+                        "src": "1563:4:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_struct$_Data_$3738_memory_ptr",
+                          "typeString": "struct StakeLimitState.Data memory"
+                        }
+                      }
+                    ],
+                    "expression": {
+                      "argumentTypes": [
+                        {
+                          "typeIdentifier": "t_struct$_Data_$3738_memory_ptr",
+                          "typeString": "struct StakeLimitState.Data memory"
+                        }
+                      ],
+                      "expression": {
+                        "argumentTypes": null,
+                        "id": 11502,
+                        "name": "STAKING_STATE_POSITION",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11412,
+                        "src": "1513:22:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bytes32",
+                          "typeString": "bytes32"
+                        }
+                      },
+                      "id": 11504,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": false,
+                      "lValueRequested": false,
+                      "memberName": "setStorageStakeLimitStruct",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": 3848,
+                      "src": "1513:49:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_internal_nonpayable$_t_bytes32_$_t_struct$_Data_$3738_memory_ptr_$returns$__$bound_to$_t_bytes32_$",
+                        "typeString": "function (bytes32,struct StakeLimitState.Data memory)"
+                      }
+                    },
+                    "id": 11506,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "1513:55:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_tuple$__$",
+                      "typeString": "tuple()"
+                    }
+                  },
+                  "id": 11507,
+                  "nodeType": "ExpressionStatement",
+                  "src": "1513:55:32"
+                },
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "arguments": [],
+                    "expression": {
+                      "argumentTypes": [],
+                      "expression": {
+                        "argumentTypes": null,
+                        "id": 11508,
+                        "name": "STAKING_STATE_POSITION",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11412,
+                        "src": "1585:22:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bytes32",
+                          "typeString": "bytes32"
+                        }
+                      },
+                      "id": 11509,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": false,
+                      "lValueRequested": false,
+                      "memberName": "getStorageUint256",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": 22164,
+                      "src": "1585:40:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_internal_view$_t_bytes32_$returns$_t_uint256_$bound_to$_t_bytes32_$",
+                        "typeString": "function (bytes32) view returns (uint256)"
+                      }
+                    },
+                    "id": 11510,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "1585:42:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "functionReturnParameters": 11472,
+                  "id": 11511,
+                  "nodeType": "Return",
+                  "src": "1578:49:32"
+                }
+              ]
+            },
+            "documentation": null,
+            "implemented": true,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "setStorageStakeLimitStruct",
+            "parameters": {
+              "id": 11469,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 11462,
+                  "name": "_prevStakeBlockNumber",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 11513,
+                  "src": "1065:28:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint32",
+                    "typeString": "uint32"
+                  },
+                  "typeName": {
+                    "id": 11461,
+                    "name": "uint32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1065:6:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint32",
+                      "typeString": "uint32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 11464,
+                  "name": "_prevStakeLimit",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 11513,
+                  "src": "1103:22:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint96",
+                    "typeString": "uint96"
+                  },
+                  "typeName": {
+                    "id": 11463,
+                    "name": "uint96",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1103:6:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint96",
+                      "typeString": "uint96"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 11466,
+                  "name": "_maxStakeLimitGrowthBlocks",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 11513,
+                  "src": "1135:33:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint32",
+                    "typeString": "uint32"
+                  },
+                  "typeName": {
+                    "id": 11465,
+                    "name": "uint32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1135:6:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint32",
+                      "typeString": "uint32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 11468,
+                  "name": "_maxStakeLimit",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 11513,
+                  "src": "1178:21:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint96",
+                    "typeString": "uint96"
+                  },
+                  "typeName": {
+                    "id": 11467,
+                    "name": "uint96",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1178:6:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint96",
+                      "typeString": "uint96"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1055:150:32"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 11472,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 11471,
+                  "name": "ret",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 11513,
+                  "src": "1227:11:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 11470,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1227:7:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1226:13:32"
+            },
+            "scope": 11692,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "public"
+          },
+          {
+            "id": 11533,
+            "nodeType": "FunctionDefinition",
+            "src": "1640:257:32",
+            "nodes": [],
+            "body": {
+              "id": 11532,
+              "nodeType": "Block",
+              "src": "1731:166:32",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "arguments": [
+                      {
+                        "argumentTypes": null,
+                        "id": 11523,
+                        "name": "_slotValue",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11515,
+                        "src": "1782:10:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        }
+                      }
+                    ],
+                    "expression": {
+                      "argumentTypes": [
+                        {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        }
+                      ],
+                      "expression": {
+                        "argumentTypes": null,
+                        "id": 11520,
+                        "name": "STAKING_STATE_POSITION",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11412,
+                        "src": "1741:22:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bytes32",
+                          "typeString": "bytes32"
+                        }
+                      },
+                      "id": 11522,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": false,
+                      "lValueRequested": false,
+                      "memberName": "setStorageUint256",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": 22200,
+                      "src": "1741:40:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_internal_nonpayable$_t_bytes32_$_t_uint256_$returns$__$bound_to$_t_bytes32_$",
+                        "typeString": "function (bytes32,uint256)"
+                      }
+                    },
+                    "id": 11524,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "1741:52:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_tuple$__$",
+                      "typeString": "tuple()"
+                    }
+                  },
+                  "id": 11525,
+                  "nodeType": "ExpressionStatement",
+                  "src": "1741:52:32"
+                },
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "arguments": [],
+                    "expression": {
+                      "argumentTypes": [],
+                      "expression": {
+                        "argumentTypes": null,
+                        "arguments": [],
+                        "expression": {
+                          "argumentTypes": [],
+                          "expression": {
+                            "argumentTypes": null,
+                            "id": 11526,
+                            "name": "STAKING_STATE_POSITION",
+                            "nodeType": "Identifier",
+                            "overloadedDeclarations": [],
+                            "referencedDeclaration": 11412,
+                            "src": "1810:22:32",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_bytes32",
+                              "typeString": "bytes32"
+                            }
+                          },
+                          "id": 11527,
+                          "isConstant": false,
+                          "isLValue": false,
+                          "isPure": false,
+                          "lValueRequested": false,
+                          "memberName": "getStorageStakeLimitStruct",
+                          "nodeType": "MemberAccess",
+                          "referencedDeclaration": 3808,
+                          "src": "1810:49:32",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_function_internal_view$_t_bytes32_$returns$_t_struct$_Data_$3738_memory_ptr_$bound_to$_t_bytes32_$",
+                            "typeString": "function (bytes32) view returns (struct StakeLimitState.Data memory)"
+                          }
+                        },
+                        "id": 11528,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": false,
+                        "kind": "functionCall",
+                        "lValueRequested": false,
+                        "names": [],
+                        "nodeType": "FunctionCall",
+                        "src": "1810:51:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_struct$_Data_$3738_memory_ptr",
+                          "typeString": "struct StakeLimitState.Data memory"
+                        }
+                      },
+                      "id": 11529,
+                      "isConstant": false,
+                      "isLValue": true,
+                      "isPure": false,
+                      "lValueRequested": false,
+                      "memberName": "calculateCurrentStakeLimit",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": 3900,
+                      "src": "1810:78:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_internal_view$_t_struct$_Data_$3738_memory_ptr_$returns$_t_uint256_$bound_to$_t_struct$_Data_$3738_memory_ptr_$",
+                        "typeString": "function (struct StakeLimitState.Data memory) view returns (uint256)"
+                      }
+                    },
+                    "id": 11530,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "1810:80:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "functionReturnParameters": 11519,
+                  "id": 11531,
+                  "nodeType": "Return",
+                  "src": "1803:87:32"
+                }
+              ]
+            },
+            "documentation": null,
+            "implemented": true,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "calculateCurrentStakeLimit",
+            "parameters": {
+              "id": 11516,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 11515,
+                  "name": "_slotValue",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 11533,
+                  "src": "1676:18:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 11514,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1676:7:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1675:20:32"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 11519,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 11518,
+                  "name": "limit",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 11533,
+                  "src": "1716:13:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 11517,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1716:7:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1715:15:32"
+            },
+            "scope": 11692,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "public"
+          },
+          {
+            "id": 11553,
+            "nodeType": "FunctionDefinition",
+            "src": "1903:226:32",
+            "nodes": [],
+            "body": {
+              "id": 11552,
+              "nodeType": "Block",
+              "src": "1974:155:32",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "arguments": [
+                      {
+                        "argumentTypes": null,
+                        "id": 11543,
+                        "name": "_slotValue",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11535,
+                        "src": "2025:10:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        }
+                      }
+                    ],
+                    "expression": {
+                      "argumentTypes": [
+                        {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        }
+                      ],
+                      "expression": {
+                        "argumentTypes": null,
+                        "id": 11540,
+                        "name": "STAKING_STATE_POSITION",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11412,
+                        "src": "1984:22:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bytes32",
+                          "typeString": "bytes32"
+                        }
+                      },
+                      "id": 11542,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": false,
+                      "lValueRequested": false,
+                      "memberName": "setStorageUint256",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": 22200,
+                      "src": "1984:40:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_internal_nonpayable$_t_bytes32_$_t_uint256_$returns$__$bound_to$_t_bytes32_$",
+                        "typeString": "function (bytes32,uint256)"
+                      }
+                    },
+                    "id": 11544,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "1984:52:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_tuple$__$",
+                      "typeString": "tuple()"
+                    }
+                  },
+                  "id": 11545,
+                  "nodeType": "ExpressionStatement",
+                  "src": "1984:52:32"
+                },
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "arguments": [],
+                    "expression": {
+                      "argumentTypes": [],
+                      "expression": {
+                        "argumentTypes": null,
+                        "arguments": [],
+                        "expression": {
+                          "argumentTypes": [],
+                          "expression": {
+                            "argumentTypes": null,
+                            "id": 11546,
+                            "name": "STAKING_STATE_POSITION",
+                            "nodeType": "Identifier",
+                            "overloadedDeclarations": [],
+                            "referencedDeclaration": 11412,
+                            "src": "2053:22:32",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_bytes32",
+                              "typeString": "bytes32"
+                            }
+                          },
+                          "id": 11547,
+                          "isConstant": false,
+                          "isLValue": false,
+                          "isPure": false,
+                          "lValueRequested": false,
+                          "memberName": "getStorageStakeLimitStruct",
+                          "nodeType": "MemberAccess",
+                          "referencedDeclaration": 3808,
+                          "src": "2053:49:32",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_function_internal_view$_t_bytes32_$returns$_t_struct$_Data_$3738_memory_ptr_$bound_to$_t_bytes32_$",
+                            "typeString": "function (bytes32) view returns (struct StakeLimitState.Data memory)"
+                          }
+                        },
+                        "id": 11548,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": false,
+                        "kind": "functionCall",
+                        "lValueRequested": false,
+                        "names": [],
+                        "nodeType": "FunctionCall",
+                        "src": "2053:51:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_struct$_Data_$3738_memory_ptr",
+                          "typeString": "struct StakeLimitState.Data memory"
+                        }
+                      },
+                      "id": 11549,
+                      "isConstant": false,
+                      "isLValue": true,
+                      "isPure": false,
+                      "lValueRequested": false,
+                      "memberName": "isStakingPaused",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": 3913,
+                      "src": "2053:67:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_internal_pure$_t_struct$_Data_$3738_memory_ptr_$returns$_t_bool_$bound_to$_t_struct$_Data_$3738_memory_ptr_$",
+                        "typeString": "function (struct StakeLimitState.Data memory) pure returns (bool)"
+                      }
+                    },
+                    "id": 11550,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "2053:69:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "functionReturnParameters": 11539,
+                  "id": 11551,
+                  "nodeType": "Return",
+                  "src": "2046:76:32"
+                }
+              ]
+            },
+            "documentation": null,
+            "implemented": true,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "isStakingPaused",
+            "parameters": {
+              "id": 11536,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 11535,
+                  "name": "_slotValue",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 11553,
+                  "src": "1928:18:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 11534,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1928:7:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1927:20:32"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 11539,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 11538,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 11553,
+                  "src": "1968:4:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bool",
+                    "typeString": "bool"
+                  },
+                  "typeName": {
+                    "id": 11537,
+                    "name": "bool",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1968:4:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1967:6:32"
+            },
+            "scope": 11692,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "public"
+          },
+          {
+            "id": 11573,
+            "nodeType": "FunctionDefinition",
+            "src": "2135:230:32",
+            "nodes": [],
+            "body": {
+              "id": 11572,
+              "nodeType": "Block",
+              "src": "2208:157:32",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "arguments": [
+                      {
+                        "argumentTypes": null,
+                        "id": 11563,
+                        "name": "_slotValue",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11555,
+                        "src": "2259:10:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        }
+                      }
+                    ],
+                    "expression": {
+                      "argumentTypes": [
+                        {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        }
+                      ],
+                      "expression": {
+                        "argumentTypes": null,
+                        "id": 11560,
+                        "name": "STAKING_STATE_POSITION",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11412,
+                        "src": "2218:22:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bytes32",
+                          "typeString": "bytes32"
+                        }
+                      },
+                      "id": 11562,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": false,
+                      "lValueRequested": false,
+                      "memberName": "setStorageUint256",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": 22200,
+                      "src": "2218:40:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_internal_nonpayable$_t_bytes32_$_t_uint256_$returns$__$bound_to$_t_bytes32_$",
+                        "typeString": "function (bytes32,uint256)"
+                      }
+                    },
+                    "id": 11564,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "2218:52:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_tuple$__$",
+                      "typeString": "tuple()"
+                    }
+                  },
+                  "id": 11565,
+                  "nodeType": "ExpressionStatement",
+                  "src": "2218:52:32"
+                },
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "arguments": [],
+                    "expression": {
+                      "argumentTypes": [],
+                      "expression": {
+                        "argumentTypes": null,
+                        "arguments": [],
+                        "expression": {
+                          "argumentTypes": [],
+                          "expression": {
+                            "argumentTypes": null,
+                            "id": 11566,
+                            "name": "STAKING_STATE_POSITION",
+                            "nodeType": "Identifier",
+                            "overloadedDeclarations": [],
+                            "referencedDeclaration": 11412,
+                            "src": "2287:22:32",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_bytes32",
+                              "typeString": "bytes32"
+                            }
+                          },
+                          "id": 11567,
+                          "isConstant": false,
+                          "isLValue": false,
+                          "isPure": false,
+                          "lValueRequested": false,
+                          "memberName": "getStorageStakeLimitStruct",
+                          "nodeType": "MemberAccess",
+                          "referencedDeclaration": 3808,
+                          "src": "2287:49:32",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_function_internal_view$_t_bytes32_$returns$_t_struct$_Data_$3738_memory_ptr_$bound_to$_t_bytes32_$",
+                            "typeString": "function (bytes32) view returns (struct StakeLimitState.Data memory)"
+                          }
+                        },
+                        "id": 11568,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": false,
+                        "kind": "functionCall",
+                        "lValueRequested": false,
+                        "names": [],
+                        "nodeType": "FunctionCall",
+                        "src": "2287:51:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_struct$_Data_$3738_memory_ptr",
+                          "typeString": "struct StakeLimitState.Data memory"
+                        }
+                      },
+                      "id": 11569,
+                      "isConstant": false,
+                      "isLValue": true,
+                      "isPure": false,
+                      "lValueRequested": false,
+                      "memberName": "isStakingLimitSet",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": 3926,
+                      "src": "2287:69:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_internal_pure$_t_struct$_Data_$3738_memory_ptr_$returns$_t_bool_$bound_to$_t_struct$_Data_$3738_memory_ptr_$",
+                        "typeString": "function (struct StakeLimitState.Data memory) pure returns (bool)"
+                      }
+                    },
+                    "id": 11570,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "2287:71:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "functionReturnParameters": 11559,
+                  "id": 11571,
+                  "nodeType": "Return",
+                  "src": "2280:78:32"
+                }
+              ]
+            },
+            "documentation": null,
+            "implemented": true,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "isStakingLimitSet",
+            "parameters": {
+              "id": 11556,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 11555,
+                  "name": "_slotValue",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 11573,
+                  "src": "2162:18:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 11554,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2162:7:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2161:20:32"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 11559,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 11558,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 11573,
+                  "src": "2202:4:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bool",
+                    "typeString": "bool"
+                  },
+                  "typeName": {
+                    "id": 11557,
+                    "name": "bool",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2202:4:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2201:6:32"
+            },
+            "scope": 11692,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "public"
+          },
+          {
+            "id": 11601,
+            "nodeType": "FunctionDefinition",
+            "src": "2371:412:32",
+            "nodes": [],
+            "body": {
+              "id": 11600,
+              "nodeType": "Block",
+              "src": "2489:294:32",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "arguments": [
+                      {
+                        "argumentTypes": null,
+                        "id": 11585,
+                        "name": "_slotValue",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11575,
+                        "src": "2540:10:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        }
+                      }
+                    ],
+                    "expression": {
+                      "argumentTypes": [
+                        {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        }
+                      ],
+                      "expression": {
+                        "argumentTypes": null,
+                        "id": 11582,
+                        "name": "STAKING_STATE_POSITION",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11412,
+                        "src": "2499:22:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bytes32",
+                          "typeString": "bytes32"
+                        }
+                      },
+                      "id": 11584,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": false,
+                      "lValueRequested": false,
+                      "memberName": "setStorageUint256",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": 22200,
+                      "src": "2499:40:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_internal_nonpayable$_t_bytes32_$_t_uint256_$returns$__$bound_to$_t_bytes32_$",
+                        "typeString": "function (bytes32,uint256)"
+                      }
+                    },
+                    "id": 11586,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "2499:52:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_tuple$__$",
+                      "typeString": "tuple()"
+                    }
+                  },
+                  "id": 11587,
+                  "nodeType": "ExpressionStatement",
+                  "src": "2499:52:32"
+                },
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "arguments": [
+                      {
+                        "argumentTypes": null,
+                        "arguments": [
+                          {
+                            "argumentTypes": null,
+                            "id": 11595,
+                            "name": "_maxStakeLimit",
+                            "nodeType": "Identifier",
+                            "overloadedDeclarations": [],
+                            "referencedDeclaration": 11577,
+                            "src": "2709:14:32",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_uint256",
+                              "typeString": "uint256"
+                            }
+                          },
+                          {
+                            "argumentTypes": null,
+                            "id": 11596,
+                            "name": "_stakeLimitIncreasePerBlock",
+                            "nodeType": "Identifier",
+                            "overloadedDeclarations": [],
+                            "referencedDeclaration": 11579,
+                            "src": "2725:27:32",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_uint256",
+                              "typeString": "uint256"
+                            }
+                          }
+                        ],
+                        "expression": {
+                          "argumentTypes": [
+                            {
+                              "typeIdentifier": "t_uint256",
+                              "typeString": "uint256"
+                            },
+                            {
+                              "typeIdentifier": "t_uint256",
+                              "typeString": "uint256"
+                            }
+                          ],
+                          "expression": {
+                            "argumentTypes": null,
+                            "arguments": [],
+                            "expression": {
+                              "argumentTypes": [],
+                              "expression": {
+                                "argumentTypes": null,
+                                "id": 11591,
+                                "name": "STAKING_STATE_POSITION",
+                                "nodeType": "Identifier",
+                                "overloadedDeclarations": [],
+                                "referencedDeclaration": 11412,
+                                "src": "2624:22:32",
+                                "typeDescriptions": {
+                                  "typeIdentifier": "t_bytes32",
+                                  "typeString": "bytes32"
+                                }
+                              },
+                              "id": 11592,
+                              "isConstant": false,
+                              "isLValue": false,
+                              "isPure": false,
+                              "lValueRequested": false,
+                              "memberName": "getStorageStakeLimitStruct",
+                              "nodeType": "MemberAccess",
+                              "referencedDeclaration": 3808,
+                              "src": "2624:49:32",
+                              "typeDescriptions": {
+                                "typeIdentifier": "t_function_internal_view$_t_bytes32_$returns$_t_struct$_Data_$3738_memory_ptr_$bound_to$_t_bytes32_$",
+                                "typeString": "function (bytes32) view returns (struct StakeLimitState.Data memory)"
+                              }
+                            },
+                            "id": 11593,
+                            "isConstant": false,
+                            "isLValue": false,
+                            "isPure": false,
+                            "kind": "functionCall",
+                            "lValueRequested": false,
+                            "names": [],
+                            "nodeType": "FunctionCall",
+                            "src": "2624:51:32",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_struct$_Data_$3738_memory_ptr",
+                              "typeString": "struct StakeLimitState.Data memory"
+                            }
+                          },
+                          "id": 11594,
+                          "isConstant": false,
+                          "isLValue": true,
+                          "isPure": false,
+                          "lValueRequested": false,
+                          "memberName": "setStakingLimit",
+                          "nodeType": "MemberAccess",
+                          "referencedDeclaration": 4041,
+                          "src": "2624:67:32",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_function_internal_view$_t_struct$_Data_$3738_memory_ptr_$_t_uint256_$_t_uint256_$returns$_t_struct$_Data_$3738_memory_ptr_$bound_to$_t_struct$_Data_$3738_memory_ptr_$",
+                            "typeString": "function (struct StakeLimitState.Data memory,uint256,uint256) view returns (struct StakeLimitState.Data memory)"
+                          }
+                        },
+                        "id": 11597,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": false,
+                        "kind": "functionCall",
+                        "lValueRequested": false,
+                        "names": [],
+                        "nodeType": "FunctionCall",
+                        "src": "2624:142:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_struct$_Data_$3738_memory_ptr",
+                          "typeString": "struct StakeLimitState.Data memory"
+                        }
+                      }
+                    ],
+                    "expression": {
+                      "argumentTypes": [
+                        {
+                          "typeIdentifier": "t_struct$_Data_$3738_memory_ptr",
+                          "typeString": "struct StakeLimitState.Data memory"
+                        }
+                      ],
+                      "expression": {
+                        "argumentTypes": null,
+                        "id": 11588,
+                        "name": "STAKING_STATE_POSITION",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11412,
+                        "src": "2561:22:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bytes32",
+                          "typeString": "bytes32"
+                        }
+                      },
+                      "id": 11590,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": false,
+                      "lValueRequested": false,
+                      "memberName": "setStorageStakeLimitStruct",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": 3848,
+                      "src": "2561:49:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_internal_nonpayable$_t_bytes32_$_t_struct$_Data_$3738_memory_ptr_$returns$__$bound_to$_t_bytes32_$",
+                        "typeString": "function (bytes32,struct StakeLimitState.Data memory)"
+                      }
+                    },
+                    "id": 11598,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "2561:215:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_tuple$__$",
+                      "typeString": "tuple()"
+                    }
+                  },
+                  "id": 11599,
+                  "nodeType": "ExpressionStatement",
+                  "src": "2561:215:32"
+                }
+              ]
+            },
+            "documentation": null,
+            "implemented": true,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "setStakingLimit",
+            "parameters": {
+              "id": 11580,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 11575,
+                  "name": "_slotValue",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 11601,
+                  "src": "2396:18:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 11574,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2396:7:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 11577,
+                  "name": "_maxStakeLimit",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 11601,
+                  "src": "2416:22:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 11576,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2416:7:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 11579,
+                  "name": "_stakeLimitIncreasePerBlock",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 11601,
+                  "src": "2440:35:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 11578,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2440:7:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2395:81:32"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 11581,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2489:0:32"
+            },
+            "scope": 11692,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "public"
+          },
+          {
+            "id": 11629,
+            "nodeType": "FunctionDefinition",
+            "src": "2789:360:32",
+            "nodes": [],
+            "body": {
+              "id": 11628,
+              "nodeType": "Block",
+              "src": "2866:283:32",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "arguments": [
+                      {
+                        "argumentTypes": null,
+                        "id": 11611,
+                        "name": "_slotValue",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11603,
+                        "src": "2917:10:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        }
+                      }
+                    ],
+                    "expression": {
+                      "argumentTypes": [
+                        {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        }
+                      ],
+                      "expression": {
+                        "argumentTypes": null,
+                        "id": 11608,
+                        "name": "STAKING_STATE_POSITION",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11412,
+                        "src": "2876:22:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bytes32",
+                          "typeString": "bytes32"
+                        }
+                      },
+                      "id": 11610,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": false,
+                      "lValueRequested": false,
+                      "memberName": "setStorageUint256",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": 22200,
+                      "src": "2876:40:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_internal_nonpayable$_t_bytes32_$_t_uint256_$returns$__$bound_to$_t_bytes32_$",
+                        "typeString": "function (bytes32,uint256)"
+                      }
+                    },
+                    "id": 11612,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "2876:52:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_tuple$__$",
+                      "typeString": "tuple()"
+                    }
+                  },
+                  "id": 11613,
+                  "nodeType": "ExpressionStatement",
+                  "src": "2876:52:32"
+                },
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "arguments": [
+                      {
+                        "argumentTypes": null,
+                        "arguments": [],
+                        "expression": {
+                          "argumentTypes": [],
+                          "expression": {
+                            "argumentTypes": null,
+                            "arguments": [],
+                            "expression": {
+                              "argumentTypes": [],
+                              "expression": {
+                                "argumentTypes": null,
+                                "id": 11617,
+                                "name": "STAKING_STATE_POSITION",
+                                "nodeType": "Identifier",
+                                "overloadedDeclarations": [],
+                                "referencedDeclaration": 11412,
+                                "src": "3001:22:32",
+                                "typeDescriptions": {
+                                  "typeIdentifier": "t_bytes32",
+                                  "typeString": "bytes32"
+                                }
+                              },
+                              "id": 11618,
+                              "isConstant": false,
+                              "isLValue": false,
+                              "isPure": false,
+                              "lValueRequested": false,
+                              "memberName": "getStorageStakeLimitStruct",
+                              "nodeType": "MemberAccess",
+                              "referencedDeclaration": 3808,
+                              "src": "3001:49:32",
+                              "typeDescriptions": {
+                                "typeIdentifier": "t_function_internal_view$_t_bytes32_$returns$_t_struct$_Data_$3738_memory_ptr_$bound_to$_t_bytes32_$",
+                                "typeString": "function (bytes32) view returns (struct StakeLimitState.Data memory)"
+                              }
+                            },
+                            "id": 11619,
+                            "isConstant": false,
+                            "isLValue": false,
+                            "isPure": false,
+                            "kind": "functionCall",
+                            "lValueRequested": false,
+                            "names": [],
+                            "nodeType": "FunctionCall",
+                            "src": "3001:51:32",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_struct$_Data_$3738_memory_ptr",
+                              "typeString": "struct StakeLimitState.Data memory"
+                            }
+                          },
+                          "id": 11620,
+                          "isConstant": false,
+                          "isLValue": true,
+                          "isPure": false,
+                          "lValueRequested": false,
+                          "memberName": "removeStakingLimit",
+                          "nodeType": "MemberAccess",
+                          "referencedDeclaration": 4057,
+                          "src": "3001:70:32",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_function_internal_view$_t_struct$_Data_$3738_memory_ptr_$returns$_t_struct$_Data_$3738_memory_ptr_$bound_to$_t_struct$_Data_$3738_memory_ptr_$",
+                            "typeString": "function (struct StakeLimitState.Data memory) view returns (struct StakeLimitState.Data memory)"
+                          }
+                        },
+                        "id": 11621,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": false,
+                        "kind": "functionCall",
+                        "lValueRequested": false,
+                        "names": [],
+                        "nodeType": "FunctionCall",
+                        "src": "3001:72:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_struct$_Data_$3738_memory_ptr",
+                          "typeString": "struct StakeLimitState.Data memory"
+                        }
+                      }
+                    ],
+                    "expression": {
+                      "argumentTypes": [
+                        {
+                          "typeIdentifier": "t_struct$_Data_$3738_memory_ptr",
+                          "typeString": "struct StakeLimitState.Data memory"
+                        }
+                      ],
+                      "expression": {
+                        "argumentTypes": null,
+                        "id": 11614,
+                        "name": "STAKING_STATE_POSITION",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11412,
+                        "src": "2938:22:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bytes32",
+                          "typeString": "bytes32"
+                        }
+                      },
+                      "id": 11616,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": false,
+                      "lValueRequested": false,
+                      "memberName": "setStorageStakeLimitStruct",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": 3848,
+                      "src": "2938:49:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_internal_nonpayable$_t_bytes32_$_t_struct$_Data_$3738_memory_ptr_$returns$__$bound_to$_t_bytes32_$",
+                        "typeString": "function (bytes32,struct StakeLimitState.Data memory)"
+                      }
+                    },
+                    "id": 11622,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "2938:145:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_tuple$__$",
+                      "typeString": "tuple()"
+                    }
+                  },
+                  "id": 11623,
+                  "nodeType": "ExpressionStatement",
+                  "src": "2938:145:32"
+                },
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "arguments": [],
+                    "expression": {
+                      "argumentTypes": [],
+                      "expression": {
+                        "argumentTypes": null,
+                        "id": 11624,
+                        "name": "STAKING_STATE_POSITION",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11412,
+                        "src": "3100:22:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bytes32",
+                          "typeString": "bytes32"
+                        }
+                      },
+                      "id": 11625,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": false,
+                      "lValueRequested": false,
+                      "memberName": "getStorageUint256",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": 22164,
+                      "src": "3100:40:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_internal_view$_t_bytes32_$returns$_t_uint256_$bound_to$_t_bytes32_$",
+                        "typeString": "function (bytes32) view returns (uint256)"
+                      }
+                    },
+                    "id": 11626,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "3100:42:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "functionReturnParameters": 11607,
+                  "id": 11627,
+                  "nodeType": "Return",
+                  "src": "3093:49:32"
+                }
+              ]
+            },
+            "documentation": null,
+            "implemented": true,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "removeStakingLimit",
+            "parameters": {
+              "id": 11604,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 11603,
+                  "name": "_slotValue",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 11629,
+                  "src": "2817:18:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 11602,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2817:7:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2816:20:32"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 11607,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 11606,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 11629,
+                  "src": "2857:7:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 11605,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2857:7:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2856:9:32"
+            },
+            "scope": 11692,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "public"
+          },
+          {
+            "id": 11660,
+            "nodeType": "FunctionDefinition",
+            "src": "3155:400:32",
+            "nodes": [],
+            "body": {
+              "id": 11659,
+              "nodeType": "Block",
+              "src": "3257:298:32",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "arguments": [
+                      {
+                        "argumentTypes": null,
+                        "id": 11641,
+                        "name": "_slotValue",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11631,
+                        "src": "3308:10:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        }
+                      }
+                    ],
+                    "expression": {
+                      "argumentTypes": [
+                        {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        }
+                      ],
+                      "expression": {
+                        "argumentTypes": null,
+                        "id": 11638,
+                        "name": "STAKING_STATE_POSITION",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11412,
+                        "src": "3267:22:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bytes32",
+                          "typeString": "bytes32"
+                        }
+                      },
+                      "id": 11640,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": false,
+                      "lValueRequested": false,
+                      "memberName": "setStorageUint256",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": 22200,
+                      "src": "3267:40:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_internal_nonpayable$_t_bytes32_$_t_uint256_$returns$__$bound_to$_t_bytes32_$",
+                        "typeString": "function (bytes32,uint256)"
+                      }
+                    },
+                    "id": 11642,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "3267:52:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_tuple$__$",
+                      "typeString": "tuple()"
+                    }
+                  },
+                  "id": 11643,
+                  "nodeType": "ExpressionStatement",
+                  "src": "3267:52:32"
+                },
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "arguments": [
+                      {
+                        "argumentTypes": null,
+                        "arguments": [
+                          {
+                            "argumentTypes": null,
+                            "id": 11651,
+                            "name": "_newPrevLimit",
+                            "nodeType": "Identifier",
+                            "overloadedDeclarations": [],
+                            "referencedDeclaration": 11633,
+                            "src": "3465:13:32",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_uint256",
+                              "typeString": "uint256"
+                            }
+                          }
+                        ],
+                        "expression": {
+                          "argumentTypes": [
+                            {
+                              "typeIdentifier": "t_uint256",
+                              "typeString": "uint256"
+                            }
+                          ],
+                          "expression": {
+                            "argumentTypes": null,
+                            "arguments": [],
+                            "expression": {
+                              "argumentTypes": [],
+                              "expression": {
+                                "argumentTypes": null,
+                                "id": 11647,
+                                "name": "STAKING_STATE_POSITION",
+                                "nodeType": "Identifier",
+                                "overloadedDeclarations": [],
+                                "referencedDeclaration": 11412,
+                                "src": "3392:22:32",
+                                "typeDescriptions": {
+                                  "typeIdentifier": "t_bytes32",
+                                  "typeString": "bytes32"
+                                }
+                              },
+                              "id": 11648,
+                              "isConstant": false,
+                              "isLValue": false,
+                              "isPure": false,
+                              "lValueRequested": false,
+                              "memberName": "getStorageStakeLimitStruct",
+                              "nodeType": "MemberAccess",
+                              "referencedDeclaration": 3808,
+                              "src": "3392:49:32",
+                              "typeDescriptions": {
+                                "typeIdentifier": "t_function_internal_view$_t_bytes32_$returns$_t_struct$_Data_$3738_memory_ptr_$bound_to$_t_bytes32_$",
+                                "typeString": "function (bytes32) view returns (struct StakeLimitState.Data memory)"
+                              }
+                            },
+                            "id": 11649,
+                            "isConstant": false,
+                            "isLValue": false,
+                            "isPure": false,
+                            "kind": "functionCall",
+                            "lValueRequested": false,
+                            "names": [],
+                            "nodeType": "FunctionCall",
+                            "src": "3392:51:32",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_struct$_Data_$3738_memory_ptr",
+                              "typeString": "struct StakeLimitState.Data memory"
+                            }
+                          },
+                          "id": 11650,
+                          "isConstant": false,
+                          "isLValue": true,
+                          "isPure": false,
+                          "lValueRequested": false,
+                          "memberName": "updatePrevStakeLimit",
+                          "nodeType": "MemberAccess",
+                          "referencedDeclaration": 4102,
+                          "src": "3392:72:32",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_function_internal_view$_t_struct$_Data_$3738_memory_ptr_$_t_uint256_$returns$_t_struct$_Data_$3738_memory_ptr_$bound_to$_t_struct$_Data_$3738_memory_ptr_$",
+                            "typeString": "function (struct StakeLimitState.Data memory,uint256) view returns (struct StakeLimitState.Data memory)"
+                          }
+                        },
+                        "id": 11652,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": false,
+                        "kind": "functionCall",
+                        "lValueRequested": false,
+                        "names": [],
+                        "nodeType": "FunctionCall",
+                        "src": "3392:87:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_struct$_Data_$3738_memory_ptr",
+                          "typeString": "struct StakeLimitState.Data memory"
+                        }
+                      }
+                    ],
+                    "expression": {
+                      "argumentTypes": [
+                        {
+                          "typeIdentifier": "t_struct$_Data_$3738_memory_ptr",
+                          "typeString": "struct StakeLimitState.Data memory"
+                        }
+                      ],
+                      "expression": {
+                        "argumentTypes": null,
+                        "id": 11644,
+                        "name": "STAKING_STATE_POSITION",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11412,
+                        "src": "3329:22:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bytes32",
+                          "typeString": "bytes32"
+                        }
+                      },
+                      "id": 11646,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": false,
+                      "lValueRequested": false,
+                      "memberName": "setStorageStakeLimitStruct",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": 3848,
+                      "src": "3329:49:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_internal_nonpayable$_t_bytes32_$_t_struct$_Data_$3738_memory_ptr_$returns$__$bound_to$_t_bytes32_$",
+                        "typeString": "function (bytes32,struct StakeLimitState.Data memory)"
+                      }
+                    },
+                    "id": 11653,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "3329:160:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_tuple$__$",
+                      "typeString": "tuple()"
+                    }
+                  },
+                  "id": 11654,
+                  "nodeType": "ExpressionStatement",
+                  "src": "3329:160:32"
+                },
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "arguments": [],
+                    "expression": {
+                      "argumentTypes": [],
+                      "expression": {
+                        "argumentTypes": null,
+                        "id": 11655,
+                        "name": "STAKING_STATE_POSITION",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11412,
+                        "src": "3506:22:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bytes32",
+                          "typeString": "bytes32"
+                        }
+                      },
+                      "id": 11656,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": false,
+                      "lValueRequested": false,
+                      "memberName": "getStorageUint256",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": 22164,
+                      "src": "3506:40:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_internal_view$_t_bytes32_$returns$_t_uint256_$bound_to$_t_bytes32_$",
+                        "typeString": "function (bytes32) view returns (uint256)"
+                      }
+                    },
+                    "id": 11657,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "3506:42:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "functionReturnParameters": 11637,
+                  "id": 11658,
+                  "nodeType": "Return",
+                  "src": "3499:49:32"
+                }
+              ]
+            },
+            "documentation": null,
+            "implemented": true,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "updatePrevStakeLimit",
+            "parameters": {
+              "id": 11634,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 11631,
+                  "name": "_slotValue",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 11660,
+                  "src": "3185:18:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 11630,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3185:7:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 11633,
+                  "name": "_newPrevLimit",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 11660,
+                  "src": "3205:21:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 11632,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3205:7:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "3184:43:32"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 11637,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 11636,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 11660,
+                  "src": "3248:7:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 11635,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3248:7:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "3247:9:32"
+            },
+            "scope": 11692,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "public"
+          },
+          {
+            "id": 11691,
+            "nodeType": "FunctionDefinition",
+            "src": "3561:395:32",
+            "nodes": [],
+            "body": {
+              "id": 11690,
+              "nodeType": "Block",
+              "src": "3659:297:32",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "arguments": [
+                      {
+                        "argumentTypes": null,
+                        "id": 11672,
+                        "name": "_slotValue",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11662,
+                        "src": "3710:10:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        }
+                      }
+                    ],
+                    "expression": {
+                      "argumentTypes": [
+                        {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        }
+                      ],
+                      "expression": {
+                        "argumentTypes": null,
+                        "id": 11669,
+                        "name": "STAKING_STATE_POSITION",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11412,
+                        "src": "3669:22:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bytes32",
+                          "typeString": "bytes32"
+                        }
+                      },
+                      "id": 11671,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": false,
+                      "lValueRequested": false,
+                      "memberName": "setStorageUint256",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": 22200,
+                      "src": "3669:40:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_internal_nonpayable$_t_bytes32_$_t_uint256_$returns$__$bound_to$_t_bytes32_$",
+                        "typeString": "function (bytes32,uint256)"
+                      }
+                    },
+                    "id": 11673,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "3669:52:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_tuple$__$",
+                      "typeString": "tuple()"
+                    }
+                  },
+                  "id": 11674,
+                  "nodeType": "ExpressionStatement",
+                  "src": "3669:52:32"
+                },
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "arguments": [
+                      {
+                        "argumentTypes": null,
+                        "arguments": [
+                          {
+                            "argumentTypes": null,
+                            "id": 11682,
+                            "name": "_isPaused",
+                            "nodeType": "Identifier",
+                            "overloadedDeclarations": [],
+                            "referencedDeclaration": 11664,
+                            "src": "3870:9:32",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_bool",
+                              "typeString": "bool"
+                            }
+                          }
+                        ],
+                        "expression": {
+                          "argumentTypes": [
+                            {
+                              "typeIdentifier": "t_bool",
+                              "typeString": "bool"
+                            }
+                          ],
+                          "expression": {
+                            "argumentTypes": null,
+                            "arguments": [],
+                            "expression": {
+                              "argumentTypes": [],
+                              "expression": {
+                                "argumentTypes": null,
+                                "id": 11678,
+                                "name": "STAKING_STATE_POSITION",
+                                "nodeType": "Identifier",
+                                "overloadedDeclarations": [],
+                                "referencedDeclaration": 11412,
+                                "src": "3794:22:32",
+                                "typeDescriptions": {
+                                  "typeIdentifier": "t_bytes32",
+                                  "typeString": "bytes32"
+                                }
+                              },
+                              "id": 11679,
+                              "isConstant": false,
+                              "isLValue": false,
+                              "isPure": false,
+                              "lValueRequested": false,
+                              "memberName": "getStorageStakeLimitStruct",
+                              "nodeType": "MemberAccess",
+                              "referencedDeclaration": 3808,
+                              "src": "3794:49:32",
+                              "typeDescriptions": {
+                                "typeIdentifier": "t_function_internal_view$_t_bytes32_$returns$_t_struct$_Data_$3738_memory_ptr_$bound_to$_t_bytes32_$",
+                                "typeString": "function (bytes32) view returns (struct StakeLimitState.Data memory)"
+                              }
+                            },
+                            "id": 11680,
+                            "isConstant": false,
+                            "isLValue": false,
+                            "isPure": false,
+                            "kind": "functionCall",
+                            "lValueRequested": false,
+                            "names": [],
+                            "nodeType": "FunctionCall",
+                            "src": "3794:51:32",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_struct$_Data_$3738_memory_ptr",
+                              "typeString": "struct StakeLimitState.Data memory"
+                            }
+                          },
+                          "id": 11681,
+                          "isConstant": false,
+                          "isLValue": true,
+                          "isPure": false,
+                          "lValueRequested": false,
+                          "memberName": "setStakeLimitPauseState",
+                          "nodeType": "MemberAccess",
+                          "referencedDeclaration": 4126,
+                          "src": "3794:75:32",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_function_internal_view$_t_struct$_Data_$3738_memory_ptr_$_t_bool_$returns$_t_struct$_Data_$3738_memory_ptr_$bound_to$_t_struct$_Data_$3738_memory_ptr_$",
+                            "typeString": "function (struct StakeLimitState.Data memory,bool) view returns (struct StakeLimitState.Data memory)"
+                          }
+                        },
+                        "id": 11683,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": false,
+                        "kind": "functionCall",
+                        "lValueRequested": false,
+                        "names": [],
+                        "nodeType": "FunctionCall",
+                        "src": "3794:86:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_struct$_Data_$3738_memory_ptr",
+                          "typeString": "struct StakeLimitState.Data memory"
+                        }
+                      }
+                    ],
+                    "expression": {
+                      "argumentTypes": [
+                        {
+                          "typeIdentifier": "t_struct$_Data_$3738_memory_ptr",
+                          "typeString": "struct StakeLimitState.Data memory"
+                        }
+                      ],
+                      "expression": {
+                        "argumentTypes": null,
+                        "id": 11675,
+                        "name": "STAKING_STATE_POSITION",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11412,
+                        "src": "3731:22:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bytes32",
+                          "typeString": "bytes32"
+                        }
+                      },
+                      "id": 11677,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": false,
+                      "lValueRequested": false,
+                      "memberName": "setStorageStakeLimitStruct",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": 3848,
+                      "src": "3731:49:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_internal_nonpayable$_t_bytes32_$_t_struct$_Data_$3738_memory_ptr_$returns$__$bound_to$_t_bytes32_$",
+                        "typeString": "function (bytes32,struct StakeLimitState.Data memory)"
+                      }
+                    },
+                    "id": 11684,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "3731:159:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_tuple$__$",
+                      "typeString": "tuple()"
+                    }
+                  },
+                  "id": 11685,
+                  "nodeType": "ExpressionStatement",
+                  "src": "3731:159:32"
+                },
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "arguments": [],
+                    "expression": {
+                      "argumentTypes": [],
+                      "expression": {
+                        "argumentTypes": null,
+                        "id": 11686,
+                        "name": "STAKING_STATE_POSITION",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 11412,
+                        "src": "3907:22:32",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bytes32",
+                          "typeString": "bytes32"
+                        }
+                      },
+                      "id": 11687,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": false,
+                      "lValueRequested": false,
+                      "memberName": "getStorageUint256",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": 22164,
+                      "src": "3907:40:32",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_internal_view$_t_bytes32_$returns$_t_uint256_$bound_to$_t_bytes32_$",
+                        "typeString": "function (bytes32) view returns (uint256)"
+                      }
+                    },
+                    "id": 11688,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "3907:42:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "functionReturnParameters": 11668,
+                  "id": 11689,
+                  "nodeType": "Return",
+                  "src": "3900:49:32"
+                }
+              ]
+            },
+            "documentation": null,
+            "implemented": true,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "setStakeLimitPauseState",
+            "parameters": {
+              "id": 11665,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 11662,
+                  "name": "_slotValue",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 11691,
+                  "src": "3594:18:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 11661,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3594:7:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 11664,
+                  "name": "_isPaused",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 11691,
+                  "src": "3614:14:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bool",
+                    "typeString": "bool"
+                  },
+                  "typeName": {
+                    "id": 11663,
+                    "name": "bool",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3614:4:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "3593:36:32"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 11668,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 11667,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 11691,
+                  "src": "3650:7:32",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 11666,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3650:7:32",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "3649:9:32"
+            },
+            "scope": 11692,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "public"
+          }
+        ],
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "contract",
+        "documentation": null,
+        "fullyImplemented": true,
+        "linearizedBaseContracts": [
+          11692
+        ],
+        "name": "StakeLimitUtilsMock",
+        "scope": 11693
+      }
+    ]
+  },
+  "id": 32
+}

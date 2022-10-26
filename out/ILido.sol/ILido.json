@@ -1,0 +1,3290 @@
+{
+  "abi": [
+    {
+      "constant": false,
+      "inputs": [],
+      "name": "resume",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [],
+      "name": "stop",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "totalSupply",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "isStakingPaused",
+      "outputs": [
+        {
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_maxStakeLimit",
+          "type": "uint256"
+        },
+        {
+          "name": "_stakeLimitIncreasePerBlock",
+          "type": "uint256"
+        }
+      ],
+      "name": "setStakingLimit",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getTotalPooledEther",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getBufferedEther",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [],
+      "name": "receiveELRewards",
+      "outputs": [],
+      "payable": true,
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getWithdrawalCredentials",
+      "outputs": [
+        {
+          "name": "",
+          "type": "bytes"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getCurrentStakeLimit",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_limitPoints",
+          "type": "uint16"
+        }
+      ],
+      "name": "setELRewardsWithdrawalLimit",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_epoch",
+          "type": "uint256"
+        },
+        {
+          "name": "_eth2balance",
+          "type": "uint256"
+        }
+      ],
+      "name": "handleOracleReport",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getStakeLimitFullInfo",
+      "outputs": [
+        {
+          "name": "isStakingPaused",
+          "type": "bool"
+        },
+        {
+          "name": "isStakingLimitSet",
+          "type": "bool"
+        },
+        {
+          "name": "currentStakeLimit",
+          "type": "uint256"
+        },
+        {
+          "name": "maxStakeLimit",
+          "type": "uint256"
+        },
+        {
+          "name": "maxStakeLimitGrowthBlocks",
+          "type": "uint256"
+        },
+        {
+          "name": "prevStakeLimit",
+          "type": "uint256"
+        },
+        {
+          "name": "prevStakeBlockNumber",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [],
+      "name": "resumeStaking",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getFeeDistribution",
+      "outputs": [
+        {
+          "name": "treasuryFeeBasisPoints",
+          "type": "uint16"
+        },
+        {
+          "name": "insuranceFeeBasisPoints",
+          "type": "uint16"
+        },
+        {
+          "name": "operatorsFeeBasisPoints",
+          "type": "uint16"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_executionLayerRewardsVault",
+          "type": "address"
+        }
+      ],
+      "name": "setELRewardsVault",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_treasuryFeeBasisPoints",
+          "type": "uint16"
+        },
+        {
+          "name": "_insuranceFeeBasisPoints",
+          "type": "uint16"
+        },
+        {
+          "name": "_operatorsFeeBasisPoints",
+          "type": "uint16"
+        }
+      ],
+      "name": "setFeeDistribution",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_feeBasisPoints",
+          "type": "uint16"
+        }
+      ],
+      "name": "setFee",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_referral",
+          "type": "address"
+        }
+      ],
+      "name": "submit",
+      "outputs": [
+        {
+          "name": "StETH",
+          "type": "uint256"
+        }
+      ],
+      "payable": true,
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getBeaconStat",
+      "outputs": [
+        {
+          "name": "depositedValidators",
+          "type": "uint256"
+        },
+        {
+          "name": "beaconValidators",
+          "type": "uint256"
+        },
+        {
+          "name": "beaconBalance",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [],
+      "name": "removeStakingLimit",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getFee",
+      "outputs": [
+        {
+          "name": "feeBasisPoints",
+          "type": "uint16"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getTotalShares",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_oracle",
+          "type": "address"
+        },
+        {
+          "name": "_treasury",
+          "type": "address"
+        },
+        {
+          "name": "_insuranceFund",
+          "type": "address"
+        }
+      ],
+      "name": "setProtocolContracts",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_withdrawalCredentials",
+          "type": "bytes32"
+        }
+      ],
+      "name": "setWithdrawalCredentials",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [],
+      "name": "pauseStaking",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "anonymous": false,
+      "inputs": [],
+      "name": "Stopped",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [],
+      "name": "Resumed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [],
+      "name": "StakingPaused",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [],
+      "name": "StakingResumed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "name": "maxStakeLimit",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "stakeLimitIncreasePerBlock",
+          "type": "uint256"
+        }
+      ],
+      "name": "StakingLimitSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [],
+      "name": "StakingLimitRemoved",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "name": "oracle",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "name": "treasury",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "name": "insuranceFund",
+          "type": "address"
+        }
+      ],
+      "name": "ProtocolContactsSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "name": "feeBasisPoints",
+          "type": "uint16"
+        }
+      ],
+      "name": "FeeSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "name": "treasuryFeeBasisPoints",
+          "type": "uint16"
+        },
+        {
+          "indexed": false,
+          "name": "insuranceFeeBasisPoints",
+          "type": "uint16"
+        },
+        {
+          "indexed": false,
+          "name": "operatorsFeeBasisPoints",
+          "type": "uint16"
+        }
+      ],
+      "name": "FeeDistributionSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "ELRewardsReceived",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "name": "limitPoints",
+          "type": "uint256"
+        }
+      ],
+      "name": "ELRewardsWithdrawalLimitSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "name": "withdrawalCredentials",
+          "type": "bytes32"
+        }
+      ],
+      "name": "WithdrawalCredentialsSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "name": "executionLayerRewardsVault",
+          "type": "address"
+        }
+      ],
+      "name": "ELRewardsVaultSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "name": "sender",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "referral",
+          "type": "address"
+        }
+      ],
+      "name": "Submitted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "Unbuffered",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "name": "sender",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "name": "tokenAmount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "sentFromBuffer",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "name": "pubkeyHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "name": "etherAmount",
+          "type": "uint256"
+        }
+      ],
+      "name": "Withdrawal",
+      "type": "event"
+    }
+  ],
+  "bytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "getBeaconStat()": "ae2e3538",
+    "getBufferedEther()": "47b714e0",
+    "getCurrentStakeLimit()": "609c4c6c",
+    "getFee()": "ced72f87",
+    "getFeeDistribution()": "752f77f1",
+    "getStakeLimitFullInfo()": "665b4b0b",
+    "getTotalPooledEther()": "37cfdaca",
+    "getTotalShares()": "d5002f2e",
+    "getWithdrawalCredentials()": "56396715",
+    "handleOracleReport(uint256,uint256)": "64f9991a",
+    "isStakingPaused()": "1ea7ca89",
+    "pauseStaking()": "f999c506",
+    "receiveELRewards()": "4ad509b2",
+    "removeStakingLimit()": "b3320d9a",
+    "resume()": "046f7da2",
+    "resumeStaking()": "7475f913",
+    "setELRewardsVault(address)": "7e4193c6",
+    "setELRewardsWithdrawalLimit(uint16)": "63c2eb53",
+    "setFee(uint16)": "8e005553",
+    "setFeeDistribution(uint16,uint16,uint16)": "8cef3612",
+    "setProtocolContracts(address,address,address)": "e73f4529",
+    "setStakingLimit(uint256,uint256)": "2cb5f784",
+    "setWithdrawalCredentials(bytes32)": "e97ee8cc",
+    "stop()": "07da68f5",
+    "submit(address)": "a1903eab",
+    "totalSupply()": "18160ddd"
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": {}
+  },
+  "ast": {
+    "absolutePath": "contracts/0.4.24/interfaces/ILido.sol",
+    "id": 3085,
+    "exportedSymbols": {
+      "ILido": [
+        3084
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "90:10100:5",
+    "nodes": [
+      {
+        "id": 2855,
+        "nodeType": "PragmaDirective",
+        "src": "90:23:5",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "0.4",
+          ".24"
+        ]
+      },
+      {
+        "id": 3084,
+        "nodeType": "ContractDefinition",
+        "src": "795:9394:5",
+        "nodes": [
+          {
+            "id": 2860,
+            "nodeType": "FunctionDefinition",
+            "src": "817:55:5",
+            "nodes": [],
+            "documentation": null,
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "totalSupply",
+            "parameters": {
+              "id": 2856,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "837:2:5"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 2859,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2858,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2860,
+                  "src": "863:7:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2857,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "863:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "862:9:5"
+            },
+            "scope": 3084,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 2865,
+            "nodeType": "FunctionDefinition",
+            "src": "877:58:5",
+            "nodes": [],
+            "documentation": null,
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getTotalShares",
+            "parameters": {
+              "id": 2861,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "900:2:5"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 2864,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2863,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2865,
+                  "src": "926:7:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2862,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "926:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "925:9:5"
+            },
+            "scope": 3084,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 2868,
+            "nodeType": "FunctionDefinition",
+            "src": "1003:25:5",
+            "nodes": [],
+            "documentation": "@notice Stop pool routine operations",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "stop",
+            "parameters": {
+              "id": 2866,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1016:2:5"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 2867,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1027:0:5"
+            },
+            "scope": 3084,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 2871,
+            "nodeType": "FunctionDefinition",
+            "src": "1098:27:5",
+            "nodes": [],
+            "documentation": "@notice Resume pool routine operations",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "resume",
+            "parameters": {
+              "id": 2869,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1113:2:5"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 2870,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1124:0:5"
+            },
+            "scope": 3084,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 2874,
+            "nodeType": "FunctionDefinition",
+            "src": "1407:33:5",
+            "nodes": [],
+            "documentation": "@notice Stops accepting new Ether to the protocol\n      * @dev While accepting new Ether is stopped, calls to the `submit` function,\nas well as to the default payable function, will revert.\n      * Emits `StakingPaused` event.",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "pauseStaking",
+            "parameters": {
+              "id": 2872,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1428:2:5"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 2873,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1439:0:5"
+            },
+            "scope": 3084,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 2877,
+            "nodeType": "FunctionDefinition",
+            "src": "1845:34:5",
+            "nodes": [],
+            "documentation": "@notice Resumes accepting new Ether to the protocol (if `pauseStaking` was called previously)\nNB: Staking could be rate-limited by imposing a limit on the stake amount\nat each moment in time, see `setStakingLimit()` and `removeStakingLimit()`\n      * @dev Preserves staking limit if it was set previously\n      * Emits `StakingResumed` event",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "resumeStaking",
+            "parameters": {
+              "id": 2875,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1867:2:5"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 2876,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1878:0:5"
+            },
+            "scope": 3084,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 2884,
+            "nodeType": "FunctionDefinition",
+            "src": "2404:95:5",
+            "nodes": [],
+            "documentation": "@notice Sets the staking rate limit\n      * @dev Reverts if:\n- `_maxStakeLimit` == 0\n- `_maxStakeLimit` >= 2^96\n- `_maxStakeLimit` < `_stakeLimitIncreasePerBlock`\n- `_maxStakeLimit` / `_stakeLimitIncreasePerBlock` >= 2^32 (only if `_stakeLimitIncreasePerBlock` != 0)\n      * Emits `StakingLimitSet` event\n      * @param _maxStakeLimit max stake limit value\n@param _stakeLimitIncreasePerBlock stake limit increase per single block",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "setStakingLimit",
+            "parameters": {
+              "id": 2882,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2879,
+                  "name": "_maxStakeLimit",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2884,
+                  "src": "2429:22:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2878,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2429:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2881,
+                  "name": "_stakeLimitIncreasePerBlock",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2884,
+                  "src": "2453:35:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2880,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2453:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2428:61:5"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 2883,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2498:0:5"
+            },
+            "scope": 3084,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 2887,
+            "nodeType": "FunctionDefinition",
+            "src": "2619:39:5",
+            "nodes": [],
+            "documentation": "@notice Removes the staking rate limit\n      * Emits `StakingLimitRemoved` event",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "removeStakingLimit",
+            "parameters": {
+              "id": 2885,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2646:2:5"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 2886,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2657:0:5"
+            },
+            "scope": 3084,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 2892,
+            "nodeType": "FunctionDefinition",
+            "src": "2745:56:5",
+            "nodes": [],
+            "documentation": "@notice Check staking state: whether it's paused or not",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "isStakingPaused",
+            "parameters": {
+              "id": 2888,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2769:2:5"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 2891,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2890,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2892,
+                  "src": "2795:4:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bool",
+                    "typeString": "bool"
+                  },
+                  "typeName": {
+                    "id": 2889,
+                    "name": "bool",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2795:4:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2794:6:5"
+            },
+            "scope": 3084,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 2897,
+            "nodeType": "FunctionDefinition",
+            "src": "3038:64:5",
+            "nodes": [],
+            "documentation": "@notice Returns how much Ether can be staked in the current block\n@dev Special return values:\n- 2^256 - 1 if staking is unlimited;\n- 0 if staking is paused or if limit is exhausted.",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getCurrentStakeLimit",
+            "parameters": {
+              "id": 2893,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3067:2:5"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 2896,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2895,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2897,
+                  "src": "3093:7:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2894,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3093:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "3092:9:5"
+            },
+            "scope": 3084,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 2914,
+            "nodeType": "FunctionDefinition",
+            "src": "3820:303:5",
+            "nodes": [],
+            "documentation": "@notice Returns full info about current stake limit params and state\n@dev Might be used for the advanced integration requests.\n@return isStakingPaused staking pause state (equivalent to return of isStakingPaused())\n@return isStakingLimitSet whether the stake limit is set\n@return currentStakeLimit current stake limit (equivalent to return of getCurrentStakeLimit())\n@return maxStakeLimit max stake limit\n@return maxStakeLimitGrowthBlocks blocks needed to restore max stake limit from the fully exhausted state\n@return prevStakeLimit previously reached stake limit\n@return prevStakeBlockNumber previously seen block number",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getStakeLimitFullInfo",
+            "parameters": {
+              "id": 2898,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3850:2:5"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 2913,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2900,
+                  "name": "isStakingPaused",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2914,
+                  "src": "3885:20:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bool",
+                    "typeString": "bool"
+                  },
+                  "typeName": {
+                    "id": 2899,
+                    "name": "bool",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3885:4:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2902,
+                  "name": "isStakingLimitSet",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2914,
+                  "src": "3915:22:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bool",
+                    "typeString": "bool"
+                  },
+                  "typeName": {
+                    "id": 2901,
+                    "name": "bool",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3915:4:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2904,
+                  "name": "currentStakeLimit",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2914,
+                  "src": "3947:25:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2903,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3947:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2906,
+                  "name": "maxStakeLimit",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2914,
+                  "src": "3982:21:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2905,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3982:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2908,
+                  "name": "maxStakeLimitGrowthBlocks",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2914,
+                  "src": "4013:33:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2907,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4013:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2910,
+                  "name": "prevStakeLimit",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2914,
+                  "src": "4056:22:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2909,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4056:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2912,
+                  "name": "prevStakeBlockNumber",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2914,
+                  "src": "4088:28:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2911,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4088:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "3875:247:5"
+            },
+            "scope": 3084,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 2916,
+            "nodeType": "EventDefinition",
+            "src": "4129:16:5",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "Stopped",
+            "parameters": {
+              "id": 2915,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "4142:2:5"
+            }
+          },
+          {
+            "id": 2918,
+            "nodeType": "EventDefinition",
+            "src": "4150:16:5",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "Resumed",
+            "parameters": {
+              "id": 2917,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "4163:2:5"
+            }
+          },
+          {
+            "id": 2920,
+            "nodeType": "EventDefinition",
+            "src": "4172:22:5",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "StakingPaused",
+            "parameters": {
+              "id": 2919,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "4191:2:5"
+            }
+          },
+          {
+            "id": 2922,
+            "nodeType": "EventDefinition",
+            "src": "4199:23:5",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "StakingResumed",
+            "parameters": {
+              "id": 2921,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "4219:2:5"
+            }
+          },
+          {
+            "id": 2928,
+            "nodeType": "EventDefinition",
+            "src": "4227:81:5",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "StakingLimitSet",
+            "parameters": {
+              "id": 2927,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2924,
+                  "indexed": false,
+                  "name": "maxStakeLimit",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2928,
+                  "src": "4249:21:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2923,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4249:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2926,
+                  "indexed": false,
+                  "name": "stakeLimitIncreasePerBlock",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2928,
+                  "src": "4272:34:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2925,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4272:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "4248:59:5"
+            }
+          },
+          {
+            "id": 2930,
+            "nodeType": "EventDefinition",
+            "src": "4313:28:5",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "StakingLimitRemoved",
+            "parameters": {
+              "id": 2929,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "4338:2:5"
+            }
+          },
+          {
+            "id": 2939,
+            "nodeType": "FunctionDefinition",
+            "src": "4580:129:5",
+            "nodes": [],
+            "documentation": "@notice Set Lido protocol contracts (oracle, treasury, insurance fund).\n@param _oracle oracle contract\n@param _treasury treasury contract\n@param _insuranceFund insurance fund contract",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "setProtocolContracts",
+            "parameters": {
+              "id": 2937,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2932,
+                  "name": "_oracle",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2939,
+                  "src": "4619:15:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 2931,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4619:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2934,
+                  "name": "_treasury",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2939,
+                  "src": "4644:17:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 2933,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4644:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2936,
+                  "name": "_insuranceFund",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2939,
+                  "src": "4671:22:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 2935,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4671:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "4609:90:5"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 2938,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "4708:0:5"
+            },
+            "scope": 3084,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 2947,
+            "nodeType": "EventDefinition",
+            "src": "4715:83:5",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "ProtocolContactsSet",
+            "parameters": {
+              "id": 2946,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2941,
+                  "indexed": false,
+                  "name": "oracle",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2947,
+                  "src": "4741:14:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 2940,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4741:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2943,
+                  "indexed": false,
+                  "name": "treasury",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2947,
+                  "src": "4757:16:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 2942,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4757:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2945,
+                  "indexed": false,
+                  "name": "insuranceFund",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2947,
+                  "src": "4775:21:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 2944,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4775:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "4740:57:5"
+            }
+          },
+          {
+            "id": 2952,
+            "nodeType": "FunctionDefinition",
+            "src": "5124:49:5",
+            "nodes": [],
+            "documentation": "@notice Set fee rate to `_feeBasisPoints` basis points.\nThe fees are accrued when:\n- oracles report staking results (beacon chain balance increase)\n- validators gain execution layer rewards (priority fees and MEV)\n@param _feeBasisPoints Fee rate, in basis points",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "setFee",
+            "parameters": {
+              "id": 2950,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2949,
+                  "name": "_feeBasisPoints",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2952,
+                  "src": "5140:22:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint16",
+                    "typeString": "uint16"
+                  },
+                  "typeName": {
+                    "id": 2948,
+                    "name": "uint16",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "5140:6:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint16",
+                      "typeString": "uint16"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "5139:24:5"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 2951,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "5172:0:5"
+            },
+            "scope": 3084,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 2961,
+            "nodeType": "FunctionDefinition",
+            "src": "5498:165:5",
+            "nodes": [],
+            "documentation": "@notice Set fee distribution\n@param _treasuryFeeBasisPoints basis points go to the treasury,\n@param _insuranceFeeBasisPoints basis points go to the insurance fund,\n@param _operatorsFeeBasisPoints basis points go to node operators.\n@dev The sum has to be 10 000.",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "setFeeDistribution",
+            "parameters": {
+              "id": 2959,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2954,
+                  "name": "_treasuryFeeBasisPoints",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2961,
+                  "src": "5535:30:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint16",
+                    "typeString": "uint16"
+                  },
+                  "typeName": {
+                    "id": 2953,
+                    "name": "uint16",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "5535:6:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint16",
+                      "typeString": "uint16"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2956,
+                  "name": "_insuranceFeeBasisPoints",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2961,
+                  "src": "5575:31:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint16",
+                    "typeString": "uint16"
+                  },
+                  "typeName": {
+                    "id": 2955,
+                    "name": "uint16",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "5575:6:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint16",
+                      "typeString": "uint16"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2958,
+                  "name": "_operatorsFeeBasisPoints",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2961,
+                  "src": "5616:31:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint16",
+                    "typeString": "uint16"
+                  },
+                  "typeName": {
+                    "id": 2957,
+                    "name": "uint16",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "5616:6:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint16",
+                      "typeString": "uint16"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "5525:128:5"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 2960,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "5662:0:5"
+            },
+            "scope": 3084,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 2966,
+            "nodeType": "FunctionDefinition",
+            "src": "5735:64:5",
+            "nodes": [],
+            "documentation": "@notice Returns staking rewards fee rate",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getFee",
+            "parameters": {
+              "id": 2962,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "5750:2:5"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 2965,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2964,
+                  "name": "feeBasisPoints",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2966,
+                  "src": "5776:21:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint16",
+                    "typeString": "uint16"
+                  },
+                  "typeName": {
+                    "id": 2963,
+                    "name": "uint16",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "5776:6:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint16",
+                      "typeString": "uint16"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "5775:23:5"
+            },
+            "scope": 3084,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 2975,
+            "nodeType": "FunctionDefinition",
+            "src": "5874:178:5",
+            "nodes": [],
+            "documentation": "@notice Returns fee distribution proportion",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getFeeDistribution",
+            "parameters": {
+              "id": 2967,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "5901:2:5"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 2974,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2969,
+                  "name": "treasuryFeeBasisPoints",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2975,
+                  "src": "5936:29:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint16",
+                    "typeString": "uint16"
+                  },
+                  "typeName": {
+                    "id": 2968,
+                    "name": "uint16",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "5936:6:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint16",
+                      "typeString": "uint16"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2971,
+                  "name": "insuranceFeeBasisPoints",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2975,
+                  "src": "5975:30:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint16",
+                    "typeString": "uint16"
+                  },
+                  "typeName": {
+                    "id": 2970,
+                    "name": "uint16",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "5975:6:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint16",
+                      "typeString": "uint16"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2973,
+                  "name": "operatorsFeeBasisPoints",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2975,
+                  "src": "6015:30:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint16",
+                    "typeString": "uint16"
+                  },
+                  "typeName": {
+                    "id": 2972,
+                    "name": "uint16",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "6015:6:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint16",
+                      "typeString": "uint16"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "5926:125:5"
+            },
+            "scope": 3084,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 2979,
+            "nodeType": "EventDefinition",
+            "src": "6058:36:5",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "FeeSet",
+            "parameters": {
+              "id": 2978,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2977,
+                  "indexed": false,
+                  "name": "feeBasisPoints",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2979,
+                  "src": "6071:21:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint16",
+                    "typeString": "uint16"
+                  },
+                  "typeName": {
+                    "id": 2976,
+                    "name": "uint16",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "6071:6:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint16",
+                      "typeString": "uint16"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "6070:23:5"
+            }
+          },
+          {
+            "id": 2987,
+            "nodeType": "EventDefinition",
+            "src": "6100:120:5",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "FeeDistributionSet",
+            "parameters": {
+              "id": 2986,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2981,
+                  "indexed": false,
+                  "name": "treasuryFeeBasisPoints",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2987,
+                  "src": "6125:29:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint16",
+                    "typeString": "uint16"
+                  },
+                  "typeName": {
+                    "id": 2980,
+                    "name": "uint16",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "6125:6:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint16",
+                      "typeString": "uint16"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2983,
+                  "indexed": false,
+                  "name": "insuranceFeeBasisPoints",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2987,
+                  "src": "6156:30:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint16",
+                    "typeString": "uint16"
+                  },
+                  "typeName": {
+                    "id": 2982,
+                    "name": "uint16",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "6156:6:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint16",
+                      "typeString": "uint16"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2985,
+                  "indexed": false,
+                  "name": "operatorsFeeBasisPoints",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2987,
+                  "src": "6188:30:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint16",
+                    "typeString": "uint16"
+                  },
+                  "typeName": {
+                    "id": 2984,
+                    "name": "uint16",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "6188:6:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint16",
+                      "typeString": "uint16"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "6124:95:5"
+            }
+          },
+          {
+            "id": 2990,
+            "nodeType": "FunctionDefinition",
+            "src": "6483:45:5",
+            "nodes": [],
+            "documentation": "@notice A payable function supposed to be called only by LidoExecutionLayerRewardsVault contract\n@dev We need a dedicated function because funds received by the default payable function\nare treated as a user deposit",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "receiveELRewards",
+            "parameters": {
+              "id": 2988,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "6508:2:5"
+            },
+            "payable": true,
+            "returnParameters": {
+              "id": 2989,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "6527:0:5"
+            },
+            "scope": 3084,
+            "stateMutability": "payable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 2994,
+            "nodeType": "EventDefinition",
+            "src": "6631:40:5",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "ELRewardsReceived",
+            "parameters": {
+              "id": 2993,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2992,
+                  "indexed": false,
+                  "name": "amount",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2994,
+                  "src": "6655:14:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2991,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "6655:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "6654:16:5"
+            }
+          },
+          {
+            "id": 2999,
+            "nodeType": "FunctionDefinition",
+            "src": "6905:67:5",
+            "nodes": [],
+            "documentation": "@dev Sets limit on amount of ETH to withdraw from execution layer rewards vault per LidoOracle report\n@param _limitPoints limit in basis points to amount of ETH to withdraw per LidoOracle report",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "setELRewardsWithdrawalLimit",
+            "parameters": {
+              "id": 2997,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2996,
+                  "name": "_limitPoints",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2999,
+                  "src": "6942:19:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint16",
+                    "typeString": "uint16"
+                  },
+                  "typeName": {
+                    "id": 2995,
+                    "name": "uint16",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "6942:6:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint16",
+                      "typeString": "uint16"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "6941:21:5"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 2998,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "6971:0:5"
+            },
+            "scope": 3084,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3003,
+            "nodeType": "EventDefinition",
+            "src": "7109:55:5",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "ELRewardsWithdrawalLimitSet",
+            "parameters": {
+              "id": 3002,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3001,
+                  "indexed": false,
+                  "name": "limitPoints",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3003,
+                  "src": "7143:19:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3000,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "7143:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "7142:21:5"
+            }
+          },
+          {
+            "id": 3008,
+            "nodeType": "FunctionDefinition",
+            "src": "7539:75:5",
+            "nodes": [],
+            "documentation": "@notice Set credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched to `_withdrawalCredentials`\n@dev Note that setWithdrawalCredentials discards all unused signing keys as the signatures are invalidated.\n@param _withdrawalCredentials withdrawal credentials field as defined in the Ethereum PoS consensus specs",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "setWithdrawalCredentials",
+            "parameters": {
+              "id": 3006,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3005,
+                  "name": "_withdrawalCredentials",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3008,
+                  "src": "7573:30:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes32",
+                    "typeString": "bytes32"
+                  },
+                  "typeName": {
+                    "id": 3004,
+                    "name": "bytes32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "7573:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "7572:32:5"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3007,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "7613:0:5"
+            },
+            "scope": 3084,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3013,
+            "nodeType": "FunctionDefinition",
+            "src": "7743:66:5",
+            "nodes": [],
+            "documentation": "@notice Returns current credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getWithdrawalCredentials",
+            "parameters": {
+              "id": 3009,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "7776:2:5"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3012,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3011,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3013,
+                  "src": "7802:5:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes_memory_ptr",
+                    "typeString": "bytes"
+                  },
+                  "typeName": {
+                    "id": 3010,
+                    "name": "bytes",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "7802:5:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes_storage_ptr",
+                      "typeString": "bytes"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "7801:7:5"
+            },
+            "scope": 3084,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3017,
+            "nodeType": "EventDefinition",
+            "src": "7815:62:5",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "WithdrawalCredentialsSet",
+            "parameters": {
+              "id": 3016,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3015,
+                  "indexed": false,
+                  "name": "withdrawalCredentials",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3017,
+                  "src": "7846:29:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes32",
+                    "typeString": "bytes32"
+                  },
+                  "typeName": {
+                    "id": 3014,
+                    "name": "bytes32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "7846:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "7845:31:5"
+            }
+          },
+          {
+            "id": 3022,
+            "nodeType": "FunctionDefinition",
+            "src": "8063:73:5",
+            "nodes": [],
+            "documentation": "@dev Sets the address of LidoExecutionLayerRewardsVault contract\n@param _executionLayerRewardsVault Execution layer rewards vault contract address",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "setELRewardsVault",
+            "parameters": {
+              "id": 3020,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3019,
+                  "name": "_executionLayerRewardsVault",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3022,
+                  "src": "8090:35:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 3018,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "8090:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "8089:37:5"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3021,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "8135:0:5"
+            },
+            "scope": 3084,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3026,
+            "nodeType": "EventDefinition",
+            "src": "8236:60:5",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "ELRewardsVaultSet",
+            "parameters": {
+              "id": 3025,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3024,
+                  "indexed": false,
+                  "name": "executionLayerRewardsVault",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3026,
+                  "src": "8260:34:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 3023,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "8260:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "8259:36:5"
+            }
+          },
+          {
+            "id": 3033,
+            "nodeType": "FunctionDefinition",
+            "src": "8478:75:5",
+            "nodes": [],
+            "documentation": "@notice Ether on the ETH 2.0 side reported by the oracle\n@param _epoch Epoch id\n@param _eth2balance Balance in wei on the ETH 2.0 side",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "handleOracleReport",
+            "parameters": {
+              "id": 3031,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3028,
+                  "name": "_epoch",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3033,
+                  "src": "8506:14:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3027,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "8506:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3030,
+                  "name": "_eth2balance",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3033,
+                  "src": "8522:20:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3029,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "8522:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "8505:38:5"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3032,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "8552:0:5"
+            },
+            "scope": 3084,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3040,
+            "nodeType": "FunctionDefinition",
+            "src": "8685:76:5",
+            "nodes": [],
+            "documentation": "@notice Adds eth to the pool\n@return StETH Amount of StETH generated",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "submit",
+            "parameters": {
+              "id": 3036,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3035,
+                  "name": "_referral",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3040,
+                  "src": "8701:17:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 3034,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "8701:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "8700:19:5"
+            },
+            "payable": true,
+            "returnParameters": {
+              "id": 3039,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3038,
+                  "name": "StETH",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3040,
+                  "src": "8746:13:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3037,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "8746:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "8745:15:5"
+            },
+            "scope": 3084,
+            "stateMutability": "payable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3048,
+            "nodeType": "EventDefinition",
+            "src": "8807:74:5",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "Submitted",
+            "parameters": {
+              "id": 3047,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3042,
+                  "indexed": true,
+                  "name": "sender",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3048,
+                  "src": "8823:22:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 3041,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "8823:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3044,
+                  "indexed": false,
+                  "name": "amount",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3048,
+                  "src": "8847:14:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3043,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "8847:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3046,
+                  "indexed": false,
+                  "name": "referral",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3048,
+                  "src": "8863:16:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 3045,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "8863:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "8822:58:5"
+            }
+          },
+          {
+            "id": 3052,
+            "nodeType": "EventDefinition",
+            "src": "8966:33:5",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "Unbuffered",
+            "parameters": {
+              "id": 3051,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3050,
+                  "indexed": false,
+                  "name": "amount",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3052,
+                  "src": "8983:14:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3049,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "8983:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "8982:16:5"
+            }
+          },
+          {
+            "id": 3064,
+            "nodeType": "EventDefinition",
+            "src": "9184:156:5",
+            "nodes": [],
+            "anonymous": false,
+            "documentation": null,
+            "name": "Withdrawal",
+            "parameters": {
+              "id": 3063,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3054,
+                  "indexed": true,
+                  "name": "sender",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3064,
+                  "src": "9201:22:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 3053,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "9201:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3056,
+                  "indexed": false,
+                  "name": "tokenAmount",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3064,
+                  "src": "9225:19:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3055,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "9225:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3058,
+                  "indexed": false,
+                  "name": "sentFromBuffer",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3064,
+                  "src": "9246:22:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3057,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "9246:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3060,
+                  "indexed": true,
+                  "name": "pubkeyHash",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3064,
+                  "src": "9291:26:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes32",
+                    "typeString": "bytes32"
+                  },
+                  "typeName": {
+                    "id": 3059,
+                    "name": "bytes32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "9291:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3062,
+                  "indexed": false,
+                  "name": "etherAmount",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3064,
+                  "src": "9319:19:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3061,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "9319:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "9200:139:5"
+            }
+          },
+          {
+            "id": 3069,
+            "nodeType": "FunctionDefinition",
+            "src": "9453:63:5",
+            "nodes": [],
+            "documentation": "@notice Gets the amount of Ether controlled by the system",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getTotalPooledEther",
+            "parameters": {
+              "id": 3065,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "9481:2:5"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3068,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3067,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3069,
+                  "src": "9507:7:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3066,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "9507:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "9506:9:5"
+            },
+            "scope": 3084,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3074,
+            "nodeType": "FunctionDefinition",
+            "src": "9624:60:5",
+            "nodes": [],
+            "documentation": "@notice Gets the amount of Ether temporary buffered on this contract balance",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getBufferedEther",
+            "parameters": {
+              "id": 3070,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "9649:2:5"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3073,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3072,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3074,
+                  "src": "9675:7:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3071,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "9675:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "9674:9:5"
+            },
+            "scope": 3084,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 3083,
+            "nodeType": "FunctionDefinition",
+            "src": "10061:126:5",
+            "nodes": [],
+            "documentation": "@notice Returns the key values related to Beacon-side\n@return depositedValidators - number of deposited validators\n@return beaconValidators - number of Lido's validators visible in the Beacon state, reported by oracles\n@return beaconBalance - total amount of Beacon-side Ether (sum of all the balances of Lido validators)",
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getBeaconStat",
+            "parameters": {
+              "id": 3075,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "10083:2:5"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 3082,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3077,
+                  "name": "depositedValidators",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3083,
+                  "src": "10109:27:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3076,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "10109:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3079,
+                  "name": "beaconValidators",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3083,
+                  "src": "10138:24:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3078,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "10138:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3081,
+                  "name": "beaconBalance",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3083,
+                  "src": "10164:21:5",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3080,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "10164:7:5",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "10108:78:5"
+            },
+            "scope": 3084,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          }
+        ],
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "interface",
+        "documentation": "@title Liquid staking pool\n  * For the high-level description of the pool operation please refer to the paper.\nPool manages withdrawal keys and fees. It receives ether submitted by users on the ETH 1 side\nand stakes it via the deposit_contract.sol contract. It doesn't hold ether on it's balance,\nonly a small portion (buffer) of it.\nIt also mints new tokens for rewards generated at the ETH 2.0 side.\n  * At the moment withdrawals are not possible in the beacon chain and there's no workaround.\nPool will be upgraded to an actual implementation when withdrawals are enabled\n(Phase 1.5 or 2 of Eth2 launch, likely late 2022 or 2023).",
+        "fullyImplemented": false,
+        "linearizedBaseContracts": [
+          3084
+        ],
+        "name": "ILido",
+        "scope": 3085
+      }
+    ]
+  },
+  "id": 5
+}

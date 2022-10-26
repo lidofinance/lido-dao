@@ -1,0 +1,195 @@
+{
+  "abi": [
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "node",
+          "type": "bytes32"
+        },
+        {
+          "name": "interfaceID",
+          "type": "bytes4"
+        }
+      ],
+      "name": "interfaceImplementer",
+      "outputs": [
+        {
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "interfaceImplementer(bytes32,bytes4)": "124a319c"
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": {}
+  },
+  "ast": {
+    "absolutePath": "contracts/0.4.24/template/IInterfaceResolver.sol",
+    "id": 8029,
+    "exportedSymbols": {
+      "IInterfaceResolver": [
+        8028
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "90:157:19",
+    "nodes": [
+      {
+        "id": 8018,
+        "nodeType": "PragmaDirective",
+        "src": "90:23:19",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "0.4",
+          ".24"
+        ]
+      },
+      {
+        "id": 8028,
+        "nodeType": "ContractDefinition",
+        "src": "115:131:19",
+        "nodes": [
+          {
+            "id": 8027,
+            "nodeType": "FunctionDefinition",
+            "src": "148:96:19",
+            "nodes": [],
+            "documentation": null,
+            "implemented": false,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "interfaceImplementer",
+            "parameters": {
+              "id": 8023,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 8020,
+                  "name": "node",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 8027,
+                  "src": "178:12:19",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes32",
+                    "typeString": "bytes32"
+                  },
+                  "typeName": {
+                    "id": 8019,
+                    "name": "bytes32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "178:7:19",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes32",
+                      "typeString": "bytes32"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 8022,
+                  "name": "interfaceID",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 8027,
+                  "src": "192:18:19",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes4",
+                    "typeString": "bytes4"
+                  },
+                  "typeName": {
+                    "id": 8021,
+                    "name": "bytes4",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "192:6:19",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes4",
+                      "typeString": "bytes4"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "177:34:19"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 8026,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 8025,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 8027,
+                  "src": "235:7:19",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 8024,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "235:7:19",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "234:9:19"
+            },
+            "scope": 8028,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          }
+        ],
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "interface",
+        "documentation": null,
+        "fullyImplemented": false,
+        "linearizedBaseContracts": [
+          8028
+        ],
+        "name": "IInterfaceResolver",
+        "scope": 8029
+      }
+    ]
+  },
+  "id": 19
+}

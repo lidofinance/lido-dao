@@ -1,0 +1,162 @@
+{
+  "abi": [
+    {
+      "payable": true,
+      "stateMutability": "payable",
+      "type": "fallback"
+    }
+  ],
+  "bytecode": {
+    "object": "0x6080604052348015600f57600080fd5b50603280601d6000396000f30060806040520000a165627a7a72305820fa63417e383db3113e2f6e0ab4a10af0318d3a5f301b9453df48438a541c85330029",
+    "sourceMap": "175:55:33:-;;;;8:9:-1;5:2;;;30:1;27;20:12;5:2;175:55:33;;;;;;;",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x60806040520000a165627a7a72305820fa63417e383db3113e2f6e0ab4a10af0318d3a5f301b9453df48438a541c85330029",
+    "sourceMap": "175:55:33:-;;;",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {},
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.4.24+commit.e67f0147\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"fallback\"}],\"devdoc\":{\"methods\":{}},\"userdoc\":{\"methods\":{}}},\"settings\":{\"compilationTarget\":{\"contracts/0.4.24/test_helpers/VaultMock.sol\":\"VaultMock\"},\"evmVersion\":\"constantinople\",\"libraries\":{},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":@aragon/=node_modules/@aragon/\",\":@nomiclabs/=node_modules/@nomiclabs/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@solidity-parser/=node_modules/@solidity-parser/\",\":ens/=node_modules/@aragon/os/contracts/lib/ens/\",\":eth-gas-reporter/=node_modules/eth-gas-reporter/\",\":gasprofile/=node_modules/gasprofile/\",\":hardhat/=node_modules/hardhat/\",\":math/=node_modules/@aragon/os/contracts/lib/math/\",\":misc/=node_modules/@aragon/os/contracts/lib/misc/\",\":openzeppelin-solidity/=node_modules/openzeppelin-solidity/\",\":sol-explore/=node_modules/sol-explore/\",\":solhint/=node_modules/solhint/\",\":solidity-bytes-utils/=node_modules/solidity-bytes-utils/\",\":token/=node_modules/@aragon/os/contracts/lib/token/\",\":truffle/=node_modules/truffle/\"]},\"sources\":{\"contracts/0.4.24/test_helpers/VaultMock.sol\":{\"keccak256\":\"0x40f55ad5fb6d5202939b5acb3922502bfaa01a4370e27d3589e74d311abf33b8\",\"urls\":[\"bzzr://bf8abdf411ec440b212fb7dcb406bec69165fa71cfc9ca8daf2ff37215f20c42\"]}},\"version\":1}",
+  "metadata": {
+    "compiler": {
+      "version": "0.4.24+commit.e67f0147"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [],
+          "stateMutability": "payable",
+          "type": "fallback"
+        }
+      ],
+      "devdoc": {
+        "methods": {}
+      },
+      "userdoc": {
+        "methods": {}
+      }
+    },
+    "settings": {
+      "remappings": [
+        ":@aragon/=node_modules/@aragon/",
+        ":@nomiclabs/=node_modules/@nomiclabs/",
+        ":@openzeppelin/=node_modules/@openzeppelin/",
+        ":@solidity-parser/=node_modules/@solidity-parser/",
+        ":ens/=node_modules/@aragon/os/contracts/lib/ens/",
+        ":eth-gas-reporter/=node_modules/eth-gas-reporter/",
+        ":gasprofile/=node_modules/gasprofile/",
+        ":hardhat/=node_modules/hardhat/",
+        ":math/=node_modules/@aragon/os/contracts/lib/math/",
+        ":misc/=node_modules/@aragon/os/contracts/lib/misc/",
+        ":openzeppelin-solidity/=node_modules/openzeppelin-solidity/",
+        ":sol-explore/=node_modules/sol-explore/",
+        ":solhint/=node_modules/solhint/",
+        ":solidity-bytes-utils/=node_modules/solidity-bytes-utils/",
+        ":token/=node_modules/@aragon/os/contracts/lib/token/",
+        ":truffle/=node_modules/truffle/"
+      ],
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "compilationTarget": {
+        "contracts/0.4.24/test_helpers/VaultMock.sol": "VaultMock"
+      },
+      "libraries": {}
+    },
+    "sources": {
+      "contracts/0.4.24/test_helpers/VaultMock.sol": {
+        "keccak256": "0x40f55ad5fb6d5202939b5acb3922502bfaa01a4370e27d3589e74d311abf33b8",
+        "urls": [
+          "bzzr://bf8abdf411ec440b212fb7dcb406bec69165fa71cfc9ca8daf2ff37215f20c42"
+        ],
+        "license": null
+      }
+    },
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": {}
+  },
+  "ast": {
+    "absolutePath": "contracts/0.4.24/test_helpers/VaultMock.sol",
+    "id": 11700,
+    "exportedSymbols": {
+      "VaultMock": [
+        11699
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "90:141:33",
+    "nodes": [
+      {
+        "id": 11694,
+        "nodeType": "PragmaDirective",
+        "src": "90:23:33",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "0.4",
+          ".24"
+        ]
+      },
+      {
+        "id": 11699,
+        "nodeType": "ContractDefinition",
+        "src": "175:55:33",
+        "nodes": [
+          {
+            "id": 11698,
+            "nodeType": "FunctionDefinition",
+            "src": "200:28:33",
+            "nodes": [],
+            "body": {
+              "id": 11697,
+              "nodeType": "Block",
+              "src": "226:2:33",
+              "nodes": [],
+              "statements": []
+            },
+            "documentation": null,
+            "implemented": true,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "",
+            "parameters": {
+              "id": 11695,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "208:2:33"
+            },
+            "payable": true,
+            "returnParameters": {
+              "id": 11696,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "226:0:33"
+            },
+            "scope": 11699,
+            "stateMutability": "payable",
+            "superFunction": null,
+            "visibility": "public"
+          }
+        ],
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "contract",
+        "documentation": "@dev This is a mock. Don't use in production.",
+        "fullyImplemented": true,
+        "linearizedBaseContracts": [
+          11699
+        ],
+        "name": "VaultMock",
+        "scope": 11700
+      }
+    ]
+  },
+  "id": 33
+}

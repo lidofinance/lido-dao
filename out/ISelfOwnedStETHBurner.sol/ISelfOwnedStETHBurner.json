@@ -1,0 +1,320 @@
+{
+  "abi": [
+    {
+      "inputs": [],
+      "name": "getCoverSharesBurnt",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getNonCoverSharesBurnt",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "getCoverSharesBurnt()": "d03601f0",
+    "getNonCoverSharesBurnt()": "7763bca6"
+  },
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.9+commit.e5eed63a\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"name\":\"getCoverSharesBurnt\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getNonCoverSharesBurnt\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"title\":\"Interface defining a \\\"client-side\\\" of the `SelfOwnedStETHBurner` contract.\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"getCoverSharesBurnt()\":{\"notice\":\"Returns the total cover shares ever burnt.\"},\"getNonCoverSharesBurnt()\":{\"notice\":\"Returns the total non-cover shares ever burnt.\"}},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/0.8.9/interfaces/ISelfOwnedStETHBurner.sol\":\"ISelfOwnedStETHBurner\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":@aragon/=node_modules/@aragon/\",\":@nomiclabs/=node_modules/@nomiclabs/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@solidity-parser/=node_modules/@solidity-parser/\",\":ens/=node_modules/@aragon/os/contracts/lib/ens/\",\":eth-gas-reporter/=node_modules/eth-gas-reporter/\",\":gasprofile/=node_modules/gasprofile/\",\":hardhat/=node_modules/hardhat/\",\":math/=node_modules/@aragon/os/contracts/lib/math/\",\":misc/=node_modules/@aragon/os/contracts/lib/misc/\",\":openzeppelin-solidity/=node_modules/openzeppelin-solidity/\",\":sol-explore/=node_modules/sol-explore/\",\":solhint/=node_modules/solhint/\",\":solidity-bytes-utils/=node_modules/solidity-bytes-utils/\",\":token/=node_modules/@aragon/os/contracts/lib/token/\",\":truffle/=node_modules/truffle/\"]},\"sources\":{\"contracts/0.8.9/interfaces/ISelfOwnedStETHBurner.sol\":{\"keccak256\":\"0xc8693a9d870ee055fe23fdeb079915124bf5db6c65a53fb2da7630eb46637c24\",\"license\":\"GPL-3.0\",\"urls\":[\"bzz-raw://2731dae77e3183df90f040507d1392858af56341f888bcf4549213bcc3632c83\",\"dweb:/ipfs/QmePQcFuvJqdyDTJWT7iAMJNJR3M73nKjLY26kfzPkimyk\"]}},\"version\":1}",
+  "metadata": {
+    "compiler": {
+      "version": "0.8.9+commit.e5eed63a"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "getCoverSharesBurnt",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ]
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "getNonCoverSharesBurnt",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ]
+        }
+      ],
+      "devdoc": {
+        "kind": "dev",
+        "methods": {},
+        "version": 1
+      },
+      "userdoc": {
+        "kind": "user",
+        "methods": {
+          "getCoverSharesBurnt()": {
+            "notice": "Returns the total cover shares ever burnt."
+          },
+          "getNonCoverSharesBurnt()": {
+            "notice": "Returns the total non-cover shares ever burnt."
+          }
+        },
+        "version": 1
+      }
+    },
+    "settings": {
+      "remappings": [
+        ":@aragon/=node_modules/@aragon/",
+        ":@nomiclabs/=node_modules/@nomiclabs/",
+        ":@openzeppelin/=node_modules/@openzeppelin/",
+        ":@solidity-parser/=node_modules/@solidity-parser/",
+        ":ens/=node_modules/@aragon/os/contracts/lib/ens/",
+        ":eth-gas-reporter/=node_modules/eth-gas-reporter/",
+        ":gasprofile/=node_modules/gasprofile/",
+        ":hardhat/=node_modules/hardhat/",
+        ":math/=node_modules/@aragon/os/contracts/lib/math/",
+        ":misc/=node_modules/@aragon/os/contracts/lib/misc/",
+        ":openzeppelin-solidity/=node_modules/openzeppelin-solidity/",
+        ":sol-explore/=node_modules/sol-explore/",
+        ":solhint/=node_modules/solhint/",
+        ":solidity-bytes-utils/=node_modules/solidity-bytes-utils/",
+        ":token/=node_modules/@aragon/os/contracts/lib/token/",
+        ":truffle/=node_modules/truffle/"
+      ],
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "metadata": {
+        "bytecodeHash": "ipfs"
+      },
+      "compilationTarget": {
+        "contracts/0.8.9/interfaces/ISelfOwnedStETHBurner.sol": "ISelfOwnedStETHBurner"
+      },
+      "libraries": {}
+    },
+    "sources": {
+      "contracts/0.8.9/interfaces/ISelfOwnedStETHBurner.sol": {
+        "keccak256": "0xc8693a9d870ee055fe23fdeb079915124bf5db6c65a53fb2da7630eb46637c24",
+        "urls": [
+          "bzz-raw://2731dae77e3183df90f040507d1392858af56341f888bcf4549213bcc3632c83",
+          "dweb:/ipfs/QmePQcFuvJqdyDTJWT7iAMJNJR3M73nKjLY26kfzPkimyk"
+        ],
+        "license": "GPL-3.0"
+      }
+    },
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": {}
+  },
+  "ast": {
+    "absolutePath": "contracts/0.8.9/interfaces/ISelfOwnedStETHBurner.sol",
+    "id": 2445,
+    "exportedSymbols": {
+      "ISelfOwnedStETHBurner": [
+        2444
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "90:435:7",
+    "nodes": [
+      {
+        "id": 2430,
+        "nodeType": "PragmaDirective",
+        "src": "90:22:7",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "0.8",
+          ".9"
+        ]
+      },
+      {
+        "id": 2444,
+        "nodeType": "ContractDefinition",
+        "src": "209:315:7",
+        "nodes": [
+          {
+            "id": 2437,
+            "nodeType": "FunctionDefinition",
+            "src": "315:63:7",
+            "nodes": [],
+            "documentation": {
+              "id": 2432,
+              "nodeType": "StructuredDocumentation",
+              "src": "247:63:7",
+              "text": " Returns the total cover shares ever burnt."
+            },
+            "functionSelector": "d03601f0",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "getCoverSharesBurnt",
+            "nameLocation": "324:19:7",
+            "parameters": {
+              "id": 2433,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "343:2:7"
+            },
+            "returnParameters": {
+              "id": 2436,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2435,
+                  "mutability": "mutable",
+                  "name": "",
+                  "nameLocation": "-1:-1:-1",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2437,
+                  "src": "369:7:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2434,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "369:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "368:9:7"
+            },
+            "scope": 2444,
+            "stateMutability": "view",
+            "virtual": false,
+            "visibility": "external"
+          },
+          {
+            "id": 2443,
+            "nodeType": "FunctionDefinition",
+            "src": "456:66:7",
+            "nodes": [],
+            "documentation": {
+              "id": 2438,
+              "nodeType": "StructuredDocumentation",
+              "src": "384:67:7",
+              "text": " Returns the total non-cover shares ever burnt."
+            },
+            "functionSelector": "7763bca6",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "getNonCoverSharesBurnt",
+            "nameLocation": "465:22:7",
+            "parameters": {
+              "id": 2439,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "487:2:7"
+            },
+            "returnParameters": {
+              "id": 2442,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2441,
+                  "mutability": "mutable",
+                  "name": "",
+                  "nameLocation": "-1:-1:-1",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2443,
+                  "src": "513:7:7",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2440,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "513:7:7",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "512:9:7"
+            },
+            "scope": 2444,
+            "stateMutability": "view",
+            "virtual": false,
+            "visibility": "external"
+          }
+        ],
+        "abstract": false,
+        "baseContracts": [],
+        "canonicalName": "ISelfOwnedStETHBurner",
+        "contractDependencies": [],
+        "contractKind": "interface",
+        "documentation": {
+          "id": 2431,
+          "nodeType": "StructuredDocumentation",
+          "src": "114:94:7",
+          "text": " @title Interface defining a \"client-side\" of the `SelfOwnedStETHBurner` contract."
+        },
+        "fullyImplemented": false,
+        "linearizedBaseContracts": [
+          2444
+        ],
+        "name": "ISelfOwnedStETHBurner",
+        "nameLocation": "219:21:7",
+        "scope": 2445,
+        "usedErrors": []
+      }
+    ],
+    "license": "GPL-3.0"
+  },
+  "id": 7
+}

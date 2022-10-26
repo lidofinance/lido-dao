@@ -1,0 +1,1050 @@
+{
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "processLidoOracleReport",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": {
+    "object": "0x6080604052348015600f57600080fd5b5060a08061001e6000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c806334212e5f14602d575b600080fd5b603d6038366004603f565b505050565b005b600080600060608486031215605357600080fd5b50508135936020830135935060409092013591905056fea26469706673582212202494cdf2f6b242c7e2cf586680b1c69d89b4efe3543bb0bfc21b6b2858bf157864736f6c63430008090033",
+    "sourceMap": "973:168:9:-:0;;;;;;;;;;;;;;;;;;;",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x6080604052348015600f57600080fd5b506004361060285760003560e01c806334212e5f14602d575b600080fd5b603d6038366004603f565b505050565b005b600080600060608486031215605357600080fd5b50508135936020830135935060409092013591905056fea26469706673582212202494cdf2f6b242c7e2cf586680b1c69d89b4efe3543bb0bfc21b6b2858bf157864736f6c63430008090033",
+    "sourceMap": "973:168:9:-:0;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;1045:94;;;;;;:::i;:::-;;;;;;;14:316:33;91:6;99;107;160:2;148:9;139:7;135:23;131:32;128:52;;;176:1;173;166:12;128:52;-1:-1:-1;;199:23:33;;;269:2;254:18;;241:32;;-1:-1:-1;320:2:33;305:18;;;292:32;;14:316;-1:-1:-1;14:316:33:o",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "processLidoOracleReport(uint256,uint256,uint256)": "34212e5f"
+  },
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.9+commit.e5eed63a\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"processLidoOracleReport\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/0.8.9/test_helpers/BeaconReceiverMock.sol\":\"BeaconReceiverMockWithoutERC165\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":@aragon/=node_modules/@aragon/\",\":@nomiclabs/=node_modules/@nomiclabs/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@solidity-parser/=node_modules/@solidity-parser/\",\":ens/=node_modules/@aragon/os/contracts/lib/ens/\",\":eth-gas-reporter/=node_modules/eth-gas-reporter/\",\":gasprofile/=node_modules/gasprofile/\",\":hardhat/=node_modules/hardhat/\",\":math/=node_modules/@aragon/os/contracts/lib/math/\",\":misc/=node_modules/@aragon/os/contracts/lib/misc/\",\":openzeppelin-solidity/=node_modules/openzeppelin-solidity/\",\":sol-explore/=node_modules/sol-explore/\",\":solhint/=node_modules/solhint/\",\":solidity-bytes-utils/=node_modules/solidity-bytes-utils/\",\":token/=node_modules/@aragon/os/contracts/lib/token/\",\":truffle/=node_modules/truffle/\"]},\"sources\":{\"contracts/0.8.9/interfaces/IBeaconReportReceiver.sol\":{\"keccak256\":\"0x3cb64d730562dad7a7e4923ca7fa17957857a0ee614fff22eebde5576c630557\",\"license\":\"GPL-3.0\",\"urls\":[\"bzz-raw://9939875f501a46a8ec049cee9c9b2ac78f6d99826e71166491dc3b4e71a3b4c0\",\"dweb:/ipfs/QmTRfxr4xh6seBFqfk8czd85YbM9n5kjXbveFK12QipQcK\"]},\"contracts/0.8.9/test_helpers/BeaconReceiverMock.sol\":{\"keccak256\":\"0x2b38e98979f98b70a790366023991c8255a6d9b6eeb766e9d6f0567d6c0528a8\",\"license\":\"GPL-3.0\",\"urls\":[\"bzz-raw://3b930f2e9282f754b2fbbfa102c1a42ba2dbddf14d74d253f4d4213037211c8b\",\"dweb:/ipfs/QmNNxRGzYFBkCzpKCJ8juaGxqLN9WGNQHgDHKyV9fnQxVC\"]},\"node_modules/@openzeppelin/contracts-v4.4/utils/introspection/ERC165.sol\":{\"keccak256\":\"0xd10975de010d89fd1c78dc5e8a9a7e7f496198085c151648f20cba166b32582b\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://fb0048dee081f6fffa5f74afc3fb328483c2a30504e94a0ddd2a5114d731ec4d\",\"dweb:/ipfs/QmZptt1nmYoA5SgjwnSgWqgUSDgm4q52Yos3xhnMv3MV43\"]},\"node_modules/@openzeppelin/contracts-v4.4/utils/introspection/IERC165.sol\":{\"keccak256\":\"0x447a5f3ddc18419d41ff92b3773fb86471b1db25773e07f877f548918a185bf1\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://be161e54f24e5c6fae81a12db1a8ae87bc5ae1b0ddc805d82a1440a68455088f\",\"dweb:/ipfs/QmP7C3CHdY9urF4dEMb9wmsp1wMxHF6nhA2yQE5SKiPAdy\"]}},\"version\":1}",
+  "metadata": {
+    "compiler": {
+      "version": "0.8.9+commit.e5eed63a"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "processLidoOracleReport"
+        }
+      ],
+      "devdoc": {
+        "kind": "dev",
+        "methods": {},
+        "version": 1
+      },
+      "userdoc": {
+        "kind": "user",
+        "methods": {},
+        "version": 1
+      }
+    },
+    "settings": {
+      "remappings": [
+        ":@aragon/=node_modules/@aragon/",
+        ":@nomiclabs/=node_modules/@nomiclabs/",
+        ":@openzeppelin/=node_modules/@openzeppelin/",
+        ":@solidity-parser/=node_modules/@solidity-parser/",
+        ":ens/=node_modules/@aragon/os/contracts/lib/ens/",
+        ":eth-gas-reporter/=node_modules/eth-gas-reporter/",
+        ":gasprofile/=node_modules/gasprofile/",
+        ":hardhat/=node_modules/hardhat/",
+        ":math/=node_modules/@aragon/os/contracts/lib/math/",
+        ":misc/=node_modules/@aragon/os/contracts/lib/misc/",
+        ":openzeppelin-solidity/=node_modules/openzeppelin-solidity/",
+        ":sol-explore/=node_modules/sol-explore/",
+        ":solhint/=node_modules/solhint/",
+        ":solidity-bytes-utils/=node_modules/solidity-bytes-utils/",
+        ":token/=node_modules/@aragon/os/contracts/lib/token/",
+        ":truffle/=node_modules/truffle/"
+      ],
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "metadata": {
+        "bytecodeHash": "ipfs"
+      },
+      "compilationTarget": {
+        "contracts/0.8.9/test_helpers/BeaconReceiverMock.sol": "BeaconReceiverMockWithoutERC165"
+      },
+      "libraries": {}
+    },
+    "sources": {
+      "contracts/0.8.9/interfaces/IBeaconReportReceiver.sol": {
+        "keccak256": "0x3cb64d730562dad7a7e4923ca7fa17957857a0ee614fff22eebde5576c630557",
+        "urls": [
+          "bzz-raw://9939875f501a46a8ec049cee9c9b2ac78f6d99826e71166491dc3b4e71a3b4c0",
+          "dweb:/ipfs/QmTRfxr4xh6seBFqfk8czd85YbM9n5kjXbveFK12QipQcK"
+        ],
+        "license": "GPL-3.0"
+      },
+      "contracts/0.8.9/test_helpers/BeaconReceiverMock.sol": {
+        "keccak256": "0x2b38e98979f98b70a790366023991c8255a6d9b6eeb766e9d6f0567d6c0528a8",
+        "urls": [
+          "bzz-raw://3b930f2e9282f754b2fbbfa102c1a42ba2dbddf14d74d253f4d4213037211c8b",
+          "dweb:/ipfs/QmNNxRGzYFBkCzpKCJ8juaGxqLN9WGNQHgDHKyV9fnQxVC"
+        ],
+        "license": "GPL-3.0"
+      },
+      "node_modules/@openzeppelin/contracts-v4.4/utils/introspection/ERC165.sol": {
+        "keccak256": "0xd10975de010d89fd1c78dc5e8a9a7e7f496198085c151648f20cba166b32582b",
+        "urls": [
+          "bzz-raw://fb0048dee081f6fffa5f74afc3fb328483c2a30504e94a0ddd2a5114d731ec4d",
+          "dweb:/ipfs/QmZptt1nmYoA5SgjwnSgWqgUSDgm4q52Yos3xhnMv3MV43"
+        ],
+        "license": "MIT"
+      },
+      "node_modules/@openzeppelin/contracts-v4.4/utils/introspection/IERC165.sol": {
+        "keccak256": "0x447a5f3ddc18419d41ff92b3773fb86471b1db25773e07f877f548918a185bf1",
+        "urls": [
+          "bzz-raw://be161e54f24e5c6fae81a12db1a8ae87bc5ae1b0ddc805d82a1440a68455088f",
+          "dweb:/ipfs/QmP7C3CHdY9urF4dEMb9wmsp1wMxHF6nhA2yQE5SKiPAdy"
+        ],
+        "license": "MIT"
+      }
+    },
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": {}
+  },
+  "ast": {
+    "absolutePath": "contracts/0.8.9/test_helpers/BeaconReceiverMock.sol",
+    "id": 2606,
+    "exportedSymbols": {
+      "BeaconReceiverMock": [
+        2591
+      ],
+      "BeaconReceiverMockWithoutERC165": [
+        2605
+      ],
+      "ERC165": [
+        5299
+      ],
+      "IBeaconReportReceiver": [
+        2376
+      ],
+      "IERC165": [
+        5513
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "123:1019:9",
+    "nodes": [
+      {
+        "id": 2533,
+        "nodeType": "PragmaDirective",
+        "src": "123:22:9",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "0.8",
+          ".9"
+        ]
+      },
+      {
+        "id": 2534,
+        "nodeType": "ImportDirective",
+        "src": "147:69:9",
+        "nodes": [],
+        "absolutePath": "node_modules/@openzeppelin/contracts-v4.4/utils/introspection/ERC165.sol",
+        "file": "@openzeppelin/contracts-v4.4/utils/introspection/ERC165.sol",
+        "nameLocation": "-1:-1:-1",
+        "scope": 2606,
+        "sourceUnit": 5300,
+        "symbolAliases": [],
+        "unitAlias": ""
+      },
+      {
+        "id": 2535,
+        "nodeType": "ImportDirective",
+        "src": "217:49:9",
+        "nodes": [],
+        "absolutePath": "contracts/0.8.9/interfaces/IBeaconReportReceiver.sol",
+        "file": "../interfaces/IBeaconReportReceiver.sol",
+        "nameLocation": "-1:-1:-1",
+        "scope": 2606,
+        "sourceUnit": 2377,
+        "symbolAliases": [],
+        "unitAlias": ""
+      },
+      {
+        "id": 2591,
+        "nodeType": "ContractDefinition",
+        "src": "400:571:9",
+        "nodes": [
+          {
+            "id": 2542,
+            "nodeType": "VariableDeclaration",
+            "src": "467:27:9",
+            "nodes": [],
+            "constant": false,
+            "functionSelector": "af640d0f",
+            "mutability": "immutable",
+            "name": "id",
+            "nameLocation": "492:2:9",
+            "scope": 2591,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 2541,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "467:7:9",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "visibility": "public"
+          },
+          {
+            "id": 2544,
+            "nodeType": "VariableDeclaration",
+            "src": "500:31:9",
+            "nodes": [],
+            "constant": false,
+            "functionSelector": "66f7696f",
+            "mutability": "mutable",
+            "name": "processedCounter",
+            "nameLocation": "515:16:9",
+            "scope": 2591,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 2543,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "500:7:9",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "visibility": "public"
+          },
+          {
+            "id": 2554,
+            "nodeType": "FunctionDefinition",
+            "src": "538:50:9",
+            "nodes": [],
+            "body": {
+              "id": 2553,
+              "nodeType": "Block",
+              "src": "563:25:9",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "id": 2551,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftHandSide": {
+                      "id": 2549,
+                      "name": "id",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 2542,
+                      "src": "573:2:9",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "nodeType": "Assignment",
+                    "operator": "=",
+                    "rightHandSide": {
+                      "id": 2550,
+                      "name": "_id",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 2546,
+                      "src": "578:3:9",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "src": "573:8:9",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "id": 2552,
+                  "nodeType": "ExpressionStatement",
+                  "src": "573:8:9"
+                }
+              ]
+            },
+            "implemented": true,
+            "kind": "constructor",
+            "modifiers": [],
+            "name": "",
+            "nameLocation": "-1:-1:-1",
+            "parameters": {
+              "id": 2547,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2546,
+                  "mutability": "mutable",
+                  "name": "_id",
+                  "nameLocation": "558:3:9",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2554,
+                  "src": "550:11:9",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2545,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "550:7:9",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "549:13:9"
+            },
+            "returnParameters": {
+              "id": 2548,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "563:0:9"
+            },
+            "scope": 2591,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "public"
+          },
+          {
+            "id": 2568,
+            "nodeType": "FunctionDefinition",
+            "src": "594:121:9",
+            "nodes": [],
+            "body": {
+              "id": 2567,
+              "nodeType": "Block",
+              "src": "680:35:9",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "id": 2565,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "nodeType": "UnaryOperation",
+                    "operator": "++",
+                    "prefix": false,
+                    "src": "690:18:9",
+                    "subExpression": {
+                      "id": 2564,
+                      "name": "processedCounter",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 2544,
+                      "src": "690:16:9",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "id": 2566,
+                  "nodeType": "ExpressionStatement",
+                  "src": "690:18:9"
+                }
+              ]
+            },
+            "baseFunctions": [
+              2375
+            ],
+            "functionSelector": "34212e5f",
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "processLidoOracleReport",
+            "nameLocation": "603:23:9",
+            "overrides": {
+              "id": 2562,
+              "nodeType": "OverrideSpecifier",
+              "overrides": [],
+              "src": "671:8:9"
+            },
+            "parameters": {
+              "id": 2561,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2556,
+                  "mutability": "mutable",
+                  "name": "",
+                  "nameLocation": "-1:-1:-1",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2568,
+                  "src": "627:7:9",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2555,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "627:7:9",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2558,
+                  "mutability": "mutable",
+                  "name": "",
+                  "nameLocation": "-1:-1:-1",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2568,
+                  "src": "636:7:9",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2557,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "636:7:9",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2560,
+                  "mutability": "mutable",
+                  "name": "",
+                  "nameLocation": "-1:-1:-1",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2568,
+                  "src": "645:7:9",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2559,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "645:7:9",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "626:27:9"
+            },
+            "returnParameters": {
+              "id": 2563,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "680:0:9"
+            },
+            "scope": 2591,
+            "stateMutability": "nonpayable",
+            "virtual": true,
+            "visibility": "external"
+          },
+          {
+            "id": 2590,
+            "nodeType": "FunctionDefinition",
+            "src": "721:248:9",
+            "nodes": [],
+            "body": {
+              "id": 2589,
+              "nodeType": "Block",
+              "src": "813:156:9",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "components": [
+                      {
+                        "commonType": {
+                          "typeIdentifier": "t_bool",
+                          "typeString": "bool"
+                        },
+                        "id": 2586,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": false,
+                        "lValueRequested": false,
+                        "leftExpression": {
+                          "commonType": {
+                            "typeIdentifier": "t_bytes4",
+                            "typeString": "bytes4"
+                          },
+                          "id": 2581,
+                          "isConstant": false,
+                          "isLValue": false,
+                          "isPure": false,
+                          "lValueRequested": false,
+                          "leftExpression": {
+                            "id": 2576,
+                            "name": "_interfaceId",
+                            "nodeType": "Identifier",
+                            "overloadedDeclarations": [],
+                            "referencedDeclaration": 2570,
+                            "src": "844:12:9",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_bytes4",
+                              "typeString": "bytes4"
+                            }
+                          },
+                          "nodeType": "BinaryOperation",
+                          "operator": "==",
+                          "rightExpression": {
+                            "expression": {
+                              "arguments": [
+                                {
+                                  "id": 2578,
+                                  "name": "IBeaconReportReceiver",
+                                  "nodeType": "Identifier",
+                                  "overloadedDeclarations": [],
+                                  "referencedDeclaration": 2376,
+                                  "src": "865:21:9",
+                                  "typeDescriptions": {
+                                    "typeIdentifier": "t_type$_t_contract$_IBeaconReportReceiver_$2376_$",
+                                    "typeString": "type(contract IBeaconReportReceiver)"
+                                  }
+                                }
+                              ],
+                              "expression": {
+                                "argumentTypes": [
+                                  {
+                                    "typeIdentifier": "t_type$_t_contract$_IBeaconReportReceiver_$2376_$",
+                                    "typeString": "type(contract IBeaconReportReceiver)"
+                                  }
+                                ],
+                                "id": 2577,
+                                "name": "type",
+                                "nodeType": "Identifier",
+                                "overloadedDeclarations": [],
+                                "referencedDeclaration": -27,
+                                "src": "860:4:9",
+                                "typeDescriptions": {
+                                  "typeIdentifier": "t_function_metatype_pure$__$returns$__$",
+                                  "typeString": "function () pure"
+                                }
+                              },
+                              "id": 2579,
+                              "isConstant": false,
+                              "isLValue": false,
+                              "isPure": true,
+                              "kind": "functionCall",
+                              "lValueRequested": false,
+                              "names": [],
+                              "nodeType": "FunctionCall",
+                              "src": "860:27:9",
+                              "tryCall": false,
+                              "typeDescriptions": {
+                                "typeIdentifier": "t_magic_meta_type_t_contract$_IBeaconReportReceiver_$2376",
+                                "typeString": "type(contract IBeaconReportReceiver)"
+                              }
+                            },
+                            "id": 2580,
+                            "isConstant": false,
+                            "isLValue": false,
+                            "isPure": true,
+                            "lValueRequested": false,
+                            "memberName": "interfaceId",
+                            "nodeType": "MemberAccess",
+                            "src": "860:39:9",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_bytes4",
+                              "typeString": "bytes4"
+                            }
+                          },
+                          "src": "844:55:9",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_bool",
+                            "typeString": "bool"
+                          }
+                        },
+                        "nodeType": "BinaryOperation",
+                        "operator": "||",
+                        "rightExpression": {
+                          "arguments": [
+                            {
+                              "id": 2584,
+                              "name": "_interfaceId",
+                              "nodeType": "Identifier",
+                              "overloadedDeclarations": [],
+                              "referencedDeclaration": 2570,
+                              "src": "939:12:9",
+                              "typeDescriptions": {
+                                "typeIdentifier": "t_bytes4",
+                                "typeString": "bytes4"
+                              }
+                            }
+                          ],
+                          "expression": {
+                            "argumentTypes": [
+                              {
+                                "typeIdentifier": "t_bytes4",
+                                "typeString": "bytes4"
+                              }
+                            ],
+                            "expression": {
+                              "id": 2582,
+                              "name": "super",
+                              "nodeType": "Identifier",
+                              "overloadedDeclarations": [],
+                              "referencedDeclaration": -25,
+                              "src": "915:5:9",
+                              "typeDescriptions": {
+                                "typeIdentifier": "t_type$_t_super$_BeaconReceiverMock_$2591_$",
+                                "typeString": "type(contract super BeaconReceiverMock)"
+                              }
+                            },
+                            "id": 2583,
+                            "isConstant": false,
+                            "isLValue": false,
+                            "isPure": false,
+                            "lValueRequested": false,
+                            "memberName": "supportsInterface",
+                            "nodeType": "MemberAccess",
+                            "referencedDeclaration": 5298,
+                            "src": "915:23:9",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_function_internal_view$_t_bytes4_$returns$_t_bool_$",
+                              "typeString": "function (bytes4) view returns (bool)"
+                            }
+                          },
+                          "id": 2585,
+                          "isConstant": false,
+                          "isLValue": false,
+                          "isPure": false,
+                          "kind": "functionCall",
+                          "lValueRequested": false,
+                          "names": [],
+                          "nodeType": "FunctionCall",
+                          "src": "915:37:9",
+                          "tryCall": false,
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_bool",
+                            "typeString": "bool"
+                          }
+                        },
+                        "src": "844:108:9",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bool",
+                          "typeString": "bool"
+                        }
+                      }
+                    ],
+                    "id": 2587,
+                    "isConstant": false,
+                    "isInlineArray": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "nodeType": "TupleExpression",
+                    "src": "830:132:9",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "functionReturnParameters": 2575,
+                  "id": 2588,
+                  "nodeType": "Return",
+                  "src": "823:139:9"
+                }
+              ]
+            },
+            "baseFunctions": [
+              5298
+            ],
+            "functionSelector": "01ffc9a7",
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "supportsInterface",
+            "nameLocation": "730:17:9",
+            "overrides": {
+              "id": 2572,
+              "nodeType": "OverrideSpecifier",
+              "overrides": [],
+              "src": "789:8:9"
+            },
+            "parameters": {
+              "id": 2571,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2570,
+                  "mutability": "mutable",
+                  "name": "_interfaceId",
+                  "nameLocation": "755:12:9",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2590,
+                  "src": "748:19:9",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes4",
+                    "typeString": "bytes4"
+                  },
+                  "typeName": {
+                    "id": 2569,
+                    "name": "bytes4",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "748:6:9",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes4",
+                      "typeString": "bytes4"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "747:21:9"
+            },
+            "returnParameters": {
+              "id": 2575,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2574,
+                  "mutability": "mutable",
+                  "name": "",
+                  "nameLocation": "-1:-1:-1",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2590,
+                  "src": "807:4:9",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bool",
+                    "typeString": "bool"
+                  },
+                  "typeName": {
+                    "id": 2573,
+                    "name": "bool",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "807:4:9",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "806:6:9"
+            },
+            "scope": 2591,
+            "stateMutability": "view",
+            "virtual": true,
+            "visibility": "public"
+          }
+        ],
+        "abstract": false,
+        "baseContracts": [
+          {
+            "baseName": {
+              "id": 2537,
+              "name": "IBeaconReportReceiver",
+              "nodeType": "IdentifierPath",
+              "referencedDeclaration": 2376,
+              "src": "431:21:9"
+            },
+            "id": 2538,
+            "nodeType": "InheritanceSpecifier",
+            "src": "431:21:9"
+          },
+          {
+            "baseName": {
+              "id": 2539,
+              "name": "ERC165",
+              "nodeType": "IdentifierPath",
+              "referencedDeclaration": 5299,
+              "src": "454:6:9"
+            },
+            "id": 2540,
+            "nodeType": "InheritanceSpecifier",
+            "src": "454:6:9"
+          }
+        ],
+        "canonicalName": "BeaconReceiverMock",
+        "contractDependencies": [],
+        "contractKind": "contract",
+        "documentation": {
+          "id": 2536,
+          "nodeType": "StructuredDocumentation",
+          "src": "268:131:9",
+          "text": " @title Mock helper for the `CompositePostRebaseBeaconReceiver` tests.\n @dev DON'T USE THIS CODE IN A PRODUCTION"
+        },
+        "fullyImplemented": true,
+        "linearizedBaseContracts": [
+          2591,
+          5299,
+          5513,
+          2376
+        ],
+        "name": "BeaconReceiverMock",
+        "nameLocation": "409:18:9",
+        "scope": 2606,
+        "usedErrors": []
+      },
+      {
+        "id": 2605,
+        "nodeType": "ContractDefinition",
+        "src": "973:168:9",
+        "nodes": [
+          {
+            "id": 2604,
+            "nodeType": "FunctionDefinition",
+            "src": "1045:94:9",
+            "nodes": [],
+            "body": {
+              "id": 2603,
+              "nodeType": "Block",
+              "src": "1131:8:9",
+              "nodes": [],
+              "statements": []
+            },
+            "baseFunctions": [
+              2375
+            ],
+            "functionSelector": "34212e5f",
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "processLidoOracleReport",
+            "nameLocation": "1054:23:9",
+            "overrides": {
+              "id": 2601,
+              "nodeType": "OverrideSpecifier",
+              "overrides": [],
+              "src": "1122:8:9"
+            },
+            "parameters": {
+              "id": 2600,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 2595,
+                  "mutability": "mutable",
+                  "name": "",
+                  "nameLocation": "-1:-1:-1",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2604,
+                  "src": "1078:7:9",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2594,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1078:7:9",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2597,
+                  "mutability": "mutable",
+                  "name": "",
+                  "nameLocation": "-1:-1:-1",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2604,
+                  "src": "1087:7:9",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2596,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1087:7:9",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 2599,
+                  "mutability": "mutable",
+                  "name": "",
+                  "nameLocation": "-1:-1:-1",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 2604,
+                  "src": "1096:7:9",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 2598,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1096:7:9",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1077:27:9"
+            },
+            "returnParameters": {
+              "id": 2602,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1131:0:9"
+            },
+            "scope": 2605,
+            "stateMutability": "nonpayable",
+            "virtual": true,
+            "visibility": "external"
+          }
+        ],
+        "abstract": false,
+        "baseContracts": [
+          {
+            "baseName": {
+              "id": 2592,
+              "name": "IBeaconReportReceiver",
+              "nodeType": "IdentifierPath",
+              "referencedDeclaration": 2376,
+              "src": "1017:21:9"
+            },
+            "id": 2593,
+            "nodeType": "InheritanceSpecifier",
+            "src": "1017:21:9"
+          }
+        ],
+        "canonicalName": "BeaconReceiverMockWithoutERC165",
+        "contractDependencies": [],
+        "contractKind": "contract",
+        "fullyImplemented": true,
+        "linearizedBaseContracts": [
+          2605,
+          2376
+        ],
+        "name": "BeaconReceiverMockWithoutERC165",
+        "nameLocation": "982:31:9",
+        "scope": 2606,
+        "usedErrors": []
+      }
+    ],
+    "license": "GPL-3.0"
+  },
+  "id": 9
+}

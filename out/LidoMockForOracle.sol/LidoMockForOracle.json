@@ -1,0 +1,717 @@
+{
+  "abi": [
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "totalSupply",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_val",
+          "type": "uint256"
+        }
+      ],
+      "name": "pretendTotalPooledEtherGweiForTest",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "name": "_beaconBalance",
+          "type": "uint256"
+        }
+      ],
+      "name": "handleOracleReport",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getTotalShares",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": {
+    "object": "0x608060405234801561001057600080fd5b5060f28061001f6000396000f30060806040526004361060405760003560e01c63ffffffff16806318160ddd1460455780635b59a78914606957806364f9991a146080578063d5002f2e146098575b600080fd5b348015605057600080fd5b50605760aa565b60408051918252519081900360200190f35b348015607457600080fd5b50607e60043560b0565b005b348015608b57600080fd5b50607e60043560243560bb565b34801560a357600080fd5b50605760c1565b60005490565b633b9aca0002600055565b60005550565b602a905600a165627a7a7230582075c664b8df8be4e8a9e4f8f90bf6e6769dde42c9515de3930dcebce4f32f6fb30029",
+    "sourceMap": "203:537:26:-;;;;8:9:-1;5:2;;;30:1;27;20:12;5:2;203:537:26;;;;;;;",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x60806040526004361060405760003560e01c63ffffffff16806318160ddd1460455780635b59a78914606957806364f9991a146080578063d5002f2e146098575b600080fd5b348015605057600080fd5b50605760aa565b60408051918252519081900360200190f35b348015607457600080fd5b50607e60043560b0565b005b348015608b57600080fd5b50607e60043560243560bb565b34801560a357600080fd5b50605760c1565b60005490565b633b9aca0002600055565b60005550565b602a905600a165627a7a7230582075c664b8df8be4e8a9e4f8f90bf6e6769dde42c9515de3930dcebce4f32f6fb30029",
+    "sourceMap": "203:537:26:-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;275:95;;8:9:-1;5:2;;;30:1;27;20:12;5:2;275:95:26;;;;;;;;;;;;;;;;;;;;612:126;;8:9:-1;5:2;;;30:1;27;20:12;5:2;-1:-1;612:126:26;;;;;;;376:142;;8:9:-1;5:2;;;30:1;27;20:12;5:2;-1:-1;376:142:26;;;;;;;524:82;;8:9:-1;5:2;;;30:1;27;20:12;5:2;524:82:26;;;;275:95;321:7;347:16;275:95;:::o;612:126::-;713:3;706:10;687:16;:29;612:126::o;376:142::-;478:16;:33;-1:-1:-1;376:142:26:o;524:82::-;597:2;524:82;:::o",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "getTotalShares()": "d5002f2e",
+    "handleOracleReport(uint256,uint256)": "64f9991a",
+    "pretendTotalPooledEtherGweiForTest(uint256)": "5b59a789",
+    "totalSupply()": "18160ddd"
+  },
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.4.24+commit.e67f0147\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"constant\":true,\"inputs\":[],\"name\":\"totalSupply\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_val\",\"type\":\"uint256\"}],\"name\":\"pretendTotalPooledEtherGweiForTest\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"},{\"name\":\"_beaconBalance\",\"type\":\"uint256\"}],\"name\":\"handleOracleReport\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getTotalShares\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"methods\":{}},\"userdoc\":{\"methods\":{}}},\"settings\":{\"compilationTarget\":{\"contracts/0.4.24/test_helpers/LidoMockForOracle.sol\":\"LidoMockForOracle\"},\"evmVersion\":\"constantinople\",\"libraries\":{},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":@aragon/=node_modules/@aragon/\",\":@nomiclabs/=node_modules/@nomiclabs/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@solidity-parser/=node_modules/@solidity-parser/\",\":ens/=node_modules/@aragon/os/contracts/lib/ens/\",\":eth-gas-reporter/=node_modules/eth-gas-reporter/\",\":gasprofile/=node_modules/gasprofile/\",\":hardhat/=node_modules/hardhat/\",\":math/=node_modules/@aragon/os/contracts/lib/math/\",\":misc/=node_modules/@aragon/os/contracts/lib/misc/\",\":openzeppelin-solidity/=node_modules/openzeppelin-solidity/\",\":sol-explore/=node_modules/sol-explore/\",\":solhint/=node_modules/solhint/\",\":solidity-bytes-utils/=node_modules/solidity-bytes-utils/\",\":token/=node_modules/@aragon/os/contracts/lib/token/\",\":truffle/=node_modules/truffle/\"]},\"sources\":{\"contracts/0.4.24/test_helpers/LidoMockForOracle.sol\":{\"keccak256\":\"0x19a7796456cec0e73d0cc388471081e9e4f3f791346f0bb814224f1a3c61af00\",\"urls\":[\"bzzr://75ffaee08f8a189302caa5bcb1d39d7b58847cbe2cfe942509badc1b972c1204\"]}},\"version\":1}",
+  "metadata": {
+    "compiler": {
+      "version": "0.4.24+commit.e67f0147"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "totalSupply",
+          "outputs": [
+            {
+              "internalType": null,
+              "name": "",
+              "type": "uint256"
+            }
+          ]
+        },
+        {
+          "inputs": [
+            {
+              "internalType": null,
+              "name": "_val",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "pretendTotalPooledEtherGweiForTest"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": null,
+              "name": "",
+              "type": "uint256"
+            },
+            {
+              "internalType": null,
+              "name": "_beaconBalance",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "handleOracleReport"
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "getTotalShares",
+          "outputs": [
+            {
+              "internalType": null,
+              "name": "",
+              "type": "uint256"
+            }
+          ]
+        }
+      ],
+      "devdoc": {
+        "methods": {}
+      },
+      "userdoc": {
+        "methods": {}
+      }
+    },
+    "settings": {
+      "remappings": [
+        ":@aragon/=node_modules/@aragon/",
+        ":@nomiclabs/=node_modules/@nomiclabs/",
+        ":@openzeppelin/=node_modules/@openzeppelin/",
+        ":@solidity-parser/=node_modules/@solidity-parser/",
+        ":ens/=node_modules/@aragon/os/contracts/lib/ens/",
+        ":eth-gas-reporter/=node_modules/eth-gas-reporter/",
+        ":gasprofile/=node_modules/gasprofile/",
+        ":hardhat/=node_modules/hardhat/",
+        ":math/=node_modules/@aragon/os/contracts/lib/math/",
+        ":misc/=node_modules/@aragon/os/contracts/lib/misc/",
+        ":openzeppelin-solidity/=node_modules/openzeppelin-solidity/",
+        ":sol-explore/=node_modules/sol-explore/",
+        ":solhint/=node_modules/solhint/",
+        ":solidity-bytes-utils/=node_modules/solidity-bytes-utils/",
+        ":token/=node_modules/@aragon/os/contracts/lib/token/",
+        ":truffle/=node_modules/truffle/"
+      ],
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "compilationTarget": {
+        "contracts/0.4.24/test_helpers/LidoMockForOracle.sol": "LidoMockForOracle"
+      },
+      "libraries": {}
+    },
+    "sources": {
+      "contracts/0.4.24/test_helpers/LidoMockForOracle.sol": {
+        "keccak256": "0x19a7796456cec0e73d0cc388471081e9e4f3f791346f0bb814224f1a3c61af00",
+        "urls": [
+          "bzzr://75ffaee08f8a189302caa5bcb1d39d7b58847cbe2cfe942509badc1b972c1204"
+        ],
+        "license": null
+      }
+    },
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": {}
+  },
+  "ast": {
+    "absolutePath": "contracts/0.4.24/test_helpers/LidoMockForOracle.sol",
+    "id": 10960,
+    "exportedSymbols": {
+      "LidoMockForOracle": [
+        10959
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "90:651:26",
+    "nodes": [
+      {
+        "id": 10916,
+        "nodeType": "PragmaDirective",
+        "src": "90:23:26",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "0.4",
+          ".24"
+        ]
+      },
+      {
+        "id": 10959,
+        "nodeType": "ContractDefinition",
+        "src": "203:537:26",
+        "nodes": [
+          {
+            "id": 10918,
+            "nodeType": "VariableDeclaration",
+            "src": "236:32:26",
+            "nodes": [],
+            "constant": false,
+            "name": "totalPooledEther",
+            "scope": 10959,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 10917,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "236:7:26",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "value": null,
+            "visibility": "private"
+          },
+          {
+            "id": 10926,
+            "nodeType": "FunctionDefinition",
+            "src": "275:95:26",
+            "nodes": [],
+            "body": {
+              "id": 10925,
+              "nodeType": "Block",
+              "src": "330:40:26",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "id": 10923,
+                    "name": "totalPooledEther",
+                    "nodeType": "Identifier",
+                    "overloadedDeclarations": [],
+                    "referencedDeclaration": 10918,
+                    "src": "347:16:26",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "functionReturnParameters": 10922,
+                  "id": 10924,
+                  "nodeType": "Return",
+                  "src": "340:23:26"
+                }
+              ]
+            },
+            "documentation": null,
+            "implemented": true,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "totalSupply",
+            "parameters": {
+              "id": 10919,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "295:2:26"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 10922,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 10921,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 10926,
+                  "src": "321:7:26",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 10920,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "321:7:26",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "320:9:26"
+            },
+            "scope": 10959,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 10938,
+            "nodeType": "FunctionDefinition",
+            "src": "376:142:26",
+            "nodes": [],
+            "body": {
+              "id": 10937,
+              "nodeType": "Block",
+              "src": "468:50:26",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "id": 10935,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftHandSide": {
+                      "argumentTypes": null,
+                      "id": 10933,
+                      "name": "totalPooledEther",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 10918,
+                      "src": "478:16:26",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "nodeType": "Assignment",
+                    "operator": "=",
+                    "rightHandSide": {
+                      "argumentTypes": null,
+                      "id": 10934,
+                      "name": "_beaconBalance",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 10930,
+                      "src": "497:14:26",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "src": "478:33:26",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "id": 10936,
+                  "nodeType": "ExpressionStatement",
+                  "src": "478:33:26"
+                }
+              ]
+            },
+            "documentation": null,
+            "implemented": true,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "handleOracleReport",
+            "parameters": {
+              "id": 10931,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 10928,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 10938,
+                  "src": "404:7:26",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 10927,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "404:7:26",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 10930,
+                  "name": "_beaconBalance",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 10938,
+                  "src": "435:22:26",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 10929,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "435:7:26",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "403:55:26"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 10932,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "468:0:26"
+            },
+            "scope": 10959,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "external"
+          },
+          {
+            "id": 10946,
+            "nodeType": "FunctionDefinition",
+            "src": "524:82:26",
+            "nodes": [],
+            "body": {
+              "id": 10945,
+              "nodeType": "Block",
+              "src": "580:26:26",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "hexValue": "3432",
+                    "id": 10943,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": true,
+                    "kind": "number",
+                    "lValueRequested": false,
+                    "nodeType": "Literal",
+                    "src": "597:2:26",
+                    "subdenomination": null,
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_rational_42_by_1",
+                      "typeString": "int_const 42"
+                    },
+                    "value": "42"
+                  },
+                  "functionReturnParameters": 10942,
+                  "id": 10944,
+                  "nodeType": "Return",
+                  "src": "590:9:26"
+                }
+              ]
+            },
+            "documentation": null,
+            "implemented": true,
+            "isConstructor": false,
+            "isDeclaredConst": true,
+            "modifiers": [],
+            "name": "getTotalShares",
+            "parameters": {
+              "id": 10939,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "547:2:26"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 10942,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 10941,
+                  "name": "",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 10946,
+                  "src": "571:7:26",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 10940,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "571:7:26",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "570:9:26"
+            },
+            "scope": 10959,
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "public"
+          },
+          {
+            "id": 10958,
+            "nodeType": "FunctionDefinition",
+            "src": "612:126:26",
+            "nodes": [],
+            "body": {
+              "id": 10957,
+              "nodeType": "Block",
+              "src": "677:61:26",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "argumentTypes": null,
+                    "id": 10955,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftHandSide": {
+                      "argumentTypes": null,
+                      "id": 10951,
+                      "name": "totalPooledEther",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 10918,
+                      "src": "687:16:26",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "nodeType": "Assignment",
+                    "operator": "=",
+                    "rightHandSide": {
+                      "argumentTypes": null,
+                      "commonType": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      },
+                      "id": 10954,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": false,
+                      "lValueRequested": false,
+                      "leftExpression": {
+                        "argumentTypes": null,
+                        "id": 10952,
+                        "name": "_val",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 10948,
+                        "src": "706:4:26",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        }
+                      },
+                      "nodeType": "BinaryOperation",
+                      "operator": "*",
+                      "rightExpression": {
+                        "argumentTypes": null,
+                        "hexValue": "316539",
+                        "id": 10953,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": true,
+                        "kind": "number",
+                        "lValueRequested": false,
+                        "nodeType": "Literal",
+                        "src": "713:3:26",
+                        "subdenomination": null,
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_rational_1000000000_by_1",
+                          "typeString": "int_const 1000000000"
+                        },
+                        "value": "1e9"
+                      },
+                      "src": "706:10:26",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "src": "687:29:26",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "id": 10956,
+                  "nodeType": "ExpressionStatement",
+                  "src": "687:29:26"
+                }
+              ]
+            },
+            "documentation": null,
+            "implemented": true,
+            "isConstructor": false,
+            "isDeclaredConst": false,
+            "modifiers": [],
+            "name": "pretendTotalPooledEtherGweiForTest",
+            "parameters": {
+              "id": 10949,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 10948,
+                  "name": "_val",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 10958,
+                  "src": "656:12:26",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 10947,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "656:7:26",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "655:14:26"
+            },
+            "payable": false,
+            "returnParameters": {
+              "id": 10950,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "677:0:26"
+            },
+            "scope": 10959,
+            "stateMutability": "nonpayable",
+            "superFunction": null,
+            "visibility": "public"
+          }
+        ],
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "contract",
+        "documentation": "@dev Only for testing purposes! Lido version with some functions exposed.",
+        "fullyImplemented": true,
+        "linearizedBaseContracts": [
+          10959
+        ],
+        "name": "LidoMockForOracle",
+        "scope": 10960
+      }
+    ]
+  },
+  "id": 26
+}
