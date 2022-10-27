@@ -26,7 +26,7 @@ contract('WithdrawalQueue', ([deployer, owner, requestor, stranger]) => {
     it('Owner can enqueue a request', async () => {
       await withdrawal.enqueue(requestor, 1, 1, { from: owner })
 
-      assertBn(await withdrawal.requestor(requestId), requestor)
+      assertBn(await withdrawal.queue(requestId)[0], requestor)
       assertBn(await withdrawal.queueLength(), +requestId + 1)
       assert(requestId >= (await withdrawal.finalizedQueueLength()))
       const request = await withdrawal.queue(requestId)
@@ -37,7 +37,6 @@ contract('WithdrawalQueue', ([deployer, owner, requestor, stranger]) => {
 
     it('Only owner can enqueue a request', async () => {
       await assertRevert(withdrawal.enqueue(requestor, 1, 1, { from: stranger }), 'NOT_OWNER')
-      await assertRevert(withdrawal.requestor(requestId), 'REQUEST_NOT_FOUND')
 
       assertBn(await withdrawal.queueLength(), requestId)
     })

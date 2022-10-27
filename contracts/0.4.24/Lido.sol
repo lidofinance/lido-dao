@@ -581,14 +581,16 @@ contract Lido is ILido, StETH, AragonApp {
 
             _burnShares(withdrawalAddress, sharesToBurn);
 
-            uint256 additionalFundsForWithdrawal = etherToLock.sub(_wcBufferedEther);
-            withdrawal.finalize.value(additionalFundsForWithdrawal)(
+            uint256 additionalFunds = etherToLock > _wcBufferedEther ? etherToLock.sub(_wcBufferedEther) : 0;
+
+            withdrawal.finalize.value(additionalFunds)(
                 _requestIdToFinalizeUpTo,
                 etherToLock, 
                 totalPooledEther,
                 totalShares
             );
         }
+        // TODO: restake _wcBuffer remainings
 
         // Don’t mint/distribute any protocol fee on the non-profitable Lido oracle report
         // (when beacon chain balance delta is zero or negative).

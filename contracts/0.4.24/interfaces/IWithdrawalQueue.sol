@@ -9,7 +9,7 @@ pragma solidity 0.4.24;
  */
 interface IWithdrawalQueue {
     function enqueue(
-        address _requestor, 
+        address _recipient, 
         uint256 _etherAmount, 
         uint256 _sharesAmount
     ) external returns (uint256 requestId);

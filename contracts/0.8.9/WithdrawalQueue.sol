@@ -5,19 +5,19 @@ pragma solidity 0.8.9;
 
 //TODO(security): Replace to in-repo copy of the lib
 import "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
+import "@openzeppelin/contracts-v4.4/utils/Address.sol";
 
 
 /**
-  * @title A dedicated contract for handling stETH withdrawal request queue
-  * @notice it responsible for:
-  * - taking withdrawal requests and placing them in the queue
-  * - finalizing requesuts in queue (making them claimable)
-  * - processing claims for finalized requests
-  * @author folkyatina
-  */
+ * @title A dedicated contract for handling stETH withdrawal request queue
+ * @author folkyatina
+ */
 contract WithdrawalQueue {
     using SafeCast for uint256;
+    using Address for address payable;
+
     /**
+     * @notice minimal possible sum that is possible to withdraw
      * We don't want to deal with small amounts because there is a gas spent on oracle 
      * for each request. 
      * But exact threshhold should be defined later when it will be clear how much will 
@@ -37,40 +37,61 @@ contract WithdrawalQueue {
      */
     uint256 public lockedEtherAmount = 0;
 
-    /**
-     * @notice queue for withdrawal requests
-     */ 
+    /// @notice queue for withdrawal requests
     Request[] public queue;
     
+    /// @notice length of the finalized part of the queue
     uint256 public finalizedQueueLength = 0;
 
+    /// @notice structure representing a request for withdrawal.
     struct Request {
-        address requestor;
+        /// @notice payable address of the recipient withdrawal will be transfered to
+        address payable recipient;
+        /// @notice block.number when the request created
         uint96 requestBlockNumber;
+        /// @notice sum of the all requested ether including this request
         uint256 cumulativeEther;
+        /// @notice sum of the all shares locked for withdrawal including this request
         uint256 cumulativeShares;
+        /// @notice flag if the request was already claimed
         bool claimed;
     }
 
-    Price[] public priceHistory;
+    /// @notice finalization price history registry
+    Price[] public finalizationPrices;
 
+    /**
+     * @notice structure representing share price for some range in request queue
+     * @dev price is stored as a pair of value that should be devided later
+     */ 
     struct Price {
         uint128 totalPooledEther;
         uint128 totalShares;
+        /// @notice last index in queue this price is actual for
         uint256 index;
     }
 
+    /**
+     * @param _owner address that will be able to invoke `enqueue` and `finalize` methods.
+     */
     constructor(address _owner) {
         OWNER = _owner;
     }
 
+    function queueLength() external view returns (uint256) {
+        return queue.length;
+    }
+
     /**
-     * @notice reserve a place in queue for withdrawal request and associate it with `_recipient` address
+     * @notice put a withdrawal request in a queue and associate it with `_recipient` address
      * @dev Assumes that `_ethAmount` of stETH is locked before invoking this function 
-     * @return requestId unique id to withdraw funds once it is available
+     * @param _recipient payable address this request will be associated with
+     * @param _etherAmount maximum amount of ether (equal to amount of locked stETH) that will be claimed upon withdrawal
+     * @param _sharesAmount amount of stETH shares that will be burned upon withdrawal
+     * @return requestId unique id to claim funds once it is available
      */
     function enqueue(
-        address _requestor, 
+        address payable _recipient, 
         uint256 _etherAmount, 
         uint256 _sharesAmount
     ) external onlyOwner returns (uint256 requestId) {
@@ -86,7 +107,7 @@ contract WithdrawalQueue {
         }
         
         queue.push(Request(
-            _requestor, 
+            _recipient, 
             block.number.toUint96(), 
             cumulativeEther,
             cumulativeShares,
@@ -95,10 +116,11 @@ contract WithdrawalQueue {
     }
 
     /**
-     * @notice Mark next requests in queue as finalized and lock the respective amount of ether for withdrawal.
-     * @dev expected that `lastIdToFinalize` is chosen by following criteria:
-     *  - it was created before the oracle report block
-     *  - we have enough money on wc balance to fullfill it
+     * @notice Finalize the batch of requests started at `finalizedQueueLength` and ended at `_lastIdToFinalize` using the given price
+     * @param _lastIdToFinalize request index in the queue that will be last finalized request in a batch
+     * @param _etherToLock ether that should be locked for these requests
+     * @param _totalPooledEther ether price component that will be used for this request batch finalization
+     * @param _totalShares shares price component that will be used for this request batch finalization
      */
     function finalize(
         uint256 _lastIdToFinalize, 
@@ -119,50 +141,91 @@ contract WithdrawalQueue {
     }
 
     /**
-     * @notice Evict a `_requestId` request from the queue and transfer reserved ether to `_to` address. 
+     * @notice Mark `_requestId` request as claimed and transfer reserved ether to recipient
+     * @param _requestId request id to claim
+     * @param _priceIndexHint price index found offchain that should be used for claiming 
      */
     function claim(uint256 _requestId, uint256 _priceIndexHint) external returns (address recipient) {
         // request must be finalized
         require(finalizedQueueLength > _requestId, "REQUEST_NOT_FINALIZED");
+        Request storage request = queue[_requestId];
+        require(!request.claimed, "REQUEST_ALREADY_CLAIMED");
+        request.claimed = true;
 
-        // TODO: find a right price in history, mark request as claimed and transfer ether
-    }
+        Price memory price;
 
-    function requestor(uint256 _requestId) public view returns (address) {
-        require(_requestId < queue.length, "REQUEST_NOT_FOUND");
-        return queue[_requestId].requestor;
+        if (_isPriceHintValid(_requestId, _priceIndexHint)) {
+            price = finalizationPrices[_priceIndexHint];
+        } else {
+            // unbounded loop branch. Can fail
+            price = finalizationPrices[findPriceHint(_requestId)];
+        }
+
+        (uint256 etherToTransfer,) = _calculateDiscountedBatch(_requestId, _requestId, price.totalPooledEther, price.totalShares);
+        lockedEtherAmount -= etherToTransfer;
+
+        request.recipient.sendValue(etherToTransfer);
     }
 
     function calculateFinalizationParams(
         uint256 _lastIdToFinalize,
         uint256 _totalPooledEther,
         uint256 _totalShares
-    ) external view returns (uint256 sharesToBurn, uint256 etherToLock) {
-        Request storage lastFinalized = queue[finalizedQueueLength - 1];
-        Request storage toFinalize = queue[_lastIdToFinalize];
-        
-        uint256 batchEther = toFinalize.cumulativeEther - lastFinalized.cumulativeEther;
+    ) external view returns (uint256, uint256) {
+        return _calculateDiscountedBatch(finalizedQueueLength, _lastIdToFinalize, _totalPooledEther, _totalShares);
+    }
 
-        sharesToBurn = toFinalize.cumulativeShares - lastFinalized.cumulativeShares;
-        etherToLock = _totalPooledEther * sharesToBurn / _totalShares;
+    function findPriceHint(uint256 _requestId) public view returns (uint256 hint) {
+        require(_requestId < finalizedQueueLength, "PRICE_NOT_FOUND");
 
-        if (batchEther < etherToLock) {
-            etherToLock = batchEther;
+        for (uint256 i = finalizationPrices.length - 1; i >= 0; i--) {
+            if (_isPriceHintValid(_requestId, i)){
+                return i;
+            }
         }
+        assert(false);
+    } 
+
+    function _calculateDiscountedBatch(
+        uint256 firstId, 
+        uint256 lastId, 
+        uint256 _totalPooledEther,
+        uint256 _totalShares
+    ) internal view returns (uint256 shares, uint256 eth) {
+        eth = queue[lastId].cumulativeEther;
+        shares = queue[lastId].cumulativeShares;
+
+        if (firstId > 0) {
+            eth -= queue[firstId - 1].cumulativeEther;
+            shares -= queue[firstId - 1].cumulativeShares;
+        }
+
+        eth = _min(eth, shares * _totalPooledEther / _totalShares);
+    }
+
+    function _isPriceHintValid(uint256 _requestId, uint256 hint) internal view returns (bool isInRange) {
+        uint256 hintLastId = finalizationPrices[hint].index;
+
+        isInRange = _requestId <= hintLastId;
+        if (hint > 0) {
+            uint256 previousId = finalizationPrices[hint - 1].index;
+           
+            isInRange = isInRange && previousId < _requestId;
+        } 
     }
 
     function _updatePriceHistory(uint256 _totalPooledEther, uint256 _totalShares, uint256 index) internal {
-        Price storage lastPrice = priceHistory[priceHistory.length - 1];
+        Price storage lastPrice = finalizationPrices[finalizationPrices.length - 1];
 
         if (_totalPooledEther/_totalShares == lastPrice.totalPooledEther/lastPrice.totalShares) {
             lastPrice.index = index;
         } else {
-            priceHistory.push(Price(_totalPooledEther.toUint128(), _totalShares.toUint128(), index));
+            finalizationPrices.push(Price(_totalPooledEther.toUint128(), _totalShares.toUint128(), index));
         }
     }
 
-    function _exists(uint256 _requestId) internal view returns (bool) {
-        return queue[_requestId].requestor != address(0);
+    function _min(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a < b ? a : b;  
     }
 
     modifier onlyOwner() {
