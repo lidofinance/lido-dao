@@ -168,7 +168,7 @@ contract WithdrawalQueue {
             _requestId, 
             price.totalPooledEther, 
             price.totalShares
-        );
+            );
         lockedEtherAmount -= etherToTransfer;
 
         request.recipient.sendValue(etherToTransfer);

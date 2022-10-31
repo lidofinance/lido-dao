@@ -10,14 +10,14 @@ const { getEthBalance, formatStEth: formamtStEth, formatBN } = require('../helpe
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
-const Lido = artifacts.require('LidoMock.sol')
+const LidoMock = artifacts.require('LidoMock.sol')
 const ELRewardsVault = artifacts.require('LidoExecutionLayerRewardsVault.sol')
 const OracleMock = artifacts.require('OracleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
 const ERC20Mock = artifacts.require('ERC20Mock.sol')
-const ERC721Mock = artifacts.require('ERC721Mock.sol')
 const VaultMock = artifacts.require('AragonVaultMock.sol')
 const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
+const WithdrawalQueue = artifacts.require('WithdrawalQueue.sol')
 
 const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
 const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
@@ -61,7 +61,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
 
   before('deploy base app', async () => {
     // Deploy the app's base contract.
-    appBase = await Lido.new()
+    appBase = await LidoMock.new()
     oracle = await OracleMock.new()
     yetAnotherOracle = await OracleMock.new()
     depositContract = await DepositContractMock.new()
@@ -74,7 +74,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
 
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
     let proxyAddress = await newApp(dao, 'lido', appBase.address, appManager)
-    app = await Lido.at(proxyAddress)
+    app = await LidoMock.at(proxyAddress)
 
     // NodeOperatorsRegistry
     proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)
@@ -210,7 +210,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+    const withdrawal = await WithdrawalQueue.new(app.address)
+    await app.setWithdrawalCredentials(hexConcat('0x01', pad(withdrawal.address, 31)), { from: voting })
+
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
     await operators.addSigningKeys(
       0,
@@ -847,7 +849,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+    const withdrawal = await WithdrawalQueue.new(app.address)
+    await app.setWithdrawalCredentials(hexConcat('0x01', pad(withdrawal.address, 31)), { from: voting })
+
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
     await operators.addSigningKeys(
       0,
@@ -861,12 +865,12 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await app.methods['depositBufferedEther()']({ from: depositor })
     await checkStat({ depositedValidators: 1, beaconValidators: 0, beaconBalance: ETH(0) })
 
-    await assertRevert(app.handleOracleReport(1, ETH(30), 0, 0, { from: appManager }), 'APP_AUTH_FAILED')
+    await assertRevert(app.handleOracleReport(1, ETH(30), 0, 0, 0, { from: appManager }), 'APP_AUTH_FAILED')
 
     await oracle.reportBeacon(100, 1, ETH(30))
     await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(30) })
 
-    await assertRevert(app.handleOracleReport(1, ETH(29), 0, 0, { from: nobody }), 'APP_AUTH_FAILED')
+    await assertRevert(app.handleOracleReport(1, ETH(29), 0, 0, 0, { from: nobody }), 'APP_AUTH_FAILED')
 
     await oracle.reportBeacon(50, 1, ETH(100)) // stale data
     await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(100) })
@@ -882,7 +886,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+    const withdrawal = await WithdrawalQueue.new(app.address)
+    await app.setWithdrawalCredentials(hexConcat('0x01', pad(withdrawal.address, 31)), { from: voting })
+
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
     await operators.addSigningKeys(
       0,
@@ -993,7 +999,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+    const withdrawal = await WithdrawalQueue.new(app.address)
+    await app.setWithdrawalCredentials(hexConcat('0x01', pad(withdrawal.address, 31)), { from: voting })
+
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
     await operators.addSigningKeys(
       0,
@@ -1022,7 +1030,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+    const withdrawal = await WithdrawalQueue.new(app.address)
+    await app.setWithdrawalCredentials(hexConcat('0x01', pad(withdrawal.address, 31)), { from: voting })
+
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
     await operators.addSigningKeys(
       0,
@@ -1065,7 +1075,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+    const withdrawal = await WithdrawalQueue.new(app.address)
+    await app.setWithdrawalCredentials(hexConcat('0x01', pad(withdrawal.address, 31)), { from: voting })
+
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
 
     await app.setFee(5000, { from: voting })

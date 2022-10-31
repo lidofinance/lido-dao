@@ -635,7 +635,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
         // report to the Lido and collect stats
         ILido lido = getLido();
         uint256 prevTotalPooledEther = lido.totalSupply();
-        lido.handleOracleReport(_beaconValidators, _beaconBalanceEth1, 0, 0); // here should be withdrawal params
+        lido.handleOracleReport(_beaconValidators, _beaconBalanceEth1, 0, 0, 0); // here should be withdrawal params
         uint256 postTotalPooledEther = lido.totalSupply();
 
         PRE_COMPLETED_TOTAL_POOLED_ETHER_POSITION.setStorageUint256(prevTotalPooledEther);

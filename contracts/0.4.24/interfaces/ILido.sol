@@ -221,7 +221,8 @@ interface ILido {
         uint256 _beaconValidators, 
         uint256 _beaconBalance, 
         uint256 _exitedValidators, 
-        uint256 _wcBufferedEther
+        uint256 _wcBufferedEther,
+        uint256 _newFinalizedLength
     ) external;
 
 
@@ -242,7 +243,7 @@ interface ILido {
     // Withdrawal functions
     function requestWithdrawal(uint256 _amountOfStETH) external returns (uint256 requestId);
 
-    function claimWithdrawal(uint256 _requestId) external;
+    function claimWithdrawal(uint256 _requestId, uint256 _priceIndexHint) external;
 
     function withdrawalRequestStatus(uint _requestId) external view returns (
         bool finalized,

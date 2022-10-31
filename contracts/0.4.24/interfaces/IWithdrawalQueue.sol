@@ -29,6 +29,6 @@ interface IWithdrawalQueue {
         uint256 _totalShares
     ) external payable;
 
-    function queue(uint256 _requestId) external view returns (address, uint, uint);
-    function finalizedQueueLength() external view returns (uint);
+    function queue(uint256 _requestId) external view returns (address, uint256, uint256);
+    function finalizedQueueLength() external view returns (uint256);
 }

@@ -518,7 +518,7 @@ contract Lido is ILido, StETH, AragonApp {
         // EL values
         uint256 _wcBufferedEther,
         // decision
-        uint256 _requestIdToFinalizeUpTo
+        uint256 _newFinalizedLength
     ) external whenNotStopped {
         require(msg.sender == getOracle(), "APP_AUTH_FAILED");
 
@@ -565,36 +565,9 @@ contract Lido is ILido, StETH, AragonApp {
             }
         }
 
-        // simple finalization flow
-        address withdrawalAddress = address(uint160(getWithdrawalCredentials()));
-        IWithdrawalQueue withdrawal = IWithdrawalQueue(withdrawalAddress);
-
-        uint256 withdrawalsToRestake = _wcBufferedEther;
-
-        if (_requestIdToFinalizeUpTo >= withdrawal.finalizedQueueLength()) {
-            uint256 totalPooledEther = getTotalPooledEther();
-            uint256 totalShares = getTotalShares();
-
-            (uint256 etherToLock, uint256 sharesToBurn) = withdrawal.calculateFinalizationParams(
-                _requestIdToFinalizeUpTo,
-                totalPooledEther,
-                totalShares 
-            );
-
-            _burnShares(withdrawalAddress, sharesToBurn);
-
-            uint256 additionalFunds = etherToLock > _wcBufferedEther ? etherToLock.sub(_wcBufferedEther) : 0;
-            withdrawalsToRestake -= etherToLock;
-
-            withdrawal.finalize.value(additionalFunds)(
-                _requestIdToFinalizeUpTo,
-                etherToLock, 
-                totalPooledEther,
-                totalShares
-            );
-        }
+        uint256 toRestake = _wcBufferedEther - _processWithdrawals(_newFinalizedLength, _wcBufferedEther);
         
-        // withdrawal.restake(withdrawalsToRestake);
+        // withdrawal.restake(toRestake);
 
         // Don’t mint/distribute any protocol fee on the non-profitable Lido oracle report
         // (when beacon chain balance delta is zero or negative).
@@ -741,6 +714,40 @@ contract Lido is ILido, StETH, AragonApp {
     */
     function getELRewardsVault() public view returns (address) {
         return EL_REWARDS_VAULT_POSITION.getStorageAddress();
+    }
+
+    function _processWithdrawals(
+        uint256 _newFinalizedLength, 
+        uint256 _wcBufferedEther
+    ) internal returns (uint256 lockedEther) {
+        address withdrawalAddress = address(uint160(getWithdrawalCredentials()));
+        IWithdrawalQueue withdrawal = IWithdrawalQueue(withdrawalAddress);
+
+        lockedEther = 0;
+
+        if (_newFinalizedLength > withdrawal.finalizedQueueLength()) {
+            uint256 totalPooledEther = getTotalPooledEther();
+            uint256 totalShares = getTotalShares();
+
+            (uint256 etherToLock, uint256 sharesToBurn) = withdrawal.calculateFinalizationParams(
+                _newFinalizedLength - 1,
+                totalPooledEther,
+                totalShares 
+            );
+
+            _burnShares(withdrawalAddress, sharesToBurn);
+
+            uint256 additionalFunds = etherToLock > _wcBufferedEther ? etherToLock.sub(_wcBufferedEther) : 0;
+
+            withdrawal.finalize.value(additionalFunds)(
+                _newFinalizedLength - 1,
+                etherToLock, 
+                totalPooledEther,
+                totalShares
+            );
+
+            lockedEther = etherToLock;
+        }
     }
 
     /**
