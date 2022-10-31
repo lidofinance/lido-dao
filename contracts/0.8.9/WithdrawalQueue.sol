@@ -148,8 +148,10 @@ contract WithdrawalQueue {
     function claim(uint256 _requestId, uint256 _priceIndexHint) external returns (address recipient) {
         // request must be finalized
         require(finalizedQueueLength > _requestId, "REQUEST_NOT_FINALIZED");
+
         Request storage request = queue[_requestId];
         require(!request.claimed, "REQUEST_ALREADY_CLAIMED");
+
         request.claimed = true;
 
         Price memory price;
@@ -161,17 +163,31 @@ contract WithdrawalQueue {
             price = finalizationPrices[findPriceHint(_requestId)];
         }
 
-        (uint256 etherToTransfer,) = _calculateDiscountedBatch(_requestId, _requestId, price.totalPooledEther, price.totalShares);
+        (uint256 etherToTransfer,) = _calculateDiscountedBatch(
+            _requestId, 
+            _requestId, 
+            price.totalPooledEther, 
+            price.totalShares
+        );
         lockedEtherAmount -= etherToTransfer;
 
         request.recipient.sendValue(etherToTransfer);
     }
 
+    /**
+     * @notice calculates the params to fullfill the next batch of requests in queue
+     * @param _lastIdToFinalize last id in the queue to finalize upon 
+     * @param _totalPooledEther share price compoinent to finalize requests
+     * @param _totalShares share price compoinent to finalize requests
+     * 
+     * @return etherToLock amount of eth required to finalize the batch
+     * @return sharesToBurn amount of shares that should be burned on finalization
+     */
     function calculateFinalizationParams(
         uint256 _lastIdToFinalize,
         uint256 _totalPooledEther,
         uint256 _totalShares
-    ) external view returns (uint256, uint256) {
+    ) external view returns (uint256 etherToLock, uint256 sharesToBurn) {
         return _calculateDiscountedBatch(finalizedQueueLength, _lastIdToFinalize, _totalPooledEther, _totalShares);
     }
 
@@ -191,7 +207,7 @@ contract WithdrawalQueue {
         uint256 lastId, 
         uint256 _totalPooledEther,
         uint256 _totalShares
-    ) internal view returns (uint256 shares, uint256 eth) {
+    ) internal view returns (uint256 eth, uint256 shares) {
         eth = queue[lastId].cumulativeEther;
         shares = queue[lastId].cumulativeShares;
 
@@ -215,12 +231,16 @@ contract WithdrawalQueue {
     }
 
     function _updatePriceHistory(uint256 _totalPooledEther, uint256 _totalShares, uint256 index) internal {
-        Price storage lastPrice = finalizationPrices[finalizationPrices.length - 1];
-
-        if (_totalPooledEther/_totalShares == lastPrice.totalPooledEther/lastPrice.totalShares) {
-            lastPrice.index = index;
-        } else {
+        if (finalizationPrices.length == 0) {
             finalizationPrices.push(Price(_totalPooledEther.toUint128(), _totalShares.toUint128(), index));
+        } else {
+            Price storage lastPrice = finalizationPrices[finalizationPrices.length - 1];
+
+            if (_totalPooledEther/_totalShares == lastPrice.totalPooledEther/lastPrice.totalShares) {
+                lastPrice.index = index;
+            } else {
+                finalizationPrices.push(Price(_totalPooledEther.toUint128(), _totalShares.toUint128(), index));
+            }
         }
     }
 

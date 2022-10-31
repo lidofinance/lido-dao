@@ -569,11 +569,13 @@ contract Lido is ILido, StETH, AragonApp {
         address withdrawalAddress = address(uint160(getWithdrawalCredentials()));
         IWithdrawalQueue withdrawal = IWithdrawalQueue(withdrawalAddress);
 
+        uint256 withdrawalsToRestake = _wcBufferedEther;
+
         if (_requestIdToFinalizeUpTo >= withdrawal.finalizedQueueLength()) {
             uint256 totalPooledEther = getTotalPooledEther();
             uint256 totalShares = getTotalShares();
 
-            (uint256 sharesToBurn, uint256 etherToLock) = withdrawal.calculateFinalizationParams(
+            (uint256 etherToLock, uint256 sharesToBurn) = withdrawal.calculateFinalizationParams(
                 _requestIdToFinalizeUpTo,
                 totalPooledEther,
                 totalShares 
@@ -582,6 +584,7 @@ contract Lido is ILido, StETH, AragonApp {
             _burnShares(withdrawalAddress, sharesToBurn);
 
             uint256 additionalFunds = etherToLock > _wcBufferedEther ? etherToLock.sub(_wcBufferedEther) : 0;
+            withdrawalsToRestake -= etherToLock;
 
             withdrawal.finalize.value(additionalFunds)(
                 _requestIdToFinalizeUpTo,
@@ -590,7 +593,8 @@ contract Lido is ILido, StETH, AragonApp {
                 totalShares
             );
         }
-        // TODO: restake _wcBuffer remainings
+        
+        // withdrawal.restake(withdrawalsToRestake);
 
         // Don’t mint/distribute any protocol fee on the non-profitable Lido oracle report
         // (when beacon chain balance delta is zero or negative).

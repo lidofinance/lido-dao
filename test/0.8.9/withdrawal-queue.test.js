@@ -5,7 +5,9 @@ const { assert } = require('chai')
 
 const WithdrawalQueue = artifacts.require('WithdrawalQueue.sol')
 
-contract('WithdrawalQueue', ([deployer, owner, requestor, stranger]) => {
+const ETH = (value) => web3.utils.toWei(value + '', 'ether')
+
+contract('WithdrawalQueue', ([deployer, owner, recipient, stranger]) => {
   console.log('Addresses:')
   console.log(` Deployer: ${deployer}`)
   console.log(` Owner: ${owner}`)
@@ -24,19 +26,19 @@ contract('WithdrawalQueue', ([deployer, owner, requestor, stranger]) => {
     })
 
     it('Owner can enqueue a request', async () => {
-      await withdrawal.enqueue(requestor, 1, 1, { from: owner })
+      await withdrawal.enqueue(recipient, ETH(1), 1, { from: owner })
 
-      assertBn(await withdrawal.queue(requestId)[0], requestor)
       assertBn(await withdrawal.queueLength(), +requestId + 1)
       assert(requestId >= (await withdrawal.finalizedQueueLength()))
       const request = await withdrawal.queue(requestId)
-      assert.equal(request[0], requestor)
-      assertBn(request[2], bn(1))
+      assert.equal(request[0], recipient)
+      assertBn(request[2], bn(ETH(1)))
       assertBn(request[3], bn(1))
+      assert.equal(request[4], false)
     })
 
     it('Only owner can enqueue a request', async () => {
-      await assertRevert(withdrawal.enqueue(requestor, 1, 1, { from: stranger }), 'NOT_OWNER')
+      await assertRevert(withdrawal.enqueue(recipient, 1, 1, { from: stranger }), 'NOT_OWNER')
 
       assertBn(await withdrawal.queueLength(), requestId)
     })
@@ -44,83 +46,94 @@ contract('WithdrawalQueue', ([deployer, owner, requestor, stranger]) => {
 
   context('Finalization', async () => {
     let requestId
-    let amountOfStETH
-    const amountOfShares = 1
+    const amount = ETH(100)
+    const shares = 1
+
     beforeEach('Enqueue a request', async () => {
-      amountOfStETH = 100
       requestId = await withdrawal.queueLength()
-      await withdrawal.enqueue(requestor, amountOfStETH, amountOfShares, { from: owner })
+      await withdrawal.enqueue(recipient, amount, shares, { from: owner })
+    })
+
+    it('Calculate one request batch', async () => {
+      const batch = await withdrawal.calculateFinalizationParams(0, ETH(100), 1)
+
+      assertBn(bn(batch[0]), bn(1))
+      assertBn(bn(batch[1]), bn(ETH(100)))
     })
 
     it('Only owner can finalize a request', async () => {
-      await withdrawal.finalize(0, amountOfStETH, amountOfShares, { from: owner, value: amountOfStETH })
-      await assertRevert(withdrawal.finalize(0, amountOfStETH, amountOfShares, { from: stranger, value: amountOfStETH }), 'NOT_OWNER')
+      await withdrawal.finalize(0, amount, amount, shares, { from: owner, value: amount })
+      await assertRevert(withdrawal.finalize(0, amount, amount, shares, { from: stranger, value: amount }), 'NOT_OWNER')
 
-      assertBn(await withdrawal.lockedEtherAmount(), bn(amountOfStETH))
+      assertBn(await withdrawal.lockedEtherAmount(), bn(amount))
+      assertBn(await web3.eth.getBalance(withdrawal.address), bn(amount))
     })
 
     it('One cannot finalize requests with no ether', async () => {
+      assertBn(await withdrawal.lockedEtherAmount(), bn(0))
+      assertBn(await web3.eth.getBalance(withdrawal.address), bn(0))
+
       await assertRevert(
-        withdrawal.finalize(0, amountOfStETH, amountOfShares, { from: owner, value: amountOfStETH - 1 }),
+        withdrawal.finalize(0, amount, amount, shares, { from: owner, value: bn(ETH(100)).sub(bn(1)) }),
         'NOT_ENOUGH_ETHER'
       )
 
       assertBn(await withdrawal.lockedEtherAmount(), bn(0))
+      assertBn(await web3.eth.getBalance(withdrawal.address), bn(0))
     })
 
     it('One can finalize requests with discount', async () => {
-      shares = 2
+      await withdrawal.finalize(0, bn(amount / 2), amount, 2, { from: owner, value: amount / 2 })
 
-      await withdrawal.finalize(0, amountOfStETH, shares, { from: owner, value: amountOfStETH / shares })
-
-      assertBn(await withdrawal.lockedEtherAmount(), bn(amountOfStETH / shares))
+      assertBn(await withdrawal.lockedEtherAmount(), bn(amount / 2))
     })
 
     it('One can finalize part of the queue', async () => {
-      await withdrawal.enqueue(requestor, amountOfStETH, amountOfShares, { from: owner })
+      await withdrawal.enqueue(recipient, amount, shares, { from: owner })
 
-      await withdrawal.finalize(0, amountOfStETH, amountOfShares, { from: owner, value: amountOfStETH })
+      await withdrawal.finalize(0, amount, amount, shares, { from: owner, value: amount })
 
       assertBn(await withdrawal.queueLength(), +requestId + 2)
       assertBn(await withdrawal.finalizedQueueLength(), +requestId + 1)
-      assertBn(await withdrawal.lockedEtherAmount(), bn(amountOfStETH))
+      assertBn(await withdrawal.lockedEtherAmount(), bn(amount))
     })
   })
 
   context('Claim', async () => {
     let requestId
+    const amount = ETH(100)
     beforeEach('Enqueue a request', async () => {
       requestId = await withdrawal.queueLength()
-      await withdrawal.enqueue(requestor, 100, 1, { from: owner })
+      await withdrawal.enqueue(recipient, amount, 1, { from: owner })
     })
 
     it('One cant claim not finalized request', async () => {
-      await assertRevert(withdrawal.claim(requestId, { from: owner }), 'REQUEST_NOT_FINALIZED')
+      await assertRevert(withdrawal.claim(requestId, 0, { from: owner }), 'REQUEST_NOT_FINALIZED')
     })
 
     it('Anyone can claim a finalized token', async () => {
-      const balanceBefore = bn(await web3.eth.getBalance(requestor))
-      await withdrawal.finalize(0, 100, 1, { from: owner, value: 100 })
+      const balanceBefore = bn(await web3.eth.getBalance(recipient))
+      await withdrawal.finalize(0, amount, amount, 1, { from: owner, value: amount })
 
-      await withdrawal.claim(requestId, { from: stranger })
+      await withdrawal.claim(requestId, 0, { from: stranger })
 
-      assertBn(await web3.eth.getBalance(requestor), balanceBefore.add(bn(100)))
+      assertBn(await web3.eth.getBalance(recipient), balanceBefore.add(bn(amount)))
     })
 
     it('Cant withdraw token two times', async () => {
-      await withdrawal.finalize(0, 100, 1, { from: owner, value: 100 })
-      await withdrawal.claim(requestId)
+      await withdrawal.finalize(0, amount, amount, 1, { from: owner, value: amount })
+      await withdrawal.claim(requestId, 0)
 
-      await assertRevert(withdrawal.claim(requestId, { from: stranger }), 'REQUEST_NOT_FOUND')
+      await assertRevert(withdrawal.claim(requestId, 0, { from: stranger }), 'REQUEST_ALREADY_CLAIMED')
     })
 
     it('Discounted withdrawals produce less eth', async () => {
-      const balanceBefore = bn(await web3.eth.getBalance(requestor))
-      await withdrawal.finalize(0, 50, 1, { from: owner, value: 50 })
+      const balanceBefore = bn(await web3.eth.getBalance(recipient))
+      await withdrawal.finalize(0, ETH(50), ETH(100), 2, { from: owner, value: ETH(50) })
 
-      await withdrawal.claim(requestId, { from: stranger })
+      await withdrawal.claim(requestId, 0, { from: stranger })
 
-      assertBn(await web3.eth.getBalance(requestor), balanceBefore.add(bn(50)))
+      assertBn(await web3.eth.getBalance(recipient), balanceBefore.add(bn(ETH(50))))
     })
   })
 })
