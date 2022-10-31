@@ -725,7 +725,7 @@ contract Lido is ILido, StETH, AragonApp {
 
         lockedEther = 0;
 
-        if (_newFinalizedLength > withdrawal.finalizedQueueLength()) {
+        if (withdrawalAddress != address(0) && _newFinalizedLength > withdrawal.finalizedQueueLength()) {
             uint256 totalPooledEther = getTotalPooledEther();
             uint256 totalShares = getTotalShares();
 

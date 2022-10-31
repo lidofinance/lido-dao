@@ -7,7 +7,7 @@ const OracleMock = artifacts.require('OracleMock.sol')
 
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 
-contract('Lido handleOracleReport', ([appManager, voting, user1, user2, user3, nobody]) => {
+contract('Lido handleOracleReport', ([appManager, user1, user2]) => {
   let appBase, app, oracle
 
   before('deploy base app', async () => {
@@ -16,12 +16,10 @@ contract('Lido handleOracleReport', ([appManager, voting, user1, user2, user3, n
   })
 
   beforeEach('deploy dao and app', async () => {
-    const { dao, acl } = await newDao(appManager)
+    const { dao } = await newDao(appManager)
 
     proxyAddress = await newApp(dao, 'lido', appBase.address, appManager)
     app = await Lido.at(proxyAddress)
-
-    // await acl.createPermission(voting, app.address, await app.PAUSE_ROLE(), appManager, { from: appManager })
 
     await app.initialize(oracle.address)
     await oracle.setPool(app.address)
