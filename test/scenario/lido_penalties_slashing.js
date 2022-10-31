@@ -3,12 +3,13 @@ const { BN } = require('bn.js')
 const { assertBn, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
 const { getEventArgument } = require('@aragon/contract-helpers-test')
 
-const { pad, ETH, tokens } = require('../helpers/utils')
+const { pad, ETH, tokens, hexConcat } = require('../helpers/utils')
 const { deployDaoAndPool } = require('./helpers/deploy')
 const { signDepositData } = require('../0.8.9/helpers/signatures')
 const { waitBlocks } = require('../helpers/blockchain')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
+const WithdrawalQueue = artifacts.require('WithdrawalQueue.sol')
 
 contract('Lido: penalties, slashing, operator stops', (addresses) => {
   const [
@@ -30,8 +31,9 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
   let oracleMock, depositContractMock
   let treasuryAddr, insuranceAddr, guardians
   let depositSecurityModule, depositRoot
+  let withdrawalCredentials
 
-  it('DAO, node operators registry, token, pool and deposit security module are deployed and initialized', async () => {
+  before('DAO, node operators registry, token, pool and deposit security module are deployed and initialized', async () => {
     const deployed = await deployDaoAndPool(appManager, voting, depositor)
 
     // contracts/StETH.sol
@@ -55,6 +57,9 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     guardians = deployed.guardians
 
     depositRoot = await depositContractMock.get_deposit_root()
+
+    const withdrawal = await WithdrawalQueue.new(pool.address)
+    withdrawalCredentials = hexConcat('0x01', pad(withdrawal.address, 31)).toLowerCase()
   })
 
   // Fee and its distribution are in basis points, 10000 corresponding to 100%
@@ -85,8 +90,6 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     assertBn(distribution.insuranceFeeBasisPoints, insuranceFeePoints, 'insurance fee')
     assertBn(distribution.operatorsFeeBasisPoints, nodeOperatorsFeePoints, 'node operators fee')
   })
-
-  const withdrawalCredentials = pad('0x0202', 32)
 
   it('voting sets withdrawal credentials', async () => {
     await pool.setWithdrawalCredentials(withdrawalCredentials, { from: voting })

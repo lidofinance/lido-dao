@@ -4,12 +4,10 @@ const { newDao, newApp } = require('./helpers/dao')
 const { getInstalledApp } = require('@aragon/contract-helpers-test/src/aragon-os')
 const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const { ZERO_ADDRESS, bn, getEventAt } = require('@aragon/contract-helpers-test')
-const { BN } = require('bn.js')
 const { formatEther } = require('ethers/lib/utils')
-const { getEthBalance, formatStEth: formamtStEth, formatBN } = require('../helpers/utils')
+const { getEthBalance, formatStEth: formamtStEth, formatBN, pad, hexConcat, ETH, tokens, div15 } = require('../helpers/utils')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
-
 const LidoMock = artifacts.require('LidoMock.sol')
 const ELRewardsVault = artifacts.require('LidoExecutionLayerRewardsVault.sol')
 const OracleMock = artifacts.require('OracleMock.sol')
@@ -27,31 +25,12 @@ const ADDRESS_4 = '0x0000000000000000000000000000000000000004'
 const UNLIMITED = 1000000000
 const TOTAL_BASIS_POINTS = 10000
 
-const pad = (hex, bytesLength) => {
-  const absentZeroes = bytesLength * 2 + 2 - hex.length
-  if (absentZeroes > 0) hex = '0x' + '0'.repeat(absentZeroes) + hex.substr(2)
-  return hex
-}
-
-const hexConcat = (first, ...rest) => {
-  let result = first.startsWith('0x') ? first : '0x' + first
-  rest.forEach((item) => {
-    result += item.startsWith('0x') ? item.substr(2) : item
-  })
-  return result
-}
-
 const assertNoEvent = (receipt, eventName, msg) => {
   const event = getEventAt(receipt, eventName)
   assert.equal(event, undefined, msg)
 }
 
-// Divides a BN by 1e15
-const div15 = (bn) => bn.div(new BN('1000000000000000'))
-
-const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 const STETH = ETH
-const tokens = ETH
 
 contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) => {
   let appBase, nodeOperatorsRegistryBase, app, oracle, depositContract, operators

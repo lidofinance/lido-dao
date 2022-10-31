@@ -8,10 +8,10 @@ const { deployDaoAndPool } = require('./helpers/deploy')
 
 const { signDepositData } = require('../0.8.9/helpers/signatures')
 const { waitBlocks } = require('../helpers/blockchain')
-const addresses = require('@aragon/contract-helpers-test/src/addresses')
 
 const LidoELRewardsVault = artifacts.require('LidoExecutionLayerRewardsVault.sol')
 const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
+const WithdrawalQueue = artifacts.require('WithdrawalQueue.sol')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
@@ -41,6 +41,7 @@ contract('Lido: merge acceptance', (addresses) => {
   let treasuryAddr, insuranceAddr, guardians
   let depositSecurityModule, depositRoot
   let rewarder, elRewardsVault
+  let withdrawalCredentials
 
   // Total fee is 1%
   const totalFeePoints = 0.01 * TOTAL_BASIS_POINTS
@@ -50,8 +51,6 @@ contract('Lido: merge acceptance', (addresses) => {
   const insuranceFeePoints = 0.2 * TOTAL_BASIS_POINTS
   // 50% goes to node operators
   const nodeOperatorsFeePoints = 0.5 * TOTAL_BASIS_POINTS
-
-  const withdrawalCredentials = pad('0x0202', 32)
 
   // Each node operator has its Ethereum 1 address, a name and a set of registered
   // validators, each of them defined as a (public key, signature) pair
@@ -130,6 +129,8 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(distribution.insuranceFeeBasisPoints, insuranceFeePoints, 'insurance fee')
     assertBn(distribution.operatorsFeeBasisPoints, nodeOperatorsFeePoints, 'node operators fee')
 
+    const withdrawal = await WithdrawalQueue.new(pool.address)
+    withdrawalCredentials = hexConcat('0x01', pad(withdrawal.address, 31)).toLowerCase()
     await pool.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
 
     // Withdrawal credentials were set

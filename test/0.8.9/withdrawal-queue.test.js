@@ -57,8 +57,8 @@ contract('WithdrawalQueue', ([deployer, owner, recipient, stranger]) => {
     it('Calculate one request batch', async () => {
       const batch = await withdrawal.calculateFinalizationParams(0, ETH(100), 1)
 
-      assertBn(bn(batch[0]), bn(1))
-      assertBn(bn(batch[1]), bn(ETH(100)))
+      assertBn(bn(batch[0]), bn(ETH(100)))
+      assertBn(bn(batch[1]), bn(1))
     })
 
     it('Only owner can finalize a request', async () => {
