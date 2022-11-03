@@ -21,12 +21,9 @@ import "./AragonUnstructuredStorage.sol";
 // NB: Internal representation conventions:
 //
 // - the `maxLimitGrowthBlocks` field above represented as follows:
-// `maxLimitGrowthBlocks` = `maxLimit` / `stakeLimitIncreasePerBlock`
+// `maxLimitGrowthBlocks` = `maxLimit` / `limitIncreasePerBlock`
 //           32 bits                 96 bits               96 bits
 //
-//
-// - the "staking paused" state is encoded by `prevBlockNumber` being zero,
-// - the "staking unlimited" state is encoded by `maxLimit` being zero and `prevBlockNumber` being non-zero.
 //
 
 /**
@@ -46,6 +43,7 @@ library LimitState {
     }
 }
 
+
 library LimitUnstructuredStorage {
     using UnstructuredStorage for bytes32;
 
@@ -59,7 +57,7 @@ library LimitUnstructuredStorage {
     uint256 internal constant PREV_BLOCK_NUMBER_OFFSET = 0;
 
     /**
-    * @dev Read stake limit state from the unstructured storage position
+    * @dev Read limit state from the unstructured storage position
     * @param _position storage offset
     */
     function getStorageLimitStruct(bytes32 _position) internal view returns (LimitState.Data memory rateLimit) {
@@ -72,9 +70,9 @@ library LimitUnstructuredStorage {
     }
 
      /**
-    * @dev Write stake limit state to the unstructured storage position
+    * @dev Write limit state to the unstructured storage position
     * @param _position storage offset
-    * @param _data stake limit state structure instance
+    * @param _data limit state structure instance
     */
     function setStorageLimitStruct(bytes32 _position, LimitState.Data memory _data) internal {
         _position.setStorageUint256(
@@ -87,11 +85,11 @@ library LimitUnstructuredStorage {
 }
 
 /**
-* @notice Interface library with helper functions to deal with stake limit struct in a more high-level approach.
+* @notice Interface library with helper functions to deal with take limit struct in a more high-level approach.
 */
 library RateLimitUtils {
     /**
-    * @notice Calculate stake limit for the current block.
+    * @notice Calculate limit for the current block.
     */
     function calculateCurrentLimit(LimitState.Data memory _data) internal view returns(uint256 limit) {
         uint256 limitIncPerBlock;
@@ -106,11 +104,11 @@ library RateLimitUtils {
     }
 
     /**
-    * @notice update stake limit repr with the desired limits
-    * @dev input `_data` param is mutated and the func returns effectively the same pointer
-    * @param _data stake limit state struct
-    * @param _maxLimit stake limit max value
-    * @param _limitIncreasePerBlock stake limit increase (restoration) per block
+    * @notice Update limit repr with the desired limits
+    * @dev Input `_data` param is mutated and the func returns effectively the same pointer
+    * @param _data limit state struct
+    * @param _maxLimit limit max value
+    * @param _limitIncreasePerBlock limit increase (restoration) per block
     */
     function setLimit(
         LimitState.Data memory _data,
@@ -118,7 +116,7 @@ library RateLimitUtils {
         uint256 _limitIncreasePerBlock
     ) internal view returns (LimitState.Data memory) {
         require(_maxLimit != 0, "ZERO_MAX_LIMIT");
-        require(_maxLimit < type(uint96).max, "TOO_LARGE_MAX_STAKE_IMIT");
+        require(_maxLimit < type(uint96).max, "TOO_LARGE_MAX_IMIT");
         require(_maxLimit >= _limitIncreasePerBlock, "TOO_LARGE_LIMIT_INCREASE");
         require(
             (_limitIncreasePerBlock == 0)
@@ -126,9 +124,9 @@ library RateLimitUtils {
             "TOO_SMALL_LIMIT_INCREASE"
         );
 
-        // if staking was paused or unlimited previously,
+        // if no limit was set previously,
         // or new limit is lower than previous, then
-        // reset prev stake limit to the new max stake limit
+        // reset prev limit to the new max limit
         if ((_data.maxLimit == 0) || (_maxLimit < _data.prevLimit)) {
             _data.prevLimit = uint96(_maxLimit);
         }
@@ -145,19 +143,17 @@ library RateLimitUtils {
 
 
     /**
-    * @notice update stake limit repr after submitting user's eth
-    * @dev input `_data` param is mutated and the func returns effectively the same pointer
-    * @param _data stake limit state struct
+    * @notice Update limit repr after submitting user's eth
+    * @dev Input `_data` param is mutated and the func returns effectively the same pointer
+    * @param _data limit state struct
     * @param _newPrevLimit new value for the `prevLimit` field
     */
     function updatePrevLimit(
         LimitState.Data memory _data,
         uint256 _newPrevLimit
     ) internal view returns (LimitState.Data memory) {
-        // assert(_newPrevLimit < type(uint96).max);
-        // assert(_data.prevBlockNumber != 0);
-        require(_newPrevLimit < type(uint96).max, "AAA");
-        require(_data.prevBlockNumber != 0, "BBB");
+        assert(_newPrevLimit < type(uint96).max);
+        assert(_data.prevBlockNumber != 0);
 
         _data.prevLimit = uint96(_newPrevLimit);
         _data.prevBlockNumber = uint32(block.number);
