@@ -8,6 +8,7 @@
 dist/
 tmp/
 venv
+out
 
 /coverage/
 /coverage.json

@@ -50,7 +50,7 @@ jobs:
       continue-on-error: true
       run: .github/assert-git-changes.py
       env:
-        TARGET_DIR: lib/abi/
+        TARGET: lib/abi/
 
     - name: Create Pull Request
       if: steps.changes.outcome != 'success'

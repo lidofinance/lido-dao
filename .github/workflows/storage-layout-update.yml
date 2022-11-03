@@ -1,0 +1,45 @@
+name: Update .storage-layout
+
+on:
+  workflow_dispatch:
+
+jobs:
+  assert:
+    runs-on: ubuntu-latest
+    name: Update storage layout
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      
+      - name: Setup node.js version
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+          cache: 'yarn'
+
+      - name: Install yarn deps
+        run: yarn install --immutable
+
+      - name: Generate new .storage-layout
+        uses: lidofinance/storage-layout-action@v1
+        with:
+          mode: generate
+          src-folder: ./contracts
+          ignore-folders: "{test_helpers,template,mocks}"
+
+      - name: Check for changes
+        id: changes
+        continue-on-error: true
+        run: .github/assert-git-changes.py
+        env:
+          TARGET: .storage-layout
+
+      - name: Create Pull Request
+        if: steps.changes.outcome != 'success'
+        uses: lidofinance/create-pull-request@v4
+        with:
+          branch: update-storage-layout-${{ github.ref_name }}
+          delete-branch: true
+          commit-message: "fix: Make storage-layout up to date"
+          title: "Update .storage-layout for ${{ github.ref_name }} branch"
+          body: "This PR is generated automatically. Merge it to apply new version of .storage-layout"
