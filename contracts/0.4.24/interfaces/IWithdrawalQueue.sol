@@ -20,7 +20,7 @@ interface IWithdrawalQueue {
         uint256 _lastIdToFinalize,
         uint256 _totalPooledEther,
         uint256 _totalShares
-    ) view returns (uint256 sharesToBurn, uint256 etherToLock);
+    ) external view returns (uint256 sharesToBurn, uint256 etherToLock);
 
     function finalize(
         uint256 _lastIdToFinalize,
