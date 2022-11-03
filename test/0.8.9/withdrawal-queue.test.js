@@ -4,17 +4,19 @@ const { assertBn, assertRevert } = require('@aragon/contract-helpers-test/src/as
 const { assert } = require('chai')
 
 const WithdrawalQueue = artifacts.require('WithdrawalQueue.sol')
+const Owner = artifacts.require('Owner.sol')
 
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 
-contract('WithdrawalQueue', ([deployer, owner, recipient, stranger]) => {
+contract('WithdrawalQueue', ([deployer, recipient, stranger]) => {
   console.log('Addresses:')
   console.log(` Deployer: ${deployer}`)
-  console.log(` Owner: ${owner}`)
 
-  let withdrawal
+  let withdrawal, owner
 
   beforeEach('Deploy', async () => {
+    owner = (await Owner.new({ value: ETH(300) })).address
+    await ethers.provider.send('hardhat_impersonateAccount', [owner])
     withdrawal = await WithdrawalQueue.new(owner)
   })
 
@@ -96,6 +98,16 @@ contract('WithdrawalQueue', ([deployer, owner, recipient, stranger]) => {
       assertBn(await withdrawal.queueLength(), +requestId + 2)
       assertBn(await withdrawal.finalizedQueueLength(), +requestId + 1)
       assertBn(await withdrawal.lockedEtherAmount(), bn(amount))
+    })
+
+    it('One can restake after finalization', async () => {
+      const balanceBefore = bn(await web3.eth.getBalance(owner))
+      await withdrawal.finalize(0, amount, amount, shares, { from: owner, value: amount * 2 })
+      await withdrawal.restake(amount, { from: owner })
+
+      assertBn(await withdrawal.lockedEtherAmount(), bn(amount))
+      assertBn(await web3.eth.getBalance(withdrawal.address), bn(amount))
+      assertBn(bn(await web3.eth.getBalance(owner)), balanceBefore.sub(bn(amount)))
     })
   })
 

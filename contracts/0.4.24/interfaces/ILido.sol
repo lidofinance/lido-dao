@@ -255,6 +255,8 @@ interface ILido {
 
     event WithdrawalClaimed(uint256 indexed requestId, address indexed receiver, address initiator);
 
+    event WithdrawalRestaked(uint256 amount);
+
     // Info functions
 
     /**

@@ -7,6 +7,9 @@ pragma solidity 0.8.9;
 import "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
 import "@openzeppelin/contracts-v4.4/utils/Address.sol";
 
+interface IRestakingSink {
+    function receiveRestake() external payable;
+}
 
 /**
  * @title A dedicated contract for handling stETH withdrawal request queue
@@ -29,7 +32,7 @@ contract WithdrawalQueue {
      * @notice All state-modifying calls are allowed only from owner protocol. 
      * @dev should be Lido
      */ 
-    address public immutable OWNER;
+    address payable public immutable OWNER;
 
     /**
      * @notice amount of ETH on this contract balance that is locked for withdrawal and waiting for claim
@@ -74,7 +77,7 @@ contract WithdrawalQueue {
     /**
      * @param _owner address that will be able to invoke `enqueue` and `finalize` methods.
      */
-    constructor(address _owner) {
+    constructor(address payable _owner) {
         OWNER = _owner;
     }
 
@@ -201,6 +204,12 @@ contract WithdrawalQueue {
         }
         assert(false);
     } 
+
+    function restake(uint256 _amount) external onlyOwner {
+        require(lockedEtherAmount + _amount <= address(this).balance, "NOT_ENOUGH_ETHER");
+
+        IRestakingSink(OWNER).receiveRestake{value: _amount}();
+    }
 
     function _calculateDiscountedBatch(
         uint256 firstId, 
