@@ -194,9 +194,9 @@ contract WithdrawalQueue {
     function findPriceHint(uint256 _requestId) public view returns (uint256 hint) {
         require(_requestId < finalizedQueueLength, "PRICE_NOT_FOUND");
 
-        for (uint256 i = finalizationPrices.length - 1; i >= 0; i--) {
-            if (_isPriceHintValid(_requestId, i)){
-                return i;
+        for (uint256 i = finalizationPrices.length; i > 0; i--) {
+            if (_isPriceHintValid(_requestId, i - 1)){
+                return i - 1;
             }
         }
         assert(false);
