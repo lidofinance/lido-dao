@@ -102,12 +102,12 @@ contract('WithdrawalQueue', ([deployer, recipient, stranger]) => {
 
     it('One can restake after finalization', async () => {
       const balanceBefore = bn(await web3.eth.getBalance(owner))
-      await withdrawal.finalize(0, amount, amount, shares, { from: owner, value: amount * 2 })
+      await withdrawal.finalize(0, amount, amount, shares, { from: owner, value: bn(amount).mul(bn(2)) })
       await withdrawal.restake(amount, { from: owner })
 
       assertBn(await withdrawal.lockedEtherAmount(), bn(amount))
       assertBn(await web3.eth.getBalance(withdrawal.address), bn(amount))
-      assertBn(bn(await web3.eth.getBalance(owner)), balanceBefore.sub(bn(amount)))
+      assertBn(await web3.eth.getBalance(owner), balanceBefore.sub(bn(amount)))
     })
   })
 
