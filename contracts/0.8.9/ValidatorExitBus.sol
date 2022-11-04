@@ -26,6 +26,7 @@ contract ValidatorExitBus {
 
 
     string private constant ERROR_ARRAYS_MUST_BE_SAME_SIZE = "ARRAYS_MUST_BE_SAME_SIZE";
+    string private constant ERROR_EMPTY_ARRAYS_REPORTED = "EMPTY_ARRAYS_REPORTED";
     string private constant ERROR_NOT_MEMBER_REPORTED = "NOT_MEMBER_REPORTED";
     string private constant ERROR_ZERO_MEMBER_ADDRESS = "ZERO_MEMBER_ADDRESS";
     string private constant ERROR_MEMBER_NOT_FOUND = "MEMBER_NOT_FOUND";
@@ -61,6 +62,7 @@ contract ValidatorExitBus {
     ) external {
         require(nodeOperatorIds.length == validatorPubkeys.length, ERROR_ARRAYS_MUST_BE_SAME_SIZE);
         require(stakingModuleIds.length == validatorPubkeys.length, ERROR_ARRAYS_MUST_BE_SAME_SIZE);
+        require(stakingModuleIds.length > 0, ERROR_EMPTY_ARRAYS_REPORTED);
 
         uint256 memberIndex = _getMemberId(msg.sender);
         require(memberIndex < MAX_MEMBERS, ERROR_NOT_MEMBER_REPORTED);
@@ -95,7 +97,7 @@ contract ValidatorExitBus {
 
 
     function getCurrentLimit() public view returns (uint256) {
-        return _getCurrentLimit(RATE_LIMIT_STATE_POSITION.getStorageLimitStruct());
+        return RATE_LIMIT_STATE_POSITION.getStorageLimitStruct().calculateCurrentLimit();
     }
 
     /**
@@ -156,7 +158,4 @@ contract ValidatorExitBus {
         emit RateLimitSet(_maxLimit, _limitIncreasePerBlock);
     }
 
-    function _getCurrentLimit(LimitState.Data memory _limitData) internal view returns(uint256) {
-        return _limitData.calculateCurrentLimit();
-    }
 }
