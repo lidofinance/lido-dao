@@ -161,6 +161,9 @@ def choose_next_validators_for_exit(num_validators: int) -> List[ValidatorKeyInf
     # The simple algorithm is implemented here only, see post for the details
     # https://research.lido.fi/t/withdrawals-on-validator-exiting-order/3048/
     start = g_cache.last_requested_for_exit_validator_index
+    # TODO: check the validators statuses: they might be
+    #       - already exited/withdrawn => skip them
+    #       - exiting => don't need to issue request for exit for it
     return g_cache.validators[start : (start + num_validators)]
 
 
@@ -180,7 +183,7 @@ def calc_number_of_validators_for_exit(ether_required: int) -> int:
 
 
 def get_pending_amount_of_ether():
-    """Amount of ether expected to receiver after exits of the validators
+    """Amount of ether expected to receive after exits of the validators
     requested to exit. Does not count on ether from validators which didn't
     send VoluntaryExit requests before TIMEOUT_FOR_EXIT_REQUEST ended."""
     pass
@@ -194,6 +197,8 @@ def separate_requests_to_finalize(
     ether_to_finalize = 0
     available_ether = get_ether_available_for_withdrawals()
 
+    # TODO: take in to account stETH price for finalization
+
     while len(requests) > 0:
         if ether_to_finalize + requests[0].requested_ether > available_ether:
             break
@@ -203,34 +208,39 @@ def separate_requests_to_finalize(
 
 
 def calc_amount_of_additional_ether_required_for_withdrawal_requests(
-    requests: List[WithdrawalRequest],
+    not_finalized_requests: List[WithdrawalRequest],
     ether_for_finalization: int,
 ) -> int:
     available_ether = get_ether_available_for_withdrawals()
     expected_ether = get_pending_amount_of_ether()
 
-    z = available_ether - ether_for_finalization + expected_ether
+    present_ether = available_ether + expected_ether - ether_for_finalization
     pending_requests_ether = 0
-    while len(requests) > 0:
-        if requests[0].requested_ether + pending_requests_ether > z:
+    while len(not_finalized_requests) > 0:
+        ether_for_next_request = not_finalized_requests[0].requested_ether
+        if ether_for_next_request + pending_requests_ether > present_ether:
             break
-        requests.pop(0)
+        not_finalized_requests.pop(0)
+        pending_requests_ether += ether_for_next_request
 
-    # at this point int `requests` there are only non-finalized requests
+    # at this point in `requests` there are only non-finalized requests
     # which require to request new validators to exit
-    missing_ether = sum([_.requested_ether for _ in requests])
-    return missing_ether
+    additional_needed_ether = sum([_.requested_ether for _ in not_finalized_requests])
+    return additional_needed_ether
 
 
 # Q: what price should be reported to WithdrawalQueue.finalize() ?
 
+
 def main():
-    requests = get_non_finalized_withdrawal_requests()
-    requests_to_finalize, requests = separate_requests_to_finalize(requests)
+    not_finalized_requests = get_non_finalized_withdrawal_requests()
+    requests_to_finalize, not_finalized_requests = separate_requests_to_finalize(
+        not_finalized_requests
+    )
     ether_for_finalization = sum([_.requested_ether for _ in requests_to_finalize])
 
     missing_ether = calc_amount_of_additional_ether_required_for_withdrawal_requests(
-        requests, ether_for_finalization
+        not_finalized_requests, ether_for_finalization
     )
     num_validator_to_eject = calc_number_of_validators_for_exit(missing_ether)
     validators_to_eject = choose_next_validators_for_exit(num_validator_to_eject)
