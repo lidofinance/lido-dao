@@ -28,6 +28,11 @@ interface IERC721 {
     function transferFrom(address _from, address _to, uint256 _tokenId) external payable;
 }
 
+interface IStakingRouter {
+    function calculateShares2Mint(uint256 _totalRewards) external returns(uint256 shares2mint, uint256 totalKeys, uint256[] memory moduleKeys);
+    function distributeShares(uint256 _totalShares, uint256 totalKeys, uint256[] moduleKeys) external returns(uint256 distributed);
+}
+
 
 /**
 * @title Liquid staking pool implementation
@@ -69,9 +74,9 @@ contract Lido is ILido, StETH, AragonApp {
         "SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE"
     );
 
-    uint256 constant public PUBKEY_LENGTH = 48;
-    uint256 constant public WITHDRAWAL_CREDENTIALS_LENGTH = 32;
-    uint256 constant public SIGNATURE_LENGTH = 96;
+    // uint256 constant public PUBKEY_LENGTH = 48;
+    // uint256 constant public WITHDRAWAL_CREDENTIALS_LENGTH = 32;
+    // uint256 constant public SIGNATURE_LENGTH = 96;
 
     uint256 constant public DEPOSIT_SIZE = 32 ether;
 
@@ -92,6 +97,7 @@ contract Lido is ILido, StETH, AragonApp {
     bytes32 internal constant TREASURY_POSITION = keccak256("lido.Lido.treasury");
     bytes32 internal constant INSURANCE_FUND_POSITION = keccak256("lido.Lido.insuranceFund");
     bytes32 internal constant EL_REWARDS_VAULT_POSITION = keccak256("lido.Lido.executionLayerRewardsVault");
+    bytes32 internal constant STAKING_ROUTER_POSITION = keccak256("lido.Lido.stakingRouter");
 
     /// @dev storage slot position of the staking rate limit structure
     bytes32 internal constant STAKING_STATE_POSITION = keccak256("lido.Lido.stakeLimit");
@@ -309,21 +315,21 @@ contract Lido is ILido, StETH, AragonApp {
     * @notice Deposits buffered ethers to the official DepositContract.
     * @dev This function is separated from submit() to reduce the cost of sending funds.
     */
-    function depositBufferedEther() external {
-        _auth(DEPOSIT_ROLE);
+    // function depositBufferedEther() external {
+    //     _auth(DEPOSIT_ROLE);
 
-        return _depositBufferedEther(DEFAULT_MAX_DEPOSITS_PER_CALL);
-    }
+    //     return _depositBufferedEther(DEFAULT_MAX_DEPOSITS_PER_CALL);
+    // }
 
     /**
     * @notice Deposits buffered ethers to the official DepositContract, making no more than `_maxDeposits` deposit calls.
     * @dev This function is separated from submit() to reduce the cost of sending funds.
     */
-    function depositBufferedEther(uint256 _maxDeposits) external {
-        _auth(DEPOSIT_ROLE);
+    // function depositBufferedEther(uint256 _maxDeposits) external {
+    //     _auth(DEPOSIT_ROLE);
 
-        return _depositBufferedEther(_maxDeposits);
-    }
+    //     return _depositBufferedEther(_maxDeposits);
+    // }
 
     function burnShares(address _account, uint256 _sharesAmount)
         external
@@ -597,13 +603,6 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-    * @notice Gets deposit contract handle
-    */
-    function getDepositContract() public view returns (IDepositContract) {
-        return IDepositContract(DEPOSIT_CONTRACT_POSITION.getStorageAddress());
-    }
-
-    /**
     * @notice Gets authorized oracle address
     * @return address of oracle contract
     */
@@ -715,84 +714,40 @@ contract Lido is ILido, StETH, AragonApp {
     /**
     * @dev Deposits buffered eth to the DepositContract and assigns chunked deposits to node operators
     */
-    function _depositBufferedEther(uint256 _maxDeposits) internal whenNotStopped {
-        uint256 buffered = _getBufferedEther();
-        if (buffered >= DEPOSIT_SIZE) {
-            uint256 unaccounted = _getUnaccountedEther();
-            uint256 numDeposits = buffered.div(DEPOSIT_SIZE);
-            _markAsUnbuffered(_ETH2Deposit(numDeposits < _maxDeposits ? numDeposits : _maxDeposits));
-            assert(_getUnaccountedEther() == unaccounted);
-        }
-    }
+    // function _depositBufferedEther(uint256 _maxDeposits) internal whenNotStopped {
+    //     uint256 buffered = _getBufferedEther();
+    //     if (buffered >= DEPOSIT_SIZE) {
+    //         uint256 unaccounted = _getUnaccountedEther();
+    //         uint256 numDeposits = buffered.div(DEPOSIT_SIZE);
+    //         _markAsUnbuffered(_ETH2Deposit(numDeposits < _maxDeposits ? numDeposits : _maxDeposits));
+    //         assert(_getUnaccountedEther() == unaccounted);
+    //     }
+    // }
 
-    /**
-    * @dev Performs deposits to the ETH 2.0 side
-    * @param _numDeposits Number of deposits to perform
-    * @return actually deposited Ether amount
-    */
-    function _ETH2Deposit(uint256 _numDeposits) internal returns (uint256) {
-        (bytes memory pubkeys, bytes memory signatures) = getOperators().assignNextSigningKeys(_numDeposits);
 
-        if (pubkeys.length == 0) {
-            return 0;
-        }
+    function updateBufferedCounters(uint256 _numKeys) external {
+        // require(msg.sender == STAKING_ROUTER_ADDRESS, "INVALID ADDRESS");
 
-        require(pubkeys.length.mod(PUBKEY_LENGTH) == 0, "REGISTRY_INCONSISTENT_PUBKEYS_LEN");
-        require(signatures.length.mod(SIGNATURE_LENGTH) == 0, "REGISTRY_INCONSISTENT_SIG_LEN");
-
-        uint256 numKeys = pubkeys.length.div(PUBKEY_LENGTH);
-        require(numKeys == signatures.length.div(SIGNATURE_LENGTH), "REGISTRY_INCONSISTENT_SIG_COUNT");
-
-        for (uint256 i = 0; i < numKeys; ++i) {
-            bytes memory pubkey = BytesLib.slice(pubkeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
-            bytes memory signature = BytesLib.slice(signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
-            _stake(pubkey, signature);
-        }
-
+        uint256 _amount = _numKeys.mul(DEPOSIT_SIZE);
+        
         DEPOSITED_VALIDATORS_POSITION.setStorageUint256(
-            DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(numKeys)
+            DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(_numKeys)
         );
 
-        return numKeys.mul(DEPOSIT_SIZE);
+        BUFFERED_ETHER_POSITION.setStorageUint256(
+            BUFFERED_ETHER_POSITION.getStorageUint256().sub(_amount));
+
+        emit Unbuffered(_amount);
     }
 
-    /**
-    * @dev Invokes a deposit call to the official Deposit contract
-    * @param _pubkey Validator to stake for
-    * @param _signature Signature of the deposit call
-    */
-    function _stake(bytes memory _pubkey, bytes memory _signature) internal {
-        bytes32 withdrawalCredentials = getWithdrawalCredentials();
-        require(withdrawalCredentials != 0, "EMPTY_WITHDRAWAL_CREDENTIALS");
-
-        uint256 value = DEPOSIT_SIZE;
-
-        // The following computations and Merkle tree-ization will make official Deposit contract happy
-        uint256 depositAmount = value.div(DEPOSIT_AMOUNT_UNIT);
-        assert(depositAmount.mul(DEPOSIT_AMOUNT_UNIT) == value);    // properly rounded
-
-        // Compute deposit data root (`DepositData` hash tree root) according to deposit_contract.sol
-        bytes32 pubkeyRoot = sha256(_pad64(_pubkey));
-        bytes32 signatureRoot = sha256(
-            abi.encodePacked(
-                sha256(BytesLib.slice(_signature, 0, 64)),
-                sha256(_pad64(BytesLib.slice(_signature, 64, SIGNATURE_LENGTH.sub(64))))
-            )
-        );
-
-        bytes32 depositDataRoot = sha256(
-            abi.encodePacked(
-                sha256(abi.encodePacked(pubkeyRoot, withdrawalCredentials)),
-                sha256(abi.encodePacked(_toLittleEndian64(depositAmount), signatureRoot))
-            )
-        );
-
-        uint256 targetBalance = address(this).balance.sub(value);
-
-        getDepositContract().deposit.value(value)(
-            _pubkey, abi.encodePacked(withdrawalCredentials), _signature, depositDataRoot);
-        require(address(this).balance == targetBalance, "EXPECTING_DEPOSIT_TO_HAPPEN");
+    function getStakingRouter() public view returns (address) {
+        return STAKING_ROUTER_POSITION.getStorageAddress();
     }
+
+    function setStakingRouter(address _stakingRouterAddress) external {
+        STAKING_ROUTER_POSITION.setStorageAddress(_stakingRouterAddress);
+    }
+    
 
     /**
     * @dev Distributes fee portion of the rewards by minting and distributing corresponding amount of liquid tokens.
@@ -824,43 +779,26 @@ contract Lido is ILido, StETH, AragonApp {
         // The effect is that the given percentage of the reward goes to the fee recipient, and
         // the rest of the reward is distributed between token holders proportionally to their
         // token shares.
-        uint256 feeBasis = getFee();
-        uint256 shares2mint = (
-            _totalRewards.mul(feeBasis).mul(_getTotalShares())
-            .div(
-                _getTotalPooledEther().mul(TOTAL_BASIS_POINTS)
-                .sub(feeBasis.mul(_totalRewards))
-            )
-        );
+
+        address stakingRouterAddress = getStakingRouter();
+
+        (uint256 shares2mint, uint256 totalKeys, uint256[] memory moduleKeys) = IStakingRouter(stakingRouterAddress).calculateShares2Mint(_totalRewards);
 
         // Mint the calculated amount of shares to this contract address. This will reduce the
         // balances of the holders, as if the fee was taken in parts from each of them.
-        _mintShares(address(this), shares2mint);
+        _mintShares(stakingRouterAddress, shares2mint);
 
 
-        // StakingRouter.distibuteRewards(shares2mint);
-
+        //distribute shares
+        IStakingRouter(stakingRouterAddress).distributeShares(shares2mint, totalKeys, moduleKeys);
     }
-
-    function mintShares(uint256 _shares2mint) external {
-        _mintShares(address(this), _shares2mint);
-    } 
-
-    function transferModuleShares(address _recipient, uint256 _sharesAmount) public returns (uint256) {
-        _transferShares(
-            address(this),
-            _recipient,
-            _sharesAmount
-        );
-        _emitTransferAfterMintingShares(_recipient, _sharesAmount);
-    } 
 
     /**
     *  @dev Internal function to distribute reward to node operators
     *  @param _sharesToDistribute amount of shares to distribute
     *  @return actual amount of shares that was transferred to node operators as a reward
     */
-    function _distributeNodeOperatorsReward(uint256 _sharesToDistribute) internal returns (uint256 distributed) {
+    function _distributeStakingRouterReward(uint256 _sharesToDistribute) internal returns (uint256 distributed) {
         (address[] memory recipients, uint256[] memory shares) = getOperators().getRewardsDistribution(_sharesToDistribute);
 
         assert(recipients.length == shares.length);

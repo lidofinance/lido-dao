@@ -16,8 +16,8 @@ contract ModuleSolo is IModule {
     uint256 public totalKeys;
     uint256 public totalUsedKeys;
     uint256 public totalStoppedKeys;
+    uint256 public totalWithdrawnKeys;
     
-    uint256 public softCap;
     ModuleType public moduleType;
 
     constructor(ModuleType _type, address _lido, uint16 _fee, uint16 _treasuryFee,  uint256 _bond) {
@@ -46,8 +46,8 @@ contract ModuleSolo is IModule {
         return totalStoppedKeys;
     }
 
-    function getSoftCap() external view returns(uint256) {
-        return softCap;
+    function getTotalWithdrawnKeys() external view returns(uint256) {
+        return totalWithdrawnKeys;
     }
 
     function getRewardsDistribution(uint256 _totalRewardShares) external view
@@ -72,5 +72,7 @@ contract ModuleSolo is IModule {
     function setTotalKeys(uint256 _keys) external { totalKeys = _keys; }
     function setTotalUsedKeys(uint256 _keys) external { totalUsedKeys = _keys; }
     function setTotalStoppedKeys(uint256 _keys) external { totalStoppedKeys = _keys; }
-    function setSoftCap(uint256 _cap) external { softCap = _cap; }
+    function setTotalWithdrawnKeys(uint256 _keys) external { totalWithdrawnKeys = _keys; }
+
+    function setNodeOperatorActive(uint256 _id, bool _active) external {}
 }

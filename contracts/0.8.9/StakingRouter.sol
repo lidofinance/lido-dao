@@ -6,14 +6,22 @@ pragma solidity 0.8.9;
 
 import "hardhat/console.sol";
 import "./IModule.sol";
+import "./interfaces/IDepositContract.sol";
+import "./lib/BytesLib.sol";
 
 import "hardhat/console.sol";
 
+/**
+  * @title Interface defining a Lido liquid staking pool
+  * @dev see also [Lido liquid staking pool core contract](https://docs.lido.fi/contracts/lido)
+  */
 interface ILido {
     function totalSupply() external view returns (uint256);
     function getTotalShares() external view returns (uint256);
-    function mintShares(uint256 _shares2mint) external;
-    function transferModuleShares(address _recipient, uint256 _sharesAmount) external returns (uint256);
+    function mintShares(uint256 shares2mint) external;
+    function transferShares(address recipient, uint256 sharesAmount) external returns (uint256);
+    function getWithdrawalCredentials() external view returns (bytes32);
+    function updateBufferedCounters(uint256 numKeys) external;
 }
 
 
@@ -22,17 +30,28 @@ contract StakingRouter {
     event KeysAssigned(bytes pubkeys, bytes signatures);
     //////
 
+    event DepositsUnpaused();
+
     error InvalidType();
 
     address public immutable lido;
+    address public immutable deposit_contract;
+    address public dsm;
 
+    uint256 constant public DEPOSIT_SIZE = 32 ether;
+
+    uint256 internal constant DEPOSIT_AMOUNT_UNIT = 1000000000 wei;
     uint256 internal constant TOTAL_BASIS_POINTS = 10000;
 
-    // uint256 internal constant UINT64_MAX = uint256(uint64(-1));
+    uint256 constant public PUBKEY_LENGTH = 48;
+    uint256 constant public WITHDRAWAL_CREDENTIALS_LENGTH = 32;
+    uint256 constant public SIGNATURE_LENGTH = 96;
 
     struct StakingModule{
         string name;
         address moduleAddress;
+        uint16 cap; //in basic points, e.g 500 - 5%
+        bool paused;
     }
 
     struct ModuleLookupCacheEntry {
@@ -47,44 +66,107 @@ contract StakingRouter {
         uint256 softCap;
     }
 
-    mapping (uint => StakingModule) public modules;
-    uint256 public modulesCount;
-    
+    mapping (uint256 => StakingModule) public modules;
+    mapping (address => uint256) public modules_deposits;
 
-    constructor(address _lido) {
+    uint256 public modulesCount;    
+
+    constructor(address _lido, address _deposit_contract) {
         lido = _lido;
-
+        deposit_contract = _deposit_contract;
+        
     }
 
     /**
-     *
-     * Register a new module
-     * 
+     * @notice register a DSM module
+     * @param _dsm address of DSM 
      */
-    function addStakingModule(string memory _name, address _pluginAddress) external {
+    function setDepositSecurityModule(address _dsm) external {
+        dsm = _dsm;
+    }
 
+    /**
+     * @notice register a new module
+     * @param _name name of module 
+     * @param _moduleAddress address of module 
+     * @param _cap soft cap 
+     */
+    function addStakingModule(string memory _name, address _moduleAddress, uint16 _cap) external {
         StakingModule storage module = modules[modulesCount];
         module.name = _name;
-        module.moduleAddress = _pluginAddress;
+        module.moduleAddress = _moduleAddress;
+        module.cap = _cap;
+        module.paused = false;
         modulesCount++;
     }
 
     /**
-     *
-     * Distribute rewards
-     * 
-     * _totalRewards 
+     * @notice pause a module
+     * @param _moduleIndex index of module 
      */
-    function distributeRewards(uint256 _totalRewards) external {
+    function pauseModule(uint256 _moduleIndex) external {
+        require(msg.sender == dsm, "invalid_caller");
 
+        StakingModule storage module = modules[_moduleIndex];
+        require(!module.paused, "module_is_paused");
 
+        module.paused = true;
+    }
+
+    /**
+     * Unpauses deposits.
+     *
+     * Only callable by the owner.
+     */
+    function unpauseModule(uint256 _moduleIndex) external {
+        require(msg.sender == dsm, "invalid_caller");
+
+        StakingModule storage module = modules[_moduleIndex];
+        if (module.paused) {
+            module.paused = false;
+            emit DepositsUnpaused();
+        }
+    }
+
+    /**
+     * @notice get total keys which can used for rewards and center distirbution
+     *
+     * @return totalKeys total keys which used for calculation
+     * @return moduleKeys array of amount module keys
+     */
+    function getTotalKeys() external view returns (uint256 totalKeys, uint256[] memory moduleKeys) {
         // calculate total used keys for operators
-        uint256 totalKeys = 0;
+        moduleKeys = new uint256[](modulesCount);
         for (uint256 i=0; i < modulesCount; ++i) {
             StakingModule memory module = modules[i];
-            totalKeys += IModule(module.moduleAddress).getTotalKeys();
+            moduleKeys[i] = IModule(module.moduleAddress).getTotalKeys();
+            totalKeys += moduleKeys[i];
         }
+    }
 
+    /**
+     * @notice calculate shares to mint on Lido
+     * @param _totalRewards total rewards from oracle report
+     *
+     * @return shares2mint amount of shares, which need to mint
+     * @return totalKeys total keys which used for calculation
+     * @return moduleKeys array of amount module keys
+     */
+    function calculateShares2Mint(uint256 _totalRewards) external 
+    returns (
+        uint256 shares2mint, 
+        uint256 totalKeys,
+        uint256[] memory moduleKeys) 
+    {
+        assert(modulesCount != 0);
+
+        // calculate total used keys for operators
+        moduleKeys = new uint256[](modulesCount);
+        for (uint256 i=0; i < modulesCount; ++i) {
+            StakingModule memory module = modules[i];
+            moduleKeys[i] = IModule(module.moduleAddress).getTotalKeys();
+            totalKeys += moduleKeys[i];
+        }
 
         //calculate total fee to mint
         uint256 totalFee = 0;
@@ -93,15 +175,13 @@ contract StakingRouter {
             IModule module = IModule(stakingModule.moduleAddress);
 
             uint256 moduleFeeBasisPoints = module.getFee();
-            uint256 moduleTotalKeys       = module.getTotalKeys();
             
-            uint256 rewards = _totalRewards * moduleTotalKeys / totalKeys;
+            uint256 rewards = _totalRewards * moduleKeys[i] / totalKeys;
 
             uint256 opRewards = rewards * moduleFeeBasisPoints / TOTAL_BASIS_POINTS;
 
             totalFee += opRewards;
         }
-
 
         // Now we want to mint new shares to the fee recipient, so that the total cost of the
         // newly-minted shares exactly corresponds to the fee taken:
@@ -118,46 +198,47 @@ contract StakingRouter {
         uint256 totalSupply = ILido(lido).totalSupply();
         uint256 prevTotalShares = ILido(lido).getTotalShares();
         
-        uint256 shares2mint = ( totalFee * prevTotalShares ) / (totalSupply - totalFee);
+        shares2mint = ( totalFee * prevTotalShares ) / (totalSupply - totalFee);
 
-        ILido(lido).mintShares(shares2mint);
+        return (shares2mint, totalKeys, moduleKeys);
+    }
+
+    /**
+    *  @dev External function to distribute reward to node operators
+    *  @param _totalShares amount of shares to distribute
+    *  @param _totalKeys total keys in modules
+    *  @return distributed actual amount of shares that was transferred to modules as a rewards
+    */
+    function distributeShares(uint256 _totalShares, uint256 _totalKeys, uint256[] memory moduleKeys) external returns (uint256 distributed) {
+        assert(_totalKeys > 0);
+        require(address(lido) == msg.sender, "INVALID_CALLER");
 
         //distribute shares to modules
+        distributed = 0;
         for (uint256 i=0; i < modulesCount; ++i) {
             StakingModule memory stakingModule = modules[i];
             IModule module = IModule(stakingModule.moduleAddress);
 
-            uint256 moduleTotalKeys = module.getTotalKeys();
-            uint256 rewardsShares   = shares2mint * moduleTotalKeys / totalKeys;
+            // uint256 moduleTotalKeys = module.getTotalKeys();
+            uint256 rewardsShares   = _totalShares * moduleKeys[i] / _totalKeys;
 
-            ILido(lido).transferModuleShares(
-                stakingModule.moduleAddress,
-                rewardsShares
-            );
+            //transfer from SR to recipient
+            ILido(lido).transferShares(address(module), rewardsShares);
+
+            distributed += rewardsShares;
         }
 
-
-        //get recipient -> shares map for distribution
-        // (uint256 treasuryShares, address[] memory recipients, uint256[] memory shares) = distributeShares(shares2mint, totalKeys, moduleUsedKeys);
-
-        //distribute to treasury
-        // ILido(lido).transferShares(treasuryAddress, treasuryShares);
-
-        //calc % module
-        //transfer to module -> claim
-        //rocketpool ??
-
-
-        //remain shares
-        // uint256 toTreasury = shares2mint - treasuryShares - distributed;
-        // ILido(lido).transferShares(treasuryAddress, treasuryShares);
+        // transfer remaining shares
+        if (_totalShares - distributed > 0) {
+            ILido(lido).transferShares(modules[0].moduleAddress, _totalShares - distributed);
+        }
     } 
 
-    function eth2deposit(uint256 _numDeposits) public returns(ModuleLookupCacheEntry[] memory) {
-        ModuleLookupCacheEntry[] memory cache = getModuleDeposits(_numDeposits);
+    function distributeDeposits(uint256 _numDeposits) public returns(ModuleLookupCacheEntry[] memory) {
+        ModuleLookupCacheEntry[] memory cache = getModulesDeposits(_numDeposits); //module-eth
         ModuleLookupCacheEntry memory entry;
-        
 
+        
         for(uint256 i=0; i< modulesCount; i++)  {
             entry = cache[i];
 
@@ -171,10 +252,9 @@ contract StakingRouter {
         }
 
         return cache;
-
     }
 
-    function getModuleDeposits(uint256 _numDeposits) public view returns(ModuleLookupCacheEntry[] memory) {
+    function getModulesDeposits(uint256 _numDeposits) public view returns(ModuleLookupCacheEntry[] memory) {
 
         ModuleLookupCacheEntry[] memory cache = _loadModuleCache();
         ModuleLookupCacheEntry memory entry;
@@ -193,11 +273,6 @@ contract StakingRouter {
                 }
 
                 uint256 stake = entry.totalUsedKeys - entry.totalStoppedKeys;
-
-                //check soft cap
-            
-                //check module quota
-
                 uint256 softCap = entry.softCap;
                 if (softCap > 0 && entry.assignedKeys * TOTAL_BASIS_POINTS / _numDeposits  >= softCap) {
                     continue;
@@ -209,6 +284,7 @@ contract StakingRouter {
                 }
             }
 
+            //выход и по ключам и по эфиру
             if (bestModuleIdx == modulesCount)  // not found
                 break;
 
@@ -240,211 +316,115 @@ contract StakingRouter {
             entry.totalKeys = module.getTotalKeys();
             entry.totalUsedKeys = module.getTotalUsedKeys();
             entry.totalStoppedKeys = module.getTotalStoppedKeys();
-            entry.softCap = module.getSoftCap();
+            entry.softCap = stakingModule.cap;
             entry.initialUsedSigningKeys = entry.totalUsedKeys;
         }
 
         return cache;
     }
 
-    // function getNextModule() public returns (StakingModule memory) {
-    //     for (uint256 i=0; i < modulesCount; ++i) {
-    //         StakingModule storage module = modules[i];
-    //         module.currentWeight += module.weight;
-    //     }
+    function deposit(bytes memory pubkeys, bytes memory signatures) external {
+        require(pubkeys.length > 0, "INVALID_PUBKEYS");
 
-    //     uint256 cw = 0;
-    //     uint256 index = 0;
+        require(pubkeys.length % PUBKEY_LENGTH == 0, "REGISTRY_INCONSISTENT_PUBKEYS_LEN");
+        require(signatures.length % SIGNATURE_LENGTH == 0, "REGISTRY_INCONSISTENT_SIG_LEN");
 
-    //     for (uint256 i=0; i < modulesCount; ++i) {
-    //         StakingModule memory module = modules[i];
-    //         if (cw < module.currentWeight) {
-    //             cw = module.currentWeight;
-    //             index = i;
-    //         }
-    //     }
+        uint256 numKeys = pubkeys.length / PUBKEY_LENGTH;
+        require(numKeys == signatures.length / SIGNATURE_LENGTH, "REGISTRY_INCONSISTENT_SIG_COUNT");
 
-    //     nextModule = index;
+        for (uint256 i = 0; i < numKeys; ++i) {
+            bytes memory pubkey = BytesLib.slice(pubkeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
+            bytes memory signature = BytesLib.slice(signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
+            _stake(pubkey, signature);
+        }
 
-    //     updateWeight(index);
-    //     StakingModule memory module = modules[index];
-    //     return module;
-    // }
+        //update DEPOSITED_VALIDATORS_POSITION on LIDO
+        ILido(lido).updateBufferedCounters(numKeys);
+    }
 
-    // function updateWeight(uint256 index) public {
-    //     for (uint256 i=0; i < modulesCount; ++i) {
-    //         if (i == index) {
-    //             StakingModule storage module = modules[i];
+    /**
+    * @dev Invokes a deposit call to the official Deposit contract
+    * @param _pubkey Validator to stake for
+    * @param _signature Signature of the deposit call
+    */
+    function _stake(bytes memory _pubkey, bytes memory _signature) internal {
+        bytes32 withdrawalCredentials = getWithdrawalCredentials();
+        require(withdrawalCredentials != 0, "EMPTY_WITHDRAWAL_CREDENTIALS");
 
-    //             module.currentWeight -= getTotalWeight();
-            
-    //         }
-    //     }
-    // }
+        uint256 value = DEPOSIT_SIZE;
 
-    // function getTotalWeight() public view returns(uint256) {
-    //     uint256 totalWeight = 0;
-    //     for (uint256 i=0; i < modulesCount; ++i) {
-    //         StakingModule memory module = modules[i];
-    //         totalWeight += module.weight;
-    //     }
-    //     return totalWeight;
-    // }
+        // The following computations and Merkle tree-ization will make official Deposit contract happy
+        uint256 depositAmount = value % DEPOSIT_AMOUNT_UNIT;
+        assert(depositAmount * DEPOSIT_AMOUNT_UNIT == value);    // properly rounded
 
-    // function getNextWRRModule() public returns (StakingModule memory) {
-        // while (true) {
-        //     b.i = (b.i + 1) % b.n
-        //     if b.i == 0 {
-        //         b.cw = b.cw - b.gcd
-        //         if b.cw <= 0 {
-        //             b.cw = b.max
-        //             if b.cw == 0 {
-        //                 return nil
-        //             }
-        //         }
-        //     }
+        // Compute deposit data root (`DepositData` hash tree root) according to deposit_contract.sol
+        bytes32 pubkeyRoot = sha256(_pad64(_pubkey));
+        bytes32 signatureRoot = sha256(
+            abi.encodePacked(
+                sha256(BytesLib.slice(_signature, 0, 64)),
+                sha256(_pad64(BytesLib.slice(_signature, 64, SIGNATURE_LENGTH - 64 )))
+            )
+        );
 
-        //     if b.items[b.i].Weight >= b.cw {
-        //         return b.items[b.i]
-        //     }
-        // }
-    // }
+        bytes32 depositDataRoot = sha256(
+            abi.encodePacked(
+                sha256(abi.encodePacked(pubkeyRoot, withdrawalCredentials)),
+                sha256(abi.encodePacked(_toLittleEndian64(depositAmount), signatureRoot))
+            )
+        );
 
-    // function gcd(uint256 a, uint256 b) public returns(uint256){
-    //     if (b == 0) {
-    //         return a;
-    //     }
-    //     return gcd(b, a % b);
-    // }
-    
+        uint256 targetBalance = address(this).balance - value;
 
-    
+        getDepositContract().deposit{value: value}(
+            _pubkey, abi.encodePacked(withdrawalCredentials), _signature, depositDataRoot);
+        require(address(this).balance == targetBalance, "EXPECTING_DEPOSIT_TO_HAPPEN");
+    }
 
+    /**
+    * @notice Gets deposit contract handle
+    */
+    function getDepositContract() public view returns (IDepositContract) {
+        return IDepositContract(deposit_contract);
+    }
 
+    /**
+    * @notice Returns current credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
+    */
+    function getWithdrawalCredentials() public view returns (bytes32) {
+        return ILido(lido).getWithdrawalCredentials();
+    }
 
-    // function getOperatorsRewardsDistribution(uint256 _totalRewardShares) external view
-    //     returns (
-    //         address[] memory recipients,
-    //         uint256[] memory shares
-    //     )
-    // {
-    //     // get solo deposited eth
-    //     // ILIDO(lido).balanceOf(solo)
-    //     // 
+    /**
+    * @dev Padding memory array with zeroes up to 64 bytes on the right
+    * @param _b Memory array of size 32 .. 64
+    */
+    function _pad64(bytes memory _b) internal pure returns (bytes memory) {
+        assert(_b.length >= 32 && _b.length <= 64);
+        if (64 == _b.length)
+            return _b;
 
+        bytes memory zero32 = new bytes(32);
+        assembly { mstore(add(zero32, 0x20), 0) }
 
-    //      // calculate shares for Pro/Solo           
-    //     sharesRewardsPro = _totalRewardShares * getProFee() / 100
-    //     sharesRewardsSolo = _totalRewardShares * getSoloFee() / 100
+        if (32 == _b.length)
+            return BytesLib.concat(_b, zero32);
+        else
+            return BytesLib.concat(_b, BytesLib.slice(zero32, 0, uint256(64) - _b.length));
+    }
 
-        // if keys remains add to PRO, or we can implement largest-remainder method (Hare–Niemeyer method)
-        // sharesRemains = _totalRewardShares - sharesRewardsPro - sharesRewardsSolo
-        // if (sharesRemains > 0 ) {
-        //     sharesRewardsPro += sharesRemains
-        // }
+    /**
+    * @dev Converting value to little endian bytes and padding up to 32 bytes on the right
+    * @param _value Number less than `2**64` for compatibility reasons
+    */
+    function _toLittleEndian64(uint256 _value) internal pure returns (uint256 result) {
+        result = 0;
+        uint256 temp_value = _value;
+        for (uint256 i = 0; i < 8; ++i) {
+            result = (result << 8) | (temp_value & 0xFF);
+            temp_value >>= 8;
+        }
 
-    //     (address[] memory recipientsPro, uint256[] memory sharesPro) = NodeOperator(PRO).getRewardsDistribution(sharesRewardsPro);
-    //     (address[] memory recipientsSolo, uint256[] memory sharesSolo) = NodeOperator(SOLO).getRewardsDistribution(sharesRewardsSolo);
-
-    //     recipients = new address[](recipientsPro.length + recipientsSolo.length);
-    //     shares = new uint256[](sharesPro.length + sharesSolo.length);
-
-    //     uint256 idx = 0;
-    //     for (uint256 i = 0; i < recipientsPro.length; ++i) {
-    //         recipients[idx] = recipientsPro[idx]
-    //         shares[idx] = sharesPro[idx]
-    //         ++idx;
-    //     }
-    //     for (uint256 i = 0; i < recipientsSolo.length; ++i) {
-    //         recipients[idx] = recipientsSolo[idx]
-    //         shares[idx] = sharesSolo[idx]
-    //         ++idx;
-    //     }
-
-    //     return (recipients, shares);
-    // }
-
-    // function getOperatorsKeys(uint256 _numDeposits) public returns (bytes memory pubkeys, bytes memory signatures) {
-
-        
-
-    //     // calculate numDeposits for Pro/Solo           
-    //     numDepositKeysPro = _numDeposits * getProFee() / 100
-    //     numDepositKeysSolo = _numDeposits * getSoloFee() / 100
-
-    //     // if keys remains add to PRO, or we can implement largest-remainder method (Hare–Niemeyer method)
-    //     keysRemains = _numDeposits - numDepositKeysPro - numDepositKeysSolo
-    //     if (keysRemains > 0 ) {
-    //         numDepositKeysPro += keysRemains
-    //     }
-
-    //     require(_numDeposits == numDepositKeysPro + numDepositKeysSolo)
-
-    //     (bytes memory pubkeysPro, bytes memory signaturesPro) = NodeOperator(PRO).assignNextSigningKeys(numDepositKeysPro);
-    //     (bytes memory pubkeysSolo, bytes memory signaturesSolo) = NodeOperator(SOLO).assignNextSigningKeys(numDepositKeysSolo);
-
-    //     //combine keys 
-    //     pubkeys = BytesLib.concat(pubkeysPro, pubkeysSolo)
-    //     signatures = BytesLib.concat(signaturesPro, signaturesSolo)
-
-    //     return (pubkeys, signatures)
-    // }
-
-    // /**
-    // * @dev Performs deposits to the ETH 2.0 side
-    // * @param _numDeposits Number of deposits to perform
-    // * @return actually deposited Ether amount
-    // */
-    // function ETH2Deposit(uint256 _numDeposits) external returns (uint256) {
-    //     (bytes memory pubkeys, bytes memory signatures) = getOperatorsKeys(_numDeposits);
-
-    //     if (pubkeys.length == 0) {
-    //         return 0;
-    //     }
-
-    //     require(pubkeys.length.mod(PUBKEY_LENGTH) == 0, "REGISTRY_INCONSISTENT_PUBKEYS_LEN");
-    //     require(signatures.length.mod(SIGNATURE_LENGTH) == 0, "REGISTRY_INCONSISTENT_SIG_LEN");
-
-    //     uint256 numKeys = pubkeys.length.div(PUBKEY_LENGTH);
-    //     require(numKeys == signatures.length.div(SIGNATURE_LENGTH), "REGISTRY_INCONSISTENT_SIG_COUNT");
-
-    //     for (uint256 i = 0; i < numKeys; ++i) {
-    //         bytes memory pubkey = BytesLib.slice(pubkeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
-    //         bytes memory signature = BytesLib.slice(signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
-    //         _stake(pubkey, signature);
-    //     }
-
-    //     //Lido.setDepositedValidators(numKeys)
-    //     DEPOSITED_VALIDATORS_POSITION.setStorageUint256(
-    //         DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(numKeys)
-    //     );
-
-    //     return numKeys.mul(DEPOSIT_SIZE);
-    // }
-
-    // function setProFee(uint16 _operatorsFeeBasisPoints) {
-    //     _setBPValue(PRO_OPERATORS_FEE, _treasuryFeeBasisPoints);
-    // }
-
-    // function getProFee() public view returns (uint16 operatorsFeeBasisPoints){
-    //     operatorsFeeBasisPoints = uint16(PRO_OPERATORS_FEE.getStorageUint256());
-    // }
-
-    // function setSoloFee(uint16 _operatorsFeeBasisPoints) {
-    //     _setBPValue(SOLO_OPERATORS_FEE, _treasuryFeeBasisPoints);
-    // }
-
-    // function getSoloFee()  public view returns (uint16 operatorsFeeBasisPoints){
-    //     operatorsFeeBasisPoints = uint16(SOLO_OPERATORS_FEE.getStorageUint256());
-    // }
-
-    // /**
-    // * @dev Write a value nominated in basis points
-    // */
-    // function _setBPValue(bytes32 _slot, uint16 _value) internal {
-    //     require(_value <= TOTAL_BASIS_POINTS, "VALUE_OVER_100_PERCENT");
-    //     _slot.setStorageUint256(uint256(_value));
-    // }
-
-
+        assert(0 == temp_value);    // fully converted
+        result <<= (24 * 8);
+    }
 }

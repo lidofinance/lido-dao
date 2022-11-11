@@ -21,8 +21,8 @@ contract ModulePro is IModule {
     uint256 public totalKeys;
     uint256 public totalUsedKeys;
     uint256 public totalStoppedKeys;
+    uint256 public totalWithdrawnKeys;
     
-    uint256 public softCap;
     ModuleType public moduleType;
 
     uint256 constant public PUBKEY_LENGTH = 48;
@@ -113,8 +113,8 @@ contract ModulePro is IModule {
         return totalStoppedKeys;
     }
 
-    function getSoftCap() external view returns(uint256) {
-        return softCap;
+    function getTotalWithdrawnKeys() external view returns(uint256) {
+        return totalWithdrawnKeys;
     }
 
     function getRewardsDistribution(uint256 _totalRewardShares) external view
@@ -226,6 +226,27 @@ contract ModulePro is IModule {
         _increaseKeysOpIndex();
         operators[_id].stakingLimit = _stakingLimit;
         emit NodeOperatorStakingLimitSet(_id, _stakingLimit);
+    }
+
+    /**
+      * @notice `_active ? 'Enable' : 'Disable'` the node operator #`_id`
+      */
+    function setNodeOperatorActive(uint256 _id, bool _active) external
+        operatorExists(_id)
+    {
+        require(operators[_id].active != _active, "NODE_OPERATOR_ACTIVITY_ALREADY_SET");
+
+        _increaseKeysOpIndex();
+
+        uint256 activeOperatorsCount = getActiveNodeOperatorsCount();
+        if (_active)
+            ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(activeOperatorsCount + 1);
+        else
+            ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(activeOperatorsCount - 1);
+
+        operators[_id].active = _active;
+
+        emit NodeOperatorActiveSet(_id, _active);
     }
 
     function assignNextSigningKeys(uint256 _numKeys) external returns (bytes memory pubkeys, bytes memory signatures) {
@@ -448,5 +469,5 @@ contract ModulePro is IModule {
     function setTotalKeys(uint256 _keys) external { totalKeys = _keys; }
     function setTotalUsedKeys(uint256 _keys) external { totalUsedKeys = _keys; }
     function setTotalStoppedKeys(uint256 _keys) external { totalStoppedKeys = _keys; }
-    function setSoftCap(uint256 _cap) external { softCap = _cap; }
+    function setTotalWithdrawnKeys(uint256 _keys) external { totalWithdrawnKeys = _keys; }
 }
