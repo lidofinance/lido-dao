@@ -7,6 +7,7 @@ import "./lib/RateLimitUtils.sol";
 
 contract ValidatorExitBus {
     using RateLimitUtils for LimitState.Data;
+    using UnstructuredStorage for bytes32;
     using LimitUnstructuredStorage for bytes32;
 
     event ValidatorExitRequest(
@@ -38,6 +39,8 @@ contract ValidatorExitBus {
 
     bytes32 internal constant RATE_LIMIT_STATE_POSITION = keccak256("lido.ValidatorExitBus.rateLimitState");
 
+    bytes32 internal constant LAST_REPORT_EPOCH_ID_POSITION = keccak256("lido.ValidatorExitBus.lastReportEpochId");
+
     /// slot 0: oracle committee members
     address[] private members;
 
@@ -58,14 +61,23 @@ contract ValidatorExitBus {
     function reportKeysToEject(
         uint256[] calldata stakingModuleIds,
         uint256[] calldata nodeOperatorIds,
-        bytes[] calldata validatorPubkeys
+        bytes[] calldata validatorPubkeys,
+        uint256 epochId
     ) external {
+        // TODO: maybe add reporting validator id
         require(nodeOperatorIds.length == validatorPubkeys.length, ERROR_ARRAYS_MUST_BE_SAME_SIZE);
         require(stakingModuleIds.length == validatorPubkeys.length, ERROR_ARRAYS_MUST_BE_SAME_SIZE);
         require(stakingModuleIds.length > 0, ERROR_EMPTY_ARRAYS_REPORTED);
 
         uint256 memberIndex = _getMemberId(msg.sender);
         require(memberIndex < MAX_MEMBERS, ERROR_NOT_MEMBER_REPORTED);
+
+        if (epochId == LAST_REPORT_EPOCH_ID_POSITION.getStorageUint256()) {
+            // no-op for mock version of the contract, to report only on
+            // report of the first committee member report
+            return;
+        }
+        LAST_REPORT_EPOCH_ID_POSITION.setStorageUint256(epochId);
 
         LimitState.Data memory limitData = RATE_LIMIT_STATE_POSITION.getStorageLimitStruct();
         uint256 currentLimit = limitData.calculateCurrentLimit();
