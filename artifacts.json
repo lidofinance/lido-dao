@@ -1,0 +1,61 @@
+[
+  {
+    "artifactPath": "artifacts/contracts/0.4.24/Lido.sol/Lido.json",
+    "sourcePath": "contracts/0.4.24/Lido.sol",
+    "name": "Lido",
+    "address": "0x47EbaB13B806773ec2A2d16873e2dF770D130b50"
+  },
+  {
+    "artifactPath": "artifacts/contracts/0.4.24/nos/NodeOperatorsRegistry.sol/NodeOperatorsRegistry.json",
+    "sourcePath": "contracts/0.4.24/nos/NodeOperatorsRegistry.sol",
+    "name": "NodeOperatorsRegistry",
+    "address": "0x5d39abaa161e622b99d45616afc8b837e9f19a25"
+  },
+  {
+    "artifactPath": "artifacts/contracts/0.4.24/oracle/LidoOracle.sol/LidoOracle.json",
+    "sourcePath": "contracts/0.4.24/oracle/LidoOracle.sol",
+    "name": "LidoOracle",
+    "address": "0x1430194905301504e8830ce4B0b0df7187E84AbD"
+  },
+  {
+    "artifactPath": "artifacts/contracts/0.6.11/deposit_contract.sol/DepositContract.json",
+    "sourcePath": "contracts/0.6.11/deposit_contract.sol",
+    "name": "DepositContract",
+    "address": "0x00000000219ab540356cBB839Cbe05303d7705Fa"
+  },
+  {
+    "artifactPath": "artifacts/contracts/0.6.12/WstETH.sol/WstETH.json",
+    "sourcePath": "contracts/0.6.12/WstETH.sol",
+    "name": "WstETH",
+    "address": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+    "txHash": "0xaf2c1a501d2b290ef1e84ddcfc7beb3406f8ece2c46dee14e212e8233654ff05"
+  },
+  {
+    "artifactPath": "artifacts/contracts/0.8.9/CompositePostRebaseBeaconReceiver.sol/CompositePostRebaseBeaconReceiver.json",
+    "sourcePath": "contracts/0.8.9/CompositePostRebaseBeaconReceiver.sol",
+    "name": "CompositePostRebaseBeaconReceiver",
+    "address": "0x55a7E1cbD678d9EbD50c7d69Dc75203B0dBdD431",
+    "txHash": "0x6d2ac569028ece24a11eca77a4d0ca5283f4206cc83865cffd88465c490e0ae1"
+  },
+  {
+    "artifactPath": "artifacts/contracts/0.8.9/DepositSecurityModule.sol/DepositSecurityModule.json",
+    "sourcePath": "contracts/0.8.9/DepositSecurityModule.sol",
+    "name": "DepositSecurityModule",
+    "address": "0x710B3303fB508a84F10793c1106e32bE873C24cd",
+    "txHash": "0xce40c18b10854166eb69e64171cbd33ec4ba2f369623f2f438bcf684cfed0523"
+  },
+  {
+    "artifactPath": "artifacts/contracts/0.8.9/LidoExecutionLayerRewardsVault.sol/LidoExecutionLayerRewardsVault.json",
+    "sourcePath": "contracts/0.8.9/LidoExecutionLayerRewardsVault.sol",
+    "name": "LidoExecutionLayerRewardsVault",
+    "address": "0x388C818CA8B9251b393131C08a736A67ccB19297",
+    "txHash": "0xd72cf25e4a5fe3677b6f9b2ae13771e02ad66f8d2419f333bb8bde3147bd4294"
+  },
+  {
+    "artifactPath": "artifacts/contracts/0.8.9/SelfOwnedStETHBurner.sol/SelfOwnedStETHBurner.json",
+    "sourcePath": "contracts/0.8.9/SelfOwnedStETHBurner.sol",
+    "name": "SelfOwnedStETHBurner",
+    "address": "0xB280E33812c0B09353180e92e27b8AD399B07f26",
+    "txHash": "0xc74b79ce67fd3dd5c0f530e60c1f34d76208694df7d9d193478923dd193a1746"
+  }
+]
