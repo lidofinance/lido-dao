@@ -32,12 +32,18 @@ interface ILidoOracle {
         uint256 epochId,
         uint128 beaconBalance,
         uint128 beaconValidators,
-        address caller
+        address caller,
+        uint32 exitedValidators,
+        uint40 wcBufferedEther,
+        uint72 newFinalizedLength
     );
     event Completed(
         uint256 epochId,
         uint128 beaconBalance,
-        uint128 beaconValidators
+        uint128 beaconValidators,
+        uint32 exitedValidators,
+        uint40 wcBufferedEther,
+        uint72 newFinalizedLength
     );
     event PostTotalShares(
          uint256 postTotalPooledEther,
@@ -106,7 +112,10 @@ interface ILidoOracle {
         returns (
             uint64 beaconBalance,
             uint32 beaconValidators,
-            uint16 count
+            uint16 count,
+            uint32 exitedValidators,
+            uint40 wcBufferedEther,
+            uint72 newFinalizedLength
         );
 
     /**
@@ -183,7 +192,7 @@ interface ILidoOracle {
             uint256 timeElapsed
         );
 
-    
+
     /**
      * @notice Initialize the contract (version 3 for now) from scratch
      * @dev For details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md
@@ -232,5 +241,12 @@ interface ILidoOracle {
      * @param _beaconBalance Balance in gwei on the ETH 2.0 side (9-digit denomination)
      * @param _beaconValidators Number of validators visible in this epoch
      */
-    function reportBeacon(uint256 _epochId, uint64 _beaconBalance, uint32 _beaconValidators) external;
+    function reportBeacon(
+        uint256 _epochId,
+        uint64 _beaconBalance,
+        uint32 _beaconValidators,
+        uint32 _exitedValidators,
+        uint40 _wcBufferedEther,
+        uint72 _newFinalizedLength
+    ) external;
 }

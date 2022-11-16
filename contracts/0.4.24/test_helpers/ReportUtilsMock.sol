@@ -10,21 +10,44 @@ import "../oracle/ReportUtils.sol";
 contract ReportUtilsMock {
     using ReportUtils for uint256;
 
-    function encode(uint64 beaconBalance, uint32 beaconValidators) public pure returns (uint256) {
-        return ReportUtils.encode(beaconBalance, beaconValidators);
+    function encode(
+        uint64 beaconBalance,
+        uint32 beaconValidators,
+        uint32 exitedValidators,
+        uint40 wcBufferedEther,
+        uint72 newFinalizedLength
+    ) internal pure returns (uint256) {
+        return ReportUtils.encode(
+            beaconBalance,
+            beaconValidators,
+            exitedValidators,
+            wcBufferedEther,
+            newFinalizedLength
+        );
     }
 
-    function decode(uint256 value) public pure returns (uint64 beaconBalance, uint32 beaconValidators) {
+    function decode(uint256 value)
+        internal pure
+        returns (
+            uint64 beaconBalance,
+            uint32 beaconValidators,
+            uint32 exitedValidators,
+            uint40 wcBufferedEther,
+            uint72 newFinalizedLength
+    ) {
         return value.decode();
     }
 
     function decodeWithCount(uint256 value)
-        public pure
+        internal pure
         returns (
             uint64 beaconBalance,
             uint32 beaconValidators,
-            uint16 count)
-    {
+            uint16 count,
+            uint32 exitedValidators,
+            uint40 wcBufferedEther,
+            uint72 newFinalizedLength
+    ) {
         return value.decodeWithCount();
     }
 
