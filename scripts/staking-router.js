@@ -1,213 +1,186 @@
-// modules config
-const proModule = {
-    type: 0, // PRO
-    fee: 500, // in basic points
-    treasuryFee: 500, // in basic points
-    totalKeys: 100000,
-    totalUsedKeys: 0,
-    totalStoppedKeys: 0,
-    softCap: 0,
-    assignedDeposits: 0,
-    balance: 0,
-    weight: 1,
-    ethPerValidator: 32
-  }
-  
-  const soloModule = {
-    type: 1, // SOLO
-    fee: 500, // in basic points
-    treasuryFee: 500, // in basic points
-    totalKeys: 100,
-    totalUsedKeys: 2,
-    totalStoppedKeys: 0,
-    softCap: 500,
-    assignedDeposits: 0,
-    bond: 16,
-    balance: 0,
-    weight: 3,
-    ethPerValidator: 32
-  }
-  
-  // const soloModule2 = {
-  //   type: 1, // SOLO
-  //   fee: 500, // in basic points
-  //   treasuryFee: 500, // in basic points
-  //   totalKeys: 200,
-  //   totalUsedKeys: 20,
-  //   totalStoppedKeys: 1,
-  //   softCap: 100,
-  //   assignedDeposits: 0,
-  //   bond: 10,
-  //   balance: 0,
-  //   weight: 3,
-  //   ethPerValidator: 32
-  // }
-  // const soloModule3 = {
-  //   type: 1, // SOLO
-  //   fee: 500, // in basic points
-  //   treasuryFee: 500, // in basic points
-  //   totalKeys: 1000,
-  //   totalUsedKeys: 900,
-  //   totalStoppedKeys: 100,
-  //   softCap: 100,
-  //   assignedDeposits: 0,
-  //   bond: 20,
-  //   balance: 0,
-  //   weight: 3,
-  //   ethPerValidator: 32
-  // }
+const { __esModule } = require("patch-package/dist/patch/apply");
+
+const curatedModule = {
+  name: 'Curated',
+  addr: '0x010101010101010101',
+  cap: 0,
+
+  total_keys: 100000, // total amount of signing keys of this operator
+  used_keys: 40000, // number of signing keys of this operator which were used in deposits to the Ethereum 2
+  stopped_keys: 0, // number of signing keys which stopped validation (e.g. were slashed)
+  exited_keys: 0,
+  assigned_keys: 0,
 
 
-const modules = []
-modules.push(proModule)
-modules.push(soloModule)
-// modules.push(soloModule2)
-// modules.push(soloModule3)
-
-let Lido = {}
-Lido.totalBeaconChain = 0;
-Lido.buffered = 0;
-Lido.totalSupply = () => Lido.totalBeaconChain + Lido.buffered
-
-let modules2 = []
-
-let data = {}
-for(let i=0; i<modules.length;i++) {
-    let op = modules[i]
-
-    let TotalKeys = op.totalKeys
-    let UsedKeys = op.totalUsedKeys
-    let StoppedKeys = op.totalStoppedKeys
-    let WithdrawnKeys = 0
-    let FreeKeys = TotalKeys - UsedKeys - StoppedKeys - WithdrawnKeys
-
-    let opdata = {
-        TotalKeys: TotalKeys.toString() * 1,
-        UsedKeys: UsedKeys.toString() * 1,
-        StoppedKeys: StoppedKeys.toString() * 1,
-        FreeKeys: FreeKeys.toString() * 1,
-        Cap: (op.softCap / 10000 * 100),
-        MaxCapStake: 0,
-        // Weight: op.weight,
-        TotalStake: TotalKeys.toString() * 32,
-        UsedStake: UsedKeys.toString() * 32,
-        EthPerValidator: op.ethPerValidator,
-        distributed: 0
-      }
-
-    data[`Operator${i}`] = opdata 
-
-    modules2.push(opdata)
-
-    Lido.totalBeaconChain += UsedKeys * 32
 }
 
-Lido.buffered = 480
+const communityModule = {
+  name: 'Community',
+  addr: '0x010101010101010101',
+  cap: 100,
 
-// for(let i=0; i<modules.length;i++) {
-//     let entry = modules2[i]
-//     let maxCap = Lido.totalSupply() * entry.Cap / 100
-//     entry.MaxCapStake = entry.TotalStake <= maxCap ? entry.TotalStake : maxCap
-// }
+  total_keys: 0, 
+  used_keys: 0,
+  stopped_keys: 0,
+  exited_keys: 0,
+  assigned_keys: 0,
+}
+///////
 
-console.table(Lido)
-// console.table(data)
-// console.table(modules2)
+let Lido = {}
+Lido.buffer = 100;
 
-// let tmp1 = getModulesDeposits(Lido.buffered)
-// console.table(tmp1)
+let StakingRouter = {
+  modules: [],
+  modulesCount: 0,
+
+  buffer: 0,
+  allocation: [],
+
+  getTotalKeys: function() {
+    // calculate total used keys for operators
+    let moduleKeys = []
+    let totalKeys = 0
+    for (let i=0; i < this.modulesCount; i++) {
+        moduleKeys[i] = this.modules[i].total_keys;
+        totalKeys += moduleKeys[i];
+    }
+
+    return [totalKeys, moduleKeys]
+  },
+
+  addModule: function(module) {
+    // this.modules.push({ name, addr, cap, paused: false })
+    this.modules.push(module)
+    this.modulesCount++;
+  },
+
+  getModules: function() {
+    return this.modules
+  },
+
+  stakeAllocation: function() {
+
+    let cache = JSON.parse(JSON.stringify(this.modules));
+
+    let totalKeys = this.getTotalKeys()[0]
+
+    let _numDeposits = this.buffer;
+
+    let assignedDeposits = 0
+    while(assignedDeposits < _numDeposits) {
+      let bestModuleIdx = this.modulesCount;
+      let smallestStake = 0;
+
+      for(let i=0; i < this.modulesCount; i++) {
+        let entry = cache[i];
+
+        if (entry.used_keys == entry.total_keys || entry.used_keys + entry.assigned_keys == entry.total_keys) {
+          continue;
+        }
+
+        //calculate least stake
+        let stake = entry.used_keys - entry.stopped_keys - entry.exited_keys;
+        let soft_cap = entry.cap
+
+        let keys_cap = entry.used_keys + entry.assigned_keys
+
+        if (soft_cap > 0 && keys_cap / totalKeys >= soft_cap) {
+          console.log('cap')
+          continue;
+        }
+
+        // console.table({
+        //   i, soft_cap, keys_cap , totalKeys
+        // })
+
+        if (bestModuleIdx == this.modulesCount || stake < smallestStake) {
+          bestModuleIdx = i;
+          smallestStake = stake;
+        }
+
+        // console.log('bestModuleIdx', bestModuleIdx)
+        // console.log('smallestStake', smallestStake)
+      }
+
+      if (bestModuleIdx == this.modulesCount)  // not found
+        break;
+
+      entry = cache[bestModuleIdx];
+
+      ++entry.assigned_keys;
+      ++assignedDeposits;
+    }
+
+    for(let i=0; i < this.modulesCount; i++) {
+      this.allocation[i] = cache[i].assigned_keys;
+    }
+
+    return this.allocation;
+  },
+
+  deposit: function(index, keys) {
+    let amount = this.allocation[index]
+
+    if (amount < keys) {
+      console.log('cant')
+      return false
+    }
+
+    this.allocation[index] -= keys
+    this.modules[index].used_keys += keys
+    this.buffer -= keys
+    // let module = this.modules[in]
+    // console.log(amount)
+  }
 
 
-// let idx = 1
-// let stake1 = getStake(idx)
-// console.table(stake1)
+  //debug
 
-// deposit(idx)
-
-// console.table(Lido)
-// let tmp2 = getModulesDeposits(Lido.buffered)
-// console.table(tmp2)
+};
 
 
-// function deposit(idx) {
-//   let stake1 = getStake(idx)
-//   let eth = stake1.distributed
-  
-//   console.log(eth)
+function main() {
+  // StakingRouter.addModule(curatedModule.name, curatedModule.addr, curatedModule.cap)
 
-//   let entry = modules2[idx]
-//   let keys = eth / 32
+  // add modules
+  StakingRouter.addModule(curatedModule)
+  StakingRouter.addModule(communityModule)
 
-//   entry.UsedKeys += keys
-//   entry.UsedStake += eth 
-//   entry.distributed = 0
+  // transfer ether for allocation
+  StakingRouter.buffer = 100;
 
-//   Lido.buffered -= eth
-// }
+  let modules = StakingRouter.getModules()
+  console.table(modules)
+
+  let alloc = StakingRouter.stakeAllocation();
+
+  console.log('')
+  console.info('Allocation only with curated module')
+  console.table(alloc)
+
+  console.table(StakingRouter)
+
+  console.info('Add keys to community module')
+  communityModule.total_keys = 100
+
+  StakingRouter.buffer = 1000
+  console.log('')
+  console.info('Allocation with 2 modules')
+  alloc = StakingRouter.stakeAllocation();
+  console.table(alloc)
 
 
-// function getStake(idx) {
-//     let table =  getModulesDeposits(Lido.buffered)
-//     return table[idx]
-// }
+  // deposit
+  let module_index = 1
+  StakingRouter.deposit(module_index, 2)
+
+  console.table(StakingRouter)
+  console.table(StakingRouter.getModules())
+
+  console.table(alloc)
 
 
+}
 
-// function getModulesDeposits(buffered) {
-//   let tmpModules = [...modules2]
-//   let modulesCount = tmpModules.length
- 
-//     let assignedDeposits = 0
-//     while(assignedDeposits < buffered) {
-//         let bestModuleIdx = modulesCount;
-//         let smallestStake = 0;
-
-//         for(let i=0; i<modulesCount;i++) {
-//             let entry = tmpModules[i]
-
-//             if (entry.TotalStake == entry.UsedStake + entry.distributed) {
-//                 continue;
-//             }
-
-//             let ethPerValidator = entry.EthPerValidator
-//             // entry.getMaxStake() == 100eth
-//             // entry.getMaxKeys() // 1 == 32eth 320eth, 300 ...20eth -> vault()
-
-//             let percent = Math.round(entry.UsedKeys * ethPerValidator / Lido.totalSupply * 100)
-
-//             if (entry.Cap != 0 && entry.Cap <= percent) continue;
-
-//             if (buffered - assignedDeposits - ethPerValidator < 0) continue;
-
-//             let stake = entry.UsedStake - entry.StoppedKeys * ethPerValidator;
-//             if (bestModuleIdx == modulesCount || stake < smallestStake) {
-//                 bestModuleIdx = i;
-//                 smallestStake = stake;
-//             }
-//         }
-
-//         if (bestModuleIdx == modulesCount)  // not found
-//                 break;
-
-//         entry = tmpModules[bestModuleIdx]
-//         let ethPerValidator = entry.EthPerValidator
-
-//         entry.distributed += ethPerValidator
-//         assignedDeposits += ethPerValidator
-        
-//     }
-
-//     return tmpModules;
-// }
-
-// 900 -32
-// 89 - 16
-// 179 - 22
-// 0 - 12
-
-// надо распределить 1000eth
-// 1. пробегаемся по модулям и смотрим наименьший стейк (UsedKeys-stopped)*32
-// 2. если 
-
-// total 100keys (100*32-100*16) = 100*ethpervalidaotr= 100*16 = 1600
-// used 10 
+main();

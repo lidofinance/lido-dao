@@ -63,13 +63,15 @@ contract StakingRouter {
         uint256 totalStoppedKeys;
         uint256 initialUsedSigningKeys;
         uint256 assignedKeys;
-        uint256 softCap;
+        uint256 cap;
     }
 
     mapping (uint256 => StakingModule) public modules;
-    mapping (address => uint256) public modules_deposits;
 
-    uint256 public modulesCount;    
+    //stake allocation module_index -> amount
+    mapping (uint256 => uint256) public allocation;
+
+    uint256 public modulesCount;
 
     constructor(address _lido, address _deposit_contract) {
         lido = _lido;
@@ -152,12 +154,11 @@ contract StakingRouter {
      * @return totalKeys total keys which used for calculation
      * @return moduleKeys array of amount module keys
      */
-    function calculateShares2Mint(uint256 _totalRewards) external 
-    returns (
+    function calculateShares2Mint(uint256 _totalRewards) external returns (
         uint256 shares2mint, 
         uint256 totalKeys,
-        uint256[] memory moduleKeys) 
-    {
+        uint256[] memory moduleKeys
+        ) {
         assert(modulesCount != 0);
 
         // calculate total used keys for operators
@@ -234,28 +235,29 @@ contract StakingRouter {
         }
     } 
 
-    function distributeDeposits(uint256 _numDeposits) public returns(ModuleLookupCacheEntry[] memory) {
-        ModuleLookupCacheEntry[] memory cache = getModulesDeposits(_numDeposits); //module-eth
+    function distributeDeposits() public returns(ModuleLookupCacheEntry[] memory, uint256[] memory allocation) {
+    //    uint256 buffered = _getBufferedEther();
+    //     if (buffered >= DEPOSIT_SIZE) {
+    //         uint256 unaccounted = _getUnaccountedEther();
+    //         uint256 numDeposits = buffered.div(DEPOSIT_SIZE);
+    //         _markAsUnbuffered(_ETH2Deposit(numDeposits < _maxDeposits ? numDeposits : _maxDeposits));
+    //         assert(_getUnaccountedEther() == unaccounted);
+    //     }
+        uint256 buffered = address(this).balance;
+        uint256 numDeposits = buffered / DEPOSIT_SIZE;
+
+        ModuleLookupCacheEntry[] memory cache = getAllocation(numDeposits); //module-eth
         ModuleLookupCacheEntry memory entry;
 
-        
         for(uint256 i=0; i< modulesCount; i++)  {
             entry = cache[i];
-
-            if (entry.assignedKeys == 0)
-                continue;
-
-            IModule module = IModule(entry.moduleAddress);
-            
-            (bytes memory pubkeys, bytes memory signatures) = module.assignNextSigningKeys(entry.assignedKeys);
-            emit KeysAssigned(pubkeys, signatures);
+            allocation[i] = cache[i].assignedKeys;
         }
 
-        return cache;
+        return (cache, allocation);
     }
 
-    function getModulesDeposits(uint256 _numDeposits) public view returns(ModuleLookupCacheEntry[] memory) {
-
+    function getAllocation(uint256 _numDeposits) public view returns(ModuleLookupCacheEntry[] memory) {
         ModuleLookupCacheEntry[] memory cache = _loadModuleCache();
         ModuleLookupCacheEntry memory entry;
 
@@ -273,8 +275,8 @@ contract StakingRouter {
                 }
 
                 uint256 stake = entry.totalUsedKeys - entry.totalStoppedKeys;
-                uint256 softCap = entry.softCap;
-                if (softCap > 0 && entry.assignedKeys * TOTAL_BASIS_POINTS / _numDeposits  >= softCap) {
+                uint256 softCap = entry.cap;
+                if (softCap > 0 && (entry.totalUsedKeys + entry.assignedKeys) * TOTAL_BASIS_POINTS / _numDeposits  >= softCap) {
                     continue;
                 }
 
@@ -316,13 +318,18 @@ contract StakingRouter {
             entry.totalKeys = module.getTotalKeys();
             entry.totalUsedKeys = module.getTotalUsedKeys();
             entry.totalStoppedKeys = module.getTotalStoppedKeys();
-            entry.softCap = stakingModule.cap;
+            entry.cap = stakingModule.cap;
             entry.initialUsedSigningKeys = entry.totalUsedKeys;
         }
 
         return cache;
     }
 
+    /**
+     * @dev Invokes a deposit call to the official Deposit contract
+     * @param pubkeys Validators to stake for
+     * @param signatures Signaturse of the deposit call
+     */
     function deposit(bytes memory pubkeys, bytes memory signatures) external {
         require(pubkeys.length > 0, "INVALID_PUBKEYS");
 

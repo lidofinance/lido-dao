@@ -794,28 +794,6 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-    *  @dev Internal function to distribute reward to node operators
-    *  @param _sharesToDistribute amount of shares to distribute
-    *  @return actual amount of shares that was transferred to node operators as a reward
-    */
-    function _distributeStakingRouterReward(uint256 _sharesToDistribute) internal returns (uint256 distributed) {
-        (address[] memory recipients, uint256[] memory shares) = getOperators().getRewardsDistribution(_sharesToDistribute);
-
-        assert(recipients.length == shares.length);
-
-        distributed = 0;
-        for (uint256 idx = 0; idx < recipients.length; ++idx) {
-            _transferShares(
-                address(this),
-                recipients[idx],
-                shares[idx]
-            );
-            _emitTransferAfterMintingShares(recipients[idx], shares[idx]);
-            distributed = distributed.add(shares[idx]);
-        }
-    }
-
-    /**
     * @dev Records a deposit to the deposit_contract.deposit function
     * @param _amount Total amount deposited to the ETH 2.0 side
     */

@@ -38,50 +38,27 @@ const proModule = {
   type: 0, // PRO
   fee: 500, // in basic points
   treasuryFee: 500, // in basic points
-  totalKeys: 4000,
-  totalUsedKeys: 3000,
-  totalStoppedKeys: 100,
   softCap: 0,
   assignedDeposits: 0,
-  balance: 0
+  balance: 0,
+
+  totalKeys: 100000,
+  totalUsedKeys: 40000,
+  totalStoppedKeys: 0
 }
 
 const soloModule = {
   type: 1, // SOLO
   fee: 500, // in basic points
   treasuryFee: 500, // in basic points
-  totalKeys: 100,
-  totalUsedKeys: 10,
-  totalStoppedKeys: 1,
   softCap: 9000,
   assignedDeposits: 0,
   bond: 16,
-  balance: 0
-}
+  balance: 0,
 
-const soloModule2 = {
-  type: 1, // SOLO
-  fee: 500, // in basic points
-  treasuryFee: 500, // in basic points
-  totalKeys: 200,
-  totalUsedKeys: 20,
-  totalStoppedKeys: 1,
-  softCap: 100,
-  assignedDeposits: 0,
-  bond: 16,
-  balance: 0
-}
-const soloModule3 = {
-  type: 1, // SOLO
-  fee: 500, // in basic points
-  treasuryFee: 500, // in basic points
-  totalKeys: 1000,
-  totalUsedKeys: 1000,
-  totalStoppedKeys: 100,
-  softCap: 100,
-  assignedDeposits: 0,
-  bond: 20,
-  balance: 0
+  totalKeys: 100,
+  totalUsedKeys: 0,
+  totalStoppedKeys: 0
 }
 
 const ModuleTypes = ['PRO', 'SOLO', 'DVT']
@@ -89,8 +66,6 @@ const ModuleTypes = ['PRO', 'SOLO', 'DVT']
 const modules = []
 modules.push(proModule)
 modules.push(soloModule)
-modules.push(soloModule2)
-modules.push(soloModule3)
 
 contract('StakingRouter', (accounts) => {
   let oracle, lido, burner
@@ -166,10 +141,7 @@ contract('StakingRouter', (accounts) => {
     it(`init counters and burn amount per run works`, async () => {
       /**
        *
-       *
        *  INITIALIZE modules
-       *
-       *
        *
        */
       for (i = 0; i < modules.length; i++) {
@@ -196,30 +168,44 @@ contract('StakingRouter', (accounts) => {
 
       await getLidoStats(lido, { Stranger1: externalAddress, Stranger2: stranger2, StakingRouter: stakingRouter.address })
 
+      const alloc1 = await stakingRouter.getAllocation(50)
+      const t1 = []
+      for (i = 0; i < alloc1.length; i++) {
+        const m = alloc1[i]
+        t1[i] = {
+          id: m.id,
+          totalKeys: m.totalKeys,
+          totalUsedKeys: m.totalUsedKeys,
+          cap: m.cap,
+          assigned: m.assignedKeys
+        }
+      }
+      console.table(t1)
+
       // console.log('report oracle 1 eth')
       // await oracle.reportBeacon(100, 0, ETH(1), { from: appManager })
 
       // await getLidoStats(lido, {Stranger1: externalAddress, Stranger2: stranger2, StakingRouter: stakingRouter.address})
 
-      const op1 = await ModulePro.at(modules[0].address)
+      // const op1 = await ModulePro.at(modules[0].address)
 
-      const data = {}
-      for (let i = 0; i < modules.length; i++) {
-        const op = await ModulePro.at(modules[i].address)
+      // const data = {}
+      // for (let i = 0; i < modules.length; i++) {
+      //   const op = await ModulePro.at(modules[i].address)
 
-        const TotalKeys = await op.getTotalKeys()
-        const UsedKeys = await op.getTotalUsedKeys()
-        const StoppedKeys = await op.getTotalStoppedKeys()
-        const WithdrawnKeys = await op.getTotalWithdrawnKeys()
-        const FreeKeys = TotalKeys.sub(UsedKeys).sub(StoppedKeys).sub(WithdrawnKeys)
+      //   const TotalKeys = await op.getTotalKeys()
+      //   const UsedKeys = await op.getTotalUsedKeys()
+      //   const StoppedKeys = await op.getTotalStoppedKeys()
+      //   const WithdrawnKeys = await op.getTotalWithdrawnKeys()
+      //   const FreeKeys = TotalKeys.sub(UsedKeys).sub(StoppedKeys).sub(WithdrawnKeys)
 
-        data[`Operator${i}`] = {
-          TotalKeys: TotalKeys.toString(),
-          UsedKeys: UsedKeys.toString(),
-          StoppedKeys: StoppedKeys.toString(),
-          FreeKeys: FreeKeys.toString()
-        }
-      }
+      //   data[`Operator${i}`] = {
+      //     TotalKeys: TotalKeys.toString(),
+      //     UsedKeys: UsedKeys.toString(),
+      //     StoppedKeys: StoppedKeys.toString(),
+      //     FreeKeys: FreeKeys.toString()
+      //   }
+      // }
     })
   })
 })
@@ -246,3 +232,5 @@ async function getLidoStats(lido, args) {
 
   console.table(data)
 }
+
+async function showAllocation(alloc) {}
