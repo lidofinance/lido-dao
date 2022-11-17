@@ -106,9 +106,6 @@ contract Lido is ILido, StETH, AragonApp {
     /// @dev number of Lido's validators exited, according to the Beacon state
     bytes32 internal constant BEACON_EXITED_VALIDATORS_POSITION = keccak256("lido.Lido.exitedValidators");
 
-    /// @dev amount of ether buffered for withdrawals, but not finalized yet
-    bytes32 internal constant WC_BUFFERED_ETHER_POSITION = keccak256("lido.Lido.wcBufferedEther");
-
     /// @dev percent in basis points of total pooled ether allowed to withdraw from LidoExecutionLayerRewardsVault per LidoOracle report
     bytes32 internal constant EL_REWARDS_WITHDRAWAL_LIMIT_POSITION = keccak256("lido.Lido.ELRewardsWithdrawalLimit");
 
@@ -728,7 +725,6 @@ contract Lido is ILido, StETH, AragonApp {
         BEACON_BALANCE_POSITION.setStorageUint256(_beaconBalance);
         BEACON_VALIDATORS_POSITION.setStorageUint256(_beaconValidators);
         BEACON_EXITED_VALIDATORS_POSITION.setStorageUint256(_totalExitedValidators);
-        WC_BUFFERED_ETHER_POSITION.setStorageUint256(_wcBufferedEther);
 
         return rewardBase;
     }
@@ -1114,8 +1110,7 @@ contract Lido is ILido, StETH, AragonApp {
     function _getTotalPooledEther() internal view returns (uint256) {
         return _getBufferedEther()
         .add(_getTransientBalance())
-        .add(BEACON_BALANCE_POSITION.getStorageUint256())
-        .add(WC_BUFFERED_ETHER_POSITION.getStorageUint256());
+        .add(BEACON_BALANCE_POSITION.getStorageUint256());
     }
 
     /**
