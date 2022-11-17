@@ -118,6 +118,10 @@ contract Lido is ILido, StETH, AragonApp {
     /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
     bytes32 internal constant WITHDRAWAL_CREDENTIALS_POSITION = keccak256("lido.Lido.withdrawalCredentials");
 
+     /// @dev Amount of eth in deposit buffer to reserve for withdrawals
+    bytes32 internal constant WITHDRAWAL_RESERVE_POSITION = keccak256("lido.Lido.withdrawalReserve");
+
+
     /**
     * @dev As AragonApp, Lido contract must be initialized with following variables:
     * @param _depositContract official ETH2 Deposit contract
@@ -520,6 +524,17 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
+     * @notice set a reserve amount that should not be sent to deposits and keeped for later withdrawals
+     */
+    function setBufferWithdrawalsReserve(uint256 _withdrawalsReserveAmount) external {
+        WITHDRAWAL_RESERVE_POSITION.setStorageUint256(_withdrawalsReserveAmount);
+    }
+
+    function getBufferWithdrawalsReserve() public returns (uint256) {
+        return WITHDRAWAL_RESERVE_POSITION.getStorageUint256();
+    }
+
+    /**
     * @notice Updates accounting stats, collects EL rewards and distributes all rewards if beacon balance increased
     * @dev periodically called by the Oracle contract
     */
@@ -898,12 +913,18 @@ contract Lido is ILido, StETH, AragonApp {
     */
     function _depositBufferedEther(uint256 _maxDeposits) internal whenNotStopped {
         uint256 buffered = _getBufferedEther();
-        if (buffered >= DEPOSIT_SIZE) {
-            uint256 unaccounted = _getUnaccountedEther();
-            uint256 numDeposits = buffered.div(DEPOSIT_SIZE);
-            _markAsUnbuffered(_ETH2Deposit(numDeposits < _maxDeposits ? numDeposits : _maxDeposits));
-            assert(_getUnaccountedEther() == unaccounted);
-        }
+        uint256 withdrawalReserve = getBufferWithdrawalsReserve();
+        
+        if (buffered > withdrawalReserve) {
+            buffered = buffered.sub(withdrawalReserve);
+
+            if (buffered >= DEPOSIT_SIZE) {
+                uint256 unaccounted = _getUnaccountedEther();
+                uint256 numDeposits = buffered.div(DEPOSIT_SIZE);
+                _markAsUnbuffered(_ETH2Deposit(numDeposits < _maxDeposits ? numDeposits : _maxDeposits));
+                assert(_getUnaccountedEther() == unaccounted);
+            }
+        } 
     }
 
     /**

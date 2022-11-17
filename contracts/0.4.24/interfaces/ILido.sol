@@ -258,6 +258,8 @@ interface ILido {
         bool isClaimed
     );
 
+    function setBufferWithdrawalsReserve(uint256 _withdrawalsReserveAmount) external;
+
     event WithdrawalRequested(address indexed receiver, uint256 amountOfStETH, uint256 amountOfShares, uint256 requestId);
 
     event WithdrawalClaimed(uint256 indexed requestId, address indexed receiver, address initiator);
