@@ -501,16 +501,22 @@ contract Lido is ILido, StETH, AragonApp {
         emit WithdrawalClaimed(_requestId, recipient, msg.sender);
     }
 
-    // TODO:
-    function withdrawalRequestStatus(uint _requestId) external view returns (
-        bool finalized,
-        uint256 etherToWithdraw,
-        address recipient
+    function withdrawalRequestStatus(uint256 _requestId) external view returns (
+        address recipient, 
+        uint256 requestBlockNumber,
+        uint256 etherToWithdraw, 
+        bool isFinalized,
+        bool isClaimed
     ) {
         IWithdrawalQueue withdrawal = IWithdrawalQueue(address(uint160(getWithdrawalCredentials())));
 
-        (recipient, etherToWithdraw,) = withdrawal.queue(_requestId);
-        finalized = _requestId < withdrawal.finalizedQueueLength();
+        (recipient, requestBlockNumber, etherToWithdraw,,isClaimed) = withdrawal.queue(_requestId);
+        if (_requestId > 0) {
+            // there is cumulative ether values in the queue so we need to subtract previous on
+            (,,uint256 previousCumulativeEther,,) = withdrawal.queue(_requestId.sub(1));
+            etherToWithdraw = etherToWithdraw.sub(previousCumulativeEther);
+        }
+        isFinalized = _requestId < withdrawal.finalizedQueueLength();
     }
 
     /**
