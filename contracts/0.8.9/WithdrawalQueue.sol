@@ -71,6 +71,7 @@ contract WithdrawalQueue {
      * @param _owner address that will be able to invoke `enqueue` and `finalize` methods.
      */
     constructor(address payable _owner) {
+        require(_owner  != address(0), "ZERO_OWNER");
         OWNER = _owner;
     }
 

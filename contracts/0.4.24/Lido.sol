@@ -7,7 +7,6 @@ pragma solidity 0.4.24;
 
 import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
-import "@aragon/os/contracts/lib/math/SafeMath64.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
 import "./interfaces/ILido.sol";
@@ -98,7 +97,7 @@ contract Lido is ILido, StETH, AragonApp {
     bytes32 internal constant STAKING_STATE_POSITION = keccak256("lido.Lido.stakeLimit");
     /// @dev amount of Ether (on the current Ethereum side) buffered on this smart contract balance
     bytes32 internal constant BUFFERED_ETHER_POSITION = keccak256("lido.Lido.bufferedEther");
-    /// @dev number of deposited validators (incrementing counter of deposit operations).
+    /// @dev number of depositmovedToWithdrawalBufferting counter of deposit operations).
     bytes32 internal constant DEPOSITED_VALIDATORS_POSITION = keccak256("lido.Lido.depositedValidators");
     /// @dev total amount of Beacon-side Ether (sum of all the balances of Lido validators)
     bytes32 internal constant BEACON_BALANCE_POSITION = keccak256("lido.Lido.beaconBalance");
@@ -518,77 +517,46 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-    * @notice Updates CL stats, collects rewards from LidoExecutionLayerRewardsVault and distributes all rewards if beacon balance increased
+    * @notice Updates accounting stats, collects EL rewards and distributes all rewards if beacon balance increased
     * @dev periodically called by the Oracle contract
     */
     function handleOracleReport(
         // CL values
         uint256 _beaconValidators,
         uint256 _beaconBalance,
-        uint256 _exitedValidators,
+        uint256 _totalExitedValidators,
         // EL values
         uint256 _wcBufferedEther,
         // decision
-        uint256 _newFinalizedLength
+        uint256[] _requestIdToFinalizeUpTo,
+        uint256[] _finalizationPooledEtherAmount,
+        uint256[] _finalizationSharesAmount
     ) external whenNotStopped {
         require(msg.sender == getOracle(), "APP_AUTH_FAILED");
-
-        uint256 depositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256();
-        require(_beaconValidators <= depositedValidators, "REPORTED_MORE_DEPOSITED");
-
-        uint256 beaconValidators = BEACON_VALIDATORS_POSITION.getStorageUint256();
-        // Since the calculation of funds in the ingress queue is based on the number of validators
-        // that are in a transient state (deposited but not seen on beacon yet), we can't decrease the previously
-        // reported number (we'll be unable to figure out who is in the queue and count them).
-        // See LIP-1 for details https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-1.md
-        require(_beaconValidators >= beaconValidators, "REPORTED_LESS_VALIDATORS");
-
-        uint256 exitedValidators = BEACON_EXITED_VALIDATORS_POSITION.getStorageUint256();
-        require(_exitedValidators >= exitedValidators, "REPORTED_LESS_EXITED_VALIDATORS");
-
-        uint256 appearedValidators = _beaconValidators.sub(beaconValidators);
-
-        // RewardBase is the amount of money that is not included in the reward calculation
-        // Just appeared validators * 32 added to the previously reported beacon balance
-        uint256 rewardBase = (appearedValidators.mul(DEPOSIT_SIZE)).add(BEACON_BALANCE_POSITION.getStorageUint256());
-
-        // Save the current beacon balance and validators to
-        // calculate rewards on the next push
-        BEACON_BALANCE_POSITION.setStorageUint256(_beaconBalance);
-        BEACON_VALIDATORS_POSITION.setStorageUint256(_beaconValidators);
-        BEACON_EXITED_VALIDATORS_POSITION.setStorageUint256(_exitedValidators);
-        WC_BUFFERED_ETHER_POSITION.setStorageUint256(_wcBufferedEther);
+        uint256 rewardBase = _processAccounting(
+            _beaconValidators, 
+            _beaconBalance, 
+            _totalExitedValidators, 
+            _wcBufferedEther
+        );
 
         // If LidoExecutionLayerRewardsVault address is not set just do as if there were no execution layer rewards at all
         // Otherwise withdraw all rewards and put them to the buffer
         // Thus, execution layer rewards are handled the same way as beacon rewards
 
-        uint256 executionLayerRewards = 0;
-        address executionLayerRewardsVaultAddress = getELRewardsVault();
+        uint256 executionLayerRewards = _processCapitalMoving(
+            _requestIdToFinalizeUpTo, 
+            _finalizationPooledEtherAmount,
+            _finalizationSharesAmount,
+            _wcBufferedEther
+        );
 
-        if (executionLayerRewardsVaultAddress != address(0)) {
-            executionLayerRewards = ILidoExecutionLayerRewardsVault(executionLayerRewardsVaultAddress).withdrawRewards(
-                (_getTotalPooledEther() * EL_REWARDS_WITHDRAWAL_LIMIT_POSITION.getStorageUint256()) / TOTAL_BASIS_POINTS
-            );
-        }
-
-        uint256 withdrawalsRestaked = _processWithdrawals(_newFinalizedLength, _wcBufferedEther);
-
-        if (executionLayerRewards != 0 || withdrawalsRestaked != 0) {
-            BUFFERED_ETHER_POSITION.setStorageUint256(
-                _getBufferedEther()
-                    .add(executionLayerRewards)
-                    .add(withdrawalsRestaked)
-            );
-        }
-        
         // Don’t mint/distribute any protocol fee on the non-profitable Lido oracle report
         // (when beacon chain balance delta is zero or negative).
         // See ADR #3 for details: 
         // https://research.lido.fi/t/rewards-distribution-after-the-merge-architecture-decision-record/1535
         if (_beaconBalance > rewardBase) {
-            uint256 rewards = _beaconBalance.sub(rewardBase);
-            distributeFee(rewards.add(executionLayerRewards));
+            distributeFee(_beaconBalance.sub(rewardBase).add(executionLayerRewards));
         }
     }
 
@@ -734,49 +702,132 @@ contract Lido is ILido, StETH, AragonApp {
         return EL_REWARDS_VAULT_POSITION.getStorageAddress();
     }
 
-    function _processWithdrawals(
-        uint256 _newFinalizedLength, 
+    /**
+     * @dev updates beacon state and calculate rewards base (OUTDATED) 
+     */
+    function _processAccounting(
+        // CL values
+        uint256 _beaconValidators,
+        uint256 _beaconBalance,
+        uint256 _totalExitedValidators,
+        // EL values
         uint256 _wcBufferedEther
-    ) internal returns (uint256 withdrawalsRestaked) {
+    ) internal returns (uint256) {
+        require(_beaconValidators <= DEPOSITED_VALIDATORS_POSITION.getStorageUint256(), "REPORTED_MORE_DEPOSITED");
+        require(_beaconValidators >= BEACON_VALIDATORS_POSITION.getStorageUint256(), "REPORTED_LESS_VALIDATORS");
+        require(_totalExitedValidators >= BEACON_EXITED_VALIDATORS_POSITION.getStorageUint256(), "REPORTED_LESS_EXITED_VALIDATORS");
+        
+        uint256 appearedValidators = _beaconValidators.sub(BEACON_VALIDATORS_POSITION.getStorageUint256());
+
+        // RewardBase is the amount of money that is not included in the reward calculation
+        // Just appeared validators * 32 added to the previously reported beacon balance
+        uint256 rewardBase = (appearedValidators.mul(DEPOSIT_SIZE)).add(BEACON_BALANCE_POSITION.getStorageUint256());
+
+        // Save the current beacon balance and validators to
+        // calculate rewards on the next push
+        BEACON_BALANCE_POSITION.setStorageUint256(_beaconBalance);
+        BEACON_VALIDATORS_POSITION.setStorageUint256(_beaconValidators);
+        BEACON_EXITED_VALIDATORS_POSITION.setStorageUint256(_totalExitedValidators);
+        WC_BUFFERED_ETHER_POSITION.setStorageUint256(_wcBufferedEther);
+
+        return rewardBase;
+    }
+
+    /**
+     * @dev move funds between ELRewardsVault, deposit and withdrawal buffers. Updates buffered counters respectively
+     */
+    function _processCapitalMoving(
+        uint256[] _requestIdToFinalizeUpTo, 
+        uint256[] _finalizationPooledEtherAmount,
+        uint256[] _finalizationSharesAmount,  
+        uint256 _wcBufferedEther
+    ) internal returns (uint256 executionLayerRewards) {
+        // Moving funds from ELRewardsVault to deposit buffer
+        address elRewardsVaultAddress = getELRewardsVault();
+        if (elRewardsVaultAddress != address(0)) {
+            executionLayerRewards = ILidoExecutionLayerRewardsVault(elRewardsVaultAddress).withdrawRewards(
+                (_getTotalPooledEther() * EL_REWARDS_WITHDRAWAL_LIMIT_POSITION.getStorageUint256()) / TOTAL_BASIS_POINTS
+            );
+        }
+
+        // Moving funds between withdrawal buffer and deposit buffer
+        // depending on withdrawal queue status
+        int256 movedToWithdrawalBuffer = _processWithdrawals(
+            _requestIdToFinalizeUpTo, 
+            _finalizationPooledEtherAmount,
+            _finalizationSharesAmount,  
+            _wcBufferedEther);
+
+        // Update deposit buffer state
+        if (executionLayerRewards != 0 || movedToWithdrawalBuffer != 0) {
+            if (movedToWithdrawalBuffer > 0) {
+                BUFFERED_ETHER_POSITION.setStorageUint256(
+                    _getBufferedEther().add(executionLayerRewards).add(uint256(movedToWithdrawalBuffer))
+                );
+            } else {
+                BUFFERED_ETHER_POSITION.setStorageUint256(
+                    _getBufferedEther().add(executionLayerRewards).sub(uint256(-movedToWithdrawalBuffer))
+                );
+            }
+        }
+    }
+
+    /**
+     * @dev finalize requests in the queue, burn shares and restake some ether if remains
+     * @return withdrawalFundsMovement amount of funds restaked (if positive) or moved to withdrawal buffer (if negative)
+     */
+    function _processWithdrawals(
+        uint256[] _requestIdToFinalizeUpTo,
+        uint256[] _finalizationPooledEtherAmount,
+        uint256[] _finalizationSharesAmount,
+        uint256 _wcBufferedEther
+    ) internal returns (int256 withdrawalFundsMovement) {
         address withdrawalAddress = address(uint160(getWithdrawalCredentials()));
-        // NOP if withdrawals is not configured
+        // do nothing if withdrawals is not configured
         if (withdrawalAddress == address(0)) { 
             return 0; 
         }
 
         IWithdrawalQueue withdrawal = IWithdrawalQueue(withdrawalAddress);
 
-        uint256 lockedEther = 0;
+        uint256 lockedEtherAccumulator = 0;
 
-        if (_newFinalizedLength > withdrawal.finalizedQueueLength()) {
-            uint256 totalPooledEther = getTotalPooledEther();
-            uint256 totalShares = getTotalShares();
+        for (uint256 i = 0; i < _requestIdToFinalizeUpTo.length; i++) {
+            uint256 lastIdToFinalize = _requestIdToFinalizeUpTo[i];
+            require(lastIdToFinalize >= withdrawal.finalizedQueueLength(), "BAD_FINALIZATION_PARAMS");
+
+            uint256 totalPooledEther = _finalizationPooledEtherAmount[i];
+            uint256 totalShares = _finalizationSharesAmount[i];
 
             (uint256 etherToLock, uint256 sharesToBurn) = withdrawal.calculateFinalizationParams(
-                _newFinalizedLength.sub(1),
+                lastIdToFinalize,
                 totalPooledEther,
                 totalShares 
             );
 
             _burnShares(withdrawalAddress, sharesToBurn);
 
-            uint256 additionalFunds = etherToLock > _wcBufferedEther ? etherToLock.sub(_wcBufferedEther) : 0;
+            uint256 remainingFunds = _wcBufferedEther > lockedEtherAccumulator ? _wcBufferedEther - lockedEtherAccumulator: 0;
 
-            withdrawal.finalize.value(additionalFunds)(
-                _newFinalizedLength.sub(1),
+            uint256 transferToWithdrawalBuffer = etherToLock > remainingFunds ? etherToLock - remainingFunds : 0;
+
+            lockedEtherAccumulator += etherToLock;
+
+            withdrawal.finalize.value(transferToWithdrawalBuffer)(
+                lastIdToFinalize,
                 etherToLock, 
                 totalPooledEther,
                 totalShares
             );
-
-            lockedEther = etherToLock;
         }
+        // There can be unnacounted ether in witdrawal buffer that should not be used for finalization
+        require(lockedEtherAccumulator <= _wcBufferedEther.add(_getBufferedEther()), "NOT_ENOUGH_ACCOUNTED_ETHER");
 
-         withdrawalsRestaked = _wcBufferedEther.sub(lockedEther);
+        withdrawalFundsMovement = int256(_wcBufferedEther) - int256(lockedEtherAccumulator);
 
-         if (withdrawalsRestaked > 0) {
-            withdrawal.restake(withdrawalsRestaked);
-         }
+        if (withdrawalFundsMovement > 0) {    
+            withdrawal.restake(uint256(withdrawalFundsMovement));
+        }
     }
 
     /**

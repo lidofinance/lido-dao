@@ -218,11 +218,16 @@ interface ILido {
       * @notice Ether on the ETH 2.0 side reported by the oracle
       */
     function handleOracleReport(
-        uint256 _beaconValidators, 
-        uint256 _beaconBalance, 
-        uint256 _exitedValidators, 
+        // CL values
+        uint256 _beaconValidators,
+        uint256 _beaconBalance,
+        uint256 _totalExitedValidators,
+        // EL values
         uint256 _wcBufferedEther,
-        uint256 _newFinalizedLength
+        // decision
+        uint256[] _requestIdToFinalizeUpTo,
+        uint256[] _finalizationPooledEtherAmount,
+        uint256[] _finalizationSharesAmount
     ) external;
 
 
