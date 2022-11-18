@@ -50,9 +50,9 @@ jobs:
         run: yarn compile
 
       - name: Verify bytecode
-        run: node .github/verify-bytecode.js artifacts.json
-        env:
-          RPC_URL: https://mainnet.infura.io/v3/${{ secrets.WEB3_INFURA_PROJECT_ID }}
+        uses: lidofinance/action-verify-bytecode@master
+        with:
+          file: artifacts.json
 
       - name: Check artifacts.json file completeness
         run: |
