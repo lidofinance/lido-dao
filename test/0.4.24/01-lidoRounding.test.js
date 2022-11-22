@@ -97,6 +97,33 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     assertEvent(receipt, 'ELRewardsWithdrawalLimitSet', { expectedArgs: { limitPoints: elRewardsWithdrawalLimitPoints } })
   })
 
+  it('stETH transfer invariant should keep', async () => {
+    const totalShares = new BN('3954885183194715680671922')
+    const totalPooledEther = new BN('42803292811181753711139770')
+    // rate = 10.822891393424902
+
+    await app.submit(ZERO_ADDRESS, { from: user1, value: totalShares })
+    await app.methods['depositBufferedEther()']({ from: depositor })
+    await oracle.reportBeacon(100, 0, totalPooledEther.sub(totalShares))
+
+    const user2ethToDeposit = new BN('10000000000000000000')
+    await app.submit(ZERO_ADDRESS, { from: user2, value: user2ethToDeposit })
+    const A_balance_before = await app.balanceOf(user2)
+
+    const user3ethToDeposit = new BN('20000000000000000000')
+    await app.submit(ZERO_ADDRESS, { from: user3, value: user3ethToDeposit })
+    const B_balance_before = await app.balanceOf(user3)
+
+    assertBn(B_balance_before, user3ethToDeposit)
+
+    await app.transfer(user2, user2ethToDeposit, { from: user3 })
+    const A_balance_after = await app.balanceOf(user2)
+    const B_balance_after = await app.balanceOf(user3)
+
+    assertBn(A_balance_before.add(B_balance_before), A_balance_after.add(B_balance_after)) // == 30000000000000000000
+    assertBn(A_balance_before.sub(A_balance_after), B_balance_after.sub(B_balance_before)) // == -10000000000000000000
+  })
+
   it('balanceOf error after submit should not be greater than 1 wei', async () => {
     const totalShares = new BN('3954885183194715680671922')
     const totalPooledEther = new BN('42803292811181753711139770')
@@ -243,6 +270,4 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
 
     assertBn(stranger_steth_balance_after, ethToDeposit)
   })
-
-  // need for rounding in public functions ?
 })

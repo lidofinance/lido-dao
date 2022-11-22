@@ -387,10 +387,10 @@ contract StETH is IERC20, Pausable {
      * Emits a `TransferShares` event.
      */
     function _transfer(address _sender, address _recipient, uint256 _amount) internal {
-        uint256 _sharesToTransfer = getSharesByPooledEth(_amount);
-        _transferShares(_sender, _recipient, _sharesToTransfer);
+        uint256 _sharesToTransferShifted = _getSharesByPooledEthWithPrecisionShifted(_amount);
+        _transferSharesWithPrecisionShifted(_sender, _recipient, _sharesToTransferShifted);
         emit Transfer(_sender, _recipient, _amount);
-        emit TransferShares(_sender, _recipient, _sharesToTransfer);
+        emit TransferShares(_sender, _recipient, _sharesToTransferShifted.fromShiftedSharesToStoredSharesValue());
     }
 
     /**
