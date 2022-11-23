@@ -31,7 +31,12 @@ interface IWithdrawalQueue {
 
     function restake(uint256 _amount) external;
 
-    function queue(uint256 _requestId) external view returns (address, uint256, uint256);
+    function queue(uint256 _requestId) external view returns (
+        address recipient, 
+        uint96 requestBlockNumber, 
+        uint128 cumulativeEtherToWithdraw, 
+        uint128 cumulativeSharesToBurn, 
+        bool claimed
+    );
     function finalizedQueueLength() external view returns (uint256);
-    
 }

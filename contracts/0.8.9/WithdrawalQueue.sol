@@ -3,10 +3,6 @@
 
 pragma solidity 0.8.9;
 
-//TODO(security): Replace to in-repo copy of the lib
-import "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
-import "@openzeppelin/contracts-v4.4/utils/Address.sol";
-
 interface IRestakingSink {
     function receiveRestake() external payable;
 }
@@ -16,9 +12,6 @@ interface IRestakingSink {
  * @author folkyatina
  */
 contract WithdrawalQueue {
-    using SafeCast for uint256;
-    using Address for address payable;
-
     /**
      * @notice minimal possible sum that is possible to withdraw
      * We don't want to deal with small amounts because there is a gas spent on oracle 
@@ -78,6 +71,7 @@ contract WithdrawalQueue {
      * @param _owner address that will be able to invoke `enqueue` and `finalize` methods.
      */
     constructor(address payable _owner) {
+        require(_owner  != address(0), "ZERO_OWNER");
         OWNER = _owner;
     }
 
@@ -111,7 +105,7 @@ contract WithdrawalQueue {
         
         queue.push(Request(
             _recipient, 
-            block.number.toUint96(), 
+            _toUint96(block.number), 
             cumulativeEther,
             cumulativeShares,
             false
@@ -174,7 +168,7 @@ contract WithdrawalQueue {
             );
         lockedEtherAmount -= etherToTransfer;
 
-        request.recipient.sendValue(etherToTransfer);
+        _sendValue(request.recipient, etherToTransfer);
     }
 
     /**
@@ -241,20 +235,37 @@ contract WithdrawalQueue {
 
     function _updatePriceHistory(uint256 _totalPooledEther, uint256 _totalShares, uint256 index) internal {
         if (finalizationPrices.length == 0) {
-            finalizationPrices.push(Price(_totalPooledEther.toUint128(), _totalShares.toUint128(), index));
+            finalizationPrices.push(Price(_toUint128(_totalPooledEther), _toUint128(_totalShares), index));
         } else {
             Price storage lastPrice = finalizationPrices[finalizationPrices.length - 1];
 
             if (_totalPooledEther/_totalShares == lastPrice.totalPooledEther/lastPrice.totalShares) {
                 lastPrice.index = index;
             } else {
-                finalizationPrices.push(Price(_totalPooledEther.toUint128(), _totalShares.toUint128(), index));
+                finalizationPrices.push(Price(_toUint128(_totalPooledEther), _toUint128(_totalShares), index));
             }
         }
     }
 
     function _min(uint256 a, uint256 b) internal pure returns (uint256) {
         return a < b ? a : b;  
+    }
+
+    function _sendValue(address payable recipient, uint256 amount) internal {
+        require(address(this).balance >= amount, "Address: insufficient balance");
+
+        (bool success, ) = recipient.call{value: amount}("");
+        require(success, "Address: unable to send value, recipient may have reverted");
+    }
+
+    function _toUint96(uint256 value) internal pure returns (uint96) {
+        require(value <= type(uint96).max, "SafeCast: value doesn't fit in 96 bits");
+        return uint96(value);
+    }
+
+    function _toUint128(uint256 value) internal pure returns (uint128) {
+        require(value <= type(uint128).max, "SafeCast: value doesn't fit in 128 bits");
+        return uint128(value);
     }
 
     modifier onlyOwner() {

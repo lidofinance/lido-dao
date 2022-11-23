@@ -218,11 +218,16 @@ interface ILido {
       * @notice Ether on the ETH 2.0 side reported by the oracle
       */
     function handleOracleReport(
-        uint256 _beaconValidators, 
-        uint256 _beaconBalance, 
-        uint256 _exitedValidators, 
+        // CL values
+        uint256 _beaconValidators,
+        uint256 _beaconBalance,
+        uint256 _totalExitedValidators,
+        // EL values
         uint256 _wcBufferedEther,
-        uint256 _newFinalizedLength
+        // decision
+        uint256[] _requestIdToFinalizeUpTo,
+        uint256[] _finalizationPooledEtherAmount,
+        uint256[] _finalizationSharesAmount
     ) external;
 
 
@@ -246,10 +251,14 @@ interface ILido {
     function claimWithdrawal(uint256 _requestId, uint256 _priceIndexHint) external;
 
     function withdrawalRequestStatus(uint _requestId) external view returns (
-        bool finalized,
-        uint256 ethToWithdraw,
-        address recipient
+        address recipient, 
+        uint256 requestBlockNumber,
+        uint256 etherToWithdraw, 
+        bool isFinalized,
+        bool isClaimed
     );
+
+    function setBufferWithdrawalsReserve(uint256 _withdrawalsReserveAmount) external;
 
     event WithdrawalRequested(address indexed receiver, uint256 amountOfStETH, uint256 amountOfShares, uint256 requestId);
 
