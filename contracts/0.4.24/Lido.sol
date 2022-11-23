@@ -574,7 +574,7 @@ contract Lido is ILido, StETH, AragonApp {
         // See ADR #3 for details: 
         // https://research.lido.fi/t/rewards-distribution-after-the-merge-architecture-decision-record/1535
         if (_beaconBalance > rewardBase) {
-            distributeFee(_beaconBalance.sub(rewardBase).add(executionLayerRewards));
+            _distributeFee(_beaconBalance.sub(rewardBase).add(executionLayerRewards));
         }
     }
 
@@ -914,7 +914,7 @@ contract Lido is ILido, StETH, AragonApp {
     function _depositBufferedEther(uint256 _maxDeposits) internal whenNotStopped {
         uint256 buffered = _getBufferedEther();
         uint256 withdrawalReserve = getBufferWithdrawalsReserve();
-        
+
         if (buffered > withdrawalReserve) {
             buffered = buffered.sub(withdrawalReserve);
 
@@ -1000,7 +1000,7 @@ contract Lido is ILido, StETH, AragonApp {
     * @dev Distributes fee portion of the rewards by minting and distributing corresponding amount of liquid tokens.
     * @param _totalRewards Total rewards accrued on the Ethereum 2.0 side in wei
     */
-    function distributeFee(uint256 _totalRewards) internal {
+    function _distributeFee(uint256 _totalRewards) internal {
         // We need to take a defined percentage of the reported reward as a fee, and we do
         // this by minting new token shares and assigning them to the fee recipients (see
         // StETH docs for the explanation of the shares mechanics). The staking rewards fee
