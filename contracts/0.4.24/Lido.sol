@@ -527,6 +527,7 @@ contract Lido is ILido, StETH, AragonApp {
      * @notice set a reserve amount that should not be sent to deposits and keeped for later withdrawals
      */
     function setBufferWithdrawalsReserve(uint256 _withdrawalsReserveAmount) external {
+        require(msg.sender == getOracle(), "APP_AUTH_FAILED");
         WITHDRAWAL_RESERVE_POSITION.setStorageUint256(_withdrawalsReserveAmount);
     }
 
