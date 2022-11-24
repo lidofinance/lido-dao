@@ -23,16 +23,15 @@ library ReportUtils {
     function encode(
         uint64 beaconBalance,
         uint32 beaconValidators,
-        uint32 exitedValidators,
-        uint40 wcBufferedEther,
-        uint72 newFinalizedLength
+        uint256 totalExitedValidators,
+        uint256 wcBufferedEther,
+        uint256[] requestIdToFinalizeUpTo,
+        uint256[] finalizationPooledEtherAmount,
+        uint256[] finalizationSharesAmount
     ) internal pure returns (uint256) {
-        return
-            uint256(beaconBalance) << 48
-          | uint256(beaconValidators) << 16
-          | uint256(exitedValidators) << 112
-          | uint256(wcBufferedEther) << 144
-          | uint256(newFinalizedLength) << 184;
+        // TODO: maybe stop accepting less than 256bit variables due to https://docs.soliditylang.org/en/latest/security-considerations.html#minor-details
+        // return keccak256(msg.data);
+        return 0;
     }
 
     function decode(uint256 value)
@@ -40,15 +39,17 @@ library ReportUtils {
         returns (
             uint64 beaconBalance,
             uint32 beaconValidators,
-            uint32 exitedValidators,
-            uint40 wcBufferedEther,
-            uint72 newFinalizedLength
+            uint256 totalExitedValidators,
+            uint256 wcBufferedEther,
+            uint256[] requestIdToFinalizeUpTo,
+            uint256[] finalizationPooledEtherAmount,
+            uint256[] finalizationSharesAmount
     ) {
-        beaconBalance = uint64(value >> 48);
-        beaconValidators = uint32(value >> 16);
-        exitedValidators = uint32(value >> 112);
-        wcBufferedEther = uint40(value >> 144);
-        newFinalizedLength = uint72(value >> 184);
+        // beaconBalance = uint64(value >> 48);
+        // beaconValidators = uint32(value >> 16);
+        // exitedValidators = uint32(value >> 112);
+        // wcBufferedEther = uint40(value >> 144);
+        // newFinalizedLength = uint72(value >> 184);
     }
 
     function decodeWithCount(uint256 value)

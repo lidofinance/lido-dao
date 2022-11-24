@@ -13,17 +13,14 @@ contract ReportUtilsMock {
     function encode(
         uint64 beaconBalance,
         uint32 beaconValidators,
-        uint32 exitedValidators,
-        uint40 wcBufferedEther,
-        uint72 newFinalizedLength
+        uint256 totalExitedValidators,
+        uint256 wcBufferedEther,
+        uint256[] requestIdToFinalizeUpTo,
+        uint256[] finalizationPooledEtherAmount,
+        uint256[] finalizationSharesAmount
     ) internal pure returns (uint256) {
-        return ReportUtils.encode(
-            beaconBalance,
-            beaconValidators,
-            exitedValidators,
-            wcBufferedEther,
-            newFinalizedLength
-        );
+        // TODO: maybe stop accepting less than 256bit variables due to https://docs.soliditylang.org/en/latest/security-considerations.html#minor-details
+        return 0;
     }
 
     function decode(uint256 value)
@@ -31,9 +28,11 @@ contract ReportUtilsMock {
         returns (
             uint64 beaconBalance,
             uint32 beaconValidators,
-            uint32 exitedValidators,
-            uint40 wcBufferedEther,
-            uint72 newFinalizedLength
+            uint256 totalExitedValidators,
+            uint256 wcBufferedEther,
+            uint256[] requestIdToFinalizeUpTo,
+            uint256[] finalizationPooledEtherAmount,
+            uint256[] finalizationSharesAmount
     ) {
         return value.decode();
     }
