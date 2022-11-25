@@ -44,8 +44,10 @@ contract StakingRouter {
     uint256 internal constant TOTAL_BASIS_POINTS = 10000;
 
     uint256 constant public PUBKEY_LENGTH = 48;
-    uint256 constant public WITHDRAWAL_CREDENTIALS_LENGTH = 32;
     uint256 constant public SIGNATURE_LENGTH = 96;
+    uint256 constant public WITHDRAWAL_CREDENTIALS_LENGTH = 32;
+
+    uint256 constant public MAX_TIME = 86400;
 
     struct StakingModule{
         string name;
@@ -61,22 +63,51 @@ contract StakingRouter {
         uint256 totalKeys;
         uint256 totalUsedKeys;
         uint256 totalStoppedKeys;
+        uint256 totalExitedKeys;
         uint256 initialUsedSigningKeys;
         uint256 assignedKeys;
         uint256 cap;
+        bool paused;
     }
 
-    mapping (uint256 => StakingModule) public modules;
+    mapping (uint => StakingModule) internal modules;
+    mapping (address => uint) internal modules_ids;
+    uint internal modulesCount;
 
     //stake allocation module_index -> amount
-    mapping (uint256 => uint256) public allocation;
+    mapping (uint => uint) public allocation;
+    uint internal totalAllocation;
 
-    uint256 public modulesCount;
+    uint public lastDistribute;
+    uint public timePeriod = 86400;
 
     constructor(address _lido, address _deposit_contract) {
         lido = _lido;
         deposit_contract = _deposit_contract;
         
+    }
+
+    function getModule(uint256 _id) external view
+        returns (
+            address moduleAddress,
+            uint16 cap,
+            bool paused
+        )
+    {
+        //@todo check exists
+
+        StakingModule memory entry = modules[_id];
+
+        moduleAddress = entry.moduleAddress;
+        cap = entry.cap;
+        paused = entry.paused;
+    }
+
+    /**
+      * @notice Returns total number of node operators
+      */
+    function getModulesCount() public view returns (uint256) {
+        return modulesCount;
     }
 
     /**
@@ -95,6 +126,8 @@ contract StakingRouter {
      */
     function addStakingModule(string memory _name, address _moduleAddress, uint16 _cap) external {
         StakingModule storage module = modules[modulesCount];
+        modules_ids[_moduleAddress] = modulesCount;
+
         module.name = _name;
         module.moduleAddress = _moduleAddress;
         module.cap = _cap;
@@ -136,7 +169,7 @@ contract StakingRouter {
      * @return totalKeys total keys which used for calculation
      * @return moduleKeys array of amount module keys
      */
-    function getTotalKeys() external view returns (uint256 totalKeys, uint256[] memory moduleKeys) {
+    function getTotalKeys() public view returns (uint256 totalKeys, uint256[] memory moduleKeys) {
         // calculate total used keys for operators
         moduleKeys = new uint256[](modulesCount);
         for (uint256 i=0; i < modulesCount; ++i) {
@@ -235,7 +268,7 @@ contract StakingRouter {
         }
     } 
 
-    function distributeDeposits() public returns(ModuleLookupCacheEntry[] memory, uint256[] memory allocation) {
+    function distributeDeposits() public {
     //    uint256 buffered = _getBufferedEther();
     //     if (buffered >= DEPOSIT_SIZE) {
     //         uint256 unaccounted = _getUnaccountedEther();
@@ -243,8 +276,13 @@ contract StakingRouter {
     //         _markAsUnbuffered(_ETH2Deposit(numDeposits < _maxDeposits ? numDeposits : _maxDeposits));
     //         assert(_getUnaccountedEther() == unaccounted);
     //     }
+
+        lastDistribute = block.timestamp;
+
         uint256 buffered = address(this).balance;
         uint256 numDeposits = buffered / DEPOSIT_SIZE;
+
+        require(numDeposits > 0);
 
         ModuleLookupCacheEntry[] memory cache = getAllocation(numDeposits); //module-eth
         ModuleLookupCacheEntry memory entry;
@@ -253,18 +291,17 @@ contract StakingRouter {
             entry = cache[i];
             allocation[i] = cache[i].assignedKeys;
         }
-
-        return (cache, allocation);
     }
 
     function getAllocation(uint256 _numDeposits) public view returns(ModuleLookupCacheEntry[] memory) {
         ModuleLookupCacheEntry[] memory cache = _loadModuleCache();
         ModuleLookupCacheEntry memory entry;
 
+        (uint256 totalKeys, ) = getTotalKeys();
+
         uint256 assignedDeposits = 0;
         while(assignedDeposits < _numDeposits) {
             uint256 bestModuleIdx = modulesCount;
-
             uint256 smallestStake = 0;
 
             for(uint256 i=0; i < modulesCount; i++) {
@@ -274,9 +311,14 @@ contract StakingRouter {
                     continue;
                 }
 
-                uint256 stake = entry.totalUsedKeys - entry.totalStoppedKeys;
+                if (entry.paused) {
+                    continue;
+                }
+
+                uint256 stake = entry.totalUsedKeys - entry.totalStoppedKeys - entry.totalExitedKeys;
                 uint256 softCap = entry.cap;
-                if (softCap > 0 && (entry.totalUsedKeys + entry.assignedKeys) * TOTAL_BASIS_POINTS / _numDeposits  >= softCap) {
+
+                if (softCap > 0 && (entry.totalUsedKeys + entry.assignedKeys) * TOTAL_BASIS_POINTS / totalKeys  >= softCap) {
                     continue;
                 }
 
@@ -286,7 +328,6 @@ contract StakingRouter {
                 }
             }
 
-            //выход и по ключам и по эфиру
             if (bestModuleIdx == modulesCount)  // not found
                 break;
 
@@ -318,8 +359,10 @@ contract StakingRouter {
             entry.totalKeys = module.getTotalKeys();
             entry.totalUsedKeys = module.getTotalUsedKeys();
             entry.totalStoppedKeys = module.getTotalStoppedKeys();
+            entry.totalExitedKeys = module.getTotalExitedKeys();
             entry.cap = stakingModule.cap;
             entry.initialUsedSigningKeys = entry.totalUsedKeys;
+            entry.paused = stakingModule.paused;
         }
 
         return cache;
@@ -330,7 +373,7 @@ contract StakingRouter {
      * @param pubkeys Validators to stake for
      * @param signatures Signaturse of the deposit call
      */
-    function deposit(bytes memory pubkeys, bytes memory signatures) external {
+    function deposit(bytes memory pubkeys, bytes memory signatures) external returns(uint256) {
         require(pubkeys.length > 0, "INVALID_PUBKEYS");
 
         require(pubkeys.length % PUBKEY_LENGTH == 0, "REGISTRY_INCONSISTENT_PUBKEYS_LEN");
@@ -338,6 +381,55 @@ contract StakingRouter {
 
         uint256 numKeys = pubkeys.length / PUBKEY_LENGTH;
         require(numKeys == signatures.length / SIGNATURE_LENGTH, "REGISTRY_INCONSISTENT_SIG_COUNT");
+
+
+        uint moduleId = modules_ids[msg.sender];
+        uint alloc = allocation[moduleId];
+        IModule module = IModule(msg.sender);
+
+
+        if (alloc >= numKeys) {
+            for (uint256 i = 0; i < numKeys; ++i) {
+                bytes memory pubkey = BytesLib.slice(pubkeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
+                bytes memory signature = BytesLib.slice(signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
+                _stake(pubkey, signature);
+            }
+
+            allocation[moduleId] -= numKeys;
+
+            ILido(lido).updateBufferedCounters(numKeys);
+
+            return numKeys;
+        }
+
+        uint currentTimestamp = block.timestamp;
+        uint left = currentTimestamp - lastDistribute;
+
+        require( left > MAX_TIME / 2, "time threshold");
+
+        
+        uint unlocked = left * TOTAL_BASIS_POINTS / MAX_TIME;
+
+        console.log('numKeys', numKeys);
+
+        uint amount = 0;
+        uint unlocked_amount = 0;
+        for (uint i=0; i< modulesCount; i++) {
+            if (i == moduleId) continue;
+
+            unlocked_amount = (allocation[i] * unlocked ) / TOTAL_BASIS_POINTS;
+
+            if (amount + unlocked_amount < numKeys) {
+                amount += unlocked_amount;
+                allocation[i] -= unlocked_amount;
+            } else {
+                uint a = numKeys - amount;
+                amount += a;
+                allocation[i] -= a;
+            }
+        }
+
+        console.log('amount', amount);
 
         for (uint256 i = 0; i < numKeys; ++i) {
             bytes memory pubkey = BytesLib.slice(pubkeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
@@ -347,6 +439,8 @@ contract StakingRouter {
 
         //update DEPOSITED_VALIDATORS_POSITION on LIDO
         ILido(lido).updateBufferedCounters(numKeys);
+
+        return numKeys;
     }
 
     /**
@@ -361,7 +455,7 @@ contract StakingRouter {
         uint256 value = DEPOSIT_SIZE;
 
         // The following computations and Merkle tree-ization will make official Deposit contract happy
-        uint256 depositAmount = value % DEPOSIT_AMOUNT_UNIT;
+        uint256 depositAmount = value / DEPOSIT_AMOUNT_UNIT;
         assert(depositAmount * DEPOSIT_AMOUNT_UNIT == value);    // properly rounded
 
         // Compute deposit data root (`DepositData` hash tree root) according to deposit_contract.sol
@@ -385,6 +479,17 @@ contract StakingRouter {
         getDepositContract().deposit{value: value}(
             _pubkey, abi.encodePacked(withdrawalCredentials), _signature, depositDataRoot);
         require(address(this).balance == targetBalance, "EXPECTING_DEPOSIT_TO_HAPPEN");
+    }
+
+    function trimUnusedKeys() external {
+        if (modulesCount > 0 ) {
+             for (uint256 i = 0; i < modulesCount; ++i) {
+                StakingModule memory stakingModule = modules[i];
+                IModule module = IModule(stakingModule.moduleAddress);
+
+                module.trimUnusedKeys();
+             }
+        }
     }
 
     /**

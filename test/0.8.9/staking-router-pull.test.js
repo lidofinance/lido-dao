@@ -1,3 +1,5 @@
+const chalk = require('chalk')
+
 const { assertBn, assertRevert, assertEvent, assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
 const { newDao, newApp } = require('../0.4.24/helpers/dao')
 const { ZERO_ADDRESS, getEventAt, getEventArgument } = require('@aragon/contract-helpers-test')
@@ -35,6 +37,8 @@ const hexConcat = (first, ...rest) => {
 
 // modules config
 const proModule = {
+  name: 'Curated',
+
   type: 0, // PRO
   fee: 500, // in basic points
   treasuryFee: 500, // in basic points
@@ -48,12 +52,13 @@ const proModule = {
 }
 
 const soloModule = {
+  name: 'Community',
+
   type: 1, // SOLO
   fee: 500, // in basic points
   treasuryFee: 500, // in basic points
-  softCap: 9000,
+  softCap: 100,
   assignedDeposits: 0,
-  bond: 16,
   balance: 0,
 
   totalKeys: 100,
@@ -107,8 +112,9 @@ contract('StakingRouter', (accounts) => {
     operators = await NodeOperatorsRegistry.at(proxyAddress)
     await operators.initialize(lido.address)
 
-    // Init the BURN_ROLE role and assign in to voting
+    // Set up the app's permissions.
     await acl.createPermission(voting, lido.address, await lido.BURN_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, lido.address, await lido.MANAGE_WITHDRAWAL_KEY(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
     await lido.initialize(depositContract.address, oracle.address, operators.address)
@@ -153,10 +159,12 @@ contract('StakingRouter', (accounts) => {
           _module = await ModulePro.new(module.type, lido.address, module.fee, module.treasuryFee, { from: appManager })
           // add solo module
         } else if (module.type === 1) {
-          _module = await ModuleSolo.new(module.type, lido.address, module.fee, module.treasuryFee, module.bond, { from: appManager })
+          _module = await ModuleSolo.new(module.type, lido.address, module.fee, module.treasuryFee, { from: appManager })
         }
 
-        const name = ModuleTypes[module.type] + i
+        const name = module.name
+
+        console.log(`module ${name} address`, _module.address)
 
         await stakingRouter.addStakingModule(name, _module.address, module.softCap, { from: appManager })
         await _module.setTotalKeys(module.totalKeys, { from: appManager })
@@ -168,19 +176,105 @@ contract('StakingRouter', (accounts) => {
 
       await getLidoStats(lido, { Stranger1: externalAddress, Stranger2: stranger2, StakingRouter: stakingRouter.address })
 
-      const alloc1 = await stakingRouter.getAllocation(50)
-      const t1 = []
-      for (i = 0; i < alloc1.length; i++) {
-        const m = alloc1[i]
-        t1[i] = {
-          id: m.id,
-          totalKeys: m.totalKeys,
-          totalUsedKeys: m.totalUsedKeys,
-          cap: m.cap,
-          assigned: m.assignedKeys
-        }
+      console.log('after allocation')
+      let table = await getModulesInfo(stakingRouter)
+      console.table(table)
+
+      await ethers.provider.send('hardhat_setBalance', [stakingRouter.address, '0x' + parseInt(ETH(101 * 32)).toString(16)])
+
+      const balance = await web3.eth.getBalance(stakingRouter.address)
+      console.log(chalk.yellow('stakingRouter balance:'), balance)
+
+      // first distribute
+      console.log('Distribute allocation')
+      const resp = await stakingRouter.distributeDeposits()
+
+      let alloc = await getAlloc(stakingRouter)
+      console.log('allocation1', alloc)
+      console.log('last distribute', (await stakingRouter.lastDistribute()).toString())
+
+      const modulesCount = await stakingRouter.getModulesCount()
+      console.log('Modules count', parseInt(modulesCount))
+
+      curatedModule = await stakingRouter.getModule(0)
+      communityModule = await stakingRouter.getModule(1)
+
+      const curModule = await ModulePro.at(curatedModule.moduleAddress)
+      const comModule = await ModuleSolo.at(communityModule.moduleAddress)
+
+      console.log('Set staking router for modules')
+      curModule.setStakingRouter(stakingRouter.address)
+      comModule.setStakingRouter(stakingRouter.address)
+
+      const wc = pad('0x0202', 32)
+      await lido.setWithdrawalCredentials(wc, { from: voting })
+      console.log('Set withdrawal credentials ' + g(wc))
+
+      // deposit(pubkey, sig)
+      console.log('community deposit')
+      const pubkeys1 = hexConcat(pad('0x0101', 48), pad('0x0102', 48), pad('0x0103', 48))
+      const sigkeys1 = hexConcat(pad('0x0101', 96), pad('0x0102', 96), pad('0x0103', 96))
+
+      await comModule.deposit(pubkeys1, sigkeys1)
+
+      const balance_2 = await web3.eth.getBalance(stakingRouter.address)
+      console.log('StakingRouter balance:', y(balance_2))
+
+      alloc = await getAlloc(stakingRouter)
+      console.log('allocation2', alloc)
+
+      table = await getModulesInfo(stakingRouter)
+      console.table(table)
+
+      // update
+      await curModule.addNodeOperator('fo o', ADDRESS_1, { from: voting })
+
+      for (let i = 0; i < 10; i++) {
+        await curModule.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
       }
-      console.table(t1)
+
+      const operator = await curModule.getNodeOperator(0, true)
+      assert.equal(operator.active, true)
+      assert.equal(operator.name, 'fo o')
+      assert.equal(operator.rewardAddress, ADDRESS_1)
+      assertBn(operator.stakingLimit, 0)
+      assertBn(operator.stoppedValidators, 0)
+      assertBn(operator.totalSigningKeys, 10)
+      assertBn(operator.usedSigningKeys, 0)
+
+      await curModule.setNodeOperatorStakingLimit(0, 1000, { from: appManager })
+
+      await curModule.deposit(1)
+
+      // 3
+      alloc = await getAlloc(stakingRouter)
+      console.log('\n allocation3', alloc)
+
+      table = await getModulesInfo(stakingRouter)
+      console.table(table)
+
+      balance_3 = await web3.eth.getBalance(stakingRouter.address)
+      console.log('StakingRouter balance3:', y(balance_3))
+
+      // 4 try to deposit more from cureated module
+
+      // wait 12 hour
+      await ethers.provider.send('evm_increaseTime', [3600 * 12])
+      await ethers.provider.send('evm_mine')
+
+      await curModule.deposit(3)
+
+      alloc = await getAlloc(stakingRouter)
+      console.log('\n allocation4', alloc)
+
+      table = await getModulesInfo(stakingRouter)
+      console.table(table)
+
+      balance_4 = await web3.eth.getBalance(stakingRouter.address)
+      console.log('StakingRouter balance4:', y(balance_4))
+
+      // await stakingRouter.distributeDeposits()
+      // console.log('last distribute', (await stakingRouter.lastDistribute()).toString())
 
       // console.log('report oracle 1 eth')
       // await oracle.reportBeacon(100, 0, ETH(1), { from: appManager })
@@ -233,4 +327,41 @@ async function getLidoStats(lido, args) {
   console.table(data)
 }
 
-async function showAllocation(alloc) {}
+function g(val) {
+  return chalk.green(val)
+}
+function b(val) {
+  return chalk.blue(val)
+}
+function y(val) {
+  return chalk.yellow(val)
+}
+
+async function getAlloc(stakingRouter) {
+  const alloc = []
+  const allocation_0 = await stakingRouter.allocation(0)
+  const allocation_1 = await stakingRouter.allocation(1)
+  alloc.push(parseInt(allocation_0))
+  alloc.push(parseInt(allocation_1))
+
+  return alloc
+}
+
+async function getModulesInfo(stakingRouter) {
+  const allocation = await stakingRouter.getAllocation(0)
+  const table = {}
+  for (i = 0; i < allocation.length; i++) {
+    const module = allocation[i]
+    table[modules[i].name] = {
+      id: module.id,
+      totalKeys: module.totalKeys,
+      totalUsedKeys: module.totalUsedKeys,
+      totalStoppedKeys: module.totalStoppedKeys,
+      totalExitedKeys: module.totalExitedKeys,
+      cap: module.cap,
+      assigned: module.assignedKeys
+    }
+  }
+
+  return table
+}

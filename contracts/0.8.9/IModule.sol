@@ -31,13 +31,16 @@ interface IModule {
     function getTotalKeys() external view returns (uint256);
     function getTotalUsedKeys() external view returns (uint256);
     function getTotalStoppedKeys() external view returns (uint256);
-    function getTotalWithdrawnKeys() external view returns (uint256);
+    function getTotalExitedKeys() external view returns (uint256);
 
-    function addNodeOperator(string memory _name, address _rewardAddress) external returns (uint256 id);
-    function setNodeOperatorStakingLimit(uint256 _id, uint64 _stakingLimit) external;
-    function addSigningKeys(uint256 _operator_id, uint256 _quantity, bytes memory _pubkeys, bytes memory _signatures) external;
-    function addSigningKeysOperatorBH(uint256 _operator_id, uint256 _quantity, bytes memory _pubkeys, bytes memory _signatures) external;
-    function assignNextSigningKeys(uint256 _numKeys) external returns (bytes memory pubkeys, bytes memory signatures);
-    function setNodeOperatorActive(uint256 _id, bool _active) external;
+    function setStakingRouter(address addr) external;
+    function trimUnusedKeys() external;
+
+    // function addNodeOperator(string memory _name, address _rewardAddress) external returns (uint256 id);
+    // function setNodeOperatorStakingLimit(uint256 _id, uint64 _stakingLimit) external;
+    // function addSigningKeys(uint256 _operator_id, uint256 _quantity, bytes memory _pubkeys, bytes memory _signatures) external;
+    // function addSigningKeysOperatorBH(uint256 _operator_id, uint256 _quantity, bytes memory _pubkeys, bytes memory _signatures) external;
+    // function assignNextSigningKeys(uint256 _numKeys) external returns (bytes memory pubkeys, bytes memory signatures);
+    // function setNodeOperatorActive(uint256 _id, bool _active) external;
     
 }

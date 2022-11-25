@@ -11,8 +11,14 @@ import "./lib/UnstructuredStorage.sol";
 
 import "hardhat/console.sol";
 
+interface IStakingRouter {
+    function deposit(bytes memory pubkeys, bytes memory signatures) external returns(uint);
+}
+
 contract ModulePro is IModule {
     using UnstructuredStorage for bytes32;
+
+    address private stakingRouter;
 
     address public immutable  lido;
     uint16 public immutable  fee;
@@ -21,7 +27,7 @@ contract ModulePro is IModule {
     uint256 public totalKeys;
     uint256 public totalUsedKeys;
     uint256 public totalStoppedKeys;
-    uint256 public totalWithdrawnKeys;
+    uint256 public totalExitedKeys;
     
     ModuleType public moduleType;
 
@@ -71,8 +77,8 @@ contract ModulePro is IModule {
     /// @dev link to the index of operations with keys
     bytes32 internal constant KEYS_OP_INDEX_POSITION = keccak256("lido.NodeOperatorsRegistry.keysOpIndex");
 
-    modifier onlyLido() {
-        require(msg.sender == LIDO_POSITION.getStorageAddress(), "APP_AUTH_FAILED");
+    modifier onlyStakingRouter() {
+        require(msg.sender == stakingRouter, "APP_AUTH_FAILED");
         _;
     }
 
@@ -113,8 +119,8 @@ contract ModulePro is IModule {
         return totalStoppedKeys;
     }
 
-    function getTotalWithdrawnKeys() external view returns(uint256) {
-        return totalWithdrawnKeys;
+    function getTotalExitedKeys() external view returns(uint256) {
+        return totalExitedKeys;
     }
 
     function getRewardsDistribution(uint256 _totalRewardShares) external view
@@ -194,6 +200,22 @@ contract ModulePro is IModule {
         _addSigningKeys(_operator_id, _quantity, _pubkeys, _signatures);
     }
 
+    /**
+      * @notice Remove unused signing keys
+      * @dev Function is used by the Lido contract
+      */
+    function trimUnusedKeys() external onlyStakingRouter {
+        uint256 length = getNodeOperatorsCount();
+        for (uint256 operatorId = 0; operatorId < length; ++operatorId) {
+            uint64 totalSigningKeys = operators[operatorId].totalSigningKeys;
+            uint64 usedSigningKeys = operators[operatorId].usedSigningKeys;
+            if (totalSigningKeys != usedSigningKeys) { // write only if update is needed
+                operators[operatorId].totalSigningKeys = usedSigningKeys;  // discard unused keys
+                emit NodeOperatorTotalKeysTrimmed(operatorId, totalSigningKeys - usedSigningKeys);
+            }
+        }
+    }
+
     function _addSigningKeys(uint256 _operator_id, uint256 _quantity, bytes memory _pubkeys, bytes memory _signatures) internal
         operatorExists(_operator_id)
     {
@@ -249,7 +271,23 @@ contract ModulePro is IModule {
         emit NodeOperatorActiveSet(_id, _active);
     }
 
-    function assignNextSigningKeys(uint256 _numKeys) external returns (bytes memory pubkeys, bytes memory signatures) {
+    function deposit(uint256 _numKeys) external {
+        (bytes memory pubkeys, bytes memory signatures) = assignNextSigningKeys(_numKeys);
+
+        require(pubkeys.length > 0, "no free keys");
+
+        require(pubkeys.length % PUBKEY_LENGTH == 0, "REGISTRY_INCONSISTENT_PUBKEYS_LEN");
+        require(signatures.length % SIGNATURE_LENGTH == 0, "REGISTRY_INCONSISTENT_SIG_LEN");
+
+        uint256 numKeys = pubkeys.length / PUBKEY_LENGTH;
+        require(numKeys == signatures.length / SIGNATURE_LENGTH, "REGISTRY_INCONSISTENT_SIG_COUNT");
+
+        uint keys = IStakingRouter(stakingRouter).deposit(pubkeys, signatures);
+
+        require(numKeys == keys); 
+    }
+
+    function assignNextSigningKeys(uint256 _numKeys) public returns (bytes memory pubkeys, bytes memory signatures) {
         // Memory is very cheap, although you don't want to grow it too much
         DepositLookupCacheEntry[] memory cache = _loadOperatorCache();
         if (0 == cache.length)
@@ -429,6 +467,35 @@ contract ModulePro is IModule {
     }
 
     /**
+      * @notice Returns the n-th node operator
+      * @param _id Node Operator id
+      * @param _fullInfo If true, name will be returned as well
+      */
+    function getNodeOperator(uint256 _id, bool _fullInfo) external view
+        operatorExists(_id)
+        returns
+        (
+            bool active,
+            string memory name,
+            address rewardAddress,
+            uint64 stakingLimit,
+            uint64 stoppedValidators,
+            uint64 totalSigningKeys,
+            uint64 usedSigningKeys
+        )
+    {
+        NodeOperator storage operator = operators[_id];
+
+        active = operator.active;
+        name = _fullInfo ? operator.name : "";    // reading name is 2+ SLOADs
+        rewardAddress = operator.rewardAddress;
+        stakingLimit = operator.stakingLimit;
+        stoppedValidators = operator.stoppedValidators;
+        totalSigningKeys = operator.totalSigningKeys;
+        usedSigningKeys = operator.usedSigningKeys;
+    }
+
+    /**
       * @notice Returns total number of node operators
       */
     function getNodeOperatorsCount() public view returns (uint256) {
@@ -465,9 +532,15 @@ contract ModulePro is IModule {
         return uint64(v);
     }
 
+    function setStakingRouter(address _addr) public {
+        stakingRouter = _addr;
+
+        //emit SetStakingRouter(_addr)
+    }
+
     //only for testing purposal
     function setTotalKeys(uint256 _keys) external { totalKeys = _keys; }
     function setTotalUsedKeys(uint256 _keys) external { totalUsedKeys = _keys; }
     function setTotalStoppedKeys(uint256 _keys) external { totalStoppedKeys = _keys; }
-    function setTotalWithdrawnKeys(uint256 _keys) external { totalWithdrawnKeys = _keys; }
+    function setTotalExitedKeys(uint256 _keys) external { totalExitedKeys = _keys; }
 }

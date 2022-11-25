@@ -31,6 +31,7 @@ interface IERC721 {
 interface IStakingRouter {
     function calculateShares2Mint(uint256 _totalRewards) external returns(uint256 shares2mint, uint256 totalKeys, uint256[] memory moduleKeys);
     function distributeShares(uint256 _totalShares, uint256 totalKeys, uint256[] moduleKeys) external returns(uint256 distributed);
+    function trimUnusedKeys() external;
 }
 
 
@@ -119,6 +120,11 @@ contract Lido is ILido, StETH, AragonApp {
 
     /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
     bytes32 internal constant WITHDRAWAL_CREDENTIALS_POSITION = keccak256("lido.Lido.withdrawalCredentials");
+
+    modifier onlyStakingRouter() {
+        require(msg.sender == getStakingRouter(), "APP_AUTH_FAILED");
+        _;
+    }
 
     /**
     * @dev As AragonApp, Lido contract must be initialized with following variables:
@@ -436,7 +442,9 @@ contract Lido is ILido, StETH, AragonApp {
         _auth(MANAGE_WITHDRAWAL_KEY);
 
         WITHDRAWAL_CREDENTIALS_POSITION.setStorageBytes32(_withdrawalCredentials);
-        getOperators().trimUnusedKeys();
+        
+        address stakingRouterAddress = getStakingRouter();
+        IStakingRouter(stakingRouterAddress).trimUnusedKeys();
 
         emit WithdrawalCredentialsSet(_withdrawalCredentials);
     }
@@ -711,33 +719,14 @@ contract Lido is ILido, StETH, AragonApp {
         emit TransferShares(address(0), _to, _sharesAmount);
     }
 
-    /**
-    * @dev Deposits buffered eth to the DepositContract and assigns chunked deposits to node operators
-    */
-    // function _depositBufferedEther(uint256 _maxDeposits) internal whenNotStopped {
-    //     uint256 buffered = _getBufferedEther();
-    //     if (buffered >= DEPOSIT_SIZE) {
-    //         uint256 unaccounted = _getUnaccountedEther();
-    //         uint256 numDeposits = buffered.div(DEPOSIT_SIZE);
-    //         _markAsUnbuffered(_ETH2Deposit(numDeposits < _maxDeposits ? numDeposits : _maxDeposits));
-    //         assert(_getUnaccountedEther() == unaccounted);
-    //     }
-    // }
-
-
-    function updateBufferedCounters(uint256 _numKeys) external {
-        // require(msg.sender == STAKING_ROUTER_ADDRESS, "INVALID ADDRESS");
-
+    function updateBufferedCounters(uint256 _numKeys) external onlyStakingRouter {
         uint256 _amount = _numKeys.mul(DEPOSIT_SIZE);
         
         DEPOSITED_VALIDATORS_POSITION.setStorageUint256(
             DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(_numKeys)
         );
 
-        BUFFERED_ETHER_POSITION.setStorageUint256(
-            BUFFERED_ETHER_POSITION.getStorageUint256().sub(_amount));
-
-        emit Unbuffered(_amount);
+        // emit Unbuffered(_amount);
     }
 
     function getStakingRouter() public view returns (address) {

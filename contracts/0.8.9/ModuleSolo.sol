@@ -6,25 +6,33 @@ pragma solidity 0.8.9;
 
 import "./IModule.sol";
 
+interface IStakingRouter {
+    function deposit(bytes memory pubkeys, bytes memory signatures) external returns(uint);
+}
+
 contract ModuleSolo is IModule {
+
+    address private stakingRouter;
 
     address immutable public lido;
     uint16 immutable public fee;
-    uint256 immutable public bond;
     uint16 immutable public treasuryFee;
 
     uint256 public totalKeys;
     uint256 public totalUsedKeys;
     uint256 public totalStoppedKeys;
-    uint256 public totalWithdrawnKeys;
+    uint256 public totalExitedKeys;
     
     ModuleType public moduleType;
 
-    constructor(ModuleType _type, address _lido, uint16 _fee, uint16 _treasuryFee,  uint256 _bond) {
+    uint256 constant public PUBKEY_LENGTH = 48;
+    uint256 constant public SIGNATURE_LENGTH = 96;
+
+
+    constructor(ModuleType _type, address _lido, uint16 _fee, uint16 _treasuryFee) {
         require(ModuleType.DVT >= _type, "INVALID_TYPE");
 
         lido = _lido;
-        bond = _bond;
         fee = _fee;
         treasuryFee = _treasuryFee;
         moduleType = _type;
@@ -46,8 +54,8 @@ contract ModuleSolo is IModule {
         return totalStoppedKeys;
     }
 
-    function getTotalWithdrawnKeys() external view returns(uint256) {
-        return totalWithdrawnKeys;
+    function getTotalExitedKeys() external view returns(uint256) {
+        return totalExitedKeys;
     }
 
     function getRewardsDistribution(uint256 _totalRewardShares) external view
@@ -72,7 +80,33 @@ contract ModuleSolo is IModule {
     function setTotalKeys(uint256 _keys) external { totalKeys = _keys; }
     function setTotalUsedKeys(uint256 _keys) external { totalUsedKeys = _keys; }
     function setTotalStoppedKeys(uint256 _keys) external { totalStoppedKeys = _keys; }
-    function setTotalWithdrawnKeys(uint256 _keys) external { totalWithdrawnKeys = _keys; }
+    function setTotalExitedKeys(uint256 _keys) external { totalExitedKeys = _keys; }
 
     function setNodeOperatorActive(uint256 _id, bool _active) external {}
+
+    function deposit(bytes memory pubkeys, bytes memory signatures) external {
+        require(pubkeys.length > 0, "INVALID_PUBKEYS");
+
+        require(pubkeys.length % PUBKEY_LENGTH == 0, "REGISTRY_INCONSISTENT_PUBKEYS_LEN");
+        require(signatures.length % SIGNATURE_LENGTH == 0, "REGISTRY_INCONSISTENT_SIG_LEN");
+
+        uint256 numKeys = pubkeys.length / PUBKEY_LENGTH;
+        require(numKeys == signatures.length / SIGNATURE_LENGTH, "REGISTRY_INCONSISTENT_SIG_COUNT");
+
+        uint keys = IStakingRouter(stakingRouter).deposit(pubkeys, signatures);
+
+        totalUsedKeys += keys;
+
+        require(numKeys == keys);
+    }
+
+    function setStakingRouter(address _addr) public {
+        stakingRouter = _addr;
+
+        //emit SetStakingRouter(_addr);
+    }
+
+    function trimUnusedKeys() external {
+
+    }
 }
