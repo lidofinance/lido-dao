@@ -28,7 +28,6 @@ jobs:
           ignore-folders: '{test_helpers,template,mocks}'
 
       - name: Create Pull Request
-        if: steps.changes.outcome != 'success'
         uses: lidofinance/create-pull-request@v4
         with:
           add-paths: .storage-layout
