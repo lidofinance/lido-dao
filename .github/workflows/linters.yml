@@ -65,7 +65,7 @@ jobs:
 
       - name: Get yarn cache directory path
         id: yarn-cache-dir-path
-        run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
+        run: echo "dir=$(yarn config get cacheFolder)" >> $GITHUB_OUTPUT
 
       - name: Cache yarn cache
         id: cache-yarn-cache
@@ -135,4 +135,10 @@ jobs:
         run: yarn compile
 
       - name: Check for ABI changes
-        run: git diff --quiet lib/abi || echo "Changes found"; exit 1
+        run: |
+          git diff --quiet lib/abi && status=clean || status=dirty
+          if [ $status == "dirty" ]; then
+              echo "The following ABIs should be commited"
+              git diff --compact-summary lib/abi
+              exit 1
+          fi
