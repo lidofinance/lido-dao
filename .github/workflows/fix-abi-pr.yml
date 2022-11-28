@@ -18,7 +18,7 @@ jobs:
 
       - name: Get yarn cache directory path
         id: yarn-cache-dir-path
-        run: echo "::set-output name=dir::$(yarn config get cacheFolder)"
+        run: echo "dir=$(yarn config get cacheFolder)" >> $GITHUB_OUTPUT
 
       - name: Cache yarn cache
         id: cache-yarn-cache
@@ -46,7 +46,6 @@ jobs:
         run: yarn compile
 
       - name: Create Pull Request
-        if: steps.changes.outcome != 'success'
         uses: lidofinance/create-pull-request@v4
         with:
           add-paths: lib/abi

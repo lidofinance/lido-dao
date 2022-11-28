@@ -23,7 +23,7 @@ jobs:
 
       - name: Get yarn cache directory path
         id: yarn-cache-dir-path
-        run: echo "::set-output name=dir::$(yarn config get cacheFolder)"
+        run: echo "dir=$(yarn config get cacheFolder)" >> $GITHUB_OUTPUT
 
       - name: Cache yarn cache
         id: cache-yarn-cache
@@ -65,9 +65,9 @@ jobs:
         if: always()
         shell: bash
         run: >
-          test -f results.sarif && 
-          echo '::set-output name=value::present' || 
-          echo '::set-output name=value::not'
+          test -f results.sarif &&
+          echo 'value=present' >> $GITHUB_OUTPUT ||
+          echo 'value=not' >> $GITHUB_OUTPUT
 
       - name: Upload SARIF file
         uses: github/codeql-action/upload-sarif@v2
