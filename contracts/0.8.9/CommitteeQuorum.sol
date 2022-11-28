@@ -1,13 +1,9 @@
 // SPDX-FileCopyrightText: 2020 Lido <info@lido.fi>
-
 // SPDX-License-Identifier: GPL-3.0
+pragma solidity 0.8.9;
 
-/* See contracts/COMPILERS.md */
-pragma solidity 0.4.24;
-
-import "@aragon/os/contracts/lib/math/SafeMath.sol";
-import "openzeppelin-solidity/contracts/introspection/ERC165Checker.sol";
-import "@aragon/os/contracts/common/UnstructuredStorage.sol";
+// import "openzeppelin-solidity/contracts/introspection/ERC165Checker.sol";
+import "./AragonUnstructuredStorage.sol";
 
 
 /**
@@ -25,8 +21,7 @@ import "@aragon/os/contracts/common/UnstructuredStorage.sol";
  * only if no quorum is reached for this epoch yet.
  */
 contract CommitteeQuorum {
-    using SafeMath for uint256;
-    using ERC165Checker for address;
+    // using ERC165Checker for address;
     using UnstructuredStorage for bytes32;
 
     event MemberAdded(address member);
@@ -46,7 +41,7 @@ contract CommitteeQuorum {
     bytes32 internal constant QUORUM_POSITION =
         0xd43b42c1ba05a1ab3c178623a49b2cdb55f000ec70b9ccdba5740b3339a7589e; // keccak256("lido.LidoOracle.quorum")
 
-    uint256 internal constant MEMBER_NOT_FOUND = uint256(-1);
+    uint256 internal constant MEMBER_NOT_FOUND = type(uint256).max;
 
     /// The bitmask of the oracle members that pushed their reports
     bytes32 internal constant REPORTS_BITMASK_POSITION =
@@ -62,30 +57,13 @@ contract CommitteeQuorum {
     }
 
 
-    // /**
-    //  * @notice Return the current reporting variants array size
-    //  */
-    // function getCurrentReportVariantsSize() external view returns (uint256) {
-    //     return currentReportVariants.length;
-    // }
-
-    // /**
-    //  * @notice Return the current reporting array element with index `_index`
-    //  */
-    // function getCurrentReportVariant(uint256 _index)
-    //     external
-    //     view
-    //     returns (
-    //         uint64 beaconBalance,
-    //         uint32 beaconValidators,
-    //         uint16 count,
-    //         uint32 exitedValidators,
-    //         uint40 wcBufferedEther,
-    //         uint72 newFinalizedLength
-    //     )
-    // {
-    //     return currentReportVariants[_index].decodeWithCount();
-    // }
+    /**
+     * @notice Return the current reporting variants array size
+     * TODO: rename
+     */
+    function getCurrentReportVariantsSize() external view returns (uint256) {
+        return distinctReports.length;
+    }
 
 
     // /**
@@ -144,7 +122,7 @@ contract CommitteeQuorum {
     /**
      * @notice Return the current oracle member committee list
      */
-    function getOracleMembers() external view returns (address[]) {
+    function getOracleMembers() external view returns (address[] memory) {
         return members;
     }
 
@@ -165,7 +143,7 @@ contract CommitteeQuorum {
         require(index != MEMBER_NOT_FOUND, "MEMBER_NOT_FOUND");
         uint256 last = members.length - 1;
         if (index != last) members[index] = members[last];
-        members.length--;
+        members.pop();
         emit MemberRemoved(_member);
 
         // delete the data for the last epoch, let remained oracles report it again
@@ -175,7 +153,6 @@ contract CommitteeQuorum {
 
     function _setQuorum(uint256 _quorum) internal  {
         require(0 != _quorum, "QUORUM_WONT_BE_MADE");
-        uint256 oldQuorum = QUORUM_POSITION.getStorageUint256();
         QUORUM_POSITION.setStorageUint256(_quorum);
         emit QuorumChanged(_quorum);
     }
@@ -209,7 +186,7 @@ contract CommitteeQuorum {
         return QUORUM_POSITION.getStorageUint256();
     }
 
-    function _handleMemberReport(address _reporter, bytes _report)
+    function _handleMemberReport(address _reporter, bytes memory _report)
         internal returns (bool isQuorumReached)
     {
         // make sure the oracle is from members list and has not yet voted
@@ -225,10 +202,19 @@ contract CommitteeQuorum {
         isQuorumReached = false;
 
         uint256 i = 0;
+        bool isFound = false;
         while (i < distinctReports.length && distinctReportHashes[i] != reportHash) {
             ++i;
         }
-        if (i > 0 && i < distinctReports.length) {
+        while (i < distinctReports.length) {
+            if (distinctReportHashes[i] == reportHash) {
+                isFound = true;
+                break;
+            }
+            ++i;
+        }
+
+        if (isFound && i < distinctReports.length) {
             distinctReportCounters[i] += 1;
         } else {
             distinctReports.push(_report);

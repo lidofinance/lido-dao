@@ -203,7 +203,7 @@ interface ILidoOracle {
      * @param _secondsPerSlot Number of seconds per slot
      * @param _genesisTime Genesis time
      * @param _allowedBeaconBalanceAnnualRelativeIncrease Allowed beacon balance annual relative increase (e.g. 1000 means 10% yearly increase)
-     * @param _allowedBeaconBalanceRelativeDecrease Allowed beacon balance moment descreat (e.g. 500 means 5% moment decrease)
+     * @param _allowedBeaconBalanceRelativeDecrease Allowed beacon balance moment decrease (e.g. 500 means 5% moment decrease)
      */
     function initialize(
         address _lido,
@@ -236,20 +236,20 @@ interface ILidoOracle {
     //  */
     // function setQuorum(uint256 _quorum) external;
 
-    /**
-     * @notice Accept oracle committee member reports from the ETH 2.0 side
-     * @param _epochId Beacon chain epoch
-     * @param _beaconBalance Balance in gwei on the ETH 2.0 side (9-digit denomination)
-     * @param _beaconValidators Number of validators visible in this epoch
-     */
-    function reportBeacon(
-        uint256 _epochId,
-        uint256 _beaconValidators,
-        uint256 _beaconBalance,
-        uint256 _totalExitedValidators,
-        uint256 _wcBufferedEther,
-        uint256[] _requestIdToFinalizeUpTo,
-        uint256[] _finalizationPooledEtherAmount,
-        uint256[] _finalizationSharesAmount
-    ) external;
+    // /**
+    //  * @notice Accept oracle committee member reports from the ETH 2.0 side
+    //  * @param _epochId Beacon chain epoch
+    //  * @param _beaconBalance Balance in gwei on the ETH 2.0 side (9-digit denomination)
+    //  * @param _beaconValidators Number of validators visible in this epoch
+    //  */
+    // function reportBeacon(
+    //     uint256 _epochId,
+    //     uint256 _beaconValidators,
+    //     uint256 _beaconBalance,
+    //     uint256 _totalExitedValidators,
+    //     uint256 _wcBufferedEther,
+    //     uint256[] _requestIdToFinalizeUpTo,
+    //     uint256[] _finalizationPooledEtherAmount,
+    //     uint256[] _finalizationSharesAmount
+    // ) external;
 }
