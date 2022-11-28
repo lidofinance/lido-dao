@@ -135,4 +135,10 @@ jobs:
         run: yarn compile
 
       - name: Check for ABI changes
-        run: git diff --quiet lib/abi || echo "Changes found"; exit 1
+        run: |
+          git diff --quiet lib/abi && status=clean || status=dirty
+          if [ $status == "dirty" ]; then
+              echo "The following ABIs should be commited"
+              git diff --compact-summary lib/abi
+              exit 1
+          fi
