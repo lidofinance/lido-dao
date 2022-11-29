@@ -47,7 +47,7 @@ const communityModule2 = {
   recycleLevel: 0,
   recycleAt: 0
 }
-///////
+/// ////
 
 const Time = {
   base: 0,
@@ -77,7 +77,7 @@ const recycleLevels = [
   { delay: 0, percent: 10000 } // 100% after 18h
 ]
 
-let Lido = {
+const Lido = {
   bufferAmount: 0,
   reservedAmount: 1000,
   lastReportTime: 0,
@@ -92,24 +92,23 @@ let Lido = {
       throw new Error('no free ether in buffer')
     }
 
-    let amount = this.bufferAmount - this.reservedAmount
+    const amount = this.bufferAmount - this.reservedAmount
     StakingRouter.balance += amount
     this.bufferAmount -= amount
   }
 }
 
-let StakingRouter = {
+const StakingRouter = {
   modules: [],
   modulesCount: 0,
 
   bufferKeys: 0,
   balance: 0,
   allocation: [],
-  recycledKeysUsage: {},
 
   getTotalKeys: function () {
     // calculate total used keys for operators
-    let moduleKeys = []
+    const moduleKeys = []
     let totalKeys = 0
     for (let i = 0; i < this.modulesCount; i++) {
       moduleKeys[i] = this.modules[i].total_keys
@@ -152,29 +151,30 @@ let StakingRouter = {
   },
 
   stakeAllocation: function () {
-    let cache = JSON.parse(JSON.stringify(this.modules))
+    const cache = JSON.parse(JSON.stringify(this.modules))
 
-    let totalKeys = this.getTotalKeys()[0]
+    const totalKeys = this.getTotalKeys()[0]
 
-    let _numDeposits = this.bufferKeys
+    const _numDeposits = this.bufferKeys
 
     let assignedDeposits = 0
+    let entry
     while (assignedDeposits < _numDeposits) {
       let bestModuleIdx = this.modulesCount
       let smallestStake = 0
 
       for (let i = 0; i < this.modulesCount; i++) {
-        let entry = cache[i]
+        entry = cache[i]
 
-        if (entry.used_keys == entry.total_keys || entry.used_keys + entry.assigned_keys == entry.total_keys) {
+        if (entry.used_keys === entry.total_keys || entry.used_keys + entry.assigned_keys === entry.total_keys) {
           continue
         }
 
-        //calculate least stake
-        let stake = entry.used_keys - entry.stopped_keys - entry.exited_keys
-        let soft_cap = entry.cap
+        // calculate least stake
+        const stake = entry.used_keys - entry.stopped_keys - entry.exited_keys
+        const soft_cap = entry.cap
 
-        let keys_cap = entry.used_keys + entry.assigned_keys
+        const keys_cap = entry.used_keys + entry.assigned_keys
 
         if (soft_cap > 0 && keys_cap / totalKeys >= soft_cap) {
           console.log('cap')
@@ -185,13 +185,13 @@ let StakingRouter = {
         //   i, soft_cap, keys_cap , totalKeys
         // })
 
-        if (bestModuleIdx == this.modulesCount || stake + entry.assigned_keys < smallestStake) {
+        if (bestModuleIdx === this.modulesCount || stake + entry.assigned_keys < smallestStake) {
           bestModuleIdx = i
           smallestStake = stake + entry.assigned_keys
         }
       }
 
-      if (bestModuleIdx == this.modulesCount)
+      if (bestModuleIdx === this.modulesCount)
         // not found
         break
 
@@ -210,7 +210,7 @@ let StakingRouter = {
   getModuleMaxKeys(index) {
     const recycleCache = this.getRecycledKeys()
     let recycledKeysAmount = recycleCache.total - recycleCache.keysAmounts[index]
-    let allocKeysAmount = this.allocation[index]
+    const allocKeysAmount = this.allocation[index]
 
     if (this.modules[index].used_keys + allocKeysAmount + recycledKeysAmount > this.modules[index].total_keys) {
       recycledKeysAmount = this.modules[index].total_keys - this.modules[index].used_keys - allocKeysAmount
@@ -225,14 +225,14 @@ let StakingRouter = {
     let timeDelta
 
     for (let i = 0; i < this.modulesCount; i++) {
-      let curAllocation = this.allocation[i]
+      const curAllocation = this.allocation[i]
 
       if (curAllocation === 0) {
         // console.log(`module #${i}: no allocation, skip`)
         continue
       }
 
-      let recycleAt = this.modules[i].recycleAt
+      const recycleAt = this.modules[i].recycleAt
       if (recycleAt > lastReportAt) {
         // default assumes we are still on the same level
         recycleCache.levels[i] = this.modules[i].recycleLevel
@@ -242,7 +242,7 @@ let StakingRouter = {
         recycleCache.keysAmounts[i] = 0
       }
 
-      let lastDeposit = this.modules[i].last_deposit
+      const lastDeposit = this.modules[i].last_deposit
       if (lastDeposit > lastReportAt) {
         // if module deposit has ocurred after report, check module slowness based on it lastDeposit time
         timeDelta = now - lastDeposit
@@ -271,16 +271,16 @@ let StakingRouter = {
         console.log(`skip module #${i}: level ${recycleCache.levels[i]}, recycle keys rest ${recycleCache.keysAmounts[i]}`)
         continue
       }
-      //sanity fix last level, just in case incorrect recycleLevels definition
+      // sanity fix last level, just in case incorrect recycleLevels definition
       else if (curLevel === recycleLevels.length) {
         curLevel--
       }
-      //skip if the current level is the same
+      // skip if the current level is the same
       if (curLevel > recycleCache.levels[i]) {
-        //adjust amount according module share in provision stake
-        //todo: едж кейс: модуль всего 1 или только один модуль не депозитит
+        // adjust amount according module share in provision stake
+        // todo: едж кейс: модуль всего 1 или только один модуль не депозитит
         // let percent = recycleLevels[curLevel].percent + ((10000 - recycleLevels[curLevel].percent) * kMod) / 10000
-        let percent = recycleLevels[curLevel].percent
+        const percent = recycleLevels[curLevel].percent
         // console.log({ percent })
         recycleCache.keysAmounts[i] = Math.floor((curAllocation * percent) / 10000)
         recycleCache.levels[i] = curLevel
@@ -326,7 +326,7 @@ let StakingRouter = {
 
       recycledKeysAmount -= keysToUse
 
-      if (recycledKeysAmount == 0) {
+      if (recycledKeysAmount === 0) {
         break
       }
     }
@@ -379,7 +379,7 @@ let StakingRouter = {
     // })
   }
 
-  //debug
+  // debug
 }
 
 function tOfs(now = 0) {}
@@ -408,7 +408,7 @@ async function main() {
   let [keysAmount, recycledKeysAmount] = StakingRouter.getModuleMaxKeys(module_index)
   keysAmount = Math.floor(keysAmount / 2) // 1/2 of avail keys
   console.head(`[+${Time.diff()}h] deposit(), module #${module_index}, ${keysAmount} keys`)
-  StakingRouter.deposit(module_index, keysAmount) //deposit  keys
+  StakingRouter.deposit(module_index, keysAmount) // deposit  keys
   s = getAndPrintState()
 
   console.hr()
@@ -418,7 +418,7 @@ async function main() {
   ;[keysAmount, recycledKeysAmount] = StakingRouter.getModuleMaxKeys(module_index)
   keysAmount = Math.floor(keysAmount / 2) // 1/2 of avail keys
   console.head(`[+${Time.diff()}h] deposit(), module #${module_index}, ${keysAmount} keys`)
-  StakingRouter.deposit(module_index, keysAmount) //deposit all avail keys
+  StakingRouter.deposit(module_index, keysAmount) // deposit all avail keys
   s = getAndPrintState()
 
   console.hr()
@@ -455,7 +455,7 @@ async function main() {
 
   console.hr()
 
-  Time.shift(41) //1d + 17h
+  Time.shift(41) // 1d + 17h
   s = getAndPrintState()
   module_index = 1
   ;[keysAmount, recycledKeysAmount] = StakingRouter.getModuleMaxKeys(module_index)
@@ -532,9 +532,9 @@ console.hr = (...args) => {
 
 function getAndPrintState() {
   console.table(StakingRouter.getModules())
-  let alloc = StakingRouter.allocation
+  const alloc = StakingRouter.allocation
   console.table(alloc)
-  let recycleCache = StakingRouter.getRecycledKeys()
+  const recycleCache = StakingRouter.getRecycledKeys()
   console.table(recycleCache)
   return { alloc, recycleCache }
 }
