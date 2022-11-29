@@ -143,12 +143,13 @@ contract('Lido handleOracleReport', ([appManager, user1, user2]) => {
     })
   })
 
-  context('with depositedVals=2, beaconVals=1, bcnBal=30, bufferedEth=3', async () => {
+  context('with depositedVals=2, beaconVals=1, bcnBal=30, bufferedEth=5', async () => {
     beforeEach(async function () {
       await app.setDepositedValidators(2)
       await app.setBeaconBalance(ETH(30))
       await app.setBufferedEther({ from: user1, value: ETH(5) })
       await app.setBeaconValidators(1)
+      await app.setTotalShares(ETH(67))
     })
 
     it('initial state before report', async () => {

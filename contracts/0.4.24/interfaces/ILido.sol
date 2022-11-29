@@ -225,11 +225,13 @@ interface ILido {
         // EL values
         uint256 _wcBufferedEther,
         // decision
+        uint256 _withdrawalsReserveAmount,
         uint256[] _requestIdToFinalizeUpTo,
         uint256[] _finalizationPooledEtherAmount,
         uint256[] _finalizationSharesAmount
     ) external;
 
+    function getBufferWithdrawalsReserve() public returns (uint256);
 
     // User functions
 
@@ -257,8 +259,6 @@ interface ILido {
         bool isFinalized,
         bool isClaimed
     );
-
-    function setBufferWithdrawalsReserve(uint256 _withdrawalsReserveAmount) external;
 
     event WithdrawalRequested(address indexed receiver, uint256 amountOfStETH, uint256 amountOfShares, uint256 requestId);
 

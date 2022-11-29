@@ -24,7 +24,7 @@ contract OracleMock {
             _beaconValidators, 
             _beaconBalance, 
             0, 
-            0,
+            0, 0,
             empty, empty, empty); 
     }
 

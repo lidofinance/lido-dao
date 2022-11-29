@@ -606,6 +606,7 @@ contract LidoOracle is ILidoOracle, AragonApp, CommitteeQuorum {
             _beaconBalanceEth1,
             _totalExitedValidators,
             _wcBufferedEther,
+            0, // withdrawal reserve 
             _requestIdToFinalizeUpTo,
             _finalizationPooledEtherAmount,
             _finalizationSharesAmount
