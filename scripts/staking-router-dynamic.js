@@ -11,7 +11,7 @@ const curatedModule = {
   stopped_keys: 0, // number of signing keys which stopped validation (e.g. were slashed)
   exited_keys: 0,
   assigned_keys: 0,
-  last_deposit: 0,
+  lastDepositAt: 0,
   recycleRestAmount: 0,
   recycleLevel: 0,
   recycleAt: 0
@@ -27,7 +27,7 @@ const communityModule = {
   stopped_keys: 0,
   exited_keys: 0,
   assigned_keys: 0,
-  last_deposit: 0,
+  lastDepositAt: 0,
   recycleRestAmount: 0,
   recycleLevel: 0,
   recycleAt: 0
@@ -42,7 +42,7 @@ const communityModule2 = {
   stopped_keys: 0,
   exited_keys: 0,
   assigned_keys: 0,
-  last_deposit: 0,
+  lastDepositAt: 0,
   recycleRestAmount: 0,
   recycleLevel: 0,
   recycleAt: 0
@@ -242,7 +242,7 @@ const StakingRouter = {
         recycleCache.keysAmounts[i] = 0
       }
 
-      const lastDeposit = this.modules[i].last_deposit
+      const lastDeposit = this.modules[i].lastDepositAt
       if (lastDeposit > lastReportAt) {
         // if module deposit has ocurred after report, check module slowness based on it lastDeposit time
         timeDelta = now - lastDeposit
@@ -364,7 +364,7 @@ const StakingRouter = {
     }
 
     this.modules[index].used_keys += keysAmount
-    this.modules[index].last_deposit = Time.now()
+    this.modules[index].lastDepositAt = Time.now()
 
     // simulate real deposit && reduce balance
     this.bufferKeys -= keysAmount
