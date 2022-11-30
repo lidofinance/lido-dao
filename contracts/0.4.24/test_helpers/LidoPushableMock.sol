@@ -51,6 +51,10 @@ contract LidoPushableMock is Lido {
         BEACON_VALIDATORS_POSITION.setStorageUint256(_beaconValidators);
     }
 
+    function setTotalShares(uint256 _totalShares) public {
+         TOTAL_SHARES_POSITION.setStorageUint256(_totalShares);
+    }
+
     function initialize(address _oracle) public onlyInit {
         _setProtocolContracts(_oracle, _oracle, _oracle);
         _resume();
@@ -62,7 +66,7 @@ contract LidoPushableMock is Lido {
         distributeFeeCalled = false;
     }
 
-    function distributeFee(uint256 _totalRewards) internal {
+    function _distributeFee(uint256 _totalRewards) internal {
         totalRewards = _totalRewards;
         distributeFeeCalled = true;
     }

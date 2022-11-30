@@ -15,7 +15,7 @@ contract LidoMockForOracle {
         return totalPooledEther;
     }
 
-    function handleOracleReport(uint256, uint256 _beaconBalance, uint256, uint256, uint256[], uint256[], uint256[]) external {
+    function handleOracleReport(uint256, uint256 _beaconBalance, uint256, uint256, uint256, uint256[], uint256[], uint256[]) external {
         totalPooledEther = _beaconBalance;
     }
 
