@@ -811,24 +811,35 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
       await web3.eth.sendTransaction({ from: anotherAccount, to: lido.address, value: ETH(10) })
       // check 10 stETH minted on balance
       assertBn(await lido.balanceOf(anotherAccount), stETH(10))
-      // transfer 5 stETH to the burner account
-      await lido.transfer(burner.address, stETH(5), { from: anotherAccount })
-      // transfer 5 stETH to voting
-      await lido.transfer(voting, stETH(5), { from: anotherAccount })
+      // transfer 1 stETH to the burner account "accidentally"
+      await lido.transfer(burner.address, stETH(1), { from: anotherAccount })
+      // transfer 9 stETH to voting (only voting is allowed to request actual burning)
+      await lido.transfer(voting, stETH(9), { from: anotherAccount })
 
-      // request 5 stETH to be burned later
-      await lido.approve(burner.address, stETH(5), { from: voting })
-      await burner.requestBurnMyStETH(stETH(5), { from: voting })
+      // request 9 stETH to be burned later
+      await lido.approve(burner.address, stETH(9), { from: voting })
+      await burner.requestBurnMyStETH(stETH(9), { from: voting })
 
       // check balances one last time
       assertBn(await lido.balanceOf(anotherAccount), stETH(0))
       assertBn(await lido.balanceOf(voting), stETH(0))
       assertBn(await lido.balanceOf(burner.address), stETH(10))
 
+      // ensure that excess amount is exactly 1 stETH
+      assertBn(await burner.getExcessStETH(), stETH(1))
+
       // can't abuse recoverERC721 API to perform griefing-like attack
       assertRevert(burner.recoverERC721(lido.address, stETH(1), { from: anotherAccount }), `TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE`)
       assertRevert(burner.recoverERC721(lido.address, stETH(1), { from: deployer }), `TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE`)
       assertRevert(burner.recoverERC721(lido.address, stETH(1), { from: voting }), `TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE`)
+
+      const receipt = await burner.recoverExcessStETH({ from: anotherAccount })
+      assertEvent(receipt, `ExcessStETHRecovered`, {
+        expectedArgs: { requestedBy: anotherAccount, amount: stETH(1) }
+      })
+
+      // ensure that excess amount is zero
+      assertBn(await burner.getExcessStETH(), stETH(0))
     })
 
     it(`can't recover zero-address ERC721(NFT)`, async () => {
