@@ -5,11 +5,11 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
-import '@openzeppelin/contracts-v4.4/token/ERC20/IERC20.sol';
-import '@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol';
-import '@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC20.sol';
+import "@openzeppelin/contracts-v4.4/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC20.sol";
 
-import './lib/AragonUnstructuredStorage.sol';
+import "./lib/AragonUnstructuredStorage.sol";
 
 /**
  * @title Interface defining a Lido liquid staking pool
@@ -55,15 +55,15 @@ contract WithdrawalQueueEarlyCommitment {
     /// - 0 right after deployment when no initializer is invoked yet
     /// - N after calling initialize() during deployment from scratch, where N is the current contract version
     /// - N after upgrading contract from the previous version (after calling finalize_vN())
-    bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256('lido.WithdrawalQueue.contractVersion');
+    bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.WithdrawalQueue.contractVersion");
 
     /// Lido DAO Agent contract address
     /// Used to call administrative levers
-    bytes32 internal constant LIDO_DAO_AGENT_POSITION = keccak256('lido.WithdrawalQueue.lidoDAOAgent');
+    bytes32 internal constant LIDO_DAO_AGENT_POSITION = keccak256("lido.WithdrawalQueue.lidoDAOAgent");
 
     /// Requests placement resume/pause control storage slot
     bytes32 internal constant REQUESTS_PLACEMENT_RESUMED_POSITION =
-        keccak256('lido.WithdrawalQueue.requestsPlacementResumed');
+        keccak256("lido.WithdrawalQueue.requestsPlacementResumed");
 
     /// Lido stETH token address to be set upon construction
     address public immutable LIDO;
@@ -80,7 +80,7 @@ contract WithdrawalQueueEarlyCommitment {
      * @notice maximum possible sum that is possible to withdraw by a single request
      * Prevents accumulating too much funds per single request fulfillment in the future.
      */
-    uint256 public constant MAX_STETH_WITHDRAWAL_AMOUNT = 32 * 500 ether;
+    uint256 public constant MAX_STETH_WITHDRAWAL_AMOUNT = 500 * 32 ether;
 
     ///! STRUCTURED STORAGE OF THE CONTRACT
     ///! SLOT 0: WithdrawalRequest[] queue
@@ -188,17 +188,19 @@ contract WithdrawalQueueEarlyCommitment {
             bool isClaimed
         )
     {
-        WithdrawalRequest memory request = queue[_requestId];
+        if (_requestId < queue.length) {
+            WithdrawalRequest memory request = queue[_requestId];
 
-        recipient = request.recipient;
-        requestBlockNumber = request.requestBlockNumber;
-        uint256 shares = request.cumulativeShares;
-        if (_requestId > 0) {
-            shares -= queue[_requestId - 1].cumulativeShares;
+            recipient = request.recipient;
+            requestBlockNumber = request.requestBlockNumber;
+            uint256 shares = request.cumulativeShares;
+            if (_requestId > 0) {
+                shares -= queue[_requestId - 1].cumulativeShares;
+            }
+            etherToWithdraw = ILido(LIDO).getPooledEthByShares(shares);
+            isFinalized = false;
+            isClaimed = false;
         }
-        etherToWithdraw = ILido(LIDO).getPooledEthByShares(shares);
-        isFinalized = false;
-        isClaimed = false;
     }
 
     /// @notice Returns Lido DAO Agent address
