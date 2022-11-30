@@ -169,6 +169,8 @@ contract WithdrawalQueue {
         lockedEtherAmount -= etherToTransfer;
 
         _sendValue(request.recipient, etherToTransfer);
+
+        return request.recipient;
     }
 
     /**
