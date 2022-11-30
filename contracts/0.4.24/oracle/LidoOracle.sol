@@ -13,7 +13,7 @@ import "../interfaces/IBeaconReportReceiver.sol";
 import "../interfaces/ILido.sol";
 import "../interfaces/ILidoOracle.sol";
 
-import "./CommitteeQuorum.sol";
+import "./ReportUtils.sol";
 
 
 /**
@@ -30,8 +30,9 @@ import "./CommitteeQuorum.sol";
  * Not all frames may come to a quorum. Oracles may report only to the first epoch of the frame and
  * only if no quorum is reached for this epoch yet.
  */
-contract LidoOracle is ILidoOracle, AragonApp, CommitteeQuorum {
+contract LidoOracle is ILidoOracle, AragonApp {
     using SafeMath for uint256;
+    using ReportUtils for uint256;
     using ERC165Checker for address;
 
     struct BeaconSpec {
@@ -53,11 +54,19 @@ contract LidoOracle is ILidoOracle, AragonApp, CommitteeQuorum {
     bytes32 constant public SET_BEACON_REPORT_RECEIVER =
         0xe22a455f1bfbaf705ac3e891a64e156da92cb0b42cfc389158e6e82bd57f37be; // keccak256("SET_BEACON_REPORT_RECEIVER")
 
+    /// Maximum number of oracle committee members
+    uint256 public constant MAX_MEMBERS = 256;
+
     /// Eth1 denomination is 18 digits, while Eth2 has 9 digits. Because we work with Eth2
     /// balances and to support old interfaces expecting eth1 format, we multiply by this
     /// coefficient.
     uint128 internal constant DENOMINATION_OFFSET = 1e9;
 
+    uint256 internal constant MEMBER_NOT_FOUND = uint256(-1);
+
+    /// Number of exactly the same reports needed to finalize the epoch
+    bytes32 internal constant QUORUM_POSITION =
+        0xd43b42c1ba05a1ab3c178623a49b2cdb55f000ec70b9ccdba5740b3339a7589e; // keccak256("lido.LidoOracle.quorum")
 
     /// Address of the Lido contract
     bytes32 internal constant LIDO_POSITION =
@@ -79,6 +88,10 @@ contract LidoOracle is ILidoOracle, AragonApp, CommitteeQuorum {
     /// Epoch that we currently collect reports
     bytes32 internal constant EXPECTED_EPOCH_ID_POSITION =
         0x65f1a0ee358a8a4000a59c2815dc768eb87d24146ca1ac5555cb6eb871aee915; // keccak256("lido.LidoOracle.expectedEpochId")
+
+    /// The bitmask of the oracle members that pushed their reports
+    bytes32 internal constant REPORTS_BITMASK_POSITION =
+        0xea6fa022365e4737a3bb52facb00ddc693a656fb51ffb2b4bd24fb85bdc888be; // keccak256("lido.LidoOracle.reportsBitMask")
 
     /// Historic data about 2 last completed reports and their times
     bytes32 internal constant POST_COMPLETED_TOTAL_POOLED_ETHER_POSITION =
@@ -112,9 +125,9 @@ contract LidoOracle is ILidoOracle, AragonApp, CommitteeQuorum {
     bytes32 internal constant V1_LAST_REPORTED_EPOCH_ID_POSITION =
         0xfe0250ed0c5d8af6526c6d133fccb8e5a55dd6b1aa6696ed0c327f8e517b5a94; // keccak256("lido.LidoOracle.lastReportedEpochId")
 
-    // /// Contract structured storage
-    // address[] private members;                /// slot 0: oracle committee members
-    // uint256[] private currentReportVariants;  /// slot 1: reporting storage
+    /// Contract structured storage
+    address[] private members;                /// slot 0: oracle committee members
+    uint256[] private currentReportVariants;  /// slot 1: reporting storage
 
 
     /**
@@ -122,6 +135,13 @@ contract LidoOracle is ILidoOracle, AragonApp, CommitteeQuorum {
      */
     function getLido() public view returns (ILido) {
         return ILido(LIDO_POSITION.getStorageAddress());
+    }
+
+    /**
+     * @notice Return the number of exactly the same reports needed to finalize the epoch
+     */
+    function getQuorum() public view returns (uint256) {
+        return QUORUM_POSITION.getStorageUint256();
     }
 
     /**
@@ -178,12 +198,49 @@ contract LidoOracle is ILidoOracle, AragonApp, CommitteeQuorum {
         emit BeaconReportReceiverSet(_addr);
     }
 
+    /**
+     * @notice Return the current reporting bitmap, representing oracles who have already pushed
+     * their version of report during the expected epoch
+     * @dev Every oracle bit corresponds to the index of the oracle in the current members list
+     */
+    function getCurrentOraclesReportStatus() external view returns (uint256) {
+        return REPORTS_BITMASK_POSITION.getStorageUint256();
+    }
+
+    /**
+     * @notice Return the current reporting variants array size
+     */
+    function getCurrentReportVariantsSize() external view returns (uint256) {
+        return currentReportVariants.length;
+    }
+
+    /**
+     * @notice Return the current reporting array element with index `_index`
+     */
+    function getCurrentReportVariant(uint256 _index)
+        external
+        view
+        returns (
+            uint64 beaconBalance,
+            uint32 beaconValidators,
+            uint16 count
+        )
+    {
+        return currentReportVariants[_index].decodeWithCount();
+    }
 
     /**
      * @notice Returns epoch that can be reported by oracles
      */
     function getExpectedEpochId() external view returns (uint256) {
         return EXPECTED_EPOCH_ID_POSITION.getStorageUint256();
+    }
+
+    /**
+     * @notice Return the current oracle member committee list
+     */
+    function getOracleMembers() external view returns (address[]) {
+        return members;
     }
 
     /**
@@ -273,7 +330,7 @@ contract LidoOracle is ILidoOracle, AragonApp, CommitteeQuorum {
     }
 
     /**
-     * @notice Report total pooled ether and its change during the last frame
+     * @notice Report beacon balance and its change during the last frame
      */
     function getLastCompletedReportDelta()
         external
@@ -378,81 +435,52 @@ contract LidoOracle is ILidoOracle, AragonApp, CommitteeQuorum {
      * @notice Add `_member` to the oracle member committee list
      */
     function addOracleMember(address _member) external auth(MANAGE_MEMBERS) {
-        _addOracleMember(_member);
+        require(address(0) != _member, "BAD_ARGUMENT");
+        require(MEMBER_NOT_FOUND == _getMemberId(_member), "MEMBER_EXISTS");
+        require(members.length < MAX_MEMBERS, "TOO_MANY_MEMBERS");
+
+        members.push(_member);
+
+        emit MemberAdded(_member);
     }
 
     /**
      * @notice Remove '_member` from the oracle member committee list
      */
     function removeOracleMember(address _member) external auth(MANAGE_MEMBERS) {
-        _removeOracleMember(_member);
-    }
+        uint256 index = _getMemberId(_member);
+        require(index != MEMBER_NOT_FOUND, "MEMBER_NOT_FOUND");
+        uint256 last = members.length - 1;
+        if (index != last) members[index] = members[last];
+        members.length--;
+        emit MemberRemoved(_member);
 
-    function _decodeReport(bytes memory _reportData) internal view returns (
-            // Consensus info
-        uint256 epochId,
-        // CL values
-        uint256 beaconValidators,
-        uint256 beaconBalanceEth1,
-        uint256 totalExitedValidators,
-        // EL values
-        uint256 wcBufferedEther,
-        // decision
-        uint256[] requestIdToFinalizeUpTo,
-        uint256[] finalizationPooledEtherAmount,
-        uint256[] finalizationSharesAmount
-    ) {
-
+        // delete the data for the last epoch, let remained oracles report it again
+        REPORTS_BITMASK_POSITION.setStorageUint256(0);
+        delete currentReportVariants;
     }
 
     /**
      * @notice Set the number of exactly the same reports needed to finalize the epoch to `_quorum`
      */
     function setQuorum(uint256 _quorum) external auth(MANAGE_QUORUM) {
+        require(0 != _quorum, "QUORUM_WONT_BE_MADE");
         uint256 oldQuorum = QUORUM_POSITION.getStorageUint256();
-
-        _setQuorum(_quorum);
+        QUORUM_POSITION.setStorageUint256(_quorum);
+        emit QuorumChanged(_quorum);
 
         // If the quorum value lowered, check existing reports whether it is time to push
         if (oldQuorum > _quorum) {
-            (bool isQuorum, uint256 reportIndex) = _getQuorumReport(_quorum);
+            (bool isQuorum, uint256 report) = _getQuorumReport(_quorum);
             if (isQuorum) {
-                (
-                    uint256 epochId,
-                    uint256 beaconValidators,
-                    uint256 beaconBalanceEth1,
-                    uint256 totalExitedValidators,
-                    uint256 wcBufferedEther,
-                    uint256[] memory requestIdToFinalizeUpTo,
-                    uint256[] memory finalizationPooledEtherAmount,
-                    uint256[] memory finalizationSharesAmount
-                ) = _decodeReport(distinctReports[reportIndex]);
-
-                _handleConsensussedReport(
-                    epochId,
-                    beaconValidators,
-                    beaconBalanceEth1,
-                    totalExitedValidators,
-                    wcBufferedEther,
-                    requestIdToFinalizeUpTo,
-                    finalizationPooledEtherAmount,
-                    finalizationSharesAmount,
-                    _getBeaconSpec()
+                (uint64 beaconBalance, uint32 beaconValidators) = report.decode();
+                _push(
+                     EXPECTED_EPOCH_ID_POSITION.getStorageUint256(),
+                     DENOMINATION_OFFSET * uint128(beaconBalance),
+                     beaconValidators,
+                     _getBeaconSpec()
                 );
             }
-        }
-    }
-
-    function _validateExpectedEpochAndClearReportingIfNeeded(uint256 _epochId, BeaconSpec memory _beaconSpec) private
-    {
-        uint256 expectedEpoch = EXPECTED_EPOCH_ID_POSITION.getStorageUint256();
-        require(_epochId >= expectedEpoch, "EPOCH_IS_TOO_OLD");
-
-        // if expected epoch has advanced, check that this is the first epoch of the current frame
-        // and clear the last unsuccessful reporting
-        if (_epochId > expectedEpoch) {
-            require(_epochId == _getFrameFirstEpochId(_getCurrentEpochId(_beaconSpec), _beaconSpec), "UNEXPECTED_EPOCH");
-            _clearReportingAndAdvanceTo(_epochId);
         }
     }
 
@@ -462,55 +490,48 @@ contract LidoOracle is ILidoOracle, AragonApp, CommitteeQuorum {
      * @param _beaconBalance Balance in gwei on the ETH 2.0 side (9-digit denomination)
      * @param _beaconValidators Number of validators visible in this epoch
      */
-    function reportBeacon(
-        // Consensus info
-        uint256 _epochId,
-        // CL values
-        uint256 _beaconValidators,
-        uint256 _beaconBalance,
-        uint256 _totalExitedValidators,
-        // EL values
-        uint256 _wcBufferedEther,
-        // decision
-        uint256[] _requestIdToFinalizeUpTo,
-        uint256[] _finalizationPooledEtherAmount,
-        uint256[] _finalizationSharesAmount
-    ) external {
+    function reportBeacon(uint256 _epochId, uint64 _beaconBalance, uint32 _beaconValidators) external {
         BeaconSpec memory beaconSpec = _getBeaconSpec();
-        _validateExpectedEpochAndClearReportingIfNeeded(_epochId, beaconSpec);
+        uint256 expectedEpoch = EXPECTED_EPOCH_ID_POSITION.getStorageUint256();
+        require(_epochId >= expectedEpoch, "EPOCH_IS_TOO_OLD");
 
-        // abi.encode(_wcBufferedEther);
-
-        // bytes[] data;
+        // if expected epoch has advanced, check that this is the first epoch of the current frame
+        // and clear the last unsuccessful reporting
+        if (_epochId > expectedEpoch) {
+            require(_epochId == _getFrameFirstEpochId(_getCurrentEpochId(beaconSpec), beaconSpec), "UNEXPECTED_EPOCH");
+            _clearReportingAndAdvanceTo(_epochId);
+        }
 
         uint128 beaconBalanceEth1 = DENOMINATION_OFFSET * uint128(_beaconBalance);
-        emit BeaconReported(
-            _epochId,
-            beaconBalanceEth1,
-            _beaconValidators,
-            msg.sender,
-            _totalExitedValidators,
-            _wcBufferedEther,
-            _requestIdToFinalizeUpTo,
-            _finalizationPooledEtherAmount,
-            _finalizationSharesAmount
-        );
+        emit BeaconReported(_epochId, beaconBalanceEth1, _beaconValidators, msg.sender);
 
-        // bytes memory reportBytes = abi.encode(_beaconValidators);
-        // bool isQuorumReached = handleReport(msg.sender, abi.encode(_beaconValidators));
-        bool isQuorumReached = _handleMemberReport(msg.sender, msg.data);
-        if (isQuorumReached) {
-            _handleConsensussedReport(
-                _epochId,
-                _beaconValidators,
-                beaconBalanceEth1,
-                _totalExitedValidators,
-                _wcBufferedEther,
-                _requestIdToFinalizeUpTo,
-                _finalizationPooledEtherAmount,
-                _finalizationSharesAmount,
-                beaconSpec
-            );
+        // make sure the oracle is from members list and has not yet voted
+        uint256 index = _getMemberId(msg.sender);
+        require(index != MEMBER_NOT_FOUND, "MEMBER_NOT_FOUND");
+        uint256 bitMask = REPORTS_BITMASK_POSITION.getStorageUint256();
+        uint256 mask = 1 << index;
+        require(bitMask & mask == 0, "ALREADY_SUBMITTED");
+        REPORTS_BITMASK_POSITION.setStorageUint256(bitMask | mask);
+
+        // push this report to the matching kind
+        uint256 report = ReportUtils.encode(_beaconBalance, _beaconValidators);
+        uint256 quorum = getQuorum();
+        uint256 i = 0;
+
+        // iterate on all report variants we already have, limited by the oracle members maximum
+        while (i < currentReportVariants.length && currentReportVariants[i].isDifferent(report)) ++i;
+        if (i < currentReportVariants.length) {
+            if (currentReportVariants[i].getCount() + 1 >= quorum) {
+                _push(_epochId, beaconBalanceEth1, _beaconValidators, beaconSpec);
+            } else {
+                ++currentReportVariants[i]; // increment report counter, see ReportUtils for details
+            }
+        } else {
+            if (quorum == 1) {
+                _push(_epochId, beaconBalanceEth1, _beaconValidators, beaconSpec);
+            } else {
+                currentReportVariants.push(report + 1);
+            }
         }
     }
 
@@ -528,6 +549,37 @@ contract LidoOracle is ILidoOracle, AragonApp, CommitteeQuorum {
         beaconSpec.secondsPerSlot = uint64(data >> 64);
         beaconSpec.genesisTime = uint64(data);
         return beaconSpec;
+    }
+
+    /**
+     * @notice Return whether the `_quorum` is reached and the final report
+     */
+    function _getQuorumReport(uint256 _quorum) internal view returns (bool isQuorum, uint256 report) {
+        // check most frequent cases first: all reports are the same or no reports yet
+        if (currentReportVariants.length == 1) {
+            return (currentReportVariants[0].getCount() >= _quorum, currentReportVariants[0]);
+        } else if (currentReportVariants.length == 0) {
+            return (false, 0);
+        }
+
+        // if more than 2 kind of reports exist, choose the most frequent
+        uint256 maxind = 0;
+        uint256 repeat = 0;
+        uint16 maxval = 0;
+        uint16 cur = 0;
+        for (uint256 i = 0; i < currentReportVariants.length; ++i) {
+            cur = currentReportVariants[i].getCount();
+            if (cur >= maxval) {
+                if (cur == maxval) {
+                    ++repeat;
+                } else {
+                    maxind = i;
+                    maxval = cur;
+                    repeat = 0;
+                }
+            }
+        }
+        return (maxval >= _quorum && repeat == 0, currentReportVariants[maxind]);
     }
 
     /**
@@ -560,39 +612,21 @@ contract LidoOracle is ILidoOracle, AragonApp, CommitteeQuorum {
             _genesisTime);
     }
 
-    // /**
-    //  * @notice Push the given report to Lido and performs accompanying accounting
-    //  * @param _epochId Beacon chain epoch, proven to be >= expected epoch and <= current epoch
-    //  * @param _beaconBalanceEth1 Validators balance in eth1 (18-digit denomination)
-    //  * @param _beaconSpec current beacon specification data
-    //  */
-    function _handleConsensussedReport(
-        // Consensus info
+    /**
+     * @notice Push the given report to Lido and performs accompanying accounting
+     * @param _epochId Beacon chain epoch, proven to be >= expected epoch and <= current epoch
+     * @param _beaconBalanceEth1 Validators balance in eth1 (18-digit denomination)
+     * @param _beaconSpec current beacon specification data
+     */
+    function _push(
         uint256 _epochId,
-        // CL values
-        uint256 _beaconValidators,
-        uint256 _beaconBalanceEth1,
-        uint256 _totalExitedValidators,
-        // EL values
-        uint256 _wcBufferedEther,
-        // decision
-        uint256[] _requestIdToFinalizeUpTo,
-        uint256[] _finalizationPooledEtherAmount,
-        uint256[] _finalizationSharesAmount,
+        uint128 _beaconBalanceEth1,
+        uint128 _beaconValidators,
         BeaconSpec memory _beaconSpec
     )
         internal
     {
-        emit Completed(
-            _epochId,
-            _beaconBalanceEth1,
-            _beaconValidators,
-            _totalExitedValidators,
-            _wcBufferedEther,
-            _requestIdToFinalizeUpTo,
-            _finalizationPooledEtherAmount,
-            _finalizationSharesAmount
-        );
+        emit Completed(_epochId, _beaconBalanceEth1, _beaconValidators);
 
         // now this frame is completed, so the expected epoch should be advanced to the first epoch
         // of the next frame
@@ -604,39 +638,30 @@ contract LidoOracle is ILidoOracle, AragonApp, CommitteeQuorum {
         lido.handleOracleReport(
             _beaconValidators,
             _beaconBalanceEth1,
-            _totalExitedValidators,
-            _wcBufferedEther,
-            0, // withdrawal reserve 
-            _requestIdToFinalizeUpTo,
-            _finalizationPooledEtherAmount,
-            _finalizationSharesAmount
-        );
+            0,
+            0,
+            0,
+            new uint256[](0),
+            new uint256[](0),
+            new uint256[](0)
+        ); // here should be withdrawal params
         uint256 postTotalPooledEther = lido.totalSupply();
 
-        _doWorkAfterReportingToLido(prevTotalPooledEther, postTotalPooledEther, _epochId, _beaconSpec);
-    }
-
-    function _doWorkAfterReportingToLido(
-        uint256 _prevTotalPooledEther,
-        uint256 _postTotalPooledEther,
-        uint256 _epochId,
-        BeaconSpec memory _beaconSpec
-    ) internal {
-        PRE_COMPLETED_TOTAL_POOLED_ETHER_POSITION.setStorageUint256(_prevTotalPooledEther);
-        POST_COMPLETED_TOTAL_POOLED_ETHER_POSITION.setStorageUint256(_postTotalPooledEther);
+        PRE_COMPLETED_TOTAL_POOLED_ETHER_POSITION.setStorageUint256(prevTotalPooledEther);
+        POST_COMPLETED_TOTAL_POOLED_ETHER_POSITION.setStorageUint256(postTotalPooledEther);
         uint256 timeElapsed = (_epochId - LAST_COMPLETED_EPOCH_ID_POSITION.getStorageUint256()) *
             _beaconSpec.slotsPerEpoch * _beaconSpec.secondsPerSlot;
         TIME_ELAPSED_POSITION.setStorageUint256(timeElapsed);
         LAST_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(_epochId);
 
         // rollback on boundaries violation
-        _reportSanityChecks(_postTotalPooledEther, _prevTotalPooledEther, timeElapsed);
+        _reportSanityChecks(postTotalPooledEther, prevTotalPooledEther, timeElapsed);
 
         // emit detailed statistics and call the quorum delegate with this data
-        emit PostTotalShares(_postTotalPooledEther, _prevTotalPooledEther, timeElapsed, getLido().getTotalShares());
+        emit PostTotalShares(postTotalPooledEther, prevTotalPooledEther, timeElapsed, lido.getTotalShares());
         IBeaconReportReceiver receiver = IBeaconReportReceiver(BEACON_REPORT_RECEIVER_POSITION.getStorageUint256());
         if (address(receiver) != address(0)) {
-            receiver.processLidoOracleReport(_postTotalPooledEther, _prevTotalPooledEther, timeElapsed);
+            receiver.processLidoOracleReport(postTotalPooledEther, prevTotalPooledEther, timeElapsed);
         }
     }
 
@@ -644,9 +669,9 @@ contract LidoOracle is ILidoOracle, AragonApp, CommitteeQuorum {
      * @notice Remove the current reporting progress and advances to accept the later epoch `_epochId`
      */
     function _clearReportingAndAdvanceTo(uint256 _epochId) internal {
-        _clearReporting();
-
+        REPORTS_BITMASK_POSITION.setStorageUint256(0);
         EXPECTED_EPOCH_ID_POSITION.setStorageUint256(_epochId);
+        delete currentReportVariants;
         emit ExpectedEpochIdUpdated(_epochId);
     }
 
@@ -675,7 +700,6 @@ contract LidoOracle is ILidoOracle, AragonApp, CommitteeQuorum {
                     allowedAnnualRelativeIncreaseBp.mul(_preTotalPooledEther).mul(_timeElapsed),
                     "ALLOWED_BEACON_BALANCE_INCREASE");
         } else {
-            // TODO: maybe allow larger decrease
             // decrease           = _preTotalPooledEther - _postTotalPooledEther
             // relativeDecrease   = decrease / _preTotalPooledEther
             // relativeDecreaseBp = relativeDecrease * 10000, in basis points 0.01% (1e-4)
@@ -686,6 +710,19 @@ contract LidoOracle is ILidoOracle, AragonApp, CommitteeQuorum {
                     allowedRelativeDecreaseBp.mul(_preTotalPooledEther),
                     "ALLOWED_BEACON_BALANCE_DECREASE");
         }
+    }
+
+    /**
+     * @notice Return `_member` index in the members list or MEMBER_NOT_FOUND
+     */
+    function _getMemberId(address _member) internal view returns (uint256) {
+        uint256 length = members.length;
+        for (uint256 i = 0; i < length; ++i) {
+            if (members[i] == _member) {
+                return i;
+            }
+        }
+        return MEMBER_NOT_FOUND;
     }
 
     /**
