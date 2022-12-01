@@ -598,8 +598,19 @@ contract LidoOracleNew is CommitteeQuorum {
         // of the next frame
         _clearReportingAndAdvanceTo(_report.epochId + _beaconSpec.epochsPerFrame);
 
-        // report to the Lido and collect stats
         ILido lido = getLido();
+        INodeOperatorsRegistry registry = lido.getOperators();
+        for (uint256 i = 0; i < _report.exitedValidatorsNumbers.length; ++i) {
+            // TODO: accept uint64 in reportBeacon?
+            uint256 stoppedIncrement = _report.exitedValidatorsNumbers[i];
+            require(stoppedIncrement < type(uint64).max, "EXITED_VALIDATORS_NUMBER_BEYOND_LIMIT");
+            registry.reportStoppedValidators(
+                _report.nodeOperatorsWithExitedValidators[i],
+                uint64(stoppedIncrement)
+            );
+        }
+
+        // report to the Lido and collect stats
         uint256 prevTotalPooledEther = lido.totalSupply();
 
         // TODO: report other values from MemberReport
@@ -608,6 +619,7 @@ contract LidoOracleNew is CommitteeQuorum {
             beaconBalance,
             _report.totalExitedValidators,
             _report.wcBufferedEther,
+            _report.newDepositBufferWithdrawalsReserve,
             _report.requestIdToFinalizeUpTo,
             _report.finalizationPooledEtherAmount,
             _report.finalizationSharesAmount

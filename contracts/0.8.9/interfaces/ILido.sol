@@ -4,6 +4,12 @@
 
 pragma solidity 0.8.9;
 
+interface INodeOperatorsRegistry {
+    /**
+      * @notice Report `_stoppedIncrement` more stopped validators of the node operator #`_id`
+      */
+    function reportStoppedValidators(uint256 _id, uint64 _stoppedIncrement) external;
+}
 
 /**
   * @title Liquid staking pool
@@ -286,5 +292,5 @@ interface ILido {
       */
     function getBeaconStat() external view returns (uint256 depositedValidators, uint256 beaconValidators, uint256 beaconBalance);
 
-    function getOperators() external view returns (address);
+    function getOperators() external view returns (INodeOperatorsRegistry);
 }

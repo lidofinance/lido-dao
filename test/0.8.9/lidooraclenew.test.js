@@ -6,7 +6,8 @@ const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 const keccak256 = require('js-sha3').keccak_256
 
 const LidoOracleNew = artifacts.require('LidoOracleNewMock.sol')
-const Lido = artifacts.require('LidoMockForOracle.sol')
+const Lido = artifacts.require('LidoMockForOracleNew.sol')
+const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistryMockForLidoOracleNew')
 const BeaconReportReceiver = artifacts.require('BeaconReportReceiverMock')
 const BeaconReportReceiverWithoutERC165 = artifacts.require('BeaconReportReceiverMockWithoutERC165')
 
@@ -33,7 +34,7 @@ const ZERO_MEMBER_REPORT = {
 const START_BALANCE = 1e12
 
 contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user5, user6, user7, nobody]) => {
-  let appLido, app
+  let appLido, app, nodeOperatorsRegistry
 
   const assertExpectedEpochs = async (startEpoch, endEpoch) => {
     assertBn(await app.getExpectedEpochId(), startEpoch)
@@ -43,7 +44,8 @@ contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user
   before('deploy base app', async () => {
     // Deploy the app's base contract.
     // app = await LidoOracle.new({ from: voting })
-    appLido = await Lido.new()
+    nodeOperatorsRegistry = await NodeOperatorsRegistry.new()
+    appLido = await Lido.new(nodeOperatorsRegistry.address)
   })
 
   beforeEach('deploy dao and app', async () => {
