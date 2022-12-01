@@ -623,8 +623,7 @@ contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user
 
       it('quorum receiver called with same arguments as getLastCompletedReportDelta', async () => {
         const badMock = await BeaconReportReceiverWithoutERC165.new()
-        // TODO: restore the check
-        // await assertRevert(app.setBeaconReportReceiver(badMock.address, { from: voting }), 'BAD_BEACON_REPORT_RECEIVER')
+        await assertRevert(app.setBeaconReportReceiver(badMock.address, { from: voting }), 'BAD_BEACON_REPORT_RECEIVER')
 
         const mock = await BeaconReportReceiver.new()
         let receipt = await app.setBeaconReportReceiver(mock.address, { from: voting })

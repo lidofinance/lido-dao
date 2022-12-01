@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.9;
 
+import { ERC165Checker } from "@openzeppelin/contracts-v4.4/utils/introspection/ERC165Checker.sol";
+
 import "./CommitteeQuorum.sol";
 import "./interfaces/ILido.sol";
 import "./interfaces/IBeaconReportReceiver.sol";
@@ -22,7 +24,7 @@ import "./interfaces/IBeaconReportReceiver.sol";
  * only if no quorum is reached for this epoch yet.
  */
 contract LidoOracleNew is CommitteeQuorum {
-    // using ERC165Checker for address;
+    using ERC165Checker for address;
     using UnstructuredStorage for bytes32;
 
     event AllowedBeaconBalanceAnnualRelativeIncreaseSet(uint256 value);
@@ -248,11 +250,10 @@ contract LidoOracleNew is CommitteeQuorum {
         _checkSenderIsOwner();
         if(_addr != address(0)) {
             IBeaconReportReceiver iBeacon;
-            // TODO: restore check
-            // require(
-            //     _addr._supportsInterface(iBeacon.processLidoOracleReport.selector),
-            //     "BAD_BEACON_REPORT_RECEIVER"
-            // );
+            require(
+                _addr.supportsInterface(iBeacon.processLidoOracleReport.selector),
+                "BAD_BEACON_REPORT_RECEIVER"
+            );
         }
 
         BEACON_REPORT_RECEIVER_POSITION.setStorageAddress(_addr);

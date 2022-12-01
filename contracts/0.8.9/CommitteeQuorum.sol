@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.9;
 
-// import "openzeppelin-solidity/contracts/introspection/ERC165Checker.sol";
 import "./lib/AragonUnstructuredStorage.sol";
 
 
@@ -21,7 +20,6 @@ import "./lib/AragonUnstructuredStorage.sol";
  * only if no quorum is reached for this epoch yet.
  */
 contract CommitteeQuorum {
-    // using ERC165Checker for address;
     using UnstructuredStorage for bytes32;
 
     event MemberAdded(address member);
