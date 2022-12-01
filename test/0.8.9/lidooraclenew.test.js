@@ -14,7 +14,6 @@ const BeaconReportReceiverWithoutERC165 = artifacts.require('BeaconReportReceive
 const GENESIS_TIME = 1606824000
 const EPOCH_LENGTH = 32 * 12
 const DENOMINATION_OFFSET = 1e9
-const AUTH_ERROR = 'ONLY_OWNER_SENDER_ALLOWED'
 
 const ZERO_MEMBER_REPORT = {
   totalExitedValidators: 0,
@@ -26,6 +25,17 @@ const ZERO_MEMBER_REPORT = {
   requestIdToFinalizeUpTo: [],
   finalizationPooledEtherAmount: [],
   finalizationSharesAmount: []
+}
+
+const DEFAULT_ADMIN_ROLE = '0x0000000000000000000000000000000000000000000000000000000000000000'
+const MANAGE_MEMBERS_ROLE = '0x0f5709a131bd812d54bcbfe625c74b832e351421787d3b67d5015bdfc1658fbd'
+const MANAGE_QUORUM_ROLE = '0x68f77d74579a6299ff72f8492235a983bb2d3dff83fe7b4c34c8da1127a1eb87'
+const SET_BEACON_SPEC_ROLE = '0xf6d880c20d109428933defa2f109f143247bbe4c84784a6b140b33988b369b37'
+const SET_REPORT_BOUNDARIES_ROLE = '0x391653625e4f1b50d601a46cb1d91cfe0d501de98c8e11a46cf55edf20942d7a'
+const SET_BEACON_REPORT_RECEIVER_ROLE = '0xe976ee3edb892b8fc9edde1f74da6a8e094e84585a6ab054a2f1c630dba6ed94'
+
+function getAuthError(account, role) {
+  return `AccessControl: account ${account.toLowerCase()} is missing role ${role}`
 }
 
 // initial pooled ether (it's required to smooth increase of balance
@@ -55,24 +65,30 @@ contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user
     // app = await LidoOracle.at(proxyAddress)
     app = await LidoOracleNew.new({ from: voting })
 
-    // Set up the app's permissions.
-    await acl.createPermission(voting, app.address, await app.MANAGE_MEMBERS(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.MANAGE_QUORUM(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.SET_BEACON_SPEC(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.SET_REPORT_BOUNDARIES(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.SET_BEACON_REPORT_RECEIVER(), appManager, { from: appManager })
-
     // Initialize the app's proxy.
     await app.setTime(GENESIS_TIME)
 
     assertBn(await app.getVersion(), 0)
     await app.setVersion(1)
-    await assertRevert(app.initialize(appLido.address, 1, 32, 12, GENESIS_TIME, 1000, 500), 'BASE_VERSION_MUST_BE_ZERO')
+    await assertRevert(app.initialize(ZERO_ADDRESS, appLido.address, 1, 32, 12, GENESIS_TIME, 1000, 500), 'BASE_VERSION_MUST_BE_ZERO')
     await app.setVersion(0)
 
     // 1000 and 500 stand for 10% yearly increase, 5% moment decrease
-    await app.initialize(appLido.address, 1, 32, 12, GENESIS_TIME, 1000, 500)
+    await app.initialize(voting, appLido.address, 1, 32, 12, GENESIS_TIME, 1000, 500)
     assertBn(await app.getVersion(), 1)
+
+    // Set up the app's permissions.
+    await app.grantRole(await app.MANAGE_MEMBERS_ROLE(), voting, { from: voting })
+    await app.grantRole(await app.MANAGE_QUORUM_ROLE(), voting, { from: voting })
+    await app.grantRole(await app.SET_BEACON_SPEC_ROLE(), voting, { from: voting })
+    await app.grantRole(await app.SET_REPORT_BOUNDARIES_ROLE(), voting, { from: voting })
+    await app.grantRole(await app.SET_BEACON_REPORT_RECEIVER_ROLE(), voting, { from: voting })
+
+    assert((await app.MANAGE_MEMBERS_ROLE()) === MANAGE_MEMBERS_ROLE)
+    assert((await app.MANAGE_QUORUM_ROLE()) === MANAGE_QUORUM_ROLE)
+    assert((await app.SET_BEACON_SPEC_ROLE()) === SET_BEACON_SPEC_ROLE)
+    assert((await app.SET_REPORT_BOUNDARIES_ROLE()) === SET_REPORT_BOUNDARIES_ROLE)
+    assert((await app.SET_BEACON_REPORT_RECEIVER_ROLE()) === SET_BEACON_REPORT_RECEIVER_ROLE)
   })
 
   it('beaconSpec is correct', async () => {
@@ -113,12 +129,12 @@ contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user
     })
 
     it('addOracleMember works', async () => {
-      await assertRevert(app.addOracleMember(user1, { from: user1 }), AUTH_ERROR)
+      await assertRevert(app.addOracleMember(user1, { from: user1 }), getAuthError(user1, MANAGE_MEMBERS_ROLE))
       await assertRevert(app.addOracleMember('0x0000000000000000000000000000000000000000', { from: voting }), 'BAD_ARGUMENT')
 
       await app.addOracleMember(user1, { from: voting })
-      await assertRevert(app.addOracleMember(user2, { from: user2 }), AUTH_ERROR)
-      await assertRevert(app.addOracleMember(user3, { from: user2 }), AUTH_ERROR)
+      await assertRevert(app.addOracleMember(user2, { from: user2 }), getAuthError(user2, MANAGE_MEMBERS_ROLE))
+      await assertRevert(app.addOracleMember(user3, { from: user2 }), getAuthError(user2, MANAGE_MEMBERS_ROLE))
 
       await app.addOracleMember(user2, { from: voting })
       await app.addOracleMember(user3, { from: voting })
@@ -142,7 +158,7 @@ contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user
     it('removeOracleMember works', async () => {
       await app.addOracleMember(user1, { from: voting })
 
-      await assertRevert(app.removeOracleMember(user1, { from: user1 }), AUTH_ERROR)
+      await assertRevert(app.removeOracleMember(user1, { from: user1 }), getAuthError(user1, MANAGE_MEMBERS_ROLE))
       await app.removeOracleMember(user1, { from: voting })
       assert.deepStrictEqual(await app.getOracleMembers(), [])
 
@@ -155,7 +171,7 @@ contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user
       await app.removeOracleMember(user1, { from: voting })
       await app.removeOracleMember(user2, { from: voting })
 
-      await assertRevert(app.removeOracleMember(user2, { from: user1 }), AUTH_ERROR)
+      await assertRevert(app.removeOracleMember(user2, { from: user1 }), getAuthError(user1, MANAGE_MEMBERS_ROLE))
       assert.deepStrictEqual(await app.getOracleMembers(), [user3])
     })
 
@@ -164,7 +180,7 @@ contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user
       await app.addOracleMember(user2, { from: voting })
       await app.addOracleMember(user3, { from: voting })
 
-      await assertRevert(app.setQuorum(2, { from: user1 }), AUTH_ERROR)
+      await assertRevert(app.setQuorum(2, { from: user1 }), getAuthError(user1, MANAGE_QUORUM_ROLE))
       await assertRevert(app.setQuorum(0, { from: voting }), 'QUORUM_WONT_BE_MADE')
       await app.setQuorum(4, { from: voting })
       assertBn(await app.getQuorum(), 4)
@@ -618,7 +634,7 @@ contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user
       })
 
       it('setBeaconReportReceiver failed auth', async () => {
-        await assertRevert(app.setBeaconReportReceiver(ZERO_ADDRESS, { from: user1 }), AUTH_ERROR)
+        await assertRevert(app.setBeaconReportReceiver(ZERO_ADDRESS, { from: user1 }), getAuthError(user1, SET_BEACON_REPORT_RECEIVER_ROLE))
       })
 
       it('quorum receiver called with same arguments as getLastCompletedReportDelta', async () => {

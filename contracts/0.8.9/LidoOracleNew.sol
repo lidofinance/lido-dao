@@ -3,6 +3,7 @@
 pragma solidity 0.8.9;
 
 import { ERC165Checker } from "@openzeppelin/contracts-v4.4/utils/introspection/ERC165Checker.sol";
+import { AccessControlEnumerable } from "@openzeppelin/contracts-v4.4/access/AccessControlEnumerable.sol";
 
 import "./CommitteeQuorum.sol";
 import "./interfaces/ILido.sol";
@@ -23,7 +24,7 @@ import "./interfaces/IBeaconReportReceiver.sol";
  * Not all frames may come to a quorum. Oracles may report only to the first epoch of the frame and
  * only if no quorum is reached for this epoch yet.
  */
-contract LidoOracleNew is CommitteeQuorum {
+contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable {
     using ERC165Checker for address;
     using UnstructuredStorage for bytes32;
 
@@ -94,26 +95,16 @@ contract LidoOracleNew is CommitteeQuorum {
     }
 
     /// ACL
-
-    /// temporary owner for testnet
-    address public owner;
-
-    bytes32 constant public MANAGE_MEMBERS =
-        0xbf6336045918ae0015f4cdb3441a2fdbfaa4bcde6558c8692aac7f56c69fb067; // keccak256("MANAGE_MEMBERS")
-    bytes32 constant public MANAGE_QUORUM =
-        0xa5ffa9f45fa52c446078e834e1914561bd9c2ab1e833572d62af775da092ccbc; // keccak256("MANAGE_QUORUM")
-    bytes32 constant public SET_BEACON_SPEC =
-        0x16a273d48baf8111397316e6d961e6836913acb23b181e6c5fb35ec0bd2648fc; // keccak256("SET_BEACON_SPEC")
-    bytes32 constant public SET_REPORT_BOUNDARIES =
-        0x44adaee26c92733e57241cb0b26ffaa2d182ed7120ba3ecd7e0dce3635c01dc1; // keccak256("SET_REPORT_BOUNDARIES")
-    bytes32 constant public SET_BEACON_REPORT_RECEIVER =
-        0xe22a455f1bfbaf705ac3e891a64e156da92cb0b42cfc389158e6e82bd57f37be; // keccak256("SET_BEACON_REPORT_RECEIVER")
+    bytes32 constant public MANAGE_MEMBERS_ROLE = keccak256("MANAGE_MEMBERS_ROLE");
+    bytes32 constant public MANAGE_QUORUM_ROLE = keccak256("MANAGE_QUORUM_ROLE");
+    bytes32 constant public SET_BEACON_SPEC_ROLE = keccak256("SET_BEACON_SPEC_ROLE");
+    bytes32 constant public SET_REPORT_BOUNDARIES_ROLE = keccak256("SET_REPORT_BOUNDARIES_ROLE");
+    bytes32 constant public SET_BEACON_REPORT_RECEIVER_ROLE = keccak256("SET_BEACON_REPORT_RECEIVER_ROLE");
 
     /// Eth1 denomination is 18 digits, while Eth2 has 9 digits. Because we work with Eth2
     /// balances and to support old interfaces expecting eth1 format, we multiply by this
     /// coefficient.
     uint128 internal constant DENOMINATION_OFFSET = 1e9;
-
 
     /// Historic data about 2 last completed reports and their times
     bytes32 internal constant POST_COMPLETED_TOTAL_POOLED_ETHER_POSITION =
@@ -124,12 +115,6 @@ contract LidoOracleNew is CommitteeQuorum {
         0xdad15c0beecd15610092d84427258e369d2582df22869138b4c5265f049f574c; // keccak256("lido.LidoOracle.lastCompletedEpochId")
     bytes32 internal constant TIME_ELAPSED_POSITION =
         0x8fe323f4ecd3bf0497252a90142003855cc5125cee76a5b5ba5d508c7ec28c3a; // keccak256("lido.LidoOracle.timeElapsed")
-
-    /// This is a dead variable: it was used only in v1 and in upgrade v1 --> v2
-    /// Just keep in mind that storage at this position is occupied but with no actual usage
-    bytes32 internal constant V1_LAST_REPORTED_EPOCH_ID_POSITION =
-        0xfe0250ed0c5d8af6526c6d133fccb8e5a55dd6b1aa6696ed0c327f8e517b5a94; // keccak256("lido.LidoOracle.lastReportedEpochId")
-
 
     /// Address of the Lido contract
     bytes32 internal constant LIDO_POSITION =
@@ -171,11 +156,6 @@ contract LidoOracleNew is CommitteeQuorum {
 
 
     constructor() {
-        owner = msg.sender;
-    }
-
-    function _checkSenderIsOwner() internal {
-        require(msg.sender == owner, "ONLY_OWNER_SENDER_ALLOWED");
     }
 
     /**
@@ -202,10 +182,9 @@ contract LidoOracleNew is CommitteeQuorum {
     /**
      * @notice Set the upper bound of the reported balance possible increase in APR to `_value`
      */
-    function setAllowedBeaconBalanceAnnualRelativeIncrease(uint256 _value) external {
-        // TODO: auth(SET_BEACON_REPORT_RECEIVER)
-        _checkSenderIsOwner();
-
+    function setAllowedBeaconBalanceAnnualRelativeIncrease(uint256 _value)
+        external onlyRole(SET_BEACON_REPORT_RECEIVER_ROLE)
+    {
         ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION.setStorageUint256(_value);
         emit AllowedBeaconBalanceAnnualRelativeIncreaseSet(_value);
     }
@@ -213,10 +192,9 @@ contract LidoOracleNew is CommitteeQuorum {
     /**
      * @notice Set the lower bound of the reported balance possible decrease to `_value`
      */
-    function setAllowedBeaconBalanceRelativeDecrease(uint256 _value) external  {
-        // TODO: auth(SET_REPORT_BOUNDARIES)
-        _checkSenderIsOwner();
-
+    function setAllowedBeaconBalanceRelativeDecrease(uint256 _value)
+        external onlyRole(SET_REPORT_BOUNDARIES_ROLE)
+    {
         ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION.setStorageUint256(_value);
         emit AllowedBeaconBalanceRelativeDecreaseSet(_value);
     }
@@ -245,9 +223,9 @@ contract LidoOracleNew is CommitteeQuorum {
      * @notice Set the receiver contract address to `_addr` to be called when the report is pushed
      * @dev Specify 0 to disable this functionality
      */
-    function setBeaconReportReceiver(address _addr) external {
-        // TODO: auth(SET_BEACON_REPORT_RECEIVER)
-        _checkSenderIsOwner();
+    function setBeaconReportReceiver(address _addr)
+        external onlyRole(SET_BEACON_REPORT_RECEIVER_ROLE)
+    {
         if(_addr != address(0)) {
             IBeaconReportReceiver iBeacon;
             require(
@@ -305,11 +283,8 @@ contract LidoOracleNew is CommitteeQuorum {
         uint64 _secondsPerSlot,
         uint64 _genesisTime
     )
-        external
+        external onlyRole(SET_BEACON_SPEC_ROLE)
     {
-        // TODO: auth(SET_BEACON_SPEC)
-        _checkSenderIsOwner();
-
         _setBeaconSpec(
             _epochsPerFrame,
             _slotsPerEpoch,
@@ -376,6 +351,7 @@ contract LidoOracleNew is CommitteeQuorum {
     /**
      * @notice Initialize the contract (version 3 for now) from scratch
      * @dev For details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md
+     * @param _admin Admin which can modify OpenZeppelin role holders
      * @param _lido Address of Lido contract
      * @param _epochsPerFrame Number of epochs per frame
      * @param _slotsPerEpoch Number of slots per epoch
@@ -385,6 +361,7 @@ contract LidoOracleNew is CommitteeQuorum {
      * @param _allowedBeaconBalanceRelativeDecrease Allowed beacon balance instantaneous decrease (e.g. 500 means 5% decrease)
      */
     function initialize(
+        address _admin,
         address _lido,
         uint64 _epochsPerFrame,
         uint64 _slotsPerEpoch,
@@ -401,6 +378,10 @@ contract LidoOracleNew is CommitteeQuorum {
 
         // Initializations for v0 --> v1
         require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "BASE_VERSION_MUST_BE_ZERO");
+        CONTRACT_VERSION_POSITION.setStorageUint256(1);
+
+        require(_admin != address(0), "ZERO_ADMIN_ADDRESS");
+        _grantRole(DEFAULT_ADMIN_ROLE, _admin);
 
         _setBeaconSpec(
             _epochsPerFrame,
@@ -414,7 +395,6 @@ contract LidoOracleNew is CommitteeQuorum {
         QUORUM_POSITION.setStorageUint256(1);
         emit QuorumChanged(1);
 
-        // Initializations for v1 --> v2
         ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION
             .setStorageUint256(_allowedBeaconBalanceAnnualRelativeIncrease);
         emit AllowedBeaconBalanceAnnualRelativeIncreaseSet(_allowedBeaconBalanceAnnualRelativeIncrease);
@@ -428,34 +408,32 @@ contract LidoOracleNew is CommitteeQuorum {
         uint256 expectedEpoch = _getFrameFirstEpochId(0, beaconSpec) + beaconSpec.epochsPerFrame;
         EXPECTED_EPOCH_ID_POSITION.setStorageUint256(expectedEpoch);
         emit ExpectedEpochIdUpdated(expectedEpoch);
-
-        CONTRACT_VERSION_POSITION.setStorageUint256(1);
     }
 
-    function setOwner(address _newOwner) external {
+    function setOwner(address _newOwner)
+        external onlyRole(DEFAULT_ADMIN_ROLE)
+    {
         // TODO: remove this temporary function
-        _checkSenderIsOwner();
 
-        owner = _newOwner;
+        _grantRole(DEFAULT_ADMIN_ROLE, _newOwner);
+        _revokeRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
     /**
      * @notice Add `_member` to the oracle member committee list
      */
-    function addOracleMember(address _member) external {
-        // TODO: auth(MANAGE_MEMBERS)
-        _checkSenderIsOwner();
-
+    function addOracleMember(address _member)
+        external onlyRole(MANAGE_MEMBERS_ROLE)
+    {
         _addOracleMember(_member);
     }
 
     /**
      * @notice Remove '_member` from the oracle member committee list
      */
-    function removeOracleMember(address _member) external {
-        // TODO: auth(MANAGE_MEMBERS)
-        _checkSenderIsOwner();
-
+    function removeOracleMember(address _member)
+        external onlyRole(MANAGE_MEMBERS_ROLE)
+    {
         _removeOracleMember(_member);
     }
 
@@ -498,10 +476,9 @@ contract LidoOracleNew is CommitteeQuorum {
     /**
      * @notice Set the number of exactly the same reports needed to finalize the epoch to `_quorum`
      */
-    function setQuorum(uint256 _quorum) external {
-        // TODO: auth(MANAGE_QUORUM)
-        _checkSenderIsOwner();
-
+    function setQuorum(uint256 _quorum)
+        external onlyRole(MANAGE_QUORUM_ROLE)
+    {
         uint256 oldQuorum = QUORUM_POSITION.getStorageUint256();
 
         _setQuorum(_quorum);

@@ -168,14 +168,12 @@ contract CommitteeQuorum {
         return MEMBER_NOT_FOUND;
     }
 
-
     function _clearReporting() internal {
         REPORTS_BITMASK_POSITION.setStorageUint256(0);
         delete distinctReports;
         delete distinctReportHashes;
         delete distinctReportCounters;
     }
-
 
     /**
      * @notice Return the number of exactly the same reports needed to finalize the epoch

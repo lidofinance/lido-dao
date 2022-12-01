@@ -8,15 +8,11 @@ import "../LidoOracleNew.sol";
 
 
 /**
-  * @dev Only for testing purposes! LidoOracle version with some functions exposed.
+  * @dev Only for testing purposes! LidoOracleNew version with some functions exposed.
   */
 contract LidoOracleNewMock is LidoOracleNew {
     uint256 private time;
     using UnstructuredStorage for bytes32;
-
-    function setV1LastReportedEpochForTest(uint256 _epoch) public {
-        V1_LAST_REPORTED_EPOCH_ID_POSITION.setStorageUint256(_epoch);
-    }
 
     function setTime(uint256 _time) public {
         time = _time;
