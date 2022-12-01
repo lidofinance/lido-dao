@@ -1,5 +1,4 @@
 const { assert } = require('chai')
-const { newDao, newApp } = require('../0.4.24/helpers/dao')
 const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const { toBN } = require('../helpers/utils')
 const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
@@ -58,11 +57,8 @@ contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user
   })
 
   beforeEach('deploy dao and app', async () => {
-    const { dao, acl } = await newDao(appManager)
-
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
-    // const proxyAddress = await newApp(dao, 'lidooracle', appBase.address, appManager)
-    // app = await LidoOracle.at(proxyAddress)
+    // TODO: use proxy
     app = await LidoOracleNew.new({ from: voting })
 
     // Initialize the app's proxy.
@@ -76,6 +72,8 @@ contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user
     // 1000 and 500 stand for 10% yearly increase, 5% moment decrease
     await app.initialize(voting, appLido.address, 1, 32, 12, GENESIS_TIME, 1000, 500)
     assertBn(await app.getVersion(), 1)
+    assertBn(await app.getRoleMemberCount(DEFAULT_ADMIN_ROLE), 1)
+    assert((await app.getRoleMember(DEFAULT_ADMIN_ROLE, 0)) === voting)
 
     // Set up the app's permissions.
     await app.grantRole(await app.MANAGE_MEMBERS_ROLE(), voting, { from: voting })

@@ -72,12 +72,11 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable {
         uint256 epochId;
         // CL values
         uint256 beaconValidators;
-        // uint256 beaconBalanceGwei;
         uint64 beaconBalanceGwei;
         uint256 totalExitedValidators;
         uint256[] stakingModuleIds;
         uint256[] nodeOperatorsWithExitedValidators;
-        uint256[] exitedValidatorsNumbers;
+        uint64[] exitedValidatorsNumbers;
         // EL values
         uint256 wcBufferedEther;
         // decision
@@ -585,12 +584,9 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable {
         ILido lido = getLido();
         INodeOperatorsRegistry registry = lido.getOperators();
         for (uint256 i = 0; i < _report.exitedValidatorsNumbers.length; ++i) {
-            // TODO: accept uint64 in reportBeacon?
-            uint256 stoppedIncrement = _report.exitedValidatorsNumbers[i];
-            require(stoppedIncrement < type(uint64).max, "EXITED_VALIDATORS_NUMBER_BEYOND_LIMIT");
             registry.reportStoppedValidators(
                 _report.nodeOperatorsWithExitedValidators[i],
-                uint64(stoppedIncrement)
+                _report.exitedValidatorsNumbers[i]
             );
         }
 
