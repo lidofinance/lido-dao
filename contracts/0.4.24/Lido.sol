@@ -476,8 +476,8 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-    * @notice this method is responsible for locking StETH and placing user 
-    * in the queue  
+    * @notice this method is responsible for locking StETH and placing user
+    * in the queue
     * @param _amountOfStETH StETH to be locked. `msg.sender` should have the `_amountOfStETH` StETH balance upon this call
     * @return ticketId id string that can be used by user to claim their ETH later
     */
@@ -506,9 +506,9 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     function withdrawalRequestStatus(uint256 _requestId) external view returns (
-        address recipient, 
+        address recipient,
         uint256 requestBlockNumber,
-        uint256 etherToWithdraw, 
+        uint256 etherToWithdraw,
         bool isFinalized,
         bool isClaimed
     ) {
@@ -549,13 +549,13 @@ contract Lido is ILido, StETH, AragonApp {
         WITHDRAWAL_RESERVE_POSITION.setStorageUint256(_withdrawalsReserveAmount);
 
         _processAccounting(
-            _beaconValidators, 
-            _beaconBalance, 
+            _beaconValidators,
+            _beaconBalance,
             _totalExitedValidators
         );
 
         uint256 executionLayerRewards = _processFundsMoving(
-            _requestIdToFinalizeUpTo, 
+            _requestIdToFinalizeUpTo,
             _finalizationPooledEtherAmount,
             _finalizationSharesAmount,
             _wcBufferedEther
@@ -567,7 +567,7 @@ contract Lido is ILido, StETH, AragonApp {
             uint256 totalRewards = _getTotalShares().mul(postSharesRate.sub(preSharesRate)).div(10 ** 27);
             // Don’t mint/distribute any protocol fee on the non-profitable Lido oracle report
             // (when beacon chain balance delta is zero or negative).
-            // See ADR #3 for details: 
+            // See ADR #3 for details:
             // https://research.lido.fi/t/rewards-distribution-after-the-merge-architecture-decision-record/1535
             if (totalRewards > executionLayerRewards) {
                 _distributeFee(totalRewards);
@@ -718,7 +718,7 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-     * @dev updates beacon state and calculate rewards base (OUTDATED) 
+     * @dev updates beacon state and calculate rewards base (OUTDATED)
      */
     function _processAccounting(
         // CL values
@@ -733,9 +733,9 @@ contract Lido is ILido, StETH, AragonApp {
         require(_totalExitedValidators >= totalExitedValidators, "REPORTED_LESS_EXITED_VALIDATORS");
 
         uint256 beaconValidators = BEACON_VALIDATORS_POSITION.getStorageUint256();
-        require(_beaconValidators + _totalExitedValidators >= beaconValidators + totalExitedValidators, 
+        require(_beaconValidators + _totalExitedValidators >= beaconValidators + totalExitedValidators,
             "REPORTED_LESS_VALIDATORS");
-        
+
         // Save the current beacon balance and validators to
         // calculate rewards on the next push
         BEACON_BALANCE_POSITION.setStorageUint256(_beaconBalance);
@@ -747,9 +747,9 @@ contract Lido is ILido, StETH, AragonApp {
      * @dev move funds between ELRewardsVault, deposit and withdrawal buffers. Updates buffered counters respectively
      */
     function _processFundsMoving(
-        uint256[] _requestIdToFinalizeUpTo, 
+        uint256[] _requestIdToFinalizeUpTo,
         uint256[] _finalizationPooledEtherAmount,
-        uint256[] _finalizationSharesAmount,  
+        uint256[] _finalizationSharesAmount,
         uint256 _wcBufferedEther
     ) internal returns (uint256) {
         uint256 executionLayerRewards = 0;
@@ -765,9 +765,9 @@ contract Lido is ILido, StETH, AragonApp {
         // Moving funds between withdrawal buffer and deposit buffer
         // depending on withdrawal queue status
         int256 movedToWithdrawalBuffer = _processWithdrawals(
-            _requestIdToFinalizeUpTo, 
+            _requestIdToFinalizeUpTo,
             _finalizationPooledEtherAmount,
-            _finalizationSharesAmount,  
+            _finalizationSharesAmount,
             _wcBufferedEther);
 
         // Update deposit buffer state
@@ -798,8 +798,8 @@ contract Lido is ILido, StETH, AragonApp {
     ) internal returns (int256 withdrawalFundsMovement) {
         address withdrawalAddress = address(uint160(getWithdrawalCredentials()));
         // do nothing if withdrawals is not configured
-        if (withdrawalAddress == address(0)) { 
-            return 0; 
+        if (withdrawalAddress == address(0)) {
+            return 0;
         }
 
         IWithdrawalQueue withdrawal = IWithdrawalQueue(withdrawalAddress);
@@ -816,7 +816,7 @@ contract Lido is ILido, StETH, AragonApp {
             (uint256 etherToLock, uint256 sharesToBurn) = withdrawal.calculateFinalizationParams(
                 lastIdToFinalize,
                 totalPooledEther,
-                totalShares 
+                totalShares
             );
 
             _burnShares(withdrawalAddress, sharesToBurn);
@@ -829,7 +829,7 @@ contract Lido is ILido, StETH, AragonApp {
 
             withdrawal.finalize.value(transferToWithdrawalBuffer)(
                 lastIdToFinalize,
-                etherToLock, 
+                etherToLock,
                 totalPooledEther,
                 totalShares
             );
@@ -839,7 +839,7 @@ contract Lido is ILido, StETH, AragonApp {
 
         withdrawalFundsMovement = int256(_wcBufferedEther) - int256(lockedEtherAccumulator);
 
-        if (withdrawalFundsMovement > 0) {    
+        if (withdrawalFundsMovement > 0) {
             withdrawal.restake(uint256(withdrawalFundsMovement));
         }
     }
@@ -921,7 +921,7 @@ contract Lido is ILido, StETH, AragonApp {
                 _markAsUnbuffered(_ETH2Deposit(numDeposits < _maxDeposits ? numDeposits : _maxDeposits));
                 assert(_getUnaccountedEther() == unaccounted);
             }
-        } 
+        }
     }
 
     /**

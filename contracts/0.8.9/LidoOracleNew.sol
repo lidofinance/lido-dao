@@ -223,7 +223,6 @@ contract LidoOracleNew is CommitteeQuorum {
      * @notice Return the receiver contract address to be called when the report is pushed to Lido
      */
     function getBeaconReportReceiver() external view returns (address) {
-        // return address(BEACON_REPORT_RECEIVER_POSITION.getStorageUint256());
         return BEACON_REPORT_RECEIVER_POSITION.getStorageAddress();
     }
 
@@ -238,7 +237,6 @@ contract LidoOracleNew is CommitteeQuorum {
         )
     {
         report = _decodeReport(distinctReports[_index]);
-        // return currentReportVariants[_index].decodeWithCount();
     }
 
     /**
@@ -473,102 +471,10 @@ contract LidoOracleNew is CommitteeQuorum {
             _report.finalizationSharesAmount
         );
 
-        // bytes memory reportBytes = abi.encode(_beaconValidators);
-        // bool isQuorumReached = handleReport(msg.sender, abi.encode(_beaconValidators));
-        // bool isQuorumReached = _handleMemberReport(msg.sender, msg.data);
-        // if (isQuorumReached) {
         if (_handleMemberReport(msg.sender, _encodeReport(_report))) {
-            // MemberReport memory report = _decodeReport(msg.data);
             _handleConsensussedReport(_report, beaconSpec);
-
-            // _handleConsensussedReportOld(
-            //     _report.epochId,
-            //     _report.beaconValidators,
-            //     beaconBalance,
-            //     _report.totalExitedValidators,
-            //     _report.wcBufferedEther,
-            //     _report.requestIdToFinalizeUpTo,
-            //     _report.finalizationPooledEtherAmount,
-            //     _report.finalizationSharesAmount,
-            //     beaconSpec
-            // );
         }
     }
-
-    // /**
-    //  * @notice Accept oracle committee member reports from the ETH 2.0 side
-    //  * @param _epochId Beacon chain epoch
-    //  * @param _beaconBalanceGwei Balance in gwei on the ETH 2.0 side (9-digit denomination)
-    //  * @param _beaconValidators Number of validators visible in this epoch
-    //  */
-    function reportBeaconOld(
-        // Consensus info
-        uint256 _epochId,
-        // CL values
-        uint256 _beaconValidators,
-        uint256 _beaconBalanceGwei,
-        uint256 _totalExitedValidators,
-        // uint256[] _nodeOperatorsWithExitedValidators,
-        // uint256[] _exitedValidatorsNumbers,
-        // EL values
-        uint256 _wcBufferedEther,
-        // decision
-        uint256[] memory _requestIdToFinalizeUpTo,
-        uint256[] memory _finalizationPooledEtherAmount,
-        uint256[] memory _finalizationSharesAmount
-    ) external {
-        BeaconSpec memory beaconSpec = _getBeaconSpec();
-        _validateExpectedEpochAndClearReportingIfNeeded(_epochId, beaconSpec);
-
-        uint128 beaconBalance = DENOMINATION_OFFSET * uint128(_beaconBalanceGwei);
-        emit BeaconReported(
-            _epochId,
-            beaconBalance,
-            _beaconValidators,
-            msg.sender,
-            _totalExitedValidators,
-            _wcBufferedEther,
-            _requestIdToFinalizeUpTo,
-            _finalizationPooledEtherAmount,
-            _finalizationSharesAmount
-        );
-
-        // bytes memory reportBytes = abi.encode(_beaconValidators);
-        // bool isQuorumReached = handleReport(msg.sender, abi.encode(_beaconValidators));
-        // bool isQuorumReached = _handleMemberReport(msg.sender, msg.data);
-        // if (isQuorumReached) {
-        if (_handleMemberReport(msg.sender, msg.data)) {
-            _handleConsensussedReportOld(
-                _epochId,
-                _beaconValidators,
-                beaconBalance,
-                _totalExitedValidators,
-                _wcBufferedEther,
-                _requestIdToFinalizeUpTo,
-                _finalizationPooledEtherAmount,
-                _finalizationSharesAmount,
-                beaconSpec
-            );
-        }
-    }
-
-    // function _decodeReport(bytes memory _reportData) internal view returns (
-    //         // Consensus info
-    //     uint256 epochId,
-    //     // CL values
-    //     uint256 beaconValidators,
-    //     uint256 beaconBalanceEth1,
-    //     uint256 totalExitedValidators,
-    //     // EL values
-    //     uint256 wcBufferedEther,
-    //     // decision
-    //     uint256[] memory requestIdToFinalizeUpTo,
-    //     uint256[] memory finalizationPooledEtherAmount,
-    //     uint256[] memory finalizationSharesAmount
-    // ) {
-
-    // }
-
 
     function _decodeReport(bytes memory _reportData) internal view returns (
         MemberReport memory report
@@ -716,61 +622,6 @@ contract LidoOracleNew is CommitteeQuorum {
         );
     }
 
-
-    // /**
-    //  * @notice Push the given report to Lido and performs accompanying accounting
-    //  * @param _epochId Beacon chain epoch, proven to be >= expected epoch and <= current epoch
-    //  * @param _beaconBalanceEth1 Validators balance in eth1 (18-digit denomination)
-    //  * @param _beaconSpec current beacon specification data
-    //  */
-    function _handleConsensussedReportOld(
-        // Consensus info
-        uint256 _epochId,
-        // CL values
-        uint256 _beaconValidators,
-        uint256 _beaconBalanceEth1,
-        uint256 _totalExitedValidators,
-        // EL values
-        uint256 _wcBufferedEther,
-        // decision
-        uint256[] memory _requestIdToFinalizeUpTo,
-        uint256[] memory _finalizationPooledEtherAmount,
-        uint256[] memory _finalizationSharesAmount,
-        BeaconSpec memory _beaconSpec
-    )
-        internal
-    {
-        emit Completed(
-            _epochId,
-            _beaconBalanceEth1,
-            _beaconValidators,
-            _totalExitedValidators,
-            _wcBufferedEther,
-            _requestIdToFinalizeUpTo,
-            _finalizationPooledEtherAmount,
-            _finalizationSharesAmount
-        );
-
-        // now this frame is completed, so the expected epoch should be advanced to the first epoch
-        // of the next frame
-        _clearReportingAndAdvanceTo(_epochId + _beaconSpec.epochsPerFrame);
-
-        // report to the Lido and collect stats
-        ILido lido = getLido();
-        uint256 prevTotalPooledEther = lido.totalSupply();
-        lido.handleOracleReport(
-            _beaconValidators,
-            _beaconBalanceEth1,
-            _totalExitedValidators,
-            _wcBufferedEther,
-            _requestIdToFinalizeUpTo,
-            _finalizationPooledEtherAmount,
-            _finalizationSharesAmount
-        );
-        uint256 postTotalPooledEther = lido.totalSupply();
-
-        _doWorkAfterReportingToLido(prevTotalPooledEther, postTotalPooledEther, _epochId, _beaconSpec);
-    }
 
     function _doWorkAfterReportingToLido(
         uint256 _prevTotalPooledEther,

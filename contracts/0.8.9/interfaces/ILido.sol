@@ -215,8 +215,8 @@ interface ILido {
     event ELRewardsVaultSet(address executionLayerRewardsVault);
 
     /**
-      * @notice Ether on the ETH 2.0 side reported by the oracle
-      */
+     * @notice Ether on the ETH 2.0 side reported by the oracle
+     */
     function handleOracleReport(
         // CL values
         uint256 _beaconValidators,
@@ -225,11 +225,11 @@ interface ILido {
         // EL values
         uint256 _wcBufferedEther,
         // decision
+        uint256 _withdrawalsReserveAmount,
         uint256[] calldata _requestIdToFinalizeUpTo,
         uint256[] calldata _finalizationPooledEtherAmount,
         uint256[] calldata _finalizationSharesAmount
     ) external;
-
 
     // User functions
 
@@ -285,4 +285,6 @@ interface ILido {
       * @return beaconBalance - total amount of Beacon-side Ether (sum of all the balances of Lido validators)
       */
     function getBeaconStat() external view returns (uint256 depositedValidators, uint256 beaconValidators, uint256 beaconBalance);
+
+    function getOperators() external view returns (address);
 }
