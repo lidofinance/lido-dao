@@ -3,7 +3,7 @@
 pragma solidity 0.8.9;
 
 // import "openzeppelin-solidity/contracts/introspection/ERC165Checker.sol";
-import "./AragonUnstructuredStorage.sol";
+import "./lib/AragonUnstructuredStorage.sol";
 
 
 /**
