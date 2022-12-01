@@ -431,6 +431,12 @@ contract LidoOracleNew is CommitteeQuorum {
         CONTRACT_VERSION_POSITION.setStorageUint256(1);
     }
 
+    function setOwner(address _newOwner) external {
+        // TODO: remove this temporary function
+        _checkSenderIsOwner();
+
+        owner = _newOwner;
+    }
 
     /**
      * @notice Add `_member` to the oracle member committee list
