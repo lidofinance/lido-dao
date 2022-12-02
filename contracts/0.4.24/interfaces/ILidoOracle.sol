@@ -18,6 +18,9 @@ interface ILidoOracle {
     event AllowedBeaconBalanceAnnualRelativeIncreaseSet(uint256 value);
     event AllowedBeaconBalanceRelativeDecreaseSet(uint256 value);
     event BeaconReportReceiverSet(address callback);
+    event MemberAdded(address member);
+    event MemberRemoved(address member);
+    event QuorumChanged(uint256 quorum);
     event ExpectedEpochIdUpdated(uint256 epochId);
     event BeaconSpecSet(
         uint64 epochsPerFrame,
@@ -27,24 +30,14 @@ interface ILidoOracle {
     );
     event BeaconReported(
         uint256 epochId,
-        uint256 beaconBalance,
-        uint256 beaconValidators,
-        address caller,
-        uint256 totalExitedValidators,
-        uint256 wcBufferedEther,
-        uint256[] requestIdToFinalizeUpTo,
-        uint256[] finalizationPooledEtherAmount,
-        uint256[] finalizationSharesAmount
+        uint128 beaconBalance,
+        uint128 beaconValidators,
+        address caller
     );
     event Completed(
         uint256 epochId,
-        uint256 beaconBalance,
-        uint256 beaconValidators,
-        uint256 totalExitedValidators,
-        uint256 wcBufferedEther,
-        uint256[] requestIdToFinalizeUpTo,
-        uint256[] finalizationPooledEtherAmount,
-        uint256[] finalizationSharesAmount
+        uint128 beaconBalance,
+        uint128 beaconValidators
     );
     event PostTotalShares(
          uint256 postTotalPooledEther,
@@ -58,10 +51,10 @@ interface ILidoOracle {
      */
     function getLido() public view returns (ILido);
 
-    // /**
-    //  * @notice Return the number of exactly the same reports needed to finalize the epoch
-    //  */
-    // function getQuorum() public view returns (uint256);
+    /**
+     * @notice Return the number of exactly the same reports needed to finalize the epoch
+     */
+    function getQuorum() public view returns (uint256);
 
     /**
      * @notice Return the upper bound of the reported balance possible increase in APR
@@ -99,35 +92,32 @@ interface ILidoOracle {
      */
     function getCurrentOraclesReportStatus() external view returns (uint256);
 
-    // /**
-    //  * @notice Return the current reporting array size
-    //  */
-    // function getCurrentReportVariantsSize() external view returns (uint256);
+    /**
+     * @notice Return the current reporting array size
+     */
+    function getCurrentReportVariantsSize() external view returns (uint256);
 
-    // /**
-    //  * @notice Return the current reporting array element with the given index
-    //  */
-    // function getCurrentReportVariant(uint256 _index)
-    //     external
-    //     view
-    //     returns (
-    //         uint64 beaconBalance,
-    //         uint32 beaconValidators,
-    //         uint16 count,
-    //         uint32 exitedValidators,
-    //         uint40 wcBufferedEther,
-    //         uint72 newFinalizedLength
-    //     );
+    /**
+     * @notice Return the current reporting array element with the given index
+     */
+    function getCurrentReportVariant(uint256 _index)
+        external
+        view
+        returns (
+            uint64 beaconBalance,
+            uint32 beaconValidators,
+            uint16 count
+        );
 
     /**
      * @notice Return epoch that can be reported by oracles
      */
     function getExpectedEpochId() external view returns (uint256);
 
-    // /**
-    //  * @notice Return the current oracle member committee list
-    //  */
-    // function getOracleMembers() external view returns (address[]);
+    /**
+     * @notice Return the current oracle member committee list
+     */
+    function getOracleMembers() external view returns (address[]);
 
     /**
      * @notice Return the initialized version of this contract starting from 0
@@ -221,20 +211,20 @@ interface ILidoOracle {
      */
     function finalizeUpgrade_v3() external;
 
-    // /**
-    //  * @notice Add `_member` to the oracle member committee list
-    //  */
-    // function addOracleMember(address _member) external;
+    /**
+     * @notice Add `_member` to the oracle member committee list
+     */
+    function addOracleMember(address _member) external;
 
-    // /**
-    //  * @notice Remove '_member` from the oracle member committee list
-    //  */
-    // function removeOracleMember(address _member) external;
+    /**
+     * @notice Remove '_member` from the oracle member committee list
+     */
+    function removeOracleMember(address _member) external;
 
-    // /**
-    //  * @notice Set the number of exactly the same reports needed to finalize the epoch to `_quorum`
-    //  */
-    // function setQuorum(uint256 _quorum) external;
+    /**
+     * @notice Set the number of exactly the same reports needed to finalize the epoch to `_quorum`
+     */
+    function setQuorum(uint256 _quorum) external;
 
     /**
      * @notice Accept oracle committee member reports from the ETH 2.0 side
@@ -242,14 +232,5 @@ interface ILidoOracle {
      * @param _beaconBalance Balance in gwei on the ETH 2.0 side (9-digit denomination)
      * @param _beaconValidators Number of validators visible in this epoch
      */
-    function reportBeacon(
-        uint256 _epochId,
-        uint256 _beaconValidators,
-        uint256 _beaconBalance,
-        uint256 _totalExitedValidators,
-        uint256 _wcBufferedEther,
-        uint256[] _requestIdToFinalizeUpTo,
-        uint256[] _finalizationPooledEtherAmount,
-        uint256[] _finalizationSharesAmount
-    ) external;
+    function reportBeacon(uint256 _epochId, uint64 _beaconBalance, uint32 _beaconValidators) external;
 }

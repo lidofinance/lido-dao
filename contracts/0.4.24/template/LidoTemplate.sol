@@ -31,7 +31,7 @@ import "../interfaces/IDepositContract.sol";
 
 
 contract LidoTemplate is IsContract {
-    // Configurarion errors
+    // Configuration errors
     string constant private ERROR_ZERO_OWNER = "TMPL_ZERO_OWNER";
     string constant private ERROR_ENS_NOT_CONTRACT = "TMPL_ENS_NOT_CONTRACT";
     string constant private ERROR_DAO_FACTORY_NOT_CONTRACT = "TMPL_DAO_FAC_NOT_CONTRACT";
@@ -359,15 +359,15 @@ contract LidoTemplate is IsContract {
             noInit
         ));
 
-        state.oracle.initialize(
-            state.lido,
-            _beaconSpec[0], // epochsPerFrame
-            _beaconSpec[1], // slotsPerEpoch
-            _beaconSpec[2], // secondsPerSlot
-            _beaconSpec[3],  // genesisTime
-            100000,
-            50000
-        );
+        // state.oracle.initialize(
+        //     state.lido,
+        //     _beaconSpec[0], // epochsPerFrame
+        //     _beaconSpec[1], // slotsPerEpoch
+        //     _beaconSpec[2], // secondsPerSlot
+        //     _beaconSpec[3],  // genesisTime
+        //     100000,
+        //     50000
+        // );
 
         state.operators.initialize(state.lido);
 
@@ -625,11 +625,12 @@ contract LidoTemplate is IsContract {
         bytes32[10] memory perms;
 
         // Oracle
-        perms[0] = _state.oracle.MANAGE_MEMBERS();
-        perms[1] = _state.oracle.MANAGE_QUORUM();
-        perms[2] = _state.oracle.SET_BEACON_SPEC();
-        perms[3] = _state.oracle.SET_REPORT_BOUNDARIES();
-        perms[4] = _state.oracle.SET_BEACON_REPORT_RECEIVER();
+        // TODO
+        // perms[0] = _state.oracle.MANAGE_MEMBERS();
+        // perms[1] = _state.oracle.MANAGE_QUORUM();
+        // perms[2] = _state.oracle.SET_BEACON_SPEC();
+        // perms[3] = _state.oracle.SET_REPORT_BOUNDARIES();
+        // perms[4] = _state.oracle.SET_BEACON_REPORT_RECEIVER();
 
         for (i = 0; i < 5; ++i) {
             _createPermissionForVoting(acl, _state.oracle, perms[i], voting);

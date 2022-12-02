@@ -30,6 +30,6 @@ contract LidoOracleMock is LidoOracle {
     }
 
     function setVersion(uint256 _version) external {
-        CONTRACT_VERSION_POSITION.setStorageUint256(_version); 
+        CONTRACT_VERSION_POSITION.setStorageUint256(_version);
     }
 }
