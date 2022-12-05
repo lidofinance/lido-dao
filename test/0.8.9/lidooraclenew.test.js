@@ -42,7 +42,7 @@ function getAuthError(account, role) {
 // but if you jump from 1e12+30 to 1e12+60 then it's smooth small jump as in the real world.
 const START_BALANCE = 1e12
 
-contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user5, user6, user7, nobody]) => {
+contract.only('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user5, user6, user7, nobody]) => {
   let appLido, app, nodeOperatorsRegistry
 
   const assertExpectedEpochs = async (startEpoch, endEpoch) => {
@@ -966,24 +966,66 @@ contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user
         assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 1, beaconBalance: 32 * DENOMINATION_OFFSET, beaconValidators: 1 } })
       })
 
-      it.skip('oracles part 3+3, no quorum here at all', async () => {
-        // await app.reportBeacon(1, 64, 2, { from: user1 })
-        await app.reportBeacon({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 2, beaconBalanceGwei: 64 }, { from: user1 })
+      it('oracles part 3+3, no quorum here at all', async () => {
+        await app.reportBeacon(
+          {
+            ...ZERO_MEMBER_REPORT,
+            epochId: 1,
+            beaconValidators: 2,
+            beaconBalanceGwei: 64
+          },
+          { from: user1 }
+        )
         await assertExpectedEpochs(1, 1)
-        // await app.reportBeacon(1, 64, 2, { from: user2 })
-        await app.reportBeacon({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 2, beaconBalanceGwei: 64 }, { from: user2 })
+        await app.reportBeacon(
+          {
+            ...ZERO_MEMBER_REPORT,
+            epochId: 1,
+            beaconValidators: 2,
+            beaconBalanceGwei: 64
+          },
+          { from: user2 }
+        )
         await assertExpectedEpochs(1, 1)
-        // await app.reportBeacon(1, 64, 2, { from: user3 })
-        await app.reportBeacon({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 2, beaconBalanceGwei: 64 }, { from: user3 })
+        await app.reportBeacon(
+          {
+            ...ZERO_MEMBER_REPORT,
+            epochId: 1,
+            beaconValidators: 2,
+            beaconBalanceGwei: 64
+          },
+          { from: user3 }
+        )
         await assertExpectedEpochs(1, 1)
-        // await app.reportBeacon(1, 65, 3, { from: user4 })
-        await app.reportBeacon({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 3, beaconBalanceGwei: 65 }, { from: user4 })
+        await app.reportBeacon(
+          {
+            ...ZERO_MEMBER_REPORT,
+            epochId: 1,
+            beaconValidators: 3,
+            beaconBalanceGwei: 65
+          },
+          { from: user4 }
+        )
         await assertExpectedEpochs(1, 1)
-        // await app.reportBeacon(1, 65, 3, { from: user5 })
-        await app.reportBeacon({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 3, beaconBalanceGwei: 65 }, { from: user5 })
+        await app.reportBeacon(
+          {
+            ...ZERO_MEMBER_REPORT,
+            epochId: 1,
+            beaconValidators: 3,
+            beaconBalanceGwei: 65
+          },
+          { from: user5 }
+        )
         await assertExpectedEpochs(1, 1)
-        // await app.reportBeacon(1, 65, 3, { from: user6 })
-        await app.reportBeacon({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 3, beaconBalanceGwei: 65 }, { from: user6 })
+        await app.reportBeacon(
+          {
+            ...ZERO_MEMBER_REPORT,
+            epochId: 1,
+            beaconValidators: 3,
+            beaconBalanceGwei: 65
+          },
+          { from: user6 }
+        )
         await assertExpectedEpochs(1, 1)
 
         // decreasing quorum does not help because conflicting parts are equal
@@ -993,20 +1035,76 @@ contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user
         await assertExpectedEpochs(1, 1)
       })
 
-      it.skip('oracles part 4+3, quorum lowers to 4', async () => {
-        await app.reportBeacon(1, 32, 1, { from: user1 })
+      it('oracles part 4+3, quorum lowers to 4', async () => {
+        await app.reportBeacon(
+          {
+            ...ZERO_MEMBER_REPORT,
+            epochId: 1,
+            beaconValidators: 1,
+            beaconBalanceGwei: 32
+          },
+          { from: user1 }
+        )
         await assertExpectedEpochs(1, 1)
-        await app.reportBeacon(1, 32, 1, { from: user2 })
+        await app.reportBeacon(
+          {
+            ...ZERO_MEMBER_REPORT,
+            epochId: 1,
+            beaconValidators: 1,
+            beaconBalanceGwei: 32
+          },
+          { from: user2 }
+        )
         await assertExpectedEpochs(1, 1)
-        await app.reportBeacon(1, 32, 1, { from: user3 })
+        await app.reportBeacon(
+          {
+            ...ZERO_MEMBER_REPORT,
+            epochId: 1,
+            beaconValidators: 1,
+            beaconBalanceGwei: 32
+          },
+          { from: user3 }
+        )
         await assertExpectedEpochs(1, 1)
-        await app.reportBeacon(1, 65, 3, { from: user4 })
+        await app.reportBeacon(
+          {
+            ...ZERO_MEMBER_REPORT,
+            epochId: 1,
+            beaconValidators: 3,
+            beaconBalanceGwei: 65
+          },
+          { from: user4 }
+        )
         await assertExpectedEpochs(1, 1)
-        await app.reportBeacon(1, 65, 3, { from: user5 })
+        await app.reportBeacon(
+          {
+            ...ZERO_MEMBER_REPORT,
+            epochId: 1,
+            beaconValidators: 3,
+            beaconBalanceGwei: 65
+          },
+          { from: user5 }
+        )
         await assertExpectedEpochs(1, 1)
-        await app.reportBeacon(1, 65, 3, { from: user6 })
+        await app.reportBeacon(
+          {
+            ...ZERO_MEMBER_REPORT,
+            epochId: 1,
+            beaconValidators: 3,
+            beaconBalanceGwei: 65
+          },
+          { from: user6 }
+        )
         await assertExpectedEpochs(1, 1)
-        await app.reportBeacon(1, 32, 1, { from: user7 })
+        await app.reportBeacon(
+          {
+            ...ZERO_MEMBER_REPORT,
+            epochId: 1,
+            beaconValidators: 1,
+            beaconBalanceGwei: 32
+          },
+          { from: user7 }
+        )
         await assertExpectedEpochs(1, 1)
 
         // decreasing quorum to 5 does not help
@@ -1017,8 +1115,20 @@ contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user
         assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 1, beaconBalance: 32 * DENOMINATION_OFFSET, beaconValidators: 1 } })
       })
 
-      it.skip('only 1 report is enough in quorum lowers to 1', async () => {
-        await app.reportBeacon(1, 32, 1, { from: user1 })
+      it('only 1 report is enough in quorum lowers to 1', async () => {
+        // await app.reportBeacon(1, 32, 1, { from: user1 })
+
+        console.log(await app.getAllowedBeaconBalanceAnnualRelativeIncrease())
+
+        await app.reportBeacon(
+          {
+            ...ZERO_MEMBER_REPORT,
+            epochId: 1,
+            beaconValidators: 1,
+            beaconBalanceGwei: 32
+          },
+          { from: user1 }
+        )
         await assertExpectedEpochs(1, 1)
 
         const receipt = await app.setQuorum(1, { from: voting })

@@ -33,7 +33,7 @@ contract CommitteeQuorum {
     address[] internal members;                /// slot 0: oracle committee members
     bytes[] internal distinctReports;  /// slot 1: reporting storage
     bytes32[] internal distinctReportHashes;
-    uint256[] internal distinctReportCounters;
+    uint16[] internal distinctReportCounters;
 
     /// Number of exactly the same reports needed to finalize the epoch
     bytes32 internal constant QUORUM_POSITION =
@@ -61,59 +61,6 @@ contract CommitteeQuorum {
      */
     function getCurrentReportVariantsSize() external view returns (uint256) {
         return distinctReports.length;
-    }
-
-
-    // /**
-    //  * @notice Return whether the `_quorum` is reached and the final report
-    //  */
-    // function _getQuorumReport(uint256 _quorum) internal view returns (bool isQuorum, uint256 report) {
-    //     // check most frequent cases first: all reports are the same or no reports yet
-    //     if (currentReportVariants.length == 1) {
-    //         return (currentReportVariants[0].getCount() >= _quorum, currentReportVariants[0]);
-    //     } else if (currentReportVariants.length == 0) {
-    //         return (false, 0);
-    //     }
-
-    //     // if more than 2 kind of reports exist, choose the most frequent
-    //     uint256 maxind = 0;
-    //     uint256 repeat = 0;
-    //     uint16 maxval = 0;
-    //     uint16 cur = 0;
-    //     for (uint256 i = 0; i < currentReportVariants.length; ++i) {
-    //         cur = currentReportVariants[i].getCount();
-    //         if (cur >= maxval) {
-    //             if (cur == maxval) {
-    //                 ++repeat;
-    //             } else {
-    //                 maxind = i;
-    //                 maxval = cur;
-    //                 repeat = 0;
-    //             }
-    //         }
-    //     }
-    //     return (maxval >= _quorum && repeat == 0, currentReportVariants[maxind]);
-    // }
-
-    function _getQuorumReport(uint256 _quorum) internal view returns (bool isQuorum, uint256 reportIndex) {
-        // check most frequent cases first: all reports are the same or no reports yet
-        if (distinctReports.length == 0) {
-            return (false, 0);
-        } else if (distinctReports.length == 1) {
-            return (distinctReportCounters[0] >= _quorum, 0);
-        }
-
-        // TODO: do we need this? maybe return the first report with counter >= quorum?
-        uint256 maxReportIndex = 0;
-        uint256 maxReportCount = 0;
-        for (uint256 i = 1; i < distinctReports.length; ++i) {
-            uint256 reportCount = distinctReportCounters[i];
-            if (reportCount > maxReportCount) {
-                maxReportCount = reportCount;
-                maxReportIndex = i;
-            }
-        }
-        return (maxReportCount >= _quorum, maxReportIndex);
     }
 
 
@@ -149,10 +96,49 @@ contract CommitteeQuorum {
         delete distinctReports;
     }
 
-    function _setQuorum(uint256 _quorum) internal  {
+    function _getQuorumReport(uint256 _quorum) internal view
+        returns (bool isQuorum, uint256 reportIndex)
+    {
+        // check most frequent cases first: all reports are the same or no reports yet
+        if (distinctReports.length == 0) {
+            return (false, 0);
+        } else if (distinctReports.length == 1) {
+            return (distinctReportCounters[0] >= _quorum, 0);
+        }
+
+        // If there are multiple reports with the same count above quorum number we consider
+        // the quorum not reached
+        uint256 reportIndex = 0;
+        bool areMultipleMaxReports = false;
+        uint16 maxCount = 0;
+        uint16 currentCount = 0;
+        for (uint256 i = 0; i < distinctReports.length; ++i) {
+            currentCount = distinctReportCounters[i];
+            if (currentCount >= maxCount) {
+                if (currentCount == maxCount) {
+                    areMultipleMaxReports = true;
+                } else {
+                    reportIndex = i;
+                    maxCount = currentCount;
+                    areMultipleMaxReports = false;
+                }
+            }
+        }
+        return (maxCount >= _quorum && !areMultipleMaxReports, reportIndex);
+    }
+
+
+    function _setQuorum(uint256 _quorum) internal
+        returns (bool isQuorum, uint256 reportIndex)
+    {
         require(0 != _quorum, "QUORUM_WONT_BE_MADE");
+        uint256 oldQuorum = QUORUM_POSITION.getStorageUint256();
         QUORUM_POSITION.setStorageUint256(_quorum);
         emit QuorumChanged(_quorum);
+
+        if (_quorum < oldQuorum) {
+            return _getQuorumReport(_quorum);
+        }
     }
 
     /**

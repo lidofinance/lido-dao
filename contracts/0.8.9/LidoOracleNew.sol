@@ -478,17 +478,10 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable {
     function setQuorum(uint256 _quorum)
         external onlyRole(MANAGE_QUORUM_ROLE)
     {
-        uint256 oldQuorum = QUORUM_POSITION.getStorageUint256();
-
-        _setQuorum(_quorum);
-
-        // If the quorum value lowered, check existing reports whether it is time to push
-        if (oldQuorum > _quorum) {
-            (bool isQuorum, uint256 reportIndex) = _getQuorumReport(_quorum);
-            if (isQuorum) {
-                MemberReport memory report = _decodeReport(distinctReports[reportIndex]);
-                _handleConsensussedReport(report, _getBeaconSpec());
-            }
+        (bool isQuorum, uint256 reportIndex) = _setQuorum(_quorum);
+        if (isQuorum) {
+            MemberReport memory report = _decodeReport(distinctReports[reportIndex]);
+            _handleConsensussedReport(report, _getBeaconSpec());
         }
     }
 
