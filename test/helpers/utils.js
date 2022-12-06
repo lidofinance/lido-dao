@@ -69,5 +69,5 @@ module.exports = {
   tokens,
   getEthBalance,
   formatBN,
-  formatStEth: formatStEth
+  formatStEth
 }

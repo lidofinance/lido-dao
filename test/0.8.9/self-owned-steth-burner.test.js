@@ -22,7 +22,7 @@ const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 const stETH = ETH
 const stETHShares = ETH
 
-contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anotherAccount, ...otherAccounts]) => {
+contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, anotherAccount]) => {
   let oracle, lido, burner
   let treasuryAddr
   let dao, acl, operators

@@ -9,7 +9,7 @@ pragma solidity 0.4.24;
  *
  * +00 | uint16 | count            | 0..256  | number of reports received exactly like this
  * +16 | uint32 | beaconValidators | 0..1e9  | number of Lido's validators in beacon chain
- * +48 | uint64 | beaconBalance    | 0..1e18 | total amout of their balance
+ * +48 | uint64 | beaconBalance    | 0..1e18 | total amount of their balance
  *
  * Note that the 'count' is the leftmost field here. Thus it is possible to apply addition
  * operations to it when it is encoded, provided that you watch for the overflow.

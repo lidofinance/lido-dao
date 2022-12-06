@@ -183,7 +183,7 @@ interface ILidoOracle {
             uint256 timeElapsed
         );
 
-    
+
     /**
      * @notice Initialize the contract (version 3 for now) from scratch
      * @dev For details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md

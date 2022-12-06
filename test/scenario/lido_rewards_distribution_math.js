@@ -3,12 +3,13 @@ const { BN } = require('bn.js')
 const { assertBn, assertEvent, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
 const { getEventArgument, ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 
-const { pad, ETH } = require('../helpers/utils')
+const { pad, ETH, hexConcat } = require('../helpers/utils')
 const { deployDaoAndPool } = require('./helpers/deploy')
 const { signDepositData } = require('../0.8.9/helpers/signatures')
 const { waitBlocks } = require('../helpers/blockchain')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
+const WithdrawalQueue = artifacts.require('WithdrawalQueue.sol')
 
 const tenKBN = new BN(10000)
 
@@ -36,7 +37,6 @@ contract('Lido: rewards distribution math', (addresses) => {
     // users who deposit Ether to the pool
     user1,
     user2,
-    user3,
     // unrelated address
     nobody
   ] = addresses
@@ -46,7 +46,7 @@ contract('Lido: rewards distribution math', (addresses) => {
   let treasuryAddr, insuranceAddr, guardians
   let depositSecurityModule, depositRoot
 
-  const withdrawalCredentials = pad('0x0202', 32)
+  let withdrawalCredentials
 
   // Each node operator has its Ethereum 1 address, a name and a set of registered
   // validators, each of them defined as a (public key, signature) pair
@@ -108,6 +108,8 @@ contract('Lido: rewards distribution math', (addresses) => {
 
     await pool.setFee(totalFeePoints, { from: voting })
     await pool.setFeeDistribution(treasuryFeePoints, insuranceFeePoints, nodeOperatorsFeePoints, { from: voting })
+    const withdrawal = await WithdrawalQueue.new(pool.address)
+    withdrawalCredentials = hexConcat('0x01', pad(withdrawal.address, 31)).toLowerCase()
     await pool.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
   })
 

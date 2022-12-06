@@ -1,13 +1,14 @@
 const { assert } = require('chai')
 const { newDao, newApp } = require('./helpers/dao')
-const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertBn, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
+const { bn } = require('@aragon/contract-helpers-test')
 
 const Lido = artifacts.require('LidoPushableMock.sol')
 const OracleMock = artifacts.require('OracleMock.sol')
 
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 
-contract('Lido handleOracleReport', ([appManager, voting, user1, user2, user3, nobody]) => {
+contract('Lido handleOracleReport', ([appManager, user1, user2]) => {
   let appBase, app, oracle
 
   before('deploy base app', async () => {
@@ -16,12 +17,10 @@ contract('Lido handleOracleReport', ([appManager, voting, user1, user2, user3, n
   })
 
   beforeEach('deploy dao and app', async () => {
-    const { dao, acl } = await newDao(appManager)
+    const { dao } = await newDao(appManager)
 
     proxyAddress = await newApp(dao, 'lido', appBase.address, appManager)
     app = await Lido.at(proxyAddress)
-
-    // await acl.createPermission(voting, app.address, await app.PAUSE_ROLE(), appManager, { from: appManager })
 
     await app.initialize(oracle.address)
     await oracle.setPool(app.address)
@@ -145,12 +144,13 @@ contract('Lido handleOracleReport', ([appManager, voting, user1, user2, user3, n
     })
   })
 
-  context('with depositedVals=2, beaconVals=1, bcnBal=30, bufferedEth=3', async () => {
+  context('with depositedVals=2, beaconVals=1, bcnBal=30, bufferedEth=5', async () => {
     beforeEach(async function () {
       await app.setDepositedValidators(2)
       await app.setBeaconBalance(ETH(30))
       await app.setBufferedEther({ from: user1, value: ETH(5) })
       await app.setBeaconValidators(1)
+      await app.setTotalShares(ETH(67))
     })
 
     it('initial state before report', async () => {
@@ -192,7 +192,7 @@ contract('Lido handleOracleReport', ([appManager, voting, user1, user2, user3, n
       assertBn(await app.getBufferedEther(), ETH(5))
       assertBn(await app.getTotalPooledEther(), ETH(68))
       assert.equal(await app.distributeFeeCalled(), true)
-      assertBn(await app.totalRewards(), ETH(1))
+      assertBn(await app.totalRewards(), bn(ETH(1)).sub(bn(1))) // rounding error
     })
 
     it('report BcnValidators:2 BcnBalance:63 = reward:1', async () => {
@@ -201,7 +201,7 @@ contract('Lido handleOracleReport', ([appManager, voting, user1, user2, user3, n
       assertBn(await app.getBufferedEther(), ETH(5))
       assertBn(await app.getTotalPooledEther(), ETH(68))
       assert.equal(await app.distributeFeeCalled(), true)
-      assertBn(await app.totalRewards(), ETH(1))
+      assertBn(await app.totalRewards(), bn(ETH(1)).sub(bn(1))) // rounding error
     })
 
     it('report BcnValidators:3 = revert with REPORTED_MORE_DEPOSITED', async () => {

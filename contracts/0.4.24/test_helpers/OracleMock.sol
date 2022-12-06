@@ -19,7 +19,13 @@ contract OracleMock {
     }
 
     function reportBeacon(uint256 _epochId, uint128 _beaconValidators, uint128 _beaconBalance) external {
-        pool.handleOracleReport(_beaconValidators, _beaconBalance);
+        uint256[] memory empty = new uint256[](0);
+        pool.handleOracleReport(
+            _beaconValidators, 
+            _beaconBalance, 
+            0, 
+            0, 0,
+            empty, empty, empty); 
     }
 
     function setBeaconReportReceiver(address _receiver) {

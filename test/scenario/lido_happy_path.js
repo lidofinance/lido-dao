@@ -10,6 +10,7 @@ const { signDepositData } = require('../0.8.9/helpers/signatures')
 const { waitBlocks } = require('../helpers/blockchain')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
+const WithdrawalQueue = artifacts.require('WithdrawalQueue.sol')
 
 contract('Lido: happy path', (addresses) => {
   const [
@@ -33,8 +34,9 @@ contract('Lido: happy path', (addresses) => {
   let oracleMock, depositContractMock
   let treasuryAddr, insuranceAddr, guardians
   let depositSecurityModule, depositRoot
+  let withdrawalCredentials
 
-  it('DAO, node operators registry, token, pool and deposit security module are deployed and initialized', async () => {
+  before('DAO, node operators registry, token, pool and deposit security module are deployed and initialized', async () => {
     const deployed = await deployDaoAndPool(appManager, voting)
 
     // contracts/StETH.sol
@@ -58,6 +60,9 @@ contract('Lido: happy path', (addresses) => {
     guardians = deployed.guardians
 
     depositRoot = await depositContractMock.get_deposit_root()
+
+    const withdrawal = await WithdrawalQueue.new(pool.address)
+    withdrawalCredentials = hexConcat('0x01', pad(withdrawal.address, 31)).toLowerCase()
   })
 
   // Fee and its distribution are in basis points, 10000 corresponding to 100%
@@ -85,8 +90,6 @@ contract('Lido: happy path', (addresses) => {
     assertBn(distribution.insuranceFeeBasisPoints, insuranceFeePoints, 'insurance fee')
     assertBn(distribution.operatorsFeeBasisPoints, nodeOperatorsFeePoints, 'node operators fee')
   })
-
-  const withdrawalCredentials = pad('0x0202', 32)
 
   it('voting sets withdrawal credentials', async () => {
     await pool.setWithdrawalCredentials(withdrawalCredentials, { from: voting })

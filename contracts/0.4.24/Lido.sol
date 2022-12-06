@@ -7,13 +7,13 @@ pragma solidity 0.4.24;
 
 import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
-import "@aragon/os/contracts/lib/math/SafeMath64.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
 import "./interfaces/ILido.sol";
 import "./interfaces/INodeOperatorsRegistry.sol";
 import "./interfaces/IDepositContract.sol";
 import "./interfaces/ILidoExecutionLayerRewardsVault.sol";
+import "./interfaces/IWithdrawalQueue.sol";
 
 import "./StETH.sol";
 
@@ -103,6 +103,8 @@ contract Lido is ILido, StETH, AragonApp {
     bytes32 internal constant BEACON_BALANCE_POSITION = keccak256("lido.Lido.beaconBalance");
     /// @dev number of Lido's validators available in the Beacon state
     bytes32 internal constant BEACON_VALIDATORS_POSITION = keccak256("lido.Lido.beaconValidators");
+    /// @dev number of Lido's validators exited, according to the Beacon state
+    bytes32 internal constant BEACON_EXITED_VALIDATORS_POSITION = keccak256("lido.Lido.exitedValidators");
 
     /// @dev percent in basis points of total pooled ether allowed to withdraw from LidoExecutionLayerRewardsVault per LidoOracle report
     bytes32 internal constant EL_REWARDS_WITHDRAWAL_LIMIT_POSITION = keccak256("lido.Lido.ELRewardsWithdrawalLimit");
@@ -111,8 +113,14 @@ contract Lido is ILido, StETH, AragonApp {
     /// Not used in the logic
     bytes32 internal constant TOTAL_EL_REWARDS_COLLECTED_POSITION = keccak256("lido.Lido.totalELRewardsCollected");
 
+    bytes32 internal constant TOTAL_WITHDRAWALS_RESTAKED_POSITION = keccak256("lido.Lido.totalWitdrawalsRestaked");
+
     /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
     bytes32 internal constant WITHDRAWAL_CREDENTIALS_POSITION = keccak256("lido.Lido.withdrawalCredentials");
+
+     /// @dev Amount of eth in deposit buffer to reserve for withdrawals
+    bytes32 internal constant WITHDRAWAL_RESERVE_POSITION = keccak256("lido.Lido.withdrawalReserve");
+
 
     /**
     * @dev As AragonApp, Lido contract must be initialized with following variables:
@@ -305,6 +313,15 @@ contract Lido is ILido, StETH, AragonApp {
         emit ELRewardsReceived(msg.value);
     }
 
+    function receiveRestake() external payable {
+        require(msg.sender == address(uint160(getWithdrawalCredentials())));
+
+        TOTAL_WITHDRAWALS_RESTAKED_POSITION.setStorageUint256(
+            TOTAL_WITHDRAWALS_RESTAKED_POSITION.getStorageUint256().add(msg.value));
+
+        emit WithdrawalRestaked(msg.value);
+    }
+
     /**
     * @notice Deposits buffered ethers to the official DepositContract.
     * @dev This function is separated from submit() to reduce the cost of sending funds.
@@ -459,57 +476,102 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-    * @notice Updates beacon stats, collects rewards from LidoExecutionLayerRewardsVault and distributes all rewards if beacon balance increased
-    * @dev periodically called by the Oracle contract
-    * @param _beaconValidators number of Lido's keys in the beacon state
-    * @param _beaconBalance summarized balance of Lido-controlled keys in wei
+    * @notice this method is responsible for locking StETH and placing user
+    * in the queue
+    * @param _amountOfStETH StETH to be locked. `msg.sender` should have the `_amountOfStETH` StETH balance upon this call
+    * @return ticketId id string that can be used by user to claim their ETH later
     */
-    function handleOracleReport(uint256 _beaconValidators, uint256 _beaconBalance) external whenNotStopped {
-        require(msg.sender == getOracle(), "APP_AUTH_FAILED");
+    function requestWithdrawal(uint256 _amountOfStETH) external returns (uint256 requestId) {
+        address withdrawal = address(uint160(getWithdrawalCredentials()));
+        // lock StETH to withdrawal contract
+        _transfer(msg.sender, withdrawal, _amountOfStETH);
 
-        uint256 depositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256();
-        require(_beaconValidators <= depositedValidators, "REPORTED_MORE_DEPOSITED");
+        uint256 shares = getSharesByPooledEth(_amountOfStETH);
+        requestId = IWithdrawalQueue(withdrawal).enqueue(msg.sender, _amountOfStETH, shares);
 
-        uint256 beaconValidators = BEACON_VALIDATORS_POSITION.getStorageUint256();
-        // Since the calculation of funds in the ingress queue is based on the number of validators
-        // that are in a transient state (deposited but not seen on beacon yet), we can't decrease the previously
-        // reported number (we'll be unable to figure out who is in the queue and count them).
-        // See LIP-1 for details https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-1.md
-        require(_beaconValidators >= beaconValidators, "REPORTED_LESS_VALIDATORS");
-        uint256 appearedValidators = _beaconValidators.sub(beaconValidators);
+        emit WithdrawalRequested(msg.sender, _amountOfStETH, shares, requestId);
+    }
 
-        // RewardBase is the amount of money that is not included in the reward calculation
-        // Just appeared validators * 32 added to the previously reported beacon balance
-        uint256 rewardBase = (appearedValidators.mul(DEPOSIT_SIZE)).add(BEACON_BALANCE_POSITION.getStorageUint256());
+    /**
+     * @notice Mark request claimed and transfer ETH to ticket owner address
+     * @param _requestId id of the request to claim
+     * @dev permissionless.
+     */
+    function claimWithdrawal(uint256 _requestId, uint256 _priceIndexHint) external {
+        /// Just forward it to withdrawals
+        address withdrawal = address(uint160(getWithdrawalCredentials()));
+        address recipient = IWithdrawalQueue(withdrawal).claim(_requestId, _priceIndexHint);
 
-        // Save the current beacon balance and validators to
-        // calculate rewards on the next push
-        BEACON_BALANCE_POSITION.setStorageUint256(_beaconBalance);
-        BEACON_VALIDATORS_POSITION.setStorageUint256(_beaconValidators);
+        emit WithdrawalClaimed(_requestId, recipient, msg.sender);
+    }
 
-        // If LidoExecutionLayerRewardsVault address is not set just do as if there were no execution layer rewards at all
-        // Otherwise withdraw all rewards and put them to the buffer
-        // Thus, execution layer rewards are handled the same way as beacon rewards
+    function withdrawalRequestStatus(uint256 _requestId) external view returns (
+        address recipient,
+        uint256 requestBlockNumber,
+        uint256 etherToWithdraw,
+        bool isFinalized,
+        bool isClaimed
+    ) {
+        IWithdrawalQueue withdrawal = IWithdrawalQueue(address(uint160(getWithdrawalCredentials())));
 
-        uint256 executionLayerRewards;
-        address executionLayerRewardsVaultAddress = getELRewardsVault();
-
-        if (executionLayerRewardsVaultAddress != address(0)) {
-            executionLayerRewards = ILidoExecutionLayerRewardsVault(executionLayerRewardsVaultAddress).withdrawRewards(
-                (_getTotalPooledEther() * EL_REWARDS_WITHDRAWAL_LIMIT_POSITION.getStorageUint256()) / TOTAL_BASIS_POINTS
-            );
-
-            if (executionLayerRewards != 0) {
-                BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().add(executionLayerRewards));
-            }
+        (recipient, requestBlockNumber, etherToWithdraw,,isClaimed) = withdrawal.queue(_requestId);
+        if (_requestId > 0) {
+            // there is cumulative ether values in the queue so we need to subtract previous on
+            (,,uint256 previousCumulativeEther,,) = withdrawal.queue(_requestId.sub(1));
+            etherToWithdraw = etherToWithdraw.sub(previousCumulativeEther);
         }
+        isFinalized = _requestId < withdrawal.finalizedQueueLength();
+    }
 
-        // Don’t mint/distribute any protocol fee on the non-profitable Lido oracle report
-        // (when beacon chain balance delta is zero or negative).
-        // See ADR #3 for details: https://research.lido.fi/t/rewards-distribution-after-the-merge-architecture-decision-record/1535
-        if (_beaconBalance > rewardBase) {
-            uint256 rewards = _beaconBalance.sub(rewardBase);
-            distributeFee(rewards.add(executionLayerRewards));
+    function getBufferWithdrawalsReserve() public returns (uint256) {
+        return WITHDRAWAL_RESERVE_POSITION.getStorageUint256();
+    }
+
+    /**
+    * @notice Updates accounting stats, collects EL rewards and distributes all rewards if beacon balance increased
+    * @dev periodically called by the Oracle contract
+    */
+    function handleOracleReport(
+        // CL values
+        uint256 _beaconValidators,
+        uint256 _beaconBalance,
+        uint256 _totalExitedValidators,
+        // EL values
+        uint256 _wcBufferedEther,
+        // decision
+        uint256 _withdrawalsReserveAmount,
+        uint256[] _requestIdToFinalizeUpTo,
+        uint256[] _finalizationPooledEtherAmount,
+        uint256[] _finalizationSharesAmount
+    ) external whenNotStopped {
+        require(msg.sender == getOracle(), "APP_AUTH_FAILED");
+        uint256 preSharesRate = getPooledEthByShares(10 ** 27);
+        WITHDRAWAL_RESERVE_POSITION.setStorageUint256(_withdrawalsReserveAmount);
+
+        _processAccounting(
+            _beaconValidators,
+            _beaconBalance,
+            _totalExitedValidators
+        );
+
+        uint256 executionLayerRewards = _processFundsMoving(
+            _requestIdToFinalizeUpTo,
+            _finalizationPooledEtherAmount,
+            _finalizationSharesAmount,
+            _wcBufferedEther
+        );
+
+        uint256 postSharesRate = getPooledEthByShares(10 ** 27);
+
+        if (postSharesRate > preSharesRate) {
+            uint256 totalRewards = _getTotalShares().mul(postSharesRate.sub(preSharesRate)).div(10 ** 27);
+            // Don’t mint/distribute any protocol fee on the non-profitable Lido oracle report
+            // (when beacon chain balance delta is zero or negative).
+            // See ADR #3 for details:
+            // https://research.lido.fi/t/rewards-distribution-after-the-merge-architecture-decision-record/1535
+            if (totalRewards > executionLayerRewards) {
+                _distributeFee(totalRewards);
+            }
         }
     }
 
@@ -588,6 +650,10 @@ contract Lido is ILido, StETH, AragonApp {
         return TOTAL_EL_REWARDS_COLLECTED_POSITION.getStorageUint256();
     }
 
+    function getTotalWithdrawalsRestaked() external view returns (uint256) {
+        return TOTAL_WITHDRAWALS_RESTAKED_POSITION.getStorageUint256();
+    }
+
     /**
     * @notice Get limit in basis points to amount of ETH to withdraw per LidoOracle report
     * @return limit in basis points to amount of ETH to withdraw per LidoOracle report
@@ -649,6 +715,133 @@ contract Lido is ILido, StETH, AragonApp {
     */
     function getELRewardsVault() public view returns (address) {
         return EL_REWARDS_VAULT_POSITION.getStorageAddress();
+    }
+
+    /**
+     * @dev updates beacon state and calculate rewards base (OUTDATED)
+     */
+    function _processAccounting(
+        // CL values
+        uint256 _beaconValidators,
+        uint256 _beaconBalance,
+        uint256 _totalExitedValidators
+    ) internal {
+        uint256 depositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256();
+        require(_beaconValidators + _totalExitedValidators <= depositedValidators, "REPORTED_MORE_DEPOSITED");
+
+        uint256 totalExitedValidators = BEACON_EXITED_VALIDATORS_POSITION.getStorageUint256();
+        require(_totalExitedValidators >= totalExitedValidators, "REPORTED_LESS_EXITED_VALIDATORS");
+
+        uint256 beaconValidators = BEACON_VALIDATORS_POSITION.getStorageUint256();
+        require(_beaconValidators + _totalExitedValidators >= beaconValidators + totalExitedValidators,
+            "REPORTED_LESS_VALIDATORS");
+
+        // Save the current beacon balance and validators to
+        // calculate rewards on the next push
+        BEACON_BALANCE_POSITION.setStorageUint256(_beaconBalance);
+        BEACON_VALIDATORS_POSITION.setStorageUint256(_beaconValidators);
+        BEACON_EXITED_VALIDATORS_POSITION.setStorageUint256(_totalExitedValidators);
+    }
+
+    /**
+     * @dev move funds between ELRewardsVault, deposit and withdrawal buffers. Updates buffered counters respectively
+     */
+    function _processFundsMoving(
+        uint256[] _requestIdToFinalizeUpTo,
+        uint256[] _finalizationPooledEtherAmount,
+        uint256[] _finalizationSharesAmount,
+        uint256 _wcBufferedEther
+    ) internal returns (uint256) {
+        uint256 executionLayerRewards = 0;
+        address elRewardsVaultAddress = getELRewardsVault();
+        // If LidoExecutionLayerRewardsVault address is not set just do as if there were no execution layer rewards at all
+        // Otherwise withdraw all rewards and put them to the buffer
+        if (elRewardsVaultAddress != address(0)) {
+            executionLayerRewards = ILidoExecutionLayerRewardsVault(elRewardsVaultAddress).withdrawRewards(
+                (_getTotalPooledEther() * EL_REWARDS_WITHDRAWAL_LIMIT_POSITION.getStorageUint256()) / TOTAL_BASIS_POINTS
+            );
+        }
+
+        // Moving funds between withdrawal buffer and deposit buffer
+        // depending on withdrawal queue status
+        int256 movedToWithdrawalBuffer = _processWithdrawals(
+            _requestIdToFinalizeUpTo,
+            _finalizationPooledEtherAmount,
+            _finalizationSharesAmount,
+            _wcBufferedEther);
+
+        // Update deposit buffer state
+        if (executionLayerRewards != 0 || movedToWithdrawalBuffer != 0) {
+            if (movedToWithdrawalBuffer > 0) {
+                BUFFERED_ETHER_POSITION.setStorageUint256(
+                    _getBufferedEther().add(executionLayerRewards).add(uint256(movedToWithdrawalBuffer))
+                );
+            } else {
+                BUFFERED_ETHER_POSITION.setStorageUint256(
+                    _getBufferedEther().add(executionLayerRewards).sub(uint256(-movedToWithdrawalBuffer))
+                );
+            }
+        }
+
+        return executionLayerRewards;
+    }
+
+    /**
+     * @dev finalize requests in the queue, burn shares and restake some ether if remains
+     * @return withdrawalFundsMovement amount of funds restaked (if positive) or moved to withdrawal buffer (if negative)
+     */
+    function _processWithdrawals(
+        uint256[] _requestIdToFinalizeUpTo,
+        uint256[] _finalizationPooledEtherAmount,
+        uint256[] _finalizationSharesAmount,
+        uint256 _wcBufferedEther
+    ) internal returns (int256 withdrawalFundsMovement) {
+        address withdrawalAddress = address(uint160(getWithdrawalCredentials()));
+        // do nothing if withdrawals is not configured
+        if (withdrawalAddress == address(0)) {
+            return 0;
+        }
+
+        IWithdrawalQueue withdrawal = IWithdrawalQueue(withdrawalAddress);
+
+        uint256 lockedEtherAccumulator = 0;
+
+        for (uint256 i = 0; i < _requestIdToFinalizeUpTo.length; i++) {
+            uint256 lastIdToFinalize = _requestIdToFinalizeUpTo[i];
+            require(lastIdToFinalize >= withdrawal.finalizedQueueLength(), "BAD_FINALIZATION_PARAMS");
+
+            uint256 totalPooledEther = _finalizationPooledEtherAmount[i];
+            uint256 totalShares = _finalizationSharesAmount[i];
+
+            (uint256 etherToLock, uint256 sharesToBurn) = withdrawal.calculateFinalizationParams(
+                lastIdToFinalize,
+                totalPooledEther,
+                totalShares
+            );
+
+            _burnShares(withdrawalAddress, sharesToBurn);
+
+            uint256 remainingFunds = _wcBufferedEther > lockedEtherAccumulator ? _wcBufferedEther.sub(lockedEtherAccumulator): 0;
+
+            uint256 transferToWithdrawalBuffer = etherToLock > remainingFunds ? etherToLock.sub(remainingFunds) : 0;
+
+            lockedEtherAccumulator = lockedEtherAccumulator.add(etherToLock);
+
+            withdrawal.finalize.value(transferToWithdrawalBuffer)(
+                lastIdToFinalize,
+                etherToLock,
+                totalPooledEther,
+                totalShares
+            );
+        }
+        // There can be unnacounted ether in witdrawal buffer that should not be used for finalization
+        require(lockedEtherAccumulator <= _wcBufferedEther.add(_getBufferedEther()), "NOT_ENOUGH_ACCOUNTED_ETHER");
+
+        withdrawalFundsMovement = int256(_wcBufferedEther) - int256(lockedEtherAccumulator);
+
+        if (withdrawalFundsMovement > 0) {
+            withdrawal.restake(uint256(withdrawalFundsMovement));
+        }
     }
 
     /**
@@ -717,11 +910,17 @@ contract Lido is ILido, StETH, AragonApp {
     */
     function _depositBufferedEther(uint256 _maxDeposits) internal whenNotStopped {
         uint256 buffered = _getBufferedEther();
-        if (buffered >= DEPOSIT_SIZE) {
-            uint256 unaccounted = _getUnaccountedEther();
-            uint256 numDeposits = buffered.div(DEPOSIT_SIZE);
-            _markAsUnbuffered(_ETH2Deposit(numDeposits < _maxDeposits ? numDeposits : _maxDeposits));
-            assert(_getUnaccountedEther() == unaccounted);
+        uint256 withdrawalReserve = getBufferWithdrawalsReserve();
+
+        if (buffered > withdrawalReserve) {
+            buffered = buffered.sub(withdrawalReserve);
+
+            if (buffered >= DEPOSIT_SIZE) {
+                uint256 unaccounted = _getUnaccountedEther();
+                uint256 numDeposits = buffered.div(DEPOSIT_SIZE);
+                _markAsUnbuffered(_ETH2Deposit(numDeposits < _maxDeposits ? numDeposits : _maxDeposits));
+                assert(_getUnaccountedEther() == unaccounted);
+            }
         }
     }
 
@@ -798,7 +997,7 @@ contract Lido is ILido, StETH, AragonApp {
     * @dev Distributes fee portion of the rewards by minting and distributing corresponding amount of liquid tokens.
     * @param _totalRewards Total rewards accrued on the Ethereum 2.0 side in wei
     */
-    function distributeFee(uint256 _totalRewards) internal {
+    function _distributeFee(uint256 _totalRewards) internal {
         // We need to take a defined percentage of the reported reward as a fee, and we do
         // this by minting new token shares and assigning them to the fee recipients (see
         // StETH docs for the explanation of the shares mechanics). The staking rewards fee
@@ -922,9 +1121,10 @@ contract Lido is ILido, StETH, AragonApp {
     function _getTransientBalance() internal view returns (uint256) {
         uint256 depositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256();
         uint256 beaconValidators = BEACON_VALIDATORS_POSITION.getStorageUint256();
+        uint256 exitedValidators = BEACON_EXITED_VALIDATORS_POSITION.getStorageUint256();
         // beaconValidators can never be less than deposited ones.
-        assert(depositedValidators >= beaconValidators);
-        return depositedValidators.sub(beaconValidators).mul(DEPOSIT_SIZE);
+        assert(depositedValidators.sub(exitedValidators) >= beaconValidators);
+        return depositedValidators.sub(exitedValidators).sub(beaconValidators).mul(DEPOSIT_SIZE);
     }
 
     /**
@@ -932,9 +1132,9 @@ contract Lido is ILido, StETH, AragonApp {
     * @return total balance in wei
     */
     function _getTotalPooledEther() internal view returns (uint256) {
-        return _getBufferedEther().add(
-            BEACON_BALANCE_POSITION.getStorageUint256()
-        ).add(_getTransientBalance());
+        return _getBufferedEther()
+        .add(_getTransientBalance())
+        .add(BEACON_BALANCE_POSITION.getStorageUint256());
     }
 
     /**
