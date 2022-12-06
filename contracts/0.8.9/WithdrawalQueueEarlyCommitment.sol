@@ -256,9 +256,9 @@ contract WithdrawalQueueEarlyCommitment {
         emit WithdrawalRequestRevoked(_requestId, request.recipient, _recoverStETHTo, stETHToTransfer);
     }
 
-    /// @notice Returns withdrawal requests placed by the `_requestsFrom` address
-    function getWithdrawalRequests(address _requestsFrom) external view returns (uint256[] memory requestsIds) {
-        return requestsByRecipient[_requestsFrom];
+    /// @notice Returns withdrawal requests placed for the `_recipient` address
+    function getWithdrawalRequests(address _recipient) external view returns (uint256[] memory requestsIds) {
+        return requestsByRecipient[_recipient];
     }
 
     /// @notice Returns status of the withdrawal request
