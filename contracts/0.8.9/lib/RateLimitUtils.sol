@@ -91,8 +91,10 @@ library RateLimitUtils {
     /**
     * @notice Calculate limit for the current block.
     */
-    function calculateCurrentLimit(LimitState.Data memory _data) internal view returns(uint256 limit) {
-        uint256 limitIncPerBlock;
+    function calculateCurrentLimit(LimitState.Data memory _data)
+        internal view returns(uint256 limit)
+    {
+        uint256 limitIncPerBlock = 0;
         if (_data.maxLimitGrowthBlocks != 0) {
             limitIncPerBlock = _data.maxLimit / _data.maxLimitGrowthBlocks;
         }
@@ -114,7 +116,7 @@ library RateLimitUtils {
         LimitState.Data memory _data,
         uint256 _maxLimit,
         uint256 _limitIncreasePerBlock
-    ) internal view returns (LimitState.Data memory) {
+    ) internal view {
         require(_maxLimit != 0, "ZERO_MAX_LIMIT");
         require(_maxLimit < type(uint96).max, "TOO_LARGE_MAX_IMIT");
         require(_maxLimit >= _limitIncreasePerBlock, "TOO_LARGE_LIMIT_INCREASE");
@@ -137,8 +139,6 @@ library RateLimitUtils {
         if (_data.prevBlockNumber != 0) {
             _data.prevBlockNumber = uint32(block.number);
         }
-
-        return _data;
     }
 
 
@@ -151,14 +151,12 @@ library RateLimitUtils {
     function updatePrevLimit(
         LimitState.Data memory _data,
         uint256 _newPrevLimit
-    ) internal view returns (LimitState.Data memory) {
+    ) internal view {
         assert(_newPrevLimit < type(uint96).max);
         assert(_data.prevBlockNumber != 0);
 
         _data.prevLimit = uint96(_newPrevLimit);
         _data.prevBlockNumber = uint32(block.number);
-
-        return _data;
     }
 
 }

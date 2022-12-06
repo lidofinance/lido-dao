@@ -1,5 +1,6 @@
 const { assertBn, assertRevert, assertEvent, assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
+const { waitBlocks } = require('../helpers/blockchain')
 
 const { assert } = require('chai')
 
@@ -9,6 +10,9 @@ const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 // semantic aliases
 
 const e18 = 10 ** 18
+const blockDurationSeconds = 12
+const secondsInDay = 24 * 60 * 60
+const blocksInDay = secondsInDay / blockDurationSeconds
 
 const pad = (hex, bytesLength) => {
   const absentZeroes = bytesLength * 2 + 2 - hex.length
@@ -17,7 +21,11 @@ const pad = (hex, bytesLength) => {
 }
 
 function fromE18(value) {
-  return Math.floor(value / e18)
+  return value / e18
+}
+
+function toE18(value) {
+  return bn(value.toString()).mul(bn(e18.toString()))
 }
 
 function logE18(value) {
@@ -29,18 +37,21 @@ function generateValidatorPubKey() {
   return pad('0x010203', pubKeyLength)
 }
 
-function generateReportKeysArguments(numKeys) {
-  var stakingModuleIds = Array.from(Array(numKeys), () => 1)
-  var nodeOperatorIds = Array.from(Array(numKeys), () => 1)
-  var keys = Array.from(Array(numKeys), () => generateValidatorPubKey())
-  return [stakingModuleIds, nodeOperatorIds, keys]
+function generateReportKeysArguments(numKeys, epochId) {
+  const stakingModuleIds = Array.from(Array(numKeys), () => 1)
+  const nodeOperatorIds = Array.from(Array(numKeys), () => 1)
+  const keys = Array.from(Array(numKeys), () => generateValidatorPubKey())
+  return [stakingModuleIds, nodeOperatorIds, keys, epochId]
 }
 
-contract('ValidatorExitBus', ([deployer, member, ...otherAccounts]) => {
+const maxRequestsPerDayE18 = toE18(2000 + 1)
+const numRequestsLimitIncreasePerBlockE18 = maxRequestsPerDayE18.div(bn(blocksInDay))
+
+contract.only('ValidatorExitBus', ([deployer, member, ...otherAccounts]) => {
   let bus = null
 
   beforeEach('deploy bus', async () => {
-    bus = await ValidatorExitBus.new({ from: deployer })
+    bus = await ValidatorExitBus.new(maxRequestsPerDayE18, numRequestsLimitIncreasePerBlockE18, { from: deployer })
     await bus.addOracleMember(member)
   })
 
@@ -48,12 +59,19 @@ contract('ValidatorExitBus', ([deployer, member, ...otherAccounts]) => {
     beforeEach(async () => {})
 
     it(`Calculate gas usages`, async () => {
+      const epochId = 123
       const gasUsage = {}
       const amountsOfKeysToTry = [1, 2, 5, 10, 50, 100, 500, 1000, 2000]
+      let prevNumKeys = 0
       for (const numKeys of amountsOfKeysToTry) {
-        const result = await bus.reportKeysToEject(...generateReportKeysArguments(numKeys), { from: member })
+        await waitBlocks(Math.ceil(prevNumKeys / fromE18(numRequestsLimitIncreasePerBlockE18)))
+        assert(numKeys <= fromE18(maxRequestsPerDayE18), 'num keys to eject is above day limit')
+        const args = generateReportKeysArguments(numKeys, epochId)
+        const result = await bus.reportKeysToEject(...args, { from: member })
         gasUsage[numKeys] = result.receipt.gasUsed
+        prevNumKeys = numKeys
       }
+
       console.log(gasUsage)
     })
   })
@@ -62,32 +80,45 @@ contract('ValidatorExitBus', ([deployer, member, ...otherAccounts]) => {
     beforeEach(async () => {})
 
     it(`Report one key`, async () => {
-      await bus.reportKeysToEject([1], [2], [generateValidatorPubKey()], { from: member })
+      const epochId = 123
+      await bus.reportKeysToEject([1], [2], [generateValidatorPubKey()], epochId, { from: member })
     })
 
-    it(`Revert if exceeds limit`, async () => {
+    it.skip(`Revert if length of arrays reported differ`, async () => {
+      // TODO
+      const epochId = 123
+      await bus.reportKeysToEject([], [2], [generateValidatorPubKey()], epochId, { from: member })
+    })
+
+    it(`Revert if exceeds limit after multiple consecutive tx`, async () => {
+      const epochId = 123
       const maxLimit = fromE18(await bus.getMaxLimit())
       let numKeysReportedTotal = 0
+      const startBlockNumber = (await web3.eth.getBlock('latest')).number
+
       const keysPerIteration = Math.floor(maxLimit / 20)
       while (maxLimit > numKeysReportedTotal) {
-        const keysToEject = Math.min(keysPerIteration, maxLimit - numKeysReportedTotal)
-        await bus.reportKeysToEject(...generateReportKeysArguments(keysToEject), { from: member })
-        numKeysReportedTotal += keysToEject
+        const numKeys = Math.min(keysPerIteration, maxLimit - numKeysReportedTotal)
+        await bus.reportKeysToEject(...generateReportKeysArguments(numKeys, epochId), { from: member })
+        numKeysReportedTotal += numKeys
       }
 
-      const numExcessKeys = 10
-      assertRevert(bus.reportKeysToEject(...generateReportKeysArguments(numExcessKeys), { from: member }), 'RATE_LIMIT')
+      const numBlocksPassed = (await web3.eth.getBlock('latest')).number - startBlockNumber
+      const numExcessKeys = Math.ceil(numBlocksPassed * fromE18(numRequestsLimitIncreasePerBlockE18)) + 1
+      assertRevert(bus.reportKeysToEject(...generateReportKeysArguments(numExcessKeys, epochId), { from: member }), 'RATE_LIMIT')
     })
 
-    it.skip(`Report max amount of keys per tx`, async () => {
+    it(`Report max amount of keys per tx`, async () => {
+      const epochId = 123
       const maxLimit = fromE18(await bus.getMaxLimit())
       console.log({ maxLimit })
-      await bus.reportKeysToEject(...generateReportKeysArguments(maxLimit), { from: member })
+      await bus.reportKeysToEject(...generateReportKeysArguments(maxLimit, epochId), { from: member })
     })
 
-    it.skip(`Revert if request to exit maxLimit+1 keys`, async () => {
-      const maxLimit = fromE18(await bus.getMaxLimit())
-      assertRevert(bus.reportKeysToEject(...generateReportKeysArguments(maxLimit + 1), { from: member }), 'RATE_LIMIT')
+    it(`Revert if request to exit maxLimit+1 keys per tx`, async () => {
+      const epochId = 123
+      const maxRequestsPerDay = fromE18(await bus.getMaxLimit())
+      assertRevert(bus.reportKeysToEject(...generateReportKeysArguments(maxRequestsPerDay + 1, epochId), { from: member }), 'RATE_LIMIT')
     })
   })
 })

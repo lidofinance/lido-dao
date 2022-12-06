@@ -1,6 +1,6 @@
+// SPDX-FileCopyrightText: 2022 Lido <info@lido.fi>
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
-// pragma experimental ABIEncoderV2;
 
 import "./lib/RateLimitUtils.sol";
 
@@ -21,11 +21,12 @@ contract ValidatorExitBus {
         uint256 limitIncreasePerBlock
     );
 
-    event MemberAdded(address member);
+    event MemberAdded(address indexed member);
 
-    event MemberRemoved(address member);
+    event MemberRemoved(address indexed member);
 
 
+    // TODO: use solidity custom errors
     string private constant ERROR_ARRAYS_MUST_BE_SAME_SIZE = "ARRAYS_MUST_BE_SAME_SIZE";
     string private constant ERROR_EMPTY_ARRAYS_REPORTED = "EMPTY_ARRAYS_REPORTED";
     string private constant ERROR_NOT_MEMBER_REPORTED = "NOT_MEMBER_REPORTED";
@@ -44,7 +45,10 @@ contract ValidatorExitBus {
     /// slot 0: oracle committee members
     address[] private members;
 
-    constructor()
+    constructor(
+        uint256 _maxRequestsPerDayE18,
+        uint256 _numRequestsLimitIncreasePerBlockE18
+    )
     {
         // For ~450,000 Ethereum validators, max amount of Voluntary Exits processed
         // per epoch is 6. This is 1350 per day
@@ -52,7 +56,7 @@ contract ValidatorExitBus {
         // This is 5400 exit requests per day, what is 0.75 requests per block
         // NB, that limit for _enqueuing_ exit requests is much larger (~ 115k per day)
         LimitState.Data memory limit = RATE_LIMIT_STATE_POSITION.getStorageLimitStruct();
-        limit.setLimit(5400 * 10**18, 75 * 10**16);
+        limit.setLimit(_maxRequestsPerDayE18, _numRequestsLimitIncreasePerBlockE18);
         limit.prevBlockNumber = uint32(block.number);
         RATE_LIMIT_STATE_POSITION.setStorageLimitStruct(limit);
     }
@@ -65,27 +69,24 @@ contract ValidatorExitBus {
         uint256 epochId
     ) external {
         // TODO: maybe add reporting validator id
+        // TODO: add consensus logic
         require(nodeOperatorIds.length == validatorPubkeys.length, ERROR_ARRAYS_MUST_BE_SAME_SIZE);
         require(stakingModuleIds.length == validatorPubkeys.length, ERROR_ARRAYS_MUST_BE_SAME_SIZE);
-        require(stakingModuleIds.length > 0, ERROR_EMPTY_ARRAYS_REPORTED);
+        require(validatorPubkeys.length > 0, ERROR_EMPTY_ARRAYS_REPORTED);
+        uint256 numKeys = validatorPubkeys.length;
 
         uint256 memberIndex = _getMemberId(msg.sender);
         require(memberIndex < MAX_MEMBERS, ERROR_NOT_MEMBER_REPORTED);
 
-        if (epochId == LAST_REPORT_EPOCH_ID_POSITION.getStorageUint256()) {
-            // no-op for mock version of the contract, to report only on
-            // report of the first committee member report
-            return;
-        }
         LAST_REPORT_EPOCH_ID_POSITION.setStorageUint256(epochId);
 
         LimitState.Data memory limitData = RATE_LIMIT_STATE_POSITION.getStorageLimitStruct();
         uint256 currentLimit = limitData.calculateCurrentLimit();
-        uint256 numKeys = nodeOperatorIds.length;
-        require(numKeys * 10**18 <= currentLimit, "RATE_LIMIT");
-        RATE_LIMIT_STATE_POSITION.setStorageLimitStruct(
-            limitData.updatePrevLimit(currentLimit - numKeys)
-        );
+
+        uint256 numKeysE18 = numKeys * 10**18;
+        require(numKeysE18 <= currentLimit, "RATE_LIMIT");
+        limitData.updatePrevLimit(currentLimit - numKeysE18);
+        RATE_LIMIT_STATE_POSITION.setStorageLimitStruct(limitData);
 
         for (uint256 i = 0; i < numKeys; i++) {
             emit ValidatorExitRequest(
@@ -102,13 +103,18 @@ contract ValidatorExitBus {
     }
 
 
-    function getMaxLimit() public view returns (uint96) {
+    function getMaxLimit() external view returns (uint96) {
         LimitState.Data memory state = RATE_LIMIT_STATE_POSITION.getStorageLimitStruct();
         return state.maxLimit;
     }
 
 
-    function getCurrentLimit() public view returns (uint256) {
+    function getLimitState() external view returns (LimitState.Data memory) {
+        return RATE_LIMIT_STATE_POSITION.getStorageLimitStruct();
+    }
+
+
+    function getCurrentLimit() external view returns (uint256) {
         return RATE_LIMIT_STATE_POSITION.getStorageLimitStruct().calculateCurrentLimit();
     }
 
@@ -160,12 +166,9 @@ contract ValidatorExitBus {
     }
 
     function _setRateLimit(uint256 _maxLimit, uint256 _limitIncreasePerBlock) internal {
-        RATE_LIMIT_STATE_POSITION.setStorageLimitStruct(
-            RATE_LIMIT_STATE_POSITION.getStorageLimitStruct().setLimit(
-                _maxLimit,
-                _limitIncreasePerBlock
-            )
-        );
+        LimitState.Data memory limitData = RATE_LIMIT_STATE_POSITION.getStorageLimitStruct();
+        limitData.setLimit(_maxLimit, _limitIncreasePerBlock);
+        RATE_LIMIT_STATE_POSITION.setStorageLimitStruct(limitData);
 
         emit RateLimitSet(_maxLimit, _limitIncreasePerBlock);
     }
