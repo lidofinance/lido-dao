@@ -184,5 +184,16 @@
   ],
   "selfOwnedStETHBurnerAddress": "0x6432756feF0fb527C06eFd4689A7CE0E195bD327",
   "executionLayerRewardsVaultAddress": "0x94750381bE1AbA0504C666ee1DB118F68f0780D4",
-  "depositorPreviousAddress": "0xEd23AD3EA5Fb9d10e7371Caef1b141AD1C23A80c"
+  "depositorPreviousAddress": "0xEd23AD3EA5Fb9d10e7371Caef1b141AD1C23A80c",
+  "withdrawalQueueEarlyCommitmentContractAddress": "0xcEeB484BA2762dE1065ec1c2F1c3f0e1c2A68140",
+  "withdrawalQueueEarlyCommitmentContractConstructorArgs": [
+    "0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F",
+    "0x6320cD32aA674d2898A68ec82e869385Fc5f7E2f"
+  ],
+  "withdrawalQueueProxyContractAddress": "0xB0F260CC0906197ED75A5d722890bB9efe2c506A",
+  "withdrawalQueueProxyContractConstructorArgs": [
+    "0xcEeB484BA2762dE1065ec1c2F1c3f0e1c2A68140",
+    "0x4333218072D5d7008546737786663c38B4D561A4",
+    "0x"
+  ]
 }
