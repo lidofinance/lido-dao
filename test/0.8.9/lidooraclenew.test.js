@@ -42,7 +42,7 @@ function getAuthError(account, role) {
 // but if you jump from 1e12+30 to 1e12+60 then it's smooth small jump as in the real world.
 const START_BALANCE = 1e12
 
-contract.only('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user5, user6, user7, nobody]) => {
+contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user5, user6, user7, nobody]) => {
   let appLido, app, nodeOperatorsRegistry
 
   const assertExpectedEpochs = async (startEpoch, endEpoch) => {

@@ -47,7 +47,7 @@ function generateReportKeysArguments(numKeys, epochId) {
 const maxRequestsPerDayE18 = toE18(2000 + 1)
 const numRequestsLimitIncreasePerBlockE18 = maxRequestsPerDayE18.div(bn(blocksInDay))
 
-contract.only('ValidatorExitBus', ([deployer, member, ...otherAccounts]) => {
+contract('ValidatorExitBus', ([deployer, member, ...otherAccounts]) => {
   let bus = null
 
   beforeEach('deploy bus', async () => {
