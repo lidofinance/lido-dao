@@ -5,13 +5,13 @@ const { newDao, newApp } = require('../0.4.24/helpers/dao')
 const { ZERO_ADDRESS, getEventAt, getEventArgument } = require('@aragon/contract-helpers-test')
 
 const StakingRouter = artifacts.require('StakingRouter.sol')
-const ModulePro = artifacts.require('ModulePro.sol')
 const ModuleSolo = artifacts.require('ModuleSolo.sol')
+const IModule = artifacts.require('contracts/0.4.24/interfaces/IModule.sol:IModule')
 
 const LidoMock = artifacts.require('LidoMock.sol')
 const LidoOracleMock = artifacts.require('OracleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
-const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
+const NodeOperatorsRegistryMock = artifacts.require('NodeOperatorsRegistryMock.sol')
 const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
 
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
@@ -96,7 +96,7 @@ contract('StakingRouter', (accounts) => {
     const lidoBase = await LidoMock.new({ from: deployer })
     oracle = await LidoOracleMock.new({ from: deployer })
     const depositContract = await DepositContractMock.new({ from: deployer })
-    const nodeOperatorsRegistryBase = await NodeOperatorsRegistry.new({ from: deployer })
+    const nodeOperatorsRegistryBase = await NodeOperatorsRegistryMock.new({ from: deployer })
 
     const daoAclObj = await newDao(appManager)
     dao = daoAclObj.dao
@@ -109,12 +109,17 @@ contract('StakingRouter', (accounts) => {
 
     // NodeOperatorsRegistry
     proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)
-    operators = await NodeOperatorsRegistry.at(proxyAddress)
+    operators = await NodeOperatorsRegistryMock.at(proxyAddress)
     await operators.initialize(lido.address)
 
     // Set up the app's permissions.
     await acl.createPermission(voting, lido.address, await lido.BURN_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, lido.address, await lido.MANAGE_WITHDRAWAL_KEY(), appManager, { from: appManager })
+
+    await acl.createPermission(voting, operators.address, await operators.ADD_NODE_OPERATOR_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, operators.address, await operators.MANAGE_SIGNING_KEYS(), appManager, { from: appManager })
+    await acl.createPermission(voting, operators.address, await operators.SET_NODE_OPERATOR_LIMIT_ROLE(), appManager, { from: appManager })
+
 
     // Initialize the app's proxy.
     await lido.initialize(depositContract.address, oracle.address, operators.address)
@@ -145,6 +150,21 @@ contract('StakingRouter', (accounts) => {
     })
 
     it(`init counters and burn amount per run works`, async () => {
+
+      // 50% of mintedShares
+      await operators.setFee(500, { from: appManager })
+
+      // add NodeOperatorRegistry
+      // name, address, cap, treasuryFee
+      await stakingRouter.addModule('Curated', operators.address, 0, 500, { from: appManager })
+
+      await operators.setTotalKeys(proModule.totalKeys, { from: appManager })
+      await operators.setTotalUsedKeys(proModule.totalUsedKeys, { from: appManager })
+      await operators.setTotalStoppedKeys(proModule.totalStoppedKeys, { from: appManager })
+
+      const NORFee = await operators.getFee()
+      assertBn(500, NORFee, 'invalid node operator registry fee')
+
       /**
        *
        *  INITIALIZE modules
@@ -156,17 +176,17 @@ contract('StakingRouter', (accounts) => {
 
         // add pro module
         if (module.type === 0) {
-          _module = await ModulePro.new(module.type, lido.address, module.fee, module.treasuryFee, { from: appManager })
+          continue;
           // add solo module
         } else if (module.type === 1) {
-          _module = await ModuleSolo.new(module.type, lido.address, module.fee, module.treasuryFee, { from: appManager })
+          _module = await ModuleSolo.new(module.type, lido.address, module.fee, { from: appManager })
         }
 
         const name = module.name
 
         console.log(`module ${name} address`, _module.address)
 
-        await stakingRouter.addModule(name, _module.address, module.softCap, { from: appManager })
+        await stakingRouter.addModule(name, _module.address, module.softCap, module.treasuryFee, { from: appManager })
         await _module.setTotalKeys(module.totalKeys, { from: appManager })
         await _module.setTotalUsedKeys(module.totalUsedKeys, { from: appManager })
         await _module.setTotalStoppedKeys(module.totalStoppedKeys, { from: appManager })
@@ -183,7 +203,7 @@ contract('StakingRouter', (accounts) => {
       await ethers.provider.send('hardhat_setBalance', [stakingRouter.address, '0x' + parseInt(ETH(101 * 32)).toString(16)])
 
       const balance = await web3.eth.getBalance(stakingRouter.address)
-      console.log(chalk.yellow('stakingRouter balance:'), balance)
+      console.log('stakingRouter balance:', y(balance))
 
       // first distribute
       console.log('Distribute allocation')
@@ -199,7 +219,7 @@ contract('StakingRouter', (accounts) => {
       curatedModule = await stakingRouter.getModule(0)
       communityModule = await stakingRouter.getModule(1)
 
-      const curModule = await ModulePro.at(curatedModule.moduleAddress)
+      const curModule = await NodeOperatorsRegistryMock.at(curatedModule.moduleAddress)
       const comModule = await ModuleSolo.at(communityModule.moduleAddress)
 
       console.log('Set staking router for modules')
@@ -211,10 +231,10 @@ contract('StakingRouter', (accounts) => {
       console.log('Set withdrawal credentials ' + g(wc))
 
       // deposit(pubkey, sig)
-      console.log('community deposit')
       const pubkeys1 = hexConcat(pad('0x0101', 48), pad('0x0102', 48), pad('0x0103', 48))
       const sigkeys1 = hexConcat(pad('0x0101', 96), pad('0x0102', 96), pad('0x0103', 96))
 
+      console.log(b('DEPOSIT 3 keys COMMUNITY module'))
       await comModule.deposit(pubkeys1, sigkeys1)
 
       const balance_2 = await web3.eth.getBalance(stakingRouter.address)
@@ -227,8 +247,10 @@ contract('StakingRouter', (accounts) => {
       console.table(table)
 
       // update
+      console.log('add node operator to curated module')
       await curModule.addNodeOperator('fo o', ADDRESS_1, { from: voting })
 
+      console.log('add keys to node operator curated module')
       for (let i = 0; i < 10; i++) {
         await curModule.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
       }
@@ -242,8 +264,10 @@ contract('StakingRouter', (accounts) => {
       assertBn(operator.totalSigningKeys, 10)
       assertBn(operator.usedSigningKeys, 0)
 
-      await curModule.setNodeOperatorStakingLimit(0, 1000, { from: appManager })
+      console.log('increase staking limit to 1000')
+      await curModule.setNodeOperatorStakingLimit(0, 1000, { from: voting })
 
+      console.log(b('DEPOSIT 1 key for curated module'))
       await curModule.deposit(1)
 
       // 3
@@ -262,6 +286,7 @@ contract('StakingRouter', (accounts) => {
       await ethers.provider.send('evm_increaseTime', [3600 * 12])
       await ethers.provider.send('evm_mine')
 
+      console.log(b('try to DEPOSIT 3 key for curated module'))
       await curModule.deposit(3)
 
       alloc = await getAlloc(stakingRouter)
@@ -348,18 +373,24 @@ async function getAlloc(stakingRouter) {
 }
 
 async function getModulesInfo(stakingRouter) {
-  const allocation = await stakingRouter.getAllocation(0)
-  const table = {}
-  for (i = 0; i < allocation.length; i++) {
-    const module = allocation[i]
+  let modulesCount = await stakingRouter.getModulesCount()
+  let table = {}
+  for (i = 0; i < modulesCount; i++) {
+    let module = await stakingRouter.getModule(i)
+    const entry = await IModule.at(module.moduleAddress)
+
     table[modules[i].name] = {
-      id: module.id,
-      totalKeys: module.totalKeys,
-      totalUsedKeys: module.totalUsedKeys,
-      totalStoppedKeys: module.totalStoppedKeys,
-      totalExitedKeys: module.totalExitedKeys,
-      cap: module.cap,
-      assigned: module.assignedKeys
+      name: module.name,
+      cap: parseInt(module.cap),
+      fee: parseInt(await entry.getFee()),
+      treasuryFee: parseInt(module.treasuryFee),
+      paused: module.paused,
+      active: module.active,
+
+      totalKeys: parseInt(await entry.getTotalKeys()),
+      totalUsedKeys: parseInt(await entry.getTotalUsedKeys()),
+      totalStoppedKeys: parseInt(await entry.getTotalStoppedKeys()),
+      totalExitedKeys: parseInt(await entry.getTotalExitedKeys())
     }
   }
 

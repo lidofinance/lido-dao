@@ -13,8 +13,10 @@ import "solidity-bytes-utils/contracts/BytesLib.sol";
 
 import "../interfaces/INodeOperatorsRegistry.sol";
 import "../interfaces/IModule.sol";
+import "../interfaces/IStakingRouter.sol";
 import "../lib/MemUtils.sol";
 
+import "hardhat/console.sol";
 
 /**
   * @title Node Operator registry implementation
@@ -93,6 +95,9 @@ contract NodeOperatorsRegistry is IModule, INodeOperatorsRegistry, IsContract, A
 
     /// @dev link to the index of operations with keys
     bytes32 internal constant KEYS_OP_INDEX_POSITION = keccak256("lido.NodeOperatorsRegistry.keysOpIndex");
+
+    /// @dev link to the Lido contract
+    bytes32 internal constant STAKING_ROUTER_POSITION = keccak256("lido.NodeOperatorsRegistry.stakingRouter");
 
 
     modifier onlyLido() {
@@ -339,7 +344,7 @@ contract NodeOperatorsRegistry is IModule, INodeOperatorsRegistry, IsContract, A
      * @param _numKeys The number of keys to select. The actual number of selected keys may be less
      *        due to the lack of active keys.
      */
-    function assignNextSigningKeys(uint256 _numKeys) external onlyLido returns (bytes memory pubkeys, bytes memory signatures) {
+    function assignNextSigningKeys(uint256 _numKeys) public returns (bytes memory pubkeys, bytes memory signatures) {
         // Memory is very cheap, although you don't want to grow it too much
         DepositLookupCacheEntry[] memory cache = _loadOperatorCache();
         if (0 == cache.length)
@@ -405,6 +410,11 @@ contract NodeOperatorsRegistry is IModule, INodeOperatorsRegistry, IsContract, A
                 (bytes memory pubkey, bytes memory signature) = _loadSigningKey(entry.id, keyIndex);
                 if (numAssignedKeys == 1) {
                     _increaseKeysOpIndex();
+
+                    TOTAL_USED_KEYS_POSITION.setStorageUint256(
+                        TOTAL_USED_KEYS_POSITION.getStorageUint256() + numAssignedKeys
+                    );
+                    
                     return (pubkey, signature);
                 } else {
                     MemUtils.copyBytes(pubkey, pubkeys, numLoadedKeys * PUBKEY_LENGTH);
@@ -420,6 +430,12 @@ contract NodeOperatorsRegistry is IModule, INodeOperatorsRegistry, IsContract, A
 
         _increaseKeysOpIndex(); // numAssignedKeys is guaranteed to be > 0 here
         assert(numLoadedKeys == numAssignedKeys);
+
+        //update total used keys
+        TOTAL_USED_KEYS_POSITION.setStorageUint256(
+            TOTAL_USED_KEYS_POSITION.getStorageUint256() + numAssignedKeys
+        );
+        
         return (pubkeys, signatures);
     }
 
@@ -549,7 +565,7 @@ contract NodeOperatorsRegistry is IModule, INodeOperatorsRegistry, IsContract, A
      *   2. a node operator's key(s) is removed;
      *   3. a node operator's approved keys limit is changed.
      *   4. a node operator was activated/deactivated. Activation or deactivation of node operator
-     *      might lead to usage of unvalidated keys in the assignNextSigningKeys method.
+     *      might lead to usage of unvalidated keys in the _assignNextSigningKeys method.
      */
     function getKeysOpIndex() public view returns (uint256) {
         return KEYS_OP_INDEX_POSITION.getStorageUint256();
@@ -747,7 +763,14 @@ contract NodeOperatorsRegistry is IModule, INodeOperatorsRegistry, IsContract, A
         emit ContractVersionSet(2);
     }
 
-    function setStakingRouter(address addr) external {}
+    function setStakingRouter(address _addr) external {
+        LIDO_POSITION.setStorageAddress(_addr);
+    }
+
+    function getStakingRouter() public returns(address) {
+        return LIDO_POSITION.getStorageAddress();
+    }
+
     function setModuleType(uint16 _type) external {}
 
     function setFee(uint16 _value) external {
@@ -769,5 +792,22 @@ contract NodeOperatorsRegistry is IModule, INodeOperatorsRegistry, IsContract, A
     }
     function getTotalExitedKeys() external view returns (uint256) {
         return TOTAL_EXITED_KEYS_POSITION.getStorageUint256();
+    }
+
+    function deposit(uint256 _numKeys) external {
+        (bytes memory pubkeys, bytes memory signatures) = assignNextSigningKeys(_numKeys);
+
+        require(pubkeys.length > 0, "no free keys");
+
+        require(pubkeys.length % PUBKEY_LENGTH == 0, "REGISTRY_INCONSISTENT_PUBKEYS_LEN");
+        require(signatures.length % SIGNATURE_LENGTH == 0, "REGISTRY_INCONSISTENT_SIG_LEN");
+
+        uint256 numKeys = pubkeys.length / PUBKEY_LENGTH;
+        require(numKeys == signatures.length / SIGNATURE_LENGTH, "REGISTRY_INCONSISTENT_SIG_COUNT");
+
+        address stakingRouter = getStakingRouter();
+        uint256 keys = IStakingRouter(stakingRouter).deposit(pubkeys, signatures);
+
+        require(numKeys == keys); 
     }
 }

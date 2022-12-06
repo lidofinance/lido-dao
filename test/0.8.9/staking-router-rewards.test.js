@@ -276,16 +276,18 @@ async function getLidoStats(lido, args) {
 }
 
 async function stakingRouterStats(stakingRouter) {
-  const modules = []
-  const modulesCount = await stakingRouter.getModulesCount()
+  let modules = []
+  let modulesCount = await stakingRouter.getModulesCount()
 
   for (let i = 0; i < modulesCount; i++) {
-    const module = await stakingRouter.getModule(i)
-    const entry = await IModule.at(module.moduleAddress)
+    let module = await stakingRouter.getModule(i)
+    let entry = await IModule.at(module.moduleAddress)
+
     modules.push({
       // address: entry.address,
       name: module.name,
       cap: parseInt(module.cap),
+      fee: parseInt(entry.getFee()),
       treasuryFee: parseInt(module.treasuryFee),
       paused: module.paused,
       active: module.active,

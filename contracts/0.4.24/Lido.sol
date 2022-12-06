@@ -14,6 +14,7 @@ import "./interfaces/ILido.sol";
 import "./interfaces/INodeOperatorsRegistry.sol";
 import "./interfaces/IDepositContract.sol";
 import "./interfaces/ILidoExecutionLayerRewardsVault.sol";
+import "./interfaces/IStakingRouter.sol";
 
 import "./StETH.sol";
 
@@ -27,13 +28,6 @@ interface IERC721 {
     /// @param _tokenId The NFT to transfer
     function transferFrom(address _from, address _to, uint256 _tokenId) external payable;
 }
-
-interface IStakingRouter {
-    function calculateShares2Mint(uint256 _totalRewards) external returns(uint256 shares2mint, uint256 totalKeys, uint256[] memory moduleKeys);
-    function distributeShares(uint256 _totalShares, uint256 totalKeys, uint256[] moduleKeys) external returns(uint256 distributed);
-    function trimUnusedKeys() external;
-}
-
 
 /**
 * @title Liquid staking pool implementation
