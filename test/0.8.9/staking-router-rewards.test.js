@@ -248,6 +248,20 @@ contract('StakingRouter', (accounts) => {
         // Module3: modules[2].address,
         // Module4: modules[3].address
       })
+
+      console.log('--- INMODULE REWORDS DISTRIBUTION ---')
+      let opShares = await lido.sharesOf(operators.address)
+      console.log('NodeOpeartorRegistry shares', parseInt(opShares))
+
+      let opCount = await operators.getNodeOperatorsCount()
+      console.log('op count', parseInt(opCount))
+
+      let response = await operators.getRewardsDistribution(opShares)
+
+
+      console.log(response)
+
+
     })
   })
 })
@@ -258,17 +272,22 @@ async function getLidoStats(lido, args) {
   const total = await lido.totalSupply()
   const shares = await lido.getTotalShares()
 
-  data.Lido = { total: total.toString(), shares: shares.toString() }
+  data.Lido = { 
+    total: total.toString(), 
+    sharesByEth: shares.toString() 
+  }
 
   for (const property in args) {
     const prop = args[property]
 
     const prop1balance = await lido.balanceOf(prop)
     const prop1shares = await lido.getSharesByPooledEth(prop1balance)
+    const prop1sharesof = await lido.sharesOf(prop)
 
     data[`${property}`] = {
       total: prop1balance.toString(),
-      shares: prop1shares.toString()
+      sharesByEth: prop1shares.toString(),
+      sharesOf: prop1sharesof.toString()
     }
   }
 

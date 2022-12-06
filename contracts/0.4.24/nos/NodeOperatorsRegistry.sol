@@ -810,4 +810,8 @@ contract NodeOperatorsRegistry is IModule, INodeOperatorsRegistry, IsContract, A
 
         require(numKeys == keys); 
     }
+
+    function distributeRewards() external {
+        
+    }
 }
