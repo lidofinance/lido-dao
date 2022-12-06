@@ -166,7 +166,7 @@ contract('StakingRouter', (accounts) => {
 
         console.log(`module ${name} address`, _module.address)
 
-        await stakingRouter.addStakingModule(name, _module.address, module.softCap, { from: appManager })
+        await stakingRouter.addModule(name, _module.address, module.softCap, { from: appManager })
         await _module.setTotalKeys(module.totalKeys, { from: appManager })
         await _module.setTotalUsedKeys(module.totalUsedKeys, { from: appManager })
         await _module.setTotalStoppedKeys(module.totalStoppedKeys, { from: appManager })
