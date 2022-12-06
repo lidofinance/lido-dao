@@ -1,11 +1,15 @@
 {
   "extends": "solhint:recommended",
+  "plugins": [
+    "lido"
+  ],
   "rules": {
     "no-inline-assembly": "off",
     "var-name-mixedcase": "off",
     "compiler-version": "off",
     "reason-string": "off",
     "no-empty-blocks": "off",
-    "func-name-mixedcase": "off"
+    "func-name-mixedcase": "off",
+    "lido/fixed-compiler-version": "error"
   }
 }

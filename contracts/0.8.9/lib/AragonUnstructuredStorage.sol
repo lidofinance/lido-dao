@@ -4,6 +4,7 @@
 
 pragma solidity ^0.8.9;
 
+
 library UnstructuredStorage {
     function getStorageBool(bytes32 position) internal view returns (bool data) {
         assembly {

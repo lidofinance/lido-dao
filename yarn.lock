@@ -3718,6 +3718,7 @@ __metadata:
     patch-package: ^6.4.7
     prettier: ^2.1.2
     solhint: ^3.2.2
+    solhint-plugin-lido: ^0.0.4
     solidity-bytes-utils: 0.0.6
     solidity-coverage: ^0.7.18
     solium: ^1.2.5
@@ -25359,6 +25360,13 @@ resolve@1.1.x:
   bin:
     solcjs: solcjs
   checksum: 00bc0e0c7c2cee1280b10d7ef6b7a34ef675431a4e1f5bd2e8ce7dba33dc1fd3cd70387dfac24dbfd7580fbe2ff56371cadb999ca583503ab9eeb1ae77b10092
+  languageName: node
+  linkType: hard
+
+"solhint-plugin-lido@npm:^0.0.4":
+  version: 0.0.4
+  resolution: "solhint-plugin-lido@npm:0.0.4"
+  checksum: eca282c079df0425e8ef3d63727f2f23dc02d9bcbcb269f3d2251fbb496622a0704a0b5ac65a35392c2985faf864650a5127b3934c1de51179485869da6f4d9d
   languageName: node
   linkType: hard
 
