@@ -162,7 +162,7 @@ contract WithdrawalQueueEarlyCommitment {
 
     /// @notice Allows withdrawal requests revocation
     /// Users would be able to revoke requests and recover their `stETH`
-    function allowWithdrawalRequestsRevocation() external onlyLidoDAOAgent {
+    function allowWithdrawalRequestsRevocation() external whenInitialized onlyLidoDAOAgent {
         REQUESTS_REVOCATION_ALLOWED_POSITION.setStorageBool(true);
 
         emit WithdrawalRequestsRevocationAllowed();
@@ -174,6 +174,7 @@ contract WithdrawalQueueEarlyCommitment {
         whenResumed
         returns (uint256 requestId)
     {
+        _recipient = _checkWithdrawalRequestInput(_amountOfStETH, _recipient);
         return _requestWithdrawal(_amountOfStETH, _recipient);
     }
 
@@ -185,6 +186,7 @@ contract WithdrawalQueueEarlyCommitment {
         bytes32 _r,
         bytes32 _s
     ) external whenResumed returns (uint256 requestId) {
+        _recipient = _checkWithdrawalRequestInput(_amountOfStETH, _recipient);
         IERC20Permit(STETH).permit(msg.sender, address(this), _amountOfStETH, _deadline, _v, _r, _s);
         return _requestWithdrawal(_amountOfStETH, _recipient);
     }
@@ -194,6 +196,7 @@ contract WithdrawalQueueEarlyCommitment {
         whenResumed
         returns (uint256 requestId)
     {
+        _recipient = _checkWithdrawalRequestInput(IWstETH(WSTETH).getStETHByWstETH(_amountOfWstETH), _recipient);
         return _requestWithdrawalWstETH(_amountOfWstETH, _recipient);
     }
 
@@ -205,6 +208,7 @@ contract WithdrawalQueueEarlyCommitment {
         bytes32 _r,
         bytes32 _s
     ) external whenResumed returns (uint256 requestId) {
+        _recipient = _checkWithdrawalRequestInput(IWstETH(WSTETH).getStETHByWstETH(_amountOfWstETH), _recipient);
         IERC20Permit(WSTETH).permit(msg.sender, address(this), _amountOfWstETH, _deadline, _v, _r, _s);
         return _requestWithdrawalWstETH(_amountOfWstETH, _recipient);
     }
@@ -318,6 +322,22 @@ contract WithdrawalQueueEarlyCommitment {
     }
 
     function _requestWithdrawal(uint256 _amountOfStETH, address _recipient) internal returns (uint256 requestId) {
+        IERC20(STETH).safeTransferFrom(msg.sender, address(this), _amountOfStETH);
+
+        return _enqueue(_amountOfStETH, _recipient);
+    }
+
+    function _requestWithdrawalWstETH(uint256 _amountOfWstETH, address _recipient)
+        internal
+        returns (uint256 requestId)
+    {
+        IERC20(WSTETH).safeTransferFrom(msg.sender, address(this), _amountOfWstETH);
+        uint256 amountOfStETH = IWstETH(WSTETH).unwrap(_amountOfWstETH);
+
+        return _enqueue(amountOfStETH, _recipient);
+    }
+
+    function _checkWithdrawalRequestInput(uint256 _amountOfStETH, address _recipient) internal returns (address) {
         if (_amountOfStETH < MIN_STETH_WITHDRAWAL_AMOUNT) {
             revert RequestAmountTooSmall(_amountOfStETH);
         }
@@ -328,31 +348,7 @@ contract WithdrawalQueueEarlyCommitment {
             _recipient = msg.sender;
         }
 
-        IERC20(STETH).safeTransferFrom(msg.sender, address(this), _amountOfStETH);
-
-        return _enqueue(_amountOfStETH, _recipient);
-    }
-
-    function _requestWithdrawalWstETH(uint256 _amountOfWstETH, address _recipient)
-        internal
-        returns (uint256 requestId)
-    {
-        uint256 amountOfStETH = IWstETH(WSTETH).getStETHByWstETH(_amountOfWstETH);
-
-        if (amountOfStETH < MIN_STETH_WITHDRAWAL_AMOUNT) {
-            revert RequestAmountTooSmall(amountOfStETH);
-        }
-        if (amountOfStETH > MAX_STETH_WITHDRAWAL_AMOUNT) {
-            revert RequestAmountTooLarge(amountOfStETH);
-        }
-        if (_recipient == address(0)) {
-            _recipient = msg.sender;
-        }
-
-        IERC20(WSTETH).safeTransferFrom(msg.sender, address(this), _amountOfWstETH);
-        amountOfStETH = IWstETH(WSTETH).unwrap(_amountOfWstETH);
-
-        return _enqueue(amountOfStETH, _recipient);
+        return _recipient;
     }
 
     function _enqueue(uint256 _amountOfStETH, address _recipient) internal returns (uint256 requestId) {
