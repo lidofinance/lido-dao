@@ -7,6 +7,7 @@ pragma solidity 0.8.9;
 
 import "@openzeppelin/contracts-v4.4/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts-v4.4/token/ERC20/extensions/draft-IERC20Permit.sol";
 import "@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC20.sol";
 
 import "./lib/AragonUnstructuredStorage.sol";
@@ -15,7 +16,7 @@ import "./lib/AragonUnstructuredStorage.sol";
  * @title Interface defining a Lido liquid staking pool
  * @dev see also [Lido liquid staking pool core contract](https://docs.lido.fi/contracts/lido)
  */
-interface ILido {
+interface IStETH {
     /**
      * @notice Get stETH token amount by the provided shares amount
      * @param _sharesAmount shares amount
@@ -29,6 +30,25 @@ interface ILido {
      * @dev dual to `getPooledEthByShares`.
      */
     function getSharesByPooledEth(uint256 _pooledEthAmount) external view returns (uint256);
+}
+
+interface IWstETH {
+    /**
+     * @notice Exchanges wstETH to stETH
+     * @param _wstETHAmount amount of wstETH to uwrap in exchange for stETH
+     * @dev Requirements:
+     *  - `_wstETHAmount` must be non-zero
+     *  - msg.sender must have at least `_wstETHAmount` wstETH.
+     * @return Amount of stETH user receives after unwrap
+     */
+    function unwrap(uint256 _wstETHAmount) external returns (uint256);
+
+    /**
+     * @notice Get amount of stETH for a given amount of wstETH
+     * @param _wstETHAmount amount of wstETH
+     * @return Amount of stETH for a given wstETH amount
+     */
+    function getStETHByWstETH(uint256 _wstETHAmount) external view returns (uint256);
 }
 
 contract WithdrawalQueueEarlyCommitment {
@@ -65,8 +85,14 @@ contract WithdrawalQueueEarlyCommitment {
     bytes32 internal constant REQUESTS_PLACEMENT_RESUMED_POSITION =
         keccak256("lido.WithdrawalQueue.requestsPlacementResumed");
 
+    /// Revocation lever control storage slot
+    bytes32 internal constant REQUESTS_REVOCATION_ALLOWED_POSITION =
+        keccak256("lido.WithdrawalQueue.revocationAllowed");
+
     /// Lido stETH token address to be set upon construction
-    address public immutable LIDO;
+    address public immutable STETH;
+    /// Lido wstETH token address to be set upon construction
+    address public immutable WSTETH;
 
     /**
      * @notice minimal possible sum that is possible to withdraw
@@ -92,12 +118,21 @@ contract WithdrawalQueueEarlyCommitment {
     /// @notice withdrawal requests mapped to the recipients
     mapping(address => uint256[]) requestsByRecipient;
 
-    constructor(address _lido) {
-        // test Lido interface sanity
-        if ((ILido(_lido).getPooledEthByShares(1 ether) == 0) || (ILido(_lido).getSharesByPooledEth(1 ether) == 0)) {
-            revert LidoInvalidAddress(_lido);
+    constructor(address _stETH, address _wstETH) {
+        // test stETH interface sanity
+        if (
+            (IStETH(_stETH).getPooledEthByShares(1 ether) == 0) || (IStETH(_stETH).getSharesByPooledEth(1 ether) == 0)
+        ) {
+            revert StETHInvalidAddress(_stETH);
         }
-        LIDO = _lido;
+        // test wstETH interface sanity
+        if (IWstETH(_wstETH).getStETHByWstETH(1 ether) != IStETH(_stETH).getPooledEthByShares(1 ether)) {
+            revert WstETHInvalidAddress(_wstETH);
+        }
+
+        // init immutables
+        STETH = _stETH;
+        WSTETH = _wstETH;
 
         // petrify the implementation by assigning a zero Lido agent address
         _initialize(address(0));
@@ -125,42 +160,53 @@ contract WithdrawalQueueEarlyCommitment {
         emit WithdrawalRequestsPlacementPaused();
     }
 
+    /// @notice Allows withdrawal requests revocation
+    /// Users would be able to revoke requests and recover their `stETH`
+    function allowWithdrawalRequestsRevocation() external onlyLidoDAOAgent {
+        REQUESTS_REVOCATION_ALLOWED_POSITION.setStorageBool(true);
+
+        emit WithdrawalRequestsRevocationAllowed();
+    }
+
     /// @notice Requests withdrawal of the provided stETH token amount
-    function requestWithdrawal(uint256 _amountOfStETH) external whenResumed returns (uint256 requestId) {
-        if (_amountOfStETH < MIN_STETH_WITHDRAWAL_AMOUNT) {
-            revert RequestAmountTooSmall(_amountOfStETH);
-        }
-        if (_amountOfStETH > MAX_STETH_WITHDRAWAL_AMOUNT) {
-            revert RequestAmountTooLarge(_amountOfStETH);
-        }
+    function requestWithdrawal(uint256 _amountOfStETH, address _recipient)
+        external
+        whenResumed
+        returns (uint256 requestId)
+    {
+        return _requestWithdrawal(_amountOfStETH, _recipient);
+    }
 
-        IERC20(LIDO).safeTransferFrom(msg.sender, address(this), _amountOfStETH);
+    function requestWithdrawalWithPermit(
+        uint256 _amountOfStETH,
+        address _recipient,
+        uint256 _deadline,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
+    ) external whenResumed returns (uint256 requestId) {
+        IERC20Permit(STETH).permit(msg.sender, address(this), _amountOfStETH, _deadline, _v, _r, _s);
+        return _requestWithdrawal(_amountOfStETH, _recipient);
+    }
 
-        requestId = queue.length;
-        uint256 shares = ILido(LIDO).getSharesByPooledEth(_amountOfStETH);
+    function requestWithdrawalWstETH(uint256 _amountOfWstETH, address _recipient)
+        external
+        whenResumed
+        returns (uint256 requestId)
+    {
+        return _requestWithdrawalWstETH(_amountOfWstETH, _recipient);
+    }
 
-        uint256 cumulativeShares = shares;
-        uint256 cumulativeEther = _amountOfStETH;
-
-        if (requestId > 0) {
-            WithdrawalRequest memory prevRequest = queue[requestId - 1];
-
-            cumulativeShares += prevRequest.cumulativeShares;
-            cumulativeShares += prevRequest.cumulativeEther;
-        }
-
-        queue.push(
-            WithdrawalRequest(
-                uint128(cumulativeEther),
-                uint128(cumulativeShares),
-                payable(msg.sender),
-                uint64(block.number),
-                false
-            )
-        );
-        requestsByRecipient[msg.sender].push(requestId);
-
-        emit WithdrawalRequested(requestId, msg.sender, _amountOfStETH, shares);
+    function requestWithdrawalWstETHWithPermit(
+        uint256 _amountOfWstETH,
+        address _recipient,
+        uint256 _deadline,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
+    ) external whenResumed returns (uint256 requestId) {
+        IERC20Permit(WSTETH).permit(msg.sender, address(this), _amountOfWstETH, _deadline, _v, _r, _s);
+        return _requestWithdrawalWstETH(_amountOfWstETH, _recipient);
     }
 
     /// @notice Claim withdrawal once finalized (claimable)
@@ -169,6 +215,41 @@ contract WithdrawalQueueEarlyCommitment {
         uint256 /*_requestId*/
     ) external pure {
         revert Unimplemented();
+    }
+
+    /// @notice Claim withdrawals batch once finalized (claimable)
+    /// NB: Always reverts
+    function claimWithdrawalsBatch(
+        uint256[] calldata /*_requests*/
+    ) external pure {
+        revert Unimplemented();
+    }
+
+    function revokeWithdrawalRequest(uint256 _requestId, address _recoverStETHTo) external whenRevocationAllowed {
+        if (_requestId >= queue.length) {
+            revert InvalidWithdrawalRequest(_requestId);
+        }
+
+        WithdrawalRequest memory request = queue[_requestId];
+
+        if (request.recipient != msg.sender) {
+            revert RecipientExpected(request.recipient, msg.sender);
+        }
+
+        uint256 stETHToTransfer = request.cumulativeEther;
+        if (_requestId > 0) {
+            stETHToTransfer -= queue[_requestId - 1].cumulativeEther;
+        }
+
+        if (_recoverStETHTo == address(0)) {
+            _recoverStETHTo = request.recipient;
+        }
+
+        IERC20(STETH).safeTransferFrom(address(this), _recoverStETHTo, stETHToTransfer);
+
+        queue[_requestId].claimed = true;
+
+        emit WithdrawalRequestRevoked(_requestId, request.recipient, _recoverStETHTo, stETHToTransfer);
     }
 
     /// @notice Returns withdrawal requests placed by the `_requestsFrom` address
@@ -197,9 +278,9 @@ contract WithdrawalQueueEarlyCommitment {
             if (_requestId > 0) {
                 shares -= queue[_requestId - 1].cumulativeShares;
             }
-            etherToWithdraw = ILido(LIDO).getPooledEthByShares(shares);
+            etherToWithdraw = IStETH(STETH).getPooledEthByShares(shares);
             isFinalized = false;
-            isClaimed = false;
+            isClaimed = request.claimed;
         }
     }
 
@@ -218,6 +299,11 @@ contract WithdrawalQueueEarlyCommitment {
         return !REQUESTS_PLACEMENT_RESUMED_POSITION.getStorageBool();
     }
 
+    /// @notice Returns whether revocation calls allowed or not for the withdrawal requests
+    function isWidthdrawalRequestsRevocationAllowed() external view returns (bool) {
+        return REQUESTS_REVOCATION_ALLOWED_POSITION.getStorageBool();
+    }
+
     /// @notice internal initialization helper
     /// @dev doesn't check provided address intentionally
     function _initialize(address _lidoDAOAgent) internal {
@@ -228,7 +314,74 @@ contract WithdrawalQueueEarlyCommitment {
         LIDO_DAO_AGENT_POSITION.setStorageAddress(_lidoDAOAgent);
         CONTRACT_VERSION_POSITION.setStorageUint256(1);
 
-        emit Initialized(_lidoDAOAgent, msg.sender);
+        emit InitializedV1(_lidoDAOAgent, msg.sender);
+    }
+
+    function _requestWithdrawal(uint256 _amountOfStETH, address _recipient) internal returns (uint256 requestId) {
+        if (_amountOfStETH < MIN_STETH_WITHDRAWAL_AMOUNT) {
+            revert RequestAmountTooSmall(_amountOfStETH);
+        }
+        if (_amountOfStETH > MAX_STETH_WITHDRAWAL_AMOUNT) {
+            revert RequestAmountTooLarge(_amountOfStETH);
+        }
+        if (_recipient == address(0)) {
+            _recipient = msg.sender;
+        }
+
+        IERC20(STETH).safeTransferFrom(msg.sender, address(this), _amountOfStETH);
+
+        return _enqueue(_amountOfStETH, _recipient);
+    }
+
+    function _requestWithdrawalWstETH(uint256 _amountOfWstETH, address _recipient)
+        internal
+        returns (uint256 requestId)
+    {
+        uint256 amountOfStETH = IWstETH(WSTETH).getStETHByWstETH(_amountOfWstETH);
+
+        if (amountOfStETH < MIN_STETH_WITHDRAWAL_AMOUNT) {
+            revert RequestAmountTooSmall(amountOfStETH);
+        }
+        if (amountOfStETH > MAX_STETH_WITHDRAWAL_AMOUNT) {
+            revert RequestAmountTooLarge(amountOfStETH);
+        }
+        if (_recipient == address(0)) {
+            _recipient = msg.sender;
+        }
+
+        IERC20(WSTETH).safeTransferFrom(msg.sender, address(this), _amountOfWstETH);
+        amountOfStETH = IWstETH(WSTETH).unwrap(_amountOfWstETH);
+
+        return _enqueue(amountOfStETH, _recipient);
+    }
+
+    function _enqueue(uint256 _amountOfStETH, address _recipient) internal returns (uint256 requestId) {
+        requestId = queue.length;
+        uint256 shares = IStETH(STETH).getSharesByPooledEth(_amountOfStETH);
+
+        uint256 cumulativeShares = shares;
+        uint256 cumulativeEther = _amountOfStETH;
+
+        if (requestId > 0) {
+            WithdrawalRequest memory prevRequest = queue[requestId - 1];
+
+            cumulativeShares += prevRequest.cumulativeShares;
+            cumulativeShares += prevRequest.cumulativeEther;
+        }
+
+        queue.push(
+            WithdrawalRequest(
+                uint128(cumulativeEther),
+                uint128(cumulativeShares),
+                payable(_recipient),
+                uint64(block.number),
+                false
+            )
+        );
+
+        requestsByRecipient[msg.sender].push(requestId);
+
+        emit WithdrawalRequested(requestId, msg.sender, _recipient, _amountOfStETH, shares);
     }
 
     /// @notice Reverts when the contract is unititialized
@@ -263,31 +416,53 @@ contract WithdrawalQueueEarlyCommitment {
         _;
     }
 
+    /// @notice Reverts when withdrawal requests revocation was not allowed before
+    modifier whenRevocationAllowed() {
+        if (!REQUESTS_REVOCATION_ALLOWED_POSITION.getStorageBool()) {
+            revert AllowedRequestsRevocationExpected();
+        }
+        _;
+    }
+
     /// @notice Emitted when a new withdrawal request enqueued
     /// @dev Contains both stETH token amount and its corresponding shares amount
     event WithdrawalRequested(
         uint256 indexed requestId,
+        address indexed requestor,
         address indexed recipient,
         uint256 amountOfStETH,
         uint256 amountOfShares
+    );
+    /// @notice Emitted when withdrawal request revoked
+    event WithdrawalRequestRevoked(
+        uint256 indexed requestId,
+        address indexed originalRecipient,
+        address indexed stETHRecoveredTo,
+        uint256 amountOfStETH
     );
     /// @notice Emitted when withdrawal requests placement paused
     event WithdrawalRequestsPlacementPaused();
     /// @notice Emitted when withdrawal requests placement resumed
     event WithdrawalRequestsPlacementResumed();
+    /// @notice Emitted when requests revocation was allowed by DAO
+    event WithdrawalRequestsRevocationAllowed();
     /// @notice Emitted when the contract initialized
     /// @param _lidoDAOAgent provided Lido DAO Agent address
     /// @param _caller initialization `msg.sender`
-    event Initialized(address _lidoDAOAgent, address _caller);
+    event InitializedV1(address _lidoDAOAgent, address _caller);
 
-    error LidoInvalidAddress(address _lido);
+    error StETHInvalidAddress(address _stETH);
+    error WstETHInvalidAddress(address _wstETH);
+    error InvalidWithdrawalRequest(uint256 _requestId);
     error LidoDAOAgentZeroAddress();
     error LidoDAOAgentExpected(address _msgSender);
+    error RecipientExpected(address _recipient, address _msgSender);
     error AlreadyInitialized();
     error Unitialized();
     error Unimplemented();
     error PausedRequestsPlacementExpected();
     error ResumedRequestsPlacementExpected();
+    error AllowedRequestsRevocationExpected();
     error RequestAmountTooSmall(uint256 _amountOfStETH);
     error RequestAmountTooLarge(uint256 _amountOfStETH);
 }
