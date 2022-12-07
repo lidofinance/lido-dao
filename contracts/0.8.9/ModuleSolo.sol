@@ -16,7 +16,6 @@ contract ModuleSolo is IModule {
 
     address immutable public lido;
     uint16 immutable public fee;
-    uint16 immutable public treasuryFee;
 
     uint256 public totalKeys;
     uint256 public totalUsedKeys;
@@ -28,18 +27,16 @@ contract ModuleSolo is IModule {
     uint256 constant public PUBKEY_LENGTH = 48;
     uint256 constant public SIGNATURE_LENGTH = 96;
 
-
-    constructor(ModuleType _type, address _lido, uint16 _fee, uint16 _treasuryFee) {
+    constructor(ModuleType _type, address _lido, uint16 _fee) {
         require(ModuleType.DVT >= _type, "INVALID_TYPE");
 
         lido = _lido;
         fee = _fee;
-        treasuryFee = _treasuryFee;
         moduleType = _type;
     } 
 
     function getFee() external view returns (uint16) {
-        return fee+treasuryFee;
+        return fee;
     }
 
     function getTotalKeys() external view returns (uint256) {

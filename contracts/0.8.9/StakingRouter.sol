@@ -22,6 +22,7 @@ interface ILido {
     function transferShares(address recipient, uint256 sharesAmount) external returns (uint256);
     function getWithdrawalCredentials() external view returns (bytes32);
     function updateBufferedCounters(uint256 numKeys) external;
+    function getTreasury() external view returns (address);
 }
 
 
@@ -45,15 +46,15 @@ contract StakingRouter {
 
     uint256 constant public PUBKEY_LENGTH = 48;
     uint256 constant public SIGNATURE_LENGTH = 96;
-    uint256 constant public WITHDRAWAL_CREDENTIALS_LENGTH = 32;
 
     uint256 constant public MAX_TIME = 86400;
 
     struct StakingModule{
         string name;
         address moduleAddress;
+        uint16 treasuryFee;
         uint16 cap; //in basic points, e.g 500 - 5%
-        bool paused;
+        bool paused;bool active;
     }
 
     struct ModuleLookupCacheEntry {
@@ -64,10 +65,11 @@ contract StakingRouter {
         uint256 totalUsedKeys;
         uint256 totalStoppedKeys;
         uint256 totalExitedKeys;
-        uint256 initialUsedSigningKeys;
         uint256 assignedKeys;
-        uint256 cap;
+        uint16 treasuryFee;
+        uint16 cap;
         bool paused;
+        bool active;
     }
 
     mapping (uint => StakingModule) internal modules;
@@ -87,29 +89,6 @@ contract StakingRouter {
         
     }
 
-    function getModule(uint256 _id) external view
-        returns (
-            address moduleAddress,
-            uint16 cap,
-            bool paused
-        )
-    {
-        //@todo check exists
-
-        StakingModule memory entry = modules[_id];
-
-        moduleAddress = entry.moduleAddress;
-        cap = entry.cap;
-        paused = entry.paused;
-    }
-
-    /**
-      * @notice Returns total number of node operators
-      */
-    function getModulesCount() public view returns (uint256) {
-        return modulesCount;
-    }
-
     /**
      * @notice register a DSM module
      * @param _dsm address of DSM 
@@ -121,19 +100,55 @@ contract StakingRouter {
     /**
      * @notice register a new module
      * @param _name name of module 
-     * @param _moduleAddress address of module 
+     * @param _moduleAddress target percent of total keys in protocol, in BP
      * @param _cap soft cap 
+     * @param _cap treasury fee
      */
-    function addStakingModule(string memory _name, address _moduleAddress, uint16 _cap) external {
+    function addModule(string memory _name, address _moduleAddress, uint16 _cap, uint16 _treasuryFee) external {
+        require(_cap <= TOTAL_BASIS_POINTS, "VALUE_OVER_100_PERCENT");
+        require(_treasuryFee <= TOTAL_BASIS_POINTS, "VALUE_OVER_100_PERCENT");
+
         StakingModule storage module = modules[modulesCount];
         modules_ids[_moduleAddress] = modulesCount;
 
         module.name = _name;
         module.moduleAddress = _moduleAddress;
         module.cap = _cap;
+        module.treasuryFee = _treasuryFee;
         module.paused = false;
+        module.active = true;
         modulesCount++;
     }
+
+    function getModule(uint256 _id) external view
+        returns (
+            address moduleAddress,
+            string memory name,
+            uint16 cap,
+            uint16 treasuryFee,
+            bool paused,
+            bool active
+        )
+    {
+        //@todo check exists
+
+        StakingModule memory entry = modules[_id];
+
+        moduleAddress = entry.moduleAddress;
+        name = entry.name;
+        cap = entry.cap;
+        treasuryFee = entry.treasuryFee;
+        paused = entry.paused;
+        active = entry.active;
+    }
+
+    /**
+      * @notice Returns total number of node operators
+      */
+    function getModulesCount() public view returns (uint256) {
+        return modulesCount;
+    }
+
 
     /**
      * @notice pause a module
@@ -151,7 +166,7 @@ contract StakingRouter {
     /**
      * Unpauses deposits.
      *
-     * Only callable by the owner.
+     * Only callable by the dsm.
      */
     function unpauseModule(uint256 _moduleIndex) external {
         require(msg.sender == dsm, "invalid_caller");
@@ -162,6 +177,15 @@ contract StakingRouter {
             emit DepositsUnpaused();
         }
     }
+
+    /**
+     * @notice set the module activity flag for participation in further reward distribution
+     */
+    function setModuleActive(uint256 _moduleIndex, bool _active) external {
+        StakingModule storage module = modules[_moduleIndex];
+        module.active = _active;
+    }
+
 
     /**
      * @notice get total keys which can used for rewards and center distirbution
@@ -208,7 +232,7 @@ contract StakingRouter {
             StakingModule memory stakingModule = modules[i];
             IModule module = IModule(stakingModule.moduleAddress);
 
-            uint256 moduleFeeBasisPoints = module.getFee();
+            uint256 moduleFeeBasisPoints = module.getFee() + stakingModule.treasuryFee;
             
             uint256 rewards = _totalRewards * moduleKeys[i] / totalKeys;
 
@@ -238,44 +262,59 @@ contract StakingRouter {
     }
 
     /**
-    *  @dev External function to distribute reward to node operators
+    *  @dev This function takes at the input the number of rewards received during the oracle report and distributes them among the connected modules
     *  @param _totalShares amount of shares to distribute
     *  @param _totalKeys total keys in modules
+    *  @param _moduleKeys the number of keys in each module
     *  @return distributed actual amount of shares that was transferred to modules as a rewards
     */
-    function distributeShares(uint256 _totalShares, uint256 _totalKeys, uint256[] memory moduleKeys) external returns (uint256 distributed) {
+    function distributeShares(uint256 _totalShares, uint256 _totalKeys, uint256[] memory _moduleKeys) external returns (uint256 distributed) {
         assert(_totalKeys > 0);
         require(address(lido) == msg.sender, "INVALID_CALLER");
 
+
+        uint256 treasuryShares = 0;
+
+       
         //distribute shares to modules
         distributed = 0;
         for (uint256 i=0; i < modulesCount; ++i) {
             StakingModule memory stakingModule = modules[i];
+            if (!stakingModule.active) {
+                continue;
+            }
+
             IModule module = IModule(stakingModule.moduleAddress);
 
+            uint totalFee = module.getFee() + stakingModule.treasuryFee;
+            uint moduleFee = module.getFee() * TOTAL_BASIS_POINTS / totalFee ;
+            uint treasuryFee = stakingModule.treasuryFee * TOTAL_BASIS_POINTS / totalFee ;
+
             // uint256 moduleTotalKeys = module.getTotalKeys();
-            uint256 rewardsShares   = _totalShares * moduleKeys[i] / _totalKeys;
+            uint256 rewardsShares  = _totalShares * _moduleKeys[i] / _totalKeys;
+
+            uint256 moduleShares = rewardsShares * moduleFee / TOTAL_BASIS_POINTS;
+            treasuryShares += rewardsShares * treasuryFee / TOTAL_BASIS_POINTS;
 
             //transfer from SR to recipient
-            ILido(lido).transferShares(address(module), rewardsShares);
+            ILido(lido).transferShares(address(module), moduleShares);
 
-            distributed += rewardsShares;
+            distributed += moduleShares;
         }
 
+        //distribute shares to the treasury
+        address treasury = ILido(lido).getTreasury();
+        ILido(lido).transferShares(treasury, treasuryShares);
+
+        uint256 remainShares = _totalShares - distributed - treasuryShares;
+
         // transfer remaining shares
-        if (_totalShares - distributed > 0) {
-            ILido(lido).transferShares(modules[0].moduleAddress, _totalShares - distributed);
+        if (remainShares > 0) {
+            ILido(lido).transferShares(treasury, remainShares);
         }
     } 
 
     function distributeDeposits() public {
-    //    uint256 buffered = _getBufferedEther();
-    //     if (buffered >= DEPOSIT_SIZE) {
-    //         uint256 unaccounted = _getUnaccountedEther();
-    //         uint256 numDeposits = buffered.div(DEPOSIT_SIZE);
-    //         _markAsUnbuffered(_ETH2Deposit(numDeposits < _maxDeposits ? numDeposits : _maxDeposits));
-    //         assert(_getUnaccountedEther() == unaccounted);
-    //     }
 
         lastDistribute = block.timestamp;
 
@@ -293,6 +332,12 @@ contract StakingRouter {
         }
     }
 
+    /**
+     * @dev This function returns the allocation table of the specified number of keys (deposits) between modules, depending on restrictions/pauses.
+     *      Priority is given to models with the lowest number of used keys
+     * @param _numDeposits the number of keys to distribute between modules
+     * @return modules with assignedKeys variable which store the number of keys allocation
+     */
     function getAllocation(uint256 _numDeposits) public view returns(ModuleLookupCacheEntry[] memory) {
         ModuleLookupCacheEntry[] memory cache = _loadModuleCache();
         ModuleLookupCacheEntry memory entry;
@@ -361,7 +406,6 @@ contract StakingRouter {
             entry.totalStoppedKeys = module.getTotalStoppedKeys();
             entry.totalExitedKeys = module.getTotalExitedKeys();
             entry.cap = stakingModule.cap;
-            entry.initialUsedSigningKeys = entry.totalUsedKeys;
             entry.paused = stakingModule.paused;
         }
 
@@ -449,7 +493,7 @@ contract StakingRouter {
     * @param _signature Signature of the deposit call
     */
     function _stake(bytes memory _pubkey, bytes memory _signature) internal {
-        bytes32 withdrawalCredentials = getWithdrawalCredentials();
+        bytes32 withdrawalCredentials = ILido(lido).getWithdrawalCredentials();
         require(withdrawalCredentials != 0, "EMPTY_WITHDRAWAL_CREDENTIALS");
 
         uint256 value = DEPOSIT_SIZE;
@@ -497,13 +541,6 @@ contract StakingRouter {
     */
     function getDepositContract() public view returns (IDepositContract) {
         return IDepositContract(deposit_contract);
-    }
-
-    /**
-    * @notice Returns current credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
-    */
-    function getWithdrawalCredentials() public view returns (bytes32) {
-        return ILido(lido).getWithdrawalCredentials();
     }
 
     /**

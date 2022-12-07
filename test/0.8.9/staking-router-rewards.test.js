@@ -3,13 +3,13 @@ const { newDao, newApp } = require('../0.4.24/helpers/dao')
 const { ZERO_ADDRESS, getEventAt, getEventArgument } = require('@aragon/contract-helpers-test')
 
 const StakingRouter = artifacts.require('StakingRouter.sol')
-const ModulePro = artifacts.require('ModulePro.sol')
 const ModuleSolo = artifacts.require('ModuleSolo.sol')
+const IModule = artifacts.require('contracts/0.4.24/interfaces/IModule.sol:IModule')
 
 const LidoMock = artifacts.require('LidoMock.sol')
 const LidoOracleMock = artifacts.require('OracleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
-const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
+const NodeOperatorsRegistryMock = artifacts.require('NodeOperatorsRegistryMock')
 const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
 
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
@@ -41,6 +41,7 @@ const proModule = {
   totalKeys: 4000,
   totalUsedKeys: 3000,
   totalStoppedKeys: 100,
+  totalExitedKeys: 0,
   softCap: 0,
   assignedDeposits: 0,
   balance: 0
@@ -49,10 +50,11 @@ const proModule = {
 const soloModule = {
   type: 1, // SOLO
   fee: 500, // in basic points
-  treasuryFee: 500, // in basic points
+  treasuryFee: 0, // in basic points
   totalKeys: 100,
   totalUsedKeys: 10,
   totalStoppedKeys: 1,
+  totalExitedKeys: 1,
   softCap: 9000,
   assignedDeposits: 0,
   bond: 16,
@@ -87,10 +89,9 @@ const soloModule3 = {
 const ModuleTypes = ['PRO', 'SOLO', 'DVT']
 
 const modules = []
-modules.push(proModule)
 modules.push(soloModule)
-modules.push(soloModule2)
-modules.push(soloModule3)
+// modules.push(soloModule2)
+// modules.push(soloModule3)
 
 contract('StakingRouter', (accounts) => {
   let oracle, lido, burner
@@ -109,14 +110,14 @@ contract('StakingRouter', (accounts) => {
 
   before(async () => {
     /* before tests */
-    console.table(modules)
+    // console.table(modules)
   })
 
   beforeEach(async () => {
     const lidoBase = await LidoMock.new({ from: deployer })
     oracle = await LidoOracleMock.new({ from: deployer })
     const depositContract = await DepositContractMock.new({ from: deployer })
-    const nodeOperatorsRegistryBase = await NodeOperatorsRegistry.new({ from: deployer })
+    const nodeOperatorsRegistryBase = await NodeOperatorsRegistryMock.new({ from: deployer })
 
     const daoAclObj = await newDao(appManager)
     dao = daoAclObj.dao
@@ -129,7 +130,7 @@ contract('StakingRouter', (accounts) => {
 
     // NodeOperatorsRegistry
     proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)
-    operators = await NodeOperatorsRegistry.at(proxyAddress)
+    operators = await NodeOperatorsRegistryMock.at(proxyAddress)
     await operators.initialize(lido.address)
 
     // Init the BURN_ROLE role and assign in to voting
@@ -164,6 +165,20 @@ contract('StakingRouter', (accounts) => {
     })
 
     it(`init counters and burn amount per run works`, async () => {
+      // 50% of mintedShares
+      await operators.setFee(500, { from: appManager })
+
+      // add NodeOperatorRegistry
+      // name, address, cap, treasuryFee
+      await stakingRouter.addModule('Curated', operators.address, 0, 500, { from: appManager })
+
+      await operators.setTotalKeys(proModule.totalKeys, { from: appManager })
+      await operators.setTotalUsedKeys(proModule.totalUsedKeys, { from: appManager })
+      await operators.setTotalStoppedKeys(proModule.totalStoppedKeys, { from: appManager })
+
+      const NORFee = await operators.getFee()
+      assertBn(500, NORFee, 'invalid node operator registry fee')
+
       /**
        *
        *
@@ -176,17 +191,18 @@ contract('StakingRouter', (accounts) => {
         const module = modules[i]
         let _module
 
-        // add pro module
+        // skip pro module
         if (module.type === 0) {
-          _module = await ModulePro.new(module.type, lido.address, module.fee, module.treasuryFee, { from: appManager })
+          continue
+          // _module = await ModulePro.new(module.type, lido.address, module.fee, module.treasuryFee, { from: appManager })
           // add solo module
         } else if (module.type === 1) {
-          _module = await ModuleSolo.new(module.type, lido.address, module.fee, module.treasuryFee, module.bond, { from: appManager })
+          _module = await ModuleSolo.new(module.type, lido.address, module.fee, { from: appManager })
         }
 
         const name = ModuleTypes[module.type] + i
 
-        await stakingRouter.addStakingModule(name, _module.address, module.softCap, { from: appManager })
+        await stakingRouter.addModule(name, _module.address, module.softCap, module.treasuryFee, { from: appManager })
         await _module.setTotalKeys(module.totalKeys, { from: appManager })
         await _module.setTotalUsedKeys(module.totalUsedKeys, { from: appManager })
         await _module.setTotalStoppedKeys(module.totalStoppedKeys, { from: appManager })
@@ -194,10 +210,18 @@ contract('StakingRouter', (accounts) => {
         module.address = _module.address
       }
 
+      await stakingRouterStats(stakingRouter)
+
       /**
        * print lido stats
        */
-      await getLidoStats(lido, { Stranger1: externalAddress, Stranger2: stranger2, StakingRouter: stakingRouter.address })
+      await getLidoStats(lido, {
+        Treasury: await lido.getTreasury(),
+        Stranger1: externalAddress,
+        Stranger2: stranger2,
+        StakingRouter: stakingRouter.address,
+        Community: modules[0].address
+      })
 
       /**
        *
@@ -209,20 +233,35 @@ contract('StakingRouter', (accounts) => {
 
       // 341770 without
       // 350708
-      console.log(result.receipt.gasUsed)
+      console.log('gas', result.receipt.gasUsed)
 
       /**
        * stats after rebase
        */
       await getLidoStats(lido, {
+        Treasury: await lido.getTreasury(),
         Stranger1: externalAddress,
         Stranger2: stranger2,
         StakingRouter: stakingRouter.address,
-        Module1: modules[0].address,
-        Module2: modules[1].address,
-        Module3: modules[2].address,
-        Module4: modules[3].address
+        Curated: operators.address,
+        Community: modules[0].address
+        // Module3: modules[2].address,
+        // Module4: modules[3].address
       })
+
+      console.log('--- INMODULE REWORDS DISTRIBUTION ---')
+      let opShares = await lido.sharesOf(operators.address)
+      console.log('NodeOpeartorRegistry shares', parseInt(opShares))
+
+      let opCount = await operators.getNodeOperatorsCount()
+      console.log('op count', parseInt(opCount))
+
+      let response = await operators.getRewardsDistribution(opShares)
+
+
+      console.log(response)
+
+
     })
   })
 })
@@ -233,19 +272,51 @@ async function getLidoStats(lido, args) {
   const total = await lido.totalSupply()
   const shares = await lido.getTotalShares()
 
-  data.Lido = { total: total.toString(), shares: shares.toString() }
+  data.Lido = { 
+    total: total.toString(), 
+    sharesByEth: shares.toString() 
+  }
 
   for (const property in args) {
     const prop = args[property]
 
     const prop1balance = await lido.balanceOf(prop)
     const prop1shares = await lido.getSharesByPooledEth(prop1balance)
+    const prop1sharesof = await lido.sharesOf(prop)
 
     data[`${property}`] = {
       total: prop1balance.toString(),
-      shares: prop1shares.toString()
+      sharesByEth: prop1shares.toString(),
+      sharesOf: prop1sharesof.toString()
     }
   }
 
   console.table(data)
+}
+
+async function stakingRouterStats(stakingRouter) {
+  let modules = []
+  let modulesCount = await stakingRouter.getModulesCount()
+
+  for (let i = 0; i < modulesCount; i++) {
+    let module = await stakingRouter.getModule(i)
+    let entry = await IModule.at(module.moduleAddress)
+
+    modules.push({
+      // address: entry.address,
+      name: module.name,
+      cap: parseInt(module.cap),
+      fee: parseInt(entry.getFee()),
+      treasuryFee: parseInt(module.treasuryFee),
+      paused: module.paused,
+      active: module.active,
+
+      totalKeys: parseInt(await entry.getTotalKeys()),
+      totalUsedKeys: parseInt(await entry.getTotalUsedKeys()),
+      totalStoppedKeys: parseInt(await entry.getTotalStoppedKeys()),
+      totalExitedKeys: parseInt(await entry.getTotalExitedKeys())
+    })
+  }
+
+  console.table(modules)
 }

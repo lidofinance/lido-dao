@@ -12,8 +12,11 @@ import "@aragon/os/contracts/lib/math/SafeMath64.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
 import "../interfaces/INodeOperatorsRegistry.sol";
+import "../interfaces/IModule.sol";
+import "../interfaces/IStakingRouter.sol";
 import "../lib/MemUtils.sol";
 
+import "hardhat/console.sol";
 
 /**
   * @title Node Operator registry implementation
@@ -22,7 +25,7 @@ import "../lib/MemUtils.sol";
   *
   * NOTE: the code below assumes moderate amount of node operators, i.e. up to `MAX_NODE_OPERATORS_COUNT`.
   */
-contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp {
+contract NodeOperatorsRegistry is IModule, INodeOperatorsRegistry, IsContract, AragonApp {
     using SafeMath for uint256;
     using SafeMath64 for uint64;
     using UnstructuredStorage for bytes32;
@@ -43,6 +46,17 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
     uint256 internal constant UINT64_MAX = uint256(uint64(-1));
 
     bytes32 internal constant SIGNING_KEYS_MAPPING_NAME = keccak256("lido.NodeOperatorsRegistry.signingKeysMappingName");
+
+    uint256 internal constant TOTAL_BASIS_POINTS = 10000;
+    
+    bytes32 internal constant FEE_POSITION = keccak256("lido.NodeOperatorsRegistry.fee");
+
+    bytes32 internal constant TOTAL_KEYS_POSITION = keccak256("lido.NodeOperatorsRegistry.totalKeys");
+    bytes32 internal constant TOTAL_USED_KEYS_POSITION = keccak256("lido.NodeOperatorsRegistry.totalUsedKeys");
+    bytes32 internal constant TOTAL_STOPPED_KEYS_POSITION = keccak256("lido.NodeOperatorsRegistry.totalStoppedKeys");
+    bytes32 internal constant TOTAL_EXITED_KEYS_POSITION = keccak256("lido.NodeOperatorsRegistry.totalExitedKeys");
+
+    bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.NodeOperatorsRegistry.contractVersion");
 
     /// @dev Node Operator parameters and internal state
     struct NodeOperator {
@@ -81,6 +95,9 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
     /// @dev link to the index of operations with keys
     bytes32 internal constant KEYS_OP_INDEX_POSITION = keccak256("lido.NodeOperatorsRegistry.keysOpIndex");
+
+    /// @dev link to the Lido contract
+    bytes32 internal constant STAKING_ROUTER_POSITION = keccak256("lido.NodeOperatorsRegistry.stakingRouter");
 
 
     modifier onlyLido() {
@@ -327,7 +344,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
      * @param _numKeys The number of keys to select. The actual number of selected keys may be less
      *        due to the lack of active keys.
      */
-    function assignNextSigningKeys(uint256 _numKeys) external onlyLido returns (bytes memory pubkeys, bytes memory signatures) {
+    function assignNextSigningKeys(uint256 _numKeys) public returns (bytes memory pubkeys, bytes memory signatures) {
         // Memory is very cheap, although you don't want to grow it too much
         DepositLookupCacheEntry[] memory cache = _loadOperatorCache();
         if (0 == cache.length)
@@ -393,6 +410,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
                 (bytes memory pubkey, bytes memory signature) = _loadSigningKey(entry.id, keyIndex);
                 if (numAssignedKeys == 1) {
                     _increaseKeysOpIndex();
+
+                    TOTAL_USED_KEYS_POSITION.setStorageUint256(
+                        TOTAL_USED_KEYS_POSITION.getStorageUint256() + numAssignedKeys
+                    );
+                    
                     return (pubkey, signature);
                 } else {
                     MemUtils.copyBytes(pubkey, pubkeys, numLoadedKeys * PUBKEY_LENGTH);
@@ -408,6 +430,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
 
         _increaseKeysOpIndex(); // numAssignedKeys is guaranteed to be > 0 here
         assert(numLoadedKeys == numAssignedKeys);
+
+        //update total used keys
+        TOTAL_USED_KEYS_POSITION.setStorageUint256(
+            TOTAL_USED_KEYS_POSITION.getStorageUint256() + numAssignedKeys
+        );
+        
         return (pubkeys, signatures);
     }
 
@@ -537,7 +565,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
      *   2. a node operator's key(s) is removed;
      *   3. a node operator's approved keys limit is changed.
      *   4. a node operator was activated/deactivated. Activation or deactivation of node operator
-     *      might lead to usage of unvalidated keys in the assignNextSigningKeys method.
+     *      might lead to usage of unvalidated keys in the _assignNextSigningKeys method.
      */
     function getKeysOpIndex() public view returns (uint256) {
         return KEYS_OP_INDEX_POSITION.getStorageUint256();
@@ -698,5 +726,92 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp 
         uint256 keysOpIndex = getKeysOpIndex();
         KEYS_OP_INDEX_POSITION.setStorageUint256(keysOpIndex + 1);
         emit KeysOpIndexSet(keysOpIndex + 1);
+    }
+
+    /**
+     * @notice Return the initialized version of this contract starting from 0
+     */
+    function getVersion() external view returns (uint256) {
+        return CONTRACT_VERSION_POSITION.getStorageUint256();
+    }
+
+    /**
+     * @notice A function to finalize upgrade to v2 (from v1). Can be called only once
+     * @dev Value 1 in CONTRACT_VERSION_POSITION is skipped due to change in numbering
+     * For more details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md
+     */
+    function finalizeUpgrade_v2() external {
+        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "WRONG_BASE_VERSION");
+
+        _initialize_v2();
+    }
+
+    function _initialize_v2() internal {
+        CONTRACT_VERSION_POSITION.setStorageUint256(2);
+
+        // uint256 totalOperators = getNodeOperatorsCount();
+        // for (uint256 operatorId = 0; operatorId < totalOperators;++operatorId) {
+        //     NodeOperator memory operator = operators[operatorId];
+        //     if (!operator.active) {
+        //         continue;
+        //     }
+        //     stat.totalKeys += operator.totalSigningKeys;
+        //     stat.totalUsedKeys += operator.usedSigningKeys;
+        //     stat.totalStoppedKeys += operator.stoppedValidators;
+        // }
+
+        emit ContractVersionSet(2);
+    }
+
+    function setStakingRouter(address _addr) external {
+        LIDO_POSITION.setStorageAddress(_addr);
+    }
+
+    function getStakingRouter() public returns(address) {
+        return LIDO_POSITION.getStorageAddress();
+    }
+
+    function setModuleType(uint16 _type) external {}
+
+    function setFee(uint16 _value) external {
+        require(_value <= TOTAL_BASIS_POINTS, "VALUE_OVER_100_PERCENT");
+        FEE_POSITION.setStorageUint256(uint256(_value));
+    }
+
+    function getFee() external view returns (uint16) {
+        return uint16(FEE_POSITION.getStorageUint256());
+    }
+    function getTotalKeys() external view returns (uint256) {
+        return TOTAL_KEYS_POSITION.getStorageUint256();
+    }
+    function getTotalUsedKeys() external view returns (uint256){
+        return TOTAL_USED_KEYS_POSITION.getStorageUint256();
+    }
+    function getTotalStoppedKeys() external view returns (uint256) {
+        return TOTAL_STOPPED_KEYS_POSITION.getStorageUint256();
+    }
+    function getTotalExitedKeys() external view returns (uint256) {
+        return TOTAL_EXITED_KEYS_POSITION.getStorageUint256();
+    }
+
+    function deposit(uint256 _numKeys) external {
+        (bytes memory pubkeys, bytes memory signatures) = assignNextSigningKeys(_numKeys);
+
+        require(pubkeys.length > 0, "no free keys");
+
+        require(pubkeys.length % PUBKEY_LENGTH == 0, "REGISTRY_INCONSISTENT_PUBKEYS_LEN");
+        require(signatures.length % SIGNATURE_LENGTH == 0, "REGISTRY_INCONSISTENT_SIG_LEN");
+
+        uint256 numKeys = pubkeys.length / PUBKEY_LENGTH;
+        require(numKeys == signatures.length / SIGNATURE_LENGTH, "REGISTRY_INCONSISTENT_SIG_COUNT");
+
+        address stakingRouter = getStakingRouter();
+        uint256 keys = IStakingRouter(stakingRouter).deposit(pubkeys, signatures);
+
+        require(numKeys == keys); 
+    }
+
+    function distributeRewards() external {
+        
     }
 }
