@@ -4,12 +4,9 @@
 //
 pragma solidity 0.8.9;
 
-import "hardhat/console.sol";
 import "./IModule.sol";
 import "./interfaces/IDepositContract.sol";
 import "./lib/BytesLib.sol";
-
-import "hardhat/console.sol";
 
 /**
   * @title Interface defining a Lido liquid staking pool
@@ -454,8 +451,6 @@ contract StakingRouter {
         
         uint unlocked = left * TOTAL_BASIS_POINTS / MAX_TIME;
 
-        console.log('numKeys', numKeys);
-
         uint amount = 0;
         uint unlocked_amount = 0;
         for (uint i=0; i< modulesCount; i++) {
@@ -472,8 +467,6 @@ contract StakingRouter {
                 allocation[i] -= a;
             }
         }
-
-        console.log('amount', amount);
 
         for (uint256 i = 0; i < numKeys; ++i) {
             bytes memory pubkey = BytesLib.slice(pubkeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
