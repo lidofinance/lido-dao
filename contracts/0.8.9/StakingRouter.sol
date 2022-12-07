@@ -7,6 +7,7 @@ pragma solidity 0.8.9;
 import "./IModule.sol";
 import "./interfaces/IDepositContract.sol";
 import "./lib/BytesLib.sol";
+import "./lib/UnstructuredStorage.sol";
 
 /**
   * @title Interface defining a Lido liquid staking pool
@@ -24,17 +25,70 @@ interface ILido {
 
 
 contract StakingRouter {
-    //////for test
-    event KeysAssigned(bytes pubkeys, bytes signatures);
-    //////
+    using UnstructuredStorage for bytes32;
 
-    event DepositsUnpaused();
+    event ModuleAdded();
+    event ModulePaused();
+    event ModuleUnpaused();
+    event ModuleActiveStatus();
+    event DistributedShares(uint256 modulesShares, uint256 treasuryShares, uint256 remainShares);
+    event DistributedDposits(uint256 moduleIndex, address indexed moduleAddress, uint256 assignedKeys, uint256 timestamp);
 
     error InvalidType();
+
+    struct StakingModule {
+        /// @notice name of module
+        string name;
+        /// @notice address of module
+        address moduleAddress;
+        /// @notice treasury fee
+        uint16 treasuryFee;
+        /// @notice target percent of total keys in protocol, in BP
+        uint16 cap;
+        /// @notice flag if module can not accept the deposits
+        bool paused;
+        /// @notice flag if module can participate in further reward distribution
+        bool active;
+    }
+
+    struct ModuleLookupCacheEntry {
+        /// @notice index of module
+        uint256 id;
+        /// @notice address of module
+        address moduleAddress;
+        /// @notice total amount of keys in the module
+        uint256 totalKeys;
+        /// @notice total amount of used keys in the module
+        uint256 totalUsedKeys;
+        /// @notice total amount of stopped keys in the module
+        uint256 totalStoppedKeys;
+        /// @notice total amount of exited keys in the module
+        uint256 totalExitedKeys;
+        /// @notice the number of keys that have been allocated to this module
+        uint256 assignedKeys;
+        /// @notice treasury fee in BP
+        uint16 treasuryFee;
+        /// @notice target percent of total keys in protocol, in BP
+        uint16 cap;
+        /// @notice flag if module can not accept the deposits
+        bool paused;
+        /// @notice flag if module can participate in further reward distribution
+        bool active;
+    }
+
+    
 
     address public immutable lido;
     address public immutable deposit_contract;
     address public dsm;
+
+    /// Version of the initialized contract data
+    /// NB: Contract versioning starts from 1.
+    /// The version stored in CONTRACT_VERSION_POSITION equals to
+    /// - 0 right after deployment when no initializer is invoked yet
+    /// - N after calling initialize() during deployment from scratch, where N is the current contract version
+    /// - N after upgrading contract from the previous version (after calling finalize_vN())
+    bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.WithdrawalQueue.contractVersion");
 
     uint256 constant public DEPOSIT_SIZE = 32 ether;
 
@@ -45,29 +99,6 @@ contract StakingRouter {
     uint256 constant public SIGNATURE_LENGTH = 96;
 
     uint256 constant public MAX_TIME = 86400;
-
-    struct StakingModule{
-        string name;
-        address moduleAddress;
-        uint16 treasuryFee;
-        uint16 cap; //in basic points, e.g 500 - 5%
-        bool paused;bool active;
-    }
-
-    struct ModuleLookupCacheEntry {
-        // Makes no sense to pack types since reading memory is as fast as any op
-        uint256 id;
-        address moduleAddress;
-        uint256 totalKeys;
-        uint256 totalUsedKeys;
-        uint256 totalStoppedKeys;
-        uint256 totalExitedKeys;
-        uint256 assignedKeys;
-        uint16 treasuryFee;
-        uint16 cap;
-        bool paused;
-        bool active;
-    }
 
     mapping (uint => StakingModule) internal modules;
     mapping (address => uint) internal modules_ids;
@@ -171,7 +202,6 @@ contract StakingRouter {
         StakingModule storage module = modules[_moduleIndex];
         if (module.paused) {
             module.paused = false;
-            emit DepositsUnpaused();
         }
     }
 
