@@ -29,7 +29,7 @@ interface ILido {
     function getTreasury() external view returns (address);
 }
 
-contract StakingRouter1 {
+contract StakingRouterLinear {
     using UnstructuredStorage for bytes32;
 
     event ModuleAdded();
@@ -102,30 +102,6 @@ contract StakingRouter1 {
     uint256 public constant SIGNATURE_LENGTH = 96;
 
     uint256 public constant MAX_TIME = 86400;
-
-    struct StakingModule {
-        string name;
-        address moduleAddress;
-        uint16 treasuryFee;
-        uint16 cap; //in basic points, e.g 500 - 5%
-        bool paused;
-        bool active;
-    }
-
-    struct ModuleLookupCacheEntry {
-        // Makes no sense to pack types since reading memory is as fast as any op
-        uint256 id;
-        address moduleAddress;
-        uint256 totalKeys;
-        uint256 totalUsedKeys;
-        uint256 totalStoppedKeys;
-        uint256 totalExitedKeys;
-        uint256 assignedKeys;
-        uint16 treasuryFee;
-        uint16 cap;
-        bool paused;
-        bool active;
-    }
 
     mapping(uint => StakingModule) internal modules;
     mapping(address => uint) internal modules_ids;
