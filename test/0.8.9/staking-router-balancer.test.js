@@ -283,7 +283,10 @@ contract('StakingRouter', (accounts) => {
       // 4 try to deposit more from cureated module
 
       // wait 12 hour
-      await ethers.provider.send('evm_increaseTime', [3600 * 12])
+      let waitTime = 3600 * 12;
+      console.log(g('WAIT ', waitTime))
+      
+      await ethers.provider.send('evm_increaseTime', [waitTime])
       await ethers.provider.send('evm_mine')
 
       console.log(b('try to DEPOSIT 3 key for curated module'))

@@ -22,10 +22,6 @@ interface IModule {
     event SigningKeyRemoved(uint256 indexed operatorId, bytes pubkey);
     event KeysOpIndexSet(uint256 keysOpIndex);
 
-    //////for test
-    event KeysAssigned(bytes pubkeys, bytes signatures);
-    //////
-
     function getFee() external view returns (uint16);
 
     function getTotalKeys() external view returns (uint256);
