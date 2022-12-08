@@ -236,6 +236,7 @@ const StakingRouter = {
       if (recycleAt > lastReportAt) {
         // default assumes we are still on the same level
         recycleCache.levels[i] = this.modules[i].recycleLevel
+        // todo: check limits in case when fallback module is 'slow'
         recycleCache.keysAmounts[i] = this.modules[i].recycleRestAmount
       } else {
         recycleCache.levels[i] = 0

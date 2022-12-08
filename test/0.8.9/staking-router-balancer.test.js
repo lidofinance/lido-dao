@@ -3,6 +3,9 @@ const chalk = require('chalk')
 const { assertBn, assertRevert, assertEvent, assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
 const { newDao, newApp } = require('../0.4.24/helpers/dao')
 const { ZERO_ADDRESS, getEventAt, getEventArgument } = require('@aragon/contract-helpers-test')
+const {
+  ethers: { provider }
+} = require('hardhat')
 
 const StakingRouter = artifacts.require('StakingRouter.sol')
 const ModuleSolo = artifacts.require('ModuleSolo.sol')
@@ -46,8 +49,8 @@ const proModule = {
   assignedDeposits: 0,
   balance: 0,
 
-  totalKeys: 100000,
-  totalUsedKeys: 40000,
+  totalKeys: 9999,
+  totalUsedKeys: 9999,
   totalStoppedKeys: 0
 }
 
@@ -55,13 +58,28 @@ const soloModule = {
   name: 'Community',
 
   type: 1, // SOLO
-  fee: 500, // in basic points
-  treasuryFee: 500, // in basic points
-  softCap: 100,
+  fee: 1100, // in basic points
+  treasuryFee: 0, // in basic points
+  softCap: 100, // 1%
   assignedDeposits: 0,
   balance: 0,
 
   totalKeys: 100,
+  totalUsedKeys: 0,
+  totalStoppedKeys: 0
+}
+
+const soloModule2 = {
+  name: 'DVT',
+
+  type: 2, // DVT
+  fee: 800, // in basic points
+  treasuryFee: 200, // in basic points
+  softCap: 200, // 2%
+  assignedDeposits: 0,
+  balance: 0,
+
+  totalKeys: 500,
   totalUsedKeys: 0,
   totalStoppedKeys: 0
 }
@@ -71,6 +89,7 @@ const ModuleTypes = ['PRO', 'SOLO', 'DVT']
 const modules = []
 modules.push(proModule)
 modules.push(soloModule)
+// modules.push(soloModule2)
 
 contract('StakingRouter', (accounts) => {
   let oracle, lido, burner
@@ -89,7 +108,7 @@ contract('StakingRouter', (accounts) => {
 
   before(async () => {
     /* before tests */
-    console.table(modules)
+    // console.table(modules)
   })
 
   beforeEach(async () => {
@@ -120,7 +139,6 @@ contract('StakingRouter', (accounts) => {
     await acl.createPermission(voting, operators.address, await operators.MANAGE_SIGNING_KEYS(), appManager, { from: appManager })
     await acl.createPermission(voting, operators.address, await operators.SET_NODE_OPERATOR_LIMIT_ROLE(), appManager, { from: appManager })
 
-
     // Initialize the app's proxy.
     await lido.initialize(depositContract.address, oracle.address, operators.address)
     treasuryAddr = await lido.getInsuranceFund()
@@ -132,6 +150,10 @@ contract('StakingRouter', (accounts) => {
 
     // set staking router to lido
     await lido.setStakingRouter(stakingRouter.address)
+
+    const wc = '0x'.padEnd(66, '1234')
+    await lido.setWithdrawalCredentials(wc, { from: voting })
+    console.log('Set withdrawal credentials ' + g(wc))
 
     const total = await lido.totalSupply()
     const shares = await lido.getTotalShares()
@@ -147,10 +169,16 @@ contract('StakingRouter', (accounts) => {
       await web3.eth.sendTransaction({ from: externalAddress, to: lido.address, value: ETH(20) })
       console.log('--- stranger1 send 10eth ---')
       await web3.eth.sendTransaction({ from: stranger2, to: lido.address, value: ETH(10) })
+      // 50% of mintedShares
+      await operators.setFee(500, { from: appManager })
+      const NORFee = await operators.getFee()
+      assertBn(500, NORFee, 'invalid node operator registry fee')
+
+      console.log('add node operator to curated module')
+      await operators.addNodeOperator('op1', ADDRESS_1, { from: voting })
     })
 
     it(`init counters and burn amount per run works`, async () => {
-
       // 50% of mintedShares
       await operators.setFee(500, { from: appManager })
 
@@ -170,13 +198,13 @@ contract('StakingRouter', (accounts) => {
        *  INITIALIZE modules
        *
        */
-      for (i = 0; i < modules.length; i++) {
+      for (let i = 0; i < modules.length; i++) {
         const module = modules[i]
         let _module
 
         // add pro module
         if (module.type === 0) {
-          continue;
+          continue
           // add solo module
         } else if (module.type === 1) {
           _module = await ModuleSolo.new(module.type, lido.address, module.fee, { from: appManager })
@@ -200,7 +228,7 @@ contract('StakingRouter', (accounts) => {
       let table = await getModulesInfo(stakingRouter)
       console.table(table)
 
-      await ethers.provider.send('hardhat_setBalance', [stakingRouter.address, '0x' + parseInt(ETH(101 * 32)).toString(16)])
+      await provider.send('hardhat_setBalance', [stakingRouter.address, '0x' + parseInt(ETH(101 * 32)).toString(16)])
 
       const balance = await web3.eth.getBalance(stakingRouter.address)
       console.log('stakingRouter balance:', y(balance))
@@ -211,13 +239,13 @@ contract('StakingRouter', (accounts) => {
 
       let alloc = await getAlloc(stakingRouter)
       console.log('allocation1', alloc)
-      console.log('last distribute', (await stakingRouter.lastDistribute()).toString())
+      console.log('last distribute', (await stakingRouter.lastDistributeAt()).toString())
 
       const modulesCount = await stakingRouter.getModulesCount()
       console.log('Modules count', parseInt(modulesCount))
 
-      curatedModule = await stakingRouter.getModule(0)
-      communityModule = await stakingRouter.getModule(1)
+      const curatedModule = await stakingRouter.getModule(0)
+      const communityModule = await stakingRouter.getModule(1)
 
       const curModule = await NodeOperatorsRegistryMock.at(curatedModule.moduleAddress)
       const comModule = await ModuleSolo.at(communityModule.moduleAddress)
@@ -283,8 +311,8 @@ contract('StakingRouter', (accounts) => {
       // 4 try to deposit more from cureated module
 
       // wait 12 hour
-      await ethers.provider.send('evm_increaseTime', [3600 * 12])
-      await ethers.provider.send('evm_mine')
+      await provider.send('evm_increaseTime', [3600 * 12])
+      await provider.send('evm_mine')
 
       console.log(b('try to DEPOSIT 3 key for curated module'))
       await curModule.deposit(3)
@@ -299,7 +327,7 @@ contract('StakingRouter', (accounts) => {
       console.log('StakingRouter balance4:', y(balance_4))
 
       // await stakingRouter.distributeDeposits()
-      // console.log('last distribute', (await stakingRouter.lastDistribute()).toString())
+      // console.log('last distribute', (await stakingRouter.lastDistributeAt()).toString())
 
       // console.log('report oracle 1 eth')
       // await oracle.reportBeacon(100, 0, ETH(1), { from: appManager })
@@ -325,6 +353,203 @@ contract('StakingRouter', (accounts) => {
       //     FreeKeys: FreeKeys.toString()
       //   }
       // }
+    })
+
+    it(`recycle allocation works`, async () => {
+      const stakeModules = [proModule, soloModule, soloModule2]
+      const stakeModuleContracts = []
+
+      /**
+       *
+       *  INITIALIZE modules
+       *
+       */
+      for (let i = 0; i < stakeModules.length; i++) {
+        const stakeModule = stakeModules[i]
+        let _module
+
+        if (stakeModule.type === 0) {
+          // skip pro module
+          // continue
+          _module = operators
+        } else {
+          // add solo module
+          _module = await ModuleSolo.new(stakeModule.type, lido.address, stakeModule.fee, { from: appManager })
+        }
+        console.log(`module ${stakeModule.name} address`, _module.address)
+
+        await stakingRouter.addModule(stakeModule.name, _module.address, stakeModule.softCap, stakeModule.treasuryFee, {
+          from: appManager
+        })
+        await _module.setTotalKeys(stakeModule.totalKeys, { from: appManager })
+        await _module.setTotalUsedKeys(stakeModule.totalUsedKeys, { from: appManager })
+        await _module.setTotalStoppedKeys(stakeModule.totalStoppedKeys, { from: appManager })
+
+        await _module.setStakingRouter(stakingRouter.address)
+        stakeModule.address = _module.address
+        stakeModuleContracts.push(_module)
+      }
+
+      console.log('before allocation')
+      let recAlloc = await getRecAlloc(stakingRouter)
+      let alloc = await getAlloc(stakingRouter)
+      console.table(await getModulesInfo(stakingRouter))
+      console.table({ recAlloc, alloc })
+
+      console.log('add keys to node operator curated module')
+      let keysAmount = 45
+      let moduleId = 0
+      let keys = genKeys(keysAmount)
+      // console.log(keys)
+      await operators.addSigningKeys(0, keysAmount, keys.pubkeys, keys.sigkeys, { from: voting })
+      console.log('increase staking limit to 11000')
+      await operators.setNodeOperatorStakingLimit(0, 11000, { from: voting })
+
+      // await getLidoStats(lido, { Stranger1: externalAddress, Stranger2: stranger2, StakingRouter: stakingRouter.address })
+
+      console.log('simulate balance topup')
+      await provider.send('hardhat_setBalance', [stakingRouter.address, '0x' + parseInt(ETH(101 * 32)).toString(16)])
+
+      // first distribute
+      console.log('Distribute allocation')
+      await provider.send('evm_increaseTime', [3600 * 1 + 10])
+      await provider.send('evm_mine')
+
+      await stakingRouter.distributeDeposits()
+      console.log('last distribute', (await stakingRouter.lastDistributeAt()).toString())
+
+      // console.log('after allocation')
+      // console.table(await getModulesInfo(stakingRouter))
+
+      // wait +6 hours
+      console.log(
+        'forward +6h after 1st distributeDeposits:\n- module0 idle 6h, no keys, skip recycle;\n- module1 idle 6h, skip recycle;\n- module2 idle 6h, skip recycle'
+      )
+
+      await provider.send('evm_increaseTime', [3600 * 6 + 10])
+      await provider.send('evm_mine')
+
+      recAlloc = await getRecAlloc(stakingRouter)
+      alloc = await getAlloc(stakingRouter)
+      console.table(await getModulesInfo(stakingRouter))
+      console.table({ recAlloc, alloc })
+      assert.equal(recAlloc.totalRecycleKeys, 0)
+      assert.deepEqual(recAlloc.levels, [0, 0, 0])
+      assert.deepEqual(recAlloc.keysAmounts, [0, 0, 0])
+      assert.deepEqual(alloc, [0, 51, 50])
+
+      keysAmount = 3
+      moduleId = 1
+      keys = genKeys(keysAmount)
+      console.log(`===> deposit: Module #${moduleId}, keys: ${keysAmount}`)
+      await stakeModuleContracts[moduleId].deposit(keys.pubkeys, keys.sigkeys)
+
+      recAlloc = await getRecAlloc(stakingRouter)
+      alloc = await getAlloc(stakingRouter)
+      console.table(await getModulesInfo(stakingRouter))
+      console.table({ recAlloc, alloc })
+      assert.equal(recAlloc.totalRecycleKeys, 0)
+      assert.deepEqual(recAlloc.levels, [0, 0, 0])
+      assert.deepEqual(recAlloc.keysAmounts, [0, 0, 0])
+      assert.deepEqual(alloc, [0, 48, 50])
+
+      // wait +6 hours, 50% of keys avail to recycle
+      console.log(
+        'forward +12h after 1st distributeDeposits:\n- module0 idle 12h, no keys, skip recycle;\n- module1 idle 6h (after deposit), skip recycle;\n- module2 idle 12h, 50% recycle'
+      )
+
+      await provider.send('evm_increaseTime', [3600 * 6 + 10])
+      await provider.send('evm_mine')
+
+      recAlloc = await getRecAlloc(stakingRouter)
+      alloc = await getAlloc(stakingRouter)
+      console.table(await getModulesInfo(stakingRouter))
+      console.table({ recAlloc, alloc })
+
+      assert.equal(recAlloc.totalRecycleKeys, 25)
+      assert.deepEqual(recAlloc.levels, [0, 0, 1])
+      assert.deepEqual(recAlloc.keysAmounts, [0, 0, 25])
+      assert.deepEqual(alloc, [0, 48, 50])
+
+      // at this point module1 is 'good' because it's last deposit was 6h ago
+      let expectedMaxKeys = [
+        { allocKeysAmount: 0, recycledKeysAmount: 25 }, // min(totalKeys-usedKeys, 50% keys of module1+module2)
+        { allocKeysAmount: 48, recycledKeysAmount: 25 }, // 50% keys of module 2 + module 0
+        { allocKeysAmount: 50, recycledKeysAmount: 0 } // 50% keys of module 1 + module 0
+      ]
+      for (let i = 0; i < stakeModules.length; i++) {
+        const { allocKeysAmount, recycledKeysAmount } = await stakingRouter.getModuleMaxKeys(i)
+        assert.equal(allocKeysAmount, expectedMaxKeys[i].allocKeysAmount)
+        assert.equal(recycledKeysAmount, expectedMaxKeys[i].recycledKeysAmount)
+        // console.log({ i, allocKeysAmount: allocKeysAmount.toNumber(), recycledKeysAmount: recycledKeysAmount.toNumber() })
+      }
+
+      keysAmount = 20
+      moduleId = 0
+      console.log(`===> deposit: Module #${moduleId}, keys: ${keysAmount}`)
+      await stakeModuleContracts[moduleId].deposit(keysAmount)
+
+      recAlloc = await getRecAlloc(stakingRouter)
+      alloc = await getAlloc(stakingRouter)
+      console.table(await getModulesInfo(stakingRouter))
+      console.table({ recAlloc, alloc })
+      assert.equal(recAlloc.totalRecycleKeys, 5)
+      assert.deepEqual(recAlloc.levels, [0, 0, 1])
+      assert.deepEqual(recAlloc.keysAmounts, [0, 0, 5])
+      assert.deepEqual(alloc, [0, 48, 30])
+
+      console.log(
+        'forward +15h after 1st distributeDeposits:\n- module0 idle 3h, no keys, skip recycle;\n- module1 idle 9h (after deposit), skip recycle;\n- module2 idle 15h, 75% recycle'
+      )
+
+      await provider.send('evm_increaseTime', [3600 * 3 + 10])
+      await provider.send('evm_mine')
+
+      recAlloc = await getRecAlloc(stakingRouter)
+      alloc = await getAlloc(stakingRouter)
+      console.table(await getModulesInfo(stakingRouter))
+      console.table({ recAlloc, alloc })
+      assert.equal(recAlloc.totalRecycleKeys, 22)
+      assert.deepEqual(recAlloc.levels, [0, 0, 2])
+      assert.deepEqual(recAlloc.keysAmounts, [0, 0, 22])
+
+      expectedMaxKeys = [
+        { allocKeysAmount: 0, recycledKeysAmount: 22 }, // 75% keys of module 2
+        { allocKeysAmount: 48, recycledKeysAmount: 22 }, // 75% keys of module 2
+        { allocKeysAmount: 30, recycledKeysAmount: 0 } // no recycle here due to: module 1 has deposited 9h ago, and mod 0 have no allocation
+      ]
+      for (let i = 0; i < stakeModules.length; i++) {
+        const { allocKeysAmount, recycledKeysAmount } = await stakingRouter.getModuleMaxKeys(i)
+        assert.equal(allocKeysAmount, expectedMaxKeys[i].allocKeysAmount)
+        assert.equal(recycledKeysAmount, expectedMaxKeys[i].recycledKeysAmount)
+      }
+
+      console.log(
+        'forward +18h after 1st distributeDeposits:\n- module0 idle 6h, no keys, skip recycle;\n- module1 idle 12h (after deposit), 50% recycle;\n- module2 idle 18h, 100% recycle'
+      )
+
+      await provider.send('evm_increaseTime', [3600 * 3 + 10])
+      await provider.send('evm_mine')
+
+      recAlloc = await getRecAlloc(stakingRouter)
+      alloc = await getAlloc(stakingRouter)
+      console.table(await getModulesInfo(stakingRouter))
+      console.table({ recAlloc, alloc })
+      assert.equal(recAlloc.totalRecycleKeys, 54)
+      assert.deepEqual(recAlloc.levels, [0, 1, 3])
+      assert.deepEqual(recAlloc.keysAmounts, [0, 24, 30])
+
+      expectedMaxKeys = [
+        { allocKeysAmount: 0, recycledKeysAmount: 25 }, // totalKeys-usedKeys < 100% recycle keys of module2+ 50% keys of module 1)
+        { allocKeysAmount: 48, recycledKeysAmount: 30 }, // 100% keys of mod 2
+        { allocKeysAmount: 30, recycledKeysAmount: 24 } // 50% keys of module 1
+      ]
+      for (let i = 0; i < stakeModules.length; i++) {
+        const { allocKeysAmount, recycledKeysAmount } = await stakingRouter.getModuleMaxKeys(i)
+        // console.log({ i, allocKeysAmount, recycledKeysAmount })
+        assert.equal(allocKeysAmount, expectedMaxKeys[i].allocKeysAmount)
+        assert.equal(recycledKeysAmount, expectedMaxKeys[i].recycledKeysAmount)
+      }
     })
   })
 })
@@ -364,35 +589,67 @@ function y(val) {
 
 async function getAlloc(stakingRouter) {
   const alloc = []
-  const allocation_0 = await stakingRouter.allocation(0)
-  const allocation_1 = await stakingRouter.allocation(1)
-  alloc.push(parseInt(allocation_0))
-  alloc.push(parseInt(allocation_1))
+  const modulesCount = await stakingRouter.getModulesCount()
+  for (let i = 0; i < modulesCount; i++) {
+    alloc.push(parseInt(await stakingRouter.allocation(i)))
+  }
 
   return alloc
 }
 
+async function getRecAlloc(stakingRouter) {
+  const recAlloc = {}
+  const modulesCount = await stakingRouter.getModulesCount()
+  const _recAlloc = await stakingRouter.getRecycleAllocation()
+
+  recAlloc.totalRecycleKeys = +_recAlloc.totalRecycleKeys
+  recAlloc.levels = []
+  recAlloc.keysAmounts = []
+  for (let i = 0; i < modulesCount; i++) {
+    recAlloc.levels.push(+_recAlloc.levels[i])
+    recAlloc.keysAmounts.push(+_recAlloc.keysAmounts[i])
+  }
+
+  return recAlloc
+}
+
 async function getModulesInfo(stakingRouter) {
-  let modulesCount = await stakingRouter.getModulesCount()
-  let table = {}
-  for (i = 0; i < modulesCount; i++) {
-    let module = await stakingRouter.getModule(i)
-    const entry = await IModule.at(module.moduleAddress)
+  const modulesCount = await stakingRouter.getModulesCount()
+  const table = []
+  for (let i = 0; i < modulesCount; i++) {
+    const comModule = await stakingRouter.getModule(i)
+    const entry = await IModule.at(comModule.moduleAddress)
 
-    table[modules[i].name] = {
-      name: module.name,
-      cap: parseInt(module.cap),
-      fee: parseInt(await entry.getFee()),
-      treasuryFee: parseInt(module.treasuryFee),
-      paused: module.paused,
-      active: module.active,
+    table.push({
+      name: comModule.name,
+      cap: +comModule.cap,
+      fee: +(await entry.getFee()),
+      treasuryFee: parseInt(comModule.treasuryFee),
+      paused: comModule.paused,
+      active: comModule.active,
+      lastDepositAt: +comModule.lastDepositAt,
+      recycleAt: +comModule.recycleAt,
+      recycleLevel: +comModule.recycleLevel,
+      recycleRestAmount: +comModule.recycleRestAmount,
 
-      totalKeys: parseInt(await entry.getTotalKeys()),
-      totalUsedKeys: parseInt(await entry.getTotalUsedKeys()),
-      totalStoppedKeys: parseInt(await entry.getTotalStoppedKeys()),
-      totalExitedKeys: parseInt(await entry.getTotalExitedKeys())
-    }
+      totalKeys: +(await entry.getTotalKeys()),
+      totalUsedKeys: +(await entry.getTotalUsedKeys()),
+      totalStoppedKeys: +(await entry.getTotalStoppedKeys())
+      // totalExitedKeys: +(await entry.getTotalExitedKeys())
+    })
   }
 
   return table
+}
+
+function genKeys(cnt = 1) {
+  let pubkeys = ''
+  let sigkeys = ''
+
+  for (let i = 1; i <= cnt; i++) {
+    pubkeys = hexConcat(pubkeys, `0x`.padEnd(98, i.toString(16))) // 48 bytes * 2 chars + 2 chars (0x)
+    sigkeys = hexConcat(sigkeys, `0x`.padEnd(194, i.toString(16))) // 96 bytes * 2 chars + 2 chars (0x)
+  }
+
+  return { pubkeys, sigkeys }
 }
