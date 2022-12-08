@@ -16,8 +16,6 @@ import '../interfaces/IModule.sol';
 import '../interfaces/IStakingRouter.sol';
 import '../lib/MemUtils.sol';
 
-import 'hardhat/console.sol';
-
 /**
  * @title Node Operator registry implementation
  *
