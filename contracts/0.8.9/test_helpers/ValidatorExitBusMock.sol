@@ -4,13 +4,13 @@
 
 pragma solidity 0.8.9;
 
-import "../LidoOracleNew.sol";
+import "../ValidatorExitBus.sol";
 
 
 /**
   * @dev Only for testing purposes! LidoOracleNew version with some functions exposed.
   */
-contract LidoOracleNewMock is LidoOracleNew {
+contract ValidatorExitBusMock is ValidatorExitBus {
     uint256 private time;
     using UnstructuredStorage for bytes32;
 

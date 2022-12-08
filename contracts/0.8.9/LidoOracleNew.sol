@@ -6,6 +6,7 @@ import { ERC165Checker } from "@openzeppelin/contracts-v4.4/utils/introspection/
 import { AccessControlEnumerable } from "@openzeppelin/contracts-v4.4/access/AccessControlEnumerable.sol";
 
 import "./CommitteeQuorum.sol";
+import "./ReportEpochChecker.sol";
 import "./interfaces/ILido.sol";
 import "./interfaces/IBeaconReportReceiver.sol";
 
@@ -24,20 +25,14 @@ import "./interfaces/IBeaconReportReceiver.sol";
  * Not all frames may come to a quorum. Oracles may report only to the first epoch of the frame and
  * only if no quorum is reached for this epoch yet.
  */
-contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable {
+contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochChecker {
     using ERC165Checker for address;
     using UnstructuredStorage for bytes32;
 
     event AllowedBeaconBalanceAnnualRelativeIncreaseSet(uint256 value);
     event AllowedBeaconBalanceRelativeDecreaseSet(uint256 value);
     event BeaconReportReceiverSet(address callback);
-    event ExpectedEpochIdUpdated(uint256 epochId);
-    event BeaconSpecSet(
-        uint64 epochsPerFrame,
-        uint64 slotsPerEpoch,
-        uint64 secondsPerSlot,
-        uint64 genesisTime
-    );
+
     event BeaconReported(
         uint256 epochId,
         uint256 beaconBalance,
@@ -49,6 +44,7 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable {
         uint256[] finalizationPooledEtherAmount,
         uint256[] finalizationSharesAmount
     );
+
     event Completed(
         uint256 epochId,
         uint256 beaconBalance,
@@ -59,11 +55,14 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable {
         uint256[] finalizationPooledEtherAmount,
         uint256[] finalizationSharesAmount
     );
+
     event PostTotalShares(
          uint256 postTotalPooledEther,
          uint256 preTotalPooledEther,
          uint256 timeElapsed,
-         uint256 totalShares);
+         uint256 totalShares
+    );
+
     event ContractVersionSet(uint256 version);
 
 
@@ -84,13 +83,6 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable {
         uint256[] requestIdToFinalizeUpTo;
         uint256[] finalizationPooledEtherAmount;
         uint256[] finalizationSharesAmount;
-    }
-
-    struct BeaconSpec {
-        uint64 epochsPerFrame;
-        uint64 slotsPerEpoch;
-        uint64 secondsPerSlot;
-        uint64 genesisTime;
     }
 
     /// ACL
@@ -119,10 +111,6 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable {
     bytes32 internal constant LIDO_POSITION =
         0xf6978a4f7e200f6d3a24d82d44c48bddabce399a3b8ec42a480ea8a2d5fe6ec5; // keccak256("lido.LidoOracle.lido")
 
-    /// Storage for the actual beacon chain specification
-    bytes32 internal constant BEACON_SPEC_POSITION =
-        0x805e82d53a51be3dfde7cfed901f1f96f5dad18e874708b082adb8841e8ca909; // keccak256("lido.LidoOracle.beaconSpec")
-
     /// Version of the initialized contract data
     /// NB: Contract versioning starts from 1.
     /// The version stored in CONTRACT_VERSION_POSITION equals to
@@ -131,10 +119,6 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable {
     /// - N after upgrading contract from the previous version (after calling finalize_vN())
     bytes32 internal constant CONTRACT_VERSION_POSITION =
         0x75be19a3f314d89bd1f84d30a6c84e2f1cd7afc7b6ca21876564c265113bb7e4; // keccak256("lido.LidoOracle.contractVersion")
-
-    /// Epoch that we currently collect reports
-    bytes32 internal constant EXPECTED_EPOCH_ID_POSITION =
-        0x65f1a0ee358a8a4000a59c2815dc768eb87d24146ca1ac5555cb6eb871aee915; // keccak256("lido.LidoOracle.expectedEpochId")
 
     /// Receiver address to be called when the report is pushed to Lido
     bytes32 internal constant BEACON_REPORT_RECEIVER_POSITION =
@@ -154,7 +138,57 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable {
         0x92ba7776ed6c5d13cf023555a94e70b823a4aebd56ed522a77345ff5cd8a9109; // keccak256("lido.LidoOracle.allowedBeaconBalanceDecrease")
 
 
-    constructor() {
+    /**
+     * @notice Initialize the contract (version 3 for now) from scratch
+     * @dev For details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md
+     * @param _admin Admin which can modify OpenZeppelin role holders
+     * @param _lido Address of Lido contract
+     * @param _epochsPerFrame Number of epochs per frame
+     * @param _slotsPerEpoch Number of slots per epoch
+     * @param _secondsPerSlot Number of seconds per slot
+     * @param _genesisTime Genesis time
+     * @param _allowedBeaconBalanceAnnualRelativeIncrease Allowed beacon balance annual relative increase (e.g. 1000 means 10% increase)
+     * @param _allowedBeaconBalanceRelativeDecrease Allowed beacon balance instantaneous decrease (e.g. 500 means 5% decrease)
+     */
+    function initialize(
+        address _admin,
+        address _lido,
+        uint64 _epochsPerFrame,
+        uint64 _slotsPerEpoch,
+        uint64 _secondsPerSlot,
+        uint64 _genesisTime,
+        uint256 _allowedBeaconBalanceAnnualRelativeIncrease,
+        uint256 _allowedBeaconBalanceRelativeDecrease
+    )
+        external
+    {
+        assert(1 == ((1 << (MAX_MEMBERS - 1)) >> (MAX_MEMBERS - 1)));  // static assert
+
+        // We consider storage state right after deployment (no initialize() called yet) as version 0
+
+        // Initializations for v0 --> v1
+        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "BASE_VERSION_MUST_BE_ZERO");
+        CONTRACT_VERSION_POSITION.setStorageUint256(1);
+
+        require(_admin != address(0), "ZERO_ADMIN_ADDRESS");
+        _grantRole(DEFAULT_ADMIN_ROLE, _admin);
+
+        LIDO_POSITION.setStorageAddress(_lido);
+
+        _setQuorum(1);
+
+        ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION
+            .setStorageUint256(_allowedBeaconBalanceAnnualRelativeIncrease);
+        emit AllowedBeaconBalanceAnnualRelativeIncreaseSet(_allowedBeaconBalanceAnnualRelativeIncrease);
+
+        ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION
+            .setStorageUint256(_allowedBeaconBalanceRelativeDecrease);
+        emit AllowedBeaconBalanceRelativeDecreaseSet(_allowedBeaconBalanceRelativeDecrease);
+
+        _setBeaconSpec(_epochsPerFrame, _slotsPerEpoch, _secondsPerSlot, _genesisTime);
+
+        // set expected epoch to the first epoch for the next frame
+        _setExpectedEpochToFirstOfNextFrame();
     }
 
     /**
@@ -208,7 +242,7 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable {
     /**
      * @notice Return the current reporting array element with index `_index`
      */
-    function getCurrentReportVariant(uint256 _index)
+    function getMemberReport(uint256 _index)
         external
         view
         returns (
@@ -238,97 +272,11 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable {
     }
 
     /**
-     * @notice Returns epoch that can be reported by oracles
-     */
-    function getExpectedEpochId() external view returns (uint256) {
-        return EXPECTED_EPOCH_ID_POSITION.getStorageUint256();
-    }
-
-    /**
      * @notice Return the initialized version of this contract starting from 0
      */
     function getVersion() external view returns (uint256) {
         return CONTRACT_VERSION_POSITION.getStorageUint256();
     }
-
-    /**
-     * @notice Return beacon specification data
-     */
-    function getBeaconSpec()
-        external
-        view
-        returns (
-            uint64 epochsPerFrame,
-            uint64 slotsPerEpoch,
-            uint64 secondsPerSlot,
-            uint64 genesisTime
-        )
-    {
-        BeaconSpec memory beaconSpec = _getBeaconSpec();
-        return (
-            beaconSpec.epochsPerFrame,
-            beaconSpec.slotsPerEpoch,
-            beaconSpec.secondsPerSlot,
-            beaconSpec.genesisTime
-        );
-    }
-
-    /**
-     * @notice Update beacon specification data
-     */
-    function setBeaconSpec(
-        uint64 _epochsPerFrame,
-        uint64 _slotsPerEpoch,
-        uint64 _secondsPerSlot,
-        uint64 _genesisTime
-    )
-        external onlyRole(SET_BEACON_SPEC_ROLE)
-    {
-        _setBeaconSpec(
-            _epochsPerFrame,
-            _slotsPerEpoch,
-            _secondsPerSlot,
-            _genesisTime
-        );
-    }
-
-    /**
-     * @notice Return the epoch calculated from current timestamp
-     */
-    function getCurrentEpochId() external view returns (uint256) {
-        BeaconSpec memory beaconSpec = _getBeaconSpec();
-        return _getCurrentEpochId(beaconSpec);
-    }
-
-    /**
-     * @notice Return currently reportable epoch (the first epoch of the current frame) as well as
-     * its start and end times in seconds
-     */
-    function getCurrentFrame()
-        external
-        view
-        returns (
-            uint256 frameEpochId,
-            uint256 frameStartTime,
-            uint256 frameEndTime
-        )
-    {
-        BeaconSpec memory beaconSpec = _getBeaconSpec();
-        uint64 genesisTime = beaconSpec.genesisTime;
-        uint64 secondsPerEpoch = beaconSpec.secondsPerSlot * beaconSpec.slotsPerEpoch;
-
-        frameEpochId = _getFrameFirstEpochId(_getCurrentEpochId(beaconSpec), beaconSpec);
-        frameStartTime = frameEpochId * secondsPerEpoch + genesisTime;
-        frameEndTime = (frameEpochId + beaconSpec.epochsPerFrame) * secondsPerEpoch + genesisTime - 1;
-    }
-
-    /**
-     * @notice Return last completed epoch
-     */
-    function getLastCompletedEpochId() external view returns (uint256) {
-        return LAST_COMPLETED_EPOCH_ID_POSITION.getStorageUint256();
-    }
-
 
     /**
      * @notice Report beacon balance and its change during the last frame
@@ -348,73 +296,19 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable {
     }
 
     /**
-     * @notice Initialize the contract (version 3 for now) from scratch
-     * @dev For details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md
-     * @param _admin Admin which can modify OpenZeppelin role holders
-     * @param _lido Address of Lido contract
-     * @param _epochsPerFrame Number of epochs per frame
-     * @param _slotsPerEpoch Number of slots per epoch
-     * @param _secondsPerSlot Number of seconds per slot
-     * @param _genesisTime Genesis time
-     * @param _allowedBeaconBalanceAnnualRelativeIncrease Allowed beacon balance annual relative increase (e.g. 1000 means 10% increase)
-     * @param _allowedBeaconBalanceRelativeDecrease Allowed beacon balance instantaneous decrease (e.g. 500 means 5% decrease)
+     * @notice Return last completed epoch
      */
-    function initialize(
-        address _admin,
-        address _lido,
-        uint64 _epochsPerFrame,
-        uint64 _slotsPerEpoch,
-        uint64 _secondsPerSlot,
-        uint64 _genesisTime,
-        uint256 _allowedBeaconBalanceAnnualRelativeIncrease,
-        uint256 _allowedBeaconBalanceRelativeDecrease
-    )
-        external
-    {
-        assert(1 == ((1 << (MAX_MEMBERS - 1)) >> (MAX_MEMBERS - 1)));  // static assert
-
-        // We consider storage state right after deployment (no initialize() called yet) as version 0
-
-        // Initializations for v0 --> v1
-        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "BASE_VERSION_MUST_BE_ZERO");
-        CONTRACT_VERSION_POSITION.setStorageUint256(1);
-
-        require(_admin != address(0), "ZERO_ADMIN_ADDRESS");
-        _grantRole(DEFAULT_ADMIN_ROLE, _admin);
-
-        _setBeaconSpec(
-            _epochsPerFrame,
-            _slotsPerEpoch,
-            _secondsPerSlot,
-            _genesisTime
-        );
-
-        LIDO_POSITION.setStorageAddress(_lido);
-
-        QUORUM_POSITION.setStorageUint256(1);
-        emit QuorumChanged(1);
-
-        ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION
-            .setStorageUint256(_allowedBeaconBalanceAnnualRelativeIncrease);
-        emit AllowedBeaconBalanceAnnualRelativeIncreaseSet(_allowedBeaconBalanceAnnualRelativeIncrease);
-
-        ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION
-            .setStorageUint256(_allowedBeaconBalanceRelativeDecrease);
-        emit AllowedBeaconBalanceRelativeDecreaseSet(_allowedBeaconBalanceRelativeDecrease);
-
-        // set expected epoch to the first epoch for the next frame
-        BeaconSpec memory beaconSpec = _getBeaconSpec();
-        uint256 expectedEpoch = _getFrameFirstEpochId(0, beaconSpec) + beaconSpec.epochsPerFrame;
-        EXPECTED_EPOCH_ID_POSITION.setStorageUint256(expectedEpoch);
-        emit ExpectedEpochIdUpdated(expectedEpoch);
+    function getLastCompletedEpochId() external view returns (uint256) {
+        return LAST_COMPLETED_EPOCH_ID_POSITION.getStorageUint256();
     }
 
-    function setOwner(address _newOwner)
+
+    function setAdmin(address _newAdmin)
         external onlyRole(DEFAULT_ADMIN_ROLE)
     {
         // TODO: remove this temporary function
 
-        _grantRole(DEFAULT_ADMIN_ROLE, _newOwner);
+        _grantRole(DEFAULT_ADMIN_ROLE, _newAdmin);
         _revokeRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
@@ -440,7 +334,14 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable {
         MemberReport calldata _report
     ) external {
         BeaconSpec memory beaconSpec = _getBeaconSpec();
-        _validateExpectedEpochAndClearReportingIfNeeded(_report.epochId, beaconSpec);
+        bool hasEpochAdvanced = _validateAndUpdateExpectedEpoch(_report.epochId, beaconSpec);
+        if (hasEpochAdvanced) {
+            _clearReporting();
+        }
+
+        if (_handleMemberReport(msg.sender, _encodeReport(_report))) {
+            _handleConsensussedReport(_report, beaconSpec);
+        }
 
         uint128 beaconBalance = DENOMINATION_OFFSET * uint128(_report.beaconBalanceGwei);
         emit BeaconReported(
@@ -454,19 +355,15 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable {
             _report.finalizationPooledEtherAmount,
             _report.finalizationSharesAmount
         );
-
-        if (_handleMemberReport(msg.sender, _encodeReport(_report))) {
-            _handleConsensussedReport(_report, beaconSpec);
-        }
     }
 
-    function _decodeReport(bytes memory _reportData) internal view returns (
+    function _decodeReport(bytes memory _reportData) internal pure returns (
         MemberReport memory report
     ) {
         report = abi.decode(_reportData, (MemberReport));
     }
 
-    function _encodeReport(MemberReport memory _report) internal view returns (
+    function _encodeReport(MemberReport memory _report) internal pure returns (
         bytes memory reportData
     ) {
         reportData = abi.encode(_report);
@@ -475,75 +372,34 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable {
     /**
      * @notice Set the number of exactly the same reports needed to finalize the epoch to `_quorum`
      */
-    function setQuorum(uint256 _quorum)
+    function updateQuorum(uint256 _quorum)
         external onlyRole(MANAGE_QUORUM_ROLE)
     {
-        (bool isQuorum, uint256 reportIndex) = _setQuorum(_quorum);
+        (bool isQuorum, uint256 reportIndex) = _updateQuorum(_quorum);
         if (isQuorum) {
             MemberReport memory report = _decodeReport(distinctReports[reportIndex]);
             _handleConsensussedReport(report, _getBeaconSpec());
         }
     }
 
-    function _validateExpectedEpochAndClearReportingIfNeeded(uint256 _epochId, BeaconSpec memory _beaconSpec) private
-    {
-        uint256 expectedEpoch = EXPECTED_EPOCH_ID_POSITION.getStorageUint256();
-        require(_epochId >= expectedEpoch, "EPOCH_IS_TOO_OLD");
-
-        // if expected epoch has advanced, check that this is the first epoch of the current frame
-        // and clear the last unsuccessful reporting
-        if (_epochId > expectedEpoch) {
-            require(_epochId == _getFrameFirstEpochId(_getCurrentEpochId(_beaconSpec), _beaconSpec), "UNEXPECTED_EPOCH");
-            _clearReportingAndAdvanceTo(_epochId);
-        }
-    }
-
     /**
-     * @notice Return beacon specification data
+     * @notice Update beacon specification data
      */
-    function _getBeaconSpec()
-        internal
-        view
-        returns (BeaconSpec memory beaconSpec)
-    {
-        uint256 data = BEACON_SPEC_POSITION.getStorageUint256();
-        beaconSpec.epochsPerFrame = uint64(data >> 192);
-        beaconSpec.slotsPerEpoch = uint64(data >> 128);
-        beaconSpec.secondsPerSlot = uint64(data >> 64);
-        beaconSpec.genesisTime = uint64(data);
-        return beaconSpec;
-    }
-
-    /**
-     * @notice Set beacon specification data
-     */
-    function _setBeaconSpec(
+    function setBeaconSpec(
         uint64 _epochsPerFrame,
         uint64 _slotsPerEpoch,
         uint64 _secondsPerSlot,
         uint64 _genesisTime
     )
-        internal
+        external onlyRole(SET_BEACON_SPEC_ROLE)
     {
-        require(_epochsPerFrame > 0, "BAD_EPOCHS_PER_FRAME");
-        require(_slotsPerEpoch > 0, "BAD_SLOTS_PER_EPOCH");
-        require(_secondsPerSlot > 0, "BAD_SECONDS_PER_SLOT");
-        require(_genesisTime > 0, "BAD_GENESIS_TIME");
-
-        uint256 data = (
-            uint256(_epochsPerFrame) << 192 |
-            uint256(_slotsPerEpoch) << 128 |
-            uint256(_secondsPerSlot) << 64 |
-            uint256(_genesisTime)
-        );
-        BEACON_SPEC_POSITION.setStorageUint256(data);
-        emit BeaconSpecSet(
+        _setBeaconSpec(
             _epochsPerFrame,
             _slotsPerEpoch,
             _secondsPerSlot,
-            _genesisTime);
+            _genesisTime
+        );
     }
-
 
     // /**
     //  * @notice Push the given report to Lido and performs accompanying accounting
@@ -572,7 +428,8 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable {
 
         // now this frame is completed, so the expected epoch should be advanced to the first epoch
         // of the next frame
-        _clearReportingAndAdvanceTo(_report.epochId + _beaconSpec.epochsPerFrame);
+        _advanceExpectedEpoch(_report.epochId + _beaconSpec.epochsPerFrame);
+        _clearReporting();
 
         ILido lido = getLido();
         INodeOperatorsRegistry registry = lido.getOperators();
@@ -633,16 +490,6 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable {
     }
 
     /**
-     * @notice Remove the current reporting progress and advances to accept the later epoch `_epochId`
-     */
-    function _clearReportingAndAdvanceTo(uint256 _epochId) internal {
-        _clearReporting();
-
-        EXPECTED_EPOCH_ID_POSITION.setStorageUint256(_epochId);
-        emit ExpectedEpochIdUpdated(_epochId);
-    }
-
-    /**
      * @notice Performs logical consistency check of the Lido changes as the result of reports push
      * @dev To make oracles less dangerous, we limit rewards report by 10% _annual_ increase and 5%
      * _instant_ decrease in stake, with both values configurable by the governance in case of
@@ -680,24 +527,4 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable {
         }
     }
 
-    /**
-     * @notice Return the epoch calculated from current timestamp
-     */
-    function _getCurrentEpochId(BeaconSpec memory _beaconSpec) internal view returns (uint256) {
-        return (_getTime() - _beaconSpec.genesisTime) / (_beaconSpec.slotsPerEpoch * _beaconSpec.secondsPerSlot);
-    }
-
-    /**
-     * @notice Return the first epoch of the frame that `_epochId` belongs to
-     */
-    function _getFrameFirstEpochId(uint256 _epochId, BeaconSpec memory _beaconSpec) internal view returns (uint256) {
-        return _epochId / _beaconSpec.epochsPerFrame * _beaconSpec.epochsPerFrame;
-    }
-
-    /**
-     * @notice Return the current timestamp
-     */
-    function _getTime() internal virtual view returns (uint256) {
-        return block.timestamp; // solhint-disable-line not-rely-on-time
-    }
 }

@@ -4,7 +4,7 @@ const { waitBlocks } = require('../helpers/blockchain')
 
 const { assert } = require('chai')
 
-const ValidatorExitBus = artifacts.require('ValidatorExitBus.sol')
+const ValidatorExitBus = artifacts.require('ValidatorExitBusMock.sol')
 
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 // semantic aliases
@@ -47,29 +47,47 @@ function generateReportKeysArguments(numKeys, epochId) {
 const maxRequestsPerDayE18 = toE18(2000 + 1)
 const numRequestsLimitIncreasePerBlockE18 = maxRequestsPerDayE18.div(bn(blocksInDay))
 
-contract('ValidatorExitBus', ([deployer, member, ...otherAccounts]) => {
+function calcRateLimitParameters(maxRequestsPerDay) {
+  const maxRequestsPerDayE18 = toE18(maxRequestsPerDay)
+  return [toE18(maxRequestsPerDay), maxRequestsPerDayE18.div(bn(blocksInDay))]
+}
+
+const GENESIS_TIME = 1606824000
+
+contract.skip('ValidatorExitBus', ([deployer, member, owner]) => {
   let bus = null
 
   beforeEach('deploy bus', async () => {
-    bus = await ValidatorExitBus.new(maxRequestsPerDayE18, numRequestsLimitIncreasePerBlockE18, { from: deployer })
-    await bus.addOracleMember(member)
+    bus = await ValidatorExitBus.new({ from: deployer })
+
+    await bus.initialize(owner, ...calcRateLimitParameters(2000), 1, 32, 12, GENESIS_TIME, { from: owner })
+
+    await bus.setTime(GENESIS_TIME)
+
+    // Set up the app's permissions.
+    await bus.grantRole(await bus.MANAGE_MEMBERS_ROLE(), owner, { from: owner })
+    await bus.grantRole(await bus.MANAGE_QUORUM_ROLE(), owner, { from: owner })
+    await bus.grantRole(await bus.SET_BEACON_SPEC_ROLE(), owner, { from: owner })
+
+    await bus.addOracleMember(member, { from: owner })
+    await bus.updateQuorum(1, { from: owner })
   })
 
   describe('Estimate gas usage', () => {
     beforeEach(async () => {})
 
-    it(`Calculate gas usages`, async () => {
-      const epochId = 123
+    it.skip(`Calculate gas usages`, async () => {
+      let epochId = 1
       const gasUsage = {}
-      const amountsOfKeysToTry = [1, 2, 5, 10, 50, 100, 500, 1000, 2000]
+      const amountsOfKeysToTry = [1, 2, 5, 10, 50, 100]
       let prevNumKeys = 0
       for (const numKeys of amountsOfKeysToTry) {
         await waitBlocks(Math.ceil(prevNumKeys / fromE18(numRequestsLimitIncreasePerBlockE18)))
-        assert(numKeys <= fromE18(maxRequestsPerDayE18), 'num keys to eject is above day limit')
         const args = generateReportKeysArguments(numKeys, epochId)
-        const result = await bus.reportKeysToEject(...args, { from: member })
+        const result = await bus.handleCommitteeMemberReport(...args, { from: member })
         gasUsage[numKeys] = result.receipt.gasUsed
         prevNumKeys = numKeys
+        epochId += 1
       }
 
       console.log(gasUsage)
@@ -80,45 +98,51 @@ contract('ValidatorExitBus', ([deployer, member, ...otherAccounts]) => {
     beforeEach(async () => {})
 
     it(`Report one key`, async () => {
-      const epochId = 123
-      await bus.reportKeysToEject([1], [2], [generateValidatorPubKey()], epochId, { from: member })
+      const epochId = 1
+      await bus.handleCommitteeMemberReport([1], [2], [generateValidatorPubKey()], epochId, { from: member })
     })
 
     it.skip(`Revert if length of arrays reported differ`, async () => {
       // TODO
-      const epochId = 123
-      await bus.reportKeysToEject([], [2], [generateValidatorPubKey()], epochId, { from: member })
+      const epochId = 1
+      await bus.handleCommitteeMemberReport([], [2], [generateValidatorPubKey()], epochId, { from: member })
     })
 
     it(`Revert if exceeds limit after multiple consecutive tx`, async () => {
-      const epochId = 123
+      let epochId = 1
       const maxLimit = fromE18(await bus.getMaxLimit())
       let numKeysReportedTotal = 0
       const startBlockNumber = (await web3.eth.getBlock('latest')).number
 
-      const keysPerIteration = Math.floor(maxLimit / 20)
+      const keysPerIteration = 100
       while (maxLimit > numKeysReportedTotal) {
         const numKeys = Math.min(keysPerIteration, maxLimit - numKeysReportedTotal)
-        await bus.reportKeysToEject(...generateReportKeysArguments(numKeys, epochId), { from: member })
+        await bus.handleCommitteeMemberReport(...generateReportKeysArguments(numKeys, epochId), { from: member })
         numKeysReportedTotal += numKeys
+        epochId += 1
       }
 
       const numBlocksPassed = (await web3.eth.getBlock('latest')).number - startBlockNumber
       const numExcessKeys = Math.ceil(numBlocksPassed * fromE18(numRequestsLimitIncreasePerBlockE18)) + 1
-      assertRevert(bus.reportKeysToEject(...generateReportKeysArguments(numExcessKeys, epochId), { from: member }), 'RATE_LIMIT')
+      assertRevert(bus.handleCommitteeMemberReport(...generateReportKeysArguments(numExcessKeys, epochId), { from: member }), 'RATE_LIMIT')
     })
 
     it(`Report max amount of keys per tx`, async () => {
-      const epochId = 123
+      const epochId = 1
+      await bus.setRateLimit(...calcRateLimitParameters(100))
       const maxLimit = fromE18(await bus.getMaxLimit())
       console.log({ maxLimit })
-      await bus.reportKeysToEject(...generateReportKeysArguments(maxLimit, epochId), { from: member })
+      await bus.handleCommitteeMemberReport(...generateReportKeysArguments(maxLimit, epochId), { from: member })
     })
 
     it(`Revert if request to exit maxLimit+1 keys per tx`, async () => {
-      const epochId = 123
+      const epochId = 1
+      await bus.setRateLimit(...calcRateLimitParameters(100))
       const maxRequestsPerDay = fromE18(await bus.getMaxLimit())
-      assertRevert(bus.reportKeysToEject(...generateReportKeysArguments(maxRequestsPerDay + 1, epochId), { from: member }), 'RATE_LIMIT')
+      assertRevert(
+        bus.handleCommitteeMemberReport(...generateReportKeysArguments(maxRequestsPerDay + 1, epochId), { from: member }),
+        'RATE_LIMIT'
+      )
     })
   })
 })

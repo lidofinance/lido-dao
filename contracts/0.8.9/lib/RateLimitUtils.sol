@@ -159,4 +159,11 @@ library RateLimitUtils {
         _data.prevBlockNumber = uint32(block.number);
     }
 
+    function setPrevBlockNumber(
+        LimitState.Data memory _data,
+        uint256 _blockNumber
+    ) internal pure {
+        _data.prevBlockNumber = uint32(_blockNumber);
+    }
+
 }

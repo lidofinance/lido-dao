@@ -2,12 +2,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 
+import { AccessControlEnumerable } from "@openzeppelin/contracts-v4.4/access/AccessControlEnumerable.sol";
+
 import "./lib/RateLimitUtils.sol";
+import "./ReportEpochChecker.sol";
+import "./CommitteeQuorum.sol";
 
 
-contract ValidatorExitBus {
-    using RateLimitUtils for LimitState.Data;
+contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEpochChecker {
     using UnstructuredStorage for bytes32;
+    using RateLimitUtils for LimitState.Data;
     using LimitUnstructuredStorage for bytes32;
 
     event ValidatorExitRequest(
@@ -21,82 +25,115 @@ contract ValidatorExitBus {
         uint256 limitIncreasePerBlock
     );
 
-    event MemberAdded(address indexed member);
+    event CommitteeMemberReported(
+        uint256[] stakingModuleIds,
+        uint256[] nodeOperatorIds,
+        bytes[] validatorPubkeys,
+        uint256 indexed epochId
+    );
 
-    event MemberRemoved(address indexed member);
+    event ConsensusReached(
+        uint256[] stakingModuleIds,
+        uint256[] nodeOperatorIds,
+        bytes[] validatorPubkeys,
+        uint256 indexed epochId
+    );
 
+    event ContractVersionSet(uint256 version);
+
+    // ACL
+    bytes32 constant public MANAGE_MEMBERS_ROLE = keccak256("MANAGE_MEMBERS_ROLE");
+    bytes32 constant public MANAGE_QUORUM_ROLE = keccak256("MANAGE_QUORUM_ROLE");
+    bytes32 constant public SET_BEACON_SPEC_ROLE = keccak256("SET_BEACON_SPEC_ROLE");
 
     // TODO: use solidity custom errors
     string private constant ERROR_ARRAYS_MUST_BE_SAME_SIZE = "ARRAYS_MUST_BE_SAME_SIZE";
     string private constant ERROR_EMPTY_ARRAYS_REPORTED = "EMPTY_ARRAYS_REPORTED";
-    string private constant ERROR_NOT_MEMBER_REPORTED = "NOT_MEMBER_REPORTED";
-    string private constant ERROR_ZERO_MEMBER_ADDRESS = "ZERO_MEMBER_ADDRESS";
-    string private constant ERROR_MEMBER_NOT_FOUND = "MEMBER_NOT_FOUND";
-    string private constant ERROR_TOO_MANY_MEMBERS = "TOO_MANY_MEMBERS";
-    string private constant ERROR_MEMBER_EXISTS = "MEMBER_EXISTS";
-
-    /// Maximum number of oracle committee members
-    uint256 public constant MAX_MEMBERS = 256;
 
     bytes32 internal constant RATE_LIMIT_STATE_POSITION = keccak256("lido.ValidatorExitBus.rateLimitState");
 
-    bytes32 internal constant LAST_REPORT_EPOCH_ID_POSITION = keccak256("lido.ValidatorExitBus.lastReportEpochId");
+    /// Version of the initialized contract data
+    /// NB: Contract versioning starts from 1.
+    /// The version stored in CONTRACT_VERSION_POSITION equals to
+    /// - 0 right after deployment when no initializer is invoked yet
+    /// - N after calling initialize() during deployment from scratch, where N is the current contract version
+    /// - N after upgrading contract from the previous version (after calling finalize_vN())
+    bytes32 internal constant CONTRACT_VERSION_POSITION =
+        0x75be19a3f314d89bd1f84d30a6c84e2f1cd7afc7b6ca21876564c265113bb7e4; // keccak256("lido.LidoOracle.contractVersion")
 
-    /// slot 0: oracle committee members
-    address[] private members;
 
-    constructor(
+    function initialize(
+        address _admin,
         uint256 _maxRequestsPerDayE18,
-        uint256 _numRequestsLimitIncreasePerBlockE18
-    )
+        uint256 _numRequestsLimitIncreasePerBlockE18,
+        uint64 _epochsPerFrame,
+        uint64 _slotsPerEpoch,
+        uint64 _secondsPerSlot,
+        uint64 _genesisTime
+    ) external
     {
-        // For ~450,000 Ethereum validators, max amount of Voluntary Exits processed
-        // per epoch is 6. This is 1350 per day
-        // Let's assume Lido wants to set its limit for exit request 4 times larger
-        // This is 5400 exit requests per day, what is 0.75 requests per block
-        // NB, that limit for _enqueuing_ exit requests is much larger (~ 115k per day)
-        LimitState.Data memory limit = RATE_LIMIT_STATE_POSITION.getStorageLimitStruct();
-        limit.setLimit(_maxRequestsPerDayE18, _numRequestsLimitIncreasePerBlockE18);
-        limit.prevBlockNumber = uint32(block.number);
-        RATE_LIMIT_STATE_POSITION.setStorageLimitStruct(limit);
-    }
+        // Initializations for v0 --> v1
+        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "BASE_VERSION_MUST_BE_ZERO");
+        require(_admin != address(0), "ZERO_ADMIN_ADDRESS");
 
+        CONTRACT_VERSION_POSITION.setStorageUint256(1);
+        emit ContractVersionSet(1);
 
-    function reportKeysToEject(
-        uint256[] calldata stakingModuleIds,
-        uint256[] calldata nodeOperatorIds,
-        bytes[] calldata validatorPubkeys,
-        uint256 epochId
-    ) external {
-        // TODO: maybe add reporting validator id
-        // TODO: add consensus logic
-        require(nodeOperatorIds.length == validatorPubkeys.length, ERROR_ARRAYS_MUST_BE_SAME_SIZE);
-        require(stakingModuleIds.length == validatorPubkeys.length, ERROR_ARRAYS_MUST_BE_SAME_SIZE);
-        require(validatorPubkeys.length > 0, ERROR_EMPTY_ARRAYS_REPORTED);
-        uint256 numKeys = validatorPubkeys.length;
-
-        uint256 memberIndex = _getMemberId(msg.sender);
-        require(memberIndex < MAX_MEMBERS, ERROR_NOT_MEMBER_REPORTED);
-
-        LAST_REPORT_EPOCH_ID_POSITION.setStorageUint256(epochId);
+        _grantRole(DEFAULT_ADMIN_ROLE, _admin);
 
         LimitState.Data memory limitData = RATE_LIMIT_STATE_POSITION.getStorageLimitStruct();
-        uint256 currentLimit = limitData.calculateCurrentLimit();
-
-        uint256 numKeysE18 = numKeys * 10**18;
-        require(numKeysE18 <= currentLimit, "RATE_LIMIT");
-        limitData.updatePrevLimit(currentLimit - numKeysE18);
+        limitData.setLimit(_maxRequestsPerDayE18, _numRequestsLimitIncreasePerBlockE18);
+        limitData.setPrevBlockNumber(block.number);
         RATE_LIMIT_STATE_POSITION.setStorageLimitStruct(limitData);
+        emit RateLimitSet(_maxRequestsPerDayE18, _numRequestsLimitIncreasePerBlockE18);
 
-        for (uint256 i = 0; i < numKeys; i++) {
-            emit ValidatorExitRequest(
-                stakingModuleIds[i],
-                nodeOperatorIds[i],
-                validatorPubkeys[i]
-            );
-        }
+        _setQuorum(1);
+
+        _setBeaconSpec(_epochsPerFrame, _slotsPerEpoch, _secondsPerSlot, _genesisTime);
+
+        // set expected epoch to the first epoch for the next frame
+        _setExpectedEpochToFirstOfNextFrame();
     }
 
+    /**
+     * @notice Return the initialized version of this contract starting from 0
+     */
+    function getVersion() external view returns (uint256) {
+        return CONTRACT_VERSION_POSITION.getStorageUint256();
+    }
+
+    function handleCommitteeMemberReport(
+        uint256[] calldata _stakingModuleIds,
+        uint256[] calldata _nodeOperatorIds,
+        bytes[] calldata _validatorPubkeys,
+        uint256 _epochId
+    ) external {
+        require(_nodeOperatorIds.length == _validatorPubkeys.length, ERROR_ARRAYS_MUST_BE_SAME_SIZE);
+        require(_stakingModuleIds.length == _validatorPubkeys.length, ERROR_ARRAYS_MUST_BE_SAME_SIZE);
+        require(_validatorPubkeys.length > 0, ERROR_EMPTY_ARRAYS_REPORTED);
+
+        BeaconSpec memory beaconSpec = _getBeaconSpec();
+        bool hasEpochAdvanced = _validateAndUpdateExpectedEpoch(_epochId, beaconSpec);
+        if (hasEpochAdvanced) {
+            _clearReporting();
+        }
+
+        bytes memory reportBytes = _encodeReport(_stakingModuleIds, _nodeOperatorIds, _validatorPubkeys, _epochId);
+        if (_handleMemberReport(msg.sender, reportBytes)) {
+            _reportKeysToEject(_stakingModuleIds, _nodeOperatorIds, _validatorPubkeys, _epochId, beaconSpec);
+        }
+
+        emit CommitteeMemberReported(_stakingModuleIds, _nodeOperatorIds, _validatorPubkeys, _epochId);
+    }
+
+    function setAdmin(address _newAdmin)
+        external onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        // TODO: remove this temporary function
+
+        _grantRole(DEFAULT_ADMIN_ROLE, _newAdmin);
+        _revokeRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    }
 
     function setRateLimit(uint256 _maxLimit, uint256 _limitIncreasePerBlock) external {
         _setRateLimit(_maxLimit, _limitIncreasePerBlock);
@@ -118,51 +155,72 @@ contract ValidatorExitBus {
         return RATE_LIMIT_STATE_POSITION.getStorageLimitStruct().calculateCurrentLimit();
     }
 
+
+    /**
+     * @notice Set the number of exactly the same reports needed to finalize the epoch to `_quorum`
+     */
+    function updateQuorum(uint256 _quorum)
+        external onlyRole(MANAGE_QUORUM_ROLE)
+    {
+        (bool isQuorumReached, uint256 reportIndex) = _updateQuorum(_quorum);
+        if (isQuorumReached) {
+            (
+                uint256[] memory stakingModuleIds,
+                uint256[] memory nodeOperatorIds,
+                bytes[] memory validatorPubkeys,
+                uint256 epochId
+            ) = _decodeReport(distinctReports[reportIndex]);
+            _reportKeysToEject(stakingModuleIds, nodeOperatorIds, validatorPubkeys, epochId, _getBeaconSpec());
+        }
+    }
+
     /**
      * @notice Add `_member` to the oracle member committee list
      */
-    function addOracleMember(address _member) external {
-        require(_member != address(0), ERROR_ZERO_MEMBER_ADDRESS);
-        require(_getMemberId(_member) == MAX_MEMBERS, ERROR_MEMBER_EXISTS);
-        require(members.length < MAX_MEMBERS, ERROR_TOO_MANY_MEMBERS);
-
-        members.push(_member);
-
-        emit MemberAdded(_member);
+    function addOracleMember(address _member)
+        external onlyRole(MANAGE_MEMBERS_ROLE)
+    {
+        _addOracleMember(_member);
     }
 
     /**
      * @notice Remove '_member` from the oracle member committee list
      */
-    function removeOracleMember(address _member) external {
-        uint256 index = _getMemberId(_member);
-        require(index != MAX_MEMBERS, ERROR_MEMBER_NOT_FOUND);
-        uint256 last = members.length - 1;
-        if (index != last) {
-            members[index] = members[last];
-        }
-        members.pop();
-        emit MemberRemoved(_member);
+    function removeOracleMember(address _member)
+        external onlyRole(MANAGE_MEMBERS_ROLE)
+    {
+        _removeOracleMember(_member);
     }
 
-    /**
-     * @notice Return the current oracle member committee list
-     */
-    function getOracleMembers() external view returns (address[] memory) {
-        return members;
-    }
+    function _reportKeysToEject(
+        uint256[] memory _stakingModuleIds,
+        uint256[] memory _nodeOperatorIds,
+        bytes[] memory _validatorPubkeys,
+        uint256 _epochId,
+        BeaconSpec memory _beaconSpec
+    ) internal {
+        // TODO: maybe add reporting validator id
 
-    /**
-     * @notice Return `_member` index in the members list or MEMBER_NOT_FOUND
-     */
-    function _getMemberId(address _member) internal view returns (uint256) {
-        uint256 length = members.length;
-        for (uint256 i = 0; i < length; ++i) {
-            if (members[i] == _member) {
-                return i;
-            }
+        emit ConsensusReached(_stakingModuleIds, _nodeOperatorIds, _validatorPubkeys, _epochId);
+
+        _advanceExpectedEpoch(_epochId + _beaconSpec.epochsPerFrame);
+        _clearReporting();
+
+        uint256 numKeys = _validatorPubkeys.length;
+        LimitState.Data memory limitData = RATE_LIMIT_STATE_POSITION.getStorageLimitStruct();
+        uint256 currentLimit = limitData.calculateCurrentLimit();
+        uint256 numKeysE18 = numKeys * 10**18;
+        require(numKeysE18 <= currentLimit, "RATE_LIMIT");
+        limitData.updatePrevLimit(currentLimit - numKeysE18);
+        RATE_LIMIT_STATE_POSITION.setStorageLimitStruct(limitData);
+
+        for (uint256 i = 0; i < numKeys; i++) {
+            emit ValidatorExitRequest(
+                _stakingModuleIds[i],
+                _nodeOperatorIds[i],
+                _validatorPubkeys[i]
+            );
         }
-        return MAX_MEMBERS;
     }
 
     function _setRateLimit(uint256 _maxLimit, uint256 _limitIncreasePerBlock) internal {
@@ -172,5 +230,28 @@ contract ValidatorExitBus {
 
         emit RateLimitSet(_maxLimit, _limitIncreasePerBlock);
     }
+
+    function _decodeReport(bytes memory _reportData) internal pure returns (
+        uint256[] memory stakingModuleIds,
+        uint256[] memory nodeOperatorIds,
+        bytes[] memory validatorPubkeys,
+        uint256 epochId
+    ) {
+        (stakingModuleIds, nodeOperatorIds, validatorPubkeys, epochId)
+            = abi.decode(_reportData, (uint256[], uint256[], bytes[], uint256));
+    }
+
+
+    function _encodeReport(
+        uint256[] calldata stakingModuleIds,
+        uint256[] calldata nodeOperatorIds,
+        bytes[] calldata validatorPubkeys,
+        uint256 epochId
+    ) internal pure returns (
+        bytes memory reportData
+    ) {
+        reportData = abi.encode(stakingModuleIds, nodeOperatorIds, validatorPubkeys, epochId);
+    }
+
 
 }
