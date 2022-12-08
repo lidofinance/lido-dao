@@ -15,7 +15,7 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
     using LimitUnstructuredStorage for bytes32;
 
     event ValidatorExitRequest(
-        uint256 indexed stakingModuleId,
+        address indexed stakingModule,
         uint256 indexed nodeOperatorId,
         bytes validatorPubkey
     );
@@ -26,14 +26,14 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
     );
 
     event CommitteeMemberReported(
-        uint256[] stakingModuleIds,
+        address[] stakingModules,
         uint256[] nodeOperatorIds,
         bytes[] validatorPubkeys,
         uint256 indexed epochId
     );
 
     event ConsensusReached(
-        uint256[] stakingModuleIds,
+        address[] stakingModules,
         uint256[] nodeOperatorIds,
         bytes[] validatorPubkeys,
         uint256 indexed epochId
@@ -103,13 +103,13 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
     }
 
     function handleCommitteeMemberReport(
-        uint256[] calldata _stakingModuleIds,
+        address[] calldata _stakingModules,
         uint256[] calldata _nodeOperatorIds,
         bytes[] calldata _validatorPubkeys,
         uint256 _epochId
     ) external {
         require(_nodeOperatorIds.length == _validatorPubkeys.length, ERROR_ARRAYS_MUST_BE_SAME_SIZE);
-        require(_stakingModuleIds.length == _validatorPubkeys.length, ERROR_ARRAYS_MUST_BE_SAME_SIZE);
+        require(_stakingModules.length == _validatorPubkeys.length, ERROR_ARRAYS_MUST_BE_SAME_SIZE);
         require(_validatorPubkeys.length > 0, ERROR_EMPTY_ARRAYS_REPORTED);
 
         BeaconSpec memory beaconSpec = _getBeaconSpec();
@@ -118,12 +118,12 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
             _clearReporting();
         }
 
-        bytes memory reportBytes = _encodeReport(_stakingModuleIds, _nodeOperatorIds, _validatorPubkeys, _epochId);
+        bytes memory reportBytes = _encodeReport(_stakingModules, _nodeOperatorIds, _validatorPubkeys, _epochId);
         if (_handleMemberReport(msg.sender, reportBytes)) {
-            _reportKeysToEject(_stakingModuleIds, _nodeOperatorIds, _validatorPubkeys, _epochId, beaconSpec);
+            _reportKeysToEject(_stakingModules, _nodeOperatorIds, _validatorPubkeys, _epochId, beaconSpec);
         }
 
-        emit CommitteeMemberReported(_stakingModuleIds, _nodeOperatorIds, _validatorPubkeys, _epochId);
+        emit CommitteeMemberReported(_stakingModules, _nodeOperatorIds, _validatorPubkeys, _epochId);
     }
 
     function setAdmin(address _newAdmin)
@@ -165,12 +165,12 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
         (bool isQuorumReached, uint256 reportIndex) = _updateQuorum(_quorum);
         if (isQuorumReached) {
             (
-                uint256[] memory stakingModuleIds,
+                address[] memory stakingModules,
                 uint256[] memory nodeOperatorIds,
                 bytes[] memory validatorPubkeys,
                 uint256 epochId
             ) = _decodeReport(distinctReports[reportIndex]);
-            _reportKeysToEject(stakingModuleIds, nodeOperatorIds, validatorPubkeys, epochId, _getBeaconSpec());
+            _reportKeysToEject(stakingModules, nodeOperatorIds, validatorPubkeys, epochId, _getBeaconSpec());
         }
     }
 
@@ -193,7 +193,7 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
     }
 
     function _reportKeysToEject(
-        uint256[] memory _stakingModuleIds,
+        address[] memory _stakingModules,
         uint256[] memory _nodeOperatorIds,
         bytes[] memory _validatorPubkeys,
         uint256 _epochId,
@@ -201,10 +201,11 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
     ) internal {
         // TODO: maybe add reporting validator id
 
-        emit ConsensusReached(_stakingModuleIds, _nodeOperatorIds, _validatorPubkeys, _epochId);
+        emit ConsensusReached(_stakingModules, _nodeOperatorIds, _validatorPubkeys, _epochId);
 
         _advanceExpectedEpoch(_epochId + _beaconSpec.epochsPerFrame);
         _clearReporting();
+
 
         uint256 numKeys = _validatorPubkeys.length;
         LimitState.Data memory limitData = RATE_LIMIT_STATE_POSITION.getStorageLimitStruct();
@@ -214,9 +215,11 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
         limitData.updatePrevLimit(currentLimit - numKeysE18);
         RATE_LIMIT_STATE_POSITION.setStorageLimitStruct(limitData);
 
+        // TODO: maybe do some additional report validity sanity checks
+
         for (uint256 i = 0; i < numKeys; i++) {
             emit ValidatorExitRequest(
-                _stakingModuleIds[i],
+                _stakingModules[i],
                 _nodeOperatorIds[i],
                 _validatorPubkeys[i]
             );
@@ -232,25 +235,25 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
     }
 
     function _decodeReport(bytes memory _reportData) internal pure returns (
-        uint256[] memory stakingModuleIds,
+        address[] memory stakingModules,
         uint256[] memory nodeOperatorIds,
         bytes[] memory validatorPubkeys,
         uint256 epochId
     ) {
-        (stakingModuleIds, nodeOperatorIds, validatorPubkeys, epochId)
-            = abi.decode(_reportData, (uint256[], uint256[], bytes[], uint256));
+        (stakingModules, nodeOperatorIds, validatorPubkeys, epochId)
+            = abi.decode(_reportData, (address[], uint256[], bytes[], uint256));
     }
 
 
     function _encodeReport(
-        uint256[] calldata stakingModuleIds,
+        address[] calldata stakingModules,
         uint256[] calldata nodeOperatorIds,
         bytes[] calldata validatorPubkeys,
         uint256 epochId
     ) internal pure returns (
         bytes memory reportData
     ) {
-        reportData = abi.encode(stakingModuleIds, nodeOperatorIds, validatorPubkeys, epochId);
+        reportData = abi.encode(stakingModules, nodeOperatorIds, validatorPubkeys, epochId);
     }
 
 

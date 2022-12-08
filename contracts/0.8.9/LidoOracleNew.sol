@@ -415,6 +415,8 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
     {
         uint128 beaconBalance = DENOMINATION_OFFSET * uint128(_report.beaconBalanceGwei);
 
+        // TODO: maybe add additional report validity sanity checks
+
         emit Completed(
             _report.epochId,
             beaconBalance,

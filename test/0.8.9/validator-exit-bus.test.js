@@ -37,8 +37,10 @@ function generateValidatorPubKey() {
   return pad('0x010203', pubKeyLength)
 }
 
+const stakingModuleId = ZERO_ADDRESS
+
 function generateReportKeysArguments(numKeys, epochId) {
-  const stakingModuleIds = Array.from(Array(numKeys), () => 1)
+  const stakingModuleIds = Array.from(Array(numKeys), () => stakingModuleId)
   const nodeOperatorIds = Array.from(Array(numKeys), () => 1)
   const keys = Array.from(Array(numKeys), () => generateValidatorPubKey())
   return [stakingModuleIds, nodeOperatorIds, keys, epochId]
@@ -54,7 +56,7 @@ function calcRateLimitParameters(maxRequestsPerDay) {
 
 const GENESIS_TIME = 1606824000
 
-contract.skip('ValidatorExitBus', ([deployer, member, owner]) => {
+contract('ValidatorExitBus', ([deployer, member, owner]) => {
   let bus = null
 
   beforeEach('deploy bus', async () => {
@@ -76,7 +78,7 @@ contract.skip('ValidatorExitBus', ([deployer, member, owner]) => {
   describe('Estimate gas usage', () => {
     beforeEach(async () => {})
 
-    it.skip(`Calculate gas usages`, async () => {
+    it(`Calculate gas usages`, async () => {
       let epochId = 1
       const gasUsage = {}
       const amountsOfKeysToTry = [1, 2, 5, 10, 50, 100]
@@ -99,7 +101,7 @@ contract.skip('ValidatorExitBus', ([deployer, member, owner]) => {
 
     it(`Report one key`, async () => {
       const epochId = 1
-      await bus.handleCommitteeMemberReport([1], [2], [generateValidatorPubKey()], epochId, { from: member })
+      await bus.handleCommitteeMemberReport([stakingModuleId], [2], [generateValidatorPubKey()], epochId, { from: member })
     })
 
     it.skip(`Revert if length of arrays reported differ`, async () => {
