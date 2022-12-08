@@ -123,7 +123,7 @@
     "@truffle/contract": "^4.2.22",
     "concurrently": "^6.4.0",
     "ethereumjs-util": "^7.0.8",
-    "ethers": "^5.0.19",
+    "ethers": "^5.1.4",
     "node-gyp": "^8.4.1",
     "openzeppelin-solidity": "2.0.0",
     "patch-package": "^6.4.7",
