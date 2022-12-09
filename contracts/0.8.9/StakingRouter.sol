@@ -9,6 +9,8 @@ import './interfaces/IDepositContract.sol';
 import './lib/BytesLib.sol';
 import './lib/UnstructuredStorage.sol';
 
+// import 'hardhat/console.sol';
+
 /**
  * @title Interface defining a Lido liquid staking pool
  * @dev see also [Lido liquid staking pool core contract](https://docs.lido.fi/contracts/lido)

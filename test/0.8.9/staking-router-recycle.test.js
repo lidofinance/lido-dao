@@ -50,7 +50,7 @@ const proModule = {
   balance: 0,
 
   totalKeys: 9999,
-  totalUsedKeys: 9999,
+  totalUsedKeys: 9998,
   totalStoppedKeys: 0
 }
 
@@ -173,12 +173,9 @@ contract('StakingRouter', (accounts) => {
       await operators.setFee(500, { from: appManager })
       const NORFee = await operators.getFee()
       assertBn(500, NORFee, 'invalid node operator registry fee')
-
-      console.log('add node operator to curated module')
-      await operators.addNodeOperator('op1', ADDRESS_1, { from: voting })
     })
 
-    it(`init counters and burn amount per run works`, async () => {
+    it(`base functions`, async () => {
       // 50% of mintedShares
       await operators.setFee(500, { from: appManager })
 
@@ -258,12 +255,9 @@ contract('StakingRouter', (accounts) => {
       await lido.setWithdrawalCredentials(wc, { from: voting })
       console.log('Set withdrawal credentials ' + g(wc))
 
-      // deposit(pubkey, sig)
-      const pubkeys1 = hexConcat(pad('0x0101', 48), pad('0x0102', 48), pad('0x0103', 48))
-      const sigkeys1 = hexConcat(pad('0x0101', 96), pad('0x0102', 96), pad('0x0103', 96))
-
+      const keys1 = genKeys(3)
       console.log(b('DEPOSIT 3 keys COMMUNITY module'))
-      await comModule.deposit(pubkeys1, sigkeys1)
+      await comModule.deposit(keys1.pubkeys, keys1.sigkeys)
 
       const balance_2 = await web3.eth.getBalance(stakingRouter.address)
       console.log('StakingRouter balance:', y(balance_2))
@@ -280,7 +274,8 @@ contract('StakingRouter', (accounts) => {
 
       console.log('add keys to node operator curated module')
       for (let i = 0; i < 10; i++) {
-        await curModule.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
+        const keys = genKeys(1)
+        await curModule.addSigningKeys(0, 1, keys.pubkeys, keys.sigkeys, { from: voting })
       }
 
       const operator = await curModule.getNodeOperator(0, true)
@@ -361,6 +356,9 @@ contract('StakingRouter', (accounts) => {
     it(`recycle allocation works`, async () => {
       const stakeModules = [proModule, soloModule, soloModule2]
       const stakeModuleContracts = []
+
+      console.log('add node operator to curated module')
+      await operators.addNodeOperator('op1', ADDRESS_1, { from: voting })
 
       /**
        *
@@ -543,7 +541,7 @@ contract('StakingRouter', (accounts) => {
       assert.deepEqual(recAlloc.keysAmounts, [0, 24, 30])
 
       expectedMaxKeys = [
-        { allocKeysAmount: 0, recycledKeysAmount: 25 }, // totalKeys-usedKeys < 100% recycle keys of module2+ 50% keys of module 1)
+        { allocKeysAmount: 0, recycledKeysAmount: 26 }, // totalKeys-usedKeys < 100% recycle keys of module2+ 50% keys of module 1)
         { allocKeysAmount: 48, recycledKeysAmount: 30 }, // 100% keys of mod 2
         { allocKeysAmount: 30, recycledKeysAmount: 24 } // 50% keys of module 1
       ]
