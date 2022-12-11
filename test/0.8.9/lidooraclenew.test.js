@@ -1,6 +1,6 @@
 const { assert } = require('chai')
 const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
-const { toBN } = require('../helpers/utils')
+const { toBN, assertRevertCustomError } = require('../helpers/utils')
 const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 const keccak256 = require('js-sha3').keccak_256
 
@@ -42,7 +42,7 @@ function getAuthError(account, role) {
 // but if you jump from 1e12+30 to 1e12+60 then it's smooth small jump as in the real world.
 const START_BALANCE = 1e12
 
-contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user5, user6, user7, nobody]) => {
+contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, user7, nobody]) => {
   let appLido, app, nodeOperatorsRegistry
 
   const assertExpectedEpochs = async (startEpoch, endEpoch) => {
@@ -66,7 +66,11 @@ contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user
 
     assertBn(await app.getVersion(), 0)
     await app.setVersion(1)
-    await assertRevert(app.initialize(ZERO_ADDRESS, appLido.address, 1, 32, 12, GENESIS_TIME, 1000, 500), 'BASE_VERSION_MUST_BE_ZERO')
+    await assertRevertCustomError(
+      app.initialize(ZERO_ADDRESS, appLido.address, 1, 32, 12, GENESIS_TIME, 1000, 500),
+      'CanInitializeOnlyOnZeroVersion'
+    )
+
     await app.setVersion(0)
 
     // 1000 and 500 stand for 10% yearly increase, 5% moment decrease
@@ -98,10 +102,10 @@ contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user
   })
 
   it('setBeaconSpec works', async () => {
-    await assertRevert(app.setBeaconSpec(0, 1, 1, 1, { from: voting }), 'BAD_EPOCHS_PER_FRAME')
-    await assertRevert(app.setBeaconSpec(1, 0, 1, 1, { from: voting }), 'BAD_SLOTS_PER_EPOCH')
-    await assertRevert(app.setBeaconSpec(1, 1, 0, 1, { from: voting }), 'BAD_SECONDS_PER_SLOT')
-    await assertRevert(app.setBeaconSpec(1, 1, 1, 0, { from: voting }), 'BAD_GENESIS_TIME')
+    await assertRevertCustomError(app.setBeaconSpec(0, 1, 1, 1, { from: voting }), 'BadEpochsPerFrame')
+    await assertRevertCustomError(app.setBeaconSpec(1, 0, 1, 1, { from: voting }), 'BadSlotsPerEpoch')
+    await assertRevertCustomError(app.setBeaconSpec(1, 1, 0, 1, { from: voting }), 'BadSecondsPerSlot')
+    await assertRevertCustomError(app.setBeaconSpec(1, 1, 1, 0, { from: voting }), 'BadGenesisTime')
 
     const receipt = await app.setBeaconSpec(1, 1, 1, 1, { from: voting })
     assertEvent(receipt, 'BeaconSpecSet', {
@@ -128,7 +132,10 @@ contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user
 
     it('addOracleMember works', async () => {
       await assertRevert(app.addOracleMember(user1, { from: user1 }), getAuthError(user1, MANAGE_MEMBERS_ROLE))
-      await assertRevert(app.addOracleMember('0x0000000000000000000000000000000000000000', { from: voting }), 'BAD_ARGUMENT')
+      await assertRevertCustomError(
+        app.addOracleMember('0x0000000000000000000000000000000000000000', { from: voting }),
+        'ZeroMemberAddress'
+      )
 
       await app.addOracleMember(user1, { from: voting })
       await assertRevert(app.addOracleMember(user2, { from: user2 }), getAuthError(user2, MANAGE_MEMBERS_ROLE))
@@ -137,8 +144,8 @@ contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user
       await app.addOracleMember(user2, { from: voting })
       await app.addOracleMember(user3, { from: voting })
 
-      await assertRevert(app.addOracleMember(user1, { from: voting }), 'MEMBER_EXISTS')
-      await assertRevert(app.addOracleMember(user2, { from: voting }), 'MEMBER_EXISTS')
+      await assertRevertCustomError(app.addOracleMember(user1, { from: voting }), 'MemberExists')
+      await assertRevertCustomError(app.addOracleMember(user2, { from: voting }), 'MemberExists')
     })
 
     it('addOracleMember edge-case', async () => {
@@ -150,7 +157,7 @@ contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user
       }
       await Promise.all(promises)
 
-      assertRevert(app.addOracleMember(user4, { from: voting }), 'TOO_MANY_MEMBERS')
+      assertRevertCustomError(app.addOracleMember(user4, { from: voting }), 'TooManyMembers')
     })
 
     it('removeOracleMember works', async () => {
@@ -164,7 +171,7 @@ contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user
       await app.addOracleMember(user2, { from: voting })
       await app.addOracleMember(user3, { from: voting })
 
-      await assertRevert(app.removeOracleMember(nobody, { from: voting }), 'MEMBER_NOT_FOUND')
+      await assertRevertCustomError(app.removeOracleMember(nobody, { from: voting }), 'MemberNotFound')
 
       await app.removeOracleMember(user1, { from: voting })
       await app.removeOracleMember(user2, { from: voting })
@@ -179,7 +186,7 @@ contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user
       await app.addOracleMember(user3, { from: voting })
 
       await assertRevert(app.updateQuorum(2, { from: user1 }), getAuthError(user1, MANAGE_QUORUM_ROLE))
-      await assertRevert(app.updateQuorum(0, { from: voting }), 'QUORUM_WONT_BE_MADE')
+      await assertRevertCustomError(app.updateQuorum(0, { from: voting }), 'QuorumWontBeMade')
       await app.updateQuorum(4, { from: voting })
       assertBn(await app.getQuorum(), 4)
 
@@ -310,7 +317,7 @@ contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user
 
       it('reverts when trying to report from non-member', async () => {
         for (const account of [user2, user3, user4, nobody]) {
-          await assertRevert(
+          await assertRevertCustomError(
             app.reportBeacon(
               {
                 ...ZERO_MEMBER_REPORT,
@@ -320,7 +327,7 @@ contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user
               },
               { from: account }
             ),
-            'MEMBER_NOT_FOUND'
+            'NotMemberReported'
           )
         }
       })
@@ -413,9 +420,9 @@ contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user
         const reward = Math.round((START_BALANCE * (768 / 365 / 24 / 3600) * 11) / 100) // annual increase by 11%
         const nextPooledEther = beginPooledEther + reward
         await app.setTime(GENESIS_TIME + EPOCH_LENGTH * 3) // 2 epochs later (timeElapsed = 768)
-        await assertRevert(
+        await assertRevertCustomError(
           app.reportBeacon({ ...ZERO_MEMBER_REPORT, epochId: 3, beaconValidators: 3, beaconBalanceGwei: nextPooledEther }, { from: user1 }),
-          'ALLOWED_BEACON_BALANCE_INCREASE'
+          'AllowedBeaconBalanceIncreaseExceeded'
         )
       })
 
@@ -456,9 +463,9 @@ contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user
         const loss = Math.round((START_BALANCE * 6) / 100) // decrease by 6%
         const nextPooledEther = beginPooledEther - loss
         await app.setTime(GENESIS_TIME + EPOCH_LENGTH * 3) // 2 epochs later (timeElapsed = 768)
-        await assertRevert(
+        await assertRevertCustomError(
           app.reportBeacon({ ...ZERO_MEMBER_REPORT, epochId: 3, beaconValidators: 3, beaconBalanceGwei: nextPooledEther }, { from: user1 }),
-          'ALLOWED_BEACON_BALANCE_DECREASE'
+          'AllowedBeaconBalanceDecreaseExceeded'
         )
       })
 
@@ -502,7 +509,7 @@ contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user
         await app.setTime(GENESIS_TIME + EPOCH_LENGTH * 3) // 2 epochs later (timeElapsed = 768)
 
         // check fails
-        await assertRevert(
+        await assertRevertCustomError(
           app.reportBeacon(
             {
               ...ZERO_MEMBER_REPORT,
@@ -512,7 +519,7 @@ contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user
             },
             { from: user1 }
           ),
-          'ALLOWED_BEACON_BALANCE_INCREASE'
+          'AllowedBeaconBalanceIncreaseExceeded'
         )
 
         // set limit up to 12%
@@ -545,9 +552,9 @@ contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user
         await app.setTime(GENESIS_TIME + EPOCH_LENGTH * 3) // 2 epochs later (timeElapsed = 768)
 
         // check fails
-        await assertRevert(
+        await assertRevertCustomError(
           app.reportBeacon({ ...ZERO_MEMBER_REPORT, epochId: 3, beaconValidators: 3, beaconBalanceGwei: nextPooledEther }, { from: user1 }),
-          'ALLOWED_BEACON_BALANCE_DECREASE'
+          'AllowedBeaconBalanceDecreaseExceeded'
         )
 
         // set limit up to 7%
@@ -580,9 +587,9 @@ contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user
         await app.setTime(GENESIS_TIME + EPOCH_LENGTH * 3) // 2 epochs later (timeElapsed = 768)
 
         // check fails
-        await assertRevert(
+        await assertRevertCustomError(
           app.reportBeacon({ ...ZERO_MEMBER_REPORT, epochId: 3, beaconValidators: 3, beaconBalanceGwei: nextPooledEther }, { from: user1 }),
-          'ALLOWED_BEACON_BALANCE_INCREASE'
+          'AllowedBeaconBalanceIncreaseExceeded'
         )
 
         await app.setTime(GENESIS_TIME + EPOCH_LENGTH * 5) // 4 epochs later (timeElapsed = 768*2)
@@ -612,16 +619,16 @@ contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user
         await app.setTime(GENESIS_TIME + EPOCH_LENGTH * 3) // 2 epochs later (timeElapsed = 768)
 
         // check fails
-        await assertRevert(
+        await assertRevertCustomError(
           app.reportBeacon({ ...ZERO_MEMBER_REPORT, epochId: 3, beaconValidators: 3, beaconBalanceGwei: nextPooledEther }, { from: user1 }),
-          'ALLOWED_BEACON_BALANCE_INCREASE'
+          'AllowedBeaconBalanceIncreaseExceeded'
         )
 
         await app.setTime(GENESIS_TIME + EPOCH_LENGTH * 5) // 4 epochs later (timeElapsed = 768*2)
         // check fails but 4 epochs passed
-        await assertRevert(
+        await assertRevertCustomError(
           app.reportBeacon({ ...ZERO_MEMBER_REPORT, epochId: 5, beaconValidators: 3, beaconBalanceGwei: nextPooledEther }, { from: user1 }),
-          'ALLOWED_BEACON_BALANCE_INCREASE'
+          'AllowedBeaconBalanceIncreaseExceeded'
         )
       })
 
@@ -637,7 +644,7 @@ contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user
 
       it('quorum receiver called with same arguments as getLastCompletedReportDelta', async () => {
         const badMock = await BeaconReportReceiverWithoutERC165.new()
-        await assertRevert(app.setBeaconReportReceiver(badMock.address, { from: voting }), 'BAD_BEACON_REPORT_RECEIVER')
+        await assertRevertCustomError(app.setBeaconReportReceiver(badMock.address, { from: voting }), 'BadBeaconReportReceiver')
 
         const mock = await BeaconReportReceiver.new()
         let receipt = await app.setBeaconReportReceiver(mock.address, { from: voting })
@@ -680,16 +687,16 @@ contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user
           { from: user1 }
         ) // got quorum
         await assertExpectedEpochs(2, 0)
-        await assertRevert(
+        await assertRevertCustomError(
           app.reportBeacon({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: START_BALANCE }, { from: user1 }),
-          'EPOCH_IS_TOO_OLD'
+          'EpochIsTooOld'
         )
       })
 
       it('reverts when trying to report future epoch', async () => {
-        await assertRevert(
+        await assertRevertCustomError(
           app.reportBeacon({ ...ZERO_MEMBER_REPORT, epochId: 2, beaconValidators: 1, beaconBalanceGwei: 32 }, { from: user1 }),
-          'UNEXPECTED_EPOCH'
+          'UnexpectedEpoch'
         )
       })
 
@@ -701,9 +708,9 @@ contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user
         })
 
         it('reverts when trying to report stale epoch', async () => {
-          await assertRevert(
+          await assertRevertCustomError(
             app.reportBeacon({ ...ZERO_MEMBER_REPORT, epochId: 0, beaconValidators: 1, beaconBalanceGwei: 32 }, { from: user1 }),
-            'EPOCH_IS_TOO_OLD'
+            'EpochIsTooOld'
           )
           await assertExpectedEpochs(1, 5)
         })
@@ -711,17 +718,17 @@ contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user
         it('reverts when trying to report this epoch again from the same user', async () => {
           await app.updateQuorum(2, { from: voting })
           await app.reportBeacon({ ...ZERO_MEMBER_REPORT, epochId: 5, beaconValidators: 1, beaconBalanceGwei: 32 }, { from: user1 })
-          await assertRevert(
+          await assertRevertCustomError(
             app.reportBeacon({ ...ZERO_MEMBER_REPORT, epochId: 5, beaconValidators: 1, beaconBalanceGwei: 32 }, { from: user1 }),
-            'ALREADY_SUBMITTED'
+            'MemberAlreadyReported'
           )
           await assertExpectedEpochs(5, 5)
         })
 
         it('reverts when trying to report future epoch', async () => {
-          await assertRevert(
+          await assertRevertCustomError(
             app.reportBeacon({ ...ZERO_MEMBER_REPORT, epochId: 10, beaconValidators: 1, beaconBalanceGwei: 32 }, { from: user1 }),
-            'UNEXPECTED_EPOCH'
+            'UnexpectedEpoch'
           )
         })
 
@@ -829,9 +836,9 @@ contract('LidoOracleNew', ([appManager, voting, user1, user2, user3, user4, user
         await assertExpectedEpochs(1, 1)
 
         for (const account of [user1, user2, user3, user4, user5, user6]) {
-          await assertRevert(
+          await assertRevertCustomError(
             app.reportBeacon({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 }, { from: account }),
-            'ALREADY_SUBMITTED'
+            'MemberAlreadyReported'
           )
         }
         await assertExpectedEpochs(1, 1)

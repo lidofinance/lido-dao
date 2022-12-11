@@ -117,14 +117,15 @@ library RateLimitUtils {
         uint256 _maxLimit,
         uint256 _limitIncreasePerBlock
     ) internal view {
-        require(_maxLimit != 0, "ZERO_MAX_LIMIT");
-        require(_maxLimit < type(uint96).max, "TOO_LARGE_MAX_IMIT");
-        require(_maxLimit >= _limitIncreasePerBlock, "TOO_LARGE_LIMIT_INCREASE");
-        require(
-            (_limitIncreasePerBlock == 0)
-            || (_maxLimit / _limitIncreasePerBlock < type(uint32).max),
-            "TOO_SMALL_LIMIT_INCREASE"
-        );
+        if (_maxLimit == 0) { revert ZeroMaxLimit(); }
+        if (_maxLimit >= type(uint96).max) { revert TooLargeMaxLimit(); }
+        if (_maxLimit < _limitIncreasePerBlock) { revert TooLargeLimitIncrease(); }
+        if (
+            (_limitIncreasePerBlock != 0)
+            && (_maxLimit / _limitIncreasePerBlock >= type(uint32).max)
+        ) {
+            revert TooSmallLimitIncrease();
+        }
 
         // if no limit was set previously,
         // or new limit is lower than previous, then
@@ -166,4 +167,8 @@ library RateLimitUtils {
         _data.prevBlockNumber = uint32(_blockNumber);
     }
 
+    error ZeroMaxLimit();
+    error TooLargeMaxLimit();
+    error TooLargeLimitIncrease();
+    error TooSmallLimitIncrease();
 }

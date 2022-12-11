@@ -30,8 +30,8 @@ contract CommitteeQuorum {
     uint256 public constant MAX_MEMBERS = 256;
 
     /// Contract structured storage
-    address[] internal members;                /// slot 0: oracle committee members
-    bytes[] internal distinctReports;  /// slot 1: reporting storage
+    address[] internal members;
+    bytes[] internal distinctReports;
     bytes32[] internal distinctReportHashes;
     uint16[] internal distinctReportCounters;
 
@@ -40,13 +40,6 @@ contract CommitteeQuorum {
         0xd43b42c1ba05a1ab3c178623a49b2cdb55f000ec70b9ccdba5740b3339a7589e; // keccak256("lido.LidoOracle.quorum")
 
     uint256 internal constant MEMBER_NOT_FOUND = type(uint256).max;
-
-    // Errors
-    string private constant ERROR_NOT_MEMBER_REPORTED = "NOT_MEMBER_REPORTED";
-    string private constant ERROR_ZERO_MEMBER_ADDRESS = "ZERO_MEMBER_ADDRESS";
-    string private constant ERROR_MEMBER_NOT_FOUND = "MEMBER_NOT_FOUND";
-    string private constant ERROR_TOO_MANY_MEMBERS = "TOO_MANY_MEMBERS";
-    string private constant ERROR_MEMBER_EXISTS = "MEMBER_EXISTS";
 
     /// The bitmask of the oracle members that pushed their reports
     bytes32 internal constant REPORTS_BITMASK_POSITION =
@@ -84,9 +77,9 @@ contract CommitteeQuorum {
     }
 
     function _addOracleMember(address _member) internal {
-        require(address(0) != _member, "BAD_ARGUMENT");
-        require(MEMBER_NOT_FOUND == _getMemberId(_member), ERROR_MEMBER_EXISTS);
-        require(members.length < MAX_MEMBERS, ERROR_TOO_MANY_MEMBERS);
+        if (_member == address(0)) { revert ZeroMemberAddress(); }
+        if (MEMBER_NOT_FOUND != _getMemberId(_member)) { revert MemberExists(); }
+        if (members.length >= MAX_MEMBERS) { revert TooManyMembers(); }
 
         members.push(_member);
 
@@ -96,7 +89,8 @@ contract CommitteeQuorum {
 
     function _removeOracleMember(address _member) internal {
         uint256 index = _getMemberId(_member);
-        require(index != MEMBER_NOT_FOUND, ERROR_MEMBER_NOT_FOUND);
+        if (index == MEMBER_NOT_FOUND) { revert MemberNotFound(); }
+
         uint256 last = members.length - 1;
         if (index != last) members[index] = members[last];
         members.pop();
@@ -146,7 +140,7 @@ contract CommitteeQuorum {
     function _updateQuorum(uint256 _quorum) internal
         returns (bool isQuorumReached, uint256 reportIndex)
     {
-        require(0 != _quorum, "QUORUM_WONT_BE_MADE");
+        if (0 == _quorum) { revert QuorumWontBeMade(); }
         uint256 oldQuorum = QUORUM_POSITION.getStorageUint256();
 
         _setQuorum(_quorum);
@@ -182,10 +176,11 @@ contract CommitteeQuorum {
     {
         // make sure the oracle is from members list and has not yet voted
         uint256 index = _getMemberId(_reporter);
-        require(index != MEMBER_NOT_FOUND, ERROR_MEMBER_NOT_FOUND);
+        if (index == MEMBER_NOT_FOUND) { revert NotMemberReported(); }
+
         uint256 bitMask = REPORTS_BITMASK_POSITION.getStorageUint256();
         uint256 mask = 1 << index;
-        require(bitMask & mask == 0, "ALREADY_SUBMITTED");
+        if (bitMask & mask != 0) { revert MemberAlreadyReported(); }
         REPORTS_BITMASK_POSITION.setStorageUint256(bitMask | mask);
 
         bytes32 reportHash = keccak256(_report);
@@ -217,5 +212,13 @@ contract CommitteeQuorum {
             isQuorumReached = true;
         }
     }
+
+    error NotMemberReported();
+    error ZeroMemberAddress();
+    error MemberNotFound();
+    error TooManyMembers();
+    error MemberExists();
+    error MemberAlreadyReported();
+    error QuorumWontBeMade();
 
 }

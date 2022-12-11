@@ -167,10 +167,12 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         // We consider storage state right after deployment (no initialize() called yet) as version 0
 
         // Initializations for v0 --> v1
-        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "BASE_VERSION_MUST_BE_ZERO");
+        if (CONTRACT_VERSION_POSITION.getStorageUint256() != 0) {
+            revert CanInitializeOnlyOnZeroVersion();
+        }
         CONTRACT_VERSION_POSITION.setStorageUint256(1);
 
-        require(_admin != address(0), "ZERO_ADMIN_ADDRESS");
+        if (_admin == address(0)) { revert ZeroAdminAddress(); }
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
 
         LIDO_POSITION.setStorageAddress(_lido);
@@ -261,10 +263,9 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
     {
         if(_addr != address(0)) {
             IBeaconReportReceiver iBeacon;
-            require(
-                _addr.supportsInterface(iBeacon.processLidoOracleReport.selector),
-                "BAD_BEACON_REPORT_RECEIVER"
-            );
+            if (!_addr.supportsInterface(iBeacon.processLidoOracleReport.selector)) {
+                revert BadBeaconReportReceiver();
+            }
         }
 
         BEACON_REPORT_RECEIVER_POSITION.setStorageAddress(_addr);
@@ -513,9 +514,11 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
             uint256 allowedAnnualRelativeIncreaseBp =
                 ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION.getStorageUint256();
             // check that annualRelativeIncreaseBp <= allowedAnnualRelativeIncreaseBp
-            require(uint256(10000 * 365 days) * (_postTotalPooledEther - _preTotalPooledEther) <=
-                    allowedAnnualRelativeIncreaseBp * _preTotalPooledEther * _timeElapsed,
-                    "ALLOWED_BEACON_BALANCE_INCREASE");
+            if (uint256(10000 * 365 days) * (_postTotalPooledEther - _preTotalPooledEther) >
+                allowedAnnualRelativeIncreaseBp * _preTotalPooledEther * _timeElapsed)
+            {
+                revert AllowedBeaconBalanceIncreaseExceeded();
+            }
         } else {
             // decrease           = _preTotalPooledEther - _postTotalPooledEther
             // relativeDecrease   = decrease / _preTotalPooledEther
@@ -523,10 +526,18 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
             uint256 allowedRelativeDecreaseBp =
                 ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION.getStorageUint256();
             // check that relativeDecreaseBp <= allowedRelativeDecreaseBp
-            require(uint256(10000) * (_preTotalPooledEther - _postTotalPooledEther) <=
-                    allowedRelativeDecreaseBp * _preTotalPooledEther,
-                    "ALLOWED_BEACON_BALANCE_DECREASE");
+            if (uint256(10000) * (_preTotalPooledEther - _postTotalPooledEther) >
+                allowedRelativeDecreaseBp * _preTotalPooledEther)
+            {
+                revert AllowedBeaconBalanceDecreaseExceeded();
+            }
         }
     }
+
+    error CanInitializeOnlyOnZeroVersion();
+    error ZeroAdminAddress();
+    error BadBeaconReportReceiver();
+    error AllowedBeaconBalanceIncreaseExceeded();
+    error AllowedBeaconBalanceDecreaseExceeded();
 
 }

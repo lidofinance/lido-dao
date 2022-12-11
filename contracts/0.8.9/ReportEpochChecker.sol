@@ -99,11 +99,13 @@ contract ReportEpochChecker {
         internal returns (bool hasEpochAdvanced)
     {
         uint256 expectedEpoch = EXPECTED_EPOCH_ID_POSITION.getStorageUint256();
-        require(_epochId >= expectedEpoch, "EPOCH_IS_TOO_OLD");
+        if (_epochId < expectedEpoch) { revert EpochIsTooOld(); }
 
         // if expected epoch has advanced, check that this is the first epoch of the current frame
         if (_epochId > expectedEpoch) {
-            require(_epochId == _getFrameFirstEpochId(_getCurrentEpochId(_beaconSpec), _beaconSpec), "UNEXPECTED_EPOCH");
+            if (_epochId != _getFrameFirstEpochId(_getCurrentEpochId(_beaconSpec), _beaconSpec)) {
+                revert UnexpectedEpoch();
+            }
             hasEpochAdvanced = true;
             _advanceExpectedEpoch(_epochId);
         }
@@ -136,10 +138,10 @@ contract ReportEpochChecker {
     )
         internal
     {
-        require(_epochsPerFrame > 0, "BAD_EPOCHS_PER_FRAME");
-        require(_slotsPerEpoch > 0, "BAD_SLOTS_PER_EPOCH");
-        require(_secondsPerSlot > 0, "BAD_SECONDS_PER_SLOT");
-        require(_genesisTime > 0, "BAD_GENESIS_TIME");
+        if (_epochsPerFrame == 0) { revert BadEpochsPerFrame(); }
+        if (_slotsPerEpoch == 0) { revert BadSlotsPerEpoch(); }
+        if (_secondsPerSlot == 0) { revert BadSecondsPerSlot(); }
+        if (_genesisTime == 0) { revert BadGenesisTime(); }
 
         uint256 data = (
             uint256(_epochsPerFrame) << 192 |
@@ -190,4 +192,11 @@ contract ReportEpochChecker {
     function _getTime() internal virtual view returns (uint256) {
         return block.timestamp; // solhint-disable-line not-rely-on-time
     }
+
+    error EpochIsTooOld();
+    error UnexpectedEpoch();
+    error BadEpochsPerFrame();
+    error BadSlotsPerEpoch();
+    error BadSecondsPerSlot();
+    error BadGenesisTime();
 }

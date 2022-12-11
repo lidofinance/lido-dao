@@ -46,10 +46,6 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
     bytes32 constant public MANAGE_QUORUM_ROLE = keccak256("MANAGE_QUORUM_ROLE");
     bytes32 constant public SET_BEACON_SPEC_ROLE = keccak256("SET_BEACON_SPEC_ROLE");
 
-    // TODO: use solidity custom errors
-    string private constant ERROR_ARRAYS_MUST_BE_SAME_SIZE = "ARRAYS_MUST_BE_SAME_SIZE";
-    string private constant ERROR_EMPTY_ARRAYS_REPORTED = "EMPTY_ARRAYS_REPORTED";
-
     bytes32 internal constant RATE_LIMIT_STATE_POSITION = keccak256("lido.ValidatorExitBus.rateLimitState");
 
     /// Version of the initialized contract data
@@ -73,8 +69,10 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
     ) external
     {
         // Initializations for v0 --> v1
-        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "BASE_VERSION_MUST_BE_ZERO");
-        require(_admin != address(0), "ZERO_ADMIN_ADDRESS");
+        if (CONTRACT_VERSION_POSITION.getStorageUint256() != 0) {
+            revert CanInitializeOnlyOnZeroVersion();
+        }
+        if (_admin == address(0)) { revert ZeroAdminAddress(); }
 
         CONTRACT_VERSION_POSITION.setStorageUint256(1);
         emit ContractVersionSet(1);
@@ -108,9 +106,9 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
         bytes[] calldata _validatorPubkeys,
         uint256 _epochId
     ) external {
-        require(_nodeOperatorIds.length == _validatorPubkeys.length, ERROR_ARRAYS_MUST_BE_SAME_SIZE);
-        require(_stakingModules.length == _validatorPubkeys.length, ERROR_ARRAYS_MUST_BE_SAME_SIZE);
-        require(_validatorPubkeys.length > 0, ERROR_EMPTY_ARRAYS_REPORTED);
+        if (_nodeOperatorIds.length != _validatorPubkeys.length) { revert ArraysMustBeSameSize(); }
+        if (_stakingModules.length != _validatorPubkeys.length) { revert ArraysMustBeSameSize(); }
+        if (_validatorPubkeys.length == 0) { revert EmptyArraysNotAllowed(); }
 
         BeaconSpec memory beaconSpec = _getBeaconSpec();
         bool hasEpochAdvanced = _validateAndUpdateExpectedEpoch(_epochId, beaconSpec);
@@ -206,12 +204,11 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
         _advanceExpectedEpoch(_epochId + _beaconSpec.epochsPerFrame);
         _clearReporting();
 
-
         uint256 numKeys = _validatorPubkeys.length;
         LimitState.Data memory limitData = RATE_LIMIT_STATE_POSITION.getStorageLimitStruct();
         uint256 currentLimit = limitData.calculateCurrentLimit();
         uint256 numKeysE18 = numKeys * 10**18;
-        require(numKeysE18 <= currentLimit, "RATE_LIMIT");
+        if (numKeysE18 > currentLimit) { revert RateLimitExceeded(); }
         limitData.updatePrevLimit(currentLimit - numKeysE18);
         RATE_LIMIT_STATE_POSITION.setStorageLimitStruct(limitData);
 
@@ -256,5 +253,10 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
         reportData = abi.encode(stakingModules, nodeOperatorIds, validatorPubkeys, epochId);
     }
 
+    error CanInitializeOnlyOnZeroVersion();
+    error ZeroAdminAddress();
+    error RateLimitExceeded();
+    error ArraysMustBeSameSize();
+    error EmptyArraysNotAllowed();
 
 }
