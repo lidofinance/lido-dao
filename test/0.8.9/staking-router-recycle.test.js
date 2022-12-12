@@ -45,7 +45,7 @@ const proModule = {
   type: 0, // PRO
   fee: 500, // in basic points
   treasuryFee: 500, // in basic points
-  softCap: 0,
+  softCap: 10000,
   assignedDeposits: 0,
   balance: 0,
 
@@ -181,7 +181,7 @@ contract('StakingRouter', (accounts) => {
 
       // add NodeOperatorRegistry
       // name, address, cap, treasuryFee
-      await stakingRouter.addModule('Curated', operators.address, 0, 500, { from: appManager })
+      await stakingRouter.addModule('Curated', operators.address, proModule.softCap, proModule.treasuryFee, { from: appManager })
 
       await operators.setTotalKeys(proModule.totalKeys, { from: appManager })
       await operators.setTotalUsedKeys(proModule.totalUsedKeys, { from: appManager })

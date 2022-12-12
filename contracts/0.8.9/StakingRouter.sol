@@ -4,12 +4,12 @@
 //
 pragma solidity 0.8.9;
 
-import './IModule.sol';
-import './interfaces/IDepositContract.sol';
-import './lib/BytesLib.sol';
-import './lib/UnstructuredStorage.sol';
+import "./IModule.sol";
+import "./interfaces/IDepositContract.sol";
+import "./lib/BytesLib.sol";
+import "./lib/UnstructuredStorage.sol";
 
-// import 'hardhat/console.sol';
+import 'hardhat/console.sol';
 
 /**
  * @title Interface defining a Lido liquid staking pool
@@ -41,7 +41,9 @@ contract StakingRouter {
     event ModuleUnpaused();
     event ModuleActiveStatus();
     event DistributedShares(uint256 modulesShares, uint256 treasuryShares, uint256 remainShares);
-    event DistributedDposits(uint256 moduleIndex, address indexed moduleAddress, uint256 assignedKeys, uint256 timestamp);
+    event DistributedDposits(
+        uint256 moduleIndex, address indexed moduleAddress, uint256 assignedKeys, uint256 timestamp
+    );
 
     error InvalidType();
 
@@ -96,9 +98,9 @@ contract StakingRouter {
     }
 
     struct RecycleCache {
-        uint totalRecycleKeys;
+        uint256 totalRecycleKeys;
         uint16[] levels;
-        uint[] keysAmounts;
+        uint256[] keysAmounts;
     }
 
     address public immutable lido;
@@ -111,7 +113,7 @@ contract StakingRouter {
     /// - 0 right after deployment when no initializer is invoked yet
     /// - N after calling initialize() during deployment from scratch, where N is the current contract version
     /// - N after upgrading contract from the previous version (after calling finalize_vN())
-    bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256('lido.WithdrawalQueue.contractVersion');
+    bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.WithdrawalQueue.contractVersion");
 
     uint256 public constant DEPOSIT_SIZE = 32 ether;
 
@@ -123,17 +125,17 @@ contract StakingRouter {
 
     uint256 public constant MAX_TIME = 86400;
 
-    mapping(uint => StakingModule) internal modules;
-    mapping(address => uint) internal modules_ids;
-    uint internal modulesCount;
+    mapping(uint256 => StakingModule) internal modules;
+    mapping(address => uint256) internal modules_ids;
+    uint256 internal modulesCount;
 
     //stake allocation module_index -> amount
-    mapping(uint => uint) public allocation;
-    uint internal totalAllocation;
+    mapping(uint256 => uint256) public allocation;
+    uint256 internal totalAllocation;
 
     uint64 public lastDistributeAt;
     uint64 public timePeriod = 86400;
-    uint public lastNumDeposits;
+    uint256 public lastNumDeposits;
 
     constructor(address _lido, address _deposit_contract) {
         lido = _lido;
@@ -156,10 +158,10 @@ contract StakingRouter {
      * @param _cap treasury fee
      */
     function addModule(string memory _name, address _moduleAddress, uint16 _cap, uint16 _treasuryFee) external {
-        require(_cap <= TOTAL_BASIS_POINTS, 'VALUE_OVER_100_PERCENT');
-        require(_treasuryFee <= TOTAL_BASIS_POINTS, 'VALUE_OVER_100_PERCENT');
+        require(_cap <= TOTAL_BASIS_POINTS, "VALUE_OVER_100_PERCENT");
+        require(_treasuryFee <= TOTAL_BASIS_POINTS, "VALUE_OVER_100_PERCENT");
 
-        uint _modulesCount = modulesCount;
+        uint256 _modulesCount = modulesCount;
         StakingModule storage module = modules[_modulesCount];
         modules_ids[_moduleAddress] = _modulesCount;
 
@@ -190,10 +192,10 @@ contract StakingRouter {
      * @param _moduleIndex index of module
      */
     function pauseModule(uint256 _moduleIndex) external {
-        require(msg.sender == dsm, 'invalid_caller');
+        require(msg.sender == dsm, "invalid_caller");
 
         StakingModule storage module = modules[_moduleIndex];
-        require(!module.paused, 'module_is_paused');
+        require(!module.paused, "module_is_paused");
 
         module.paused = true;
     }
@@ -204,7 +206,7 @@ contract StakingRouter {
      * Only callable by the dsm.
      */
     function unpauseModule(uint256 _moduleIndex) external {
-        require(msg.sender == dsm, 'invalid_caller');
+        require(msg.sender == dsm, "invalid_caller");
 
         StakingModule storage module = modules[_moduleIndex];
         if (module.paused) {
@@ -244,9 +246,10 @@ contract StakingRouter {
      * @return totalKeys total keys which used for calculation
      * @return moduleKeys array of amount module keys
      */
-    function calculateShares2Mint(
-        uint256 _totalRewards
-    ) external returns (uint256 shares2mint, uint256 totalKeys, uint256[] memory moduleKeys) {
+    function calculateShares2Mint(uint256 _totalRewards)
+        external
+        returns (uint256 shares2mint, uint256 totalKeys, uint256[] memory moduleKeys)
+    {
         assert(modulesCount != 0);
 
         // calculate total used keys for operators
@@ -280,10 +283,10 @@ contract StakingRouter {
         //
         //
         //                  _totalRewards * prevTotalShares
+        //                  _totalRewards * prevTotalShares
         // shares2mint = ---------------------------------------
         //                 newTotalPooledEther - _totalRewards
         //
-
         uint256 totalSupply = ILido(lido).totalSupply();
         uint256 prevTotalShares = ILido(lido).getTotalShares();
 
@@ -299,13 +302,12 @@ contract StakingRouter {
      *  @param _moduleKeys the number of keys in each module
      *  @return distributed actual amount of shares that was transferred to modules as a rewards
      */
-    function distributeShares(
-        uint256 _totalShares,
-        uint256 _totalKeys,
-        uint256[] memory _moduleKeys
-    ) external returns (uint256 distributed) {
+    function distributeShares(uint256 _totalShares, uint256 _totalKeys, uint256[] memory _moduleKeys)
+        external
+        returns (uint256 distributed)
+    {
         assert(_totalKeys > 0);
-        require(address(lido) == msg.sender, 'INVALID_CALLER');
+        require(address(lido) == msg.sender, "INVALID_CALLER");
 
         uint256 treasuryShares = 0;
 
@@ -319,9 +321,9 @@ contract StakingRouter {
 
             IModule module = IModule(stakingModule.moduleAddress);
 
-            uint totalFee = module.getFee() + stakingModule.treasuryFee;
-            uint moduleFee = (module.getFee() * TOTAL_BASIS_POINTS) / totalFee;
-            uint treasuryFee = (stakingModule.treasuryFee * TOTAL_BASIS_POINTS) / totalFee;
+            uint256 totalFee = module.getFee() + stakingModule.treasuryFee;
+            uint256 moduleFee = (module.getFee() * TOTAL_BASIS_POINTS) / totalFee;
+            uint256 treasuryFee = (stakingModule.treasuryFee * TOTAL_BASIS_POINTS) / totalFee;
 
             // uint256 moduleTotalKeys = module.getTotalKeys();
             uint256 rewardsShares = (_totalShares * _moduleKeys[i]) / _totalKeys;
@@ -368,15 +370,17 @@ contract StakingRouter {
      * @return cache modules with assignedKeys variable which store the number of keys allocation
      */
     function getAllocation(uint256 keysToDistribute) public view returns (ModuleLookupCacheEntry[] memory cache) {
-        uint256 totalKeys;
-        (cache, totalKeys) = _loadModuleCache();
+        uint256 newTotalUsedKeys;
+        (cache, newTotalUsedKeys) = _loadModuleCache();
         ModuleLookupCacheEntry memory entry;
-        uint _modulesCount = modulesCount;
+        uint256 _modulesCount = modulesCount;
 
-        uint newTotlaUsedKeys;
+        uint256 entryTotalUsedKeys;
         uint256 bestModuleIdx;
         uint256 smallestStake;
         uint256 stake;
+
+        newTotalUsedKeys += keysToDistribute;
         while (keysToDistribute > 0) {
             bestModuleIdx = _modulesCount;
             smallestStake = 0;
@@ -387,29 +391,37 @@ contract StakingRouter {
                     continue;
                 }
 
-                // todo: unchecked?
-                newTotlaUsedKeys = entry.totalUsedKeys + entry.assignedKeys;
+                unchecked {
+                    entryTotalUsedKeys = entry.totalUsedKeys + entry.assignedKeys;
+                }
+
                 if (
-                    newTotlaUsedKeys == entry.totalKeys ||
-                    // todo: unchecked?
-                    (entry.cap > 0 && (newTotlaUsedKeys * TOTAL_BASIS_POINTS) / totalKeys >= entry.cap)
+                    entryTotalUsedKeys == entry.totalKeys || entry.cap == 0
+                        || (
+                            // entry.cap != ~uint16(0) // -1
+                            entry.cap < 10000 // 100%
+                                && (entryTotalUsedKeys * TOTAL_BASIS_POINTS) / newTotalUsedKeys > entry.cap
+                        )
                 ) {
+                    console.log("skip", i);
                     entry.skip = true;
                     continue;
                 }
 
                 unchecked {
-                    stake = newTotlaUsedKeys - entry.totalStoppedKeys - entry.totalExitedKeys;
+                    stake = entryTotalUsedKeys - entry.totalStoppedKeys - entry.totalExitedKeys;
                 }
+                 console.log("stake", i, stake);
                 if (bestModuleIdx == _modulesCount || stake < smallestStake) {
                     bestModuleIdx = i;
                     smallestStake = stake;
                 }
             }
 
-            if (bestModuleIdx == _modulesCount)
+            if (bestModuleIdx == _modulesCount) {
                 // not found
                 break;
+            }
 
             // assert(entry.usedSigningKeys < UINT64_MAX);
             // todo: unchecked?
@@ -419,7 +431,7 @@ contract StakingRouter {
             }
         }
 
-        require(keysToDistribute == 0, 'INVALID_ASSIGNED_KEYS');
+        require(keysToDistribute == 0, "INVALID_ASSIGNED_KEYS");
 
         return cache;
     }
@@ -428,19 +440,24 @@ contract StakingRouter {
         return ILido(lido).getLastReportTimestamp();
     }
 
-    function getModuleMaxKeys(uint256 moduleId) external view returns (uint allocKeysAmount, uint recycledKeysAmount) {
+    function getModuleMaxKeys(uint256 moduleId)
+        external
+        view
+        returns (uint256 allocKeysAmount, uint256 recycledKeysAmount)
+    {
         RecycleCache memory recycleCache = getRecycleAllocation();
 
         return _getModuleMaxKeys(moduleId, recycleCache);
     }
 
-    function _getModuleMaxKeys(
-        uint256 moduleId,
-        RecycleCache memory recycleCache
-    ) internal view returns (uint allocKeysAmount, uint recycledKeysAmount) {
+    function _getModuleMaxKeys(uint256 moduleId, RecycleCache memory recycleCache)
+        internal
+        view
+        returns (uint256 allocKeysAmount, uint256 recycledKeysAmount)
+    {
         IModule module = IModule(modules[moduleId].moduleAddress);
         //todo: unchecked ?
-        uint restKeysAmount = module.getTotalKeys() - module.getTotalUsedKeys();
+        uint256 restKeysAmount = module.getTotalKeys() - module.getTotalUsedKeys();
         allocKeysAmount = allocation[moduleId];
         // substruct module's own recycle keys
         unchecked {
@@ -455,7 +472,7 @@ contract StakingRouter {
     }
 
     function getRecycleAllocation() public view returns (RecycleCache memory recycleCache) {
-        uint _modulesCount = modulesCount;
+        uint256 _modulesCount = modulesCount;
         recycleCache.levels = new uint16[](_modulesCount);
         recycleCache.keysAmounts = new uint[](_modulesCount);
         uint64 _now = uint64(block.timestamp);
@@ -466,8 +483,8 @@ contract StakingRouter {
 
         StakingModule memory moduleCache;
         uint64 timeDelta;
-        uint curAllocation;
-        for (uint i = 0; i < _modulesCount; i++) {
+        uint256 curAllocation;
+        for (uint256 i = 0; i < _modulesCount; i++) {
             moduleCache = modules[i];
             curAllocation = allocation[i];
             if (curAllocation == 0) {
@@ -518,14 +535,14 @@ contract StakingRouter {
                 // todo: едж кейс: модуль всего 1 или только один модуль не депозитит
                 // let percent = recycleLevels[curLevel].percent + ((10000 - recycleLevels[curLevel].percent) * kMod) / 10000
                 // const percent = _getRecycleLevel(curLevel).percent;
-                recycleCache.keysAmounts[i] = (curAllocation * uint(_getRecycleLevel(curLevel).percent)) / 10000;
+                recycleCache.keysAmounts[i] = (curAllocation * uint256(_getRecycleLevel(curLevel).percent)) / 10000;
                 recycleCache.levels[i] = curLevel;
             }
             recycleCache.totalRecycleKeys += recycleCache.keysAmounts[i];
         }
     }
 
-    function _loadModuleCache() internal view returns (ModuleLookupCacheEntry[] memory cache, uint totalKeys) {
+    function _loadModuleCache() internal view returns (ModuleLookupCacheEntry[] memory cache, uint256 totalUsedKeys) {
         cache = new ModuleLookupCacheEntry[](modulesCount);
         if (0 == cache.length) return (cache, 0);
 
@@ -538,40 +555,38 @@ contract StakingRouter {
             entry.id = i;
             entry.moduleAddress = stakingModule.moduleAddress;
             entry.totalKeys = module.getTotalKeys();
-            totalKeys += entry.totalKeys;
             entry.totalUsedKeys = module.getTotalUsedKeys();
+            totalUsedKeys += entry.totalUsedKeys;
             entry.totalStoppedKeys = module.getTotalStoppedKeys();
             entry.totalExitedKeys = module.getTotalExitedKeys();
             entry.cap = stakingModule.cap;
             entry.paused = stakingModule.paused;
             // prefill skip flag for paused or full modules
             entry.skip = entry.paused || entry.totalUsedKeys == entry.totalKeys;
-            // entry.lastDepositAt = stakingModule.lastDepositAt;
-            // entry.recycleAt = stakingModule.recycleAt;
-            // entry.recycleLevel = stakingModule.recycleLevel;
-            // entry.recycleRestAmount = stakingModule.recycleRestAmount;
         }
 
-        return (cache, totalKeys);
+        return (cache, totalUsedKeys);
     }
 
-    function _useRecycledKeys(uint moduleId, uint recycledKeysAmount, RecycleCache memory recycleCache) internal {
-        require(recycledKeysAmount <= recycleCache.totalRecycleKeys, 'exceed recycled amount');
-        uint _modulesCount = modulesCount;
+    function _useRecycledKeys(uint256 moduleId, uint256 recycledKeysAmount, RecycleCache memory recycleCache)
+        internal
+    {
+        require(recycledKeysAmount <= recycleCache.totalRecycleKeys, "exceed recycled amount");
+        uint256 _modulesCount = modulesCount;
 
-        for (uint i = 0; i < _modulesCount; i++) {
+        for (uint256 i = 0; i < _modulesCount; i++) {
             if (recycleCache.keysAmounts[i] == 0 || moduleId == i) {
                 // skip recycle of the module itself, or already recycled modules
                 continue;
             }
-            uint keysToUse;
-            uint moduleAlloc = allocation[i];
+            uint256 keysToUse;
+            uint256 moduleAlloc = allocation[i];
             if (recycleCache.keysAmounts[i] > recycledKeysAmount) {
                 keysToUse = recycledKeysAmount;
             } else {
                 keysToUse = recycleCache.keysAmounts[i];
             }
-            require(keysToUse <= moduleAlloc, 'allocation < keysToUse');
+            require(keysToUse <= moduleAlloc, "allocation < keysToUse");
 
             if (moduleAlloc > keysToUse) {
                 modules[i].recycleLevel = recycleCache.levels[i];
@@ -595,7 +610,7 @@ contract StakingRouter {
                 break;
             }
         }
-        require(recycledKeysAmount == 0, 'recycle cache error');
+        require(recycledKeysAmount == 0, "recycle cache error");
     }
 
     /**
@@ -604,26 +619,24 @@ contract StakingRouter {
      * @param signatures Signaturse of the deposit call
      */
     function deposit(bytes memory pubkeys, bytes memory signatures) external returns (uint256) {
-        require(pubkeys.length > 0, 'INVALID_PUBKEYS');
+        require(pubkeys.length > 0, "INVALID_PUBKEYS");
 
-        require(pubkeys.length % PUBKEY_LENGTH == 0, 'REGISTRY_INCONSISTENT_PUBKEYS_LEN');
-        require(signatures.length % SIGNATURE_LENGTH == 0, 'REGISTRY_INCONSISTENT_SIG_LEN');
+        require(pubkeys.length % PUBKEY_LENGTH == 0, "REGISTRY_INCONSISTENT_PUBKEYS_LEN");
+        require(signatures.length % SIGNATURE_LENGTH == 0, "REGISTRY_INCONSISTENT_SIG_LEN");
 
         uint256 keysAmount = pubkeys.length / PUBKEY_LENGTH;
-        require(keysAmount == signatures.length / SIGNATURE_LENGTH, 'REGISTRY_INCONSISTENT_SIG_COUNT');
+        require(keysAmount == signatures.length / SIGNATURE_LENGTH, "REGISTRY_INCONSISTENT_SIG_COUNT");
 
-        uint moduleId = modules_ids[msg.sender];
+        uint256 moduleId = modules_ids[msg.sender];
 
-        require(modules[moduleId].active && !modules[moduleId].paused, 'module paused or not active');
+        require(modules[moduleId].active && !modules[moduleId].paused, "module paused or not active");
 
         RecycleCache memory recycleCache = getRecycleAllocation();
 
-        (uint allocKeysAmount, uint recycledKeysAmount) = _getModuleMaxKeys(moduleId, recycleCache);
+        (uint256 allocKeysAmount, uint256 recycledKeysAmount) = _getModuleMaxKeys(moduleId, recycleCache);
         // todo: check module max cap
-        require((allocKeysAmount + recycledKeysAmount >= keysAmount), 'not enough keys');
+        require((allocKeysAmount + recycledKeysAmount >= keysAmount), "not enough keys");
 
-        // console.log('allocKeysAmount1', allocKeysAmount);
-        // console.log('recycledKeysAmount1', recycledKeysAmount);
         // recycled amount correction
         if (keysAmount > allocKeysAmount) {
             recycledKeysAmount = keysAmount - allocKeysAmount;
@@ -631,9 +644,6 @@ contract StakingRouter {
             recycledKeysAmount = 0;
             allocKeysAmount = keysAmount;
         }
-        // console.log('allocKeysAmount2', allocKeysAmount);
-        // console.log('recycledKeysAmount2', recycledKeysAmount);
-        // console.log('keysAmount2', keysAmount);
 
         for (uint256 i = 0; i < keysAmount; ++i) {
             bytes memory pubkey = BytesLib.slice(pubkeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
@@ -660,45 +670,6 @@ contract StakingRouter {
         lastNumDeposits -= keysAmount;
 
         return keysAmount;
-
-        // uint currentTimestamp = block.timestamp;
-        // uint left = currentTimestamp - lastDistributeAt;
-
-        // require(left > MAX_TIME / 2, 'time threshold');
-
-        // uint unlocked = (left * TOTAL_BASIS_POINTS) / MAX_TIME;
-
-        // console.log('keysAmount', keysAmount);
-
-        // uint amount = 0;
-        // uint unlocked_amount = 0;
-        // for (uint i = 0; i < modulesCount; i++) {
-        //     if (i == moduleId) continue;
-
-        //     unlocked_amount = (allocation[i] * unlocked) / TOTAL_BASIS_POINTS;
-
-        //     if (amount + unlocked_amount < keysAmount) {
-        //         amount += unlocked_amount;
-        //         allocation[i] -= unlocked_amount;
-        //     } else {
-        //         uint a = keysAmount - amount;
-        //         amount += a;
-        //         allocation[i] -= a;
-        //     }
-        // }
-
-        // console.log('amount', amount);
-
-        // for (uint256 i = 0; i < keysAmount; ++i) {
-        //     bytes memory pubkey = BytesLib.slice(pubkeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
-        //     bytes memory signature = BytesLib.slice(signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
-        //     _stake(pubkey, signature);
-        // }
-
-        // //update DEPOSITED_VALIDATORS_POSITION on LIDO
-        // ILido(lido).updateBufferedCounters(keysAmount);
-
-        // return keysAmount;
     }
 
     /**
@@ -708,7 +679,7 @@ contract StakingRouter {
      */
     function _stake(bytes memory _pubkey, bytes memory _signature) internal {
         bytes32 withdrawalCredentials = ILido(lido).getWithdrawalCredentials();
-        require(withdrawalCredentials != 0, 'EMPTY_WITHDRAWAL_CREDENTIALS');
+        require(withdrawalCredentials != 0, "EMPTY_WITHDRAWAL_CREDENTIALS");
 
         uint256 value = DEPOSIT_SIZE;
 
@@ -734,8 +705,10 @@ contract StakingRouter {
 
         uint256 targetBalance = address(this).balance - value;
 
-        getDepositContract().deposit{ value: value }(_pubkey, abi.encodePacked(withdrawalCredentials), _signature, depositDataRoot);
-        require(address(this).balance == targetBalance, 'EXPECTING_DEPOSIT_TO_HAPPEN');
+        getDepositContract().deposit{value: value}(
+            _pubkey, abi.encodePacked(withdrawalCredentials), _signature, depositDataRoot
+        );
+        require(address(this).balance == targetBalance, "EXPECTING_DEPOSIT_TO_HAPPEN");
     }
 
     function trimUnusedKeys() external {
@@ -790,15 +763,14 @@ contract StakingRouter {
     }
 
     // note: should be set to actual levels count
-    uint internal constant RECYCLE_LEVELS_COUNT = 4;
+    uint256 internal constant RECYCLE_LEVELS_COUNT = 4;
 
     function _getRecycleLevel(uint16 level) internal pure returns (RecycleLevel memory) {
-        return
-            [
-                RecycleLevel(12 * 3600, 0), // 0% during 12h
-                RecycleLevel(15 * 3600, 5000), // 50% after 12h
-                RecycleLevel(18 * 3600, 7500), // 75% after 15h
-                RecycleLevel(0, 10000) // 100% after 18h
-            ][level];
+        return [
+            RecycleLevel(12 * 3600, 0), // 0% during 12h
+            RecycleLevel(15 * 3600, 5000), // 50% after 12h
+            RecycleLevel(18 * 3600, 7500), // 75% after 15h
+            RecycleLevel(0, 10000) // 100% after 18h
+        ][level];
     }
 }
