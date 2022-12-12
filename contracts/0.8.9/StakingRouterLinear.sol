@@ -4,7 +4,7 @@
 //
 pragma solidity 0.8.9;
 
-import './IModule.sol';
+import './IStakingModule.sol';
 import './interfaces/IDepositContract.sol';
 import './lib/BytesLib.sol';
 import './lib/UnstructuredStorage.sol';
@@ -218,7 +218,7 @@ contract StakingRouterLinear {
         moduleKeys = new uint256[](modulesCount);
         for (uint256 i = 0; i < modulesCount; ++i) {
             StakingModule memory module = modules[i];
-            moduleKeys[i] = IModule(module.moduleAddress).getTotalKeys();
+            moduleKeys[i] = IStakingModule(module.moduleAddress).getTotalKeys();
             totalKeys += moduleKeys[i];
         }
     }
@@ -240,7 +240,7 @@ contract StakingRouterLinear {
         moduleKeys = new uint256[](modulesCount);
         for (uint256 i = 0; i < modulesCount; ++i) {
             StakingModule memory module = modules[i];
-            moduleKeys[i] = IModule(module.moduleAddress).getTotalKeys();
+            moduleKeys[i] = IStakingModule(module.moduleAddress).getTotalKeys();
             totalKeys += moduleKeys[i];
         }
 
@@ -248,7 +248,7 @@ contract StakingRouterLinear {
         uint256 totalFee = 0;
         for (uint256 i = 0; i < modulesCount; ++i) {
             StakingModule memory stakingModule = modules[i];
-            IModule module = IModule(stakingModule.moduleAddress);
+            IStakingModule module = IStakingModule(stakingModule.moduleAddress);
 
             uint256 moduleFeeBasisPoints = module.getFee() + stakingModule.treasuryFee;
 
@@ -304,7 +304,7 @@ contract StakingRouterLinear {
                 continue;
             }
 
-            IModule module = IModule(stakingModule.moduleAddress);
+            IStakingModule module = IStakingModule(stakingModule.moduleAddress);
 
             uint totalFee = module.getFee() + stakingModule.treasuryFee;
             uint moduleFee = (module.getFee() * TOTAL_BASIS_POINTS) / totalFee;
@@ -415,7 +415,7 @@ contract StakingRouterLinear {
         uint256 idx = 0;
         for (uint256 i = 0; i < modulesCount; ++i) {
             StakingModule memory stakingModule = modules[i];
-            IModule module = IModule(stakingModule.moduleAddress);
+            IStakingModule module = IStakingModule(stakingModule.moduleAddress);
 
             ModuleLookupCacheEntry memory entry = cache[idx++];
             entry.id = i;
@@ -447,7 +447,7 @@ contract StakingRouterLinear {
 
         uint moduleId = modules_ids[msg.sender];
         uint alloc = allocation[moduleId];
-        IModule module = IModule(msg.sender);
+        IStakingModule module = IStakingModule(msg.sender);
 
         if (alloc >= numKeys) {
             for (uint256 i = 0; i < numKeys; ++i) {
@@ -540,7 +540,7 @@ contract StakingRouterLinear {
         if (modulesCount > 0) {
             for (uint256 i = 0; i < modulesCount; ++i) {
                 StakingModule memory stakingModule = modules[i];
-                IModule module = IModule(stakingModule.moduleAddress);
+                IStakingModule module = IStakingModule(stakingModule.moduleAddress);
 
                 module.trimUnusedKeys();
             }

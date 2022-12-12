@@ -4,7 +4,7 @@
 //
 pragma solidity 0.8.9;
 
-import "./IModule.sol";
+import "./IStakingModule.sol";
 import "./interfaces/IDepositContract.sol";
 import "./lib/BytesLib.sol";
 import "./lib/UnstructuredStorage.sol";
@@ -77,8 +77,6 @@ contract StakingRouter {
         uint256 totalUsedKeys;
         /// @notice total amount of stopped keys in the module
         uint256 totalStoppedKeys;
-        /// @notice total amount of exited keys in the module
-        uint256 totalExitedKeys;
         /// @notice the number of keys that have been allocated to this module
         uint256 assignedKeys;
         /// @notice treasury fee in BP
@@ -125,7 +123,7 @@ contract StakingRouter {
 
     uint256 public constant MAX_TIME = 86400;
 
-    mapping(uint256 => StakingModule) internal modules;
+     mapping(uint256 => StakingModule) internal modules;
     mapping(address => uint256) internal modules_ids;
     uint256 internal modulesCount;
 
@@ -233,7 +231,7 @@ contract StakingRouter {
         moduleKeys = new uint256[](modulesCount);
         for (uint256 i = 0; i < modulesCount; ++i) {
             StakingModule memory module = modules[i];
-            moduleKeys[i] = IModule(module.moduleAddress).getTotalKeys();
+            moduleKeys[i] = IStakingModule(module.moduleAddress).getTotalKeys();
             totalKeys += moduleKeys[i];
         }
     }
@@ -256,7 +254,7 @@ contract StakingRouter {
         moduleKeys = new uint256[](modulesCount);
         for (uint256 i = 0; i < modulesCount; ++i) {
             StakingModule memory module = modules[i];
-            moduleKeys[i] = IModule(module.moduleAddress).getTotalKeys();
+            moduleKeys[i] = IStakingModule(module.moduleAddress).getTotalKeys();
             totalKeys += moduleKeys[i];
         }
 
@@ -264,7 +262,7 @@ contract StakingRouter {
         uint256 totalFee = 0;
         for (uint256 i = 0; i < modulesCount; ++i) {
             StakingModule memory stakingModule = modules[i];
-            IModule module = IModule(stakingModule.moduleAddress);
+            IStakingModule module = IStakingModule(stakingModule.moduleAddress);
 
             uint256 moduleFeeBasisPoints = module.getFee() + stakingModule.treasuryFee;
 
@@ -319,7 +317,7 @@ contract StakingRouter {
                 continue;
             }
 
-            IModule module = IModule(stakingModule.moduleAddress);
+            IStakingModule module = IStakingModule(stakingModule.moduleAddress);
 
             uint256 totalFee = module.getFee() + stakingModule.treasuryFee;
             uint256 moduleFee = (module.getFee() * TOTAL_BASIS_POINTS) / totalFee;
@@ -409,7 +407,7 @@ contract StakingRouter {
                 }
 
                 unchecked {
-                    stake = entryTotalUsedKeys - entry.totalStoppedKeys - entry.totalExitedKeys;
+                    stake = entryTotalUsedKeys - entry.totalStoppedKeys;
                 }
                  console.log("stake", i, stake);
                 if (bestModuleIdx == _modulesCount || stake < smallestStake) {
@@ -450,12 +448,12 @@ contract StakingRouter {
         return _getModuleMaxKeys(moduleId, recycleCache);
     }
 
-    function _getModuleMaxKeys(uint256 moduleId, RecycleCache memory recycleCache)
+ function _getModuleMaxKeys(uint256 moduleId, RecycleCache memory recycleCache)
         internal
         view
         returns (uint256 allocKeysAmount, uint256 recycledKeysAmount)
     {
-        IModule module = IModule(modules[moduleId].moduleAddress);
+        IStakingModule module = IStakingModule(modules[moduleId].moduleAddress);
         //todo: unchecked ?
         uint256 restKeysAmount = module.getTotalKeys() - module.getTotalUsedKeys();
         allocKeysAmount = allocation[moduleId];
@@ -549,7 +547,7 @@ contract StakingRouter {
         uint256 idx = 0;
         for (uint256 i = 0; i < modulesCount; ++i) {
             StakingModule memory stakingModule = modules[i];
-            IModule module = IModule(stakingModule.moduleAddress);
+            IStakingModule module = IStakingModule(stakingModule.moduleAddress);
 
             ModuleLookupCacheEntry memory entry = cache[idx++];
             entry.id = i;
@@ -558,7 +556,6 @@ contract StakingRouter {
             entry.totalUsedKeys = module.getTotalUsedKeys();
             totalUsedKeys += entry.totalUsedKeys;
             entry.totalStoppedKeys = module.getTotalStoppedKeys();
-            entry.totalExitedKeys = module.getTotalExitedKeys();
             entry.cap = stakingModule.cap;
             entry.paused = stakingModule.paused;
             // prefill skip flag for paused or full modules
@@ -715,7 +712,7 @@ contract StakingRouter {
         if (modulesCount > 0) {
             for (uint256 i = 0; i < modulesCount; ++i) {
                 StakingModule memory stakingModule = modules[i];
-                IModule module = IModule(stakingModule.moduleAddress);
+                IStakingModule module = IStakingModule(stakingModule.moduleAddress);
 
                 module.trimUnusedKeys();
             }

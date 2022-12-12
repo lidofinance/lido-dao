@@ -9,7 +9,7 @@ const {
 
 const StakingRouter = artifacts.require('StakingRouter.sol')
 const ModuleSolo = artifacts.require('ModuleSolo.sol')
-const IModule = artifacts.require('contracts/0.4.24/interfaces/IModule.sol:IModule')
+const IStakingModule = artifacts.require('contracts/0.4.24/interfaces/IStakingModule.sol:IStakingModule')
 
 const LidoMock = artifacts.require('LidoMock.sol')
 const LidoOracleMock = artifacts.require('OracleMock.sol')
@@ -619,7 +619,7 @@ async function getModulesInfo(stakingRouter) {
   const table = []
   for (let i = 0; i < modulesCount; i++) {
     const comModule = await stakingRouter.getModule(i)
-    const entry = await IModule.at(comModule.moduleAddress)
+    const entry = await IStakingModule.at(comModule.moduleAddress)
 
     table.push({
       name: comModule.name,
