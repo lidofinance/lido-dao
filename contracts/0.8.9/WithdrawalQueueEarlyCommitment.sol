@@ -82,8 +82,8 @@ contract WithdrawalQueueEarlyCommitment {
     bytes32 internal constant LIDO_DAO_AGENT_POSITION = keccak256("lido.WithdrawalQueue.lidoDAOAgent");
 
     /// Requests placement resume/pause control storage slot
-    bytes32 internal constant REQUESTS_PLACEMENT_RESUMED_POSITION =
-        keccak256("lido.WithdrawalQueue.requestsPlacementResumed");
+    bytes32 internal constant REQUESTS_PLACEMENT_RESUME_AT_POSITION =
+        keccak256("lido.WithdrawalQueue.requestsPlacementResumeAt");
 
     /// Lido stETH token address to be set upon construction
     address public immutable STETH;
@@ -143,15 +143,17 @@ contract WithdrawalQueueEarlyCommitment {
     }
 
     /// @notice Resume new withdrawal requests placement
-    function resumeRequestsPlacement() external whenInitialized whenPaused onlyLidoDAOAgent {
-        REQUESTS_PLACEMENT_RESUMED_POSITION.setStorageBool(true);
+    /// @param _timestamp timepoint of activation
+    /// @dev if _timestamp <= block.timestamp than activates immediately
+    function resumeRequestsPlacement(uint256 _timestamp) external whenInitialized whenPaused onlyLidoDAOAgent {
+        REQUESTS_PLACEMENT_RESUME_AT_POSITION.setStorageUint256(_timestamp);
 
-        emit WithdrawalRequestsPlacementResumed();
+        emit WithdrawalRequestsPlacementResumedAt(_timestamp);
     }
 
     /// @notice Pause new withdrawal requests placement
     function pauseRequestsPlacement() external whenResumed onlyLidoDAOAgent {
-        REQUESTS_PLACEMENT_RESUMED_POSITION.setStorageBool(false);
+        REQUESTS_PLACEMENT_RESUME_AT_POSITION.setStorageUint256(type(uint256).max);
 
         emit WithdrawalRequestsPlacementPaused();
     }
@@ -261,7 +263,12 @@ contract WithdrawalQueueEarlyCommitment {
 
     /// @notice Returns whether the requests placement is paused or not
     function isRequestsPlacementPaused() external view returns (bool) {
-        return !REQUESTS_PLACEMENT_RESUMED_POSITION.getStorageBool();
+        return REQUESTS_PLACEMENT_RESUME_AT_POSITION.getStorageUint256() > block.timestamp;
+    }
+
+    /// @notice Returns requests placement resume activation timestamp
+    function getRequestsPlacementResumeTimestamp() external view returns (uint256) {
+        return REQUESTS_PLACEMENT_RESUME_AT_POSITION.getStorageUint256();
     }
 
     /// @notice internal initialization helper
@@ -354,7 +361,7 @@ contract WithdrawalQueueEarlyCommitment {
 
     /// @notice Reverts when new withdrawal requests placement resumed
     modifier whenPaused() {
-        if (REQUESTS_PLACEMENT_RESUMED_POSITION.getStorageBool()) {
+        if (REQUESTS_PLACEMENT_RESUME_AT_POSITION.getStorageUint256() <= block.timestamp) {
             revert PausedRequestsPlacementExpected();
         }
         _;
@@ -362,7 +369,7 @@ contract WithdrawalQueueEarlyCommitment {
 
     /// @notice Reverts when new withdrawal requests placement paused
     modifier whenResumed() {
-        if (!REQUESTS_PLACEMENT_RESUMED_POSITION.getStorageBool()) {
+        if (REQUESTS_PLACEMENT_RESUME_AT_POSITION.getStorageUint256() > block.timestamp) {
             revert ResumedRequestsPlacementExpected();
         }
         _;
@@ -379,8 +386,8 @@ contract WithdrawalQueueEarlyCommitment {
     );
     /// @notice Emitted when withdrawal requests placement paused
     event WithdrawalRequestsPlacementPaused();
-    /// @notice Emitted when withdrawal requests placement resumed
-    event WithdrawalRequestsPlacementResumed();
+    /// @notice Emitted when withdrawal requests placement resumed at the specified time
+    event WithdrawalRequestsPlacementResumedAt(uint256 timestamp);
     /// @notice Emitted when the contract initialized
     /// @param _lidoDAOAgent provided Lido DAO Agent address
     /// @param _caller initialization `msg.sender`
