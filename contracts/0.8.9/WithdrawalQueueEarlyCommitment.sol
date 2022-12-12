@@ -116,7 +116,7 @@ contract WithdrawalQueueEarlyCommitment {
     WithdrawalRequest[] public queue;
 
     /// @notice withdrawal requests mapped to the recipients
-    mapping(address => uint256[]) requestsByRecipient;
+    mapping(address => uint256[]) public requestsByRecipient;
 
     constructor(address _stETH, address _wstETH) {
         // test stETH interface sanity
@@ -158,14 +158,6 @@ contract WithdrawalQueueEarlyCommitment {
         REQUESTS_PLACEMENT_RESUMED_POSITION.setStorageBool(false);
 
         emit WithdrawalRequestsPlacementPaused();
-    }
-
-    /// @notice Allows withdrawal requests revocation
-    /// Users would be able to revoke requests and recover their `stETH`
-    function allowWithdrawalRequestsRevocation() external whenInitialized onlyLidoDAOAgent {
-        REQUESTS_REVOCATION_ALLOWED_POSITION.setStorageBool(true);
-
-        emit WithdrawalRequestsRevocationAllowed();
     }
 
     /// @notice Requests withdrawal of the provided stETH token amount
@@ -229,33 +221,6 @@ contract WithdrawalQueueEarlyCommitment {
         revert Unimplemented();
     }
 
-    function revokeWithdrawalRequest(uint256 _requestId, address _recoverStETHTo) external whenRevocationAllowed {
-        if (_requestId >= queue.length) {
-            revert InvalidWithdrawalRequest(_requestId);
-        }
-
-        WithdrawalRequest memory request = queue[_requestId];
-
-        if (request.recipient != msg.sender) {
-            revert RecipientExpected(request.recipient, msg.sender);
-        }
-
-        uint256 stETHToTransfer = request.cumulativeEther;
-        if (_requestId > 0) {
-            stETHToTransfer -= queue[_requestId - 1].cumulativeEther;
-        }
-
-        if (_recoverStETHTo == address(0)) {
-            _recoverStETHTo = request.recipient;
-        }
-
-        IERC20(STETH).safeTransferFrom(address(this), _recoverStETHTo, stETHToTransfer);
-
-        queue[_requestId].claimed = true;
-
-        emit WithdrawalRequestRevoked(_requestId, request.recipient, _recoverStETHTo, stETHToTransfer);
-    }
-
     /// @notice Returns withdrawal requests placed for the `_recipient` address
     function getWithdrawalRequests(address _recipient) external view returns (uint256[] memory requestsIds) {
         return requestsByRecipient[_recipient];
@@ -284,7 +249,7 @@ contract WithdrawalQueueEarlyCommitment {
             }
             etherToWithdraw = IStETH(STETH).getPooledEthByShares(shares);
             isFinalized = false;
-            isClaimed = request.claimed;
+            isClaimed = false;
         }
     }
 
@@ -412,14 +377,6 @@ contract WithdrawalQueueEarlyCommitment {
         _;
     }
 
-    /// @notice Reverts when withdrawal requests revocation was not allowed before
-    modifier whenRevocationAllowed() {
-        if (!REQUESTS_REVOCATION_ALLOWED_POSITION.getStorageBool()) {
-            revert AllowedRequestsRevocationExpected();
-        }
-        _;
-    }
-
     /// @notice Emitted when a new withdrawal request enqueued
     /// @dev Contains both stETH token amount and its corresponding shares amount
     event WithdrawalRequested(
@@ -429,19 +386,10 @@ contract WithdrawalQueueEarlyCommitment {
         uint256 amountOfStETH,
         uint256 amountOfShares
     );
-    /// @notice Emitted when withdrawal request revoked
-    event WithdrawalRequestRevoked(
-        uint256 indexed requestId,
-        address indexed originalRecipient,
-        address indexed stETHRecoveredTo,
-        uint256 amountOfStETH
-    );
     /// @notice Emitted when withdrawal requests placement paused
     event WithdrawalRequestsPlacementPaused();
     /// @notice Emitted when withdrawal requests placement resumed
     event WithdrawalRequestsPlacementResumed();
-    /// @notice Emitted when requests revocation was allowed by DAO
-    event WithdrawalRequestsRevocationAllowed();
     /// @notice Emitted when the contract initialized
     /// @param _lidoDAOAgent provided Lido DAO Agent address
     /// @param _caller initialization `msg.sender`
@@ -458,7 +406,6 @@ contract WithdrawalQueueEarlyCommitment {
     error Unimplemented();
     error PausedRequestsPlacementExpected();
     error ResumedRequestsPlacementExpected();
-    error AllowedRequestsRevocationExpected();
     error RequestAmountTooSmall(uint256 _amountOfStETH);
     error RequestAmountTooLarge(uint256 _amountOfStETH);
 }
