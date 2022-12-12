@@ -269,7 +269,7 @@ interface ILido {
             bool isClaimed
         );
 
-    event WithdrawalRequested(address indexed receiver, uint256 amountOfStETH, uint256 amountOfShares, uint256 requestId);
+    event WithdrawalRequested(address indexed recipient, uint256 ethAmount, uint256 sharesAmount, uint256 requestId);
 
     event WithdrawalClaimed(uint256 indexed requestId, address indexed receiver, address initiator);
 

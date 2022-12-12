@@ -115,6 +115,7 @@ module.exports = {
   toBN,
   div15,
   ETH,
+  StETH: ETH,
   tokens,
   getEthBalance,
   formatBN,

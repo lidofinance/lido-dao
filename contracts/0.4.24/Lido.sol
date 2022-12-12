@@ -482,7 +482,9 @@ contract Lido is ILido, StETH, AragonApp {
     * @return ticketId id string that can be used by user to claim their ETH later
     */
     function requestWithdrawal(uint256 _amountOfStETH) external returns (uint256 requestId) {
-        address withdrawal = address(uint160(getWithdrawalCredentials()));
+        address withdrawal = _getWithdrawalVaultAddress();
+        require(withdrawal != address(0), "ZERO_WITHDRAWAL_ADDRESS");
+
         // lock StETH to withdrawal contract
         _transfer(msg.sender, withdrawal, _amountOfStETH);
 
@@ -498,8 +500,9 @@ contract Lido is ILido, StETH, AragonApp {
      * @dev permissionless.
      */
     function claimWithdrawal(uint256 _requestId, uint256 _priceIndexHint) external {
-        /// Just forward it to withdrawals
-        address withdrawal = address(uint160(getWithdrawalCredentials()));
+        address withdrawal = _getWithdrawalVaultAddress();
+        require(withdrawal != address(0), "ZERO_WITHDRAWAL_ADDRESS");
+
         address recipient = IWithdrawalQueue(withdrawal).claim(_requestId, _priceIndexHint);
 
         emit WithdrawalClaimed(_requestId, recipient, msg.sender);
@@ -512,7 +515,7 @@ contract Lido is ILido, StETH, AragonApp {
         bool isFinalized,
         bool isClaimed
     ) {
-        IWithdrawalQueue withdrawal = IWithdrawalQueue(address(uint160(getWithdrawalCredentials())));
+        IWithdrawalQueue withdrawal = IWithdrawalQueue(_getWithdrawalVaultAddress());
 
         (recipient, requestBlockNumber, etherToWithdraw,,isClaimed) = withdrawal.queue(_requestId);
         if (_requestId > 0) {
@@ -546,6 +549,8 @@ contract Lido is ILido, StETH, AragonApp {
     ) external whenNotStopped {
         require(msg.sender == getOracle(), "APP_AUTH_FAILED");
         uint256 preSharesRate = getPooledEthByShares(10 ** 27);
+        
+        // update withdrawals reserve
         WITHDRAWAL_RESERVE_POSITION.setStorageUint256(_withdrawalsReserveAmount);
 
         _processAccounting(
@@ -628,6 +633,15 @@ contract Lido is ILido, StETH, AragonApp {
     */
     function getWithdrawalCredentials() public view returns (bytes32) {
         return WITHDRAWAL_CREDENTIALS_POSITION.getStorageBytes32();
+    }
+
+    /**
+    * @notice Returns the address of the vault where withdrawals arrive
+    * @dev withdrawal vault address is encoded as a last 160 bits of withdrawal credentials type 0x01
+    * @return address of the vault or address(0) if the vault is not set
+    */
+    function getWithdrawalVaultAddress() public view returns (address) {
+        return _getWithdrawalVaultAddress();
     }
 
     /**
@@ -796,7 +810,7 @@ contract Lido is ILido, StETH, AragonApp {
         uint256[] _finalizationSharesAmount,
         uint256 _wcBufferedEther
     ) internal returns (int256 withdrawalFundsMovement) {
-        address withdrawalAddress = address(uint160(getWithdrawalCredentials()));
+        address withdrawalAddress = _getWithdrawalVaultAddress();
         // do nothing if withdrawals is not configured
         if (withdrawalAddress == address(0)) {
             return 0;
@@ -1111,6 +1125,14 @@ contract Lido is ILido, StETH, AragonApp {
     */
     function _getUnaccountedEther() internal view returns (uint256) {
         return address(this).balance.sub(_getBufferedEther());
+    }
+
+    function _getWithdrawalVaultAddress() internal view returns (address) {
+        uint8 credentialsType = uint8(uint256(getWithdrawalCredentials()) >> 248);
+        if (credentialsType == 0x01) {
+            return address(uint160(getWithdrawalCredentials()));
+        }
+        return address(0);
     }
 
     /**
