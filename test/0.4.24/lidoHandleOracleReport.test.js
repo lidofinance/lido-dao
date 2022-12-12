@@ -1,6 +1,7 @@
 const { assert } = require('chai')
 const { newDao, newApp } = require('./helpers/dao')
 const { assertBn, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
+const { bn } = require('@aragon/contract-helpers-test')
 
 const Lido = artifacts.require('LidoPushableMock.sol')
 const OracleMock = artifacts.require('OracleMock.sol')
@@ -191,7 +192,7 @@ contract('Lido handleOracleReport', ([appManager, user1, user2]) => {
       assertBn(await app.getBufferedEther(), ETH(5))
       assertBn(await app.getTotalPooledEther(), ETH(68))
       assert.equal(await app.distributeFeeCalled(), true)
-      assertBn(await app.totalRewards(), ETH(1))
+      assertBn(await app.totalRewards(), bn(ETH(1)).sub(bn(1))) // rounding error
     })
 
     it('report BcnValidators:2 BcnBalance:63 = reward:1', async () => {
@@ -200,7 +201,7 @@ contract('Lido handleOracleReport', ([appManager, user1, user2]) => {
       assertBn(await app.getBufferedEther(), ETH(5))
       assertBn(await app.getTotalPooledEther(), ETH(68))
       assert.equal(await app.distributeFeeCalled(), true)
-      assertBn(await app.totalRewards(), ETH(1))
+      assertBn(await app.totalRewards(), bn(ETH(1)).sub(bn(1))) // rounding error
     })
 
     it('report BcnValidators:3 = revert with REPORTED_MORE_DEPOSITED', async () => {

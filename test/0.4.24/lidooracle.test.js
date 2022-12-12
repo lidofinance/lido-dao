@@ -813,7 +813,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, user5, 
         await app.reportBeacon(1, 65, 3, { from: user6 })
         await assertExpectedEpochs(1, 1)
 
-        // decreasing quorum does not help because colflicting parts are equal
+        // decreasing quorum does not help because conflicting parts are equal
         await app.setQuorum(3, { from: voting })
         await assertExpectedEpochs(1, 1)
         await app.setQuorum(1, { from: voting })
@@ -844,7 +844,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, user5, 
         assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 1, beaconBalance: 32 * DENOMINATION_OFFSET, beaconValidators: 1 } })
       })
 
-      it('only 1 report is enough in quorum loweres to 1', async () => {
+      it('only 1 report is enough in quorum lowers to 1', async () => {
         await app.reportBeacon(1, 32, 1, { from: user1 })
         await assertExpectedEpochs(1, 1)
 

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2020 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2022 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.9;
 
@@ -22,18 +22,18 @@ import "./lib/AragonUnstructuredStorage.sol";
 contract CommitteeQuorum {
     using UnstructuredStorage for bytes32;
 
-    event MemberAdded(address member);
-    event MemberRemoved(address member);
+    event MemberAdded(address indexed member);
+    event MemberRemoved(address indexed member);
     event QuorumChanged(uint256 quorum);
 
     /// Maximum number of oracle committee members
     uint256 public constant MAX_MEMBERS = 256;
 
     /// Contract structured storage
-    address[] internal members;                /// slot 0: oracle committee members
-    bytes[] internal distinctReports;  /// slot 1: reporting storage
+    address[] internal members;
+    bytes[] internal distinctReports;
     bytes32[] internal distinctReportHashes;
-    uint256[] internal distinctReportCounters;
+    uint16[] internal distinctReportCounters;
 
     /// Number of exactly the same reports needed to finalize the epoch
     bytes32 internal constant QUORUM_POSITION =
@@ -54,68 +54,13 @@ contract CommitteeQuorum {
         return REPORTS_BITMASK_POSITION.getStorageUint256();
     }
 
-
     /**
      * @notice Return the current reporting variants array size
      * TODO: rename
      */
-    function getCurrentReportVariantsSize() external view returns (uint256) {
+    function getDistinctMemberReportsCount() external view returns (uint256) {
         return distinctReports.length;
     }
-
-
-    // /**
-    //  * @notice Return whether the `_quorum` is reached and the final report
-    //  */
-    // function _getQuorumReport(uint256 _quorum) internal view returns (bool isQuorum, uint256 report) {
-    //     // check most frequent cases first: all reports are the same or no reports yet
-    //     if (currentReportVariants.length == 1) {
-    //         return (currentReportVariants[0].getCount() >= _quorum, currentReportVariants[0]);
-    //     } else if (currentReportVariants.length == 0) {
-    //         return (false, 0);
-    //     }
-
-    //     // if more than 2 kind of reports exist, choose the most frequent
-    //     uint256 maxind = 0;
-    //     uint256 repeat = 0;
-    //     uint16 maxval = 0;
-    //     uint16 cur = 0;
-    //     for (uint256 i = 0; i < currentReportVariants.length; ++i) {
-    //         cur = currentReportVariants[i].getCount();
-    //         if (cur >= maxval) {
-    //             if (cur == maxval) {
-    //                 ++repeat;
-    //             } else {
-    //                 maxind = i;
-    //                 maxval = cur;
-    //                 repeat = 0;
-    //             }
-    //         }
-    //     }
-    //     return (maxval >= _quorum && repeat == 0, currentReportVariants[maxind]);
-    // }
-
-    function _getQuorumReport(uint256 _quorum) internal view returns (bool isQuorum, uint256 reportIndex) {
-        // check most frequent cases first: all reports are the same or no reports yet
-        if (distinctReports.length == 0) {
-            return (false, 0);
-        } else if (distinctReports.length == 1) {
-            return (distinctReportCounters[0] >= _quorum, 0);
-        }
-
-        // TODO: do we need this? maybe return the first report with counter >= quorum?
-        uint256 maxReportIndex = 0;
-        uint256 maxReportCount = 0;
-        for (uint256 i = 1; i < distinctReports.length; ++i) {
-            uint256 reportCount = distinctReportCounters[i];
-            if (reportCount > maxReportCount) {
-                maxReportCount = reportCount;
-                maxReportIndex = i;
-            }
-        }
-        return (maxReportCount >= _quorum, maxReportIndex);
-    }
-
 
     /**
      * @notice Return the current oracle member committee list
@@ -124,11 +69,17 @@ contract CommitteeQuorum {
         return members;
     }
 
+    /**
+     * @notice Return the number of exactly the same reports needed to finalize the epoch
+     */
+    function getQuorum() public view returns (uint256) {
+        return QUORUM_POSITION.getStorageUint256();
+    }
 
     function _addOracleMember(address _member) internal {
-        require(address(0) != _member, "BAD_ARGUMENT");
-        require(MEMBER_NOT_FOUND == _getMemberId(_member), "MEMBER_EXISTS");
-        require(members.length < MAX_MEMBERS, "TOO_MANY_MEMBERS");
+        if (_member == address(0)) { revert ZeroMemberAddress(); }
+        if (MEMBER_NOT_FOUND != _getMemberId(_member)) { revert MemberExists(); }
+        if (members.length >= MAX_MEMBERS) { revert TooManyMembers(); }
 
         members.push(_member);
 
@@ -138,7 +89,8 @@ contract CommitteeQuorum {
 
     function _removeOracleMember(address _member) internal {
         uint256 index = _getMemberId(_member);
-        require(index != MEMBER_NOT_FOUND, "MEMBER_NOT_FOUND");
+        if (index == MEMBER_NOT_FOUND) { revert MemberNotFound(); }
+
         uint256 last = members.length - 1;
         if (index != last) members[index] = members[last];
         members.pop();
@@ -149,10 +101,53 @@ contract CommitteeQuorum {
         delete distinctReports;
     }
 
-    function _setQuorum(uint256 _quorum) internal  {
-        require(0 != _quorum, "QUORUM_WONT_BE_MADE");
+    function _getQuorumReport(uint256 _quorum) internal view
+        returns (bool isQuorumReached, uint256 reportIndex)
+    {
+        // check most frequent cases first: all reports are the same or no reports yet
+        if (distinctReports.length == 0) {
+            return (false, 0);
+        } else if (distinctReports.length == 1) {
+            return (distinctReportCounters[0] >= _quorum, 0);
+        }
+
+        // If there are multiple reports with the same count above quorum number we consider
+        // the quorum not reached
+        reportIndex = 0;
+        bool areMultipleMaxReports = false;
+        uint16 maxCount = 0;
+        uint16 currentCount = 0;
+        for (uint256 i = 0; i < distinctReports.length; ++i) {
+            currentCount = distinctReportCounters[i];
+            if (currentCount >= maxCount) {
+                if (currentCount == maxCount) {
+                    areMultipleMaxReports = true;
+                } else {
+                    reportIndex = i;
+                    maxCount = currentCount;
+                    areMultipleMaxReports = false;
+                }
+            }
+        }
+        isQuorumReached = maxCount >= _quorum && !areMultipleMaxReports;
+    }
+
+    function _setQuorum(uint256 _quorum) internal {
         QUORUM_POSITION.setStorageUint256(_quorum);
         emit QuorumChanged(_quorum);
+    }
+
+    function _updateQuorum(uint256 _quorum) internal
+        returns (bool isQuorumReached, uint256 reportIndex)
+    {
+        if (0 == _quorum) { revert QuorumWontBeMade(); }
+        uint256 oldQuorum = QUORUM_POSITION.getStorageUint256();
+
+        _setQuorum(_quorum);
+
+        if (_quorum < oldQuorum) {
+            return _getQuorumReport(_quorum);
+        }
     }
 
     /**
@@ -175,24 +170,18 @@ contract CommitteeQuorum {
         delete distinctReportCounters;
     }
 
-    /**
-     * @notice Return the number of exactly the same reports needed to finalize the epoch
-     */
-    function getQuorum() public view returns (uint256) {
-        return QUORUM_POSITION.getStorageUint256();
-    }
 
     function _handleMemberReport(address _reporter, bytes memory _report)
         internal returns (bool isQuorumReached)
     {
         // make sure the oracle is from members list and has not yet voted
         uint256 index = _getMemberId(_reporter);
-        require(index != MEMBER_NOT_FOUND, "MEMBER_NOT_FOUND");
+        if (index == MEMBER_NOT_FOUND) { revert NotMemberReported(); }
+
         uint256 bitMask = REPORTS_BITMASK_POSITION.getStorageUint256();
         uint256 mask = 1 << index;
-        require(bitMask & mask == 0, "ALREADY_SUBMITTED");
+        if (bitMask & mask != 0) { revert MemberAlreadyReported(); }
         REPORTS_BITMASK_POSITION.setStorageUint256(bitMask | mask);
-
 
         bytes32 reportHash = keccak256(_report);
         isQuorumReached = false;
@@ -223,5 +212,13 @@ contract CommitteeQuorum {
             isQuorumReached = true;
         }
     }
+
+    error NotMemberReported();
+    error ZeroMemberAddress();
+    error MemberNotFound();
+    error TooManyMembers();
+    error MemberExists();
+    error MemberAlreadyReported();
+    error QuorumWontBeMade();
 
 }
