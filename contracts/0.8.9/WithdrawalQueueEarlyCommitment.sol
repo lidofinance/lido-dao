@@ -85,10 +85,6 @@ contract WithdrawalQueueEarlyCommitment {
     bytes32 internal constant REQUESTS_PLACEMENT_RESUMED_POSITION =
         keccak256("lido.WithdrawalQueue.requestsPlacementResumed");
 
-    /// Revocation lever control storage slot
-    bytes32 internal constant REQUESTS_REVOCATION_ALLOWED_POSITION =
-        keccak256("lido.WithdrawalQueue.revocationAllowed");
-
     /// Lido stETH token address to be set upon construction
     address public immutable STETH;
     /// Lido wstETH token address to be set upon construction
@@ -266,11 +262,6 @@ contract WithdrawalQueueEarlyCommitment {
     /// @notice Returns whether the requests placement is paused or not
     function isRequestsPlacementPaused() external view returns (bool) {
         return !REQUESTS_PLACEMENT_RESUMED_POSITION.getStorageBool();
-    }
-
-    /// @notice Returns whether revocation calls allowed or not for the withdrawal requests
-    function isWidthdrawalRequestsRevocationAllowed() external view returns (bool) {
-        return REQUESTS_REVOCATION_ALLOWED_POSITION.getStorageBool();
     }
 
     /// @notice internal initialization helper
