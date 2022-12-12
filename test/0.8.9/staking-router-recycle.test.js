@@ -251,10 +251,6 @@ contract('StakingRouter', (accounts) => {
       curModule.setStakingRouter(stakingRouter.address)
       comModule.setStakingRouter(stakingRouter.address)
 
-      const wc = pad('0x0202', 32)
-      await lido.setWithdrawalCredentials(wc, { from: voting })
-      console.log('Set withdrawal credentials ' + g(wc))
-
       const keys1 = genKeys(3)
       console.log(b('DEPOSIT 3 keys COMMUNITY module'))
       await comModule.deposit(keys1.pubkeys, keys1.sigkeys)

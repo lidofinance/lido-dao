@@ -9,7 +9,7 @@ import "./interfaces/IDepositContract.sol";
 import "./lib/BytesLib.sol";
 import "./lib/UnstructuredStorage.sol";
 
-import 'hardhat/console.sol';
+// import "hardhat/console.sol";
 
 /**
  * @title Interface defining a Lido liquid staking pool
@@ -123,7 +123,7 @@ contract StakingRouter {
 
     uint256 public constant MAX_TIME = 86400;
 
-     mapping(uint256 => StakingModule) internal modules;
+    mapping(uint256 => StakingModule) internal modules;
     mapping(address => uint256) internal modules_ids;
     uint256 internal modulesCount;
 
@@ -395,13 +395,12 @@ contract StakingRouter {
 
                 if (
                     entryTotalUsedKeys == entry.totalKeys || entry.cap == 0
-                        || (
-                            // entry.cap != ~uint16(0) // -1
-                            entry.cap < 10000 // 100%
-                                && (entryTotalUsedKeys * TOTAL_BASIS_POINTS) / newTotalUsedKeys > entry.cap
-                        )
+                    // entry.cap != ~uint16(0) // -1
+                    || (
+                        entry.cap < 10000 // < 100%
+                            && (entryTotalUsedKeys * TOTAL_BASIS_POINTS) / newTotalUsedKeys > entry.cap
+                    )
                 ) {
-                    console.log("skip", i);
                     entry.skip = true;
                     continue;
                 }
@@ -409,7 +408,6 @@ contract StakingRouter {
                 unchecked {
                     stake = entryTotalUsedKeys - entry.totalStoppedKeys;
                 }
-                 console.log("stake", i, stake);
                 if (bestModuleIdx == _modulesCount || stake < smallestStake) {
                     bestModuleIdx = i;
                     smallestStake = stake;
@@ -448,7 +446,7 @@ contract StakingRouter {
         return _getModuleMaxKeys(moduleId, recycleCache);
     }
 
- function _getModuleMaxKeys(uint256 moduleId, RecycleCache memory recycleCache)
+    function _getModuleMaxKeys(uint256 moduleId, RecycleCache memory recycleCache)
         internal
         view
         returns (uint256 allocKeysAmount, uint256 recycledKeysAmount)
