@@ -2,8 +2,14 @@
 //
 // SPDX-License-Identifier: GPL-3.0
 //
-pragma solidity 0.4.24;
-interface IModule {
+pragma solidity 0.8.9;
+
+enum ModuleType {
+    PRO,
+    SOLO,
+    DVT
+}
+interface IStakingModule {
     
     function getFee() external view returns (uint16);
 
@@ -12,7 +18,11 @@ interface IModule {
     function getTotalStoppedKeys() external view returns (uint256);
     function getTotalExitedKeys() external view returns (uint256);
 
-    function setModuleType(uint16 _type) external;
+    function getType() external returns(uint16);
+    function setType(uint16 _type) external;
+
+    function getStakingRouter() external returns(address);
     function setStakingRouter(address addr) external;
+
     function trimUnusedKeys() external;
 }

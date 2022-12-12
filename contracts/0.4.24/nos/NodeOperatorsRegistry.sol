@@ -12,7 +12,7 @@ import '@aragon/os/contracts/lib/math/SafeMath64.sol';
 import 'solidity-bytes-utils/contracts/BytesLib.sol';
 
 import '../interfaces/INodeOperatorsRegistry.sol';
-import '../interfaces/IModule.sol';
+import '../interfaces/IStakingModule.sol';
 import '../interfaces/IStakingRouter.sol';
 import '../lib/MemUtils.sol';
 
@@ -23,7 +23,7 @@ import '../lib/MemUtils.sol';
  *
  * NOTE: the code below assumes moderate amount of node operators, i.e. up to `MAX_NODE_OPERATORS_COUNT`.
  */
-contract NodeOperatorsRegistry is IModule, INodeOperatorsRegistry, IsContract, AragonApp {
+contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp, IStakingModule {
     using SafeMath for uint256;
     using SafeMath64 for uint64;
     using UnstructuredStorage for bytes32;
@@ -95,6 +95,9 @@ contract NodeOperatorsRegistry is IModule, INodeOperatorsRegistry, IsContract, A
 
     /// @dev link to the Lido contract
     bytes32 internal constant STAKING_ROUTER_POSITION = keccak256('lido.NodeOperatorsRegistry.stakingRouter');
+
+    /// @dev module type
+    bytes32 internal constant TYPE_POSITION = keccak256('lido.NodeOperatorsRegistry.type');
 
     modifier onlyLido() {
         require(msg.sender == LIDO_POSITION.getStorageAddress(), 'APP_AUTH_FAILED');
@@ -755,14 +758,20 @@ contract NodeOperatorsRegistry is IModule, INodeOperatorsRegistry, IsContract, A
     }
 
     function setStakingRouter(address _addr) external {
-        LIDO_POSITION.setStorageAddress(_addr);
+        STAKING_ROUTER_POSITION.setStorageAddress(_addr);
     }
 
     function getStakingRouter() public returns (address) {
-        return LIDO_POSITION.getStorageAddress();
+        return STAKING_ROUTER_POSITION.getStorageAddress();
     }
 
-    function setModuleType(uint16 _type) external {}
+    function setType(uint16 _type) external {
+        TYPE_POSITION.setStorageUint256(uint256(_type));
+    }
+    
+    function getType() external returns(uint16){
+        return uint16(TYPE_POSITION.getStorageUint256());
+    }
 
     function setFee(uint16 _value) external {
         require(_value <= TOTAL_BASIS_POINTS, 'VALUE_OVER_100_PERCENT');
