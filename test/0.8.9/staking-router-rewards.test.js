@@ -39,7 +39,7 @@ const curatedModule = {
   fee: 500, // in basic points
   treasuryFee: 500, // in basic points
   totalKeys: 100,
-  totalUsedKeys: 3000,
+  totalUsedKeys: 50,
   totalStoppedKeys: 100,
   softCap: 0,
   assignedDeposits: 0,
@@ -51,7 +51,7 @@ const communityModule = {
   fee: 500, // in basic points
   treasuryFee: 500, // in basic points
   totalKeys: 100,
-  totalUsedKeys: 100,
+  totalUsedKeys: 30,
   totalStoppedKeys: 1,
   softCap: 9000,
   assignedDeposits: 0,
@@ -243,14 +243,15 @@ contract('StakingRouter', (accounts) => {
 
       const sharesTable = await stakingRouter.getSharesTable()
       const recipients = sharesTable.recipients
-      const modulePercent = sharesTable.modulePercent
+      const modulesShares = sharesTable.modulesShares
       const moduleFee = sharesTable.moduleFee
       const treasuryFee = sharesTable.treasuryFee
       const res = []
       for (let i = 0; i < recipients.length; i++) {
+        console.log(i)
         res.push({
           address: recipients[i],
-          modulePercent: parseInt(modulePercent[i]),
+          modulesShares: parseInt(modulesShares[i]),
           moduleFee: parseInt(moduleFee[i]),
           treasuryFee: parseInt(treasuryFee[i])
         })
@@ -327,7 +328,7 @@ async function stakingRouterStats(stakingRouter) {
       // address: entry.address,
       name: module.name,
       cap: parseInt(module.cap),
-      fee: parseInt(entry.getFee()),
+      fee: parseInt(await entry.getFee()),
       treasuryFee: parseInt(module.treasuryFee),
       paused: module.paused,
       active: module.active,

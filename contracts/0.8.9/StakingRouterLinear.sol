@@ -4,7 +4,7 @@
 //
 pragma solidity 0.8.9;
 
-import './IStakingModule.sol';
+import './interfaces/IStakingModule.sol';
 import './interfaces/IDepositContract.sol';
 import './lib/BytesLib.sol';
 import './lib/UnstructuredStorage.sol';

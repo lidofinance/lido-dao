@@ -4,7 +4,7 @@
 //
 pragma solidity 0.8.9;
 
-import "./IStakingModule.sol";
+import "./interfaces/IStakingModule.sol";
 
 interface IStakingRouter {
     function deposit(bytes memory pubkeys, bytes memory signatures) external returns(uint);

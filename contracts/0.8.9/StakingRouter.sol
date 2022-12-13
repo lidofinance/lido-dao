@@ -4,7 +4,7 @@
 //
 pragma solidity 0.8.9;
 
-import "./IStakingModule.sol";
+import "./interfaces/IStakingModule.sol";
 import "./interfaces/IDepositContract.sol";
 import "./lib/BytesLib.sol";
 import "./lib/UnstructuredStorage.sol";
@@ -221,16 +221,16 @@ contract StakingRouter {
     /**
      * @notice get total keys which can used for rewards and center distirbution
      *
-     * @return totalKeys total keys which used for calculation
-     * @return moduleKeys array of amount module keys
+     * @return totalUsedKeys total keys which used for calculation
+     * @return moduleUsedKeys array of amount module keys
      */
-    function getTotalKeys() public view returns (uint256 totalKeys, uint256[] memory moduleKeys) {
+    function getTotalUsedKeys() public view returns (uint256 totalUsedKeys, uint256[] memory moduleUsedKeys) {
         // calculate total used keys for operators
-        moduleKeys = new uint256[](modulesCount);
+        moduleUsedKeys = new uint256[](modulesCount);
         for (uint256 i = 0; i < modulesCount; ++i) {
             StakingModule memory module = modules[i];
-            moduleKeys[i] = IStakingModule(module.moduleAddress).getTotalKeys();
-            totalKeys += moduleKeys[i];
+            moduleUsedKeys[i] = IStakingModule(module.moduleAddress).getTotalUsedKeys();
+            totalUsedKeys += moduleUsedKeys[i];
         }
     }
 
@@ -240,13 +240,13 @@ contract StakingRouter {
      * @notice return shares table
      *
      * @return recipients recipients list
-     * @return modulePercent shares of each recipient
+     * @return modulesShares shares of each recipient
      * @return moduleFee shares of each recipient
      * @return treasuryFee shares of each recipient
      */
     function getSharesTable() external view returns (
         address[] memory recipients, 
-        uint256[] memory modulePercent,
+        uint256[] memory modulesShares,
         uint256[] memory moduleFee,
         uint256[] memory treasuryFee
     ) {
@@ -254,30 +254,28 @@ contract StakingRouter {
 
         // +1 for treasury
         recipients = new address[](modulesCount);
-        modulePercent = new uint256[](modulesCount);
+        modulesShares = new uint256[](modulesCount);
         moduleFee = new uint256[](modulesCount);
         treasuryFee = new uint256[](modulesCount);
 
         uint256 idx = 0;
         uint256 treasuryShares = 0;
 
-        (uint256 totalKeys, uint256[] memory moduleKeys ) = getTotalKeys();
+        (uint256 totalKeys, uint256[] memory moduleKeys ) = getTotalUsedKeys();
 
         for (uint256 i = 0; i < modulesCount; ++i) {
-            //@todo sanity check for each module
-            //@todo sanity check proto ???
             StakingModule memory stakingModule = modules[i];
             IStakingModule module = IStakingModule(stakingModule.moduleAddress);
 
             recipients[idx] = stakingModule.moduleAddress;
-            modulePercent[idx] = (moduleKeys[i] * TOTAL_BASIS_POINTS / totalKeys);
+            modulesShares[idx] = (moduleKeys[i] * TOTAL_BASIS_POINTS / totalKeys);
             moduleFee[idx]   = module.getFee();
             treasuryFee[idx] = stakingModule.treasuryFee;
 
             ++idx;
         }
 
-        return (recipients, modulePercent, moduleFee, treasuryFee);
+        return (recipients, modulesShares, moduleFee, treasuryFee);
     }
 
     /**

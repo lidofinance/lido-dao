@@ -6,7 +6,12 @@
 pragma solidity 0.4.24;
 
 interface IStakingRouter {
-    function getSharesTable() external returns(address[] memory recipients, uint256[] memory shares);
+    function getSharesTable() external returns(
+        address[] memory recipients, 
+        uint256[] memory modulesShares,
+        uint256[] memory moduleFee,
+        uint256[] memory treasuryFee
+    );
     function distributeShares(uint256 _totalShares, uint256 totalKeys, uint256[] moduleKeys) external returns(uint256 distributed);
     function trimUnusedKeys() external;
     function deposit(bytes pubkeys, bytes signatures) external returns(uint);
