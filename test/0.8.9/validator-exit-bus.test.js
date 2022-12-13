@@ -76,9 +76,7 @@ contract('ValidatorExitBus', ([deployer, member, owner]) => {
   })
 
   describe('Estimate gas usage', () => {
-    beforeEach(async () => {})
-
-    it(`Calculate gas usages`, async () => {
+    it.skip(`Calculate gas usages`, async () => {
       let epochId = 1
       const gasUsage = {}
       const amountsOfKeysToTry = [1, 2, 5, 10, 50, 100]
@@ -97,8 +95,6 @@ contract('ValidatorExitBus', ([deployer, member, owner]) => {
   })
 
   describe('Rate limit tests', () => {
-    beforeEach(async () => {})
-
     it(`Report one key`, async () => {
       const epochId = 1
       await bus.handleCommitteeMemberReport([stakingModuleId], [2], [generateValidatorPubKey()], epochId, { from: member })
@@ -133,11 +129,10 @@ contract('ValidatorExitBus', ([deployer, member, owner]) => {
       const epochId = 1
       await bus.setRateLimit(...calcRateLimitParameters(100))
       const maxLimit = fromE18(await bus.getMaxLimit())
-      console.log({ maxLimit })
       await bus.handleCommitteeMemberReport(...generateReportKeysArguments(maxLimit, epochId), { from: member })
     })
 
-    it(`Revert if request to exit maxLimit+1 keys per tx`, async () => {
+    it.skip(`Revert if request to exit maxLimit+1 keys per tx`, async () => {
       const epochId = 1
       await bus.setRateLimit(...calcRateLimitParameters(100))
       const maxRequestsPerDay = fromE18(await bus.getMaxLimit())
