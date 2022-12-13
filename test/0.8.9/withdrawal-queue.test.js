@@ -8,10 +8,7 @@ const Owner = artifacts.require('Owner.sol')
 
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 
-contract('WithdrawalQueue', ([deployer, recipient, stranger]) => {
-  console.log('Addresses:')
-  console.log(` Deployer: ${deployer}`)
-
+contract('WithdrawalQueue', ([recipient, stranger]) => {
   let withdrawal, owner
 
   beforeEach('Deploy', async () => {

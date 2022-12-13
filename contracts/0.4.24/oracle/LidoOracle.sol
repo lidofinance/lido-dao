@@ -640,7 +640,6 @@ contract LidoOracle is ILidoOracle, AragonApp {
             _beaconBalanceEth1,
             0,
             0,
-            0,
             new uint256[](0),
             new uint256[](0),
             new uint256[](0)

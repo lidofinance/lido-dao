@@ -15,7 +15,6 @@ const EPOCH_LENGTH = 32 * 12
 const DENOMINATION_OFFSET = 1e9
 
 const ZERO_MEMBER_REPORT = {
-  totalExitedValidators: 0,
   stakingModuleIds: [],
   nodeOperatorsWithExitedValidators: [],
   exitedValidatorsNumbers: [],

@@ -38,7 +38,6 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         uint256 beaconBalance,
         uint256 beaconValidators,
         address caller,
-        uint256 totalExitedValidators,
         uint256 wcBufferedEther,
         uint256[] requestIdToFinalizeUpTo,
         uint256[] finalizationPooledEtherAmount,
@@ -49,7 +48,6 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         uint256 epochId,
         uint256 beaconBalance,
         uint256 beaconValidators,
-        uint256 totalExitedValidators,
         uint256 wcBufferedEther,
         uint256[] requestIdToFinalizeUpTo,
         uint256[] finalizationPooledEtherAmount,
@@ -72,7 +70,6 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         // CL values
         uint256 beaconValidators;
         uint64 beaconBalanceGwei;
-        uint256 totalExitedValidators;
         uint256[] stakingModuleIds;
         uint256[] nodeOperatorsWithExitedValidators;
         uint64[] exitedValidatorsNumbers;
@@ -350,7 +347,6 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
             beaconBalance,
             _report.beaconValidators,
             msg.sender,
-            _report.totalExitedValidators,
             _report.wcBufferedEther,
             _report.requestIdToFinalizeUpTo,
             _report.finalizationPooledEtherAmount,
@@ -422,7 +418,6 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
             _report.epochId,
             beaconBalance,
             _report.beaconValidators,
-            _report.totalExitedValidators,
             _report.wcBufferedEther,
             _report.requestIdToFinalizeUpTo,
             _report.finalizationPooledEtherAmount,
@@ -450,7 +445,6 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         lido.handleOracleReport(
             _report.beaconValidators,
             beaconBalance,
-            _report.totalExitedValidators,
             _report.wcBufferedEther,
             _report.newDepositBufferWithdrawalsReserve,
             _report.requestIdToFinalizeUpTo,

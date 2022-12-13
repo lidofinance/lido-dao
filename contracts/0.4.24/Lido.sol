@@ -103,8 +103,6 @@ contract Lido is ILido, StETH, AragonApp {
     bytes32 internal constant BEACON_BALANCE_POSITION = keccak256("lido.Lido.beaconBalance");
     /// @dev number of Lido's validators available in the Beacon state
     bytes32 internal constant BEACON_VALIDATORS_POSITION = keccak256("lido.Lido.beaconValidators");
-    /// @dev number of Lido's validators exited, according to the Beacon state
-    bytes32 internal constant BEACON_EXITED_VALIDATORS_POSITION = keccak256("lido.Lido.exitedValidators");
 
     /// @dev percent in basis points of total pooled ether allowed to withdraw from LidoExecutionLayerRewardsVault per LidoOracle report
     bytes32 internal constant EL_REWARDS_WITHDRAWAL_LIMIT_POSITION = keccak256("lido.Lido.ELRewardsWithdrawalLimit");
@@ -538,7 +536,6 @@ contract Lido is ILido, StETH, AragonApp {
         // CL values
         uint256 _beaconValidators,
         uint256 _beaconBalance,
-        uint256 _totalExitedValidators,
         // EL values
         uint256 _wcBufferedEther,
         // decision
@@ -555,8 +552,7 @@ contract Lido is ILido, StETH, AragonApp {
 
         _processAccounting(
             _beaconValidators,
-            _beaconBalance,
-            _totalExitedValidators
+            _beaconBalance
         );
 
         uint256 executionLayerRewards = _processFundsMoving(
@@ -737,24 +733,22 @@ contract Lido is ILido, StETH, AragonApp {
     function _processAccounting(
         // CL values
         uint256 _beaconValidators,
-        uint256 _beaconBalance,
-        uint256 _totalExitedValidators
+        uint256 _beaconBalance
     ) internal {
         uint256 depositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256();
-        require(_beaconValidators + _totalExitedValidators <= depositedValidators, "REPORTED_MORE_DEPOSITED");
-
-        uint256 totalExitedValidators = BEACON_EXITED_VALIDATORS_POSITION.getStorageUint256();
-        require(_totalExitedValidators >= totalExitedValidators, "REPORTED_LESS_EXITED_VALIDATORS");
+        require(_beaconValidators <= depositedValidators, "REPORTED_MORE_DEPOSITED");
 
         uint256 beaconValidators = BEACON_VALIDATORS_POSITION.getStorageUint256();
-        require(_beaconValidators + _totalExitedValidators >= beaconValidators + totalExitedValidators,
-            "REPORTED_LESS_VALIDATORS");
+        require(_beaconValidators >= beaconValidators, "REPORTED_LESS_VALIDATORS");
 
         // Save the current beacon balance and validators to
         // calculate rewards on the next push
+
         BEACON_BALANCE_POSITION.setStorageUint256(_beaconBalance);
-        BEACON_VALIDATORS_POSITION.setStorageUint256(_beaconValidators);
-        BEACON_EXITED_VALIDATORS_POSITION.setStorageUint256(_totalExitedValidators);
+
+        if (_beaconValidators > beaconValidators) {
+            BEACON_VALIDATORS_POSITION.setStorageUint256(_beaconValidators);
+        }
     }
 
     /**
@@ -1143,10 +1137,9 @@ contract Lido is ILido, StETH, AragonApp {
     function _getTransientBalance() internal view returns (uint256) {
         uint256 depositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256();
         uint256 beaconValidators = BEACON_VALIDATORS_POSITION.getStorageUint256();
-        uint256 exitedValidators = BEACON_EXITED_VALIDATORS_POSITION.getStorageUint256();
         // beaconValidators can never be less than deposited ones.
-        assert(depositedValidators.sub(exitedValidators) >= beaconValidators);
-        return depositedValidators.sub(exitedValidators).sub(beaconValidators).mul(DEPOSIT_SIZE);
+        assert(depositedValidators >= beaconValidators);
+        return depositedValidators.sub(beaconValidators).mul(DEPOSIT_SIZE);
     }
 
     /**

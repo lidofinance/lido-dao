@@ -227,7 +227,6 @@ interface ILido {
         // CL values
         uint256 _beaconValidators,
         uint256 _beaconBalance,
-        uint256 _totalExitedValidators,
         // EL values
         uint256 _wcBufferedEther,
         // decision

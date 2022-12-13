@@ -23,7 +23,6 @@ contract OracleMock {
         pool.handleOracleReport(
             _beaconValidators, 
             _beaconBalance, 
-            0, 
             0, 0,
             empty, empty, empty); 
     }

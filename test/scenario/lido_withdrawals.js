@@ -100,11 +100,11 @@ contract('Lido: withdrawals', (addresses) => {
 
   context('handleOracleReport', async () => {
     it('auth', async () => {
-      assertRevert(pool.handleOracleReport(0, 0, 0, 0, 0, [], [], []), 'APP_AUTH_FAILED')
+      assertRevert(pool.handleOracleReport(0, 0, 0, 0, [], [], []), 'APP_AUTH_FAILED')
     })
 
     it('zero report', async () => {
-      await pool.handleOracleReport(0, 0, 0, 0, 0, [], [], [], { from: oracle.address })
+      await pool.handleOracleReport(0, 0, 0, 0, [], [], [], { from: oracle.address })
     })
   })
 })

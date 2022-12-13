@@ -25,7 +25,6 @@ contract LidoMockForOracleNew {
         uint256 _beaconBalance,
         uint256,
         uint256,
-        uint256,
         uint256[] calldata,
         uint256[] calldata,
         uint256[] calldata
