@@ -4,13 +4,13 @@
 //
 pragma solidity 0.8.9;
 
-import "./IModule.sol";
+import "./interfaces/IStakingModule.sol";
 
 interface IStakingRouter {
     function deposit(bytes memory pubkeys, bytes memory signatures) external returns(uint);
 }
 
-contract ModuleSolo is IModule {
+contract ModuleSolo is IStakingModule {
 
     address private stakingRouter;
 
@@ -20,16 +20,13 @@ contract ModuleSolo is IModule {
     uint256 public totalKeys;
     uint256 public totalUsedKeys;
     uint256 public totalStoppedKeys;
-    uint256 public totalExitedKeys;
     
-    ModuleType public moduleType;
+    uint16 public moduleType;
 
     uint256 constant public PUBKEY_LENGTH = 48;
     uint256 constant public SIGNATURE_LENGTH = 96;
 
-    constructor(ModuleType _type, address _lido, uint16 _fee) {
-        require(ModuleType.DVT >= _type, "INVALID_TYPE");
-
+    constructor(uint16 _type, address _lido, uint16 _fee) {
         lido = _lido;
         fee = _fee;
         moduleType = _type;
@@ -49,10 +46,6 @@ contract ModuleSolo is IModule {
 
     function getTotalStoppedKeys() external view returns(uint256) {
         return totalStoppedKeys;
-    }
-
-    function getTotalExitedKeys() external view returns(uint256) {
-        return totalExitedKeys;
     }
 
     function getRewardsDistribution(uint256 _totalRewardShares) external view
@@ -77,7 +70,6 @@ contract ModuleSolo is IModule {
     function setTotalKeys(uint256 _keys) external { totalKeys = _keys; }
     function setTotalUsedKeys(uint256 _keys) external { totalUsedKeys = _keys; }
     function setTotalStoppedKeys(uint256 _keys) external { totalStoppedKeys = _keys; }
-    function setTotalExitedKeys(uint256 _keys) external { totalExitedKeys = _keys; }
 
     function setNodeOperatorActive(uint256 _id, bool _active) external {}
 
@@ -103,7 +95,21 @@ contract ModuleSolo is IModule {
         //emit SetStakingRouter(_addr);
     }
 
+    function getStakingRouter() external returns(address) {
+        return stakingRouter;
+    }
+
+
+
     function trimUnusedKeys() external {
 
+    }
+
+    function setType(uint16 _type) external {
+        moduleType = _type;
+    } 
+
+    function getType() external returns(uint16) {
+        return moduleType;
     }
 }

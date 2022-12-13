@@ -300,7 +300,8 @@ function main() {
 
 }
 
-main();
+// main();
+rewards();
 
 function f(timestamp) {
   var d = new Date(timestamp * 1000);
@@ -314,4 +315,30 @@ function f(timestamp) {
     var time = y +'-' + M +'-' + day + ' ' + h + ':' + m + ':' + s;
 
     return time;
+}
+
+function rewards() {
+  let modules = []
+  modules.push({ name: 'm1', fee: 5, treasury: 5, keys: 90})
+  modules.push({ name: 'm2', fee: 5, treasury: 5, keys: 10})
+
+
+  let rewards = 1
+  let totalKeys = 100
+
+  console.log(rewards)
+  console.table(modules)
+  let treasuryShares = 0;
+  let recipients = []
+
+  for (let index = 0; index < modules.length; index++) {
+    let entry = modules[index];
+    
+    let moduleShares = (entry.keys / totalKeys) * entry.fee/100
+    treasuryShares += (entry.keys / totalKeys) * entry.treasury/100
+    entry.moduleShares = moduleShares
+  }
+
+  console.table(treasuryShares)
+  console.table(modules)
 }
