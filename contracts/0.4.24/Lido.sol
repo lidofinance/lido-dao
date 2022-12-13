@@ -19,7 +19,6 @@ import "./StETH.sol";
 
 import "./lib/StakeLimitUtils.sol";
 
-
 interface IERC721 {
     /// @notice Transfer ownership of an NFT
     /// @param _from The current owner of the NFT
@@ -545,12 +544,13 @@ contract Lido is ILido, StETH, AragonApp {
         uint256[] _finalizationSharesAmount
     ) external whenNotStopped {
         require(msg.sender == getOracle(), "APP_AUTH_FAILED");
-        uint256 preSharesRate = getPooledEthByShares(10 ** 27);
         
         // update withdrawals reserve
         WITHDRAWAL_RESERVE_POSITION.setStorageUint256(_withdrawalsReserveAmount);
 
-        _processAccounting(
+        uint256 beaconBalanceOld = BEACON_BALANCE_POSITION.getStorageUint256();
+
+        uint256 appearedValidators = _processAccounting(
             _beaconValidators,
             _beaconBalance
         );
@@ -562,18 +562,13 @@ contract Lido is ILido, StETH, AragonApp {
             _wcBufferedEther
         );
 
-        uint256 postSharesRate = getPooledEthByShares(10 ** 27);
-
-        if (postSharesRate > preSharesRate) {
-            uint256 totalRewards = _getTotalShares().mul(postSharesRate.sub(preSharesRate)).div(10 ** 27);
-            // Don’t mint/distribute any protocol fee on the non-profitable Lido oracle report
-            // (when beacon chain balance delta is zero or negative).
-            // See ADR #3 for details:
-            // https://research.lido.fi/t/rewards-distribution-after-the-merge-architecture-decision-record/1535
-            if (totalRewards > executionLayerRewards) {
-                _distributeFee(totalRewards);
-            }
-        }
+        _processRewards(
+            _beaconBalance,
+            executionLayerRewards,
+            _wcBufferedEther,
+            beaconBalanceOld,
+            appearedValidators
+        );
     }
 
     /**
@@ -734,7 +729,7 @@ contract Lido is ILido, StETH, AragonApp {
         // CL values
         uint256 _beaconValidators,
         uint256 _beaconBalance
-    ) internal {
+    ) internal returns (uint256 appearedValidators) {
         uint256 depositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256();
         require(_beaconValidators <= depositedValidators, "REPORTED_MORE_DEPOSITED");
 
@@ -749,6 +744,8 @@ contract Lido is ILido, StETH, AragonApp {
         if (_beaconValidators > beaconValidators) {
             BEACON_VALIDATORS_POSITION.setStorageUint256(_beaconValidators);
         }
+
+        return _beaconValidators.sub(beaconValidators);
     }
 
     /**
@@ -792,6 +789,29 @@ contract Lido is ILido, StETH, AragonApp {
         }
 
         return executionLayerRewards;
+    }
+
+    function _processRewards(
+        uint256 _beaconBalanceNew,
+        uint256 _executionLayerRewards,
+        uint256 _wcBufferedEther,
+        uint256 _beaconBalanceOld,
+        uint256 _appearedValidators
+    ) internal {
+        // Post-withdrawal rewards
+        // rewards = (beacon balance new - beacon balance old) - (appeared validators x 32 ETH) 
+        // + withdrawn from execution layer rewards vault + withdrawn from withdrawal credentials vault
+
+        uint256 rewardsBase = (_appearedValidators.mul(DEPOSIT_SIZE)).add(_beaconBalanceOld);
+
+        // Don’t mint/distribute any protocol fee on the non-profitable Lido oracle report
+        // (when beacon chain balance delta is zero or negative).
+        // See ADR #3 for details:
+        // https://research.lido.fi/t/rewards-distribution-after-the-merge-architecture-decision-record/1535
+        if (_beaconBalanceNew.add(_wcBufferedEther) > rewardsBase) {
+            uint256 consensusLayerRewards = _beaconBalanceNew.add(_wcBufferedEther).sub(rewardsBase);
+            _distributeFee(consensusLayerRewards.add(_executionLayerRewards));
+        }
     }
 
     /**
