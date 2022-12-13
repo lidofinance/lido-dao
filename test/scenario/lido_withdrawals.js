@@ -46,7 +46,7 @@ contract('Lido: withdrawals', (addresses) => {
   it('setWithdrawalCredentials', async () => {
     assert.equal(await pool.getWithdrawalVaultAddress(), ZERO_ADDRESS)
     assertRevert(pool.requestWithdrawal(StETH(3), { from: recipient }), 'ZERO_WITHDRAWAL_ADDRESS')
-    assertRevert(pool.claimWithdrawal(0), 'ZERO_WITHDRAWAL_ADDRESS')
+    assertRevert(pool.claimWithdrawal(0, 0), 'ZERO_WITHDRAWAL_ADDRESS')
 
     await pool.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
     assert.equal(await pool.getWithdrawalCredentials(), withdrawalCredentials)
@@ -79,7 +79,7 @@ contract('Lido: withdrawals', (addresses) => {
     })
 
     it('cant claim no-finalized', async () => {
-      assertRevert(pool.claimWithdrawal(0), 'REQUEST_NOT_FINALIZED')
+      assertRevert(pool.claimWithdrawal(0, 0), 'REQUEST_NOT_FINALIZED')
     })
 
     it('another two requests', async () => {
