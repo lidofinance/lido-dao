@@ -10,7 +10,6 @@ interface IStakingModule {
     function getTotalKeys() external view returns (uint256);
     function getTotalUsedKeys() external view returns (uint256);
     function getTotalStoppedKeys() external view returns (uint256);
-    function getTotalExitedKeys() external view returns (uint256);
 
     function getType() external returns(uint16);
     function setType(uint16 _type) external;

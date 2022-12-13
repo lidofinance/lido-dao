@@ -20,7 +20,6 @@ contract ModuleSolo is IStakingModule {
     uint256 public totalKeys;
     uint256 public totalUsedKeys;
     uint256 public totalStoppedKeys;
-    uint256 public totalExitedKeys;
     
     uint16 public moduleType;
 
@@ -49,10 +48,6 @@ contract ModuleSolo is IStakingModule {
         return totalStoppedKeys;
     }
 
-    function getTotalExitedKeys() external view returns(uint256) {
-        return totalExitedKeys;
-    }
-
     function getRewardsDistribution(uint256 _totalRewardShares) external view
         returns (
             address[] memory recipients,
@@ -75,7 +70,6 @@ contract ModuleSolo is IStakingModule {
     function setTotalKeys(uint256 _keys) external { totalKeys = _keys; }
     function setTotalUsedKeys(uint256 _keys) external { totalUsedKeys = _keys; }
     function setTotalStoppedKeys(uint256 _keys) external { totalStoppedKeys = _keys; }
-    function setTotalExitedKeys(uint256 _keys) external { totalExitedKeys = _keys; }
 
     function setNodeOperatorActive(uint256 _id, bool _active) external {}
 

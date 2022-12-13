@@ -52,7 +52,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
     bytes32 internal constant TOTAL_KEYS_POSITION = keccak256('lido.NodeOperatorsRegistry.totalKeys');
     bytes32 internal constant TOTAL_USED_KEYS_POSITION = keccak256('lido.NodeOperatorsRegistry.totalUsedKeys');
     bytes32 internal constant TOTAL_STOPPED_KEYS_POSITION = keccak256('lido.NodeOperatorsRegistry.totalStoppedKeys');
-    bytes32 internal constant TOTAL_EXITED_KEYS_POSITION = keccak256('lido.NodeOperatorsRegistry.totalExitedKeys');
 
     bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256('lido.NodeOperatorsRegistry.contractVersion');
 
@@ -768,7 +767,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
     function setType(uint16 _type) external {
         TYPE_POSITION.setStorageUint256(uint256(_type));
     }
-    
+
     function getType() external returns(uint16){
         return uint16(TYPE_POSITION.getStorageUint256());
     }
@@ -792,10 +791,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
 
     function getTotalStoppedKeys() public view returns (uint256) {
         return TOTAL_STOPPED_KEYS_POSITION.getStorageUint256();
-    }
-
-    function getTotalExitedKeys() public view returns (uint256) {
-        return TOTAL_EXITED_KEYS_POSITION.getStorageUint256();
     }
 
     function deposit(uint256 _numKeys) external {

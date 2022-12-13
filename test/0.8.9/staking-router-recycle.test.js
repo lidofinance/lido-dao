@@ -632,7 +632,6 @@ async function getModulesInfo(stakingRouter) {
       totalKeys: +(await entry.getTotalKeys()),
       totalUsedKeys: +(await entry.getTotalUsedKeys()),
       totalStoppedKeys: +(await entry.getTotalStoppedKeys())
-      // totalExitedKeys: +(await entry.getTotalExitedKeys())
     })
   }
 

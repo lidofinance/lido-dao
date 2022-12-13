@@ -41,9 +41,7 @@ contract StakingRouter {
     event ModuleUnpaused();
     event ModuleActiveStatus();
     event DistributedShares(uint256 modulesShares, uint256 treasuryShares, uint256 remainShares);
-    event DistributedDposits(
-        uint256 moduleIndex, address indexed moduleAddress, uint256 assignedKeys, uint256 timestamp
-    );
+    event DistributedDeposits(uint256 moduleIndex, address indexed moduleAddress, uint256 assignedKeys, uint256 timestamp);
 
     error InvalidType();
 
@@ -236,61 +234,50 @@ contract StakingRouter {
         }
     }
 
+    
+
     /**
-     * @notice calculate shares to mint on Lido
-     * @param _totalRewards total rewards from oracle report
+     * @notice return shares table
      *
-     * @return shares2mint amount of shares, which need to mint
-     * @return totalKeys total keys which used for calculation
-     * @return moduleKeys array of amount module keys
+     * @return recipients recipients list
+     * @return modulePercent shares of each recipient
+     * @return moduleFee shares of each recipient
+     * @return treasuryFee shares of each recipient
      */
-    function calculateShares2Mint(uint256 _totalRewards)
-        external
-        returns (uint256 shares2mint, uint256 totalKeys, uint256[] memory moduleKeys)
-    {
+    function getSharesTable() external view returns (
+        address[] memory recipients, 
+        uint256[] memory modulePercent,
+        uint256[] memory moduleFee,
+        uint256[] memory treasuryFee
+    ) {
         assert(modulesCount != 0);
 
-        // calculate total used keys for operators
-        moduleKeys = new uint256[](modulesCount);
-        for (uint256 i = 0; i < modulesCount; ++i) {
-            StakingModule memory module = modules[i];
-            moduleKeys[i] = IStakingModule(module.moduleAddress).getTotalKeys();
-            totalKeys += moduleKeys[i];
-        }
+        // +1 for treasury
+        recipients = new address[](modulesCount);
+        modulePercent = new uint256[](modulesCount);
+        moduleFee = new uint256[](modulesCount);
+        treasuryFee = new uint256[](modulesCount);
 
-        //calculate total fee to mint
-        uint256 totalFee = 0;
+        uint256 idx = 0;
+        uint256 treasuryShares = 0;
+
+        (uint256 totalKeys, uint256[] memory moduleKeys ) = getTotalKeys();
+
         for (uint256 i = 0; i < modulesCount; ++i) {
+            //@todo sanity check for each module
+            //@todo sanity check proto ???
             StakingModule memory stakingModule = modules[i];
             IStakingModule module = IStakingModule(stakingModule.moduleAddress);
 
-            uint256 moduleFeeBasisPoints = module.getFee() + stakingModule.treasuryFee;
+            recipients[idx] = stakingModule.moduleAddress;
+            modulePercent[idx] = (moduleKeys[i] * TOTAL_BASIS_POINTS / totalKeys);
+            moduleFee[idx]   = module.getFee();
+            treasuryFee[idx] = stakingModule.treasuryFee;
 
-            uint256 rewards = (_totalRewards * moduleKeys[i]) / totalKeys;
-
-            uint256 opRewards = (rewards * moduleFeeBasisPoints) / TOTAL_BASIS_POINTS;
-
-            totalFee += opRewards;
+            ++idx;
         }
 
-        // Now we want to mint new shares to the fee recipient, so that the total cost of the
-        // newly-minted shares exactly corresponds to the fee taken:
-        //
-        // shares2mint * newShareCost = totalFee
-        // newShareCost = newTotalPooledEther / (prevTotalShares + shares2mint)
-        //
-        //
-        //                  _totalRewards * prevTotalShares
-        //                  _totalRewards * prevTotalShares
-        // shares2mint = ---------------------------------------
-        //                 newTotalPooledEther - _totalRewards
-        //
-        uint256 totalSupply = ILido(lido).totalSupply();
-        uint256 prevTotalShares = ILido(lido).getTotalShares();
-
-        shares2mint = (totalFee * prevTotalShares) / (totalSupply - totalFee);
-
-        return (shares2mint, totalKeys, moduleKeys);
+        return (recipients, modulePercent, moduleFee, treasuryFee);
     }
 
     /**

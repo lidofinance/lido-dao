@@ -38,10 +38,9 @@ const curatedModule = {
   type: 0, // Curated
   fee: 500, // in basic points
   treasuryFee: 500, // in basic points
-  totalKeys: 4000,
+  totalKeys: 100,
   totalUsedKeys: 3000,
   totalStoppedKeys: 100,
-  totalExitedKeys: 0,
   softCap: 0,
   assignedDeposits: 0,
   balance: 0
@@ -50,11 +49,10 @@ const curatedModule = {
 const communityModule = {
   type: 1, // Community
   fee: 500, // in basic points
-  treasuryFee: 0, // in basic points
+  treasuryFee: 500, // in basic points
   totalKeys: 100,
-  totalUsedKeys: 10,
+  totalUsedKeys: 100,
   totalStoppedKeys: 1,
-  totalExitedKeys: 1,
   softCap: 9000,
   assignedDeposits: 0,
   bond: 16,
@@ -65,7 +63,7 @@ const communityModule2 = {
   type: 1, // Community
   fee: 500, // in basic points
   treasuryFee: 500, // in basic points
-  totalKeys: 200,
+  totalKeys: 100,
   totalUsedKeys: 20,
   totalStoppedKeys: 1,
   softCap: 100,
@@ -89,13 +87,14 @@ const communityModule3 = {
 const ModuleTypes = ['Curated', 'Community', 'DVT']
 
 const modules = []
-// modules.push(communityModule)
-// modules.push(communityModule2)
+modules.push(communityModule)
+modules.push(communityModule2)
 // modules.push(communityModule3)
 
 contract('StakingRouter', (accounts) => {
   let oracle, lido, burner
   let treasuryAddr
+  let insuranceAddr
   let dao, acl, operators
 
   let stakingRouter
@@ -138,7 +137,11 @@ contract('StakingRouter', (accounts) => {
 
     // Initialize the app's proxy.
     await lido.initialize(depositContract.address, oracle.address, operators.address)
-    treasuryAddr = await lido.getInsuranceFund()
+    insuranceAddr = await lido.getInsuranceFund()
+    treasuryAddr = await lido.getTreasury()
+
+    console.log('insuranceAddr', insuranceAddr)
+    console.log('treasuryAddr', treasuryAddr)
 
     await oracle.setPool(lido.address)
     await depositContract.reset()
@@ -147,6 +150,9 @@ contract('StakingRouter', (accounts) => {
 
     // set staking router to lido
     await lido.setStakingRouter(stakingRouter.address)
+
+    //
+    // const receipt = await lido.setProtocolContracts(await app.getOracle(), await app.getTreasury(), user1, { from: voting })
 
     const total = await lido.totalSupply()
     const shares = await lido.getTotalShares()
@@ -187,7 +193,7 @@ contract('StakingRouter', (accounts) => {
        *
        *
        */
-      let addresses
+      const addresses = []
       for (i = 0; i < modules.length; i++) {
         const module = modules[i]
         let _module
@@ -201,7 +207,7 @@ contract('StakingRouter', (accounts) => {
           _module = await ModuleSolo.new(module.type, lido.address, module.fee, { from: appManager })
         }
 
-        const name = ModuleTypes[module.type] + i
+        const name = 'Community' + i
 
         await stakingRouter.addModule(name, _module.address, module.softCap, module.treasuryFee, { from: appManager })
         await _module.setTotalKeys(module.totalKeys, { from: appManager })
@@ -211,6 +217,8 @@ contract('StakingRouter', (accounts) => {
         module.address = _module.address
         addresses[name] = module.address
       }
+
+      console.table(addresses)
 
       await stakingRouterStats(stakingRouter)
 
@@ -232,6 +240,22 @@ contract('StakingRouter', (accounts) => {
        */
       console.log('report oracle 1 eth')
       const result = await oracle.reportBeacon(100, 0, ETH(1), { from: appManager })
+
+      const sharesTable = await stakingRouter.getSharesTable()
+      const recipients = sharesTable.recipients
+      const modulePercent = sharesTable.modulePercent
+      const moduleFee = sharesTable.moduleFee
+      const treasuryFee = sharesTable.treasuryFee
+      const res = []
+      for (let i = 0; i < recipients.length; i++) {
+        res.push({
+          address: recipients[i],
+          modulePercent: parseInt(modulePercent[i]),
+          moduleFee: parseInt(moduleFee[i]),
+          treasuryFee: parseInt(treasuryFee[i])
+        })
+      }
+      console.table(res)
 
       // 341770 without
       // 350708
@@ -310,8 +334,7 @@ async function stakingRouterStats(stakingRouter) {
 
       totalKeys: parseInt(await entry.getTotalKeys()),
       totalUsedKeys: parseInt(await entry.getTotalUsedKeys()),
-      totalStoppedKeys: parseInt(await entry.getTotalStoppedKeys()),
-      totalExitedKeys: parseInt(await entry.getTotalExitedKeys())
+      totalStoppedKeys: parseInt(await entry.getTotalStoppedKeys())
     })
   }
 

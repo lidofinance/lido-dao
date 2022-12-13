@@ -67,8 +67,6 @@ contract StakingRouterLinear {
         uint256 totalUsedKeys;
         /// @notice total amount of stopped keys in the module
         uint256 totalStoppedKeys;
-        /// @notice total amount of exited keys in the module
-        uint256 totalExitedKeys;
         /// @notice the number of keys that have been allocated to this module
         uint256 assignedKeys;
         /// @notice treasury fee in BP
@@ -379,7 +377,7 @@ contract StakingRouterLinear {
                     continue;
                 }
 
-                uint256 stake = entry.totalUsedKeys - entry.totalStoppedKeys - entry.totalExitedKeys;
+                uint256 stake = entry.totalUsedKeys - entry.totalStoppedKeys;
                 uint256 softCap = entry.cap;
 
                 if (softCap > 0 && ((entry.totalUsedKeys + entry.assignedKeys) * TOTAL_BASIS_POINTS) / totalKeys >= softCap) {
@@ -423,7 +421,6 @@ contract StakingRouterLinear {
             entry.totalKeys = module.getTotalKeys();
             entry.totalUsedKeys = module.getTotalUsedKeys();
             entry.totalStoppedKeys = module.getTotalStoppedKeys();
-            entry.totalExitedKeys = module.getTotalExitedKeys();
             entry.cap = stakingModule.cap;
             entry.paused = stakingModule.paused;
         }

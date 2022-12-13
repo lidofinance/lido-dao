@@ -745,16 +745,19 @@ contract Lido is ILido, StETH, AragonApp {
 
         address stakingRouterAddress = getStakingRouter();
 
-        (uint256 shares2mint, uint256 totalKeys, uint256[] memory moduleKeys) = IStakingRouter(stakingRouterAddress).calculateShares2Mint(
-            _totalRewards
-        );
 
-        // Mint the calculated amount of shares to this contract address. This will reduce the
-        // balances of the holders, as if the fee was taken in parts from each of them.
-        _mintShares(stakingRouterAddress, shares2mint);
+        // address modulefee treasuryfee
 
-        //distribute shares
-        IStakingRouter(stakingRouterAddress).distributeShares(shares2mint, totalKeys, moduleKeys);
+        // (uint256 shares2mint, uint256 totalKeys, uint256[] memory moduleKeys) = IStakingRouter(stakingRouterAddress).calculateShares2Mint(
+        //     _totalRewards
+        // );
+
+        // // Mint the calculated amount of shares to this contract address. This will reduce the
+        // // balances of the holders, as if the fee was taken in parts from each of them.
+        // _mintShares(stakingRouterAddress, shares2mint);
+
+        // //distribute shares
+        // IStakingRouter(stakingRouterAddress).distributeShares(shares2mint, totalKeys, moduleKeys);
     }
 
     /**
