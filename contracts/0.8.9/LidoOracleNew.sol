@@ -33,7 +33,7 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
     event AllowedBeaconBalanceRelativeDecreaseSet(uint256 value);
     event BeaconReportReceiverSet(address callback);
 
-    event BeaconReported(
+    event CommitteeMemberReported(
         uint256 epochId,
         uint256 beaconBalance,
         uint256 beaconValidators,
@@ -44,7 +44,7 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         uint256[] finalizationSharesAmount
     );
 
-    event Completed(
+    event ConsensusReached(
         uint256 epochId,
         uint256 beaconBalance,
         uint256 beaconValidators,
@@ -338,11 +338,11 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         }
 
         if (_handleMemberReport(msg.sender, _encodeReport(_report))) {
-            _handleConsensussedReport(_report, beaconSpec);
+            _handleConsensusReport(_report, beaconSpec);
         }
 
         uint128 beaconBalance = DENOMINATION_OFFSET * uint128(_report.beaconBalanceGwei);
-        emit BeaconReported(
+        emit CommitteeMemberReported(
             _report.epochId,
             beaconBalance,
             _report.beaconValidators,
@@ -375,7 +375,7 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         (bool isQuorum, uint256 reportIndex) = _updateQuorum(_quorum);
         if (isQuorum) {
             MemberReport memory report = _decodeReport(distinctReports[reportIndex]);
-            _handleConsensussedReport(report, _getBeaconSpec());
+            _handleConsensusReport(report, _getBeaconSpec());
         }
     }
 
@@ -404,7 +404,7 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
     //  * @param _beaconBalanceEth1 Validators balance in eth1 (18-digit denomination)
     //  * @param _beaconSpec current beacon specification data
     //  */
-    function _handleConsensussedReport(
+    function _handleConsensusReport(
         MemberReport memory _report,
         BeaconSpec memory _beaconSpec
     )
@@ -414,7 +414,7 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
 
         // TODO: maybe add additional report validity sanity checks
 
-        emit Completed(
+        emit ConsensusReached(
             _report.epochId,
             beaconBalance,
             _report.beaconValidators,

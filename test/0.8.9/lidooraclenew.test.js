@@ -211,7 +211,9 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
       await assertExpectedEpochs(1, 0)
 
       const receipt = await app.updateQuorum(2, { from: voting })
-      assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 1, beaconBalance: 32 * DENOMINATION_OFFSET, beaconValidators: 1 } })
+      assertEvent(receipt, 'ConsensusReached', {
+        expectedArgs: { epochId: 1, beaconBalance: 32 * DENOMINATION_OFFSET, beaconValidators: 1 }
+      })
       await assertExpectedEpochs(2, 0)
     })
 
@@ -291,7 +293,7 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
           { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 5692, beaconBalanceGwei: BALANCE.toString(10) },
           { from: user1 }
         )
-        assertEvent(receipt, 'BeaconReported', {
+        assertEvent(receipt, 'CommitteeMemberReported', {
           expectedArgs: {
             epochId: 1,
             beaconBalance: BALANCE_TRUNCATED64_WEI,
@@ -309,7 +311,7 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
           { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 5692, beaconBalanceGwei: BALANCE_GWEI.toString(10) },
           { from: user1 }
         )
-        assertEvent(receipt, 'BeaconReported', {
+        assertEvent(receipt, 'CommitteeMemberReported', {
           expectedArgs: { epochId: 1, beaconBalance: BALANCE_WEI, beaconValidators: 5692, caller: user1 }
         })
       })
@@ -339,7 +341,7 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
           { from: user1 }
         )
 
-        assertEvent(receipt, 'Completed', {
+        assertEvent(receipt, 'ConsensusReached', {
           expectedArgs: { epochId: 1, beaconBalance: prePooledEther * DENOMINATION_OFFSET, beaconValidators: 1 }
         })
         assertEvent(receipt, 'PostTotalShares', {
@@ -363,7 +365,7 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
           { ...ZERO_MEMBER_REPORT, epochId: 3, beaconValidators: 3, beaconBalanceGwei: postPooledEther },
           { from: user1 }
         )
-        assertEvent(receipt, 'Completed', {
+        assertEvent(receipt, 'ConsensusReached', {
           expectedArgs: { epochId: 3, beaconBalance: postPooledEther * DENOMINATION_OFFSET, beaconValidators: 3 }
         })
         assertEvent(receipt, 'PostTotalShares', {
@@ -388,7 +390,7 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
           { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: beginPooledEther },
           { from: user1 }
         )
-        assertEvent(receipt, 'Completed', {
+        assertEvent(receipt, 'ConsensusReached', {
           expectedArgs: { epochId: 1, beaconBalance: beginPooledEther * DENOMINATION_OFFSET, beaconValidators: 1 }
         })
         await assertExpectedEpochs(2, 0)
@@ -400,7 +402,7 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
           { ...ZERO_MEMBER_REPORT, epochId: 3, beaconValidators: 3, beaconBalanceGwei: nextPooledEther },
           { from: user1 }
         )
-        assertEvent(receipt, 'Completed', {
+        assertEvent(receipt, 'ConsensusReached', {
           expectedArgs: { epochId: 3, beaconBalance: nextPooledEther * DENOMINATION_OFFSET, beaconValidators: 3 }
         })
       })
@@ -411,7 +413,7 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
           { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: beginPooledEther },
           { from: user1 }
         )
-        assertEvent(receipt, 'Completed', {
+        assertEvent(receipt, 'ConsensusReached', {
           expectedArgs: { epochId: 1, beaconBalance: beginPooledEther * DENOMINATION_OFFSET, beaconValidators: 1 }
         })
         await assertExpectedEpochs(2, 0)
@@ -431,7 +433,7 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
           { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: beginPooledEther },
           { from: user1 }
         )
-        assertEvent(receipt, 'Completed', {
+        assertEvent(receipt, 'ConsensusReached', {
           expectedArgs: { epochId: 1, beaconBalance: beginPooledEther * DENOMINATION_OFFSET, beaconValidators: 1 }
         })
         await assertExpectedEpochs(2, 0)
@@ -443,7 +445,7 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
           { ...ZERO_MEMBER_REPORT, epochId: 3, beaconValidators: 3, beaconBalanceGwei: nextPooledEther },
           { from: user1 }
         )
-        assertEvent(receipt, 'Completed', {
+        assertEvent(receipt, 'ConsensusReached', {
           expectedArgs: { epochId: 3, beaconBalance: nextPooledEther * DENOMINATION_OFFSET, beaconValidators: 3 }
         })
       })
@@ -454,7 +456,7 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
           { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: beginPooledEther },
           { from: user1 }
         )
-        assertEvent(receipt, 'Completed', {
+        assertEvent(receipt, 'ConsensusReached', {
           expectedArgs: { epochId: 1, beaconBalance: beginPooledEther * DENOMINATION_OFFSET, beaconValidators: 1 }
         })
         await assertExpectedEpochs(2, 0)
@@ -498,7 +500,7 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
           { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: beginPooledEther },
           { from: user1 }
         )
-        assertEvent(receipt, 'Completed', {
+        assertEvent(receipt, 'ConsensusReached', {
           expectedArgs: { epochId: 1, beaconBalance: beginPooledEther * DENOMINATION_OFFSET, beaconValidators: 1 }
         })
         await assertExpectedEpochs(2, 0)
@@ -530,7 +532,7 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
           { ...ZERO_MEMBER_REPORT, epochId: 3, beaconValidators: 3, beaconBalanceGwei: nextPooledEther },
           { from: user1 }
         )
-        assertEvent(receipt, 'Completed', {
+        assertEvent(receipt, 'ConsensusReached', {
           expectedArgs: { epochId: 3, beaconBalance: nextPooledEther * DENOMINATION_OFFSET, beaconValidators: 3 }
         })
       })
@@ -541,7 +543,7 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
           { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: beginPooledEther },
           { from: user1 }
         )
-        assertEvent(receipt, 'Completed', {
+        assertEvent(receipt, 'ConsensusReached', {
           expectedArgs: { epochId: 1, beaconBalance: beginPooledEther * DENOMINATION_OFFSET, beaconValidators: 1 }
         })
         await assertExpectedEpochs(2, 0)
@@ -565,7 +567,7 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
           { ...ZERO_MEMBER_REPORT, epochId: 3, beaconValidators: 3, beaconBalanceGwei: nextPooledEther },
           { from: user1 }
         )
-        assertEvent(receipt, 'Completed', {
+        assertEvent(receipt, 'ConsensusReached', {
           expectedArgs: { epochId: 3, beaconBalance: nextPooledEther * DENOMINATION_OFFSET, beaconValidators: 3 }
         })
       })
@@ -576,7 +578,7 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
           { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: beginPooledEther },
           { from: user1 }
         )
-        assertEvent(receipt, 'Completed', {
+        assertEvent(receipt, 'ConsensusReached', {
           expectedArgs: { epochId: 1, beaconBalance: beginPooledEther * DENOMINATION_OFFSET, beaconValidators: 1 }
         })
         await assertExpectedEpochs(2, 0)
@@ -597,7 +599,7 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
           { ...ZERO_MEMBER_REPORT, epochId: 5, beaconValidators: 3, beaconBalanceGwei: nextPooledEther },
           { from: user1 }
         )
-        assertEvent(receipt, 'Completed', {
+        assertEvent(receipt, 'ConsensusReached', {
           expectedArgs: { epochId: 5, beaconBalance: nextPooledEther * DENOMINATION_OFFSET, beaconValidators: 3 }
         })
       })
@@ -608,7 +610,7 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
           { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: beginPooledEther },
           { from: user1 }
         )
-        assertEvent(receipt, 'Completed', {
+        assertEvent(receipt, 'ConsensusReached', {
           expectedArgs: { epochId: 1, beaconBalance: beginPooledEther * DENOMINATION_OFFSET, beaconValidators: 1 }
         })
         await assertExpectedEpochs(2, 0)
@@ -655,7 +657,7 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
           { from: user1 }
         )
 
-        assertEvent(receipt, 'Completed', {
+        assertEvent(receipt, 'ConsensusReached', {
           expectedArgs: { epochId: 1, beaconBalance: (START_BALANCE + 35) * DENOMINATION_OFFSET, beaconValidators: 1 }
         })
         await assertExpectedEpochs(2, 0)
@@ -665,7 +667,7 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
           { ...ZERO_MEMBER_REPORT, epochId: 2, beaconValidators: 3, beaconBalanceGwei: START_BALANCE + 77 },
           { from: user1 }
         )
-        assertEvent(receipt, 'Completed', {
+        assertEvent(receipt, 'ConsensusReached', {
           expectedArgs: { epochId: 2, beaconBalance: (START_BALANCE + 77) * DENOMINATION_OFFSET, beaconValidators: 3 }
         })
         await assertExpectedEpochs(3, 2)
@@ -736,7 +738,9 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
             { ...ZERO_MEMBER_REPORT, epochId: 5, beaconValidators: 1, beaconBalanceGwei: 32 },
             { from: user1 }
           )
-          assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 5, beaconBalance: 32 * DENOMINATION_OFFSET, beaconValidators: 1 } })
+          assertEvent(receipt, 'ConsensusReached', {
+            expectedArgs: { epochId: 5, beaconBalance: 32 * DENOMINATION_OFFSET, beaconValidators: 1 }
+          })
           await assertExpectedEpochs(6, 5)
         })
       })
@@ -800,7 +804,7 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
 
       // TODO: fix the check
       const receipt = await app.updateQuorum(2, { from: voting })
-      // assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 1, beaconBalance: 32 * DENOMINATION_OFFSET, beaconValidators: 1 } })
+      // assertEvent(receipt, 'ConsensusReached', { expectedArgs: { epochId: 1, beaconBalance: 32 * DENOMINATION_OFFSET, beaconValidators: 1 } })
       // assertBn(await app.getCurrentOraclesReportStatus(), 0b000)
       // assertBn(await app.getDistinctMemberReportsCount(), 0)
     })
@@ -813,7 +817,7 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
             { from: acc }
           )
           await assertExpectedEpochs(1, 1)
-          assertEvent(receipt, 'BeaconReported', {
+          assertEvent(receipt, 'CommitteeMemberReported', {
             expectedArgs: { epochId: 1, beaconBalance: 32 * DENOMINATION_OFFSET, beaconValidators: 1, caller: acc }
           })
         }
@@ -822,10 +826,12 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
           { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 },
           { from: user7 }
         )
-        assertEvent(receipt, 'BeaconReported', {
+        assertEvent(receipt, 'CommitteeMemberReported', {
           expectedArgs: { epochId: 1, beaconBalance: 32 * DENOMINATION_OFFSET, beaconValidators: 1, caller: user7 }
         })
-        assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 1, beaconBalance: 32 * DENOMINATION_OFFSET, beaconValidators: 1 } })
+        assertEvent(receipt, 'ConsensusReached', {
+          expectedArgs: { epochId: 1, beaconBalance: 32 * DENOMINATION_OFFSET, beaconValidators: 1 }
+        })
       })
 
       it('reverts when trying to report this epoch again', async () => {
@@ -853,7 +859,9 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
           { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 },
           { from: user7 }
         )
-        assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 1, beaconBalance: 32 * DENOMINATION_OFFSET, beaconValidators: 1 } })
+        assertEvent(receipt, 'ConsensusReached', {
+          expectedArgs: { epochId: 1, beaconBalance: 32 * DENOMINATION_OFFSET, beaconValidators: 1 }
+        })
       })
 
       it('oracles part 3+3, no quorum for 4', async () => {
@@ -891,7 +899,9 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
           { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 },
           { from: user5 }
         )
-        assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 1, beaconBalance: 32 * DENOMINATION_OFFSET, beaconValidators: 1 } })
+        assertEvent(receipt, 'ConsensusReached', {
+          expectedArgs: { epochId: 1, beaconBalance: 32 * DENOMINATION_OFFSET, beaconValidators: 1 }
+        })
       })
 
       it('oracles part 4+3, got quorum for 4', async () => {
@@ -912,7 +922,9 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
           { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 },
           { from: user7 }
         )
-        assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 1, beaconBalance: 32 * DENOMINATION_OFFSET, beaconValidators: 1 } })
+        assertEvent(receipt, 'ConsensusReached', {
+          expectedArgs: { epochId: 1, beaconBalance: 32 * DENOMINATION_OFFSET, beaconValidators: 1 }
+        })
       })
 
       it('oracles part 5+2, got quorum for 5', async () => {
@@ -933,7 +945,9 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
           { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 },
           { from: user7 }
         )
-        assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 1, beaconBalance: 32 * DENOMINATION_OFFSET, beaconValidators: 1 } })
+        assertEvent(receipt, 'ConsensusReached', {
+          expectedArgs: { epochId: 1, beaconBalance: 32 * DENOMINATION_OFFSET, beaconValidators: 1 }
+        })
       })
 
       it('only 1 report is enough in quorum l1', async () => {
@@ -942,7 +956,9 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
           { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 },
           { from: user1 }
         )
-        assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 1, beaconBalance: 32 * DENOMINATION_OFFSET, beaconValidators: 1 } })
+        assertEvent(receipt, 'ConsensusReached', {
+          expectedArgs: { epochId: 1, beaconBalance: 32 * DENOMINATION_OFFSET, beaconValidators: 1 }
+        })
       })
 
       it('only 2 alike report is enough in quorum 2', async () => {
@@ -955,7 +971,9 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
           { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 },
           { from: user5 }
         )
-        assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 1, beaconBalance: 32 * DENOMINATION_OFFSET, beaconValidators: 1 } })
+        assertEvent(receipt, 'ConsensusReached', {
+          expectedArgs: { epochId: 1, beaconBalance: 32 * DENOMINATION_OFFSET, beaconValidators: 1 }
+        })
       })
     })
     describe('updateQuorum lowering reaches quorum', function () {
@@ -969,7 +987,9 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
         await assertExpectedEpochs(1, 1)
 
         const receipt = await app.updateQuorum(6, { from: voting })
-        assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 1, beaconBalance: 32 * DENOMINATION_OFFSET, beaconValidators: 1 } })
+        assertEvent(receipt, 'ConsensusReached', {
+          expectedArgs: { epochId: 1, beaconBalance: 32 * DENOMINATION_OFFSET, beaconValidators: 1 }
+        })
       })
 
       it('oracles part 3+3, no quorum here at all', async () => {
@@ -1118,7 +1138,9 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
         await assertExpectedEpochs(1, 1)
 
         receipt = await app.updateQuorum(4, { from: voting })
-        assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 1, beaconBalance: 32 * DENOMINATION_OFFSET, beaconValidators: 1 } })
+        assertEvent(receipt, 'ConsensusReached', {
+          expectedArgs: { epochId: 1, beaconBalance: 32 * DENOMINATION_OFFSET, beaconValidators: 1 }
+        })
       })
 
       it('only 1 report is enough in quorum lowers to 1', async () => {
@@ -1134,7 +1156,9 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
         await assertExpectedEpochs(1, 1)
 
         const receipt = await app.updateQuorum(1, { from: voting })
-        assertEvent(receipt, 'Completed', { expectedArgs: { epochId: 1, beaconBalance: 32 * DENOMINATION_OFFSET, beaconValidators: 1 } })
+        assertEvent(receipt, 'ConsensusReached', {
+          expectedArgs: { epochId: 1, beaconBalance: 32 * DENOMINATION_OFFSET, beaconValidators: 1 }
+        })
       })
     })
   })
