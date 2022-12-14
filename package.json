@@ -2,6 +2,9 @@
   "name": "@lido/dao",
   "version": "0.0.1",
   "private": true,
+  "author": "Lido <info@lido.fi>",
+  "homepage": "https://lido.fi/",
+  "license": "GPL-3.0",
   "workspaces": [
     "apps/*/app",
     "lib",
@@ -60,9 +63,6 @@
     "aragon:start": "node scripts/start-aragon.js",
     "lido:start": "hardhat node& yarn deploy:all && yarn lido:apps& hardhat run --no-compile scripts/start-aragon.js"
   },
-  "author": "Lido <info@lido.fi>",
-  "homepage": "https://lido.fi/",
-  "license": "GPL-3.0",
   "devDependencies": {
     "@aragon/apps-finance": "^3.0.0",
     "@aragon/apps-token-manager": "^2.1.0",

@@ -19,7 +19,7 @@ contract OrderedCallbacksArray is IOrderedCallbacksArray {
     using ERC165Checker for address;
 
     uint256 public constant MAX_CALLBACKS_COUNT = 16;
-    bytes4 constant INVALID_INTERFACE_ID = 0xffffffff;
+    bytes4 internal constant INVALID_INTERFACE_ID = 0xffffffff;
 
     address public immutable VOTING;
     bytes4 public immutable REQUIRED_INTERFACE;

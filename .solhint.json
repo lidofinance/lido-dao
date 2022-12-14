@@ -10,6 +10,7 @@
     "reason-string": "off",
     "no-empty-blocks": "off",
     "func-name-mixedcase": "off",
-    "lido/fixed-compiler-version": "error"
+    "lido/fixed-compiler-version": "error",
+    "func-visibility": ["warn",{"ignoreConstructors":true}]
   }
 }

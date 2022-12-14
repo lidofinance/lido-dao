@@ -281,6 +281,7 @@ contract Lido is ILido, StETH, AragonApp {
     * accepts payments of any size. Submitted Ethers are stored in Buffer until someone calls
     * depositBufferedEther() and pushes them to the ETH2 Deposit contract.
     */
+    // solhint-disable-next-line
     function() external payable {
         // protection against accidental submissions by calling non-existent function
         require(msg.data.length == 0, "NON_EMPTY_DATA");
@@ -584,6 +585,7 @@ contract Lido is ILido, StETH, AragonApp {
         if (_token == ETH) {
             balance = _getUnaccountedEther();
             // Transfer replaced by call to prevent transfer gas amount issue
+            // solhint-disable-next-line
             require(vault.call.value(balance)(), "RECOVER_TRANSFER_FAILED");
         } else {
             ERC20 token = ERC20(_token);

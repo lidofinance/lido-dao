@@ -6,10 +6,9 @@ pragma solidity 0.4.24;
 
 import "../oracle/LidoOracle.sol";
 
-
 /**
-  * @dev Only for testing purposes! LidoOracle version with some functions exposed.
-  */
+ * @dev Only for testing purposes! LidoOracle version with some functions exposed.
+ */
 contract LidoOracleMock is LidoOracle {
     uint256 private time;
 

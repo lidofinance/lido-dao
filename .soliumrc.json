@@ -1,6 +1,8 @@
 {
-  "extends": "solium:all",
-  "plugins": ["security"],
+  "extends": "solium:recommended",
+  "plugins": [
+    "security"
+  ],
   "rules": {
     "security/no-low-level-calls": "off",
     "security/no-inline-assembly": "off",
@@ -23,14 +25,13 @@
     "quotes": "error",
     "blank-lines": "error",
     "indentation": "error",
-    "arg-overflow": ["error", 8],
+    "arg-overflow": [
+      "error",
+      8
+    ],
     "whitespace": "error",
     "deprecated-suicide": "error",
     "pragma-on-top": "error",
-    "function-order": [
-      "error",
-      {"ignore": {"functions": ["initialize"]}}
-    ],
     "emit": "error",
     "no-constant": "error",
     "value-in-payable": "error",
