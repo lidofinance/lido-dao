@@ -31,24 +31,24 @@ contract WithdrawalQueue {
      * @notice amount of ETH on this contract balance that is locked for withdrawal and waiting for claim
      * @dev Invariant: `lockedEtherAmount <= this.balance`
      */
-    uint256 public lockedEtherAmount = 0;
+    uint128 public lockedEtherAmount = 0;
 
     /// @notice queue for withdrawal requests
     Request[] public queue;
-    
+
     /// @notice length of the finalized part of the queue
     uint256 public finalizedRequestsCounter = 0;
 
     /// @notice structure representing a request for withdrawal.
     struct Request {
+        /// @notice sum of the all requested ether including this request
+        uint128 cumulativeEther;
+        /// @notice sum of the all shares locked for withdrawal including this request
+        uint128 cumulativeShares;
         /// @notice payable address of the recipient withdrawal will be transfered to
         address payable recipient;
         /// @notice block.number when the request created
-        uint96 requestBlockNumber;
-        /// @notice sum of the all requested ether including this request
-        uint256 cumulativeEther;
-        /// @notice sum of the all shares locked for withdrawal including this request
-        uint256 cumulativeShares;
+        uint64 requestBlockNumber;
         /// @notice flag if the request was already claimed
         bool claimed;
     }
@@ -75,6 +75,10 @@ contract WithdrawalQueue {
         OWNER = _owner;
     }
 
+    /**
+     * @notice Getter for withdrawal queue length
+     * @return length of the request queue
+     */
     function queueLength() external view returns (uint256) {
         return queue.length;
     }
@@ -95,8 +99,8 @@ contract WithdrawalQueue {
         require(_etherAmount > MIN_WITHDRAWAL, "WITHDRAWAL_IS_TOO_SMALL");
         requestId = queue.length;
 
-        uint256 cumulativeEther = _etherAmount;
-        uint256 cumulativeShares = _sharesAmount;
+        uint128 cumulativeEther = _toUint128(_etherAmount);
+        uint128 cumulativeShares = _toUint128(_sharesAmount);
         
         if (requestId > 0) {
             cumulativeEther += queue[requestId - 1].cumulativeEther;
@@ -104,10 +108,10 @@ contract WithdrawalQueue {
         }
         
         queue.push(Request(
-            _recipient, 
-            _toUint96(block.number), 
             cumulativeEther,
             cumulativeShares,
+            _recipient, 
+            _toUint64(block.number), 
             false
         ));
     }
@@ -131,9 +135,9 @@ contract WithdrawalQueue {
         );
         require(lockedEtherAmount + _etherToLock <= address(this).balance, "NOT_ENOUGH_ETHER");
 
-        _updatePriceHistory(_totalPooledEther, _totalShares, _lastIdToFinalize);
+        _updatePriceHistory(_toUint128(_totalPooledEther), _toUint128(_totalShares), _lastIdToFinalize);
 
-        lockedEtherAmount += _etherToLock;
+        lockedEtherAmount = _toUint128(_etherToLock);
         finalizedRequestsCounter = _lastIdToFinalize + 1; 
     }
 
@@ -160,7 +164,7 @@ contract WithdrawalQueue {
             price = finalizationPrices[findPriceHint(_requestId)];
         }
 
-        (uint256 etherToTransfer,) = _calculateDiscountedBatch(
+        (uint128 etherToTransfer,) = _calculateDiscountedBatch(
             _requestId, 
             _requestId, 
             price.totalPooledEther, 
@@ -187,7 +191,12 @@ contract WithdrawalQueue {
         uint256 _totalPooledEther,
         uint256 _totalShares
     ) external view returns (uint256 etherToLock, uint256 sharesToBurn) {
-        return _calculateDiscountedBatch(finalizedRequestsCounter, _lastIdToFinalize, _totalPooledEther, _totalShares);
+        return _calculateDiscountedBatch(
+            finalizedRequestsCounter, 
+            _lastIdToFinalize, 
+            _toUint128(_totalPooledEther), 
+            _toUint128(_totalShares)
+        );
     }
 
     function findPriceHint(uint256 _requestId) public view returns (uint256 hint) {
@@ -210,9 +219,9 @@ contract WithdrawalQueue {
     function _calculateDiscountedBatch(
         uint256 firstId, 
         uint256 lastId, 
-        uint256 _totalPooledEther,
-        uint256 _totalShares
-    ) internal view returns (uint256 eth, uint256 shares) {
+        uint128 _totalPooledEther,
+        uint128 _totalShares
+    ) internal view returns (uint128 eth, uint128 shares) {
         eth = queue[lastId].cumulativeEther;
         shares = queue[lastId].cumulativeShares;
 
@@ -235,21 +244,21 @@ contract WithdrawalQueue {
         } 
     }
 
-    function _updatePriceHistory(uint256 _totalPooledEther, uint256 _totalShares, uint256 index) internal {
+    function _updatePriceHistory(uint128 _totalPooledEther, uint128 _totalShares, uint256 index) internal {
         if (finalizationPrices.length == 0) {
-            finalizationPrices.push(Price(_toUint128(_totalPooledEther), _toUint128(_totalShares), index));
+            finalizationPrices.push(Price(_totalPooledEther, _totalShares, index));
         } else {
             Price storage lastPrice = finalizationPrices[finalizationPrices.length - 1];
 
             if (_totalPooledEther/_totalShares == lastPrice.totalPooledEther/lastPrice.totalShares) {
                 lastPrice.index = index;
             } else {
-                finalizationPrices.push(Price(_toUint128(_totalPooledEther), _toUint128(_totalShares), index));
+                finalizationPrices.push(Price(_totalPooledEther, _totalShares, index));
             }
         }
     }
 
-    function _min(uint256 a, uint256 b) internal pure returns (uint256) {
+    function _min(uint128 a, uint128 b) internal pure returns (uint128) {
         return a < b ? a : b;  
     }
 
@@ -261,9 +270,9 @@ contract WithdrawalQueue {
         require(success, "Address: unable to send value, recipient may have reverted");
     }
 
-    function _toUint96(uint256 value) internal pure returns (uint96) {
-        require(value <= type(uint96).max, "SafeCast: value doesn't fit in 96 bits");
-        return uint96(value);
+    function _toUint64(uint256 value) internal pure returns (uint64) {
+        require(value <= type(uint64).max, "SafeCast: value doesn't fit in 96 bits");
+        return uint64(value);
     }
 
     function _toUint128(uint256 value) internal pure returns (uint128) {

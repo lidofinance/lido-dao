@@ -30,10 +30,10 @@ contract('WithdrawalQueue', ([recipient, stranger]) => {
       assertBn(await withdrawal.queueLength(), +requestId + 1)
       assert(requestId >= (await withdrawal.finalizedRequestsCounter()))
       const request = await withdrawal.queue(requestId)
-      assert.equal(request[0], recipient)
-      assertBn(request[2], bn(ETH(1)))
-      assertBn(request[3], bn(1))
-      assert.equal(request[4], false)
+      assert.equal(request.recipient, recipient)
+      assertBn(request.cumulativeEther, bn(ETH(1)))
+      assertBn(request.cumulativeShares, bn(1))
+      assert.equal(request.claimed, false)
     })
 
     it('Only owner can enqueue a request', async () => {
