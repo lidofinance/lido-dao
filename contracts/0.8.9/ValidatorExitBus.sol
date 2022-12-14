@@ -62,6 +62,9 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
 
     bytes32 internal constant TOTAL_EXIT_REQUESTS_POSITION = keccak256("lido.ValidatorExitBus.totalExitRequests");
 
+    /// (stakingModuleAddress, nodeOperatorId) => lastRequestedValidatorId
+    mapping(address => mapping (uint256 => uint256)) public lastRequestedValidatorIds;
+
     function initialize(
         address _admin,
         uint256 _maxRequestsPerDayE18,
@@ -120,6 +123,8 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
         if (_stakingModules.length != _validatorPubkeys.length) { revert ArraysMustBeSameSize(); }
         if (_validatorIds.length != _validatorPubkeys.length) { revert ArraysMustBeSameSize(); }
         if (_validatorPubkeys.length == 0) { revert EmptyArraysNotAllowed(); }
+
+        // TODO: maybe check length of bytes pubkeys
 
         BeaconSpec memory beaconSpec = _getBeaconSpec();
         bool hasEpochAdvanced = _validateAndUpdateExpectedEpoch(_epochId, beaconSpec);
@@ -186,6 +191,11 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
         return RATE_LIMIT_STATE_POSITION.getStorageLimitStruct().calculateCurrentLimit();
     }
 
+    function getLastRequestedValidatorId(address _stakingModule, uint256 _nodeOperatorId)
+        external view returns (uint256)
+    {
+        return lastRequestedValidatorIds[_stakingModule][_nodeOperatorId];
+    }
 
     /**
      * @notice Set the number of exactly the same reports needed to finalize the epoch to `_quorum`
@@ -256,6 +266,8 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
                 _validatorIds[i],
                 _validatorPubkeys[i]
             );
+
+            lastRequestedValidatorIds[_stakingModules[i]][_nodeOperatorIds[i]] = _validatorIds[i];
         }
 
         TOTAL_EXIT_REQUESTS_POSITION.setStorageUint256(

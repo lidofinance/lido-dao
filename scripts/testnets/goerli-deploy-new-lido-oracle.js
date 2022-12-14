@@ -29,7 +29,7 @@ async function deployLidoOracleNew({ web3, artifacts }) {
 
   let LidoOracleNew = await hre.ethers.getContractFactory("LidoOracleNew")
 
-  let oracle = await LidoOracleNew.deploy({ from: DEPLOYER })
+  let oracle = await LidoOracleNew.deploy()
   console.log(oracle.address)
 
   const oracleAdmin = DEPLOYER

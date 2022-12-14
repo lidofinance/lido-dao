@@ -57,7 +57,7 @@ function calcRateLimitParameters(maxRequestsPerDay) {
 
 const GENESIS_TIME = 1606824000
 
-contract.only('ValidatorExitBus', ([deployer, member, owner]) => {
+contract('ValidatorExitBus', ([deployer, member, owner]) => {
   let bus = null
 
   beforeEach('deploy bus', async () => {
@@ -80,7 +80,7 @@ contract.only('ValidatorExitBus', ([deployer, member, owner]) => {
     it.skip(`Calculate gas usages`, async () => {
       let epochId = 1
       const gasUsage = {}
-      const amountsOfKeysToTry = [1, 2, 5, 10, 50, 100]
+      const amountsOfKeysToTry = [1, 3, 10, 40, 100]
       let prevNumKeys = 0
       for (const numKeys of amountsOfKeysToTry) {
         await waitBlocks(Math.ceil(prevNumKeys / fromE18(numRequestsLimitIncreasePerBlockE18)))
@@ -91,7 +91,12 @@ contract.only('ValidatorExitBus', ([deployer, member, owner]) => {
         epochId += 1
       }
 
-      console.log(gasUsage)
+      console.log(`==== Gas usage ====`)
+      for (const [numKeys, gasTotal] of Object.entries(gasUsage)) {
+        const usagePerKey = gasTotal / numKeys
+        console.log(`${numKeys}: ${usagePerKey} per key (${gasTotal} total)`)
+      }
+      console.log(`===================`)
     })
   })
 
