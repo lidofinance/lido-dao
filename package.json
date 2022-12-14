@@ -11,7 +11,7 @@
     "gasprofile"
   ],
   "scripts": {
-    "postinstall": "patch-package",
+    "postinstall": "patch-package && husky install",
     "build:apps": "yarn compile && hardhat run --no-compile scripts/build-apps-frontend.js",
     "lint": "yarn lint:sol && yarn lint:js",
     "lint:sol": "yarn lint:sol:solhint && yarn lint:sol:solium",
@@ -101,13 +101,14 @@
     "hardhat": "2.9.9",
     "hardhat-contract-sizer": "^2.5.0",
     "hardhat-gas-reporter": "1.0.8",
-    "husky": "^4.3.0",
+    "husky": "^8.0.2",
     "ipfs-http-client": "^55.0.0",
     "lerna": "^3.22.1",
     "lint-staged": ">=10",
     "prettier": "^2.1.2",
     "prettier-plugin-solidity": "^1.1.0",
     "solhint": "^3.3.7",
+    "solhint-plugin-lido": "^0.0.4",
     "solidity-coverage": "^0.7.18",
     "solium": "^1.2.5",
     "truffle": "^5.1.43",
@@ -128,16 +129,7 @@
     "node-gyp": "^8.4.1",
     "openzeppelin-solidity": "2.0.0",
     "patch-package": "^6.4.7",
-    "solhint-plugin-lido": "^0.0.4",
     "solidity-bytes-utils": "0.0.6",
     "yargs": "^16.0.3"
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged"
-    }
-  },
-  "lint-staged": {
-    "*.{js,jsx}": "yarn lint:js:fix"
   }
 }
