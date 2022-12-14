@@ -320,7 +320,7 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         _removeOracleMember(_member);
     }
 
-    function reportBeacon(
+    function handleCommitteeMemberReport(
         MemberReport calldata _report
     ) external {
         BeaconSpec memory beaconSpec = _getBeaconSpec();
