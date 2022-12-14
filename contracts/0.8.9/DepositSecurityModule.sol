@@ -30,7 +30,6 @@ interface IStakingRouter {
 }
 
 contract DepositSecurityModule {
-
     /**
      * Short ECDSA signature as defined in https://eips.ethereum.org/EIPS/eip-2098.
      */
@@ -47,6 +46,8 @@ contract DepositSecurityModule {
     event GuardianAdded(address guardian);
     event GuardianRemoved(address guardian);
     event LastDepositBlockChanged(uint256 indexed moduleId, uint256 newLastDepositBlock);
+    event DepositsPaused(address indexed guardian, address indexed stakingModule);
+    event DepositsUnpaused(address indexed stakingModule);
 
     bytes32 public immutable ATTEST_MESSAGE_PREFIX;
     bytes32 public immutable PAUSE_MESSAGE_PREFIX;
@@ -65,8 +66,8 @@ contract DepositSecurityModule {
     mapping(address => uint256) internal guardianIndicesOneBased; // 1-based
 
     constructor(
-        address _stakingRouter,
         address _depositContract,
+        address _stakingRouter,
         uint256 _maxDepositsPerBlock,
         uint256 _minDepositBlockDistance,
         uint256 _pauseIntentValidityPeriodBlocks
@@ -329,6 +330,7 @@ contract DepositSecurityModule {
         require(block.number - blockNumber <= pauseIntentValidityPeriodBlocks, "pause intent expired");
 
         STAKING_ROUTER.pauseStakingModule(stakingModule);
+        emit DepositsPaused(guardianAddr, stakingModule);
     }
 
     /**
@@ -339,6 +341,7 @@ contract DepositSecurityModule {
     function unpauseDeposits(address stakingModule) external onlyOwner {
         if (STAKING_ROUTER.getStakingModuleIsPaused(stakingModule)) {
             STAKING_ROUTER.unpauseStakingModule(stakingModule);
+            emit DepositsUnpaused(stakingModule);
         }
     }
 
@@ -378,11 +381,12 @@ contract DepositSecurityModule {
         bytes calldata depositCalldata,
         Signature[] calldata sortedGuardianSignatures
     ) external {
+        require(quorum > 0 && sortedGuardianSignatures.length >= quorum, "no guardian quorum");
+        
         bytes32 onchainDepositRoot = IDepositContract(DEPOSIT_CONTRACT).get_deposit_root();
         require(depositRoot == onchainDepositRoot, "deposit root changed");
 
         require(!STAKING_ROUTER.getStakingModuleIsPaused(stakingModule), "deposits are paused");
-        require(quorum > 0 && sortedGuardianSignatures.length >= quorum, "no guardian quorum");
 
         uint256 lastDepositBlock = STAKING_ROUTER.getStakingModuleLastDepositBlock(stakingModule);
         require(block.number - lastDepositBlock >= minDepositBlockDistance, "too frequent deposits");
@@ -405,7 +409,9 @@ contract DepositSecurityModule {
         uint256 keysOpIndex,
         Signature[] memory sigs
     ) internal view {
-        bytes32 msgHash = keccak256(abi.encodePacked(ATTEST_MESSAGE_PREFIX, blockNumber, blockHash, depositRoot, stakingModule, keysOpIndex));
+        bytes32 msgHash = keccak256(
+            abi.encodePacked(ATTEST_MESSAGE_PREFIX, blockNumber, blockHash, depositRoot, stakingModule, keysOpIndex)
+        );
 
         address prevSignerAddr = address(0);
 
