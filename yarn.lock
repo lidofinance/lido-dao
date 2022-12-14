@@ -3858,7 +3858,8 @@ __metadata:
     openzeppelin-solidity: 2.0.0
     patch-package: ^6.4.7
     prettier: ^2.1.2
-    solhint: ^3.2.2
+    prettier-plugin-solidity: ^1.1.0
+    solhint: ^3.3.7
     solhint-plugin-lido: ^0.0.4
     solidity-bytes-utils: 0.0.6
     solidity-coverage: ^0.7.18
@@ -4605,7 +4606,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@solidity-parser/parser@npm:^0.14.1":
+"@solidity-parser/parser@npm:^0.14.1, @solidity-parser/parser@npm:^0.14.5":
   version: 0.14.5
   resolution: "@solidity-parser/parser@npm:0.14.5"
   dependencies:
@@ -4628,7 +4629,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@solidity-parser/parser@npm:^0.8.0, @solidity-parser/parser@npm:^0.8.1":
+"@solidity-parser/parser@npm:^0.8.0":
   version: 0.8.1
   resolution: "@solidity-parser/parser@npm:0.8.1"
   checksum: c16f7d947277d41cbef0b93df899e09ce1032a1ac37a2af9d9e3b805f38f232ae7516e3b41a4a81a2787cdc84dfe554d86aa6038faa899bac3254a653df68e39
@@ -10831,6 +10832,13 @@ __metadata:
   version: 0.7.1
   resolution: "emittery@npm:0.7.1"
   checksum: 917b0995126e004ddf175e7d0a74ae8608083846c3f3608e964bf13caba220a003b7455ced5bf813a40e977605be48e53c74f6150fbe587a47ef6b985b8a447e
+  languageName: node
+  linkType: hard
+
+"emoji-regex@npm:^10.2.1":
+  version: 10.2.1
+  resolution: "emoji-regex@npm:10.2.1"
+  checksum: 6a15ddd92b5782a99dec6a0700c4caab9ebc92bdcc90d1fc59e298a1628a694c465739f18a9103446687192bec89406b2910b6f22f4de48cf74f82f86194a3d8
   languageName: node
   linkType: hard
 
@@ -23011,6 +23019,22 @@ fsevents@~2.3.2:
   languageName: node
   linkType: hard
 
+"prettier-plugin-solidity@npm:^1.1.0":
+  version: 1.1.0
+  resolution: "prettier-plugin-solidity@npm:1.1.0"
+  dependencies:
+    "@solidity-parser/parser": ^0.14.5
+    emoji-regex: ^10.2.1
+    escape-string-regexp: ^4.0.0
+    semver: ^7.3.8
+    solidity-comments-extractor: ^0.0.7
+    string-width: ^4.2.3
+  peerDependencies:
+    prettier: ^2.3.0
+  checksum: 5abaf1480a46b270e6fca948768cc1fd203b8a142ca8efd5ee4687d8599cfbe8fa5991c84ac66aefebe924ea425b4f69b5662277cc7d6d0ce99350f490aa7d1c
+  languageName: node
+  linkType: hard
+
 "prettier@npm:^1.14.3":
   version: 1.19.1
   resolution: "prettier@npm:1.19.1"
@@ -24987,6 +25011,17 @@ resolve@1.1.x:
   languageName: node
   linkType: hard
 
+"semver@npm:^7.3.8":
+  version: 7.3.8
+  resolution: "semver@npm:7.3.8"
+  dependencies:
+    lru-cache: ^6.0.0
+  bin:
+    semver: bin/semver.js
+  checksum: cfb9c2101dae4ee93c415471f48797c750174d65def4e06ff691bf910194cc6ca92793e597be8302175ceb640100a3da36451e7656320da53b51167eeaf11eb5
+  languageName: node
+  linkType: hard
+
 "semver@npm:~5.4.1":
   version: 5.4.1
   resolution: "semver@npm:5.4.1"
@@ -25518,11 +25553,11 @@ resolve@1.1.x:
   languageName: node
   linkType: hard
 
-"solhint@npm:^3.2.2":
-  version: 3.2.2
-  resolution: "solhint@npm:3.2.2"
+"solhint@npm:^3.3.7":
+  version: 3.3.7
+  resolution: "solhint@npm:3.3.7"
   dependencies:
-    "@solidity-parser/parser": ^0.8.1
+    "@solidity-parser/parser": ^0.14.1
     ajv: ^6.6.1
     antlr4: 4.7.1
     ast-parents: 0.0.1
@@ -25542,7 +25577,7 @@ resolve@1.1.x:
       optional: true
   bin:
     solhint: solhint.js
-  checksum: 4b77b5d6490233ec49899149b103ebec33518fcb5eee4a2078a363e8b7d8247c9edeed3650bce37e180fe777da88eba8abdbb946d3933fa1558fb1d1a809ebce
+  checksum: b0a3e0806bef88be734002ee5b6634fa261d612d946688ddc803cf582995b9b3abc8debe35beb10d4201dacf97870b783f703c0f5b3c5b3ebf195f5d061e7f98
   languageName: node
   linkType: hard
 
@@ -25552,6 +25587,13 @@ resolve@1.1.x:
   dependencies:
     truffle-hdwallet-provider: 0.0.3
   checksum: e17ae4e770e6cfcafb1d2e044dfa5cf1a1a43c05b21a9df68f2c013feea2c82a83a8fb08c8814e549e0776c466715c23e8f08cebe77717b34cf450496841c094
+  languageName: node
+  linkType: hard
+
+"solidity-comments-extractor@npm:^0.0.7":
+  version: 0.0.7
+  resolution: "solidity-comments-extractor@npm:0.0.7"
+  checksum: b3a463999290067e87f65335e0397d5932b21734c3b0867cad7dc710968120ec58e9f9a633001724b60a2bfb0c5d2aa90a7038fe2234fb130563564c5526200d
   languageName: node
   linkType: hard
 
