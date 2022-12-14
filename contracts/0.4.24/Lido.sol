@@ -312,7 +312,7 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     function receiveRestake() external payable {
-        require(msg.sender == address(uint160(getWithdrawalCredentials())));
+        require(msg.sender == _getWithdrawalVaultAddress());
 
         TOTAL_WITHDRAWALS_RESTAKED_POSITION.setStorageUint256(
             TOTAL_WITHDRAWALS_RESTAKED_POSITION.getStorageUint256().add(msg.value));
@@ -633,7 +633,7 @@ contract Lido is ILido, StETH, AragonApp {
     * @dev withdrawal vault address is encoded as a last 160 bits of withdrawal credentials type 0x01
     * @return address of the vault or address(0) if the vault is not set
     */
-    function getWithdrawalVaultAddress() public view returns (address) {
+    function getWithdrawalVaultAddress() external view returns (address) {
         return _getWithdrawalVaultAddress();
     }
 
