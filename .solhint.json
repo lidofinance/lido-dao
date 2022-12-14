@@ -11,6 +11,8 @@
     "no-empty-blocks": "off",
     "func-name-mixedcase": "off",
     "lido/fixed-compiler-version": "error",
+    "visibility-modifier-order": "error",
+    "no-unused-vars": "error",
     "func-visibility": ["warn",{"ignoreConstructors":true}]
   }
 }
