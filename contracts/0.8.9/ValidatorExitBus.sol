@@ -124,14 +124,36 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
         emit CommitteeMemberReported(_stakingModules, _nodeOperatorIds, _validatorPubkeys, _epochId);
     }
 
-    function setAdmin(address _newAdmin)
+
+    /**
+     * @notice Super admin has all roles (can change committee members etc)
+     */
+    function testnet_setAdmin(address _newAdmin)
         external onlyRole(DEFAULT_ADMIN_ROLE)
     {
         // TODO: remove this temporary function
-
         _grantRole(DEFAULT_ADMIN_ROLE, _newAdmin);
         _revokeRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
+
+
+    function testnet_addAdmin(address _newAdmin)
+        external onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        // TODO: remove this temporary function
+        _grantRole(DEFAULT_ADMIN_ROLE, _newAdmin);
+    }
+
+
+    function testnet_assignAllNonAdminRolesTo(address _rolesHolder)
+        external onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        // TODO: remove this temporary function
+        _grantRole(MANAGE_MEMBERS_ROLE, _rolesHolder);
+        _grantRole(MANAGE_QUORUM_ROLE, _rolesHolder);
+        _grantRole(SET_BEACON_SPEC_ROLE, _rolesHolder);
+    }
+
 
     function setRateLimit(uint256 _maxLimit, uint256 _limitIncreasePerBlock) external {
         _setRateLimit(_maxLimit, _limitIncreasePerBlock);
@@ -181,6 +203,7 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
         _addOracleMember(_member);
     }
 
+
     /**
      * @notice Remove '_member` from the oracle member committee list
      */
@@ -189,6 +212,7 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
     {
         _removeOracleMember(_member);
     }
+
 
     function _reportKeysToEject(
         address[] memory _stakingModules,

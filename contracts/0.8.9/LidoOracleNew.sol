@@ -167,9 +167,11 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         if (CONTRACT_VERSION_POSITION.getStorageUint256() != 0) {
             revert CanInitializeOnlyOnZeroVersion();
         }
-        CONTRACT_VERSION_POSITION.setStorageUint256(1);
-
         if (_admin == address(0)) { revert ZeroAdminAddress(); }
+
+        CONTRACT_VERSION_POSITION.setStorageUint256(1);
+        emit ContractVersionSet(1);
+
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
 
         LIDO_POSITION.setStorageAddress(_lido);
@@ -300,16 +302,6 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         return LAST_COMPLETED_EPOCH_ID_POSITION.getStorageUint256();
     }
 
-
-    function setAdmin(address _newAdmin)
-        external onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        // TODO: remove this temporary function
-
-        _grantRole(DEFAULT_ADMIN_ROLE, _newAdmin);
-        _revokeRole(DEFAULT_ADMIN_ROLE, msg.sender);
-    }
-
     /**
      * @notice Add `_member` to the oracle member committee list
      */
@@ -397,6 +389,39 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
             _genesisTime
         );
     }
+
+
+    /**
+     * @notice Super admin has all roles (can change committee members etc)
+     */
+    function testnet_setAdmin(address _newAdmin)
+        external onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        // TODO: remove this temporary function
+        _grantRole(DEFAULT_ADMIN_ROLE, _newAdmin);
+        _revokeRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    }
+
+
+    function testnet_addAdmin(address _newAdmin)
+        external onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        // TODO: remove this temporary function
+        _grantRole(DEFAULT_ADMIN_ROLE, _newAdmin);
+    }
+
+
+    function testnet_assignAllNonAdminRolesTo(address _rolesHolder)
+        external onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        // TODO: remove this temporary function
+        _grantRole(MANAGE_MEMBERS_ROLE, _rolesHolder);
+        _grantRole(MANAGE_QUORUM_ROLE, _rolesHolder);
+        _grantRole(SET_BEACON_SPEC_ROLE, _rolesHolder);
+        _grantRole(SET_REPORT_BOUNDARIES_ROLE, _rolesHolder);
+        _grantRole(SET_BEACON_REPORT_RECEIVER_ROLE, _rolesHolder);
+    }
+
 
     // /**
     //  * @notice Push the given report to Lido and performs accompanying accounting
