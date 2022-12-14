@@ -744,20 +744,36 @@ contract Lido is ILido, StETH, AragonApp {
         // token shares.
 
         address stakingRouterAddress = getStakingRouter();
+        (
+            address[] memory moduleAddresses,
+            uint256[] memory moduleShares,
+            uint256[] memory moduleFees,
+            uint256[] memory moduleTreasuryFees
+        ) = IStakingRouter(stakingRouterAddress).getSharesTable();
 
+        address treasury = getTreasury();
+        uint256 rewards2mint = 0;
+        uint256[] memory moduleRewards = new uint256[](moduleAddresses.length);
 
-        // address modulefee treasuryfee
+        for (uint256 i = 0; i < moduleAddresses.length; i++) {
+            uint256 moduleShare = _totalRewards * moduleShares[i] / TOTAL_BASIS_POINTS;
 
-        // (uint256 shares2mint, uint256 totalKeys, uint256[] memory moduleKeys) = IStakingRouter(stakingRouterAddress).calculateShares2Mint(
-        //     _totalRewards
-        // );
+            moduleRewards[i] = moduleShare * moduleFees[i] / TOTAL_BASIS_POINTS;
+            rewards2mint += moduleShare * moduleTreasuryFees[i] / TOTAL_BASIS_POINTS + moduleRewards[i];
+        }
 
-        // // Mint the calculated amount of shares to this contract address. This will reduce the
-        // // balances of the holders, as if the fee was taken in parts from each of them.
-        // _mintShares(stakingRouterAddress, shares2mint);
+        uint256 shares2mint = rewards2mint.mul(_getTotalShares()).div(_getTotalPooledEther().sub(rewards2mint));
 
-        // //distribute shares
-        // IStakingRouter(stakingRouterAddress).distributeShares(shares2mint, totalKeys, moduleKeys);
+        _mintShares(address(this), shares2mint);
+
+        for (uint256 j = 0; j < moduleAddresses.length; j++) {
+            uint256 moduleRewardInShares = getSharesByPooledEth(moduleRewards[j]);
+            shares2mint -= moduleRewardInShares;
+
+            _transferShares(address(this), moduleAddresses[j], moduleRewardInShares);
+        }
+        
+        _transferShares(address(this), treasury, shares2mint);
     }
 
     /**
