@@ -28,7 +28,7 @@ contract('WithdrawalQueue', ([recipient, stranger]) => {
       await withdrawal.enqueue(recipient, ETH(1), 1, { from: owner })
 
       assertBn(await withdrawal.queueLength(), +requestId + 1)
-      assert(requestId >= (await withdrawal.finalizedQueueLength()))
+      assert(requestId >= (await withdrawal.finalizedRequestsCounter()))
       const request = await withdrawal.queue(requestId)
       assert.equal(request[0], recipient)
       assertBn(request[2], bn(ETH(1)))
@@ -93,7 +93,7 @@ contract('WithdrawalQueue', ([recipient, stranger]) => {
       await withdrawal.finalize(0, amount, amount, shares, { from: owner, value: amount })
 
       assertBn(await withdrawal.queueLength(), +requestId + 2)
-      assertBn(await withdrawal.finalizedQueueLength(), +requestId + 1)
+      assertBn(await withdrawal.finalizedRequestsCounter(), +requestId + 1)
       assertBn(await withdrawal.lockedEtherAmount(), bn(amount))
     })
 

@@ -37,7 +37,7 @@ contract WithdrawalQueue {
     Request[] public queue;
     
     /// @notice length of the finalized part of the queue
-    uint256 public finalizedQueueLength = 0;
+    uint256 public finalizedRequestsCounter = 0;
 
     /// @notice structure representing a request for withdrawal.
     struct Request {
@@ -113,7 +113,7 @@ contract WithdrawalQueue {
     }
 
     /**
-     * @notice Finalize the batch of requests started at `finalizedQueueLength` and ended at `_lastIdToFinalize` using the given price
+     * @notice Finalize the batch of requests started at `finalizedRequestsCounter` and ended at `_lastIdToFinalize` using the given price
      * @param _lastIdToFinalize request index in the queue that will be last finalized request in a batch
      * @param _etherToLock ether that should be locked for these requests
      * @param _totalPooledEther ether price component that will be used for this request batch finalization
@@ -126,7 +126,7 @@ contract WithdrawalQueue {
         uint256 _totalShares
     ) external payable onlyOwner {
         require(
-            _lastIdToFinalize >= finalizedQueueLength && _lastIdToFinalize < queue.length, 
+            _lastIdToFinalize >= finalizedRequestsCounter && _lastIdToFinalize < queue.length, 
             "INVALID_FINALIZATION_ID"
         );
         require(lockedEtherAmount + _etherToLock <= address(this).balance, "NOT_ENOUGH_ETHER");
@@ -134,7 +134,7 @@ contract WithdrawalQueue {
         _updatePriceHistory(_totalPooledEther, _totalShares, _lastIdToFinalize);
 
         lockedEtherAmount += _etherToLock;
-        finalizedQueueLength = _lastIdToFinalize + 1; 
+        finalizedRequestsCounter = _lastIdToFinalize + 1; 
     }
 
     /**
@@ -144,7 +144,7 @@ contract WithdrawalQueue {
      */
     function claim(uint256 _requestId, uint256 _priceIndexHint) external returns (address recipient) {
         // request must be finalized
-        require(finalizedQueueLength > _requestId, "REQUEST_NOT_FINALIZED");
+        require(finalizedRequestsCounter > _requestId, "REQUEST_NOT_FINALIZED");
 
         Request storage request = queue[_requestId];
         require(!request.claimed, "REQUEST_ALREADY_CLAIMED");
@@ -187,11 +187,11 @@ contract WithdrawalQueue {
         uint256 _totalPooledEther,
         uint256 _totalShares
     ) external view returns (uint256 etherToLock, uint256 sharesToBurn) {
-        return _calculateDiscountedBatch(finalizedQueueLength, _lastIdToFinalize, _totalPooledEther, _totalShares);
+        return _calculateDiscountedBatch(finalizedRequestsCounter, _lastIdToFinalize, _totalPooledEther, _totalShares);
     }
 
     function findPriceHint(uint256 _requestId) public view returns (uint256 hint) {
-        require(_requestId < finalizedQueueLength, "PRICE_NOT_FOUND");
+        require(_requestId < finalizedRequestsCounter, "PRICE_NOT_FOUND");
 
         for (uint256 i = finalizationPrices.length; i > 0; i--) {
             if (_isPriceHintValid(_requestId, i - 1)){

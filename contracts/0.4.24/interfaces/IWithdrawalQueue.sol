@@ -42,5 +42,5 @@ interface IWithdrawalQueue {
             bool claimed
         );
 
-    function finalizedQueueLength() external view returns (uint256);
+    function finalizedRequestsCounter() external view returns (uint256);
 }

@@ -521,7 +521,7 @@ contract Lido is ILido, StETH, AragonApp {
             (,,uint256 previousCumulativeEther,,) = withdrawal.queue(_requestId.sub(1));
             etherToWithdraw = etherToWithdraw.sub(previousCumulativeEther);
         }
-        isFinalized = _requestId < withdrawal.finalizedQueueLength();
+        isFinalized = _requestId < withdrawal.finalizedRequestsCounter();
     }
 
     function getBufferWithdrawalsReserve() public returns (uint256) {
@@ -838,7 +838,7 @@ contract Lido is ILido, StETH, AragonApp {
 
         for (uint256 i = 0; i < _requestIdToFinalizeUpTo.length; i++) {
             uint256 lastIdToFinalize = _requestIdToFinalizeUpTo[i];
-            require(lastIdToFinalize >= withdrawal.finalizedQueueLength(), "BAD_FINALIZATION_PARAMS");
+            require(lastIdToFinalize >= withdrawal.finalizedRequestsCounter(), "BAD_FINALIZATION_PARAMS");
 
             uint256 totalPooledEther = _finalizationPooledEtherAmount[i];
             uint256 totalShares = _finalizationSharesAmount[i];
