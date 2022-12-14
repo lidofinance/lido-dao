@@ -17,6 +17,7 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
     event ValidatorExitRequest(
         address indexed stakingModule,
         uint256 indexed nodeOperatorId,
+        uint256 indexed validatorId,
         bytes validatorPubkey
     );
 
@@ -28,6 +29,7 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
     event CommitteeMemberReported(
         address[] stakingModules,
         uint256[] nodeOperatorIds,
+        uint256[] validatorIds,
         bytes[] validatorPubkeys,
         uint256 indexed epochId
     );
@@ -35,6 +37,7 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
     event ConsensusReached(
         address[] stakingModules,
         uint256[] nodeOperatorIds,
+        uint256[] validatorIds,
         bytes[] validatorPubkeys,
         uint256 indexed epochId
     );
@@ -57,6 +60,7 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
     bytes32 internal constant CONTRACT_VERSION_POSITION =
         0x75be19a3f314d89bd1f84d30a6c84e2f1cd7afc7b6ca21876564c265113bb7e4; // keccak256("lido.LidoOracle.contractVersion")
 
+    bytes32 internal constant TOTAL_EXIT_REQUESTS_POSITION = keccak256("lido.ValidatorExitBus.totalExitRequests");
 
     function initialize(
         address _admin,
@@ -100,14 +104,21 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
         return CONTRACT_VERSION_POSITION.getStorageUint256();
     }
 
+    function getTotalExitRequests() external view returns (uint256) {
+        return TOTAL_EXIT_REQUESTS_POSITION.getStorageUint256();
+    }
+
+
     function handleCommitteeMemberReport(
         address[] calldata _stakingModules,
         uint256[] calldata _nodeOperatorIds,
+        uint256[] calldata _validatorIds,
         bytes[] calldata _validatorPubkeys,
         uint256 _epochId
     ) external {
         if (_nodeOperatorIds.length != _validatorPubkeys.length) { revert ArraysMustBeSameSize(); }
         if (_stakingModules.length != _validatorPubkeys.length) { revert ArraysMustBeSameSize(); }
+        if (_validatorIds.length != _validatorPubkeys.length) { revert ArraysMustBeSameSize(); }
         if (_validatorPubkeys.length == 0) { revert EmptyArraysNotAllowed(); }
 
         BeaconSpec memory beaconSpec = _getBeaconSpec();
@@ -116,12 +127,12 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
             _clearReporting();
         }
 
-        bytes memory reportBytes = _encodeReport(_stakingModules, _nodeOperatorIds, _validatorPubkeys, _epochId);
+        bytes memory reportBytes = _encodeReport(_stakingModules, _nodeOperatorIds, _validatorIds, _validatorPubkeys, _epochId);
         if (_handleMemberReport(msg.sender, reportBytes)) {
-            _reportKeysToEject(_stakingModules, _nodeOperatorIds, _validatorPubkeys, _epochId, beaconSpec);
+            _reportKeysToEject(_stakingModules, _nodeOperatorIds, _validatorIds, _validatorPubkeys, _epochId, beaconSpec);
         }
 
-        emit CommitteeMemberReported(_stakingModules, _nodeOperatorIds, _validatorPubkeys, _epochId);
+        emit CommitteeMemberReported(_stakingModules, _nodeOperatorIds, _validatorIds, _validatorPubkeys, _epochId);
     }
 
 
@@ -187,10 +198,11 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
             (
                 address[] memory stakingModules,
                 uint256[] memory nodeOperatorIds,
+                uint256[] memory validatorIds,
                 bytes[] memory validatorPubkeys,
                 uint256 epochId
             ) = _decodeReport(distinctReports[reportIndex]);
-            _reportKeysToEject(stakingModules, nodeOperatorIds, validatorPubkeys, epochId, _getBeaconSpec());
+            _reportKeysToEject(stakingModules, nodeOperatorIds, validatorIds, validatorPubkeys, epochId, _getBeaconSpec());
         }
     }
 
@@ -217,13 +229,12 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
     function _reportKeysToEject(
         address[] memory _stakingModules,
         uint256[] memory _nodeOperatorIds,
+        uint256[] memory _validatorIds,
         bytes[] memory _validatorPubkeys,
         uint256 _epochId,
         BeaconSpec memory _beaconSpec
     ) internal {
-        // TODO: maybe add reporting validator id
-
-        emit ConsensusReached(_stakingModules, _nodeOperatorIds, _validatorPubkeys, _epochId);
+        emit ConsensusReached(_stakingModules, _nodeOperatorIds, _validatorIds, _validatorPubkeys, _epochId);
 
         _advanceExpectedEpoch(_epochId + _beaconSpec.epochsPerFrame);
         _clearReporting();
@@ -242,9 +253,14 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
             emit ValidatorExitRequest(
                 _stakingModules[i],
                 _nodeOperatorIds[i],
+                _validatorIds[i],
                 _validatorPubkeys[i]
             );
         }
+
+        TOTAL_EXIT_REQUESTS_POSITION.setStorageUint256(
+            TOTAL_EXIT_REQUESTS_POSITION.getStorageUint256() + numKeys
+        );
     }
 
     function _setRateLimit(uint256 _maxLimit, uint256 _limitIncreasePerBlock) internal {
@@ -258,23 +274,25 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
     function _decodeReport(bytes memory _reportData) internal pure returns (
         address[] memory stakingModules,
         uint256[] memory nodeOperatorIds,
+        uint256[] memory validatorIds,
         bytes[] memory validatorPubkeys,
         uint256 epochId
     ) {
-        (stakingModules, nodeOperatorIds, validatorPubkeys, epochId)
-            = abi.decode(_reportData, (address[], uint256[], bytes[], uint256));
+        (stakingModules, nodeOperatorIds, validatorIds, validatorPubkeys, epochId)
+            = abi.decode(_reportData, (address[], uint256[], uint256[], bytes[], uint256));
     }
 
 
     function _encodeReport(
-        address[] calldata stakingModules,
-        uint256[] calldata nodeOperatorIds,
-        bytes[] calldata validatorPubkeys,
-        uint256 epochId
+        address[] calldata _stakingModules,
+        uint256[] calldata _nodeOperatorIds,
+        uint256[] calldata _validatorIds,
+        bytes[] calldata _validatorPubkeys,
+        uint256 _epochId
     ) internal pure returns (
         bytes memory reportData
     ) {
-        reportData = abi.encode(stakingModules, nodeOperatorIds, validatorPubkeys, epochId);
+        reportData = abi.encode(_stakingModules, _nodeOperatorIds, _validatorIds, _validatorPubkeys, _epochId);
     }
 
     error CanInitializeOnlyOnZeroVersion();

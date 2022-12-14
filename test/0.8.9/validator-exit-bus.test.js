@@ -41,9 +41,10 @@ const stakingModuleId = ZERO_ADDRESS
 
 function generateReportKeysArguments(numKeys, epochId) {
   const stakingModuleIds = Array.from(Array(numKeys), () => stakingModuleId)
+  const validatorIds = Array.from(Array(numKeys), () => 123)
   const nodeOperatorIds = Array.from(Array(numKeys), () => 1)
   const keys = Array.from(Array(numKeys), () => generateValidatorPubKey())
-  return [stakingModuleIds, nodeOperatorIds, keys, epochId]
+  return [stakingModuleIds, nodeOperatorIds, validatorIds, keys, epochId]
 }
 
 const maxRequestsPerDayE18 = toE18(2000 + 1)
@@ -56,7 +57,7 @@ function calcRateLimitParameters(maxRequestsPerDay) {
 
 const GENESIS_TIME = 1606824000
 
-contract('ValidatorExitBus', ([deployer, member, owner]) => {
+contract.only('ValidatorExitBus', ([deployer, member, owner]) => {
   let bus = null
 
   beforeEach('deploy bus', async () => {
@@ -97,7 +98,7 @@ contract('ValidatorExitBus', ([deployer, member, owner]) => {
   describe('Rate limit tests', () => {
     it(`Report one key`, async () => {
       const epochId = 1
-      await bus.handleCommitteeMemberReport([stakingModuleId], [2], [generateValidatorPubKey()], epochId, { from: member })
+      await bus.handleCommitteeMemberReport([stakingModuleId], [2], [123], [generateValidatorPubKey()], epochId, { from: member })
     })
 
     it.skip(`Revert if length of arrays reported differ`, async () => {
@@ -140,6 +141,15 @@ contract('ValidatorExitBus', ([deployer, member, owner]) => {
         bus.handleCommitteeMemberReport(...generateReportKeysArguments(maxRequestsPerDay + 1, epochId), { from: member }),
         'RATE_LIMIT'
       )
+    })
+  })
+
+  describe('Not responded validators tests', () => {
+    it(`Report not responded validator happy path`, async () => {
+      const epochId = 1
+      await bus.setRateLimit(...calcRateLimitParameters(100))
+      const maxLimit = fromE18(await bus.getMaxLimit())
+      await bus.handleCommitteeMemberReport(...generateReportKeysArguments(maxLimit, epochId), { from: member })
     })
   })
 })
