@@ -14,17 +14,17 @@ interface IRestakingSink {
 contract WithdrawalQueue {
     /**
      * @notice minimal possible sum that is possible to withdraw
-     * We don't want to deal with small amounts because there is a gas spent on oracle 
-     * for each request. 
-     * But exact threshhold should be defined later when it will be clear how much will 
+     * We don't want to deal with small amounts because there is a gas spent on oracle
+     * for each request.
+     * But exact threshold should be defined later when it will be clear how much will
      * it cost to withdraw.
      */
     uint256 public constant MIN_WITHDRAWAL = 0.1 ether;
 
     /**
-     * @notice All state-modifying calls are allowed only from owner protocol. 
+     * @notice All state-modifying calls are allowed only from owner protocol.
      * @dev should be Lido
-     */ 
+     */
     address payable public immutable OWNER;
 
     /**
@@ -45,7 +45,7 @@ contract WithdrawalQueue {
         uint128 cumulativeEther;
         /// @notice sum of the all shares locked for withdrawal including this request
         uint128 cumulativeShares;
-        /// @notice payable address of the recipient withdrawal will be transfered to
+        /// @notice payable address of the recipient withdrawal will be transferred to
         address payable recipient;
         /// @notice block.number when the request created
         uint64 requestBlockNumber;
@@ -58,8 +58,8 @@ contract WithdrawalQueue {
 
     /**
      * @notice structure representing share price for some range in request queue
-     * @dev price is stored as a pair of value that should be devided later
-     */ 
+     * @dev price is stored as a pair of value that should be divided later
+     */
     struct Price {
         uint128 totalPooledEther;
         uint128 totalShares;
@@ -85,15 +85,15 @@ contract WithdrawalQueue {
 
     /**
      * @notice put a withdrawal request in a queue and associate it with `_recipient` address
-     * @dev Assumes that `_ethAmount` of stETH is locked before invoking this function 
+     * @dev Assumes that `_ethAmount` of stETH is locked before invoking this function
      * @param _recipient payable address this request will be associated with
      * @param _etherAmount maximum amount of ether (equal to amount of locked stETH) that will be claimed upon withdrawal
      * @param _sharesAmount amount of stETH shares that will be burned upon withdrawal
      * @return requestId unique id to claim funds once it is available
      */
     function enqueue(
-        address payable _recipient, 
-        uint256 _etherAmount, 
+        address payable _recipient,
+        uint256 _etherAmount,
         uint256 _sharesAmount
     ) external onlyOwner returns (uint256 requestId) {
         require(_etherAmount > MIN_WITHDRAWAL, "WITHDRAWAL_IS_TOO_SMALL");
@@ -101,17 +101,17 @@ contract WithdrawalQueue {
 
         uint128 cumulativeEther = _toUint128(_etherAmount);
         uint128 cumulativeShares = _toUint128(_sharesAmount);
-        
+
         if (requestId > 0) {
             cumulativeEther += queue[requestId - 1].cumulativeEther;
             cumulativeShares += queue[requestId - 1].cumulativeShares;
         }
-        
+
         queue.push(Request(
             cumulativeEther,
             cumulativeShares,
-            _recipient, 
-            _toUint64(block.number), 
+            _recipient,
+            _toUint64(block.number),
             false
         ));
     }
@@ -124,13 +124,13 @@ contract WithdrawalQueue {
      * @param _totalShares shares price component that will be used for this request batch finalization
      */
     function finalize(
-        uint256 _lastIdToFinalize, 
+        uint256 _lastIdToFinalize,
         uint256 _etherToLock,
         uint256 _totalPooledEther,
         uint256 _totalShares
     ) external payable onlyOwner {
         require(
-            _lastIdToFinalize >= finalizedRequestsCounter && _lastIdToFinalize < queue.length, 
+            _lastIdToFinalize >= finalizedRequestsCounter && _lastIdToFinalize < queue.length,
             "INVALID_FINALIZATION_ID"
         );
         require(lockedEtherAmount + _etherToLock <= address(this).balance, "NOT_ENOUGH_ETHER");
@@ -138,13 +138,13 @@ contract WithdrawalQueue {
         _updatePriceHistory(_toUint128(_totalPooledEther), _toUint128(_totalShares), _lastIdToFinalize);
 
         lockedEtherAmount = _toUint128(_etherToLock);
-        finalizedRequestsCounter = _lastIdToFinalize + 1; 
+        finalizedRequestsCounter = _lastIdToFinalize + 1;
     }
 
     /**
      * @notice Mark `_requestId` request as claimed and transfer reserved ether to recipient
      * @param _requestId request id to claim
-     * @param _priceIndexHint price index found offchain that should be used for claiming 
+     * @param _priceIndexHint price index found offchain that should be used for claiming
      */
     function claim(uint256 _requestId, uint256 _priceIndexHint) external returns (address recipient) {
         // request must be finalized
@@ -165,9 +165,9 @@ contract WithdrawalQueue {
         }
 
         (uint128 etherToTransfer,) = _calculateDiscountedBatch(
-            _requestId, 
-            _requestId, 
-            price.totalPooledEther, 
+            _requestId,
+            _requestId,
+            price.totalPooledEther,
             price.totalShares
             );
         lockedEtherAmount -= etherToTransfer;
@@ -178,11 +178,11 @@ contract WithdrawalQueue {
     }
 
     /**
-     * @notice calculates the params to fullfill the next batch of requests in queue
-     * @param _lastIdToFinalize last id in the queue to finalize upon 
-     * @param _totalPooledEther share price compoinent to finalize requests
-     * @param _totalShares share price compoinent to finalize requests
-     * 
+     * @notice calculates the params to fulfill the next batch of requests in queue
+     * @param _lastIdToFinalize last id in the queue to finalize upon
+     * @param _totalPooledEther share price component to finalize requests
+     * @param _totalShares share price component to finalize requests
+     *
      * @return etherToLock amount of eth required to finalize the batch
      * @return sharesToBurn amount of shares that should be burned on finalization
      */
@@ -192,9 +192,9 @@ contract WithdrawalQueue {
         uint256 _totalShares
     ) external view returns (uint256 etherToLock, uint256 sharesToBurn) {
         return _calculateDiscountedBatch(
-            finalizedRequestsCounter, 
-            _lastIdToFinalize, 
-            _toUint128(_totalPooledEther), 
+            finalizedRequestsCounter,
+            _lastIdToFinalize,
+            _toUint128(_totalPooledEther),
             _toUint128(_totalShares)
         );
     }
@@ -208,7 +208,7 @@ contract WithdrawalQueue {
             }
         }
         assert(false);
-    } 
+    }
 
     function restake(uint256 _amount) external onlyOwner {
         require(lockedEtherAmount + _amount <= address(this).balance, "NOT_ENOUGH_ETHER");
@@ -217,8 +217,8 @@ contract WithdrawalQueue {
     }
 
     function _calculateDiscountedBatch(
-        uint256 firstId, 
-        uint256 lastId, 
+        uint256 firstId,
+        uint256 lastId,
         uint128 _totalPooledEther,
         uint128 _totalShares
     ) internal view returns (uint128 eth, uint128 shares) {
@@ -239,9 +239,9 @@ contract WithdrawalQueue {
         isInRange = _requestId <= hintLastId;
         if (hint > 0) {
             uint256 previousId = finalizationPrices[hint - 1].index;
-           
+
             isInRange = isInRange && previousId < _requestId;
-        } 
+        }
     }
 
     function _updatePriceHistory(uint128 _totalPooledEther, uint128 _totalShares, uint256 index) internal {
@@ -259,12 +259,12 @@ contract WithdrawalQueue {
     }
 
     function _min(uint128 a, uint128 b) internal pure returns (uint128) {
-        return a < b ? a : b;  
+        return a < b ? a : b;
     }
 
     function _sendValue(address payable recipient, uint256 amount) internal {
         require(address(this).balance >= amount, "Address: insufficient balance");
-        
+
         // solhint-disable-next-line
         (bool success, ) = recipient.call{value: amount}("");
         require(success, "Address: unable to send value, recipient may have reverted");

@@ -110,7 +110,7 @@ contract Lido is ILido, StETH, AragonApp {
     /// Not used in the logic
     bytes32 internal constant TOTAL_EL_REWARDS_COLLECTED_POSITION = keccak256("lido.Lido.totalELRewardsCollected");
 
-    bytes32 internal constant TOTAL_WITHDRAWALS_RESTAKED_POSITION = keccak256("lido.Lido.totalWitdrawalsRestaked");
+    bytes32 internal constant TOTAL_WITHDRAWALS_RESTAKED_POSITION = keccak256("lido.Lido.totalWithdrawalsRestaked");
 
     /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
     bytes32 internal constant WITHDRAWAL_CREDENTIALS_POSITION = keccak256("lido.Lido.withdrawalCredentials");
@@ -545,7 +545,7 @@ contract Lido is ILido, StETH, AragonApp {
         uint256[] _finalizationSharesAmount
     ) external whenNotStopped {
         require(msg.sender == getOracle(), "APP_AUTH_FAILED");
-        
+
         // update withdrawals reserve
         WITHDRAWAL_RESERVE_POSITION.setStorageUint256(_withdrawalsReserveAmount);
 
@@ -801,7 +801,7 @@ contract Lido is ILido, StETH, AragonApp {
         uint256 _appearedValidators
     ) internal {
         // Post-withdrawal rewards
-        // rewards = (beacon balance new - beacon balance old) - (appeared validators x 32 ETH) 
+        // rewards = (beacon balance new - beacon balance old) - (appeared validators x 32 ETH)
         // + withdrawn from execution layer rewards vault + withdrawn from withdrawal credentials vault
 
         uint256 rewardsBase = (_appearedValidators.mul(DEPOSIT_SIZE)).add(_beaconBalanceOld);
@@ -864,7 +864,7 @@ contract Lido is ILido, StETH, AragonApp {
                 totalShares
             );
         }
-        // There can be unnacounted ether in witdrawal buffer that should not be used for finalization
+        // There can be unaccounted ether in withdrawal buffer that should not be used for finalization
         require(lockedEtherAccumulator <= _wcBufferedEther.add(_getBufferedEther()), "NOT_ENOUGH_ACCOUNTED_ETHER");
 
         withdrawalFundsMovement = int256(_wcBufferedEther) - int256(lockedEtherAccumulator);

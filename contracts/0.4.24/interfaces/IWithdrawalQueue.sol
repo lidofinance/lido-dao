@@ -5,7 +5,7 @@
 pragma solidity 0.4.24;
 
 /**
- * @notice an interface for witdrawal queue. See `WithdrawalQueue.sol` for docs
+ * @notice an interface for withdrawal queue. See `WithdrawalQueue.sol` for docs
  */
 interface IWithdrawalQueue {
     function enqueue(
