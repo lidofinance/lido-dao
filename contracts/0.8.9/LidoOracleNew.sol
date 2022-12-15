@@ -422,6 +422,10 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         _grantRole(SET_BEACON_REPORT_RECEIVER_ROLE, _rolesHolder);
     }
 
+    function testnet_setLido(address _newLido) external {
+        // TODO: remove this temporary function
+        LIDO_POSITION.setStorageAddress(_newLido);
+    }
 
     // /**
     //  * @notice Push the given report to Lido and performs accompanying accounting
