@@ -45,9 +45,12 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
     event ContractVersionSet(uint256 version);
 
     // ACL
+
     bytes32 constant public MANAGE_MEMBERS_ROLE = keccak256("MANAGE_MEMBERS_ROLE");
     bytes32 constant public MANAGE_QUORUM_ROLE = keccak256("MANAGE_QUORUM_ROLE");
     bytes32 constant public SET_BEACON_SPEC_ROLE = keccak256("SET_BEACON_SPEC_ROLE");
+
+    // Unstructured storage
 
     bytes32 internal constant RATE_LIMIT_STATE_POSITION = keccak256("lido.ValidatorExitBus.rateLimitState");
 
@@ -57,10 +60,11 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
     /// - 0 right after deployment when no initializer is invoked yet
     /// - N after calling initialize() during deployment from scratch, where N is the current contract version
     /// - N after upgrading contract from the previous version (after calling finalize_vN())
-    bytes32 internal constant CONTRACT_VERSION_POSITION =
-        0x75be19a3f314d89bd1f84d30a6c84e2f1cd7afc7b6ca21876564c265113bb7e4; // keccak256("lido.LidoOracle.contractVersion")
+    bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.ValidatorExitBus.contractVersion");
 
     bytes32 internal constant TOTAL_EXIT_REQUESTS_POSITION = keccak256("lido.ValidatorExitBus.totalExitRequests");
+
+    // Structured storage
 
     /// (stakingModuleAddress, nodeOperatorId) => lastRequestedValidatorId
     mapping(address => mapping (uint256 => uint256)) public lastRequestedValidatorIds;
@@ -124,7 +128,7 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
         if (_validatorIds.length != _validatorPubkeys.length) { revert ArraysMustBeSameSize(); }
         if (_validatorPubkeys.length == 0) { revert EmptyArraysNotAllowed(); }
 
-        // TODO: maybe check length of bytes pubkeys
+        // TODO: maybe check lengths of pubkeys
 
         BeaconSpec memory beaconSpec = _getBeaconSpec();
         bool hasEpochAdvanced = _validateAndUpdateExpectedEpoch(_epochId, beaconSpec);
@@ -141,9 +145,6 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
     }
 
 
-    /**
-     * @notice Super admin has all roles (can change committee members etc)
-     */
     function testnet_setAdmin(address _newAdmin)
         external onlyRole(DEFAULT_ADMIN_ROLE)
     {

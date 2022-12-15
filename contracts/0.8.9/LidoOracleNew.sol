@@ -95,18 +95,13 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
     uint128 internal constant DENOMINATION_OFFSET = 1e9;
 
     /// Historic data about 2 last completed reports and their times
-    bytes32 internal constant POST_COMPLETED_TOTAL_POOLED_ETHER_POSITION =
-        0xaa8433b13d2b111d4f84f6f374bc7acbe20794944308876aa250fa9a73dc7f53; // keccak256("lido.LidoOracle.postCompletedTotalPooledEther")
-    bytes32 internal constant PRE_COMPLETED_TOTAL_POOLED_ETHER_POSITION =
-        0x1043177539af09a67d747435df3ff1155a64cd93a347daaac9132a591442d43e; // keccak256("lido.LidoOracle.preCompletedTotalPooledEther")
-    bytes32 internal constant LAST_COMPLETED_EPOCH_ID_POSITION =
-        0xdad15c0beecd15610092d84427258e369d2582df22869138b4c5265f049f574c; // keccak256("lido.LidoOracle.lastCompletedEpochId")
-    bytes32 internal constant TIME_ELAPSED_POSITION =
-        0x8fe323f4ecd3bf0497252a90142003855cc5125cee76a5b5ba5d508c7ec28c3a; // keccak256("lido.LidoOracle.timeElapsed")
+    bytes32 internal constant POST_COMPLETED_TOTAL_POOLED_ETHER_POSITION = keccak256("lido.LidoOracle.postCompletedTotalPooledEther");
+    bytes32 internal constant PRE_COMPLETED_TOTAL_POOLED_ETHER_POSITION = keccak256("lido.LidoOracle.preCompletedTotalPooledEther");
+    bytes32 internal constant LAST_COMPLETED_EPOCH_ID_POSITION = keccak256("lido.LidoOracle.lastCompletedEpochId");
+    bytes32 internal constant TIME_ELAPSED_POSITION = keccak256("lido.LidoOracle.timeElapsed");
 
     /// Address of the Lido contract
-    bytes32 internal constant LIDO_POSITION =
-        0xf6978a4f7e200f6d3a24d82d44c48bddabce399a3b8ec42a480ea8a2d5fe6ec5; // keccak256("lido.LidoOracle.lido")
+    bytes32 internal constant LIDO_POSITION = keccak256("lido.LidoOracle.lido");
 
     /// Version of the initialized contract data
     /// NB: Contract versioning starts from 1.
@@ -114,16 +109,14 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
     /// - 0 right after deployment when no initializer is invoked yet
     /// - N after calling initialize() during deployment from scratch, where N is the current contract version
     /// - N after upgrading contract from the previous version (after calling finalize_vN())
-    bytes32 internal constant CONTRACT_VERSION_POSITION =
-        0x75be19a3f314d89bd1f84d30a6c84e2f1cd7afc7b6ca21876564c265113bb7e4; // keccak256("lido.LidoOracle.contractVersion")
+    bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.LidoOracle.contractVersion");
 
     /// Receiver address to be called when the report is pushed to Lido
-    bytes32 internal constant BEACON_REPORT_RECEIVER_POSITION =
-        0xb59039ed37776bc23c5d272e10b525a957a1dfad97f5006c84394b6b512c1564; // keccak256("lido.LidoOracle.beaconReportReceiver")
+    bytes32 internal constant BEACON_REPORT_RECEIVER_POSITION = keccak256("lido.LidoOracle.beaconReportReceiver");
 
     /// Upper bound of the reported balance possible increase in APR, controlled by the governance
     bytes32 internal constant ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION =
-        0x613075ab597bed8ce2e18342385ce127d3e5298bc7a84e3db68dc64abd4811ac; // keccak256("lido.LidoOracle.allowedBeaconBalanceAnnualRelativeIncrease")
+        keccak256("lido.LidoOracle.allowedBeaconBalanceAnnualRelativeIncrease");
 
     /// Lower bound of the reported balance possible decrease, controlled by the governance
     ///
@@ -132,7 +125,7 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
     /// realistic scenario. Thus, instead of sanity check for an APR, we check if the plain relative
     /// decrease is within bounds.  Note that it's not annual value, its just one-jump value.
     bytes32 internal constant ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION =
-        0x92ba7776ed6c5d13cf023555a94e70b823a4aebd56ed522a77345ff5cd8a9109; // keccak256("lido.LidoOracle.allowedBeaconBalanceDecrease")
+        keccak256("lido.LidoOracle.allowedBeaconBalanceDecrease");
 
 
     /**
@@ -254,21 +247,21 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
     }
 
     /**
-     * @notice Set the receiver contract address to `_addr` to be called when the report is pushed
+     * @notice Set the receiver contract address to `_address` to be called when the report is pushed
      * @dev Specify 0 to disable this functionality
      */
-    function setBeaconReportReceiver(address _addr)
+    function setBeaconReportReceiver(address _address)
         external onlyRole(SET_BEACON_REPORT_RECEIVER_ROLE)
     {
-        if(_addr != address(0)) {
+        if(_address != address(0)) {
             IBeaconReportReceiver iBeacon;
-            if (!_addr.supportsInterface(iBeacon.processLidoOracleReport.selector)) {
+            if (!_address.supportsInterface(iBeacon.processLidoOracleReport.selector)) {
                 revert BadBeaconReportReceiver();
             }
         }
 
-        BEACON_REPORT_RECEIVER_POSITION.setStorageAddress(_addr);
-        emit BeaconReportReceiverSet(_addr);
+        BEACON_REPORT_RECEIVER_POSITION.setStorageAddress(_address);
+        emit BeaconReportReceiverSet(_address);
     }
 
     /**
@@ -529,6 +522,7 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         view
     {
         // TODO: update sanity checks
+
         if (_postTotalPooledEther >= _preTotalPooledEther) {
             // increase                 = _postTotalPooledEther - _preTotalPooledEther,
             // relativeIncrease         = increase / _preTotalPooledEther,

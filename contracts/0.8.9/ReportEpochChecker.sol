@@ -27,12 +27,10 @@ contract ReportEpochChecker {
     }
 
     /// Storage for the actual beacon chain specification
-    bytes32 internal constant BEACON_SPEC_POSITION =
-        0x805e82d53a51be3dfde7cfed901f1f96f5dad18e874708b082adb8841e8ca909; // keccak256("lido.LidoOracle.beaconSpec")
+    bytes32 internal constant BEACON_SPEC_POSITION = keccak256("lido.ReportEpochChecker.beaconSpec");
 
     /// Epoch that we currently collect reports
-    bytes32 internal constant EXPECTED_EPOCH_ID_POSITION =
-        0x65f1a0ee358a8a4000a59c2815dc768eb87d24146ca1ac5555cb6eb871aee915; // keccak256("lido.LidoOracle.expectedEpochId")
+    bytes32 internal constant EXPECTED_EPOCH_ID_POSITION = keccak256("lido.ReportEpochChecker.expectedEpochId");
 
 
     /**
