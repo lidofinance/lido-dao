@@ -70,7 +70,7 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         // CL values
         uint256 beaconValidators;
         uint64 beaconBalanceGwei;
-        uint256[] stakingModuleIds;
+        address[] stakingModules;
         uint256[] nodeOperatorsWithExitedValidators;
         uint64[] exitedValidatorsNumbers;
         // EL values
