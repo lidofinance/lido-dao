@@ -41,7 +41,8 @@ const curatedModule = {
   totalKeys: 100,
   totalUsedKeys: 50,
   totalStoppedKeys: 100,
-  softCap: 0,
+  targetShare: 10000,
+  recycleShare: 0, // 0%, no effect if targetShare >=10000
   assignedDeposits: 0,
   balance: 0
 }
@@ -53,7 +54,8 @@ const communityModule = {
   totalKeys: 100,
   totalUsedKeys: 30,
   totalStoppedKeys: 1,
-  softCap: 9000,
+  targetShare: 9000,
+  recycleShare: 1000, // 10%, no effect if targetShare >=10000
   assignedDeposits: 0,
   bond: 16,
   balance: 0
@@ -66,7 +68,8 @@ const communityModule2 = {
   totalKeys: 100,
   totalUsedKeys: 20,
   totalStoppedKeys: 1,
-  softCap: 100,
+  targetShare: 100,
+  recycleShare: 1000, // 10%, no effect if targetShare >=10000
   assignedDeposits: 0,
   bond: 16,
   balance: 0
@@ -78,7 +81,8 @@ const communityModule3 = {
   totalKeys: 1000,
   totalUsedKeys: 1000,
   totalStoppedKeys: 100,
-  softCap: 100,
+  targetShare: 100,
+  recycleShare: 1000, // 10%, no effect if targetShare >=10000
   assignedDeposits: 0,
   bond: 20,
   balance: 0
@@ -176,7 +180,7 @@ contract('StakingRouter', (accounts) => {
 
       // add NodeOperatorRegistry
       // name, address, cap, treasuryFee
-      await stakingRouter.addModule('Curated', operators.address, 0, 500, { from: appManager })
+      await stakingRouter.addModule('Curated', operators.address, 10000, 0, 500, { from: appManager })
 
       await operators.setTotalKeys(curatedModule.totalKeys, { from: appManager })
       await operators.setTotalUsedKeys(curatedModule.totalUsedKeys, { from: appManager })
@@ -209,7 +213,9 @@ contract('StakingRouter', (accounts) => {
 
         const name = 'Community' + i
 
-        await stakingRouter.addModule(name, _module.address, module.softCap, module.treasuryFee, { from: appManager })
+        await stakingRouter.addModule(name, _module.address, module.targetShare, module.recycleShare, module.treasuryFee, {
+          from: appManager
+        })
         await _module.setTotalKeys(module.totalKeys, { from: appManager })
         await _module.setTotalUsedKeys(module.totalUsedKeys, { from: appManager })
         await _module.setTotalStoppedKeys(module.totalStoppedKeys, { from: appManager })
