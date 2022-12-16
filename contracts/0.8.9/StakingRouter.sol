@@ -45,6 +45,8 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
     event ModuleActiveStatus();
     event DistributedShares(uint256 modulesShares, uint256 treasuryShares, uint256 remainShares);
     event DistributedDeposits(address indexed moduleAddress, uint256 assignedKeys, uint64 timestamp);
+    event WithdrawalCredentialsSet(bytes32 withdrawalCredentials);
+    event ContractVersionSet(uint256 version);
 
     struct StakingModule {
         /// @notice name of module
@@ -100,11 +102,11 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
         uint256[] recycleKeys;
     }
 
-    address public immutable lido;
-    address public immutable deposit_contract;
-    address public dsm;
+    IDepositContract internal immutable DEPOSIT_CONTRACT;
 
     bytes32 public constant MANAGE_WITHDRAWAL_KEY_ROLE = keccak256("MANAGE_WITHDRAWAL_KEY_ROLE");
+    bytes32 public constant MODULE_PAUSE_ROLE = keccak256("MODULE_PAUSE_ROLE");
+    bytes32 public constant MODULE_CONTROL_ROLE = keccak256("MODULE_CONTROL_ROLE");
 
     /// Version of the initialized contract data
     /// NB: Contract versioning starts from 1.
@@ -116,6 +118,8 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
 
     /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
     bytes32 internal constant WITHDRAWAL_CREDENTIALS_POSITION = keccak256('lido.StakingRouter.withdrawalCredentials');
+
+    bytes32 internal constant LIDO_POSITION = keccak256('lido.StakingRouter.lido');
 
     uint256 public constant DEPOSIT_SIZE = 32 ether;
 
@@ -138,17 +142,26 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
     uint64 public lastDistributeAt;
     uint256 public lastDepositsAmount;
 
-    constructor(address _lido, address _deposit_contract) {
-        lido = _lido;
-        deposit_contract = _deposit_contract;
+    constructor(address _depositContract) {
+        require(_depositContract != address(0), "DEPOSIT_CONTRACT_ZERO_ADDRESS");
+
+        DEPOSIT_CONTRACT = IDepositContract(_depositContract);
     }
 
-    /**
-     * @notice register a DSM module
-     * @param _dsm address of DSM
-     */
-    function setDepositSecurityModule(address _dsm) external {
-        dsm = _dsm;
+    function initialize(address _lido, address _admin) external {
+        require(_lido != address(0), "LIDO_ZERO_ADDRESS");
+        require(_admin != address(0), "ADMIN_ZERO_ADDRESS");
+        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "BASE_VERSION_MUST_BE_ZERO");
+
+        _setupRole(DEFAULT_ADMIN_ROLE, _admin);
+
+        LIDO_POSITION.setStorageAddress(_lido);
+        CONTRACT_VERSION_POSITION.setStorageUint256(1);
+        emit ContractVersionSet(1);
+    }
+
+    function _initialize_v1() internal {
+        
     }
 
     /**
@@ -197,9 +210,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
      * @notice pause a module
      * @param _moduleIndex index of module
      */
-    function pauseModule(uint256 _moduleIndex) external {
-        require(msg.sender == dsm, "invalid_caller");
-
+    function pauseModule(uint256 _moduleIndex) external onlyRole(MODULE_PAUSE_ROLE) {
         StakingModule storage module = modules[_moduleIndex];
         require(!module.paused, "module_is_paused");
 
@@ -211,9 +222,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
      *
      * Only callable by the dsm.
      */
-    function unpauseModule(uint256 _moduleIndex) external {
-        require(msg.sender == dsm, "invalid_caller");
-
+    function unpauseModule(uint256 _moduleIndex) external onlyRole(MODULE_CONTROL_ROLE) {
         StakingModule storage module = modules[_moduleIndex];
         if (module.paused) {
             module.paused = false;
@@ -398,7 +407,12 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
     }
 
     function getLastReportTimestamp() public view returns (uint64 lastReportAt) {
+        address lido = getLido();
         return ILido(lido).getLastReportTimestamp();
+    }
+
+    function getLido() public view returns (address) {
+        return LIDO_POSITION.getStorageAddress();
     }
 
     function getModuleMaxKeys(uint256 moduleId) external view returns (uint256 assignedKeys, uint256 recycledKeys) {
@@ -567,6 +581,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
         }
 
         allocation[moduleId] -= assignedKeys;
+        address lido = getLido();
         ILido(lido).updateBufferedCounters(depositsAmount);
 
         if (recycledKeys > 0) {
@@ -633,7 +648,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
      * @notice Gets deposit contract handle
      */
     function getDepositContract() public view returns (IDepositContract) {
-        return IDepositContract(deposit_contract);
+        return DEPOSIT_CONTRACT;
     }
 
     /**

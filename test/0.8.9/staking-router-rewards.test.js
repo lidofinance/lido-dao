@@ -150,7 +150,10 @@ contract('StakingRouter', (accounts) => {
     await oracle.setPool(lido.address)
     await depositContract.reset()
 
-    stakingRouter = await StakingRouter.new(lido.address, depositContract.address, { from: appManager })
+    stakingRouter = await StakingRouter.new(depositContract.address, { from: appManager })
+
+    // initialize
+    await stakingRouter.initialize(lido.address)
 
     // set staking router to lido
     await lido.setStakingRouter(stakingRouter.address)

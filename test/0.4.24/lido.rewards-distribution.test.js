@@ -90,17 +90,46 @@ contract('Lido', ([appManager, voting, user2, depositor]) => {
   })
 
   beforeEach('setup staking router', async () => {
-    stakingRouter = await StakingRouter.new(app.address, depositContract.address)
+    stakingRouter = await StakingRouter.new(depositContract.address)
+    // initialize
+    await stakingRouter.initialize(app.address)
+
     await app.setStakingRouter(stakingRouter.address)
 
     soloModule = await ModuleSolo.new(1, app.address, 500, { from: appManager })
 
-    await stakingRouter.addModule('Curated', curatedModule.address, 0, 500, { from: appManager })
+    const cfgCurated = {
+      treasuryFee: 500,
+      targetShare: 10000,
+      recycleShare: 0 // 0%, no effect if targetShare >=10000
+    }
+
+    await stakingRouter.addModule(
+      'Curated',
+      curatedModule.address,
+      cfgCurated.targetShare,
+      cfgCurated.recycleShare,
+      cfgCurated.treasuryFee,
+      { from: appManager }
+    )
     await curatedModule.setTotalKeys(100, { from: appManager })
     await curatedModule.setTotalUsedKeys(50, { from: appManager })
     await curatedModule.setTotalStoppedKeys(100, { from: appManager })
 
-    await stakingRouter.addModule('Solo', soloModule.address, 0, 500, { from: appManager })
+    const cfgCommunity = {
+      treasuryFee: 500,
+      targetShare: 10000,
+      recycleShare: 0 // 0%, no effect if targetShare >=10000
+    }
+
+    await stakingRouter.addModule(
+      'Solo',
+      soloModule.address,
+      cfgCommunity.targetShare,
+      cfgCommunity.recycleShare,
+      cfgCommunity.treasuryFee,
+      { from: appManager }
+    )
     await soloModule.setTotalKeys(100, { from: appManager })
     await soloModule.setTotalUsedKeys(50, { from: appManager })
     await soloModule.setTotalStoppedKeys(100, { from: appManager })

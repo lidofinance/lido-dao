@@ -149,14 +149,26 @@ contract('StakingRouter', (accounts) => {
     await oracle.setPool(lido.address)
     await depositContract.reset()
 
-    stakingRouter = await StakingRouter.new(lido.address, depositContract.address, { from: appManager })
+    stakingRouter = await StakingRouter.new(depositContract.address, { from: appManager })
+
+    // initialize
+    await stakingRouter.initialize(lido.address, appManager)
+
+    // Set up the staking router permissions.
+    const MANAGE_WITHDRAWAL_KEY_ROLE = await stakingRouter.MANAGE_WITHDRAWAL_KEY_ROLE()
+    const MODULE_PAUSE_ROLE = await stakingRouter.MODULE_PAUSE_ROLE()
+    const MODULE_CONTROL_ROLE = await stakingRouter.MODULE_CONTROL_ROLE()
+
+    await stakingRouter.grantRole(MANAGE_WITHDRAWAL_KEY_ROLE, voting, { from: appManager })
+    await stakingRouter.grantRole(MODULE_PAUSE_ROLE, voting, { from: appManager })
+    await stakingRouter.grantRole(MODULE_CONTROL_ROLE, voting, { from: appManager })
+
+    const wc = '0x'.padEnd(66, '1234')
+    await stakingRouter.setWithdrawalCredentials(wc, { from: voting })
+    log('Set withdrawal credentials ' + gr(wc))
 
     // set staking router to lido
     await lido.setStakingRouter(stakingRouter.address)
-
-    const wc = '0x'.padEnd(66, '1234')
-    await lido.setWithdrawalCredentials(wc, { from: voting })
-    log('Set withdrawal credentials ' + gr(wc))
 
     const total = await lido.totalSupply()
     const shares = await lido.getTotalShares()
