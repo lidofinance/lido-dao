@@ -12,14 +12,80 @@ function toEip2098({ v, r, s }) {
   return [r, hexStringFromBuffer(vs)]
 }
 
-function signPauseData(pauseMessagePrefix, blockNumber, guardianPrivateKey) {
-  const hash = keccak256(encodePauseData(pauseMessagePrefix, blockNumber))
+const UINT256_SIZE = 64
+
+class DSMMessage {
+  static MESSAGE_PREFIX
+
+  static setMessagePrefix(newMessagePrefix) {
+    this.MESSAGE_PREFIX = newMessagePrefix
+  }
+
+  get messagePrefix() {
+    const messagePrefix = this.constructor.MESSAGE_PREFIX
+    if (messagePrefix === undefined) {
+      throw new Error(`MESSAGE_PREFIX isn't set`)
+    }
+    return messagePrefix
+  }
+
+  get hash() {
+    throw new Error('Unimplemented')
+  }
+
+  sign(signerPrivateKey) {
+    return toEip2098(ecSign(this.hash, signerPrivateKey))
+  }
+}
+
+class DSMAttestMessage extends DSMMessage {
+  constructor(blockNumber, blockHash, depositRoot, stakingModule, keysOpIndex) {
+    super()
+    this.blockNumber = blockNumber
+    this.blockHash = blockHash
+    this.depositRoot = depositRoot
+    this.stakingModule = stakingModule
+    this.keysOpIndex = keysOpIndex
+  }
+
+  get hash() {
+    return keccak256(
+      hexToBytes(
+        strip0x(this.messagePrefix) +
+          encodeBN(this.blockNumber) +
+          strip0x(this.blockHash) +
+          strip0x(this.depositRoot) +
+          strip0x(this.stakingModule) +
+          encodeBN(this.keysOpIndex)
+      )
+    )
+  }
+}
+
+class DSMPauseMessage extends DSMMessage {
+  constructor(blockNumber, stakingModule) {
+    super()
+    this.blockNumber = blockNumber
+    this.stakingModule = stakingModule
+  }
+
+  get hash() {
+    return keccak256(hexToBytes(strip0x(this.messagePrefix) + encodeBN(this.blockNumber) + strip0x(this.stakingModule)))
+  }
+}
+
+function signPauseData(pauseMessagePrefix, pauseMessage, guardianPrivateKey) {
+  const hash = keccak256(encodePauseData(pauseMessagePrefix, pauseMessage))
   return toEip2098(ecSign(hash, guardianPrivateKey))
 }
 
-function encodePauseData(pauseMessagePrefix, blockNumber) {
+function encodePauseData(pauseMessagePrefix, pauseMessage) {
   const uint256Size = 64
-  return hexToBytes(strip0x(pauseMessagePrefix) + new BN(blockNumber).toString('hex', uint256Size))
+  return hexToBytes(strip0x(pauseMessagePrefix) + encodeBN(pauseMessage.blockNumber) + stripOx(pauseMessage.stakingModule))
+}
+
+function encodeBN(value) {
+  return new BN(value).toString('hex', UINT256_SIZE)
 }
 
 function signDepositData(attestMessagePrefix, depositRoot, keysOpIndex, blockNumber, blockHash, guardianPrivateKey) {
@@ -45,5 +111,7 @@ function hexToBytes(hex) {
 
 module.exports = {
   signDepositData,
-  signPauseData
+  signPauseData,
+  DSMPauseMessage,
+  DSMAttestMessage
 }
