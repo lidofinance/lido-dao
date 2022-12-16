@@ -110,9 +110,6 @@ contract Lido is ILido, StETH, AragonApp {
     bytes32 internal constant TOTAL_EL_REWARDS_COLLECTED_POSITION = keccak256('lido.Lido.totalELRewardsCollected');
 
     /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
-    bytes32 internal constant WITHDRAWAL_CREDENTIALS_POSITION = keccak256('lido.Lido.withdrawalCredentials');
-
-    /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
     bytes32 internal constant LAST_REPORT_TIMESTAMP = keccak256('lido.Lido.lastReportTimestamp');
 
     modifier onlyStakingRouter() {
@@ -412,22 +409,6 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-     * @notice Set credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched to `_withdrawalCredentials`
-     * @dev Note that setWithdrawalCredentials discards all unused signing keys as the signatures are invalidated.
-     * @param _withdrawalCredentials withdrawal credentials field as defined in the Ethereum PoS consensus specs
-     */
-    function setWithdrawalCredentials(bytes32 _withdrawalCredentials) external {
-        _auth(MANAGE_WITHDRAWAL_KEY);
-
-        WITHDRAWAL_CREDENTIALS_POSITION.setStorageBytes32(_withdrawalCredentials);
-
-        address stakingRouterAddress = getStakingRouter();
-        IStakingRouter(stakingRouterAddress).trimUnusedKeys();
-
-        emit WithdrawalCredentialsSet(_withdrawalCredentials);
-    }
-
-    /**
      * @dev Sets the address of LidoExecutionLayerRewardsVault contract
      * @param _executionLayerRewardsVault Execution layer rewards vault contract address
      */
@@ -548,13 +529,6 @@ contract Lido is ILido, StETH, AragonApp {
         treasuryFeeBasisPoints = uint16(TREASURY_FEE_POSITION.getStorageUint256());
         insuranceFeeBasisPoints = uint16(INSURANCE_FEE_POSITION.getStorageUint256());
         operatorsFeeBasisPoints = uint16(NODE_OPERATORS_FEE_POSITION.getStorageUint256());
-    }
-
-    /**
-     * @notice Returns current credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
-     */
-    function getWithdrawalCredentials() public view returns (bytes32) {
-        return WITHDRAWAL_CREDENTIALS_POSITION.getStorageBytes32();
     }
 
     /**

@@ -192,20 +192,6 @@ interface ILido {
     event ELRewardsWithdrawalLimitSet(uint256 limitPoints);
 
     /**
-      * @notice Set credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched to `_withdrawalCredentials`
-      * @dev Note that setWithdrawalCredentials discards all unused signing keys as the signatures are invalidated.
-      * @param _withdrawalCredentials withdrawal credentials field as defined in the Ethereum PoS consensus specs
-      */
-    function setWithdrawalCredentials(bytes32 _withdrawalCredentials) external;
-
-    /**
-      * @notice Returns current credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
-      */
-    function getWithdrawalCredentials() external view returns (bytes);
-
-    event WithdrawalCredentialsSet(bytes32 withdrawalCredentials);
-
-    /**
       * @dev Sets the address of LidoExecutionLayerRewardsVault contract
       * @param _executionLayerRewardsVault Execution layer rewards vault contract address
       */

@@ -286,10 +286,6 @@ contract('StakingRouter', (accounts) => {
 
       const opCount = await operators.getNodeOperatorsCount()
       console.log('op count', parseInt(opCount))
-
-      const response = await operators.getRewardsDistribution(opShares)
-
-      console.log(response)
     })
   })
 })

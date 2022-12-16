@@ -4,6 +4,9 @@
 //
 pragma solidity 0.8.9;
 
+import "@openzeppelin/contracts-v4.4/access/AccessControlEnumerable.sol";
+
+import "./interfaces/IStakingRouter.sol";
 import "./interfaces/IStakingModule.sol";
 import "./interfaces/IDepositContract.sol";
 import "./lib/BytesLib.sol";
@@ -26,14 +29,14 @@ interface ILido {
 
     function getWithdrawalCredentials() external view returns (bytes32);
 
-    function updateBufferedCounters(uint256 depositsAmount) external;
+    function updateBufferedCounters(uint256 keysAmount) external;
 
     function getTreasury() external view returns (address);
 
     function getLastReportTimestamp() external view returns (uint64);
 }
 
-contract StakingRouter {
+contract StakingRouter is IStakingRouter, AccessControlEnumerable {
     using UnstructuredStorage for bytes32;
 
     event ModuleAdded();
@@ -41,7 +44,7 @@ contract StakingRouter {
     event ModuleUnpaused();
     event ModuleActiveStatus();
     event DistributedShares(uint256 modulesShares, uint256 treasuryShares, uint256 remainShares);
-    event DistributedDeposits(address indexed moduleAddress, uint256 assignedKeys, uint64 timestamp);
+    event DistributedDeposits(uint256 moduleIndex, address indexed moduleAddress, uint256 assignedKeys, uint256 timestamp);
 
     error InvalidType();
 
@@ -107,13 +110,18 @@ contract StakingRouter {
     address public immutable deposit_contract;
     address public dsm;
 
+    bytes32 public constant MANAGE_WITHDRAWAL_KEY_ROLE = keccak256("MANAGE_WITHDRAWAL_KEY_ROLE");
+
     /// Version of the initialized contract data
     /// NB: Contract versioning starts from 1.
     /// The version stored in CONTRACT_VERSION_POSITION equals to
     /// - 0 right after deployment when no initializer is invoked yet
     /// - N after calling initialize() during deployment from scratch, where N is the current contract version
     /// - N after upgrading contract from the previous version (after calling finalize_vN())
-    bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.WithdrawalQueue.contractVersion");
+    bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.StakingRouter.contractVersion");
+
+    /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
+    bytes32 internal constant WITHDRAWAL_CREDENTIALS_POSITION = keccak256('lido.StakingRouter.withdrawalCredentials');
 
     uint256 public constant DEPOSIT_SIZE = 32 ether;
 
@@ -283,65 +291,11 @@ contract StakingRouter {
         return (recipients, modulesShares, moduleFee, treasuryFee);
     }
 
-    /**
-     *  @dev This function takes at the input the number of rewards received during the oracle report and distributes them among the connected modules
-     *  @param _totalShares amount of shares to distribute
-     *  @param _totalKeys total keys in modules
-     *  @param _moduleKeys the number of keys in each module
-     *  @return distributed actual amount of shares that was transferred to modules as a rewards
-     */
-    function distributeShares(uint256 _totalShares, uint256 _totalKeys, uint256[] memory _moduleKeys)
-        external
-        returns (uint256 distributed)
-    {
-        assert(_totalKeys > 0);
-        require(address(lido) == msg.sender, "INVALID_CALLER");
-
-        uint256 treasuryShares = 0;
-
-        //distribute shares to modules
-        distributed = 0;
-        for (uint256 i = 0; i < modulesCount; ++i) {
-            StakingModule memory stakingModule = modules[i];
-            if (!stakingModule.active) {
-                continue;
-            }
-
-            IStakingModule module = IStakingModule(stakingModule.moduleAddress);
-
-            uint256 totalFee = module.getFee() + stakingModule.treasuryFee;
-            uint256 moduleFee = (module.getFee() * TOTAL_BASIS_POINTS) / totalFee;
-            uint256 treasuryFee = (stakingModule.treasuryFee * TOTAL_BASIS_POINTS) / totalFee;
-
-            // uint256 moduleTotalKeys = module.getTotalKeys();
-            uint256 rewardsShares = (_totalShares * _moduleKeys[i]) / _totalKeys;
-
-            uint256 moduleShares = (rewardsShares * moduleFee) / TOTAL_BASIS_POINTS;
-            treasuryShares += (rewardsShares * treasuryFee) / TOTAL_BASIS_POINTS;
-
-            //transfer from SR to recipient
-            ILido(lido).transferShares(address(module), moduleShares);
-
-            distributed += moduleShares;
-        }
-
-        //distribute shares to the treasury
-        address treasury = ILido(lido).getTreasury();
-        ILido(lido).transferShares(treasury, treasuryShares);
-
-        uint256 remainShares = _totalShares - distributed - treasuryShares;
-
-        // transfer remaining shares
-        if (remainShares > 0) {
-            ILido(lido).transferShares(treasury, remainShares);
-        }
-    }
-
     function distributeDeposits() public {
         uint256 depositsAmount = address(this).balance / DEPOSIT_SIZE;
 
         (ModuleLookupCacheEntry[] memory cache, uint256 newTotalAllocation) = getAllocation(depositsAmount);
-        
+
         uint256 _modulesCount = modulesCount;
         uint64 _now = uint64(block.timestamp);
         bool isUpdated;
@@ -351,7 +305,7 @@ contract StakingRouter {
                 allocation[i] = cache[i].assignedKeys;
                 isUpdated = true;
                 if (cache[i].assignedKeys > 0) {
-                    emit DistributedDeposits(cache[i].moduleAddress, cache[i].assignedKeys, _now);
+                    emit DistributedDeposits(i, cache[i].moduleAddress, cache[i].assignedKeys, _now);
                 }
             }
         }
@@ -369,7 +323,7 @@ contract StakingRouter {
         //   еще 40 незадепозиченных ключей) не попадает под механизм recycle, а 50% аллокации DVT модуля
         //   становится доступна для депозита другими модулями.
         // - допустим Curated модуль через 12 часов депозитит все доступные recycled ключи: 50% от 150 ключей DVT модуля = 75.
-        //   Новая таблица аллокаци после депозита: [0, 40, 75]. 
+        //   Новая таблица аллокаци после депозита: [0, 40, 75].
         // - допустим, на SR приходит еще eth на 1 депозит, и повторно вывзывается distributeDeposits: метод отработает и
         //   переформирует таблицу аллокаций на: [0, ]
 
@@ -716,7 +670,7 @@ contract StakingRouter {
      * @param _signature Signature of the deposit call
      */
     function _stake(bytes memory _pubkey, bytes memory _signature) internal {
-        bytes32 withdrawalCredentials = ILido(lido).getWithdrawalCredentials();
+        bytes32 withdrawalCredentials = getWithdrawalCredentials();
         require(withdrawalCredentials != 0, "EMPTY_WITHDRAWAL_CREDENTIALS");
 
         uint256 value = DEPOSIT_SIZE;
@@ -746,7 +700,7 @@ contract StakingRouter {
         require(address(this).balance == targetBalance, "EXPECTING_DEPOSIT_TO_HAPPEN");
     }
 
-    function trimUnusedKeys() external {
+    function _trimUnusedKeys() internal {
         if (modulesCount > 0) {
             for (uint256 i = 0; i < modulesCount; ++i) {
                 StakingModule memory stakingModule = modules[i];
@@ -807,5 +761,27 @@ contract StakingRouter {
             RecycleLevel(18 * 3600, 7500), // 75% after 15h
             RecycleLevel(0, 10000) // 100% after 18h
         ][level];
+    }
+
+    /**
+     * @notice Set credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched to `_withdrawalCredentials`
+     * @dev Note that setWithdrawalCredentials discards all unused signing keys as the signatures are invalidated.
+     * @param _withdrawalCredentials withdrawal credentials field as defined in the Ethereum PoS consensus specs
+     */
+    function setWithdrawalCredentials(bytes32 _withdrawalCredentials) external onlyRole(MANAGE_WITHDRAWAL_KEY_ROLE) {
+
+        WITHDRAWAL_CREDENTIALS_POSITION.setStorageBytes32(_withdrawalCredentials);
+
+        //trim keys with old WC
+        _trimUnusedKeys();
+
+        emit WithdrawalCredentialsSet(_withdrawalCredentials);
+    }
+
+    /**
+     * @notice Returns current credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
+     */
+    function getWithdrawalCredentials() public view returns (bytes32) {
+        return WITHDRAWAL_CREDENTIALS_POSITION.getStorageBytes32();
     }
 }

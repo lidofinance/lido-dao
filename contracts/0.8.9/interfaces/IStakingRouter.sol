@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
 /* See contracts/COMPILERS.md */
-pragma solidity 0.4.24;
+pragma solidity 0.8.9;
 
 interface IStakingRouter {
     function getSharesTable() external returns(
@@ -12,7 +12,7 @@ interface IStakingRouter {
         uint256[] memory moduleFee,
         uint256[] memory treasuryFee
     );
-    function deposit(bytes pubkeys, bytes signatures) external returns(uint);
+    function deposit(bytes memory pubkeys, bytes memory signatures) external returns(uint);
 
     /**
       * @notice Set credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched to `_withdrawalCredentials`
