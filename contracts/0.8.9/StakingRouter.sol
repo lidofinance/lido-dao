@@ -29,7 +29,7 @@ interface ILido {
 
     function getWithdrawalCredentials() external view returns (bytes32);
 
-    function updateBufferedCounters(uint256 keysAmount) external;
+    function updateBufferedCounters(uint256 depositsAmount) external;
 
     function getTreasury() external view returns (address);
 
@@ -64,9 +64,6 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
         /// @notice flag if module can participate in further reward distribution
         bool active;
         uint64 lastDepositAt;
-        uint64 recycleAt;
-        uint16 recycleLevel;
-        uint256 recycleRestKeys;
     }
 
     struct ModuleLookupCacheEntry {
@@ -102,7 +99,6 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
 
     struct RecycleCache {
         uint256 totalRecycleKeys;
-        uint16[] recycleLevels;
         uint256[] recycleKeys;
     }
 
@@ -131,7 +127,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
     uint256 public constant PUBKEY_LENGTH = 48;
     uint256 public constant SIGNATURE_LENGTH = 96;
 
-    uint256 public constant MAX_TIME = 86400;
+    uint256 public constant RECYCLE_DELAY = 12 hours;
 
     mapping(uint256 => StakingModule) internal modules;
     mapping(address => uint256) internal modules_ids;
@@ -320,12 +316,16 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
         //  тогда депозиты(ключи) распределятся так: Curated - 0, Community - 50, DVT - 150. Таблица аллокации: [0, 50, 150]
         // - допустим в тчении 12 часов Community и Curated модули функционируют нормально, а DVT модуль тормозит.
         // - Если Community модуль уже задепозитил 10 из своих ключей, значит вся его аллокация (т.е.
-        //   еще 40 незадепозиченных ключей) не попадает под механизм recycle, а 50% аллокации DVT модуля
+        //   еще 40 незадепозиченных ключей) не попадает под механизм recycle, а 100% аллокации DVT модуля
         //   становится доступна для депозита другими модулями.
-        // - допустим Curated модуль через 12 часов депозитит все доступные recycled ключи: 50% от 150 ключей DVT модуля = 75.
-        //   Новая таблица аллокаци после депозита: [0, 40, 75].
+        // - допустим Curated модуль через 12 часов депозитит все доступные recycled ключи: 100% от 150 ключей DVT модуля.
+        //   Новая таблица аллокаци после депозита: [0, 40, 0].
         // - допустим, на SR приходит еще eth на 1 депозит, и повторно вывзывается distributeDeposits: метод отработает и
-        //   переформирует таблицу аллокаций на: [0, ]
+        //   переформирует таблицу аллокаций на: [0, 0, 40] - и ключи модуля 1 снова становятся доступны для депозита любым
+        //   модулем, т.к. перетекли в корзинку модуля DVT, который на данный момент уже числится "тормозным"
+        //
+        // suggested solution: close the call distributeDeposits() wuth security role
+
 
         require(depositsAmount > lastDepositsAmount && isUpdated, "allocation not changed");
         totalAllocation = newTotalAllocation;
@@ -355,32 +355,24 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
         uint256 smallestStake;
         uint256 stake;
         newTotalAllocation = curTotalAllocation + keysToDistribute;
-        // console.log("!!! init keysToDistribute", keysToDistribute);
-        // console.log("!!! init curTotalAllocation", curTotalAllocation);
-        // console.log("!!! init newTotalAllocation", newTotalAllocation);
         while (distributedKeys < keysToDistribute) {
             bestModuleIdx = _modulesCount;
             smallestStake = 0;
 
             for (uint256 i = 0; i < _modulesCount; i++) {
                 entry = cache[i];
-                // console.log("entry.targetShare", i, entry.targetShare);
                 if (entry.skip) {
-                //    console.log(">>> skip1", i);
                     continue;
                 }
 
                 unchecked {
                     stake = entry.totalUsedKeys + entry.assignedKeys - entry.totalStoppedKeys;
                 }
-                // console.log(">>> stake", i, stake);
-                // console.log(">>> cap", i, (newTotalAllocation * entry.targetShare) / TOTAL_BASIS_POINTS);
                 if (
                     entry.totalUsedKeys + entry.assignedKeys == entry.totalKeys || entry.targetShare == 0
                         || (entry.targetShare < 10000 && stake >= (newTotalAllocation * entry.targetShare) / TOTAL_BASIS_POINTS)
                 ) {
                     cache[i].skip = true;
-                    // console.log(">>> skip2", i);
                     continue;
                 }
 
@@ -395,21 +387,16 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
                 break;
             }
 
-            // console.log("assign", bestModuleIdx);
-            // assert(entry.usedSigningKeys < UINT64_MAX);
             unchecked {
                 cache[bestModuleIdx].assignedKeys++;
                 distributedKeys++;
             }
-            // console.log(">>> distributedKeys", distributedKeys);
         }
 
         require(distributedKeys > 0, "INVALID_ASSIGNED_KEYS");
 
         // get new provisoned total stake
         newTotalAllocation = curTotalAllocation + distributedKeys;
-        // console.log("!! final newTotalAllocation", newTotalAllocation);
-        // console.log("!! final distributedKeys", distributedKeys);
     }
 
     function getLastReportTimestamp() public view returns (uint64 lastReportAt) {
@@ -432,49 +419,33 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
 
         uint256 totalKeys = module.getTotalKeys();
         uint256 totalUsedKeys = module.getTotalUsedKeys();
-
-        // console.log("totalKeys", totalKeys);
-        // console.log("totalUsedKeys", totalUsedKeys);
-        // console.log("provisionedTotalStake", totalAllocation);
-
         uint256 stakeLimit;
-
         if (moduleCache.targetShare < 10000) {
             stakeLimit =
                 (totalAllocation * moduleCache.targetShare * (10000 + moduleCache.recycleShare)) / TOTAL_BASIS_POINTS / TOTAL_BASIS_POINTS;
-            // console.log("stakeLimit 0", stakeLimit);
             if (stakeLimit > totalKeys) {
                 stakeLimit = totalKeys;
             }
         } else {
             stakeLimit = totalKeys;
         }
-        // console.log("stakeLimit", stakeLimit);
 
         uint256 restKeys = stakeLimit - totalUsedKeys;
         assignedKeys = allocation[moduleId];
         // substruct module's own recycle keys
-        // console.log("assignedKeys", assignedKeys);
-        // console.log("restKeys", restKeys);
-        // console.log("totalRecycleKeys", recycleCache.totalRecycleKeys);
-        // console.log("recycleKeys1", recycleCache.recycleKeys[moduleId]);
         unchecked {
             recycledKeys = recycleCache.totalRecycleKeys - recycleCache.recycleKeys[moduleId];
         }
 
-        // console.log("recycledKeys2", recycledKeys);
         if (assignedKeys + recycledKeys > restKeys) {
-            //todo: check upper cap for non fallback modules (to reduce imbalance)
             unchecked {
                 recycledKeys = restKeys - assignedKeys;
             }
         }
-        // console.log("recycledKeys3", recycledKeys);
     }
 
     function getRecycleAllocation() public view returns (RecycleCache memory recycleCache) {
         uint256 _modulesCount = modulesCount;
-        recycleCache.recycleLevels = new uint16[](_modulesCount);
         recycleCache.recycleKeys = new uint[](_modulesCount);
         uint64 _now = uint64(block.timestamp);
         uint64 lastReportAt = getLastReportTimestamp();
@@ -482,52 +453,24 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
             lastReportAt = lastDistributeAt;
         }
 
-        StakingModule memory moduleCache;
+        uint64 lastDepositAt;
         uint64 timeDelta;
         uint256 curAllocation;
         for (uint256 i = 0; i < _modulesCount; i++) {
-            moduleCache = modules[i];
             curAllocation = allocation[i];
             if (curAllocation == 0) {
                 continue;
             }
-            if (moduleCache.recycleAt > lastReportAt) {
-                // default assumes we are still on the same level
-                recycleCache.recycleLevels[i] = moduleCache.recycleLevel;
-                // todo: check limits in case when fallback module is 'slow'
-                recycleCache.recycleKeys[i] = moduleCache.recycleRestKeys;
-            }
+            lastDepositAt = modules[i].lastDepositAt;
 
-            if (moduleCache.lastDepositAt > lastReportAt) {
-                // if module deposit has ocurred after report, check module slowness based on it lastDepositAt time
-                timeDelta = _now - moduleCache.lastDepositAt;
-            } else {
-                // check module slowness based on lastReportAt time
-                timeDelta = _now - lastReportAt;
-            }
+            // if module deposit has ocurred after report, check module slowness based on it lastDepositAt time
+            // else check module slowness based on lastReportAt time
+            timeDelta = _now - (lastDepositAt > lastReportAt ? lastDepositAt : lastReportAt);
 
-            uint16 curLevel;
-            uint64 delay;
-            // find current recycle level
-            for (curLevel = recycleCache.recycleLevels[i]; curLevel < RECYCLE_LEVELS_COUNT; curLevel++) {
-                delay = _getRecycleLevel(curLevel).delay;
-                if (timeDelta <= delay || delay == 0) {
-                    break;
-                }
+            if (timeDelta > RECYCLE_DELAY) {
+                recycleCache.recycleKeys[i] = curAllocation;
+                recycleCache.totalRecycleKeys += curAllocation;
             }
-            if (curLevel == 0) {
-                // skip healthy module
-                continue;
-            } else if (curLevel == RECYCLE_LEVELS_COUNT) {
-                // sanity fix last level
-                curLevel--;
-            }
-            // skip if the current level is the same
-            if (curLevel > recycleCache.recycleLevels[i]) {
-                recycleCache.recycleKeys[i] = (curAllocation * uint256(_getRecycleLevel(curLevel).percent)) / TOTAL_BASIS_POINTS;
-                recycleCache.recycleLevels[i] = curLevel;
-            }
-            recycleCache.totalRecycleKeys += recycleCache.recycleKeys[i];
         }
     }
 
@@ -553,9 +496,6 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
             entry.skip = entry.paused || entry.totalUsedKeys == entry.totalKeys;
             // update global totals
             newTotalAllocation += (entry.totalUsedKeys - entry.totalStoppedKeys);
-            // console.log("CCC totalUsedKeys", i, entry.totalUsedKeys);
-            // console.log("CCC totalStoppedKeys", i, entry.totalStoppedKeys);
-            // console.log("CCC newTotalAllocation", i, newTotalAllocation);
         }
     }
 
@@ -564,8 +504,8 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
         uint256 _modulesCount = modulesCount;
 
         for (uint256 i = 0; i < _modulesCount; i++) {
+            // skip recycle of the module itself, or already recycled module
             if (recycleCache.recycleKeys[i] == 0 || moduleId == i) {
-                // skip recycle of the module itself, or already recycled modules
                 continue;
             }
             uint256 keysToUse;
@@ -575,23 +515,12 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
             } else {
                 keysToUse = recycleCache.recycleKeys[i];
             }
+
+            // should never fired
             require(keysToUse <= moduleAlloc, "allocation < keysToUse");
 
-            if (moduleAlloc > keysToUse) {
-                modules[i].recycleLevel = recycleCache.recycleLevels[i];
-                unchecked {
-                    modules[i].recycleRestKeys = recycleCache.recycleKeys[i] - keysToUse;
-                    allocation[i] = moduleAlloc - keysToUse;
-                }
-            } else {
-                //moduleAlloc == keysToUse
-                modules[i].recycleRestKeys = 0;
-                modules[i].recycleLevel = 0;
-                allocation[i] = 0;
-            }
-            modules[i].recycleAt = uint64(block.timestamp);
-
             unchecked {
+                allocation[i] = moduleAlloc - keysToUse;
                 recycledKeys -= keysToUse;
             }
 
@@ -623,10 +552,6 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
         RecycleCache memory recycleCache = getRecycleAllocation();
 
         (uint256 assignedKeys, uint256 recycledKeys) = _getModuleMaxKeys(moduleId, recycleCache);
-        // todo: check module max cap
-        // console.log("1 assignedKeys", assignedKeys);
-        // console.log("1 recycledKeys", recycledKeys);
-        // console.log("1 depositsAmount", depositsAmount);
         require((assignedKeys + recycledKeys >= depositsAmount), "not enough keys");
 
         // recycled amount correction
@@ -645,11 +570,6 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
 
         allocation[moduleId] -= assignedKeys;
         ILido(lido).updateBufferedCounters(depositsAmount);
-
-        if (allocation[moduleId] == 0) {
-            modules[moduleId].recycleRestKeys = 0;
-            modules[moduleId].recycleLevel = 0;
-        }
 
         if (recycledKeys > 0) {
             _useRecycledKeys(moduleId, recycledKeys, recycleCache);
