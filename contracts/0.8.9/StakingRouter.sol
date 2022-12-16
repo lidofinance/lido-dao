@@ -44,9 +44,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
     event ModuleUnpaused();
     event ModuleActiveStatus();
     event DistributedShares(uint256 modulesShares, uint256 treasuryShares, uint256 remainShares);
-    event DistributedDeposits(uint256 moduleIndex, address indexed moduleAddress, uint256 assignedKeys, uint256 timestamp);
-
-    error InvalidType();
+    event DistributedDeposits(address indexed moduleAddress, uint256 assignedKeys, uint64 timestamp);
 
     struct StakingModule {
         /// @notice name of module
@@ -301,7 +299,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
                 allocation[i] = cache[i].assignedKeys;
                 isUpdated = true;
                 if (cache[i].assignedKeys > 0) {
-                    emit DistributedDeposits(i, cache[i].moduleAddress, cache[i].assignedKeys, _now);
+                    emit DistributedDeposits(cache[i].moduleAddress, cache[i].assignedKeys, _now);
                 }
             }
         }
