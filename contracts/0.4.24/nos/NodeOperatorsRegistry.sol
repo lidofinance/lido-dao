@@ -14,6 +14,7 @@ import 'solidity-bytes-utils/contracts/BytesLib.sol';
 import '../interfaces/INodeOperatorsRegistry.sol';
 import '../interfaces/IStakingModule.sol';
 import '../interfaces/IStakingRouter.sol';
+import '../interfaces/IStETH.sol';
 import '../lib/MemUtils.sol';
 
 /**
@@ -54,6 +55,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
     bytes32 internal constant TOTAL_STOPPED_KEYS_POSITION = keccak256('lido.NodeOperatorsRegistry.totalStoppedKeys');
 
     bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256('lido.NodeOperatorsRegistry.contractVersion');
+
+    bytes32 internal constant STETH_POSITION = keccak256('lido.Lido.stETH');
 
     /// @dev Node Operator parameters and internal state
     struct NodeOperator {
@@ -127,10 +130,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
      * @param _rewardAddress Ethereum 1 address which receives stETH rewards for this operator
      * @return a unique key of the added operator
      */
-    function addNodeOperator(
-        string _name,
-        address _rewardAddress
-    ) external auth(ADD_NODE_OPERATOR_ROLE) validAddress(_rewardAddress) returns (uint256 id) {
+    function addNodeOperator(string _name, address _rewardAddress)
+        external
+        auth(ADD_NODE_OPERATOR_ROLE)
+        validAddress(_rewardAddress)
+        returns (uint256 id)
+    {
         id = getNodeOperatorsCount();
         require(id < MAX_NODE_OPERATORS_COUNT, 'MAX_NODE_OPERATORS_COUNT_EXCEEDED');
 
@@ -154,10 +159,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
     /**
      * @notice `_active ? 'Enable' : 'Disable'` the node operator #`_id`
      */
-    function setNodeOperatorActive(
-        uint256 _id,
-        bool _active
-    ) external authP(SET_NODE_OPERATOR_ACTIVE_ROLE, arr(_id, _active ? uint256(1) : uint256(0))) operatorExists(_id) {
+    function setNodeOperatorActive(uint256 _id, bool _active)
+        external
+        authP(SET_NODE_OPERATOR_ACTIVE_ROLE, arr(_id, _active ? uint256(1) : uint256(0)))
+        operatorExists(_id)
+    {
         require(operators[_id].active != _active, 'NODE_OPERATOR_ACTIVITY_ALREADY_SET');
 
         _increaseKeysOpIndex();
@@ -191,10 +197,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
     /**
      * @notice Change reward address of the node operator #`_id` to `_rewardAddress`
      */
-    function setNodeOperatorRewardAddress(
-        uint256 _id,
-        address _rewardAddress
-    ) external authP(SET_NODE_OPERATOR_ADDRESS_ROLE, arr(_id, uint256(_rewardAddress))) operatorExists(_id) validAddress(_rewardAddress) {
+    function setNodeOperatorRewardAddress(uint256 _id, address _rewardAddress)
+        external
+        authP(SET_NODE_OPERATOR_ADDRESS_ROLE, arr(_id, uint256(_rewardAddress)))
+        operatorExists(_id)
+        validAddress(_rewardAddress)
+    {
         require(operators[_id].rewardAddress != _rewardAddress, 'NODE_OPERATOR_ADDRESS_IS_THE_SAME');
         operators[_id].rewardAddress = _rewardAddress;
         emit NodeOperatorRewardAddressSet(_id, _rewardAddress);
@@ -203,10 +211,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
     /**
      * @notice Set the maximum number of validators to stake for the node operator #`_id` to `_stakingLimit`
      */
-    function setNodeOperatorStakingLimit(
-        uint256 _id,
-        uint64 _stakingLimit
-    ) external authP(SET_NODE_OPERATOR_LIMIT_ROLE, arr(_id, uint256(_stakingLimit))) operatorExists(_id) {
+    function setNodeOperatorStakingLimit(uint256 _id, uint64 _stakingLimit)
+        external
+        authP(SET_NODE_OPERATOR_LIMIT_ROLE, arr(_id, uint256(_stakingLimit)))
+        operatorExists(_id)
+    {
         require(operators[_id].stakingLimit != _stakingLimit, 'NODE_OPERATOR_STAKING_LIMIT_IS_THE_SAME');
         _increaseKeysOpIndex();
         operators[_id].stakingLimit = _stakingLimit;
@@ -216,10 +225,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
     /**
      * @notice Report `_stoppedIncrement` more stopped validators of the node operator #`_id`
      */
-    function reportStoppedValidators(
-        uint256 _id,
-        uint64 _stoppedIncrement
-    ) external authP(REPORT_STOPPED_VALIDATORS_ROLE, arr(_id, uint256(_stoppedIncrement))) operatorExists(_id) {
+    function reportStoppedValidators(uint256 _id, uint64 _stoppedIncrement)
+        external
+        authP(REPORT_STOPPED_VALIDATORS_ROLE, arr(_id, uint256(_stoppedIncrement)))
+        operatorExists(_id)
+    {
         require(0 != _stoppedIncrement, 'EMPTY_VALUE');
         operators[_id].stoppedValidators = operators[_id].stoppedValidators.add(_stoppedIncrement);
         require(operators[_id].stoppedValidators <= operators[_id].usedSigningKeys, 'STOPPED_MORE_THAN_LAUNCHED');
@@ -279,7 +289,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
      * @param _pubkeys Several concatenated validator signing keys
      * @param _signatures Several concatenated signatures for (pubkey, withdrawal_credentials, 32000000000) messages
      */
-    function addSigningKeysOperatorBH(uint256 _operator_id, uint256 _quantity, bytes _pubkeys, bytes _signatures) external {
+    function addSigningKeysOperatorBH(
+        uint256 _operator_id,
+        uint256 _quantity,
+        bytes _pubkeys,
+        bytes _signatures
+    ) external {
         require(msg.sender == operators[_operator_id].rewardAddress, 'APP_AUTH_FAILED');
         _addSigningKeys(_operator_id, _quantity, _pubkeys, _signatures);
     }
@@ -326,7 +341,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
      * @param _index Index of the key, starting with 0
      * @param _amount Number of keys to remove
      */
-    function removeSigningKeysOperatorBH(uint256 _operator_id, uint256 _index, uint256 _amount) external {
+    function removeSigningKeysOperatorBH(
+        uint256 _operator_id,
+        uint256 _index,
+        uint256 _amount
+    ) external {
         require(msg.sender == operators[_operator_id].rewardAddress, 'APP_AUTH_FAILED');
         // removing from the last index to the highest one, so we won't get outside the array
         for (uint256 i = _index.add(_amount); i > _index; --i) {
@@ -436,9 +455,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
      * @notice Returns the rewards distribution proportional to the effective stake for each node operator.
      * @param _totalRewardShares Total amount of reward shares to distribute.
      */
-    function getRewardsDistribution(
-        uint256 _totalRewardShares
-    ) external view returns (address[] memory recipients, uint256[] memory shares) {
+    function _getRewardsDistribution(uint256 _totalRewardShares)
+        public
+        view
+        returns (address[] memory recipients, uint256[] memory shares)
+    {
         uint256 nodeOperatorCount = getNodeOperatorsCount();
 
         uint256 activeCount = getActiveNodeOperatorsCount();
@@ -483,10 +504,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
      * @param _id Node Operator id
      * @param _fullInfo If true, name will be returned as well
      */
-    function getNodeOperator(
-        uint256 _id,
-        bool _fullInfo
-    )
+    function getNodeOperator(uint256 _id, bool _fullInfo)
         external
         view
         operatorExists(_id)
@@ -533,10 +551,16 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
      * @return depositSignature Signature needed for a deposit_contract.deposit call
      * @return used Flag indication if the key was used in the staking
      */
-    function getSigningKey(
-        uint256 _operator_id,
-        uint256 _index
-    ) external view operatorExists(_operator_id) returns (bytes key, bytes depositSignature, bool used) {
+    function getSigningKey(uint256 _operator_id, uint256 _index)
+        external
+        view
+        operatorExists(_operator_id)
+        returns (
+            bytes key,
+            bytes depositSignature,
+            bool used
+        )
+    {
         require(_index < operators[_operator_id].totalSigningKeys, 'KEY_NOT_FOUND');
 
         (bytes memory key_, bytes memory signature) = _loadSigningKey(_operator_id, _index);
@@ -585,7 +609,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         return uint256(keccak256(abi.encodePacked(SIGNING_KEYS_MAPPING_NAME, _operator_id, _keyIndex)));
     }
 
-    function _storeSigningKey(uint256 _operator_id, uint256 _keyIndex, bytes memory _key, bytes memory _signature) internal {
+    function _storeSigningKey(
+        uint256 _operator_id,
+        uint256 _keyIndex,
+        bytes memory _key,
+        bytes memory _signature
+    ) internal {
         assert(_key.length == PUBKEY_LENGTH);
         assert(_signature.length == SIGNATURE_LENGTH);
 
@@ -756,6 +785,18 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         emit ContractVersionSet(2);
     }
 
+    function finalizeUpgrade_v3(address _steth) external {
+        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, 'WRONG_BASE_VERSION');
+
+        _initialize_v3(_steth);
+    }
+
+    function _initialize_v3(address _steth) internal {
+        STETH_POSITION.setStorageAddress(_steth);
+        CONTRACT_VERSION_POSITION.setStorageUint256(3);
+        emit ContractVersionSet(3);
+    }
+
     function setStakingRouter(address _addr) external {
         STAKING_ROUTER_POSITION.setStorageAddress(_addr);
     }
@@ -768,7 +809,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         TYPE_POSITION.setStorageUint256(uint256(_type));
     }
 
-    function getType() external returns(uint16){
+    function getType() external returns (uint16) {
         return uint16(TYPE_POSITION.getStorageUint256());
     }
 
@@ -810,5 +851,21 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         require(numKeys == keys);
     }
 
-    function distributeRewards() external {}
+    function distributeRewards() external returns (uint256 distributed) {
+        IStETH stETH = IStETH(STETH_POSITION.getStorageAddress());
+
+        uint256 sharesToDistribute = stETH.sharesOf(address(this));
+        assert(sharesToDistribute > 0);
+
+        (address[] memory recipients, uint256[] memory shares) = _getRewardsDistribution(sharesToDistribute);
+
+        assert(recipients.length == shares.length);
+
+        distributed = 0;
+        for (uint256 idx = 0; idx < recipients.length; ++idx) {
+            stETH.transferShares(recipients[idx], shares[idx]);
+            distributed = distributed.add(shares[idx]);
+            emit RewardsDistributedInShares(idx, shares[idx]);
+        }
+    }
 }
