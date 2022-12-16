@@ -5,7 +5,7 @@ const { ZERO_ADDRESS, getEventAt, getEventArgument } = require('@aragon/contract
 const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const keccak256 = require('js-sha3').keccak_256
 
-const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry.sol')
+const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistryMock')
 const PoolMock = artifacts.require('PoolMock.sol')
 
 const PUBKEY_LENGTH_BYTES = 48
@@ -39,13 +39,15 @@ const assertNoEvent = (receipt, eventName, msg) => {
 
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 const tokens = ETH
+const StETH = artifacts.require('StETHMock')
 
-contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nobody]) => {
-  let appBase, app, pool
+contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nobody, ste]) => {
+  let appBase, app, pool, steth
 
   before('deploy base app', async () => {
     // Deploy the app's base contract.
     appBase = await NodeOperatorsRegistry.new()
+    steth = await StETH.new()
   })
 
   beforeEach('deploy dao and app', async () => {
@@ -781,48 +783,6 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     assertBn(await app.getUnusedSigningKeyCount(0, { from: nobody }), 0)
   })
 
-  it('getRewardsDistribution works', async () => {
-    const { empty_recipients, empty_shares } = await app.getRewardsDistribution(tokens(900))
-
-    assert.equal(empty_recipients, undefined, 'recipients')
-    assert.equal(empty_shares, undefined, 'shares')
-
-    await app.addNodeOperator('fo o', ADDRESS_1, { from: voting })
-    await app.addNodeOperator(' bar', ADDRESS_2, { from: voting })
-    await app.addNodeOperator('3', ADDRESS_3, { from: voting })
-
-    await app.setNodeOperatorStakingLimit(0, 10, { from: voting })
-    await app.setNodeOperatorStakingLimit(1, 10, { from: voting })
-    await app.setNodeOperatorStakingLimit(2, 10, { from: voting })
-
-    await app.addSigningKeys(0, 2, hexConcat(pad('0x010101', 48), pad('0x020202', 48)), hexConcat(pad('0x01', 96), pad('0x02', 96)), {
-      from: voting
-    })
-    await app.addSigningKeys(1, 2, hexConcat(pad('0x050505', 48), pad('0x060606', 48)), hexConcat(pad('0x04', 96), pad('0x03', 96)), {
-      from: voting
-    })
-
-    await app.addSigningKeys(2, 2, hexConcat(pad('0x070707', 48), pad('0x080808', 48)), hexConcat(pad('0x05', 96), pad('0x06', 96)), {
-      from: voting
-    })
-
-    await pool.assignNextSigningKeys(6)
-    assertBn((await app.getNodeOperator(0, false)).usedSigningKeys, 2, 'op 0 used keys')
-    assertBn((await app.getNodeOperator(1, false)).usedSigningKeys, 2, 'op 1 used keys')
-    assertBn((await app.getNodeOperator(2, false)).usedSigningKeys, 2, 'op 2 used keys')
-
-    await app.reportStoppedValidators(0, 1, { from: voting })
-    await app.setNodeOperatorActive(2, false, { from: voting })
-
-    const { recipients, shares } = await app.getRewardsDistribution(tokens(900))
-
-    assert.sameOrderedMembers(recipients, [ADDRESS_1, ADDRESS_2], 'recipients')
-    assert.sameOrderedMembers(
-      shares.map((x) => String(x)),
-      [tokens(300), tokens(600)],
-      'shares'
-    )
-  })
   context('keysOpIndex increases correctly', () => {
     it('must increases on setNodeOperatorStakingLimit', async () => {
       await app.addNodeOperator('1', user1, { from: voting })
@@ -869,6 +829,28 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const tx = await app.setNodeOperatorActive(0, false, { from: voting })
       assertEvent(tx, 'KeysOpIndexSet', { expectedArgs: { keysOpIndex: 1 } })
       assertBn(await app.getKeysOpIndex(), 1)
+    })
+  })
+  context('distribute rewards', () => {
+    it('must distribute rewards to operators', async () => {
+      await app.finalizeUpgrade_v3(steth.address)
+      await steth.setTotalPooledEther(ETH(100))
+      await steth.mintShares(app.address, ETH(10))
+
+      await app.addNodeOperator('0', user1, { from: voting })
+      await app.addNodeOperator('1', user2, { from: voting })
+      await app.addNodeOperator('2', user3, { from: voting })
+
+      await app.setUsedKeys(0, 3)
+      await app.setUsedKeys(1, 7)
+      await app.setUsedKeys(2, 0)
+      await app.setTotalUsedKeys(10)
+
+      await app.distributeRewards({ from: user3 })
+
+      assertBn(await steth.sharesOf(user1), ETH(3))
+      assertBn(await steth.sharesOf(user2), ETH(7))
+      assertBn(await steth.sharesOf(user3), 0)
     })
   })
 })
