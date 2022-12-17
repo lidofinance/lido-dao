@@ -129,6 +129,7 @@
     "node-gyp": "^8.4.1",
     "openzeppelin-solidity": "2.0.0",
     "patch-package": "^6.4.7",
+    "solhint-plugin-lido": "^0.0.4",
     "solidity-bytes-utils": "0.0.6",
     "yargs": "^16.0.3"
   },
