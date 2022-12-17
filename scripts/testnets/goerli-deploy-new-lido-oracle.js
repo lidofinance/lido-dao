@@ -40,8 +40,10 @@ async function deployLidoOracleNew({ web3, artifacts }) {
   const allowedBeaconBalanceAnnualRelativeIncrease = 3000
   const allowedBeaconBalanceRelativeDecrease = 5000
 
+  console.log('LidoOracleNew initialize parameters:')
   console.log([
     oracleAdmin.toString(),
+    lidoAddress.toString(),
     epochsPerFrame.toString(),
     slotsPerEpoch.toString(),
     secondsPerSlot.toString(),
@@ -51,14 +53,14 @@ async function deployLidoOracleNew({ web3, artifacts }) {
   ])
 
   // await oracle.initialize(
-  //   oracleAdmin,
-  //   lidoAddress,
-  //   epochsPerFrame,
-  //   slotsPerEpoch,
-  //   secondsPerSlot,
-  //   genesisTime,
-  //   allowedBeaconBalanceAnnualRelativeIncrease,
-  //   allowedBeaconBalanceRelativeDecrease
+  //   oracleAdmin.toString(),
+  //   lidoAddress.toString(),
+  //   epochsPerFrame.toString(),
+  //   slotsPerEpoch.toString(),
+  //   secondsPerSlot.toString(),
+  //   genesisTime.toString(),
+  //   allowedBeaconBalanceAnnualRelativeIncrease.toString(),
+  //   allowedBeaconBalanceRelativeDecrease.toString()
   // )
 
 }

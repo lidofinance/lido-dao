@@ -15,7 +15,7 @@ const EPOCH_LENGTH = 32 * 12
 const DENOMINATION_OFFSET = 1e9
 
 const ZERO_MEMBER_REPORT = {
-  stakingModuleIds: [],
+  stakingModules: [],
   nodeOperatorsWithExitedValidators: [],
   exitedValidatorsNumbers: [],
   wcBufferedEther: 0,
@@ -202,9 +202,18 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
 
       await appLido.pretendTotalPooledEtherGweiForTest(32)
 
-      await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 31 }, { from: user1 })
-      await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 }, { from: user2 })
-      await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 }, { from: user3 })
+      await app.handleCommitteeMemberReport(
+        { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 31 },
+        { from: user1 }
+      )
+      await app.handleCommitteeMemberReport(
+        { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 },
+        { from: user2 }
+      )
+      await app.handleCommitteeMemberReport(
+        { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 },
+        { from: user3 }
+      )
       await assertExpectedEpochs(1, 0)
 
       await app.updateQuorum(3, { from: voting })
@@ -247,7 +256,10 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
       await app.setTime(GENESIS_TIME + EPOCH_LENGTH * 123 + 1)
       await app.updateQuorum(1, { from: voting })
       await app.addOracleMember(user1, { from: voting })
-      await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 123, beaconValidators: 1, beaconBalanceGwei: 32 }, { from: user1 })
+      await app.handleCommitteeMemberReport(
+        { ...ZERO_MEMBER_REPORT, epochId: 123, beaconValidators: 1, beaconBalanceGwei: 32 },
+        { from: user1 }
+      )
 
       assertBn(await app.getExpectedEpochId(), 124)
       assertBn(await app.getLastCompletedEpochId(), 123)
@@ -422,7 +434,10 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
         const nextPooledEther = beginPooledEther + reward
         await app.setTime(GENESIS_TIME + EPOCH_LENGTH * 3) // 2 epochs later (timeElapsed = 768)
         await assertRevertCustomError(
-          app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 3, beaconValidators: 3, beaconBalanceGwei: nextPooledEther }, { from: user1 }),
+          app.handleCommitteeMemberReport(
+            { ...ZERO_MEMBER_REPORT, epochId: 3, beaconValidators: 3, beaconBalanceGwei: nextPooledEther },
+            { from: user1 }
+          ),
           'AllowedBeaconBalanceIncreaseExceeded'
         )
       })
@@ -465,7 +480,10 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
         const nextPooledEther = beginPooledEther - loss
         await app.setTime(GENESIS_TIME + EPOCH_LENGTH * 3) // 2 epochs later (timeElapsed = 768)
         await assertRevertCustomError(
-          app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 3, beaconValidators: 3, beaconBalanceGwei: nextPooledEther }, { from: user1 }),
+          app.handleCommitteeMemberReport(
+            { ...ZERO_MEMBER_REPORT, epochId: 3, beaconValidators: 3, beaconBalanceGwei: nextPooledEther },
+            { from: user1 }
+          ),
           'AllowedBeaconBalanceDecreaseExceeded'
         )
       })
@@ -554,7 +572,10 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
 
         // check fails
         await assertRevertCustomError(
-          app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 3, beaconValidators: 3, beaconBalanceGwei: nextPooledEther }, { from: user1 }),
+          app.handleCommitteeMemberReport(
+            { ...ZERO_MEMBER_REPORT, epochId: 3, beaconValidators: 3, beaconBalanceGwei: nextPooledEther },
+            { from: user1 }
+          ),
           'AllowedBeaconBalanceDecreaseExceeded'
         )
 
@@ -589,7 +610,10 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
 
         // check fails
         await assertRevertCustomError(
-          app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 3, beaconValidators: 3, beaconBalanceGwei: nextPooledEther }, { from: user1 }),
+          app.handleCommitteeMemberReport(
+            { ...ZERO_MEMBER_REPORT, epochId: 3, beaconValidators: 3, beaconBalanceGwei: nextPooledEther },
+            { from: user1 }
+          ),
           'AllowedBeaconBalanceIncreaseExceeded'
         )
 
@@ -621,14 +645,20 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
 
         // check fails
         await assertRevertCustomError(
-          app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 3, beaconValidators: 3, beaconBalanceGwei: nextPooledEther }, { from: user1 }),
+          app.handleCommitteeMemberReport(
+            { ...ZERO_MEMBER_REPORT, epochId: 3, beaconValidators: 3, beaconBalanceGwei: nextPooledEther },
+            { from: user1 }
+          ),
           'AllowedBeaconBalanceIncreaseExceeded'
         )
 
         await app.setTime(GENESIS_TIME + EPOCH_LENGTH * 5) // 4 epochs later (timeElapsed = 768*2)
         // check fails but 4 epochs passed
         await assertRevertCustomError(
-          app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 5, beaconValidators: 3, beaconBalanceGwei: nextPooledEther }, { from: user1 }),
+          app.handleCommitteeMemberReport(
+            { ...ZERO_MEMBER_REPORT, epochId: 5, beaconValidators: 3, beaconBalanceGwei: nextPooledEther },
+            { from: user1 }
+          ),
           'AllowedBeaconBalanceIncreaseExceeded'
         )
       })
@@ -689,14 +719,20 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
         ) // got quorum
         await assertExpectedEpochs(2, 0)
         await assertRevertCustomError(
-          app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: START_BALANCE }, { from: user1 }),
+          app.handleCommitteeMemberReport(
+            { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: START_BALANCE },
+            { from: user1 }
+          ),
           'EpochIsTooOld'
         )
       })
 
       it('reverts when trying to report future epoch', async () => {
         await assertRevertCustomError(
-          app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 2, beaconValidators: 1, beaconBalanceGwei: 32 }, { from: user1 }),
+          app.handleCommitteeMemberReport(
+            { ...ZERO_MEMBER_REPORT, epochId: 2, beaconValidators: 1, beaconBalanceGwei: 32 },
+            { from: user1 }
+          ),
           'UnexpectedEpoch'
         )
       })
@@ -710,7 +746,10 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
 
         it('reverts when trying to report stale epoch', async () => {
           await assertRevertCustomError(
-            app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 0, beaconValidators: 1, beaconBalanceGwei: 32 }, { from: user1 }),
+            app.handleCommitteeMemberReport(
+              { ...ZERO_MEMBER_REPORT, epochId: 0, beaconValidators: 1, beaconBalanceGwei: 32 },
+              { from: user1 }
+            ),
             'EpochIsTooOld'
           )
           await assertExpectedEpochs(1, 5)
@@ -718,9 +757,15 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
 
         it('reverts when trying to report this epoch again from the same user', async () => {
           await app.updateQuorum(2, { from: voting })
-          await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 5, beaconValidators: 1, beaconBalanceGwei: 32 }, { from: user1 })
+          await app.handleCommitteeMemberReport(
+            { ...ZERO_MEMBER_REPORT, epochId: 5, beaconValidators: 1, beaconBalanceGwei: 32 },
+            { from: user1 }
+          )
           await assertRevertCustomError(
-            app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 5, beaconValidators: 1, beaconBalanceGwei: 32 }, { from: user1 }),
+            app.handleCommitteeMemberReport(
+              { ...ZERO_MEMBER_REPORT, epochId: 5, beaconValidators: 1, beaconBalanceGwei: 32 },
+              { from: user1 }
+            ),
             'MemberAlreadyReported'
           )
           await assertExpectedEpochs(5, 5)
@@ -728,7 +773,10 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
 
         it('reverts when trying to report future epoch', async () => {
           await assertRevertCustomError(
-            app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 10, beaconValidators: 1, beaconBalanceGwei: 32 }, { from: user1 }),
+            app.handleCommitteeMemberReport(
+              { ...ZERO_MEMBER_REPORT, epochId: 10, beaconValidators: 1, beaconBalanceGwei: 32 },
+              { from: user1 }
+            ),
             'UnexpectedEpoch'
           )
         })
@@ -757,8 +805,14 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
     })
 
     it('removeOracleMember updates expectedEpochId and clears current reporting', async () => {
-      await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 0, beaconBalanceGwei: 0 }, { from: user1 })
-      await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 }, { from: user2 })
+      await app.handleCommitteeMemberReport(
+        { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 0, beaconBalanceGwei: 0 },
+        { from: user1 }
+      )
+      await app.handleCommitteeMemberReport(
+        { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 },
+        { from: user2 }
+      )
       await assertExpectedEpochs(1, 1)
       assertBn(await app.getCurrentOraclesReportStatus(), 0b011)
       assertBn(await app.getDistinctMemberReportsCount(), 2)
@@ -769,7 +823,10 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
       assertBn(await app.getDistinctMemberReportsCount(), 0)
 
       // user2 reports again the same epoch
-      await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 }, { from: user2 })
+      await app.handleCommitteeMemberReport(
+        { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 },
+        { from: user2 }
+      )
       await assertExpectedEpochs(1, 1)
       assertBn(await app.getCurrentOraclesReportStatus(), 0b010)
       assertBn(await app.getDistinctMemberReportsCount(), 1)
@@ -779,15 +836,24 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
       assertBn(await app.getCurrentOraclesReportStatus(), 0b000)
       assertBn(await app.getDistinctMemberReportsCount(), 0)
 
-      await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 }, { from: user1 })
+      await app.handleCommitteeMemberReport(
+        { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 },
+        { from: user1 }
+      )
       assertBn(await app.getCurrentOraclesReportStatus(), 0b001)
       assertBn(await app.getDistinctMemberReportsCount(), 1)
 
-      await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 11, beaconBalanceGwei: 101 }, { from: user2 })
+      await app.handleCommitteeMemberReport(
+        { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 11, beaconBalanceGwei: 101 },
+        { from: user2 }
+      )
       assertBn(await app.getCurrentOraclesReportStatus(), 0b011)
       assertBn(await app.getDistinctMemberReportsCount(), 2)
 
-      await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 }, { from: user3 })
+      await app.handleCommitteeMemberReport(
+        { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 },
+        { from: user3 }
+      )
       assertBn(await app.getCurrentOraclesReportStatus(), 0b111)
       assertBn(await app.getDistinctMemberReportsCount(), 2)
 
@@ -836,13 +902,19 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
 
       it('reverts when trying to report this epoch again', async () => {
         for (const account of [user1, user2, user3, user4, user5, user6]) {
-          await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 }, { from: account })
+          await app.handleCommitteeMemberReport(
+            { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 },
+            { from: account }
+          )
         }
         await assertExpectedEpochs(1, 1)
 
         for (const account of [user1, user2, user3, user4, user5, user6]) {
           await assertRevertCustomError(
-            app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 }, { from: account }),
+            app.handleCommitteeMemberReport(
+              { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 },
+              { from: account }
+            ),
             'MemberAlreadyReported'
           )
         }
@@ -851,7 +923,10 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
 
       it('6 oracles push alike, 1 miss', async () => {
         for (const acc of [user1, user2, user3, user4, user5, user6]) {
-          await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 }, { from: acc })
+          await app.handleCommitteeMemberReport(
+            { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 },
+            { from: acc }
+          )
           await assertExpectedEpochs(1, 1)
         }
 
@@ -866,34 +941,64 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
 
       it('oracles part 3+3, no quorum for 4', async () => {
         await app.updateQuorum(4, { from: voting })
-        await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 2, beaconBalanceGwei: 64 }, { from: user1 })
+        await app.handleCommitteeMemberReport(
+          { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 2, beaconBalanceGwei: 64 },
+          { from: user1 }
+        )
         await assertExpectedEpochs(1, 1)
-        await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 2, beaconBalanceGwei: 64 }, { from: user2 })
+        await app.handleCommitteeMemberReport(
+          { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 2, beaconBalanceGwei: 64 },
+          { from: user2 }
+        )
 
         await assertExpectedEpochs(1, 1)
-        await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 3, beaconBalanceGwei: 65 }, { from: user3 })
+        await app.handleCommitteeMemberReport(
+          { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 3, beaconBalanceGwei: 65 },
+          { from: user3 }
+        )
 
         await assertExpectedEpochs(1, 1)
-        await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 3, beaconBalanceGwei: 65 }, { from: user4 })
+        await app.handleCommitteeMemberReport(
+          { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 3, beaconBalanceGwei: 65 },
+          { from: user4 }
+        )
 
         await assertExpectedEpochs(1, 1)
-        await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 2, beaconBalanceGwei: 64 }, { from: user5 })
+        await app.handleCommitteeMemberReport(
+          { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 2, beaconBalanceGwei: 64 },
+          { from: user5 }
+        )
 
         await assertExpectedEpochs(1, 1)
-        await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 3, beaconBalanceGwei: 65 }, { from: user6 })
+        await app.handleCommitteeMemberReport(
+          { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 3, beaconBalanceGwei: 65 },
+          { from: user6 }
+        )
 
         await assertExpectedEpochs(1, 1)
       })
 
       it('oracles part 3+3, got quorum for 3', async () => {
         await app.updateQuorum(3, { from: voting })
-        await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 2, beaconBalanceGwei: 64 }, { from: user1 })
+        await app.handleCommitteeMemberReport(
+          { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 2, beaconBalanceGwei: 64 },
+          { from: user1 }
+        )
         await assertExpectedEpochs(1, 1)
-        await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 }, { from: user2 })
+        await app.handleCommitteeMemberReport(
+          { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 },
+          { from: user2 }
+        )
         await assertExpectedEpochs(1, 1)
-        await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 }, { from: user3 })
+        await app.handleCommitteeMemberReport(
+          { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 },
+          { from: user3 }
+        )
         await assertExpectedEpochs(1, 1)
-        await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 2, beaconBalanceGwei: 64 }, { from: user4 })
+        await app.handleCommitteeMemberReport(
+          { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 2, beaconBalanceGwei: 64 },
+          { from: user4 }
+        )
         await assertExpectedEpochs(1, 1)
         const receipt = await app.handleCommitteeMemberReport(
           { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 },
@@ -906,17 +1011,35 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
 
       it('oracles part 4+3, got quorum for 4', async () => {
         await app.updateQuorum(4, { from: voting })
-        await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 }, { from: user1 })
+        await app.handleCommitteeMemberReport(
+          { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 },
+          { from: user1 }
+        )
         await assertExpectedEpochs(1, 1)
-        await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 }, { from: user2 })
+        await app.handleCommitteeMemberReport(
+          { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 },
+          { from: user2 }
+        )
         await assertExpectedEpochs(1, 1)
-        await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 }, { from: user3 })
+        await app.handleCommitteeMemberReport(
+          { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 },
+          { from: user3 }
+        )
         await assertExpectedEpochs(1, 1)
-        await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 3, beaconBalanceGwei: 65 }, { from: user4 })
+        await app.handleCommitteeMemberReport(
+          { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 3, beaconBalanceGwei: 65 },
+          { from: user4 }
+        )
         await assertExpectedEpochs(1, 1)
-        await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 3, beaconBalanceGwei: 65 }, { from: user5 })
+        await app.handleCommitteeMemberReport(
+          { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 3, beaconBalanceGwei: 65 },
+          { from: user5 }
+        )
         await assertExpectedEpochs(1, 1)
-        await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 3, beaconBalanceGwei: 65 }, { from: user6 })
+        await app.handleCommitteeMemberReport(
+          { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 3, beaconBalanceGwei: 65 },
+          { from: user6 }
+        )
         await assertExpectedEpochs(1, 1)
         const receipt = await app.handleCommitteeMemberReport(
           { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 },
@@ -929,17 +1052,35 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
 
       it('oracles part 5+2, got quorum for 5', async () => {
         await app.updateQuorum(5, { from: voting })
-        await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 2, beaconBalanceGwei: 65 }, { from: user1 })
+        await app.handleCommitteeMemberReport(
+          { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 2, beaconBalanceGwei: 65 },
+          { from: user1 }
+        )
         await assertExpectedEpochs(1, 1)
-        await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 }, { from: user2 })
+        await app.handleCommitteeMemberReport(
+          { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 },
+          { from: user2 }
+        )
         await assertExpectedEpochs(1, 1)
-        await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 }, { from: user3 })
+        await app.handleCommitteeMemberReport(
+          { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 },
+          { from: user3 }
+        )
         await assertExpectedEpochs(1, 1)
-        await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 }, { from: user4 })
+        await app.handleCommitteeMemberReport(
+          { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 },
+          { from: user4 }
+        )
         await assertExpectedEpochs(1, 1)
-        await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 3, beaconBalanceGwei: 65 }, { from: user5 })
+        await app.handleCommitteeMemberReport(
+          { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 3, beaconBalanceGwei: 65 },
+          { from: user5 }
+        )
         await assertExpectedEpochs(1, 1)
-        await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 }, { from: user6 })
+        await app.handleCommitteeMemberReport(
+          { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 },
+          { from: user6 }
+        )
         await assertExpectedEpochs(1, 1)
         const receipt = await app.handleCommitteeMemberReport(
           { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 },
@@ -963,10 +1104,22 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
 
       it('only 2 alike report is enough in quorum 2', async () => {
         await app.updateQuorum(2, { from: voting })
-        await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 }, { from: user1 })
-        await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 2, beaconBalanceGwei: 33 }, { from: user2 })
-        await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 3, beaconBalanceGwei: 34 }, { from: user3 })
-        await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 0, beaconBalanceGwei: 0 }, { from: user4 })
+        await app.handleCommitteeMemberReport(
+          { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 },
+          { from: user1 }
+        )
+        await app.handleCommitteeMemberReport(
+          { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 2, beaconBalanceGwei: 33 },
+          { from: user2 }
+        )
+        await app.handleCommitteeMemberReport(
+          { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 3, beaconBalanceGwei: 34 },
+          { from: user3 }
+        )
+        await app.handleCommitteeMemberReport(
+          { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 0, beaconBalanceGwei: 0 },
+          { from: user4 }
+        )
         const receipt = await app.handleCommitteeMemberReport(
           { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 },
           { from: user5 }
@@ -979,7 +1132,10 @@ contract('LidoOracleNew', ([voting, user1, user2, user3, user4, user5, user6, us
     describe('updateQuorum lowering reaches quorum', function () {
       it('6 oracles push alike, 1 miss', async () => {
         for (const acc of [user1, user2, user3, user4, user5, user6]) {
-          await app.handleCommitteeMemberReport({ ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 }, { from: acc })
+          await app.handleCommitteeMemberReport(
+            { ...ZERO_MEMBER_REPORT, epochId: 1, beaconValidators: 1, beaconBalanceGwei: 32 },
+            { from: acc }
+          )
           await assertExpectedEpochs(1, 1)
         }
 
