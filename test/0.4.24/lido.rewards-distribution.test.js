@@ -123,7 +123,7 @@ contract('Lido', ([appManager, voting, user2, depositor]) => {
     )
     await curatedModule.setTotalKeys(100, { from: appManager })
     await curatedModule.setTotalUsedKeys(50, { from: appManager })
-    await curatedModule.setTotalStoppedKeys(100, { from: appManager })
+    await curatedModule.setTotalStoppedKeys(0, { from: appManager })
 
     const cfgCommunity = {
       treasuryFee: 500,
@@ -141,7 +141,7 @@ contract('Lido', ([appManager, voting, user2, depositor]) => {
     )
     await soloModule.setTotalKeys(100, { from: appManager })
     await soloModule.setTotalUsedKeys(50, { from: appManager })
-    await soloModule.setTotalStoppedKeys(100, { from: appManager })
+    await soloModule.setTotalStoppedKeys(0, { from: appManager })
 
     stakingModules = [curatedModule, soloModule]
   })

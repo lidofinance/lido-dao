@@ -38,9 +38,9 @@ const curatedModule = {
   type: 0, // Curated
   fee: 500, // in basic points
   treasuryFee: 500, // in basic points
-  totalKeys: 100,
+  totalKeys: 1000,
   totalUsedKeys: 50,
-  totalStoppedKeys: 100,
+  totalStoppedKeys: 0,
   targetShare: 10000,
   recycleShare: 0, // 0%, no effect if targetShare >=10000
   assignedDeposits: 0,

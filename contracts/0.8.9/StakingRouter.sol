@@ -63,7 +63,10 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
         bool paused;
         /// @notice flag if module can participate in further reward distribution
         bool active;
+
         uint64 lastDepositAt;
+
+        uint256 lastDepositBlock;
     }
 
     struct ModuleLookupCacheEntry {
@@ -240,7 +243,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
     /**
      * @notice set the module activity flag for participation in further reward distribution
      */
-    function setStakingModuleActive(address stakingModule, bool _active) external onlyRole(MODULE_PAUSE_ROLE) {
+    function setStakingModuleActive(address stakingModule, bool _active) external onlyRole(MODULE_CONTROL_ROLE) {
         StakingModule storage module = _getModuleByAddress(stakingModule);
         module.active = _active;
     }
@@ -256,6 +259,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
 
     function getStakingModuleLastDepositBlock(address stakingModule) external view returns (uint256) {
         StakingModule storage module = _getModuleByAddress(stakingModule);
+        return module.lastDepositBlock;
     }
 
     function _getModuleByAddress(address _moduleAddress) internal view returns(StakingModule storage) {
@@ -265,19 +269,21 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
     }
 
     /**
-     * @notice get total keys which can used for rewards and center distirbution
+     * @notice get total keys which can used for rewards and center distribution
+     *         active keys = used keys - stopped keys
      *
-     * @return totalUsedKeys total keys which used for calculation
-     * @return moduleUsedKeys array of amount module keys
+     * @return totalActiveKeys total keys which used for calculation
+     * @return moduleActiveKeys array of amount module keys
      */
-    function getTotalUsedKeys() public view returns (uint256 totalUsedKeys, uint256[] memory moduleUsedKeys) {
+    function getTotalActiveKeys() public view returns (uint256 totalActiveKeys, uint256[] memory moduleActiveKeys) {
         // calculate total used keys for operators
         uint256 _modulesCount = getModulesCount();
-        moduleUsedKeys = new uint256[](_modulesCount);
+        moduleActiveKeys = new uint256[](_modulesCount);
         for (uint256 i = 0; i < _modulesCount; ++i) {
-            StakingModule memory module = modules[i];
-            moduleUsedKeys[i] = IStakingModule(module.moduleAddress).getTotalUsedKeys(); //todo minus stopped
-            totalUsedKeys += moduleUsedKeys[i];
+            StakingModule memory stakingModule = modules[i];
+            IStakingModule module = IStakingModule(stakingModule.moduleAddress);
+            moduleActiveKeys[i] = module.getTotalUsedKeys() - module.getTotalStoppedKeys();
+            totalActiveKeys += moduleActiveKeys[i];
         }
     }
 
@@ -306,14 +312,16 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
         uint256 idx = 0;
         uint256 treasuryShares = 0;
 
-        (uint256 totalKeys, uint256[] memory moduleKeys) = getTotalUsedKeys();
+        (uint256 totalActiveKeys, uint256[] memory moduleActiveKeys) = getTotalActiveKeys();
+
+        require(totalActiveKeys > 0, "NO_KEYS");
 
         for (uint256 i = 0; i < _modulesCount; ++i) {
             StakingModule memory stakingModule = modules[i];
             IStakingModule module = IStakingModule(stakingModule.moduleAddress);
 
             recipients[idx] = stakingModule.moduleAddress;
-            modulesShares[idx] = (moduleKeys[i] * TOTAL_BASIS_POINTS / totalKeys);
+            modulesShares[idx] = (moduleActiveKeys[i] * TOTAL_BASIS_POINTS / totalActiveKeys);
             moduleFee[idx] = module.getFee();
             treasuryFee[idx] = stakingModule.treasuryFee;
 
@@ -622,9 +630,9 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
 
         // this.modules[index].used_keys += depositsAmount
         modules[moduleId].lastDepositAt = uint64(block.timestamp);
+        modules[moduleId].lastDepositBlock = block.number;
 
         // reduce rest amount of deposits
-        // lastDepositsAmount -= depositsAmount; //todo remove
         LAST_DEPOSITS_AMOUNT_POSITION.setStorageUint256(getLastDepositsAmount() - depositsAmount);
 
         return depositsAmount;
