@@ -171,10 +171,6 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
         emit ContractVersionSet(1);
     }
 
-    function _initialize_v1() internal {
-        
-    }
-
     /**
      * @notice register a new module
      * @param _name name of module
@@ -220,23 +216,22 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
     }
 
     /**
-     * @notice pause a module
-     * @param _moduleIndex index of module
+     * @notice pause deposits for module
+     * @param stakingModule address of module
      */
-    function pauseModule(uint256 _moduleIndex) external onlyRole(MODULE_PAUSE_ROLE) {
-        StakingModule storage module = modules[_moduleIndex];
+    function pauseStakingModule(address stakingModule) external onlyRole(MODULE_PAUSE_ROLE) {
+        StakingModule storage module = _getModuleByAddress(stakingModule);
         require(!module.paused, "module_is_paused");
 
         module.paused = true;
     }
 
     /**
-     * Unpauses deposits.
-     *
-     * Only callable by the dsm.
+     * @notice unpause deposits for module
+     * @param stakingModule address of module
      */
-    function unpauseModule(uint256 _moduleIndex) external onlyRole(MODULE_CONTROL_ROLE) {
-        StakingModule storage module = modules[_moduleIndex];
+    function unpauseStakingModule(address stakingModule) external onlyRole(MODULE_CONTROL_ROLE) {
+        StakingModule storage module = _getModuleByAddress(stakingModule);
         if (module.paused) {
             module.paused = false;
         }
@@ -245,9 +240,28 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
     /**
      * @notice set the module activity flag for participation in further reward distribution
      */
-    function setModuleActive(uint256 _moduleIndex, bool _active) external onlyRole(MODULE_PAUSE_ROLE) {
-        StakingModule storage module = modules[_moduleIndex];
+    function setStakingModuleActive(address stakingModule, bool _active) external onlyRole(MODULE_PAUSE_ROLE) {
+        StakingModule storage module = _getModuleByAddress(stakingModule);
         module.active = _active;
+    }
+
+    function getStakingModuleIsPaused(address stakingModule) external view returns (bool) {
+        StakingModule storage module = _getModuleByAddress(stakingModule);
+        return module.paused;
+    }
+
+    function getStakingModuleKeysOpIndex(address stakingModule) external view returns (uint256) {
+        return IStakingModule(stakingModule).getKeysOpIndex();
+    }
+
+    function getStakingModuleLastDepositBlock(address stakingModule) external view returns (uint256) {
+        StakingModule storage module = _getModuleByAddress(stakingModule);
+    }
+
+    function _getModuleByAddress(address _moduleAddress) internal view returns(StakingModule storage) {
+        uint256 _moduleIndex = modulesIds[_moduleAddress];
+        StakingModule storage module = modules[_moduleIndex];
+        return module;
     }
 
     /**

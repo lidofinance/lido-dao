@@ -23,6 +23,8 @@ contract ModuleSolo is IStakingModule {
     
     uint16 public moduleType;
 
+    uint16 public keysOpIndex;
+
     uint256 constant public PUBKEY_LENGTH = 48;
     uint256 constant public SIGNATURE_LENGTH = 96;
 
@@ -99,8 +101,6 @@ contract ModuleSolo is IStakingModule {
         return stakingRouter;
     }
 
-
-
     function trimUnusedKeys() external {
 
     }
@@ -111,5 +111,9 @@ contract ModuleSolo is IStakingModule {
 
     function getType() external returns(uint16) {
         return moduleType;
+    }
+
+    function getKeysOpIndex() external view returns (uint256) {
+        return keysOpIndex;
     }
 }

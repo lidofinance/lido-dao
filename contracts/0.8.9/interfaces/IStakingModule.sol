@@ -19,4 +19,5 @@ interface IStakingModule {
     function setStakingRouter(address addr) external;
 
     function trimUnusedKeys() external;
+    function getKeysOpIndex() external view returns (uint256);
 }
