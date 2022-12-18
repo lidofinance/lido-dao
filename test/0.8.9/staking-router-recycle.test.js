@@ -197,7 +197,7 @@ contract('StakingRouter', (accounts) => {
       // add NodeOperatorRegistry
       // name, address, cap, treasuryFee
       await stakingRouter.addModule('Curated', operators.address, proModule.targetShare, proModule.recycleShare, proModule.treasuryFee, {
-        from: appManager
+        from: voting
       })
 
       await operators.setTotalKeys(proModule.totalKeys, { from: appManager })
@@ -229,7 +229,7 @@ contract('StakingRouter', (accounts) => {
         log(`module ${name} address`, _module.address)
 
         await stakingRouter.addModule(name, _module.address, module.targetShare, module.recycleShare, module.treasuryFee, {
-          from: appManager
+          from: voting
         })
         await _module.setTotalKeys(module.totalKeys, { from: appManager })
         await _module.setTotalUsedKeys(module.totalUsedKeys, { from: appManager })
@@ -258,7 +258,7 @@ contract('StakingRouter', (accounts) => {
 
       const alloc = await getAndCheckAlloc(stakingRouter)
       log('allocation1', alloc.assignedKeys)
-      log('last distribute', (await stakingRouter.lastDistributeAt()).toString())
+      log('last distribute', (await stakingRouter.getLastDistributeAt()).toString())
 
       const modulesCount = await stakingRouter.getModulesCount()
       log('Modules count', parseInt(modulesCount))
@@ -400,7 +400,7 @@ contract('StakingRouter', (accounts) => {
           stakeModule.recycleShare,
           stakeModule.treasuryFee,
           {
-            from: appManager
+            from: voting
           }
         )
         await _module.setTotalKeys(stakeModule.totalKeys, { from: appManager })
@@ -447,7 +447,7 @@ contract('StakingRouter', (accounts) => {
       logWideSplitter()
       await logTx(bl('call distributeDeposits()'), stakingRouter.distributeDeposits())
       log(OK, `- ${gr('NO revert')}!`)
-      const lastDistributeAt = (await stakingRouter.lastDistributeAt()).toNumber()
+      const lastDistributeAt = (await stakingRouter.getLastDistributeAt()).toNumber()
       log('last distribute', lastDistributeAt)
 
       // after allocation
@@ -548,7 +548,7 @@ contract('StakingRouter', (accounts) => {
         recycleKeys: [0, 0, 85]
       })
 
-      assert.equal((await stakingRouter.lastDistributeAt()).toNumber(), lastDistributeAt)
+      assert.equal((await stakingRouter.getLastDistributeAt()).toNumber(), lastDistributeAt)
 
       keysAmount = 25
       moduleId = 0

@@ -101,16 +101,16 @@ contract StakingRouterLinear {
 
     uint256 public constant MAX_TIME = 86400;
 
-    mapping(uint => StakingModule) internal modules;
+    mapping(uint256 => StakingModule) internal modules;
     mapping(address => uint) internal modules_ids;
-    uint internal modulesCount;
+    uint256 internal modulesCount;
 
     //stake allocation module_index -> amount
-    mapping(uint => uint) public allocation;
-    uint internal totalAllocation;
+    mapping(uint256 => uint256) public allocation;
+    uint256 internal totalAllocation;
 
-    uint public lastDistribute;
-    uint public timePeriod = 86400;
+    uint256 public lastDistribute;
+    uint256 public timePeriod = 86400;
 
     constructor(address _lido, address _deposit_contract) {
         lido = _lido;
@@ -304,9 +304,9 @@ contract StakingRouterLinear {
 
             IStakingModule module = IStakingModule(stakingModule.moduleAddress);
 
-            uint totalFee = module.getFee() + stakingModule.treasuryFee;
-            uint moduleFee = (module.getFee() * TOTAL_BASIS_POINTS) / totalFee;
-            uint treasuryFee = (stakingModule.treasuryFee * TOTAL_BASIS_POINTS) / totalFee;
+            uint256 totalFee = module.getFee() + stakingModule.treasuryFee;
+            uint256 moduleFee = (module.getFee() * TOTAL_BASIS_POINTS) / totalFee;
+            uint256 treasuryFee = (stakingModule.treasuryFee * TOTAL_BASIS_POINTS) / totalFee;
 
             // uint256 moduleTotalKeys = module.getTotalKeys();
             uint256 rewardsShares = (_totalShares * _moduleKeys[i]) / _totalKeys;
@@ -442,8 +442,8 @@ contract StakingRouterLinear {
         uint256 numKeys = pubkeys.length / PUBKEY_LENGTH;
         require(numKeys == signatures.length / SIGNATURE_LENGTH, 'REGISTRY_INCONSISTENT_SIG_COUNT');
 
-        uint moduleId = modules_ids[msg.sender];
-        uint alloc = allocation[moduleId];
+        uint256 moduleId = modules_ids[msg.sender];
+        uint256 alloc = allocation[moduleId];
         IStakingModule module = IStakingModule(msg.sender);
 
         if (alloc >= numKeys) {
@@ -460,16 +460,16 @@ contract StakingRouterLinear {
             return numKeys;
         }
 
-        uint currentTimestamp = block.timestamp;
-        uint left = currentTimestamp - lastDistribute;
+        uint256 currentTimestamp = block.timestamp;
+        uint256 left = currentTimestamp - lastDistribute;
 
         require(left > MAX_TIME / 2, 'time threshold');
 
-        uint unlocked = (left * TOTAL_BASIS_POINTS) / MAX_TIME;
+        uint256 unlocked = (left * TOTAL_BASIS_POINTS) / MAX_TIME;
 
-        uint amount = 0;
-        uint unlocked_amount = 0;
-        for (uint i = 0; i < modulesCount; i++) {
+        uint256 amount = 0;
+        uint256 unlocked_amount = 0;
+        for (uint256 i = 0; i < modulesCount; i++) {
             if (i == moduleId) continue;
 
             unlocked_amount = (allocation[i] * unlocked) / TOTAL_BASIS_POINTS;
@@ -478,7 +478,7 @@ contract StakingRouterLinear {
                 amount += unlocked_amount;
                 allocation[i] -= unlocked_amount;
             } else {
-                uint a = numKeys - amount;
+                uint256 a = numKeys - amount;
                 amount += a;
                 allocation[i] -= a;
             }

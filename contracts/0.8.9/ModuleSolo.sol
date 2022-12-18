@@ -82,7 +82,7 @@ contract ModuleSolo is IStakingModule {
         uint256 numKeys = pubkeys.length / PUBKEY_LENGTH;
         require(numKeys == signatures.length / SIGNATURE_LENGTH, "REGISTRY_INCONSISTENT_SIG_COUNT");
 
-        uint keys = IStakingRouter(stakingRouter).deposit(pubkeys, signatures);
+        uint256 keys = IStakingRouter(stakingRouter).deposit(pubkeys, signatures);
 
         totalUsedKeys += keys;
 

@@ -153,13 +153,19 @@ contract('StakingRouter', (accounts) => {
     stakingRouter = await StakingRouter.new(depositContract.address, { from: appManager })
 
     // initialize
-    await stakingRouter.initialize(lido.address)
+    await stakingRouter.initialize(lido.address, appManager)
+
+    // Set up the staking router permissions.
+    const MANAGE_WITHDRAWAL_KEY_ROLE = await stakingRouter.MANAGE_WITHDRAWAL_KEY_ROLE()
+    const MODULE_PAUSE_ROLE = await stakingRouter.MODULE_PAUSE_ROLE()
+    const MODULE_CONTROL_ROLE = await stakingRouter.MODULE_CONTROL_ROLE()
+
+    await stakingRouter.grantRole(MANAGE_WITHDRAWAL_KEY_ROLE, voting, { from: appManager })
+    await stakingRouter.grantRole(MODULE_PAUSE_ROLE, voting, { from: appManager })
+    await stakingRouter.grantRole(MODULE_CONTROL_ROLE, voting, { from: appManager })
 
     // set staking router to lido
     await lido.setStakingRouter(stakingRouter.address)
-
-    //
-    // const receipt = await lido.setProtocolContracts(await app.getOracle(), await app.getTreasury(), user1, { from: voting })
 
     const total = await lido.totalSupply()
     const shares = await lido.getTotalShares()
@@ -181,9 +187,9 @@ contract('StakingRouter', (accounts) => {
       // 50% of mintedShares
       await operators.setFee(500, { from: appManager })
 
-      // add NodeOperatorRegistry
+      // add NodeOperatorRegistry from voting
       // name, address, cap, treasuryFee
-      await stakingRouter.addModule('Curated', operators.address, 10000, 0, 500, { from: appManager })
+      await stakingRouter.addModule('Curated', operators.address, 10000, 0, 500, { from: voting })
 
       await operators.setTotalKeys(curatedModule.totalKeys, { from: appManager })
       await operators.setTotalUsedKeys(curatedModule.totalUsedKeys, { from: appManager })
@@ -217,7 +223,7 @@ contract('StakingRouter', (accounts) => {
         const name = 'Community' + i
 
         await stakingRouter.addModule(name, _module.address, module.targetShare, module.recycleShare, module.treasuryFee, {
-          from: appManager
+          from: voting
         })
         await _module.setTotalKeys(module.totalKeys, { from: appManager })
         await _module.setTotalUsedKeys(module.totalUsedKeys, { from: appManager })
@@ -285,7 +291,7 @@ contract('StakingRouter', (accounts) => {
 
       console.log('--- INMODULE REWORDS DISTRIBUTION ---')
       const opShares = await lido.sharesOf(operators.address)
-      console.log('NodeOpeartorRegistry shares', parseInt(opShares))
+      console.log('NodeOperatorRegistry shares', parseInt(opShares))
 
       const opCount = await operators.getNodeOperatorsCount()
       console.log('op count', parseInt(opCount))
