@@ -136,6 +136,9 @@ contract('StakingRouter', (accounts) => {
     operators = await NodeOperatorsRegistryMock.at(proxyAddress)
     await operators.initialize(lido.address)
 
+    // Set up NOR permissions
+    await acl.createPermission(voting, operators.address, await operators.SET_FEE_ROLE(), appManager, { from: appManager })
+
     // Init the BURN_ROLE role and assign in to voting
     await acl.createPermission(voting, lido.address, await lido.BURN_ROLE(), appManager, { from: appManager })
 
@@ -185,7 +188,7 @@ contract('StakingRouter', (accounts) => {
 
     it(`init counters and burn amount per run works`, async () => {
       // 50% of mintedShares
-      await operators.setFee(500, { from: appManager })
+      await operators.setFee(500, { from: voting })
 
       // add NodeOperatorRegistry from voting
       // name, address, cap, treasuryFee

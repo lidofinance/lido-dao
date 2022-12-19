@@ -37,6 +37,9 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
     bytes32 public constant SET_NODE_OPERATOR_ADDRESS_ROLE = keccak256('SET_NODE_OPERATOR_ADDRESS_ROLE');
     bytes32 public constant SET_NODE_OPERATOR_LIMIT_ROLE = keccak256('SET_NODE_OPERATOR_LIMIT_ROLE');
     bytes32 public constant REPORT_STOPPED_VALIDATORS_ROLE = keccak256('REPORT_STOPPED_VALIDATORS_ROLE');
+    bytes32 public constant SET_FEE_ROLE = keccak256('SET_FEE_ROLE');
+    bytes32 public constant SET_TYPE_ROLE = keccak256('SET_TYPE_ROLE');
+    bytes32 public constant SET_STAKING_ROUTER_ROLE = keccak256('SET_STAKING_ROUTER_ROLE');
 
     uint256 public constant PUBKEY_LENGTH = 48;
     uint256 public constant SIGNATURE_LENGTH = 96;
@@ -772,7 +775,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         require(_steth != address(0), "STETH_ADDRESS_ZERO");
 
         STETH_POSITION.setStorageAddress(_steth);
-        
+
 
         uint256 totalOperators = getNodeOperatorsCount();
         uint256 totalKeys;
@@ -796,7 +799,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         emit ContractVersionSet(2);
     }
 
-    function setStakingRouter(address _addr) external {
+    function setStakingRouter(address _addr) external auth(SET_STAKING_ROUTER_ROLE) {
         STAKING_ROUTER_POSITION.setStorageAddress(_addr);
     }
 
@@ -804,15 +807,15 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         return STAKING_ROUTER_POSITION.getStorageAddress();
     }
 
-    function setType(uint16 _type) external {
+    function setType(uint16 _type) external auth(SET_TYPE_ROLE) {
         TYPE_POSITION.setStorageUint256(uint256(_type));
     }
 
-    function getType() external returns (uint16) {
+    function getType() external view returns (uint16) {
         return uint16(TYPE_POSITION.getStorageUint256());
     }
 
-    function setFee(uint16 _value) external {
+    function setFee(uint16 _value) external auth(SET_FEE_ROLE) {
         require(_value <= TOTAL_BASIS_POINTS, 'VALUE_OVER_100_PERCENT');
         FEE_POSITION.setStorageUint256(uint256(_value));
     }

@@ -138,6 +138,9 @@ contract('StakingRouter', (accounts) => {
     await acl.createPermission(voting, lido.address, await lido.BURN_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, lido.address, await lido.MANAGE_WITHDRAWAL_KEY(), appManager, { from: appManager })
 
+    await acl.createPermission(voting, operators.address, await operators.SET_FEE_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, operators.address, await operators.SET_TYPE_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, operators.address, await operators.SET_STAKING_ROUTER_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, operators.address, await operators.ADD_NODE_OPERATOR_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, operators.address, await operators.MANAGE_SIGNING_KEYS(), appManager, { from: appManager })
     await acl.createPermission(voting, operators.address, await operators.SET_NODE_OPERATOR_LIMIT_ROLE(), appManager, { from: appManager })
@@ -185,14 +188,14 @@ contract('StakingRouter', (accounts) => {
       log('--- stranger1 send 10eth ---')
       await web3.eth.sendTransaction({ from: stranger2, to: lido.address, value: ETH(10) })
       // 50% of mintedShares
-      await operators.setFee(500, { from: appManager })
+      await operators.setFee(500, { from: voting })
       const NORFee = await operators.getFee()
       assertBn(500, NORFee, 'invalid node operator registry fee')
     })
 
     it(`base functions`, async () => {
       // 50% of mintedShares
-      await operators.setFee(500, { from: appManager })
+      await operators.setFee(500, { from: voting })
 
       // add NodeOperatorRegistry
       // name, address, cap, treasuryFee
@@ -270,8 +273,8 @@ contract('StakingRouter', (accounts) => {
       const comModule = await ModuleSolo.at(communityModule.moduleAddress)
 
       log('Set staking router for modules')
-      curModule.setStakingRouter(stakingRouter.address)
-      comModule.setStakingRouter(stakingRouter.address)
+      curModule.setStakingRouter(stakingRouter.address, { from: voting })
+      comModule.setStakingRouter(stakingRouter.address, { from: voting })
 
       const keys1 = genKeys(3)
       log(bl('DEPOSIT 3 keys COMMUNITY module'))
@@ -407,7 +410,7 @@ contract('StakingRouter', (accounts) => {
         await _module.setTotalUsedKeys(stakeModule.totalUsedKeys, { from: appManager })
         await _module.setTotalStoppedKeys(stakeModule.totalStoppedKeys, { from: appManager })
 
-        await _module.setStakingRouter(stakingRouter.address)
+        await _module.setStakingRouter(stakingRouter.address, { from: voting })
         stakeModule.address = _module.address
         stakeModuleContracts.push(_module)
         totalAllocation += stakeModule.totalUsedKeys - stakeModule.totalStoppedKeys

@@ -7,12 +7,13 @@ pragma solidity 0.4.24;
 interface IStakingModule {
     
     function getFee() external view returns (uint16);
+    function setFee(uint16 _value) external;
 
     function getTotalKeys() external view returns (uint256);
     function getTotalUsedKeys() external view returns (uint256);
     function getTotalStoppedKeys() external view returns (uint256);
 
-    function getType() external returns(uint16);
+    function getType() external view returns(uint16);
     function setType(uint16 _type) external;
 
     function getStakingRouter() external returns(address);
