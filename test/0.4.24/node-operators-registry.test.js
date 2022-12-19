@@ -831,9 +831,34 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assertBn(await app.getKeysOpIndex(), 1)
     })
   })
+  context('finalized upgrade', () => {
+    it('calculate current keys', async () => {
+      await app.addNodeOperator('0', user1, { from: voting })
+      await app.addNodeOperator('1', user2, { from: voting })
+      await app.addNodeOperator('2', user3, { from: voting })
+
+      await app.setOperatorUsedKeys(0, 3)
+      await app.setOperatorStoppedKeys(0, 4)
+      await app.setOperatorTotalKeys(0, 7)
+
+      await app.setOperatorUsedKeys(1, 7)
+      await app.setOperatorStoppedKeys(1, 1)
+      await app.setOperatorTotalKeys(1, 8)
+
+      await app.setOperatorUsedKeys(2, 0)
+      await app.setOperatorStoppedKeys(2, 10)
+      await app.setOperatorTotalKeys(2, 10)
+
+      await app.finalizeUpgrade_v2(steth.address)
+
+      assertBn(await app.getTotalKeys(), 25)
+      assertBn(await app.getTotalUsedKeys(), 10)
+      assertBn(await app.getTotalStoppedKeys(), 15)
+    })
+  })
   context('distribute rewards', () => {
     it('must distribute rewards to operators', async () => {
-      await app.finalizeUpgrade_v3(steth.address)
+      await app.finalizeUpgrade_v2(steth.address)
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, ETH(10))
 
@@ -841,9 +866,9 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await app.addNodeOperator('1', user2, { from: voting })
       await app.addNodeOperator('2', user3, { from: voting })
 
-      await app.setUsedKeys(0, 3)
-      await app.setUsedKeys(1, 7)
-      await app.setUsedKeys(2, 0)
+      await app.setOperatorUsedKeys(0, 3)
+      await app.setOperatorUsedKeys(1, 7)
+      await app.setOperatorUsedKeys(2, 0)
       await app.setTotalUsedKeys(10)
 
       await app.distributeRewards({ from: user3 })

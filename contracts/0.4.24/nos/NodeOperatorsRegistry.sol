@@ -762,39 +762,38 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
      * @dev Value 1 in CONTRACT_VERSION_POSITION is skipped due to change in numbering
      * For more details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md
      */
-    function finalizeUpgrade_v2() external {
+    function finalizeUpgrade_v2(address _steth) external {
         require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, 'WRONG_BASE_VERSION');
 
-        _initialize_v2();
+        _initialize_v2(_steth);
     }
 
-    function _initialize_v2() internal {
-        CONTRACT_VERSION_POSITION.setStorageUint256(2);
+    function _initialize_v2(address _steth) internal {
+        require(_steth != address(0), "STETH_ADDRESS_ZERO");
 
-        // uint256 totalOperators = getNodeOperatorsCount();
-        // for (uint256 operatorId = 0; operatorId < totalOperators;++operatorId) {
-        //     NodeOperator memory operator = operators[operatorId];
-        //     if (!operator.active) {
-        //         continue;
-        //     }
-        //     stat.totalKeys += operator.totalSigningKeys;
-        //     stat.totalUsedKeys += operator.usedSigningKeys;
-        //     stat.totalStoppedKeys += operator.stoppedValidators;
-        // }
-
-        emit ContractVersionSet(2);
-    }
-
-    function finalizeUpgrade_v3(address _steth) external {
-        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, 'WRONG_BASE_VERSION');
-
-        _initialize_v3(_steth);
-    }
-
-    function _initialize_v3(address _steth) internal {
         STETH_POSITION.setStorageAddress(_steth);
-        CONTRACT_VERSION_POSITION.setStorageUint256(3);
-        emit ContractVersionSet(3);
+        
+
+        uint256 totalOperators = getNodeOperatorsCount();
+        uint256 totalKeys;
+        uint256 totalUsedKeys;
+        uint256 totalStoppedKeys;
+        for (uint256 operatorId = 0; operatorId < totalOperators;++operatorId) {
+            NodeOperator memory operator = operators[operatorId];
+            if (!operator.active) {
+                continue;
+            }
+            totalKeys += operator.totalSigningKeys;
+            totalUsedKeys += operator.usedSigningKeys;
+            totalStoppedKeys += operator.stoppedValidators;
+        }
+
+        TOTAL_KEYS_POSITION.setStorageUint256(totalKeys);
+        TOTAL_USED_KEYS_POSITION.setStorageUint256(totalUsedKeys);
+        TOTAL_STOPPED_KEYS_POSITION.setStorageUint256(totalStoppedKeys);
+
+        CONTRACT_VERSION_POSITION.setStorageUint256(2);
+        emit ContractVersionSet(2);
     }
 
     function setStakingRouter(address _addr) external {
