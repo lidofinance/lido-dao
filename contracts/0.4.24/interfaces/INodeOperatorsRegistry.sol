@@ -88,16 +88,6 @@ interface INodeOperatorsRegistry {
     event RewardsDistributedInShares(uint256 indexed id, uint256 amount);
 
     /**
-     * @notice Selects and returns at most `_numKeys` signing keys (as well as the corresponding
-     *         signatures) from the set of active keys and marks the selected keys as used.
-     *         May only be called by the pool contract.
-     *
-     * @param _numKeys The number of keys to select. The actual number of selected keys may be less
-     *        due to the lack of active keys.
-     */
-    function assignNextSigningKeys(uint256 _numKeys) external returns (bytes memory pubkeys, bytes memory signatures);
-
-    /**
      * @notice Add `_quantity` validator signing keys to the keys of the node operator #`_operator_id`. Concatenated keys are: `_pubkeys`
      * @dev Along with each key the DAO has to provide a signatures for the
      *      (pubkey, withdrawal_credentials, 32000000000) message.

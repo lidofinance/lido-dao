@@ -12,7 +12,11 @@ interface IStakingRouter {
         uint256[] memory moduleFee,
         uint256[] memory treasuryFee
     );
-    function deposit(bytes memory pubkeys, bytes memory signatures) external returns(uint);
+    function deposit(
+        uint256 maxDepositsCount,
+        address stakingModule,
+        bytes calldata depositCalldata
+    ) external;
 
     /**
       * @notice Set credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched to `_withdrawalCredentials`
@@ -25,4 +29,14 @@ interface IStakingRouter {
       * @notice Returns current credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
       */
     function getWithdrawalCredentials() external view returns (bytes32);
+
+    function pauseStakingModule(address stakingModule) external;
+
+    function unpauseStakingModule(address stakingModule) external;
+
+    function getStakingModuleIsPaused(address stakingModule) external view returns (bool);
+
+    function getStakingModuleKeysOpIndex(address stakingModule) external view returns (uint256);
+
+    function getStakingModuleLastDepositBlock(address stakingModule) external view returns (uint256);
 }

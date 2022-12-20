@@ -98,14 +98,14 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
     /// @dev link to the index of operations with keys
     bytes32 internal constant KEYS_OP_INDEX_POSITION = keccak256('lido.NodeOperatorsRegistry.keysOpIndex');
 
-    /// @dev link to the Lido contract
+    /// @dev link to the Staking Router contract
     bytes32 internal constant STAKING_ROUTER_POSITION = keccak256('lido.NodeOperatorsRegistry.stakingRouter');
 
     /// @dev module type
     bytes32 internal constant TYPE_POSITION = keccak256('lido.NodeOperatorsRegistry.type');
 
-    modifier onlyLido() {
-        require(msg.sender == LIDO_POSITION.getStorageAddress(), 'APP_AUTH_FAILED');
+    modifier onlyStakingRouter() {
+        require(msg.sender == getStakingRouter(), 'APP_AUTH_FAILED');
         _;
     }
 
@@ -245,7 +245,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
      * @notice Remove unused signing keys
      * @dev Function is used by the Lido contract
      */
-    function trimUnusedKeys() external onlyLido {
+    function trimUnusedKeys() external onlyStakingRouter {
         uint256 length = getNodeOperatorsCount();
         uint256 trimmedKeys = 0;
         for (uint256 operatorId = 0; operatorId < length; ++operatorId) {
@@ -364,7 +364,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
      * @param _numKeys The number of keys to select. The actual number of selected keys may be less
      *        due to the lack of active keys.
      */
-    function assignNextSigningKeys(uint256 _numKeys) public returns (bytes memory pubkeys, bytes memory signatures) {
+    function _assignNextSigningKeys(uint256 _numKeys) internal returns (bytes memory pubkeys, bytes memory signatures) {
         // Memory is very cheap, although you don't want to grow it too much
         DepositLookupCacheEntry[] memory cache = _loadOperatorCache();
         if (0 == cache.length) return (new bytes(0), new bytes(0));
@@ -803,7 +803,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         STAKING_ROUTER_POSITION.setStorageAddress(_addr);
     }
 
-    function getStakingRouter() public returns (address) {
+    function getStakingRouter() public view returns (address) {
         return STAKING_ROUTER_POSITION.getStorageAddress();
     }
 
@@ -836,23 +836,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         return TOTAL_STOPPED_KEYS_POSITION.getStorageUint256();
     }
 
-    function deposit(uint256 _numKeys) external {
-        (bytes memory pubkeys, bytes memory signatures) = assignNextSigningKeys(_numKeys);
-
-        require(pubkeys.length > 0, 'no free keys');
-
-        require(pubkeys.length % PUBKEY_LENGTH == 0, 'REGISTRY_INCONSISTENT_PUBKEYS_LEN');
-        require(signatures.length % SIGNATURE_LENGTH == 0, 'REGISTRY_INCONSISTENT_SIG_LEN');
-
-        uint256 numKeys = pubkeys.length / PUBKEY_LENGTH;
-        require(numKeys == signatures.length / SIGNATURE_LENGTH, 'REGISTRY_INCONSISTENT_SIG_COUNT');
-
-        address stakingRouter = getStakingRouter();
-        uint256 keys = IStakingRouter(stakingRouter).deposit(pubkeys, signatures);
-
-        require(numKeys == keys);
-    }
-
     function distributeRewards() external returns (uint256 distributed) {
         IStETH stETH = IStETH(STETH_POSITION.getStorageAddress());
 
@@ -869,5 +852,14 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
             distributed = distributed.add(shares[idx]);
             emit RewardsDistributedInShares(idx, shares[idx]);
         }
+    }
+
+    function prepNextSigningKeys(uint256 maxDepositsCount, bytes depositCalldata) 
+        external 
+        onlyStakingRouter 
+        returns (bytes memory pubkeys, bytes memory signatures) 
+    {
+        (pubkeys, signatures) = _assignNextSigningKeys(maxDepositsCount);
+        return (pubkeys, signatures);
     }
 }

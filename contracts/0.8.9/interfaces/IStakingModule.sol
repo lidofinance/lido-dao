@@ -12,12 +12,14 @@ interface IStakingModule {
     function getTotalUsedKeys() external view returns (uint256);
     function getTotalStoppedKeys() external view returns (uint256);
 
-    function getType() external returns(uint16);
+    function getType() external view returns(uint16);
     function setType(uint16 _type) external;
 
-    function getStakingRouter() external returns(address);
+    function getStakingRouter() external view returns(address);
     function setStakingRouter(address addr) external;
 
     function trimUnusedKeys() external;
     function getKeysOpIndex() external view returns (uint256);
+
+    function prepNextSigningKeys(uint256 maxDepositsCount, bytes calldata depositCalldata) external returns (bytes memory pubkeys, bytes memory signatures);
 }

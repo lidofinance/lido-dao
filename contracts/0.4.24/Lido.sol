@@ -101,6 +101,8 @@ contract Lido is ILido, StETH, AragonApp {
     bytes32 internal constant BEACON_BALANCE_POSITION = keccak256('lido.Lido.beaconBalance');
     /// @dev number of Lido's validators available in the Beacon state
     bytes32 internal constant BEACON_VALIDATORS_POSITION = keccak256('lido.Lido.beaconValidators');
+    /// @dev amount of Ether sended to the Staking Router contract balance
+    bytes32 internal constant STAKING_ROUTER_BUFFERED_ETHER_POSITION = keccak256('lido.Lido.stakingRouterBufferedEther');
 
     /// @dev percent in basis points of total pooled ether allowed to withdraw from LidoExecutionLayerRewardsVault per LidoOracle report
     bytes32 internal constant EL_REWARDS_WITHDRAWAL_LIMIT_POSITION = keccak256('lido.Lido.ELRewardsWithdrawalLimit');
@@ -674,8 +676,10 @@ contract Lido is ILido, StETH, AragonApp {
         uint256 _amount = _numKeys.mul(DEPOSIT_SIZE);
 
         DEPOSITED_VALIDATORS_POSITION.setStorageUint256(DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(_numKeys));
-
-        // emit Unbuffered(_amount);
+        
+        uint256 buffered = STAKING_ROUTER_BUFFERED_ETHER_POSITION.getStorageUint256();
+        uint256 newBuffered = _amount >= buffered ? 0 : buffered.sub(_amount);
+        STAKING_ROUTER_BUFFERED_ETHER_POSITION.setStorageUint256(newBuffered);
     }
 
     function getStakingRouter() public view returns (address) {
@@ -756,8 +760,15 @@ contract Lido is ILido, StETH, AragonApp {
      */
     function _markAsUnbuffered(uint256 _amount) internal {
         BUFFERED_ETHER_POSITION.setStorageUint256(BUFFERED_ETHER_POSITION.getStorageUint256().sub(_amount));
+        STAKING_ROUTER_BUFFERED_ETHER_POSITION.setStorageUint256(
+            STAKING_ROUTER_BUFFERED_ETHER_POSITION.getStorageUint256().add(_amount)
+        );
 
         emit Unbuffered(_amount);
+    }
+
+    function getStakingRouterBufferedEther() external view returns(uint256) {
+        return STAKING_ROUTER_BUFFERED_ETHER_POSITION.getStorageUint256();
     }
 
     /**
@@ -803,40 +814,10 @@ contract Lido is ILido, StETH, AragonApp {
      * @return total balance in wei
      */
     function _getTotalPooledEther() internal view returns (uint256) {
-        return _getBufferedEther().add(BEACON_BALANCE_POSITION.getStorageUint256()).add(_getTransientBalance());
-    }
-
-    /**
-     * @dev Padding memory array with zeroes up to 64 bytes on the right
-     * @param _b Memory array of size 32 .. 64
-     */
-    function _pad64(bytes memory _b) internal pure returns (bytes memory) {
-        assert(_b.length >= 32 && _b.length <= 64);
-        if (64 == _b.length) return _b;
-
-        bytes memory zero32 = new bytes(32);
-        assembly {
-            mstore(add(zero32, 0x20), 0)
-        }
-
-        if (32 == _b.length) return BytesLib.concat(_b, zero32);
-        else return BytesLib.concat(_b, BytesLib.slice(zero32, 0, uint256(64).sub(_b.length)));
-    }
-
-    /**
-     * @dev Converting value to little endian bytes and padding up to 32 bytes on the right
-     * @param _value Number less than `2**64` for compatibility reasons
-     */
-    function _toLittleEndian64(uint256 _value) internal pure returns (uint256 result) {
-        result = 0;
-        uint256 temp_value = _value;
-        for (uint256 i = 0; i < 8; ++i) {
-            result = (result << 8) | (temp_value & 0xFF);
-            temp_value >>= 8;
-        }
-
-        assert(0 == temp_value); // fully converted
-        result <<= (24 * 8);
+        return _getBufferedEther()
+            .add(BEACON_BALANCE_POSITION.getStorageUint256())
+            .add(_getTransientBalance())
+            .add(STAKING_ROUTER_BUFFERED_ETHER_POSITION.getStorageUint256());
     }
 
     function _pauseStaking() internal {
@@ -872,5 +853,24 @@ contract Lido is ILido, StETH, AragonApp {
      */
     function _auth(bytes32 _role) internal view auth(_role) {
         // no-op
+    }
+
+    function transferToStakingRouter(uint256 _maxDeposits) external {
+        address stakingRouter = getStakingRouter();
+        require(stakingRouter != address(0), "STAKING_ROUTER_ADDRESS_ZERO");
+
+        uint256 buffered = _getBufferedEther();
+        if (buffered >= DEPOSIT_SIZE) {
+            uint256 unaccounted = _getUnaccountedEther();
+            uint256 numDeposits = buffered.div(DEPOSIT_SIZE);
+            numDeposits = numDeposits < _maxDeposits ? numDeposits : _maxDeposits;
+
+            uint256 amount = numDeposits * DEPOSIT_SIZE;
+
+            address(stakingRouter).transfer(amount);
+
+            _markAsUnbuffered(amount);
+            assert(_getUnaccountedEther() == unaccounted);
+        }
     }
 }

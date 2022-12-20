@@ -110,14 +110,12 @@ contract('Lido', ([appManager, voting, user2, depositor]) => {
     const cfgCurated = {
       treasuryFee: 500,
       targetShare: 10000,
-      recycleShare: 0 // 0%, no effect if targetShare >=10000
     }
 
     await stakingRouter.addModule(
       'Curated',
       curatedModule.address,
       cfgCurated.targetShare,
-      cfgCurated.recycleShare,
       cfgCurated.treasuryFee,
       { from: voting }
     )
@@ -128,14 +126,12 @@ contract('Lido', ([appManager, voting, user2, depositor]) => {
     const cfgCommunity = {
       treasuryFee: 500,
       targetShare: 10000,
-      recycleShare: 0 // 0%, no effect if targetShare >=10000
     }
 
     await stakingRouter.addModule(
       'Solo',
       soloModule.address,
       cfgCommunity.targetShare,
-      cfgCommunity.recycleShare,
       cfgCommunity.treasuryFee,
       { from: voting }
     )

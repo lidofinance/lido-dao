@@ -7,7 +7,6 @@ pragma solidity 0.4.24;
 interface IStakingModule {
     
     function getFee() external view returns (uint16);
-    function setFee(uint16 _value) external;
 
     function getTotalKeys() external view returns (uint256);
     function getTotalUsedKeys() external view returns (uint256);
@@ -21,4 +20,6 @@ interface IStakingModule {
 
     function trimUnusedKeys() external;
     function getKeysOpIndex() external view returns (uint256);
+
+    function prepNextSigningKeys(uint256 maxDepositsCount, bytes depositCalldata) external returns (bytes memory pubkeys, bytes memory signatures);
 }

@@ -192,7 +192,7 @@ contract('StakingRouter', (accounts) => {
 
       // add NodeOperatorRegistry from voting
       // name, address, cap, treasuryFee
-      await stakingRouter.addModule('Curated', operators.address, 10000, 0, 500, { from: voting })
+      await stakingRouter.addModule('Curated', operators.address, 10000, 500, { from: voting })
 
       await operators.setTotalKeys(curatedModule.totalKeys, { from: appManager })
       await operators.setTotalUsedKeys(curatedModule.totalUsedKeys, { from: appManager })
@@ -225,7 +225,7 @@ contract('StakingRouter', (accounts) => {
 
         const name = 'Community' + i
 
-        await stakingRouter.addModule(name, _module.address, module.targetShare, module.recycleShare, module.treasuryFee, {
+        await stakingRouter.addModule(name, _module.address, module.targetShare, module.treasuryFee, {
           from: voting
         })
         await _module.setTotalKeys(module.totalKeys, { from: appManager })
