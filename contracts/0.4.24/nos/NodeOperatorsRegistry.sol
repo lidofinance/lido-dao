@@ -51,8 +51,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
 
     uint256 internal constant TOTAL_BASIS_POINTS = 10000;
 
-    bytes32 internal constant FEE_POSITION = keccak256('lido.NodeOperatorsRegistry.fee');
-
     bytes32 internal constant TOTAL_KEYS_POSITION = keccak256('lido.NodeOperatorsRegistry.totalKeys');
     bytes32 internal constant TOTAL_USED_KEYS_POSITION = keccak256('lido.NodeOperatorsRegistry.totalUsedKeys');
     bytes32 internal constant TOTAL_STOPPED_KEYS_POSITION = keccak256('lido.NodeOperatorsRegistry.totalStoppedKeys');
@@ -813,15 +811,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
 
     function getType() external view returns (uint16) {
         return uint16(TYPE_POSITION.getStorageUint256());
-    }
-
-    function setFee(uint16 _value) external auth(SET_FEE_ROLE) {
-        require(_value <= TOTAL_BASIS_POINTS, 'VALUE_OVER_100_PERCENT');
-        FEE_POSITION.setStorageUint256(uint256(_value));
-    }
-
-    function getFee() external view returns (uint16) {
-        return uint16(FEE_POSITION.getStorageUint256());
     }
 
     function getTotalKeys() public view returns (uint256) {

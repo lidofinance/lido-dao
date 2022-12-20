@@ -46,6 +46,8 @@ contract StakingRouterLinear {
         string name;
         /// @notice address of module
         address moduleAddress;
+        /// @notice module fee
+        uint16 moduleFee;
         /// @notice treasury fee
         uint16 treasuryFee;
         /// @notice target percent of total keys in protocol, in BP
@@ -132,7 +134,7 @@ contract StakingRouterLinear {
      * @param _cap soft cap
      * @param _cap treasury fee
      */
-    function addModule(string memory _name, address _moduleAddress, uint16 _cap, uint16 _treasuryFee) external {
+    function addModule(string memory _name, address _moduleAddress, uint16 _cap, uint16 _treasuryFee, uint16 _moduleFee) external {
         require(_cap <= TOTAL_BASIS_POINTS, 'VALUE_OVER_100_PERCENT');
         require(_treasuryFee <= TOTAL_BASIS_POINTS, 'VALUE_OVER_100_PERCENT');
 
@@ -143,6 +145,7 @@ contract StakingRouterLinear {
         module.moduleAddress = _moduleAddress;
         module.cap = _cap;
         module.treasuryFee = _treasuryFee;
+        module.moduleFee = _moduleFee;
         module.paused = false;
         module.active = true;
         modulesCount++;
@@ -248,7 +251,7 @@ contract StakingRouterLinear {
             StakingModule memory stakingModule = modules[i];
             IStakingModule module = IStakingModule(stakingModule.moduleAddress);
 
-            uint256 moduleFeeBasisPoints = module.getFee() + stakingModule.treasuryFee;
+            uint256 moduleFeeBasisPoints = stakingModule.moduleFee + stakingModule.treasuryFee;
 
             uint256 rewards = (_totalRewards * moduleKeys[i]) / totalKeys;
 
@@ -304,8 +307,8 @@ contract StakingRouterLinear {
 
             IStakingModule module = IStakingModule(stakingModule.moduleAddress);
 
-            uint256 totalFee = module.getFee() + stakingModule.treasuryFee;
-            uint256 moduleFee = (module.getFee() * TOTAL_BASIS_POINTS) / totalFee;
+            uint256 totalFee = stakingModule.moduleFee + stakingModule.treasuryFee;
+            uint256 moduleFee = (stakingModule.moduleFee * TOTAL_BASIS_POINTS) / totalFee;
             uint256 treasuryFee = (stakingModule.treasuryFee * TOTAL_BASIS_POINTS) / totalFee;
 
             // uint256 moduleTotalKeys = module.getTotalKeys();

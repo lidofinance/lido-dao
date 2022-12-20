@@ -13,9 +13,7 @@ interface IStakingRouter {
 contract ModuleSolo is IStakingModule {
 
     address private stakingRouter;
-
     address immutable public lido;
-    uint16 immutable public fee;
 
     uint256 public totalKeys;
     uint256 public totalUsedKeys;
@@ -28,14 +26,9 @@ contract ModuleSolo is IStakingModule {
     uint256 constant public PUBKEY_LENGTH = 48;
     uint256 constant public SIGNATURE_LENGTH = 96;
 
-    constructor(uint16 _type, address _lido, uint16 _fee) {
+    constructor(uint16 _type, address _lido) {
         lido = _lido;
-        fee = _fee;
         moduleType = _type;
-    } 
-
-    function getFee() external view returns (uint16) {
-        return fee;
     }
 
     function getTotalKeys() external view returns (uint256) {

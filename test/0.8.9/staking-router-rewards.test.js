@@ -188,17 +188,16 @@ contract('StakingRouter', (accounts) => {
 
     it(`init counters and burn amount per run works`, async () => {
       // 50% of mintedShares
-      await operators.setFee(500, { from: voting })
 
       // add NodeOperatorRegistry from voting
       // name, address, cap, treasuryFee
-      await stakingRouter.addModule('Curated', operators.address, 10000, 0, 500, { from: voting })
+      await stakingRouter.addModule('Curated', operators.address, 10000, 0, 500, curatedModule.fee, { from: voting })
 
       await operators.setTotalKeys(curatedModule.totalKeys, { from: appManager })
       await operators.setTotalUsedKeys(curatedModule.totalUsedKeys, { from: appManager })
       await operators.setTotalStoppedKeys(curatedModule.totalStoppedKeys, { from: appManager })
 
-      const NORFee = await operators.getFee()
+      const NORFee = curatedModule.fee
       assertBn(500, NORFee, 'invalid node operator registry fee')
 
       /**
@@ -220,12 +219,12 @@ contract('StakingRouter', (accounts) => {
           // _module = await ModulePro.new(module.type, lido.address, module.fee, module.treasuryFee, { from: appManager })
           // add solo module
         } else if (module.type === 1) {
-          _module = await ModuleSolo.new(module.type, lido.address, module.fee, { from: appManager })
+          _module = await ModuleSolo.new(module.type, lido.address, { from: appManager })
         }
 
         const name = 'Community' + i
 
-        await stakingRouter.addModule(name, _module.address, module.targetShare, module.recycleShare, module.treasuryFee, {
+        await stakingRouter.addModule(name, _module.address, module.targetShare, module.recycleShare, module.treasuryFee, module.fee, {
           from: voting
         })
         await _module.setTotalKeys(module.totalKeys, { from: appManager })
@@ -342,7 +341,7 @@ async function stakingRouterStats(stakingRouter) {
       // address: entry.address,
       name: module.name,
       cap: parseInt(module.cap),
-      fee: parseInt(await entry.getFee()),
+      fee: parseInt(module.moduleFee),
       treasuryFee: parseInt(module.treasuryFee),
       paused: module.paused,
       active: module.active,

@@ -53,6 +53,8 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
         string name;
         /// @notice address of module
         address moduleAddress;
+        /// @notice module fee
+        uint16 moduleFee;
         /// @notice treasury fee
         uint16 treasuryFee;
         /// @notice target percent of total keys in protocol, in BP
@@ -182,7 +184,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
      * @param _recycleShare allowed share of _targetShare to be recycled by module
      * @param _treasuryFee treasury fee
      */
-    function addModule(string memory _name, address _moduleAddress, uint16 _targetShare, uint16 _recycleShare, uint16 _treasuryFee)
+    function addModule(string memory _name, address _moduleAddress, uint16 _targetShare, uint16 _recycleShare, uint16 _treasuryFee, uint16 _moduleFee)
         external
         onlyRole(MODULE_PAUSE_ROLE)
     {
@@ -198,6 +200,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
         module.targetShare = _targetShare;
         module.recycleShare = _recycleShare;
         module.treasuryFee = _treasuryFee;
+        module.moduleFee = _moduleFee;
         module.paused = false;
         module.active = true;
 
@@ -322,7 +325,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
 
             recipients[idx] = stakingModule.moduleAddress;
             modulesShares[idx] = (moduleActiveKeys[i] * TOTAL_BASIS_POINTS / totalActiveKeys);
-            moduleFee[idx] = module.getFee();
+            moduleFee[idx] = stakingModule.moduleFee;
             treasuryFee[idx] = stakingModule.treasuryFee;
 
             ++idx;
