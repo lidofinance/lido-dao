@@ -27,5 +27,5 @@ interface IStakingModule {
 
     function prepNextSigningKeys(uint256 maxDepositsCount, bytes calldata depositCalldata)
         external
-        returns (bytes memory pubkeys, bytes memory signatures);
+        returns (uint256 keysCount, bytes memory pubkeys, bytes memory signatures);
 }

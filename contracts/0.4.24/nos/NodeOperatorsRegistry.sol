@@ -364,12 +364,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
      * @param _numKeys The number of keys to select. The actual number of selected keys may be less
      *        due to the lack of active keys.
      */
-    function _assignNextSigningKeys(uint256 _numKeys) internal returns (bytes memory pubkeys, bytes memory signatures) {
+    function _assignNextSigningKeys(uint256 _numKeys) internal returns (uint256 numAssignedKeys, bytes memory pubkeys, bytes memory signatures) {
         // Memory is very cheap, although you don't want to grow it too much
         DepositLookupCacheEntry[] memory cache = _loadOperatorCache();
-        if (0 == cache.length) return (new bytes(0), new bytes(0));
+        if (0 == cache.length) return (0, new bytes(0), new bytes(0));
 
-        uint256 numAssignedKeys = 0;
         DepositLookupCacheEntry memory entry;
 
         while (numAssignedKeys < _numKeys) {
@@ -404,7 +403,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         }
 
         if (numAssignedKeys == 0) {
-            return (new bytes(0), new bytes(0));
+            return (0, new bytes(0), new bytes(0));
         }
 
         if (numAssignedKeys > 1) {
@@ -432,7 +431,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
                     // TOTAL_USED_KEYS_POSITION.setStorageUint256(TOTAL_USED_KEYS_POSITION.getStorageUint256() + numAssignedKeys);
                     TOTAL_USED_KEYS_POSITION.setStorageUint256(getTotalUsedKeys().add(1));
 
-                    return (pubkey, signature);
+                    return (1, pubkey, signature);
                 } else {
                     MemUtils.copyBytes(pubkey, pubkeys, numLoadedKeys * PUBKEY_LENGTH);
                     MemUtils.copyBytes(signature, signatures, numLoadedKeys * SIGNATURE_LENGTH);
@@ -451,7 +450,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         //update total used keys
         TOTAL_USED_KEYS_POSITION.setStorageUint256(getTotalUsedKeys().add(numAssignedKeys));
 
-        return (pubkeys, signatures);
+        return (numAssignedKeys, pubkeys, signatures);
     }
 
     /**
@@ -854,12 +853,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         }
     }
 
-    function prepNextSigningKeys(uint256 maxDepositsCount, bytes depositCalldata) 
-        external 
-        onlyStakingRouter 
-        returns (bytes memory pubkeys, bytes memory signatures) 
+    function prepNextSigningKeys(uint256 maxDepositsCount, bytes depositCalldata)
+        external
+        onlyStakingRouter
+        returns (uint256 keysCount, bytes memory pubkeys, bytes memory signatures)
     {
-        (pubkeys, signatures) = _assignNextSigningKeys(maxDepositsCount);
-        return (pubkeys, signatures);
+        return _assignNextSigningKeys(maxDepositsCount);
     }
 }
