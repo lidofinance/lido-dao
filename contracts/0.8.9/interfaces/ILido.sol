@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
 /* See contracts/COMPILERS.md */
-pragma solidity >= 0.4.24;
+pragma solidity 0.8.9;
 
 /**
  * @title Interface defining a Lido liquid staking pool

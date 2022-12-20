@@ -76,9 +76,6 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
     uint256 public constant PUBKEY_LENGTH = 48;
     uint256 public constant SIGNATURE_LENGTH = 96;
 
-    uint256 public constant RECYCLE_DELAY = 12 hours;
-
-    /// CONTRACT STRUCTED STORAGE
     /// @dev list of the staking modules
     StakingModule[] internal _stakingModules;
 
@@ -289,11 +286,11 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
         onlyRegisteredStakingModule(_stakingModule)
         returns (uint256)
     {
-        return _getAllocatedDepositsCount(_stakingModuleIndicesOneBased[_stakingModule], _totalActiveKeys);
+        return _getAllocatedDepositsCount(_stakingModule, _totalActiveKeys);
     }
 
-    function _getAllocatedDepositsCount(uint256 stakingModuleIndex, uint256 totalActiveKeys) internal view returns (uint256) {
-        StakingModule storage stakingModule = _stakingModules[stakingModuleIndex];
+    function _getAllocatedDepositsCount(address _stakingModule, uint256 totalActiveKeys) internal view returns (uint256) {
+        StakingModule storage stakingModule = _stakingModules[_stakingModuleIndicesOneBased[_stakingModule]];
         if (stakingModule.paused) {
             return 0;
         }
@@ -323,14 +320,11 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
         uint256 maxDepositsCount,
         address stakingModule,
         bytes calldata depositCalldata
-    ) external onlyRole(DEPOSIT_ROLE) {
-        uint256 moduleIndex = _stakingModuleIndicesOneBased[stakingModule];
-        require(moduleIndex != 0, 'MODULE_NOT_FOUND');
-
+    ) external onlyRole(DEPOSIT_ROLE) onlyRegisteredStakingModule(stakingModule) onlyNotPausedStakingModule(stakingModule) {
         (uint256 activeKeysCount, ) = getTotalActiveKeys();
 
         uint256 maxSigningKeysCount = _getAllocatedDepositsCount(
-            moduleIndex,
+            stakingModule,
             activeKeysCount + Math.min(maxDepositsCount, _getStakingModuleAvailableKeys(stakingModule))
         );
 
@@ -348,8 +342,6 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
         uint256 depositsCount = pubkeys.length / PUBKEY_LENGTH;
         require(depositsCount == signatures.length / SIGNATURE_LENGTH, 'REGISTRY_INCONSISTENT_SIG_COUNT');
 
-        require(_stakingModules[moduleIndex].active && !_stakingModules[moduleIndex].paused, 'module paused or not active');
-
         for (uint256 i = 0; i < depositsCount; ++i) {
             bytes memory pubkey = BytesLib.slice(pubkeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
             bytes memory signature = BytesLib.slice(signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
@@ -358,8 +350,9 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
 
         LIDO.updateBufferedCounters(depositsCount);
 
-        _stakingModules[moduleIndex].lastDepositAt = uint64(block.timestamp);
-        _stakingModules[moduleIndex].lastDepositBlock = block.number;
+        uint256 stakingModuleIndex = _stakingModuleIndicesOneBased[stakingModule];
+        _stakingModules[stakingModuleIndex].lastDepositAt = uint64(block.timestamp);
+        _stakingModules[stakingModuleIndex].lastDepositBlock = block.number;
     }
 
     /**
@@ -487,6 +480,11 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
 
     modifier onlyRegisteredStakingModule(address stakingModule) {
         require(_stakingModuleIndicesOneBased[stakingModule] != 0, 'UNREGISTERED_STAKING_MODULE');
+        _;
+    }
+
+    modifier onlyNotPausedStakingModule(address stakingModule) {
+        require(!_stakingModules[_stakingModuleIndicesOneBased[stakingModule]].paused, 'STAKING_MODULE_PAUSED');
         _;
     }
 }
