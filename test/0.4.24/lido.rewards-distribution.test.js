@@ -15,14 +15,14 @@ const TOTAL_BASIS_POINTS = 10000
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 
 const cfgCurated = {
-  moduleFee: 500,
+  moduleFee: 250,
   treasuryFee: 500,
   targetShare: 10000,
   recycleShare: 0 // 0%, no effect if targetShare >=10000
 }
 
 const cfgCommunity = {
-  moduleFee: 500,
+  moduleFee: 250,
   treasuryFee: 500,
   targetShare: 10000,
   recycleShare: 0 // 0%, no effect if targetShare >=10000
@@ -146,13 +146,13 @@ contract('Lido', ([appManager, voting, user2, depositor]) => {
     await soloModule.setTotalKeys(100, { from: appManager })
     await soloModule.setTotalUsedKeys(50, { from: appManager })
     await soloModule.setTotalStoppedKeys(0, { from: appManager })
-
-    stakingModules = [curatedModule, soloModule]
   })
 
   it('Rewards distribution fills treasury', async () => {
     const depositAmount = ETH(1)
-    const treasuryRewards = (depositAmount * 500) / TOTAL_BASIS_POINTS
+    const { moduleShares, totalShare } = await stakingRouter.getSharesTable()
+    const treasuryShare = moduleShares.reduce((total, share) => total - share, totalShare)
+    const treasuryRewards = (treasuryShare * depositAmount) / TOTAL_BASIS_POINTS
 
     await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(32) })
 
@@ -165,9 +165,8 @@ contract('Lido', ([appManager, voting, user2, depositor]) => {
 
   it('Rewards distribution fills modules', async () => {
     const depositAmount = ETH(1)
-    const { modulesShares } = await stakingRouter.getSharesTable()
-    const moduleFee = (depositAmount * modulesShares[0]) / TOTAL_BASIS_POINTS
-    const rewards = (moduleFee * cfgCommunity.moduleFee) / TOTAL_BASIS_POINTS
+    const { moduleShares } = await stakingRouter.getSharesTable()
+    const moduleRewards = (depositAmount * moduleShares[0]) / TOTAL_BASIS_POINTS
 
     await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(32) })
 
@@ -176,6 +175,6 @@ contract('Lido', ([appManager, voting, user2, depositor]) => {
     await oracle.reportBeacon(100, 0, depositAmount, { from: appManager })
 
     const moduleBalanceAfter = await app.balanceOf(soloModule.address)
-    assertBn(moduleBalanceBefore.add(bn(rewards).sub(bn(1))), moduleBalanceAfter)
+    assertBn(moduleBalanceBefore.add(bn(moduleRewards).sub(bn(1))), moduleBalanceAfter)
   })
 })

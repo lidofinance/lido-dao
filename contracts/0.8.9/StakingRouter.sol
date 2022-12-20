@@ -294,44 +294,39 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
      * @notice return shares table
      *
      * @return recipients recipients list
-     * @return modulesShares shares of each recipient
-     * @return moduleFee shares of each recipient
-     * @return treasuryFee shares of each recipient
+     * @return moduleShares shares of each recipient
+     * @return totalShare total share to mint for each module and treasury
      */
     function getSharesTable()
         external
         view
-        returns (address[] memory recipients, uint256[] memory modulesShares, uint256[] memory moduleFee, uint256[] memory treasuryFee)
+        returns (address[] memory recipients, uint256[] memory moduleShares, uint256 totalShare)
     {
         uint256 _modulesCount = getModulesCount();
         assert(_modulesCount != 0);
 
         // +1 for treasury
         recipients = new address[](_modulesCount);
-        modulesShares = new uint256[](_modulesCount);
-        moduleFee = new uint256[](_modulesCount);
-        treasuryFee = new uint256[](_modulesCount);
+        moduleShares = new uint256[](_modulesCount);
 
-        uint256 idx = 0;
-        uint256 treasuryShares = 0;
-
+        totalShare = 0;
+        
         (uint256 totalActiveKeys, uint256[] memory moduleActiveKeys) = getTotalActiveKeys();
 
         require(totalActiveKeys > 0, "NO_KEYS");
 
         for (uint256 i = 0; i < _modulesCount; ++i) {
             StakingModule memory stakingModule = modules[i];
-            IStakingModule module = IStakingModule(stakingModule.moduleAddress);
 
-            recipients[idx] = stakingModule.moduleAddress;
-            modulesShares[idx] = (moduleActiveKeys[i] * TOTAL_BASIS_POINTS / totalActiveKeys);
-            moduleFee[idx] = stakingModule.moduleFee;
-            treasuryFee[idx] = stakingModule.treasuryFee;
+            uint256 moduleShare = (moduleActiveKeys[i] * TOTAL_BASIS_POINTS / totalActiveKeys);
 
-            ++idx;
+            recipients[i] = stakingModule.moduleAddress;
+            moduleShares[i] = moduleShare * stakingModule.moduleFee / TOTAL_BASIS_POINTS;
+
+            totalShare += moduleShare * stakingModule.treasuryFee / TOTAL_BASIS_POINTS + moduleShares[i];
         }
 
-        return (recipients, modulesShares, moduleFee, treasuryFee);
+        return (recipients, moduleShares, totalShare);
     }
 
     function distributeDeposits() public {

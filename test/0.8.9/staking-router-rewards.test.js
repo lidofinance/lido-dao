@@ -258,19 +258,13 @@ contract('StakingRouter', (accounts) => {
       console.log('report oracle 1 eth')
       const result = await oracle.reportBeacon(100, 0, ETH(1), { from: appManager })
 
-      const sharesTable = await stakingRouter.getSharesTable()
-      const recipients = sharesTable.recipients
-      const modulesShares = sharesTable.modulesShares
-      const moduleFee = sharesTable.moduleFee
-      const treasuryFee = sharesTable.treasuryFee
+      const { recipients, moduleShares } = await stakingRouter.getSharesTable()
       const res = []
       for (let i = 0; i < recipients.length; i++) {
         console.log(i)
         res.push({
           address: recipients[i],
-          modulesShares: parseInt(modulesShares[i]),
-          moduleFee: parseInt(moduleFee[i]),
-          treasuryFee: parseInt(treasuryFee[i])
+          modulesShares: parseInt(moduleShares[i])
         })
       }
       console.table(res)
