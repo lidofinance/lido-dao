@@ -51,7 +51,9 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         uint256 lastDepositBlock;
     }
 
-    struct StakingModuleKeysInfo {
+    struct StakingModuleCache {
+        bool paused;
+        uint16 targetShare;
         uint256 totalKeysCount;
         uint256 usedKeysCount;
         uint256 stoppedKeysCount;
@@ -121,17 +123,20 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         require(_targetShare <= TOTAL_BASIS_POINTS, 'VALUE_OVER_100_PERCENT');
         require(_treasuryFee <= TOTAL_BASIS_POINTS, 'VALUE_OVER_100_PERCENT');
 
-        _stakingModules.push();
-        StakingModule storage module = _stakingModules[_stakingModules.length - 1];
+        _stakingModules.push(
+            StakingModule({
+                name: _name,
+                moduleAddress: IStakingModule(_moduleAddress),
+                targetShare: _targetShare,
+                treasuryFee: _treasuryFee,
+                moduleFee: _moduleFee,
+                paused: false,
+                active: true,
+                lastDepositAt: 0,
+                lastDepositBlock: 0
+            })
+        );
         _stakingModuleIndicesOneBased[_moduleAddress] = _stakingModules.length;
-
-        module.name = _name;
-        module.moduleAddress = IStakingModule(_moduleAddress);
-        module.targetShare = _targetShare;
-        module.treasuryFee = _treasuryFee;
-        module.moduleFee = _moduleFee;
-        module.paused = false;
-        module.active = true;
     }
 
     function getModule(uint256 moduleId) external view returns (StakingModule memory) {
@@ -205,16 +210,18 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         uint256 _modulesCount = getModulesCount();
         moduleActiveKeys = new uint256[](_modulesCount);
         for (uint256 i = 0; i < _modulesCount; ++i) {
-            moduleActiveKeys[i] = getActiveKeysCount(_stakingModules[i].moduleAddress);
+            moduleActiveKeys[i] = _getActiveKeysCount(_stakingModules[i].moduleAddress);
             totalActiveKeys += moduleActiveKeys[i];
         }
     }
 
-    function getActiveKeysCount(IStakingModule stakingModule) public view returns (uint256) {
-        require(_stakingModuleIndicesOneBased[address(stakingModule)] != 0, 'MODULE_NOT_FOUND');
+    function getActiveKeysCount(address _stakingModule) public view onlyRegisteredStakingModule(_stakingModule) returns (uint256) {
+        return _getActiveKeysCount(IStakingModule(_stakingModule));
+    }
 
-        uint256 usedKeysCount = stakingModule.getTotalUsedKeys();
-        uint256 stoppedKeysCount = stakingModule.getTotalStoppedKeys();
+    function _getActiveKeysCount(IStakingModule _stakingModule) internal view returns (uint256) {
+        uint256 usedKeysCount = _stakingModule.getTotalUsedKeys();
+        uint256 stoppedKeysCount = _stakingModule.getTotalStoppedKeys();
         return usedKeysCount - stoppedKeysCount;
     }
 
@@ -271,14 +278,14 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         depositsAllocation = new uint256[](_stakingModules.length);
 
         for (uint256 i = 0; i < depositsAllocation.length; ++i) {
-            StakingModuleKeysInfo memory stakingModuleKeysInfo = _getStakingModuleKeysInfo(_stakingModules[i].moduleAddress);
+            StakingModuleCache memory stakingModuleCache = _loadStakingModuleCache(i);
             uint256 targetKeysAllocation = (_totalActiveKeysCount * _stakingModules[i].targetShare) / TOTAL_BASIS_POINTS;
 
-            if (_stakingModules[i].paused || stakingModuleKeysInfo.activeKeysCount >= targetKeysAllocation) {
+            if (_stakingModules[i].paused || stakingModuleCache.activeKeysCount >= targetKeysAllocation) {
                 continue;
             }
-            uint256 availableKeys = stakingModuleKeysInfo.totalKeysCount - stakingModuleKeysInfo.usedKeysCount;
-            depositsAllocation[i] = Math.min(targetKeysAllocation - stakingModuleKeysInfo.activeKeysCount, availableKeys);
+            uint256 availableKeys = stakingModuleCache.totalKeysCount - stakingModuleCache.usedKeysCount;
+            depositsAllocation[i] = Math.min(targetKeysAllocation - stakingModuleCache.activeKeysCount, availableKeys);
         }
     }
 
@@ -288,7 +295,9 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         onlyRegisteredStakingModule(_stakingModule)
         returns (uint256)
     {
-        return _getAllocatedDepositsCount(_stakingModule, _totalActiveKeys);
+        uint256 stakingModuleIndex = _stakingModuleIndicesOneBased[_stakingModule];
+        StakingModuleCache memory stakingModuleCache = _loadStakingModuleCache(stakingModuleIndex);
+        return _getAllocatedDepositsCount(stakingModuleCache, _totalActiveKeys);
     }
 
     /**
@@ -304,15 +313,17 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     ) external onlyRole(DEPOSIT_ROLE) onlyRegisteredStakingModule(stakingModule) onlyNotPausedStakingModule(stakingModule) {
         (uint256 activeKeysCount, ) = getTotalActiveKeys();
 
+        uint256 stakingModuleIndex = _stakingModuleIndicesOneBased[stakingModule];
+        StakingModuleCache memory stakingModuleCache = _loadStakingModuleCache(stakingModuleIndex);
+
         uint256 maxSigningKeysCount = _getAllocatedDepositsCount(
-            stakingModule,
-            activeKeysCount + Math.min(maxDepositsCount, _getStakingModuleAvailableKeys(stakingModule))
+            stakingModuleCache,
+            activeKeysCount + Math.min(maxDepositsCount, stakingModuleCache.availableKeysCount)
         );
 
-        require(maxSigningKeysCount != 0, 'EMPTY_DEPOSIT');
+        require(maxSigningKeysCount != 0, 'ZERO_MAX_SIGNING_KEYS_COUNT');
 
-        IStakingModule module = IStakingModule(stakingModule);
-        (uint256 keysCount, bytes memory publicKeysBatch, bytes memory signaturesBatch) = module.prepNextSigningKeys(
+        (uint256 keysCount, bytes memory publicKeysBatch, bytes memory signaturesBatch) = IStakingModule(stakingModule).prepNextSigningKeys(
             maxSigningKeysCount,
             depositCalldata
         );
@@ -333,7 +344,6 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
 
         LIDO.updateBufferedCounters(keysCount);
 
-        uint256 stakingModuleIndex = _stakingModuleIndicesOneBased[stakingModule];
         _stakingModules[stakingModuleIndex].lastDepositAt = uint64(block.timestamp);
         _stakingModules[stakingModuleIndex].lastDepositBlock = block.number;
     }
@@ -359,42 +369,34 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         return WITHDRAWAL_CREDENTIALS_POSITION.getStorageBytes32();
     }
 
-    function _getAllocatedDepositsCount(address _stakingModule, uint256 totalActiveKeys) internal view returns (uint256) {
-        StakingModule storage stakingModule = _stakingModules[_stakingModuleIndicesOneBased[_stakingModule]];
-        if (stakingModule.paused) {
+    function _getAllocatedDepositsCount(StakingModuleCache memory _stakingModule, uint256 totalActiveKeys) internal pure returns (uint256) {
+        if (_stakingModule.paused) {
             return 0;
         }
-        StakingModuleKeysInfo memory keysInfo = _getStakingModuleKeysInfo(stakingModule.moduleAddress);
-        uint256 targetKeysAllocation = (totalActiveKeys * stakingModule.targetShare) / TOTAL_BASIS_POINTS;
-        if (keysInfo.activeKeysCount > targetKeysAllocation) {
+        uint256 targetKeysAllocation = (totalActiveKeys * _stakingModule.targetShare) / TOTAL_BASIS_POINTS;
+        if (_stakingModule.activeKeysCount > targetKeysAllocation) {
             return 0;
         }
-        return Math.min(targetKeysAllocation - keysInfo.activeKeysCount, keysInfo.availableKeysCount);
+        return Math.min(targetKeysAllocation - _stakingModule.activeKeysCount, _stakingModule.availableKeysCount);
     }
 
     function _trimUnusedKeys() internal {
-        uint256 _modulesCount = getModulesCount();
-        if (_modulesCount > 0) {
-            for (uint256 i = 0; i < _modulesCount; ++i) {
-                StakingModule memory stakingModule = _stakingModules[i];
-                IStakingModule module = IStakingModule(stakingModule.moduleAddress);
-
-                module.trimUnusedKeys();
-            }
+        for (uint256 i = 0; i < _stakingModules.length; ++i) {
+            StakingModule memory stakingModule = _stakingModules[i];
+            IStakingModule(stakingModule.moduleAddress).trimUnusedKeys();
         }
     }
 
-    function _getStakingModuleKeysInfo(IStakingModule stakingModule) internal view returns (StakingModuleKeysInfo memory keysInfo) {
-        keysInfo.totalKeysCount = stakingModule.getTotalKeys();
-        keysInfo.usedKeysCount = stakingModule.getTotalUsedKeys();
-        keysInfo.stoppedKeysCount = stakingModule.getTotalStoppedKeys();
-        keysInfo.activeKeysCount = keysInfo.usedKeysCount - keysInfo.stoppedKeysCount;
-        keysInfo.availableKeysCount = keysInfo.totalKeysCount - keysInfo.usedKeysCount;
-    }
+    function _loadStakingModuleCache(uint256 _stakingModuleIndex) internal view returns (StakingModuleCache memory stakingModuleCache) {
+        stakingModuleCache.paused = _stakingModules[_stakingModuleIndex].paused;
+        stakingModuleCache.targetShare = _stakingModules[_stakingModuleIndex].targetShare;
 
-    function _getStakingModuleAvailableKeys(address stakingModule_) internal view returns (uint256) {
-        IStakingModule stakingModule = IStakingModule(stakingModule_);
-        return stakingModule.getTotalKeys() - stakingModule.getTotalUsedKeys();
+        IStakingModule stakingModule = IStakingModule(_stakingModules[_stakingModuleIndex].moduleAddress);
+        stakingModuleCache.totalKeysCount = stakingModule.getTotalKeys();
+        stakingModuleCache.usedKeysCount = stakingModule.getTotalUsedKeys();
+        stakingModuleCache.stoppedKeysCount = stakingModule.getTotalStoppedKeys();
+        stakingModuleCache.activeKeysCount = stakingModuleCache.usedKeysCount - stakingModuleCache.stoppedKeysCount;
+        stakingModuleCache.availableKeysCount = stakingModuleCache.totalKeysCount - stakingModuleCache.usedKeysCount;
     }
 
     modifier onlyRegisteredStakingModule(address stakingModule) {
