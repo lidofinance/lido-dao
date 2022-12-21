@@ -6,8 +6,6 @@ pragma solidity 0.8.9;
 
 interface IStakingModule {
     
-    function getFee() external view returns (uint16);
-
     function getTotalKeys() external view returns (uint256);
     function getTotalUsedKeys() external view returns (uint256);
     function getTotalStoppedKeys() external view returns (uint256);

@@ -53,6 +53,8 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
         string name;
         /// @notice address of module
         address moduleAddress;
+        /// @notice module fee
+        uint16 moduleFee;
         /// @notice treasury fee
         uint16 treasuryFee;
         /// @notice target percent of total keys in protocol, in BP
@@ -182,7 +184,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
      * @param _recycleShare allowed share of _targetShare to be recycled by module
      * @param _treasuryFee treasury fee
      */
-    function addModule(string memory _name, address _moduleAddress, uint16 _targetShare, uint16 _recycleShare, uint16 _treasuryFee)
+    function addModule(string memory _name, address _moduleAddress, uint16 _targetShare, uint16 _recycleShare, uint16 _treasuryFee, uint16 _moduleFee)
         external
         onlyRole(MODULE_PAUSE_ROLE)
     {
@@ -198,6 +200,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
         module.targetShare = _targetShare;
         module.recycleShare = _recycleShare;
         module.treasuryFee = _treasuryFee;
+        module.moduleFee = _moduleFee;
         module.paused = false;
         module.active = true;
 
@@ -291,44 +294,39 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
      * @notice return shares table
      *
      * @return recipients recipients list
-     * @return modulesShares shares of each recipient
-     * @return moduleFee shares of each recipient
-     * @return treasuryFee shares of each recipient
+     * @return moduleShares shares of each recipient
+     * @return totalShare total share to mint for each module and treasury
      */
     function getSharesTable()
         external
         view
-        returns (address[] memory recipients, uint256[] memory modulesShares, uint256[] memory moduleFee, uint256[] memory treasuryFee)
+        returns (address[] memory recipients, uint256[] memory moduleShares, uint256 totalShare)
     {
         uint256 _modulesCount = getModulesCount();
         assert(_modulesCount != 0);
 
         // +1 for treasury
         recipients = new address[](_modulesCount);
-        modulesShares = new uint256[](_modulesCount);
-        moduleFee = new uint256[](_modulesCount);
-        treasuryFee = new uint256[](_modulesCount);
+        moduleShares = new uint256[](_modulesCount);
 
-        uint256 idx = 0;
-        uint256 treasuryShares = 0;
-
+        totalShare = 0;
+        
         (uint256 totalActiveKeys, uint256[] memory moduleActiveKeys) = getTotalActiveKeys();
 
         require(totalActiveKeys > 0, "NO_KEYS");
 
         for (uint256 i = 0; i < _modulesCount; ++i) {
             StakingModule memory stakingModule = modules[i];
-            IStakingModule module = IStakingModule(stakingModule.moduleAddress);
 
-            recipients[idx] = stakingModule.moduleAddress;
-            modulesShares[idx] = (moduleActiveKeys[i] * TOTAL_BASIS_POINTS / totalActiveKeys);
-            moduleFee[idx] = module.getFee();
-            treasuryFee[idx] = stakingModule.treasuryFee;
+            uint256 moduleShare = (moduleActiveKeys[i] * TOTAL_BASIS_POINTS / totalActiveKeys);
 
-            ++idx;
+            recipients[i] = stakingModule.moduleAddress;
+            moduleShares[i] = moduleShare * stakingModule.moduleFee / TOTAL_BASIS_POINTS;
+
+            totalShare += moduleShare * stakingModule.treasuryFee / TOTAL_BASIS_POINTS + moduleShares[i];
         }
 
-        return (recipients, modulesShares, moduleFee, treasuryFee);
+        return (recipients, moduleShares, totalShare);
     }
 
     function distributeDeposits() public {

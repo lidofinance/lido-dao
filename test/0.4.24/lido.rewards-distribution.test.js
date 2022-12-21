@@ -14,6 +14,20 @@ const ModuleSolo = artifacts.require('ModuleSolo.sol')
 const TOTAL_BASIS_POINTS = 10000
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 
+const cfgCurated = {
+  moduleFee: 250,
+  treasuryFee: 500,
+  targetShare: 10000,
+  recycleShare: 0 // 0%, no effect if targetShare >=10000
+}
+
+const cfgCommunity = {
+  moduleFee: 250,
+  treasuryFee: 500,
+  targetShare: 10000,
+  recycleShare: 0 // 0%, no effect if targetShare >=10000
+}
+
 contract('Lido', ([appManager, voting, user2, depositor]) => {
   let appBase, nodeOperatorsRegistryBase, app, oracle, depositContract, curatedModule, stakingRouter, soloModule
   let treasuryAddr
@@ -105,13 +119,7 @@ contract('Lido', ([appManager, voting, user2, depositor]) => {
 
     await app.setStakingRouter(stakingRouter.address)
 
-    soloModule = await ModuleSolo.new(1, app.address, 500, { from: appManager })
-
-    const cfgCurated = {
-      treasuryFee: 500,
-      targetShare: 10000,
-      recycleShare: 0 // 0%, no effect if targetShare >=10000
-    }
+    soloModule = await ModuleSolo.new(1, app.address, { from: appManager })
 
     await stakingRouter.addModule(
       'Curated',
@@ -119,17 +127,12 @@ contract('Lido', ([appManager, voting, user2, depositor]) => {
       cfgCurated.targetShare,
       cfgCurated.recycleShare,
       cfgCurated.treasuryFee,
+      cfgCurated.moduleFee,
       { from: voting }
     )
     await curatedModule.setTotalKeys(100, { from: appManager })
     await curatedModule.setTotalUsedKeys(50, { from: appManager })
     await curatedModule.setTotalStoppedKeys(0, { from: appManager })
-
-    const cfgCommunity = {
-      treasuryFee: 500,
-      targetShare: 10000,
-      recycleShare: 0 // 0%, no effect if targetShare >=10000
-    }
 
     await stakingRouter.addModule(
       'Solo',
@@ -137,18 +140,19 @@ contract('Lido', ([appManager, voting, user2, depositor]) => {
       cfgCommunity.targetShare,
       cfgCommunity.recycleShare,
       cfgCommunity.treasuryFee,
+      cfgCommunity.moduleFee,
       { from: voting }
     )
     await soloModule.setTotalKeys(100, { from: appManager })
     await soloModule.setTotalUsedKeys(50, { from: appManager })
     await soloModule.setTotalStoppedKeys(0, { from: appManager })
-
-    stakingModules = [curatedModule, soloModule]
   })
 
   it('Rewards distribution fills treasury', async () => {
     const depositAmount = ETH(1)
-    const treasuryRewards = (depositAmount * 500) / TOTAL_BASIS_POINTS
+    const { moduleShares, totalShare } = await stakingRouter.getSharesTable()
+    const treasuryShare = moduleShares.reduce((total, share) => total - share, totalShare)
+    const treasuryRewards = (treasuryShare * depositAmount) / TOTAL_BASIS_POINTS
 
     await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(32) })
 
@@ -161,9 +165,8 @@ contract('Lido', ([appManager, voting, user2, depositor]) => {
 
   it('Rewards distribution fills modules', async () => {
     const depositAmount = ETH(1)
-    const { modulesShares } = await stakingRouter.getSharesTable()
-    const moduleFee = (depositAmount * modulesShares[0]) / TOTAL_BASIS_POINTS
-    const rewards = (moduleFee * (await soloModule.getFee())) / TOTAL_BASIS_POINTS
+    const { moduleShares } = await stakingRouter.getSharesTable()
+    const moduleRewards = (depositAmount * moduleShares[0]) / TOTAL_BASIS_POINTS
 
     await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(32) })
 
@@ -172,6 +175,6 @@ contract('Lido', ([appManager, voting, user2, depositor]) => {
     await oracle.reportBeacon(100, 0, depositAmount, { from: appManager })
 
     const moduleBalanceAfter = await app.balanceOf(soloModule.address)
-    assertBn(moduleBalanceBefore.add(bn(rewards).sub(bn(1))), moduleBalanceAfter)
+    assertBn(moduleBalanceBefore.add(bn(moduleRewards).sub(bn(1))), moduleBalanceAfter)
   })
 })

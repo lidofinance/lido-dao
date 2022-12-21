@@ -718,36 +718,28 @@ contract Lido is ILido, StETH, AragonApp {
         // token shares.
 
         address stakingRouterAddress = getStakingRouter();
-        (
-            address[] memory moduleAddresses,
-            uint256[] memory moduleShares,
-            uint256[] memory moduleFees,
-            uint256[] memory moduleTreasuryFees
-        ) = IStakingRouter(stakingRouterAddress).getSharesTable();
+        (address[] memory recipients, uint256[] memory moduleShares, uint256 totalShare) = IStakingRouter(stakingRouterAddress)
+            .getSharesTable();
 
-        address treasury = getTreasury();
-        uint256 rewards2mint = 0;
-        uint256[] memory moduleRewards = new uint256[](moduleAddresses.length);
-
-        for (uint256 i = 0; i < moduleAddresses.length; i++) {
-            uint256 moduleShare = _totalRewards * moduleShares[i] / TOTAL_BASIS_POINTS;
-
-            moduleRewards[i] = moduleShare * moduleFees[i] / TOTAL_BASIS_POINTS;
-            rewards2mint += moduleShare * moduleTreasuryFees[i] / TOTAL_BASIS_POINTS + moduleRewards[i];
-        }
-
-        uint256 shares2mint = rewards2mint.mul(_getTotalShares()).div(_getTotalPooledEther().sub(rewards2mint));
+        uint256 shares2mint = _totalRewards.mul(totalShare).mul(_getTotalShares()).div(
+            _getTotalPooledEther().mul(TOTAL_BASIS_POINTS).sub(totalShare.mul(_totalRewards))
+        );
 
         _mintShares(address(this), shares2mint);
 
-        for (uint256 j = 0; j < moduleAddresses.length; j++) {
-            uint256 moduleRewardInShares = getSharesByPooledEth(moduleRewards[j]);
-            shares2mint -= moduleRewardInShares;
-
-            _transferShares(address(this), moduleAddresses[j], moduleRewardInShares);
+        uint256 treasuryReward = shares2mint;
+        uint256 moduleReward;
+        for (uint256 i = 0; i < recipients.length; i++) {
+            moduleReward = shares2mint.mul(moduleShares[i]).div(totalShare);
+            if (moduleReward > 0) {
+                _transferShares(address(this), recipients[i], moduleReward);
+                treasuryReward -= moduleReward;
+            }
         }
-        
-        _transferShares(address(this), treasury, shares2mint);
+
+        address treasury = getTreasury();
+
+        _transferShares(address(this), treasury, treasuryReward);
     }
 
     /**
