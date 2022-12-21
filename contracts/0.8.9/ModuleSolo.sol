@@ -4,8 +4,8 @@
 // See contracts/COMPILERS.md
 pragma solidity 0.8.9;
 
-import './interfaces/IStakingModule.sol';
-import './lib/BytesLib.sol';
+import "./interfaces/IStakingModule.sol";
+import "./lib/BytesLib.sol";
 
 interface IStakingRouter {
     function deposit(bytes memory pubkeys, bytes memory signatures) external returns (uint256);
@@ -13,9 +13,7 @@ interface IStakingRouter {
 
 contract ModuleSolo is IStakingModule {
     address private stakingRouter;
-
     address public immutable lido;
-    uint16 public immutable fee;
 
     uint256 public totalKeys;
     uint256 public totalUsedKeys;
@@ -28,18 +26,9 @@ contract ModuleSolo is IStakingModule {
     uint256 public constant PUBKEY_LENGTH = 48;
     uint256 public constant SIGNATURE_LENGTH = 96;
 
-    constructor(
-        uint16 _type,
-        address _lido,
-        uint16 _fee
-    ) {
+    constructor(uint16 _type, address _lido) {
         lido = _lido;
-        fee = _fee;
         moduleType = _type;
-    }
-
-    function getFee() external view returns (uint16) {
-        return fee;
     }
 
     function getTotalKeys() external view returns (uint256) {
@@ -60,25 +49,13 @@ contract ModuleSolo is IStakingModule {
         returns (address[] memory recipients, uint256[] memory shares)
     {}
 
-    function assignNextSigningKeys(uint256 _numKeys) external returns (bytes memory pubkeys, bytes memory signatures) {}
-
     function addNodeOperator(string memory _name, address _rewardAddress) external returns (uint256 id) {}
 
     function setNodeOperatorStakingLimit(uint256 _id, uint64 _stakingLimit) external {}
 
-    function addSigningKeys(
-        uint256 _operator_id,
-        uint256 _quantity,
-        bytes memory _pubkeys,
-        bytes memory _signatures
-    ) external {}
+    function addSigningKeys(uint256 _operator_id, uint256 _quantity, bytes memory _pubkeys, bytes memory _signatures) external {}
 
-    function addSigningKeysOperatorBH(
-        uint256 _operator_id,
-        uint256 _quantity,
-        bytes memory _pubkeys,
-        bytes memory _signatures
-    ) external {}
+    function addSigningKeysOperatorBH(uint256 _operator_id, uint256 _quantity, bytes memory _pubkeys, bytes memory _signatures) external {}
 
     //only for testing purposal
     function setTotalKeys(uint256 _keys) external {

@@ -5,24 +5,17 @@
 pragma solidity 0.8.9;
 
 interface IStakingModule {
-    function getFee() external view returns (uint16);
-
     function getTotalKeys() external view returns (uint256);
-
     function getTotalUsedKeys() external view returns (uint256);
-
     function getTotalStoppedKeys() external view returns (uint256);
 
-    function getType() external returns (uint16);
-
+    function getType() external view returns (uint16);
     function setType(uint16 _type) external; // module team
 
-    function getStakingRouter() external returns (address);
-
+    function getStakingRouter() external view returns (address);
     function setStakingRouter(address addr) external; // lido team
 
     function trimUnusedKeys() external;
-
     function getKeysOpIndex() external view returns (uint256);
 
     function prepNextSigningKeys(uint256 maxDepositsCount, bytes calldata depositCalldata)

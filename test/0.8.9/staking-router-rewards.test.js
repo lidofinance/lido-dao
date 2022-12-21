@@ -42,7 +42,6 @@ const curatedModule = {
   totalUsedKeys: 50,
   totalStoppedKeys: 0,
   targetShare: 10000,
-  recycleShare: 0, // 0%, no effect if targetShare >=10000
   assignedDeposits: 0,
   balance: 0
 }
@@ -55,7 +54,6 @@ const communityModule = {
   totalUsedKeys: 30,
   totalStoppedKeys: 1,
   targetShare: 9000,
-  recycleShare: 1000, // 10%, no effect if targetShare >=10000
   assignedDeposits: 0,
   bond: 16,
   balance: 0
@@ -69,7 +67,6 @@ const communityModule2 = {
   totalUsedKeys: 20,
   totalStoppedKeys: 1,
   targetShare: 100,
-  recycleShare: 1000, // 10%, no effect if targetShare >=10000
   assignedDeposits: 0,
   bond: 16,
   balance: 0
@@ -82,7 +79,6 @@ const communityModule3 = {
   totalUsedKeys: 1000,
   totalStoppedKeys: 100,
   targetShare: 100,
-  recycleShare: 1000, // 10%, no effect if targetShare >=10000
   assignedDeposits: 0,
   bond: 20,
   balance: 0
@@ -153,10 +149,10 @@ contract('StakingRouter', (accounts) => {
     await oracle.setPool(lido.address)
     await depositContract.reset()
 
-    stakingRouter = await StakingRouter.new(depositContract.address, { from: appManager })
+    stakingRouter = await StakingRouter.new(depositContract.address, lido.address, { from: appManager })
 
     // initialize
-    await stakingRouter.initialize(lido.address, appManager)
+    await stakingRouter.initialize(appManager)
 
     // Set up the staking router permissions.
     const MANAGE_WITHDRAWAL_KEY_ROLE = await stakingRouter.MANAGE_WITHDRAWAL_KEY_ROLE()
@@ -188,17 +184,16 @@ contract('StakingRouter', (accounts) => {
 
     it(`init counters and burn amount per run works`, async () => {
       // 50% of mintedShares
-      await operators.setFee(500, { from: voting })
 
       // add NodeOperatorRegistry from voting
       // name, address, cap, treasuryFee
-      await stakingRouter.addModule('Curated', operators.address, 10000, 0, 500, { from: voting })
+      await stakingRouter.addModule('Curated', operators.address, 10000, 500, curatedModule.fee, { from: voting })
 
       await operators.setTotalKeys(curatedModule.totalKeys, { from: appManager })
       await operators.setTotalUsedKeys(curatedModule.totalUsedKeys, { from: appManager })
       await operators.setTotalStoppedKeys(curatedModule.totalStoppedKeys, { from: appManager })
 
-      const NORFee = await operators.getFee()
+      const NORFee = curatedModule.fee
       assertBn(500, NORFee, 'invalid node operator registry fee')
 
       /**
@@ -220,12 +215,12 @@ contract('StakingRouter', (accounts) => {
           // _module = await ModulePro.new(module.type, lido.address, module.fee, module.treasuryFee, { from: appManager })
           // add solo module
         } else if (module.type === 1) {
-          _module = await ModuleSolo.new(module.type, lido.address, module.fee, { from: appManager })
+          _module = await ModuleSolo.new(module.type, lido.address, { from: appManager })
         }
 
         const name = 'Community' + i
 
-        await stakingRouter.addModule(name, _module.address, module.targetShare, module.recycleShare, module.treasuryFee, {
+        await stakingRouter.addModule(name, _module.address, module.targetShare, module.treasuryFee, module.fee, {
           from: voting
         })
         await _module.setTotalKeys(module.totalKeys, { from: appManager })
@@ -259,19 +254,13 @@ contract('StakingRouter', (accounts) => {
       console.log('report oracle 1 eth')
       const result = await oracle.reportBeacon(100, 0, ETH(1), { from: appManager })
 
-      const sharesTable = await stakingRouter.getSharesTable()
-      const recipients = sharesTable.recipients
-      const modulesShares = sharesTable.modulesShares
-      const moduleFee = sharesTable.moduleFee
-      const treasuryFee = sharesTable.treasuryFee
+      const { recipients, moduleShares } = await stakingRouter.getSharesTable()
       const res = []
       for (let i = 0; i < recipients.length; i++) {
         console.log(i)
         res.push({
           address: recipients[i],
-          modulesShares: parseInt(modulesShares[i]),
-          moduleFee: parseInt(moduleFee[i]),
-          treasuryFee: parseInt(treasuryFee[i])
+          modulesShares: parseInt(moduleShares[i])
         })
       }
       console.table(res)
@@ -342,7 +331,7 @@ async function stakingRouterStats(stakingRouter) {
       // address: entry.address,
       name: module.name,
       cap: parseInt(module.cap),
-      fee: parseInt(await entry.getFee()),
+      fee: parseInt(module.moduleFee),
       treasuryFee: parseInt(module.treasuryFee),
       paused: module.paused,
       active: module.active,

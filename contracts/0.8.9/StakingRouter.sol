@@ -5,18 +5,18 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
-import { AccessControlEnumerable } from '@openzeppelin/contracts-v4.4/access/AccessControlEnumerable.sol';
+import {AccessControlEnumerable} from "@openzeppelin/contracts-v4.4/access/AccessControlEnumerable.sol";
 
-import { ILido } from './interfaces/ILido.sol';
-import { IStakingRouter } from './interfaces/IStakingRouter.sol';
-import { IStakingModule } from './interfaces/IStakingModule.sol';
-import { IDepositContract } from './interfaces/IDepositContract.sol';
+import {ILido} from "./interfaces/ILido.sol";
+import {IStakingRouter} from "./interfaces/IStakingRouter.sol";
+import {IStakingModule} from "./interfaces/IStakingModule.sol";
+import {IDepositContract} from "./interfaces/IDepositContract.sol";
 
-import { Math } from './lib/Math.sol';
-import { BatchedSigningKeys } from './lib/BatchedSigningKeys.sol';
-import { UnstructuredStorage } from './lib/UnstructuredStorage.sol';
+import {Math} from "./lib/Math.sol";
+import {BatchedSigningKeys} from "./lib/BatchedSigningKeys.sol";
+import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
 
-import { BeaconChainDepositor } from './BeaconChainDepositor.sol';
+import {BeaconChainDepositor} from "./BeaconChainDepositor.sol";
 
 contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDepositor {
     using UnstructuredStorage for bytes32;
@@ -29,16 +29,20 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     event DistributedDeposits(address indexed moduleAddress, uint256 assignedKeys, uint64 timestamp);
     event WithdrawalCredentialsSet(bytes32 withdrawalCredentials);
     event ContractVersionSet(uint256 version);
+    /**
+     * Emitted when the vault received ETH
+     */
+    event ETHReceived(uint256 amount);
 
     struct StakingModule {
         /// @notice name of module
         string name;
         /// @notice address of module
         IStakingModule moduleAddress;
+        /// @notice rewarf fee of the module
+        uint16 moduleFee;
         /// @notice treasury fee
         uint16 treasuryFee;
-        /// @notice fee of the module
-        uint16 moduleFee;
         /// @notice target percent of total keys in protocol, in BP
         uint16 targetShare;
         /// @notice flag if module can not accept the deposits
@@ -63,10 +67,10 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
 
     ILido public immutable LIDO;
 
-    bytes32 public constant MANAGE_WITHDRAWAL_KEY_ROLE = keccak256('MANAGE_WITHDRAWAL_KEY_ROLE');
-    bytes32 public constant MODULE_PAUSE_ROLE = keccak256('MODULE_PAUSE_ROLE');
-    bytes32 public constant MODULE_CONTROL_ROLE = keccak256('MODULE_CONTROL_ROLE');
-    bytes32 public constant DEPOSIT_ROLE = keccak256('DEPOSIT_ROLE');
+    bytes32 public constant MANAGE_WITHDRAWAL_KEY_ROLE = keccak256("MANAGE_WITHDRAWAL_KEY_ROLE");
+    bytes32 public constant MODULE_PAUSE_ROLE = keccak256("MODULE_PAUSE_ROLE");
+    bytes32 public constant MODULE_CONTROL_ROLE = keccak256("MODULE_CONTROL_ROLE");
+    bytes32 public constant DEPOSIT_ROLE = keccak256("DEPOSIT_ROLE");
 
     /// Version of the initialized contract data
     /// NB: Contract versioning starts from 1.
@@ -74,10 +78,10 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     /// - 0 right after deployment when no initializer is invoked yet
     /// - N after calling initialize() during deployment from scratch, where N is the current contract version
     /// - N after upgrading contract from the previous version (after calling finalize_vN())
-    bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256('lido.StakingRouter.contractVersion');
+    bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.StakingRouter.contractVersion");
 
     /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
-    bytes32 internal constant WITHDRAWAL_CREDENTIALS_POSITION = keccak256('lido.StakingRouter.withdrawalCredentials');
+    bytes32 internal constant WITHDRAWAL_CREDENTIALS_POSITION = keccak256("lido.StakingRouter.withdrawalCredentials");
 
     uint256 public constant DEPOSIT_SIZE = 32 ether;
 
@@ -91,18 +95,22 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     mapping(address => uint256) internal _stakingModuleIndicesOneBased;
 
     constructor(address _depositContract, address _lido) BeaconChainDepositor(_depositContract) {
-        require(_lido != address(0), 'LIDO_ZERO_ADDRESS');
+        require(_lido != address(0), "LIDO_ZERO_ADDRESS");
         LIDO = ILido(_lido);
     }
 
     function initialize(address _admin) external {
-        require(_admin != address(0), 'ADMIN_ZERO_ADDRESS');
-        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, 'BASE_VERSION_MUST_BE_ZERO');
+        require(_admin != address(0), "ADMIN_ZERO_ADDRESS");
+        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "BASE_VERSION_MUST_BE_ZERO");
 
         _setupRole(DEFAULT_ADMIN_ROLE, _admin);
 
         CONTRACT_VERSION_POSITION.setStorageUint256(1);
         emit ContractVersionSet(1);
+    }
+
+    receive() external payable {
+        emit ETHReceived(msg.value);
     }
 
     /**
@@ -113,15 +121,12 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
      * @param _moduleFee fee of the module taken from the consensus layer rewards
      * @param _treasuryFee treasury fee
      */
-    function addModule(
-        string memory _name,
-        address _moduleAddress,
-        uint16 _targetShare,
-        uint16 _moduleFee,
-        uint16 _treasuryFee
-    ) external onlyRole(MODULE_PAUSE_ROLE) {
-        require(_targetShare <= TOTAL_BASIS_POINTS, 'VALUE_OVER_100_PERCENT');
-        require(_treasuryFee <= TOTAL_BASIS_POINTS, 'VALUE_OVER_100_PERCENT');
+    function addModule(string memory _name, address _moduleAddress, uint16 _targetShare, uint16 _moduleFee, uint16 _treasuryFee)
+        external
+        onlyRole(MODULE_PAUSE_ROLE)
+    {
+        require(_targetShare <= TOTAL_BASIS_POINTS, "VALUE_OVER_100_PERCENT");
+        require(_treasuryFee <= TOTAL_BASIS_POINTS, "VALUE_OVER_100_PERCENT");
 
         _stakingModules.push(
             StakingModule({
@@ -156,7 +161,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
      */
     function pauseStakingModule(address stakingModule) external onlyRole(MODULE_PAUSE_ROLE) {
         StakingModule storage module = _getModuleByAddress(stakingModule);
-        require(!module.paused, 'module_is_paused');
+        require(!module.paused, "module_is_paused");
 
         module.paused = true;
     }
@@ -229,49 +234,36 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
      * @notice return shares table
      *
      * @return recipients recipients list
-     * @return modulesShares shares of each recipient
-     * @return moduleFee shares of each recipient
-     * @return treasuryFee shares of each recipient
+     * @return moduleShares shares of each recipient
+     * @return totalShare total share to mint for each module and treasury
      */
-    function getSharesTable()
-        external
-        view
-        returns (
-            address[] memory recipients,
-            uint256[] memory modulesShares,
-            uint256[] memory moduleFee,
-            uint256[] memory treasuryFee
-        )
-    {
+    function getSharesTable() external view returns (address[] memory recipients, uint256[] memory moduleShares, uint256 totalShare) {
         uint256 _modulesCount = _stakingModules.length;
         assert(_modulesCount != 0);
 
         // +1 for treasury
         recipients = new address[](_modulesCount);
-        modulesShares = new uint256[](_modulesCount);
-        moduleFee = new uint256[](_modulesCount);
-        treasuryFee = new uint256[](_modulesCount);
+        moduleShares = new uint256[](_modulesCount);
 
-        uint256 idx = 0;
-        uint256 treasuryShares = 0;
+        totalShare = 0;
 
         (uint256 totalActiveKeys, uint256[] memory moduleActiveKeys) = getTotalActiveKeys();
 
-        require(totalActiveKeys > 0, 'NO_KEYS');
+        require(totalActiveKeys > 0, "NO_KEYS");
 
+        StakingModule memory stakingModule;
+        uint256 moduleShare;
         for (uint256 i = 0; i < _modulesCount; ++i) {
-            StakingModule memory stakingModule = _stakingModules[i];
-            IStakingModule module = IStakingModule(stakingModule.moduleAddress);
+            stakingModule = _stakingModules[i];
+            moduleShare = (moduleActiveKeys[i] * TOTAL_BASIS_POINTS / totalActiveKeys);
 
-            recipients[idx] = address(stakingModule.moduleAddress);
-            modulesShares[idx] = ((moduleActiveKeys[i] * TOTAL_BASIS_POINTS) / totalActiveKeys);
-            moduleFee[idx] = module.getFee();
-            treasuryFee[idx] = stakingModule.treasuryFee;
+            recipients[i] = address(stakingModule.moduleAddress);
+            moduleShares[i] = (moduleShare * stakingModule.moduleFee / TOTAL_BASIS_POINTS);
 
-            ++idx;
+            totalShare += moduleShare * stakingModule.treasuryFee / TOTAL_BASIS_POINTS + moduleShares[i];
         }
 
-        return (recipients, modulesShares, moduleFee, treasuryFee);
+        return (recipients, moduleShares, totalShare);
     }
 
     function getAllocatedDepositsDistribution(uint256 _totalActiveKeysCount) public view returns (uint256[] memory depositsAllocation) {
@@ -306,34 +298,32 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
      * @param stakingModule module address
      * @param depositCalldata module calldata
      */
-    function deposit(
-        uint256 maxDepositsCount,
-        address stakingModule,
-        bytes calldata depositCalldata
-    ) external onlyRole(DEPOSIT_ROLE) onlyRegisteredStakingModule(stakingModule) onlyNotPausedStakingModule(stakingModule) {
-        (uint256 activeKeysCount, ) = getTotalActiveKeys();
+    function deposit(uint256 maxDepositsCount, address stakingModule, bytes calldata depositCalldata)
+        external
+        onlyRole(DEPOSIT_ROLE)
+        onlyRegisteredStakingModule(stakingModule)
+        onlyNotPausedStakingModule(stakingModule)
+    {
+        (uint256 activeKeysCount,) = getTotalActiveKeys();
 
         uint256 stakingModuleIndex = _stakingModuleIndicesOneBased[stakingModule];
         StakingModuleCache memory stakingModuleCache = _loadStakingModuleCache(stakingModuleIndex);
 
         uint256 maxSigningKeysCount = _getAllocatedDepositsCount(
-            stakingModuleCache,
-            activeKeysCount + Math.min(maxDepositsCount, stakingModuleCache.availableKeysCount)
+            stakingModuleCache, activeKeysCount + Math.min(maxDepositsCount, stakingModuleCache.availableKeysCount)
         );
 
-        require(maxSigningKeysCount != 0, 'ZERO_MAX_SIGNING_KEYS_COUNT');
+        require(maxSigningKeysCount != 0, "ZERO_MAX_SIGNING_KEYS_COUNT");
 
-        (uint256 keysCount, bytes memory publicKeysBatch, bytes memory signaturesBatch) = IStakingModule(stakingModule).prepNextSigningKeys(
-            maxSigningKeysCount,
-            depositCalldata
-        );
+        (uint256 keysCount, bytes memory publicKeysBatch, bytes memory signaturesBatch) =
+            IStakingModule(stakingModule).prepNextSigningKeys(maxSigningKeysCount, depositCalldata);
 
-        require(keysCount > 0, 'NO_SIGNING_KEYS');
+        require(keysCount > 0, "NO_SIGNING_KEYS");
 
         BatchedSigningKeys.validatePublicKeysBatch(publicKeysBatch, keysCount);
         BatchedSigningKeys.validateSignaturesBatch(signaturesBatch, keysCount);
 
-        require(getWithdrawalCredentials() != 0, 'EMPTY_WITHDRAWALS_CREDENTIALS');
+        require(getWithdrawalCredentials() != 0, "EMPTY_WITHDRAWALS_CREDENTIALS");
         bytes memory encodedWithdrawalCredentials = abi.encodePacked(getWithdrawalCredentials());
 
         for (uint256 i = 0; i < keysCount; ++i) {
@@ -369,10 +359,15 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         return WITHDRAWAL_CREDENTIALS_POSITION.getStorageBytes32();
     }
 
-    function _getAllocatedDepositsCount(StakingModuleCache memory _stakingModule, uint256 totalActiveKeys) internal pure returns (uint256) {
+    function _getAllocatedDepositsCount(StakingModuleCache memory _stakingModule, uint256 totalActiveKeys)
+        internal
+        pure
+        returns (uint256)
+    {
         if (_stakingModule.paused) {
             return 0;
         }
+        // @todo use totalActiveKeys + keysToDeposit
         uint256 targetKeysAllocation = (totalActiveKeys * _stakingModule.targetShare) / TOTAL_BASIS_POINTS;
         if (_stakingModule.activeKeysCount > targetKeysAllocation) {
             return 0;
@@ -400,12 +395,12 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     }
 
     modifier onlyRegisteredStakingModule(address stakingModule) {
-        require(_stakingModuleIndicesOneBased[stakingModule] != 0, 'UNREGISTERED_STAKING_MODULE');
+        require(_stakingModuleIndicesOneBased[stakingModule] != 0, "UNREGISTERED_STAKING_MODULE");
         _;
     }
 
     modifier onlyNotPausedStakingModule(address stakingModule) {
-        require(!_stakingModules[_stakingModuleIndicesOneBased[stakingModule]].paused, 'STAKING_MODULE_PAUSED');
+        require(!_stakingModules[_stakingModuleIndicesOneBased[stakingModule]].paused, "STAKING_MODULE_PAUSED");
         _;
     }
 }

@@ -5,20 +5,20 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.4.24;
 
-import '@aragon/os/contracts/apps/AragonApp.sol';
-import '@aragon/os/contracts/lib/math/SafeMath.sol';
-import '@aragon/os/contracts/lib/math/SafeMath64.sol';
-import 'solidity-bytes-utils/contracts/BytesLib.sol';
+import "@aragon/os/contracts/apps/AragonApp.sol";
+import "@aragon/os/contracts/lib/math/SafeMath.sol";
+import "@aragon/os/contracts/lib/math/SafeMath64.sol";
+import "solidity-bytes-utils/contracts/BytesLib.sol";
 
-import './interfaces/ILido.sol';
-import './interfaces/INodeOperatorsRegistry.sol';
-import './interfaces/IDepositContract.sol';
-import './interfaces/ILidoExecutionLayerRewardsVault.sol';
-import './interfaces/IStakingRouter.sol';
+import "./interfaces/ILido.sol";
+import "./interfaces/INodeOperatorsRegistry.sol";
+import "./interfaces/IDepositContract.sol";
+import "./interfaces/ILidoExecutionLayerRewardsVault.sol";
+import "./interfaces/IStakingRouter.sol";
 
-import './StETH.sol';
+import "./StETH.sol";
 
-import './lib/StakeLimitUtils.sol';
+import "./lib/StakeLimitUtils.sol";
 
 interface IERC721 {
     /// @notice Transfer ownership of an NFT
@@ -54,17 +54,17 @@ contract Lido is ILido, StETH, AragonApp {
     using StakeLimitUtils for StakeLimitState.Data;
 
     /// ACL
-    bytes32 public constant PAUSE_ROLE = keccak256('PAUSE_ROLE');
-    bytes32 public constant RESUME_ROLE = keccak256('RESUME_ROLE');
-    bytes32 public constant STAKING_PAUSE_ROLE = keccak256('STAKING_PAUSE_ROLE');
-    bytes32 public constant STAKING_CONTROL_ROLE = keccak256('STAKING_CONTROL_ROLE');
-    bytes32 public constant MANAGE_FEE = keccak256('MANAGE_FEE');
-    bytes32 public constant MANAGE_WITHDRAWAL_KEY = keccak256('MANAGE_WITHDRAWAL_KEY');
-    bytes32 public constant MANAGE_PROTOCOL_CONTRACTS_ROLE = keccak256('MANAGE_PROTOCOL_CONTRACTS_ROLE');
-    bytes32 public constant BURN_ROLE = keccak256('BURN_ROLE');
-    bytes32 public constant DEPOSIT_ROLE = keccak256('DEPOSIT_ROLE');
-    bytes32 public constant SET_EL_REWARDS_VAULT_ROLE = keccak256('SET_EL_REWARDS_VAULT_ROLE');
-    bytes32 public constant SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE = keccak256('SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE');
+    bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
+    bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
+    bytes32 public constant STAKING_PAUSE_ROLE = keccak256("STAKING_PAUSE_ROLE");
+    bytes32 public constant STAKING_CONTROL_ROLE = keccak256("STAKING_CONTROL_ROLE");
+    bytes32 public constant MANAGE_FEE = keccak256("MANAGE_FEE");
+    bytes32 public constant MANAGE_WITHDRAWAL_KEY = keccak256("MANAGE_WITHDRAWAL_KEY");
+    bytes32 public constant MANAGE_PROTOCOL_CONTRACTS_ROLE = keccak256("MANAGE_PROTOCOL_CONTRACTS_ROLE");
+    bytes32 public constant BURN_ROLE = keccak256("BURN_ROLE");
+    bytes32 public constant DEPOSIT_ROLE = keccak256("DEPOSIT_ROLE");
+    bytes32 public constant SET_EL_REWARDS_VAULT_ROLE = keccak256("SET_EL_REWARDS_VAULT_ROLE");
+    bytes32 public constant SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE = keccak256("SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE");
 
     // uint256 constant public PUBKEY_LENGTH = 48;
     // uint256 constant public WITHDRAWAL_CREDENTIALS_LENGTH = 32;
@@ -78,42 +78,44 @@ contract Lido is ILido, StETH, AragonApp {
     /// @dev default value for maximum number of Ethereum 2.0 validators registered in a single depositBufferedEther call
     uint256 internal constant DEFAULT_MAX_DEPOSITS_PER_CALL = 150;
 
-    bytes32 internal constant FEE_POSITION = keccak256('lido.Lido.fee');
-    bytes32 internal constant TREASURY_FEE_POSITION = keccak256('lido.Lido.treasuryFee');
-    bytes32 internal constant INSURANCE_FEE_POSITION = keccak256('lido.Lido.insuranceFee');
-    bytes32 internal constant NODE_OPERATORS_FEE_POSITION = keccak256('lido.Lido.nodeOperatorsFee');
+    bytes32 internal constant FEE_POSITION = keccak256("lido.Lido.fee");
+    bytes32 internal constant TREASURY_FEE_POSITION = keccak256("lido.Lido.treasuryFee");
+    bytes32 internal constant INSURANCE_FEE_POSITION = keccak256("lido.Lido.insuranceFee");
+    bytes32 internal constant NODE_OPERATORS_FEE_POSITION = keccak256("lido.Lido.nodeOperatorsFee");
 
-    bytes32 internal constant DEPOSIT_CONTRACT_POSITION = keccak256('lido.Lido.depositContract');
-    bytes32 internal constant ORACLE_POSITION = keccak256('lido.Lido.oracle');
-    bytes32 internal constant NODE_OPERATORS_REGISTRY_POSITION = keccak256('lido.Lido.nodeOperatorsRegistry');
-    bytes32 internal constant TREASURY_POSITION = keccak256('lido.Lido.treasury');
-    bytes32 internal constant INSURANCE_FUND_POSITION = keccak256('lido.Lido.insuranceFund');
-    bytes32 internal constant EL_REWARDS_VAULT_POSITION = keccak256('lido.Lido.executionLayerRewardsVault');
-    bytes32 internal constant STAKING_ROUTER_POSITION = keccak256('lido.Lido.stakingRouter');
+    bytes32 internal constant DEPOSIT_CONTRACT_POSITION = keccak256("lido.Lido.depositContract");
+    bytes32 internal constant ORACLE_POSITION = keccak256("lido.Lido.oracle");
+    bytes32 internal constant NODE_OPERATORS_REGISTRY_POSITION = keccak256("lido.Lido.nodeOperatorsRegistry");
+    bytes32 internal constant TREASURY_POSITION = keccak256("lido.Lido.treasury");
+    bytes32 internal constant INSURANCE_FUND_POSITION = keccak256("lido.Lido.insuranceFund");
+    bytes32 internal constant EL_REWARDS_VAULT_POSITION = keccak256("lido.Lido.executionLayerRewardsVault");
+    bytes32 internal constant STAKING_ROUTER_POSITION = keccak256("lido.Lido.stakingRouter");
 
     /// @dev storage slot position of the staking rate limit structure
-    bytes32 internal constant STAKING_STATE_POSITION = keccak256('lido.Lido.stakeLimit');
+    bytes32 internal constant STAKING_STATE_POSITION = keccak256("lido.Lido.stakeLimit");
     /// @dev amount of Ether (on the current Ethereum side) buffered on this smart contract balance
-    bytes32 internal constant BUFFERED_ETHER_POSITION = keccak256('lido.Lido.bufferedEther');
+    bytes32 internal constant BUFFERED_ETHER_POSITION = keccak256("lido.Lido.bufferedEther");
     /// @dev number of deposited validators (incrementing counter of deposit operations).
-    bytes32 internal constant DEPOSITED_VALIDATORS_POSITION = keccak256('lido.Lido.depositedValidators');
+    bytes32 internal constant DEPOSITED_VALIDATORS_POSITION = keccak256("lido.Lido.depositedValidators");
     /// @dev total amount of Beacon-side Ether (sum of all the balances of Lido validators)
-    bytes32 internal constant BEACON_BALANCE_POSITION = keccak256('lido.Lido.beaconBalance');
+    bytes32 internal constant BEACON_BALANCE_POSITION = keccak256("lido.Lido.beaconBalance");
     /// @dev number of Lido's validators available in the Beacon state
-    bytes32 internal constant BEACON_VALIDATORS_POSITION = keccak256('lido.Lido.beaconValidators');
+    bytes32 internal constant BEACON_VALIDATORS_POSITION = keccak256("lido.Lido.beaconValidators");
+    /// @dev amount of Ether sended to the Staking Router contract balance
+    bytes32 internal constant STAKING_ROUTER_BUFFERED_ETHER_POSITION = keccak256("lido.Lido.stakingRouterBufferedEther");
 
     /// @dev percent in basis points of total pooled ether allowed to withdraw from LidoExecutionLayerRewardsVault per LidoOracle report
-    bytes32 internal constant EL_REWARDS_WITHDRAWAL_LIMIT_POSITION = keccak256('lido.Lido.ELRewardsWithdrawalLimit');
+    bytes32 internal constant EL_REWARDS_WITHDRAWAL_LIMIT_POSITION = keccak256("lido.Lido.ELRewardsWithdrawalLimit");
 
     /// @dev Just a counter of total amount of execution layer rewards received by Lido contract
     /// Not used in the logic
-    bytes32 internal constant TOTAL_EL_REWARDS_COLLECTED_POSITION = keccak256('lido.Lido.totalELRewardsCollected');
+    bytes32 internal constant TOTAL_EL_REWARDS_COLLECTED_POSITION = keccak256("lido.Lido.totalELRewardsCollected");
 
     /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
-    bytes32 internal constant LAST_REPORT_TIMESTAMP = keccak256('lido.Lido.lastReportTimestamp');
+    bytes32 internal constant LAST_REPORT_TIMESTAMP = keccak256("lido.Lido.lastReportTimestamp");
 
     modifier onlyStakingRouter() {
-        require(msg.sender == getStakingRouter(), 'APP_AUTH_FAILED');
+        require(msg.sender == getStakingRouter(), "APP_AUTH_FAILED");
         _;
     }
 
@@ -278,7 +280,7 @@ contract Lido is ILido, StETH, AragonApp {
      */
     function() external payable {
         // protection against accidental submissions by calling non-existent function
-        require(msg.data.length == 0, 'NON_EMPTY_DATA');
+        require(msg.data.length == 0, "NON_EMPTY_DATA");
         _submit(0);
     }
 
@@ -324,10 +326,11 @@ contract Lido is ILido, StETH, AragonApp {
     //     return _depositBufferedEther(_maxDeposits);
     // }
 
-    function burnShares(
-        address _account,
-        uint256 _sharesAmount
-    ) external authP(BURN_ROLE, arr(_account, _sharesAmount)) returns (uint256 newTotalShares) {
+    function burnShares(address _account, uint256 _sharesAmount)
+        external
+        authP(BURN_ROLE, arr(_account, _sharesAmount))
+        returns (uint256 newTotalShares)
+    {
         return _burnShares(_account, _sharesAmount);
     }
 
@@ -373,13 +376,15 @@ contract Lido is ILido, StETH, AragonApp {
      * @param _operatorsFeeBasisPoints basis points go to node operators.
      * @dev The sum has to be 10 000.
      */
-    function setFeeDistribution(uint16 _treasuryFeeBasisPoints, uint16 _insuranceFeeBasisPoints, uint16 _operatorsFeeBasisPoints) external {
+    function setFeeDistribution(uint16 _treasuryFeeBasisPoints, uint16 _insuranceFeeBasisPoints, uint16 _operatorsFeeBasisPoints)
+        external
+    {
         _auth(MANAGE_FEE);
 
         require(
-            TOTAL_BASIS_POINTS ==
-                uint256(_treasuryFeeBasisPoints).add(uint256(_insuranceFeeBasisPoints)).add(uint256(_operatorsFeeBasisPoints)),
-            'FEES_DONT_ADD_UP'
+            TOTAL_BASIS_POINTS
+                == uint256(_treasuryFeeBasisPoints).add(uint256(_insuranceFeeBasisPoints)).add(uint256(_operatorsFeeBasisPoints)),
+            "FEES_DONT_ADD_UP"
         );
 
         _setBPValue(TREASURY_FEE_POSITION, _treasuryFeeBasisPoints);
@@ -438,17 +443,17 @@ contract Lido is ILido, StETH, AragonApp {
      * @param _beaconBalance summarized balance of Lido-controlled keys in wei
      */
     function handleOracleReport(uint256 _beaconValidators, uint256 _beaconBalance) external whenNotStopped {
-        require(msg.sender == getOracle(), 'APP_AUTH_FAILED');
+        require(msg.sender == getOracle(), "APP_AUTH_FAILED");
 
         uint256 depositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256();
-        require(_beaconValidators <= depositedValidators, 'REPORTED_MORE_DEPOSITED');
+        require(_beaconValidators <= depositedValidators, "REPORTED_MORE_DEPOSITED");
 
         uint256 beaconValidators = BEACON_VALIDATORS_POSITION.getStorageUint256();
         // Since the calculation of funds in the ingress queue is based on the number of validators
         // that are in a transient state (deposited but not seen on beacon yet), we can't decrease the previously
         // reported number (we'll be unable to figure out who is in the queue and count them).
         // See LIP-1 for details https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-1.md
-        require(_beaconValidators >= beaconValidators, 'REPORTED_LESS_VALIDATORS');
+        require(_beaconValidators >= beaconValidators, "REPORTED_LESS_VALIDATORS");
         uint256 appearedValidators = _beaconValidators.sub(beaconValidators);
 
         // RewardBase is the amount of money that is not included in the reward calculation
@@ -492,20 +497,20 @@ contract Lido is ILido, StETH, AragonApp {
      * @param _token Token to be sent to recovery vault
      */
     function transferToVault(address _token) external {
-        require(allowRecoverability(_token), 'RECOVER_DISALLOWED');
+        require(allowRecoverability(_token), "RECOVER_DISALLOWED");
         address vault = getRecoveryVault();
-        require(vault != address(0), 'RECOVER_VAULT_ZERO');
+        require(vault != address(0), "RECOVER_VAULT_ZERO");
 
         uint256 balance;
         if (_token == ETH) {
             balance = _getUnaccountedEther();
             // Transfer replaced by call to prevent transfer gas amount issue
-            require(vault.call.value(balance)(), 'RECOVER_TRANSFER_FAILED');
+            require(vault.call.value(balance)(), "RECOVER_TRANSFER_FAILED");
         } else {
             ERC20 token = ERC20(_token);
             balance = token.staticBalanceOf(this);
             // safeTransfer comes from overridden default implementation
-            require(token.safeTransfer(vault, balance), 'RECOVER_TOKEN_TRANSFER_FAILED');
+            require(token.safeTransfer(vault, balance), "RECOVER_TOKEN_TRANSFER_FAILED");
         }
 
         emit RecoverToVault(vault, _token, balance);
@@ -616,9 +621,9 @@ contract Lido is ILido, StETH, AragonApp {
      * @param _oracle oracle contract
      */
     function _setProtocolContracts(address _oracle, address _treasury, address _insuranceFund) internal {
-        require(_oracle != address(0), 'ORACLE_ZERO_ADDRESS');
-        require(_treasury != address(0), 'TREASURY_ZERO_ADDRESS');
-        require(_insuranceFund != address(0), 'INSURANCE_FUND_ZERO_ADDRESS');
+        require(_oracle != address(0), "ORACLE_ZERO_ADDRESS");
+        require(_treasury != address(0), "TREASURY_ZERO_ADDRESS");
+        require(_insuranceFund != address(0), "INSURANCE_FUND_ZERO_ADDRESS");
 
         ORACLE_POSITION.setStorageAddress(_oracle);
         TREASURY_POSITION.setStorageAddress(_treasury);
@@ -633,15 +638,15 @@ contract Lido is ILido, StETH, AragonApp {
      * @return amount of StETH shares generated
      */
     function _submit(address _referral) internal returns (uint256) {
-        require(msg.value != 0, 'ZERO_DEPOSIT');
+        require(msg.value != 0, "ZERO_DEPOSIT");
 
         StakeLimitState.Data memory stakeLimitData = STAKING_STATE_POSITION.getStorageStakeLimitStruct();
-        require(!stakeLimitData.isStakingPaused(), 'STAKING_PAUSED');
+        require(!stakeLimitData.isStakingPaused(), "STAKING_PAUSED");
 
         if (stakeLimitData.isStakingLimitSet()) {
             uint256 currentStakeLimit = stakeLimitData.calculateCurrentStakeLimit();
 
-            require(msg.value <= currentStakeLimit, 'STAKE_LIMIT');
+            require(msg.value <= currentStakeLimit, "STAKE_LIMIT");
 
             STAKING_STATE_POSITION.setStorageStakeLimitStruct(stakeLimitData.updatePrevStakeLimit(currentStakeLimit - msg.value));
         }
@@ -675,7 +680,9 @@ contract Lido is ILido, StETH, AragonApp {
 
         DEPOSITED_VALIDATORS_POSITION.setStorageUint256(DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(_numKeys));
 
-        // emit Unbuffered(_amount);
+        uint256 buffered = STAKING_ROUTER_BUFFERED_ETHER_POSITION.getStorageUint256();
+        uint256 newBuffered = _amount >= buffered ? 0 : buffered.sub(_amount);
+        STAKING_ROUTER_BUFFERED_ETHER_POSITION.setStorageUint256(newBuffered);
     }
 
     function getStakingRouter() public view returns (address) {
@@ -718,36 +725,28 @@ contract Lido is ILido, StETH, AragonApp {
         // token shares.
 
         address stakingRouterAddress = getStakingRouter();
-        (
-            address[] memory moduleAddresses,
-            uint256[] memory moduleShares,
-            uint256[] memory moduleFees,
-            uint256[] memory moduleTreasuryFees
-        ) = IStakingRouter(stakingRouterAddress).getSharesTable();
+        (address[] memory recipients, uint256[] memory moduleShares, uint256 totalShare) =
+            IStakingRouter(stakingRouterAddress).getSharesTable();
 
-        address treasury = getTreasury();
-        uint256 rewards2mint = 0;
-        uint256[] memory moduleRewards = new uint256[](moduleAddresses.length);
-
-        for (uint256 i = 0; i < moduleAddresses.length; i++) {
-            uint256 moduleShare = _totalRewards * moduleShares[i] / TOTAL_BASIS_POINTS;
-
-            moduleRewards[i] = moduleShare * moduleFees[i] / TOTAL_BASIS_POINTS;
-            rewards2mint += moduleShare * moduleTreasuryFees[i] / TOTAL_BASIS_POINTS + moduleRewards[i];
-        }
-
-        uint256 shares2mint = rewards2mint.mul(_getTotalShares()).div(_getTotalPooledEther().sub(rewards2mint));
+        uint256 shares2mint = _totalRewards.mul(totalShare).mul(_getTotalShares()).div(
+            _getTotalPooledEther().mul(TOTAL_BASIS_POINTS).sub(totalShare.mul(_totalRewards))
+        );
 
         _mintShares(address(this), shares2mint);
 
-        for (uint256 j = 0; j < moduleAddresses.length; j++) {
-            uint256 moduleRewardInShares = getSharesByPooledEth(moduleRewards[j]);
-            shares2mint -= moduleRewardInShares;
-
-            _transferShares(address(this), moduleAddresses[j], moduleRewardInShares);
+        uint256 treasuryReward = shares2mint;
+        uint256 moduleReward;
+        for (uint256 i = 0; i < recipients.length; i++) {
+            moduleReward = shares2mint.mul(moduleShares[i]).div(totalShare);
+            if (moduleReward > 0) {
+                _transferShares(address(this), recipients[i], moduleReward);
+                treasuryReward -= moduleReward;
+            }
         }
-        
-        _transferShares(address(this), treasury, shares2mint);
+
+        address treasury = getTreasury();
+
+        _transferShares(address(this), treasury, treasuryReward);
     }
 
     /**
@@ -756,15 +755,20 @@ contract Lido is ILido, StETH, AragonApp {
      */
     function _markAsUnbuffered(uint256 _amount) internal {
         BUFFERED_ETHER_POSITION.setStorageUint256(BUFFERED_ETHER_POSITION.getStorageUint256().sub(_amount));
+        STAKING_ROUTER_BUFFERED_ETHER_POSITION.setStorageUint256(STAKING_ROUTER_BUFFERED_ETHER_POSITION.getStorageUint256().add(_amount));
 
         emit Unbuffered(_amount);
+    }
+
+    function getStakingRouterBufferedEther() external view returns (uint256) {
+        return STAKING_ROUTER_BUFFERED_ETHER_POSITION.getStorageUint256();
     }
 
     /**
      * @dev Write a value nominated in basis points
      */
     function _setBPValue(bytes32 _slot, uint16 _value) internal {
-        require(_value <= TOTAL_BASIS_POINTS, 'VALUE_OVER_100_PERCENT');
+        require(_value <= TOTAL_BASIS_POINTS, "VALUE_OVER_100_PERCENT");
         _slot.setStorageUint256(uint256(_value));
     }
 
@@ -803,46 +807,13 @@ contract Lido is ILido, StETH, AragonApp {
      * @return total balance in wei
      */
     function _getTotalPooledEther() internal view returns (uint256) {
-        return _getBufferedEther().add(BEACON_BALANCE_POSITION.getStorageUint256()).add(_getTransientBalance());
-    }
-
-    /**
-     * @dev Padding memory array with zeroes up to 64 bytes on the right
-     * @param _b Memory array of size 32 .. 64
-     */
-    function _pad64(bytes memory _b) internal pure returns (bytes memory) {
-        assert(_b.length >= 32 && _b.length <= 64);
-        if (64 == _b.length) return _b;
-
-        bytes memory zero32 = new bytes(32);
-        assembly {
-            mstore(add(zero32, 0x20), 0)
-        }
-
-        if (32 == _b.length) return BytesLib.concat(_b, zero32);
-        else return BytesLib.concat(_b, BytesLib.slice(zero32, 0, uint256(64).sub(_b.length)));
-    }
-
-    /**
-     * @dev Converting value to little endian bytes and padding up to 32 bytes on the right
-     * @param _value Number less than `2**64` for compatibility reasons
-     */
-    function _toLittleEndian64(uint256 _value) internal pure returns (uint256 result) {
-        result = 0;
-        uint256 temp_value = _value;
-        for (uint256 i = 0; i < 8; ++i) {
-            result = (result << 8) | (temp_value & 0xFF);
-            temp_value >>= 8;
-        }
-
-        assert(0 == temp_value); // fully converted
-        result <<= (24 * 8);
+        return _getBufferedEther().add(BEACON_BALANCE_POSITION.getStorageUint256()).add(_getTransientBalance()).add(
+            STAKING_ROUTER_BUFFERED_ETHER_POSITION.getStorageUint256()
+        );
     }
 
     function _pauseStaking() internal {
-        STAKING_STATE_POSITION.setStorageStakeLimitStruct(
-            STAKING_STATE_POSITION.getStorageStakeLimitStruct().setStakeLimitPauseState(true)
-        );
+        STAKING_STATE_POSITION.setStorageStakeLimitStruct(STAKING_STATE_POSITION.getStorageStakeLimitStruct().setStakeLimitPauseState(true));
 
         emit StakingPaused();
     }
@@ -872,5 +843,24 @@ contract Lido is ILido, StETH, AragonApp {
      */
     function _auth(bytes32 _role) internal view auth(_role) {
         // no-op
+    }
+
+    function transferToStakingRouter(uint256 _maxDeposits) external {
+        address stakingRouter = getStakingRouter();
+        require(stakingRouter != address(0), "STAKING_ROUTER_ADDRESS_ZERO");
+
+        uint256 buffered = _getBufferedEther();
+        if (buffered >= DEPOSIT_SIZE) {
+            uint256 unaccounted = _getUnaccountedEther();
+            uint256 numDeposits = buffered.div(DEPOSIT_SIZE);
+            numDeposits = numDeposits < _maxDeposits ? numDeposits : _maxDeposits;
+
+            uint256 amount = numDeposits * DEPOSIT_SIZE;
+
+            address(stakingRouter).transfer(amount);
+
+            _markAsUnbuffered(amount);
+            assert(_getUnaccountedEther() == unaccounted);
+        }
     }
 }
