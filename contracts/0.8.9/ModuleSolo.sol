@@ -5,6 +5,9 @@
 pragma solidity 0.8.9;
 
 import "./interfaces/IStakingModule.sol";
+import './lib/BytesLib.sol';
+
+import "hardhat/console.sol";
 
 interface IStakingRouter {
     function deposit(bytes memory pubkeys, bytes memory signatures) external returns(uint);
@@ -68,29 +71,13 @@ contract ModuleSolo is IStakingModule {
 
     function setNodeOperatorActive(uint256 _id, bool _active) external {}
 
-    function deposit(bytes memory pubkeys, bytes memory signatures) external {
-        require(pubkeys.length > 0, "INVALID_PUBKEYS");
-
-        require(pubkeys.length % PUBKEY_LENGTH == 0, "REGISTRY_INCONSISTENT_PUBKEYS_LEN");
-        require(signatures.length % SIGNATURE_LENGTH == 0, "REGISTRY_INCONSISTENT_SIG_LEN");
-
-        uint256 numKeys = pubkeys.length / PUBKEY_LENGTH;
-        require(numKeys == signatures.length / SIGNATURE_LENGTH, "REGISTRY_INCONSISTENT_SIG_COUNT");
-
-        uint256 keys = IStakingRouter(stakingRouter).deposit(pubkeys, signatures);
-
-        totalUsedKeys += keys;
-
-        require(numKeys == keys);
-    }
-
     function setStakingRouter(address _addr) public {
         stakingRouter = _addr;
 
         //emit SetStakingRouter(_addr);
     }
 
-    function getStakingRouter() external returns(address) {
+    function getStakingRouter() external view returns(address) {
         return stakingRouter;
     }
 
@@ -102,11 +89,21 @@ contract ModuleSolo is IStakingModule {
         moduleType = _type;
     } 
 
-    function getType() external returns(uint16) {
+    function getType() external view returns(uint16) {
         return moduleType;
     }
 
     function getKeysOpIndex() external view returns (uint256) {
         return keysOpIndex;
+    }
+
+    function prepNextSigningKeys(uint256 maxDepositsCount, bytes calldata depositCalldata) 
+        external 
+    returns (bytes memory pubkeys, bytes memory signatures) {
+
+        pubkeys = BytesLib.slice(depositCalldata, 0, maxDepositsCount * PUBKEY_LENGTH);
+        signatures = BytesLib.slice(depositCalldata, maxDepositsCount * PUBKEY_LENGTH, maxDepositsCount*SIGNATURE_LENGTH);
+
+        return (pubkeys, signatures);
     }
 }

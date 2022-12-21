@@ -42,7 +42,6 @@ const curatedModule = {
   totalUsedKeys: 50,
   totalStoppedKeys: 0,
   targetShare: 10000,
-  recycleShare: 0, // 0%, no effect if targetShare >=10000
   assignedDeposits: 0,
   balance: 0
 }
@@ -55,7 +54,6 @@ const communityModule = {
   totalUsedKeys: 30,
   totalStoppedKeys: 1,
   targetShare: 9000,
-  recycleShare: 1000, // 10%, no effect if targetShare >=10000
   assignedDeposits: 0,
   bond: 16,
   balance: 0
@@ -69,7 +67,6 @@ const communityModule2 = {
   totalUsedKeys: 20,
   totalStoppedKeys: 1,
   targetShare: 100,
-  recycleShare: 1000, // 10%, no effect if targetShare >=10000
   assignedDeposits: 0,
   bond: 16,
   balance: 0
@@ -82,7 +79,6 @@ const communityModule3 = {
   totalUsedKeys: 1000,
   totalStoppedKeys: 100,
   targetShare: 100,
-  recycleShare: 1000, // 10%, no effect if targetShare >=10000
   assignedDeposits: 0,
   bond: 20,
   balance: 0
@@ -191,7 +187,7 @@ contract('StakingRouter', (accounts) => {
 
       // add NodeOperatorRegistry from voting
       // name, address, cap, treasuryFee
-      await stakingRouter.addModule('Curated', operators.address, 10000, 0, 500, curatedModule.fee, { from: voting })
+      await stakingRouter.addModule('Curated', operators.address, 10000, 500, curatedModule.fee, { from: voting })
 
       await operators.setTotalKeys(curatedModule.totalKeys, { from: appManager })
       await operators.setTotalUsedKeys(curatedModule.totalUsedKeys, { from: appManager })
@@ -224,7 +220,7 @@ contract('StakingRouter', (accounts) => {
 
         const name = 'Community' + i
 
-        await stakingRouter.addModule(name, _module.address, module.targetShare, module.recycleShare, module.treasuryFee, module.fee, {
+        await stakingRouter.addModule(name, _module.address, module.targetShare, module.treasuryFee, module.fee, {
           from: voting
         })
         await _module.setTotalKeys(module.totalKeys, { from: appManager })

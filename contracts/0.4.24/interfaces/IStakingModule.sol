@@ -17,4 +17,6 @@ interface IStakingModule {
 
     function trimUnusedKeys() external;
     function getKeysOpIndex() external view returns (uint256);
+
+    function prepNextSigningKeys(uint256 maxDepositsCount, bytes depositCalldata) external returns (bytes memory pubkeys, bytes memory signatures);
 }

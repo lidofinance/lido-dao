@@ -121,28 +121,16 @@ contract('Lido', ([appManager, voting, user2, depositor]) => {
 
     soloModule = await ModuleSolo.new(1, app.address, { from: appManager })
 
-    await stakingRouter.addModule(
-      'Curated',
-      curatedModule.address,
-      cfgCurated.targetShare,
-      cfgCurated.recycleShare,
-      cfgCurated.treasuryFee,
-      cfgCurated.moduleFee,
-      { from: voting }
-    )
+    await stakingRouter.addModule('Curated', curatedModule.address, cfgCurated.targetShare, cfgCurated.treasuryFee, cfgCurated.moduleFee, {
+      from: voting
+    })
     await curatedModule.setTotalKeys(100, { from: appManager })
     await curatedModule.setTotalUsedKeys(50, { from: appManager })
     await curatedModule.setTotalStoppedKeys(0, { from: appManager })
 
-    await stakingRouter.addModule(
-      'Solo',
-      soloModule.address,
-      cfgCommunity.targetShare,
-      cfgCommunity.recycleShare,
-      cfgCommunity.treasuryFee,
-      cfgCommunity.moduleFee,
-      { from: voting }
-    )
+    await stakingRouter.addModule('Solo', soloModule.address, cfgCommunity.targetShare, cfgCommunity.treasuryFee, cfgCommunity.moduleFee, {
+      from: voting
+    })
     await soloModule.setTotalKeys(100, { from: appManager })
     await soloModule.setTotalUsedKeys(50, { from: appManager })
     await soloModule.setTotalStoppedKeys(0, { from: appManager })
