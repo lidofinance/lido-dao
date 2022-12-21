@@ -382,7 +382,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
 
         uint256 maxSigningKeysCount = getAllocatedDepositsCount(_stakingModuleId, totalActiveKeys + _maxDepositsCount);
 
-        if (maxSigningKeysCount == 0) revert ErrorZerroMaxSigningKeysCount();
+        if (maxSigningKeysCount == 0) revert ErrorZeroMaxSigningKeysCount();
 
         StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
         (uint256 keysCount, bytes memory publicKeysBatch, bytes memory signaturesBatch) = IStakingModule(
@@ -499,7 +499,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     error ErrorBaseVersion();
     error ErrorNoKeys();
     error ErrorNoStakingModules();
-    error ErrorZerroMaxSigningKeysCount();
+    error ErrorZeroMaxSigningKeysCount();
     error ErrorValueOver100Percent(string field);
     error ErrorStakingModuleIsPaused();
     error ErrorStakingModuleIsNotPaused();
