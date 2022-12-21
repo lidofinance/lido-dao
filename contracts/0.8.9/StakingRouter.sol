@@ -304,13 +304,15 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         onlyRegisteredStakingModule(stakingModule)
         onlyNotPausedStakingModule(stakingModule)
     {
-        (uint256 activeKeysCount,) = getTotalActiveKeys();
+        /// @todo make more optimal calc of totalActiveKeysCount (eliminate double calls of module.getTotalUsedKeys() and
+        ///       module.getTotalStoppedKeys() inside getTotalActiveKeys() and _loadStakingModuleCache() methods)
+        (uint256 totalActiveKeys,) = getTotalActiveKeys();
 
         uint256 stakingModuleIndex = _stakingModuleIndicesOneBased[stakingModule];
         StakingModuleCache memory stakingModuleCache = _loadStakingModuleCache(stakingModuleIndex);
 
         uint256 maxSigningKeysCount = _getAllocatedDepositsCount(
-            stakingModuleCache, activeKeysCount + Math.min(maxDepositsCount, stakingModuleCache.availableKeysCount)
+            stakingModuleCache, totalActiveKeys + Math.min(maxDepositsCount, stakingModuleCache.availableKeysCount)
         );
 
         require(maxSigningKeysCount != 0, "ZERO_MAX_SIGNING_KEYS_COUNT");
@@ -367,7 +369,6 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         if (_stakingModule.paused) {
             return 0;
         }
-        // @todo use totalActiveKeys + keysToDeposit
         uint256 targetKeysAllocation = (totalActiveKeys * _stakingModule.targetShare) / TOTAL_BASIS_POINTS;
         if (_stakingModule.activeKeysCount > targetKeysAllocation) {
             return 0;

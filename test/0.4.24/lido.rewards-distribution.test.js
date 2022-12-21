@@ -17,15 +17,13 @@ const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 const cfgCurated = {
   moduleFee: 250,
   treasuryFee: 500,
-  targetShare: 10000,
-  recycleShare: 0 // 0%, no effect if targetShare >=10000
+  targetShare: 10000
 }
 
 const cfgCommunity = {
   moduleFee: 250,
   treasuryFee: 500,
-  targetShare: 10000,
-  recycleShare: 0 // 0%, no effect if targetShare >=10000
+  targetShare: 10000
 }
 
 contract('Lido', ([appManager, voting, user2, depositor]) => {
