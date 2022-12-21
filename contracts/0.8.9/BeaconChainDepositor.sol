@@ -15,7 +15,7 @@ contract BeaconChainDepositor {
     IDepositContract public immutable DEPOSIT_CONTRACT;
 
     constructor(address _depositContract) {
-        require(_depositContract != address(0), 'DEPOSIT_CONTRACT_ZERO_ADDRESS');
+        if (_depositContract == address(0)) revert ErrorDepositContractZeroAddress();
         DEPOSIT_CONTRACT = IDepositContract(_depositContract);
     }
 
@@ -37,7 +37,7 @@ contract BeaconChainDepositor {
             _signature,
             _computeDepositDataRoot(_withdrawalCredentials, _publicKey, _signature, _depositValue / DEPOSIT_AMOUNT_UNIT)
         );
-        require(address(this).balance == targetBalance, 'EXPECTING_DEPOSIT_TO_HAPPEN');
+        if (address(this).balance != targetBalance) revert ErrorNoDeposit();
     }
 
     /// @dev computes the deposit_root_hash required by official Beacon Deposit contract
@@ -98,4 +98,7 @@ contract BeaconChainDepositor {
         assert(0 == temp_value); // fully converted
         result <<= (24 * 8);
     }
+
+    error ErrorDepositContractZeroAddress();
+    error ErrorNoDeposit();
 }
