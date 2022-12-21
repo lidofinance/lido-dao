@@ -273,10 +273,12 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
             stakingModule = _stakingModules[i];
             moduleShare = ((moduleActiveKeys[i] * TOTAL_BASIS_POINTS) / totalActiveKeys);
 
-            recipients[i] = address(stakingModule.moduleAddress);
-            moduleShares[i] = ((moduleShare * stakingModule.moduleFee) / TOTAL_BASIS_POINTS);
+            uint256 moduleRewards = ((moduleShare * stakingModule.moduleFee) / TOTAL_BASIS_POINTS);
 
-            totalShare += (moduleShare * stakingModule.treasuryFee) / TOTAL_BASIS_POINTS + moduleShares[i];
+            totalShare += moduleRewards;
+
+            recipients[i] = address(stakingModule.moduleAddress);
+            moduleShares[i] = moduleRewards - (moduleShare * stakingModule.treasuryFee / TOTAL_BASIS_POINTS);
         }
 
         return (recipients, moduleShares, totalShare);
