@@ -5,17 +5,17 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.4.24;
 
-import '@aragon/os/contracts/apps/AragonApp.sol';
-import '@aragon/os/contracts/common/IsContract.sol';
-import '@aragon/os/contracts/lib/math/SafeMath.sol';
-import '@aragon/os/contracts/lib/math/SafeMath64.sol';
-import 'solidity-bytes-utils/contracts/BytesLib.sol';
+import "@aragon/os/contracts/apps/AragonApp.sol";
+import "@aragon/os/contracts/common/IsContract.sol";
+import "@aragon/os/contracts/lib/math/SafeMath.sol";
+import "@aragon/os/contracts/lib/math/SafeMath64.sol";
+import "solidity-bytes-utils/contracts/BytesLib.sol";
 
-import '../interfaces/INodeOperatorsRegistry.sol';
-import '../interfaces/IStakingModule.sol';
-import '../interfaces/IStakingRouter.sol';
-import '../interfaces/IStETH.sol';
-import '../lib/MemUtils.sol';
+import "../interfaces/INodeOperatorsRegistry.sol";
+import "../interfaces/IStakingModule.sol";
+import "../interfaces/IStakingRouter.sol";
+import "../interfaces/IStETH.sol";
+import "../lib/MemUtils.sol";
 
 /**
  * @title Node Operator registry implementation
@@ -30,16 +30,16 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
     using UnstructuredStorage for bytes32;
 
     /// ACL
-    bytes32 public constant MANAGE_SIGNING_KEYS = keccak256('MANAGE_SIGNING_KEYS');
-    bytes32 public constant ADD_NODE_OPERATOR_ROLE = keccak256('ADD_NODE_OPERATOR_ROLE');
-    bytes32 public constant SET_NODE_OPERATOR_ACTIVE_ROLE = keccak256('SET_NODE_OPERATOR_ACTIVE_ROLE');
-    bytes32 public constant SET_NODE_OPERATOR_NAME_ROLE = keccak256('SET_NODE_OPERATOR_NAME_ROLE');
-    bytes32 public constant SET_NODE_OPERATOR_ADDRESS_ROLE = keccak256('SET_NODE_OPERATOR_ADDRESS_ROLE');
-    bytes32 public constant SET_NODE_OPERATOR_LIMIT_ROLE = keccak256('SET_NODE_OPERATOR_LIMIT_ROLE');
-    bytes32 public constant REPORT_STOPPED_VALIDATORS_ROLE = keccak256('REPORT_STOPPED_VALIDATORS_ROLE');
-    bytes32 public constant SET_FEE_ROLE = keccak256('SET_FEE_ROLE');
-    bytes32 public constant SET_TYPE_ROLE = keccak256('SET_TYPE_ROLE');
-    bytes32 public constant SET_STAKING_ROUTER_ROLE = keccak256('SET_STAKING_ROUTER_ROLE');
+    bytes32 public constant MANAGE_SIGNING_KEYS = keccak256("MANAGE_SIGNING_KEYS");
+    bytes32 public constant ADD_NODE_OPERATOR_ROLE = keccak256("ADD_NODE_OPERATOR_ROLE");
+    bytes32 public constant SET_NODE_OPERATOR_ACTIVE_ROLE = keccak256("SET_NODE_OPERATOR_ACTIVE_ROLE");
+    bytes32 public constant SET_NODE_OPERATOR_NAME_ROLE = keccak256("SET_NODE_OPERATOR_NAME_ROLE");
+    bytes32 public constant SET_NODE_OPERATOR_ADDRESS_ROLE = keccak256("SET_NODE_OPERATOR_ADDRESS_ROLE");
+    bytes32 public constant SET_NODE_OPERATOR_LIMIT_ROLE = keccak256("SET_NODE_OPERATOR_LIMIT_ROLE");
+    bytes32 public constant REPORT_STOPPED_VALIDATORS_ROLE = keccak256("REPORT_STOPPED_VALIDATORS_ROLE");
+    bytes32 public constant SET_FEE_ROLE = keccak256("SET_FEE_ROLE");
+    bytes32 public constant SET_TYPE_ROLE = keccak256("SET_TYPE_ROLE");
+    bytes32 public constant SET_STAKING_ROUTER_ROLE = keccak256("SET_STAKING_ROUTER_ROLE");
 
     uint256 public constant PUBKEY_LENGTH = 48;
     uint256 public constant SIGNATURE_LENGTH = 96;
@@ -47,17 +47,17 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
 
     uint256 internal constant UINT64_MAX = uint256(uint64(-1));
 
-    bytes32 internal constant SIGNING_KEYS_MAPPING_NAME = keccak256('lido.NodeOperatorsRegistry.signingKeysMappingName');
+    bytes32 internal constant SIGNING_KEYS_MAPPING_NAME = keccak256("lido.NodeOperatorsRegistry.signingKeysMappingName");
 
     uint256 internal constant TOTAL_BASIS_POINTS = 10000;
 
-    bytes32 internal constant TOTAL_KEYS_POSITION = keccak256('lido.NodeOperatorsRegistry.totalKeys');
-    bytes32 internal constant TOTAL_USED_KEYS_POSITION = keccak256('lido.NodeOperatorsRegistry.totalUsedKeys');
-    bytes32 internal constant TOTAL_STOPPED_KEYS_POSITION = keccak256('lido.NodeOperatorsRegistry.totalStoppedKeys');
+    bytes32 internal constant TOTAL_KEYS_POSITION = keccak256("lido.NodeOperatorsRegistry.totalKeys");
+    bytes32 internal constant TOTAL_USED_KEYS_POSITION = keccak256("lido.NodeOperatorsRegistry.totalUsedKeys");
+    bytes32 internal constant TOTAL_STOPPED_KEYS_POSITION = keccak256("lido.NodeOperatorsRegistry.totalStoppedKeys");
 
-    bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256('lido.NodeOperatorsRegistry.contractVersion');
+    bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.NodeOperatorsRegistry.contractVersion");
 
-    bytes32 internal constant STETH_POSITION = keccak256('lido.Lido.stETH');
+    bytes32 internal constant STETH_POSITION = keccak256("lido.Lido.stETH");
 
     /// @dev Node Operator parameters and internal state
     struct NodeOperator {
@@ -85,35 +85,35 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
     mapping(uint256 => NodeOperator) internal operators;
 
     // @dev Total number of operators
-    bytes32 internal constant TOTAL_OPERATORS_COUNT_POSITION = keccak256('lido.NodeOperatorsRegistry.totalOperatorsCount');
+    bytes32 internal constant TOTAL_OPERATORS_COUNT_POSITION = keccak256("lido.NodeOperatorsRegistry.totalOperatorsCount");
 
     // @dev Cached number of active operators
-    bytes32 internal constant ACTIVE_OPERATORS_COUNT_POSITION = keccak256('lido.NodeOperatorsRegistry.activeOperatorsCount');
+    bytes32 internal constant ACTIVE_OPERATORS_COUNT_POSITION = keccak256("lido.NodeOperatorsRegistry.activeOperatorsCount");
 
     /// @dev link to the Lido contract
-    bytes32 internal constant LIDO_POSITION = keccak256('lido.NodeOperatorsRegistry.lido');
+    bytes32 internal constant LIDO_POSITION = keccak256("lido.NodeOperatorsRegistry.lido");
 
     /// @dev link to the index of operations with keys
-    bytes32 internal constant KEYS_OP_INDEX_POSITION = keccak256('lido.NodeOperatorsRegistry.keysOpIndex');
+    bytes32 internal constant KEYS_OP_INDEX_POSITION = keccak256("lido.NodeOperatorsRegistry.keysOpIndex");
 
     /// @dev link to the Staking Router contract
-    bytes32 internal constant STAKING_ROUTER_POSITION = keccak256('lido.NodeOperatorsRegistry.stakingRouter');
+    bytes32 internal constant STAKING_ROUTER_POSITION = keccak256("lido.NodeOperatorsRegistry.stakingRouter");
 
     /// @dev module type
-    bytes32 internal constant TYPE_POSITION = keccak256('lido.NodeOperatorsRegistry.type');
+    bytes32 internal constant TYPE_POSITION = keccak256("lido.NodeOperatorsRegistry.type");
 
     modifier onlyStakingRouter() {
-        require(msg.sender == getStakingRouter(), 'APP_AUTH_FAILED');
+        require(msg.sender == getStakingRouter(), "APP_AUTH_FAILED");
         _;
     }
 
     modifier validAddress(address _a) {
-        require(_a != address(0), 'EMPTY_ADDRESS');
+        require(_a != address(0), "EMPTY_ADDRESS");
         _;
     }
 
     modifier operatorExists(uint256 _id) {
-        require(_id < getNodeOperatorsCount(), 'NODE_OPERATOR_NOT_FOUND');
+        require(_id < getNodeOperatorsCount(), "NODE_OPERATOR_NOT_FOUND");
         _;
     }
 
@@ -138,7 +138,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         returns (uint256 id)
     {
         id = getNodeOperatorsCount();
-        require(id < MAX_NODE_OPERATORS_COUNT, 'MAX_NODE_OPERATORS_COUNT_EXCEEDED');
+        require(id < MAX_NODE_OPERATORS_COUNT, "MAX_NODE_OPERATORS_COUNT_EXCEEDED");
 
         TOTAL_OPERATORS_COUNT_POSITION.setStorageUint256(id.add(1));
 
@@ -165,7 +165,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         authP(SET_NODE_OPERATOR_ACTIVE_ROLE, arr(_id, _active ? uint256(1) : uint256(0)))
         operatorExists(_id)
     {
-        require(operators[_id].active != _active, 'NODE_OPERATOR_ACTIVITY_ALREADY_SET');
+        require(operators[_id].active != _active, "NODE_OPERATOR_ACTIVITY_ALREADY_SET");
 
         _increaseKeysOpIndex();
 
@@ -190,7 +190,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
      * @notice Change human-readable name of the node operator #`_id` to `_name`
      */
     function setNodeOperatorName(uint256 _id, string _name) external authP(SET_NODE_OPERATOR_NAME_ROLE, arr(_id)) operatorExists(_id) {
-        require(keccak256(operators[_id].name) != keccak256(_name), 'NODE_OPERATOR_NAME_IS_THE_SAME');
+        require(keccak256(operators[_id].name) != keccak256(_name), "NODE_OPERATOR_NAME_IS_THE_SAME");
         operators[_id].name = _name;
         emit NodeOperatorNameSet(_id, _name);
     }
@@ -204,7 +204,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         operatorExists(_id)
         validAddress(_rewardAddress)
     {
-        require(operators[_id].rewardAddress != _rewardAddress, 'NODE_OPERATOR_ADDRESS_IS_THE_SAME');
+        require(operators[_id].rewardAddress != _rewardAddress, "NODE_OPERATOR_ADDRESS_IS_THE_SAME");
         operators[_id].rewardAddress = _rewardAddress;
         emit NodeOperatorRewardAddressSet(_id, _rewardAddress);
     }
@@ -217,7 +217,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         authP(SET_NODE_OPERATOR_LIMIT_ROLE, arr(_id, uint256(_stakingLimit)))
         operatorExists(_id)
     {
-        require(operators[_id].stakingLimit != _stakingLimit, 'NODE_OPERATOR_STAKING_LIMIT_IS_THE_SAME');
+        require(operators[_id].stakingLimit != _stakingLimit, "NODE_OPERATOR_STAKING_LIMIT_IS_THE_SAME");
         _increaseKeysOpIndex();
         operators[_id].stakingLimit = _stakingLimit;
         emit NodeOperatorStakingLimitSet(_id, _stakingLimit);
@@ -231,9 +231,9 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         authP(REPORT_STOPPED_VALIDATORS_ROLE, arr(_id, uint256(_stoppedIncrement)))
         operatorExists(_id)
     {
-        require(0 != _stoppedIncrement, 'EMPTY_VALUE');
+        require(0 != _stoppedIncrement, "EMPTY_VALUE");
         operators[_id].stoppedValidators = operators[_id].stoppedValidators.add(_stoppedIncrement);
-        require(operators[_id].stoppedValidators <= operators[_id].usedSigningKeys, 'STOPPED_MORE_THAN_LAUNCHED');
+        require(operators[_id].stoppedValidators <= operators[_id].usedSigningKeys, "STOPPED_MORE_THAN_LAUNCHED");
         TOTAL_STOPPED_KEYS_POSITION.setStorageUint256(getTotalStoppedKeys().add(_stoppedIncrement));
 
         emit NodeOperatorTotalStoppedValidatorsReported(_id, operators[_id].stoppedValidators);
@@ -270,12 +270,10 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
      * @param _pubkeys Several concatenated validator signing keys
      * @param _signatures Several concatenated signatures for (pubkey, withdrawal_credentials, 32000000000) messages
      */
-    function addSigningKeys(
-        uint256 _operator_id,
-        uint256 _quantity,
-        bytes _pubkeys,
-        bytes _signatures
-    ) external authP(MANAGE_SIGNING_KEYS, arr(_operator_id)) {
+    function addSigningKeys(uint256 _operator_id, uint256 _quantity, bytes _pubkeys, bytes _signatures)
+        external
+        authP(MANAGE_SIGNING_KEYS, arr(_operator_id))
+    {
         _addSigningKeys(_operator_id, _quantity, _pubkeys, _signatures);
     }
 
@@ -290,13 +288,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
      * @param _pubkeys Several concatenated validator signing keys
      * @param _signatures Several concatenated signatures for (pubkey, withdrawal_credentials, 32000000000) messages
      */
-    function addSigningKeysOperatorBH(
-        uint256 _operator_id,
-        uint256 _quantity,
-        bytes _pubkeys,
-        bytes _signatures
-    ) external {
-        require(msg.sender == operators[_operator_id].rewardAddress, 'APP_AUTH_FAILED');
+    function addSigningKeysOperatorBH(uint256 _operator_id, uint256 _quantity, bytes _pubkeys, bytes _signatures) external {
+        require(msg.sender == operators[_operator_id].rewardAddress, "APP_AUTH_FAILED");
         _addSigningKeys(_operator_id, _quantity, _pubkeys, _signatures);
     }
 
@@ -315,11 +308,10 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
      * @param _index Index of the key, starting with 0
      * @param _amount Number of keys to remove
      */
-    function removeSigningKeys(
-        uint256 _operator_id,
-        uint256 _index,
-        uint256 _amount
-    ) external authP(MANAGE_SIGNING_KEYS, arr(_operator_id)) {
+    function removeSigningKeys(uint256 _operator_id, uint256 _index, uint256 _amount)
+        external
+        authP(MANAGE_SIGNING_KEYS, arr(_operator_id))
+    {
         // removing from the last index to the highest one, so we won't get outside the array
         for (uint256 i = _index.add(_amount); i > _index; --i) {
             _removeSigningKey(_operator_id, i - 1);
@@ -332,7 +324,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
      * @param _index Index of the key, starting with 0
      */
     function removeSigningKeyOperatorBH(uint256 _operator_id, uint256 _index) external {
-        require(msg.sender == operators[_operator_id].rewardAddress, 'APP_AUTH_FAILED');
+        require(msg.sender == operators[_operator_id].rewardAddress, "APP_AUTH_FAILED");
         _removeSigningKey(_operator_id, _index);
     }
 
@@ -342,12 +334,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
      * @param _index Index of the key, starting with 0
      * @param _amount Number of keys to remove
      */
-    function removeSigningKeysOperatorBH(
-        uint256 _operator_id,
-        uint256 _index,
-        uint256 _amount
-    ) external {
-        require(msg.sender == operators[_operator_id].rewardAddress, 'APP_AUTH_FAILED');
+    function removeSigningKeysOperatorBH(uint256 _operator_id, uint256 _index, uint256 _amount) external {
+        require(msg.sender == operators[_operator_id].rewardAddress, "APP_AUTH_FAILED");
         // removing from the last index to the highest one, so we won't get outside the array
         for (uint256 i = _index.add(_amount); i > _index; --i) {
             _removeSigningKey(_operator_id, i - 1);
@@ -362,12 +350,14 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
      * @param _numKeys The number of keys to select. The actual number of selected keys may be less
      *        due to the lack of active keys.
      */
-    function _assignNextSigningKeys(uint256 _numKeys) internal returns (bytes memory pubkeys, bytes memory signatures) {
+    function _assignNextSigningKeys(uint256 _numKeys)
+        internal
+        returns (uint256 numAssignedKeys, bytes memory pubkeys, bytes memory signatures)
+    {
         // Memory is very cheap, although you don't want to grow it too much
         DepositLookupCacheEntry[] memory cache = _loadOperatorCache();
-        if (0 == cache.length) return (new bytes(0), new bytes(0));
+        if (0 == cache.length) return (0, new bytes(0), new bytes(0));
 
-        uint256 numAssignedKeys = 0;
         DepositLookupCacheEntry memory entry;
 
         while (numAssignedKeys < _numKeys) {
@@ -390,9 +380,10 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
                 }
             }
 
-            if (bestOperatorIdx == cache.length)
+            if (bestOperatorIdx == cache.length) {
                 // not found
                 break;
+            }
 
             entry = cache[bestOperatorIdx];
             assert(entry.usedSigningKeys < UINT64_MAX);
@@ -402,7 +393,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         }
 
         if (numAssignedKeys == 0) {
-            return (new bytes(0), new bytes(0));
+            return (0, new bytes(0), new bytes(0));
         }
 
         if (numAssignedKeys > 1) {
@@ -430,7 +421,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
                     // TOTAL_USED_KEYS_POSITION.setStorageUint256(TOTAL_USED_KEYS_POSITION.getStorageUint256() + numAssignedKeys);
                     TOTAL_USED_KEYS_POSITION.setStorageUint256(getTotalUsedKeys().add(1));
 
-                    return (pubkey, signature);
+                    return (1, pubkey, signature);
                 } else {
                     MemUtils.copyBytes(pubkey, pubkeys, numLoadedKeys * PUBKEY_LENGTH);
                     MemUtils.copyBytes(signature, signatures, numLoadedKeys * SIGNATURE_LENGTH);
@@ -449,7 +440,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         //update total used keys
         TOTAL_USED_KEYS_POSITION.setStorageUint256(getTotalUsedKeys().add(numAssignedKeys));
 
-        return (pubkeys, signatures);
+        return (numAssignedKeys, pubkeys, signatures);
     }
 
     /**
@@ -522,7 +513,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         NodeOperator storage operator = operators[_id];
 
         active = operator.active;
-        name = _fullInfo ? operator.name : ''; // reading name is 2+ SLOADs
+        name = _fullInfo ? operator.name : ""; // reading name is 2+ SLOADs
         rewardAddress = operator.rewardAddress;
         stakingLimit = operator.stakingLimit;
         stoppedValidators = operator.stoppedValidators;
@@ -556,13 +547,9 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         external
         view
         operatorExists(_operator_id)
-        returns (
-            bytes key,
-            bytes depositSignature,
-            bool used
-        )
+        returns (bytes key, bytes depositSignature, bool used)
     {
-        require(_index < operators[_operator_id].totalSigningKeys, 'KEY_NOT_FOUND');
+        require(_index < operators[_operator_id].totalSigningKeys, "KEY_NOT_FOUND");
 
         (bytes memory key_, bytes memory signature) = _loadSigningKey(_operator_id, _index);
 
@@ -610,12 +597,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         return uint256(keccak256(abi.encodePacked(SIGNING_KEYS_MAPPING_NAME, _operator_id, _keyIndex)));
     }
 
-    function _storeSigningKey(
-        uint256 _operator_id,
-        uint256 _keyIndex,
-        bytes memory _key,
-        bytes memory _signature
-    ) internal {
+    function _storeSigningKey(uint256 _operator_id, uint256 _keyIndex, bytes memory _key, bytes memory _signature) internal {
         assert(_key.length == PUBKEY_LENGTH);
         assert(_signature.length == SIGNATURE_LENGTH);
 
@@ -637,21 +619,19 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         }
     }
 
-    function _addSigningKeys(
-        uint256 _operator_id,
-        uint256 _quantity,
-        bytes _pubkeys,
-        bytes _signatures
-    ) internal operatorExists(_operator_id) {
-        require(_quantity != 0, 'NO_KEYS');
-        require(_pubkeys.length == _quantity.mul(PUBKEY_LENGTH), 'INVALID_LENGTH');
-        require(_signatures.length == _quantity.mul(SIGNATURE_LENGTH), 'INVALID_LENGTH');
+    function _addSigningKeys(uint256 _operator_id, uint256 _quantity, bytes _pubkeys, bytes _signatures)
+        internal
+        operatorExists(_operator_id)
+    {
+        require(_quantity != 0, "NO_KEYS");
+        require(_pubkeys.length == _quantity.mul(PUBKEY_LENGTH), "INVALID_LENGTH");
+        require(_signatures.length == _quantity.mul(SIGNATURE_LENGTH), "INVALID_LENGTH");
 
         _increaseKeysOpIndex();
 
         for (uint256 i = 0; i < _quantity; ++i) {
             bytes memory key = BytesLib.slice(_pubkeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
-            require(!_isEmptySigningKey(key), 'EMPTY_KEY');
+            require(!_isEmptySigningKey(key), "EMPTY_KEY");
             bytes memory sig = BytesLib.slice(_signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
 
             _storeSigningKey(_operator_id, operators[_operator_id].totalSigningKeys + i, key, sig);
@@ -663,12 +643,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
     }
 
     function _removeSigningKey(uint256 _operator_id, uint256 _index) internal operatorExists(_operator_id) {
-        require(_index < operators[_operator_id].totalSigningKeys, 'KEY_NOT_FOUND');
-        require(_index >= operators[_operator_id].usedSigningKeys, 'KEY_WAS_USED');
+        require(_index < operators[_operator_id].totalSigningKeys, "KEY_NOT_FOUND");
+        require(_index >= operators[_operator_id].usedSigningKeys, "KEY_WAS_USED");
 
         _increaseKeysOpIndex();
 
-        (bytes memory removedKey, ) = _loadSigningKey(_operator_id, _index);
+        (bytes memory removedKey,) = _loadSigningKey(_operator_id, _index);
 
         uint256 lastIndex = operators[_operator_id].totalSigningKeys.sub(1);
         if (_index < lastIndex) {
@@ -740,7 +720,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
             entry.usedSigningKeys = operator.usedSigningKeys;
             entry.initialUsedSigningKeys = entry.usedSigningKeys;
         }
-        require(idx == cache.length, 'INCOSISTENT_ACTIVE_COUNT');
+        require(idx == cache.length, "INCOSISTENT_ACTIVE_COUNT");
 
         return cache;
     }
@@ -764,7 +744,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
      * For more details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md
      */
     function finalizeUpgrade_v2(address _steth) external {
-        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, 'WRONG_BASE_VERSION');
+        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "WRONG_BASE_VERSION");
 
         _initialize_v2(_steth);
     }
@@ -774,12 +754,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
 
         STETH_POSITION.setStorageAddress(_steth);
 
-
         uint256 totalOperators = getNodeOperatorsCount();
         uint256 totalKeys;
         uint256 totalUsedKeys;
         uint256 totalStoppedKeys;
-        for (uint256 operatorId = 0; operatorId < totalOperators;++operatorId) {
+        for (uint256 operatorId = 0; operatorId < totalOperators; ++operatorId) {
             NodeOperator memory operator = operators[operatorId];
             if (!operator.active) {
                 continue;
@@ -843,12 +822,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         }
     }
 
-    function prepNextSigningKeys(uint256 maxDepositsCount, bytes depositCalldata) 
-        external 
-        onlyStakingRouter 
-        returns (bytes memory pubkeys, bytes memory signatures) 
+    function prepNextSigningKeys(uint256 maxDepositsCount, bytes depositCalldata)
+        external
+        onlyStakingRouter
+        returns (uint256 keysCount, bytes memory pubkeys, bytes memory signatures)
     {
-        (pubkeys, signatures) = _assignNextSigningKeys(maxDepositsCount);
-        return (pubkeys, signatures);
+        return _assignNextSigningKeys(maxDepositsCount);
     }
 }

@@ -3,12 +3,11 @@ pragma solidity 0.4.24;
 import "../../interfaces/INodeOperatorsRegistry.sol";
 import "../../interfaces/IStakingModule.sol";
 
-
 /**
-  * @dev This is a mock. Don't use in production.
-  */
+ * @dev This is a mock. Don't use in production.
+ */
 contract PoolMock {
-    event KeysAssigned(bytes pubkeys, bytes signatures);
+    event KeysAssigned(uint256 keysCount, bytes pubkeys, bytes signatures);
     event KeysOpIndexSet(uint256 keysOpIndex);
 
     IStakingModule private operators;
@@ -19,8 +18,8 @@ contract PoolMock {
 
     function assignNextSigningKeys(uint256 _numKeys) external {
         bytes memory data = new bytes(0);
-        (bytes memory pubkeys, bytes memory signatures) = operators.prepNextSigningKeys(_numKeys, data);
-        emit KeysAssigned(pubkeys, signatures);
+        (uint256 keysCount, bytes memory pubkeys, bytes memory signatures) = operators.prepNextSigningKeys(_numKeys, data);
+        emit KeysAssigned(keysCount, pubkeys, signatures);
     }
 
     function trimUnusedKeys() external {

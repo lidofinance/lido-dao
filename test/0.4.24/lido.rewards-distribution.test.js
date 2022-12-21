@@ -17,15 +17,13 @@ const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 const cfgCurated = {
   moduleFee: 250,
   treasuryFee: 500,
-  targetShare: 10000,
-  recycleShare: 0 // 0%, no effect if targetShare >=10000
+  targetShare: 10000
 }
 
 const cfgCommunity = {
   moduleFee: 250,
   treasuryFee: 500,
-  targetShare: 10000,
-  recycleShare: 0 // 0%, no effect if targetShare >=10000
+  targetShare: 10000
 }
 
 contract('Lido', ([appManager, voting, user2, depositor]) => {
@@ -104,9 +102,9 @@ contract('Lido', ([appManager, voting, user2, depositor]) => {
   })
 
   beforeEach('setup staking router', async () => {
-    stakingRouter = await StakingRouter.new(depositContract.address)
+    stakingRouter = await StakingRouter.new(depositContract.address, app.address)
     // initialize
-    await stakingRouter.initialize(app.address, appManager)
+    await stakingRouter.initialize(appManager)
 
     // Set up the staking router permissions.
     const MANAGE_WITHDRAWAL_KEY_ROLE = await stakingRouter.MANAGE_WITHDRAWAL_KEY_ROLE()
@@ -148,7 +146,8 @@ contract('Lido', ([appManager, voting, user2, depositor]) => {
     await oracle.reportBeacon(100, 0, depositAmount, { from: appManager })
 
     const treasuryBalanceAfter = await app.balanceOf(treasuryAddr)
-    assertBn(treasuryBalanceBefore.add(bn(treasuryRewards)).sub(bn(1)), treasuryBalanceAfter)
+    // omit .sub(bn(1)) as no rounding loss
+    assertBn(treasuryBalanceBefore.add(bn(treasuryRewards)), treasuryBalanceAfter)
   })
 
   it('Rewards distribution fills modules', async () => {

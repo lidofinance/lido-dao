@@ -149,10 +149,10 @@ contract('StakingRouter', (accounts) => {
     await oracle.setPool(lido.address)
     await depositContract.reset()
 
-    stakingRouter = await StakingRouter.new(depositContract.address, { from: appManager })
+    stakingRouter = await StakingRouter.new(depositContract.address, lido.address, { from: appManager })
 
     // initialize
-    await stakingRouter.initialize(lido.address, appManager)
+    await stakingRouter.initialize(appManager)
 
     // Set up the staking router permissions.
     const MANAGE_WITHDRAWAL_KEY_ROLE = await stakingRouter.MANAGE_WITHDRAWAL_KEY_ROLE()

@@ -98,12 +98,7 @@ interface INodeOperatorsRegistry {
      * @param _pubkeys Several concatenated validator signing keys
      * @param _signatures Several concatenated signatures for (pubkey, withdrawal_credentials, 32000000000) messages
      */
-    function addSigningKeys(
-        uint256 _operator_id,
-        uint256 _quantity,
-        bytes _pubkeys,
-        bytes _signatures
-    ) external;
+    function addSigningKeys(uint256 _operator_id, uint256 _quantity, bytes _pubkeys, bytes _signatures) external;
 
     /**
      * @notice Add `_quantity` validator signing keys of operator #`_id` to the set of usable keys. Concatenated keys are: `_pubkeys`. Can be done by node operator in question by using the designated rewards address.
@@ -116,12 +111,7 @@ interface INodeOperatorsRegistry {
      * @param _pubkeys Several concatenated validator signing keys
      * @param _signatures Several concatenated signatures for (pubkey, withdrawal_credentials, 32000000000) messages
      */
-    function addSigningKeysOperatorBH(
-        uint256 _operator_id,
-        uint256 _quantity,
-        bytes _pubkeys,
-        bytes _signatures
-    ) external;
+    function addSigningKeysOperatorBH(uint256 _operator_id, uint256 _quantity, bytes _pubkeys, bytes _signatures) external;
 
     /**
      * @notice Removes a validator signing key #`_index` from the keys of the node operator #`_operator_id`
@@ -143,11 +133,7 @@ interface INodeOperatorsRegistry {
      * @param _index Index of the key, starting with 0
      * @param _amount Number of keys to remove
      */
-    function removeSigningKeys(
-        uint256 _operator_id,
-        uint256 _index,
-        uint256 _amount
-    ) external;
+    function removeSigningKeys(uint256 _operator_id, uint256 _index, uint256 _amount) external;
 
     /**
      * @notice Removes an #`_amount` of validator signing keys starting from #`_index` of operator #`_id` usable keys. Executed on behalf of Node Operator.
@@ -155,11 +141,7 @@ interface INodeOperatorsRegistry {
      * @param _index Index of the key, starting with 0
      * @param _amount Number of keys to remove
      */
-    function removeSigningKeysOperatorBH(
-        uint256 _operator_id,
-        uint256 _index,
-        uint256 _amount
-    ) external;
+    function removeSigningKeysOperatorBH(uint256 _operator_id, uint256 _index, uint256 _amount) external;
 
     /**
      * @notice Returns total number of signing keys of the node operator #`_operator_id`
@@ -179,14 +161,7 @@ interface INodeOperatorsRegistry {
      * @return depositSignature Signature needed for a deposit_contract.deposit call
      * @return used Flag indication if the key was used in the staking
      */
-    function getSigningKey(uint256 _operator_id, uint256 _index)
-        external
-        view
-        returns (
-            bytes key,
-            bytes depositSignature,
-            bool used
-        );
+    function getSigningKey(uint256 _operator_id, uint256 _index) external view returns (bytes key, bytes depositSignature, bool used);
 
     /**
      * @notice Returns a monotonically increasing counter that gets incremented when any of the following happens:
