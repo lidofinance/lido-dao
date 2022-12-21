@@ -18,15 +18,30 @@ import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
 
 import {BeaconChainDepositor} from "./BeaconChainDepositor.sol";
 
+
 contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDepositor {
     using UnstructuredStorage for bytes32;
 
-    event ModuleAdded();
-    event ModulePaused();
-    event ModuleUnpaused();
-    event ModuleActiveStatus();
+    event StakingModuleAdded(
+        address indexed creator,
+        address indexed stakingModule, 
+        string name
+    );
+    event StakingModuleTargetSharesSet(
+        address indexed stakingModule,
+        uint16 targetShare
+    );
+    event StakingModuleFeesSet(
+        address indexed stakingModule,
+        uint16 treasuryFee, 
+        uint16 moduleFee
+    );
+    event StakingModulePaused(address indexed stakingModule, address indexed actor);
+    event StakingModuleUnpaused(address indexed stakingModule, address indexed actor);
+    event StakingModuleActiveStatusChanged(address indexed stakingModule, bool isActive, address indexed actor);
+    event StakingModuleDeposit(uint64 lastDepositAt, uint256 lastDepositBlock);
     event DistributedShares(uint256 modulesShares, uint256 treasuryShares, uint256 remainShares);
-    event DistributedDeposits(address indexed moduleAddress, uint256 assignedKeys, uint64 timestamp);
+    event DistributedDeposits(address indexed stakingModuleAddress, uint256 assignedKeys, uint64 timestamp);
     event WithdrawalCredentialsSet(bytes32 withdrawalCredentials);
     event ContractVersionSet(uint256 version);
     /**
@@ -38,7 +53,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         /// @notice name of module
         string name;
         /// @notice address of module
-        IStakingModule moduleAddress;
+        IStakingModule stakingModuleAddress;
         /// @notice rewarf fee of the module
         uint16 moduleFee;
         /// @notice treasury fee
@@ -95,13 +110,13 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     mapping(address => uint256) internal _stakingModuleIndicesOneBased;
 
     constructor(address _depositContract, address _lido) BeaconChainDepositor(_depositContract) {
-        require(_lido != address(0), "LIDO_ZERO_ADDRESS");
+        if (_lido == address(0)) revert ErrorZeroAddress("_lido");
         LIDO = ILido(_lido);
     }
 
     function initialize(address _admin) external {
-        require(_admin != address(0), "ADMIN_ZERO_ADDRESS");
-        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "BASE_VERSION_MUST_BE_ZERO");
+        if (_admin == address(0)) revert ErrorZeroAddress("_admin");
+        if (CONTRACT_VERSION_POSITION.getStorageUint256() != 0) revert ErrorBaseVersion();
 
         _setupRole(DEFAULT_ADMIN_ROLE, _admin);
 
@@ -116,7 +131,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     /**
      * @notice register a new module
      * @param _name name of module
-     * @param _moduleAddress target percent of total keys in protocol, in BP
+     * @param _stakingModuleAddress target percent of total keys in protocol, in BP
      * @param _targetShare target total stake share
      * @param _moduleFee fee of the module taken from the consensus layer rewards
      * @param _treasuryFee treasury fee
@@ -127,14 +142,15 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         uint16 _targetShare,
         uint16 _moduleFee,
         uint16 _treasuryFee
-    ) external onlyRole(MODULE_PAUSE_ROLE) {
-        require(_targetShare <= TOTAL_BASIS_POINTS, "VALUE_OVER_100_PERCENT");
-        require(_treasuryFee <= TOTAL_BASIS_POINTS, "VALUE_OVER_100_PERCENT");
+    ) external onlyRole(MODULE_CONTROL_ROLE) {
+        if (_targetShare > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_targetShare");
+        if (_treasuryFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_treasuryFee");
+        if (_moduleFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_moduleFee");
 
         _stakingModules.push(
             StakingModule({
                 name: _name,
-                moduleAddress: IStakingModule(_moduleAddress),
+                stakingModuleAddress: IStakingModule(_stakingModuleAddress),
                 targetShare: _targetShare,
                 treasuryFee: _treasuryFee,
                 moduleFee: _moduleFee,
@@ -144,7 +160,29 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
                 lastDepositBlock: 0
             })
         );
-        _stakingModuleIndicesOneBased[_moduleAddress] = _stakingModules.length;
+        _stakingModuleIndicesOneBased[_stakingModuleAddress] = _stakingModules.length;
+
+        emit StakingModuleAdded(msg.sender, _stakingModuleAddress, _name);
+        emit StakingModuleTargetSharesSet(_stakingModuleAddress, _targetShare);
+        emit StakingModuleFeesSet(_stakingModuleAddress, _treasuryFee, _moduleFee);
+    }
+
+    function updateStakingModule(address _stakingModuleAddress, uint16 _targetShare, uint16 _moduleFee, uint16 _treasuryFee)
+        external
+        onlyRole(MODULE_CONTROL_ROLE)
+    {
+        if (_targetShare > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_targetShare");
+        if (_treasuryFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_treasuryFee");
+        if (_moduleFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_moduleFee");
+
+        uint256 stakingModuleIndex = _stakingModuleIndicesOneBased[_stakingModuleAddress];
+
+        _stakingModules[stakingModuleIndex].targetShare = _targetShare;
+        _stakingModules[stakingModuleIndex].treasuryFee = _treasuryFee;
+        _stakingModules[stakingModuleIndex].moduleFee = _moduleFee;
+
+        emit StakingModuleTargetSharesSet(_stakingModuleAddress, _targetShare);
+        emit StakingModuleFeesSet(_stakingModuleAddress, _treasuryFee, _moduleFee);
     }
 
     function getModule(uint256 moduleId) external view returns (StakingModule memory) {
@@ -164,9 +202,11 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
      */
     function pauseStakingModule(address stakingModule) external onlyRole(MODULE_PAUSE_ROLE) {
         StakingModule storage module = _getModuleByAddress(stakingModule);
-        require(!module.paused, "module_is_paused");
+        if (module.paused) revert ErrorStakingModuleIsPaused();
 
         module.paused = true;
+
+        emit StakingModulePaused(stakingModule, msg.sender);
     }
 
     /**
@@ -175,9 +215,11 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
      */
     function unpauseStakingModule(address stakingModule) external onlyRole(MODULE_CONTROL_ROLE) {
         StakingModule storage module = _getModuleByAddress(stakingModule);
-        if (module.paused) {
-            module.paused = false;
-        }
+        if (!module.paused) revert ErrorStakingModuleIsNotPaused();
+
+        module.paused = false;
+
+        emit StakingModuleUnpaused(stakingModule, msg.sender);
     }
 
     /**
@@ -186,6 +228,8 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     function setStakingModuleActive(address stakingModule, bool _active) external onlyRole(MODULE_CONTROL_ROLE) {
         StakingModule storage module = _getModuleByAddress(stakingModule);
         module.active = _active;
+
+        emit StakingModuleActiveStatusChanged(stakingModule, _active, msg.sender);
     }
 
     function getStakingModuleIsPaused(address stakingModule) external view returns (bool) {
@@ -202,8 +246,8 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         return module.lastDepositBlock;
     }
 
-    function _getModuleByAddress(address _moduleAddress) internal view returns (StakingModule storage) {
-        return _stakingModules[_stakingModuleIndicesOneBased[_moduleAddress]];
+    function _getModuleByAddress(address _stakingModuleAddress) internal view returns (StakingModule storage) {
+        return _stakingModules[_stakingModuleIndicesOneBased[_stakingModuleAddress]];
     }
 
     /**
@@ -218,7 +262,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         uint256 _modulesCount = getModulesCount();
         moduleActiveKeys = new uint256[](_modulesCount);
         for (uint256 i = 0; i < _modulesCount; ++i) {
-            moduleActiveKeys[i] = _getActiveKeysCount(_stakingModules[i].moduleAddress);
+            moduleActiveKeys[i] = _getActiveKeysCount(_stakingModules[i].stakingModuleAddress);
             totalActiveKeys += moduleActiveKeys[i];
         }
     }
@@ -255,7 +299,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         )
     {
         uint256 _modulesCount = _stakingModules.length;
-        assert(_modulesCount != 0);
+        if (_modulesCount == 0) revert ErrorNoStakingModules();
 
         // +1 for treasury
         recipients = new address[](_modulesCount);
@@ -265,7 +309,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
 
         (uint256 totalActiveKeys, uint256[] memory moduleActiveKeys) = getTotalActiveKeys();
 
-        require(totalActiveKeys > 0, "NO_KEYS");
+        if (totalActiveKeys == 0) revert ErrorNoKeys();
 
         StakingModule memory stakingModule;
         uint256 moduleShare;
@@ -273,7 +317,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
             stakingModule = _stakingModules[i];
             moduleShare = ((moduleActiveKeys[i] * TOTAL_BASIS_POINTS) / totalActiveKeys);
 
-            recipients[i] = address(stakingModule.moduleAddress);
+            recipients[i] = address(stakingModule.stakingModuleAddress);
             moduleShares[i] = ((moduleShare * stakingModule.moduleFee) / TOTAL_BASIS_POINTS);
 
             totalShare += (moduleShare * stakingModule.treasuryFee) / TOTAL_BASIS_POINTS + moduleShares[i];
@@ -340,18 +384,19 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
             stakingModuleCache,
             totalActiveKeys + Math.min(maxDepositsCount, stakingModuleCache.availableKeysCount)
         );
-
-        require(maxSigningKeysCount != 0, "ZERO_MAX_SIGNING_KEYS_COUNT");
+        
+        if (maxSigningKeysCount == 0) revert ErrorZerroMaxSigningKeysCount();
 
         (uint256 keysCount, bytes memory publicKeysBatch, bytes memory signaturesBatch) = IStakingModule(stakingModule)
             .prepNextSigningKeys(maxSigningKeysCount, depositCalldata);
 
-        require(keysCount > 0, "NO_SIGNING_KEYS");
+        if (keysCount == 0) revert ErrorNoKeys();
 
         BatchedSigningKeys.validatePublicKeysBatch(publicKeysBatch, keysCount);
         BatchedSigningKeys.validateSignaturesBatch(signaturesBatch, keysCount);
 
-        require(getWithdrawalCredentials() != 0, "EMPTY_WITHDRAWALS_CREDENTIALS");
+        if (getWithdrawalCredentials() == 0) revert ErrorEmptyWithdrawalsCredentials(); 
+
         bytes memory encodedWithdrawalCredentials = abi.encodePacked(getWithdrawalCredentials());
 
         for (uint256 i = 0; i < keysCount; ++i) {
@@ -405,7 +450,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     function _trimUnusedKeys() internal {
         for (uint256 i = 0; i < _stakingModules.length; ++i) {
             StakingModule memory stakingModule = _stakingModules[i];
-            IStakingModule(stakingModule.moduleAddress).trimUnusedKeys();
+            IStakingModule(stakingModule.stakingModuleAddress).trimUnusedKeys();
         }
     }
 
@@ -417,7 +462,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         stakingModuleCache.paused = _stakingModules[_stakingModuleIndex].paused;
         stakingModuleCache.targetShare = _stakingModules[_stakingModuleIndex].targetShare;
 
-        IStakingModule stakingModule = IStakingModule(_stakingModules[_stakingModuleIndex].moduleAddress);
+        IStakingModule stakingModule = IStakingModule(_stakingModules[_stakingModuleIndex].stakingModuleAddress);
         stakingModuleCache.totalKeysCount = stakingModule.getTotalKeys();
         stakingModuleCache.usedKeysCount = stakingModule.getTotalUsedKeys();
         stakingModuleCache.stoppedKeysCount = stakingModule.getTotalStoppedKeys();
@@ -426,12 +471,24 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     }
 
     modifier onlyRegisteredStakingModule(address stakingModule) {
-        require(_stakingModuleIndicesOneBased[stakingModule] != 0, "UNREGISTERED_STAKING_MODULE");
+        if (_stakingModuleIndicesOneBased[stakingModule] == 0) revert UnregisteredStakingModule();
         _;
     }
 
     modifier onlyNotPausedStakingModule(address stakingModule) {
-        require(!_stakingModules[_stakingModuleIndicesOneBased[stakingModule]].paused, "STAKING_MODULE_PAUSED");
+        if (_stakingModules[_stakingModuleIndicesOneBased[stakingModule]].paused) revert ErrorStakingModuleIsPaused();
         _;
     }
+
+    error ErrorZeroAddress(string field);
+    error ErrorBaseVersion();
+    error ErrorNoKeys();
+    error ErrorNoStakingModules();
+    error ErrorZerroMaxSigningKeysCount();
+    error ErrorValueOver100Percent(string field);
+    error ErrorStakingModuleIsPaused();
+    error ErrorStakingModuleIsNotPaused();
+    error UnregisteredStakingModule();
+    error ErrorEmptyWithdrawalsCredentials();
+    
 }
