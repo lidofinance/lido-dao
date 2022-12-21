@@ -47,7 +47,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
 
     uint256 internal constant UINT64_MAX = uint256(uint64(-1));
 
-    bytes32 internal constant SIGNING_KEYS_MAPPING_NAME = keccak256("lido.NodeOperatorsRegistry.signingKeysMappingName");
+    bytes32 internal constant SIGNING_KEYS_MAPPING_NAME =
+        keccak256("lido.NodeOperatorsRegistry.signingKeysMappingName");
 
     uint256 internal constant TOTAL_BASIS_POINTS = 10000;
 
@@ -85,10 +86,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
     mapping(uint256 => NodeOperator) internal operators;
 
     // @dev Total number of operators
-    bytes32 internal constant TOTAL_OPERATORS_COUNT_POSITION = keccak256("lido.NodeOperatorsRegistry.totalOperatorsCount");
+    bytes32 internal constant TOTAL_OPERATORS_COUNT_POSITION =
+        keccak256("lido.NodeOperatorsRegistry.totalOperatorsCount");
 
     // @dev Cached number of active operators
-    bytes32 internal constant ACTIVE_OPERATORS_COUNT_POSITION = keccak256("lido.NodeOperatorsRegistry.activeOperatorsCount");
+    bytes32 internal constant ACTIVE_OPERATORS_COUNT_POSITION =
+        keccak256("lido.NodeOperatorsRegistry.activeOperatorsCount");
 
     /// @dev link to the Lido contract
     bytes32 internal constant LIDO_POSITION = keccak256("lido.NodeOperatorsRegistry.lido");
@@ -189,7 +192,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
     /**
      * @notice Change human-readable name of the node operator #`_id` to `_name`
      */
-    function setNodeOperatorName(uint256 _id, string _name) external authP(SET_NODE_OPERATOR_NAME_ROLE, arr(_id)) operatorExists(_id) {
+    function setNodeOperatorName(uint256 _id, string _name)
+        external
+        authP(SET_NODE_OPERATOR_NAME_ROLE, arr(_id))
+        operatorExists(_id)
+    {
         require(keccak256(operators[_id].name) != keccak256(_name), "NODE_OPERATOR_NAME_IS_THE_SAME");
         operators[_id].name = _name;
         emit NodeOperatorNameSet(_id, _name);
@@ -270,10 +277,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
      * @param _pubkeys Several concatenated validator signing keys
      * @param _signatures Several concatenated signatures for (pubkey, withdrawal_credentials, 32000000000) messages
      */
-    function addSigningKeys(uint256 _operator_id, uint256 _quantity, bytes _pubkeys, bytes _signatures)
-        external
-        authP(MANAGE_SIGNING_KEYS, arr(_operator_id))
-    {
+    function addSigningKeys(
+        uint256 _operator_id,
+        uint256 _quantity,
+        bytes _pubkeys,
+        bytes _signatures
+    ) external authP(MANAGE_SIGNING_KEYS, arr(_operator_id)) {
         _addSigningKeys(_operator_id, _quantity, _pubkeys, _signatures);
     }
 
@@ -288,7 +297,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
      * @param _pubkeys Several concatenated validator signing keys
      * @param _signatures Several concatenated signatures for (pubkey, withdrawal_credentials, 32000000000) messages
      */
-    function addSigningKeysOperatorBH(uint256 _operator_id, uint256 _quantity, bytes _pubkeys, bytes _signatures) external {
+    function addSigningKeysOperatorBH(
+        uint256 _operator_id,
+        uint256 _quantity,
+        bytes _pubkeys,
+        bytes _signatures
+    ) external {
         require(msg.sender == operators[_operator_id].rewardAddress, "APP_AUTH_FAILED");
         _addSigningKeys(_operator_id, _quantity, _pubkeys, _signatures);
     }
@@ -298,7 +312,10 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
      * @param _operator_id Node Operator id
      * @param _index Index of the key, starting with 0
      */
-    function removeSigningKey(uint256 _operator_id, uint256 _index) external authP(MANAGE_SIGNING_KEYS, arr(_operator_id)) {
+    function removeSigningKey(uint256 _operator_id, uint256 _index)
+        external
+        authP(MANAGE_SIGNING_KEYS, arr(_operator_id))
+    {
         _removeSigningKey(_operator_id, _index);
     }
 
@@ -308,10 +325,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
      * @param _index Index of the key, starting with 0
      * @param _amount Number of keys to remove
      */
-    function removeSigningKeys(uint256 _operator_id, uint256 _index, uint256 _amount)
-        external
-        authP(MANAGE_SIGNING_KEYS, arr(_operator_id))
-    {
+    function removeSigningKeys(
+        uint256 _operator_id,
+        uint256 _index,
+        uint256 _amount
+    ) external authP(MANAGE_SIGNING_KEYS, arr(_operator_id)) {
         // removing from the last index to the highest one, so we won't get outside the array
         for (uint256 i = _index.add(_amount); i > _index; --i) {
             _removeSigningKey(_operator_id, i - 1);
@@ -334,7 +352,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
      * @param _index Index of the key, starting with 0
      * @param _amount Number of keys to remove
      */
-    function removeSigningKeysOperatorBH(uint256 _operator_id, uint256 _index, uint256 _amount) external {
+    function removeSigningKeysOperatorBH(
+        uint256 _operator_id,
+        uint256 _index,
+        uint256 _amount
+    ) external {
         require(msg.sender == operators[_operator_id].rewardAddress, "APP_AUTH_FAILED");
         // removing from the last index to the highest one, so we won't get outside the array
         for (uint256 i = _index.add(_amount); i > _index; --i) {
@@ -352,7 +374,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
      */
     function _assignNextSigningKeys(uint256 _numKeys)
         internal
-        returns (uint256 numAssignedKeys, bytes memory pubkeys, bytes memory signatures)
+        returns (
+            uint256 numAssignedKeys,
+            bytes memory pubkeys,
+            bytes memory signatures
+        )
     {
         // Memory is very cheap, although you don't want to grow it too much
         DepositLookupCacheEntry[] memory cache = _loadOperatorCache();
@@ -524,14 +550,24 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
     /**
      * @notice Returns total number of signing keys of the node operator #`_operator_id`
      */
-    function getTotalSigningKeyCount(uint256 _operator_id) external view operatorExists(_operator_id) returns (uint256) {
+    function getTotalSigningKeyCount(uint256 _operator_id)
+        external
+        view
+        operatorExists(_operator_id)
+        returns (uint256)
+    {
         return operators[_operator_id].totalSigningKeys;
     }
 
     /**
      * @notice Returns number of usable signing keys of the node operator #`_operator_id`
      */
-    function getUnusedSigningKeyCount(uint256 _operator_id) external view operatorExists(_operator_id) returns (uint256) {
+    function getUnusedSigningKeyCount(uint256 _operator_id)
+        external
+        view
+        operatorExists(_operator_id)
+        returns (uint256)
+    {
         return operators[_operator_id].totalSigningKeys.sub(operators[_operator_id].usedSigningKeys);
     }
 
@@ -547,7 +583,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         external
         view
         operatorExists(_operator_id)
-        returns (bytes key, bytes depositSignature, bool used)
+        returns (
+            bytes key,
+            bytes depositSignature,
+            bool used
+        )
     {
         require(_index < operators[_operator_id].totalSigningKeys, "KEY_NOT_FOUND");
 
@@ -597,7 +637,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         return uint256(keccak256(abi.encodePacked(SIGNING_KEYS_MAPPING_NAME, _operator_id, _keyIndex)));
     }
 
-    function _storeSigningKey(uint256 _operator_id, uint256 _keyIndex, bytes memory _key, bytes memory _signature) internal {
+    function _storeSigningKey(
+        uint256 _operator_id,
+        uint256 _keyIndex,
+        bytes memory _key,
+        bytes memory _signature
+    ) internal {
         assert(_key.length == PUBKEY_LENGTH);
         assert(_signature.length == SIGNATURE_LENGTH);
 
@@ -619,10 +664,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         }
     }
 
-    function _addSigningKeys(uint256 _operator_id, uint256 _quantity, bytes _pubkeys, bytes _signatures)
-        internal
-        operatorExists(_operator_id)
-    {
+    function _addSigningKeys(
+        uint256 _operator_id,
+        uint256 _quantity,
+        bytes _pubkeys,
+        bytes _signatures
+    ) internal operatorExists(_operator_id) {
         require(_quantity != 0, "NO_KEYS");
         require(_pubkeys.length == _quantity.mul(PUBKEY_LENGTH), "INVALID_LENGTH");
         require(_signatures.length == _quantity.mul(SIGNATURE_LENGTH), "INVALID_LENGTH");
@@ -648,7 +695,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
 
         _increaseKeysOpIndex();
 
-        (bytes memory removedKey,) = _loadSigningKey(_operator_id, _index);
+        (bytes memory removedKey, ) = _loadSigningKey(_operator_id, _index);
 
         uint256 lastIndex = operators[_operator_id].totalSigningKeys.sub(1);
         if (_index < lastIndex) {
@@ -677,7 +724,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         }
     }
 
-    function _loadSigningKey(uint256 _operator_id, uint256 _keyIndex) internal view returns (bytes memory key, bytes memory signature) {
+    function _loadSigningKey(uint256 _operator_id, uint256 _keyIndex)
+        internal
+        view
+        returns (bytes memory key, bytes memory signature)
+    {
         uint256 offset = _signingKeyOffset(_operator_id, _keyIndex);
 
         // key
@@ -822,10 +873,14 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         }
     }
 
-    function prepNextSigningKeys(uint256 maxDepositsCount, bytes depositCalldata)
+    function prepNextSigningKeys(uint256 maxDepositsCount, bytes)
         external
         onlyStakingRouter
-        returns (uint256 keysCount, bytes memory pubkeys, bytes memory signatures)
+        returns (
+            uint256 keysCount,
+            bytes memory pubkeys,
+            bytes memory signatures
+        )
     {
         return _assignNextSigningKeys(maxDepositsCount);
     }

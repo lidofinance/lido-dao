@@ -4,7 +4,7 @@
 
 pragma solidity 0.4.24;
 
-import '../StETH.sol';
+import "../StETH.sol";
 
 /**
  * @dev Only for testing purposes!

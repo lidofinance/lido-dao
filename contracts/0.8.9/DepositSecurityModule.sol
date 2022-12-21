@@ -5,7 +5,7 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
-import { ECDSA } from "./lib/ECDSA.sol";
+import {ECDSA} from "./lib/ECDSA.sol";
 
 interface IDepositContract {
     function get_deposit_root() external view returns (bytes32 rootHash);
@@ -382,7 +382,7 @@ contract DepositSecurityModule {
         Signature[] calldata sortedGuardianSignatures
     ) external {
         require(quorum > 0 && sortedGuardianSignatures.length >= quorum, "no guardian quorum");
-        
+
         bytes32 onchainDepositRoot = IDepositContract(DEPOSIT_CONTRACT).get_deposit_root();
         require(depositRoot == onchainDepositRoot, "deposit root changed");
 

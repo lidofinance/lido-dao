@@ -4,14 +4,13 @@
 
 pragma solidity 0.4.24;
 
-import '../nos/NodeOperatorsRegistry.sol';
+import "../nos/NodeOperatorsRegistry.sol";
 
 contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
-
     function setOperatorTotalKeys(uint256 _operatorId, uint64 _keys) external {
         operators[_operatorId].totalSigningKeys = _keys;
     }
-    
+
     function setOperatorUsedKeys(uint256 _operatorId, uint64 _keys) external {
         operators[_operatorId].usedSigningKeys = _keys;
     }

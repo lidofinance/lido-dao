@@ -4,9 +4,9 @@
 // See contracts/COMPILERS.md
 pragma solidity 0.8.9;
 
-import { BytesLib } from './lib/BytesLib.sol';
+import {BytesLib} from "./lib/BytesLib.sol";
 
-import { IDepositContract } from './interfaces/IDepositContract.sol';
+import {IDepositContract} from "./interfaces/IDepositContract.sol";
 
 contract BeaconChainDepositor {
     uint256 private constant SIGNATURE_LENGTH = 96;
@@ -15,7 +15,7 @@ contract BeaconChainDepositor {
     IDepositContract public immutable DEPOSIT_CONTRACT;
 
     constructor(address _depositContract) {
-        require(_depositContract != address(0), 'DEPOSIT_CONTRACT_ZERO_ADDRESS');
+        require(_depositContract != address(0), "DEPOSIT_CONTRACT_ZERO_ADDRESS");
         DEPOSIT_CONTRACT = IDepositContract(_depositContract);
     }
 
@@ -31,13 +31,13 @@ contract BeaconChainDepositor {
         uint256 _depositValue
     ) internal {
         uint256 targetBalance = address(this).balance - _depositValue;
-        DEPOSIT_CONTRACT.deposit{ value: _depositValue }(
+        DEPOSIT_CONTRACT.deposit{value: _depositValue}(
             _publicKey,
             _withdrawalCredentials,
             _signature,
             _computeDepositDataRoot(_withdrawalCredentials, _publicKey, _signature, _depositValue / DEPOSIT_AMOUNT_UNIT)
         );
-        require(address(this).balance == targetBalance, 'EXPECTING_DEPOSIT_TO_HAPPEN');
+        require(address(this).balance == targetBalance, "EXPECTING_DEPOSIT_TO_HAPPEN");
     }
 
     /// @dev computes the deposit_root_hash required by official Beacon Deposit contract
@@ -68,7 +68,6 @@ contract BeaconChainDepositor {
             );
     }
 
-    
     /// @dev Padding memory array with zeroes up to 64 bytes on the right
     /// @param _b Memory array of size 32 .. 64
     function _pad64(bytes memory _b) private pure returns (bytes memory) {
@@ -84,7 +83,6 @@ contract BeaconChainDepositor {
         else return BytesLib.concat(_b, BytesLib.slice(zero32, 0, uint256(64) - _b.length));
     }
 
-    
     /// @dev Converting value to little endian bytes and padding up to 32 bytes on the right
     /// @param _value Number less than `2**64` for compatibility reasons
     function _toLittleEndian64(uint256 _value) internal pure returns (uint256 result) {
