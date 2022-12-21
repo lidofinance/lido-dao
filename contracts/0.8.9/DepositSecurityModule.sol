@@ -6,28 +6,8 @@
 pragma solidity 0.8.9;
 
 import {ECDSA} from "./lib/ECDSA.sol";
-
-interface IDepositContract {
-    function get_deposit_root() external view returns (bytes32 rootHash);
-}
-
-interface IStakingRouter {
-    function deposit(
-        uint256 maxDepositsCount,
-        address stakingModule,
-        bytes calldata depositCalldata
-    ) external;
-
-    function pauseStakingModule(address stakingModule) external;
-
-    function unpauseStakingModule(address stakingModule) external;
-
-    function getStakingModuleIsPaused(address stakingModule) external view returns (bool);
-
-    function getStakingModuleKeysOpIndex(address stakingModule) external view returns (uint256);
-
-    function getStakingModuleLastDepositBlock(address stakingModule) external view returns (uint256);
-}
+import {IStakingRouter} from "./interfaces/IStakingRouter.sol";
+import {IDepositContract} from "./interfaces/IDepositContract.sol";
 
 contract DepositSecurityModule {
     /**
@@ -45,9 +25,8 @@ contract DepositSecurityModule {
     event GuardianQuorumChanged(uint256 newValue);
     event GuardianAdded(address guardian);
     event GuardianRemoved(address guardian);
-    event LastDepositBlockChanged(uint256 indexed moduleId, uint256 newLastDepositBlock);
-    event DepositsPaused(address indexed guardian, address indexed stakingModule);
-    event DepositsUnpaused(address indexed stakingModule);
+    event DepositsPaused(address indexed guardian, uint24 indexed stakingModuleId);
+    event DepositsUnpaused(uint24 indexed stakingModuleId);
 
     bytes32 public immutable ATTEST_MESSAGE_PREFIX;
     bytes32 public immutable PAUSE_MESSAGE_PREFIX;
@@ -306,14 +285,14 @@ contract DepositSecurityModule {
      */
     function pauseDeposits(
         uint256 blockNumber,
-        address stakingModule,
+        uint24 stakingModuleId,
         Signature memory sig
     ) external {
         // In case of an emergency function `pauseDeposits` is supposed to be called
         // by all guardians. Thus only the first call will do the actual change. But
         // the other calls would be OK operations from the point of view of protocol’s logic.
         // Thus we prefer not to use “error” semantics which is implied by `require`.
-        if (STAKING_ROUTER.getStakingModuleIsPaused(stakingModule)) {
+        if (STAKING_ROUTER.getStakingModuleIsPaused(stakingModuleId)) {
             return;
         }
 
@@ -321,7 +300,7 @@ contract DepositSecurityModule {
         int256 guardianIndex = _getGuardianIndex(msg.sender);
 
         if (guardianIndex == -1) {
-            bytes32 msgHash = keccak256(abi.encodePacked(PAUSE_MESSAGE_PREFIX, blockNumber, stakingModule));
+            bytes32 msgHash = keccak256(abi.encodePacked(PAUSE_MESSAGE_PREFIX, blockNumber, stakingModuleId));
             guardianAddr = ECDSA.recover(msgHash, sig.r, sig.vs);
             guardianIndex = _getGuardianIndex(guardianAddr);
             require(guardianIndex != -1, "invalid signature");
@@ -329,8 +308,8 @@ contract DepositSecurityModule {
 
         require(block.number - blockNumber <= pauseIntentValidityPeriodBlocks, "pause intent expired");
 
-        STAKING_ROUTER.pauseStakingModule(stakingModule);
-        emit DepositsPaused(guardianAddr, stakingModule);
+        STAKING_ROUTER.pauseStakingModule(stakingModuleId);
+        emit DepositsPaused(guardianAddr, stakingModuleId);
     }
 
     /**
@@ -338,10 +317,10 @@ contract DepositSecurityModule {
      *
      * Only callable by the owner.
      */
-    function unpauseDeposits(address stakingModule) external onlyOwner {
-        if (STAKING_ROUTER.getStakingModuleIsPaused(stakingModule)) {
-            STAKING_ROUTER.unpauseStakingModule(stakingModule);
-            emit DepositsUnpaused(stakingModule);
+    function unpauseDeposits(uint24 stakingModuleId) external onlyOwner {
+        if (STAKING_ROUTER.getStakingModuleIsPaused(stakingModuleId)) {
+            STAKING_ROUTER.unpauseStakingModule(stakingModuleId);
+            emit DepositsUnpaused(stakingModuleId);
         }
     }
 
@@ -350,9 +329,9 @@ contract DepositSecurityModule {
      * guardian attestations of non-stale deposit root and `keysOpIndex`, and the number of
      * such attestations will be enough to reach quorum.
      */
-    function canDeposit(address stakingModule) external view returns (bool) {
-        bool isModulePaused = STAKING_ROUTER.getStakingModuleIsPaused(stakingModule);
-        uint256 lastDepositBlock = STAKING_ROUTER.getStakingModuleLastDepositBlock(stakingModule);
+    function canDeposit(uint24 stakingModuleId) external view returns (bool) {
+        bool isModulePaused = STAKING_ROUTER.getStakingModuleIsPaused(stakingModuleId);
+        uint256 lastDepositBlock = STAKING_ROUTER.getStakingModuleLastDepositBlock(stakingModuleId);
         return !isModulePaused && quorum > 0 && block.number - lastDepositBlock >= minDepositBlockDistance;
     }
 
@@ -376,7 +355,7 @@ contract DepositSecurityModule {
         uint256 blockNumber,
         bytes32 blockHash,
         bytes32 depositRoot,
-        address stakingModule,
+        uint24 stakingModuleId,
         uint256 keysOpIndex,
         bytes calldata depositCalldata,
         Signature[] calldata sortedGuardianSignatures
@@ -386,18 +365,18 @@ contract DepositSecurityModule {
         bytes32 onchainDepositRoot = IDepositContract(DEPOSIT_CONTRACT).get_deposit_root();
         require(depositRoot == onchainDepositRoot, "deposit root changed");
 
-        require(!STAKING_ROUTER.getStakingModuleIsPaused(stakingModule), "deposits are paused");
+        require(!STAKING_ROUTER.getStakingModuleIsPaused(stakingModuleId), "deposits are paused");
 
-        uint256 lastDepositBlock = STAKING_ROUTER.getStakingModuleLastDepositBlock(stakingModule);
+        uint256 lastDepositBlock = STAKING_ROUTER.getStakingModuleLastDepositBlock(stakingModuleId);
         require(block.number - lastDepositBlock >= minDepositBlockDistance, "too frequent deposits");
         require(blockHash != bytes32(0) && blockhash(blockNumber) == blockHash, "unexpected block hash");
 
-        uint256 onchainKeysOpIndex = STAKING_ROUTER.getStakingModuleKeysOpIndex(stakingModule);
+        uint256 onchainKeysOpIndex = STAKING_ROUTER.getStakingModuleKeysOpIndex(stakingModuleId);
         require(keysOpIndex == onchainKeysOpIndex, "keys op index changed");
 
-        _verifySignatures(depositRoot, blockNumber, blockHash, stakingModule, keysOpIndex, sortedGuardianSignatures);
+        _verifySignatures(depositRoot, blockNumber, blockHash, stakingModuleId, keysOpIndex, sortedGuardianSignatures);
 
-        STAKING_ROUTER.deposit(maxDepositsPerBlock, stakingModule, depositCalldata);
+        STAKING_ROUTER.deposit(maxDepositsPerBlock, stakingModuleId, depositCalldata);
         lastDepositBlock = block.number;
     }
 
@@ -405,12 +384,12 @@ contract DepositSecurityModule {
         bytes32 depositRoot,
         uint256 blockNumber,
         bytes32 blockHash,
-        address stakingModule,
+        uint24 stakingModuleId,
         uint256 keysOpIndex,
         Signature[] memory sigs
     ) internal view {
         bytes32 msgHash = keccak256(
-            abi.encodePacked(ATTEST_MESSAGE_PREFIX, blockNumber, blockHash, depositRoot, stakingModule, keysOpIndex)
+            abi.encodePacked(ATTEST_MESSAGE_PREFIX, blockNumber, blockHash, depositRoot, stakingModuleId, keysOpIndex)
         );
 
         address prevSignerAddr = address(0);

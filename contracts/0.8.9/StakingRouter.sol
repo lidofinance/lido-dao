@@ -22,15 +22,20 @@ import {BeaconChainDepositor} from "./BeaconChainDepositor.sol";
 contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDepositor {
     using UnstructuredStorage for bytes32;
 
-    event StakingModuleAdded(address indexed creator, address indexed stakingModule, string name);
-    event StakingModuleTargetSharesSet(address indexed stakingModule, uint16 targetShare);
-    event StakingModuleFeesSet(address indexed stakingModule, uint16 treasuryFee, uint16 moduleFee);
-    event StakingModulePaused(address indexed stakingModule, address indexed actor);
-    event StakingModuleUnpaused(address indexed stakingModule, address indexed actor);
-    event StakingModuleActiveStatusChanged(address indexed stakingModule, bool isActive, address indexed actor);
+    event StakingModuleAdded(
+        address indexed creator,
+        uint256 indexed stakingModuleId,
+        address indexed stakingModule,
+        string name
+    );
+    event StakingModuleTargetSharesSet(uint24 indexed stakingModuleId, uint16 targetShare);
+    event StakingModuleFeesSet(uint24 indexed stakingModuleId, uint16 treasuryFee, uint16 moduleFee);
+    event StakingModulePaused(uint24 indexed stakingModuleId, address indexed actor);
+    event StakingModuleUnpaused(uint24 indexed stakingModuleId, address indexed actor);
+    event StakingModuleActiveStatusChanged(uint24 indexed stakingModuleId, bool isActive, address indexed actor);
     event StakingModuleDeposit(uint64 lastDepositAt, uint256 lastDepositBlock);
     event DistributedShares(uint256 modulesShares, uint256 treasuryShares, uint256 remainShares);
-    event DistributedDeposits(address indexed stakingModuleAddress, uint256 assignedKeys, uint64 timestamp);
+    event DistributedDeposits(uint24 indexed stakingModuleId, uint256 assignedKeys, uint64 timestamp);
     event WithdrawalCredentialsSet(bytes32 withdrawalCredentials);
     event ContractVersionSet(uint256 version);
     /**
@@ -39,6 +44,8 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     event ETHReceived(uint256 amount);
 
     struct StakingModule {
+        /// @notice unique id of the module
+        uint24 id;
         /// @notice name of module
         string name;
         /// @notice address of module
@@ -94,12 +101,15 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     /// @dev total count of staking modules
     uint256 private _stakingModulesCount;
 
+    /// @dev id of the last added staking module. This counter grow on staking modules adding
+    uint24 private _lastStakingModuleId;
+
     /// @dev mapping is used instead of array to allow to extend the StakingModule
-    mapping(uint256 => StakingModule) private _stakingModulesMap;
+    mapping(uint256 => StakingModule) private _stakingModules;
 
     /// @dev Position of the staking modules in the `_stakingModules` map, plus 1 because
     ///      index 0 means a value is not in the set.
-    mapping(address => uint256) private _stakingModuleIndicesOneBased;
+    mapping(uint24 => uint256) private _stakingModuleIndicesOneBased;
 
     constructor(address _depositContract, address _lido) BeaconChainDepositor(_depositContract) {
         if (_lido == address(0)) revert ErrorZeroAddress("_lido");
@@ -139,7 +149,9 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         if (_treasuryFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_treasuryFee");
         if (_moduleFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_moduleFee");
 
-        _stakingModulesMap[_stakingModulesCount] = StakingModule({
+        uint24 stakingModuleId = _lastStakingModuleId++;
+        _stakingModules[_stakingModulesCount] = StakingModule({
+            id: stakingModuleId,
             name: _name,
             stakingModuleAddress: _stakingModuleAddress,
             targetShare: _targetShare,
@@ -151,15 +163,15 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
             lastDepositBlock: 0
         });
 
-        _stakingModuleIndicesOneBased[_stakingModuleAddress] = ++_stakingModulesCount;
+        _stakingModuleIndicesOneBased[_lastStakingModuleId] = ++_stakingModulesCount;
 
-        emit StakingModuleAdded(msg.sender, _stakingModuleAddress, _name);
-        emit StakingModuleTargetSharesSet(_stakingModuleAddress, _targetShare);
-        emit StakingModuleFeesSet(_stakingModuleAddress, _treasuryFee, _moduleFee);
+        emit StakingModuleAdded(msg.sender, stakingModuleId, _stakingModuleAddress, _name);
+        emit StakingModuleTargetSharesSet(stakingModuleId, _targetShare);
+        emit StakingModuleFeesSet(stakingModuleId, _treasuryFee, _moduleFee);
     }
 
     function updateStakingModule(
-        address _stakingModuleAddress,
+        uint24 _stakingModuleId,
         uint16 _targetShare,
         uint16 _moduleFee,
         uint16 _treasuryFee
@@ -168,18 +180,18 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         if (_treasuryFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_treasuryFee");
         if (_moduleFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_moduleFee");
 
-        uint256 stakingModuleIndex = _stakingModuleIndicesOneBased[_stakingModuleAddress];
+        uint256 stakingModuleIndex = _stakingModuleIndicesOneBased[_lastStakingModuleId];
 
-        _stakingModulesMap[stakingModuleIndex].targetShare = _targetShare;
-        _stakingModulesMap[stakingModuleIndex].treasuryFee = _treasuryFee;
-        _stakingModulesMap[stakingModuleIndex].moduleFee = _moduleFee;
+        _stakingModules[stakingModuleIndex].targetShare = _targetShare;
+        _stakingModules[stakingModuleIndex].treasuryFee = _treasuryFee;
+        _stakingModules[stakingModuleIndex].moduleFee = _moduleFee;
 
-        emit StakingModuleTargetSharesSet(_stakingModuleAddress, _targetShare);
-        emit StakingModuleFeesSet(_stakingModuleAddress, _treasuryFee, _moduleFee);
+        emit StakingModuleTargetSharesSet(_stakingModuleId, _targetShare);
+        emit StakingModuleFeesSet(_stakingModuleId, _treasuryFee, _moduleFee);
     }
 
-    function getStakingModule(address _stakingModule) external view returns (StakingModule memory) {
-        return _getStakingModuleByAddress(_stakingModule);
+    function getStakingModule(uint24 _stakingModuleId) external view returns (StakingModule memory) {
+        return _getStakingModuleById(_stakingModuleId);
     }
 
     /**
@@ -191,51 +203,51 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
 
     /**
      * @notice pause deposits for module
-     * @param stakingModule address of module
+     * @param _stakingModuleId id of the staking module to be paused
      */
-    function pauseStakingModule(address stakingModule) external onlyRole(MODULE_PAUSE_ROLE) {
-        StakingModule storage module = _getStakingModuleByAddress(stakingModule);
+    function pauseStakingModule(uint24 _stakingModuleId) external onlyRole(MODULE_PAUSE_ROLE) {
+        StakingModule storage module = _getStakingModuleById(_stakingModuleId);
         if (module.paused) revert ErrorStakingModuleIsPaused();
 
         module.paused = true;
 
-        emit StakingModulePaused(stakingModule, msg.sender);
+        emit StakingModulePaused(_stakingModuleId, msg.sender);
     }
 
     /**
      * @notice unpause deposits for module
-     * @param stakingModule address of module
+     * @param _stakingModuleId id of the staking module to be unpaused
      */
-    function unpauseStakingModule(address stakingModule) external onlyRole(MODULE_CONTROL_ROLE) {
-        StakingModule storage module = _getStakingModuleByAddress(stakingModule);
+    function unpauseStakingModule(uint24 _stakingModuleId) external onlyRole(MODULE_CONTROL_ROLE) {
+        StakingModule storage module = _getStakingModuleById(_stakingModuleId);
         if (!module.paused) revert ErrorStakingModuleIsNotPaused();
 
         module.paused = false;
 
-        emit StakingModuleUnpaused(stakingModule, msg.sender);
+        emit StakingModuleUnpaused(_stakingModuleId, msg.sender);
     }
 
     /**
      * @notice set the module activity flag for participation in further reward distribution
      */
-    function setStakingModuleActive(address stakingModule, bool _active) external onlyRole(MODULE_CONTROL_ROLE) {
-        StakingModule storage module = _getStakingModuleByAddress(stakingModule);
+    function setStakingModuleActive(uint24 _stakingModuleId, bool _active) external onlyRole(MODULE_CONTROL_ROLE) {
+        StakingModule storage module = _getStakingModuleById(_stakingModuleId);
         module.active = _active;
 
-        emit StakingModuleActiveStatusChanged(stakingModule, _active, msg.sender);
+        emit StakingModuleActiveStatusChanged(_stakingModuleId, _active, msg.sender);
     }
 
-    function getStakingModuleIsPaused(address stakingModule) external view returns (bool) {
-        StakingModule storage module = _getStakingModuleByAddress(stakingModule);
+    function getStakingModuleIsPaused(uint24 _stakingModuleId) external view returns (bool) {
+        StakingModule storage module = _getStakingModuleById(_stakingModuleId);
         return module.paused;
     }
 
-    function getStakingModuleKeysOpIndex(address stakingModule) external view returns (uint256) {
-        return IStakingModule(stakingModule).getKeysOpIndex();
+    function getStakingModuleKeysOpIndex(uint24 _stakingModuleId) external view returns (uint256) {
+        return IStakingModule(_getStakingModuleAddressById(_stakingModuleId)).getKeysOpIndex();
     }
 
-    function getStakingModuleLastDepositBlock(address stakingModule) external view returns (uint256) {
-        StakingModule storage module = _getStakingModuleByAddress(stakingModule);
+    function getStakingModuleLastDepositBlock(uint24 _stakingModuleId) external view returns (uint256) {
+        StakingModule storage module = _getStakingModuleById(_stakingModuleId);
         return module.lastDepositBlock;
     }
 
@@ -251,18 +263,18 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         uint256 _modulesCount = getStakingModulesCount();
         moduleActiveKeys = new uint256[](_modulesCount);
         for (uint256 i = 0; i < _modulesCount; ++i) {
-            moduleActiveKeys[i] = _getActiveKeysCount(_getStakingModuleAddressByIndex(i));
+            moduleActiveKeys[i] = _getActiveKeysCount(_getStakingModuleIdByIndex(i));
             totalActiveKeys += moduleActiveKeys[i];
         }
     }
 
-    function getActiveKeysCount(address _stakingModule)
+    function getActiveKeysCount(uint24 _stakingModuleId)
         public
         view
-        onlyRegisteredStakingModule(_stakingModule)
+        onlyRegisteredStakingModule(_stakingModuleId)
         returns (uint256)
     {
-        return _getActiveKeysCount(_stakingModule);
+        return _getActiveKeysCount(_stakingModuleId);
     }
 
     /**
@@ -321,61 +333,61 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
             );
 
         for (uint256 i = 0; i < candidates.length; ++i) {
-            address stakingModuleAddress = _getStakingModuleAddressByIndex(i);
-            StakingModuleCache memory stakingModuleCache = _loadStakingModuleCache(stakingModuleAddress);
+            StakingModuleCache memory stakingModuleCache = _loadStakingModuleCache(_getStakingModuleIdByIndex(i));
             if (stakingModuleCache.paused) {
                 continue;
             }
-            candidates[i].activeKeysCount = getActiveKeysCount(stakingModuleAddress);
-            uint256 availableKeys = IStakingModule(stakingModuleAddress).getTotalKeys();
+            candidates[i].activeKeysCount = stakingModuleCache.activeKeysCount;
             uint256 targetKeys = (stakingModuleCache.targetShare * _totalActiveKeys) / TOTAL_BASIS_POINTS;
             if (targetKeys <= candidates[i].activeKeysCount) {
                 continue;
             }
-            candidates[i].availableKeysCount = targetKeys > availableKeys
-                ? availableKeys - candidates[i].activeKeysCount
+            candidates[i].availableKeysCount = targetKeys > stakingModuleCache.availableKeysCount
+                ? stakingModuleCache.availableKeysCount - candidates[i].activeKeysCount
                 : targetKeys - candidates[i].activeKeysCount;
         }
         return DepositsAllocatorStrategyMinActiveKeysFirst.allocate(candidates, _totalActiveKeys);
     }
 
-    function getAllocatedDepositsCount(address _stakingModule, uint256 _totalActiveKeys)
+    function getAllocatedDepositsCount(uint24 _stakingModuleId, uint256 _totalActiveKeys)
         public
         view
-        onlyRegisteredStakingModule(_stakingModule)
+        onlyRegisteredStakingModule(_stakingModuleId)
         returns (uint256)
     {
         (uint256[] memory keysDistribution, ) = getAllocatedDepositsDistribution(_totalActiveKeys);
-        uint256 stakingModuleIndex = _getStakingModuleIndexByAddress(_stakingModule);
+        uint256 stakingModuleIndex = _getStakingModuleIndexById(_stakingModuleId);
         return keysDistribution[stakingModuleIndex];
     }
 
     /**
      * @dev Invokes a deposit call to the official Deposit contract
      * @param _maxDepositsCount max deposits count
-     * @param _stakingModule module address
+     * @param _stakingModuleId id of the staking module to be deposited
      * @param _depositCalldata module calldata
      */
     function deposit(
         uint256 _maxDepositsCount,
-        address _stakingModule,
+        uint24 _stakingModuleId,
         bytes calldata _depositCalldata
     )
         external
         onlyRole(DEPOSIT_ROLE)
-        onlyRegisteredStakingModule(_stakingModule)
-        onlyNotPausedStakingModule(_stakingModule)
+        onlyRegisteredStakingModule(_stakingModuleId)
+        onlyNotPausedStakingModule(_stakingModuleId)
     {
         /// @todo make more optimal calc of totalActiveKeysCount (eliminate double calls of module.getTotalUsedKeys() and
         ///       module.getTotalStoppedKeys() inside getTotalActiveKeys() and _loadStakingModuleCache() methods)
         (uint256 totalActiveKeys, ) = getTotalActiveKeys();
 
-        uint256 maxSigningKeysCount = getAllocatedDepositsCount(_stakingModule, totalActiveKeys + _maxDepositsCount);
+        uint256 maxSigningKeysCount = getAllocatedDepositsCount(_stakingModuleId, totalActiveKeys + _maxDepositsCount);
 
         if (maxSigningKeysCount == 0) revert ErrorZerroMaxSigningKeysCount();
 
-        (uint256 keysCount, bytes memory publicKeysBatch, bytes memory signaturesBatch) = IStakingModule(_stakingModule)
-            .prepNextSigningKeys(maxSigningKeysCount, _depositCalldata);
+        StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
+        (uint256 keysCount, bytes memory publicKeysBatch, bytes memory signaturesBatch) = IStakingModule(
+            stakingModule.stakingModuleAddress
+        ).prepNextSigningKeys(maxSigningKeysCount, _depositCalldata);
 
         if (keysCount == 0) revert ErrorNoKeys();
 
@@ -393,8 +405,6 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         }
 
         LIDO.updateBufferedCounters(keysCount);
-
-        StakingModule storage stakingModule = _getStakingModuleByAddress(_stakingModule);
 
         stakingModule.lastDepositAt = uint64(block.timestamp);
         stakingModule.lastDepositBlock = block.number;
@@ -424,17 +434,16 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     function _trimUnusedKeys() internal {
         uint256 stakingModulesCount = getStakingModulesCount();
         for (uint256 i = 0; i < stakingModulesCount; ++i) {
-            StakingModule storage stakingModule = _getStakingModuleByIndex(i);
-            IStakingModule(stakingModule.stakingModuleAddress).trimUnusedKeys();
+            IStakingModule(_getStakingModuleAddressByIndex(i)).trimUnusedKeys();
         }
     }
 
-    function _loadStakingModuleCache(address _stakingModule)
+    function _loadStakingModuleCache(uint24 _stakingModuleId)
         internal
         view
         returns (StakingModuleCache memory stakingModuleCache)
     {
-        StakingModule storage stakingModuleData = _getStakingModuleByAddress(_stakingModule);
+        StakingModule storage stakingModuleData = _getStakingModuleById(_stakingModuleId);
         stakingModuleCache.paused = stakingModuleData.paused;
         stakingModuleCache.targetShare = stakingModuleData.targetShare;
 
@@ -446,35 +455,42 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         stakingModuleCache.availableKeysCount = stakingModuleCache.totalKeysCount - stakingModuleCache.usedKeysCount;
     }
 
-    function _getActiveKeysCount(address _stakingModule) internal view returns (uint256) {
-        uint256 usedKeysCount = IStakingModule(_stakingModule).getTotalUsedKeys();
-        uint256 stoppedKeysCount = IStakingModule(_stakingModule).getTotalStoppedKeys();
-        return usedKeysCount - stoppedKeysCount;
+    function _getActiveKeysCount(uint24 _stakingModuleId) internal view returns (uint256) {
+        IStakingModule stakingModule = IStakingModule(_getStakingModuleAddressById(_stakingModuleId));
+        return stakingModule.getTotalUsedKeys() - stakingModule.getTotalStoppedKeys();
+    }
+
+    function _getStakingModuleAddressById(uint24 _stakingModuleId) private view returns (address) {
+        return _getStakingModuleById(_stakingModuleId).stakingModuleAddress;
     }
 
     function _getStakingModuleAddressByIndex(uint256 _stakingModuleIndex) private view returns (address) {
-        return _getStakingModuleByIndex(_stakingModuleIndex).stakingModuleAddress;
+        return _stakingModules[_stakingModuleIndex].stakingModuleAddress;
     }
 
-    function _getStakingModuleIndexByAddress(address _stakingModule) private view returns (uint256) {
-        return _stakingModuleIndicesOneBased[_stakingModule];
+    function _getStakingModuleIndexById(uint24 _stakingModuleId) private view returns (uint256) {
+        return _stakingModuleIndicesOneBased[_stakingModuleId] - 1;
     }
 
-    function _getStakingModuleByAddress(address _stakingModule) private view returns (StakingModule storage) {
-        return _stakingModulesMap[_stakingModuleIndicesOneBased[_stakingModule] - 1];
+    function _getStakingModuleIdByIndex(uint256 _index) private view returns (uint24) {
+        return _stakingModules[_index].id;
     }
 
-    function _getStakingModuleByIndex(uint256 _stakingModuleIndex) private view returns (StakingModule storage) {
-        return _stakingModulesMap[_stakingModuleIndex];
+    function _getStakingModuleById(uint24 _stakingModuleId) private view returns (StakingModule storage) {
+        return _stakingModules[_stakingModuleIndicesOneBased[_stakingModuleId] - 1];
     }
 
-    modifier onlyRegisteredStakingModule(address _stakingModule) {
-        require(_stakingModuleIndicesOneBased[_stakingModule] != 0, "UNREGISTERED_STAKING_MODULE");
+    function _getStakingModuleByIndex(uint256 _index) private view returns (StakingModule storage) {
+        return _stakingModules[_index];
+    }
+
+    modifier onlyRegisteredStakingModule(uint24 _stakingModuleId) {
+        require(_stakingModuleIndicesOneBased[_stakingModuleId] != 0, "UNREGISTERED_STAKING_MODULE");
         _;
     }
 
-    modifier onlyNotPausedStakingModule(address _stakingModule) {
-        StakingModule storage stakingModule = _getStakingModuleByAddress(_stakingModule);
+    modifier onlyNotPausedStakingModule(uint24 _stakingModuleId) {
+        StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
         require(!stakingModule.paused, "STAKING_MODULE_PAUSED");
         _;
     }

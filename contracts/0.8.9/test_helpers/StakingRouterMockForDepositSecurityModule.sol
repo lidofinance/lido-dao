@@ -5,43 +5,55 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
-import { IStakingRouter } from "../DepositSecurityModule.sol";
-
+import {IStakingRouter} from "../DepositSecurityModule.sol";
 
 contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
-    event StakingModuleDeposited(uint256 maxDepositsCount, address stakingModule, bytes depositCalldata);
-    event StakingModulePaused(address stakingModule);
-    event StakingModuleUnpaused(address stakingModule);
+    event StakingModuleDeposited(uint256 maxDepositsCount, uint24 stakingModuleId, bytes depositCalldata);
+    event StakingModulePaused(uint24 stakingModuleId);
+    event StakingModuleUnpaused(uint24 stakingModuleId);
 
     bool private isStakingModulePaused;
     uint256 private stakingModuleKeysOpIndex;
     uint256 private stakingModuleLastDepositBlock;
 
+    function getSharesTable()
+        external
+        returns (
+            address[] memory recipients,
+            uint256[] memory moduleShares,
+            uint256 totalShare
+        )
+    {}
+
     function deposit(
         uint256 maxDepositsCount,
-        address stakingModule,
+        uint24 stakingModuleId,
         bytes calldata depositCalldata
     ) external {
-        emit StakingModuleDeposited(maxDepositsCount, stakingModule, depositCalldata);
+        emit StakingModuleDeposited(maxDepositsCount, stakingModuleId, depositCalldata);
     }
 
-    function pauseStakingModule(address stakingModule) external {
-        emit StakingModulePaused(stakingModule);
+    function setWithdrawalCredentials(bytes32 _withdrawalCredentials) external {}
+
+    function pauseStakingModule(uint24 stakingModuleId) external {
+        emit StakingModulePaused(stakingModuleId);
     }
 
-    function unpauseStakingModule(address stakingModule) external {
-        emit StakingModuleUnpaused(stakingModule);
+    function unpauseStakingModule(uint24 stakingModuleId) external {
+        emit StakingModuleUnpaused(stakingModuleId);
     }
 
-    function getStakingModuleIsPaused(address) external view returns (bool) {
+    function getWithdrawalCredentials() external view returns (bytes32) {}
+
+    function getStakingModuleIsPaused(uint24) external view returns (bool) {
         return isStakingModulePaused;
     }
 
-    function getStakingModuleKeysOpIndex(address) external view returns (uint256) {
+    function getStakingModuleKeysOpIndex(uint24) external view returns (uint256) {
         return stakingModuleKeysOpIndex;
     }
 
-    function getStakingModuleLastDepositBlock(address) external view returns (uint256) {
+    function getStakingModuleLastDepositBlock(uint24) external view returns (uint256) {
         return stakingModuleLastDepositBlock;
     }
 
