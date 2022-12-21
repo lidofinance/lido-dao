@@ -727,16 +727,19 @@ contract Lido is ILido, StETH, AragonApp {
 
         _mintShares(address(this), shares2mint);
 
+        uint256 treasuryReward = shares2mint;
+        uint256 moduleReward;
         for (uint256 i = 0; i < recipients.length; i++) {
-            uint256 moduleRewards = getSharesByPooledEth(_totalRewards * moduleShares[i] / TOTAL_BASIS_POINTS);
-            shares2mint -= moduleRewards;
-
-            if (moduleRewards > 0) _transferShares(address(this), recipients[i], moduleRewards);
+            moduleReward = shares2mint.mul(moduleShares[i]).div(totalShare);
+            if (moduleReward > 0) {
+                _transferShares(address(this), recipients[i], moduleReward);
+                treasuryReward -= moduleReward;
+            }
         }
 
         address treasury = getTreasury();
 
-        _transferShares(address(this), treasury, shares2mint);
+        _transferShares(address(this), treasury, treasuryReward);
     }
 
     /**
