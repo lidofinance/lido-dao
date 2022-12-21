@@ -37,6 +37,7 @@ contract BeaconChainDepositor {
             _signature,
             _computeDepositDataRoot(_withdrawalCredentials, _publicKey, _signature, _depositValue / DEPOSIT_AMOUNT_UNIT)
         );
+
         if (address(this).balance != targetBalance) revert ErrorNotExpectedBalance();
     }
 
