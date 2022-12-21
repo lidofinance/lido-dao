@@ -19,16 +19,15 @@ contract ModuleSolo is IStakingModule {
     uint256 public totalUsedKeys;
     uint256 public totalStoppedKeys;
 
-    uint16 public moduleType;
+    bytes32 public moduleType;
 
     uint16 public keysOpIndex;
 
     uint256 public constant PUBKEY_LENGTH = 48;
     uint256 public constant SIGNATURE_LENGTH = 96;
 
-    constructor(uint16 _type, address _lido) {
+    constructor(address _lido) {
         lido = _lido;
-        moduleType = _type;
     }
 
     function getTotalKeys() external view returns (uint256) {
@@ -84,11 +83,11 @@ contract ModuleSolo is IStakingModule {
 
     function trimUnusedKeys() external {}
 
-    function setType(uint16 _type) external {
+    function setType(bytes32 _type) external {
         moduleType = _type;
     }
 
-    function getType() external view returns (uint16) {
+    function getType() external view returns (bytes32) {
         return moduleType;
     }
 

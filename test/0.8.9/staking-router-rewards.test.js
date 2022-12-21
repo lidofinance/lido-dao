@@ -132,9 +132,6 @@ contract('StakingRouter', (accounts) => {
     operators = await NodeOperatorsRegistryMock.at(proxyAddress)
     await operators.initialize(lido.address)
 
-    // Set up NOR permissions
-    await acl.createPermission(voting, operators.address, await operators.SET_FEE_ROLE(), appManager, { from: appManager })
-
     // Init the BURN_ROLE role and assign in to voting
     await acl.createPermission(voting, lido.address, await lido.BURN_ROLE(), appManager, { from: appManager })
 
@@ -215,7 +212,7 @@ contract('StakingRouter', (accounts) => {
           // _module = await ModulePro.new(module.type, lido.address, module.fee, module.treasuryFee, { from: appManager })
           // add solo module
         } else if (module.type === 1) {
-          _module = await ModuleSolo.new(module.type, lido.address, { from: appManager })
+          _module = await ModuleSolo.new(lido.address, { from: appManager })
         }
 
         const name = 'Community' + i
@@ -325,7 +322,7 @@ async function stakingRouterStats(stakingRouter) {
 
   for (let i = 0; i < modulesCount; i++) {
     const module = await stakingRouter.getModule(i)
-    const entry = await IStakingModule.at(module.moduleAddress)
+    const entry = await IStakingModule.at(module.stakingModuleAddress)
 
     modules.push({
       // address: entry.address,

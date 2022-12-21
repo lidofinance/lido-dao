@@ -117,7 +117,7 @@ contract('Lido', ([appManager, voting, user2, depositor]) => {
 
     await app.setStakingRouter(stakingRouter.address)
 
-    soloModule = await ModuleSolo.new(1, app.address, { from: appManager })
+    soloModule = await ModuleSolo.new(app.address, { from: appManager })
 
     await stakingRouter.addModule('Curated', curatedModule.address, cfgCurated.targetShare, cfgCurated.treasuryFee, cfgCurated.moduleFee, {
       from: voting

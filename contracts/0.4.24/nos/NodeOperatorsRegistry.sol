@@ -834,12 +834,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         return STAKING_ROUTER_POSITION.getStorageAddress();
     }
 
-    function setType(uint16 _type) external auth(SET_TYPE_ROLE) {
-        TYPE_POSITION.setStorageUint256(uint256(_type));
+    function setType(bytes32 _type) external auth(SET_TYPE_ROLE) {
+        TYPE_POSITION.setStorageBytes32(_type);
     }
 
-    function getType() external view returns (uint16) {
-        return uint16(TYPE_POSITION.getStorageUint256());
+    function getType() external view returns (bytes32) {
+        return TYPE_POSITION.getStorageBytes32();
     }
 
     function getTotalKeys() public view returns (uint256) {

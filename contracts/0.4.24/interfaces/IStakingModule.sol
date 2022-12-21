@@ -9,8 +9,8 @@ interface IStakingModule {
     function getTotalUsedKeys() external view returns (uint256);
     function getTotalStoppedKeys() external view returns (uint256);
 
-    function getType() external view returns (uint16);
-    function setType(uint16 _type) external; // module team
+    function getType() external view returns (bytes32);
+    function setType(bytes32 _type) external; // module team
 
     function getStakingRouter() external view returns (address);
     function setStakingRouter(address addr) external; // lido team

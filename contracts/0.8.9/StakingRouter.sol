@@ -138,7 +138,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
      */
     function addModule(
         string memory _name,
-        address _moduleAddress,
+        address _stakingModuleAddress,
         uint16 _targetShare,
         uint16 _moduleFee,
         uint16 _treasuryFee
