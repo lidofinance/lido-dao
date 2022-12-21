@@ -57,6 +57,8 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
         string name;
         /// @notice address of module
         address moduleAddress;
+        /// @notice module fee
+        uint16 moduleFee;
         /// @notice treasury fee
         uint16 treasuryFee;
         /// @notice target percent of total keys in protocol, in BP
@@ -174,7 +176,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
      * @param _targetShare target total stake share
      * @param _treasuryFee treasury fee
      */
-    function addModule(string memory _name, address _moduleAddress, uint16 _targetShare, uint16 _treasuryFee)
+    function addModule(string memory _name, address _moduleAddress, uint16 _targetShare, uint16 _treasuryFee, uint16 _moduleFee)
         external
         onlyRole(MODULE_PAUSE_ROLE)
     {
@@ -189,6 +191,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
         module.moduleAddress = _moduleAddress;
         module.targetShare = _targetShare;
         module.treasuryFee = _treasuryFee;
+        module.moduleFee = _moduleFee;
         module.paused = false;
         module.active = true;
 
@@ -282,44 +285,39 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
      * @notice return shares table
      *
      * @return recipients recipients list
-     * @return modulesShares shares of each recipient
-     * @return moduleFee shares of each recipient
-     * @return treasuryFee shares of each recipient
+     * @return moduleShares shares of each recipient
+     * @return totalShare total share to mint for each module and treasury
      */
     function getSharesTable()
         external
         view
-        returns (address[] memory recipients, uint256[] memory modulesShares, uint256[] memory moduleFee, uint256[] memory treasuryFee)
+        returns (address[] memory recipients, uint256[] memory moduleShares, uint256 totalShare)
     {
         uint256 _modulesCount = getModulesCount();
         assert(_modulesCount != 0);
 
         // +1 for treasury
         recipients = new address[](_modulesCount);
-        modulesShares = new uint256[](_modulesCount);
-        moduleFee = new uint256[](_modulesCount);
-        treasuryFee = new uint256[](_modulesCount);
+        moduleShares = new uint256[](_modulesCount);
 
-        uint256 idx = 0;
-        uint256 treasuryShares = 0;
-
+        totalShare = 0;
+        
         (uint256 totalActiveKeys, uint256[] memory moduleActiveKeys) = getTotalActiveKeys();
 
         require(totalActiveKeys > 0, "NO_KEYS");
 
         for (uint256 i = 0; i < _modulesCount; ++i) {
             StakingModule memory stakingModule = modules[i];
-            IStakingModule module = IStakingModule(stakingModule.moduleAddress);
 
-            recipients[idx] = stakingModule.moduleAddress;
-            modulesShares[idx] = (moduleActiveKeys[i] * TOTAL_BASIS_POINTS / totalActiveKeys);
-            moduleFee[idx] = module.getFee();
-            treasuryFee[idx] = stakingModule.treasuryFee;
+            uint256 moduleShare = (moduleActiveKeys[i] * TOTAL_BASIS_POINTS / totalActiveKeys);
 
-            ++idx;
+            recipients[i] = stakingModule.moduleAddress;
+            moduleShares[i] = moduleShare * stakingModule.moduleFee / TOTAL_BASIS_POINTS;
+
+            totalShare += moduleShare * stakingModule.treasuryFee / TOTAL_BASIS_POINTS + moduleShares[i];
         }
 
-        return (recipients, modulesShares, moduleFee, treasuryFee);
+        return (recipients, moduleShares, totalShare);
     }
 
     function distributeDeposits() public {
@@ -340,28 +338,6 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable {
                 }
             }
         }
-        // @todo придумать более красивый способ от повторного распределения
-        // кейс:
-        // - предположим, у нас 3 модуля:
-        //   1. Curated: totalKeys = 15000, totalUsedKeys = 9700, targetShare = 100% (т.е. без ограничений)
-        //   2. Community: totalKeys = 300, totalUsedKeys = 100, targetShare = 1% (1% от общего числа валидаторов)
-        //   3. DVT:  totalKeys = 200, totalUsedKeys = 0, targetShare = 5% (5% от общего числа валидаторов)
-        // - на баланс SR приходит eth на 200 депозитов и вызывается distributeDeposits
-        // - происходит аллокация по модулям (targetShare модулей в данном случае не превышен),
-        //  тогда депозиты(ключи) распределятся так: Curated - 0, Community - 50, DVT - 150. Таблица аллокации: [0, 50, 150]
-        // - допустим в тчении 12 часов Community и Curated модули функционируют нормально, а DVT модуль тормозит.
-        // - Если Community модуль уже задепозитил 10 из своих ключей, значит вся его аллокация (т.е.
-        //   еще 40 незадепозиченных ключей) не попадает под механизм recycle, а 100% аллокации DVT модуля
-        //   становится доступна для депозита другими модулями.
-        // - допустим Curated модуль через 12 часов депозитит все доступные recycled ключи: 100% от 150 ключей DVT модуля.
-        //   Новая таблица аллокаци после депозита: [0, 40, 0].
-        // - допустим, на SR приходит еще eth на 1 депозит, и повторно вывзывается distributeDeposits: метод отработает и
-        //   переформирует таблицу аллокаций на: [0, 0, 40] - и ключи модуля 1 снова становятся доступны для депозита любым
-        //   модулем, т.к. перетекли в корзинку модуля DVT, который на данный момент уже числится "тормозным"
-        //
-        // suggested solution: close the call distributeDeposits() wuth security role
-
-
 
         require(depositsAmount > getLastDepositsAmount() && isUpdated, "allocation not changed");
         TOTAL_ALLOCATION_POSITION.setStorageUint256(newTotalAllocation);
