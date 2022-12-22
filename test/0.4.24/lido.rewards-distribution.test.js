@@ -16,13 +16,13 @@ const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 
 const cfgCurated = {
   moduleFee: 250,
-  treasuryFee: 500,
+  treasuryFee: 350,
   targetShare: 10000
 }
 
 const cfgCommunity = {
   moduleFee: 250,
-  treasuryFee: 500,
+  treasuryFee: 250,
   targetShare: 10000
 }
 
@@ -86,7 +86,7 @@ contract('Lido', ([appManager, voting, user2, depositor]) => {
     await acl.createPermission(depositor, app.address, await app.DEPOSIT_ROLE(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
-    await app.initialize(depositContract.address, oracle.address, curatedModule.address)
+    await app.initialize(oracle.address)
 
     assert((await app.isStakingPaused()) === true)
     assert((await app.isStopped()) === true)
@@ -150,7 +150,7 @@ contract('Lido', ([appManager, voting, user2, depositor]) => {
   it('Rewards distribution fills modules', async () => {
     const depositAmount = ETH(1)
     const { moduleFees } = await stakingRouter.getSharesTable()
-    const moduleRewards = (depositAmount * moduleFees[0]) / TOTAL_BASIS_POINTS
+    const moduleRewards = (depositAmount * moduleFees[1]) / TOTAL_BASIS_POINTS
 
     await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(32) })
 
