@@ -374,9 +374,7 @@ contract LidoTemplate is IsContract {
         state.lido.initialize(
             _beaconDepositContract,
             state.oracle,
-            state.operators,
-            state.agent, // treasury
-            state.agent  // insurance fund
+            state.agent // treasury
         );
 
         // used for issuing vested tokens in the next step
@@ -436,13 +434,6 @@ contract LidoTemplate is IsContract {
 
         require(state.dao != address(0), ERROR_DAO_NOT_DEPLOYED);
         require(bytes(_daoName).length > 0, ERROR_INVALID_ID);
-
-        // Set initial values for fee and its distribution
-        bytes32 LIDO_MANAGE_FEE = state.lido.MANAGE_FEE();
-        _createPermissionForTemplate(state.acl, state.lido, LIDO_MANAGE_FEE);
-        state.lido.setFee(_totalFeeBP);
-        state.lido.setFeeDistribution(_treasuryFeeBP, _insuranceFeeBP, _operatorsFeeBP);
-        _removePermissionFromTemplate(state.acl, state.lido, LIDO_MANAGE_FEE);
 
         if (_unvestedTokensAmount != 0) {
             // using issue + assign to avoid setting the additional MINT_ROLE for the template
@@ -650,17 +641,15 @@ contract LidoTemplate is IsContract {
 
         // Lido
         perms[0] = _state.lido.PAUSE_ROLE();
-        perms[1] = _state.lido.MANAGE_FEE();
-        perms[2] = _state.lido.MANAGE_WITHDRAWAL_KEY();
-        perms[3] = _state.lido.MANAGE_PROTOCOL_CONTRACTS_ROLE();
-        perms[4] = _state.lido.BURN_ROLE();
-        perms[5] = _state.lido.RESUME_ROLE();
-        perms[6] = _state.lido.STAKING_PAUSE_ROLE();
-        perms[7] = _state.lido.STAKING_CONTROL_ROLE();
-        perms[8] = _state.lido.SET_EL_REWARDS_VAULT_ROLE();
-        perms[9] = _state.lido.SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE();
+        perms[1] = _state.lido.MANAGE_PROTOCOL_CONTRACTS_ROLE();
+        perms[2] = _state.lido.BURN_ROLE();
+        perms[3] = _state.lido.RESUME_ROLE();
+        perms[4] = _state.lido.STAKING_PAUSE_ROLE();
+        perms[5] = _state.lido.STAKING_CONTROL_ROLE();
+        perms[6] = _state.lido.SET_EL_REWARDS_VAULT_ROLE();
+        perms[7] = _state.lido.SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE();
 
-        for (i = 0; i < 10; ++i) {
+        for (i = 0; i < 8; ++i) {
             _createPermissionForVoting(acl, _state.lido, perms[i], voting);
         }
     }

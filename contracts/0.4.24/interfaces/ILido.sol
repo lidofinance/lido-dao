@@ -119,40 +119,16 @@ interface ILido {
     event StakingLimitRemoved();
 
     /**
-      * @notice Set Lido protocol contracts (oracle, treasury, insurance fund).
+      * @notice Set Lido protocol contracts (oracle, treasury).
       * @param _oracle oracle contract
       * @param _treasury treasury contract
-      * @param _insuranceFund insurance fund contract
       */
     function setProtocolContracts(
         address _oracle,
-        address _treasury,
-        address _insuranceFund
+        address _treasury
     ) external;
 
-    event ProtocolContactsSet(address oracle, address treasury, address insuranceFund);
-
-    /**
-      * @notice Set fee rate to `_feeBasisPoints` basis points.
-      * The fees are accrued when:
-      * - oracles report staking results (beacon chain balance increase)
-      * - validators gain execution layer rewards (priority fees and MEV)
-      * @param _feeBasisPoints Fee rate, in basis points
-      */
-    function setFee(uint16 _feeBasisPoints) external;
-
-    /**
-      * @notice Set fee distribution
-      * @param _treasuryFeeBasisPoints basis points go to the treasury,
-      * @param _insuranceFeeBasisPoints basis points go to the insurance fund,
-      * @param _operatorsFeeBasisPoints basis points go to node operators.
-      * @dev The sum has to be 10 000.
-      */
-    function setFeeDistribution(
-        uint16 _treasuryFeeBasisPoints,
-        uint16 _insuranceFeeBasisPoints,
-        uint16 _operatorsFeeBasisPoints
-    ) external;
+    event ProtocolContactsSet(address oracle, address treasury);
 
     function setMaxFee(uint256 _maximumFeeBasisPoints) external;
 
@@ -161,20 +137,7 @@ interface ILido {
       */
     function getFee() external view returns (uint256 feeBasisPoints);
 
-    /**
-      * @notice Returns fee distribution proportion
-      */
-    function getFeeDistribution() external view returns (
-        uint16 treasuryFeeBasisPoints,
-        uint16 insuranceFeeBasisPoints,
-        uint16 operatorsFeeBasisPoints
-    );
-
     function getMaxFee() public view returns (uint256 maxFeeBasisPoints);
-
-    event FeeSet(uint16 feeBasisPoints);
-
-    event FeeDistributionSet(uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, uint16 operatorsFeeBasisPoints);
 
     /**
       * @notice A payable function supposed to be called only by LidoExecutionLayerRewardsVault contract

@@ -468,7 +468,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
      * @param _totalRewardShares Total amount of reward shares to distribute.
      */
     function _getRewardsDistribution(uint256 _totalRewardShares)
-        public
+        internal
         view
         returns (address[] memory recipients, uint256[] memory shares)
     {
