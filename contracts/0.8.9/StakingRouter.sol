@@ -291,16 +291,16 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
      * @notice return shares table
      *
      * @return recipients recipients list
-     * @return moduleShares shares of each recipient
-     * @return totalShare total share to mint for each module and treasury
+     * @return moduleFees fee of each recipient
+     * @return totalFee total fee to mint for each module and treasury
      */
     function getSharesTable()
         external
         view
         returns (
             address[] memory recipients,
-            uint256[] memory moduleShares,
-            uint256 totalShare
+            uint256[] memory moduleFees,
+            uint256 totalFee
         )
     {
         uint256 _modulesCount = getStakingModulesCount();
@@ -308,9 +308,9 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
 
         // +1 for treasury
         recipients = new address[](_modulesCount);
-        moduleShares = new uint256[](_modulesCount);
+        moduleFees = new uint256[](_modulesCount);
 
-        totalShare = 0;
+        totalFee = 0;
 
         (uint256 totalActiveKeys, uint256[] memory moduleActiveKeys) = getTotalActiveKeys();
 
@@ -323,12 +323,12 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
             moduleShare = ((moduleActiveKeys[i] * TOTAL_BASIS_POINTS) / totalActiveKeys);
 
             recipients[i] = address(stakingModule.stakingModuleAddress);
-            moduleShares[i] = ((moduleShare * stakingModule.moduleFee) / TOTAL_BASIS_POINTS);
+            moduleFees[i] = ((moduleShare * stakingModule.moduleFee) / TOTAL_BASIS_POINTS);
 
-            totalShare += (moduleShare * stakingModule.treasuryFee) / TOTAL_BASIS_POINTS + moduleShares[i];
+            totalFee += (moduleShare * stakingModule.treasuryFee) / TOTAL_BASIS_POINTS + moduleFees[i];
         }
 
-        return (recipients, moduleShares, totalShare);
+        return (recipients, moduleFees, totalFee);
     }
 
     function getAllocatedDepositsDistribution(uint256 _totalActiveKeys)
