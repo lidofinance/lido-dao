@@ -329,35 +329,14 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         return (recipients, moduleFees, totalFee);
     }
 
-    /// @notice returns new deposits allocation after the distribution of the `_distributedKeysCount` keys
-    function getKeysAllocation(uint256 _keysToAllocate) public view returns (uint256[] memory) {
-        (uint256 totalActiveKeys, ) = getTotalActiveKeys();
-        return _getKeysAllocation(totalActiveKeys, _keysToAllocate);
-    }
-
-    function _getKeysAllocation(uint256 _activeKeysCount, uint256 _keysToAllocate)
+    /// @notice returns new deposits allocation after the distribution of the `_keysToAllocate` keys
+    function getKeysAllocation(uint256 _keysToAllocate)
         public
         view
-        returns (uint256[] memory)
+        returns (uint256 allocated, uint256[] memory allocations)
     {
-        uint256 stakingModulesCount = getStakingModulesCount();
-        uint256[] memory capacities = new uint256[](stakingModulesCount);
-        uint256[] memory allocations = new uint256[](stakingModulesCount);
-        uint256 _totalActiveKeysCount = _activeKeysCount + _keysToAllocate;
-
-        for (uint256 i = 0; i < stakingModulesCount; ++i) {
-            StakingModuleCache memory stakingModuleCache = _loadStakingModuleCache(_getStakingModuleIdByIndex(i));
-            allocations[i] = stakingModuleCache.activeKeysCount;
-
-            uint256 targetKeys = (stakingModuleCache.targetShare * _totalActiveKeysCount) / TOTAL_BASIS_POINTS;
-            capacities[i] = Math.min(
-                targetKeys,
-                stakingModuleCache.activeKeysCount + stakingModuleCache.availableKeysCount
-            );
-        }
-
-        MinFirstAllocationStrategy.allocate(allocations, capacities, _keysToAllocate);
-        return allocations;
+        (uint256 totalActiveKeys, ) = getTotalActiveKeys();
+        (allocated, allocations) = _getKeysAllocation(totalActiveKeys, _keysToAllocate);
     }
 
     /**
@@ -385,7 +364,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
             _maxDepositsCount = Math.min(address(this).balance / DEPOSIT_SIZE, _maxDepositsCount);
             (uint256 totalActiveKeys, uint256[] memory stakingModulesActiveKeys) = getTotalActiveKeys();
             uint256 stakingModuleIndex = _getStakingModuleIndexById(_stakingModuleId);
-            uint256[] memory newKeysAllocation = _getKeysAllocation(totalActiveKeys, _maxDepositsCount);
+            (, uint256[] memory newKeysAllocation) = _getKeysAllocation(totalActiveKeys, _maxDepositsCount);
             maxSigningKeysCount = newKeysAllocation[stakingModuleIndex] - stakingModulesActiveKeys[stakingModuleIndex];
         }
 
@@ -463,6 +442,30 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         stakingModuleCache.stoppedKeysCount = stakingModule.getTotalStoppedKeys();
         stakingModuleCache.activeKeysCount = stakingModuleCache.usedKeysCount - stakingModuleCache.stoppedKeysCount;
         stakingModuleCache.availableKeysCount = stakingModuleCache.totalKeysCount - stakingModuleCache.usedKeysCount;
+    }
+
+    function _getKeysAllocation(uint256 _activeKeysCount, uint256 _keysToAllocate)
+        public
+        view
+        returns (uint256 allocated, uint256[] memory allocations)
+    {
+        uint256 stakingModulesCount = getStakingModulesCount();
+        allocations = new uint256[](stakingModulesCount);
+        uint256[] memory capacities = new uint256[](stakingModulesCount);
+        uint256 _totalActiveKeysCount = _activeKeysCount + _keysToAllocate;
+
+        for (uint256 i = 0; i < stakingModulesCount; ++i) {
+            StakingModuleCache memory stakingModuleCache = _loadStakingModuleCache(_getStakingModuleIdByIndex(i));
+            allocations[i] = stakingModuleCache.activeKeysCount;
+
+            uint256 targetKeys = (stakingModuleCache.targetShare * _totalActiveKeysCount) / TOTAL_BASIS_POINTS;
+            capacities[i] = Math.min(
+                targetKeys,
+                stakingModuleCache.activeKeysCount + stakingModuleCache.availableKeysCount
+            );
+        }
+
+        allocated = MinFirstAllocationStrategy.allocate(allocations, capacities, _keysToAllocate);
     }
 
     function _getActiveKeysCount(uint24 _stakingModuleId) internal view returns (uint256) {

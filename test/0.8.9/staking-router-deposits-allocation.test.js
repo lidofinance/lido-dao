@@ -55,22 +55,21 @@ contract('StakingRouter', (accounts) => {
     })
 
     it('getAllocatedDepositsDistribution :: staking module without keys', async () => {
-      const { depositsDistribution, distributedDepositsCount } = await stakingRouter.getAllocatedDepositsDistribution(0)
+      const { allocated, allocations } = await stakingRouter.getKeysAllocation(0)
 
-      assertBn(distributedDepositsCount, 0)
-      assert.equal(depositsDistribution.length, 1)
-      assertBn(depositsDistribution[0], 0)
+      assertBn(allocated, 0)
+      assert.equal(allocations.length, 1)
+      assertBn(allocations[0], 0)
     })
 
     it('getAllocatedDepositsDistribution :: staking module with zero used keys', async () => {
       await curatedStakingModuleMock.setTotalKeys(500)
       assertBn(await curatedStakingModuleMock.getTotalKeys(), 500)
+      const { allocated, allocations } = await stakingRouter.getKeysAllocation(1000)
 
-      const { depositsDistribution, distributedDepositsCount } = await stakingRouter.getAllocatedDepositsDistribution(1000)
-
-      assertBn(distributedDepositsCount, 500)
-      assert.equal(depositsDistribution.length, 1)
-      assertBn(depositsDistribution[0], 500)
+      assertBn(allocated, 500)
+      assert.equal(allocations.length, 1)
+      assertBn(allocations[0], 500)
     })
 
     it('getAllocatedDepositsDistribution :: staking module with non zero used keys', async () => {
@@ -80,11 +79,11 @@ contract('StakingRouter', (accounts) => {
       await curatedStakingModuleMock.setTotalUsedKeys(250)
       assertBn(await curatedStakingModuleMock.getTotalUsedKeys(), 250)
 
-      const { depositsDistribution, distributedDepositsCount } = await stakingRouter.getAllocatedDepositsDistribution(1000)
+      const { allocated, allocations } = await stakingRouter.getKeysAllocation(250)
 
-      assertBn(distributedDepositsCount, 250)
-      assert.equal(depositsDistribution.length, 1)
-      assertBn(depositsDistribution[0], 250)
+      assertBn(allocated, 250)
+      assert.equal(allocations.length, 1)
+      assertBn(allocations[0], 500)
     })
   })
 
@@ -93,7 +92,7 @@ contract('StakingRouter', (accounts) => {
       await stakingRouter.addModule(
         'Curated',
         curatedStakingModuleMock.address,
-        10_000, // 100 % _targetShare 
+        10_000, // 100 % _targetShare
         1_000, // 10 % _moduleFee
         5_000, // 50 % _treasuryFee
         { from: admin }
@@ -101,7 +100,7 @@ contract('StakingRouter', (accounts) => {
       await stakingRouter.addModule(
         'Solo',
         soloStakingModuleMock.address,
-        200, // 2 % _targetShare 
+        200, // 2 % _targetShare
         5_000, // 50 % _moduleFee
         0, // 0 % _treasuryFee
         { from: admin }
@@ -121,12 +120,14 @@ contract('StakingRouter', (accounts) => {
       await soloStakingModuleMock.setTotalUsedKeys(50)
       assertBn(await soloStakingModuleMock.getTotalUsedKeys(), 50)
 
-      const { depositsDistribution, distributedDepositsCount } = await stakingRouter.getAllocatedDepositsDistribution(5000)
+      const { allocated, allocations } = await stakingRouter.getKeysAllocation(333)
 
-      assertBn(distributedDepositsCount, 550)
-      assert.equal(depositsDistribution.length, 2)
-      assertBn(depositsDistribution[0], 500)
-      assertBn(depositsDistribution[1], 50)
+      assertBn(allocated, 333)
+      assert.equal(allocations.length, 2)
+
+      assertBn(allocations[0], 4786)
+      // newTotalKeysCount: 4883 -> 0.02 * 4883 = 97
+      assertBn(allocations[1], 97)
     })
   })
 
@@ -135,7 +136,7 @@ contract('StakingRouter', (accounts) => {
       await stakingRouter.addModule(
         'Curated',
         curatedStakingModuleMock.address,
-        10_000, // 100 % _targetShare 
+        10_000, // 100 % _targetShare
         1_000, // 10 % _moduleFee
         5_000, // 50 % _treasuryFee
         { from: admin }
@@ -143,15 +144,13 @@ contract('StakingRouter', (accounts) => {
       await stakingRouter.addModule(
         'Solo',
         soloStakingModuleMock.address,
-        200, // 2 % _targetShare 
+        200, // 2 % _targetShare
         5_000, // 50 % _moduleFee
         0, // 0 % _treasuryFee
         { from: admin }
       )
     })
 
-    it('Lido.deposit() :: transfer balance', async () => {
-      
-    })
+    it('Lido.deposit() :: transfer balance', async () => {})
   })
 })
