@@ -23,15 +23,15 @@ contract('StakingRouter', (accounts) => {
     await stakingRouter.initialize(admin, { from: deployer })
 
     // Set up the staking router permissions.
-    const [MANAGE_WITHDRAWAL_KEY_ROLE, MODULE_PAUSE_ROLE, MODULE_CONTROL_ROLE] = await Promise.all([
-      stakingRouter.MANAGE_WITHDRAWAL_KEY_ROLE(),
+    const [MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, MODULE_PAUSE_ROLE, MODULE_MANAGE_ROLE] = await Promise.all([
+      stakingRouter.MANAGE_WITHDRAWAL_CREDENTIALS_ROLE(),
       stakingRouter.MODULE_PAUSE_ROLE(),
-      stakingRouter.MODULE_CONTROL_ROLE()
+      stakingRouter.MODULE_MANAGE_ROLE()
     ])
 
-    await stakingRouter.grantRole(MANAGE_WITHDRAWAL_KEY_ROLE, admin, { from: admin })
+    await stakingRouter.grantRole(MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, admin, { from: admin })
     await stakingRouter.grantRole(MODULE_PAUSE_ROLE, admin, { from: admin })
-    await stakingRouter.grantRole(MODULE_CONTROL_ROLE, admin, { from: admin })
+    await stakingRouter.grantRole(MODULE_MANAGE_ROLE, admin, { from: admin })
 
     evmSnapshotId = await hre.ethers.provider.send('evm_snapshot', [])
   })

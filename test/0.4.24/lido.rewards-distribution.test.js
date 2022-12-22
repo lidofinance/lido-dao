@@ -55,7 +55,6 @@ contract('Lido', ([appManager, voting, user2, depositor]) => {
     await acl.createPermission(voting, app.address, await app.PAUSE_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.RESUME_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.MANAGE_FEE(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.MANAGE_WITHDRAWAL_KEY(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.BURN_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.MANAGE_PROTOCOL_CONTRACTS_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_EL_REWARDS_VAULT_ROLE(), appManager, { from: appManager })
@@ -107,15 +106,11 @@ contract('Lido', ([appManager, voting, user2, depositor]) => {
     await stakingRouter.initialize(appManager)
 
     // Set up the staking router permissions.
-    const MANAGE_WITHDRAWAL_KEY_ROLE = await stakingRouter.MANAGE_WITHDRAWAL_KEY_ROLE()
-    const MODULE_PAUSE_ROLE = await stakingRouter.MODULE_PAUSE_ROLE()
-    const MODULE_CONTROL_ROLE = await stakingRouter.MODULE_CONTROL_ROLE()
+    const MODULE_MANAGE_ROLE = await stakingRouter.MODULE_MANAGE_ROLE()
 
-    await stakingRouter.grantRole(MANAGE_WITHDRAWAL_KEY_ROLE, voting, { from: appManager })
-    await stakingRouter.grantRole(MODULE_PAUSE_ROLE, voting, { from: appManager })
-    await stakingRouter.grantRole(MODULE_CONTROL_ROLE, voting, { from: appManager })
+    await stakingRouter.grantRole(MODULE_MANAGE_ROLE, voting, { from: appManager })
 
-    await app.setStakingRouter(stakingRouter.address)
+    await app.setStakingRouter(stakingRouter.address, { from: voting })
     await app.setMaxFee(1000, { from: voting })
 
     soloModule = await ModuleSolo.new(app.address, { from: appManager })
