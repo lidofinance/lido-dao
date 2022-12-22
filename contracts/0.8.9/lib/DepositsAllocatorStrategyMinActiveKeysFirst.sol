@@ -23,7 +23,7 @@ library DepositsAllocatorStrategyMinActiveKeysFirst {
                 candidates,
                 keysToDistribute - distributedKeysCount
             );
-            if (keysDistributed == 0) {
+            if (keysDistributed == 0 || candidateIndex == type(uint256).max) {
                 break;
             }
             candidates[candidateIndex].activeKeysCount += keysDistributed;
@@ -38,21 +38,30 @@ library DepositsAllocatorStrategyMinActiveKeysFirst {
         pure
         returns (uint256 nextCandidateIndex, uint256 keysDistributed)
     {
-        uint256 candidatesCount = 1;
-        // find the candidate with the lowest number of the active keys count
-        for (uint256 i = 1; i < candidates.length; ++i) {
-            if (candidates[nextCandidateIndex].activeKeysCount > candidates[i].activeKeysCount) {
+        uint256 candidatesCount = 0;
+        nextCandidateIndex = type(uint256).max;
+        uint256 nextCandidateActiveKeysCount = type(uint256).max;
+
+        // find the candidate with the lowest number of the active keys count and available keys count > 0
+        for (uint256 i = 0; i < candidates.length; ++i) {
+            if (candidates[i].availableKeysCount == 0) {
+                continue;
+            } else if (nextCandidateActiveKeysCount > candidates[i].activeKeysCount) {
+                nextCandidateActiveKeysCount = candidates[i].activeKeysCount;
                 nextCandidateIndex = i;
                 candidatesCount = 1;
-            } else if (candidates[nextCandidateIndex].activeKeysCount == candidates[i].activeKeysCount) {
+            } else if (nextCandidateActiveKeysCount == candidates[i].activeKeysCount) {
                 candidatesCount += 1;
             }
+        }
+
+        if (candidatesCount == 0) {
+            return (nextCandidateIndex, keysDistributed);
         }
 
         // bound the max number of keys to distribute to the candidate by the lowest active keys count
         // after the found candidate
         uint256 availableKeysCountLimit = type(uint256).max;
-        uint256 nextCandidateActiveKeysCount = candidates[nextCandidateIndex].activeKeysCount;
         for (uint256 i = 0; i < candidates.length; ++i) {
             if (
                 candidates[i].activeKeysCount > nextCandidateActiveKeysCount &&
