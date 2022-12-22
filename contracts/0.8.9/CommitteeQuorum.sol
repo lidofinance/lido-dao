@@ -26,7 +26,12 @@ contract CommitteeQuorum {
     /// The bitmask of the oracle members that pushed their reports
     bytes32 internal constant REPORTS_BITMASK_POSITION = keccak256("lido.CommitteeQuorum.reportsBitmask");
 
-    /// Contract structured storage
+    ///! STRUCTURED STORAGE OF THE CONTRACT
+    ///! SLOT 0: address[] members
+    ///! SLOT 1: bytes[] distinctReports
+    ///! SLOT 2: bytes[] distinctReportHashes
+    ///! SLOT 3: bytes32[] distinctReportCounters
+
     address[] internal members;
     bytes[] internal distinctReports;
     bytes32[] internal distinctReportHashes;

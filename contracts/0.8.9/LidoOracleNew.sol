@@ -128,6 +128,17 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         keccak256("lido.LidoOracle.allowedBeaconBalanceDecrease");
 
 
+    ///! STRUCTURED STORAGE OF THE CONTRACT
+    ///! Inherited from CommitteeQuorum:
+    ///! SLOT 0: address[] members
+    ///! SLOT 1: bytes[] distinctReports
+    ///! SLOT 2: bytes[] distinctReportHashes
+    ///! SLOT 3: bytes32[] distinctReportCounters
+    ///! Inherited from AccessControlEnumerable:
+    ///! SLOT 4: mapping(bytes32 => RoleData) _roles
+    ///! SLOT 5: mapping(bytes32 => EnumerableSet.AddressSet) _roleMembers
+
+
     /**
      * @notice Initialize the contract (version 3 for now) from scratch
      * @dev For details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md

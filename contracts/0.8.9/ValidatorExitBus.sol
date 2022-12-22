@@ -9,7 +9,7 @@ import "./ReportEpochChecker.sol";
 import "./CommitteeQuorum.sol";
 
 
-contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEpochChecker {
+contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable, ReportEpochChecker {
     using UnstructuredStorage for bytes32;
     using RateLimitUtils for LimitState.Data;
     using LimitUnstructuredStorage for bytes32;
@@ -64,7 +64,17 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable,  ReportEp
 
     bytes32 internal constant TOTAL_EXIT_REQUESTS_POSITION = keccak256("lido.ValidatorExitBus.totalExitRequests");
 
-    // Structured storage
+    ///! STRUCTURED STORAGE OF THE CONTRACT
+    ///! Inherited from CommitteeQuorum:
+    ///! SLOT 0: address[] members
+    ///! SLOT 1: bytes[] distinctReports
+    ///! SLOT 2: bytes[] distinctReportHashes
+    ///! SLOT 3: bytes32[] distinctReportCounters
+    ///! Inherited from AccessControlEnumerable:
+    ///! SLOT 4: mapping(bytes32 => RoleData) _roles
+    ///! SLOT 5: mapping(bytes32 => EnumerableSet.AddressSet) _roleMembers
+    ///! Own:
+    ///! SLOT 6: mapping(address => mapping (uint256 => uint256)) lastRequestedValidatorIds
 
     /// (stakingModuleAddress, nodeOperatorId) => lastRequestedValidatorId
     mapping(address => mapping (uint256 => uint256)) public lastRequestedValidatorIds;
