@@ -377,7 +377,6 @@ contract DepositSecurityModule {
         _verifySignatures(depositRoot, blockNumber, blockHash, stakingModuleId, keysOpIndex, sortedGuardianSignatures);
 
         STAKING_ROUTER.deposit(maxDepositsPerBlock, stakingModuleId, depositCalldata);
-        lastDepositBlock = block.number;
     }
 
     function _verifySignatures(
