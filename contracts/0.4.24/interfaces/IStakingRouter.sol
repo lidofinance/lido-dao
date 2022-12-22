@@ -7,7 +7,7 @@ pragma solidity 0.4.24;
 
 interface IStakingRouter {
     function getSharesTable() external returns (address[] memory recipients, uint256[] memory moduleShares, uint256 totalShare);
-    function deposit(uint256 maxDepositsCount, address stakingModule, bytes depositCalldata) external;
+    function deposit(uint256 maxDepositsCount, uint24 stakingModuleId, bytes depositCalldata) external returns(uint256);
 
     /**
      * @notice Set credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched to `_withdrawalCredentials`
@@ -21,10 +21,13 @@ interface IStakingRouter {
      */
     function getWithdrawalCredentials() external view returns (bytes32);
 
-    function pauseStakingModule(address stakingModule) external;
-    function unpauseStakingModule(address stakingModule) external;
+    function pauseStakingModule(uint24 _stakingModuleId) external;
 
-    function getStakingModuleIsPaused(address stakingModule) external view returns (bool);
-    function getStakingModuleKeysOpIndex(address stakingModule) external view returns (uint256);
-    function getStakingModuleLastDepositBlock(address stakingModule) external view returns (uint256);
+    function unpauseStakingModule(uint24 _stakingModuleId) external;
+
+    function getStakingModuleIsPaused(uint24 _stakingModuleId) external view returns (bool);
+
+    function getStakingModuleKeysOpIndex(uint24 _stakingModuleId) external view returns (uint256);
+
+    function getStakingModuleLastDepositBlock(uint24 _stakingModuleId) external view returns (uint256);
 }

@@ -15,10 +15,10 @@ interface IStakingRouter {
         );
 
     function deposit(
-        uint256 _maxDepositsCount,
-        uint24 _stakingModuleId,
-        bytes calldata _depositCalldata
-    ) external;
+        uint256 maxDepositsCount,
+        uint24 stakingModuleId,
+        bytes calldata depositCalldata
+    ) external returns(uint256);
 
     /**
      * @notice Set credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched to `_withdrawalCredentials`

@@ -20,6 +20,8 @@ import "./StETH.sol";
 
 import "./lib/StakeLimitUtils.sol";
 
+import "hardhat/console.sol";
+
 interface IERC721 {
     /// @notice Transfer ownership of an NFT
     /// @param _from The current owner of the NFT
@@ -94,6 +96,7 @@ contract Lido is ILido, StETH, AragonApp {
     bytes32 internal constant INSURANCE_FUND_POSITION = keccak256("lido.Lido.insuranceFund");
     bytes32 internal constant EL_REWARDS_VAULT_POSITION = keccak256("lido.Lido.executionLayerRewardsVault");
     bytes32 internal constant STAKING_ROUTER_POSITION = keccak256("lido.Lido.stakingRouter");
+    bytes32 internal constant DEPOSIT_SECURITY_MODULE_POSITION = keccak256("lido.Lido.depositSecurityModule");
 
     /// @dev storage slot position of the staking rate limit structure
     bytes32 internal constant STAKING_STATE_POSITION = keccak256("lido.Lido.stakeLimit");
@@ -119,8 +122,8 @@ contract Lido is ILido, StETH, AragonApp {
     /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
     bytes32 internal constant LAST_REPORT_TIMESTAMP = keccak256("lido.Lido.lastReportTimestamp");
 
-    modifier onlyStakingRouter() {
-        require(msg.sender == getStakingRouter(), "APP_AUTH_FAILED");
+    modifier onlyDsm() {
+        require(msg.sender == getDepositSecurityModule(), "APP_AUTH_DSM_FAILED");
         _;
     }
 
@@ -317,26 +320,6 @@ contract Lido is ILido, StETH, AragonApp {
 
         emit ELRewardsReceived(msg.value);
     }
-
-    /**
-     * @notice Deposits buffered ethers to the official DepositContract.
-     * @dev This function is separated from submit() to reduce the cost of sending funds.
-     */
-    // function depositBufferedEther() external {
-    //     _auth(DEPOSIT_ROLE);
-
-    //     return _depositBufferedEther(DEFAULT_MAX_DEPOSITS_PER_CALL);
-    // }
-
-    /**
-     * @notice Deposits buffered ethers to the official DepositContract, making no more than `_maxDeposits` deposit calls.
-     * @dev This function is separated from submit() to reduce the cost of sending funds.
-     */
-    // function depositBufferedEther(uint256 _maxDeposits) external {
-    //     _auth(DEPOSIT_ROLE);
-
-    //     return _depositBufferedEther(_maxDeposits);
-    // }
 
     function burnShares(address _account, uint256 _sharesAmount)
         external
@@ -713,24 +696,24 @@ contract Lido is ILido, StETH, AragonApp {
         emit TransferShares(address(0), _to, _sharesAmount);
     }
 
-    function updateBufferedCounters(uint256 _numKeys) external onlyStakingRouter {
-        uint256 _amount = _numKeys.mul(DEPOSIT_SIZE);
-
-        DEPOSITED_VALIDATORS_POSITION.setStorageUint256(
-            DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(_numKeys)
-        );
-
-        uint256 buffered = STAKING_ROUTER_BUFFERED_ETHER_POSITION.getStorageUint256();
-        uint256 newBuffered = _amount >= buffered ? 0 : buffered.sub(_amount);
-        STAKING_ROUTER_BUFFERED_ETHER_POSITION.setStorageUint256(newBuffered);
-    }
-
     function getStakingRouter() public view returns (address) {
         return STAKING_ROUTER_POSITION.getStorageAddress();
     }
 
     function setStakingRouter(address _stakingRouterAddress) external {
+        _auth(MANAGE_PROTOCOL_CONTRACTS_ROLE);
+        require(_stakingRouterAddress != address(0), "STAKING_ROUTER_ADDRESS_ZERO");
         STAKING_ROUTER_POSITION.setStorageAddress(_stakingRouterAddress);
+    }
+
+    function getDepositSecurityModule() public view returns (address) {
+        return DEPOSIT_SECURITY_MODULE_POSITION.getStorageAddress();
+    }
+
+    function setDepositSecurityModule(address _dsmAddress) external {
+        _auth(MANAGE_PROTOCOL_CONTRACTS_ROLE);
+        require(_dsmAddress != address(0), "DSM_ADDRESS_ZERO");
+        DEPOSIT_SECURITY_MODULE_POSITION.setStorageAddress(_dsmAddress);
     }
 
     /**
@@ -804,7 +787,7 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     function getStakingRouterBufferedEther() external view returns (uint256) {
-        return STAKING_ROUTER_BUFFERED_ETHER_POSITION.getStorageUint256();
+        return _getStakingRouterBufferedEther();
     }
 
     /**
@@ -823,6 +806,13 @@ contract Lido is ILido, StETH, AragonApp {
         assert(address(this).balance >= buffered);
 
         return buffered;
+    }
+
+    /**
+     * @dev Gets the amount of Ether temporary buffered on the StakingRouter contract balance
+     */
+    function _getStakingRouterBufferedEther() internal view returns (uint256) {
+        return STAKING_ROUTER_BUFFERED_ETHER_POSITION.getStorageUint256();
     }
 
     /**
@@ -852,7 +842,7 @@ contract Lido is ILido, StETH, AragonApp {
     function _getTotalPooledEther() internal view returns (uint256) {
         return
             _getBufferedEther().add(BEACON_BALANCE_POSITION.getStorageUint256()).add(_getTransientBalance()).add(
-                STAKING_ROUTER_BUFFERED_ETHER_POSITION.getStorageUint256()
+                _getStakingRouterBufferedEther()
             );
     }
 
@@ -891,7 +881,7 @@ contract Lido is ILido, StETH, AragonApp {
         // no-op
     }
 
-    function transferToStakingRouter(uint256 _maxDeposits) external {
+    function _transferToStakingRouter(uint256 _maxDepositsCount) internal  {
         address stakingRouter = getStakingRouter();
         require(stakingRouter != address(0), "STAKING_ROUTER_ADDRESS_ZERO");
 
@@ -899,7 +889,7 @@ contract Lido is ILido, StETH, AragonApp {
         if (buffered >= DEPOSIT_SIZE) {
             uint256 unaccounted = _getUnaccountedEther();
             uint256 numDeposits = buffered.div(DEPOSIT_SIZE);
-            numDeposits = numDeposits < _maxDeposits ? numDeposits : _maxDeposits;
+            numDeposits = numDeposits < _maxDepositsCount ? numDeposits : _maxDepositsCount;
 
             uint256 amount = numDeposits * DEPOSIT_SIZE;
 
@@ -908,5 +898,40 @@ contract Lido is ILido, StETH, AragonApp {
             _markAsUnbuffered(amount);
             assert(_getUnaccountedEther() == unaccounted);
         }
+    }
+
+    /**
+     * @dev Invokes a deposit call to the Staking Router contract and updates buffered counters
+     * @param _maxDepositsCount max deposits count
+     * @param _stakingModuleId id of the staking module to be deposited
+     * @param _depositCalldata module calldata
+     */
+    function deposit(
+        uint256 _maxDepositsCount,
+        uint24 _stakingModuleId,
+        bytes _depositCalldata
+    )
+        external onlyDsm
+    {    
+        //make buffer transfer from LIDO to StakingRouter
+        _transferToStakingRouter(_maxDepositsCount);
+
+        // //make deposit
+        IStakingRouter stakingRouterAddress = IStakingRouter(getStakingRouter());
+        uint256 keysCount = stakingRouterAddress.deposit(_maxDepositsCount, _stakingModuleId, _depositCalldata);
+
+        updateBufferedCounters(keysCount);
+    }
+
+    function updateBufferedCounters(uint256 _numKeys) internal {
+        uint256 _amount = _numKeys.mul(DEPOSIT_SIZE);
+
+        DEPOSITED_VALIDATORS_POSITION.setStorageUint256(
+            DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(_numKeys)
+        );
+
+        uint256 buffered = _getStakingRouterBufferedEther();
+        uint256 newBuffered = _amount >= buffered ? 0 : buffered.sub(_amount);
+        STAKING_ROUTER_BUFFERED_ETHER_POSITION.setStorageUint256(newBuffered);
     }
 }

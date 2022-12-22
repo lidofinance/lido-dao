@@ -37,8 +37,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
     bytes32 public constant SET_NODE_OPERATOR_ADDRESS_ROLE = keccak256("SET_NODE_OPERATOR_ADDRESS_ROLE");
     bytes32 public constant SET_NODE_OPERATOR_LIMIT_ROLE = keccak256("SET_NODE_OPERATOR_LIMIT_ROLE");
     bytes32 public constant REPORT_STOPPED_VALIDATORS_ROLE = keccak256("REPORT_STOPPED_VALIDATORS_ROLE");
-    bytes32 public constant SET_TYPE_ROLE = keccak256("SET_TYPE_ROLE");
-    bytes32 public constant SET_STAKING_ROUTER_ROLE = keccak256("SET_STAKING_ROUTER_ROLE");
+    bytes32 public constant ASSIGN_NEXT_KEYS_ROLE = keccak256("ASSIGN_NEXT_KEYS_ROLE");
+    bytes32 public constant TRIM_UNUSED_KEYS_ROLE = keccak256("TRIM_UNUSED_KEYS_ROLE");
 
     uint256 public constant PUBKEY_LENGTH = 48;
     uint256 public constant SIGNATURE_LENGTH = 96;
@@ -103,11 +103,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
 
     /// @dev module type
     bytes32 internal constant TYPE_POSITION = keccak256("lido.NodeOperatorsRegistry.type");
-
-    modifier onlyStakingRouter() {
-        require(msg.sender == getStakingRouter(), "APP_AUTH_FAILED");
-        _;
-    }
 
     modifier validAddress(address _a) {
         require(_a != address(0), "EMPTY_ADDRESS");
@@ -249,7 +244,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
      * @notice Remove unused signing keys
      * @dev Function is used by the Lido contract
      */
-    function trimUnusedKeys() external onlyStakingRouter {
+    function trimUnusedKeys() external auth(TRIM_UNUSED_KEYS_ROLE) {
         uint256 length = getNodeOperatorsCount();
         uint256 trimmedKeys = 0;
         for (uint256 operatorId = 0; operatorId < length; ++operatorId) {
@@ -826,18 +821,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         emit ContractVersionSet(2);
     }
 
-    function setStakingRouter(address _addr) external auth(SET_STAKING_ROUTER_ROLE) {
-        STAKING_ROUTER_POSITION.setStorageAddress(_addr);
-    }
-
-    function getStakingRouter() public view returns (address) {
-        return STAKING_ROUTER_POSITION.getStorageAddress();
-    }
-
-    function setType(bytes32 _type) external auth(SET_TYPE_ROLE) {
-        TYPE_POSITION.setStorageBytes32(_type);
-    }
-
     function getType() external view returns (bytes32) {
         return TYPE_POSITION.getStorageBytes32();
     }
@@ -874,7 +857,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
 
     function prepNextSigningKeys(uint256 maxDepositsCount, bytes)
         external
-        onlyStakingRouter
+        auth(ASSIGN_NEXT_KEYS_ROLE)
         returns (
             uint256 keysCount,
             bytes memory pubkeys,

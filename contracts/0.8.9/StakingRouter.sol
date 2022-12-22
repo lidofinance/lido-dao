@@ -81,7 +81,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     bytes32 public constant MANAGE_WITHDRAWAL_KEY_ROLE = keccak256("MANAGE_WITHDRAWAL_KEY_ROLE");
     bytes32 public constant MODULE_PAUSE_ROLE = keccak256("MODULE_PAUSE_ROLE");
     bytes32 public constant MODULE_CONTROL_ROLE = keccak256("MODULE_CONTROL_ROLE");
-    bytes32 public constant DEPOSIT_ROLE = keccak256("DEPOSIT_ROLE");
+    bytes32 public constant STAKING_ROUTER_DEPOSIT_ROLE = keccak256("STAKING_ROUTER_DEPOSIT_ROLE");
 
     /// Version of the initialized contract data
     /// NB: Contract versioning starts from 1.
@@ -383,10 +383,13 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         bytes calldata _depositCalldata
     )
         external
-        onlyRole(DEPOSIT_ROLE)
+        onlyRole(STAKING_ROUTER_DEPOSIT_ROLE)
         onlyRegisteredStakingModule(_stakingModuleId)
         onlyNotPausedStakingModule(_stakingModuleId)
+        returns (uint256 keysCount)
     {
+        _maxDepositsCount = Math.min(address(this).balance / DEPOSIT_SIZE, _maxDepositsCount);
+
         /// @todo make more optimal calc of totalActiveKeysCount (eliminate double calls of module.getTotalUsedKeys() and
         ///       module.getTotalStoppedKeys() inside getTotalActiveKeys() and _loadStakingModuleCache() methods)
         (uint256 totalActiveKeys, ) = getTotalActiveKeys();
@@ -415,10 +418,10 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
             _makeBeaconChainDeposit(encodedWithdrawalCredentials, publicKey, signature, DEPOSIT_SIZE);
         }
 
-        LIDO.updateBufferedCounters(keysCount);
-
         stakingModule.lastDepositAt = uint64(block.timestamp);
         stakingModule.lastDepositBlock = block.number;
+
+        return keysCount;
     }
 
     /**

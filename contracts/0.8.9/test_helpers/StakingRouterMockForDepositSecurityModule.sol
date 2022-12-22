@@ -29,8 +29,9 @@ contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
         uint256 maxDepositsCount,
         uint24 stakingModuleId,
         bytes calldata depositCalldata
-    ) external {
+    ) external returns(uint256 keysCount) {
         emit StakingModuleDeposited(maxDepositsCount, stakingModuleId, depositCalldata);
+        return maxDepositsCount;
     }
 
     function setWithdrawalCredentials(bytes32 _withdrawalCredentials) external {}

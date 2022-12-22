@@ -38,4 +38,8 @@ contract LidoMock is Lido {
      * @dev Only for testing recovery vault
      */
     function makeUnaccountedEther() public payable {}
+
+    function transferToStakingRouter(uint256 _maxDepositsCount) public {
+        _transferToStakingRouter(_maxDepositsCount);
+    }
 }
