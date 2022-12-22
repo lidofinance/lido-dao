@@ -39,9 +39,9 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     event WithdrawalCredentialsSet(bytes32 withdrawalCredentials);
     event ContractVersionSet(uint256 version);
     /**
-     * Emitted when the vault received ETH
+     * Emitted when the StakingRouter received ETH
      */
-    event ETHReceived(uint256 amount);
+    event StakingRouterETHReceived(uint256 amount);
 
     struct StakingModule {
         /// @notice unique id of the module
@@ -127,7 +127,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     }
 
     receive() external payable {
-        emit ETHReceived(msg.value);
+        emit StakingRouterETHReceived(msg.value);
     }
 
     /**
