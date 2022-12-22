@@ -6,17 +6,23 @@ pragma solidity 0.8.9;
 
 import {Math} from "./Math.sol";
 
+/// @notice Library with methods to calculate "proportional" allocations among "buckets" with different
+///     capacity and level of filling.
+/// @dev The current implementation favors buckets with lowest amount of filling
 library MinFirstAllocationStrategy {
     function allocate(
         uint256[] memory allocations,
         uint256[] memory capacities,
         uint256 maxAllocationSize
-    ) internal pure {
-        uint256 allocated = 0;
-        uint256 allocatedTotal = 0;
-        do {
-            allocated = allocateToBestCandidate(allocations, capacities, maxAllocationSize);
-        } while (allocatedTotal < maxAllocationSize && allocated > 0);
+    ) internal pure returns (uint256 allocated) {
+        uint256 allocatedToBestCandidate = 0;
+        while (allocated < maxAllocationSize) {
+            allocatedToBestCandidate = allocateToBestCandidate(allocations, capacities, maxAllocationSize - allocated);
+            if (allocatedToBestCandidate == 0) {
+                break;
+            }
+            allocated += allocatedToBestCandidate;
+        }
     }
 
     function allocateToBestCandidate(
