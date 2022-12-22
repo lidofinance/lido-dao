@@ -374,9 +374,7 @@ contract LidoTemplate is IsContract {
         state.lido.initialize(
             _beaconDepositContract,
             state.oracle,
-            state.operators,
-            state.agent, // treasury
-            state.agent  // insurance fund
+            state.agent // treasury
         );
 
         // used for issuing vested tokens in the next step

@@ -11,7 +11,6 @@ import "@aragon/os/contracts/lib/math/SafeMath64.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
 import "./interfaces/ILido.sol";
-import "./interfaces/INodeOperatorsRegistry.sol";
 import "./interfaces/IDepositContract.sol";
 import "./interfaces/ILidoExecutionLayerRewardsVault.sol";
 import "./interfaces/IStakingRouter.sol";
@@ -38,8 +37,6 @@ interface IERC721 {
  * Lido is an Ethereum 2.0 liquid staking protocol solving the problem of frozen staked Ethers
  * until transfers become available in Ethereum 2.0.
  * Whitepaper: https://lido.fi/static/Lido:Ethereum-Liquid-Staking.pdf
- *
- * NOTE: the code below assumes moderate amount of node operators, e.g. up to 200.
  *
  * Since balances of all token holders change when the amount of total pooled Ether
  * changes, this token cannot fully implement ERC20 standard: it only emits `Transfer`
@@ -79,9 +76,7 @@ contract Lido is ILido, StETH, AragonApp {
 
     bytes32 internal constant DEPOSIT_CONTRACT_POSITION = keccak256("lido.Lido.depositContract");
     bytes32 internal constant ORACLE_POSITION = keccak256("lido.Lido.oracle");
-    bytes32 internal constant NODE_OPERATORS_REGISTRY_POSITION = keccak256("lido.Lido.nodeOperatorsRegistry");
     bytes32 internal constant TREASURY_POSITION = keccak256("lido.Lido.treasury");
-    bytes32 internal constant INSURANCE_FUND_POSITION = keccak256("lido.Lido.insuranceFund");
     bytes32 internal constant EL_REWARDS_VAULT_POSITION = keccak256("lido.Lido.executionLayerRewardsVault");
     bytes32 internal constant STAKING_ROUTER_POSITION = keccak256("lido.Lido.stakingRouter");
 
@@ -106,29 +101,21 @@ contract Lido is ILido, StETH, AragonApp {
     /// Not used in the logic
     bytes32 internal constant TOTAL_EL_REWARDS_COLLECTED_POSITION = keccak256("lido.Lido.totalELRewardsCollected");
 
-    /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
-    bytes32 internal constant LAST_REPORT_TIMESTAMP = keccak256("lido.Lido.lastReportTimestamp");
-
     /**
      * @dev As AragonApp, Lido contract must be initialized with following variables:
      * @param _depositContract official ETH2 Deposit contract
      * @param _oracle oracle contract
-     * @param _operators instance of Node Operators Registry
      * @param _treasury treasury contract
-     * @param _insuranceFund insurance fund contract
      * NB: by default, staking and the whole Lido pool are in paused state
      */
     function initialize(
         IDepositContract _depositContract,
         address _oracle,
-        INodeOperatorsRegistry _operators,
-        address _treasury,
-        address _insuranceFund
+        address _treasury
     ) public onlyInit {
-        NODE_OPERATORS_REGISTRY_POSITION.setStorageAddress(address(_operators));
         DEPOSIT_CONTRACT_POSITION.setStorageAddress(address(_depositContract));
 
-        _setProtocolContracts(_oracle, _treasury, _insuranceFund);
+        _setProtocolContracts(_oracle, _treasury);
 
         initialized();
     }
@@ -353,26 +340,23 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-     * @notice Set Lido protocol contracts (oracle, treasury, insurance fund).
+     * @notice Set Lido protocol contracts (oracle, treasury).
      *
      * @dev Oracle contract specified here is allowed to make
      * periodical updates of beacon stats
      * by calling pushBeacon. Treasury contract specified here is used
-     * to accumulate the protocol treasury fee. Insurance fund contract
-     * specified here is used to accumulate the protocol insurance fee.
+     * to accumulate the protocol treasury fee.
      *
      * @param _oracle oracle contract
      * @param _treasury treasury contract
-     * @param _insuranceFund insurance fund contract
      */
     function setProtocolContracts(
         address _oracle,
-        address _treasury,
-        address _insuranceFund
+        address _treasury
     ) external {
         _auth(MANAGE_PROTOCOL_CONTRACTS_ROLE);
 
-        _setProtocolContracts(_oracle, _treasury, _insuranceFund);
+        _setProtocolContracts(_oracle, _treasury);
     }
 
     /**
@@ -426,7 +410,6 @@ contract Lido is ILido, StETH, AragonApp {
         // calculate rewards on the next push
         BEACON_BALANCE_POSITION.setStorageUint256(_beaconBalance);
         BEACON_VALIDATORS_POSITION.setStorageUint256(_beaconValidators);
-        LAST_REPORT_TIMESTAMP.setStorageUint256(block.timestamp);
 
         // If LidoExecutionLayerRewardsVault address is not set just do as if there were no execution layer rewards at all
         // Otherwise withdraw all rewards and put them to the buffer
@@ -515,24 +498,10 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-     * @notice Gets node operators registry interface handle
-     */
-    function getOperators() public view returns (INodeOperatorsRegistry) {
-        return INodeOperatorsRegistry(NODE_OPERATORS_REGISTRY_POSITION.getStorageAddress());
-    }
-
-    /**
      * @notice Returns the treasury address
      */
     function getTreasury() public view returns (address) {
         return TREASURY_POSITION.getStorageAddress();
-    }
-
-    /**
-     * @notice Returns the insurance fund address
-     */
-    function getInsuranceFund() public view returns (address) {
-        return INSURANCE_FUND_POSITION.getStorageAddress();
     }
 
     /**
@@ -555,9 +524,10 @@ contract Lido is ILido, StETH, AragonApp {
         beaconBalance = BEACON_BALANCE_POSITION.getStorageUint256();
     }
 
-    function getLastReportTimestamp() external view returns (uint64 lastReportAt) {
-        lastReportAt = uint64(LAST_REPORT_TIMESTAMP.getStorageUint256());
-    }
+    /** 
+     * @notice Returns staking rewards fee rate
+     */
+    function getFee() public view returns (uint16 feeBasisPoints) {}
 
     /**
      * @notice Returns address of the contract set as LidoExecutionLayerRewardsVault
@@ -572,18 +542,15 @@ contract Lido is ILido, StETH, AragonApp {
      */
     function _setProtocolContracts(
         address _oracle,
-        address _treasury,
-        address _insuranceFund
+        address _treasury
     ) internal {
         require(_oracle != address(0), "ORACLE_ZERO_ADDRESS");
         require(_treasury != address(0), "TREASURY_ZERO_ADDRESS");
-        require(_insuranceFund != address(0), "INSURANCE_FUND_ZERO_ADDRESS");
 
         ORACLE_POSITION.setStorageAddress(_oracle);
         TREASURY_POSITION.setStorageAddress(_treasury);
-        INSURANCE_FUND_POSITION.setStorageAddress(_insuranceFund);
 
-        emit ProtocolContactsSet(_oracle, _treasury, _insuranceFund);
+        emit ProtocolContactsSet(_oracle, _treasury);
     }
 
     /**
