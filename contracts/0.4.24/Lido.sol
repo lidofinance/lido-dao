@@ -75,7 +75,6 @@ contract Lido is ILido, StETH, AragonApp {
 
     bytes32 internal constant MAX_FEE = keccak256("lido.Lido.maxFee");
 
-    bytes32 internal constant DEPOSIT_CONTRACT_POSITION = keccak256("lido.Lido.depositContract");
     bytes32 internal constant ORACLE_POSITION = keccak256("lido.Lido.oracle");
     bytes32 internal constant TREASURY_POSITION = keccak256("lido.Lido.treasury");
     bytes32 internal constant EL_REWARDS_VAULT_POSITION = keccak256("lido.Lido.executionLayerRewardsVault");
@@ -116,12 +115,9 @@ contract Lido is ILido, StETH, AragonApp {
      * NB: by default, staking and the whole Lido pool are in paused state
      */
     function initialize(
-        IDepositContract _depositContract,
         address _oracle,
         address _treasury
     ) public onlyInit {
-        DEPOSIT_CONTRACT_POSITION.setStorageAddress(address(_depositContract));
-
         _setProtocolContracts(_oracle, _treasury);
 
         initialized();
