@@ -101,7 +101,7 @@ contract('Lido', ([appManager, voting, user2, depositor]) => {
   })
 
   beforeEach('setup staking router', async () => {
-    stakingRouter = await StakingRouter.new(depositContract.address, app.address)
+    stakingRouter = await StakingRouter.new(depositContract.address)
     // initialize
     const wc = '0x'.padEnd(66, '1234')
     await stakingRouter.initialize(appManager, wc)

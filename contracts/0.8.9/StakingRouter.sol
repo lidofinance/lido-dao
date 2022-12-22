@@ -76,8 +76,6 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         uint256 availableKeysCount;
     }
 
-    ILido public immutable LIDO;
-
     bytes32 public constant MANAGE_WITHDRAWAL_CREDENTIALS_ROLE = keccak256("MANAGE_WITHDRAWAL_CREDENTIALS_ROLE");
     bytes32 public constant MODULE_PAUSE_ROLE = keccak256("MODULE_PAUSE_ROLE");
     bytes32 public constant MODULE_RESUME_ROLE = keccak256("MODULE_RESUME_ROLE");
@@ -97,7 +95,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
 
     uint256 public constant DEPOSIT_SIZE = 32 ether;
 
-    uint256 internal constant TOTAL_BASIS_POINTS = 10000;
+    uint256 public constant TOTAL_BASIS_POINTS = 10000;
 
     /// @dev total count of staking modules
     uint256 private _stakingModulesCount;
@@ -112,9 +110,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     ///      index 0 means a value is not in the set.
     mapping(uint24 => uint256) private _stakingModuleIndicesOneBased;
 
-    constructor(address _depositContract, address _lido) BeaconChainDepositor(_depositContract) {
-        if (_lido == address(0)) revert ErrorZeroAddress("_lido");
-        LIDO = ILido(_lido);
+    constructor(address _depositContract) BeaconChainDepositor(_depositContract) {
     }
 
     function initialize(address _admin, bytes32 _withdrawalCredentials) external {

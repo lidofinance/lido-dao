@@ -44,7 +44,7 @@ contract('StakingRouter', (accounts) => {
     await lido.resumeProtocolAndStaking()
 
     depositContract = await DepositContractMock.new({ from: deployer })
-    stakingRouter = await StakingRouter.new(depositContract.address, lido.address, { from: deployer })
+    stakingRouter = await StakingRouter.new(depositContract.address, { from: deployer })
     ;[curatedStakingModuleMock, soloStakingModuleMock, dvtStakingModuleMock] = await Promise.all([
       StakingModuleMock.new({ from: deployer }),
       StakingModuleMock.new({ from: deployer }),
