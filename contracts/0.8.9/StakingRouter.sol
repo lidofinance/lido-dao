@@ -110,8 +110,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     ///      index 0 means a value is not in the set.
     mapping(uint24 => uint256) private _stakingModuleIndicesOneBased;
 
-    constructor(address _depositContract) BeaconChainDepositor(_depositContract) {
-    }
+    constructor(address _depositContract) BeaconChainDepositor(_depositContract) {}
 
     function initialize(address _admin, bytes32 _withdrawalCredentials) external {
         if (_admin == address(0)) revert ErrorZeroAddress("_admin");
@@ -376,16 +375,15 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         onlyRole(STAKING_ROUTER_DEPOSIT_ROLE)
         onlyRegisteredStakingModule(_stakingModuleId)
         onlyNotPausedStakingModule(_stakingModuleId)
-        returns (uint256 keysCount)
+        returns (uint256)
     {
-        _maxDepositsCount = Math.min(address(this).balance / DEPOSIT_SIZE, _maxDepositsCount);
-
         /// @todo make more optimal calc of totalActiveKeysCount (eliminate double calls of module.getTotalUsedKeys() and
         ///       module.getTotalStoppedKeys() inside getTotalActiveKeys() and _loadStakingModuleCache() methods)
-        (uint256 totalActiveKeys, uint256[] memory stakingModulesActiveKeys) = getTotalActiveKeys();
 
         uint256 maxSigningKeysCount;
         {
+            _maxDepositsCount = Math.min(address(this).balance / DEPOSIT_SIZE, _maxDepositsCount);
+            (uint256 totalActiveKeys, uint256[] memory stakingModulesActiveKeys) = getTotalActiveKeys();
             uint256 stakingModuleIndex = _getStakingModuleIndexById(_stakingModuleId);
             uint256[] memory newKeysAllocation = _getKeysAllocation(totalActiveKeys, _maxDepositsCount);
             maxSigningKeysCount = newKeysAllocation[stakingModuleIndex] - stakingModulesActiveKeys[stakingModuleIndex];
@@ -424,7 +422,10 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
      * @dev Note that setWithdrawalCredentials discards all unused signing keys as the signatures are invalidated.
      * @param _withdrawalCredentials withdrawal credentials field as defined in the Ethereum PoS consensus specs
      */
-    function setWithdrawalCredentials(bytes32 _withdrawalCredentials) external onlyRole(MANAGE_WITHDRAWAL_CREDENTIALS_ROLE) {
+    function setWithdrawalCredentials(bytes32 _withdrawalCredentials)
+        external
+        onlyRole(MANAGE_WITHDRAWAL_CREDENTIALS_ROLE)
+    {
         WITHDRAWAL_CREDENTIALS_POSITION.setStorageBytes32(_withdrawalCredentials);
 
         //trim keys with old WC
