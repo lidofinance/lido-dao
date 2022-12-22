@@ -109,7 +109,6 @@ contract Lido is ILido, StETH, AragonApp {
 
     /**
      * @dev As AragonApp, Lido contract must be initialized with following variables:
-     * @param _depositContract official ETH2 Deposit contract
      * @param _oracle oracle contract
      * @param _treasury treasury contract
      * NB: by default, staking and the whole Lido pool are in paused state

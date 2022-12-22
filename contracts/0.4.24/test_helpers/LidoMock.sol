@@ -12,10 +12,9 @@ import "./VaultMock.sol";
  */
 contract LidoMock is Lido {
     function initialize(
-        IDepositContract _depositContract,
         address _oracle
     ) public {
-        super.initialize(_depositContract, _oracle, new VaultMock());
+        super.initialize(_oracle, new VaultMock());
     }
 
     /**

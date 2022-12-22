@@ -372,7 +372,6 @@ contract LidoTemplate is IsContract {
         state.operators.initialize(state.lido);
 
         state.lido.initialize(
-            _beaconDepositContract,
             state.oracle,
             state.agent // treasury
         );

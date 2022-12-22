@@ -16,21 +16,6 @@ contract LidoPushableMock is Lido {
     uint256 public totalRewards;
     bool public distributeFeeCalled;
 
-    function initialize(
-        IDepositContract depositContract,
-        address _oracle
-    )
-    public
-    {
-        super.initialize(
-          depositContract,
-          _oracle,
-          new VaultMock()
-        );
-
-        _resume();
-    }
-
     function setDepositedValidators(uint256 _depositedValidators) public {
         DEPOSITED_VALIDATORS_POSITION.setStorageUint256(_depositedValidators);
     }
@@ -49,7 +34,10 @@ contract LidoPushableMock is Lido {
     }
 
     function initialize(address _oracle) public onlyInit {
-        _setProtocolContracts(_oracle, _oracle);
+        _setProtocolContracts(
+            _oracle, 
+          new VaultMock()
+        );
         _resume();
         initialized();
     }
