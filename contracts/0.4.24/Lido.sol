@@ -817,7 +817,9 @@ contract Lido is ILido, StETH, AragonApp {
         uint24 _stakingModuleId,
         bytes _depositCalldata
     )
-        external onlyDsm
+        external 
+        onlyDsm
+        whenNotStopped
     {
         //make buffer transfer from LIDO to StakingRouter
         _transferToStakingRouter(_maxDepositsCount);
