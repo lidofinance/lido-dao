@@ -183,7 +183,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         if (_treasuryFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_treasuryFee");
         if (_moduleFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_moduleFee");
 
-        uint256 stakingModuleIndex = _stakingModuleIndicesOneBased[_lastStakingModuleId];
+        uint256 stakingModuleIndex = _stakingModuleIndicesOneBased[_stakingModuleId];
 
         _stakingModules[stakingModuleIndex].targetShare = _targetShare;
         _stakingModules[stakingModuleIndex].treasuryFee = _treasuryFee;
