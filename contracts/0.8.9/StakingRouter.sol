@@ -117,14 +117,17 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         LIDO = ILido(_lido);
     }
 
-    function initialize(address _admin) external {
+    function initialize(address _admin, bytes32 _withdrawalCredentials) external {
         if (_admin == address(0)) revert ErrorZeroAddress("_admin");
         if (CONTRACT_VERSION_POSITION.getStorageUint256() != 0) revert ErrorBaseVersion();
 
         _setupRole(DEFAULT_ADMIN_ROLE, _admin);
 
         CONTRACT_VERSION_POSITION.setStorageUint256(1);
+        WITHDRAWAL_CREDENTIALS_POSITION.setStorageBytes32(_withdrawalCredentials);
+
         emit ContractVersionSet(1);
+        emit WithdrawalCredentialsSet(_withdrawalCredentials);
     }
 
     receive() external payable {

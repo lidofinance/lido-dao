@@ -91,7 +91,8 @@ contract('StakingRouter', (accounts) => {
       from: deployer
     })
 
-    await stakingRouter.initialize(admin, { from: deployer })
+    const wc = '0x'.padEnd(66, '1234')
+    await stakingRouter.initialize(admin, wc, { from: deployer })
 
     // Set up the staking router permissions.
     const [MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, MODULE_PAUSE_ROLE, MODULE_MANAGE_ROLE, STAKING_ROUTER_DEPOSIT_ROLE] = await Promise.all([
@@ -108,9 +109,6 @@ contract('StakingRouter', (accounts) => {
 
     await lido.setStakingRouter(stakingRouter.address, { from: voting })
     await lido.setDepositSecurityModule(depositSecurityModule.address, { from: voting })
-
-    const wc = '0x'.padEnd(66, '1234')
-    await stakingRouter.setWithdrawalCredentials(wc, { from: voting })
 
     evmSnapshotId = await hre.ethers.provider.send('evm_snapshot', [])
   })
