@@ -133,7 +133,7 @@ contract('Lido', ([appManager, voting, user2, depositor]) => {
 
   it('Rewards distribution fills treasury', async () => {
     const depositAmount = ETH(1)
-    const { moduleFees, totalFee } = await stakingRouter.getSharesTable()
+    const { moduleFees, totalFee } = await stakingRouter.getStakingRewardsDistribution()
     const treasuryShare = moduleFees.reduce((total, share) => total - share, totalFee)
     const treasuryRewards = (treasuryShare * depositAmount) / TOTAL_BASIS_POINTS
 
@@ -149,8 +149,8 @@ contract('Lido', ([appManager, voting, user2, depositor]) => {
 
   it('Rewards distribution fills modules', async () => {
     const depositAmount = ETH(1)
-    const { moduleFees } = await stakingRouter.getSharesTable()
-    const moduleRewards = (depositAmount * moduleFees[1]) / TOTAL_BASIS_POINTS
+    const { moduleFees } = await stakingRouter.getStakingRewardsDistribution()
+    const moduleRewards = (depositAmount * moduleFees[0]) / TOTAL_BASIS_POINTS
 
     await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(32) })
 

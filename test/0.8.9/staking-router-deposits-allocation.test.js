@@ -93,7 +93,7 @@ contract('StakingRouter', (accounts) => {
       await stakingRouter.addModule(
         'Curated',
         curatedStakingModuleMock.address,
-        10_000, // 100 % _targetShare 
+        10_000, // 100 % _targetShare
         1_000, // 10 % _moduleFee
         5_000, // 50 % _treasuryFee
         { from: admin }
@@ -101,7 +101,7 @@ contract('StakingRouter', (accounts) => {
       await stakingRouter.addModule(
         'Solo',
         soloStakingModuleMock.address,
-        200, // 2 % _targetShare 
+        200, // 2 % _targetShare
         5_000, // 50 % _moduleFee
         0, // 0 % _treasuryFee
         { from: admin }
@@ -135,7 +135,7 @@ contract('StakingRouter', (accounts) => {
       await stakingRouter.addModule(
         'Curated',
         curatedStakingModuleMock.address,
-        10_000, // 100 % _targetShare 
+        10_000, // 100 % _targetShare
         1_000, // 10 % _moduleFee
         5_000, // 50 % _treasuryFee
         { from: admin }
@@ -143,15 +143,13 @@ contract('StakingRouter', (accounts) => {
       await stakingRouter.addModule(
         'Solo',
         soloStakingModuleMock.address,
-        200, // 2 % _targetShare 
+        200, // 2 % _targetShare
         5_000, // 50 % _moduleFee
         0, // 0 % _treasuryFee
         { from: admin }
       )
     })
 
-    it('Lido.deposit() :: transfer balance', async () => {
-      
-    })
+    it('Lido.deposit() :: transfer balance', async () => {})
   })
 })

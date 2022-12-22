@@ -16,20 +16,12 @@ contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
     uint256 private stakingModuleKeysOpIndex;
     uint256 private stakingModuleLastDepositBlock;
 
-    function getSharesTable()
-        external
-        returns (
-            address[] memory recipients,
-            uint256[] memory moduleShares,
-            uint256 totalShare
-        )
-    {}
+    function getStakingRewardsDistribution() external returns (address[] memory recipients, uint16[] memory moduleFees, uint16 totalFee) {}
 
-    function deposit(
-        uint256 maxDepositsCount,
-        uint24 stakingModuleId,
-        bytes calldata depositCalldata
-    ) external returns(uint256 keysCount) {
+    function deposit(uint256 maxDepositsCount, uint24 stakingModuleId, bytes calldata depositCalldata)
+        external
+        returns (uint256 keysCount)
+    {
         emit StakingModuleDeposited(maxDepositsCount, stakingModuleId, depositCalldata);
         return maxDepositsCount;
     }
