@@ -15,21 +15,22 @@ library DepositsAllocatorStrategyMinActiveKeysFirst {
     function allocate(AllocationCandidate[] memory candidates, uint256 keysToDistribute)
         internal
         pure
-        returns (uint256[] memory keysDistribution, uint256 distributedKeysCount)
+        returns (uint256[] memory depositsDistribution, uint256 distributedDepositsCount)
     {
-        keysDistribution = new uint256[](candidates.length);
-        while (distributedKeysCount < keysToDistribute) {
+        depositsDistribution = new uint256[](candidates.length);
+
+        while (distributedDepositsCount < keysToDistribute) {
             (uint256 candidateIndex, uint256 keysDistributed) = _getNextCandidate(
                 candidates,
-                keysToDistribute - distributedKeysCount
+                keysToDistribute - distributedDepositsCount
             );
             if (keysDistributed == 0 || candidateIndex == type(uint256).max) {
                 break;
             }
             candidates[candidateIndex].activeKeysCount += keysDistributed;
             candidates[candidateIndex].availableKeysCount -= keysDistributed;
-            keysDistribution[candidateIndex] += keysDistributed;
-            distributedKeysCount += keysDistributed;
+            depositsDistribution[candidateIndex] += keysDistributed;
+            distributedDepositsCount += keysDistributed;
         }
     }
 

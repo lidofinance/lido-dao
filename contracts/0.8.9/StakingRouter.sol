@@ -149,25 +149,27 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         if (_treasuryFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_treasuryFee");
         if (_moduleFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_moduleFee");
 
-        uint24 stakingModuleId = _lastStakingModuleId++;
-        _stakingModules[_stakingModulesCount] = StakingModule({
-            id: stakingModuleId,
-            name: _name,
-            stakingModuleAddress: _stakingModuleAddress,
-            targetShare: _targetShare,
-            treasuryFee: _treasuryFee,
-            moduleFee: _moduleFee,
-            paused: false,
-            active: true,
-            lastDepositAt: 0,
-            lastDepositBlock: 0
-        });
+        uint24 newStakingModuleId = _lastStakingModuleId + 1;
+        uint256 newStakingModuleIndex = _stakingModulesCount;
+        StakingModule storage newStakingModule = _stakingModules[newStakingModuleIndex];
 
-        _stakingModuleIndicesOneBased[_lastStakingModuleId] = ++_stakingModulesCount;
+        newStakingModule.id = newStakingModuleId;
+        newStakingModule.name = _name;
+        newStakingModule.stakingModuleAddress = _stakingModuleAddress;
+        newStakingModule.targetShare = _targetShare;
+        newStakingModule.treasuryFee = _treasuryFee;
+        newStakingModule.moduleFee = _moduleFee;
+        newStakingModule.paused = false;
+        newStakingModule.active = true;
 
-        emit StakingModuleAdded(msg.sender, stakingModuleId, _stakingModuleAddress, _name);
-        emit StakingModuleTargetSharesSet(stakingModuleId, _targetShare);
-        emit StakingModuleFeesSet(stakingModuleId, _treasuryFee, _moduleFee);
+        _stakingModuleIndicesOneBased[newStakingModuleId] = newStakingModuleIndex + 1;
+
+        _lastStakingModuleId = newStakingModuleId;
+        _stakingModulesCount = newStakingModuleIndex + 1;
+
+        emit StakingModuleAdded(msg.sender, newStakingModuleId, _stakingModuleAddress, _name);
+        emit StakingModuleTargetSharesSet(newStakingModuleId, _targetShare);
+        emit StakingModuleFeesSet(newStakingModuleId, _treasuryFee, _moduleFee);
     }
 
     function updateStakingModule(
@@ -324,7 +326,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     function getAllocatedDepositsDistribution(uint256 _totalActiveKeys)
         public
         view
-        returns (uint256[] memory, uint256)
+        returns (uint256[] memory depositsDistribution, uint256 distributedDepositsCount)
     {
         uint256 stakingModulesCount = getStakingModulesCount();
         DepositsAllocatorStrategyMinActiveKeysFirst.AllocationCandidate[]
@@ -342,9 +344,10 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
             if (targetKeys <= candidates[i].activeKeysCount) {
                 continue;
             }
-            candidates[i].availableKeysCount = targetKeys > stakingModuleCache.availableKeysCount
-                ? stakingModuleCache.availableKeysCount - candidates[i].activeKeysCount
-                : targetKeys - candidates[i].activeKeysCount;
+            candidates[i].availableKeysCount = Math.min(
+                stakingModuleCache.availableKeysCount,
+                targetKeys - candidates[i].activeKeysCount
+            );
         }
         return DepositsAllocatorStrategyMinActiveKeysFirst.allocate(candidates, _totalActiveKeys);
     }

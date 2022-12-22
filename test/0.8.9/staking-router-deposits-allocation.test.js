@@ -46,15 +46,17 @@ contract('StakingRouter', (accounts) => {
       await stakingRouter.addModule(
         'Curated',
         curatedStakingModuleMock.address,
-        10_000, // 100 %
-        1_000, // 10 %
-        5_000, // 50 %
+        10_000, // target share 100 %
+        1_000, // module fee 10 %
+        5_000, // treasury fee 5 %
         { from: admin }
       )
     })
 
-    it('getAllocatedDepositsDistribution :: empty staking module', async () => {
-      const depositsDistribution = await stakingRouter.getAllocatedDepositsDistribution(0)
+    it('getAllocatedDepositsDistribution :: staking module without keys', async () => {
+      const { depositsDistribution, distributedDepositsCount } = await stakingRouter.getAllocatedDepositsDistribution(0)
+
+      assertBn(distributedDepositsCount, 0)
       assert.equal(depositsDistribution.length, 1)
       assertBn(depositsDistribution[0], 0)
     })
@@ -63,7 +65,9 @@ contract('StakingRouter', (accounts) => {
       await curatedStakingModuleMock.setTotalKeys(500)
       assertBn(await curatedStakingModuleMock.getTotalKeys(), 500)
 
-      const depositsDistribution = await stakingRouter.getAllocatedDepositsDistribution(1000)
+      const { depositsDistribution, distributedDepositsCount } = await stakingRouter.getAllocatedDepositsDistribution(1000)
+
+      assertBn(distributedDepositsCount, 500)
       assert.equal(depositsDistribution.length, 1)
       assertBn(depositsDistribution[0], 500)
     })
@@ -75,7 +79,9 @@ contract('StakingRouter', (accounts) => {
       await curatedStakingModuleMock.setTotalUsedKeys(250)
       assertBn(await curatedStakingModuleMock.getTotalUsedKeys(), 250)
 
-      const depositsDistribution = await stakingRouter.getAllocatedDepositsDistribution(1000)
+      const { depositsDistribution, distributedDepositsCount } = await stakingRouter.getAllocatedDepositsDistribution(1000)
+
+      assertBn(distributedDepositsCount, 250)
       assert.equal(depositsDistribution.length, 1)
       assertBn(depositsDistribution[0], 250)
     })
@@ -114,7 +120,9 @@ contract('StakingRouter', (accounts) => {
       await soloStakingModuleMock.setTotalUsedKeys(50)
       assertBn(await soloStakingModuleMock.getTotalUsedKeys(), 50)
 
-      const depositsDistribution = await stakingRouter.getAllocatedDepositsDistribution(5000)
+      const { depositsDistribution, distributedDepositsCount } = await stakingRouter.getAllocatedDepositsDistribution(5000)
+
+      assertBn(distributedDepositsCount, 550)
       assert.equal(depositsDistribution.length, 2)
       assertBn(depositsDistribution[0], 500)
       assertBn(depositsDistribution[1], 50)
