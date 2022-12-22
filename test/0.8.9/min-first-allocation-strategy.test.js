@@ -93,7 +93,7 @@ contract('MinFirstAllocationStrategy', (accounts) => {
       })
     }
 
-    describe.only(`edge cases & illustrative examples`, () => {
+    describe(`edge cases & illustrative examples`, () => {
       const edgeCases = [
         {
           input: [[0, 0, 0, 0], [0, 0, 0, 0], 100],
