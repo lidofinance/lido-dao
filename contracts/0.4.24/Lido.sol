@@ -62,30 +62,20 @@ contract Lido is ILido, StETH, AragonApp {
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
     bytes32 public constant STAKING_PAUSE_ROLE = keccak256("STAKING_PAUSE_ROLE");
     bytes32 public constant STAKING_CONTROL_ROLE = keccak256("STAKING_CONTROL_ROLE");
-    bytes32 public constant MANAGE_FEE = keccak256("MANAGE_FEE");
-    bytes32 public constant MANAGE_WITHDRAWAL_KEY = keccak256("MANAGE_WITHDRAWAL_KEY");
     bytes32 public constant MANAGE_PROTOCOL_CONTRACTS_ROLE = keccak256("MANAGE_PROTOCOL_CONTRACTS_ROLE");
     bytes32 public constant BURN_ROLE = keccak256("BURN_ROLE");
     bytes32 public constant DEPOSIT_ROLE = keccak256("DEPOSIT_ROLE");
     bytes32 public constant SET_EL_REWARDS_VAULT_ROLE = keccak256("SET_EL_REWARDS_VAULT_ROLE");
     bytes32 public constant SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE = keccak256("SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE");
-
-    // uint256 constant public PUBKEY_LENGTH = 48;
-    // uint256 constant public WITHDRAWAL_CREDENTIALS_LENGTH = 32;
-    // uint256 constant public SIGNATURE_LENGTH = 96;
+    bytes32 public constant SET_STAKING_ROUTER_ROLE = keccak256("SET_STAKING_ROUTER_ROLE");
+    bytes32 public constant UPDATE_BUFFERED_COUNTERS_ROLE = keccak256("UPDATE_BUFFERED_COUNTERS_ROLE");
 
     uint256 public constant DEPOSIT_SIZE = 32 ether;
 
-    uint256 internal constant DEPOSIT_AMOUNT_UNIT = 1000000000 wei;
     uint256 internal constant TOTAL_BASIS_POINTS = 10000;
 
     /// @dev default value for maximum number of Ethereum 2.0 validators registered in a single depositBufferedEther call
     uint256 internal constant DEFAULT_MAX_DEPOSITS_PER_CALL = 150;
-
-    bytes32 internal constant FEE_POSITION = keccak256("lido.Lido.fee");
-    bytes32 internal constant TREASURY_FEE_POSITION = keccak256("lido.Lido.treasuryFee");
-    bytes32 internal constant INSURANCE_FEE_POSITION = keccak256("lido.Lido.insuranceFee");
-    bytes32 internal constant NODE_OPERATORS_FEE_POSITION = keccak256("lido.Lido.nodeOperatorsFee");
 
     bytes32 internal constant DEPOSIT_CONTRACT_POSITION = keccak256("lido.Lido.depositContract");
     bytes32 internal constant ORACLE_POSITION = keccak256("lido.Lido.oracle");
@@ -118,11 +108,6 @@ contract Lido is ILido, StETH, AragonApp {
 
     /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
     bytes32 internal constant LAST_REPORT_TIMESTAMP = keccak256("lido.Lido.lastReportTimestamp");
-
-    modifier onlyStakingRouter() {
-        require(msg.sender == getStakingRouter(), "APP_AUTH_FAILED");
-        _;
-    }
 
     /**
      * @dev As AragonApp, Lido contract must be initialized with following variables:
@@ -368,49 +353,6 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-     * @notice Set fee rate to `_feeBasisPoints` basis points.
-     * The fees are accrued when:
-     * - oracles report staking results (beacon chain balance increase)
-     * - validators gain execution layer rewards (priority fees and MEV)
-     * @param _feeBasisPoints Fee rate, in basis points
-     */
-    function setFee(uint16 _feeBasisPoints) external {
-        _auth(MANAGE_FEE);
-
-        _setBPValue(FEE_POSITION, _feeBasisPoints);
-        emit FeeSet(_feeBasisPoints);
-    }
-
-    /**
-     * @notice Set fee distribution
-     * @param _treasuryFeeBasisPoints basis points go to the treasury,
-     * @param _insuranceFeeBasisPoints basis points go to the insurance fund,
-     * @param _operatorsFeeBasisPoints basis points go to node operators.
-     * @dev The sum has to be 10 000.
-     */
-    function setFeeDistribution(
-        uint16 _treasuryFeeBasisPoints,
-        uint16 _insuranceFeeBasisPoints,
-        uint16 _operatorsFeeBasisPoints
-    ) external {
-        _auth(MANAGE_FEE);
-
-        require(
-            TOTAL_BASIS_POINTS ==
-                uint256(_treasuryFeeBasisPoints).add(uint256(_insuranceFeeBasisPoints)).add(
-                    uint256(_operatorsFeeBasisPoints)
-                ),
-            "FEES_DONT_ADD_UP"
-        );
-
-        _setBPValue(TREASURY_FEE_POSITION, _treasuryFeeBasisPoints);
-        _setBPValue(INSURANCE_FEE_POSITION, _insuranceFeeBasisPoints);
-        _setBPValue(NODE_OPERATORS_FEE_POSITION, _operatorsFeeBasisPoints);
-
-        emit FeeDistributionSet(_treasuryFeeBasisPoints, _insuranceFeeBasisPoints, _operatorsFeeBasisPoints);
-    }
-
-    /**
      * @notice Set Lido protocol contracts (oracle, treasury, insurance fund).
      *
      * @dev Oracle contract specified here is allowed to make
@@ -534,30 +476,6 @@ contract Lido is ILido, StETH, AragonApp {
         }
 
         emit RecoverToVault(vault, _token, balance);
-    }
-
-    /**
-     * @notice Returns staking rewards fee rate
-     */
-    function getFee() public view returns (uint16 feeBasisPoints) {
-        return uint16(FEE_POSITION.getStorageUint256());
-    }
-
-    /**
-     * @notice Returns fee distribution proportion
-     */
-    function getFeeDistribution()
-        public
-        view
-        returns (
-            uint16 treasuryFeeBasisPoints,
-            uint16 insuranceFeeBasisPoints,
-            uint16 operatorsFeeBasisPoints
-        )
-    {
-        treasuryFeeBasisPoints = uint16(TREASURY_FEE_POSITION.getStorageUint256());
-        insuranceFeeBasisPoints = uint16(INSURANCE_FEE_POSITION.getStorageUint256());
-        operatorsFeeBasisPoints = uint16(NODE_OPERATORS_FEE_POSITION.getStorageUint256());
     }
 
     /**
@@ -713,7 +631,8 @@ contract Lido is ILido, StETH, AragonApp {
         emit TransferShares(address(0), _to, _sharesAmount);
     }
 
-    function updateBufferedCounters(uint256 _numKeys) external onlyStakingRouter {
+    function updateBufferedCounters(uint256 _numKeys) external {
+        _auth(UPDATE_BUFFERED_COUNTERS_ROLE);
         uint256 _amount = _numKeys.mul(DEPOSIT_SIZE);
 
         DEPOSITED_VALIDATORS_POSITION.setStorageUint256(
@@ -730,6 +649,7 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     function setStakingRouter(address _stakingRouterAddress) external {
+        _auth(SET_STAKING_ROUTER_ROLE);
         STAKING_ROUTER_POSITION.setStorageAddress(_stakingRouterAddress);
     }
 

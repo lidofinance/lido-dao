@@ -78,9 +78,10 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
 
     ILido public immutable LIDO;
 
-    bytes32 public constant MANAGE_WITHDRAWAL_KEY_ROLE = keccak256("MANAGE_WITHDRAWAL_KEY_ROLE");
+    bytes32 public constant MANAGE_WITHDRAWAL_CREDANTIALS_ROLE = keccak256("MANAGE_WITHDRAWAL_CREDANTIALS_ROLE");
     bytes32 public constant MODULE_PAUSE_ROLE = keccak256("MODULE_PAUSE_ROLE");
-    bytes32 public constant MODULE_CONTROL_ROLE = keccak256("MODULE_CONTROL_ROLE");
+    bytes32 public constant MODULE_RESUME_ROLE = keccak256("MODULE_RESUME_ROLE");
+    bytes32 public constant MODULE_MANAGE_ROLE = keccak256("MODULE_MANAGE_ROLE");
     bytes32 public constant DEPOSIT_ROLE = keccak256("DEPOSIT_ROLE");
 
     /// Version of the initialized contract data
@@ -144,7 +145,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         uint16 _targetShare,
         uint16 _moduleFee,
         uint16 _treasuryFee
-    ) external onlyRole(MODULE_CONTROL_ROLE) {
+    ) external onlyRole(MODULE_MANAGE_ROLE) {
         if (_targetShare > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_targetShare");
         if (_treasuryFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_treasuryFee");
         if (_moduleFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_moduleFee");
@@ -177,7 +178,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         uint16 _targetShare,
         uint16 _moduleFee,
         uint16 _treasuryFee
-    ) external onlyRole(MODULE_CONTROL_ROLE) {
+    ) external onlyRole(MODULE_MANAGE_ROLE) {
         if (_targetShare > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_targetShare");
         if (_treasuryFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_treasuryFee");
         if (_moduleFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_moduleFee");
@@ -228,7 +229,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
      * @notice unpause deposits for module
      * @param _stakingModuleId id of the staking module to be unpaused
      */
-    function unpauseStakingModule(uint24 _stakingModuleId) external onlyRole(MODULE_CONTROL_ROLE) {
+    function unpauseStakingModule(uint24 _stakingModuleId) external onlyRole(MODULE_RESUME_ROLE) {
         StakingModule storage module = _getStakingModuleById(_stakingModuleId);
         if (!module.paused) revert ErrorStakingModuleIsNotPaused();
 
@@ -240,7 +241,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     /**
      * @notice set the module activity flag for participation in further reward distribution
      */
-    function setStakingModuleActive(uint24 _stakingModuleId, bool _active) external onlyRole(MODULE_CONTROL_ROLE) {
+    function setStakingModuleActive(uint24 _stakingModuleId, bool _active) external onlyRole(MODULE_MANAGE_ROLE) {
         StakingModule storage module = _getStakingModuleById(_stakingModuleId);
         module.active = _active;
 
@@ -306,7 +307,6 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         uint256 _modulesCount = getStakingModulesCount();
         if (_modulesCount == 0) revert ErrorNoStakingModules();
 
-        // +1 for treasury
         recipients = new address[](_modulesCount);
         moduleShares = new uint256[](_modulesCount);
 
@@ -426,7 +426,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
      * @dev Note that setWithdrawalCredentials discards all unused signing keys as the signatures are invalidated.
      * @param _withdrawalCredentials withdrawal credentials field as defined in the Ethereum PoS consensus specs
      */
-    function setWithdrawalCredentials(bytes32 _withdrawalCredentials) external onlyRole(MANAGE_WITHDRAWAL_KEY_ROLE) {
+    function setWithdrawalCredentials(bytes32 _withdrawalCredentials) external onlyRole(MANAGE_WITHDRAWAL_CREDANTIALS_ROLE) {
         WITHDRAWAL_CREDENTIALS_POSITION.setStorageBytes32(_withdrawalCredentials);
 
         //trim keys with old WC
