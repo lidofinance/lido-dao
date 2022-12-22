@@ -192,6 +192,14 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         emit StakingModuleFeesSet(_stakingModuleId, _treasuryFee, _moduleFee);
     }
 
+    function getStakingModules() external view returns (StakingModule[] memory res) {
+        uint256 stakingModulesCount = getStakingModulesCount();
+        res = new StakingModule[](stakingModulesCount);
+        for (uint256 i = 0; i < stakingModulesCount; ++i) {
+            res[i] = _getStakingModuleByIndex(i);
+        }
+    }
+
     function getStakingModule(uint24 _stakingModuleId) external view returns (StakingModule memory) {
         return _getStakingModuleById(_stakingModuleId);
     }
