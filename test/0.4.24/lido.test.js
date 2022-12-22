@@ -120,6 +120,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     treasuryAddr = await app.getTreasury()
     insuranceAddr = await app.getInsuranceFund()
 
+    await app.setMaxFee(1000, { from: voting })
     await oracle.setPool(app.address)
     await depositContract.reset()
 

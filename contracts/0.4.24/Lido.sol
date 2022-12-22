@@ -89,6 +89,8 @@ contract Lido is ILido, StETH, AragonApp {
     bytes32 internal constant INSURANCE_FEE_POSITION = keccak256("lido.Lido.insuranceFee");
     bytes32 internal constant NODE_OPERATORS_FEE_POSITION = keccak256("lido.Lido.nodeOperatorsFee");
 
+    bytes32 internal constant MAX_FEE = keccak256("lido.Lido.maxFee");
+
     bytes32 internal constant DEPOSIT_CONTRACT_POSITION = keccak256("lido.Lido.depositContract");
     bytes32 internal constant ORACLE_POSITION = keccak256("lido.Lido.oracle");
     bytes32 internal constant NODE_OPERATORS_REGISTRY_POSITION = keccak256("lido.Lido.nodeOperatorsRegistry");
@@ -393,6 +395,13 @@ contract Lido is ILido, StETH, AragonApp {
         emit FeeDistributionSet(_treasuryFeeBasisPoints, _insuranceFeeBasisPoints, _operatorsFeeBasisPoints);
     }
 
+    function setMaxFee(uint256 _maximumFeeBasisPoints) external {
+        _auth(MANAGE_FEE);
+
+        require(_maximumFeeBasisPoints <= TOTAL_BASIS_POINTS, "VALUE_OVER_100_PERCENT");
+        MAX_FEE.setStorageUint256(_maximumFeeBasisPoints);
+    }
+
     /**
      * @notice Set Lido protocol contracts (oracle, treasury, insurance fund).
      *
@@ -541,6 +550,10 @@ contract Lido is ILido, StETH, AragonApp {
         treasuryFeeBasisPoints = uint16(TREASURY_FEE_POSITION.getStorageUint256());
         insuranceFeeBasisPoints = uint16(INSURANCE_FEE_POSITION.getStorageUint256());
         operatorsFeeBasisPoints = uint16(NODE_OPERATORS_FEE_POSITION.getStorageUint256());
+    }
+
+    function getMaxFee() public view returns (uint256 maxFeeBasisPoints) {
+        return MAX_FEE.getStorageUint256();
     }
 
     /**
@@ -748,20 +761,26 @@ contract Lido is ILido, StETH, AragonApp {
         // token shares.
 
         address stakingRouterAddress = getStakingRouter();
-        (address[] memory recipients, uint256[] memory moduleShares, uint256 totalShare) = IStakingRouter(
+        (address[] memory recipients, uint256[] memory moduleFees, uint256 totalFee) = IStakingRouter(
             stakingRouterAddress
         ).getSharesTable();
 
-        uint256 shares2mint = _totalRewards.mul(totalShare).mul(_getTotalShares()).div(
-            _getTotalPooledEther().mul(TOTAL_BASIS_POINTS).sub(totalShare.mul(_totalRewards))
-        );
+        require(totalFee <= getMaxFee(), 'TOTAL_FEE_EXCEED_MAXIMUM_FEE');
+
+        uint256 shares2mint = 
+            _totalRewards.mul(totalFee).mul(_getTotalShares())
+            .div(
+                _getTotalPooledEther().mul(TOTAL_BASIS_POINTS)
+                .sub(totalFee.mul(_totalRewards))
+            );
 
         _mintShares(address(this), shares2mint);
 
         uint256 treasuryReward = shares2mint;
         uint256 moduleReward;
+
         for (uint256 i = 0; i < recipients.length; i++) {
-            moduleReward = shares2mint.mul(moduleShares[i]).div(totalShare);
+            moduleReward = shares2mint.mul(moduleFees[i]).div(totalFee);
             if (moduleReward > 0) {
                 _transferShares(address(this), recipients[i], moduleReward);
                 treasuryReward -= moduleReward;

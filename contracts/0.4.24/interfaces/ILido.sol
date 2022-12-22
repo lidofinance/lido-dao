@@ -154,10 +154,12 @@ interface ILido {
         uint16 _operatorsFeeBasisPoints
     ) external;
 
+    function setMaxFee(uint256 _maximumFeeBasisPoints) external;
+
     /**
       * @notice Returns staking rewards fee rate
       */
-    function getFee() external view returns (uint16 feeBasisPoints);
+    function getFee() external view returns (uint256 feeBasisPoints);
 
     /**
       * @notice Returns fee distribution proportion
@@ -167,6 +169,8 @@ interface ILido {
         uint16 insuranceFeeBasisPoints,
         uint16 operatorsFeeBasisPoints
     );
+
+    function getMaxFee() public view returns (uint256 maxFeeBasisPoints);
 
     event FeeSet(uint16 feeBasisPoints);
 
