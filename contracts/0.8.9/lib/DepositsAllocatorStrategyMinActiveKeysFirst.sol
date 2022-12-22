@@ -39,34 +39,30 @@ library DepositsAllocatorStrategyMinActiveKeysFirst {
         returns (uint256 nextCandidateIndex, uint256 keysDistributed)
     {
         uint256 candidatesCount = 1;
+        // find the candidate with the lowest number of the active keys count
         for (uint256 i = 1; i < candidates.length; ++i) {
             if (candidates[nextCandidateIndex].activeKeysCount > candidates[i].activeKeysCount) {
                 nextCandidateIndex = i;
                 candidatesCount = 1;
             } else if (candidates[nextCandidateIndex].activeKeysCount == candidates[i].activeKeysCount) {
                 candidatesCount += 1;
-                // second sort based on availableKeysCount. Always take the lowest one.
-                if (candidates[nextCandidateIndex].availableKeysCount > candidates[i].availableKeysCount) {
-                    nextCandidateIndex = i;
-                }
             }
         }
 
-        uint256 nextCandidateSuccessorIndex = 0;
-        for (uint256 i = 1; i < candidates.length; ++i) {
+        // bound the max number of keys to distribute to the candidate by the lowest active keys count
+        // after the found candidate
+        uint256 availableKeysCountLimit = type(uint256).max;
+        uint256 nextCandidateActiveKeysCount = candidates[nextCandidateIndex].activeKeysCount;
+        for (uint256 i = 0; i < candidates.length; ++i) {
             if (
-                candidates[nextCandidateIndex].activeKeysCount < candidates[i].activeKeysCount &&
-                candidates[nextCandidateSuccessorIndex].activeKeysCount > candidates[i].activeKeysCount
+                candidates[i].activeKeysCount > nextCandidateActiveKeysCount &&
+                candidates[i].activeKeysCount < availableKeysCountLimit
             ) {
-                nextCandidateSuccessorIndex = i;
+                availableKeysCountLimit = candidates[i].activeKeysCount;
             }
         }
 
-        keysDistributed = Math.min(keysToDistribute / candidatesCount, candidates[nextCandidateIndex].activeKeysCount);
-
-        // case when all candidates has same number of active keys count
-        if (nextCandidateSuccessorIndex != nextCandidateIndex) {
-            keysDistributed = Math.min(keysDistributed, candidates[nextCandidateSuccessorIndex].activeKeysCount);
-        }
+        keysDistributed = Math.min(availableKeysCountLimit, candidates[nextCandidateIndex].availableKeysCount);
+        keysDistributed = Math.min(keysDistributed, keysToDistribute / candidatesCount);
     }
 }
