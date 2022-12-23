@@ -674,19 +674,6 @@ contract Lido is ILido, StETH, AragonApp {
         _transferShares(address(this), treasury, treasuryReward);
     }
 
-    /**
-     * @dev Records a deposit to the deposit_contract.deposit function
-     * @param _amount Total amount deposited to the ETH 2.0 side
-     */
-    function _markAsUnbuffered(uint256 _amount) internal {
-        BUFFERED_ETHER_POSITION.setStorageUint256(BUFFERED_ETHER_POSITION.getStorageUint256().sub(_amount));
-        STAKING_ROUTER_BUFFERED_ETHER_POSITION.setStorageUint256(
-            STAKING_ROUTER_BUFFERED_ETHER_POSITION.getStorageUint256().add(_amount)
-        );
-
-        emit Unbuffered(_amount);
-    }
-
     function getStakingRouterBufferedEther() external view returns (uint256) {
         return _getStakingRouterBufferedEther();
     }
@@ -796,7 +783,16 @@ contract Lido is ILido, StETH, AragonApp {
 
             address(stakingRouter).transfer(amount);
 
-            _markAsUnbuffered(amount);
+            BUFFERED_ETHER_POSITION.setStorageUint256(
+                BUFFERED_ETHER_POSITION.getStorageUint256().sub(amount)
+            );
+
+            STAKING_ROUTER_BUFFERED_ETHER_POSITION.setStorageUint256(
+                STAKING_ROUTER_BUFFERED_ETHER_POSITION.getStorageUint256().add(amount)
+            );
+
+            emit Unbuffered(amount);
+
             assert(_getUnaccountedEther() == unaccounted);
         }
     }
