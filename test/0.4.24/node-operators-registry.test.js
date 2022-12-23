@@ -853,22 +853,28 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await app.addNodeOperator('2', user3, { from: voting })
 
       await app.setOperatorUsedKeys(0, 3)
-      await app.setOperatorStoppedKeys(0, 4)
-      await app.setOperatorTotalKeys(0, 7)
+      await app.setOperatorStoppedKeys(0, 2)
+      await app.setOperatorTotalKeys(0, 5)
+      await app.setNodeOperatorStakingLimit(0, 5, { from: voting })
 
       await app.setOperatorUsedKeys(1, 7)
       await app.setOperatorStoppedKeys(1, 1)
       await app.setOperatorTotalKeys(1, 8)
+      await app.setNodeOperatorStakingLimit(1, 5, { from: voting })
 
-      await app.setOperatorUsedKeys(2, 0)
+      await app.setOperatorUsedKeys(2, 10)
       await app.setOperatorStoppedKeys(2, 10)
-      await app.setOperatorTotalKeys(2, 10)
+      await app.setOperatorTotalKeys(2, 20)
+      await app.setNodeOperatorStakingLimit(2, 13, { from: voting })
 
       await app.finalizeUpgrade_v2(steth.address, CURATED_TYPE)
 
-      assertBn(await app.getTotalKeys(), 25)
-      assertBn(await app.getTotalUsedKeys(), 10)
-      assertBn(await app.getTotalStoppedKeys(), 15)
+      assertBn(await app.getActiveKeysCount(), 7)
+      assertBn(await app.getAvailableKeysCount(), 5)
+
+      const { activeKeysCount, availableKeysCount } = await app.getKeysUsageData()
+      assertBn(activeKeysCount, 7)
+      assertBn(availableKeysCount, 5)
     })
   })
   context('distribute rewards', () => {
@@ -884,7 +890,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await app.setOperatorUsedKeys(0, 3)
       await app.setOperatorUsedKeys(1, 7)
       await app.setOperatorUsedKeys(2, 0)
-      await app.setTotalUsedKeys(10)
+      await app.setActiveKeysCount(10)
 
       await app.distributeRewards({ from: user3 })
 

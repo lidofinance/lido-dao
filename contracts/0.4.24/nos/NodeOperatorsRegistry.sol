@@ -160,6 +160,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
 
         _increaseKeysOpIndex();
 
+        operators[_id].active = _active;
+
         uint256 activeOperatorsCount = getActiveNodeOperatorsCount();
         if (_active) {
             ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(activeOperatorsCount.add(1));
@@ -169,7 +171,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
             _trimUnusedNodeOperatorKeys(_id);
             _updateTotalAvailableKeysCount();
         }
-        operators[_id].active = _active;
 
         emit NodeOperatorActiveSet(_id, _active);
     }
