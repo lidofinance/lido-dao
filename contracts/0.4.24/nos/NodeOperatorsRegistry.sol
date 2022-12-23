@@ -46,8 +46,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
 
     uint256 internal constant UINT64_MAX = uint256(uint64(-1));
 
-    bytes32 internal constant SIGNING_KEYS_MAPPING_NAME =
-        keccak256("lido.NodeOperatorsRegistry.signingKeysMappingName");
+    bytes32 internal constant SIGNING_KEYS_MAPPING_NAME = keccak256("lido.NodeOperatorsRegistry.signingKeysMappingName");
 
     uint256 internal constant TOTAL_BASIS_POINTS = 10000;
 
@@ -90,12 +89,10 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
     SigningKeysStats internal signingKeysStats;
 
     // @dev Total number of operators
-    bytes32 internal constant TOTAL_OPERATORS_COUNT_POSITION =
-        keccak256("lido.NodeOperatorsRegistry.totalOperatorsCount");
+    bytes32 internal constant TOTAL_OPERATORS_COUNT_POSITION = keccak256("lido.NodeOperatorsRegistry.totalOperatorsCount");
 
     // @dev Cached number of active operators
-    bytes32 internal constant ACTIVE_OPERATORS_COUNT_POSITION =
-        keccak256("lido.NodeOperatorsRegistry.activeOperatorsCount");
+    bytes32 internal constant ACTIVE_OPERATORS_COUNT_POSITION = keccak256("lido.NodeOperatorsRegistry.activeOperatorsCount");
 
     /// @dev link to the index of operations with keys
     bytes32 internal constant KEYS_OP_INDEX_POSITION = keccak256("lido.NodeOperatorsRegistry.keysOpIndex");
@@ -165,21 +162,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         _increaseKeysOpIndex();
 
         uint256 activeOperatorsCount = getActiveNodeOperatorsCount();
-        SigningKeysStats memory _signingKeysStats = signingKeysStats;
         if (_active) {
             ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(activeOperatorsCount.add(1));
-            _setSigningKeysStats(
-                _signingKeysStats.totalSigningKeys.add(operators[_id].totalSigningKeys),
-                _signingKeysStats.usedSigningKeys.add(operators[_id].usedSigningKeys),
-                _signingKeysStats.stoppedSigningKeys.add(operators[_id].stoppedValidators)
-            );
         } else {
             ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(activeOperatorsCount.sub(1));
-            _setSigningKeysStats(
-                _signingKeysStats.totalSigningKeys.sub(operators[_id].totalSigningKeys),
-                _signingKeysStats.usedSigningKeys.sub(operators[_id].usedSigningKeys),
-                _signingKeysStats.stoppedSigningKeys.sub(operators[_id].stoppedValidators)
-            );
+            _trimUnusedKeys();
         }
         operators[_id].active = _active;
 
@@ -189,11 +176,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
     /**
      * @notice Change human-readable name of the node operator #`_id` to `_name`
      */
-    function setNodeOperatorName(uint256 _id, string _name)
-        external
-        authP(SET_NODE_OPERATOR_NAME_ROLE, arr(_id))
-        operatorExists(_id)
-    {
+    function setNodeOperatorName(uint256 _id, string _name) external authP(SET_NODE_OPERATOR_NAME_ROLE, arr(_id)) operatorExists(_id) {
         require(keccak256(operators[_id].name) != keccak256(_name), "NODE_OPERATOR_NAME_IS_THE_SAME");
         operators[_id].name = _name;
         emit NodeOperatorNameSet(_id, _name);
@@ -248,19 +231,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
      * @dev Function is used by the StakingRouter where WC changed
      */
     function trimUnusedKeys() external auth(TRIM_UNUSED_KEYS_ROLE) {
-        uint256 length = getNodeOperatorsCount();
-        uint256 trimmedKeys = 0;
-        for (uint256 operatorId = 0; operatorId < length; ++operatorId) {
-            uint64 totalSigningKeys = operators[operatorId].totalSigningKeys;
-            uint64 usedSigningKeys = operators[operatorId].usedSigningKeys;
-            if (totalSigningKeys != usedSigningKeys) {
-                // write only if update is needed
-                operators[operatorId].totalSigningKeys = usedSigningKeys; // discard unused keys
-                trimmedKeys += totalSigningKeys - usedSigningKeys;
-                emit NodeOperatorTotalKeysTrimmed(operatorId, totalSigningKeys - usedSigningKeys);
-            }
-        }
-        _setTotalSigningKeys(signingKeysStats.totalSigningKeys.sub(uint64(trimmedKeys)));
+        _trimUnusedKeys();
     }
 
     /**
@@ -309,10 +280,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
      * @param _operator_id Node Operator id
      * @param _index Index of the key, starting with 0
      */
-    function removeSigningKey(uint256 _operator_id, uint256 _index)
-        external
-        authP(MANAGE_SIGNING_KEYS, arr(_operator_id))
-    {
+    function removeSigningKey(uint256 _operator_id, uint256 _index) external authP(MANAGE_SIGNING_KEYS, arr(_operator_id)) {
         _removeSigningKey(_operator_id, _index);
     }
 
@@ -546,24 +514,14 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
     /**
      * @notice Returns total number of signing keys of the node operator #`_operator_id`
      */
-    function getTotalSigningKeyCount(uint256 _operator_id)
-        external
-        view
-        operatorExists(_operator_id)
-        returns (uint256)
-    {
+    function getTotalSigningKeyCount(uint256 _operator_id) external view operatorExists(_operator_id) returns (uint256) {
         return operators[_operator_id].totalSigningKeys;
     }
 
     /**
      * @notice Returns number of usable signing keys of the node operator #`_operator_id`
      */
-    function getUnusedSigningKeyCount(uint256 _operator_id)
-        external
-        view
-        operatorExists(_operator_id)
-        returns (uint256)
-    {
+    function getUnusedSigningKeyCount(uint256 _operator_id) external view operatorExists(_operator_id) returns (uint256) {
         return operators[_operator_id].totalSigningKeys.sub(operators[_operator_id].usedSigningKeys);
     }
 
@@ -720,11 +678,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         }
     }
 
-    function _loadSigningKey(uint256 _operator_id, uint256 _keyIndex)
-        internal
-        view
-        returns (bytes memory key, bytes memory signature)
-    {
+    function _loadSigningKey(uint256 _operator_id, uint256 _keyIndex) internal view returns (bytes memory key, bytes memory signature) {
         uint256 offset = _signingKeyOffset(_operator_id, _keyIndex);
 
         // key
@@ -778,14 +732,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         emit KeysOpIndexSet(keysOpIndex + 1);
     }
 
-    function _setSigningKeysStats(
-        uint64 _totalSigningKeys,
-        uint64 _usedSigningKeys,
-        uint64 _stoppedSigningKeys
-    ) internal {
-        signingKeysStats = SigningKeysStats(_totalSigningKeys, _usedSigningKeys, _stoppedSigningKeys);
-    }
-
     function _setTotalSigningKeys(uint64 _totalSigningKeys) internal {
         signingKeysStats.totalSigningKeys = _totalSigningKeys;
     }
@@ -796,6 +742,22 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
 
     function _setStoppedSigningKeys(uint64 _stoppedSigningKeys) internal {
         signingKeysStats.stoppedSigningKeys = _stoppedSigningKeys;
+    }
+
+    function _trimUnusedKeys() internal {
+        uint256 length = getNodeOperatorsCount();
+        uint256 trimmedKeys = 0;
+        for (uint256 operatorId = 0; operatorId < length; ++operatorId) {
+            uint64 totalSigningKeys = operators[operatorId].totalSigningKeys;
+            uint64 usedSigningKeys = operators[operatorId].usedSigningKeys;
+            if (totalSigningKeys != usedSigningKeys) {
+                // write only if update is needed
+                operators[operatorId].totalSigningKeys = usedSigningKeys; // discard unused keys
+                trimmedKeys += totalSigningKeys - usedSigningKeys;
+                emit NodeOperatorTotalKeysTrimmed(operatorId, totalSigningKeys - usedSigningKeys);
+            }
+        }
+        _setTotalSigningKeys(signingKeysStats.totalSigningKeys.sub(uint64(trimmedKeys)));
     }
 
     /**
@@ -840,7 +802,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         assert(totalUsedKeys <= 2**64 - 1);
         assert(totalStoppedKeys <= 2**64 - 1);
 
-        _setSigningKeysStats(uint64(totalKeys), uint64(totalUsedKeys), uint64(totalStoppedKeys));
+        signingKeysStats = SigningKeysStats(uint64(totalKeys), uint64(totalUsedKeys), uint64(totalStoppedKeys));
 
         assert(signingKeysStats.totalSigningKeys == totalKeys);
         assert(signingKeysStats.usedSigningKeys == totalUsedKeys);
