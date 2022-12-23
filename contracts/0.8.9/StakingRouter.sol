@@ -22,12 +22,7 @@ import {BeaconChainDepositor} from "./BeaconChainDepositor.sol";
 contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDepositor {
     using UnstructuredStorage for bytes32;
 
-    event StakingModuleAdded(
-        address indexed creator,
-        uint256 indexed stakingModuleId,
-        address indexed stakingModule,
-        string name
-    );
+    event StakingModuleAdded(address indexed creator, uint24 indexed stakingModuleId, address indexed stakingModule, string name);
     event StakingModuleTargetSharesSet(uint24 indexed stakingModuleId, uint16 targetShare);
     event StakingModuleFeesSet(uint24 indexed stakingModuleId, uint16 treasuryFee, uint16 moduleFee);
     event StakingModulePaused(uint24 indexed stakingModuleId, address indexed actor);
@@ -137,13 +132,10 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
      * @param _moduleFee fee of the module taken from the consensus layer rewards
      * @param _treasuryFee treasury fee
      */
-    function addModule(
-        string memory _name,
-        address _stakingModuleAddress,
-        uint16 _targetShare,
-        uint16 _moduleFee,
-        uint16 _treasuryFee
-    ) external onlyRole(MODULE_MANAGE_ROLE) {
+    function addModule(string memory _name, address _stakingModuleAddress, uint16 _targetShare, uint16 _moduleFee, uint16 _treasuryFee)
+        external
+        onlyRole(MODULE_MANAGE_ROLE)
+    {
         if (_targetShare > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_targetShare");
         if (_treasuryFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_treasuryFee");
         if (_moduleFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_moduleFee");
@@ -171,17 +163,15 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         emit StakingModuleFeesSet(newStakingModuleId, _treasuryFee, _moduleFee);
     }
 
-    function updateStakingModule(
-        uint24 _stakingModuleId,
-        uint16 _targetShare,
-        uint16 _moduleFee,
-        uint16 _treasuryFee
-    ) external onlyRole(MODULE_MANAGE_ROLE) {
+    function updateStakingModule(uint24 _stakingModuleId, uint16 _targetShare, uint16 _moduleFee, uint16 _treasuryFee)
+        external
+        onlyRole(MODULE_MANAGE_ROLE)
+    {
         if (_targetShare > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_targetShare");
         if (_treasuryFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_treasuryFee");
         if (_moduleFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_moduleFee");
 
-        uint256 stakingModuleIndex = _stakingModuleIndicesOneBased[_stakingModuleId];
+        uint256 stakingModuleIndex = _getStakingModuleIndexById(_stakingModuleId);
 
         _stakingModules[stakingModuleIndex].targetShare = _targetShare;
         _stakingModules[stakingModuleIndex].treasuryFee = _treasuryFee;
@@ -277,12 +267,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         }
     }
 
-    function getActiveKeysCount(uint24 _stakingModuleId)
-        public
-        view
-        onlyRegisteredStakingModule(_stakingModuleId)
-        returns (uint256)
-    {
+    function getActiveKeysCount(uint24 _stakingModuleId) public view onlyRegisteredStakingModule(_stakingModuleId) returns (uint256) {
         return _getActiveKeysCount(_stakingModuleId);
     }
 
@@ -293,20 +278,16 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
      * @return moduleFees fee of each recipient
      * @return totalFee total fee to mint for each module and treasury
      */
-    function getSharesTable()
+    function getStakingRewardsDistribution()
         external
         view
-        returns (
-            address[] memory recipients,
-            uint256[] memory moduleFees,
-            uint256 totalFee
-        )
+        returns (address[] memory recipients, uint16[] memory moduleFees, uint16 totalFee)
     {
         uint256 _modulesCount = getStakingModulesCount();
         if (_modulesCount == 0) revert ErrorNoStakingModules();
 
         recipients = new address[](_modulesCount);
-        moduleFees = new uint256[](_modulesCount);
+        moduleFees = new uint16[](_modulesCount);
 
         totalFee = 0;
 
@@ -315,15 +296,15 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         if (totalActiveKeys == 0) revert ErrorNoKeys();
 
         StakingModule memory stakingModule;
-        uint256 moduleShare;
+        uint256 moduleKeysShare;
         for (uint256 i = 0; i < _modulesCount; ++i) {
             stakingModule = _getStakingModuleByIndex(i);
-            moduleShare = ((moduleActiveKeys[i] * TOTAL_BASIS_POINTS) / totalActiveKeys);
+            moduleKeysShare = ((moduleActiveKeys[i] * TOTAL_BASIS_POINTS) / totalActiveKeys);
 
             recipients[i] = address(stakingModule.stakingModuleAddress);
-            moduleFees[i] = ((moduleShare * stakingModule.moduleFee) / TOTAL_BASIS_POINTS);
+            moduleFees[i] = uint16((moduleKeysShare * stakingModule.moduleFee) / TOTAL_BASIS_POINTS);
 
-            totalFee += (moduleShare * stakingModule.treasuryFee) / TOTAL_BASIS_POINTS + moduleFees[i];
+            totalFee += uint16((moduleKeysShare * stakingModule.treasuryFee) / TOTAL_BASIS_POINTS) + moduleFees[i];
         }
 
         return (recipients, moduleFees, totalFee);
@@ -345,11 +326,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
      * @param _stakingModuleId id of the staking module to be deposited
      * @param _depositCalldata module calldata
      */
-    function deposit(
-        uint256 _maxDepositsCount,
-        uint24 _stakingModuleId,
-        bytes calldata _depositCalldata
-    )
+    function deposit(uint256 _maxDepositsCount, uint24 _stakingModuleId, bytes calldata _depositCalldata)
         external
         onlyRole(STAKING_ROUTER_DEPOSIT_ROLE)
         onlyRegisteredStakingModule(_stakingModuleId)
@@ -371,9 +348,10 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         if (maxSigningKeysCount == 0) revert ErrorZeroMaxSigningKeysCount();
 
         StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
-        (uint256 keysCount, bytes memory publicKeysBatch, bytes memory signaturesBatch) = IStakingModule(
-            stakingModule.stakingModuleAddress
-        ).prepNextSigningKeys(maxSigningKeysCount, _depositCalldata);
+        bytes memory publicKeysBatch;
+        bytes memory signaturesBatch;
+        (keysCount, publicKeysBatch, signaturesBatch) =
+            IStakingModule(stakingModule.stakingModuleAddress).prepNextSigningKeys(maxSigningKeysCount, _depositCalldata);
 
         if (keysCount == 0) revert ErrorNoKeys();
 
@@ -427,11 +405,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         }
     }
 
-    function _loadStakingModuleCache(uint24 _stakingModuleId)
-        internal
-        view
-        returns (StakingModuleCache memory stakingModuleCache)
-    {
+    function _loadStakingModuleCache(uint24 _stakingModuleId) internal view returns (StakingModuleCache memory stakingModuleCache) {
         StakingModule storage stakingModuleData = _getStakingModuleById(_stakingModuleId);
         stakingModuleCache.paused = stakingModuleData.paused;
         stakingModuleCache.targetShare = stakingModuleData.targetShare;

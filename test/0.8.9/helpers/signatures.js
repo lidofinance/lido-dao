@@ -85,10 +85,10 @@ function encodePauseData(pauseMessagePrefix, pauseMessage) {
 }
 
 function encodeBN(value) {
-  return new BN(value).toString('hex', UINT256_SIZE)//32bytes
+  return new BN(value).toString('hex', UINT256_SIZE) // 32bytes
 }
 function encodeBNuint24(value) {
-  return new BN(value).toString('hex', 6) //3bytes
+  return new BN(value).toString('hex', 6) // 3bytes
 }
 
 function signDepositData(attestMessagePrefix, depositRoot, keysOpIndex, blockNumber, blockHash, guardianPrivateKey) {

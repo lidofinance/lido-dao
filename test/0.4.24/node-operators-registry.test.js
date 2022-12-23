@@ -73,14 +73,14 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
   })
 
   it('setType works', async () => {
-    let type = web3.utils.fromAscii("curated")
+    const type = web3.utils.fromAscii('curated')
 
     await assertRevert(app.setType(type, { from: user1 }), 'APP_AUTH_FAILED')
     await assertRevert(app.setType(type, { from: nobody }), 'APP_AUTH_FAILED')
 
     await app.setType(type, { from: voting })
 
-    assert(web3.utils.hexToString(await app.getType()) == "curated", "invalid_type")
+    assert(web3.utils.hexToString(await app.getType()) === 'curated', 'invalid_type')
   })
 
   it('addNodeOperator works', async () => {

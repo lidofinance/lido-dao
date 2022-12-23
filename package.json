@@ -112,7 +112,7 @@
     "ipfs-http-client": "^55.0.0",
     "lerna": "^3.22.1",
     "lint-staged": ">=10",
-    "prettier": "^2.1.2",
+    "prettier": "^2.8.1",
     "prettier-plugin-solidity": "^1.1.0",
     "solhint": "^3.3.7",
     "solidity-coverage": "^0.7.18",
