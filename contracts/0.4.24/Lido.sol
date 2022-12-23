@@ -597,6 +597,8 @@ contract Lido is ILido, StETH, AragonApp {
         _auth(MANAGE_PROTOCOL_CONTRACTS_ROLE);
         require(_stakingRouterAddress != address(0), "STAKING_ROUTER_ADDRESS_ZERO");
         STAKING_ROUTER_POSITION.setStorageAddress(_stakingRouterAddress);
+
+        emit StakingRouterSet(_stakingRouterAddress);
     }
 
     function getDepositSecurityModule() public view returns (address) {
@@ -607,6 +609,8 @@ contract Lido is ILido, StETH, AragonApp {
         _auth(MANAGE_PROTOCOL_CONTRACTS_ROLE);
         require(_dsmAddress != address(0), "DSM_ADDRESS_ZERO");
         DEPOSIT_SECURITY_MODULE_POSITION.setStorageAddress(_dsmAddress);
+
+        emit DepositSecurityModuleSet(_dsmAddress);
     }
 
     /**
@@ -806,10 +810,10 @@ contract Lido is ILido, StETH, AragonApp {
         IStakingRouter stakingRouterAddress = IStakingRouter(getStakingRouter());
         uint256 keysCount = stakingRouterAddress.deposit(_maxDepositsCount, _stakingModuleId, _depositCalldata);
 
-        updateBufferedCounters(keysCount);
+        _updateBufferedCounters(keysCount);
     }
 
-    function updateBufferedCounters(uint256 _numKeys) internal {
+    function _updateBufferedCounters(uint256 _numKeys) internal {
         uint256 _amount = _numKeys.mul(DEPOSIT_SIZE);
 
         DEPOSITED_VALIDATORS_POSITION.setStorageUint256(DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(_numKeys));

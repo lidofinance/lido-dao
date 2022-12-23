@@ -312,6 +312,38 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assertRevert(app.receiveELRewards({ from: user1, value: ETH(1) }))
   })
 
+  it('setStakingRouter event works', async () => {
+    assert.equal(await app.getStakingRouter(), stakingRouter.address)
+
+    assertEvent(await app.setStakingRouter(voting, { from: voting }), 'StakingRouterSet', {
+      expectedArgs: { stakingRouterAddress: voting }
+    })
+
+    assert.equal(await app.getStakingRouter(), voting)
+  })
+
+  it('setDepositSecurityModule event works', async () => {
+    assert.equal(await app.getDepositSecurityModule(), ZERO_ADDRESS)
+
+    assertEvent(await app.setDepositSecurityModule(voting, { from: voting }), 'DepositSecurityModuleSet', {
+      expectedArgs: { dsmAddress: voting }
+    })
+
+    assert.equal(await app.getDepositSecurityModule(), voting)
+  })
+
+  it('setMaxFee event works', async () => {
+    assertBn(await app.getMaxFee(), 1000)
+
+    assertRevert(app.setMaxFee(10001, { from: voting }), 'VALUE_OVER_100_PERCENT')
+
+    assertEvent(await app.setMaxFee(10, { from: voting }), 'MaxFeeSet', {
+      expectedArgs: { feeBasisPoints: 10 }
+    })
+
+    assert.equal(await app.getMaxFee(), 10)
+  })
+
   it('setFee works', async () => {
     await app.setFee(110, { from: voting })
     await assertRevert(app.setFee(110, { from: user1 }), 'APP_AUTH_FAILED')
