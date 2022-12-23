@@ -132,10 +132,13 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
      * @param _moduleFee fee of the module taken from the consensus layer rewards
      * @param _treasuryFee treasury fee
      */
-    function addModule(string memory _name, address _stakingModuleAddress, uint16 _targetShare, uint16 _moduleFee, uint16 _treasuryFee)
-        external
-        onlyRole(MODULE_MANAGE_ROLE)
-    {
+    function addModule(
+        string memory _name,
+        address _stakingModuleAddress,
+        uint16 _targetShare,
+        uint16 _moduleFee,
+        uint16 _treasuryFee
+    ) external onlyRole(MODULE_MANAGE_ROLE) {
         if (_targetShare > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_targetShare");
         if (_treasuryFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_treasuryFee");
         if (_moduleFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_moduleFee");
@@ -163,10 +166,12 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         emit StakingModuleFeesSet(newStakingModuleId, _treasuryFee, _moduleFee);
     }
 
-    function updateStakingModule(uint24 _stakingModuleId, uint16 _targetShare, uint16 _moduleFee, uint16 _treasuryFee)
-        external
-        onlyRole(MODULE_MANAGE_ROLE)
-    {
+    function updateStakingModule(
+        uint24 _stakingModuleId,
+        uint16 _targetShare,
+        uint16 _moduleFee,
+        uint16 _treasuryFee
+    ) external onlyRole(MODULE_MANAGE_ROLE) {
         if (_targetShare > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_targetShare");
         if (_treasuryFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_treasuryFee");
         if (_moduleFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_moduleFee");
@@ -311,11 +316,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     }
 
     /// @notice returns new deposits allocation after the distribution of the `_keysToAllocate` keys
-    function getKeysAllocation(uint256 _keysToAllocate)
-        public
-        view
-        returns (uint256 allocated, uint256[] memory allocations)
-    {
+    function getKeysAllocation(uint256 _keysToAllocate) public view returns (uint256 allocated, uint256[] memory allocations) {
         (uint256 totalActiveKeys, ) = getTotalActiveKeys();
         (allocated, allocations) = _getKeysAllocation(totalActiveKeys, _keysToAllocate);
     }
@@ -326,7 +327,11 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
      * @param _stakingModuleId id of the staking module to be deposited
      * @param _depositCalldata module calldata
      */
-    function deposit(uint256 _maxDepositsCount, uint24 _stakingModuleId, bytes calldata _depositCalldata)
+    function deposit(
+        uint256 _maxDepositsCount,
+        uint24 _stakingModuleId,
+        bytes calldata _depositCalldata
+    )
         external
         onlyRole(STAKING_ROUTER_DEPOSIT_ROLE)
         onlyRegisteredStakingModule(_stakingModuleId)
@@ -348,10 +353,8 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         if (maxSigningKeysCount == 0) revert ErrorZeroMaxSigningKeysCount();
 
         StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
-        bytes memory publicKeysBatch;
-        bytes memory signaturesBatch;
-        (keysCount, publicKeysBatch, signaturesBatch) =
-            IStakingModule(stakingModule.stakingModuleAddress).prepNextSigningKeys(maxSigningKeysCount, _depositCalldata);
+        (uint256 keysCount, bytes memory publicKeysBatch, bytes memory signaturesBatch) = IStakingModule(stakingModule.stakingModuleAddress)
+            .prepNextSigningKeys(maxSigningKeysCount, _depositCalldata);
 
         if (keysCount == 0) revert ErrorNoKeys();
 
@@ -379,10 +382,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
      * @dev Note that setWithdrawalCredentials discards all unused signing keys as the signatures are invalidated.
      * @param _withdrawalCredentials withdrawal credentials field as defined in the Ethereum PoS consensus specs
      */
-    function setWithdrawalCredentials(bytes32 _withdrawalCredentials)
-        external
-        onlyRole(MANAGE_WITHDRAWAL_CREDENTIALS_ROLE)
-    {
+    function setWithdrawalCredentials(bytes32 _withdrawalCredentials) external onlyRole(MANAGE_WITHDRAWAL_CREDENTIALS_ROLE) {
         WITHDRAWAL_CREDENTIALS_POSITION.setStorageBytes32(_withdrawalCredentials);
 
         //trim keys with old WC
@@ -419,11 +419,10 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         stakingModuleCache.availableKeysCount = stakingModuleCache.totalKeysCount - stakingModuleCache.usedKeysCount;
     }
 
-    function _getKeysAllocation(uint256 _activeKeysCount, uint256 _keysToAllocate)
-        public
-        view
-        returns (uint256 allocated, uint256[] memory allocations)
-    {
+    function _getKeysAllocation(
+        uint256 _activeKeysCount,
+        uint256 _keysToAllocate
+    ) public view returns (uint256 allocated, uint256[] memory allocations) {
         uint256 stakingModulesCount = getStakingModulesCount();
         allocations = new uint256[](stakingModulesCount);
         uint256[] memory capacities = new uint256[](stakingModulesCount);
@@ -434,10 +433,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
             allocations[i] = stakingModuleCache.activeKeysCount;
 
             uint256 targetKeys = (stakingModuleCache.targetShare * _totalActiveKeysCount) / TOTAL_BASIS_POINTS;
-            capacities[i] = Math.min(
-                targetKeys,
-                stakingModuleCache.activeKeysCount + stakingModuleCache.availableKeysCount
-            );
+            capacities[i] = Math.min(targetKeys, stakingModuleCache.activeKeysCount + stakingModuleCache.availableKeysCount);
         }
 
         allocated = MinFirstAllocationStrategy.allocate(allocations, capacities, _keysToAllocate);
