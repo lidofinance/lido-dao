@@ -24,11 +24,7 @@ interface IERC721 {
     /// @param _from The current owner of the NFT
     /// @param _to The new owner
     /// @param _tokenId The NFT to transfer
-    function transferFrom(
-        address _from,
-        address _to,
-        uint256 _tokenId
-    ) external payable;
+    function transferFrom(address _from, address _to, uint256 _tokenId) external payable;
 }
 
 /**
@@ -73,7 +69,7 @@ contract Lido is ILido, StETH, AragonApp {
     /// @dev default value for maximum number of Ethereum 2.0 validators registered in a single depositBufferedEther call
     uint256 internal constant DEFAULT_MAX_DEPOSITS_PER_CALL = 150;
 
-    bytes32 internal constant MAX_FEE = keccak256("lido.Lido.maxFee");
+    bytes32 internal constant MAX_FEE_POSITION = keccak256("lido.Lido.maxFee");
 
     bytes32 internal constant ORACLE_POSITION = keccak256("lido.Lido.oracle");
     bytes32 internal constant TREASURY_POSITION = keccak256("lido.Lido.treasury");
@@ -92,8 +88,7 @@ contract Lido is ILido, StETH, AragonApp {
     /// @dev number of Lido's validators available in the Beacon state
     bytes32 internal constant BEACON_VALIDATORS_POSITION = keccak256("lido.Lido.beaconValidators");
     /// @dev amount of Ether sended to the Staking Router contract balance
-    bytes32 internal constant STAKING_ROUTER_BUFFERED_ETHER_POSITION =
-        keccak256("lido.Lido.stakingRouterBufferedEther");
+    bytes32 internal constant STAKING_ROUTER_BUFFERED_ETHER_POSITION = keccak256("lido.Lido.stakingRouterBufferedEther");
 
     /// @dev percent in basis points of total pooled ether allowed to withdraw from LidoExecutionLayerRewardsVault per LidoOracle report
     bytes32 internal constant EL_REWARDS_WITHDRAWAL_LIMIT_POSITION = keccak256("lido.Lido.ELRewardsWithdrawalLimit");
@@ -113,10 +108,7 @@ contract Lido is ILido, StETH, AragonApp {
      * @param _treasury treasury contract
      * NB: by default, staking and the whole Lido pool are in paused state
      */
-    function initialize(
-        address _oracle,
-        address _treasury
-    ) public onlyInit {
+    function initialize(address _oracle, address _treasury) public onlyInit {
         _setProtocolContracts(_oracle, _treasury);
 
         initialized();
@@ -177,10 +169,7 @@ contract Lido is ILido, StETH, AragonApp {
         _auth(STAKING_CONTROL_ROLE);
 
         STAKING_STATE_POSITION.setStorageStakeLimitStruct(
-            STAKING_STATE_POSITION.getStorageStakeLimitStruct().setStakingLimit(
-                _maxStakeLimit,
-                _stakeLimitIncreasePerBlock
-            )
+            STAKING_STATE_POSITION.getStorageStakeLimitStruct().setStakingLimit(_maxStakeLimit, _stakeLimitIncreasePerBlock)
         );
 
         emit StakingLimitSet(_maxStakeLimit, _stakeLimitIncreasePerBlock);
@@ -194,9 +183,7 @@ contract Lido is ILido, StETH, AragonApp {
     function removeStakingLimit() external {
         _auth(STAKING_CONTROL_ROLE);
 
-        STAKING_STATE_POSITION.setStorageStakeLimitStruct(
-            STAKING_STATE_POSITION.getStorageStakeLimitStruct().removeStakingLimit()
-        );
+        STAKING_STATE_POSITION.setStorageStakeLimitStruct(STAKING_STATE_POSITION.getStorageStakeLimitStruct().removeStakingLimit());
 
         emit StakingLimitRemoved();
     }
@@ -285,18 +272,15 @@ contract Lido is ILido, StETH, AragonApp {
     function receiveELRewards() external payable {
         require(msg.sender == EL_REWARDS_VAULT_POSITION.getStorageAddress());
 
-        TOTAL_EL_REWARDS_COLLECTED_POSITION.setStorageUint256(
-            TOTAL_EL_REWARDS_COLLECTED_POSITION.getStorageUint256().add(msg.value)
-        );
+        TOTAL_EL_REWARDS_COLLECTED_POSITION.setStorageUint256(TOTAL_EL_REWARDS_COLLECTED_POSITION.getStorageUint256().add(msg.value));
 
         emit ELRewardsReceived(msg.value);
     }
 
-    function burnShares(address _account, uint256 _sharesAmount)
-        external
-        authP(BURN_ROLE, arr(_account, _sharesAmount))
-        returns (uint256 newTotalShares)
-    {
+    function burnShares(
+        address _account,
+        uint256 _sharesAmount
+    ) external authP(BURN_ROLE, arr(_account, _sharesAmount)) returns (uint256 newTotalShares) {
         return _burnShares(_account, _sharesAmount);
     }
 
@@ -321,11 +305,11 @@ contract Lido is ILido, StETH, AragonApp {
         _resumeStaking();
     }
 
-    function setMaxFee(uint256 _maximumFeeBasisPoints) external {
+    function setMaxFee(uint16 _maximumFeeBasisPoints) external {
         _auth(MANAGE_FEE);
 
-        require(_maximumFeeBasisPoints <= TOTAL_BASIS_POINTS, "VALUE_OVER_100_PERCENT");
-        MAX_FEE.setStorageUint256(_maximumFeeBasisPoints);
+        _setBPValue(MAX_FEE_POSITION, _maximumFeeBasisPoints);
+        emit MaxFeeSet(_maximumFeeBasisPoints);
     }
 
     /**
@@ -339,13 +323,11 @@ contract Lido is ILido, StETH, AragonApp {
      * @param _oracle oracle contract
      * @param _treasury treasury contract
      */
-    function setProtocolContracts(
-        address _oracle,
-        address _treasury
-    ) external {
+    function setProtocolContracts(address _oracle, address _treasury) external {
         _auth(MANAGE_PROTOCOL_CONTRACTS_ROLE);
 
         _setProtocolContracts(_oracle, _treasury);
+        emit ProtocolContactsSet(_oracle, _treasury);
     }
 
     /**
@@ -450,8 +432,8 @@ contract Lido is ILido, StETH, AragonApp {
         emit RecoverToVault(vault, _token, balance);
     }
 
-    function getMaxFee() public view returns (uint256 maxFeeBasisPoints) {
-        return MAX_FEE.getStorageUint256();
+    function getMaxFee() public view returns (uint16 maximumFeeBasisPoints) {
+        return uint16(MAX_FEE_POSITION.getStorageUint256());
     }
 
     /**
@@ -503,24 +485,32 @@ contract Lido is ILido, StETH, AragonApp {
      * @return beaconValidators - number of Lido's validators visible in the Beacon state, reported by oracles
      * @return beaconBalance - total amount of Beacon-side Ether (sum of all the balances of Lido validators)
      */
-    function getBeaconStat()
-        public
-        view
-        returns (
-            uint256 depositedValidators,
-            uint256 beaconValidators,
-            uint256 beaconBalance
-        )
-    {
+    function getBeaconStat() public view returns (uint256 depositedValidators, uint256 beaconValidators, uint256 beaconBalance) {
         depositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256();
         beaconValidators = BEACON_VALIDATORS_POSITION.getStorageUint256();
         beaconBalance = BEACON_BALANCE_POSITION.getStorageUint256();
     }
 
     /**
-     * @notice Returns staking rewards fee rate
+     * @notice Returns current staking rewards fee rate
      */
-    function getFee() public view returns (uint16 feeBasisPoints) {}
+    function getFee() public view returns (uint16 feeBasisPoints) {
+        address stakingRouterAddress = getStakingRouter();
+        (, , feeBasisPoints) = IStakingRouter(stakingRouterAddress).getStakingRewardsDistribution();
+        return feeBasisPoints;
+    }
+
+    /**
+     * @notice Returns current fee distribution proportion
+     */
+    function getFeeDistribution() public view returns (uint16 modulesFeeBasisPoints, uint16 treasuryFeeBasisPoints) {
+        address stakingRouterAddress = getStakingRouter();
+        (, uint16[] memory moduleFees, uint16 totalFee) = IStakingRouter(stakingRouterAddress).getStakingRewardsDistribution();
+        for (uint i; i < moduleFees.length; ++i) {
+            modulesFeeBasisPoints += moduleFees[i];
+        }
+        treasuryFeeBasisPoints = totalFee - modulesFeeBasisPoints;
+    }
 
     /**
      * @notice Returns address of the contract set as LidoExecutionLayerRewardsVault
@@ -533,10 +523,7 @@ contract Lido is ILido, StETH, AragonApp {
      * @dev Internal function to set authorized oracle address
      * @param _oracle oracle contract
      */
-    function _setProtocolContracts(
-        address _oracle,
-        address _treasury
-    ) internal {
+    function _setProtocolContracts(address _oracle, address _treasury) internal {
         require(_oracle != address(0), "ORACLE_ZERO_ADDRESS");
         require(_treasury != address(0), "TREASURY_ZERO_ADDRESS");
 
@@ -562,9 +549,7 @@ contract Lido is ILido, StETH, AragonApp {
 
             require(msg.value <= currentStakeLimit, "STAKE_LIMIT");
 
-            STAKING_STATE_POSITION.setStorageStakeLimitStruct(
-                stakeLimitData.updatePrevStakeLimit(currentStakeLimit - msg.value)
-            );
+            STAKING_STATE_POSITION.setStorageStakeLimitStruct(stakeLimitData.updatePrevStakeLimit(currentStakeLimit - msg.value));
         }
 
         uint256 sharesAmount = getSharesByPooledEth(msg.value);
@@ -643,18 +628,15 @@ contract Lido is ILido, StETH, AragonApp {
         // token shares.
 
         address stakingRouterAddress = getStakingRouter();
-        (address[] memory recipients, uint256[] memory moduleFees, uint256 totalFee) = IStakingRouter(
-            stakingRouterAddress
-        ).getSharesTable();
 
-        require(totalFee <= getMaxFee(), 'TOTAL_FEE_EXCEED_MAXIMUM_FEE');
+        (address[] memory recipients, uint16[] memory moduleFees, uint16 totalFee) = IStakingRouter(stakingRouterAddress)
+            .getStakingRewardsDistribution();
 
-        uint256 shares2mint =
-            _totalRewards.mul(totalFee).mul(_getTotalShares())
-            .div(
-                _getTotalPooledEther().mul(TOTAL_BASIS_POINTS)
-                .sub(totalFee.mul(_totalRewards))
-            );
+        require(totalFee <= getMaxFee(), "TOTAL_FEE_EXCEED_MAXIMUM_FEE");
+
+        uint256 shares2mint = _totalRewards.mul(totalFee).mul(_getTotalShares()).div(
+            _getTotalPooledEther().mul(TOTAL_BASIS_POINTS).sub(_totalRewards.mul(totalFee))
+        );
 
         _mintShares(address(this), shares2mint);
 
@@ -769,7 +751,7 @@ contract Lido is ILido, StETH, AragonApp {
         // no-op
     }
 
-    function _transferToStakingRouter(uint256 _maxDepositsCount) internal  {
+    function _transferToStakingRouter(uint256 _maxDepositsCount) internal {
         address stakingRouter = getStakingRouter();
         require(stakingRouter != address(0), "STAKING_ROUTER_ADDRESS_ZERO");
 
@@ -803,15 +785,7 @@ contract Lido is ILido, StETH, AragonApp {
      * @param _stakingModuleId id of the staking module to be deposited
      * @param _depositCalldata module calldata
      */
-    function deposit(
-        uint256 _maxDepositsCount,
-        uint24 _stakingModuleId,
-        bytes _depositCalldata
-    )
-        external 
-        onlyDsm
-        whenNotStopped
-    {
+    function deposit(uint256 _maxDepositsCount, uint24 _stakingModuleId, bytes _depositCalldata) external onlyDsm whenNotStopped {
         //make buffer transfer from LIDO to StakingRouter
         _transferToStakingRouter(_maxDepositsCount);
 
@@ -825,9 +799,7 @@ contract Lido is ILido, StETH, AragonApp {
     function updateBufferedCounters(uint256 _numKeys) internal {
         uint256 _amount = _numKeys.mul(DEPOSIT_SIZE);
 
-        DEPOSITED_VALIDATORS_POSITION.setStorageUint256(
-            DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(_numKeys)
-        );
+        DEPOSITED_VALIDATORS_POSITION.setStorageUint256(DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(_numKeys));
 
         uint256 buffered = _getStakingRouterBufferedEther();
         uint256 newBuffered = _amount >= buffered ? 0 : buffered.sub(_amount);
