@@ -802,7 +802,7 @@ contract Lido is ILido, StETH, AragonApp {
         //make buffer transfer from LIDO to StakingRouter
         _transferToStakingRouter(_maxDepositsCount);
 
-        // //make deposit
+        //make deposit
         IStakingRouter stakingRouterAddress = IStakingRouter(getStakingRouter());
         uint256 keysCount = stakingRouterAddress.deposit(_maxDepositsCount, _stakingModuleId, _depositCalldata);
 
