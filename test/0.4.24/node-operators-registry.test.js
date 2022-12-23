@@ -87,6 +87,16 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     assert.equal(web3.utils.hexToString(await app.getType()), 'curated', 'invalid type')
   })
 
+  it('events works', async () => {
+    const receipt = await app.finalizeUpgrade_v2(pool.address, CURATED_TYPE)
+
+    const moduleType = await app.getType()
+
+    assertEvent(receipt, 'ContractVersionSet', { expectedArgs: { version: 2 } })
+    assertEvent(receipt, 'StethContractSet', { expectedArgs: { stethAddress: pool.address } })
+    assertEvent(receipt, 'SetStakingModuleType', { expectedArgs: { moduleType } })
+  })
+
   it('addNodeOperator works', async () => {
     await assertRevert(app.addNodeOperator('1', ADDRESS_1, { from: user1 }), 'APP_AUTH_FAILED')
     await assertRevert(app.addNodeOperator('1', ADDRESS_1, { from: nobody }), 'APP_AUTH_FAILED')

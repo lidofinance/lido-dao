@@ -816,6 +816,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
 
         CONTRACT_VERSION_POSITION.setStorageUint256(2);
         emit ContractVersionSet(2);
+        emit StethContractSet(_steth);
+        emit SetStakingModuleType(_type);
     }
 
     function getType() external view returns (bytes32) {
