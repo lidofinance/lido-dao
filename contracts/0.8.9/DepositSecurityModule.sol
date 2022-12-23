@@ -9,7 +9,6 @@ import {ECDSA} from "./lib/ECDSA.sol";
 import {IStakingRouter} from "./interfaces/IStakingRouter.sol";
 import {IDepositContract} from "./interfaces/IDepositContract.sol";
 
-import "hardhat/console.sol";
 contract DepositSecurityModule {
     /**
      * Short ECDSA signature as defined in https://eips.ethereum.org/EIPS/eip-2098.
