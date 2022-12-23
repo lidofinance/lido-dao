@@ -810,16 +810,17 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
      * @dev Value 1 in CONTRACT_VERSION_POSITION is skipped due to change in numbering
      * For more details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md
      */
-    function finalizeUpgrade_v2(address _steth) external {
+    function finalizeUpgrade_v2(address _steth, bytes32 _type) external {
         require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "WRONG_BASE_VERSION");
 
-        _initialize_v2(_steth);
+        _initialize_v2(_steth, _type);
     }
 
-    function _initialize_v2(address _steth) internal {
+    function _initialize_v2(address _steth, bytes32 _type) internal {
         require(_steth != address(0), "STETH_ADDRESS_ZERO");
 
         STETH_POSITION.setStorageAddress(_steth);
+        TYPE_POSITION.setStorageBytes32(_type);
 
         uint256 totalOperators = getNodeOperatorsCount();
         uint256 totalKeys;

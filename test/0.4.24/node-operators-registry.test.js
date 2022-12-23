@@ -18,6 +18,9 @@ const ADDRESS_4 = '0x0000000000000000000000000000000000000004'
 
 const UNLIMITED = 1000000000
 
+//bytes32 0x63757261746564
+const CURATED_TYPE = web3.utils.fromAscii('curated')
+
 const pad = (hex, bytesLength) => {
   const absentZeroes = bytesLength * 2 + 2 - hex.length
   if (absentZeroes > 0) hex = '0x' + '0'.repeat(absentZeroes) + hex.substr(2)
@@ -57,6 +60,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     const proxyAddress = await newApp(dao, 'node-operators-registry', appBase.address, appManager)
     app = await NodeOperatorsRegistry.at(proxyAddress)
 
+    pool = await PoolMock.new(app.address)
+
     // Set up the app's permissions.
     await acl.createPermission(voting, app.address, await app.MANAGE_SIGNING_KEYS(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.ADD_NODE_OPERATOR_ROLE(), appManager, { from: appManager })
@@ -65,22 +70,21 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await acl.createPermission(voting, app.address, await app.SET_NODE_OPERATOR_ADDRESS_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_NODE_OPERATOR_LIMIT_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.REPORT_STOPPED_VALIDATORS_ROLE(), appManager, { from: appManager })
-
-    pool = await PoolMock.new(app.address)
+    
+    await acl.createPermission(pool.address, app.address, await app.ASSIGN_NEXT_KEYS_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(pool.address, app.address, await app.TRIM_UNUSED_KEYS_ROLE(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
-    await app.initialize(pool.address)
+    await app.initialize()
   })
 
   it('setType works', async () => {
-    const type = web3.utils.fromAscii('curated')
+    assert.equal(await app.getType(), 0, "invalid init type")
 
-    await assertRevert(app.setType(type, { from: user1 }), 'APP_AUTH_FAILED')
-    await assertRevert(app.setType(type, { from: nobody }), 'APP_AUTH_FAILED')
+    await app.finalizeUpgrade_v2(pool.address, CURATED_TYPE)
 
-    await app.setType(type, { from: voting })
-
-    assert(web3.utils.hexToString(await app.getType()) === 'curated', 'invalid_type')
+    assert.equal(await app.getType(), 0x6375726174656400000000000000000000000000000000000000000000000000, "invalid bytes32 type")
+    assert.equal(web3.utils.hexToString(await app.getType()), "curated", "invalid type")
   })
 
   it('addNodeOperator works', async () => {
@@ -860,7 +864,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await app.setOperatorStoppedKeys(2, 10)
       await app.setOperatorTotalKeys(2, 10)
 
-      await app.finalizeUpgrade_v2(steth.address)
+      await app.finalizeUpgrade_v2(steth.address, CURATED_TYPE)
 
       assertBn(await app.getTotalKeys(), 25)
       assertBn(await app.getTotalUsedKeys(), 10)
@@ -869,7 +873,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
   })
   context('distribute rewards', () => {
     it('must distribute rewards to operators', async () => {
-      await app.finalizeUpgrade_v2(steth.address)
+      await app.finalizeUpgrade_v2(steth.address, CURATED_TYPE)
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, ETH(10))
 
