@@ -105,8 +105,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     ///      index 0 means a value is not in the set.
     mapping(uint24 => uint256) private _stakingModuleIndicesOneBased;
 
-    constructor(address _depositContract) BeaconChainDepositor(_depositContract) {
-    }
+    constructor(address _depositContract) BeaconChainDepositor(_depositContract) {}
 
     function initialize(address _admin, bytes32 _withdrawalCredentials) external {
         if (_admin == address(0)) revert ErrorZeroAddress("_admin");
@@ -172,7 +171,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         if (_treasuryFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_treasuryFee");
         if (_moduleFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_moduleFee");
 
-        uint256 stakingModuleIndex = _stakingModuleIndicesOneBased[_stakingModuleId];
+        uint256 stakingModuleIndex = _getStakingModuleIndexById(_stakingModuleId);
 
         _stakingModules[stakingModuleIndex].targetShare = _targetShare;
         _stakingModules[stakingModuleIndex].treasuryFee = _treasuryFee;
@@ -297,15 +296,15 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         if (totalActiveKeys == 0) revert ErrorNoKeys();
 
         StakingModule memory stakingModule;
-        uint16 moduleFee;
+        uint256 moduleKeysShare;
         for (uint256 i = 0; i < _modulesCount; ++i) {
             stakingModule = _getStakingModuleByIndex(i);
-            moduleFee = ((moduleActiveKeys[i] * TOTAL_BASIS_POINTS) / totalActiveKeys);
+            moduleKeysShare = ((moduleActiveKeys[i] * TOTAL_BASIS_POINTS) / totalActiveKeys);
 
             recipients[i] = address(stakingModule.stakingModuleAddress);
-            moduleFees[i] = ((moduleFee * stakingModule.moduleFee) / TOTAL_BASIS_POINTS);
+            moduleFees[i] = uint16((moduleKeysShare * stakingModule.moduleFee) / TOTAL_BASIS_POINTS);
 
-            totalFee += (moduleFee * stakingModule.treasuryFee) / TOTAL_BASIS_POINTS + moduleFees[i];
+            totalFee += uint16((moduleKeysShare * stakingModule.treasuryFee) / TOTAL_BASIS_POINTS) + moduleFees[i];
         }
 
         return (recipients, moduleFees, totalFee);
@@ -318,9 +317,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     {
         uint256 stakingModulesCount = getStakingModulesCount();
         DepositsAllocatorStrategyMinActiveKeysFirst.AllocationCandidate[] memory candidates =
-        new DepositsAllocatorStrategyMinActiveKeysFirst.AllocationCandidate[](
-                stakingModulesCount
-            );
+            new DepositsAllocatorStrategyMinActiveKeysFirst.AllocationCandidate[](stakingModulesCount);
 
         for (uint256 i = 0; i < candidates.length; ++i) {
             StakingModuleCache memory stakingModuleCache = _loadStakingModuleCache(_getStakingModuleIdByIndex(i));
@@ -372,7 +369,9 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         if (maxSigningKeysCount == 0) revert ErrorZeroMaxSigningKeysCount();
 
         StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
-        (uint256 keysCount, bytes memory publicKeysBatch, bytes memory signaturesBatch) =
+        bytes memory publicKeysBatch;
+        bytes memory signaturesBatch;
+        (keysCount, publicKeysBatch, signaturesBatch) =
             IStakingModule(stakingModule.stakingModuleAddress).prepNextSigningKeys(maxSigningKeysCount, _depositCalldata);
 
         if (keysCount == 0) revert ErrorNoKeys();

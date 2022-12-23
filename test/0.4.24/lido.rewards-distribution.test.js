@@ -10,20 +10,21 @@ const OracleMock = artifacts.require('OracleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
 const StakingRouter = artifacts.require('StakingRouter.sol')
 const ModuleSolo = artifacts.require('ModuleSolo.sol')
+const IStakingModule = artifacts.require('contracts/0.8.9/interfaces/IStakingModule.sol:IStakingModule')
 
 const TOTAL_BASIS_POINTS = 10000
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 
 const cfgCurated = {
-  moduleFee: 250,
-  treasuryFee: 350,
+  moduleFee: 500,
+  treasuryFee: 500,
   targetShare: 10000
 }
 
 const cfgCommunity = {
-  moduleFee: 250,
+  moduleFee: 750,
   treasuryFee: 250,
-  targetShare: 10000
+  targetShare: 5000
 }
 
 contract('Lido', ([appManager, voting, user2, depositor]) => {
@@ -127,7 +128,7 @@ contract('Lido', ([appManager, voting, user2, depositor]) => {
       from: voting
     })
     await soloModule.setTotalKeys(100, { from: appManager })
-    await soloModule.setTotalUsedKeys(50, { from: appManager })
+    await soloModule.setTotalUsedKeys(10, { from: appManager })
     await soloModule.setTotalStoppedKeys(0, { from: appManager })
   })
 
@@ -139,26 +140,39 @@ contract('Lido', ([appManager, voting, user2, depositor]) => {
 
     await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(32) })
 
-    const treasuryBalanceBefore = await app.balanceOf(treasuryAddr)
+    const treasuryBalanceBefore = fixRound(await app.balanceOf(treasuryAddr))
     await oracle.reportBeacon(100, 0, depositAmount, { from: appManager })
 
-    const treasuryBalanceAfter = await app.balanceOf(treasuryAddr)
-    // omit .sub(bn(1)) as no rounding loss
+    const treasuryBalanceAfter = fixRound(await app.balanceOf(treasuryAddr))
     assertBn(treasuryBalanceBefore.add(bn(treasuryRewards)), treasuryBalanceAfter)
   })
 
   it('Rewards distribution fills modules', async () => {
     const depositAmount = ETH(1)
-    const { moduleFees } = await stakingRouter.getStakingRewardsDistribution()
-    const moduleRewards = (depositAmount * moduleFees[0]) / TOTAL_BASIS_POINTS
+    const { recipients, moduleFees } = await stakingRouter.getStakingRewardsDistribution()
 
     await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(32) })
 
-    const moduleBalanceBefore = await app.balanceOf(soloModule.address)
+    const moduleBalanceBefore = []
+    for (let i = 0; i < recipients.length; i++) {
+      moduleBalanceBefore.push(fixRound(await app.balanceOf(recipients[i])))
+    }
 
     await oracle.reportBeacon(100, 0, depositAmount, { from: appManager })
 
-    const moduleBalanceAfter = await app.balanceOf(soloModule.address)
-    assertBn(moduleBalanceBefore.add(bn(moduleRewards).sub(bn(1))), moduleBalanceAfter)
+    for (let i = 0; i < recipients.length; i++) {
+      const moduleBalanceAfter = fixRound(await app.balanceOf(recipients[i]))
+      const moduleRewards = (depositAmount * moduleFees[i]) / TOTAL_BASIS_POINTS
+      assertBn(moduleBalanceBefore[i].add(bn(moduleRewards)), moduleBalanceAfter)
+    }
   })
 })
+
+function fixRound(n) {
+  const _fix = bn(3) // +/- 3wei
+  const _base = bn(10)
+  return n.add(_fix).div(_base).mul(_base)
+  // const _n = n.add(_fix).div(_base).mul(_base)
+  // console.log({ orig: n.toString(), fixed: _n.toString() })
+  // return _n
+}
