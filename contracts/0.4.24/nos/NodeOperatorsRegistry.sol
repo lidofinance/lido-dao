@@ -89,36 +89,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
 
     SigningKeysStats internal signingKeysStats;
 
-    function _setSigningKeysStats(
-        uint256 _totalSigningKeys,
-        uint256 _usedSigningKeys,
-        uint256 _stoppedSigningKeys
-    ) internal {
-        require(_totalSigningKeys <= 2**64 - 1, "TOTAL_SIGNING_KEYS_OVERFLOW");
-        require(_usedSigningKeys <= 2**64 - 1, "USED_SIGNING_KEYS_OVERFLOW");
-        require(_stoppedSigningKeys <= 2**64 - 1, "STOPPED_SIGNING_KEYS_OVERFLOW");
-        signingKeysStats = SigningKeysStats(
-            uint64(_totalSigningKeys),
-            uint64(_usedSigningKeys),
-            uint64(_stoppedSigningKeys)
-        );
-    }
-
-    function _setTotalSigningKeys(uint64 _totalSigningKeys) internal {
-        require(_totalSigningKeys <= 2**64 - 1, "TOTAL_SIGNING_KEYS_OVERFLOW");
-        signingKeysStats.totalSigningKeys = _totalSigningKeys;
-    }
-
-    function _setUsedSigningKeys(uint64 _usedSigningKeys) internal {
-        require(_usedSigningKeys <= 2**64 - 1, "USED_SIGNING_KEYS_OVERFLOW");
-        signingKeysStats.usedSigningKeys = _usedSigningKeys;
-    }
-
-    function _setStoppedSigningKeys(uint64 _stoppedSigningKeys) internal {
-        require(_stoppedSigningKeys <= 2**64 - 1, "STOPPED_SIGNING_KEYS_OVERFLOW");
-        signingKeysStats.stoppedSigningKeys = _stoppedSigningKeys;
-    }
-
     // @dev Total number of operators
     bytes32 internal constant TOTAL_OPERATORS_COUNT_POSITION =
         keccak256("lido.NodeOperatorsRegistry.totalOperatorsCount");
@@ -815,6 +785,26 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         emit KeysOpIndexSet(keysOpIndex + 1);
     }
 
+    function _setSigningKeysStats(
+        uint64 _totalSigningKeys,
+        uint64 _usedSigningKeys,
+        uint64 _stoppedSigningKeys
+    ) internal {
+        signingKeysStats = SigningKeysStats(_totalSigningKeys, _usedSigningKeys, _stoppedSigningKeys);
+    }
+
+    function _setTotalSigningKeys(uint64 _totalSigningKeys) internal {
+        signingKeysStats.totalSigningKeys = _totalSigningKeys;
+    }
+
+    function _setUsedSigningKeys(uint64 _usedSigningKeys) internal {
+        signingKeysStats.usedSigningKeys = _usedSigningKeys;
+    }
+
+    function _setStoppedSigningKeys(uint64 _stoppedSigningKeys) internal {
+        signingKeysStats.stoppedSigningKeys = _stoppedSigningKeys;
+    }
+
     /**
      * @notice Return the initialized version of this contract starting from 0
      */
@@ -852,7 +842,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
             totalStoppedKeys += operator.stoppedValidators;
         }
 
-        _setSigningKeysStats(totalKeys, totalUsedKeys, totalStoppedKeys);
+        assert(totalKeys <= 2**64 - 1);
+        assert(totalUsedKeys <= 2**64 - 1);
+        assert(totalStoppedKeys <= 2**64 - 1);
+
+        _setSigningKeysStats(uint64(totalKeys), uint64(totalUsedKeys), uint64(totalStoppedKeys));
 
         assert(signingKeysStats.totalSigningKeys == totalKeys);
         assert(signingKeysStats.usedSigningKeys == totalUsedKeys);
