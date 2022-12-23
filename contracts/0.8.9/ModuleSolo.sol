@@ -30,16 +30,17 @@ contract ModuleSolo is IStakingModule {
         lido = _lido;
     }
 
-    function getTotalKeys() external view returns (uint256) {
-        return totalKeys;
+    function getActiveKeysCount() public view returns (uint256) {
+        return totalUsedKeys - totalStoppedKeys;
     }
 
-    function getTotalUsedKeys() external view returns (uint256) {
-        return totalUsedKeys;
+    function getAvailableKeysCount() public view returns (uint256) {
+        return totalKeys - totalUsedKeys;
     }
 
-    function getTotalStoppedKeys() external view returns (uint256) {
-        return totalStoppedKeys;
+    function getKeysUsageData() external view returns (uint256 activeKeysCount, uint256 availableKeysCount) {
+        activeKeysCount = getActiveKeysCount();
+        availableKeysCount = getAvailableKeysCount();
     }
 
     function getSigningKeysStats()
@@ -129,11 +130,7 @@ contract ModuleSolo is IStakingModule {
         )
     {
         pubkeys = BytesLib.slice(depositCalldata, 0, maxDepositsCount * PUBKEY_LENGTH);
-        signatures = BytesLib.slice(
-            depositCalldata,
-            maxDepositsCount * PUBKEY_LENGTH,
-            maxDepositsCount * SIGNATURE_LENGTH
-        );
+        signatures = BytesLib.slice(depositCalldata, maxDepositsCount * PUBKEY_LENGTH, maxDepositsCount * SIGNATURE_LENGTH);
 
         return (maxDepositsCount, pubkeys, signatures);
     }

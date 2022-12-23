@@ -120,9 +120,9 @@ contract('Lido', ([appManager, voting, user2, depositor]) => {
     await stakingRouter.addModule('Curated', curatedModule.address, cfgCurated.targetShare, cfgCurated.treasuryFee, cfgCurated.moduleFee, {
       from: voting
     })
-    await curatedModule.setTotalKeys(100, { from: appManager })
-    await curatedModule.setTotalUsedKeys(50, { from: appManager })
-    await curatedModule.setTotalStoppedKeys(0, { from: appManager })
+
+    await curatedModule.setAvailableKeysCount(50, { from: appManager })
+    await curatedModule.setActiveKeysCount(50, { from: appManager })
 
     await stakingRouter.addModule('Solo', soloModule.address, cfgCommunity.targetShare, cfgCommunity.treasuryFee, cfgCommunity.moduleFee, {
       from: voting
