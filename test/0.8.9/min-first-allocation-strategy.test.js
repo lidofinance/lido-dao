@@ -62,8 +62,8 @@ contract('MinFirstAllocationStrategy', (accounts) => {
       describe(`allocations.length == ${allocationsLength} samples count: ${samplesCount}`, async () => {
         const title = [
           `allocation: [${allocationRange[0]}..${allocationRange[1]}]`,
-          `capacity: [${capacityRange[1]}..${capacityRange[0]}]`,
-          `maxAllocationSize: [${maxAllocationSizeRange[1]}..${maxAllocationSizeRange[0]}]`
+          `capacity: [${capacityRange[0]}..${capacityRange[1]}]`,
+          `maxAllocationSize: [${maxAllocationSizeRange[0]}..${maxAllocationSizeRange[1]}]`
         ].join(' | ')
         it(title, async () => {
           for (let i = 0; i < samplesCount; ++i) {
@@ -173,8 +173,8 @@ contract('MinFirstAllocationStrategy', (accounts) => {
       describe(`allocations.length == ${allocationsLength} samples count: ${samplesCount}`, async () => {
         const title = [
           `allocation: [${allocationRange[0]}..${allocationRange[1]}]`,
-          `capacity: [${capacityRange[1]}..${capacityRange[0]}]`,
-          `maxAllocationSize: [${maxAllocationSizeRange[1]}..${maxAllocationSizeRange[0]}]`
+          `capacity: [${capacityRange[0]}..${capacityRange[1]}]`,
+          `maxAllocationSize: [${maxAllocationSizeRange[0]}..${maxAllocationSizeRange[1]}]`
         ].join(' ')
         it(title, async () => {
           for (let i = 0; i < samplesCount; ++i) {
