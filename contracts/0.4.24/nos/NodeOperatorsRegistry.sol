@@ -166,7 +166,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
             ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(activeOperatorsCount.add(1));
         } else {
             ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(activeOperatorsCount.sub(1));
-            _trimUnusedKeys();
+            uint256 trimmedKeys = _trimUnusedNodeOperatorKeys(_id);
+            _setTotalSigningKeys(signingKeysStats.totalSigningKeys.sub(uint64(trimmedKeys)));
         }
         operators[_id].active = _active;
 
@@ -231,7 +232,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
      * @dev Function is used by the StakingRouter where WC changed
      */
     function trimUnusedKeys() external auth(TRIM_UNUSED_KEYS_ROLE) {
-        _trimUnusedKeys();
+        uint256 trimmedKeys = 0;
+        uint256 length = getNodeOperatorsCount();
+        for (uint256 operatorId = 0; operatorId < length; ++operatorId) {
+            trimmedKeys += _trimUnusedNodeOperatorKeys(operatorId);
+        }
+        _setTotalSigningKeys(signingKeysStats.totalSigningKeys.sub(uint64(trimmedKeys)));
     }
 
     /**
@@ -744,20 +750,16 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         signingKeysStats.stoppedSigningKeys = _stoppedSigningKeys;
     }
 
-    function _trimUnusedKeys() internal {
-        uint256 length = getNodeOperatorsCount();
-        uint256 trimmedKeys = 0;
-        for (uint256 operatorId = 0; operatorId < length; ++operatorId) {
-            uint64 totalSigningKeys = operators[operatorId].totalSigningKeys;
-            uint64 usedSigningKeys = operators[operatorId].usedSigningKeys;
-            if (totalSigningKeys != usedSigningKeys) {
-                // write only if update is needed
-                operators[operatorId].totalSigningKeys = usedSigningKeys; // discard unused keys
-                trimmedKeys += totalSigningKeys - usedSigningKeys;
-                emit NodeOperatorTotalKeysTrimmed(operatorId, totalSigningKeys - usedSigningKeys);
-            }
+    function _trimUnusedNodeOperatorKeys(uint256 _nodeOperatorId) internal returns (uint256 trimmedKeys) {
+        uint64 totalSigningKeys = operators[_nodeOperatorId].totalSigningKeys;
+        uint64 usedSigningKeys = operators[_nodeOperatorId].usedSigningKeys;
+
+        // write only if update is needed
+        if (totalSigningKeys != usedSigningKeys) {
+            trimmedKeys = totalSigningKeys - usedSigningKeys;
+            operators[_nodeOperatorId].totalSigningKeys = usedSigningKeys; // discard unused keys
+            emit NodeOperatorTotalKeysTrimmed(_nodeOperatorId, trimmedKeys);
         }
-        _setTotalSigningKeys(signingKeysStats.totalSigningKeys.sub(uint64(trimmedKeys)));
     }
 
     /**
