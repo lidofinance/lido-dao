@@ -253,24 +253,6 @@ interface ILido {
     event Unbuffered(uint256 amount);
 
     // Withdrawal functions
-    function requestWithdrawal(uint256 _amountOfStETH) external returns (uint256 requestId);
-
-    function claimWithdrawal(uint256 _requestId, uint256 _priceIndexHint) external;
-
-    function withdrawalRequestStatus(uint256 _requestId)
-        external
-        view
-        returns (
-            address recipient,
-            uint256 requestBlockNumber,
-            uint256 etherToWithdraw,
-            bool isFinalized,
-            bool isClaimed
-        );
-
-    event WithdrawalRequested(address indexed recipient, uint256 ethAmount, uint256 sharesAmount, uint256 requestId);
-
-    event WithdrawalClaimed(uint256 indexed requestId, address indexed receiver, address initiator);
 
     event WithdrawalRestaked(uint256 amount);
 

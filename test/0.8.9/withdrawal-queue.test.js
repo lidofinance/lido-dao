@@ -5,16 +5,27 @@ const { assert } = require('chai')
 
 const WithdrawalQueue = artifacts.require('WithdrawalQueue.sol')
 const Owner = artifacts.require('Owner.sol')
+const StETHMock = artifacts.require('StETHMockForWithdrawalQueue.sol')
+const WstETH = artifacts.require('WstETH.sol')
+const OssifiableProxy = artifacts.require('OssifiableProxy.sol')
 
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 
-contract('WithdrawalQueue', ([recipient, stranger]) => {
-  let withdrawal, owner
+contract.only('WithdrawalQueue', ([recipient, stranger, daoAgent]) => {
+  let withdrawal, withdrawalImpl, owner, steth, wsteth
 
   beforeEach('Deploy', async () => {
     owner = (await Owner.new({ value: ETH(300) })).address
     await ethers.provider.send('hardhat_impersonateAccount', [owner])
-    withdrawal = await WithdrawalQueue.new(owner)
+    steth = await StETHMock.new()
+    wsteth = await WstETH.new(steth.address)
+
+    withdrawalImpl = (await WithdrawalQueue.new(owner, steth.address, wsteth.address)).address
+    console.log({withdrawalImpl})
+    let withdrawalProxy = await OssifiableProxy.new(withdrawalImpl, daoAgent, '0x')
+    withdrawal = await WithdrawalQueue.at(withdrawalProxy.address)
+    await withdrawal.initialize(daoAgent)
+    await withdrawal.resumeRequestsPlacement({from: daoAgent})
   })
 
   context('Enqueue', async () => {
@@ -24,8 +35,9 @@ contract('WithdrawalQueue', ([recipient, stranger]) => {
       requestId = await withdrawal.queueLength()
     })
 
-    it('Owner can enqueue a request', async () => {
-      await withdrawal.enqueue(recipient, ETH(1), 1, { from: owner })
+    it.only('Owner can enqueue a request', async () => {
+      // await withdrawal.enqueue(recipient, ETH(1), 1, { from: owner })
+      await withdrawal.requestWithdrawal(ETH(1), recipient, { from: owner })
 
       assertBn(await withdrawal.queueLength(), +requestId + 1)
       assert(requestId >= (await withdrawal.finalizedRequestsCounter()))

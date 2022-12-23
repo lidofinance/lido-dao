@@ -27,7 +27,6 @@ interface IERC721 {
     function transferFrom(address _from, address _to, uint256 _tokenId) external payable;
 }
 
-
 /**
 * @title Liquid staking pool implementation
 *
@@ -471,57 +470,6 @@ contract Lido is ILido, StETH, AragonApp {
 
         _setBPValue(EL_REWARDS_WITHDRAWAL_LIMIT_POSITION, _limitPoints);
         emit ELRewardsWithdrawalLimitSet(_limitPoints);
-    }
-
-    /**
-    * @notice this method is responsible for locking StETH and placing user
-    * in the queue
-    * @param _amountOfStETH StETH to be locked. `msg.sender` should have the `_amountOfStETH` StETH balance upon this call
-    * @return ticketId id string that can be used by user to claim their ETH later
-    */
-    function requestWithdrawal(uint256 _amountOfStETH) external returns (uint256 requestId) {
-        address withdrawal = _getWithdrawalVaultAddress();
-        require(withdrawal != address(0), "ZERO_WITHDRAWAL_ADDRESS");
-
-        // lock StETH to withdrawal contract
-        _transfer(msg.sender, withdrawal, _amountOfStETH);
-
-        uint256 shares = getSharesByPooledEth(_amountOfStETH);
-        requestId = IWithdrawalQueue(withdrawal).enqueue(msg.sender, _amountOfStETH, shares);
-
-        emit WithdrawalRequested(msg.sender, _amountOfStETH, shares, requestId);
-    }
-
-    /**
-     * @notice Mark request claimed and transfer ETH to ticket owner address
-     * @param _requestId id of the request to claim
-     * @dev permissionless.
-     */
-    function claimWithdrawal(uint256 _requestId, uint256 _priceIndexHint) external {
-        address withdrawal = _getWithdrawalVaultAddress();
-        require(withdrawal != address(0), "ZERO_WITHDRAWAL_ADDRESS");
-
-        address recipient = IWithdrawalQueue(withdrawal).claim(_requestId, _priceIndexHint);
-
-        emit WithdrawalClaimed(_requestId, recipient, msg.sender);
-    }
-
-    function withdrawalRequestStatus(uint256 _requestId) external view returns (
-        address recipient,
-        uint256 requestBlockNumber,
-        uint256 etherToWithdraw,
-        bool isFinalized,
-        bool isClaimed
-    ) {
-        IWithdrawalQueue withdrawal = IWithdrawalQueue(_getWithdrawalVaultAddress());
-
-        (recipient, requestBlockNumber, etherToWithdraw,,isClaimed) = withdrawal.queue(_requestId);
-        if (_requestId > 0) {
-            // there is cumulative ether values in the queue so we need to subtract previous on
-            (,,uint256 previousCumulativeEther,,) = withdrawal.queue(_requestId.sub(1));
-            etherToWithdraw = etherToWithdraw.sub(previousCumulativeEther);
-        }
-        isFinalized = _requestId < withdrawal.finalizedRequestsCounter();
     }
 
     function getBufferWithdrawalsReserve() public returns (uint256) {

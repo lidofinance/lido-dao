@@ -5,7 +5,7 @@ const { getInstalledApp } = require('@aragon/contract-helpers-test/src/aragon-os
 const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const { ZERO_ADDRESS, bn, getEventAt } = require('@aragon/contract-helpers-test')
 const { formatEther } = require('ethers/lib/utils')
-const { getEthBalance, formatStEth: formamtStEth, formatBN, pad, hexConcat, ETH, tokens, div15 } = require('../helpers/utils')
+const { getEthBalance, formatStEth, formatBN, pad, hexConcat, ETH, tokens, div15 } = require('../helpers/utils')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 const LidoMock = artifacts.require('LidoMock.sol')
@@ -16,6 +16,7 @@ const ERC20Mock = artifacts.require('ERC20Mock.sol')
 const VaultMock = artifacts.require('AragonVaultMock.sol')
 const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
 const WithdrawalQueue = artifacts.require('WithdrawalQueue.sol')
+const WstETH = artifacts.require('WstETH.sol')
 
 const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
 const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
@@ -33,7 +34,7 @@ const assertNoEvent = (receipt, eventName, msg) => {
 const STETH = ETH
 
 contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) => {
-  let appBase, nodeOperatorsRegistryBase, app, oracle, depositContract, operators
+  let appBase, nodeOperatorsRegistryBase, app, oracle, depositContract, operators, wsteth
   let treasuryAddr, insuranceAddr
   let dao, acl
   let elRewardsVault, rewarder
@@ -54,6 +55,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
     let proxyAddress = await newApp(dao, 'lido', appBase.address, appManager)
     app = await LidoMock.at(proxyAddress)
+
+    // deploy WstETH contract
+    wsteth = await WstETH.new(app.address)
 
     // NodeOperatorsRegistry
     proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)
@@ -139,7 +143,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
   }
 
   async function getStEthBalance(address) {
-    return formamtStEth(await app.balanceOf(address))
+    return formatStEth(await app.balanceOf(address))
   }
 
   const logLidoState = async () => {
@@ -189,7 +193,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
-    const withdrawal = await WithdrawalQueue.new(app.address)
+    const withdrawal = await WithdrawalQueue.new(app.address, app.address, wsteth.address)
     await app.setWithdrawalCredentials(hexConcat('0x01', pad(withdrawal.address, 31)), { from: voting })
 
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
@@ -828,7 +832,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
-    const withdrawal = await WithdrawalQueue.new(app.address)
+    const withdrawal = await WithdrawalQueue.new(app.address, app.address, wsteth.address)
     await app.setWithdrawalCredentials(hexConcat('0x01', pad(withdrawal.address, 31)), { from: voting })
 
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
@@ -865,7 +869,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
-    const withdrawal = await WithdrawalQueue.new(app.address)
+    const withdrawal = await WithdrawalQueue.new(app.address, app.address, wsteth.address)
     await app.setWithdrawalCredentials(hexConcat('0x01', pad(withdrawal.address, 31)), { from: voting })
 
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
@@ -978,7 +982,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
-    const withdrawal = await WithdrawalQueue.new(app.address)
+    const withdrawal = await WithdrawalQueue.new(app.address, app.address, wsteth.address)
     await app.setWithdrawalCredentials(hexConcat('0x01', pad(withdrawal.address, 31)), { from: voting })
 
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
@@ -1009,7 +1013,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
-    const withdrawal = await WithdrawalQueue.new(app.address)
+    const withdrawal = await WithdrawalQueue.new(app.address, app.address, wsteth.address)
     await app.setWithdrawalCredentials(hexConcat('0x01', pad(withdrawal.address, 31)), { from: voting })
 
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
@@ -1054,7 +1058,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
-    const withdrawal = await WithdrawalQueue.new(app.address)
+    const withdrawal = await WithdrawalQueue.new(app.address, app.address, wsteth.address)
     await app.setWithdrawalCredentials(hexConcat('0x01', pad(withdrawal.address, 31)), { from: voting })
 
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
