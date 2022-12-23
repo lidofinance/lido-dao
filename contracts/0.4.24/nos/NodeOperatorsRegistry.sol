@@ -97,14 +97,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
     bytes32 internal constant ACTIVE_OPERATORS_COUNT_POSITION =
         keccak256("lido.NodeOperatorsRegistry.activeOperatorsCount");
 
-    /// @dev link to the Lido contract
-    bytes32 internal constant LIDO_POSITION = keccak256("lido.NodeOperatorsRegistry.lido");
-
     /// @dev link to the index of operations with keys
     bytes32 internal constant KEYS_OP_INDEX_POSITION = keccak256("lido.NodeOperatorsRegistry.keysOpIndex");
-
-    /// @dev link to the Staking Router contract
-    bytes32 internal constant STAKING_ROUTER_POSITION = keccak256("lido.NodeOperatorsRegistry.stakingRouter");
 
     /// @dev module type
     bytes32 internal constant TYPE_POSITION = keccak256("lido.NodeOperatorsRegistry.type");
@@ -119,11 +113,10 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         _;
     }
 
-    function initialize(address _lido) public onlyInit {
+    function initialize() public onlyInit {
         TOTAL_OPERATORS_COUNT_POSITION.setStorageUint256(0);
         ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(0);
         KEYS_OP_INDEX_POSITION.setStorageUint256(0);
-        LIDO_POSITION.setStorageAddress(_lido);
         initialized();
     }
 
@@ -252,7 +245,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
 
     /**
      * @notice Remove unused signing keys
-     * @dev Function is used by the Lido contract
+     * @dev Function is used by the StakingRouter where WC changed
      */
     function trimUnusedKeys() external auth(TRIM_UNUSED_KEYS_ROLE) {
         uint256 length = getNodeOperatorsCount();
@@ -371,7 +364,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
     /**
      * @notice Selects and returns at most `_numKeys` signing keys (as well as the corresponding
      *         signatures) from the set of active keys and marks the selected keys as used.
-     *         May only be called by the Lido contract.
+     *         May only be called by the StakingRouter contract.
      *
      * @param _numKeys The number of keys to select. The actual number of selected keys may be less
      *        due to the lack of active keys.

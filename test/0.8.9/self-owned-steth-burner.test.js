@@ -22,7 +22,7 @@ const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 const stETH = ETH
 const stETHShares = ETH
 
-contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anotherAccount, ...otherAccounts]) => {
+contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anotherAccount, treasury, ...otherAccounts]) => {
   let oracle, lido, burner
   let treasuryAddr
   let dao, acl, operators
@@ -46,13 +46,13 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
     // NodeOperatorsRegistry
     proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)
     operators = await NodeOperatorsRegistry.at(proxyAddress)
-    await operators.initialize(lido.address)
+    await operators.initialize()
 
     // Init the BURN_ROLE role and assign in to voting
     await acl.createPermission(voting, lido.address, await lido.BURN_ROLE(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
-    await lido.initialize(depositContract.address, oracle.address, operators.address)
+    await lido.initialize(oracle.address, treasury)
     treasuryAddr = await lido.getInsuranceFund()
 
     await oracle.setPool(lido.address)
