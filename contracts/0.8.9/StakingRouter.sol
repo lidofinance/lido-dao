@@ -437,9 +437,10 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         stakingModuleCache.targetShare = stakingModuleData.targetShare;
 
         IStakingModule stakingModule = IStakingModule(stakingModuleData.stakingModuleAddress);
-        stakingModuleCache.totalKeysCount = stakingModule.getTotalKeys();
-        stakingModuleCache.usedKeysCount = stakingModule.getTotalUsedKeys();
-        stakingModuleCache.stoppedKeysCount = stakingModule.getTotalStoppedKeys();
+        (uint256 totalKeysCount, uint256 usedKeysCount, uint256 stoppedKeysCount) = stakingModule.getSigningKeysStats();
+        stakingModuleCache.totalKeysCount = totalKeysCount;
+        stakingModuleCache.usedKeysCount = usedKeysCount;
+        stakingModuleCache.stoppedKeysCount = stoppedKeysCount;
         stakingModuleCache.activeKeysCount = stakingModuleCache.usedKeysCount - stakingModuleCache.stoppedKeysCount;
         stakingModuleCache.availableKeysCount = stakingModuleCache.totalKeysCount - stakingModuleCache.usedKeysCount;
     }
@@ -470,7 +471,8 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
 
     function _getActiveKeysCount(uint24 _stakingModuleId) internal view returns (uint256) {
         IStakingModule stakingModule = IStakingModule(_getStakingModuleAddressById(_stakingModuleId));
-        return stakingModule.getTotalUsedKeys() - stakingModule.getTotalStoppedKeys();
+        (, uint256 usedSigningKeys, uint256 stoppedSigningKeys) = stakingModule.getSigningKeysStats();
+        return usedSigningKeys - stoppedSigningKeys;
     }
 
     function _getStakingModuleAddressById(uint24 _stakingModuleId) private view returns (address) {
