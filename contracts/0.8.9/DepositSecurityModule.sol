@@ -9,6 +9,14 @@ import {ECDSA} from "./lib/ECDSA.sol";
 import {IStakingRouter} from "./interfaces/IStakingRouter.sol";
 import {IDepositContract} from "./interfaces/IDepositContract.sol";
 
+interface ILido {
+    function deposit(
+        uint256 _maxDepositsCount,
+        uint24 _stakingModuleId,
+        bytes calldata _depositCalldata
+    ) external;
+}
+
 contract DepositSecurityModule {
     /**
      * Short ECDSA signature as defined in https://eips.ethereum.org/EIPS/eip-2098.
@@ -31,6 +39,7 @@ contract DepositSecurityModule {
     bytes32 public immutable ATTEST_MESSAGE_PREFIX;
     bytes32 public immutable PAUSE_MESSAGE_PREFIX;
 
+    ILido public immutable LIDO;
     IStakingRouter public immutable STAKING_ROUTER;
     IDepositContract public immutable DEPOSIT_CONTRACT;
 
@@ -45,15 +54,18 @@ contract DepositSecurityModule {
     mapping(address => uint256) internal guardianIndicesOneBased; // 1-based
 
     constructor(
+        address _lido,
         address _depositContract,
         address _stakingRouter,
         uint256 _maxDepositsPerBlock,
         uint256 _minDepositBlockDistance,
         uint256 _pauseIntentValidityPeriodBlocks
     ) {
+        require(_lido != address(0), "LIDO_CONTRACT_ZERO_ADDRESS");
         require(_stakingRouter != address(0), "STAKING_ROUTER_ZERO_ADDRESS");
         require(_depositContract != address(0), "DEPOSIT_CONTRACT_ZERO_ADDRESS");
 
+        LIDO = ILido(_lido);
         STAKING_ROUTER = IStakingRouter(_stakingRouter);
         DEPOSIT_CONTRACT = IDepositContract(_depositContract);
 
@@ -376,7 +388,7 @@ contract DepositSecurityModule {
 
         _verifySignatures(depositRoot, blockNumber, blockHash, stakingModuleId, keysOpIndex, sortedGuardianSignatures);
 
-        STAKING_ROUTER.deposit(maxDepositsPerBlock, stakingModuleId, depositCalldata);
+        LIDO.deposit(maxDepositsPerBlock, stakingModuleId, depositCalldata);
     }
 
     function _verifySignatures(

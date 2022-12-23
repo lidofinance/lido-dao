@@ -10,6 +10,7 @@ const { artifacts, network } = require('hardhat')
 const DepositSecurityModule = artifacts.require('DepositSecurityModule.sol')
 const DepositContractMockForDepositSecurityModule = artifacts.require('DepositContractMockForDepositSecurityModule.sol')
 const StakingRouterMockForDepositSecurityModule = artifacts.require('StakingRouterMockForDepositSecurityModule')
+const LidoMockForDepositSecurityModule = artifacts.require('LidoMockForDepositSecurityModule.sol')
 
 const MAX_DEPOSITS_PER_BLOCK = 100
 const MIN_DEPOSIT_BLOCK_DISTANCE = 14
@@ -40,10 +41,12 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
   let block
 
   before('deploy mock contracts', async () => {
+    lidoMock = await LidoMockForDepositSecurityModule.new()
     stakingRouterMock = await StakingRouterMockForDepositSecurityModule.new()
     depositContractMock = await DepositContractMockForDepositSecurityModule.new()
 
     depositSecurityModule = await DepositSecurityModule.new(
+      lidoMock.address,
       depositContractMock.address,
       stakingRouterMock.address,
       MAX_DEPOSITS_PER_BLOCK,
