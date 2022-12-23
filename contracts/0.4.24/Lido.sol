@@ -62,9 +62,13 @@ contract Lido is ILido, StETH, AragonApp {
     bytes32 public constant SET_EL_REWARDS_VAULT_ROLE = keccak256("SET_EL_REWARDS_VAULT_ROLE");
     bytes32 public constant SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE = keccak256("SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE");
 
+    uint256 constant public PUBKEY_LENGTH = 48;
+    uint256 constant public WITHDRAWAL_CREDENTIALS_LENGTH = 32;
+    uint256 constant public SIGNATURE_LENGTH = 96;
+
     uint256 public constant DEPOSIT_SIZE = 32 ether;
 
-    uint256 internal constant TOTAL_BASIS_POINTS = 10000;
+    uint256 public constant TOTAL_BASIS_POINTS = 10000;
 
     /// @dev default value for maximum number of Ethereum 2.0 validators registered in a single depositBufferedEther call
     uint256 internal constant DEFAULT_MAX_DEPOSITS_PER_CALL = 150;
@@ -510,6 +514,15 @@ contract Lido is ILido, StETH, AragonApp {
             modulesFeeBasisPoints += moduleFees[i];
         }
         treasuryFeeBasisPoints = totalFee - modulesFeeBasisPoints;
+    }
+
+     /**
+    * @notice Returns current credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
+    */
+    function getWithdrawalCredentials() external view returns (bytes32) {
+        address stakingRouterAddress = getStakingRouter();
+        require(stakingRouterAddress != address(0), "STAKING_ROUTER_ADDRESS_ZERO");
+        return IStakingRouter(stakingRouterAddress).getWithdrawalCredentials();
     }
 
     /**
