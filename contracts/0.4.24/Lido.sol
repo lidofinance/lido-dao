@@ -277,11 +277,10 @@ contract Lido is ILido, StETH, AragonApp {
         emit ELRewardsReceived(msg.value);
     }
 
-    function burnShares(address _account, uint256 _sharesAmount)
-        external
-        authP(BURN_ROLE, arr(_account, _sharesAmount))
-        returns (uint256 newTotalShares)
-    {
+    function burnShares(
+        address _account,
+        uint256 _sharesAmount
+    ) external authP(BURN_ROLE, arr(_account, _sharesAmount)) returns (uint256 newTotalShares) {
         return _burnShares(_account, _sharesAmount);
     }
 
@@ -493,9 +492,25 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-     * @notice Returns staking rewards fee rate
+     * @notice Returns current staking rewards fee rate
      */
-    function getFee() public view returns (uint16 feeBasisPoints) {}
+    function getFee() public view returns (uint16 feeBasisPoints) {
+        address stakingRouterAddress = getStakingRouter();
+        (, , feeBasisPoints) = IStakingRouter(stakingRouterAddress).getStakingRewardsDistribution();
+        return feeBasisPoints;
+    }
+
+    /**
+     * @notice Returns current fee distribution proportion
+     */
+    function getFeeDistribution() public view returns (uint16 modulesFeeBasisPoints, uint16 treasuryFeeBasisPoints) {
+        address stakingRouterAddress = getStakingRouter();
+        (, uint16[] memory moduleFees, uint16 totalFee) = IStakingRouter(stakingRouterAddress).getStakingRewardsDistribution();
+        for (uint i; i < moduleFees.length; ++i) {
+            modulesFeeBasisPoints += moduleFees[i];
+        }
+        treasuryFeeBasisPoints = totalFee - modulesFeeBasisPoints;
+    }
 
     /**
      * @notice Returns address of the contract set as LidoExecutionLayerRewardsVault
@@ -614,8 +629,8 @@ contract Lido is ILido, StETH, AragonApp {
 
         address stakingRouterAddress = getStakingRouter();
 
-        (address[] memory recipients, uint16[] memory moduleFees, uint16 totalFee) =
-            IStakingRouter(stakingRouterAddress).getStakingRewardsDistribution();
+        (address[] memory recipients, uint16[] memory moduleFees, uint16 totalFee) = IStakingRouter(stakingRouterAddress)
+            .getStakingRewardsDistribution();
 
         require(totalFee <= getMaxFee(), "TOTAL_FEE_EXCEED_MAXIMUM_FEE");
 
@@ -705,13 +720,16 @@ contract Lido is ILido, StETH, AragonApp {
      * @return total balance in wei
      */
     function _getTotalPooledEther() internal view returns (uint256) {
-        return _getBufferedEther().add(BEACON_BALANCE_POSITION.getStorageUint256()).add(_getTransientBalance()).add(
-            _getStakingRouterBufferedEther()
-        );
+        return
+            _getBufferedEther().add(BEACON_BALANCE_POSITION.getStorageUint256()).add(_getTransientBalance()).add(
+                _getStakingRouterBufferedEther()
+            );
     }
 
     function _pauseStaking() internal {
-        STAKING_STATE_POSITION.setStorageStakeLimitStruct(STAKING_STATE_POSITION.getStorageStakeLimitStruct().setStakeLimitPauseState(true));
+        STAKING_STATE_POSITION.setStorageStakeLimitStruct(
+            STAKING_STATE_POSITION.getStorageStakeLimitStruct().setStakeLimitPauseState(true)
+        );
 
         emit StakingPaused();
     }
