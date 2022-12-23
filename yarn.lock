@@ -3716,7 +3716,7 @@ __metadata:
     node-gyp: ^8.4.1
     openzeppelin-solidity: 2.0.0
     patch-package: ^6.4.7
-    prettier: ^2.1.2
+    prettier: ^2.8.1
     prettier-plugin-solidity: ^1.1.0
     solhint: ^3.3.7
     solhint-plugin-lido: ^0.0.4
@@ -22225,6 +22225,15 @@ fsevents@^1.2.7:
   bin:
     prettier: bin-prettier.js
   checksum: bedc24c568efbcfe45f255558900777e2fabb36bf28ed4c22d2456eb22dfb012d12e566a46472ea5b857a4e9f263e888f7e316527d00bb58188f1820b0b0031a
+  languageName: node
+  linkType: hard
+
+"prettier@npm:^2.8.1":
+  version: 2.8.1
+  resolution: "prettier@npm:2.8.1"
+  bin:
+    prettier: bin-prettier.js
+  checksum: 9d95411c5fa78e5b2143e0fd6ce6fd1a52aa795656ba8bf00c70de34a76e4a64b00ce978f55c3566bf6d7c40c4bb0792db41db2cccced874f19656dae0f8ab83
   languageName: node
   linkType: hard
 
