@@ -55,7 +55,7 @@ class DSMAttestMessage extends DSMMessage {
           encodeBN(this.blockNumber) +
           strip0x(this.blockHash) +
           strip0x(this.depositRoot) +
-          strip0x(this.stakingModule) +
+          encodeBNuint24(this.stakingModule) +
           encodeBN(this.keysOpIndex)
       )
     )
@@ -70,7 +70,7 @@ class DSMPauseMessage extends DSMMessage {
   }
 
   get hash() {
-    return keccak256(hexToBytes(strip0x(this.messagePrefix) + encodeBN(this.blockNumber) + strip0x(this.stakingModule)))
+    return keccak256(hexToBytes(strip0x(this.messagePrefix) + encodeBN(this.blockNumber) + encodeBNuint24(this.stakingModule)))
   }
 }
 
@@ -81,11 +81,14 @@ function signPauseData(pauseMessagePrefix, pauseMessage, guardianPrivateKey) {
 
 function encodePauseData(pauseMessagePrefix, pauseMessage) {
   const uint256Size = 64
-  return hexToBytes(strip0x(pauseMessagePrefix) + encodeBN(pauseMessage.blockNumber) + stripOx(pauseMessage.stakingModule))
+  return hexToBytes(strip0x(pauseMessagePrefix) + encodeBN(pauseMessage.blockNumber) + encodeBNuint24(pauseMessage.stakingModule))
 }
 
 function encodeBN(value) {
-  return new BN(value).toString('hex', UINT256_SIZE)
+  return new BN(value).toString('hex', UINT256_SIZE) // 32bytes
+}
+function encodeBNuint24(value) {
+  return new BN(value).toString('hex', 6) // 3bytes
 }
 
 function signDepositData(attestMessagePrefix, depositRoot, keysOpIndex, blockNumber, blockHash, guardianPrivateKey) {

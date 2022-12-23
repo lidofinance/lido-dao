@@ -15,7 +15,7 @@ const MAX_DEPOSITS_PER_BLOCK = 100
 const MIN_DEPOSIT_BLOCK_DISTANCE = 14
 const PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS = 10
 
-const STAKING_MODULE = '0xe4598147d1117A0F30a43f1e09654894971D4225'
+const STAKING_MODULE = 123
 const DEPOSIT_CALLDATA = '0x000000000000000000000000000000000000000000000000000000000000002a'
 
 const GUARDIAN1 = '0x5Fc0E75BF6502009943590492B02A1d08EAc9C43'
@@ -136,7 +136,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
           { from: stranger }
         )
         assertEvent(tx.receipt, 'StakingModuleDeposited', {
-          expectedArgs: { maxDepositsCount: MAX_DEPOSITS_PER_BLOCK, stakingModule: STAKING_MODULE, depositCalldata: DEPOSIT_CALLDATA },
+          expectedArgs: { maxDepositsCount: MAX_DEPOSITS_PER_BLOCK, stakingModuleId: STAKING_MODULE, depositCalldata: DEPOSIT_CALLDATA },
           decodeForAbi: StakingRouterMockForDepositSecurityModule._json.abi
         })
       })
@@ -290,7 +290,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
         )
 
         assertEvent(tx.receipt, 'StakingModuleDeposited', {
-          expectedArgs: { maxDepositsCount: MAX_DEPOSITS_PER_BLOCK, stakingModule: STAKING_MODULE, depositCalldata: DEPOSIT_CALLDATA },
+          expectedArgs: { maxDepositsCount: MAX_DEPOSITS_PER_BLOCK, stakingModuleId: STAKING_MODULE, depositCalldata: DEPOSIT_CALLDATA },
           decodeForAbi: StakingRouterMockForDepositSecurityModule._json.abi
         })
       })
@@ -313,7 +313,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
         )
 
         assertEvent(tx.receipt, 'StakingModuleDeposited', {
-          expectedArgs: { maxDepositsCount: MAX_DEPOSITS_PER_BLOCK, stakingModule: STAKING_MODULE, depositCalldata: DEPOSIT_CALLDATA },
+          expectedArgs: { maxDepositsCount: MAX_DEPOSITS_PER_BLOCK, stakingModuleId: STAKING_MODULE, depositCalldata: DEPOSIT_CALLDATA },
           decodeForAbi: StakingRouterMockForDepositSecurityModule._json.abi
         })
       })
@@ -336,7 +336,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
         )
 
         assertEvent(tx.receipt, 'StakingModuleDeposited', {
-          expectedArgs: { maxDepositsCount: MAX_DEPOSITS_PER_BLOCK, stakingModule: STAKING_MODULE, depositCalldata: DEPOSIT_CALLDATA },
+          expectedArgs: { maxDepositsCount: MAX_DEPOSITS_PER_BLOCK, stakingModuleId: STAKING_MODULE, depositCalldata: DEPOSIT_CALLDATA },
           decodeForAbi: StakingRouterMockForDepositSecurityModule._json.abi
         })
       })
@@ -359,7 +359,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
         )
 
         assertEvent(tx.receipt, 'StakingModuleDeposited', {
-          expectedArgs: { maxDepositsCount: MAX_DEPOSITS_PER_BLOCK, stakingModule: STAKING_MODULE, depositCalldata: DEPOSIT_CALLDATA },
+          expectedArgs: { maxDepositsCount: MAX_DEPOSITS_PER_BLOCK, stakingModuleId: STAKING_MODULE, depositCalldata: DEPOSIT_CALLDATA },
           decodeForAbi: StakingRouterMockForDepositSecurityModule._json.abi
         })
       })
@@ -458,7 +458,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
     it('if called by a guardian 1 or 2', async () => {
       const tx = await depositSecurityModule.pauseDeposits(block.number, STAKING_MODULE, ['0x', '0x'], { from: guardian })
       assertEvent(tx.receipt, 'StakingModulePaused', {
-        expectedArgs: { stakingModule: STAKING_MODULE },
+        expectedArgs: { stakingModuleId: STAKING_MODULE },
         decodeForAbi: StakingRouterMockForDepositSecurityModule._json.abi
       })
     })
@@ -466,7 +466,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
     it('pauses if called by an anon submitting sig of guardian 1 or 2', async () => {
       const tx = await depositSecurityModule.pauseDeposits(block.number, STAKING_MODULE, ['0x', '0x'], { from: guardian })
       assertEvent(tx.receipt, 'StakingModulePaused', {
-        expectedArgs: { stakingModule: STAKING_MODULE },
+        expectedArgs: { stakingModuleId: STAKING_MODULE },
         decodeForAbi: StakingRouterMockForDepositSecurityModule._json.abi
       })
     })
@@ -479,7 +479,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
         { from: guardian }
       )
       assertEvent(tx.receipt, 'StakingModulePaused', {
-        expectedArgs: { stakingModule: STAKING_MODULE },
+        expectedArgs: { stakingModuleId: STAKING_MODULE },
         decodeForAbi: StakingRouterMockForDepositSecurityModule._json.abi
       })
     })
@@ -522,9 +522,9 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
 
     it("pauseDeposits emits DepositsPaused(guardianAddr) event if wasn't paused before", async () => {
       const tx = await depositSecurityModule.pauseDeposits(block.number, STAKING_MODULE, ['0x', '0x'], { from: guardian })
-      assertEvent(tx, 'DepositsPaused', { expectedArgs: { guardian, stakingModule: STAKING_MODULE } })
+      assertEvent(tx, 'DepositsPaused', { expectedArgs: { guardian, stakingModuleId: STAKING_MODULE } })
       assertEvent(tx, 'StakingModulePaused', {
-        expectedArgs: { stakingModule: STAKING_MODULE },
+        expectedArgs: { stakingModuleId: STAKING_MODULE },
         decodeForAbi: StakingRouterMockForDepositSecurityModule._json.abi
       })
     })
@@ -546,9 +546,9 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
     })
     it('unpauses paused deposits', async () => {
       const tx = await depositSecurityModule.unpauseDeposits(STAKING_MODULE, { from: owner })
-      assertEvent(tx, 'DepositsUnpaused', { stakingModule: STAKING_MODULE })
+      assertEvent(tx, 'DepositsUnpaused', { stakingModuleId: STAKING_MODULE })
       assertEvent(tx, 'StakingModuleUnpaused', {
-        expectedArgs: { stakingModule: STAKING_MODULE },
+        expectedArgs: { stakingModuleId: STAKING_MODULE },
         decodeForAbi: StakingRouterMockForDepositSecurityModule._json.abi
       })
     })

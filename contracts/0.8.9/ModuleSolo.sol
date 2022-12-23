@@ -42,6 +42,20 @@ contract ModuleSolo is IStakingModule {
         return totalStoppedKeys;
     }
 
+    function getSigningKeysStats()
+        external
+        view
+        returns (
+            uint256 totalSigningKeys,
+            uint256 usedSigningKeys,
+            uint256 stoppedSigningKeys
+        )
+    {
+        totalSigningKeys = totalKeys;
+        usedSigningKeys = totalUsedKeys;
+        stoppedSigningKeys = totalStoppedKeys;
+    }
+
     function getRewardsDistribution(uint256 _totalRewardShares)
         external
         view
@@ -52,9 +66,19 @@ contract ModuleSolo is IStakingModule {
 
     function setNodeOperatorStakingLimit(uint256 _id, uint64 _stakingLimit) external {}
 
-    function addSigningKeys(uint256 _operator_id, uint256 _quantity, bytes memory _pubkeys, bytes memory _signatures) external {}
+    function addSigningKeys(
+        uint256 _operator_id,
+        uint256 _quantity,
+        bytes memory _pubkeys,
+        bytes memory _signatures
+    ) external {}
 
-    function addSigningKeysOperatorBH(uint256 _operator_id, uint256 _quantity, bytes memory _pubkeys, bytes memory _signatures) external {}
+    function addSigningKeysOperatorBH(
+        uint256 _operator_id,
+        uint256 _quantity,
+        bytes memory _pubkeys,
+        bytes memory _signatures
+    ) external {}
 
     //only for testing purposal
     function setTotalKeys(uint256 _keys) external {
@@ -105,7 +129,11 @@ contract ModuleSolo is IStakingModule {
         )
     {
         pubkeys = BytesLib.slice(depositCalldata, 0, maxDepositsCount * PUBKEY_LENGTH);
-        signatures = BytesLib.slice(depositCalldata, maxDepositsCount * PUBKEY_LENGTH, maxDepositsCount * SIGNATURE_LENGTH);
+        signatures = BytesLib.slice(
+            depositCalldata,
+            maxDepositsCount * PUBKEY_LENGTH,
+            maxDepositsCount * SIGNATURE_LENGTH
+        );
 
         return (maxDepositsCount, pubkeys, signatures);
     }

@@ -53,9 +53,9 @@ const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 const STETH = ETH
 const tokens = ETH
 
-contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) => {
+contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, treasury]) => {
   let appBase, nodeOperatorsRegistryBase, app, oracle, depositContract, operators
-  let treasuryAddr, insuranceAddr
+  let treasuryAddr
   let dao, acl
   let elRewardsVault, rewarder
 
@@ -79,13 +79,12 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     // NodeOperatorsRegistry
     proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)
     operators = await NodeOperatorsRegistry.at(proxyAddress)
-    await operators.initialize(app.address)
+    await operators.initialize()
 
     // Set up the app's permissions.
     await acl.createPermission(voting, app.address, await app.PAUSE_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.RESUME_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.MANAGE_FEE(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.MANAGE_WITHDRAWAL_KEY(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.BURN_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.MANAGE_PROTOCOL_CONTRACTS_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_EL_REWARDS_VAULT_ROLE(), appManager, { from: appManager })
@@ -109,7 +108,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await acl.createPermission(depositor, app.address, await app.DEPOSIT_ROLE(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
-    await app.initialize(depositContract.address, oracle.address, operators.address)
+    await app.initialize(oracle.address, treasury)
 
     assert((await app.isStakingPaused()) === true)
     assert((await app.isStopped()) === true)
@@ -118,7 +117,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     assert((await app.isStopped()) === false)
 
     treasuryAddr = await app.getTreasury()
-    insuranceAddr = await app.getInsuranceFund()
 
     await app.setMaxFee(1000, { from: voting })
     await oracle.setPool(app.address)
@@ -145,9 +143,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
 
   // Assert reward distribution. The values must be divided by 1e15.
   const checkRewards = async ({ treasury, insurance, operator }) => {
-    const [treasury_b, insurance_b, operators_b, a1, a2, a3, a4] = await Promise.all([
+    const [treasury_b, operators_b, a1, a2, a3, a4] = await Promise.all([
       app.balanceOf(treasuryAddr),
-      app.balanceOf(insuranceAddr),
       app.balanceOf(operators.address),
       app.balanceOf(ADDRESS_1),
       app.balanceOf(ADDRESS_2),
@@ -156,7 +153,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     ])
 
     assertBn(div15(treasury_b), treasury, 'treasury token balance check')
-    assertBn(div15(insurance_b), insurance, 'insurance fund token balance check')
     assertBn(div15(operators_b.add(a1).add(a2).add(a3).add(a4)), operator, 'node operators token balance check')
   }
 
@@ -192,8 +188,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
   const logBalances = async () => {
     const user2stEthBalance = await getStEthBalance(user2)
     const treasuryStEthBalance = await getStEthBalance(treasuryAddr)
-    const insuranceStEthBalance = await getStEthBalance(insuranceAddr)
-    console.log({ user2stEthBalance, treasuryStEthBalance, insuranceStEthBalance })
+    console.log({ user2stEthBalance, treasuryStEthBalance })
   }
 
   const logAll = async () => {

@@ -48,7 +48,7 @@ const div15 = (bn) => bn.div(new BN(1000000)).div(new BN(1000000)).div(new BN(10
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 const tokens = ETH
 
-contract('Lido with official deposit contract', ([appManager, voting, user1, user2, user3, nobody, depositor]) => {
+contract('Lido with official deposit contract', ([appManager, voting, user1, user2, user3, nobody, depositor, treasury]) => {
   let appBase, stEthBase, nodeOperatorsRegistryBase, app, token, oracle, depositContract, operators
   let treasuryAddr, insuranceAddr
 
@@ -72,7 +72,7 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
     // NodeOperatorsRegistry
     proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)
     operators = await NodeOperatorsRegistry.at(proxyAddress)
-    await operators.initialize(app.address)
+    await operators.initialize()
 
     // token
     // proxyAddress = await newApp(dao, 'steth', stEthBase.address, appManager)
@@ -83,7 +83,6 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
     await acl.createPermission(voting, app.address, await app.PAUSE_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.RESUME_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.MANAGE_FEE(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.MANAGE_WITHDRAWAL_KEY(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_EL_REWARDS_VAULT_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE(), appManager, {
       from: appManager
@@ -108,7 +107,7 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
     await acl.createPermission(depositor, app.address, await app.DEPOSIT_ROLE(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
-    await app.initialize(depositContract.address, oracle.address, operators.address)
+    await app.initialize(oracle.address, treasury)
     treasuryAddr = await app.getTreasury()
     insuranceAddr = await app.getInsuranceFund()
 

@@ -369,7 +369,7 @@ contract LidoTemplate is IsContract {
             50000
         );
 
-        state.operators.initialize(state.lido);
+        state.operators.initialize();
 
         state.lido.initialize(
             state.oracle,
