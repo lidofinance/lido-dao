@@ -292,7 +292,9 @@ contract DepositSecurityModule {
         // by all guardians. Thus only the first call will do the actual change. But
         // the other calls would be OK operations from the point of view of protocol’s logic.
         // Thus we prefer not to use “error” semantics which is implied by `require`.
-        if (STAKING_ROUTER.getStakingModuleIsPaused(stakingModuleId)) {
+
+        /// @dev pause only active modules (not already paused, nor full stopped)
+        if (!STAKING_ROUTER.getStakingModuleIsActive(stakingModuleId)) {
             return;
         }
 
@@ -318,7 +320,8 @@ contract DepositSecurityModule {
      * Only callable by the owner.
      */
     function unpauseDeposits(uint24 stakingModuleId) external onlyOwner {
-        if (STAKING_ROUTER.getStakingModuleIsPaused(stakingModuleId)) {
+         /// @dev unpause only paused modules (skip stopped)
+        if (STAKING_ROUTER.getStakingModuleIsDepositsPaused(stakingModuleId)) {
             STAKING_ROUTER.unpauseStakingModule(stakingModuleId);
             emit DepositsUnpaused(stakingModuleId);
         }
@@ -330,9 +333,9 @@ contract DepositSecurityModule {
      * such attestations will be enough to reach quorum.
      */
     function canDeposit(uint24 stakingModuleId) external view returns (bool) {
-        bool isModulePaused = STAKING_ROUTER.getStakingModuleIsPaused(stakingModuleId);
+        bool isModuleActive = STAKING_ROUTER.getStakingModuleIsActive(stakingModuleId);
         uint256 lastDepositBlock = STAKING_ROUTER.getStakingModuleLastDepositBlock(stakingModuleId);
-        return !isModulePaused && quorum > 0 && block.number - lastDepositBlock >= minDepositBlockDistance;
+        return isModuleActive && quorum > 0 && block.number - lastDepositBlock >= minDepositBlockDistance;
     }
 
     /**
@@ -365,7 +368,7 @@ contract DepositSecurityModule {
         bytes32 onchainDepositRoot = IDepositContract(DEPOSIT_CONTRACT).get_deposit_root();
         require(depositRoot == onchainDepositRoot, "deposit root changed");
 
-        require(!STAKING_ROUTER.getStakingModuleIsPaused(stakingModuleId), "deposits are paused");
+        require(STAKING_ROUTER.getStakingModuleIsActive(stakingModuleId), "module not active");
 
         uint256 lastDepositBlock = STAKING_ROUTER.getStakingModuleLastDepositBlock(stakingModuleId);
         require(block.number - lastDepositBlock >= minDepositBlockDistance, "too frequent deposits");

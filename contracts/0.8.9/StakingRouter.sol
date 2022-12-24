@@ -25,9 +25,12 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     event StakingModuleAdded(address indexed creator, uint24 indexed stakingModuleId, address indexed stakingModule, string name);
     event StakingModuleTargetSharesSet(uint24 indexed stakingModuleId, uint16 targetShare);
     event StakingModuleFeesSet(uint24 indexed stakingModuleId, uint16 treasuryFee, uint16 moduleFee);
-    event StakingModulePaused(uint24 indexed stakingModuleId, address indexed actor);
-    event StakingModuleUnpaused(uint24 indexed stakingModuleId, address indexed actor);
-    event StakingModuleActiveStatusChanged(uint24 indexed stakingModuleId, bool isActive, address indexed actor);
+    event StakingModuleStatusChanged(
+        uint24 indexed stakingModuleId,
+        address indexed actor,
+        StakingModuleStatus fromStatus,
+        StakingModuleStatus toStatus
+    );
     event StakingModuleDeposit(uint64 lastDepositAt, uint256 lastDepositBlock);
     event DistributedShares(uint256 modulesShares, uint256 treasuryShares, uint256 remainShares);
     event DistributedDeposits(uint24 indexed stakingModuleId, uint256 assignedKeys, uint64 timestamp);
@@ -51,10 +54,12 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         uint16 treasuryFee;
         /// @notice target percent of total keys in protocol, in BP
         uint16 targetShare;
-        /// @notice flag if module can not accept the deposits
-        bool paused;
-        /// @notice flag if module can participate in further reward distribution
-        bool active;
+        /// @notice module status if module can not accept the deposits or can participate in further reward distribution
+        uint8 status;
+        // /// @notice flag if module can not accept the deposits
+        // bool paused;
+        // /// @notice flag if module can participate in further reward distribution
+        // bool active;
         /// @notice block.timestamp of the last deposit of the module
         uint64 lastDepositAt;
         /// @notice block.number of the last deposit of the module
@@ -62,7 +67,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     }
 
     struct StakingModuleCache {
-        bool paused;
+        uint8 status;
         uint16 targetShare;
         uint256 totalKeysCount;
         uint256 usedKeysCount;
@@ -153,8 +158,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         newStakingModule.targetShare = _targetShare;
         newStakingModule.treasuryFee = _treasuryFee;
         newStakingModule.moduleFee = _moduleFee;
-        newStakingModule.paused = false;
-        newStakingModule.active = true;
+        newStakingModule.status = uint8(StakingModuleStatus.Active);
 
         _stakingModuleIndicesOneBased[newStakingModuleId] = newStakingModuleIndex + 1;
 
@@ -205,17 +209,40 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         return _stakingModulesCount;
     }
 
+    function getStakingModuleStatus(uint24 _stakingModuleId) public view returns (StakingModuleStatus) {
+        return _getStakingModuleStatusByIndex(_getStakingModuleIndexById(_stakingModuleId));
+    }
+
+    /**
+     * @notice set the module status flag for participation in further deposits and/or reward distribution
+     */
+    function setStakingModuleStatus(uint24 _stakingModuleId, StakingModuleStatus _status) external onlyRole(MODULE_MANAGE_ROLE) {
+        uint _stakingModuleIndex = _getStakingModuleIndexById(_stakingModuleId);
+        StakingModuleStatus _prevStatus = _getStakingModuleStatusByIndex(_stakingModuleIndex);
+        if (_prevStatus == _status) revert ErrorStakingModuleStatusNotChanged();
+        _setStakingModuleStatusByIndex(_stakingModuleIndex, _status);
+        emit StakingModuleStatusChanged(_stakingModuleId, msg.sender, _prevStatus, _status);
+    }
+
+    function _getStakingModuleStatusByIndex(uint256 _stakingModuleIndex) internal view returns (StakingModuleStatus) {
+        return StakingModuleStatus(_stakingModules[_stakingModuleIndex].status);
+    }
+
+    function _setStakingModuleStatusByIndex(uint256 _stakingModuleIndex, StakingModuleStatus _status) internal {
+        _stakingModules[_stakingModuleIndex].status = uint8(_status);
+    }
+
     /**
      * @notice pause deposits for module
      * @param _stakingModuleId id of the staking module to be paused
      */
     function pauseStakingModule(uint24 _stakingModuleId) external onlyRole(MODULE_PAUSE_ROLE) {
-        StakingModule storage module = _getStakingModuleById(_stakingModuleId);
-        if (module.paused) revert ErrorStakingModuleIsPaused();
+        uint _stakingModuleIndex = _getStakingModuleIndexById(_stakingModuleId);
+        if (_getStakingModuleStatusByIndex(_stakingModuleIndex) != StakingModuleStatus.Active) revert ErrorStakingModuleIsPaused();
 
-        module.paused = true;
-
-        emit StakingModulePaused(_stakingModuleId, msg.sender);
+        _setStakingModuleStatusByIndex(_stakingModuleIndex, StakingModuleStatus.DepositsPaused);
+        // emit StakingModulePaused(_stakingModuleId, msg.sender);
+        emit StakingModuleStatusChanged(_stakingModuleId, msg.sender, StakingModuleStatus.Active, StakingModuleStatus.DepositsPaused);
     }
 
     /**
@@ -223,27 +250,25 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
      * @param _stakingModuleId id of the staking module to be unpaused
      */
     function unpauseStakingModule(uint24 _stakingModuleId) external onlyRole(MODULE_RESUME_ROLE) {
-        StakingModule storage module = _getStakingModuleById(_stakingModuleId);
-        if (!module.paused) revert ErrorStakingModuleIsNotPaused();
+        uint _stakingModuleIndex = _getStakingModuleIndexById(_stakingModuleId);
+        if (_getStakingModuleStatusByIndex(_stakingModuleIndex) != StakingModuleStatus.DepositsPaused)
+            revert ErrorStakingModuleIsNotPaused();
 
-        module.paused = false;
-
-        emit StakingModuleUnpaused(_stakingModuleId, msg.sender);
+        _setStakingModuleStatusByIndex(_stakingModuleIndex, StakingModuleStatus.Active);
+        // emit StakingModuleUnpaused(_stakingModuleId, msg.sender);
+        emit StakingModuleStatusChanged(_stakingModuleId, msg.sender, StakingModuleStatus.DepositsPaused, StakingModuleStatus.Active);
     }
 
-    /**
-     * @notice set the module activity flag for participation in further reward distribution
-     */
-    function setStakingModuleActive(uint24 _stakingModuleId, bool _active) external onlyRole(MODULE_MANAGE_ROLE) {
-        StakingModule storage module = _getStakingModuleById(_stakingModuleId);
-        module.active = _active;
-
-        emit StakingModuleActiveStatusChanged(_stakingModuleId, _active, msg.sender);
+    function getStakingModuleIsStopped(uint24 _stakingModuleId) external view returns (bool) {
+        return getStakingModuleStatus(_stakingModuleId) == StakingModuleStatus.Stopped;
     }
 
-    function getStakingModuleIsPaused(uint24 _stakingModuleId) external view returns (bool) {
-        StakingModule storage module = _getStakingModuleById(_stakingModuleId);
-        return module.paused;
+    function getStakingModuleIsDepositsPaused(uint24 _stakingModuleId) external view returns (bool) {
+        return getStakingModuleStatus(_stakingModuleId) == StakingModuleStatus.DepositsPaused;
+    }
+
+    function getStakingModuleIsActive(uint24 _stakingModuleId) public view returns (bool) {
+        return getStakingModuleStatus(_stakingModuleId) == StakingModuleStatus.Active;
     }
 
     function getStakingModuleKeysOpIndex(uint24 _stakingModuleId) external view returns (uint256) {
@@ -335,7 +360,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         external
         onlyRole(STAKING_ROUTER_DEPOSIT_ROLE)
         onlyRegisteredStakingModule(_stakingModuleId)
-        onlyNotPausedStakingModule(_stakingModuleId)
+        onlyActiveStakingModule(_stakingModuleId)
         returns (uint256)
     {
         /// @todo make more optimal calc of totalActiveKeysCount (eliminate double calls of module.getTotalUsedKeys() and
@@ -407,7 +432,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
 
     function _loadStakingModuleCache(uint24 _stakingModuleId) internal view returns (StakingModuleCache memory stakingModuleCache) {
         StakingModule storage stakingModuleData = _getStakingModuleById(_stakingModuleId);
-        stakingModuleCache.paused = stakingModuleData.paused;
+        stakingModuleCache.status = stakingModuleData.status;
         stakingModuleCache.targetShare = stakingModuleData.targetShare;
 
         IStakingModule stakingModule = IStakingModule(stakingModuleData.stakingModuleAddress);
@@ -474,9 +499,8 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         _;
     }
 
-    modifier onlyNotPausedStakingModule(uint24 _stakingModuleId) {
-        StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
-        require(!stakingModule.paused, "STAKING_MODULE_PAUSED");
+    modifier onlyActiveStakingModule(uint24 _stakingModuleId) {
+        require(getStakingModuleIsActive(_stakingModuleId), "STAKING_MODULE_NOT_ACTIVE");
         _;
     }
 
@@ -486,6 +510,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     error ErrorNoStakingModules();
     error ErrorZeroMaxSigningKeysCount();
     error ErrorValueOver100Percent(string field);
+    error ErrorStakingModuleStatusNotChanged();
     error ErrorStakingModuleIsPaused();
     error ErrorStakingModuleIsNotPaused();
     error UnregisteredStakingModule();

@@ -34,6 +34,13 @@ const UNRELATED_SIGNER_PRIVATE_KEYS = {
   [UNRELATED_SIGNER2]: '0xbabec7d3867c72f6c275135b1e1423ca8f565d6e21a1947d056a195b1c3cae27'
 }
 
+// status enum
+const StakingModuleStatus = {
+  Active: 0, // deposits and rewards allowed
+  DepositsPaused: 1, // deposits NOT allowed, rewards allowed
+  Stopped: 2 // deposits and rewards NOT allowed
+}
+
 contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
   let depositSecurityModule, depositContractMock, stakingRouterMock
   let evmSnapshotId
@@ -452,21 +459,39 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       await depositSecurityModule.addGuardian(GUARDIAN2, 1, { from: owner })
       const guardians = await depositSecurityModule.getGuardians()
       assert.equal(guardians.length, 2, 'invariant failed: guardians != 2')
-      assert.equal(await stakingRouterMock.getStakingModuleIsPaused(STAKING_MODULE), false, 'invariant failed: isPaused')
+      assert.equal(await stakingRouterMock.getStakingModuleIsDepositsPaused(STAKING_MODULE), false, 'invariant failed: isPaused')
     })
 
     it('if called by a guardian 1 or 2', async () => {
       const tx = await depositSecurityModule.pauseDeposits(block.number, STAKING_MODULE, ['0x', '0x'], { from: guardian })
-      assertEvent(tx.receipt, 'StakingModulePaused', {
-        expectedArgs: { stakingModuleId: STAKING_MODULE },
+      console.log({
+        expectedArgs: {
+          stakingModuleId: STAKING_MODULE,
+          actor: depositSecurityModule,
+          fromStatus: StakingModuleStatus.Active,
+          toStatus: StakingModuleStatus.DepositsPaused
+        }
+      })
+      assertEvent(tx, 'StakingModuleStatusChanged', {
+        expectedArgs: {
+          stakingModuleId: STAKING_MODULE,
+          actor: depositSecurityModule,
+          fromStatus: StakingModuleStatus.Active,
+          toStatus: StakingModuleStatus.DepositsPaused
+        },
         decodeForAbi: StakingRouterMockForDepositSecurityModule._json.abi
       })
     })
 
     it('pauses if called by an anon submitting sig of guardian 1 or 2', async () => {
       const tx = await depositSecurityModule.pauseDeposits(block.number, STAKING_MODULE, ['0x', '0x'], { from: guardian })
-      assertEvent(tx.receipt, 'StakingModulePaused', {
-        expectedArgs: { stakingModuleId: STAKING_MODULE },
+      assertEvent(tx, 'StakingModuleStatusChanged', {
+        expectedArgs: {
+          stakingModuleId: STAKING_MODULE,
+          actor: depositSecurityModule,
+          fromStatus: StakingModuleStatus.Active,
+          toStatus: StakingModuleStatus.DepositsPaused
+        },
         decodeForAbi: StakingRouterMockForDepositSecurityModule._json.abi
       })
     })
@@ -478,8 +503,13 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
         validPauseMessage.sign(UNRELATED_SIGNER_PRIVATE_KEYS[UNRELATED_SIGNER1]),
         { from: guardian }
       )
-      assertEvent(tx.receipt, 'StakingModulePaused', {
-        expectedArgs: { stakingModuleId: STAKING_MODULE },
+      assertEvent(tx, 'StakingModuleStatusChanged', {
+        expectedArgs: {
+          stakingModuleId: STAKING_MODULE,
+          actor: depositSecurityModule,
+          fromStatus: StakingModuleStatus.Active,
+          toStatus: StakingModuleStatus.DepositsPaused
+        },
         decodeForAbi: StakingRouterMockForDepositSecurityModule._json.abi
       })
     })
@@ -523,15 +553,20 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
     it("pauseDeposits emits DepositsPaused(guardianAddr) event if wasn't paused before", async () => {
       const tx = await depositSecurityModule.pauseDeposits(block.number, STAKING_MODULE, ['0x', '0x'], { from: guardian })
       assertEvent(tx, 'DepositsPaused', { expectedArgs: { guardian, stakingModuleId: STAKING_MODULE } })
-      assertEvent(tx, 'StakingModulePaused', {
-        expectedArgs: { stakingModuleId: STAKING_MODULE },
+      assertEvent(tx, 'StakingModuleStatusChanged', {
+        expectedArgs: {
+          stakingModuleId: STAKING_MODULE,
+          actor: depositSecurityModule,
+          fromStatus: StakingModuleStatus.Active,
+          toStatus: StakingModuleStatus.DepositsPaused
+        },
         decodeForAbi: StakingRouterMockForDepositSecurityModule._json.abi
       })
     })
 
     it("pauseDeposits doesn't emit DepositsPaused(guardianAddr) event if was paused before", async () => {
-      await stakingRouterMock.setStakingModuleIsPaused(true)
-      assert.isTrue(await stakingRouterMock.getStakingModuleIsPaused(STAKING_MODULE), 'invariant failed: isPaused != true')
+      await stakingRouterMock.setStakingModuleStatus(STAKING_MODULE, StakingModuleStatus.DepositsPaused)
+      assert.isTrue(await stakingRouterMock.getStakingModuleIsDepositsPaused(STAKING_MODULE), 'invariant failed: isPaused != true')
       const tx = await depositSecurityModule.pauseDeposits(block.number, STAKING_MODULE, ['0x', '0x'], { from: guardian })
       assert.equal(tx.logs.length, 0, 'invalid result: logs not empty')
     })
@@ -541,14 +576,19 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       await depositSecurityModule.addGuardian(guardian, 1, { from: owner })
       const guardians = await depositSecurityModule.getGuardians()
       assert.equal(guardians.length, 1, 'invariant failed: guardians != 1')
-      await stakingRouterMock.setStakingModuleIsPaused(true)
-      assert.equal(await stakingRouterMock.getStakingModuleIsPaused(STAKING_MODULE), true, 'invariant failed: isPaused')
+      await stakingRouterMock.setStakingModuleStatus(STAKING_MODULE, StakingModuleStatus.DepositsPaused)
+      assert.equal(await stakingRouterMock.getStakingModuleIsDepositsPaused(STAKING_MODULE), true, 'invariant failed: isPaused')
     })
     it('unpauses paused deposits', async () => {
       const tx = await depositSecurityModule.unpauseDeposits(STAKING_MODULE, { from: owner })
       assertEvent(tx, 'DepositsUnpaused', { stakingModuleId: STAKING_MODULE })
-      assertEvent(tx, 'StakingModuleUnpaused', {
-        expectedArgs: { stakingModuleId: STAKING_MODULE },
+      assertEvent(tx, 'StakingModuleStatusChanged', {
+        expectedArgs: {
+          stakingModuleId: STAKING_MODULE,
+          actor: depositSecurityModule,
+          fromStatus: StakingModuleStatus.DepositsPaused,
+          toStatus: StakingModuleStatus.Active
+        },
         decodeForAbi: StakingRouterMockForDepositSecurityModule._json.abi
       })
     })
@@ -826,7 +866,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
     it('true if not paused and quorum > 0 and currentBlock - lastDepositBlock >= minDepositBlockDistance', async () => {
       await depositSecurityModule.addGuardian(GUARDIAN1, 1, { from: owner })
 
-      assert.equal(await stakingRouterMock.getStakingModuleIsPaused(STAKING_MODULE), false, 'invariant failed: isPaused')
+      assert.equal(await stakingRouterMock.getStakingModuleIsDepositsPaused(STAKING_MODULE), false, 'invariant failed: isPaused')
       assert.isTrue((await depositSecurityModule.getGuardianQuorum()) > 0, 'invariant failed: quorum > 0')
 
       const lastDepositBlockNumber = await web3.eth.getBlockNumber()
@@ -851,8 +891,8 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
 
       assert.isTrue(latestBlock.number - lastDepositBlockNumber >= minDepositBlockDistance)
 
-      await stakingRouterMock.setStakingModuleIsPaused(true)
-      assert.isTrue(await stakingRouterMock.getStakingModuleIsPaused(STAKING_MODULE), 'invariant failed: isPaused')
+      await stakingRouterMock.setStakingModuleStatus(STAKING_MODULE, StakingModuleStatus.DepositsPaused)
+      assert.isTrue(await stakingRouterMock.getStakingModuleIsDepositsPaused(STAKING_MODULE), 'invariant failed: isPaused')
 
       assert.isFalse(await depositSecurityModule.canDeposit(STAKING_MODULE))
     })
@@ -860,7 +900,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       await depositSecurityModule.addGuardians([GUARDIAN1, guardian], 1, { from: owner })
       assert.isTrue((await depositSecurityModule.getGuardianQuorum()) > 0, 'invariant failed: quorum > 0')
 
-      assert.equal(await stakingRouterMock.getStakingModuleIsPaused(STAKING_MODULE), false, 'invariant failed: isPaused')
+      assert.equal(await stakingRouterMock.getStakingModuleIsDepositsPaused(STAKING_MODULE), false, 'invariant failed: isPaused')
 
       const lastDepositBlockNumber = await web3.eth.getBlockNumber()
       stakingRouterMock.setStakingModuleLastDepositBlock(lastDepositBlockNumber)
@@ -878,7 +918,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       await depositSecurityModule.addGuardian(GUARDIAN1, 1, { from: owner })
       assert.isTrue((await depositSecurityModule.getGuardianQuorum()) > 0, 'invariant failed: quorum > 0')
 
-      assert.equal(await stakingRouterMock.getStakingModuleIsPaused(STAKING_MODULE), false, 'invariant failed: isPaused')
+      assert.equal(await stakingRouterMock.getStakingModuleIsDepositsPaused(STAKING_MODULE), false, 'invariant failed: isPaused')
 
       const lastDepositBlockNumber = await web3.eth.getBlockNumber()
       stakingRouterMock.setStakingModuleLastDepositBlock(lastDepositBlockNumber)
