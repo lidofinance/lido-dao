@@ -798,15 +798,13 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         TYPE_POSITION.setStorageBytes32(_type);
 
         uint256 totalOperators = getNodeOperatorsCount();
-        uint256 totalKeys;
         uint256 totalUsedKeys;
         uint256 totalStoppedKeys;
         for (uint256 operatorId = 0; operatorId < totalOperators; ++operatorId) {
             NodeOperator memory operator = operators[operatorId];
             if (!operator.active) {
-                continue;
+                _trimUnusedNodeOperatorKeys(operatorId);
             }
-            totalKeys += operator.totalSigningKeys;
             totalUsedKeys += operator.usedSigningKeys;
             totalStoppedKeys += operator.stoppedValidators;
         }
