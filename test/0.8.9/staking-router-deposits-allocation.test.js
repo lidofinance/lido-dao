@@ -63,8 +63,9 @@ contract('StakingRouter', (accounts) => {
     })
 
     it('getKeysAllocation :: staking module with zero used keys', async () => {
-      await curatedStakingModuleMock.setTotalKeys(500)
-      assertBn(await curatedStakingModuleMock.getTotalKeys(), 500)
+      await curatedStakingModuleMock.setAvailableKeysCount(500)
+      assertBn(await curatedStakingModuleMock.getAvailableKeysCount(), 500)
+
       const { allocated, allocations } = await stakingRouter.getKeysAllocation(1000)
 
       assertBn(allocated, 500)
@@ -73,11 +74,11 @@ contract('StakingRouter', (accounts) => {
     })
 
     it('getKeysAllocation :: staking module with non zero used keys', async () => {
-      await curatedStakingModuleMock.setTotalKeys(500)
-      assertBn(await curatedStakingModuleMock.getTotalKeys(), 500)
+      await curatedStakingModuleMock.setActiveKeysCount(250)
+      assertBn(await curatedStakingModuleMock.getActiveKeysCount(), 250)
 
-      await curatedStakingModuleMock.setTotalUsedKeys(250)
-      assertBn(await curatedStakingModuleMock.getTotalUsedKeys(), 250)
+      await curatedStakingModuleMock.setAvailableKeysCount(250)
+      assertBn(await curatedStakingModuleMock.getAvailableKeysCount(), 250)
 
       const { allocated, allocations } = await stakingRouter.getKeysAllocation(250)
 
@@ -108,17 +109,17 @@ contract('StakingRouter', (accounts) => {
     })
 
     it('getKeysAllocation :: equal available keys', async () => {
-      await curatedStakingModuleMock.setTotalKeys(5000)
-      assertBn(await curatedStakingModuleMock.getTotalKeys(), 5000)
+      await curatedStakingModuleMock.setActiveKeysCount(4500)
+      assertBn(await curatedStakingModuleMock.getActiveKeysCount(), 4500)
 
-      await curatedStakingModuleMock.setTotalUsedKeys(4500)
-      assertBn(await curatedStakingModuleMock.getTotalUsedKeys(), 4500)
+      await curatedStakingModuleMock.setAvailableKeysCount(500)
+      assertBn(await curatedStakingModuleMock.getAvailableKeysCount(), 500)
 
-      await soloStakingModuleMock.setTotalKeys(300)
-      assertBn(await soloStakingModuleMock.getTotalKeys(), 300)
+      await soloStakingModuleMock.setActiveKeysCount(50)
+      assertBn(await soloStakingModuleMock.getActiveKeysCount(), 50)
 
-      await soloStakingModuleMock.setTotalUsedKeys(50)
-      assertBn(await soloStakingModuleMock.getTotalUsedKeys(), 50)
+      await soloStakingModuleMock.setAvailableKeysCount(250)
+      assertBn(await soloStakingModuleMock.getAvailableKeysCount(), 250)
 
       const { allocated, allocations } = await stakingRouter.getKeysAllocation(333)
 

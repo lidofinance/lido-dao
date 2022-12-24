@@ -5,20 +5,11 @@
 pragma solidity 0.8.9;
 
 interface IStakingModule {
-    function getTotalKeys() external view returns (uint256);
+    function getActiveKeysCount() external view returns (uint256);
 
-    function getTotalUsedKeys() external view returns (uint256);
+    function getAvailableKeysCount() external view returns (uint256);
 
-    function getTotalStoppedKeys() external view returns (uint256);
-
-    function getSigningKeysStats()
-        external
-        view
-        returns (
-            uint256 totalSigningKeys,
-            uint256 usedSigningKeys,
-            uint256 stoppedSigningKeys
-        );
+    function getKeysUsageData() external view returns (uint256 activeKeysCount, uint256 availableKeysCount);
 
     function getType() external view returns (bytes32);
 

@@ -18,6 +18,7 @@ const ERC20Mock = artifacts.require('ERC20Mock.sol')
 const ERC721Mock = artifacts.require('ERC721Mock.sol')
 const VaultMock = artifacts.require('AragonVaultMock.sol')
 const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
+const StakingRouter = artifacts.require('StakingRouter.sol')
 
 const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
 const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
@@ -58,6 +59,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
   let treasuryAddr
   let dao, acl
   let elRewardsVault, rewarder
+  let stakingRouter
 
   before('deploy base app', async () => {
     // Deploy the app's base contract.
@@ -80,6 +82,12 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)
     operators = await NodeOperatorsRegistry.at(proxyAddress)
     await operators.initialize()
+
+    // StakingRouter
+    stakingRouter = await StakingRouter.new(depositContract.address)
+    await stakingRouter.initialize(appManager, pad('0x0202', 32))
+    await stakingRouter.grantRole(await stakingRouter.MANAGE_WITHDRAWAL_CREDENTIALS_ROLE(), voting, { from: appManager })
+    await stakingRouter.grantRole(await stakingRouter.MODULE_MANAGE_ROLE(), voting, { from: appManager })
 
     // Set up the app's permissions.
     await acl.createPermission(voting, app.address, await app.PAUSE_ROLE(), appManager, { from: appManager })
@@ -106,9 +114,22 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
       from: appManager
     })
     await acl.createPermission(depositor, app.address, await app.DEPOSIT_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(stakingRouter.address, operators.address, await operators.TRIM_UNUSED_KEYS_ROLE(), appManager, {
+      from: appManager
+    })
 
     // Initialize the app's proxy.
     await app.initialize(oracle.address, treasury)
+
+    await app.setStakingRouter(stakingRouter.address, { from: voting })
+    await stakingRouter.addModule(
+      'Curated',
+      operators.address,
+      10_000, // 100 % _targetShare
+      1_000, // 10 % _moduleFee
+      5_000, // 50 % _treasuryFee
+      { from: voting }
+    )
 
     assert((await app.isStakingPaused()) === true)
     assert((await app.isStopped()) === true)
@@ -206,7 +227,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+    await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
     await operators.addSigningKeys(
       0,
@@ -291,6 +312,38 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assertRevert(app.receiveELRewards({ from: user1, value: ETH(1) }))
   })
 
+  it('setStakingRouter event works', async () => {
+    assert.equal(await app.getStakingRouter(), stakingRouter.address)
+
+    assertEvent(await app.setStakingRouter(voting, { from: voting }), 'StakingRouterSet', {
+      expectedArgs: { stakingRouterAddress: voting }
+    })
+
+    assert.equal(await app.getStakingRouter(), voting)
+  })
+
+  it('setDepositSecurityModule event works', async () => {
+    assert.equal(await app.getDepositSecurityModule(), ZERO_ADDRESS)
+
+    assertEvent(await app.setDepositSecurityModule(voting, { from: voting }), 'DepositSecurityModuleSet', {
+      expectedArgs: { dsmAddress: voting }
+    })
+
+    assert.equal(await app.getDepositSecurityModule(), voting)
+  })
+
+  it('setMaxFee event works', async () => {
+    assertBn(await app.getMaxFee(), 1000)
+
+    assertRevert(app.setMaxFee(10001, { from: voting }), 'VALUE_OVER_100_PERCENT')
+
+    assertEvent(await app.setMaxFee(10, { from: voting }), 'MaxFeeSet', {
+      expectedArgs: { feeBasisPoints: 10 }
+    })
+
+    assert.equal(await app.getMaxFee(), 10)
+  })
+
   it('setFee works', async () => {
     await app.setFee(110, { from: voting })
     await assertRevert(app.setFee(110, { from: user1 }), 'APP_AUTH_FAILED')
@@ -316,10 +369,15 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
   })
 
   it('setWithdrawalCredentials works', async () => {
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
-    await assertRevert(app.setWithdrawalCredentials(pad('0x0203', 32), { from: user1 }), 'APP_AUTH_FAILED')
+    await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
-    assert.equal(await app.getWithdrawalCredentials({ from: nobody }), pad('0x0202', 32))
+    await assertRevert(
+      stakingRouter.setWithdrawalCredentials(pad('0x0203', 32), { from: user1 }),
+      `AccessControl: account ${user1.toLowerCase()} is missing role ${await stakingRouter.MANAGE_WITHDRAWAL_CREDENTIALS_ROLE()}`
+    )
+
+    assert.equal(await stakingRouter.getWithdrawalCredentials(), pad('0x0202', 32))
+    assert.equal(await app.getWithdrawalCredentials(), pad('0x0202', 32))
   })
 
   it('setOracle works', async () => {
@@ -336,7 +394,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+    await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
     await operators.addSigningKeys(1, 2, hexConcat(pad('0x050505', 48), pad('0x060606', 48)), hexConcat(pad('0x02', 96), pad('0x03', 96)), {
@@ -347,7 +405,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assertBn(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
     assertBn(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 2)
 
-    await app.setWithdrawalCredentials(pad('0x0203', 32), { from: voting })
+    await stakingRouter.setWithdrawalCredentials(pad('0x0203', 32), { from: voting })
 
     assertBn(await operators.getTotalSigningKeyCount(0, { from: nobody }), 0)
     assertBn(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0)
@@ -432,7 +490,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await assertRevert(app.methods['depositBufferedEther()']({ from: depositor }), 'EMPTY_WITHDRAWAL_CREDENTIALS')
 
     // set withdrawalCredentials with keys, because they were trimmed
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+    await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
     await operators.addSigningKeys(
       0,
@@ -510,7 +568,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
       sigs: Array.from({ length: 3 }, (_, i) => `0x22${i}${i}` + 'fcde'.repeat(94 / 2))
     }
 
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+    await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
     await operators.addSigningKeys(0, 3, hexConcat(...op0.keys), hexConcat(...op0.sigs), { from: voting })
     await operators.addSigningKeys(1, 3, hexConcat(...op1.keys), hexConcat(...op1.sigs), { from: voting })
 
@@ -545,7 +603,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+    await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
     await operators.addSigningKeys(1, 1, pad('0x030405', 48), pad('0x06', 96), { from: voting })
 
@@ -779,7 +837,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+    await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
     await operators.addSigningKeys(
       0,
@@ -810,7 +868,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+    await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
 
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(100) })
@@ -843,7 +901,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+    await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
     await operators.addSigningKeys(
       0,
@@ -878,7 +936,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+    await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
     await operators.addSigningKeys(
       0,
@@ -949,7 +1007,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+    await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
     await operators.addSigningKeys(
       0,
@@ -989,7 +1047,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+    await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
     await operators.addSigningKeys(
       0,
@@ -1018,7 +1076,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+    await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
     await operators.addSigningKeys(
       0,
@@ -1061,7 +1119,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+    await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
 
     await app.setFee(5000, { from: voting })
@@ -1081,7 +1139,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
   })
 
   it('Node Operators filtering during deposit works when doing a huge deposit', async () => {
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+    await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
     await operators.addNodeOperator('good', ADDRESS_1, { from: voting }) // 0
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
@@ -1203,7 +1261,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
   })
 
   it('Node Operators filtering during deposit works when doing small deposits', async () => {
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+    await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
     await operators.addNodeOperator('good', ADDRESS_1, { from: voting }) // 0
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
@@ -1328,7 +1386,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
   })
 
   it('Deposit finds the right operator', async () => {
-    await app.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+    await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
     await operators.addNodeOperator('good', ADDRESS_1, { from: voting }) // 0
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })

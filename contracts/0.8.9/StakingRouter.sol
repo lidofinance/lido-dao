@@ -69,9 +69,6 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     struct StakingModuleCache {
         uint8 status;
         uint16 targetShare;
-        uint256 totalKeysCount;
-        uint256 usedKeysCount;
-        uint256 stoppedKeysCount;
         uint256 activeKeysCount;
         uint256 availableKeysCount;
     }
@@ -287,34 +284,61 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
      * @return totalActiveKeys total keys which used for calculation
      * @return moduleActiveKeys array of amount module keys
      */
-    function getTotalActiveKeys() public view returns (uint256 totalActiveKeys, uint256[] memory moduleActiveKeys) {
-        // calculate total used keys for operators
-        uint256 modulesCount = getStakingModulesCount();
-        moduleActiveKeys = new uint256[](modulesCount);
-        for (uint256 i = 0; i < modulesCount; ++i) {
-            /// @dev skip stopped modules
-            if (_getStakingModuleStatusByIndex(i) != StakingModuleStatus.Stopped) {
-                moduleActiveKeys[i] = _getActiveKeysCount(_getStakingModuleIdByIndex(i));
-                totalActiveKeys += moduleActiveKeys[i];
-            }
-        }
-    }
-
     function getTotalActiveKeysForDeposit() public view returns (uint256 totalActiveKeys, uint256[] memory moduleActiveKeys) {
         // calculate total used keys for operators
-        uint256 modulesCount = getStakingModulesCount();
-        moduleActiveKeys = new uint256[](modulesCount);
-        for (uint256 i = 0; i < modulesCount; ++i) {
-            /// @dev skip stopped modules
-            if (_getStakingModuleStatusByIndex(i) != StakingModuleStatus.Stopped) {
-                moduleActiveKeys[i] = _getActiveKeysCount(_getStakingModuleIdByIndex(i));
+        uint256 _modulesCount = getStakingModulesCount();
+        moduleActiveKeys = new uint256[](_modulesCount);
+        for (uint256 i = 0; i < _modulesCount; ++i) {
+            /// @dev only active modules can deposit
+            if (_getStakingModuleStatusByIndex(i) == StakingModuleStatus.Active) {
+                moduleActiveKeys[i] = IStakingModule(_getStakingModuleAddressByIndex(i)).getActiveKeysCount();
                 totalActiveKeys += moduleActiveKeys[i];
             }
         }
     }
 
+    function getTotalActiveKeysForRewardDistribution() public view returns (uint256 totalActiveKeys, uint256[] memory moduleActiveKeys) {
+        // calculate total used keys for operators
+        uint256 _modulesCount = getStakingModulesCount();
+        moduleActiveKeys = new uint256[](_modulesCount);
+        for (uint256 i = 0; i < _modulesCount; ++i) {
+            /// @dev skip only stopped modules
+            if (_getStakingModuleStatusByIndex(i) != StakingModuleStatus.Stopped) {
+                moduleActiveKeys[i] = IStakingModule(_getStakingModuleAddressByIndex(i)).getActiveKeysCount();
+                totalActiveKeys += moduleActiveKeys[i];
+            }
+        }
+    }
+
+    //old
+    //  function getTotalActiveKeys() public view returns (uint256 totalActiveKeys, uint256[] memory moduleActiveKeys) {
+    //     // calculate total used keys for operators
+    //     uint256 modulesCount = getStakingModulesCount();
+    //     moduleActiveKeys = new uint256[](modulesCount);
+    // for (uint256 i = 0; i < modulesCount; ++i) {
+    //     /// @dev skip stopped modules
+    //     if (_getStakingModuleStatusByIndex(i) != StakingModuleStatus.Stopped) {
+    //         moduleActiveKeys[i] = _getActiveKeysCount(_getStakingModuleIdByIndex(i));
+    //         totalActiveKeys += moduleActiveKeys[i];
+    //     }
+    // }
+    // }
+
+    // function getTotalActiveKeysForDeposit() public view returns (uint256 totalActiveKeys, uint256[] memory moduleActiveKeys) {
+    //     // calculate total used keys for operators
+    //     uint256 modulesCount = getStakingModulesCount();
+    //     moduleActiveKeys = new uint256[](modulesCount);
+    //     for (uint256 i = 0; i < modulesCount; ++i) {
+    //         /// @dev skip stopped modules
+    //         if (_getStakingModuleStatusByIndex(i) != StakingModuleStatus.Stopped) {
+    //             moduleActiveKeys[i] = _getActiveKeysCount(_getStakingModuleIdByIndex(i));
+    //             totalActiveKeys += moduleActiveKeys[i];
+    //         }
+    //     }
+    // }
+
     function getActiveKeysCount(uint24 _stakingModuleId) public view onlyRegisteredStakingModule(_stakingModuleId) returns (uint256) {
-        return _getActiveKeysCount(_stakingModuleId);
+        return IStakingModule(_getStakingModuleAddressById(_stakingModuleId)).getActiveKeysCount();
     }
 
     /**
@@ -329,7 +353,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         view
         returns (address[] memory recipients, uint16[] memory moduleFees, uint16 totalFee)
     {
-        (uint256 totalActiveKeys, uint256[] memory moduleActiveKeys) = getTotalActiveKeys();
+        (uint256 totalActiveKeys, uint256[] memory moduleActiveKeys) = getTotalActiveKeysForRewardDistribution();
         uint256 modulesCount = moduleActiveKeys.length;
 
         /// @dev return empty response if there are no modules or active keys
@@ -434,7 +458,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     }
 
     /**
-     * @notice Set credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched to `_withdrawalCredentials`
+     * @notice Set credentials to withdraw ETH on Consensus Layer side after the phase 2 is launched to `_withdrawalCredentials`
      * @dev Note that setWithdrawalCredentials discards all unused signing keys as the signatures are invalidated.
      * @param _withdrawalCredentials withdrawal credentials field as defined in the Ethereum PoS consensus specs
      */
@@ -448,7 +472,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     }
 
     /**
-     * @notice Returns current credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
+     * @notice Returns current credentials to withdraw ETH on Consensus Layer side after the phase 2 is launched
      */
     function getWithdrawalCredentials() public view returns (bytes32) {
         return WITHDRAWAL_CREDENTIALS_POSITION.getStorageBytes32();
@@ -467,12 +491,9 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         stakingModuleCache.targetShare = stakingModuleData.targetShare;
 
         IStakingModule stakingModule = IStakingModule(stakingModuleData.stakingModuleAddress);
-        (uint256 totalKeysCount, uint256 usedKeysCount, uint256 stoppedKeysCount) = stakingModule.getSigningKeysStats();
-        stakingModuleCache.totalKeysCount = totalKeysCount;
-        stakingModuleCache.usedKeysCount = usedKeysCount;
-        stakingModuleCache.stoppedKeysCount = stoppedKeysCount;
-        stakingModuleCache.activeKeysCount = stakingModuleCache.usedKeysCount - stakingModuleCache.stoppedKeysCount;
-        stakingModuleCache.availableKeysCount = stakingModuleCache.totalKeysCount - stakingModuleCache.usedKeysCount;
+        (uint256 activeKeysCount, uint256 availableKeysCount) = stakingModule.getKeysUsageData();
+        stakingModuleCache.activeKeysCount = activeKeysCount;
+        stakingModuleCache.availableKeysCount = availableKeysCount;
     }
 
     function _getKeysAllocation(
@@ -515,11 +536,11 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         allocated = MinFirstAllocationStrategy.allocate(allocations, capacities, _keysToAllocate);
     }
 
-    function _getActiveKeysCount(uint24 _stakingModuleIndex) internal view returns (uint256) {
-        IStakingModule stakingModule = IStakingModule(_getStakingModuleAddressByIndex(_stakingModuleIndex));
-        (, uint256 usedSigningKeys, uint256 stoppedSigningKeys) = stakingModule.getSigningKeysStats();
-        return usedSigningKeys - stoppedSigningKeys;
-    }
+    // function _getActiveKeysCount(uint24 _stakingModuleIndex) internal view returns (uint256) {
+    //     IStakingModule stakingModule = IStakingModule(_getStakingModuleAddressByIndex(_stakingModuleIndex));
+    //     (, uint256 usedSigningKeys, uint256 stoppedSigningKeys) = stakingModule.getSigningKeysStats();
+    //     return usedSigningKeys - stoppedSigningKeys;
+    // }
 
     function _getStakingModuleAddressById(uint24 _stakingModuleId) private view returns (address) {
         return _getStakingModuleById(_stakingModuleId).stakingModuleAddress;

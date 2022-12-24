@@ -19,15 +19,11 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         operators[_operatorId].stoppedValidators = _keys;
     }
 
-    function setTotalKeys(uint256 _keys) external {
-        signingKeysStats.totalSigningKeys = uint64(_keys);
+    function setAvailableKeysCount(uint256 _keys) external {
+        keysUsageStats.totalAvailableKeys = uint64(_keys);
     }
 
-    function setTotalUsedKeys(uint256 _keys) external {
-        signingKeysStats.usedSigningKeys = uint64(_keys);
-    }
-
-    function setTotalStoppedKeys(uint256 _keys) external {
-        signingKeysStats.stoppedSigningKeys = uint64(_keys);
+    function setActiveKeysCount(uint256 _keys) external {
+        keysUsageStats.totalActiveKeys = uint64(_keys);
     }
 }

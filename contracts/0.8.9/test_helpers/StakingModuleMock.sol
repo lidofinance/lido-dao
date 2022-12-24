@@ -8,34 +8,20 @@ pragma solidity 0.8.9;
 import {IStakingModule} from "../interfaces/IStakingModule.sol";
 
 contract StakingModuleMock is IStakingModule {
-    uint256 private _totalKeys;
-    uint256 private _totalUsedKeys;
-    uint256 private _totalStoppedKeys;
+    uint256 private _activeKeysCount;
+    uint256 private _availableKeysCount;
 
-    function getTotalKeys() external view returns (uint256) {
-        return _totalKeys;
+    function getActiveKeysCount() public view returns (uint256) {
+        return _activeKeysCount;
     }
 
-    function getTotalUsedKeys() external view returns (uint256) {
-        return _totalUsedKeys;
+    function getAvailableKeysCount() public view returns (uint256) {
+        return _availableKeysCount;
     }
 
-    function getTotalStoppedKeys() external view returns (uint256) {
-        return _totalStoppedKeys;
-    }
-
-    function getSigningKeysStats()
-        external
-        view
-        returns (
-            uint256 totalSigningKeys,
-            uint256 usedSigningKeys,
-            uint256 stoppedSigningKeys
-        )
-    {
-        totalSigningKeys = _totalKeys;
-        usedSigningKeys = _totalUsedKeys;
-        stoppedSigningKeys = _totalStoppedKeys;
+    function getKeysUsageData() external view returns (uint256 activeKeysCount, uint256 availableKeysCount) {
+        activeKeysCount = getActiveKeysCount();
+        availableKeysCount = getAvailableKeysCount();
     }
 
     function getType() external view returns (bytes32) {}
@@ -43,10 +29,6 @@ contract StakingModuleMock is IStakingModule {
     function trimUnusedKeys() external {}
 
     function getKeysOpIndex() external view returns (uint256) {}
-
-    function setTotalKeys(uint256 _newTotalKeys) external {
-        _totalKeys = _newTotalKeys;
-    }
 
     function prepNextSigningKeys(uint256 maxDepositsCount, bytes calldata depositCalldata)
         external
@@ -57,11 +39,11 @@ contract StakingModuleMock is IStakingModule {
         )
     {}
 
-    function setTotalUsedKeys(uint256 _newTotalUsedKeys) external {
-        _totalUsedKeys = _newTotalUsedKeys;
+    function setActiveKeysCount(uint256 _newActiveKeysCount) external {
+        _activeKeysCount = _newActiveKeysCount;
     }
 
-    function setTotalStoppedKeys(uint256 _newTotalStoppedKeys) external {
-        _totalStoppedKeys = _newTotalStoppedKeys;
+    function setAvailableKeysCount(uint256 _newAvailableKeysCount) external {
+        _availableKeysCount = _newAvailableKeysCount;
     }
 }

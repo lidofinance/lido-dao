@@ -18,6 +18,9 @@ const ADDRESS_4 = '0x0000000000000000000000000000000000000004'
 
 const UNLIMITED = 1000000000
 
+// bytes32 0x63757261746564
+const CURATED_TYPE = web3.utils.fromAscii('curated')
+
 const pad = (hex, bytesLength) => {
   const absentZeroes = bytesLength * 2 + 2 - hex.length
   if (absentZeroes > 0) hex = '0x' + '0'.repeat(absentZeroes) + hex.substr(2)
@@ -57,6 +60,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     const proxyAddress = await newApp(dao, 'node-operators-registry', appBase.address, appManager)
     app = await NodeOperatorsRegistry.at(proxyAddress)
 
+    pool = await PoolMock.new(app.address)
+
     // Set up the app's permissions.
     await acl.createPermission(voting, app.address, await app.MANAGE_SIGNING_KEYS(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.ADD_NODE_OPERATOR_ROLE(), appManager, { from: appManager })
@@ -66,21 +71,30 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await acl.createPermission(voting, app.address, await app.SET_NODE_OPERATOR_LIMIT_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.REPORT_STOPPED_VALIDATORS_ROLE(), appManager, { from: appManager })
 
-    pool = await PoolMock.new(app.address)
+    await acl.createPermission(pool.address, app.address, await app.ASSIGN_NEXT_KEYS_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(pool.address, app.address, await app.TRIM_UNUSED_KEYS_ROLE(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
-    await app.initialize(pool.address)
+    await app.initialize()
   })
 
   it('setType works', async () => {
-    const type = web3.utils.fromAscii('curated')
+    assert.equal(await app.getType(), 0, 'invalid init type')
 
-    await assertRevert(app.setType(type, { from: user1 }), 'APP_AUTH_FAILED')
-    await assertRevert(app.setType(type, { from: nobody }), 'APP_AUTH_FAILED')
+    await app.finalizeUpgrade_v2(pool.address, CURATED_TYPE)
 
-    await app.setType(type, { from: voting })
+    assert.equal(await app.getType(), 0x6375726174656400000000000000000000000000000000000000000000000000, 'invalid bytes32 type')
+    assert.equal(web3.utils.hexToString(await app.getType()), 'curated', 'invalid type')
+  })
 
-    assert(web3.utils.hexToString(await app.getType()) === 'curated', 'invalid_type')
+  it('events works', async () => {
+    const receipt = await app.finalizeUpgrade_v2(pool.address, CURATED_TYPE)
+
+    const moduleType = await app.getType()
+
+    assertEvent(receipt, 'ContractVersionSet', { expectedArgs: { version: 2 } })
+    assertEvent(receipt, 'StethContractSet', { expectedArgs: { stethAddress: pool.address } })
+    assertEvent(receipt, 'SetStakingModuleType', { expectedArgs: { moduleType } })
   })
 
   it('addNodeOperator works', async () => {
@@ -849,27 +863,33 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await app.addNodeOperator('2', user3, { from: voting })
 
       await app.setOperatorUsedKeys(0, 3)
-      await app.setOperatorStoppedKeys(0, 4)
-      await app.setOperatorTotalKeys(0, 7)
+      await app.setOperatorStoppedKeys(0, 2)
+      await app.setOperatorTotalKeys(0, 5)
+      await app.setNodeOperatorStakingLimit(0, 5, { from: voting })
 
       await app.setOperatorUsedKeys(1, 7)
       await app.setOperatorStoppedKeys(1, 1)
       await app.setOperatorTotalKeys(1, 8)
+      await app.setNodeOperatorStakingLimit(1, 5, { from: voting })
 
-      await app.setOperatorUsedKeys(2, 0)
+      await app.setOperatorUsedKeys(2, 10)
       await app.setOperatorStoppedKeys(2, 10)
-      await app.setOperatorTotalKeys(2, 10)
+      await app.setOperatorTotalKeys(2, 20)
+      await app.setNodeOperatorStakingLimit(2, 13, { from: voting })
 
-      await app.finalizeUpgrade_v2(steth.address)
+      await app.finalizeUpgrade_v2(steth.address, CURATED_TYPE)
 
-      assertBn(await app.getTotalKeys(), 25)
-      assertBn(await app.getTotalUsedKeys(), 10)
-      assertBn(await app.getTotalStoppedKeys(), 15)
+      assertBn(await app.getActiveKeysCount(), 7)
+      assertBn(await app.getAvailableKeysCount(), 5)
+
+      const { activeKeysCount, availableKeysCount } = await app.getKeysUsageData()
+      assertBn(activeKeysCount, 7)
+      assertBn(availableKeysCount, 5)
     })
   })
   context('distribute rewards', () => {
     it('must distribute rewards to operators', async () => {
-      await app.finalizeUpgrade_v2(steth.address)
+      await app.finalizeUpgrade_v2(steth.address, CURATED_TYPE)
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, ETH(10))
 
@@ -880,7 +900,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await app.setOperatorUsedKeys(0, 3)
       await app.setOperatorUsedKeys(1, 7)
       await app.setOperatorUsedKeys(2, 0)
-      await app.setTotalUsedKeys(10)
+      await app.setActiveKeysCount(10)
 
       await app.distributeRewards({ from: user3 })
 

@@ -228,4 +228,20 @@ interface ILido {
      * @return beaconBalance - total amount of Beacon-side Ether (sum of all the balances of Lido validators)
      */
     function getBeaconStat() external view returns (uint256 depositedValidators, uint256 beaconValidators, uint256 beaconBalance);
+
+    /**
+     * @dev Sets the address of StakingRouter contract
+     * @param stakingRouterAddress StakingRouter contract address
+     */
+    function setStakingRouter(address stakingRouterAddress) external;
+
+    event StakingRouterSet(address stakingRouterAddress);
+
+    /**
+     * @dev Sets the address of DepositSecurityModule contract
+     * @param dsmAddress DepositSecurityModule contract address
+     */
+    function setDepositSecurityModule(address dsmAddress) external;
+
+    event DepositSecurityModuleSet(address dsmAddress);
 }

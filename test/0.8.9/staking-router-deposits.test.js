@@ -55,6 +55,7 @@ contract('StakingRouter', (accounts) => {
     stakingRouterMock = await StakingRouterMockForDepositSecurityModule.new()
     depositContractMock = await DepositContractMockForDepositSecurityModule.new()
     depositSecurityModule = await DepositSecurityModule.new(
+      lido.address,
       depositContractMock.address,
       stakingRouterMock.address,
       MAX_DEPOSITS_PER_BLOCK,

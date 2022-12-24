@@ -9,6 +9,14 @@ import {ECDSA} from "./lib/ECDSA.sol";
 import {IStakingRouter} from "./interfaces/IStakingRouter.sol";
 import {IDepositContract} from "./interfaces/IDepositContract.sol";
 
+interface ILido {
+    function deposit(
+        uint256 _maxDepositsCount,
+        uint24 _stakingModuleId,
+        bytes calldata _depositCalldata
+    ) external;
+}
+
 contract DepositSecurityModule {
     /**
      * Short ECDSA signature as defined in https://eips.ethereum.org/EIPS/eip-2098.
@@ -31,6 +39,7 @@ contract DepositSecurityModule {
     bytes32 public immutable ATTEST_MESSAGE_PREFIX;
     bytes32 public immutable PAUSE_MESSAGE_PREFIX;
 
+    ILido public immutable LIDO;
     IStakingRouter public immutable STAKING_ROUTER;
     IDepositContract public immutable DEPOSIT_CONTRACT;
 
@@ -45,15 +54,18 @@ contract DepositSecurityModule {
     mapping(address => uint256) internal guardianIndicesOneBased; // 1-based
 
     constructor(
+        address _lido,
         address _depositContract,
         address _stakingRouter,
         uint256 _maxDepositsPerBlock,
         uint256 _minDepositBlockDistance,
         uint256 _pauseIntentValidityPeriodBlocks
     ) {
+        require(_lido != address(0), "LIDO_CONTRACT_ZERO_ADDRESS");
         require(_stakingRouter != address(0), "STAKING_ROUTER_ZERO_ADDRESS");
         require(_depositContract != address(0), "DEPOSIT_CONTRACT_ZERO_ADDRESS");
 
+        LIDO = ILido(_lido);
         STAKING_ROUTER = IStakingRouter(_stakingRouter);
         DEPOSIT_CONTRACT = IDepositContract(_depositContract);
 
@@ -61,7 +73,8 @@ contract DepositSecurityModule {
             abi.encodePacked(
                 // keccak256("lido.DepositSecurityModule.ATTEST_MESSAGE")
                 bytes32(0x1085395a994e25b1b3d0ea7937b7395495fb405b31c7d22dbc3976a6bd01f2bf),
-                block.chainid
+                block.chainid,
+                address(this)
             )
         );
 
@@ -69,7 +82,8 @@ contract DepositSecurityModule {
             abi.encodePacked(
                 // keccak256("lido.DepositSecurityModule.PAUSE_MESSAGE")
                 bytes32(0x9c4c40205558f12027f21204d6218b8006985b7a6359bcab15404bcc3e3fa122),
-                block.chainid
+                block.chainid,
+                address(this)
             )
         );
 
@@ -270,7 +284,7 @@ contract DepositSecurityModule {
     }
 
     /**
-     * Pauses deposits given that both conditions are satisfied (reverts otherwise):
+     * Pauses deposits for module given that both conditions are satisfied (reverts otherwise):
      *
      *   1. The function is called by the guardian with index guardianIndex OR sig
      *      is a valid signature by the guardian with index guardianIndex of the data
@@ -281,7 +295,7 @@ contract DepositSecurityModule {
      * The signature, if present, must be produced for keccak256 hash of the following
      * message (each component taking 32 bytes):
      *
-     * | PAUSE_MESSAGE_PREFIX | blockNumber
+     * | PAUSE_MESSAGE_PREFIX | blockNumber | stakingModuleId |
      */
     function pauseDeposits(
         uint256 blockNumber,
@@ -315,7 +329,7 @@ contract DepositSecurityModule {
     }
 
     /**
-     * Unpauses deposits.
+     * Unpauses deposits for module
      *
      * Only callable by the owner.
      */
@@ -328,7 +342,7 @@ contract DepositSecurityModule {
     }
 
     /**
-     * Returns whether depositBufferedEther can be called, given that the caller will provide
+     * Returns whether LIDO.deposit() can be called, given that the caller will provide
      * guardian attestations of non-stale deposit root and `keysOpIndex`, and the number of
      * such attestations will be enough to reach quorum.
      */
@@ -339,20 +353,20 @@ contract DepositSecurityModule {
     }
 
     /**
-     * Calls Lido.depositBufferedEther(maxDepositsPerBlock).
+     * Calls LIDO.deposit(maxDepositsPerBlock, stakingModuleId, depositCalldata).
      *
      * Reverts if any of the following is true:
      *   1. IDepositContract.get_deposit_root() != depositRoot.
-     *   2. INodeOperatorsRegistry.getKeysOpIndex() != keysOpIndex.
+     *   2. StakingModule.getKeysOpIndex() != keysOpIndex.
      *   3. The number of guardian signatures is less than getGuardianQuorum().
      *   4. An invalid or non-guardian signature received.
-     *   5. block.number - getLastDepositBlock() < minDepositBlockDistance.
+     *   5. block.number - StakingModule.getLastDepositBlock() < minDepositBlockDistance.
      *   6. blockhash(blockNumber) != blockHash.
      *
      * Signatures must be sorted in ascending order by index of the guardian. Each signature must
      * be produced for keccak256 hash of the following message (each component taking 32 bytes):
      *
-     * | ATTEST_MESSAGE_PREFIX | depositRoot | keysOpIndex | blockNumber | blockHash |
+     * | ATTEST_MESSAGE_PREFIX | blockNumber | blockHash | depositRoot | stakingModuleId | keysOpIndex |
      */
     function depositBufferedEther(
         uint256 blockNumber,
@@ -379,7 +393,7 @@ contract DepositSecurityModule {
 
         _verifySignatures(depositRoot, blockNumber, blockHash, stakingModuleId, keysOpIndex, sortedGuardianSignatures);
 
-        STAKING_ROUTER.deposit(maxDepositsPerBlock, stakingModuleId, depositCalldata);
+        LIDO.deposit(maxDepositsPerBlock, stakingModuleId, depositCalldata);
     }
 
     function _verifySignatures(
