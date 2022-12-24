@@ -633,6 +633,7 @@ contract Lido is ILido, StETH, AragonApp {
             .getStakingRewardsDistribution();
 
         require(recipients.length > 0, "NO_RECIPIENTS");
+        require(totalFee > 0, "NOTHING_TO_DISTRIBUTE");
         require(totalFee <= getMaxFee(), "TOTAL_FEE_EXCEED_MAXIMUM_FEE");
 
         uint256 shares2mint = _totalRewards.mul(totalFee).mul(_getTotalShares()).div(
@@ -766,9 +767,7 @@ contract Lido is ILido, StETH, AragonApp {
 
             address(stakingRouter).transfer(amount);
 
-            BUFFERED_ETHER_POSITION.setStorageUint256(
-                BUFFERED_ETHER_POSITION.getStorageUint256().sub(amount)
-            );
+            BUFFERED_ETHER_POSITION.setStorageUint256(BUFFERED_ETHER_POSITION.getStorageUint256().sub(amount));
 
             STAKING_ROUTER_BUFFERED_ETHER_POSITION.setStorageUint256(
                 STAKING_ROUTER_BUFFERED_ETHER_POSITION.getStorageUint256().add(amount)
