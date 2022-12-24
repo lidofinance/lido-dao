@@ -313,28 +313,25 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         view
         returns (address[] memory recipients, uint16[] memory moduleFees, uint16 totalFee)
     {
-        uint256 _modulesCount = getStakingModulesCount();
-        if (_modulesCount == 0) revert ErrorNoStakingModules();
-
-        recipients = new address[](_modulesCount);
-        moduleFees = new uint16[](_modulesCount);
-
-        totalFee = 0;
-
         (uint256 totalActiveKeys, uint256[] memory moduleActiveKeys) = getTotalActiveKeys();
 
-        if (totalActiveKeys == 0) revert ErrorNoKeys();
+        uint256 _modulesCount = moduleActiveKeys.length;
+        recipients = new address[](_modulesCount);
+        moduleFees = new uint16[](_modulesCount);
+        totalFee = 0;
 
-        StakingModule memory stakingModule;
-        uint256 moduleKeysShare;
-        for (uint256 i = 0; i < _modulesCount; ++i) {
-            stakingModule = _getStakingModuleByIndex(i);
-            moduleKeysShare = ((moduleActiveKeys[i] * TOTAL_BASIS_POINTS) / totalActiveKeys);
+        if (_modulesCount > 0 && totalActiveKeys == 0) {
+            StakingModule memory stakingModule;
+            uint256 moduleKeysShare;
+            for (uint256 i = 0; i < _modulesCount; ++i) {
+                stakingModule = _getStakingModuleByIndex(i);
+                moduleKeysShare = ((moduleActiveKeys[i] * TOTAL_BASIS_POINTS) / totalActiveKeys);
 
-            recipients[i] = address(stakingModule.stakingModuleAddress);
-            moduleFees[i] = uint16((moduleKeysShare * stakingModule.moduleFee) / TOTAL_BASIS_POINTS);
+                recipients[i] = address(stakingModule.stakingModuleAddress);
+                moduleFees[i] = uint16((moduleKeysShare * stakingModule.moduleFee) / TOTAL_BASIS_POINTS);
 
-            totalFee += uint16((moduleKeysShare * stakingModule.treasuryFee) / TOTAL_BASIS_POINTS) + moduleFees[i];
+                totalFee += uint16((moduleKeysShare * stakingModule.treasuryFee) / TOTAL_BASIS_POINTS) + moduleFees[i];
+            }
         }
 
         return (recipients, moduleFees, totalFee);
@@ -507,7 +504,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     error ErrorZeroAddress(string field);
     error ErrorBaseVersion();
     error ErrorNoKeys();
-    error ErrorNoStakingModules();
+    // error ErrorNoStakingModules();
     error ErrorZeroMaxSigningKeysCount();
     error ErrorValueOver100Percent(string field);
     error ErrorStakingModuleStatusNotChanged();
