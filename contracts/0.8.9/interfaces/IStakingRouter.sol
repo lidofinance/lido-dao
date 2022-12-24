@@ -22,11 +22,25 @@ interface IStakingRouter {
      */
     function getWithdrawalCredentials() external view returns (bytes32);
 
+    enum StakingModuleStatus {
+        Active, // deposits and rewards allowed
+        DepositsPaused, // deposits NOT allowed, rewards allowed
+        Stopped // deposits and rewards NOT allowed
+    }
+
+    function getStakingModuleStatus(uint24 _stakingModuleId) external view returns (StakingModuleStatus);
+
+    function setStakingModuleStatus(uint24 _stakingModuleId, StakingModuleStatus _status) external;
+
     function pauseStakingModule(uint24 _stakingModuleId) external;
 
     function unpauseStakingModule(uint24 _stakingModuleId) external;
 
-    function getStakingModuleIsPaused(uint24 _stakingModuleId) external view returns (bool);
+    function getStakingModuleIsStopped(uint24 _stakingModuleId) external view returns (bool);
+
+    function getStakingModuleIsDepositsPaused(uint24 _stakingModuleId) external view returns (bool);
+
+    function getStakingModuleIsActive(uint24 _stakingModuleId) external view returns (bool);
 
     function getStakingModuleKeysOpIndex(uint24 _stakingModuleId) external view returns (uint256);
 

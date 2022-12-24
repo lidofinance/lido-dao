@@ -9,37 +9,61 @@ import {IStakingRouter} from "../DepositSecurityModule.sol";
 
 contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
     event StakingModuleDeposited(uint256 maxDepositsCount, uint24 stakingModuleId, bytes depositCalldata);
-    event StakingModulePaused(uint24 stakingModuleId);
-    event StakingModuleUnpaused(uint24 stakingModuleId);
+    event StakingModuleStatusChanged(
+        uint24 indexed stakingModuleId,
+        address indexed actor,
+        StakingModuleStatus fromStatus,
+        StakingModuleStatus toStatus
+    );
 
-    bool private isStakingModulePaused;
+    StakingModuleStatus private status;
     uint256 private stakingModuleKeysOpIndex;
     uint256 private stakingModuleLastDepositBlock;
 
     function getStakingRewardsDistribution() external returns (address[] memory recipients, uint16[] memory moduleFees, uint16 totalFee) {}
 
-    function deposit(uint256 maxDepositsCount, uint24 stakingModuleId, bytes calldata depositCalldata)
-        external
-        returns (uint256 keysCount)
-    {
+    function deposit(
+        uint256 maxDepositsCount,
+        uint24 stakingModuleId,
+        bytes calldata depositCalldata
+    ) external returns (uint256 keysCount) {
         emit StakingModuleDeposited(maxDepositsCount, stakingModuleId, depositCalldata);
         return maxDepositsCount;
     }
 
     function setWithdrawalCredentials(bytes32 _withdrawalCredentials) external {}
 
+    function getStakingModuleStatus(uint24) external view returns (StakingModuleStatus) {
+        return status;
+    }
+
+    function setStakingModuleStatus(uint24 _stakingModuleId, StakingModuleStatus _status) external {
+        emit StakingModuleStatusChanged(_stakingModuleId, msg.sender, status, _status);
+        status = _status;
+    }
+
     function pauseStakingModule(uint24 stakingModuleId) external {
-        emit StakingModulePaused(stakingModuleId);
+        emit StakingModuleStatusChanged(stakingModuleId, msg.sender, status, StakingModuleStatus.DepositsPaused);
+        status = StakingModuleStatus.DepositsPaused;
     }
 
     function unpauseStakingModule(uint24 stakingModuleId) external {
-        emit StakingModuleUnpaused(stakingModuleId);
+        emit StakingModuleStatusChanged(stakingModuleId, msg.sender, status, StakingModuleStatus.Active);
+        status = StakingModuleStatus.Active;
     }
 
     function getWithdrawalCredentials() external view returns (bytes32) {}
 
-    function getStakingModuleIsPaused(uint24) external view returns (bool) {
-        return isStakingModulePaused;
+    function getStakingModuleIsStopped(uint24) external view returns (bool) {
+        return status == StakingModuleStatus.Stopped;
+    }
+
+    function getStakingModuleIsDepositsPaused(uint24) external view returns (bool) {
+        return status == StakingModuleStatus.DepositsPaused;
+    }
+
+    function getStakingModuleIsActive(uint24) external view returns (bool) {
+        return status == StakingModuleStatus.Active;
     }
 
     function getStakingModuleKeysOpIndex(uint24) external view returns (uint256) {
@@ -48,10 +72,6 @@ contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
 
     function getStakingModuleLastDepositBlock(uint24) external view returns (uint256) {
         return stakingModuleLastDepositBlock;
-    }
-
-    function setStakingModuleIsPaused(bool value) external {
-        isStakingModulePaused = value;
     }
 
     function setStakingModuleKeysOpIndex(uint256 value) external {
