@@ -758,17 +758,26 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
     }
 
     function _updateTotalAvailableKeysCount() internal {
-        DepositLookupCacheEntry[] memory cache = _loadOperatorCache();
-
+        uint256 operatorStakingLimit;
+        uint256 operatorUsedSigningKeys;
+        uint256 operatorTotalSigningKeys;
         uint256 totalAvailableKeysCount;
-        for (uint256 i = 0; i < cache.length; ++i) {
-            if (cache[i].usedSigningKeys >= cache[i].stakingLimit || cache[i].usedSigningKeys >= cache[i].totalSigningKeys) {
+        uint256 activeNodeOperatorsCount = getActiveNodeOperatorsCount();
+        for (uint256 i = 0; i < activeNodeOperatorsCount; ++i) {
+            NodeOperator storage operator = operators[i];
+            if (!operator.active) {
+                continue;
+            }
+            operatorStakingLimit = operator.stakingLimit;
+            operatorUsedSigningKeys = operator.usedSigningKeys;
+            operatorTotalSigningKeys = operator.totalSigningKeys;
+            if (operatorUsedSigningKeys >= operatorStakingLimit || operatorUsedSigningKeys >= operatorTotalSigningKeys) {
                 continue;
             }
 
-            totalAvailableKeysCount += cache[i].stakingLimit < cache[i].totalSigningKeys
-                ? cache[i].stakingLimit - cache[i].usedSigningKeys
-                : cache[i].totalSigningKeys - cache[i].usedSigningKeys;
+            totalAvailableKeysCount += operatorStakingLimit < operatorTotalSigningKeys
+                ? operatorStakingLimit - operatorUsedSigningKeys
+                : operatorTotalSigningKeys - operatorUsedSigningKeys;
         }
         keysUsageStats.totalAvailableKeys = to64(totalAvailableKeysCount);
     }
