@@ -213,6 +213,10 @@ contract('MinFirstAllocationStrategy', (accounts) => {
         {
           input: [[9998, 70, 0], [10099, 101, 100], 101],
           output: [101, [9998, 86, 85]]
+        },
+        {
+          input: [[3379, 495, 5572], [7185, 1061, 3265], 1007],
+          output: [1007, [3820, 1061, 5572]]
         }
       ]
       for (const { input, output } of edgeCases) {
@@ -221,6 +225,8 @@ contract('MinFirstAllocationStrategy', (accounts) => {
         const title = `allocations: [${allocations}] capacities: [${capacities}] maxAllocationSize: ${maxAllocationSize}`
         it(title, async () => {
           const { allocated, newAllocations } = await minFirstAllocationStrategy.allocate(allocations, capacities, maxAllocationSize)
+
+          assertAllocationAssumptions(allocations, capacities, maxAllocationSize, allocated, newAllocations)
 
           const assertMessage = getAssertMessage(allocations, capacities, maxAllocationSize, expectedNewAllocations, newAllocations)
           assert.equal(expectedNewAllocations.length, newAllocations.length, assertMessage)
@@ -259,6 +265,34 @@ function getExpectedAllocate(allocations, capacities, maxAllocationSize) {
   return [allocated, allocations]
 }
 
+function assertAllocationAssumptions(allocations, capacities, maxAllocationSize, allocated, newAllocations) {
+  // assumption 1: lengths of prev allocations, capacities and new allocations are equal
+  assert(allocations.length === capacities.length)
+  assert(allocations.length === newAllocations.length)
+
+  // assumption 2: allocated doesn't exceeds maxAllocationSize
+  assert(allocated.toNumber() <= maxAllocationSize)
+
+  // assumption 3: each item in new allocation doesn't exceeds capacity if prev allocation wasn't
+  for (let i = 0; i < newAllocations.length; ++i) {
+    if (allocations[i] < capacities[i]) {
+      assert(newAllocations[i].toNumber() <= capacities[i])
+    }
+  }
+
+  // assumption 4: if new allocation item exceeds capacity it must be equal to value in prev allocation
+  for (let i = 0; i < newAllocations.length; ++i) {
+    if (allocations[i] >= capacities[i]) {
+      assertBn(newAllocations[i], allocations[i])
+    }
+  }
+
+  // assumption 4: the sum of new allocation minus the sum of prev allocation equal to distributed
+  const newAllocationsSum = newAllocations.map((a) => a.toNumber()).reduce((sum, a) => sum + a, 0)
+  const prevAllocationsSum = allocations.reduce((sum, a) => sum + a, 0)
+  assert.equal(prevAllocationsSum, newAllocationsSum - allocated)
+}
+
 function getExpectedAllocateToBestCandidate(allocations, capacities, maxAllocationSize) {
   const [allocation, capacity, index] = allocations
     .map((a, i) => [a, capacities[i], i])
@@ -276,9 +310,12 @@ function getExpectedAllocateToBestCandidate(allocations, capacities, maxAllocati
   const candidatesCount = allocations.filter((a, i) => a === allocation && a < capacities[i]).length
 
   let allocationBound = Number.MAX_SAFE_INTEGER
-  for (const a of allocations) {
-    if (a > allocation && a < allocationBound) {
-      allocationBound = a
+  for (let i = 0; i < allocations.length; ++i) {
+    if (allocations[i] >= capacities[i]) {
+      continue
+    }
+    if (allocations[i] > allocation && allocations[i] < allocationBound) {
+      allocationBound = allocations[i]
     }
   }
 
