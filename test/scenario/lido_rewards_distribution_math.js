@@ -7,6 +7,7 @@ const { pad, ETH } = require('../helpers/utils')
 const { deployDaoAndPool } = require('./helpers/deploy')
 const { signDepositData } = require('../0.8.9/helpers/signatures')
 const { waitBlocks } = require('../helpers/blockchain')
+const { DSMAttestMessage, DSMPauseMessage } = require('../0.8.9/helpers/signatures')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
@@ -14,8 +15,8 @@ const tenKBN = new BN(10000)
 
 // Fee and its distribution are in basis points, 10000 corresponding to 100%
 
-// Total fee is 1%
-const totalFeePoints = 0.01 * 10000
+// Total max fee is 10%
+const totalFeePoints = 0.1 * 10000
 
 // Of this 1%, 30% goes to the treasury
 const treasuryFeePoints = 0.3 * 10000
@@ -95,25 +96,25 @@ contract('Lido: rewards distribution math', (addresses) => {
     // contracts/nos/NodeOperatorsRegistry.sol
     nodeOperatorRegistry = deployed.nodeOperatorRegistry
 
+    // contracts/0.8.9/StakingRouter.sol
+    stakingRouter = deployed.stakingRouter
+
     // mocks
     oracleMock = deployed.oracleMock
 
     // addresses
     treasuryAddr = deployed.treasuryAddr
-    insuranceAddr = deployed.insuranceAddr
     depositSecurityModule = deployed.depositSecurityModule
     guardians = deployed.guardians
 
     depositRoot = await deployed.depositContractMock.get_deposit_root()
 
-    await pool.setFee(totalFeePoints, { from: voting })
-    await pool.setFeeDistribution(treasuryFeePoints, insuranceFeePoints, nodeOperatorsFeePoints, { from: voting })
-    await pool.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
+    await pool.setMaxFee(totalFeePoints, { from: voting })
+    await stakingRouter.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
   })
 
   it(`initial treasury & insurance balances are zero`, async () => {
     assertBn(await token.balanceOf(treasuryAddr), new BN(0), 'treasury balance is zero')
-    assertBn(await token.balanceOf(insuranceAddr), new BN(0), 'insurance balance is zero')
   })
 
   it(`registers one node operator with one key`, async () => {
@@ -184,32 +185,27 @@ contract('Lido: rewards distribution math', (addresses) => {
     assertBn(await token.getTotalShares(), depositAmount, 'total shares')
 
     assertBn(await token.balanceOf(treasuryAddr), new BN(0), 'treasury balance is zero')
-    assertBn(await token.balanceOf(insuranceAddr), new BN(0), 'insurance balance is zero')
     assertBn(await token.balanceOf(nodeOperator1.address), new BN(0), 'nodeOperator1 balance is zero')
   })
 
   it(`the first deposit gets deployed`, async () => {
+    const [curated, _] = await stakingRouter.getStakingModules()
+    const calldata = '0x'
+
     const block = await web3.eth.getBlock('latest')
     const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+
+    DSMAttestMessage.setMessagePrefix(await depositSecurityModule.ATTEST_MESSAGE_PREFIX())
+    DSMPauseMessage.setMessagePrefix(await depositSecurityModule.PAUSE_MESSAGE_PREFIX())
+
+    const validAttestMessage = new DSMAttestMessage(block.number, block.hash, depositRoot, curated.id, keysOpIndex)
+
     const signatures = [
-      signDepositData(
-        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
-        depositRoot,
-        keysOpIndex,
-        block.number,
-        block.hash,
-        guardians.privateKeys[guardians.addresses[0]]
-      ),
-      signDepositData(
-        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
-        depositRoot,
-        keysOpIndex,
-        block.number,
-        block.hash,
-        guardians.privateKeys[guardians.addresses[1]]
-      )
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[0]]),
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]])
     ]
-    await depositSecurityModule.depositBufferedEther(depositRoot, keysOpIndex, block.number, block.hash, signatures)
+
+    await depositSecurityModule.depositBufferedEther(block.number, block.hash, depositRoot, curated.id, keysOpIndex, '0x', signatures)
 
     assertBn(await nodeOperatorRegistry.getUnusedSigningKeyCount(0), 0, 'no more available keys for the first validator')
     assertBn(await token.balanceOf(user1), ETH(34), 'user1 balance is equal first reported value + their buffered deposit value')
@@ -217,7 +213,6 @@ contract('Lido: rewards distribution math', (addresses) => {
     assertBn(await token.totalSupply(), ETH(34), 'token total supply')
 
     assertBn(await token.balanceOf(treasuryAddr), ETH(0), 'treasury balance equals buffered value')
-    assertBn(await token.balanceOf(insuranceAddr), new BN(0), 'insurance balance is zero')
     assertBn(await token.balanceOf(nodeOperator1.address), new BN(0), 'nodeOperator1 balance is zero')
   })
 
@@ -230,7 +225,6 @@ contract('Lido: rewards distribution math', (addresses) => {
     const [{ receipt }, deltas] = await getSharesTokenDeltas(
       () => reportBeacon(1, reportingValue),
       treasuryAddr,
-      insuranceAddr,
       nodeOperator1.address,
       user1
     )
@@ -238,8 +232,6 @@ contract('Lido: rewards distribution math', (addresses) => {
     const [
       treasuryTokenDelta,
       treasurySharesDelta,
-      insuranceTokenDelta,
-      insuranceSharesDelta,
       nodeOperator1TokenDelta,
       nodeOperator1SharesDelta,
       user1TokenDelta,
@@ -258,11 +250,10 @@ contract('Lido: rewards distribution math', (addresses) => {
       treasuryFeeToMint
     } = await getAwaitedFeesSharesTokensDeltas(profitAmount, prevTotalShares, 1)
 
-    assertBn(insuranceSharesDelta, insuranceSharesToMint, 'insurance shares are correct')
     assertBn(nodeOperator1SharesDelta, nodeOperatorsSharesToMint, 'nodeOperator1 shares are correct')
     assertBn(treasurySharesDelta, treasurySharesToMint, 'treasury shares are correct')
 
-    assertBn(insuranceFeeToMint.add(nodeOperatorsFeeToMint).add(treasuryFeeToMint), reportedMintAmount, 'reported the expected total fee')
+    assertBn(treasuryFeeToMint.add(nodeOperatorsFeeToMint), reportedMintAmount, 'reported the expected total fee')
 
     assert.equal(tos[0], insuranceAddr, 'first transfer to insurance address')
     assertBn(values[0], insuranceFeeToMint, 'insurance transfer amount is correct')

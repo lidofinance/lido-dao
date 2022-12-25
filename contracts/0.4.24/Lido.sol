@@ -450,6 +450,14 @@ contract Lido is ILido, StETH, AragonApp {
         return _getBufferedEther();
     }
 
+    function getStakingRouterBufferedEther() external view returns (uint256) {
+        return _getStakingRouterBufferedEther();
+    }
+
+    function getTotalBufferedEther() public view returns (uint256) {
+        return _getBufferedEther().add(_getStakingRouterBufferedEther());
+    }
+
     /**
      * @notice Get total amount of execution layer rewards collected to Lido contract
      * @dev Ether got through LidoExecutionLayerRewardsVault is kept on this contract's balance the same way
@@ -675,10 +683,6 @@ contract Lido is ILido, StETH, AragonApp {
         _transferShares(address(this), treasury, treasuryReward);
     }
 
-    function getStakingRouterBufferedEther() external view returns (uint256) {
-        return _getStakingRouterBufferedEther();
-    }
-
     /**
      * @dev Write a value nominated in basis points
      */
@@ -730,9 +734,7 @@ contract Lido is ILido, StETH, AragonApp {
      */
     function _getTotalPooledEther() internal view returns (uint256) {
         return
-            _getBufferedEther().add(BEACON_BALANCE_POSITION.getStorageUint256()).add(_getTransientBalance()).add(
-                _getStakingRouterBufferedEther()
-            );
+            getTotalBufferedEther().add(BEACON_BALANCE_POSITION.getStorageUint256()).add(_getTransientBalance());
     }
 
     function _pauseStaking() internal {

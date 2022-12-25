@@ -5,6 +5,7 @@ const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 const OracleMock = artifacts.require('OracleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
 const DepositSecurityModule = artifacts.require('DepositSecurityModule.sol')
+const StakingRouter = artifacts.require('StakingRouter.sol')
 
 module.exports = {
   deployDaoAndPool
@@ -23,10 +24,13 @@ const GUARDIAN_PRIVATE_KEYS = {
   [GUARDIAN3]: '0x75e6f508b637327debc90962cd38943ddb9cfc1fc4a8572fc5e3d0984e1261de'
 }
 const DEPOSIT_ROOT = '0xd151867719c94ad8458feaf491809f9bc8096c702a72747403ecaac30c179137'
+const CURATED_TYPE = web3.utils.fromAscii('curated')
 
 async function deployDaoAndPool(appManager, voting) {
   // Deploy the DAO, oracle and deposit contract mocks, and base contracts for
   // Lido (the pool) and NodeOperatorsRegistry (the Node Operators registry)
+
+  const treasury = web3.eth.accounts.create()
 
   const [{ dao, acl }, oracleMock, depositContractMock, poolBase, nodeOperatorRegistryBase] = await Promise.all([
     newDao(appManager),
@@ -35,6 +39,8 @@ async function deployDaoAndPool(appManager, voting) {
     Lido.new(),
     NodeOperatorsRegistry.new()
   ])
+
+  const stakingRouter = await StakingRouter.new(depositContractMock.address)
 
   // Instantiate proxies for the pool, the token, and the node operators registry, using
   // the base contracts as their logic implementation
@@ -53,8 +59,7 @@ async function deployDaoAndPool(appManager, voting) {
   const depositSecurityModule = await DepositSecurityModule.new(
     pool.address,
     depositContractMock.address,
-    nodeOperatorRegistry.address,
-    NETWORK_ID,
+    stakingRouter.address,
     MAX_DEPOSITS_PER_BLOCK,
     MIN_DEPOSIT_BLOCK_DISTANCE,
     PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS,
@@ -63,44 +68,49 @@ async function deployDaoAndPool(appManager, voting) {
   await depositSecurityModule.addGuardians([GUARDIAN3, GUARDIAN1, GUARDIAN2], 2, { from: appManager })
 
   // Initialize the node operators registry and the pool
-  await nodeOperatorRegistry.initialize(pool.address)
+  await nodeOperatorRegistry.initialize()
+  await nodeOperatorRegistry.finalizeUpgrade_v2(pool.address, CURATED_TYPE)
 
   const [
     POOL_PAUSE_ROLE,
     POOL_RESUME_ROLE,
     POOL_MANAGE_FEE,
-    POOL_MANAGE_WITHDRAWAL_KEY,
     POOL_BURN_ROLE,
     DEPOSIT_ROLE,
     STAKING_PAUSE_ROLE,
     STAKING_CONTROL_ROLE,
     SET_EL_REWARDS_VAULT_ROLE,
     SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE,
+    MANAGE_PROTOCOL_CONTRACTS_ROLE,
     NODE_OPERATOR_REGISTRY_MANAGE_SIGNING_KEYS,
     NODE_OPERATOR_REGISTRY_ADD_NODE_OPERATOR_ROLE,
     NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_ACTIVE_ROLE,
     NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_NAME_ROLE,
     NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_ADDRESS_ROLE,
     NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_LIMIT_ROLE,
-    NODE_OPERATOR_REGISTRY_REPORT_STOPPED_VALIDATORS_ROLE
+    NODE_OPERATOR_REGISTRY_REPORT_STOPPED_VALIDATORS_ROLE,
+    NODE_OPERATOR_REGISTRY_ASSIGN_NEXT_KEYS_ROLE,
+    NODE_OPERATOR_REGISTRY_TRIM_UNUSED_KEYS_ROLE
   ] = await Promise.all([
     pool.PAUSE_ROLE(),
     pool.RESUME_ROLE(),
     pool.MANAGE_FEE(),
-    pool.MANAGE_WITHDRAWAL_KEY(),
     pool.BURN_ROLE(),
     pool.DEPOSIT_ROLE(),
     pool.STAKING_PAUSE_ROLE(),
     pool.STAKING_CONTROL_ROLE(),
     pool.SET_EL_REWARDS_VAULT_ROLE(),
     pool.SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE(),
+    pool.MANAGE_PROTOCOL_CONTRACTS_ROLE(),
     nodeOperatorRegistry.MANAGE_SIGNING_KEYS(),
     nodeOperatorRegistry.ADD_NODE_OPERATOR_ROLE(),
     nodeOperatorRegistry.SET_NODE_OPERATOR_ACTIVE_ROLE(),
     nodeOperatorRegistry.SET_NODE_OPERATOR_NAME_ROLE(),
     nodeOperatorRegistry.SET_NODE_OPERATOR_ADDRESS_ROLE(),
     nodeOperatorRegistry.SET_NODE_OPERATOR_LIMIT_ROLE(),
-    nodeOperatorRegistry.REPORT_STOPPED_VALIDATORS_ROLE()
+    nodeOperatorRegistry.REPORT_STOPPED_VALIDATORS_ROLE(),
+    nodeOperatorRegistry.ASSIGN_NEXT_KEYS_ROLE(),
+    nodeOperatorRegistry.TRIM_UNUSED_KEYS_ROLE()
   ])
 
   await Promise.all([
@@ -108,12 +118,12 @@ async function deployDaoAndPool(appManager, voting) {
     acl.createPermission(voting, pool.address, POOL_PAUSE_ROLE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, POOL_RESUME_ROLE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, POOL_MANAGE_FEE, appManager, { from: appManager }),
-    acl.createPermission(voting, pool.address, POOL_MANAGE_WITHDRAWAL_KEY, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, POOL_BURN_ROLE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, STAKING_PAUSE_ROLE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, STAKING_CONTROL_ROLE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, SET_EL_REWARDS_VAULT_ROLE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE, appManager, { from: appManager }),
+    acl.createPermission(voting, pool.address, MANAGE_PROTOCOL_CONTRACTS_ROLE, appManager, { from: appManager }),
 
     // Allow depositor to deposit buffered ether
     acl.createPermission(depositSecurityModule.address, pool.address, DEPOSIT_ROLE, appManager, { from: appManager }),
@@ -139,16 +149,50 @@ async function deployDaoAndPool(appManager, voting) {
     }),
     acl.createPermission(voting, nodeOperatorRegistry.address, NODE_OPERATOR_REGISTRY_REPORT_STOPPED_VALIDATORS_ROLE, appManager, {
       from: appManager
+    }),
+    acl.createPermission(stakingRouter.address, nodeOperatorRegistry.address, NODE_OPERATOR_REGISTRY_ASSIGN_NEXT_KEYS_ROLE, appManager, {
+      from: appManager
+    }),
+    acl.createPermission(stakingRouter.address, nodeOperatorRegistry.address, NODE_OPERATOR_REGISTRY_TRIM_UNUSED_KEYS_ROLE, appManager, {
+      from: appManager
     })
   ])
 
-  await pool.initialize(depositContractMock.address, oracleMock.address, nodeOperatorRegistry.address)
+  const wc = '0x'.padEnd(66, '1234')
+  await stakingRouter.initialize(appManager, wc, { from: appManager })
+
+  // Set up the staking router permissions.
+  const [MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, MODULE_PAUSE_ROLE, MODULE_MANAGE_ROLE, STAKING_ROUTER_DEPOSIT_ROLE] = await Promise.all([
+    stakingRouter.MANAGE_WITHDRAWAL_CREDENTIALS_ROLE(),
+    stakingRouter.MODULE_PAUSE_ROLE(),
+    stakingRouter.MODULE_MANAGE_ROLE(),
+    stakingRouter.STAKING_ROUTER_DEPOSIT_ROLE()
+  ])
+
+  await stakingRouter.grantRole(MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, voting, { from: appManager })
+  await stakingRouter.grantRole(MODULE_PAUSE_ROLE, voting, { from: appManager })
+  await stakingRouter.grantRole(MODULE_MANAGE_ROLE, voting, { from: appManager })
+  await stakingRouter.grantRole(STAKING_ROUTER_DEPOSIT_ROLE, pool.address, { from: appManager })
+
+  await stakingRouter.addModule(
+    'Curated',
+    nodeOperatorRegistry.address,
+    10_000, // 100 % _targetShare
+    500, // 5 % _moduleFee
+    500, // 5 % _treasuryFee
+    { from: voting }
+  )
+
+  await pool.initialize(oracleMock.address, treasury.address)
+  await pool.setDepositSecurityModule(depositSecurityModule.address, { from: voting })
+  await pool.setStakingRouter(stakingRouter.address, { from: voting })
+  await pool.setMaxFee(1000, { from: voting })
 
   await oracleMock.setPool(pool.address)
   await depositContractMock.reset()
   await depositContractMock.set_deposit_root(DEPOSIT_ROOT)
 
-  const [treasuryAddr, insuranceAddr] = await Promise.all([pool.getTreasury(), pool.getInsuranceFund()])
+  const treasuryAddr = await pool.getTreasury()
 
   return {
     dao,
@@ -159,11 +203,11 @@ async function deployDaoAndPool(appManager, voting) {
     pool,
     nodeOperatorRegistry,
     treasuryAddr,
-    insuranceAddr,
     depositSecurityModule,
     guardians: {
       privateKeys: GUARDIAN_PRIVATE_KEYS,
       addresses: [GUARDIAN1, GUARDIAN2, GUARDIAN3]
-    }
+    },
+    stakingRouter
   }
 }

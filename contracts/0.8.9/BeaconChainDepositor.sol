@@ -71,7 +71,7 @@ contract BeaconChainDepositor {
 
     /// @dev Padding memory array with zeroes up to 64 bytes on the right
     /// @param _b Memory array of size 32 .. 64
-    function _pad64(bytes memory _b) private pure returns (bytes memory) {
+    function _pad64(bytes memory _b) internal pure returns (bytes memory) {
         assert(_b.length >= 32 && _b.length <= 64);
         if (64 == _b.length) return _b;
 

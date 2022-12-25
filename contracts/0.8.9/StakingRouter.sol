@@ -399,14 +399,14 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
             stakingModuleIndex = _getStakingModuleIndexById(_stakingModuleId);
             maxSigningKeysCount = newKeysAllocation[stakingModuleIndex] - _modulesCache[stakingModuleIndex].activeKeysCount;
         }
-
-        if (maxSigningKeysCount == 0) revert ErrorZeroMaxSigningKeysCount();
+        
+        if (maxSigningKeysCount == 0) return 0;
 
         (uint256 keysCount, bytes memory publicKeysBatch, bytes memory signaturesBatch) = IStakingModule(
             _modulesCache[stakingModuleIndex].stakingModuleAddress
         ).prepNextSigningKeys(maxSigningKeysCount, _depositCalldata);
 
-        if (keysCount == 0) revert ErrorNoKeys();
+        if (keysCount == 0) return 0;
 
         BatchedSigningKeys.validatePublicKeysBatch(publicKeysBatch, keysCount);
         BatchedSigningKeys.validateSignaturesBatch(signaturesBatch, keysCount);
@@ -490,7 +490,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
             /// @dev in general case, the distribution of active keys per modules
             ///      is different for `deposit` and for `rewardDistribution` calls
             ///      `_isRewardDistribution=true`: skip only stopped modules
-            ///      `_isRewardDistribution=false`: assuming it 'deposit' call, i.e. only active modules can deposit (skip paused and stopeed)
+            ///      `_isRewardDistribution=false`: assuming it 'deposit' call, i.e. only active modules can deposit (skip paused and stoped)
             if (_isRewardDistribution ? _status != StakingModuleStatus.Stopped : _status == StakingModuleStatus.Active) {
                 totalActiveKeys += modulesCache[i].activeKeysCount;
             } else {
@@ -562,14 +562,9 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
 
     error ErrorZeroAddress(string field);
     error ErrorBaseVersion();
-    error ErrorNoKeys();
-    // error ErrorNoStakingModules();
-    error ErrorZeroMaxSigningKeysCount();
     error ErrorValueOver100Percent(string field);
     error ErrorStakingModuleStatusNotChanged();
     error ErrorStakingModuleIsPaused();
-    // error ErrorStakingModuleIsNotActive();
     error ErrorStakingModuleIsNotPaused();
-    error UnregisteredStakingModule();
     error ErrorEmptyWithdrawalsCredentials();
 }

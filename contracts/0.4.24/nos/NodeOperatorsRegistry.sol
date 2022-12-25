@@ -762,8 +762,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         uint256 operatorUsedSigningKeys;
         uint256 operatorTotalSigningKeys;
         uint256 totalAvailableKeysCount;
-        uint256 activeNodeOperatorsCount = getActiveNodeOperatorsCount();
-        for (uint256 i = 0; i < activeNodeOperatorsCount; ++i) {
+        uint256 nodeOperatorsCount = getNodeOperatorsCount();
+        for (uint256 i = 0; i < nodeOperatorsCount; ++i) {
             NodeOperator storage operator = operators[i];
             if (!operator.active) {
                 continue;

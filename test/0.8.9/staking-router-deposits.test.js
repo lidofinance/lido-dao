@@ -3,7 +3,7 @@ const { assert } = require('chai')
 const { assertBn, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
 const { BN, constants, expectEvent, expectRevert } = require('@openzeppelin/test-helpers')
 const { newDao, newApp } = require('../0.4.24/helpers/dao')
-const { ETH } = require('../helpers/utils')
+const { ETH, genKeys } = require('../helpers/utils')
 const { expect } = require('chai')
 
 const LidoMock = artifacts.require('LidoMock.sol')
@@ -220,23 +220,3 @@ contract('StakingRouter', (accounts) => {
     })
   })
 })
-
-function genKeys(cnt = 1) {
-  let pubkeys = ''
-  let sigkeys = ''
-
-  for (let i = 1; i <= cnt; i++) {
-    pubkeys = hexConcat(pubkeys, `0x`.padEnd(98, i.toString(16))) // 48 bytes * 2 chars + 2 chars (0x)
-    sigkeys = hexConcat(sigkeys, `0x`.padEnd(194, i.toString(16))) // 96 bytes * 2 chars + 2 chars (0x)
-  }
-
-  return { pubkeys, sigkeys }
-}
-
-const hexConcat = (first, ...rest) => {
-  let result = first.startsWith('0x') ? first : '0x' + first
-  rest.forEach((item) => {
-    result += item.startsWith('0x') ? item.substr(2) : item
-  })
-  return result
-}

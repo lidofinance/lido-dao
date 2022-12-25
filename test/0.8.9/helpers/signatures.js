@@ -91,8 +91,17 @@ function encodeBNuint24(value) {
   return new BN(value).toString('hex', 6) // 3bytes
 }
 
-function signDepositData(attestMessagePrefix, depositRoot, keysOpIndex, blockNumber, blockHash, guardianPrivateKey) {
-  const hash = keccak256(encodeAttestMessage(attestMessagePrefix, depositRoot, keysOpIndex, blockNumber, blockHash))
+function signDepositData(
+  attestMessagePrefix,
+  blockNumber,
+  blockHash,
+  depositRoot,
+  StakingModuleId,
+  keysOpIndex,
+  calldata,
+  guardianPrivateKey
+) {
+  const hash = keccak256(encodeAttestMessage(attestMessagePrefix, blockNumber, blockHash, depositRoot, keysOpIndex))
   return toEip2098(ecSign(hash, guardianPrivateKey))
 }
 
