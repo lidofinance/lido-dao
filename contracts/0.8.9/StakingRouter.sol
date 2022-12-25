@@ -41,27 +41,6 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
      */
     event StakingRouterETHReceived(uint256 amount);
 
-    struct StakingModule {
-        /// @notice unique id of the module
-        uint24 id;
-        /// @notice name of module
-        string name;
-        /// @notice address of module
-        address stakingModuleAddress;
-        /// @notice rewarf fee of the module
-        uint16 moduleFee;
-        /// @notice treasury fee
-        uint16 treasuryFee;
-        /// @notice target percent of total keys in protocol, in BP
-        uint16 targetShare;
-        /// @notice module status if module can not accept the deposits or can participate in further reward distribution
-        uint8 status;
-        /// @notice block.timestamp of the last deposit of the module
-        uint64 lastDepositAt;
-        /// @notice block.number of the last deposit of the module
-        uint256 lastDepositBlock;
-    }
-
     struct StakingModuleCache {
         address stakingModuleAddress;
         uint16 moduleFee;

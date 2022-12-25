@@ -28,6 +28,48 @@ interface IStakingRouter {
         Stopped // deposits and rewards NOT allowed
     }
 
+    struct StakingModule {
+        /// @notice unique id of the module
+        uint24 id;
+        /// @notice name of module
+        string name;
+        /// @notice address of module
+        address stakingModuleAddress;
+        /// @notice rewarf fee of the module
+        uint16 moduleFee;
+        /// @notice treasury fee
+        uint16 treasuryFee;
+        /// @notice target percent of total keys in protocol, in BP
+        uint16 targetShare;
+        /// @notice module status if module can not accept the deposits or can participate in further reward distribution
+        uint8 status;
+        /// @notice block.timestamp of the last deposit of the module
+        uint64 lastDepositAt;
+        /// @notice block.number of the last deposit of the module
+        uint256 lastDepositBlock;
+    }
+
+    function getStakingModules() external view returns (StakingModule[] memory res);
+
+    function addModule(
+        string memory _name,
+        address _stakingModuleAddress,
+        uint16 _targetShare,
+        uint16 _moduleFee,
+        uint16 _treasuryFee
+    ) external;
+
+    function updateStakingModule(
+        uint24 _stakingModuleId,
+        uint16 _targetShare,
+        uint16 _moduleFee,
+        uint16 _treasuryFee
+    ) external;
+
+    function getStakingModule(uint24 _stakingModuleId) external view returns (StakingModule memory);
+
+    function getStakingModulesCount() external view returns (uint256);
+
     function getStakingModuleStatus(uint24 _stakingModuleId) external view returns (StakingModuleStatus);
 
     function setStakingModuleStatus(uint24 _stakingModuleId, StakingModuleStatus _status) external;
@@ -45,4 +87,12 @@ interface IStakingRouter {
     function getStakingModuleKeysOpIndex(uint24 _stakingModuleId) external view returns (uint256);
 
     function getStakingModuleLastDepositBlock(uint24 _stakingModuleId) external view returns (uint256);
+
+    function checkStakingModuleStatus(uint24 _stakingModuleId, StakingModuleStatus _status) external view returns (bool);
+
+    function getTotalActiveKeys() external view returns (uint256 totalActiveKeys, uint256[] memory moduleActiveKeys);
+
+    function getModuleActiveKeysCount(uint24 _stakingModuleId) external view returns (uint256);
+
+    function getKeysAllocation(uint256 _keysToAllocate) external view returns (uint256 allocated, uint256[] memory allocations);
 }

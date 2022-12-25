@@ -277,7 +277,7 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
     assertBn(await app.getBufferedEther(), ETH(5))
   })
 
-  it.only('Node Operators filtering during deposit works when doing a huge deposit', async () => {
+  it('Node Operators filtering during deposit works when doing a huge deposit', async () => {
     await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
     await operators.addNodeOperator('good', ADDRESS_1, { from: voting }) // 0
