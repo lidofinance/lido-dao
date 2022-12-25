@@ -447,11 +447,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
      * @notice Returns the rewards distribution proportional to the effective stake for each node operator.
      * @param _totalRewardShares Total amount of reward shares to distribute.
      */
-    function getRewardsDistribution(uint256 _totalRewardShares)
-        public
-        view
-        returns (address[] memory recipients, uint256[] memory shares)
-    {
+    function getRewardsDistribution(uint256 _totalRewardShares) public view returns (address[] memory recipients, uint256[] memory shares) {
         uint256 nodeOperatorCount = getNodeOperatorsCount();
 
         uint256 activeCount = getActiveNodeOperatorsCount();
@@ -759,28 +755,30 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
     }
 
     function _updateTotalAvailableKeysCount() internal {
-        uint256 operatorStakingLimit;
-        uint256 operatorUsedSigningKeys;
-        uint256 operatorTotalSigningKeys;
         uint256 totalAvailableKeysCount;
-        uint256 nodeOperatorsCount = getNodeOperatorsCount();
-        for (uint256 i = 0; i < nodeOperatorsCount; ++i) {
-            NodeOperator storage operator = operators[i];
-            if (!operator.active) {
-                continue;
-            }
-            operatorStakingLimit = operator.stakingLimit;
-            operatorUsedSigningKeys = operator.usedSigningKeys;
-            operatorTotalSigningKeys = operator.totalSigningKeys;
-            if (operatorUsedSigningKeys >= operatorStakingLimit || operatorUsedSigningKeys >= operatorTotalSigningKeys) {
-                continue;
-            }
-
-            totalAvailableKeysCount += operatorStakingLimit < operatorTotalSigningKeys
-                ? operatorStakingLimit - operatorUsedSigningKeys
-                : operatorTotalSigningKeys - operatorUsedSigningKeys;
+        uint256 activeNodeOperatorsCount = getNodeOperatorsCount();
+        for (uint256 i = 0; i < activeNodeOperatorsCount; ++i) {
+            totalAvailableKeysCount += _getNodeOperatorAvailableKeysCount(i);
         }
         keysUsageStats.totalAvailableKeys = to64(totalAvailableKeysCount);
+    }
+
+    function _getNodeOperatorAvailableKeysCount(uint256 _operatorId) internal view returns (uint256) {
+        NodeOperator storage operator = operators[_operatorId];
+        if (!operator.active) {
+            return 0;
+        }
+        uint256 operatorStakingLimit = operator.stakingLimit;
+        uint256 operatorUsedSigningKeys = operator.usedSigningKeys;
+        uint256 operatorTotalSigningKeys = operator.totalSigningKeys;
+        if (operatorUsedSigningKeys >= operatorStakingLimit || operatorUsedSigningKeys >= operatorTotalSigningKeys) {
+            return 0;
+        }
+
+        return
+            operatorStakingLimit < operatorTotalSigningKeys
+                ? operatorStakingLimit - operatorUsedSigningKeys
+                : operatorTotalSigningKeys - operatorUsedSigningKeys;
     }
 
     /**
@@ -831,6 +829,15 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
 
     function getType() external view returns (bytes32) {
         return TYPE_POSITION.getStorageBytes32();
+    }
+
+    function getNodeOperatorActiveKeysCount(uint256 _operatorId) external view operatorExists(_operatorId) returns (uint256) {
+        NodeOperator storage operator = operators[_operatorId];
+        return operator.usedSigningKeys - operator.stoppedValidators;
+    }
+
+    function getNodeOperatorAvailableKeysCount(uint256 _operatorId) external view operatorExists(_operatorId) returns (uint256) {
+        return _getNodeOperatorAvailableKeysCount(_operatorId);
     }
 
     function getActiveKeysCount() external view returns (uint256) {
