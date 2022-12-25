@@ -1107,4 +1107,34 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assertBn(await steth.sharesOf(user3), 0)
     })
   })
+  context('getSignedKeys', () => {
+    it('reverts with NODE_OPERATOR_NOT_FOUND', async () => {
+      await assertRevert(app.getSigningKeys(0, 0, 10), 'NODE_OPERATOR_NOT_FOUND')
+    })
+
+    it('reverts with OUT_OF_RANGE', async () => {
+      await app.finalizeUpgrade_v2(steth.address, CURATED_TYPE)
+
+      await app.addNodeOperator('0', user1, { from: voting })
+
+      await assertRevert(app.getSigningKeys(0, 0, 10), 'OUT_OF_RANGE')
+    })
+
+    it('returns specified signed keys', async () => {
+      await app.finalizeUpgrade_v2(steth.address, CURATED_TYPE)
+
+      await app.addNodeOperator('0', user1, { from: voting })
+
+      const keys = [pad('0xaa0101', 48), pad('0xaa0202', 48), pad('0xaa0303', 48)]
+      const sigs = [pad('0xa1', 96), pad('0xa2', 96), pad('0xa3', 96)]
+
+      await app.addSigningKeys(0, 3, hexConcat(...keys), hexConcat(...sigs), { from: voting })
+
+      const { pubkeys, signatures, used } = await app.getSigningKeys(0, 1, 2)
+
+      assert.equal(pubkeys, keys[1] + keys[2].slice(2))
+      assert.equal(signatures, sigs[1] + sigs[2].slice(2))
+      assert.sameMembers(used, [false, false])
+    })
+  })
 })

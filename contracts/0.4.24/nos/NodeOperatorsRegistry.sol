@@ -560,6 +560,32 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         return (key_, signature, _index < operators[_operator_id].usedSigningKeys);
     }
 
+
+    function getSigningKeys(uint256 _operator_id, uint256 _offset, uint256 _limit)
+        external
+        view
+        operatorExists(_operator_id)
+        returns (
+            bytes memory pubkeys,
+            bytes memory signatures,
+            bool [] memory used
+        )
+    {
+        require(_offset + _limit <= operators[_operator_id].totalSigningKeys, "OUT_OF_RANGE");
+
+        pubkeys = MemUtils.unsafeAllocateBytes(_limit * PUBKEY_LENGTH);
+        signatures = MemUtils.unsafeAllocateBytes(_limit * SIGNATURE_LENGTH);
+        used = new bool[](_limit);
+        
+        for (uint256 index = 0; index < _limit; index++) {
+            (bytes memory pubkey, bytes memory signature) = _loadSigningKey(_operator_id, _offset + index);
+            MemUtils.copyBytes(pubkey, pubkeys, index * PUBKEY_LENGTH);
+            MemUtils.copyBytes(signature, signatures, index * SIGNATURE_LENGTH);
+            used[index] = (_offset + index) < operators[_operator_id].usedSigningKeys;
+        }
+    }
+
+
     /**
      * @notice Returns total number of node operators
      */
