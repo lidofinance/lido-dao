@@ -1161,7 +1161,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await checkRewards({ treasury: 200, operator: 199 })
   })
 
-  it.only('Node Operators filtering during deposit works when doing a huge deposit', async () => {
+  it('Node Operators filtering during deposit works when doing a huge deposit', async () => {
     await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
     await operators.addNodeOperator('good', ADDRESS_1, { from: voting }) // 0
