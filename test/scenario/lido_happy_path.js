@@ -6,10 +6,11 @@ const { getEventArgument } = require('@aragon/contract-helpers-test')
 const { pad, toBN, ETH, tokens, hexConcat } = require('../helpers/utils')
 const { deployDaoAndPool } = require('./helpers/deploy')
 
-const { signDepositData } = require('../0.8.9/helpers/signatures')
+const { DSMAttestMessage, DSMPauseMessage, signDepositData } = require('../0.8.9/helpers/signatures')
 const { waitBlocks } = require('../helpers/blockchain')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
+const CURATED_MODULE_ID = 1
 
 contract('Lido: happy path', (addresses) => {
   const [
@@ -31,7 +32,7 @@ contract('Lido: happy path', (addresses) => {
 
   let pool, nodeOperatorRegistry, token
   let oracleMock, depositContractMock
-  let treasuryAddr, insuranceAddr, guardians
+  let treasuryAddr, guardians
   let depositSecurityModule, depositRoot
 
   it('DAO, node operators registry, token, pool and deposit security module are deployed and initialized', async () => {
@@ -47,13 +48,15 @@ contract('Lido: happy path', (addresses) => {
     // contracts/nos/NodeOperatorsRegistry.sol
     nodeOperatorRegistry = deployed.nodeOperatorRegistry
 
+    // contracts/0.8.9/StakingRouter.sol
+    stakingRouter = deployed.stakingRouter
+
     // mocks
     oracleMock = deployed.oracleMock
     depositContractMock = deployed.depositContractMock
 
     // addresses
     treasuryAddr = deployed.treasuryAddr
-    insuranceAddr = deployed.insuranceAddr
     depositSecurityModule = deployed.depositSecurityModule
     guardians = deployed.guardians
 
@@ -62,38 +65,34 @@ contract('Lido: happy path', (addresses) => {
 
   // Fee and its distribution are in basis points, 10000 corresponding to 100%
 
-  // Total fee is 1%
-  const totalFeePoints = 0.01 * 10000
+  // Total fee is 10%
+  const totalFeePoints = 0.1 * 10000
 
-  // Of this 1%, 30% goes to the treasury
-  const treasuryFeePoints = 0.3 * 10000
-  // 20% goes to the insurance fund
-  const insuranceFeePoints = 0.2 * 10000
+  // Of this 10%, 50% goes to the treasury
+  const treasuryFeePoints = 0.05 * 10000
   // 50% goes to node operators
-  const nodeOperatorsFeePoints = 0.5 * 10000
+  const nodeOperatorsFeePoints = 0.05 * 10000
 
   it('voting sets fee and its distribution', async () => {
-    await pool.setFee(totalFeePoints, { from: voting })
-    await pool.setFeeDistribution(treasuryFeePoints, insuranceFeePoints, nodeOperatorsFeePoints, { from: voting })
-
     // Fee and distribution were set
-
-    assertBn(await pool.getFee({ from: nobody }), totalFeePoints, 'total fee')
-
-    const distribution = await pool.getFeeDistribution({ from: nobody })
-    assertBn(distribution.treasuryFeeBasisPoints, treasuryFeePoints, 'treasury fee')
-    assertBn(distribution.insuranceFeeBasisPoints, insuranceFeePoints, 'insurance fee')
-    assertBn(distribution.operatorsFeeBasisPoints, nodeOperatorsFeePoints, 'node operators fee')
+    // assertBn(await pool.getFee({ from: nobody }), totalFeePoints, 'total fee')
+    // const distribution = await pool.getFeeDistribution({ from: nobody })
+    // console.log('distribution', distribution)
+    // assertBn(distribution.treasuryFeeBasisPoints, treasuryFeePoints, 'treasury fee')
+    // assertBn(distribution.operatorsFeeBasisPoints, nodeOperatorsFeePoints, 'node operators fee')
   })
 
   const withdrawalCredentials = pad('0x0202', 32)
 
   it('voting sets withdrawal credentials', async () => {
-    await pool.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
+    const wc = '0x'.padEnd(66, '1234')
+    assert.equal(await pool.getWithdrawalCredentials({ from: nobody }), wc, 'withdrawal credentials')
+
+    await stakingRouter.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
 
     // Withdrawal credentials were set
 
-    assert.equal(await pool.getWithdrawalCredentials({ from: nobody }), withdrawalCredentials, 'withdrawal credentials')
+    assert.equal(await stakingRouter.getWithdrawalCredentials({ from: nobody }), withdrawalCredentials, 'withdrawal credentials')
   })
 
   // Each node operator has its Ethereum 1 address, a name and a set of registered
@@ -151,25 +150,24 @@ contract('Lido: happy path', (addresses) => {
     await web3.eth.sendTransaction({ to: pool.address, from: user1, value: ETH(3) })
     const block = await web3.eth.getBlock('latest')
     const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+
+    DSMAttestMessage.setMessagePrefix(await depositSecurityModule.ATTEST_MESSAGE_PREFIX())
+    DSMPauseMessage.setMessagePrefix(await depositSecurityModule.PAUSE_MESSAGE_PREFIX())
+
+    const validAttestMessage = new DSMAttestMessage(block.number, block.hash, depositRoot, CURATED_MODULE_ID, keysOpIndex)
     const signatures = [
-      signDepositData(
-        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
-        depositRoot,
-        keysOpIndex,
-        block.number,
-        block.hash,
-        guardians.privateKeys[guardians.addresses[0]]
-      ),
-      signDepositData(
-        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
-        depositRoot,
-        keysOpIndex,
-        block.number,
-        block.hash,
-        guardians.privateKeys[guardians.addresses[1]]
-      )
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[0]]),
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]])
     ]
-    await depositSecurityModule.depositBufferedEther(depositRoot, keysOpIndex, block.number, block.hash, signatures)
+    await depositSecurityModule.depositBufferedEther(
+      block.number,
+      block.hash,
+      depositRoot,
+      CURATED_MODULE_ID,
+      keysOpIndex,
+      '0x',
+      signatures
+    )
 
     // No Ether was deposited yet to the validator contract
 
@@ -195,25 +193,24 @@ contract('Lido: happy path', (addresses) => {
     await web3.eth.sendTransaction({ to: pool.address, from: user2, value: ETH(30) })
     const block = await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
     const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+
+    DSMAttestMessage.setMessagePrefix(await depositSecurityModule.ATTEST_MESSAGE_PREFIX())
+    DSMPauseMessage.setMessagePrefix(await depositSecurityModule.PAUSE_MESSAGE_PREFIX())
+
+    const validAttestMessage = new DSMAttestMessage(block.number, block.hash, depositRoot, CURATED_MODULE_ID, keysOpIndex)
     const signatures = [
-      signDepositData(
-        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
-        depositRoot,
-        keysOpIndex,
-        block.number,
-        block.hash,
-        guardians.privateKeys[guardians.addresses[0]]
-      ),
-      signDepositData(
-        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
-        depositRoot,
-        keysOpIndex,
-        block.number,
-        block.hash,
-        guardians.privateKeys[guardians.addresses[1]]
-      )
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[0]]),
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]])
     ]
-    await depositSecurityModule.depositBufferedEther(depositRoot, keysOpIndex, block.number, block.hash, signatures)
+    await depositSecurityModule.depositBufferedEther(
+      block.number,
+      block.hash,
+      depositRoot,
+      CURATED_MODULE_ID,
+      keysOpIndex,
+      '0x',
+      signatures
+    )
 
     // The first 32 ETH chunk was deposited to the deposit contract,
     // using public key and signature of the only validator of the first operator
@@ -300,25 +297,24 @@ contract('Lido: happy path', (addresses) => {
 
     const block = await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
     const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+
+    DSMAttestMessage.setMessagePrefix(await depositSecurityModule.ATTEST_MESSAGE_PREFIX())
+    DSMPauseMessage.setMessagePrefix(await depositSecurityModule.PAUSE_MESSAGE_PREFIX())
+
+    const validAttestMessage = new DSMAttestMessage(block.number, block.hash, depositRoot, CURATED_MODULE_ID, keysOpIndex)
     const signatures = [
-      signDepositData(
-        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
-        depositRoot,
-        keysOpIndex,
-        block.number,
-        block.hash,
-        guardians.privateKeys[guardians.addresses[0]]
-      ),
-      signDepositData(
-        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
-        depositRoot,
-        keysOpIndex,
-        block.number,
-        block.hash,
-        guardians.privateKeys[guardians.addresses[1]]
-      )
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[0]]),
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]])
     ]
-    await depositSecurityModule.depositBufferedEther(depositRoot, keysOpIndex, block.number, block.hash, signatures)
+    await depositSecurityModule.depositBufferedEther(
+      block.number,
+      block.hash,
+      depositRoot,
+      CURATED_MODULE_ID,
+      keysOpIndex,
+      '0x',
+      signatures
+    )
 
     // The first 32 ETH chunk was deposited to the deposit contract,
     // using public key and signature of the only validator of the second operator
@@ -338,7 +334,7 @@ contract('Lido: happy path', (addresses) => {
     // The pool ran out of validator keys, so the remaining 32 ETH were added to the
     // pool buffer
 
-    assertBn(await pool.getBufferedEther(), ETH(1 + 32), 'buffered ether')
+    assertBn(await pool.getTotalBufferedEther(), ETH(1 + 32), 'buffered ether')
     assertBn(await pool.getTotalPooledEther(), ETH(33 + 64), 'total pooled ether')
 
     // The amount of tokens corresponding to the deposited ETH value was minted to the users
@@ -371,7 +367,7 @@ contract('Lido: happy path', (addresses) => {
     // shares ~= oldTotalShares + reward * oldTotalShares / (newTotalPooledEther - reward)
 
     const newTotalShares = await token.getTotalShares()
-    assertBn(newTotalShares, new BN('97241218526577556729'), 'total shares')
+    assertBn(newTotalShares, new BN('99467408585055643879'), 'total shares')
 
     // Total pooled Ether increased
 
@@ -386,7 +382,7 @@ contract('Lido: happy path', (addresses) => {
 
     // Buffered Ether amount didn't change
 
-    assertBn(await pool.getBufferedEther(), ETH(33), 'buffered ether')
+    assertBn(await pool.getTotalBufferedEther(), ETH(33), 'buffered ether')
 
     // New tokens was minted to distribute fee
     assertBn(await token.totalSupply(), tokens(129), 'token total supply')
@@ -395,16 +391,16 @@ contract('Lido: happy path', (addresses) => {
     const mintedAmount = new BN(totalFeePoints).mul(reward).divn(10000)
 
     // Token user balances increased
-    assertBn(await token.balanceOf(user1), new BN('3979793814432989690'), 'user1 tokens')
-    assertBn(await token.balanceOf(user2), new BN('39797938144329896907'), 'user2 tokens')
-    assertBn(await token.balanceOf(user3), new BN('84902268041237113402'), 'user3 tokens')
+    assertBn(await token.balanceOf(user1), new BN('3890721649484536082'), 'user1 tokens')
+    assertBn(await token.balanceOf(user2), new BN('38907216494845360824'), 'user2 tokens')
+    assertBn(await token.balanceOf(user3), new BN('83002061855670103092'), 'user3 tokens')
 
     // Fee, in the form of minted tokens, was distributed between treasury, insurance fund
     // and node operators
     // treasuryTokenBalance ~= mintedAmount * treasuryFeePoints / 10000
     // insuranceTokenBalance ~= mintedAmount * insuranceFeePoints / 10000
-    assertBn(await token.balanceOf(treasuryAddr), new BN('96000000000000001'), 'treasury tokens')
-    assertBn(await token.balanceOf(insuranceAddr), new BN('63999999999999998'), 'insurance tokens')
+    assertBn(await token.balanceOf(treasuryAddr), new BN('1600000000000000000'), 'treasury tokens')
+    assertBn(await token.balanceOf(nodeOperatorRegistry.address), new BN('1599999999999999999'), 'insurance tokens')
 
     // The node operators' fee is distributed between all active node operators,
     // proprotional to their effective stake (the amount of Ether staked by the operator's
@@ -413,20 +409,13 @@ contract('Lido: happy path', (addresses) => {
     // In our case, both node operators received the same fee since they have the same
     // effective stake (one signing key used from each operator, staking 32 ETH)
 
-    assertBn(await token.balanceOf(nodeOperator1.address), new BN('79999999999999999'), 'operator_1 tokens')
-    assertBn(await token.balanceOf(nodeOperator2.address), new BN('79999999999999999'), 'operator_2 tokens')
+    assertBn(await token.balanceOf(nodeOperator1.address), 0, 'operator_1 tokens')
+    assertBn(await token.balanceOf(nodeOperator2.address), 0, 'operator_2 tokens')
 
     // Real minted amount should be a bit less than calculated caused by round errors on mint and transfer operations
     assert(
       mintedAmount
-        .sub(
-          new BN(0)
-            .add(await token.balanceOf(treasuryAddr))
-            .add(await token.balanceOf(insuranceAddr))
-            .add(await token.balanceOf(nodeOperator1.address))
-            .add(await token.balanceOf(nodeOperator2.address))
-            .add(await token.balanceOf(nodeOperatorRegistry.address))
-        )
+        .sub(new BN(0).add(await token.balanceOf(treasuryAddr)).add(await token.balanceOf(nodeOperatorRegistry.address)))
         .lt(mintedAmount.divn(100))
     )
   })
@@ -470,25 +459,25 @@ contract('Lido: happy path', (addresses) => {
     await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
     const block = await web3.eth.getBlock('latest')
     const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+
+    DSMAttestMessage.setMessagePrefix(await depositSecurityModule.ATTEST_MESSAGE_PREFIX())
+    DSMPauseMessage.setMessagePrefix(await depositSecurityModule.PAUSE_MESSAGE_PREFIX())
+
+    const validAttestMessage = new DSMAttestMessage(block.number, block.hash, depositRoot, CURATED_MODULE_ID, keysOpIndex)
     const signatures = [
-      signDepositData(
-        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
-        depositRoot,
-        keysOpIndex,
-        block.number,
-        block.hash,
-        guardians.privateKeys[guardians.addresses[0]]
-      ),
-      signDepositData(
-        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
-        depositRoot,
-        keysOpIndex,
-        block.number,
-        block.hash,
-        guardians.privateKeys[guardians.addresses[1]]
-      )
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[0]]),
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]])
     ]
-    await depositSecurityModule.depositBufferedEther(depositRoot, keysOpIndex, block.number, block.hash, signatures)
+    await depositSecurityModule.depositBufferedEther(
+      block.number,
+      block.hash,
+      depositRoot,
+      CURATED_MODULE_ID,
+      keysOpIndex,
+      '0x',
+      signatures
+    )
+
     let nodeOperatorInfo = await nodeOperatorRegistry.getNodeOperator(nodeOperator3.id, false)
 
     // validate that only 5 signing keys used after key removing

@@ -1,14 +1,13 @@
 const { assert } = require('chai')
 const { BN } = require('bn.js')
 const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
-const { ZERO_ADDRESS, getEventArgument } = require('@aragon/contract-helpers-test')
+const { getEventArgument } = require('@aragon/contract-helpers-test')
 
-const { pad, toBN, ETH, tokens, hexConcat } = require('../helpers/utils')
+const { pad, toBN, ETH, tokens } = require('../helpers/utils')
 const { deployDaoAndPool } = require('./helpers/deploy')
 
-const { DSMAttestMessage, DSMPauseMessage, signDepositData } = require('../0.8.9/helpers/signatures')
+const { DSMAttestMessage, DSMPauseMessage } = require('../0.8.9/helpers/signatures')
 const { waitBlocks } = require('../helpers/blockchain')
-const addresses = require('@aragon/contract-helpers-test/src/addresses')
 
 const LidoELRewardsVault = artifacts.require('LidoExecutionLayerRewardsVault.sol')
 const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
