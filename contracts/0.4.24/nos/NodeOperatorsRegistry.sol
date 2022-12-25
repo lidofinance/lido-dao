@@ -206,9 +206,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
     {
         require(operators[_id].stakingLimit != _stakingLimit, "NODE_OPERATOR_STAKING_LIMIT_IS_THE_SAME");
         _increaseKeysOpIndex();
-        operators[_id].stakingLimit = _stakingLimit;
-        emit NodeOperatorStakingLimitSet(_id, _stakingLimit);
-
+        _setNodeOperatorStakingLimit(_id, _stakingLimit);
         _updateTotalAvailableKeysCount();
     }
 
@@ -223,6 +221,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         require(0 != _stoppedIncrement, "EMPTY_VALUE");
         operators[_id].stoppedValidators = operators[_id].stoppedValidators.add(_stoppedIncrement);
         require(operators[_id].stoppedValidators <= operators[_id].usedSigningKeys, "STOPPED_MORE_THAN_LAUNCHED");
+
+        uint64 currentStakingLimit = operators[_id].stakingLimit;
+        if (currentStakingLimit > 0) {
+            uint64 stakingLimitDecrease = currentStakingLimit > _stoppedIncrement ? _stoppedIncrement : currentStakingLimit;
+            _setNodeOperatorStakingLimit(_id, operators[_id].stakingLimit.sub(stakingLimitDecrease));
+        }
 
         _setTotalActiveKeys(keysUsageStats.totalActiveKeys.sub(_stoppedIncrement));
 
@@ -779,6 +783,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
             operatorStakingLimit < operatorTotalSigningKeys
                 ? operatorStakingLimit - operatorUsedSigningKeys
                 : operatorTotalSigningKeys - operatorUsedSigningKeys;
+    }
+
+    function _setNodeOperatorStakingLimit(uint256 _id, uint64 _stakingLimit) internal {
+        require(operators[_id].stakingLimit != _stakingLimit, "NODE_OPERATOR_STAKING_LIMIT_IS_THE_SAME");
+        operators[_id].stakingLimit = _stakingLimit;
+        emit NodeOperatorStakingLimitSet(_id, _stakingLimit);
     }
 
     /**
