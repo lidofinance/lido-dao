@@ -48,8 +48,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
 
     bytes32 internal constant SIGNING_KEYS_MAPPING_NAME = keccak256("lido.NodeOperatorsRegistry.signingKeysMappingName");
 
-    uint256 internal constant TOTAL_BASIS_POINTS = 10000;
-
     bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.NodeOperatorsRegistry.contractVersion");
 
     bytes32 internal constant STETH_POSITION = keccak256("lido.Lido.stETH");
@@ -242,6 +240,9 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
             trimmedKeys += _trimUnusedNodeOperatorKeys(operatorId);
         }
         _updateTotalAvailableKeysCount();
+        if (trimmedKeys > 0) {
+            _increaseKeysOpIndex();
+        }
     }
 
     /**
@@ -446,8 +447,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
      * @notice Returns the rewards distribution proportional to the effective stake for each node operator.
      * @param _totalRewardShares Total amount of reward shares to distribute.
      */
-    function _getRewardsDistribution(uint256 _totalRewardShares)
-        internal
+    function getRewardsDistribution(uint256 _totalRewardShares)
+        public
         view
         returns (address[] memory recipients, uint256[] memory shares)
     {
@@ -820,6 +821,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
 
         _setTotalActiveKeys(to64(totalUsedKeys) - to64(totalStoppedKeys));
         _updateTotalAvailableKeysCount();
+        _increaseKeysOpIndex();
 
         CONTRACT_VERSION_POSITION.setStorageUint256(2);
         emit ContractVersionSet(2);
@@ -851,7 +853,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         uint256 sharesToDistribute = stETH.sharesOf(address(this));
         assert(sharesToDistribute > 0);
 
-        (address[] memory recipients, uint256[] memory shares) = _getRewardsDistribution(sharesToDistribute);
+        (address[] memory recipients, uint256[] memory shares) = getRewardsDistribution(sharesToDistribute);
 
         assert(recipients.length == shares.length);
 

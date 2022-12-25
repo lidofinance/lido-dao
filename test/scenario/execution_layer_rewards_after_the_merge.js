@@ -1,12 +1,12 @@
 const { assert } = require('chai')
 const { BN } = require('bn.js')
 const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
-const { getEventArgument } = require('@aragon/contract-helpers-test')
+const { ZERO_ADDRESS, getEventArgument } = require('@aragon/contract-helpers-test')
 
 const { pad, toBN, ETH, tokens, hexConcat } = require('../helpers/utils')
 const { deployDaoAndPool } = require('./helpers/deploy')
 
-const { signDepositData } = require('../0.8.9/helpers/signatures')
+const { DSMAttestMessage, DSMPauseMessage, signDepositData } = require('../0.8.9/helpers/signatures')
 const { waitBlocks } = require('../helpers/blockchain')
 const addresses = require('@aragon/contract-helpers-test/src/addresses')
 
@@ -16,6 +16,7 @@ const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
 const TOTAL_BASIS_POINTS = 10000
+const CURATED_MODULE_ID = 1
 
 contract('Lido: merge acceptance', (addresses) => {
   const [
@@ -38,7 +39,7 @@ contract('Lido: merge acceptance', (addresses) => {
 
   let pool, nodeOperatorRegistry, token
   let oracleMock, depositContractMock
-  let treasuryAddr, insuranceAddr, guardians
+  let treasuryAddr, guardians
   let depositSecurityModule, depositRoot
   let rewarder, elRewardsVault
 
@@ -93,13 +94,15 @@ contract('Lido: merge acceptance', (addresses) => {
     // contracts/nos/NodeOperatorsRegistry.sol
     nodeOperatorRegistry = deployed.nodeOperatorRegistry
 
+    // contracts/0.8.9/StakingRouter.sol
+    stakingRouter = deployed.stakingRouter
+
     // mocks
     oracleMock = deployed.oracleMock
     depositContractMock = deployed.depositContractMock
 
     // addresses
     treasuryAddr = deployed.treasuryAddr
-    insuranceAddr = deployed.insuranceAddr
     depositSecurityModule = deployed.depositSecurityModule
     guardians = deployed.guardians
 
@@ -116,24 +119,18 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(await web3.eth.getBalance(rewarder.address), ETH(0), 'rewarder balance')
     assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(0), 'Execution layer rewards vault balance')
 
-    // Fee and its distribution are in basis points, 10000 corresponding to 100%
-
-    await pool.setFee(totalFeePoints, { from: voting })
-    await pool.setFeeDistribution(treasuryFeePoints, insuranceFeePoints, nodeOperatorsFeePoints, { from: voting })
-
     // Fee and distribution were set
 
-    assertBn(await pool.getFee({ from: nobody }), totalFeePoints, 'total fee')
+    // assertBn(await pool.getFee({ from: nobody }), totalFeePoints, 'total fee')
 
-    const distribution = await pool.getFeeDistribution({ from: nobody })
-    assertBn(distribution.treasuryFeeBasisPoints, treasuryFeePoints, 'treasury fee')
-    assertBn(distribution.insuranceFeeBasisPoints, insuranceFeePoints, 'insurance fee')
-    assertBn(distribution.operatorsFeeBasisPoints, nodeOperatorsFeePoints, 'node operators fee')
+    // const distribution = await pool.getFeeDistribution({ from: nobody })
+    // assertBn(distribution.treasuryFeeBasisPoints, treasuryFeePoints, 'treasury fee')
+    // assertBn(distribution.operatorsFeeBasisPoints, nodeOperatorsFeePoints, 'node operators fee')
 
-    await pool.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
+    await stakingRouter.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
 
     // Withdrawal credentials were set
-    assert.equal(await pool.getWithdrawalCredentials({ from: nobody }), withdrawalCredentials, 'withdrawal credentials')
+    assert.equal(await stakingRouter.getWithdrawalCredentials({ from: nobody }), withdrawalCredentials, 'withdrawal credentials')
 
     // How many validators can this node operator register
     const validatorsLimit = 100000000
@@ -157,6 +154,8 @@ contract('Lido: merge acceptance', (addresses) => {
         from: nodeOperator1.address
       }
     )
+
+    const distribution = await pool.getFeeDistribution({ from: nobody })
 
     // The key was added
 
@@ -201,25 +200,24 @@ contract('Lido: merge acceptance', (addresses) => {
     await web3.eth.sendTransaction({ to: pool.address, from: user1, value: ETH(3) })
     const block = await web3.eth.getBlock('latest')
     const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+
+    DSMAttestMessage.setMessagePrefix(await depositSecurityModule.ATTEST_MESSAGE_PREFIX())
+    DSMPauseMessage.setMessagePrefix(await depositSecurityModule.PAUSE_MESSAGE_PREFIX())
+
+    const validAttestMessage = new DSMAttestMessage(block.number, block.hash, depositRoot, CURATED_MODULE_ID, keysOpIndex)
     const signatures = [
-      signDepositData(
-        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
-        depositRoot,
-        keysOpIndex,
-        block.number,
-        block.hash,
-        guardians.privateKeys[guardians.addresses[0]]
-      ),
-      signDepositData(
-        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
-        depositRoot,
-        keysOpIndex,
-        block.number,
-        block.hash,
-        guardians.privateKeys[guardians.addresses[1]]
-      )
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[0]]),
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]])
     ]
-    await depositSecurityModule.depositBufferedEther(depositRoot, keysOpIndex, block.number, block.hash, signatures)
+    await depositSecurityModule.depositBufferedEther(
+      block.number,
+      block.hash,
+      depositRoot,
+      CURATED_MODULE_ID,
+      keysOpIndex,
+      '0x',
+      signatures
+    )
 
     // No Ether was deposited yet to the validator contract
 
@@ -231,7 +229,7 @@ contract('Lido: merge acceptance', (addresses) => {
 
     // All Ether was buffered within the pool contract atm
 
-    assertBn(await pool.getBufferedEther(), ETH(3), 'buffered ether')
+    assertBn(await pool.getTotalBufferedEther(), ETH(3), 'buffered ether')
     assertBn(await pool.getTotalPooledEther(), ETH(3), 'total pooled ether')
 
     // The amount of tokens corresponding to the deposited ETH value was minted to the user
@@ -245,25 +243,24 @@ contract('Lido: merge acceptance', (addresses) => {
     await web3.eth.sendTransaction({ to: pool.address, from: user2, value: ETH(30) })
     const block = await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
     const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+
+    DSMAttestMessage.setMessagePrefix(await depositSecurityModule.ATTEST_MESSAGE_PREFIX())
+    DSMPauseMessage.setMessagePrefix(await depositSecurityModule.PAUSE_MESSAGE_PREFIX())
+
+    const validAttestMessage = new DSMAttestMessage(block.number, block.hash, depositRoot, CURATED_MODULE_ID, keysOpIndex)
     const signatures = [
-      signDepositData(
-        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
-        depositRoot,
-        keysOpIndex,
-        block.number,
-        block.hash,
-        guardians.privateKeys[guardians.addresses[0]]
-      ),
-      signDepositData(
-        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
-        depositRoot,
-        keysOpIndex,
-        block.number,
-        block.hash,
-        guardians.privateKeys[guardians.addresses[1]]
-      )
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[0]]),
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]])
     ]
-    await depositSecurityModule.depositBufferedEther(depositRoot, keysOpIndex, block.number, block.hash, signatures)
+    await depositSecurityModule.depositBufferedEther(
+      block.number,
+      block.hash,
+      depositRoot,
+      CURATED_MODULE_ID,
+      keysOpIndex,
+      '0x',
+      signatures
+    )
 
     // The first 32 ETH chunk was deposited to the deposit contract,
     // using public key and signature of the only validator of the first operator
@@ -298,25 +295,26 @@ contract('Lido: merge acceptance', (addresses) => {
 
     const block = await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
     const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+
+    DSMAttestMessage.setMessagePrefix(await depositSecurityModule.ATTEST_MESSAGE_PREFIX())
+    DSMPauseMessage.setMessagePrefix(await depositSecurityModule.PAUSE_MESSAGE_PREFIX())
+
+    const validAttestMessage = new DSMAttestMessage(block.number, block.hash, depositRoot, CURATED_MODULE_ID, keysOpIndex)
     const signatures = [
-      signDepositData(
-        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
-        depositRoot,
-        keysOpIndex,
-        block.number,
-        block.hash,
-        guardians.privateKeys[guardians.addresses[0]]
-      ),
-      signDepositData(
-        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
-        depositRoot,
-        keysOpIndex,
-        block.number,
-        block.hash,
-        guardians.privateKeys[guardians.addresses[1]]
-      )
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[0]]),
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]])
     ]
-    await depositSecurityModule.depositBufferedEther(depositRoot, keysOpIndex, block.number, block.hash, signatures)
+
+    assertBn(await depositContractMock.totalCalls(), 1)
+    await depositSecurityModule.depositBufferedEther(
+      block.number,
+      block.hash,
+      depositRoot,
+      CURATED_MODULE_ID,
+      keysOpIndex,
+      '0x',
+      signatures
+    )
 
     // The first 32 ETH chunk was deposited to the deposit contract,
     // using public key and signature of the only validator of the second operator
@@ -336,7 +334,7 @@ contract('Lido: merge acceptance', (addresses) => {
     // The pool ran out of validator keys, so the remaining 32 ETH were added to the
     // pool buffer
 
-    assertBn(await pool.getBufferedEther(), ETH(1 + 32), 'buffered ether')
+    assertBn(await pool.getTotalBufferedEther(), ETH(1 + 32), 'buffered ether')
     assertBn(await pool.getTotalPooledEther(), ETH(33 + 64), 'total pooled ether')
 
     // The amount of tokens corresponding to the deposited ETH value was minted to the users
@@ -375,10 +373,17 @@ contract('Lido: merge acceptance', (addresses) => {
 
     // Total shares increased because fee minted (fee shares added)
     // shares ~= oldTotalShares + reward * oldTotalShares / (newTotalPooledEther - reward)
+    //
+    // totalFee = 1000 (10%)
+    // reward = 41000000000000000000
+    // oldTotalShares = 97000000000000000000
+    // newTotalPooledEther = 138000000000000000000
+    // shares2mint = int(41000000000000000000 * 1000 * 97000000000000000000 / (138000000000000000000 * 10000 - 1000 * 41000000000000000000 ))
+    // shares2mint ~= 2970126960418222592
 
     const newTotalShares = await token.getTotalShares()
 
-    assertBn(newTotalShares, new BN('97289047169125663202'), 'total shares')
+    assertBn(newTotalShares, new BN('99970126960418222554'), 'total shares')
 
     const elRewards = 9
 
@@ -394,7 +399,7 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(ether2Stat.beaconBalance, ETH(96), 'remote ether2')
 
     // Buffered Ether amount changed on execution layer rewards
-    assertBn(await pool.getBufferedEther(), ETH(33 + elRewards), 'buffered ether')
+    assertBn(await pool.getTotalBufferedEther(), ETH(33 + elRewards), 'buffered ether')
 
     // New tokens was minted to distribute fee
     assertBn(await token.totalSupply(), tokens(129 + elRewards), 'token total supply')
@@ -403,38 +408,23 @@ contract('Lido: merge acceptance', (addresses) => {
     const mintedAmount = new BN(totalFeePoints).mul(reward).divn(TOTAL_BASIS_POINTS)
 
     // Token user balances increased
-    assertBn(await token.balanceOf(user1), new BN('4255360824742268041'), 'user1 tokens')
-    assertBn(await token.balanceOf(user2), new BN('42553608247422680412'), 'user2 tokens')
-    assertBn(await token.balanceOf(user3), new BN('90781030927835051546'), 'user3 tokens')
+    assertBn(await token.balanceOf(user1), new BN('4141237113402061855'), 'user1 tokens')
+    assertBn(await token.balanceOf(user2), new BN('41412371134020618556'), 'user2 tokens')
+    assertBn(await token.balanceOf(user3), new BN('88346391752577319587'), 'user3 tokens')
 
     // Fee, in the form of minted tokens, was distributed between treasury, insurance fund
     // and node operators
     // treasuryTokenBalance ~= mintedAmount * treasuryFeePoints / 10000
     // insuranceTokenBalance ~= mintedAmount * insuranceFeePoints / 10000
-    assertBn(await token.balanceOf(treasuryAddr), new BN('123000000000000001'), 'treasury tokens')
-    assertBn(await token.balanceOf(insuranceAddr), new BN('81999999999999999'), 'insurance tokens')
+    assertBn(await token.balanceOf(treasuryAddr), new BN('2049999999999999999'), 'treasury tokens')
 
-    // The node operators' fee is distributed between all active node operators,
-    // proportional to their effective stake (the amount of Ether staked by the operator's
-    // used and non-stopped validators).
-    //
-    // In our case, both node operators received the same fee since they have the same
-    // effective stake (one signing key used from each operator, staking 32 ETH)
-
-    assertBn(await token.balanceOf(nodeOperator1.address), new BN('102499999999999999'), 'operator_1 tokens')
-    assertBn(await token.balanceOf(nodeOperator2.address), new BN('102499999999999999'), 'operator_2 tokens')
+    // Module fee, rewards distribution between modules should be make by module
+    assertBn(await token.balanceOf(nodeOperatorRegistry.address), new BN('2049999999999999999'), 'module1 tokens')
 
     // Real minted amount should be a bit less than calculated caused by round errors on mint and transfer operations
     assert(
       mintedAmount
-        .sub(
-          new BN(0)
-            .add(await token.balanceOf(treasuryAddr))
-            .add(await token.balanceOf(insuranceAddr))
-            .add(await token.balanceOf(nodeOperator1.address))
-            .add(await token.balanceOf(nodeOperator2.address))
-            .add(await token.balanceOf(nodeOperatorRegistry.address))
-        )
+        .sub(new BN(0).add(await token.balanceOf(treasuryAddr)).add(await token.balanceOf(nodeOperatorRegistry.address)))
         .lt(mintedAmount.divn(100))
     )
   })
@@ -452,7 +442,7 @@ contract('Lido: merge acceptance', (addresses) => {
 
     // Total shares are equal to deposited eth before ratio change and fee mint
     const oldTotalShares = await token.getTotalShares()
-    assertBn(oldTotalShares, new BN('97289047169125663202'), 'total shares')
+    assertBn(oldTotalShares, new BN('99970126960418222554'), 'total shares')
 
     // Old total pooled Ether
 
@@ -483,7 +473,7 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(ether2Stat.beaconBalance, ETH(96), 'remote ether2')
 
     // Buffered Ether amount changed on execution layer rewards
-    assertBn(await pool.getBufferedEther(), ETH(42 + 7), 'buffered ether')
+    assertBn(await pool.getTotalBufferedEther(), ETH(42 + 7), 'buffered ether')
 
     assertBn(await token.totalSupply(), tokens(145), 'token total supply')
 
@@ -493,14 +483,16 @@ contract('Lido: merge acceptance', (addresses) => {
     // All of the balances should be increased with proportion of newTotalPooledEther/oldTotalPooledEther (which is >1)
     // cause shares per user and overall shares number are preserved
 
-    assertBn(await token.balanceOf(user1), new BN('4471212460779919318'), 'user1 tokens')
-    assertBn(await token.balanceOf(user2), new BN('44712124607799193187'), 'user2 tokens')
-    assertBn(await token.balanceOf(user3), new BN('95385865829971612132'), 'user3 tokens')
+    assertBn(await token.balanceOf(user1), new BN('4351299865531151949'), 'user1 tokens')
+    assertBn(await token.balanceOf(user2), new BN('43512998655311519498'), 'user2 tokens')
+    assertBn(await token.balanceOf(user3), new BN('92827730464664574929'), 'user3 tokens')
 
-    assertBn(await token.balanceOf(treasuryAddr), new BN('129239130434782610'), 'treasury tokens')
-    assertBn(await token.balanceOf(insuranceAddr), new BN('86159420289855071'), 'insurance tokens')
-    assertBn(await token.balanceOf(nodeOperator1.address), new BN('107699275362318839'), 'operator_1 tokens')
-    assertBn(await token.balanceOf(nodeOperator2.address), new BN('107699275362318839'), 'operator_2 tokens')
+    assertBn(await token.balanceOf(treasuryAddr), new BN('2153985507246376811'), 'treasury tokens')
+    assertBn(await token.balanceOf(nodeOperatorRegistry.address), new BN('2153985507246376811'), 'module1 tokens')
+
+    // operators do not claim rewards from module
+    assertBn(await token.balanceOf(nodeOperator1.address), 0, 'operator_1 tokens')
+    assertBn(await token.balanceOf(nodeOperator2.address), 0, 'operator_2 tokens')
   })
 
   it('collect another 5 ETH execution layer rewards to the vault', async () => {
@@ -513,7 +505,7 @@ contract('Lido: merge acceptance', (addresses) => {
 
     // Total shares are equal to deposited eth before ratio change and fee mint
     const oldTotalShares = await token.getTotalShares()
-    assertBn(oldTotalShares, new BN('97289047169125663202'), 'total shares')
+    assertBn(oldTotalShares, new BN('99970126960418222554'), 'total shares')
 
     // Old total pooled Ether
 
@@ -541,7 +533,7 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(ether2Stat.beaconBalance, ETH(94), 'remote ether2')
 
     // Buffered Ether amount changed on execution layer rewards
-    assertBn(await pool.getBufferedEther(), ETH(49 + 5), 'buffered ether')
+    assertBn(await pool.getTotalBufferedEther(), ETH(49 + 5), 'buffered ether')
 
     assertBn(await token.totalSupply(), tokens(145 + 3), 'token total supply')
 
@@ -551,14 +543,12 @@ contract('Lido: merge acceptance', (addresses) => {
     // All of the balances should be increased with proportion of newTotalPooledEther/oldTotalPooledEther (which is >1)
     // cause shares per user and overall shares number are preserved
 
-    assertBn(await token.balanceOf(user1), new BN('4563720304796055580'), 'user1 tokens')
-    assertBn(await token.balanceOf(user2), new BN('45637203047960555804'), 'user2 tokens')
-    assertBn(await token.balanceOf(user3), new BN('97359366502315852383'), 'user3 tokens')
+    assertBn(await token.balanceOf(user1), new BN('4441326759300761990'), 'user1 tokens')
+    assertBn(await token.balanceOf(user2), new BN('44413267593007619901'), 'user2 tokens')
+    assertBn(await token.balanceOf(user3), new BN('94748304198416255789'), 'user3 tokens')
 
-    assertBn(await token.balanceOf(treasuryAddr), new BN('131913043478260871'), 'treasury tokens')
-    assertBn(await token.balanceOf(insuranceAddr), new BN('87942028985507245'), 'insurance tokens')
-    assertBn(await token.balanceOf(nodeOperator1.address), new BN('109927536231884057'), 'operator_1 tokens')
-    assertBn(await token.balanceOf(nodeOperator2.address), new BN('109927536231884057'), 'operator_2 tokens')
+    assertBn(await token.balanceOf(treasuryAddr), new BN('2198550724637681159'), 'treasury tokens')
+    assertBn(await token.balanceOf(nodeOperatorRegistry.address), new BN('2198550724637681159'), 'module1 tokens')
   })
 
   it('collect another 3 ETH execution layer rewards to the vault', async () => {
@@ -571,7 +561,7 @@ contract('Lido: merge acceptance', (addresses) => {
 
     // Total shares are equal to deposited eth before ratio change and fee mint
     const oldTotalShares = await token.getTotalShares()
-    assertBn(oldTotalShares, new BN('97289047169125663202'), 'total shares')
+    assertBn(oldTotalShares, new BN('99970126960418222554'), 'total shares')
 
     // Old total pooled Ether
 
@@ -599,7 +589,7 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(ether2Stat.beaconBalance, ETH(91), 'remote ether2')
 
     // Buffered Ether amount changed on execution layer rewards
-    assertBn(await pool.getBufferedEther(), ETH(54 + 3), 'buffered ether')
+    assertBn(await pool.getTotalBufferedEther(), ETH(54 + 3), 'buffered ether')
 
     assertBn(await token.totalSupply(), tokens(148), 'token total supply')
 
@@ -607,14 +597,12 @@ contract('Lido: merge acceptance', (addresses) => {
     const mintedAmount = new BN(0)
 
     // All of the balances should be the same as before cause overall changes sums to zero
-    assertBn(await token.balanceOf(user1), new BN('4563720304796055580'), 'user1 tokens')
-    assertBn(await token.balanceOf(user2), new BN('45637203047960555804'), 'user2 tokens')
-    assertBn(await token.balanceOf(user3), new BN('97359366502315852383'), 'user3 tokens')
+    assertBn(await token.balanceOf(user1), new BN('4441326759300761990'), 'user1 tokens')
+    assertBn(await token.balanceOf(user2), new BN('44413267593007619901'), 'user2 tokens')
+    assertBn(await token.balanceOf(user3), new BN('94748304198416255789'), 'user3 tokens')
 
-    assertBn(await token.balanceOf(treasuryAddr), new BN('131913043478260871'), 'treasury tokens')
-    assertBn(await token.balanceOf(insuranceAddr), new BN('87942028985507245'), 'insurance tokens')
-    assertBn(await token.balanceOf(nodeOperator1.address), new BN('109927536231884057'), 'operator_1 tokens')
-    assertBn(await token.balanceOf(nodeOperator2.address), new BN('109927536231884057'), 'operator_2 tokens')
+    assertBn(await token.balanceOf(treasuryAddr), new BN('2198550724637681159'), 'treasury tokens')
+    assertBn(await token.balanceOf(nodeOperatorRegistry.address), new BN('2198550724637681159'), 'module1 tokens')
   })
 
   it('collect another 2 ETH execution layer rewards to the vault', async () => {
@@ -627,7 +615,7 @@ contract('Lido: merge acceptance', (addresses) => {
 
     // Total shares are equal to deposited eth before ratio change and fee mint
     const oldTotalShares = await token.getTotalShares()
-    assertBn(oldTotalShares, new BN('97289047169125663202'), 'total shares')
+    assertBn(oldTotalShares, new BN('99970126960418222554'), 'total shares')
 
     // Old total pooled Ether
 
@@ -655,20 +643,20 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(ether2Stat.beaconBalance, ETH(83), 'remote ether2')
 
     // Buffered Ether amount changed on execution layer rewards
-    assertBn(await pool.getBufferedEther(), ETH(57 + 2), 'buffered ether')
+    assertBn(await pool.getTotalBufferedEther(), ETH(57 + 2), 'buffered ether')
 
     assertBn(await token.totalSupply(), tokens(142), 'token total supply')
 
     // All of the balances should be decreased with proportion of newTotalPooledEther/oldTotalPooledEther (which is <1)
     // cause shares per user and overall shares number are preserved
-    assertBn(await token.balanceOf(user1), new BN('4378704616763783056'), 'user1 tokens')
-    assertBn(await token.balanceOf(user2), new BN('43787046167637830569'), 'user2 tokens')
-    assertBn(await token.balanceOf(user3), new BN('93412365157627371881'), 'user3 tokens')
+    assertBn(await token.balanceOf(user1), new BN('4261272971761541909'), 'user1 tokens')
+    assertBn(await token.balanceOf(user2), new BN('42612729717615419094'), 'user2 tokens')
+    assertBn(await token.balanceOf(user3), new BN('90907156730912894068'), 'user3 tokens')
 
-    assertBn(await token.balanceOf(treasuryAddr), new BN('126565217391304349'), 'treasury tokens')
-    assertBn(await token.balanceOf(insuranceAddr), new BN('84376811594202897'), 'insurance tokens')
-    assertBn(await token.balanceOf(nodeOperator1.address), new BN('105471014492753622'), 'operator_1 tokens')
-    assertBn(await token.balanceOf(nodeOperator2.address), new BN('105471014492753622'), 'operator_2 tokens')
+    assertBn(await token.balanceOf(treasuryAddr), new BN('2109420289855072463'), 'treasury tokens')
+    assertBn(await token.balanceOf(nodeOperatorRegistry.address), new BN('2109420289855072463'), 'module1 tokens')
+    assertBn(await token.balanceOf(nodeOperator1.address), 0, 'operator_1 tokens')
+    assertBn(await token.balanceOf(nodeOperator2.address), 0, 'operator_2 tokens')
   })
 
   it('collect another 3 ETH execution layer rewards to the vault', async () => {
@@ -681,7 +669,7 @@ contract('Lido: merge acceptance', (addresses) => {
 
     // Total shares are equal to deposited eth before ratio change and fee mint
     const oldTotalShares = await token.getTotalShares()
-    assertBn(oldTotalShares, new BN('97289047169125663202'), 'total shares')
+    assertBn(oldTotalShares, new BN('99970126960418222554'), 'total shares')
 
     // Old total pooled Ether
 
@@ -698,7 +686,7 @@ contract('Lido: merge acceptance', (addresses) => {
     // shares ~= oldTotalShares + reward * oldTotalShares / (newTotalPooledEther - reward)
 
     const newTotalShares = await token.getTotalShares()
-    assertBn(newTotalShares, new BN('97322149941214511675'), 'total shares')
+    assertBn(newTotalShares, new BN('100311321932979376897'), 'total shares')
 
     // Total pooled Ether increased by 2ETH+3ETH
     const newTotalPooledEther = await pool.getTotalPooledEther()
@@ -710,30 +698,20 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(ether2Stat.beaconBalance, ETH(85), 'remote ether2')
 
     // Buffered Ether amount changed on execution layer rewards
-    assertBn(await pool.getBufferedEther(), ETH(59 + 3), 'buffered ether')
+    assertBn(await pool.getTotalBufferedEther(), ETH(59 + 3), 'buffered ether')
 
     assertBn(await token.totalSupply(), tokens(142 + 5), 'token total supply')
 
     // Token user balances increased
-    assertBn(await token.balanceOf(user1), new BN('4531342559390407888'), 'user1 tokens')
-    assertBn(await token.balanceOf(user2), new BN('45313425593904078888'), 'user2 tokens')
-    assertBn(await token.balanceOf(user3), new BN('96668641266995368295'), 'user3 tokens')
+    assertBn(await token.balanceOf(user1), new BN('4396313312415956969'), 'user1 tokens')
+    assertBn(await token.balanceOf(user2), new BN('43963133124159569699'), 'user2 tokens')
+    assertBn(await token.balanceOf(user3), new BN('93788017331540415359'), 'user3 tokens')
 
     // Fee, in the form of minted tokens, was distributed between treasury, insurance fund
     // and node operators
     // treasuryTokenBalance = (oldTreasuryShares + mintedRewardShares * treasuryFeePoints / 10000) * sharePrice
-    assertBn((await token.balanceOf(treasuryAddr)).divn(10), new BN('14597717391304348'), 'treasury tokens')
-    // should preserver treasuryFeePoints/insuranceFeePoints ratio
-    assertBn((await token.balanceOf(insuranceAddr)).divn(10), new BN('9731811594202898'), 'insurance tokens')
-
-    // The node operators' fee is distributed between all active node operators,
-    // proportional to their effective stake (the amount of Ether staked by the operator's
-    // used and non-stopped validators).
-    //
-    // In our case, both node operators received the same fee since they have the same
-    // effective stake (one signing key used from each operator, staking 32 ETH)
-    assertBn((await token.balanceOf(nodeOperator1.address)).divn(10), new BN('12164764492753623'), 'operator_1 tokens')
-    assertBn((await token.balanceOf(nodeOperator2.address)).divn(10), new BN('12164764492753623'), 'operator_2 tokens')
+    assertBn((await token.balanceOf(treasuryAddr)).divn(10), new BN('242626811594202898'), 'treasury tokens')
+    assertBn((await token.balanceOf(nodeOperatorRegistry.address)).divn(10), new BN('242626811594202898'), 'module1 tokens')
   })
 
   it('collect 0.1 ETH execution layer rewards to elRewardsVault and withdraw it entirely by means of multiple oracle reports (+1 ETH)', async () => {
@@ -769,7 +747,7 @@ contract('Lido: merge acceptance', (addresses) => {
     let elRewardsWithdrawalLimitPoints = toNum(await pool.getELRewardsWithdrawalLimit())
     let elRewardsVaultBalance = toNum(await web3.eth.getBalance(elRewardsVault.address))
     let totalPooledEther = toNum(await pool.getTotalPooledEther())
-    let bufferedEther = toNum(await pool.getBufferedEther())
+    let bufferedEther = toNum(await pool.getTotalBufferedEther())
     let totalSupply = toNum(await pool.totalSupply())
     const beaconBalanceInc = toE18(1)
     let elRewardsWithdrawn = 0
@@ -798,11 +776,11 @@ contract('Lido: merge acceptance', (addresses) => {
 
       assertBn(await pool.totalSupply(), totalSupply + beaconBalanceInc + elRewardsToWithdraw, 'token total supply')
 
-      assertBn(await pool.getBufferedEther(), bufferedEther + elRewardsToWithdraw, 'buffered ether')
+      assertBn(await pool.getTotalBufferedEther(), bufferedEther + elRewardsToWithdraw, 'buffered ether')
 
       elRewardsVaultBalance = toNum(await web3.eth.getBalance(elRewardsVault.address))
       totalPooledEther = toNum(await pool.getTotalPooledEther())
-      bufferedEther = toNum(await pool.getBufferedEther())
+      bufferedEther = toNum(await pool.getTotalBufferedEther())
       totalSupply = toNum(await pool.totalSupply())
 
       lastBeaconBalance += beaconBalanceInc

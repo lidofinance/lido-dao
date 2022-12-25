@@ -31,9 +31,6 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         StakingModuleStatus fromStatus,
         StakingModuleStatus toStatus
     );
-    event StakingModuleDeposit(uint64 lastDepositAt, uint256 lastDepositBlock);
-    event DistributedShares(uint256 modulesShares, uint256 treasuryShares, uint256 remainShares);
-    event DistributedDeposits(uint24 indexed stakingModuleId, uint256 assignedKeys, uint64 timestamp);
     event WithdrawalCredentialsSet(bytes32 withdrawalCredentials);
     event ContractVersionSet(uint256 version);
     /**
@@ -278,7 +275,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         if (_modulesCount == 0 || totalActiveKeys == 0) {
             return (0, new uint256[](0));
         }
-        // calculate total used keys for operators
+        // calculate total active keys for operators
         moduleActiveKeys = new uint256[](_modulesCount);
         for (uint256 i = 0; i < _modulesCount; ++i) {
             moduleActiveKeys[i] = _modulesCache[i].activeKeysCount;

@@ -70,7 +70,7 @@ contract Lido is ILido, StETH, AragonApp {
 
     uint256 public constant TOTAL_BASIS_POINTS = 10000;
 
-    /// @dev default value for maximum number of Ethereum 2.0 validators registered in a single depositBufferedEther call
+    /// @dev default value for maximum number of Ethereum 2.0 validators registered in a single deposit() call
     uint256 internal constant DEFAULT_MAX_DEPOSITS_PER_CALL = 150;
 
     bytes32 internal constant MAX_FEE_POSITION = keccak256("lido.Lido.maxFee");
@@ -639,14 +639,14 @@ contract Lido is ILido, StETH, AragonApp {
         // Now we want to mint new shares to the fee recipient, so that the total cost of the
         // newly-minted shares exactly corresponds to the fee taken:
         //
-        // shares2mint * newShareCost = (_totalRewards * feeBasis) / TOTAL_BASIS_POINTS
+        // shares2mint * newShareCost = (_totalRewards * totalFee) / TOTAL_BASIS_POINTS
         // newShareCost = newTotalPooledEther / (prevTotalShares + shares2mint)
         //
         // which follows to:
         //
-        //                        _totalRewards * feeBasis * prevTotalShares
+        //                        _totalRewards * totalFee * prevTotalShares
         // shares2mint = --------------------------------------------------------------
-        //                 (newTotalPooledEther * TOTAL_BASIS_POINTS) - (feeBasis * _totalRewards)
+        //                 (newTotalPooledEther * TOTAL_BASIS_POINTS) - (totalFee * _totalRewards)
         //
         // The effect is that the given percentage of the reward goes to the fee recipient, and
         // the rest of the reward is distributed between token holders proportionally to their
