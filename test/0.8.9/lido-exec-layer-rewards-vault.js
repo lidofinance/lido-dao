@@ -50,12 +50,11 @@ contract('LidoExecutionLayerRewardsVault', ([appManager, voting, deployer, depos
 
     // Initialize the app's proxy.
     await lido.initialize(operators.address, treasury)
-    treasuryAddr = await lido.getInsuranceFund()
 
     await oracle.setPool(lido.address)
     await depositContract.reset()
 
-    elRewardsVault = await LidoELRewardsVault.new(lido.address, treasuryAddr, { from: deployer })
+    elRewardsVault = await LidoELRewardsVault.new(lido.address, treasury, { from: deployer })
   })
 
   it('Addresses which are not Lido contract cannot withdraw from execution layer rewards vault', async () => {
@@ -155,7 +154,7 @@ contract('LidoExecutionLayerRewardsVault', ([appManager, voting, deployer, depos
 
       // check balances again
       assertBn(await mockERC20Token.balanceOf(elRewardsVault.address), bn(100000))
-      assertBn(await mockERC20Token.balanceOf(treasuryAddr), bn(500000))
+      assertBn(await mockERC20Token.balanceOf(treasury), bn(500000))
       assertBn(await mockERC20Token.balanceOf(deployer), bn(0))
       assertBn(await mockERC20Token.balanceOf(anotherAccount), bn(400000))
 
@@ -197,9 +196,9 @@ contract('LidoExecutionLayerRewardsVault', ([appManager, voting, deployer, depos
       assertEvent(receiptNft1, `ERC721Recovered`, { expectedArgs: { requestedBy: deployer, token: mockNFT.address, tokenId: nft1 } })
 
       // check final NFT ownership state
-      assertBn(await mockNFT.balanceOf(treasuryAddr), bn(2))
-      assertBn(await mockNFT.ownerOf(nft1), treasuryAddr)
-      assertBn(await mockNFT.ownerOf(nft2), treasuryAddr)
+      assertBn(await mockNFT.balanceOf(treasury), bn(2))
+      assertBn(await mockNFT.ownerOf(nft1), treasury)
+      assertBn(await mockNFT.ownerOf(nft2), treasury)
     })
   })
 })

@@ -24,7 +24,6 @@ const stETHShares = ETH
 
 contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anotherAccount, treasury, ...otherAccounts]) => {
   let oracle, lido, burner
-  let treasuryAddr
   let dao, acl, operators
   let compositeBeaconReceiver
 
@@ -53,12 +52,11 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
 
     // Initialize the app's proxy.
     await lido.initialize(oracle.address, treasury)
-    treasuryAddr = await lido.getInsuranceFund()
 
     await oracle.setPool(lido.address)
     await depositContract.reset()
 
-    burner = await SelfOwnerStETHBurner.new(treasuryAddr, lido.address, voting, bn(0), bn(0), bn(4), { from: deployer })
+    burner = await SelfOwnerStETHBurner.new(treasury, lido.address, voting, bn(0), bn(0), bn(4), { from: deployer })
 
     compositeBeaconReceiver = await CompositePostRebaseBeaconReceiver.new(voting, oracle.address, { from: deployer })
     compositeBeaconReceiver.addCallback(burner.address, { from: voting })
@@ -101,13 +99,13 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
     })
 
     it(`init counters and burn amount per run works`, async () => {
-      let newBurner = await SelfOwnerStETHBurner.new(treasuryAddr, lido.address, voting, bn(0), bn(0), bn(5), { from: deployer })
+      let newBurner = await SelfOwnerStETHBurner.new(treasury, lido.address, voting, bn(0), bn(0), bn(5), { from: deployer })
 
       assertBn(await newBurner.getCoverSharesBurnt(), bn(0))
       assertBn(await newBurner.getNonCoverSharesBurnt(), bn(0))
       assertBn(await newBurner.getBurnAmountPerRunQuota(), bn(5))
 
-      newBurner = await SelfOwnerStETHBurner.new(treasuryAddr, lido.address, voting, bn(123), bn(456), bn(777), { from: deployer })
+      newBurner = await SelfOwnerStETHBurner.new(treasury, lido.address, voting, bn(123), bn(456), bn(777), { from: deployer })
 
       assertBn(await newBurner.getCoverSharesBurnt(), bn(123))
       assertBn(await newBurner.getNonCoverSharesBurnt(), bn(456))
@@ -116,14 +114,11 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
 
     it(`can't use zero init addresses or bad burn amount per run`, async () => {
       assertRevert(
-        SelfOwnerStETHBurner.new(treasuryAddr, lido.address, ZERO_ADDRESS, bn(0), bn(0), bn(4), { from: deployer }),
+        SelfOwnerStETHBurner.new(treasury, lido.address, ZERO_ADDRESS, bn(0), bn(0), bn(4), { from: deployer }),
         `VOTING_ZERO_ADDRESS`
       )
 
-      assertRevert(
-        SelfOwnerStETHBurner.new(treasuryAddr, ZERO_ADDRESS, voting, bn(0), bn(0), bn(4), { from: deployer }),
-        `LIDO_ZERO_ADDRESS`
-      )
+      assertRevert(SelfOwnerStETHBurner.new(treasury, ZERO_ADDRESS, voting, bn(0), bn(0), bn(4), { from: deployer }), `LIDO_ZERO_ADDRESS`)
 
       assertRevert(
         SelfOwnerStETHBurner.new(ZERO_ADDRESS, lido.address, voting, bn(0), bn(0), bn(4), { from: deployer }),
@@ -131,12 +126,12 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
       )
 
       assertRevert(
-        SelfOwnerStETHBurner.new(treasuryAddr, lido.address, voting, bn(0), bn(0), bn(0), { from: deployer }),
+        SelfOwnerStETHBurner.new(treasury, lido.address, voting, bn(0), bn(0), bn(0), { from: deployer }),
         `ZERO_BURN_AMOUNT_PER_RUN`
       )
 
       assertRevert(
-        SelfOwnerStETHBurner.new(treasuryAddr, lido.address, voting, bn(0), bn(0), bn(10001), { from: deployer }),
+        SelfOwnerStETHBurner.new(treasury, lido.address, voting, bn(0), bn(0), bn(10001), { from: deployer }),
         `TOO_LARGE_BURN_AMOUNT_PER_RUN`
       )
     })
@@ -625,7 +620,7 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
 
       // excess stETH amount should be zero
       assertBn(await burner.getExcessStETH(), stETH(0))
-      assertBn(await lido.balanceOf(treasuryAddr), stETH(0))
+      assertBn(await lido.balanceOf(treasury), stETH(0))
       assertBn(await lido.balanceOf(burner.address), stETH(7.1))
 
       // should change nothing
@@ -636,7 +631,7 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
       assertBn(await burner.getExcessStETH(), stETH(0))
 
       // treasury and burner stETH balances are same
-      assertBn(await lido.balanceOf(treasuryAddr), stETH(0))
+      assertBn(await lido.balanceOf(treasury), stETH(0))
       assertBn(await lido.balanceOf(burner.address), stETH(7.1))
     })
 
@@ -646,7 +641,7 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
 
       // check burner and treasury balances before recovery
       assertBn(await lido.balanceOf(burner.address), stETH(2.3))
-      assertBn(await lido.balanceOf(treasuryAddr), stETH(0))
+      assertBn(await lido.balanceOf(treasury), stETH(0))
 
       const sharesAmount2_3StETH = await lido.sharesOf(burner.address)
       const receipt = await burner.recoverExcessStETH({ from: deployer })
@@ -656,7 +651,7 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
 
       // check burner and treasury balances after recovery
       assertBn(await lido.balanceOf(burner.address), stETH(0))
-      assertBn(await lido.balanceOf(treasuryAddr), stETH(2.3))
+      assertBn(await lido.balanceOf(treasury), stETH(2.3))
     })
 
     it(`recover some accidentally sent stETH, while burning requests happened in the middle`, async () => {
@@ -689,7 +684,7 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
 
       // finally burner balance is 5 stETH
       assertBn(await lido.balanceOf(burner.address), stETH(9))
-      assertBn(await lido.balanceOf(treasuryAddr), stETH(0))
+      assertBn(await lido.balanceOf(treasury), stETH(0))
 
       // run recovery process, excess stETH amount (5)
       // should be transferred to the treasury
@@ -701,7 +696,7 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
 
       assertBn(await burner.getExcessStETH(), stETH(0))
 
-      assertBn(await lido.balanceOf(treasuryAddr), stETH(5))
+      assertBn(await lido.balanceOf(treasury), stETH(5))
       assertBn(await lido.balanceOf(burner.address), stETH(4))
     })
   })
@@ -790,7 +785,7 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
 
       // check balances again
       assertBn(await mockERC20Token.balanceOf(burner.address), bn(100000))
-      assertBn(await mockERC20Token.balanceOf(treasuryAddr), bn(500000))
+      assertBn(await mockERC20Token.balanceOf(treasury), bn(500000))
       assertBn(await mockERC20Token.balanceOf(deployer), bn(0))
       assertBn(await mockERC20Token.balanceOf(anotherAccount), bn(400000))
 
@@ -832,9 +827,9 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
       assertEvent(receiptNft1, `ERC721Recovered`, { expectedArgs: { requestedBy: deployer, token: mockNFT.address, tokenId: nft1 } })
 
       // check final NFT ownership state
-      assertBn(await mockNFT.balanceOf(treasuryAddr), bn(2))
-      assertBn(await mockNFT.ownerOf(nft1), treasuryAddr)
-      assertBn(await mockNFT.ownerOf(nft2), treasuryAddr)
+      assertBn(await mockNFT.balanceOf(treasury), bn(2))
+      assertBn(await mockNFT.ownerOf(nft1), treasury)
+      assertBn(await mockNFT.ownerOf(nft2), treasury)
     })
   })
 
