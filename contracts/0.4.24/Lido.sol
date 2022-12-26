@@ -532,6 +532,7 @@ contract Lido is ILido, StETH, AragonApp {
      */
     function getFee() public view returns (uint16 feeBasisPoints) {
         address stakingRouterAddress = getStakingRouter();
+        require(stakingRouterAddress != address(0), "STAKING_ROUTER_ADDRESS_ZERO");
         (, , feeBasisPoints) = IStakingRouter(stakingRouterAddress).getStakingRewardsDistribution();
         return feeBasisPoints;
     }
@@ -541,6 +542,7 @@ contract Lido is ILido, StETH, AragonApp {
      */
     function getFeeDistribution() public view returns (uint16 modulesFeeBasisPoints, uint16 treasuryFeeBasisPoints) {
         address stakingRouterAddress = getStakingRouter();
+        require(stakingRouterAddress != address(0), "STAKING_ROUTER_ADDRESS_ZERO");
         (, uint16[] memory moduleFees, uint16 totalFee) = IStakingRouter(stakingRouterAddress).getStakingRewardsDistribution();
         for (uint256 i; i < moduleFees.length; ++i) {
             modulesFeeBasisPoints += moduleFees[i];
