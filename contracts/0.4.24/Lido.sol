@@ -125,6 +125,7 @@ contract Lido is ILido, StETH, AragonApp {
         DEPOSIT_SECURITY_MODULE_POSITION.setStorageAddress(_dsmAddress);
         _setBPValue(MAX_FEE_POSITION, _maximumFeeBasisPoints);
 
+        CONTRACT_VERSION_POSITION.setStorageUint256(2);
         emit ContractVersionSet(2);
         emit StakingRouterSet(_stakingRouterAddress);
         emit DepositSecurityModuleSet(_dsmAddress);
