@@ -660,7 +660,7 @@ contract Lido is ILido, StETH, AragonApp {
                 if (recipientReward > 0) {
                     _transferShares(address(this), recipients[i], recipientReward);
                     _emitTransferAfterMintingShares(recipients[i], recipientReward);
-                    treasuryReward -= recipientReward;
+                    treasuryReward = treasuryReward.sub(recipientReward);
                 }
             }
 
