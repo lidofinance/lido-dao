@@ -28,7 +28,7 @@ contract('StakingRouter', (accounts) => {
   let evmSnapshotId
   let depositContract, stakingRouter
   let curatedStakingModuleMock, soloStakingModuleMock, dvtStakingModuleMock
-  let dao, acl
+  let dao, acl, lido, oracle, operators
   let depositSecurityModule, depositContractMock, stakingRouterMock
   const [deployer, voting, admin, treasury, stranger1] = accounts
 
@@ -75,7 +75,7 @@ contract('StakingRouter', (accounts) => {
     const nodeOperatorsRegistryBase = await NodeOperatorsRegistryMock.new({ from: deployer })
     proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, deployer)
     operators = await NodeOperatorsRegistryMock.at(proxyAddress)
-    await operators.initialize()
+    await operators.initialize(lido.address, '0x01')
 
     // Set up the Lido permissions.
     await acl.createPermission(voting, lido.address, await lido.MANAGE_PROTOCOL_CONTRACTS_ROLE(), deployer, { from: deployer })

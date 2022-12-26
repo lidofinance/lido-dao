@@ -187,4 +187,6 @@ interface INodeOperatorsRegistry {
     event ContractVersionSet(uint256 version);
     event StethContractSet(address stethAddress);
     event SetStakingModuleType(bytes32 moduleType);
+    event ActiveKeysCountChanged(uint256 newActiveKeysCount);
+    event AvailableKeysCountChanged(uint256 newAvailableKeysCount);
 }

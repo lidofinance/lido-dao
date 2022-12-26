@@ -50,7 +50,7 @@ contract('Lido', ([appManager, voting, user2, depositor]) => {
     // NodeOperatorsRegistry
     proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)
     curatedModule = await NodeOperatorsRegistry.at(proxyAddress)
-    await curatedModule.initialize()
+    await curatedModule.initialize(app.address, '0x01')
 
     // Set up the app's permissions.
     await acl.createPermission(voting, app.address, await app.PAUSE_ROLE(), appManager, { from: appManager })

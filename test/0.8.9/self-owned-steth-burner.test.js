@@ -45,7 +45,7 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
     // NodeOperatorsRegistry
     proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)
     operators = await NodeOperatorsRegistry.at(proxyAddress)
-    await operators.initialize()
+    await operators.initialize(lido.address, '0x01')
 
     // Init the BURN_ROLE role and assign in to voting
     await acl.createPermission(voting, lido.address, await lido.BURN_ROLE(), appManager, { from: appManager })

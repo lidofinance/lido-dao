@@ -78,22 +78,13 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await acl.createPermission(pool.address, app.address, await app.TRIM_UNUSED_KEYS_ROLE(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
-    await app.initialize()
+    await app.initialize(steth.address, CURATED_TYPE)
     await snapshot.add()
   })
 
   afterEach(async () => {
     await snapshot.revert()
     await snapshot.add()
-  })
-
-  it('setType works', async () => {
-    assert.equal(await app.getType(), 0, 'invalid init type')
-
-    await app.finalizeUpgrade_v2(pool.address, CURATED_TYPE)
-
-    assert.equal(await app.getType(), 0x6375726174656400000000000000000000000000000000000000000000000000, 'invalid bytes32 type')
-    assert.equal(web3.utils.hexToString(await app.getType()), 'curated', 'invalid type')
   })
 
   it('events works', async () => {
@@ -110,7 +101,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await assertRevert(app.addNodeOperator('1', ADDRESS_1, { from: user1 }), 'APP_AUTH_FAILED')
     await assertRevert(app.addNodeOperator('1', ADDRESS_1, { from: nobody }), 'APP_AUTH_FAILED')
 
-    await assertRevert(app.addNodeOperator('1', ZERO_ADDRESS, { from: voting }), 'EMPTY_ADDRESS')
+    await assertRevert(app.addNodeOperator('1', ZERO_ADDRESS, { from: voting }), 'ZERO_ADDRESS')
 
     await app.addNodeOperator('fo o', ADDRESS_1, { from: voting })
     assertBn(await app.getNodeOperatorsCount({ from: nobody }), 1)
@@ -1007,51 +998,57 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
   })
 
   context('keysOpIndex increases correctly', () => {
+    let initialKeysOpIndex
+
+    before('set initial keys op index', async () => {
+      initialKeysOpIndex = await app.getKeysOpIndex().then((v) => v.toNumber())
+    })
+
     it('must increases on setNodeOperatorStakingLimit', async () => {
       await app.addNodeOperator('1', user1, { from: voting })
-      assertBn(await app.getKeysOpIndex(), 0)
+      assertBn(await app.getKeysOpIndex(), initialKeysOpIndex)
       const tx = await app.setNodeOperatorStakingLimit(0, 40, { from: voting })
-      assertEvent(tx, 'KeysOpIndexSet', { expectedArgs: { keysOpIndex: 1 } })
-      assertBn(await app.getKeysOpIndex(), 1)
+      assertEvent(tx, 'KeysOpIndexSet', { expectedArgs: { keysOpIndex: initialKeysOpIndex + 1 } })
+      assertBn(await app.getKeysOpIndex(), initialKeysOpIndex + 1)
     })
     it('must increases on addSigningKeys', async () => {
       await app.addNodeOperator('1', user1, { from: voting })
-      assertBn(await app.getKeysOpIndex(), 0)
+      assertBn(await app.getKeysOpIndex(), initialKeysOpIndex)
       const tx = await app.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
-      assertEvent(tx, 'KeysOpIndexSet', { expectedArgs: { keysOpIndex: 1 } })
-      assertBn(await app.getKeysOpIndex(), 1)
+      assertEvent(tx, 'KeysOpIndexSet', { expectedArgs: { keysOpIndex: initialKeysOpIndex + 1 } })
+      assertBn(await app.getKeysOpIndex(), initialKeysOpIndex + 1)
     })
     it('must increases on addSigningKeysOperatorBH', async () => {
       await app.addNodeOperator('1', user1, { from: voting })
-      assertBn(await app.getKeysOpIndex(), 0)
+      assertBn(await app.getKeysOpIndex(), initialKeysOpIndex)
       const tx = await app.addSigningKeysOperatorBH(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: user1 })
-      assertEvent(tx, 'KeysOpIndexSet', { expectedArgs: { keysOpIndex: 1 } })
-      assertBn(await app.getKeysOpIndex(), 1)
+      assertEvent(tx, 'KeysOpIndexSet', { expectedArgs: { keysOpIndex: initialKeysOpIndex + 1 } })
+      assertBn(await app.getKeysOpIndex(), initialKeysOpIndex + 1)
     })
     it('must increases on removeSigningKey', async () => {
       await app.addNodeOperator('1', user1, { from: voting })
-      assertBn(await app.getKeysOpIndex(), 0)
+      assertBn(await app.getKeysOpIndex(), initialKeysOpIndex)
       await app.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
-      assertBn(await app.getKeysOpIndex(), 1)
+      assertBn(await app.getKeysOpIndex(), initialKeysOpIndex + 1)
       const tx = await app.removeSigningKey(0, 0, { from: voting })
-      assertEvent(tx, 'KeysOpIndexSet', { expectedArgs: { keysOpIndex: 2 } })
-      assertBn(await app.getKeysOpIndex(), 2)
+      assertEvent(tx, 'KeysOpIndexSet', { expectedArgs: { keysOpIndex: initialKeysOpIndex + 2 } })
+      assertBn(await app.getKeysOpIndex(), initialKeysOpIndex + 2)
     })
     it('must increases on removeSigningKeyOperatorBH', async () => {
       await app.addNodeOperator('1', user1, { from: voting })
-      assertBn(await app.getKeysOpIndex(), 0)
+      assertBn(await app.getKeysOpIndex(), initialKeysOpIndex)
       await app.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
-      assertBn(await app.getKeysOpIndex(), 1)
+      assertBn(await app.getKeysOpIndex(), initialKeysOpIndex + 1)
       const tx = await app.removeSigningKeyOperatorBH(0, 0, { from: user1 })
-      assertEvent(tx, 'KeysOpIndexSet', { expectedArgs: { keysOpIndex: 2 } })
-      assertBn(await app.getKeysOpIndex(), 2)
+      assertEvent(tx, 'KeysOpIndexSet', { expectedArgs: { keysOpIndex: initialKeysOpIndex + 2 } })
+      assertBn(await app.getKeysOpIndex(), initialKeysOpIndex + 2)
     })
     it('must increases on setNodeOperatorActive', async () => {
       await app.addNodeOperator('1', user1, { from: voting })
-      assertBn(await app.getKeysOpIndex(), 0)
+      assertBn(await app.getKeysOpIndex(), initialKeysOpIndex)
       const tx = await app.setNodeOperatorActive(0, false, { from: voting })
-      assertEvent(tx, 'KeysOpIndexSet', { expectedArgs: { keysOpIndex: 1 } })
-      assertBn(await app.getKeysOpIndex(), 1)
+      assertEvent(tx, 'KeysOpIndexSet', { expectedArgs: { keysOpIndex: initialKeysOpIndex + 1 } })
+      assertBn(await app.getKeysOpIndex(), initialKeysOpIndex + 1)
     })
   })
   context('finalized upgrade', () => {
@@ -1087,7 +1084,6 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
   })
   context('distribute rewards', () => {
     it('must distribute rewards to operators', async () => {
-      await app.finalizeUpgrade_v2(steth.address, CURATED_TYPE)
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, ETH(10))
 
@@ -1113,16 +1109,12 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     it('reverts with OUT_OF_RANGE', async () => {
-      await app.finalizeUpgrade_v2(steth.address, CURATED_TYPE)
-
       await app.addNodeOperator('0', user1, { from: voting })
 
       await assertRevert(app.getSigningKeys(0, 0, 10), 'OUT_OF_RANGE')
     })
 
     it('returns specified signed keys', async () => {
-      await app.finalizeUpgrade_v2(steth.address, CURATED_TYPE)
-
       await app.addNodeOperator('0', user1, { from: voting })
 
       const keys = [pad('0xaa0101', 48), pad('0xaa0202', 48), pad('0xaa0303', 48)]

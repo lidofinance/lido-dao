@@ -78,7 +78,7 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
     // NodeOperatorsRegistry
     proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)
     operators = await NodeOperatorsRegistry.at(proxyAddress)
-    await operators.initialize()
+    await operators.initialize(app.address, '0x')
 
     // Staking ROuter
     stakingRouter = await StakingRouter.new(depositContract.address, { from: appManager })

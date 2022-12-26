@@ -69,8 +69,7 @@ async function deployDaoAndPool(appManager, voting) {
   await depositSecurityModule.addGuardians([GUARDIAN3, GUARDIAN1, GUARDIAN2], 2, { from: appManager })
 
   // Initialize the node operators registry and the pool
-  await nodeOperatorRegistry.initialize()
-  await nodeOperatorRegistry.finalizeUpgrade_v2(pool.address, CURATED_TYPE)
+  await nodeOperatorRegistry.initialize(token.address, '0x01')
 
   const [
     POOL_PAUSE_ROLE,
