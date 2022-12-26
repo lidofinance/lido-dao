@@ -91,6 +91,8 @@ contract Lido is ILido, StETH, AragonApp {
      * @dev As AragonApp, Lido contract must be initialized with following variables:
      * @param _oracle oracle contract
      * @param _treasury treasury contract
+     * @param _stakingRouterAddress Staking router contract
+     * @param _dsmAddress Deposit security module contract
      * NB: by default, staking and the whole Lido pool are in paused state
      */
     function initialize(address _oracle, address _treasury, address _stakingRouterAddress, address _dsmAddress) public onlyInit {
