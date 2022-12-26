@@ -841,10 +841,10 @@ contract Lido is ILido, StETH, AragonApp {
         _updateBufferedCounters(keysCount);
     }
 
-    function _updateBufferedCounters(uint256 _numKeys) internal {
-        uint256 _amount = _numKeys.mul(DEPOSIT_SIZE);
+    function _updateBufferedCounters(uint256 keysCount) internal {
+        uint256 _amount = keysCount.mul(DEPOSIT_SIZE);
 
-        DEPOSITED_VALIDATORS_POSITION.setStorageUint256(DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(_numKeys));
+        DEPOSITED_VALIDATORS_POSITION.setStorageUint256(DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(keysCount));
 
         uint256 buffered = _getStakingRouterBufferedEther();
         uint256 newBuffered = _amount >= buffered ? 0 : buffered.sub(_amount);
