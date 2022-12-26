@@ -229,14 +229,8 @@ contract('Lido: rewards distribution math', (addresses) => {
       user1
     )
 
-    const [
-      treasuryTokenDelta,
-      treasurySharesDelta,
-      nodeOperator1TokenDelta,
-      nodeOperator1SharesDelta,
-      user1TokenDelta,
-      user1SharesDelta
-    ] = deltas
+    const [treasuryTokenDelta, treasurySharesDelta, nodeOperator1TokenDelta, nodeOperator1SharesDelta, user1TokenDelta, user1SharesDelta] =
+      deltas
 
     const { reportedMintAmount, tos, values } = await readLastPoolEventLog()
 
