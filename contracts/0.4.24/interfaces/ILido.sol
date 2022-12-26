@@ -82,6 +82,11 @@ interface ILido {
     function isStakingPaused() external view returns (bool);
 
     /**
+     * @notice Returns current credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
+     */
+    function getWithdrawalCredentials() external view returns (bytes32);
+
+    /**
      * @notice Returns how much Ether can be staked in the current block
      * @dev Special return values:
      * - 2^256 - 1 if staking is unlimited;
@@ -133,7 +138,7 @@ interface ILido {
     /**
      * @notice Set max fee rate to `_maximumFeeBasisPoints` basis points.
      * The max total fee that can be accrued when:
-     * - oracles report staking results (beacon chain balance increase)
+     * - oracles report staking rewards (beacon chain balance increase)
      * - validators gain execution layer rewards (priority fees and MEV)
      * @param _maximumFeeBasisPoints Max fee rate, in basis points
      */
@@ -205,9 +210,13 @@ interface ILido {
     // The `amount` of ether was sent to the deposit_contract.deposit function
     event Unbuffered(uint256 amount);
 
-    // Requested withdrawal of `etherAmount` to `pubkeyHash` on the ETH 2.0 side, `tokenAmount` burned by `sender`,
-    // `sentFromBuffer` was sent on the current Ethereum side.
-    event Withdrawal(address indexed sender, uint256 tokenAmount, uint256 sentFromBuffer, bytes32 indexed pubkeyHash, uint256 etherAmount);
+    /**
+     * @dev Invokes a deposit call to the Staking Router contract and updates buffered counters
+     * @param _maxDepositsCount max deposits count
+     * @param _stakingModuleId id of the staking module to be deposited
+     * @param _depositCalldata module calldata
+     */
+    function deposit(uint256 _maxDepositsCount, uint24 _stakingModuleId, bytes _depositCalldata) external;
 
     // Info functions
 
@@ -222,6 +231,16 @@ interface ILido {
     function getBufferedEther() external view returns (uint256);
 
     /**
+     * @dev Gets the amount of Ether temporary buffered on the StakingRouter contract balance
+     */
+    function getStakingRouterBufferedEther() external view returns (uint256);
+
+    /**
+     * @dev Gets the amount of Ether temporary buffered on the Lido and StakingRouter contracts balance
+     */
+    function getTotalBufferedEther() external view returns (uint256);
+
+    /**
      * @notice Returns the key values related to Beacon-side
      * @return depositedValidators - number of deposited validators
      * @return beaconValidators - number of Lido's validators visible in the Beacon state, reported by oracles
@@ -230,12 +249,22 @@ interface ILido {
     function getBeaconStat() external view returns (uint256 depositedValidators, uint256 beaconValidators, uint256 beaconBalance);
 
     /**
+     * @dev Returns StakingRouter contract address
+     */
+    function getStakingRouter() public view returns (address);
+
+    /**
      * @dev Sets the address of StakingRouter contract
      * @param stakingRouterAddress StakingRouter contract address
      */
     function setStakingRouter(address stakingRouterAddress) external;
 
     event StakingRouterSet(address stakingRouterAddress);
+
+    /**
+     * @dev Returns Deposit security module contrac address
+     */
+    function getDepositSecurityModule() external view returns (address);
 
     /**
      * @dev Sets the address of DepositSecurityModule contract
