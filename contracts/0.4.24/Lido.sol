@@ -319,7 +319,7 @@ contract Lido is ILido, StETH, AragonApp {
      *
      * @dev Oracle contract specified here is allowed to make
      * periodical updates of beacon stats
-     * by calling pushBeacon. Treasury contract specified here is used
+     * by calling handleOracleReport. Treasury contract specified here is used
      * to accumulate the protocol treasury fee.
      *
      * @param _oracle oracle contract
