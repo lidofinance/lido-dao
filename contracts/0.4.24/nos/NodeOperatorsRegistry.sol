@@ -223,7 +223,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
         require(operators[_id].stakingLimit != _stakingLimit, "NODE_OPERATOR_STAKING_LIMIT_IS_THE_SAME");
         _increaseKeysOpIndex();
         _setNodeOperatorStakingLimit(_id, _stakingLimit);
-        _updateTotalAvailableKeysCount();
     }
 
     /**
@@ -834,6 +833,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp,
     function _setNodeOperatorStakingLimit(uint256 _id, uint64 _stakingLimit) internal {
         require(operators[_id].stakingLimit != _stakingLimit, "NODE_OPERATOR_STAKING_LIMIT_IS_THE_SAME");
         operators[_id].stakingLimit = _stakingLimit;
+        _updateTotalAvailableKeysCount();
         emit NodeOperatorStakingLimitSet(_id, _stakingLimit);
     }
 
