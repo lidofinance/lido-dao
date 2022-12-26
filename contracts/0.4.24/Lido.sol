@@ -85,7 +85,7 @@ contract Lido is ILido, StETH, AragonApp {
     bytes32 internal constant TOTAL_EL_REWARDS_COLLECTED_POSITION = keccak256("lido.Lido.totalELRewardsCollected");
 
     /// @dev version of contract
-    bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.NodeOperatorsRegistry.contractVersion");
+    bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.Lido.contractVersion");
 
     /**
      * @dev As AragonApp, Lido contract must be initialized with following variables:
