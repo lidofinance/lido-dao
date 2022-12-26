@@ -146,7 +146,7 @@ contract('StakingRouter', (accounts) => {
       const prev = await lido.getTotalPooledEther()
       assertBn(prev, ETH(maxDepositsCount * 32))
 
-      await lido.transferToStakingRouter(maxDepositsCount, { from: voting })
+      await lido.transferToStakingRouter({ from: voting })
       assert(await lido.getBufferedEther(), 0)
       assert(await lido.getStakingRouterBufferedEther(), maxDepositsCount * 32)
 

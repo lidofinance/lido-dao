@@ -37,7 +37,7 @@ contract LidoMock is Lido {
      */
     function makeUnaccountedEther() public payable {}
 
-    function transferToStakingRouter(uint256 _maxDepositsCount) public {
-        _transferToStakingRouter(_maxDepositsCount);
+    function transferToStakingRouter() public {
+        _transferBufferedEtherToStakingRouter();
     }
 }

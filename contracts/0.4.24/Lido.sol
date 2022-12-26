@@ -759,30 +759,15 @@ contract Lido is ILido, StETH, AragonApp {
         // no-op
     }
 
-    function _transferToStakingRouter(uint256 _maxDepositsCount) internal {
-        address stakingRouter = getStakingRouter();
-        require(stakingRouter != address(0), "STAKING_ROUTER_ADDRESS_ZERO");
+    function _transferBufferedEtherToStakingRouter() internal returns (uint256 transferred) {
+        //make buffer transfer from LIDO to StakingRouter
+        uint256 unaccounted = _getUnaccountedEther();
 
-        uint256 buffered = _getBufferedEther();
-        if (buffered >= DEPOSIT_SIZE) {
-            uint256 unaccounted = _getUnaccountedEther();
-            uint256 numDeposits = buffered.div(DEPOSIT_SIZE);
-            numDeposits = numDeposits < _maxDepositsCount ? numDeposits : _maxDepositsCount;
+        transferred = _getBufferedEther();
+        address(getStakingRouter()).transfer(transferred);
+        BUFFERED_ETHER_POSITION.setStorageUint256(0);
 
-            uint256 amount = numDeposits * DEPOSIT_SIZE;
-
-            address(stakingRouter).transfer(amount);
-
-            BUFFERED_ETHER_POSITION.setStorageUint256(BUFFERED_ETHER_POSITION.getStorageUint256().sub(amount));
-
-            STAKING_ROUTER_BUFFERED_ETHER_POSITION.setStorageUint256(
-                STAKING_ROUTER_BUFFERED_ETHER_POSITION.getStorageUint256().add(amount)
-            );
-
-            emit Unbuffered(amount);
-
-            assert(_getUnaccountedEther() == unaccounted);
-        }
+        assert(_getUnaccountedEther() == unaccounted);
     }
 
     /**
@@ -794,22 +779,18 @@ contract Lido is ILido, StETH, AragonApp {
     function deposit(uint256 _maxDepositsCount, uint24 _stakingModuleId, bytes _depositCalldata) external whenNotStopped {
         require(msg.sender == getDepositSecurityModule(), "APP_AUTH_DSM_FAILED");
 
-        //make buffer transfer from LIDO to StakingRouter
-        _transferToStakingRouter(_maxDepositsCount);
+        uint256 transferred = _transferBufferedEtherToStakingRouter();
+        uint256 stakingRouterBuffered = _getStakingRouterBufferedEther().add(transferred);
 
         //make deposit
         uint256 keysCount = getStakingRouter().deposit(_maxDepositsCount, _stakingModuleId, _depositCalldata);
+        uint256 depositedAmount = keysCount.mul(DEPOSIT_SIZE);
 
-        _updateBufferedCounters(keysCount);
-    }
-
-    function _updateBufferedCounters(uint256 keysCount) internal {
-        uint256 _amount = keysCount.mul(DEPOSIT_SIZE);
+        stakingRouterBuffered = depositedAmount >= stakingRouterBuffered ? 0 : stakingRouterBuffered.sub(depositedAmount);
 
         DEPOSITED_VALIDATORS_POSITION.setStorageUint256(DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(keysCount));
+        STAKING_ROUTER_BUFFERED_ETHER_POSITION.setStorageUint256(stakingRouterBuffered);
 
-        uint256 buffered = _getStakingRouterBufferedEther();
-        uint256 newBuffered = _amount >= buffered ? 0 : buffered.sub(_amount);
-        STAKING_ROUTER_BUFFERED_ETHER_POSITION.setStorageUint256(newBuffered);
+        emit Unbuffered(depositedAmount);
     }
 }
