@@ -17,14 +17,6 @@ import "./StETH.sol";
 
 import "./lib/StakeLimitUtils.sol";
 
-interface IERC721 {
-    /// @notice Transfer ownership of an NFT
-    /// @param _from The current owner of the NFT
-    /// @param _to The new owner
-    /// @param _tokenId The NFT to transfer
-    function transferFrom(address _from, address _to, uint256 _tokenId) external payable;
-}
-
 /**
  * @title Liquid staking pool implementation
  *
