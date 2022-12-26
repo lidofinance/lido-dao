@@ -4,6 +4,9 @@
 
 pragma solidity 0.4.24;
 
+import "./IStakingRouter.sol";
+
+
 /**
  * @title Liquid staking pool
  *
@@ -249,9 +252,9 @@ interface ILido {
     function getBeaconStat() external view returns (uint256 depositedValidators, uint256 beaconValidators, uint256 beaconBalance);
 
     /**
-     * @dev Returns StakingRouter contract address
+     * @dev Returns StakingRouter contract interface
      */
-    function getStakingRouter() public view returns (address);
+    function getStakingRouter() public view returns (IStakingRouter);
 
     /**
      * @dev Sets the address of StakingRouter contract

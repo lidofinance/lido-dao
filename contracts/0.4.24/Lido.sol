@@ -432,7 +432,7 @@ contract Lido is ILido, StETH, AragonApp {
         // See ADR #3 for details: https://research.lido.fi/t/rewards-distribution-after-the-merge-architecture-decision-record/1535
         if (_beaconBalance > rewardBase) {
             uint256 rewards = _beaconBalance.sub(rewardBase);
-            distributeFee(rewards.add(executionLayerRewards));
+            _distributeFee(rewards.add(executionLayerRewards));
         }
     }
 
@@ -531,9 +531,7 @@ contract Lido is ILido, StETH, AragonApp {
      * @notice Returns current staking rewards fee rate
      */
     function getFee() public view returns (uint16 feeBasisPoints) {
-        address stakingRouterAddress = getStakingRouter();
-        require(stakingRouterAddress != address(0), "STAKING_ROUTER_ADDRESS_ZERO");
-        (, , feeBasisPoints) = IStakingRouter(stakingRouterAddress).getStakingRewardsDistribution();
+        (, , feeBasisPoints) = getStakingRouter().getStakingRewardsDistribution();
         return feeBasisPoints;
     }
 
@@ -541,9 +539,7 @@ contract Lido is ILido, StETH, AragonApp {
      * @notice Returns current fee distribution proportion
      */
     function getFeeDistribution() public view returns (uint16 modulesFeeBasisPoints, uint16 treasuryFeeBasisPoints) {
-        address stakingRouterAddress = getStakingRouter();
-        require(stakingRouterAddress != address(0), "STAKING_ROUTER_ADDRESS_ZERO");
-        (, uint16[] memory moduleFees, uint16 totalFee) = IStakingRouter(stakingRouterAddress).getStakingRewardsDistribution();
+        (, uint16[] memory moduleFees, uint16 totalFee) = getStakingRouter().getStakingRewardsDistribution();
         for (uint256 i; i < moduleFees.length; ++i) {
             modulesFeeBasisPoints += moduleFees[i];
         }
@@ -554,9 +550,7 @@ contract Lido is ILido, StETH, AragonApp {
      * @notice Returns current credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
      */
     function getWithdrawalCredentials() external view returns (bytes32) {
-        address stakingRouterAddress = getStakingRouter();
-        require(stakingRouterAddress != address(0), "STAKING_ROUTER_ADDRESS_ZERO");
-        return IStakingRouter(stakingRouterAddress).getWithdrawalCredentials();
+        return getStakingRouter().getWithdrawalCredentials();
     }
 
     /**
@@ -623,8 +617,8 @@ contract Lido is ILido, StETH, AragonApp {
         emit TransferShares(address(0), _to, _sharesAmount);
     }
 
-    function getStakingRouter() public view returns (address) {
-        return STAKING_ROUTER_POSITION.getStorageAddress();
+    function getStakingRouter() public view returns (IStakingRouter) {
+        return IStakingRouter(STAKING_ROUTER_POSITION.getStorageAddress());
     }
 
     function setStakingRouter(address _stakingRouterAddress) external {
@@ -651,7 +645,7 @@ contract Lido is ILido, StETH, AragonApp {
      * @dev Distributes fee portion of the rewards by minting and distributing corresponding amount of liquid tokens.
      * @param _totalRewards Total rewards accrued on the Ethereum 2.0 side in wei
      */
-    function distributeFee(uint256 _totalRewards) internal {
+    function _distributeFee(uint256 _totalRewards) internal {
         // We need to take a defined percentage of the reported reward as a fee, and we do
         // this by minting new token shares and assigning them to the fee recipients (see
         // StETH docs for the explanation of the shares mechanics). The staking rewards fee
@@ -678,10 +672,7 @@ contract Lido is ILido, StETH, AragonApp {
         // the rest of the reward is distributed between token holders proportionally to their
         // token shares.
 
-        address stakingRouterAddress = getStakingRouter();
-
-        (address[] memory recipients, uint16[] memory moduleFees, uint16 totalFee) = IStakingRouter(stakingRouterAddress)
-            .getStakingRewardsDistribution();
+        (address[] memory recipients, uint16[] memory moduleFees, uint16 totalFee) = getStakingRouter().getStakingRewardsDistribution();
 
         require(recipients.length == moduleFees.length && recipients.length > 0, "WRONG_RECIPIENTS_INPUT");
         require(totalFee > 0, "NOTHING_TO_DISTRIBUTE");
@@ -836,8 +827,7 @@ contract Lido is ILido, StETH, AragonApp {
         _transferToStakingRouter(_maxDepositsCount);
 
         //make deposit
-        IStakingRouter stakingRouterAddress = IStakingRouter(getStakingRouter());
-        uint256 keysCount = stakingRouterAddress.deposit(_maxDepositsCount, _stakingModuleId, _depositCalldata);
+        uint256 keysCount = getStakingRouter().deposit(_maxDepositsCount, _stakingModuleId, _depositCalldata);
 
         _updateBufferedCounters(keysCount);
     }
