@@ -669,32 +669,34 @@ contract Lido is ILido, StETH, AragonApp {
         // the rest of the reward is distributed between token holders proportionally to their
         // token shares.
 
-        (address[] memory recipients, uint16[] memory moduleFees, uint16 totalFee) = getStakingRouter().getStakingRewardsDistribution();
+        (address[] memory recipients, uint16[] memory recipientFees, uint16 totalFee) = getStakingRouter().getStakingRewardsDistribution();
 
-        require(recipients.length == moduleFees.length && recipients.length > 0, "WRONG_RECIPIENTS_INPUT");
-        require(totalFee > 0, "NOTHING_TO_DISTRIBUTE");
-        require(totalFee <= getMaxFee(), "TOTAL_FEE_EXCEED_MAXIMUM_FEE");
+        require(recipients.length == recipientFees.length, "WRONG_RECIPIENTS_INPUT");
 
-        uint256 shares2mint = _totalRewards.mul(totalFee).mul(_getTotalShares()).div(
-            _getTotalPooledEther().mul(TOTAL_BASIS_POINTS).sub(_totalRewards.mul(totalFee))
-        );
+        if (totalFee > 0) {
+            uint256 shares2mint = _totalRewards.mul(totalFee).mul(_getTotalShares()).div(
+                _getTotalPooledEther().mul(TOTAL_BASIS_POINTS).sub(_totalRewards.mul(totalFee))
+            );
 
-        _mintShares(address(this), shares2mint);
+            _mintShares(address(this), shares2mint);
 
-        uint256 treasuryReward = shares2mint;
-        uint256 moduleReward;
+            uint256 treasuryReward = shares2mint;
+            uint256 recipientReward;
 
-        for (uint256 i = 0; i < recipients.length; i++) {
-            moduleReward = shares2mint.mul(moduleFees[i]).div(totalFee);
-            if (moduleReward > 0) {
-                _transferShares(address(this), recipients[i], moduleReward);
-                treasuryReward -= moduleReward;
+            for (uint256 i = 0; i < recipients.length; i++) {
+                recipientReward = shares2mint.mul(recipientFees[i]).div(totalFee);
+                if (recipientReward > 0) {
+                    _transferShares(address(this), recipients[i], recipientReward);
+                    _emitTransferAfterMintingShares(recipients[i], recipientReward);
+                    treasuryReward -= recipientReward;
+                }
             }
+
+            address treasury = getTreasury();
+
+            _transferShares(address(this), treasury, treasuryReward);
+            _emitTransferAfterMintingShares(treasury, treasuryReward);
         }
-
-        address treasury = getTreasury();
-
-        _transferShares(address(this), treasury, treasuryReward);
     }
 
     /**
