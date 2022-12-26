@@ -244,4 +244,6 @@ interface ILido {
     function setDepositSecurityModule(address dsmAddress) external;
 
     event DepositSecurityModuleSet(address dsmAddress);
+
+    event ContractVersionSet(uint256 version);
 }

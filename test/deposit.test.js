@@ -21,6 +21,7 @@ const UNLIMITED = 1000000000
 const MAX_DEPOSITS = 150
 const CURATED_MODULE_ID = 1
 const CALLDATA = '0x0'
+const MAX_FEE = 1000 // in BP
 
 const pad = (hex, bytesLength) => {
   const absentZeroes = bytesLength * 2 + 2 - hex.length
@@ -125,7 +126,6 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
     await acl.createPermission(voting, operators.address, await operators.REPORT_STOPPED_VALIDATORS_ROLE(), appManager, {
       from: appManager
     })
-    await acl.createPermission(depositor, app.address, await app.DEPOSIT_ROLE(), appManager, { from: appManager })
     await acl.createPermission(stakingRouter.address, operators.address, await operators.ASSIGN_NEXT_KEYS_ROLE(), appManager, {
       from: appManager
     })
@@ -134,9 +134,7 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
     })
 
     // Initialize the app's proxy.
-    await app.initialize(oracle.address, treasury)
-    await app.setDepositSecurityModule(depositor, { from: voting })
-    await app.setStakingRouter(stakingRouter.address, { from: voting })
+    await app.initialize(oracle.address, treasury, stakingRouter.address, depositor, MAX_FEE)
 
     treasuryAddr = await app.getTreasury()
 

@@ -51,7 +51,7 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, depositor, anot
     await acl.createPermission(voting, lido.address, await lido.BURN_ROLE(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
-    await lido.initialize(oracle.address, treasury)
+    await lido.initialize(oracle.address, treasury, ZERO_ADDRESS, ZERO_ADDRESS, 1000)
 
     await oracle.setPool(lido.address)
     await depositContract.reset()

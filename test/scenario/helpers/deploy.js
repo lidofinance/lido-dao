@@ -11,6 +11,7 @@ module.exports = {
   deployDaoAndPool
 }
 
+const MAX_FEE = 1000 // in BP
 const NETWORK_ID = 1000
 const MAX_DEPOSITS_PER_BLOCK = 100
 const MIN_DEPOSIT_BLOCK_DISTANCE = 20
@@ -76,7 +77,6 @@ async function deployDaoAndPool(appManager, voting) {
     POOL_RESUME_ROLE,
     POOL_MANAGE_FEE,
     POOL_BURN_ROLE,
-    DEPOSIT_ROLE,
     STAKING_PAUSE_ROLE,
     STAKING_CONTROL_ROLE,
     SET_EL_REWARDS_VAULT_ROLE,
@@ -96,7 +96,6 @@ async function deployDaoAndPool(appManager, voting) {
     pool.RESUME_ROLE(),
     pool.MANAGE_FEE(),
     pool.BURN_ROLE(),
-    pool.DEPOSIT_ROLE(),
     pool.STAKING_PAUSE_ROLE(),
     pool.STAKING_CONTROL_ROLE(),
     pool.SET_EL_REWARDS_VAULT_ROLE(),
@@ -124,9 +123,6 @@ async function deployDaoAndPool(appManager, voting) {
     acl.createPermission(voting, pool.address, SET_EL_REWARDS_VAULT_ROLE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, MANAGE_PROTOCOL_CONTRACTS_ROLE, appManager, { from: appManager }),
-
-    // Allow depositor to deposit buffered ether
-    acl.createPermission(depositSecurityModule.address, pool.address, DEPOSIT_ROLE, appManager, { from: appManager }),
 
     // Allow voting to manage node operators registry
     acl.createPermission(voting, nodeOperatorRegistry.address, NODE_OPERATOR_REGISTRY_MANAGE_SIGNING_KEYS, appManager, {
@@ -183,10 +179,7 @@ async function deployDaoAndPool(appManager, voting) {
     { from: voting }
   )
 
-  await pool.initialize(oracleMock.address, treasury.address)
-  await pool.setDepositSecurityModule(depositSecurityModule.address, { from: voting })
-  await pool.setStakingRouter(stakingRouter.address, { from: voting })
-  await pool.setMaxFee(1000, { from: voting })
+  await pool.initialize(oracleMock.address, treasury.address, stakingRouter.address, depositSecurityModule.address, MAX_FEE)
 
   await oracleMock.setPool(pool.address)
   await depositContractMock.reset()

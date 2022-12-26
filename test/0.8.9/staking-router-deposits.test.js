@@ -22,6 +22,7 @@ const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
 const MAX_DEPOSITS_PER_BLOCK = 100
 const MIN_DEPOSIT_BLOCK_DISTANCE = 20
 const PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS = 10
+const MAX_FEE = 1000 // in BP
 
 contract('StakingRouter', (accounts) => {
   let evmSnapshotId
@@ -76,10 +77,7 @@ contract('StakingRouter', (accounts) => {
     operators = await NodeOperatorsRegistryMock.at(proxyAddress)
     await operators.initialize()
 
-    await lido.initialize(oracle.address, treasury)
-
     // Set up the Lido permissions.
-    await acl.createPermission(voting, lido.address, await lido.DEPOSIT_ROLE(), deployer, { from: deployer })
     await acl.createPermission(voting, lido.address, await lido.MANAGE_PROTOCOL_CONTRACTS_ROLE(), deployer, { from: deployer })
 
     await acl.createPermission(voting, operators.address, await operators.ADD_NODE_OPERATOR_ROLE(), deployer, { from: deployer })
@@ -108,8 +106,7 @@ contract('StakingRouter', (accounts) => {
     await stakingRouter.grantRole(MODULE_MANAGE_ROLE, voting, { from: admin })
     await stakingRouter.grantRole(STAKING_ROUTER_DEPOSIT_ROLE, lido.address, { from: admin })
 
-    await lido.setStakingRouter(stakingRouter.address, { from: voting })
-    await lido.setDepositSecurityModule(depositSecurityModule.address, { from: voting })
+    await lido.initialize(oracle.address, treasury, stakingRouter.address, depositSecurityModule.address, MAX_FEE)
 
     evmSnapshotId = await hre.ethers.provider.send('evm_snapshot', [])
   })

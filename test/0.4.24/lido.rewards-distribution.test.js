@@ -84,7 +84,6 @@ contract('Lido', ([appManager, voting, user2, depositor]) => {
     await acl.createPermission(voting, curatedModule.address, await curatedModule.REPORT_STOPPED_VALIDATORS_ROLE(), appManager, {
       from: appManager
     })
-    await acl.createPermission(depositor, app.address, await app.DEPOSIT_ROLE(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
     await app.initialize(oracle.address)

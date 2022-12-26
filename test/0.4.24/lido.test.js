@@ -29,6 +29,7 @@ const ADDRESS_4 = '0x0000000000000000000000000000000000000004'
 
 const UNLIMITED = 1000000000
 const TOTAL_BASIS_POINTS = 10000
+const MAX_FEE = 1000 // in BP
 
 const assertNoEvent = (receipt, eventName, msg) => {
   const event = getEventAt(receipt, eventName)
@@ -115,10 +116,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await acl.createPermission(stakingRouter.address, operators.address, await operators.TRIM_UNUSED_KEYS_ROLE(), appManager, {
       from: appManager
     })
-    await acl.createPermission(depositor, app.address, await app.DEPOSIT_ROLE(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
-    await app.initialize(oracle.address, treasury)
+    await app.initialize(oracle.address, treasury, stakingRouter.address, depositor, MAX_FEE)
 
     await app.setDepositSecurityModule(depositor, { from: voting })
     await app.setStakingRouter(stakingRouter.address, { from: voting })

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2020 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2022 Lido <info@lido.fi>
 
 // SPDX-License-Identifier: GPL-3.0
 
@@ -7,11 +7,9 @@ pragma solidity 0.4.24;
 
 import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
-import "@aragon/os/contracts/lib/math/SafeMath64.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
 import "./interfaces/ILido.sol";
-import "./interfaces/IDepositContract.sol";
 import "./interfaces/ILidoExecutionLayerRewardsVault.sol";
 import "./interfaces/IStakingRouter.sol";
 
@@ -58,7 +56,6 @@ contract Lido is ILido, StETH, AragonApp {
     bytes32 public constant MANAGE_FEE = keccak256("MANAGE_FEE");
     bytes32 public constant MANAGE_PROTOCOL_CONTRACTS_ROLE = keccak256("MANAGE_PROTOCOL_CONTRACTS_ROLE");
     bytes32 public constant BURN_ROLE = keccak256("BURN_ROLE");
-    bytes32 public constant DEPOSIT_ROLE = keccak256("DEPOSIT_ROLE");
     bytes32 public constant SET_EL_REWARDS_VAULT_ROLE = keccak256("SET_EL_REWARDS_VAULT_ROLE");
     bytes32 public constant SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE = keccak256("SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE");
 
@@ -101,10 +98,8 @@ contract Lido is ILido, StETH, AragonApp {
     /// Not used in the logic
     bytes32 internal constant TOTAL_EL_REWARDS_COLLECTED_POSITION = keccak256("lido.Lido.totalELRewardsCollected");
 
-    modifier onlyDsm() {
-        require(msg.sender == getDepositSecurityModule(), "APP_AUTH_DSM_FAILED");
-        _;
-    }
+    /// @dev version of contract
+    bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.NodeOperatorsRegistry.contractVersion");
 
     /**
      * @dev As AragonApp, Lido contract must be initialized with following variables:
@@ -112,10 +107,39 @@ contract Lido is ILido, StETH, AragonApp {
      * @param _treasury treasury contract
      * NB: by default, staking and the whole Lido pool are in paused state
      */
-    function initialize(address _oracle, address _treasury) public onlyInit {
+    function initialize(
+        address _oracle, 
+        address _treasury, 
+        address _stakingRouterAddress, 
+        address _dsmAddress, 
+        uint16 _maximumFeeBasisPoints
+    ) public onlyInit {
         _setProtocolContracts(_oracle, _treasury);
 
+        _initialize_v2(_stakingRouterAddress, _dsmAddress, _maximumFeeBasisPoints);
         initialized();
+    }
+
+    function _initialize_v2(address _stakingRouterAddress, address _dsmAddress, uint16 _maximumFeeBasisPoints) internal {
+        STAKING_ROUTER_POSITION.setStorageAddress(_stakingRouterAddress);
+        DEPOSIT_SECURITY_MODULE_POSITION.setStorageAddress(_dsmAddress);
+        _setBPValue(MAX_FEE_POSITION, _maximumFeeBasisPoints);
+
+        emit ContractVersionSet(2);
+        emit StakingRouterSet(_stakingRouterAddress);
+        emit DepositSecurityModuleSet(_dsmAddress);
+        emit MaxFeeSet(_maximumFeeBasisPoints);
+    }
+
+    /**
+     * @notice A function to finalize upgrade to v2 (from v1). Can be called only once
+     * @dev Value 1 in CONTRACT_VERSION_POSITION is skipped due to change in numbering
+     * For more details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md
+     */
+    function finalizeUpgrade_v2(address _stakingRouterAddress, address _dsmAddress,  uint16 _maximumFeeBasisPoints) external {
+        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "WRONG_BASE_VERSION");
+
+        _initialize_v2(_stakingRouterAddress, _dsmAddress, _maximumFeeBasisPoints);
     }
 
     /**
@@ -804,7 +828,9 @@ contract Lido is ILido, StETH, AragonApp {
      * @param _stakingModuleId id of the staking module to be deposited
      * @param _depositCalldata module calldata
      */
-    function deposit(uint256 _maxDepositsCount, uint24 _stakingModuleId, bytes _depositCalldata) external onlyDsm whenNotStopped {
+    function deposit(uint256 _maxDepositsCount, uint24 _stakingModuleId, bytes _depositCalldata) external whenNotStopped {
+        require(msg.sender == getDepositSecurityModule(), "APP_AUTH_DSM_FAILED");
+
         //make buffer transfer from LIDO to StakingRouter
         _transferToStakingRouter(_maxDepositsCount);
 
