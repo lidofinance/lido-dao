@@ -355,7 +355,6 @@ contract Lido is ILido, StETH, AragonApp {
         _auth(MANAGE_PROTOCOL_CONTRACTS_ROLE);
 
         _setProtocolContracts(_oracle, _treasury);
-        emit ProtocolContactsSet(_oracle, _treasury);
     }
 
     /**
