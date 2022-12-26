@@ -89,7 +89,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     // Set up the app's permissions.
     await acl.createPermission(voting, app.address, await app.PAUSE_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.RESUME_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.MANAGE_FEE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.BURN_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.MANAGE_PROTOCOL_CONTRACTS_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_EL_REWARDS_VAULT_ROLE(), appManager, { from: appManager })
@@ -139,7 +138,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     treasuryAddr = await app.getTreasury()
 
-    await app.setMaxFee(1000, { from: voting })
     await oracle.setPool(app.address)
     await depositContract.reset()
 
@@ -219,8 +217,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
   }
 
   const setupNodeOperatorsForELRewardsVaultTests = async (userAddress, initialDepositAmount) => {
-    await app.setMaxFee(1000, { from: voting }) // 10%
-
     await operators.addNodeOperator('1', ADDRESS_1, { from: voting })
     await operators.addNodeOperator('2', ADDRESS_2, { from: voting })
 
@@ -334,27 +330,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     })
 
     assert.equal(await app.getDepositSecurityModule(), voting)
-  })
-
-  it('setMaxFee event works', async () => {
-    assertBn(await app.getMaxFee(), 1000)
-
-    assertRevert(app.setMaxFee(10001, { from: voting }), 'VALUE_OVER_100_PERCENT')
-
-    assertEvent(await app.setMaxFee(10, { from: voting }), 'MaxFeeSet', {
-      expectedArgs: { feeBasisPoints: 10 }
-    })
-
-    assert.equal(await app.getMaxFee(), 10)
-  })
-
-  it('setMaxFee works', async () => {
-    await app.setMaxFee(110, { from: voting })
-    await assertRevert(app.setMaxFee(110, { from: user1 }), 'APP_AUTH_FAILED')
-    await assertRevert(app.setMaxFee(110, { from: nobody }), 'APP_AUTH_FAILED')
-    await assertRevert(app.setMaxFee(11000, { from: voting }), 'VALUE_OVER_100_PERCENT')
-
-    assertBn(await app.getMaxFee({ from: nobody }), 110)
   })
 
   it('setModulesFee works', async () => {

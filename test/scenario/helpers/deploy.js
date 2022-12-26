@@ -74,7 +74,6 @@ async function deployDaoAndPool(appManager, voting) {
   const [
     POOL_PAUSE_ROLE,
     POOL_RESUME_ROLE,
-    POOL_MANAGE_FEE,
     POOL_BURN_ROLE,
     STAKING_PAUSE_ROLE,
     STAKING_CONTROL_ROLE,
@@ -93,7 +92,6 @@ async function deployDaoAndPool(appManager, voting) {
   ] = await Promise.all([
     pool.PAUSE_ROLE(),
     pool.RESUME_ROLE(),
-    pool.MANAGE_FEE(),
     pool.BURN_ROLE(),
     pool.STAKING_PAUSE_ROLE(),
     pool.STAKING_CONTROL_ROLE(),
@@ -115,7 +113,6 @@ async function deployDaoAndPool(appManager, voting) {
     // Allow voting to manage the pool
     acl.createPermission(voting, pool.address, POOL_PAUSE_ROLE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, POOL_RESUME_ROLE, appManager, { from: appManager }),
-    acl.createPermission(voting, pool.address, POOL_MANAGE_FEE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, POOL_BURN_ROLE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, STAKING_PAUSE_ROLE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, STAKING_CONTROL_ROLE, appManager, { from: appManager }),
@@ -178,7 +175,7 @@ async function deployDaoAndPool(appManager, voting) {
     { from: voting }
   )
 
-  await pool.initialize(oracleMock.address, treasury.address, stakingRouter.address, depositSecurityModule.address, MAX_FEE)
+  await pool.initialize(oracleMock.address, treasury.address, stakingRouter.address, depositSecurityModule.address)
 
   await oracleMock.setPool(pool.address)
   await depositContractMock.reset()

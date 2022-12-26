@@ -55,7 +55,6 @@ contract('Lido', ([appManager, voting, user2, depositor]) => {
     // Set up the app's permissions.
     await acl.createPermission(voting, app.address, await app.PAUSE_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.RESUME_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.MANAGE_FEE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.BURN_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.MANAGE_PROTOCOL_CONTRACTS_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_EL_REWARDS_VAULT_ROLE(), appManager, { from: appManager })
@@ -112,7 +111,6 @@ contract('Lido', ([appManager, voting, user2, depositor]) => {
     await stakingRouter.grantRole(MODULE_MANAGE_ROLE, voting, { from: appManager })
 
     await app.setStakingRouter(stakingRouter.address, { from: voting })
-    await app.setMaxFee(1000, { from: voting })
 
     soloModule = await ModuleSolo.new(app.address, { from: appManager })
 

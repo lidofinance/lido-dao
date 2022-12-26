@@ -375,8 +375,7 @@ contract LidoTemplate is IsContract {
             state.oracle,
             state.agent, // treasury
             address(0), // staking router
-            address(0), // deposit security module
-            1000 // max fee 10%
+            address(0) // deposit security module
         );
 
         // used for issuing vested tokens in the next step

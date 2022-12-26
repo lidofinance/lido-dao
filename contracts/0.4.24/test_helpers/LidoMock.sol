@@ -14,7 +14,7 @@ contract LidoMock is Lido {
     function initialize(
         address _oracle
     ) public {
-        super.initialize(_oracle, new VaultMock(), new VaultMock(), new VaultMock(), 1000);
+        super.initialize(_oracle, new VaultMock(), new VaultMock(), new VaultMock());
     }
 
     /**

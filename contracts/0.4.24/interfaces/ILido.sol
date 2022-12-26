@@ -6,7 +6,6 @@ pragma solidity 0.4.24;
 
 import "./IStakingRouter.sol";
 
-
 /**
  * @title Liquid staking pool
  *
@@ -137,22 +136,6 @@ interface ILido {
     function setProtocolContracts(address _oracle, address _treasury) external;
 
     event ProtocolContactsSet(address oracle, address treasury);
-
-    /**
-     * @notice Set max fee rate to `_maximumFeeBasisPoints` basis points.
-     * The max total fee that can be accrued when:
-     * - oracles report staking rewards (beacon chain balance increase)
-     * - validators gain execution layer rewards (priority fees and MEV)
-     * @param _maximumFeeBasisPoints Max fee rate, in basis points
-     */
-    function setMaxFee(uint16 _maximumFeeBasisPoints) external;
-
-    event MaxFeeSet(uint16 feeBasisPoints);
-
-    /**
-     * @notice Returns staking rewards max fee rate
-     */
-    function getMaxFee() external view returns (uint16 maximumFeeBasisPoints);
 
     /**
      * @notice Returns current staking rewards  fee rate

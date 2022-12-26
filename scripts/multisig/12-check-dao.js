@@ -569,7 +569,6 @@ async function assertDaoPermissions({ kernel, lido, oracle, nopsRegistry, agent,
         roleNames: [
           'PAUSE_ROLE',
           'RESUME_ROLE',
-          'MANAGE_FEE',
           'MANAGE_PROTOCOL_CONTRACTS_ROLE',
           'MANAGE_WITHDRAWAL_KEY',
           'BURN_ROLE',

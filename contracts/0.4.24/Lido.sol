@@ -53,7 +53,6 @@ contract Lido is ILido, StETH, AragonApp {
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
     bytes32 public constant STAKING_PAUSE_ROLE = keccak256("STAKING_PAUSE_ROLE");
     bytes32 public constant STAKING_CONTROL_ROLE = keccak256("STAKING_CONTROL_ROLE");
-    bytes32 public constant MANAGE_FEE = keccak256("MANAGE_FEE");
     bytes32 public constant MANAGE_PROTOCOL_CONTRACTS_ROLE = keccak256("MANAGE_PROTOCOL_CONTRACTS_ROLE");
     bytes32 public constant BURN_ROLE = keccak256("BURN_ROLE");
     bytes32 public constant SET_EL_REWARDS_VAULT_ROLE = keccak256("SET_EL_REWARDS_VAULT_ROLE");
@@ -66,8 +65,6 @@ contract Lido is ILido, StETH, AragonApp {
     uint256 public constant DEPOSIT_SIZE = 32 ether;
 
     uint256 public constant TOTAL_BASIS_POINTS = 10000;
-
-    bytes32 internal constant MAX_FEE_POSITION = keccak256("lido.Lido.maxFee");
 
     bytes32 internal constant ORACLE_POSITION = keccak256("lido.Lido.oracle");
     bytes32 internal constant TREASURY_POSITION = keccak256("lido.Lido.treasury");
@@ -104,29 +101,21 @@ contract Lido is ILido, StETH, AragonApp {
      * @param _treasury treasury contract
      * NB: by default, staking and the whole Lido pool are in paused state
      */
-    function initialize(
-        address _oracle,
-        address _treasury,
-        address _stakingRouterAddress,
-        address _dsmAddress,
-        uint16 _maximumFeeBasisPoints
-    ) public onlyInit {
+    function initialize(address _oracle, address _treasury, address _stakingRouterAddress, address _dsmAddress) public onlyInit {
         _setProtocolContracts(_oracle, _treasury);
 
-        _initialize_v2(_stakingRouterAddress, _dsmAddress, _maximumFeeBasisPoints);
+        _initialize_v2(_stakingRouterAddress, _dsmAddress);
         initialized();
     }
 
-    function _initialize_v2(address _stakingRouterAddress, address _dsmAddress, uint16 _maximumFeeBasisPoints) internal {
+    function _initialize_v2(address _stakingRouterAddress, address _dsmAddress) internal {
         STAKING_ROUTER_POSITION.setStorageAddress(_stakingRouterAddress);
         DEPOSIT_SECURITY_MODULE_POSITION.setStorageAddress(_dsmAddress);
-        _setBPValue(MAX_FEE_POSITION, _maximumFeeBasisPoints);
 
         CONTRACT_VERSION_POSITION.setStorageUint256(2);
         emit ContractVersionSet(2);
         emit StakingRouterSet(_stakingRouterAddress);
         emit DepositSecurityModuleSet(_dsmAddress);
-        emit MaxFeeSet(_maximumFeeBasisPoints);
     }
 
     /**
@@ -134,10 +123,10 @@ contract Lido is ILido, StETH, AragonApp {
      * @dev Value 1 in CONTRACT_VERSION_POSITION is skipped due to change in numbering
      * For more details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md
      */
-    function finalizeUpgrade_v2(address _stakingRouterAddress, address _dsmAddress, uint16 _maximumFeeBasisPoints) external {
+    function finalizeUpgrade_v2(address _stakingRouterAddress, address _dsmAddress) external {
         require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "WRONG_BASE_VERSION");
 
-        _initialize_v2(_stakingRouterAddress, _dsmAddress, _maximumFeeBasisPoints);
+        _initialize_v2(_stakingRouterAddress, _dsmAddress);
     }
 
     /**
@@ -331,13 +320,6 @@ contract Lido is ILido, StETH, AragonApp {
         _resumeStaking();
     }
 
-    function setMaxFee(uint16 _maximumFeeBasisPoints) external {
-        _auth(MANAGE_FEE);
-
-        _setBPValue(MAX_FEE_POSITION, _maximumFeeBasisPoints);
-        emit MaxFeeSet(_maximumFeeBasisPoints);
-    }
-
     /**
      * @notice Set Lido protocol contracts (oracle, treasury).
      *
@@ -455,10 +437,6 @@ contract Lido is ILido, StETH, AragonApp {
         }
 
         emit RecoverToVault(vault, _token, balance);
-    }
-
-    function getMaxFee() public view returns (uint16 maximumFeeBasisPoints) {
-        return uint16(MAX_FEE_POSITION.getStorageUint256());
     }
 
     /**

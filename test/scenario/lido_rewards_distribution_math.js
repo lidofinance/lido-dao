@@ -109,7 +109,6 @@ contract('Lido: rewards distribution math', (addresses) => {
 
     depositRoot = await deployed.depositContractMock.get_deposit_root()
 
-    await pool.setMaxFee(totalFeePoints, { from: voting })
     await stakingRouter.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
   })
 
