@@ -1,9 +1,12 @@
+const hre = require('hardhat')
 const { assert } = require('chai')
 const { hexSplit, toBN } = require('../helpers/utils')
 const { newDao, newApp } = require('./helpers/dao')
-const { ZERO_ADDRESS, getEventAt, getEventArgument } = require('@aragon/contract-helpers-test')
+const { EvmSnapshot } = require('../helpers/blockchain')
+const { ZERO_ADDRESS, getEventAt } = require('@aragon/contract-helpers-test')
 const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const keccak256 = require('js-sha3').keccak_256
+const nodeOperators = require('../helpers/node-operators')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistryMock')
 const PoolMock = artifacts.require('PoolMock.sol')
@@ -45,19 +48,19 @@ const tokens = ETH
 const StETH = artifacts.require('StETHMock')
 
 contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nobody, ste]) => {
-  let appBase, app, pool, steth
+  let appBase, app, pool, steth, acl
+  const snapshot = new EvmSnapshot(hre.ethers.provider)
 
   before('deploy base app', async () => {
     // Deploy the app's base contract.
     appBase = await NodeOperatorsRegistry.new()
     steth = await StETH.new()
-  })
 
-  beforeEach('deploy dao and app', async () => {
-    const { dao, acl } = await newDao(appManager)
+    const newDAO = await newDao(appManager)
+    acl = newDAO.acl
 
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
-    const proxyAddress = await newApp(dao, 'node-operators-registry', appBase.address, appManager)
+    const proxyAddress = await newApp(newDAO.dao, 'node-operators-registry', appBase.address, appManager)
     app = await NodeOperatorsRegistry.at(proxyAddress)
 
     pool = await PoolMock.new(app.address)
@@ -76,6 +79,12 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     // Initialize the app's proxy.
     await app.initialize()
+    await snapshot.add()
+  })
+
+  afterEach(async () => {
+    await snapshot.revert()
+    await snapshot.add()
   })
 
   it('setType works', async () => {
@@ -164,50 +173,239 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await assertRevert(app.getNodeOperator(10, false), 'NODE_OPERATOR_NOT_FOUND')
   })
 
-  it('setNodeOperatorActive works', async () => {
-    await app.addNodeOperator('fo o', ADDRESS_1, { from: voting })
-    await app.addNodeOperator(' bar', ADDRESS_2, { from: voting })
+  context('setNodeOperatorActive()', () => {
+    before(async () => {
+      await nodeOperators.addNodeOperator(
+        app,
+        { name: 'fo o', rewardAddress: ADDRESS_1, totalSigningKeys: 10, usedSigningKeys: 5, stoppedValidators: 1, stakingLimit: 6 },
+        { from: voting }
+      )
+      await nodeOperators.addNodeOperator(
+        app,
+        { name: ' bar', rewardAddress: ADDRESS_2, totalSigningKeys: 15, usedSigningKeys: 7, stoppedValidators: 0, stakingLimit: 10 },
+        { from: voting }
+      )
+      await nodeOperators.addNodeOperator(
+        app,
+        {
+          name: 'deactivated',
+          isActive: false,
+          rewardAddress: ADDRESS_3,
+          totalSigningKeys: 10,
+          usedSigningKeys: 0,
+          stoppedValidators: 0,
+          stakingLimit: 5
+        },
+        { from: voting }
+      )
 
-    await app.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
+      assertBn(await app.getActiveKeysCount(), 11)
+      assertBn(await app.getAvailableKeysCount(), 4)
+      // make new snapshot to return to this state after each test
+      await snapshot.add()
+    })
 
-    assert.equal((await app.getNodeOperator(0, false)).active, true)
-    assert.equal((await app.getNodeOperator(1, false)).active, true)
-    assertBn(await app.getNodeOperatorsCount({ from: nobody }), 2)
-    assertBn(await app.getActiveNodeOperatorsCount({ from: nobody }), 2)
+    after(async () => {
+      // return to initial snapshot after all tests finished
+      await snapshot.revert(-2)
+      await snapshot.add()
+    })
 
-    await assertRevert(app.setNodeOperatorActive(0, false, { from: user1 }), 'APP_AUTH_FAILED')
-    await assertRevert(app.setNodeOperatorActive(0, true, { from: nobody }), 'APP_AUTH_FAILED')
+    it('reverts with APP_AUTH_FAILED error when called by address without SET_NODE_OPERATOR_ACTIVE_ROLE permission', async () => {
+      const [hasPermission, nodeOperatorsCount] = await Promise.all([
+        await acl.hasPermission(nobody, app.address, await app.SET_NODE_OPERATOR_ACTIVE_ROLE()),
+        app.getNodeOperatorsCount()
+      ])
+      assert.isFalse(hasPermission)
+      const nodeOperatorId = nodeOperatorsCount - 1
+      await assertRevert(app.setNodeOperatorActive(nodeOperatorId, true, { from: nobody }), 'APP_AUTH_FAILED')
+      await assertRevert(app.setNodeOperatorActive(nodeOperatorId, false, { from: nobody }), 'APP_AUTH_FAILED')
+    })
 
-    // switch off #0
-    await app.setNodeOperatorActive(0, false, { from: voting })
-    assert.equal((await app.getNodeOperator(0, false)).active, false)
-    assert.equal((await app.getNodeOperator(1, false)).active, true)
-    assertBn(await app.getNodeOperatorsCount({ from: nobody }), 2)
-    assertBn(await app.getActiveNodeOperatorsCount({ from: nobody }), 1)
+    it('reverts when called with non-existent operator id', async () => {
+      const [hasPermission, nodeOperatorsCount] = await Promise.all([
+        await acl.hasPermission(voting, app.address, await app.SET_NODE_OPERATOR_ACTIVE_ROLE()),
+        app.getNodeOperatorsCount()
+      ])
+      assert.isTrue(hasPermission)
+      const nodeOperatorId = nodeOperatorsCount
+      await assertRevert(app.setNodeOperatorActive(nodeOperatorId, true, { from: voting }), 'NODE_OPERATOR_NOT_FOUND')
+      await assertRevert(app.setNodeOperatorActive(nodeOperatorId, false, { from: voting }), 'NODE_OPERATOR_NOT_FOUND')
+    })
 
-    await assertRevert(app.setNodeOperatorActive(0, false, { from: voting }), 'NODE_OPERATOR_ACTIVITY_ALREADY_SET')
-    assert.equal((await app.getNodeOperator(0, false)).active, false)
-    assertBn(await app.getActiveNodeOperatorsCount({ from: nobody }), 1)
+    it('reverts with NODE_OPERATOR_ACTIVITY_ALREADY_SET when node operator active state the same', async () => {
+      const activeNodeOperatorId = 0
+      const notActiveNodeOperatorId = 2
 
-    // switch off #1
-    await app.setNodeOperatorActive(1, false, { from: voting })
-    assert.equal((await app.getNodeOperator(0, false)).active, false)
-    assert.equal((await app.getNodeOperator(1, false)).active, false)
-    assertBn(await app.getNodeOperatorsCount({ from: nobody }), 2)
-    assertBn(await app.getActiveNodeOperatorsCount({ from: nobody }), 0)
+      const activeNodeOperator = await app.getNodeOperator(activeNodeOperatorId, false)
+      assert.isTrue(activeNodeOperator.active)
 
-    // switch #0 back on
-    await app.setNodeOperatorActive(0, true, { from: voting })
-    assert.equal((await app.getNodeOperator(0, false)).active, true)
-    assert.equal((await app.getNodeOperator(1, false)).active, false)
-    assertBn(await app.getNodeOperatorsCount({ from: nobody }), 2)
-    assertBn(await app.getActiveNodeOperatorsCount({ from: nobody }), 1)
+      await assertRevert(app.setNodeOperatorActive(activeNodeOperatorId, true, { from: voting }), 'NODE_OPERATOR_ACTIVITY_ALREADY_SET')
 
-    await assertRevert(app.setNodeOperatorActive(0, true, { from: voting }), 'NODE_OPERATOR_ACTIVITY_ALREADY_SET')
-    assert.equal((await app.getNodeOperator(0, false)).active, true)
-    assertBn(await app.getActiveNodeOperatorsCount({ from: nobody }), 1)
+      const notActiveNodeOperator = await app.getNodeOperator(notActiveNodeOperatorId, false)
+      assert.isFalse(notActiveNodeOperator.active)
+      await assertRevert(app.setNodeOperatorActive(notActiveNodeOperatorId, false, { from: voting }), 'NODE_OPERATOR_ACTIVITY_ALREADY_SET')
+    })
 
-    await assertRevert(app.setNodeOperatorActive(10, false, { from: voting }), 'NODE_OPERATOR_NOT_FOUND')
+    it('increases keysOpIndex', async () => {
+      const nodeOperatorId = 0
+      const [nodeOperator, keyOpIndexBefore] = await Promise.all([app.getNodeOperator(nodeOperatorId, false), app.getKeysOpIndex()])
+
+      assert.isTrue(nodeOperator.active)
+
+      await app.setNodeOperatorActive(nodeOperatorId, false, { from: voting })
+      assertBn(await app.getKeysOpIndex(), keyOpIndexBefore.toNumber() + 1)
+
+      await app.setNodeOperatorActive(nodeOperatorId, true, { from: voting })
+      assertBn(await app.getKeysOpIndex(), keyOpIndexBefore.toNumber() + 2)
+    })
+
+    it('active == true :: sets active state of node operator to true when it is deactivated', async () => {
+      const notActiveNodeOperatorId = 2
+      const notActiveNodeOperator = await app.getNodeOperator(notActiveNodeOperatorId, false)
+
+      assert.isFalse(notActiveNodeOperator.active)
+
+      await app.setNodeOperatorActive(notActiveNodeOperatorId, true, { from: voting })
+
+      const nodeOperator = await app.getNodeOperator(notActiveNodeOperatorId, false)
+      assert.isTrue(nodeOperator.active)
+    })
+
+    it('active == true :: increments active node operators counter', async () => {
+      const notActiveNodeOperatorId = 2
+      const notActiveNodeOperator = await app.getNodeOperator(notActiveNodeOperatorId, false)
+
+      const activeNodeOperatorsCountBefore = await app.getActiveNodeOperatorsCount()
+      assert.isFalse(notActiveNodeOperator.active)
+      await app.setNodeOperatorActive(notActiveNodeOperatorId, true, { from: voting })
+
+      const activeNodeOperatorsCountAfter = await app.getActiveNodeOperatorsCount()
+      assert.equal(activeNodeOperatorsCountAfter.toNumber(), activeNodeOperatorsCountBefore.toNumber() + 1)
+    })
+
+    it('active == false :: sets active state of node operator to false when it is active', async () => {
+      const activeNodeOperatorId = 0
+      const notActiveNodeOperator = await app.getNodeOperator(activeNodeOperatorId, false)
+
+      assert.isTrue(notActiveNodeOperator.active)
+
+      await app.setNodeOperatorActive(activeNodeOperatorId, false, { from: voting })
+
+      const nodeOperator = await app.getNodeOperator(activeNodeOperatorId, false)
+      assert.isFalse(nodeOperator.active)
+    })
+
+    it('active == false :: decrements active node operators counter', async () => {
+      const activeNodeOperatorId = 0
+      const notActiveNodeOperator = await app.getNodeOperator(activeNodeOperatorId, false)
+
+      const activeNodeOperatorsCountBefore = await app.getActiveNodeOperatorsCount()
+      assert.isTrue(notActiveNodeOperator.active)
+      await app.setNodeOperatorActive(activeNodeOperatorId, false, { from: voting })
+
+      const activeNodeOperatorsCountAfter = await app.getActiveNodeOperatorsCount()
+      assert.equal(activeNodeOperatorsCountAfter.toNumber(), activeNodeOperatorsCountBefore.toNumber() - 1)
+    })
+
+    it('active == false :: trims unused keys', async () => {
+      const nodeOperatorId = 1
+
+      const [nodeOperator, nodeOperatorAvailableKeysCountBefore] = await Promise.all([
+        app.getNodeOperator(nodeOperatorId, false),
+        app.getNodeOperatorAvailableKeysCount(nodeOperatorId)
+      ])
+
+      assert.isTrue(nodeOperator.active, 'Invariant Failed: not active')
+      const tx = await app.setNodeOperatorActive(nodeOperatorId, false, { from: voting })
+
+      assertEvent(tx, 'NodeOperatorTotalKeysTrimmed', { id: nodeOperatorId, totalKeysTrimmed: nodeOperatorAvailableKeysCountBefore })
+    })
+
+    it('active == false :: updates availableKeysCount correctly', async () => {
+      const nodeOperatorId = 1
+
+      const [nodeOperator, availableKeysBefore, nodeOperatorAvailableKeysCountBefore] = await Promise.all([
+        app.getNodeOperator(nodeOperatorId, false),
+        app.getAvailableKeysCount(),
+        app.getNodeOperatorAvailableKeysCount(nodeOperatorId)
+      ])
+
+      assert.isTrue(nodeOperator.active, 'Invariant Failed: not active')
+      await app.setNodeOperatorActive(nodeOperatorId, false, { from: voting })
+
+      const [availableKeysAfter, nodeOperatorAvailableKeysCountAfter] = await Promise.all([
+        app.getAvailableKeysCount(),
+        app.getNodeOperatorAvailableKeysCount(nodeOperatorId)
+      ])
+
+      assertBn(nodeOperatorAvailableKeysCountAfter, 0) // available keys of node operator becomes 0
+      assertBn(availableKeysBefore.sub(nodeOperatorAvailableKeysCountBefore), availableKeysAfter) // all available keys of operator are excluded
+    })
+
+    it("active == false :: doesn't modify active keys count", async () => {
+      const nodeOperatorId = 1
+
+      const [nodeOperator, activeKeysBefore, nodeOperatorActiveKeysCountBefore] = await Promise.all([
+        app.getNodeOperator(nodeOperatorId, false),
+        app.getActiveKeysCount(),
+        app.getNodeOperatorActiveKeysCount(nodeOperatorId)
+      ])
+
+      assert.isTrue(nodeOperator.active, 'Invariant Failed: not active')
+      await app.setNodeOperatorActive(nodeOperatorId, false, { from: voting })
+
+      const [activeKeysAfter, nodeOperatorActiveKeysCountAfter] = await Promise.all([
+        app.getActiveKeysCount(),
+        app.getNodeOperatorActiveKeysCount(nodeOperatorId)
+      ])
+
+      assertBn(activeKeysBefore, activeKeysAfter)
+      assertBn(nodeOperatorActiveKeysCountBefore, nodeOperatorActiveKeysCountAfter)
+    })
+
+    it('emits NodeOperatorActiveSet event when active state was changed', async () => {
+      for (const activeState of [true, false]) {
+        const nodeOperatorId = await nodeOperators.findNodeOperatorId(app, (operator) => operator.active === activeState)
+        assert.notEqual(nodeOperatorId, -1, `Invariant: node operator with active state == ${activeState} not found`)
+        const tx = await app.setNodeOperatorActive(nodeOperatorId, !activeState, { from: voting })
+        assertEvent(tx, 'NodeOperatorActiveSet', { id: nodeOperatorId, active: !activeState })
+      }
+    })
+
+    it("doesn't change node operators count", async () => {
+      for (const activeState of [true, false]) {
+        const nodeOperatorsBefore = await nodeOperators.getAllNodeOperators(app)
+        const nodeOperatorId = nodeOperatorsBefore.findIndex((operator) => operator.active === activeState)
+        assert.notEqual(nodeOperatorId, -1, `Invariant: node operator with active state == ${activeState} not found`)
+
+        await app.setNodeOperatorActive(nodeOperatorId, !activeState, { from: voting })
+
+        const nodeOperatorsAfter = await nodeOperators.getAllNodeOperators(app)
+
+        assert.equal(nodeOperatorsBefore.length, nodeOperatorsAfter.length)
+      }
+    })
+
+    it("doesn't change other node operators active state", async () => {
+      for (const activeState of [true, false]) {
+        const nodeOperatorsBefore = await nodeOperators.getAllNodeOperators(app)
+        const nodeOperatorId = nodeOperatorsBefore.findIndex((operator) => operator.active === activeState)
+        assert.notEqual(nodeOperatorId, -1, `Invariant: node operator with active state == ${activeState} not found`)
+
+        await app.setNodeOperatorActive(nodeOperatorId, !activeState, { from: voting })
+
+        const nodeOperatorsAfter = await nodeOperators.getAllNodeOperators(app)
+
+        for (let i = 0; i < nodeOperatorsAfter.length; ++i) {
+          if (nodeOperatorId === i) {
+            assert.equal(nodeOperatorsBefore[i].active, !nodeOperatorsAfter[i].active)
+          } else {
+            assert.equal(nodeOperatorsBefore[i].active, nodeOperatorsAfter[i].active)
+          }
+        }
+      }
+    })
   })
 
   it('setNodeOperatorName works', async () => {
@@ -907,6 +1105,36 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assertBn(await steth.sharesOf(user1), ETH(3))
       assertBn(await steth.sharesOf(user2), ETH(7))
       assertBn(await steth.sharesOf(user3), 0)
+    })
+  })
+  context('getSignedKeys', () => {
+    it('reverts with NODE_OPERATOR_NOT_FOUND', async () => {
+      await assertRevert(app.getSigningKeys(0, 0, 10), 'NODE_OPERATOR_NOT_FOUND')
+    })
+
+    it('reverts with OUT_OF_RANGE', async () => {
+      await app.finalizeUpgrade_v2(steth.address, CURATED_TYPE)
+
+      await app.addNodeOperator('0', user1, { from: voting })
+
+      await assertRevert(app.getSigningKeys(0, 0, 10), 'OUT_OF_RANGE')
+    })
+
+    it('returns specified signed keys', async () => {
+      await app.finalizeUpgrade_v2(steth.address, CURATED_TYPE)
+
+      await app.addNodeOperator('0', user1, { from: voting })
+
+      const keys = [pad('0xaa0101', 48), pad('0xaa0202', 48), pad('0xaa0303', 48)]
+      const sigs = [pad('0xa1', 96), pad('0xa2', 96), pad('0xa3', 96)]
+
+      await app.addSigningKeys(0, 3, hexConcat(...keys), hexConcat(...sigs), { from: voting })
+
+      const { pubkeys, signatures, used } = await app.getSigningKeys(0, 1, 2)
+
+      assert.equal(pubkeys, keys[1] + keys[2].slice(2))
+      assert.equal(signatures, sigs[1] + sigs[2].slice(2))
+      assert.sameMembers(used, [false, false])
     })
   })
 })

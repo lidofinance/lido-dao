@@ -11,6 +11,12 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         operators[_operatorId].totalSigningKeys = _keys;
     }
 
+    function incUsedSigningKeys(uint256 _operatorId, uint64 _incDelta) external {
+        operators[_operatorId].usedSigningKeys += _incDelta;
+        _setTotalActiveKeys(keysUsageStats.totalActiveKeys.add(uint64(_incDelta)));
+        _updateTotalAvailableKeysCount();
+    }
+
     function setOperatorUsedKeys(uint256 _operatorId, uint64 _keys) external {
         operators[_operatorId].usedSigningKeys = _keys;
     }

@@ -155,6 +155,9 @@ contract('MinFirstAllocationStrategy', (accounts) => {
           for (const allocation of allocations) {
             for (const maxAllocationSize of maxAllocationSizes) {
               const { allocated, newAllocations } = await minFirstAllocationStrategy.allocate([allocation], [capacity], maxAllocationSize)
+
+              assertAllocationAssumptions([allocation], [capacity], maxAllocationSize, allocated, newAllocations)
+
               const expectedAllocated = Math.min(Math.max(0, capacity - allocation), maxAllocationSize)
               assertBn(allocated, expectedAllocated)
               assert.equal(newAllocations.length, 1)
@@ -165,7 +168,7 @@ contract('MinFirstAllocationStrategy', (accounts) => {
       })
     })
 
-    for (let allocationsLength = 2; allocationsLength <= 4; ++allocationsLength) {
+    for (let allocationsLength = 2; allocationsLength <= 16; ++allocationsLength) {
       const samplesCount = 128
       const allocationRange = [0, 8192]
       const capacityRange = [0, 8192]
@@ -183,6 +186,9 @@ contract('MinFirstAllocationStrategy', (accounts) => {
             const maxAllocationSize = getMaxAllocationSizeSample(maxAllocationSizeRange)
 
             const { allocated, newAllocations } = await minFirstAllocationStrategy.allocate(allocations, capacities, maxAllocationSize)
+
+            assertAllocationAssumptions(allocations, capacities, maxAllocationSize, allocated, newAllocations)
+
             const [expectedAllocated, expectedNewAllocations] = getExpectedAllocate(allocations, capacities, maxAllocationSize)
 
             const assertMessage = getAssertMessage(allocations, capacities, maxAllocationSize, expectedNewAllocations, newAllocations)
@@ -266,31 +272,41 @@ function getExpectedAllocate(allocations, capacities, maxAllocationSize) {
 }
 
 function assertAllocationAssumptions(allocations, capacities, maxAllocationSize, allocated, newAllocations) {
+  const assertMessage = getAssertMessage(allocations, capacities, maxAllocationSize, [], newAllocations)
   // assumption 1: lengths of prev allocations, capacities and new allocations are equal
-  assert(allocations.length === capacities.length)
-  assert(allocations.length === newAllocations.length)
+  assert(allocations.length === capacities.length, assertMessage)
+  assert(allocations.length === newAllocations.length, assertMessage)
 
   // assumption 2: allocated doesn't exceeds maxAllocationSize
-  assert(allocated.toNumber() <= maxAllocationSize)
+  assert(allocated.toNumber() <= maxAllocationSize, assertMessage)
 
   // assumption 3: each item in new allocation doesn't exceeds capacity if prev allocation wasn't
   for (let i = 0; i < newAllocations.length; ++i) {
     if (allocations[i] < capacities[i]) {
-      assert(newAllocations[i].toNumber() <= capacities[i])
+      assert(newAllocations[i].toNumber() <= capacities[i], assertMessage)
     }
   }
 
   // assumption 4: if new allocation item exceeds capacity it must be equal to value in prev allocation
   for (let i = 0; i < newAllocations.length; ++i) {
     if (allocations[i] >= capacities[i]) {
-      assertBn(newAllocations[i], allocations[i])
+      assertBn(newAllocations[i], allocations[i], assertMessage)
     }
   }
 
   // assumption 4: the sum of new allocation minus the sum of prev allocation equal to distributed
   const newAllocationsSum = newAllocations.map((a) => a.toNumber()).reduce((sum, a) => sum + a, 0)
   const prevAllocationsSum = allocations.reduce((sum, a) => sum + a, 0)
-  assert.equal(prevAllocationsSum, newAllocationsSum - allocated)
+  assert.equal(prevAllocationsSum, newAllocationsSum - allocated, assertMessage)
+
+  // assumption 5: allocated might be less then maxAllocationSize only when
+  // every new allocation item greater or equal than capacity item
+  if (allocated < maxAllocationSize) {
+    assert.isTrue(
+      newAllocations.every((newAllocation, i) => newAllocation.toNumber() >= capacities[i]),
+      assertMessage
+    )
+  }
 }
 
 function getExpectedAllocateToBestCandidate(allocations, capacities, maxAllocationSize) {
