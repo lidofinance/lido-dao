@@ -683,7 +683,7 @@ contract Lido is ILido, StETH, AragonApp {
         (address[] memory recipients, uint16[] memory moduleFees, uint16 totalFee) = IStakingRouter(stakingRouterAddress)
             .getStakingRewardsDistribution();
 
-        require(recipients.length > 0, "NO_RECIPIENTS");
+        require(recipients.length == moduleFees.length && recipients.length > 0, "WRONG_RECIPIENTS_INPUT");
         require(totalFee > 0, "NOTHING_TO_DISTRIBUTE");
         require(totalFee <= getMaxFee(), "TOTAL_FEE_EXCEED_MAXIMUM_FEE");
 
