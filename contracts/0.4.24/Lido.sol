@@ -59,9 +59,9 @@ contract Lido is ILido, StETH, AragonApp {
     bytes32 public constant SET_EL_REWARDS_VAULT_ROLE = keccak256("SET_EL_REWARDS_VAULT_ROLE");
     bytes32 public constant SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE = keccak256("SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE");
 
-    uint256 constant public PUBKEY_LENGTH = 48;
-    uint256 constant public WITHDRAWAL_CREDENTIALS_LENGTH = 32;
-    uint256 constant public SIGNATURE_LENGTH = 96;
+    uint256 public constant PUBKEY_LENGTH = 48;
+    uint256 public constant WITHDRAWAL_CREDENTIALS_LENGTH = 32;
+    uint256 public constant SIGNATURE_LENGTH = 96;
 
     uint256 public constant DEPOSIT_SIZE = 32 ether;
 
@@ -108,10 +108,10 @@ contract Lido is ILido, StETH, AragonApp {
      * NB: by default, staking and the whole Lido pool are in paused state
      */
     function initialize(
-        address _oracle, 
-        address _treasury, 
-        address _stakingRouterAddress, 
-        address _dsmAddress, 
+        address _oracle,
+        address _treasury,
+        address _stakingRouterAddress,
+        address _dsmAddress,
         uint16 _maximumFeeBasisPoints
     ) public onlyInit {
         _setProtocolContracts(_oracle, _treasury);
@@ -136,7 +136,7 @@ contract Lido is ILido, StETH, AragonApp {
      * @dev Value 1 in CONTRACT_VERSION_POSITION is skipped due to change in numbering
      * For more details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md
      */
-    function finalizeUpgrade_v2(address _stakingRouterAddress, address _dsmAddress,  uint16 _maximumFeeBasisPoints) external {
+    function finalizeUpgrade_v2(address _stakingRouterAddress, address _dsmAddress, uint16 _maximumFeeBasisPoints) external {
         require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "WRONG_BASE_VERSION");
 
         _initialize_v2(_stakingRouterAddress, _dsmAddress, _maximumFeeBasisPoints);
@@ -542,15 +542,15 @@ contract Lido is ILido, StETH, AragonApp {
     function getFeeDistribution() public view returns (uint16 modulesFeeBasisPoints, uint16 treasuryFeeBasisPoints) {
         address stakingRouterAddress = getStakingRouter();
         (, uint16[] memory moduleFees, uint16 totalFee) = IStakingRouter(stakingRouterAddress).getStakingRewardsDistribution();
-        for (uint i; i < moduleFees.length; ++i) {
+        for (uint256 i; i < moduleFees.length; ++i) {
             modulesFeeBasisPoints += moduleFees[i];
         }
         treasuryFeeBasisPoints = totalFee - modulesFeeBasisPoints;
     }
 
-     /**
-    * @notice Returns current credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
-    */
+    /**
+     * @notice Returns current credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
+     */
     function getWithdrawalCredentials() external view returns (bytes32) {
         address stakingRouterAddress = getStakingRouter();
         require(stakingRouterAddress != address(0), "STAKING_ROUTER_ADDRESS_ZERO");
@@ -757,8 +757,7 @@ contract Lido is ILido, StETH, AragonApp {
      * @return total balance in wei
      */
     function _getTotalPooledEther() internal view returns (uint256) {
-        return
-            getTotalBufferedEther().add(BEACON_BALANCE_POSITION.getStorageUint256()).add(_getTransientBalance());
+        return getTotalBufferedEther().add(BEACON_BALANCE_POSITION.getStorageUint256()).add(_getTransientBalance());
     }
 
     function _pauseStaking() internal {

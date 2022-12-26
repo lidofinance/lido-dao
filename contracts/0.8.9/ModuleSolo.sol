@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2021 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2022 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 // See contracts/COMPILERS.md
@@ -43,43 +43,23 @@ contract ModuleSolo is IStakingModule {
         availableKeysCount = getAvailableKeysCount();
     }
 
-    function getSigningKeysStats()
-        external
-        view
-        returns (
-            uint256 totalSigningKeys,
-            uint256 usedSigningKeys,
-            uint256 stoppedSigningKeys
-        )
-    {
+    function getSigningKeysStats() external view returns (uint256 totalSigningKeys, uint256 usedSigningKeys, uint256 stoppedSigningKeys) {
         totalSigningKeys = totalKeys;
         usedSigningKeys = totalUsedKeys;
         stoppedSigningKeys = totalStoppedKeys;
     }
 
-    function getRewardsDistribution(uint256 _totalRewardShares)
-        external
-        view
-        returns (address[] memory recipients, uint256[] memory shares)
-    {}
+    function getRewardsDistribution(
+        uint256 _totalRewardShares
+    ) external view returns (address[] memory recipients, uint256[] memory shares) {}
 
     function addNodeOperator(string memory _name, address _rewardAddress) external returns (uint256 id) {}
 
     function setNodeOperatorStakingLimit(uint256 _id, uint64 _stakingLimit) external {}
 
-    function addSigningKeys(
-        uint256 _operator_id,
-        uint256 _quantity,
-        bytes memory _pubkeys,
-        bytes memory _signatures
-    ) external {}
+    function addSigningKeys(uint256 _operator_id, uint256 _quantity, bytes memory _pubkeys, bytes memory _signatures) external {}
 
-    function addSigningKeysOperatorBH(
-        uint256 _operator_id,
-        uint256 _quantity,
-        bytes memory _pubkeys,
-        bytes memory _signatures
-    ) external {}
+    function addSigningKeysOperatorBH(uint256 _operator_id, uint256 _quantity, bytes memory _pubkeys, bytes memory _signatures) external {}
 
     //only for testing purposal
     function setTotalKeys(uint256 _keys) external {
@@ -120,15 +100,10 @@ contract ModuleSolo is IStakingModule {
         return keysOpIndex;
     }
 
-    function prepNextSigningKeys(uint256 maxDepositsCount, bytes calldata depositCalldata)
-        external
-        pure
-        returns (
-            uint256 keysCount,
-            bytes memory pubkeys,
-            bytes memory signatures
-        )
-    {
+    function prepNextSigningKeys(
+        uint256 maxDepositsCount,
+        bytes calldata depositCalldata
+    ) external pure returns (uint256 keysCount, bytes memory pubkeys, bytes memory signatures) {
         pubkeys = BytesLib.slice(depositCalldata, 0, maxDepositsCount * PUBKEY_LENGTH);
         signatures = BytesLib.slice(depositCalldata, maxDepositsCount * PUBKEY_LENGTH, maxDepositsCount * SIGNATURE_LENGTH);
 
