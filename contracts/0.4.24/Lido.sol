@@ -67,9 +67,6 @@ contract Lido is ILido, StETH, AragonApp {
 
     uint256 public constant TOTAL_BASIS_POINTS = 10000;
 
-    /// @dev default value for maximum number of Ethereum 2.0 validators registered in a single deposit() call
-    uint256 internal constant DEFAULT_MAX_DEPOSITS_PER_CALL = 150;
-
     bytes32 internal constant MAX_FEE_POSITION = keccak256("lido.Lido.maxFee");
 
     bytes32 internal constant ORACLE_POSITION = keccak256("lido.Lido.oracle");
