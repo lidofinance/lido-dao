@@ -6,7 +6,6 @@
 pragma solidity 0.4.24;
 
 import "@aragon/os/contracts/apps/AragonApp.sol";
-import "@aragon/os/contracts/common/IsContract.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 import "@aragon/os/contracts/lib/math/SafeMath64.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
@@ -24,7 +23,7 @@ import "../lib/MemUtils.sol";
  *
  * NOTE: the code below assumes moderate amount of node operators, i.e. up to `MAX_NODE_OPERATORS_COUNT`.
  */
-contract NodeOperatorsRegistry is INodeOperatorsRegistry, IsContract, AragonApp, IStakingModule {
+contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingModule {
     using SafeMath for uint256;
     using SafeMath64 for uint64;
     using UnstructuredStorage for bytes32;
