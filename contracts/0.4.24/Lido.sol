@@ -20,8 +20,8 @@ import "./lib/StakeLimitUtils.sol";
 /**
  * @title Liquid staking pool implementation
  *
- * Lido is an Ethereum 2.0 liquid staking protocol solving the problem of frozen staked Ethers
- * until transfers become available in Ethereum 2.0.
+ * Lido is an liquid staking protocol solving the problem of frozen staked Ethers
+ * until transfers become available in Beacon Chain.
  * Whitepaper: https://lido.fi/static/Lido:Ethereum-Liquid-Staking.pdf
  *
  * Since balances of all token holders change when the amount of total pooled Ether
@@ -30,9 +30,7 @@ import "./lib/StakeLimitUtils.sol";
  * rewards, no Transfer events are generated: doing so would require emitting an event
  * for each token holder and thus running an unbounded loop.
  *
- * At the moment withdrawals are not possible in the beacon chain and there's no workaround.
- * Pool will be upgraded to an actual implementation when withdrawals are enabled
- * (Phase 1.5 or 2 of Eth2 launch, likely late 2022 or 2023).
+ * Withdrawals are expected to be available with the first post-Merge hardfork Q1/Q2 2023.
  */
 contract Lido is ILido, StETH, AragonApp {
     using SafeMath for uint256;
