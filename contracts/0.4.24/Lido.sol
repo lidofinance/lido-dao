@@ -48,6 +48,7 @@ contract Lido is ILido, StETH, AragonApp {
     bytes32 public constant SET_EL_REWARDS_VAULT_ROLE = keccak256("SET_EL_REWARDS_VAULT_ROLE");
     bytes32 public constant SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE = keccak256("SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE");
 
+    /// @dev constants are deprecated and left for backward compatibility
     uint256 public constant PUBKEY_LENGTH = 48;
     uint256 public constant WITHDRAWAL_CREDENTIALS_LENGTH = 32;
     uint256 public constant SIGNATURE_LENGTH = 96;

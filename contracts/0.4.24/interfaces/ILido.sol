@@ -13,7 +13,7 @@ import "./IStakingRouter.sol";
  * Pool manages withdrawal keys and fees. It receives ether submitted by users on the ETH 1 side
  * and stakes it via the deposit_contract.sol contract. It doesn't hold ether on it's balance,
  * only a small portion (buffer) of it.
- * It also mints new tokens for rewards generated at the ETH 2.0 side.
+ * It also mints new tokens for rewards accrued both on the Execution Layer and the Consensus Layer sides
  *
  * At the moment withdrawals are not possible in the beacon chain and there's no workaround.
  * Pool will be upgraded to an actual implementation when withdrawals are enabled
