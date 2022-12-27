@@ -807,5 +807,6 @@ contract Lido is ILido, StETH, AragonApp {
         STAKING_ROUTER_BUFFERED_ETHER_POSITION.setStorageUint256(stakingRouterBuffered);
 
         emit Unbuffered(depositedAmount);
+        emit TransferredToStakingRouter(transferred);
     }
 }

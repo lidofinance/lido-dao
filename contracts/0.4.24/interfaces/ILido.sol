@@ -261,4 +261,7 @@ interface ILido {
     event DepositSecurityModuleSet(address dsmAddress);
 
     event ContractVersionSet(uint256 version);
+
+    // The `amount` of ether was sent to the Staking Router
+    event TransferredToStakingRouter(uint256 amount);
 }

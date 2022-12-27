@@ -1,10 +1,7 @@
 const hre = require('hardhat')
-const { assert } = require('chai')
-const { assertBn, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
-const { BN, constants, expectEvent, expectRevert } = require('@openzeppelin/test-helpers')
+const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const { newDao, newApp } = require('../0.4.24/helpers/dao')
 const { ETH, genKeys } = require('../helpers/utils')
-const { expect } = require('chai')
 
 const LidoMock = artifacts.require('LidoMock.sol')
 const LidoOracleMock = artifacts.require('OracleMock.sol')
@@ -183,7 +180,7 @@ contract('StakingRouter', (accounts) => {
       await operators.addSigningKeys(0, keysAmount, keys1.pubkeys, keys1.sigkeys, { from: voting })
       await operators.addSigningKeys(0, keysAmount, keys1.pubkeys, keys1.sigkeys, { from: voting })
 
-      await lido.deposit(maxDepositsCount, curated.id, '0x', { from: depositSecurityModule.address })
+      receipt = await lido.deposit(maxDepositsCount, curated.id, '0x', { from: depositSecurityModule.address })
 
       assertBn(await depositContract.totalCalls(), 100, 'invalid deposits count')
 
@@ -193,6 +190,9 @@ contract('StakingRouter', (accounts) => {
       assertBn(await web3.eth.getBalance(stakingRouter.address), ETH(32), 'invalid staking_router balance')
       assertBn(await lido.getStakingRouterBufferedEther(), ETH(32), 'invalid staking_router buffer')
       assertBn(await lido.getTotalBufferedEther(), ETH(32), 'invalid total buffer')
+
+      assertEvent(receipt, 'Unbuffered', { expectedArgs: { amount: ETH(maxDepositsCount * 32) } })
+      assertEvent(receipt, 'TransferredToStakingRouter', { expectedArgs: { amount: sendEthForKeys } })
     })
   })
 })
