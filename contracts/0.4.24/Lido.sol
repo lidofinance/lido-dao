@@ -289,6 +289,13 @@ contract Lido is ILido, StETH, AragonApp {
         emit ELRewardsReceived(msg.value);
     }
 
+    /**
+     * @notice Destroys _sharesAmount shares from _account holdings, decreasing the total amount of shares.
+     * 
+     * @param _account Address where shares will be burned
+     * @param _sharesAmount Amount of shares to burn
+     * @return Amount of new total shares after tokens burning
+     */
     function burnShares(
         address _account,
         uint256 _sharesAmount
@@ -446,10 +453,20 @@ contract Lido is ILido, StETH, AragonApp {
         return _getBufferedEther();
     }
 
+    /**
+     * @notice Get the amount of Ether temporary buffered on Staking Router contract balance
+     * @dev We transfer eth from the Lido buffer to the StakingRouter buffer at deposit. 
+     *      We are transferring the entire Lido buffered balance
+     * @return amount of buffered funds in wei
+     */
     function getStakingRouterBufferedEther() external view returns (uint256) {
         return _getStakingRouterBufferedEther();
     }
 
+    /**
+     * @notice Get the total amount of Ether temporary buffered on Staking Router and Lido contracts 
+     * @return amount of buffered funds in wei
+     */
     function getTotalBufferedEther() public view returns (uint256) {
         return _getBufferedEther().add(_getStakingRouterBufferedEther());
     }
@@ -616,7 +633,7 @@ contract Lido is ILido, StETH, AragonApp {
 
     /**
      * @dev Distributes fee portion of the rewards by minting and distributing corresponding amount of liquid tokens.
-     * @param _totalRewards Total rewards accrued on the Ethereum 2.0 side in wei
+     * @param _totalRewards Total rewards accrued both on the Execution Layer and the Consensus Layer sides in wei. 
      */
     function _distributeFee(uint256 _totalRewards) internal {
         // We need to take a defined percentage of the reported reward as a fee, and we do
@@ -687,10 +704,7 @@ contract Lido is ILido, StETH, AragonApp {
      * @dev Gets the amount of Ether temporary buffered on this contract balance
      */
     function _getBufferedEther() internal view returns (uint256) {
-        uint256 buffered = BUFFERED_ETHER_POSITION.getStorageUint256();
-        assert(address(this).balance >= buffered);
-
-        return buffered;
+        return BUFFERED_ETHER_POSITION.getStorageUint256();
     }
 
     /**
@@ -763,17 +777,6 @@ contract Lido is ILido, StETH, AragonApp {
         // no-op
     }
 
-    function _transferBufferedEtherToStakingRouter() internal returns (uint256 transferred) {
-        //make buffer transfer from LIDO to StakingRouter
-        uint256 unaccounted = _getUnaccountedEther();
-
-        transferred = _getBufferedEther();
-        address(getStakingRouter()).transfer(transferred);
-        BUFFERED_ETHER_POSITION.setStorageUint256(0);
-
-        assert(_getUnaccountedEther() == unaccounted);
-    }
-
     /**
      * @dev Invokes a deposit call to the Staking Router contract and updates buffered counters
      * @param _maxDepositsCount max deposits count
@@ -783,7 +786,15 @@ contract Lido is ILido, StETH, AragonApp {
     function deposit(uint256 _maxDepositsCount, uint24 _stakingModuleId, bytes _depositCalldata) external whenNotStopped {
         require(msg.sender == getDepositSecurityModule(), "APP_AUTH_DSM_FAILED");
 
-        uint256 transferred = _transferBufferedEtherToStakingRouter();
+        //make buffer transfer from LIDO to StakingRouter
+        uint256 unaccounted = _getUnaccountedEther();
+
+        uint256 transferred = _getBufferedEther();
+        address(getStakingRouter()).transfer(transferred);
+        BUFFERED_ETHER_POSITION.setStorageUint256(0);
+
+        assert(_getUnaccountedEther() == unaccounted);
+
         uint256 stakingRouterBuffered = _getStakingRouterBufferedEther().add(transferred);
 
         //make deposit

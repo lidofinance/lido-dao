@@ -27,7 +27,7 @@ const cfgCommunity = {
   targetShare: 5000
 }
 
-contract('Lido', ([appManager, voting, user2, depositor]) => {
+contract('Lido', ([appManager, voting, user2]) => {
   let appBase, nodeOperatorsRegistryBase, app, oracle, depositContract, curatedModule, stakingRouter, soloModule
   let treasuryAddr
   let dao, acl
@@ -85,7 +85,7 @@ contract('Lido', ([appManager, voting, user2, depositor]) => {
     })
 
     // Initialize the app's proxy.
-    await app.initialize(oracle.address)
+    await app.initialize(oracle.address, oracle.address, ZERO_ADDRESS, ZERO_ADDRESS)
 
     assert((await app.isStakingPaused()) === true)
     assert((await app.isStopped()) === true)

@@ -13,7 +13,6 @@ const StakingRouter = artifacts.require('StakingRouter')
 const StakingModuleMock = artifacts.require('StakingModuleMock')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
 const DepositSecurityModule = artifacts.require('DepositSecurityModule.sol')
-const DepositContractMockForDepositSecurityModule = artifacts.require('DepositContractMockForDepositSecurityModule.sol')
 const StakingRouterMockForDepositSecurityModule = artifacts.require('StakingRouterMockForDepositSecurityModule')
 
 const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
@@ -28,7 +27,7 @@ contract('StakingRouter', (accounts) => {
   let depositContract, stakingRouter
   let curatedStakingModuleMock, soloStakingModuleMock, dvtStakingModuleMock
   let dao, acl, lido, oracle, operators
-  let depositSecurityModule, depositContractMock, stakingRouterMock
+  let depositSecurityModule, stakingRouterMock
   const [deployer, voting, admin, treasury, stranger1] = accounts
 
   before(async () => {
@@ -53,10 +52,9 @@ contract('StakingRouter', (accounts) => {
 
     // DSM
     stakingRouterMock = await StakingRouterMockForDepositSecurityModule.new()
-    depositContractMock = await DepositContractMockForDepositSecurityModule.new()
     depositSecurityModule = await DepositSecurityModule.new(
       lido.address,
-      depositContractMock.address,
+      depositContract.address,
       stakingRouterMock.address,
       MAX_DEPOSITS_PER_BLOCK,
       MIN_DEPOSIT_BLOCK_DISTANCE,
@@ -135,27 +133,6 @@ contract('StakingRouter', (accounts) => {
       )
     })
 
-    it('Lido.deposit() :: transfer balance', async () => {
-      const maxDepositsCount = 150
-
-      await web3.eth.sendTransaction({ value: ETH(maxDepositsCount * 32), to: lido.address, from: stranger1 })
-      assertBn(await lido.getBufferedEther(), ETH(maxDepositsCount * 32))
-
-      // before total tvl
-      const prev = await lido.getTotalPooledEther()
-      assertBn(prev, ETH(maxDepositsCount * 32))
-
-      await lido.transferToStakingRouter({ from: voting })
-      assert(await lido.getBufferedEther(), 0)
-      assert(await lido.getStakingRouterBufferedEther(), maxDepositsCount * 32)
-
-      const stakingRouterBalance = await web3.eth.getBalance(stakingRouter.address)
-      assert(stakingRouterBalance, maxDepositsCount * 32)
-
-      // after total tvl
-      assertBn(await lido.getTotalPooledEther(), prev)
-    })
-
     it('Lido.deposit() :: check permissionss', async () => {
       const maxDepositsCount = 150
 
@@ -208,11 +185,14 @@ contract('StakingRouter', (accounts) => {
 
       await lido.deposit(maxDepositsCount, curated.id, '0x', { from: depositSecurityModule.address })
 
-      assertBn(await lido.getBufferedEther(), ETH(32), 'invalid lido buffer')
-      assertBn(await web3.eth.getBalance(lido.address), ETH(32), 'invalid lido balance')
+      assertBn(await depositContract.totalCalls(), 100, 'invalid deposits count')
 
-      assertBn(await lido.getStakingRouterBufferedEther(), 0, 'invalid staking_router buffer')
-      assertBn(await web3.eth.getBalance(stakingRouter.address), 0, 'invalid staking_router balance')
+      // on deposit we transfer all of BUFFERED_ETHER to th StakingRouter
+      assertBn(await web3.eth.getBalance(lido.address), ETH(0), 'invalid lido balance')
+
+      assertBn(await web3.eth.getBalance(stakingRouter.address), ETH(32), 'invalid staking_router balance')
+      assertBn(await lido.getStakingRouterBufferedEther(), ETH(32), 'invalid staking_router buffer')
+      assertBn(await lido.getTotalBufferedEther(), ETH(32), 'invalid total buffer')
     })
   })
 })

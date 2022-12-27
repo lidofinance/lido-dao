@@ -394,7 +394,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assert.equal(await app.getWithdrawalCredentials(), pad('0x0202', 32))
   })
 
-  it.only('setOracle works', async () => {
+  it('setOracle works', async () => {
     await assertRevert(app.setProtocolContracts(ZERO_ADDRESS, user2, { from: voting }), 'ORACLE_ZERO_ADDRESS')
     const receipt = await app.setProtocolContracts(yetAnotherOracle.address, oracle.address, { from: voting })
     assertEvent(receipt, 'ProtocolContactsSet', {
