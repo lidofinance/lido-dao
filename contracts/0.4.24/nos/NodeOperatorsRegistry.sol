@@ -50,7 +50,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
 
     bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.NodeOperatorsRegistry.contractVersion");
 
-    bytes32 internal constant STETH_POSITION = keccak256("lido.Lido.stETH");
+    bytes32 internal constant STETH_POSITION = keccak256("lido.NodeOperatorsRegistry.stETH");
 
     /// @dev Node Operator parameters and internal state
     struct NodeOperator {
