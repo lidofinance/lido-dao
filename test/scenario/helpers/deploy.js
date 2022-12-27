@@ -11,7 +11,6 @@ module.exports = {
   deployDaoAndPool
 }
 
-const MAX_FEE = 1000 // in BP
 const NETWORK_ID = 1000
 const MAX_DEPOSITS_PER_BLOCK = 100
 const MIN_DEPOSIT_BLOCK_DISTANCE = 20

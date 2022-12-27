@@ -95,7 +95,12 @@ contract Lido is ILido, StETH, AragonApp {
      * @param _dsmAddress Deposit security module contract
      * NB: by default, staking and the whole Lido pool are in paused state
      */
-    function initialize(address _oracle, address _treasury, address _stakingRouterAddress, address _dsmAddress) public onlyInit {
+    function initialize(
+        address _oracle, 
+        address _treasury, 
+        address _stakingRouterAddress, 
+        address _dsmAddress
+    ) public onlyInit {
         _setProtocolContracts(_oracle, _treasury);
 
         _initialize_v2(_stakingRouterAddress, _dsmAddress);
@@ -540,7 +545,8 @@ contract Lido is ILido, StETH, AragonApp {
         ORACLE_POSITION.setStorageAddress(_oracle);
         TREASURY_POSITION.setStorageAddress(_treasury);
 
-        emit ProtocolContactsSet(_oracle, _treasury);
+        // the 3rd parameter is left for backward compatibility
+        emit ProtocolContactsSet(_oracle, _treasury, address(0));
     }
 
     /**

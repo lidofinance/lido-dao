@@ -12,9 +12,12 @@ import "./VaultMock.sol";
  */
 contract LidoMock is Lido {
     function initialize(
-        address _oracle
+        address _oracle, 
+        address _treasury, 
+        address _stakingRouterAddress, 
+        address _dsmAddress
     ) public {
-        super.initialize(_oracle, new VaultMock(), new VaultMock(), new VaultMock());
+        super.initialize(_oracle, _treasury, _stakingRouterAddress, _dsmAddress);
     }
 
     /**

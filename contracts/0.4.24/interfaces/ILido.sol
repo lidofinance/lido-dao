@@ -135,7 +135,7 @@ interface ILido {
      */
     function setProtocolContracts(address _oracle, address _treasury) external;
 
-    event ProtocolContactsSet(address oracle, address treasury);
+    event ProtocolContactsSet(address oracle, address treasury, address insuranceFund);
 
     /**
      * @notice Returns current staking rewards  fee rate

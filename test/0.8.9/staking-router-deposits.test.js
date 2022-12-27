@@ -22,7 +22,6 @@ const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
 const MAX_DEPOSITS_PER_BLOCK = 100
 const MIN_DEPOSIT_BLOCK_DISTANCE = 20
 const PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS = 10
-const MAX_FEE = 1000 // in BP
 
 contract('StakingRouter', (accounts) => {
   let evmSnapshotId
@@ -106,7 +105,7 @@ contract('StakingRouter', (accounts) => {
     await stakingRouter.grantRole(MODULE_MANAGE_ROLE, voting, { from: admin })
     await stakingRouter.grantRole(STAKING_ROUTER_DEPOSIT_ROLE, lido.address, { from: admin })
 
-    await lido.initialize(oracle.address, treasury, stakingRouter.address, depositSecurityModule.address, MAX_FEE)
+    await lido.initialize(oracle.address, treasury, stakingRouter.address, depositSecurityModule.address)
 
     evmSnapshotId = await hre.ethers.provider.send('evm_snapshot', [])
   })
