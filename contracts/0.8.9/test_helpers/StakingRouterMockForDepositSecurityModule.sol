@@ -104,7 +104,6 @@ contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
         stakingModuleLastDepositBlock = value;
     }
 
-    function getTotalActiveKeys() public view returns (uint256 totalActiveKeys, uint256[] memory moduleActiveKeys) {}
-    function getModuleActiveKeysCount(uint24 _stakingModuleId) external view returns (uint256) {}
+    function getStakingModuleActiveKeysCount(uint24 _stakingModuleId) external view returns (uint256) {}
     function getKeysAllocation(uint256 _keysToAllocate) external view returns (uint256 allocated, uint256[] memory allocations) {}
 }

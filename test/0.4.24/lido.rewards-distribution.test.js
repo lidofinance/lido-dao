@@ -85,7 +85,7 @@ contract('Lido', ([appManager, voting, user2]) => {
     })
 
     // Initialize the app's proxy.
-    await app.initialize(oracle.address, oracle.address, ZERO_ADDRESS, ZERO_ADDRESS)
+    await app.initialize(oracle.address, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS)
 
     assert((await app.isStakingPaused()) === true)
     assert((await app.isStopped()) === true)
