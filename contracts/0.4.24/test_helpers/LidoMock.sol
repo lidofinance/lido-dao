@@ -16,7 +16,7 @@ contract LidoMock is Lido {
         address _oracle,
         INodeOperatorsRegistry _operators
     ) public {
-        super.initialize(_depositContract, _oracle, _operators, new VaultMock(), new VaultMock());
+        super.initialize(_depositContract, _oracle, _operators, new VaultMock(), address(0));
     }
 
     /**

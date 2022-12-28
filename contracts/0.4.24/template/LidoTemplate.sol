@@ -358,7 +358,7 @@ contract LidoTemplate is IsContract {
             state.oracle,
             state.operators,
             state.agent, // treasury
-            state.agent // insurance fund
+            address(0) // execution layer rewards vault
         );
 
         // used for issuing vested tokens in the next step
@@ -403,7 +403,6 @@ contract LidoTemplate is IsContract {
         string _daoName,
         uint16 _totalFeeBP,
         uint16 _treasuryFeeBP,
-        uint16 _insuranceFeeBP,
         uint16 _operatorsFeeBP,
         uint256 _unvestedTokensAmount
     ) external onlyOwner {
@@ -417,7 +416,7 @@ contract LidoTemplate is IsContract {
         bytes32 LIDO_MANAGE_FEE = state.lido.MANAGE_FEE();
         _createPermissionForTemplate(state.acl, state.lido, LIDO_MANAGE_FEE);
         state.lido.setFee(_totalFeeBP);
-        state.lido.setFeeDistribution(_treasuryFeeBP, _insuranceFeeBP, _operatorsFeeBP);
+        state.lido.setFeeDistribution(_treasuryFeeBP, _operatorsFeeBP);
         _removePermissionFromTemplate(state.acl, state.lido, LIDO_MANAGE_FEE);
 
         if (_unvestedTokensAmount != 0) {
@@ -651,10 +650,9 @@ contract LidoTemplate is IsContract {
         perms[5] = _state.lido.RESUME_ROLE();
         perms[6] = _state.lido.STAKING_PAUSE_ROLE();
         perms[7] = _state.lido.STAKING_CONTROL_ROLE();
-        perms[8] = _state.lido.SET_EL_REWARDS_VAULT_ROLE();
-        perms[9] = _state.lido.SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE();
+        perms[8] = _state.lido.SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE();
 
-        for (i = 0; i < 10; ++i) {
+        for (i = 0; i < 9; ++i) {
             _createPermissionForVoting(acl, _state.lido, perms[i], voting);
         }
     }
