@@ -376,9 +376,10 @@ contract StETH is IERC20, Pausable {
      * - `_spender` cannot be the zero address.
      * - the contract must not be paused.
      */
-    function _approve(address _owner, address _spender, uint256 _amount) internal whenNotStopped {
+    function _approve(address _owner, address _spender, uint256 _amount) internal {
         require(_owner != address(0), "APPROVE_FROM_ZERO_ADDRESS");
         require(_spender != address(0), "APPROVE_TO_ZERO_ADDRESS");
+        _whenNotStopped();
 
         allowances[_owner][_spender] = _amount;
         emit Approval(_owner, _spender, _amount);
@@ -408,9 +409,10 @@ contract StETH is IERC20, Pausable {
      * - `_sender` must hold at least `_sharesAmount` shares.
      * - the contract must not be paused.
      */
-    function _transferShares(address _sender, address _recipient, uint256 _sharesAmount) internal whenNotStopped {
+    function _transferShares(address _sender, address _recipient, uint256 _sharesAmount) internal {
         require(_sender != address(0), "TRANSFER_FROM_THE_ZERO_ADDRESS");
         require(_recipient != address(0), "TRANSFER_TO_THE_ZERO_ADDRESS");
+        _whenNotStopped();
 
         uint256 currentSenderShares = shares[_sender];
         require(_sharesAmount <= currentSenderShares, "TRANSFER_AMOUNT_EXCEEDS_BALANCE");
@@ -428,8 +430,9 @@ contract StETH is IERC20, Pausable {
      * - `_recipient` cannot be the zero address.
      * - the contract must not be paused.
      */
-    function _mintShares(address _recipient, uint256 _sharesAmount) internal whenNotStopped returns (uint256 newTotalShares) {
+    function _mintShares(address _recipient, uint256 _sharesAmount) internal returns (uint256 newTotalShares) {
         require(_recipient != address(0), "MINT_TO_THE_ZERO_ADDRESS");
+        _whenNotStopped();
 
         newTotalShares = _getTotalShares().add(_sharesAmount);
         TOTAL_SHARES_POSITION.setStorageUint256(newTotalShares);
@@ -454,8 +457,9 @@ contract StETH is IERC20, Pausable {
      * - `_account` must hold at least `_sharesAmount` shares.
      * - the contract must not be paused.
      */
-    function _burnShares(address _account, uint256 _sharesAmount) internal whenNotStopped returns (uint256 newTotalShares) {
+    function _burnShares(address _account, uint256 _sharesAmount) internal returns (uint256 newTotalShares) {
         require(_account != address(0), "BURN_FROM_THE_ZERO_ADDRESS");
+        _whenNotStopped();
 
         uint256 accountShares = shares[_account];
         require(_sharesAmount <= accountShares, "BURN_AMOUNT_EXCEEDS_BALANCE");

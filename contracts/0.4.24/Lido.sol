@@ -491,8 +491,9 @@ contract Lido is ILido, StETH, AragonApp {
         uint256[] _requestIdToFinalizeUpTo,
         uint256[] _finalizationPooledEtherAmount,
         uint256[] _finalizationSharesAmount
-    ) external whenNotStopped {
+    ) external {
         require(msg.sender == getOracle(), "APP_AUTH_FAILED");
+        _whenNotStopped();
 
         // update withdrawals reserve
         WITHDRAWAL_RESERVE_POSITION.setStorageUint256(_withdrawalsReserveAmount);
@@ -886,7 +887,9 @@ contract Lido is ILido, StETH, AragonApp {
     /**
     * @dev Deposits buffered eth to the DepositContract and assigns chunked deposits to node operators
     */
-    function _depositBufferedEther(uint256 _maxDeposits) internal whenNotStopped {
+    function _depositBufferedEther(uint256 _maxDeposits) internal {
+        _whenNotStopped();
+
         uint256 buffered = _getBufferedEther();
         uint256 withdrawalReserve = getBufferWithdrawalsReserve();
 
