@@ -181,15 +181,25 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         }
     }
 
+    /**
+     *  @dev Returns staking module by id
+     */
     function getStakingModule(uint24 _stakingModuleId) external view returns (StakingModule memory) {
         return _getStakingModuleById(_stakingModuleId);
     }
 
     /**
-     * @notice Returns total number of node operators
+     * @dev Returns total number of staking modules
      */
     function getStakingModulesCount() public view returns (uint256) {
         return _stakingModulesCount;
+    }
+
+    /**
+     *  @dev Returns staking module by index
+     */
+    function getStakingModuleByIndex(uint256 _stakingModuleIdndex) external view returns (StakingModule memory) {
+        return _getStakingModuleByIndex(_stakingModuleIdndex);
     }
 
     function getStakingModuleStatus(uint24 _stakingModuleId) external view returns (StakingModuleStatus) {
@@ -276,6 +286,35 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     }
 
     /**
+     * @dev calculate max count of depositable module keys based on the total prospective number of deposits
+     *
+     * @param _stakingModuleId id of the staking module to be deposited
+     * @param _totalDepositsCount total number of deposits to be made
+     * @return max depositable keys count
+     */
+    function getStakingModuleProspectiveMaxDepositableKeys(
+        uint24 _stakingModuleId,
+        uint256 _totalDepositsCount
+    ) external view onlyRegisteredStakingModule(_stakingModuleId) returns (uint256) {
+        return _getStakingModuleProspectiveMaxDepositableKeysByIndex(_getStakingModuleIndexById(_stakingModuleId), _totalDepositsCount);
+    }
+
+    /**
+     * @dev see {StakingRouter-getStakingModuleProspectiveMaxDepositableKeys}
+     *
+     * @param _stakingModuleIndex module index
+     * @param _totalDepositsCount total number of deposits to be made
+     * @return max depositable keys count
+     */
+    function _getStakingModuleProspectiveMaxDepositableKeysByIndex(
+        uint256 _stakingModuleIndex,
+        uint256 _totalDepositsCount
+    ) internal view returns (uint256) {
+        (, uint256[] memory newKeysAllocation, StakingModuleCache[] memory modulesCache) = _getKeysAllocation(_totalDepositsCount);
+        return newKeysAllocation[_stakingModuleIndex] - modulesCache[_stakingModuleIndex].activeKeysCount;
+    }
+
+    /**
      * @notice return shares table
      *
      * @return recipients recipients list
@@ -297,11 +336,10 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
 
         recipients = new address[](modulesCount);
         moduleFees = new uint16[](modulesCount);
-        totalFee = 0;
 
         uint256 rewardedModulesCount = 0;
         uint256 moduleKeysShare;
-        for (uint256 i = 0; i < modulesCount; ++i) {
+        for (uint256 i; i < modulesCount; ++i) {
             /// @dev skip modules which have no active keys
             if (modulesCache[i].activeKeysCount > 0) {
                 moduleKeysShare = ((modulesCache[i].activeKeysCount * TOTAL_BASIS_POINTS) / totalActiveKeys);
@@ -343,24 +381,28 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         bytes calldata _depositCalldata
     )
         external
+        payable
         onlyRole(STAKING_ROUTER_DEPOSIT_ROLE)
         onlyRegisteredStakingModule(_stakingModuleId)
         onlyActiveStakingModule(_stakingModuleId)
         returns (uint256)
     {
-        uint256 maxSigningKeysCount;
-        uint256 stakingModuleIndex = _getStakingModuleIndexById(_stakingModuleId);
-        {
-            _maxDepositsCount = Math.min(address(this).balance / DEPOSIT_SIZE, _maxDepositsCount);
-            (, uint256[] memory newKeysAllocation, StakingModuleCache[] memory modulesCache) = _getKeysAllocation(_maxDepositsCount);
-            maxSigningKeysCount = newKeysAllocation[stakingModuleIndex] - modulesCache[stakingModuleIndex].activeKeysCount;
+        if (msg.value > 0) {
+            emit StakingRouterETHReceived(msg.value);
         }
+        uint256 maxDepositableKeys;
+        uint256 stakingModuleIndex = _getStakingModuleIndexById(_stakingModuleId);
 
-        if (maxSigningKeysCount == 0) return 0;
+        maxDepositableKeys = _getStakingModuleProspectiveMaxDepositableKeysByIndex(
+            stakingModuleIndex,
+            Math.min(address(this).balance / DEPOSIT_SIZE, _maxDepositsCount)
+        );
+
+        if (maxDepositableKeys == 0) return 0;
 
         (uint256 keysCount, bytes memory publicKeysBatch, bytes memory signaturesBatch) = IStakingModule(
             _getStakingModuleAddressByIndex(stakingModuleIndex)
-        ).prepNextSigningKeys(maxSigningKeysCount, _depositCalldata);
+        ).prepNextSigningKeys(maxDepositableKeys, _depositCalldata);
 
         if (keysCount == 0) return 0;
 
@@ -504,9 +546,9 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         return _stakingModuleIndicesOneBased[_stakingModuleId] - 1;
     }
 
-    function _getStakingModuleIdByIndex(uint256 _index) private view returns (uint24) {
-        return _stakingModules[_index].id;
-    }
+    // function _getStakingModuleIdByIndex(uint256 _index) private view returns (uint24) {
+    //     return _stakingModules[_index].id;
+    // }
 
     function _getStakingModuleById(uint24 _stakingModuleId) private view returns (StakingModule storage) {
         return _stakingModules[_stakingModuleIndicesOneBased[_stakingModuleId] - 1];
@@ -525,12 +567,4 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         require(checkStakingModuleStatus(_stakingModuleId, StakingModuleStatus.Active), "STAKING_MODULE_NOT_ACTIVE");
         _;
     }
-
-    error ErrorZeroAddress(string field);
-    error ErrorBaseVersion();
-    error ErrorValueOver100Percent(string field);
-    error ErrorStakingModuleStatusNotChanged();
-    error ErrorStakingModuleIsPaused();
-    error ErrorStakingModuleIsNotPaused();
-    error ErrorEmptyWithdrawalsCredentials();
 }

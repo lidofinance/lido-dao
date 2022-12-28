@@ -94,12 +94,7 @@ contract Lido is ILido, StETH, AragonApp {
      * @param _dsmAddress Deposit security module contract
      * NB: by default, staking and the whole Lido pool are in paused state
      */
-    function initialize(
-        address _oracle, 
-        address _treasury, 
-        address _stakingRouterAddress, 
-        address _dsmAddress
-    ) public onlyInit {
+    function initialize(address _oracle, address _treasury, address _stakingRouterAddress, address _dsmAddress) public onlyInit {
         _setProtocolContracts(_oracle, _treasury);
 
         _initialize_v2(_stakingRouterAddress, _dsmAddress);
@@ -292,7 +287,7 @@ contract Lido is ILido, StETH, AragonApp {
 
     /**
      * @notice Destroys _sharesAmount shares from _account holdings, decreasing the total amount of shares.
-     * 
+     *
      * @param _account Address where shares will be burned
      * @param _sharesAmount Amount of shares to burn
      * @return Amount of new total shares after tokens burning
@@ -634,7 +629,7 @@ contract Lido is ILido, StETH, AragonApp {
 
     /**
      * @dev Distributes fee portion of the rewards by minting and distributing corresponding amount of liquid tokens.
-     * @param _totalRewards Total rewards accrued both on the Execution Layer and the Consensus Layer sides in wei. 
+     * @param _totalRewards Total rewards accrued both on the Execution Layer and the Consensus Layer sides in wei.
      */
     function _distributeFee(uint256 _totalRewards) internal {
         // We need to take a defined percentage of the reported reward as a fee, and we do
@@ -776,6 +771,19 @@ contract Lido is ILido, StETH, AragonApp {
      */
     function _auth(bytes32 _role) internal view auth(_role) {
         // no-op
+    }
+
+    /**
+     * @dev calculate max count of depositable module keys based on the current Staking Router balance and buffered Ether amoutn
+     *
+     * @param _stakingModuleId id of the staking module to be deposited
+     * @return max depositable keys count
+     */
+    function getStakingModuleMaxDepositableKeys(uint24 _stakingModuleId) external view returns (uint256) {
+        IStakingRouter stakingRouter = getStakingRouter();
+        /// take into account the current balance of the Staking Router and the buffered ether amount
+        uint256 totalDepositsCount = _getBufferedEther().add(address(stakingRouter).balance).div(DEPOSIT_SIZE);
+        return getStakingRouter().getStakingModuleProspectiveMaxDepositableKeys(_stakingModuleId, totalDepositsCount);
     }
 
     /**
