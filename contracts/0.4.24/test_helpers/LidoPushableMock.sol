@@ -19,7 +19,7 @@ contract LidoPushableMock is Lido {
         address _oracle,
         INodeOperatorsRegistry _operators
     ) public {
-        super.initialize(depositContract, _oracle, _operators, new VaultMock(), new VaultMock());
+        super.initialize(depositContract, _oracle, _operators, new VaultMock(), address(0));
 
         _resume();
     }

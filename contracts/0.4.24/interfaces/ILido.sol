@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2020 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2022 Lido <info@lido.fi>
 
 // SPDX-License-Identifier: GPL-3.0
 
@@ -7,15 +7,13 @@ pragma solidity 0.4.24;
 /**
  * @title Liquid staking pool
  *
- * For the high-level description of the pool operation please refer to the paper.
- * Pool manages withdrawal keys and fees. It receives ether submitted by users on the ETH 1 side
- * and stakes it via the deposit_contract.sol contract. It doesn't hold ether on it's balance,
- * only a small portion (buffer) of it.
- * It also mints new tokens for rewards generated at the ETH 2.0 side.
+ * For the high-level description of the pool operation please refer to the docs: https://docs.lido.fi
  *
- * At the moment withdrawals are not possible in the beacon chain and there's no workaround.
- * Pool will be upgraded to an actual implementation when withdrawals are enabled
- * (Phase 1.5 or 2 of Eth2 launch, likely late 2022 or 2023).
+ * Pool manages withdrawal keys and fees. It receives ether submitted by users on the Execution Layer side
+ * and stakes it via the deposit_contract.sol contract.
+ * It doesn't hold ether on it's balance, only a small portion (buffer) of it.
+ * It also mints new tokens for rewards generated at the Consensus Layer side.
+ *
  */
 interface ILido {
     function totalSupply() external view returns (uint256);
@@ -81,38 +79,6 @@ interface ILido {
      */
     function isStakingPaused() external view returns (bool);
 
-    /**
-     * @notice Returns how much Ether can be staked in the current block
-     * @dev Special return values:
-     * - 2^256 - 1 if staking is unlimited;
-     * - 0 if staking is paused or if limit is exhausted.
-     */
-    function getCurrentStakeLimit() external view returns (uint256);
-
-    /**
-     * @notice Returns full info about current stake limit params and state
-     * @dev Might be used for the advanced integration requests.
-     * @return isStakingPaused staking pause state (equivalent to return of isStakingPaused())
-     * @return isStakingLimitSet whether the stake limit is set
-     * @return currentStakeLimit current stake limit (equivalent to return of getCurrentStakeLimit())
-     * @return maxStakeLimit max stake limit
-     * @return maxStakeLimitGrowthBlocks blocks needed to restore max stake limit from the fully exhausted state
-     * @return prevStakeLimit previously reached stake limit
-     * @return prevStakeBlockNumber previously seen block number
-     */
-    function getStakeLimitFullInfo()
-        external
-        view
-        returns (
-            bool isStakingPaused,
-            bool isStakingLimitSet,
-            uint256 currentStakeLimit,
-            uint256 maxStakeLimit,
-            uint256 maxStakeLimitGrowthBlocks,
-            uint256 prevStakeLimit,
-            uint256 prevStakeBlockNumber
-        );
-
     event Stopped();
     event Resumed();
 
@@ -122,18 +88,16 @@ interface ILido {
     event StakingLimitRemoved();
 
     /**
-     * @notice Set Lido protocol contracts (oracle, treasury, insurance fund).
+     * @notice Set Lido protocol contracts (oracle, treasury, execution layer rewards vault).
      * @param _oracle oracle contract
      * @param _treasury treasury contract
-     * @param _insuranceFund insurance fund contract
+     * @param _executionLayerRewardsVault execution layer rewards vault
      */
     function setProtocolContracts(
-        address _oracle,
-        address _treasury,
-        address _insuranceFund
+        address _oracle, address _treasury, address _executionLayerRewardsVault
     ) external;
 
-    event ProtocolContactsSet(address oracle, address treasury, address insuranceFund);
+    event ProtocolContactsSet(address oracle, address treasury, address _executionLayerRewardsVault);
 
     /**
      * @notice Set fee rate to `_feeBasisPoints` basis points.
@@ -146,16 +110,11 @@ interface ILido {
 
     /**
      * @notice Set fee distribution
-     * @param _treasuryFeeBasisPoints basis points go to the treasury,
-     * @param _insuranceFeeBasisPoints basis points go to the insurance fund,
-     * @param _operatorsFeeBasisPoints basis points go to node operators.
+     * @param _treasuryFeeBasisPoints basis points go to the treasury
+     * @param _operatorsFeeBasisPoints basis points go to node operators
      * @dev The sum has to be 10 000.
      */
-    function setFeeDistribution(
-        uint16 _treasuryFeeBasisPoints,
-        uint16 _insuranceFeeBasisPoints,
-        uint16 _operatorsFeeBasisPoints
-    ) external;
+    function setFeeDistribution(uint16 _treasuryFeeBasisPoints, uint16 _operatorsFeeBasisPoints) external;
 
     /**
      * @notice Returns staking rewards fee rate
@@ -165,18 +124,13 @@ interface ILido {
     /**
      * @notice Returns fee distribution proportion
      */
-    function getFeeDistribution()
-        external
-        view
-        returns (
-            uint16 treasuryFeeBasisPoints,
-            uint16 insuranceFeeBasisPoints,
-            uint16 operatorsFeeBasisPoints
-        );
+    function getFeeDistribution() external view returns (
+        uint16 treasuryFeeBasisPoints, uint16 operatorsFeeBasisPoints
+    );
 
     event FeeSet(uint16 feeBasisPoints);
 
-    event FeeDistributionSet(uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, uint16 operatorsFeeBasisPoints);
+    event FeeDistributionSet(uint16 treasuryFeeBasisPoints, uint16 operatorsFeeBasisPoints);
 
     /**
      * @notice A payable function supposed to be called only by LidoExecutionLayerRewardsVault contract
@@ -198,30 +152,21 @@ interface ILido {
     event ELRewardsWithdrawalLimitSet(uint256 limitPoints);
 
     /**
-     * @notice Set credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched to `_withdrawalCredentials`
+     * @notice Set credentials to withdraw ETH on Consensus Layer side to `_withdrawalCredentials`
      * @dev Note that setWithdrawalCredentials discards all unused signing keys as the signatures are invalidated.
      * @param _withdrawalCredentials withdrawal credentials field as defined in the Ethereum PoS consensus specs
      */
     function setWithdrawalCredentials(bytes32 _withdrawalCredentials) external;
 
     /**
-     * @notice Returns current credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
+     * @notice Returns current credentials to withdraw ETH on the Consensus Layer side
      */
     function getWithdrawalCredentials() external view returns (bytes);
 
     event WithdrawalCredentialsSet(bytes32 withdrawalCredentials);
 
     /**
-     * @dev Sets the address of LidoExecutionLayerRewardsVault contract
-     * @param _executionLayerRewardsVault Execution layer rewards vault contract address
-     */
-    function setELRewardsVault(address _executionLayerRewardsVault) external;
-
-    // The `executionLayerRewardsVault` was set as the execution layer rewards vault for Lido
-    event ELRewardsVaultSet(address executionLayerRewardsVault);
-
-    /**
-     * @notice Ether on the ETH 2.0 side reported by the oracle
+     * @notice Ether on the Consensus Layer side, and withdrawals-related data reported by the oracle
      */
     function handleOracleReport(
         // CL values

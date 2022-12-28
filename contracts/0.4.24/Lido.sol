@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2020 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2022 Lido <info@lido.fi>
 
 // SPDX-License-Identifier: GPL-3.0
 
@@ -19,32 +19,17 @@ import "./StETH.sol";
 
 import "./lib/StakeLimitUtils.sol";
 
-interface IERC721 {
-    /// @notice Transfer ownership of an NFT
-    /// @param _from The current owner of the NFT
-    /// @param _to The new owner
-    /// @param _tokenId The NFT to transfer
-    function transferFrom(address _from, address _to, uint256 _tokenId) external payable;
-}
-
 /**
 * @title Liquid staking pool implementation
 *
-* Lido is an Ethereum 2.0 liquid staking protocol solving the problem of frozen staked Ethers
-* until transfers become available in Ethereum 2.0.
-* Whitepaper: https://lido.fi/static/Lido:Ethereum-Liquid-Staking.pdf
-*
-* NOTE: the code below assumes moderate amount of node operators, e.g. up to 200.
+* Lido is an Ethereum liquid staking protocol solving the problem of frozen staked ether on Consensus Layer
+* being unavailable for transfers and DeFi on Execution Layer.
 *
 * Since balances of all token holders change when the amount of total pooled Ether
 * changes, this token cannot fully implement ERC20 standard: it only emits `Transfer`
 * events upon explicit transfer between holders. In contrast, when Lido oracle reports
 * rewards, no Transfer events are generated: doing so would require emitting an event
 * for each token holder and thus running an unbounded loop.
-*
-* At the moment withdrawals are not possible in the beacon chain and there's no workaround.
-* Pool will be upgraded to an actual implementation when withdrawals are enabled
-* (Phase 1.5 or 2 of Eth2 launch, likely late 2022 or 2023).
 */
 contract Lido is ILido, StETH, AragonApp {
     using SafeMath for uint256;
@@ -62,7 +47,6 @@ contract Lido is ILido, StETH, AragonApp {
     bytes32 constant public MANAGE_PROTOCOL_CONTRACTS_ROLE = keccak256("MANAGE_PROTOCOL_CONTRACTS_ROLE");
     bytes32 constant public BURN_ROLE = keccak256("BURN_ROLE");
     bytes32 constant public DEPOSIT_ROLE = keccak256("DEPOSIT_ROLE");
-    bytes32 constant public SET_EL_REWARDS_VAULT_ROLE = keccak256("SET_EL_REWARDS_VAULT_ROLE");
     bytes32 constant public SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE = keccak256(
         "SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE"
     );
@@ -76,19 +60,17 @@ contract Lido is ILido, StETH, AragonApp {
     uint256 internal constant DEPOSIT_AMOUNT_UNIT = 1000000000 wei;
     uint256 internal constant TOTAL_BASIS_POINTS = 10000;
 
-    /// @dev default value for maximum number of Ethereum 2.0 validators registered in a single depositBufferedEther call
+    /// @dev default value for maximum number of Consensus Layer validators registered in a single depositBufferedEther call
     uint256 internal constant DEFAULT_MAX_DEPOSITS_PER_CALL = 150;
 
     bytes32 internal constant FEE_POSITION = keccak256("lido.Lido.fee");
     bytes32 internal constant TREASURY_FEE_POSITION = keccak256("lido.Lido.treasuryFee");
-    bytes32 internal constant INSURANCE_FEE_POSITION = keccak256("lido.Lido.insuranceFee");
     bytes32 internal constant NODE_OPERATORS_FEE_POSITION = keccak256("lido.Lido.nodeOperatorsFee");
 
     bytes32 internal constant DEPOSIT_CONTRACT_POSITION = keccak256("lido.Lido.depositContract");
     bytes32 internal constant ORACLE_POSITION = keccak256("lido.Lido.oracle");
     bytes32 internal constant NODE_OPERATORS_REGISTRY_POSITION = keccak256("lido.Lido.nodeOperatorsRegistry");
     bytes32 internal constant TREASURY_POSITION = keccak256("lido.Lido.treasury");
-    bytes32 internal constant INSURANCE_FUND_POSITION = keccak256("lido.Lido.insuranceFund");
     bytes32 internal constant EL_REWARDS_VAULT_POSITION = keccak256("lido.Lido.executionLayerRewardsVault");
 
     /// @dev storage slot position of the staking rate limit structure
@@ -120,11 +102,11 @@ contract Lido is ILido, StETH, AragonApp {
 
     /**
     * @dev As AragonApp, Lido contract must be initialized with following variables:
-    * @param _depositContract official ETH2 Deposit contract
+    * @param _depositContract official Ethereum Deposit contract
     * @param _oracle oracle contract
     * @param _operators instance of Node Operators Registry
     * @param _treasury treasury contract
-    * @param _insuranceFund insurance fund contract
+    * @param _executionLayerRewardsVault execution layer rewards vault contract
     * NB: by default, staking and the whole Lido pool are in paused state
     */
     function initialize(
@@ -132,14 +114,14 @@ contract Lido is ILido, StETH, AragonApp {
         address _oracle,
         INodeOperatorsRegistry _operators,
         address _treasury,
-        address _insuranceFund
+        address _executionLayerRewardsVault
     )
         public onlyInit
     {
         NODE_OPERATORS_REGISTRY_POSITION.setStorageAddress(address(_operators));
         DEPOSIT_CONTRACT_POSITION.setStorageAddress(address(_depositContract));
 
-        _setProtocolContracts(_oracle, _treasury, _insuranceFund);
+        _setProtocolContracts(_oracle, _treasury, _executionLayerRewardsVault);
 
         initialized();
     }
@@ -230,55 +212,18 @@ contract Lido is ILido, StETH, AragonApp {
         return STAKING_STATE_POSITION.getStorageStakeLimitStruct().isStakingPaused();
     }
 
-    /**
-    * @notice Returns how much Ether can be staked in the current block
-    * @dev Special return values:
-    * - 2^256 - 1 if staking is unlimited;
-    * - 0 if staking is paused or if limit is exhausted.
-    */
-    function getCurrentStakeLimit() public view returns (uint256) {
-        return _getCurrentStakeLimit(STAKING_STATE_POSITION.getStorageStakeLimitStruct());
-    }
 
-    /**
-    * @notice Returns full info about current stake limit params and state
-    * @dev Might be used for the advanced integration requests.
-    * @return isStakingPaused staking pause state (equivalent to return of isStakingPaused())
-    * @return isStakingLimitSet whether the stake limit is set
-    * @return currentStakeLimit current stake limit (equivalent to return of getCurrentStakeLimit())
-    * @return maxStakeLimit max stake limit
-    * @return maxStakeLimitGrowthBlocks blocks needed to restore max stake limit from the fully exhausted state
-    * @return prevStakeLimit previously reached stake limit
-    * @return prevStakeBlockNumber previously seen block number
-    */
-    function getStakeLimitFullInfo() external view returns (
-        bool isStakingPaused,
-        bool isStakingLimitSet,
-        uint256 currentStakeLimit,
-        uint256 maxStakeLimit,
-        uint256 maxStakeLimitGrowthBlocks,
-        uint256 prevStakeLimit,
-        uint256 prevStakeBlockNumber
-    ) {
-        StakeLimitState.Data memory stakeLimitData = STAKING_STATE_POSITION.getStorageStakeLimitStruct();
+    //FIXME(DZhon): get back these funcs
+    // function getCurrentStakeLimit();
+    // function getStakeLimitFullInfo();
 
-        isStakingPaused = stakeLimitData.isStakingPaused();
-        isStakingLimitSet = stakeLimitData.isStakingLimitSet();
-
-        currentStakeLimit = _getCurrentStakeLimit(stakeLimitData);
-
-        maxStakeLimit = stakeLimitData.maxStakeLimit;
-        maxStakeLimitGrowthBlocks = stakeLimitData.maxStakeLimitGrowthBlocks;
-        prevStakeLimit = stakeLimitData.prevStakeLimit;
-        prevStakeBlockNumber = stakeLimitData.prevStakeBlockNumber;
-    }
 
     /**
     * @notice Send funds to the pool
     * @dev Users are able to submit their funds by transacting to the fallback function.
-    * Unlike vanilla Eth2.0 Deposit contract, accepting only 32-Ether transactions, Lido
+    * Unlike vanilla Etheremum Deposit contract, accepting only 32-Ether transactions, Lido
     * accepts payments of any size. Submitted Ethers are stored in Buffer until someone calls
-    * depositBufferedEther() and pushes them to the ETH2 Deposit contract.
+    * depositBufferedEther() and pushes them to the Ethereum Deposit contract.
     */
     // solhint-disable-next-line
     function() external payable {
@@ -317,16 +262,6 @@ contract Lido is ILido, StETH, AragonApp {
             TOTAL_WITHDRAWALS_RESTAKED_POSITION.getStorageUint256().add(msg.value));
 
         emit WithdrawalRestaked(msg.value);
-    }
-
-    /**
-    * @notice Deposits buffered ethers to the official DepositContract.
-    * @dev This function is separated from submit() to reduce the cost of sending funds.
-    */
-    function depositBufferedEther() external {
-        _auth(DEPOSIT_ROLE);
-
-        return _depositBufferedEther(DEFAULT_MAX_DEPOSITS_PER_CALL);
     }
 
     /**
@@ -371,7 +306,7 @@ contract Lido is ILido, StETH, AragonApp {
     /**
     * @notice Set fee rate to `_feeBasisPoints` basis points.
     * The fees are accrued when:
-    * - oracles report staking results (beacon chain balance increase)
+    * - oracles report staking results (consensus layer balance increase)
     * - validators gain execution layer rewards (priority fees and MEV)
     * @param _feeBasisPoints Fee rate, in basis points
     */
@@ -384,59 +319,53 @@ contract Lido is ILido, StETH, AragonApp {
 
     /**
     * @notice Set fee distribution
-    * @param _treasuryFeeBasisPoints basis points go to the treasury,
-    * @param _insuranceFeeBasisPoints basis points go to the insurance fund,
-    * @param _operatorsFeeBasisPoints basis points go to node operators.
+    * @param _treasuryFeeBasisPoints basis points go to the treasury
+    * @param _operatorsFeeBasisPoints basis points go to node operators
     * @dev The sum has to be 10 000.
     */
-    function setFeeDistribution(
-        uint16 _treasuryFeeBasisPoints,
-        uint16 _insuranceFeeBasisPoints,
-        uint16 _operatorsFeeBasisPoints
-    )
+    function setFeeDistribution(uint16 _treasuryFeeBasisPoints, uint16 _operatorsFeeBasisPoints)
         external
     {
         _auth(MANAGE_FEE);
 
         require(
             TOTAL_BASIS_POINTS == uint256(_treasuryFeeBasisPoints)
-            .add(uint256(_insuranceFeeBasisPoints))
             .add(uint256(_operatorsFeeBasisPoints)),
             "FEES_DONT_ADD_UP"
         );
 
         _setBPValue(TREASURY_FEE_POSITION, _treasuryFeeBasisPoints);
-        _setBPValue(INSURANCE_FEE_POSITION, _insuranceFeeBasisPoints);
         _setBPValue(NODE_OPERATORS_FEE_POSITION, _operatorsFeeBasisPoints);
 
-        emit FeeDistributionSet(_treasuryFeeBasisPoints, _insuranceFeeBasisPoints, _operatorsFeeBasisPoints);
+        emit FeeDistributionSet(_treasuryFeeBasisPoints, _operatorsFeeBasisPoints);
     }
 
     /**
-    * @notice Set Lido protocol contracts (oracle, treasury, insurance fund).
+    * @notice Set Lido protocol contracts (oracle, treasury, execution layer rewards vault).
     *
     * @dev Oracle contract specified here is allowed to make
     * periodical updates of beacon stats
     * by calling pushBeacon. Treasury contract specified here is used
-    * to accumulate the protocol treasury fee. Insurance fund contract
-    * specified here is used to accumulate the protocol insurance fee.
+    * to accumulate the protocol treasury fee.
+    * Execution layer rewards vault is set as `feeRecipient`
+    * by the Lido-paritipating node operators.
     *
     * @param _oracle oracle contract
     * @param _treasury treasury contract
-    * @param _insuranceFund insurance fund contract
+    * @param _executionLayerRewardsVault execution layer rewards vault contract
     */
     function setProtocolContracts(
         address _oracle,
         address _treasury,
-        address _insuranceFund
+        address _executionLayerRewardsVault
     ) external {
         _auth(MANAGE_PROTOCOL_CONTRACTS_ROLE);
 
-        _setProtocolContracts(_oracle, _treasury, _insuranceFund);
+        _setProtocolContracts(_oracle, _treasury, _executionLayerRewardsVault);
     }
 
     /**
-    * @notice Set credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched to `_withdrawalCredentials`
+    * @notice Set credentials to withdraw ETH on the Consensus Layer side to `_withdrawalCredentials`
     * @dev Note that setWithdrawalCredentials discards all unused signing keys as the signatures are invalidated.
     * @param _withdrawalCredentials withdrawal credentials field as defined in the Ethereum PoS consensus specs
     */
@@ -447,18 +376,6 @@ contract Lido is ILido, StETH, AragonApp {
         getOperators().trimUnusedKeys();
 
         emit WithdrawalCredentialsSet(_withdrawalCredentials);
-    }
-
-    /**
-    * @dev Sets the address of LidoExecutionLayerRewardsVault contract
-    * @param _executionLayerRewardsVault Execution layer rewards vault contract address
-    */
-    function setELRewardsVault(address _executionLayerRewardsVault) external {
-        _auth(SET_EL_REWARDS_VAULT_ROLE);
-
-        EL_REWARDS_VAULT_POSITION.setStorageAddress(_executionLayerRewardsVault);
-
-        emit ELRewardsVaultSet(_executionLayerRewardsVault);
     }
 
     /**
@@ -522,31 +439,6 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-    * @notice Send funds to recovery Vault. Overrides default AragonApp behaviour
-    * @param _token Token to be sent to recovery vault
-    */
-    function transferToVault(address _token) external {
-        require(allowRecoverability(_token), "RECOVER_DISALLOWED");
-        address vault = getRecoveryVault();
-        require(vault != address(0), "RECOVER_VAULT_ZERO");
-
-        uint256 balance;
-        if (_token == ETH) {
-            balance = _getUnaccountedEther();
-            // Transfer replaced by call to prevent transfer gas amount issue
-            // solhint-disable-next-line
-            require(vault.call.value(balance)(), "RECOVER_TRANSFER_FAILED");
-        } else {
-            ERC20 token = ERC20(_token);
-            balance = token.staticBalanceOf(this);
-            // safeTransfer comes from overridden default implementation
-            require(token.safeTransfer(vault, balance), "RECOVER_TOKEN_TRANSFER_FAILED");
-        }
-
-        emit RecoverToVault(vault, _token, balance);
-    }
-
-    /**
     * @notice Returns staking rewards fee rate
     */
     function getFee() public view returns (uint16 feeBasisPoints) {
@@ -561,29 +453,18 @@ contract Lido is ILido, StETH, AragonApp {
         view
         returns (
             uint16 treasuryFeeBasisPoints,
-            uint16 insuranceFeeBasisPoints,
             uint16 operatorsFeeBasisPoints
         )
     {
         treasuryFeeBasisPoints = uint16(TREASURY_FEE_POSITION.getStorageUint256());
-        insuranceFeeBasisPoints = uint16(INSURANCE_FEE_POSITION.getStorageUint256());
         operatorsFeeBasisPoints = uint16(NODE_OPERATORS_FEE_POSITION.getStorageUint256());
     }
 
     /**
-    * @notice Returns current credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
+    * @notice Returns current credentials to withdraw ETH on the Consensus Layer side
     */
     function getWithdrawalCredentials() public view returns (bytes32) {
         return WITHDRAWAL_CREDENTIALS_POSITION.getStorageBytes32();
-    }
-
-    /**
-    * @notice Returns the address of the vault where withdrawals arrive
-    * @dev withdrawal vault address is encoded as a last 160 bits of withdrawal credentials type 0x01
-    * @return address of the vault or address(0) if the vault is not set
-    */
-    function getWithdrawalVaultAddress() external view returns (address) {
-        return _getWithdrawalVaultAddress();
     }
 
     /**
@@ -645,13 +526,6 @@ contract Lido is ILido, StETH, AragonApp {
     */
     function getTreasury() public view returns (address) {
         return TREASURY_POSITION.getStorageAddress();
-    }
-
-    /**
-    * @notice Returns the insurance fund address
-    */
-    function getInsuranceFund() public view returns (address) {
-        return INSURANCE_FUND_POSITION.getStorageAddress();
     }
 
     /**
@@ -756,7 +630,7 @@ contract Lido is ILido, StETH, AragonApp {
         uint256 rewardsBase = (_appearedValidators.mul(DEPOSIT_SIZE)).add(_beaconBalanceOld);
 
         // Don’t mint/distribute any protocol fee on the non-profitable Lido oracle report
-        // (when beacon chain balance delta is zero or negative).
+        // (when consensus layer balance delta is zero or negative).
         // See ADR #3 for details:
         // https://research.lido.fi/t/rewards-distribution-after-the-merge-architecture-decision-record/1535
         if (_beaconBalanceNew.add(_wcBufferedEther) > rewardsBase) {
@@ -826,17 +700,21 @@ contract Lido is ILido, StETH, AragonApp {
     /**
     * @dev Internal function to set authorized oracle address
     * @param _oracle oracle contract
+    * @param _treasury treasury contract
+    * @param _executionLayerRewardsVault execution layer rewards vault contract
     */
-    function _setProtocolContracts(address _oracle, address _treasury, address _insuranceFund) internal {
+    function _setProtocolContracts(
+        address _oracle, address _treasury, address _executionLayerRewardsVault
+    ) internal {
         require(_oracle != address(0), "ORACLE_ZERO_ADDRESS");
         require(_treasury != address(0), "TREASURY_ZERO_ADDRESS");
-        require(_insuranceFund != address(0), "INSURANCE_FUND_ZERO_ADDRESS");
+        //NB: _executionLayerRewardsVault can be zero
 
         ORACLE_POSITION.setStorageAddress(_oracle);
         TREASURY_POSITION.setStorageAddress(_treasury);
-        INSURANCE_FUND_POSITION.setStorageAddress(_insuranceFund);
+        EL_REWARDS_VAULT_POSITION.setStorageAddress(_executionLayerRewardsVault);
 
-        emit ProtocolContactsSet(_oracle, _treasury, _insuranceFund);
+        emit ProtocolContactsSet(_oracle, _treasury, _executionLayerRewardsVault);
     }
 
     /**
@@ -899,18 +777,18 @@ contract Lido is ILido, StETH, AragonApp {
             if (buffered >= DEPOSIT_SIZE) {
                 uint256 unaccounted = _getUnaccountedEther();
                 uint256 numDeposits = buffered.div(DEPOSIT_SIZE);
-                _markAsUnbuffered(_ETH2Deposit(numDeposits < _maxDeposits ? numDeposits : _maxDeposits));
+                _markAsUnbuffered(_ConsensusLayerDeposit(numDeposits < _maxDeposits ? numDeposits : _maxDeposits));
                 assert(_getUnaccountedEther() == unaccounted);
             }
         }
     }
 
     /**
-    * @dev Performs deposits to the ETH 2.0 side
+    * @dev Performs deposits to the Consensus Layer side
     * @param _numDeposits Number of deposits to perform
     * @return actually deposited Ether amount
     */
-    function _ETH2Deposit(uint256 _numDeposits) internal returns (uint256) {
+    function _ConsensusLayerDeposit(uint256 _numDeposits) internal returns (uint256) {
         (bytes memory pubkeys, bytes memory signatures) = getOperators().assignNextSigningKeys(_numDeposits);
 
         if (pubkeys.length == 0) {
@@ -976,7 +854,7 @@ contract Lido is ILido, StETH, AragonApp {
 
     /**
     * @dev Distributes fee portion of the rewards by minting and distributing corresponding amount of liquid tokens.
-    * @param _totalRewards Total rewards accrued on the Ethereum 2.0 side in wei
+    * @param _totalRewards Total rewards accrued both on the Consensus Layer and Execution Layer sides in wei
     */
     function _distributeFee(uint256 _totalRewards) internal {
         // We need to take a defined percentage of the reported reward as a fee, and we do
@@ -1017,19 +895,14 @@ contract Lido is ILido, StETH, AragonApp {
         // balances of the holders, as if the fee was taken in parts from each of them.
         _mintShares(address(this), shares2mint);
 
-        (,uint16 insuranceFeeBasisPoints, uint16 operatorsFeeBasisPoints) = getFeeDistribution();
-
-        uint256 toInsuranceFund = shares2mint.mul(insuranceFeeBasisPoints).div(TOTAL_BASIS_POINTS);
-        address insuranceFund = getInsuranceFund();
-        _transferShares(address(this), insuranceFund, toInsuranceFund);
-        _emitTransferAfterMintingShares(insuranceFund, toInsuranceFund);
+        (, uint16 operatorsFeeBasisPoints) = getFeeDistribution();
 
         uint256 distributedToOperatorsShares = _distributeNodeOperatorsReward(
             shares2mint.mul(operatorsFeeBasisPoints).div(TOTAL_BASIS_POINTS)
         );
 
         // Transfer the rest of the fee to treasury
-        uint256 toTreasury = shares2mint.sub(toInsuranceFund).sub(distributedToOperatorsShares);
+        uint256 toTreasury = shares2mint.sub(distributedToOperatorsShares);
 
         address treasury = getTreasury();
         _transferShares(address(this), treasury, toTreasury);
@@ -1060,7 +933,7 @@ contract Lido is ILido, StETH, AragonApp {
 
     /**
     * @dev Records a deposit to the deposit_contract.deposit function
-    * @param _amount Total amount deposited to the ETH 2.0 side
+    * @param _amount Total amount deposited to the Consensus Layer side
     */
     function _markAsUnbuffered(uint256 _amount) internal {
         BUFFERED_ETHER_POSITION.setStorageUint256(
