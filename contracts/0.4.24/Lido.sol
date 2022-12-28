@@ -456,7 +456,7 @@ contract Lido is ILido, StETH, AragonApp {
 
     /**
      * @notice Get the amount of Ether temporary buffered on Staking Router contract balance
-     * @dev We transfer eth from the Lido buffer to the StakingRouter buffer at deposit. 
+     * @dev We transfer eth from the Lido buffer to the StakingRouter buffer at deposit.
      *      We are transferring the entire Lido buffered balance
      * @return amount of buffered funds in wei
      */
@@ -465,7 +465,7 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-     * @notice Get the total amount of Ether temporary buffered on Staking Router and Lido contracts 
+     * @notice Get the total amount of Ether temporary buffered on Staking Router and Lido contracts
      * @return amount of buffered funds in wei
      */
     function getTotalBufferedEther() public view returns (uint256) {
@@ -789,23 +789,19 @@ contract Lido is ILido, StETH, AragonApp {
 
         //make buffer transfer from LIDO to StakingRouter
         uint256 unaccounted = _getUnaccountedEther();
-
         uint256 transferred = _getBufferedEther();
-        address(getStakingRouter()).transfer(transferred);
-        BUFFERED_ETHER_POSITION.setStorageUint256(0);
-
         assert(_getUnaccountedEther() == unaccounted);
 
+        // transfer the buffered ether to SR and make deposit at the same time
+        uint256 keysCount = getStakingRouter().deposit.value(transferred)(_maxDepositsCount, _stakingModuleId, _depositCalldata);
         uint256 stakingRouterBuffered = _getStakingRouterBufferedEther().add(transferred);
-
-        //make deposit
-        uint256 keysCount = getStakingRouter().deposit(_maxDepositsCount, _stakingModuleId, _depositCalldata);
         uint256 depositedAmount = keysCount.mul(DEPOSIT_SIZE);
 
         stakingRouterBuffered = depositedAmount >= stakingRouterBuffered ? 0 : stakingRouterBuffered.sub(depositedAmount);
 
         DEPOSITED_VALIDATORS_POSITION.setStorageUint256(DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(keysCount));
         STAKING_ROUTER_BUFFERED_ETHER_POSITION.setStorageUint256(stakingRouterBuffered);
+        BUFFERED_ETHER_POSITION.setStorageUint256(0);
 
         emit Unbuffered(depositedAmount);
         emit TransferredToStakingRouter(transferred);

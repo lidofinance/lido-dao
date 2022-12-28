@@ -22,6 +22,7 @@ import {BeaconChainDepositor} from "./BeaconChainDepositor.sol";
 contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDepositor {
     using UnstructuredStorage for bytes32;
 
+    /// @dev events
     event StakingModuleAdded(address indexed creator, uint24 indexed stakingModuleId, address indexed stakingModule, string name);
     event StakingModuleTargetSharesSet(uint24 indexed stakingModuleId, uint16 targetShare);
     event StakingModuleFeesSet(uint24 indexed stakingModuleId, uint16 treasuryFee, uint16 moduleFee);
@@ -37,6 +38,16 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
      * Emitted when the StakingRouter received ETH
      */
     event StakingRouterETHReceived(uint256 amount);
+
+    /// @dev errors
+    error ErrorZeroAddress(string field);
+    error ErrorBaseVersion();
+    error ErrorValueOver100Percent(string field);
+    error ErrorStakingModuleStatusNotChanged();
+    error ErrorStakingModuleIsPaused();
+    error ErrorStakingModuleIsNotPaused();
+    error ErrorEmptyWithdrawalsCredentials();
+    error ErrorDirectETHTransfer();
 
     struct StakingModuleCache {
         address stakingModuleAddress;
@@ -96,8 +107,9 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         emit WithdrawalCredentialsSet(_withdrawalCredentials);
     }
 
+    /// @dev prohibit direct transfer to contract
     receive() external payable {
-        emit StakingRouterETHReceived(msg.value);
+        revert ErrorDirectETHTransfer();
     }
 
     /**

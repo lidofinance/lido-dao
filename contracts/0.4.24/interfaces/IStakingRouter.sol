@@ -8,7 +8,7 @@ pragma solidity 0.4.24;
 interface IStakingRouter {
     function getStakingRewardsDistribution() external returns (address[] memory recipients, uint16[] memory moduleFees, uint16 totalFee);
 
-    function deposit(uint256 maxDepositsCount, uint24 stakingModuleId, bytes depositCalldata) external returns (uint256);
+    function deposit(uint256 maxDepositsCount, uint24 stakingModuleId, bytes depositCalldata) external payable returns (uint256);
 
     /**
      * @notice Set credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched to `_withdrawalCredentials`
