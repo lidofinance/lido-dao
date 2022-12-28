@@ -311,7 +311,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     assert.equal(await app.getWithdrawalCredentials({ from: nobody }), pad('0x0202', 32))
   })
 
-  it('setOracle works', async () => {
+  it.skip('setOracle works', async () => {
+    // TODO: restore the test when function `setProtocolContracts` is restored
     await assertRevert(app.setProtocolContracts(ZERO_ADDRESS, user2, user3, { from: voting }), 'ORACLE_ZERO_ADDRESS')
     const receipt = await app.setProtocolContracts(yetAnotherOracle.address, oracle.address, oracle.address, { from: voting })
     assertEvent(receipt, 'ProtocolContactsSet', { expectedArgs: { oracle: yetAnotherOracle.address } })
@@ -1428,18 +1429,21 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
       assert.notEqual(await app.getTreasury(), ZERO_ADDRESS)
     })
 
-    it(`treasury can't be set by an arbitrary address`, async () => {
+    it.skip(`treasury can't be set by an arbitrary address`, async () => {
+      // TODO: restore the test when function `transferToVault` is restored
       await assertRevert(app.setProtocolContracts(await app.getOracle(), user1, await app.getInsuranceFund(), { from: nobody }))
       await assertRevert(app.setProtocolContracts(await app.getOracle(), user1, await app.getInsuranceFund(), { from: user1 }))
     })
 
-    it('voting can set treasury', async () => {
+    it.skip('voting can set treasury', async () => {
+      // TODO: restore the test when function `setProtocolContracts` is restored
       const receipt = await app.setProtocolContracts(await app.getOracle(), user1, await app.getInsuranceFund(), { from: voting })
       assertEvent(receipt, 'ProtocolContactsSet', { expectedArgs: { treasury: user1 } })
       assert.equal(await app.getTreasury(), user1)
     })
 
-    it('reverts when treasury is zero address', async () => {
+    it.skip('reverts when treasury is zero address', async () => {
+      // TODO: restore the test when function `setProtocolContracts` is restored
       await assertRevert(
         app.setProtocolContracts(await app.getOracle(), ZERO_ADDRESS, await app.getInsuranceFund(), { from: voting }),
         'TREASURY_ZERO_ADDRESS'
@@ -1452,18 +1456,21 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
       assert.notEqual(await app.getInsuranceFund(), ZERO_ADDRESS)
     })
 
-    it(`insurance fund can't be set by an arbitrary address`, async () => {
+    it.skip(`insurance fund can't be set by an arbitrary address`, async () => {
+      // TODO: restore the test when function `setProtocolContracts` is restored
       await assertRevert(app.setProtocolContracts(await app.getOracle(), await app.getTreasury(), user1, { from: nobody }))
       await assertRevert(app.setProtocolContracts(await app.getOracle(), await app.getTreasury(), user1, { from: user1 }))
     })
 
-    it('voting can set insurance fund', async () => {
+    it.skip('voting can set insurance fund', async () => {
+      // TODO: restore the test when function `setProtocolContracts` is restored
       const receipt = await app.setProtocolContracts(await app.getOracle(), await app.getTreasury(), user1, { from: voting })
       assertEvent(receipt, 'ProtocolContactsSet', { expectedArgs: { insuranceFund: user1 } })
       assert.equal(await app.getInsuranceFund(), user1)
     })
 
-    it('reverts when insurance fund is zero address', async () => {
+    it.skip('reverts when insurance fund is zero address', async () => {
+      // TODO: restore the test when function `setProtocolContracts` is restored
       await assertRevert(
         app.setProtocolContracts(await app.getOracle(), await app.getTreasury(), ZERO_ADDRESS, { from: voting }),
         'INSURANCE_FUND_ZERO_ADDRESS'
@@ -1476,11 +1483,13 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
       await anyToken.mint(app.address, 100)
     })
 
-    it('reverts when vault is not set', async () => {
+    it.skip('reverts when vault is not set', async () => {
+      // TODO: restore the test when function `setProtocolContracts` is restored
       await assertRevert(app.transferToVault(anyToken.address, { from: nobody }), 'RECOVER_VAULT_ZERO')
     })
 
-    context('recovery works with vault mock deployed', () => {
+    context.skip('recovery works with vault mock deployed', () => {
+      // TODO: restore the test when function `transferToVault` is restored
       let vault
 
       beforeEach(async () => {
@@ -1495,12 +1504,14 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
         await dao.setRecoveryVaultAppId(vaultId)
       })
 
-      it('recovery with erc20 tokens works and emits event', async () => {
+      it.skip('recovery with erc20 tokens works and emits event', async () => {
+        // TODO: restore the test when function `setProtocolContracts` is restored
         const receipt = await app.transferToVault(anyToken.address, { from: nobody })
         assertEvent(receipt, 'RecoverToVault', { expectedArgs: { vault: vault.address, token: anyToken.address, amount: 100 } })
       })
 
-      it('recovery with unaccounted ether works and emits event', async () => {
+      it.skip('recovery with unaccounted ether works and emits event', async () => {
+        // TODO: restore the test when function `setProtocolContracts` is restored
         await app.makeUnaccountedEther({ from: user1, value: ETH(10) })
         const receipt = await app.transferToVault(ZERO_ADDRESS, { from: nobody })
         assertEvent(receipt, 'RecoverToVault', { expectedArgs: { vault: vault.address, token: ZERO_ADDRESS, amount: ETH(10) } })

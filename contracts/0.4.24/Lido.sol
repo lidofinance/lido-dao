@@ -412,28 +412,29 @@ contract Lido is ILido, StETH, AragonApp {
         emit FeeDistributionSet(_treasuryFeeBasisPoints, _insuranceFeeBasisPoints, _operatorsFeeBasisPoints);
     }
 
-    /**
-    * @notice Set Lido protocol contracts (oracle, treasury, insurance fund).
-    *
-    * @dev Oracle contract specified here is allowed to make
-    * periodical updates of beacon stats
-    * by calling pushBeacon. Treasury contract specified here is used
-    * to accumulate the protocol treasury fee. Insurance fund contract
-    * specified here is used to accumulate the protocol insurance fee.
-    *
-    * @param _oracle oracle contract
-    * @param _treasury treasury contract
-    * @param _insuranceFund insurance fund contract
-    */
-    function setProtocolContracts(
-        address _oracle,
-        address _treasury,
-        address _insuranceFund
-    ) external {
-        _auth(MANAGE_PROTOCOL_CONTRACTS_ROLE);
+    // TODO: restore the function, it was removed temporarily to reduce contract size below the limit
+    // /**
+    // * @notice Set Lido protocol contracts (oracle, treasury, insurance fund).
+    // *
+    // * @dev Oracle contract specified here is allowed to make
+    // * periodical updates of beacon stats
+    // * by calling pushBeacon. Treasury contract specified here is used
+    // * to accumulate the protocol treasury fee. Insurance fund contract
+    // * specified here is used to accumulate the protocol insurance fee.
+    // *
+    // * @param _oracle oracle contract
+    // * @param _treasury treasury contract
+    // * @param _insuranceFund insurance fund contract
+    // */
+    // function setProtocolContracts(
+    //     address _oracle,
+    //     address _treasury,
+    //     address _insuranceFund
+    // ) external {
+    //     _auth(MANAGE_PROTOCOL_CONTRACTS_ROLE);
 
-        _setProtocolContracts(_oracle, _treasury, _insuranceFund);
-    }
+    //     _setProtocolContracts(_oracle, _treasury, _insuranceFund);
+    // }
 
     /**
     * @notice Set credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched to `_withdrawalCredentials`
@@ -526,24 +527,28 @@ contract Lido is ILido, StETH, AragonApp {
     * @param _token Token to be sent to recovery vault
     */
     function transferToVault(address _token) external {
-        require(allowRecoverability(_token), "RECOVER_DISALLOWED");
-        address vault = getRecoveryVault();
-        require(vault != address(0), "RECOVER_VAULT_ZERO");
+        // no-op
+        // TODO: restore the function: it was removed temporarily to reduce contract size below size limit
 
-        uint256 balance;
-        if (_token == ETH) {
-            balance = _getUnaccountedEther();
-            // Transfer replaced by call to prevent transfer gas amount issue
-            // solhint-disable-next-line
-            require(vault.call.value(balance)(), "RECOVER_TRANSFER_FAILED");
-        } else {
-            ERC20 token = ERC20(_token);
-            balance = token.staticBalanceOf(this);
-            // safeTransfer comes from overridden default implementation
-            require(token.safeTransfer(vault, balance), "RECOVER_TOKEN_TRANSFER_FAILED");
-        }
 
-        emit RecoverToVault(vault, _token, balance);
+    //     require(allowRecoverability(_token), "RECOVER_DISALLOWED");
+    //     address vault = getRecoveryVault();
+    //     require(vault != address(0), "RECOVER_VAULT_ZERO");
+
+    //     uint256 balance;
+    //     if (_token == ETH) {
+    //         balance = _getUnaccountedEther();
+    //         // Transfer replaced by call to prevent transfer gas amount issue
+    //         // solhint-disable-next-line
+    //         require(vault.call.value(balance)(), "RECOVER_TRANSFER_FAILED");
+    //     } else {
+    //         ERC20 token = ERC20(_token);
+    //         balance = token.staticBalanceOf(this);
+    //         // safeTransfer comes from overridden default implementation
+    //         require(token.safeTransfer(vault, balance), "RECOVER_TOKEN_TRANSFER_FAILED");
+    //     }
+
+    //     emit RecoverToVault(vault, _token, balance);
     }
 
     /**

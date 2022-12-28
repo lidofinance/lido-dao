@@ -121,17 +121,18 @@ interface ILido {
     event StakingLimitSet(uint256 maxStakeLimit, uint256 stakeLimitIncreasePerBlock);
     event StakingLimitRemoved();
 
-    /**
-     * @notice Set Lido protocol contracts (oracle, treasury, insurance fund).
-     * @param _oracle oracle contract
-     * @param _treasury treasury contract
-     * @param _insuranceFund insurance fund contract
-     */
-    function setProtocolContracts(
-        address _oracle,
-        address _treasury,
-        address _insuranceFund
-    ) external;
+    // TODO: restore the function, it was removed temporarily to reduce contract size below the limit
+    // /**
+    //  * @notice Set Lido protocol contracts (oracle, treasury, insurance fund).
+    //  * @param _oracle oracle contract
+    //  * @param _treasury treasury contract
+    //  * @param _insuranceFund insurance fund contract
+    //  */
+    // function setProtocolContracts(
+    //     address _oracle,
+    //     address _treasury,
+    //     address _insuranceFund
+    // ) external;
 
     event ProtocolContactsSet(address oracle, address treasury, address insuranceFund);
 
