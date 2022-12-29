@@ -4,8 +4,6 @@
 
 pragma solidity 0.4.24;
 
-interface InodeOperatorsRegistryDeprecated {}
-
 /**
  * @title Node Operator registry
  *
