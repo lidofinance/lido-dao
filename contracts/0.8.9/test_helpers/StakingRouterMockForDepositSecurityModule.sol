@@ -65,7 +65,7 @@ contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
         status = StakingModuleStatus.DepositsPaused;
     }
 
-    function unpauseStakingModule(uint24 stakingModuleId) external {
+    function resumeStakingModule(uint24 stakingModuleId) external {
         emit StakingModuleStatusChanged(stakingModuleId, status, StakingModuleStatus.Active, msg.sender);
         status = StakingModuleStatus.Active;
     }

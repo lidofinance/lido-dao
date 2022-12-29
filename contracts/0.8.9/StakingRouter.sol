@@ -243,10 +243,10 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     }
 
     /**
-     * @notice unpause deposits for module
+     * @notice resume deposits for module
      * @param _stakingModuleId id of the staking module to be unpaused
      */
-    function unpauseStakingModule(uint24 _stakingModuleId) external onlyRole(MODULE_RESUME_ROLE) {
+    function resumeStakingModule(uint24 _stakingModuleId) external onlyRole(MODULE_RESUME_ROLE) {
         uint _stakingModuleIndex = _getStakingModuleIndexById(_stakingModuleId);
         if (!_checkStakingModuleStatusByIndex(_stakingModuleIndex, StakingModuleStatus.DepositsPaused))
             revert ErrorStakingModuleIsNotPaused();
