@@ -15,7 +15,7 @@ import {IDepositContract} from "./interfaces/IDepositContract.sol";
 import {Math} from "./lib/Math.sol";
 import {BatchedSigningKeys} from "./lib/BatchedSigningKeys.sol";
 import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
-import {MinFirstAllocationStrategy} from "./lib/MinFirstAllocationStrategy.sol";
+import {MinFirstAllocationStrategy} from "../common/lib/MinFirstAllocationStrategy.sol";
 
 import {BeaconChainDepositor} from "./BeaconChainDepositor.sol";
 
@@ -289,7 +289,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         returns (uint256)
     {
         (uint64 exitedValidatorsCount, uint64 depositedValidatorsCount, , ) = IStakingModule(_getStakingModuleAddressById(_stakingModuleId))
-            .getValidatorsStats();
+            .getValidatorsKeysStats();
         return depositedValidatorsCount - exitedValidatorsCount;
     }
 
@@ -450,7 +450,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         stakingModuleCache.status = stakingModuleData.status;
 
         IStakingModule stakingModule = IStakingModule(stakingModuleData.stakingModuleAddress);
-        (uint64 exitedKeysCount, uint64 depositedKeysCount, uint64 approvedValidatorsKeysCount, ) = stakingModule.getValidatorsStats();
+        (uint64 exitedKeysCount, uint64 depositedKeysCount, uint64 approvedValidatorsKeysCount, ) = stakingModule.getValidatorsKeysStats();
         stakingModuleCache.activeKeysCount = depositedKeysCount - exitedKeysCount;
         stakingModuleCache.availableKeysCount = approvedValidatorsKeysCount - depositedKeysCount;
     }

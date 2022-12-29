@@ -30,7 +30,7 @@ contract ModuleSolo is IStakingModule {
         return moduleType;
     }
 
-    function getValidatorsStats()
+    function getValidatorsKeysStats()
         external
         view
         returns (
@@ -42,7 +42,7 @@ contract ModuleSolo is IStakingModule {
     {
         exitedValidatorsCount = uint64(totalStoppedKeys);
         depositedValidatorsCount = uint64(totalUsedKeys);
-        exitedValidatorsCount = uint64(totalStoppedKeys);
+        approvedValidatorsKeysCount = uint64(totalKeys);
         totalValidatorsKeysCount = uint64(totalKeys);
     }
 
@@ -56,7 +56,7 @@ contract ModuleSolo is IStakingModule {
 
     function getNodeOperatorIsActive(uint24 _nodeOperatorId) external view returns (bool) {}
 
-    function getNodeOperatorValidatorsStats(uint24 _nodeOperatorId)
+    function getNodeOperatorValidatorsKeysStats(uint24 _nodeOperatorId)
         external
         view
         returns (
@@ -87,7 +87,7 @@ contract ModuleSolo is IStakingModule {
 
     function setNodeOperatorStakingLimit(uint256 _id, uint64 _stakingLimit) external {}
 
-    function updateNodeOperatorExitedValidatorsCount(uint24 _nodeOperatorId, uint64 _newEverExitedKeysCount) external {}
+    function updateNodeOperatorExitedValidatorsKeysCount(uint24 _nodeOperatorId, uint64 _newEverExitedKeysCount) external {}
 
     function addSigningKeys(
         uint256 _operator_id,

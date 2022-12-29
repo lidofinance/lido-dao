@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: GPL-3.0
 
 /* See contracts/COMPILERS.md */
-pragma solidity >=0.4.24 <0.9.0;
+pragma solidity 0.4.24||0.8.9;
 
 import {Math256} from "./Math256.sol";
 
+/// TODO: basket -> bucket
+/// TODO: gas optimization uint256 -> uint64
 /// @notice Library with methods to calculate "proportional" allocations among baskets with different
 ///     capacity and level of filling.
 /// @dev The current implementation favors baskets with the least fill factor

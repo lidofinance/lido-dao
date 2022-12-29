@@ -14,17 +14,8 @@ interface INodeOperatorsRegistryDeprecated {
     /**
      * @notice `_active ? 'Enable' : 'Disable'` the node operator #`_id`
      */
+    /// ???
     function setNodeOperatorActive(uint256 _id, bool _active) external;
-
-    /**
-     * @notice Change human-readable name of the node operator #`_id` to `_name`
-     */
-    function setNodeOperatorName(uint256 _id, string _name) external;
-
-    /**
-     * @notice Change reward address of the node operator #`_id` to `_rewardAddress`
-     */
-    function setNodeOperatorRewardAddress(uint256 _id, address _rewardAddress) external;
 
     /**
      * @notice Set the maximum number of validators to stake for the node operator #`_id` to `_stakingLimit`
@@ -44,33 +35,6 @@ interface INodeOperatorsRegistryDeprecated {
      */
     /// ???
     function trimUnusedKeys() external;
-
-    /**
-     * @notice Returns the n-th node operator
-     * @param _id Node Operator id
-     * @param _fullInfo If true, name will be returned as well
-     */
-    function getNodeOperator(uint256 _id, bool _fullInfo)
-        external
-        view
-        returns (
-            bool active,
-            string name,
-            address rewardAddress,
-            uint64 stakingLimit,
-            uint64 stoppedValidators,
-            uint64 totalSigningKeys,
-            uint64 usedSigningKeys
-        );
-
-    /**
-     * @notice Returns the rewards distribution proportional to the effective stake for each node operator.
-     * @param _totalRewardShares Total amount of reward shares to distribute.
-     */
-    function getRewardsDistribution(uint256 _totalRewardShares)
-        external
-        view
-        returns (address[] memory recipients, uint256[] memory shares);
 
     event NodeOperatorAdded(uint256 id, string name, address rewardAddress, uint64 stakingLimit);
     event NodeOperatorActiveSet(uint256 indexed id, bool active);
@@ -192,6 +156,5 @@ interface INodeOperatorsRegistryDeprecated {
     function getKeysOpIndex() external view returns (uint256);
 
     event SigningKeyAdded(uint256 indexed operatorId, bytes pubkey);
-    event SigningKeyRemoved(uint256 indexed operatorId, bytes pubkey);
     event KeysOpIndexSet(uint256 keysOpIndex);
 }

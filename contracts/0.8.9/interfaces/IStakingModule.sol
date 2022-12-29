@@ -8,12 +8,12 @@ interface IStakingModule {
     function getType() external view returns (bytes32);
 
     /// @notice Returns the stats of the validators keys of node operators in the staking module
-    function getValidatorsStats()
+    function getValidatorsKeysStats()
         external
         view
         returns (
-            uint64 exitedValidatorsCount,
-            uint64 depositedValidatorsCount,
+            uint64 exitedValidatorsKeysCount,
+            uint64 depositedValidatorsKeysCount,
             uint64 approvedValidatorsKeysCount,
             uint64 totalValidatorsKeysCount
         );
@@ -35,17 +35,17 @@ interface IStakingModule {
     function getNodeOperatorIsActive(uint24 _nodeOperatorId) external view returns (bool);
 
     /// @notice Returns the stats of the keys of node operator with given id
-    function getNodeOperatorValidatorsStats(uint24 _nodeOperatorId)
+    function getNodeOperatorValidatorsKeysStats(uint24 _nodeOperatorId)
         external
         view
         returns (
-            uint64 exitedValidatorsCount,
-            uint64 depositedValidatorsCount,
+            uint64 exitedValidatorsKeysCount,
+            uint64 depositedValidatorsKeysCount,
             uint64 approvedValidatorsKeysCount,
             uint64 totalValidatorsKeysCount
         );
 
-    function updateNodeOperatorExitedValidatorsCount(uint24 _nodeOperatorId, uint64 _exitedValidatorsCount) external;
+    function updateNodeOperatorExitedValidatorsKeysCount(uint24 _nodeOperatorId, uint64 _exitedValidatorsKeysCount) external;
 
     function trimUnusedValidatorsKeys() external;
 
@@ -63,12 +63,12 @@ interface IStakingModule {
     event NodeOperatorActivated(uint24 indexed nodeOperatorId);
     event NodeOperatorDeactivated(uint24 indexed nodeOperatorId);
 
-    event ApprovedValidatorsCountChanged(uint24 indexed nodeOperatorId, uint64 approvedValidatorsCount);
-    event DepositedValidatorsCountChanged(uint24 indexed nodeOperatorId, uint64 depositedValidatorsCount);
-    event ExitedValidatorsCountChanged(uint24 indexed nodeOperatorId, uint64 exitedValidatorsCount);
-    event TotalValidatorsCountChanged(uint24 indexed nodeOperatorId, uint64 totalValidatorsCount);
+    event ApprovedValidatorsKeysCountChanged(uint24 indexed nodeOperatorId, uint64 approvedValidatorsCount);
+    event DepositedValidatorsKeysCountChanged(uint24 indexed nodeOperatorId, uint64 depositedValidatorsCount);
+    event ExitedValidatorsKeysCountChanged(uint24 indexed nodeOperatorId, uint64 exitedValidatorsCount);
+    event TotalValidatorsKeysCountChanged(uint24 indexed nodeOperatorId, uint64 totalValidatorsCount);
 
-    event UnusedKeysTrimmed(uint24 indexed nodeOperatorId, uint64 trimmedKeysCount);
+    event UnusedValidatorsKeysTrimmed(uint24 indexed nodeOperatorId, uint64 trimmedKeysCount);
 
-    event NodeOperatorUnusedKeysTrimmed(uint24 indexed nodeOperatorId, uint64 trimmedKeysCount);
+    event NodeOperatorUnusedValidatorsKeysTrimmed(uint24 indexed nodeOperatorId, uint64 trimmedKeysCount);
 }

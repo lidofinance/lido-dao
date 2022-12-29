@@ -129,7 +129,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
     function finalizeUpgrade_v2(address _steth, bytes32 _type) external {
         require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "WRONG_BASE_VERSION");
         _initialize_v2(_steth, _type);
-        _increaseKeysOpIndex();
+        _increaseValidatorsKeysNonce();
     }
 
     function _initialize_v2(address _steth, bytes32 _type) internal {
@@ -197,30 +197,44 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         return _nodeOperators[_nodeOperatorId].active;
     }
 
-    function activateNodeOperator(uint24 _nodeOperatorId)
-        external
+    function activateNodeOperator(uint24 _nodeOperatorId) external {
+        _activateNodeOperator(_nodeOperatorId);
+    }
+
+    function _activateNodeOperator(uint24 _nodeOperatorId)
+        internal
         onlyExistedNodeOperator(_nodeOperatorId)
         auth(ACTIVATE_NODE_OPERATOR_ROLE)
     {
         NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
         require(!nodeOperator.active, "NODE_OPERATOR_ALREADY_ACTIVATED");
 
+        uint256 activeOperatorsCount = getActiveNodeOperatorsCount();
+        ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(activeOperatorsCount.add(1));
+
         nodeOperator.active = true;
-        _increaseKeysOpIndex();
+        _increaseValidatorsKeysNonce();
 
         emit NodeOperatorActivated(_nodeOperatorId);
     }
 
-    function deactivateNodeOperator(uint24 _nodeOperatorId)
-        external
+    function deactivateNodeOperator(uint24 _nodeOperatorId) external {
+        _deactivateNodeOperator(_nodeOperatorId);
+    }
+
+    function _deactivateNodeOperator(uint24 _nodeOperatorId)
+        internal
         onlyExistedNodeOperator(_nodeOperatorId)
         auth(DEACTIVATE_NODE_OPERATOR_ROLE)
     {
         NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
         require(nodeOperator.active, "NODE_OPERATOR_ALREADY_DEACTIVATED");
 
+        uint256 activeOperatorsCount = getActiveNodeOperatorsCount();
+        ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(activeOperatorsCount.sub(1));
+
         nodeOperator.active = false;
-        _increaseKeysOpIndex();
+        _increaseValidatorsKeysNonce();
 
         emit NodeOperatorDeactivated(_nodeOperatorId);
 
@@ -242,7 +256,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
      * @notice Change human-readable name of the node operator #`_nodeOperatorId` to `_name`
      */
     function setNodeOperatorName(uint24 _nodeOperatorId, string _name)
-        external
+        public
         onlyExistedNodeOperator(_nodeOperatorId)
         onlyValidNodeOperatorName(_name)
         authP(SET_NODE_OPERATOR_NAME_ROLE, arr(uint256(_nodeOperatorId)))
@@ -256,7 +270,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
      * @notice Change reward address of the node operator #`_nodeOperatorId` to `_rewardAddress`
      */
     function setNodeOperatorRewardAddress(uint24 _nodeOperatorId, address _rewardAddress)
-        external
+        public
         onlyExistedNodeOperator(_nodeOperatorId)
         onlyNonZeroAddress(_rewardAddress)
         authP(SET_NODE_OPERATOR_ADDRESS_ROLE, arr(uint256(_nodeOperatorId), uint256(_rewardAddress)))
@@ -270,7 +284,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
      * @notice Set the maximum number of validators to stake for the node operator #`_nodeOperatorId` to `_stakingLimit`
      */
     function setNodeOperatorApprovedValidatorsKeysCount(uint24 _nodeOperatorId, uint64 _approvedValidatorsKeysCount)
-        external
+        public
         authP(SET_NODE_OPERATOR_LIMIT_ROLE, arr(uint256(_nodeOperatorId), uint256(_approvedValidatorsKeysCount)))
         onlyExistedNodeOperator(_nodeOperatorId)
     {
@@ -300,7 +314,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
             totalValidatorKeysStats.decreaseApprovedValidatorsKeysCount(approvedValidatorsCountBefore - approvedValidatorsCountAfter);
         }
         _setTotalValidatorsKeysStats(totalValidatorKeysStats);
-        _increaseKeysOpIndex();
+        _increaseValidatorsKeysNonce();
 
         emit ApprovedValidatorsKeysCountChanged(_nodeOperatorId, approvedValidatorsCountAfter);
     }
@@ -310,7 +324,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         TODO:: Add method to unsafe tune node operator
      */
     function updateNodeOperatorExitedValidatorsCount(uint24 _nodeOperatorId, uint64 _exitedValidatorsCount)
-        external
+        public
         onlyExistedNodeOperator(_nodeOperatorId)
         auth(REPORT_NODE_OPERATOR_KEYS_EXITED_ROLE)
     {
@@ -342,6 +356,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         uint64 totalTrimmedKeysCount = 0;
         uint64 approvedValidatorsDecrease = 0;
         uint24 nodeOperatorsCount = getNodeOperatorsCount();
+
         for (uint24 _nodeOperatorId = 0; _nodeOperatorId < nodeOperatorsCount; ++_nodeOperatorId) {
             NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
             uint64 totalValidatorsKeysCount = nodeOperator.totalValidatorsKeysCount;
@@ -358,17 +373,22 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
             nodeOperator.totalValidatorsKeysCount = depositedValidatorsKeysCount;
             nodeOperator.approvedValidatorsKeysCount = depositedValidatorsKeysCount;
 
-            emit NodeOperatorUnusedValidatorsKeysTrimmed(_nodeOperatorId, trimmedKeysCount);
             emit TotalValidatorsKeysCountChanged(_nodeOperatorId, depositedValidatorsKeysCount);
             emit ApprovedValidatorsKeysCountChanged(_nodeOperatorId, depositedValidatorsKeysCount);
-            // TODO: Legacy events
+            emit NodeOperatorUnusedValidatorsKeysTrimmed(_nodeOperatorId, trimmedKeysCount);
         }
+
         if (totalTrimmedKeysCount > 0) {
             ValidatorsKeysStats.State memory totalValidatorsKeysStats = _getTotalValidatorsKeysStats();
+
             totalValidatorsKeysStats.decreaseTotalValidatorsKeysCount(totalTrimmedKeysCount);
             totalValidatorsKeysStats.decreaseApprovedValidatorsKeysCount(approvedValidatorsDecrease);
+
             _setTotalValidatorsKeysStats(totalValidatorsKeysStats);
-            _increaseKeysOpIndex();
+            _increaseValidatorsKeysNonce();
+
+            /// @dev DEPRECATED
+            emit NodeOperatorTotalKeysTrimmed(_nodeOperatorId, trimmedKeysCount);
         }
     }
 
@@ -388,7 +408,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         uint64 _keysCount,
         bytes _publicKeys,
         bytes _signatures
-    ) external authP(MANAGE_SIGNING_KEYS, arr(uint256(_nodeOperatorId))) {
+    ) public {
         _addValidatorsKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
     }
 
@@ -408,7 +428,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         uint64 _keysCount,
         bytes _publicKeys,
         bytes _signatures
-    ) external {
+    ) public {
         require(msg.sender == _nodeOperators[_nodeOperatorId].rewardAddress, "APP_AUTH_FAILED");
         _addValidatorsKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
     }
@@ -423,7 +443,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         uint24 _nodeOperatorId,
         uint64 _fromIndex,
         uint64 _keysCount
-    ) external authP(MANAGE_SIGNING_KEYS, arr(uint256(_nodeOperatorId))) {
+    ) public authP(MANAGE_SIGNING_KEYS, arr(uint256(_nodeOperatorId))) {
         _removeUnusedValidatorsKeys(_nodeOperatorId, _fromIndex, _keysCount);
     }
 
@@ -437,7 +457,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         uint24 _nodeOperatorId,
         uint64 _fromIndex,
         uint64 _keysCount
-    ) external {
+    ) public {
         require(msg.sender == _nodeOperators[_nodeOperatorId].rewardAddress, "APP_AUTH_FAILED");
         _removeUnusedValidatorsKeys(_nodeOperatorId, _fromIndex, _keysCount);
     }
@@ -491,7 +511,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
      * @param _nodeOperatorId Node Operator id
      * @param _fullInfo If true, name will be returned as well
      */
-    function getNodeOperator(uint256 _nodeOperatorId, bool _fullInfo)
+    function getNodeOperator(uint24 _nodeOperatorId, bool _fullInfo)
         external
         view
         onlyExistedNodeOperator(_nodeOperatorId)
@@ -550,7 +570,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
      * @return depositSignature Signature needed for a deposit_contract.deposit call
      * @return used Flag indication if the key was used in the staking
      */
-    function getNodeOperatorValidatorKey(uint256 _nodeOperatorId, uint256 _index)
+    function getNodeOperatorValidatorKey(uint24 _nodeOperatorId, uint256 _index)
         external
         view
         onlyExistedNodeOperator(_nodeOperatorId)
@@ -569,7 +589,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
     }
 
     function getNodeOperatorValidatorsKeys(
-        uint256 _nodeOperatorId,
+        uint24 _nodeOperatorId,
         uint256 _offset,
         uint256 _limit
     )
@@ -820,12 +840,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         uint64 _keysCount,
         bytes _publicKeys,
         bytes _signatures
-    ) internal onlyExistedNodeOperator(_nodeOperatorId) {
+    ) internal onlyExistedNodeOperator(_nodeOperatorId) authP(MANAGE_SIGNING_KEYS, arr(uint256(_nodeOperatorId))) {
         require(_keysCount != 0, "NO_KEYS");
         require(_publicKeys.length == _keysCount.mul(PUBKEY_LENGTH), "INVALID_LENGTH");
         require(_signatures.length == _keysCount.mul(SIGNATURE_LENGTH), "INVALID_LENGTH");
 
-        _increaseKeysOpIndex();
+        _increaseValidatorsKeysNonce();
 
         NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
         uint64 totalValidatorsKeysCount = nodeOperator.totalValidatorsKeysCount;
@@ -863,7 +883,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
             _removeUnusedKey(_nodeOperatorId, i - 1);
         }
 
-        _increaseKeysOpIndex();
+        _increaseValidatorsKeysNonce();
 
         uint64 totalValidatorsCountAfter = nodeOperator.totalValidatorsKeysCount;
         uint64 approvedValidatorsCountAfter = nodeOperator.approvedValidatorsKeysCount;
@@ -911,7 +931,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         }
 
         emit UnusedKeyRemoved(_nodeOperatorId, removedKey);
-        // TODO: deprecated events
+        /// @dev DEPRECATED
+        emit SigningKeyRemoved(_nodeOperatorId, removedKey);
     }
 
     function _deleteSigningKey(uint256 _nodeOperatorId, uint256 _keyIndex) internal {
@@ -947,7 +968,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         return (key, signature);
     }
 
-    function _increaseKeysOpIndex() internal {
+    function _increaseValidatorsKeysNonce() internal {
         uint256 keysOpIndex = getValidatorsKeysNonce();
         KEYS_OP_INDEX_POSITION.setStorageUint256(keysOpIndex + 1);
         emit KeysOpIndexSet(keysOpIndex + 1);
@@ -970,7 +991,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         _;
     }
 
-    modifier onlyExistedNodeOperator(uint256 _nodeOperatorId) {
+    modifier onlyExistedNodeOperator(uint24 _nodeOperatorId) {
         require(_nodeOperatorId < getNodeOperatorsCount(), "NODE_OPERATOR_NOT_FOUND");
         _;
     }

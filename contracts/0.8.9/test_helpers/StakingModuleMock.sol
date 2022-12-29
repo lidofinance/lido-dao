@@ -28,7 +28,7 @@ contract StakingModuleMock is IStakingModule {
 
     function trimUnusedKeys() external {}
 
-    function getValidatorsStats()
+    function getValidatorsKeysStats()
         external
         view
         returns (
@@ -47,7 +47,7 @@ contract StakingModuleMock is IStakingModule {
 
     function getNodeOperatorIsActive(uint24 _nodeOperatorId) external view returns (bool) {}
 
-    function getNodeOperatorValidatorsStats(uint24 _nodeOperatorId)
+    function getNodeOperatorValidatorsKeysStats(uint24 _nodeOperatorId)
         external
         view
         returns (
@@ -58,7 +58,7 @@ contract StakingModuleMock is IStakingModule {
         )
     {}
 
-    function updateNodeOperatorExitedValidatorsCount(uint24 _nodeOperatorId, uint64 _exitedValidatorsCount) external {}
+    function updateNodeOperatorExitedValidatorsKeysCount(uint24 _nodeOperatorId, uint64 _exitedValidatorsCount) external {}
 
     function trimUnusedValidatorsKeys() external {}
 

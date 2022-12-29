@@ -28,7 +28,7 @@ interface INodeOperatorsRegistry {
     /**
      * @notice Change human-readable name of the node operator #`_nodeOperatorId` to `_name`
      */
-    function setNodeOperatorName(uint24 _nodeOperatorId, string _name) external;
+    function setNodeOperatorName(uint24 _nodeOperatorId, string _name) public;
 
     /**
      * @notice Change reward address of the node operator #`_nodeOperatorId` to `_rewardAddress`
@@ -83,7 +83,7 @@ interface INodeOperatorsRegistry {
         uint64 _keysCount,
         bytes _publicKeys,
         bytes _signatures
-    ) external;
+    ) public;
 
     /**
      * @notice Add `_quantity` validator signing keys of operator #`_id` to the set of usable keys. Concatenated keys are: `_pubkeys`. Can be done by node operator in question by using the designated rewards address.
@@ -101,7 +101,7 @@ interface INodeOperatorsRegistry {
         uint64 _keysCount,
         bytes _publicKeys,
         bytes _signatures
-    ) external;
+    ) public;
 
     /**
      * @notice Removes an #`_keysCount` of validator signing keys starting from #`_index` of operator #`_id` usable keys. Executed on behalf of DAO.
@@ -185,4 +185,5 @@ interface INodeOperatorsRegistry {
     event NodeOperatorTotalStoppedValidatorsReported(uint256 indexed id, uint64 totalStopped);
     event NodeOperatorTotalKeysTrimmed(uint256 indexed id, uint64 totalKeysTrimmed);
     event RewardsDistributedInShares(uint256 indexed id, uint256 amount);
+    event SigningKeyRemoved(uint256 indexed nodeOperatorId, bytes pubkey);
 }
