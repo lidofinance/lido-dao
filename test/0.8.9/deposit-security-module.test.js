@@ -568,7 +568,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
     })
 
     it("pauseDeposits doesn't emit DepositsPaused(guardianAddr) event if was paused before", async () => {
-      await stakingRouterMock.setStakingModuleStatus(STAKING_MODULE, StakingModuleStatus.DepositsPaused)
+      await stakingRouterMock.changeStakingModuleStatus(STAKING_MODULE, StakingModuleStatus.DepositsPaused)
       assert.isTrue(await stakingRouterMock.getStakingModuleIsDepositsPaused(STAKING_MODULE), 'invariant failed: isPaused != true')
       const tx = await depositSecurityModule.pauseDeposits(block.number, STAKING_MODULE, ['0x', '0x'], { from: guardian })
       assert.equal(tx.logs.length, 0, 'invalid result: logs not empty')
@@ -579,7 +579,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       await depositSecurityModule.addGuardian(guardian, 1, { from: owner })
       const guardians = await depositSecurityModule.getGuardians()
       assert.equal(guardians.length, 1, 'invariant failed: guardians != 1')
-      await stakingRouterMock.setStakingModuleStatus(STAKING_MODULE, StakingModuleStatus.DepositsPaused)
+      await stakingRouterMock.changeStakingModuleStatus(STAKING_MODULE, StakingModuleStatus.DepositsPaused)
       assert.equal(await stakingRouterMock.getStakingModuleIsDepositsPaused(STAKING_MODULE), true, 'invariant failed: isPaused')
     })
     it('unpauses paused deposits', async () => {
@@ -894,7 +894,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
 
       assert.isTrue(latestBlock.number - lastDepositBlockNumber >= minDepositBlockDistance)
 
-      await stakingRouterMock.setStakingModuleStatus(STAKING_MODULE, StakingModuleStatus.DepositsPaused)
+      await stakingRouterMock.changeStakingModuleStatus(STAKING_MODULE, StakingModuleStatus.DepositsPaused)
       assert.isTrue(await stakingRouterMock.getStakingModuleIsDepositsPaused(STAKING_MODULE), 'invariant failed: isPaused')
 
       assert.isFalse(await depositSecurityModule.canDeposit(STAKING_MODULE))

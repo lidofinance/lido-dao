@@ -11,7 +11,6 @@ import {IStakingRouter} from "./interfaces/IStakingRouter.sol";
 import {IStakingModule} from "./interfaces/IStakingModule.sol";
 
 import {Math} from "./lib/Math.sol";
-import {BatchedSigningKeys} from "./lib/BatchedSigningKeys.sol";
 import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
 import {MinFirstAllocationStrategy} from "./lib/MinFirstAllocationStrategy.sol";
 
@@ -36,6 +35,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
      * Emitted when the StakingRouter received ETH
      */
     event StakingRouterETHReceived(uint256 amount);
+    event StakingRouterETHDeposited(uint24 indexed stakingModuleId, uint256 amount);
 
     /// @dev errors
     error ErrorZeroAddress(string field);
@@ -73,7 +73,6 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
     bytes32 internal constant WITHDRAWAL_CREDENTIALS_POSITION = keccak256("lido.StakingRouter.withdrawalCredentials");
 
-    uint256 public constant DEPOSIT_SIZE = 32 ether;
 
     uint256 public constant TOTAL_BASIS_POINTS = 10000;
 
@@ -388,10 +387,12 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         if (msg.value > 0) {
             emit StakingRouterETHReceived(msg.value);
         }
-        uint256 maxDepositableKeys;
-        uint256 stakingModuleIndex = _getStakingModuleIndexById(_stakingModuleId);
 
-        maxDepositableKeys = _estimateStakingModuleMaxDepositableKeysByIndex(
+        bytes32 withdrawalCredentials = getWithdrawalCredentials();
+        if (withdrawalCredentials == 0) revert ErrorEmptyWithdrawalsCredentials();
+        
+        uint256 stakingModuleIndex = _getStakingModuleIndexById(_stakingModuleId);
+        uint256 maxDepositableKeys = _estimateStakingModuleMaxDepositableKeysByIndex(
             stakingModuleIndex,
             Math.min(address(this).balance / DEPOSIT_SIZE, _maxDepositsCount)
         );
@@ -404,22 +405,13 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
 
         if (keysCount == 0) return 0;
 
-        BatchedSigningKeys.validatePublicKeysBatch(publicKeysBatch, keysCount);
-        BatchedSigningKeys.validateSignaturesBatch(signaturesBatch, keysCount);
-
-        if (getWithdrawalCredentials() == 0) revert ErrorEmptyWithdrawalsCredentials();
-
-        bytes memory encodedWithdrawalCredentials = abi.encodePacked(getWithdrawalCredentials());
-
-        for (uint256 i = 0; i < keysCount; ++i) {
-            bytes memory publicKey = BatchedSigningKeys.readPublicKey(publicKeysBatch, i);
-            bytes memory signature = BatchedSigningKeys.readSignature(signaturesBatch, i);
-            _makeBeaconChainDeposit(encodedWithdrawalCredentials, publicKey, signature, DEPOSIT_SIZE);
-        }
+        _makeBeaconChainDeposits(keysCount,  abi.encodePacked(withdrawalCredentials), publicKeysBatch, signaturesBatch);
 
         StakingModule storage stakingModule = _getStakingModuleByIndex(stakingModuleIndex);
         stakingModule.lastDepositAt = uint64(block.timestamp);
         stakingModule.lastDepositBlock = block.number;
+
+        emit StakingRouterETHDeposited(_getStakingModuleIdByIndex(stakingModuleIndex), keysCount * DEPOSIT_SIZE);
 
         return keysCount;
     }
@@ -544,9 +536,9 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         return _stakingModuleIndicesOneBased[_stakingModuleId] - 1;
     }
 
-    // function _getStakingModuleIdByIndex(uint256 _index) private view returns (uint24) {
-    //     return _stakingModules[_index].id;
-    // }
+    function _getStakingModuleIdByIndex(uint256 _index) private view returns (uint24) {
+        return _stakingModules[_index].id;
+    }
 
     function _getStakingModuleById(uint24 _stakingModuleId) private view returns (StakingModule storage) {
         return _stakingModules[_stakingModuleIndicesOneBased[_stakingModuleId] - 1];

@@ -9,8 +9,13 @@ import {BytesLib} from "./lib/BytesLib.sol";
 import {IDepositContract} from "./interfaces/IDepositContract.sol";
 
 contract BeaconChainDepositor {
+    uint256 private constant PUBLIC_KEY_LENGTH = 48;
     uint256 private constant SIGNATURE_LENGTH = 96;
-    uint256 private constant DEPOSIT_AMOUNT_UNIT = 1 gwei;
+    uint256 public constant DEPOSIT_SIZE = 32 ether;
+
+    /// @dev deposit amount 32eth in gweis converted to little endian uint64
+    /// DEPOSIT_SIZE_IN_GWEI_LE64 = toLittleEndian64(32 ether / 1 gwei)
+    uint64 public constant DEPOSIT_SIZE_IN_GWEI_LE64 = 0x0040597307000000;
 
     IDepositContract public immutable DEPOSIT_CONTRACT;
 
@@ -20,23 +25,37 @@ contract BeaconChainDepositor {
     }
 
     /// @dev Invokes a deposit call to the official Beacon Deposit contract
+    /// @param _keysCount amount of keys to deposit
     /// @param _withdrawalCredentials Commitment to a public key for withdrawals
-    /// @param _publicKey A BLS12-381 public key.
-    /// @param _signature A BLS12-381 signature
-    /// @param _depositValue Amount of ETH to deposit into Beacon Deposit contract in Wei
-    function _makeBeaconChainDeposit(
+    /// @param _publicKeysBatch A BLS12-381 public keys batch
+    /// @param _signaturesBatch A BLS12-381 signatures batch
+    function _makeBeaconChainDeposits(
+        uint256 _keysCount,
         bytes memory _withdrawalCredentials,
-        bytes memory _publicKey,
-        bytes memory _signature,
-        uint256 _depositValue
+        bytes memory _publicKeysBatch,
+        bytes memory _signaturesBatch
     ) internal {
-        uint256 targetBalance = address(this).balance - _depositValue;
-        DEPOSIT_CONTRACT.deposit{value: _depositValue}(
-            _publicKey,
-            _withdrawalCredentials,
-            _signature,
-            _computeDepositDataRoot(_withdrawalCredentials, _publicKey, _signature, _depositValue / DEPOSIT_AMOUNT_UNIT)
-        );
+        require(_publicKeysBatch.length == PUBLIC_KEY_LENGTH * _keysCount, "INVALID_PUBLIC_KEYS_BATCH_LENGTH");
+        require(_signaturesBatch.length == SIGNATURE_LENGTH * _keysCount, "INVALID_SIGNATURES_BATCH_LENGTH");
+
+        uint256 targetBalance = address(this).balance - (_keysCount * DEPOSIT_SIZE);
+
+        bytes memory publicKey;
+        bytes memory signature;
+        for (uint256 i; i < _keysCount; ) {
+            publicKey = BytesLib.slice(_publicKeysBatch, i * PUBLIC_KEY_LENGTH, PUBLIC_KEY_LENGTH);
+            signature = BytesLib.slice(_signaturesBatch, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
+            DEPOSIT_CONTRACT.deposit{value: DEPOSIT_SIZE}(
+                publicKey,
+                _withdrawalCredentials,
+                signature,
+                _computeDepositDataRoot(_withdrawalCredentials, publicKey, signature)
+            );
+
+            unchecked {
+                ++i;
+            }
+        }
 
         if (address(this).balance != targetBalance) revert ErrorNotExpectedBalance();
     }
@@ -44,12 +63,10 @@ contract BeaconChainDepositor {
     /// @dev computes the deposit_root_hash required by official Beacon Deposit contract
     /// @param _publicKey A BLS12-381 public key.
     /// @param _signature A BLS12-381 signature
-    /// @param _depositAmount Amount of ETH to deposit into Beacon Deposit contract in Deposit Contract units
     function _computeDepositDataRoot(
         bytes memory _withdrawalCredentials,
         bytes memory _publicKey,
-        bytes memory _signature,
-        uint256 _depositAmount
+        bytes memory _signature
     ) private pure returns (bytes32) {
         // Compute deposit data root (`DepositData` hash tree root) according to deposit_contract.sol
         bytes32 publicKeyRoot = sha256(_pad64(_publicKey));
@@ -64,7 +81,7 @@ contract BeaconChainDepositor {
             sha256(
                 abi.encodePacked(
                     sha256(abi.encodePacked(publicKeyRoot, _withdrawalCredentials)),
-                    sha256(abi.encodePacked(_toLittleEndian64(_depositAmount), signatureRoot))
+                    sha256(abi.encodePacked(DEPOSIT_SIZE_IN_GWEI_LE64, bytes24(0), signatureRoot))
                 )
             );
     }
@@ -82,20 +99,6 @@ contract BeaconChainDepositor {
 
         if (32 == _b.length) return BytesLib.concat(_b, zero32);
         else return BytesLib.concat(_b, BytesLib.slice(zero32, 0, uint256(64) - _b.length));
-    }
-
-    /// @dev Converting value to little endian bytes and padding up to 32 bytes on the right
-    /// @param _value Number less than `2**64` for compatibility reasons
-    function _toLittleEndian64(uint256 _value) internal pure returns (uint256 result) {
-        result = 0;
-        uint256 temp_value = _value;
-        for (uint256 i = 0; i < 8; ++i) {
-            result = (result << 8) | (temp_value & 0xFF);
-            temp_value >>= 8;
-        }
-
-        assert(0 == temp_value); // fully converted
-        result <<= (24 * 8);
     }
 
     error ErrorDepositContractZeroAddress();

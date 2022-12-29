@@ -447,13 +447,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assert.equal(await beaconChainDepositor.pad64(pad('0x1122', 64)), pad('0x1122', 64))
   })
 
-  it('toLittleEndian64 works', async () => {
-    await assertRevert(beaconChainDepositor.toLittleEndian64('0x010203040506070809'))
-    assertBn(await beaconChainDepositor.toLittleEndian64('0x0102030405060708'), bn('0x0807060504030201' + '0'.repeat(48)))
-    assertBn(await beaconChainDepositor.toLittleEndian64('0x0100000000000008'), bn('0x0800000000000001' + '0'.repeat(48)))
-    assertBn(await beaconChainDepositor.toLittleEndian64('0x10'), bn('0x1000000000000000' + '0'.repeat(48)))
-  })
-
   it('Lido.deposit(uint256,uint24,bytes) reverts when called by account without DEPOSIT_ROLE granted', async () => {
     await assertRevert(
       app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: nobody }),
@@ -481,6 +474,14 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await assertRevert(app.submit(ZERO_ADDRESS, { from: user1, value: ETH(0) }), 'ZERO_DEPOSIT')
     await assertRevert(web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(0) }), 'ZERO_DEPOSIT')
 
+    // can not deposit with unset withdrawalCredentials
+    await assertRevert(
+      app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor }),
+      `ed with custom error 'ErrorEmptyWithdrawalsCredentials()`
+    )
+    // set withdrawalCredentials with keys, because they were trimmed
+    await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+
     // +1 ETH
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(1) })
     await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
@@ -505,14 +506,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     // +30 ETH
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(30) })
-    // can not deposit with unset withdrawalCredentials
-    await assertRevert(
-      app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor }),
-      `ed with custom error 'ErrorEmptyWithdrawalsCredentials()`
-    )
 
-    // set withdrawalCredentials with keys, because they were trimmed
-    await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
     await operators.addSigningKeys(
       0,

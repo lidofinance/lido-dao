@@ -11,11 +11,11 @@ contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
     event StakingModuleDeposited(uint256 maxDepositsCount, uint24 stakingModuleId, bytes depositCalldata);
     event StakingModuleStatusChanged(
         uint24 indexed stakingModuleId,
-        address indexed actor,
         StakingModuleStatus fromStatus,
-        StakingModuleStatus toStatus
+        StakingModuleStatus toStatus,
+        address changedBy
     );
-
+    
     StakingModuleStatus private status;
     uint256 private stakingModuleKeysOpIndex;
     uint256 private stakingModuleLastDepositBlock;
