@@ -7,10 +7,6 @@ pragma solidity 0.8.9;
 import "./interfaces/IStakingModule.sol";
 import "./lib/BytesLib.sol";
 
-interface IStakingRouter {
-    function deposit(bytes memory pubkeys, bytes memory signatures) external returns (uint256);
-}
-
 contract ModuleSolo is IStakingModule {
     address private stakingRouter;
     address public immutable lido;
@@ -30,36 +26,82 @@ contract ModuleSolo is IStakingModule {
         lido = _lido;
     }
 
-    function getActiveKeysCount() public view returns (uint256) {
-        return totalUsedKeys - totalStoppedKeys;
+    function getType() external view returns (bytes32) {
+        return moduleType;
     }
 
-    function getAvailableKeysCount() public view returns (uint256) {
-        return totalKeys - totalUsedKeys;
+    function getValidatorsStats()
+        external
+        view
+        returns (
+            uint64 exitedValidatorsCount,
+            uint64 depositedValidatorsCount,
+            uint64 approvedValidatorsKeysCount,
+            uint64 totalValidatorsKeysCount
+        )
+    {
+        exitedValidatorsCount = uint64(totalStoppedKeys);
+        depositedValidatorsCount = uint64(totalUsedKeys);
+        exitedValidatorsCount = uint64(totalStoppedKeys);
+        totalValidatorsKeysCount = uint64(totalKeys);
     }
 
-    function getKeysUsageData() external view returns (uint256 activeKeysCount, uint256 availableKeysCount) {
-        activeKeysCount = getActiveKeysCount();
-        availableKeysCount = getAvailableKeysCount();
+    function getValidatorsKeysNonce() external view returns (uint256) {
+        return keysOpIndex;
     }
 
-    function getSigningKeysStats() external view returns (uint256 totalSigningKeys, uint256 usedSigningKeys, uint256 stoppedSigningKeys) {
-        totalSigningKeys = totalKeys;
-        usedSigningKeys = totalUsedKeys;
-        stoppedSigningKeys = totalStoppedKeys;
-    }
+    function getNodeOperatorsCount() external view returns (uint24) {}
 
-    function getRewardsDistribution(
-        uint256 _totalRewardShares
-    ) external view returns (address[] memory recipients, uint256[] memory shares) {}
+    function getActiveNodeOperatorsCount() external view returns (uint24) {}
+
+    function getNodeOperatorIsActive(uint24 _nodeOperatorId) external view returns (bool) {}
+
+    function getNodeOperatorValidatorsStats(uint24 _nodeOperatorId)
+        external
+        view
+        returns (
+            uint64 exitedValidatorsCount,
+            uint64 depositedValidatorsCount,
+            uint64 approvedValidatorsKeysCount,
+            uint64 totalValidatorsKeysCount
+        )
+    {}
+
+    function getRewardsDistribution(uint256 _totalRewardShares)
+        external
+        view
+        returns (address[] memory recipients, uint256[] memory shares)
+    {}
+
+    function getNodeOperatorKeysStats(uint24 _nodeOperatorId)
+        external
+        view
+        returns (
+            uint64 everDepositedKeysCount,
+            uint64 everExitedKeysCount,
+            uint64 readyToDepositKeysCount
+        )
+    {}
 
     function addNodeOperator(string memory _name, address _rewardAddress) external returns (uint256 id) {}
 
     function setNodeOperatorStakingLimit(uint256 _id, uint64 _stakingLimit) external {}
 
-    function addSigningKeys(uint256 _operator_id, uint256 _quantity, bytes memory _pubkeys, bytes memory _signatures) external {}
+    function updateNodeOperatorExitedValidatorsCount(uint24 _nodeOperatorId, uint64 _newEverExitedKeysCount) external {}
 
-    function addSigningKeysOperatorBH(uint256 _operator_id, uint256 _quantity, bytes memory _pubkeys, bytes memory _signatures) external {}
+    function addSigningKeys(
+        uint256 _operator_id,
+        uint256 _quantity,
+        bytes memory _pubkeys,
+        bytes memory _signatures
+    ) external {}
+
+    function addSigningKeysOperatorBH(
+        uint256 _operator_id,
+        uint256 _quantity,
+        bytes memory _pubkeys,
+        bytes memory _signatures
+    ) external {}
 
     //only for testing purposal
     function setTotalKeys(uint256 _keys) external {
@@ -86,27 +128,28 @@ contract ModuleSolo is IStakingModule {
         return stakingRouter;
     }
 
-    function trimUnusedKeys() external {}
+    function trimUnusedValidatorsKeys() external {}
 
     function setType(bytes32 _type) external {
         moduleType = _type;
-    }
-
-    function getType() external view returns (bytes32) {
-        return moduleType;
     }
 
     function getKeysOpIndex() external view returns (uint256) {
         return keysOpIndex;
     }
 
-    function prepNextSigningKeys(
-        uint256 maxDepositsCount,
-        bytes calldata depositCalldata
-    ) external pure returns (uint256 keysCount, bytes memory pubkeys, bytes memory signatures) {
-        pubkeys = BytesLib.slice(depositCalldata, 0, maxDepositsCount * PUBKEY_LENGTH);
-        signatures = BytesLib.slice(depositCalldata, maxDepositsCount * PUBKEY_LENGTH, maxDepositsCount * SIGNATURE_LENGTH);
+    function enqueueApprovedValidatorsKeys(uint64 _keysCount, bytes calldata _calldata)
+        external
+        pure
+        returns (
+            uint64 enqueuedValidatorsKeysCount,
+            bytes memory publicKeys,
+            bytes memory signatures
+        )
+    {
+        publicKeys = BytesLib.slice(_calldata, 0, _keysCount * PUBKEY_LENGTH);
+        signatures = BytesLib.slice(_calldata, _keysCount * PUBKEY_LENGTH, _keysCount * SIGNATURE_LENGTH);
 
-        return (maxDepositsCount, pubkeys, signatures);
+        return (_keysCount, publicKeys, signatures);
     }
 }

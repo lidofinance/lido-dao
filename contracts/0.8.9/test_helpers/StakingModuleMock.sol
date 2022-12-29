@@ -28,13 +28,45 @@ contract StakingModuleMock is IStakingModule {
 
     function trimUnusedKeys() external {}
 
-    function getKeysOpIndex() external view returns (uint256) {}
+    function getValidatorsStats()
+        external
+        view
+        returns (
+            uint64 exitedValidatorsCount,
+            uint64 depositedValidatorsCount,
+            uint64 approvedValidatorsKeysCount,
+            uint64 totalValidatorsKeysCount
+        )
+    {}
 
-    function prepNextSigningKeys(uint256 maxDepositsCount, bytes calldata depositCalldata)
+    function getValidatorsKeysNonce() external view returns (uint256) {}
+
+    function getNodeOperatorsCount() external view returns (uint24) {}
+
+    function getActiveNodeOperatorsCount() external view returns (uint24) {}
+
+    function getNodeOperatorIsActive(uint24 _nodeOperatorId) external view returns (bool) {}
+
+    function getNodeOperatorValidatorsStats(uint24 _nodeOperatorId)
+        external
+        view
+        returns (
+            uint64 exitedValidatorsCount,
+            uint64 depositedValidatorsCount,
+            uint64 approvedValidatorsKeysCount,
+            uint64 totalValidatorsKeysCount
+        )
+    {}
+
+    function updateNodeOperatorExitedValidatorsCount(uint24 _nodeOperatorId, uint64 _exitedValidatorsCount) external {}
+
+    function trimUnusedValidatorsKeys() external {}
+
+    function enqueueApprovedValidatorsKeys(uint64 _keysCount, bytes calldata _calldata)
         external
         returns (
-            uint256 keysCount,
-            bytes memory pubkeys,
+            uint64 enqueuedValidatorsKeysCount,
+            bytes memory publicKeys,
             bytes memory signatures
         )
     {}

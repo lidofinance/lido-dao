@@ -1,20 +1,23 @@
 // SPDX-FileCopyrightText: 2022 Lido <info@lido.fi>
-
 // SPDX-License-Identifier: GPL-3.0
 
-/* See contracts/COMPILERS.md */
+// See contracts/COMPILERS.md
 pragma solidity 0.4.24;
 
-import "@aragon/os/contracts/apps/AragonApp.sol";
-import "@aragon/os/contracts/lib/math/SafeMath.sol";
-import "@aragon/os/contracts/lib/math/SafeMath64.sol";
-import "solidity-bytes-utils/contracts/BytesLib.sol";
+import {AragonApp} from "@aragon/os/contracts/apps/AragonApp.sol";
+import {SafeMath} from "@aragon/os/contracts/lib/math/SafeMath.sol";
+import {SafeMath64} from "@aragon/os/contracts/lib/math/SafeMath64.sol";
+import {UnstructuredStorage} from "@aragon/os/contracts/common/UnstructuredStorage.sol";
+import {BytesLib} from "solidity-bytes-utils/contracts/BytesLib.sol";
 
-import "../interfaces/INodeOperatorsRegistry.sol";
-import "../interfaces/IStakingModule.sol";
-import "../interfaces/IStakingRouter.sol";
-import "../interfaces/IStETH.sol";
+import {IStakingModule} from "../interfaces/IStakingModule.sol";
+import {INodeOperatorsRegistry} from "../interfaces/INodeOperatorsRegistry.sol";
+import {IStETH} from "../interfaces/IStETH.sol";
+
 import "../lib/MemUtils.sol";
+import {Math64} from "../../common/lib/Math64.sol";
+import {MinFirstAllocationStrategy} from "../../common/lib/MinFirstAllocationStrategy.sol";
+import {ValidatorsKeysStats} from "../lib/ValidatorsKeysStats.sol";
 
 /**
  * @title Node Operator registry implementation
@@ -22,13 +25,18 @@ import "../lib/MemUtils.sol";
  * See the comment of `INodeOperatorsRegistry`.
  *
  * NOTE: the code below assumes moderate amount of node operators, i.e. up to `MAX_NODE_OPERATORS_COUNT`.
+
+ * TODO: rename to CuratedValidatorsRegistry
  */
 contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingModule {
     using SafeMath for uint256;
     using SafeMath64 for uint64;
     using UnstructuredStorage for bytes32;
+    using ValidatorsKeysStats for ValidatorsKeysStats.State;
 
-    /// ACL
+    //
+    // ACL
+    //
     bytes32 public constant MANAGE_SIGNING_KEYS = keccak256("MANAGE_SIGNING_KEYS");
     bytes32 public constant ADD_NODE_OPERATOR_ROLE = keccak256("ADD_NODE_OPERATOR_ROLE");
     bytes32 public constant SET_NODE_OPERATOR_ACTIVE_ROLE = keccak256("SET_NODE_OPERATOR_ACTIVE_ROLE");
@@ -36,59 +44,34 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
     bytes32 public constant SET_NODE_OPERATOR_ADDRESS_ROLE = keccak256("SET_NODE_OPERATOR_ADDRESS_ROLE");
     bytes32 public constant SET_NODE_OPERATOR_LIMIT_ROLE = keccak256("SET_NODE_OPERATOR_LIMIT_ROLE");
     bytes32 public constant REPORT_STOPPED_VALIDATORS_ROLE = keccak256("REPORT_STOPPED_VALIDATORS_ROLE");
-    bytes32 public constant ASSIGN_NEXT_KEYS_ROLE = keccak256("ASSIGN_NEXT_KEYS_ROLE");
+    bytes32 public constant ENQUEUE_APPROVED_VALIDATORS_KEYS_ROLE = keccak256("ENQUEUE_APPROVED_VALIDATORS_KEYS_ROLE");
     bytes32 public constant TRIM_UNUSED_KEYS_ROLE = keccak256("TRIM_UNUSED_KEYS_ROLE");
+    bytes32 public constant ACTIVATE_NODE_OPERATOR_ROLE = keccak256("ACTIVATE_NODE_OPERATOR_ROLE");
+    bytes32 public constant DEACTIVATE_NODE_OPERATOR_ROLE = keccak256("DEACTIVATE_NODE_OPERATOR_ROLE");
+    bytes32 public constant REPORT_NODE_OPERATOR_KEYS_EXITED_ROLE = keccak256("REPORT_NODE_OPERATOR_KEYS_EXITED_ROLE");
 
-    uint256 public constant PUBKEY_LENGTH = 48;
-    uint256 public constant SIGNATURE_LENGTH = 96;
+    //
+    // CONSTANTS
+    //
+    uint64 public constant PUBKEY_LENGTH = 48;
+    uint64 public constant SIGNATURE_LENGTH = 96;
     uint256 public constant MAX_NODE_OPERATORS_COUNT = 200;
     uint256 public constant MAX_NODE_OPERATOR_NAME_LENGTH = 255;
-
     uint256 internal constant UINT64_MAX = uint256(uint64(-1));
 
+    //
+    // UNSTRUCTURED STORAGE POSITIONS
+    //
     bytes32 internal constant SIGNING_KEYS_MAPPING_NAME = keccak256("lido.NodeOperatorsRegistry.signingKeysMappingName");
 
     bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.NodeOperatorsRegistry.contractVersion");
 
     bytes32 internal constant STETH_POSITION = keccak256("lido.NodeOperatorsRegistry.stETH");
 
-    /// @dev Node Operator parameters and internal state
-    struct NodeOperator {
-        bool active; // a flag indicating if the operator can participate in further staking and reward distribution
-        address rewardAddress; // Ethereum address on Execution Layer which receives steth rewards for this operator
-        string name; // human-readable name
-        uint64 stakingLimit; // the maximum number of validators to stake for this operator
-        uint64 stoppedValidators; // number of signing keys which stopped validation (e.g. were slashed)
-        uint64 totalSigningKeys; // total amount of signing keys of this operator
-        uint64 usedSigningKeys; // number of signing keys of this operator which were used in deposits to the Ethereum 2
-    }
-
-    /// @dev Memory cache entry used in the assignNextKeys function
-    struct DepositLookupCacheEntry {
-        // Makes no sense to pack types since reading memory is as fast as any op
-        uint256 id;
-        uint256 stakingLimit;
-        uint256 stoppedValidators;
-        uint256 totalSigningKeys;
-        uint256 usedSigningKeys;
-        uint256 initialUsedSigningKeys;
-    }
-
-    /// @dev The cumulative stats of signing keys of all added node operators
-    struct KeysUsageStats {
-        uint64 totalActiveKeys;
-        uint64 totalAvailableKeys;
-    }
-
-    /// @dev Mapping of all node operators. Mapping is used to be able to extend the struct.
-    mapping(uint256 => NodeOperator) internal operators;
-
-    KeysUsageStats internal keysUsageStats;
-
-    // @dev Total number of operators
+    /// @dev Total number of operators
     bytes32 internal constant TOTAL_OPERATORS_COUNT_POSITION = keccak256("lido.NodeOperatorsRegistry.totalOperatorsCount");
 
-    // @dev Cached number of active operators
+    /// @dev Cached number of active operators
     bytes32 internal constant ACTIVE_OPERATORS_COUNT_POSITION = keccak256("lido.NodeOperatorsRegistry.activeOperatorsCount");
 
     /// @dev link to the index of operations with keys
@@ -97,30 +80,85 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
     /// @dev module type
     bytes32 internal constant TYPE_POSITION = keccak256("lido.NodeOperatorsRegistry.type");
 
-    modifier onlyNonZeroAddress(address _a) {
-        require(_a != address(0), "ZERO_ADDRESS");
-        _;
+    bytes32 internal constant TOTAL_VALIDATORS_KEYS_STATS = keccak256("lido.NodeOperatorsRegistry.totalValidatorsKeysStats");
+
+    //
+    // DATA TYPES
+    //
+
+    /// @dev Node Operator parameters and internal state
+    struct NodeOperator {
+        /// @dev Flag indicating if the operator can participate in further staking and reward distribution
+        bool active;
+        /// @dev Ethereum address on Execution Layer which receives steth rewards for this operator
+        address rewardAddress;
+        /// @dev Human-readable name
+        string name;
+        /// @dev Maximum number of keys for this operator to be deposited for all time
+        uint64 approvedValidatorsKeysCount; // previously stakingLimit
+        /// @dev Number of keys in the EXITED state for this operator for all time
+        uint64 exitedValidatorsKeysCount; // previously stoppedValidators
+        /// @dev Total number of keys of this operator for all time
+        uint64 totalValidatorsKeysCount; // totalSigningKeys
+        /// @dev Number of keys of this operator which were in DEPOSITED state for all time
+        uint64 depositedValidatorsKeysCount; // usedSigningKeys
     }
 
-    modifier operatorExists(uint256 _id) {
-        require(_id < getNodeOperatorsCount(), "NODE_OPERATOR_NOT_FOUND");
-        _;
-    }
+    //
+    // STORAGE VARIABLES
+    //
 
-    modifier onlyValidNodeOperatorName(string _name) {
-        require(bytes(_name).length > 0 && bytes(_name).length <= MAX_NODE_OPERATOR_NAME_LENGTH, "NAME_TOO_LONG");
-        _;
-    }
+    /// @dev Mapping of all node operators. Mapping is used to be able to extend the struct.
+    mapping(uint256 => NodeOperator) internal _nodeOperators;
+
+    //
+    // PUBLIC & EXTERNAL METHODS
+    //
 
     function initialize(address _steth, bytes32 _type) public onlyInit {
-        TOTAL_OPERATORS_COUNT_POSITION.setStorageUint256(0);
-        ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(0);
-        KEYS_OP_INDEX_POSITION.setStorageUint256(0);
-
         // Initializations for v1 --> v2
         _initialize_v2(_steth, _type);
-
         initialized();
+    }
+
+    /**
+     * @notice A function to finalize upgrade to v2 (from v1). Can be called only once
+     * @dev Value 1 in CONTRACT_VERSION_POSITION is skipped due to change in numbering
+     * For more details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md
+     */
+    function finalizeUpgrade_v2(address _steth, bytes32 _type) external {
+        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "WRONG_BASE_VERSION");
+        _initialize_v2(_steth, _type);
+        _increaseKeysOpIndex();
+    }
+
+    function _initialize_v2(address _steth, bytes32 _type) internal {
+        require(_steth != address(0), "STETH_ADDRESS_ZERO");
+
+        STETH_POSITION.setStorageAddress(_steth);
+        TYPE_POSITION.setStorageBytes32(_type);
+
+        uint256 totalOperators = getNodeOperatorsCount();
+
+        ValidatorsKeysStats.State memory totalValidatorsKeysStats = _getTotalValidatorsKeysStats();
+        for (uint256 operatorId = 0; operatorId < totalOperators; ++operatorId) {
+            NodeOperator memory operator = _nodeOperators[operatorId];
+
+            _nodeOperators[operatorId].approvedValidatorsKeysCount = Math64.min(
+                operator.totalValidatorsKeysCount,
+                Math64.max(operator.depositedValidatorsKeysCount, operator.approvedValidatorsKeysCount)
+            );
+            totalValidatorsKeysStats.increaseApprovedValidatorsKeysCount(operator.approvedValidatorsKeysCount);
+            totalValidatorsKeysStats.increaseDepositedValidatorsKeysCount(operator.depositedValidatorsKeysCount);
+            totalValidatorsKeysStats.increaseExitedValidatorsKeysCount(operator.exitedValidatorsKeysCount);
+            totalValidatorsKeysStats.increaseTotalValidatorsKeysCount(operator.totalValidatorsKeysCount);
+        }
+        _setTotalValidatorsKeysStats(totalValidatorsKeysStats);
+
+        CONTRACT_VERSION_POSITION.setStorageUint256(2);
+        emit ContractVersionSet(2);
+        emit StethContractSet(_steth);
+        emit StakingModuleTypeSet(_type);
     }
 
     /**
@@ -134,334 +172,274 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         auth(ADD_NODE_OPERATOR_ROLE)
         onlyValidNodeOperatorName(_name)
         onlyNonZeroAddress(_rewardAddress)
-        returns (uint256 id)
+        returns (uint24 id)
     {
         id = getNodeOperatorsCount();
         require(id < MAX_NODE_OPERATORS_COUNT, "MAX_NODE_OPERATORS_COUNT_EXCEEDED");
 
-        TOTAL_OPERATORS_COUNT_POSITION.setStorageUint256(id.add(1));
+        TOTAL_OPERATORS_COUNT_POSITION.setStorageUint256(id + 1);
 
-        NodeOperator storage operator = operators[id];
+        NodeOperator storage operator = _nodeOperators[id];
 
         uint256 activeOperatorsCount = getActiveNodeOperatorsCount();
-        ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(activeOperatorsCount.add(1));
+        ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(activeOperatorsCount + 1);
 
         operator.active = true;
         operator.name = _name;
         operator.rewardAddress = _rewardAddress;
-        operator.stakingLimit = 0;
 
         emit NodeOperatorAdded(id, _name, _rewardAddress, 0);
 
         return id;
     }
 
-    /**
-     * @notice `_active ? 'Enable' : 'Disable'` the node operator #`_id`
-     */
-    function setNodeOperatorActive(uint256 _id, bool _active)
-        external
-        authP(SET_NODE_OPERATOR_ACTIVE_ROLE, arr(_id, _active ? uint256(1) : uint256(0)))
-        operatorExists(_id)
-    {
-        require(operators[_id].active != _active, "NODE_OPERATOR_ACTIVITY_ALREADY_SET");
+    function getNodeOperatorIsActive(uint24 _nodeOperatorId) external view returns (bool) {
+        return _nodeOperators[_nodeOperatorId].active;
+    }
 
+    function activateNodeOperator(uint24 _nodeOperatorId)
+        external
+        onlyExistedNodeOperator(_nodeOperatorId)
+        auth(ACTIVATE_NODE_OPERATOR_ROLE)
+    {
+        NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
+        require(!nodeOperator.active, "NODE_OPERATOR_ALREADY_ACTIVATED");
+
+        nodeOperator.active = true;
         _increaseKeysOpIndex();
 
-        operators[_id].active = _active;
+        emit NodeOperatorActivated(_nodeOperatorId);
+    }
 
-        uint256 activeOperatorsCount = getActiveNodeOperatorsCount();
-        if (_active) {
-            ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(activeOperatorsCount.add(1));
-        } else {
-            ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(activeOperatorsCount.sub(1));
+    function deactivateNodeOperator(uint24 _nodeOperatorId)
+        external
+        onlyExistedNodeOperator(_nodeOperatorId)
+        auth(DEACTIVATE_NODE_OPERATOR_ROLE)
+    {
+        NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
+        require(nodeOperator.active, "NODE_OPERATOR_ALREADY_DEACTIVATED");
 
-            _trimUnusedNodeOperatorKeys(_id);
-            _updateTotalAvailableKeysCount();
+        nodeOperator.active = false;
+        _increaseKeysOpIndex();
+
+        emit NodeOperatorDeactivated(_nodeOperatorId);
+
+        uint64 approvedValidatorsKeysCount = nodeOperator.approvedValidatorsKeysCount;
+        uint64 depositedValidatorsKeysCount = nodeOperator.depositedValidatorsKeysCount;
+
+        // reset approved keys count to the deposited validators count
+        if (approvedValidatorsKeysCount > depositedValidatorsKeysCount) {
+            nodeOperator.approvedValidatorsKeysCount = depositedValidatorsKeysCount;
+            emit ApprovedValidatorsKeysCountChanged(_nodeOperatorId, depositedValidatorsKeysCount);
+
+            ValidatorsKeysStats.State memory totalValidatorStats = _getTotalValidatorsKeysStats();
+            totalValidatorStats.decreaseApprovedValidatorsKeysCount(approvedValidatorsKeysCount - depositedValidatorsKeysCount);
+            _setTotalValidatorsKeysStats(totalValidatorStats);
         }
-
-        emit NodeOperatorActiveSet(_id, _active);
     }
 
     /**
-     * @notice Change human-readable name of the node operator #`_id` to `_name`
+     * @notice Change human-readable name of the node operator #`_nodeOperatorId` to `_name`
      */
-    function setNodeOperatorName(uint256 _id, string _name)
+    function setNodeOperatorName(uint24 _nodeOperatorId, string _name)
         external
-        authP(SET_NODE_OPERATOR_NAME_ROLE, arr(_id))
-        operatorExists(_id)
+        onlyExistedNodeOperator(_nodeOperatorId)
         onlyValidNodeOperatorName(_name)
+        authP(SET_NODE_OPERATOR_NAME_ROLE, arr(uint256(_nodeOperatorId)))
     {
-        require(keccak256(operators[_id].name) != keccak256(_name), "NODE_OPERATOR_NAME_IS_THE_SAME");
-        operators[_id].name = _name;
-        emit NodeOperatorNameSet(_id, _name);
+        require(keccak256(_nodeOperators[_nodeOperatorId].name) != keccak256(_name), "NODE_OPERATOR_NAME_IS_THE_SAME");
+        _nodeOperators[_nodeOperatorId].name = _name;
+        emit NodeOperatorNameSet(_nodeOperatorId, _name);
     }
 
     /**
-     * @notice Change reward address of the node operator #`_id` to `_rewardAddress`
+     * @notice Change reward address of the node operator #`_nodeOperatorId` to `_rewardAddress`
      */
-    function setNodeOperatorRewardAddress(uint256 _id, address _rewardAddress)
+    function setNodeOperatorRewardAddress(uint24 _nodeOperatorId, address _rewardAddress)
         external
-        authP(SET_NODE_OPERATOR_ADDRESS_ROLE, arr(_id, uint256(_rewardAddress)))
-        operatorExists(_id)
+        onlyExistedNodeOperator(_nodeOperatorId)
         onlyNonZeroAddress(_rewardAddress)
+        authP(SET_NODE_OPERATOR_ADDRESS_ROLE, arr(uint256(_nodeOperatorId), uint256(_rewardAddress)))
     {
-        require(operators[_id].rewardAddress != _rewardAddress, "NODE_OPERATOR_ADDRESS_IS_THE_SAME");
-        operators[_id].rewardAddress = _rewardAddress;
-        emit NodeOperatorRewardAddressSet(_id, _rewardAddress);
+        require(_nodeOperators[_nodeOperatorId].rewardAddress != _rewardAddress, "NODE_OPERATOR_ADDRESS_IS_THE_SAME");
+        _nodeOperators[_nodeOperatorId].rewardAddress = _rewardAddress;
+        emit NodeOperatorRewardAddressSet(_nodeOperatorId, _rewardAddress);
     }
 
     /**
-     * @notice Set the maximum number of validators to stake for the node operator #`_id` to `_stakingLimit`
+     * @notice Set the maximum number of validators to stake for the node operator #`_nodeOperatorId` to `_stakingLimit`
      */
-    function setNodeOperatorStakingLimit(uint256 _id, uint64 _stakingLimit)
+    function setNodeOperatorApprovedValidatorsKeysCount(uint24 _nodeOperatorId, uint64 _approvedValidatorsKeysCount)
         external
-        authP(SET_NODE_OPERATOR_LIMIT_ROLE, arr(_id, uint256(_stakingLimit)))
-        operatorExists(_id)
+        authP(SET_NODE_OPERATOR_LIMIT_ROLE, arr(uint256(_nodeOperatorId), uint256(_approvedValidatorsKeysCount)))
+        onlyExistedNodeOperator(_nodeOperatorId)
     {
-        require(operators[_id].stakingLimit != _stakingLimit, "NODE_OPERATOR_STAKING_LIMIT_IS_THE_SAME");
-        _increaseKeysOpIndex();
-        _setNodeOperatorStakingLimit(_id, _stakingLimit);
-    }
+        NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
 
-    /**
-     * @notice Report `_stoppedIncrement` more stopped validators of the node operator #`_id`
-     */
-    function reportStoppedValidators(uint256 _id, uint64 _stoppedIncrement)
-        external
-        authP(REPORT_STOPPED_VALIDATORS_ROLE, arr(_id, uint256(_stoppedIncrement)))
-        operatorExists(_id)
-    {
-        require(0 != _stoppedIncrement, "EMPTY_VALUE");
+        require(nodeOperator.active, "NODE_OPERATOR_DEACTIVATED");
 
-        uint64 newStoppedValidatorsCount = operators[_id].stoppedValidators.add(_stoppedIncrement);
-        require(newStoppedValidatorsCount <= operators[_id].usedSigningKeys, "STOPPED_MORE_THAN_LAUNCHED");
+        uint64 totalValidatorsKeysCount = nodeOperator.totalValidatorsKeysCount;
+        uint64 depositedValidatorsKeysCount = nodeOperator.depositedValidatorsKeysCount;
+        uint64 approvedValidatorsCountBefore = nodeOperator.approvedValidatorsKeysCount;
 
-        operators[_id].stoppedValidators = newStoppedValidatorsCount;
+        uint64 approvedValidatorsCountAfter = Math64.min(
+            totalValidatorsKeysCount,
+            Math64.max(_approvedValidatorsKeysCount, depositedValidatorsKeysCount)
+        );
 
-        uint64 currentStakingLimit = operators[_id].stakingLimit;
-        if (currentStakingLimit > 0) {
-            uint64 stakingLimitDecrease = currentStakingLimit > _stoppedIncrement ? _stoppedIncrement : currentStakingLimit;
-            _setNodeOperatorStakingLimit(_id, operators[_id].stakingLimit.sub(stakingLimitDecrease));
+        if (approvedValidatorsCountAfter == approvedValidatorsCountBefore) {
+            return;
         }
 
-        _setTotalActiveKeys(keysUsageStats.totalActiveKeys.sub(_stoppedIncrement));
+        nodeOperator.approvedValidatorsKeysCount = approvedValidatorsCountAfter;
 
-        emit NodeOperatorTotalStoppedValidatorsReported(_id, newStoppedValidatorsCount);
+        ValidatorsKeysStats.State memory totalValidatorKeysStats = _getTotalValidatorsKeysStats();
+        if (approvedValidatorsCountAfter > approvedValidatorsCountBefore) {
+            totalValidatorKeysStats.increaseApprovedValidatorsKeysCount(approvedValidatorsCountAfter - approvedValidatorsCountBefore);
+        } else {
+            totalValidatorKeysStats.decreaseApprovedValidatorsKeysCount(approvedValidatorsCountBefore - approvedValidatorsCountAfter);
+        }
+        _setTotalValidatorsKeysStats(totalValidatorKeysStats);
+        _increaseKeysOpIndex();
+
+        emit ApprovedValidatorsKeysCountChanged(_nodeOperatorId, approvedValidatorsCountAfter);
     }
 
     /**
-     * @notice Remove unused signing keys
+     * @notice Report `_stoppedIncrement` more stopped validators of the node operator #`_nodeOperatorId`
+        TODO:: Add method to unsafe tune node operator
+     */
+    function updateNodeOperatorExitedValidatorsCount(uint24 _nodeOperatorId, uint64 _exitedValidatorsCount)
+        external
+        onlyExistedNodeOperator(_nodeOperatorId)
+        auth(REPORT_NODE_OPERATOR_KEYS_EXITED_ROLE)
+    {
+        uint64 exitedValidatorsCountBefore = _nodeOperators[_nodeOperatorId].exitedValidatorsKeysCount;
+        uint64 depositedValidatorsKeysCount = _nodeOperators[_nodeOperatorId].depositedValidatorsKeysCount;
+
+        if (exitedValidatorsCountBefore == _exitedValidatorsCount) {
+            return;
+        }
+
+        require(_exitedValidatorsCount <= depositedValidatorsKeysCount, "INVALID_EXITED_VALIDATORS_COUNT");
+        require(_exitedValidatorsCount > exitedValidatorsCountBefore, "EXITED_VALIDATORS_COUNT_DECREASED");
+
+        _nodeOperators[_nodeOperatorId].exitedValidatorsKeysCount = _exitedValidatorsCount;
+
+        ValidatorsKeysStats.State memory totalValidatorsKeysStats = _getTotalValidatorsKeysStats();
+        totalValidatorsKeysStats.increaseExitedValidatorsKeysCount(_exitedValidatorsCount - exitedValidatorsCountBefore);
+        _setTotalValidatorsKeysStats(totalValidatorsKeysStats);
+
+        emit ExitedValidatorsKeysCountChanged(_nodeOperatorId, _exitedValidatorsCount);
+    }
+
+    /**
+     * @notice Remove unused keys
      * @dev Supposed to be called externally on withdrawals credentials change
      */
-    function trimUnusedKeys() external auth(TRIM_UNUSED_KEYS_ROLE) {
-        uint256 trimmedKeys = 0;
-        uint256 length = getNodeOperatorsCount();
-        for (uint256 operatorId = 0; operatorId < length; ++operatorId) {
-            trimmedKeys += _trimUnusedNodeOperatorKeys(operatorId);
+    function trimUnusedValidatorsKeys() external auth(TRIM_UNUSED_KEYS_ROLE) {
+        uint64 trimmedKeysCount = 0;
+        uint64 totalTrimmedKeysCount = 0;
+        uint64 approvedValidatorsDecrease = 0;
+        uint24 nodeOperatorsCount = getNodeOperatorsCount();
+        for (uint24 _nodeOperatorId = 0; _nodeOperatorId < nodeOperatorsCount; ++_nodeOperatorId) {
+            NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
+            uint64 totalValidatorsKeysCount = nodeOperator.totalValidatorsKeysCount;
+            uint64 approvedValidatorsKeysCount = nodeOperator.approvedValidatorsKeysCount;
+            uint64 depositedValidatorsKeysCount = nodeOperator.depositedValidatorsKeysCount;
+
+            if (depositedValidatorsKeysCount == totalValidatorsKeysCount) {
+                return;
+            }
+
+            totalTrimmedKeysCount += totalValidatorsKeysCount - depositedValidatorsKeysCount;
+            approvedValidatorsDecrease += approvedValidatorsKeysCount - depositedValidatorsKeysCount;
+
+            nodeOperator.totalValidatorsKeysCount = depositedValidatorsKeysCount;
+            nodeOperator.approvedValidatorsKeysCount = depositedValidatorsKeysCount;
+
+            emit NodeOperatorUnusedValidatorsKeysTrimmed(_nodeOperatorId, trimmedKeysCount);
+            emit TotalValidatorsKeysCountChanged(_nodeOperatorId, depositedValidatorsKeysCount);
+            emit ApprovedValidatorsKeysCountChanged(_nodeOperatorId, depositedValidatorsKeysCount);
+            // TODO: Legacy events
         }
-        if (trimmedKeys > 0) {
-            _updateTotalAvailableKeysCount();
+        if (totalTrimmedKeysCount > 0) {
+            ValidatorsKeysStats.State memory totalValidatorsKeysStats = _getTotalValidatorsKeysStats();
+            totalValidatorsKeysStats.decreaseTotalValidatorsKeysCount(totalTrimmedKeysCount);
+            totalValidatorsKeysStats.decreaseApprovedValidatorsKeysCount(approvedValidatorsDecrease);
+            _setTotalValidatorsKeysStats(totalValidatorsKeysStats);
             _increaseKeysOpIndex();
         }
     }
 
     /**
-     * @notice Add `_quantity` validator signing keys of operator #`_id` to the set of usable keys. Concatenated keys are: `_pubkeys`. Can be done by the DAO in question by using the designated rewards address.
+     * @notice Add `_keysCount` validator keys of operator #`_nodeOperatorId` to the set of usable keys. Concatenated keys are: `_publicKeys`. Can be done by the DAO in question by using the designated rewards address.
      * @dev Along with each key the DAO has to provide a signatures for the
      *      (pubkey, withdrawal_credentials, 32000000000) message.
      *      Given that information, the contract'll be able to call
      *      deposit_contract.deposit on-chain.
-     * @param _operator_id Node Operator id
-     * @param _quantity Number of signing keys provided
-     * @param _pubkeys Several concatenated validator signing keys
+     * @param _nodeOperatorId Node Operator id
+     * @param _keysCount Number of keys provided
+     * @param _publicKeys Several concatenated validator keys
      * @param _signatures Several concatenated signatures for (pubkey, withdrawal_credentials, 32000000000) messages
      */
-    function addSigningKeys(
-        uint256 _operator_id,
-        uint256 _quantity,
-        bytes _pubkeys,
+    function addValidatorsKeys(
+        uint24 _nodeOperatorId,
+        uint64 _keysCount,
+        bytes _publicKeys,
         bytes _signatures
-    ) external authP(MANAGE_SIGNING_KEYS, arr(_operator_id)) {
-        _addSigningKeys(_operator_id, _quantity, _pubkeys, _signatures);
+    ) external authP(MANAGE_SIGNING_KEYS, arr(uint256(_nodeOperatorId))) {
+        _addValidatorsKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
     }
 
     /**
-     * @notice Add `_quantity` validator signing keys of operator #`_id` to the set of usable keys. Concatenated keys are: `_pubkeys`. Can be done by node operator in question by using the designated rewards address.
+     * @notice Add `_keysCount` validator keys of operator #`_nodeOperatorId` to the set of usable keys. Concatenated keys are: `_publicKeys`. Can be done by node operator in question by using the designated rewards address.
      * @dev Along with each key the DAO has to provide a signatures for the
      *      (pubkey, withdrawal_credentials, 32000000000) message.
      *      Given that information, the contract'll be able to call
      *      deposit_contract.deposit on-chain.
-     * @param _operator_id Node Operator id
-     * @param _quantity Number of signing keys provided
-     * @param _pubkeys Several concatenated validator signing keys
+     * @param _nodeOperatorId Node Operator id
+     * @param _keysCount Number of keys provided
+     * @param _publicKeys Several concatenated validator keys
      * @param _signatures Several concatenated signatures for (pubkey, withdrawal_credentials, 32000000000) messages
      */
-    function addSigningKeysOperatorBH(
-        uint256 _operator_id,
-        uint256 _quantity,
-        bytes _pubkeys,
+    function addValidatorsKeysByNodeOperator(
+        uint24 _nodeOperatorId,
+        uint64 _keysCount,
+        bytes _publicKeys,
         bytes _signatures
     ) external {
-        require(msg.sender == operators[_operator_id].rewardAddress, "APP_AUTH_FAILED");
-        _addSigningKeys(_operator_id, _quantity, _pubkeys, _signatures);
+        require(msg.sender == _nodeOperators[_nodeOperatorId].rewardAddress, "APP_AUTH_FAILED");
+        _addValidatorsKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
     }
 
     /**
-     * @notice Removes a validator signing key #`_index` of operator #`_id` from the set of usable keys. Executed on behalf of DAO.
-     * @param _operator_id Node Operator id
-     * @param _index Index of the key, starting with 0
+     * @notice Removes an #`_keysCount` of validator keys starting from #`_fromIndex` of operator #`_nodeOperatorId` usable keys. Executed on behalf of DAO.
+     * @param _nodeOperatorId Node Operator id
+     * @param _fromIndex Index of the key, starting with 0
+     * @param _keysCount Number of keys to remove
      */
-    function removeSigningKey(uint256 _operator_id, uint256 _index) external authP(MANAGE_SIGNING_KEYS, arr(_operator_id)) {
-        _removeSigningKey(_operator_id, _index);
-        _updateTotalAvailableKeysCount();
+    function removeUnusedValidatorsKeys(
+        uint24 _nodeOperatorId,
+        uint64 _fromIndex,
+        uint64 _keysCount
+    ) external authP(MANAGE_SIGNING_KEYS, arr(uint256(_nodeOperatorId))) {
+        _removeUnusedValidatorsKeys(_nodeOperatorId, _fromIndex, _keysCount);
     }
 
     /**
-     * @notice Removes an #`_amount` of validator signing keys starting from #`_index` of operator #`_id` usable keys. Executed on behalf of DAO.
-     * @param _operator_id Node Operator id
-     * @param _index Index of the key, starting with 0
-     * @param _amount Number of keys to remove
+     * @notice Removes an #`_keysCount` of validator keys starting from #`_fromIndex` of operator #`_nodeOperatorId` usable keys. Executed on behalf of Node Operator.
+     * @param _nodeOperatorId Node Operator id
+     * @param _fromIndex Index of the key, starting with 0
+     * @param _keysCount Number of keys to remove
      */
-    function removeSigningKeys(
-        uint256 _operator_id,
-        uint256 _index,
-        uint256 _amount
-    ) external authP(MANAGE_SIGNING_KEYS, arr(_operator_id)) {
-        // removing from the last index to the highest one, so we won't get outside the array
-        for (uint256 i = _index.add(_amount); i > _index; --i) {
-            _removeSigningKey(_operator_id, i - 1);
-        }
-        _updateTotalAvailableKeysCount();
-    }
-
-    /**
-     * @notice Removes a validator signing key #`_index` of operator #`_id` from the set of usable keys. Executed on behalf of Node Operator.
-     * @param _operator_id Node Operator id
-     * @param _index Index of the key, starting with 0
-     */
-    function removeSigningKeyOperatorBH(uint256 _operator_id, uint256 _index) external {
-        require(msg.sender == operators[_operator_id].rewardAddress, "APP_AUTH_FAILED");
-        _removeSigningKey(_operator_id, _index);
-        _updateTotalAvailableKeysCount();
-    }
-
-    /**
-     * @notice Removes an #`_amount` of validator signing keys starting from #`_index` of operator #`_id` usable keys. Executed on behalf of Node Operator.
-     * @param _operator_id Node Operator id
-     * @param _index Index of the key, starting with 0
-     * @param _amount Number of keys to remove
-     */
-    function removeSigningKeysOperatorBH(
-        uint256 _operator_id,
-        uint256 _index,
-        uint256 _amount
+    function removeUnusedValidatorsKeysByNodeOperator(
+        uint24 _nodeOperatorId,
+        uint64 _fromIndex,
+        uint64 _keysCount
     ) external {
-        require(msg.sender == operators[_operator_id].rewardAddress, "APP_AUTH_FAILED");
-        // removing from the last index to the highest one, so we won't get outside the array
-        for (uint256 i = _index.add(_amount); i > _index; --i) {
-            _removeSigningKey(_operator_id, i - 1);
-        }
-        _updateTotalAvailableKeysCount();
-    }
-
-    /**
-     * @notice Selects and returns at most `_numKeys` signing keys (as well as the corresponding
-     *         signatures) from the set of active keys and marks the selected keys as used.
-     *         May only be called by the StakingRouter contract.
-     *
-     * @param _numKeys The number of keys to select. The actual number of selected keys may be less
-     *        due to the lack of active keys.
-     */
-    function _assignNextSigningKeys(uint256 _numKeys)
-        internal
-        returns (
-            uint256 numAssignedKeys,
-            bytes memory pubkeys,
-            bytes memory signatures
-        )
-    {
-        // Memory is very cheap, although you don't want to grow it too much
-        DepositLookupCacheEntry[] memory cache = _loadOperatorCache();
-        if (0 == cache.length) return (0, new bytes(0), new bytes(0));
-
-        DepositLookupCacheEntry memory entry;
-
-        while (numAssignedKeys < _numKeys) {
-            // Finding the best suitable operator
-            uint256 bestOperatorIdx = cache.length; // 'not found' flag
-            uint256 smallestStake;
-            // The loop is lightweight comparing to an ether transfer and .deposit invocation
-            for (uint256 idx = 0; idx < cache.length; ++idx) {
-                entry = cache[idx];
-
-                assert(entry.usedSigningKeys <= entry.totalSigningKeys);
-                if (entry.usedSigningKeys == entry.totalSigningKeys) continue;
-
-                uint256 stake = entry.usedSigningKeys.sub(entry.stoppedValidators);
-                if (stake + 1 > entry.stakingLimit) continue;
-
-                if (bestOperatorIdx == cache.length || stake < smallestStake) {
-                    bestOperatorIdx = idx;
-                    smallestStake = stake;
-                }
-            }
-
-            if (bestOperatorIdx == cache.length) {
-                // not found
-                break;
-            }
-
-            entry = cache[bestOperatorIdx];
-            assert(entry.usedSigningKeys < UINT64_MAX);
-
-            ++entry.usedSigningKeys;
-            ++numAssignedKeys;
-        }
-
-        if (numAssignedKeys == 0) {
-            return (0, new bytes(0), new bytes(0));
-        }
-
-        if (numAssignedKeys > 1) {
-            // we can allocate without zeroing out since we're going to rewrite the whole array
-            pubkeys = MemUtils.unsafeAllocateBytes(numAssignedKeys * PUBKEY_LENGTH);
-            signatures = MemUtils.unsafeAllocateBytes(numAssignedKeys * SIGNATURE_LENGTH);
-        }
-
-        uint256 numLoadedKeys = 0;
-
-        for (uint256 i = 0; i < cache.length; ++i) {
-            entry = cache[i];
-
-            if (entry.usedSigningKeys == entry.initialUsedSigningKeys) {
-                continue;
-            }
-
-            operators[entry.id].usedSigningKeys = uint64(entry.usedSigningKeys);
-
-            for (uint256 keyIndex = entry.initialUsedSigningKeys; keyIndex < entry.usedSigningKeys; ++keyIndex) {
-                (bytes memory pubkey, bytes memory signature) = _loadSigningKey(entry.id, keyIndex);
-                if (numAssignedKeys == 1) {
-                    _increaseKeysOpIndex();
-
-                    return (1, pubkey, signature);
-                } else {
-                    MemUtils.copyBytes(pubkey, pubkeys, numLoadedKeys * PUBKEY_LENGTH);
-                    MemUtils.copyBytes(signature, signatures, numLoadedKeys * SIGNATURE_LENGTH);
-                    ++numLoadedKeys;
-                }
-            }
-
-            if (numLoadedKeys == numAssignedKeys) {
-                break;
-            }
-        }
-
-        _increaseKeysOpIndex(); // numAssignedKeys is guaranteed to be > 0 here
-        assert(numLoadedKeys == numAssignedKeys);
-
-        return (numAssignedKeys, pubkeys, signatures);
+        require(msg.sender == _nodeOperators[_nodeOperatorId].rewardAddress, "APP_AUTH_FAILED");
+        _removeUnusedValidatorsKeys(_nodeOperatorId, _fromIndex, _keysCount);
     }
 
     /**
@@ -476,23 +454,23 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         shares = new uint256[](activeCount);
         uint256 idx = 0;
 
-        uint256 activeValidatorsTotal = 0;
+        uint256 totalActiveValidatorsCount = 0;
         for (uint256 operatorId = 0; operatorId < nodeOperatorCount; ++operatorId) {
-            NodeOperator storage operator = operators[operatorId];
-            if (!operator.active) continue;
+            NodeOperator storage nodeOperator = _nodeOperators[operatorId];
+            if (!nodeOperator.active) continue;
 
-            uint256 activeValidators = operator.usedSigningKeys.sub(operator.stoppedValidators);
-            activeValidatorsTotal = activeValidatorsTotal.add(activeValidators);
+            uint256 activeValidatorsCount = nodeOperator.depositedValidatorsKeysCount.sub(nodeOperator.exitedValidatorsKeysCount);
+            totalActiveValidatorsCount = totalActiveValidatorsCount.add(activeValidatorsCount);
 
-            recipients[idx] = operator.rewardAddress;
-            shares[idx] = activeValidators;
+            recipients[idx] = nodeOperator.rewardAddress;
+            shares[idx] = activeValidatorsCount;
 
             ++idx;
         }
 
-        if (activeValidatorsTotal == 0) return (recipients, shares);
+        if (totalActiveValidatorsCount == 0) return (recipients, shares);
 
-        uint256 perValidatorReward = _totalRewardShares.div(activeValidatorsTotal);
+        uint256 perValidatorReward = _totalRewardShares.div(totalActiveValidatorsCount);
 
         for (idx = 0; idx < activeCount; ++idx) {
             shares[idx] = shares[idx].mul(perValidatorReward);
@@ -504,19 +482,19 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
     /**
      * @notice Returns number of active node operators
      */
-    function getActiveNodeOperatorsCount() public view returns (uint256) {
-        return ACTIVE_OPERATORS_COUNT_POSITION.getStorageUint256();
+    function getActiveNodeOperatorsCount() public view returns (uint24) {
+        return uint24(ACTIVE_OPERATORS_COUNT_POSITION.getStorageUint256());
     }
 
     /**
      * @notice Returns the n-th node operator
-     * @param _id Node Operator id
+     * @param _nodeOperatorId Node Operator id
      * @param _fullInfo If true, name will be returned as well
      */
-    function getNodeOperator(uint256 _id, bool _fullInfo)
+    function getNodeOperator(uint256 _nodeOperatorId, bool _fullInfo)
         external
         view
-        operatorExists(_id)
+        onlyExistedNodeOperator(_nodeOperatorId)
         returns (
             bool active,
             string name,
@@ -527,89 +505,105 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
             uint64 usedSigningKeys
         )
     {
-        NodeOperator storage operator = operators[_id];
+        NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
 
-        active = operator.active;
-        name = _fullInfo ? operator.name : ""; // reading name is 2+ SLOADs
-        rewardAddress = operator.rewardAddress;
-        stakingLimit = operator.stakingLimit;
-        stoppedValidators = operator.stoppedValidators;
-        totalSigningKeys = operator.totalSigningKeys;
-        usedSigningKeys = operator.usedSigningKeys;
+        active = nodeOperator.active;
+        name = _fullInfo ? nodeOperator.name : ""; // reading name is 2+ SLOADs
+        rewardAddress = nodeOperator.rewardAddress;
+
+        stakingLimit = nodeOperator.approvedValidatorsKeysCount;
+        stoppedValidators = nodeOperator.exitedValidatorsKeysCount;
+        totalSigningKeys = nodeOperator.totalValidatorsKeysCount;
+        usedSigningKeys = nodeOperator.depositedValidatorsKeysCount;
+    }
+
+    function getNodeOperatorValidatorsStats(uint24 _nodeOperatorId)
+        external
+        view
+        returns (
+            uint64 exitedValidatorsKeysCount,
+            uint64 depositedValidatorsKeysCount,
+            uint64 approvedValidatorsKeysCount,
+            uint64 totalValidatorsKeysCount
+        )
+    {
+        NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
+
+        exitedValidatorsKeysCount = nodeOperator.exitedValidatorsKeysCount;
+        approvedValidatorsKeysCount = nodeOperator.approvedValidatorsKeysCount;
+        depositedValidatorsKeysCount = nodeOperator.depositedValidatorsKeysCount;
+        totalValidatorsKeysCount = nodeOperator.totalValidatorsKeysCount;
     }
 
     /**
-     * @notice Returns total number of signing keys of the node operator #`_operator_id`
+     * @notice Return the initialized version of this contract starting from 0
      */
-    function getTotalSigningKeyCount(uint256 _operator_id) external view operatorExists(_operator_id) returns (uint256) {
-        return operators[_operator_id].totalSigningKeys;
+    function getVersion() external view returns (uint256) {
+        return CONTRACT_VERSION_POSITION.getStorageUint256();
     }
 
     /**
-     * @notice Returns number of usable signing keys of the node operator #`_operator_id`
-     */
-    function getUnusedSigningKeyCount(uint256 _operator_id) external view operatorExists(_operator_id) returns (uint256) {
-        return operators[_operator_id].totalSigningKeys.sub(operators[_operator_id].usedSigningKeys);
-    }
-
-    /**
-     * @notice Returns n-th signing key of the node operator #`_operator_id`
-     * @param _operator_id Node Operator id
+     * @notice Returns n-th key of the node operator #`_nodeOperatorId`
+     * @param _nodeOperatorId Node Operator id
      * @param _index Index of the key, starting with 0
      * @return key Key
      * @return depositSignature Signature needed for a deposit_contract.deposit call
      * @return used Flag indication if the key was used in the staking
      */
-    function getSigningKey(uint256 _operator_id, uint256 _index)
+    function getNodeOperatorValidatorKey(uint256 _nodeOperatorId, uint256 _index)
         external
         view
-        operatorExists(_operator_id)
+        onlyExistedNodeOperator(_nodeOperatorId)
         returns (
             bytes key,
             bytes depositSignature,
             bool used
         )
     {
-        require(_index < operators[_operator_id].totalSigningKeys, "KEY_NOT_FOUND");
+        NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
+        require(_index < nodeOperator.totalValidatorsKeysCount, "KEY_NOT_FOUND");
 
-        (bytes memory key_, bytes memory signature) = _loadSigningKey(_operator_id, _index);
+        (bytes memory key_, bytes memory signature) = _loadSigningKey(_nodeOperatorId, _index);
 
-        return (key_, signature, _index < operators[_operator_id].usedSigningKeys);
+        return (key_, signature, _index < nodeOperator.depositedValidatorsKeysCount);
     }
 
-    function getSigningKeys(
-        uint256 _operator_id,
+    function getNodeOperatorValidatorsKeys(
+        uint256 _nodeOperatorId,
         uint256 _offset,
         uint256 _limit
     )
         external
         view
-        operatorExists(_operator_id)
+        onlyExistedNodeOperator(_nodeOperatorId)
         returns (
             bytes memory pubkeys,
             bytes memory signatures,
             bool[] memory used
         )
     {
-        require(_offset.add(_limit) <= operators[_operator_id].totalSigningKeys, "OUT_OF_RANGE");
+        NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
+        require(_offset.add(_limit) <= nodeOperator.totalValidatorsKeysCount, "OUT_OF_RANGE");
 
         pubkeys = MemUtils.unsafeAllocateBytes(_limit.mul(PUBKEY_LENGTH));
         signatures = MemUtils.unsafeAllocateBytes(_limit.mul(SIGNATURE_LENGTH));
         used = new bool[](_limit);
 
         for (uint256 index = 0; index < _limit; index++) {
-            (bytes memory pubkey, bytes memory signature) = _loadSigningKey(_operator_id, _offset.add(index));
+            (bytes memory pubkey, bytes memory signature) = _loadSigningKey(_nodeOperatorId, _offset.add(index));
             MemUtils.copyBytes(pubkey, pubkeys, index.mul(PUBKEY_LENGTH));
             MemUtils.copyBytes(signature, signatures, index.mul(SIGNATURE_LENGTH));
-            used[index] = (_offset.add(index)) < operators[_operator_id].usedSigningKeys;
+            used[index] = (_offset.add(index)) < nodeOperator.depositedValidatorsKeysCount;
         }
     }
 
     /**
      * @notice Returns total number of node operators
      */
-    function getNodeOperatorsCount() public view returns (uint256) {
-        return TOTAL_OPERATORS_COUNT_POSITION.getStorageUint256();
+    function getNodeOperatorsCount() public view returns (uint24) {
+        uint256 res = TOTAL_OPERATORS_COUNT_POSITION.getStorageUint256();
+        assert(res <= uint256(uint24(-1)));
+        return uint24(res);
     }
 
     /**
@@ -620,8 +614,161 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
      *   4. a node operator was activated/deactivated. Activation or deactivation of node operator
      *      might lead to usage of unvalidated keys in the _assignNextSigningKeys method.
      */
-    function getKeysOpIndex() public view returns (uint256) {
+    function getValidatorsKeysNonce() public view returns (uint256) {
         return KEYS_OP_INDEX_POSITION.getStorageUint256();
+    }
+
+    function getType() external view returns (bytes32) {
+        return TYPE_POSITION.getStorageBytes32();
+    }
+
+    function getValidatorsStats()
+        external
+        view
+        returns (
+            uint64 exitedValidatorsKeysCount,
+            uint64 depositedValidatorsKeysCount,
+            uint64 approvedValidatorsKeysCount,
+            uint64 totalValidatorsKeysCount
+        )
+    {
+        ValidatorsKeysStats.State memory totalValidatorsKeysStats = _getTotalValidatorsKeysStats();
+
+        depositedValidatorsKeysCount = totalValidatorsKeysStats.depositedValidatorsKeysCount;
+        exitedValidatorsKeysCount = totalValidatorsKeysStats.exitedValidatorsKeysCount;
+        approvedValidatorsKeysCount = totalValidatorsKeysStats.approvedValidatorsKeysCount;
+        totalValidatorsKeysCount = totalValidatorsKeysStats.totalValidatorsKeysCount;
+    }
+
+    // TODO: note that called by oracle (add this method to the end of oracle report call)
+    function distributeRewards() external returns (uint256 distributed) {
+        IStETH stETH = IStETH(STETH_POSITION.getStorageAddress());
+
+        uint256 sharesToDistribute = stETH.sharesOf(address(this));
+        assert(sharesToDistribute > 0);
+
+        (address[] memory recipients, uint256[] memory shares) = getRewardsDistribution(sharesToDistribute);
+
+        assert(recipients.length == shares.length);
+
+        distributed = 0;
+        for (uint256 idx = 0; idx < recipients.length; ++idx) {
+            stETH.transferShares(recipients[idx], shares[idx]);
+            distributed = distributed.add(shares[idx]);
+            emit RewardsDistributedInShares(idx, shares[idx]);
+        }
+    }
+
+    // TODO:: gas usage
+    // TODO:: acceptance tests
+    // TODO:: auditors check equivalence and ask opinion about performance
+    function enqueueApprovedValidatorsKeys(uint64 _keysCount, bytes)
+        external
+        auth(ENQUEUE_APPROVED_VALIDATORS_KEYS_ROLE)
+        returns (
+            uint64 enqueuedValidatorsKeysCount,
+            bytes memory publicKeys,
+            bytes memory signatures
+        )
+    {
+        uint64 activeNodeOperatorsCount = getActiveNodeOperatorsCount();
+        uint24[] memory activeNodeOperatorIds = new uint24[](activeNodeOperatorsCount);
+        uint256[] memory activeValidatorsKeysCountsAfter = new uint256[](activeNodeOperatorsCount);
+        uint256[] memory activeValidatorsKeysCountsBefore = new uint256[](activeNodeOperatorsCount);
+        uint256[] memory depositedValidatorsKeysLimits = new uint256[](activeNodeOperatorsCount);
+
+        uint24 activeNodeOperatorIndex;
+        uint64 nodeOperatorsCount = getNodeOperatorsCount();
+        for (uint24 nodeOperatorId = 0; nodeOperatorId < nodeOperatorsCount; ++nodeOperatorId) {
+            NodeOperator storage nodeOperator = _nodeOperators[nodeOperatorId];
+
+            if (!nodeOperator.active) continue;
+
+            activeNodeOperatorIds[activeNodeOperatorIndex] = nodeOperatorId;
+
+            uint256 exitedValidatorsKeysCount = nodeOperator.exitedValidatorsKeysCount;
+            uint256 depositedValidatorsKeysCount = nodeOperator.depositedValidatorsKeysCount;
+            uint256 approvedValidatorsKeysCount = nodeOperator.approvedValidatorsKeysCount;
+
+            uint256 activeValidatorsKeysCount = depositedValidatorsKeysCount - exitedValidatorsKeysCount;
+            uint256 depositedValidatorsKeysLimit = approvedValidatorsKeysCount - exitedValidatorsKeysCount;
+
+            activeValidatorsKeysCountsBefore[activeNodeOperatorIndex] = activeValidatorsKeysCount;
+            activeValidatorsKeysCountsAfter[activeNodeOperatorIndex] = activeValidatorsKeysCount;
+            depositedValidatorsKeysLimits[activeNodeOperatorIndex] = depositedValidatorsKeysLimit;
+
+            ++activeNodeOperatorIndex;
+        }
+        enqueuedValidatorsKeysCount = _allocateNextKeys(_keysCount, activeValidatorsKeysCountsAfter, depositedValidatorsKeysLimits);
+        if (enqueuedValidatorsKeysCount == 0) {
+            return (0, new bytes(0), new bytes(0));
+        }
+
+        (publicKeys, signatures) = _loadNextKeys(
+            _keysCount,
+            activeNodeOperatorIds,
+            activeValidatorsKeysCountsBefore,
+            activeValidatorsKeysCountsAfter
+        );
+    }
+
+    function _getActiveNodeOperatorIds() internal view returns (uint24[] memory activeNodeOperatorIds) {
+        uint64 nodeOperatorsCount = getNodeOperatorsCount();
+        uint64 activeNodeOperatorsCount = getActiveNodeOperatorsCount();
+
+        activeNodeOperatorIds = new uint24[](activeNodeOperatorsCount);
+        uint24 activeNodeOperatorIndex = 0;
+        for (uint24 nodeOperatorId = 0; nodeOperatorId < nodeOperatorsCount; ++nodeOperatorId) {
+            if (!_nodeOperators[nodeOperatorId].active) continue;
+
+            activeNodeOperatorIds[activeNodeOperatorIndex] = nodeOperatorId;
+        }
+    }
+
+    //
+    // INTERNAL METHODS
+    //
+
+    function _allocateNextKeys(
+        uint64 _keysCount,
+        uint256[] memory activeNodeOperatorEverDepositedKeysCounts,
+        uint256[] memory activeNodeOperatorEverDepositedKeysLimits
+    ) internal pure returns (uint64) {
+        uint256 allocatedKeysCount = MinFirstAllocationStrategy.allocate(
+            activeNodeOperatorEverDepositedKeysCounts,
+            activeNodeOperatorEverDepositedKeysLimits,
+            _keysCount
+        );
+        assert(allocatedKeysCount <= _keysCount);
+        return uint64(allocatedKeysCount);
+    }
+
+    function _loadNextKeys(
+        uint64 _keysCount,
+        uint24[] memory activeNodeOperatorIds,
+        uint256[] memory activeValidatorsKeysCountsBefore,
+        uint256[] memory activeValidatorsKeysCountsAfter
+    ) internal returns (bytes memory publicKeys, bytes memory signatures) {
+        publicKeys = MemUtils.unsafeAllocateBytes(_keysCount * PUBKEY_LENGTH);
+        signatures = MemUtils.unsafeAllocateBytes(_keysCount * SIGNATURE_LENGTH);
+        uint256 loadedKeysCount = 0;
+        for (uint24 i = 0; i < activeNodeOperatorIds.length; ++i) {
+            uint64 validatorsKeysToLoad = uint64(activeValidatorsKeysCountsAfter[i].sub(activeValidatorsKeysCountsBefore[i]));
+            if (validatorsKeysToLoad == 0) continue;
+
+            NodeOperator storage nodeOperator = _nodeOperators[activeNodeOperatorIds[i]];
+            uint64 depositedValidatorsKeysCountBefore = nodeOperator.depositedValidatorsKeysCount;
+            uint64 depositedValidatorsKeysCountAfter = depositedValidatorsKeysCountBefore.add(validatorsKeysToLoad);
+
+            for (uint256 keyIndex = depositedValidatorsKeysCountBefore; keyIndex < depositedValidatorsKeysCountAfter; ++keyIndex) {
+                (bytes memory pubkey, bytes memory signature) = _loadSigningKey(activeNodeOperatorIds[i], keyIndex);
+                MemUtils.copyBytes(pubkey, publicKeys, loadedKeysCount * PUBKEY_LENGTH);
+                MemUtils.copyBytes(signature, signatures, loadedKeysCount * SIGNATURE_LENGTH);
+                ++loadedKeysCount;
+            }
+            nodeOperator.depositedValidatorsKeysCount = depositedValidatorsKeysCountAfter;
+        }
+        assert(loadedKeysCount == _keysCount);
     }
 
     function _isEmptySigningKey(bytes memory _key) internal pure returns (bool) {
@@ -637,17 +784,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         return 0 == k1 && 0 == (k2 >> ((2 * 32 - PUBKEY_LENGTH) * 8));
     }
 
-    function to64(uint256 v) internal pure returns (uint64) {
-        assert(v <= UINT64_MAX);
-        return uint64(v);
-    }
-
-    function _signingKeyOffset(uint256 _operator_id, uint256 _keyIndex) internal pure returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(SIGNING_KEYS_MAPPING_NAME, _operator_id, _keyIndex)));
+    function _signingKeyOffset(uint256 _nodeOperatorId, uint256 _keyIndex) internal pure returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(SIGNING_KEYS_MAPPING_NAME, _nodeOperatorId, _keyIndex)));
     }
 
     function _storeSigningKey(
-        uint256 _operator_id,
+        uint256 _nodeOperatorId,
         uint256 _keyIndex,
         bytes memory _key,
         bytes memory _signature
@@ -656,7 +798,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         assert(_signature.length == SIGNATURE_LENGTH);
 
         // key
-        uint256 offset = _signingKeyOffset(_operator_id, _keyIndex);
+        uint256 offset = _signingKeyOffset(_nodeOperatorId, _keyIndex);
         uint256 keyExcessBits = (2 * 32 - PUBKEY_LENGTH) * 8;
         assembly {
             sstore(offset, mload(add(_key, 0x20)))
@@ -673,59 +815,107 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         }
     }
 
-    function _addSigningKeys(
-        uint256 _operator_id,
-        uint256 _quantity,
-        bytes _pubkeys,
+    function _addValidatorsKeys(
+        uint24 _nodeOperatorId,
+        uint64 _keysCount,
+        bytes _publicKeys,
         bytes _signatures
-    ) internal operatorExists(_operator_id) {
-        require(_quantity != 0, "NO_KEYS");
-        require(_pubkeys.length == _quantity.mul(PUBKEY_LENGTH), "INVALID_LENGTH");
-        require(_signatures.length == _quantity.mul(SIGNATURE_LENGTH), "INVALID_LENGTH");
+    ) internal onlyExistedNodeOperator(_nodeOperatorId) {
+        require(_keysCount != 0, "NO_KEYS");
+        require(_publicKeys.length == _keysCount.mul(PUBKEY_LENGTH), "INVALID_LENGTH");
+        require(_signatures.length == _keysCount.mul(SIGNATURE_LENGTH), "INVALID_LENGTH");
 
         _increaseKeysOpIndex();
 
-        for (uint256 i = 0; i < _quantity; ++i) {
-            bytes memory key = BytesLib.slice(_pubkeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
+        NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
+        uint64 totalValidatorsKeysCount = nodeOperator.totalValidatorsKeysCount;
+        for (uint256 i = 0; i < _keysCount; ++i) {
+            bytes memory key = BytesLib.slice(_publicKeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
             require(!_isEmptySigningKey(key), "EMPTY_KEY");
             bytes memory sig = BytesLib.slice(_signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
 
-            _storeSigningKey(_operator_id, operators[_operator_id].totalSigningKeys + i, key, sig);
-            emit SigningKeyAdded(_operator_id, key);
+            _storeSigningKey(_nodeOperatorId, totalValidatorsKeysCount, key, sig);
+            totalValidatorsKeysCount += 1;
+            emit ReadyToDepositKeyAdded(_nodeOperatorId, key);
+            // TODO: deprecated events
         }
 
-        operators[_operator_id].totalSigningKeys = operators[_operator_id].totalSigningKeys.add(to64(_quantity));
+        emit TotalValidatorsKeysCountChanged(_nodeOperatorId, totalValidatorsKeysCount);
 
-        _updateTotalAvailableKeysCount();
+        _nodeOperators[_nodeOperatorId].totalValidatorsKeysCount = totalValidatorsKeysCount;
+
+        ValidatorsKeysStats.State memory totalValidatorsKeysStats = _getTotalValidatorsKeysStats();
+        totalValidatorsKeysStats.increaseTotalValidatorsKeysCount(_keysCount);
+        _setTotalValidatorsKeysStats(totalValidatorsKeysStats);
     }
 
-    function _removeSigningKey(uint256 _operator_id, uint256 _index) internal operatorExists(_operator_id) {
-        require(_index < operators[_operator_id].totalSigningKeys, "KEY_NOT_FOUND");
-        require(_index >= operators[_operator_id].usedSigningKeys, "KEY_WAS_USED");
+    function _removeUnusedValidatorsKeys(
+        uint24 _nodeOperatorId,
+        uint64 _fromIndex,
+        uint64 _keysCount
+    ) internal onlyExistedNodeOperator(_nodeOperatorId) {
+        NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
+
+        uint64 approveValidatorsCountBefore = nodeOperator.approvedValidatorsKeysCount;
+
+        // removing from the last index to the highest one, so we won't get outside the array
+        for (uint64 i = _fromIndex.add(_keysCount); i > _fromIndex; --i) {
+            _removeUnusedKey(_nodeOperatorId, i - 1);
+        }
 
         _increaseKeysOpIndex();
 
-        (bytes memory removedKey, ) = _loadSigningKey(_operator_id, _index);
+        uint64 totalValidatorsCountAfter = nodeOperator.totalValidatorsKeysCount;
+        uint64 approvedValidatorsCountAfter = nodeOperator.approvedValidatorsKeysCount;
 
-        uint256 lastIndex = operators[_operator_id].totalSigningKeys.sub(1);
-        if (_index < lastIndex) {
-            (bytes memory key, bytes memory signature) = _loadSigningKey(_operator_id, lastIndex);
-            _storeSigningKey(_operator_id, _index, key, signature);
+        emit TotalValidatorsKeysCountChanged(_nodeOperatorId, totalValidatorsCountAfter);
+        emit ApprovedValidatorsKeysCountChanged(_nodeOperatorId, approvedValidatorsCountAfter);
+
+        ValidatorsKeysStats.State memory totalValidatorsKeysStats = _getTotalValidatorsKeysStats();
+        totalValidatorsKeysStats.decreaseTotalValidatorsKeysCount(_keysCount);
+
+        if (approveValidatorsCountBefore > approvedValidatorsCountAfter) {
+            totalValidatorsKeysStats.decreaseApprovedValidatorsKeysCount(approveValidatorsCountBefore - approvedValidatorsCountAfter);
         }
 
-        _deleteSigningKey(_operator_id, lastIndex);
-        operators[_operator_id].totalSigningKeys = operators[_operator_id].totalSigningKeys.sub(1);
-
-        if (_index < operators[_operator_id].stakingLimit) {
-            // decreasing the staking limit so the key at _index can't be used anymore
-            operators[_operator_id].stakingLimit = uint64(_index);
-        }
-
-        emit SigningKeyRemoved(_operator_id, removedKey);
+        _setTotalValidatorsKeysStats(totalValidatorsKeysStats);
     }
 
-    function _deleteSigningKey(uint256 _operator_id, uint256 _keyIndex) internal {
-        uint256 offset = _signingKeyOffset(_operator_id, _keyIndex);
+    function _removeUnusedKey(uint24 _nodeOperatorId, uint64 _index) internal {
+        NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
+
+        uint64 totalValidatorsKeysCount = nodeOperator.totalValidatorsKeysCount;
+        uint64 lastValidatorKeyIndex = totalValidatorsKeysCount.sub(1);
+        uint64 approvedValidatorsKeysCount = nodeOperator.approvedValidatorsKeysCount;
+        uint64 depositedValidatorsKeysCount = nodeOperator.depositedValidatorsKeysCount;
+
+        require(_index <= lastValidatorKeyIndex, "KEY_NOT_FOUND");
+        require(_index >= depositedValidatorsKeysCount, "KEY_WAS_USED");
+
+        (bytes memory removedKey, ) = _loadSigningKey(_nodeOperatorId, _index);
+
+        if (_index < lastValidatorKeyIndex) {
+            (bytes memory key, bytes memory signature) = _loadSigningKey(_nodeOperatorId, lastValidatorKeyIndex);
+            _storeSigningKey(_nodeOperatorId, _index, key, signature);
+        }
+
+        _deleteSigningKey(_nodeOperatorId, lastValidatorKeyIndex);
+
+        nodeOperator.totalValidatorsKeysCount = totalValidatorsKeysCount.sub(1);
+        emit TotalValidatorsKeysCountChanged(_nodeOperatorId, _index);
+
+        if (_index < approvedValidatorsKeysCount) {
+            // decreasing the staking limit so the key at _index can't be used anymore
+            nodeOperator.approvedValidatorsKeysCount = _index;
+            emit ApprovedValidatorsKeysCountChanged(_nodeOperatorId, _index);
+        }
+
+        emit UnusedKeyRemoved(_nodeOperatorId, removedKey);
+        // TODO: deprecated events
+    }
+
+    function _deleteSigningKey(uint256 _nodeOperatorId, uint256 _keyIndex) internal {
+        uint256 offset = _signingKeyOffset(_nodeOperatorId, _keyIndex);
         for (uint256 i = 0; i < (PUBKEY_LENGTH + SIGNATURE_LENGTH) / 32 + 1; ++i) {
             assembly {
                 sstore(add(offset, i), 0)
@@ -733,8 +923,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         }
     }
 
-    function _loadSigningKey(uint256 _operator_id, uint256 _keyIndex) internal view returns (bytes memory key, bytes memory signature) {
-        uint256 offset = _signingKeyOffset(_operator_id, _keyIndex);
+    function _loadSigningKey(uint256 _nodeOperatorId, uint256 _keyIndex) internal view returns (bytes memory key, bytes memory signature) {
+        uint256 offset = _signingKeyOffset(_nodeOperatorId, _keyIndex);
 
         // key
         bytes memory tmpKey = new bytes(64);
@@ -757,187 +947,36 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         return (key, signature);
     }
 
-    function _loadOperatorCache() internal view returns (DepositLookupCacheEntry[] memory cache) {
-        cache = new DepositLookupCacheEntry[](getActiveNodeOperatorsCount());
-        if (0 == cache.length) return cache;
-
-        uint256 totalOperators = getNodeOperatorsCount();
-        uint256 idx = 0;
-        for (uint256 operatorId = 0; operatorId < totalOperators; ++operatorId) {
-            NodeOperator storage operator = operators[operatorId];
-
-            if (!operator.active) continue;
-
-            DepositLookupCacheEntry memory entry = cache[idx++];
-            entry.id = operatorId;
-            entry.stakingLimit = operator.stakingLimit;
-            entry.stoppedValidators = operator.stoppedValidators;
-            entry.totalSigningKeys = operator.totalSigningKeys;
-            entry.usedSigningKeys = operator.usedSigningKeys;
-            entry.initialUsedSigningKeys = entry.usedSigningKeys;
-        }
-        require(idx == cache.length, "INCOSISTENT_ACTIVE_COUNT");
-
-        return cache;
-    }
-
     function _increaseKeysOpIndex() internal {
-        uint256 keysOpIndex = getKeysOpIndex();
+        uint256 keysOpIndex = getValidatorsKeysNonce();
         KEYS_OP_INDEX_POSITION.setStorageUint256(keysOpIndex + 1);
         emit KeysOpIndexSet(keysOpIndex + 1);
     }
 
-    function _trimUnusedNodeOperatorKeys(uint256 _nodeOperatorId) internal returns (uint64 trimmedKeys) {
-        uint64 totalSigningKeys = operators[_nodeOperatorId].totalSigningKeys;
-        uint64 usedSigningKeys = operators[_nodeOperatorId].usedSigningKeys;
-
-        // write only if update is needed
-        if (totalSigningKeys != usedSigningKeys) {
-            trimmedKeys = totalSigningKeys - usedSigningKeys;
-            operators[_nodeOperatorId].totalSigningKeys = usedSigningKeys; // discard unused keys
-            emit NodeOperatorTotalKeysTrimmed(_nodeOperatorId, trimmedKeys);
-        }
+    function _setTotalValidatorsKeysStats(ValidatorsKeysStats.State memory _validatorsKeysStats) internal {
+        _validatorsKeysStats.store(TOTAL_VALIDATORS_KEYS_STATS);
     }
 
-    function _setTotalActiveKeys(uint64 _newTotalActiveKeys) internal {
-        keysUsageStats.totalActiveKeys = _newTotalActiveKeys;
-        emit ActiveKeysCountChanged(_newTotalActiveKeys);
+    function _getTotalValidatorsKeysStats() internal view returns (ValidatorsKeysStats.State memory) {
+        return ValidatorsKeysStats.load(TOTAL_VALIDATORS_KEYS_STATS);
     }
 
-    function _updateTotalAvailableKeysCount() internal {
-        uint256 newTotalAvailableKeysCount = 0;
-        uint256 activeNodeOperatorsCount = getNodeOperatorsCount();
-        for (uint256 i = 0; i < activeNodeOperatorsCount; ++i) {
-            newTotalAvailableKeysCount += _getNodeOperatorAvailableKeysCount(i);
-        }
-        keysUsageStats.totalAvailableKeys = to64(newTotalAvailableKeysCount);
-        emit AvailableKeysCountChanged(newTotalAvailableKeysCount);
+    //
+    // MODIFIERS
+    //
+
+    modifier onlyNonZeroAddress(address _a) {
+        require(_a != address(0), "ZERO_ADDRESS");
+        _;
     }
 
-    function _getNodeOperatorAvailableKeysCount(uint256 _operatorId) internal view returns (uint64) {
-        NodeOperator storage operator = operators[_operatorId];
-        if (!operator.active) {
-            return 0;
-        }
-        uint64 operatorStakingLimit = operator.stakingLimit;
-        uint64 operatorUsedSigningKeys = operator.usedSigningKeys;
-        uint64 operatorTotalSigningKeys = operator.totalSigningKeys;
-
-        // The keys limit of the validator is min(total signing keys, staking limit)
-        uint64 operatorSigningKeysLimit = operatorTotalSigningKeys > operatorStakingLimit ? operatorStakingLimit : operatorTotalSigningKeys;
-
-        return operatorUsedSigningKeys >= operatorSigningKeysLimit ? 0 : operatorSigningKeysLimit - operatorUsedSigningKeys;
+    modifier onlyExistedNodeOperator(uint256 _nodeOperatorId) {
+        require(_nodeOperatorId < getNodeOperatorsCount(), "NODE_OPERATOR_NOT_FOUND");
+        _;
     }
 
-    function _setNodeOperatorStakingLimit(uint256 _id, uint64 _stakingLimit) internal {
-        require(operators[_id].stakingLimit != _stakingLimit, "NODE_OPERATOR_STAKING_LIMIT_IS_THE_SAME");
-        operators[_id].stakingLimit = _stakingLimit;
-        _updateTotalAvailableKeysCount();
-        emit NodeOperatorStakingLimitSet(_id, _stakingLimit);
-    }
-
-    /**
-     * @notice Return the initialized version of this contract starting from 0
-     */
-    function getVersion() external view returns (uint256) {
-        return CONTRACT_VERSION_POSITION.getStorageUint256();
-    }
-
-    /**
-     * @notice A function to finalize upgrade to v2 (from v1). Can be called only once
-     * @dev Value 1 in CONTRACT_VERSION_POSITION is skipped due to change in numbering
-     * For more details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md
-     */
-    function finalizeUpgrade_v2(address _steth, bytes32 _type) external {
-        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "WRONG_BASE_VERSION");
-
-        _initialize_v2(_steth, _type);
-    }
-
-    function _initialize_v2(address _steth, bytes32 _type) internal {
-        require(_steth != address(0), "STETH_ADDRESS_ZERO");
-
-        STETH_POSITION.setStorageAddress(_steth);
-        TYPE_POSITION.setStorageBytes32(_type);
-
-        uint256 totalOperators = getNodeOperatorsCount();
-        uint256 totalUsedKeys;
-        uint256 totalStoppedKeys;
-        for (uint256 operatorId = 0; operatorId < totalOperators; ++operatorId) {
-            NodeOperator memory operator = operators[operatorId];
-            if (!operator.active) {
-                _trimUnusedNodeOperatorKeys(operatorId);
-            }
-            totalUsedKeys += operator.usedSigningKeys;
-            totalStoppedKeys += operator.stoppedValidators;
-        }
-
-        _setTotalActiveKeys(to64(totalUsedKeys) - to64(totalStoppedKeys));
-        _updateTotalAvailableKeysCount();
-        _increaseKeysOpIndex();
-
-        CONTRACT_VERSION_POSITION.setStorageUint256(2);
-        emit ContractVersionSet(2);
-        emit StethContractSet(_steth);
-        emit SetStakingModuleType(_type);
-    }
-
-    function getType() external view returns (bytes32) {
-        return TYPE_POSITION.getStorageBytes32();
-    }
-
-    function getNodeOperatorActiveKeysCount(uint256 _operatorId) external view operatorExists(_operatorId) returns (uint256) {
-        NodeOperator storage operator = operators[_operatorId];
-        return operator.usedSigningKeys - operator.stoppedValidators;
-    }
-
-    function getNodeOperatorAvailableKeysCount(uint256 _operatorId) external view operatorExists(_operatorId) returns (uint256) {
-        return _getNodeOperatorAvailableKeysCount(_operatorId);
-    }
-
-    function getActiveKeysCount() external view returns (uint256) {
-        return keysUsageStats.totalActiveKeys;
-    }
-
-    function getAvailableKeysCount() external view returns (uint256) {
-        return keysUsageStats.totalAvailableKeys;
-    }
-
-    function getKeysUsageData() external view returns (uint256 activeKeysCount, uint256 availableKeysCount) {
-        KeysUsageStats memory _keysUsageStats = keysUsageStats;
-        activeKeysCount = _keysUsageStats.totalActiveKeys;
-        availableKeysCount = _keysUsageStats.totalAvailableKeys;
-    }
-
-    function distributeRewards() external returns (uint256 distributed) {
-        IStETH stETH = IStETH(STETH_POSITION.getStorageAddress());
-
-        uint256 sharesToDistribute = stETH.sharesOf(address(this));
-        assert(sharesToDistribute > 0);
-
-        (address[] memory recipients, uint256[] memory shares) = getRewardsDistribution(sharesToDistribute);
-
-        assert(recipients.length == shares.length);
-
-        distributed = 0;
-        for (uint256 idx = 0; idx < recipients.length; ++idx) {
-            stETH.transferShares(recipients[idx], shares[idx]);
-            distributed = distributed.add(shares[idx]);
-            emit RewardsDistributedInShares(idx, shares[idx]);
-        }
-    }
-
-    function prepNextSigningKeys(uint256 maxDepositsCount, bytes)
-        external
-        auth(ASSIGN_NEXT_KEYS_ROLE)
-        returns (
-            uint256 keysCount,
-            bytes memory pubkeys,
-            bytes memory signatures
-        )
-    {
-        (keysCount, pubkeys, signatures) = _assignNextSigningKeys(maxDepositsCount);
-        _setTotalActiveKeys(keysUsageStats.totalActiveKeys.add(uint64(keysCount)));
-        _updateTotalAvailableKeysCount();
+    modifier onlyValidNodeOperatorName(string _name) {
+        require(bytes(_name).length > 0 && bytes(_name).length <= MAX_NODE_OPERATOR_NAME_LENGTH, "NAME_TOO_LONG");
+        _;
     }
 }
