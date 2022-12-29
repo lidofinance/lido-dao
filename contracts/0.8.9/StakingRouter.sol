@@ -7,10 +7,8 @@ pragma solidity 0.8.9;
 
 import {AccessControlEnumerable} from "@openzeppelin/contracts-v4.4/access/AccessControlEnumerable.sol";
 
-import {ILido} from "./interfaces/ILido.sol";
 import {IStakingRouter} from "./interfaces/IStakingRouter.sol";
 import {IStakingModule} from "./interfaces/IStakingModule.sol";
-import {IDepositContract} from "./interfaces/IDepositContract.sol";
 
 import {Math} from "./lib/Math.sol";
 import {BatchedSigningKeys} from "./lib/BatchedSigningKeys.sol";

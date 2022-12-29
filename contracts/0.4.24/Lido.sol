@@ -20,9 +20,8 @@ import "./lib/StakeLimitUtils.sol";
 /**
  * @title Liquid staking pool implementation
  *
- * Lido is an liquid staking protocol solving the problem of frozen staked Ethers
- * until transfers become available in Beacon Chain.
- * Whitepaper: https://lido.fi/static/Lido:Ethereum-Liquid-Staking.pdf
+ * Lido is an Ethereum liquid staking protocol solving the problem of frozen staked ether on Consensus Layer
+ * being unavailable for transfers and DeFi on Execution Layer.
  *
  * Since balances of all token holders change when the amount of total pooled Ether
  * changes, this token cannot fully implement ERC20 standard: it only emits `Transfer`
@@ -73,7 +72,7 @@ contract Lido is ILido, StETH, AragonApp {
     bytes32 internal constant BEACON_BALANCE_POSITION = keccak256("lido.Lido.beaconBalance");
     /// @dev number of Lido's validators available in the Beacon state
     bytes32 internal constant BEACON_VALIDATORS_POSITION = keccak256("lido.Lido.beaconValidators");
-    /// @dev amount of Ether sended to the Staking Router contract balance
+    /// @dev amount of Ether buffered on the Staking Router contract balance
     bytes32 internal constant STAKING_ROUTER_BUFFERED_ETHER_POSITION = keccak256("lido.Lido.stakingRouterBufferedEther");
 
     /// @dev percent in basis points of total pooled ether allowed to withdraw from LidoExecutionLayerRewardsVault per LidoOracle report
@@ -90,25 +89,25 @@ contract Lido is ILido, StETH, AragonApp {
      * @dev As AragonApp, Lido contract must be initialized with following variables:
      * @param _oracle oracle contract
      * @param _treasury treasury contract
-     * @param _stakingRouterAddress Staking router contract
-     * @param _dsmAddress Deposit security module contract
+     * @param _stakingRouter Staking router contract
+     * @param _dsm Deposit security module contract
      * NB: by default, staking and the whole Lido pool are in paused state
      */
-    function initialize(address _oracle, address _treasury, address _stakingRouterAddress, address _dsmAddress) public onlyInit {
+    function initialize(address _oracle, address _treasury, address _stakingRouter, address _dsm) public onlyInit {
         _setProtocolContracts(_oracle, _treasury);
 
-        _initialize_v2(_stakingRouterAddress, _dsmAddress);
+        _initialize_v2(_stakingRouter, _dsm);
         initialized();
     }
 
-    function _initialize_v2(address _stakingRouterAddress, address _dsmAddress) internal {
-        STAKING_ROUTER_POSITION.setStorageAddress(_stakingRouterAddress);
-        DEPOSIT_SECURITY_MODULE_POSITION.setStorageAddress(_dsmAddress);
+    function _initialize_v2(address _stakingRouter, address _dsm) internal {
+        STAKING_ROUTER_POSITION.setStorageAddress(_stakingRouter);
+        DEPOSIT_SECURITY_MODULE_POSITION.setStorageAddress(_dsm);
 
         CONTRACT_VERSION_POSITION.setStorageUint256(2);
         emit ContractVersionSet(2);
-        emit StakingRouterSet(_stakingRouterAddress);
-        emit DepositSecurityModuleSet(_dsmAddress);
+        emit StakingRouterSet(_stakingRouter);
+        emit DepositSecurityModuleSet(_dsm);
     }
 
     /**
@@ -116,10 +115,12 @@ contract Lido is ILido, StETH, AragonApp {
      * @dev Value 1 in CONTRACT_VERSION_POSITION is skipped due to change in numbering
      * For more details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md
      */
-    function finalizeUpgrade_v2(address _stakingRouterAddress, address _dsmAddress) external {
+    function finalizeUpgrade_v2(address _stakingRouter, address _dsm) external {
         require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "WRONG_BASE_VERSION");
+        require(_stakingRouter != address(0), "STAKING_ROUTER_ZERO_ADDRESS");
+        require(_dsm != address(0), "DSM_ZERO_ADDRESS");
 
-        _initialize_v2(_stakingRouterAddress, _dsmAddress);
+        _initialize_v2(_stakingRouter, _dsm);
     }
 
     /**
@@ -607,24 +608,24 @@ contract Lido is ILido, StETH, AragonApp {
         return IStakingRouter(STAKING_ROUTER_POSITION.getStorageAddress());
     }
 
-    function setStakingRouter(address _stakingRouterAddress) external {
+    function setStakingRouter(address _stakingRouter) external {
         _auth(MANAGE_PROTOCOL_CONTRACTS_ROLE);
-        require(_stakingRouterAddress != address(0), "STAKING_ROUTER_ADDRESS_ZERO");
-        STAKING_ROUTER_POSITION.setStorageAddress(_stakingRouterAddress);
+        require(_stakingRouter != address(0), "STAKING_ROUTER_ADDRESS_ZERO");
+        STAKING_ROUTER_POSITION.setStorageAddress(_stakingRouter);
 
-        emit StakingRouterSet(_stakingRouterAddress);
+        emit StakingRouterSet(_stakingRouter);
     }
 
     function getDepositSecurityModule() public view returns (address) {
         return DEPOSIT_SECURITY_MODULE_POSITION.getStorageAddress();
     }
 
-    function setDepositSecurityModule(address _dsmAddress) external {
+    function setDepositSecurityModule(address _dsm) external {
         _auth(MANAGE_PROTOCOL_CONTRACTS_ROLE);
-        require(_dsmAddress != address(0), "DSM_ADDRESS_ZERO");
-        DEPOSIT_SECURITY_MODULE_POSITION.setStorageAddress(_dsmAddress);
+        require(_dsm != address(0), "DSM_ADDRESS_ZERO");
+        DEPOSIT_SECURITY_MODULE_POSITION.setStorageAddress(_dsm);
 
-        emit DepositSecurityModuleSet(_dsmAddress);
+        emit DepositSecurityModuleSet(_dsm);
     }
 
     /**
@@ -796,9 +797,7 @@ contract Lido is ILido, StETH, AragonApp {
         require(msg.sender == getDepositSecurityModule(), "APP_AUTH_DSM_FAILED");
 
         //make buffer transfer from LIDO to StakingRouter
-        uint256 unaccounted = _getUnaccountedEther();
         uint256 transferred = _getBufferedEther();
-        assert(_getUnaccountedEther() == unaccounted);
 
         // transfer the buffered ether to SR and make deposit at the same time
         uint256 keysCount = getStakingRouter().deposit.value(transferred)(_maxDepositsCount, _stakingModuleId, _depositCalldata);
