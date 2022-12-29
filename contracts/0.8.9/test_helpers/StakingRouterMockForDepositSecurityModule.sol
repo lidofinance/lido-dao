@@ -55,18 +55,18 @@ contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
         return status;
     }
 
-    function setStakingModuleStatus(uint24 _stakingModuleId, StakingModuleStatus _status) external {
-        emit StakingModuleStatusChanged(_stakingModuleId, msg.sender, status, _status);
+    function changeStakingModuleStatus(uint24 _stakingModuleId, StakingModuleStatus _status) external {
+        emit StakingModuleStatusChanged(_stakingModuleId, status, _status, msg.sender);
         status = _status;
     }
 
     function pauseStakingModule(uint24 stakingModuleId) external {
-        emit StakingModuleStatusChanged(stakingModuleId, msg.sender, status, StakingModuleStatus.DepositsPaused);
+        emit StakingModuleStatusChanged(stakingModuleId, status, StakingModuleStatus.DepositsPaused, msg.sender);
         status = StakingModuleStatus.DepositsPaused;
     }
 
     function unpauseStakingModule(uint24 stakingModuleId) external {
-        emit StakingModuleStatusChanged(stakingModuleId, msg.sender, status, StakingModuleStatus.Active);
+        emit StakingModuleStatusChanged(stakingModuleId, status, StakingModuleStatus.Active, msg.sender);
         status = StakingModuleStatus.Active;
     }
 
@@ -102,7 +102,7 @@ contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
 
     function getStakingModuleActiveKeysCount(uint24 _stakingModuleId) external view returns (uint256) {}
 
-    function getStakingModuleProspectiveMaxDepositableKeys(
+    function estimateStakingModuleMaxDepositableKeys(
         uint24 _stakingModuleId,
         uint256 _totalDepositsCount
     ) external view returns (uint256) {}

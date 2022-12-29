@@ -21,14 +21,14 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     using UnstructuredStorage for bytes32;
 
     /// @dev events
-    event StakingModuleAdded(address indexed creator, uint24 indexed stakingModuleId, address indexed stakingModule, string name);
-    event StakingModuleTargetSharesSet(uint24 indexed stakingModuleId, uint16 targetShare);
+    event StakingModuleAdded(uint24 indexed stakingModuleId, address stakingModule, string name, address createdBy);
+    event StakingModuleTargetShareSet(uint24 indexed stakingModuleId, uint16 targetShare);
     event StakingModuleFeesSet(uint24 indexed stakingModuleId, uint16 treasuryFee, uint16 moduleFee);
     event StakingModuleStatusChanged(
         uint24 indexed stakingModuleId,
-        address indexed actor,
         StakingModuleStatus fromStatus,
-        StakingModuleStatus toStatus
+        StakingModuleStatus toStatus,
+        address changedBy
     );
     event WithdrawalCredentialsSet(bytes32 withdrawalCredentials);
     event ContractVersionSet(uint256 version);
@@ -119,7 +119,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
      * @param _treasuryFee treasury fee
      */
     function addModule(
-        string memory _name,
+        string calldata _name,
         address _stakingModuleAddress,
         uint16 _targetShare,
         uint16 _moduleFee,
@@ -146,8 +146,8 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         _lastStakingModuleId = newStakingModuleId;
         _stakingModulesCount = newStakingModuleIndex + 1;
 
-        emit StakingModuleAdded(msg.sender, newStakingModuleId, _stakingModuleAddress, _name);
-        emit StakingModuleTargetSharesSet(newStakingModuleId, _targetShare);
+        emit StakingModuleAdded(newStakingModuleId, _stakingModuleAddress, _name, msg.sender);
+        emit StakingModuleTargetShareSet(newStakingModuleId, _targetShare);
         emit StakingModuleFeesSet(newStakingModuleId, _treasuryFee, _moduleFee);
     }
 
@@ -167,7 +167,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         _stakingModules[stakingModuleIndex].treasuryFee = _treasuryFee;
         _stakingModules[stakingModuleIndex].moduleFee = _moduleFee;
 
-        emit StakingModuleTargetSharesSet(_stakingModuleId, _targetShare);
+        emit StakingModuleTargetShareSet(_stakingModuleId, _targetShare);
         emit StakingModuleFeesSet(_stakingModuleId, _treasuryFee, _moduleFee);
     }
 
@@ -207,12 +207,12 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     /**
      * @notice set the module status flag for participation in further deposits and/or reward distribution
      */
-    function setStakingModuleStatus(uint24 _stakingModuleId, StakingModuleStatus _status) external onlyRole(MODULE_MANAGE_ROLE) {
+    function changeStakingModuleStatus(uint24 _stakingModuleId, StakingModuleStatus _status) external onlyRole(MODULE_MANAGE_ROLE) {
         uint _stakingModuleIndex = _getStakingModuleIndexById(_stakingModuleId);
         StakingModuleStatus _prevStatus = _getStakingModuleStatusByIndex(_stakingModuleIndex);
         if (_prevStatus == _status) revert ErrorStakingModuleStatusNotChanged();
-        _setStakingModuleStatusByIndex(_stakingModuleIndex, _status);
-        emit StakingModuleStatusChanged(_stakingModuleId, msg.sender, _prevStatus, _status);
+        _changeStakingModuleStatusByIndex(_stakingModuleIndex, _status);
+        emit StakingModuleStatusChanged(_stakingModuleId, _prevStatus, _status, msg.sender);
     }
 
     function checkStakingModuleStatus(uint24 _stakingModuleId, StakingModuleStatus _status) public view returns (bool) {
@@ -223,7 +223,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         return StakingModuleStatus(_stakingModules[_stakingModuleIndex].status);
     }
 
-    function _setStakingModuleStatusByIndex(uint256 _stakingModuleIndex, StakingModuleStatus _status) internal {
+    function _changeStakingModuleStatusByIndex(uint256 _stakingModuleIndex, StakingModuleStatus _status) internal {
         _stakingModules[_stakingModuleIndex].status = uint8(_status);
     }
 
@@ -239,8 +239,8 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         uint _stakingModuleIndex = _getStakingModuleIndexById(_stakingModuleId);
         if (!_checkStakingModuleStatusByIndex(_stakingModuleIndex, StakingModuleStatus.Active)) revert ErrorStakingModuleIsPaused();
 
-        _setStakingModuleStatusByIndex(_stakingModuleIndex, StakingModuleStatus.DepositsPaused);
-        emit StakingModuleStatusChanged(_stakingModuleId, msg.sender, StakingModuleStatus.Active, StakingModuleStatus.DepositsPaused);
+        _changeStakingModuleStatusByIndex(_stakingModuleIndex, StakingModuleStatus.DepositsPaused);
+        emit StakingModuleStatusChanged(_stakingModuleId, StakingModuleStatus.Active, StakingModuleStatus.DepositsPaused, msg.sender);
     }
 
     /**
@@ -252,8 +252,8 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         if (!_checkStakingModuleStatusByIndex(_stakingModuleIndex, StakingModuleStatus.DepositsPaused))
             revert ErrorStakingModuleIsNotPaused();
 
-        _setStakingModuleStatusByIndex(_stakingModuleIndex, StakingModuleStatus.Active);
-        emit StakingModuleStatusChanged(_stakingModuleId, msg.sender, StakingModuleStatus.DepositsPaused, StakingModuleStatus.Active);
+        _changeStakingModuleStatusByIndex(_stakingModuleIndex, StakingModuleStatus.Active);
+        emit StakingModuleStatusChanged(_stakingModuleId, StakingModuleStatus.DepositsPaused, StakingModuleStatus.Active, msg.sender);
     }
 
     function getStakingModuleIsStopped(uint24 _stakingModuleId) external view returns (bool) {
@@ -290,21 +290,21 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
      * @param _totalDepositsCount total number of deposits to be made
      * @return max depositable keys count
      */
-    function getStakingModuleProspectiveMaxDepositableKeys(
+    function estimateStakingModuleMaxDepositableKeys(
         uint24 _stakingModuleId,
         uint256 _totalDepositsCount
     ) external view onlyRegisteredStakingModule(_stakingModuleId) returns (uint256) {
-        return _getStakingModuleProspectiveMaxDepositableKeysByIndex(_getStakingModuleIndexById(_stakingModuleId), _totalDepositsCount);
+        return _estimateStakingModuleMaxDepositableKeysByIndex(_getStakingModuleIndexById(_stakingModuleId), _totalDepositsCount);
     }
 
     /**
-     * @dev see {StakingRouter-getStakingModuleProspectiveMaxDepositableKeys}
+     * @dev see {StakingRouter-estimateStakingModuleMaxDepositableKeys}
      *
      * @param _stakingModuleIndex module index
      * @param _totalDepositsCount total number of deposits to be made
      * @return max depositable keys count
      */
-    function _getStakingModuleProspectiveMaxDepositableKeysByIndex(
+    function _estimateStakingModuleMaxDepositableKeysByIndex(
         uint256 _stakingModuleIndex,
         uint256 _totalDepositsCount
     ) internal view returns (uint256) {
@@ -391,7 +391,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         uint256 maxDepositableKeys;
         uint256 stakingModuleIndex = _getStakingModuleIndexById(_stakingModuleId);
 
-        maxDepositableKeys = _getStakingModuleProspectiveMaxDepositableKeysByIndex(
+        maxDepositableKeys = _estimateStakingModuleMaxDepositableKeysByIndex(
             stakingModuleIndex,
             Math.min(address(this).balance / DEPOSIT_SIZE, _maxDepositsCount)
         );

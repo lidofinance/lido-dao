@@ -784,7 +784,7 @@ contract Lido is ILido, StETH, AragonApp {
         IStakingRouter stakingRouter = getStakingRouter();
         /// take into account the current balance of the Staking Router and the buffered ether amount
         uint256 totalDepositsCount = _getBufferedEther().add(address(stakingRouter).balance).div(DEPOSIT_SIZE);
-        return getStakingRouter().getStakingModuleProspectiveMaxDepositableKeys(_stakingModuleId, totalDepositsCount);
+        return getStakingRouter().estimateStakingModuleMaxDepositableKeys(_stakingModuleId, totalDepositsCount);
     }
 
     /**

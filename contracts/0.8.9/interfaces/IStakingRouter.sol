@@ -67,7 +67,7 @@ interface IStakingRouter {
 
     function getStakingModuleStatus(uint24 _stakingModuleId) external view returns (StakingModuleStatus);
 
-    function setStakingModuleStatus(uint24 _stakingModuleId, StakingModuleStatus _status) external;
+    function changeStakingModuleStatus(uint24 _stakingModuleId, StakingModuleStatus _status) external;
 
     function pauseStakingModule(uint24 _stakingModuleId) external;
 
@@ -87,7 +87,7 @@ interface IStakingRouter {
 
     function getStakingModuleActiveKeysCount(uint24 _stakingModuleId) external view returns (uint256);
 
-    function getStakingModuleProspectiveMaxDepositableKeys(
+    function estimateStakingModuleMaxDepositableKeys(
         uint24 _stakingModuleId,
         uint256 _totalDepositsCount
     ) external view returns (uint256);
