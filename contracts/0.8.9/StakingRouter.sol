@@ -73,7 +73,6 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
     bytes32 internal constant WITHDRAWAL_CREDENTIALS_POSITION = keccak256("lido.StakingRouter.withdrawalCredentials");
 
-
     uint256 public constant TOTAL_BASIS_POINTS = 10000;
 
     /// @dev total count of staking modules
@@ -89,18 +88,20 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     ///      index 0 means a value is not in the set.
     mapping(uint24 => uint256) private _stakingModuleIndicesOneBased;
 
-    constructor(address _depositContract) BeaconChainDepositor(_depositContract) {}
+    constructor(address _depositContract) BeaconChainDepositor(_depositContract) {
+        /// @dev lock version in implementation to avoid initialize() call
+        ///      DEFAULT_ADMIN_ROLE will remain unset, i.e. no ability to add new members ro roles
+        _setContractVersion(type(uint256).max);
+    }
 
     function initialize(address _admin, bytes32 _withdrawalCredentials) external {
         if (_admin == address(0)) revert ErrorZeroAddress("_admin");
         if (CONTRACT_VERSION_POSITION.getStorageUint256() != 0) revert ErrorBaseVersion();
+        _setContractVersion(1);
 
         _setupRole(DEFAULT_ADMIN_ROLE, _admin);
 
-        CONTRACT_VERSION_POSITION.setStorageUint256(1);
         WITHDRAWAL_CREDENTIALS_POSITION.setStorageBytes32(_withdrawalCredentials);
-
-        emit ContractVersionSet(1);
         emit WithdrawalCredentialsSet(_withdrawalCredentials);
     }
 
@@ -390,7 +391,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
 
         bytes32 withdrawalCredentials = getWithdrawalCredentials();
         if (withdrawalCredentials == 0) revert ErrorEmptyWithdrawalsCredentials();
-        
+
         uint256 stakingModuleIndex = _getStakingModuleIndexById(_stakingModuleId);
         uint256 maxDepositableKeys = _estimateStakingModuleMaxDepositableKeysByIndex(
             stakingModuleIndex,
@@ -405,7 +406,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
 
         if (keysCount == 0) return 0;
 
-        _makeBeaconChainDeposits32ETH(keysCount,  abi.encodePacked(withdrawalCredentials), publicKeysBatch, signaturesBatch);
+        _makeBeaconChainDeposits32ETH(keysCount, abi.encodePacked(withdrawalCredentials), publicKeysBatch, signaturesBatch);
 
         StakingModule storage stakingModule = _getStakingModuleByIndex(stakingModuleIndex);
         stakingModule.lastDepositAt = uint64(block.timestamp);
@@ -556,5 +557,10 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     modifier onlyActiveStakingModule(uint24 _stakingModuleId) {
         require(checkStakingModuleStatus(_stakingModuleId, StakingModuleStatus.Active), "STAKING_MODULE_NOT_ACTIVE");
         _;
+    }
+
+    function _setContractVersion(uint256 version) internal {
+        CONTRACT_VERSION_POSITION.setStorageUint256(version);
+        emit ContractVersionSet(version);
     }
 }

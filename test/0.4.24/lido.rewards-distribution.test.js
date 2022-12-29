@@ -8,7 +8,7 @@ const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistryMock')
 const Lido = artifacts.require('LidoMock.sol')
 const OracleMock = artifacts.require('OracleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
-const StakingRouter = artifacts.require('StakingRouter.sol')
+const StakingRouter = artifacts.require('StakingRouterMock.sol')
 const ModuleSolo = artifacts.require('ModuleSolo.sol')
 const IStakingModule = artifacts.require('contracts/0.8.9/interfaces/IStakingModule.sol:IStakingModule')
 

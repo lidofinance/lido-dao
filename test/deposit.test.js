@@ -9,8 +9,8 @@ const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
 const Lido = artifacts.require('LidoMock.sol')
 const OracleMock = artifacts.require('OracleMock.sol')
-const DepositContract = artifacts.require('DepositContract')
-const StakingRouter = artifacts.require('StakingRouter')
+const DepositContract = artifacts.require('DepositContract.sol')
+const StakingRouter = artifacts.require('StakingRouterMock.sol')
 
 const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
 const ADDRESS_2 = '0x0000000000000000000000000000000000000002'

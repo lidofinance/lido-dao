@@ -1,8 +1,8 @@
 const hre = require('hardhat')
 const { assert } = require('chai')
 const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
-const StakingRouter = artifacts.require('StakingRouter')
-const StakingModuleMock = artifacts.require('StakingModuleMock')
+const StakingRouter = artifacts.require('StakingRouterMock.sol')
+const StakingModuleMock = artifacts.require('StakingModuleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
 
 contract('StakingRouter', (accounts) => {

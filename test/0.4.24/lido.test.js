@@ -19,7 +19,7 @@ const ERC20Mock = artifacts.require('ERC20Mock.sol')
 const ERC721Mock = artifacts.require('ERC721Mock.sol')
 const VaultMock = artifacts.require('AragonVaultMock.sol')
 const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
-const StakingRouter = artifacts.require('StakingRouter.sol')
+const StakingRouter = artifacts.require('StakingRouterMock.sol')
 const BeaconChainDepositorMock = artifacts.require('BeaconChainDepositorMock.sol')
 
 const ADDRESS_1 = '0x0000000000000000000000000000000000000001'

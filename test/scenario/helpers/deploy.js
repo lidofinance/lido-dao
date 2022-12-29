@@ -5,7 +5,7 @@ const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 const OracleMock = artifacts.require('OracleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
 const DepositSecurityModule = artifacts.require('DepositSecurityModule.sol')
-const StakingRouter = artifacts.require('StakingRouter.sol')
+const StakingRouter = artifacts.require('StakingRouterMock.sol')
 
 module.exports = {
   deployDaoAndPool
