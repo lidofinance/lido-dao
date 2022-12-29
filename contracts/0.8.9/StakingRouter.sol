@@ -94,6 +94,11 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         _setContractVersion(type(uint256).max);
     }
 
+    /**
+     * @dev proxy initialization
+     * @param _admin Lido DAO Aragon agent contract address
+     * @param _withdrawalCredentials Lido withdrawal vault contract address
+     */
     function initialize(address _admin, bytes32 _withdrawalCredentials) external {
         if (_admin == address(0)) revert ErrorZeroAddress("_admin");
         if (CONTRACT_VERSION_POSITION.getStorageUint256() != 0) revert ErrorBaseVersion();
@@ -126,8 +131,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         uint16 _treasuryFee
     ) external onlyRole(MODULE_MANAGE_ROLE) {
         if (_targetShare > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_targetShare");
-        if (_treasuryFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_treasuryFee");
-        if (_moduleFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_moduleFee");
+        if (_moduleFee + _treasuryFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_moduleFee + _treasuryFee");
 
         uint24 newStakingModuleId = _lastStakingModuleId + 1;
         uint256 newStakingModuleIndex = _stakingModulesCount;
@@ -139,6 +143,9 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         newStakingModule.targetShare = _targetShare;
         newStakingModule.treasuryFee = _treasuryFee;
         newStakingModule.moduleFee = _moduleFee;
+        /// @dev since `enum` is `uint8` by nature, so the `status` is stored as `uint8` to avoid possible problems when upgrading.
+        ///      But for human readability, we use `enum` as function parameter type.
+        ///      More about conversion in the docs https://docs.soliditylang.org/en/v0.8.17/types.html#enums
         newStakingModule.status = uint8(StakingModuleStatus.Active);
 
         _stakingModuleIndicesOneBased[newStakingModuleId] = newStakingModuleIndex + 1;
@@ -158,8 +165,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         uint16 _treasuryFee
     ) external onlyRole(MODULE_MANAGE_ROLE) {
         if (_targetShare > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_targetShare");
-        if (_treasuryFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_treasuryFee");
-        if (_moduleFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_moduleFee");
+        if (_moduleFee + _treasuryFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_moduleFee + _treasuryFee");
 
         uint256 stakingModuleIndex = _getStakingModuleIndexById(_stakingModuleId);
 
@@ -351,6 +357,8 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
                 }
             }
         }
+        // sanity check
+        if (totalFee >= TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("totalFee");
 
         /// @dev shrink arrays
         if (rewardedModulesCount < modulesCount) {
