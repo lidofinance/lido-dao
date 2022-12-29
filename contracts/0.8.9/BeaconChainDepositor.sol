@@ -29,7 +29,7 @@ contract BeaconChainDepositor {
     /// @param _withdrawalCredentials Commitment to a public key for withdrawals
     /// @param _publicKeysBatch A BLS12-381 public keys batch
     /// @param _signaturesBatch A BLS12-381 signatures batch
-    function _makeBeaconChainDeposits(
+    function _makeBeaconChainDeposits32ETH(
         uint256 _keysCount,
         bytes memory _withdrawalCredentials,
         bytes memory _publicKeysBatch,

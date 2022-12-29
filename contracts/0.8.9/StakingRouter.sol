@@ -405,7 +405,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
 
         if (keysCount == 0) return 0;
 
-        _makeBeaconChainDeposits(keysCount,  abi.encodePacked(withdrawalCredentials), publicKeysBatch, signaturesBatch);
+        _makeBeaconChainDeposits32ETH(keysCount,  abi.encodePacked(withdrawalCredentials), publicKeysBatch, signaturesBatch);
 
         StakingModule storage stakingModule = _getStakingModuleByIndex(stakingModuleIndex);
         stakingModule.lastDepositAt = uint64(block.timestamp);
