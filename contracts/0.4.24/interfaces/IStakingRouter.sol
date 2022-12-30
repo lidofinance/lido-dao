@@ -24,7 +24,7 @@ interface IStakingRouter {
 
     function getStakingModuleStatus(uint24 _stakingModuleId) external view returns (uint8 status);
 
-    function changeStakingModuleStatus(uint24 _stakingModuleId, uint8 _status) external;
+    function setStakingModuleStatus(uint24 _stakingModuleId, uint8 _status) external;
 
     function pauseStakingModule(uint24 _stakingModuleId) external;
 

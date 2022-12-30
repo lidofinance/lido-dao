@@ -9,13 +9,8 @@ import {IStakingRouter} from "../DepositSecurityModule.sol";
 
 contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
     event StakingModuleDeposited(uint256 maxDepositsCount, uint24 stakingModuleId, bytes depositCalldata);
-    event StakingModuleStatusChanged(
-        uint24 indexed stakingModuleId,
-        StakingModuleStatus fromStatus,
-        StakingModuleStatus toStatus,
-        address changedBy
-    );
-    
+    event StakingModuleStatusSet(uint24 indexed stakingModuleId, StakingModuleStatus status, address setBy);
+
     StakingModuleStatus private status;
     uint256 private stakingModuleKeysOpIndex;
     uint256 private stakingModuleLastDepositBlock;
@@ -36,8 +31,6 @@ contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
 
     function getStakingModulesCount() public view returns (uint256) {}
 
-    function checkStakingModuleStatus(uint24 _stakingModuleId, StakingModuleStatus _status) public view returns (bool) {}
-
     function getStakingRewardsDistribution() external returns (address[] memory recipients, uint96[] memory moduleFees, uint96 totalFee) {}
 
     function deposit(
@@ -55,18 +48,18 @@ contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
         return status;
     }
 
-    function changeStakingModuleStatus(uint24 _stakingModuleId, StakingModuleStatus _status) external {
-        emit StakingModuleStatusChanged(_stakingModuleId, status, _status, msg.sender);
+    function setStakingModuleStatus(uint24 _stakingModuleId, StakingModuleStatus _status) external {
+        emit StakingModuleStatusSet(_stakingModuleId, _status, msg.sender);
         status = _status;
     }
 
     function pauseStakingModule(uint24 stakingModuleId) external {
-        emit StakingModuleStatusChanged(stakingModuleId, status, StakingModuleStatus.DepositsPaused, msg.sender);
+        emit StakingModuleStatusSet(stakingModuleId, StakingModuleStatus.DepositsPaused, msg.sender);
         status = StakingModuleStatus.DepositsPaused;
     }
 
     function resumeStakingModule(uint24 stakingModuleId) external {
-        emit StakingModuleStatusChanged(stakingModuleId, status, StakingModuleStatus.Active, msg.sender);
+        emit StakingModuleStatusSet(stakingModuleId, StakingModuleStatus.Active, msg.sender);
         status = StakingModuleStatus.Active;
     }
 
