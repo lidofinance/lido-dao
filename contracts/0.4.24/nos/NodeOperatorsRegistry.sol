@@ -37,11 +37,9 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
     //
     bytes32 public constant MANAGE_SIGNING_KEYS = keccak256("MANAGE_SIGNING_KEYS");
     bytes32 public constant ADD_NODE_OPERATOR_ROLE = keccak256("ADD_NODE_OPERATOR_ROLE");
-    bytes32 public constant SET_NODE_OPERATOR_ACTIVE_ROLE = keccak256("SET_NODE_OPERATOR_ACTIVE_ROLE");
     bytes32 public constant SET_NODE_OPERATOR_NAME_ROLE = keccak256("SET_NODE_OPERATOR_NAME_ROLE");
     bytes32 public constant SET_NODE_OPERATOR_ADDRESS_ROLE = keccak256("SET_NODE_OPERATOR_ADDRESS_ROLE");
     bytes32 public constant SET_NODE_OPERATOR_LIMIT_ROLE = keccak256("SET_NODE_OPERATOR_LIMIT_ROLE");
-    bytes32 public constant REPORT_STOPPED_VALIDATORS_ROLE = keccak256("REPORT_STOPPED_VALIDATORS_ROLE");
     bytes32 public constant REQUEST_VALIDATORS_KEYS_ROLE = keccak256("REQUEST_VALIDATORS_KEYS_ROLE");
     bytes32 public constant TRIM_UNUSED_KEYS_ROLE = keccak256("TRIM_UNUSED_KEYS_ROLE");
     bytes32 public constant ACTIVATE_NODE_OPERATOR_ROLE = keccak256("ACTIVATE_NODE_OPERATOR_ROLE");
@@ -210,7 +208,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
     }
 
     /// @notice Deactivates active node operator with given id
-    function deactivateNodeOperator(uint256 _nodeOperatorId) external {
+    function deactivateNodeOperator(uint256 _nodeOperatorId)
+        external
+        onlyExistedNodeOperator(_nodeOperatorId)
+        auth(DEACTIVATE_NODE_OPERATOR_ROLE)
+    {
         NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
         require(nodeOperator.active, "NODE_OPERATOR_ALREADY_DEACTIVATED");
 
