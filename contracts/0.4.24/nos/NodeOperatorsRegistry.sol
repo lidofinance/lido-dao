@@ -8,13 +8,13 @@ import {AragonApp} from "@aragon/os/contracts/apps/AragonApp.sol";
 import {SafeMath} from "@aragon/os/contracts/lib/math/SafeMath.sol";
 import {SafeMath64} from "@aragon/os/contracts/lib/math/SafeMath64.sol";
 import {UnstructuredStorage} from "@aragon/os/contracts/common/UnstructuredStorage.sol";
-import {BytesLib} from "solidity-bytes-utils/contracts/BytesLib.sol";
 
 import {IStakingModule} from "../interfaces/IStakingModule.sol";
 import {INodeOperatorsRegistry} from "../interfaces/INodeOperatorsRegistry.sol";
 import {IStETH} from "../interfaces/IStETH.sol";
 
 import "../lib/MemUtils.sol";
+import {BytesLib} from "../lib/BytesLib.sol";
 import {Math64} from "../../common/lib/Math64.sol";
 import {MinFirstAllocationStrategy} from "../../common/lib/MinFirstAllocationStrategy.sol";
 import {SigningKeysStats} from "../lib/SigningKeysStats.sol";
@@ -254,7 +254,9 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         emit NodeOperatorRewardAddressSet(_nodeOperatorId, _rewardAddress);
     }
 
-    /// @dev TODO :: add comment about value scaling
+    /// @dev Current implementation preserves invariant: depositedSigningKeysCount <= vettedSigningKeysCount <= totalSigningKeysCount.
+    ///     If _vettedSigningKeysCount out of range [depositedSigningKeysCount, totalSigningKeysCount], the new vettedSigningKeysCount
+    ///     value will be set to the nearest range border.
     function setNodeOperatorStakingLimit(uint256 _nodeOperatorId, uint64 _vettedSigningKeysCount)
         external
         authP(SET_NODE_OPERATOR_LIMIT_ROLE, arr(uint256(_nodeOperatorId), uint256(_vettedSigningKeysCount)))
@@ -647,7 +649,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
 
     /// @notice distributes rewards among node operators
     /// @return distributed Amount of stETH shares distributed among node operators
-    // TODO: note that called by oracle (add this method to the end of oracle report call)
     function distributeRewards() external returns (uint256 distributed) {
         IStETH stETH = IStETH(STETH_POSITION.getStorageAddress());
 
