@@ -77,10 +77,16 @@ contract('StakingRouter', (accounts) => {
     await acl.createPermission(voting, operators.address, await operators.ADD_NODE_OPERATOR_ROLE(), deployer, { from: deployer })
     await acl.createPermission(voting, operators.address, await operators.MANAGE_SIGNING_KEYS(), deployer, { from: deployer })
     await acl.createPermission(voting, operators.address, await operators.SET_NODE_OPERATOR_LIMIT_ROLE(), deployer, { from: deployer })
-    await acl.createPermission(stakingRouter.address, operators.address, await operators.ASSIGN_NEXT_KEYS_ROLE(), deployer, {
-      from: deployer
-    })
-    await acl.createPermission(stakingRouter.address, operators.address, await operators.TRIM_UNUSED_KEYS_ROLE(), deployer, {
+    await acl.createPermission(
+      stakingRouter.address,
+      operators.address,
+      await operators.REQUEST_VALIDATORS_KEYS_FOR_DEPOSITS_ROLE(),
+      deployer,
+      {
+        from: deployer
+      }
+    )
+    await acl.createPermission(stakingRouter.address, operators.address, await operators.INVALIDATE_READY_TO_DEPOSIT_KEYS(), deployer, {
       from: deployer
     })
 

@@ -69,9 +69,7 @@ contract('Lido', ([appManager, voting, user2]) => {
     await acl.createPermission(voting, curatedModule.address, await curatedModule.ADD_NODE_OPERATOR_ROLE(), appManager, {
       from: appManager
     })
-    await acl.createPermission(voting, curatedModule.address, await curatedModule.SET_NODE_OPERATOR_ACTIVE_ROLE(), appManager, {
-      from: appManager
-    })
+
     await acl.createPermission(voting, curatedModule.address, await curatedModule.SET_NODE_OPERATOR_NAME_ROLE(), appManager, {
       from: appManager
     })
@@ -79,9 +77,6 @@ contract('Lido', ([appManager, voting, user2]) => {
       from: appManager
     })
     await acl.createPermission(voting, curatedModule.address, await curatedModule.SET_NODE_OPERATOR_LIMIT_ROLE(), appManager, {
-      from: appManager
-    })
-    await acl.createPermission(voting, curatedModule.address, await curatedModule.REPORT_STOPPED_VALIDATORS_ROLE(), appManager, {
       from: appManager
     })
 
@@ -119,8 +114,9 @@ contract('Lido', ([appManager, voting, user2]) => {
       from: voting
     })
 
-    await curatedModule.setAvailableKeysCount(50, { from: appManager })
-    await curatedModule.setActiveKeysCount(500000, { from: appManager })
+    await curatedModule.increaseTotalSigningKeysCount(500_000, { from: appManager })
+    await curatedModule.increaseDepositedSigningKeysCount(499_950, { from: appManager })
+    await curatedModule.increaseVettedSigningKeysCount(499_950, { from: appManager })
 
     await stakingRouter.addModule('Solo', soloModule.address, cfgCommunity.targetShare, cfgCommunity.moduleFee, cfgCommunity.treasuryFee, {
       from: voting
@@ -135,7 +131,6 @@ contract('Lido', ([appManager, voting, user2]) => {
     const { moduleFees, totalFee } = await stakingRouter.getStakingRewardsDistribution()
     const treasuryShare = moduleFees.reduce((total, share) => total.sub(share), totalFee)
     const treasuryRewards = bn(beaconBalance).mul(treasuryShare).div(TOTAL_PRECISION_BASIS_POINTS)
-    // console.log({ treasuryRewards: web3.utils.fromWei(treasuryRewards, 'ether') })
     await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(32) })
 
     const treasuryBalanceBefore = await app.balanceOf(treasuryAddr)
@@ -162,7 +157,6 @@ contract('Lido', ([appManager, voting, user2]) => {
     for (let i = 0; i < recipients.length; i++) {
       const moduleBalanceAfter = await app.balanceOf(recipients[i])
       const moduleRewards = bn(beaconBalance).mul(moduleFees[i]).div(TOTAL_PRECISION_BASIS_POINTS)
-      // console.log({ moduleRewards: web3.utils.fromWei(moduleRewards, 'ether') })
       assert(moduleBalanceAfter.gt(moduleBalanceBefore[i]))
       assertBn(fixRound(moduleBalanceBefore[i].add(moduleRewards)), fixRound(moduleBalanceAfter))
     }

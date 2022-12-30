@@ -115,19 +115,26 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
 
     await acl.createPermission(voting, operators.address, await operators.MANAGE_SIGNING_KEYS(), appManager, { from: appManager })
     await acl.createPermission(voting, operators.address, await operators.ADD_NODE_OPERATOR_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, operators.address, await operators.SET_NODE_OPERATOR_ACTIVE_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, operators.address, await operators.ACTIVATE_NODE_OPERATOR_ROLE(), appManager, { from: appManager })
+    await acl.createPermission(voting, operators.address, await operators.DEACTIVATE_NODE_OPERATOR_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, operators.address, await operators.SET_NODE_OPERATOR_NAME_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, operators.address, await operators.SET_NODE_OPERATOR_ADDRESS_ROLE(), appManager, {
       from: appManager
     })
     await acl.createPermission(voting, operators.address, await operators.SET_NODE_OPERATOR_LIMIT_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, operators.address, await operators.REPORT_STOPPED_VALIDATORS_ROLE(), appManager, {
+    await acl.createPermission(voting, operators.address, await operators.UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE(), appManager, {
       from: appManager
     })
-    await acl.createPermission(stakingRouter.address, operators.address, await operators.ASSIGN_NEXT_KEYS_ROLE(), appManager, {
-      from: appManager
-    })
-    await acl.createPermission(stakingRouter.address, operators.address, await operators.TRIM_UNUSED_KEYS_ROLE(), appManager, {
+    await acl.createPermission(
+      stakingRouter.address,
+      operators.address,
+      await operators.REQUEST_VALIDATORS_KEYS_FOR_DEPOSITS_ROLE(),
+      appManager,
+      {
+        from: appManager
+      }
+    )
+    await acl.createPermission(stakingRouter.address, operators.address, await operators.INVALIDATE_READY_TO_DEPOSIT_KEYS(), appManager, {
       from: appManager
     })
 

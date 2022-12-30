@@ -28,11 +28,16 @@ async function addNodeOperator(registry, config, txOptions) {
   const vettedSigningKeysCount = config.vettedSigningKeysCount || 0
   const isActive = config.isActive === undefined ? true : config.isActive
 
-  if (depositedSigningKeysCount > vettedSigningKeysCount) {
-    throw new Error('Invalid keys config: everDepositedKeysLimit < everDepositedKeysCount')
+  if (vettedSigningKeysCount < depositedSigningKeysCount) {
+    throw new Error('Invalid keys config: vettedSigningKeysCount < depositedSigningKeysCount')
   }
+
+  if (vettedSigningKeysCount > totalSigningKeysCount) {
+    throw new Error('Invalid keys config: vettedSigningKeysCount > totalSigningKeysCount')
+  }
+
   if (exitedSigningKeysCount > depositedSigningKeysCount) {
-    throw new Error('Invalid keys config: everDepositedKeysCount < everExitedKeysCount')
+    throw new Error('Invalid keys config: depositedSigningKeysCount < exitedSigningKeysCount')
   }
 
   if (totalSigningKeysCount < exitedSigningKeysCount + depositedSigningKeysCount) {
@@ -46,7 +51,7 @@ async function addNodeOperator(registry, config, txOptions) {
   }
 
   if (depositedSigningKeysCount > 0) {
-    await registry.increaseDepositedSigningKeysCount(newOperatorId, depositedSigningKeysCount, txOptions)
+    await registry.increaseNodeOperatorDepositedSigningKeysCount(newOperatorId, depositedSigningKeysCount, txOptions)
   }
 
   if (vettedSigningKeysCount > 0) {

@@ -8,7 +8,6 @@ import {IStakingModule} from "../../interfaces/IStakingModule.sol";
  */
 contract PoolMock {
     event KeysAssigned(uint256 keysCount, bytes pubkeys, bytes signatures);
-    event KeysOpIndexSet(uint256 keysOpIndex);
 
     IStakingModule private operators;
 
