@@ -78,23 +78,19 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await acl.createPermission(pool.address, app.address, await app.TRIM_UNUSED_KEYS_ROLE(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
-    await app.initialize(steth.address, CURATED_TYPE)
+    const tx = await app.initialize(steth.address, CURATED_TYPE)
+
+    const moduleType = await app.getType()
+    assertEvent(tx, 'ContractVersionSet', { expectedArgs: { version: 2 } })
+    assertEvent(tx, 'StethContractSet', { expectedArgs: { stethAddress: steth.address } })
+    assertEvent(tx, 'SetStakingModuleType', { expectedArgs: { moduleType } })
+
     await snapshot.add()
   })
 
   afterEach(async () => {
     await snapshot.revert()
     await snapshot.add()
-  })
-
-  it('events works', async () => {
-    const receipt = await app.finalizeUpgrade_v2(pool.address, CURATED_TYPE)
-
-    const moduleType = await app.getType()
-
-    assertEvent(receipt, 'ContractVersionSet', { expectedArgs: { version: 2 } })
-    assertEvent(receipt, 'StethContractSet', { expectedArgs: { stethAddress: pool.address } })
-    assertEvent(receipt, 'SetStakingModuleType', { expectedArgs: { moduleType } })
   })
 
   it('addNodeOperator works', async () => {
@@ -1051,37 +1047,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assertBn(await app.getKeysOpIndex(), initialKeysOpIndex + 1)
     })
   })
-  context('finalized upgrade', () => {
-    it('calculate current keys', async () => {
-      await app.addNodeOperator('0', user1, { from: voting })
-      await app.addNodeOperator('1', user2, { from: voting })
-      await app.addNodeOperator('2', user3, { from: voting })
 
-      await app.setOperatorUsedKeys(0, 3)
-      await app.setOperatorStoppedKeys(0, 2)
-      await app.setOperatorTotalKeys(0, 5)
-      await app.setNodeOperatorStakingLimit(0, 5, { from: voting })
-
-      await app.setOperatorUsedKeys(1, 7)
-      await app.setOperatorStoppedKeys(1, 1)
-      await app.setOperatorTotalKeys(1, 8)
-      await app.setNodeOperatorStakingLimit(1, 5, { from: voting })
-
-      await app.setOperatorUsedKeys(2, 10)
-      await app.setOperatorStoppedKeys(2, 10)
-      await app.setOperatorTotalKeys(2, 20)
-      await app.setNodeOperatorStakingLimit(2, 13, { from: voting })
-
-      await app.finalizeUpgrade_v2(steth.address, CURATED_TYPE)
-
-      assertBn(await app.getActiveKeysCount(), 7)
-      assertBn(await app.getAvailableKeysCount(), 5)
-
-      const { activeKeysCount, availableKeysCount } = await app.getKeysUsageData()
-      assertBn(activeKeysCount, 7)
-      assertBn(availableKeysCount, 5)
-    })
-  })
   context('distribute rewards', () => {
     it('must distribute rewards to operators', async () => {
       await steth.setTotalPooledEther(ETH(100))

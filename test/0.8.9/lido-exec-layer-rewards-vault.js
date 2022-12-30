@@ -49,7 +49,7 @@ contract('LidoExecutionLayerRewardsVault', ([appManager, voting, deployer, depos
     await acl.createPermission(voting, lido.address, await lido.BURN_ROLE(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
-    await lido.initialize(operators.address, treasury, ZERO_ADDRESS, ZERO_ADDRESS, 1000)
+    await lido.initialize(oracle.address, treasury, ZERO_ADDRESS, ZERO_ADDRESS)
 
     await oracle.setPool(lido.address)
     await depositContract.reset()

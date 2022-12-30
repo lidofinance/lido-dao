@@ -101,18 +101,21 @@ function signDepositData(
   calldata,
   guardianPrivateKey
 ) {
-  const hash = keccak256(encodeAttestMessage(attestMessagePrefix, blockNumber, blockHash, depositRoot, keysOpIndex))
+  const hash = keccak256(encodeAttestMessage(attestMessagePrefix, blockNumber, blockHash, depositRoot, StakingModuleId, keysOpIndex))
   return toEip2098(ecSign(hash, guardianPrivateKey))
 }
 
-function encodeAttestMessage(attestMessagePrefix, depositRoot, keysOpIndex, blockNumber, blockHash) {
+function encodeAttestMessage(attestMessagePrefix, blockNumber, blockHash, depositRoot, StakingModuleId, keysOpIndex) {
   const uint256Size = 64
+  const uint24Size = 6
+
   return hexToBytes(
     strip0x(attestMessagePrefix) +
-      strip0x(depositRoot) +
-      new BN(keysOpIndex).toString('hex', uint256Size) +
       new BN(blockNumber).toString('hex', uint256Size) +
-      strip0x(blockHash)
+      strip0x(blockHash) +
+      strip0x(depositRoot) +
+      new BN(StakingModuleId).toString('hex', uint24Size) +
+      new BN(keysOpIndex).toString('hex', uint256Size)
   )
 }
 
