@@ -332,9 +332,9 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         }
 
         _nodeOperators[_nodeOperatorId].exitedSigningKeysCount = uint64(_exitedValidatorsKeysCount);
-        
+
         SigningKeysStats.State memory totalSigningKeysStats = _getTotalSigningKeysStats();
-        if (_exitedValidatorsKeysCount > exitedValidatorsCountBefore ) {
+        if (_exitedValidatorsKeysCount > exitedValidatorsCountBefore) {
             totalSigningKeysStats.increaseExitedSigningKeysCount(uint64(_exitedValidatorsKeysCount) - exitedValidatorsCountBefore);
         } else {
             totalSigningKeysStats.decreaseExitedSigningKeysCount(exitedValidatorsCountBefore - uint64(_exitedValidatorsKeysCount));
@@ -396,22 +396,15 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
             bytes memory signatures
         )
     {
-        (
-            uint256[] memory nodeOperatorIds,
-            uint256[] memory activeKeysCounts,
-            uint256[] memory activeKeysCapacities
-        ) = _getSigningKeysAllocationData();
-
-        enqueuedValidatorsKeysCount = MinFirstAllocationStrategy.allocate(activeKeysCounts, activeKeysCapacities, _keysCount);
-
-        assert(enqueuedValidatorsKeysCount <= _keysCount);
+        uint256[] memory nodeOperatorIds;
+        uint256[] memory activeKeysCountAfterAllocation;
+        (enqueuedValidatorsKeysCount, nodeOperatorIds, activeKeysCountAfterAllocation) = _getSigningKeysAllocationData(_keysCount);
 
         if (enqueuedValidatorsKeysCount == 0) {
             return (0, new bytes(0), new bytes(0));
         }
 
-        // [1,0], [0,1]
-        (publicKeys, signatures) = _loadSigningKeys(enqueuedValidatorsKeysCount, nodeOperatorIds, activeKeysCounts);
+        (publicKeys, signatures) = _loadSigningKeys(enqueuedValidatorsKeysCount, nodeOperatorIds, activeKeysCountAfterAllocation);
         _increaseValidatorsKeysNonce();
     }
 
@@ -696,19 +689,19 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
     // INTERNAL METHODS
     //
 
-    function _getSigningKeysAllocationData()
+    function _getSigningKeysAllocationData(uint256 _keysCount)
         internal
         view
         returns (
+            uint256 allocatedKeysCount,
             uint256[] memory nodeOperatorIds,
-            uint256[] memory activeKeysCounts,
-            uint256[] memory activeKeysCapacities
+            uint256[] memory activeKeysCounts
         )
     {
         uint256 activeNodeOperatorsCount = getActiveNodeOperatorsCount();
         nodeOperatorIds = new uint256[](activeNodeOperatorsCount);
         activeKeysCounts = new uint256[](activeNodeOperatorsCount);
-        activeKeysCapacities = new uint256[](activeNodeOperatorsCount);
+        uint256[] memory activeKeysCapacities = new uint256[](activeNodeOperatorsCount);
 
         uint256 activeNodeOperatorIndex;
         uint256 nodeOperatorsCount = getNodeOperatorsCount();
@@ -726,6 +719,10 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
 
             ++activeNodeOperatorIndex;
         }
+
+        allocatedKeysCount = MinFirstAllocationStrategy.allocate(activeKeysCounts, activeKeysCapacities, _keysCount);
+
+        assert(allocatedKeysCount <= _keysCount);
     }
 
     function _loadSigningKeys(
