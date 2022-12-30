@@ -40,13 +40,9 @@ interface IStakingRouter {
 
     function getStakingModuleLastDepositBlock(uint24 _stakingModuleId) external view returns (uint256);
 
-
     function getStakingModuleActiveKeysCount(uint24 _stakingModuleId) external view returns (uint256);
 
-    function estimateStakingModuleMaxDepositableKeys(
-        uint24 _stakingModuleId,
-        uint256 _totalDepositsCount
-    ) external view returns (uint256);
+    function estimateStakingModuleMaxDepositableKeys(uint24 _stakingModuleId, uint256 _keysToAllocate) external view returns (uint256);
 
     function getKeysAllocation(uint256 _keysToAllocate) external view returns (uint256 allocated, uint256[] memory allocations);
 }

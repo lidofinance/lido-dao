@@ -312,7 +312,7 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(32 * 3 + 50) })
     tx = await app.methods[`deposit(uint256,uint24,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
 
-    // assertEvent(tx, 'StakingRouterChangeReceived')
+    // assertEvent(tx, 'StakingRouterTransferReceived')
 
     await checkStat({ depositedValidators: 3, beaconBalance: 0 })
     assertBn(await app.getTotalPooledEther(), ETH(146))
