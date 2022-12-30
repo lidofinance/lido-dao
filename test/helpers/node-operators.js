@@ -8,73 +8,97 @@ const { createFakePublicKeysBatch, createFakeSignaturesBatch } = require('./sign
  * @param {object} config Configuration of the added node operator
  * @param {string} config.name Name of the new node operator
  * @param {string} config.rewardAddress Reward address of the new node operator
- * @param {number} config.totalSigningKeys Count of the validators in the new node operator
- * @param {number} config.usedSigningKeys Count of used signing keys in the new node operator
- * @param {number} config.stoppedValidators Count of stopped signing keys in the new node operator
- * @param {number} config.stakingLimit Staking limit of the new node operator
+ * @param {number} config.totalSigningKeysCount Count of the validators in the new node operator
+ * @param {number} config.depositedSigningKeysCount Count of used signing keys in the new node operator
+ * @param {number} config.exitedSigningKeysCount Count of stopped signing keys in the new node operator
+ * @param {number} config.vettedSigningKeysCount Staking limit of the new node operator
  * @param {number} config.isActive The active state of new node operator
  * @param {object} txOptions Transaction options, like "from", "gasPrice" and e.t.c
  * @returns {number} newOperatorId Id of newly added Node Operator
  */
 async function addNodeOperator(registry, config, txOptions) {
   const newOperatorId = await registry.getNodeOperatorsCount()
-  const { activeKeysCount: activeKeysCountBefore, availableKeysCount: availableKeysCountBefore } = await registry.getKeysUsageData()
+  // const { activeKeysCount: activeKeysCountBefore, availableKeysCount: availableKeysCountBefore } = await registry.getKeysUsageData()
 
   await registry.addNodeOperator(config.name, config.rewardAddress, txOptions)
 
-  const totalSigningKeys = config.totalSigningKeys || 0
-  const stoppedValidators = config.stoppedValidators || 0
-  const usedSigningKeys = config.usedSigningKeys || 0
-  const stakingLimit = config.stakingLimit || 0
+  const totalSigningKeysCount = config.totalSigningKeysCount || 0
+  const exitedSigningKeysCount = config.exitedSigningKeysCount || 0
+  const depositedSigningKeysCount = config.depositedSigningKeysCount || 0
+  const vettedSigningKeysCount = config.vettedSigningKeysCount || 0
   const isActive = config.isActive === undefined ? true : config.isActive
 
-  if (totalSigningKeys < stoppedValidators + usedSigningKeys) {
+  if (depositedSigningKeysCount > vettedSigningKeysCount) {
+    throw new Error('Invalid keys config: everDepositedKeysLimit < everDepositedKeysCount')
+  }
+  if (exitedSigningKeysCount > depositedSigningKeysCount) {
+    throw new Error('Invalid keys config: everDepositedKeysCount < everExitedKeysCount')
+  }
+
+  if (totalSigningKeysCount < exitedSigningKeysCount + depositedSigningKeysCount) {
     throw new Error('Invalid keys config: totalSigningKeys < stoppedValidators + usedSigningKeys')
   }
 
-  if (totalSigningKeys > 0) {
-    const pubkeys = createFakePublicKeysBatch(totalSigningKeys)
-    const signatures = createFakeSignaturesBatch(totalSigningKeys)
-    await registry.addSigningKeys(newOperatorId, totalSigningKeys, pubkeys, signatures, txOptions)
+  if (totalSigningKeysCount > 0) {
+    const pubkeys = createFakePublicKeysBatch(totalSigningKeysCount)
+    const signatures = createFakeSignaturesBatch(totalSigningKeysCount)
+    await registry.addSigningKeys(newOperatorId, totalSigningKeysCount, pubkeys, signatures, txOptions)
   }
 
-  if (usedSigningKeys > 0) {
-    await registry.incUsedSigningKeys(newOperatorId, usedSigningKeys, txOptions)
+  if (depositedSigningKeysCount > 0) {
+    await registry.increaseDepositedSigningKeysCount(newOperatorId, depositedSigningKeysCount, txOptions)
   }
 
-  if (stoppedValidators > 0) {
-    await registry.reportStoppedValidators(newOperatorId, stoppedValidators, txOptions)
+  if (vettedSigningKeysCount > 0) {
+    await registry.setNodeOperatorStakingLimit(newOperatorId, vettedSigningKeysCount, txOptions)
   }
 
-  if (stakingLimit > 0) {
-    await registry.setNodeOperatorStakingLimit(newOperatorId, stakingLimit, txOptions)
+  if (exitedSigningKeysCount > 0) {
+    await registry.updateExitedValidatorsKeysCount(newOperatorId, exitedSigningKeysCount, txOptions)
   }
 
   if (!isActive) {
-    await registry.setNodeOperatorActive(newOperatorId, false, txOptions)
+    await registry.deactivateNodeOperator(newOperatorId, txOptions)
   }
 
-  const newOperator = await registry.getNodeOperator(newOperatorId, true)
-  const { activeKeysCount: activeKeysCountAfter, availableKeysCount: availableKeysCountAfter } = await registry.getKeysUsageData()
+  const { exitedValidatorsCount, activeValidatorsKeysCount, readyToDepositValidatorsKeysCount } = await registry.getValidatorsKeysStats(
+    newOperatorId
+  )
+  const nodeOperator = await registry.getNodeOperator(newOperatorId, true)
 
-  assert.equal(newOperator.name, config.name, 'Invalid name')
-  assert.equal(newOperator.rewardAddress, config.rewardAddress, 'Invalid reward address')
-  assert.equal(newOperator.active, isActive, 'Invalid active status')
-  assertBn(newOperator.stakingLimit, stakingLimit, 'Invalid staking limit')
+  if (isActive) {
+    assertBn(nodeOperator.stakingLimit, vettedSigningKeysCount)
+    assertBn(nodeOperator.totalSigningKeys, totalSigningKeysCount)
+    assertBn(exitedValidatorsCount, exitedSigningKeysCount)
+    assertBn(activeValidatorsKeysCount, depositedSigningKeysCount - exitedSigningKeysCount)
+    assertBn(readyToDepositValidatorsKeysCount, vettedSigningKeysCount - depositedSigningKeysCount)
+  } else {
+    assertBn(exitedValidatorsCount, exitedSigningKeysCount)
+    assertBn(activeValidatorsKeysCount, depositedSigningKeysCount - exitedSigningKeysCount)
+    assertBn(readyToDepositValidatorsKeysCount, 0)
+  }
 
-  const expectedTotalSigningKeys = isActive ? totalSigningKeys : usedSigningKeys
-  assertBn(newOperator.totalSigningKeys, expectedTotalSigningKeys, 'Invalid total signing keys')
-  assertBn(newOperator.usedSigningKeys, usedSigningKeys, 'Invalid used signing keys')
-  assertBn(newOperator.stoppedValidators, stoppedValidators, 'Invalid stopped signing keys')
+  // const newOperator = await registry.getNodeOperator(newOperatorId, true)
+  // const { activeKeysCount: activeKeysCountAfter, availableKeysCount: availableKeysCountAfter } = await registry.getKeysUsageData()
 
-  const expectedActiveKeysCount = activeKeysCountBefore.toNumber() + usedSigningKeys - stoppedValidators
-  assertBn(expectedActiveKeysCount, activeKeysCountAfter)
+  // assert.equal(newOperator.name, config.name, 'Invalid name')
+  // assert.equal(newOperator.rewardAddress, config.rewardAddress, 'Invalid reward address')
+  // assert.equal(newOperator.active, isActive, 'Invalid active status')
+  // assertBn(newOperator.stakingLimit, everDepositedKeysLimit, 'Invalid staking limit')
 
-  const expectedAvailableKeys = isActive ? Math.max(0, Math.min(totalSigningKeys, stakingLimit) - usedSigningKeys) : 0
+  // const expectedTotalSigningKeys = isActive ? everAddedKeysCount : everDepositedKeysCount
+  // assertBn(newOperator.totalSigningKeys, expectedTotalSigningKeys, 'Invalid total signing keys')
+  // assertBn(newOperator.usedSigningKeys, everDepositedKeysCount, 'Invalid used signing keys')
+  // assertBn(newOperator.stoppedValidators, everExitedKeysCount, 'Invalid stopped signing keys')
 
-  assertBn(availableKeysCountBefore.toNumber() + expectedAvailableKeys, availableKeysCountAfter)
+  // const expectedActiveKeysCount = activeKeysCountBefore.toNumber() + everDepositedKeysCount - everExitedKeysCount
+  // assertBn(expectedActiveKeysCount, activeKeysCountAfter)
 
-  return newOperatorId.toNumber()
+  // const expectedAvailableKeys = isActive ? Math.max(0, Math.min(everAddedKeysCount, everDepositedKeysLimit) - everDepositedKeysCount) : 0
+
+  // assertBn(availableKeysCountBefore.toNumber() + expectedAvailableKeys, availableKeysCountAfter)
+
+  // return newOperatorId.toNumber()
 }
 
 async function getAllNodeOperators(registry) {

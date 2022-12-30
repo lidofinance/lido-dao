@@ -18,7 +18,7 @@ contract PoolMock {
 
     function assignNextSigningKeys(uint64 _numKeys) external {
         bytes memory data = new bytes(0);
-        (uint256 enqueuedValidatorsKeysCount, bytes memory pubkeys, bytes memory signatures) = operators.enqueueApprovedValidatorsKeys(
+        (uint256 enqueuedValidatorsKeysCount, bytes memory pubkeys, bytes memory signatures) = operators.requestValidatorsKeysForDeposits(
             _numKeys,
             data
         );
@@ -26,6 +26,6 @@ contract PoolMock {
     }
 
     function trimUnusedKeys() external {
-        operators.trimUnusedValidatorsKeys();
+        operators.invalidateReadyToDepositKeys();
     }
 }

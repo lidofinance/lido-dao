@@ -32,40 +32,38 @@ contract StakingModuleMock is IStakingModule {
         external
         view
         returns (
-            uint64 exitedValidatorsCount,
-            uint64 depositedValidatorsCount,
-            uint64 approvedValidatorsKeysCount,
-            uint64 totalValidatorsKeysCount
+            uint256 exitedValidatorsCount,
+            uint256 activeValidatorsKeysCount,
+            uint256 readyToDepositValidatorsKeysCount
         )
     {}
 
     function getValidatorsKeysNonce() external view returns (uint256) {}
 
-    function getNodeOperatorsCount() external view returns (uint24) {}
+    function getNodeOperatorsCount() external view returns (uint256) {}
 
-    function getActiveNodeOperatorsCount() external view returns (uint24) {}
+    function getActiveNodeOperatorsCount() external view returns (uint256) {}
 
-    function getNodeOperatorIsActive(uint24 _nodeOperatorId) external view returns (bool) {}
+    function getNodeOperatorIsActive(uint256 _nodeOperatorId) external view returns (bool) {}
 
-    function getNodeOperatorValidatorsKeysStats(uint24 _nodeOperatorId)
+    function getValidatorsKeysStats(uint256 _nodeOperatorId)
         external
         view
         returns (
-            uint64 exitedValidatorsCount,
-            uint64 depositedValidatorsCount,
-            uint64 approvedValidatorsKeysCount,
-            uint64 totalValidatorsKeysCount
+            uint256 exitedValidatorsCount,
+            uint256 activeValidatorsKeysCount,
+            uint256 readyToDepositValidatorsKeysCount
         )
     {}
 
-    function updateNodeOperatorExitedValidatorsKeysCount(uint24 _nodeOperatorId, uint64 _exitedValidatorsCount) external {}
+    function updateExitedValidatorsKeysCount(uint256 _nodeOperatorId, uint256 _exitedValidatorsCount) external {}
 
-    function trimUnusedValidatorsKeys() external {}
+    function invalidateReadyToDepositKeys() external {}
 
-    function enqueueApprovedValidatorsKeys(uint64 _keysCount, bytes calldata _calldata)
+    function requestValidatorsKeysForDeposits(uint256 _keysCount, bytes calldata _calldata)
         external
         returns (
-            uint64 enqueuedValidatorsKeysCount,
+            uint256 enqueuedValidatorsKeysCount,
             bytes memory publicKeys,
             bytes memory signatures
         )

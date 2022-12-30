@@ -288,9 +288,8 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         onlyRegisteredStakingModule(_stakingModuleId)
         returns (uint256)
     {
-        (uint64 exitedValidatorsCount, uint64 depositedValidatorsCount, , ) = IStakingModule(_getStakingModuleAddressById(_stakingModuleId))
-            .getValidatorsKeysStats();
-        return depositedValidatorsCount - exitedValidatorsCount;
+        (, uint256 activeValidatorsKeysCount, ) = IStakingModule(_getStakingModuleAddressById(_stakingModuleId)).getValidatorsKeysStats();
+        return activeValidatorsKeysCount;
     }
 
     /**
@@ -389,7 +388,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
 
         (uint256 keysCount, bytes memory publicKeysBatch, bytes memory signaturesBatch) = IStakingModule(
             _modulesCache[stakingModuleIndex].stakingModuleAddress
-        ).enqueueApprovedValidatorsKeys(uint64(maxSigningKeysCount), _depositCalldata);
+        ).requestValidatorsKeysForDeposits(maxSigningKeysCount, _depositCalldata);
 
         if (keysCount == 0) return 0;
 
@@ -437,7 +436,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     function _trimUnusedKeys() internal {
         uint256 _modulesCount = getStakingModulesCount();
         for (uint256 i = 0; i < _modulesCount; ++i) {
-            IStakingModule(_getStakingModuleAddressByIndex(i)).trimUnusedValidatorsKeys();
+            IStakingModule(_getStakingModuleAddressByIndex(i)).invalidateReadyToDepositKeys();
         }
     }
 
@@ -450,9 +449,9 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         stakingModuleCache.status = stakingModuleData.status;
 
         IStakingModule stakingModule = IStakingModule(stakingModuleData.stakingModuleAddress);
-        (uint64 exitedKeysCount, uint64 depositedKeysCount, uint64 approvedValidatorsKeysCount, ) = stakingModule.getValidatorsKeysStats();
-        stakingModuleCache.activeKeysCount = depositedKeysCount - exitedKeysCount;
-        stakingModuleCache.availableKeysCount = approvedValidatorsKeysCount - depositedKeysCount;
+        (, uint256 activeValidatorsKeysCount, uint256 readyToDepositValidatorsKeysCount) = stakingModule.getValidatorsKeysStats();
+        stakingModuleCache.activeKeysCount = activeValidatorsKeysCount;
+        stakingModuleCache.availableKeysCount = readyToDepositValidatorsKeysCount;
     }
 
     /**

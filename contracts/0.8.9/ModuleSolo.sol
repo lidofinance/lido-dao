@@ -34,38 +34,35 @@ contract ModuleSolo is IStakingModule {
         external
         view
         returns (
-            uint64 exitedValidatorsCount,
-            uint64 depositedValidatorsCount,
-            uint64 approvedValidatorsKeysCount,
-            uint64 totalValidatorsKeysCount
+            uint256 exitedValidatorsCount,
+            uint256 activeValidatorsKeysCount,
+            uint256 readyToDepositValidatorsKeysCount
         )
     {
-        exitedValidatorsCount = uint64(totalStoppedKeys);
-        depositedValidatorsCount = uint64(totalUsedKeys);
-        approvedValidatorsKeysCount = uint64(totalKeys);
-        totalValidatorsKeysCount = uint64(totalKeys);
+        exitedValidatorsCount = totalStoppedKeys;
+        activeValidatorsKeysCount = totalUsedKeys - totalStoppedKeys;
+        readyToDepositValidatorsKeysCount = totalKeys - totalUsedKeys;
     }
+
+    function getValidatorsKeysStats(uint256 _nodeOperatorId)
+        external
+        view
+        returns (
+            uint256 exitedValidatorsCount,
+            uint256 activeValidatorsKeysCount,
+            uint256 readyToDepositValidatorsKeysCount
+        )
+    {}
 
     function getValidatorsKeysNonce() external view returns (uint256) {
         return keysOpIndex;
     }
 
-    function getNodeOperatorsCount() external view returns (uint24) {}
+    function getNodeOperatorsCount() external view returns (uint256) {}
 
-    function getActiveNodeOperatorsCount() external view returns (uint24) {}
+    function getActiveNodeOperatorsCount() external view returns (uint256) {}
 
-    function getNodeOperatorIsActive(uint24 _nodeOperatorId) external view returns (bool) {}
-
-    function getNodeOperatorValidatorsKeysStats(uint24 _nodeOperatorId)
-        external
-        view
-        returns (
-            uint64 exitedValidatorsCount,
-            uint64 depositedValidatorsCount,
-            uint64 approvedValidatorsKeysCount,
-            uint64 totalValidatorsKeysCount
-        )
-    {}
+    function getNodeOperatorIsActive(uint256 _nodeOperatorId) external view returns (bool) {}
 
     function getRewardsDistribution(uint256 _totalRewardShares)
         external
@@ -73,21 +70,21 @@ contract ModuleSolo is IStakingModule {
         returns (address[] memory recipients, uint256[] memory shares)
     {}
 
-    function getNodeOperatorKeysStats(uint24 _nodeOperatorId)
+    function getNodeOperatorKeysStats(uint56 _nodeOperatorId)
         external
         view
         returns (
-            uint64 everDepositedKeysCount,
-            uint64 everExitedKeysCount,
-            uint64 readyToDepositKeysCount
+            uint256 everDepositedKeysCount,
+            uint256 everExitedKeysCount,
+            uint256 readyToDepositKeysCount
         )
     {}
 
     function addNodeOperator(string memory _name, address _rewardAddress) external returns (uint256 id) {}
 
-    function setNodeOperatorStakingLimit(uint256 _id, uint64 _stakingLimit) external {}
+    function setNodeOperatorStakingLimit(uint256 _id, uint256 _stakingLimit) external {}
 
-    function updateNodeOperatorExitedValidatorsKeysCount(uint24 _nodeOperatorId, uint64 _newEverExitedKeysCount) external {}
+    function updateExitedValidatorsKeysCount(uint256 _nodeOperatorId, uint256 _exitedValidatorsKeysCount) external {}
 
     function addSigningKeys(
         uint256 _operator_id,
@@ -128,7 +125,7 @@ contract ModuleSolo is IStakingModule {
         return stakingRouter;
     }
 
-    function trimUnusedValidatorsKeys() external {}
+    function invalidateReadyToDepositKeys() external {}
 
     function setType(bytes32 _type) external {
         moduleType = _type;
@@ -138,11 +135,11 @@ contract ModuleSolo is IStakingModule {
         return keysOpIndex;
     }
 
-    function enqueueApprovedValidatorsKeys(uint64 _keysCount, bytes calldata _calldata)
+    function requestValidatorsKeysForDeposits(uint256 _keysCount, bytes calldata _calldata)
         external
         pure
         returns (
-            uint64 enqueuedValidatorsKeysCount,
+            uint256 keysCount,
             bytes memory publicKeys,
             bytes memory signatures
         )
