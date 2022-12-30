@@ -21,7 +21,7 @@ contract('StakingRouter', (accounts) => {
     ])
 
     const wc = '0x'.padEnd(66, '1234')
-    await stakingRouter.initialize(admin, wc, { from: deployer })
+    await stakingRouter.initialize(admin, lido, wc, { from: deployer })
 
     // Set up the staking router permissions.
     const [MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, MODULE_PAUSE_ROLE, MODULE_MANAGE_ROLE] = await Promise.all([

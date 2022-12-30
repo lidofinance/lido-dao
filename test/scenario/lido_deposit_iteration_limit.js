@@ -195,7 +195,7 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
     await pool.submit(referral, { from: user1, value: ETH(2 * 32) })
 
     assertBn(await pool.getTotalPooledEther(), ETH(27 * 32), 'total controlled ether')
-    assertBn(await pool.getTotalBufferedEther(), ETH(2 * 32), 'buffered ether')
+    assertBn(await pool.getBufferedEther(), ETH(2 * 32), 'buffered ether')
   })
 
   it('the number of assigned validators is still limited by the number of available validator keys', async () => {
@@ -226,7 +226,7 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
     assertBn(ether2Stat.depositedValidators, 26, 'deposited validators')
 
     // the rest of the received Ether is still buffered in the pool
-    assertBn(await pool.getTotalBufferedEther(), ETH(1 * 32), 'buffered ether')
+    assertBn(await pool.getBufferedEther(), ETH(1 * 32), 'buffered ether')
   })
 
   it('depositBufferedEther is a nop if there are no signing keys available', async () => {
@@ -254,6 +254,6 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
     assertBn(await depositContractMock.totalCalls(), 26, 'total validators assigned')
 
     // the rest of the received Ether is still buffered in the pool
-    assertBn(await pool.getTotalBufferedEther(), ETH(1 * 32), 'buffered ether')
+    assertBn(await pool.getBufferedEther(), ETH(1 * 32), 'buffered ether')
   })
 })

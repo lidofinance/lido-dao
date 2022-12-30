@@ -217,16 +217,6 @@ interface ILido {
     function getBufferedEther() external view returns (uint256);
 
     /**
-     * @dev Gets the amount of Ether temporary buffered on the StakingRouter contract balance
-     */
-    function getStakingRouterBufferedEther() external view returns (uint256);
-
-    /**
-     * @dev Gets the amount of Ether temporary buffered on the Lido and StakingRouter contracts balance
-     */
-    function getTotalBufferedEther() external view returns (uint256);
-
-    /**
      * @notice Returns the key values related to Beacon-side
      * @return depositedValidators - number of deposited validators
      * @return beaconValidators - number of Lido's validators visible in the Beacon state, reported by oracles
@@ -262,6 +252,6 @@ interface ILido {
 
     event ContractVersionSet(uint256 version);
 
-    // The `amount` of ether was sent to the Staking Router
-    event TransferredToStakingRouter(uint256 amount);
+    // The amount of ETH sended from StakingRouter contract to Lido contract
+    event StakingRouterChangeReceived(uint256 amount);
 }

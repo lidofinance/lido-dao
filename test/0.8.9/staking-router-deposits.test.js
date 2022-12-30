@@ -85,7 +85,7 @@ contract('StakingRouter', (accounts) => {
     })
 
     const wc = '0x'.padEnd(66, '1234')
-    await stakingRouter.initialize(admin, wc, { from: deployer })
+    await stakingRouter.initialize(admin, lido.address, wc, { from: deployer })
 
     // Set up the staking router permissions.
     const [MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, MODULE_PAUSE_ROLE, MODULE_MANAGE_ROLE, STAKING_ROUTER_DEPOSIT_ROLE] = await Promise.all([
@@ -184,15 +184,13 @@ contract('StakingRouter', (accounts) => {
 
       assertBn(await depositContract.totalCalls(), 100, 'invalid deposits count')
 
-      // on deposit we transfer all of BUFFERED_ETHER to th StakingRouter
-      assertBn(await web3.eth.getBalance(lido.address), ETH(0), 'invalid lido balance')
+      // on deposit we return balance to Lido
+      assertBn(await web3.eth.getBalance(lido.address), ETH(32), 'invalid lido balance')
+      assertBn(await web3.eth.getBalance(stakingRouter.address), 0, 'invalid staking_router balance')
 
-      assertBn(await web3.eth.getBalance(stakingRouter.address), ETH(32), 'invalid staking_router balance')
-      assertBn(await lido.getStakingRouterBufferedEther(), ETH(32), 'invalid staking_router buffer')
-      assertBn(await lido.getTotalBufferedEther(), ETH(32), 'invalid total buffer')
+      assertBn(await lido.getBufferedEther(), ETH(32), 'invalid total buffer')
 
       assertEvent(receipt, 'Unbuffered', { expectedArgs: { amount: ETH(maxDepositsCount * 32) } })
-      assertEvent(receipt, 'TransferredToStakingRouter', { expectedArgs: { amount: sendEthForKeys } })
     })
   })
 })

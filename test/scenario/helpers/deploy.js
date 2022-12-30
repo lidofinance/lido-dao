@@ -150,7 +150,7 @@ async function deployDaoAndPool(appManager, voting) {
   ])
 
   const wc = '0x'.padEnd(66, '1234')
-  await stakingRouter.initialize(appManager, wc, { from: appManager })
+  await stakingRouter.initialize(appManager, pool.address, wc, { from: appManager })
 
   // Set up the staking router permissions.
   const [MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, MODULE_PAUSE_ROLE, MODULE_MANAGE_ROLE, STAKING_ROUTER_DEPOSIT_ROLE] = await Promise.all([

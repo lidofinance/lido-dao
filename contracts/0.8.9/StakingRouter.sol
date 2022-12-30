@@ -16,6 +16,15 @@ import {MinFirstAllocationStrategy} from "./lib/MinFirstAllocationStrategy.sol";
 
 import {BeaconChainDepositor} from "./BeaconChainDepositor.sol";
 
+interface ILido {
+    /**
+      * @notice A payable function supposed to be called only by StakingRouter contract
+      * @dev We need a dedicated function because funds received by the default payable function
+      * are treated as a user deposit
+      */
+    function receiveStakingRouter() external payable;
+}
+
 contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDepositor {
     using UnstructuredStorage for bytes32;
 
@@ -65,6 +74,8 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     /// - N after upgrading contract from the previous version (after calling finalize_vN())
     bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.StakingRouter.contractVersion");
 
+    bytes32 internal constant LIDO_POSITION = keccak256("lido.StakingRouter.lido");
+
     /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
     bytes32 internal constant WITHDRAWAL_CREDENTIALS_POSITION = keccak256("lido.StakingRouter.withdrawalCredentials");
 
@@ -92,13 +103,15 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
      * @param _admin Lido DAO Aragon agent contract address
      * @param _withdrawalCredentials Lido withdrawal vault contract address
      */
-    function initialize(address _admin, bytes32 _withdrawalCredentials) external {
+    function initialize(address _admin, address _lido, bytes32 _withdrawalCredentials) external {
         if (_admin == address(0)) revert ErrorZeroAddress("_admin");
+        if (_lido == address(0)) revert ErrorZeroAddress("_lido");
         if (CONTRACT_VERSION_POSITION.getStorageUint256() != 0) revert ErrorBaseVersion();
         _setContractVersion(1);
 
         _setupRole(DEFAULT_ADMIN_ROLE, _admin);
 
+        LIDO_POSITION.setStorageAddress(_lido);
         WITHDRAWAL_CREDENTIALS_POSITION.setStorageBytes32(_withdrawalCredentials);
         emit WithdrawalCredentialsSet(_withdrawalCredentials);
     }
@@ -106,6 +119,13 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     /// @dev prohibit direct transfer to contract
     receive() external payable {
         revert ErrorDirectETHTransfer();
+    }
+
+    /**
+     * @notice Return the Lido contract address
+     */
+    function getLido() public view returns (ILido) {
+        return ILido(LIDO_POSITION.getStorageAddress());
     }
 
     /**
@@ -364,6 +384,8 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         uint24 _stakingModuleId,
         bytes calldata _depositCalldata
     ) external payable onlyRole(STAKING_ROUTER_DEPOSIT_ROLE) returns (uint256) {
+        if (msg.value == 0) return 0;
+
         bytes32 withdrawalCredentials = getWithdrawalCredentials();
         if (withdrawalCredentials == 0) revert ErrorEmptyWithdrawalsCredentials();
 
@@ -373,19 +395,21 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
 
         uint256 maxDepositableKeys = _estimateStakingModuleMaxDepositableKeysByIndex(
             stakingModuleIndex,
-            Math.min(address(this).balance / DEPOSIT_SIZE, _maxDepositsCount)
+            Math.min(msg.value / DEPOSIT_SIZE, _maxDepositsCount)
         );
 
-        if (maxDepositableKeys == 0) return 0;
-
-        if (msg.value > 0) {
-            emit StakingRouterETHReceived(msg.value);
+        if (maxDepositableKeys == 0) {
+            _returnBalanceEthToLido();
+            return 0;
         }
 
         (uint256 keysCount, bytes memory publicKeysBatch, bytes memory signaturesBatch) = IStakingModule(stakingModule.stakingModuleAddress)
             .prepNextSigningKeys(maxDepositableKeys, _depositCalldata);
 
-        if (keysCount == 0) return 0;
+        if (keysCount == 0) { 
+            _returnBalanceEthToLido();
+            return 0; 
+        }
 
         _makeBeaconChainDeposits32ETH(keysCount, abi.encodePacked(withdrawalCredentials), publicKeysBatch, signaturesBatch);
 
@@ -394,7 +418,17 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
 
         emit StakingRouterETHDeposited(_getStakingModuleIdByIndex(stakingModuleIndex), keysCount * DEPOSIT_SIZE);
 
+        _returnBalanceEthToLido();
+
         return keysCount;
+    }
+
+    function _returnBalanceEthToLido() internal {
+        //return balance to Lido 
+        uint256 balance = address(this).balance;
+        if (balance > 0) {
+            getLido().receiveStakingRouter{value: balance}();
+        }
     }
 
     /**

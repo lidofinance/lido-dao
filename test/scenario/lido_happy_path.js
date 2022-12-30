@@ -334,7 +334,7 @@ contract('Lido: happy path', (addresses) => {
     // The pool ran out of validator keys, so the remaining 32 ETH were added to the
     // pool buffer
 
-    assertBn(await pool.getTotalBufferedEther(), ETH(1 + 32), 'buffered ether')
+    assertBn(await pool.getBufferedEther(), ETH(1 + 32), 'buffered ether')
     assertBn(await pool.getTotalPooledEther(), ETH(33 + 64), 'total pooled ether')
 
     // The amount of tokens corresponding to the deposited ETH value was minted to the users
@@ -382,7 +382,7 @@ contract('Lido: happy path', (addresses) => {
 
     // Buffered Ether amount didn't change
 
-    assertBn(await pool.getTotalBufferedEther(), ETH(33), 'buffered ether')
+    assertBn(await pool.getBufferedEther(), ETH(33), 'buffered ether')
 
     // New tokens was minted to distribute fee
     assertBn(await token.totalSupply(), tokens(129), 'token total supply')
