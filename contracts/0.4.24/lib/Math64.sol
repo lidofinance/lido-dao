@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 // See contracts/COMPILERS.md
-pragma solidity >=0.4.24 <0.9.0;
+pragma solidity 0.4.24;
 
 library Math64 {
     function max(uint64 a, uint64 b) internal pure returns (uint64) {

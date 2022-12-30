@@ -14,8 +14,8 @@ import {INodeOperatorsRegistry} from "../interfaces/INodeOperatorsRegistry.sol";
 import {IStETH} from "../interfaces/IStETH.sol";
 
 import "../lib/MemUtils.sol";
+import {Math64} from "../lib/Math64.sol";
 import {BytesLib} from "../lib/BytesLib.sol";
-import {Math64} from "../../common/lib/Math64.sol";
 import {MinFirstAllocationStrategy} from "../../common/lib/MinFirstAllocationStrategy.sol";
 import {SigningKeysStats} from "../lib/SigningKeysStats.sol";
 
