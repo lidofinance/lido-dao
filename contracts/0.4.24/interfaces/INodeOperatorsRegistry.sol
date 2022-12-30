@@ -40,7 +40,7 @@ interface INodeOperatorsRegistry {
     /// @notice Returns number of active node operators
     function getActiveNodeOperatorsCount() external view returns (uint256);
 
-    /// @notice Returns the n-th node operator
+    /// @notice Returns the node operator by id
     /// @param _nodeOperatorId Node Operator id
     /// @param _fullInfo If true, name will be returned as well
     function getNodeOperator(uint256 _nodeOperatorId, bool _fullInfo)
@@ -167,6 +167,19 @@ interface INodeOperatorsRegistry {
             bytes key,
             bytes depositSignature,
             bool used
+        );
+
+    function getNodeOperatorValidatorsKeys(
+        uint256 _nodeOperatorId,
+        uint256 _offset,
+        uint256 _limit
+    )
+        external
+        view
+        returns (
+            bytes memory pubkeys,
+            bytes memory signatures,
+            bool[] memory used
         );
 
     /// @notice Unsafely updates the number of the validators in the EXITED state for node operator with given id

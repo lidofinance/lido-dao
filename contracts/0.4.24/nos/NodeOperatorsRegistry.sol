@@ -166,6 +166,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         emit StakingModuleTypeSet(_type);
     }
 
+    /// @notice Add node operator named `name` with reward address `rewardAddress` and staking limit = 0 validators
     function addNodeOperator(string _name, address _rewardAddress)
         external
         auth(ADD_NODE_OPERATOR_ROLE)
@@ -190,6 +191,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         emit NodeOperatorAdded(id, _name, _rewardAddress, 0);
     }
 
+    // @notice Activates deactivated node operator with given id
     function activateNodeOperator(uint256 _nodeOperatorId)
         external
         onlyExistedNodeOperator(_nodeOperatorId)
@@ -207,6 +209,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         emit NodeOperatorActivated(_nodeOperatorId);
     }
 
+    /// @notice Deactivates active node operator with given id
     function deactivateNodeOperator(uint256 _nodeOperatorId) external {
         NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
         require(nodeOperator.active, "NODE_OPERATOR_ALREADY_DEACTIVATED");
@@ -233,6 +236,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         }
     }
 
+    /// @notice Change human-readable name of the node operator with given id
     function setNodeOperatorName(uint256 _nodeOperatorId, string _name)
         external
         onlyExistedNodeOperator(_nodeOperatorId)
@@ -244,6 +248,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         emit NodeOperatorNameSet(_nodeOperatorId, _name);
     }
 
+    /// @notice Change reward address of the node operator with given id
     function setNodeOperatorRewardAddress(uint256 _nodeOperatorId, address _rewardAddress)
         external
         onlyExistedNodeOperator(_nodeOperatorId)
@@ -255,6 +260,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         emit NodeOperatorRewardAddressSet(_nodeOperatorId, _rewardAddress);
     }
 
+    /// @notice Set the maximum number of validators to stake for the node operator with given id
     /// @dev Current implementation preserves invariant: depositedSigningKeysCount <= vettedSigningKeysCount <= totalSigningKeysCount.
     ///     If _vettedSigningKeysCount out of range [depositedSigningKeysCount, totalSigningKeysCount], the new vettedSigningKeysCount
     ///     value will be set to the nearest range border.
@@ -294,6 +300,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         emit VettedSigningKeysCountChanged(_nodeOperatorId, approvedValidatorsCountAfter);
     }
 
+    /// @notice Updates the number of the validators in the EXITED state for node operator with given id
     function updateExitedValidatorsKeysCount(uint256 _nodeOperatorId, uint256 _exitedValidatorsKeysCount)
         external
         onlyExistedNodeOperator(_nodeOperatorId)
@@ -319,6 +326,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         emit ExitedValidatorsKeysCountChanged(_nodeOperatorId, _exitedValidatorsKeysCount);
     }
 
+    /// @notice Unsafely updates the number of the validators in the EXITED state for node operator with given id
     function unsafeUpdateExitedValidatorsKeysCount(uint256 _nodeOperatorId, uint256 _exitedValidatorsKeysCount)
         external
         onlyExistedNodeOperator(_nodeOperatorId)
@@ -344,6 +352,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         emit ExitedValidatorsKeysCountChanged(_nodeOperatorId, _exitedValidatorsKeysCount);
     }
 
+    /// @notice Invalidates all unused validators keys for all node operators
     function invalidateReadyToDepositKeys() external auth(TRIM_UNUSED_KEYS_ROLE) {
         uint64 trimmedKeysCount = 0;
         uint64 totalTrimmedKeysCount = 0;
@@ -384,9 +393,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         }
     }
 
-    // TODO:: gas usage
-    // TODO:: acceptance tests
-    // TODO:: auditors check equivalence and ask opinion about performance
+    /// @notice Requests the given number of the validator keys from the staking module
     function requestValidatorsKeysForDeposits(uint256 _keysCount, bytes)
         external
         auth(REQUEST_VALIDATORS_KEYS_ROLE)
@@ -419,6 +426,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         _increaseValidatorsKeysNonce();
     }
 
+    /// @notice Returns the node operator by id
     function getNodeOperator(uint256 _nodeOperatorId, bool _fullInfo)
         external
         view
@@ -445,6 +453,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         usedSigningKeys = nodeOperator.depositedSigningKeysCount;
     }
 
+    /// @notice Returns the rewards distribution proportional to the effective stake for each node operator.
     function getRewardsDistribution(uint256 _totalRewardShares) public view returns (address[] memory recipients, uint256[] memory shares) {
         uint256 nodeOperatorCount = getNodeOperatorsCount();
 
@@ -478,6 +487,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         return (recipients, shares);
     }
 
+    /// @notice Add `_quantity` validator signing keys to the keys of the node operator #`_nodeOperatorId`. Concatenated keys are: `_pubkeys`
     function addSigningKeys(
         uint256 _nodeOperatorId,
         uint256 _keysCount,
@@ -488,6 +498,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         _addSigningKeys(_nodeOperatorId, uint64(_keysCount), _publicKeys, _signatures);
     }
 
+    /// @notice Add `_quantity` validator signing keys of operator #`_id` to the set of usable keys. Concatenated keys are: `_pubkeys`. Can be done by node operator in question by using the designated rewards address.
     function addSigningKeysOperatorBH(
         uint256 _nodeOperatorId,
         uint256 _keysCount,
@@ -499,6 +510,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         _addSigningKeys(_nodeOperatorId, uint64(_keysCount), _publicKeys, _signatures);
     }
 
+    /// @notice Removes a validator signing key #`_index` from the keys of the node operator #`_nodeOperatorId`
     function removeSigningKey(uint256 _nodeOperatorId, uint256 _index)
         external
         onlyExistedNodeOperator(_nodeOperatorId)
@@ -508,6 +520,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         _removeUnusedSigningKey(_nodeOperatorId, uint64(_index));
     }
 
+    /// @notice Removes an #`_amount` of validator signing keys starting from #`_index` of operator #`_id` usable keys. Executed on behalf of DAO.
     function removeSigningKeys(
         uint256 _nodeOperatorId,
         uint256 _fromIndex,
@@ -519,12 +532,14 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         _removeUnusedSigningKeys(_nodeOperatorId, uint64(_fromIndex), uint64(_keysCount));
     }
 
+    /// @notice Removes a validator signing key #`_index` of operator #`_id` from the set of usable keys. Executed on behalf of Node Operator.
     function removeSigningKeyOperatorBH(uint256 _nodeOperatorId, uint256 _index) external onlyExistedNodeOperator(_nodeOperatorId) {
         require(_index <= UINT64_MAX, "INDEX_TOO_LARGE");
         require(msg.sender == _nodeOperators[_nodeOperatorId].rewardAddress, "APP_AUTH_FAILED");
         _removeUnusedSigningKey(_nodeOperatorId, uint64(_index));
     }
 
+    /// @notice Removes an #`_amount` of validator signing keys starting from #`_index` of operator #`_id` usable keys. Executed on behalf of Node Operator.
     function removeSigningKeysOperatorBH(
         uint256 _nodeOperatorId,
         uint256 _fromIndex,
@@ -537,14 +552,17 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         _removeUnusedSigningKeys(_nodeOperatorId, uint64(_fromIndex), uint64(_keysCount));
     }
 
+    /// @notice Returns total number of signing keys of the node operator #`_nodeOperatorId`
     function getTotalSigningKeyCount(uint256 _nodeOperatorId) external view onlyExistedNodeOperator(_nodeOperatorId) returns (uint256) {
         return _nodeOperators[_nodeOperatorId].totalSigningKeysCount;
     }
 
+    /// @notice Returns number of usable signing keys of the node operator #`_nodeOperatorId`
     function getUnusedSigningKeyCount(uint256 _nodeOperatorId) external view onlyExistedNodeOperator(_nodeOperatorId) returns (uint256) {
         return _nodeOperators[_nodeOperatorId].totalSigningKeysCount.sub(_nodeOperators[_nodeOperatorId].depositedSigningKeysCount);
     }
 
+    /// @notice Returns n-th signing key of the node operator #`_nodeOperatorId`
     function getSigningKey(uint256 _nodeOperatorId, uint256 _index)
         external
         view
@@ -562,6 +580,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         return (key_, signature, _index < _nodeOperators[_nodeOperatorId].depositedSigningKeysCount);
     }
 
+    /// @notice Returns a monotonically increasing counter that gets incremented when any of the following happens:
+    ///   1. a node operator's key(s) is added;
+    ///   2. a node operator's key(s) is removed;
+    ///   3. a node operator's approved keys limit is changed.
+    ///   4. a node operator was activated/deactivated. Activation or deactivation of node operator
+    ///      might lead to usage of unvalidated keys in the assignNextSigningKeys method.
     function getKeysOpIndex() external view returns (uint256) {
         return KEYS_OP_INDEX_POSITION.getStorageUint256();
     }
@@ -571,6 +595,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         return CONTRACT_VERSION_POSITION.getStorageUint256();
     }
 
+    /// @notice Returns n-th key of the node operator #`_nodeOperatorId`
     function getNodeOperatorValidatorKey(uint256 _nodeOperatorId, uint256 _index)
         external
         view
@@ -618,10 +643,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         }
     }
 
+    /// @notice Returns the type of the staking module
     function getType() external view returns (bytes32) {
         return TYPE_POSITION.getStorageBytes32();
     }
 
+    /// @notice Returns the validators stats of all node operators in the staking module
     function getValidatorsKeysStats()
         external
         view
@@ -641,6 +668,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         readyToDepositValidatorsKeysCount = vettedSigningKeysCount - depositedSigningKeysCount;
     }
 
+    /// @notice Returns the validators stats of given node operator
     function getValidatorsKeysStats(uint256 _nodeOperatorId)
         public
         view
@@ -660,18 +688,26 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         readyToDepositValidatorsKeysCount = vettedSigningKeysCount - depositedSigningKeysCount;
     }
 
+    /// @notice Returns total number of node operators
     function getNodeOperatorsCount() public view returns (uint256) {
         return TOTAL_OPERATORS_COUNT_POSITION.getStorageUint256();
     }
 
+    /// @notice Returns number of active node operators
     function getActiveNodeOperatorsCount() public view returns (uint256) {
         return ACTIVE_OPERATORS_COUNT_POSITION.getStorageUint256();
     }
 
+    /// @notice Returns if the node operator with given id is active
     function getNodeOperatorIsActive(uint256 _nodeOperatorId) external view returns (bool) {
         return _nodeOperators[_nodeOperatorId].active;
     }
 
+    /// @notice Returns a counter that MUST change it's value when any of the following happens:
+    ///     1. a node operator's key(s) is added
+    ///     2. a node operator's key(s) is removed
+    ///     3. a node operator's ready to deposit keys count is changed
+    ///     4. a node operator was activated/deactivated
     function getValidatorsKeysNonce() external view returns (uint256) {
         return KEYS_OP_INDEX_POSITION.getStorageUint256();
     }

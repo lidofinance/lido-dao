@@ -21,7 +21,7 @@ interface IStakingModule {
             uint256 readyToDepositValidatorsKeysCount
         );
 
-    /// @notice Returns the validators stats of all node operators in the staking module
+    /// @notice Returns the validators stats of given node operator
     /// @param _nodeOperatorId Node operator id to get data for
     /// @return exitedValidatorsCount Total number of validators in the EXITED state
     /// @return activeValidatorsKeysCount Total number of validators in active state
@@ -49,6 +49,7 @@ interface IStakingModule {
     function getActiveNodeOperatorsCount() external view returns (uint256);
 
     /// @notice Returns if the node operator with given id is active
+    /// @param _nodeOperatorId Id of the node operator
     function getNodeOperatorIsActive(uint256 _nodeOperatorId) external view returns (bool);
 
     /// @notice Updates the number of the validators in the EXITED state for node operator with given id
