@@ -54,6 +54,7 @@ contract Lido is ILido, StETH, AragonApp {
 
     uint256 public constant DEPOSIT_SIZE = 32 ether;
 
+    uint256 public constant TOTAL_PRECISION_BASIS_POINTS = 10 ** 20; // 100 * 10 ** 18
     uint256 public constant TOTAL_BASIS_POINTS = 10000;
 
     bytes32 internal constant ORACLE_POSITION = keccak256("lido.Lido.oracle");
@@ -515,21 +516,23 @@ contract Lido is ILido, StETH, AragonApp {
 
     /**
      * @notice Returns current staking rewards fee rate
+     * @return totalFee total rewards fee in precission basis points
      */
-    function getFee() public view returns (uint16 feeBasisPoints) {
-        (, , feeBasisPoints) = getStakingRouter().getStakingRewardsDistribution();
-        return feeBasisPoints;
+    function getFee() public view returns (uint96 totalFee) {
+        (, , totalFee) = getStakingRouter().getStakingRewardsDistribution();
     }
 
     /**
      * @notice Returns current fee distribution proportion
+     * @return modulesFee modules summary fee in precission basis points
+     * @return treasuryFee treasury fee in precission basis points
      */
-    function getFeeDistribution() public view returns (uint16 modulesFeeBasisPoints, uint16 treasuryFeeBasisPoints) {
-        (, uint16[] memory moduleFees, uint16 totalFee) = getStakingRouter().getStakingRewardsDistribution();
+    function getFeeDistribution() public view returns (uint96 modulesFee, uint96 treasuryFee) {
+        (, uint96[] memory moduleFees, uint96 totalFee) = getStakingRouter().getStakingRewardsDistribution();
         for (uint256 i; i < moduleFees.length; ++i) {
-            modulesFeeBasisPoints += moduleFees[i];
+            modulesFee += moduleFees[i];
         }
-        treasuryFeeBasisPoints = totalFee - modulesFeeBasisPoints;
+        treasuryFee = totalFee - modulesFee;
     }
 
     /**
@@ -659,22 +662,21 @@ contract Lido is ILido, StETH, AragonApp {
         // the rest of the reward is distributed between token holders proportionally to their
         // token shares.
 
-        (address[] memory recipients, uint16[] memory recipientFees, uint16 totalFee) = getStakingRouter().getStakingRewardsDistribution();
+        (address[] memory recipients, uint96[] memory modulesFees, uint96 totalFee) = getStakingRouter().getStakingRewardsDistribution();
 
-        require(recipients.length == recipientFees.length, "WRONG_RECIPIENTS_INPUT");
+        require(recipients.length == modulesFees.length, "WRONG_RECIPIENTS_INPUT");
 
         if (totalFee > 0) {
             uint256 shares2mint = _totalRewards.mul(totalFee).mul(_getTotalShares()).div(
-                _getTotalPooledEther().mul(TOTAL_BASIS_POINTS).sub(_totalRewards.mul(totalFee))
+                _getTotalPooledEther().mul(TOTAL_PRECISION_BASIS_POINTS).sub(_totalRewards.mul(totalFee))
             );
-
             _mintShares(address(this), shares2mint);
 
             uint256 treasuryReward = shares2mint;
             uint256 recipientReward;
 
             for (uint256 i = 0; i < recipients.length; i++) {
-                recipientReward = shares2mint.mul(recipientFees[i]).div(totalFee);
+                recipientReward = shares2mint.mul(modulesFees[i]).div(totalFee);
                 if (recipientReward > 0) {
                     _transferShares(address(this), recipients[i], recipientReward);
                     _emitTransferAfterMintingShares(recipients[i], recipientReward);

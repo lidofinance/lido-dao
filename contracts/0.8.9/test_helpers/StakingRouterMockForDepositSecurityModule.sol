@@ -38,7 +38,7 @@ contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
 
     function checkStakingModuleStatus(uint24 _stakingModuleId, StakingModuleStatus _status) public view returns (bool) {}
 
-    function getStakingRewardsDistribution() external returns (address[] memory recipients, uint16[] memory moduleFees, uint16 totalFee) {}
+    function getStakingRewardsDistribution() external returns (address[] memory recipients, uint96[] memory moduleFees, uint96 totalFee) {}
 
     function deposit(
         uint256 maxDepositsCount,

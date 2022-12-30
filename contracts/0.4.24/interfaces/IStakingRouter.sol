@@ -6,7 +6,7 @@
 pragma solidity 0.4.24;
 
 interface IStakingRouter {
-    function getStakingRewardsDistribution() external returns (address[] memory recipients, uint16[] memory moduleFees, uint16 totalFee);
+    function getStakingRewardsDistribution() external returns (address[] memory recipients, uint96[] memory moduleFees, uint96 totalFee);
 
     function deposit(uint256 maxDepositsCount, uint24 stakingModuleId, bytes depositCalldata) external payable returns (uint256);
 

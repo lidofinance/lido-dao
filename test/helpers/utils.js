@@ -80,7 +80,8 @@ module.exports = {
   ETH,
   tokens,
   getEthBalance,
+  formatWei,
   formatBN,
-  formatStEth: formatStEth,
+  formatStEth,
   genKeys
 }

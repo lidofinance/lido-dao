@@ -6,7 +6,7 @@ const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helper
 const { ZERO_ADDRESS, bn, getEventAt } = require('@aragon/contract-helpers-test')
 const { BN } = require('bn.js')
 const { formatEther } = require('ethers/lib/utils')
-const { getEthBalance, formatStEth: formamtStEth, formatBN, genKeys, hexConcat, pad } = require('../helpers/utils')
+const { getEthBalance, formatStEth, formatBN, genKeys, hexConcat, pad, ETH, tokens, formatWei } = require('../helpers/utils')
 const nodeOperators = require('../helpers/node-operators')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
@@ -29,6 +29,8 @@ const ADDRESS_4 = '0x0000000000000000000000000000000000000004'
 
 const UNLIMITED = 1000000000
 const TOTAL_BASIS_POINTS = 10000
+const TOTAL_PRECISION_BASIS_POINTS = bn(10).pow(bn(20)) // 100 * 10e18
+const toPrecBP = (bp) => bn(bp).mul(TOTAL_PRECISION_BASIS_POINTS).div(bn(10000))
 
 const assertNoEvent = (receipt, eventName, msg) => {
   const event = getEventAt(receipt, eventName)
@@ -41,9 +43,7 @@ const MAX_DEPOSITS = 150
 const CURATED_MODULE_ID = 1
 const CALLDATA = '0x0'
 
-const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 const STETH = ETH
-const tokens = ETH
 
 contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, treasury]) => {
   let appBase, nodeOperatorsRegistryBase, app, oracle, depositContract, operators
@@ -173,7 +173,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
   }
 
   async function getStEthBalance(address) {
-    return formamtStEth(await app.balanceOf(address))
+    return formatStEth(await app.balanceOf(address))
   }
 
   const logLidoState = async () => {
@@ -283,12 +283,15 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await rewarder.reward({ from: user1, value: ETH(elRewards) })
     await oracle.reportBeacon(101, 1, ETH(depositAmount + beaconRewards))
 
-    const protocolFeePoints = await app.getFee()
-    const shareOfRewardsForStakers = (TOTAL_BASIS_POINTS - protocolFeePoints) / TOTAL_BASIS_POINTS
     assertBn(await app.getTotalPooledEther(), ETH(depositAmount + elRewards + beaconRewards))
     assertBn(await app.getTotalBufferedEther(), ETH(elRewards))
-    assertBn(await app.balanceOf(user2), STETH(depositAmount + shareOfRewardsForStakers * (elRewards + beaconRewards)))
     assertBn(await app.getTotalELRewardsCollected(), ETH(elRewards))
+
+    const protocolPrecisionFeePoints = await app.getFee()
+    const stakersReward = bn(ETH(elRewards + beaconRewards))
+      .mul(TOTAL_PRECISION_BASIS_POINTS.sub(protocolPrecisionFeePoints))
+      .div(TOTAL_PRECISION_BASIS_POINTS)
+    assertBn(await app.balanceOf(user2), bn(STETH(depositAmount)).add(stakersReward))
   })
 
   it('Attempt to set invalid execution layer rewards withdrawal limit', async () => {
@@ -362,12 +365,12 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     await assertRevert(
       stakingRouter.updateStakingModule(module1.id, 10000, 10001, 700, { from: voting }),
-      `ed with custom error 'ErrorValueOver100Percent("_moduleFee")`
+      `ed with custom error 'ErrorValueOver100Percent("_moduleFee + _treasuryFee")`
     )
 
     await assertRevert(
       stakingRouter.updateStakingModule(module1.id, 10000, 300, 10001, { from: voting }),
-      `ed with custom error 'ErrorValueOver100Percent("_treasuryFee")`
+      `ed with custom error 'ErrorValueOver100Percent("_moduleFee + _treasuryFee")`
     )
 
     // distribution fee calculates on active keys in modules
@@ -375,11 +378,11 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await setupNodeOperatorsForELRewardsVaultTests(user2, ETH(depositAmount))
 
     const totalFee = await app.getFee()
-    assertBn(totalFee, 1000)
+    assertBn(totalFee, toPrecBP(1000))
 
     const distribution = await app.getFeeDistribution({ from: nobody })
-    assertBn(distribution.modulesFeeBasisPoints, 300)
-    assertBn(distribution.treasuryFeeBasisPoints, 700)
+    assertBn(distribution.modulesFee, toPrecBP(300))
+    assertBn(distribution.treasuryFee, toPrecBP(700))
   })
 
   it('setWithdrawalCredentials works', async () => {
