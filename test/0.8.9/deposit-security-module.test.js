@@ -470,17 +470,15 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       console.log({
         expectedArgs: {
           stakingModuleId: STAKING_MODULE,
-          actor: depositSecurityModule,
-          fromStatus: StakingModuleStatus.Active,
-          toStatus: StakingModuleStatus.DepositsPaused
+          status: StakingModuleStatus.DepositsPaused,
+          setBy: depositSecurityModule
         }
       })
-      assertEvent(tx, 'StakingModuleStatusChanged', {
+      assertEvent(tx, 'StakingModuleStatusSet', {
         expectedArgs: {
           stakingModuleId: STAKING_MODULE,
-          actor: depositSecurityModule,
-          fromStatus: StakingModuleStatus.Active,
-          toStatus: StakingModuleStatus.DepositsPaused
+          status: StakingModuleStatus.DepositsPaused,
+          setBy: depositSecurityModule
         },
         decodeForAbi: StakingRouterMockForDepositSecurityModule._json.abi
       })
@@ -488,12 +486,11 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
 
     it('pauses if called by an anon submitting sig of guardian 1 or 2', async () => {
       const tx = await depositSecurityModule.pauseDeposits(block.number, STAKING_MODULE, ['0x', '0x'], { from: guardian })
-      assertEvent(tx, 'StakingModuleStatusChanged', {
+      assertEvent(tx, 'StakingModuleStatusSet', {
         expectedArgs: {
           stakingModuleId: STAKING_MODULE,
-          actor: depositSecurityModule,
-          fromStatus: StakingModuleStatus.Active,
-          toStatus: StakingModuleStatus.DepositsPaused
+          status: StakingModuleStatus.DepositsPaused,
+          setBy: depositSecurityModule
         },
         decodeForAbi: StakingRouterMockForDepositSecurityModule._json.abi
       })
@@ -506,12 +503,11 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
         validPauseMessage.sign(UNRELATED_SIGNER_PRIVATE_KEYS[UNRELATED_SIGNER1]),
         { from: guardian }
       )
-      assertEvent(tx, 'StakingModuleStatusChanged', {
+      assertEvent(tx, 'StakingModuleStatusSet', {
         expectedArgs: {
           stakingModuleId: STAKING_MODULE,
-          actor: depositSecurityModule,
-          fromStatus: StakingModuleStatus.Active,
-          toStatus: StakingModuleStatus.DepositsPaused
+          status: StakingModuleStatus.DepositsPaused,
+          setBy: depositSecurityModule
         },
         decodeForAbi: StakingRouterMockForDepositSecurityModule._json.abi
       })
@@ -556,12 +552,11 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
     it("pauseDeposits emits DepositsPaused(guardianAddr) event if wasn't paused before", async () => {
       const tx = await depositSecurityModule.pauseDeposits(block.number, STAKING_MODULE, ['0x', '0x'], { from: guardian })
       assertEvent(tx, 'DepositsPaused', { expectedArgs: { guardian, stakingModuleId: STAKING_MODULE } })
-      assertEvent(tx, 'StakingModuleStatusChanged', {
+      assertEvent(tx, 'StakingModuleStatusSet', {
         expectedArgs: {
           stakingModuleId: STAKING_MODULE,
-          actor: depositSecurityModule,
-          fromStatus: StakingModuleStatus.Active,
-          toStatus: StakingModuleStatus.DepositsPaused
+          status: StakingModuleStatus.DepositsPaused,
+          setBy: depositSecurityModule
         },
         decodeForAbi: StakingRouterMockForDepositSecurityModule._json.abi
       })
@@ -585,12 +580,11 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
     it('unpauses paused deposits', async () => {
       const tx = await depositSecurityModule.unpauseDeposits(STAKING_MODULE, { from: owner })
       assertEvent(tx, 'DepositsUnpaused', { stakingModuleId: STAKING_MODULE })
-      assertEvent(tx, 'StakingModuleStatusChanged', {
+      assertEvent(tx, 'StakingModuleStatusSet', {
         expectedArgs: {
           stakingModuleId: STAKING_MODULE,
-          actor: depositSecurityModule,
-          fromStatus: StakingModuleStatus.DepositsPaused,
-          toStatus: StakingModuleStatus.Active
+          status: StakingModuleStatus.Active,
+          setBy: depositSecurityModule
         },
         decodeForAbi: StakingRouterMockForDepositSecurityModule._json.abi
       })

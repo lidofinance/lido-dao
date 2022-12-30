@@ -11,12 +11,10 @@ import "./VaultMock.sol";
  * @dev Only for testing purposes! Lido version with some functions exposed.
  */
 contract LidoMock is Lido {
-    function initialize(
-        address _oracle, 
-        address _treasury, 
-        address _stakingRouterAddress, 
-        address _dsmAddress
-    ) public {
+    function initialize(address _oracle, address _treasury, address _stakingRouterAddress, address _dsmAddress) public {
+        if (_treasury == address(0)) {
+            _treasury = new VaultMock();
+        }
         super.initialize(_oracle, _treasury, _stakingRouterAddress, _dsmAddress);
     }
 

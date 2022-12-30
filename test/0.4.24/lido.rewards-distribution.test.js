@@ -8,11 +8,12 @@ const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistryMock')
 const Lido = artifacts.require('LidoMock.sol')
 const OracleMock = artifacts.require('OracleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
-const StakingRouter = artifacts.require('StakingRouter.sol')
+const StakingRouter = artifacts.require('StakingRouterMock.sol')
 const ModuleSolo = artifacts.require('ModuleSolo.sol')
 const IStakingModule = artifacts.require('contracts/0.8.9/interfaces/IStakingModule.sol:IStakingModule')
 
 const TOTAL_BASIS_POINTS = 10000
+const TOTAL_PRECISION_BASIS_POINTS = bn(10).pow(bn(20)) // 100 * 10e18
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 
 const cfgCurated = {
@@ -22,8 +23,8 @@ const cfgCurated = {
 }
 
 const cfgCommunity = {
-  moduleFee: 750,
-  treasuryFee: 250,
+  moduleFee: 566,
+  treasuryFee: 123,
   targetShare: 5000
 }
 
@@ -85,7 +86,7 @@ contract('Lido', ([appManager, voting, user2]) => {
     })
 
     // Initialize the app's proxy.
-    await app.initialize(oracle.address, oracle.address, ZERO_ADDRESS, ZERO_ADDRESS)
+    await app.initialize(oracle.address, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS)
 
     assert((await app.isStakingPaused()) === true)
     assert((await app.isStopped()) === true)
@@ -103,7 +104,7 @@ contract('Lido', ([appManager, voting, user2]) => {
     stakingRouter = await StakingRouter.new(depositContract.address)
     // initialize
     const wc = '0x'.padEnd(66, '1234')
-    await stakingRouter.initialize(appManager, wc)
+    await stakingRouter.initialize(appManager, app.address, wc)
 
     // Set up the staking router permissions.
     const MODULE_MANAGE_ROLE = await stakingRouter.MODULE_MANAGE_ROLE()
@@ -114,14 +115,14 @@ contract('Lido', ([appManager, voting, user2]) => {
 
     soloModule = await ModuleSolo.new(app.address, { from: appManager })
 
-    await stakingRouter.addModule('Curated', curatedModule.address, cfgCurated.targetShare, cfgCurated.treasuryFee, cfgCurated.moduleFee, {
+    await stakingRouter.addModule('Curated', curatedModule.address, cfgCurated.targetShare, cfgCurated.moduleFee, cfgCurated.treasuryFee, {
       from: voting
     })
 
     await curatedModule.setAvailableKeysCount(50, { from: appManager })
-    await curatedModule.setActiveKeysCount(50, { from: appManager })
+    await curatedModule.setActiveKeysCount(500000, { from: appManager })
 
-    await stakingRouter.addModule('Solo', soloModule.address, cfgCommunity.targetShare, cfgCommunity.treasuryFee, cfgCommunity.moduleFee, {
+    await stakingRouter.addModule('Solo', soloModule.address, cfgCommunity.targetShare, cfgCommunity.moduleFee, cfgCommunity.treasuryFee, {
       from: voting
     })
     await soloModule.setTotalKeys(100, { from: appManager })
@@ -130,46 +131,46 @@ contract('Lido', ([appManager, voting, user2]) => {
   })
 
   it('Rewards distribution fills treasury', async () => {
-    const depositAmount = ETH(1)
+    const beaconBalance = ETH(1)
     const { moduleFees, totalFee } = await stakingRouter.getStakingRewardsDistribution()
-    const treasuryShare = moduleFees.reduce((total, share) => total - share, totalFee)
-    const treasuryRewards = (treasuryShare * depositAmount) / TOTAL_BASIS_POINTS
-
+    const treasuryShare = moduleFees.reduce((total, share) => total.sub(share), totalFee)
+    const treasuryRewards = bn(beaconBalance).mul(treasuryShare).div(TOTAL_PRECISION_BASIS_POINTS)
+    // console.log({ treasuryRewards: web3.utils.fromWei(treasuryRewards, 'ether') })
     await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(32) })
 
-    const treasuryBalanceBefore = fixRound(await app.balanceOf(treasuryAddr))
-    await oracle.reportBeacon(100, 0, depositAmount, { from: appManager })
+    const treasuryBalanceBefore = await app.balanceOf(treasuryAddr)
+    await oracle.reportBeacon(100, 0, beaconBalance, { from: appManager })
 
-    const treasuryBalanceAfter = fixRound(await app.balanceOf(treasuryAddr))
-    assertBn(treasuryBalanceBefore.add(bn(treasuryRewards)), treasuryBalanceAfter)
+    const treasuryBalanceAfter = await app.balanceOf(treasuryAddr)
+    assert(treasuryBalanceAfter.gt(treasuryBalanceBefore))
+    assertBn(fixRound(treasuryBalanceBefore.add(treasuryRewards)), fixRound(treasuryBalanceAfter))
   })
 
   it('Rewards distribution fills modules', async () => {
-    const depositAmount = ETH(1)
+    const beaconBalance = ETH(1)
     const { recipients, moduleFees } = await stakingRouter.getStakingRewardsDistribution()
 
     await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(32) })
 
     const moduleBalanceBefore = []
     for (let i = 0; i < recipients.length; i++) {
-      moduleBalanceBefore.push(fixRound(await app.balanceOf(recipients[i])))
+      moduleBalanceBefore.push(await app.balanceOf(recipients[i]))
     }
 
-    await oracle.reportBeacon(100, 0, depositAmount, { from: appManager })
+    await oracle.reportBeacon(100, 0, beaconBalance, { from: appManager })
 
     for (let i = 0; i < recipients.length; i++) {
-      const moduleBalanceAfter = fixRound(await app.balanceOf(recipients[i]))
-      const moduleRewards = (depositAmount * moduleFees[i]) / TOTAL_BASIS_POINTS
-      assertBn(moduleBalanceBefore[i].add(bn(moduleRewards)), moduleBalanceAfter)
+      const moduleBalanceAfter = await app.balanceOf(recipients[i])
+      const moduleRewards = bn(beaconBalance).mul(moduleFees[i]).div(TOTAL_PRECISION_BASIS_POINTS)
+      // console.log({ moduleRewards: web3.utils.fromWei(moduleRewards, 'ether') })
+      assert(moduleBalanceAfter.gt(moduleBalanceBefore[i]))
+      assertBn(fixRound(moduleBalanceBefore[i].add(moduleRewards)), fixRound(moduleBalanceAfter))
     }
   })
 })
 
 function fixRound(n) {
-  const _fix = bn(3) // +/- 3wei
+  const _fix = bn(5) // +/- 5wei
   const _base = bn(10)
   return n.add(_fix).div(_base).mul(_base)
-  // const _n = n.add(_fix).div(_base).mul(_base)
-  // console.log({ orig: n.toString(), fixed: _n.toString() })
-  // return _n
 }

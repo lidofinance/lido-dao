@@ -336,7 +336,7 @@ contract DepositSecurityModule {
     function unpauseDeposits(uint24 stakingModuleId) external onlyOwner {
          /// @dev unpause only paused modules (skip stopped)
         if (STAKING_ROUTER.getStakingModuleIsDepositsPaused(stakingModuleId)) {
-            STAKING_ROUTER.unpauseStakingModule(stakingModuleId);
+            STAKING_ROUTER.resumeStakingModule(stakingModuleId);
             emit DepositsUnpaused(stakingModuleId);
         }
     }

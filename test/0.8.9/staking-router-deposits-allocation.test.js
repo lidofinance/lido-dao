@@ -1,8 +1,8 @@
 const hre = require('hardhat')
 const { assert } = require('chai')
 const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
-const StakingRouter = artifacts.require('StakingRouter')
-const StakingModuleMock = artifacts.require('StakingModuleMock')
+const StakingRouter = artifacts.require('StakingRouterMock.sol')
+const StakingModuleMock = artifacts.require('StakingModuleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
 
 contract('StakingRouter', (accounts) => {
@@ -21,7 +21,7 @@ contract('StakingRouter', (accounts) => {
     ])
 
     const wc = '0x'.padEnd(66, '1234')
-    await stakingRouter.initialize(admin, wc, { from: deployer })
+    await stakingRouter.initialize(admin, lido, wc, { from: deployer })
 
     // Set up the staking router permissions.
     const [MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, MODULE_PAUSE_ROLE, MODULE_MANAGE_ROLE] = await Promise.all([

@@ -9,12 +9,7 @@ import {IStakingRouter} from "../DepositSecurityModule.sol";
 
 contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
     event StakingModuleDeposited(uint256 maxDepositsCount, uint24 stakingModuleId, bytes depositCalldata);
-    event StakingModuleStatusChanged(
-        uint24 indexed stakingModuleId,
-        address indexed actor,
-        StakingModuleStatus fromStatus,
-        StakingModuleStatus toStatus
-    );
+    event StakingModuleStatusSet(uint24 indexed stakingModuleId, StakingModuleStatus status, address setBy);
 
     StakingModuleStatus private status;
     uint256 private stakingModuleKeysOpIndex;
@@ -30,25 +25,19 @@ contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
         uint16 _treasuryFee
     ) external {}
 
-    function updateStakingModule(
-        uint24 _stakingModuleId,
-        uint16 _targetShare,
-        uint16 _moduleFee,
-        uint16 _treasuryFee
-    ) external {}
+    function updateStakingModule(uint24 _stakingModuleId, uint16 _targetShare, uint16 _moduleFee, uint16 _treasuryFee) external {}
 
     function getStakingModule(uint24 _stakingModuleId) external view returns (StakingModule memory) {}
+
     function getStakingModulesCount() public view returns (uint256) {}
 
-    function checkStakingModuleStatus(uint24 _stakingModuleId, StakingModuleStatus _status) public view returns (bool) {}
-
-    function getStakingRewardsDistribution() external returns (address[] memory recipients, uint16[] memory moduleFees, uint16 totalFee) {}
+    function getStakingRewardsDistribution() external returns (address[] memory recipients, uint96[] memory moduleFees, uint96 totalFee) {}
 
     function deposit(
         uint256 maxDepositsCount,
         uint24 stakingModuleId,
         bytes calldata depositCalldata
-    ) external returns (uint256 keysCount) {
+    ) external payable returns (uint256 keysCount) {
         emit StakingModuleDeposited(maxDepositsCount, stakingModuleId, depositCalldata);
         return maxDepositsCount;
     }
@@ -60,17 +49,17 @@ contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
     }
 
     function setStakingModuleStatus(uint24 _stakingModuleId, StakingModuleStatus _status) external {
-        emit StakingModuleStatusChanged(_stakingModuleId, msg.sender, status, _status);
+        emit StakingModuleStatusSet(_stakingModuleId, _status, msg.sender);
         status = _status;
     }
 
     function pauseStakingModule(uint24 stakingModuleId) external {
-        emit StakingModuleStatusChanged(stakingModuleId, msg.sender, status, StakingModuleStatus.DepositsPaused);
+        emit StakingModuleStatusSet(stakingModuleId, StakingModuleStatus.DepositsPaused, msg.sender);
         status = StakingModuleStatus.DepositsPaused;
     }
 
-    function unpauseStakingModule(uint24 stakingModuleId) external {
-        emit StakingModuleStatusChanged(stakingModuleId, msg.sender, status, StakingModuleStatus.Active);
+    function resumeStakingModule(uint24 stakingModuleId) external {
+        emit StakingModuleStatusSet(stakingModuleId, StakingModuleStatus.Active, msg.sender);
         status = StakingModuleStatus.Active;
     }
 
@@ -104,7 +93,12 @@ contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
         stakingModuleLastDepositBlock = value;
     }
 
-    function getTotalActiveKeys() public view returns (uint256 totalActiveKeys, uint256[] memory moduleActiveKeys) {}
-    function getModuleActiveKeysCount(uint24 _stakingModuleId) external view returns (uint256) {}
+    function getStakingModuleActiveKeysCount(uint24 _stakingModuleId) external view returns (uint256) {}
+
+    function estimateStakingModuleMaxDepositableKeys(
+        uint24 _stakingModuleId,
+        uint256 _totalDepositsCount
+    ) external view returns (uint256) {}
+
     function getKeysAllocation(uint256 _keysToAllocate) external view returns (uint256 allocated, uint256[] memory allocations) {}
 }

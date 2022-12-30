@@ -6,9 +6,9 @@
 pragma solidity 0.4.24;
 
 interface IStakingRouter {
-    function getStakingRewardsDistribution() external returns (address[] memory recipients, uint16[] memory moduleFees, uint16 totalFee);
+    function getStakingRewardsDistribution() external returns (address[] memory recipients, uint96[] memory moduleFees, uint96 totalFee);
 
-    function deposit(uint256 maxDepositsCount, uint24 stakingModuleId, bytes depositCalldata) external returns (uint256);
+    function deposit(uint256 maxDepositsCount, uint24 stakingModuleId, bytes depositCalldata) external payable returns (uint256);
 
     /**
      * @notice Set credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched to `_withdrawalCredentials`
@@ -28,7 +28,7 @@ interface IStakingRouter {
 
     function pauseStakingModule(uint24 _stakingModuleId) external;
 
-    function unpauseStakingModule(uint24 _stakingModuleId) external;
+    function resumeStakingModule(uint24 _stakingModuleId) external;
 
     function getStakingModuleIsStopped(uint24 _stakingModuleId) external view returns (bool);
 
@@ -39,4 +39,14 @@ interface IStakingRouter {
     function getStakingModuleKeysOpIndex(uint24 _stakingModuleId) external view returns (uint256);
 
     function getStakingModuleLastDepositBlock(uint24 _stakingModuleId) external view returns (uint256);
+
+
+    function getStakingModuleActiveKeysCount(uint24 _stakingModuleId) external view returns (uint256);
+
+    function estimateStakingModuleMaxDepositableKeys(
+        uint24 _stakingModuleId,
+        uint256 _totalDepositsCount
+    ) external view returns (uint256);
+
+    function getKeysAllocation(uint256 _keysToAllocate) external view returns (uint256 allocated, uint256[] memory allocations);
 }

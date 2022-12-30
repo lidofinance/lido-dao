@@ -16,13 +16,13 @@ import "./interfaces/IStakingRouter.sol";
 import "./StETH.sol";
 
 import "./lib/StakeLimitUtils.sol";
+import "hardhat/console.sol";
 
 /**
  * @title Liquid staking pool implementation
  *
- * Lido is an liquid staking protocol solving the problem of frozen staked Ethers
- * until transfers become available in Beacon Chain.
- * Whitepaper: https://lido.fi/static/Lido:Ethereum-Liquid-Staking.pdf
+ * Lido is an Ethereum liquid staking protocol solving the problem of frozen staked ether on Consensus Layer
+ * being unavailable for transfers and DeFi on Execution Layer.
  *
  * Since balances of all token holders change when the amount of total pooled Ether
  * changes, this token cannot fully implement ERC20 standard: it only emits `Transfer`
@@ -55,6 +55,7 @@ contract Lido is ILido, StETH, AragonApp {
 
     uint256 public constant DEPOSIT_SIZE = 32 ether;
 
+    uint256 public constant TOTAL_PRECISION_BASIS_POINTS = 10 ** 20; // 100 * 10 ** 18
     uint256 public constant TOTAL_BASIS_POINTS = 10000;
 
     bytes32 internal constant ORACLE_POSITION = keccak256("lido.Lido.oracle");
@@ -73,8 +74,6 @@ contract Lido is ILido, StETH, AragonApp {
     bytes32 internal constant BEACON_BALANCE_POSITION = keccak256("lido.Lido.beaconBalance");
     /// @dev number of Lido's validators available in the Beacon state
     bytes32 internal constant BEACON_VALIDATORS_POSITION = keccak256("lido.Lido.beaconValidators");
-    /// @dev amount of Ether sended to the Staking Router contract balance
-    bytes32 internal constant STAKING_ROUTER_BUFFERED_ETHER_POSITION = keccak256("lido.Lido.stakingRouterBufferedEther");
 
     /// @dev percent in basis points of total pooled ether allowed to withdraw from LidoExecutionLayerRewardsVault per LidoOracle report
     bytes32 internal constant EL_REWARDS_WITHDRAWAL_LIMIT_POSITION = keccak256("lido.Lido.ELRewardsWithdrawalLimit");
@@ -90,30 +89,25 @@ contract Lido is ILido, StETH, AragonApp {
      * @dev As AragonApp, Lido contract must be initialized with following variables:
      * @param _oracle oracle contract
      * @param _treasury treasury contract
-     * @param _stakingRouterAddress Staking router contract
-     * @param _dsmAddress Deposit security module contract
+     * @param _stakingRouter Staking router contract
+     * @param _dsm Deposit security module contract
      * NB: by default, staking and the whole Lido pool are in paused state
      */
-    function initialize(
-        address _oracle, 
-        address _treasury, 
-        address _stakingRouterAddress, 
-        address _dsmAddress
-    ) public onlyInit {
+    function initialize(address _oracle, address _treasury, address _stakingRouter, address _dsm) public onlyInit {
         _setProtocolContracts(_oracle, _treasury);
 
-        _initialize_v2(_stakingRouterAddress, _dsmAddress);
+        _initialize_v2(_stakingRouter, _dsm);
         initialized();
     }
 
-    function _initialize_v2(address _stakingRouterAddress, address _dsmAddress) internal {
-        STAKING_ROUTER_POSITION.setStorageAddress(_stakingRouterAddress);
-        DEPOSIT_SECURITY_MODULE_POSITION.setStorageAddress(_dsmAddress);
+    function _initialize_v2(address _stakingRouter, address _dsm) internal {
+        STAKING_ROUTER_POSITION.setStorageAddress(_stakingRouter);
+        DEPOSIT_SECURITY_MODULE_POSITION.setStorageAddress(_dsm);
 
         CONTRACT_VERSION_POSITION.setStorageUint256(2);
         emit ContractVersionSet(2);
-        emit StakingRouterSet(_stakingRouterAddress);
-        emit DepositSecurityModuleSet(_dsmAddress);
+        emit StakingRouterSet(_stakingRouter);
+        emit DepositSecurityModuleSet(_dsm);
     }
 
     /**
@@ -121,10 +115,12 @@ contract Lido is ILido, StETH, AragonApp {
      * @dev Value 1 in CONTRACT_VERSION_POSITION is skipped due to change in numbering
      * For more details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md
      */
-    function finalizeUpgrade_v2(address _stakingRouterAddress, address _dsmAddress) external {
+    function finalizeUpgrade_v2(address _stakingRouter, address _dsm) external {
         require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "WRONG_BASE_VERSION");
+        require(_stakingRouter != address(0), "STAKING_ROUTER_ZERO_ADDRESS");
+        require(_dsm != address(0), "DSM_ZERO_ADDRESS");
 
-        _initialize_v2(_stakingRouterAddress, _dsmAddress);
+        _initialize_v2(_stakingRouter, _dsm);
     }
 
     /**
@@ -291,8 +287,19 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
+     * @notice A payable function for execution layer rewards. Can be called only by ExecutionLayerRewardsVault contract
+     * @dev We need a dedicated function because funds received by the default payable function
+     * are treated as a user deposit
+     */
+    function receiveStakingRouter() external payable {
+        require(msg.sender == STAKING_ROUTER_POSITION.getStorageAddress());
+
+        emit StakingRouterChangeReceived(msg.value);
+    }
+
+    /**
      * @notice Destroys _sharesAmount shares from _account holdings, decreasing the total amount of shares.
-     * 
+     *
      * @param _account Address where shares will be burned
      * @param _sharesAmount Amount of shares to burn
      * @return Amount of new total shares after tokens burning
@@ -455,24 +462,6 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-     * @notice Get the amount of Ether temporary buffered on Staking Router contract balance
-     * @dev We transfer eth from the Lido buffer to the StakingRouter buffer at deposit. 
-     *      We are transferring the entire Lido buffered balance
-     * @return amount of buffered funds in wei
-     */
-    function getStakingRouterBufferedEther() external view returns (uint256) {
-        return _getStakingRouterBufferedEther();
-    }
-
-    /**
-     * @notice Get the total amount of Ether temporary buffered on Staking Router and Lido contracts 
-     * @return amount of buffered funds in wei
-     */
-    function getTotalBufferedEther() public view returns (uint256) {
-        return _getBufferedEther().add(_getStakingRouterBufferedEther());
-    }
-
-    /**
      * @notice Get total amount of execution layer rewards collected to Lido contract
      * @dev Ether got through LidoExecutionLayerRewardsVault is kept on this contract's balance the same way
      * as other buffered Ether is kept (until it gets deposited)
@@ -519,21 +508,23 @@ contract Lido is ILido, StETH, AragonApp {
 
     /**
      * @notice Returns current staking rewards fee rate
+     * @return totalFee total rewards fee in precission basis points
      */
-    function getFee() public view returns (uint16 feeBasisPoints) {
-        (, , feeBasisPoints) = getStakingRouter().getStakingRewardsDistribution();
-        return feeBasisPoints;
+    function getFee() public view returns (uint96 totalFee) {
+        (, , totalFee) = getStakingRouter().getStakingRewardsDistribution();
     }
 
     /**
      * @notice Returns current fee distribution proportion
+     * @return modulesFee modules summary fee in precission basis points
+     * @return treasuryFee treasury fee in precission basis points
      */
-    function getFeeDistribution() public view returns (uint16 modulesFeeBasisPoints, uint16 treasuryFeeBasisPoints) {
-        (, uint16[] memory moduleFees, uint16 totalFee) = getStakingRouter().getStakingRewardsDistribution();
+    function getFeeDistribution() public view returns (uint96 modulesFee, uint96 treasuryFee) {
+        (, uint96[] memory moduleFees, uint96 totalFee) = getStakingRouter().getStakingRewardsDistribution();
         for (uint256 i; i < moduleFees.length; ++i) {
-            modulesFeeBasisPoints += moduleFees[i];
+            modulesFee += moduleFees[i];
         }
-        treasuryFeeBasisPoints = totalFee - modulesFeeBasisPoints;
+        treasuryFee = totalFee - modulesFee;
     }
 
     /**
@@ -612,29 +603,29 @@ contract Lido is ILido, StETH, AragonApp {
         return IStakingRouter(STAKING_ROUTER_POSITION.getStorageAddress());
     }
 
-    function setStakingRouter(address _stakingRouterAddress) external {
+    function setStakingRouter(address _stakingRouter) external {
         _auth(MANAGE_PROTOCOL_CONTRACTS_ROLE);
-        require(_stakingRouterAddress != address(0), "STAKING_ROUTER_ADDRESS_ZERO");
-        STAKING_ROUTER_POSITION.setStorageAddress(_stakingRouterAddress);
+        require(_stakingRouter != address(0), "STAKING_ROUTER_ADDRESS_ZERO");
+        STAKING_ROUTER_POSITION.setStorageAddress(_stakingRouter);
 
-        emit StakingRouterSet(_stakingRouterAddress);
+        emit StakingRouterSet(_stakingRouter);
     }
 
     function getDepositSecurityModule() public view returns (address) {
         return DEPOSIT_SECURITY_MODULE_POSITION.getStorageAddress();
     }
 
-    function setDepositSecurityModule(address _dsmAddress) external {
+    function setDepositSecurityModule(address _dsm) external {
         _auth(MANAGE_PROTOCOL_CONTRACTS_ROLE);
-        require(_dsmAddress != address(0), "DSM_ADDRESS_ZERO");
-        DEPOSIT_SECURITY_MODULE_POSITION.setStorageAddress(_dsmAddress);
+        require(_dsm != address(0), "DSM_ADDRESS_ZERO");
+        DEPOSIT_SECURITY_MODULE_POSITION.setStorageAddress(_dsm);
 
-        emit DepositSecurityModuleSet(_dsmAddress);
+        emit DepositSecurityModuleSet(_dsm);
     }
 
     /**
      * @dev Distributes fee portion of the rewards by minting and distributing corresponding amount of liquid tokens.
-     * @param _totalRewards Total rewards accrued both on the Execution Layer and the Consensus Layer sides in wei. 
+     * @param _totalRewards Total rewards accrued both on the Execution Layer and the Consensus Layer sides in wei.
      */
     function _distributeFee(uint256 _totalRewards) internal {
         // We need to take a defined percentage of the reported reward as a fee, and we do
@@ -663,22 +654,21 @@ contract Lido is ILido, StETH, AragonApp {
         // the rest of the reward is distributed between token holders proportionally to their
         // token shares.
 
-        (address[] memory recipients, uint16[] memory recipientFees, uint16 totalFee) = getStakingRouter().getStakingRewardsDistribution();
+        (address[] memory recipients, uint96[] memory modulesFees, uint96 totalFee) = getStakingRouter().getStakingRewardsDistribution();
 
-        require(recipients.length == recipientFees.length, "WRONG_RECIPIENTS_INPUT");
+        require(recipients.length == modulesFees.length, "WRONG_RECIPIENTS_INPUT");
 
         if (totalFee > 0) {
             uint256 shares2mint = _totalRewards.mul(totalFee).mul(_getTotalShares()).div(
-                _getTotalPooledEther().mul(TOTAL_BASIS_POINTS).sub(_totalRewards.mul(totalFee))
+                _getTotalPooledEther().mul(TOTAL_PRECISION_BASIS_POINTS).sub(_totalRewards.mul(totalFee))
             );
-
             _mintShares(address(this), shares2mint);
 
             uint256 treasuryReward = shares2mint;
             uint256 recipientReward;
 
             for (uint256 i = 0; i < recipients.length; i++) {
-                recipientReward = shares2mint.mul(recipientFees[i]).div(totalFee);
+                recipientReward = shares2mint.mul(modulesFees[i]).div(totalFee);
                 if (recipientReward > 0) {
                     _transferShares(address(this), recipients[i], recipientReward);
                     _emitTransferAfterMintingShares(recipients[i], recipientReward);
@@ -709,13 +699,6 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-     * @dev Gets the amount of Ether temporary buffered on the StakingRouter contract balance
-     */
-    function _getStakingRouterBufferedEther() internal view returns (uint256) {
-        return STAKING_ROUTER_BUFFERED_ETHER_POSITION.getStorageUint256();
-    }
-
-    /**
      * @dev Gets unaccounted (excess) Ether on this contract balance
      */
     function _getUnaccountedEther() internal view returns (uint256) {
@@ -740,7 +723,7 @@ contract Lido is ILido, StETH, AragonApp {
      * @return total balance in wei
      */
     function _getTotalPooledEther() internal view returns (uint256) {
-        return getTotalBufferedEther().add(BEACON_BALANCE_POSITION.getStorageUint256()).add(_getTransientBalance());
+        return _getBufferedEther().add(BEACON_BALANCE_POSITION.getStorageUint256()).add(_getTransientBalance());
     }
 
     function _pauseStaking() internal {
@@ -779,6 +762,19 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
+     * @dev calculate max count of depositable module keys based on the current Staking Router balance and buffered Ether amoutn
+     *
+     * @param _stakingModuleId id of the staking module to be deposited
+     * @return max depositable keys count
+     */
+    function getStakingModuleMaxDepositableKeys(uint24 _stakingModuleId) external view returns (uint256) {
+        IStakingRouter stakingRouter = getStakingRouter();
+        /// take into account the current balance of the Staking Router and the buffered ether amount
+        uint256 totalDepositsCount = _getBufferedEther().add(address(stakingRouter).balance).div(DEPOSIT_SIZE);
+        return getStakingRouter().estimateStakingModuleMaxDepositableKeys(_stakingModuleId, totalDepositsCount);
+    }
+
+    /**
      * @dev Invokes a deposit call to the Staking Router contract and updates buffered counters
      * @param _maxDepositsCount max deposits count
      * @param _stakingModuleId id of the staking module to be deposited
@@ -788,26 +784,24 @@ contract Lido is ILido, StETH, AragonApp {
         require(msg.sender == getDepositSecurityModule(), "APP_AUTH_DSM_FAILED");
 
         //make buffer transfer from LIDO to StakingRouter
-        uint256 unaccounted = _getUnaccountedEther();
+        uint256 numDeposits = _getBufferedEther().div(DEPOSIT_SIZE);
+        uint256 transferred = _min(numDeposits, _maxDepositsCount).mul(DEPOSIT_SIZE);
 
-        uint256 transferred = _getBufferedEther();
-        address(getStakingRouter()).transfer(transferred);
-        BUFFERED_ETHER_POSITION.setStorageUint256(0);
+        if (transferred > 0) {
+            // transfer the buffered ether to SR and make deposit at the same time
+            uint256 keysCount = getStakingRouter().deposit.value(transferred)(_maxDepositsCount, _stakingModuleId, _depositCalldata);
+            uint256 depositedAmount = keysCount.mul(DEPOSIT_SIZE);
 
-        assert(_getUnaccountedEther() == unaccounted);
+            DEPOSITED_VALIDATORS_POSITION.setStorageUint256(DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(keysCount));
+            BUFFERED_ETHER_POSITION.setStorageUint256(
+                _getBufferedEther().sub(depositedAmount)
+            );
 
-        uint256 stakingRouterBuffered = _getStakingRouterBufferedEther().add(transferred);
+            emit Unbuffered(depositedAmount);
+        }
+    }
 
-        //make deposit
-        uint256 keysCount = getStakingRouter().deposit(_maxDepositsCount, _stakingModuleId, _depositCalldata);
-        uint256 depositedAmount = keysCount.mul(DEPOSIT_SIZE);
-
-        stakingRouterBuffered = depositedAmount >= stakingRouterBuffered ? 0 : stakingRouterBuffered.sub(depositedAmount);
-
-        DEPOSITED_VALIDATORS_POSITION.setStorageUint256(DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(keysCount));
-        STAKING_ROUTER_BUFFERED_ETHER_POSITION.setStorageUint256(stakingRouterBuffered);
-
-        emit Unbuffered(depositedAmount);
-        emit TransferredToStakingRouter(transferred);
+    function _min(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a < b ? a : b;
     }
 }
