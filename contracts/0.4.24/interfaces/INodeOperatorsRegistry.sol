@@ -154,22 +154,7 @@ interface INodeOperatorsRegistry {
     ///      might lead to usage of unvalidated keys in the assignNextSigningKeys method.
     function getKeysOpIndex() external view returns (uint256);
 
-    /// @notice Returns n-th key of the node operator #`_nodeOperatorId`
-    /// @param _nodeOperatorId Node Operator id
-    /// @param _index Index of the key, starting with 0
-    /// @return key Key
-    /// @return depositSignature Signature needed for a deposit_contract.deposit call
-    /// @return used Flag indication if the key was used in the staking
-    function getNodeOperatorValidatorKey(uint256 _nodeOperatorId, uint256 _index)
-        external
-        view
-        returns (
-            bytes key,
-            bytes depositSignature,
-            bool used
-        );
-
-    function getNodeOperatorValidatorsKeys(
+    function getSigningKeys(
         uint256 _nodeOperatorId,
         uint256 _offset,
         uint256 _limit

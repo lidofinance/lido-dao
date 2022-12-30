@@ -595,26 +595,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         return CONTRACT_VERSION_POSITION.getStorageUint256();
     }
 
-    /// @notice Returns n-th key of the node operator #`_nodeOperatorId`
-    function getNodeOperatorValidatorKey(uint256 _nodeOperatorId, uint256 _index)
-        external
-        view
-        onlyExistedNodeOperator(_nodeOperatorId)
-        returns (
-            bytes key,
-            bytes depositSignature,
-            bool used
-        )
-    {
-        NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
-        require(_index < nodeOperator.totalSigningKeysCount, "KEY_NOT_FOUND");
-
-        (bytes memory key_, bytes memory signature) = _loadSigningKey(_nodeOperatorId, _index);
-
-        return (key_, signature, _index < nodeOperator.depositedSigningKeysCount);
-    }
-
-    function getNodeOperatorValidatorsKeys(
+    function getSigningKeys(
         uint256 _nodeOperatorId,
         uint256 _offset,
         uint256 _limit
