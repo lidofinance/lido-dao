@@ -25,4 +25,8 @@ interface ILido {
     function getTreasury() external view returns (address);
 
     function getLastReportTimestamp() external view returns (uint64);
+
+    function getBufferedEther() external view returns (uint256);
+
+    function receiveStakingRouter() external payable;
 }

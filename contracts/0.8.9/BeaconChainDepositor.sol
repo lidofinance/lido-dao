@@ -9,13 +9,13 @@ import {BytesLib} from "./lib/BytesLib.sol";
 import {IDepositContract} from "./interfaces/IDepositContract.sol";
 
 contract BeaconChainDepositor {
-    uint256 private constant PUBLIC_KEY_LENGTH = 48;
-    uint256 private constant SIGNATURE_LENGTH = 96;
-    uint256 public constant DEPOSIT_SIZE = 32 ether;
+    uint256 internal constant PUBLIC_KEY_LENGTH = 48;
+    uint256 internal constant SIGNATURE_LENGTH = 96;
+    uint256 internal constant DEPOSIT_SIZE = 32 ether;
 
     /// @dev deposit amount 32eth in gweis converted to little endian uint64
     /// DEPOSIT_SIZE_IN_GWEI_LE64 = toLittleEndian64(32 ether / 1 gwei)
-    uint64 public constant DEPOSIT_SIZE_IN_GWEI_LE64 = 0x0040597307000000;
+    uint64 internal constant DEPOSIT_SIZE_IN_GWEI_LE64 = 0x0040597307000000;
 
     IDepositContract public immutable DEPOSIT_CONTRACT;
 

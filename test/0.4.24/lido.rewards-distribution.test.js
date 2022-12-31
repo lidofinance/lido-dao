@@ -12,8 +12,6 @@ const StakingRouter = artifacts.require('StakingRouterMock.sol')
 const ModuleSolo = artifacts.require('ModuleSolo.sol')
 const IStakingModule = artifacts.require('contracts/0.8.9/interfaces/IStakingModule.sol:IStakingModule')
 
-const TOTAL_BASIS_POINTS = 10000
-const TOTAL_PRECISION_BASIS_POINTS = bn(10).pow(bn(20)) // 100 * 10e18
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 
 const cfgCurated = {
@@ -128,9 +126,9 @@ contract('Lido', ([appManager, voting, user2]) => {
 
   it('Rewards distribution fills treasury', async () => {
     const beaconBalance = ETH(1)
-    const { moduleFees, totalFee } = await stakingRouter.getStakingRewardsDistribution()
+    const { moduleFees, totalFee, precisionPoints } = await stakingRouter.getStakingRewardsDistribution()
     const treasuryShare = moduleFees.reduce((total, share) => total.sub(share), totalFee)
-    const treasuryRewards = bn(beaconBalance).mul(treasuryShare).div(TOTAL_PRECISION_BASIS_POINTS)
+    const treasuryRewards = bn(beaconBalance).mul(treasuryShare).div(precisionPoints)
     await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(32) })
 
     const treasuryBalanceBefore = await app.balanceOf(treasuryAddr)
@@ -143,7 +141,7 @@ contract('Lido', ([appManager, voting, user2]) => {
 
   it('Rewards distribution fills modules', async () => {
     const beaconBalance = ETH(1)
-    const { recipients, moduleFees } = await stakingRouter.getStakingRewardsDistribution()
+    const { recipients, moduleFees, precisionPoints } = await stakingRouter.getStakingRewardsDistribution()
 
     await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(32) })
 
@@ -156,7 +154,7 @@ contract('Lido', ([appManager, voting, user2]) => {
 
     for (let i = 0; i < recipients.length; i++) {
       const moduleBalanceAfter = await app.balanceOf(recipients[i])
-      const moduleRewards = bn(beaconBalance).mul(moduleFees[i]).div(TOTAL_PRECISION_BASIS_POINTS)
+      const moduleRewards = bn(beaconBalance).mul(moduleFees[i]).div(precisionPoints)
       assert(moduleBalanceAfter.gt(moduleBalanceBefore[i]))
       assertBn(fixRound(moduleBalanceBefore[i].add(moduleRewards)), fixRound(moduleBalanceAfter))
     }

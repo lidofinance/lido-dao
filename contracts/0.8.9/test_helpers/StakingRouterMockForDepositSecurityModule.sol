@@ -31,7 +31,10 @@ contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
 
     function getStakingModulesCount() public view returns (uint256) {}
 
-    function getStakingRewardsDistribution() external returns (address[] memory recipients, uint96[] memory moduleFees, uint96 totalFee) {}
+    function getStakingRewardsDistribution()
+        external
+        returns (address[] memory recipients, uint96[] memory moduleFees, uint96 totalFeee, uint256 precisionPoints)
+    {}
 
     function deposit(
         uint256 maxDepositsCount,
@@ -95,7 +98,7 @@ contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
 
     function getStakingModuleActiveKeysCount(uint24 _stakingModuleId) external view returns (uint256) {}
 
-    function estimateStakingModuleMaxDepositableKeys(uint24 _stakingModuleId, uint256 _keysToAllocate) external view returns (uint256) {}
-
     function getKeysAllocation(uint256 _keysToAllocate) external view returns (uint256 allocated, uint256[] memory allocations) {}
+
+    function getStakingModuleMaxDepositableKeys(uint24 _stakingModuleId) external view returns (uint256) {}
 }

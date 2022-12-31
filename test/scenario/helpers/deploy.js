@@ -174,17 +174,15 @@ async function deployDaoAndPool(appManager, voting) {
   await stakingRouter.initialize(appManager, pool.address, wc, { from: appManager })
 
   // Set up the staking router permissions.
-  const [MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, MODULE_PAUSE_ROLE, MODULE_MANAGE_ROLE, STAKING_ROUTER_DEPOSIT_ROLE] = await Promise.all([
+  const [MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, MODULE_PAUSE_ROLE, MODULE_MANAGE_ROLE] = await Promise.all([
     stakingRouter.MANAGE_WITHDRAWAL_CREDENTIALS_ROLE(),
     stakingRouter.MODULE_PAUSE_ROLE(),
-    stakingRouter.MODULE_MANAGE_ROLE(),
-    stakingRouter.STAKING_ROUTER_DEPOSIT_ROLE()
+    stakingRouter.MODULE_MANAGE_ROLE()
   ])
 
   await stakingRouter.grantRole(MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, voting, { from: appManager })
   await stakingRouter.grantRole(MODULE_PAUSE_ROLE, voting, { from: appManager })
   await stakingRouter.grantRole(MODULE_MANAGE_ROLE, voting, { from: appManager })
-  await stakingRouter.grantRole(STAKING_ROUTER_DEPOSIT_ROLE, pool.address, { from: appManager })
 
   await stakingRouter.addModule(
     'Curated',

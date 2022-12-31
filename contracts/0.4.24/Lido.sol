@@ -46,14 +46,8 @@ contract Lido is ILido, StETH, AragonApp {
     bytes32 public constant SET_EL_REWARDS_VAULT_ROLE = keccak256("SET_EL_REWARDS_VAULT_ROLE");
     bytes32 public constant SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE = keccak256("SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE");
 
-    /// @dev constants are deprecated and left for backward compatibility
-    uint256 public constant PUBKEY_LENGTH = 48;
-    uint256 public constant WITHDRAWAL_CREDENTIALS_LENGTH = 32;
-    uint256 public constant SIGNATURE_LENGTH = 96;
-
     uint256 public constant DEPOSIT_SIZE = 32 ether;
 
-    uint256 public constant TOTAL_PRECISION_BASIS_POINTS = 10 ** 20; // 100 * 10 ** 18
     uint256 public constant TOTAL_BASIS_POINTS = 10000;
 
     bytes32 internal constant ORACLE_POSITION = keccak256("lido.Lido.oracle");
@@ -509,7 +503,7 @@ contract Lido is ILido, StETH, AragonApp {
      * @return totalFee total rewards fee in precission basis points
      */
     function getFee() public view returns (uint96 totalFee) {
-        (, , totalFee) = getStakingRouter().getStakingRewardsDistribution();
+        (, , totalFee, ) = getStakingRouter().getStakingRewardsDistribution();
     }
 
     /**
@@ -518,7 +512,7 @@ contract Lido is ILido, StETH, AragonApp {
      * @return treasuryFee treasury fee in precission basis points
      */
     function getFeeDistribution() public view returns (uint96 modulesFee, uint96 treasuryFee) {
-        (, uint96[] memory moduleFees, uint96 totalFee) = getStakingRouter().getStakingRewardsDistribution();
+        (, uint96[] memory moduleFees, uint96 totalFee, ) = getStakingRouter().getStakingRewardsDistribution();
         for (uint256 i; i < moduleFees.length; ++i) {
             modulesFee += moduleFees[i];
         }
@@ -652,13 +646,14 @@ contract Lido is ILido, StETH, AragonApp {
         // the rest of the reward is distributed between token holders proportionally to their
         // token shares.
 
-        (address[] memory recipients, uint96[] memory modulesFees, uint96 totalFee) = getStakingRouter().getStakingRewardsDistribution();
+        (address[] memory recipients, uint96[] memory modulesFees, uint96 totalFee, uint256 precisionPoints) = getStakingRouter()
+            .getStakingRewardsDistribution();
 
         require(recipients.length == modulesFees.length, "WRONG_RECIPIENTS_INPUT");
 
         if (totalFee > 0) {
             uint256 shares2mint = _totalRewards.mul(totalFee).mul(_getTotalShares()).div(
-                _getTotalPooledEther().mul(TOTAL_PRECISION_BASIS_POINTS).sub(_totalRewards.mul(totalFee))
+                _getTotalPooledEther().mul(precisionPoints).sub(_totalRewards.mul(totalFee))
             );
             _mintShares(address(this), shares2mint);
 
@@ -757,19 +752,6 @@ contract Lido is ILido, StETH, AragonApp {
      */
     function _auth(bytes32 _role) internal view auth(_role) {
         // no-op
-    }
-
-    /**
-     * @dev calculate max count of depositable module keys based on the current Staking Router balance and buffered Ether amoutn
-     *
-     * @param _stakingModuleId id of the staking module to be deposited
-     * @return max depositable keys count
-     */
-    function getStakingModuleMaxDepositableKeys(uint24 _stakingModuleId) external view returns (uint256) {
-        IStakingRouter stakingRouter = getStakingRouter();
-        /// take into account the current balance of the Staking Router and the buffered ether amount
-        uint256 totalDepositsCount = _getBufferedEther().add(address(stakingRouter).balance).div(DEPOSIT_SIZE);
-        return getStakingRouter().estimateStakingModuleMaxDepositableKeys(_stakingModuleId, totalDepositsCount);
     }
 
     /**

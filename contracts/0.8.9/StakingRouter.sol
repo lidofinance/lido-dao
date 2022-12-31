@@ -9,21 +9,13 @@ import {AccessControlEnumerable} from "@openzeppelin/contracts-v4.4/access/Acces
 
 import {IStakingRouter} from "./interfaces/IStakingRouter.sol";
 import {IStakingModule} from "./interfaces/IStakingModule.sol";
+import {ILido} from "./interfaces/ILido.sol";
 
 import {Math} from "./lib/Math.sol";
 import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
 import {MinFirstAllocationStrategy} from "../common/lib/MinFirstAllocationStrategy.sol";
 
 import {BeaconChainDepositor} from "./BeaconChainDepositor.sol";
-
-interface ILido {
-    /**
-     * @notice A payable function supposed to be called only by StakingRouter contract
-     * @dev We need a dedicated function because funds received by the default payable function
-     * are treated as a user deposit
-     */
-    function receiveStakingRouter() external payable;
-}
 
 contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDepositor {
     using UnstructuredStorage for bytes32;
@@ -64,7 +56,6 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     bytes32 public constant MODULE_PAUSE_ROLE = keccak256("MODULE_PAUSE_ROLE");
     bytes32 public constant MODULE_RESUME_ROLE = keccak256("MODULE_RESUME_ROLE");
     bytes32 public constant MODULE_MANAGE_ROLE = keccak256("MODULE_MANAGE_ROLE");
-    bytes32 public constant STAKING_ROUTER_DEPOSIT_ROLE = keccak256("STAKING_ROUTER_DEPOSIT_ROLE");
 
     /// Version of the initialized contract data
     /// NB: Contract versioning starts from 1.
@@ -89,7 +80,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     ///      index 0 means a value is not in the set.
     bytes32 internal constant STAKING_MODULE_INDICES_MAPPING_POSITION = keccak256("lido.StakingRouter.stakingModuleIndicesOneBased");
 
-    uint256 public constant TOTAL_PRECISION_BASIS_POINTS = 10 ** 20; // 100 * 10 ** 18
+    uint256 internal constant FEE_PRECISION_POINTS = 10 ** 20; // 100 * 10 ** 18
     uint256 public constant TOTAL_BASIS_POINTS = 10000;
 
     constructor(address _depositContract) BeaconChainDepositor(_depositContract) {
@@ -281,22 +272,22 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     }
 
     function getStakingModuleActiveKeysCount(uint24 _stakingModuleId) external view returns (uint256 activeKeysCount) {
-        (,activeKeysCount,) = IStakingModule(_getStakingModuleAddressById(_stakingModuleId)).getValidatorsKeysStats();
+        (, activeKeysCount, ) = IStakingModule(_getStakingModuleAddressById(_stakingModuleId)).getValidatorsKeysStats();
     }
 
     /**
-     * @dev calculate max count of depositable module keys based on the total prospective number of deposits
+     * @dev calculate max count of depositable module keys based on the current Staking Router balance and buffered Ether amoutn
      *
      * @param _stakingModuleId id of the staking module to be deposited
-     * @param _keysToAllocate total number of deposits to be made
      * @return max depositable keys count
      */
-    function estimateStakingModuleMaxDepositableKeys(uint24 _stakingModuleId, uint256 _keysToAllocate) external view returns (uint256) {
+    function getStakingModuleMaxDepositableKeys(uint24 _stakingModuleId) external view returns (uint256) {
+        uint256 _keysToAllocate = getLido().getBufferedEther() / DEPOSIT_SIZE;
         return _estimateStakingModuleMaxDepositableKeysByIndex(_getStakingModuleIndexById(_stakingModuleId), _keysToAllocate);
     }
 
     /**
-     * @dev see {StakingRouter-estimateStakingModuleMaxDepositableKeys}
+     * @dev calculate max count of depositable module keys based on the total expected number of deposits
      *
      * @param _stakingModuleIndex module index
      * @param _keysToAllocate total number of deposits to be made
@@ -320,16 +311,17 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     function getStakingRewardsDistribution()
         external
         view
-        returns (address[] memory recipients, uint96[] memory moduleFees, uint96 totalFee)
+        returns (address[] memory recipients, uint96[] memory moduleFees, uint96 totalFee, uint256 precisionPoints)
     {
         (uint256 totalActiveKeys, StakingModuleCache[] memory modulesCache) = _loadNotStoppedStakingModulesCache();
         uint256 modulesCount = modulesCache.length;
 
         /// @dev return empty response if there are no modules or active keys yet
         if (modulesCount == 0 || totalActiveKeys == 0) {
-            return (new address[](0), new uint96[](0), 0);
+            return (new address[](0), new uint96[](0), 0, FEE_PRECISION_POINTS);
         }
 
+        precisionPoints = FEE_PRECISION_POINTS;
         recipients = new address[](modulesCount);
         moduleFees = new uint96[](modulesCount);
 
@@ -339,7 +331,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         for (uint256 i; i < modulesCount; ) {
             /// @dev skip modules which have no active keys
             if (modulesCache[i].activeKeysCount > 0) {
-                moduleKeysShare = ((modulesCache[i].activeKeysCount * TOTAL_PRECISION_BASIS_POINTS) / totalActiveKeys);
+                moduleKeysShare = ((modulesCache[i].activeKeysCount * precisionPoints) / totalActiveKeys);
 
                 recipients[i] = address(modulesCache[i].stakingModuleAddress);
                 moduleFees[i] = uint96((moduleKeysShare * modulesCache[i].moduleFee) / TOTAL_BASIS_POINTS);
@@ -356,7 +348,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         }
 
         // sanity check
-        if (totalFee >= TOTAL_PRECISION_BASIS_POINTS) revert ErrorValueOver100Percent("totalFee");
+        if (totalFee >= precisionPoints) revert ErrorValueOver100Percent("totalFee");
 
         /// @dev shrink arrays
         if (rewardedModulesCount < modulesCount) {
@@ -383,7 +375,9 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         uint256 _maxDepositsCount,
         uint24 _stakingModuleId,
         bytes calldata _depositCalldata
-    ) external payable onlyRole(STAKING_ROUTER_DEPOSIT_ROLE) returns (uint256 keysCount) {
+    ) external payable returns (uint256 keysCount) {
+        require(msg.sender == LIDO_POSITION.getStorageAddress(), "APP_AUTH_LIDO_FAILED");
+
         uint256 depositableEth = msg.value;
         if (depositableEth == 0) {
             _transferBalanceEthToLido();
@@ -490,8 +484,9 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
 
             /// @dev account only keys from not stopped modules (i.e. active and paused)
             if (status != StakingModuleStatus.Stopped) {
-                (,modulesCache[i].activeKeysCount, modulesCache[i].availableKeysCount) = IStakingModule(modulesCache[i].stakingModuleAddress)
-                    .getValidatorsKeysStats();
+                (, modulesCache[i].activeKeysCount, modulesCache[i].availableKeysCount) = IStakingModule(
+                    modulesCache[i].stakingModuleAddress
+                ).getValidatorsKeysStats();
                 totalActiveKeys += modulesCache[i].activeKeysCount;
             }
             unchecked {
@@ -510,13 +505,15 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         uint256 modulesCount = getStakingModulesCount();
         modulesCache = new StakingModuleCache[](modulesCount);
         StakingModuleStatus status;
+
         for (uint256 i; i < modulesCount; ) {
             (status, modulesCache[i]) = _loadStakingModuleCache(i);
 
             /// @dev account only keys from active modules
             if (status == StakingModuleStatus.Active) {
-                (,modulesCache[i].activeKeysCount, modulesCache[i].availableKeysCount) = IStakingModule(modulesCache[i].stakingModuleAddress)
-                    .getValidatorsKeysStats();
+                (, modulesCache[i].activeKeysCount, modulesCache[i].availableKeysCount) = IStakingModule(
+                    modulesCache[i].stakingModuleAddress
+                ).getValidatorsKeysStats();
                 totalActiveKeys += modulesCache[i].activeKeysCount;
             }
             unchecked {
