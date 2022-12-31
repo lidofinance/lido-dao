@@ -18,10 +18,10 @@ import {BeaconChainDepositor} from "./BeaconChainDepositor.sol";
 
 interface ILido {
     /**
-      * @notice A payable function supposed to be called only by StakingRouter contract
-      * @dev We need a dedicated function because funds received by the default payable function
-      * are treated as a user deposit
-      */
+     * @notice A payable function supposed to be called only by StakingRouter contract
+     * @dev We need a dedicated function because funds received by the default payable function
+     * are treated as a user deposit
+     */
     function receiveStakingRouter() external payable;
 }
 
@@ -288,25 +288,25 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
      * @dev calculate max count of depositable module keys based on the total prospective number of deposits
      *
      * @param _stakingModuleId id of the staking module to be deposited
-     * @param _totalDepositsCount total number of deposits to be made
+     * @param _keysToAllocate total number of deposits to be made
      * @return max depositable keys count
      */
-    function estimateStakingModuleMaxDepositableKeys(uint24 _stakingModuleId, uint256 _totalDepositsCount) external view returns (uint256) {
-        return _estimateStakingModuleMaxDepositableKeysByIndex(_getStakingModuleIndexById(_stakingModuleId), _totalDepositsCount);
+    function estimateStakingModuleMaxDepositableKeys(uint24 _stakingModuleId, uint256 _keysToAllocate) external view returns (uint256) {
+        return _estimateStakingModuleMaxDepositableKeysByIndex(_getStakingModuleIndexById(_stakingModuleId), _keysToAllocate);
     }
 
     /**
      * @dev see {StakingRouter-estimateStakingModuleMaxDepositableKeys}
      *
      * @param _stakingModuleIndex module index
-     * @param _totalDepositsCount total number of deposits to be made
+     * @param _keysToAllocate total number of deposits to be made
      * @return max depositable keys count
      */
     function _estimateStakingModuleMaxDepositableKeysByIndex(
         uint256 _stakingModuleIndex,
-        uint256 _totalDepositsCount
+        uint256 _keysToAllocate
     ) internal view returns (uint256) {
-        (, uint256[] memory newKeysAllocation, StakingModuleCache[] memory modulesCache) = _getKeysAllocation(_totalDepositsCount);
+        (, uint256[] memory newKeysAllocation, StakingModuleCache[] memory modulesCache) = _getKeysAllocation(_keysToAllocate);
         return newKeysAllocation[_stakingModuleIndex] - modulesCache[_stakingModuleIndex].activeKeysCount;
     }
 
@@ -383,8 +383,12 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         uint256 _maxDepositsCount,
         uint24 _stakingModuleId,
         bytes calldata _depositCalldata
-    ) external payable onlyRole(STAKING_ROUTER_DEPOSIT_ROLE) returns (uint256) {
-        if (msg.value == 0) return 0;
+    ) external payable onlyRole(STAKING_ROUTER_DEPOSIT_ROLE) returns (uint256 keysCount) {
+        uint256 depositableEth = msg.value;
+        if (depositableEth == 0) {
+            _transferBalanceEthToLido();
+            return 0;
+        }
 
         bytes32 withdrawalCredentials = getWithdrawalCredentials();
         if (withdrawalCredentials == 0) revert ErrorEmptyWithdrawalsCredentials();
@@ -395,36 +399,30 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
 
         uint256 maxDepositableKeys = _estimateStakingModuleMaxDepositableKeysByIndex(
             stakingModuleIndex,
-            Math.min(msg.value / DEPOSIT_SIZE, _maxDepositsCount)
+            Math.min(depositableEth / DEPOSIT_SIZE, _maxDepositsCount)
         );
 
-        if (maxDepositableKeys == 0) {
-            _returnBalanceEthToLido();
-            return 0;
+        if (maxDepositableKeys > 0) {
+            bytes memory publicKeysBatch;
+            bytes memory signaturesBatch;
+            (keysCount, publicKeysBatch, signaturesBatch) = IStakingModule(stakingModule.stakingModuleAddress)
+                .requestValidatorsKeysForDeposits(maxDepositableKeys, _depositCalldata);
+
+            if (keysCount > 0) {
+                _makeBeaconChainDeposits32ETH(keysCount, abi.encodePacked(withdrawalCredentials), publicKeysBatch, signaturesBatch);
+
+                stakingModule.lastDepositAt = uint64(block.timestamp);
+                stakingModule.lastDepositBlock = block.number;
+
+                emit StakingRouterETHDeposited(_getStakingModuleIdByIndex(stakingModuleIndex), keysCount * DEPOSIT_SIZE);
+            }
         }
-
-        (uint256 keysCount, bytes memory publicKeysBatch, bytes memory signaturesBatch) = IStakingModule(stakingModule.stakingModuleAddress)
-            .requestValidatorsKeysForDeposits(maxDepositableKeys, _depositCalldata);
-
-        if (keysCount == 0) { 
-            _returnBalanceEthToLido();
-            return 0; 
-        }
-
-        _makeBeaconChainDeposits32ETH(keysCount, abi.encodePacked(withdrawalCredentials), publicKeysBatch, signaturesBatch);
-
-        stakingModule.lastDepositAt = uint64(block.timestamp);
-        stakingModule.lastDepositBlock = block.number;
-
-        emit StakingRouterETHDeposited(_getStakingModuleIdByIndex(stakingModuleIndex), keysCount * DEPOSIT_SIZE);
-
-        _returnBalanceEthToLido();
-
-        return keysCount;
+        _transferBalanceEthToLido();
+        // return keysCount;
     }
 
-    function _returnBalanceEthToLido() internal {
-        //return balance to Lido 
+    /// @dev transfer all remaining balance to Lido contract
+    function _transferBalanceEthToLido() internal {
         uint256 balance = address(this).balance;
         if (balance > 0) {
             getLido().receiveStakingRouter{value: balance}();

@@ -253,5 +253,5 @@ interface ILido {
     event ContractVersionSet(uint256 version);
 
     // The amount of ETH sended from StakingRouter contract to Lido contract
-    event StakingRouterChangeReceived(uint256 amount);
+    event StakingRouterTransferReceived(uint256 amount);
 }

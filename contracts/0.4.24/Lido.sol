@@ -293,7 +293,7 @@ contract Lido is ILido, StETH, AragonApp {
     function receiveStakingRouter() external payable {
         require(msg.sender == STAKING_ROUTER_POSITION.getStorageAddress());
 
-        emit StakingRouterChangeReceived(msg.value);
+        emit StakingRouterTransferReceived(msg.value);
     }
 
     /**
@@ -782,20 +782,22 @@ contract Lido is ILido, StETH, AragonApp {
     function deposit(uint256 _maxDepositsCount, uint24 _stakingModuleId, bytes _depositCalldata) external whenNotStopped {
         require(msg.sender == getDepositSecurityModule(), "APP_AUTH_DSM_FAILED");
 
-        //make buffer transfer from LIDO to StakingRouter
-        uint256 numDeposits = _getBufferedEther().div(DEPOSIT_SIZE);
-        uint256 transferred = _min(numDeposits, _maxDepositsCount).mul(DEPOSIT_SIZE);
+        uint256 bufferedEth = _getBufferedEther();
+        /// available ether amount for deposits (multiple of 32eth)
+        uint256 depositableEth = _min(bufferedEth.div(DEPOSIT_SIZE), _maxDepositsCount).mul(DEPOSIT_SIZE);
 
-        if (transferred > 0) {
-            // transfer the buffered ether to SR and make deposit at the same time
-            uint256 keysCount = getStakingRouter().deposit.value(transferred)(_maxDepositsCount, _stakingModuleId, _depositCalldata);
-            uint256 depositedAmount = keysCount.mul(DEPOSIT_SIZE);
+        /// @dev transfer ether to SR and make deposit at the same time
+        /// @notice allow zero value of depositableEth, in this case SR will simply transfer the unaccounted ether to Lido contract
+        uint256 depositedKeysCount = getStakingRouter().deposit.value(depositableEth)(
+            _maxDepositsCount,
+            _stakingModuleId,
+            _depositCalldata
+        );
 
-            DEPOSITED_VALIDATORS_POSITION.setStorageUint256(DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(keysCount));
-            BUFFERED_ETHER_POSITION.setStorageUint256(
-                _getBufferedEther().sub(depositedAmount)
-            );
-
+        if (depositedKeysCount > 0) {
+            uint256 depositedAmount = depositedKeysCount.mul(DEPOSIT_SIZE);
+            DEPOSITED_VALIDATORS_POSITION.setStorageUint256(DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(depositedKeysCount));
+            BUFFERED_ETHER_POSITION.setStorageUint256(bufferedEth.sub(depositedAmount));
             emit Unbuffered(depositedAmount);
         }
     }

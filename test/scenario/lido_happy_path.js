@@ -6,7 +6,7 @@ const { getEventArgument } = require('@aragon/contract-helpers-test')
 const { pad, toBN, ETH, tokens, hexConcat } = require('../helpers/utils')
 const { deployDaoAndPool } = require('./helpers/deploy')
 
-const { DSMAttestMessage, DSMPauseMessage, signDepositData } = require('../0.8.9/helpers/signatures')
+const { DSMAttestMessage, DSMPauseMessage } = require('../0.8.9/helpers/signatures')
 const { waitBlocks } = require('../helpers/blockchain')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
@@ -67,11 +67,6 @@ contract('Lido: happy path', (addresses) => {
 
   // Total fee is 10%
   const totalFeePoints = 0.1 * 10000
-
-  // Of this 10%, 50% goes to the treasury
-  const treasuryFeePoints = 0.05 * 10000
-  // 50% goes to node operators
-  const nodeOperatorsFeePoints = 0.05 * 10000
 
   it('voting sets fee and its distribution', async () => {
     // Fee and distribution were set

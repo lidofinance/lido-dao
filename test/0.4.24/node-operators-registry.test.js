@@ -84,7 +84,13 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await acl.createPermission(pool.address, app.address, await app.INVALIDATE_READY_TO_DEPOSIT_KEYS(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
-    await app.initialize(steth.address, CURATED_TYPE)
+    const tx = await app.initialize(steth.address, CURATED_TYPE)
+
+    const moduleType = await app.getType()
+    assertEvent(tx, 'ContractVersionSet', { expectedArgs: { version: 2 } })
+    assertEvent(tx, 'StethContractSet', { expectedArgs: { stethAddress: steth.address } })
+    assertEvent(tx, 'SetStakingModuleType', { expectedArgs: { moduleType } })
+
     await snapshot.add()
   })
 

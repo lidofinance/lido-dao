@@ -6,7 +6,7 @@ const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helper
 const { ZERO_ADDRESS, bn, getEventAt } = require('@aragon/contract-helpers-test')
 const { BN } = require('bn.js')
 const { formatEther } = require('ethers/lib/utils')
-const { getEthBalance, formatStEth, formatBN, genKeys, hexConcat, pad, ETH, tokens, formatWei } = require('../helpers/utils')
+const { getEthBalance, formatStEth, formatBN, hexConcat, pad, ETH, tokens } = require('../helpers/utils')
 const nodeOperators = require('../helpers/node-operators')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
@@ -16,7 +16,6 @@ const ELRewardsVault = artifacts.require('LidoExecutionLayerRewardsVault.sol')
 const OracleMock = artifacts.require('OracleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
 const ERC20Mock = artifacts.require('ERC20Mock.sol')
-const ERC721Mock = artifacts.require('ERC721Mock.sol')
 const VaultMock = artifacts.require('AragonVaultMock.sol')
 const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
 const StakingRouter = artifacts.require('StakingRouterMock.sol')
@@ -52,6 +51,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
   let elRewardsVault, rewarder
   let stakingRouter
   let beaconChainDepositor
+  let yetAnotherOracle, anyToken
 
   before('deploy base app', async () => {
     // Deploy the app's base contract.
@@ -258,7 +258,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await oracle.reportBeacon(101, 1, ETH(depositAmount + beaconRewards))
 
     assertBn(await app.getTotalPooledEther(), ETH(depositAmount + elRewards + beaconRewards))
-    assertBn(await app.getBufferedEther(), ETH(elRewards))
+    assertBn(await app.totalSupply(), ETH(depositAmount + elRewards + beaconRewards))
     assertBn(await app.balanceOf(user2), STETH(depositAmount + elRewards))
     assertBn(await app.getTotalELRewardsCollected(), ETH(elRewards))
   })
@@ -275,7 +275,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await oracle.reportBeacon(101, 1, ETH(depositAmount + beaconRewards))
 
     assertBn(await app.getTotalPooledEther(), ETH(depositAmount + elRewards + beaconRewards))
-    assertBn(await app.getBufferedEther(), ETH(elRewards))
     assertBn(await app.balanceOf(user2), STETH(depositAmount + elRewards + beaconRewards))
     assertBn(await app.getTotalELRewardsCollected(), ETH(elRewards))
   })
@@ -292,7 +291,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await oracle.reportBeacon(101, 1, ETH(depositAmount + beaconRewards))
 
     assertBn(await app.getTotalPooledEther(), ETH(depositAmount + elRewards + beaconRewards))
-    assertBn(await app.getBufferedEther(), ETH(elRewards))
     assertBn(await app.getTotalELRewardsCollected(), ETH(elRewards))
 
     const protocolPrecisionFeePoints = await app.getFee()
@@ -486,7 +484,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     // can not deposit with unset withdrawalCredentials
     await assertRevert(
       app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor }),
-      `ed with custom error 'ErrorEmptyWithdrawalsCredentials()`
+      `ErrorEmptyWithdrawalsCredentials`
     )
     // set withdrawalCredentials with keys, because they were trimmed
     await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
@@ -497,7 +495,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await checkStat({ depositedValidators: 0, beaconValidators: 0, beaconBalance: ETH(0) })
     assertBn(await depositContract.totalCalls(), 0)
     assertBn(await app.getTotalPooledEther(), ETH(1))
-    assertBn(await app.getBufferedEther(), ETH(1))
+    assertBn(await app.getTotalELRewardsCollected(), 0)
     assertBn(await app.balanceOf(user1), tokens(1))
     assertBn(await app.totalSupply(), tokens(1))
 
@@ -509,7 +507,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await checkStat({ depositedValidators: 0, beaconValidators: 0, beaconBalance: ETH(0) })
     assertBn(await depositContract.totalCalls(), 0)
     assertBn(await app.getTotalPooledEther(), ETH(3))
-    assertBn(await app.getBufferedEther(), ETH(3))
+    assertBn(await app.getTotalELRewardsCollected(), 0)
     assertBn(await app.balanceOf(user2), tokens(2))
     assertBn(await app.totalSupply(), tokens(3))
 

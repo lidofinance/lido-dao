@@ -467,13 +467,6 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
 
     it('if called by a guardian 1 or 2', async () => {
       const tx = await depositSecurityModule.pauseDeposits(block.number, STAKING_MODULE, ['0x', '0x'], { from: guardian })
-      console.log({
-        expectedArgs: {
-          stakingModuleId: STAKING_MODULE,
-          status: StakingModuleStatus.DepositsPaused,
-          setBy: depositSecurityModule
-        }
-      })
       assertEvent(tx, 'StakingModuleStatusSet', {
         expectedArgs: {
           stakingModuleId: STAKING_MODULE,

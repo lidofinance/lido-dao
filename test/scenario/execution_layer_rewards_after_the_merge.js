@@ -228,7 +228,7 @@ contract('Lido: merge acceptance', (addresses) => {
 
     // All Ether was buffered within the pool contract atm
 
-    assertBn(await pool.getTotalBufferedEther(), ETH(3), 'buffered ether')
+    assertBn(await pool.getBufferedEther(), ETH(3), 'buffered ether')
     assertBn(await pool.getTotalPooledEther(), ETH(3), 'total pooled ether')
 
     // The amount of tokens corresponding to the deposited ETH value was minted to the user
@@ -333,7 +333,7 @@ contract('Lido: merge acceptance', (addresses) => {
     // The pool ran out of validator keys, so the remaining 32 ETH were added to the
     // pool buffer
 
-    assertBn(await pool.getTotalBufferedEther(), ETH(1 + 32), 'buffered ether')
+    assertBn(await pool.getBufferedEther(), ETH(1 + 32), 'buffered ether')
     assertBn(await pool.getTotalPooledEther(), ETH(33 + 64), 'total pooled ether')
 
     // The amount of tokens corresponding to the deposited ETH value was minted to the users
@@ -398,7 +398,7 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(ether2Stat.beaconBalance, ETH(96), 'remote ether2')
 
     // Buffered Ether amount changed on execution layer rewards
-    assertBn(await pool.getTotalBufferedEther(), ETH(33 + elRewards), 'buffered ether')
+    assertBn(await pool.getBufferedEther(), ETH(33 + elRewards), 'buffered ether')
 
     // New tokens was minted to distribute fee
     assertBn(await token.totalSupply(), tokens(129 + elRewards), 'token total supply')
@@ -472,7 +472,7 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(ether2Stat.beaconBalance, ETH(96), 'remote ether2')
 
     // Buffered Ether amount changed on execution layer rewards
-    assertBn(await pool.getTotalBufferedEther(), ETH(42 + 7), 'buffered ether')
+    assertBn(await pool.getBufferedEther(), ETH(42 + 7), 'buffered ether')
 
     assertBn(await token.totalSupply(), tokens(145), 'token total supply')
 
@@ -532,7 +532,7 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(ether2Stat.beaconBalance, ETH(94), 'remote ether2')
 
     // Buffered Ether amount changed on execution layer rewards
-    assertBn(await pool.getTotalBufferedEther(), ETH(49 + 5), 'buffered ether')
+    assertBn(await pool.getBufferedEther(), ETH(49 + 5), 'buffered ether')
 
     assertBn(await token.totalSupply(), tokens(145 + 3), 'token total supply')
 
@@ -588,7 +588,7 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(ether2Stat.beaconBalance, ETH(91), 'remote ether2')
 
     // Buffered Ether amount changed on execution layer rewards
-    assertBn(await pool.getTotalBufferedEther(), ETH(54 + 3), 'buffered ether')
+    assertBn(await pool.getBufferedEther(), ETH(54 + 3), 'buffered ether')
 
     assertBn(await token.totalSupply(), tokens(148), 'token total supply')
 
@@ -642,7 +642,7 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(ether2Stat.beaconBalance, ETH(83), 'remote ether2')
 
     // Buffered Ether amount changed on execution layer rewards
-    assertBn(await pool.getTotalBufferedEther(), ETH(57 + 2), 'buffered ether')
+    assertBn(await pool.getBufferedEther(), ETH(57 + 2), 'buffered ether')
 
     assertBn(await token.totalSupply(), tokens(142), 'token total supply')
 
@@ -697,7 +697,7 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(ether2Stat.beaconBalance, ETH(85), 'remote ether2')
 
     // Buffered Ether amount changed on execution layer rewards
-    assertBn(await pool.getTotalBufferedEther(), ETH(59 + 3), 'buffered ether')
+    assertBn(await pool.getBufferedEther(), ETH(59 + 3), 'buffered ether')
 
     assertBn(await token.totalSupply(), tokens(142 + 5), 'token total supply')
 
@@ -746,7 +746,7 @@ contract('Lido: merge acceptance', (addresses) => {
     let elRewardsWithdrawalLimitPoints = toNum(await pool.getELRewardsWithdrawalLimit())
     let elRewardsVaultBalance = toNum(await web3.eth.getBalance(elRewardsVault.address))
     let totalPooledEther = toNum(await pool.getTotalPooledEther())
-    let bufferedEther = toNum(await pool.getTotalBufferedEther())
+    let bufferedEther = toNum(await pool.getBufferedEther())
     let totalSupply = toNum(await pool.totalSupply())
     const beaconBalanceInc = toE18(1)
     let elRewardsWithdrawn = 0
@@ -775,11 +775,11 @@ contract('Lido: merge acceptance', (addresses) => {
 
       assertBn(await pool.totalSupply(), totalSupply + beaconBalanceInc + elRewardsToWithdraw, 'token total supply')
 
-      assertBn(await pool.getTotalBufferedEther(), bufferedEther + elRewardsToWithdraw, 'buffered ether')
+      assertBn(await pool.getBufferedEther(), bufferedEther + elRewardsToWithdraw, 'buffered ether')
 
       elRewardsVaultBalance = toNum(await web3.eth.getBalance(elRewardsVault.address))
       totalPooledEther = toNum(await pool.getTotalPooledEther())
-      bufferedEther = toNum(await pool.getTotalBufferedEther())
+      bufferedEther = toNum(await pool.getBufferedEther())
       totalSupply = toNum(await pool.totalSupply())
 
       lastBeaconBalance += beaconBalanceInc
