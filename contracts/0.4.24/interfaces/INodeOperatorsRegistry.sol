@@ -195,7 +195,7 @@ interface INodeOperatorsRegistry {
     event StethContractSet(address stethAddress);
 
     event VettedSigningKeysCountChanged(uint256 indexed nodeOperatorId, uint256 approvedValidatorsCount);
-    event DepositedValidatorsKeysCountChanged(uint256 indexed nodeOperatorId, uint256 depositedValidatorsCount);
-    event ExitedValidatorsKeysCountChanged(uint256 indexed nodeOperatorId, uint256 exitedValidatorsCount);
-    event TotalValidatorsKeysCountChanged(uint256 indexed nodeOperatorId, uint256 totalValidatorsCount);
+    event DepositedSigningKeysCountChanged(uint256 indexed nodeOperatorId, uint256 depositedValidatorsCount);
+    event ExitedSigningKeysCountChanged(uint256 indexed nodeOperatorId, uint256 exitedValidatorsCount);
+    event TotalSigningKeysCountChanged(uint256 indexed nodeOperatorId, uint256 totalValidatorsCount);
 }
