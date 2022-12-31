@@ -4,8 +4,8 @@
 // See contracts/COMPILERS.md
 pragma solidity 0.8.9;
 
-import "./interfaces/IStakingModule.sol";
-import "./lib/BytesLib.sol";
+import "../interfaces/IStakingModule.sol";
+import "../lib/BytesLib.sol";
 
 contract ModuleSolo is IStakingModule {
     address private stakingRouter;
