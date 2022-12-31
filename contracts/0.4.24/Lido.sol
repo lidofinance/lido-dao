@@ -15,7 +15,6 @@ import "./interfaces/IStakingRouter.sol";
 import "./StETH.sol";
 
 import "./lib/StakeLimitUtils.sol";
-import "hardhat/console.sol";
 
 /**
  * @title Liquid staking pool implementation
