@@ -89,7 +89,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     const moduleType = await app.getType()
     assertEvent(tx, 'ContractVersionSet', { expectedArgs: { version: 2 } })
     assertEvent(tx, 'StethContractSet', { expectedArgs: { stethAddress: steth.address } })
-    assertEvent(tx, 'SetStakingModuleType', { expectedArgs: { moduleType } })
+    assertEvent(tx, 'StakingModuleTypeSet', { expectedArgs: { moduleType } })
 
     await snapshot.add()
   })

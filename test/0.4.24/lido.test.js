@@ -465,6 +465,14 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await operators.addNodeOperator('1', ADDRESS_1, { from: voting })
     await operators.addNodeOperator('2', ADDRESS_2, { from: voting })
 
+    // can not deposit with unset withdrawalCredentials
+    await assertRevert(
+      app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor }),
+      `ErrorEmptyWithdrawalsCredentials`
+    )
+    // set withdrawalCredentials with keys, because they were trimmed
+    await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
     await operators.addSigningKeys(
       0,
@@ -480,14 +488,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     // zero deposits revert
     await assertRevert(app.submit(ZERO_ADDRESS, { from: user1, value: ETH(0) }), 'ZERO_DEPOSIT')
     await assertRevert(web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(0) }), 'ZERO_DEPOSIT')
-
-    // can not deposit with unset withdrawalCredentials
-    await assertRevert(
-      app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor }),
-      `ErrorEmptyWithdrawalsCredentials`
-    )
-    // set withdrawalCredentials with keys, because they were trimmed
-    await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
     // +1 ETH
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(1) })
@@ -894,6 +894,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await operators.addNodeOperator('2', ADDRESS_2, { from: voting })
 
     await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
 
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
@@ -914,6 +915,10 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
       hexConcat(pad('0x01', 96), pad('0x01', 96), pad('0x01', 96)),
       { from: voting }
     )
+
+    // increase staking limit
+    await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
+
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(1) })
     await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     await checkStat({ depositedValidators: 3, beaconValidators: 0, beaconBalance: ETH(0) })
@@ -1148,30 +1153,26 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     // id: 0
     await nodeOperators.addNodeOperator(
       operators,
-      { name: 'good', rewardAddress: ADDRESS_1, totalSigningKeys: 2, stakingLimit: UNLIMITED },
+      { name: 'good', rewardAddress: ADDRESS_1, totalSigningKeysCount: 2, vettedSigningKeysCount: 2 },
       { from: voting }
     )
 
     // id: 1
     await nodeOperators.addNodeOperator(
       operators,
-      { name: 'limited', rewardAddress: ADDRESS_2, totalSigningKeys: 2, stakingLimit: 1 },
+      { name: 'limited', rewardAddress: ADDRESS_2, totalSigningKeysCount: 2, vettedSigningKeysCount: 1 },
       { from: voting }
     )
 
     // id: 2
     await nodeOperators.addNodeOperator(
       operators,
-      { name: 'deactivated', rewardAddress: ADDRESS_3, totalSigningKeys: 2, stakingLimit: 2, isActive: false },
+      { name: 'deactivated', rewardAddress: ADDRESS_3, totalSigningKeysCount: 2, vettedSigningKeysCount: 2, isActive: false },
       { from: voting }
     )
 
     // id: 3
-    await nodeOperators.addNodeOperator(
-      operators,
-      { name: 'short on keys', rewardAddress: ADDRESS_4, stakingLimit: UNLIMITED },
-      { from: voting }
-    )
+    await nodeOperators.addNodeOperator(operators, { name: 'short on keys', rewardAddress: ADDRESS_4 }, { from: voting })
 
     // Deposit huge chunk
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(32 * 3 + 50) })
@@ -1183,12 +1184,12 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     assertBn(await operators.getTotalSigningKeyCount(0, { from: nobody }), 2)
     assertBn(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(2, { from: nobody }), 0)
+    assertBn(await operators.getTotalSigningKeyCount(2, { from: nobody }), 2)
     assertBn(await operators.getTotalSigningKeyCount(3, { from: nobody }), 0)
 
     assertBn(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0)
     assertBn(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
-    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 0)
+    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
     assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
 
     // Next deposit changes nothing
@@ -1201,16 +1202,16 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     assertBn(await operators.getTotalSigningKeyCount(0, { from: nobody }), 2)
     assertBn(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(2, { from: nobody }), 0)
+    assertBn(await operators.getTotalSigningKeyCount(2, { from: nobody }), 2)
     assertBn(await operators.getTotalSigningKeyCount(3, { from: nobody }), 0)
 
     assertBn(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0)
     assertBn(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
-    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 0)
+    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
     assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
 
     // #1 goes below the limit
-    await operators.reportStoppedValidators(1, 1, { from: voting })
+    await operators.updateExitedValidatorsKeysCount(1, 1, { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(1) })
     await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     await checkStat({ depositedValidators: 3, beaconValidators: 0, beaconBalance: ETH(0) })
@@ -1220,16 +1221,18 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     assertBn(await operators.getTotalSigningKeyCount(0, { from: nobody }), 2)
     assertBn(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(2, { from: nobody }), 0)
+    assertBn(await operators.getTotalSigningKeyCount(2, { from: nobody }), 2)
     assertBn(await operators.getTotalSigningKeyCount(3, { from: nobody }), 0)
 
     assertBn(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0)
     assertBn(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
-    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 0)
+    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
     assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
 
-    // Adding a key will help
+    // Adding a key & setting staking limit will help
     await operators.addSigningKeys(0, 1, pad('0x0003', 48), pad('0x01', 96), { from: voting })
+    operators.setNodeOperatorStakingLimit(0, 3, { from: voting })
+
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(1) })
     await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     await checkStat({ depositedValidators: 4, beaconValidators: 0, beaconBalance: ETH(0) })
@@ -1239,12 +1242,12 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     assertBn(await operators.getTotalSigningKeyCount(0, { from: nobody }), 3)
     assertBn(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(2, { from: nobody }), 0)
+    assertBn(await operators.getTotalSigningKeyCount(2, { from: nobody }), 2)
     assertBn(await operators.getTotalSigningKeyCount(3, { from: nobody }), 0)
 
     assertBn(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0)
     assertBn(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
-    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 0)
+    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
     assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
 
     // Reactivation of #2 doesn't change anything cause keys of #2 was trimmed
@@ -1258,12 +1261,12 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     assertBn(await operators.getTotalSigningKeyCount(0, { from: nobody }), 3)
     assertBn(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(2, { from: nobody }), 0)
+    assertBn(await operators.getTotalSigningKeyCount(2, { from: nobody }), 2)
     assertBn(await operators.getTotalSigningKeyCount(3, { from: nobody }), 0)
 
     assertBn(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0)
     assertBn(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
-    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 0)
+    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
     assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
   })
 
@@ -1273,30 +1276,26 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     // id: 0
     await nodeOperators.addNodeOperator(
       operators,
-      { name: 'good', rewardAddress: ADDRESS_1, stakingLimit: UNLIMITED, totalSigningKeys: 2 },
+      { name: 'good', rewardAddress: ADDRESS_1, totalSigningKeysCount: 2, vettedSigningKeysCount: 2 },
       { from: voting }
     )
 
     // id: 1
     await nodeOperators.addNodeOperator(
       operators,
-      { name: 'limited', rewardAddress: ADDRESS_2, stakingLimit: 1, totalSigningKeys: 2 },
+      { name: 'limited', rewardAddress: ADDRESS_2, totalSigningKeysCount: 2, vettedSigningKeysCount: 1 },
       { from: voting }
     )
 
-    // id: 2 (unused keys were trimmed)
+    // id: 2
     await nodeOperators.addNodeOperator(
       operators,
-      { name: 'deactivated', rewardAddress: ADDRESS_3, totalSigningKeys: 2, stakingLimit: 2, isActive: false },
+      { name: 'deactivated', rewardAddress: ADDRESS_3, totalSigningKeysCount: 2, vettedSigningKeysCount: 2, isActive: false },
       { from: voting }
     )
 
     // id: 3
-    await nodeOperators.addNodeOperator(
-      operators,
-      { name: 'short on keys', rewardAddress: ADDRESS_4, stakingLimit: UNLIMITED },
-      { from: voting }
-    )
+    await nodeOperators.addNodeOperator(operators, { name: 'short on keys', rewardAddress: ADDRESS_4 }, { from: voting })
 
     // Small deposits
     for (let i = 0; i < 14; i++) await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(10) })
@@ -1311,12 +1310,12 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     assertBn(await operators.getTotalSigningKeyCount(0, { from: nobody }), 2)
     assertBn(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(2, { from: nobody }), 0)
+    assertBn(await operators.getTotalSigningKeyCount(2, { from: nobody }), 2)
     assertBn(await operators.getTotalSigningKeyCount(3, { from: nobody }), 0)
 
     assertBn(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0)
     assertBn(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
-    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 0)
+    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
     assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
 
     // Next deposit changes nothing
@@ -1329,16 +1328,16 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     assertBn(await operators.getTotalSigningKeyCount(0, { from: nobody }), 2)
     assertBn(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(2, { from: nobody }), 0)
+    assertBn(await operators.getTotalSigningKeyCount(2, { from: nobody }), 2)
     assertBn(await operators.getTotalSigningKeyCount(3, { from: nobody }), 0)
 
     assertBn(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0)
     assertBn(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
-    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 0)
+    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
     assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
 
     // #1 goes below the limit (doesn't change situation. validator stop decreases limit)
-    await operators.reportStoppedValidators(1, 1, { from: voting })
+    await operators.updateExitedValidatorsKeysCount(1, 1, { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(1) })
     await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     await checkStat({ depositedValidators: 3, beaconValidators: 0, beaconBalance: ETH(0) })
@@ -1348,16 +1347,18 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     assertBn(await operators.getTotalSigningKeyCount(0, { from: nobody }), 2)
     assertBn(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(2, { from: nobody }), 0)
+    assertBn(await operators.getTotalSigningKeyCount(2, { from: nobody }), 2)
     assertBn(await operators.getTotalSigningKeyCount(3, { from: nobody }), 0)
 
     assertBn(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0)
     assertBn(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
-    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 0)
+    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
     assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
 
-    // Adding a key will help
+    // Adding a key & setting staking limit will help
     await operators.addSigningKeys(0, 1, pad('0x0003', 48), pad('0x01', 96), { from: voting })
+    operators.setNodeOperatorStakingLimit(0, 3, { from: voting })
+
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(1) })
     await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     await checkStat({ depositedValidators: 4, beaconValidators: 0, beaconBalance: ETH(0) })
@@ -1367,12 +1368,12 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     assertBn(await operators.getTotalSigningKeyCount(0, { from: nobody }), 3)
     assertBn(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(2, { from: nobody }), 0)
+    assertBn(await operators.getTotalSigningKeyCount(2, { from: nobody }), 2)
     assertBn(await operators.getTotalSigningKeyCount(3, { from: nobody }), 0)
 
     assertBn(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0)
     assertBn(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
-    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 0)
+    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
     assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
 
     // Reactivation of #2 (changes nothing, it's not used keys were trimmed)
@@ -1386,12 +1387,12 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     assertBn(await operators.getTotalSigningKeyCount(0, { from: nobody }), 3)
     assertBn(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(2, { from: nobody }), 0)
+    assertBn(await operators.getTotalSigningKeyCount(2, { from: nobody }), 2)
     assertBn(await operators.getTotalSigningKeyCount(3, { from: nobody }), 0)
 
     assertBn(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0)
     assertBn(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
-    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 0)
+    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
     assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
   })
 
@@ -1430,14 +1431,15 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     assertBn(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 1)
     assertBn(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
-    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 0)
+    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
     assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
 
-    // Reactivation of #2 - has the smallest stake
+    // Reactivation of #2 & setting staking limit - has the smallest stake
     await operators.activateNodeOperator(2, { from: voting })
     await operators.addSigningKeys(2, 2, hexConcat(pad('0x0201', 48), pad('0x0202', 48)), hexConcat(pad('0x01', 96), pad('0x01', 96)), {
       from: voting
     })
+    await operators.setNodeOperatorStakingLimit(2, UNLIMITED, { from: voting })
 
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(36) })
     await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
@@ -1448,7 +1450,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     assertBn(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 1)
     assertBn(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
-    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 1)
+    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 3)
     assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
   })
 

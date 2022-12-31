@@ -36,7 +36,11 @@ contract StakingModuleMock is IStakingModule {
             uint256 activeValidatorsKeysCount,
             uint256 readyToDepositValidatorsKeysCount
         )
-    {}
+    {
+        exitedValidatorsCount = 0;
+        activeValidatorsKeysCount = _activeKeysCount;
+        readyToDepositValidatorsKeysCount = _availableKeysCount;
+    }
 
     function getValidatorsKeysNonce() external view returns (uint256) {}
 

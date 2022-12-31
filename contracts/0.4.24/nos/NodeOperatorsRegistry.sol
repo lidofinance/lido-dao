@@ -24,8 +24,6 @@ import {SigningKeysStats} from "../lib/SigningKeysStats.sol";
 /// See the comment of `INodeOperatorsRegistry`.
 ///
 /// NOTE: the code below assumes moderate amount of node operators, i.e. up to `MAX_NODE_OPERATORS_COUNT`.
-
-/// TODO: rename to CuratedValidatorsRegistry
 contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingModule {
     using SafeMath for uint256;
     using SafeMath64 for uint64;

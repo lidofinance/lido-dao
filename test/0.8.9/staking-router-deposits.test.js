@@ -176,9 +176,6 @@ contract('StakingRouter', (accounts) => {
       await operators.addNodeOperator('1', ADDRESS_1, { from: voting })
       await operators.addNodeOperator('2', ADDRESS_2, { from: voting })
 
-      await operators.setNodeOperatorStakingLimit(0, 100000, { from: voting })
-      await operators.setNodeOperatorStakingLimit(1, 100000, { from: voting })
-
       // add 150 keys to module
       const keysAmount = 50
       const keys1 = genKeys(keysAmount)
@@ -186,7 +183,10 @@ contract('StakingRouter', (accounts) => {
       await operators.addSigningKeys(0, keysAmount, keys1.pubkeys, keys1.sigkeys, { from: voting })
       await operators.addSigningKeys(0, keysAmount, keys1.pubkeys, keys1.sigkeys, { from: voting })
 
-      receipt = await lido.deposit(maxDepositsCount, curated.id, '0x', { from: depositSecurityModule.address })
+      await operators.setNodeOperatorStakingLimit(0, 100000, { from: voting })
+      await operators.setNodeOperatorStakingLimit(1, 100000, { from: voting })
+
+      const receipt = await lido.deposit(maxDepositsCount, curated.id, '0x', { from: depositSecurityModule.address })
 
       assertBn(await depositContract.totalCalls(), 100, 'invalid deposits count')
 

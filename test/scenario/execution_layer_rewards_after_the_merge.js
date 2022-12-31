@@ -12,7 +12,7 @@ const { waitBlocks } = require('../helpers/blockchain')
 const LidoELRewardsVault = artifacts.require('LidoExecutionLayerRewardsVault.sol')
 const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
 
-const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
+const INodeOperatorsRegistry = artifacts.require('INodeOperatorsRegistry')
 
 const TOTAL_BASIS_POINTS = 10000
 const CURATED_MODULE_ID = 1
@@ -134,10 +134,9 @@ contract('Lido: merge acceptance', (addresses) => {
     // How many validators can this node operator register
     const validatorsLimit = 100000000
     let txn = await nodeOperatorRegistry.addNodeOperator(nodeOperator1.name, nodeOperator1.address, { from: voting })
-    await nodeOperatorRegistry.setNodeOperatorStakingLimit(0, validatorsLimit, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
-    nodeOperator1.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
+    nodeOperator1.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: INodeOperatorsRegistry._json.abi })
     assertBn(nodeOperator1.id, 0, 'operator id')
 
     assertBn(await nodeOperatorRegistry.getNodeOperatorsCount(), 1, 'total node operators')
@@ -154,6 +153,8 @@ contract('Lido: merge acceptance', (addresses) => {
       }
     )
 
+    await nodeOperatorRegistry.setNodeOperatorStakingLimit(0, validatorsLimit, { from: voting })
+
     const distribution = await pool.getFeeDistribution({ from: nobody })
 
     // The key was added
@@ -167,10 +168,9 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(unusedKeys, 1, 'unused signing keys')
 
     txn = await nodeOperatorRegistry.addNodeOperator(nodeOperator2.name, nodeOperator2.address, { from: voting })
-    await nodeOperatorRegistry.setNodeOperatorStakingLimit(1, validatorsLimit, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
-    nodeOperator2.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
+    nodeOperator2.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: INodeOperatorsRegistry._json.abi })
     assertBn(nodeOperator2.id, 1, 'operator id')
 
     assertBn(await nodeOperatorRegistry.getNodeOperatorsCount(), 2, 'total node operators')
@@ -184,6 +184,8 @@ contract('Lido: merge acceptance', (addresses) => {
         from: nodeOperator2.address
       }
     )
+
+    await nodeOperatorRegistry.setNodeOperatorStakingLimit(1, validatorsLimit, { from: voting })
 
     // The key was added
 
