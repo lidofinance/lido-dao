@@ -100,14 +100,14 @@ interface INodeOperatorsRegistry {
     /// @param _index Index of the key, starting with 0
     function removeSigningKey(uint256 _nodeOperatorId, uint256 _index) external;
 
-    /// @notice Removes an #`_amount` of validator signing keys starting from #`_index` of operator #`_id` usable keys. Executed on behalf of DAO.
+    /// @notice Removes an #`_keysCount` of validator signing keys starting from #`_index` of operator #`_id` usable keys. Executed on behalf of DAO.
     /// @param _nodeOperatorId Node Operator id
     /// @param _fromIndex Index of the key, starting with 0
-    /// @param _amount Number of keys to remove
+    /// @param _keysCount Number of keys to remove
     function removeSigningKeys(
         uint256 _nodeOperatorId,
         uint256 _fromIndex,
-        uint256 _amount
+        uint256 _keysCount
     ) external;
 
     /// @notice Removes a validator signing key #`_index` of operator #`_id` from the set of usable keys. Executed on behalf of Node Operator.
@@ -115,14 +115,14 @@ interface INodeOperatorsRegistry {
     /// @param _index Index of the key, starting with 0
     function removeSigningKeyOperatorBH(uint256 _nodeOperatorId, uint256 _index) external;
 
-    /// @notice Removes an #`_amount` of validator signing keys starting from #`_index` of operator #`_id` usable keys. Executed on behalf of Node Operator.
+    /// @notice Removes an #`_keysCount` of validator signing keys starting from #`_index` of operator #`_id` usable keys. Executed on behalf of Node Operator.
     /// @param _nodeOperatorId Node Operator id
     /// @param _fromIndex Index of the key, starting with 0
-    /// @param _amount Number of keys to remove
+    /// @param _keysCount Number of keys to remove
     function removeSigningKeysOperatorBH(
         uint256 _nodeOperatorId,
         uint256 _fromIndex,
-        uint256 _amount
+        uint256 _keysCount
     ) external;
 
     /// @notice Returns total number of signing keys of the node operator #`_nodeOperatorId`
@@ -154,6 +154,13 @@ interface INodeOperatorsRegistry {
     ///      might lead to usage of unvalidated keys in the assignNextSigningKeys method.
     function getKeysOpIndex() external view returns (uint256);
 
+    /// @notice Returns n signing keys of the node operator #`_nodeOperatorId`
+    /// @param _nodeOperatorId Node Operator id
+    /// @param _offset Offset of the key, starting with 0
+    /// @param _limit Number of keys to return
+    /// @return pubkeys Keys concatenated into the bytes batch
+    /// @return signatures Signatures concatenated into the bytes batch needed for a deposit_contract.deposit call
+    /// @return used Array of flags indicated if the key was used in the staking
     function getSigningKeys(
         uint256 _nodeOperatorId,
         uint256 _offset,
