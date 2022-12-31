@@ -4,7 +4,7 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
-import {MinFirstAllocationStrategy} from "../lib/MinFirstAllocationStrategy.sol";
+import {MinFirstAllocationStrategy} from "../../common/lib/MinFirstAllocationStrategy.sol";
 
 contract MinFirstAllocationStrategyTest {
     function allocate(

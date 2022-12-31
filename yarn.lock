@@ -3720,7 +3720,6 @@ __metadata:
     prettier-plugin-solidity: ^1.1.0
     solhint: ^3.3.7
     solhint-plugin-lido: ^0.0.4
-    solidity-bytes-utils: 0.0.6
     solidity-coverage: ^0.7.18
     truffle: ^5.1.43
     truffle-extract: ^1.2.1
@@ -24710,15 +24709,6 @@ resolve@1.1.x:
   bin:
     solhint: solhint.js
   checksum: b0a3e0806bef88be734002ee5b6634fa261d612d946688ddc803cf582995b9b3abc8debe35beb10d4201dacf97870b783f703c0f5b3c5b3ebf195f5d061e7f98
-  languageName: node
-  linkType: hard
-
-"solidity-bytes-utils@npm:0.0.6":
-  version: 0.0.6
-  resolution: "solidity-bytes-utils@npm:0.0.6"
-  dependencies:
-    truffle-hdwallet-provider: 0.0.3
-  checksum: e17ae4e770e6cfcafb1d2e044dfa5cf1a1a43c05b21a9df68f2c013feea2c82a83a8fb08c8814e549e0776c466715c23e8f08cebe77717b34cf450496841c094
   languageName: node
   linkType: hard
 

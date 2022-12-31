@@ -81,13 +81,14 @@ async function deployDaoAndPool(appManager, voting) {
     MANAGE_PROTOCOL_CONTRACTS_ROLE,
     NODE_OPERATOR_REGISTRY_MANAGE_SIGNING_KEYS,
     NODE_OPERATOR_REGISTRY_ADD_NODE_OPERATOR_ROLE,
-    NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_ACTIVE_ROLE,
+    NODE_OPERATOR_REGISTRY_ACTIVATE_NODE_OPERATOR_ROLE,
+    NODE_OPERATOR_REGISTRY_DEACTIVATE_NODE_OPERATOR_ROLE,
     NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_NAME_ROLE,
     NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_ADDRESS_ROLE,
     NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_LIMIT_ROLE,
-    NODE_OPERATOR_REGISTRY_REPORT_STOPPED_VALIDATORS_ROLE,
-    NODE_OPERATOR_REGISTRY_ASSIGN_NEXT_KEYS_ROLE,
-    NODE_OPERATOR_REGISTRY_TRIM_UNUSED_KEYS_ROLE
+    NODE_OPERATOR_REGISTRY_UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE,
+    NODE_OPERATOR_REGISTRY_REQUEST_VALIDATORS_KEYS_FOR_DEPOSITS_ROLE,
+    NODE_OPERATOR_REGISTRY_INVALIDATE_READY_TO_DEPOSIT_KEYS
   ] = await Promise.all([
     pool.PAUSE_ROLE(),
     pool.RESUME_ROLE(),
@@ -99,13 +100,14 @@ async function deployDaoAndPool(appManager, voting) {
     pool.MANAGE_PROTOCOL_CONTRACTS_ROLE(),
     nodeOperatorRegistry.MANAGE_SIGNING_KEYS(),
     nodeOperatorRegistry.ADD_NODE_OPERATOR_ROLE(),
-    nodeOperatorRegistry.SET_NODE_OPERATOR_ACTIVE_ROLE(),
+    nodeOperatorRegistry.ACTIVATE_NODE_OPERATOR_ROLE(),
+    nodeOperatorRegistry.DEACTIVATE_NODE_OPERATOR_ROLE(),
     nodeOperatorRegistry.SET_NODE_OPERATOR_NAME_ROLE(),
     nodeOperatorRegistry.SET_NODE_OPERATOR_ADDRESS_ROLE(),
     nodeOperatorRegistry.SET_NODE_OPERATOR_LIMIT_ROLE(),
-    nodeOperatorRegistry.REPORT_STOPPED_VALIDATORS_ROLE(),
-    nodeOperatorRegistry.ASSIGN_NEXT_KEYS_ROLE(),
-    nodeOperatorRegistry.TRIM_UNUSED_KEYS_ROLE()
+    nodeOperatorRegistry.UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE(),
+    nodeOperatorRegistry.REQUEST_VALIDATORS_KEYS_FOR_DEPOSITS_ROLE(),
+    nodeOperatorRegistry.INVALIDATE_READY_TO_DEPOSIT_KEYS()
   ])
 
   await Promise.all([
@@ -126,7 +128,10 @@ async function deployDaoAndPool(appManager, voting) {
     acl.createPermission(voting, nodeOperatorRegistry.address, NODE_OPERATOR_REGISTRY_ADD_NODE_OPERATOR_ROLE, appManager, {
       from: appManager
     }),
-    acl.createPermission(voting, nodeOperatorRegistry.address, NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_ACTIVE_ROLE, appManager, {
+    acl.createPermission(voting, nodeOperatorRegistry.address, NODE_OPERATOR_REGISTRY_ACTIVATE_NODE_OPERATOR_ROLE, appManager, {
+      from: appManager
+    }),
+    acl.createPermission(voting, nodeOperatorRegistry.address, NODE_OPERATOR_REGISTRY_DEACTIVATE_NODE_OPERATOR_ROLE, appManager, {
       from: appManager
     }),
     acl.createPermission(voting, nodeOperatorRegistry.address, NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_NAME_ROLE, appManager, {
@@ -138,15 +143,31 @@ async function deployDaoAndPool(appManager, voting) {
     acl.createPermission(voting, nodeOperatorRegistry.address, NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_LIMIT_ROLE, appManager, {
       from: appManager
     }),
-    acl.createPermission(voting, nodeOperatorRegistry.address, NODE_OPERATOR_REGISTRY_REPORT_STOPPED_VALIDATORS_ROLE, appManager, {
-      from: appManager
-    }),
-    acl.createPermission(stakingRouter.address, nodeOperatorRegistry.address, NODE_OPERATOR_REGISTRY_ASSIGN_NEXT_KEYS_ROLE, appManager, {
-      from: appManager
-    }),
-    acl.createPermission(stakingRouter.address, nodeOperatorRegistry.address, NODE_OPERATOR_REGISTRY_TRIM_UNUSED_KEYS_ROLE, appManager, {
-      from: appManager
-    })
+    acl.createPermission(
+      voting,
+      nodeOperatorRegistry.address,
+      NODE_OPERATOR_REGISTRY_UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE,
+      appManager,
+      { from: appManager }
+    ),
+    acl.createPermission(
+      stakingRouter.address,
+      nodeOperatorRegistry.address,
+      NODE_OPERATOR_REGISTRY_REQUEST_VALIDATORS_KEYS_FOR_DEPOSITS_ROLE,
+      appManager,
+      {
+        from: appManager
+      }
+    ),
+    acl.createPermission(
+      stakingRouter.address,
+      nodeOperatorRegistry.address,
+      NODE_OPERATOR_REGISTRY_INVALIDATE_READY_TO_DEPOSIT_KEYS,
+      appManager,
+      {
+        from: appManager
+      }
+    )
   ])
 
   const wc = '0x'.padEnd(66, '1234')

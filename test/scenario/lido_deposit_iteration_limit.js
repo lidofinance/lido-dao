@@ -6,7 +6,7 @@ const { deployDaoAndPool } = require('./helpers/deploy')
 const { waitBlocks } = require('../helpers/blockchain')
 const { DSMAttestMessage, DSMPauseMessage } = require('../0.8.9/helpers/signatures')
 
-const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
+const INodeOperatorsRegistry = artifacts.require('INodeOperatorsRegistry')
 const CURATED_MODULE_ID = 1
 
 contract('Lido: deposit loop iteration limit', (addresses) => {
@@ -60,10 +60,9 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
     const numKeys = 26
 
     const txn = await nodeOperatorRegistry.addNodeOperator('operator_1', nodeOperator, { from: voting })
-    await nodeOperatorRegistry.setNodeOperatorStakingLimit(0, validatorsLimit, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
-    const nodeOperatorId = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
+    const nodeOperatorId = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: INodeOperatorsRegistry._json.abi })
 
     assertBn(await nodeOperatorRegistry.getNodeOperatorsCount(), 1, 'total node operators')
 
@@ -79,6 +78,8 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
     const sigs = hexConcat(...data.map((v) => v.sig))
 
     await nodeOperatorRegistry.addSigningKeysOperatorBH(nodeOperatorId, numKeys, keys, sigs, { from: nodeOperator })
+
+    await nodeOperatorRegistry.setNodeOperatorStakingLimit(0, validatorsLimit, { from: voting })
 
     const totalKeys = await nodeOperatorRegistry.getTotalSigningKeyCount(nodeOperatorId, { from: nobody })
     assertBn(totalKeys, numKeys, 'total signing keys')

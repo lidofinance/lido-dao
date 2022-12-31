@@ -8,7 +8,7 @@ const { deployDaoAndPool } = require('./helpers/deploy')
 const { signDepositData } = require('../0.8.9/helpers/signatures')
 const { waitBlocks } = require('../helpers/blockchain')
 
-const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
+const INodeOperatorsRegistry = artifacts.require('INodeOperatorsRegistry')
 
 contract('Lido: penalties, slashing, operator stops', (addresses) => {
   const [
@@ -92,17 +92,10 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
   }
 
   it('voting adds the first node operator', async () => {
-    // How many validators can this node operator register
-    const validatorsLimit = 0
-
     const txn = await nodeOperatorRegistry.addNodeOperator(nodeOperator1.name, nodeOperator1.address, { from: voting })
-    await assertRevert(
-      nodeOperatorRegistry.setNodeOperatorStakingLimit(0, validatorsLimit, { from: voting }),
-      'NODE_OPERATOR_STAKING_LIMIT_IS_THE_SAME'
-    )
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
-    nodeOperator1.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
+    nodeOperator1.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: INodeOperatorsRegistry._json.abi })
     assertBn(nodeOperator1.id, 0, 'operator id')
 
     assertBn(await nodeOperatorRegistry.getNodeOperatorsCount(), 1, 'total node operators')
@@ -338,10 +331,9 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     const validatorsLimit = 1000000000
 
     const txn = await nodeOperatorRegistry.addNodeOperator(nodeOperator2.name, nodeOperator2.address, { from: voting })
-    await nodeOperatorRegistry.setNodeOperatorStakingLimit(1, validatorsLimit, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
-    nodeOperator2.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
+    nodeOperator2.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: INodeOperatorsRegistry._json.abi })
     assertBn(nodeOperator2.id, 1, 'correct operator id added')
 
     assertBn(await nodeOperatorRegistry.getNodeOperatorsCount(), 2, 'total node operators updated')
@@ -359,6 +351,8 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     )
 
     // The key was added
+
+    await nodeOperatorRegistry.setNodeOperatorStakingLimit(1, validatorsLimit, { from: voting })
 
     const totalKeys = await nodeOperatorRegistry.getTotalSigningKeyCount(nodeOperator2.id, { from: nobody })
     assertBn(totalKeys, 1, 'second operator added one key')

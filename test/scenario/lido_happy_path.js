@@ -9,7 +9,7 @@ const { deployDaoAndPool } = require('./helpers/deploy')
 const { DSMAttestMessage, DSMPauseMessage } = require('../0.8.9/helpers/signatures')
 const { waitBlocks } = require('../helpers/blockchain')
 
-const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
+const INodeOperatorsRegistry = artifacts.require('INodeOperatorsRegistry')
 const CURATED_MODULE_ID = 1
 
 contract('Lido: happy path', (addresses) => {
@@ -104,20 +104,18 @@ contract('Lido: happy path', (addresses) => {
   }
 
   it('voting adds the first node operator', async () => {
-    // How many validators can this node operator register
-    const validatorsLimit = 1000000000
-
     const txn = await nodeOperatorRegistry.addNodeOperator(nodeOperator1.name, nodeOperator1.address, { from: voting })
-    await nodeOperatorRegistry.setNodeOperatorStakingLimit(0, validatorsLimit, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
-    nodeOperator1.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
+    nodeOperator1.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: INodeOperatorsRegistry._json.abi })
     assertBn(nodeOperator1.id, 0, 'operator id')
 
     assertBn(await nodeOperatorRegistry.getNodeOperatorsCount(), 1, 'total node operators')
   })
 
   it('the first node operator registers one validator', async () => {
+    // How many validators can this node operator register
+    const validatorsLimit = 1000000000
     const numKeys = 1
 
     await nodeOperatorRegistry.addSigningKeysOperatorBH(
@@ -129,6 +127,8 @@ contract('Lido: happy path', (addresses) => {
         from: nodeOperator1.address
       }
     )
+
+    await nodeOperatorRegistry.setNodeOperatorStakingLimit(0, validatorsLimit, { from: voting })
 
     // The key was added
 
@@ -256,10 +256,9 @@ contract('Lido: happy path', (addresses) => {
     const validatorsLimit = 1000000000
 
     const txn = await nodeOperatorRegistry.addNodeOperator(nodeOperator2.name, nodeOperator2.address, { from: voting })
-    await nodeOperatorRegistry.setNodeOperatorStakingLimit(1, validatorsLimit, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
-    nodeOperator2.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
+    nodeOperator2.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: INodeOperatorsRegistry._json.abi })
     assertBn(nodeOperator2.id, 1, 'operator id')
 
     assertBn(await nodeOperatorRegistry.getNodeOperatorsCount(), 2, 'total node operators')
@@ -277,6 +276,8 @@ contract('Lido: happy path', (addresses) => {
     )
 
     // The key was added
+
+    await nodeOperatorRegistry.setNodeOperatorStakingLimit(1, validatorsLimit, { from: voting })
 
     const totalKeys = await nodeOperatorRegistry.getTotalSigningKeyCount(nodeOperator2.id, { from: nobody })
     assertBn(totalKeys, 1, 'total signing keys')
@@ -429,7 +430,6 @@ contract('Lido: happy path', (addresses) => {
   it('nodeOperator3 registered in NodeOperatorsRegistry and adds 10 signing keys', async () => {
     const validatorsCount = 10
     await nodeOperatorRegistry.addNodeOperator(nodeOperator3.name, nodeOperator3.address, { from: voting })
-    await nodeOperatorRegistry.setNodeOperatorStakingLimit(nodeOperator3.id, validatorsCount, { from: voting })
     await nodeOperatorRegistry.addSigningKeysOperatorBH(
       nodeOperator3.id,
       validatorsCount,
@@ -439,6 +439,7 @@ contract('Lido: happy path', (addresses) => {
         from: nodeOperator3.address
       }
     )
+    await nodeOperatorRegistry.setNodeOperatorStakingLimit(nodeOperator3.id, validatorsCount, { from: voting })
   })
 
   it('nodeOperator3 removes signing key with id 5', async () => {

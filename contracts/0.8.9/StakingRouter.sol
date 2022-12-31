@@ -12,7 +12,7 @@ import {IStakingModule} from "./interfaces/IStakingModule.sol";
 
 import {Math} from "./lib/Math.sol";
 import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
-import {MinFirstAllocationStrategy} from "./lib/MinFirstAllocationStrategy.sol";
+import {MinFirstAllocationStrategy} from "../common/lib/MinFirstAllocationStrategy.sol";
 
 import {BeaconChainDepositor} from "./BeaconChainDepositor.sol";
 
@@ -272,7 +272,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     }
 
     function getStakingModuleKeysOpIndex(uint24 _stakingModuleId) external view returns (uint256) {
-        return IStakingModule(_getStakingModuleAddressById(_stakingModuleId)).getKeysOpIndex();
+        return IStakingModule(_getStakingModuleAddressById(_stakingModuleId)).getValidatorsKeysNonce();
     }
 
     function getStakingModuleLastDepositBlock(uint24 _stakingModuleId) external view returns (uint256) {
@@ -280,8 +280,8 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         return module.lastDepositBlock;
     }
 
-    function getStakingModuleActiveKeysCount(uint24 _stakingModuleId) external view returns (uint256) {
-        return IStakingModule(_getStakingModuleAddressById(_stakingModuleId)).getActiveKeysCount();
+    function getStakingModuleActiveKeysCount(uint24 _stakingModuleId) external view returns (uint256 activeKeysCount) {
+        (,activeKeysCount,) = IStakingModule(_getStakingModuleAddressById(_stakingModuleId)).getValidatorsKeysStats();
     }
 
     /**
@@ -405,10 +405,8 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         if (maxDepositableKeys > 0) {
             bytes memory publicKeysBatch;
             bytes memory signaturesBatch;
-            (keysCount, publicKeysBatch, signaturesBatch) = IStakingModule(stakingModule.stakingModuleAddress).prepNextSigningKeys(
-                maxDepositableKeys,
-                _depositCalldata
-            );
+            (keysCount, publicKeysBatch, signaturesBatch) = IStakingModule(stakingModule.stakingModuleAddress)
+                .requestValidatorsKeysForDeposits(maxDepositableKeys, _depositCalldata);
 
             if (keysCount > 0) {
                 _makeBeaconChainDeposits32ETH(keysCount, abi.encodePacked(withdrawalCredentials), publicKeysBatch, signaturesBatch);
@@ -455,7 +453,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     function _trimUnusedKeys() internal {
         uint256 modulesCount = getStakingModulesCount();
         for (uint256 i; i < modulesCount; ) {
-            IStakingModule(_getStakingModuleAddressByIndex(i)).trimUnusedKeys();
+            IStakingModule(_getStakingModuleAddressByIndex(i)).invalidateReadyToDepositKeys();
             unchecked {
                 ++i;
             }
@@ -492,8 +490,8 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
 
             /// @dev account only keys from not stopped modules (i.e. active and paused)
             if (status != StakingModuleStatus.Stopped) {
-                (modulesCache[i].activeKeysCount, modulesCache[i].availableKeysCount) = IStakingModule(modulesCache[i].stakingModuleAddress)
-                    .getKeysUsageData();
+                (,modulesCache[i].activeKeysCount, modulesCache[i].availableKeysCount) = IStakingModule(modulesCache[i].stakingModuleAddress)
+                    .getValidatorsKeysStats();
                 totalActiveKeys += modulesCache[i].activeKeysCount;
             }
             unchecked {
@@ -517,8 +515,8 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
 
             /// @dev account only keys from active modules
             if (status == StakingModuleStatus.Active) {
-                (modulesCache[i].activeKeysCount, modulesCache[i].availableKeysCount) = IStakingModule(modulesCache[i].stakingModuleAddress)
-                    .getKeysUsageData();
+                (,modulesCache[i].activeKeysCount, modulesCache[i].availableKeysCount) = IStakingModule(modulesCache[i].stakingModuleAddress)
+                    .getValidatorsKeysStats();
                 totalActiveKeys += modulesCache[i].activeKeysCount;
             }
             unchecked {

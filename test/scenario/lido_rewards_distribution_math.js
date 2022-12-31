@@ -9,7 +9,7 @@ const { signDepositData } = require('../0.8.9/helpers/signatures')
 const { waitBlocks } = require('../helpers/blockchain')
 const { DSMAttestMessage, DSMPauseMessage } = require('../0.8.9/helpers/signatures')
 
-const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
+const INodeOperatorsRegistry = artifacts.require('INodeOperatorsRegistry')
 
 const tenKBN = new BN(10000)
 
@@ -120,13 +120,9 @@ contract('Lido: rewards distribution math', (addresses) => {
     const validatorsLimit = 0
 
     const txn = await nodeOperatorsRegistry.addNodeOperator(nodeOperator1.name, nodeOperator1.address, { from: voting })
-    await assertRevert(
-      nodeOperatorsRegistry.setNodeOperatorStakingLimit(0, validatorsLimit, { from: voting }),
-      'NODE_OPERATOR_STAKING_LIMIT_IS_THE_SAME'
-    )
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
-    nodeOperator1.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
+    nodeOperator1.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: INodeOperatorsRegistry._json.abi })
     assertBn(nodeOperator1.id, 0, 'operator id')
 
     assertBn(await nodeOperatorsRegistry.getNodeOperatorsCount(), 1, 'total node operators')
@@ -225,13 +221,8 @@ contract('Lido: rewards distribution math', (addresses) => {
 
     const { reportedMintAmount, tos, values } = await readLastPoolEventLog()
 
-    const {
-      totalFeeToDistribute,
-      nodeOperatorsSharesToMint,
-      treasurySharesToMint,
-      nodeOperatorsFeeToMint,
-      treasuryFeeToMint
-    } = await getAwaitedFeesSharesTokensDeltas(profitAmount, prevTotalShares, 1)
+    const { totalFeeToDistribute, nodeOperatorsSharesToMint, treasurySharesToMint, nodeOperatorsFeeToMint, treasuryFeeToMint } =
+      await getAwaitedFeesSharesTokensDeltas(profitAmount, prevTotalShares, 1)
 
     assertBn(nodeOperatorsRegistrySharesDelta, nodeOperatorsSharesToMint, 'nodeOperator1 shares are correct')
     assertBn(treasurySharesDelta, treasurySharesToMint, 'treasury shares are correct')
