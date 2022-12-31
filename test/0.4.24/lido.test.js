@@ -117,9 +117,15 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
         from: appManager
       }
     )
-    await acl.createPermission(stakingRouter.address, operators.address, await operators.INVALIDATE_READY_TO_DEPOSIT_KEYS(), appManager, {
-      from: appManager
-    })
+    await acl.createPermission(
+      stakingRouter.address,
+      operators.address,
+      await operators.INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE(),
+      appManager,
+      {
+        from: appManager
+      }
+    )
 
     // Initialize the app's proxy.
     await app.initialize(oracle.address, treasury, stakingRouter.address, depositor)

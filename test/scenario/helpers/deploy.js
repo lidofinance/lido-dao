@@ -88,7 +88,7 @@ async function deployDaoAndPool(appManager, voting) {
     NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_LIMIT_ROLE,
     NODE_OPERATOR_REGISTRY_UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE,
     NODE_OPERATOR_REGISTRY_REQUEST_VALIDATORS_KEYS_FOR_DEPOSITS_ROLE,
-    NODE_OPERATOR_REGISTRY_INVALIDATE_READY_TO_DEPOSIT_KEYS
+    NODE_OPERATOR_REGISTRY_INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE
   ] = await Promise.all([
     pool.PAUSE_ROLE(),
     pool.RESUME_ROLE(),
@@ -107,7 +107,7 @@ async function deployDaoAndPool(appManager, voting) {
     nodeOperatorRegistry.SET_NODE_OPERATOR_LIMIT_ROLE(),
     nodeOperatorRegistry.UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE(),
     nodeOperatorRegistry.REQUEST_VALIDATORS_KEYS_FOR_DEPOSITS_ROLE(),
-    nodeOperatorRegistry.INVALIDATE_READY_TO_DEPOSIT_KEYS()
+    nodeOperatorRegistry.INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE()
   ])
 
   await Promise.all([
@@ -162,7 +162,7 @@ async function deployDaoAndPool(appManager, voting) {
     acl.createPermission(
       stakingRouter.address,
       nodeOperatorRegistry.address,
-      NODE_OPERATOR_REGISTRY_INVALIDATE_READY_TO_DEPOSIT_KEYS,
+      NODE_OPERATOR_REGISTRY_INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE,
       appManager,
       {
         from: appManager
