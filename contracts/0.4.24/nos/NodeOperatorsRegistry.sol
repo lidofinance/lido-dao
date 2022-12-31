@@ -134,25 +134,30 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
 
         SigningKeysStats.State memory totalSigningKeysStats = _getTotalSigningKeysStats();
         for (uint256 operatorId = 0; operatorId < totalOperators; ++operatorId) {
-            NodeOperator memory operator = _nodeOperators[operatorId];
+            NodeOperator storage operator = _nodeOperators[operatorId];
 
-            uint64 vettedSigningKeysBefore = operator.vettedSigningKeysCount;
+            uint64 totalSigningKeysCount = operator.totalSigningKeysCount;
+            uint64 vettedSigningKeysCount = operator.vettedSigningKeysCount;
+            uint64 depositedSigningKeysCount = operator.depositedSigningKeysCount;
+            uint64 exitedSigningKeysCount = operator.exitedSigningKeysCount;
+
+            uint64 vettedSigningKeysBefore = vettedSigningKeysCount;
             uint64 vettedSigningKeysAfter = Math64.min(
-                operator.totalSigningKeysCount,
-                Math64.max(operator.depositedSigningKeysCount, vettedSigningKeysBefore)
+                totalSigningKeysCount,
+                Math64.max(depositedSigningKeysCount, vettedSigningKeysBefore)
             );
             if (vettedSigningKeysBefore != vettedSigningKeysAfter) {
                 _nodeOperators[operatorId].vettedSigningKeysCount = vettedSigningKeysAfter;
                 emit VettedSigningKeysCountChanged(operatorId, vettedSigningKeysAfter);
             }
             _nodeOperators[operatorId].vettedSigningKeysCount = Math64.min(
-                operator.totalSigningKeysCount,
-                Math64.max(operator.depositedSigningKeysCount, operator.vettedSigningKeysCount)
+                totalSigningKeysCount,
+                Math64.max(depositedSigningKeysCount, vettedSigningKeysCount)
             );
-            totalSigningKeysStats.increaseVettedSigningKeysCount(operator.vettedSigningKeysCount);
-            totalSigningKeysStats.increaseDepositedSigningKeysCount(operator.depositedSigningKeysCount);
-            totalSigningKeysStats.increaseExitedSigningKeysCount(operator.exitedSigningKeysCount);
-            totalSigningKeysStats.increaseTotalSigningKeysCount(operator.totalSigningKeysCount);
+            totalSigningKeysStats.increaseVettedSigningKeysCount(vettedSigningKeysCount);
+            totalSigningKeysStats.increaseDepositedSigningKeysCount(depositedSigningKeysCount);
+            totalSigningKeysStats.increaseExitedSigningKeysCount(exitedSigningKeysCount);
+            totalSigningKeysStats.increaseTotalSigningKeysCount(totalSigningKeysCount);
         }
         _setTotalSigningKeysStats(totalSigningKeysStats);
 
@@ -516,6 +521,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
     }
 
     /// @notice Removes a validator signing key #`_index` from the keys of the node operator #`_nodeOperatorId`
+    /// @dev DEPRECATED use removeSigningKeys instead
     function removeSigningKey(uint256 _nodeOperatorId, uint256 _index)
         external
         onlyExistedNodeOperator(_nodeOperatorId)
@@ -538,6 +544,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
     }
 
     /// @notice Removes a validator signing key #`_index` of operator #`_id` from the set of usable keys. Executed on behalf of Node Operator.
+    /// @dev DEPRECATED use removeSigningKeysOperatorBH instead
     function removeSigningKeyOperatorBH(uint256 _nodeOperatorId, uint256 _index) external onlyExistedNodeOperator(_nodeOperatorId) {
         require(_index <= UINT64_MAX, "INDEX_TOO_LARGE");
         require(msg.sender == _nodeOperators[_nodeOperatorId].rewardAddress, "APP_AUTH_FAILED");
@@ -706,7 +713,9 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         IStETH stETH = IStETH(STETH_POSITION.getStorageAddress());
 
         uint256 sharesToDistribute = stETH.sharesOf(address(this));
-        assert(sharesToDistribute > 0);
+        if (sharesToDistribute == 0) {
+            return;
+        }
 
         (address[] memory recipients, uint256[] memory shares) = getRewardsDistribution(sharesToDistribute);
 
@@ -716,7 +725,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         for (uint256 idx = 0; idx < recipients.length; ++idx) {
             stETH.transferShares(recipients[idx], shares[idx]);
             distributed = distributed.add(shares[idx]);
-            emit RewardsDistributedInShares(idx, shares[idx]);
+            emit RewardsDistributed(idx, shares[idx]);
         }
     }
 

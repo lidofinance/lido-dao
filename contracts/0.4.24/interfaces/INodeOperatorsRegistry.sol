@@ -184,7 +184,7 @@ interface INodeOperatorsRegistry {
     event KeysOpIndexSet(uint256 keysOpIndex);
     event ContractVersionSet(uint256 version);
     event StakingModuleTypeSet(bytes32 moduleType);
-    event RewardsDistributedInShares(uint256 indexed id, uint256 amount);
+    event RewardsDistributed(uint256 indexed id, uint256 sharesAmount);
     event StethContractSet(address stethAddress);
 
     event VettedSigningKeysCountChanged(uint256 indexed nodeOperatorId, uint256 approvedValidatorsCount);
