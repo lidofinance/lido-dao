@@ -107,7 +107,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
     mapping(uint256 => NodeOperator) internal _nodeOperators;
 
     //
-    // PUBLIC & EXTERNAL METHODS
+    // METHODS
     //
 
     function initialize(address _steth, bytes32 _type) public onlyInit {
@@ -456,6 +456,72 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         _increaseValidatorsKeysNonce();
     }
 
+    function _getSigningKeysAllocationData(uint256 _keysCount)
+        internal
+        view
+        returns (
+            uint256 allocatedKeysCount,
+            uint256[] memory nodeOperatorIds,
+            uint256[] memory activeKeysCounts,
+            uint256[] memory exitedSigningKeysCount
+        )
+    {
+        uint256 activeNodeOperatorsCount = getActiveNodeOperatorsCount();
+        nodeOperatorIds = new uint256[](activeNodeOperatorsCount);
+        activeKeysCounts = new uint256[](activeNodeOperatorsCount);
+        exitedSigningKeysCount = new uint256[](activeNodeOperatorsCount);
+        uint256[] memory activeKeysCapacities = new uint256[](activeNodeOperatorsCount);
+
+        uint256 activeNodeOperatorIndex;
+        uint256 nodeOperatorsCount = getNodeOperatorsCount();
+        for (uint256 nodeOperatorId = 0; nodeOperatorId < nodeOperatorsCount; ++nodeOperatorId) {
+            NodeOperator storage nodeOperator = _nodeOperators[nodeOperatorId];
+            if (!nodeOperator.active) continue;
+
+            nodeOperatorIds[activeNodeOperatorIndex] = nodeOperatorId;
+            exitedSigningKeysCount[activeNodeOperatorIndex] = nodeOperator.exitedSigningKeysCount;
+            uint256 depositedSigningKeysCount = nodeOperator.depositedSigningKeysCount;
+            uint256 vettedSigningKeysCount = nodeOperator.vettedSigningKeysCount;
+
+            activeKeysCounts[activeNodeOperatorIndex] = depositedSigningKeysCount.sub(exitedSigningKeysCount[activeNodeOperatorIndex]);
+            activeKeysCapacities[activeNodeOperatorIndex] = vettedSigningKeysCount.sub(exitedSigningKeysCount[activeNodeOperatorIndex]);
+
+            ++activeNodeOperatorIndex;
+        }
+
+        allocatedKeysCount = MinFirstAllocationStrategy.allocate(activeKeysCounts, activeKeysCapacities, _keysCount);
+
+        assert(allocatedKeysCount <= _keysCount);
+    }
+
+    function _loadAllocatedSigningKeys(
+        uint256 _keysCountToLoad,
+        uint256[] memory _nodeOperatorIds,
+        uint256[] memory _keysCountAfterAllocation,
+        uint256[] memory _exitedSigningKeysCount
+    ) internal returns (bytes memory publicKeys, bytes memory signatures) {
+        publicKeys = MemUtils.unsafeAllocateBytes(_keysCountToLoad * PUBKEY_LENGTH);
+        signatures = MemUtils.unsafeAllocateBytes(_keysCountToLoad * SIGNATURE_LENGTH);
+
+        uint256 loadedKeysCount = 0;
+        for (uint256 i = 0; i < _nodeOperatorIds.length; ++i) {
+            NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorIds[i]];
+
+            uint64 depositedSigningKeysCountBefore = nodeOperator.depositedSigningKeysCount;
+            uint64 depositedSigningKeysCountAfter = uint64(_exitedSigningKeysCount[i].add(_keysCountAfterAllocation[i]));
+
+            for (uint256 keyIndex = depositedSigningKeysCountBefore; keyIndex < depositedSigningKeysCountAfter; ++keyIndex) {
+                (bytes memory pubkey, bytes memory signature) = _loadSigningKey(_nodeOperatorIds[i], keyIndex);
+                MemUtils.copyBytes(pubkey, publicKeys, loadedKeysCount * PUBKEY_LENGTH);
+                MemUtils.copyBytes(signature, signatures, loadedKeysCount * SIGNATURE_LENGTH);
+                ++loadedKeysCount;
+            }
+            nodeOperator.depositedSigningKeysCount = depositedSigningKeysCountAfter;
+        }
+
+        assert(loadedKeysCount == _keysCountToLoad);
+    }
+
     /// @notice Returns the node operator by id
     /// @param _nodeOperatorId Node Operator id
     /// @param _fullInfo If true, name will be returned as well
@@ -559,6 +625,38 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         _addSigningKeys(_nodeOperatorId, uint64(_keysCount), _publicKeys, _signatures);
     }
 
+    function _addSigningKeys(
+        uint256 _nodeOperatorId,
+        uint64 _keysCount,
+        bytes _publicKeys,
+        bytes _signatures
+    ) internal onlyExistedNodeOperator(_nodeOperatorId) {
+        require(_keysCount != 0, "NO_KEYS");
+        require(_publicKeys.length == _keysCount.mul(PUBKEY_LENGTH), "INVALID_LENGTH");
+        require(_signatures.length == _keysCount.mul(SIGNATURE_LENGTH), "INVALID_LENGTH");
+
+        NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
+        uint64 totalSigningKeysCount = nodeOperator.totalSigningKeysCount;
+        for (uint256 i = 0; i < _keysCount; ++i) {
+            bytes memory key = BytesLib.slice(_publicKeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
+            require(!_isEmptySigningKey(key), "EMPTY_KEY");
+            bytes memory sig = BytesLib.slice(_signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
+
+            _storeSigningKey(_nodeOperatorId, totalSigningKeysCount, key, sig);
+            totalSigningKeysCount = totalSigningKeysCount.add(1);
+            emit SigningKeyAdded(_nodeOperatorId, key);
+        }
+
+        emit TotalValidatorsKeysCountChanged(_nodeOperatorId, totalSigningKeysCount);
+
+        nodeOperator.totalSigningKeysCount = totalSigningKeysCount;
+
+        SigningKeysStats.State memory totalSigningKeysStats = _getTotalSigningKeysStats();
+        totalSigningKeysStats.increaseTotalSigningKeysCount(_keysCount);
+        _setTotalSigningKeysStats(totalSigningKeysStats);
+        _increaseValidatorsKeysNonce();
+    }
+
     /// @notice Removes a validator signing key #`_index` from the keys of the node operator #`_nodeOperatorId`
     /// @param _nodeOperatorId Node Operator id
     /// @param _index Index of the key, starting with 0
@@ -611,6 +709,70 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         require(_keysCount <= UINT64_MAX, "KEYS_COUNT_TOO_LARGE");
         require(msg.sender == _nodeOperators[_nodeOperatorId].rewardAddress, "APP_AUTH_FAILED");
         _removeUnusedSigningKeys(_nodeOperatorId, uint64(_fromIndex), uint64(_keysCount));
+    }
+
+    function _removeUnusedSigningKeys(
+        uint256 _nodeOperatorId,
+        uint64 _fromIndex,
+        uint64 _keysCount
+    ) internal {
+        NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
+
+        uint64 approveValidatorsCountBefore = nodeOperator.vettedSigningKeysCount;
+
+        // removing from the last index to the highest one, so we won't get outside the array
+        for (uint64 i = _fromIndex.add(_keysCount); i > _fromIndex; --i) {
+            _removeUnusedSigningKey(_nodeOperatorId, i - 1);
+        }
+
+        uint64 totalValidatorsCountAfter = nodeOperator.totalSigningKeysCount;
+        uint64 approvedValidatorsCountAfter = nodeOperator.vettedSigningKeysCount;
+
+        emit TotalValidatorsKeysCountChanged(_nodeOperatorId, totalValidatorsCountAfter);
+        emit VettedSigningKeysCountChanged(_nodeOperatorId, approvedValidatorsCountAfter);
+
+        SigningKeysStats.State memory totalSigningKeysStats = _getTotalSigningKeysStats();
+        totalSigningKeysStats.decreaseTotalSigningKeysCount(_keysCount);
+
+        if (approveValidatorsCountBefore > approvedValidatorsCountAfter) {
+            totalSigningKeysStats.decreaseVettedSigningKeysCount(approveValidatorsCountBefore - approvedValidatorsCountAfter);
+        }
+
+        _setTotalSigningKeysStats(totalSigningKeysStats);
+        _increaseValidatorsKeysNonce();
+    }
+
+    function _removeUnusedSigningKey(uint256 _nodeOperatorId, uint64 _index) internal {
+        NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
+
+        uint64 totalSigningKeysCount = nodeOperator.totalSigningKeysCount;
+        require(_index < totalSigningKeysCount, "KEY_NOT_FOUND");
+
+        uint64 depositedSigningKeysCount = nodeOperator.depositedSigningKeysCount;
+        require(_index >= depositedSigningKeysCount, "KEY_WAS_USED");
+
+        uint64 lastValidatorKeyIndex = totalSigningKeysCount.sub(1);
+        uint64 vettedSigningKeysCount = nodeOperator.vettedSigningKeysCount;
+
+        (bytes memory removedKey, ) = _loadSigningKey(_nodeOperatorId, _index);
+
+        if (_index < lastValidatorKeyIndex) {
+            (bytes memory key, bytes memory signature) = _loadSigningKey(_nodeOperatorId, lastValidatorKeyIndex);
+            _storeSigningKey(_nodeOperatorId, _index, key, signature);
+        }
+
+        _deleteSigningKey(_nodeOperatorId, lastValidatorKeyIndex);
+
+        nodeOperator.totalSigningKeysCount = totalSigningKeysCount.sub(1);
+        emit TotalValidatorsKeysCountChanged(_nodeOperatorId, _index);
+
+        if (_index < vettedSigningKeysCount) {
+            // decreasing the staking limit so the key at _index can't be used anymore
+            nodeOperator.vettedSigningKeysCount = _index;
+            emit VettedSigningKeysCountChanged(_nodeOperatorId, _index);
+        }
+
+        emit SigningKeyRemoved(_nodeOperatorId, removedKey);
     }
 
     /// @notice Returns total number of signing keys of the node operator #`_nodeOperatorId`
@@ -797,76 +959,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         }
     }
 
-    //
-    // INTERNAL METHODS
-    //
-
-    function _getSigningKeysAllocationData(uint256 _keysCount)
-        internal
-        view
-        returns (
-            uint256 allocatedKeysCount,
-            uint256[] memory nodeOperatorIds,
-            uint256[] memory activeKeysCounts,
-            uint256[] memory exitedSigningKeysCount
-        )
-    {
-        uint256 activeNodeOperatorsCount = getActiveNodeOperatorsCount();
-        nodeOperatorIds = new uint256[](activeNodeOperatorsCount);
-        activeKeysCounts = new uint256[](activeNodeOperatorsCount);
-        exitedSigningKeysCount = new uint256[](activeNodeOperatorsCount);
-        uint256[] memory activeKeysCapacities = new uint256[](activeNodeOperatorsCount);
-
-        uint256 activeNodeOperatorIndex;
-        uint256 nodeOperatorsCount = getNodeOperatorsCount();
-        for (uint256 nodeOperatorId = 0; nodeOperatorId < nodeOperatorsCount; ++nodeOperatorId) {
-            NodeOperator storage nodeOperator = _nodeOperators[nodeOperatorId];
-            if (!nodeOperator.active) continue;
-
-            nodeOperatorIds[activeNodeOperatorIndex] = nodeOperatorId;
-            exitedSigningKeysCount[activeNodeOperatorIndex] = nodeOperator.exitedSigningKeysCount;
-            uint256 depositedSigningKeysCount = nodeOperator.depositedSigningKeysCount;
-            uint256 vettedSigningKeysCount = nodeOperator.vettedSigningKeysCount;
-
-            activeKeysCounts[activeNodeOperatorIndex] = depositedSigningKeysCount.sub(exitedSigningKeysCount[activeNodeOperatorIndex]);
-            activeKeysCapacities[activeNodeOperatorIndex] = vettedSigningKeysCount.sub(exitedSigningKeysCount[activeNodeOperatorIndex]);
-
-            ++activeNodeOperatorIndex;
-        }
-
-        allocatedKeysCount = MinFirstAllocationStrategy.allocate(activeKeysCounts, activeKeysCapacities, _keysCount);
-
-        assert(allocatedKeysCount <= _keysCount);
-    }
-
-    function _loadAllocatedSigningKeys(
-        uint256 _keysCountToLoad,
-        uint256[] memory _nodeOperatorIds,
-        uint256[] memory _keysCountAfterAllocation,
-        uint256[] memory _exitedSigningKeysCount
-    ) internal returns (bytes memory publicKeys, bytes memory signatures) {
-        publicKeys = MemUtils.unsafeAllocateBytes(_keysCountToLoad * PUBKEY_LENGTH);
-        signatures = MemUtils.unsafeAllocateBytes(_keysCountToLoad * SIGNATURE_LENGTH);
-
-        uint256 loadedKeysCount = 0;
-        for (uint256 i = 0; i < _nodeOperatorIds.length; ++i) {
-            NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorIds[i]];
-
-            uint64 depositedSigningKeysCountBefore = nodeOperator.depositedSigningKeysCount;
-            uint64 depositedSigningKeysCountAfter = uint64(_exitedSigningKeysCount[i].add(_keysCountAfterAllocation[i]));
-
-            for (uint256 keyIndex = depositedSigningKeysCountBefore; keyIndex < depositedSigningKeysCountAfter; ++keyIndex) {
-                (bytes memory pubkey, bytes memory signature) = _loadSigningKey(_nodeOperatorIds[i], keyIndex);
-                MemUtils.copyBytes(pubkey, publicKeys, loadedKeysCount * PUBKEY_LENGTH);
-                MemUtils.copyBytes(signature, signatures, loadedKeysCount * SIGNATURE_LENGTH);
-                ++loadedKeysCount;
-            }
-            nodeOperator.depositedSigningKeysCount = depositedSigningKeysCountAfter;
-        }
-
-        assert(loadedKeysCount == _keysCountToLoad);
-    }
-
     function _isEmptySigningKey(bytes memory _key) internal pure returns (bool) {
         assert(_key.length == PUBKEY_LENGTH);
 
@@ -909,102 +1001,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
             }
             offset++;
         }
-    }
-
-    function _addSigningKeys(
-        uint256 _nodeOperatorId,
-        uint64 _keysCount,
-        bytes _publicKeys,
-        bytes _signatures
-    ) internal onlyExistedNodeOperator(_nodeOperatorId) {
-        require(_keysCount != 0, "NO_KEYS");
-        require(_publicKeys.length == _keysCount.mul(PUBKEY_LENGTH), "INVALID_LENGTH");
-        require(_signatures.length == _keysCount.mul(SIGNATURE_LENGTH), "INVALID_LENGTH");
-
-        NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
-        uint64 totalSigningKeysCount = nodeOperator.totalSigningKeysCount;
-        for (uint256 i = 0; i < _keysCount; ++i) {
-            bytes memory key = BytesLib.slice(_publicKeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
-            require(!_isEmptySigningKey(key), "EMPTY_KEY");
-            bytes memory sig = BytesLib.slice(_signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
-
-            _storeSigningKey(_nodeOperatorId, totalSigningKeysCount, key, sig);
-            totalSigningKeysCount = totalSigningKeysCount.add(1);
-            emit SigningKeyAdded(_nodeOperatorId, key);
-        }
-
-        emit TotalValidatorsKeysCountChanged(_nodeOperatorId, totalSigningKeysCount);
-
-        nodeOperator.totalSigningKeysCount = totalSigningKeysCount;
-
-        SigningKeysStats.State memory totalSigningKeysStats = _getTotalSigningKeysStats();
-        totalSigningKeysStats.increaseTotalSigningKeysCount(_keysCount);
-        _setTotalSigningKeysStats(totalSigningKeysStats);
-        _increaseValidatorsKeysNonce();
-    }
-
-    function _removeUnusedSigningKeys(
-        uint256 _nodeOperatorId,
-        uint64 _fromIndex,
-        uint64 _keysCount
-    ) internal {
-        NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
-
-        uint64 approveValidatorsCountBefore = nodeOperator.vettedSigningKeysCount;
-
-        // removing from the last index to the highest one, so we won't get outside the array
-        for (uint64 i = _fromIndex.add(_keysCount); i > _fromIndex; --i) {
-            _removeUnusedSigningKey(_nodeOperatorId, i - 1);
-        }
-
-        uint64 totalValidatorsCountAfter = nodeOperator.totalSigningKeysCount;
-        uint64 approvedValidatorsCountAfter = nodeOperator.vettedSigningKeysCount;
-
-        emit TotalValidatorsKeysCountChanged(_nodeOperatorId, totalValidatorsCountAfter);
-        emit VettedSigningKeysCountChanged(_nodeOperatorId, approvedValidatorsCountAfter);
-
-        SigningKeysStats.State memory totalSigningKeysStats = _getTotalSigningKeysStats();
-        totalSigningKeysStats.decreaseTotalSigningKeysCount(_keysCount);
-
-        if (approveValidatorsCountBefore > approvedValidatorsCountAfter) {
-            totalSigningKeysStats.decreaseVettedSigningKeysCount(approveValidatorsCountBefore - approvedValidatorsCountAfter);
-        }
-
-        _setTotalSigningKeysStats(totalSigningKeysStats);
-        _increaseValidatorsKeysNonce();
-    }
-
-    function _removeUnusedSigningKey(uint256 _nodeOperatorId, uint64 _index) internal {
-        NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
-
-        uint64 totalSigningKeysCount = nodeOperator.totalSigningKeysCount;
-        require(_index < totalSigningKeysCount, "KEY_NOT_FOUND");
-
-        uint64 depositedSigningKeysCount = nodeOperator.depositedSigningKeysCount;
-        require(_index >= depositedSigningKeysCount, "KEY_WAS_USED");
-
-        uint64 lastValidatorKeyIndex = totalSigningKeysCount.sub(1);
-        uint64 vettedSigningKeysCount = nodeOperator.vettedSigningKeysCount;
-
-        (bytes memory removedKey, ) = _loadSigningKey(_nodeOperatorId, _index);
-
-        if (_index < lastValidatorKeyIndex) {
-            (bytes memory key, bytes memory signature) = _loadSigningKey(_nodeOperatorId, lastValidatorKeyIndex);
-            _storeSigningKey(_nodeOperatorId, _index, key, signature);
-        }
-
-        _deleteSigningKey(_nodeOperatorId, lastValidatorKeyIndex);
-
-        nodeOperator.totalSigningKeysCount = totalSigningKeysCount.sub(1);
-        emit TotalValidatorsKeysCountChanged(_nodeOperatorId, _index);
-
-        if (_index < vettedSigningKeysCount) {
-            // decreasing the staking limit so the key at _index can't be used anymore
-            nodeOperator.vettedSigningKeysCount = _index;
-            emit VettedSigningKeysCountChanged(_nodeOperatorId, _index);
-        }
-
-        emit SigningKeyRemoved(_nodeOperatorId, removedKey);
     }
 
     function _deleteSigningKey(uint256 _nodeOperatorId, uint256 _keyIndex) internal {
