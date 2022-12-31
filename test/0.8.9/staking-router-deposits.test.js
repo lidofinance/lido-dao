@@ -86,9 +86,15 @@ contract('StakingRouter', (accounts) => {
         from: deployer
       }
     )
-    await acl.createPermission(stakingRouter.address, operators.address, await operators.INVALIDATE_READY_TO_DEPOSIT_KEYS(), deployer, {
-      from: deployer
-    })
+    await acl.createPermission(
+      stakingRouter.address,
+      operators.address,
+      await operators.INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE(),
+      deployer,
+      {
+        from: deployer
+      }
+    )
 
     const wc = '0x'.padEnd(66, '1234')
     await stakingRouter.initialize(admin, lido.address, wc, { from: deployer })

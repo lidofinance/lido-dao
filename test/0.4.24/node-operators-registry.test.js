@@ -81,7 +81,9 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     await acl.createPermission(pool.address, app.address, await app.REQUEST_VALIDATORS_KEYS_FOR_DEPOSITS_ROLE(), appManager, {
       from: appManager
     })
-    await acl.createPermission(pool.address, app.address, await app.INVALIDATE_READY_TO_DEPOSIT_KEYS(), appManager, { from: appManager })
+    await acl.createPermission(pool.address, app.address, await app.INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE(), appManager, {
+      from: appManager
+    })
 
     // Initialize the app's proxy.
     const tx = await app.initialize(steth.address, CURATED_TYPE)
