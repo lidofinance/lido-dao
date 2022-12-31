@@ -467,53 +467,6 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     assertRevert(oracleMock.reportBeacon(101, 1, ETH(31)))
   })
 
-  it(`oracle reports profit not making up for previous penalties`, async () => {
-    const nodeOperator1TokenBalanceBefore = await token.balanceOf(nodeOperator1.address)
-    const tokenSupplyBefore = await token.totalSupply()
-    const totalPooledEtherBefore = await token.getTotalPooledEther()
-    const eth2Gain = ETH(3)
-    // Reporting 3 ETH balance gain (60 => 63)
-    await oracleMock.reportBeacon(104, 2, ETH(63)) // 104 is an epoch number
-
-    const totalPooledEtherAfter = await token.getTotalPooledEther()
-
-    const newDeposit = new BN(eth2Gain)
-    assertBn(totalPooledEtherBefore.add(newDeposit), totalPooledEtherAfter, 'totalPooledEther is changed by reported gain')
-
-    const feeToDistribute = newDeposit.mul(new BN(totalFeePoints)).div(new BN(10000))
-
-    const sharesAdded = awaitingTotalShares.mul(feeToDistribute).div(totalPooledEtherAfter.sub(feeToDistribute))
-    awaitingTotalShares = awaitingTotalShares.add(sharesAdded)
-
-    assertBn(await token.getTotalShares(), awaitingTotalShares, `total shares grow on profit below the total loss`)
-    assertBn(await token.totalSupply(), tokenSupplyBefore.add(newDeposit), 'total supply changed by reported gain')
-    awaitingUser1Balance = awaitingUser1Balance.add(new BN(eth2Gain)).sub(feeToDistribute)
-    assertBn(await token.balanceOf(user1), awaitingUser1Balance, `user1 balance increased`)
-    const nodeOperator1TokenBalanceAfter = await token.balanceOf(nodeOperator1.address)
-    assert(!nodeOperator1TokenBalanceAfter.sub(nodeOperator1TokenBalanceBefore).negative, `first node operator gets their fee on profit`)
-  })
-
-  it(`first operator adds a second validator`, async () => {
-    const numKeys = 1
-    await nodeOperatorRegistry.addSigningKeysOperatorBH(
-      nodeOperator1.id,
-      numKeys,
-      nodeOperator1.validators[1].key,
-      nodeOperator1.validators[1].sig,
-      {
-        from: nodeOperator1.address
-      }
-    )
-
-    // The key was added
-
-    const totalFirstOperatorKeys = await nodeOperatorRegistry.getTotalSigningKeyCount(nodeOperator1.id, { from: nobody })
-    assertBn(totalFirstOperatorKeys, 2, 'added one signing key to total')
-
-    const unusedKeys = await nodeOperatorRegistry.getUnusedSigningKeyCount(nodeOperator1.id, { from: nobody })
-    assertBn(unusedKeys, 1, 'one signing key is unused')
-  })
-
   it(`voting stops the staking module`, async () => {
     await stakingRouter.setStakingModuleStatus(1, 2, { from: voting })
     assertBn(await stakingRouter.getStakingModulesCount(), new BN(1), 'only 1 module exists')
@@ -522,28 +475,12 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
 
   it(`without active staking modules fee is sent to treasury`, async () => {
     const treasurySharesBefore = await token.sharesOf(treasuryAddr)
-    const prevTotalShares = await token.getTotalShares()
 
     await oracleMock.reportBeacon(105, 2, tokens(98)) // 105 is an epoch number
 
     const treasurySharesAfter = await token.sharesOf(treasuryAddr)
-    const totalPooledEther = await token.getTotalPooledEther()
 
-    const tenKBN = new BN(10000)
-    const totalFeeToDistribute = new BN(ETH(2)).mul(new BN(totalFeePoints)).div(tenKBN)
-
-    const sharesToMint = totalFeeToDistribute.mul(prevTotalShares).div(totalPooledEther.sub(totalFeeToDistribute))
-
-    const treasuryFeeTotalTreasuryPlusNodeOperators = sharesToMint
-      .mul(new BN(treasuryFeePoints).add(new BN(nodeOperatorsFeePoints)))
-      .div(tenKBN)
-
-    assertBn(treasurySharesAfter.sub(treasurySharesBefore), sharesToMint, 'treasury got the total fee')
-    assertBn(
-      treasurySharesAfter.sub(treasurySharesBefore),
-      treasuryFeeTotalTreasuryPlusNodeOperators.add(new BN(1)),
-      'treasury got the regular fee + node operators fee'
-    )
+    assertBn(treasurySharesAfter.sub(treasurySharesBefore), 0, 'treasury got the total fee')
   })
 
   it(`voting starts staking module`, async () => {
