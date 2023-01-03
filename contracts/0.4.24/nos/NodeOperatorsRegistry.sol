@@ -398,9 +398,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
             if (depositedSigningKeysCount == totalSigningKeysCount) {
                 continue;
             }
-            if (!wereSigningKeysTrimmed) {
-                wereSigningKeysTrimmed = true;
-            }
 
             nodeOperator.totalSigningKeysCount = depositedSigningKeysCount;
             nodeOperator.vettedSigningKeysCount = depositedSigningKeysCount;
@@ -409,6 +406,10 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
             emit VettedSigningKeysCountChanged(_nodeOperatorId, depositedSigningKeysCount);
             emit NodeOperatorUnusedValidatorsKeysTrimmed(_nodeOperatorId, trimmedKeysCount);
             emit NodeOperatorTotalKeysTrimmed(_nodeOperatorId, trimmedKeysCount);
+
+            if (!wereSigningKeysTrimmed) {
+                wereSigningKeysTrimmed = true;
+            }
         }
 
         if (wereSigningKeysTrimmed) {
@@ -491,10 +492,32 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
             uint256 depositedSigningKeysCount = nodeOperator.depositedSigningKeysCount;
             uint256 vettedSigningKeysCount = nodeOperator.vettedSigningKeysCount;
 
-            activeKeyCountsAfterAllocation[activeNodeOperatorIndex] = depositedSigningKeysCount.sub(exitedSigningKeysCount[activeNodeOperatorIndex]);
+            // the node operator has no available signing keys
+            if (depositedSigningKeysCount == vettedSigningKeysCount) continue;
+
+            activeKeyCountsAfterAllocation[activeNodeOperatorIndex] = depositedSigningKeysCount.sub(
+                exitedSigningKeysCount[activeNodeOperatorIndex]
+            );
             activeKeysCapacities[activeNodeOperatorIndex] = vettedSigningKeysCount.sub(exitedSigningKeysCount[activeNodeOperatorIndex]);
 
             ++activeNodeOperatorIndex;
+        }
+
+        if (activeNodeOperatorIndex == 0) return (0, new uint256[](0), new uint256[](0), new uint256[](0));
+
+        /// @dev shrink the length of the resulting arrays if some active node operators have no available keys to be deposited
+        if (activeNodeOperatorIndex < activeNodeOperatorsCount) {
+            assembly {
+                let trimLength := sub(activeNodeOperatorsCount, activeNodeOperatorIndex)
+                mstore(nodeOperatorIds, sub(mload(nodeOperatorIds), trimLength))
+                mstore(activeKeyCountsAfterAllocation, sub(mload(activeKeyCountsAfterAllocation), trimLength))
+                mstore(exitedSigningKeysCount, sub(mload(exitedSigningKeysCount), trimLength))
+                mstore(activeKeysCapacities, sub(mload(activeKeysCapacities), trimLength))
+            }
+            assert(nodeOperatorIds.length == activeNodeOperatorIndex);
+            assert(activeKeyCountsAfterAllocation.length == activeNodeOperatorIndex);
+            assert(exitedSigningKeysCount.length == activeNodeOperatorIndex);
+            assert(activeKeysCapacities.length == activeNodeOperatorIndex);
         }
 
         allocatedKeysCount = MinFirstAllocationStrategy.allocate(activeKeyCountsAfterAllocation, activeKeysCapacities, _keysCount);
