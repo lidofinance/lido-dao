@@ -112,6 +112,7 @@ contract Lido is ILido, StETH, AragonApp {
      * For more details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md
      */
     function finalizeUpgrade_v2(address _stakingRouter, address _dsm) external {
+        require(!isPetrified(), "PETRIFIED");
         require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "WRONG_BASE_VERSION");
         require(_stakingRouter != address(0), "STAKING_ROUTER_ZERO_ADDRESS");
         require(_dsm != address(0), "DSM_ZERO_ADDRESS");
