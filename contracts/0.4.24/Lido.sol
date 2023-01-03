@@ -92,6 +92,10 @@ contract Lido is ILido, StETH, AragonApp {
         initialized();
     }
 
+    /**
+     * @dev If we are deploying the protocol from scratch there are circular dependencies introduced (StakingRouter and DSM), 
+     *      so on init stage we need to set `_stakingRouter` and `_dsm` as 0x0, and afterwards use setters for set them correctly
+     */
     function _initialize_v2(address _stakingRouter, address _dsm) internal {
         STAKING_ROUTER_POSITION.setStorageAddress(_stakingRouter);
         DEPOSIT_SECURITY_MODULE_POSITION.setStorageAddress(_dsm);
@@ -500,7 +504,7 @@ contract Lido is ILido, StETH, AragonApp {
 
     /**
      * @notice Returns current staking rewards fee rate
-     * @return totalFee total rewards fee in precission basis points
+     * @return totalFee total rewards fee in base precission
      */
     function getFee() public view returns (uint96 totalFee) {
         (, , totalFee, ) = getStakingRouter().getStakingRewardsDistribution();
@@ -508,8 +512,8 @@ contract Lido is ILido, StETH, AragonApp {
 
     /**
      * @notice Returns current fee distribution proportion
-     * @return modulesFee modules summary fee in precission basis points
-     * @return treasuryFee treasury fee in precission basis points
+     * @return modulesFee modules summary fee in base precission
+     * @return treasuryFee treasury fee in base precission
      */
     function getFeeDistribution() public view returns (uint96 modulesFee, uint96 treasuryFee) {
         (, uint96[] memory moduleFees, uint96 totalFee, ) = getStakingRouter().getStakingRewardsDistribution();
@@ -633,14 +637,14 @@ contract Lido is ILido, StETH, AragonApp {
         // Now we want to mint new shares to the fee recipient, so that the total cost of the
         // newly-minted shares exactly corresponds to the fee taken:
         //
-        // shares2mint * newShareCost = (_totalRewards * totalFee) / TOTAL_BASIS_POINTS
+        // shares2mint * newShareCost = (_totalRewards * totalFee) / PRECISION_POINTS
         // newShareCost = newTotalPooledEther / (prevTotalShares + shares2mint)
         //
         // which follows to:
         //
         //                        _totalRewards * totalFee * prevTotalShares
         // shares2mint = --------------------------------------------------------------
-        //                 (newTotalPooledEther * TOTAL_BASIS_POINTS) - (totalFee * _totalRewards)
+        //                 (newTotalPooledEther * PRECISION_POINTS) - (_totalRewards * totalFee)
         //
         // The effect is that the given percentage of the reward goes to the fee recipient, and
         // the rest of the reward is distributed between token holders proportionally to their
@@ -774,6 +778,7 @@ contract Lido is ILido, StETH, AragonApp {
             _stakingModuleId,
             _depositCalldata
         );
+        assert(depositedKeysCount <= depositableEth / DEPOSIT_SIZE );
 
         if (depositedKeysCount > 0) {
             uint256 depositedAmount = depositedKeysCount.mul(DEPOSIT_SIZE);
