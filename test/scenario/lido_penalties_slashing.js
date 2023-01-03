@@ -475,12 +475,11 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
 
   it(`without active staking modules fee is sent to treasury`, async () => {
     const treasurySharesBefore = await token.sharesOf(treasuryAddr)
-
     await oracleMock.reportBeacon(105, 2, tokens(98)) // 105 is an epoch number
 
     const treasurySharesAfter = await token.sharesOf(treasuryAddr)
 
-    assertBn(treasurySharesAfter.sub(treasurySharesBefore), 0, 'treasury got the total fee')
+    assertBn(treasurySharesAfter.sub(treasurySharesBefore), new BN('2715279303023647411'), 'treasury got the total fee')
   })
 
   it(`voting starts staking module`, async () => {

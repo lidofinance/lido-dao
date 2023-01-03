@@ -313,10 +313,11 @@ function getExpectedAllocateToBestCandidate(allocations, capacities, maxAllocati
   const [allocation, capacity, index] = allocations
     .map((a, i) => [a, capacities[i], i])
     .filter(([a, c]) => a < c)
-    .reduce(
-      ([minA, minC, minI], [a, c, i]) => (a < minA ? [a, c, i] : [minA, minC, minI]),
-      [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER]
-    )
+    .reduce(([minA, minC, minI], [a, c, i]) => (a < minA ? [a, c, i] : [minA, minC, minI]), [
+      Number.MAX_SAFE_INTEGER,
+      Number.MAX_SAFE_INTEGER,
+      Number.MAX_SAFE_INTEGER
+    ])
 
   if (allocation === Number.MAX_SAFE_INTEGER || maxAllocationSize === 0) {
     return [0, allocations]
