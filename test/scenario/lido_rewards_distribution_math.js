@@ -1,12 +1,10 @@
 const { assert } = require('chai')
 const { BN } = require('bn.js')
-const { assertBn, assertEvent, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertBn, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const { getEventArgument, ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 
 const { pad, ETH } = require('../helpers/utils')
 const { deployDaoAndPool } = require('./helpers/deploy')
-const { signDepositData } = require('../0.8.9/helpers/signatures')
-const { waitBlocks } = require('../helpers/blockchain')
 const { DSMAttestMessage, DSMPauseMessage } = require('../0.8.9/helpers/signatures')
 
 const INodeOperatorsRegistry = artifacts.require('INodeOperatorsRegistry')
@@ -93,7 +91,7 @@ contract('Lido: rewards distribution math', (addresses) => {
     await pool.resumeProtocolAndStaking()
 
     // contracts/nos/NodeOperatorsRegistry.sol
-    nodeOperatorsRegistry = deployed.nodeOperatorRegistry
+    nodeOperatorsRegistry = deployed.nodeOperatorsRegistry
 
     // contracts/0.8.9/StakingRouter.sol
     stakingRouter = deployed.stakingRouter
@@ -116,9 +114,6 @@ contract('Lido: rewards distribution math', (addresses) => {
   })
 
   it(`registers one node operator with one key`, async () => {
-    // How many validators can this node operator register
-    const validatorsLimit = 0
-
     const txn = await nodeOperatorsRegistry.addNodeOperator(nodeOperator1.name, nodeOperator1.address, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
@@ -221,8 +216,13 @@ contract('Lido: rewards distribution math', (addresses) => {
 
     const { reportedMintAmount, tos, values } = await readLastPoolEventLog()
 
-    const { totalFeeToDistribute, nodeOperatorsSharesToMint, treasurySharesToMint, nodeOperatorsFeeToMint, treasuryFeeToMint } =
-      await getAwaitedFeesSharesTokensDeltas(profitAmount, prevTotalShares, 1)
+    const {
+      totalFeeToDistribute,
+      nodeOperatorsSharesToMint,
+      treasurySharesToMint,
+      nodeOperatorsFeeToMint,
+      treasuryFeeToMint
+    } = await getAwaitedFeesSharesTokensDeltas(profitAmount, prevTotalShares, 1)
 
     assertBn(nodeOperatorsRegistrySharesDelta, nodeOperatorsSharesToMint, 'nodeOperator1 shares are correct')
     assertBn(treasurySharesDelta, treasurySharesToMint, 'treasury shares are correct')

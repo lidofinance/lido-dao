@@ -26,7 +26,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     depositor
   ] = addresses
 
-  let pool, nodeOperatorRegistry, token
+  let pool, nodeOperatorsRegistry, token
   let oracleMock, depositContractMock
   let treasuryAddr, guardians
   let depositSecurityModule, depositRoot
@@ -43,7 +43,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     await pool.resumeProtocolAndStaking()
 
     // contracts/nos/NodeOperatorsRegistry.sol
-    nodeOperatorRegistry = deployed.nodeOperatorRegistry
+    nodeOperatorsRegistry = deployed.nodeOperatorsRegistry
 
     // mocks
     oracleMock = deployed.oracleMock
@@ -51,7 +51,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
 
     stakingRouter = deployed.stakingRouter
 
-    // stakingRouter.addModule('NOR', nodeOperatorRegistry.address, 10000, 500, 500, { from: voting })
+    // stakingRouter.addModule('NOR', nodeOperatorsRegistry.address, 10000, 500, 500, { from: voting })
 
     // addresses
     treasuryAddr = deployed.treasuryAddr
@@ -92,19 +92,19 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
   }
 
   it('voting adds the first node operator', async () => {
-    const txn = await nodeOperatorRegistry.addNodeOperator(nodeOperator1.name, nodeOperator1.address, { from: voting })
+    const txn = await nodeOperatorsRegistry.addNodeOperator(nodeOperator1.name, nodeOperator1.address, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
     nodeOperator1.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: INodeOperatorsRegistry._json.abi })
     assertBn(nodeOperator1.id, 0, 'operator id')
 
-    assertBn(await nodeOperatorRegistry.getNodeOperatorsCount(), 1, 'total node operators')
+    assertBn(await nodeOperatorsRegistry.getNodeOperatorsCount(), 1, 'total node operators')
   })
 
   it('the first node operator registers one validator', async () => {
     const numKeys = 1
 
-    await nodeOperatorRegistry.addSigningKeysOperatorBH(
+    await nodeOperatorsRegistry.addSigningKeysOperatorBH(
       nodeOperator1.id,
       numKeys,
       nodeOperator1.validators[0].key,
@@ -116,12 +116,12 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
 
     // The key was added
 
-    const totalKeys = await nodeOperatorRegistry.getTotalSigningKeyCount(nodeOperator1.id, { from: nobody })
+    const totalKeys = await nodeOperatorsRegistry.getTotalSigningKeyCount(nodeOperator1.id, { from: nobody })
     assertBn(totalKeys, 1, 'total signing keys')
 
     // The key was not used yet
 
-    const unusedKeys = await nodeOperatorRegistry.getUnusedSigningKeyCount(nodeOperator1.id, { from: nobody })
+    const unusedKeys = await nodeOperatorsRegistry.getUnusedSigningKeyCount(nodeOperator1.id, { from: nobody })
     assertBn(unusedKeys, 1, 'unused signing keys')
   })
 
@@ -131,7 +131,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     awaitingUser1Balance = new BN(depositAmount)
     await web3.eth.sendTransaction({ to: pool.address, from: user1, value: depositAmount })
     const block = await web3.eth.getBlock('latest')
-    const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+    const keysOpIndex = await nodeOperatorsRegistry.getKeysOpIndex()
 
     const signatures = [
       signDepositData(
@@ -180,18 +180,18 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
   })
 
   it(`voting grants first operator right to have one validator`, async () => {
-    await nodeOperatorRegistry.setNodeOperatorStakingLimit(nodeOperator1.id, 1, { from: voting })
+    await nodeOperatorsRegistry.setNodeOperatorStakingLimit(nodeOperator1.id, 1, { from: voting })
   })
 
   it(`new validator doesn't get buffered ether even if there's 32 ETH deposit in the pool`, async () => {
     assertBn(await pool.getBufferedEther(), ETH(32), `all ether is buffered until there's a validator to deposit it`)
     assertBn(await pool.getTotalPooledEther(), ETH(32), 'total pooled ether')
-    assertBn(await nodeOperatorRegistry.getUnusedSigningKeyCount(0), 1, 'one key available for the first validator')
+    assertBn(await nodeOperatorsRegistry.getUnusedSigningKeyCount(0), 1, 'one key available for the first validator')
   })
 
   it(`pushes pooled eth to the available validator`, async () => {
     const block = await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
-    const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+    const keysOpIndex = await nodeOperatorsRegistry.getKeysOpIndex()
     const signatures = [
       signDepositData(
         await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
@@ -220,7 +220,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
   it('new validator gets the 32 ETH deposit from the pool', async () => {
     assertBn(await pool.getBufferedEther(), ETH(0), `all ether is buffered until there's a validator to deposit it`)
     assertBn(await pool.getTotalPooledEther(), ETH(32), 'total pooled ether')
-    assertBn(await nodeOperatorRegistry.getUnusedSigningKeyCount(0), 0, 'no more available keys for the first validator')
+    assertBn(await nodeOperatorsRegistry.getUnusedSigningKeyCount(0), 0, 'no more available keys for the first validator')
   })
 
   it('first oracle report is taken as-is for Lido', async () => {
@@ -330,17 +330,17 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
   it('voting adds the second node operator who registers one validator', async () => {
     const validatorsLimit = 1000000000
 
-    const txn = await nodeOperatorRegistry.addNodeOperator(nodeOperator2.name, nodeOperator2.address, { from: voting })
+    const txn = await nodeOperatorsRegistry.addNodeOperator(nodeOperator2.name, nodeOperator2.address, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
     nodeOperator2.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: INodeOperatorsRegistry._json.abi })
     assertBn(nodeOperator2.id, 1, 'correct operator id added')
 
-    assertBn(await nodeOperatorRegistry.getNodeOperatorsCount(), 2, 'total node operators updated')
+    assertBn(await nodeOperatorsRegistry.getNodeOperatorsCount(), 2, 'total node operators updated')
 
     const numKeys = 1
 
-    await nodeOperatorRegistry.addSigningKeysOperatorBH(
+    await nodeOperatorsRegistry.addSigningKeysOperatorBH(
       nodeOperator2.id,
       numKeys,
       nodeOperator2.validators[0].key,
@@ -352,14 +352,14 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
 
     // The key was added
 
-    await nodeOperatorRegistry.setNodeOperatorStakingLimit(1, validatorsLimit, { from: voting })
+    await nodeOperatorsRegistry.setNodeOperatorStakingLimit(1, validatorsLimit, { from: voting })
 
-    const totalKeys = await nodeOperatorRegistry.getTotalSigningKeyCount(nodeOperator2.id, { from: nobody })
+    const totalKeys = await nodeOperatorsRegistry.getTotalSigningKeyCount(nodeOperator2.id, { from: nobody })
     assertBn(totalKeys, 1, 'second operator added one key')
 
     // The key was not used yet
 
-    const unusedKeys = await nodeOperatorRegistry.getUnusedSigningKeyCount(nodeOperator2.id, { from: nobody })
+    const unusedKeys = await nodeOperatorsRegistry.getUnusedSigningKeyCount(nodeOperator2.id, { from: nobody })
     assertBn(unusedKeys, 1, 'unused signing keys')
   })
 
@@ -369,7 +369,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     const tokenSupplyBefore = await token.totalSupply()
     await web3.eth.sendTransaction({ to: pool.address, from: user1, value: depositAmount })
     const block = await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
-    const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+    const keysOpIndex = await nodeOperatorsRegistry.getKeysOpIndex()
     const signatures = [
       signDepositData(
         await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
@@ -490,11 +490,11 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
   })
 
   it(`oracle reports profit, previously stopped staking module gets the fee`, async () => {
-    const stakingModuleTokenSharesBefore = await token.sharesOf(nodeOperatorRegistry.address)
+    const stakingModuleTokenSharesBefore = await token.sharesOf(nodeOperatorsRegistry.address)
 
     await oracleMock.reportBeacon(106, 2, tokens(100)) // 106 is an epoch number
 
-    const stakingModuleTokenSharesAfter = await token.sharesOf(nodeOperatorRegistry.address)
+    const stakingModuleTokenSharesAfter = await token.sharesOf(nodeOperatorsRegistry.address)
 
     assert(
       stakingModuleTokenSharesBefore.sub(stakingModuleTokenSharesAfter).negative,

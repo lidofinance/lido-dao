@@ -30,7 +30,7 @@ contract('Lido: happy path', (addresses) => {
     nobody
   ] = addresses
 
-  let pool, nodeOperatorRegistry, token
+  let pool, nodeOperatorsRegistry, token
   let oracleMock, depositContractMock
   let treasuryAddr, guardians
   let depositSecurityModule, depositRoot
@@ -46,7 +46,7 @@ contract('Lido: happy path', (addresses) => {
     await pool.resumeProtocolAndStaking()
 
     // contracts/nos/NodeOperatorsRegistry.sol
-    nodeOperatorRegistry = deployed.nodeOperatorRegistry
+    nodeOperatorsRegistry = deployed.nodeOperatorsRegistry
 
     // contracts/0.8.9/StakingRouter.sol
     stakingRouter = deployed.stakingRouter
@@ -104,13 +104,13 @@ contract('Lido: happy path', (addresses) => {
   }
 
   it('voting adds the first node operator', async () => {
-    const txn = await nodeOperatorRegistry.addNodeOperator(nodeOperator1.name, nodeOperator1.address, { from: voting })
+    const txn = await nodeOperatorsRegistry.addNodeOperator(nodeOperator1.name, nodeOperator1.address, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
     nodeOperator1.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: INodeOperatorsRegistry._json.abi })
     assertBn(nodeOperator1.id, 0, 'operator id')
 
-    assertBn(await nodeOperatorRegistry.getNodeOperatorsCount(), 1, 'total node operators')
+    assertBn(await nodeOperatorsRegistry.getNodeOperatorsCount(), 1, 'total node operators')
   })
 
   it('the first node operator registers one validator', async () => {
@@ -118,7 +118,7 @@ contract('Lido: happy path', (addresses) => {
     const validatorsLimit = 1000000000
     const numKeys = 1
 
-    await nodeOperatorRegistry.addSigningKeysOperatorBH(
+    await nodeOperatorsRegistry.addSigningKeysOperatorBH(
       nodeOperator1.id,
       numKeys,
       nodeOperator1.validators[0].key,
@@ -128,23 +128,23 @@ contract('Lido: happy path', (addresses) => {
       }
     )
 
-    await nodeOperatorRegistry.setNodeOperatorStakingLimit(0, validatorsLimit, { from: voting })
+    await nodeOperatorsRegistry.setNodeOperatorStakingLimit(0, validatorsLimit, { from: voting })
 
     // The key was added
 
-    const totalKeys = await nodeOperatorRegistry.getTotalSigningKeyCount(nodeOperator1.id, { from: nobody })
+    const totalKeys = await nodeOperatorsRegistry.getTotalSigningKeyCount(nodeOperator1.id, { from: nobody })
     assertBn(totalKeys, 1, 'total signing keys')
 
     // The key was not used yet
 
-    const unusedKeys = await nodeOperatorRegistry.getUnusedSigningKeyCount(nodeOperator1.id, { from: nobody })
+    const unusedKeys = await nodeOperatorsRegistry.getUnusedSigningKeyCount(nodeOperator1.id, { from: nobody })
     assertBn(unusedKeys, 1, 'unused signing keys')
   })
 
   it('the first user deposits 3 ETH to the pool', async () => {
     await web3.eth.sendTransaction({ to: pool.address, from: user1, value: ETH(3) })
     const block = await web3.eth.getBlock('latest')
-    const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+    const keysOpIndex = await nodeOperatorsRegistry.getKeysOpIndex()
 
     DSMAttestMessage.setMessagePrefix(await depositSecurityModule.ATTEST_MESSAGE_PREFIX())
     DSMPauseMessage.setMessagePrefix(await depositSecurityModule.PAUSE_MESSAGE_PREFIX())
@@ -187,7 +187,7 @@ contract('Lido: happy path', (addresses) => {
   it('the second user deposits 30 ETH to the pool', async () => {
     await web3.eth.sendTransaction({ to: pool.address, from: user2, value: ETH(30) })
     const block = await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
-    const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+    const keysOpIndex = await nodeOperatorsRegistry.getKeysOpIndex()
 
     DSMAttestMessage.setMessagePrefix(await depositSecurityModule.ATTEST_MESSAGE_PREFIX())
     DSMPauseMessage.setMessagePrefix(await depositSecurityModule.PAUSE_MESSAGE_PREFIX())
@@ -236,7 +236,7 @@ contract('Lido: happy path', (addresses) => {
   })
 
   it('at this point, the pool has ran out of signing keys', async () => {
-    const unusedKeys = await nodeOperatorRegistry.getUnusedSigningKeyCount(nodeOperator1.id, { from: nobody })
+    const unusedKeys = await nodeOperatorsRegistry.getUnusedSigningKeyCount(nodeOperator1.id, { from: nobody })
     assertBn(unusedKeys, 0, 'unused signing keys')
   })
 
@@ -255,17 +255,17 @@ contract('Lido: happy path', (addresses) => {
     // TODO: we have to submit operators with 0 validators allowed only
     const validatorsLimit = 1000000000
 
-    const txn = await nodeOperatorRegistry.addNodeOperator(nodeOperator2.name, nodeOperator2.address, { from: voting })
+    const txn = await nodeOperatorsRegistry.addNodeOperator(nodeOperator2.name, nodeOperator2.address, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
     nodeOperator2.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: INodeOperatorsRegistry._json.abi })
     assertBn(nodeOperator2.id, 1, 'operator id')
 
-    assertBn(await nodeOperatorRegistry.getNodeOperatorsCount(), 2, 'total node operators')
+    assertBn(await nodeOperatorsRegistry.getNodeOperatorsCount(), 2, 'total node operators')
 
     const numKeys = 1
 
-    await nodeOperatorRegistry.addSigningKeysOperatorBH(
+    await nodeOperatorsRegistry.addSigningKeysOperatorBH(
       nodeOperator2.id,
       numKeys,
       nodeOperator2.validators[0].key,
@@ -277,14 +277,14 @@ contract('Lido: happy path', (addresses) => {
 
     // The key was added
 
-    await nodeOperatorRegistry.setNodeOperatorStakingLimit(1, validatorsLimit, { from: voting })
+    await nodeOperatorsRegistry.setNodeOperatorStakingLimit(1, validatorsLimit, { from: voting })
 
-    const totalKeys = await nodeOperatorRegistry.getTotalSigningKeyCount(nodeOperator2.id, { from: nobody })
+    const totalKeys = await nodeOperatorsRegistry.getTotalSigningKeyCount(nodeOperator2.id, { from: nobody })
     assertBn(totalKeys, 1, 'total signing keys')
 
     // The key was not used yet
 
-    const unusedKeys = await nodeOperatorRegistry.getUnusedSigningKeyCount(nodeOperator2.id, { from: nobody })
+    const unusedKeys = await nodeOperatorsRegistry.getUnusedSigningKeyCount(nodeOperator2.id, { from: nobody })
     assertBn(unusedKeys, 1, 'unused signing keys')
   })
 
@@ -292,7 +292,7 @@ contract('Lido: happy path', (addresses) => {
     await web3.eth.sendTransaction({ to: pool.address, from: user3, value: ETH(64) })
 
     const block = await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
-    const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+    const keysOpIndex = await nodeOperatorsRegistry.getKeysOpIndex()
 
     DSMAttestMessage.setMessagePrefix(await depositSecurityModule.ATTEST_MESSAGE_PREFIX())
     DSMPauseMessage.setMessagePrefix(await depositSecurityModule.PAUSE_MESSAGE_PREFIX())
@@ -396,7 +396,7 @@ contract('Lido: happy path', (addresses) => {
     // treasuryTokenBalance ~= mintedAmount * treasuryFeePoints / 10000
     // insuranceTokenBalance ~= mintedAmount * insuranceFeePoints / 10000
     assertBn(await token.balanceOf(treasuryAddr), new BN('1600000000000000000'), 'treasury tokens')
-    assertBn(await token.balanceOf(nodeOperatorRegistry.address), new BN('1599999999999999999'), 'insurance tokens')
+    assertBn(await token.balanceOf(nodeOperatorsRegistry.address), new BN('1599999999999999999'), 'insurance tokens')
 
     // The node operators' fee is distributed between all active node operators,
     // proprotional to their effective stake (the amount of Ether staked by the operator's
@@ -411,7 +411,7 @@ contract('Lido: happy path', (addresses) => {
     // Real minted amount should be a bit less than calculated caused by round errors on mint and transfer operations
     assert(
       mintedAmount
-        .sub(new BN(0).add(await token.balanceOf(treasuryAddr)).add(await token.balanceOf(nodeOperatorRegistry.address)))
+        .sub(new BN(0).add(await token.balanceOf(treasuryAddr)).add(await token.balanceOf(nodeOperatorsRegistry.address)))
         .lt(mintedAmount.divn(100))
     )
   })
@@ -429,8 +429,8 @@ contract('Lido: happy path', (addresses) => {
 
   it('nodeOperator3 registered in NodeOperatorsRegistry and adds 10 signing keys', async () => {
     const validatorsCount = 10
-    await nodeOperatorRegistry.addNodeOperator(nodeOperator3.name, nodeOperator3.address, { from: voting })
-    await nodeOperatorRegistry.addSigningKeysOperatorBH(
+    await nodeOperatorsRegistry.addNodeOperator(nodeOperator3.name, nodeOperator3.address, { from: voting })
+    await nodeOperatorsRegistry.addSigningKeysOperatorBH(
       nodeOperator3.id,
       validatorsCount,
       hexConcat(...nodeOperator3.validators.map((v) => v.key)),
@@ -439,13 +439,13 @@ contract('Lido: happy path', (addresses) => {
         from: nodeOperator3.address
       }
     )
-    await nodeOperatorRegistry.setNodeOperatorStakingLimit(nodeOperator3.id, validatorsCount, { from: voting })
+    await nodeOperatorsRegistry.setNodeOperatorStakingLimit(nodeOperator3.id, validatorsCount, { from: voting })
   })
 
   it('nodeOperator3 removes signing key with id 5', async () => {
     const signingKeyIndexToRemove = 5
-    await nodeOperatorRegistry.removeSigningKeyOperatorBH(nodeOperator3.id, signingKeyIndexToRemove, { from: nodeOperator3.address })
-    const nodeOperatorInfo = await nodeOperatorRegistry.getNodeOperator(nodeOperator3.id, false)
+    await nodeOperatorsRegistry.removeSigningKeyOperatorBH(nodeOperator3.id, signingKeyIndexToRemove, { from: nodeOperator3.address })
+    const nodeOperatorInfo = await nodeOperatorsRegistry.getNodeOperator(nodeOperator3.id, false)
     assertBn(nodeOperatorInfo.stakingLimit, 5)
   })
 
@@ -454,7 +454,7 @@ contract('Lido: happy path', (addresses) => {
     await web3.eth.sendTransaction({ to: pool.address, from: user1, value: amountToDeposit })
     await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
     const block = await web3.eth.getBlock('latest')
-    const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+    const keysOpIndex = await nodeOperatorsRegistry.getKeysOpIndex()
 
     DSMAttestMessage.setMessagePrefix(await depositSecurityModule.ATTEST_MESSAGE_PREFIX())
     DSMPauseMessage.setMessagePrefix(await depositSecurityModule.PAUSE_MESSAGE_PREFIX())
@@ -474,16 +474,16 @@ contract('Lido: happy path', (addresses) => {
       signatures
     )
 
-    let nodeOperatorInfo = await nodeOperatorRegistry.getNodeOperator(nodeOperator3.id, false)
+    let nodeOperatorInfo = await nodeOperatorsRegistry.getNodeOperator(nodeOperator3.id, false)
 
     // validate that only 5 signing keys used after key removing
     assertBn(nodeOperatorInfo.stakingLimit, nodeOperatorInfo.usedSigningKeys)
     assertBn(nodeOperatorInfo.totalSigningKeys, 9)
 
     // validate that all other validators used and pool still has buffered ether
-    nodeOperatorInfo = await nodeOperatorRegistry.getNodeOperator(nodeOperator1.id, false)
+    nodeOperatorInfo = await nodeOperatorsRegistry.getNodeOperator(nodeOperator1.id, false)
     assertBn(nodeOperatorInfo.totalSigningKeys, nodeOperatorInfo.usedSigningKeys)
-    nodeOperatorInfo = await nodeOperatorRegistry.getNodeOperator(nodeOperator2.id, false)
+    nodeOperatorInfo = await nodeOperatorsRegistry.getNodeOperator(nodeOperator2.id, false)
     assertBn(nodeOperatorInfo.totalSigningKeys, nodeOperatorInfo.usedSigningKeys)
   })
 })

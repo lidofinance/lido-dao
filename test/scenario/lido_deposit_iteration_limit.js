@@ -28,7 +28,7 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
   // This is needed to prevent the deposit loop from failing due to it using more gas than
   // available in a single block and to protect from possible attacks exploiting this.
 
-  let pool, nodeOperatorRegistry, depositContractMock
+  let pool, nodeOperatorsRegistry, depositContractMock
   let depositSecurityModule, depositRoot, guardians
 
   it('DAO, node operators registry, token, pool and deposit security module are deployed and initialized', async () => {
@@ -39,7 +39,7 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
     await pool.resumeProtocolAndStaking()
 
     // contracts/nos/NodeOperatorsRegistry.sol
-    nodeOperatorRegistry = deployed.nodeOperatorRegistry
+    nodeOperatorsRegistry = deployed.nodeOperatorsRegistry
 
     // contracts/0.8.9/StakingRouter.sol
     stakingRouter = deployed.stakingRouter
@@ -59,12 +59,12 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
     const validatorsLimit = 1000
     const numKeys = 26
 
-    const txn = await nodeOperatorRegistry.addNodeOperator('operator_1', nodeOperator, { from: voting })
+    const txn = await nodeOperatorsRegistry.addNodeOperator('operator_1', nodeOperator, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
     const nodeOperatorId = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: INodeOperatorsRegistry._json.abi })
 
-    assertBn(await nodeOperatorRegistry.getNodeOperatorsCount(), 1, 'total node operators')
+    assertBn(await nodeOperatorsRegistry.getNodeOperatorsCount(), 1, 'total node operators')
 
     const data = Array.from({ length: numKeys }, (_, i) => {
       const n = 1 + 10 * i
@@ -77,11 +77,11 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
     const keys = hexConcat(...data.map((v) => v.key))
     const sigs = hexConcat(...data.map((v) => v.sig))
 
-    await nodeOperatorRegistry.addSigningKeysOperatorBH(nodeOperatorId, numKeys, keys, sigs, { from: nodeOperator })
+    await nodeOperatorsRegistry.addSigningKeysOperatorBH(nodeOperatorId, numKeys, keys, sigs, { from: nodeOperator })
 
-    await nodeOperatorRegistry.setNodeOperatorStakingLimit(0, validatorsLimit, { from: voting })
+    await nodeOperatorsRegistry.setNodeOperatorStakingLimit(0, validatorsLimit, { from: voting })
 
-    const totalKeys = await nodeOperatorRegistry.getTotalSigningKeyCount(nodeOperatorId, { from: nobody })
+    const totalKeys = await nodeOperatorsRegistry.getTotalSigningKeyCount(nodeOperatorId, { from: nobody })
     assertBn(totalKeys, numKeys, 'total signing keys')
   })
 
@@ -100,7 +100,7 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
 
   it('guardians can assign the buffered ether to validators by calling depositBufferedEther()', async () => {
     const block = await web3.eth.getBlock('latest')
-    const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+    const keysOpIndex = await nodeOperatorsRegistry.getKeysOpIndex()
 
     DSMAttestMessage.setMessagePrefix(await depositSecurityModule.ATTEST_MESSAGE_PREFIX())
     DSMPauseMessage.setMessagePrefix(await depositSecurityModule.PAUSE_MESSAGE_PREFIX())
@@ -132,7 +132,7 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
 
   it('guardians can advance the deposit loop further by calling depositBufferedEther() once again', async () => {
     const block = await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
-    const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+    const keysOpIndex = await nodeOperatorsRegistry.getKeysOpIndex()
 
     DSMAttestMessage.setMessagePrefix(await depositSecurityModule.ATTEST_MESSAGE_PREFIX())
     DSMPauseMessage.setMessagePrefix(await depositSecurityModule.PAUSE_MESSAGE_PREFIX())
@@ -161,7 +161,7 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
 
   it('the number of assigned validators is limited by the remaining ether', async () => {
     const block = await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
-    const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+    const keysOpIndex = await nodeOperatorsRegistry.getKeysOpIndex()
 
     DSMAttestMessage.setMessagePrefix(await depositSecurityModule.ATTEST_MESSAGE_PREFIX())
     DSMPauseMessage.setMessagePrefix(await depositSecurityModule.PAUSE_MESSAGE_PREFIX())
@@ -200,7 +200,7 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
 
   it('the number of assigned validators is still limited by the number of available validator keys', async () => {
     const block = await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
-    const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+    const keysOpIndex = await nodeOperatorsRegistry.getKeysOpIndex()
 
     DSMAttestMessage.setMessagePrefix(await depositSecurityModule.ATTEST_MESSAGE_PREFIX())
     DSMPauseMessage.setMessagePrefix(await depositSecurityModule.PAUSE_MESSAGE_PREFIX())
@@ -231,7 +231,7 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
 
   it('depositBufferedEther is a nop if there are no signing keys available', async () => {
     const block = await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
-    const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+    const keysOpIndex = await nodeOperatorsRegistry.getKeysOpIndex()
 
     DSMAttestMessage.setMessagePrefix(await depositSecurityModule.ATTEST_MESSAGE_PREFIX())
     DSMPauseMessage.setMessagePrefix(await depositSecurityModule.PAUSE_MESSAGE_PREFIX())

@@ -36,7 +36,7 @@ contract('Lido: merge acceptance', (addresses) => {
     userELRewards
   ] = addresses
 
-  let pool, nodeOperatorRegistry, token
+  let pool, nodeOperatorsRegistry, token
   let oracleMock, depositContractMock
   let treasuryAddr, guardians
   let depositSecurityModule, depositRoot
@@ -44,12 +44,6 @@ contract('Lido: merge acceptance', (addresses) => {
 
   // Total fee is 1%
   const totalFeePoints = 0.01 * TOTAL_BASIS_POINTS
-  // Of this 1%, 30% goes to the treasury
-  const treasuryFeePoints = 0.3 * TOTAL_BASIS_POINTS
-  // 20% goes to the insurance fund
-  const insuranceFeePoints = 0.2 * TOTAL_BASIS_POINTS
-  // 50% goes to node operators
-  const nodeOperatorsFeePoints = 0.5 * TOTAL_BASIS_POINTS
 
   const withdrawalCredentials = pad('0x0202', 32)
 
@@ -91,7 +85,7 @@ contract('Lido: merge acceptance', (addresses) => {
     await pool.resumeProtocolAndStaking()
 
     // contracts/nos/NodeOperatorsRegistry.sol
-    nodeOperatorRegistry = deployed.nodeOperatorRegistry
+    nodeOperatorsRegistry = deployed.nodeOperatorsRegistry
 
     // contracts/0.8.9/StakingRouter.sol
     stakingRouter = deployed.stakingRouter
@@ -133,17 +127,17 @@ contract('Lido: merge acceptance', (addresses) => {
 
     // How many validators can this node operator register
     const validatorsLimit = 100000000
-    let txn = await nodeOperatorRegistry.addNodeOperator(nodeOperator1.name, nodeOperator1.address, { from: voting })
+    let txn = await nodeOperatorsRegistry.addNodeOperator(nodeOperator1.name, nodeOperator1.address, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
     nodeOperator1.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: INodeOperatorsRegistry._json.abi })
     assertBn(nodeOperator1.id, 0, 'operator id')
 
-    assertBn(await nodeOperatorRegistry.getNodeOperatorsCount(), 1, 'total node operators')
+    assertBn(await nodeOperatorsRegistry.getNodeOperatorsCount(), 1, 'total node operators')
 
     const numKeys = 1
 
-    await nodeOperatorRegistry.addSigningKeysOperatorBH(
+    await nodeOperatorsRegistry.addSigningKeysOperatorBH(
       nodeOperator1.id,
       numKeys,
       nodeOperator1.validators[0].key,
@@ -153,29 +147,29 @@ contract('Lido: merge acceptance', (addresses) => {
       }
     )
 
-    await nodeOperatorRegistry.setNodeOperatorStakingLimit(0, validatorsLimit, { from: voting })
+    await nodeOperatorsRegistry.setNodeOperatorStakingLimit(0, validatorsLimit, { from: voting })
 
     const distribution = await pool.getFeeDistribution({ from: nobody })
 
     // The key was added
 
-    let totalKeys = await nodeOperatorRegistry.getTotalSigningKeyCount(nodeOperator1.id, { from: nobody })
+    let totalKeys = await nodeOperatorsRegistry.getTotalSigningKeyCount(nodeOperator1.id, { from: nobody })
     assertBn(totalKeys, 1, 'total signing keys')
 
     // The key was not used yet
 
-    let unusedKeys = await nodeOperatorRegistry.getUnusedSigningKeyCount(nodeOperator1.id, { from: nobody })
+    let unusedKeys = await nodeOperatorsRegistry.getUnusedSigningKeyCount(nodeOperator1.id, { from: nobody })
     assertBn(unusedKeys, 1, 'unused signing keys')
 
-    txn = await nodeOperatorRegistry.addNodeOperator(nodeOperator2.name, nodeOperator2.address, { from: voting })
+    txn = await nodeOperatorsRegistry.addNodeOperator(nodeOperator2.name, nodeOperator2.address, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
     nodeOperator2.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: INodeOperatorsRegistry._json.abi })
     assertBn(nodeOperator2.id, 1, 'operator id')
 
-    assertBn(await nodeOperatorRegistry.getNodeOperatorsCount(), 2, 'total node operators')
+    assertBn(await nodeOperatorsRegistry.getNodeOperatorsCount(), 2, 'total node operators')
 
-    await nodeOperatorRegistry.addSigningKeysOperatorBH(
+    await nodeOperatorsRegistry.addSigningKeysOperatorBH(
       nodeOperator2.id,
       numKeys,
       nodeOperator2.validators[0].key,
@@ -185,22 +179,22 @@ contract('Lido: merge acceptance', (addresses) => {
       }
     )
 
-    await nodeOperatorRegistry.setNodeOperatorStakingLimit(1, validatorsLimit, { from: voting })
+    await nodeOperatorsRegistry.setNodeOperatorStakingLimit(1, validatorsLimit, { from: voting })
 
     // The key was added
 
-    totalKeys = await nodeOperatorRegistry.getTotalSigningKeyCount(nodeOperator2.id, { from: nobody })
+    totalKeys = await nodeOperatorsRegistry.getTotalSigningKeyCount(nodeOperator2.id, { from: nobody })
     assertBn(totalKeys, 1, 'total signing keys')
 
     // The key was not used yet
-    unusedKeys = await nodeOperatorRegistry.getUnusedSigningKeyCount(nodeOperator2.id, { from: nobody })
+    unusedKeys = await nodeOperatorsRegistry.getUnusedSigningKeyCount(nodeOperator2.id, { from: nobody })
     assertBn(unusedKeys, 1, 'unused signing keys')
   })
 
   it('the first user deposits 3 ETH to the pool', async () => {
     await web3.eth.sendTransaction({ to: pool.address, from: user1, value: ETH(3) })
     const block = await web3.eth.getBlock('latest')
-    const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+    const keysOpIndex = await nodeOperatorsRegistry.getKeysOpIndex()
 
     DSMAttestMessage.setMessagePrefix(await depositSecurityModule.ATTEST_MESSAGE_PREFIX())
     DSMPauseMessage.setMessagePrefix(await depositSecurityModule.PAUSE_MESSAGE_PREFIX())
@@ -243,7 +237,7 @@ contract('Lido: merge acceptance', (addresses) => {
   it('the second user deposits 30 ETH to the pool', async () => {
     await web3.eth.sendTransaction({ to: pool.address, from: user2, value: ETH(30) })
     const block = await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
-    const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+    const keysOpIndex = await nodeOperatorsRegistry.getKeysOpIndex()
 
     DSMAttestMessage.setMessagePrefix(await depositSecurityModule.ATTEST_MESSAGE_PREFIX())
     DSMPauseMessage.setMessagePrefix(await depositSecurityModule.PAUSE_MESSAGE_PREFIX())
@@ -295,7 +289,7 @@ contract('Lido: merge acceptance', (addresses) => {
     await web3.eth.sendTransaction({ to: pool.address, from: user3, value: ETH(64) })
 
     const block = await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
-    const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+    const keysOpIndex = await nodeOperatorsRegistry.getKeysOpIndex()
 
     DSMAttestMessage.setMessagePrefix(await depositSecurityModule.ATTEST_MESSAGE_PREFIX())
     DSMPauseMessage.setMessagePrefix(await depositSecurityModule.PAUSE_MESSAGE_PREFIX())
@@ -420,12 +414,12 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(await token.balanceOf(treasuryAddr), new BN('2049999999999999999'), 'treasury tokens')
 
     // Module fee, rewards distribution between modules should be make by module
-    assertBn(await token.balanceOf(nodeOperatorRegistry.address), new BN('2049999999999999999'), 'module1 tokens')
+    assertBn(await token.balanceOf(nodeOperatorsRegistry.address), new BN('2049999999999999999'), 'module1 tokens')
 
     // Real minted amount should be a bit less than calculated caused by round errors on mint and transfer operations
     assert(
       mintedAmount
-        .sub(new BN(0).add(await token.balanceOf(treasuryAddr)).add(await token.balanceOf(nodeOperatorRegistry.address)))
+        .sub(new BN(0).add(await token.balanceOf(treasuryAddr)).add(await token.balanceOf(nodeOperatorsRegistry.address)))
         .lt(mintedAmount.divn(100))
     )
   })
@@ -489,7 +483,7 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(await token.balanceOf(user3), new BN('92827730464664574929'), 'user3 tokens')
 
     assertBn(await token.balanceOf(treasuryAddr), new BN('2153985507246376811'), 'treasury tokens')
-    assertBn(await token.balanceOf(nodeOperatorRegistry.address), new BN('2153985507246376811'), 'module1 tokens')
+    assertBn(await token.balanceOf(nodeOperatorsRegistry.address), new BN('2153985507246376811'), 'module1 tokens')
 
     // operators do not claim rewards from module
     assertBn(await token.balanceOf(nodeOperator1.address), 0, 'operator_1 tokens')
@@ -549,7 +543,7 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(await token.balanceOf(user3), new BN('94748304198416255789'), 'user3 tokens')
 
     assertBn(await token.balanceOf(treasuryAddr), new BN('2198550724637681159'), 'treasury tokens')
-    assertBn(await token.balanceOf(nodeOperatorRegistry.address), new BN('2198550724637681159'), 'module1 tokens')
+    assertBn(await token.balanceOf(nodeOperatorsRegistry.address), new BN('2198550724637681159'), 'module1 tokens')
   })
 
   it('collect another 3 ETH execution layer rewards to the vault', async () => {
@@ -603,7 +597,7 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(await token.balanceOf(user3), new BN('94748304198416255789'), 'user3 tokens')
 
     assertBn(await token.balanceOf(treasuryAddr), new BN('2198550724637681159'), 'treasury tokens')
-    assertBn(await token.balanceOf(nodeOperatorRegistry.address), new BN('2198550724637681159'), 'module1 tokens')
+    assertBn(await token.balanceOf(nodeOperatorsRegistry.address), new BN('2198550724637681159'), 'module1 tokens')
   })
 
   it('collect another 2 ETH execution layer rewards to the vault', async () => {
@@ -655,7 +649,7 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(await token.balanceOf(user3), new BN('90907156730912894068'), 'user3 tokens')
 
     assertBn(await token.balanceOf(treasuryAddr), new BN('2109420289855072463'), 'treasury tokens')
-    assertBn(await token.balanceOf(nodeOperatorRegistry.address), new BN('2109420289855072463'), 'module1 tokens')
+    assertBn(await token.balanceOf(nodeOperatorsRegistry.address), new BN('2109420289855072463'), 'module1 tokens')
     assertBn(await token.balanceOf(nodeOperator1.address), 0, 'operator_1 tokens')
     assertBn(await token.balanceOf(nodeOperator2.address), 0, 'operator_2 tokens')
   })
@@ -712,7 +706,7 @@ contract('Lido: merge acceptance', (addresses) => {
     // and node operators
     // treasuryTokenBalance = (oldTreasuryShares + mintedRewardShares * treasuryFeePoints / 10000) * sharePrice
     assertBn((await token.balanceOf(treasuryAddr)).divn(10), new BN('242626811594202898'), 'treasury tokens')
-    assertBn((await token.balanceOf(nodeOperatorRegistry.address)).divn(10), new BN('242626811594202898'), 'module1 tokens')
+    assertBn((await token.balanceOf(nodeOperatorsRegistry.address)).divn(10), new BN('242626811594202898'), 'module1 tokens')
   })
 
   it('collect 0.1 ETH execution layer rewards to elRewardsVault and withdraw it entirely by means of multiple oracle reports (+1 ETH)', async () => {
