@@ -508,16 +508,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         /// @dev shrink the length of the resulting arrays if some active node operators have no available keys to be deposited
         if (activeNodeOperatorIndex < activeNodeOperatorsCount) {
             assembly {
-                let trimLength := sub(activeNodeOperatorsCount, activeNodeOperatorIndex)
-                mstore(nodeOperatorIds, sub(mload(nodeOperatorIds), trimLength))
-                mstore(activeKeyCountsAfterAllocation, sub(mload(activeKeyCountsAfterAllocation), trimLength))
-                mstore(exitedSigningKeysCount, sub(mload(exitedSigningKeysCount), trimLength))
-                mstore(activeKeysCapacities, sub(mload(activeKeysCapacities), trimLength))
+                mstore(nodeOperatorIds, activeNodeOperatorIndex)
+                mstore(activeKeyCountsAfterAllocation, activeNodeOperatorIndex)
+                mstore(exitedSigningKeysCount, activeNodeOperatorIndex)
+                mstore(activeKeysCapacities, activeNodeOperatorIndex)
             }
-            assert(nodeOperatorIds.length == activeNodeOperatorIndex);
-            assert(activeKeyCountsAfterAllocation.length == activeNodeOperatorIndex);
-            assert(exitedSigningKeysCount.length == activeNodeOperatorIndex);
-            assert(activeKeysCapacities.length == activeNodeOperatorIndex);
         }
 
         allocatedKeysCount = MinFirstAllocationStrategy.allocate(activeKeyCountsAfterAllocation, activeKeysCapacities, _keysCount);
