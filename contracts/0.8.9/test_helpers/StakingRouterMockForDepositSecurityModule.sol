@@ -33,6 +33,7 @@ contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
 
     function getStakingRewardsDistribution()
         external
+        view
         returns (address[] memory recipients, uint96[] memory moduleFees, uint96 totalFeee, uint256 precisionPoints)
     {}
 

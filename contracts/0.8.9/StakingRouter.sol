@@ -48,6 +48,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         uint16 moduleFee;
         uint16 treasuryFee;
         uint16 targetShare;
+        StakingModuleStatus status;
         uint256 activeKeysCount;
         uint256 availableKeysCount;
     }
@@ -313,7 +314,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         view
         returns (address[] memory recipients, uint96[] memory moduleFees, uint96 totalFee, uint256 precisionPoints)
     {
-        (uint256 totalActiveKeys, StakingModuleCache[] memory modulesCache) = _loadNotStoppedStakingModulesCache();
+        (uint256 totalActiveKeys, StakingModuleCache[] memory modulesCache) = _loadStakingModulesCache();
         uint256 modulesCount = modulesCache.length;
 
         /// @dev return empty response if there are no modules or active keys yet
@@ -327,6 +328,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
 
         uint256 rewardedModulesCount = 0;
         uint256 moduleKeysShare;
+        uint96 moduleFee;
 
         for (uint256 i; i < modulesCount; ) {
             /// @dev skip modules which have no active keys
@@ -334,9 +336,16 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
                 moduleKeysShare = ((modulesCache[i].activeKeysCount * precisionPoints) / totalActiveKeys);
 
                 recipients[i] = address(modulesCache[i].stakingModuleAddress);
-                moduleFees[i] = uint96((moduleKeysShare * modulesCache[i].moduleFee) / TOTAL_BASIS_POINTS);
+                moduleFee = uint96((moduleKeysShare * modulesCache[i].moduleFee) / TOTAL_BASIS_POINTS);
+                /// @dev if the module has the `Stopped` status for some reason, then the module's
+                ///      rewards go to the treasure, so that the DAO has ability to manage them
+                ///      (e.g. to compensate the module in case of an error, etc.)
+                if (modulesCache[i].status != StakingModuleStatus.Stopped) {
+                    moduleFees[i] = moduleFee;
+                }
+                // else keep moduleFees[i] = 0, but increase totalFee
 
-                totalFee += uint96((moduleKeysShare * modulesCache[i].treasuryFee) / TOTAL_BASIS_POINTS) + moduleFees[i];
+                totalFee += (uint96((moduleKeysShare * modulesCache[i].treasuryFee) / TOTAL_BASIS_POINTS) + moduleFee);
 
                 unchecked {
                     rewardedModulesCount++;
@@ -454,41 +463,29 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         }
     }
 
-    function _loadStakingModuleCache(
-        uint256 _stakingModuleIndex
-    ) internal view returns (StakingModuleStatus status, StakingModuleCache memory stakingModuleCache) {
+    function _readStakingModuleCache(uint256 _stakingModuleIndex) internal view returns (StakingModuleCache memory stakingModuleCache) {
         StakingModule storage stakingModuleData = _getStakingModuleByIndex(_stakingModuleIndex);
         stakingModuleCache.stakingModuleAddress = stakingModuleData.stakingModuleAddress;
         stakingModuleCache.moduleFee = stakingModuleData.moduleFee;
         stakingModuleCache.treasuryFee = stakingModuleData.treasuryFee;
         stakingModuleCache.targetShare = stakingModuleData.targetShare;
-        status = StakingModuleStatus(stakingModuleData.status);
+        stakingModuleCache.status = StakingModuleStatus(stakingModuleData.status);
     }
 
     /**
-     * @dev load not stopped modules list
+     * @dev load all modules list
      * @notice used for reward distribution
      * @return totalActiveKeys for not stopped modules
      * @return modulesCache array of StakingModuleCache struct
      */
-    function _loadNotStoppedStakingModulesCache()
-        internal
-        view
-        returns (uint256 totalActiveKeys, StakingModuleCache[] memory modulesCache)
-    {
+    function _loadStakingModulesCache() internal view returns (uint256 totalActiveKeys, StakingModuleCache[] memory modulesCache) {
         uint256 modulesCount = getStakingModulesCount();
         modulesCache = new StakingModuleCache[](modulesCount);
-        StakingModuleStatus status;
         for (uint256 i; i < modulesCount; ) {
-            (status, modulesCache[i]) = _loadStakingModuleCache(i);
-
-            /// @dev account only keys from not stopped modules (i.e. active and paused)
-            if (status != StakingModuleStatus.Stopped) {
-                (, modulesCache[i].activeKeysCount, modulesCache[i].availableKeysCount) = IStakingModule(
-                    modulesCache[i].stakingModuleAddress
-                ).getValidatorsKeysStats();
-                totalActiveKeys += modulesCache[i].activeKeysCount;
-            }
+            modulesCache[i] = _readStakingModuleCache(i);
+            (, modulesCache[i].activeKeysCount, modulesCache[i].availableKeysCount) = IStakingModule(modulesCache[i].stakingModuleAddress)
+                .getValidatorsKeysStats();
+            totalActiveKeys += modulesCache[i].activeKeysCount;
             unchecked {
                 ++i;
             }
@@ -504,13 +501,12 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     function _loadActiveStakingModulesCache() internal view returns (uint256 totalActiveKeys, StakingModuleCache[] memory modulesCache) {
         uint256 modulesCount = getStakingModulesCount();
         modulesCache = new StakingModuleCache[](modulesCount);
-        StakingModuleStatus status;
 
         for (uint256 i; i < modulesCount; ) {
-            (status, modulesCache[i]) = _loadStakingModuleCache(i);
+            modulesCache[i] = _readStakingModuleCache(i);
 
             /// @dev account only keys from active modules
-            if (status == StakingModuleStatus.Active) {
+            if (modulesCache[i].status == StakingModuleStatus.Active) {
                 (, modulesCache[i].activeKeysCount, modulesCache[i].availableKeysCount) = IStakingModule(
                     modulesCache[i].stakingModuleAddress
                 ).getValidatorsKeysStats();
