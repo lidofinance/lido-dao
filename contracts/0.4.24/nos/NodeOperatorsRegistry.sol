@@ -90,14 +90,31 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         address rewardAddress;
         /// @dev Human-readable name
         string name;
+
+        /// @dev The below variables store the signing keys info of the node operator.
+        ///     These variables can take values in the following ranges:
+        ///
+        ///                0             <=  exitedSigningKeysCount   <= depositedSigningKeysCount
+        ///     exitedSigningKeysCount   <= depositedSigningKeysCount <=  vettedSigningKeysCount
+        ///    depositedSigningKeysCount <=   vettedSigningKeysCount  <=   totalSigningKeysCount
+        ///    depositedSigningKeysCount <=   totalSigningKeysCount   <=        MAX_UINT64
+        ///
+        /// Additionally, the exitedSigningKeysCount and depositedSigningKeysCount values are monotonically increasing:
+        /// :                              :         :         :         : 
+        /// [....exitedSigningKeysCount....]-------->:         :         :
+        /// [....depositedSigningKeysCount :.........]-------->:         :
+        /// [....vettedSigningKeysCount....:.........:<--------]-------->:
+        /// [....totalSigningKeysCount.....:.........:<--------:---------]------->
+        /// :                              :         :         :         :
+
         /// @dev Maximum number of keys for this operator to be deposited for all time
-        uint64 vettedSigningKeysCount; // previously stakingLimit
+        uint64 vettedSigningKeysCount;
         /// @dev Number of keys in the EXITED state for this operator for all time
-        uint64 exitedSigningKeysCount; // previously stoppedValidators
+        uint64 exitedSigningKeysCount;
         /// @dev Total number of keys of this operator for all time
-        uint64 totalSigningKeysCount; // totalSigningKeys
+        uint64 totalSigningKeysCount;
         /// @dev Number of keys of this operator which were in DEPOSITED state for all time
-        uint64 depositedSigningKeysCount; // usedSigningKeys
+        uint64 depositedSigningKeysCount;
     }
 
     //
