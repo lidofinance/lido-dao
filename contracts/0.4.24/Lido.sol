@@ -46,8 +46,7 @@ contract Lido is ILido, StETH, AragonApp {
     bytes32 public constant SET_EL_REWARDS_VAULT_ROLE = keccak256("SET_EL_REWARDS_VAULT_ROLE");
     bytes32 public constant SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE = keccak256("SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE");
 
-    uint256 public constant DEPOSIT_SIZE = 32 ether;
-
+    uint256 private constant DEPOSIT_SIZE = 32 ether;
     uint256 public constant TOTAL_BASIS_POINTS = 10000;
 
     bytes32 internal constant ORACLE_POSITION = keccak256("lido.Lido.oracle");
@@ -526,6 +525,7 @@ contract Lido is ILido, StETH, AragonApp {
 
     /**
      * @notice Returns current credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
+     * @dev DEPRECATED: use StakingRouter.getWithdrawalCredentials() instead
      */
     function getWithdrawalCredentials() external view returns (bytes32) {
         return getStakingRouter().getWithdrawalCredentials();

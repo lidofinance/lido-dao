@@ -83,4 +83,8 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         depositedSigningKeysCount = signingKeysStats.depositedSigningKeysCount;
         exitedSigningKeysCount = signingKeysStats.exitedSigningKeysCount;
     }
+
+    function testing_setBaseVersion(uint256 _newBaseVersion) external {
+        CONTRACT_VERSION_POSITION.setStorageUint256(_newBaseVersion);
+    }
 }

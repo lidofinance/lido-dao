@@ -88,6 +88,10 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     // Initialize the app's proxy.
     const tx = await app.initialize(steth.address, CURATED_TYPE)
 
+    // Implementation initializer reverts because initialization block was set to max(uint256)
+    // in the Autopetrified base contract
+    await assertRevert(appBase.initialize(steth.address, CURATED_TYPE), 'INIT_ALREADY_INITIALIZED')
+
     const moduleType = await app.getType()
     assertEvent(tx, 'ContractVersionSet', { expectedArgs: { version: 2 } })
     assertEvent(tx, 'StethContractSet', { expectedArgs: { stethAddress: steth.address } })
@@ -102,11 +106,9 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
   })
 
   describe('finalizeUpgrade_v2()', () => {
-    let registryImpl
-
     before(async () => {
-      registryImpl = await NodeOperatorsRegistry.new()
-      assertBn(await registryImpl.getVersion(), 0)
+      // reset version there to test upgrade finalization
+      await app.testing_setBaseVersion(0)
       await snapshot.add()
     })
 
@@ -116,19 +118,23 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await snapshot.add()
     })
 
+    it('fails with PETRIFIED error when called on implementation', async () => {
+      await assertRevert(appBase.finalizeUpgrade_v2(pool.address, CURATED_TYPE), 'PETRIFIED')
+    })
+
     it('sets correct contract version', async () => {
-      await registryImpl.finalizeUpgrade_v2(pool.address, CURATED_TYPE)
-      assertBn(await registryImpl.getVersion(), 2)
+      await app.finalizeUpgrade_v2(pool.address, CURATED_TYPE)
+      assertBn(await app.getVersion(), 2)
     })
 
     it('reverts with error STETH_ADDRESS_ZERO when stETH address is zero address', async () => {
-      await assertRevert(registryImpl.finalizeUpgrade_v2(ZERO_ADDRESS, CURATED_TYPE), 'STETH_ADDRESS_ZERO')
+      await assertRevert(app.finalizeUpgrade_v2(ZERO_ADDRESS, CURATED_TYPE), 'STETH_ADDRESS_ZERO')
     })
 
     it('reverts with error WRONG_BASE_VERSION when called on already initialized contract', async () => {
-      await registryImpl.finalizeUpgrade_v2(pool.address, CURATED_TYPE)
-      assertBn(await registryImpl.getVersion(), 2)
-      assertRevert(registryImpl.finalizeUpgrade_v2(pool.address, CURATED_TYPE), 'WRONG_BASE_VERSION')
+      await app.finalizeUpgrade_v2(pool.address, CURATED_TYPE)
+      assertBn(await app.getVersion(), 2)
+      assertRevert(app.finalizeUpgrade_v2(pool.address, CURATED_TYPE), 'WRONG_BASE_VERSION')
     })
 
     it('sets total signing keys stats correctly', async () => {
@@ -151,7 +157,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         }
       ]
       for (const config of nodeOperatorConfigs) {
-        await registryImpl.testing_addNodeOperator(
+        await app.testing_addNodeOperator(
           config.name,
           config.rewardAddress,
           config.totalSigningKeysCount,
@@ -161,19 +167,19 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         )
       }
 
-      await registryImpl.testing_resetTotalSigningKeysStats()
+      await app.testing_resetTotalSigningKeysStats()
 
       for (let i = 0; i < nodeOperatorConfigs.length; ++i) {
-        const nodeOperator = await registryImpl.getNodeOperator(i, false)
+        const nodeOperator = await app.getNodeOperator(i, false)
         assert.equal(nodeOperator.totalSigningKeys.toNumber(), nodeOperatorConfigs[i].totalSigningKeysCount)
         assert.equal(nodeOperator.stakingLimit.toNumber(), nodeOperatorConfigs[i].vettedSigningKeysCount)
         assert.equal(nodeOperator.usedSigningKeys.toNumber(), nodeOperatorConfigs[i].depositedSigningKeysCount)
         assert.equal(nodeOperator.stoppedValidators.toNumber(), nodeOperatorConfigs[i].exitedSigningKeysCount)
       }
 
-      await registryImpl.finalizeUpgrade_v2(pool.address, CURATED_TYPE)
+      await app.finalizeUpgrade_v2(pool.address, CURATED_TYPE)
 
-      const totalSigningKeysStatsAfter = await registryImpl.testing_getTotalSigningKeysStats()
+      const totalSigningKeysStatsAfter = await app.testing_getTotalSigningKeysStats()
 
       const totalSigningKeysCount = nodeOperatorConfigs.reduce((sum, c) => sum + c.totalSigningKeysCount, 0)
       const vettedSigningKeysCount = nodeOperatorConfigs.reduce((sum, c) => sum + c.vettedSigningKeysCount, 0)
@@ -195,7 +201,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         depositedSigningKeysCount: 7,
         exitedSigningKeysCount: 5
       }
-      await registryImpl.testing_addNodeOperator(
+      await app.testing_addNodeOperator(
         config.name,
         config.rewardAddress,
         config.totalSigningKeysCount,
@@ -204,13 +210,13 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         config.exitedSigningKeysCount
       )
 
-      let nodeOperator = await registryImpl.getNodeOperator(0, false)
+      let nodeOperator = await app.getNodeOperator(0, false)
       assert.equal(nodeOperator.stakingLimit.toNumber(), config.vettedSigningKeysCount)
       assert.equal(nodeOperator.totalSigningKeys.toNumber(), config.totalSigningKeysCount)
 
-      await registryImpl.finalizeUpgrade_v2(pool.address, CURATED_TYPE)
+      await app.finalizeUpgrade_v2(pool.address, CURATED_TYPE)
 
-      nodeOperator = await registryImpl.getNodeOperator(0, false)
+      nodeOperator = await app.getNodeOperator(0, false)
       assert.equal(nodeOperator.stakingLimit.toNumber(), config.totalSigningKeysCount)
       assert.equal(nodeOperator.totalSigningKeys.toNumber(), config.totalSigningKeysCount)
     })
@@ -225,7 +231,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         exitedSigningKeysCount: 5
       }
 
-      await registryImpl.testing_addNodeOperator(
+      await app.testing_addNodeOperator(
         config.name,
         config.rewardAddress,
         config.totalSigningKeysCount,
@@ -234,30 +240,30 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         config.exitedSigningKeysCount
       )
 
-      let nodeOperator = await registryImpl.getNodeOperator(0, false)
+      let nodeOperator = await app.getNodeOperator(0, false)
       assert.equal(nodeOperator.stakingLimit.toNumber(), config.vettedSigningKeysCount)
       assert.equal(nodeOperator.totalSigningKeys.toNumber(), config.totalSigningKeysCount)
 
-      await registryImpl.finalizeUpgrade_v2(pool.address, CURATED_TYPE)
+      await app.finalizeUpgrade_v2(pool.address, CURATED_TYPE)
 
-      nodeOperator = await registryImpl.getNodeOperator(0, false)
+      nodeOperator = await app.getNodeOperator(0, false)
 
       assert.equal(nodeOperator.stakingLimit.toNumber(), config.depositedSigningKeysCount)
       assert.equal(nodeOperator.totalSigningKeys.toNumber(), config.totalSigningKeysCount)
     })
 
     it('emits ContractVersionSet event with correct params', async () => {
-      const receipt = await registryImpl.finalizeUpgrade_v2(pool.address, CURATED_TYPE)
+      const receipt = await app.finalizeUpgrade_v2(pool.address, CURATED_TYPE)
       assertEvent(receipt, 'ContractVersionSet', { expectedArgs: { version: 2 } })
     })
 
     it('emits StethContractSet event with correct params', async () => {
-      const receipt = await registryImpl.finalizeUpgrade_v2(pool.address, CURATED_TYPE)
+      const receipt = await app.finalizeUpgrade_v2(pool.address, CURATED_TYPE)
       assertEvent(receipt, 'StethContractSet', { expectedArgs: { stethAddress: pool.address } })
     })
 
     it('emits StakingModuleTypeSet event with correct params', async () => {
-      const receipt = await registryImpl.finalizeUpgrade_v2(pool.address, CURATED_TYPE)
+      const receipt = await app.finalizeUpgrade_v2(pool.address, CURATED_TYPE)
       const moduleType = await app.getType()
       assertEvent(receipt, 'StakingModuleTypeSet', { expectedArgs: { moduleType } })
     })
