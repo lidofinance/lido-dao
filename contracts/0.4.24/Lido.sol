@@ -661,8 +661,8 @@ contract Lido is ILido, StETH, AragonApp {
             uint256 recipientReward;
 
             for (uint256 i = 0; i < recipients.length; i++) {
-                recipientReward = shares2mint.mul(modulesFees[i]).div(totalFee);
-                if (recipientReward > 0) {
+                if (modulesFees[i] > 0) {
+                    recipientReward = shares2mint.mul(modulesFees[i]).div(totalFee);
                     _transferShares(address(this), recipients[i], recipientReward);
                     _emitTransferAfterMintingShares(recipients[i], recipientReward);
                     treasuryReward = treasuryReward.sub(recipientReward);
@@ -670,7 +670,6 @@ contract Lido is ILido, StETH, AragonApp {
             }
 
             address treasury = getTreasury();
-
             _transferShares(address(this), treasury, treasuryReward);
             _emitTransferAfterMintingShares(treasury, treasuryReward);
         }

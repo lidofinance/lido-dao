@@ -251,7 +251,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await app.methods[`deposit(uint256,uint24,bytes)`](MAX_DEPOSITS, curated.id, CALLDATA, { from: depositor })
   }
 
-  it.skip('Execution layer rewards distribution works when zero rewards reported', async () => {
+  it('Execution layer rewards distribution works when zero rewards reported', async () => {
     const depositAmount = 32
     const elRewards = depositAmount / TOTAL_BASIS_POINTS
     const beaconRewards = 0
@@ -268,7 +268,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assertBn(await app.getTotalELRewardsCollected(), ETH(elRewards))
   })
 
-  it.skip('Execution layer rewards distribution works when negative rewards reported', async () => {
+  it('Execution layer rewards distribution works when negative rewards reported', async () => {
     const depositAmount = 32
     const elRewards = depositAmount / TOTAL_BASIS_POINTS
     const beaconRewards = -2
@@ -284,7 +284,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assertBn(await app.getTotalELRewardsCollected(), ETH(elRewards))
   })
 
-  it.skip('Execution layer rewards distribution works when positive rewards reported', async () => {
+  it('Execution layer rewards distribution works when positive rewards reported', async () => {
     const depositAmount = 32
     const elRewards = depositAmount / TOTAL_BASIS_POINTS
     const beaconRewards = 3
@@ -305,7 +305,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assertBn(await app.balanceOf(user2), bn(STETH(depositAmount)).add(stakersReward))
   })
 
-  it.skip('Attempt to set invalid execution layer rewards withdrawal limit', async () => {
+  it('Attempt to set invalid execution layer rewards withdrawal limit', async () => {
     const initialValue = await app.getELRewardsWithdrawalLimit()
 
     assertEvent(await app.setELRewardsWithdrawalLimit(1, { from: voting }), 'ELRewardsWithdrawalLimitSet', {
@@ -323,7 +323,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assertRevert(app.receiveELRewards({ from: user1, value: ETH(1) }))
   })
 
-  it.skip('setStakingRouter event works', async () => {
+  it('setStakingRouter event works', async () => {
     assert.equal(await app.getStakingRouter(), stakingRouter.address)
 
     assertEvent(await app.setStakingRouter(voting, { from: voting }), 'StakingRouterSet', {
@@ -333,7 +333,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assert.equal(await app.getStakingRouter(), voting)
   })
 
-  it.skip('setDepositSecurityModule event works', async () => {
+  it('setDepositSecurityModule event works', async () => {
     assert.equal(await app.getDepositSecurityModule(), depositor)
 
     assertEvent(await app.setDepositSecurityModule(voting, { from: voting }), 'DepositSecurityModuleSet', {
@@ -343,7 +343,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assert.equal(await app.getDepositSecurityModule(), voting)
   })
 
-  it.skip('setModulesFee works', async () => {
+  it('setModulesFee works', async () => {
     const [curated] = await stakingRouter.getStakingModules()
 
     let module1 = await stakingRouter.getStakingModule(curated.id)
@@ -393,7 +393,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assertBn(distribution.treasuryFee, toPrecBP(700))
   })
 
-  it.skip('setWithdrawalCredentials works', async () => {
+  it('setWithdrawalCredentials works', async () => {
     await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
     await assertRevert(
@@ -405,7 +405,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assert.equal(await app.getWithdrawalCredentials(), pad('0x0202', 32))
   })
 
-  it.skip('setOracle works', async () => {
+  it('setOracle works', async () => {
     await assertRevert(app.setProtocolContracts(ZERO_ADDRESS, user2, { from: voting }), 'ORACLE_ZERO_ADDRESS')
     const receipt = await app.setProtocolContracts(yetAnotherOracle.address, oracle.address, { from: voting })
     assertEvent(receipt, 'ProtocolContactsSet', {
@@ -418,7 +418,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assert.equal(await app.getOracle(), yetAnotherOracle.address)
   })
 
-  it.skip('setWithdrawalCredentials resets unused keys', async () => {
+  it('setWithdrawalCredentials resets unused keys', async () => {
     await operators.addNodeOperator('1', ADDRESS_1, { from: voting })
     await operators.addNodeOperator('2', ADDRESS_2, { from: voting })
 
@@ -446,7 +446,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assert.equal(await app.getWithdrawalCredentials({ from: nobody }), pad('0x0203', 32))
   })
 
-  it.skip('pad64 works', async () => {
+  it('pad64 works', async () => {
     await assertRevert(beaconChainDepositor.pad64('0x'))
     await assertRevert(beaconChainDepositor.pad64('0x11'))
     await assertRevert(beaconChainDepositor.pad64('0x1122'))
@@ -459,7 +459,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assert.equal(await beaconChainDepositor.pad64(pad('0x1122', 64)), pad('0x1122', 64))
   })
 
-  it.skip('Lido.deposit(uint256,uint24,bytes) reverts when called by account without DEPOSIT_ROLE granted', async () => {
+  it('Lido.deposit(uint256,uint24,bytes) reverts when called by account without DEPOSIT_ROLE granted', async () => {
     await assertRevert(
       app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: nobody }),
       'APP_AUTH_DSM_FAILED'
@@ -585,7 +585,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assert.equal(calls[3].pubkey, pad('0x010206', 48))
   })
 
-  it.skip('deposit uses the expected signing keys', async () => {
+  it('deposit uses the expected signing keys', async () => {
     await operators.addNodeOperator('1', ADDRESS_1, { from: voting })
     await operators.addNodeOperator('2', ADDRESS_2, { from: voting })
 
@@ -631,7 +631,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     )
   })
 
-  it.skip('deposit works when the first node operator is inactive', async () => {
+  it('deposit works when the first node operator is inactive', async () => {
     await operators.addNodeOperator('1', ADDRESS_1, { from: voting })
     await operators.addNodeOperator('2', ADDRESS_2, { from: voting })
 
@@ -650,7 +650,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assertBn(await depositContract.totalCalls(), 1)
   })
 
-  it.skip('submits with zero and non-zero referrals work', async () => {
+  it('submits with zero and non-zero referrals work', async () => {
     const REFERRAL = '0xDeaDbeefdEAdbeefdEadbEEFdeadbeEFdEaDbeeF'
     let receipt
     receipt = await app.submit(REFERRAL, { from: user2, value: ETH(2) })
@@ -691,7 +691,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     }
   }
 
-  it.skip('staking pause & unlimited resume works', async () => {
+  it('staking pause & unlimited resume works', async () => {
     let receipt
 
     const MAX_UINT256 = bn(2).pow(bn(256)).sub(bn(1))
@@ -723,7 +723,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     }
   }
 
-  it.skip('staking resume with a limit works', async () => {
+  it('staking resume with a limit works', async () => {
     let receipt
 
     const blocksToReachMaxStakeLimit = 300
@@ -780,7 +780,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await assertRevert(app.setStakingLimit(ETH(1), bn(10), { from: voting }), `TOO_SMALL_LIMIT_INCREASE`)
   })
 
-  it.skip('resume staking with an one-shot limit works', async () => {
+  it('resume staking with an one-shot limit works', async () => {
     let receipt
 
     const expectedMaxStakeLimit = ETH(7)
@@ -809,7 +809,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await verifyStakeLimitState(expectedMaxStakeLimit, limitIncreasePerBlock, ETH(0), false, true)
   })
 
-  it.skip('resume staking with various changing limits work', async () => {
+  it('resume staking with various changing limits work', async () => {
     let receipt
 
     const expectedMaxStakeLimit = ETH(9)
@@ -860,13 +860,13 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await verifyStakeLimitState(0, 0, bn(2).pow(bn(256)).sub(bn(1)), false, false)
   })
 
-  it.skip('reverts when trying to call unknown function', async () => {
+  it('reverts when trying to call unknown function', async () => {
     const wrongMethodABI = '0x00'
     await assertRevert(web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(1), data: wrongMethodABI }), 'NON_EMPTY_DATA')
     await assertRevert(web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(0), data: wrongMethodABI }), 'NON_EMPTY_DATA')
   })
 
-  it.skip('key removal is taken into account during deposit', async () => {
+  it('key removal is taken into account during deposit', async () => {
     await operators.addNodeOperator('1', ADDRESS_1, { from: voting })
     await operators.addNodeOperator('2', ADDRESS_2, { from: voting })
 
@@ -938,7 +938,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assertBn(await app.getBufferedEther(), ETH(5))
   })
 
-  it.skip('handleOracleReport works', async () => {
+  it('handleOracleReport works', async () => {
     await operators.addNodeOperator('1', ADDRESS_1, { from: voting })
     await operators.addNodeOperator('2', ADDRESS_2, { from: voting })
 
@@ -973,7 +973,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(33) })
   })
 
-  it.skip('oracle data affects deposits', async () => {
+  it('oracle data affects deposits', async () => {
     await operators.addNodeOperator('1', ADDRESS_1, { from: voting })
     await operators.addNodeOperator('2', ADDRESS_2, { from: voting })
 
@@ -1028,7 +1028,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assertBn(await app.totalSupply(), tokens(52))
   })
 
-  it.skip('can stop and resume', async () => {
+  it('can stop and resume', async () => {
     await operators.addNodeOperator('1', ADDRESS_1, { from: voting })
     await operators.addNodeOperator('2', ADDRESS_2, { from: voting })
 
@@ -1056,7 +1056,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     await assertRevert(web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(4) }), 'STAKING_PAUSED')
     await assertRevert(web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(4) }), 'STAKING_PAUSED')
-    await assertRevert(app.submit.skip('0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef', { from: user1, value: ETH(4) }), 'STAKING_PAUSED')
+    await assertRevert(app.submit('0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef', { from: user1, value: ETH(4) }), 'STAKING_PAUSED')
 
     await assertRevert(app.resume({ from: user2 }), 'APP_AUTH_FAILED')
     await app.resume({ from: voting })
@@ -1068,7 +1068,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assertBn(await app.getBufferedEther(), ETH(12))
   })
 
-  it.skip('rewards distribution works in a simple case', async () => {
+  it('rewards distribution works in a simple case', async () => {
     await operators.addNodeOperator('1', ADDRESS_1, { from: voting })
     await operators.addNodeOperator('2', ADDRESS_2, { from: voting })
 
@@ -1094,7 +1094,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await checkRewards({ treasury: 199, operator: 199 })
   })
 
-  it.skip('rewards distribution works', async () => {
+  it('rewards distribution works', async () => {
     await operators.addNodeOperator('1', ADDRESS_1, { from: voting })
     await operators.addNodeOperator('2', ADDRESS_2, { from: voting })
 
@@ -1134,7 +1134,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     // await checkRewards({ treasury: tokens(33), insurance: tokens(22), operator: tokens(55) })
   })
 
-  it.skip('deposits accounted properly during rewards distribution', async () => {
+  it('deposits accounted properly during rewards distribution', async () => {
     await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
     await operators.addNodeOperator('1', ADDRESS_1, { from: voting })
@@ -1158,7 +1158,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await checkRewards({ treasury: 200, operator: 199 })
   })
 
-  it.skip('Node Operators filtering during deposit works when doing a huge deposit', async () => {
+  it('Node Operators filtering during deposit works when doing a huge deposit', async () => {
     await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
     // id: 0
@@ -1281,7 +1281,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
   })
 
-  it.skip('Node Operators filtering during deposit works when doing small deposits', async () => {
+  it('Node Operators filtering during deposit works when doing small deposits', async () => {
     await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
     // id: 0
@@ -1407,7 +1407,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
   })
 
-  it.skip('Deposit finds the right operator', async () => {
+  it('Deposit finds the right operator', async () => {
     await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
     await operators.addNodeOperator('good', ADDRESS_1, { from: voting }) // 0
@@ -1465,7 +1465,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
   })
 
-  it.skip('burnShares works', async () => {
+  it('burnShares works', async () => {
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(1) })
 
     // not permitted from arbitrary address
@@ -1507,7 +1507,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
   })
 
   context('treasury', () => {
-    it.skip('treasury address has been set after init', async () => {
+    it('treasury address has been set after init', async () => {
       assert.notEqual(await app.getTreasury(), ZERO_ADDRESS)
     })
 
@@ -1516,13 +1516,13 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
       await assertRevert(app.setProtocolContracts(await app.getOracle(), user1, { from: user1 }))
     })
 
-    it.skip('voting can set treasury', async () => {
+    it('voting can set treasury', async () => {
       const receipt = await app.setProtocolContracts(await app.getOracle(), user1, { from: voting })
       assertEvent(receipt, 'ProtocolContactsSet', { expectedArgs: { treasury: user1 } })
       assert.equal(await app.getTreasury(), user1)
     })
 
-    it.skip('reverts when treasury is zero address', async () => {
+    it('reverts when treasury is zero address', async () => {
       await assertRevert(app.setProtocolContracts(await app.getOracle(), ZERO_ADDRESS, { from: voting }), 'TREASURY_ZERO_ADDRESS')
     })
   })
@@ -1532,7 +1532,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
       await anyToken.mint(app.address, 100)
     })
 
-    it.skip('reverts when vault is not set', async () => {
+    it('reverts when vault is not set', async () => {
       await assertRevert(app.transferToVault(anyToken.address, { from: nobody }), 'RECOVER_VAULT_ZERO')
     })
 
@@ -1551,12 +1551,12 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
         await dao.setRecoveryVaultAppId(vaultId)
       })
 
-      it.skip('recovery with erc20 tokens works and emits event', async () => {
+      it('recovery with erc20 tokens works and emits event', async () => {
         const receipt = await app.transferToVault(anyToken.address, { from: nobody })
         assertEvent(receipt, 'RecoverToVault', { expectedArgs: { vault: vault.address, token: anyToken.address, amount: 100 } })
       })
 
-      it.skip('recovery with unaccounted ether works and emits event', async () => {
+      it('recovery with unaccounted ether works and emits event', async () => {
         await app.makeUnaccountedEther({ from: user1, value: ETH(10) })
         const receipt = await app.transferToVault(ZERO_ADDRESS, { from: nobody })
         assertEvent(receipt, 'RecoverToVault', { expectedArgs: { vault: vault.address, token: ZERO_ADDRESS, amount: ETH(10) } })
