@@ -48,10 +48,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
     //
     // CONSTANTS
     //
-    uint64 public constant PUBKEY_LENGTH = 48;
-    uint64 public constant SIGNATURE_LENGTH = 96;
     uint256 public constant MAX_NODE_OPERATORS_COUNT = 200;
     uint256 public constant MAX_NODE_OPERATOR_NAME_LENGTH = 255;
+
+    uint64 private constant PUBKEY_LENGTH = 48;
+    uint64 private constant SIGNATURE_LENGTH = 96;
     uint256 internal constant UINT64_MAX = uint256(uint64(-1));
 
     //
@@ -120,18 +121,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
     /// @dev Value 1 in CONTRACT_VERSION_POSITION is skipped due to change in numbering
     /// For more details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md
     function finalizeUpgrade_v2(address _steth, bytes32 _type) external {
-        require(_steth != address(0), "STETH_ADDRESS_ZERO");
+        require(!isPetrified(), "PETRIFIED");
         require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "WRONG_BASE_VERSION");
         _initialize_v2(_steth, _type);
-        _increaseValidatorsKeysNonce();
-    }
-
-    function _initialize_v2(address _steth, bytes32 _type) internal {
-        STETH_POSITION.setStorageAddress(_steth);
-        TYPE_POSITION.setStorageBytes32(_type);
 
         uint256 totalOperators = getNodeOperatorsCount();
-
         SigningKeysStats.State memory totalSigningKeysStats = _getTotalSigningKeysStats();
         for (uint256 operatorId = 0; operatorId < totalOperators; ++operatorId) {
             NodeOperator storage operator = _nodeOperators[operatorId];
@@ -166,6 +160,14 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
             totalSigningKeysStats.increaseTotalSigningKeysCount(totalSigningKeysCount);
         }
         _setTotalSigningKeysStats(totalSigningKeysStats);
+
+        _increaseValidatorsKeysNonce();
+    }
+
+    function _initialize_v2(address _steth, bytes32 _type) internal {
+        require(_steth != address(0), "STETH_ADDRESS_ZERO");
+        STETH_POSITION.setStorageAddress(_steth);
+        TYPE_POSITION.setStorageBytes32(_type);
 
         CONTRACT_VERSION_POSITION.setStorageUint256(2);
         emit ContractVersionSet(2);
