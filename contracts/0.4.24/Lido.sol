@@ -46,8 +46,7 @@ contract Lido is ILido, StETH, AragonApp {
     bytes32 public constant SET_EL_REWARDS_VAULT_ROLE = keccak256("SET_EL_REWARDS_VAULT_ROLE");
     bytes32 public constant SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE = keccak256("SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE");
 
-    uint256 public constant DEPOSIT_SIZE = 32 ether;
-
+    uint256 private constant DEPOSIT_SIZE = 32 ether;
     uint256 public constant TOTAL_BASIS_POINTS = 10000;
 
     bytes32 internal constant ORACLE_POSITION = keccak256("lido.Lido.oracle");
