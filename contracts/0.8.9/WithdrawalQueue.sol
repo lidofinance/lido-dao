@@ -108,7 +108,6 @@ contract WithdrawalQueue {
     /// Lido wstETH token address to be set upon construction
     address public immutable WSTETH;
 
-
     /**
      * @notice minimal possible sum that is possible to withdraw
      * We don't want to deal with small amounts because there is a gas spent on oracle
@@ -128,7 +127,6 @@ contract WithdrawalQueue {
      * @dev should be Lido
      */
     address payable public immutable OWNER;
-
 
     ///! STRUCTURED STORAGE OF THE CONTRACT
     ///! SLOT 0: uint128 lockedEtherAmount
@@ -155,13 +153,16 @@ contract WithdrawalQueue {
     /// @notice finalization price history registry
     Price[] public finalizationPrices;
 
-
     /**
      * @param _owner address that will be able to invoke `restake` and `finalize` methods.
      * @param _stETH address of StETH contract
      * @param _wstETH address of WstETH contract
      */
-    constructor(address payable _owner, address _stETH, address _wstETH) {
+    constructor(
+        address payable _owner,
+        address _stETH,
+        address _wstETH
+    ) {
         if (_owner == address(0)) revert ZeroOwner();
 
         // test stETH interface sanity
@@ -184,7 +185,6 @@ contract WithdrawalQueue {
         _initialize(address(0));
     }
 
-
     function initialize(address _lidoDAOAgent) external {
         if (_lidoDAOAgent == address(0)) {
             revert LidoDAOAgentZeroAddress();
@@ -192,7 +192,6 @@ contract WithdrawalQueue {
 
         _initialize(_lidoDAOAgent);
     }
-
 
     /// @notice Resume new withdrawal requests placement
     function resumeRequestsPlacement() external whenInitialized whenPaused onlyLidoDAOAgent {
@@ -215,7 +214,6 @@ contract WithdrawalQueue {
     function queueLength() external view returns (uint256) {
         return queue.length;
     }
-
 
     /// @notice Request withdrawal of the provided stETH token amount
     function requestWithdrawal(uint256 _amountOfStETH, address _recipient)
@@ -362,7 +360,6 @@ contract WithdrawalQueue {
         return _recipient;
     }
 
-
     function _enqueue(uint256 _amountOfStETH, address _recipient) internal returns (uint256 requestId) {
         requestId = queue.length;
         uint256 shares = IStETH(STETH).getSharesByPooledEth(_amountOfStETH);
@@ -391,7 +388,6 @@ contract WithdrawalQueue {
 
         emit WithdrawalRequested(requestId, msg.sender, _recipient, _amountOfStETH, shares);
     }
-
 
     /**
      * @notice Finalize the batch of requests started at `finalizedRequestsCounter` and ended at `_lastIdToFinalize` using the given price
@@ -426,7 +422,6 @@ contract WithdrawalQueue {
         // request must be finalized
         if (finalizedRequestsCounter <= _requestId) revert RequestNotFinalized();
 
-
         WithdrawalRequest storage request = queue[_requestId];
         if (request.claimed) revert RequestAlreadyClaimed();
 
@@ -441,12 +436,12 @@ contract WithdrawalQueue {
             price = finalizationPrices[findPriceHint(_requestId)];
         }
 
-        (uint128 etherToTransfer,) = _calculateDiscountedBatch(
+        (uint128 etherToTransfer, ) = _calculateDiscountedBatch(
             _requestId,
             _requestId,
             price.totalPooledEther,
             price.totalShares
-            );
+        );
         lockedEtherAmount -= etherToTransfer;
 
         _sendValue(request.recipient, etherToTransfer);
@@ -482,7 +477,7 @@ contract WithdrawalQueue {
         if (_requestId >= finalizedRequestsCounter) revert PriceNotFound();
 
         for (uint256 i = finalizationPrices.length; i > 0; i--) {
-            if (_isPriceHintValid(_requestId, i - 1)){
+            if (_isPriceHintValid(_requestId, i - 1)) {
                 return i - 1;
             }
         }
@@ -509,7 +504,7 @@ contract WithdrawalQueue {
             shares -= queue[firstId - 1].cumulativeShares;
         }
 
-        eth = _min(eth, shares * _totalPooledEther / _totalShares);
+        eth = _min(eth, (shares * _totalPooledEther) / _totalShares);
     }
 
     function _isPriceHintValid(uint256 _requestId, uint256 hint) internal view returns (bool isInRange) {
@@ -529,7 +524,7 @@ contract WithdrawalQueue {
         } else {
             Price storage lastPrice = finalizationPrices[finalizationPrices.length - 1];
 
-            if (_totalPooledEther/_totalShares == lastPrice.totalPooledEther/lastPrice.totalShares) {
+            if (_totalPooledEther / _totalShares == lastPrice.totalPooledEther / lastPrice.totalShares) {
                 lastPrice.index = index;
             } else {
                 finalizationPrices.push(Price(_totalPooledEther, _totalShares, index));
@@ -558,7 +553,6 @@ contract WithdrawalQueue {
         if (value > type(uint128).max) revert SafeCastValueDoesNotFit128Bits();
         return uint128(value);
     }
-
 
     modifier onlyOwner() {
         if (msg.sender != OWNER) revert NotOwner();
@@ -642,5 +636,4 @@ contract WithdrawalQueue {
     error CantSendValueRecipientMayHaveReverted();
     error SafeCastValueDoesNotFit96Bits();
     error SafeCastValueDoesNotFit128Bits();
-
 }
