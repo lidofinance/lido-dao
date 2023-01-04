@@ -265,8 +265,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     assert.equal(await app.getWithdrawalCredentials({ from: nobody }), pad('0x0202', 32))
   })
 
-  it.skip('setOracle works', async () => {
-    // TODO: restore the test when function `setProtocolContracts` is restored
+  it('setOracle works', async () => {
     await assertRevert(app.setProtocolContracts(ZERO_ADDRESS, user2, user3, { from: voting }), 'ORACLE_ZERO_ADDRESS')
     const receipt = await app.setProtocolContracts(yetAnotherOracle.address, oracle.address, oracle.address, { from: voting })
     assertEvent(receipt, 'ProtocolContactsSet', { expectedArgs: { oracle: yetAnotherOracle.address } })
@@ -876,20 +875,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     assertBn(await app.getTotalPooledEther(), ETH(52))
     assertBn(await app.getBufferedEther(), ETH(4))
     assertBn(await app.totalSupply(), tokens(52))
-    /*
-
-    // 2nd deposit, ratio is 2
-    await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(2) })
-    await app.methods['depositBufferedEther()']({ from: depositor })
-
-    await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(72)})
-    assertBn(await depositContract.totalCalls(), 1)
-    assertBn(await app.getTotalPooledEther(), ETH(78))
-    assertBn(await app.getBufferedEther(), ETH(6))
-    assertBn(await app.balanceOf(user1), tokens(8))
-    assertBn(await app.balanceOf(user3), tokens(2))
-    assertBn(await app.totalSupply(), tokens(78))
-*/
   })
 
   it('can stop and resume', async () => {
@@ -1386,22 +1371,24 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
       assert.notEqual(await app.getTreasury(), ZERO_ADDRESS)
     })
 
-    it.skip(`treasury can't be set by an arbitrary address`, async () => {
+    it(`treasury can't be set by an arbitrary address`, async () => {
       // TODO: restore the test when function `transferToVault` is restored
-      await assertRevert(app.setProtocolContracts(await app.getOracle(), user1, { from: nobody }))
-      await assertRevert(app.setProtocolContracts(await app.getOracle(), user1, { from: user1 }))
+      await assertRevert(app.setProtocolContracts(await app.getOracle(), user1, ZERO_ADDRESS, { from: nobody }))
+      await assertRevert(app.setProtocolContracts(await app.getOracle(), user1, ZERO_ADDRESS, { from: user1 }))
     })
 
-    it.skip('voting can set treasury', async () => {
-      // TODO: restore the test when function `setProtocolContracts` is restored
-      const receipt = await app.setProtocolContracts(await app.getOracle(), user1, { from: voting })
+    it('voting can set treasury', async () => {
+      const receipt = await app.setProtocolContracts(await app.getOracle(), user1, ZERO_ADDRESS, { from: voting })
       assertEvent(receipt, 'ProtocolContactsSet', { expectedArgs: { treasury: user1 } })
       assert.equal(await app.getTreasury(), user1)
     })
 
-    it.skip('reverts when treasury is zero address', async () => {
+    it('reverts when treasury is zero address', async () => {
       // TODO: restore the test when function `setProtocolContracts` is restored
-      await assertRevert(app.setProtocolContracts(await app.getOracle(), ZERO_ADDRESS, { from: voting }), 'TREASURY_ZERO_ADDRESS')
+      await assertRevert(
+        app.setProtocolContracts(await app.getOracle(), ZERO_ADDRESS, ZERO_ADDRESS, { from: voting }),
+        'TREASURY_ZERO_ADDRESS'
+      )
     })
   })
 
