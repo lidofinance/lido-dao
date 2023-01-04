@@ -47,9 +47,7 @@ contract Lido is ILido, StETH, AragonApp {
     bytes32 constant public MANAGE_PROTOCOL_CONTRACTS_ROLE = keccak256("MANAGE_PROTOCOL_CONTRACTS_ROLE");
     bytes32 constant public BURN_ROLE = keccak256("BURN_ROLE");
     bytes32 constant public DEPOSIT_ROLE = keccak256("DEPOSIT_ROLE");
-    bytes32 constant public SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE = keccak256(
-        "SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE"
-    );
+    bytes32 constant public SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE = keccak256("SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE");
 
     uint256 constant public PUBKEY_LENGTH = 48;
     uint256 constant public WITHDRAWAL_CREDENTIALS_LENGTH = 32;
@@ -90,8 +88,6 @@ contract Lido is ILido, StETH, AragonApp {
     /// @dev Just a counter of total amount of execution layer rewards received by Lido contract
     /// Not used in the logic
     bytes32 internal constant TOTAL_EL_REWARDS_COLLECTED_POSITION = keccak256("lido.Lido.totalELRewardsCollected");
-
-    bytes32 internal constant TOTAL_WITHDRAWALS_RESTAKED_POSITION = keccak256("lido.Lido.totalWithdrawalsRestaked");
 
     /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
     bytes32 internal constant WITHDRAWAL_CREDENTIALS_POSITION = keccak256("lido.Lido.withdrawalCredentials");
@@ -296,9 +292,6 @@ contract Lido is ILido, StETH, AragonApp {
     function receiveRestake() external payable {
         require(msg.sender == _getWithdrawalVaultAddress());
 
-        TOTAL_WITHDRAWALS_RESTAKED_POSITION.setStorageUint256(
-            TOTAL_WITHDRAWALS_RESTAKED_POSITION.getStorageUint256().add(msg.value));
-
         emit WithdrawalRestaked(msg.value);
     }
 
@@ -313,7 +306,7 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-    * @notice Deposits buffered ethers to the official DepositContract, making no more than `_maxDeposits` deposit calls.
+    * @notice Deposits buffered ethers to the official DepositContract, making no more than `_maxDeposits` deposit calls
     * @dev This function is separated from submit() to reduce the cost of sending funds.
     */
     function depositBufferedEther(uint256 _maxDeposits) external {
@@ -571,10 +564,6 @@ contract Lido is ILido, StETH, AragonApp {
         return TOTAL_EL_REWARDS_COLLECTED_POSITION.getStorageUint256();
     }
 
-    function getTotalWithdrawalsRestaked() external view returns (uint256) {
-        return TOTAL_WITHDRAWALS_RESTAKED_POSITION.getStorageUint256();
-    }
-
     /**
     * @notice Get limit in basis points to amount of ETH to withdraw per LidoOracle report
     * @return limit in basis points to amount of ETH to withdraw per LidoOracle report
@@ -613,10 +602,10 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-    * @notice Returns the key values related to Beacon-side
+    * @notice Returns the key values related to Consensus Layer side of the contract (Beacon chain was deprecated)
     * @return depositedValidators - number of deposited validators
-    * @return beaconValidators - number of Lido's validators visible in the Beacon state, reported by oracles
-    * @return beaconBalance - total amount of Beacon-side Ether (sum of all the balances of Lido validators)
+    * @return beaconValidators - number of Lido's validators visible on the Consensus Layer state, reported by oracle
+    * @return beaconBalance - total amount of Ether on the Consensus Layer side (sum of all the balances of Lido validators)
     */
     function getBeaconStat() public view returns (uint256 depositedValidators, uint256 beaconValidators, uint256 beaconBalance) {
         depositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256();
