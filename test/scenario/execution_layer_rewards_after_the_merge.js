@@ -3,16 +3,13 @@ const { BN } = require('bn.js')
 const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 const { getEventArgument } = require('@aragon/contract-helpers-test')
 
-const { pad, toBN, ETH, tokens, hexConcat } = require('../helpers/utils')
+const { pad, toBN, ETH, tokens } = require('../helpers/utils')
 const { deployDaoAndPool } = require('./helpers/deploy')
 
 const { signDepositData } = require('../0.8.9/helpers/signatures')
 const { waitBlocks } = require('../helpers/blockchain')
 
-const LidoELRewardsVault = artifacts.require('LidoExecutionLayerRewardsVault.sol')
 const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
-const WithdrawalQueue = artifacts.require('WithdrawalQueue.sol')
-
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
 const TOTAL_BASIS_POINTS = 10000
@@ -38,19 +35,15 @@ contract('Lido: merge acceptance', (addresses) => {
 
   let pool, nodeOperatorRegistry, token
   let oracleMock, depositContractMock
-  let treasuryAddr, insuranceAddr, guardians
+  let treasuryAddr, guardians
   let depositSecurityModule, depositRoot
   let rewarder, elRewardsVault
   let withdrawalCredentials
 
   // Total fee is 1%
   const totalFeePoints = 0.01 * TOTAL_BASIS_POINTS
-  // Of this 1%, 30% goes to the treasury
   const treasuryFeePoints = 0.3 * TOTAL_BASIS_POINTS
-  // 20% goes to the insurance fund
-  const insuranceFeePoints = 0.2 * TOTAL_BASIS_POINTS
-  // 50% goes to node operators
-  const nodeOperatorsFeePoints = 0.5 * TOTAL_BASIS_POINTS
+  const nodeOperatorsFeePoints = 0.7 * TOTAL_BASIS_POINTS
 
   // Each node operator has its Ethereum 1 address, a name and a set of registered
   // validators, each of them defined as a (public key, signature) pair
@@ -98,14 +91,11 @@ contract('Lido: merge acceptance', (addresses) => {
 
     // addresses
     treasuryAddr = deployed.treasuryAddr
-    insuranceAddr = deployed.insuranceAddr
     depositSecurityModule = deployed.depositSecurityModule
     guardians = deployed.guardians
+    elRewardsVault = deployed.elRewardsVault
 
     depositRoot = await depositContractMock.get_deposit_root()
-
-    elRewardsVault = await LidoELRewardsVault.new(pool.address, treasuryAddr)
-    await pool.setELRewardsVault(elRewardsVault.address, { from: voting })
 
     // At first go through tests assuming there is no withdrawal limit
     await pool.setELRewardsWithdrawalLimit(TOTAL_BASIS_POINTS, { from: voting })
@@ -118,7 +108,7 @@ contract('Lido: merge acceptance', (addresses) => {
     // Fee and its distribution are in basis points, 10000 corresponding to 100%
 
     await pool.setFee(totalFeePoints, { from: voting })
-    await pool.setFeeDistribution(treasuryFeePoints, insuranceFeePoints, nodeOperatorsFeePoints, { from: voting })
+    await pool.setFeeDistribution(treasuryFeePoints, nodeOperatorsFeePoints, { from: voting })
 
     // Fee and distribution were set
 
@@ -126,11 +116,9 @@ contract('Lido: merge acceptance', (addresses) => {
 
     const distribution = await pool.getFeeDistribution({ from: nobody })
     assertBn(distribution.treasuryFeeBasisPoints, treasuryFeePoints, 'treasury fee')
-    assertBn(distribution.insuranceFeeBasisPoints, insuranceFeePoints, 'insurance fee')
     assertBn(distribution.operatorsFeeBasisPoints, nodeOperatorsFeePoints, 'node operators fee')
 
-    const withdrawal = await WithdrawalQueue.new(pool.address)
-    withdrawalCredentials = hexConcat('0x01', pad(withdrawal.address, 31)).toLowerCase()
+    withdrawalCredentials = pad('0x0202', 32)
     await pool.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
 
     // Withdrawal credentials were set
@@ -411,9 +399,7 @@ contract('Lido: merge acceptance', (addresses) => {
     // Fee, in the form of minted tokens, was distributed between treasury, insurance fund
     // and node operators
     // treasuryTokenBalance ~= mintedAmount * treasuryFeePoints / 10000
-    // insuranceTokenBalance ~= mintedAmount * insuranceFeePoints / 10000
     assertBn(await token.balanceOf(treasuryAddr), new BN('123000000000000001'), 'treasury tokens')
-    assertBn(await token.balanceOf(insuranceAddr), new BN('81999999999999999'), 'insurance tokens')
 
     // The node operators' fee is distributed between all active node operators,
     // proportional to their effective stake (the amount of Ether staked by the operator's
@@ -422,8 +408,8 @@ contract('Lido: merge acceptance', (addresses) => {
     // In our case, both node operators received the same fee since they have the same
     // effective stake (one signing key used from each operator, staking 32 ETH)
 
-    assertBn(await token.balanceOf(nodeOperator1.address), new BN('102499999999999999'), 'operator_1 tokens')
-    assertBn(await token.balanceOf(nodeOperator2.address), new BN('102499999999999999'), 'operator_2 tokens')
+    assertBn(await token.balanceOf(nodeOperator1.address), new BN('143499999999999998'), 'operator_1 tokens')
+    assertBn(await token.balanceOf(nodeOperator2.address), new BN('143499999999999998'), 'operator_2 tokens')
 
     // Real minted amount should be a bit less than calculated caused by round errors on mint and transfer operations
     assert(
@@ -431,7 +417,6 @@ contract('Lido: merge acceptance', (addresses) => {
         .sub(
           new BN(0)
             .add(await token.balanceOf(treasuryAddr))
-            .add(await token.balanceOf(insuranceAddr))
             .add(await token.balanceOf(nodeOperator1.address))
             .add(await token.balanceOf(nodeOperator2.address))
             .add(await token.balanceOf(nodeOperatorRegistry.address))
@@ -499,9 +484,8 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(await token.balanceOf(user3), new BN('95385865829971612132'), 'user3 tokens')
 
     assertBn(await token.balanceOf(treasuryAddr), new BN('129239130434782610'), 'treasury tokens')
-    assertBn(await token.balanceOf(insuranceAddr), new BN('86159420289855071'), 'insurance tokens')
-    assertBn(await token.balanceOf(nodeOperator1.address), new BN('107699275362318839'), 'operator_1 tokens')
-    assertBn(await token.balanceOf(nodeOperator2.address), new BN('107699275362318839'), 'operator_2 tokens')
+    assertBn(await token.balanceOf(nodeOperator1.address), new BN('150778985507246375'), 'operator_1 tokens')
+    assertBn(await token.balanceOf(nodeOperator2.address), new BN('150778985507246375'), 'operator_2 tokens')
   })
 
   it('collect another 5 ETH execution layer rewards to the vault', async () => {
@@ -557,9 +541,8 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(await token.balanceOf(user3), new BN('97359366502315852383'), 'user3 tokens')
 
     assertBn(await token.balanceOf(treasuryAddr), new BN('131913043478260871'), 'treasury tokens')
-    assertBn(await token.balanceOf(insuranceAddr), new BN('87942028985507245'), 'insurance tokens')
-    assertBn(await token.balanceOf(nodeOperator1.address), new BN('109927536231884057'), 'operator_1 tokens')
-    assertBn(await token.balanceOf(nodeOperator2.address), new BN('109927536231884057'), 'operator_2 tokens')
+    assertBn(await token.balanceOf(nodeOperator1.address), new BN('153898550724637679'), 'operator_1 tokens')
+    assertBn(await token.balanceOf(nodeOperator2.address), new BN('153898550724637679'), 'operator_2 tokens')
   })
 
   it('collect another 3 ETH execution layer rewards to the vault', async () => {
@@ -613,9 +596,8 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(await token.balanceOf(user3), new BN('97359366502315852383'), 'user3 tokens')
 
     assertBn(await token.balanceOf(treasuryAddr), new BN('131913043478260871'), 'treasury tokens')
-    assertBn(await token.balanceOf(insuranceAddr), new BN('87942028985507245'), 'insurance tokens')
-    assertBn(await token.balanceOf(nodeOperator1.address), new BN('109927536231884057'), 'operator_1 tokens')
-    assertBn(await token.balanceOf(nodeOperator2.address), new BN('109927536231884057'), 'operator_2 tokens')
+    assertBn(await token.balanceOf(nodeOperator1.address), new BN('153898550724637679'), 'operator_1 tokens')
+    assertBn(await token.balanceOf(nodeOperator2.address), new BN('153898550724637679'), 'operator_2 tokens')
   })
 
   it('collect another 2 ETH execution layer rewards to the vault', async () => {
@@ -667,9 +649,8 @@ contract('Lido: merge acceptance', (addresses) => {
     assertBn(await token.balanceOf(user3), new BN('93412365157627371881'), 'user3 tokens')
 
     assertBn(await token.balanceOf(treasuryAddr), new BN('126565217391304349'), 'treasury tokens')
-    assertBn(await token.balanceOf(insuranceAddr), new BN('84376811594202897'), 'insurance tokens')
-    assertBn(await token.balanceOf(nodeOperator1.address), new BN('105471014492753622'), 'operator_1 tokens')
-    assertBn(await token.balanceOf(nodeOperator2.address), new BN('105471014492753622'), 'operator_2 tokens')
+    assertBn(await token.balanceOf(nodeOperator1.address), new BN('147659420289855071'), 'operator_1 tokens')
+    assertBn(await token.balanceOf(nodeOperator2.address), new BN('147659420289855071'), 'operator_2 tokens')
   })
 
   it('collect another 3 ETH execution layer rewards to the vault', async () => {
@@ -724,8 +705,6 @@ contract('Lido: merge acceptance', (addresses) => {
     // and node operators
     // treasuryTokenBalance = (oldTreasuryShares + mintedRewardShares * treasuryFeePoints / 10000) * sharePrice
     assertBn((await token.balanceOf(treasuryAddr)).divn(10), new BN('14597717391304348'), 'treasury tokens')
-    // should preserver treasuryFeePoints/insuranceFeePoints ratio
-    assertBn((await token.balanceOf(insuranceAddr)).divn(10), new BN('9731811594202898'), 'insurance tokens')
 
     // The node operators' fee is distributed between all active node operators,
     // proportional to their effective stake (the amount of Ether staked by the operator's
@@ -733,8 +712,8 @@ contract('Lido: merge acceptance', (addresses) => {
     //
     // In our case, both node operators received the same fee since they have the same
     // effective stake (one signing key used from each operator, staking 32 ETH)
-    assertBn((await token.balanceOf(nodeOperator1.address)).divn(10), new BN('12164764492753623'), 'operator_1 tokens')
-    assertBn((await token.balanceOf(nodeOperator2.address)).divn(10), new BN('12164764492753623'), 'operator_2 tokens')
+    assertBn((await token.balanceOf(nodeOperator1.address)).divn(10), new BN('17030670289855072'), 'operator_1 tokens')
+    assertBn((await token.balanceOf(nodeOperator2.address)).divn(10), new BN('17030670289855072'), 'operator_2 tokens')
   })
 
   it('collect 0.1 ETH execution layer rewards to elRewardsVault and withdraw it entirely by means of multiple oracle reports (+1 ETH)', async () => {

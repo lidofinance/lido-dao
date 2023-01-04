@@ -1,12 +1,13 @@
 const { assert } = require('chai')
 const { assertEvent, assertRevert, assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 
-const { web3 } = require('hardhat')
+const { web3, artifacts } = require('hardhat')
 const { pad, hexConcat, StETH, ETH } = require('../helpers/utils')
 const { deployDaoAndPool } = require('./helpers/deploy')
 const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 
 const WithdrawalQueue = artifacts.require('WithdrawalQueue.sol')
+const WstETH = artifacts.require('WstETH.sol')
 
 contract('Lido: withdrawals', (addresses) => {
   const [
@@ -18,7 +19,7 @@ contract('Lido: withdrawals', (addresses) => {
     recipient
   ] = addresses
 
-  let pool, token
+  let pool, token, wsteth
   let oracle
   let withdrawalCredentials, withdrawalQueue
 
@@ -30,6 +31,7 @@ contract('Lido: withdrawals', (addresses) => {
 
     // contracts/Lido.sol
     pool = deployed.pool
+    wsteth = await WstETH.new(pool.address)
     await pool.resumeProtocolAndStaking()
 
     // mocks
@@ -37,10 +39,10 @@ contract('Lido: withdrawals', (addresses) => {
     // unlock oracle account (allow transactions originated from oracle.address)
     await ethers.provider.send('hardhat_impersonateAccount', [oracle.address])
 
-    withdrawalQueue = await WithdrawalQueue.new(pool.address)
-    withdrawalCredentials = hexConcat('0x01', pad(withdrawalQueue.address, 31)).toLowerCase()
-
     await web3.eth.sendTransaction({ to: pool.address, from: recipient, value: ETH(3) })
+
+    withdrawalQueue = await WithdrawalQueue.new(pool.address, pool.address, wsteth.address)
+    withdrawalCredentials = hexConcat('0x01', pad(withdrawalQueue.address, 31)).toLowerCase()
   })
 
   it('setWithdrawalCredentials', async () => {

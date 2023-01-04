@@ -3,13 +3,12 @@ const { BN } = require('bn.js')
 const { assertBn, assertEvent, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
 const { getEventArgument, ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 
-const { pad, ETH, hexConcat } = require('../helpers/utils')
+const { pad, ETH } = require('../helpers/utils')
 const { deployDaoAndPool } = require('./helpers/deploy')
 const { signDepositData } = require('../0.8.9/helpers/signatures')
 const { waitBlocks } = require('../helpers/blockchain')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
-const WithdrawalQueue = artifacts.require('WithdrawalQueue.sol')
 
 const tenKBN = new BN(10000)
 
@@ -20,10 +19,8 @@ const totalFeePoints = 0.01 * 10000
 
 // Of this 1%, 30% goes to the treasury
 const treasuryFeePoints = 0.3 * 10000
-// 20% goes to the insurance fund
-const insuranceFeePoints = 0.2 * 10000
 // 50% goes to node operators
-const nodeOperatorsFeePoints = 0.5 * 10000
+const nodeOperatorsFeePoints = 0.7 * 10000
 
 contract('Lido: rewards distribution math', (addresses) => {
   const [
@@ -43,10 +40,8 @@ contract('Lido: rewards distribution math', (addresses) => {
 
   let pool, nodeOperatorRegistry, token
   let oracleMock
-  let treasuryAddr, insuranceAddr, guardians
+  let treasuryAddr, guardians
   let depositSecurityModule, depositRoot
-
-  let withdrawalCredentials
 
   // Each node operator has its Ethereum 1 address, a name and a set of registered
   // validators, each of them defined as a (public key, signature) pair
@@ -100,22 +95,18 @@ contract('Lido: rewards distribution math', (addresses) => {
 
     // addresses
     treasuryAddr = deployed.treasuryAddr
-    insuranceAddr = deployed.insuranceAddr
     depositSecurityModule = deployed.depositSecurityModule
     guardians = deployed.guardians
 
     depositRoot = await deployed.depositContractMock.get_deposit_root()
 
     await pool.setFee(totalFeePoints, { from: voting })
-    await pool.setFeeDistribution(treasuryFeePoints, insuranceFeePoints, nodeOperatorsFeePoints, { from: voting })
-    const withdrawal = await WithdrawalQueue.new(pool.address)
-    withdrawalCredentials = hexConcat('0x01', pad(withdrawal.address, 31)).toLowerCase()
-    await pool.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
+    await pool.setFeeDistribution(treasuryFeePoints, nodeOperatorsFeePoints, { from: voting })
+    await pool.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
   })
 
-  it(`initial treasury & insurance balances are zero`, async () => {
+  it(`initial treasury balance are zero`, async () => {
     assertBn(await token.balanceOf(treasuryAddr), new BN(0), 'treasury balance is zero')
-    assertBn(await token.balanceOf(insuranceAddr), new BN(0), 'insurance balance is zero')
   })
 
   it(`registers one node operator with one key`, async () => {
@@ -162,10 +153,6 @@ contract('Lido: rewards distribution math', (addresses) => {
     const depostitEthValue = 34
     const depositAmount = ETH(depostitEthValue)
 
-    // const receipt = await web3.eth.sendTransaction({ value: depositAmount, from: user1, to: pool.address })
-    // const transferValue = getEventArgument(receipt, 'Transfer', 'value', { decodeForAbi: Lido._json.abi })
-    // const transferFrom = getEventArgument(receipt, 'Transfer', 'from', { decodeForAbi: Lido._json.abi })
-    // const transferTo = getEventArgument(receipt, 'Transfer', 'to', { decodeForAbi: Lido._json.abi })
     const receipt = await pool.submit(ZERO_ADDRESS, { value: depositAmount, from: user1 })
 
     assertEvent(receipt, 'Transfer', { expectedArgs: { from: 0, to: user1, value: depositAmount } })
@@ -186,7 +173,6 @@ contract('Lido: rewards distribution math', (addresses) => {
     assertBn(await token.getTotalShares(), depositAmount, 'total shares')
 
     assertBn(await token.balanceOf(treasuryAddr), new BN(0), 'treasury balance is zero')
-    assertBn(await token.balanceOf(insuranceAddr), new BN(0), 'insurance balance is zero')
     assertBn(await token.balanceOf(nodeOperator1.address), new BN(0), 'nodeOperator1 balance is zero')
   })
 
@@ -219,7 +205,6 @@ contract('Lido: rewards distribution math', (addresses) => {
     assertBn(await token.totalSupply(), ETH(34), 'token total supply')
 
     assertBn(await token.balanceOf(treasuryAddr), ETH(0), 'treasury balance equals buffered value')
-    assertBn(await token.balanceOf(insuranceAddr), new BN(0), 'insurance balance is zero')
     assertBn(await token.balanceOf(nodeOperator1.address), new BN(0), 'nodeOperator1 balance is zero')
   })
 
@@ -229,49 +214,29 @@ contract('Lido: rewards distribution math', (addresses) => {
     const reportingValue = ETH(32 + profitAmountEth)
     const prevTotalShares = await pool.getTotalShares()
     // for some reason there's nothing in this receipt's log, so we're not going to use it
-    const [{ receipt }, deltas] = await getSharesTokenDeltas(
-      () => reportBeacon(1, reportingValue),
-      treasuryAddr,
-      insuranceAddr,
-      nodeOperator1.address,
-      user1
-    )
+    const [, deltas] = await getSharesTokenDeltas(() => reportBeacon(1, reportingValue), treasuryAddr, nodeOperator1.address)
 
-    const [
-      treasuryTokenDelta,
-      treasurySharesDelta,
-      insuranceTokenDelta,
-      insuranceSharesDelta,
-      nodeOperator1TokenDelta,
-      nodeOperator1SharesDelta,
-      user1TokenDelta,
-      user1SharesDelta
-    ] = deltas
+    const [treasuryTokenDelta, treasurySharesDelta, nodeOperator1TokenDelta, nodeOperator1SharesDelta] = deltas
 
     const { reportedMintAmount, tos, values } = await readLastPoolEventLog()
 
     const {
       totalFeeToDistribute,
-      insuranceSharesToMint,
       nodeOperatorsSharesToMint,
       treasurySharesToMint,
-      insuranceFeeToMint,
       nodeOperatorsFeeToMint,
       treasuryFeeToMint
     } = await getAwaitedFeesSharesTokensDeltas(profitAmount, prevTotalShares, 1)
 
-    assertBn(insuranceSharesDelta, insuranceSharesToMint, 'insurance shares are correct')
     assertBn(nodeOperator1SharesDelta, nodeOperatorsSharesToMint, 'nodeOperator1 shares are correct')
     assertBn(treasurySharesDelta, treasurySharesToMint, 'treasury shares are correct')
 
-    assertBn(insuranceFeeToMint.add(nodeOperatorsFeeToMint).add(treasuryFeeToMint), reportedMintAmount, 'reported the expected total fee')
+    assertBn(nodeOperatorsFeeToMint.add(treasuryFeeToMint), reportedMintAmount, 'reported the expected total fee')
 
-    assert.equal(tos[0], insuranceAddr, 'first transfer to insurance address')
-    assertBn(values[0], insuranceFeeToMint, 'insurance transfer amount is correct')
-    assert.equal(tos[1], nodeOperator1.address, 'second transfer to node operator')
-    assertBn(values[1], nodeOperatorsFeeToMint, 'operator transfer amount is correct')
-    assert.equal(tos[2], treasuryAddr, 'third transfer to treasury address')
-    assertBn(values[2], treasuryFeeToMint, 'treasury transfer amount is correct')
+    assert.equal(tos[0], nodeOperator1.address, 'second transfer to node operator')
+    assertBn(values[0], nodeOperatorsFeeToMint, 'operator transfer amount is correct')
+    assert.equal(tos[1], treasuryAddr, 'third transfer to treasury address')
+    assertBn(values[1], treasuryFeeToMint, 'treasury transfer amount is correct')
     // URURU
     assertBn(
       await token.balanceOf(user1),
@@ -284,8 +249,6 @@ contract('Lido: rewards distribution math', (addresses) => {
 
     assertBn(await token.balanceOf(treasuryAddr), treasuryFeeToMint, 'treasury balance = fee')
     assertBn(treasuryTokenDelta, treasuryFeeToMint, 'treasury balance = fee')
-    assertBn(await token.balanceOf(insuranceAddr), insuranceFeeToMint, 'insurance balance = fee')
-    assertBn(insuranceTokenDelta, insuranceFeeToMint, 'insurance balance = fee')
     assertBn(await token.balanceOf(nodeOperator1.address), nodeOperatorsFeeToMint, 'nodeOperator1 balance = fee')
     assertBn(nodeOperator1TokenDelta, nodeOperatorsFeeToMint, 'nodeOperator1 balance = fee')
   })
@@ -371,7 +334,6 @@ contract('Lido: rewards distribution math', (addresses) => {
     const [_, deltas] = await getSharesTokenDeltas(
       () => depositSecurityModule.depositBufferedEther(depositRoot, keysOpIndex, block.number, block.hash, signatures),
       treasuryAddr,
-      insuranceAddr,
       nodeOperator1.address,
       nodeOperator2.address,
       user1,
@@ -388,7 +350,6 @@ contract('Lido: rewards distribution math', (addresses) => {
     const [_, deltas] = await getSharesTokenDeltas(
       () => reportBeacon(2, ETH(32 + 1 + 32)),
       treasuryAddr,
-      insuranceAddr,
       nodeOperator1.address,
       nodeOperator2.address,
       user1,
@@ -413,7 +374,6 @@ contract('Lido: rewards distribution math', (addresses) => {
     const [{ valuesBefore, valuesAfter }, deltas] = await getSharesTokenDeltas(
       () => reportBeacon(2, reportingValue),
       treasuryAddr,
-      insuranceAddr,
       nodeOperator1.address,
       nodeOperator2.address,
       user1,
@@ -423,8 +383,6 @@ contract('Lido: rewards distribution math', (addresses) => {
     const [
       treasuryTokenDelta,
       treasurySharesDelta,
-      insuranceTokenDelta,
-      insuranceSharesDelta,
       nodeOperator1TokenDelta,
       nodeOperator1SharesDelta,
       nodeOperator2TokenDelta,
@@ -439,31 +397,26 @@ contract('Lido: rewards distribution math', (addresses) => {
 
     const {
       sharesToMint,
-      insuranceSharesToMint,
       nodeOperatorsSharesToMint,
       treasurySharesToMint,
-      insuranceFeeToMint,
       nodeOperatorsFeeToMint,
       treasuryFeeToMint
     } = await getAwaitedFeesSharesTokensDeltas(profitAmount, prevTotalShares, 2)
 
     // events are ok
-    assert.equal(tos[0], insuranceAddr, 'first transfer to insurance address')
-    assert.equal(tos[1], nodeOperator1.address, 'second transfer to node operator 1')
-    assert.equal(tos[2], nodeOperator2.address, 'third transfer to node operator 2')
-    assert.equal(tos[3], treasuryAddr, 'third transfer to treasury address')
+    assert.equal(tos[0], nodeOperator1.address, 'second transfer to node operator 1')
+    assert.equal(tos[1], nodeOperator2.address, 'third transfer to node operator 2')
+    assert.equal(tos[2], treasuryAddr, 'third transfer to treasury address')
 
-    assertBn(values[0], insuranceFeeToMint, 'insurance transfer amount is correct')
-    assertBn(values[1].add(values[2]), nodeOperatorsFeeToMint, 'operator transfer amount is correct')
-    assertBn(values[3], treasuryFeeToMint, 'treasury transfer amount is correct')
+    assertBn(values[0].add(values[1]), nodeOperatorsFeeToMint, 'operator transfer amount is correct')
+    assertBn(values[2], treasuryFeeToMint, 'treasury transfer amount is correct')
 
-    const totalFeeToMint = insuranceFeeToMint.add(nodeOperatorsFeeToMint).add(treasuryFeeToMint)
+    const totalFeeToMint = nodeOperatorsFeeToMint.add(treasuryFeeToMint)
 
     assertBn(totalFeeToMint, reportedMintAmount, 'reported the expected total fee')
 
     assertBn(nodeOperator2SharesDelta, await pool.sharesOf(nodeOperator2.address), 'node operator 2 got only fee on balance')
 
-    assertBn(insuranceSharesDelta, insuranceSharesToMint, 'insurance shares are correct')
     assertBn(nodeOperator1SharesDelta.add(nodeOperator2SharesDelta), nodeOperatorsSharesToMint, 'nodeOperator1 shares are correct')
     assertBn(treasurySharesDelta, treasurySharesToMint, 'treasury shares are correct')
 
@@ -476,25 +429,18 @@ contract('Lido: rewards distribution math', (addresses) => {
 
     const treasuryBalanceAfter = valuesAfter[0]
     const treasuryShareBefore = valuesBefore[1]
-    const insuranceBalanceAfter = valuesAfter[2]
-    const insuraceShareBefore = valuesBefore[3]
-    const nodeOperator1BalanceAfter = valuesAfter[4]
-    const nodeOperator1ShareBefore = valuesBefore[5]
-    const nodeOperator2BalanceAfter = valuesAfter[6]
-    const nodeOperator2ShareBefore = valuesBefore[7]
-    const user1BalanceAfter = valuesAfter[8]
-    const user1SharesBefore = valuesBefore[9]
-    const user2BalanceAfter = valuesAfter[10]
-    const user2SharesBefore = valuesBefore[11]
+    const nodeOperator1BalanceAfter = valuesAfter[2]
+    const nodeOperator1ShareBefore = valuesBefore[3]
+    const nodeOperator2BalanceAfter = valuesAfter[4]
+    const nodeOperator2ShareBefore = valuesBefore[5]
+    const user1BalanceAfter = valuesAfter[6]
+    const user1SharesBefore = valuesBefore[7]
+    const user2BalanceAfter = valuesAfter[8]
+    const user2SharesBefore = valuesBefore[9]
     const singleNodeOperatorFeeShare = nodeOperatorsSharesToMint.div(new BN(2))
 
     const awaitingTotalShares = prevTotalShares.add(sharesToMint)
 
-    assertBn(
-      insuranceBalanceAfter,
-      insuraceShareBefore.add(insuranceSharesToMint).mul(totalSupply).div(awaitingTotalShares),
-      'insurance token balance changed correctly'
-    )
     assertBn(
       nodeOperator1BalanceAfter,
       nodeOperator1ShareBefore.add(singleNodeOperatorFeeShare).mul(totalSupply).div(awaitingTotalShares),
@@ -523,11 +469,8 @@ contract('Lido: rewards distribution math', (addresses) => {
     const totalFeeToDistribute = new BN(profitAmount).mul(new BN(totalFeePoints)).div(tenKBN)
 
     const sharesToMint = totalFeeToDistribute.mul(prevTotalShares).div(totalPooledEther.sub(totalFeeToDistribute))
-    const insuranceSharesToMint = sharesToMint.mul(new BN(insuranceFeePoints)).div(tenKBN)
     const nodeOperatorsSharesToMint = sharesToMint.mul(new BN(nodeOperatorsFeePoints)).div(tenKBN)
-    const treasurySharesToMint = sharesToMint.sub(insuranceSharesToMint).sub(nodeOperatorsSharesToMint)
-
-    const insuranceFeeToMint = insuranceSharesToMint.mul(totalPooledEther).div(totalShares)
+    const treasurySharesToMint = sharesToMint.sub(nodeOperatorsSharesToMint)
 
     const validatorsCountBN = new BN(validatorsCount)
 
@@ -543,10 +486,8 @@ contract('Lido: rewards distribution math', (addresses) => {
       totalShares,
       totalFeeToDistribute,
       sharesToMint,
-      insuranceSharesToMint,
       nodeOperatorsSharesToMint,
       treasurySharesToMint,
-      insuranceFeeToMint,
       nodeOperatorsFeeToMint,
       treasuryFeeToMint
     }

@@ -11,14 +11,6 @@ import "./VaultMock.sol";
  * @dev Only for testing purposes! Lido version with some functions exposed.
  */
 contract LidoMock is Lido {
-    function initialize(
-        IDepositContract _depositContract,
-        address _oracle,
-        INodeOperatorsRegistry _operators
-    ) public {
-        super.initialize(_depositContract, _oracle, _operators, new VaultMock(), address(0));
-    }
-
     /**
      * @dev For use in tests to make protocol operational after deployment
      */

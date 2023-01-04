@@ -1,9 +1,8 @@
 const { assert } = require('chai')
 const { newDao, newApp } = require('./helpers/dao')
 const { assertBn, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
-const { bn } = require('@aragon/contract-helpers-test')
 
-const Lido = artifacts.require('LidoPushableMock.sol')
+const LidoPushableMock = artifacts.require('LidoPushableMock.sol')
 const OracleMock = artifacts.require('OracleMock.sol')
 
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
@@ -12,7 +11,7 @@ contract('Lido handleOracleReport', ([appManager, user1, user2]) => {
   let appBase, app, oracle
 
   before('deploy base app', async () => {
-    appBase = await Lido.new()
+    appBase = await LidoPushableMock.new()
     oracle = await OracleMock.new()
   })
 
@@ -20,7 +19,7 @@ contract('Lido handleOracleReport', ([appManager, user1, user2]) => {
     const { dao } = await newDao(appManager)
 
     proxyAddress = await newApp(dao, 'lido', appBase.address, appManager)
-    app = await Lido.at(proxyAddress)
+    app = await LidoPushableMock.at(proxyAddress)
 
     await app.initialize(oracle.address)
     await oracle.setPool(app.address)

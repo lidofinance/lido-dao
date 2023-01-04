@@ -24,6 +24,12 @@ contract LidoPushableMock is Lido {
         _resume();
     }
 
+    function initialize(address _oracle) public onlyInit {
+        _setProtocolContracts(_oracle, _oracle, address(0));
+        _resume();
+        initialized();
+    }
+
     function setDepositedValidators(uint256 _depositedValidators) public {
         DEPOSITED_VALIDATORS_POSITION.setStorageUint256(_depositedValidators);
     }
@@ -43,12 +49,6 @@ contract LidoPushableMock is Lido {
 
     function setTotalShares(uint256 _totalShares) public {
         TOTAL_SHARES_POSITION.setStorageUint256(_totalShares);
-    }
-
-    function initialize(address _oracle) public onlyInit {
-        _setProtocolContracts(_oracle, _oracle, _oracle);
-        _resume();
-        initialized();
     }
 
     function resetDistributeFee() public {

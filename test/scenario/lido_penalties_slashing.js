@@ -3,13 +3,12 @@ const { BN } = require('bn.js')
 const { assertBn, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
 const { getEventArgument } = require('@aragon/contract-helpers-test')
 
-const { pad, ETH, tokens, hexConcat } = require('../helpers/utils')
+const { pad, ETH, tokens } = require('../helpers/utils')
 const { deployDaoAndPool } = require('./helpers/deploy')
 const { signDepositData } = require('../0.8.9/helpers/signatures')
 const { waitBlocks } = require('../helpers/blockchain')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
-const WithdrawalQueue = artifacts.require('WithdrawalQueue.sol')
 
 contract('Lido: penalties, slashing, operator stops', (addresses) => {
   const [
@@ -57,9 +56,8 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     guardians = deployed.guardians
 
     depositRoot = await depositContractMock.get_deposit_root()
-
-    const withdrawal = await WithdrawalQueue.new(pool.address)
-    withdrawalCredentials = hexConcat('0x01', pad(withdrawal.address, 31)).toLowerCase()
+    withdrawalCredentials = pad('0x0202', 32)
+    await pool.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
   })
 
   // Fee and its distribution are in basis points, 10000 corresponding to 100%
@@ -67,19 +65,15 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
   // Total fee is 1%
   const totalFeePoints = 0.01 * 10000
 
-  // Of this 1%, 30% goes to the treasury
   const treasuryFeePoints = 0.3 * 10000
-  // 20% goes to the insurance fund
-  const insuranceFeePoints = 0.2 * 10000
-  // 50% goes to node operators
-  const nodeOperatorsFeePoints = 0.5 * 10000
+  const nodeOperatorsFeePoints = 0.7 * 10000
 
   let awaitingTotalShares = new BN(0)
   let awaitingUser1Balance = new BN(0)
 
   it('voting sets fee and its distribution', async () => {
     await pool.setFee(totalFeePoints, { from: voting })
-    await pool.setFeeDistribution(treasuryFeePoints, insuranceFeePoints, nodeOperatorsFeePoints, { from: voting })
+    await pool.setFeeDistribution(treasuryFeePoints, nodeOperatorsFeePoints, { from: voting })
 
     // Fee and distribution were set
 
@@ -87,7 +81,6 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
 
     const distribution = await pool.getFeeDistribution({ from: nobody })
     assertBn(distribution.treasuryFeeBasisPoints, treasuryFeePoints, 'treasury fee')
-    assertBn(distribution.insuranceFeeBasisPoints, insuranceFeePoints, 'insurance fee')
     assertBn(distribution.operatorsFeeBasisPoints, nodeOperatorsFeePoints, 'node operators fee')
   })
 
@@ -289,7 +282,6 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
 
     // No fees distributed yet
     assertBn(await token.balanceOf(treasuryAddr), new BN(0), 'treasury tokens')
-    assertBn(await token.balanceOf(insuranceAddr), new BN(0), 'insurance tokens')
     assertBn(await token.balanceOf(nodeOperator1.address), new BN(0), 'operator_1 tokens')
   })
 
@@ -336,7 +328,6 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
 
     // No fees distributed yet
     assertBn(await token.balanceOf(treasuryAddr), new BN(0), 'no treasury tokens on no reward')
-    assertBn(await token.balanceOf(insuranceAddr), new BN(0), 'no insurance tokens on no reward')
 
     assertBn(await token.balanceOf(nodeOperator1.address), new BN(0), 'no operator_1 reward')
   })
@@ -478,7 +469,6 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
 
     // No fees distributed yet
     assertBn(await token.balanceOf(treasuryAddr), new BN(0), 'no treasury tokens on no reward')
-    assertBn(await token.balanceOf(insuranceAddr), new BN(0), 'no insurance tokens on no reward')
 
     assertBn(await token.balanceOf(nodeOperator1.address), new BN(0), 'no operator_1 reward')
     assertBn(await token.balanceOf(user1), ETH(60), `user1 balance decreased by lost ETH`)
@@ -612,7 +602,6 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
   it(`without active node operators node operator's fee is sent to treasury`, async () => {
     const nodeOperator1TokenSharesBefore = await token.sharesOf(nodeOperator1.address)
     const nodeOperator2TokenSharesBefore = await token.sharesOf(nodeOperator2.address)
-    const insuranceSharesBefore = await token.sharesOf(insuranceAddr)
     const treasurySharesBefore = await token.sharesOf(treasuryAddr)
     const prevTotalShares = await token.getTotalShares()
 
@@ -620,7 +609,6 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
 
     const nodeOperator1TokenSharesAfter = await token.sharesOf(nodeOperator1.address)
     const nodeOperator2TokenSharesAfter = await token.sharesOf(nodeOperator2.address)
-    const insuranceSharesAfter = await token.sharesOf(insuranceAddr)
     const treasurySharesAfter = await token.sharesOf(treasuryAddr)
     const totalPooledEther = await token.getTotalPooledEther()
 
@@ -631,18 +619,16 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     const totalFeeToDistribute = new BN(ETH(2)).mul(new BN(totalFeePoints)).div(tenKBN)
 
     const sharesToMint = totalFeeToDistribute.mul(prevTotalShares).div(totalPooledEther.sub(totalFeeToDistribute))
-    const insuranceFee = sharesToMint.mul(new BN(insuranceFeePoints)).div(tenKBN)
-    const treasuryFeeTotalMinusInsurance = sharesToMint.sub(insuranceFee)
+    const treasuryFeeTotalMinusInsurance = sharesToMint
 
     const treasuryFeeTotalTreasuryPlusNodeOperators = sharesToMint
       .mul(new BN(treasuryFeePoints).add(new BN(nodeOperatorsFeePoints)))
       .div(tenKBN)
 
-    assertBn(insuranceSharesAfter.sub(insuranceSharesBefore), insuranceFee, 'insurance got the regular fee')
     assertBn(treasurySharesAfter.sub(treasurySharesBefore), treasuryFeeTotalMinusInsurance, 'treasury got the total fee - insurance fee')
     assertBn(
       treasurySharesAfter.sub(treasurySharesBefore),
-      treasuryFeeTotalTreasuryPlusNodeOperators.add(new BN(1)),
+      treasuryFeeTotalTreasuryPlusNodeOperators,
       'treasury got the regular fee + node operators fee'
     )
   })

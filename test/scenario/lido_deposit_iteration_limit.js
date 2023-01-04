@@ -48,7 +48,7 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
     depositRoot = await depositContractMock.get_deposit_root()
 
     await pool.setFee(0.01 * 10000, { from: voting })
-    await pool.setFeeDistribution(0.3 * 10000, 0.2 * 10000, 0.5 * 10000, { from: voting })
+    await pool.setFeeDistribution(0.3 * 10000, 0.7 * 10000, { from: voting })
     await pool.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
     await depositSecurityModule.setMaxDeposits(10, { from: appManager })
     assertBn(await depositSecurityModule.getMaxDeposits(), 10, 'invariant failed: max deposits')

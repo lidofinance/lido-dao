@@ -10,7 +10,6 @@ const { signDepositData } = require('../0.8.9/helpers/signatures')
 const { waitBlocks } = require('../helpers/blockchain')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
-const WithdrawalQueue = artifacts.require('WithdrawalQueue.sol')
 
 contract('Lido: happy path', (addresses) => {
   const [
@@ -32,7 +31,7 @@ contract('Lido: happy path', (addresses) => {
 
   let pool, nodeOperatorRegistry, token
   let oracleMock, depositContractMock
-  let treasuryAddr, insuranceAddr, guardians
+  let treasuryAddr, guardians
   let depositSecurityModule, depositRoot
   let withdrawalCredentials
 
@@ -55,14 +54,14 @@ contract('Lido: happy path', (addresses) => {
 
     // addresses
     treasuryAddr = deployed.treasuryAddr
-    insuranceAddr = deployed.insuranceAddr
     depositSecurityModule = deployed.depositSecurityModule
     guardians = deployed.guardians
 
     depositRoot = await depositContractMock.get_deposit_root()
 
-    const withdrawal = await WithdrawalQueue.new(pool.address)
-    withdrawalCredentials = hexConcat('0x01', pad(withdrawal.address, 31)).toLowerCase()
+    withdrawalCredentials = pad('0x0202', 32)
+
+    await pool.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
   })
 
   // Fee and its distribution are in basis points, 10000 corresponding to 100%
@@ -70,16 +69,12 @@ contract('Lido: happy path', (addresses) => {
   // Total fee is 1%
   const totalFeePoints = 0.01 * 10000
 
-  // Of this 1%, 30% goes to the treasury
   const treasuryFeePoints = 0.3 * 10000
-  // 20% goes to the insurance fund
-  const insuranceFeePoints = 0.2 * 10000
-  // 50% goes to node operators
-  const nodeOperatorsFeePoints = 0.5 * 10000
+  const nodeOperatorsFeePoints = 0.7 * 10000
 
   it('voting sets fee and its distribution', async () => {
     await pool.setFee(totalFeePoints, { from: voting })
-    await pool.setFeeDistribution(treasuryFeePoints, insuranceFeePoints, nodeOperatorsFeePoints, { from: voting })
+    await pool.setFeeDistribution(treasuryFeePoints, nodeOperatorsFeePoints, { from: voting })
 
     // Fee and distribution were set
 
@@ -87,7 +82,6 @@ contract('Lido: happy path', (addresses) => {
 
     const distribution = await pool.getFeeDistribution({ from: nobody })
     assertBn(distribution.treasuryFeeBasisPoints, treasuryFeePoints, 'treasury fee')
-    assertBn(distribution.insuranceFeeBasisPoints, insuranceFeePoints, 'insurance fee')
     assertBn(distribution.operatorsFeeBasisPoints, nodeOperatorsFeePoints, 'node operators fee')
   })
 
@@ -405,9 +399,7 @@ contract('Lido: happy path', (addresses) => {
     // Fee, in the form of minted tokens, was distributed between treasury, insurance fund
     // and node operators
     // treasuryTokenBalance ~= mintedAmount * treasuryFeePoints / 10000
-    // insuranceTokenBalance ~= mintedAmount * insuranceFeePoints / 10000
-    assertBn(await token.balanceOf(treasuryAddr), new BN('96000000000000001'), 'treasury tokens')
-    assertBn(await token.balanceOf(insuranceAddr), new BN('63999999999999998'), 'insurance tokens')
+    assertBn(await token.balanceOf(treasuryAddr), new BN('96000000000000000'), 'treasury tokens')
 
     // The node operators' fee is distributed between all active node operators,
     // proprotional to their effective stake (the amount of Ether staked by the operator's
@@ -416,8 +408,8 @@ contract('Lido: happy path', (addresses) => {
     // In our case, both node operators received the same fee since they have the same
     // effective stake (one signing key used from each operator, staking 32 ETH)
 
-    assertBn(await token.balanceOf(nodeOperator1.address), new BN('79999999999999999'), 'operator_1 tokens')
-    assertBn(await token.balanceOf(nodeOperator2.address), new BN('79999999999999999'), 'operator_2 tokens')
+    assertBn(await token.balanceOf(nodeOperator1.address), new BN('111999999999999999'), 'operator_1 tokens')
+    assertBn(await token.balanceOf(nodeOperator2.address), new BN('111999999999999999'), 'operator_2 tokens')
 
     // Real minted amount should be a bit less than calculated caused by round errors on mint and transfer operations
     assert(
@@ -425,7 +417,6 @@ contract('Lido: happy path', (addresses) => {
         .sub(
           new BN(0)
             .add(await token.balanceOf(treasuryAddr))
-            .add(await token.balanceOf(insuranceAddr))
             .add(await token.balanceOf(nodeOperator1.address))
             .add(await token.balanceOf(nodeOperator2.address))
             .add(await token.balanceOf(nodeOperatorRegistry.address))

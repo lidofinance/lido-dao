@@ -1,6 +1,7 @@
 const { BN } = require('bn.js')
 const { isGeth } = require('@aragon/contract-helpers-test/src/node')
 const { decodeErrorReasonFromTx } = require('@aragon/contract-helpers-test/src/decoding')
+const { getEventAt } = require('@aragon/contract-helpers-test')
 
 const pad = (hex, bytesLength, fill = '0') => {
   const absentZeroes = bytesLength * 2 + 2 - hex.length
@@ -108,6 +109,22 @@ async function assertRevertCustomError(blockOrPromise, expectedError, ctx) {
   )
 }
 
+const assertNoEvent = (receipt, eventName, msg) => {
+  const event = getEventAt(receipt, eventName)
+  assert.equal(event, undefined, msg)
+}
+
+const changeEndianness = (string) => {
+  string = string.replace('0x', '')
+  const result = []
+  let len = string.length - 2
+  while (len >= 0) {
+    result.push(string.substr(len, 2))
+    len -= 2
+  }
+  return '0x' + result.join('')
+}
+
 module.exports = {
   pad,
   hexConcat,
@@ -120,5 +137,7 @@ module.exports = {
   getEthBalance,
   formatBN,
   formatStEth,
-  assertRevertCustomError
+  assertRevertCustomError,
+  assertNoEvent,
+  changeEndianness
 }

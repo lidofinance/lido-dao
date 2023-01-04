@@ -1,14 +1,14 @@
+const { artifacts } = require('hardhat')
+
 const { newDao, newApp } = require('../../0.4.24/helpers/dao')
 
 const Lido = artifacts.require('LidoMock.sol')
+const VaultMock = artifacts.require('VaultMock.sol')
+const LidoELRewardsVault = artifacts.require('LidoExecutionLayerRewardsVault.sol')
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 const OracleMock = artifacts.require('OracleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
 const DepositSecurityModule = artifacts.require('DepositSecurityModule.sol')
-
-module.exports = {
-  deployDaoAndPool
-}
 
 const NETWORK_ID = 1000
 const MAX_DEPOSITS_PER_BLOCK = 100
@@ -74,7 +74,6 @@ async function deployDaoAndPool(appManager, voting) {
     DEPOSIT_ROLE,
     STAKING_PAUSE_ROLE,
     STAKING_CONTROL_ROLE,
-    SET_EL_REWARDS_VAULT_ROLE,
     SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE,
     NODE_OPERATOR_REGISTRY_MANAGE_SIGNING_KEYS,
     NODE_OPERATOR_REGISTRY_ADD_NODE_OPERATOR_ROLE,
@@ -92,7 +91,6 @@ async function deployDaoAndPool(appManager, voting) {
     pool.DEPOSIT_ROLE(),
     pool.STAKING_PAUSE_ROLE(),
     pool.STAKING_CONTROL_ROLE(),
-    pool.SET_EL_REWARDS_VAULT_ROLE(),
     pool.SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE(),
     nodeOperatorRegistry.MANAGE_SIGNING_KEYS(),
     nodeOperatorRegistry.ADD_NODE_OPERATOR_ROLE(),
@@ -112,7 +110,6 @@ async function deployDaoAndPool(appManager, voting) {
     acl.createPermission(voting, pool.address, POOL_BURN_ROLE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, STAKING_PAUSE_ROLE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, STAKING_CONTROL_ROLE, appManager, { from: appManager }),
-    acl.createPermission(voting, pool.address, SET_EL_REWARDS_VAULT_ROLE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE, appManager, { from: appManager }),
 
     // Allow depositor to deposit buffered ether
@@ -142,13 +139,22 @@ async function deployDaoAndPool(appManager, voting) {
     })
   ])
 
-  await pool.initialize(depositContractMock.address, oracleMock.address, nodeOperatorRegistry.address)
+  treasury = await VaultMock.new()
+  elRewardsVault = await LidoELRewardsVault.new(pool.address, treasury.address)
+
+  await pool.initialize(
+    depositContractMock.address,
+    oracleMock.address,
+    nodeOperatorRegistry.address,
+    treasury.address,
+    elRewardsVault.address
+  )
 
   await oracleMock.setPool(pool.address)
   await depositContractMock.reset()
   await depositContractMock.set_deposit_root(DEPOSIT_ROOT)
 
-  const [treasuryAddr, insuranceAddr] = await Promise.all([pool.getTreasury(), pool.getInsuranceFund()])
+  const treasuryAddr = await pool.getTreasury()
 
   return {
     dao,
@@ -159,11 +165,15 @@ async function deployDaoAndPool(appManager, voting) {
     pool,
     nodeOperatorRegistry,
     treasuryAddr,
-    insuranceAddr,
+    elRewardsVault,
     depositSecurityModule,
     guardians: {
       privateKeys: GUARDIAN_PRIVATE_KEYS,
       addresses: [GUARDIAN1, GUARDIAN2, GUARDIAN3]
     }
   }
+}
+
+module.exports = {
+  deployDaoAndPool
 }
