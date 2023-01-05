@@ -409,7 +409,7 @@ contract WithdrawalQueue {
 
         _updatePriceHistory(_toUint128(_totalPooledEther), _toUint128(_totalShares), _lastIdToFinalize);
 
-        lockedEtherAmount = _toUint128(_etherToLock);
+        lockedEtherAmount += _toUint128(_etherToLock);
         finalizedRequestsCounter = _lastIdToFinalize + 1;
     }
 
