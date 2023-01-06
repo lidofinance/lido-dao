@@ -102,11 +102,11 @@ async function createVoting({ web3, artifacts }) {
   }
 
   const encodedUpgradeCallData = encodeCallScript([
-    // createChangeVoteTimePermission,
-    // grantChangeVoteTimePermission,
+    createChangeVoteTimePermission,
+    grantChangeVoteTimePermission,
     changeObjectionTime,
     changeVoteTime,
-    // revokeChangeVoteTimePermission,
+    revokeChangeVoteTimePermission,
   ])
 
   log(`encodedUpgradeCallData:`, yl(encodedUpgradeCallData))
@@ -119,10 +119,10 @@ async function createVoting({ web3, artifacts }) {
 
   const txName = `tx-32-change-voting-time.json`
   const votingDesc =
-// `1) Grant permission UNSAFELY_MODIFY_VOTE_TIME_ROLE to Voting
-`1) Set objection phase time to ${objectionPhaseTimeSec} seconds
-2) Set total vote time to ${voteTimeSec} seconds`
-// 4) Revoke permission UNSAFELY_MODIFY_VOTE_TIME_ROLE from Voting`
+`1) Grant permission UNSAFELY_MODIFY_VOTE_TIME_ROLE to Voting
+2) Set objection phase time to ${objectionPhaseTimeSec} seconds
+3) Set total vote time to ${voteTimeSec} seconds
+4) Revoke permission UNSAFELY_MODIFY_VOTE_TIME_ROLE from Voting`
 
   await saveCallTxData(votingDesc, tokenManager, 'forward', txName, {
     arguments: [votingCallData],
@@ -133,23 +133,6 @@ async function createVoting({ web3, artifacts }) {
   log(gr(`Before continuing the deployment, please send all transactions listed above.`))
   log(gr(`You must complete it positively and execute before continuing with the deployment!`))
   log.splitter()
-
-  log(gr(`Note for Kovan!!!`))
-  log(`To execute the vote in hardhat console:
-const { readNetworkState, assertRequiredNetworkState } = require('./scripts/helpers/persisted-network-state')
-const { APP_NAMES, APP_ARTIFACTS } = require('./scripts/multisig/constants')
-const netId = await web3.eth.net.getId()
-const state = readNetworkState(network.name, netId)
-const voting = await artifacts.require('Voting').at(state[\`app:\${APP_NAMES.ARAGON_VOTING}\`].proxyAddress)
-
-const ldoMegaHolder = '0xc0e1418de75cD11B4C5cF60B9F86713e80689517'
-
-(await voting.votesLength()).toString()  // to see vote id
-await voting.vote(<voteId>, true, false, { from: ldoMegaHolder })
-
-// wait for 15 minutes (current Kovan vote duration)
-
-await voting.executeVote(<voteId>, { from: ldoMegaHolder })`)
 }
 
 

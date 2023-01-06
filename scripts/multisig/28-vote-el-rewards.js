@@ -85,7 +85,7 @@ async function createVoting({ web3, artifacts }) {
   ])
 
   const txName = `tx-28-vote-el-rewards.json`
-  const votingDesc = 
+  const votingDesc =
 `1) Set deployed LidoExecutionLayerRewardsVault to Lido contract
 2) Set Execution Layer rewards withdrawal limit to ${elRewardsWithdrawalLimitPoints} basis points`
 
