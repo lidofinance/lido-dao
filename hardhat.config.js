@@ -95,13 +95,6 @@ const getNetConfig = (networkName, ethAccountName) => {
       chainId: 1,
       timeout: 60000 * 10
     },
-    kovan: {
-      ...base,
-      url: 'https://kovan.infura.io/v3/' + accounts.infura.projectId,
-      chainId: 42,
-      timeout: 60000 * 10,
-      gas: 30000000
-    },
     fork: {
       ...base,
       chainId: 1,
