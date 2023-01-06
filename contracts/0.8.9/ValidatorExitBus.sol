@@ -50,7 +50,7 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable, ReportEpo
     bytes32 constant public MANAGE_QUORUM_ROLE = keccak256("MANAGE_QUORUM_ROLE");
     bytes32 constant public SET_BEACON_SPEC_ROLE = keccak256("SET_BEACON_SPEC_ROLE");
 
-    // Unstructured storage
+    // UNSTRUCTURED STORAGE
 
     bytes32 internal constant RATE_LIMIT_STATE_POSITION = keccak256("lido.ValidatorExitBus.rateLimitState");
 
@@ -63,6 +63,9 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable, ReportEpo
     bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.ValidatorExitBus.contractVersion");
 
     bytes32 internal constant TOTAL_EXIT_REQUESTS_POSITION = keccak256("lido.ValidatorExitBus.totalExitRequests");
+
+
+
 
     ///! STRUCTURED STORAGE OF THE CONTRACT
     ///! Inherited from CommitteeQuorum:
@@ -78,6 +81,16 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable, ReportEpo
 
     /// (stakingModuleAddress, nodeOperatorId) => lastRequestedValidatorId
     mapping(address => mapping (uint256 => uint256)) public lastRequestedValidatorIds;
+
+
+    // TODO: this might be used if we decide to report not responded validators
+    // /// (stakingModuleAddress, nodeOperatorId) => notRespondedValidatorsCount
+    // ///! SLOT 7: mapping(address => mapping (uint256 => uint256)) notRespondedValidatorsCount
+    // mapping(address => mapping (uint256 => uint256)) public notRespondedValidatorsCount;
+    // /// Time in seconds before a validator requested to perform voluntary exit is considered as not responded
+    // /// and should be reported as such
+    // bytes32 internal constant TIME_TO_CONSIDER_VALIDATOR_NOT_RESPONDED_SECS_POSITION
+    //     = keccak256("lido.ValidatorExitBus.totalExitRequests");
 
     function initialize(
         address _admin,
@@ -116,6 +129,7 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable, ReportEpo
 
     /**
      * @notice Return the initialized version of this contract starting from 0
+     * @dev See LIP-10 for the details
      */
     function getVersion() external view returns (uint256) {
         return CONTRACT_VERSION_POSITION.getStorageUint256();
@@ -270,7 +284,7 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable, ReportEpo
 
         // TODO: maybe do some additional report validity sanity checks
 
-        for (uint256 i = 0; i < numKeys; i++) {
+        for (uint256 i = 0; i < numKeys; ++i) {
             emit ValidatorExitRequest(
                 _stakingModules[i],
                 _nodeOperatorIds[i],

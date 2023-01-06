@@ -723,7 +723,7 @@ contract Lido is ILido, StETH, AragonApp {
         uint256 _wcBufferedEther
     ) internal returns (int256 withdrawalFundsMovement) {
         address withdrawalAddress = _getWithdrawalVaultAddress();
-        // do nothing if withdrawals is not configured
+        // do nothing if the withdrawals vault address is not configured
         if (withdrawalAddress == address(0)) {
             return 0;
         }
