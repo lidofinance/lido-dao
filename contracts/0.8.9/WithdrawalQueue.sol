@@ -266,6 +266,7 @@ contract WithdrawalQueue {
             address recipient,
             uint256 requestBlockNumber,
             uint256 etherToWithdraw,
+            uint256 shares,
             bool isFinalized,
             bool isClaimed
         )
@@ -275,13 +276,16 @@ contract WithdrawalQueue {
 
             recipient = request.recipient;
             requestBlockNumber = request.requestBlockNumber;
-            uint256 shares = request.cumulativeShares;
+            
+            shares = request.cumulativeShares;
+            etherToWithdraw = request.cumulativeEther;
             if (_requestId > 0) {
                 shares -= queue[_requestId - 1].cumulativeShares;
+                etherToWithdraw -= queue[_requestId - 1].cumulativeEther;
             }
-            etherToWithdraw = IStETH(STETH).getPooledEthByShares(shares);
-            isFinalized = false;
-            isClaimed = false;
+            
+            isFinalized = _requestId < finalizedRequestsCounter;
+            isClaimed = request.claimed;
         }
     }
 
