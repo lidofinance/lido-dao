@@ -360,7 +360,8 @@ contract LidoTemplate is IsContract {
             state.oracle,
             state.operators,
             state.agent, // treasury
-            address(0) // execution layer rewards vault
+            address(0), // execution layer rewards vault
+            address(0) // withdrawal queue
         );
 
         // used for issuing vested tokens in the next step
@@ -431,7 +432,8 @@ contract LidoTemplate is IsContract {
         state.lido.setProtocolContracts(
             state.lido.getOracle(),
             state.lido.getTreasury(),
-            _elRewardsVault
+            _elRewardsVault,
+            address(0)
         );
         _removePermissionFromTemplate(state.acl, state.lido, MANAGE_PROTOCOL_CONTRACTS_ROLE);
 

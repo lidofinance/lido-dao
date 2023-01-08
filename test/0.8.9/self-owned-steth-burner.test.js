@@ -52,7 +52,7 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, anotherAccount]
     await acl.createPermission(voting, lido.address, await lido.BURN_ROLE(), appManager, { from: appManager })
 
     // Initialize the app's proxy.
-    await lido.initialize(depositContract.address, oracle.address, operators.address, treasury.address, ZERO_ADDRESS)
+    await lido.initialize(depositContract.address, oracle.address, operators.address, treasury.address, ZERO_ADDRESS, ZERO_ADDRESS)
     treasuryAddr = await lido.getTreasury()
 
     await oracle.setPool(lido.address)
@@ -806,40 +806,40 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, anotherAccount]
 
     it(`can't recover stETH via ERC721(NFT)`, async () => {
       // initial stETH balance is zero
-      assertBn(await lido.balanceOf(anotherAccount), stETH(0))
+      assertBn(await lido.balanceOf(anotherAccount), StETH(0))
       // submit 10 ETH to mint 10 stETH
       await web3.eth.sendTransaction({ from: anotherAccount, to: lido.address, value: ETH(10) })
       // check 10 stETH minted on balance
-      assertBn(await lido.balanceOf(anotherAccount), stETH(10))
-      // transfer 1 stETH to the burner account "accidentally"
-      await lido.transfer(burner.address, stETH(1), { from: anotherAccount })
-      // transfer 9 stETH to voting (only voting is allowed to request actual burning)
-      await lido.transfer(voting, stETH(9), { from: anotherAccount })
+      assertBn(await lido.balanceOf(anotherAccount), StETH(10))
+      // transfer 1 StETH to the burner account "accidentally"
+      await lido.transfer(burner.address, StETH(1), { from: anotherAccount })
+      // transfer 9 StETH to voting (only voting is allowed to request actual burning)
+      await lido.transfer(voting, StETH(9), { from: anotherAccount })
 
-      // request 9 stETH to be burned later
-      await lido.approve(burner.address, stETH(9), { from: voting })
-      await burner.requestBurnMyStETH(stETH(9), { from: voting })
+      // request 9 StETH to be burned later
+      await lido.approve(burner.address, StETH(9), { from: voting })
+      await burner.requestBurnMyStETH(StETH(9), { from: voting })
 
       // check balances one last time
-      assertBn(await lido.balanceOf(anotherAccount), stETH(0))
-      assertBn(await lido.balanceOf(voting), stETH(0))
-      assertBn(await lido.balanceOf(burner.address), stETH(10))
+      assertBn(await lido.balanceOf(anotherAccount), StETH(0))
+      assertBn(await lido.balanceOf(voting), StETH(0))
+      assertBn(await lido.balanceOf(burner.address), StETH(10))
 
-      // ensure that excess amount is exactly 1 stETH
-      assertBn(await burner.getExcessStETH(), stETH(1))
+      // ensure that excess amount is exactly 1 StETH
+      assertBn(await burner.getExcessStETH(), StETH(1))
 
       // can't abuse recoverERC721 API to perform griefing-like attack
-      assertRevert(burner.recoverERC721(lido.address, stETH(1), { from: anotherAccount }), `TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE`)
-      assertRevert(burner.recoverERC721(lido.address, stETH(1), { from: deployer }), `TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE`)
-      assertRevert(burner.recoverERC721(lido.address, stETH(1), { from: voting }), `TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE`)
+      assertRevert(burner.recoverERC721(lido.address, StETH(1), { from: anotherAccount }), `TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE`)
+      assertRevert(burner.recoverERC721(lido.address, StETH(1), { from: deployer }), `TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE`)
+      assertRevert(burner.recoverERC721(lido.address, StETH(1), { from: voting }), `TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE`)
 
       const receipt = await burner.recoverExcessStETH({ from: anotherAccount })
       assertEvent(receipt, `ExcessStETHRecovered`, {
-        expectedArgs: { requestedBy: anotherAccount, amount: stETH(1) }
+        expectedArgs: { requestedBy: anotherAccount, amount: StETH(1) }
       })
 
       // ensure that excess amount is zero
-      assertBn(await burner.getExcessStETH(), stETH(0))
+      assertBn(await burner.getExcessStETH(), StETH(0))
     })
 
     it(`can't recover zero-address ERC721(NFT)`, async () => {

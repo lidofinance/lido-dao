@@ -38,18 +38,18 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         uint256 beaconBalance,
         uint256 beaconValidators,
         address caller,
-        uint256 wcBufferedEther,
+        uint256 withdrawalVaultBalance,
         uint256[] requestIdToFinalizeUpTo,
-        uint256[] _finalizationShareRates
+        uint256[] finalizationShareRates
     );
 
     event ConsensusReached(
         uint256 epochId,
         uint256 beaconBalance,
         uint256 beaconValidators,
-        uint256 wcBufferedEther,
+        uint256 _withdrawalVaultBalance,
         uint256[] requestIdToFinalizeUpTo,
-        uint256[] _finalizationShareRates
+        uint256[] finalizationShareRates
     );
 
     event PostTotalShares(
@@ -72,7 +72,7 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         uint256[] nodeOperatorsWithExitedValidators;
         uint64[] exitedValidatorsNumbers;
         // EL values
-        uint256 wcBufferedEther;
+        uint256 withdrawalVaultBalance;
         // decision
         uint256 newDepositBufferWithdrawalsReserve;
         uint256[] requestIdToFinalizeUpTo;
@@ -340,7 +340,7 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
             beaconBalance,
             _report.beaconValidators,
             msg.sender,
-            _report.wcBufferedEther,
+            _report.withdrawalVaultBalance,
             _report.requestIdToFinalizeUpTo,
             _report.finalizationShareRates
         );
@@ -447,7 +447,7 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
             _report.epochId,
             beaconBalance,
             _report.beaconValidators,
-            _report.wcBufferedEther,
+            _report.withdrawalVaultBalance,
             _report.requestIdToFinalizeUpTo,
             _report.finalizationShareRates
         );
@@ -473,7 +473,7 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         lido.handleOracleReport(
             _report.beaconValidators,
             beaconBalance,
-            _report.wcBufferedEther,
+            _report.withdrawalVaultBalance,
             _report.newDepositBufferWithdrawalsReserve,
             _report.requestIdToFinalizeUpTo,
             _report.finalizationShareRates

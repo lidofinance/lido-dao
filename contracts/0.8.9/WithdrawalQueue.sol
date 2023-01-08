@@ -11,10 +11,6 @@ import "@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC20.sol";
 
 import "./lib/AragonUnstructuredStorage.sol";
 
-interface IRestakingSink {
-    function receiveRestake() external payable;
-}
-
 /**
  * @title Interface defining a Lido liquid staking pool
  * @dev see also [Lido liquid staking pool core contract](https://docs.lido.fi/contracts/lido)
@@ -381,24 +377,23 @@ contract WithdrawalQueue {
 
     /**
      * @notice Finalize requests in [`finalizedRequestsCounter`,`_lastIdToFinalize`] range with `_shareRate`
+     * @dev ether to finalize all the requests should be calculated using `calculateFinalizationParams` and sent with 
+     * this call as msg.value
      * @param _lastIdToFinalize request index in the queue that will be last finalized request in a batch
-     * @param _etherToLock ether amount that should be locked for these requests
      * @param _shareRate share/ETH rate for the protocol with 1e27 decimals
      */
     function finalize(
         uint256 _lastIdToFinalize,
-        uint256 _etherToLock,
         uint256 _shareRate
     ) external payable onlyOwner {
         if (_lastIdToFinalize < finalizedRequestsCounter || _lastIdToFinalize >= queue.length) {
             revert InvalidFinalizationId();
         }
-        if (lockedEtherAmount + _etherToLock > address(this).balance) revert NotEnoughEther();
+        if (lockedEtherAmount + msg.value > address(this).balance) revert NotEnoughEther();
 
         _updateRateHistory(_shareRate, _lastIdToFinalize);
 
-        // todo: ? should we check passed `_etherToLock`
-        lockedEtherAmount += _toUint128(_etherToLock);
+        lockedEtherAmount += _toUint128(msg.value);
 
         finalizedRequestsCounter = _lastIdToFinalize + 1;
     }
@@ -473,12 +468,6 @@ contract WithdrawalQueue {
             }
         }
         assert(false);
-    }
-
-    function restake(uint256 _amount) external onlyOwner {
-        if (lockedEtherAmount + _amount > address(this).balance) revert NotEnoughEther();
-
-        IRestakingSink(OWNER).receiveRestake{value: _amount}();
     }
 
     /// @dev calculates `eth` and `shares` for the batch of requests in (`_firstId`, `_lastId`] range using `_shareRate`

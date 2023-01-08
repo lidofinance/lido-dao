@@ -18,7 +18,7 @@ const ZERO_MEMBER_REPORT = {
   stakingModules: [],
   nodeOperatorsWithExitedValidators: [],
   exitedValidatorsNumbers: [],
-  wcBufferedEther: 0,
+  withdrawalVaultBalance: 0,
   newDepositBufferWithdrawalsReserve: 0,
   requestIdToFinalizeUpTo: [],
   finalizationShareRates: []

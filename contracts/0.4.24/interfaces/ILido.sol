@@ -124,12 +124,18 @@ interface ILido {
      * @param _oracle oracle contract
      * @param _treasury treasury contract
      * @param _executionLayerRewardsVault execution layer rewards vault
+     * @param _withdrawalQueue withdrawal queue
      */
     function setProtocolContracts(
-        address _oracle, address _treasury, address _executionLayerRewardsVault
+        address _oracle, address _treasury, address _executionLayerRewardsVault, address _withdrawalQueue
     ) external;
 
-    event ProtocolContactsSet(address oracle, address treasury, address _executionLayerRewardsVault);
+    event ProtocolContactsSet(
+        address oracle, 
+        address treasury, 
+        address _executionLayerRewardsVault, 
+        address _withdrawalQueue
+    );
 
     /**
      * @notice Set fee rate to `_feeBasisPoints` basis points.
@@ -205,7 +211,7 @@ interface ILido {
         uint256 _beaconValidators,
         uint256 _beaconBalance,
         // EL values
-        uint256 _wcBufferedEther,
+        uint256 _withdrawalVaultBalance,
         // decision
         uint256 _withdrawalsReserveAmount,
         uint256[] _requestIdToFinalizeUpTo,
@@ -228,9 +234,7 @@ interface ILido {
     // The `amount` of ether was sent to the deposit_contract.deposit function
     event Unbuffered(uint256 amount);
 
-    // Withdrawal functions
-
-    event WithdrawalRestaked(uint256 amount);
+    event WithdrawalsReceived(uint256 amount);
 
     // Info functions
 

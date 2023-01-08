@@ -1,3 +1,4 @@
+const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 const { artifacts } = require('hardhat')
 
 const { newDao, newApp } = require('../../0.4.24/helpers/dao')
@@ -147,7 +148,8 @@ async function deployDaoAndPool(appManager, voting) {
     oracleMock.address,
     nodeOperatorRegistry.address,
     treasury.address,
-    elRewardsVault.address
+    elRewardsVault.address,
+    ZERO_ADDRESS
   )
 
   await oracleMock.setPool(pool.address)

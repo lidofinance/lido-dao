@@ -76,7 +76,7 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
 
     // Initialize the app's proxy.
     const treasury = await VaultMock.new()
-    await app.initialize(depositContract.address, oracle.address, operators.address, treasury.address, ZERO_ADDRESS)
+    await app.initialize(depositContract.address, oracle.address, operators.address, treasury.address, ZERO_ADDRESS, ZERO_ADDRESS)
 
     await oracle.setPool(app.address)
   })

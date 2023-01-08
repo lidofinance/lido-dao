@@ -18,7 +18,7 @@ const ERC20Mock = artifacts.require('ERC20Mock.sol')
 const VaultMock = artifacts.require('VaultMock.sol')
 const AragonVaultMock = artifacts.require('AragonVaultMock.sol')
 const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
-const WithdrawalQueue = artifacts.require('WithdrawalQueue.sol')
+const WithdrawalVault = artifacts.require('WithdrawalVault.sol')
 const WstETH = artifacts.require('WstETH.sol')
 
 const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
@@ -47,7 +47,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
   })
 
   beforeEach('deploy dao and app', async () => {
-    ;({ dao, acl } = await newDao(appManager))
+    ; ({ dao, acl } = await newDao(appManager))
 
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
     let proxyAddress = await newApp(dao, 'lido', appBase.address, appManager)
@@ -89,7 +89,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
 
     elRewardsVault = await ELRewardsVault.new(app.address, treasury.address)
     // Initialize the app's proxy.
-    await app.initialize(depositContract.address, oracle.address, operators.address, treasury.address, elRewardsVault.address)
+    await app.initialize(depositContract.address, oracle.address, operators.address, treasury.address, elRewardsVault.address, ZERO_ADDRESS)
 
     assert((await app.isStakingPaused()) === true)
     assert((await app.isStopped()) === true)
@@ -142,7 +142,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
 
       await web3.eth.sendTransaction({ to: app.address, from: userAddress, value: initialDepositAmount })
 
-      const withdrawal = await WithdrawalQueue.new(app.address, app.address, wsteth.address)
+      const withdrawal = await WithdrawalVault.new(app.address, treasury.address)
       await app.setWithdrawalCredentials(hexConcat('0x01', pad(withdrawal.address, 31)), { from: voting })
 
       await operators.addNodeOperator('1', ADDRESS_1, { from: voting })
@@ -266,8 +266,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
   })
 
   it('setOracle works', async () => {
-    await assertRevert(app.setProtocolContracts(ZERO_ADDRESS, user2, user3, { from: voting }), 'ORACLE_ZERO_ADDRESS')
-    const receipt = await app.setProtocolContracts(yetAnotherOracle.address, oracle.address, oracle.address, { from: voting })
+    await assertRevert(app.setProtocolContracts(ZERO_ADDRESS, user2, user3, ZERO_ADDRESS, { from: voting }), 'ORACLE_ZERO_ADDRESS')
+    const receipt = await app.setProtocolContracts(yetAnotherOracle.address, oracle.address, oracle.address, ZERO_ADDRESS, { from: voting })
     assertEvent(receipt, 'ProtocolContactsSet', { expectedArgs: { oracle: yetAnotherOracle.address } })
     assert.equal(await app.getOracle(), yetAnotherOracle.address)
   })
@@ -520,15 +520,15 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
 
     isStakingPaused = await app.isStakingPaused()
     assert.equal(isStakingPaused, expectedIsStakingPaused)
-    ;({
-      isStakingPaused,
-      isStakingLimitSet,
-      currentStakeLimit,
-      maxStakeLimit,
-      maxStakeLimitGrowthBlocks,
-      prevStakeLimit,
-      prevStakeBlockNumber
-    } = await app.getStakeLimitFullInfo())
+      ; ({
+        isStakingPaused,
+        isStakingLimitSet,
+        currentStakeLimit,
+        maxStakeLimit,
+        maxStakeLimitGrowthBlocks,
+        prevStakeLimit,
+        prevStakeBlockNumber
+      } = await app.getStakeLimitFullInfo())
 
     assertBn(currentStakeLimit, expectedCurrentStakeLimit)
     assertBn(maxStakeLimit, expectedMaxStakeLimit)
@@ -788,7 +788,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
-    const withdrawal = await WithdrawalQueue.new(app.address, app.address, wsteth.address)
+    const withdrawal = await WithdrawalVault.new(app.address, treasury.address)
     await app.setWithdrawalCredentials(hexConcat('0x01', pad(withdrawal.address, 31)), { from: voting })
 
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
@@ -826,7 +826,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
-    const withdrawal = await WithdrawalQueue.new(app.address, app.address, wsteth.address)
+    const withdrawal = await WithdrawalVault.new(app.address, treasury.address)
     await app.setWithdrawalCredentials(hexConcat('0x01', pad(withdrawal.address, 31)), { from: voting })
 
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
@@ -926,7 +926,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
-    const withdrawal = await WithdrawalQueue.new(app.address, app.address, wsteth.address)
+    const withdrawal = await WithdrawalVault.new(app.address, treasury.address)
     await app.setWithdrawalCredentials(hexConcat('0x01', pad(withdrawal.address, 31)), { from: voting })
 
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
@@ -958,7 +958,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
-    const withdrawal = await WithdrawalQueue.new(app.address, app.address, wsteth.address)
+    const withdrawal = await WithdrawalVault.new(app.address, treasury.address)
     await app.setWithdrawalCredentials(hexConcat('0x01', pad(withdrawal.address, 31)), { from: voting })
 
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
@@ -1003,7 +1003,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
-    const withdrawal = await WithdrawalQueue.new(app.address, app.address, wsteth.address)
+    const withdrawal = await WithdrawalVault.new(app.address, treasury.address)
     await app.setWithdrawalCredentials(hexConcat('0x01', pad(withdrawal.address, 31)), { from: voting })
 
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
@@ -1373,12 +1373,12 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
 
     it(`treasury can't be set by an arbitrary address`, async () => {
       // TODO: restore the test when function `transferToVault` is restored
-      await assertRevert(app.setProtocolContracts(await app.getOracle(), user1, ZERO_ADDRESS, { from: nobody }))
-      await assertRevert(app.setProtocolContracts(await app.getOracle(), user1, ZERO_ADDRESS, { from: user1 }))
+      await assertRevert(app.setProtocolContracts(await app.getOracle(), user1, ZERO_ADDRESS, ZERO_ADDRESS, { from: nobody }))
+      await assertRevert(app.setProtocolContracts(await app.getOracle(), user1, ZERO_ADDRESS, ZERO_ADDRESS, { from: user1 }))
     })
 
     it('voting can set treasury', async () => {
-      const receipt = await app.setProtocolContracts(await app.getOracle(), user1, ZERO_ADDRESS, { from: voting })
+      const receipt = await app.setProtocolContracts(await app.getOracle(), user1, ZERO_ADDRESS, ZERO_ADDRESS, { from: voting })
       assertEvent(receipt, 'ProtocolContactsSet', { expectedArgs: { treasury: user1 } })
       assert.equal(await app.getTreasury(), user1)
     })
@@ -1386,9 +1386,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     it('reverts when treasury is zero address', async () => {
       // TODO: restore the test when function `setProtocolContracts` is restored
       await assertRevert(
-        app.setProtocolContracts(await app.getOracle(), ZERO_ADDRESS, ZERO_ADDRESS, { from: voting }),
-        'TREASURY_ZERO_ADDRESS'
-      )
+        app.setProtocolContracts(await app.getOracle(), ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, { from: voting }),
+        'TREASURY_ZERO_ADDRESS')
     })
   })
 

@@ -228,7 +228,7 @@ interface ILido {
         uint256 _beaconValidators,
         uint256 _beaconBalance,
         // EL values
-        uint256 _wcBufferedEther,
+        uint256 _withdrawalVaultBalance,
         // decision
         uint256 _withdrawalsReserveAmount,
         uint256[] calldata _requestIdToFinalizeUpTo,
@@ -249,7 +249,8 @@ interface ILido {
     // The `amount` of ether was sent to the deposit_contract.deposit function
     event Unbuffered(uint256 amount);
 
-    event WithdrawalRestaked(uint256 amount);
+    // the `amount` of ether sent from WithdrawalsVault to deposit buffer during the oracle report
+    event WithdrawalsReceived(uint256 amount);
 
     // Info functions
 
