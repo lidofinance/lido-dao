@@ -105,6 +105,12 @@ contract WithdrawalQueue {
     address public immutable WSTETH;
 
     /**
+     * @notice All state-modifying calls are allowed only from owner protocol.
+     * @dev should be Lido
+     */
+    address payable public immutable OWNER;
+
+    /**
      * @notice minimal possible sum that is possible to withdraw
      * We don't want to deal with small amounts because there is a gas spent on oracle
      * for each request.
@@ -117,12 +123,6 @@ contract WithdrawalQueue {
      * Prevents accumulating too much funds per single request fulfillment in the future.
      */
     uint256 public constant MAX_STETH_WITHDRAWAL_AMOUNT = 500 * 32 ether;
-
-    /**
-     * @notice All state-modifying calls are allowed only from owner protocol.
-     * @dev should be Lido
-     */
-    address payable public immutable OWNER;
 
     ///! STRUCTURED STORAGE OF THE CONTRACT
     ///! SLOT 0: uint128 lockedEtherAmount
@@ -154,11 +154,7 @@ contract WithdrawalQueue {
      * @param _stETH address of StETH contract
      * @param _wstETH address of WstETH contract
      */
-    constructor(
-        address payable _owner,
-        address _stETH,
-        address _wstETH
-    ) {
+    constructor(address payable _owner, address _stETH, address _wstETH) {
         if (_owner == address(0)) revert ZeroOwner();
 
         // init immutables
@@ -201,15 +197,18 @@ contract WithdrawalQueue {
     }
 
     /// @notice Request withdrawal of the provided stETH token amount
-    function requestWithdrawal(uint256 _amountOfStETH, address _recipient)
-        external
-        whenResumed
-        returns (uint256 requestId)
-    {
+    function requestWithdrawal(
+        uint256 _amountOfStETH,
+        address _recipient
+    ) external whenResumed returns (uint256 requestId) {
         _recipient = _checkWithdrawalRequestInput(_amountOfStETH, _recipient);
         return _requestWithdrawal(_amountOfStETH, _recipient);
     }
 
+    /**
+     * @notice Request withdrawal of the provided stETH token amount using EIP-2612 Permit
+     * @dev NB: requires permit in stETH being implemented
+     */
     function requestWithdrawalWithPermit(
         uint256 _amountOfStETH,
         address _recipient,
@@ -223,15 +222,16 @@ contract WithdrawalQueue {
         return _requestWithdrawal(_amountOfStETH, _recipient);
     }
 
-    function requestWithdrawalWstETH(uint256 _amountOfWstETH, address _recipient)
-        external
-        whenResumed
-        returns (uint256 requestId)
-    {
+    /// @notice Request withdrawal of the provided wstETH token amount
+    function requestWithdrawalWstETH(
+        uint256 _amountOfWstETH,
+        address _recipient
+    ) external whenResumed returns (uint256 requestId) {
         _recipient = _checkWithdrawalRequestInput(IWstETH(WSTETH).getStETHByWstETH(_amountOfWstETH), _recipient);
         return _requestWithdrawalWstETH(_amountOfWstETH, _recipient);
     }
 
+    /// @notice Request withdrawal of the provided wstETH token amount using EIP-2612 Permit
     function requestWithdrawalWstETHWithPermit(
         uint256 _amountOfWstETH,
         address _recipient,
@@ -247,9 +247,7 @@ contract WithdrawalQueue {
 
     /// @notice Claim withdrawals batch once finalized (claimable)
     /// NB: Always reverts
-    function claimWithdrawalsBatch(
-        uint256[] calldata /*_requests*/
-    ) external pure {
+    function claimWithdrawalsBatch(uint256[] calldata /*_requests*/) external pure {
         revert Unimplemented();
     }
 
@@ -276,14 +274,14 @@ contract WithdrawalQueue {
 
             recipient = request.recipient;
             requestBlockNumber = request.requestBlockNumber;
-            
+
             shares = request.cumulativeShares;
             etherToWithdraw = request.cumulativeEther;
             if (_requestId > 0) {
                 shares -= queue[_requestId - 1].cumulativeShares;
                 etherToWithdraw -= queue[_requestId - 1].cumulativeEther;
             }
-            
+
             isFinalized = _requestId < finalizedRequestsCounter;
             isClaimed = request.claimed;
         }
@@ -323,19 +321,17 @@ contract WithdrawalQueue {
         return _enqueue(_amountOfStETH, _recipient);
     }
 
-    function _requestWithdrawalWstETH(uint256 _amountOfWstETH, address _recipient)
-        internal
-        returns (uint256 requestId)
-    {
+    function _requestWithdrawalWstETH(
+        uint256 _amountOfWstETH,
+        address _recipient
+    ) internal returns (uint256 requestId) {
         IERC20(WSTETH).safeTransferFrom(msg.sender, address(this), _amountOfWstETH);
         uint256 amountOfStETH = IWstETH(WSTETH).unwrap(_amountOfWstETH);
 
         return _enqueue(amountOfStETH, _recipient);
     }
 
-    function _checkWithdrawalRequestInput(uint256 _amountOfStETH, address _recipient)
-        internal view returns (address)
-    {
+    function _checkWithdrawalRequestInput(uint256 _amountOfStETH, address _recipient) internal view returns (address) {
         if (_amountOfStETH < MIN_STETH_WITHDRAWAL_AMOUNT) {
             revert RequestAmountTooSmall(_amountOfStETH);
         }
@@ -381,15 +377,12 @@ contract WithdrawalQueue {
 
     /**
      * @notice Finalize requests in [`finalizedRequestsCounter`,`_lastIdToFinalize`] range with `_shareRate`
-     * @dev ether to finalize all the requests should be calculated using `calculateFinalizationParams` and sent with 
+     * @dev ether to finalize all the requests should be calculated using `calculateFinalizationParams` and sent with
      * this call as msg.value
      * @param _lastIdToFinalize request index in the queue that will be last finalized request in a batch
      * @param _shareRate share/ETH rate for the protocol with 1e27 decimals
      */
-    function finalize(
-        uint256 _lastIdToFinalize,
-        uint256 _shareRate
-    ) external payable onlyOwner {
+    function finalize(uint256 _lastIdToFinalize, uint256 _shareRate) external payable onlyOwner {
         if (_lastIdToFinalize < finalizedRequestsCounter || _lastIdToFinalize >= queue.length) {
             revert InvalidFinalizationId();
         }
@@ -403,11 +396,11 @@ contract WithdrawalQueue {
     }
 
     /**
-     * @notice Mark `_requestId` request as claimed and transfer reserved ether to recipient
+     * @notice Claim `_requestId` request and transfer reserved ether to recipient
      * @param _requestId request id to claim
      * @param _rateIndexHint rate index found offchain that should be used for claiming
      */
-    function claim(uint256 _requestId, uint256 _rateIndexHint) external {
+    function claimWithdrawal(uint256 _requestId, uint256 _rateIndexHint) external {
         // request must be finalized
         if (_requestId >= finalizedRequestsCounter) revert RequestNotFinalized();
 
@@ -425,11 +418,7 @@ contract WithdrawalQueue {
             shareRate = finalizationRates[findRateHint(_requestId)];
         }
 
-        (uint128 etherToBeClaimed, ) = _calculateDiscountedBatch(
-            _requestId,
-            _requestId,
-            shareRate.value
-        );
+        (uint128 etherToBeClaimed, ) = _calculateDiscountedBatch(_requestId, _requestId, shareRate.value);
 
         lockedEtherAmount -= etherToBeClaimed;
 
@@ -450,17 +439,13 @@ contract WithdrawalQueue {
         uint256 _lastIdToFinalize,
         uint256 _shareRate
     ) external view returns (uint256 etherToLock, uint256 sharesToBurn) {
-        return _calculateDiscountedBatch(
-            finalizedRequestsCounter,
-            _lastIdToFinalize,
-            _shareRate
-        );
+        return _calculateDiscountedBatch(finalizedRequestsCounter, _lastIdToFinalize, _shareRate);
     }
 
     /**
      * @notice view function to find a proper ShareRate offchain to pass it to `claim()` later
      * @param _requestId request id to be claimed later
-     * 
+     *
      * @return hint rate index for this request
      */
     function findRateHint(uint256 _requestId) public view returns (uint256 hint) {
@@ -479,7 +464,7 @@ contract WithdrawalQueue {
         uint256 _firstId,
         uint256 _lastId,
         uint256 _shareRate
-    ) internal view returns (uint128 eth, uint128 shares) { 
+    ) internal view returns (uint128 eth, uint128 shares) {
         eth = queue[_lastId].cumulativeEther;
         shares = queue[_lastId].cumulativeShares;
 
@@ -491,7 +476,7 @@ contract WithdrawalQueue {
         eth = _min(eth, _toUint128((shares * _shareRate) / 1e9));
     }
 
-    /// @dev checks if provided request included in the rate hint boundaries 
+    /// @dev checks if provided request included in the rate hint boundaries
     function _isRateHintValid(uint256 _requestId, uint256 _hint) internal view returns (bool isInRange) {
         uint256 rightBoundary = finalizationRates[_hint].index;
 

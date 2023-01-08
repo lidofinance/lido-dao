@@ -505,7 +505,7 @@ contract Lido is StETH, AragonApp {
 
         uint256 preBeaconBalance = BEACON_BALANCE_POSITION.getStorageUint256();
 
-        uint256 appearedValidators = _processAccounting(
+        uint256 appearedValidators = _processBeaconStateUpdate(
             _beaconValidators,
             _beaconBalance
         );
@@ -674,29 +674,29 @@ contract Lido is StETH, AragonApp {
     }
 
     /**
-     * @dev updates beacon state and calculate rewards base (OUTDATED)
+     * @dev updates beacon state
      */
-    function _processAccounting(
+    function _processBeaconStateUpdate(
         // CL values
-        uint256 _beaconValidators,
-        uint256 _beaconBalance
+        uint256 _postBeaconValidators,
+        uint256 _postBeaconBalance
     ) internal returns (uint256 appearedValidators) {
         uint256 depositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256();
-        require(_beaconValidators <= depositedValidators, "REPORTED_MORE_DEPOSITED");
+        require(_postBeaconValidators <= depositedValidators, "REPORTED_MORE_DEPOSITED");
 
-        uint256 beaconValidators = BEACON_VALIDATORS_POSITION.getStorageUint256();
-        require(_beaconValidators >= beaconValidators, "REPORTED_LESS_VALIDATORS");
+        uint256 preBeaconValidators = BEACON_VALIDATORS_POSITION.getStorageUint256();
+        require(_postBeaconValidators >= preBeaconValidators, "REPORTED_LESS_VALIDATORS");
 
         // Save the current beacon balance and validators to
         // calculate rewards on the next push
 
-        BEACON_BALANCE_POSITION.setStorageUint256(_beaconBalance);
+        BEACON_BALANCE_POSITION.setStorageUint256(_postBeaconBalance);
 
-        if (_beaconValidators > beaconValidators) {
-            BEACON_VALIDATORS_POSITION.setStorageUint256(_beaconValidators);
+        if (_postBeaconValidators > preBeaconValidators) {
+            BEACON_VALIDATORS_POSITION.setStorageUint256(_postBeaconValidators);
         }
 
-        return _beaconValidators.sub(beaconValidators);
+        return _postBeaconValidators.sub(preBeaconValidators);
     }
 
     /**
@@ -722,8 +722,10 @@ contract Lido is StETH, AragonApp {
         uint256 lockedToWithdrawalQueue = 0;
 
         if (withdrawalVaultAddress != address(0)) {
+            // we pull all the accounted ether from WithdrawalVault
             IWithdrawalVault(withdrawalVaultAddress).withdrawWithdrawals(_withdrawalVaultBalance);
 
+            // And pass some ether to WithdrawalQueue to fulfill requests
             lockedToWithdrawalQueue = _processWithdrawals(
                 _requestIdToFinalizeUpTo,
                 _finalizationShareRates

@@ -19,7 +19,6 @@ const VaultMock = artifacts.require('VaultMock.sol')
 const AragonVaultMock = artifacts.require('AragonVaultMock.sol')
 const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
 const WithdrawalVault = artifacts.require('WithdrawalVault.sol')
-const WstETH = artifacts.require('WstETH.sol')
 
 const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
 const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
@@ -30,7 +29,7 @@ const UNLIMITED = 1000000000
 const TOTAL_BASIS_POINTS = 10000
 
 contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) => {
-  let appBase, nodeOperatorsRegistryBase, app, oracle, depositContract, operators, wsteth, treasury
+  let appBase, nodeOperatorsRegistryBase, app, oracle, depositContract, operators, treasury
   let treasuryAddr
   let dao, acl
   let elRewardsVault
@@ -52,9 +51,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
     let proxyAddress = await newApp(dao, 'lido', appBase.address, appManager)
     app = await LidoMock.at(proxyAddress)
-
-    // deploy WstETH contract
-    wsteth = await WstETH.new(app.address)
 
     // NodeOperatorsRegistry
     proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)
