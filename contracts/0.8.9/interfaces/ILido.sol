@@ -232,8 +232,7 @@ interface ILido {
         // decision
         uint256 _withdrawalsReserveAmount,
         uint256[] calldata _requestIdToFinalizeUpTo,
-        uint256[] calldata _finalizationPooledEtherAmount,
-        uint256[] calldata _finalizationSharesAmount
+        uint256[] calldata _finalizationShareRates
     ) external;
 
     // User functions
@@ -249,25 +248,6 @@ interface ILido {
 
     // The `amount` of ether was sent to the deposit_contract.deposit function
     event Unbuffered(uint256 amount);
-
-    // Withdrawal functions
-    function requestWithdrawal(uint256 _amountOfStETH) external returns (uint256 requestId);
-
-    function claimWithdrawal(uint256 _requestId, uint256 _priceIndexHint) external;
-
-    function withdrawalRequestStatus(uint _requestId) external view returns (
-        address recipient,
-        uint256 requestBlockNumber,
-        uint256 etherToWithdraw,
-        bool isFinalized,
-        bool isClaimed
-    );
-
-    function setBufferWithdrawalsReserve(uint256 _withdrawalsReserveAmount) external;
-
-    event WithdrawalRequested(address indexed receiver, uint256 amountOfStETH, uint256 amountOfShares, uint256 requestId);
-
-    event WithdrawalClaimed(uint256 indexed requestId, address indexed receiver, address initiator);
 
     event WithdrawalRestaked(uint256 amount);
 

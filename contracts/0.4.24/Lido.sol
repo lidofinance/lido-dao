@@ -435,8 +435,15 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
-    * @notice Updates accounting stats, collects EL rewards and distributes all rewards if beacon balance increased
+    * @notice Updates accounting stats, collects EL rewards and distributes collected rewards if beacon balance increased
     * @dev periodically called by the Oracle contract
+    * @param _beaconValidators number of Lido validators on Consensus Layer
+    * @param _beaconBalance sum of all Lido validators' balances 
+    * @param _wcBufferedEther withdrawal vaultt balance on report block
+    * @param _withdrawalsReserveAmount amount of ether in deposit buffer that should be reserved for future withdrawals
+    * @param _requestIdToFinalizeUpTo batches of withdrawal requests that should be finalized, 
+    * encoded as the right boundaries in the range (`lastFinalizedId`, `_requestIdToFinalizeUpTo`]
+    * @param _finalizationShareRates share rates that should be used for finalization of the each batch
     */
     function handleOracleReport(
         // CL values
@@ -447,8 +454,7 @@ contract Lido is ILido, StETH, AragonApp {
         // decision
         uint256 _withdrawalsReserveAmount,
         uint256[] _requestIdToFinalizeUpTo,
-        uint256[] _finalizationPooledEtherAmount,
-        uint256[] _finalizationSharesAmount
+        uint256[] _finalizationShareRates
     ) external {
         require(msg.sender == getOracle(), "APP_AUTH_FAILED");
         _whenNotStopped();
@@ -465,8 +471,7 @@ contract Lido is ILido, StETH, AragonApp {
 
         uint256 executionLayerRewards = _processFundsMoving(
             _requestIdToFinalizeUpTo,
-            _finalizationPooledEtherAmount,
-            _finalizationSharesAmount,
+            _finalizationShareRates,
             _wcBufferedEther
         );
 
@@ -651,8 +656,7 @@ contract Lido is ILido, StETH, AragonApp {
      */
     function _processFundsMoving(
         uint256[] _requestIdToFinalizeUpTo,
-        uint256[] _finalizationPooledEtherAmount,
-        uint256[] _finalizationSharesAmount,
+        uint256[] _finalizationShareRates,
         uint256 _wcBufferedEther
     ) internal returns (uint256) {
         uint256 executionLayerRewards = 0;
@@ -669,8 +673,7 @@ contract Lido is ILido, StETH, AragonApp {
         // depending on withdrawal queue status
         int256 movedToWithdrawalBuffer = _processWithdrawals(
             _requestIdToFinalizeUpTo,
-            _finalizationPooledEtherAmount,
-            _finalizationSharesAmount,
+            _finalizationShareRates,
             _wcBufferedEther);
 
         // Update deposit buffer state
@@ -718,8 +721,7 @@ contract Lido is ILido, StETH, AragonApp {
      */
     function _processWithdrawals(
         uint256[] _requestIdToFinalizeUpTo,
-        uint256[] _finalizationPooledEtherAmount,
-        uint256[] _finalizationSharesAmount,
+        uint256[] _finalizationShareRates,
         uint256 _wcBufferedEther
     ) internal returns (int256 withdrawalFundsMovement) {
         address withdrawalAddress = _getWithdrawalVaultAddress();
@@ -728,7 +730,7 @@ contract Lido is ILido, StETH, AragonApp {
             return 0;
         }
 
-        IWithdrawalQueue withdrawal = IWithdrawalQueue(withdrawalAddress);
+        IFinalizableWithdrawableQueue withdrawal = IFinalizableWithdrawableQueue(withdrawalAddress);
 
         uint256 lockedEtherAccumulator = 0;
 
@@ -736,13 +738,11 @@ contract Lido is ILido, StETH, AragonApp {
             uint256 lastIdToFinalize = _requestIdToFinalizeUpTo[i];
             require(lastIdToFinalize >= withdrawal.finalizedRequestsCounter(), "BAD_FINALIZATION_PARAMS");
 
-            uint256 totalPooledEther = _finalizationPooledEtherAmount[i];
-            uint256 totalShares = _finalizationSharesAmount[i];
+            uint256 shareRate = _finalizationShareRates[i];
 
             (uint256 etherToLock, uint256 sharesToBurn) = withdrawal.calculateFinalizationParams(
                 lastIdToFinalize,
-                totalPooledEther,
-                totalShares
+                shareRate
             );
 
             _burnShares(withdrawalAddress, sharesToBurn);
@@ -756,8 +756,7 @@ contract Lido is ILido, StETH, AragonApp {
             withdrawal.finalize.value(transferToWithdrawalBuffer)(
                 lastIdToFinalize,
                 etherToLock,
-                totalPooledEther,
-                totalShares
+                shareRate
             );
         }
         // There can be unaccounted ether in withdrawal buffer that should not be used for finalization

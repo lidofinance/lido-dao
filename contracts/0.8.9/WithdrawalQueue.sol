@@ -77,13 +77,13 @@ contract WithdrawalQueue {
     }
 
     /**
-     * @notice structure representing share price for some range in request queue
-     * @dev price is stored as a pair of value that should be divided later
+     * @notice structure representing share rate for a range (`prevIndex`, `index`] in request queue
      */
-    struct Price {
-        uint128 totalPooledEther;
-        uint128 totalShares;
-        /// @notice last index in queue this price is actual for
+    struct ShareRate {
+        /// @notice share/ETH rate with 1e27 precision for the protocol
+        uint256 value;
+        /// @notice last index in queue this rate is actual for
+        /// @dev the rate is valid for (`prevIndex`, `index`] where `prevIndex` is previous element `index` value or 0
         uint256 index;
     }
 
@@ -133,7 +133,7 @@ contract WithdrawalQueue {
     ///! SLOT 1: uint256 finalizedRequestsCounter
     ///! SLOT 2: WithdrawalRequest[] queue
     ///! SLOT 3: mapping(address => uint256[]) requestsByRecipient
-    ///! SLOT 4 Price[] finalizationPrices
+    ///! SLOT 4 ShareRate[] finalizationRates
 
     /**
      * @notice amount of ETH on this contract balance that is locked for withdrawal and waiting for claim
@@ -150,8 +150,8 @@ contract WithdrawalQueue {
     /// @notice withdrawal requests mapped to the recipients
     mapping(address => uint256[]) public requestsByRecipient;
 
-    /// @notice finalization price history registry
-    Price[] public finalizationPrices;
+    /// @notice finalization rates history
+    ShareRate[] public finalizationRates;
 
     /**
      * @param _owner address that will be able to invoke `restake` and `finalize` methods.
@@ -351,6 +351,7 @@ contract WithdrawalQueue {
 
     function _enqueue(uint256 _amountOfStETH, address _recipient) internal returns (uint256 requestId) {
         requestId = queue.length;
+
         uint256 shares = IStETH(STETH).getSharesByPooledEth(_amountOfStETH);
 
         uint256 cumulativeShares = shares;
@@ -379,94 +380,95 @@ contract WithdrawalQueue {
     }
 
     /**
-     * @notice Finalize the batch of requests started at `finalizedRequestsCounter` and ended at `_lastIdToFinalize` using the given price
+     * @notice Finalize requests in [`finalizedRequestsCounter`,`_lastIdToFinalize`] range with `_shareRate`
      * @param _lastIdToFinalize request index in the queue that will be last finalized request in a batch
-     * @param _etherToLock ether that should be locked for these requests
-     * @param _totalPooledEther ether price component that will be used for this request batch finalization
-     * @param _totalShares shares price component that will be used for this request batch finalization
+     * @param _etherToLock ether amount that should be locked for these requests
+     * @param _shareRate share/ETH rate for the protocol with 1e27 decimals
      */
     function finalize(
         uint256 _lastIdToFinalize,
         uint256 _etherToLock,
-        uint256 _totalPooledEther,
-        uint256 _totalShares
+        uint256 _shareRate
     ) external payable onlyOwner {
         if (_lastIdToFinalize < finalizedRequestsCounter || _lastIdToFinalize >= queue.length) {
             revert InvalidFinalizationId();
         }
         if (lockedEtherAmount + _etherToLock > address(this).balance) revert NotEnoughEther();
 
-        _updatePriceHistory(_toUint128(_totalPooledEther), _toUint128(_totalShares), _lastIdToFinalize);
+        _updateRateHistory(_shareRate, _lastIdToFinalize);
 
+        // todo: ? should we check passed `_etherToLock`
         lockedEtherAmount += _toUint128(_etherToLock);
+
         finalizedRequestsCounter = _lastIdToFinalize + 1;
     }
 
     /**
      * @notice Mark `_requestId` request as claimed and transfer reserved ether to recipient
      * @param _requestId request id to claim
-     * @param _priceIndexHint price index found offchain that should be used for claiming
+     * @param _rateIndexHint rate index found offchain that should be used for claiming
      */
-    function claim(uint256 _requestId, uint256 _priceIndexHint) external returns (address recipient) {
+    function claim(uint256 _requestId, uint256 _rateIndexHint) external {
         // request must be finalized
-        if (finalizedRequestsCounter <= _requestId) revert RequestNotFinalized();
+        if (_requestId >= finalizedRequestsCounter) revert RequestNotFinalized();
 
         WithdrawalRequest storage request = queue[_requestId];
-        if (request.claimed) revert RequestAlreadyClaimed();
 
+        if (request.claimed) revert RequestAlreadyClaimed();
         request.claimed = true;
 
-        Price memory price;
+        ShareRate memory shareRate;
 
-        if (_isPriceHintValid(_requestId, _priceIndexHint)) {
-            price = finalizationPrices[_priceIndexHint];
+        if (_isRateHintValid(_requestId, _rateIndexHint)) {
+            shareRate = finalizationRates[_rateIndexHint];
         } else {
-            // unbounded loop branch. Can fail
-            price = finalizationPrices[findPriceHint(_requestId)];
+            // unbounded loop branch. Can fail with OOG
+            shareRate = finalizationRates[findRateHint(_requestId)];
         }
 
-        (uint128 etherToTransfer, ) = _calculateDiscountedBatch(
+        (uint128 etherToBeClaimed, ) = _calculateDiscountedBatch(
             _requestId,
             _requestId,
-            price.totalPooledEther,
-            price.totalShares
+            shareRate.value
         );
-        lockedEtherAmount -= etherToTransfer;
 
-        _sendValue(request.recipient, etherToTransfer);
+        lockedEtherAmount -= etherToBeClaimed;
 
-        emit WithdrawalClaimed(_requestId, recipient, msg.sender);
+        _sendValue(request.recipient, etherToBeClaimed);
 
-        return request.recipient;
+        emit WithdrawalClaimed(_requestId, request.recipient, msg.sender);
     }
 
     /**
      * @notice calculates the params to fulfill the next batch of requests in queue
      * @param _lastIdToFinalize last id in the queue to finalize upon
-     * @param _totalPooledEther share price component to finalize requests
-     * @param _totalShares share price component to finalize requests
+     * @param _shareRate share rate to finalize requests with
      *
      * @return etherToLock amount of eth required to finalize the batch
      * @return sharesToBurn amount of shares that should be burned on finalization
      */
     function calculateFinalizationParams(
         uint256 _lastIdToFinalize,
-        uint256 _totalPooledEther,
-        uint256 _totalShares
+        uint256 _shareRate
     ) external view returns (uint256 etherToLock, uint256 sharesToBurn) {
         return _calculateDiscountedBatch(
             finalizedRequestsCounter,
             _lastIdToFinalize,
-            _toUint128(_totalPooledEther),
-            _toUint128(_totalShares)
+            _shareRate
         );
     }
 
-    function findPriceHint(uint256 _requestId) public view returns (uint256 hint) {
-        if (_requestId >= finalizedRequestsCounter) revert PriceNotFound();
+    /**
+     * @notice view function to find a proper ShareRate offchain to pass it to `claim()` later
+     * @param _requestId request id to be claimed later
+     * 
+     * @return hint rate index for this request
+     */
+    function findRateHint(uint256 _requestId) public view returns (uint256 hint) {
+        if (_requestId >= finalizedRequestsCounter) revert RateNotFound();
 
-        for (uint256 i = finalizationPrices.length; i > 0; i--) {
-            if (_isPriceHintValid(_requestId, i - 1)) {
+        for (uint256 i = finalizationRates.length; i > 0; i--) {
+            if (_isRateHintValid(_requestId, i - 1)) {
                 return i - 1;
             }
         }
@@ -479,44 +481,46 @@ contract WithdrawalQueue {
         IRestakingSink(OWNER).receiveRestake{value: _amount}();
     }
 
+    /// @dev calculates `eth` and `shares` for the batch of requests in (`_firstId`, `_lastId`] range using `_shareRate`
     function _calculateDiscountedBatch(
-        uint256 firstId,
-        uint256 lastId,
-        uint128 _totalPooledEther,
-        uint128 _totalShares
-    ) internal view returns (uint128 eth, uint128 shares) {
-        eth = queue[lastId].cumulativeEther;
-        shares = queue[lastId].cumulativeShares;
+        uint256 _firstId,
+        uint256 _lastId,
+        uint256 _shareRate
+    ) internal view returns (uint128 eth, uint128 shares) { 
+        eth = queue[_lastId].cumulativeEther;
+        shares = queue[_lastId].cumulativeShares;
 
-        if (firstId > 0) {
-            eth -= queue[firstId - 1].cumulativeEther;
-            shares -= queue[firstId - 1].cumulativeShares;
+        if (_firstId > 0) {
+            eth -= queue[_firstId - 1].cumulativeEther;
+            shares -= queue[_firstId - 1].cumulativeShares;
         }
 
-        eth = _min(eth, (shares * _totalPooledEther) / _totalShares);
+        eth = _min(eth, _toUint128((shares * _shareRate) / 1e9));
     }
 
-    function _isPriceHintValid(uint256 _requestId, uint256 hint) internal view returns (bool isInRange) {
-        uint256 hintLastId = finalizationPrices[hint].index;
+    /// @dev checks if provided request included in the rate hint boundaries 
+    function _isRateHintValid(uint256 _requestId, uint256 _hint) internal view returns (bool isInRange) {
+        uint256 rightBoundary = finalizationRates[_hint].index;
 
-        isInRange = _requestId <= hintLastId;
-        if (hint > 0) {
-            uint256 previousId = finalizationPrices[hint - 1].index;
+        isInRange = _requestId <= rightBoundary;
+        if (_hint > 0) {
+            uint256 leftBoundary = finalizationRates[_hint - 1].index;
 
-            isInRange = isInRange && previousId < _requestId;
+            isInRange = isInRange && leftBoundary < _requestId;
         }
     }
 
-    function _updatePriceHistory(uint128 _totalPooledEther, uint128 _totalShares, uint256 index) internal {
-        if (finalizationPrices.length == 0) {
-            finalizationPrices.push(Price(_totalPooledEther, _totalShares, index));
+    /// @dev add a new entry to share rates history or modify the last one if rate does not change
+    function _updateRateHistory(uint256 _shareRate, uint256 _index) internal {
+        if (finalizationRates.length == 0) {
+            finalizationRates.push(ShareRate(_shareRate, _index));
         } else {
-            Price storage lastPrice = finalizationPrices[finalizationPrices.length - 1];
+            ShareRate storage lastRate = finalizationRates[finalizationRates.length - 1];
 
-            if (_totalPooledEther / _totalShares == lastPrice.totalPooledEther / lastPrice.totalShares) {
-                lastPrice.index = index;
+            if (_shareRate == lastRate.value) {
+                lastRate.index = _index;
             } else {
-                finalizationPrices.push(Price(_totalPooledEther, _totalShares, index));
+                finalizationRates.push(ShareRate(_shareRate, _index));
             }
         }
     }
@@ -620,7 +624,7 @@ contract WithdrawalQueue {
     error NotEnoughEther();
     error RequestNotFinalized();
     error RequestAlreadyClaimed();
-    error PriceNotFound();
+    error RateNotFound();
     error NotOwner();
     error CantSendValueRecipientMayHaveReverted();
     error SafeCastValueDoesNotFit96Bits();

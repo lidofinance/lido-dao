@@ -209,11 +209,10 @@ interface ILido {
         // decision
         uint256 _withdrawalsReserveAmount,
         uint256[] _requestIdToFinalizeUpTo,
-        uint256[] _finalizationPooledEtherAmount,
-        uint256[] _finalizationSharesAmount
+        uint256[] _finalizationShareRates
     ) external;
 
-    function getBufferWithdrawalsReserve() public returns (uint256);
+    function getBufferWithdrawalsReserve() external returns (uint256);
 
     // User functions
 

@@ -21,8 +21,7 @@ const ZERO_MEMBER_REPORT = {
   wcBufferedEther: 0,
   newDepositBufferWithdrawalsReserve: 0,
   requestIdToFinalizeUpTo: [],
-  finalizationPooledEtherAmount: [],
-  finalizationSharesAmount: []
+  finalizationShareRates: []
 }
 
 const DEFAULT_ADMIN_ROLE = '0x0000000000000000000000000000000000000000000000000000000000000000'

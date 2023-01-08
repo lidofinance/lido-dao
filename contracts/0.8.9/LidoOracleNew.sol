@@ -40,8 +40,7 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         address caller,
         uint256 wcBufferedEther,
         uint256[] requestIdToFinalizeUpTo,
-        uint256[] finalizationPooledEtherAmount,
-        uint256[] finalizationSharesAmount
+        uint256[] _finalizationShareRates
     );
 
     event ConsensusReached(
@@ -50,8 +49,7 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         uint256 beaconValidators,
         uint256 wcBufferedEther,
         uint256[] requestIdToFinalizeUpTo,
-        uint256[] finalizationPooledEtherAmount,
-        uint256[] finalizationSharesAmount
+        uint256[] _finalizationShareRates
     );
 
     event PostTotalShares(
@@ -78,8 +76,7 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         // decision
         uint256 newDepositBufferWithdrawalsReserve;
         uint256[] requestIdToFinalizeUpTo;
-        uint256[] finalizationPooledEtherAmount;
-        uint256[] finalizationSharesAmount;
+        uint256[] finalizationShareRates;
     }
 
     /// ACL
@@ -345,8 +342,7 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
             msg.sender,
             _report.wcBufferedEther,
             _report.requestIdToFinalizeUpTo,
-            _report.finalizationPooledEtherAmount,
-            _report.finalizationSharesAmount
+            _report.finalizationShareRates
         );
     }
 
@@ -453,8 +449,7 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
             _report.beaconValidators,
             _report.wcBufferedEther,
             _report.requestIdToFinalizeUpTo,
-            _report.finalizationPooledEtherAmount,
-            _report.finalizationSharesAmount
+            _report.finalizationShareRates
         );
 
         // now this frame is completed, so the expected epoch should be advanced to the first epoch
@@ -481,8 +476,7 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
             _report.wcBufferedEther,
             _report.newDepositBufferWithdrawalsReserve,
             _report.requestIdToFinalizeUpTo,
-            _report.finalizationPooledEtherAmount,
-            _report.finalizationSharesAmount
+            _report.finalizationShareRates
         );
         uint256 postTotalPooledEther = lido.totalSupply();
 
