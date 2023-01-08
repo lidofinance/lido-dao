@@ -44,7 +44,14 @@ contract('LidoExecutionLayerRewardsVault', ([appManager, voting, deployer, anoth
     elRewardsVault = await LidoELRewardsVault.new(lido.address, treasury.address, { from: deployer })
 
     // Initialize the app's proxy.
-    await lido.initialize(depositContract.address, oracle.address, operators.address, treasury.address, elRewardsVault.address, ZERO_ADDRESS)
+    await lido.initialize(
+      depositContract.address,
+      oracle.address,
+      operators.address,
+      treasury.address,
+      elRewardsVault.address,
+      ZERO_ADDRESS
+    )
     treasuryAddr = await lido.getTreasury()
 
     await oracle.setPool(lido.address)

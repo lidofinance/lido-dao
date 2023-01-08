@@ -47,7 +47,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
   })
 
   beforeEach('deploy dao and app', async () => {
-    ; ({ dao, acl } = await newDao(appManager))
+    ;({ dao, acl } = await newDao(appManager))
 
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
     let proxyAddress = await newApp(dao, 'lido', appBase.address, appManager)
@@ -520,15 +520,15 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
 
     isStakingPaused = await app.isStakingPaused()
     assert.equal(isStakingPaused, expectedIsStakingPaused)
-      ; ({
-        isStakingPaused,
-        isStakingLimitSet,
-        currentStakeLimit,
-        maxStakeLimit,
-        maxStakeLimitGrowthBlocks,
-        prevStakeLimit,
-        prevStakeBlockNumber
-      } = await app.getStakeLimitFullInfo())
+    ;({
+      isStakingPaused,
+      isStakingLimitSet,
+      currentStakeLimit,
+      maxStakeLimit,
+      maxStakeLimitGrowthBlocks,
+      prevStakeLimit,
+      prevStakeBlockNumber
+    } = await app.getStakeLimitFullInfo())
 
     assertBn(currentStakeLimit, expectedCurrentStakeLimit)
     assertBn(maxStakeLimit, expectedMaxStakeLimit)
@@ -1387,7 +1387,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor]) 
       // TODO: restore the test when function `setProtocolContracts` is restored
       await assertRevert(
         app.setProtocolContracts(await app.getOracle(), ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, { from: voting }),
-        'TREASURY_ZERO_ADDRESS')
+        'TREASURY_ZERO_ADDRESS'
+      )
     })
   })
 
