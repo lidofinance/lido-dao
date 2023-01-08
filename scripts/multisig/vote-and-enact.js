@@ -5,9 +5,11 @@ const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = re
 
 const { APP_NAMES } = require('./constants')
 
-
 const REQUIRED_NET_STATE = ['daoInitialSettings', `app:${APP_NAMES.ARAGON_VOTING}`, 'owner']
 
+const maxWaitVoteTimeSecs = 60
+
+const timer = ms => new Promise( res => setTimeout(res, ms))
 
 async function voteAndEnact({ web3, artifacts }) {
   const netId = await web3.eth.net.getId()
@@ -34,10 +36,25 @@ async function voteAndEnact({ web3, artifacts }) {
 
   const ldoMegaHolder = state['owner']
   log.splitter()
-  log(`Executing vote ${voteId}`)
-  await voting.vote(voteId, true, false, { from: ldoMegaHolder })
-  await voting.executeVote(voteId, { from: ldoMegaHolder })
 
+  log(`Voting for vote ${voteId}...`)
+  await voting.vote(voteId, true, false, { from: ldoMegaHolder })
+
+  const voteTimeSecs = +(await voting.voteTime()).toString()
+  if (voteTimeSecs <= maxWaitVoteTimeSecs) {
+    console.log(`Wait ${voteTimeSecs} seconds till the voting is over`)
+    await timer(voteTimeSecs * 1000)
+
+    // NB: the vote won't execute till the voting time passes
+    //     for a local hardhat node we can trick the time with
+    //     `await ethers.provider.send("evm_mine", [newTimestampInSeconds]);`
+    //     but cannot for a geth node
+    await voting.executeVote(voteId, { from: ldoMegaHolder })
+    log(`Vote ${voteId} executed!`)
+  } else {
+    console.log(`The voting time ${voteTimeSecs} secs for vote ${voteId} is too long to wait in this script.
+You'd need to enact it manually`)
+  }
 }
 
 module.exports = runOrWrapScript(voteAndEnact, module)

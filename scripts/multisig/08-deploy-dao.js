@@ -58,7 +58,8 @@ async function deployDAO({ web3, artifacts }) {
   const votingSettings = [
     daoInitialSettings.voting.minSupportRequired,
     daoInitialSettings.voting.minAcceptanceQuorum,
-    daoInitialSettings.voting.voteDuration
+    daoInitialSettings.voting.voteDuration,
+    daoInitialSettings.voting.objectionPhaseDuration,
   ]
 
   const beaconSpec = [

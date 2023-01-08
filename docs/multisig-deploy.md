@@ -312,7 +312,7 @@ Run the following:
 yarn hardhat --network mainnet run ./scripts/multisig/07-create-app-repos.js
 ...
 ====================
-Saving data for createRepos transaction to tx-04-create-app-repos.json (projected gas usage is 7160587)
+Saving data for createRepos transaction to tx-07-create-app-repos.json (projected gas usage is 7160587)
 ====================
 ```
 

@@ -53,7 +53,11 @@ Steps for deploy:
 * [ ] deploy Lido Apps repo contracts (via Lido Template)
 * [ ] deploy Lido DAO contract (via Lido Template)
 * [ ] issue DAO tokens (via Lido Template)
+* [ ] deploy LidoExecutionLayerRewardsVault
 * [ ] finalize DAO setup (via Lido Template)
+* [ ] deploy CompositePostRebaseBeaconReceiver
+* [ ] deploy SelfOwnedStETHBurner
+* [ ] do Aragon voting to attach CompositePostRebaseBeaconReceiver and SelfOwnedStETHBurner to the protocol
 * [ ] make final deployed DAO check via script
 * [ ] open and check Lido DAO web interface (via Aragon client)
 
@@ -69,7 +73,7 @@ So, one-click local deploy from scratch command is:
 
 ## Aragon dependency issue
 
-`ipfs-http-client` version has been strictly pinned to `43.0.0` in [this commit](https://github.com/lidofinance/lido-dao/commit/38bf0232fbc59ec6d69d27e170e3e75cfbe1ba11) because `/scripts/multisig/04-publish-app-frontends.js` used to crash at 
+`ipfs-http-client` version has been strictly pinned to `43.0.0` in [this commit](https://github.com/lidofinance/lido-dao/commit/38bf0232fbc59ec6d69d27e170e3e75cfbe1ba11) because `/scripts/multisig/04-publish-app-frontends.js` used to crash at
 ```javascript
 const rootCid = await uploadDirToIpfs({ dirPath: distPath, ipfsApiUrl: ipfsAPI })
 ```
@@ -77,3 +81,6 @@ const rootCid = await uploadDirToIpfs({ dirPath: distPath, ipfsApiUrl: ipfsAPI }
 It appeared that `@aragon/buidler-aragon@npm:^0.2.9` uses `ipfs-http-client`.
 
 `ipfs-http-client` has a brittle API. Neither `41.0.0` nor `50.0.0` versions of it will work with `@aragon/buidler-aragon@npm:^0.2.9`.
+
+## Default Aragon voting time
+To attach SelfOwnedStETHBurner to the protocol a DAO voting is needed. To do it reasonably fast on the protocol deployment the default Aragon voting duration time (see `deployed-local-defaults.json`) is set to seconds. Draft script for changing Aragon voting time is at `scripts/multisig/32-change-voting-time.js`.
