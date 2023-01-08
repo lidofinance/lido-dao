@@ -114,7 +114,7 @@ contract WithdrawalQueue {
      * @notice minimal possible sum that is possible to withdraw
      */
     uint256 public constant MIN_STETH_WITHDRAWAL_AMOUNT = 100 wei;
-    
+
     /**
      * @notice maximum possible sum that is possible to withdraw by a single request
      * Prevents accumulating too much funds per single request fulfillment in the future.
@@ -300,7 +300,150 @@ contract WithdrawalQueue {
         return !REQUESTS_PLACEMENT_RESUMED_POSITION.getStorageBool();
     }
 
-    /// @notice internal initialization helper
+    /**
+     * @notice Finalize requests in [`finalizedRequestsCounter`,`_lastIdToFinalize`] range with `_shareRate`
+     * @dev ether to finalize all the requests should be calculated using `calculateFinalizationParams` and sent with
+     * this call as msg.value
+     * @param _lastIdToFinalize request index in the queue that will be last finalized request in a batch
+     * @param _shareRate share/ETH rate for the protocol with 1e27 decimals
+     */
+    function finalize(uint256 _lastIdToFinalize, uint256 _shareRate) external payable onlyOwner {
+        if (_lastIdToFinalize < finalizedRequestsCounter || _lastIdToFinalize >= queue.length) {
+            revert InvalidFinalizationId();
+        }
+        if (lockedEtherAmount + msg.value > address(this).balance) revert NotEnoughEther();
+
+        _updateRateHistory(_shareRate, _lastIdToFinalize);
+
+        lockedEtherAmount += _toUint128(msg.value);
+
+        finalizedRequestsCounter = _lastIdToFinalize + 1;
+    }
+
+    /**
+     * @notice calculates the params to fulfill the next batch of requests in queue
+     * @param _lastIdToFinalize last id in the queue to finalize upon
+     * @param _shareRate share rate to finalize requests with
+     *
+     * @return etherToLock amount of eth required to finalize the batch
+     * @return sharesToBurn amount of shares that should be burned on finalization
+     */
+    function calculateFinalizationParams(
+        uint256 _lastIdToFinalize,
+        uint256 _shareRate
+    ) external view returns (uint256 etherToLock, uint256 sharesToBurn) {
+        return _calculateDiscountedBatch(finalizedRequestsCounter, _lastIdToFinalize, _shareRate);
+    }
+
+    /**
+     * @notice Transfer the right to claim withdrawal to another `_newRecipient`
+     * @dev should be called by the old recepient
+     * @param _requestId id of the request subject to change
+     * @param _newRecipient new recipient address for withdrawal
+     */
+    function changeRecipient(uint256 _requestId, address _newRecipient) external {
+        WithdrawalRequest storage request = queue[_requestId];
+
+        if (request.recipient != msg.sender) revert RecipientExpected(request.recipient, msg.sender);
+        if (request.claimed) revert RequestAlreadyClaimed();
+
+        request.recipient = payable(_newRecipient);
+    }
+
+    /**
+     * @notice Claim `_requestId` request and transfer reserved ether to recipient
+     * @param _requestId request id to claim
+     * @param _rateIndexHint rate index found offchain that should be used for claiming
+     */
+    function claimWithdrawal(uint256 _requestId, uint256 _rateIndexHint) external {
+        // request must be finalized
+        if (_requestId >= finalizedRequestsCounter) revert RequestNotFinalized();
+
+        WithdrawalRequest storage request = queue[_requestId];
+
+        if (request.claimed) revert RequestAlreadyClaimed();
+        request.claimed = true;
+
+        ShareRate memory shareRate;
+
+        if (_isRateHintValid(_requestId, _rateIndexHint)) {
+            shareRate = finalizationRates[_rateIndexHint];
+        } else {
+            // unbounded loop branch. Can fail with OOG
+            shareRate = finalizationRates[findRateHint(_requestId)];
+        }
+
+        (uint128 etherToBeClaimed, ) = _calculateDiscountedBatch(_requestId, _requestId, shareRate.value);
+
+        lockedEtherAmount -= etherToBeClaimed;
+
+        _sendValue(request.recipient, etherToBeClaimed);
+
+        emit WithdrawalClaimed(_requestId, request.recipient, msg.sender);
+    }
+
+    /**
+     * @notice view function to find a proper ShareRate offchain to pass it to `claim()` later
+     * @param _requestId request id to be claimed later
+     *
+     * @return hint rate index for this request
+     */
+    function findRateHint(uint256 _requestId) public view returns (uint256 hint) {
+        if (_requestId >= finalizedRequestsCounter) revert RateNotFound();
+
+        for (uint256 i = finalizationRates.length; i > 0; i--) {
+            if (_isRateHintValid(_requestId, i - 1)) {
+                return i - 1;
+            }
+        }
+        assert(false);
+    }
+
+    /// @dev calculates `eth` and `shares` for the batch of requests in (`_firstId`, `_lastId`] range using `_shareRate`
+    function _calculateDiscountedBatch(
+        uint256 _firstId,
+        uint256 _lastId,
+        uint256 _shareRate
+    ) internal view returns (uint128 eth, uint128 shares) {
+        eth = queue[_lastId].cumulativeEther;
+        shares = queue[_lastId].cumulativeShares;
+
+        if (_firstId > 0) {
+            eth -= queue[_firstId - 1].cumulativeEther;
+            shares -= queue[_firstId - 1].cumulativeShares;
+        }
+
+        eth = _min(eth, _toUint128((shares * _shareRate) / 1e9));
+    }
+
+    /// @dev checks if provided request included in the rate hint boundaries
+    function _isRateHintValid(uint256 _requestId, uint256 _hint) internal view returns (bool isInRange) {
+        uint256 rightBoundary = finalizationRates[_hint].index;
+
+        isInRange = _requestId <= rightBoundary;
+        if (_hint > 0) {
+            uint256 leftBoundary = finalizationRates[_hint - 1].index;
+
+            isInRange = isInRange && leftBoundary < _requestId;
+        }
+    }
+
+    /// @dev add a new entry to share rates history or modify the last one if rate does not change
+    function _updateRateHistory(uint256 _shareRate, uint256 _index) internal {
+        if (finalizationRates.length == 0) {
+            finalizationRates.push(ShareRate(_shareRate, _index));
+        } else {
+            ShareRate storage lastRate = finalizationRates[finalizationRates.length - 1];
+
+            if (_shareRate == lastRate.value) {
+                lastRate.index = _index;
+            } else {
+                finalizationRates.push(ShareRate(_shareRate, _index));
+            }
+        }
+    }
+
+        /// @notice internal initialization helper
     /// @dev doesn't check provided address intentionally
     function _initialize(address _lidoDAOAgent) internal {
         if (CONTRACT_VERSION_POSITION.getStorageUint256() != 0) {
@@ -371,134 +514,6 @@ contract WithdrawalQueue {
         requestsByRecipient[msg.sender].push(requestId);
 
         emit WithdrawalRequested(requestId, msg.sender, _recipient, _amountOfStETH, shares);
-    }
-
-    /**
-     * @notice Finalize requests in [`finalizedRequestsCounter`,`_lastIdToFinalize`] range with `_shareRate`
-     * @dev ether to finalize all the requests should be calculated using `calculateFinalizationParams` and sent with
-     * this call as msg.value
-     * @param _lastIdToFinalize request index in the queue that will be last finalized request in a batch
-     * @param _shareRate share/ETH rate for the protocol with 1e27 decimals
-     */
-    function finalize(uint256 _lastIdToFinalize, uint256 _shareRate) external payable onlyOwner {
-        if (_lastIdToFinalize < finalizedRequestsCounter || _lastIdToFinalize >= queue.length) {
-            revert InvalidFinalizationId();
-        }
-        if (lockedEtherAmount + msg.value > address(this).balance) revert NotEnoughEther();
-
-        _updateRateHistory(_shareRate, _lastIdToFinalize);
-
-        lockedEtherAmount += _toUint128(msg.value);
-
-        finalizedRequestsCounter = _lastIdToFinalize + 1;
-    }
-
-    /**
-     * @notice Claim `_requestId` request and transfer reserved ether to recipient
-     * @param _requestId request id to claim
-     * @param _rateIndexHint rate index found offchain that should be used for claiming
-     */
-    function claimWithdrawal(uint256 _requestId, uint256 _rateIndexHint) external {
-        // request must be finalized
-        if (_requestId >= finalizedRequestsCounter) revert RequestNotFinalized();
-
-        WithdrawalRequest storage request = queue[_requestId];
-
-        if (request.claimed) revert RequestAlreadyClaimed();
-        request.claimed = true;
-
-        ShareRate memory shareRate;
-
-        if (_isRateHintValid(_requestId, _rateIndexHint)) {
-            shareRate = finalizationRates[_rateIndexHint];
-        } else {
-            // unbounded loop branch. Can fail with OOG
-            shareRate = finalizationRates[findRateHint(_requestId)];
-        }
-
-        (uint128 etherToBeClaimed, ) = _calculateDiscountedBatch(_requestId, _requestId, shareRate.value);
-
-        lockedEtherAmount -= etherToBeClaimed;
-
-        _sendValue(request.recipient, etherToBeClaimed);
-
-        emit WithdrawalClaimed(_requestId, request.recipient, msg.sender);
-    }
-
-    /**
-     * @notice calculates the params to fulfill the next batch of requests in queue
-     * @param _lastIdToFinalize last id in the queue to finalize upon
-     * @param _shareRate share rate to finalize requests with
-     *
-     * @return etherToLock amount of eth required to finalize the batch
-     * @return sharesToBurn amount of shares that should be burned on finalization
-     */
-    function calculateFinalizationParams(
-        uint256 _lastIdToFinalize,
-        uint256 _shareRate
-    ) external view returns (uint256 etherToLock, uint256 sharesToBurn) {
-        return _calculateDiscountedBatch(finalizedRequestsCounter, _lastIdToFinalize, _shareRate);
-    }
-
-    /**
-     * @notice view function to find a proper ShareRate offchain to pass it to `claim()` later
-     * @param _requestId request id to be claimed later
-     *
-     * @return hint rate index for this request
-     */
-    function findRateHint(uint256 _requestId) public view returns (uint256 hint) {
-        if (_requestId >= finalizedRequestsCounter) revert RateNotFound();
-
-        for (uint256 i = finalizationRates.length; i > 0; i--) {
-            if (_isRateHintValid(_requestId, i - 1)) {
-                return i - 1;
-            }
-        }
-        assert(false);
-    }
-
-    /// @dev calculates `eth` and `shares` for the batch of requests in (`_firstId`, `_lastId`] range using `_shareRate`
-    function _calculateDiscountedBatch(
-        uint256 _firstId,
-        uint256 _lastId,
-        uint256 _shareRate
-    ) internal view returns (uint128 eth, uint128 shares) {
-        eth = queue[_lastId].cumulativeEther;
-        shares = queue[_lastId].cumulativeShares;
-
-        if (_firstId > 0) {
-            eth -= queue[_firstId - 1].cumulativeEther;
-            shares -= queue[_firstId - 1].cumulativeShares;
-        }
-
-        eth = _min(eth, _toUint128((shares * _shareRate) / 1e9));
-    }
-
-    /// @dev checks if provided request included in the rate hint boundaries
-    function _isRateHintValid(uint256 _requestId, uint256 _hint) internal view returns (bool isInRange) {
-        uint256 rightBoundary = finalizationRates[_hint].index;
-
-        isInRange = _requestId <= rightBoundary;
-        if (_hint > 0) {
-            uint256 leftBoundary = finalizationRates[_hint - 1].index;
-
-            isInRange = isInRange && leftBoundary < _requestId;
-        }
-    }
-
-    /// @dev add a new entry to share rates history or modify the last one if rate does not change
-    function _updateRateHistory(uint256 _shareRate, uint256 _index) internal {
-        if (finalizationRates.length == 0) {
-            finalizationRates.push(ShareRate(_shareRate, _index));
-        } else {
-            ShareRate storage lastRate = finalizationRates[finalizationRates.length - 1];
-
-            if (_shareRate == lastRate.value) {
-                lastRate.index = _index;
-            } else {
-                finalizationRates.push(ShareRate(_shareRate, _index));
-            }
-        }
     }
 
     function _min(uint128 a, uint128 b) internal pure returns (uint128) {
