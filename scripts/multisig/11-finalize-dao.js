@@ -17,7 +17,9 @@ const REQUIRED_NET_STATE = [
   'daoAragonId',
   'daoInitialSettings',
   'vestingParams',
-  `app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`
+  `app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`,
+  'executionLayerRewardsVaultAddress',
+  'executionLayerRewardsParams'
 ]
 
 async function finalizeDAO({ web3, artifacts }) {
@@ -72,7 +74,9 @@ async function finalizeDAO({ web3, artifacts }) {
       percentToBP(fee.treasuryPercent),
       percentToBP(fee.insurancePercent),
       percentToBP(fee.nodeOperatorsPercent),
-      state.vestingParams.unvestedTokensAmount
+      state.vestingParams.unvestedTokensAmount,
+      state.executionLayerRewardsVaultAddress,
+      state.executionLayerRewardsParams.withdrawalLimit
     ],
     from: state.multisigAddress
   })

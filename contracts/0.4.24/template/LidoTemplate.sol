@@ -17,10 +17,11 @@ import "@aragon/os/contracts/common/IsContract.sol";
 
 import "@aragon/apps-agent/contracts/Agent.sol";
 import "@aragon/apps-vault/contracts/Vault.sol";
-import "@aragon/apps-voting/contracts/Voting.sol";
+
+import "@aragon/apps-lido/apps/voting/contracts/Voting.sol";
+
 import "@aragon/apps-finance/contracts/Finance.sol";
-import "@aragon/apps-token-manager/contracts/TokenManager.sol";
-import "@aragon/apps-shared-minime/contracts/MiniMeToken.sol";
+import "@aragon/apps-lido/apps/token-manager/contracts/TokenManager.sol";
 
 import "@aragon/id/contracts/IFIFSResolvingRegistrar.sol";
 
@@ -31,7 +32,7 @@ import "../interfaces/IDepositContract.sol";
 
 
 contract LidoTemplate is IsContract {
-    // Configurarion errors
+    // Configuration errors
     string constant private ERROR_ZERO_OWNER = "TMPL_ZERO_OWNER";
     string constant private ERROR_ENS_NOT_CONTRACT = "TMPL_ENS_NOT_CONTRACT";
     string constant private ERROR_DAO_FACTORY_NOT_CONTRACT = "TMPL_DAO_FAC_NOT_CONTRACT";
@@ -298,7 +299,7 @@ contract LidoTemplate is IsContract {
     function newDAO(
         string _tokenName,
         string _tokenSymbol,
-        uint64[3] _votingSettings,
+        uint64[4] _votingSettings,
         IDepositContract _beaconDepositContract,
         uint32[4] _beaconSpec
     )
@@ -334,9 +335,10 @@ contract LidoTemplate is IsContract {
             state.lidoRegistryEnsNode,
             state.dao,
             state.token,
-            _votingSettings[0],
-            _votingSettings[1],
-            _votingSettings[2]
+            _votingSettings[0], // support
+            _votingSettings[1], // acceptance
+            _votingSettings[2], // duration
+            _votingSettings[3]  // objectionPhaseDuration
         );
 
         bytes memory noInit = new bytes(0);
@@ -380,7 +382,7 @@ contract LidoTemplate is IsContract {
         );
 
         // used for issuing vested tokens in the next step
-        _createTokenManagerPersissionsForTemplate(state.acl, state.tokenManager);
+        _createTokenManagerPermissionsForTemplate(state.acl, state.tokenManager);
 
         emit TmplDAOAndTokenDeployed(address(state.dao), address(state.token));
 
@@ -426,7 +428,9 @@ contract LidoTemplate is IsContract {
         uint16 _treasuryFeeBP,
         uint16 _insuranceFeeBP,
         uint16 _operatorsFeeBP,
-        uint256 _unvestedTokensAmount
+        uint256 _unvestedTokensAmount,
+        address _elRewardsVault,
+        uint16 _elRewardsWithdrawalLimit
     )
         onlyOwner
         external
@@ -443,6 +447,17 @@ contract LidoTemplate is IsContract {
         state.lido.setFee(_totalFeeBP);
         state.lido.setFeeDistribution(_treasuryFeeBP, _insuranceFeeBP, _operatorsFeeBP);
         _removePermissionFromTemplate(state.acl, state.lido, LIDO_MANAGE_FEE);
+
+        // Set Execution Layer rewards parameters on Lido contract
+        bytes32 LIDO_SET_EL_REWARDS_VAULT = state.lido.SET_EL_REWARDS_VAULT_ROLE();
+        _createPermissionForTemplate(state.acl, state.lido, LIDO_SET_EL_REWARDS_VAULT);
+        state.lido.setELRewardsVault(_elRewardsVault);
+        _removePermissionFromTemplate(state.acl, state.lido, LIDO_SET_EL_REWARDS_VAULT);
+
+        bytes32 LIDO_SET_EL_REWARDS_WITHDRAWAL_LIMIT = state.lido.SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE();
+        _createPermissionForTemplate(state.acl, state.lido, LIDO_SET_EL_REWARDS_WITHDRAWAL_LIMIT);
+        state.lido.setELRewardsWithdrawalLimit(_elRewardsWithdrawalLimit);
+        _removePermissionFromTemplate(state.acl, state.lido, LIDO_SET_EL_REWARDS_WITHDRAWAL_LIMIT);
 
         if (_unvestedTokensAmount != 0) {
             // using issue + assign to avoid setting the additional MINT_ROLE for the template
@@ -517,12 +532,13 @@ contract LidoTemplate is IsContract {
         MiniMeToken _token,
         uint64 _support,
         uint64 _acceptance,
-        uint64 _duration
+        uint64 _duration,
+        uint64 _objectionPhaseDuration
     )
         private returns (Voting)
     {
         bytes32 appId = _getAppId(ARAGON_VOTING_APP_NAME, _lidoRegistryEnsNode);
-        bytes memory initializeData = abi.encodeWithSelector(Voting(0).initialize.selector, _token, _support, _acceptance, _duration);
+        bytes memory initializeData = abi.encodeWithSelector(Voting(0).initialize.selector, _token, _support, _acceptance, _duration, _objectionPhaseDuration);
         return Voting(_installNonDefaultApp(_dao, appId, initializeData));
     }
 
@@ -553,7 +569,7 @@ contract LidoTemplate is IsContract {
         uint64 _vestingCliff,
         uint64 _vestingEnd,
         bool _vestingRevokable,
-        uint256 _extectedFinalTotalSupply
+        uint256 _expectedFinalTotalSupply
     )
         private
         returns (uint256 totalAmount)
@@ -566,7 +582,7 @@ contract LidoTemplate is IsContract {
         }
 
         _tokenManager.issue(totalAmount);
-        require(_token.totalSupply() == _extectedFinalTotalSupply, ERROR_UNEXPECTED_TOTAL_SUPPLY);
+        require(_token.totalSupply() == _expectedFinalTotalSupply, ERROR_UNEXPECTED_TOTAL_SUPPLY);
 
         for (i = 0; i < _holders.length; ++i) {
             _tokenManager.assignVested(_holders[i], _amounts[i], _vestingStart, _vestingCliff, _vestingEnd, _vestingRevokable);
@@ -665,7 +681,7 @@ contract LidoTemplate is IsContract {
         }
     }
 
-    function _createTokenManagerPersissionsForTemplate(ACL _acl, TokenManager _tokenManager) internal {
+    function _createTokenManagerPermissionsForTemplate(ACL _acl, TokenManager _tokenManager) internal {
         _createPermissionForTemplate(_acl, _tokenManager, _tokenManager.ISSUE_ROLE());
         _createPermissionForTemplate(_acl, _tokenManager, _tokenManager.ASSIGN_ROLE());
     }

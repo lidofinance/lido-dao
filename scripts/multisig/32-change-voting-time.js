@@ -18,8 +18,7 @@ const REQUIRED_NET_STATE = [
   'ensAddress',
   'daoAddress',
   `app:${APP_NAMES.ARAGON_VOTING}`,
-  `app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`,
-  'executionLayerRewardsParams'
+  `app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`
 ]
 
 async function createVoting({ web3, artifacts }) {
@@ -29,12 +28,7 @@ async function createVoting({ web3, artifacts }) {
   log(`Network ID:`, yl(netId))
 
   const state = readNetworkState(network.name, netId)
-  assertRequiredNetworkState(state, REQUIRED_NET_STATE.concat([
-    'app:lido',
-    'app:node-operators-registry',
-    'app:oracle',
-    'executionLayerRewardsVaultAddress'
-  ]))
+  assertRequiredNetworkState(state, REQUIRED_NET_STATE)
 
   logSplitter()
 
@@ -45,35 +39,74 @@ async function createVoting({ web3, artifacts }) {
   const kernel = await artifacts.require('Kernel').at(state.daoAddress)
   const aclAddress = await kernel.acl()
   const acl = await artifacts.require('ACL').at(aclAddress)
-  const lidoAddress = state[`app:lido`].proxyAddress
-  const lido = await artifacts.require('Lido').at(lidoAddress)
-  const elRewardsVaultAddress = state.executionLayerRewardsVaultAddress
 
-  // About the value see https://github.com/lidofinance/lido-dao/issues/405
-  const elRewardsWithdrawalLimitPoints = state.executionLayerRewardsParams.withdrawalLimit
+  const objectionPhaseTimeSec = 5
+  const voteTimeSec = 60
 
   log(`Using ENS:`, yl(state.ensAddress))
   log(`TokenManager address:`, yl(tokenManagerAddress))
   log(`Voting address:`, yl(votingAddress))
   log(`Kernel:`, yl(kernel.address))
   log(`ACL:`, yl(acl.address))
-  log(`ELRewardsWithdrawalLimitPoints: `, yl(elRewardsWithdrawalLimitPoints))
 
   log.splitter()
 
-  const setELRewardsVaultCallData = {
-    to: lidoAddress,
-    calldata: await lido.contract.methods.setELRewardsVault(elRewardsVaultAddress).encodeABI()
+  const voteRoleId = '0x068ca51c9d69625c7add396c98ca4f3b27d894c3b973051ad3ee53017d7094ea' // keccak256(UNSAFELY_MODIFY_VOTE_TIME_ROLE)
+
+
+  // This script grants and revokes the role so checking it is absent at the beginning
+  // assert.isFalse(await acl.hasPermission(votingAddress, votingAddress, voteRoleId))
+
+  const createChangeVoteTimePermission = {
+    to: acl.address,
+    calldata: await acl.contract.methods
+      .createPermission(
+        votingAddress,
+        votingAddress,
+        voteRoleId,
+        votingAddress
+      )
+      .encodeABI()
   }
 
-  const setELRewardsWithdrawalLimitCallData = {
-    to: lidoAddress,
-    calldata: await lido.contract.methods.setELRewardsWithdrawalLimit(elRewardsWithdrawalLimitPoints).encodeABI()
+  const grantChangeVoteTimePermission = {
+    to: acl.address,
+    calldata: await acl.contract.methods
+      .grantPermission(
+        votingAddress,
+        votingAddress,
+        voteRoleId
+      )
+      .encodeABI()
+  }
+
+  const revokeChangeVoteTimePermission = {
+    to: acl.address,
+    calldata: await acl.contract.methods
+      .revokePermission(
+        votingAddress,
+        votingAddress,
+        voteRoleId
+      )
+      .encodeABI()
+  }
+
+  const changeObjectionTime = {
+    to: votingAddress,
+    calldata: await voting.contract.methods.unsafelyChangeObjectionPhaseTime(objectionPhaseTimeSec).encodeABI()
+  }
+
+  const changeVoteTime = {
+    to: votingAddress,
+    calldata: await voting.contract.methods.unsafelyChangeVoteTime(voteTimeSec).encodeABI()
   }
 
   const encodedUpgradeCallData = encodeCallScript([
-    setELRewardsVaultCallData,
-    setELRewardsWithdrawalLimitCallData,
+    createChangeVoteTimePermission,
+    grantChangeVoteTimePermission,
+    changeObjectionTime,
+    changeVoteTime,
+    revokeChangeVoteTimePermission,
   ])
 
   log(`encodedUpgradeCallData:`, yl(encodedUpgradeCallData))
@@ -84,10 +117,12 @@ async function createVoting({ web3, artifacts }) {
     }
   ])
 
-  const txName = `tx-28-vote-el-rewards.json`
+  const txName = `tx-32-change-voting-time.json`
   const votingDesc =
-`1) Set deployed LidoExecutionLayerRewardsVault to Lido contract
-2) Set Execution Layer rewards withdrawal limit to ${elRewardsWithdrawalLimitPoints} basis points`
+`1) Grant permission UNSAFELY_MODIFY_VOTE_TIME_ROLE to Voting
+2) Set objection phase time to ${objectionPhaseTimeSec} seconds
+3) Set total vote time to ${voteTimeSec} seconds
+4) Revoke permission UNSAFELY_MODIFY_VOTE_TIME_ROLE from Voting`
 
   await saveCallTxData(votingDesc, tokenManager, 'forward', txName, {
     arguments: [votingCallData],
@@ -100,9 +135,5 @@ async function createVoting({ web3, artifacts }) {
   log.splitter()
 }
 
-
-function fromE18ToString(x) {
-  return `${(x / 1e18).toFixed(3)} ETH (${x} wei)`
-}
 
 module.exports = runOrWrapScript(createVoting, module)
