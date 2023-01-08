@@ -7,9 +7,27 @@ import { AccessControlEnumerable } from "@openzeppelin/contracts-v4.4/access/Acc
 
 import "./CommitteeQuorum.sol";
 import "./ReportEpochChecker.sol";
-import "./interfaces/ILido.sol";
 import "./interfaces/IBeaconReportReceiver.sol";
 
+interface INodeOperatorsRegistry {
+    /**
+      * @notice Report `_stoppedIncrement` more stopped validators of the node operator #`_id`
+      */
+    function reportStoppedValidators(uint256 _id, uint64 _stoppedIncrement) external;
+}
+
+/**
+ * @notice Part of Lido interface required for `LidoOracleNew` to work
+ */
+interface ILido {
+    function getOperators() external returns (INodeOperatorsRegistry);
+    
+    function totalSupply() external returns (uint256);
+
+    function getTotalShares() external returns (uint256);
+
+    function handleOracleReport(uint256, uint256, uint256, uint256, uint256[] calldata, uint256[] calldata) external;
+}
 
 /**
  * @title Implementation of an ETH 2.0 -> ETH oracle

@@ -10,8 +10,9 @@ import "@aragon/os/contracts/lib/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/introspection/ERC165Checker.sol";
 
 import "../interfaces/IBeaconReportReceiver.sol";
-import "../interfaces/ILido.sol";
 import "../interfaces/ILidoOracle.sol";
+
+import "../Lido.sol";
 
 import "./ReportUtils.sol";
 
@@ -133,8 +134,8 @@ contract LidoOracle is ILidoOracle, AragonApp {
     /**
      * @notice Return the Lido contract address
      */
-    function getLido() public view returns (ILido) {
-        return ILido(LIDO_POSITION.getStorageAddress());
+    function getLido() public view returns (Lido) {
+        return Lido(LIDO_POSITION.getStorageAddress());
     }
 
     /**
@@ -633,7 +634,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
         _clearReportingAndAdvanceTo(_epochId + _beaconSpec.epochsPerFrame);
 
         // report to the Lido and collect stats
-        ILido lido = getLido();
+        Lido lido = getLido();
         uint256 prevTotalPooledEther = lido.totalSupply();
         lido.handleOracleReport(
             _beaconValidators,

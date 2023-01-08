@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2022 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 
 // SPDX-License-Identifier: GPL-3.0
 
@@ -9,7 +9,6 @@ import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
-import "./interfaces/ILido.sol";
 import "./interfaces/INodeOperatorsRegistry.sol";
 import "./interfaces/IDepositContract.sol";
 import "./interfaces/ILidoExecutionLayerRewardsVault.sol";
@@ -32,7 +31,7 @@ import "./lib/StakeLimitUtils.sol";
 * rewards, no Transfer events are generated: doing so would require emitting an event
 * for each token holder and thus running an unbounded loop.
 */
-contract Lido is ILido, StETH, AragonApp {
+contract Lido is StETH, AragonApp {
     using SafeMath for uint256;
     using UnstructuredStorage for bytes32;
     using StakeLimitUnstructuredStorage for bytes32;
@@ -97,6 +96,39 @@ contract Lido is ILido, StETH, AragonApp {
      /// @dev Amount of eth in deposit buffer to reserve for withdrawals
     bytes32 internal constant WITHDRAWAL_RESERVE_POSITION = keccak256("lido.Lido.withdrawalReserve");
 
+    event Stopped();
+    event Resumed();
+
+    event StakingPaused();
+    event StakingResumed();
+    event StakingLimitSet(uint256 maxStakeLimit, uint256 stakeLimitIncreasePerBlock);
+    event StakingLimitRemoved();
+
+    event ProtocolContactsSet(
+        address oracle, 
+        address treasury, 
+        address _executionLayerRewardsVault, 
+        address _withdrawalQueue
+    );
+
+    event FeeSet(uint16 feeBasisPoints);
+    event FeeDistributionSet(uint16 treasuryFeeBasisPoints, uint16 operatorsFeeBasisPoints);
+
+    // The amount of ETH withdrawn from LidoExecutionLayerRewardsVault contract to Lido contract
+    event ELRewardsReceived(uint256 amount);
+
+    // Percent in basis points of total pooled ether allowed to withdraw from LidoExecutionLayerRewardsVault per LidoOracle report
+    event ELRewardsWithdrawalLimitSet(uint256 limitPoints);
+
+    event WithdrawalCredentialsSet(bytes32 withdrawalCredentials);
+
+    // Records a deposit made by a user
+    event Submitted(address indexed sender, uint256 amount, address referral);
+
+    // The `amount` of ether was sent to the deposit_contract.deposit function
+    event Unbuffered(uint256 amount);
+
+    event WithdrawalsReceived(uint256 amount);
 
     /**
     * @dev As AragonApp, Lido contract must be initialized with following variables:
@@ -439,7 +471,7 @@ contract Lido is ILido, StETH, AragonApp {
         emit ELRewardsWithdrawalLimitSet(_limitPoints);
     }
 
-    function getBufferWithdrawalsReserve() public returns (uint256) {
+    function getBufferWithdrawalsReserve() public view returns (uint256) {
         return WITHDRAWAL_RESERVE_POSITION.getStorageUint256();
     }
 
