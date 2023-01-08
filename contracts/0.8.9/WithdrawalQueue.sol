@@ -165,17 +165,6 @@ contract WithdrawalQueue {
     ) {
         if (_owner == address(0)) revert ZeroOwner();
 
-        // test stETH interface sanity
-        if (
-            (IStETH(_stETH).getPooledEthByShares(1 ether) == 0) || (IStETH(_stETH).getSharesByPooledEth(1 ether) == 0)
-        ) {
-            revert StETHInvalidAddress(_stETH);
-        }
-        // test wstETH interface sanity
-        if (IWstETH(_wstETH).getStETHByWstETH(1 ether) != IStETH(_stETH).getPooledEthByShares(1 ether)) {
-            revert WstETHInvalidAddress(_wstETH);
-        }
-
         // init immutables
         STETH = _stETH;
         WSTETH = _wstETH;
