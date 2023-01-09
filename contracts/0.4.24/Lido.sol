@@ -530,26 +530,24 @@ contract Lido is StETH, AragonApp {
     * @param _token Token to be sent to recovery vault
     */
     function transferToVault(address _token) external {
-        // FIXME: restore the function: it was removed temporarily to reduce contract size below size limit
+        require(allowRecoverability(_token), "RECOVER_DISALLOWED");
+        address vault = getRecoveryVault();
+        require(vault != address(0), "RECOVER_VAULT_ZERO");
 
-        // require(allowRecoverability(_token), "RECOVER_DISALLOWED");
-        // address vault = getRecoveryVault();
-        // require(vault != address(0), "RECOVER_VAULT_ZERO");
+        uint256 balance;
+        if (_token == ETH) {
+            balance = _getUnaccountedEther();
+            // Transfer replaced by call to prevent transfer gas amount issue
+            // solhint-disable-next-line
+            require(vault.call.value(balance)(), "RECOVER_TRANSFER_FAILED");
+        } else {
+            ERC20 token = ERC20(_token);
+            balance = token.staticBalanceOf(this);
+            // safeTransfer comes from overridden default implementation
+            require(token.safeTransfer(vault, balance), "RECOVER_TOKEN_TRANSFER_FAILED");
+        }
 
-        // uint256 balance;
-        // if (_token == ETH) {
-        //     balance = _getUnaccountedEther();
-        //     // Transfer replaced by call to prevent transfer gas amount issue
-        //     // solhint-disable-next-line
-        //     require(vault.call.value(balance)(), "RECOVER_TRANSFER_FAILED");
-        // } else {
-        //     ERC20 token = ERC20(_token);
-        //     balance = token.staticBalanceOf(this);
-        //     // safeTransfer comes from overridden default implementation
-        //     require(token.safeTransfer(vault, balance), "RECOVER_TOKEN_TRANSFER_FAILED");
-        // }
-
-        // emit RecoverToVault(vault, _token, balance);
+        emit RecoverToVault(vault, _token, balance);
     }
 
     /**
