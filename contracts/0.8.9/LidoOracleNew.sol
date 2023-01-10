@@ -100,6 +100,7 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         uint256 withdrawalsReserveAmount;
         uint256[] requestIdToFinalizeUpTo;
         uint256[] finalizationShareRates;
+        bool bunkerModeFlag; // todo: to be utilized later
     }
 
     /// ACL
