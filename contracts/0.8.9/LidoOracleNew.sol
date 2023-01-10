@@ -463,13 +463,15 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         _clearReporting();
 
         ILido lido = getLido();
-        INodeOperatorsRegistry registry = lido.getOperators();
-        for (uint256 i = 0; i < _report.exitedValidatorsNumbers.length; ++i) {
-            registry.reportStoppedValidators(
-                _report.nodeOperatorsWithExitedValidators[i],
-                _report.exitedValidatorsNumbers[i]
-            );
-        }
+
+        // TODO: connect to staking router
+        // INodeOperatorsRegistry registry = lido.getOperators();
+        // for (uint256 i = 0; i < _report.exitedValidatorsNumbers.length; ++i) {
+        //     registry.reportStoppedValidators(
+        //         _report.nodeOperatorsWithExitedValidators[i],
+        //         _report.exitedValidatorsNumbers[i]
+        //     );
+        // }
 
         // report to the Lido and collect stats
         uint256 prevTotalPooledEther = lido.totalSupply();

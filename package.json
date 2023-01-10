@@ -104,7 +104,7 @@
     "ipfs-http-client": "^55.0.0",
     "lerna": "^3.22.1",
     "lint-staged": ">=10",
-    "prettier": "^2.1.2",
+    "prettier": "^2.8.1",
     "prettier-plugin-solidity": "^1.1.0",
     "solhint": "^3.3.7",
     "solhint-plugin-lido": "^0.0.4",
@@ -127,7 +127,7 @@
     "node-gyp": "^8.4.1",
     "openzeppelin-solidity": "2.0.0",
     "patch-package": "^6.4.7",
-    "solidity-bytes-utils": "0.0.6",
+    "solhint-plugin-lido": "^0.0.4",
     "yargs": "^16.0.3"
   }
 }

@@ -8,7 +8,7 @@ const { deployDaoAndPool } = require('./helpers/deploy')
 const { signDepositData } = require('../0.8.9/helpers/signatures')
 const { waitBlocks } = require('../helpers/blockchain')
 
-const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
+const INodeOperatorsRegistry = artifacts.require('INodeOperatorsRegistry')
 
 contract('Lido: penalties, slashing, operator stops', (addresses) => {
   const [
@@ -26,11 +26,12 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     depositor
   ] = addresses
 
-  let pool, nodeOperatorRegistry, token
+  let pool, nodeOperatorsRegistry, token
   let oracleMock, depositContractMock
-  let treasuryAddr, insuranceAddr, guardians
+  let treasuryAddr, guardians
   let depositSecurityModule, depositRoot
   let withdrawalCredentials
+  let stakingRouter
 
   before('DAO, node operators registry, token, pool and deposit security module are deployed and initialized', async () => {
     const deployed = await deployDaoAndPool(appManager, voting, depositor)
@@ -43,15 +44,18 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     await pool.resumeProtocolAndStaking()
 
     // contracts/nos/NodeOperatorsRegistry.sol
-    nodeOperatorRegistry = deployed.nodeOperatorRegistry
+    nodeOperatorsRegistry = deployed.nodeOperatorsRegistry
 
     // mocks
     oracleMock = deployed.oracleMock
     depositContractMock = deployed.depositContractMock
 
+    stakingRouter = deployed.stakingRouter
+
+    // stakingRouter.addModule('NOR', nodeOperatorsRegistry.address, 10000, 500, 500, { from: voting })
+
     // addresses
     treasuryAddr = deployed.treasuryAddr
-    insuranceAddr = deployed.insuranceAddr
     depositSecurityModule = deployed.depositSecurityModule
     guardians = deployed.guardians
 
@@ -110,26 +114,19 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
   }
 
   it('voting adds the first node operator', async () => {
-    // How many validators can this node operator register
-    const validatorsLimit = 0
-
-    const txn = await nodeOperatorRegistry.addNodeOperator(nodeOperator1.name, nodeOperator1.address, { from: voting })
-    await assertRevert(
-      nodeOperatorRegistry.setNodeOperatorStakingLimit(0, validatorsLimit, { from: voting }),
-      'NODE_OPERATOR_STAKING_LIMIT_IS_THE_SAME'
-    )
+    const txn = await nodeOperatorsRegistry.addNodeOperator(nodeOperator1.name, nodeOperator1.address, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
-    nodeOperator1.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
+    nodeOperator1.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: INodeOperatorsRegistry._json.abi })
     assertBn(nodeOperator1.id, 0, 'operator id')
 
-    assertBn(await nodeOperatorRegistry.getNodeOperatorsCount(), 1, 'total node operators')
+    assertBn(await nodeOperatorsRegistry.getNodeOperatorsCount(), 1, 'total node operators')
   })
 
   it('the first node operator registers one validator', async () => {
     const numKeys = 1
 
-    await nodeOperatorRegistry.addSigningKeysOperatorBH(
+    await nodeOperatorsRegistry.addSigningKeysOperatorBH(
       nodeOperator1.id,
       numKeys,
       nodeOperator1.validators[0].key,
@@ -141,12 +138,12 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
 
     // The key was added
 
-    const totalKeys = await nodeOperatorRegistry.getTotalSigningKeyCount(nodeOperator1.id, { from: nobody })
+    const totalKeys = await nodeOperatorsRegistry.getTotalSigningKeyCount(nodeOperator1.id, { from: nobody })
     assertBn(totalKeys, 1, 'total signing keys')
 
     // The key was not used yet
 
-    const unusedKeys = await nodeOperatorRegistry.getUnusedSigningKeyCount(nodeOperator1.id, { from: nobody })
+    const unusedKeys = await nodeOperatorsRegistry.getUnusedSigningKeyCount(nodeOperator1.id, { from: nobody })
     assertBn(unusedKeys, 1, 'unused signing keys')
   })
 
@@ -156,26 +153,31 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     awaitingUser1Balance = new BN(depositAmount)
     await web3.eth.sendTransaction({ to: pool.address, from: user1, value: depositAmount })
     const block = await web3.eth.getBlock('latest')
-    const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+    const keysOpIndex = await nodeOperatorsRegistry.getKeysOpIndex()
+
     const signatures = [
       signDepositData(
         await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
-        depositRoot,
-        keysOpIndex,
         block.number,
         block.hash,
+        depositRoot,
+        1,
+        keysOpIndex,
+        '0x00',
         guardians.privateKeys[guardians.addresses[0]]
       ),
       signDepositData(
         await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
-        depositRoot,
-        keysOpIndex,
         block.number,
         block.hash,
+        depositRoot,
+        1,
+        keysOpIndex,
+        '0x00',
         guardians.privateKeys[guardians.addresses[1]]
       )
     ]
-    await depositSecurityModule.depositBufferedEther(depositRoot, keysOpIndex, block.number, block.hash, signatures)
+    await depositSecurityModule.depositBufferedEther(block.number, block.hash, depositRoot, 1, keysOpIndex, '0x00', signatures)
 
     // No Ether was deposited yet to the validator contract
 
@@ -200,43 +202,47 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
   })
 
   it(`voting grants first operator right to have one validator`, async () => {
-    await nodeOperatorRegistry.setNodeOperatorStakingLimit(nodeOperator1.id, 1, { from: voting })
+    await nodeOperatorsRegistry.setNodeOperatorStakingLimit(nodeOperator1.id, 1, { from: voting })
   })
 
   it(`new validator doesn't get buffered ether even if there's 32 ETH deposit in the pool`, async () => {
     assertBn(await pool.getBufferedEther(), ETH(32), `all ether is buffered until there's a validator to deposit it`)
     assertBn(await pool.getTotalPooledEther(), ETH(32), 'total pooled ether')
-    assertBn(await nodeOperatorRegistry.getUnusedSigningKeyCount(0), 1, 'one key available for the first validator')
+    assertBn(await nodeOperatorsRegistry.getUnusedSigningKeyCount(0), 1, 'one key available for the first validator')
   })
 
   it(`pushes pooled eth to the available validator`, async () => {
     const block = await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
-    const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+    const keysOpIndex = await nodeOperatorsRegistry.getKeysOpIndex()
     const signatures = [
       signDepositData(
         await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
-        depositRoot,
-        keysOpIndex,
         block.number,
         block.hash,
+        depositRoot,
+        1,
+        keysOpIndex,
+        '0x00',
         guardians.privateKeys[guardians.addresses[0]]
       ),
       signDepositData(
         await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
-        depositRoot,
-        keysOpIndex,
         block.number,
         block.hash,
+        depositRoot,
+        1,
+        keysOpIndex,
+        '0x00',
         guardians.privateKeys[guardians.addresses[1]]
       )
     ]
-    await depositSecurityModule.depositBufferedEther(depositRoot, keysOpIndex, block.number, block.hash, signatures)
+    await depositSecurityModule.depositBufferedEther(block.number, block.hash, depositRoot, 1, keysOpIndex, '0x00', signatures)
   })
 
   it('new validator gets the 32 ETH deposit from the pool', async () => {
     assertBn(await pool.getBufferedEther(), ETH(0), `all ether is buffered until there's a validator to deposit it`)
     assertBn(await pool.getTotalPooledEther(), ETH(32), 'total pooled ether')
-    assertBn(await nodeOperatorRegistry.getUnusedSigningKeyCount(0), 0, 'no more available keys for the first validator')
+    assertBn(await nodeOperatorsRegistry.getUnusedSigningKeyCount(0), 0, 'no more available keys for the first validator')
   })
 
   it('first oracle report is taken as-is for Lido', async () => {
@@ -346,18 +352,17 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
   it('voting adds the second node operator who registers one validator', async () => {
     const validatorsLimit = 1000000000
 
-    const txn = await nodeOperatorRegistry.addNodeOperator(nodeOperator2.name, nodeOperator2.address, { from: voting })
-    await nodeOperatorRegistry.setNodeOperatorStakingLimit(1, validatorsLimit, { from: voting })
+    const txn = await nodeOperatorsRegistry.addNodeOperator(nodeOperator2.name, nodeOperator2.address, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
-    nodeOperator2.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
+    nodeOperator2.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: INodeOperatorsRegistry._json.abi })
     assertBn(nodeOperator2.id, 1, 'correct operator id added')
 
-    assertBn(await nodeOperatorRegistry.getNodeOperatorsCount(), 2, 'total node operators updated')
+    assertBn(await nodeOperatorsRegistry.getNodeOperatorsCount(), 2, 'total node operators updated')
 
     const numKeys = 1
 
-    await nodeOperatorRegistry.addSigningKeysOperatorBH(
+    await nodeOperatorsRegistry.addSigningKeysOperatorBH(
       nodeOperator2.id,
       numKeys,
       nodeOperator2.validators[0].key,
@@ -369,12 +374,14 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
 
     // The key was added
 
-    const totalKeys = await nodeOperatorRegistry.getTotalSigningKeyCount(nodeOperator2.id, { from: nobody })
+    await nodeOperatorsRegistry.setNodeOperatorStakingLimit(1, validatorsLimit, { from: voting })
+
+    const totalKeys = await nodeOperatorsRegistry.getTotalSigningKeyCount(nodeOperator2.id, { from: nobody })
     assertBn(totalKeys, 1, 'second operator added one key')
 
     // The key was not used yet
 
-    const unusedKeys = await nodeOperatorRegistry.getUnusedSigningKeyCount(nodeOperator2.id, { from: nobody })
+    const unusedKeys = await nodeOperatorsRegistry.getUnusedSigningKeyCount(nodeOperator2.id, { from: nobody })
     assertBn(unusedKeys, 1, 'unused signing keys')
   })
 
@@ -384,26 +391,30 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     const tokenSupplyBefore = await token.totalSupply()
     await web3.eth.sendTransaction({ to: pool.address, from: user1, value: depositAmount })
     const block = await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
-    const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+    const keysOpIndex = await nodeOperatorsRegistry.getKeysOpIndex()
     const signatures = [
       signDepositData(
         await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
-        depositRoot,
-        keysOpIndex,
         block.number,
         block.hash,
+        depositRoot,
+        1,
+        keysOpIndex,
+        '0x00',
         guardians.privateKeys[guardians.addresses[0]]
       ),
       signDepositData(
         await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
-        depositRoot,
-        keysOpIndex,
         block.number,
         block.hash,
+        depositRoot,
+        1,
+        keysOpIndex,
+        '0x00',
         guardians.privateKeys[guardians.addresses[1]]
       )
     ]
-    await depositSecurityModule.depositBufferedEther(depositRoot, keysOpIndex, block.number, block.hash, signatures)
+    await depositSecurityModule.depositBufferedEther(block.number, block.hash, depositRoot, 1, keysOpIndex, '0x00', signatures)
 
     assertBn(await depositContractMock.totalCalls(), 2)
 
@@ -478,30 +489,10 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     assertRevert(oracleMock.reportBeacon(101, 1, ETH(31)))
   })
 
-  it(`oracle reports profit not making up for previous penalties`, async () => {
-    const nodeOperator1TokenBalanceBefore = await token.balanceOf(nodeOperator1.address)
-    const tokenSupplyBefore = await token.totalSupply()
-    const totalPooledEtherBefore = await token.getTotalPooledEther()
-    const eth2Gain = ETH(3)
-    // Reporting 3 ETH balance gain (60 => 63)
-    await oracleMock.reportBeacon(104, 2, ETH(63)) // 104 is an epoch number
-
-    const totalPooledEtherAfter = await token.getTotalPooledEther()
-
-    const newDeposit = new BN(eth2Gain)
-    assertBn(totalPooledEtherBefore.add(newDeposit), totalPooledEtherAfter, 'totalPooledEther is changed by reported gain')
-
-    const feeToDistribute = newDeposit.mul(new BN(totalFeePoints)).div(new BN(10000))
-
-    const sharesAdded = awaitingTotalShares.mul(feeToDistribute).div(totalPooledEtherAfter.sub(feeToDistribute))
-    awaitingTotalShares = awaitingTotalShares.add(sharesAdded)
-
-    assertBn(await token.getTotalShares(), awaitingTotalShares, `total shares grow on profit below the total loss`)
-    assertBn(await token.totalSupply(), tokenSupplyBefore.add(newDeposit), 'total supply changed by reported gain')
-    awaitingUser1Balance = awaitingUser1Balance.add(new BN(eth2Gain)).sub(feeToDistribute)
-    assertBn(await token.balanceOf(user1), awaitingUser1Balance, `user1 balance increased`)
-    const nodeOperator1TokenBalanceAfter = await token.balanceOf(nodeOperator1.address)
-    assert(!nodeOperator1TokenBalanceAfter.sub(nodeOperator1TokenBalanceBefore).negative, `first node operator gets their fee on profit`)
+  it(`voting stops the staking module`, async () => {
+    await stakingRouter.setStakingModuleStatus(1, 2, { from: voting })
+    assertBn(await stakingRouter.getStakingModulesCount(), new BN(1), 'only 1 module exists')
+    assertBn(await stakingRouter.getStakingModuleStatus(1), new BN(2), 'no active staking modules')
   })
 
   it(`first operator adds a second validator`, async () => {
@@ -599,18 +590,13 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     assertBn(activeOperatorsAfter, new BN(0), 'no active operators')
   })
 
-  it(`without active node operators node operator's fee is sent to treasury`, async () => {
-    const nodeOperator1TokenSharesBefore = await token.sharesOf(nodeOperator1.address)
-    const nodeOperator2TokenSharesBefore = await token.sharesOf(nodeOperator2.address)
+  it(`without active staking modules fee is sent to treasury`, async () => {
     const treasurySharesBefore = await token.sharesOf(treasuryAddr)
-    const prevTotalShares = await token.getTotalShares()
-
     await oracleMock.reportBeacon(105, 2, tokens(98)) // 105 is an epoch number
 
     const nodeOperator1TokenSharesAfter = await token.sharesOf(nodeOperator1.address)
     const nodeOperator2TokenSharesAfter = await token.sharesOf(nodeOperator2.address)
     const treasurySharesAfter = await token.sharesOf(treasuryAddr)
-    const totalPooledEther = await token.getTotalPooledEther()
 
     assertBn(nodeOperator1TokenSharesAfter, nodeOperator1TokenSharesBefore, `first node operator hasn't got fees`)
     assertBn(nodeOperator2TokenSharesAfter, nodeOperator2TokenSharesBefore, `second node operator hasn't got fees`)
@@ -631,77 +617,27 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
       treasuryFeeTotalTreasuryPlusNodeOperators,
       'treasury got the regular fee + node operators fee'
     )
+
+    // TODO: the following line is from staking router
+    assertBn(treasurySharesAfter.sub(treasurySharesBefore), new BN('2715279303023647411'), 'treasury got the total fee')
   })
 
-  it(`voting starts the first operator back`, async () => {
-    const activeOperatorsBefore = await nodeOperatorRegistry.getActiveNodeOperatorsCount()
-    await nodeOperatorRegistry.setNodeOperatorActive(0, true, { from: voting })
-    const activeOperatorsAfter = await nodeOperatorRegistry.getActiveNodeOperatorsCount()
-    assertBn(activeOperatorsAfter, activeOperatorsBefore.add(new BN(1)), 'activated one operator')
+  it(`voting starts staking module`, async () => {
+    await stakingRouter.setStakingModuleStatus(1, 0, { from: voting })
+    assertBn(await stakingRouter.getStakingModulesCount(), new BN(1), 'only 1 module exists')
+    assertBn(await stakingRouter.getStakingModuleStatus(1), new BN(0), 'no active staking modules')
   })
 
-  it(`voting starts the second operator back`, async () => {
-    const activeOperatorsBefore = await nodeOperatorRegistry.getActiveNodeOperatorsCount()
-    await nodeOperatorRegistry.setNodeOperatorActive(1, true, { from: voting })
-    const activeOperatorsAfter = await nodeOperatorRegistry.getActiveNodeOperatorsCount()
-    assertBn(activeOperatorsAfter, activeOperatorsBefore.add(new BN(1)), 'activated one operator')
-  })
-
-  it(`oracle reports profit, previously stopped node operator gets the fee`, async () => {
-    const nodeOperator1TokenSharesBefore = await token.sharesOf(nodeOperator1.address)
-    const nodeOperator2TokenSharesBefore = await token.sharesOf(nodeOperator2.address)
+  it(`oracle reports profit, previously stopped staking module gets the fee`, async () => {
+    const stakingModuleTokenSharesBefore = await token.sharesOf(nodeOperatorsRegistry.address)
 
     await oracleMock.reportBeacon(106, 2, tokens(100)) // 106 is an epoch number
 
-    const nodeOperator1TokenSharesAfter = await token.sharesOf(nodeOperator1.address)
-    const nodeOperator2TokenSharesAfter = await token.sharesOf(nodeOperator2.address)
+    const stakingModuleTokenSharesAfter = await token.sharesOf(nodeOperatorsRegistry.address)
 
     assert(
-      nodeOperator1TokenSharesBefore.sub(nodeOperator1TokenSharesAfter).negative,
+      stakingModuleTokenSharesBefore.sub(stakingModuleTokenSharesAfter).negative,
       `first node operator gained shares under fee distribution`
     )
-    assert(
-      nodeOperator2TokenSharesBefore.sub(nodeOperator2TokenSharesAfter).negative,
-      `second node operator gained shares under fee distribution`
-    )
-  })
-
-  it(`voting reports first operator validators as stopped`, async () => {
-    await nodeOperatorRegistry.reportStoppedValidators(nodeOperator1.id, 1, { from: voting })
-  })
-
-  it(`oracle reports profit, which gets distributed with one operator validators stopped`, async () => {
-    const nodeOperator1TokenSharesBefore = await token.sharesOf(nodeOperator1.address)
-    const nodeOperator2TokenSharesBefore = await token.sharesOf(nodeOperator2.address)
-    const treasurySharesBefore = await token.sharesOf(treasuryAddr)
-    await oracleMock.reportBeacon(107, 2, tokens(102)) // 107 is an epoch number
-    const nodeOperator1TokenSharesAfter = await token.sharesOf(nodeOperator1.address)
-    const nodeOperator2TokenSharesAfter = await token.sharesOf(nodeOperator2.address)
-    const treasurySharesAfter = await token.sharesOf(treasuryAddr)
-
-    assertBn(nodeOperator1TokenSharesBefore, nodeOperator1TokenSharesAfter, `first node operator gained no shares under fee distribution`)
-    assert(
-      !nodeOperator2TokenSharesAfter.sub(nodeOperator2TokenSharesBefore).negative,
-      `second node operator gained shares under fee distribution`
-    )
-    assert(!treasurySharesAfter.sub(treasurySharesBefore).negative, 'treasury gained shares under fee distribution')
-  })
-
-  it(`voting reports second operator validators as stopped`, async () => {
-    await nodeOperatorRegistry.reportStoppedValidators(nodeOperator2.id, 1, { from: voting })
-  })
-
-  it(`oracle reports profit, which gets distributed with all validators stopped`, async () => {
-    const nodeOperator1TokenSharesBefore = await token.sharesOf(nodeOperator1.address)
-    const nodeOperator2TokenSharesBefore = await token.sharesOf(nodeOperator2.address)
-    const treasurySharesBefore = await token.sharesOf(treasuryAddr)
-    await oracleMock.reportBeacon(108, 2, tokens(103)) // 108 is an epoch number
-    const nodeOperator1TokenSharesAfter = await token.sharesOf(nodeOperator1.address)
-    const nodeOperator2TokenSharesAfter = await token.sharesOf(nodeOperator2.address)
-    const treasurySharesAfter = await token.sharesOf(treasuryAddr)
-
-    assertBn(nodeOperator1TokenSharesBefore, nodeOperator1TokenSharesAfter, `first node operator gained no shares under fee distribution`)
-    assertBn(nodeOperator2TokenSharesBefore, nodeOperator2TokenSharesAfter, `second node operator gained no shares under fee distribution`)
-    assert(!treasurySharesAfter.sub(treasurySharesBefore).negative, 'treasury gained shares under fee distribution')
   })
 })

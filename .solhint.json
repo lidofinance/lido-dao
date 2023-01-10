@@ -1,8 +1,6 @@
 {
   "extends": "solhint:recommended",
-  "plugins": [
-    "lido"
-  ],
+  "plugins": ["lido"],
   "rules": {
     "no-inline-assembly": "off",
     "var-name-mixedcase": "off",
@@ -13,6 +11,6 @@
     "lido/fixed-compiler-version": "error",
     "visibility-modifier-order": "error",
     "no-unused-vars": "error",
-    "func-visibility": ["warn",{"ignoreConstructors":true}]
+    "func-visibility": ["warn", { "ignoreConstructors": true }]
   }
 }

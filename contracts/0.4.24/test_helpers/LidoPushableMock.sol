@@ -14,16 +14,6 @@ contract LidoPushableMock is Lido {
     uint256 public totalRewards;
     bool public distributeFeeCalled;
 
-    function initialize(
-        IDepositContract depositContract,
-        address _oracle,
-        INodeOperatorsRegistry _operators
-    ) public {
-        super.initialize(depositContract, _oracle, _operators, new VaultMock(), address(0));
-
-        _resume();
-    }
-
     function initialize(address _oracle) public onlyInit {
         _setProtocolContracts(_oracle, _oracle, address(0));
         _resume();
@@ -54,6 +44,14 @@ contract LidoPushableMock is Lido {
     function resetDistributeFee() public {
         totalRewards = 0;
         distributeFeeCalled = false;
+    }
+
+    function getWithdrawalCredentials() public view returns (bytes32) {
+        IStakingRouter stakingRouter = getStakingRouter();
+        if (address(stakingRouter) != address(0)) {
+            return stakingRouter.getWithdrawalCredentials();
+        }
+        return bytes32(0);
     }
 
     function _distributeFee(uint256 _totalRewards) internal {

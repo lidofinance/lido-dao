@@ -8,19 +8,16 @@ const { StETH, ETH } = require('../helpers/utils')
 const LidoELRewardsVault = artifacts.require('LidoExecutionLayerRewardsVault.sol')
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 const LidoMock = artifacts.require('LidoMock.sol')
-const VaultMock = artifacts.require('VaultMock.sol')
 const LidoOracleMock = artifacts.require('OracleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
 
 const ERC20OZMock = artifacts.require('ERC20OZMock.sol')
 const ERC721OZMock = artifacts.require('ERC721OZMock.sol')
 
-contract('LidoExecutionLayerRewardsVault', ([appManager, voting, deployer, anotherAccount]) => {
+contract('LidoExecutionLayerRewardsVault', ([appManager, voting, deployer, depositor, anotherAccount, treasury, ...otherAccounts]) => {
   let lido, elRewardsVault
-  let treasuryAddr
 
   beforeEach('deploy lido with dao', async () => {
-    const treasury = await VaultMock.new()
     const lidoBase = await LidoMock.new({ from: deployer })
     const oracle = await LidoOracleMock.new({ from: deployer })
     const depositContract = await DepositContractMock.new({ from: deployer })
@@ -35,17 +32,16 @@ contract('LidoExecutionLayerRewardsVault', ([appManager, voting, deployer, anoth
 
     // NodeOperatorsRegistry
     proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)
-    const operators = await NodeOperatorsRegistry.at(proxyAddress)
-    await operators.initialize(lido.address)
+    operators = await NodeOperatorsRegistry.at(proxyAddress)
+    await operators.initialize(lido.address, '0x01')
 
     // Init the BURN_ROLE role and assign in to voting
     await acl.createPermission(voting, lido.address, await lido.BURN_ROLE(), appManager, { from: appManager })
 
-    elRewardsVault = await LidoELRewardsVault.new(lido.address, treasury.address, { from: deployer })
+    elRewardsVault = await LidoELRewardsVault.new(lido.address, treasury, { from: deployer })
 
     // Initialize the app's proxy.
-    await lido.initialize(depositContract.address, oracle.address, operators.address, treasury.address, elRewardsVault.address)
-    treasuryAddr = await lido.getTreasury()
+    await lido.initialize(oracle.address, treasury, ZERO_ADDRESS, ZERO_ADDRESS, elRewardsVault)
 
     await oracle.setPool(lido.address)
     await depositContract.reset()
@@ -147,7 +143,7 @@ contract('LidoExecutionLayerRewardsVault', ([appManager, voting, deployer, anoth
 
       // check balances again
       assertBn(await mockERC20Token.balanceOf(elRewardsVault.address), bn(100000))
-      assertBn(await mockERC20Token.balanceOf(treasuryAddr), bn(500000))
+      assertBn(await mockERC20Token.balanceOf(treasury), bn(500000))
       assertBn(await mockERC20Token.balanceOf(deployer), bn(0))
       assertBn(await mockERC20Token.balanceOf(anotherAccount), bn(400000))
 
@@ -189,9 +185,9 @@ contract('LidoExecutionLayerRewardsVault', ([appManager, voting, deployer, anoth
       assertEvent(receiptNft1, `ERC721Recovered`, { expectedArgs: { requestedBy: deployer, token: mockNFT.address, tokenId: nft1 } })
 
       // check final NFT ownership state
-      assertBn(await mockNFT.balanceOf(treasuryAddr), bn(2))
-      assertBn(await mockNFT.ownerOf(nft1), treasuryAddr)
-      assertBn(await mockNFT.ownerOf(nft2), treasuryAddr)
+      assertBn(await mockNFT.balanceOf(treasury), bn(2))
+      assertBn(await mockNFT.ownerOf(nft1), treasury)
+      assertBn(await mockNFT.ownerOf(nft2), treasury)
     })
   })
 })

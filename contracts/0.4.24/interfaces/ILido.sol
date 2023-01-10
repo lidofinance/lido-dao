@@ -4,6 +4,8 @@
 
 pragma solidity 0.4.24;
 
+import "./IStakingRouter.sol";
+
 /**
  * @title Liquid staking pool
  *
@@ -80,6 +82,11 @@ interface ILido {
     function isStakingPaused() external view returns (bool);
 
     /**
+     * @notice Returns current credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
+     */
+    function getWithdrawalCredentials() external view returns (bytes32);
+
+    /**
      * @notice Returns how much Ether can be staked in the current block
      * @dev Special return values:
      * - 2^256 - 1 if staking is unlimited;
@@ -129,40 +136,15 @@ interface ILido {
         address _oracle, address _treasury, address _executionLayerRewardsVault
     ) external;
 
-    event ProtocolContactsSet(address oracle, address treasury, address _executionLayerRewardsVault);
-
     /**
-     * @notice Set fee rate to `_feeBasisPoints` basis points.
-     * The fees are accrued when:
-     * - oracles report staking results (beacon chain balance increase)
-     * - validators gain execution layer rewards (priority fees and MEV)
-     * @param _feeBasisPoints Fee rate, in basis points
-     */
-    function setFee(uint16 _feeBasisPoints) external;
-
-    /**
-     * @notice Set fee distribution
-     * @param _treasuryFeeBasisPoints basis points go to the treasury
-     * @param _operatorsFeeBasisPoints basis points go to node operators
-     * @dev The sum has to be 10 000.
-     */
-    function setFeeDistribution(uint16 _treasuryFeeBasisPoints, uint16 _operatorsFeeBasisPoints) external;
-
-    /**
-     * @notice Returns staking rewards fee rate
+     * @notice Returns current staking rewards fee rate
      */
     function getFee() external view returns (uint16 feeBasisPoints);
 
     /**
-     * @notice Returns fee distribution proportion
+     * @notice Returns current fee distribution proportion
      */
-    function getFeeDistribution() external view returns (
-        uint16 treasuryFeeBasisPoints, uint16 operatorsFeeBasisPoints
-    );
-
-    event FeeSet(uint16 feeBasisPoints);
-
-    event FeeDistributionSet(uint16 treasuryFeeBasisPoints, uint16 operatorsFeeBasisPoints);
+    function getFeeDistribution() external view returns (uint16 modulesFeeBasisPoints, uint16 treasuryFeeBasisPoints);
 
     /**
      * @notice A payable function supposed to be called only by LidoExecutionLayerRewardsVault contract
@@ -182,20 +164,6 @@ interface ILido {
 
     // Percent in basis points of total pooled ether allowed to withdraw from LidoExecutionLayerRewardsVault per LidoOracle report
     event ELRewardsWithdrawalLimitSet(uint256 limitPoints);
-
-    /**
-     * @notice Set credentials to withdraw ETH on Consensus Layer side to `_withdrawalCredentials`
-     * @dev Note that setWithdrawalCredentials discards all unused signing keys as the signatures are invalidated.
-     * @param _withdrawalCredentials withdrawal credentials field as defined in the Ethereum PoS consensus specs
-     */
-    function setWithdrawalCredentials(bytes32 _withdrawalCredentials) external;
-
-    /**
-     * @notice Returns current credentials to withdraw ETH on the Consensus Layer side
-     */
-    function getWithdrawalCredentials() external view returns (bytes);
-
-    event WithdrawalCredentialsSet(bytes32 withdrawalCredentials);
 
     /**
      * @notice Ether on the Consensus Layer side, and withdrawals-related data reported by the oracle
@@ -233,6 +201,14 @@ interface ILido {
 
     event WithdrawalRestaked(uint256 amount);
 
+    /**
+     * @dev Invokes a deposit call to the Staking Router contract and updates buffered counters
+     * @param _maxDepositsCount max deposits count
+     * @param _stakingModuleId id of the staking module to be deposited
+     * @param _depositCalldata module calldata
+     */
+    function deposit(uint256 _maxDepositsCount, uint24 _stakingModuleId, bytes _depositCalldata) external;
+
     // Info functions
 
     /**
@@ -251,12 +227,42 @@ interface ILido {
      * @return beaconValidators - number of Lido's validators visible in the Beacon state, reported by oracles
      * @return beaconBalance - total amount of Beacon-side Ether (sum of all the balances of Lido validators)
      */
-    function getBeaconStat()
-        external
-        view
-        returns (
-            uint256 depositedValidators,
-            uint256 beaconValidators,
-            uint256 beaconBalance
-        );
+    function getBeaconStat() external view returns (uint256 depositedValidators, uint256 beaconValidators, uint256 beaconBalance);
+
+    /**
+     * @dev Returns StakingRouter contract interface
+     */
+    function getStakingRouter() public view returns (IStakingRouter);
+
+    /**
+     * @dev Sets the address of StakingRouter contract
+     * @param stakingRouterAddress StakingRouter contract address
+     */
+    function setStakingRouter(address stakingRouterAddress) external;
+
+    event StakingRouterSet(address stakingRouterAddress);
+
+    /**
+     * @dev Returns Deposit security module contract address
+     */
+    function getDepositSecurityModule() external view returns (address);
+
+    /**
+     * @dev Sets the address of DepositSecurityModule contract
+     * @param dsmAddress DepositSecurityModule contract address
+     */
+    function setDepositSecurityModule(address dsmAddress) external;
+
+    event DepositSecurityModuleSet(address dsmAddress);
+
+    event ContractVersionSet(uint256 version);
+
+    // The amount of ETH sended from StakingRouter contract to Lido contract
+    event StakingRouterTransferReceived(uint256 amount);
+
+    event ProtocolContactsSet(
+        address oracle,
+        address treasury,
+        address executionLayerRewardsVault
+    );
 }

@@ -17,6 +17,18 @@ const hexConcat = (first, ...rest) => {
   return result
 }
 
+function genKeys(cnt = 1) {
+  let pubkeys = ''
+  let sigkeys = ''
+
+  for (let i = 1; i <= cnt; i++) {
+    pubkeys = hexConcat(pubkeys, `0x`.padEnd(98, i.toString(16))) // 48 bytes * 2 chars + 2 chars (0x)
+    sigkeys = hexConcat(sigkeys, `0x`.padEnd(194, i.toString(16))) // 96 bytes * 2 chars + 2 chars (0x)
+  }
+
+  return { pubkeys, sigkeys }
+}
+
 const hexSplit = (hexStr, lenBytes) => {
   const lenSymbols = lenBytes * 2
   hexStr = hexStr.replace(/^0x/, '')
@@ -135,9 +147,11 @@ module.exports = {
   StETH: ETH,
   tokens,
   getEthBalance,
+  formatWei,
   formatBN,
   formatStEth,
   assertRevertCustomError,
   assertNoEvent,
-  changeEndianness
+  changeEndianness,
+  genKeys
 }

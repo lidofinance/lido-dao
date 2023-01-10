@@ -11,6 +11,24 @@ import "./VaultMock.sol";
  * @dev Only for testing purposes! Lido version with some functions exposed.
  */
 contract LidoMock is Lido {
+    function initialize(
+        address _oracle,
+        address _treasury,
+        address _stakingRouterAddress,
+        address _dsmAddress,
+        address _executionLayerRewardsVault
+    )
+        public
+    {
+        if (_treasury == address(0)) {
+            _treasury = new VaultMock();
+        }
+        if (_executionLayerRewardsVault == address(0)) {
+            _executionLayerRewardsVault = new VaultMock();
+        }
+        super.initialize(_oracle, _treasury, _stakingRouterAddress, _dsmAddress, _executionLayerRewardsVault);
+    }
+
     /**
      * @dev For use in tests to make protocol operational after deployment
      */
@@ -24,22 +42,6 @@ contract LidoMock is Lido {
      */
     function getUnaccountedEther() public view returns (uint256) {
         return _getUnaccountedEther();
-    }
-
-    /**
-     * @dev Padding memory array with zeroes up to 64 bytes on the right
-     * @param _b Memory array of size 32 .. 64
-     */
-    function pad64(bytes memory _b) public pure returns (bytes memory) {
-        return _pad64(_b);
-    }
-
-    /**
-     * @dev Converting value to little endian bytes and padding up to 32 bytes on the right
-     * @param _value Number less than `2**64` for compatibility reasons
-     */
-    function toLittleEndian64(uint256 _value) public pure returns (uint256 result) {
-        return _toLittleEndian64(_value);
     }
 
     /**

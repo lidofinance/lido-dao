@@ -6,22 +6,16 @@
 pragma solidity 0.8.9;
 
 import {ECDSA} from "./lib/ECDSA.sol";
-
-
-interface IDepositContract {
-    function get_deposit_root() external view returns (bytes32 rootHash);
-}
-
+import {IStakingRouter} from "./interfaces/IStakingRouter.sol";
+import {IDepositContract} from "./interfaces/IDepositContract.sol";
 
 interface ILido {
-    function depositBufferedEther(uint256 maxDeposits) external;
+    function deposit(
+        uint256 _maxDepositsCount,
+        uint24 _stakingModuleId,
+        bytes calldata _depositCalldata
+    ) external;
 }
-
-
-interface INodeOperatorsRegistry {
-    function getKeysOpIndex() external view returns (uint256 index);
-}
-
 
 contract DepositSecurityModule {
     /**
@@ -33,66 +27,67 @@ contract DepositSecurityModule {
     }
 
     event OwnerChanged(address newValue);
-    event NodeOperatorsRegistryChanged(address newValue);
     event PauseIntentValidityPeriodBlocksChanged(uint256 newValue);
     event MaxDepositsChanged(uint256 newValue);
     event MinDepositBlockDistanceChanged(uint256 newValue);
     event GuardianQuorumChanged(uint256 newValue);
     event GuardianAdded(address guardian);
     event GuardianRemoved(address guardian);
-    event DepositsPaused(address guardian);
-    event DepositsUnpaused();
-
+    event DepositsPaused(address indexed guardian, uint24 indexed stakingModuleId);
+    event DepositsUnpaused(uint24 indexed stakingModuleId);
 
     bytes32 public immutable ATTEST_MESSAGE_PREFIX;
     bytes32 public immutable PAUSE_MESSAGE_PREFIX;
 
-    address public immutable LIDO;
-    address public immutable DEPOSIT_CONTRACT;
+    ILido public immutable LIDO;
+    IStakingRouter public immutable STAKING_ROUTER;
+    IDepositContract public immutable DEPOSIT_CONTRACT;
 
-    address internal nodeOperatorsRegistry;
     uint256 internal maxDepositsPerBlock;
     uint256 internal minDepositBlockDistance;
     uint256 internal pauseIntentValidityPeriodBlocks;
 
     address internal owner;
 
+    uint256 internal quorum;
     address[] internal guardians;
     mapping(address => uint256) internal guardianIndicesOneBased; // 1-based
-    uint256 internal quorum;
-
-    bool internal paused;
-    uint256 internal lastDepositBlock;
-
 
     constructor(
         address _lido,
         address _depositContract,
-        address _nodeOperatorsRegistry,
-        uint256 _networkId,
+        address _stakingRouter,
         uint256 _maxDepositsPerBlock,
         uint256 _minDepositBlockDistance,
         uint256 _pauseIntentValidityPeriodBlocks
     ) {
-        require(_lido != address(0), "LIDO_ZERO_ADDRESS");
+        require(_lido != address(0), "LIDO_CONTRACT_ZERO_ADDRESS");
+        require(_stakingRouter != address(0), "STAKING_ROUTER_ZERO_ADDRESS");
         require(_depositContract != address(0), "DEPOSIT_CONTRACT_ZERO_ADDRESS");
-        LIDO = _lido;
-        DEPOSIT_CONTRACT = _depositContract;
 
-        ATTEST_MESSAGE_PREFIX = keccak256(abi.encodePacked(
-            // keccak256("lido.DepositSecurityModule.ATTEST_MESSAGE")
-            bytes32(0x1085395a994e25b1b3d0ea7937b7395495fb405b31c7d22dbc3976a6bd01f2bf),
-            _networkId
-        ));
+        LIDO = ILido(_lido);
+        STAKING_ROUTER = IStakingRouter(_stakingRouter);
+        DEPOSIT_CONTRACT = IDepositContract(_depositContract);
 
-        PAUSE_MESSAGE_PREFIX = keccak256(abi.encodePacked(
-            // keccak256("lido.DepositSecurityModule.PAUSE_MESSAGE")
-            bytes32(0x9c4c40205558f12027f21204d6218b8006985b7a6359bcab15404bcc3e3fa122),
-            _networkId
-        ));
+        ATTEST_MESSAGE_PREFIX = keccak256(
+            abi.encodePacked(
+                // keccak256("lido.DepositSecurityModule.ATTEST_MESSAGE")
+                bytes32(0x1085395a994e25b1b3d0ea7937b7395495fb405b31c7d22dbc3976a6bd01f2bf),
+                block.chainid,
+                address(this)
+            )
+        );
+
+        PAUSE_MESSAGE_PREFIX = keccak256(
+            abi.encodePacked(
+                // keccak256("lido.DepositSecurityModule.PAUSE_MESSAGE")
+                bytes32(0x9c4c40205558f12027f21204d6218b8006985b7a6359bcab15404bcc3e3fa122),
+                block.chainid,
+                address(this)
+            )
+        );
 
         _setOwner(msg.sender);
-        _setNodeOperatorsRegistry(_nodeOperatorsRegistry);
         _setMaxDeposits(_maxDepositsPerBlock);
         _setMinDepositBlockDistance(_minDepositBlockDistance);
         _setPauseIntentValidityPeriodBlocks(_pauseIntentValidityPeriodBlocks);
@@ -105,7 +100,7 @@ contract DepositSecurityModule {
         return owner;
     }
 
-    modifier onlyOwner {
+    modifier onlyOwner() {
         require(msg.sender == owner, "not an owner");
         _;
     }
@@ -122,27 +117,6 @@ contract DepositSecurityModule {
         owner = newValue;
         emit OwnerChanged(newValue);
     }
-
-
-    /**
-     * Returns NodeOperatorsRegistry contract address.
-     */
-    function getNodeOperatorsRegistry() external view returns (address) {
-        return nodeOperatorsRegistry;
-    }
-
-    /**
-     * Sets NodeOperatorsRegistry contract address. Only callable by the owner.
-     */
-    function setNodeOperatorsRegistry(address newValue) external onlyOwner {
-        _setNodeOperatorsRegistry(newValue);
-    }
-
-    function _setNodeOperatorsRegistry(address newValue) internal {
-        nodeOperatorsRegistry = newValue;
-        emit NodeOperatorsRegistryChanged(newValue);
-    }
-
 
     /**
      * Returns current `pauseIntentValidityPeriodBlocks` contract parameter (see `pauseDeposits`).
@@ -164,7 +138,6 @@ contract DepositSecurityModule {
         emit PauseIntentValidityPeriodBlocksChanged(newValue);
     }
 
-
     /**
      * Returns `maxDepositsPerBlock` (see `depositBufferedEther`).
      */
@@ -183,7 +156,6 @@ contract DepositSecurityModule {
         maxDepositsPerBlock = newValue;
         emit MaxDepositsChanged(newValue);
     }
-
 
     /**
      * Returns `minDepositBlockDistance`  (see `depositBufferedEther`).
@@ -207,7 +179,6 @@ contract DepositSecurityModule {
         }
     }
 
-
     /**
      * Returns number of valid guardian signatures required to vet (depositRoot, keysOpIndex) pair.
      */
@@ -224,7 +195,6 @@ contract DepositSecurityModule {
         quorum = newValue;
         emit GuardianQuorumChanged(newValue);
     }
-
 
     /**
      * Returns guardian committee member list.
@@ -313,16 +283,8 @@ contract DepositSecurityModule {
         emit GuardianRemoved(addr);
     }
 
-
     /**
-     * Returns whether deposits were paused.
-     */
-    function isPaused() external view returns (bool) {
-        return paused;
-    }
-
-    /**
-     * Pauses deposits given that both conditions are satisfied (reverts otherwise):
+     * Pauses deposits for module given that both conditions are satisfied (reverts otherwise):
      *
      *   1. The function is called by the guardian with index guardianIndex OR sig
      *      is a valid signature by the guardian with index guardianIndex of the data
@@ -333,14 +295,20 @@ contract DepositSecurityModule {
      * The signature, if present, must be produced for keccak256 hash of the following
      * message (each component taking 32 bytes):
      *
-     * | PAUSE_MESSAGE_PREFIX | blockNumber
+     * | PAUSE_MESSAGE_PREFIX | blockNumber | stakingModuleId |
      */
-    function pauseDeposits(uint256 blockNumber, Signature memory sig) external {
+    function pauseDeposits(
+        uint256 blockNumber,
+        uint24 stakingModuleId,
+        Signature memory sig
+    ) external {
         // In case of an emergency function `pauseDeposits` is supposed to be called
         // by all guardians. Thus only the first call will do the actual change. But
         // the other calls would be OK operations from the point of view of protocol’s logic.
         // Thus we prefer not to use “error” semantics which is implied by `require`.
-        if (paused) {
+
+        /// @dev pause only active modules (not already paused, nor full stopped)
+        if (!STAKING_ROUTER.getStakingModuleIsActive(stakingModuleId)) {
             return;
         }
 
@@ -348,124 +316,97 @@ contract DepositSecurityModule {
         int256 guardianIndex = _getGuardianIndex(msg.sender);
 
         if (guardianIndex == -1) {
-            bytes32 msgHash = keccak256(abi.encodePacked(PAUSE_MESSAGE_PREFIX, blockNumber));
+            bytes32 msgHash = keccak256(abi.encodePacked(PAUSE_MESSAGE_PREFIX, blockNumber, stakingModuleId));
             guardianAddr = ECDSA.recover(msgHash, sig.r, sig.vs);
             guardianIndex = _getGuardianIndex(guardianAddr);
             require(guardianIndex != -1, "invalid signature");
         }
 
-        require(
-            block.number - blockNumber <= pauseIntentValidityPeriodBlocks,
-            "pause intent expired"
-        );
+        require(block.number - blockNumber <= pauseIntentValidityPeriodBlocks, "pause intent expired");
 
-        paused = true;
-        emit DepositsPaused(guardianAddr);
+        STAKING_ROUTER.pauseStakingModule(stakingModuleId);
+        emit DepositsPaused(guardianAddr, stakingModuleId);
     }
 
     /**
-     * Unpauses deposits.
+     * Unpauses deposits for module
      *
      * Only callable by the owner.
      */
-    function unpauseDeposits() external onlyOwner {
-        if (paused) {
-            paused = false;
-            emit DepositsUnpaused();
+    function unpauseDeposits(uint24 stakingModuleId) external onlyOwner {
+         /// @dev unpause only paused modules (skip stopped)
+        if (STAKING_ROUTER.getStakingModuleIsDepositsPaused(stakingModuleId)) {
+            STAKING_ROUTER.resumeStakingModule(stakingModuleId);
+            emit DepositsUnpaused(stakingModuleId);
         }
     }
 
-
     /**
-     * Returns the last block that contains a deposit performed via this security module.
-     */
-    function getLastDepositBlock() external view returns (uint256) {
-        return lastDepositBlock;
-    }
-
-
-    /**
-     * Sets `lastDepositBlock`. Only callable by the owner.
-     */
-    function setLastDepositBlock(uint256 newLastDepositBlock) external onlyOwner {
-        lastDepositBlock = newLastDepositBlock;
-    }
-
-
-    /**
-     * Returns whether depositBufferedEther can be called, given that the caller will provide
+     * Returns whether LIDO.deposit() can be called, given that the caller will provide
      * guardian attestations of non-stale deposit root and `keysOpIndex`, and the number of
      * such attestations will be enough to reach quorum.
      */
-    function canDeposit() external view returns (bool) {
-        return !paused && quorum > 0 && block.number - lastDepositBlock >= minDepositBlockDistance;
+    function canDeposit(uint24 stakingModuleId) external view returns (bool) {
+        bool isModuleActive = STAKING_ROUTER.getStakingModuleIsActive(stakingModuleId);
+        uint256 lastDepositBlock = STAKING_ROUTER.getStakingModuleLastDepositBlock(stakingModuleId);
+        return isModuleActive && quorum > 0 && block.number - lastDepositBlock >= minDepositBlockDistance;
     }
 
-
     /**
-     * Calls Lido.depositBufferedEther(maxDepositsPerBlock).
+     * Calls LIDO.deposit(maxDepositsPerBlock, stakingModuleId, depositCalldata).
      *
      * Reverts if any of the following is true:
      *   1. IDepositContract.get_deposit_root() != depositRoot.
-     *   2. INodeOperatorsRegistry.getKeysOpIndex() != keysOpIndex.
+     *   2. StakingModule.getKeysOpIndex() != keysOpIndex.
      *   3. The number of guardian signatures is less than getGuardianQuorum().
      *   4. An invalid or non-guardian signature received.
-     *   5. block.number - getLastDepositBlock() < minDepositBlockDistance.
+     *   5. block.number - StakingModule.getLastDepositBlock() < minDepositBlockDistance.
      *   6. blockhash(blockNumber) != blockHash.
      *
      * Signatures must be sorted in ascending order by index of the guardian. Each signature must
      * be produced for keccak256 hash of the following message (each component taking 32 bytes):
      *
-     * | ATTEST_MESSAGE_PREFIX | depositRoot | keysOpIndex | blockNumber | blockHash |
+     * | ATTEST_MESSAGE_PREFIX | blockNumber | blockHash | depositRoot | stakingModuleId | keysOpIndex |
      */
     function depositBufferedEther(
-        bytes32 depositRoot,
-        uint256 keysOpIndex,
         uint256 blockNumber,
         bytes32 blockHash,
-        Signature[] memory sortedGuardianSignatures
+        bytes32 depositRoot,
+        uint24 stakingModuleId,
+        uint256 keysOpIndex,
+        bytes calldata depositCalldata,
+        Signature[] calldata sortedGuardianSignatures
     ) external {
+        require(quorum > 0 && sortedGuardianSignatures.length >= quorum, "no guardian quorum");
+
         bytes32 onchainDepositRoot = IDepositContract(DEPOSIT_CONTRACT).get_deposit_root();
         require(depositRoot == onchainDepositRoot, "deposit root changed");
 
-        require(!paused, "deposits are paused");
-        require(quorum > 0 && sortedGuardianSignatures.length >= quorum, "no guardian quorum");
+        require(STAKING_ROUTER.getStakingModuleIsActive(stakingModuleId), "module not active");
 
+        uint256 lastDepositBlock = STAKING_ROUTER.getStakingModuleLastDepositBlock(stakingModuleId);
         require(block.number - lastDepositBlock >= minDepositBlockDistance, "too frequent deposits");
         require(blockHash != bytes32(0) && blockhash(blockNumber) == blockHash, "unexpected block hash");
 
-        uint256 onchainKeysOpIndex = INodeOperatorsRegistry(nodeOperatorsRegistry).getKeysOpIndex();
+        uint256 onchainKeysOpIndex = STAKING_ROUTER.getStakingModuleKeysOpIndex(stakingModuleId);
         require(keysOpIndex == onchainKeysOpIndex, "keys op index changed");
 
-        _verifySignatures(
-            depositRoot,
-            keysOpIndex,
-            blockNumber,
-            blockHash,
-            sortedGuardianSignatures
-        );
+        _verifySignatures(depositRoot, blockNumber, blockHash, stakingModuleId, keysOpIndex, sortedGuardianSignatures);
 
-        ILido(LIDO).depositBufferedEther(maxDepositsPerBlock);
-        lastDepositBlock = block.number;
+        LIDO.deposit(maxDepositsPerBlock, stakingModuleId, depositCalldata);
     }
-
 
     function _verifySignatures(
         bytes32 depositRoot,
-        uint256 keysOpIndex,
         uint256 blockNumber,
         bytes32 blockHash,
+        uint24 stakingModuleId,
+        uint256 keysOpIndex,
         Signature[] memory sigs
-    )
-        internal view
-    {
-        bytes32 msgHash = keccak256(abi.encodePacked(
-            ATTEST_MESSAGE_PREFIX,
-            depositRoot,
-            keysOpIndex,
-            blockNumber,
-            blockHash
-        ));
+    ) internal view {
+        bytes32 msgHash = keccak256(
+            abi.encodePacked(ATTEST_MESSAGE_PREFIX, blockNumber, blockHash, depositRoot, stakingModuleId, keysOpIndex)
+        );
 
         address prevSignerAddr = address(0);
 

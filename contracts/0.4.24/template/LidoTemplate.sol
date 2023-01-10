@@ -292,9 +292,10 @@ contract LidoTemplate is IsContract {
         string _tokenName,
         string _tokenSymbol,
         uint64[4] _votingSettings,
-        IDepositContract _beaconDepositContract,
+        IDepositContract /*_beaconDepositContract*/,
         uint32[4]
     ) external onlyOwner {
+        // TODO: remove unused argument
         DeployState memory state = deployState;
 
         require(state.lidoRegistry != address(0), ERROR_REGISTRY_NOT_DEPLOYED);
@@ -343,6 +344,7 @@ contract LidoTemplate is IsContract {
             _installNonDefaultApp(state.dao, _getAppId(ORACLE_APP_NAME, state.lidoRegistryEnsNode), noInit)
         );
 
+        // TODO: do new Lido Oracle initialization. Maybe initialized old deprecated APR version of LidoOracle
         // state.oracle.initialize(
         //     state.lido,
         //     _beaconSpec[0], // epochsPerFrame
@@ -353,13 +355,13 @@ contract LidoTemplate is IsContract {
         //     50000
         // );
 
-        state.operators.initialize(state.lido);
+        state.operators.initialize(state.lido, bytes32(0x1));
 
         state.lido.initialize(
-            _beaconDepositContract,
             state.oracle,
-            state.operators,
             state.agent, // treasury
+            address(0), // staking router
+            address(0), // deposit security module
             address(0) // execution layer rewards vault
         );
 
@@ -403,27 +405,21 @@ contract LidoTemplate is IsContract {
 
     function finalizeDAO(
         string _daoName,
-        uint16 _totalFeeBP,
-        uint16 _treasuryFeeBP,
-        uint16 _operatorsFeeBP,
+        uint16 /*_totalFeeBP*/,
+        uint16 /*_treasuryFeeBP*/,
+        uint16 /*_operatorsFeeBP*/,
         uint256 _unvestedTokensAmount,
         address _elRewardsVault,
         uint16 _elRewardsWithdrawalLimit
     )
         external onlyOwner
     {
+        // TODO: remove unused arguments
         DeployState memory state = deployState;
         APMRepos memory repos = apmRepos;
 
         require(state.dao != address(0), ERROR_DAO_NOT_DEPLOYED);
         require(bytes(_daoName).length > 0, ERROR_INVALID_ID);
-
-        // Set initial values for fee and its distribution
-        bytes32 LIDO_MANAGE_FEE = state.lido.MANAGE_FEE();
-        _createPermissionForTemplate(state.acl, state.lido, LIDO_MANAGE_FEE);
-        state.lido.setFee(_totalFeeBP);
-        state.lido.setFeeDistribution(_treasuryFeeBP, _operatorsFeeBP);
-        _removePermissionFromTemplate(state.acl, state.lido, LIDO_MANAGE_FEE);
 
         // Set Execution Layer rewards parameters on Lido contract
         bytes32 MANAGE_PROTOCOL_CONTRACTS_ROLE = state.lido.MANAGE_PROTOCOL_CONTRACTS_ROLE();
@@ -625,7 +621,6 @@ contract LidoTemplate is IsContract {
 
         // using loops to save contract size
         Repo[10] memory repoAddresses;
-
         repoAddresses[0] = _repos.lido;
         repoAddresses[1] = _repos.oracle;
         repoAddresses[2] = _repos.nodeOperatorsRegistry;
@@ -636,13 +631,12 @@ contract LidoTemplate is IsContract {
         repoAddresses[7] = _resolveRepo(_getAppId(APM_APP_NAME, _state.lidoRegistryEnsNode));
         repoAddresses[8] = _resolveRepo(_getAppId(APM_REPO_APP_NAME, _state.lidoRegistryEnsNode));
         repoAddresses[9] = _resolveRepo(_getAppId(APM_ENSSUB_APP_NAME, _state.lidoRegistryEnsNode));
-
         for (uint256 i = 0; i < repoAddresses.length; ++i) {
             _transferPermissionFromTemplate(apmACL, repoAddresses[i], voting, REPO_CREATE_VERSION_ROLE);
         }
 
         // using loops to save contract size
-        bytes32[8] memory perms;
+        bytes32[7] memory perms;
 
         // Oracle
         // TODO
@@ -651,7 +645,6 @@ contract LidoTemplate is IsContract {
         // perms[2] = _state.oracle.SET_BEACON_SPEC();
         // perms[3] = _state.oracle.SET_REPORT_BOUNDARIES();
         // perms[4] = _state.oracle.SET_BEACON_REPORT_RECEIVER();
-
         for (i = 0; i < 5; ++i) {
             _createPermissionForVoting(acl, _state.oracle, perms[i], voting);
         }
@@ -659,27 +652,25 @@ contract LidoTemplate is IsContract {
         // NodeOperatorsRegistry
         perms[0] = _state.operators.MANAGE_SIGNING_KEYS();
         perms[1] = _state.operators.ADD_NODE_OPERATOR_ROLE();
-        perms[2] = _state.operators.SET_NODE_OPERATOR_ACTIVE_ROLE();
+        perms[2] = _state.operators.ACTIVATE_NODE_OPERATOR_ROLE();
+        perms[2] = _state.operators.DEACTIVATE_NODE_OPERATOR_ROLE();
         perms[3] = _state.operators.SET_NODE_OPERATOR_NAME_ROLE();
         perms[4] = _state.operators.SET_NODE_OPERATOR_ADDRESS_ROLE();
         perms[5] = _state.operators.SET_NODE_OPERATOR_LIMIT_ROLE();
-        perms[6] = _state.operators.REPORT_STOPPED_VALIDATORS_ROLE();
-
+        perms[6] = _state.operators.UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE();
         for (i = 0; i < 7; ++i) {
             _createPermissionForVoting(acl, _state.operators, perms[i], voting);
         }
 
         // Lido
         perms[0] = _state.lido.PAUSE_ROLE();
-        perms[1] = _state.lido.MANAGE_FEE();
-        perms[2] = _state.lido.MANAGE_WITHDRAWAL_KEY();
-        perms[3] = _state.lido.MANAGE_PROTOCOL_CONTRACTS_ROLE();
-        perms[4] = _state.lido.BURN_ROLE();
-        perms[5] = _state.lido.RESUME_ROLE();
-        perms[6] = _state.lido.STAKING_PAUSE_ROLE();
-        perms[7] = _state.lido.STAKING_CONTROL_ROLE();
-
-        for (i = 0; i < 8; ++i) {
+        perms[1] = _state.lido.MANAGE_PROTOCOL_CONTRACTS_ROLE();
+        perms[2] = _state.lido.BURN_ROLE();
+        perms[3] = _state.lido.RESUME_ROLE();
+        perms[4] = _state.lido.STAKING_PAUSE_ROLE();
+        perms[5] = _state.lido.STAKING_CONTROL_ROLE();
+        perms[6] = _state.lido.SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE();
+        for (i = 0; i < 7; ++i) {
             _createPermissionForVoting(acl, _state.lido, perms[i], voting);
         }
     }

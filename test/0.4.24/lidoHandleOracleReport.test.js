@@ -18,7 +18,7 @@ contract('Lido handleOracleReport', ([appManager, user1, user2]) => {
   beforeEach('deploy dao and app', async () => {
     const { dao } = await newDao(appManager)
 
-    proxyAddress = await newApp(dao, 'lido', appBase.address, appManager)
+    const proxyAddress = await newApp(dao, 'lido', appBase.address, appManager)
     app = await LidoPushableMock.at(proxyAddress)
 
     await app.initialize(oracle.address)
@@ -33,8 +33,7 @@ contract('Lido handleOracleReport', ([appManager, user1, user2]) => {
   }
 
   it('reportBeacon access control', async () => {
-    let fakeOracle
-    fakeOracle = await OracleMock.new()
+    const fakeOracle = await OracleMock.new()
     await fakeOracle.setPool(app.address)
     await assertRevert(fakeOracle.reportBeacon(110, 0, ETH(0), { from: user2 }), 'APP_AUTH_FAILED')
   })
@@ -186,8 +185,8 @@ contract('Lido handleOracleReport', ([appManager, user1, user2]) => {
     })
 
     it('report BcnValidators:1 BcnBalance:31 = reward:1', async () => {
-      await oracle.reportBeacon(100, 1, ETH(31), { from: user1 })
-      checkStat({ depositedValidators: 2, beaconValidators: 1, beaconBalance: ETH(31) })
+      await oracle.reportBeacon(100, 2, ETH(63), { from: user1 })
+      checkStat({ depositedValidators: 2, beaconValidators: 2, beaconBalance: ETH(63) })
       assertBn(await app.getBufferedEther(), ETH(5))
       assertBn(await app.getTotalPooledEther(), ETH(68))
       assert.equal(await app.distributeFeeCalled(), true)

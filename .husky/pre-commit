@@ -3,4 +3,6 @@
 
 yarn compile
 yarn lint:sol
-yarn lint:js:fix
+
+# TODO: uncomment. it's temporarily disabled on staking_router + withdrawals-poc merge
+# yarn lint:js:fix

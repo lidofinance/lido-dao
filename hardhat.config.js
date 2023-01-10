@@ -55,7 +55,7 @@ const getNetConfig = (networkName, ethAccountName) => {
       chainId: 1337
     },
     hardhat: {
-      blockGasLimit: 20000000,
+      blockGasLimit: 30000000,
       gasPrice: 0,
       initialBaseFeePerGas: 0,
       allowUnlimitedContractSize: true,

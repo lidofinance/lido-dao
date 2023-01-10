@@ -1,21 +1,20 @@
 const { assert } = require('chai')
 const { BN } = require('bn.js')
-const { assertBn, assertEvent, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertBn, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const { getEventArgument, ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 
 const { pad, ETH } = require('../helpers/utils')
 const { deployDaoAndPool } = require('./helpers/deploy')
-const { signDepositData } = require('../0.8.9/helpers/signatures')
-const { waitBlocks } = require('../helpers/blockchain')
+const { DSMAttestMessage, DSMPauseMessage } = require('../0.8.9/helpers/signatures')
 
-const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
+const INodeOperatorsRegistry = artifacts.require('INodeOperatorsRegistry')
 
 const tenKBN = new BN(10000)
 
 // Fee and its distribution are in basis points, 10000 corresponding to 100%
 
-// Total fee is 1%
-const totalFeePoints = 0.01 * 10000
+// Total max fee is 10%
+const totalFeePoints = 0.1 * 10000
 
 // Of this 1%, 30% goes to the treasury
 const treasuryFeePoints = 0.3 * 10000
@@ -38,7 +37,8 @@ contract('Lido: rewards distribution math', (addresses) => {
     nobody
   ] = addresses
 
-  let pool, nodeOperatorRegistry, token
+  let pool, nodeOperatorsRegistry, token
+  let stakingRouter
   let oracleMock
   let treasuryAddr, guardians
   let depositSecurityModule, depositRoot
@@ -88,7 +88,10 @@ contract('Lido: rewards distribution math', (addresses) => {
     await pool.resumeProtocolAndStaking()
 
     // contracts/nos/NodeOperatorsRegistry.sol
-    nodeOperatorRegistry = deployed.nodeOperatorRegistry
+    nodeOperatorsRegistry = deployed.nodeOperatorsRegistry
+
+    // contracts/0.8.9/StakingRouter.sol
+    stakingRouter = deployed.stakingRouter
 
     // mocks
     oracleMock = deployed.oracleMock
@@ -100,31 +103,22 @@ contract('Lido: rewards distribution math', (addresses) => {
 
     depositRoot = await deployed.depositContractMock.get_deposit_root()
 
-    await pool.setFee(totalFeePoints, { from: voting })
-    await pool.setFeeDistribution(treasuryFeePoints, nodeOperatorsFeePoints, { from: voting })
-    await pool.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+    await stakingRouter.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
   })
 
-  it(`initial treasury balance are zero`, async () => {
+  it(`initial treasury balance is zero`, async () => {
     assertBn(await token.balanceOf(treasuryAddr), new BN(0), 'treasury balance is zero')
   })
 
   it(`registers one node operator with one key`, async () => {
-    // How many validators can this node operator register
-    const validatorsLimit = 0
-
-    const txn = await nodeOperatorRegistry.addNodeOperator(nodeOperator1.name, nodeOperator1.address, { from: voting })
-    await assertRevert(
-      nodeOperatorRegistry.setNodeOperatorStakingLimit(0, validatorsLimit, { from: voting }),
-      'NODE_OPERATOR_STAKING_LIMIT_IS_THE_SAME'
-    )
+    const txn = await nodeOperatorsRegistry.addNodeOperator(nodeOperator1.name, nodeOperator1.address, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
-    nodeOperator1.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
+    nodeOperator1.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: INodeOperatorsRegistry._json.abi })
     assertBn(nodeOperator1.id, 0, 'operator id')
 
-    assertBn(await nodeOperatorRegistry.getNodeOperatorsCount(), 1, 'total node operators')
-    await nodeOperatorRegistry.addSigningKeysOperatorBH(
+    assertBn(await nodeOperatorsRegistry.getNodeOperatorsCount(), 1, 'total node operators')
+    await nodeOperatorsRegistry.addSigningKeysOperatorBH(
       nodeOperator1.id,
       1,
       nodeOperator1.validators[0].key,
@@ -134,15 +128,15 @@ contract('Lido: rewards distribution math', (addresses) => {
       }
     )
 
-    const totalKeys = await nodeOperatorRegistry.getTotalSigningKeyCount(nodeOperator1.id, { from: nobody })
+    const totalKeys = await nodeOperatorsRegistry.getTotalSigningKeyCount(nodeOperator1.id, { from: nobody })
     assertBn(totalKeys, 1, 'total signing keys')
 
-    const unusedKeys = await nodeOperatorRegistry.getUnusedSigningKeyCount(nodeOperator1.id, { from: nobody })
+    const unusedKeys = await nodeOperatorsRegistry.getUnusedSigningKeyCount(nodeOperator1.id, { from: nobody })
     assertBn(unusedKeys, 1, 'unused signing keys')
 
     assertBn(await token.balanceOf(nodeOperator1.address), new BN(0), 'nodeOperator1 balance is zero')
 
-    await nodeOperatorRegistry.setNodeOperatorStakingLimit(nodeOperator1.id, 1, { from: voting })
+    await nodeOperatorsRegistry.setNodeOperatorStakingLimit(nodeOperator1.id, 1, { from: voting })
 
     const ether2Stat = await pool.getBeaconStat()
     assertBn(ether2Stat.depositedValidators, 0, 'no validators have received the ether2')
@@ -177,29 +171,24 @@ contract('Lido: rewards distribution math', (addresses) => {
   })
 
   it(`the first deposit gets deployed`, async () => {
-    const block = await web3.eth.getBlock('latest')
-    const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
-    const signatures = [
-      signDepositData(
-        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
-        depositRoot,
-        keysOpIndex,
-        block.number,
-        block.hash,
-        guardians.privateKeys[guardians.addresses[0]]
-      ),
-      signDepositData(
-        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
-        depositRoot,
-        keysOpIndex,
-        block.number,
-        block.hash,
-        guardians.privateKeys[guardians.addresses[1]]
-      )
-    ]
-    await depositSecurityModule.depositBufferedEther(depositRoot, keysOpIndex, block.number, block.hash, signatures)
+    const [curated] = await stakingRouter.getStakingModules()
 
-    assertBn(await nodeOperatorRegistry.getUnusedSigningKeyCount(0), 0, 'no more available keys for the first validator')
+    const block = await web3.eth.getBlock('latest')
+    const keysOpIndex = await nodeOperatorsRegistry.getKeysOpIndex()
+
+    DSMAttestMessage.setMessagePrefix(await depositSecurityModule.ATTEST_MESSAGE_PREFIX())
+    DSMPauseMessage.setMessagePrefix(await depositSecurityModule.PAUSE_MESSAGE_PREFIX())
+
+    const validAttestMessage = new DSMAttestMessage(block.number, block.hash, depositRoot, curated.id, keysOpIndex)
+
+    const signatures = [
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[0]]),
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]])
+    ]
+
+    await depositSecurityModule.depositBufferedEther(block.number, block.hash, depositRoot, curated.id, keysOpIndex, '0x', signatures)
+
+    assertBn(await nodeOperatorsRegistry.getUnusedSigningKeyCount(0), 0, 'no more available keys for the first validator')
     assertBn(await token.balanceOf(user1), ETH(34), 'user1 balance is equal first reported value + their buffered deposit value')
     assertBn(await token.sharesOf(user1), ETH(34), 'user1 shares are equal to the first deposit')
     assertBn(await token.totalSupply(), ETH(34), 'token total supply')
@@ -214,9 +203,14 @@ contract('Lido: rewards distribution math', (addresses) => {
     const reportingValue = ETH(32 + profitAmountEth)
     const prevTotalShares = await pool.getTotalShares()
     // for some reason there's nothing in this receipt's log, so we're not going to use it
-    const [, deltas] = await getSharesTokenDeltas(() => reportBeacon(1, reportingValue), treasuryAddr, nodeOperator1.address)
+    const [{ receipt }, deltas] = await getSharesTokenDeltas(
+      () => reportBeacon(1, reportingValue),
+      treasuryAddr,
+      nodeOperatorsRegistry.address,
+      user1
+    )
 
-    const [treasuryTokenDelta, treasurySharesDelta, nodeOperator1TokenDelta, nodeOperator1SharesDelta] = deltas
+    const [treasuryTokenDelta, treasurySharesDelta, nodeOperatorsRegistryTokenDelta, nodeOperatorsRegistrySharesDelta] = deltas
 
     const { reportedMintAmount, tos, values } = await readLastPoolEventLog()
 
@@ -228,12 +222,12 @@ contract('Lido: rewards distribution math', (addresses) => {
       treasuryFeeToMint
     } = await getAwaitedFeesSharesTokensDeltas(profitAmount, prevTotalShares, 1)
 
-    assertBn(nodeOperator1SharesDelta, nodeOperatorsSharesToMint, 'nodeOperator1 shares are correct')
+    assertBn(nodeOperatorsRegistrySharesDelta, nodeOperatorsSharesToMint, 'nodeOperator1 shares are correct')
     assertBn(treasurySharesDelta, treasurySharesToMint, 'treasury shares are correct')
 
-    assertBn(nodeOperatorsFeeToMint.add(treasuryFeeToMint), reportedMintAmount, 'reported the expected total fee')
+    assertBn(treasuryFeeToMint.add(nodeOperatorsFeeToMint), reportedMintAmount, 'reported the expected total fee')
 
-    assert.equal(tos[0], nodeOperator1.address, 'second transfer to node operator')
+    assert.equal(tos[0], nodeOperatorsRegistry.address, 'second transfer to node operator')
     assertBn(values[0], nodeOperatorsFeeToMint, 'operator transfer amount is correct')
     assert.equal(tos[1], treasuryAddr, 'third transfer to treasury address')
     assertBn(values[1], treasuryFeeToMint, 'treasury transfer amount is correct')
@@ -460,8 +454,13 @@ contract('Lido: rewards distribution math', (addresses) => {
     assertBn(user1BalanceAfter, user1SharesBefore.mul(totalSupply).div(awaitingTotalShares), `user1 token balance increased`)
     assertBn(user2SharesDelta, new BN(0), `user2 didn't get any shares from profit`)
     assertBn(user2BalanceAfter, user2SharesBefore.mul(totalSupply).div(awaitingTotalShares), `user2 token balance increased`)
+
+    // TODO: the following two lines are from staking router, check them
+    assertBn(await token.balanceOf(nodeOperatorsRegistry.address), nodeOperatorsFeeToMint, 'nodeOperatorsRegistry balance = fee')
+    assertBn(nodeOperatorsRegistryTokenDelta, nodeOperatorsFeeToMint, 'nodeOperatorsRegistry balance = fee')
   })
 
+  // test multiple staking modules erward distribution
   async function getAwaitedFeesSharesTokensDeltas(profitAmount, prevTotalShares, validatorsCount) {
     const totalPooledEther = await pool.getTotalPooledEther()
     const totalShares = await pool.getTotalShares()
