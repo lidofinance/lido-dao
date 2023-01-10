@@ -9,7 +9,7 @@ import "@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts-v4.4/token/ERC20/extensions/draft-IERC20Permit.sol";
 import "@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC20.sol";
 
-import "./lib/AragonUnstructuredStorage.sol";
+import "./lib/UnstructuredStorage.sol";
 
 /**
  * @title Interface defining a Lido liquid staking pool
