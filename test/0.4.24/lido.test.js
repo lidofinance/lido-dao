@@ -44,7 +44,7 @@ const CALLDATA = '0x0'
 
 const STETH = ETH
 
-contract.only('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, treasury]) => {
+contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, treasury]) => {
   let appBase, nodeOperatorsRegistryBase, app, oracle, depositContract, operators
   let treasuryAddress
   let dao, acl
