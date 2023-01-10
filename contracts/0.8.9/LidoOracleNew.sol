@@ -7,9 +7,27 @@ import { AccessControlEnumerable } from "@openzeppelin/contracts-v4.4/access/Acc
 
 import "./CommitteeQuorum.sol";
 import "./ReportEpochChecker.sol";
-import "./interfaces/ILido.sol";
 import "./interfaces/IBeaconReportReceiver.sol";
 
+interface INodeOperatorsRegistry {
+    /**
+      * @notice Report `_stoppedIncrement` more stopped validators of the node operator #`_id`
+      */
+    function reportStoppedValidators(uint256 _id, uint64 _stoppedIncrement) external;
+}
+
+/**
+ * @notice Part of Lido interface required for `LidoOracleNew` to work
+ */
+interface ILido {
+    function getOperators() external returns (INodeOperatorsRegistry);
+
+    function totalSupply() external returns (uint256);
+
+    function getTotalShares() external returns (uint256);
+
+    function handleOracleReport(uint256, uint256, uint256, uint256, uint256[] calldata, uint256[] calldata) external;
+}
 
 /**
  * @title Implementation of an ETH 2.0 -> ETH oracle
@@ -38,20 +56,18 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         uint256 beaconBalance,
         uint256 beaconValidators,
         address caller,
-        uint256 wcBufferedEther,
+        uint256 withdrawalVaultBalance,
         uint256[] requestIdToFinalizeUpTo,
-        uint256[] finalizationPooledEtherAmount,
-        uint256[] finalizationSharesAmount
+        uint256[] finalizationShareRates
     );
 
     event ConsensusReached(
         uint256 epochId,
         uint256 beaconBalance,
         uint256 beaconValidators,
-        uint256 wcBufferedEther,
+        uint256 _withdrawalVaultBalance,
         uint256[] requestIdToFinalizeUpTo,
-        uint256[] finalizationPooledEtherAmount,
-        uint256[] finalizationSharesAmount
+        uint256[] finalizationShareRates
     );
 
     event PostTotalShares(
@@ -74,12 +90,11 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         uint256[] nodeOperatorsWithExitedValidators;
         uint64[] exitedValidatorsNumbers;
         // EL values
-        uint256 wcBufferedEther;
+        uint256 withdrawalVaultBalance;
         // decision
         uint256 newDepositBufferWithdrawalsReserve;
         uint256[] requestIdToFinalizeUpTo;
-        uint256[] finalizationPooledEtherAmount;
-        uint256[] finalizationSharesAmount;
+        uint256[] finalizationShareRates;
     }
 
     /// ACL
@@ -343,10 +358,9 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
             beaconBalance,
             _report.beaconValidators,
             msg.sender,
-            _report.wcBufferedEther,
+            _report.withdrawalVaultBalance,
             _report.requestIdToFinalizeUpTo,
-            _report.finalizationPooledEtherAmount,
-            _report.finalizationSharesAmount
+            _report.finalizationShareRates
         );
     }
 
@@ -451,10 +465,9 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
             _report.epochId,
             beaconBalance,
             _report.beaconValidators,
-            _report.wcBufferedEther,
+            _report.withdrawalVaultBalance,
             _report.requestIdToFinalizeUpTo,
-            _report.finalizationPooledEtherAmount,
-            _report.finalizationSharesAmount
+            _report.finalizationShareRates
         );
 
         // now this frame is completed, so the expected epoch should be advanced to the first epoch
@@ -480,11 +493,10 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         lido.handleOracleReport(
             _report.beaconValidators,
             beaconBalance,
-            _report.wcBufferedEther,
+            _report.withdrawalVaultBalance,
             _report.newDepositBufferWithdrawalsReserve,
             _report.requestIdToFinalizeUpTo,
-            _report.finalizationPooledEtherAmount,
-            _report.finalizationSharesAmount
+            _report.finalizationShareRates
         );
         uint256 postTotalPooledEther = lido.totalSupply();
 

@@ -29,7 +29,6 @@ const tokens = ETH
 
 contract('Lido with official deposit contract', ([appManager, voting, user1, user2, user3, nobody, depositor, treasury]) => {
   let appBase, stEthBase, nodeOperatorsRegistryBase, app, token, oracle, depositContract, operators, stakingRouter
-  let treasuryAddr, insuranceAddr
 
   before('deploy base app', async () => {
     // Deploy the app's base contract.
@@ -114,9 +113,7 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
     )
 
     // Initialize the app's proxy.
-    await app.initialize(oracle.address, treasury, stakingRouter.address, depositor, ZERO_ADDRESS)
-
-    treasuryAddr = await app.getTreasury()
+    await app.initialize(oracle.address, treasury, stakingRouter.address, depositor, ZERO_ADDRESS, ZERO_ADDRESS)
 
     await oracle.setPool(app.address)
   })

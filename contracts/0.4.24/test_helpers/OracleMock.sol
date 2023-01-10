@@ -1,20 +1,20 @@
-// SPDX-FileCopyrightText: 2020 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.4.24;
 
-import "../interfaces/ILido.sol";
+import "../Lido.sol";
 
 /**
  * @dev This is a mock. Don't use in production.
  */
 contract OracleMock {
-    ILido private pool;
+    Lido private pool;
     address private beaconReceiver;
 
     function setPool(address _pool) external {
-        pool = ILido(_pool);
+        pool = Lido(_pool);
     }
 
     function reportBeacon(
@@ -30,7 +30,6 @@ contract OracleMock {
             _beaconBalance,
             wcBufferedEther,
             withdrawalsReserveAmount,
-            empty,
             empty,
             empty
         );

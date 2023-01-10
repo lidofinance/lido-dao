@@ -86,6 +86,7 @@
     "babel-plugin-istanbul": "^6.0.0",
     "chai": "^4.2.0",
     "dotenv": "^8.2.0",
+    "electron": "^22.0.0",
     "eslint": "^7.10.0",
     "eslint-config-prettier": "^6.12.0",
     "eslint-config-standard": "^14.1.1",

@@ -10,7 +10,7 @@ const nodeOperators = require('../helpers/node-operators')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistryMock')
 const PoolMock = artifacts.require('PoolMock.sol')
-const INodeOperatorsRegistry = artifacts.require('INodeOperatorsRegistry.sol')
+const INodeOperatorsRegistry = artifacts.require('contracts/0.4.24/interfaces/INodeOperatorsRegistry.sol:INodeOperatorsRegistry')
 
 const PUBKEY_LENGTH_BYTES = 48
 const SIGNATURE_LENGTH_BYTES = 96

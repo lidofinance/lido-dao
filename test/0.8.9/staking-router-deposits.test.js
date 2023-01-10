@@ -1,5 +1,6 @@
 const hre = require('hardhat')
 const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
+const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 const { newDao, newApp } = require('../0.4.24/helpers/dao')
 const { ETH, genKeys } = require('../helpers/utils')
 
@@ -110,7 +111,7 @@ contract('StakingRouter', (accounts) => {
     await stakingRouter.grantRole(MODULE_PAUSE_ROLE, voting, { from: admin })
     await stakingRouter.grantRole(MODULE_MANAGE_ROLE, voting, { from: admin })
 
-    await lido.initialize(oracle.address, treasury, stakingRouter.address, depositSecurityModule.address)
+    await lido.initialize(oracle.address, treasury, stakingRouter.address, depositSecurityModule.address, ZERO_ADDRESS, ZERO_ADDRESS)
 
     evmSnapshotId = await hre.ethers.provider.send('evm_snapshot', [])
   })

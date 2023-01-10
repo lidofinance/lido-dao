@@ -18,11 +18,10 @@ const ZERO_MEMBER_REPORT = {
   stakingModules: [],
   nodeOperatorsWithExitedValidators: [],
   exitedValidatorsNumbers: [],
-  wcBufferedEther: 0,
+  withdrawalVaultBalance: 0,
   newDepositBufferWithdrawalsReserve: 0,
   requestIdToFinalizeUpTo: [],
-  finalizationPooledEtherAmount: [],
-  finalizationSharesAmount: []
+  finalizationShareRates: []
 }
 
 const DEFAULT_ADMIN_ROLE = '0x0000000000000000000000000000000000000000000000000000000000000000'

@@ -4,7 +4,7 @@
 
 pragma solidity 0.4.24;
 
-import "../interfaces/ILido.sol";
+import "../Lido.sol";
 
 
 /**
@@ -49,7 +49,7 @@ interface ILidoOracle {
     /**
      * @notice Return the Lido contract address
      */
-    function getLido() public view returns (ILido);
+    function getLido() public view returns (Lido);
 
     /**
      * @notice Return the number of exactly the same reports needed to finalize the epoch

@@ -2,14 +2,13 @@ const { artifacts, contract } = require('hardhat')
 const { bn } = require('@aragon/contract-helpers-test')
 const { assertBn, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
 const { assert } = require('chai')
+const { ETH } = require('../helpers/utils')
 
 const WithdrawalQueue = artifacts.require('WithdrawalQueue.sol')
 const Owner = artifacts.require('Owner.sol')
 const StETHMock = artifacts.require('StETHMockForWithdrawalQueue.sol')
 const WstETH = artifacts.require('WstETH.sol')
 const OssifiableProxy = artifacts.require('OssifiableProxy.sol')
-
-const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 
 contract('WithdrawalQueue', ([recipient, stranger, daoAgent]) => {
   let withdrawal, withdrawalImpl, owner, steth, wsteth

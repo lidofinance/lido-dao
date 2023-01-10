@@ -9,7 +9,7 @@ const { deployDaoAndPool } = require('./helpers/deploy')
 const { DSMAttestMessage, DSMPauseMessage } = require('../0.8.9/helpers/signatures')
 const { waitBlocks } = require('../helpers/blockchain')
 
-const INodeOperatorsRegistry = artifacts.require('INodeOperatorsRegistry')
+const INodeOperatorsRegistry = artifacts.require('contracts/0.4.24/interfaces/INodeOperatorsRegistry.sol:INodeOperatorsRegistry')
 const CURATED_MODULE_ID = 1
 
 contract('Lido: happy path', (addresses) => {

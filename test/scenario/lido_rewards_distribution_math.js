@@ -7,7 +7,7 @@ const { pad, ETH } = require('../helpers/utils')
 const { deployDaoAndPool } = require('./helpers/deploy')
 const { DSMAttestMessage, DSMPauseMessage } = require('../0.8.9/helpers/signatures')
 
-const INodeOperatorsRegistry = artifacts.require('INodeOperatorsRegistry')
+const INodeOperatorsRegistry = artifacts.require('contracts/0.4.24/interfaces/INodeOperatorsRegistry.sol:INodeOperatorsRegistry')
 
 const tenKBN = new BN(10000)
 
@@ -214,13 +214,8 @@ contract('Lido: rewards distribution math', (addresses) => {
 
     const { reportedMintAmount, tos, values } = await readLastPoolEventLog()
 
-    const {
-      totalFeeToDistribute,
-      nodeOperatorsSharesToMint,
-      treasurySharesToMint,
-      nodeOperatorsFeeToMint,
-      treasuryFeeToMint
-    } = await getAwaitedFeesSharesTokensDeltas(profitAmount, prevTotalShares, 1)
+    const { totalFeeToDistribute, nodeOperatorsSharesToMint, treasurySharesToMint, nodeOperatorsFeeToMint, treasuryFeeToMint } =
+      await getAwaitedFeesSharesTokensDeltas(profitAmount, prevTotalShares, 1)
 
     assertBn(nodeOperatorsRegistrySharesDelta, nodeOperatorsSharesToMint, 'nodeOperator1 shares are correct')
     assertBn(treasurySharesDelta, treasurySharesToMint, 'treasury shares are correct')
@@ -248,15 +243,15 @@ contract('Lido: rewards distribution math', (addresses) => {
   })
 
   it(`adds another node operator`, async () => {
-    const txn = await nodeOperatorRegistry.addNodeOperator(nodeOperator2.name, nodeOperator2.address, { from: voting })
-    await nodeOperatorRegistry.setNodeOperatorStakingLimit(1, 1, { from: voting })
+    const txn = await nodeOperatorsRegistry.addNodeOperator(nodeOperator2.name, nodeOperator2.address, { from: voting })
+    await nodeOperatorsRegistry.setNodeOperatorStakingLimit(1, 1, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
     nodeOperator2.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
     assertBn(nodeOperator2.id, 1, 'operator id')
 
-    assertBn(await nodeOperatorRegistry.getNodeOperatorsCount(), 2, 'total node operators')
-    await nodeOperatorRegistry.addSigningKeysOperatorBH(
+    assertBn(await nodeOperatorsRegistry.getNodeOperatorsCount(), 2, 'total node operators')
+    await nodeOperatorsRegistry.addSigningKeysOperatorBH(
       nodeOperator2.id,
       1,
       nodeOperator2.validators[0].key,
@@ -266,10 +261,10 @@ contract('Lido: rewards distribution math', (addresses) => {
       }
     )
 
-    const totalKeys = await nodeOperatorRegistry.getTotalSigningKeyCount(nodeOperator2.id, { from: nobody })
+    const totalKeys = await nodeOperatorsRegistry.getTotalSigningKeyCount(nodeOperator2.id, { from: nobody })
     assertBn(totalKeys, 1, 'total signing keys')
 
-    const unusedKeys = await nodeOperatorRegistry.getUnusedSigningKeyCount(nodeOperator2.id, { from: nobody })
+    const unusedKeys = await nodeOperatorsRegistry.getUnusedSigningKeyCount(nodeOperator2.id, { from: nobody })
     assertBn(unusedKeys, 1, 'unused signing keys')
 
     assertBn(await token.balanceOf(nodeOperator2.address), new BN(0), 'nodeOperator2 balance is zero')
@@ -306,7 +301,7 @@ contract('Lido: rewards distribution math', (addresses) => {
 
   it(`the second deposit gets deployed`, async () => {
     const block = await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
-    const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+    const keysOpIndex = await nodeOperatorsRegistry.getKeysOpIndex()
     const signatures = [
       signDepositData(
         await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
@@ -334,7 +329,7 @@ contract('Lido: rewards distribution math', (addresses) => {
       user2
     )
 
-    assertBn(await nodeOperatorRegistry.getUnusedSigningKeyCount(0), 0, 'no more available keys')
+    assertBn(await nodeOperatorsRegistry.getUnusedSigningKeyCount(0), 0, 'no more available keys')
     const zeroBn = new BN(0)
     // deposit doesn't change any kind of balances
     deltas.forEach((delta, i) => assertBn(delta, zeroBn, `delta ${i} is zero`))
@@ -350,7 +345,7 @@ contract('Lido: rewards distribution math', (addresses) => {
       user2
     )
 
-    assertBn(await nodeOperatorRegistry.getUnusedSigningKeyCount(0), 0, 'no more available keys')
+    assertBn(await nodeOperatorsRegistry.getUnusedSigningKeyCount(0), 0, 'no more available keys')
     const zeroBn = new BN(0)
     // deposit doesn't change any kind of _shares_ balances
     deltas.forEach((delta, i) => i % 2 && assertBn(delta, zeroBn, `delta ${i} is zero`))
@@ -389,13 +384,8 @@ contract('Lido: rewards distribution math', (addresses) => {
 
     const { reportedMintAmount, tos, values } = await readLastPoolEventLog()
 
-    const {
-      sharesToMint,
-      nodeOperatorsSharesToMint,
-      treasurySharesToMint,
-      nodeOperatorsFeeToMint,
-      treasuryFeeToMint
-    } = await getAwaitedFeesSharesTokensDeltas(profitAmount, prevTotalShares, 2)
+    const { sharesToMint, nodeOperatorsSharesToMint, treasurySharesToMint, nodeOperatorsFeeToMint, treasuryFeeToMint } =
+      await getAwaitedFeesSharesTokensDeltas(profitAmount, prevTotalShares, 2)
 
     // events are ok
     assert.equal(tos[0], nodeOperator1.address, 'second transfer to node operator 1')

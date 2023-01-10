@@ -8,7 +8,7 @@ const { deployDaoAndPool } = require('./helpers/deploy')
 const { signDepositData } = require('../0.8.9/helpers/signatures')
 const { waitBlocks } = require('../helpers/blockchain')
 
-const INodeOperatorsRegistry = artifacts.require('INodeOperatorsRegistry')
+const INodeOperatorsRegistry = artifacts.require('contracts/0.4.24/interfaces/INodeOperatorsRegistry.sol:INodeOperatorsRegistry')
 
 contract('Lido: penalties, slashing, operator stops', (addresses) => {
   const [
@@ -327,10 +327,10 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     assertBn(await pool.getBufferedEther(), ETH(0), 'buffered ether')
 
     // Total supply accounts for penalties taken by the validator
-    assertBn(await token.totalSupply(), tokens(29), 'token total supply shrinked by loss taken')
+    assertBn(await token.totalSupply(), tokens(29), 'token total supply shrunk by loss taken')
 
     // Token user balances decreased
-    assertBn(await token.balanceOf(user1), awaitingUser1Balance, 'user1 tokens shrinked by loss taken')
+    assertBn(await token.balanceOf(user1), awaitingUser1Balance, 'user1 tokens shrunk by loss taken')
 
     // No fees distributed yet
     assertBn(await token.balanceOf(treasuryAddr), new BN(0), 'no treasury tokens on no reward')
@@ -437,7 +437,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     const newDeposit = new BN(depositAmount)
     const sharesAdded = newDeposit.mul(oldShares).div(tokenSupplyBefore)
     awaitingTotalShares = awaitingTotalShares.add(sharesAdded)
-    assertBn(await token.getTotalShares(), new BN(depositAmount).add(sharesAdded), 'total shares are changed proportionaly')
+    assertBn(await token.getTotalShares(), new BN(depositAmount).add(sharesAdded), 'total shares are changed proportionally')
     assertBn(await token.balanceOf(user1), awaitingUser1Balance, `user1 balance increased by deposited ETH`)
   })
 
@@ -473,10 +473,10 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     assertBn(await pool.getBufferedEther(), ETH(0), 'buffered ether')
 
     // Total supply accounts for penalties taken by the validator
-    assertBn(await token.totalSupply(), tokens(60), 'token total supply shrinked by loss taken')
+    assertBn(await token.totalSupply(), tokens(60), 'token total supply shrunk by loss taken')
 
     // Token user balances decreased
-    assertBn(await token.balanceOf(user1), awaitingUser1Balance, 'user1 tokens shrinked by loss taken')
+    assertBn(await token.balanceOf(user1), awaitingUser1Balance, 'user1 tokens shrunk by loss taken')
 
     // No fees distributed yet
     assertBn(await token.balanceOf(treasuryAddr), new BN(0), 'no treasury tokens on no reward')
@@ -485,7 +485,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     assertBn(await token.balanceOf(user1), ETH(60), `user1 balance decreased by lost ETH`)
   })
 
-  it(`the oracle can't report less validators than previosly`, () => {
+  it(`the oracle can't report less validators than previously`, () => {
     assertRevert(oracleMock.reportBeacon(101, 1, ETH(31)))
   })
 
@@ -497,7 +497,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
 
   it(`first operator adds a second validator`, async () => {
     const numKeys = 1
-    await nodeOperatorRegistry.addSigningKeysOperatorBH(
+    await nodeOperatorsRegistry.addSigningKeysOperatorBH(
       nodeOperator1.id,
       numKeys,
       nodeOperator1.validators[1].key,
@@ -509,17 +509,17 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
 
     // The key was added
 
-    const totalFirstOperatorKeys = await nodeOperatorRegistry.getTotalSigningKeyCount(nodeOperator1.id, { from: nobody })
+    const totalFirstOperatorKeys = await nodeOperatorsRegistry.getTotalSigningKeyCount(nodeOperator1.id, { from: nobody })
     assertBn(totalFirstOperatorKeys, 2, 'added one signing key to total')
 
-    const unusedKeys = await nodeOperatorRegistry.getUnusedSigningKeyCount(nodeOperator1.id, { from: nobody })
+    const unusedKeys = await nodeOperatorsRegistry.getUnusedSigningKeyCount(nodeOperator1.id, { from: nobody })
     assertBn(unusedKeys, 1, 'one signing key is unused')
   })
 
   it(`voting stops the first operator`, async () => {
-    const activeOperatorsBefore = await nodeOperatorRegistry.getActiveNodeOperatorsCount()
-    await nodeOperatorRegistry.setNodeOperatorActive(0, false, { from: voting })
-    const activeOperatorsAfter = await nodeOperatorRegistry.getActiveNodeOperatorsCount()
+    const activeOperatorsBefore = await nodeOperatorsRegistry.getActiveNodeOperatorsCount()
+    await nodeOperatorsRegistry.setNodeOperatorActive(0, false, { from: voting })
+    const activeOperatorsAfter = await nodeOperatorsRegistry.getActiveNodeOperatorsCount()
     assertBn(activeOperatorsAfter, activeOperatorsBefore.sub(new BN(1)), 'deactivated one operator')
   })
 
@@ -531,7 +531,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
 
     await web3.eth.sendTransaction({ to: pool.address, from: user1, value: depositAmount })
     const block = await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
-    const keysOpIndex = await nodeOperatorRegistry.getKeysOpIndex()
+    const keysOpIndex = await nodeOperatorsRegistry.getKeysOpIndex()
     const signatures = [
       signDepositData(
         await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
@@ -583,9 +583,9 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
   })
 
   it(`voting stops the second operator`, async () => {
-    const activeOperatorsBefore = await nodeOperatorRegistry.getActiveNodeOperatorsCount()
-    await nodeOperatorRegistry.setNodeOperatorActive(1, false, { from: voting })
-    const activeOperatorsAfter = await nodeOperatorRegistry.getActiveNodeOperatorsCount()
+    const activeOperatorsBefore = await nodeOperatorsRegistry.getActiveNodeOperatorsCount()
+    await nodeOperatorsRegistry.setNodeOperatorActive(1, false, { from: voting })
+    const activeOperatorsAfter = await nodeOperatorsRegistry.getActiveNodeOperatorsCount()
     assertBn(activeOperatorsAfter, activeOperatorsBefore.sub(new BN(1)), 'deactivated one operator')
     assertBn(activeOperatorsAfter, new BN(0), 'no active operators')
   })

@@ -16,7 +16,8 @@ contract LidoMock is Lido {
         address _treasury,
         address _stakingRouterAddress,
         address _dsmAddress,
-        address _executionLayerRewardsVault
+        address _executionLayerRewardsVault,
+        address _withdrawalQueue
     )
         public
     {
@@ -26,7 +27,14 @@ contract LidoMock is Lido {
         if (_executionLayerRewardsVault == address(0)) {
             _executionLayerRewardsVault = new VaultMock();
         }
-        super.initialize(_oracle, _treasury, _stakingRouterAddress, _dsmAddress, _executionLayerRewardsVault);
+        super.initialize(
+            _oracle,
+            _treasury,
+            _stakingRouterAddress,
+            _dsmAddress,
+            _executionLayerRewardsVault,
+            _withdrawalQueue
+        );
     }
 
     /**

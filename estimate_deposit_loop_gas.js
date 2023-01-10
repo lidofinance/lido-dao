@@ -21,7 +21,7 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
     nobody
   ] = addresses
 
-  let pool, nodeOperatorRegistry, depositContractMock
+  let pool, nodeOperatorsRegistry, depositContractMock
 
   const arbitraryN = toBN('0x0159e2036050fb43f6ecaca13a7b53b23ea54a623e47fb2bd89a5b4a18da3295')
   const withdrawalCredentials = pad('0x0202', 32)
@@ -34,7 +34,7 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
     pool = deployed.pool
 
     // contracts/nos/NodeOperatorsRegistry.sol
-    nodeOperatorRegistry = deployed.nodeOperatorRegistry
+    nodeOperatorsRegistry = deployed.nodeOperatorsRegistry
 
     // mocks
     depositContractMock = deployed.depositContractMock
@@ -50,7 +50,7 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
     const numKeys = 3
 
     for (let iOperator = 0; iOperator < numOperators; ++iOperator) {
-      const txn = await nodeOperatorRegistry.addNodeOperator(`operator-${iOperator}`, nodeOperator, operatorValidatorsLimit, {
+      const txn = await nodeOperatorsRegistry.addNodeOperator(`operator-${iOperator}`, nodeOperator, operatorValidatorsLimit, {
         from: voting
       })
       const nodeOperatorId = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
@@ -66,15 +66,15 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
       const keys = hexConcat(...data.map((v) => v.key))
       const sigs = hexConcat(...data.map((v) => v.sig))
 
-      await nodeOperatorRegistry.addSigningKeys(nodeOperatorId, numKeys, keys, sigs, { from: voting })
+      await nodeOperatorsRegistry.addSigningKeys(nodeOperatorId, numKeys, keys, sigs, { from: voting })
 
-      const totalKeys = await nodeOperatorRegistry.getTotalSigningKeyCount(nodeOperatorId, { from: nobody })
+      const totalKeys = await nodeOperatorsRegistry.getTotalSigningKeyCount(nodeOperatorId, { from: nobody })
       assertBn(totalKeys, numKeys, 'total signing keys')
 
       validatorData.push.apply(validatorData, data)
     }
 
-    assertBn(await nodeOperatorRegistry.getNodeOperatorsCount(), numOperators, 'total operators')
+    assertBn(await nodeOperatorsRegistry.getNodeOperatorsCount(), numOperators, 'total operators')
   })
 
   let gasPerMockDeposit

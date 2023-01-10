@@ -1,0 +1,1 @@
+[{"inputs":[{"internalType":"uint256","name":"_id","type":"uint256"},{"internalType":"uint64","name":"_stoppedIncrement","type":"uint64"}],"name":"reportStoppedValidators","outputs":[],"stateMutability":"nonpayable","type":"function"}]

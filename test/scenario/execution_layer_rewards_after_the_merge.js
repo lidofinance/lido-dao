@@ -11,7 +11,7 @@ const { waitBlocks } = require('../helpers/blockchain')
 
 const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
 
-const INodeOperatorsRegistry = artifacts.require('INodeOperatorsRegistry')
+const INodeOperatorsRegistry = artifacts.require('contracts/0.4.24/interfaces/INodeOperatorsRegistry.sol:INodeOperatorsRegistry')
 
 const TOTAL_BASIS_POINTS = 10000
 const CURATED_MODULE_ID = 1
