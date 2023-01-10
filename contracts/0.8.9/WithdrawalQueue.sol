@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2022 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 /* See contracts/COMPILERS.md */
@@ -139,7 +139,7 @@ contract WithdrawalQueue {
     uint256 public finalizedRequestsCounter = 0;
 
     /// @notice queue for withdrawal requests
-    WithdrawalRequest[] public queue;
+    WithdrawalRequest[] internal queue;
 
     /// @notice withdrawal requests mapped to the recipients
     mapping(address => uint256[]) public requestsByRecipient;
@@ -311,7 +311,9 @@ contract WithdrawalQueue {
         if (_lastIdToFinalize < finalizedRequestsCounter || _lastIdToFinalize >= queue.length) {
             revert InvalidFinalizationId();
         }
-        if (lockedEtherAmount + msg.value > address(this).balance) revert NotEnoughEther();
+        (uint128 ethToWithdraw, ) = _calculateDiscountedBatch(finalizedRequestsCounter, _lastIdToFinalize, _shareRate);
+
+        if (msg.value < ethToWithdraw) revert NotEnoughEther();
 
         _updateRateHistory(_shareRate, _lastIdToFinalize);
 
@@ -331,7 +333,7 @@ contract WithdrawalQueue {
     function calculateFinalizationParams(
         uint256 _lastIdToFinalize,
         uint256 _shareRate
-    ) external view returns (uint256 etherToLock, uint256 sharesToBurn) {
+    ) external view returns (uint128 etherToLock, uint128 sharesToBurn) {
         return _calculateDiscountedBatch(finalizedRequestsCounter, _lastIdToFinalize, _shareRate);
     }
 
@@ -413,7 +415,7 @@ contract WithdrawalQueue {
             shares -= queue[_firstId - 1].cumulativeShares;
         }
 
-        eth = _min(eth, _toUint128((shares * _shareRate) / 1e9));
+        eth = _min(eth, _toUint128(shares * _shareRate / 1e9));
     }
 
     /// @dev checks if provided request included in the rate hint boundaries

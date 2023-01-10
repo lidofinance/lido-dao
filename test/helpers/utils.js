@@ -57,6 +57,7 @@ const div15 = (bn) => bn.div(new BN(1000000)).div(new BN(1000000)).div(new BN(10
 
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 const tokens = ETH
+const shareRate = (value) => web3.utils.toWei(value + '', 'gether')
 
 function formatWei(weiString) {
   return ethers.utils.formatEther(ethers.utils.parseUnits(weiString, 'wei'), { commify: true }) + ' ETH'
@@ -153,5 +154,6 @@ module.exports = {
   assertRevertCustomError,
   assertNoEvent,
   changeEndianness,
-  genKeys
+  genKeys,
+  shareRate
 }

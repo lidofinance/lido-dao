@@ -13,7 +13,7 @@ import "../StETH.sol";
 contract StETHMock is StETH {
     uint256 private totalPooledEther;
 
-    constructor() public {
+    constructor() public payable{
         _resume();
     }
 

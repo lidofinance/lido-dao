@@ -11,7 +11,7 @@ interface IWithdrawalQueue {
     function calculateFinalizationParams(
         uint256 _lastIdToFinalize,
         uint256 _shareRate
-    ) external view returns (uint256 sharesToBurn, uint256 etherToLock);
+    ) external view returns (uint128 sharesToBurn, uint128 etherToLock);
 
     function finalize(
         uint256 _lastIdToFinalize,
