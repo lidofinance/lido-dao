@@ -21,7 +21,8 @@ const ZERO_MEMBER_REPORT = {
   withdrawalVaultBalance: 0,
   newDepositBufferWithdrawalsReserve: 0,
   requestIdToFinalizeUpTo: [],
-  finalizationShareRates: []
+  finalizationShareRates: [], 
+  bunkerModeFlag: false,
 }
 
 const DEFAULT_ADMIN_ROLE = '0x0000000000000000000000000000000000000000000000000000000000000000'
