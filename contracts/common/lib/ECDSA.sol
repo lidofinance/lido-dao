@@ -5,6 +5,7 @@
 // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/541e821/contracts/utils/cryptography/ECDSA.sol#L112
 
 /* See contracts/COMPILERS.md */
+// solhint-disable-next-line
 pragma solidity >=0.4.24 <0.9.0;
 
 
