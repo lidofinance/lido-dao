@@ -89,7 +89,7 @@ contract.skip('ValidatorExitBus', ([deployer, member, owner, nobody]) => {
     it(`Calculate gas usages`, async () => {
       let epochId = 1
       const gasUsage = {}
-      const amountsOfKeysToTry = [1, 3, 10, 40, 100]
+      const amountsOfKeysToTry = [1, 10, 100, 500]
       let prevNumKeys = 0
       for (const numKeys of amountsOfKeysToTry) {
         await waitBlocks(Math.ceil(prevNumKeys / fromE18(numRequestsLimitIncreasePerBlockE18)))

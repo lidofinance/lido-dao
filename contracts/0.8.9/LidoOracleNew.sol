@@ -203,8 +203,6 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
 
         // set expected epoch to the first epoch for the next frame
         _setExpectedEpochToFirstOfNextFrame();
-
-        CONSENSUS_INDEX_POSITION.setStorageUint256(NO_CONSENSUS_INDEX);
     }
 
     /**
@@ -363,7 +361,7 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
     function updateQuorum(uint256 _quorum)
         external onlyRole(MANAGE_QUORUM_ROLE)
     {
-        _updateQuorum(_quorum);
+        _updateQuorum(_quorum, _getCurrentEpochId(_getBeaconSpec()));
     }
 
     /**

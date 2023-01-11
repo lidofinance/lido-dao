@@ -117,8 +117,6 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable, ReportEpo
 
         // set expected epoch to the first epoch for the next frame
         _setExpectedEpochToFirstOfNextFrame();
-
-        CONSENSUS_INDEX_POSITION.setStorageUint256(NO_CONSENSUS_INDEX);
     }
 
     /**
@@ -144,7 +142,6 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable, ReportEpo
         }
 
         _handleMemberReport(msg.sender, _epochId, _reportHash);
-        // TODO: events
     }
 
     function handleReportData(
@@ -230,17 +227,7 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable, ReportEpo
     function updateQuorum(uint256 _quorum)
         external onlyRole(MANAGE_QUORUM_ROLE)
     {
-        // (bool isQuorumReached, uint256 reportIndex) = _updateQuorum(_quorum);
-        // if (isQuorumReached) {
-        //     (
-        //         address[] memory stakingModules,
-        //         uint256[] memory nodeOperatorIds,
-        //         uint256[] memory validatorIds,
-        //         bytes[] memory validatorPubkeys,
-        //         uint256 epochId
-        //     ) = _decodeReport(distinctReports[reportIndex]);
-        //     _reportKeysToEject(stakingModules, nodeOperatorIds, validatorIds, validatorPubkeys, epochId, _getBeaconSpec());
-        // }
+        _updateQuorum(_quorum, _getCurrentEpochId(_getBeaconSpec()));
     }
 
     /**

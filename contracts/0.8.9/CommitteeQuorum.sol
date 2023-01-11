@@ -33,13 +33,14 @@ contract CommitteeQuorum {
 
     uint256 internal constant MEMBER_NOT_FOUND = type(uint256).max;
 
-    uint256 internal constant NO_CONSENSUS_INDEX = type(uint256).max;
+    /// The value CONSENSUS_HASH_POSITION has if no consensus reached
+    bytes32 internal constant NO_CONSENSUS_HASH = bytes32(0);
 
     /// The bitmask of the oracle members that pushed their reports
     bytes32 internal constant REPORTS_BITMASK_POSITION = keccak256("lido.CommitteeQuorum.reportsBitmask");
 
     ///! If no consensus reached it is NO_CONSENSUS_INDEX
-    bytes32 internal constant CONSENSUS_INDEX_POSITION = keccak256("lido.CommitteeQuorum.consensusIndex");
+    bytes32 internal constant CONSENSUS_HASH_POSITION = keccak256("lido.CommitteeQuorum.consensusHash");
 
     ///! STRUCTURED STORAGE OF THE CONTRACT
     ///! SLOT 0: address[] members
@@ -111,43 +112,41 @@ contract CommitteeQuorum {
 
         // Check is quorum reached
         if (distinctReportCounters[i] >= QUORUM_POSITION.getStorageUint256()) {
-            CONSENSUS_INDEX_POSITION.setStorageUint256(i);
-            emit ConsensusReached(_epochId, _reportHash);
+            _updateConsensusHash(_reportHash, _epochId);
         }
     }
 
     function _checkOnDataDelivery(bytes32 _dataHash, uint256 _epochId, uint256 _expectedEpochId) internal view {
-        uint256 consensusIndex = CONSENSUS_INDEX_POSITION.getStorageUint256();
-        if (consensusIndex == NO_CONSENSUS_INDEX) {
+        bytes32 consensusHash = CONSENSUS_HASH_POSITION.getStorageBytes32();
+        if (consensusHash == NO_CONSENSUS_HASH) {
             revert CannotDeliverDataIfNoHashConsensus();
         }
         if (_epochId != _expectedEpochId) {
             revert ConsensusEpochAndDataEpochDoNotMatch();
         }
-        bytes32 consensusHash = distinctReportHashes[consensusIndex];
         if (_dataHash != consensusHash) {
             revert ReportDataDoNotMatchConsensusHash(_dataHash, consensusHash);
         }
     }
 
     function _getQuorumReport(uint256 _quorum) internal view
-        returns (uint256)
+        returns (bytes32)
     {
         // check most frequent cases first: all reports are the same or no reports yet
         uint256 numDistinctReports = distinctReportHashes.length;
         if (numDistinctReports == 0) {
-            return NO_CONSENSUS_INDEX;
+            return NO_CONSENSUS_HASH;
         } else if (numDistinctReports == 1) {
             if (distinctReportCounters[0] >= _quorum) {
                 return 0;
             } else {
-                return NO_CONSENSUS_INDEX;
+                return NO_CONSENSUS_HASH;
             }
         }
 
         // If there are multiple reports with the same count above quorum we consider
         // committee quorum not reached
-        uint256 consensusIndex = NO_CONSENSUS_INDEX;
+        uint256 consensusIndex = 0;
         bool areMultipleMaxReports = false;
         uint16 maxCount = 0;
         uint16 currentCount = 0;
@@ -165,9 +164,9 @@ contract CommitteeQuorum {
         }
         // isQuorumReached = maxCount >= _quorum && !areMultipleMaxReports;
         if (!(maxCount >= _quorum && !areMultipleMaxReports)) {
-            return consensusIndex;
+            return distinctReportHashes[consensusIndex];
         }
-        return NO_CONSENSUS_INDEX;
+        return NO_CONSENSUS_HASH;
     }
 
     function _addOracleMember(address _member) internal {
@@ -199,16 +198,17 @@ contract CommitteeQuorum {
         emit QuorumChanged(_quorum);
     }
 
-    function _updateQuorum(uint256 _quorum) internal {
+    function _updateQuorum(uint256 _quorum, uint256 _epochId) internal {
         if (0 == _quorum) { revert QuorumWontBeMade(); }
         uint256 oldQuorum = QUORUM_POSITION.getStorageUint256();
 
         _setQuorum(_quorum);
 
         if (_quorum < oldQuorum) {
-            uint256 consensusIndex = _getQuorumReport(_quorum);
-            if (consensusIndex != NO_CONSENSUS_INDEX) {
-                CONSENSUS_INDEX_POSITION.setStorageUint256(consensusIndex);
+            bytes32 consensusHash = _getQuorumReport(_quorum);
+            if (consensusHash != NO_CONSENSUS_HASH) {
+                _updateConsensusHash(consensusHash, _epochId);
+                CONSENSUS_HASH_POSITION.setStorageBytes32(consensusHash);
                 // TODO: emit event (separate the snippet into function)
             }
         }
@@ -227,9 +227,14 @@ contract CommitteeQuorum {
         return MEMBER_NOT_FOUND;
     }
 
+    function _updateConsensusHash(bytes32 _hash, uint256 _epochId) internal {
+        CONSENSUS_HASH_POSITION.setStorageBytes32(_hash);
+        emit ConsensusReached(_epochId, _hash);
+    }
+
     function _clearReporting() internal {
         REPORTS_BITMASK_POSITION.setStorageUint256(0);
-        CONSENSUS_INDEX_POSITION.setStorageUint256(NO_CONSENSUS_INDEX);
+        CONSENSUS_HASH_POSITION.setStorageBytes32(NO_CONSENSUS_HASH);
         delete distinctReportHashes;
         delete distinctReportCounters;
     }
