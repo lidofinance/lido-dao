@@ -48,8 +48,8 @@ contract CommitteeQuorum {
     ///! SLOT 2: bytes32[] distinctReportCounters
 
     address[] internal members;
-    bytes32[] internal distinctReportHashes;
-    uint16[] internal distinctReportCounters;
+    bytes32[] public distinctReportHashes;
+    uint16[] public distinctReportCounters;
 
     /**
      * @notice Return the current reporting bitmap, representing oracles who have already pushed
@@ -74,6 +74,13 @@ contract CommitteeQuorum {
         return QUORUM_POSITION.getStorageUint256();
     }
 
+    /**
+     * @notice Return the consensus hash or zero bytes if no consensus
+     */
+    function getConsensusHash() external view returns (bytes32) {
+        return CONSENSUS_HASH_POSITION.getStorageBytes32();
+    }
+
     function _handleMemberReport(address _reporter, uint256 _epochId, bytes32 _reportHash)
         internal
     {
@@ -89,19 +96,12 @@ contract CommitteeQuorum {
         uint256 numDistinctReports = distinctReportHashes.length;
 
         uint256 i = 0;
-        bool isFound = false;
         while (i < numDistinctReports && distinctReportHashes[i] != _reportHash) {
             ++i;
         }
-        while (i < numDistinctReports) {
-            if (distinctReportHashes[i] == _reportHash) {
-                isFound = true;
-                break;
-            }
-            ++i;
-        }
 
-        if (isFound && i < numDistinctReports) {
+        bool isFound = i < numDistinctReports && numDistinctReports > 0;
+        if (isFound) {
             distinctReportCounters[i] += 1;
         } else {
             distinctReportHashes.push(_reportHash);
