@@ -6,7 +6,7 @@ import "./lib/AragonUnstructuredStorage.sol";
 
 
 /**
- * @title Implementation of oracle committee consensus reporting
+ * @title Implementation of oracle committee consensus hash reporting
  */
 contract CommitteeQuorum {
     using UnstructuredStorage for bytes32;
@@ -16,12 +16,12 @@ contract CommitteeQuorum {
     event QuorumChanged(uint256 quorum);
 
     event CommitteeMemberReported(
-        uint256 epochId,
+        uint256 indexed epochId,
         bytes32 reportHash
     );
 
     event ConsensusReached(
-        uint256 epochId,
+        uint256 indexed epochId,
         bytes32 reportHash
     );
 
@@ -43,14 +43,12 @@ contract CommitteeQuorum {
 
     ///! STRUCTURED STORAGE OF THE CONTRACT
     ///! SLOT 0: address[] members
-    ///! SLOT 1: bytes[] distinctReports
-    ///! SLOT 2: bytes[] distinctReportHashes
-    ///! SLOT 3: bytes32[] distinctReportCounters
+    ///! SLOT 1: bytes[] distinctReportHashes
+    ///! SLOT 2: bytes32[] distinctReportCounters
 
     address[] internal members;
     bytes32[] internal distinctReportHashes;
     uint16[] internal distinctReportCounters;
-
 
     /**
      * @notice Return the current reporting bitmap, representing oracles who have already pushed
@@ -128,7 +126,6 @@ contract CommitteeQuorum {
         if (_dataHash != consensusHash) {
             revert ReportDataDoNotMatchConsensusHash(_dataHash, consensusHash);
         }
-
     }
 
     function _getQuorumReport(uint256 _quorum) internal view

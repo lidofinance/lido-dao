@@ -57,10 +57,10 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
     event BeaconReportReceiverSet(address callback);
 
     event ConsensusDataDelivered(
-        uint256 epochId,
+        uint256 indexed epochId,
         uint256 beaconBalance,
         uint256 beaconValidators,
-        uint256 _withdrawalVaultBalance,
+        uint256 withdrawalVaultBalance,
         uint256[] requestIdToFinalizeUpTo,
         uint256[] finalizationShareRates
     );
@@ -141,12 +141,11 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
     ///! STRUCTURED STORAGE OF THE CONTRACT
     ///! Inherited from CommitteeQuorum:
     ///! SLOT 0: address[] members
-    ///! SLOT 1: bytes[] distinctReports
-    ///! SLOT 2: bytes[] distinctReportHashes
-    ///! SLOT 3: bytes32[] distinctReportCounters
+    ///! SLOT 1: bytes[] distinctReportHashes
+    ///! SLOT 2: bytes32[] distinctReportCounters
     ///! Inherited from AccessControlEnumerable:
-    ///! SLOT 4: mapping(bytes32 => RoleData) _roles
-    ///! SLOT 5: mapping(bytes32 => EnumerableSet.AddressSet) _roleMembers
+    ///! SLOT 3: mapping(bytes32 => RoleData) _roles
+    ///! SLOT 4: mapping(bytes32 => EnumerableSet.AddressSet) _roleMembers
 
 
     /**
