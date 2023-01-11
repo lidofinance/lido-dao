@@ -16,10 +16,10 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable, ReportEpo
 
     event ConsensusDataDelivered(
         uint256 indexed epochId,
-        address[] _stakingModules,
-        uint256[] _nodeOperatorIds,
-        uint256[] _validatorIds,
-        bytes[] _validatorPubkeys
+        address[] stakingModules,
+        uint256[] nodeOperatorIds,
+        uint256[] validatorIds,
+        bytes[] validatorPubkeys
     );
 
     event ValidatorExitRequest(
@@ -56,20 +56,16 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable, ReportEpo
 
     bytes32 internal constant TOTAL_EXIT_REQUESTS_POSITION = keccak256("lido.ValidatorExitBus.totalExitRequests");
 
-
-
-
     ///! STRUCTURED STORAGE OF THE CONTRACT
     ///! Inherited from CommitteeQuorum:
     ///! SLOT 0: address[] members
-    ///! SLOT 1: bytes[] distinctReports
-    ///! SLOT 2: bytes[] distinctReportHashes
-    ///! SLOT 3: bytes32[] distinctReportCounters
+    ///! SLOT 1: bytes[] distinctReportHashes
+    ///! SLOT 2: bytes32[] distinctReportCounters
     ///! Inherited from AccessControlEnumerable:
-    ///! SLOT 4: mapping(bytes32 => RoleData) _roles
-    ///! SLOT 5: mapping(bytes32 => EnumerableSet.AddressSet) _roleMembers
+    ///! SLOT 3: mapping(bytes32 => RoleData) _roles
+    ///! SLOT 4: mapping(bytes32 => EnumerableSet.AddressSet) _roleMembers
     ///! Own:
-    ///! SLOT 6: mapping(address => mapping (uint256 => uint256)) lastRequestedValidatorIds
+    ///! SLOT 5: mapping(address => mapping (uint256 => uint256)) lastRequestedValidatorIds
 
     /// (stakingModuleAddress, nodeOperatorId) => lastRequestedValidatorId
     mapping(address => mapping (uint256 => uint256)) public lastRequestedValidatorIds;
