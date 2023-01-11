@@ -56,21 +56,11 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
     event AllowedBeaconBalanceRelativeDecreaseSet(uint256 value);
     event BeaconReportReceiverSet(address callback);
 
-    event CommitteeMemberReported(
-        uint256 epochId,
+    event ConsensusDataDelivered(
+        uint256 indexed epochId,
         uint256 beaconBalance,
         uint256 beaconValidators,
-        address caller,
         uint256 withdrawalVaultBalance,
-        uint256[] requestIdToFinalizeUpTo,
-        uint256[] finalizationShareRates
-    );
-
-    event ConsensusReached(
-        uint256 epochId,
-        uint256 beaconBalance,
-        uint256 beaconValidators,
-        uint256 _withdrawalVaultBalance,
         uint256[] requestIdToFinalizeUpTo,
         uint256[] finalizationShareRates
     );
@@ -152,12 +142,11 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
     ///! STRUCTURED STORAGE OF THE CONTRACT
     ///! Inherited from CommitteeQuorum:
     ///! SLOT 0: address[] members
-    ///! SLOT 1: bytes[] distinctReports
-    ///! SLOT 2: bytes[] distinctReportHashes
-    ///! SLOT 3: bytes32[] distinctReportCounters
+    ///! SLOT 1: bytes[] distinctReportHashes
+    ///! SLOT 2: bytes32[] distinctReportCounters
     ///! Inherited from AccessControlEnumerable:
-    ///! SLOT 4: mapping(bytes32 => RoleData) _roles
-    ///! SLOT 5: mapping(bytes32 => EnumerableSet.AddressSet) _roleMembers
+    ///! SLOT 3: mapping(bytes32 => RoleData) _roles
+    ///! SLOT 4: mapping(bytes32 => EnumerableSet.AddressSet) _roleMembers
 
 
     /**
@@ -268,14 +257,14 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
     /**
      * @notice Return the current reporting array element with index `_index`
      */
-    function getMemberReport(uint256 _index)
+    function getMemberReportHash(uint256 _index)
         external
         view
         returns (
-            Report memory report
+            bytes32 reportHash
         )
     {
-        report = _decodeReport(distinctReports[_index]);
+        reportHash = distinctReportHashes[_index];
     }
 
     /**
@@ -346,46 +335,25 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
     }
 
     function handleCommitteeMemberReport(
-        Report calldata _report
+        uint256 _epochId,
+        bytes32 _reportHash
     ) external {
-        if (_report.stakingModules.length != _report.nodeOperatorsWithExitedValidators.length
-         || _report.stakingModules.length != _report.exitedValidatorsNumbers.length
-        ) {
-            revert InvalidReportFormat();
-        }
-
         BeaconSpec memory beaconSpec = _getBeaconSpec();
-        bool hasEpochAdvanced = _validateAndUpdateExpectedEpoch(_report.epochId, beaconSpec);
+        bool hasEpochAdvanced = _validateAndUpdateExpectedEpoch(_epochId, beaconSpec);
         if (hasEpochAdvanced) {
             _clearReporting();
         }
 
-        if (_handleMemberReport(msg.sender, _encodeReport(_report))) {
-            _handleConsensusReport(_report, beaconSpec);
-        }
-
-        uint128 beaconBalance = DENOMINATION_OFFSET * uint128(_report.beaconBalanceGwei);
-        emit CommitteeMemberReported(
-            _report.epochId,
-            beaconBalance,
-            _report.beaconValidators,
-            msg.sender,
-            _report.withdrawalVaultBalance,
-            _report.requestIdToFinalizeUpTo,
-            _report.finalizationShareRates
-        );
+        _handleMemberReport(msg.sender, _epochId, _reportHash);
     }
 
-    function _decodeReport(bytes memory _reportData) internal pure returns (
-        Report memory report
-    ) {
-        report = abi.decode(_reportData, (Report));
-    }
+    function handleReportData(
+        Report calldata _report
+    ) external {
+        bytes32 reportHash = keccak256(abi.encode(_report));
 
-    function _encodeReport(Report memory _report) internal pure returns (
-        bytes memory reportData
-    ) {
-        reportData = abi.encode(_report);
+        _checkOnDataDelivery(reportHash, _report.epochId, EXPECTED_EPOCH_ID_POSITION.getStorageUint256());
+        _handleConsensusReport(_report);
     }
 
     /**
@@ -394,11 +362,7 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
     function updateQuorum(uint256 _quorum)
         external onlyRole(MANAGE_QUORUM_ROLE)
     {
-        (bool isQuorum, uint256 reportIndex) = _updateQuorum(_quorum);
-        if (isQuorum) {
-            Report memory report = _decodeReport(distinctReports[reportIndex]);
-            _handleConsensusReport(report, _getBeaconSpec());
-        }
+        _updateQuorum(_quorum, _getCurrentEpochId(_getBeaconSpec()));
     }
 
     /**
@@ -457,23 +421,17 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         LIDO_POSITION.setStorageAddress(_newLido);
     }
 
-    // /**
-    //  * @notice Push the given report to Lido and performs accompanying accounting
-    //  * @param _epochId Beacon chain epoch, proven to be >= expected epoch and <= current epoch
-    //  * @param _beaconBalanceEth1 Validators balance in eth1 (18-digit denomination)
-    //  * @param _beaconSpec current beacon specification data
-    //  */
     function _handleConsensusReport(
-        Report memory _report,
-        BeaconSpec memory _beaconSpec
+        Report memory _report
     )
         internal
     {
+        BeaconSpec memory beaconSpec = _getBeaconSpec();
         uint128 beaconBalance = DENOMINATION_OFFSET * uint128(_report.beaconBalanceGwei);
 
         // TODO: maybe add additional report validity sanity checks
 
-        emit ConsensusReached(
+        emit ConsensusDataDelivered(
             _report.epochId,
             beaconBalance,
             _report.beaconValidators,
@@ -484,7 +442,7 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
 
         // now this frame is completed, so the expected epoch should be advanced to the first epoch
         // of the next frame
-        _advanceExpectedEpoch(_report.epochId + _beaconSpec.epochsPerFrame);
+        _advanceExpectedEpoch(_report.epochId + beaconSpec.epochsPerFrame);
         _clearReporting();
 
         for (uint256 i = 0; i < _report.stakingModules.length; ++i) {
@@ -513,7 +471,7 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
             prevTotalPooledEther,
             postTotalPooledEther,
             _report.epochId,
-            _beaconSpec
+            beaconSpec
         );
     }
 
