@@ -14,9 +14,9 @@ import "./interfaces/IWithdrawalQueue.sol";
 import "./interfaces/IWithdrawalVault.sol";
 import "./interfaces/IStakingRouter.sol";
 
-import "./StETH.sol";
-
 import "./lib/StakeLimitUtils.sol";
+
+import "./StETHPermit.sol";
 
 /**
 * @title Liquid staking pool implementation
@@ -30,7 +30,7 @@ import "./lib/StakeLimitUtils.sol";
 * rewards, no Transfer events are generated: doing so would require emitting an event
 * for each token holder and thus running an unbounded loop.
 */
-contract Lido is StETH, AragonApp {
+contract Lido is StETHPermit, AragonApp {
     using SafeMath for uint256;
     using UnstructuredStorage for bytes32;
     using StakeLimitUnstructuredStorage for bytes32;

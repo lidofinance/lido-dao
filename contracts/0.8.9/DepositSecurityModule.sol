@@ -5,9 +5,10 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
-import {ECDSA} from "./lib/ECDSA.sol";
 import {IStakingRouter} from "./interfaces/IStakingRouter.sol";
 import {IDepositContract} from "./interfaces/IDepositContract.sol";
+
+import {ECDSA} from "../common/lib/ECDSA.sol";
 
 interface ILido {
     function deposit(

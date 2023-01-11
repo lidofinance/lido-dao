@@ -1,0 +1,1 @@
+[{"inputs":[],"name":"domainSeparatorV4","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"_structHash","type":"bytes32"}],"name":"hashTypedDataV4","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"}]
