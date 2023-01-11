@@ -14,6 +14,14 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable, ReportEpo
     using RateLimitUtils for LimitState.Data;
     using LimitUnstructuredStorage for bytes32;
 
+    event ConsensusDataDelivered(
+        uint256 indexed epochId,
+        address[] _stakingModules,
+        uint256[] _nodeOperatorIds,
+        uint256[] _validatorIds,
+        bytes[] _validatorPubkeys
+    );
+
     event ValidatorExitRequest(
         address indexed stakingModule,
         uint256 indexed nodeOperatorId,
@@ -24,22 +32,6 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable, ReportEpo
     event RateLimitSet(
         uint256 maxLimit,
         uint256 limitIncreasePerBlock
-    );
-
-    event CommitteeMemberReported(
-        address[] stakingModules,
-        uint256[] nodeOperatorIds,
-        uint256[] validatorIds,
-        bytes[] validatorPubkeys,
-        uint256 indexed epochId
-    );
-
-    event ConsensusReached(
-        address[] stakingModules,
-        uint256[] nodeOperatorIds,
-        uint256[] validatorIds,
-        bytes[] validatorPubkeys,
-        uint256 indexed epochId
     );
 
     event ContractVersionSet(uint256 version);
@@ -175,7 +167,7 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable, ReportEpo
 
         _reportKeysToEject(_stakingModules, _nodeOperatorIds, _validatorIds, _validatorPubkeys, _epochId, _getBeaconSpec());
 
-        // TODO: events
+        emit ConsensusDataDelivered(_epochId, _stakingModules, _nodeOperatorIds, _validatorIds, _validatorPubkeys);
     }
 
 
@@ -279,8 +271,6 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable, ReportEpo
         uint256 _epochId,
         BeaconSpec memory _beaconSpec
     ) internal {
-        emit ConsensusReached(_stakingModules, _nodeOperatorIds, _validatorIds, _validatorPubkeys, _epochId);
-
         _advanceExpectedEpoch(_epochId + _beaconSpec.epochsPerFrame);
         _clearReporting();
 

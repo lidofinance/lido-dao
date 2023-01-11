@@ -107,6 +107,8 @@ contract CommitteeQuorum {
             distinctReportCounters.push(1);
         }
 
+        emit CommitteeMemberReported(_epochId, _reportHash);
+
         // Check is quorum reached
         if (distinctReportCounters[i] >= QUORUM_POSITION.getStorageUint256()) {
             CONSENSUS_INDEX_POSITION.setStorageUint256(i);
