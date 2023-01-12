@@ -1,6 +1,6 @@
 const { assert } = require('chai')
 const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
-const { createFakePublicKeysBatch, createFakeSignaturesBatch } = require('./signing-keys')
+const { FakeValidatorKeys } = require('./signing-keys')
 
 /***
  * Adds new Node Operator to the registry and configures it
@@ -44,10 +44,10 @@ async function addNodeOperator(registry, config, txOptions) {
     throw new Error('Invalid keys config: totalSigningKeys < stoppedValidators + usedSigningKeys')
   }
 
+  let validatorKeys
   if (totalSigningKeysCount > 0) {
-    const pubkeys = createFakePublicKeysBatch(totalSigningKeysCount)
-    const signatures = createFakeSignaturesBatch(totalSigningKeysCount)
-    await registry.addSigningKeys(newOperatorId, totalSigningKeysCount, pubkeys, signatures, txOptions)
+    validatorKeys = new FakeValidatorKeys(totalSigningKeysCount)
+    await registry.addSigningKeys(newOperatorId, totalSigningKeysCount, ...validatorKeys.slice(), txOptions)
   }
 
   if (depositedSigningKeysCount > 0) {
@@ -82,28 +82,7 @@ async function addNodeOperator(registry, config, txOptions) {
     assertBn(activeValidatorsKeysCount, depositedSigningKeysCount - exitedSigningKeysCount)
     assertBn(readyToDepositValidatorsKeysCount, 0)
   }
-
-  // const newOperator = await registry.getNodeOperator(newOperatorId, true)
-  // const { activeKeysCount: activeKeysCountAfter, availableKeysCount: availableKeysCountAfter } = await registry.getKeysUsageData()
-
-  // assert.equal(newOperator.name, config.name, 'Invalid name')
-  // assert.equal(newOperator.rewardAddress, config.rewardAddress, 'Invalid reward address')
-  // assert.equal(newOperator.active, isActive, 'Invalid active status')
-  // assertBn(newOperator.stakingLimit, everDepositedKeysLimit, 'Invalid staking limit')
-
-  // const expectedTotalSigningKeys = isActive ? everAddedKeysCount : everDepositedKeysCount
-  // assertBn(newOperator.totalSigningKeys, expectedTotalSigningKeys, 'Invalid total signing keys')
-  // assertBn(newOperator.usedSigningKeys, everDepositedKeysCount, 'Invalid used signing keys')
-  // assertBn(newOperator.stoppedValidators, everExitedKeysCount, 'Invalid stopped signing keys')
-
-  // const expectedActiveKeysCount = activeKeysCountBefore.toNumber() + everDepositedKeysCount - everExitedKeysCount
-  // assertBn(expectedActiveKeysCount, activeKeysCountAfter)
-
-  // const expectedAvailableKeys = isActive ? Math.max(0, Math.min(everAddedKeysCount, everDepositedKeysLimit) - everDepositedKeysCount) : 0
-
-  // assertBn(availableKeysCountBefore.toNumber() + expectedAvailableKeys, availableKeysCountAfter)
-
-  // return newOperatorId.toNumber()
+  return { validatorKeys, id: newOperatorId.toNumber() }
 }
 
 async function getAllNodeOperators(registry) {
@@ -120,8 +99,14 @@ async function findNodeOperatorId(registry, predicate) {
   return allNodeOperators.findIndex(predicate)
 }
 
+async function filterNodeOperators(registry, predicate) {
+  const allNodeOperators = await getAllNodeOperators(registry)
+  return allNodeOperators.filter(predicate)
+}
+
 module.exports = {
   addNodeOperator,
   findNodeOperatorId,
-  getAllNodeOperators
+  getAllNodeOperators,
+  filterNodeOperators
 }
