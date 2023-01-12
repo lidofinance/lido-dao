@@ -162,6 +162,7 @@ contract WithdrawalQueue is AccessControlEnumerable {
     }
 
     /**
+     * @notice Intialize the contract storage explicitly. NB! It's initialized in paused state by default 
      * @param _admin admin address that can change every role.
      * @param _pauser address that will be able to pause the withdrawals
      * @param _resumer address that will be able to resume the withdrawals after pause
@@ -176,8 +177,13 @@ contract WithdrawalQueue is AccessControlEnumerable {
         _initialize(_admin, _pauser, _resumer, _finalizer);
     }
 
+    /// @notice Returns whether the contract is initialized or not
+    function isInitialized() external view returns (bool) {
+        return CONTRACT_VERSION_POSITION.getStorageUint256() != 0;
+    }
+
     /**
-     * @notice Resume withdrawal requests processing
+     * @notice Resume withdrawal requests placement and finalization
      * @dev Reverts with `Uninitialized()` if contract is not initialized
      * @dev Reverts with `PausedExpected()` if contract is already resumed
      * @dev Reverts with `AccessControl:...` reason if sender has no `RESUME_ROLE`
@@ -189,7 +195,7 @@ contract WithdrawalQueue is AccessControlEnumerable {
     }
 
     /**
-     * @notice Pause withdrawal requests processing
+     * @notice Pause withdrawal requests placement and finalization. Claiming finalized requests will still be available
      * @dev Reverts with `ResumedExpected()` if contract is already paused
      * @dev Reverts with `AccessControl:...` reason if sender has no `PAUSE_ROLE`
      */
@@ -199,10 +205,12 @@ contract WithdrawalQueue is AccessControlEnumerable {
         emit WithdrawalQueuePaused();
     }
 
-    /**
-     * @notice Getter for withdrawal queue length
-     * @return length of the request queue
-     */
+    /// @notice Returns whether the requests placement and finalization is paused or not
+    function isPaused() external view returns (bool) {
+        return !RESUMED_POSITION.getStorageBool();
+    }
+
+    /// @notice Returns the length of the withdrawal request queue 
     function queueLength() external view returns (uint256) {
         return queue.length;
     }
@@ -332,16 +340,6 @@ contract WithdrawalQueue is AccessControlEnumerable {
         }
     }
 
-    /// @notice Returns whether the contract is initialized or not
-    function isInitialized() external view returns (bool) {
-        return CONTRACT_VERSION_POSITION.getStorageUint256() != 0;
-    }
-
-    /// @notice Returns whether the requests placement is paused or not
-    function isPaused() external view returns (bool) {
-        return !RESUMED_POSITION.getStorageBool();
-    }
-
     /**
      * @notice Finalize requests in [`finalizedRequestsCounter`,`_lastRequestIdToFinalize`] range with `_shareRate`
      * @dev ether to finalize all the requests should be calculated using `calculateFinalizationParams` and sent with
@@ -421,7 +419,7 @@ contract WithdrawalQueue is AccessControlEnumerable {
             shareRate = finalizationRates[_rateIndexHint];
         } else {
             // unbounded loop branch. Can fail with OOG
-            shareRate = finalizationRates[findClaimingRateHint(_requestId)];
+            shareRate = finalizationRates[findClaimRateHint(_requestId)];
         }
 
         (uint128 etherToBeClaimed, ) = _calculateDiscountedBatch(_requestId, _requestId, shareRate.value);
@@ -439,7 +437,7 @@ contract WithdrawalQueue is AccessControlEnumerable {
      *
      * @return hint rate index for this request
      */
-    function findClaimingRateHint(uint256 _requestId) public view returns (uint256 hint) {
+    function findClaimRateHint(uint256 _requestId) public view returns (uint256 hint) {
         if (_requestId >= finalizedRequestsCounter) revert RateNotFound();
 
         for (uint256 i = finalizationRates.length; i > 0; i--) {
@@ -507,6 +505,8 @@ contract WithdrawalQueue is AccessControlEnumerable {
         _grantRole(FINALIZE_ROLE, _finalizer);
 
         CONTRACT_VERSION_POSITION.setStorageUint256(1);
+
+        RESUMED_POSITION.setStorageBool(false); // pause it explicitly
 
         emit InitializedV1(_admin, _pauser, _resumer, _finalizer, msg.sender);
     }
