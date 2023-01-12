@@ -500,7 +500,7 @@ contract WithdrawalQueue {
             WithdrawalRequest memory prevRequest = queue[requestId - 1];
 
             cumulativeShares += prevRequest.cumulativeShares;
-            cumulativeShares += prevRequest.cumulativeEther;
+            cumulativeEther += prevRequest.cumulativeEther;
         }
 
         queue.push(
