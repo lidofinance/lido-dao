@@ -83,6 +83,11 @@ interface IEIP712 {
 
 contract StETHPermit is IERC2612, StETH {
     /**
+     * @dev Service event for initialization
+     */
+    event EIP712StETHInitialized(address eip712StETH);
+
+    /**
      * @dev Nonces for ERC-2612 (Permit)
      */
     mapping(address => uint256) public nonces;
@@ -153,5 +158,7 @@ contract StETHPermit is IERC2612, StETH {
         require(eip712StETH == address(0), "StETHPermit: eip712StETH already set");
 
         eip712StETH = _eip712StETH;
+
+        emit EIP712StETHInitialized(_eip712StETH);
     }
 }

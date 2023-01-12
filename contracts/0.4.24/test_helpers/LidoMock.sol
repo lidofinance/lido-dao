@@ -17,7 +17,8 @@ contract LidoMock is Lido {
         address _stakingRouterAddress,
         address _dsmAddress,
         address _executionLayerRewardsVault,
-        address _withdrawalQueue
+        address _withdrawalQueue,
+        address _eip712StETH
     )
         public
     {
@@ -33,7 +34,8 @@ contract LidoMock is Lido {
             _stakingRouterAddress,
             _dsmAddress,
             _executionLayerRewardsVault,
-            _withdrawalQueue
+            _withdrawalQueue,
+            _eip712StETH
         );
     }
 

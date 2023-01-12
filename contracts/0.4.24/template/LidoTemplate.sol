@@ -293,7 +293,8 @@ contract LidoTemplate is IsContract {
         string _tokenSymbol,
         uint64[4] _votingSettings,
         IDepositContract /*_beaconDepositContract*/,
-        uint32[4]
+        uint32[4],
+        address _eip712StETH
     ) external onlyOwner {
         // TODO: remove unused argument
         DeployState memory state = deployState;
@@ -363,7 +364,8 @@ contract LidoTemplate is IsContract {
             address(0), // staking router
             address(0), // deposit security module
             address(0), // execution layer rewards vault
-            address(0) // withdrawal queue
+            address(0), // withdrawal queue
+            _eip712StETH // EIP712 helper for StETH
         );
 
         // used for issuing vested tokens in the next step
