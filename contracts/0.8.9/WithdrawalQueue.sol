@@ -159,7 +159,7 @@ contract WithdrawalQueue is AccessControlEnumerable {
         STETH = _stETH;
         WSTETH = _wstETH;
 
-        // petrify the implementation by assigning a zero addresses for every role
+        // petrify the implementation by assigning a zero address for every role
         _initialize(address(0), address(0), address(0), address(0));
     }
 
@@ -215,6 +215,22 @@ contract WithdrawalQueue is AccessControlEnumerable {
     /// @notice Returns the length of the withdrawal request queue 
     function queueLength() external view returns (uint256) {
         return queue.length;
+    }
+
+    /// @notice return number of unfinalized requests in the queue
+    function unfinalizedQueueLength() external view returns (uint256) {
+        return queue.length - finalizedRequestsCounter;
+    }
+
+    /// @notice amount of stETH yet to be finalized
+    function unfinalizedStETH() external view returns (uint256 stETHAmountToFinalize) {
+        stETHAmountToFinalize = 0;
+        if (queue.length > 0) {
+            stETHAmountToFinalize = queue[queue.length - 1].cumulativeEther;
+            if (finalizedRequestsCounter > 0) {
+                stETHAmountToFinalize -= queue[finalizedRequestsCounter - 1].cumulativeEther;
+            }
+        }
     }
 
     /**
