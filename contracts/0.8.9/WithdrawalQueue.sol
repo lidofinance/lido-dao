@@ -11,8 +11,6 @@ import "@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC20.sol";
 
 import {AccessControlEnumerable} from "@openzeppelin/contracts-v4.4/access/AccessControlEnumerable.sol";
 
-import {AccessControlEnumerable} from "@openzeppelin/contracts-v4.4/access/AccessControlEnumerable.sol";
-
 import "./lib/UnstructuredStorage.sol";
 
 /**
@@ -104,7 +102,6 @@ contract WithdrawalQueue is AccessControlEnumerable {
     address public immutable WSTETH;
 
     // ACL
-
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
     bytes32 public constant FINALIZE_ROLE = keccak256("FINALIZE_ROLE");
@@ -161,12 +158,12 @@ contract WithdrawalQueue is AccessControlEnumerable {
         STETH = _stETH;
         WSTETH = _wstETH;
 
-        // petrify the implementation by assigning a zero addresses for every role
+        // petrify the implementation by assigning a zero address for every role
         _initialize(address(0), address(0), address(0), address(0));
     }
 
     /**
-     * @notice Intialize the contract storage explicitly. NB! It's initialized in paused state by default 
+     * @notice Intialize the contract storage explicitly. NB! It's initialized in paused state by default
      * @param _admin admin address that can change every role.
      * @param _pauser address that will be able to pause the withdrawals
      * @param _resumer address that will be able to resume the withdrawals after pause
@@ -214,9 +211,25 @@ contract WithdrawalQueue is AccessControlEnumerable {
         return !RESUMED_POSITION.getStorageBool();
     }
 
-    /// @notice Returns the length of the withdrawal request queue 
+    /// @notice Returns the length of the withdrawal request queue
     function queueLength() external view returns (uint256) {
         return queue.length;
+    }
+
+    /// @notice return number of unfinalized requests in the queue
+    function unfinalizedQueueLength() external view returns (uint256) {
+        return queue.length - finalizedRequestsCounter;
+    }
+
+    /// @notice amount of stETH yet to be finalized
+    function unfinalizedStETH() external view returns (uint256 stETHAmountToFinalize) {
+        stETHAmountToFinalize = 0;
+        if (queue.length > 0) {
+            stETHAmountToFinalize = queue[queue.length - 1].cumulativeEther;
+            if (finalizedRequestsCounter > 0) {
+                stETHAmountToFinalize -= queue[finalizedRequestsCounter - 1].cumulativeEther;
+            }
+        }
     }
 
     /**
@@ -260,7 +273,7 @@ contract WithdrawalQueue is AccessControlEnumerable {
     /**
      * @notice Request withdrawal of the provided wstETH token amount
      * @param _amountOfWstETH StETH tokens that will be locked for withdrawal
-     * @param _recipient address to send ether to upon withdrawal. Will be set to `msg.sender` if `address(0)` is passed 
+     * @param _recipient address to send ether to upon withdrawal. Will be set to `msg.sender` if `address(0)` is passed
      */
     function requestWithdrawalWstETH(
         uint256 _amountOfWstETH,
@@ -273,7 +286,7 @@ contract WithdrawalQueue is AccessControlEnumerable {
     /**
      * @notice Request withdrawal of the provided wstETH token amount using EIP-2612 Permit
      * @param _amountOfWstETH StETH tokens that will be locked for withdrawal
-     * @param _recipient address to send ether to upon withdrawal. Will be set to `msg.sender` if `address(0)` is passed 
+     * @param _recipient address to send ether to upon withdrawal. Will be set to `msg.sender` if `address(0)` is passed
      */
     function requestWithdrawalWstETHWithPermit(
         uint256 _amountOfWstETH,
@@ -314,7 +327,9 @@ contract WithdrawalQueue is AccessControlEnumerable {
      * @return recipient address to send ETH to once request is finalized and claimed
      * @
      */
-    function getWithdrawalRequestStatus(uint256 _requestId)
+    function getWithdrawalRequestStatus(
+        uint256 _requestId
+    )
         external
         view
         returns (
@@ -352,7 +367,7 @@ contract WithdrawalQueue is AccessControlEnumerable {
      * @param _shareRate share/ETH rate for the protocol with 1e27 decimals
      */
     function finalize(
-        uint256 _lastRequestIdToFinalize, 
+        uint256 _lastRequestIdToFinalize,
         uint256 _shareRate
     ) external payable whenResumed onlyRole(FINALIZE_ROLE) {
         if (_lastRequestIdToFinalize < finalizedRequestsCounter || _lastRequestIdToFinalize >= queue.length) {
@@ -466,7 +481,7 @@ contract WithdrawalQueue is AccessControlEnumerable {
             shares -= queue[_firstId - 1].cumulativeShares;
         }
 
-        eth = _min(eth, _toUint128(shares * _shareRate / SHARE_RATE_PRECISION));
+        eth = _min(eth, _toUint128((shares * _shareRate) / SHARE_RATE_PRECISION));
     }
 
     /// @dev checks if provided request included in the rate hint boundaries
