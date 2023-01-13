@@ -122,6 +122,8 @@ contract WithdrawalQueue {
      */
     uint256 public constant MAX_STETH_WITHDRAWAL_AMOUNT = 1000 ether;
 
+    uint256 public constant SHARE_RATE_PRECISION = 1e27;
+
     ///! STRUCTURED STORAGE OF THE CONTRACT
     ///! SLOT 0: uint128 lockedEtherAmount
     ///! SLOT 1: uint256 finalizedRequestsCounter
@@ -415,7 +417,7 @@ contract WithdrawalQueue {
             shares -= queue[_firstId - 1].cumulativeShares;
         }
 
-        eth = _min(eth, _toUint128(shares * _shareRate / 1e9));
+        eth = _min(eth, _toUint128(shares * _shareRate / SHARE_RATE_PRECISION));
     }
 
     /// @dev checks if provided request included in the rate hint boundaries

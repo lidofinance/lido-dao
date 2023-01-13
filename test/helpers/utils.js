@@ -53,9 +53,12 @@ const toBN = (obj) => {
 // Divides a BN by 1e15
 const div15 = (bn) => bn.div(new BN(1000000)).div(new BN(1000000)).div(new BN(1000))
 
-const ETH = (value) => web3.utils.toWei(value + '', 'ether')
-const tokens = ETH
-const shareRate = (value) => web3.utils.toWei(value + '', 'gether')
+const e18 = (value) => web3.utils.toWei(value + '', 'ether')
+const e27 = (value) => web3.utils.toWei(value + '', 'gether')
+const ETH = e18
+const tokens = e18
+const shares = e18
+const shareRate = e27
 
 function formatWei(weiString) {
   return ethers.utils.formatEther(ethers.utils.parseUnits(weiString, 'wei'), { commify: true }) + ' ETH'
@@ -105,5 +108,6 @@ module.exports = {
   assertNoEvent,
   changeEndianness,
   genKeys,
-  shareRate
+  shareRate,
+  shares,
 }
