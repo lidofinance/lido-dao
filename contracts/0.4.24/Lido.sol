@@ -66,12 +66,9 @@ contract Lido is StETH, AragonApp {
     bytes32 internal constant BEACON_BALANCE_POSITION = keccak256("lido.Lido.beaconBalance");
     /// @dev number of Lido's validators available in the Beacon state
     bytes32 internal constant BEACON_VALIDATORS_POSITION = keccak256("lido.Lido.beaconValidators");
-
     /// @dev percent in basis points of total pooled ether allowed to withdraw from LidoExecutionLayerRewardsVault per LidoOracle report
     bytes32 internal constant EL_REWARDS_WITHDRAWAL_LIMIT_POSITION = keccak256("lido.Lido.ELRewardsWithdrawalLimit");
-
-    /// @dev Just a counter of total amount of execution layer rewards received by Lido contract
-    /// Not used in the logic
+    /// @dev Just a counter of total amount of execution layer rewards received by Lido contract. Not used in the logic.
     bytes32 internal constant TOTAL_EL_REWARDS_COLLECTED_POSITION = keccak256("lido.Lido.totalELRewardsCollected");
     /// @dev Amount of eth in deposit buffer to be reserved from being deposited
     bytes32 internal constant BUFFERED_ETHER_RESERVE_POSITION = keccak256("lido.Lido.bufferedEtherReserve");
@@ -393,7 +390,6 @@ contract Lido is StETH, AragonApp {
         _resumeStaking();
     }
 
-
     /**
     * @notice Set Lido protocol contracts (oracle, treasury, execution layer rewards vault).
     *
@@ -457,20 +453,23 @@ contract Lido is StETH, AragonApp {
 
         uint256 preBeaconBalance = BEACON_BALANCE_POSITION.getStorageUint256();
 
+        // updating saved stats from beacon balance checking its sanity
         uint256 appearedValidators = _processBeaconStateUpdate(
             _beaconValidators,
             _beaconBalance
         );
-
-        uint256 executionLayerRewards = _processFundsMoving(
+        
+        // collect ETH from EL and Withdrawal vaults and distribute it to WithdrawalQueue
+        uint256 executionLayerRewards = _processETHDistribution(
+            _withdrawalVaultBalance,
             _requestIdToFinalizeUpTo,
-            _finalizationShareRates,
-            _withdrawalVaultBalance
+            _finalizationShareRates
         );
 
         // update ether reserve accordingly
         _processBufferedEtherReserveUpdate(_newBufferedEtherReserveAmount);
 
+        // distribute rewards to Lido and Node Operators
         _processRewards(
             preBeaconBalance,
             _beaconBalance,
@@ -621,7 +620,7 @@ contract Lido is StETH, AragonApp {
     }
 
     /**
-     * @dev updates beacon state
+     * @dev updates beacon state according to fresh report
      */
     function _processBeaconStateUpdate(
         // CL values
@@ -666,9 +665,12 @@ contract Lido is StETH, AragonApp {
 
         BUFFERED_ETHER_RESERVE_POSITION.setStorageUint256(_max(_newBufferedEtherReserve, minEtherReserve));
     }
+
+    /// @dev collect ETH from ELRewardsVault and WithdrawalVault and send to WithdrawalQueue
+    function _processETHDistribution(
+        uint256 _withdrawalVaultBalance,
         uint256[] _requestIdToFinalizeUpTo,
-        uint256[] _finalizationShareRates,
-        uint256 _withdrawalVaultBalance
+        uint256[] _finalizationShareRates
     ) internal returns (uint256 executionLayerRewards) {
         executionLayerRewards = 0;
         address elRewardsVaultAddress = getELRewardsVault();
@@ -689,7 +691,7 @@ contract Lido is StETH, AragonApp {
             IWithdrawalVault(withdrawalVaultAddress).withdrawWithdrawals(_withdrawalVaultBalance);
 
             // And pass some ether to WithdrawalQueue to fulfill requests
-            lockedToWithdrawalQueue = _processWithdrawals(
+            lockedToWithdrawalQueue = _processWithdrawalQueue(
                 _requestIdToFinalizeUpTo,
                 _finalizationShareRates
             );
@@ -698,9 +700,9 @@ contract Lido is StETH, AragonApp {
         uint256 preBufferedEther = _getBufferedEther();
 
         uint256 postBufferedEther = _getBufferedEther()
-            .add(executionLayerRewards)
-            .add(_withdrawalVaultBalance)
-            .sub(lockedToWithdrawalQueue);
+            .add(executionLayerRewards) // Collected from ELVault
+            .add(_withdrawalVaultBalance) // Collected from WithdrawalVault
+            .sub(lockedToWithdrawalQueue); // Sent to WithdrawalQueue
 
         if (preBufferedEther != postBufferedEther) {
             BUFFERED_ETHER_POSITION.setStorageUint256(postBufferedEther);
@@ -714,10 +716,6 @@ contract Lido is StETH, AragonApp {
         uint256 _executionLayerRewards,
         uint256 _withdrawalVaultBalance
     ) internal {
-        // Post-withdrawal rewards
-        // rewards = (beacon balance new - beacon balance old) - (appeared validators x 32 ETH)
-        // + withdrawn from execution layer rewards vault + withdrawn from withdrawal credentials vault
-
         uint256 rewardsBase = (_appearedValidators.mul(DEPOSIT_SIZE)).add(_preBeaconBalance);
 
         // Don’t mint/distribute any protocol fee on the non-profitable Lido oracle report
@@ -730,11 +728,8 @@ contract Lido is StETH, AragonApp {
         }
     }
 
-    /**
-     * @dev finalize requests in the queue, burn shares
-     * @return transferredToWithdrawalQueue amount locked on WithdrawalQueue to fulfill withdrawal requests
-     */
-    function _processWithdrawals(
+    ///@dev finalize withdrawal requests in the queue, burn their shares and return the amount of ether locked for claiming
+    function _processWithdrawalQueue(
         uint256[] _requestIdToFinalizeUpTo,
         uint256[] _finalizationShareRates
     ) internal returns (uint256 lockedToWithdrawalQueue) {
@@ -745,13 +740,9 @@ contract Lido is StETH, AragonApp {
         }
 
         IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(withdrawalQueueAddress);
-        // do nothing if WithdrawalQueue is paused
-        if (withdrawalQueue.isPaused()) {
-            return 0;
-        }
 
         lockedToWithdrawalQueue = 0;
-        uint256 burnedSharesAccumulator = 0;
+        uint256 sharesToBurnAccumulator = 0;
 
         for (uint256 i = 0; i < _requestIdToFinalizeUpTo.length; i++) {
             uint256 lastIdToFinalize = _requestIdToFinalizeUpTo[i];
@@ -759,12 +750,13 @@ contract Lido is StETH, AragonApp {
 
             uint256 shareRate = _finalizationShareRates[i];
 
+            // todo(folkyatina)?: vectorize finalization batches 
             (uint256 etherToLock, uint256 sharesToBurn) = withdrawalQueue.calculateFinalizationParams(
                 lastIdToFinalize,
                 shareRate
             );
 
-            burnedSharesAccumulator = burnedSharesAccumulator.add(sharesToBurn);
+            sharesToBurnAccumulator = sharesToBurnAccumulator.add(sharesToBurn);
 
             withdrawalQueue.finalize.value(etherToLock)(
                 lastIdToFinalize,
