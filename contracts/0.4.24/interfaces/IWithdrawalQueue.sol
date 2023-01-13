@@ -19,4 +19,6 @@ interface IWithdrawalQueue {
     ) external payable;
 
     function finalizedRequestsCounter() external view returns (uint256);
+
+    function isPaused() external returns (bool);
 }

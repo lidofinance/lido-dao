@@ -9,6 +9,8 @@ import "@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts-v4.4/token/ERC20/extensions/draft-IERC20Permit.sol";
 import "@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC20.sol";
 
+import {AccessControlEnumerable} from "@openzeppelin/contracts-v4.4/access/AccessControlEnumerable.sol";
+
 import "./lib/UnstructuredStorage.sol";
 
 /**
@@ -54,7 +56,7 @@ interface IWstETH {
  * @title A dedicated contract for handling stETH withdrawal request queue
  * @author folkyatina
  */
-contract WithdrawalQueue {
+contract WithdrawalQueue is AccessControlEnumerable {
     using SafeERC20 for IERC20;
     using UnstructuredStorage for bytes32;
 
@@ -91,24 +93,18 @@ contract WithdrawalQueue {
     /// - N after upgrading contract from the previous version (after calling finalize_vN())
     bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.WithdrawalQueue.contractVersion");
 
-    /// Lido DAO Agent contract address
-    /// Used to call administrative levers
-    bytes32 internal constant LIDO_DAO_AGENT_POSITION = keccak256("lido.WithdrawalQueue.lidoDAOAgent");
-
-    /// Requests placement resume/pause control storage slot
-    bytes32 internal constant REQUESTS_PLACEMENT_RESUMED_POSITION =
-        keccak256("lido.WithdrawalQueue.requestsPlacementResumed");
+    /// Withdrawal queue resume/pause control storage slot
+    bytes32 internal constant RESUMED_POSITION = keccak256("lido.WithdrawalQueue.resumed");
 
     /// Lido stETH token address to be set upon construction
     address public immutable STETH;
     /// Lido wstETH token address to be set upon construction
     address public immutable WSTETH;
 
-    /**
-     * @notice All state-modifying calls are allowed only from owner protocol.
-     * @dev should be Lido
-     */
-    address payable public immutable OWNER;
+    // ACL
+    bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
+    bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
+    bytes32 public constant FINALIZE_ROLE = keccak256("FINALIZE_ROLE");
 
     /**
      * @notice minimal possible sum that is possible to withdraw
@@ -125,11 +121,15 @@ contract WithdrawalQueue {
     uint256 public constant SHARE_RATE_PRECISION = 1e27;
 
     ///! STRUCTURED STORAGE OF THE CONTRACT
-    ///! SLOT 0: uint128 lockedEtherAmount
-    ///! SLOT 1: uint256 finalizedRequestsCounter
-    ///! SLOT 2: WithdrawalRequest[] queue
-    ///! SLOT 3: mapping(address => uint256[]) requestsByRecipient
-    ///! SLOT 4 ShareRate[] finalizationRates
+    ///  Inherited from AccessControlEnumerable:
+    ///! SLOT 0: mapping(bytes32 => RoleData) _roles
+    ///! SLOT 1: mapping(bytes32 => EnumerableSet.AddressSet) _roleMembers
+    ///  Own:
+    ///! SLOT 2: uint128 lockedEtherAmount
+    ///! SLOT 3: uint256 finalizedRequestsCounter
+    ///! SLOT 4: WithdrawalRequest[] queue
+    ///! SLOT 5: mapping(address => uint256[]) requestsByRecipient
+    ///! SLOT 6: ShareRate[] finalizationRates
 
     /**
      * @notice amount of ETH on this contract balance that is locked for withdrawal and waiting for claim
@@ -150,64 +150,110 @@ contract WithdrawalQueue {
     ShareRate[] public finalizationRates;
 
     /**
-     * @param _owner address that will be able to invoke `restake` and `finalize` methods.
      * @param _stETH address of StETH contract
      * @param _wstETH address of WstETH contract
      */
-    constructor(address payable _owner, address _stETH, address _wstETH) {
-        if (_owner == address(0)) revert ZeroOwner();
-
+    constructor(address _stETH, address _wstETH) {
         // init immutables
         STETH = _stETH;
         WSTETH = _wstETH;
-        OWNER = _owner;
 
-        // petrify the implementation by assigning a zero Lido agent address
-        _initialize(address(0));
-    }
-
-    function initialize(address _lidoDAOAgent) external {
-        if (_lidoDAOAgent == address(0)) {
-            revert LidoDAOAgentZeroAddress();
-        }
-
-        _initialize(_lidoDAOAgent);
-    }
-
-    /// @notice Resume new withdrawal requests placement
-    function resumeRequestsPlacement() external whenInitialized whenPaused onlyLidoDAOAgent {
-        REQUESTS_PLACEMENT_RESUMED_POSITION.setStorageBool(true);
-
-        emit WithdrawalRequestsPlacementResumed();
-    }
-
-    /// @notice Pause new withdrawal requests placement
-    function pauseRequestsPlacement() external whenResumed onlyLidoDAOAgent {
-        REQUESTS_PLACEMENT_RESUMED_POSITION.setStorageBool(false);
-
-        emit WithdrawalRequestsPlacementPaused();
+        // petrify the implementation by assigning a zero address for every role
+        _initialize(address(0), address(0), address(0), address(0));
     }
 
     /**
-     * @notice Getter for withdrawal queue length
-     * @return length of the request queue
+     * @notice Intialize the contract storage explicitly. NB! It's initialized in paused state by default
+     * @param _admin admin address that can change every role.
+     * @param _pauser address that will be able to pause the withdrawals
+     * @param _resumer address that will be able to resume the withdrawals after pause
+     * @param _finalizer address that can finalize requests in the queue
+     * @dev Reverts with `AdminZeroAddress()` if `_admin` equals to `address(0)`
      */
+    function initialize(address _admin, address _pauser, address _resumer, address _finalizer) external {
+        if (_admin == address(0)) {
+            revert AdminZeroAddress();
+        }
+
+        _initialize(_admin, _pauser, _resumer, _finalizer);
+    }
+
+    /// @notice Returns whether the contract is initialized or not
+    function isInitialized() external view returns (bool) {
+        return CONTRACT_VERSION_POSITION.getStorageUint256() != 0;
+    }
+
+    /**
+     * @notice Resume withdrawal requests placement and finalization
+     * @dev Reverts with `Uninitialized()` if contract is not initialized
+     * @dev Reverts with `PausedExpected()` if contract is already resumed
+     * @dev Reverts with `AccessControl:...` reason if sender has no `RESUME_ROLE`
+     */
+    function resume() external whenInitialized whenPaused onlyRole(RESUME_ROLE) {
+        RESUMED_POSITION.setStorageBool(true);
+
+        emit WithdrawalQueueResumed();
+    }
+
+    /**
+     * @notice Pause withdrawal requests placement and finalization. Claiming finalized requests will still be available
+     * @dev Reverts with `ResumedExpected()` if contract is already paused
+     * @dev Reverts with `AccessControl:...` reason if sender has no `PAUSE_ROLE`
+     */
+    function pause() external whenResumed onlyRole(PAUSE_ROLE) {
+        RESUMED_POSITION.setStorageBool(false);
+
+        emit WithdrawalQueuePaused();
+    }
+
+    /// @notice Returns whether the requests placement and finalization is paused or not
+    function isPaused() external view returns (bool) {
+        return !RESUMED_POSITION.getStorageBool();
+    }
+
+    /// @notice Returns the length of the withdrawal request queue
     function queueLength() external view returns (uint256) {
         return queue.length;
     }
 
-    /// @notice Request withdrawal of the provided stETH token amount
+    /// @notice return number of unfinalized requests in the queue
+    function unfinalizedQueueLength() external view returns (uint256) {
+        return queue.length - finalizedRequestsCounter;
+    }
+
+    /// @notice amount of stETH yet to be finalized
+    function unfinalizedStETH() external view returns (uint256 stETHAmountToFinalize) {
+        stETHAmountToFinalize = 0;
+        if (queue.length > 0) {
+            stETHAmountToFinalize = queue[queue.length - 1].cumulativeEther;
+            if (finalizedRequestsCounter > 0) {
+                stETHAmountToFinalize -= queue[finalizedRequestsCounter - 1].cumulativeEther;
+            }
+        }
+    }
+
+    /**
+     * @notice Request withdrawal of the provided stETH token amount
+     * @param _amountOfStETH StETH tokens that will be locked for withdrawal
+     * @param _recipient address to send ether to upon withdrawal. Will be set to `msg.sender` if `address(0)` is passed
+     * @dev Reverts with `ResumedExpected()` if contract is paused
+     * @dev Reverts with `RequestAmountTooSmall(_amountOfStETH)` if amount is less than `MIN_STETH_WITHDRAWAL_AMOUNT`
+     * @dev Reverts with `RequestAmountTooLarge(_amountOfStETH)` if amount is greater than `MAX_STETH_WITHDRAWAL_AMOUNT`
+     * @dev Reverts if failed to transfer StETH to the contract
+     */
     function requestWithdrawal(
         uint256 _amountOfStETH,
         address _recipient
     ) external whenResumed returns (uint256 requestId) {
         _recipient = _checkWithdrawalRequestInput(_amountOfStETH, _recipient);
+
         return _requestWithdrawal(_amountOfStETH, _recipient);
     }
 
     /**
      * @notice Request withdrawal of the provided stETH token amount using EIP-2612 Permit
-     * @dev NB: requires permit in stETH being implemented
+     * @param _amountOfStETH StETH tokens that will be locked for withdrawal
+     * @param _recipient address to send ether to upon withdrawal. Will be set to `msg.sender` if `address(0)` is passed
      */
     function requestWithdrawalWithPermit(
         uint256 _amountOfStETH,
@@ -218,11 +264,17 @@ contract WithdrawalQueue {
         bytes32 _s
     ) external whenResumed returns (uint256 requestId) {
         _recipient = _checkWithdrawalRequestInput(_amountOfStETH, _recipient);
+
         IERC20Permit(STETH).permit(msg.sender, address(this), _amountOfStETH, _deadline, _v, _r, _s);
+
         return _requestWithdrawal(_amountOfStETH, _recipient);
     }
 
-    /// @notice Request withdrawal of the provided wstETH token amount
+    /**
+     * @notice Request withdrawal of the provided wstETH token amount
+     * @param _amountOfWstETH StETH tokens that will be locked for withdrawal
+     * @param _recipient address to send ether to upon withdrawal. Will be set to `msg.sender` if `address(0)` is passed
+     */
     function requestWithdrawalWstETH(
         uint256 _amountOfWstETH,
         address _recipient
@@ -231,7 +283,11 @@ contract WithdrawalQueue {
         return _requestWithdrawalWstETH(_amountOfWstETH, _recipient);
     }
 
-    /// @notice Request withdrawal of the provided wstETH token amount using EIP-2612 Permit
+    /**
+     * @notice Request withdrawal of the provided wstETH token amount using EIP-2612 Permit
+     * @param _amountOfWstETH StETH tokens that will be locked for withdrawal
+     * @param _recipient address to send ether to upon withdrawal. Will be set to `msg.sender` if `address(0)` is passed
+     */
     function requestWithdrawalWstETHWithPermit(
         uint256 _amountOfWstETH,
         address _recipient,
@@ -245,19 +301,35 @@ contract WithdrawalQueue {
         return _requestWithdrawalWstETH(_amountOfWstETH, _recipient);
     }
 
-    /// @notice Claim withdrawals batch once finalized (claimable)
+    /// @notice Request withdrawal of the provided token amount in a batch
     /// NB: Always reverts
-    function claimWithdrawalsBatch(uint256[] calldata /*_requests*/) external pure {
+    function requestWithdrawalBatch(
+        uint256[] calldata,
+        address[] calldata
+    ) external view whenResumed returns (uint256[] memory) {
         revert Unimplemented();
     }
 
-    /// @notice Returns withdrawal requests placed for the `_recipient` address
+    /// @notice Claim withdrawals batch once finalized (claimable)
+    /// NB: Always reverts
+    function claimWithdrawalBatch(uint256[] calldata /*_requests*/) external pure {
+        revert Unimplemented();
+    }
+
+    /// @notice Returns all withdrawal requests placed for the `_recipient` address
     function getWithdrawalRequests(address _recipient) external view returns (uint256[] memory requestsIds) {
         return requestsByRecipient[_recipient];
     }
 
-    /// @notice Returns status of the withdrawal request
-    function getWithdrawalRequestStatus(uint256 _requestId)
+    /**
+     * @notice Returns status of the withdrawal request
+     * @param _requestId id of the request
+     * @return recipient address to send ETH to once request is finalized and claimed
+     * @
+     */
+    function getWithdrawalRequestStatus(
+        uint256 _requestId
+    )
         external
         view
         returns (
@@ -287,41 +359,33 @@ contract WithdrawalQueue {
         }
     }
 
-    /// @notice Returns Lido DAO Agent address
-    function getLidoDAOAgent() external view returns (address) {
-        return LIDO_DAO_AGENT_POSITION.getStorageAddress();
-    }
-
-    /// @notice Returns whether the contract is initialized or not
-    function isInitialized() external view returns (bool) {
-        return CONTRACT_VERSION_POSITION.getStorageUint256() != 0;
-    }
-
-    /// @notice Returns whether the requests placement is paused or not
-    function isRequestsPlacementPaused() external view returns (bool) {
-        return !REQUESTS_PLACEMENT_RESUMED_POSITION.getStorageBool();
-    }
-
     /**
-     * @notice Finalize requests in [`finalizedRequestsCounter`,`_lastIdToFinalize`] range with `_shareRate`
+     * @notice Finalize requests in [`finalizedRequestsCounter`,`_lastRequestIdToFinalize`] range with `_shareRate`
      * @dev ether to finalize all the requests should be calculated using `calculateFinalizationParams` and sent with
      * this call as msg.value
-     * @param _lastIdToFinalize request index in the queue that will be last finalized request in a batch
+     * @param _lastRequestIdToFinalize request index in the queue that will be last finalized request in a batch
      * @param _shareRate share/ETH rate for the protocol with 1e27 decimals
      */
-    function finalize(uint256 _lastIdToFinalize, uint256 _shareRate) external payable onlyOwner {
-        if (_lastIdToFinalize < finalizedRequestsCounter || _lastIdToFinalize >= queue.length) {
+    function finalize(
+        uint256 _lastRequestIdToFinalize,
+        uint256 _shareRate
+    ) external payable whenResumed onlyRole(FINALIZE_ROLE) {
+        if (_lastRequestIdToFinalize < finalizedRequestsCounter || _lastRequestIdToFinalize >= queue.length) {
             revert InvalidFinalizationId();
         }
-        (uint128 ethToWithdraw, ) = _calculateDiscountedBatch(finalizedRequestsCounter, _lastIdToFinalize, _shareRate);
+        (uint128 ethToWithdraw, ) = _calculateDiscountedBatch(
+            finalizedRequestsCounter,
+            _lastRequestIdToFinalize,
+            _shareRate
+        );
 
         if (msg.value < ethToWithdraw) revert NotEnoughEther();
 
-        _updateRateHistory(_shareRate, _lastIdToFinalize);
+        _updateRateHistory(_shareRate, _lastRequestIdToFinalize);
 
         lockedEtherAmount += _toUint128(msg.value);
 
-        finalizedRequestsCounter = _lastIdToFinalize + 1;
+        finalizedRequestsCounter = _lastRequestIdToFinalize + 1;
     }
 
     /**
@@ -374,7 +438,7 @@ contract WithdrawalQueue {
             shareRate = finalizationRates[_rateIndexHint];
         } else {
             // unbounded loop branch. Can fail with OOG
-            shareRate = finalizationRates[findRateHint(_requestId)];
+            shareRate = finalizationRates[findClaimRateHint(_requestId)];
         }
 
         (uint128 etherToBeClaimed, ) = _calculateDiscountedBatch(_requestId, _requestId, shareRate.value);
@@ -392,7 +456,7 @@ contract WithdrawalQueue {
      *
      * @return hint rate index for this request
      */
-    function findRateHint(uint256 _requestId) public view returns (uint256 hint) {
+    function findClaimRateHint(uint256 _requestId) public view returns (uint256 hint) {
         if (_requestId >= finalizedRequestsCounter) revert RateNotFound();
 
         for (uint256 i = finalizationRates.length; i > 0; i--) {
@@ -417,7 +481,7 @@ contract WithdrawalQueue {
             shares -= queue[_firstId - 1].cumulativeShares;
         }
 
-        eth = _min(eth, _toUint128(shares * _shareRate / SHARE_RATE_PRECISION));
+        eth = _min(eth, _toUint128((shares * _shareRate) / SHARE_RATE_PRECISION));
     }
 
     /// @dev checks if provided request included in the rate hint boundaries
@@ -447,17 +511,23 @@ contract WithdrawalQueue {
         }
     }
 
-        /// @notice internal initialization helper
-    /// @dev doesn't check provided address intentionally
-    function _initialize(address _lidoDAOAgent) internal {
+    /// @notice internal initialization helper
+    /// @dev doesn't check provided addresses intentionally
+    function _initialize(address _admin, address _pauser, address _resumer, address _finalizer) internal {
         if (CONTRACT_VERSION_POSITION.getStorageUint256() != 0) {
             revert AlreadyInitialized();
         }
 
-        LIDO_DAO_AGENT_POSITION.setStorageAddress(_lidoDAOAgent);
+        _grantRole(DEFAULT_ADMIN_ROLE, _admin);
+        _grantRole(PAUSE_ROLE, _pauser);
+        _grantRole(RESUME_ROLE, _resumer);
+        _grantRole(FINALIZE_ROLE, _finalizer);
+
         CONTRACT_VERSION_POSITION.setStorageUint256(1);
 
-        emit InitializedV1(_lidoDAOAgent, msg.sender);
+        RESUMED_POSITION.setStorageBool(false); // pause it explicitly
+
+        emit InitializedV1(_admin, _pauser, _resumer, _finalizer, msg.sender);
     }
 
     function _requestWithdrawal(uint256 _amountOfStETH, address _recipient) internal returns (uint256 requestId) {
@@ -542,11 +612,6 @@ contract WithdrawalQueue {
         return uint128(value);
     }
 
-    modifier onlyOwner() {
-        if (msg.sender != OWNER) revert NotOwner();
-        _;
-    }
-
     /// @notice Reverts when the contract is uninitialized
     modifier whenInitialized() {
         if (CONTRACT_VERSION_POSITION.getStorageUint256() == 0) {
@@ -555,26 +620,18 @@ contract WithdrawalQueue {
         _;
     }
 
-    /// @notice Reverts when the caller is not Lido DAO Agent
-    modifier onlyLidoDAOAgent() {
-        if (msg.sender != LIDO_DAO_AGENT_POSITION.getStorageAddress()) {
-            revert LidoDAOAgentExpected(msg.sender);
-        }
-        _;
-    }
-
     /// @notice Reverts when new withdrawal requests placement resumed
     modifier whenPaused() {
-        if (REQUESTS_PLACEMENT_RESUMED_POSITION.getStorageBool()) {
-            revert PausedRequestsPlacementExpected();
+        if (RESUMED_POSITION.getStorageBool()) {
+            revert PausedExpected();
         }
         _;
     }
 
     /// @notice Reverts when new withdrawal requests placement paused
     modifier whenResumed() {
-        if (!REQUESTS_PLACEMENT_RESUMED_POSITION.getStorageBool()) {
-            revert ResumedRequestsPlacementExpected();
+        if (!RESUMED_POSITION.getStorageBool()) {
+            revert ResumedExpected();
         }
         _;
     }
@@ -589,38 +646,32 @@ contract WithdrawalQueue {
         uint256 amountOfShares
     );
     /// @notice Emitted when withdrawal requests placement paused
-    event WithdrawalRequestsPlacementPaused();
+    event WithdrawalQueuePaused();
 
     /// @notice Emitted when withdrawal requests placement resumed
-    event WithdrawalRequestsPlacementResumed();
+    event WithdrawalQueueResumed();
 
     /// @notice Emitted when the contract initialized
-    /// @param _lidoDAOAgent provided Lido DAO Agent address
+    /// @param _admin provided admin address
     /// @param _caller initialization `msg.sender`
-    event InitializedV1(address _lidoDAOAgent, address _caller);
+    event InitializedV1(address _admin, address _pauser, address _resumer, address _finalizer, address _caller);
 
     event WithdrawalClaimed(uint256 indexed requestId, address indexed receiver, address initiator);
 
-    error StETHInvalidAddress(address _stETH);
-    error WstETHInvalidAddress(address _wstETH);
-    error InvalidWithdrawalRequest(uint256 _requestId);
-    error LidoDAOAgentZeroAddress();
-    error LidoDAOAgentExpected(address _msgSender);
+    error AdminZeroAddress();
     error RecipientExpected(address _recipient, address _msgSender);
     error AlreadyInitialized();
     error Uninitialized();
     error Unimplemented();
-    error PausedRequestsPlacementExpected();
-    error ResumedRequestsPlacementExpected();
+    error PausedExpected();
+    error ResumedExpected();
     error RequestAmountTooSmall(uint256 _amountOfStETH);
     error RequestAmountTooLarge(uint256 _amountOfStETH);
-    error ZeroOwner();
     error InvalidFinalizationId();
     error NotEnoughEther();
     error RequestNotFinalized();
     error RequestAlreadyClaimed();
     error RateNotFound();
-    error NotOwner();
     error CantSendValueRecipientMayHaveReverted();
     error SafeCastValueDoesNotFit96Bits();
     error SafeCastValueDoesNotFit128Bits();

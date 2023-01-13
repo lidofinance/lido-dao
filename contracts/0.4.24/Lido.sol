@@ -721,13 +721,17 @@ contract Lido is StETH, AragonApp {
         uint256[] _requestIdToFinalizeUpTo,
         uint256[] _finalizationShareRates
     ) internal returns (uint256 lockedToWithdrawalQueue) {
-        address withdrawalQueueAddress = _getWithdrawalVault();
+        address withdrawalQueueAddress = getWithdrawalQueue();
         // do nothing if the withdrawals vault address is not configured
         if (withdrawalQueueAddress == address(0)) {
             return 0;
         }
 
         IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(withdrawalQueueAddress);
+        // do nothing if WithdrawalQueue is paused
+        if (withdrawalQueue.isPaused()) {
+            return 0;
+        }
 
         lockedToWithdrawalQueue = 0;
         uint256 burnedSharesAccumulator = 0;
