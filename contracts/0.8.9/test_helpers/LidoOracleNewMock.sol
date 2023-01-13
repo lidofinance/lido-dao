@@ -29,4 +29,11 @@ contract LidoOracleNewMock is LidoOracleNew {
     function setVersion(uint256 _version) external {
         CONTRACT_VERSION_POSITION.setStorageUint256(_version);
     }
+
+    function calcReportHash(Report calldata _report)
+        external pure
+        returns (bytes32 reportHash)
+    {
+        reportHash = keccak256(abi.encode(_report));
+    }
 }

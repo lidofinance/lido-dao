@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2022 Lido <info@lido.fi>
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.9;
 
 import { AccessControlEnumerable } from "@openzeppelin/contracts-v4.4/access/AccessControlEnumerable.sol";
@@ -14,6 +14,14 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable, ReportEpo
     using RateLimitUtils for LimitState.Data;
     using LimitUnstructuredStorage for bytes32;
 
+    event ConsensusDataDelivered(
+        uint256 indexed epochId,
+        address[] stakingModules,
+        uint256[] nodeOperatorIds,
+        uint256[] validatorIds,
+        bytes[] validatorPubkeys
+    );
+
     event ValidatorExitRequest(
         address indexed stakingModule,
         uint256 indexed nodeOperatorId,
@@ -24,22 +32,6 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable, ReportEpo
     event RateLimitSet(
         uint256 maxLimit,
         uint256 limitIncreasePerBlock
-    );
-
-    event CommitteeMemberReported(
-        address[] stakingModules,
-        uint256[] nodeOperatorIds,
-        uint256[] validatorIds,
-        bytes[] validatorPubkeys,
-        uint256 indexed epochId
-    );
-
-    event ConsensusReached(
-        address[] stakingModules,
-        uint256[] nodeOperatorIds,
-        uint256[] validatorIds,
-        bytes[] validatorPubkeys,
-        uint256 indexed epochId
     );
 
     event ContractVersionSet(uint256 version);
@@ -64,20 +56,16 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable, ReportEpo
 
     bytes32 internal constant TOTAL_EXIT_REQUESTS_POSITION = keccak256("lido.ValidatorExitBus.totalExitRequests");
 
-
-
-
     ///! STRUCTURED STORAGE OF THE CONTRACT
     ///! Inherited from CommitteeQuorum:
     ///! SLOT 0: address[] members
-    ///! SLOT 1: bytes[] distinctReports
-    ///! SLOT 2: bytes[] distinctReportHashes
-    ///! SLOT 3: bytes32[] distinctReportCounters
+    ///! SLOT 1: bytes[] distinctReportHashes
+    ///! SLOT 2: bytes32[] distinctReportCounters
     ///! Inherited from AccessControlEnumerable:
-    ///! SLOT 4: mapping(bytes32 => RoleData) _roles
-    ///! SLOT 5: mapping(bytes32 => EnumerableSet.AddressSet) _roleMembers
+    ///! SLOT 3: mapping(bytes32 => RoleData) _roles
+    ///! SLOT 4: mapping(bytes32 => EnumerableSet.AddressSet) _roleMembers
     ///! Own:
-    ///! SLOT 6: mapping(address => mapping (uint256 => uint256)) lastRequestedValidatorIds
+    ///! SLOT 5: mapping(address => mapping (uint256 => uint256)) lastRequestedValidatorIds
 
     /// (stakingModuleAddress, nodeOperatorId) => lastRequestedValidatorId
     mapping(address => mapping (uint256 => uint256)) public lastRequestedValidatorIds;
@@ -139,33 +127,40 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable, ReportEpo
         return TOTAL_EXIT_REQUESTS_POSITION.getStorageUint256();
     }
 
-
     function handleCommitteeMemberReport(
-        address[] calldata _stakingModules,
-        uint256[] calldata _nodeOperatorIds,
-        uint256[] calldata _validatorIds,
-        bytes[] calldata _validatorPubkeys,
-        uint256 _epochId
+        uint256 _epochId,
+        bytes32 _reportHash
     ) external {
-        if (_nodeOperatorIds.length != _validatorPubkeys.length) { revert ArraysMustBeSameSize(); }
-        if (_stakingModules.length != _validatorPubkeys.length) { revert ArraysMustBeSameSize(); }
-        if (_validatorIds.length != _validatorPubkeys.length) { revert ArraysMustBeSameSize(); }
-        if (_validatorPubkeys.length == 0) { revert EmptyArraysNotAllowed(); }
-
-        // TODO: maybe check lengths of pubkeys
-
         BeaconSpec memory beaconSpec = _getBeaconSpec();
         bool hasEpochAdvanced = _validateAndUpdateExpectedEpoch(_epochId, beaconSpec);
         if (hasEpochAdvanced) {
             _clearReporting();
         }
 
-        bytes memory reportBytes = _encodeReport(_stakingModules, _nodeOperatorIds, _validatorIds, _validatorPubkeys, _epochId);
-        if (_handleMemberReport(msg.sender, reportBytes)) {
-            _reportKeysToEject(_stakingModules, _nodeOperatorIds, _validatorIds, _validatorPubkeys, _epochId, beaconSpec);
-        }
+        _handleMemberReport(msg.sender, _epochId, _reportHash);
+    }
 
-        emit CommitteeMemberReported(_stakingModules, _nodeOperatorIds, _validatorIds, _validatorPubkeys, _epochId);
+    function handleReportData(
+        uint256 _epochId,
+        address[] calldata _stakingModules,
+        uint256[] calldata _nodeOperatorIds,
+        uint256[] calldata _validatorIds,
+        bytes[] calldata _validatorPubkeys
+    ) external {
+
+        if (_nodeOperatorIds.length != _validatorPubkeys.length) { revert ArraysMustBeSameSize(); }
+        if (_stakingModules.length != _validatorPubkeys.length) { revert ArraysMustBeSameSize(); }
+        if (_validatorIds.length != _validatorPubkeys.length) { revert ArraysMustBeSameSize(); }
+        if (_validatorPubkeys.length == 0) { revert EmptyArraysNotAllowed(); }
+        // TODO: maybe check lengths of pubkeys
+
+        bytes memory reportBytes = _encodeReport(_epochId, _stakingModules, _nodeOperatorIds, _validatorIds, _validatorPubkeys);
+        bytes32 reportHash = keccak256(reportBytes);
+        _checkOnDataDelivery(reportHash, _epochId, EXPECTED_EPOCH_ID_POSITION.getStorageUint256());
+
+        _reportKeysToEject(_stakingModules, _nodeOperatorIds, _validatorIds, _validatorPubkeys, _epochId, _getBeaconSpec());
+
+        emit ConsensusDataDelivered(_epochId, _stakingModules, _nodeOperatorIds, _validatorIds, _validatorPubkeys);
     }
 
 
@@ -228,17 +223,7 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable, ReportEpo
     function updateQuorum(uint256 _quorum)
         external onlyRole(MANAGE_QUORUM_ROLE)
     {
-        (bool isQuorumReached, uint256 reportIndex) = _updateQuorum(_quorum);
-        if (isQuorumReached) {
-            (
-                address[] memory stakingModules,
-                uint256[] memory nodeOperatorIds,
-                uint256[] memory validatorIds,
-                bytes[] memory validatorPubkeys,
-                uint256 epochId
-            ) = _decodeReport(distinctReports[reportIndex]);
-            _reportKeysToEject(stakingModules, nodeOperatorIds, validatorIds, validatorPubkeys, epochId, _getBeaconSpec());
-        }
+        _updateQuorum(_quorum, _getCurrentEpochId(_getBeaconSpec()));
     }
 
     /**
@@ -269,8 +254,6 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable, ReportEpo
         uint256 _epochId,
         BeaconSpec memory _beaconSpec
     ) internal {
-        emit ConsensusReached(_stakingModules, _nodeOperatorIds, _validatorIds, _validatorPubkeys, _epochId);
-
         _advanceExpectedEpoch(_epochId + _beaconSpec.epochsPerFrame);
         _clearReporting();
 
@@ -321,15 +304,21 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable, ReportEpo
 
 
     function _encodeReport(
+        uint256 _epochId,
         address[] calldata _stakingModules,
         uint256[] calldata _nodeOperatorIds,
         uint256[] calldata _validatorIds,
-        bytes[] calldata _validatorPubkeys,
-        uint256 _epochId
+        bytes[] calldata _validatorPubkeys
     ) internal pure returns (
         bytes memory reportData
     ) {
-        reportData = abi.encode(_stakingModules, _nodeOperatorIds, _validatorIds, _validatorPubkeys, _epochId);
+        reportData = abi.encode(
+            _epochId,
+            _stakingModules,
+            _nodeOperatorIds,
+            _validatorIds,
+            _validatorPubkeys
+        );
     }
 
     error CanInitializeOnlyOnZeroVersion();
@@ -337,5 +326,4 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable, ReportEpo
     error RateLimitExceeded();
     error ArraysMustBeSameSize();
     error EmptyArraysNotAllowed();
-
 }

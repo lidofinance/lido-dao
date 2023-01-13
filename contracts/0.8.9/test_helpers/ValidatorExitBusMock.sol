@@ -29,4 +29,21 @@ contract ValidatorExitBusMock is ValidatorExitBus {
     function setVersion(uint256 _version) external {
         CONTRACT_VERSION_POSITION.setStorageUint256(_version);
     }
+
+    function calcReportHash(
+        uint256 _epochId,
+        address[] calldata _stakingModules,
+        uint256[] calldata _nodeOperatorIds,
+        uint256[] calldata _validatorIds,
+        bytes[] calldata _validatorPubkeys
+    ) external pure returns (bytes32 reportHash) {
+        bytes memory reportData = _encodeReport(
+            _epochId,
+            _stakingModules,
+            _nodeOperatorIds,
+            _validatorIds,
+            _validatorPubkeys
+        );
+        return keccak256(reportData);
+    }
 }

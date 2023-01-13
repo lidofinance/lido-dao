@@ -44,7 +44,7 @@ function generateReportKeysArguments(numKeys, epochId) {
   const validatorIds = Array.from(Array(numKeys), () => 123)
   const nodeOperatorIds = Array.from(Array(numKeys), () => 1)
   const keys = Array.from(Array(numKeys), () => generateValidatorPubKey())
-  return [stakingModuleIds, nodeOperatorIds, validatorIds, keys, epochId]
+  return [epochId, stakingModuleIds, nodeOperatorIds, validatorIds, keys]
 }
 
 const maxRequestsPerDayE18 = toE18(2000 + 1)
@@ -57,8 +57,17 @@ function calcRateLimitParameters(maxRequestsPerDay) {
 
 const GENESIS_TIME = 1606824000
 
-contract.skip('ValidatorExitBus', ([deployer, member, owner]) => {
+contract.skip('ValidatorExitBus', ([deployer, member, owner, nobody]) => {
   let bus = null
+
+  const calcReportHash = async (report) => {
+    return await bus.calcReportHash(...report, {from: nobody})
+  }
+
+  const doHashReport = async (epochId, report, reporter) => {
+    const reportHash = await calcReportHash(report)
+    return await bus.handleCommitteeMemberReport(epochId, reportHash, { from: reporter })
+  }
 
   beforeEach('deploy bus', async () => {
     bus = await ValidatorExitBus.new({ from: deployer })
@@ -77,16 +86,17 @@ contract.skip('ValidatorExitBus', ([deployer, member, owner]) => {
   })
 
   describe('Estimate gas usage', () => {
-    it.skip(`Calculate gas usages`, async () => {
+    it(`Calculate gas usages`, async () => {
       let epochId = 1
       const gasUsage = {}
-      const amountsOfKeysToTry = [1, 3, 10, 40, 100]
+      const amountsOfKeysToTry = [1, 10, 100, 500]
       let prevNumKeys = 0
       for (const numKeys of amountsOfKeysToTry) {
         await waitBlocks(Math.ceil(prevNumKeys / fromE18(numRequestsLimitIncreasePerBlockE18)))
         const args = generateReportKeysArguments(numKeys, epochId)
-        const result = await bus.handleCommitteeMemberReport(...args, { from: member })
-        gasUsage[numKeys] = result.receipt.gasUsed
+        const hashReportTx = await doHashReport(epochId, args, member)
+        const dataReportTx = await bus.handleReportData(...args, { from: nobody })
+        gasUsage[numKeys] = dataReportTx.receipt.gasUsed
         prevNumKeys = numKeys
         epochId += 1
       }
