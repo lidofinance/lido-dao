@@ -20,7 +20,7 @@ const ZERO_MEMBER_REPORT = {
   nodeOperatorsWithExitedValidators: [],
   exitedValidatorsNumbers: [],
   withdrawalVaultBalance: 0,
-  withdrawalsReserveAmount: 0,
+  newBufferedEtherReserveAmount: 0,
   requestIdToFinalizeUpTo: [],
   finalizationShareRates: [], 
   bunkerModeFlag: false,

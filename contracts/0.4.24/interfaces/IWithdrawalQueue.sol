@@ -21,4 +21,16 @@ interface IWithdrawalQueue {
     function finalizedRequestsCounter() external view returns (uint256);
 
     function isPaused() external returns (bool);
+
+    function getWithdrawalRequestStatus(uint256 _requestId)
+        external
+        view
+        returns (
+            address recipient,
+            uint256 requestBlockNumber,
+            uint256 etherToWithdraw,
+            uint256 shares,
+            bool isFinalized,
+            bool isClaimed
+        );
 }
