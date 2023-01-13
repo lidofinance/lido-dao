@@ -1,6 +1,4 @@
 const { BN } = require('bn.js')
-const { isGeth } = require('@aragon/contract-helpers-test/src/node')
-const { decodeErrorReasonFromTx } = require('@aragon/contract-helpers-test/src/decoding')
 const { getEventAt } = require('@aragon/contract-helpers-test')
 
 const pad = (hex, bytesLength, fill = '0') => {
@@ -75,53 +73,6 @@ function formatStEth(bn) {
   return ethers.utils.formatEther(ethers.utils.parseUnits(bn.toString(), 'wei'), { commify: true }) + ' stETH'
 }
 
-// Copy paste from node_modules/@aragon/contract-helpers-test/src/asserts/assertThrow.js
-async function assertThrows(blockOrPromise, expectedErrorCode, expectedReason, ctx) {
-  try {
-    typeof blockOrPromise === 'function' ? await blockOrPromise() : await blockOrPromise
-  } catch (error) {
-    if (await isGeth(ctx)) {
-      // With geth, we are only provided the transaction receipt and have to decode the failure
-      // ourselves.
-      const status = error.receipt.status
-
-      assert.equal(status, '0x0', `Expected transaction to revert but it executed with status ${status}`)
-      if (!expectedReason.length) {
-        // Note that it is difficult to ascertain invalid jumps or out of gas scenarios
-        // and so we simply pass if no revert message is given
-        return
-      }
-
-      const { tx } = error
-      assert.notEqual(tx, undefined, `Expected error to include transaction hash, cannot assert revert reason ${expectedReason}: ${error}`)
-
-      error.reason = decodeErrorReasonFromTx(tx, ctx)
-      return error
-    } else {
-      const errorMatchesExpected = error.message.search(expectedErrorCode) > -1
-      assert(errorMatchesExpected, `Expected error code "${expectedErrorCode}" but failed with "${error}" instead.`)
-      return error
-    }
-  }
-  // assert.fail() for some reason does not have its error string printed 🤷
-  assert(false, `Expected "${expectedErrorCode}"${expectedReason ? ` (with reason: "${expectedReason}")` : ''} but it did not fail`)
-}
-
-async function assertRevertCustomError(blockOrPromise, expectedError, ctx) {
-  const error = await assertThrows(blockOrPromise, 'revert', expectedError, ctx)
-
-  if (!expectedError) {
-    return
-  }
-
-  const expectedMessage = `VM Exception while processing transaction: reverted with custom error '${expectedError}()'`
-  assert.equal(
-    error.message,
-    expectedMessage,
-    `Expected revert with custom error "${expectedError}()" but failed with "${error.message}" instead.`
-  )
-}
-
 const assertNoEvent = (receipt, eventName, msg) => {
   const event = getEventAt(receipt, eventName)
   assert.equal(event, undefined, msg)
@@ -151,7 +102,6 @@ module.exports = {
   formatWei,
   formatBN,
   formatStEth,
-  assertRevertCustomError,
   assertNoEvent,
   changeEndianness,
   genKeys,
