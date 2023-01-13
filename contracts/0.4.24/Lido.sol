@@ -453,7 +453,7 @@ contract Lido is StETH, AragonApp {
 
         uint256 preBeaconBalance = BEACON_BALANCE_POSITION.getStorageUint256();
 
-        // updating saved stats from beacon balance checking its sanity
+        // update saved stats from beacon balance checking its sanity
         uint256 appearedValidators = _processBeaconStateUpdate(
             _beaconValidators,
             _beaconBalance
@@ -619,11 +619,8 @@ contract Lido is StETH, AragonApp {
         return EL_REWARDS_VAULT_POSITION.getStorageAddress();
     }
 
-    /**
-     * @dev updates beacon state according to fresh report
-     */
+    /// @dev updates beacon state according to the current report
     function _processBeaconStateUpdate(
-        // CL values
         uint256 _postBeaconValidators,
         uint256 _postBeaconBalance
     ) internal returns (uint256 appearedValidators) {
@@ -659,7 +656,6 @@ contract Lido is StETH, AragonApp {
             IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(withdrawalQueueAddress);
 
             uint256 lastUnfinalizedRequestId = withdrawalQueue.finalizedRequestsCounter();
-
             (,,minEtherReserve,,,) = withdrawalQueue.getWithdrawalRequestStatus(lastUnfinalizedRequestId);
         }
 
@@ -709,25 +705,6 @@ contract Lido is StETH, AragonApp {
         }
     }
 
-    function _processRewards(
-        uint256 _preBeaconBalance,
-        uint256 _postBeaconBalance,
-        uint256 _appearedValidators,
-        uint256 _executionLayerRewards,
-        uint256 _withdrawalVaultBalance
-    ) internal {
-        uint256 rewardsBase = (_appearedValidators.mul(DEPOSIT_SIZE)).add(_preBeaconBalance);
-
-        // Don’t mint/distribute any protocol fee on the non-profitable Lido oracle report
-        // (when consensus layer balance delta is zero or negative).
-        // See ADR #3 for details:
-        // https://research.lido.fi/t/rewards-distribution-after-the-merge-architecture-decision-record/1535
-        if (_postBeaconBalance.add(_withdrawalVaultBalance) > rewardsBase) {
-            uint256 consensusLayerRewards = _postBeaconBalance.add(_withdrawalVaultBalance).sub(rewardsBase);
-            _distributeFee(consensusLayerRewards.add(_executionLayerRewards));
-        }
-    }
-
     ///@dev finalize withdrawal requests in the queue, burn their shares and return the amount of ether locked for claiming
     function _processWithdrawalQueue(
         uint256[] _requestIdToFinalizeUpTo,
@@ -765,6 +742,26 @@ contract Lido is StETH, AragonApp {
         }
 
         _burnShares(withdrawalQueueAddress, sharesToBurn);
+    }
+
+    /// @dev calculate the amout of rewards and distribute it 
+    function _processRewards(
+        uint256 _preBeaconBalance,
+        uint256 _postBeaconBalance,
+        uint256 _appearedValidators,
+        uint256 _executionLayerRewards,
+        uint256 _withdrawalVaultBalance
+    ) internal {
+        uint256 rewardsBase = (_appearedValidators.mul(DEPOSIT_SIZE)).add(_preBeaconBalance);
+
+        // Don’t mint/distribute any protocol fee on the non-profitable Lido oracle report
+        // (when consensus layer balance delta is zero or negative).
+        // See ADR #3 for details:
+        // https://research.lido.fi/t/rewards-distribution-after-the-merge-architecture-decision-record/1535
+        if (_postBeaconBalance.add(_withdrawalVaultBalance) > rewardsBase) {
+            uint256 consensusLayerRewards = _postBeaconBalance.add(_withdrawalVaultBalance).sub(rewardsBase);
+            _distributeFee(consensusLayerRewards.add(_executionLayerRewards));
+        }
     }
 
     /**
