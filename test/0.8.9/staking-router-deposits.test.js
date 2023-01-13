@@ -1,5 +1,6 @@
 const hre = require('hardhat')
-const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertBn, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertRevert } = require('../helpers/assertThrow')
 const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 const { newDao, newApp } = require('../0.4.24/helpers/dao')
 const { ETH, genKeys } = require('../helpers/utils')

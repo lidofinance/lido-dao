@@ -1,5 +1,6 @@
 const { assert } = require('chai')
-const { assertBn, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertRevert } = require('../helpers/assertThrow')
 const { bn, MAX_UINT256 } = require('@aragon/contract-helpers-test')
 const { toBN } = require('../helpers/utils')
 const { waitBlocks } = require('../helpers/blockchain')
