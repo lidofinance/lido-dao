@@ -1,3 +1,6 @@
+// this is modified version of assertRevert from
+// https://github.com/aragon/contract-helpers/blob/b24284687abb0855da0b0a089d21ee4ea83d9f49/packages/test-helpers/src/asserts/assertThrow.js
+// that adds support for asserting custom errors
 const { assert } = require('chai')
 const { isGeth } = require('@aragon/contract-helpers-test/src/node')
 const { decodeErrorReasonFromTx } = require('@aragon/contract-helpers-test/src/decoding')
@@ -60,6 +63,18 @@ async function assertThrows(
   )
 }
 
+async function assertJump(blockOrPromise, ctx) {
+  await assertThrows(blockOrPromise, 'invalid JUMP', ctx)
+}
+
+async function assertInvalidOpcode(blockOrPromise, ctx) {
+  await assertThrows(blockOrPromise, 'invalid opcode', ctx)
+}
+
+async function assertOutOfGas(blockOrPromise, ctx) {
+  await assertThrows(blockOrPromise, 'out of gas', ctx)
+}
+
 // version of @aragon/contract-helpers-test assertRevert, but with custom errors support
 async function assertRevert(blockOrPromise, expectedReason, ctx) {
   const error = await assertThrows(
@@ -97,4 +112,9 @@ async function assertRevert(blockOrPromise, expectedReason, ctx) {
   )
 }
 
-module.exports = { assertRevert }
+module.exports = {
+  assertJump,
+  assertInvalidOpcode,
+  assertOutOfGas,
+  assertRevert,
+}

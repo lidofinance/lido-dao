@@ -119,6 +119,8 @@ contract WithdrawalQueue is AccessControlEnumerable {
      */
     uint256 public constant MAX_STETH_WITHDRAWAL_AMOUNT = 1000 ether;
 
+    uint256 public constant SHARE_RATE_PRECISION = 1e27;
+
     ///! STRUCTURED STORAGE OF THE CONTRACT
     ///  Inherited from AccessControlEnumerable:
     ///! SLOT 0: mapping(bytes32 => RoleData) _roles
@@ -462,7 +464,7 @@ contract WithdrawalQueue is AccessControlEnumerable {
             shares -= queue[_firstId - 1].cumulativeShares;
         }
 
-        eth = _min(eth, _toUint128((shares * _shareRate) / 1e9));
+        eth = _min(eth, _toUint128(shares * _shareRate / SHARE_RATE_PRECISION));
     }
 
     /// @dev checks if provided request included in the rate hint boundaries
