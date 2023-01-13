@@ -1,6 +1,7 @@
 const { assert } = require('chai')
 const { newDao, newApp } = require('./helpers/dao')
-const { assertBn, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertRevert } = require('../helpers/assertThrow')
 
 const LidoPushableMock = artifacts.require('LidoPushableMock.sol')
 const OracleMock = artifacts.require('OracleMock.sol')

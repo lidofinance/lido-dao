@@ -1,7 +1,8 @@
 const { assert } = require('chai')
 const { artifacts } = require('hardhat')
 
-const { assertBn, assertRevert, assertEvent, assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertBn, assertEvent, assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertRevert } = require('../helpers/assertThrow')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 const { newDao, newApp } = require('../0.4.24/helpers/dao')
 const { StETH, ETH } = require('../helpers/utils')

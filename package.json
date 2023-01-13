@@ -11,7 +11,7 @@
     "gasprofile"
   ],
   "scripts": {
-    "postinstall": "patch-package && husky install",
+    "postinstall": "husky install",
     "build:apps": "yarn compile && hardhat run --no-compile scripts/build-apps-frontend.js",
     "lint": "yarn lint:sol && yarn lint:js",
     "lint:sol": "solhint \"contracts/**/*.sol\" --ignore-path .solhintignore",
@@ -127,7 +127,6 @@
     "ethers": "^5.1.4",
     "node-gyp": "^8.4.1",
     "openzeppelin-solidity": "2.0.0",
-    "patch-package": "^6.4.7",
     "solhint-plugin-lido": "^0.0.4",
     "yargs": "^16.0.3"
   }

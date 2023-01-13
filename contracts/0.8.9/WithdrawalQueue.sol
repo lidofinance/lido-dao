@@ -11,7 +11,9 @@ import "@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC20.sol";
 
 import {AccessControlEnumerable} from "@openzeppelin/contracts-v4.4/access/AccessControlEnumerable.sol";
 
-import "./lib/AragonUnstructuredStorage.sol";
+import {AccessControlEnumerable} from "@openzeppelin/contracts-v4.4/access/AccessControlEnumerable.sol";
+
+import "./lib/UnstructuredStorage.sol";
 
 /**
  * @title Interface defining a Lido liquid staking pool
@@ -118,6 +120,8 @@ contract WithdrawalQueue is AccessControlEnumerable {
      * @dev To withdraw larger amounts, recommended to split it to several requests
      */
     uint256 public constant MAX_STETH_WITHDRAWAL_AMOUNT = 1000 ether;
+
+    uint256 public constant SHARE_RATE_PRECISION = 1e27;
 
     ///! STRUCTURED STORAGE OF THE CONTRACT
     ///  Inherited from AccessControlEnumerable:
@@ -462,7 +466,7 @@ contract WithdrawalQueue is AccessControlEnumerable {
             shares -= queue[_firstId - 1].cumulativeShares;
         }
 
-        eth = _min(eth, _toUint128((shares * _shareRate) / 1e9));
+        eth = _min(eth, _toUint128(shares * _shareRate / SHARE_RATE_PRECISION));
     }
 
     /// @dev checks if provided request included in the rate hint boundaries

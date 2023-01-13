@@ -1,6 +1,8 @@
 const { artifacts } = require('hardhat')
 
-const { assertBn, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertRevert } = require('./helpers/assertThrow')
+
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 const { newDao, newApp } = require('./0.4.24/helpers/dao')
 const { BN } = require('bn.js')

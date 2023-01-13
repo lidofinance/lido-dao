@@ -4,7 +4,9 @@ const { hexSplit, toBN } = require('../helpers/utils')
 const { newDao, newApp } = require('./helpers/dao')
 const { EvmSnapshot } = require('../helpers/blockchain')
 const { ZERO_ADDRESS, getEventAt } = require('@aragon/contract-helpers-test')
-const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertBn, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertRevert } = require('../helpers/assertThrow')
+
 const keccak256 = require('js-sha3').keccak_256
 const nodeOperators = require('../helpers/node-operators')
 

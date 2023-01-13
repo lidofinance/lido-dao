@@ -1,5 +1,6 @@
 const hre = require('hardhat')
-const { assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertRevert } = require('../helpers/assertThrow')
 const { assert } = require('chai')
 const { DSMAttestMessage, DSMPauseMessage } = require('./helpers/signatures')
 const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
