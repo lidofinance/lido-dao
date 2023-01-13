@@ -3,7 +3,9 @@ const { assert } = require('chai')
 const { artifacts } = require('hardhat')
 
 const { getInstalledApp } = require('@aragon/contract-helpers-test/src/aragon-os')
-const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertBn, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertRevert } = require('../helpers/assertThrow')
+
 
 const { newDao, newApp } = require('./helpers/dao')
 const { ZERO_ADDRESS, bn, getEventAt } = require('@aragon/contract-helpers-test')
@@ -457,17 +459,17 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     await assertRevert(
       stakingRouter.updateStakingModule(module1.id, 10001, 300, 700, { from: voting }),
-      `ed with custom error 'ErrorValueOver100Percent("_targetShare")`
+      `ErrorValueOver100Percent("_targetShare")`
     )
 
     await assertRevert(
       stakingRouter.updateStakingModule(module1.id, 10000, 10001, 700, { from: voting }),
-      `ed with custom error 'ErrorValueOver100Percent("_moduleFee + _treasuryFee")`
+      `ErrorValueOver100Percent("_moduleFee + _treasuryFee")`
     )
 
     await assertRevert(
       stakingRouter.updateStakingModule(module1.id, 10000, 300, 10001, { from: voting }),
-      `ed with custom error 'ErrorValueOver100Percent("_moduleFee + _treasuryFee")`
+      `ErrorValueOver100Percent("_moduleFee + _treasuryFee")`
     )
 
     // distribution fee calculates on active keys in modules
@@ -608,7 +610,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     // can not deposit with unset withdrawalCredentials
     await assertRevert(
       app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor }),
-      `ed with custom error 'ErrorEmptyWithdrawalsCredentials()`
+      'ErrorEmptyWithdrawalsCredentials()'
     )
     // set withdrawalCredentials with keys, because they were trimmed
     await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })

@@ -1,5 +1,6 @@
 const { assert } = require('chai')
-const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertBn, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertRevert } = require('../helpers/assertThrow')
 const { toBN, assertRevertCustomError } = require('../helpers/utils')
 const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 const keccak256 = require('js-sha3').keccak_256

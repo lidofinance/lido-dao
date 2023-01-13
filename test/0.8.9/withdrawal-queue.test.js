@@ -3,7 +3,7 @@ const { bn } = require('@aragon/contract-helpers-test')
 const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 const { assert } = require('chai')
 const { ETH, StETH, shareRate } = require('../helpers/utils')
-const { assertRevert } = require('../helpers/assert')
+const { assertRevert } = require('../helpers/assertThrow')
 
 const WithdrawalQueue = artifacts.require('WithdrawalQueue.sol')
 const StETHMock = artifacts.require('StETHMock.sol')
