@@ -3,7 +3,7 @@
 pragma solidity 0.8.9;
 
 
-import "./AragonUnstructuredStorage.sol";
+import "./UnstructuredStorage.sol";
 
 //
 // We need to pack four variables into the same 256bit-wide storage slot

@@ -11,7 +11,7 @@ import "@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC20.sol";
 
 import {AccessControlEnumerable} from "@openzeppelin/contracts-v4.4/access/AccessControlEnumerable.sol";
 
-import "./lib/AragonUnstructuredStorage.sol";
+import "./lib/UnstructuredStorage.sol";
 
 /**
  * @title Interface defining a Lido liquid staking pool

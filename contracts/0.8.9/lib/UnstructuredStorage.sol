@@ -1,10 +1,13 @@
 /*
- * SPDX-License-Identifier:    MIT
+ * SPDX-License-Identifier: MIT
  */
 
 pragma solidity 0.8.9;
 
 
+/**
+ * @notice Aragon Unstructured Storage library
+ */
 library UnstructuredStorage {
     function getStorageBool(bytes32 position) internal view returns (bool data) {
         assembly { data := sload(position) }
