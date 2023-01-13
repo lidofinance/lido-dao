@@ -44,8 +44,8 @@ jobs:
       - name: Run Solidity tests
         run: yarn test:unit
 
-    - name: Run Solidity linters
-      run: yarn lint:sol
+      - name: Run Solidity linters
+        run: yarn lint:sol
 
       - name: Run JS linters
         run: yarn lint:js
