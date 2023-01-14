@@ -135,6 +135,17 @@ contract StETHPermit is IERC2612, StETH {
     }
 
     /**
+     * @dev Returns the current nonce for `owner`. This value must be
+     * included whenever a signature is generated for {permit}.
+     *
+     * Every successful call to {permit} increases ``owner``'s nonce by one. This
+     * prevents a signature from being used multiple times.
+     */
+    function nonces(address owner) external view returns (uint256) {
+        return nonces[owner];
+    }
+
+    /**
      * @dev Returns the domain separator used in the encoding of the signature for {permit}, as defined by {EIP712}.
      */
     // solhint-disable-next-line func-name-mixedcase
