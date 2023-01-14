@@ -29,8 +29,8 @@ function signPermit(owner, spender, value, nonce, deadline, domainSeparator, pri
 function signEIP712(domainSeparator, typeHash, types, parameters, privateKey) {
   const digest = web3.utils.keccak256(
     '0x1901' +
-      strip0x(domainSeparator) +
-      strip0x(web3.utils.keccak256(web3.eth.abi.encodeParameters(['bytes32', ...types], [typeHash, ...parameters])))
+    strip0x(domainSeparator) +
+    strip0x(web3.utils.keccak256(web3.eth.abi.encodeParameters(['bytes32', ...types], [typeHash, ...parameters])))
   )
 
   return ecSign(digest, privateKey)

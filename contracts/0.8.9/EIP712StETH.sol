@@ -44,12 +44,12 @@ contract EIP712StETH is IEIP712, EIP712 {
     /**
      * @dev Constructs specialized EIP712 instance for StETH token, version "1".
      */
-    constructor() EIP712("StETH", "1") {}
+    constructor() EIP712("Liquid staked Ether 2.0", "1") {}
 
     /**
      * @dev Returns the domain separator for the current chain.
      */
-    function domainSeparatorV4() override external view returns (bytes32) {
+    function domainSeparatorV4() external view override returns (bytes32) {
         return _domainSeparatorV4();
     }
 
@@ -68,7 +68,7 @@ contract EIP712StETH is IEIP712, EIP712 {
      * address signer = ECDSA.recover(digest, signature);
      * ```
      */
-    function hashTypedDataV4(bytes32 _structHash) override external view returns (bytes32) {
+    function hashTypedDataV4(bytes32 _structHash) external view override returns (bytes32) {
         return _hashTypedDataV4(_structHash);
     }
 }
