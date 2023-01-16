@@ -6,6 +6,7 @@
 pragma solidity 0.4.24;
 
 import {ECDSA} from "../common/lib/ECDSA.sol";
+import {IEIP712} from "../common/interfaces/IEIP712.sol";
 
 import {StETH} from "./StETH.sol";
 
@@ -49,36 +50,6 @@ interface IERC2612 {
      */
     // solhint-disable-next-line func-name-mixedcase
     function DOMAIN_SEPARATOR() external view returns (bytes32);
-}
-
-/**
- * @dev Helper interface of EIP712.
- *
- * Has an access to the CHAIN_ID opcode and relies on immutables internally
- * Both are unavailable for Solidity 0.4.24.
- */
-interface IEIP712 {
-    /**
-     * @dev Returns the domain separator for the current chain.
-     */
-    function domainSeparatorV4() external view returns (bytes32);
-
-    /**
-     * @dev Given an already https://eips.ethereum.org/EIPS/eip-712#definition-of-hashstruct[hashed struct], this
-     * function returns the hash of the fully encoded EIP712 message for this domain.
-     *
-     * This hash can be used together with {ECDSA-recover} to obtain the signer of a message. For example:
-     *
-     * ```solidity
-     * bytes32 digest = hashTypedDataV4(keccak256(abi.encode(
-     *     keccak256("Mail(address to,string contents)"),
-     *     mailTo,
-     *     keccak256(bytes(mailContents))
-     * )));
-     * address signer = ECDSA.recover(digest, signature);
-     * ```
-     */
-    function hashTypedDataV4(bytes32 _structHash) external view returns (bytes32);
 }
 
 contract StETHPermit is IERC2612, StETH {

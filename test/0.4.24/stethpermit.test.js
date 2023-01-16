@@ -1,11 +1,12 @@
 const crypto = require('crypto')
 const { ACCOUNTS_AND_KEYS, MAX_UINT256, ZERO_ADDRESS } = require('./helpers/constants')
 const { bn } = require('@aragon/contract-helpers-test')
-const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertBn, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertRevert } = require('../helpers/assertThrow')
 const { signPermit, signTransferAuthorization, makeDomainSeparator } = require('./helpers/permit_helpers')
-const { hexStringFromBuffer } = require('./helpers')
+const { hexStringFromBuffer } = require('./helpers/sign_utils')
 
-const EIP712StETH = artifacts.require('EIP712StETHMock')
+const EIP712StETH = artifacts.require('EIP712StETH')
 const StETHPermit = artifacts.require('StETHPermitMock')
 
 contract('StETHPermit', ([deployer, ...accounts]) => {
@@ -16,10 +17,8 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
     stEthPermit = await StETHPermit.new({ from: deployer })
     await stEthPermit.initializeEIP712StETH(eip712StETH.address)
 
-    // We get the chain id from the contract because Ganache (used for coverage) does not return the same chain id
-    // from within the EVM as from the JSON RPC interface.
-    // See https://github.com/trufflesuite/ganache-core/issues/515
-    chainId = await eip712StETH.getChainId()
+    chainId = await web3.eth.net.getId();
+
     domainSeparator = makeDomainSeparator('Liquid staked Ether 2.0', '1', chainId, eip712StETH.address)
   })
 

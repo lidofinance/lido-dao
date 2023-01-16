@@ -2,28 +2,21 @@
 
 // SPDX-License-Identifier: GPL-3.0
 
-/* See contracts/COMPILERS.md */
-pragma solidity 0.8.9;
-
-import {EIP712} from "@openzeppelin/contracts-v4.4/utils/cryptography/draft-EIP712.sol";
-
-import {IEIP712} from "../common/interfaces/IEIP712.sol";
+// See contracts/COMPILERS.md
+// solhint-disable-next-line
+pragma solidity 0.4.24||0.8.9;
 
 /**
- * Helper contract exposes OpenZeppelin's EIP712 message utils implementation.
+ * @dev Helper interface of EIP712.
+ *
+ * Has an access to the CHAIN_ID opcode and relies on immutables internally
+ * Both are unavailable for Solidity 0.4.24.
  */
-contract EIP712StETH is IEIP712, EIP712 {
-    /**
-     * @dev Constructs specialized EIP712 instance for StETH token, version "1".
-     */
-    constructor() EIP712("Liquid staked Ether 2.0", "1") {}
-
+interface IEIP712 {
     /**
      * @dev Returns the domain separator for the current chain.
      */
-    function domainSeparatorV4() external view override returns (bytes32) {
-        return _domainSeparatorV4();
-    }
+    function domainSeparatorV4() external view returns (bytes32);
 
     /**
      * @dev Given an already https://eips.ethereum.org/EIPS/eip-712#definition-of-hashstruct[hashed struct], this
@@ -40,7 +33,5 @@ contract EIP712StETH is IEIP712, EIP712 {
      * address signer = ECDSA.recover(digest, signature);
      * ```
      */
-    function hashTypedDataV4(bytes32 _structHash) external view override returns (bytes32) {
-        return _hashTypedDataV4(_structHash);
-    }
+    function hashTypedDataV4(bytes32 _structHash) external view returns (bytes32);
 }

@@ -1,4 +1,4 @@
-const { ecSign, strip0x } = require('./index')
+const { ecSign, strip0x } = require('./sign_utils')
 
 const transferWithAuthorizationTypeHash = web3.utils.keccak256(
   'TransferWithAuthorization(address from,address to,uint256 value,uint256 validAfter,uint256 validBefore,bytes32 nonce)'
