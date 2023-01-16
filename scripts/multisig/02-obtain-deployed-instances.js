@@ -7,6 +7,7 @@ const { assert } = require('../helpers/assert')
 const { readNetworkState, persistNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
 
 const { APP_NAMES } = require('./constants')
+const { network } = require('hardhat')
 
 const REQUIRED_NET_STATE = [
   'ensAddress',
@@ -18,7 +19,8 @@ const REQUIRED_NET_STATE = [
   'daoTemplateDeployTx',
   'lidoBaseDeployTx',
   'oracleBaseDeployTx',
-  'nodeOperatorsRegistryBaseDeployTx'
+  'nodeOperatorsRegistryBaseDeployTx',
+  'eip712StETHDeployTx'
 ]
 
 async function deployTemplate({ web3, artifacts }) {
@@ -64,6 +66,7 @@ async function deployTemplate({ web3, artifacts }) {
     state.nodeOperatorsRegistryBaseAddress,
     state.nodeOperatorsRegistryBaseDeployTx
   )
+
   log(`Checking...`)
   await assertDeployedBytecode(nodeOperatorsRegistryBase.address, 'NodeOperatorsRegistry')
   await assertAragonProxyBase(nodeOperatorsRegistryBase, 'nodeOperatorsRegistryBase')
@@ -72,6 +75,19 @@ async function deployTemplate({ web3, artifacts }) {
       ...state[`app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`],
       baseAddress: nodeOperatorsRegistryBase.address
     }
+  })
+
+  log('EIP712StETH')
+  const eip712StETH = await useOrGetDeployed(
+    'EIP712StETH',
+    state.eip712StETHAddress,
+    state.eip712StETHDeployTx
+  )
+
+  log(`Checking...`)
+  await assertDeployedBytecode(eip712StETH.address, 'EIP712StETH')
+  persistNetworkState(network.name, netId, state, {
+    eip712StETHAddress: eip712StETH.address
   })
 }
 

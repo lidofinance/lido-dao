@@ -22,7 +22,8 @@ const REQUIRED_NET_STATE = [
   `app:${APP_NAMES.LIDO}`,
   `app:${APP_NAMES.ORACLE}`,
   `app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`,
-  'daoInitialSettings'
+  'daoInitialSettings',
+  'eip712StETHAddress'
 ]
 
 const ARAGON_APM_ENS_DOMAIN = 'aragonpm.eth'
@@ -53,7 +54,7 @@ async function deployDAO({ web3, artifacts }) {
   await checkAppRepos(state)
   log.splitter()
 
-  const { daoInitialSettings, depositContractAddress } = state
+  const { daoInitialSettings, depositContractAddress, eip712StETHAddress } = state
 
   const votingSettings = [
     daoInitialSettings.voting.minSupportRequired,
@@ -72,6 +73,7 @@ async function deployDAO({ web3, artifacts }) {
   log(`Using DAO token settings:`, daoInitialSettings.token)
   log(`Using DAO voting settings:`, daoInitialSettings.voting)
   log(`Using beacon spec:`, daoInitialSettings.beaconSpec)
+  log(`Using eip712StETHAddress:`, eip712StETHAddress)
 
   await saveCallTxData(`newDAO`, template, 'newDAO', `tx-05-deploy-dao.json`, {
     arguments: [
@@ -79,7 +81,8 @@ async function deployDAO({ web3, artifacts }) {
       daoInitialSettings.token.symbol,
       votingSettings,
       daoInitialSettings.beaconSpec.depositContractAddress || depositContractAddress,
-      beaconSpec
+      beaconSpec,
+      eip712StETHAddress
     ],
     from: state.multisigAddress
   })

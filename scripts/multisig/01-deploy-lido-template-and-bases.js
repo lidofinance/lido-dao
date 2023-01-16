@@ -47,13 +47,17 @@ async function deployTemplate({ web3, artifacts }) {
   await saveDeployTx('NodeOperatorsRegistry', 'tx-01-4-deploy-nops-base.json', {
     from: state.multisigAddress
   })
+  await saveDeployTx('EIP712StETH', 'tx-01-5-deploy-nops-base.json', {
+    from: state.multisigAddress
+  })
 
   persistNetworkState(network.name, netId, state, {
     daoTemplateConstructorArgs,
     daoTemplateDeployTx: '',
     lidoBaseDeployTx: '',
     oracleBaseDeployTx: '',
-    nodeOperatorsRegistryBaseDeployTx: ''
+    nodeOperatorsRegistryBaseDeployTx: '',
+    eip712StETHDeployTx: '',
   })
 
   log.splitter()

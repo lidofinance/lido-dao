@@ -14,9 +14,9 @@ import "./interfaces/IWithdrawalQueue.sol";
 import "./interfaces/IWithdrawalVault.sol";
 import "./interfaces/IStakingRouter.sol";
 
-import "./StETH.sol";
-
 import "./lib/StakeLimitUtils.sol";
+
+import "./StETHPermit.sol";
 
 /**
 * @title Liquid staking pool implementation
@@ -30,7 +30,7 @@ import "./lib/StakeLimitUtils.sol";
 * rewards, no Transfer events are generated: doing so would require emitting an event
 * for each token holder and thus running an unbounded loop.
 */
-contract Lido is StETH, AragonApp {
+contract Lido is StETHPermit, AragonApp {
     using SafeMath for uint256;
     using UnstructuredStorage for bytes32;
     using StakeLimitUnstructuredStorage for bytes32;
@@ -122,6 +122,7 @@ contract Lido is StETH, AragonApp {
     * @param _dsm Deposit security module contract
     * @param _executionLayerRewardsVault execution layer rewards vault contract
     * @param _withdrawalQueue withdrawal queue contract
+    * @param _eip712StETH eip712 helper contract for StETH
     */
     function initialize(
         address _oracle,
@@ -129,13 +130,14 @@ contract Lido is StETH, AragonApp {
         address _stakingRouter,
         address _dsm,
         address _executionLayerRewardsVault,
-        address _withdrawalQueue
+        address _withdrawalQueue,
+        address _eip712StETH
     )
         public onlyInit
     {
         _setProtocolContracts(_oracle, _treasury, _executionLayerRewardsVault, _withdrawalQueue);
 
-        _initialize_v2(_stakingRouter, _dsm);
+        _initialize_v2(_stakingRouter, _dsm, _eip712StETH);
         initialized();
     }
 
@@ -143,11 +145,14 @@ contract Lido is StETH, AragonApp {
      * @dev If we are deploying the protocol from scratch there are circular dependencies introduced (StakingRouter and DSM),
      *      so on init stage we need to set `_stakingRouter` and `_dsm` as 0x0, and afterwards use setters for set them correctly
      */
-    function _initialize_v2(address _stakingRouter, address _dsm) internal {
+    function _initialize_v2(address _stakingRouter, address _dsm, address _eip712StETH) internal {
         STAKING_ROUTER_POSITION.setStorageAddress(_stakingRouter);
         DEPOSIT_SECURITY_MODULE_POSITION.setStorageAddress(_dsm);
 
         CONTRACT_VERSION_POSITION.setStorageUint256(2);
+
+        _initializeEIP712StETH(_eip712StETH);
+
         emit ContractVersionSet(2);
         emit StakingRouterSet(_stakingRouter);
         emit DepositSecurityModuleSet(_dsm);
@@ -158,13 +163,14 @@ contract Lido is StETH, AragonApp {
      * @dev Value 1 in CONTRACT_VERSION_POSITION is skipped due to change in numbering
      * For more details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md
      */
-    function finalizeUpgrade_v2(address _stakingRouter, address _dsm) external {
+    function finalizeUpgrade_v2(address _stakingRouter, address _dsm, address _eip712StETH) external {
         require(!isPetrified(), "PETRIFIED");
         require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "WRONG_BASE_VERSION");
         require(_stakingRouter != address(0), "STAKING_ROUTER_ZERO_ADDRESS");
         require(_dsm != address(0), "DSM_ZERO_ADDRESS");
+        require(_eip712StETH != address(0), "EIP712_STETH_ZERO_ADDRESS");
 
-        _initialize_v2(_stakingRouter, _dsm);
+        _initialize_v2(_stakingRouter, _dsm, _eip712StETH);
     }
 
     /**
