@@ -9,7 +9,13 @@ interface IStakingRouter {
     function getStakingRewardsDistribution()
         external
         view
-        returns (address[] memory recipients, uint96[] memory moduleFees, uint96 totalFeee, uint256 precisionPoints);
+        returns (
+            address[] memory recipients,
+            uint256[] memory moduleIds,
+            uint96[] memory moduleFees,
+            uint96 totalFeee,
+            uint256 precisionPoints
+        );
 
     function deposit(uint256 maxDepositsCount, uint24 stakingModuleId, bytes calldata depositCalldata) external payable returns (uint256);
 
@@ -50,7 +56,11 @@ interface IStakingRouter {
         uint64 lastDepositAt;
         /// @notice block.number of the last deposit of the module
         uint256 lastDepositBlock;
+        /// @notice number of exited keys
+        uint256 exitedKeysCount;
     }
+
+    function getExitedKeysCountAcrossAllModules() external view returns (uint256);
 
     function getStakingModules() external view returns (StakingModule[] memory res);
 
@@ -63,6 +73,19 @@ interface IStakingRouter {
     ) external;
 
     function updateStakingModule(uint24 _stakingModuleId, uint16 _targetShare, uint16 _moduleFee, uint16 _treasuryFee) external;
+
+    function reportRewardsMinted(uint256[] calldata _stakingModuleIds, uint256[] calldata _totalShares) external;
+
+    function updateExitedKeysCountByStakingModule(
+        uint256[] calldata _moduleIds,
+        uint256[] calldata _exitedKeysCounts
+    ) external;
+
+    function reportStakingModuleExitedKeysCountByNodeOperator(
+        uint256 _stakingModuleId,
+        uint256[] calldata _nodeOperatorIds,
+        uint256[] calldata _exitedKeysCounts
+    ) external;
 
     function getStakingModule(uint24 _stakingModuleId) external view returns (StakingModule memory);
 

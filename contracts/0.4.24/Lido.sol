@@ -472,6 +472,9 @@ contract Lido is StETHPermit, AragonApp {
             _finalizationShareRates
         );
 
+        // TODO: check rebase boundaries
+        // TODO: emit a rebase event with sufficient data to calc pre- and post-rebase share rates and APR
+
         // update ether reserve accordingly
         _processBufferedEtherReserveUpdate(_newBufferedEtherReserveAmount);
 
@@ -594,7 +597,7 @@ contract Lido is StETHPermit, AragonApp {
      * @return totalFee total rewards fee in base precision
      */
     function getFee() public view returns (uint96 totalFee) {
-        (, , totalFee, ) = getStakingRouter().getStakingRewardsDistribution();
+        (, , , totalFee, ) = getStakingRouter().getStakingRewardsDistribution();
     }
 
     /**
@@ -603,7 +606,7 @@ contract Lido is StETHPermit, AragonApp {
      * @return treasuryFee treasury fee in base precision
      */
     function getFeeDistribution() public view returns (uint96 modulesFee, uint96 treasuryFee) {
-        (, uint96[] memory moduleFees, uint96 totalFee, ) = getStakingRouter().getStakingRewardsDistribution();
+        (, , uint96[] memory moduleFees, uint96 totalFee, ) = getStakingRouter().getStakingRewardsDistribution();
         for (uint256 i; i < moduleFees.length; ++i) {
             modulesFee += moduleFees[i];
         }
@@ -888,11 +891,16 @@ contract Lido is StETHPermit, AragonApp {
         // The effect is that the given percentage of the reward goes to the fee recipient, and
         // the rest of the reward is distributed between token holders proportionally to their
         // token shares.
+        IStakingRouter router = getStakingRouter();
 
-        (address[] memory recipients, uint96[] memory modulesFees, uint96 totalFee, uint256 precisionPoints) = getStakingRouter()
-            .getStakingRewardsDistribution();
+        (address[] memory recipients,
+            uint256[] memory moduleIds,
+            uint96[] memory modulesFees,
+            uint96 totalFee,
+            uint256 precisionPoints) = router.getStakingRewardsDistribution();
 
         require(recipients.length == modulesFees.length, "WRONG_RECIPIENTS_INPUT");
+        require(moduleIds.length == modulesFees.length, "WRONG_MODULE_IDS_INPUT");
 
         if (totalFee > 0) {
             uint256 shares2mint = _totalRewards
@@ -906,20 +914,23 @@ contract Lido is StETHPermit, AragonApp {
             _mintShares(address(this), shares2mint);
 
             uint256 treasuryReward = shares2mint;
-            uint256 recipientReward;
+            uint256[] memory moduleRewards = new uint256[](recipients.length);
 
             for (uint256 i = 0; i < recipients.length; i++) {
                 if (modulesFees[i] > 0) {
-                    recipientReward = shares2mint.mul(modulesFees[i]).div(totalFee);
-                    _transferShares(address(this), recipients[i], recipientReward);
-                    _emitTransferAfterMintingShares(recipients[i], recipientReward);
-                    treasuryReward = treasuryReward.sub(recipientReward);
+                    uint256 moduleReward = shares2mint.mul(modulesFees[i]).div(totalFee);
+                    moduleRewards[i] = moduleReward;
+                    _transferShares(address(this), recipients[i], moduleReward);
+                    _emitTransferAfterMintingShares(recipients[i], moduleReward);
+                    treasuryReward = treasuryReward.sub(moduleReward);
                 }
             }
 
             address treasury = getTreasury();
             _transferShares(address(this), treasury, treasuryReward);
             _emitTransferAfterMintingShares(treasury, treasuryReward);
+
+            router.reportRewardsMinted(moduleIds, moduleRewards);
         }
     }
 

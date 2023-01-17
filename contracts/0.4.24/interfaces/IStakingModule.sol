@@ -52,10 +52,18 @@ interface IStakingModule {
     /// @param _nodeOperatorId Id of the node operator
     function getNodeOperatorIsActive(uint256 _nodeOperatorId) external view returns (bool);
 
+    /// @notice Called by StakingRouter to signal that stETH rewards were minted for this module.
+    /// @param _totalShares Amount of stETH shares that were minted to reward all node operators.
+    function handleRewardsMinted(uint256 _totalShares) external;
+
     /// @notice Updates the number of the validators in the EXITED state for node operator with given id
     /// @param _nodeOperatorId Id of the node operator
     /// @param _exitedValidatorsKeysCount New number of EXITED validators of the node operator
-    function updateExitedValidatorsKeysCount(uint256 _nodeOperatorId, uint256 _exitedValidatorsKeysCount) external;
+    /// @return number of exited validators across all node operators
+    function updateExitedValidatorsKeysCount(
+        uint256 _nodeOperatorId,
+        uint256 _exitedValidatorsKeysCount
+    ) external returns (uint256);
 
     /// @notice Invalidates all unused validators keys for all node operators
     function invalidateReadyToDepositKeys() external;

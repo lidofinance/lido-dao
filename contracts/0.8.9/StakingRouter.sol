@@ -25,6 +25,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     event StakingModuleTargetShareSet(uint24 indexed stakingModuleId, uint16 targetShare);
     event StakingModuleFeesSet(uint24 indexed stakingModuleId, uint16 treasuryFee, uint16 moduleFee);
     event StakingModuleStatusSet(uint24 indexed stakingModuleId, StakingModuleStatus status, address setBy);
+    event StakingModuleExitedKeysIncompleteReporting(uint256 indexed stakingModuleId, uint256 unreportedExitedKeysCount);
     event WithdrawalCredentialsSet(bytes32 withdrawalCredentials);
     event ContractVersionSet(uint256 version);
     /**
@@ -42,9 +43,11 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     error ErrorStakingModuleNotPaused();
     error ErrorEmptyWithdrawalsCredentials();
     error ErrorDirectETHTransfer();
+    error ErrorExitedKeysCountCannotDecrease();
 
     struct StakingModuleCache {
         address stakingModuleAddress;
+        uint24 moduleId;
         uint16 moduleFee;
         uint16 treasuryFee;
         uint16 targetShare;
@@ -57,6 +60,8 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     bytes32 public constant MODULE_PAUSE_ROLE = keccak256("MODULE_PAUSE_ROLE");
     bytes32 public constant MODULE_RESUME_ROLE = keccak256("MODULE_RESUME_ROLE");
     bytes32 public constant MODULE_MANAGE_ROLE = keccak256("MODULE_MANAGE_ROLE");
+    bytes32 public constant REPORT_EXITED_KEYS_ROLE = keccak256("REPORT_EXITED_KEYS_ROLE");
+    bytes32 public constant REPORT_REWARDS_MINTED_ROLE = keccak256("REPORT_REWARDS_MINTED_ROLE");
 
     /// Version of the initialized contract data
     /// NB: Contract versioning starts from 1.
@@ -180,6 +185,68 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
 
         emit StakingModuleTargetShareSet(_stakingModuleId, _targetShare);
         emit StakingModuleFeesSet(_stakingModuleId, _treasuryFee, _moduleFee);
+    }
+
+    function reportRewardsMinted(uint256[] calldata _stakingModuleIds, uint256[] calldata _totalShares)
+        external
+        onlyRole(REPORT_REWARDS_MINTED_ROLE)
+    {
+        for (uint256 i = 0; i < _stakingModuleIds.length; ) {
+            address moduleAddr = _getStakingModuleById(_stakingModuleIds[i]).stakingModuleAddress;
+            IStakingModule(moduleAddr).handleRewardsMinted(_totalShares[i]);
+            unchecked { ++i; }
+        }
+    }
+
+    function updateExitedKeysCountByStakingModule(
+        uint256[] calldata _moduleIds,
+        uint256[] calldata _exitedKeysCounts
+    ) external onlyRole(REPORT_EXITED_KEYS_ROLE) {
+        for (uint256 i = 0; i < _moduleIds.length; ) {
+            StakingModule storage stakingModule = _getStakingModuleById(_moduleIds[i]);
+            uint256 prevExitedKeysCount = stakingModule.exitedKeysCount;
+            if (_exitedKeysCounts[i] < prevExitedKeysCount) {
+                revert ErrorExitedKeysCountCannotDecrease();
+            }
+            (uint256 moduleExitedKeysCount,,) = IStakingModule(stakingModule.stakingModuleAddress)
+                .getValidatorsKeysStats();
+            if (moduleExitedKeysCount < prevExitedKeysCount) {
+                // not all of the exited keys were async reported to the module
+                emit StakingModuleExitedKeysIncompleteReporting(
+                    stakingModule.id,
+                    prevExitedKeysCount - moduleExitedKeysCount);
+            }
+            stakingModule.exitedKeysCount = _exitedKeysCounts[i];
+            unchecked { ++i; }
+        }
+    }
+
+    function reportStakingModuleExitedKeysCountByNodeOperator(
+        uint256 _stakingModuleId,
+        uint256[] calldata _nodeOperatorIds,
+        uint256[] calldata _exitedKeysCounts
+    ) external onlyRole(REPORT_EXITED_KEYS_ROLE) {
+        StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
+        address moduleAddr = stakingModule.stakingModuleAddress;
+        for (uint256 i = 0; i < _nodeOperatorIds.length; ) {
+            uint256 exitedKeysCount = IStakingModule(moduleAddr)
+                .updateExitedValidatorsKeysCount(_nodeOperatorIds[i], _exitedKeysCounts[i]);
+            if (exitedKeysCount == stakingModule.exitedKeysCount) {
+                // oracle finished updating exited keys for all node ops
+                stakingModule.finishUpdatingExitedValidatorsKeysCount();
+            }
+            unchecked { ++i; }
+        }
+    }
+
+    function getExitedKeysCountAcrossAllModules() external view returns (uint256) {
+        uint256 modulesCount = getStakingModulesCount();
+        uint256 exitedKeysCount = 0;
+        for (uint256 i; i < modulesCount; ) {
+            exitedKeysCount += _getStakingModuleByIndex(i).exitedKeysCount;
+            unchecked { ++i; }
+        }
+        return exitedKeysCount;
     }
 
     function getStakingModules() external view returns (StakingModule[] memory res) {
@@ -312,18 +379,25 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     function getStakingRewardsDistribution()
         external
         view
-        returns (address[] memory recipients, uint96[] memory moduleFees, uint96 totalFee, uint256 precisionPoints)
+        returns (
+            address[] memory recipients,
+            uint256[] memory moduleIds,
+            uint96[] memory moduleFees,
+            uint96 totalFee,
+            uint256 precisionPoints
+        )
     {
-        (uint256 totalActiveKeys, StakingModuleCache[] memory modulesCache) = _loadStakingModulesCache();
+        (uint256 totalActiveKeys, StakingModuleCache[] memory modulesCache) = _loadStakingModulesCache(false);
         uint256 modulesCount = modulesCache.length;
 
         /// @dev return empty response if there are no modules or active keys yet
         if (modulesCount == 0 || totalActiveKeys == 0) {
-            return (new address[](0), new uint96[](0), 0, FEE_PRECISION_POINTS);
+            return (new address[](0), new uint256[](0), new uint96[](0), 0, FEE_PRECISION_POINTS);
         }
 
         precisionPoints = FEE_PRECISION_POINTS;
         recipients = new address[](modulesCount);
+        moduleIds = new uint256[](modulesCount);
         moduleFees = new uint96[](modulesCount);
 
         uint256 rewardedModulesCount = 0;
@@ -331,6 +405,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         uint96 moduleFee;
 
         for (uint256 i; i < modulesCount; ) {
+            moduleIds[i] = modulesCache[i].moduleId;
             /// @dev skip modules which have no active keys
             if (modulesCache[i].activeKeysCount > 0) {
                 moduleKeysShare = ((modulesCache[i].activeKeysCount * precisionPoints) / totalActiveKeys);
@@ -338,7 +413,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
                 recipients[i] = address(modulesCache[i].stakingModuleAddress);
                 moduleFee = uint96((moduleKeysShare * modulesCache[i].moduleFee) / TOTAL_BASIS_POINTS);
                 /// @dev if the module has the `Stopped` status for some reason, then the module's
-                ///      rewards go to the treasure, so that the DAO has ability to manage them
+                ///      rewards go to the treasury, so that the DAO has ability to manage them
                 ///      (e.g. to compensate the module in case of an error, etc.)
                 if (modulesCache[i].status != StakingModuleStatus.Stopped) {
                     moduleFees[i] = moduleFee;
@@ -463,55 +538,49 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         }
     }
 
-    function _readStakingModuleCache(uint256 _stakingModuleIndex) internal view returns (StakingModuleCache memory stakingModuleCache) {
+    function _loadStakingModuleCacheItem(
+        uint256 _stakingModuleIndex,
+        bool _zeroKeysCountsIfInactive
+    ) internal view returns (StakingModuleCache memory cacheItem) {
         StakingModule storage stakingModuleData = _getStakingModuleByIndex(_stakingModuleIndex);
-        stakingModuleCache.stakingModuleAddress = stakingModuleData.stakingModuleAddress;
-        stakingModuleCache.moduleFee = stakingModuleData.moduleFee;
-        stakingModuleCache.treasuryFee = stakingModuleData.treasuryFee;
-        stakingModuleCache.targetShare = stakingModuleData.targetShare;
-        stakingModuleCache.status = StakingModuleStatus(stakingModuleData.status);
-    }
 
-    /**
-     * @dev load all modules list
-     * @notice used for reward distribution
-     * @return totalActiveKeys for not stopped modules
-     * @return modulesCache array of StakingModuleCache struct
-     */
-    function _loadStakingModulesCache() internal view returns (uint256 totalActiveKeys, StakingModuleCache[] memory modulesCache) {
-        uint256 modulesCount = getStakingModulesCount();
-        modulesCache = new StakingModuleCache[](modulesCount);
-        for (uint256 i; i < modulesCount; ) {
-            modulesCache[i] = _readStakingModuleCache(i);
-            (, modulesCache[i].activeKeysCount, modulesCache[i].availableKeysCount) = IStakingModule(modulesCache[i].stakingModuleAddress)
-                .getValidatorsKeysStats();
-            totalActiveKeys += modulesCache[i].activeKeysCount;
-            unchecked {
-                ++i;
+        cacheItem.stakingModuleAddress = stakingModuleData.stakingModuleAddress;
+        cacheItem.moduleId = stakingModuleData.id;
+        cacheItem.moduleFee = stakingModuleData.moduleFee;
+        cacheItem.treasuryFee = stakingModuleData.treasuryFee;
+        cacheItem.targetShare = stakingModuleData.targetShare;
+        cacheItem.status = StakingModuleStatus(stakingModuleData.status);
+
+        if (!_zeroKeysCountsIfInactive || cacheItem.status == StakingModuleStatus.Active) {
+            (uint256 moduleExitedKeysCount, cacheItem.activeKeysCount, cacheItem.availableKeysCount) =
+                IStakingModule(cacheItem.stakingModuleAddress).getValidatorsKeysStats();
+            uint256 exitedKeysCount = stakingModuleData.exitedKeysCount;
+            if (exitedKeysCount < moduleExitedKeysCount) {
+                // module hasn't received all exited validators data yet
+                cacheItem.activeKeysCount -= (exitedKeysCount - moduleExitedKeysCount);
             }
         }
     }
 
     /**
-     * @dev load active modules list
-     * @notice used for deposits allocation
-     * @return totalActiveKeys for active modules
-     * @return modulesCache array of StakingModuleCache struct
+     * @dev load modules into a memory cache
+     *
+     * @param _zeroKeysCountsOfInactiveModules if true, active and available keys for
+     *        inactive modules are set to zero
+     *
+     * @return totalActiveKeys total active keys across all modules (excluding inactive
+     *         if _zeroKeysCountsOfInactiveModules is true)
+     * @return modulesCache array of StakingModuleCache structs
      */
-    function _loadActiveStakingModulesCache() internal view returns (uint256 totalActiveKeys, StakingModuleCache[] memory modulesCache) {
+    function _loadStakingModulesCache(bool _zeroKeysCountsOfInactiveModules) internal view returns (
+        uint256 totalActiveKeys,
+        StakingModuleCache[] memory modulesCache
+    ) {
         uint256 modulesCount = getStakingModulesCount();
         modulesCache = new StakingModuleCache[](modulesCount);
-
         for (uint256 i; i < modulesCount; ) {
-            modulesCache[i] = _readStakingModuleCache(i);
-
-            /// @dev account only keys from active modules
-            if (modulesCache[i].status == StakingModuleStatus.Active) {
-                (, modulesCache[i].activeKeysCount, modulesCache[i].availableKeysCount) = IStakingModule(
-                    modulesCache[i].stakingModuleAddress
-                ).getValidatorsKeysStats();
-                totalActiveKeys += modulesCache[i].activeKeysCount;
-            }
+            modulesCache[i] = _loadStakingModuleCacheItem(i, _zeroKeysCountsOfInactiveModules);
+            totalActiveKeys += modulesCache[i].activeKeysCount;
             unchecked {
                 ++i;
             }
@@ -524,7 +593,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         // calculate total used keys for operators
         uint256 totalActiveKeys;
 
-        (totalActiveKeys, modulesCache) = _loadActiveStakingModulesCache();
+        (totalActiveKeys, modulesCache) = _loadStakingModulesCache(true);
 
         uint256 modulesCount = modulesCache.length;
         allocations = new uint256[](modulesCount);

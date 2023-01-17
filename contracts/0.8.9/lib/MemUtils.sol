@@ -54,4 +54,19 @@ library MemUtils {
         }
         memcpy(srcStartPos, dstStartPos, _src.length);
     }
+
+    /**
+     * Calculates keccak256 over a uint256 memory array contents.
+     *
+     * keccakUint256Array(array) is a more gas-efficient equivalent
+     * to keccak256(abi.encodePacked(array)) since copying memory
+     * is avoided.
+     */
+    function keccakUint256Array(uint256[] memory _arr) external pure returns (bytes32 result) {
+        assembly {
+            let ptr := add(_arr, 32)
+            let len := mul(mload(_arr), 32)
+            result := keccak256(ptr, len)
+        }
+    }
 }

@@ -11,5 +11,7 @@ interface ILido {
       */
     function getBufferedEther() external view returns (uint256);
 
+    function getStakingRouter() external view returns (address);
+
     function receiveStakingRouter() external payable;
 }

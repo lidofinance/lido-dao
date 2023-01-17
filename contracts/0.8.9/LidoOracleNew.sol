@@ -31,7 +31,10 @@ interface ILido {
  * @notice Part of StakingModule interface required for `LidoOracleNew` to work
  */
 interface IStakingModule {
-    function updateExitedValidatorsKeysCount(uint256 _nodeOperatorId, uint256 _exitedValidatorsKeysCount) external;
+    function updateExitedValidatorsKeysCount(
+        uint256 _nodeOperatorId,
+        uint256 _exitedValidatorsKeysCount
+    ) external returns (uint256);
 }
 
 /**
