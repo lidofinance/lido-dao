@@ -335,15 +335,15 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
             if (modulesCache[i].activeKeysCount > 0) {
                 moduleKeysShare = ((modulesCache[i].activeKeysCount * precisionPoints) / totalActiveKeys);
 
-                recipients[i] = address(modulesCache[i].stakingModuleAddress);
+                recipients[rewardedModulesCount] = address(modulesCache[i].stakingModuleAddress);
                 moduleFee = uint96((moduleKeysShare * modulesCache[i].moduleFee) / TOTAL_BASIS_POINTS);
                 /// @dev if the module has the `Stopped` status for some reason, then the module's
                 ///      rewards go to the treasure, so that the DAO has ability to manage them
                 ///      (e.g. to compensate the module in case of an error, etc.)
                 if (modulesCache[i].status != StakingModuleStatus.Stopped) {
-                    moduleFees[i] = moduleFee;
+                    moduleFees[rewardedModulesCount] = moduleFee;
                 }
-                // else keep moduleFees[i] = 0, but increase totalFee
+                // else keep moduleFees[rewardedModulesCount] = 0, but increase totalFee
 
                 totalFee += (uint96((moduleKeysShare * modulesCache[i].treasuryFee) / TOTAL_BASIS_POINTS) + moduleFee);
 
