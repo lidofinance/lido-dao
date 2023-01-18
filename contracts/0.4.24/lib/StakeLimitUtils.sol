@@ -94,6 +94,7 @@ library StakeLimitUnstructuredStorage {
 library StakeLimitUtils {
     /**
     * @notice Calculate stake limit for the current block.
+    * @dev using `_constGasMin` to make gas consumption independent of the current block number
     */
     function calculateCurrentStakeLimit(StakeLimitState.Data memory _data) internal view returns(uint256 limit) {
         uint256 stakeLimitIncPerBlock;
@@ -101,10 +102,10 @@ library StakeLimitUtils {
             stakeLimitIncPerBlock = _data.maxStakeLimit / _data.maxStakeLimitGrowthBlocks;
         }
 
-        limit = _data.prevStakeLimit + ((block.number - _data.prevStakeBlockNumber) * stakeLimitIncPerBlock);
-        if (limit > _data.maxStakeLimit) {
-            limit = _data.maxStakeLimit;
-        }
+        limit = _constGasMin(
+            _data.prevStakeLimit + ((block.number - _data.prevStakeBlockNumber) * stakeLimitIncPerBlock),
+            _data.maxStakeLimit
+        );
     }
 
     /**
@@ -204,5 +205,23 @@ library StakeLimitUtils {
         _data.prevStakeBlockNumber = uint32(_isPaused ? 0 : block.number);
 
         return _data;
+    }
+
+    /**
+     * @notice find a minimum of two numbers with a constant gas consumption
+     * @dev doesn't use branching logic inside
+     */
+    function _constGasMin(uint256 l, uint256 r) internal pure returns (uint256 min) {
+        uint256 lIsLess = _toUInt256(l < r);
+        min = l * lIsLess + r * (1 - lIsLess);
+    }
+
+    /**
+     * @notice cast boolean flag to integer (true=1, false=0)
+     * @dev doesn't use ternary operation or if condition
+     * intended to use for the branchless `_constGasMin`
+     */
+    function _toUInt256(bool flag) internal pure returns (uint256 flagValue) {
+        assembly { flagValue := flag }
     }
 }

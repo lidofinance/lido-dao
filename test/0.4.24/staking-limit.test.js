@@ -208,4 +208,34 @@ contract('StakingLimits', ([account1]) => {
     assertBn(decodedPrevStakeLimit, max96)
     assertBn(decodedPrevStakeBlockNumber, max32)
   })
+
+  it('constant gas for `calculateCurrentStakeLimit` regardless `block.number`', async () => {
+    const block = await web3.eth.getBlock('latest')
+
+    const maxStakeLimit = 100
+    const increasePerBlock = 25
+    const maxStakeLimitGrowthBlocks = maxStakeLimit / increasePerBlock
+
+    const slot = await limits.setStorageStakeLimitStruct(
+      block.number,
+      0,
+      maxStakeLimitGrowthBlocks,
+      maxStakeLimit
+    )
+    // dry run to init the storage
+    await limits.emitCurrentStakeLimit(slot)
+
+    // reference call (the current limit is below max)
+    const referenceGas = (await limits.emitCurrentStakeLimit(slot)).receipt.gasUsed
+    const referenceBlock = (await web3.eth.getBlock('latest')).number
+
+    // spin up the loop to hit the max and impose saturation
+    for(i=0; i<maxStakeLimitGrowthBlocks+1; ++i) {
+      const currentGas = (await limits.emitCurrentStakeLimit(slot)).receipt.gasUsed
+      const currentBlock = (await web3.eth.getBlock('latest')).number
+
+      assertBn(currentGas, referenceGas)
+      assertBn(currentBlock, referenceBlock + i + 1)
+    }
+  })
 })
