@@ -176,11 +176,6 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
   }
 
   it('deposit works', async () => {
-    console.log('--addresses---')
-    console.log('operators', operators.address)
-    console.log('lido', app.address)
-    console.log('staking_router', stakingRouter.address)
-
     await operators.addNodeOperator('1', ADDRESS_1, { from: voting })
     await operators.addNodeOperator('2', ADDRESS_2, { from: voting })
 
