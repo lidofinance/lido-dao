@@ -137,7 +137,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
       'Curated',
       operators.address,
       10_000, // 100 % _targetShare
-      500, // 5 % _moduleFee
+      500, // 5 % _stakingModuleFee
       500, // 5 % _treasuryFee
       { from: voting }
     )
@@ -1203,15 +1203,15 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     let module1 = await stakingRouter.getStakingModule(curated.id)
     assertBn(module1.targetShare, 10000)
-    assertBn(module1.moduleFee, 500)
+    assertBn(module1.stakingModuleFee, 500)
     assertBn(module1.treasuryFee, 500)
 
-    // stakingModuleId, targetShare, moduleFee, treasuryFee
+    // stakingModuleId, targetShare, stakingModuleFee, treasuryFee
     await stakingRouter.updateStakingModule(module1.id, module1.targetShare, 0, 0, { from: voting })
 
     module1 = await stakingRouter.getStakingModule(curated.id)
     assertBn(module1.targetShare, 10000)
-    assertBn(module1.moduleFee, 0)
+    assertBn(module1.stakingModuleFee, 0)
     assertBn(module1.treasuryFee, 0)
 
     // check stat before deposit

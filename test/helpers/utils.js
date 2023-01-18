@@ -6,6 +6,13 @@ const pad = (hex, bytesLength, fill = '0') => {
   return hex
 }
 
+const padRight = (hex, length, fill = '0') => {
+  const strippedHex = hex.replace('0x', '')
+  const absentZeroes = length * 2 - strippedHex.length
+  if (absentZeroes > 0) hex = '0x' + strippedHex + fill.repeat(absentZeroes)
+  return hex
+}
+
 const hexConcat = (first, ...rest) => {
   let result = first.startsWith('0x') ? first : '0x' + first
   rest.forEach((item) => {
@@ -83,5 +90,6 @@ module.exports = {
   formatWei,
   formatBN,
   formatStEth,
-  genKeys
+  genKeys,
+  padRight
 }

@@ -220,13 +220,8 @@ contract('Lido: rewards distribution math', (addresses) => {
 
     const { reportedMintAmount, tos, values } = await readLastPoolEventLog()
 
-    const {
-      totalFeeToDistribute,
-      nodeOperatorsSharesToMint,
-      treasurySharesToMint,
-      nodeOperatorsFeeToMint,
-      treasuryFeeToMint
-    } = await getAwaitedFeesSharesTokensDeltas(profitAmount, prevTotalShares, 1)
+    const { totalFeeToDistribute, nodeOperatorsSharesToMint, treasurySharesToMint, nodeOperatorsFeeToMint, treasuryFeeToMint } =
+      await getAwaitedFeesSharesTokensDeltas(profitAmount, prevTotalShares, 1)
 
     assertBn(nodeOperatorsRegistrySharesDelta, nodeOperatorsSharesToMint, 'nodeOperator1 shares are correct')
     assertBn(treasurySharesDelta, treasurySharesToMint, 'treasury shares are correct')

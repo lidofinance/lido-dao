@@ -130,7 +130,7 @@ contract('StakingRouter', (accounts) => {
     let stakingRouterImplementation
 
     before(async () => {
-      await snapshot.add()
+      await snapshot.make()
       stakingRouterImplementation = await StakingRouter.new(depositContract.address, { from: deployer })
     })
 
@@ -168,7 +168,7 @@ contract('StakingRouter', (accounts) => {
   describe('staking router', async () => {
     let stakingModule
     before(async () => {
-      await snapshot.add()
+      await snapshot.make()
 
       stakingModule = await StakingModuleMock.new({ from: deployer })
 
@@ -257,7 +257,7 @@ contract('StakingRouter', (accounts) => {
     ]
 
     before(async () => {
-      await snapshot.add()
+      await snapshot.make()
 
       stakingModule1 = await StakingModuleMock.new({ from: deployer })
       stakingModule2 = await StakingModuleMock.new({ from: deployer })

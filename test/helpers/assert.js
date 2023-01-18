@@ -4,8 +4,6 @@ const { assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
 const { toChecksumAddress } = require('ethereumjs-util')
 const { isAddress } = require('ethers/lib/utils')
 
-// chai.use(require('chai-match'))
-
 chai.util.addMethod(chai.assert, 'emits', function (receipt, eventName, args = {}, options = {}) {
   const event = getEvent(receipt, eventName, args, options.abi)
   this.isTrue(event !== undefined, `Event ${eventName} with args ${JSON.stringify(args)} wasn't found`)
@@ -19,6 +17,14 @@ chai.util.addMethod(chai.assert, 'notEmits', function (receipt, eventName, args 
 
 chai.util.addMethod(chai.assert, 'reverts', async function (receipt, reason) {
   await assertRevert(receipt, reason)
+})
+
+chai.util.addMethod(chai.assert, 'equals', function (actual, expected, errorMsg) {
+  this.equal(actual.toString(), expected.toString(), `${errorMsg} expected ${expected.toString()} to equal ${actual.toString()}`)
+})
+
+chai.util.addMethod(chai.assert, 'notEquals', function (actual, expected, errorMsg) {
+  this.notEqual(actual.toString(), expected.toString(), `${errorMsg} expected ${expected.toString()} to equal ${actual.toString()}`)
 })
 
 chai.util.addMethod(chai.assert, 'equals', function (actual, expected, errorMsg = '') {
