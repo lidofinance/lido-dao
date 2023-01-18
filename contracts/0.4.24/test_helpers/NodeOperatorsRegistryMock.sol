@@ -42,15 +42,14 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         }
     }
 
-    function testing_markAllKeysDeposited(uint256 _nodeOperatorId) external onlyExistedNodeOperator(_nodeOperatorId) {
+    function testing_markAllKeysDeposited(uint256 _nodeOperatorId) external {
+        _onlyExistedNodeOperator(_nodeOperatorId);
         NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
         testing_setDepositedSigningKeysCount(_nodeOperatorId, nodeOperator.vettedSigningKeysCount);
     }
 
-    function testing_setDepositedSigningKeysCount(uint256 _nodeOperatorId, uint256 _depositedSigningKeysCount)
-        public
-        onlyExistedNodeOperator(_nodeOperatorId)
-    {
+    function testing_setDepositedSigningKeysCount(uint256 _nodeOperatorId, uint256 _depositedSigningKeysCount) public {
+        _onlyExistedNodeOperator(_nodeOperatorId);
         NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
         uint64 depositedSigningKeysCountBefore = nodeOperator.depositedSigningKeysCount;
         if (_depositedSigningKeysCount == depositedSigningKeysCountBefore) {
