@@ -347,7 +347,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
     function _updateExitedValidatorsKeysCount(
         uint256 _nodeOperatorId,
         uint256 _exitedValidatorsKeysCount,
-        bool allowDecrease
+        bool _allowDecrease
     ) internal {
         _onlyExistedNodeOperator(_nodeOperatorId);
         _auth(UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE);
@@ -360,7 +360,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         }
 
         require(_exitedValidatorsKeysCount <= depositedSigningKeysCount, "INVALID_EXITED_VALIDATORS_COUNT");
-        require(allowDecrease || _exitedValidatorsKeysCount > exitedValidatorsCountBefore, "EXITED_VALIDATORS_COUNT_DECREASED");
+        require(_allowDecrease || _exitedValidatorsKeysCount > exitedValidatorsCountBefore, "EXITED_VALIDATORS_COUNT_DECREASED");
 
         _nodeOperators[_nodeOperatorId].exitedSigningKeysCount = uint64(_exitedValidatorsKeysCount);
 
