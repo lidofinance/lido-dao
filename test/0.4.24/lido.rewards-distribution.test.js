@@ -100,25 +100,39 @@ contract('Lido', ([appManager, voting, user2]) => {
     await stakingRouter.initialize(appManager, app.address, wc)
 
     // Set up the staking router permissions.
-    const MODULE_MANAGE_ROLE = await stakingRouter.MODULE_MANAGE_ROLE()
+    const STAKING_MODULE_MANAGE_ROLE = await stakingRouter.STAKING_MODULE_MANAGE_ROLE()
 
-    await stakingRouter.grantRole(MODULE_MANAGE_ROLE, voting, { from: appManager })
+    await stakingRouter.grantRole(STAKING_MODULE_MANAGE_ROLE, voting, { from: appManager })
 
     await app.setStakingRouter(stakingRouter.address, { from: voting })
 
     soloModule = await ModuleSolo.new(app.address, { from: appManager })
 
-    await stakingRouter.addModule('Curated', curatedModule.address, cfgCurated.targetShare, cfgCurated.moduleFee, cfgCurated.treasuryFee, {
-      from: voting
-    })
+    await stakingRouter.addStakingModule(
+      'Curated',
+      curatedModule.address,
+      cfgCurated.targetShare,
+      cfgCurated.moduleFee,
+      cfgCurated.treasuryFee,
+      {
+        from: voting
+      }
+    )
 
     await curatedModule.increaseTotalSigningKeysCount(500_000, { from: appManager })
     await curatedModule.increaseDepositedSigningKeysCount(499_950, { from: appManager })
     await curatedModule.increaseVettedSigningKeysCount(499_950, { from: appManager })
 
-    await stakingRouter.addModule('Solo', soloModule.address, cfgCommunity.targetShare, cfgCommunity.moduleFee, cfgCommunity.treasuryFee, {
-      from: voting
-    })
+    await stakingRouter.addStakingModule(
+      'Solo',
+      soloModule.address,
+      cfgCommunity.targetShare,
+      cfgCommunity.moduleFee,
+      cfgCommunity.treasuryFee,
+      {
+        from: voting
+      }
+    )
     await soloModule.setTotalKeys(100, { from: appManager })
     await soloModule.setTotalUsedKeys(10, { from: appManager })
     await soloModule.setTotalStoppedKeys(0, { from: appManager })
@@ -126,8 +140,8 @@ contract('Lido', ([appManager, voting, user2]) => {
 
   it('Rewards distribution fills treasury', async () => {
     const beaconBalance = ETH(1)
-    const { moduleFees, totalFee, precisionPoints } = await stakingRouter.getStakingRewardsDistribution()
-    const treasuryShare = moduleFees.reduce((total, share) => total.sub(share), totalFee)
+    const { stakingModuleFees, totalFee, precisionPoints } = await stakingRouter.getStakingRewardsDistribution()
+    const treasuryShare = stakingModuleFees.reduce((total, share) => total.sub(share), totalFee)
     const treasuryRewards = bn(beaconBalance).mul(treasuryShare).div(precisionPoints)
     await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(32) })
 
@@ -141,7 +155,7 @@ contract('Lido', ([appManager, voting, user2]) => {
 
   it('Rewards distribution fills modules', async () => {
     const beaconBalance = ETH(1)
-    const { recipients, moduleFees, precisionPoints } = await stakingRouter.getStakingRewardsDistribution()
+    const { recipients, stakingModuleFees, precisionPoints } = await stakingRouter.getStakingRewardsDistribution()
 
     await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(32) })
 
@@ -154,7 +168,7 @@ contract('Lido', ([appManager, voting, user2]) => {
 
     for (let i = 0; i < recipients.length; i++) {
       const moduleBalanceAfter = await app.balanceOf(recipients[i])
-      const moduleRewards = bn(beaconBalance).mul(moduleFees[i]).div(precisionPoints)
+      const moduleRewards = bn(beaconBalance).mul(stakingModuleFees[i]).div(precisionPoints)
       assert(moduleBalanceAfter.gt(moduleBalanceBefore[i]))
       assertBn(fixRound(moduleBalanceBefore[i].add(moduleRewards)), fixRound(moduleBalanceAfter))
     }

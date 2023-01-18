@@ -83,8 +83,8 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
     stakingRouter = await StakingRouter.new(depositContract.address, { from: appManager })
     await stakingRouter.initialize(appManager, app.address, ZERO_ADDRESS)
     await stakingRouter.grantRole(await stakingRouter.MANAGE_WITHDRAWAL_CREDENTIALS_ROLE(), voting, { from: appManager })
-    await stakingRouter.grantRole(await stakingRouter.MODULE_MANAGE_ROLE(), voting, { from: appManager })
-    await stakingRouter.addModule(
+    await stakingRouter.grantRole(await stakingRouter.STAKING_MODULE_MANAGE_ROLE(), voting, { from: appManager })
+    await stakingRouter.addStakingModule(
       'Curated',
       operators.address,
       10_000, // 100 % _targetShare
