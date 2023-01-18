@@ -2,6 +2,7 @@ const hre = require('hardhat')
 const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const { newDao, newApp } = require('../0.4.24/helpers/dao')
 const { ETH, genKeys } = require('../helpers/utils')
+const { assert } = require('../helpers/assert')
 
 const LidoMock = artifacts.require('LidoMock.sol')
 const LidoOracleMock = artifacts.require('OracleMock.sol')
@@ -100,15 +101,15 @@ contract('StakingRouter', (accounts) => {
     await stakingRouter.initialize(admin, lido.address, wc, { from: deployer })
 
     // Set up the staking router permissions.
-    const [MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, MODULE_PAUSE_ROLE, MODULE_MANAGE_ROLE] = await Promise.all([
+    const [MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, STAKING_MODULE_PAUSE_ROLE, STAKING_MODULE_MANAGE_ROLE] = await Promise.all([
       stakingRouter.MANAGE_WITHDRAWAL_CREDENTIALS_ROLE(),
-      stakingRouter.MODULE_PAUSE_ROLE(),
-      stakingRouter.MODULE_MANAGE_ROLE()
+      stakingRouter.STAKING_MODULE_PAUSE_ROLE(),
+      stakingRouter.STAKING_MODULE_MANAGE_ROLE()
     ])
 
     await stakingRouter.grantRole(MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, voting, { from: admin })
-    await stakingRouter.grantRole(MODULE_PAUSE_ROLE, voting, { from: admin })
-    await stakingRouter.grantRole(MODULE_MANAGE_ROLE, voting, { from: admin })
+    await stakingRouter.grantRole(STAKING_MODULE_PAUSE_ROLE, voting, { from: admin })
+    await stakingRouter.grantRole(STAKING_MODULE_MANAGE_ROLE, voting, { from: admin })
 
     await lido.initialize(oracle.address, treasury, stakingRouter.address, depositSecurityModule.address)
 
@@ -122,7 +123,7 @@ contract('StakingRouter', (accounts) => {
 
   describe('Make deposit', () => {
     beforeEach(async () => {
-      await stakingRouter.addModule(
+      await stakingRouter.addStakingModule(
         'Curated',
         operators.address,
         10_000, // 100 % _targetShare
@@ -130,7 +131,7 @@ contract('StakingRouter', (accounts) => {
         5_000, // 50 % _treasuryFee
         { from: voting }
       )
-      await stakingRouter.addModule(
+      await stakingRouter.addStakingModule(
         'Community',
         soloStakingModuleMock.address,
         200, // 2 % _targetShare
@@ -153,9 +154,9 @@ contract('StakingRouter', (accounts) => {
 
       // assertRevert(stakingRouter.deposit(maxDepositsCount, curated.id, '0x', {'from': voting }), 'APP_AUTH_DSM_FAILED')
 
-      assertRevert(
+      assert.revertsWithCustomError(
         lido.deposit(maxDepositsCount, curated.id, '0x', { from: depositSecurityModule.address }),
-        "ed with custom error 'ErrorZeroMaxSigningKeysCount()"
+        'ErrorZeroMaxSigningKeysCount()'
       )
     })
 

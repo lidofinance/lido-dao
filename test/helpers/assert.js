@@ -27,6 +27,20 @@ chai.util.addMethod(chai.assert, 'notEquals', function (actual, expected, errorM
   this.notEqual(actual.toString(), expected.toString(), `${errorMsg} expected ${expected.toString()} to equal ${actual.toString()}`)
 })
 
+chai.util.addMethod(chai.assert, 'equals', function (actual, expected, errorMsg = '') {
+  this.equal(actual.toString(), expected.toString(), `${errorMsg} expected ${expected.toString()} to equal ${actual.toString()}`)
+})
+
+chai.util.addMethod(chai.assert, 'revertsWithCustomError', async function (receipt, reason) {
+  try {
+    await receipt
+  } catch (error) {
+    chai.expect(error.message).to.equal(`VM Exception while processing transaction: reverted with custom error '${reason}'`)
+    return
+  }
+  throw new Error(`Transaction has been executed without revert. Expected revert reason ${reason}`)
+})
+
 function getEvent(receipt, eventName, args, abi) {
   return getEvents(receipt, eventName, { decodeForAbi: abi }).find((e) =>
     // find the first index where every event argument matches the expected one

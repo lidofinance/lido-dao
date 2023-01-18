@@ -120,6 +120,13 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
+     * @notice Return the initialized version of this contract starting from 0
+     */
+    function getVersion() external view returns (uint256) {
+        return CONTRACT_VERSION_POSITION.getStorageUint256();
+    }
+
+    /**
      * @notice Stops accepting new Ether to the protocol
      *
      * @dev While accepting new Ether is stopped, calls to the `submit` function,
