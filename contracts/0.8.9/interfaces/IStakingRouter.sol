@@ -9,7 +9,7 @@ interface IStakingRouter {
     function getStakingRewardsDistribution()
         external
         view
-        returns (address[] memory recipients, uint96[] memory moduleFees, uint96 totalFeee, uint256 precisionPoints);
+        returns (address[] memory recipients, uint96[] memory stakingModuleFees, uint96 totalFeee, uint256 precisionPoints);
 
     function deposit(uint256 maxDepositsCount, uint24 stakingModuleId, bytes calldata depositCalldata) external payable returns (uint256);
 
@@ -32,37 +32,37 @@ interface IStakingRouter {
     }
 
     struct StakingModule {
-        /// @notice unique id of the module
+        /// @notice unique id of the staking module
         uint24 id;
-        /// @notice address of module
+        /// @notice address of staking module
         address stakingModuleAddress;
-        /// @notice rewarf fee of the module
-        uint16 moduleFee;
+        /// @notice rewarf fee of the staking module
+        uint16 stakingModuleFee;
         /// @notice treasury fee
         uint16 treasuryFee;
         /// @notice target percent of total keys in protocol, in BP
         uint16 targetShare;
-        /// @notice module status if module can not accept the deposits or can participate in further reward distribution
+        /// @notice staking module status if staking module can not accept the deposits or can participate in further reward distribution
         uint8 status;
-        /// @notice name of module
+        /// @notice name of staking module
         string name;
-        /// @notice block.timestamp of the last deposit of the module
+        /// @notice block.timestamp of the last deposit of the staking module
         uint64 lastDepositAt;
-        /// @notice block.number of the last deposit of the module
+        /// @notice block.number of the last deposit of the staking module
         uint256 lastDepositBlock;
     }
 
     function getStakingModules() external view returns (StakingModule[] memory res);
 
-    function addModule(
+    function addStakingModule(
         string memory _name,
         address _stakingModuleAddress,
         uint16 _targetShare,
-        uint16 _moduleFee,
+        uint16 _stakingModuleFee,
         uint16 _treasuryFee
     ) external;
 
-    function updateStakingModule(uint24 _stakingModuleId, uint16 _targetShare, uint16 _moduleFee, uint16 _treasuryFee) external;
+    function updateStakingModule(uint24 _stakingModuleId, uint16 _targetShare, uint16 _stakingModuleFee, uint16 _treasuryFee) external;
 
     function getStakingModule(uint24 _stakingModuleId) external view returns (StakingModule memory);
 

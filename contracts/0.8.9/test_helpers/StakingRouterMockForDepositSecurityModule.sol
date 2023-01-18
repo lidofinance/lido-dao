@@ -17,7 +17,7 @@ contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
 
     function getStakingModules() external view returns (StakingModule[] memory res) {}
 
-    function addModule(
+    function addStakingModule(
         string memory _name,
         address _stakingModuleAddress,
         uint16 _targetShare,

@@ -1,5 +1,4 @@
 const { hash } = require('eth-ens-namehash')
-const { assert } = require('chai')
 const { newDao, newApp } = require('./helpers/dao')
 const { getInstalledApp } = require('@aragon/contract-helpers-test/src/aragon-os')
 const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
@@ -7,6 +6,7 @@ const { ZERO_ADDRESS, bn, getEventAt } = require('@aragon/contract-helpers-test'
 const { BN } = require('bn.js')
 const { formatEther } = require('ethers/lib/utils')
 const { getEthBalance, formatStEth, formatBN, hexConcat, pad, ETH, tokens } = require('../helpers/utils')
+const { assert } = require('../helpers/assert')
 const nodeOperators = require('../helpers/node-operators')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
@@ -79,7 +79,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     stakingRouter = await StakingRouter.new(depositContract.address)
     await stakingRouter.initialize(appManager, app.address, ZERO_ADDRESS)
     await stakingRouter.grantRole(await stakingRouter.MANAGE_WITHDRAWAL_CREDENTIALS_ROLE(), voting, { from: appManager })
-    await stakingRouter.grantRole(await stakingRouter.MODULE_MANAGE_ROLE(), voting, { from: appManager })
+    await stakingRouter.grantRole(await stakingRouter.STAKING_MODULE_MANAGE_ROLE(), voting, { from: appManager })
 
     // BeaconChainDepositor
     beaconChainDepositor = await BeaconChainDepositorMock.new(depositContract.address)
@@ -130,7 +130,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     // Initialize the app's proxy.
     await app.initialize(oracle.address, treasury, stakingRouter.address, depositor)
 
-    await stakingRouter.addModule(
+    await stakingRouter.addStakingModule(
       'Curated',
       operators.address,
       10_000, // 100 % _targetShare
@@ -348,37 +348,37 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     let module1 = await stakingRouter.getStakingModule(curated.id)
     assertBn(module1.targetShare, 10000)
-    assertBn(module1.moduleFee, 500)
+    assertBn(module1.stakingModuleFee, 500)
     assertBn(module1.treasuryFee, 500)
 
-    // stakingModuleId, targetShare, moduleFee, treasuryFee
+    // stakingModuleId, targetShare, stakingModuleFee, treasuryFee
     await stakingRouter.updateStakingModule(module1.id, module1.targetShare, 300, 700, { from: voting })
 
     module1 = await stakingRouter.getStakingModule(curated.id)
 
     await assertRevert(
       stakingRouter.updateStakingModule(module1.id, module1.targetShare, 300, 700, { from: user1 }),
-      `AccessControl: account ${user1.toLowerCase()} is missing role ${await stakingRouter.MODULE_MANAGE_ROLE()}`
+      `AccessControl: account ${user1.toLowerCase()} is missing role ${await stakingRouter.STAKING_MODULE_MANAGE_ROLE()}`
     )
 
     await assertRevert(
       stakingRouter.updateStakingModule(module1.id, module1.targetShare, 300, 700, { from: nobody }),
-      `AccessControl: account ${nobody.toLowerCase()} is missing role ${await stakingRouter.MODULE_MANAGE_ROLE()}`
+      `AccessControl: account ${nobody.toLowerCase()} is missing role ${await stakingRouter.STAKING_MODULE_MANAGE_ROLE()}`
     )
 
-    await assertRevert(
+    await assert.revertsWithCustomError(
       stakingRouter.updateStakingModule(module1.id, 10001, 300, 700, { from: voting }),
-      `ed with custom error 'ErrorValueOver100Percent("_targetShare")`
+      'ErrorValueOver100Percent("_targetShare")'
     )
 
-    await assertRevert(
+    await assert.revertsWithCustomError(
       stakingRouter.updateStakingModule(module1.id, 10000, 10001, 700, { from: voting }),
-      `ed with custom error 'ErrorValueOver100Percent("_moduleFee + _treasuryFee")`
+      'ErrorValueOver100Percent("_stakingModuleFee + _treasuryFee")'
     )
 
-    await assertRevert(
+    await assert.revertsWithCustomError(
       stakingRouter.updateStakingModule(module1.id, 10000, 300, 10001, { from: voting }),
-      `ed with custom error 'ErrorValueOver100Percent("_moduleFee + _treasuryFee")`
+      'ErrorValueOver100Percent("_stakingModuleFee + _treasuryFee")'
     )
 
     // distribution fee calculates on active keys in modules
@@ -516,9 +516,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
 
     // can not deposit with unset withdrawalCredentials
-    await assertRevert(
+    await assert.revertsWithCustomError(
       app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor }),
-      `ed with custom error 'ErrorEmptyWithdrawalsCredentials()`
+      'ErrorEmptyWithdrawalsCredentials()'
     )
     // set withdrawalCredentials with keys, because they were trimmed
     await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })

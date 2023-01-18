@@ -3,8 +3,8 @@ const { BN } = require('bn.js')
 const { assertBn, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const { getEventArgument, ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 
-const { pad, ETH } = require('../helpers/utils')
-const { deployDaoAndPool } = require('./helpers/deploy')
+const { pad, ETH, hexConcat } = require('../helpers/utils')
+const { deployDaoAndPool, setupNodeOperatorsRegistry } = require('./helpers/deploy')
 const { DSMAttestMessage, DSMPauseMessage } = require('../0.8.9/helpers/signatures')
 
 const INodeOperatorsRegistry = artifacts.require('INodeOperatorsRegistry')
@@ -16,11 +16,14 @@ const tenKBN = new BN(10000)
 // Total max fee is 10%
 const totalFeePoints = 0.1 * 10000
 
-// Of this 1%, 30% goes to the treasury
-const treasuryFeePoints = 0.3 * 10000
 // 50% goes to node operators
 const nodeOperatorsFeePoints = 0.5 * 10000
 
+const StakingModuleStatus = {
+  Active: 0, // deposits and rewards allowed
+  DepositsPaused: 1, // deposits NOT allowed, rewards allowed
+  Stopped: 2 // deposits and rewards NOT allowed
+}
 contract('Lido: rewards distribution math', (addresses) => {
   const [
     // the root account which deployed the DAO
@@ -32,15 +35,13 @@ contract('Lido: rewards distribution math', (addresses) => {
     operator_2,
     // users who deposit Ether to the pool
     user1,
-    user2,
-    user3,
     // unrelated address
     nobody
   ] = addresses
 
   let pool, nodeOperatorsRegistry, token
-  let stakingRouter
-  let oracleMock
+  let stakingRouter, dao, acl
+  let oracleMock, anotherCuratedModule
   let treasuryAddr, guardians
   let depositSecurityModule, depositRoot
 
@@ -82,6 +83,9 @@ contract('Lido: rewards distribution math', (addresses) => {
 
   before(async () => {
     const deployed = await deployDaoAndPool(appManager, voting)
+
+    dao = deployed.dao
+    acl = deployed.acl
 
     // contracts/StETH.sol
     token = deployed.pool
@@ -247,6 +251,149 @@ contract('Lido: rewards distribution math', (addresses) => {
     assertBn(treasuryTokenDelta, treasuryFeeToMint, 'treasury balance = fee')
     assertBn(await token.balanceOf(nodeOperatorsRegistry.address), nodeOperatorsFeeToMint, 'nodeOperatorsRegistry balance = fee')
     assertBn(nodeOperatorsRegistryTokenDelta, nodeOperatorsFeeToMint, 'nodeOperatorsRegistry balance = fee')
+  })
+
+  it(`add another staking module`, async () => {
+    anotherCuratedModule = await setupNodeOperatorsRegistry(dao, acl, voting, token, appManager, stakingRouter.address)
+    await stakingRouter.addStakingModule(
+      'Curated limited',
+      anotherCuratedModule.address,
+      5_000, // 50 % _targetShare
+      100, // 1 % _moduleFee
+      100, // 1 % _treasuryFee
+      { from: voting }
+    )
+
+    const modulesList = await stakingRouter.getStakingModules()
+
+    assert(modulesList.length, 2, 'module added')
+
+    const operator = {
+      name: 'operator',
+      address: operator_2,
+      validators: [...Array(10).keys()].map((i) => ({
+        key: pad('0xaa01' + i.toString(16), 48),
+        sig: pad('0x' + i.toString(16), 96)
+      }))
+    }
+    const validatorsCount = 10
+    await anotherCuratedModule.addNodeOperator(operator.name, operator.address, { from: voting })
+    await anotherCuratedModule.addSigningKeysOperatorBH(
+      0,
+      validatorsCount,
+      hexConcat(...operator.validators.map((v) => v.key)),
+      hexConcat(...operator.validators.map((v) => v.sig)),
+      {
+        from: operator.address
+      }
+    )
+    await anotherCuratedModule.setNodeOperatorStakingLimit(0, validatorsCount, { from: voting })
+    assertBn(await anotherCuratedModule.getUnusedSigningKeyCount(0), validatorsCount, 'operator of module has 10 unused keys')
+  })
+
+  it(`deposit to new module`, async () => {
+    const depositAmount = ETH(32)
+    await pool.submit(ZERO_ADDRESS, { value: depositAmount, from: user1 })
+
+    const [_, newCurated] = await stakingRouter.getStakingModules()
+
+    await nodeOperatorsRegistry.setNodeOperatorStakingLimit(0, 0, { from: voting })
+
+    const block = await web3.eth.getBlock('latest')
+    const keysOpIndex = await anotherCuratedModule.getKeysOpIndex()
+
+    DSMAttestMessage.setMessagePrefix(await depositSecurityModule.ATTEST_MESSAGE_PREFIX())
+    DSMPauseMessage.setMessagePrefix(await depositSecurityModule.PAUSE_MESSAGE_PREFIX())
+
+    const validAttestMessage = new DSMAttestMessage(block.number, block.hash, depositRoot, newCurated.id, keysOpIndex)
+
+    const signatures = [
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[0]]),
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]])
+    ]
+
+    const user1BalanceBefore = await token.balanceOf(user1)
+    const user1SharesBefore = await token.sharesOf(user1)
+    const totalSupplyBefore = await token.totalSupply()
+
+    assertBn(await anotherCuratedModule.getUnusedSigningKeyCount(0), 10, 'operator of module has 10 unused keys')
+    await depositSecurityModule.depositBufferedEther(block.number, block.hash, depositRoot, newCurated.id, keysOpIndex, '0x', signatures)
+    assertBn(await anotherCuratedModule.getUnusedSigningKeyCount(0), 9, 'operator of module has 9 unused keys')
+
+    assertBn(await token.balanceOf(user1), user1BalanceBefore, 'user1 balance is equal first reported value + their buffered deposit value')
+    assertBn(await token.sharesOf(user1), user1SharesBefore, 'user1 shares are equal to the first deposit')
+    assertBn(await token.totalSupply(), totalSupplyBefore, 'token total supply')
+    assertBn(await token.getBufferedEther(), ETH(2), '')
+  })
+
+  it(`rewards distribution`, async () => {
+    const totalPooledEtherBefore = await token.getTotalPooledEther()
+    const bufferedBefore = await token.getBufferedEther()
+    const newBeaconBalance = totalPooledEtherBefore.sub(bufferedBefore).mul(new BN(2))
+
+    const firstModuleSharesBefore = await token.sharesOf(nodeOperatorsRegistry.address)
+    const secondModuleSharesBefore = await token.sharesOf(anotherCuratedModule.address)
+    const treasurySharesBefore = await await token.sharesOf(treasuryAddr)
+
+    await reportBeacon(2, newBeaconBalance)
+
+    assertBn(await token.totalSupply(), newBeaconBalance.add(bufferedBefore), 'token total supply')
+
+    const rewardsToDistribute = await token.getSharesByPooledEth(newBeaconBalance.add(bufferedBefore).sub(totalPooledEtherBefore))
+
+    const expectedRewardsDistribution = {
+      firstModule: rewardsToDistribute.div(new BN(40)),
+      secondModule: rewardsToDistribute.div(new BN(200)),
+      treasury: rewardsToDistribute
+        .div(new BN(40))
+        .add(rewardsToDistribute.div(new BN(200)))
+        .add(new BN(2))
+    }
+
+    const firstModuleSharesAfter = await token.sharesOf(nodeOperatorsRegistry.address)
+    const secondModuleSharesAfter = await token.sharesOf(anotherCuratedModule.address)
+    const treasurySharesAfter = await await token.sharesOf(treasuryAddr)
+
+    assertBn(firstModuleSharesAfter, firstModuleSharesBefore.add(expectedRewardsDistribution.firstModule), 'first module balance')
+    assertBn(secondModuleSharesAfter, secondModuleSharesBefore.add(expectedRewardsDistribution.secondModule), 'second module balance')
+    assertBn(treasurySharesAfter, treasurySharesBefore.add(expectedRewardsDistribution.treasury), 'treasury balance')
+  })
+
+  it(`module rewards should recieved by treasury if module stopped`, async () => {
+    const [firstModule] = await stakingRouter.getStakingModules()
+    const totalPooledEtherBefore = await token.getTotalPooledEther()
+    const bufferedBefore = await token.getBufferedEther()
+    const newBeaconBalance = totalPooledEtherBefore.sub(bufferedBefore).mul(new BN(2))
+
+    await stakingRouter.setStakingModuleStatus(firstModule.id, StakingModuleStatus.Stopped, { from: appManager })
+
+    const firstModuleSharesBefore = await token.sharesOf(nodeOperatorsRegistry.address)
+    const secondModuleSharesBefore = await token.sharesOf(anotherCuratedModule.address)
+    const treasurySharesBefore = await await token.sharesOf(treasuryAddr)
+
+    await reportBeacon(2, newBeaconBalance)
+
+    assertBn(await token.totalSupply(), newBeaconBalance.add(bufferedBefore), 'token total supply')
+
+    const rewardsToDistribute = await token.getSharesByPooledEth(newBeaconBalance.add(bufferedBefore).sub(totalPooledEtherBefore))
+
+    const expectedRewardsDistribution = {
+      firstModule: new BN(0),
+      secondModule: rewardsToDistribute.div(new BN(200)),
+      treasury: rewardsToDistribute
+        .div(new BN(40))
+        .add(rewardsToDistribute.div(new BN(200)))
+        .add(new BN(2))
+        .add(rewardsToDistribute.div(new BN(40)))
+    }
+
+    const firstModuleSharesAfter = await token.sharesOf(nodeOperatorsRegistry.address)
+    const secondModuleSharesAfter = await token.sharesOf(anotherCuratedModule.address)
+    const treasurySharesAfter = await token.sharesOf(treasuryAddr)
+
+    assertBn(firstModuleSharesAfter, firstModuleSharesBefore.add(expectedRewardsDistribution.firstModule), 'first module balance')
+    assertBn(secondModuleSharesAfter, secondModuleSharesBefore.add(expectedRewardsDistribution.secondModule), 'second module balance')
+    assertBn(treasurySharesAfter, treasurySharesBefore.add(expectedRewardsDistribution.treasury), 'treasury balance')
   })
 
   // test multiple staking modules erward distribution
