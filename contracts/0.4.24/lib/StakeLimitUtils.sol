@@ -210,10 +210,12 @@ library StakeLimitUtils {
     /**
      * @notice find a minimum of two numbers with a constant gas consumption
      * @dev doesn't use branching logic inside
+     * @param _lhs left hand side value
+     * @param _rhs right hand side value
      */
-    function _constGasMin(uint256 l, uint256 r) internal pure returns (uint256 min) {
-        uint256 lIsLess = _toUInt256(l < r);
-        min = l * lIsLess + r * (1 - lIsLess);
+    function _constGasMin(uint256 _lhs, uint256 _rhs) internal pure returns (uint256 min) {
+        uint256 lhsIsLess = _toUInt256(_lhs < _rhs);
+        min = _lhs * lhsIsLess + _rhs * (1 - lhsIsLess);
     }
 
     /**
@@ -221,7 +223,7 @@ library StakeLimitUtils {
      * @dev doesn't use ternary operation or if condition
      * intended to use for the branchless `_constGasMin`
      */
-    function _toUInt256(bool flag) internal pure returns (uint256 flagValue) {
-        assembly { flagValue := flag }
+    function _toUInt256(bool _flag) internal pure returns (uint256 flagValue) {
+        assembly { flagValue := _flag }
     }
 }
