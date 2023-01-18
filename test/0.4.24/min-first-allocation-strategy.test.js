@@ -1,8 +1,9 @@
+/* eslint-disable prettier/prettier */
 const hre = require('hardhat')
 const { assert } = require('chai')
 const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 
-const MinFirstAllocationStrategyTest = hre.artifacts.require('MinFirstAllocationStrategyTest')
+const MinFirstAllocationStrategyTest = hre.artifacts.require('MinFirstAllocationStrategyConsumerMockLegacyVersion')
 
 contract('MinFirstAllocationStrategy', (accounts) => {
   let minFirstAllocationStrategy
@@ -31,9 +32,24 @@ contract('MinFirstAllocationStrategy', (accounts) => {
     })
 
     describe('allocations.length == 1', () => {
-      const allocations = [0, 15, 25, 50]
-      const capacities = [0, 15, 24, 50]
-      const maxAllocationSizes = [0, 15, 25, 50]
+      const allocations = [
+        0,
+        15,
+        25,
+        50
+      ]
+      const capacities = [
+        0,
+        15,
+        24,
+        50
+      ]
+      const maxAllocationSizes = [
+        0,
+        15,
+        25,
+        50
+      ]
 
       for (const allocation of allocations) {
         for (const capacity of capacities) {
@@ -52,6 +68,30 @@ contract('MinFirstAllocationStrategy', (accounts) => {
           }
         }
       }
+    })
+
+    describe('allocations.length == 1', () => {
+      const capacities = [0, 15, 24, 50]
+      const allocations = [0, 15, 25, 50]
+      const maxAllocationSizes = [0, 15, 25, 50]
+
+      it(`allocations[0]=[${allocations}] capacity[0]=[${capacities}] maxAllocationSize=[${maxAllocationSizes}]`, async () => {
+        for (const capacity of capacities) {
+          for (const allocation of allocations) {
+            for (const maxAllocationSize of maxAllocationSizes) {
+              const { allocated, newAllocations } = await minFirstAllocationStrategy.allocateToBestCandidate(
+                [allocation],
+                [capacity],
+                maxAllocationSize
+              )
+              const expectedAllocated = Math.min(Math.max(0, capacity - allocation), maxAllocationSize)
+              assertBn(allocated, expectedAllocated)
+              assert.equal(newAllocations.length, 1)
+              assertBn(newAllocations[0], allocation + expectedAllocated)
+            }
+          }
+        }
+      })
     })
 
     for (let allocationsLength = 2; allocationsLength <= 16; ++allocationsLength) {
@@ -313,10 +353,11 @@ function getExpectedAllocateToBestCandidate(allocations, capacities, maxAllocati
   const [allocation, capacity, index] = allocations
     .map((a, i) => [a, capacities[i], i])
     .filter(([a, c]) => a < c)
-    .reduce(
-      ([minA, minC, minI], [a, c, i]) => (a < minA ? [a, c, i] : [minA, minC, minI]),
-      [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER]
-    )
+    .reduce(([minA, minC, minI], [a, c, i]) => (a < minA ? [a, c, i] : [minA, minC, minI]), [
+      Number.MAX_SAFE_INTEGER,
+      Number.MAX_SAFE_INTEGER,
+      Number.MAX_SAFE_INTEGER
+    ])
 
   if (allocation === Number.MAX_SAFE_INTEGER || maxAllocationSize === 0) {
     return [0, allocations]
@@ -362,4 +403,8 @@ function getRandomValueInRange(min, max) {
   min = Math.ceil(min)
   max = Math.floor(max)
   return Math.floor(Math.random() * (max - min + 1)) + min
+}
+
+function sum(numbers) {
+  return numbers.reduce((acc, cur) => acc + cur, 0)
 }
