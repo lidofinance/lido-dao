@@ -1618,6 +1618,16 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.notEquals(validatorsKeysNonceAfter, validatorsKeysNonceBefore)
     })
 
+    it('increases global deposited signing keys counter', async () => {
+      const keysToAllocate = 10
+      const keyIndex = NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount + 1
+      assert.isTrue(keyIndex <= NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount)
+      const { depositedSigningKeysCount: depositedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
+      await app.testing_requestValidatorsKeysForDeposits(keysToAllocate)
+      const { depositedSigningKeysCount: depositedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
+      assert.equal(depositedSigningKeysCountAfter.toNumber(), depositedSigningKeysCountBefore.toNumber() + 4)
+    })
+
     it('emits KeysOpIndexSet & ValidatorsKeysNonceChanged', async () => {
       const keysOpIndexBefore = await app.getKeysOpIndex()
       const keysToAllocate = 10
