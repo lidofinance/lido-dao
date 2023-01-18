@@ -81,6 +81,4 @@ interface IStakingModule {
     event NodeOperatorDeactivated(uint256 indexed nodeOperatorId);
 
     event UnusedValidatorsKeysTrimmed(uint256 indexed nodeOperatorId, uint256 trimmedKeysCount);
-
-    event NodeOperatorUnusedValidatorsKeysTrimmed(uint256 indexed nodeOperatorId, uint256 trimmedKeysCount);
 }
