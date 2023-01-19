@@ -71,8 +71,7 @@ contract WithdrawalVault {
         require(msg.sender == LIDO, "ONLY_LIDO_CAN_WITHDRAW");
 
         uint256 balance = address(this).balance;
-
-        if (balance > _amount) {
+        if (_amount > balance) {
             revert NotEnoughEther(_amount, balance);
         }
 
