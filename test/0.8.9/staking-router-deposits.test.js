@@ -1,5 +1,5 @@
 const hre = require('hardhat')
-const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertBn, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const { newDao, newApp } = require('../0.4.24/helpers/dao')
 const { ETH, genKeys } = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
@@ -149,15 +149,10 @@ contract('StakingRouter', (accounts) => {
 
       const [curated, _] = await stakingRouter.getStakingModules()
 
-      assertRevert(lido.deposit(maxDepositsCount, curated.id, '0x', { from: stranger1 }), 'APP_AUTH_DSM_FAILED')
-      assertRevert(lido.deposit(maxDepositsCount, curated.id, '0x', { from: voting }), 'APP_AUTH_DSM_FAILED')
+      await assert.reverts(lido.deposit(maxDepositsCount, curated.id, '0x', { from: stranger1 }), 'APP_AUTH_DSM_FAILED')
+      await assert.reverts(lido.deposit(maxDepositsCount, curated.id, '0x', { from: voting }), 'APP_AUTH_DSM_FAILED')
 
-      // assertRevert(stakingRouter.deposit(maxDepositsCount, curated.id, '0x', {'from': voting }), 'APP_AUTH_DSM_FAILED')
-
-      assert.revertsWithCustomError(
-        lido.deposit(maxDepositsCount, curated.id, '0x', { from: depositSecurityModule.address }),
-        'ErrorZeroMaxSigningKeysCount()'
-      )
+      await assert.reverts(stakingRouter.deposit(maxDepositsCount, curated.id, '0x', { from: voting }), 'APP_AUTH_LIDO_FAILED')
     })
 
     it('Lido.deposit() :: check deposit with keys', async () => {
@@ -191,7 +186,8 @@ contract('StakingRouter', (accounts) => {
       await operators.setNodeOperatorStakingLimit(0, 100000, { from: voting })
       await operators.setNodeOperatorStakingLimit(1, 100000, { from: voting })
 
-      const receipt = await lido.deposit(maxDepositsCount, curated.id, '0x', { from: depositSecurityModule.address })
+      await lido.setDepositSecurityModule(stranger1, { from: voting })
+      const receipt = await lido.deposit(maxDepositsCount, curated.id, '0x', { from: stranger1 })
 
       assertBn(await depositContract.totalCalls(), 100, 'invalid deposits count')
 
