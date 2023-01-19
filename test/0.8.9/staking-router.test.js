@@ -234,6 +234,26 @@ contract('StakingRouter', (accounts) => {
     })
   })
 
+  describe('staking modules limit', async () => {
+    before(async () => {
+      await snapshot.make()
+    })
+
+    after(async () => {
+      await snapshot.revert()
+    })
+    it('staking modules limit is 32', async () => {
+      const stakingModule = await StakingModuleMock.new({ from: deployer })
+      for (var i = 0; i < 32; i++) {
+        await app.addStakingModule('Test module', stakingModule.address, 100, 100, 100, { from: appManager })
+      }
+      await assert.revertsWithCustomError(
+        app.addStakingModule('Test module', stakingModule.address, 100, 100, 100, { from: appManager }),
+        `ErrorStakingModulesLimitExceeded()`
+      )
+    })
+  })
+
   describe('manage staking modules', async () => {
     let stakingModule1, stakingModule2
 

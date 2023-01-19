@@ -42,6 +42,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     error ErrorStakingModuleNotPaused();
     error ErrorEmptyWithdrawalsCredentials();
     error ErrorDirectETHTransfer();
+    error ErrorStakingModulesLimitExceeded();
 
     struct StakingModuleCache {
         address stakingModuleAddress;
@@ -140,6 +141,8 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         if (_stakingModuleFee + _treasuryFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_stakingModuleFee + _treasuryFee");
 
         uint256 newStakingModuleIndex = getStakingModulesCount();
+
+        if (newStakingModuleIndex >= 32) revert ErrorStakingModulesLimitExceeded();
         StakingModule storage newStakingModule = _getStakingModuleByIndex(newStakingModuleIndex);
         uint24 newStakingModuleId = uint24(LAST_STAKING_MODULE_ID_POSITION.getStorageUint256()) + 1;
 
