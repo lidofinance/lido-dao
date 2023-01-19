@@ -109,14 +109,14 @@ contract WithdrawalQueue is AccessControlEnumerable {
     /**
      * @notice minimal possible sum that is possible to withdraw
      */
-    uint256 public constant MIN_STETH_WITHDRAWAL_AMOUNT = 100 wei;
+    uint256 public constant MIN_STETH_WITHDRAWAL_AMOUNT = 100;
 
     /**
      * @notice maximum possible sum that is possible to withdraw by a single request
      * Prevents accumulating too much funds per single request fulfillment in the future.
      * @dev To withdraw larger amounts, recommended to split it to several requests
      */
-    uint256 public constant MAX_STETH_WITHDRAWAL_AMOUNT = 1000 ether;
+    uint256 public constant MAX_STETH_WITHDRAWAL_AMOUNT = 1000 * 1e18;
 
     uint256 public constant SHARE_RATE_PRECISION = 1e27;
 
