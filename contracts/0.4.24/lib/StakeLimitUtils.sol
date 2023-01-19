@@ -102,8 +102,11 @@ library StakeLimitUtils {
             stakeLimitIncPerBlock = _data.maxStakeLimit / _data.maxStakeLimitGrowthBlocks;
         }
 
+        uint256 blocksPassed = block.number - _data.prevStakeBlockNumber;
+        uint256 projectedLimit = _data.prevStakeLimit + blocksPassed * stakeLimitIncPerBlock;
+
         limit = _constGasMin(
-            _data.prevStakeLimit + ((block.number - _data.prevStakeBlockNumber) * stakeLimitIncPerBlock),
+            projectedLimit,
             _data.maxStakeLimit
         );
     }
