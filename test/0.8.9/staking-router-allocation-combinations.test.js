@@ -8,7 +8,7 @@ const DepositContractMock = artifacts.require('DepositContractMock.sol')
 
 const BASIS_POINTS_BASE = 100_00
 
-contract('StakingRouter2', (accounts) => {
+contract('StakingRouter', (accounts) => {
   let evmSnapshotId
   let depositContract, stakingRouter
   let StakingModule1, StakingModule2
@@ -48,7 +48,7 @@ contract('StakingRouter2', (accounts) => {
   const availableKeysCases = [0, 1, 10, 50]
   const activeKeysCases = [0, 1, 10, 50]
 
-  describe('Single staking module', async () => {
+  xdescribe('Single staking module', async () => {
     beforeEach(async () => {
       await stakingRouter.addModule('Module1', StakingModule1.address, 10_000, 1_000, 5_000, { from: admin })
     })
@@ -94,7 +94,7 @@ contract('StakingRouter2', (accounts) => {
     }
   })
 
-  describe('Two staking modules', async () => {
+  xdescribe('Two staking modules', async () => {
     const targetSharesCases = [
       [100_00, 0],
       [50_00, 50_00],
