@@ -212,13 +212,12 @@ contract('StakingLimits', ([account1]) => {
   it('constant gas for `calculateCurrentStakeLimit` regardless `block.number`', async () => {
     const block = await web3.eth.getBlock('latest')
 
-    const maxStakeLimit = 100
-    const increasePerBlock = 25
-    const maxStakeLimitGrowthBlocks = maxStakeLimit / increasePerBlock
+    const maxStakeLimit = ETH(150000)
+    const maxStakeLimitGrowthBlocks = 12
 
     const slot = await limits.setStorageStakeLimitStruct(
       block.number,
-      0,
+      ETH(0),
       maxStakeLimitGrowthBlocks,
       maxStakeLimit
     )
