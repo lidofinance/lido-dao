@@ -145,10 +145,10 @@ contract('StakingRouter', (accounts) => {
 
                     const { allocated, allocations } = await stakingRouter.getKeysAllocation(depositableKeys)
 
-                    const newTotalActiveKeys = module1ActiveKeys + module2ActiveKeys + depositableKeys // 2
+                    const newTotalActiveKeys = module1ActiveKeys + module2ActiveKeys + depositableKeys
 
-                    const module1TargetKeys = BigNumber.from(newTotalActiveKeys).mul(module1TargetShare).div(BASIS_POINTS_BASE) // 2
-                    const module2TargetKeys = BigNumber.from(newTotalActiveKeys).mul(module2TargetShare).div(BASIS_POINTS_BASE) // 0
+                    const module1TargetKeys = BigNumber.from(newTotalActiveKeys).mul(module1TargetShare).div(BASIS_POINTS_BASE)
+                    const module2TargetKeys = BigNumber.from(newTotalActiveKeys).mul(module2TargetShare).div(BASIS_POINTS_BASE)
 
                     const module1DepositableKeys = Math.min(module1AvailableKeys, Math.max(0, module1TargetKeys - module1ActiveKeys))
                     const module2DepositableKeys = Math.min(module2AvailableKeys, Math.max(0, module2TargetKeys - module2ActiveKeys))
