@@ -420,14 +420,15 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
 
         uint256 maxDepositableKeys = _estimateStakingModuleMaxDepositableKeysByIndex(
             stakingModuleIndex,
-            Math.min(depositableEth / DEPOSIT_SIZE, _maxDepositsCount)
+            getLido().getBufferedEther() / DEPOSIT_SIZE
         );
+        uint256 keysToDeposit = Math.min(maxDepositableKeys, _maxDepositsCount);
 
-        if (maxDepositableKeys > 0) {
+        if (keysToDeposit > 0) {
             bytes memory publicKeysBatch;
             bytes memory signaturesBatch;
             (keysCount, publicKeysBatch, signaturesBatch) = IStakingModule(stakingModule.stakingModuleAddress)
-                .requestValidatorsKeysForDeposits(maxDepositableKeys, _depositCalldata);
+                .requestValidatorsKeysForDeposits(keysToDeposit, _depositCalldata);
 
             if (keysCount > 0) {
                 _makeBeaconChainDeposits32ETH(keysCount, abi.encodePacked(withdrawalCredentials), publicKeysBatch, signaturesBatch);
