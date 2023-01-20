@@ -297,25 +297,11 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     /**
      * @dev calculate max count of depositable staking module keys based on the current Staking Router balance and buffered Ether amoutn
      *
-     * @param _stakingModuleId id of the staking module to be deposited
+     * @param _stakingModuleIndex index of the staking module to be deposited
      * @return max depositable keys count
      */
-    function getStakingModuleMaxDepositableKeys(uint24 _stakingModuleId) external view returns (uint256) {
+    function getStakingModuleMaxDepositableKeys(uint256 _stakingModuleIndex) public view returns (uint256) {
         uint256 _keysToAllocate = getLido().getBufferedEther() / DEPOSIT_SIZE;
-        return _estimateStakingModuleMaxDepositableKeysByIndex(_getStakingModuleIndexById(_stakingModuleId), _keysToAllocate);
-    }
-
-    /**
-     * @dev calculate max count of depositable staking module keys based on the total expected number of deposits
-     *
-     * @param _stakingModuleIndex staking module index
-     * @param _keysToAllocate total number of deposits to be made
-     * @return max depositable keys count
-     */
-    function _estimateStakingModuleMaxDepositableKeysByIndex(
-        uint256 _stakingModuleIndex,
-        uint256 _keysToAllocate
-    ) internal view returns (uint256) {
         (, uint256[] memory newKeysAllocation, StakingModuleCache[] memory stakingModuleCache) = _getKeysAllocation(_keysToAllocate);
         return newKeysAllocation[_stakingModuleIndex] - stakingModuleCache[_stakingModuleIndex].activeKeysCount;
     }
@@ -418,10 +404,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         StakingModule storage stakingModule = _getStakingModuleByIndex(stakingModuleIndex);
         require(StakingModuleStatus(stakingModule.status) == StakingModuleStatus.Active, "STAKING_MODULE_NOT_ACTIVE");
 
-        uint256 maxDepositableKeys = _estimateStakingModuleMaxDepositableKeysByIndex(
-            stakingModuleIndex,
-            getLido().getBufferedEther() / DEPOSIT_SIZE
-        );
+        uint256 maxDepositableKeys = getStakingModuleMaxDepositableKeys(stakingModuleIndex);
         uint256 keysToDeposit = Math.min(maxDepositableKeys, _maxDepositsCount);
 
         if (keysToDeposit > 0) {
