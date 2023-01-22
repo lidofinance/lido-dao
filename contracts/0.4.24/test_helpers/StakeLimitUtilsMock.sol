@@ -14,6 +14,10 @@ contract StakeLimitUtilsMock {
 
     bytes32 internal constant STAKING_STATE_POSITION = keccak256("abcdef");
 
+    event StakeLimitValue(
+        uint256 currentLimit
+    );
+
     function getStorageStakeLimit(uint256 _slotValue) public view returns (
         uint32 prevStakeBlockNumber,
         uint96 prevStakeLimit,
@@ -48,6 +52,11 @@ contract StakeLimitUtilsMock {
     function calculateCurrentStakeLimit(uint256 _slotValue) public view returns(uint256 limit) {
         STAKING_STATE_POSITION.setStorageUint256(_slotValue);
         return STAKING_STATE_POSITION.getStorageStakeLimitStruct().calculateCurrentStakeLimit();
+    }
+
+    function emitCurrentStakeLimit(uint256 _slotValue) public {
+        uint256 limit = calculateCurrentStakeLimit(_slotValue);
+        emit StakeLimitValue(limit);
     }
 
     function isStakingPaused(uint256 _slotValue) public view returns(bool) {
