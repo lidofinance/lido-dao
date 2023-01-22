@@ -103,6 +103,7 @@ contract('Lido: rewards distribution math', (addresses) => {
 
     depositRoot = await deployed.depositContractMock.get_deposit_root()
 
+    const withdrawalCredentials = pad('0x0202', 32)
     await stakingRouter.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
   })
 

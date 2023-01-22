@@ -34,7 +34,7 @@ contract('Lido: happy path', (addresses) => {
   let oracleMock, depositContractMock
   let treasuryAddr, guardians
   let depositSecurityModule, depositRoot
-  let withdrawalCredentials
+  let withdrawalCredentials, stakingRouter
 
   before('DAO, node operators registry, token, pool and deposit security module are deployed and initialized', async () => {
     const deployed = await deployDaoAndPool(appManager, voting)
@@ -62,10 +62,9 @@ contract('Lido: happy path', (addresses) => {
     guardians = deployed.guardians
 
     depositRoot = await depositContractMock.get_deposit_root()
+    withdrawalCredentials = '0x'.padEnd(66, '1234')
 
-    withdrawalCredentials = pad('0x0202', 32)
-
-    await pool.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
+    await stakingRouter.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
   })
 
   // Fee and its distribution are in basis points, 10000 corresponding to 100%
@@ -86,6 +85,7 @@ contract('Lido: happy path', (addresses) => {
     const wc = '0x'.padEnd(66, '1234')
     assert.equal(await pool.getWithdrawalCredentials({ from: nobody }), wc, 'withdrawal credentials')
 
+    withdrawalCredentials = '0x'.padEnd(66, '5678')
     await stakingRouter.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
 
     // Withdrawal credentials were set
