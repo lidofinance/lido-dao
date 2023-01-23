@@ -410,9 +410,11 @@ contract WithdrawalQueue is AccessControlEnumerable {
      * @param _newRecipient new recipient address for withdrawal
      */
     function changeRecipient(uint256 _requestId, address _newRecipient) external {
+        if (_newRecipient == address(0)) revert RecipientZeroAddress();
+
         WithdrawalRequest storage request = queue[_requestId];
 
-        if (request.recipient != msg.sender) revert RecipientExpected(request.recipient, msg.sender);
+        if (msg.sender != request.recipient) revert SenderExpected(request.recipient, msg.sender);
         if (request.claimed) revert RequestAlreadyClaimed();
 
         request.recipient = payable(_newRecipient);
@@ -659,7 +661,8 @@ contract WithdrawalQueue is AccessControlEnumerable {
     event WithdrawalClaimed(uint256 indexed requestId, address indexed receiver, address initiator);
 
     error AdminZeroAddress();
-    error RecipientExpected(address _recipient, address _msgSender);
+    error RecipientZeroAddress();
+    error SenderExpected(address _recipient, address _msgSender);
     error AlreadyInitialized();
     error Uninitialized();
     error Unimplemented();
