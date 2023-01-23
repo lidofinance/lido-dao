@@ -1,7 +1,8 @@
 const hre = require('hardhat')
 const { assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const { assertRevert } = require('../helpers/assertThrow')
-const { assert } = require('chai')
+const { assert } = require('../helpers/assert')
+const { BN } = require('bn.js')
 const { DSMAttestMessage, DSMPauseMessage } = require('./helpers/signatures')
 const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 const { artifacts, network } = require('hardhat')
@@ -18,6 +19,7 @@ const MIN_DEPOSIT_BLOCK_DISTANCE = 14
 const PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS = 10
 
 const STAKING_MODULE = 123
+const UINT24_MAX = new BN(2).pow(new BN(24))
 const DEPOSIT_CALLDATA = '0x000000000000000000000000000000000000000000000000000000000000002a'
 
 const GUARDIAN1 = '0x5Fc0E75BF6502009943590492B02A1d08EAc9C43'
@@ -239,6 +241,27 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
             [validAttestMessage.sign(GUARDIAN_PRIVATE_KEYS[GUARDIAN1])]
           ),
           'too frequent deposits'
+        )
+      })
+
+      it('cannot deposit when module is inactive', async () => {
+        const latestBlock = await waitBlocks(1)
+        assert(latestBlock.number > block.number, 'invariant failed: block number')
+
+        // pause module
+        await stakingRouterMock.pauseStakingModule(STAKING_MODULE)
+
+        await assertRevert(
+          depositSecurityModule.depositBufferedEther(
+            latestBlock.number,
+            block.hash,
+            DEPOSIT_ROOT,
+            STAKING_MODULE,
+            KEYS_OP_INDEX,
+            DEPOSIT_CALLDATA,
+            [validAttestMessage.sign(GUARDIAN_PRIVATE_KEYS[GUARDIAN1])]
+          ),
+          'module not active'
         )
       })
 
@@ -532,6 +555,18 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       )
     })
 
+    it('reverts when staking module too large', async () => {
+      await assert.revertsWithCustomError(
+        depositSecurityModule.pauseDeposits(
+          stalePauseMessage.blockNumber,
+          UINT24_MAX,
+          stalePauseMessage.sign(GUARDIAN_PRIVATE_KEYS[GUARDIAN2]),
+          { from: stranger }
+        ),
+        'ErrorStakingModuleIdTooLarge()'
+      )
+    })
+
     it('reverts if called by a guardian with a future blockNumber', async () => {
       const futureBlockNumber = block.number + 100
       await assertRevert(depositSecurityModule.pauseDeposits(futureBlockNumber, STAKING_MODULE, ['0x', '0x'], { from: guardian }))
@@ -583,6 +618,23 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
         decodeForAbi: StakingRouterMockForDepositSecurityModule._json.abi
       })
     })
+
+    it('unpauses paused deposits on active modules no events', async () => {
+      // pause module
+      await stakingRouterMock.setStakingModuleStatus(STAKING_MODULE, StakingModuleStatus.Active)
+
+      const receipt = await depositSecurityModule.unpauseDeposits(STAKING_MODULE, { from: owner })
+      assert.notEmits(receipt, 'DepositsUnpaused')
+    })
+
+    it('unpauses paused deposits on stopped modules no events', async () => {
+      // pause module
+      await stakingRouterMock.setStakingModuleStatus(STAKING_MODULE, StakingModuleStatus.Stopped)
+
+      const receipt = await depositSecurityModule.unpauseDeposits(STAKING_MODULE, { from: owner })
+      assert.notEmits(receipt, 'DepositsUnpaused')
+    })
+
     it('cannot be called by non-admin', async () => {
       await assertRevert(depositSecurityModule.unpauseDeposits(STAKING_MODULE, { from: stranger }), 'not an owner')
     })

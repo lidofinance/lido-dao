@@ -8,27 +8,29 @@ async function waitBlocks(numBlocksToMine) {
 }
 
 /**
- * Allows to make snapshots of the blockchain and revert to the previously made snapshots
+ * Allows to make snapshot of the blockchain and revert to the previous state
  */
 class EvmSnapshot {
   constructor(provider) {
     this.provider = provider
-    this.evmSnapshotIds = []
+    this.evmSnapshotId = undefined
   }
 
-  async add() {
-    this.evmSnapshotIds.push(await this.provider.send('evm_snapshot', []))
+  async make() {
+    this.evmSnapshotId = await this.provider.send('evm_snapshot', [])
   }
 
-  async revert(offset = -1) {
-    if (this.evmSnapshotIds.length + offset < 0) {
+  async revert() {
+    if (this.evmSnapshotId === undefined) {
       throw new Error('Revert Error: no snapshots to revert')
     }
-    while (offset !== 0) {
-      offset += 1
-      const lastSnapshotId = this.evmSnapshotIds.pop()
-      await this.provider.send('evm_revert', [lastSnapshotId])
-    }
+    await this.provider.send('evm_revert', [this.evmSnapshotId])
+    this.evmSnapshotId = undefined
+  }
+
+  async rollback() {
+    await this.revert()
+    await this.make()
   }
 }
 

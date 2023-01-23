@@ -13,7 +13,7 @@ import {ECDSA} from "../common/lib/ECDSA.sol";
 interface ILido {
     function deposit(
         uint256 _maxDepositsCount,
-        uint24 _stakingModuleId,
+        uint256 _stakingModuleId,
         bytes calldata _depositCalldata
     ) external;
 }
@@ -36,6 +36,8 @@ contract DepositSecurityModule {
     event GuardianRemoved(address guardian);
     event DepositsPaused(address indexed guardian, uint24 indexed stakingModuleId);
     event DepositsUnpaused(uint24 indexed stakingModuleId);
+
+    error ErrorStakingModuleIdTooLarge();
 
     bytes32 public immutable ATTEST_MESSAGE_PREFIX;
     bytes32 public immutable PAUSE_MESSAGE_PREFIX;
@@ -103,6 +105,11 @@ contract DepositSecurityModule {
 
     modifier onlyOwner() {
         require(msg.sender == owner, "not an owner");
+        _;
+    }
+
+    modifier validStakingModuleId(uint256 _stakingModuleId) {
+        if (_stakingModuleId > type(uint24).max) revert ErrorStakingModuleIdTooLarge();
         _;
     }
 
@@ -300,9 +307,9 @@ contract DepositSecurityModule {
      */
     function pauseDeposits(
         uint256 blockNumber,
-        uint24 stakingModuleId,
+        uint256 stakingModuleId,
         Signature memory sig
-    ) external {
+    ) external validStakingModuleId(stakingModuleId) {
         // In case of an emergency function `pauseDeposits` is supposed to be called
         // by all guardians. Thus only the first call will do the actual change. But
         // the other calls would be OK operations from the point of view of protocol’s logic.
@@ -326,7 +333,7 @@ contract DepositSecurityModule {
         require(block.number - blockNumber <= pauseIntentValidityPeriodBlocks, "pause intent expired");
 
         STAKING_ROUTER.pauseStakingModule(stakingModuleId);
-        emit DepositsPaused(guardianAddr, stakingModuleId);
+        emit DepositsPaused(guardianAddr, uint24(stakingModuleId));
     }
 
     /**
@@ -334,11 +341,11 @@ contract DepositSecurityModule {
      *
      * Only callable by the owner.
      */
-    function unpauseDeposits(uint24 stakingModuleId) external onlyOwner {
+    function unpauseDeposits(uint256 stakingModuleId) external validStakingModuleId(stakingModuleId) onlyOwner {
          /// @dev unpause only paused modules (skip stopped)
         if (STAKING_ROUTER.getStakingModuleIsDepositsPaused(stakingModuleId)) {
             STAKING_ROUTER.resumeStakingModule(stakingModuleId);
-            emit DepositsUnpaused(stakingModuleId);
+            emit DepositsUnpaused(uint24(stakingModuleId));
         }
     }
 
@@ -347,7 +354,7 @@ contract DepositSecurityModule {
      * guardian attestations of non-stale deposit root and `keysOpIndex`, and the number of
      * such attestations will be enough to reach quorum.
      */
-    function canDeposit(uint24 stakingModuleId) external view returns (bool) {
+    function canDeposit(uint256 stakingModuleId) external view validStakingModuleId(stakingModuleId) returns (bool) {
         bool isModuleActive = STAKING_ROUTER.getStakingModuleIsActive(stakingModuleId);
         uint256 lastDepositBlock = STAKING_ROUTER.getStakingModuleLastDepositBlock(stakingModuleId);
         return isModuleActive && quorum > 0 && block.number - lastDepositBlock >= minDepositBlockDistance;
@@ -373,11 +380,11 @@ contract DepositSecurityModule {
         uint256 blockNumber,
         bytes32 blockHash,
         bytes32 depositRoot,
-        uint24 stakingModuleId,
+        uint256 stakingModuleId,
         uint256 keysOpIndex,
         bytes calldata depositCalldata,
         Signature[] calldata sortedGuardianSignatures
-    ) external {
+    ) external validStakingModuleId(stakingModuleId) {
         require(quorum > 0 && sortedGuardianSignatures.length >= quorum, "no guardian quorum");
 
         bytes32 onchainDepositRoot = IDepositContract(DEPOSIT_CONTRACT).get_deposit_root();
@@ -401,7 +408,7 @@ contract DepositSecurityModule {
         bytes32 depositRoot,
         uint256 blockNumber,
         bytes32 blockHash,
-        uint24 stakingModuleId,
+        uint256 stakingModuleId,
         uint256 keysOpIndex,
         Signature[] memory sigs
     ) internal view {
