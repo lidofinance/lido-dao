@@ -202,7 +202,7 @@ interface ILido {
      * @param _stakingModuleId id of the staking module to be deposited
      * @param _depositCalldata module calldata
      */
-    function deposit(uint256 _maxDepositsCount, uint24 _stakingModuleId, bytes _depositCalldata) external;
+    function deposit(uint256 _maxDepositsCount, uint256 _stakingModuleId, bytes _depositCalldata) external;
 
     // Info functions
 

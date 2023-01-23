@@ -38,3 +38,6 @@ cli/vendor
 /accounts.json
 # e2e temp data
 /deployed-e2e.json
+
+# OS relative
+.DS_Store

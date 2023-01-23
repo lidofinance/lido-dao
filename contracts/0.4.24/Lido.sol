@@ -120,6 +120,13 @@ contract Lido is ILido, StETH, AragonApp {
     }
 
     /**
+     * @notice Return the initialized version of this contract starting from 0
+     */
+    function getVersion() external view returns (uint256) {
+        return CONTRACT_VERSION_POSITION.getStorageUint256();
+    }
+
+    /**
      * @notice Stops accepting new Ether to the protocol
      *
      * @dev While accepting new Ether is stopped, calls to the `submit` function,
@@ -764,8 +771,9 @@ contract Lido is ILido, StETH, AragonApp {
      * @param _stakingModuleId id of the staking module to be deposited
      * @param _depositCalldata module calldata
      */
-    function deposit(uint256 _maxDepositsCount, uint24 _stakingModuleId, bytes _depositCalldata) external whenNotStopped {
+    function deposit(uint256 _maxDepositsCount, uint256 _stakingModuleId, bytes _depositCalldata) external whenNotStopped {
         require(msg.sender == getDepositSecurityModule(), "APP_AUTH_DSM_FAILED");
+        require(_stakingModuleId <= uint24(-1), "STAKING_MODULE_ID_TOO_LARGE");
 
         uint256 bufferedEth = _getBufferedEther();
         /// available ether amount for deposits (multiple of 32eth)

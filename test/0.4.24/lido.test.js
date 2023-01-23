@@ -1,5 +1,4 @@
 const { hash } = require('eth-ens-namehash')
-const { assert } = require('chai')
 const { newDao, newApp } = require('./helpers/dao')
 const { getInstalledApp } = require('@aragon/contract-helpers-test/src/aragon-os')
 const { assertBn, assertRevert, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
@@ -7,6 +6,7 @@ const { ZERO_ADDRESS, bn, getEventAt } = require('@aragon/contract-helpers-test'
 const { BN } = require('bn.js')
 const { formatEther } = require('ethers/lib/utils')
 const { getEthBalance, formatStEth, formatBN, hexConcat, pad, ETH, tokens } = require('../helpers/utils')
+const { assert } = require('../helpers/assert')
 const nodeOperators = require('../helpers/node-operators')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
@@ -16,7 +16,9 @@ const ELRewardsVault = artifacts.require('LidoExecutionLayerRewardsVault.sol')
 const OracleMock = artifacts.require('OracleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
 const ERC20Mock = artifacts.require('ERC20Mock.sol')
+const ERC20WrongTransferMock = artifacts.require('ERC20WrongTransferMock.sol')
 const VaultMock = artifacts.require('AragonVaultMock.sol')
+const AragonNotPayableVaultMock = artifacts.require('AragonNotPayableVaultMock.sol')
 const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
 const StakingRouter = artifacts.require('StakingRouterMock.sol')
 const BeaconChainDepositorMock = artifacts.require('BeaconChainDepositorMock.sol')
@@ -61,6 +63,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     depositContract = await DepositContractMock.new()
     nodeOperatorsRegistryBase = await NodeOperatorsRegistry.new()
     anyToken = await ERC20Mock.new()
+    badToken = await ERC20WrongTransferMock.new()
   })
 
   beforeEach('deploy dao and app', async () => {
@@ -79,7 +82,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     stakingRouter = await StakingRouter.new(depositContract.address)
     await stakingRouter.initialize(appManager, app.address, ZERO_ADDRESS)
     await stakingRouter.grantRole(await stakingRouter.MANAGE_WITHDRAWAL_CREDENTIALS_ROLE(), voting, { from: appManager })
-    await stakingRouter.grantRole(await stakingRouter.MODULE_MANAGE_ROLE(), voting, { from: appManager })
+    await stakingRouter.grantRole(await stakingRouter.STAKING_MODULE_MANAGE_ROLE(), voting, { from: appManager })
 
     // BeaconChainDepositor
     beaconChainDepositor = await BeaconChainDepositorMock.new(depositContract.address)
@@ -130,11 +133,11 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     // Initialize the app's proxy.
     await app.initialize(oracle.address, treasury, stakingRouter.address, depositor)
 
-    await stakingRouter.addModule(
+    await stakingRouter.addStakingModule(
       'Curated',
       operators.address,
       10_000, // 100 % _targetShare
-      500, // 5 % _moduleFee
+      500, // 5 % _stakingModuleFee
       500, // 5 % _treasuryFee
       { from: voting }
     )
@@ -248,8 +251,55 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await web3.eth.sendTransaction({ to: app.address, from: userAddress, value: initialDepositAmount })
 
     // deposit(maxDeposits, stakingModuleId, calldata)
-    await app.methods[`deposit(uint256,uint24,bytes)`](MAX_DEPOSITS, curated.id, CALLDATA, { from: depositor })
+    await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, curated.id, CALLDATA, { from: depositor })
   }
+
+  describe('finalizeUpgrade_v2()', () => {
+    beforeEach(async () => {
+      // contract initialize with version == 2, so reset version
+      await app.setVersion(0)
+    })
+
+    it('contract version is correct after finalized', async () => {
+      await app.finalizeUpgrade_v2(stakingRouter.address, depositor)
+      assert.equal(await app.getVersion(), 2)
+    })
+
+    it('reverts with PETRIFIED on implementation finalized ', async () => {
+      assertRevert(appBase.finalizeUpgrade_v2(stakingRouter.address, depositor), 'PETRIFIED')
+    })
+
+    it('reverts if already initialized', async () => {
+      assert.equal(await app.getVersion(), 0)
+      await app.finalizeUpgrade_v2(stakingRouter.address, depositor)
+      assert.equal(await app.getVersion(), 2)
+      assertRevert(app.finalizeUpgrade_v2(stakingRouter.address, depositor), 'WRONG_BASE_VERSION')
+    })
+
+    it('reverts if staking router address is ZERO', async () => {
+      assertRevert(app.finalizeUpgrade_v2(ZERO_ADDRESS, depositor), 'STAKING_ROUTER_ZERO_ADDRESS')
+    })
+
+    it('reverts if dsm address is ZERO', async () => {
+      assertRevert(app.finalizeUpgrade_v2(stakingRouter.address, ZERO_ADDRESS), 'DSM_ZERO_ADDRESS')
+    })
+
+    it('events works', async () => {
+      const receipt = await app.finalizeUpgrade_v2(stakingRouter.address, depositor)
+
+      assert.equal(await app.getVersion(), 2)
+
+      assertEvent(receipt, 'ContractVersionSet', { expectedArgs: { version: 2 } })
+
+      assertEvent(receipt, 'StakingRouterSet', {
+        expectedArgs: { stakingRouterAddress: stakingRouter.address }
+      })
+
+      assertEvent(receipt, 'DepositSecurityModuleSet', {
+        expectedArgs: { dsmAddress: depositor }
+      })
+    })
+  })
 
   it('Execution layer rewards distribution works when zero rewards reported', async () => {
     const depositAmount = 32
@@ -323,24 +373,82 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assertRevert(app.receiveELRewards({ from: user1, value: ETH(1) }))
   })
 
-  it('setStakingRouter event works', async () => {
-    assert.equal(await app.getStakingRouter(), stakingRouter.address)
-
-    assertEvent(await app.setStakingRouter(voting, { from: voting }), 'StakingRouterSet', {
-      expectedArgs: { stakingRouterAddress: voting }
+  describe('receiveELRewards()', async () => {
+    it('unable to receive eth from arbitrary account', async () => {
+      assertRevert(app.receiveELRewards({ from: nobody, value: ETH(1) }))
     })
 
-    assert.equal(await app.getStakingRouter(), voting)
+    it('event work', async () => {
+      await app.setELRewardsVault(nobody, { from: voting })
+
+      const receipt = await app.receiveELRewards({ from: nobody, value: ETH(2) })
+
+      assertEvent(receipt, 'ELRewardsReceived', {
+        expectedArgs: { amount: ETH(2) }
+      })
+
+      assertBn(await app.getTotalELRewardsCollected(), ETH(2))
+    })
   })
 
-  it('setDepositSecurityModule event works', async () => {
-    assert.equal(await app.getDepositSecurityModule(), depositor)
-
-    assertEvent(await app.setDepositSecurityModule(voting, { from: voting }), 'DepositSecurityModuleSet', {
-      expectedArgs: { dsmAddress: voting }
+  describe('receiveStakingRouter()', async () => {
+    it('unable to receive eth from arbitrary account', async () => {
+      assertRevert(app.receiveStakingRouter({ from: nobody, value: ETH(1) }))
     })
 
-    assert.equal(await app.getDepositSecurityModule(), voting)
+    it('event work', async () => {
+      // unlock oracle account (allow transactions originated from oracle.address)
+      await ethers.provider.send('hardhat_impersonateAccount', [stakingRouter.address])
+
+      // add some amount to the sender
+      await ethers.provider.send('hardhat_setBalance', [stakingRouter.address, web3.utils.numberToHex(ETH(100))])
+
+      const receipt = await app.receiveStakingRouter({ from: stakingRouter.address, value: ETH(2) })
+
+      assertEvent(receipt, 'StakingRouterTransferReceived', {
+        expectedArgs: { amount: ETH(2) }
+      })
+    })
+  })
+
+  describe('setStakingRouter()', async () => {
+    it('reverts setStakingRouter from stranger address', async () => {
+      assertRevert(app.setStakingRouter(ZERO_ADDRESS, { from: nobody }), 'APP_AUTH_FAILED')
+    })
+
+    it('reverts setStakingRouter on ZERO address', async () => {
+      await assertRevert(app.setStakingRouter(ZERO_ADDRESS, { from: voting }), 'STAKING_ROUTER_ADDRESS_ZERO')
+    })
+
+    it('setStakingRouter event works', async () => {
+      assert.equal(await app.getStakingRouter(), stakingRouter.address)
+
+      assertEvent(await app.setStakingRouter(voting, { from: voting }), 'StakingRouterSet', {
+        expectedArgs: { stakingRouterAddress: voting }
+      })
+
+      assert.equal(await app.getStakingRouter(), voting)
+    })
+  })
+
+  describe('setDepositSecurityModule()', async () => {
+    it('reverts setDepositSecurityModule from stranger address', async () => {
+      assertRevert(app.setDepositSecurityModule(ZERO_ADDRESS, { from: nobody }), 'APP_AUTH_FAILED')
+    })
+
+    it('reverts setDepositSecurityModule on ZERO address', async () => {
+      await assertRevert(app.setDepositSecurityModule(ZERO_ADDRESS, { from: voting }), 'DSM_ADDRESS_ZERO')
+    })
+
+    it('setDepositSecurityModule event works', async () => {
+      assert.equal(await app.getDepositSecurityModule(), depositor)
+
+      assertEvent(await app.setDepositSecurityModule(voting, { from: voting }), 'DepositSecurityModuleSet', {
+        expectedArgs: { dsmAddress: voting }
+      })
+
+      assert.equal(await app.getDepositSecurityModule(), voting)
+    })
   })
 
   it('setModulesFee works', async () => {
@@ -348,37 +456,37 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     let module1 = await stakingRouter.getStakingModule(curated.id)
     assertBn(module1.targetShare, 10000)
-    assertBn(module1.moduleFee, 500)
+    assertBn(module1.stakingModuleFee, 500)
     assertBn(module1.treasuryFee, 500)
 
-    // stakingModuleId, targetShare, moduleFee, treasuryFee
+    // stakingModuleId, targetShare, stakingModuleFee, treasuryFee
     await stakingRouter.updateStakingModule(module1.id, module1.targetShare, 300, 700, { from: voting })
 
     module1 = await stakingRouter.getStakingModule(curated.id)
 
     await assertRevert(
       stakingRouter.updateStakingModule(module1.id, module1.targetShare, 300, 700, { from: user1 }),
-      `AccessControl: account ${user1.toLowerCase()} is missing role ${await stakingRouter.MODULE_MANAGE_ROLE()}`
+      `AccessControl: account ${user1.toLowerCase()} is missing role ${await stakingRouter.STAKING_MODULE_MANAGE_ROLE()}`
     )
 
     await assertRevert(
       stakingRouter.updateStakingModule(module1.id, module1.targetShare, 300, 700, { from: nobody }),
-      `AccessControl: account ${nobody.toLowerCase()} is missing role ${await stakingRouter.MODULE_MANAGE_ROLE()}`
+      `AccessControl: account ${nobody.toLowerCase()} is missing role ${await stakingRouter.STAKING_MODULE_MANAGE_ROLE()}`
     )
 
-    await assertRevert(
+    await assert.revertsWithCustomError(
       stakingRouter.updateStakingModule(module1.id, 10001, 300, 700, { from: voting }),
-      `ed with custom error 'ErrorValueOver100Percent("_targetShare")`
+      'ErrorValueOver100Percent("_targetShare")'
     )
 
-    await assertRevert(
+    await assert.revertsWithCustomError(
       stakingRouter.updateStakingModule(module1.id, 10000, 10001, 700, { from: voting }),
-      `ed with custom error 'ErrorValueOver100Percent("_moduleFee + _treasuryFee")`
+      'ErrorValueOver100Percent("_stakingModuleFee + _treasuryFee")'
     )
 
-    await assertRevert(
+    await assert.revertsWithCustomError(
       stakingRouter.updateStakingModule(module1.id, 10000, 300, 10001, { from: voting }),
-      `ed with custom error 'ErrorValueOver100Percent("_moduleFee + _treasuryFee")`
+      'ErrorValueOver100Percent("_stakingModuleFee + _treasuryFee")'
     )
 
     // distribution fee calculates on active keys in modules
@@ -459,9 +567,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assert.equal(await beaconChainDepositor.pad64(pad('0x1122', 64)), pad('0x1122', 64))
   })
 
-  it('Lido.deposit(uint256,uint24,bytes) reverts when called by account without DEPOSIT_ROLE granted', async () => {
+  it('Lido.deposit(uint256,uint256,bytes) reverts when called by account without DEPOSIT_ROLE granted', async () => {
     await assertRevert(
-      app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: nobody }),
+      app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: nobody }),
       'APP_AUTH_DSM_FAILED'
     )
   })
@@ -488,7 +596,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     // +1 ETH
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(1) })
-    await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     await checkStat({ depositedValidators: 0, beaconValidators: 0, beaconBalance: ETH(0) })
     assertBn(await depositContract.totalCalls(), 0)
     assertBn(await app.getTotalPooledEther(), ETH(1))
@@ -516,14 +624,14 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
 
     // can not deposit with unset withdrawalCredentials
-    await assertRevert(
-      app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor }),
-      `ed with custom error 'ErrorEmptyWithdrawalsCredentials()`
+    await assert.revertsWithCustomError(
+      app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor }),
+      'ErrorEmptyWithdrawalsCredentials()'
     )
     // set withdrawalCredentials with keys, because they were trimmed
     await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
-    assertBn(await stakingRouter.getStakingModuleMaxDepositableKeys(CURATED_MODULE_ID), 0)
+    assertBn(await stakingRouter.getStakingModuleMaxDepositableKeys(CURATED_MODULE_ID - 1), 0)
 
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
     await operators.addSigningKeys(
@@ -535,12 +643,12 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     )
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
 
-    assertBn(await stakingRouter.getStakingModuleMaxDepositableKeys(CURATED_MODULE_ID), 1)
+    assertBn(await stakingRouter.getStakingModuleMaxDepositableKeys(CURATED_MODULE_ID - 1), 1)
     assertBn(await app.getTotalPooledEther(), ETH(33))
     assertBn(await app.getBufferedEther(), ETH(33))
 
     // now deposit works
-    await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
 
     await checkStat({ depositedValidators: 1, beaconValidators: 0, beaconBalance: ETH(0) })
     assertBn(await app.getTotalPooledEther(), ETH(33))
@@ -568,7 +676,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assertBn(await app.balanceOf(user3), tokens(30))
     assertBn(await app.totalSupply(), tokens(133))
 
-    await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     await checkStat({ depositedValidators: 4, beaconValidators: 0, beaconBalance: ETH(0) })
     assertBn(await app.getTotalPooledEther(), ETH(133))
     assertBn(await app.getBufferedEther(), ETH(5))
@@ -613,15 +721,15 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
     await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(32) })
-    await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     assertBn(await depositContract.totalCalls(), 1, 'first submit: total deposits')
 
     await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2 * 32) })
-    await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     assertBn(await depositContract.totalCalls(), 3, 'second submit: total deposits')
 
     await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(3 * 32) })
-    await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     assertBn(await depositContract.totalCalls(), 6, 'third submit: total deposits')
 
     const calls = await Promise.all(Array.from({ length: 6 }, (_, i) => depositContract.calls(i)))
@@ -651,7 +759,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await operators.deactivateNodeOperator(0, { from: voting })
     await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(32) })
 
-    await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     assertBn(await depositContract.totalCalls(), 1)
   })
 
@@ -889,7 +997,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(33) })
-    await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     assertBn(await depositContract.totalCalls(), 1)
     await assertRevert(operators.removeSigningKey(0, 0, { from: voting }), 'KEY_WAS_USED')
 
@@ -899,7 +1007,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(100) })
 
-    await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     assertBn(await depositContract.totalCalls(), 1)
     assertBn(await app.getTotalPooledEther(), ETH(133))
     assertBn(await app.getBufferedEther(), ETH(101))
@@ -917,7 +1025,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(100) })
-    await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     await checkStat({ depositedValidators: 1, beaconValidators: 0, beaconBalance: ETH(0) })
     assertBn(await depositContract.totalCalls(), 1)
     assertBn(await app.getTotalPooledEther(), ETH(100))
@@ -936,7 +1044,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
 
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(1) })
-    await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     await checkStat({ depositedValidators: 3, beaconValidators: 0, beaconBalance: ETH(0) })
     assertBn(await depositContract.totalCalls(), 3)
     assertBn(await app.getTotalPooledEther(), ETH(101))
@@ -961,7 +1069,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(34) })
-    await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     await checkStat({ depositedValidators: 1, beaconValidators: 0, beaconBalance: ETH(0) })
 
     await assertRevert(app.handleOracleReport(1, ETH(30), { from: appManager }), 'APP_AUTH_FAILED')
@@ -996,7 +1104,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(34) })
-    await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     await checkStat({ depositedValidators: 1, beaconValidators: 0, beaconBalance: ETH(0) })
     assertBn(await depositContract.totalCalls(), 1)
     assertBn(await app.getTotalPooledEther(), ETH(34))
@@ -1013,7 +1121,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     // deposit, ratio is 0.5
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(2) })
-    await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
 
     await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(15) })
     assertBn(await depositContract.totalCalls(), 1)
@@ -1051,7 +1159,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(40) })
-    await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     await checkStat({ depositedValidators: 1, beaconValidators: 0, beaconBalance: ETH(0) })
     assertBn(await app.getBufferedEther(), ETH(8))
 
@@ -1068,9 +1176,63 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assert((await app.isStakingPaused()) === false)
 
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(4) })
-    await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     await checkStat({ depositedValidators: 1, beaconValidators: 0, beaconBalance: ETH(0) })
     assertBn(await app.getBufferedEther(), ETH(12))
+  })
+
+  it('rewards distribution on module with zero treasury and module fee', async () => {
+    await operators.addNodeOperator('1', ADDRESS_1, { from: voting })
+    await operators.addNodeOperator('2', ADDRESS_2, { from: voting })
+
+    await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
+    await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
+    await operators.addSigningKeys(
+      0,
+      3,
+      hexConcat(pad('0x010204', 48), pad('0x010205', 48), pad('0x010206', 48)),
+      hexConcat(pad('0x01', 96), pad('0x01', 96), pad('0x01', 96)),
+      { from: voting }
+    )
+
+    await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
+    await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
+
+    // get staking module
+    const [curated] = await stakingRouter.getStakingModules()
+
+    let module1 = await stakingRouter.getStakingModule(curated.id)
+    assertBn(module1.targetShare, 10000)
+    assertBn(module1.stakingModuleFee, 500)
+    assertBn(module1.treasuryFee, 500)
+
+    // stakingModuleId, targetShare, stakingModuleFee, treasuryFee
+    await stakingRouter.updateStakingModule(module1.id, module1.targetShare, 0, 0, { from: voting })
+
+    module1 = await stakingRouter.getStakingModule(curated.id)
+    assertBn(module1.targetShare, 10000)
+    assertBn(module1.stakingModuleFee, 0)
+    assertBn(module1.treasuryFee, 0)
+
+    // check stat before deposit
+    await checkStat({ depositedValidators: 0, beaconValidators: 0, beaconBalance: 0 })
+
+    await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(34) })
+    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+
+    await oracle.reportBeacon(300, 1, ETH(36))
+    await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(36) })
+    assertBn(await app.totalSupply(), ETH(38)) // remote + buffered
+    await checkRewards({ treasury: 0, operator: 0 })
+
+    // return module commission
+    await stakingRouter.updateStakingModule(module1.id, module1.targetShare, 500, 500, { from: voting })
+
+    //
+    await oracle.reportBeacon(300, 1, ETH(38))
+    await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(38) })
+    assertBn(await app.totalSupply(), ETH(40)) // remote + buffered
+    await checkRewards({ treasury: 100, operator: 99 })
   })
 
   it('rewards distribution works in a simple case', async () => {
@@ -1091,7 +1253,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(34) })
-    await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
 
     await oracle.reportBeacon(300, 1, ETH(36))
     await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(36) })
@@ -1117,7 +1279,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(34) })
-    await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     // some slashing occurred
     await oracle.reportBeacon(100, 1, ETH(30))
 
@@ -1152,9 +1314,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     // Only 32 ETH deposited
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(32) })
-    await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(32) })
-    await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     assertBn(await app.totalSupply(), tokens(64))
 
     await oracle.reportBeacon(300, 1, ETH(36))
@@ -1192,7 +1354,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     // Deposit huge chunk
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(32 * 3 + 50) })
-    await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     await checkStat({ depositedValidators: 3, beaconValidators: 0, beaconBalance: ETH(0) })
     assertBn(await app.getTotalPooledEther(), ETH(146))
     assertBn(await app.getBufferedEther(), ETH(50))
@@ -1210,7 +1372,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     // Next deposit changes nothing
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(32) })
-    await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     await checkStat({ depositedValidators: 3, beaconValidators: 0, beaconBalance: ETH(0) })
     assertBn(await app.getTotalPooledEther(), ETH(178))
     assertBn(await app.getBufferedEther(), ETH(82))
@@ -1229,7 +1391,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     // #1 goes below the limit
     await operators.updateExitedValidatorsKeysCount(1, 1, { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(1) })
-    await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     await checkStat({ depositedValidators: 3, beaconValidators: 0, beaconBalance: ETH(0) })
     assertBn(await app.getTotalPooledEther(), ETH(179))
     assertBn(await app.getBufferedEther(), ETH(83))
@@ -1250,7 +1412,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     operators.setNodeOperatorStakingLimit(0, 3, { from: voting })
 
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(1) })
-    await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     await checkStat({ depositedValidators: 4, beaconValidators: 0, beaconBalance: ETH(0) })
     assertBn(await app.getTotalPooledEther(), ETH(180))
     assertBn(await app.getBufferedEther(), ETH(52))
@@ -1269,7 +1431,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     // Reactivation of #2 doesn't change anything cause keys of #2 was trimmed
     await operators.activateNodeOperator(2, { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(12) })
-    await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     await checkStat({ depositedValidators: 4, beaconValidators: 0, beaconBalance: ETH(0) })
     assertBn(await app.getTotalPooledEther(), ETH(192))
     assertBn(await app.getBufferedEther(), ETH(64))
@@ -1315,9 +1477,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     // Small deposits
     for (let i = 0; i < 14; i++) await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(10) })
-    await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(6) })
-    await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
 
     await checkStat({ depositedValidators: 3, beaconValidators: 0, beaconBalance: ETH(0) })
     assertBn(await app.getTotalPooledEther(), ETH(146))
@@ -1336,7 +1498,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     // Next deposit changes nothing
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(32) })
-    await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     await checkStat({ depositedValidators: 3, beaconValidators: 0, beaconBalance: ETH(0) })
     assertBn(await app.getTotalPooledEther(), ETH(178))
     assertBn(await app.getBufferedEther(), ETH(82))
@@ -1355,7 +1517,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     // #1 goes below the limit (doesn't change situation. validator stop decreases limit)
     await operators.updateExitedValidatorsKeysCount(1, 1, { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(1) })
-    await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     await checkStat({ depositedValidators: 3, beaconValidators: 0, beaconBalance: ETH(0) })
     assertBn(await app.getTotalPooledEther(), ETH(179))
     assertBn(await app.getBufferedEther(), ETH(83))
@@ -1376,7 +1538,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     operators.setNodeOperatorStakingLimit(0, 3, { from: voting })
 
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(1) })
-    await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     await checkStat({ depositedValidators: 4, beaconValidators: 0, beaconBalance: ETH(0) })
     assertBn(await app.getTotalPooledEther(), ETH(180))
     assertBn(await app.getBufferedEther(), ETH(52))
@@ -1395,7 +1557,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     // Reactivation of #2 (changes nothing, it's not used keys were trimmed)
     await operators.activateNodeOperator(2, { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(12) })
-    await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     await checkStat({ depositedValidators: 4, beaconValidators: 0, beaconBalance: ETH(0) })
     assertBn(await app.getTotalPooledEther(), ETH(192))
     assertBn(await app.getBufferedEther(), ETH(64))
@@ -1439,7 +1601,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     // #1 and #0 get the funds
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(64) })
-    await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     await checkStat({ depositedValidators: 2, beaconValidators: 0, beaconBalance: ETH(0) })
     assertBn(await app.getTotalPooledEther(), ETH(64))
     assertBn(await app.getBufferedEther(), ETH(0))
@@ -1458,7 +1620,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await operators.setNodeOperatorStakingLimit(2, UNLIMITED, { from: voting })
 
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(36) })
-    await app.methods['deposit(uint256,uint24,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     await checkStat({ depositedValidators: 3, beaconValidators: 0, beaconBalance: ETH(0) })
     assertBn(await app.getTotalPooledEther(), ETH(100))
     assertBn(await app.getBufferedEther(), ETH(4))
@@ -1535,10 +1697,16 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
   context('recovery vault', () => {
     beforeEach(async () => {
       await anyToken.mint(app.address, 100)
+      await badToken.mint(app.address, 100)
     })
 
     it('reverts when vault is not set', async () => {
       await assertRevert(app.transferToVault(anyToken.address, { from: nobody }), 'RECOVER_VAULT_ZERO')
+    })
+
+    it('reverts when recover disallowed', async () => {
+      await app.setAllowRecoverability(false)
+      await assertRevert(app.transferToVault(anyToken.address, { from: nobody }), 'RECOVER_DISALLOWED')
     })
 
     context('recovery works with vault mock deployed', () => {
@@ -1566,6 +1734,19 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
         const receipt = await app.transferToVault(ZERO_ADDRESS, { from: nobody })
         assertEvent(receipt, 'RecoverToVault', { expectedArgs: { vault: vault.address, token: ZERO_ADDRESS, amount: ETH(10) } })
       })
+    })
+
+    it('vault is not payable', async () => {
+      const vaultId = hash('vault.aragonpm.test')
+      const vaultBase = await AragonNotPayableVaultMock.new()
+      const vaultReceipt = await dao.newAppInstance(vaultId, vaultBase.address, '0x', true)
+      const vaultAddress = getInstalledApp(vaultReceipt)
+      vault = await AragonNotPayableVaultMock.at(vaultAddress)
+
+      await dao.setRecoveryVaultAppId(vaultId)
+
+      await assertRevert(app.transferToVault(ZERO_ADDRESS, { from: nobody }), 'RECOVER_TRANSFER_FAILED')
+      await assertRevert(app.transferToVault(badToken.address, { from: nobody }), 'RECOVER_TOKEN_TRANSFER_FAILED')
     })
   })
 })
