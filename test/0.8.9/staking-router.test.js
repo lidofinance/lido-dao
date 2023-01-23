@@ -230,10 +230,6 @@ contract('StakingRouter', (accounts) => {
       await assert.revertsWithCustomError(app.getStakingModuleActiveKeysCount(UINT24_MAX), 'ErrorStakingModuleIdTooLarge()')
     })
 
-    it('getStakingModuleMaxDepositableKeys reverts when staking module id too large', async () => {
-      await assert.revertsWithCustomError(app.getStakingModuleMaxDepositableKeys(UINT24_MAX), 'ErrorStakingModuleIdTooLarge()')
-    })
-
     it('getStakingModuleActiveKeysCount', async () => {
       await stakingModule.setActiveKeysCount(200, { from: deployer })
 
