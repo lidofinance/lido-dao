@@ -40,6 +40,7 @@ interface IStakingModule {
     ///     2. a node operator's key(s) is removed
     ///     3. a node operator's ready to deposit keys count is changed
     ///     4. a node operator was activated/deactivated
+    ///     5. a node operator's key(s) is used for the deposit
     function getValidatorsKeysNonce() external view returns (uint256);
 
     /// @notice Returns total number of node operators
