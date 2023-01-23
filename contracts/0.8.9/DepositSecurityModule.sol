@@ -323,7 +323,7 @@ contract DepositSecurityModule {
         int256 guardianIndex = _getGuardianIndex(msg.sender);
 
         if (guardianIndex == -1) {
-            bytes32 msgHash = keccak256(abi.encodePacked(PAUSE_MESSAGE_PREFIX, blockNumber, uint24(stakingModuleId)));
+            bytes32 msgHash = keccak256(abi.encodePacked(PAUSE_MESSAGE_PREFIX, blockNumber, stakingModuleId));
             guardianAddr = ECDSA.recover(msgHash, sig.r, sig.vs);
             guardianIndex = _getGuardianIndex(guardianAddr);
             require(guardianIndex != -1, "invalid signature");
@@ -398,7 +398,7 @@ contract DepositSecurityModule {
         uint256 onchainKeysOpIndex = STAKING_ROUTER.getStakingModuleKeysOpIndex(stakingModuleId);
         require(keysOpIndex == onchainKeysOpIndex, "keys op index changed");
 
-        _verifySignatures(depositRoot, blockNumber, blockHash, uint24(stakingModuleId), keysOpIndex, sortedGuardianSignatures);
+        _verifySignatures(depositRoot, blockNumber, blockHash, stakingModuleId, keysOpIndex, sortedGuardianSignatures);
 
         LIDO.deposit(maxDepositsPerBlock, stakingModuleId, depositCalldata);
     }
@@ -407,7 +407,7 @@ contract DepositSecurityModule {
         bytes32 depositRoot,
         uint256 blockNumber,
         bytes32 blockHash,
-        uint24 stakingModuleId,
+        uint256 stakingModuleId,
         uint256 keysOpIndex,
         Signature[] memory sigs
     ) internal view {
