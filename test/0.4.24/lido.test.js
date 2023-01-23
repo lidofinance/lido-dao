@@ -631,7 +631,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     // set withdrawalCredentials with keys, because they were trimmed
     await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
-    assertBn(await stakingRouter.getStakingModuleMaxDepositableKeys(CURATED_MODULE_ID), 0)
+    assertBn(await stakingRouter.getStakingModuleMaxDepositableKeys(CURATED_MODULE_ID - 1), 0)
 
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
     await operators.addSigningKeys(
@@ -643,7 +643,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     )
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
 
-    assertBn(await stakingRouter.getStakingModuleMaxDepositableKeys(CURATED_MODULE_ID), 1)
+    assertBn(await stakingRouter.getStakingModuleMaxDepositableKeys(CURATED_MODULE_ID - 1), 1)
     assertBn(await app.getTotalPooledEther(), ETH(33))
     assertBn(await app.getBufferedEther(), ETH(33))
 

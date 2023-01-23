@@ -101,5 +101,5 @@ contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
 
     function getKeysAllocation(uint256 _keysToAllocate) external view returns (uint256 allocated, uint256[] memory allocations) {}
 
-    function getStakingModuleMaxDepositableKeys(uint256 _stakingModuleId) external view returns (uint256) {}
+    function getStakingModuleMaxDepositableKeys(uint256 _stakingModuleIndex) public view returns (uint256) {}
 }
