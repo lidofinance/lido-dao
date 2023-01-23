@@ -7,7 +7,7 @@ pragma solidity 0.4.24;
 import "../nos/NodeOperatorsRegistry.sol";
 
 contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
-    function increaseNodeOperatorDepositedSigningKeysCount(uint24 _nodeOperatorId, uint64 _keysCount) external {
+    function increaseNodeOperatorDepositedSigningKeysCount(uint256 _nodeOperatorId, uint64 _keysCount) external {
         NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
         nodeOperator.depositedSigningKeysCount = nodeOperator.depositedSigningKeysCount.add(_keysCount);
 
