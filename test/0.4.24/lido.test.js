@@ -28,6 +28,7 @@ const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
 const StakingRouter = artifacts.require('StakingRouterMock.sol')
 const BeaconChainDepositorMock = artifacts.require('BeaconChainDepositorMock.sol')
 const WithdrawalVault = artifacts.require('WithdrawalVault.sol')
+const EIP712StETH = artifacts.require('EIP712StETH')
 
 const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
 const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
@@ -129,8 +130,18 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     )
 
     elRewardsVault = await ELRewardsVault.new(app.address, treasury)
+    const eip712StETH = await EIP712StETH.new()
+
     // Initialize the app's proxy.
-    await app.initialize(oracle.address, treasury, stakingRouter.address, depositor, elRewardsVault.address, ZERO_ADDRESS)
+    await app.initialize(
+      oracle.address,
+      treasury,
+      stakingRouter.address,
+      depositor,
+      elRewardsVault.address,
+      ZERO_ADDRESS,
+      eip712StETH.address
+    )
 
     await stakingRouter.addModule(
       'Curated',

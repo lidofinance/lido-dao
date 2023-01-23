@@ -62,7 +62,8 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
 
     depositRoot = await depositContractMock.get_deposit_root()
     withdrawalCredentials = pad('0x0202', 32)
-    await pool.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
+
+    await stakingRouter.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
   })
 
   // Fee and its distribution are in basis points, 10000 corresponding to 100%

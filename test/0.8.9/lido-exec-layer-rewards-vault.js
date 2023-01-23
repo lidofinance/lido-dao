@@ -11,6 +11,7 @@ const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 const LidoMock = artifacts.require('LidoMock.sol')
 const LidoOracleMock = artifacts.require('OracleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
+const EIP712StETH = artifacts.require('EIP712StETH')
 
 const ERC20OZMock = artifacts.require('ERC20OZMock.sol')
 const ERC721OZMock = artifacts.require('ERC721OZMock.sol')
@@ -40,9 +41,18 @@ contract('LidoExecutionLayerRewardsVault', ([appManager, voting, deployer, depos
     await acl.createPermission(voting, lido.address, await lido.BURN_ROLE(), appManager, { from: appManager })
 
     elRewardsVault = await LidoELRewardsVault.new(lido.address, treasury, { from: deployer })
+    const eip712StETH = await EIP712StETH.new({ from: deployer })
 
     // Initialize the app's proxy.
-    await lido.initialize(oracle.address, treasury, ZERO_ADDRESS, ZERO_ADDRESS, elRewardsVault.address, ZERO_ADDRESS)
+    await lido.initialize(
+      oracle.address,
+      treasury,
+      ZERO_ADDRESS,
+      ZERO_ADDRESS,
+      elRewardsVault.address,
+      ZERO_ADDRESS,
+      eip712StETH.address
+    )
 
     await oracle.setPool(lido.address)
     await depositContract.reset()

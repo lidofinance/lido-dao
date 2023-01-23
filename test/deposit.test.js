@@ -16,6 +16,7 @@ const OracleMock = artifacts.require('OracleMock.sol')
 const DepositContract = artifacts.require('DepositContract')
 const VaultMock = artifacts.require('VaultMock.sol')
 const StakingRouter = artifacts.require('StakingRouterMock.sol')
+const EIP712StETH = artifacts.require('EIP712StETH')
 
 const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
 const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
@@ -114,8 +115,18 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
       }
     )
 
+    const eip712StETH = await EIP712StETH.new({ from: appManager })
+
     // Initialize the app's proxy.
-    await app.initialize(oracle.address, treasury, stakingRouter.address, depositor, ZERO_ADDRESS, ZERO_ADDRESS)
+    await app.initialize(
+      oracle.address,
+      treasury,
+      stakingRouter.address,
+      depositor,
+      ZERO_ADDRESS,
+      ZERO_ADDRESS,
+      eip712StETH.address
+    )
 
     await oracle.setPool(app.address)
   })

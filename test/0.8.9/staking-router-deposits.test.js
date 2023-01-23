@@ -13,6 +13,7 @@ const StakingModuleMock = artifacts.require('StakingModuleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
 const DepositSecurityModule = artifacts.require('DepositSecurityModule.sol')
 const StakingRouterMockForDepositSecurityModule = artifacts.require('StakingRouterMockForDepositSecurityModule')
+const EIP712StETH = artifacts.require('EIP712StETH')
 
 const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
 const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
@@ -112,7 +113,17 @@ contract('StakingRouter', (accounts) => {
     await stakingRouter.grantRole(MODULE_PAUSE_ROLE, voting, { from: admin })
     await stakingRouter.grantRole(MODULE_MANAGE_ROLE, voting, { from: admin })
 
-    await lido.initialize(oracle.address, treasury, stakingRouter.address, depositSecurityModule.address, ZERO_ADDRESS, ZERO_ADDRESS)
+    const eip712StETH = await EIP712StETH.new({ from: deployer })
+
+    await lido.initialize(
+      oracle.address,
+      treasury,
+      stakingRouter.address,
+      depositSecurityModule.address,
+      ZERO_ADDRESS,
+      ZERO_ADDRESS,
+      eip712StETH.address
+    )
 
     evmSnapshotId = await hre.ethers.provider.send('evm_snapshot', [])
   })
