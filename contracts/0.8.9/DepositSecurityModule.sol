@@ -36,6 +36,8 @@ contract DepositSecurityModule {
     event DepositsPaused(address indexed guardian, uint24 indexed stakingModuleId);
     event DepositsUnpaused(uint24 indexed stakingModuleId);
 
+    error ErrorStakingModuleIdTooLarge();
+
     bytes32 public immutable ATTEST_MESSAGE_PREFIX;
     bytes32 public immutable PAUSE_MESSAGE_PREFIX;
 
@@ -102,6 +104,11 @@ contract DepositSecurityModule {
 
     modifier onlyOwner() {
         require(msg.sender == owner, "not an owner");
+        _;
+    }
+
+    modifier validStakingModuleId(uint256 _stakingModuleId) {
+        if (_stakingModuleId > type(uint24).max) revert ErrorStakingModuleIdTooLarge();
         _;
     }
 
@@ -299,9 +306,9 @@ contract DepositSecurityModule {
      */
     function pauseDeposits(
         uint256 blockNumber,
-        uint24 stakingModuleId,
+        uint256 stakingModuleId,
         Signature memory sig
-    ) external {
+    ) external validStakingModuleId(stakingModuleId) {
         // In case of an emergency function `pauseDeposits` is supposed to be called
         // by all guardians. Thus only the first call will do the actual change. But
         // the other calls would be OK operations from the point of view of protocol’s logic.
@@ -316,7 +323,7 @@ contract DepositSecurityModule {
         int256 guardianIndex = _getGuardianIndex(msg.sender);
 
         if (guardianIndex == -1) {
-            bytes32 msgHash = keccak256(abi.encodePacked(PAUSE_MESSAGE_PREFIX, blockNumber, stakingModuleId));
+            bytes32 msgHash = keccak256(abi.encodePacked(PAUSE_MESSAGE_PREFIX, blockNumber, uint24(stakingModuleId)));
             guardianAddr = ECDSA.recover(msgHash, sig.r, sig.vs);
             guardianIndex = _getGuardianIndex(guardianAddr);
             require(guardianIndex != -1, "invalid signature");
@@ -325,7 +332,7 @@ contract DepositSecurityModule {
         require(block.number - blockNumber <= pauseIntentValidityPeriodBlocks, "pause intent expired");
 
         STAKING_ROUTER.pauseStakingModule(stakingModuleId);
-        emit DepositsPaused(guardianAddr, stakingModuleId);
+        emit DepositsPaused(guardianAddr, uint24(stakingModuleId));
     }
 
     /**
@@ -333,11 +340,10 @@ contract DepositSecurityModule {
      *
      * Only callable by the owner.
      */
-    function unpauseDeposits(uint256 stakingModuleId) external onlyOwner {
-        require(stakingModuleId <= type(uint24).max, "MODULE_ID_TOO_LARGE");
+    function unpauseDeposits(uint256 stakingModuleId) external validStakingModuleId(stakingModuleId) onlyOwner {
          /// @dev unpause only paused modules (skip stopped)
-        if (STAKING_ROUTER.getStakingModuleIsDepositsPaused(uint24(stakingModuleId))) {
-            STAKING_ROUTER.resumeStakingModule(uint24(stakingModuleId));
+        if (STAKING_ROUTER.getStakingModuleIsDepositsPaused(stakingModuleId)) {
+            STAKING_ROUTER.resumeStakingModule(stakingModuleId);
             emit DepositsUnpaused(uint24(stakingModuleId));
         }
     }
@@ -347,10 +353,9 @@ contract DepositSecurityModule {
      * guardian attestations of non-stale deposit root and `keysOpIndex`, and the number of
      * such attestations will be enough to reach quorum.
      */
-    function canDeposit(uint256 stakingModuleId) external view returns (bool) {
-        require(stakingModuleId <= type(uint24).max, "MODULE_ID_TOO_LARGE");
-        bool isModuleActive = STAKING_ROUTER.getStakingModuleIsActive(uint24(stakingModuleId));
-        uint256 lastDepositBlock = STAKING_ROUTER.getStakingModuleLastDepositBlock(uint24(stakingModuleId));
+    function canDeposit(uint256 stakingModuleId) external view validStakingModuleId(stakingModuleId) returns (bool) {
+        bool isModuleActive = STAKING_ROUTER.getStakingModuleIsActive(stakingModuleId);
+        uint256 lastDepositBlock = STAKING_ROUTER.getStakingModuleLastDepositBlock(stakingModuleId);
         return isModuleActive && quorum > 0 && block.number - lastDepositBlock >= minDepositBlockDistance;
     }
 
@@ -378,25 +383,24 @@ contract DepositSecurityModule {
         uint256 keysOpIndex,
         bytes calldata depositCalldata,
         Signature[] calldata sortedGuardianSignatures
-    ) external {
-        require(stakingModuleId <= type(uint24).max, "MODULE_ID_TOO_LARGE");
+    ) external validStakingModuleId(stakingModuleId) {
         require(quorum > 0 && sortedGuardianSignatures.length >= quorum, "no guardian quorum");
 
         bytes32 onchainDepositRoot = IDepositContract(DEPOSIT_CONTRACT).get_deposit_root();
         require(depositRoot == onchainDepositRoot, "deposit root changed");
 
-        require(STAKING_ROUTER.getStakingModuleIsActive(uint24(stakingModuleId)), "module not active");
+        require(STAKING_ROUTER.getStakingModuleIsActive(stakingModuleId), "module not active");
 
-        uint256 lastDepositBlock = STAKING_ROUTER.getStakingModuleLastDepositBlock(uint24(stakingModuleId));
+        uint256 lastDepositBlock = STAKING_ROUTER.getStakingModuleLastDepositBlock(stakingModuleId);
         require(block.number - lastDepositBlock >= minDepositBlockDistance, "too frequent deposits");
         require(blockHash != bytes32(0) && blockhash(blockNumber) == blockHash, "unexpected block hash");
 
-        uint256 onchainKeysOpIndex = STAKING_ROUTER.getStakingModuleKeysOpIndex(uint24(stakingModuleId));
+        uint256 onchainKeysOpIndex = STAKING_ROUTER.getStakingModuleKeysOpIndex(stakingModuleId);
         require(keysOpIndex == onchainKeysOpIndex, "keys op index changed");
 
         _verifySignatures(depositRoot, blockNumber, blockHash, uint24(stakingModuleId), keysOpIndex, sortedGuardianSignatures);
 
-        LIDO.deposit(maxDepositsPerBlock, uint24(stakingModuleId), depositCalldata);
+        LIDO.deposit(maxDepositsPerBlock, stakingModuleId, depositCalldata);
     }
 
     function _verifySignatures(

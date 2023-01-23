@@ -90,6 +90,11 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
 
     uint256 internal constant UINT24_MAX = type(uint24).max;
 
+    modifier validStakingModuleId(uint256 _stakingModuleId) {
+        if (_stakingModuleId > UINT24_MAX) revert ErrorStakingModuleIdTooLarge();
+        _;
+    }
+
     constructor(address _depositContract) BeaconChainDepositor(_depositContract) {
         /// @dev lock version in implementation to avoid initialize() call
         ///      DEFAULT_ADMIN_ROLE will remain unset, i.e. no ability to add new members ro roles
@@ -183,8 +188,10 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         uint16 _targetShare,
         uint16 _stakingModuleFee,
         uint16 _treasuryFee
-    ) external onlyRole(STAKING_MODULE_MANAGE_ROLE) {
-        if (_stakingModuleId > UINT24_MAX) revert ErrorStakingModuleIdTooLarge();
+    ) external 
+      validStakingModuleId(_stakingModuleId) 
+      onlyRole(STAKING_MODULE_MANAGE_ROLE) 
+    {
         if (_targetShare > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_targetShare");
         if (_stakingModuleFee + _treasuryFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_stakingModuleFee + _treasuryFee");
 
@@ -217,8 +224,12 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     /**
      *  @dev Returns staking module by id
      */
-    function getStakingModule(uint256 _stakingModuleId) external view returns (StakingModule memory) {
-        if (_stakingModuleId > UINT24_MAX) revert ErrorStakingModuleIdTooLarge();
+    function getStakingModule(uint256 _stakingModuleId) 
+        external 
+        view 
+        validStakingModuleId(_stakingModuleId) 
+        returns (StakingModule memory) 
+    {
         return _getStakingModuleById(uint24(_stakingModuleId));
     }
 
@@ -239,16 +250,20 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     /**
      * @dev Returns status of staking module
      */
-    function getStakingModuleStatus(uint256 _stakingModuleId) public view returns (StakingModuleStatus) {
-        if (_stakingModuleId > UINT24_MAX) revert ErrorStakingModuleIdTooLarge();
+    function getStakingModuleStatus(uint256 _stakingModuleId) public view 
+        validStakingModuleId(_stakingModuleId)  
+        returns (StakingModuleStatus) 
+    {
         return StakingModuleStatus(_getStakingModuleById(uint24(_stakingModuleId)).status);
     }
 
     /**
      * @notice set the staking module status flag for participation in further deposits and/or reward distribution
      */
-    function setStakingModuleStatus(uint256 _stakingModuleId, StakingModuleStatus _status) external onlyRole(STAKING_MODULE_MANAGE_ROLE) {
-        if (_stakingModuleId > UINT24_MAX) revert ErrorStakingModuleIdTooLarge();
+    function setStakingModuleStatus(uint256 _stakingModuleId, StakingModuleStatus _status) external 
+        validStakingModuleId(_stakingModuleId) 
+        onlyRole(STAKING_MODULE_MANAGE_ROLE) 
+    {
         StakingModule storage stakingModule = _getStakingModuleById(uint24(_stakingModuleId));
         stakingModule.status = uint8(_status);
         emit StakingModuleStatusSet(uint24(_stakingModuleId), _status, msg.sender);
@@ -258,8 +273,10 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
      * @notice pause deposits for staking module
      * @param _stakingModuleId id of the staking module to be paused
      */
-    function pauseStakingModule(uint256 _stakingModuleId) external onlyRole(STAKING_MODULE_PAUSE_ROLE) {
-        if (_stakingModuleId > UINT24_MAX) revert ErrorStakingModuleIdTooLarge();
+    function pauseStakingModule(uint256 _stakingModuleId) external 
+        validStakingModuleId(_stakingModuleId) 
+        onlyRole(STAKING_MODULE_PAUSE_ROLE) 
+    {
         StakingModule storage stakingModule = _getStakingModuleById(uint24(_stakingModuleId));
         StakingModuleStatus _prevStatus = StakingModuleStatus(stakingModule.status);
         if (_prevStatus != StakingModuleStatus.Active) revert ErrorStakingModuleNotActive();
@@ -271,8 +288,10 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
      * @notice resume deposits for staking module
      * @param _stakingModuleId id of the staking module to be unpaused
      */
-    function resumeStakingModule(uint256 _stakingModuleId) external onlyRole(STAKING_MODULE_RESUME_ROLE) {
-        if (_stakingModuleId > UINT24_MAX) revert ErrorStakingModuleIdTooLarge();
+    function resumeStakingModule(uint256 _stakingModuleId) external 
+        validStakingModuleId(_stakingModuleId) 
+        onlyRole(STAKING_MODULE_RESUME_ROLE) 
+    {
         StakingModule storage stakingModule = _getStakingModuleById(uint24(_stakingModuleId));
         StakingModuleStatus _prevStatus = StakingModuleStatus(stakingModule.status);
         if (_prevStatus != StakingModuleStatus.DepositsPaused) revert ErrorStakingModuleNotPaused();
@@ -280,34 +299,46 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         emit StakingModuleStatusSet(uint24(_stakingModuleId), StakingModuleStatus.Active, msg.sender);
     }
 
-    function getStakingModuleIsStopped(uint256 _stakingModuleId) external view returns (bool) {
-        if (_stakingModuleId > UINT24_MAX) revert ErrorStakingModuleIdTooLarge();
+    function getStakingModuleIsStopped(uint256 _stakingModuleId) external view 
+        validStakingModuleId(_stakingModuleId) 
+        returns (bool) 
+    {
         return getStakingModuleStatus(uint24(_stakingModuleId)) == StakingModuleStatus.Stopped;
     }
 
-    function getStakingModuleIsDepositsPaused(uint256 _stakingModuleId) external view returns (bool) {
-        if (_stakingModuleId > UINT24_MAX) revert ErrorStakingModuleIdTooLarge();
+    function getStakingModuleIsDepositsPaused(uint256 _stakingModuleId) external view 
+        validStakingModuleId(_stakingModuleId) 
+        returns (bool) 
+    {
         return getStakingModuleStatus(uint24(_stakingModuleId)) == StakingModuleStatus.DepositsPaused;
     }
 
-    function getStakingModuleIsActive(uint256 _stakingModuleId) external view returns (bool) {
-        if (_stakingModuleId > UINT24_MAX) revert ErrorStakingModuleIdTooLarge();
+    function getStakingModuleIsActive(uint256 _stakingModuleId) external view 
+        validStakingModuleId(_stakingModuleId) 
+        returns (bool) 
+    {
         return getStakingModuleStatus(uint24(_stakingModuleId)) == StakingModuleStatus.Active;
     }
 
-    function getStakingModuleKeysOpIndex(uint256 _stakingModuleId) external view returns (uint256) {
-        if (_stakingModuleId > UINT24_MAX) revert ErrorStakingModuleIdTooLarge();
+    function getStakingModuleKeysOpIndex(uint256 _stakingModuleId) external view 
+        validStakingModuleId(_stakingModuleId) 
+        returns (uint256) 
+    {
         return IStakingModule(_getStakingModuleAddressById(uint24(_stakingModuleId))).getValidatorsKeysNonce();
     }
 
-    function getStakingModuleLastDepositBlock(uint256 _stakingModuleId) external view returns (uint256) {
-        if (_stakingModuleId > UINT24_MAX) revert ErrorStakingModuleIdTooLarge();
+    function getStakingModuleLastDepositBlock(uint256 _stakingModuleId) external view 
+        validStakingModuleId(_stakingModuleId) 
+        returns (uint256) 
+    {
         StakingModule storage stakingModule = _getStakingModuleById(uint24(_stakingModuleId));
         return stakingModule.lastDepositBlock;
     }
 
-    function getStakingModuleActiveKeysCount(uint256 _stakingModuleId) external view returns (uint256 activeKeysCount) {
-        if (_stakingModuleId > UINT24_MAX) revert ErrorStakingModuleIdTooLarge();
+    function getStakingModuleActiveKeysCount(uint256 _stakingModuleId) external view 
+        validStakingModuleId(_stakingModuleId) 
+        returns (uint256 activeKeysCount) 
+    {
         (, activeKeysCount, ) = IStakingModule(_getStakingModuleAddressById(uint24(_stakingModuleId))).getValidatorsKeysStats();
     }
 
@@ -317,8 +348,10 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
      * @param _stakingModuleId id of the staking module to be deposited
      * @return max depositable keys count
      */
-    function getStakingModuleMaxDepositableKeys(uint256 _stakingModuleId) external view returns (uint256) {
-        if (_stakingModuleId > UINT24_MAX) revert ErrorStakingModuleIdTooLarge();
+    function getStakingModuleMaxDepositableKeys(uint256 _stakingModuleId) external view 
+        validStakingModuleId(_stakingModuleId) 
+        returns (uint256) 
+    {
         uint256 _keysToAllocate = getLido().getBufferedEther() / DEPOSIT_SIZE;
         return _estimateStakingModuleMaxDepositableKeysByIndex(_getStakingModuleIndexById(uint24(_stakingModuleId)), _keysToAllocate);
     }
@@ -420,9 +453,8 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         uint256 _maxDepositsCount,
         uint256 _stakingModuleId,
         bytes calldata _depositCalldata
-    ) external payable returns (uint256 keysCount) {
+    ) external payable validStakingModuleId(_stakingModuleId)  returns (uint256 keysCount) {
         if (msg.sender != LIDO_POSITION.getStorageAddress()) revert ErrorAppAuthLidoFailed();
-        if (_stakingModuleId > UINT24_MAX) revert ErrorStakingModuleIdTooLarge();
 
         uint256 depositableEth = msg.value;
         if (depositableEth == 0) {
