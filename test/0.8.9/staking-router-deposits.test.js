@@ -152,7 +152,10 @@ contract('StakingRouter', (accounts) => {
       await assert.reverts(lido.deposit(maxDepositsCount, curated.id, '0x', { from: stranger1 }), 'APP_AUTH_DSM_FAILED')
       await assert.reverts(lido.deposit(maxDepositsCount, curated.id, '0x', { from: voting }), 'APP_AUTH_DSM_FAILED')
 
-      await assert.reverts(stakingRouter.deposit(maxDepositsCount, curated.id, '0x', { from: voting }), 'APP_AUTH_LIDO_FAILED')
+      await assert.revertsWithCustomError(
+        stakingRouter.deposit(maxDepositsCount, curated.id, '0x', { from: voting }),
+        'ErrorAppAuthLidoFailed()'
+      )
     })
 
     it('Lido.deposit() :: check deposit with keys', async () => {

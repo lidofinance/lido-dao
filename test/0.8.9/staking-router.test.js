@@ -163,7 +163,10 @@ contract('StakingRouter', (accounts) => {
     })
 
     it('deposit fails', async () => {
-      await assert.reverts(stakingRouterImplementation.deposit(100, 0, '0x00', { from: stranger }), `APP_AUTH_LIDO_FAILED`)
+      await assert.revertsWithCustomError(
+        stakingRouterImplementation.deposit(100, 0, '0x00', { from: stranger }),
+        `ErrorAppAuthLidoFailed()`
+      )
     })
   })
 
@@ -216,19 +219,19 @@ contract('StakingRouter', (accounts) => {
     })
 
     it('getStakingModuleKeysOpIndex reverts when staking module id too large', async () => {
-      await assert.reverts(app.getStakingModuleKeysOpIndex(UINT24_MAX), 'MODULE_ID_TOO_LARGE')
+      await assert.revertsWithCustomError(app.getStakingModuleKeysOpIndex(UINT24_MAX), 'ErrorStakingModuleIdTooLarge()')
     })
 
     it('getStakingModuleLastDepositBlock reverts when staking module id too large', async () => {
-      await assert.reverts(app.getStakingModuleLastDepositBlock(UINT24_MAX), 'MODULE_ID_TOO_LARGE')
+      await assert.revertsWithCustomError(app.getStakingModuleLastDepositBlock(UINT24_MAX), 'ErrorStakingModuleIdTooLarge()')
     })
 
     it('getStakingModuleActiveKeysCount reverts when staking module id too large', async () => {
-      await assert.reverts(app.getStakingModuleActiveKeysCount(UINT24_MAX), 'MODULE_ID_TOO_LARGE')
+      await assert.revertsWithCustomError(app.getStakingModuleActiveKeysCount(UINT24_MAX), 'ErrorStakingModuleIdTooLarge()')
     })
 
     it('getStakingModuleMaxDepositableKeys reverts when staking module id too large', async () => {
-      await assert.reverts(app.getStakingModuleMaxDepositableKeys(UINT24_MAX), 'MODULE_ID_TOO_LARGE')
+      await assert.revertsWithCustomError(app.getStakingModuleMaxDepositableKeys(UINT24_MAX), 'ErrorStakingModuleIdTooLarge()')
     })
 
     it('getStakingModuleActiveKeysCount', async () => {
@@ -248,7 +251,7 @@ contract('StakingRouter', (accounts) => {
     })
 
     it('getStakingModuleIndexById zero index fail', async () => {
-      await assert.reverts(app.getStakingModuleIndexById(0), 'UNREGISTERED_STAKING_MODULE')
+      await assert.revertsWithCustomError(app.getStakingModuleIndexById(0), 'ErrorStakingModuleUnregistered()')
     })
   })
 
@@ -381,11 +384,11 @@ contract('StakingRouter', (accounts) => {
       assert.equals(await app.getStakingModuleIsDepositsPaused(stakingModulesParams[0].expectedModuleId), false)
       assert.equals(await app.getStakingModuleIsActive(stakingModulesParams[0].expectedModuleId), true)
 
-      await assert.reverts(app.getStakingModule(UINT24_MAX), 'MODULE_ID_TOO_LARGE')
-      await assert.reverts(app.getStakingModuleStatus(UINT24_MAX), 'MODULE_ID_TOO_LARGE')
-      await assert.reverts(app.getStakingModuleIsStopped(UINT24_MAX), 'MODULE_ID_TOO_LARGE')
-      await assert.reverts(app.getStakingModuleIsDepositsPaused(UINT24_MAX), 'MODULE_ID_TOO_LARGE')
-      await assert.reverts(app.getStakingModuleIsActive(UINT24_MAX), 'MODULE_ID_TOO_LARGE')
+      await assert.revertsWithCustomError(app.getStakingModule(UINT24_MAX), 'ErrorStakingModuleIdTooLarge()')
+      await assert.revertsWithCustomError(app.getStakingModuleStatus(UINT24_MAX), 'ErrorStakingModuleIdTooLarge()')
+      await assert.revertsWithCustomError(app.getStakingModuleIsStopped(UINT24_MAX), 'ErrorStakingModuleIdTooLarge()')
+      await assert.revertsWithCustomError(app.getStakingModuleIsDepositsPaused(UINT24_MAX), 'ErrorStakingModuleIdTooLarge()')
+      await assert.revertsWithCustomError(app.getStakingModuleIsActive(UINT24_MAX), 'ErrorStakingModuleIdTooLarge()')
 
       const module = await app.getStakingModule(stakingModulesParams[0].expectedModuleId)
 
@@ -483,7 +486,7 @@ contract('StakingRouter', (accounts) => {
     })
 
     it('update staking module reverts on large module id', async () => {
-      await assert.reverts(
+      await assert.revertsWithCustomError(
         app.updateStakingModule(
           UINT24_MAX,
           stakingModulesParams[0].targetShare + 1,
@@ -493,7 +496,7 @@ contract('StakingRouter', (accounts) => {
             from: appManager
           }
         ),
-        `MODULE_ID_TOO_LARGE`
+        `ErrorStakingModuleIdTooLarge()`
       )
     })
 
@@ -564,11 +567,11 @@ contract('StakingRouter', (accounts) => {
     })
 
     it('set staking module status reverts if staking module id too large', async () => {
-      await assert.reverts(
+      await assert.revertsWithCustomError(
         app.setStakingModuleStatus(UINT24_MAX, StakingModuleStatus.Stopped, {
           from: appManager
         }),
-        `MODULE_ID_TOO_LARGE`
+        `ErrorStakingModuleIdTooLarge()`
       )
     })
 
@@ -594,11 +597,11 @@ contract('StakingRouter', (accounts) => {
     })
 
     it('pause staking module reverts when staking module too large', async () => {
-      await assert.reverts(
+      await assert.revertsWithCustomError(
         app.pauseStakingModule(UINT24_MAX, {
           from: appManager
         }),
-        `MODULE_ID_TOO_LARGE`
+        `ErrorStakingModuleIdTooLarge()`
       )
     })
 
@@ -639,13 +642,16 @@ contract('StakingRouter', (accounts) => {
     })
 
     it('deposit fails', async () => {
-      await assert.reverts(app.deposit(100, UINT24_MAX, '0x00', { value: 100, from: lido }), 'MODULE_ID_TOO_LARGE')
+      await assert.revertsWithCustomError(
+        app.deposit(100, UINT24_MAX, '0x00', { value: 100, from: lido }),
+        'ErrorStakingModuleIdTooLarge()'
+      )
     })
 
     it('deposit fails', async () => {
-      await assert.reverts(
+      await assert.revertsWithCustomError(
         app.deposit(100, stakingModulesParams[0].expectedModuleId, '0x00', { value: 100, from: lido }),
-        'STAKING_MODULE_NOT_ACTIVE'
+        'ErrorStakingModuleNotActive()'
       )
     })
 
@@ -666,11 +672,11 @@ contract('StakingRouter', (accounts) => {
     })
 
     it('resume staking module reverts when staking module id too large', async () => {
-      await assert.reverts(
+      await assert.revertsWithCustomError(
         app.resumeStakingModule(UINT24_MAX, {
           from: appManager
         }),
-        `MODULE_ID_TOO_LARGE`
+        `ErrorStakingModuleIdTooLarge()`
       )
     })
 
