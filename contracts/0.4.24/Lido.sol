@@ -783,7 +783,7 @@ contract Lido is ILido, StETH, AragonApp {
         /// @notice allow zero value of depositableEth, in this case SR will simply transfer the unaccounted ether to Lido contract
         uint256 depositedKeysCount = getStakingRouter().deposit.value(depositableEth)(
             _maxDepositsCount,
-            uint24(_stakingModuleId),
+            _stakingModuleId,
             _depositCalldata
         );
         assert(depositedKeysCount <= depositableEth / DEPOSIT_SIZE );
