@@ -1,7 +1,7 @@
 const hre = require('hardhat')
-const { assertBn, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertBn, assertEvent, assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
 const { newDao, newApp } = require('../0.4.24/helpers/dao')
-const { ETH, genKeys } = require('../helpers/utils')
+const { ETH, genKeys, toBN } = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
 
 const LidoMock = artifacts.require('LidoMock.sol')
@@ -198,6 +198,14 @@ contract('StakingRouter', (accounts) => {
       assertBn(await lido.getBufferedEther(), ETH(32), 'invalid total buffer')
 
       assertEvent(receipt, 'Unbuffered', { expectedArgs: { amount: ETH(maxDepositsCount * 32) } })
+    })
+
+    it('Lido.deposit() :: revert if stakingModuleId more than uint24', async () => {
+      const maxDepositsCount = 100
+      const maxModuleId = toBN(2).pow(toBN(24))
+
+      await lido.setDepositSecurityModule(stranger1, { from: voting })
+      await assertRevert(lido.deposit(maxDepositsCount, maxModuleId, '0x', { from: stranger1 }), 'STAKING_MODULE_ID_TOO_LARGE')
     })
   })
 })

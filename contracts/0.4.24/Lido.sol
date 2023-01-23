@@ -15,6 +15,7 @@ import "./interfaces/IStakingRouter.sol";
 import "./StETH.sol";
 
 import "./lib/StakeLimitUtils.sol";
+import "hardhat/console.sol";
 
 /**
  * @title Liquid staking pool implementation
@@ -771,8 +772,9 @@ contract Lido is ILido, StETH, AragonApp {
      * @param _stakingModuleId id of the staking module to be deposited
      * @param _depositCalldata module calldata
      */
-    function deposit(uint256 _maxDepositsCount, uint24 _stakingModuleId, bytes _depositCalldata) external whenNotStopped {
+    function deposit(uint256 _maxDepositsCount, uint256 _stakingModuleId, bytes _depositCalldata) external whenNotStopped {
         require(msg.sender == getDepositSecurityModule(), "APP_AUTH_DSM_FAILED");
+        require(_stakingModuleId <= uint24(-1), "STAKING_MODULE_ID_TOO_LARGE");
 
         uint256 bufferedEth = _getBufferedEther();
         /// available ether amount for deposits (multiple of 32eth)
@@ -782,7 +784,7 @@ contract Lido is ILido, StETH, AragonApp {
         /// @notice allow zero value of depositableEth, in this case SR will simply transfer the unaccounted ether to Lido contract
         uint256 depositedKeysCount = getStakingRouter().deposit.value(depositableEth)(
             _maxDepositsCount,
-            _stakingModuleId,
+            uint24(_stakingModuleId),
             _depositCalldata
         );
         assert(depositedKeysCount <= depositableEth / DEPOSIT_SIZE );

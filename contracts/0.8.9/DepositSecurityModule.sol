@@ -12,7 +12,7 @@ import {IDepositContract} from "./interfaces/IDepositContract.sol";
 interface ILido {
     function deposit(
         uint256 _maxDepositsCount,
-        uint24 _stakingModuleId,
+        uint256 _stakingModuleId,
         bytes calldata _depositCalldata
     ) external;
 }
@@ -333,11 +333,12 @@ contract DepositSecurityModule {
      *
      * Only callable by the owner.
      */
-    function unpauseDeposits(uint24 stakingModuleId) external onlyOwner {
+    function unpauseDeposits(uint256 stakingModuleId) external onlyOwner {
+        require(stakingModuleId <= type(uint24).max, "MODULE_ID_TOO_LARGE");
          /// @dev unpause only paused modules (skip stopped)
-        if (STAKING_ROUTER.getStakingModuleIsDepositsPaused(stakingModuleId)) {
-            STAKING_ROUTER.resumeStakingModule(stakingModuleId);
-            emit DepositsUnpaused(stakingModuleId);
+        if (STAKING_ROUTER.getStakingModuleIsDepositsPaused(uint24(stakingModuleId))) {
+            STAKING_ROUTER.resumeStakingModule(uint24(stakingModuleId));
+            emit DepositsUnpaused(uint24(stakingModuleId));
         }
     }
 
@@ -346,9 +347,10 @@ contract DepositSecurityModule {
      * guardian attestations of non-stale deposit root and `keysOpIndex`, and the number of
      * such attestations will be enough to reach quorum.
      */
-    function canDeposit(uint24 stakingModuleId) external view returns (bool) {
-        bool isModuleActive = STAKING_ROUTER.getStakingModuleIsActive(stakingModuleId);
-        uint256 lastDepositBlock = STAKING_ROUTER.getStakingModuleLastDepositBlock(stakingModuleId);
+    function canDeposit(uint256 stakingModuleId) external view returns (bool) {
+        require(stakingModuleId <= type(uint24).max, "MODULE_ID_TOO_LARGE");
+        bool isModuleActive = STAKING_ROUTER.getStakingModuleIsActive(uint24(stakingModuleId));
+        uint256 lastDepositBlock = STAKING_ROUTER.getStakingModuleLastDepositBlock(uint24(stakingModuleId));
         return isModuleActive && quorum > 0 && block.number - lastDepositBlock >= minDepositBlockDistance;
     }
 
@@ -372,28 +374,29 @@ contract DepositSecurityModule {
         uint256 blockNumber,
         bytes32 blockHash,
         bytes32 depositRoot,
-        uint24 stakingModuleId,
+        uint256 stakingModuleId,
         uint256 keysOpIndex,
         bytes calldata depositCalldata,
         Signature[] calldata sortedGuardianSignatures
     ) external {
+        require(stakingModuleId <= type(uint24).max, "MODULE_ID_TOO_LARGE");
         require(quorum > 0 && sortedGuardianSignatures.length >= quorum, "no guardian quorum");
 
         bytes32 onchainDepositRoot = IDepositContract(DEPOSIT_CONTRACT).get_deposit_root();
         require(depositRoot == onchainDepositRoot, "deposit root changed");
 
-        require(STAKING_ROUTER.getStakingModuleIsActive(stakingModuleId), "module not active");
+        require(STAKING_ROUTER.getStakingModuleIsActive(uint24(stakingModuleId)), "module not active");
 
-        uint256 lastDepositBlock = STAKING_ROUTER.getStakingModuleLastDepositBlock(stakingModuleId);
+        uint256 lastDepositBlock = STAKING_ROUTER.getStakingModuleLastDepositBlock(uint24(stakingModuleId));
         require(block.number - lastDepositBlock >= minDepositBlockDistance, "too frequent deposits");
         require(blockHash != bytes32(0) && blockhash(blockNumber) == blockHash, "unexpected block hash");
 
-        uint256 onchainKeysOpIndex = STAKING_ROUTER.getStakingModuleKeysOpIndex(stakingModuleId);
+        uint256 onchainKeysOpIndex = STAKING_ROUTER.getStakingModuleKeysOpIndex(uint24(stakingModuleId));
         require(keysOpIndex == onchainKeysOpIndex, "keys op index changed");
 
-        _verifySignatures(depositRoot, blockNumber, blockHash, stakingModuleId, keysOpIndex, sortedGuardianSignatures);
+        _verifySignatures(depositRoot, blockNumber, blockHash, uint24(stakingModuleId), keysOpIndex, sortedGuardianSignatures);
 
-        LIDO.deposit(maxDepositsPerBlock, stakingModuleId, depositCalldata);
+        LIDO.deposit(maxDepositsPerBlock, uint24(stakingModuleId), depositCalldata);
     }
 
     function _verifySignatures(
