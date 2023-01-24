@@ -449,6 +449,9 @@ contract Lido is StETHPermit, AragonApp {
     * @param _newBufferedEtherReserveAmount amount of ETH in deposit buffer that should be reserved from being deposited
     * @param _requestIdToFinalizeUpTo rigth boundary of requestId range if equals 0, no requests should be finalized 
     * @param _finalizationShareRate share rate that should be used for finalization
+    * 
+    * @return totalPooledEther amount of ether in the protocol after report
+    * @return totalShares amount of shares in the protocol after report
     */
     function handleOracleReport(
         // CL values
@@ -460,7 +463,7 @@ contract Lido is StETHPermit, AragonApp {
         uint256 _newBufferedEtherReserveAmount,
         uint256 _requestIdToFinalizeUpTo,
         uint256 _finalizationShareRate
-    ) external {
+    ) external returns (uint256 totalPooledEther, uint256 totalShares){
         require(msg.sender == getOracle(), "APP_AUTH_FAILED");
         _whenNotStopped();
 
@@ -490,6 +493,9 @@ contract Lido is StETHPermit, AragonApp {
             executionLayerRewards,
             _withdrawalVaultBalance
         );
+
+        totalPooledEther = _getTotalPooledEther();
+        totalShares = _getTotalShares();
     }
 
     /**
