@@ -662,7 +662,7 @@ contract Lido is StETHPermit, AragonApp {
             IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(withdrawalQueueAddress);
 
             uint256 lastUnfinalizedRequestId = withdrawalQueue.finalizedRequestsCounter();
-            (,,minEtherReserve,,,) = withdrawalQueue.getWithdrawalRequestStatus(lastUnfinalizedRequestId);
+            (minEtherReserve,,,,,) = withdrawalQueue.getWithdrawalRequestStatus(lastUnfinalizedRequestId);
         }
 
         BUFFERED_ETHER_RESERVE_POSITION.setStorageUint256(_max(_newBufferedEtherReserve, minEtherReserve));
@@ -733,18 +733,14 @@ contract Lido is StETHPermit, AragonApp {
 
             uint256 shareRate = _finalizationShareRates[i];
 
-            // todo(folkyatina)?: vectorize finalization batches 
-            (uint256 etherToLock, uint256 sharesToBurn) = withdrawalQueue.calculateFinalizationParams(
+            (uint256 etherToLock, uint256 sharesToBurn) = withdrawalQueue.finalizationBatch(
                 lastIdToFinalize,
                 shareRate
             );
 
             sharesToBurnAccumulator = sharesToBurnAccumulator.add(sharesToBurn);
 
-            withdrawalQueue.finalize.value(etherToLock)(
-                lastIdToFinalize,
-                shareRate
-            );
+            withdrawalQueue.finalize.value(etherToLock)(lastIdToFinalize);
         }
 
         _burnShares(withdrawalQueueAddress, sharesToBurn);

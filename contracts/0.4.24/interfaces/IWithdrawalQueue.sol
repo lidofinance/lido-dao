@@ -8,15 +8,12 @@ pragma solidity 0.4.24;
  * @notice WithdrawalQueue interface to be used in Lido.sol contract
  */
 interface IWithdrawalQueue {
-    function calculateFinalizationParams(
-        uint256 _lastIdToFinalize,
-        uint256 _shareRate
-    ) external view returns (uint128 sharesToBurn, uint128 etherToLock);
+    function finalizationBatch(uint256 _lastRequestIdToFinalize, uint256 _shareRate) 
+        external
+        view 
+        returns (uint128 eth, uint128 shares);
 
-    function finalize(
-        uint256 _lastIdToFinalize,
-        uint256 _shareRate
-    ) external payable;
+    function finalize(uint256 _lastIdToFinalize) external payable;
 
     function finalizedRequestsCounter() external view returns (uint256);
 
@@ -26,10 +23,10 @@ interface IWithdrawalQueue {
         external
         view
         returns (
+            uint256 amountOfStETH,
+            uint256 amountOfShares,
             address recipient,
-            uint256 requestBlockNumber,
-            uint256 etherToWithdraw,
-            uint256 shares,
+            uint256 blockNumber,
             bool isFinalized,
             bool isClaimed
         );

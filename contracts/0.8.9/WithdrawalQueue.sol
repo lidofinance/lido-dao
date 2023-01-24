@@ -62,27 +62,27 @@ contract WithdrawalQueue is AccessControlEnumerable {
 
     /// @notice structure representing a request for withdrawal.
     struct WithdrawalRequest {
-        /// @notice sum of the all requested ether including this request
-        uint128 cumulativeEther;
-        /// @notice sum of the all shares locked for withdrawal including this request
+        /// @notice sum of the all stETH submitted for withdrawals up to this request
+        uint128 cumulativeStETH;
+        /// @notice sum of the all shares locked for withdrawal up to this request
         uint128 cumulativeShares;
-        /// @notice payable address of the recipient withdrawal will be transferred to
+        /// @notice payable address of the recipient eth will be transferred to
         address payable recipient;
-        /// @notice block.number when the request created
-        uint64 requestBlockNumber;
-        /// @notice flag if the request was already claimed
+        /// @notice block.number when the request was created
+        uint64 blockNumber;
+        /// @notice flag if the request was claimed
         bool claimed;
     }
 
-    /**
-     * @notice structure representing share rate for a range (`prevIndex`, `index`] in request queue
-     */
-    struct ShareRate {
-        /// @notice share/ETH rate with 1e27 precision for the protocol
-        uint256 value;
-        /// @notice last index in queue this rate is actual for
-        /// @dev the rate is valid for (`prevIndex`, `index`] where `prevIndex` is previous element `index` value or 0
-        uint256 index;
+    /// @notice structure representing a discount that is applied to request batch on finalization
+    struct Discount {
+        /// @notice discount factor with 1e27 precision (0 - 100% discount, 1e27 - means no discount)
+        uint256 discountFactor;
+        /**
+         * @notice last index in queue the discount is applicable to
+         * @dev the `discountingFactor` is valid for (`previuosIndex`, `index`]
+         */
+        uint256 indexInQueue;
     }
 
     /// Version of the initialized contract data
@@ -92,13 +92,12 @@ contract WithdrawalQueue is AccessControlEnumerable {
     /// - N after calling initialize() during deployment from scratch, where N is the current contract version
     /// - N after upgrading contract from the previous version (after calling finalize_vN())
     bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.WithdrawalQueue.contractVersion");
-
     /// Withdrawal queue resume/pause control storage slot
     bytes32 internal constant RESUMED_POSITION = keccak256("lido.WithdrawalQueue.resumed");
 
-    /// Lido stETH token address to be set upon construction
+    /// @notice Lido stETH token address to be set upon construction
     address public immutable STETH;
-    /// Lido wstETH token address to be set upon construction
+    /// @notice Lido wstETH token address to be set upon construction
     address public immutable WSTETH;
 
     // ACL
@@ -106,9 +105,7 @@ contract WithdrawalQueue is AccessControlEnumerable {
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
     bytes32 public constant FINALIZE_ROLE = keccak256("FINALIZE_ROLE");
 
-    /**
-     * @notice minimal possible sum that is possible to withdraw
-     */
+    /// @notice minimal possible sum that is possible to withdraw
     uint256 public constant MIN_STETH_WITHDRAWAL_AMOUNT = 100;
 
     /**
@@ -118,7 +115,8 @@ contract WithdrawalQueue is AccessControlEnumerable {
      */
     uint256 public constant MAX_STETH_WITHDRAWAL_AMOUNT = 1000 * 1e18;
 
-    uint256 public constant SHARE_RATE_PRECISION = 1e27;
+    /// @notice precision base for share rate and discounting factor values in the contract
+    uint256 public constant E27_PRECISION_BASE = 1e27;
 
     ///! STRUCTURED STORAGE OF THE CONTRACT
     ///  Inherited from AccessControlEnumerable:
@@ -129,12 +127,9 @@ contract WithdrawalQueue is AccessControlEnumerable {
     ///! SLOT 3: uint256 finalizedRequestsCounter
     ///! SLOT 4: WithdrawalRequest[] queue
     ///! SLOT 5: mapping(address => uint256[]) requestsByRecipient
-    ///! SLOT 6: ShareRate[] finalizationRates
+    ///! SLOT 6: Discount[] discountHistory
 
-    /**
-     * @notice amount of ETH on this contract balance that is locked for withdrawal and waiting for claim
-     * @dev Invariant: `lockedEtherAmount <= this.balance`
-     */
+    /// @notice amount of ETH on this contract balance that is locked for withdrawal and waiting for claim
     uint128 public lockedEtherAmount = 0;
 
     /// @notice length of the finalized part of the queue
@@ -146,8 +141,8 @@ contract WithdrawalQueue is AccessControlEnumerable {
     /// @notice withdrawal requests mapped to the recipients
     mapping(address => uint256[]) public requestsByRecipient;
 
-    /// @notice finalization rates history
-    ShareRate[] public finalizationRates;
+    /// @notice finalization discount history
+    Discount[] public discountHistory;
 
     /**
      * @param _stETH address of StETH contract
@@ -225,9 +220,9 @@ contract WithdrawalQueue is AccessControlEnumerable {
     function unfinalizedStETH() external view returns (uint256 stETHAmountToFinalize) {
         stETHAmountToFinalize = 0;
         if (queue.length > 0) {
-            stETHAmountToFinalize = queue[queue.length - 1].cumulativeEther;
+            stETHAmountToFinalize = queue[queue.length - 1].cumulativeStETH;
             if (finalizedRequestsCounter > 0) {
-                stETHAmountToFinalize -= queue[finalizedRequestsCounter - 1].cumulativeEther;
+                stETHAmountToFinalize -= queue[finalizedRequestsCounter - 1].cumulativeStETH;
             }
         }
     }
@@ -241,10 +236,11 @@ contract WithdrawalQueue is AccessControlEnumerable {
      * @dev Reverts with `RequestAmountTooLarge(_amountOfStETH)` if amount is greater than `MAX_STETH_WITHDRAWAL_AMOUNT`
      * @dev Reverts if failed to transfer StETH to the contract
      */
-    function requestWithdrawal(
-        uint256 _amountOfStETH,
-        address _recipient
-    ) external whenResumed returns (uint256 requestId) {
+    function requestWithdrawal(uint256 _amountOfStETH, address _recipient)
+        external
+        whenResumed
+        returns (uint256 requestId)
+    {
         _recipient = _checkWithdrawalRequestInput(_amountOfStETH, _recipient);
 
         return _requestWithdrawal(_amountOfStETH, _recipient);
@@ -275,10 +271,11 @@ contract WithdrawalQueue is AccessControlEnumerable {
      * @param _amountOfWstETH StETH tokens that will be locked for withdrawal
      * @param _recipient address to send ether to upon withdrawal. Will be set to `msg.sender` if `address(0)` is passed
      */
-    function requestWithdrawalWstETH(
-        uint256 _amountOfWstETH,
-        address _recipient
-    ) external whenResumed returns (uint256 requestId) {
+    function requestWithdrawalWstETH(uint256 _amountOfWstETH, address _recipient)
+        external
+        whenResumed
+        returns (uint256 requestId)
+    {
         _recipient = _checkWithdrawalRequestInput(IWstETH(WSTETH).getStETHByWstETH(_amountOfWstETH), _recipient);
         return _requestWithdrawalWstETH(_amountOfWstETH, _recipient);
     }
@@ -303,16 +300,18 @@ contract WithdrawalQueue is AccessControlEnumerable {
 
     /// @notice Request withdrawal of the provided token amount in a batch
     /// NB: Always reverts
-    function requestWithdrawalBatch(
-        uint256[] calldata,
-        address[] calldata
-    ) external view whenResumed returns (uint256[] memory) {
+    function requestWithdrawalBatch(uint256[] calldata, address[] calldata)
+        external
+        view
+        whenResumed
+        returns (uint256[] memory)
+    {
         revert Unimplemented();
     }
 
     /// @notice Claim withdrawals batch once finalized (claimable)
     /// NB: Always reverts
-    function claimWithdrawalBatch(uint256[] calldata /*_requests*/) external pure {
+    function claimWithdrawalBatch(uint256[] calldata /*_requests*/ ) external pure {
         revert Unimplemented();
     }
 
@@ -324,19 +323,15 @@ contract WithdrawalQueue is AccessControlEnumerable {
     /**
      * @notice Returns status of the withdrawal request
      * @param _requestId id of the request
-     * @return recipient address to send ETH to once request is finalized and claimed
-     * @
      */
-    function getWithdrawalRequestStatus(
-        uint256 _requestId
-    )
+    function getWithdrawalRequestStatus(uint256 _requestId)
         external
         view
         returns (
+            uint256 amountOfStETH,
+            uint256 amountOfShares,
             address recipient,
-            uint256 requestBlockNumber,
-            uint256 etherToWithdraw,
-            uint256 shares,
+            uint256 blockNumber,
             bool isFinalized,
             bool isClaimed
         )
@@ -345,13 +340,13 @@ contract WithdrawalQueue is AccessControlEnumerable {
             WithdrawalRequest memory request = queue[_requestId];
 
             recipient = request.recipient;
-            requestBlockNumber = request.requestBlockNumber;
+            blockNumber = request.blockNumber;
 
-            shares = request.cumulativeShares;
-            etherToWithdraw = request.cumulativeEther;
+            amountOfShares = request.cumulativeShares;
+            amountOfStETH = request.cumulativeStETH;
             if (_requestId > 0) {
-                shares -= queue[_requestId - 1].cumulativeShares;
-                etherToWithdraw -= queue[_requestId - 1].cumulativeEther;
+                amountOfShares -= queue[_requestId - 1].cumulativeShares;
+                amountOfStETH -= queue[_requestId - 1].cumulativeStETH;
             }
 
             isFinalized = _requestId < finalizedRequestsCounter;
@@ -360,47 +355,42 @@ contract WithdrawalQueue is AccessControlEnumerable {
     }
 
     /**
-     * @notice Finalize requests in [`finalizedRequestsCounter`,`_lastRequestIdToFinalize`] range with `_shareRate`
-     * @dev ether to finalize all the requests should be calculated using `calculateFinalizationParams` and sent with
-     * this call as msg.value
-     * @param _lastRequestIdToFinalize request index in the queue that will be last finalized request in a batch
-     * @param _shareRate share/ETH rate for the protocol with 1e27 decimals
+     * @notice returns the amount of ETH to be send along to finalize this batch and the amount of shares to burn after
+     * @param _lastRequestIdToFinalize the index in the request queue that should be used as the end of the batch
+     * @param _shareRate share rate that will be used to calculate the batch value
+     *
+     * @return eth amount of ETH required to finalize the batch
+     * @return shares amount of shares that should be burned on finalization
      */
-    function finalize(
-        uint256 _lastRequestIdToFinalize,
-        uint256 _shareRate
-    ) external payable whenResumed onlyRole(FINALIZE_ROLE) {
-        if (_lastRequestIdToFinalize < finalizedRequestsCounter || _lastRequestIdToFinalize >= queue.length) {
-            revert InvalidFinalizationId();
-        }
-        (uint128 ethToWithdraw, ) = _calculateDiscountedBatch(
-            finalizedRequestsCounter,
-            _lastRequestIdToFinalize,
-            _shareRate
-        );
-
-        if (msg.value < ethToWithdraw) revert NotEnoughEther();
-
-        _updateRateHistory(_shareRate, _lastRequestIdToFinalize);
-
-        lockedEtherAmount += _toUint128(msg.value);
-
-        finalizedRequestsCounter = _lastRequestIdToFinalize + 1;
+    function finalizationBatch(uint256 _lastRequestIdToFinalize, uint256 _shareRate)
+        external
+        view
+        returns (uint128 eth, uint128 shares)
+    {
+        (eth, shares) = _batch(finalizedRequestsCounter, _lastRequestIdToFinalize);
+        uint256 batchValue = shares * _shareRate / E27_PRECISION_BASE;
+        uint256 discountFactor = _calculateDiscountFactor(eth, batchValue);
+        eth = _applyDiscount(eth, discountFactor);
     }
 
     /**
-     * @notice calculates the params to fulfill the next batch of requests in queue
-     * @param _lastIdToFinalize last id in the queue to finalize upon
-     * @param _shareRate share rate to finalize requests with
+     * @notice Finalize requests from last finalized one up to `_lastRequestIdToFinalize`
+     * @dev ether to finalize all the requests should be calculated using `finalizationBatch()` and sent along
      *
-     * @return etherToLock amount of eth required to finalize the batch
-     * @return sharesToBurn amount of shares that should be burned on finalization
+     * @param _lastRequestIdToFinalize request index in the queue that will be last finalized request in a batch
      */
-    function calculateFinalizationParams(
-        uint256 _lastIdToFinalize,
-        uint256 _shareRate
-    ) external view returns (uint128 etherToLock, uint128 sharesToBurn) {
-        return _calculateDiscountedBatch(finalizedRequestsCounter, _lastIdToFinalize, _shareRate);
+    function finalize(uint256 _lastRequestIdToFinalize) external payable whenResumed onlyRole(FINALIZE_ROLE) {
+        if (_lastRequestIdToFinalize < finalizedRequestsCounter || _lastRequestIdToFinalize >= queue.length) {
+            revert InvalidFinalizationId();
+        }
+
+        (uint128 amountOfStETH,) = _batch(finalizedRequestsCounter, _lastRequestIdToFinalize);
+        uint256 discountFactor = _calculateDiscountFactor(amountOfStETH, msg.value);
+
+        _updateDiscountHistory(discountFactor, _lastRequestIdToFinalize);
+
+        lockedEtherAmount += _applyDiscount(amountOfStETH, discountFactor);
+        finalizedRequestsCounter = _lastRequestIdToFinalize + 1;
     }
 
     /**
@@ -423,98 +413,107 @@ contract WithdrawalQueue is AccessControlEnumerable {
     /**
      * @notice Claim `_requestId` request and transfer reserved ether to recipient
      * @param _requestId request id to claim
-     * @param _rateIndexHint rate index found offchain that should be used for claiming
+     * @param _hint rate index found offchain that should be used for claiming
      */
-    function claimWithdrawal(uint256 _requestId, uint256 _rateIndexHint) external {
-        // request must be finalized
+    function claimWithdrawal(uint256 _requestId, uint256 _hint) external {
         if (_requestId >= finalizedRequestsCounter) revert RequestNotFinalized();
 
         WithdrawalRequest storage request = queue[_requestId];
-
         if (request.claimed) revert RequestAlreadyClaimed();
+
         request.claimed = true;
 
-        ShareRate memory shareRate;
-
-        if (_isRateHintValid(_requestId, _rateIndexHint)) {
-            shareRate = finalizationRates[_rateIndexHint];
+        Discount memory discount;
+        if (_isHintValid(_requestId, _hint)) {
+            discount = discountHistory[_hint];
         } else {
-            // unbounded loop branch. Can fail with OOG
-            shareRate = finalizationRates[findClaimRateHint(_requestId)];
+            revert InvalidHint();
         }
 
-        (uint128 etherToBeClaimed, ) = _calculateDiscountedBatch(_requestId, _requestId, shareRate.value);
+        (uint128 ethToSend,) = _batch(_requestId, _requestId);
+        ethToSend = _applyDiscount(ethToSend, discount.discountFactor);
 
-        lockedEtherAmount -= etherToBeClaimed;
+        lockedEtherAmount -= ethToSend;
 
-        _sendValue(request.recipient, etherToBeClaimed);
+        _sendValue(request.recipient, ethToSend);
 
         emit WithdrawalClaimed(_requestId, request.recipient, msg.sender);
     }
 
     /**
-     * @notice view function to find a proper ShareRate offchain to pass it to `claim()` later
+     * @notice view function to find a proper Discount offchain to pass it to `claim()` later
      * @param _requestId request id to be claimed later
      *
-     * @return hint rate index for this request
+     * @return hint discount index for this request
      */
-    function findClaimRateHint(uint256 _requestId) public view returns (uint256 hint) {
-        if (_requestId >= finalizedRequestsCounter) revert RateNotFound();
+    function findClaimDiscountHint(uint256 _requestId) public view returns (uint256 hint) {
+        // binary search
+        if (_requestId >= finalizedRequestsCounter) revert InvalidHint();
 
-        for (uint256 i = finalizationRates.length; i > 0; i--) {
-            if (_isRateHintValid(_requestId, i - 1)) {
+        for (uint256 i = discountHistory.length; i > 0; i--) {
+            if (_isHintValid(_requestId, i - 1)) {
                 return i - 1;
             }
         }
         assert(false);
     }
 
-    /// @dev calculates `eth` and `shares` for the batch of requests in (`_firstId`, `_lastId`] range using `_shareRate`
-    function _calculateDiscountedBatch(
-        uint256 _firstId,
-        uint256 _lastId,
-        uint256 _shareRate
-    ) internal view returns (uint128 eth, uint128 shares) {
-        eth = queue[_lastId].cumulativeEther;
-        shares = queue[_lastId].cumulativeShares;
+    /// @dev calculates the sum of stETH and shares for all requests in [`_firstId`, `_lastId`]
+    function _batch(uint256 _firstId, uint256 _lastId)
+        internal
+        view
+        returns (uint128 amountOfStETH, uint128 amountOfShares)
+    {
+        amountOfStETH = queue[_lastId].cumulativeStETH;
+        amountOfShares = queue[_lastId].cumulativeShares;
 
         if (_firstId > 0) {
-            eth -= queue[_firstId - 1].cumulativeEther;
-            shares -= queue[_firstId - 1].cumulativeShares;
+            amountOfStETH -= queue[_firstId - 1].cumulativeStETH;
+            amountOfShares -= queue[_firstId - 1].cumulativeShares;
         }
-
-        eth = _min(eth, _toUint128((shares * _shareRate) / SHARE_RATE_PRECISION));
     }
 
-    /// @dev checks if provided request included in the rate hint boundaries
-    function _isRateHintValid(uint256 _requestId, uint256 _hint) internal view returns (bool isInRange) {
-        uint256 rightBoundary = finalizationRates[_hint].index;
+    /// @dev returns discount factor for finalization
+    function _calculateDiscountFactor(uint256 _requestedValue, uint256 _realValue) internal pure returns (uint256) {
+        if (_requestedValue > _realValue) {
+            return _realValue * E27_PRECISION_BASE / _requestedValue;
+        }
+        return E27_PRECISION_BASE;
+    }
+
+    /// @dev apply discount factor to the given amount of tokens
+    function _applyDiscount(uint128 _amountOfStETH, uint256 _discountFactor) internal pure returns (uint128) {
+        return _toUint128(_amountOfStETH * _discountFactor / E27_PRECISION_BASE);
+    }
+
+    /// @dev checks if provided request included in the discount hint boundaries
+    function _isHintValid(uint256 _requestId, uint256 _indexHint) internal view returns (bool isInRange) {
+        uint256 rightBoundary = discountHistory[_indexHint].indexInQueue;
 
         isInRange = _requestId <= rightBoundary;
-        if (_hint > 0) {
-            uint256 leftBoundary = finalizationRates[_hint - 1].index;
+        if (_indexHint > 0) {
+            uint256 leftBoundary = discountHistory[_indexHint - 1].indexInQueue;
 
             isInRange = isInRange && leftBoundary < _requestId;
         }
     }
 
-    /// @dev add a new entry to share rates history or modify the last one if rate does not change
-    function _updateRateHistory(uint256 _shareRate, uint256 _index) internal {
-        if (finalizationRates.length == 0) {
-            finalizationRates.push(ShareRate(_shareRate, _index));
+    /// @dev add a new entry to discount history or modify the last one if discount does not change
+    function _updateDiscountHistory(uint256 _discountFactor, uint256 _index) internal {
+        if (discountHistory.length == 0) {
+            discountHistory.push(Discount(_discountFactor, _index));
         } else {
-            ShareRate storage lastRate = finalizationRates[finalizationRates.length - 1];
+            Discount storage previousDiscount = discountHistory[discountHistory.length - 1];
 
-            if (_shareRate == lastRate.value) {
-                lastRate.index = _index;
+            if (_discountFactor == previousDiscount.discountFactor) {
+                previousDiscount.indexInQueue = _index;
             } else {
-                finalizationRates.push(ShareRate(_shareRate, _index));
+                discountHistory.push(Discount(_discountFactor, _index));
             }
         }
     }
 
-    /// @notice internal initialization helper
-    /// @dev doesn't check provided addresses intentionally
+    /// @dev internal initialization helper. Doesn't check provided addresses intentionally
     function _initialize(address _admin, address _pauser, address _resumer, address _finalizer) internal {
         if (CONTRACT_VERSION_POSITION.getStorageUint256() != 0) {
             revert AlreadyInitialized();
@@ -538,10 +537,10 @@ contract WithdrawalQueue is AccessControlEnumerable {
         return _enqueue(_amountOfStETH, _recipient);
     }
 
-    function _requestWithdrawalWstETH(
-        uint256 _amountOfWstETH,
-        address _recipient
-    ) internal returns (uint256 requestId) {
+    function _requestWithdrawalWstETH(uint256 _amountOfWstETH, address _recipient)
+        internal
+        returns (uint256 requestId)
+    {
         IERC20(WSTETH).safeTransferFrom(msg.sender, address(this), _amountOfWstETH);
         uint256 amountOfStETH = IWstETH(WSTETH).unwrap(_amountOfWstETH);
 
@@ -568,21 +567,21 @@ contract WithdrawalQueue is AccessControlEnumerable {
         uint256 shares = IStETH(STETH).getSharesByPooledEth(_amountOfStETH);
 
         uint256 cumulativeShares = shares;
-        uint256 cumulativeEther = _amountOfStETH;
+        uint256 cumulativeStETH = _amountOfStETH;
 
         if (requestId > 0) {
             WithdrawalRequest memory prevRequest = queue[requestId - 1];
 
             cumulativeShares += prevRequest.cumulativeShares;
-            cumulativeEther += prevRequest.cumulativeEther;
+            cumulativeStETH += prevRequest.cumulativeStETH;
         }
 
         queue.push(
             WithdrawalRequest(
-                uint128(cumulativeEther),
-                uint128(cumulativeShares),
+                _toUint128(cumulativeStETH),
+                _toUint128(cumulativeShares),
                 payable(_recipient),
-                uint64(block.number),
+                _toUint64(block.number),
                 false
             )
         );
@@ -596,22 +595,22 @@ contract WithdrawalQueue is AccessControlEnumerable {
         return a < b ? a : b;
     }
 
-    function _sendValue(address payable recipient, uint256 amount) internal {
-        if (address(this).balance < amount) revert NotEnoughEther();
+    function _sendValue(address payable _recipient, uint256 _amount) internal {
+        if (address(this).balance < _amount) revert NotEnoughEther();
 
         // solhint-disable-next-line
-        (bool success, ) = recipient.call{value: amount}("");
+        (bool success,) = _recipient.call{value: _amount}("");
         if (!success) revert CantSendValueRecipientMayHaveReverted();
     }
 
-    function _toUint64(uint256 value) internal pure returns (uint64) {
-        if (value > type(uint64).max) revert SafeCastValueDoesNotFit96Bits();
-        return uint64(value);
+    function _toUint64(uint256 _value) internal pure returns (uint64) {
+        if (_value > type(uint64).max) revert SafeCastValueDoesNotFit96Bits();
+        return uint64(_value);
     }
 
-    function _toUint128(uint256 value) internal pure returns (uint128) {
-        if (value > type(uint128).max) revert SafeCastValueDoesNotFit128Bits();
-        return uint128(value);
+    function _toUint128(uint256 _value) internal pure returns (uint128) {
+        if (_value > type(uint128).max) revert SafeCastValueDoesNotFit128Bits();
+        return uint128(_value);
     }
 
     /// @notice Reverts when the contract is uninitialized
@@ -649,15 +648,12 @@ contract WithdrawalQueue is AccessControlEnumerable {
     );
     /// @notice Emitted when withdrawal requests placement paused
     event WithdrawalQueuePaused();
-
     /// @notice Emitted when withdrawal requests placement resumed
     event WithdrawalQueueResumed();
-
     /// @notice Emitted when the contract initialized
     /// @param _admin provided admin address
     /// @param _caller initialization `msg.sender`
     event InitializedV1(address _admin, address _pauser, address _resumer, address _finalizer, address _caller);
-
     event WithdrawalClaimed(uint256 indexed requestId, address indexed receiver, address initiator);
 
     error AdminZeroAddress();
@@ -672,9 +668,10 @@ contract WithdrawalQueue is AccessControlEnumerable {
     error RequestAmountTooLarge(uint256 _amountOfStETH);
     error InvalidFinalizationId();
     error NotEnoughEther();
+    error InvalidMsgValue(uint256 _actualAmount, uint256 _expectedAmount);
     error RequestNotFinalized();
     error RequestAlreadyClaimed();
-    error RateNotFound();
+    error InvalidHint();
     error CantSendValueRecipientMayHaveReverted();
     error SafeCastValueDoesNotFit96Bits();
     error SafeCastValueDoesNotFit128Bits();
