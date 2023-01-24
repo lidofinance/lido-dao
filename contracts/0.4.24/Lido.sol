@@ -911,27 +911,42 @@ contract Lido is StETHPermit, AragonApp {
                         .mul(precisionPoints)
                         .sub(_totalRewards.mul(totalFee))
             );
+
             _mintShares(address(this), shares2mint);
 
-            uint256 treasuryReward = shares2mint;
-            uint256[] memory moduleRewards = new uint256[](recipients.length);
+            (uint256[] memory moduleRewards, uint256 totalModuleRewards) =
+                _transferModuleRewards(recipients, modulesFees, totalFee, shares2mint);
 
-            for (uint256 i = 0; i < recipients.length; i++) {
-                if (modulesFees[i] > 0) {
-                    uint256 moduleReward = shares2mint.mul(modulesFees[i]).div(totalFee);
-                    moduleRewards[i] = moduleReward;
-                    _transferShares(address(this), recipients[i], moduleReward);
-                    _emitTransferAfterMintingShares(recipients[i], moduleReward);
-                    treasuryReward = treasuryReward.sub(moduleReward);
-                }
-            }
-
-            address treasury = getTreasury();
-            _transferShares(address(this), treasury, treasuryReward);
-            _emitTransferAfterMintingShares(treasury, treasuryReward);
+            _transferTreasuryRewards(shares2mint.sub(totalModuleRewards));
 
             router.reportRewardsMinted(moduleIds, moduleRewards);
         }
+    }
+
+    function _transferModuleRewards(
+        address[] memory recipients,
+        uint96[] memory modulesFees,
+        uint256 totalFee,
+        uint256 totalRewards
+    ) internal returns (uint256[] memory moduleRewards, uint256 totalModuleRewards) {
+        totalModuleRewards = 0;
+        moduleRewards = new uint256[](recipients.length);
+
+        for (uint256 i = 0; i < recipients.length; i++) {
+            if (modulesFees[i] > 0) {
+                uint256 iModuleRewards = totalRewards.mul(modulesFees[i]).div(totalFee);
+                moduleRewards[i] = iModuleRewards;
+                _transferShares(address(this), recipients[i], iModuleRewards);
+                _emitTransferAfterMintingShares(recipients[i], iModuleRewards);
+                totalModuleRewards = totalModuleRewards.add(iModuleRewards);
+            }
+        }
+    }
+
+    function _transferTreasuryRewards(uint256 treasuryReward) internal {
+        address treasury = getTreasury();
+        _transferShares(address(this), treasury, treasuryReward);
+        _emitTransferAfterMintingShares(treasury, treasuryReward);
     }
 
     /**
