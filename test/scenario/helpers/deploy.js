@@ -32,12 +32,11 @@ async function deployDaoAndPool(appManager, voting) {
 
   const treasury = web3.eth.accounts.create()
 
-  const [{ dao, acl }, oracleMock, depositContractMock, poolBase, nodeOperatorsRegistryBase] = await Promise.all([
+  const [{ dao, acl }, oracleMock, depositContractMock, poolBase] = await Promise.all([
     newDao(appManager),
     OracleMock.new(),
     DepositContractMock.new(),
-    Lido.new(),
-    NodeOperatorsRegistry.new()
+    Lido.new()
   ])
 
   const stakingRouter = await StakingRouter.new(depositContractMock.address)
@@ -89,33 +88,27 @@ async function deployDaoAndPool(appManager, voting) {
     acl.createPermission(voting, pool.address, MANAGE_PROTOCOL_CONTRACTS_ROLE, appManager, { from: appManager })
   ])
 
-  elRewardsVault = await LidoELRewardsVault.new(pool.address, treasury.address)
-
-  const nodeOperatorsRegistry = await setupNodeOperatorsRegistry(
-    dao,
-    acl,
-    voting,
-    token,
-    nodeOperatorsRegistryBase,
-    appManager,
-    stakingRouter.address
-  )
+  const elRewardsVault = await LidoELRewardsVault.new(pool.address, treasury.address)
+  const nodeOperatorsRegistry = await setupNodeOperatorsRegistry(dao, acl, voting, token, appManager, stakingRouter.address)
 
   const wc = '0x'.padEnd(66, '1234')
   await stakingRouter.initialize(appManager, pool.address, wc, { from: appManager })
 
   // Set up the staking router permissions.
-  const [MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, MODULE_PAUSE_ROLE, MODULE_MANAGE_ROLE] = await Promise.all([
+  const [MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, STAKING_MODULE_PAUSE_ROLE, STAKING_MODULE_MANAGE_ROLE] = await Promise.all([
     stakingRouter.MANAGE_WITHDRAWAL_CREDENTIALS_ROLE(),
-    stakingRouter.MODULE_PAUSE_ROLE(),
-    stakingRouter.MODULE_MANAGE_ROLE()
+    stakingRouter.STAKING_MODULE_PAUSE_ROLE(),
+    stakingRouter.STAKING_MODULE_MANAGE_ROLE()
   ])
-
   await stakingRouter.grantRole(MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, voting, { from: appManager })
-  await stakingRouter.grantRole(MODULE_PAUSE_ROLE, voting, { from: appManager })
-  await stakingRouter.grantRole(MODULE_MANAGE_ROLE, voting, { from: appManager })
+  await stakingRouter.grantRole(STAKING_MODULE_PAUSE_ROLE, voting, { from: appManager })
+  await stakingRouter.grantRole(STAKING_MODULE_MANAGE_ROLE, voting, { from: appManager })
 
-  await stakingRouter.addModule(
+  await stakingRouter.grantRole(MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, appManager, { from: appManager })
+  await stakingRouter.grantRole(STAKING_MODULE_PAUSE_ROLE, appManager, { from: appManager })
+  await stakingRouter.grantRole(STAKING_MODULE_MANAGE_ROLE, appManager, { from: appManager })
+
+  await stakingRouter.addStakingModule(
     'Curated',
     nodeOperatorsRegistry.address,
     10_000, // 100 % _targetShare
@@ -160,8 +153,10 @@ async function deployDaoAndPool(appManager, voting) {
   }
 }
 
-async function setupNodeOperatorsRegistry(dao, acl, voting, token, nodeOperatorsRegistryBase, appManager, stakingRouterAddress) {
-  const nodeOperatorsRegistryProxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)
+async function setupNodeOperatorsRegistry(dao, acl, voting, token, appManager, stakingRouterAddress) {
+  const nodeOperatorsRegistryBase = await NodeOperatorsRegistry.new()
+  const name = 'node-operators-registry-' + Math.random().toString(36).slice(2, 6)
+  const nodeOperatorsRegistryProxyAddress = await newApp(dao, name, nodeOperatorsRegistryBase.address, appManager)
   const nodeOperatorsRegistry = await NodeOperatorsRegistry.at(nodeOperatorsRegistryProxyAddress)
 
   // Initialize the node operators registry and the pool

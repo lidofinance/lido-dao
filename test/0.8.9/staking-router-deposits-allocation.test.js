@@ -8,13 +8,13 @@ const DepositContractMock = artifacts.require('DepositContractMock.sol')
 contract('StakingRouter', (accounts) => {
   let evmSnapshotId
   let depositContract, stakingRouter
-  let curatedStakingModuleMock, soloStakingModuleMock, dvtStakingModuleMock
+  let curatedStakingModuleMock, soloStakingModuleMock
   const [deployer, lido, admin] = accounts
 
   before(async () => {
     depositContract = await DepositContractMock.new({ from: deployer })
     stakingRouter = await StakingRouter.new(depositContract.address, { from: deployer })
-    ;[curatedStakingModuleMock, soloStakingModuleMock, dvtStakingModuleMock] = await Promise.all([
+    ;[curatedStakingModuleMock, soloStakingModuleMock] = await Promise.all([
       StakingModuleMock.new({ from: deployer }),
       StakingModuleMock.new({ from: deployer }),
       StakingModuleMock.new({ from: deployer })
@@ -24,15 +24,15 @@ contract('StakingRouter', (accounts) => {
     await stakingRouter.initialize(admin, lido, wc, { from: deployer })
 
     // Set up the staking router permissions.
-    const [MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, MODULE_PAUSE_ROLE, MODULE_MANAGE_ROLE] = await Promise.all([
+    const [MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, STAKING_MODULE_PAUSE_ROLE, STAKING_MODULE_MANAGE_ROLE] = await Promise.all([
       stakingRouter.MANAGE_WITHDRAWAL_CREDENTIALS_ROLE(),
-      stakingRouter.MODULE_PAUSE_ROLE(),
-      stakingRouter.MODULE_MANAGE_ROLE()
+      stakingRouter.STAKING_MODULE_PAUSE_ROLE(),
+      stakingRouter.STAKING_MODULE_MANAGE_ROLE()
     ])
 
     await stakingRouter.grantRole(MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, admin, { from: admin })
-    await stakingRouter.grantRole(MODULE_PAUSE_ROLE, admin, { from: admin })
-    await stakingRouter.grantRole(MODULE_MANAGE_ROLE, admin, { from: admin })
+    await stakingRouter.grantRole(STAKING_MODULE_PAUSE_ROLE, admin, { from: admin })
+    await stakingRouter.grantRole(STAKING_MODULE_MANAGE_ROLE, admin, { from: admin })
 
     evmSnapshotId = await hre.ethers.provider.send('evm_snapshot', [])
   })
@@ -44,7 +44,7 @@ contract('StakingRouter', (accounts) => {
 
   describe('One staking module', () => {
     beforeEach(async () => {
-      await stakingRouter.addModule(
+      await stakingRouter.addStakingModule(
         'Curated',
         curatedStakingModuleMock.address,
         10_000, // target share 100 %
@@ -90,7 +90,7 @@ contract('StakingRouter', (accounts) => {
 
   describe('Two staking modules', () => {
     beforeEach(async () => {
-      await stakingRouter.addModule(
+      await stakingRouter.addStakingModule(
         'Curated',
         curatedStakingModuleMock.address,
         10_000, // 100 % _targetShare
@@ -98,7 +98,7 @@ contract('StakingRouter', (accounts) => {
         5_000, // 50 % _treasuryFee
         { from: admin }
       )
-      await stakingRouter.addModule(
+      await stakingRouter.addStakingModule(
         'Solo',
         soloStakingModuleMock.address,
         200, // 2 % _targetShare
@@ -134,7 +134,7 @@ contract('StakingRouter', (accounts) => {
 
   describe('Make deposit', () => {
     beforeEach(async () => {
-      await stakingRouter.addModule(
+      await stakingRouter.addStakingModule(
         'Curated',
         curatedStakingModuleMock.address,
         10_000, // 100 % _targetShare
@@ -142,7 +142,7 @@ contract('StakingRouter', (accounts) => {
         5_000, // 50 % _treasuryFee
         { from: admin }
       )
-      await stakingRouter.addModule(
+      await stakingRouter.addStakingModule(
         'Solo',
         soloStakingModuleMock.address,
         200, // 2 % _targetShare

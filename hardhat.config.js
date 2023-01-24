@@ -162,6 +162,10 @@ module.exports = {
             runs: 5000000 // https://etherscan.io/address/0x00000000219ab540356cbb839cbe05303d7705fa#code
           }
         }
+      },
+      'contracts/0.4.24/test_helpers/MinFirstAllocationStrategyConsumerMockLegacyVersion.sol': {
+        version: '0.4.24',
+        settings: {}
       }
     }
   },

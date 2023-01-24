@@ -174,6 +174,13 @@ contract Lido is StETHPermit, AragonApp {
     }
 
     /**
+     * @notice Return the initialized version of this contract starting from 0
+     */
+    function getVersion() external view returns (uint256) {
+        return CONTRACT_VERSION_POSITION.getStorageUint256();
+    }
+
+    /**
      * @notice Stops accepting new Ether to the protocol
      *
      * @dev While accepting new Ether is stopped, calls to the `submit` function,
@@ -464,7 +471,7 @@ contract Lido is StETHPermit, AragonApp {
             _beaconValidators,
             _beaconBalance
         );
-        
+
         // collect ETH from EL and Withdrawal vaults and distribute it to WithdrawalQueue
         uint256 executionLayerRewards = _processETHDistribution(
             _withdrawalVaultBalance,
@@ -748,7 +755,7 @@ contract Lido is StETHPermit, AragonApp {
         _burnShares(withdrawalQueueAddress, sharesToBurn);
     }
 
-    /// @dev calculate the amout of rewards and distribute it 
+    /// @dev calculate the amout of rewards and distribute it
     function _processRewards(
         uint256 _preBeaconBalance,
         uint256 _postBeaconBalance,
@@ -1026,8 +1033,9 @@ contract Lido is StETHPermit, AragonApp {
      * @param _stakingModuleId id of the staking module to be deposited
      * @param _depositCalldata module calldata
      */
-    function deposit(uint256 _maxDepositsCount, uint24 _stakingModuleId, bytes _depositCalldata) external {
+    function deposit(uint256 _maxDepositsCount, uint256 _stakingModuleId, bytes _depositCalldata) external {
         require(msg.sender == getDepositSecurityModule(), "APP_AUTH_DSM_FAILED");
+        require(_stakingModuleId <= uint24(-1), "STAKING_MODULE_ID_TOO_LARGE");
         _whenNotStopped();
 
         uint256 bufferedEth = _getBufferedEther();

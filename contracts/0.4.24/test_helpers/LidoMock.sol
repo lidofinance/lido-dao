@@ -11,6 +11,8 @@ import "./VaultMock.sol";
  * @dev Only for testing purposes! Lido version with some functions exposed.
  */
 contract LidoMock is Lido {
+    bytes32 internal constant ALLOW_TOKEN_POSITION = keccak256("lido.Lido.allowToken");
+
     function initialize(
         address _oracle,
         address _treasury,
@@ -37,6 +39,8 @@ contract LidoMock is Lido {
             _withdrawalQueue,
             _eip712StETH
         );
+
+        setAllowRecoverability(true);
     }
 
     /**
@@ -58,4 +62,24 @@ contract LidoMock is Lido {
      * @dev Only for testing recovery vault
      */
     function makeUnaccountedEther() public payable {}
+
+    function setVersion(uint256 _version) external {
+        CONTRACT_VERSION_POSITION.setStorageUint256(_version);
+    }
+
+    function allowRecoverability(address /*token*/) public view returns (bool) {
+        return getAllowRecoverability();
+    }
+
+    function setAllowRecoverability(bool allow) public {
+        ALLOW_TOKEN_POSITION.setStorageBool(allow);
+    }
+
+    function getAllowRecoverability() public view returns (bool) {
+        return ALLOW_TOKEN_POSITION.getStorageBool();
+    }
+
+    function resetEip712StETH() external {
+        eip712StETH = address(0);
+    }
 }

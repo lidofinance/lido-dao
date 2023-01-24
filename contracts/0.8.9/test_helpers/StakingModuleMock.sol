@@ -10,6 +10,7 @@ import {IStakingModule} from "../interfaces/IStakingModule.sol";
 contract StakingModuleMock is IStakingModule {
     uint256 private _activeKeysCount;
     uint256 private _availableKeysCount;
+    uint256 private _keysNonce;
 
     function getActiveKeysCount() public view returns (uint256) {
         return _activeKeysCount;
@@ -42,7 +43,13 @@ contract StakingModuleMock is IStakingModule {
         readyToDepositValidatorsKeysCount = _availableKeysCount;
     }
 
-    function getValidatorsKeysNonce() external view returns (uint256) {}
+    function getValidatorsKeysNonce() external view returns (uint256) {
+        return _keysNonce;
+    }
+
+    function setValidatorsKeysNonce(uint256 _newKeysNonce) external {
+        _keysNonce = _newKeysNonce;
+    }
 
     function getNodeOperatorsCount() external view returns (uint256) {}
 
@@ -62,7 +69,9 @@ contract StakingModuleMock is IStakingModule {
 
     function updateExitedValidatorsKeysCount(uint256 _nodeOperatorId, uint256 _exitedValidatorsCount) external {}
 
-    function invalidateReadyToDepositKeys() external {}
+    function invalidateReadyToDepositKeys() external {
+        _availableKeysCount = _activeKeysCount;
+    }
 
     function requestValidatorsKeysForDeposits(uint256 _keysCount, bytes calldata _calldata)
         external
