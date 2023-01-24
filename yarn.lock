@@ -3701,7 +3701,7 @@ __metadata:
     hardhat: 2.9.9
     hardhat-contract-sizer: ^2.5.0
     hardhat-gas-reporter: 1.0.8
-    hardhat-ignore-warnings: ^0.2.6
+    hardhat-ignore-warnings: "skozin/hardhat-ignore-warnings#0ecf2ae85bddb83594193ee5c463cb4ae54cde7d"
     husky: ^8.0.2
     ipfs-http-client: ^55.0.0
     lerna: ^3.22.1
@@ -14209,14 +14209,14 @@ fsevents@~2.3.2:
   languageName: node
   linkType: hard
 
-"hardhat-ignore-warnings@npm:^0.2.6":
+"hardhat-ignore-warnings@skozin/hardhat-ignore-warnings#0ecf2ae85bddb83594193ee5c463cb4ae54cde7d":
   version: 0.2.6
-  resolution: "hardhat-ignore-warnings@npm:0.2.6"
+  resolution: "hardhat-ignore-warnings@https://github.com/skozin/hardhat-ignore-warnings.git#commit=0ecf2ae85bddb83594193ee5c463cb4ae54cde7d"
   dependencies:
     minimatch: ^5.1.0
     node-interval-tree: ^2.0.1
     solidity-comments: ^0.0.2
-  checksum: 09a62c860c49b01d51b5e70aecaf5232e64024476d8875a0898ce575d2ad45d2cdf149ee4d013758b76d90bd937f3104d0cc6a97b5790ad603d5f927e99d523a
+  checksum: 0a0326c28acdae7645e98cc4a55283a56d1372ccb860c4f8cb5ce12f5b7ba79d9705355cb54bc2df16fd6d929e50a0c596346923e869a39cf234f91ffa2101d1
   languageName: node
   linkType: hard
 
