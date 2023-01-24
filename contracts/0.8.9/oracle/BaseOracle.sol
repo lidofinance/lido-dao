@@ -8,8 +8,8 @@ import { SafeCast } from "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
 
 import { IReportAsyncProcessor } from "./HashConsensus.sol";
 
-import "../lib/UnstructuredStorage.sol";
-import "../utils/Versioned.sol";
+import { UnstructuredStorage } from "../lib/UnstructuredStorage.sol";
+import { Versioned } from "../utils/Versioned.sol";
 
 
 interface IConsensusContract {
@@ -29,7 +29,6 @@ contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, Versioned
     error RefSlotCannotDecrease(uint256 processingRefSlot, uint256 newRefSlot);
     error ProcessingDeadlineMissed(uint256 deadline);
     error UnexpectedRefSlot(uint256 consensusRefSlot, uint256 dataRefSlot);
-    error UnexpectedContractVersion(uint256 expectedVersion, uint256 receivedVersion);
     error UnexpectedConsensusVersion(uint256 expectedVersion, uint256 receivedVersion);
 
     event ConsensusContractSet(address indexed addr, address indexed prevAddr);
@@ -101,7 +100,7 @@ contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, Versioned
     }
 
     function _setConsensusVersion(uint256 version) internal {
-        address prevVersion = CONSENSUS_VERSION_POSITION.getStorageUint256();
+        uint256 prevVersion = CONSENSUS_VERSION_POSITION.getStorageUint256();
         if (version == prevVersion) revert VersionCannotBeSame();
         CONSENSUS_VERSION_POSITION.setStorageUint256(version);
         emit ConsensusVersionSet(version, prevVersion);
@@ -148,7 +147,7 @@ contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, Versioned
         }
 
         uint256 lastProcessedRefSlot = LAST_PROCESSED_REF_SLOT_POSITION.getStorageUint256();
-        if (refSlot <= _getLastProcessedRefSlot) {
+        if (refSlot <= lastProcessedRefSlot) {
             revert ProcessedRefSlotMustIncrease(lastProcessedRefSlot, refSlot);
         }
 
@@ -160,13 +159,13 @@ contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, Versioned
         ConsensusReport memory report = ConsensusReport(
             report,
             refSlot.toUint64(),
-            _getTime(),
+            uint64(_getTime()),
             deadline.toUint64());
 
         _storageProcessingReport().value = report;
         _startProcessing(report);
 
-        emit ProcessingStarted(refSlot, report, deadline);
+        emit ProcessingStarted(refSlot, report.hash, deadline);
     }
 
     /// @notice Returns the last reference slot for which the data was processed.
@@ -183,7 +182,7 @@ contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, Versioned
         return consensus != address(0) && IConsensusContract(consensus).isMember(addr);
     }
 
-    function _startProcessing(ConsensusReport calldata report) internal virtual {}
+    function _startProcessing(ConsensusReport memory report) internal virtual {}
 
     function _checkConsensusData(uint256 refSlot, uint256 consensusVersion) internal {
         _checkDeadline();
@@ -211,7 +210,7 @@ contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, Versioned
         if (_getTime() > deadline) revert ProcessingDeadlineMissed(deadline);
     }
 
-    function _getTime() internal virtual view returns (uint64) {
+    function _getTime() internal virtual view returns (uint256) {
         return block.timestamp; // solhint-disable-line not-rely-on-time
     }
 
@@ -224,7 +223,7 @@ contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, Versioned
     }
 
     function _storageProcessingReport() internal pure returns (StorageConsensusReport storage r) {
-        uint256 position = PROCESSING_REPORT_POSITION;
+        bytes32 position = PROCESSING_REPORT_POSITION;
         assembly { r.slot := position }
     }
 }

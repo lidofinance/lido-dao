@@ -357,9 +357,9 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
     /// @param _exitedValidatorsKeysCount New number of EXITED validators of the node operator
     function updateExitedValidatorsKeysCount(uint256 _nodeOperatorId, uint256 _exitedValidatorsKeysCount)
         external
-        returns (uint256)
         onlyExistedNodeOperator(_nodeOperatorId)
         auth(STAKING_ROUTER_ROLE)
+        returns (uint256)
     {
         uint64 exitedValidatorsCountBefore = _nodeOperators[_nodeOperatorId].exitedSigningKeysCount;
         uint64 depositedSigningKeysCount = _nodeOperators[_nodeOperatorId].depositedSigningKeysCount;

@@ -41,17 +41,17 @@ interface IStakingRouter {
 
     function resumeStakingModule(uint24 _stakingModuleId) external;
 
-    function reportRewardsMinted(uint256[] calldata _stakingModuleIds, uint256[] calldata _totalShares) external;
+    function reportRewardsMinted(uint256[] _stakingModuleIds, uint256[] _totalShares) external;
 
     function updateExitedKeysCountByStakingModule(
-        uint256[] calldata _moduleIds,
-        uint256[] calldata _exitedKeysCounts
+        uint256[] _moduleIds,
+        uint256[] _exitedKeysCounts
     ) external;
 
     function reportStakingModuleExitedKeysCountByNodeOperator(
         uint256 _stakingModuleId,
-        uint256[] calldata _nodeOperatorIds,
-        uint256[] calldata _exitedKeysCounts
+        uint256[] _nodeOperatorIds,
+        uint256[] _exitedKeysCounts
     ) external;
 
     function getStakingModuleIsStopped(uint24 _stakingModuleId) external view returns (bool);

@@ -37,7 +37,7 @@ library ResizableArray {
     ///        a new memory region will be allocated and the array contents will be copied
     ///        to that region.
     ///
-    /// @returns The Array memory struct holding the array internal representation.
+    /// @return The Array memory struct holding the array internal representation.
     ///
     function preallocate(uint256 preallocLen) internal pure returns (Array memory) {
         return preallocate(preallocLen, 200, preallocLen * 10);
@@ -57,7 +57,7 @@ library ResizableArray {
     /// @param maxGrowth Limits the maximum absolute one-time increase in the pre-allocated
     ///        memory size. Zero means no limit.
     ///
-    /// @returns The Array memory struct holding the array internal representation.
+    /// @return The Array memory struct holding the array internal representation.
     ///
     function preallocate(uint256 preallocLen, uint256 growthFactor, uint256 maxGrowth)
         internal pure returns (Array memory)
@@ -146,7 +146,7 @@ library ResizableArray {
 
     /// @notice Removes the last item from the array.
     ///
-    /// @returns The removed item.
+    /// @return result The removed item.
     ///
     function pop(Array memory self) internal pure returns (uint256 result) {
         uint256 memPtr = self._memPtr;

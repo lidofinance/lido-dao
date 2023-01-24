@@ -233,7 +233,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
                 .updateExitedValidatorsKeysCount(_nodeOperatorIds[i], _exitedKeysCounts[i]);
             if (exitedKeysCount == stakingModule.exitedKeysCount) {
                 // oracle finished updating exited keys for all node ops
-                stakingModule.finishUpdatingExitedValidatorsKeysCount();
+                IStakingModule(moduleAddr).finishUpdatingExitedValidatorsKeysCount();
             }
             unchecked { ++i; }
         }
@@ -372,9 +372,11 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     /**
      * @notice return shares table
      *
-     * @return recipients recipients list
-     * @return moduleFees fee of each recipient
-     * @return totalFee total fee to mint for each module and treasury
+     * @return recipients rewards recipient addresses corresponding to each module
+     * @return moduleIds module IDs
+     * @return moduleFees fee corresponding to each module
+     * @return totalFee total fee to mint for each module and treasury (TODO: incorrect?)
+     * @return precisionPoints TODO: ???
      */
     function getStakingRewardsDistribution()
         external
@@ -552,7 +554,8 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         cacheItem.status = StakingModuleStatus(stakingModuleData.status);
 
         if (!_zeroKeysCountsIfInactive || cacheItem.status == StakingModuleStatus.Active) {
-            (uint256 moduleExitedKeysCount, cacheItem.activeKeysCount, cacheItem.availableKeysCount) =
+            uint256 moduleExitedKeysCount;
+            (moduleExitedKeysCount, cacheItem.activeKeysCount, cacheItem.availableKeysCount) =
                 IStakingModule(cacheItem.stakingModuleAddress).getValidatorsKeysStats();
             uint256 exitedKeysCount = stakingModuleData.exitedKeysCount;
             if (exitedKeysCount < moduleExitedKeysCount) {
@@ -616,8 +619,8 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         }
     }
 
-    function _getStakingModuleIndexById(uint24 _stakingModuleId) internal view returns (uint256) {
-        mapping(uint24 => uint256) storage _stakingModuleIndicesOneBased = _getStorageStakingIndicesMapping(
+    function _getStakingModuleIndexById(uint256 _stakingModuleId) internal view returns (uint256) {
+        mapping(uint256 => uint256) storage _stakingModuleIndicesOneBased = _getStorageStakingIndicesMapping(
             STAKING_MODULE_INDICES_MAPPING_POSITION
         );
         uint256 indexOneBased = _stakingModuleIndicesOneBased[_stakingModuleId];
@@ -626,7 +629,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     }
 
     function _setStakingModuleIndexById(uint24 _stakingModuleId, uint256 _stakingModuleIndex) internal {
-        mapping(uint24 => uint256) storage _stakingModuleIndicesOneBased = _getStorageStakingIndicesMapping(
+        mapping(uint256 => uint256) storage _stakingModuleIndicesOneBased = _getStorageStakingIndicesMapping(
             STAKING_MODULE_INDICES_MAPPING_POSITION
         );
         _stakingModuleIndicesOneBased[_stakingModuleId] = _stakingModuleIndex + 1;
@@ -636,7 +639,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         return _getStakingModuleByIndex(_stakingModuleIndex).id;
     }
 
-    function _getStakingModuleById(uint24 _stakingModuleId) internal view returns (StakingModule storage) {
+    function _getStakingModuleById(uint256 _stakingModuleId) internal view returns (StakingModule storage) {
         return _getStakingModuleByIndex(_getStakingModuleIndexById(_stakingModuleId));
     }
 
@@ -664,7 +667,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         }
     }
 
-    function _getStorageStakingIndicesMapping(bytes32 position) internal pure returns (mapping(uint24 => uint256) storage result) {
+    function _getStorageStakingIndicesMapping(bytes32 position) internal pure returns (mapping(uint256 => uint256) storage result) {
         assembly {
             result.slot := position
         }

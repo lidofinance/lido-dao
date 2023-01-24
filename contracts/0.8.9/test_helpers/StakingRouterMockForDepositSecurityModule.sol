@@ -105,7 +105,19 @@ contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
 
     function getStakingModuleActiveKeysCount(uint24 _stakingModuleId) external view returns (uint256) {}
 
+    function getExitedKeysCountAcrossAllModules() external view returns (uint256) {}
+
     function getKeysAllocation(uint256 _keysToAllocate) external view returns (uint256 allocated, uint256[] memory allocations) {}
 
     function getStakingModuleMaxDepositableKeys(uint24 _stakingModuleId) external view returns (uint256) {}
+
+    function reportRewardsMinted(uint256[] calldata _stakingModuleIds, uint256[] calldata _totalShares) external {}
+
+    function updateExitedKeysCountByStakingModule(uint256[] calldata _moduleIds, uint256[] calldata _exitedKeysCounts) external {}
+
+    function reportStakingModuleExitedKeysCountByNodeOperator(
+        uint256 _stakingModuleId,
+        uint256[] calldata _nodeOperatorIds,
+        uint256[] calldata _exitedKeysCounts
+    ) external {}
 }

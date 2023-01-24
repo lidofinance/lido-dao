@@ -9,6 +9,9 @@ import { ILido } from "../interfaces/ILido.sol";
 import { IStakingRouter } from "../interfaces/IStakingRouter.sol";
 import { MemUtils } from "../lib/MemUtils.sol";
 import { ResizableArray } from "../lib/ResizableArray.sol";
+import { UnstructuredStorage } from "../lib/UnstructuredStorage.sol";
+
+import { BaseOracle } from "./BaseOracle.sol";
 
 
 contract AccountingOracle is BaseOracle {
@@ -24,11 +27,12 @@ contract AccountingOracle is BaseOracle {
     error NumExitedValidatorsCannotDecrease();
     error ExitedValidatorsLimitExceeded(uint256 limitPerDay, uint256 exitedPerDay);
     error UnsupportedExtraDataFormat(uint256 format);
-    error UnsupportedExtraDataType(uint256 type);
+    error UnsupportedExtraDataType(uint256 dataType);
     error MaxExtraDataItemsCountExceeded(uint256 maxItemsCount, uint256 receivedItemsCount);
     error CannotProcessExtraDataBeforeMainData();
     error ExtraDataAlreadyProcessed();
     error ExtraDataListOnlySupportsSingleTx();
+    error UnexpectedExtraDataFormat(uint256 expectedFormat, uint256 receivedFormat);
     error UnexpectedExtraDataItemsCount(uint256 expectedCount, uint256 receivedCount);
     error UnexpectedExtraDataIndex(uint256 expectedIndex, uint256 receivedIndex);
     error InvalidExtraDataSortOrder();
@@ -168,10 +172,10 @@ contract AccountingOracle is BaseOracle {
     ///
     /// keccac256(abi.encodePacked(array))
     ///
-    uint16 public constant EXTRA_DATA_FORMAT_LIST = 0;
+    uint256 public constant EXTRA_DATA_FORMAT_LIST = 0;
 
-    uint16 public constant EXTRA_DATA_TYPE_STUCK_VALIDATORS = 0;
-    uint16 public constant EXTRA_DATA_TYPE_EXITED_VALIDATORS = 1;
+    uint256 public constant EXTRA_DATA_TYPE_STUCK_VALIDATORS = 0;
+    uint256 public constant EXTRA_DATA_TYPE_EXITED_VALIDATORS = 1;
 
     struct DataBoundraies {
         uint64 maxExitedValidatorsPerDay;
@@ -181,7 +185,7 @@ contract AccountingOracle is BaseOracle {
     struct ExtraDataProcessingState {
         uint256 lastProcessedItem;
         bytes32 dataHash;
-        uint16 dataType;
+        uint16 dataFormat;
         uint64 itemsCount;
         uint64 itemsProcessed;
     }
@@ -212,10 +216,10 @@ contract AccountingOracle is BaseOracle {
         SECONDS_PER_SLOT = secondsPerSlot;
     }
 
-    function initialize(address admin, address consensusContract) external {
+    function initialize(address admin, address consensusContract, uint256 consensusVersion) external {
         if (admin == address(0)) revert AdminCannotBeZero();
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
-        _initialize(consensusContract);
+        _initialize(consensusContract, consensusVersion);
     }
 
     function getDataBoundaries() external view returns (
@@ -236,7 +240,7 @@ contract AccountingOracle is BaseOracle {
         emit DataBoundraiesSet(maxExitedValidatorsPerDay, maxExtraDataListItemsCount);
     }
 
-    function _startProcessing(ConsensusReport calldata report) internal virtual {
+    function _startProcessing(ConsensusReport memory report) internal override {
         ExtraDataProcessingState memory extraProcState = _storageExtraDataProcessingState().value;
         if (extraProcState.itemsProcessed < extraProcState.itemsCount) {
             emit WarnExtraDataIncomleteProcessing(
@@ -282,13 +286,13 @@ contract AccountingOracle is BaseOracle {
 
     function _checkMsgSenderIsAllowedToSubmitData() internal view {
         address sender = _msgSender();
-        if (!hasRole(sender, SUBMIT_DATA_ROLE) && !_isConsensusMember(sender)) {
+        if (!hasRole(SUBMIT_DATA_ROLE, sender) && !_isConsensusMember(sender)) {
             revert SenderNotAllowed();
         }
     }
 
     function _checkReportDataHash(ReportData calldata data) internal view {
-        bytes32 consensusHash = _storageProcessingReport().hash;
+        bytes32 consensusHash = _storageProcessingReport().value.hash;
         bytes32 dataHash = keccak256(abi.encode(data));
         if (dataHash != consensusHash) {
             revert UnexpectedDataHash(consensusHash, dataHash);
@@ -307,7 +311,7 @@ contract AccountingOracle is BaseOracle {
             data.numExitedValidatorsByStakingModule,
             slotsElapsed);
 
-        _processRebaseData(boudaries, data, slotsElapsed, boudaries);
+        _processRebaseData(boudaries, data, slotsElapsed);
 
         if (data.extraDataFormat != EXTRA_DATA_FORMAT_LIST) {
             revert UnsupportedExtraDataFormat(data.extraDataFormat);
@@ -321,18 +325,19 @@ contract AccountingOracle is BaseOracle {
         }
 
         _storageExtraDataProcessingState().value = ExtraDataProcessingState({
-            dataType: data.extraDataFormat,
+            lastProcessedItem: 0,
+            dataFormat: data.extraDataFormat.toUint16(),
             dataHash: data.extraDataHash,
-            itemsCount: data.extraDataItemsCount,
+            itemsCount: data.extraDataItemsCount.toUint16(),
             itemsProcessed: 0
-        })
+        });
     }
 
     function _processStakingRouterExitedKeysByModule(
-        DataBoundraies calldata boudaries,
+        DataBoundraies memory boudaries,
         uint256[] calldata stakingModuleIds,
         uint256[] calldata numExitedValidatorsByStakingModule,
-        uint256 slotsElapsed,
+        uint256 slotsElapsed
     ) internal {
         if (stakingModuleIds.length != numExitedValidatorsByStakingModule.length) {
             revert InvalidExitedValidatorsData();
@@ -370,33 +375,32 @@ contract AccountingOracle is BaseOracle {
             (exitedValidators - prevExitedValidators) * (1 days) /
             (SECONDS_PER_SLOT * slotsElapsed);
 
-        if (exitedValidatorsPerDay > MAX_EXITED_VALIDATORS_PER_DAY) {
+        if (exitedValidatorsPerDay > boudaries.maxExitedValidatorsPerDay) {
             revert ExitedValidatorsLimitExceeded(
-                MAX_EXITED_VALIDATORS_PER_DAY,
+                boudaries.maxExitedValidatorsPerDay,
                 exitedValidatorsPerDay);
         }
 
-        stakingRouter.updateNewlyExitedKeysCountByStakingModule(
+        stakingRouter.updateExitedKeysCountByStakingModule(
             stakingModuleIds,
             numExitedValidatorsByStakingModule);
     }
 
     function _processRebaseData(
-        DataBoundraies calldata boudaries,
+        DataBoundraies memory boudaries,
         ReportData calldata data,
         uint256 slotsElapsed
     ) internal {
         ILido(LIDO).handleOracleReport(
+            slotsElapsed * SECONDS_PER_SLOT,
             data.numValidators,
             uint256(data.clBalanceGwei) * 1e9,
             data.withdrawalVaultBalance,
             data.elRewardsVaultBalance,
             data.finalizeWithdrawalRequestsUpToId,
             data.finalizationShareRate,
-            slotsElapsed * SECONDS_PER_SLOT
+            data.isBunkerMode
         );
-
-        // TODO: pass/store/report bunker mode
     }
 
     ///
@@ -426,6 +430,10 @@ contract AccountingOracle is BaseOracle {
             revert UnexpectedExtraDataItemsCount(procState.itemsCount, items.length);
         }
 
+        if (procState.dataFormat != EXTRA_DATA_FORMAT_LIST) {
+            revert UnexpectedExtraDataFormat(procState.dataFormat, EXTRA_DATA_FORMAT_LIST);
+        }
+
         bytes32 dataHash = MemUtils.keccakUint256Array(items);
         if (dataHash != procState.dataHash) {
             revert UnexpectedDataHash(procState.dataHash, dataHash);
@@ -434,7 +442,7 @@ contract AccountingOracle is BaseOracle {
         ExtraDataProcessingState storage _procState = _storageExtraDataProcessingState().value;
 
         _procState.lastProcessedItem = _processExtraDataItems(items, 0, 0);
-        _procState.processedItemsCount = items.length;
+        _procState.itemsProcessed = uint64(items.length);
     }
 
     struct ExtraDataIterState {
@@ -443,6 +451,8 @@ contract AccountingOracle is BaseOracle {
         int256 lastType;
         int256 lastModuleId;
         int256 lastNodeOpId;
+        ResizableArray.Array nopIds;
+        ResizableArray.Array keyCounts;
     }
 
     function _processExtraDataItems(
@@ -457,52 +467,59 @@ contract AccountingOracle is BaseOracle {
             nextIndex: 0,
             lastType: -1,
             lastModuleId: -1,
-            lastNodeOpId: -1
+            lastNodeOpId: -1,
+            nopIds: ResizableArray.preallocate(20),
+            keyCounts: ResizableArray.preallocate(20)
         });
 
         if (lastProcessedItem != 0) {
-            (, iter.lastType, uint256 payload) = _decodeExtraDataItem(lastProcessedItem);
-            (iter.lastModuleId, iter.lastNodeOpId, ) = _decodeExtraDataPayload(payload);
+            (, uint256 itemType, uint216 payload) = _decodeExtraDataItem(lastProcessedItem);
+            (uint256 moduleId, uint256 nodeOpId, ) = _decodeExtraDataPayload(payload);
+            iter.lastType = int256(itemType);
+            iter.lastModuleId = int256(moduleId);
+            iter.lastNodeOpId = int256(nodeOpId);
         }
 
-        ResizableArray.Array memory nopIds = ResizableArray.preallocate(20);
-        ResizableArray.Array memory keyCounts = ResizableArray.preallocate(20);
-
         while (iter.nextIndex < items.length) {
-            _processSingleModule(iter, items, nopIds, keyCounts);
+            iter.nopIds.clear();
+            iter.keyCounts.clear();
 
-            if (iter.lastType == EXTRA_DATA_TYPE_STUCK_VALIDATORS) {
-                // TODO: report stuck validators
-                // stakingRouter.reportStakingModuleStuckKeysCountByNodeOperator(
-                //     iter.lastModuleId,
-                //     nopIds.pointer(),
-                //     keyCounts.pointer()
-                // );
-            } else if (iter.lastType == EXTRA_DATA_TYPE_EXITED_VALIDATORS) {
-                stakingRouter.reportStakingModuleExitedKeysCountByNodeOperator(
-                    iter.lastModuleId,
-                    nopIds.pointer(),
-                    keyCounts.pointer()
-                );
-            } else {
-                revert UnsupportedExtraDataType(iter.lastType);
+            _processSingleModule(iter, items);
+
+            if (iter.lastType != -1) {
+                assert(iter.lastModuleId >= 0);
+                assert(iter.lastNodeOpId >= 0);
+
+                if (iter.lastType == int256(EXTRA_DATA_TYPE_STUCK_VALIDATORS)) {
+                    // TODO: report stuck validators
+                    // stakingRouter.reportStakingModuleStuckKeysCountByNodeOperator(
+                    //     iter.lastModuleId,
+                    //     iter.nopIds.pointer(),
+                    //     iter.keyCounts.pointer()
+                    // );
+                } else if (iter.lastType == int256(EXTRA_DATA_TYPE_EXITED_VALIDATORS)) {
+                    stakingRouter.reportStakingModuleExitedKeysCountByNodeOperator(
+                        uint256(iter.lastModuleId),
+                        iter.nopIds.pointer(),
+                        iter.keyCounts.pointer()
+                    );
+                } else {
+                    revert UnsupportedExtraDataType(uint256(iter.lastType));
+                }
             }
-
-            nopIds.clear();
-            keyCounts.clear();
         }
 
         return iter.nextIndex == 0 ? 0 : items[iter.nextIndex - 1];
     }
 
-    function _processSingleModule(
-        ExtraDataIterState memory iter,
-        uint256[] calldata items,
-        ResizableArray.Array memory nopIds,
-        ResizableArray.Array memory keyCounts
-    ) internal pure {
+    function _processSingleModule(ExtraDataIterState memory iter, uint256[] calldata items)
+        internal pure
+    {
+        if (items.length == 0) {
+            return;
+        }
+
         uint256 i = iter.nextIndex;
-        uint256 firstItemIndex = iter.firstItemIndex;
         bool started = false;
 
         uint256 itemType;
@@ -510,10 +527,10 @@ contract AccountingOracle is BaseOracle {
         uint256 lastNodeOpId;
 
         while (i < items.length) {
-            (uint256 iIndex, uint256 iType, uint256 iPayload) = _decodeExtraDataItem(items[i]);
+            (uint256 iIndex, uint256 iType, uint216 iPayload) = _decodeExtraDataItem(items[i]);
 
-            if (iIndex != firstItemIndex + i) {
-                revert UnexpectedExtraDataIndex(firstItemIndex + i, iIndex);
+            if (iIndex != iter.firstItemIndex + i) {
+                revert UnexpectedExtraDataIndex(iter.firstItemIndex + i, iIndex);
             }
 
             (uint256 iModuleId, uint256 iNodeOpId, uint256 iKeysCount) =
@@ -524,9 +541,9 @@ contract AccountingOracle is BaseOracle {
                     break;
                 }
             } else {
-                if (iType < iter.lastType || iType == iter.lastType && (
-                    iModuleId < iter.lastModuleId ||
-                    iModuleId == iter.lastModuleId && iNodeOpId <= iter.lastNodeOpId
+                if (int256(iType) < iter.lastType || int256(iType) == iter.lastType && (
+                    int256(iModuleId) < iter.lastModuleId ||
+                    int256(iModuleId) == iter.lastModuleId && int256(iNodeOpId) <= iter.lastNodeOpId
                 )) {
                     revert InvalidExtraDataSortOrder();
                 }
@@ -539,22 +556,22 @@ contract AccountingOracle is BaseOracle {
                 revert InvalidExtraDataSortOrder();
             }
 
-            nopIds.push(iNodeOpId);
-            keyCounts.push(iKeysCount);
+            iter.nopIds.push(iNodeOpId);
+            iter.keyCounts.push(iKeysCount);
             lastNodeOpId = iNodeOpId;
 
             unchecked { ++i; }
         }
 
         iter.nextIndex = i;
-        iter.lastType = itemType;
-        iter.lastModuleId = moduleId;
-        iter.lastNodeOpId = lastNodeOpId;
+        iter.lastType = int256(itemType);
+        iter.lastModuleId = int256(moduleId);
+        iter.lastNodeOpId = int256(lastNodeOpId);
     }
 
     function _decodeExtraDataItem(uint256 item) internal pure returns (
-        uint256 itemIndex,
-        uint256 itemType,
+        uint24 itemIndex,
+        uint16 itemType,
         uint216 itemPayload
     ) {
         itemPayload = uint216(item);
@@ -563,9 +580,9 @@ contract AccountingOracle is BaseOracle {
     }
 
     function _decodeExtraDataPayload(uint216 payload) internal pure returns (
-        uint256 moduleId,
-        uint256 nodeOperatorId,
-        uint256 keysCount
+        uint24 moduleId,
+        uint64 nodeOperatorId,
+        uint128 keysCount
     ) {
         keysCount = uint128(payload);
         nodeOperatorId = uint64(payload >> 128);
@@ -581,7 +598,7 @@ contract AccountingOracle is BaseOracle {
     }
 
     function _storageDataBoundaries() internal pure returns (StorageDataBoudaries storage r) {
-        uint256 position = DATA_BOUNDARIES_POSITION;
+        bytes32 position = DATA_BOUNDARIES_POSITION;
         assembly { r.slot := position }
     }
 
@@ -592,7 +609,7 @@ contract AccountingOracle is BaseOracle {
     function _storageExtraDataProcessingState()
         internal pure returns (StorageExtraDataProcessingState storage r)
     {
-        uint256 position = EXTRA_DATA_PROCESSING_STATE_POSITION;
+        bytes32 position = EXTRA_DATA_PROCESSING_STATE_POSITION;
         assembly { r.slot := position }
     }
 }

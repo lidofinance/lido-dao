@@ -4,6 +4,7 @@ pragma solidity 0.8.9;
 
 
 import { AccessControlEnumerable } from "@openzeppelin/contracts-v4.4/access/AccessControlEnumerable.sol";
+import { SafeCast } from "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
 
 
 interface IReportAsyncProcessor {
@@ -14,7 +15,11 @@ interface IReportAsyncProcessor {
 
 
 contract HashConsensus is AccessControlEnumerable {
+    using SafeCast for uint256;
+
+    error NumericOverflow();
     error AdminCannotBeZero();
+    error DuplicateMember();
     error AddressCannotBeZero();
     error EpochsPerFrameCannotBeZero();
     error NonMember();
@@ -27,7 +32,7 @@ contract HashConsensus is AccessControlEnumerable {
     error NewProcessorCannotBeTheSame();
     error ConsensusReportAlreadyProcessed();
 
-    event FrameConfigSet(uint64 newInitialEpoch, uint64 newEpochsPerFrame);
+    event FrameConfigSet(uint256 newInitialEpoch, uint256 newEpochsPerFrame);
     event MemberAdded(address indexed addr, uint256 newTotalMembers, uint256 newQuorum);
     event MemberRemoved(address indexed addr, uint256 newTotalMembers, uint256 newQuorum);
     event QuorumSet(uint256 newQuorum, uint256 totalMembers, uint256 prevQuorum);
@@ -97,7 +102,7 @@ contract HashConsensus is AccessControlEnumerable {
 
     /// @dev A quorum value that effectively disables the oracle.
     uint256 internal constant UNREACHABLE_QUORUM = type(uint256).max;
-    uint256 internal constant ZERO_HASH = bytes32(0);
+    bytes32 internal constant ZERO_HASH = bytes32(0);
 
     ///! STORAGE OF THE CONTRACT
     ///! Inherited from AccessControlEnumerable:
@@ -131,18 +136,22 @@ contract HashConsensus is AccessControlEnumerable {
     address internal _reportProcessor;
 
     constructor(
-        uint64 slotsPerEpoch,
-        uint64 secondsPerSlot,
-        uint64 genesisTime,
+        uint256 slotsPerEpoch,
+        uint256 secondsPerSlot,
+        uint256 genesisTime,
+        uint256 epochsPerFrame,
         address admin,
         address reportProcessor
     ) {
-        SLOTS_PER_EPOCH = slotsPerEpoch;
-        SECONDS_PER_SLOT = secondsPerSlot;
-        GENESIS_TIME = genesisTime;
+        SLOTS_PER_EPOCH = slotsPerEpoch.toUint64();
+        SECONDS_PER_SLOT = secondsPerSlot.toUint64();
+        GENESIS_TIME = genesisTime.toUint64();
 
         if (admin == address(0)) revert AdminCannotBeZero();
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
+
+        uint256 startEpoch = _computeEpochAtTimestamp(_getTime());
+        _setFrameConfig(startEpoch, epochsPerFrame);
 
         // zero address is allowed here, meaning "no processor"
         _reportProcessor = reportProcessor;
@@ -154,7 +163,7 @@ contract HashConsensus is AccessControlEnumerable {
 
     /// @notice Returns the chain configuration required to calculate
     /// epoch and slot given a timestamp.
-    function getChainConfig() external pure returns (
+    function getChainConfig() external view returns (
         uint64 slotsPerEpoch,
         uint64 secondsPerSlot,
         uint64 genesisTime
@@ -177,7 +186,7 @@ contract HashConsensus is AccessControlEnumerable {
     }
 
     function _computeFrameStartEpoch(uint256 timestamp, FrameConfig memory config)
-        internal pure returns (uint256)
+        internal view returns (uint256)
     {
         uint256 epochsSinceInitial = _computeEpochAtTimestamp(timestamp) - config.initialEpoch;
         uint256 frameIndex = epochsSinceInitial / config.epochsPerFrame;
@@ -185,15 +194,15 @@ contract HashConsensus is AccessControlEnumerable {
     }
 
     function _getFrameAtTimestamp(uint256 timestamp) internal view returns (ConsensusFrame memory) {
-        FrameConfig memory config = _getFrameConfig();
+        FrameConfig memory config = _frameConfig;
 
         uint256 frameStartEpoch = _computeFrameStartEpoch(timestamp, config);
         uint256 frameStartSlot = _computeStartSlotAtEpoch(frameStartEpoch);
         uint256 nextFrameStartSlot = frameStartSlot + config.epochsPerFrame * SLOTS_PER_EPOCH;
 
         return ConsensusFrame({
-            refSlot: frameStartSlot - 1,
-            reportProcessingDeadlineSlot: nextFrameStartSlot - 1
+            refSlot: uint64(frameStartSlot - 1),
+            reportProcessingDeadlineSlot: uint64(nextFrameStartSlot - 1)
         });
     }
 
@@ -207,14 +216,15 @@ contract HashConsensus is AccessControlEnumerable {
         // where Si and Sj are reference slots, j > i,
         // E1 is the curent value of epochsPerFrame,
         // E2 is the new value of epochsPerFrame.
-        if (epochsPerFrame == 0) revert EpochsPerFrameCannotBeZero();
-
         uint256 timestamp = _getTime();
         uint256 currentFrameStartEpoch = _computeFrameStartEpoch(timestamp, _frameConfig);
+        _setFrameConfig(currentFrameStartEpoch, epochsPerFrame);
+    }
 
-        _frameConfig = FrameConfig(currentFrameStartEpoch, epochsPerFrame);
-
-        emit FrameConfigSet(_initialEpoch, epochsPerFrame);
+    function _setFrameConfig(uint256 startEpoch, uint256 epochsPerFrame) internal {
+        if (epochsPerFrame == 0) revert EpochsPerFrameCannotBeZero();
+        _frameConfig = FrameConfig(startEpoch.toUint64(), epochsPerFrame.toUint64());
+        emit FrameConfigSet(startEpoch, epochsPerFrame);
     }
 
     ///
@@ -360,6 +370,8 @@ contract HashConsensus is AccessControlEnumerable {
     ///        match the version returned by the currently set consensus report processor,
     ///        or zero if no report processor is set.
     function submitReport(uint256 slot, bytes32 report, uint256 consensusVersion) external {
+        if (slot > type(uint64).max) revert NumericOverflow();
+
         uint256 memberIndex = _getMemberIndex(_msgSender());
         MemberState storage member = _members[memberIndex];
 
@@ -391,7 +403,7 @@ contract HashConsensus is AccessControlEnumerable {
 
         if (_reportingState.lastReportRefSlot != slot) {
             // first report for a new slot => clear report variants
-            _reportingState.lastReportRefSlot = slot;
+            _reportingState.lastReportRefSlot = uint64(slot);
             variantsLength = 0;
         } else {
             variantsLength = _reportVariantsLength;
@@ -422,11 +434,11 @@ contract HashConsensus is AccessControlEnumerable {
             _reportVariantsLength = ++variantsLength;
         }
 
-        member.lastReportRefSlot = slot;
+        member.lastReportRefSlot = uint64(slot);
         member.lastReportVariantIndex = varIndex;
 
         if (support >= _quorum) {
-            _consensusReached(frame.refSlot, report, varIndex, support);
+            _consensusReached(frame, report, varIndex, support);
         }
     }
 
@@ -437,10 +449,10 @@ contract HashConsensus is AccessControlEnumerable {
         uint256 support
     ) internal {
         if (_reportingState.lastConsensusRefSlot != frame.refSlot ||
-            _reportingState.lastConsensusVariantIndex != varIndex
+            _reportingState.lastConsensusVariantIndex != variantIndex
         ) {
             _reportingState.lastConsensusRefSlot = frame.refSlot;
-            _reportingState.lastConsensusVariantIndex = variantIndex;
+            _reportingState.lastConsensusVariantIndex = uint64(variantIndex);
 
             _startReportProcessing(frame, report);
 
@@ -504,8 +516,8 @@ contract HashConsensus is AccessControlEnumerable {
         (bytes32 consensusReport, int256 consensusVariantIndex, uint256 support) =
             _getConsensusReport(frame.refSlot, quorum);
 
-        if (consensusReport != ZERO_HASH) {
-            _consensusReached(frame, consensusReport, consensusVariantIndex, support);
+        if (consensusVariantIndex >= 0) {
+            _consensusReached(frame, consensusReport, uint256(consensusVariantIndex), support);
         }
     }
 
@@ -522,10 +534,10 @@ contract HashConsensus is AccessControlEnumerable {
         report = ZERO_HASH;
         support = 0;
 
-        for (int256 i = 0; i < variantsLength && report == ZERO_HASH; ++i) {
+        for (uint256 i = 0; i < variantsLength && report == ZERO_HASH; ++i) {
             uint256 iSupport = _reportVariants[i].support;
             if (iSupport >= quorum) {
-                variantIndex = i;
+                variantIndex = int256(i);
                 report = _reportVariants[i].hash;
                 support = iSupport;
             }
@@ -561,7 +573,7 @@ contract HashConsensus is AccessControlEnumerable {
         }
     }
 
-    function _getLastProcessedRefSlot() internal view returns (uint64) {
+    function _getLastProcessedRefSlot() internal view returns (uint256) {
         address processor = _reportProcessor;
         return processor == address(0)
             ? _reportingState.lastConsensusRefSlot
@@ -584,25 +596,25 @@ contract HashConsensus is AccessControlEnumerable {
     /// Utils
     ///
 
-    function _computeTimestampAtSlot(uint256 slot) internal pure returns (uint256) {
+    function _computeTimestampAtSlot(uint256 slot) internal view returns (uint256) {
         // See: github.com/ethereum/consensus-specs/blob/dev/specs/bellatrix/beacon-chain.md#compute_timestamp_at_slot
         return GENESIS_TIME + slot * SECONDS_PER_SLOT;
     }
 
-    function _computeSlotAtTimestamp(uint256 timestamp) internal pure returns (uint256) {
+    function _computeSlotAtTimestamp(uint256 timestamp) internal view returns (uint256) {
         return (timestamp - GENESIS_TIME) / SECONDS_PER_SLOT;
     }
 
-    function _computeEpochAtSlot(uint256 slot) internal pure returns (uint256) {
+    function _computeEpochAtSlot(uint256 slot) internal view returns (uint256) {
         // See: github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#compute_epoch_at_slot
         return slot / SLOTS_PER_EPOCH;
     }
 
-    function _computeEpochAtTimestamp(uint256 timestamp) internal pure returns (uint256) {
+    function _computeEpochAtTimestamp(uint256 timestamp) internal view returns (uint256) {
         return _computeEpochAtSlot(_computeSlotAtTimestamp(timestamp));
     }
 
-    function _computeStartSlotAtEpoch(uint256 epoch) internal pure returns (uint256) {
+    function _computeStartSlotAtEpoch(uint256 epoch) internal view returns (uint256) {
         // See: github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#compute_start_slot_at_epoch
         return epoch * SLOTS_PER_EPOCH;
     }

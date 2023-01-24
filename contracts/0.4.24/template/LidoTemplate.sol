@@ -661,8 +661,7 @@ contract LidoTemplate is IsContract {
         perms[3] = _state.operators.SET_NODE_OPERATOR_NAME_ROLE();
         perms[4] = _state.operators.SET_NODE_OPERATOR_ADDRESS_ROLE();
         perms[5] = _state.operators.SET_NODE_OPERATOR_LIMIT_ROLE();
-        perms[6] = _state.operators.UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE();
-        for (i = 0; i < 7; ++i) {
+        for (i = 0; i < 6; ++i) {
             _createPermissionForVoting(acl, _state.operators, perms[i], voting);
         }
 
