@@ -240,7 +240,7 @@ contract AccountingOracle is BaseOracle {
         emit DataBoundraiesSet(maxExitedValidatorsPerDay, maxExtraDataListItemsCount);
     }
 
-    function _startProcessing(ConsensusReport memory report) internal override {
+    function _startProcessing(ConsensusReport memory /* report */) internal override {
         ExtraDataProcessingState memory extraProcState = _storageExtraDataProcessingState().value;
         if (extraProcState.itemsProcessed < extraProcState.itemsCount) {
             emit WarnExtraDataIncomleteProcessing(

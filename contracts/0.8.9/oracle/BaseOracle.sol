@@ -184,7 +184,7 @@ contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, Versioned
 
     function _startProcessing(ConsensusReport memory report) internal virtual {}
 
-    function _checkConsensusData(uint256 refSlot, uint256 consensusVersion) internal {
+    function _checkConsensusData(uint256 refSlot, uint256 consensusVersion) internal view {
         _checkDeadline();
 
         uint256 consensusRefSlot = _storageProcessingReport().value.refSlot;

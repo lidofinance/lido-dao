@@ -231,7 +231,7 @@ contract HashConsensus is AccessControlEnumerable {
     /// Members
     ///
 
-    function isMember(address addr) external view returns (bool) {
+    function getIsMember(address addr) external view returns (bool) {
         return _isMember(addr);
     }
 
