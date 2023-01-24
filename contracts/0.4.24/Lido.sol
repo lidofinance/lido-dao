@@ -688,9 +688,10 @@ contract Lido is StETHPermit, AragonApp {
 
         uint256 lockedToWithdrawalQueue = 0;
 
-        if (withdrawalVaultAddress != address(0)) {
-            // we pull all the accounted ether from WithdrawalVault
-            IWithdrawalVault(withdrawalVaultAddress).withdrawWithdrawals(_withdrawalVaultBalance);
+            if (_withdrawalVaultBalance > 0) {
+                // we pull all the accounted ether from WithdrawalVault
+                IWithdrawalVault(withdrawalVaultAddress).withdrawWithdrawals(_withdrawalVaultBalance);
+            }
 
             // And pass some ether to WithdrawalQueue to fulfill requests
             lockedToWithdrawalQueue = _processWithdrawalQueue(
