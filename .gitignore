@@ -3,6 +3,7 @@
 **/build/
 **/node_modules/
 **/artifacts/
+**/artifacts-userdoc/
 .cache
 **/cache/
 dist/
