@@ -311,7 +311,16 @@ contract AccountingOracle is BaseOracle {
             data.numExitedValidatorsByStakingModule,
             slotsElapsed);
 
-        _processRebaseData(boudaries, data, slotsElapsed);
+        ILido(LIDO).handleOracleReport(
+            slotsElapsed * SECONDS_PER_SLOT,
+            data.numValidators,
+            uint256(data.clBalanceGwei) * 1e9,
+            data.withdrawalVaultBalance,
+            data.elRewardsVaultBalance,
+            data.finalizeWithdrawalRequestsUpToId,
+            data.finalizationShareRate,
+            data.isBunkerMode
+        );
 
         if (data.extraDataFormat != EXTRA_DATA_FORMAT_LIST) {
             revert UnsupportedExtraDataFormat(data.extraDataFormat);
@@ -384,23 +393,6 @@ contract AccountingOracle is BaseOracle {
         stakingRouter.updateExitedKeysCountByStakingModule(
             stakingModuleIds,
             numExitedValidatorsByStakingModule);
-    }
-
-    function _processRebaseData(
-        DataBoundraies memory boudaries,
-        ReportData calldata data,
-        uint256 slotsElapsed
-    ) internal {
-        ILido(LIDO).handleOracleReport(
-            slotsElapsed * SECONDS_PER_SLOT,
-            data.numValidators,
-            uint256(data.clBalanceGwei) * 1e9,
-            data.withdrawalVaultBalance,
-            data.elRewardsVaultBalance,
-            data.finalizeWithdrawalRequestsUpToId,
-            data.finalizationShareRate,
-            data.isBunkerMode
-        );
     }
 
     ///

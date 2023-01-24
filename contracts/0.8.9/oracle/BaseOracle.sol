@@ -141,7 +141,7 @@ contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, Versioned
     /// Consensus contract interface
     ///
 
-    function startProcessing(bytes32 report, uint256 refSlot, uint256 deadline) external {
+    function startProcessing(bytes32 reportHash, uint256 refSlot, uint256 deadline) external {
         if (_msgSender() != CONSENSUS_CONTRACT_POSITION.getStorageAddress()) {
             revert OnlyConsensusContractCanStartProcessing();
         }
@@ -157,7 +157,7 @@ contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, Versioned
         }
 
         ConsensusReport memory report = ConsensusReport(
-            report,
+            reportHash,
             refSlot.toUint64(),
             uint64(_getTime()),
             deadline.toUint64());
@@ -205,7 +205,7 @@ contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, Versioned
         emit ProcessingFinished(processingReport.refSlot, processingReport.hash);
     }
 
-    function _checkDeadline() internal {
+    function _checkDeadline() internal view {
         uint256 deadline = _storageProcessingReport().value.deadlineTime;
         if (_getTime() > deadline) revert ProcessingDeadlineMissed(deadline);
     }
