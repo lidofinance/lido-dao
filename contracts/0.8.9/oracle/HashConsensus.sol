@@ -437,6 +437,8 @@ contract HashConsensus is AccessControlEnumerable {
         member.lastReportRefSlot = uint64(slot);
         member.lastReportVariantIndex = varIndex;
 
+        emit ReportReceived(slot, _msgSender(), report);
+
         if (support >= _quorum) {
             _consensusReached(frame, report, varIndex, support);
         }
