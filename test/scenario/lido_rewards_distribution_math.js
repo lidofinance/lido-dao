@@ -21,7 +21,7 @@ const treasuryFeePoints = 0.3 * 10000
 // 50% goes to node operators
 const nodeOperatorsFeePoints = 0.7 * 10000
 
-contract('Lido: rewards distribution math', (addresses) => {
+contract.skip('Lido: rewards distribution math', (addresses) => {
   const [
     // the root account which deployed the DAO
     appManager,

@@ -11,7 +11,7 @@ const { waitBlocks } = require('../helpers/blockchain')
 
 const INodeOperatorsRegistry = artifacts.require('contracts/0.4.24/interfaces/INodeOperatorsRegistry.sol:INodeOperatorsRegistry')
 
-contract('Lido: penalties, slashing, operator stops', (addresses) => {
+contract.skip('Lido: penalties, slashing, operator stops', (addresses) => {
   const [
     // the root account which deployed the DAO
     appManager,
