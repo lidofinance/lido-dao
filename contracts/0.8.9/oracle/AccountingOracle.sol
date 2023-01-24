@@ -8,9 +8,11 @@ import { SafeCast } from "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
 import { ILido } from "../interfaces/ILido.sol";
 import { IStakingRouter } from "../interfaces/IStakingRouter.sol";
 import { MemUtils } from "../lib/MemUtils.sol";
+import { ResizableArray } from "../lib/ResizableArray.sol";
 
 
 contract AccountingOracle is BaseOracle {
+    using ResizableArray for ResizableArray.Array;
     using UnstructuredStorage for bytes32;
     using SafeCast for uint256;
 
@@ -21,12 +23,15 @@ contract AccountingOracle is BaseOracle {
     error InvalidExitedValidatorsData();
     error NumExitedValidatorsCannotDecrease();
     error ExitedValidatorsLimitExceeded(uint256 limitPerDay, uint256 exitedPerDay);
-    error UnsupportedExtraDataType();
+    error UnsupportedExtraDataFormat(uint256 format);
+    error UnsupportedExtraDataType(uint256 type);
     error MaxExtraDataItemsCountExceeded(uint256 maxItemsCount, uint256 receivedItemsCount);
     error CannotProcessExtraDataBeforeMainData();
     error ExtraDataAlreadyProcessed();
     error ExtraDataListOnlySupportsSingleTx();
-    error UnexpectedExtraItemsCount(uint256 expectedCount, uint256 receivedCount);
+    error UnexpectedExtraDataItemsCount(uint256 expectedCount, uint256 receivedCount);
+    error UnexpectedExtraDataIndex(uint256 expectedIndex, uint256 receivedIndex);
+    error InvalidExtraDataSortOrder();
 
     event DataBoundraiesSet(uint256 maxExitedValidatorsPerDay, uint256 maxExtraDataListItemsCount);
 
@@ -165,6 +170,9 @@ contract AccountingOracle is BaseOracle {
     ///
     uint16 public constant EXTRA_DATA_FORMAT_LIST = 0;
 
+    uint16 public constant EXTRA_DATA_TYPE_STUCK_VALIDATORS = 0;
+    uint16 public constant EXTRA_DATA_TYPE_EXITED_VALIDATORS = 1;
+
     struct DataBoundraies {
         uint64 maxExitedValidatorsPerDay;
         uint64 maxExtraDataListItemsCount;
@@ -302,7 +310,7 @@ contract AccountingOracle is BaseOracle {
         _processRebaseData(boudaries, data, slotsElapsed, boudaries);
 
         if (data.extraDataFormat != EXTRA_DATA_FORMAT_LIST) {
-            revert UnsupportedExtraDataType();
+            revert UnsupportedExtraDataFormat(data.extraDataFormat);
         }
 
         if (data.extraDataItemsCount > boudaries.maxExtraDataListItemsCount) {
@@ -415,7 +423,7 @@ contract AccountingOracle is BaseOracle {
         }
 
         if (items.length != procState.itemsCount) {
-            revert UnexpectedExtraItemsCount(procState.itemsCount, items.length);
+            revert UnexpectedExtraDataItemsCount(procState.itemsCount, items.length);
         }
 
         bytes32 dataHash = MemUtils.keccakUint256Array(items);
@@ -423,18 +431,125 @@ contract AccountingOracle is BaseOracle {
             revert UnexpectedDataHash(procState.dataHash, dataHash);
         }
 
-        uint256 newIndex = _processExtraDataItems(items, 0);
-        assert(newIndex + 1 == procState.itemsCount);
+        ExtraDataProcessingState storage _procState = _storageExtraDataProcessingState().value;
 
-        _storageExtraDataProcessingState().value.processedItemsCount = newIndex + 1;
+        _procState.lastProcessedItem = _processExtraDataItems(items, 0, 0);
+        _procState.processedItemsCount = items.length;
+    }
+
+    struct ExtraDataIterState {
+        uint256 firstItemIndex;
+        uint256 nextIndex;
+        int256 lastType;
+        int256 lastModuleId;
+        int256 lastNodeOpId;
     }
 
     function _processExtraDataItems(
         uint256[] calldata items,
         uint256 itemsProcessed,
         uint256 lastProcessedItem
-    ) returns (uint256) {
-        // TODO
+    ) internal returns (uint256) {
+        IStakingRouter stakingRouter = IStakingRouter(ILido(LIDO).getStakingRouter());
+
+        ExtraDataIterState memory iter = ExtraDataIterState({
+            firstItemIndex: itemsProcessed,
+            nextIndex: 0,
+            lastType: -1,
+            lastModuleId: -1,
+            lastNodeOpId: -1
+        });
+
+        if (lastProcessedItem != 0) {
+            (, iter.lastType, uint256 payload) = _decodeExtraDataItem(lastProcessedItem);
+            (iter.lastModuleId, iter.lastNodeOpId, ) = _decodeExtraDataPayload(payload);
+        }
+
+        ResizableArray.Array memory nopIds = ResizableArray.preallocate(20);
+        ResizableArray.Array memory keyCounts = ResizableArray.preallocate(20);
+
+        while (iter.nextIndex < items.length) {
+            _processSingleModule(iter, items, nopIds, keyCounts);
+
+            if (iter.lastType == EXTRA_DATA_TYPE_STUCK_VALIDATORS) {
+                // TODO: report stuck validators
+                // stakingRouter.reportStakingModuleStuckKeysCountByNodeOperator(
+                //     iter.lastModuleId,
+                //     nopIds.pointer(),
+                //     keyCounts.pointer()
+                // );
+            } else if (iter.lastType == EXTRA_DATA_TYPE_EXITED_VALIDATORS) {
+                stakingRouter.reportStakingModuleExitedKeysCountByNodeOperator(
+                    iter.lastModuleId,
+                    nopIds.pointer(),
+                    keyCounts.pointer()
+                );
+            } else {
+                revert UnsupportedExtraDataType(iter.lastType);
+            }
+
+            nopIds.clear();
+            keyCounts.clear();
+        }
+
+        return iter.nextIndex == 0 ? 0 : items[iter.nextIndex - 1];
+    }
+
+    function _processSingleModule(
+        ExtraDataIterState memory iter,
+        uint256[] calldata items,
+        ResizableArray.Array memory nopIds,
+        ResizableArray.Array memory keyCounts
+    ) internal pure {
+        uint256 i = iter.nextIndex;
+        uint256 firstItemIndex = iter.firstItemIndex;
+        bool started = false;
+
+        uint256 itemType;
+        uint256 moduleId;
+        uint256 lastNodeOpId;
+
+        while (i < items.length) {
+            (uint256 iIndex, uint256 iType, uint256 iPayload) = _decodeExtraDataItem(items[i]);
+
+            if (iIndex != firstItemIndex + i) {
+                revert UnexpectedExtraDataIndex(firstItemIndex + i, iIndex);
+            }
+
+            (uint256 iModuleId, uint256 iNodeOpId, uint256 iKeysCount) =
+                _decodeExtraDataPayload(iPayload);
+
+            if (started) {
+                if (iType != itemType || iModuleId != moduleId) {
+                    break;
+                }
+            } else {
+                if (iType < iter.lastType || iType == iter.lastType && (
+                    iModuleId < iter.lastModuleId ||
+                    iModuleId == iter.lastModuleId && iNodeOpId <= iter.lastNodeOpId
+                )) {
+                    revert InvalidExtraDataSortOrder();
+                }
+                itemType = iType;
+                moduleId = iModuleId;
+                started = true;
+            }
+
+            if (iNodeOpId <= lastNodeOpId) {
+                revert InvalidExtraDataSortOrder();
+            }
+
+            nopIds.push(iNodeOpId);
+            keyCounts.push(iKeysCount);
+            lastNodeOpId = iNodeOpId;
+
+            unchecked { ++i; }
+        }
+
+        iter.nextIndex = i;
+        iter.lastType = itemType;
+        iter.lastModuleId = moduleId;
+        iter.lastNodeOpId = lastNodeOpId;
     }
 
     function _decodeExtraDataItem(uint256 item) internal pure returns (
