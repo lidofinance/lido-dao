@@ -10,6 +10,7 @@ require('@nomiclabs/hardhat-etherscan')
 require('hardhat-gas-reporter')
 require('solidity-coverage')
 require('hardhat-contract-sizer')
+require('hardhat-ignore-warnings')
 
 const NETWORK_NAME = getNetworkName()
 const ETH_ACCOUNT_NAME = process.env.ETH_ACCOUNT_NAME
@@ -167,6 +168,14 @@ module.exports = {
         version: '0.4.24',
         settings: {}
       }
+    }
+  },
+  warnings: {
+    '@aragon/**/*': {
+      default: 'off',
+    },
+    'contracts/*/test_helpers/**/*': {
+      default: 'off',
     }
   },
   gasReporter: {
