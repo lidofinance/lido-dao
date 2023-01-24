@@ -668,7 +668,7 @@ contract Lido is StETHPermit, AragonApp {
         if (withdrawalQueueAddress != address(0)) {
             IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(withdrawalQueueAddress);
 
-            uint256 lastUnfinalizedRequestId = withdrawalQueue.finalizedRequestsCounter();
+            uint256 lastUnfinalizedRequestId = withdrawalQueue.lastFinalizedRequestId() + 1;
             (minEtherReserve,,,,,) = withdrawalQueue.getWithdrawalRequestStatus(lastUnfinalizedRequestId);
         }
 
@@ -738,8 +738,6 @@ contract Lido is StETHPermit, AragonApp {
 
         for (uint256 i = 0; i < _requestIdToFinalizeUpTo.length; i++) {
             uint256 lastIdToFinalize = _requestIdToFinalizeUpTo[i];
-            require(lastIdToFinalize >= withdrawalQueue.finalizedRequestsCounter(), "BAD_FINALIZATION_PARAMS");
-
             uint256 shareRate = _finalizationShareRates[i];
 
             (uint256 etherToLock, uint256 sharesToBurn) = withdrawalQueue.finalizationBatch(

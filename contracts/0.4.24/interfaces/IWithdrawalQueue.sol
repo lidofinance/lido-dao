@@ -15,7 +15,7 @@ interface IWithdrawalQueue {
 
     function finalize(uint256 _lastIdToFinalize) external payable;
 
-    function finalizedRequestsCounter() external view returns (uint256);
+    function lastFinalizedRequestId() external view returns (uint256);
 
     function isPaused() external returns (bool);
 

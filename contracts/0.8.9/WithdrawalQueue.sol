@@ -59,11 +59,13 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
     ///! SLOT 0: mapping(bytes32 => RoleData) _roles
     ///! SLOT 1: mapping(bytes32 => EnumerableSet.AddressSet) _roleMembers
     ///  Inherited from WithdrawalQueueBase:
-    ///! SLOT 2: uint128 lockedEtherAmount
-    ///! SLOT 3: uint256 finalizedRequestsCounter
-    ///! SLOT 4: WithdrawalRequest[] queue
-    ///! SLOT 5: mapping(address => uint256[]) requestsByRecipient
-    ///! SLOT 6: Discount[] discountHistory
+    ///! SLOT 2: mapping(uint256 => WithdrawalRequest) queue
+    ///! SLOT 3: uint256 lastRequestId
+    ///! SLOT 4: uint256 lastFinalizedRequestId
+    ///! SLOT 5: mapping(uint256 => Discount) discountHistory
+    ///! SLOT 6: uint256 lastDiscountIndex
+    ///! SLOT 7: uint128 public lockedEtherAmount
+    ///! SLOT 8: mapping(address => uint256[]) requestsByRecipient
 
     /// Version of the initialized contract data
     /// NB: Contract versioning starts from 1.
