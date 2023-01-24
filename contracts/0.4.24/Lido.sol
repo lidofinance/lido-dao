@@ -447,8 +447,8 @@ contract Lido is StETHPermit, AragonApp {
     * @param _beaconBalance sum of all Lido validators' balances
     * @param _withdrawalVaultBalance withdrawal vault balance on report block
     * @param _newBufferedEtherReserveAmount amount of ETH in deposit buffer that should be reserved from being deposited
-    * @param _requestIdToFinalizeUpTo batches of withdrawal requests that should be finalized, encoded as the right boundaries in the range (`lastFinalizedId`, `_requestIdToFinalizeUpTo`]
-    * @param _finalizationShareRates share rates that should be used for finalization of the each batch
+    * @param _requestIdToFinalizeUpTo rigth boundary of requestId range if equals 0, no requests should be finalized 
+    * @param _finalizationShareRate share rate that should be used for finalization
     */
     function handleOracleReport(
         // CL values
@@ -458,8 +458,8 @@ contract Lido is StETHPermit, AragonApp {
         uint256 _withdrawalVaultBalance,
         // decision
         uint256 _newBufferedEtherReserveAmount,
-        uint256[] _requestIdToFinalizeUpTo,
-        uint256[] _finalizationShareRates
+        uint256 _requestIdToFinalizeUpTo,
+        uint256 _finalizationShareRate
     ) external {
         require(msg.sender == getOracle(), "APP_AUTH_FAILED");
         _whenNotStopped();
@@ -476,7 +476,7 @@ contract Lido is StETHPermit, AragonApp {
         uint256 executionLayerRewards = _processETHDistribution(
             _withdrawalVaultBalance,
             _requestIdToFinalizeUpTo,
-            _finalizationShareRates
+            _finalizationShareRate
         );
 
         // update ether reserve accordingly
@@ -678,8 +678,8 @@ contract Lido is StETHPermit, AragonApp {
     /// @dev collect ETH from ELRewardsVault and WithdrawalVault and send to WithdrawalQueue
     function _processETHDistribution(
         uint256 _withdrawalVaultBalance,
-        uint256[] _requestIdToFinalizeUpTo,
-        uint256[] _finalizationShareRates
+        uint256 _requestIdToFinalizeUpTo,
+        uint256 _finalizationShareRate
     ) internal returns (uint256 executionLayerRewards) {
         executionLayerRewards = 0;
         address elRewardsVaultAddress = getELRewardsVault();
@@ -701,11 +701,13 @@ contract Lido is StETHPermit, AragonApp {
                 IWithdrawalVault(withdrawalVaultAddress).withdrawWithdrawals(_withdrawalVaultBalance);
             }
 
-            // And pass some ether to WithdrawalQueue to fulfill requests
-            lockedToWithdrawalQueue = _processWithdrawalQueue(
-                _requestIdToFinalizeUpTo,
-                _finalizationShareRates
-            );
+            if (_requestIdToFinalizeUpTo != 0) {
+                // And pass some ether to WithdrawalQueue to fulfill requests
+                lockedToWithdrawalQueue = _processWithdrawalQueue(
+                    _requestIdToFinalizeUpTo,
+                    _finalizationShareRate
+                );
+            }
         }
 
         uint256 preBufferedEther = _getBufferedEther();
@@ -722,8 +724,8 @@ contract Lido is StETHPermit, AragonApp {
 
     ///@dev finalize withdrawal requests in the queue, burn their shares and return the amount of ether locked for claiming
     function _processWithdrawalQueue(
-        uint256[] _requestIdToFinalizeUpTo,
-        uint256[] _finalizationShareRates
+        uint256 _requestIdToFinalizeUpTo,
+        uint256 _finalizationShareRate
     ) internal returns (uint256 lockedToWithdrawalQueue) {
         address withdrawalQueueAddress = getWithdrawalQueue();
         // do nothing if the withdrawals vault address is not configured
@@ -733,24 +735,13 @@ contract Lido is StETHPermit, AragonApp {
 
         IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(withdrawalQueueAddress);
 
-        lockedToWithdrawalQueue = 0;
-        uint256 sharesToBurnAccumulator = 0;
-
-        for (uint256 i = 0; i < _requestIdToFinalizeUpTo.length; i++) {
-            uint256 lastIdToFinalize = _requestIdToFinalizeUpTo[i];
-            uint256 shareRate = _finalizationShareRates[i];
-
-            (uint256 etherToLock, uint256 sharesToBurn) = withdrawalQueue.finalizationBatch(
-                lastIdToFinalize,
-                shareRate
-            );
-
-            sharesToBurnAccumulator = sharesToBurnAccumulator.add(sharesToBurn);
-
-            withdrawalQueue.finalize.value(etherToLock)(lastIdToFinalize);
-        }
+        (uint256 etherToLock, uint256 sharesToBurn) = withdrawalQueue.finalizationBatch(
+            _requestIdToFinalizeUpTo,
+            _finalizationShareRate
+        );
 
         _burnShares(withdrawalQueueAddress, sharesToBurn);
+        withdrawalQueue.finalize.value(etherToLock)(_requestIdToFinalizeUpTo);
     }
 
     /// @dev calculate the amout of rewards and distribute it

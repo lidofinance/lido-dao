@@ -641,8 +641,8 @@ contract LidoOracle is ILidoOracle, AragonApp {
             _beaconBalanceEth1,
             0,
             0,
-            new uint256[](0),
-            new uint256[](0)
+            0,
+            0
         ); // here should be withdrawal params
         uint256 postTotalPooledEther = lido.totalSupply();
 
