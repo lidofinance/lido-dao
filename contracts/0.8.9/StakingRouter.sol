@@ -97,7 +97,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
 
     constructor(address _depositContract) BeaconChainDepositor(_depositContract) {
         /// @dev lock version in implementation to avoid initialize() call
-        ///      DEFAULT_ADMIN_ROLE will remain unset, i.e. no ability to add new members ro roles
+        ///      DEFAULT_ADMIN_ROLE will remain unset, i.e. no ability to add new members or roles
         _setContractVersion(type(uint256).max);
     }
 
@@ -177,7 +177,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     }
 
     /**
-     * @notice update staking module params
+     * @notice Update staking module params
      * @param _stakingModuleId staking module id
      * @param _targetShare target total stake share
      * @param _stakingModuleFee fee of the staking module taken from the consensus layer rewards
@@ -208,7 +208,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
 
 
     /**
-     * @notice Returns all registred staking modules
+     * @notice Returns all registered staking modules
      */
     function getStakingModules() external view returns (StakingModule[] memory res) {
         uint256 stakingModulesCount = getStakingModulesCount();
@@ -243,8 +243,8 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     /**
      *  @dev Returns staking module by index
      */
-    function getStakingModuleByIndex(uint256 _stakingModuleIdndex) external view returns (StakingModule memory) {
-        return _getStakingModuleByIndex(_stakingModuleIdndex);
+    function getStakingModuleByIndex(uint256 _stakingModuleIndex) external view returns (StakingModule memory) {
+        return _getStakingModuleByIndex(_stakingModuleIndex);
     }
 
     /**
@@ -355,11 +355,12 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     }
 
     /**
-     * @notice return shares table
+     * @notice Return shares table
      *
      * @return recipients recipients list
      * @return stakingModuleFees fee of each recipient
      * @return totalFee total fee to mint for each staking module and treasury
+     * @return precisionPoints base precision number, which constitutes 100% fee
      */
     function getStakingRewardsDistribution()
         external
@@ -390,7 +391,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
                 recipients[rewardedStakingModulesCount] = address(stakingModuleCache[i].stakingModuleAddress);
                 stakingModuleFee = uint96((stakingModuleKeysShare * stakingModuleCache[i].stakingModuleFee) / TOTAL_BASIS_POINTS);
                 /// @dev if the staking module has the `Stopped` status for some reason, then
-                ///      the staking module's rewards go to the treasure, so that the DAO has ability
+                ///      the staking module's rewards go to the treasury, so that the DAO has ability
                 ///      to manage them (e.g. to compensate the staking module in case of an error, etc.)
                 if (stakingModuleCache[i].status != StakingModuleStatus.Stopped) {
                     stakingModuleFees[rewardedStakingModulesCount] = stakingModuleFee;
@@ -471,7 +472,6 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
             }
         }
         _transferBalanceEthToLido();
-        // return keysCount;
     }
 
     /// @dev transfer all remaining balance to Lido contract
