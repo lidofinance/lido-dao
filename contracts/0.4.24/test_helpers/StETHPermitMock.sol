@@ -15,4 +15,8 @@ contract StETHPermitMock is StETHPermit, StETHMock {
     function initializeEIP712StETH(address _eip712StETH) external {
         _initializeEIP712StETH(_eip712StETH);
     }
+
+    function getBlockTime() external view returns (uint256) {
+        return block.timestamp;
+    }
 }

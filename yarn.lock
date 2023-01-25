@@ -3707,7 +3707,6 @@ __metadata:
     lint-staged: ">=10"
     node-gyp: ^8.4.1
     openzeppelin-solidity: 2.0.0
-    patch-package: ^6.4.7
     prettier: ^2.8.1
     prettier-plugin-solidity: ^1.1.0
     solhint: ^3.3.7
@@ -12964,15 +12963,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"find-yarn-workspace-root@npm:^2.0.0":
-  version: 2.0.0
-  resolution: "find-yarn-workspace-root@npm:2.0.0"
-  dependencies:
-    micromatch: ^4.0.2
-  checksum: 21c2b76621c58ecb0aadfeb128ece1ece979a9c43aac6f91bb422b20ca5744e63300d175692bc1a9e7b9f2f949f865e0f3ec05efeeabb81447146e6b4ccf003a
-  languageName: node
-  linkType: hard
-
 "flat-cache@npm:^2.0.1":
   version: 2.0.1
   resolution: "flat-cache@npm:2.0.1"
@@ -20169,16 +20159,6 @@ fsevents@~2.3.2:
   languageName: node
   linkType: hard
 
-"open@npm:^7.4.2":
-  version: 7.4.2
-  resolution: "open@npm:7.4.2"
-  dependencies:
-    is-docker: ^2.0.0
-    is-wsl: ^2.1.1
-  checksum: 07545fa768e5fbc25c6f53c6f17465f1b7ee663a494f87608d99a7b3227c83d2d2e0f0e5ecb70325b4ddef97dcd02d206f9afe3f8d6bb3d6612db9ca310ed4eb
-  languageName: node
-  linkType: hard
-
 "openzeppelin-solidity@npm:2.0.0":
   version: 2.0.0
   resolution: "openzeppelin-solidity@npm:2.0.0"
@@ -20870,29 +20850,6 @@ fsevents@~2.3.2:
   bin:
     patch-package: index.js
   checksum: 4225ee1028f387ed2c00d9c0d7ffbb03dba5b8adc26a6cc116e0f38f4cd08d232defa20dbca51bce088964d787291715f3603b496abc608f0c392643dd3d3a46
-  languageName: node
-  linkType: hard
-
-"patch-package@npm:^6.4.7":
-  version: 6.4.7
-  resolution: "patch-package@npm:6.4.7"
-  dependencies:
-    "@yarnpkg/lockfile": ^1.1.0
-    chalk: ^2.4.2
-    cross-spawn: ^6.0.5
-    find-yarn-workspace-root: ^2.0.0
-    fs-extra: ^7.0.1
-    is-ci: ^2.0.0
-    klaw-sync: ^6.0.0
-    minimist: ^1.2.0
-    open: ^7.4.2
-    rimraf: ^2.6.3
-    semver: ^5.6.0
-    slash: ^2.0.0
-    tmp: ^0.0.33
-  bin:
-    patch-package: index.js
-  checksum: ff118d6b994f69957e8c695dd7d9a4bae4c43f25609427b287cd4414957eaec3efc87e9a44010fe1b5a64bdbd37ac6534e6e38d82deb3afb0ac66772e14e7a62
   languageName: node
   linkType: hard
 
