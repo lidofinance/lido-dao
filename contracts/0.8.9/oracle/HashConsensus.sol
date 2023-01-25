@@ -476,7 +476,7 @@ contract HashConsensus is AccessControlEnumerable {
 
     function _setQuorumAndCheckConsensus(uint256 quorum, uint256 totalMembers) internal {
         if (quorum <= totalMembers / 2) {
-            revert QuorumTooSmall(totalMembers / 2, quorum);
+            revert QuorumTooSmall(totalMembers / 2 + 1, quorum);
         }
 
         // we're explicitly allowing quorum values greater than the number of members to
