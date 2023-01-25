@@ -211,11 +211,8 @@ contract HashConsensus is AccessControlEnumerable {
     }
 
     function setEpochsPerFrame(uint256 epochsPerFrame) external onlyRole(MANAGE_INTERVAL_ROLE) {
-        // Updates epochsPerFrame keeping the following invariant:
-        // Sj - Si >= min(E1, E2) * SLOTS_PER_EPOCH
-        // where Si and Sj are reference slots, j > i,
-        // E1 is the curent value of epochsPerFrame,
-        // E2 is the new value of epochsPerFrame.
+        // Updates epochsPerFrame in a way that either keeps the current reference slot the same
+        // or increases it by at least the minimum of old and new frame sizes.
         uint256 timestamp = _getTime();
         uint256 currentFrameStartEpoch = _computeFrameStartEpoch(timestamp, _frameConfig);
         _setFrameConfig(currentFrameStartEpoch, epochsPerFrame);
