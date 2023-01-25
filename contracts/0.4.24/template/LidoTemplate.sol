@@ -430,8 +430,7 @@ contract LidoTemplate is IsContract {
         state.lido.setProtocolContracts(
             state.lido.getOracle(),
             state.lido.getTreasury(),
-            _elRewardsVault,
-            address(0)
+            _elRewardsVault
         );
         _removePermissionFromTemplate(state.acl, state.lido, MANAGE_PROTOCOL_CONTRACTS_ROLE);
 

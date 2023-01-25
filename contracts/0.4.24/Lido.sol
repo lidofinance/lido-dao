@@ -88,8 +88,7 @@ contract Lido is StETHPermit, AragonApp {
     event ProtocolContactsSet(
         address oracle,
         address treasury,
-        address executionLayerRewardsVault,
-        address withdrawalQueue
+        address executionLayerRewardsVault
     );
 
     // The amount of ETH withdrawn from LidoExecutionLayerRewardsVault contract to Lido contract
@@ -109,6 +108,8 @@ contract Lido is StETHPermit, AragonApp {
     event DepositSecurityModuleSet(address dsmAddress);
 
     event StakingRouterSet(address stakingRouterAddress);
+
+    event WithdrawalQueueSet(address withdrawalQueueAddress);
 
     // The amount of ETH sended from StakingRouter contract to Lido contract
     event StakingRouterTransferReceived(uint256 amount);
@@ -135,9 +136,9 @@ contract Lido is StETHPermit, AragonApp {
     )
         public onlyInit
     {
-        _setProtocolContracts(_oracle, _treasury, _executionLayerRewardsVault, _withdrawalQueue);
+        _setProtocolContracts(_oracle, _treasury, _executionLayerRewardsVault);
 
-        _initialize_v2(_stakingRouter, _dsm, _eip712StETH);
+        _initialize_v2(_stakingRouter, _dsm, _eip712StETH, _withdrawalQueue);
         initialized();
     }
 
@@ -145,9 +146,10 @@ contract Lido is StETHPermit, AragonApp {
      * @dev If we are deploying the protocol from scratch there are circular dependencies introduced (StakingRouter and DSM),
      *      so on init stage we need to set `_stakingRouter` and `_dsm` as 0x0, and afterwards use setters for set them correctly
      */
-    function _initialize_v2(address _stakingRouter, address _dsm, address _eip712StETH) internal {
+    function _initialize_v2(address _stakingRouter, address _dsm, address _eip712StETH, address _withdrawalQueue) internal {
         STAKING_ROUTER_POSITION.setStorageAddress(_stakingRouter);
         DEPOSIT_SECURITY_MODULE_POSITION.setStorageAddress(_dsm);
+        WITHDRAWAL_QUEUE_POSITION.setStorageAddress(_withdrawalQueue);
 
         CONTRACT_VERSION_POSITION.setStorageUint256(2);
 
@@ -156,6 +158,7 @@ contract Lido is StETHPermit, AragonApp {
         emit ContractVersionSet(2);
         emit StakingRouterSet(_stakingRouter);
         emit DepositSecurityModuleSet(_dsm);
+        emit WithdrawalQueueSet(_withdrawalQueue);
     }
 
     /**
@@ -163,14 +166,21 @@ contract Lido is StETHPermit, AragonApp {
      * @dev Value 1 in CONTRACT_VERSION_POSITION is skipped due to change in numbering
      * For more details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md
      */
-    function finalizeUpgrade_v2(address _stakingRouter, address _dsm, address _eip712StETH) external {
+    function finalizeUpgrade_v2(
+        address _stakingRouter, 
+        address _dsm, 
+        address _eip712StETH, 
+        address _withdrawalQueue
+    ) external {
         require(!isPetrified(), "PETRIFIED");
         require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "WRONG_BASE_VERSION");
+
         require(_stakingRouter != address(0), "STAKING_ROUTER_ZERO_ADDRESS");
         require(_dsm != address(0), "DSM_ZERO_ADDRESS");
         require(_eip712StETH != address(0), "EIP712_STETH_ZERO_ADDRESS");
+        require(_withdrawalQueue != address(0), "WITHDRAWAL_QUEUE_ZERO_ADDRESS");
 
-        _initialize_v2(_stakingRouter, _dsm, _eip712StETH);
+        _initialize_v2(_stakingRouter, _dsm, _eip712StETH, _withdrawalQueue);
     }
 
     /**
@@ -416,17 +426,15 @@ contract Lido is StETHPermit, AragonApp {
     * @param _oracle oracle contract
     * @param _treasury treasury contract
     * @param _executionLayerRewardsVault execution layer rewards vault contract
-    * @param _withdrawalQueue withdrawal queue contract
     */
     function setProtocolContracts(
         address _oracle,
         address _treasury,
-        address _executionLayerRewardsVault,
-        address _withdrawalQueue
+        address _executionLayerRewardsVault
     ) external {
         _auth(MANAGE_PROTOCOL_CONTRACTS_ROLE);
 
-        _setProtocolContracts(_oracle, _treasury, _executionLayerRewardsVault, _withdrawalQueue);
+        _setProtocolContracts(_oracle, _treasury, _executionLayerRewardsVault);
     }
 
     /**
@@ -535,8 +543,16 @@ contract Lido is StETHPermit, AragonApp {
     /**
      * @notice Returns the address of WithdrawalQueue contract. Can be address(0) if withdrawals
      */
-    function getWithdrawalQueue() public view returns (address) {
-        return WITHDRAWAL_QUEUE_POSITION.getStorageAddress();
+    function getWithdrawalQueue() public view returns (IWithdrawalQueue) {
+        return IWithdrawalQueue(WITHDRAWAL_QUEUE_POSITION.getStorageAddress());
+    }
+
+    function setWithdrawalQueue(address _withdrawalQueue) external {
+        _auth(MANAGE_PROTOCOL_CONTRACTS_ROLE);
+        require(_withdrawalQueue != address(0), "WITHDRAWAL_QUEUE_ADDRESS_ZERO");
+        WITHDRAWAL_QUEUE_POSITION.setStorageAddress(_withdrawalQueue);
+
+        emit WithdrawalQueueSet(_withdrawalQueue);
     }
 
     /**
@@ -663,22 +679,7 @@ contract Lido is StETHPermit, AragonApp {
 
     /// @dev update BufferedEtherReserve to `_newBufferedEtherReserve`
     function _processBufferedEtherReserveUpdate(uint256 _newBufferedEtherReserve) internal {
-        uint256 minEtherReserve = 0;
-
-        // We are trying to avoid the situation when withdrawal queue is blocked by large request
-        // while ether is constantly spent to deposit new validators
-        // so if we pass a reserve amount less than amount of eth required to finalize the last request
-        // in the queue, we are updating it to that amount
-        address withdrawalQueueAddress = getWithdrawalQueue();
-
-        if (withdrawalQueueAddress != address(0)) {
-            IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(withdrawalQueueAddress);
-
-            uint256 lastUnfinalizedRequestId = withdrawalQueue.lastFinalizedRequestId() + 1;
-            (minEtherReserve,,,,,) = withdrawalQueue.getWithdrawalRequestStatus(lastUnfinalizedRequestId);
-        }
-
-        BUFFERED_ETHER_RESERVE_POSITION.setStorageUint256(_max(_newBufferedEtherReserve, minEtherReserve));
+        BUFFERED_ETHER_RESERVE_POSITION.setStorageUint256(_newBufferedEtherReserve);
     }
 
     /// @dev collect ETH from ELRewardsVault and WithdrawalVault and send to WithdrawalQueue
@@ -698,31 +699,28 @@ contract Lido is StETHPermit, AragonApp {
         }
 
         address withdrawalVaultAddress = _getWithdrawalVault();
-
-        uint256 lockedToWithdrawalQueue = 0;
-
         if (withdrawalVaultAddress != address(0)) {
             if (_withdrawalVaultBalance > 0) {
                 // we pull all the accounted ether from WithdrawalVault
                 IWithdrawalVault(withdrawalVaultAddress).withdrawWithdrawals(_withdrawalVaultBalance);
             }
+        }
 
-            if (_requestIdToFinalizeUpTo != 0) {
-                // And pass some ether to WithdrawalQueue to fulfill requests
-                lockedToWithdrawalQueue = _processWithdrawalQueue(
-                    _requestIdToFinalizeUpTo,
-                    _finalizationShareRate
-                );
-            }
+        uint256 lockedToWithdrawalQueue = 0;
+        if (_requestIdToFinalizeUpTo > 0) {
+            lockedToWithdrawalQueue = _processWithdrawalQueue(
+                _requestIdToFinalizeUpTo,
+                _finalizationShareRate
+            );
         }
 
         uint256 preBufferedEther = _getBufferedEther();
-
         uint256 postBufferedEther = _getBufferedEther()
             .add(executionLayerRewards) // Collected from ELVault
             .add(_withdrawalVaultBalance) // Collected from WithdrawalVault
             .sub(lockedToWithdrawalQueue); // Sent to WithdrawalQueue
 
+        // Storing even the same value costs gas, so just avoid it
         if (preBufferedEther != postBufferedEther) {
             BUFFERED_ETHER_POSITION.setStorageUint256(postBufferedEther);
         }
@@ -733,21 +731,17 @@ contract Lido is StETHPermit, AragonApp {
         uint256 _requestIdToFinalizeUpTo,
         uint256 _finalizationShareRate
     ) internal returns (uint256 lockedToWithdrawalQueue) {
-        address withdrawalQueueAddress = getWithdrawalQueue();
-        // do nothing if the withdrawals vault address is not configured
-        if (withdrawalQueueAddress == address(0)) {
-            return 0;
-        }
-
-        IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(withdrawalQueueAddress);
+        IWithdrawalQueue withdrawalQueue = getWithdrawalQueue();
 
         (uint256 etherToLock, uint256 sharesToBurn) = withdrawalQueue.finalizationBatch(
             _requestIdToFinalizeUpTo,
             _finalizationShareRate
         );
 
-        _burnShares(withdrawalQueueAddress, sharesToBurn);
+        _burnShares(address(withdrawalQueue), sharesToBurn);
         withdrawalQueue.finalize.value(etherToLock)(_requestIdToFinalizeUpTo);
+
+        lockedToWithdrawalQueue = etherToLock;
     }
 
     /// @dev calculate the amout of rewards and distribute it
@@ -775,20 +769,19 @@ contract Lido is StETHPermit, AragonApp {
     * @param _oracle oracle contract
     * @param _treasury treasury contract
     * @param _executionLayerRewardsVault execution layer rewards vault contract
-    * @param _withdrawalQueue withdrawal queue contract
     */
     function _setProtocolContracts(
-        address _oracle, address _treasury, address _executionLayerRewardsVault, address _withdrawalQueue
+        address _oracle, address _treasury, address _executionLayerRewardsVault
     ) internal {
         require(_oracle != address(0), "ORACLE_ZERO_ADDRESS");
         require(_treasury != address(0), "TREASURY_ZERO_ADDRESS");
-        //NB: _executionLayerRewardsVault and _withdrawalQueue can be zero
+        //NB: _executionLayerRewardsVault can be zero
 
         ORACLE_POSITION.setStorageAddress(_oracle);
         TREASURY_POSITION.setStorageAddress(_treasury);
         EL_REWARDS_VAULT_POSITION.setStorageAddress(_executionLayerRewardsVault);
 
-        emit ProtocolContactsSet(_oracle, _treasury, _executionLayerRewardsVault, _withdrawalQueue);
+        emit ProtocolContactsSet(_oracle, _treasury, _executionLayerRewardsVault);
     }
 
     /**

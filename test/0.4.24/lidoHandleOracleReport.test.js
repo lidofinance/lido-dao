@@ -8,7 +8,7 @@ const OracleMock = artifacts.require('OracleMock.sol')
 
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 
-contract('Lido handleOracleReport', ([appManager, user1, user2]) => {
+contract('Lido: handleOracleReport', ([appManager, user1, user2]) => {
   let appBase, app, oracle
 
   before('deploy base app', async () => {

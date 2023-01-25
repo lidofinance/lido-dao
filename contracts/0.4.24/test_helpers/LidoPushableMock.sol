@@ -15,7 +15,7 @@ contract LidoPushableMock is Lido {
     bool public distributeFeeCalled;
 
     function initialize(address _oracle) public onlyInit {
-        _setProtocolContracts(_oracle, _oracle, address(0), address(0));
+        _setProtocolContracts(_oracle, _oracle, address(0));
         _resume();
         initialized();
     }

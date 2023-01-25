@@ -29,6 +29,7 @@
     "estimate-deposit-loop-gas": "yarn run test:unit ./estimate_deposit_loop_gas.js",
     "compile": "hardhat compile && yarn extract-abi",
     "extract-abi": "node ./scripts/extract-abi.js",
+    "size-contracts": "yarn run hardhat size-contracts",
     "deploy": "yarn run deploy:all",
     "deploy:all": "yarn compile && yarn deploy:aragon-env && yarn deploy:aragon-std-apps && yarn deploy:apm-and-template && yarn deploy:apps && yarn deploy:dao",
     "deploy:e2e:all": "yarn compile && yarn deploy:e2e:aragon-env && yarn deploy:e2e:aragon-std-apps && yarn deploy:e2e:apm-and-template && yarn deploy:e2e:apps && yarn deploy:e2e:dao",
