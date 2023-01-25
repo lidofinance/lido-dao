@@ -70,8 +70,6 @@ contract Lido is StETHPermit, AragonApp {
     bytes32 internal constant EL_REWARDS_WITHDRAWAL_LIMIT_POSITION = keccak256("lido.Lido.ELRewardsWithdrawalLimit");
     /// @dev Just a counter of total amount of execution layer rewards received by Lido contract. Not used in the logic.
     bytes32 internal constant TOTAL_EL_REWARDS_COLLECTED_POSITION = keccak256("lido.Lido.totalELRewardsCollected");
-    /// @dev Amount of eth in deposit buffer to be reserved from being deposited
-    bytes32 internal constant BUFFERED_ETHER_RESERVE_POSITION = keccak256("lido.Lido.bufferedEtherReserve");
     /// @dev version of contract
     bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.Lido.contractVersion");
 
@@ -454,7 +452,7 @@ contract Lido is StETHPermit, AragonApp {
     * @param _beaconValidators number of Lido validators on Consensus Layer
     * @param _beaconBalance sum of all Lido validators' balances
     * @param _withdrawalVaultBalance withdrawal vault balance on report block
-    * @param _newBufferedEtherReserveAmount amount of ETH in deposit buffer that should be reserved from being deposited
+    * @param _elRewardsVaultBalance elRewards vault balance on report block
     * @param _requestIdToFinalizeUpTo rigth boundary of requestId range if equals 0, no requests should be finalized 
     * @param _finalizationShareRate share rate that should be used for finalization
     * 
@@ -467,8 +465,8 @@ contract Lido is StETHPermit, AragonApp {
         uint256 _beaconBalance,
         // EL values
         uint256 _withdrawalVaultBalance,
+        uint256 _elRewardsVaultBalance,
         // decision
-        uint256 _newBufferedEtherReserveAmount,
         uint256 _requestIdToFinalizeUpTo,
         uint256 _finalizationShareRate
     ) external returns (uint256 totalPooledEther, uint256 totalShares){
@@ -486,12 +484,10 @@ contract Lido is StETHPermit, AragonApp {
         // collect ETH from EL and Withdrawal vaults and distribute it to WithdrawalQueue
         uint256 executionLayerRewards = _processETHDistribution(
             _withdrawalVaultBalance,
+            _elRewardsVaultBalance,
             _requestIdToFinalizeUpTo,
             _finalizationShareRate
         );
-
-        // update ether reserve accordingly
-        _processBufferedEtherReserveUpdate(_newBufferedEtherReserveAmount);
 
         // distribute rewards to Lido and Node Operators
         _processRewards(
@@ -541,7 +537,7 @@ contract Lido is StETHPermit, AragonApp {
     }
 
     /**
-     * @notice Returns the address of WithdrawalQueue contract. Can be address(0) if withdrawals
+     * @notice Returns WithdrawalQueue contract.
      */
     function getWithdrawalQueue() public view returns (IWithdrawalQueue) {
         return IWithdrawalQueue(WITHDRAWAL_QUEUE_POSITION.getStorageAddress());
@@ -550,6 +546,7 @@ contract Lido is StETHPermit, AragonApp {
     function setWithdrawalQueue(address _withdrawalQueue) external {
         _auth(MANAGE_PROTOCOL_CONTRACTS_ROLE);
         require(_withdrawalQueue != address(0), "WITHDRAWAL_QUEUE_ADDRESS_ZERO");
+
         WITHDRAWAL_QUEUE_POSITION.setStorageAddress(_withdrawalQueue);
 
         emit WithdrawalQueueSet(_withdrawalQueue);
@@ -563,14 +560,6 @@ contract Lido is StETHPermit, AragonApp {
     */
     function getBufferedEther() external view returns (uint256) {
         return _getBufferedEther();
-    }
-
-    /**
-     * @notice Get the amount of eth to be reserved in the buffer from deposits
-     * @dev it will be used for next withdrawal finalization round
-     */
-    function getBufferedEtherReserve() public view returns (uint256) {
-        return BUFFERED_ETHER_RESERVE_POSITION.getStorageUint256();
     }
 
     /**
@@ -677,14 +666,10 @@ contract Lido is StETHPermit, AragonApp {
         return _postBeaconValidators.sub(preBeaconValidators);
     }
 
-    /// @dev update BufferedEtherReserve to `_newBufferedEtherReserve`
-    function _processBufferedEtherReserveUpdate(uint256 _newBufferedEtherReserve) internal {
-        BUFFERED_ETHER_RESERVE_POSITION.setStorageUint256(_newBufferedEtherReserve);
-    }
-
     /// @dev collect ETH from ELRewardsVault and WithdrawalVault and send to WithdrawalQueue
     function _processETHDistribution(
         uint256 _withdrawalVaultBalance,
+        uint256 _elRewardsVaultBalance,
         uint256 _requestIdToFinalizeUpTo,
         uint256 _finalizationShareRate
     ) internal returns (uint256 executionLayerRewards) {
@@ -693,8 +678,9 @@ contract Lido is StETHPermit, AragonApp {
         // If LidoExecutionLayerRewardsVault address is not set just do as if there were no execution layer rewards at all
         // Otherwise withdraw all rewards and put them to the buffer
         if (elRewardsVaultAddress != address(0)) {
+            uint256 rewardsLimit = (_getTotalPooledEther() * EL_REWARDS_WITHDRAWAL_LIMIT_POSITION.getStorageUint256()) / TOTAL_BASIS_POINTS;
             executionLayerRewards = ILidoExecutionLayerRewardsVault(elRewardsVaultAddress).withdrawRewards(
-                (_getTotalPooledEther() * EL_REWARDS_WITHDRAWAL_LIMIT_POSITION.getStorageUint256()) / TOTAL_BASIS_POINTS
+               _min(rewardsLimit, _elRewardsVaultBalance)
             );
         }
 
@@ -1027,7 +1013,8 @@ contract Lido is StETHPermit, AragonApp {
         _whenNotStopped();
 
         uint256 bufferedEth = _getBufferedEther();
-        uint256 withdrawalReserve = getBufferedEtherReserve();
+        // we dont deposit funds that will go to withdrawals
+        uint256 withdrawalReserve = getWithdrawalQueue().unfinalizedStETH();
 
         if (bufferedEth > withdrawalReserve) {
             bufferedEth = bufferedEth.sub(withdrawalReserve);

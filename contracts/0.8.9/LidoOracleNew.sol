@@ -87,8 +87,8 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         uint256[] exitedValidatorsNumbers;
         // EL values
         uint256 withdrawalVaultBalance;
+        uint256 elRewardsVaultBalance;
         // decision
-        uint256 newBufferedEtherReserveAmount;
         uint256 requestIdToFinalizeUpTo;
         uint256 finalizationShareRate;
         bool bunkerModeFlag; // todo: to be utilized later
@@ -462,7 +462,7 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
             _report.beaconValidators,
             beaconBalance,
             _report.withdrawalVaultBalance,
-            _report.newBufferedEtherReserveAmount,
+            _report.elRewardsVaultBalance,
             _report.requestIdToFinalizeUpTo,
             _report.finalizationShareRate
         );

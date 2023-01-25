@@ -1,10 +1,10 @@
-const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 const { artifacts } = require('hardhat')
+const withdrawals = require('../../helpers/withdrawals')
 
 const { newDao, newApp } = require('../../0.4.24/helpers/dao')
 
 const Lido = artifacts.require('LidoMock.sol')
-const VaultMock = artifacts.require('VaultMock.sol')
+const WstETH = artifacts.require('WstETH.sol')
 const LidoELRewardsVault = artifacts.require('LidoExecutionLayerRewardsVault.sol')
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 const OracleMock = artifacts.require('OracleMock.sol')
@@ -119,13 +119,16 @@ async function deployDaoAndPool(appManager, voting) {
 
   const eip712StETH = await EIP712StETH.new({ from: appManager })
 
+  const wsteth = await WstETH.new(pool.address)
+  const withdrawalQueue = await (await withdrawals.deploy(appManager, pool.address, wsteth.address)).queue
+
   await pool.initialize(
     oracleMock.address,
     treasury.address,
     stakingRouter.address,
     depositSecurityModule.address,
     elRewardsVault.address,
-    ZERO_ADDRESS,
+    withdrawalQueue.address,
     eip712StETH.address
   )
 

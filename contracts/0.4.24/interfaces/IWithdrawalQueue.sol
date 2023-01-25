@@ -17,17 +17,7 @@ interface IWithdrawalQueue {
 
     function lastFinalizedRequestId() external view returns (uint256);
 
-    function isPaused() external returns (bool);
+    function isPaused() external view returns (bool);
 
-    function getWithdrawalRequestStatus(uint256 _requestId)
-        external
-        view
-        returns (
-            uint256 amountOfStETH,
-            uint256 amountOfShares,
-            address recipient,
-            uint256 blockNumber,
-            bool isFinalized,
-            bool isClaimed
-        );
+    function unfinalizedStETH() external view returns (uint256);
 }
