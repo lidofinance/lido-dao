@@ -345,6 +345,12 @@ contract HashConsensus is AccessControlEnumerable {
     /// Consensus
     ///
 
+    /// @notice Returns info about the current frame and consensus state in that frame.
+    ///
+    /// @return frame Current reporting frame.
+    /// @return consensusReport Consensus report for the current frame, if any. Zero bytes otherwise.
+    /// @return reportProcessed If consensus report for the current frame is already processed.
+    ///
     function getConsensusState() external view returns (
         ConsensusFrame memory frame,
         bytes32 consensusReport,
@@ -353,6 +359,27 @@ contract HashConsensus is AccessControlEnumerable {
         frame = _getCurrentFrame();
         (consensusReport,,) = _getConsensusReport(frame.refSlot, _quorum);
         reportProcessed = _getLastProcessedRefSlot() == frame.refSlot;
+    }
+
+    /// @notice Returns report variants and their support for the current reference slot.
+    ///
+    function getReportVariants() external view returns (
+        bytes32[] memory variants,
+        uint256[] memory support
+    ) {
+        if (_reportingState.lastReportRefSlot != _getCurrentFrame().refSlot) {
+            return (variants, support);
+        }
+
+        uint256 variantsLength = _reportVariantsLength;
+        variants = new bytes32[](variantsLength);
+        support = new uint256[](variantsLength);
+
+        for (uint256 i = 0; i < variantsLength; ++i) {
+            ReportVariant memory variant = _reportVariants[i];
+            variants[i] = variant.hash;
+            support[i] = variant.support;
+        }
     }
 
     /// @notice Used by oracle members to submit hash of the data calculated for the given
