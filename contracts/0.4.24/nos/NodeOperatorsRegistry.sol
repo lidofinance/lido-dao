@@ -210,7 +210,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         operator.name = _name;
         operator.rewardAddress = _rewardAddress;
 
-        emit NodeOperatorAdded(id);
         emit NodeOperatorAdded(id, _name, _rewardAddress, 0);
     }
 
