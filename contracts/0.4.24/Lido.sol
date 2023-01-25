@@ -719,6 +719,8 @@ contract Lido is StETHPermit, AragonApp {
     ) internal returns (uint256 lockedToWithdrawalQueue) {
         IWithdrawalQueue withdrawalQueue = getWithdrawalQueue();
 
+        if (withdrawalQueue.isPaused()) return 0;
+
         (uint256 etherToLock, uint256 sharesToBurn) = withdrawalQueue.finalizationBatch(
             _requestIdToFinalizeUpTo,
             _finalizationShareRate
@@ -727,7 +729,7 @@ contract Lido is StETHPermit, AragonApp {
         _burnShares(address(withdrawalQueue), sharesToBurn);
         withdrawalQueue.finalize.value(etherToLock)(_requestIdToFinalizeUpTo);
 
-        lockedToWithdrawalQueue = etherToLock;
+        return etherToLock;
     }
 
     /// @dev calculate the amout of rewards and distribute it
