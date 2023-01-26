@@ -164,9 +164,9 @@ contract HashConsensus is AccessControlEnumerable {
     /// @notice Returns the chain configuration required to calculate
     /// epoch and slot given a timestamp.
     function getChainConfig() external view returns (
-        uint64 slotsPerEpoch,
-        uint64 secondsPerSlot,
-        uint64 genesisTime
+        uint256 slotsPerEpoch,
+        uint256 secondsPerSlot,
+        uint256 genesisTime
     ) {
         return (SLOTS_PER_EPOCH, SECONDS_PER_SLOT, GENESIS_TIME);
     }
