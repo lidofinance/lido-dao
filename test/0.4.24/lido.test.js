@@ -364,9 +364,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
       assertBn(await app.getTotalPooledEther(), ETH(depositAmount + elRewards + beaconRewards))
       assertBn(await app.getTotalELRewardsCollected(), ETH(elRewards))
 
-      const protocolFeePrecisionPoints = await app.getFee()
+      const totalFee = await app.getFee()
       const stakersReward = bn(ETH(elRewards + beaconRewards))
-        .mul(FEE_PRECISION_POINTS.sub(protocolFeePrecisionPoints))
+        .mul(FEE_PRECISION_POINTS.sub(totalFee))
         .div(FEE_PRECISION_POINTS)
       assertBn(await app.balanceOf(user2), bn(StETH(depositAmount)).add(stakersReward))
     })
@@ -1163,10 +1163,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await operators.addNodeOperator('1', ADDRESS_1, { from: voting })
     await operators.addNodeOperator('2', ADDRESS_2, { from: voting })
 
-    // TODO: next 2 lines are from withdrawals
-    // const withdrawal = await WithdrawalVault.new(app.address, treasury)
-    // await app.setWithdrawalCredentials(hexConcat('0x01', pad(withdrawal.address, 31)), { from: voting })
-
     await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
     await operators.addSigningKeys(
@@ -1421,7 +1417,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     // await checkRewards({ treasury: tokens(33), operator: tokens(55) })
   })
 
-  it.skip('deposits accounted properly during rewards distribution', async () => {
+  it('deposits accounted properly during rewards distribution', async () => {
     await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
     await operators.addNodeOperator('1', ADDRESS_1, { from: voting })
@@ -1437,7 +1433,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     assertBn(await app.totalSupply(), tokens(64))
 
-    // TODO: fix reverting with REPORTED_MORE_DEPOSITED
     await oracle.reportBeacon(300, 1, ETH(36))
     await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(36) })
     assertBn(await app.totalSupply(), tokens(68))
@@ -1798,9 +1793,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     })
 
     it(`treasury can't be set by an arbitrary address`, async () => {
-      // TODO: restore the test when function `transferToVault` is restored
-      await assertRevert(app.setProtocolContracts(await app.getOracle(), user1, ZERO_ADDRESS, { from: nobody }))
-      await assertRevert(app.setProtocolContracts(await app.getOracle(), user1, ZERO_ADDRESS, { from: user1 }))
+      await assertRevert(app.setProtocolContracts(await app.getOracle(), user1, ZERO_ADDRESS, ZERO_ADDRESS, { from: nobody }))
+      await assertRevert(app.setProtocolContracts(await app.getOracle(), user1, ZERO_ADDRESS, ZERO_ADDRESS, { from: user1 }))
     })
 
     it('voting can set treasury', async () => {
@@ -1813,7 +1807,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     })
 
     it('reverts when treasury is zero address', async () => {
-      // TODO: restore the test when function `setProtocolContracts` is restored
       await assertRevert(
         app.setProtocolContracts(await app.getOracle(), ZERO_ADDRESS, ZERO_ADDRESS, { from: voting }),
         'TREASURY_ZERO_ADDRESS'
