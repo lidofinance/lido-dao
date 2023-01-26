@@ -14,6 +14,11 @@ import { Versioned } from "../utils/Versioned.sol";
 
 interface IConsensusContract {
     function getIsMember(address addr) external view returns (bool);
+
+    function getCurrentFrame() external view returns (
+        uint64 refSlot,
+        uint64 reportProcessingDeadlineSlot
+    );
 }
 
 
@@ -24,6 +29,7 @@ contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, Versioned
     error AddressCannotBeZero();
     error AddressCannotBeSame();
     error VersionCannotBeSame();
+    error LastProcessedRefSlotCannotExceedCurrentOne(uint256 refSlot, uint256 lastProcessedRefSlot);
     error OnlyConsensusContractCanStartProcessing();
     error ProcessedRefSlotMustIncrease(uint256 processedRefSlot, uint256 newRefSlot);
     error RefSlotCannotDecrease(uint256 processingRefSlot, uint256 newRefSlot);
@@ -67,10 +73,21 @@ contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, Versioned
         keccak256("lido.BaseOracle.processingReport");
 
 
-    function _initialize(address consensusContract, uint256 consensusVersion) internal virtual {
+    function _initialize(
+        address consensusContract,
+        uint256 consensusVersion,
+        uint256 lastProcessedRefSlot
+    ) internal virtual {
         _initializeContractVersionTo1();
         _setConsensusContract(consensusContract);
         _setConsensusVersion(consensusVersion);
+
+        (uint64 refSlot, ) = IConsensusContract(consensusContract).getCurrentFrame();
+        if (lastProcessedRefSlot > refSlot) {
+            revert LastProcessedRefSlotCannotExceedCurrentOne(refSlot, lastProcessedRefSlot);
+        }
+
+        LAST_PROCESSED_REF_SLOT_POSITION.setStorageUint256(lastProcessedRefSlot);
     }
 
     ///
@@ -104,8 +121,16 @@ contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, Versioned
 
     function _setConsensusContract(address addr) internal {
         if (addr == address(0)) revert AddressCannotBeZero();
+
         address prevAddr = CONSENSUS_CONTRACT_POSITION.getStorageAddress();
         if (addr == prevAddr) revert AddressCannotBeSame();
+
+        (uint64 refSlot, ) = IConsensusContract(addr).getCurrentFrame();
+        uint256 lastProcessedRefSlot = LAST_PROCESSED_REF_SLOT_POSITION.getStorageUint256();
+        if (lastProcessedRefSlot > refSlot) {
+            revert LastProcessedRefSlotCannotExceedCurrentOne(refSlot, lastProcessedRefSlot);
+        }
+
         CONSENSUS_CONTRACT_POSITION.setStorageAddress(addr);
         emit ConsensusContractSet(addr, prevAddr);
     }

@@ -226,13 +226,16 @@ contract AccountingOracle is BaseOracle {
         address admin,
         address consensusContract,
         uint256 consensusVersion,
+        uint256 lastProcessedRefSlot,
         uint256 maxExitedValidatorsPerDay,
         uint256 maxExtraDataListItemsCount
     ) external {
         if (admin == address(0)) revert AdminCannotBeZero();
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
-        _initialize(consensusContract, consensusVersion);
+        _initialize(consensusContract, consensusVersion, lastProcessedRefSlot);
         _setDataBoundaries(maxExitedValidatorsPerDay, maxExtraDataListItemsCount);
+
+
     }
 
     function getDataBoundaries() external view returns (
@@ -322,8 +325,6 @@ contract AccountingOracle is BaseOracle {
     function _handleConsensusReportData(ReportData calldata data) internal {
         DataBoundraies memory boudaries = _storageDataBoundaries().value;
         uint256 slotsElapsed = data.refSlot - LAST_PROCESSED_REF_SLOT_POSITION.getStorageUint256();
-
-        // TODO: handle migration from prev oracle
 
         _processStakingRouterExitedKeysByModule(
             boudaries,
