@@ -42,6 +42,8 @@ contract AccountingOracle is BaseOracle {
     error InvalidExtraDataSortOrder();
 
     event DataBoundraiesSet(uint256 maxExitedValidatorsPerDay, uint256 maxExtraDataListItemsCount);
+    event DataSubmitted(uint256 indexed refSlot);
+    event ExtraDataSubmitted(uint256 indexed refSlot, uint256 itemsProcessed, uint256 itemsCount);
 
     event WarnExtraDataIncomleteProcessing(
         uint256 indexed refSlot,
@@ -358,6 +360,8 @@ contract AccountingOracle is BaseOracle {
             itemsCount: data.extraDataItemsCount.toUint16(),
             itemsProcessed: 0
         });
+
+        emit DataSubmitted(data.refSlot);
     }
 
     function _processStakingRouterExitedKeysByModule(
@@ -453,6 +457,8 @@ contract AccountingOracle is BaseOracle {
 
         _procState.lastProcessedItem = _processExtraDataItems(items, 0, 0);
         _procState.itemsProcessed = uint64(items.length);
+
+        emit ExtraDataSubmitted(refSlot, items.length, items.length);
     }
 
     struct ExtraDataIterState {
