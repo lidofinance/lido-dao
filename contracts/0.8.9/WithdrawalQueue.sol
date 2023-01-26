@@ -8,6 +8,7 @@ import "@openzeppelin/contracts-v4.4/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts-v4.4/token/ERC20/extensions/draft-IERC20Permit.sol";
 import "@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-v4.4/utils/structs/EnumerableSet.sol";
 
 import {AccessControlEnumerable} from "@openzeppelin/contracts-v4.4/access/AccessControlEnumerable.sol";
 
@@ -59,6 +60,7 @@ interface IWstETH {
 contract WithdrawalQueue is AccessControlEnumerable {
     using SafeERC20 for IERC20;
     using UnstructuredStorage for bytes32;
+    using EnumerableSet for EnumerableSet.UintSet;
 
     /// @notice structure representing a request for withdrawal.
     struct WithdrawalRequest {
@@ -144,7 +146,7 @@ contract WithdrawalQueue is AccessControlEnumerable {
     WithdrawalRequest[] internal queue;
 
     /// @notice withdrawal requests mapped to the recipients
-    mapping(address => uint256[]) public requestsByRecipient;
+    mapping(address => EnumerableSet.UintSet) private requestsByRecipient;
 
     /// @notice finalization rates history
     ShareRate[] public finalizationRates;
@@ -318,7 +320,7 @@ contract WithdrawalQueue is AccessControlEnumerable {
 
     /// @notice Returns all withdrawal requests placed for the `_recipient` address
     function getWithdrawalRequests(address _recipient) external view returns (uint256[] memory requestsIds) {
-        return requestsByRecipient[_recipient];
+        return requestsByRecipient[_recipient].values();
     }
 
     /**
@@ -416,6 +418,9 @@ contract WithdrawalQueue is AccessControlEnumerable {
         if (request.claimed) revert RequestAlreadyClaimed();
 
         request.recipient = payable(_newRecipient);
+        
+        requestsByRecipient[_newRecipient].add(_requestId);
+        requestsByRecipient[msg.sender].remove(_requestId);
     }
 
     /**
@@ -585,7 +590,7 @@ contract WithdrawalQueue is AccessControlEnumerable {
             )
         );
 
-        requestsByRecipient[msg.sender].push(requestId);
+        requestsByRecipient[msg.sender].add(requestId);
 
         emit WithdrawalRequested(requestId, msg.sender, _recipient, _amountOfStETH, shares);
     }
