@@ -220,10 +220,17 @@ contract AccountingOracle is BaseOracle {
         SECONDS_PER_SLOT = secondsPerSlot;
     }
 
-    function initialize(address admin, address consensusContract, uint256 consensusVersion) external {
+    function initialize(
+        address admin,
+        address consensusContract,
+        uint256 consensusVersion,
+        uint256 maxExitedValidatorsPerDay,
+        uint256 maxExtraDataListItemsCount
+    ) external {
         if (admin == address(0)) revert AdminCannotBeZero();
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
         _initialize(consensusContract, consensusVersion);
+        _setDataBoundaries(maxExitedValidatorsPerDay, maxExtraDataListItemsCount);
     }
 
     function getDataBoundaries() external view returns (
@@ -235,7 +242,14 @@ contract AccountingOracle is BaseOracle {
     }
 
     function setDataBoundaries(uint256 maxExitedValidatorsPerDay, uint256 maxExtraDataListItemsCount)
-        external onlyRole(MANAGE_DATA_BOUNDARIES_ROLE)
+        external
+        onlyRole(MANAGE_DATA_BOUNDARIES_ROLE)
+    {
+        _setDataBoundaries(maxExitedValidatorsPerDay, maxExtraDataListItemsCount);
+    }
+
+    function _setDataBoundaries(uint256 maxExitedValidatorsPerDay, uint256 maxExtraDataListItemsCount)
+        internal
     {
         _storageDataBoundaries().value = DataBoundraies({
             maxExitedValidatorsPerDay: maxExitedValidatorsPerDay.toUint64(),
