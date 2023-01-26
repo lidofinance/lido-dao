@@ -461,6 +461,21 @@ contract AccountingOracle is BaseOracle {
         emit ExtraDataSubmitted(refSlot, items.length, items.length);
     }
 
+    function getExtraDataProcessingState() external view returns (
+        uint256 lastProcessedItem,
+        bytes32 dataHash,
+        uint256 dataFormat,
+        uint256 itemsCount,
+        uint256 itemsProcessed
+    ) {
+        ExtraDataProcessingState memory state = _storageExtraDataProcessingState().value;
+        lastProcessedItem = state.lastProcessedItem;
+        dataHash = state.dataHash;
+        dataFormat = state.dataFormat;
+        itemsCount = state.itemsCount;
+        itemsProcessed = state.itemsProcessed;
+    }
+
     struct ExtraDataIterState {
         uint256 firstItemIndex;
         uint256 nextIndex;
