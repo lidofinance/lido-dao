@@ -5,7 +5,31 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
-interface IStakingRouter {
+
+interface IStakingRouterExitedKeys {
+    function getExitedKeysCountAcrossAllModules() external view returns (uint256);
+
+    function updateExitedKeysCountByStakingModule(
+        uint256[] calldata _moduleIds,
+        uint256[] calldata _exitedKeysCounts
+    ) external;
+
+    function reportStakingModuleExitedKeysCountByNodeOperator(
+        uint256 _stakingModuleId,
+        uint256[] calldata _nodeOperatorIds,
+        uint256[] calldata _exitedKeysCounts
+    ) external;
+
+    // TODO:
+    // function reportStakingModuleStuckKeysCountByNodeOperator(
+    //     uint256 _stakingModuleId,
+    //     uint256[] calldata _nodeOperatorIds,
+    //     uint256[] calldata _exitedKeysCounts
+    // ) external;
+}
+
+
+interface IStakingRouter is IStakingRouterExitedKeys {
     function getStakingRewardsDistribution()
         external
         view
@@ -60,8 +84,6 @@ interface IStakingRouter {
         uint256 exitedKeysCount;
     }
 
-    function getExitedKeysCountAcrossAllModules() external view returns (uint256);
-
     function getStakingModules() external view returns (StakingModule[] memory res);
 
     function addModule(
@@ -75,17 +97,6 @@ interface IStakingRouter {
     function updateStakingModule(uint24 _stakingModuleId, uint16 _targetShare, uint16 _moduleFee, uint16 _treasuryFee) external;
 
     function reportRewardsMinted(uint256[] calldata _stakingModuleIds, uint256[] calldata _totalShares) external;
-
-    function updateExitedKeysCountByStakingModule(
-        uint256[] calldata _moduleIds,
-        uint256[] calldata _exitedKeysCounts
-    ) external;
-
-    function reportStakingModuleExitedKeysCountByNodeOperator(
-        uint256 _stakingModuleId,
-        uint256[] calldata _nodeOperatorIds,
-        uint256[] calldata _exitedKeysCounts
-    ) external;
 
     function getStakingModule(uint24 _stakingModuleId) external view returns (StakingModule memory);
 

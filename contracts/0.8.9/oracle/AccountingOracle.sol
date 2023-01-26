@@ -5,13 +5,17 @@ pragma solidity 0.8.9;
 
 import { SafeCast } from "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
 
-import { ILido } from "../interfaces/ILido.sol";
-import { IStakingRouter } from "../interfaces/IStakingRouter.sol";
+import { IOracleReportReceiver, IStakingRouterProvider } from "../interfaces/ILido.sol";
+import { IStakingRouterExitedKeys } from "../interfaces/IStakingRouter.sol";
 import { MemUtils } from "../lib/MemUtils.sol";
 import { ResizableArray } from "../lib/ResizableArray.sol";
 import { UnstructuredStorage } from "../lib/UnstructuredStorage.sol";
 
 import { BaseOracle } from "./BaseOracle.sol";
+
+
+interface ILido is IOracleReportReceiver, IStakingRouterProvider {}
+interface IStakingRouter is IStakingRouterExitedKeys {}
 
 
 contract AccountingOracle is BaseOracle {

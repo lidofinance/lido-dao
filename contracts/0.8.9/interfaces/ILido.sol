@@ -5,16 +5,7 @@
 pragma solidity 0.8.9;
 
 
-interface ILido {
-    /**
-      * @notice Gets the amount of Ether temporary buffered on this contract balance
-      */
-    function getBufferedEther() external view returns (uint256);
-
-    function getStakingRouter() external view returns (address);
-
-    function receiveStakingRouter() external payable;
-
+interface IOracleReportReceiver {
     function handleOracleReport(
         uint256 secondsElapsedSinceLastReport,
         // CL values
@@ -28,4 +19,19 @@ interface ILido {
         uint256 finalizationShareRate,
         bool isBunkerMode
     ) external;
+}
+
+
+interface IStakingRouterProvider {
+    function getStakingRouter() external view returns (address);
+}
+
+
+interface ILido is IOracleReportReceiver, IStakingRouterProvider {
+    /**
+      * @notice Gets the amount of Ether temporary buffered on this contract balance
+      */
+    function getBufferedEther() external view returns (uint256);
+
+    function receiveStakingRouter() external payable;
 }
