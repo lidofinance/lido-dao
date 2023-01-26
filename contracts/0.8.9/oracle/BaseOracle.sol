@@ -13,7 +13,7 @@ import { Versioned } from "../utils/Versioned.sol";
 
 
 interface IConsensusContract {
-    function isMember(address addr) external view returns (bool);
+    function getIsMember(address addr) external view returns (bool);
 }
 
 
@@ -179,7 +179,7 @@ contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, Versioned
 
     function _isConsensusMember(address addr) internal view returns (bool) {
         address consensus = CONSENSUS_CONTRACT_POSITION.getStorageAddress();
-        return consensus != address(0) && IConsensusContract(consensus).isMember(addr);
+        return consensus != address(0) && IConsensusContract(consensus).getIsMember(addr);
     }
 
     function _startProcessing(ConsensusReport memory report) internal virtual {}
