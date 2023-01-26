@@ -133,7 +133,7 @@ contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, Versioned
             report.refSlot,
             report.receptionTime,
             report.deadlineTime,
-            report.refSlot == processedRefSlot
+            report.refSlot != 0 && report.refSlot == processedRefSlot
         );
     }
 
