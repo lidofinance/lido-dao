@@ -8,6 +8,7 @@ const { assertRevert } = require('../helpers/assertThrow')
 const { newDao, newApp } = require('./helpers/dao')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 const { formatEther } = require('ethers/lib/utils')
+const { waitBlocks } = require('../helpers/blockchain')
 const { getEthBalance, formatStEth, formatBN, hexConcat, pad, ETH, tokens, div15, assertNoEvent, StETH } = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
 const nodeOperators = require('../helpers/node-operators')
@@ -938,12 +939,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assertEvent(receipt, 'Submitted', { expectedArgs: { sender: user2, amount: ETH(1.4), referral: ZERO_ADDRESS } })
   })
 
-  const mineNBlocks = async (n) => {
-    for (let index = 0; index < n; index++) {
-      await ethers.provider.send('evm_mine')
-    }
-  }
-
   it('staking resume with a limit works', async () => {
     let receipt
 
@@ -972,7 +967,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     // expect to grow for another 1.5 ETH since last submit
     // every revert produces new block, so we need to account that block
-    await mineNBlocks(blocksToReachMaxStakeLimit / 2 - 1)
+    await waitBlocks(blocksToReachMaxStakeLimit / 2 - 1)
     await verifyStakeLimitState(expectedMaxStakeLimit, limitIncreasePerBlock, ETH(2.5), false, true)
     await assertRevert(app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2.6) }), `STAKE_LIMIT`)
     receipt = await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2.5) })
@@ -982,18 +977,18 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await assertRevert(app.submit(ZERO_ADDRESS, { from: user2, value: ETH(0.1) }), `STAKE_LIMIT`)
     await verifyStakeLimitState(expectedMaxStakeLimit, limitIncreasePerBlock, limitIncreasePerBlock.muln(3), false, true)
     // once again, we are subtracting blocks number induced by revert checks
-    await mineNBlocks(blocksToReachMaxStakeLimit / 3 - 4)
+    await waitBlocks(blocksToReachMaxStakeLimit / 3 - 4)
 
     receipt = await app.submit(ZERO_ADDRESS, { from: user1, value: ETH(1) })
     assertEvent(receipt, 'Submitted', { expectedArgs: { sender: user1, amount: ETH(1), referral: ZERO_ADDRESS } })
     await verifyStakeLimitState(expectedMaxStakeLimit, limitIncreasePerBlock, ETH(0), false, true)
 
     // check that limit is restored completely
-    await mineNBlocks(blocksToReachMaxStakeLimit)
+    await waitBlocks(blocksToReachMaxStakeLimit)
     await verifyStakeLimitState(expectedMaxStakeLimit, limitIncreasePerBlock, expectedMaxStakeLimit, false, true)
 
     // check that limit is capped by maxLimit value and doesn't grow infinitely
-    await mineNBlocks(10)
+    await waitBlocks(10)
     await verifyStakeLimitState(expectedMaxStakeLimit, limitIncreasePerBlock, expectedMaxStakeLimit, false, true)
 
     await assertRevert(app.setStakingLimit(ETH(0), ETH(0), { from: voting }), `ZERO_MAX_STAKE_LIMIT`)
@@ -1026,7 +1021,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await verifyStakeLimitState(expectedMaxStakeLimit, limitIncreasePerBlock, ETH(0), false, true)
     await assertRevert(app.submit(ZERO_ADDRESS, { from: user2, value: ETH(0.1) }), `STAKE_LIMIT`)
     await verifyStakeLimitState(expectedMaxStakeLimit, limitIncreasePerBlock, ETH(0), false, true)
-    await mineNBlocks(100)
+    await waitBlocks(100)
     await verifyStakeLimitState(expectedMaxStakeLimit, limitIncreasePerBlock, ETH(0), false, true)
   })
 
@@ -1793,8 +1788,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     })
 
     it(`treasury can't be set by an arbitrary address`, async () => {
-      await assertRevert(app.setProtocolContracts(await app.getOracle(), user1, ZERO_ADDRESS, ZERO_ADDRESS, { from: nobody }))
-      await assertRevert(app.setProtocolContracts(await app.getOracle(), user1, ZERO_ADDRESS, ZERO_ADDRESS, { from: user1 }))
+      await assertRevert(app.setProtocolContracts(await app.getOracle(), user1, ZERO_ADDRESS, { from: nobody }))
+      await assertRevert(app.setProtocolContracts(await app.getOracle(), user1, ZERO_ADDRESS, { from: user1 }))
     })
 
     it('voting can set treasury', async () => {
