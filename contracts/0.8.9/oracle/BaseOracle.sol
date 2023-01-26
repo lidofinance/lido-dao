@@ -69,11 +69,7 @@ contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, Versioned
 
     function _initialize(address consensusContract, uint256 consensusVersion) internal virtual {
         _initializeContractVersionTo1();
-
-        if (consensusContract != address(0)) {
-            _setConsensusContract(consensusContract);
-        }
-
+        _setConsensusContract(consensusContract);
         _setConsensusVersion(consensusVersion);
     }
 
@@ -179,7 +175,7 @@ contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, Versioned
 
     function _isConsensusMember(address addr) internal view returns (bool) {
         address consensus = CONSENSUS_CONTRACT_POSITION.getStorageAddress();
-        return consensus != address(0) && IConsensusContract(consensus).getIsMember(addr);
+        return IConsensusContract(consensus).getIsMember(addr);
     }
 
     function _startProcessing(ConsensusReport memory report) internal virtual {}
