@@ -572,6 +572,9 @@ contract AccountingOracle is BaseOracle {
                 if (iType != itemType || iModuleId != moduleId) {
                     break;
                 }
+                if (iNodeOpId <= lastNodeOpId) {
+                    revert InvalidExtraDataSortOrder();
+                }
             } else {
                 if (int256(iType) < iter.lastType || int256(iType) == iter.lastType && (
                     int256(iModuleId) < iter.lastModuleId ||
@@ -582,10 +585,6 @@ contract AccountingOracle is BaseOracle {
                 itemType = iType;
                 moduleId = iModuleId;
                 started = true;
-            }
-
-            if (iNodeOpId <= lastNodeOpId) {
-                revert InvalidExtraDataSortOrder();
             }
 
             iter.nopIds.push(iNodeOpId);
