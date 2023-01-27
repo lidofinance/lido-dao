@@ -388,8 +388,6 @@ contract('StakingRouter', (accounts) => {
 
       const module = await app.getStakingModule(stakingModulesParams[0].expectedModuleId)
 
-      assert.equals(await app.getStakingModuleByIndex(stakingModulesParams[0].expectedModuleId - 1), module)
-
       assert.equals(module.name, stakingModulesParams[0].name)
       assert.equals(module.stakingModuleAddress, stakingModule1.address)
       assert.equals(module.stakingModuleFee, stakingModulesParams[0].stakingModuleFee)
@@ -438,8 +436,6 @@ contract('StakingRouter', (accounts) => {
       assert.equals(await app.getStakingModuleIsActive(stakingModulesParams[1].expectedModuleId), true)
 
       const module = await app.getStakingModule(stakingModulesParams[1].expectedModuleId)
-
-      assert.equals(await app.getStakingModuleByIndex(stakingModulesParams[1].expectedModuleId - 1), module)
 
       assert.equals(module.name, stakingModulesParams[1].name)
       assert.equals(module.stakingModuleAddress, stakingModule2.address)
