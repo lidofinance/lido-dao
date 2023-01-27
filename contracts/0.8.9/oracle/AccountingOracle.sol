@@ -7,7 +7,7 @@ import { SafeCast } from "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
 
 import { IOracleReportReceiver, IStakingRouterProvider } from "../interfaces/ILido.sol";
 import { IStakingRouterExitedKeys } from "../interfaces/IStakingRouter.sol";
-import { MemUtils } from "../lib/MemUtils.sol";
+import { MemUtils } from "../../common/lib/MemUtils.sol";
 import { ResizableArray } from "../lib/ResizableArray.sol";
 import { UnstructuredStorage } from "../lib/UnstructuredStorage.sol";
 

@@ -6,7 +6,7 @@
 pragma solidity 0.8.9;
 
 
-import { MemUtils } from "./MemUtils.sol";
+import { MemUtils } from "../../common/lib/MemUtils.sol";
 
 
 /// Implements a "resizable" memory array by pre-allocating extra memory and copying the data
