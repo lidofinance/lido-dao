@@ -165,7 +165,7 @@ contract('HashConsensus', ([admin, member1, member2, member3, stranger]) => {
       assert.isTrue(consensusState.reportProcessed)
     })
 
-    it('second member cannot change their vote', async () => {
+    it('second member cannot change their vote anymore', async () => {
       await consensus.advanceTimeBy(SECONDS_PER_EPOCH + 70)
 
       await assertRevert(
