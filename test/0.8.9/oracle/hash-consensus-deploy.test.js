@@ -32,8 +32,10 @@ const HASH_5 = '0x55555555555555555555555555555555555555555555555555555555555555
 
 const CONSENSUS_VERSION = 1
 
-async function deployHashConsensus(admin) {
-  const reportProcessor = await MockReportProcessor.new(CONSENSUS_VERSION, { from: admin })
+async function deployHashConsensus(admin, {reportProcessor = null} = {}) {
+  if (!reportProcessor) {
+    reportProcessor = await MockReportProcessor.new(CONSENSUS_VERSION, { from: admin })
+  }
 
   const consensus = await HashConsensus.new(
     SLOTS_PER_EPOCH,

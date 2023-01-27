@@ -53,8 +53,10 @@ const toBN = (obj) => {
 // Divides a BN by 1e15
 const div15 = (bn) => bn.div(new BN(1000000)).div(new BN(1000000)).div(new BN(1000))
 
+const e9 = (value) => web3.utils.toWei(value + '', 'gwei')
 const e18 = (value) => web3.utils.toWei(value + '', 'ether')
 const e27 = (value) => web3.utils.toWei(value + '', 'gether')
+const gwei = e9
 const ETH = e18
 const tokens = e18
 const shares = e18
@@ -98,6 +100,10 @@ module.exports = {
   hexSplit,
   toBN,
   div15,
+  e9,
+  e18,
+  e27,
+  gwei,
   ETH,
   StETH: ETH,
   tokens,
