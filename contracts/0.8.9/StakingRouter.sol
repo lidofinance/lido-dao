@@ -222,6 +222,20 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     }
 
     /**
+     * @notice Returns the ids of all registered staking modules
+     */
+    function getStakingModuleIds() external view returns (uint24[] memory stakingModuleIds) {
+        uint256 stakingModulesCount = getStakingModulesCount();
+        stakingModuleIds = new uint24[](stakingModulesCount);
+        for (uint256 i; i < stakingModulesCount; ) {
+            stakingModuleIds[i] = _getStakingModuleIdByIndex(i);
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    /**
      *  @dev Returns staking module by id
      */
     function getStakingModule(uint256 _stakingModuleId)

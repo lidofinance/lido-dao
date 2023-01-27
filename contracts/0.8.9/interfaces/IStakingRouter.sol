@@ -53,6 +53,8 @@ interface IStakingRouter {
 
     function getStakingModules() external view returns (StakingModule[] memory res);
 
+    function getStakingModuleIds() external view returns (uint24[] memory stakingModuleIds);
+
     function addStakingModule(
         string memory _name,
         address _stakingModuleAddress,

@@ -462,6 +462,15 @@ contract('StakingRouter', (accounts) => {
       }
     })
 
+    it('get staking module ids', async () => {
+      const stakingModules = await app.getStakingModules()
+      const stakingModuleIds = await app.getStakingModuleIds()
+
+      for (let i = 0; i < stakingModules.length; i++) {
+        assert.equals(stakingModules[i].id, stakingModuleIds[i])
+      }
+    })
+
     it('update staking module does not allowed without role', async () => {
       await assert.reverts(
         app.updateStakingModule(
