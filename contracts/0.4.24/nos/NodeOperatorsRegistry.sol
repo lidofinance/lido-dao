@@ -522,16 +522,21 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         signatures = MemUtils.unsafeAllocateBytes(_keysCountToLoad * SIGNATURE_LENGTH);
 
         uint256 loadedKeysCount = 0;
+        uint64 depositedSigningKeysCountBefore;
+        uint64 depositedSigningKeysCountAfter;
+        bytes memory pubkey;
+        bytes memory signature;
+        uint256 keyIndex;
         for (uint256 i = 0; i < _nodeOperatorIds.length; ++i) {
             NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorIds[i]];
 
-            uint64 depositedSigningKeysCountBefore = nodeOperator.depositedSigningKeysCount;
-            uint64 depositedSigningKeysCountAfter = uint64(_exitedSigningKeysCount[i].add(_activeKeyCountsAfterAllocation[i]));
+            depositedSigningKeysCountBefore = nodeOperator.depositedSigningKeysCount;
+            depositedSigningKeysCountAfter = uint64(_exitedSigningKeysCount[i].add(_activeKeyCountsAfterAllocation[i]));
 
             if (depositedSigningKeysCountBefore == depositedSigningKeysCountAfter) continue;
 
-            for (uint256 keyIndex = depositedSigningKeysCountBefore; keyIndex < depositedSigningKeysCountAfter; ++keyIndex) {
-                (bytes memory pubkey, bytes memory signature) = _loadSigningKey(_nodeOperatorIds[i], keyIndex);
+            for (keyIndex = depositedSigningKeysCountBefore; keyIndex < depositedSigningKeysCountAfter; ++keyIndex) {
+                (pubkey, signature) = _loadSigningKey(_nodeOperatorIds[i], keyIndex);
                 MemUtils.copyBytes(pubkey, publicKeys, loadedKeysCount * PUBKEY_LENGTH);
                 MemUtils.copyBytes(signature, signatures, loadedKeysCount * SIGNATURE_LENGTH);
                 ++loadedKeysCount;
@@ -660,10 +665,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
 
         NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
         uint64 totalSigningKeysCount = nodeOperator.totalSigningKeysCount;
+        bytes memory key;
+        bytes memory sig;
         for (uint256 i = 0; i < _keysCount; ++i) {
-            bytes memory key = BytesLib.slice(_publicKeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
+            key = BytesLib.slice(_publicKeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
             require(!_isEmptySigningKey(key), "EMPTY_KEY");
-            bytes memory sig = BytesLib.slice(_signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
+            sig = BytesLib.slice(_signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
 
             _storeSigningKey(_nodeOperatorId, totalSigningKeysCount, key, sig);
             totalSigningKeysCount = totalSigningKeysCount.add(1);
