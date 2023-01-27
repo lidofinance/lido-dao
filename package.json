@@ -26,6 +26,7 @@
     "test:e2e": "npm run compile && ava -T 1000000 -v",
     "estimate-deposit-loop-gas": "yarn run test:unit ./estimate_deposit_loop_gas.js",
     "compile": "hardhat compile && yarn extract-abi",
+    "userdoc": "hardhat userdoc",
     "extract-abi": "node ./scripts/extract-abi.js",
     "deploy": "yarn run deploy:all",
     "deploy:all": "yarn compile && yarn deploy:aragon-env && yarn deploy:aragon-std-apps && yarn deploy:apm-and-template && yarn deploy:apps && yarn deploy:dao",
