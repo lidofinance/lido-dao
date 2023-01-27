@@ -219,6 +219,8 @@ task(TASK_COMPILE).setAction(async function (args, hre, runSuper) {
 })
 
 task('userdoc', 'Generate userdoc JSON files', async function (args, hre) {
+  await hre.run("compile");
+
   const contractNames = await hre.artifacts.getAllFullyQualifiedNames()
   const dirPath = path.join(__dirname, '/artifacts-userdoc')
 
