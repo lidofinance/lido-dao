@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
 /* See contracts/COMPILERS.md */
-pragma solidity 0.4.24;
+pragma solidity >=0.4.24 <0.9.0;
 
 
 library MemUtils {

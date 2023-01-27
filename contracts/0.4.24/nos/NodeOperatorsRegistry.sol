@@ -15,7 +15,7 @@ import {IStETH} from "../interfaces/IStETH.sol";
 
 import {Math64} from "../lib/Math64.sol";
 import {BytesLib} from "../lib/BytesLib.sol";
-import {MemUtils} from "../lib/MemUtils.sol";
+import {MemUtils} from "../../common/lib/MemUtils.sol";
 import {MinFirstAllocationStrategy} from "../../common/lib/MinFirstAllocationStrategy.sol";
 import {SigningKeysStats} from "../lib/SigningKeysStats.sol";
 
