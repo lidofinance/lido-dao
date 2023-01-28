@@ -284,14 +284,14 @@ contract StETH is IERC20, Pausable {
      * @dev The sum of all accounts' shares can be an arbitrary number, therefore
      * it is necessary to store it in order to calculate each account's relative share.
      */
-    function getTotalShares() public view returns (uint256) {
+    function getTotalShares() external view returns (uint256) {
         return _getTotalShares();
     }
 
     /**
      * @return the amount of shares owned by `_account`.
      */
-    function sharesOf(address _account) public view returns (uint256) {
+    function sharesOf(address _account) external view returns (uint256) {
         return _sharesOf(_account);
     }
 
@@ -338,7 +338,7 @@ contract StETH is IERC20, Pausable {
      *
      * @dev The `_sharesAmount` argument is the amount of shares, not tokens.
      */
-    function transferShares(address _recipient, uint256 _sharesAmount) public returns (uint256) {
+    function transferShares(address _recipient, uint256 _sharesAmount) external returns (uint256) {
         _transferShares(msg.sender, _recipient, _sharesAmount);
         emit TransferShares(msg.sender, _recipient, _sharesAmount);
         uint256 tokensAmount = getPooledEthByShares(_sharesAmount);

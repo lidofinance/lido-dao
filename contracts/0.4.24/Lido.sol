@@ -213,7 +213,7 @@ contract Lido is ILido, StETH, AragonApp {
      * - 2^256 - 1 if staking is unlimited;
      * - 0 if staking is paused or if limit is exhausted.
      */
-    function getCurrentStakeLimit() public view returns (uint256) {
+    function getCurrentStakeLimit() external view returns (uint256) {
         return _getCurrentStakeLimit(STAKING_STATE_POSITION.getStorageStakeLimitStruct());
     }
 
@@ -503,7 +503,7 @@ contract Lido is ILido, StETH, AragonApp {
      * @return beaconValidators - number of Lido's validators visible in the Beacon state, reported by oracles
      * @return beaconBalance - total amount of Beacon-side Ether (sum of all the balances of Lido validators)
      */
-    function getBeaconStat() public view returns (uint256 depositedValidators, uint256 beaconValidators, uint256 beaconBalance) {
+    function getBeaconStat() external view returns (uint256 depositedValidators, uint256 beaconValidators, uint256 beaconBalance) {
         depositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256();
         beaconValidators = BEACON_VALIDATORS_POSITION.getStorageUint256();
         beaconBalance = BEACON_BALANCE_POSITION.getStorageUint256();
@@ -513,7 +513,7 @@ contract Lido is ILido, StETH, AragonApp {
      * @notice Returns current staking rewards fee rate
      * @return totalFee total rewards fee in base precission
      */
-    function getFee() public view returns (uint96 totalFee) {
+    function getFee() external view returns (uint96 totalFee) {
         (, , totalFee, ) = getStakingRouter().getStakingRewardsDistribution();
     }
 
@@ -522,7 +522,7 @@ contract Lido is ILido, StETH, AragonApp {
      * @return modulesFee modules summary fee in base precission
      * @return treasuryFee treasury fee in base precission
      */
-    function getFeeDistribution() public view returns (uint96 modulesFee, uint96 treasuryFee) {
+    function getFeeDistribution() external view returns (uint96 modulesFee, uint96 treasuryFee) {
         (, uint96[] memory moduleFees, uint96 totalFee, ) = getStakingRouter().getStakingRewardsDistribution();
         for (uint256 i; i < moduleFees.length; ++i) {
             modulesFee += moduleFees[i];

@@ -135,7 +135,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     /**
      * @notice register a new staking module
      * @param _name name of staking module
-     * @param _stakingModuleAddress target percent of total keys in protocol, in BP
+     * @param _stakingModuleAddress address of staking module
      * @param _targetShare target total stake share
      * @param _stakingModuleFee fee of the staking module taken from the consensus layer rewards
      * @param _treasuryFee treasury fee
@@ -422,7 +422,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     }
 
     /// @notice returns new deposits allocation after the distribution of the `_keysToAllocate` keys
-    function getKeysAllocation(uint256 _keysToAllocate) public view returns (uint256 allocated, uint256[] memory allocations) {
+    function getKeysAllocation(uint256 _keysToAllocate) external view returns (uint256 allocated, uint256[] memory allocations) {
         (allocated, allocations, ) = _getKeysAllocation(_keysToAllocate);
     }
 
