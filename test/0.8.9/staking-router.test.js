@@ -571,6 +571,16 @@ contract('StakingRouter', (accounts) => {
       )
     })
 
+    it('set staking module status reverts if status is the same', async () => {
+      const module = await app.getStakingModule(stakingModulesParams[0].expectedModuleId)
+      await assert.revertsWithCustomError(
+        app.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, module.status, {
+          from: appManager
+        }),
+        `ErrorStakingModuleStatusTheSame()`
+      )
+    })
+
     it('set staking module status', async () => {
       const tx = await app.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, StakingModuleStatus.Stopped, {
         from: appManager
@@ -602,6 +612,10 @@ contract('StakingRouter', (accounts) => {
     })
 
     it('pause staking module does not allowed at not active staking module', async () => {
+      await app.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, StakingModuleStatus.Active, {
+        from: appManager
+      })
+      
       await app.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, StakingModuleStatus.Stopped, {
         from: appManager
       })

@@ -46,6 +46,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     error ErrorStakingModuleIdTooLarge();
     error ErrorStakingModuleUnregistered();
     error ErrorAppAuthLidoFailed();
+    error ErrorStakingModuleStatusTheSame();
 
     struct StakingModuleCache {
         address stakingModuleAddress;
@@ -265,6 +266,8 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         onlyRole(STAKING_MODULE_MANAGE_ROLE)
     {
         StakingModule storage stakingModule = _getStakingModuleById(uint24(_stakingModuleId));
+        StakingModuleStatus _prevStatus = StakingModuleStatus(stakingModule.status);
+        if (_prevStatus == _status) revert ErrorStakingModuleStatusTheSame();
         stakingModule.status = uint8(_status);
         emit StakingModuleStatusSet(uint24(_stakingModuleId), _status, msg.sender);
     }
