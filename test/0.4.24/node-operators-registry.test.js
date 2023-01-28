@@ -2814,4 +2814,62 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.sameMembers(used, [false, false])
     })
   })
+
+  describe.only('setNodeOperatorTargetLimit()', async () => {
+    const firstNodeOperatorId = 0
+    const secondNodeOperatorId = 1
+    const notExistedNodeOperatorId = 3
+
+    beforeEach(async () => {
+      await nodeOperators.addNodeOperator(
+        app,
+        { ...NODE_OPERATORS[0], totalSigningKeysCount: 100, vettedSigningKeysCount: 50, depositedSigningKeysCount: 20 },
+        { from: voting }
+      )
+      await nodeOperators.addNodeOperator(
+        app,
+        { ...NODE_OPERATORS[1], totalSigningKeysCount: 50, vettedSigningKeysCount: 45, depositedSigningKeysCount: 30 },
+        { from: voting }
+      )
+    })
+
+    it('reverts with "APP_AUTH_FAILED" error when called by sender without SET_NODE_OPERATOR_LIMIT_ROLE', async () => {
+      const hasPermission = await dao.hasPermission(nobody, app, 'SET_NODE_OPERATOR_LIMIT_ROLE')
+      assert.isFalse(hasPermission)
+      await assert.reverts(app.setNodeOperatorTargetLimit(firstNodeOperatorId, 40, { from: nobody }), 'APP_AUTH_FAILED')
+    })
+
+    it('reverts with "NODE_OPERATOR_NOT_FOUND" error when called on non existent validator', async () => {
+      const hasPermission = await dao.hasPermission(voting, app, 'SET_NODE_OPERATOR_LIMIT_ROLE')
+      assert.isTrue(hasPermission)
+      await assert.reverts(app.setNodeOperatorTargetLimit(notExistedNodeOperatorId, 40, { from: voting }), 'NODE_OPERATOR_NOT_FOUND')
+    })
+
+    it('reverts with "NODE_OPERATOR_DEACTIVATED" error when node operator deactivated', async () => {
+      const hasPermission = await dao.hasPermission(voting, app, 'SET_NODE_OPERATOR_LIMIT_ROLE')
+      assert.isTrue(hasPermission)
+      await app.deactivateNodeOperator(secondNodeOperatorId, { from: voting })
+      assert.isFalse(await app.getNodeOperatorIsActive(secondNodeOperatorId))
+      await assert.reverts(app.setNodeOperatorTargetLimit(secondNodeOperatorId, 40, { from: voting }), 'NODE_OPERATOR_DEACTIVATED')
+    })
+
+    it('newStakingLimit < depositedSigningKeys :: sets staking limit to deposited signing keys count', async () => {
+      await app.setNodeOperatorTargetLimit(firstNodeOperatorId, 10, { from: voting })
+      const nodeOperator = await app.getNodeOperator(firstNodeOperatorId, false)
+      assert.equals(nodeOperator.targetLimit, 20)
+    })
+
+    it('newStakingLimit > totalSigningKeysCount :: sets staking limit to total signing keys count', async () => {
+      await app.setNodeOperatorTargetLimit(secondNodeOperatorId, 1000, { from: voting })
+      const nodeOperator = await app.getNodeOperator(secondNodeOperatorId, false)
+      assert.equals(nodeOperator.targetLimit, 50)
+    })
+
+    it('depositedSigningKeys <= newStakingLimit <= totalSigningKeysCount :: sets staking limit to passed value', async () => {
+      await app.setNodeOperatorTargetLimit(firstNodeOperatorId, 75, { from: voting })
+      const nodeOperator = await app.getNodeOperator(firstNodeOperatorId, false)
+      assert.equals(nodeOperator.targetLimit, 75)
+    })
+
+  })
 })

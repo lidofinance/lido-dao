@@ -114,6 +114,33 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         uint64 totalSigningKeysCount;
         /// @dev Number of keys of this operator which were in DEPOSITED state for all time
         uint64 depositedSigningKeysCount;
+
+        /// @dev DAO target limit, used to check how many keys shoud be go to exit
+        ///      UINT64_MAX - unlim
+        ///      0 - all deposited keys 
+        ///      N < deposited keys -
+        ///      deposited < N < vetted - use (N-deposited) as available
+        uint64 targetSigningKeysCount;
+
+        /// кол-во ключей которы просчроены
+        uint64 stuckKeysCount;
+    }
+
+    /**
+      * @notice Set the target number of validators
+      */
+    function setNodeOperatorTargetLimit(uint256 _nodeOperatorId, uint64 _targetLimit) external {
+        _onlyExistedNodeOperator(_nodeOperatorId);
+        _authP(SET_NODE_OPERATOR_LIMIT_ROLE, arr(uint256(_nodeOperatorId), uint256(_targetLimit)));
+
+        NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
+        require(nodeOperator.active, "NODE_OPERATOR_DEACTIVATED");
+
+        require(nodeOperator.targetSigningKeysCount != _targetLimit, "NODE_OPERATOR_TARGET_LIMIT_IS_THE_SAME");
+        nodeOperator.targetSigningKeysCount = _targetLimit;
+
+        // emit NodeOperatorTargetLimitSet(_nodeOperatorId, _targetLimit);
+        _increaseValidatorsKeysNonce();
     }
 
     //
@@ -556,7 +583,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
             uint64 stakingLimit,
             uint64 stoppedValidators,
             uint64 totalSigningKeys,
-            uint64 usedSigningKeys
+            uint64 usedSigningKeys,
+            uint64 targetLimit
         )
     {
         _onlyExistedNodeOperator(_nodeOperatorId);
@@ -571,6 +599,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         stoppedValidators = nodeOperator.exitedSigningKeysCount;
         totalSigningKeys = nodeOperator.totalSigningKeysCount;
         usedSigningKeys = nodeOperator.depositedSigningKeysCount;
+        targetLimit = nodeOperator.targetSigningKeysCount;
     }
 
     /// @notice Returns the rewards distribution proportional to the effective stake for each node operator.
@@ -891,10 +920,18 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
 
         uint256 vettedSigningKeysCount = totalSigningKeysStats.vettedSigningKeysCount;
         uint256 depositedSigningKeysCount = totalSigningKeysStats.depositedSigningKeysCount;
+        uint256 targetSigningKeysCount = totalSigningKeysStats.targetSigningKeysCount;
 
         exitedValidatorsCount = totalSigningKeysStats.exitedSigningKeysCount;
         activeValidatorsKeysCount = depositedSigningKeysCount.sub(exitedValidatorsCount);
-        readyToDepositValidatorsKeysCount = vettedSigningKeysCount.sub(depositedSigningKeysCount);
+
+        readyToDepositValidatorsKeysCount = 0;
+        if (targetSigningKeysCount >= vettedSigningKeysCount ) {
+            readyToDepositValidatorsKeysCount = vettedSigningKeysCount.sub(depositedSigningKeysCount);
+        } else if (readyToDepositValidatorsKeysCount > depositedSigningKeysCount && readyToDepositValidatorsKeysCount < vettedSigningKeysCount) {
+            readyToDepositValidatorsKeysCount = readyToDepositValidatorsKeysCount.sub(depositedSigningKeysCount);
+        }
+        
     }
 
     /// @notice Returns the validators stats of given node operator

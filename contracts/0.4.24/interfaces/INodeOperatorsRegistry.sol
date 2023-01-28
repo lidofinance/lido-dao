@@ -53,7 +53,8 @@ interface INodeOperatorsRegistry {
             uint64 stakingLimit,
             uint64 stoppedValidators,
             uint64 totalSigningKeys,
-            uint64 usedSigningKeys
+            uint64 usedSigningKeys,
+            uint64 targetLimit
         );
 
     /// @notice Returns the rewards distribution proportional to the effective stake for each node operator.

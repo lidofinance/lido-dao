@@ -135,7 +135,7 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         KEYS_OP_INDEX_POSITION.setStorageUint256(0);
 
         for (uint256 i = 0; i < totalOperatorsCount; ++i) {
-            _nodeOperators[i] = NodeOperator(false, address(0), new string(0), 0, 0, 0, 0);
+            _nodeOperators[i] = NodeOperator(false, address(0), new string(0), 0, 0, 0, 0, uint64(-1), 0);
         }
 
         testing_resetTotalSigningKeysStats();
