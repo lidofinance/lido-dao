@@ -78,6 +78,15 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
 
     bytes32 internal constant TOTAL_SIGNING_KEYS_STATS = keccak256("lido.NodeOperatorsRegistry.totalSigningKeysStats");
 
+    /// @dev DAO target limit, used to check how many keys shoud be go to exit
+    ///      UINT64_MAX - unlim
+    ///      0 - all deposited keys 
+    ///      N < deposited keys -
+    ///      deposited < N < vetted - use (N-deposited) as available
+    bytes32 internal constant TOTAL_TARGET_KEYS_COUNT = keccak256("lido.NodeOperatorsRegistry.totalTargetKeysCount");
+
+    bytes32 internal constant TOTAL_STUCK_KEYS_COUNT = keccak256("lido.NodeOperatorsRegistry.totalStuckKeysCount");
+
     //
     // DATA TYPES
     //
@@ -115,16 +124,10 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         /// @dev Number of keys of this operator which were in DEPOSITED state for all time
         uint64 depositedSigningKeysCount;
 
-        /// @dev DAO target limit, used to check how many keys shoud be go to exit
-        ///      UINT64_MAX - unlim
-        ///      0 - all deposited keys 
-        ///      N < deposited keys -
-        ///      deposited < N < vetted - use (N-deposited) as available
         uint64 targetSigningKeysCount;
-
-        /// кол-во ключей которы просчроены
-        uint64 stuckKeysCount;
     }
+
+
 
     /**
       * @notice Set the target number of validators
@@ -920,17 +923,18 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
 
         uint256 vettedSigningKeysCount = totalSigningKeysStats.vettedSigningKeysCount;
         uint256 depositedSigningKeysCount = totalSigningKeysStats.depositedSigningKeysCount;
-        uint256 targetSigningKeysCount = totalSigningKeysStats.targetSigningKeysCount;
+        // uint256 targetSigningKeysCount = totalSigningKeysStats.targetSigningKeysCount;
 
         exitedValidatorsCount = totalSigningKeysStats.exitedSigningKeysCount;
         activeValidatorsKeysCount = depositedSigningKeysCount.sub(exitedValidatorsCount);
+        readyToDepositValidatorsKeysCount = vettedSigningKeysCount.sub(depositedSigningKeysCount);
 
-        readyToDepositValidatorsKeysCount = 0;
-        if (targetSigningKeysCount >= vettedSigningKeysCount ) {
-            readyToDepositValidatorsKeysCount = vettedSigningKeysCount.sub(depositedSigningKeysCount);
-        } else if (readyToDepositValidatorsKeysCount > depositedSigningKeysCount && readyToDepositValidatorsKeysCount < vettedSigningKeysCount) {
-            readyToDepositValidatorsKeysCount = readyToDepositValidatorsKeysCount.sub(depositedSigningKeysCount);
-        }
+        // readyToDepositValidatorsKeysCount = 0;
+        // if (targetSigningKeysCount >= vettedSigningKeysCount ) {
+        //     readyToDepositValidatorsKeysCount = vettedSigningKeysCount.sub(depositedSigningKeysCount);
+        // } else if (readyToDepositValidatorsKeysCount > depositedSigningKeysCount && readyToDepositValidatorsKeysCount < vettedSigningKeysCount) {
+        //     readyToDepositValidatorsKeysCount = readyToDepositValidatorsKeysCount.sub(depositedSigningKeysCount);
+        // }
         
     }
 
