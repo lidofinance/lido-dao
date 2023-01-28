@@ -43,7 +43,6 @@ contract Lido is StETHPermit, AragonApp {
     bytes32 public constant STAKING_CONTROL_ROLE = keccak256("STAKING_CONTROL_ROLE");
     bytes32 public constant MANAGE_PROTOCOL_CONTRACTS_ROLE = keccak256("MANAGE_PROTOCOL_CONTRACTS_ROLE");
     bytes32 public constant BURN_ROLE = keccak256("BURN_ROLE");
-    bytes32 public constant SET_EL_REWARDS_VAULT_ROLE = keccak256("SET_EL_REWARDS_VAULT_ROLE");
     bytes32 public constant SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE = keccak256("SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE");
 
     uint256 private constant DEPOSIT_SIZE = 32 ether;
@@ -599,18 +598,22 @@ contract Lido is StETHPermit, AragonApp {
     /**
      * @notice Returns current staking rewards fee rate
      * @return totalFee total rewards fee in base precision
+     * @return basePrecision base precision number, which constitutes 100% fee
      */
-    function getFee() public view returns (uint96 totalFee) {
-        (, , totalFee, ) = getStakingRouter().getStakingRewardsDistribution();
+    function getFee() public view returns (uint96 totalFee, uint256 basePrecision) {
+        (, , totalFee, basePrecision) = getStakingRouter().getStakingRewardsDistribution();
     }
 
     /**
      * @notice Returns current fee distribution proportion
      * @return modulesFee modules summary fee in base precision
      * @return treasuryFee treasury fee in base precision
+     * @return basePrecision base precision number, which constitutes 100% fee
      */
-    function getFeeDistribution() public view returns (uint96 modulesFee, uint96 treasuryFee) {
-        (, uint96[] memory moduleFees, uint96 totalFee, ) = getStakingRouter().getStakingRewardsDistribution();
+    function getFeeDistribution() public view returns (uint96 modulesFee, uint96 treasuryFee, uint256 basePrecision) {
+        uint96[] memory moduleFees;
+        uint96 totalFee;
+        (, moduleFees, totalFee, basePrecision) = getStakingRouter().getStakingRewardsDistribution();
         for (uint256 i; i < moduleFees.length; ++i) {
             modulesFee += moduleFees[i];
         }
@@ -757,7 +760,7 @@ contract Lido is StETHPermit, AragonApp {
         _burnShares(withdrawalQueueAddress, sharesToBurn);
     }
 
-    /// @dev calculate the amout of rewards and distribute it
+    /// @dev calculate the amount of rewards and distribute it
     function _processRewards(
         uint256 _preBeaconBalance,
         uint256 _postBeaconBalance,
@@ -902,14 +905,12 @@ contract Lido is StETHPermit, AragonApp {
         require(recipients.length == modulesFees.length, "WRONG_RECIPIENTS_INPUT");
 
         if (totalFee > 0) {
-            uint256 shares2mint = _totalRewards
-                .mul(totalFee)
-                .mul(_getTotalShares())
+            uint256 shares2mint =
+                _totalRewards.mul(totalFee).mul(_getTotalShares())
                 .div(
-                    _getTotalPooledEther()
-                        .mul(precisionPoints)
-                        .sub(_totalRewards.mul(totalFee))
-            );
+                    (_getTotalPooledEther().mul(precisionPoints))
+                    .sub(_totalRewards.mul(totalFee))
+                );
             _mintShares(address(this), shares2mint);
 
             uint256 treasuryReward = shares2mint;

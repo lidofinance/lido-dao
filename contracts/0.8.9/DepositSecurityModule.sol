@@ -1,5 +1,4 @@
-// SPDX-FileCopyrightText: 2021 Lido <info@lido.fi>
-
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 /* See contracts/COMPILERS.md */
@@ -292,7 +291,7 @@ contract DepositSecurityModule {
     }
 
     /**
-     * Pauses deposits for module given that both conditions are satisfied (reverts otherwise):
+     * Pauses deposits for staking module given that both conditions are satisfied (reverts otherwise):
      *
      *   1. The function is called by the guardian with index guardianIndex OR sig
      *      is a valid signature by the guardian with index guardianIndex of the data
@@ -337,7 +336,7 @@ contract DepositSecurityModule {
     }
 
     /**
-     * Unpauses deposits for module
+     * Unpauses deposits for staking module
      *
      * Only callable by the owner.
      */
