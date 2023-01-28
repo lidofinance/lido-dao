@@ -470,7 +470,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
                 stakingModule.lastDepositAt = uint64(block.timestamp);
                 stakingModule.lastDepositBlock = block.number;
 
-                emit StakingRouterETHDeposited(_getStakingModuleIdByIndex(stakingModuleIndex), keysCount * DEPOSIT_SIZE);
+                emit StakingRouterETHDeposited(uint24(_stakingModuleId), keysCount * DEPOSIT_SIZE);
             }
         }
         _transferBalanceEthToLido();
@@ -601,18 +601,14 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     }
 
     function _getStakingModuleIndexById(uint24 _stakingModuleId) internal view returns (uint256) {
-        mapping(uint24 => uint256) storage _stakingModuleIndicesOneBased = _getStorageStakingIndicesMapping(
-            STAKING_MODULE_INDICES_MAPPING_POSITION
-        );
+        mapping(uint24 => uint256) storage _stakingModuleIndicesOneBased = _getStorageStakingIndicesMapping();
         uint256 indexOneBased = _stakingModuleIndicesOneBased[_stakingModuleId];
         if (indexOneBased == 0) revert ErrorStakingModuleUnregistered();
         return indexOneBased - 1;
     }
 
     function _setStakingModuleIndexById(uint24 _stakingModuleId, uint256 _stakingModuleIndex) internal {
-        mapping(uint24 => uint256) storage _stakingModuleIndicesOneBased = _getStorageStakingIndicesMapping(
-            STAKING_MODULE_INDICES_MAPPING_POSITION
-        );
+        mapping(uint24 => uint256) storage _stakingModuleIndicesOneBased = _getStorageStakingIndicesMapping();
         _stakingModuleIndicesOneBased[_stakingModuleId] = _stakingModuleIndex + 1;
     }
 
@@ -625,7 +621,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     }
 
     function _getStakingModuleByIndex(uint256 _stakingModuleIndex) internal view returns (StakingModule storage) {
-        mapping(uint256 => StakingModule) storage _stakingModules = _getStorageStakingModulesMapping(STAKING_MODULES_MAPPING_POSITION);
+        mapping(uint256 => StakingModule) storage _stakingModules = _getStorageStakingModulesMapping();
         return _stakingModules[_stakingModuleIndex];
     }
 
@@ -647,13 +643,15 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         return CONTRACT_VERSION_POSITION.getStorageUint256();
     }
 
-    function _getStorageStakingModulesMapping(bytes32 position) internal pure returns (mapping(uint256 => StakingModule) storage result) {
+    function _getStorageStakingModulesMapping() internal pure returns (mapping(uint256 => StakingModule) storage result) {
+        bytes32 position = STAKING_MODULES_MAPPING_POSITION;
         assembly {
             result.slot := position
         }
     }
 
-    function _getStorageStakingIndicesMapping(bytes32 position) internal pure returns (mapping(uint24 => uint256) storage result) {
+    function _getStorageStakingIndicesMapping() internal pure returns (mapping(uint24 => uint256) storage result) {
+        bytes32 position = STAKING_MODULE_INDICES_MAPPING_POSITION;
         assembly {
             result.slot := position
         }
