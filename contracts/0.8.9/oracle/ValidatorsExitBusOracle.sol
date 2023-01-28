@@ -5,6 +5,7 @@ pragma solidity 0.8.9;
 
 import { SafeCast } from "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
 
+import { Math } from "../lib/Math.sol";
 import { UnstructuredStorage } from "../lib/UnstructuredStorage.sol";
 import { AllowanceBasedRateLimit as RateLimit } from "../lib/AllowanceBasedRateLimit.sol";
 
@@ -234,7 +235,10 @@ contract ValidatorsExitBusOracle is BaseOracle {
     /// submitted in the report for the current frame.
     ///
     function getMaxExitRequestsForCurrentFrame() external view returns (uint256) {
-        return RateLimit.load(RATE_LIMIT_POSITION).calculateLimitAt(_getCurrentRefSlot()) / 10**18;
+        return Math.min(
+            _storageDataBoundaries().value.maxRequestsPerReport,
+            RateLimit.load(RATE_LIMIT_POSITION).calculateLimitAt(_getCurrentRefSlot()) / 10**18
+        );
     }
 
     function getTotalRequestsProcessed() external view returns (uint256) {
