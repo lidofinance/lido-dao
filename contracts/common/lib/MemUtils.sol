@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2020 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 
 // SPDX-License-Identifier: GPL-3.0
 
@@ -53,5 +53,30 @@ library MemUtils {
             dstStartPos := add(add(_dst, 32), _dstStart)
         }
         memcpy(srcStartPos, dstStartPos, _src.length);
+    }
+
+    /**
+     * Calculates keccak256 over a uint256 memory array contents.
+     *
+     * keccakUint256Array(array) is a more gas-efficient equivalent
+     * to keccak256(abi.encodePacked(array)) since copying memory
+     * is avoided.
+     */
+    function keccakUint256Array(uint256[] memory _arr) internal pure returns (bytes32 result) {
+        assembly {
+            let ptr := add(_arr, 32)
+            let len := mul(mload(_arr), 32)
+            result := keccak256(ptr, len)
+        }
+    }
+
+    /**
+     * Decreases length of a uint256 memory array `_arr` by the `_trimBy` items.
+     */
+    function trimUint256Array(uint256[] memory _arr, uint256 _trimBy) internal pure {
+        uint256 newLen = _arr.length - _trimBy;
+        assembly {
+            mstore(_arr, newLen)
+        }
     }
 }

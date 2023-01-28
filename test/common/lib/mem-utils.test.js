@@ -1,7 +1,4 @@
-const { BN } = require('bn.js')
-const { assert } = require('chai')
-const { assertBn, assertEvent, assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
-const { assertRevert } = require('../../helpers/assertThrow')
+const { assert } = require('../../helpers/assert')
 
 const MemUtilsTest = artifacts.require('MemUtilsTest')
 
@@ -86,7 +83,7 @@ contract('AccountingOracle', ([deployer]) => {
     })
 
     it('reverts on trying to trim by more than the array length', async () => {
-      await assertRevert(
+      await assert.reverts(
         memUtilsTest.trimUint256Array_reverts_on_trying_to_trim_by_more_than_length()
       )
     })
