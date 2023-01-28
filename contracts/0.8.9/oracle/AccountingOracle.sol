@@ -213,13 +213,11 @@ contract AccountingOracle is BaseOracle {
 
 
     address public immutable LIDO;
-    uint256 public immutable SECONDS_PER_SLOT;
 
 
-    constructor(address lido, uint256 secondsPerSlot) {
+    constructor(address lido, uint256 secondsPerSlot) BaseOracle(secondsPerSlot) {
         if (lido == address(0)) revert LidoCannotBeZero();
         LIDO = lido;
-        SECONDS_PER_SLOT = secondsPerSlot;
     }
 
     function initialize(
@@ -261,7 +259,11 @@ contract AccountingOracle is BaseOracle {
         emit DataBoundraiesSet(maxExitedValidatorsPerDay, maxExtraDataListItemsCount);
     }
 
-    function _startProcessing(ConsensusReport memory /* report */) internal override {
+    function _startProcessing(
+        ConsensusReport memory /* report */,
+        uint256 /* lastProcessingRefSlot */,
+        uint256 /* lastProcessedRefSlot */
+    ) internal override {
         ExtraDataProcessingState memory extraProcState = _storageExtraDataProcessingState().value;
         if (extraProcState.itemsProcessed < extraProcState.itemsCount) {
             emit WarnExtraDataIncomleteProcessing(
