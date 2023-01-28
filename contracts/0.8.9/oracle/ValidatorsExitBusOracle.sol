@@ -151,6 +151,8 @@ contract ValidatorsExitBusOracle is BaseOracle {
         );
     }
 
+    /// @notice Returns the current data boundaries. See `setDataBoundaries`.
+    ///
     function getDataBoundaries() external view returns (
         uint256 maxExitRequestsPerReport,
         uint256 maxExitRequestsListLength,
@@ -192,7 +194,9 @@ contract ValidatorsExitBusOracle is BaseOracle {
         /// Requests data
         ///
 
-        /// @dev Total number of validator exit requests in this report.
+        /// @dev Total number of validator exit requests in this report. Must not be
+        /// greater than the value returned from getMaxExitRequestsForCurrentFrame()
+        /// called within the same reporting frame.
         uint256 requestsCount;
 
         /// @dev Format of the validator exit requests data. Currently, only the
@@ -222,6 +226,25 @@ contract ValidatorsExitBusOracle is BaseOracle {
     ///
     uint256 public constant DATA_FORMAT_LIST = 0;
 
+    /// @notice Sibmits report data for processing.
+    ///
+    /// @param report The data. See the `ReportData` structure's docs for details.
+    /// @param contractVersion Expected version of the oracle contract.
+    ///
+    /// Reverts if the caller is not a member of the oracle committee and doesn't
+    /// possess the SUBMIT_DATA_ROLE.
+    ///
+    /// Reverts if the provided contract version is different from the current one.
+    ///
+    /// Reverts if the provided consensus version is different from the current one.
+    ///
+    /// Reverts if the keccak256 hash of the ABI-encoded data is different from the last hash
+    /// provided by the hash consensus contract.
+    ///
+    /// Reverts if the processing deadline for the reference slot's consensus frame is not met.
+    ///
+    /// Reverts if the provided data doesn't meet safety checks and boundaries.
+    ///
     function submitReportData(ReportData calldata report, uint256 contractVersion) external {
         _checkMsgSenderIsAllowedToSubmitData();
         _checkContractVersion(contractVersion);
@@ -232,7 +255,8 @@ contract ValidatorsExitBusOracle is BaseOracle {
     }
 
     /// @notice Returns maximum number of validator exit requests that can be
-    /// submitted in the report for the current frame.
+    /// submitted in the report for the current frame, accounting for both
+    /// the rate limit and the absolute limit per report.
     ///
     function getMaxExitRequestsForCurrentFrame() external view returns (uint256) {
         return Math.min(
@@ -241,10 +265,15 @@ contract ValidatorsExitBusOracle is BaseOracle {
         );
     }
 
+    /// @notice Returns the total number of validator exit requests ever processed.
+    ///
     function getTotalRequestsProcessed() external view returns (uint256) {
         return TOTAL_REQUESTS_PROCESSED_POSITION.getStorageUint256();
     }
 
+    /// @notice Returns the latest validator index that was requested to exit
+    /// for the given `nodeOperatorId` in the given `moduleId`.
+    ///
     function getLastRequestedValidatorIndex(uint256 moduleId, uint256 nodeOpId)
         external view returns (uint256)
     {
