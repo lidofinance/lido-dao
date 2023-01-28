@@ -234,8 +234,6 @@ contract AccountingOracle is BaseOracle {
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
         _initialize(consensusContract, consensusVersion, lastProcessedRefSlot);
         _setDataBoundaries(maxExitedValidatorsPerDay, maxExtraDataListItemsCount);
-
-
     }
 
     function getDataBoundaries() external view returns (
@@ -387,7 +385,7 @@ contract AccountingOracle is BaseOracle {
         }
 
         uint256 exitedValidators = 0;
-        for (uint256 i = 1; i < stakingModuleIds.length;) {
+        for (uint256 i = 0; i < stakingModuleIds.length;) {
             if (numExitedValidatorsByStakingModule[i] == 0) {
                 revert InvalidExitedValidatorsData();
             } else {
