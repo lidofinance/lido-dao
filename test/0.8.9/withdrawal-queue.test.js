@@ -1,5 +1,5 @@
 const { artifacts, contract, ethers } = require('hardhat')
-const { bn } = require('@aragon/contract-helpers-test')
+const { bn, getEventArgument } = require('@aragon/contract-helpers-test')
 
 const { ETH, StETH, shareRate, shares } = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
@@ -20,22 +20,25 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
     await withdrawalQueue.initialize(daoAgent, daoAgent, daoAgent, steth.address)
     await withdrawalQueue.resume({ from: daoAgent })
 
-    steth.setTotalPooledEther(ETH(300))
-    steth.mintShares(user, shares(1))
-    steth.approve(withdrawalQueue.address, StETH(300), { from: user })
+    await steth.setTotalPooledEther(ETH(300))
+    await steth.mintShares(user, shares(1))
+    await steth.approve(withdrawalQueue.address, StETH(300), { from: user })
 
     await ethers.provider.send('hardhat_impersonateAccount', [steth.address])
   })
 
-  context('Enqueue', async () => {
-    let requestId
+  context('Request', async () => {
+    it('One can request a withdrawal', async () => {
+      const receipt = await withdrawalQueue.requestWithdrawal(StETH(300), recipient, { from: user })
+      const requestId = getEventArgument(receipt, "WithdrawalRequested", "requestId")
 
-    beforeEach('Read some state', async () => {
-      requestId = bn(await withdrawalQueue.lastRequestId()).add(bn(1));
-    })
-
-    it('One can enqueue a request', async () => {
-      await withdrawalQueue.requestWithdrawal(StETH(300), recipient, { from: user })
+      assert.emits(receipt, "WithdrawalRequested", { 
+        requestId: 1,
+        requestor: user.toLowerCase(),
+        recipient: recipient.toLowerCase(),
+        amountOfStETH: StETH(300),
+        amountOfShares: shares(1)
+      })
 
       assert.equals(await withdrawalQueue.lastRequestId(), requestId)
       assert.equals(await withdrawalQueue.lastFinalizedRequestId(), 0)
@@ -47,6 +50,93 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
       assert.equals(request.amountOfShares, shares(1))
       assert.equals(request.isFinalized, false)
       assert.equals(request.isClaimed, false)
+    })
+
+    it('One cant request less than MIN', async () => {
+      const min = bn(await withdrawalQueue.MIN_STETH_WITHDRAWAL_AMOUNT())
+      assert.equals(min, 100)
+
+      const amount = min.sub(bn(1))
+
+      await assert.reverts(withdrawalQueue.requestWithdrawal(amount, recipient, { from: user }), 
+      `RequestAmountTooSmall(${amount})`)
+    })
+
+    it('One can request MIN', async () => {
+      const min = await withdrawalQueue.MIN_STETH_WITHDRAWAL_AMOUNT()
+      const shares = await steth.getSharesByPooledEth(min)
+
+      const receipt = await withdrawalQueue.requestWithdrawal(min, recipient, { from: user })
+      const requestId = getEventArgument(receipt, "WithdrawalRequested", "requestId")
+
+      assert.emits(receipt, "WithdrawalRequested", { 
+        requestId: 1,
+        requestor: user.toLowerCase(),
+        recipient: recipient.toLowerCase(),
+        amountOfStETH: min,
+        amountOfShares: shares,
+      })
+
+      assert.equals(await withdrawalQueue.lastRequestId(), requestId)
+      assert.equals(await withdrawalQueue.lastFinalizedRequestId(), 0)
+
+      const request = await withdrawalQueue.getWithdrawalRequestStatus(requestId)
+
+      assert.equals(request.recipient, recipient)
+      assert.equals(request.amountOfStETH, min)
+      assert.equals(request.amountOfShares, shares)
+      assert.equals(request.isFinalized, false)
+      assert.equals(request.isClaimed, false)
+    })
+
+    it('One cant request more than MAX', async () => {
+      const max = bn(await withdrawalQueue.MAX_STETH_WITHDRAWAL_AMOUNT())
+      const amount = max.add(bn(1))
+      await steth.setTotalPooledEther(amount)
+      await steth.approve(withdrawalQueue.address, amount, { from: user })
+
+      await assert.reverts(withdrawalQueue.requestWithdrawal(amount, recipient, { from: user }), 
+      `RequestAmountTooLarge(${amount})`)
+    })
+
+    it('One can request MAX', async () => {
+      const max = await withdrawalQueue.MAX_STETH_WITHDRAWAL_AMOUNT()
+      await steth.setTotalPooledEther(max)
+      await steth.approve(withdrawalQueue.address, max, { from: user })
+
+      const receipt = await withdrawalQueue.requestWithdrawal(max, recipient, { from: user })
+      const requestId = getEventArgument(receipt, "WithdrawalRequested", "requestId")
+
+      assert.emits(receipt, "WithdrawalRequested", { 
+        requestId: 1,
+        requestor: user.toLowerCase(),
+        recipient: recipient.toLowerCase(),
+        amountOfStETH: max,
+        amountOfShares: shares(1)
+      })
+
+      assert.equals(await withdrawalQueue.lastRequestId(), requestId)
+      assert.equals(await withdrawalQueue.lastFinalizedRequestId(), 0)
+
+      const request = await withdrawalQueue.getWithdrawalRequestStatus(requestId)
+
+      assert.equals(request.recipient, recipient)
+      assert.equals(request.amountOfStETH, max)
+      assert.equals(request.amountOfShares, shares(1))
+      assert.equals(request.isFinalized, false)
+      assert.equals(request.isClaimed, false)
+    })
+
+    it('One cant request more than they have', async () => {
+      await assert.reverts(withdrawalQueue.requestWithdrawal(StETH(400), recipient, { from: user }), 
+        "TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE")
+    })
+
+    it('One cant request more than allowed', async () => {
+      await steth.approve(withdrawalQueue.address, StETH(200), { from: user })
+
+      await assert.reverts(withdrawalQueue.requestWithdrawal(StETH(300), recipient, { from: user }), 
+        "TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE")
     })
   })
 
@@ -81,9 +171,9 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
     })
 
     it('One can finalize a batch of requests at once', async () => {
-      steth.setTotalPooledEther(ETH(600))
-      steth.mintShares(user, shares(1))
-      steth.approve(withdrawalQueue.address, StETH(600), { from: user })
+      await steth.setTotalPooledEther(ETH(600))
+      await steth.mintShares(user, shares(1))
+      await steth.approve(withdrawalQueue.address, StETH(600), { from: user })
 
       await withdrawalQueue.requestWithdrawal(amount, recipient, { from: user })
       const batch = await withdrawalQueue.finalizationBatch(2, shareRate(300))
@@ -97,9 +187,9 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
     })
 
     it('One can finalize part of the queue', async () => {
-      steth.setTotalPooledEther(ETH(600))
-      steth.mintShares(user, shares(1))
-      steth.approve(withdrawalQueue.address, StETH(600), { from: user })
+      await steth.setTotalPooledEther(ETH(600))
+      await steth.mintShares(user, shares(1))
+      await steth.approve(withdrawalQueue.address, StETH(600), { from: user })
 
       await withdrawalQueue.requestWithdrawal(amount, recipient, { from: user })
 
@@ -123,24 +213,30 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
     let requestId
     const amount = ETH(300)
     beforeEach('Enqueue a request', async () => {
-      requestId = await withdrawalQueue.lastRequestId() + 1; // todo: get from receipt
-      await withdrawalQueue.requestWithdrawal(amount, recipient, { from: user })
+      const receipt = await withdrawalQueue.requestWithdrawal(amount, recipient, { from: user })
+      requestId = getEventArgument(receipt, "WithdrawalRequested", "requestId")
     })
 
     it('One cant claim not finalized request', async () => {
-      await assert.reverts(withdrawalQueue.claimWithdrawal(requestId, 1), 'RequestNotFinalized()')
+      await assert.reverts(withdrawalQueue.claimWithdrawal(requestId, 0), `RequestNotFinalized(${requestId})`)
+    })
+
+    it('One can find a right hint to claim a withdrawal', async () => {
+      await withdrawalQueue.finalize(1, { from: steth.address, value: amount })
+
+      assert.equals(await withdrawalQueue.findClaimHint(requestId), await withdrawalQueue.lastDiscountIndex())
     })
 
     it('Cant claim request with a wrong hint', async () => {
-      steth.setTotalPooledEther(ETH(600))
-      steth.mintShares(user, shares(1))
-      steth.approve(withdrawalQueue.address, StETH(600), { from: user })
+      await steth.setTotalPooledEther(ETH(600))
+      await steth.mintShares(user, shares(1))
+      await steth.approve(withdrawalQueue.address, StETH(600), { from: user })
 
       await withdrawalQueue.requestWithdrawal(amount, recipient, { from: user })
 
       await withdrawalQueue.finalize(2, { from: steth.address, value: amount })
-      await assert.reverts(withdrawalQueue.claimWithdrawal(requestId, 0), 'InvalidHint()')
-      await assert.reverts(withdrawalQueue.claimWithdrawal(requestId, 2), 'InvalidHint()')
+      await assert.reverts(withdrawalQueue.claimWithdrawal(requestId, 0), 'InvalidHint(0)')
+      await assert.reverts(withdrawalQueue.claimWithdrawal(requestId, 2), 'InvalidHint(2)')
     })
 
     it('Anyone can claim a finalized token', async () => {
