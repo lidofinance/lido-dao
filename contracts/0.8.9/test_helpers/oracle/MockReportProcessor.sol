@@ -7,15 +7,15 @@ import { IReportAsyncProcessor } from "../../oracle/HashConsensus.sol";
 contract MockReportProcessor is IReportAsyncProcessor {
     uint256 internal _consensusVersion;
 
-    struct StartProcessingLastCall {
+    struct SubmitReportLastCall {
         bytes32 report;
         uint256 refSlot;
         uint256 deadline;
         uint256 callCount;
     }
 
-    StartProcessingLastCall internal _startProcessingLastCall;
-    uint256 internal _lastProcessedRefSlot;
+    SubmitReportLastCall internal _submitReportLastCall;
+    uint256 internal _lastProcessingRefSlot;
 
     constructor(uint256 consensusVersion) {
         _consensusVersion = consensusVersion;
@@ -25,16 +25,16 @@ contract MockReportProcessor is IReportAsyncProcessor {
         _consensusVersion = consensusVersion;
     }
 
-    function setLastProcessedRefSlot(uint256 refSlot) external {
-        _lastProcessedRefSlot = refSlot;
+    function setLastProcessingStartedRefSlot(uint256 refSlot) external {
+        _lastProcessingRefSlot = refSlot;
     }
 
-    function getLastCall_startProcessing() external view returns (StartProcessingLastCall memory) {
-        return _startProcessingLastCall;
+    function getLastCall_submitReport() external view returns (SubmitReportLastCall memory) {
+        return _submitReportLastCall;
     }
 
-    function markLastReportProcessed() external {
-        _lastProcessedRefSlot = _startProcessingLastCall.refSlot;
+    function startReportProcessing() external {
+        _lastProcessingRefSlot = _submitReportLastCall.refSlot;
     }
 
     ///
@@ -45,14 +45,14 @@ contract MockReportProcessor is IReportAsyncProcessor {
         return _consensusVersion;
     }
 
-    function startProcessing(bytes32 report, uint256 refSlot, uint256 deadline) external {
-        _startProcessingLastCall.report = report;
-        _startProcessingLastCall.refSlot = refSlot;
-        _startProcessingLastCall.deadline = deadline;
-        ++_startProcessingLastCall.callCount;
+    function submitReport(bytes32 report, uint256 refSlot, uint256 deadline) external {
+        _submitReportLastCall.report = report;
+        _submitReportLastCall.refSlot = refSlot;
+        _submitReportLastCall.deadline = deadline;
+        ++_submitReportLastCall.callCount;
     }
 
-    function getLastProcessedRefSlot() external view returns (uint256) {
-        return _lastProcessedRefSlot;
+    function getLastProcessingRefSlot() external view returns (uint256) {
+        return _lastProcessingRefSlot;
     }
 }

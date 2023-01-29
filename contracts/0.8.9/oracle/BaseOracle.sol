@@ -2,14 +2,13 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.9;
 
-
 import { AccessControlEnumerable } from "@openzeppelin/contracts-v4.4/access/AccessControlEnumerable.sol";
 import { SafeCast } from "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
 
-import { IReportAsyncProcessor } from "./HashConsensus.sol";
-
 import { UnstructuredStorage } from "../lib/UnstructuredStorage.sol";
 import { Versioned } from "../utils/Versioned.sol";
+
+import { IReportAsyncProcessor } from "./HashConsensus.sol";
 
 
 interface IConsensusContract {
@@ -28,27 +27,28 @@ interface IConsensusContract {
 }
 
 
-contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, Versioned {
+abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, Versioned {
     using UnstructuredStorage for bytes32;
     using SafeCast for uint256;
 
     error AddressCannotBeZero();
     error AddressCannotBeSame();
     error VersionCannotBeSame();
-    error LastProcessedRefSlotCannotExceedCurrentOne(uint256 refSlot, uint256 lastProcessedRefSlot);
     error UnexpectedChainConfig();
-    error OnlyConsensusContractCanStartProcessing();
-    error ProcessedRefSlotMustIncrease(uint256 processedRefSlot, uint256 newRefSlot);
-    error RefSlotCannotDecrease(uint256 processingRefSlot, uint256 newRefSlot);
+    error OnlyConsensusContractCanSubmitReport();
+    error RefSlotCannotBeLessThanProcessingOne(uint256 refSlot, uint256 processingRefSlot);
+    error RefSlotMustBeGreaterThanProcessingOne(uint256 refSlot, uint256 processingRefSlot);
+    error RefSlotCannotDecrease(uint256 refSlot, uint256 prevRefSlot);
     error ProcessingDeadlineMissed(uint256 deadline);
     error UnexpectedRefSlot(uint256 consensusRefSlot, uint256 dataRefSlot);
     error UnexpectedConsensusVersion(uint256 expectedVersion, uint256 receivedVersion);
+    error UnexpectedDataHash(bytes32 consensusHash, bytes32 receivedHash);
 
     event ConsensusContractSet(address indexed addr, address indexed prevAddr);
     event ConsensusVersionSet(uint256 indexed version, uint256 indexed prevVersion);
-    event ProcessingStarted(uint256 indexed refSlot, bytes32 hash, uint256 deadlineTime);
-    event ProcessingFinished(uint256 indexed refSlot, bytes32 hash);
-    event WarnNoDataSubmitted(uint256 indexed refSlot);
+    event ReportSubmitted(uint256 indexed refSlot, bytes32 hash, uint256 deadlineTime);
+    event ProcessingStarted(uint256 indexed refSlot, bytes32 hash);
+    event WarnProcessingMissed(uint256 indexed refSlot);
 
     struct ConsensusReport {
         bytes32 hash;
@@ -74,11 +74,11 @@ contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, Versioned
     bytes32 internal constant CONSENSUS_VERSION_POSITION =
         keccak256("lido.BaseOracle.consensusVersion");
 
-    bytes32 internal constant LAST_PROCESSED_REF_SLOT_POSITION =
-        keccak256("lido.BaseOracle.lastProcessedRefSlot");
+    bytes32 internal constant LAST_PROCESSING_REF_SLOT_POSITION =
+        keccak256("lido.BaseOracle.lastProcessingRefSlot");
 
-    bytes32 internal constant PROCESSING_REPORT_POSITION =
-        keccak256("lido.BaseOracle.processingReport");
+    bytes32 internal constant CONSENSUS_REPORT_POSITION =
+        keccak256("lido.BaseOracle.consensusReport");
 
 
     uint256 public immutable SECONDS_PER_SLOT;
@@ -91,12 +91,12 @@ contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, Versioned
     function _initialize(
         address consensusContract,
         uint256 consensusVersion,
-        uint256 lastProcessedRefSlot
+        uint256 lastProcessingRefSlot
     ) internal virtual {
         _initializeContractVersionTo1();
-        _setConsensusContract(consensusContract, lastProcessedRefSlot);
+        _setConsensusContract(consensusContract, lastProcessingRefSlot);
         _setConsensusVersion(consensusVersion);
-        LAST_PROCESSED_REF_SLOT_POSITION.setStorageUint256(lastProcessedRefSlot);
+        LAST_PROCESSING_REF_SLOT_POSITION.setStorageUint256(lastProcessingRefSlot);
     }
 
     ///
@@ -104,15 +104,20 @@ contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, Versioned
     ///
 
     /// @notice Returns the address of the HashConsensus contract.
+    ///
     function getConsensusContract() external view returns (address) {
         return CONSENSUS_CONTRACT_POSITION.getStorageAddress();
     }
 
     function setConsensusContract(address addr) external onlyRole(MANAGE_CONSENSUS_CONTRACT_ROLE) {
-        _setConsensusContract(addr, LAST_PROCESSED_REF_SLOT_POSITION.getStorageUint256());
+        _setConsensusContract(addr, LAST_PROCESSING_REF_SLOT_POSITION.getStorageUint256());
     }
 
-    /// @notice Returns the oracle consensus rules version expected by the oracle contract.
+    /// @notice Returns the current consensus version expected by the oracle contract.
+    ///
+    /// Consensus version must change every time consensus rules change, meaning that
+    /// an oracle looking at the same reference slot would calculate a different hash.
+    ///
     function getConsensusVersion() external view returns (uint256) {
         return CONSENSUS_VERSION_POSITION.getStorageUint256();
     }
@@ -128,7 +133,7 @@ contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, Versioned
         emit ConsensusVersionSet(version, prevVersion);
     }
 
-    function _setConsensusContract(address addr, uint256 lastProcessedRefSlot) internal {
+    function _setConsensusContract(address addr, uint256 lastProcessingRefSlot) internal {
         if (addr == address(0)) revert AddressCannotBeZero();
 
         address prevAddr = CONSENSUS_CONTRACT_POSITION.getStorageAddress();
@@ -140,8 +145,8 @@ contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, Versioned
         }
 
         (uint64 refSlot, ) = IConsensusContract(addr).getCurrentFrame();
-        if (lastProcessedRefSlot > refSlot) {
-            revert LastProcessedRefSlotCannotExceedCurrentOne(refSlot, lastProcessedRefSlot);
+        if (refSlot < lastProcessingRefSlot) {
+            revert RefSlotCannotBeLessThanProcessingOne(refSlot, lastProcessingRefSlot);
         }
 
         CONSENSUS_CONTRACT_POSITION.setStorageAddress(addr);
@@ -159,21 +164,22 @@ contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, Versioned
     ///
 
     /// @notice Returns the last consensus report hash and metadata.
+    ///
     function getConsensusReport() external view returns (
         bytes32 hash,
         uint256 refSlot,
         uint256 receptionTime,
         uint256 deadlineTime,
-        bool isProcessed
+        bool processingStarted
     ) {
-        ConsensusReport memory report = _storageProcessingReport().value;
-        uint256 processedRefSlot = LAST_PROCESSED_REF_SLOT_POSITION.getStorageUint256();
+        ConsensusReport memory report = _storageConsensusReport().value;
+        uint256 processingRefSlot = LAST_PROCESSING_REF_SLOT_POSITION.getStorageUint256();
         return (
             report.hash,
             report.refSlot,
             report.receptionTime,
             report.deadlineTime,
-            report.refSlot != 0 && report.refSlot == processedRefSlot
+            report.refSlot != 0 && report.refSlot == processingRefSlot
         );
     }
 
@@ -181,80 +187,116 @@ contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, Versioned
     /// Consensus contract interface
     ///
 
-    function startProcessing(bytes32 reportHash, uint256 refSlot, uint256 deadline) external {
+    /// @notice Called by HashConsensus contract to push a consensus report for processing.
+    ///
+    /// Note that submitting the report doesn't require the oracle to start processing it
+    /// right away, this can happen later. Until the processing is started, HashConsensus is
+    /// free to reach consensus on another report for the same reporting frame and submit it
+    /// using this same function.
+    ///
+    function submitReport(bytes32 reportHash, uint256 refSlot, uint256 deadline) external {
         if (_msgSender() != CONSENSUS_CONTRACT_POSITION.getStorageAddress()) {
-            revert OnlyConsensusContractCanStartProcessing();
+            revert OnlyConsensusContractCanSubmitReport();
         }
 
-        uint256 lastProcessedRefSlot = LAST_PROCESSED_REF_SLOT_POSITION.getStorageUint256();
-        if (refSlot <= lastProcessedRefSlot) {
-            revert ProcessedRefSlotMustIncrease(lastProcessedRefSlot, refSlot);
+        uint256 prevSubmittedRefSlot = _storageConsensusReport().value.refSlot;
+        if (refSlot < prevSubmittedRefSlot) {
+            revert RefSlotCannotDecrease(refSlot, prevSubmittedRefSlot);
         }
 
-        uint256 lastProcessingRefSlot = _storageProcessingReport().value.refSlot;
-        if (refSlot < lastProcessingRefSlot) {
-            revert RefSlotCannotDecrease(lastProcessingRefSlot, refSlot);
+        uint256 prevProcessingRefSlot = LAST_PROCESSING_REF_SLOT_POSITION.getStorageUint256();
+        if (refSlot <= prevProcessingRefSlot) {
+            revert RefSlotMustBeGreaterThanProcessingOne(refSlot, prevProcessingRefSlot);
         }
 
-        if (lastProcessedRefSlot != lastProcessingRefSlot) {
-            emit WarnNoDataSubmitted(lastProcessingRefSlot);
+        if (prevProcessingRefSlot != prevSubmittedRefSlot) {
+            emit WarnProcessingMissed(prevSubmittedRefSlot);
         }
 
-        ConsensusReport memory report = ConsensusReport(
-            reportHash,
-            refSlot.toUint64(),
-            uint64(_getTime()),
-            deadline.toUint64());
+        emit ReportSubmitted(refSlot, reportHash, deadline);
 
-        _storageProcessingReport().value = report;
-        _startProcessing(report, lastProcessingRefSlot, lastProcessedRefSlot);
+        ConsensusReport memory report = ConsensusReport({
+            hash: reportHash,
+            refSlot: refSlot.toUint64(),
+            receptionTime: uint64(_getTime()),
+            deadlineTime: deadline.toUint64()
+        });
 
-        emit ProcessingStarted(refSlot, report.hash, deadline);
+        _storageConsensusReport().value = report;
+        _handleConsensusReport(report, prevSubmittedRefSlot, prevProcessingRefSlot);
     }
 
-    /// @notice Returns the last reference slot for which the data was processed.
-    function getLastProcessedRefSlot() external view returns (uint256) {
-        return LAST_PROCESSED_REF_SLOT_POSITION.getStorageUint256();
+    /// @notice Returns the last reference slot for which processing of the report was started.
+    ///
+    function getLastProcessingRefSlot() external view returns (uint256) {
+        return LAST_PROCESSING_REF_SLOT_POSITION.getStorageUint256();
     }
 
     ///
     /// Internal interface
     ///
 
+    /// @notice Returns whether the given address is a member of the oracle committee.
+    ///
     function _isConsensusMember(address addr) internal view returns (bool) {
         address consensus = CONSENSUS_CONTRACT_POSITION.getStorageAddress();
         return IConsensusContract(consensus).getIsMember(addr);
     }
 
-    function _startProcessing(
+    /// @notice Called when oracle gets a new consensus report from the HashConsensus contract.
+    ///
+    /// Keep in mind that, until you call `_startProcessing`, the oracle committee is free to
+    /// reach consensus on another report for the same reporting frame and re-submit it using
+    /// this function.
+    ///
+    function _handleConsensusReport(
         ConsensusReport memory report,
-        uint256 lastProcessingRefSlot,
-        uint256 lastProcessedRefSlot
-    ) internal virtual {}
+        uint256 prevSubmittedRefSlot,
+        uint256 prevProcessingRefSlot
+    ) internal virtual;
 
-    function _checkConsensusData(uint256 refSlot, uint256 consensusVersion) internal view {
-        _checkDeadline();
+    /// @notice May be called by a descendant contract to check if the received data matches
+    /// the currently submitted consensus report, and that processing deadline is not missed.
+    /// Reverts otherwise.
+    ///
+    function _checkConsensusData(uint256 refSlot, uint256 consensusVersion, bytes32 hash)
+        internal view
+    {
+        _checkProcessingDeadline();
 
-        uint256 consensusRefSlot = _storageProcessingReport().value.refSlot;
-        if (refSlot != consensusRefSlot) {
-            revert UnexpectedRefSlot(consensusRefSlot, refSlot);
+        ConsensusReport memory report = _storageConsensusReport().value;
+        if (refSlot != report.refSlot) {
+            revert UnexpectedRefSlot(report.refSlot, refSlot);
         }
 
         uint256 expectedConsensusVersion = CONSENSUS_VERSION_POSITION.getStorageUint256();
         if (consensusVersion != expectedConsensusVersion) {
             revert UnexpectedConsensusVersion(expectedConsensusVersion, consensusVersion);
         }
+
+        if (hash != report.hash) {
+            revert UnexpectedDataHash(report.hash, hash);
+        }
     }
 
-    function _finishProcessing() internal {
-        _checkDeadline();
-        ConsensusReport memory processingReport = _storageProcessingReport().value;
-        LAST_PROCESSED_REF_SLOT_POSITION.setStorageUint256(processingReport.refSlot);
-        emit ProcessingFinished(processingReport.refSlot, processingReport.hash);
+    /// @notice Called by a descendant contract to mark the current consensus report
+    /// as being processed.
+    ///
+    /// Before this function is called, the oracle committee is free to reach consensus
+    /// on another report for the same reporting frame. After this function is called,
+    /// the consensus report for the current frame is guaranteed to remain the same.
+    ///
+    function _startProcessing() internal {
+        _checkProcessingDeadline();
+        ConsensusReport memory report = _storageConsensusReport().value;
+        LAST_PROCESSING_REF_SLOT_POSITION.setStorageUint256(report.refSlot);
+        emit ProcessingStarted(report.refSlot, report.hash);
     }
 
-    function _checkDeadline() internal view {
-        uint256 deadline = _storageProcessingReport().value.deadlineTime;
+    /// @notice Reverts if the processing deadline for the current consensus report is missed.
+    ///
+    function _checkProcessingDeadline() internal view {
+        uint256 deadline = _storageConsensusReport().value.deadlineTime;
         if (_getTime() > deadline) revert ProcessingDeadlineMissed(deadline);
     }
 
@@ -270,8 +312,8 @@ contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, Versioned
         ConsensusReport value;
     }
 
-    function _storageProcessingReport() internal pure returns (StorageConsensusReport storage r) {
-        bytes32 position = PROCESSING_REPORT_POSITION;
+    function _storageConsensusReport() internal pure returns (StorageConsensusReport storage r) {
+        bytes32 position = CONSENSUS_REPORT_POSITION;
         assembly { r.slot := position }
     }
 }

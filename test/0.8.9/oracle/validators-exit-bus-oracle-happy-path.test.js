@@ -55,16 +55,16 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
       assert.equal((await consensus.getConsensusState()).consensusReport, hash)
     }
 
-    it('initially, consensus report is empty and not processed', async () => {
+    it('initially, consensus report is empty and is not being processed', async () => {
       const report = await oracle.getConsensusReport()
       assert.equal(report.hash, ZERO_HASH)
       assert.equal(+report.refSlot, 0)
       assert.equal(+report.receptionTime, 0)
       assert.equal(+report.deadlineTime, 0)
-      assert.isFalse(report.isProcessed)
+      assert.isFalse(report.processingStarted)
 
       const procState = await oracle.getDataProcessingState()
-      assert.isFalse(procState.dataReceived)
+      assert.isFalse(procState.processingStarted)
       assert.equal(+procState.requestsCount, 0)
       assert.equal(+procState.requestsProcessed, 0)
       assert.equal(+procState.dataFormat, 0)
@@ -99,10 +99,10 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
       assert.equal(+report.refSlot, +reportFields.refSlot)
       assert.equal(+report.receptionTime, +await oracle.getTime())
       assert.equal(+report.deadlineTime, computeTimestampAtSlot(+report.refSlot + SLOTS_PER_FRAME))
-      assert.isFalse(report.isProcessed)
+      assert.isFalse(report.processingStarted)
 
       const procState = await oracle.getDataProcessingState()
-      assert.isFalse(procState.dataReceived)
+      assert.isFalse(procState.processingStarted)
       assert.equal(+procState.requestsCount, 0)
       assert.equal(+procState.requestsProcessed, 0)
       assert.equal(+procState.dataFormat, 0)
@@ -147,8 +147,8 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
 
     it(`a committee member submits the report data, exit requests are emitted`, async () => {
       const tx = await oracle.submitReportData(reportItems, oracleVersion, {from: member1})
-      assertEvent(tx, 'DataSubmitted', {expectedArgs: {refSlot: reportFields.refSlot}})
-      assert.isTrue((await oracle.getConsensusReport()).isProcessed)
+      assertEvent(tx, 'ProcessingStarted', {expectedArgs: {refSlot: reportFields.refSlot}})
+      assert.isTrue((await oracle.getConsensusReport()).processingStarted)
 
       for (let i = 0; i < exitRequests.length; ++i) {
         assertEvent(tx, 'ValidatorExitRequest', {index: i, expectedArgs: {
@@ -162,7 +162,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
 
     it(`reports are marked as processed`, async () => {
       const procState = await oracle.getDataProcessingState()
-      assert.isTrue(procState.dataReceived)
+      assert.isTrue(procState.processingStarted)
       assert.equal(+procState.requestsCount, exitRequests.length)
       assert.equal(+procState.requestsProcessed, exitRequests.length)
       assert.equal(+procState.dataFormat, DATA_FORMAT_LIST)

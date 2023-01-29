@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.9;
 
-
 import { SafeCast } from "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
 
 import { Math } from "../lib/Math.sol";
@@ -19,7 +18,6 @@ contract ValidatorsExitBusOracle is BaseOracle {
 
     error AdminCannotBeZero();
     error SenderNotAllowed();
-    error UnexpectedDataHash(bytes32 consensusHash, bytes32 receivedHash);
     error UnsupportedRequestsDataFormat(uint256 format);
     error InvalidRequestsData();
     error InvalidRequestsDataLength();
@@ -34,8 +32,6 @@ contract ValidatorsExitBusOracle is BaseOracle {
         uint256 exitRequestsRateLimitWindowSizeSlots,
         uint256 exitRequestsRateLimitMaxThroughputE18
     );
-
-    event DataSubmitted(uint256 indexed refSlot);
 
     event ValidatorExitRequest(
         uint256 indexed stakingModuleId,
@@ -101,7 +97,7 @@ contract ValidatorsExitBusOracle is BaseOracle {
         address admin,
         address consensusContract,
         uint256 consensusVersion,
-        uint256 lastProcessedRefSlot,
+        uint256 lastProcessingRefSlot,
         uint256 maxExitRequestsPerReport,
         uint256 maxExitRequestsListLength,
         uint256 exitRequestsRateLimitWindowSizeSlots,
@@ -109,7 +105,7 @@ contract ValidatorsExitBusOracle is BaseOracle {
     ) external {
         if (admin == address(0)) revert AdminCannotBeZero();
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
-        _initialize(consensusContract, consensusVersion, lastProcessedRefSlot);
+        _initialize(consensusContract, consensusVersion, lastProcessingRefSlot);
         _setDataBoundaries(
             maxExitRequestsPerReport,
             maxExitRequestsListLength,
@@ -222,32 +218,29 @@ contract ValidatorsExitBusOracle is BaseOracle {
     ///
     uint256 public constant DATA_FORMAT_LIST = 0;
 
-    /// @notice Sibmits report data for processing.
+    /// @notice Submits report data for processing.
     ///
-    /// @param report The data. See the `ReportData` structure's docs for details.
+    /// @param data The data. See the `ReportData` structure's docs for details.
     /// @param contractVersion Expected version of the oracle contract.
     ///
-    /// Reverts if the caller is not a member of the oracle committee and doesn't
-    /// possess the SUBMIT_DATA_ROLE.
+    /// Reverts if:
+    /// - The caller is not a member of the oracle committee and doesn't possess the
+    ///   SUBMIT_DATA_ROLE.
+    /// - The provided contract version is different from the current one.
+    /// - The provided consensus version is different from the expected one.
+    /// - The provided reference slot differs from the current consensus frame's one.
+    /// - The processing deadline for the current consensus frame is missed.
+    /// - The keccak256 hash of the ABI-encoded data is different from the last hash
+    ///   provided by the hash consensus contract.
+    /// - The provided data doesn't meet safety checks and boundaries.
     ///
-    /// Reverts if the provided contract version is different from the current one.
-    ///
-    /// Reverts if the provided consensus version is different from the current one.
-    ///
-    /// Reverts if the keccak256 hash of the ABI-encoded data is different from the last hash
-    /// provided by the hash consensus contract.
-    ///
-    /// Reverts if the processing deadline for the reference slot's consensus frame is not met.
-    ///
-    /// Reverts if the provided data doesn't meet safety checks and boundaries.
-    ///
-    function submitReportData(ReportData calldata report, uint256 contractVersion) external {
+    function submitReportData(ReportData calldata data, uint256 contractVersion) external {
         _checkMsgSenderIsAllowedToSubmitData();
         _checkContractVersion(contractVersion);
-        _checkConsensusData(report.refSlot, report.consensusVersion);
-        _checkReportDataHash(report);
-        _handleConsensusReportData(report);
-        _finishProcessing();
+        // it's a waste of gas to copy the whole calldata into mem but seems there's no way around
+        _checkConsensusData(data.refSlot, data.consensusVersion, keccak256(abi.encode(data)));
+        _startProcessing();
+        _handleConsensusReportData(data);
     }
 
     /// @notice Returns maximum number of validator exit requests that can be
@@ -261,7 +254,8 @@ contract ValidatorsExitBusOracle is BaseOracle {
         );
     }
 
-    /// @notice Returns the total number of validator exit requests ever processed.
+    /// @notice Returns the total number of validator exit requests ever processed
+    /// across all received reports.
     ///
     function getTotalRequestsProcessed() external view returns (uint256) {
         return TOTAL_REQUESTS_PROCESSED_POSITION.getStorageUint256();
@@ -279,17 +273,18 @@ contract ValidatorsExitBusOracle is BaseOracle {
         return _storageLastRequestedValidatorIndices()[nodeOpKey];
     }
 
-    /// @notice Returns processing state for the current frame.
+    /// @notice Returns processing state for the current consensus report.
     ///
     function getDataProcessingState() external view returns (
-        bool dataReceived,
+        bool processingStarted,
         uint256 requestsCount,
         uint256 requestsProcessed,
         uint256 dataFormat
     ) {
         DataProcessingState memory state = _storageDataProcessingState().value;
-        dataReceived = state.refSlot == _getCurrentRefSlot();
-        if (dataReceived) {
+        uint256 processingRefSlot = LAST_PROCESSING_REF_SLOT_POSITION.getStorageUint256();
+        processingStarted = state.refSlot != 0 && state.refSlot == processingRefSlot;
+        if (processingStarted) {
             requestsCount = state.requestsCount;
             requestsProcessed = state.requestsProcessed;
             dataFormat = state.dataFormat;
@@ -327,15 +322,15 @@ contract ValidatorsExitBusOracle is BaseOracle {
         );
     }
 
-    function _startProcessing(
+    function _handleConsensusReport(
         ConsensusReport memory /* report */,
-        uint256 /* lastProcessingRefSlot */,
-        uint256 lastProcessedRefSlot
+        uint256 /* prevSubmittedRefSlot */,
+        uint256 prevProcessingRefSlot
     ) internal override {
         DataProcessingState memory state = _storageDataProcessingState().value;
-        if (state.refSlot == lastProcessedRefSlot && state.requestsProcessed < state.requestsCount) {
+        if (state.refSlot == prevProcessingRefSlot && state.requestsProcessed < state.requestsCount) {
             emit WarnDataIncomleteProcessing(
-                lastProcessedRefSlot,
+                prevProcessingRefSlot,
                 state.requestsProcessed,
                 state.requestsCount
             );
@@ -349,51 +344,40 @@ contract ValidatorsExitBusOracle is BaseOracle {
         }
     }
 
-    function _checkReportDataHash(ReportData calldata report) internal view {
-        bytes32 consensusHash = _storageProcessingReport().value.hash;
-        // it's a waste of gas to copy the whole calldata into mem but seems there's no way around
-        bytes32 dataHash = keccak256(abi.encode(report));
-        if (dataHash != consensusHash) {
-            revert UnexpectedDataHash(consensusHash, dataHash);
-        }
-    }
-
-    function _handleConsensusReportData(ReportData calldata report) internal {
-        if (report.dataFormat != DATA_FORMAT_LIST) {
-            revert UnsupportedRequestsDataFormat(report.dataFormat);
+    function _handleConsensusReportData(ReportData calldata data) internal {
+        if (data.dataFormat != DATA_FORMAT_LIST) {
+            revert UnsupportedRequestsDataFormat(data.dataFormat);
         }
 
-        if (report.data.length % 64 != 0) {
+        if (data.data.length % 64 != 0) {
             revert InvalidRequestsDataLength();
         }
 
-        if (report.data.length / 64 != report.requestsCount) {
+        if (data.data.length / 64 != data.requestsCount) {
             revert UnexpectedRequestsDataLength();
         }
 
-        uint256 lastProcessedItemWithoutPubkey = _processExitRequestsList(report.data);
+        uint256 lastProcessedItemWithoutPubkey = _processExitRequestsList(data.data);
 
         _storageDataProcessingState().value = DataProcessingState({
             lastProcessedItemWithoutPubkey: lastProcessedItemWithoutPubkey,
-            refSlot: report.refSlot.toUint64(),
-            requestsCount: report.requestsCount.toUint64(),
-            requestsProcessed: report.requestsCount.toUint64(),
+            refSlot: data.refSlot.toUint64(),
+            requestsCount: data.requestsCount.toUint64(),
+            requestsProcessed: data.requestsCount.toUint64(),
             dataFormat: uint16(DATA_FORMAT_LIST)
         });
 
-        emit DataSubmitted(report.refSlot);
-
-        if (report.requestsCount == 0) {
+        if (data.requestsCount == 0) {
             return;
         }
 
         RateLimit
             .load(RATE_LIMIT_POSITION)
-            .recordUsageAt(report.refSlot, report.requestsCount * 10**18)
+            .recordUsageAt(data.refSlot, data.requestsCount * 10**18)
             .store(RATE_LIMIT_POSITION);
 
         TOTAL_REQUESTS_PROCESSED_POSITION.setStorageUint256(
-            TOTAL_REQUESTS_PROCESSED_POSITION.getStorageUint256() + report.requestsCount
+            TOTAL_REQUESTS_PROCESSED_POSITION.getStorageUint256() + data.requestsCount
         );
     }
 

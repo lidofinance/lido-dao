@@ -2,18 +2,53 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.9;
 
-
 import { AccessControlEnumerable } from "@openzeppelin/contracts-v4.4/access/AccessControlEnumerable.sol";
 import { SafeCast } from "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
 
 
+/// @notice A contract that gets consensus reports (i.e. hashes) pushed to and processes them
+/// asynchronously.
+///
 interface IReportAsyncProcessor {
-    function startProcessing(bytes32 report, uint256 refSlot, uint256 deadline) external;
-    function getLastProcessedRefSlot() external view returns (uint256);
+    /// @notice Submits a consensus report for processing.
+    ///
+    /// Note that submitting the report doesn't require the processor to start processing it
+    /// right away, this can happen later. Until the processing is started, HashConsensus is
+    /// free to reach consensus on another report for the same reporting frame and submit it
+    /// using this same function.
+    ///
+    function submitReport(bytes32 report, uint256 refSlot, uint256 deadline) external;
+
+    /// @notice Returns the last reference slot for which processing of the report was started.
+    ///
+    function getLastProcessingRefSlot() external view returns (uint256);
+
+    /// @notice Returns the current consensus version.
+    ///
+    /// Consensus version must change every time consensus rules change, meaning that
+    /// an oracle looking at the same reference slot would calculate a different hash.
+    ///
     function getConsensusVersion() external view returns (uint256);
 }
 
 
+/// @notice A contract managing oracle members committee and allowing the members to reach
+/// consensus on a hash for each reporting frame.
+///
+/// Time is divided in frames of equal length, each having reference slot and processing
+/// deadline. Report data must be gathered by looking at the world state at the moment of
+/// the frame's reference slot (including any state changes made in that slot), and must
+/// be processed before the frame's processing deadline.
+///
+/// Frame length is defined in Ethereum consensus layer epochs. Reference slot for each
+/// frame is set to the last slot of the epoch preceding the frame's first epoch. The
+/// processing deadline is set to the last slot of the last epoch of the frame.
+///
+/// This means that all state changes a report processing could entail are guaranteed to be
+/// observed while gathering data for the next frame's report. This is an important property
+/// given that oracle reports sometimes have to contain diffs instead of the full state which
+/// might be impractical or even impossible to transmit and process.
+///
 contract HashConsensus is AccessControlEnumerable {
     using SafeCast for uint256;
 
@@ -30,7 +65,7 @@ contract HashConsensus is AccessControlEnumerable {
     error EmptyReport();
     error StaleReport();
     error NewProcessorCannotBeTheSame();
-    error ConsensusReportAlreadyProcessed();
+    error ConsensusReportAlreadyProcessing();
 
     event FrameConfigSet(uint256 newInitialEpoch, uint256 newEpochsPerFrame);
     event MemberAdded(address indexed addr, uint256 newTotalMembers, uint256 newQuorum);
@@ -331,10 +366,10 @@ contract HashConsensus is AccessControlEnumerable {
         ConsensusFrame memory frame = _getCurrentFrame();
 
         if (member.lastReportRefSlot == frame.refSlot &&
-            _getLastProcessedRefSlot() < frame.refSlot
+            _getLastProcessingRefSlot() < frame.refSlot
         ) {
             // member reported for the current ref. slot and the consensus report
-            // hasn't been processed yet => need to cancel the member's report
+            // is not processing yet => need to cancel the member's report
             --_reportVariants[member.lastReportVariantIndex].support;
         }
 
@@ -348,17 +383,21 @@ contract HashConsensus is AccessControlEnumerable {
     /// @notice Returns info about the current frame and consensus state in that frame.
     ///
     /// @return frame Current reporting frame.
-    /// @return consensusReport Consensus report for the current frame, if any. Zero bytes otherwise.
-    /// @return reportProcessed If consensus report for the current frame is already processed.
+    ///
+    /// @return consensusReport Consensus report for the current frame, if any.
+    ///         Zero bytes otherwise.
+    ///
+    /// @return isReportProcessing If consensus report for the current frame is already
+    ///         being processed. Consensus can be changed before the processing starts.
     ///
     function getConsensusState() external view returns (
         ConsensusFrame memory frame,
         bytes32 consensusReport,
-        bool reportProcessed
+        bool isReportProcessing
     ) {
         frame = _getCurrentFrame();
         (consensusReport,,) = _getConsensusReport(frame.refSlot, _quorum);
-        reportProcessed = _getLastProcessedRefSlot() == frame.refSlot;
+        isReportProcessing = _getLastProcessingRefSlot() == frame.refSlot;
     }
 
     /// @notice Returns report variants and their support for the current reference slot.
@@ -412,11 +451,11 @@ contract HashConsensus is AccessControlEnumerable {
         if (slot != frame.refSlot) revert InvalidSlot();
         if (currentSlot > frame.reportProcessingDeadlineSlot) revert StaleReport();
 
-        if (slot <= _getLastProcessedRefSlot()) {
-            // consensus for the ref. slot was already reached and consensus report processed
+        if (slot <= _getLastProcessingRefSlot()) {
+            // consensus for the ref. slot was already reached and consensus report is processing
             if (slot == member.lastReportRefSlot) {
                 // member sends a report for the same slot => let them know via a revert
-                revert ConsensusReportAlreadyProcessed();
+                revert ConsensusReportAlreadyProcessing();
             } else {
                 // member hasn't sent a report for this slot => normal operation, do nothing
                 return;
@@ -480,7 +519,7 @@ contract HashConsensus is AccessControlEnumerable {
             _reportingState.lastConsensusRefSlot = frame.refSlot;
             _reportingState.lastConsensusVariantIndex = uint64(variantIndex);
 
-            _startReportProcessing(frame, report);
+            _submitReportForProcessing(frame, report);
 
             emit ConsensusReached(frame.refSlot, report, support);
         }
@@ -534,8 +573,8 @@ contract HashConsensus is AccessControlEnumerable {
             return;
         }
 
-        if (_getLastProcessedRefSlot() >= frame.refSlot) {
-            // consensus report for the current ref. slot already processed
+        if (_getLastProcessingRefSlot() >= frame.refSlot) {
+            // consensus report for the current ref. slot already processing
             return;
         }
 
@@ -589,28 +628,28 @@ contract HashConsensus is AccessControlEnumerable {
         ConsensusFrame memory frame = _getCurrentFrame();
         uint256 lastConsensusRefSlot = _reportingState.lastConsensusRefSlot;
 
-        uint256 processedRefSlot = prevProcessor == address(0)
+        uint256 processingRefSlot = prevProcessor == address(0)
             ? lastConsensusRefSlot
-            : IReportAsyncProcessor(prevProcessor).getLastProcessedRefSlot();
+            : IReportAsyncProcessor(prevProcessor).getLastProcessingRefSlot();
 
-        if (processedRefSlot < frame.refSlot && lastConsensusRefSlot == frame.refSlot) {
+        if (processingRefSlot < frame.refSlot && lastConsensusRefSlot == frame.refSlot) {
             bytes32 report = _reportVariants[_reportingState.lastConsensusVariantIndex].hash;
-            _startReportProcessing(frame, report);
+            _submitReportForProcessing(frame, report);
         }
     }
 
-    function _getLastProcessedRefSlot() internal view returns (uint256) {
+    function _getLastProcessingRefSlot() internal view returns (uint256) {
         address processor = _reportProcessor;
         return processor == address(0)
             ? _reportingState.lastConsensusRefSlot
-            : IReportAsyncProcessor(processor).getLastProcessedRefSlot();
+            : IReportAsyncProcessor(processor).getLastProcessingRefSlot();
     }
 
-    function _startReportProcessing(ConsensusFrame memory frame, bytes32 report) internal {
+    function _submitReportForProcessing(ConsensusFrame memory frame, bytes32 report) internal {
         address processor = _reportProcessor;
         if (processor == address(0)) return;
         uint256 deadline = _computeTimestampAtSlot(frame.reportProcessingDeadlineSlot);
-        IReportAsyncProcessor(processor).startProcessing(report, frame.refSlot, deadline);
+        IReportAsyncProcessor(processor).submitReport(report, frame.refSlot, deadline);
     }
 
     function _getConsensusVersion() internal view returns (uint256) {

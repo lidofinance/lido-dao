@@ -75,8 +75,8 @@ contract('HashConsensus', ([admin, member1, member2, member3, stranger]) => {
     it('consensus is not reached', async () => {
       const consensusState = await consensus.getConsensusState()
       assert.equal(consensusState.consensusReport, ZERO_HASH)
-      assert.isFalse(consensusState.reportProcessed)
-      assert.equal(+(await reportProcessor.getLastCall_startProcessing()).callCount, 0)
+      assert.isFalse(consensusState.isReportProcessing)
+      assert.equal(+(await reportProcessor.getLastCall_submitReport()).callCount, 0)
     })
 
     it('second member votes for hash 1', async () => {
@@ -97,8 +97,8 @@ contract('HashConsensus', ([admin, member1, member2, member3, stranger]) => {
     it('consensus is not reached', async () => {
       const consensusState = await consensus.getConsensusState()
       assert.equal(consensusState.consensusReport, ZERO_HASH)
-      assert.isFalse(consensusState.reportProcessed)
-      assert.equal(+(await reportProcessor.getLastCall_startProcessing()).callCount, 0)
+      assert.isFalse(consensusState.isReportProcessing)
+      assert.equal(+(await reportProcessor.getLastCall_submitReport()).callCount, 0)
     })
 
     it('third member votes for hash 3', async () => {
@@ -119,13 +119,13 @@ contract('HashConsensus', ([admin, member1, member2, member3, stranger]) => {
     it('consensus is reached', async () => {
       const consensusState = await consensus.getConsensusState()
       assert.equal(consensusState.consensusReport, HASH_3)
-      assert.isFalse(consensusState.reportProcessed)
+      assert.isFalse(consensusState.isReportProcessing)
 
-      const startProcessingLastCall = await reportProcessor.getLastCall_startProcessing()
-      assert.equal(+startProcessingLastCall.callCount, 1)
-      assert.equal(startProcessingLastCall.report, HASH_3)
-      assert.equal(+startProcessingLastCall.refSlot, +frame.refSlot)
-      assert.equal(+startProcessingLastCall.deadline, computeTimestampAtSlot(frame.reportProcessingDeadlineSlot))
+      const submitReportLastCall = await reportProcessor.getLastCall_submitReport()
+      assert.equal(+submitReportLastCall.callCount, 1)
+      assert.equal(submitReportLastCall.report, HASH_3)
+      assert.equal(+submitReportLastCall.refSlot, +frame.refSlot)
+      assert.equal(+submitReportLastCall.deadline, computeTimestampAtSlot(frame.reportProcessingDeadlineSlot))
     })
 
     it('first member votes for hash 1', async () => {
@@ -146,23 +146,23 @@ contract('HashConsensus', ([admin, member1, member2, member3, stranger]) => {
     it('new consensus is reached', async () => {
       const consensusState = await consensus.getConsensusState()
       assert.equal(consensusState.consensusReport, HASH_1)
-      assert.isFalse(consensusState.reportProcessed)
+      assert.isFalse(consensusState.isReportProcessing)
 
-      const startProcessingLastCall = await reportProcessor.getLastCall_startProcessing()
-      assert.equal(+startProcessingLastCall.callCount, 2)
-      assert.equal(startProcessingLastCall.report, HASH_1)
-      assert.equal(+startProcessingLastCall.refSlot, +frame.refSlot)
-      assert.equal(+startProcessingLastCall.deadline, computeTimestampAtSlot(frame.reportProcessingDeadlineSlot))
+      const submitReportLastCall = await reportProcessor.getLastCall_submitReport()
+      assert.equal(+submitReportLastCall.callCount, 2)
+      assert.equal(submitReportLastCall.report, HASH_1)
+      assert.equal(+submitReportLastCall.refSlot, +frame.refSlot)
+      assert.equal(+submitReportLastCall.deadline, computeTimestampAtSlot(frame.reportProcessingDeadlineSlot))
     })
 
-    it('the report gets processed', async () => {
+    it('report processor starts processing the report', async () => {
       await consensus.advanceTimeBy(SECONDS_PER_EPOCH + 33)
 
-      await reportProcessor.markLastReportProcessed()
+      await reportProcessor.startReportProcessing()
 
       const consensusState = await consensus.getConsensusState()
       assert.equal(consensusState.consensusReport, HASH_1)
-      assert.isTrue(consensusState.reportProcessed)
+      assert.isTrue(consensusState.isReportProcessing)
     })
 
     it('second member cannot change their vote anymore', async () => {
@@ -170,7 +170,7 @@ contract('HashConsensus', ([admin, member1, member2, member3, stranger]) => {
 
       await assertRevert(
         consensus.submitReport(frame.refSlot, HASH_3, CONSENSUS_VERSION, { from: member2 }),
-        'ConsensusReportAlreadyProcessed()'
+        'ConsensusReportAlreadyProcessing()'
       )
     })
 
@@ -186,7 +186,7 @@ contract('HashConsensus', ([admin, member1, member2, member3, stranger]) => {
 
       const consensusState = await consensus.getConsensusState()
       assert.equal(consensusState.consensusReport, ZERO_HASH)
-      assert.isFalse(consensusState.reportProcessed)
+      assert.isFalse(consensusState.isReportProcessing)
 
       let checkMember = async (member) => {
         const memberInfo = await consensus.getMemberInfo(member)
@@ -200,7 +200,7 @@ contract('HashConsensus', ([admin, member1, member2, member3, stranger]) => {
       await checkMember(member2)
       await checkMember(member3)
 
-      assert.equal(+(await reportProcessor.getLastCall_startProcessing()).callCount, 2)
+      assert.equal(+(await reportProcessor.getLastCall_submitReport()).callCount, 2)
     })
 
     it('a member cannot submit report for the previous ref slot', async () => {
@@ -237,8 +237,8 @@ contract('HashConsensus', ([admin, member1, member2, member3, stranger]) => {
     it('consensus is not reached', async () => {
       const consensusState = await consensus.getConsensusState()
       assert.equal(consensusState.consensusReport, ZERO_HASH)
-      assert.isFalse(consensusState.reportProcessed)
-      assert.equal(+(await reportProcessor.getLastCall_startProcessing()).callCount, 2)
+      assert.isFalse(consensusState.isReportProcessing)
+      assert.equal(+(await reportProcessor.getLastCall_submitReport()).callCount, 2)
     })
   })
 })

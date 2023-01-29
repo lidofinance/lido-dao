@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.9;
 
-
 import { SafeCast } from "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
 
 import { MemUtils } from "../../common/lib/MemUtils.sol";
@@ -62,14 +61,13 @@ contract AccountingOracle is BaseOracle {
     error LidoCannotBeZero();
     error AdminCannotBeZero();
     error SenderNotAllowed();
-    error UnexpectedDataHash(bytes32 consensusHash, bytes32 receivedHash);
     error InvalidExitedValidatorsData();
     error NumExitedValidatorsCannotDecrease();
     error ExitedValidatorsLimitExceeded(uint256 limitPerDay, uint256 exitedPerDay);
     error UnsupportedExtraDataFormat(uint256 format);
     error UnsupportedExtraDataType(uint256 dataType);
     error MaxExtraDataItemsCountExceeded(uint256 maxItemsCount, uint256 receivedItemsCount);
-    error CannotProcessExtraDataBeforeMainData();
+    error CannotSubmitExtraDataBeforeMainData();
     error ExtraDataAlreadyProcessed();
     error ExtraDataListOnlySupportsSingleTx();
     error UnexpectedExtraDataFormat(uint256 expectedFormat, uint256 receivedFormat);
@@ -78,7 +76,6 @@ contract AccountingOracle is BaseOracle {
     error InvalidExtraDataSortOrder();
 
     event DataBoundraiesSet(uint256 maxExitedValidatorsPerDay, uint256 maxExtraDataListItemsCount);
-    event DataSubmitted(uint256 indexed refSlot);
     event ExtraDataSubmitted(uint256 indexed refSlot, uint256 itemsProcessed, uint256 itemsCount);
 
     event WarnExtraDataIncomleteProcessing(
@@ -225,11 +222,12 @@ contract AccountingOracle is BaseOracle {
     }
 
     struct ExtraDataProcessingState {
-        uint256 lastProcessedItem;
-        bytes32 dataHash;
+        uint64 refSlot;
         uint16 dataFormat;
         uint64 itemsCount;
         uint64 itemsProcessed;
+        uint256 lastProcessedItem;
+        bytes32 dataHash;
     }
 
     /// @notice An ACL role granting the permission to submit the data for a commitee report.
@@ -260,13 +258,13 @@ contract AccountingOracle is BaseOracle {
         address admin,
         address consensusContract,
         uint256 consensusVersion,
-        uint256 lastProcessedRefSlot,
+        uint256 lastProcessingRefSlot,
         uint256 maxExitedValidatorsPerDay,
         uint256 maxExtraDataListItemsCount
     ) external {
         if (admin == address(0)) revert AdminCannotBeZero();
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
-        _initialize(consensusContract, consensusVersion, lastProcessedRefSlot);
+        _initialize(consensusContract, consensusVersion, lastProcessingRefSlot);
         _setDataBoundaries(maxExitedValidatorsPerDay, maxExtraDataListItemsCount);
     }
 
@@ -295,52 +293,47 @@ contract AccountingOracle is BaseOracle {
         emit DataBoundraiesSet(maxExitedValidatorsPerDay, maxExtraDataListItemsCount);
     }
 
-    function _startProcessing(
+    function _handleConsensusReport(
         ConsensusReport memory /* report */,
-        uint256 /* lastProcessingRefSlot */,
-        uint256 /* lastProcessedRefSlot */
+        uint256 /* prevSubmittedRefSlot */,
+        uint256 prevProcessingRefSlot
     ) internal override {
-        ExtraDataProcessingState memory extraProcState = _storageExtraDataProcessingState().value;
-        if (extraProcState.itemsProcessed < extraProcState.itemsCount) {
+        ExtraDataProcessingState memory state = _storageExtraDataProcessingState().value;
+        if (state.refSlot == prevProcessingRefSlot && state.itemsProcessed < state.itemsCount) {
             emit WarnExtraDataIncomleteProcessing(
-                LAST_PROCESSED_REF_SLOT_POSITION.getStorageUint256(),
-                extraProcState.itemsProcessed,
-                extraProcState.itemsCount);
+                prevProcessingRefSlot,
+                state.itemsProcessed,
+                state.itemsCount);
         }
-        // prevent any further processing of previous extra data
-        _storageExtraDataProcessingState().value.dataHash = bytes32(0);
     }
 
     ///
     /// Data provider interface: main data
     ///
 
-    /// @notice Submits the full report data.
+    /// @notice Submits report data for processing.
     ///
-    /// @param data The report data.
+    /// @param data The data. See the `ReportData` structure's docs for details.
     /// @param contractVersion Expected version of the oracle contract.
     ///
-    /// Reverts if the caller is not a member of the oracle committee and doesn't
-    /// possess the SUBMIT_DATA_ROLE.
-    ///
-    /// Reverts if the provided contract version is different from the current one.
-    ///
-    /// Reverts if the provided consensus version is different from the current one.
-    ///
-    /// Reverts if the keccak256 hash of the ABI-encoded data is different from the last hash
-    /// provided by the hash consensus contract.
-    ///
-    /// Reverts if the processing deadline for the reference slot's consensus frame is not met.
-    ///
-    /// Reverts if the provided data doesn't meet safety checks and boundaries.
+    /// Reverts if:
+    /// - The caller is not a member of the oracle committee and doesn't possess the
+    ///   SUBMIT_DATA_ROLE.
+    /// - The provided contract version is different from the current one.
+    /// - The provided consensus version is different from the expected one.
+    /// - The provided reference slot differs from the current consensus frame's one.
+    /// - The processing deadline for the current consensus frame is missed.
+    /// - The keccak256 hash of the ABI-encoded data is different from the last hash
+    ///   provided by the hash consensus contract.
+    /// - The provided data doesn't meet safety checks and boundaries.
     ///
     function submitReportData(ReportData calldata data, uint256 contractVersion) external {
         _checkMsgSenderIsAllowedToSubmitData();
         _checkContractVersion(contractVersion);
-        _checkConsensusData(data.refSlot, data.consensusVersion);
-        _checkReportDataHash(data);
-        _handleConsensusReportData(data);
-        _finishProcessing();
+        _checkConsensusData(data.refSlot, data.consensusVersion, keccak256(abi.encode(data)));
+        uint256 slotsElapsed = data.refSlot - LAST_PROCESSING_REF_SLOT_POSITION.getStorageUint256();
+        _startProcessing();
+        _handleConsensusReportData(data, slotsElapsed);
     }
 
     function _checkMsgSenderIsAllowedToSubmitData() internal view {
@@ -350,34 +343,8 @@ contract AccountingOracle is BaseOracle {
         }
     }
 
-    function _checkReportDataHash(ReportData calldata data) internal view {
-        bytes32 consensusHash = _storageProcessingReport().value.hash;
-        bytes32 dataHash = keccak256(abi.encode(data));
-        if (dataHash != consensusHash) {
-            revert UnexpectedDataHash(consensusHash, dataHash);
-        }
-    }
-
-    function _handleConsensusReportData(ReportData calldata data) internal {
+    function _handleConsensusReportData(ReportData calldata data, uint256 slotsElapsed) internal {
         DataBoundraies memory boudaries = _storageDataBoundaries().value;
-        uint256 slotsElapsed = data.refSlot - LAST_PROCESSED_REF_SLOT_POSITION.getStorageUint256();
-
-        _processStakingRouterExitedKeysByModule(
-            boudaries,
-            data.stakingModuleIdsWithNewlyExitedValidators,
-            data.numExitedValidatorsByStakingModule,
-            slotsElapsed);
-
-        ILido(LIDO).handleOracleReport(
-            slotsElapsed * SECONDS_PER_SLOT,
-            data.numValidators,
-            uint256(data.clBalanceGwei) * 1e9,
-            data.withdrawalVaultBalance,
-            data.elRewardsVaultBalance,
-            data.lastWithdrawalRequestIdToFinalize,
-            data.finalizationShareRate,
-            data.isBunkerMode
-        );
 
         if (data.extraDataFormat != EXTRA_DATA_FORMAT_LIST) {
             revert UnsupportedExtraDataFormat(data.extraDataFormat);
@@ -390,15 +357,32 @@ contract AccountingOracle is BaseOracle {
             );
         }
 
+        _processStakingRouterExitedKeysByModule(
+            boudaries,
+            data.stakingModuleIdsWithNewlyExitedValidators,
+            data.numExitedValidatorsByStakingModule,
+            slotsElapsed
+        );
+
+        ILido(LIDO).handleOracleReport(
+            slotsElapsed * SECONDS_PER_SLOT,
+            data.numValidators,
+            uint256(data.clBalanceGwei) * 1e9,
+            data.withdrawalVaultBalance,
+            data.elRewardsVaultBalance,
+            data.lastWithdrawalRequestIdToFinalize,
+            data.finalizationShareRate,
+            data.isBunkerMode
+        );
+
         _storageExtraDataProcessingState().value = ExtraDataProcessingState({
-            lastProcessedItem: 0,
+            refSlot: data.refSlot.toUint64(),
             dataFormat: data.extraDataFormat.toUint16(),
             dataHash: data.extraDataHash,
             itemsCount: data.extraDataItemsCount.toUint16(),
-            itemsProcessed: 0
+            itemsProcessed: 0,
+            lastProcessedItem: 0
         });
-
-        emit DataSubmitted(data.refSlot);
     }
 
     function _processStakingRouterExitedKeysByModule(
@@ -446,12 +430,14 @@ contract AccountingOracle is BaseOracle {
         if (exitedValidatorsPerDay > boudaries.maxExitedValidatorsPerDay) {
             revert ExitedValidatorsLimitExceeded(
                 boudaries.maxExitedValidatorsPerDay,
-                exitedValidatorsPerDay);
+                exitedValidatorsPerDay
+            );
         }
 
         stakingRouter.updateExitedKeysCountByStakingModule(
             stakingModuleIds,
-            numExitedValidatorsByStakingModule);
+            numExitedValidatorsByStakingModule
+        );
     }
 
     ///
@@ -460,15 +446,14 @@ contract AccountingOracle is BaseOracle {
 
     function submitReportExtraDataList(uint256[] calldata items) external {
         _checkMsgSenderIsAllowedToSubmitData();
-        _checkDeadline();
-
-        uint256 refSlot = _storageProcessingReport().value.refSlot;
-        uint256 processedRefSlot = LAST_PROCESSED_REF_SLOT_POSITION.getStorageUint256();
-        if (refSlot != processedRefSlot) {
-            revert CannotProcessExtraDataBeforeMainData();
-        }
+        _checkProcessingDeadline();
 
         ExtraDataProcessingState memory procState = _storageExtraDataProcessingState().value;
+
+        if (procState.refSlot != LAST_PROCESSING_REF_SLOT_POSITION.getStorageUint256()) {
+            revert CannotSubmitExtraDataBeforeMainData();
+        }
+
         if (procState.itemsProcessed == procState.itemsCount) {
             revert ExtraDataAlreadyProcessed();
         }
@@ -495,10 +480,13 @@ contract AccountingOracle is BaseOracle {
         _procState.lastProcessedItem = _processExtraDataItems(items, 0, 0);
         _procState.itemsProcessed = uint64(items.length);
 
-        emit ExtraDataSubmitted(refSlot, items.length, items.length);
+        emit ExtraDataSubmitted(procState.refSlot, items.length, items.length);
     }
 
+    /// @notice Returns extra data processing state for the current consensus report.
+    ///
     function getExtraDataProcessingState() external view returns (
+        bool processingStarted,
         uint256 lastProcessedItem,
         bytes32 dataHash,
         uint256 dataFormat,
@@ -506,11 +494,15 @@ contract AccountingOracle is BaseOracle {
         uint256 itemsProcessed
     ) {
         ExtraDataProcessingState memory state = _storageExtraDataProcessingState().value;
-        lastProcessedItem = state.lastProcessedItem;
-        dataHash = state.dataHash;
-        dataFormat = state.dataFormat;
-        itemsCount = state.itemsCount;
-        itemsProcessed = state.itemsProcessed;
+        uint256 processingRefSlot = LAST_PROCESSING_REF_SLOT_POSITION.getStorageUint256();
+        processingStarted = state.refSlot != 0 && state.refSlot == processingRefSlot;
+        if (processingStarted) {
+            lastProcessedItem = state.lastProcessedItem;
+            dataHash = state.dataHash;
+            dataFormat = state.dataFormat;
+            itemsCount = state.itemsCount;
+            itemsProcessed = state.itemsProcessed;
+        }
     }
 
     struct ExtraDataIterState {

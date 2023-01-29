@@ -55,15 +55,16 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       assert.equal((await consensus.getConsensusState()).consensusReport, hash)
     }
 
-    it('initially, consensus report is empty and not processed', async () => {
+    it('initially, consensus report is empty and is not being processed', async () => {
       const report = await oracle.getConsensusReport()
       assert.equal(report.hash, ZERO_HASH)
       assert.equal(+report.refSlot, 0)
       assert.equal(+report.receptionTime, 0)
       assert.equal(+report.deadlineTime, 0)
-      assert.isFalse(report.isProcessed)
+      assert.isFalse(report.processingStarted)
 
       const extraState = await oracle.getExtraDataProcessingState()
+      assert.isFalse(extraState.processingStarted)
       assert.equal(extraState.dataHash, ZERO_HASH)
       assert.equal(+extraState.itemsCount, 0)
       assert.equal(+extraState.itemsProcessed, 0)
@@ -118,9 +119,10 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       assert.equal(+report.refSlot, +reportFields.refSlot)
       assert.equal(+report.receptionTime, +await oracle.getTime())
       assert.equal(+report.deadlineTime, computeTimestampAtSlot(+report.refSlot + SLOTS_PER_FRAME))
-      assert.isFalse(report.isProcessed)
+      assert.isFalse(report.processingStarted)
 
       const extraState = await oracle.getExtraDataProcessingState()
+      assert.isFalse(extraState.processingStarted)
       assert.equal(extraState.dataHash, ZERO_HASH)
       assert.equal(+extraState.itemsCount, 0)
       assert.equal(+extraState.itemsProcessed, 0)
@@ -157,12 +159,13 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
 
     it(`a committee member submits the rebase data`, async () => {
       const tx = await oracle.submitReportData(reportItems, oracleVersion, {from: member1})
-      assertEvent(tx, 'DataSubmitted', {expectedArgs: {refSlot: reportFields.refSlot}})
-      assert.isTrue((await oracle.getConsensusReport()).isProcessed)
+      assertEvent(tx, 'ProcessingStarted', {expectedArgs: {refSlot: reportFields.refSlot}})
+      assert.isTrue((await oracle.getConsensusReport()).processingStarted)
     })
 
-    it(`extra data description was populated`, async () => {
+    it(`extra data processing is started`, async () => {
       const extraState = await oracle.getExtraDataProcessingState()
+      assert.isTrue(extraState.processingStarted)
       assert.equal(extraState.dataHash, reportFields.extraDataHash)
       assert.equal(+extraState.itemsCount, reportFields.extraDataItemsCount)
       assert.equal(+extraState.itemsProcessed, 0)
@@ -234,6 +237,7 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       }})
 
       const extraState = await oracle.getExtraDataProcessingState()
+      assert.isTrue(extraState.processingStarted)
       assert.equal(extraState.dataHash, reportFields.extraDataHash)
       assert.equal(+extraState.itemsCount, reportFields.extraDataItemsCount)
       assert.equal(+extraState.itemsProcessed, extraDataItems.length)
