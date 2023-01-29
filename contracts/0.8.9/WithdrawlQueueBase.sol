@@ -178,7 +178,7 @@ abstract contract WithdrawalQueueBase {
      * @param _requestId request id to claim
      * @param _hint rate index found offchain that should be used for claiming
      */
-    function claimWithdrawal(uint256 _requestId, uint256 _hint) external {
+    function claimWithdrawal(uint256 _requestId, uint256 _hint) public {
         if (_requestId == 0) revert ZeroRequestId();
         if (_hint == 0) revert InvalidHint();
         if (_requestId > lastFinalizedRequestId) revert RequestNotFinalized();
@@ -207,8 +207,8 @@ abstract contract WithdrawalQueueBase {
 
     /// @dev creates a new `WithdrawalRequest` in the queue
     function _enqueue(uint256 _amountOfStETH, uint256 _amountofShares, address _recipient)
-        internal
-        returns (uint256 requestId)
+    internal
+    returns (uint256 requestId)
     {
         WithdrawalRequest memory lastRequest = queue[lastRequestId];
 
@@ -235,7 +235,7 @@ abstract contract WithdrawalQueueBase {
             revert InvalidFinalizationId();
         }
 
-        uint128 amountOfStETH 
+        uint128 amountOfStETH
             = queue[_lastRequestIdToFinalize].cumulativeStETH - queue[lastFinalizedRequestId].cumulativeStETH;
         uint96 discountFactor = _calculateDiscountFactor(amountOfStETH, _amountofETH);
 
@@ -273,7 +273,7 @@ abstract contract WithdrawalQueueBase {
         uint256 rightBoundary = discountHistory[_indexHint].indexInQueue;
         uint256 leftBoundary = discountHistory[_indexHint - 1].indexInQueue;
 
-        return leftBoundary < _requestId &&_requestId <= rightBoundary;
+        return leftBoundary < _requestId && _requestId <= rightBoundary;
     }
 
     /// @dev add a new entry to discount history or modify the last one if discount does not change

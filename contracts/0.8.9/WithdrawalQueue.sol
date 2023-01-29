@@ -10,7 +10,7 @@ import {IERC20Permit} from "@openzeppelin/contracts-v4.4/token/ERC20/extensions/
 import {SafeERC20} from "@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC20.sol";
 import {AccessControlEnumerable} from "@openzeppelin/contracts-v4.4/access/AccessControlEnumerable.sol";
 
-import {WithdrawalQueueBase} from  "./WithdrawlQueueBase.sol";
+import {WithdrawalQueueBase} from "./WithdrawlQueueBase.sol";
 
 import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
 
@@ -114,6 +114,8 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
     error ResumedExpected();
     error RequestAmountTooSmall(uint256 _amountOfStETH);
     error RequestAmountTooLarge(uint256 _amountOfStETH);
+    error LengthsMismatch(uint256 _expectedLength, uint256 _actualLength);
+    error UnsupportedWithdrawalToken(address _token, address[] _supportedTokens);
 
     /// @notice Reverts when the contract is uninitialized
     modifier whenInitialized() {
@@ -138,7 +140,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
         }
         _;
     }
-    
+
     /**
      * @param _stETH address of StETH contract
      * @param _wstETH address of WstETH contract
@@ -153,7 +155,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
     }
 
     /**
-     * @notice Intialize the contract storage explicitly. 
+     * @notice Intialize the contract storage explicitly.
      * @param _admin admin address that can change every role.
      * @param _pauser address that will be able to pause the withdrawals
      * @param _resumer address that will be able to resume the withdrawals after pause
@@ -273,21 +275,79 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
         return _requestWithdrawalWstETH(_amountOfWstETH, _recipient);
     }
 
-    /// @notice Request withdrawal of the provided token amount in a batch
-    /// NB: Always reverts
-    function requestWithdrawalBatch(uint256[] calldata, address[] calldata)
+    struct WithdrawalRequestInput {
+        address token;
+        uint256 amount;
+        address recipient;
+    }
+
+    struct Permit {
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+        address owner;
+        uint256 deadline;
+    }
+
+    /// @notice Request the sequence of withdrawals according to passed `withdrawalRequestInputs` data
+    /// @param _withdrawalRequestInputs an array of `WithdrawalRequestInput` data. The standalone withdrawal request will
+    ///  be created for each item in the passed list. If `WithdrawalRequestInput.recipient` is set to `address(0)`,
+    ///  `msg.sender` will be used as recipient.
+    /// @return requestIds an array of the created withdrawal requests
+    function requestWithdrawals(WithdrawalRequestInput[] memory _withdrawalRequestInputs)
         external
-        view
         whenResumed
-        returns (uint256[] memory)
+        returns (uint256[] memory requestIds)
     {
-        revert Unimplemented();
+        requestIds = new uint256[](_withdrawalRequestInputs.length);
+        for (uint256 i = 0; i < _withdrawalRequestInputs.length; ++i) {
+            requestIds[i] = _enqueueWithdrawalRequest(msg.sender, _withdrawalRequestInputs[i]);
+        }
+    }
+
+    /// @notice Request the sequence of withdrawals according to passed `withdrawalRequestInputs` data using EIP-2612 Permit
+    /// @param _withdrawalRequestInputs an array of `WithdrawalRequestInput` data. The standalone withdrawal request will
+    ///  be created for each item in the passed list. If `WithdrawalRequestInput.recipient` is set to `address(0)`,
+    ///  `msg.sender` will be used as recipient.
+    /// @return requestIds an array of the created withdrawal requests
+    function requestWithdrawalsWithPermit(
+        WithdrawalRequestInput[] memory _withdrawalRequestInputs,
+        Permit[] calldata _permits
+    ) external whenResumed returns (uint256[] memory requestIds) {
+        if (_withdrawalRequestInputs.length != _permits.length)
+            revert LengthsMismatch(_withdrawalRequestInputs.length, _permits.length);
+        requestIds = new uint256[](_withdrawalRequestInputs.length);
+        for (uint256 i = 0; i < _withdrawalRequestInputs.length; ++i) {
+            IERC20Permit(_withdrawalRequestInputs[i].token).permit(
+                _permits[i].owner,
+                address(this),
+                _withdrawalRequestInputs[i].amount,
+                _permits[i].deadline,
+                _permits[i].v,
+                _permits[i].r,
+                _permits[i].s
+            );
+            requestIds[i] = _enqueueWithdrawalRequest(_permits[i].owner, _withdrawalRequestInputs[i]);
+        }
     }
 
     /// @notice Claim withdrawals batch once finalized (claimable)
-    /// NB: Always reverts
-    function claimWithdrawalBatch(uint256[] calldata /*_requests*/ ) external pure {
-        revert Unimplemented();
+    /// @param _requestIds ids of the finalized requests to claim
+    /// @param _hints rate indices found offchain that should be used for claiming
+    function claimWithdrawals(uint256[] calldata _requestIds, uint256[] calldata _hints) external {
+        if (_requestIds.length != _hints.length) revert LengthsMismatch(_requestIds.length, _hints.length);
+        for (uint256 i = 0; i < _requestIds.length; ++i) {
+            claimWithdrawal(_requestIds[i], _hints[i]);
+        }
+    }
+
+    /// @notice Returns the list of hints for the given request ids
+    /// @param _requestIds ids of the requests to get hints for
+    function findClaimHints(uint256[] calldata _requestIds) external view returns (uint256[] memory hintIds) {
+        hintIds = new uint256[](_requestIds.length);
+        for (uint256 i = 0; i < _requestIds.length; ++i) {
+            hintIds[i] = findClaimHint(_requestIds[i]);
+        }
     }
 
     /**
@@ -316,6 +376,33 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
         RESUMED_POSITION.setStorageBool(false); // pause it explicitly
 
         emit InitializedV1(_admin, _pauser, _resumer, _finalizer, msg.sender);
+    }
+
+    function _enqueueWithdrawalRequest(address _tokensHolder, WithdrawalRequestInput memory _withdrawalRequestInput)
+        internal
+        onlyValidWithdrawalRequestInput(_withdrawalRequestInput)
+        returns (uint256 requestId)
+    {
+        (uint256 collectedAmountOfStETH, uint256 collectedAmountOfShares) = _collectWithdrawableToken(
+            _tokensHolder,
+            _withdrawalRequestInput
+        );
+        address recipient = _withdrawalRequestInput.recipient;
+        requestId = _enqueue(
+            collectedAmountOfStETH,
+            collectedAmountOfShares,
+            recipient == address(0) ? msg.sender : recipient
+        );
+    }
+
+    function _collectWithdrawableToken(address _tokenHolder, WithdrawalRequestInput memory _withdrawalRequestInput)
+        internal
+        returns (uint256 collectedAmountOfStETH, uint256 collectedAmountOfShares)
+    {
+        uint256 amount = _withdrawalRequestInput.amount;
+        SafeERC20.safeTransferFrom(IERC20(_withdrawalRequestInput.token), _tokenHolder, address(this), amount);
+        collectedAmountOfStETH = _withdrawalRequestInput.token == address(WSTETH) ? WSTETH.unwrap(amount) : amount;
+        collectedAmountOfShares = STETH.getSharesByPooledEth(collectedAmountOfStETH);
     }
 
     function _requestWithdrawal(uint256 _amountOfStETH, address _recipient) internal returns (uint256 requestId) {
@@ -350,5 +437,27 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
         }
 
         return _recipient;
+    }
+
+    modifier onlyValidWithdrawalRequestInput(WithdrawalRequestInput memory _withdrawalRequestInput) {
+        address token = _withdrawalRequestInput.token;
+        if (token != address(STETH) && token != address(WSTETH)) {
+            address[] memory withdrawableTokens = new address[](2);
+            withdrawableTokens[0] = address(STETH);
+            withdrawableTokens[1] = address(WSTETH);
+            revert UnsupportedWithdrawalToken(token, withdrawableTokens);
+        }
+
+        uint256 amountOfStETH = _withdrawalRequestInput.token == address(WSTETH)
+            ? WSTETH.getStETHByWstETH(_withdrawalRequestInput.amount)
+            : _withdrawalRequestInput.amount;
+
+        if (amountOfStETH < MIN_STETH_WITHDRAWAL_AMOUNT) {
+            revert RequestAmountTooSmall(amountOfStETH);
+        }
+        if (amountOfStETH > MAX_STETH_WITHDRAWAL_AMOUNT) {
+            revert RequestAmountTooLarge(amountOfStETH);
+        }
+        _;
     }
 }
