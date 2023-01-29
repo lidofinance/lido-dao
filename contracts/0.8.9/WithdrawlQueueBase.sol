@@ -83,8 +83,8 @@ abstract contract WithdrawalQueueBase {
     /// @notice withdrawal requests mapped to the recipients
     mapping(address => uint256[]) internal requestsByRecipient;
 
-    constructor() {
-        // setting dummy zero structs in discountHistory and queue beginning 
+    function _initializeQueue() internal {
+        // setting dummy zero structs in discountHistory and queue beginning
         // to avoid uint underflows and related if-branches
         queue[lastRequestId] = WithdrawalRequest(0, 0, payable(0), _toUint64(block.number), true);
         discountHistory[lastDiscountIndex] = Discount(lastRequestId, NO_DISCOUNT);
@@ -160,23 +160,42 @@ abstract contract WithdrawalQueueBase {
         uint96 discountFactor = _calculateDiscountFactor(eth, batchValue);
         eth = _applyDiscount(eth, discountFactor);
     }
+    /**
+     * @notice View function to find a hint to pass it to `claimWithdrawal()`.
+     * @dev NB! OOG is possible if used onchain. See `findClaimHint(uint256 _requestId, uint256 _firstIndex, uint256 _lastIndex)`
+     * @param _requestId request id to be claimed with this hint
+     */
+
+    function findClaimHintUnbounded(uint256 _requestId) public view returns (uint256) {
+        return findClaimHint(_requestId, 0, lastDiscountIndex);
+    }
 
     /**
-     * @notice View function to find a proper hint offchain to pass it to `claim()` later
+     * @notice View function to find a hint for `claimWithdrawal()` in the range of `[_firstIndex, _lastIndex]`
      * @param _requestId request id to be claimed later
+     * @param _firstIndex left boundary of the search range
+     * @param _lastIndex right boundary of the search range
      *
-     * @return hint the hint for `claimWithdrawal` to find the discount for the request
+     * @return the hint for `claimWithdrawal` to find the discount for the request
      */
-    function findClaimHint(uint256 _requestId) public view returns (uint256 hint) {
+    function findClaimHint(uint256 _requestId, uint256 _firstIndex, uint256 _lastIndex) public view returns (uint256) {
         if (_requestId == 0) revert ZeroRequestId();
         if (_requestId > lastFinalizedRequestId) revert RequestNotFinalized(_requestId);
 
-        for (uint256 i = lastDiscountIndex; i > 0; i--) {
-            if (_isHintValid(_requestId, i)) {
-                return i;
-            }
+        // if we are assuming that:
+        // 1) Discount history are rarely grows durung normal operation (see `_updateDiscountHistory`)
+        // 2) Most users will claim their withdrawal as soon as possible after the finalization
+        //
+        // It's reasonable to check if the last discount is the right one before starting the search
+        uint256 middle = lastDiscountIndex;
+        int8 comparision = _compareWithHint(_requestId, middle);
+        while (comparision != 0) {
+            middle = (_firstIndex + _lastIndex) / 2;
+            comparision = _compareWithHint(_requestId, middle);
+            if (comparision > 0) _firstIndex = middle;
+            if (comparision < 0) _lastIndex = middle;
         }
-        assert(false);
+        return middle;
     }
 
     /**
@@ -194,7 +213,7 @@ abstract contract WithdrawalQueueBase {
         request.claimed = true;
 
         Discount memory discount;
-        if (_hint <= lastDiscountIndex && _isHintValid(_requestId, _hint)) {
+        if (_hint <= lastDiscountIndex && _compareWithHint(_requestId, _hint) == 0) {
             discount = discountHistory[_hint];
         } else {
             revert InvalidHint(_hint);
@@ -229,7 +248,7 @@ abstract contract WithdrawalQueueBase {
             _toUint64(block.number),
             false
         );
-        requestsByRecipient[msg.sender].push(requestId);
+        requestsByRecipient[_recipient].push(requestId);
 
         emit WithdrawalRequested(requestId, msg.sender, _recipient, _amountOfStETH, _amountofShares);
     }
@@ -272,17 +291,20 @@ abstract contract WithdrawalQueueBase {
         return _toUint128(_amountOfStETH * _discountFactor / E27_PRECISION_BASE);
     }
 
-    /// @dev checks if provided request included in the discount hint boundaries
-    function _isHintValid(uint256 _requestId, uint256 _indexHint) internal view returns (bool) {
-        bool rightBoundary = _requestId <= discountHistory[_indexHint].indexInQueue;
+    /// @dev returns -1 if `requestId` is to the left from the hint range
+    ///      returns  0 if `requestId` is inside the hint range
+    ///      returns +1 if `requestId` is to the right of the hint range
+    ///      where hint range is `(discountHistory[_hint - 1].indexInQueue, discountHistory[_hint].indexInQueue]`
+    function _compareWithHint(uint256 _requestId, uint256 _hint) internal view returns (int8 result) {
+        assert(_hint <= lastDiscountIndex);
 
-        bool leftBoundary = true;
-        
-        if (_indexHint > 0) {
-            leftBoundary = _requestId > discountHistory[_indexHint - 1].indexInQueue;
+        if (discountHistory[_hint].indexInQueue < _requestId) {
+            return 1;
         }
 
-        return rightBoundary && leftBoundary;
+        if (_hint > 0 && _requestId <= discountHistory[_hint - 1].indexInQueue) {
+            return -1;
+        }
     }
 
     /// @dev add a new entry to discount history or modify the last one if discount does not change

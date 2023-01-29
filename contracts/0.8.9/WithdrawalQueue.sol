@@ -347,10 +347,10 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
 
     /// @notice Returns the list of hints for the given request ids
     /// @param _requestIds ids of the requests to get hints for
-    function findClaimHints(uint256[] calldata _requestIds) external view returns (uint256[] memory hintIds) {
+    function findClaimHints(uint256[] calldata _requestIds, uint256 _firstIndex, uint256 _lastIndex) external view returns (uint256[] memory hintIds) {
         hintIds = new uint256[](_requestIds.length);
         for (uint256 i = 0; i < _requestIds.length; ++i) {
-            hintIds[i] = findClaimHint(_requestIds[i]);
+            hintIds[i] = findClaimHint(_requestIds[i], _firstIndex, _lastIndex);
         }
     }
 
@@ -366,6 +366,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
 
     /// @dev internal initialization helper. Doesn't check provided addresses intentionally
     function _initialize(address _admin, address _pauser, address _resumer, address _finalizer) internal {
+        _initializeQueue();
         if (CONTRACT_VERSION_POSITION.getStorageUint256() != 0) {
             revert AlreadyInitialized();
         }

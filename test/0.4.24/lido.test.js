@@ -365,12 +365,12 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
       assertBn(await app.getTotalPooledEther(), ETH(depositAmount + elRewards + beaconRewards))
       assertBn(await app.getTotalELRewardsCollected(), ETH(elRewards))
 
-      const totalFee = await app.getFee()
-      const stakersReward = bn(ETH(elRewards + beaconRewards))
-        .mul(FEE_PRECISION_POINTS.sub(totalFee))
-        .div(FEE_PRECISION_POINTS)
-      assertBn(await app.balanceOf(user2), bn(StETH(depositAmount)).add(stakersReward))
-    })
+    const {totalFee} = await app.getFee()
+    const stakersReward = bn(ETH(elRewards + beaconRewards))
+      .mul(FEE_PRECISION_POINTS.sub(totalFee))
+      .div(FEE_PRECISION_POINTS)
+    assertBn(await app.balanceOf(user2), bn(StETH(depositAmount)).add(stakersReward))
+  })
 
     it('Attempt to set invalid execution layer rewards withdrawal limit', async () => {
       const initialValue = await app.getELRewardsWithdrawalLimit()
@@ -450,13 +450,13 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
         await rewarder.reward({ from: user1, value: ETH(elRewards) })
         await oracle.reportBeacon(101, 1, ETH(depositAmount + beaconRewards))
 
-        const protocolFeePoints = await app.getFee()
-        const shareOfRewardsForStakers = (TOTAL_BASIS_POINTS - protocolFeePoints) / TOTAL_BASIS_POINTS
-        assertBn(await app.getTotalPooledEther(), ETH(depositAmount + elRewards + beaconRewards))
-        assertBn(await app.getBufferedEther(), ETH(elRewards))
-        assertBn(await app.balanceOf(user2), StETH(depositAmount + shareOfRewardsForStakers * (elRewards + beaconRewards)))
-        assertBn(await app.getTotalELRewardsCollected(), ETH(elRewards))
-      })
+      const {totalFee} = await app.getFee()
+      const shareOfRewardsForStakers = (TOTAL_BASIS_POINTS - totalFee) / TOTAL_BASIS_POINTS
+      assertBn(await app.getTotalPooledEther(), ETH(depositAmount + elRewards + beaconRewards))
+      assertBn(await app.getBufferedEther(), ETH(elRewards))
+      assertBn(await app.balanceOf(user2), StETH(depositAmount + shareOfRewardsForStakers * (elRewards + beaconRewards)))
+      assertBn(await app.getTotalELRewardsCollected(), ETH(elRewards))
+    })
 
       it('Attempt to set invalid execution layer rewards withdrawal limit', async () => {
         const initialValue = await app.getELRewardsWithdrawalLimit()
@@ -602,7 +602,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     const depositAmount = 32
     await setupNodeOperatorsForELRewardsVaultTests(user2, ETH(depositAmount))
 
-    const totalFee = await app.getFee()
+    const {totalFee} = await app.getFee()
     assertBn(totalFee, toPrecBP(1000))
 
     const distribution = await app.getFeeDistribution({ from: nobody })

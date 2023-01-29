@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2022 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 // See contracts/COMPILERS.md
@@ -210,7 +210,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         operator.name = _name;
         operator.rewardAddress = _rewardAddress;
 
-        emit NodeOperatorAdded(id);
         emit NodeOperatorAdded(id, _name, _rewardAddress, 0);
     }
 

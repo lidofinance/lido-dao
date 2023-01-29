@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2022 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.9;
 
@@ -170,7 +170,8 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         uint64 _secondsPerSlot,
         uint64 _genesisTime,
         uint256 _allowedBeaconBalanceAnnualRelativeIncrease,
-        uint256 _allowedBeaconBalanceRelativeDecrease
+        uint256 _allowedBeaconBalanceRelativeDecrease,
+        address _postRebaseBeaconReportReceiver
     )
         external
     {
@@ -205,6 +206,8 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
 
         // set expected epoch to the first epoch for the next frame
         _setExpectedEpochToFirstOfNextFrame();
+
+        _setBeaconReportReceiver(_postRebaseBeaconReportReceiver);
     }
 
     /**
@@ -275,6 +278,12 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
     function setBeaconReportReceiver(address _address)
         external onlyRole(SET_BEACON_REPORT_RECEIVER_ROLE)
     {
+        _setBeaconReportReceiver(_address);
+    }
+
+    function _setBeaconReportReceiver(address _address)
+        internal
+    {
         if(_address != address(0)) {
             IBeaconReportReceiver iBeacon;
             if (!_address.supportsInterface(iBeacon.processLidoOracleReport.selector)) {
@@ -285,6 +294,7 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         BEACON_REPORT_RECEIVER_POSITION.setStorageAddress(_address);
         emit BeaconReportReceiverSet(_address);
     }
+
 
     /**
      * @notice Return the initialized version of this contract starting from 0

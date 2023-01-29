@@ -18,9 +18,8 @@ const REQUIRED_NET_STATE = [
   'multisigAddress',
   'daoTemplateDeployTx',
   'lidoBaseDeployTx',
-  'oracleBaseDeployTx',
   'nodeOperatorsRegistryBaseDeployTx',
-  'eip712StETHDeployTx'
+  'eip712StETHDeployTx',
 ]
 
 async function deployTemplate({ web3, artifacts }) {
@@ -45,18 +44,6 @@ async function deployTemplate({ web3, artifacts }) {
     [`app:${APP_NAMES.LIDO}`]: {
       ...state[`app:${APP_NAMES.LIDO}`],
       baseAddress: lidoBase.address
-    }
-  })
-
-  logHeader('LidoOracle app base')
-  const oracleBase = await useOrGetDeployed('LidoOracle', state.oracleBaseAddress, state.oracleBaseDeployTx)
-  log(`Checking...`)
-  await assertDeployedBytecode(oracleBase.address, 'LidoOracle')
-  await assertAragonProxyBase(oracleBase, 'oracleBase')
-  persistNetworkState(network.name, netId, state, {
-    [`app:${APP_NAMES.ORACLE}`]: {
-      ...state[`app:${APP_NAMES.ORACLE}`],
-      baseAddress: oracleBase.address
     }
   })
 
