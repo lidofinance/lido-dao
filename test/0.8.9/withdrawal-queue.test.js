@@ -1,9 +1,8 @@
-const { assert } = require('chai')
 const { artifacts, contract, ethers } = require('hardhat')
 const { bn } = require('@aragon/contract-helpers-test')
-const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
+
 const { ETH, StETH, shareRate, shares } = require('../helpers/utils')
-const { assertRevert } = require('../helpers/assertThrow')
+const { assert } = require('../helpers/assert')
 const withdrawals = require('../helpers/withdrawals')
 
 const StETHMock = artifacts.require('StETHMock.sol')
@@ -38,16 +37,16 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
     it('One can enqueue a request', async () => {
       await withdrawalQueue.requestWithdrawal(StETH(300), recipient, { from: user })
 
-      assertBn(await withdrawalQueue.lastRequestId(), requestId)
-      assert.equal(await withdrawalQueue.lastFinalizedRequestId(), 0)
+      assert.equals(await withdrawalQueue.lastRequestId(), requestId)
+      assert.equals(await withdrawalQueue.lastFinalizedRequestId(), 0)
 
       const request = await withdrawalQueue.getWithdrawalRequestStatus(requestId)
 
-      assert.equal(request.recipient, recipient)
-      assertBn(request.amountOfStETH, StETH(300))
-      assertBn(request.amountOfShares, shares(1))
-      assert.equal(request.isFinalized, false)
-      assert.equal(request.isClaimed, false)
+      assert.equals(request.recipient, recipient)
+      assert.equals(request.amountOfStETH, StETH(300))
+      assert.equals(request.amountOfShares, shares(1))
+      assert.equals(request.isFinalized, false)
+      assert.equals(request.isClaimed, false)
     })
   })
 
@@ -61,24 +60,24 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
     it('Calculate one request batch', async () => {
       const batch = await withdrawalQueue.finalizationBatch(1, shareRate(300))
 
-      assertBn(batch.eth, ETH(300))
-      assertBn(batch.shares, shares(1))
+      assert.equals(batch.eth, ETH(300))
+      assert.equals(batch.shares, shares(1))
     })
 
     it('Only owner can finalize a request', async () => {
-      await assertRevert(withdrawalQueue.finalize(1, { from: stranger }),
+      await assert.reverts(withdrawalQueue.finalize(1, { from: stranger }),
         `AccessControl: account ${stranger.toLowerCase()} is missing role ${await withdrawalQueue.FINALIZE_ROLE()}`)
       await withdrawalQueue.finalize(1, { from: steth.address, value: amount })
 
-      assertBn(await withdrawalQueue.lockedEtherAmount(), amount)
-      assertBn(await withdrawalQueue.lockedEtherAmount(), await ethers.provider.getBalance(withdrawalQueue.address))
+      assert.equals(await withdrawalQueue.lockedEtherAmount(), amount)
+      assert.equals(await withdrawalQueue.lockedEtherAmount(), await ethers.provider.getBalance(withdrawalQueue.address))
     })
     
     it('One can finalize requests with discount', async () => {
       await withdrawalQueue.finalize(1, { from: steth.address, value: ETH(150) })
 
-      assertBn(await withdrawalQueue.lockedEtherAmount(), ETH(150))
-      assertBn(await withdrawalQueue.lockedEtherAmount(), await ethers.provider.getBalance(withdrawalQueue.address))
+      assert.equals(await withdrawalQueue.lockedEtherAmount(), ETH(150))
+      assert.equals(await withdrawalQueue.lockedEtherAmount(), await ethers.provider.getBalance(withdrawalQueue.address))
     })
 
     it('One can finalize a batch of requests at once', async () => {
@@ -90,11 +89,11 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
       const batch = await withdrawalQueue.finalizationBatch(2, shareRate(300))
       await withdrawalQueue.finalize(2, { from: steth.address, value: batch.eth })
 
-      assertBn(batch.shares, shares(2))
-      assertBn(await withdrawalQueue.lastRequestId(), 2)
-      assertBn(await withdrawalQueue.lastFinalizedRequestId(), 2)
-      assertBn(await withdrawalQueue.lockedEtherAmount(), ETH(600))
-      assertBn(await withdrawalQueue.lockedEtherAmount(), await ethers.provider.getBalance(withdrawalQueue.address))
+      assert.equals(batch.shares, shares(2))
+      assert.equals(await withdrawalQueue.lastRequestId(), 2)
+      assert.equals(await withdrawalQueue.lastFinalizedRequestId(), 2)
+      assert.equals(await withdrawalQueue.lockedEtherAmount(), ETH(600))
+      assert.equals(await withdrawalQueue.lockedEtherAmount(), await ethers.provider.getBalance(withdrawalQueue.address))
     })
 
     it('One can finalize part of the queue', async () => {
@@ -106,17 +105,17 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
 
       await withdrawalQueue.finalize(1, { from: steth.address, value: amount })
 
-      assertBn(await withdrawalQueue.lastRequestId(), 2)
-      assertBn(await withdrawalQueue.lastFinalizedRequestId(), 1)
-      assertBn(await withdrawalQueue.lockedEtherAmount(), ETH(300))
-      assertBn(await withdrawalQueue.lockedEtherAmount(), await ethers.provider.getBalance(withdrawalQueue.address))
+      assert.equals(await withdrawalQueue.lastRequestId(), 2)
+      assert.equals(await withdrawalQueue.lastFinalizedRequestId(), 1)
+      assert.equals(await withdrawalQueue.lockedEtherAmount(), ETH(300))
+      assert.equals(await withdrawalQueue.lockedEtherAmount(), await ethers.provider.getBalance(withdrawalQueue.address))
 
       await withdrawalQueue.finalize(2, { from: steth.address, value: amount })
 
-      assertBn(await withdrawalQueue.lastRequestId(), 2)
-      assertBn(await withdrawalQueue.lastFinalizedRequestId(), 2)
-      assertBn(await withdrawalQueue.lockedEtherAmount(), ETH(600))
-      assertBn(await withdrawalQueue.lockedEtherAmount(), await ethers.provider.getBalance(withdrawalQueue.address))
+      assert.equals(await withdrawalQueue.lastRequestId(), 2)
+      assert.equals(await withdrawalQueue.lastFinalizedRequestId(), 2)
+      assert.equals(await withdrawalQueue.lockedEtherAmount(), ETH(600))
+      assert.equals(await withdrawalQueue.lockedEtherAmount(), await ethers.provider.getBalance(withdrawalQueue.address))
     })
   })
 
@@ -129,7 +128,7 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
     })
 
     it('One cant claim not finalized request', async () => {
-      await assertRevert(withdrawalQueue.claimWithdrawal(requestId, 1), 'RequestNotFinalized()')
+      await assert.reverts(withdrawalQueue.claimWithdrawal(requestId, 1), 'RequestNotFinalized()')
     })
 
     it('Cant claim request with a wrong hint', async () => {
@@ -140,8 +139,8 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
       await withdrawalQueue.requestWithdrawal(amount, recipient, { from: user })
 
       await withdrawalQueue.finalize(2, { from: steth.address, value: amount })
-      await assertRevert(withdrawalQueue.claimWithdrawal(requestId, 0), 'InvalidHint()')
-      await assertRevert(withdrawalQueue.claimWithdrawal(requestId, 2), 'InvalidHint()')
+      await assert.reverts(withdrawalQueue.claimWithdrawal(requestId, 0), 'InvalidHint()')
+      await assert.reverts(withdrawalQueue.claimWithdrawal(requestId, 2), 'InvalidHint()')
     })
 
     it('Anyone can claim a finalized token', async () => {
@@ -151,14 +150,14 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
 
       await withdrawalQueue.claimWithdrawal(requestId, 1, { from: stranger })
 
-      assertBn(await ethers.provider.getBalance(recipient), balanceBefore.add(bn(amount)))
+      assert.equals(await ethers.provider.getBalance(recipient), balanceBefore.add(bn(amount)))
     })
 
     it('Cant withdraw token two times', async () => {
       await withdrawalQueue.finalize(1, { from: steth.address, value: amount })
       await withdrawalQueue.claimWithdrawal(requestId, 1)
 
-      await assertRevert(withdrawalQueue.claimWithdrawal(requestId, 1), 'RequestAlreadyClaimed()')
+      await assert.reverts(withdrawalQueue.claimWithdrawal(requestId, 1), 'RequestAlreadyClaimed()')
     })
 
     it('Discounted withdrawals produce less eth', async () => {
@@ -167,7 +166,7 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
 
       await withdrawalQueue.claimWithdrawal(requestId, 1)
 
-      assertBn(await ethers.provider.getBalance(recipient), balanceBefore.add(bn(ETH(150))))
+      assert.equals(await ethers.provider.getBalance(recipient), balanceBefore.add(bn(ETH(150))))
     })
   })
 })
