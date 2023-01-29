@@ -279,6 +279,23 @@ contract ValidatorsExitBusOracle is BaseOracle {
         return _storageLastRequestedValidatorIndices()[nodeOpKey];
     }
 
+    /// @notice Returns processing state for the current frame.
+    ///
+    function getDataProcessingState() external view returns (
+        bool dataReceived,
+        uint256 requestsCount,
+        uint256 requestsProcessed,
+        uint256 dataFormat
+    ) {
+        DataProcessingState memory state = _storageDataProcessingState().value;
+        dataReceived = state.refSlot == _getCurrentRefSlot();
+        if (dataReceived) {
+            requestsCount = state.requestsCount;
+            requestsProcessed = state.requestsProcessed;
+            dataFormat = state.dataFormat;
+        }
+    }
+
     ///
     /// Internal interface & helpers
     ///
