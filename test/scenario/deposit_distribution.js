@@ -51,7 +51,7 @@ contract('StakingRouter', (accounts) => {
     await stakingRouter.grantRole(STAKING_MODULE_MANAGE_ROLE, voting, { from: admin })
 
     const wsteth = await WstETH.new(lido.address)
-    const withdrawalQueue = (await withdrawals.deploy(dao.address, lido.address, wsteth.address)).queue
+    const withdrawalQueue = (await withdrawals.deploy(dao.address, wsteth.address)).queue
 
     await lido.initialize(oracle.address, treasury, stakingRouter.address, dsm, dummy, withdrawalQueue.address, dummy)
 

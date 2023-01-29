@@ -120,7 +120,7 @@ async function deployDaoAndPool(appManager, voting) {
   const eip712StETH = await EIP712StETH.new({ from: appManager })
 
   const wsteth = await WstETH.new(pool.address)
-  const withdrawalQueue = await (await withdrawals.deploy(appManager, pool.address, wsteth.address)).queue
+  const withdrawalQueue = (await withdrawals.deploy(appManager, wsteth.address)).queue
 
   await pool.initialize(
     oracleMock.address,

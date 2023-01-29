@@ -16,7 +16,7 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
     steth = await StETHMock.new({ value: ETH(600) })
     wsteth = await WstETH.new(steth.address)
 
-    withdrawalQueue = (await withdrawals.deploy(daoAgent, steth.address, wsteth.address)).queue
+    withdrawalQueue = (await withdrawals.deploy(daoAgent, wsteth.address)).queue
 
     await withdrawalQueue.initialize(daoAgent, daoAgent, daoAgent, steth.address)
     await withdrawalQueue.resume({ from: daoAgent })

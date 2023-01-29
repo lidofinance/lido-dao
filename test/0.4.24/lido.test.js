@@ -87,7 +87,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     // WithdrawalQueue
     const wsteth = await WstETH.new(app.address)
-    withdrawalQueue = (await withdrawals.deploy(dao.address, app.address, wsteth.address)).queue
+    withdrawalQueue = (await withdrawals.deploy(dao.address, wsteth.address)).queue
 
     // BeaconChainDepositor
     beaconChainDepositor = await BeaconChainDepositorMock.new(depositContract.address)

@@ -117,7 +117,7 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
 
     const eip712StETH = await EIP712StETH.new({ from: appManager })
     const wsteth = await WstETH.new(app.address)
-    const withdrawalQueue = await (await withdrawals.deploy(dao.address, app.address, wsteth.address)).queue
+    const withdrawalQueue = await (await withdrawals.deploy(dao.address, wsteth.address)).queue
 
     // Initialize the app's proxy.
     await app.initialize(
