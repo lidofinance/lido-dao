@@ -32,7 +32,7 @@ contract ValidatorsExitBusOracle is BaseOracle {
         uint256 maxExitRequestsPerReport,
         uint256 maxExitRequestsListLength,
         uint256 exitRequestsRateLimitWindowSizeSlots,
-        uint256 exitRequestsRateLimitMaxThroughput
+        uint256 exitRequestsRateLimitMaxThroughputE18
     );
 
     event DataSubmitted(uint256 indexed refSlot);
@@ -105,7 +105,7 @@ contract ValidatorsExitBusOracle is BaseOracle {
         uint256 maxExitRequestsPerReport,
         uint256 maxExitRequestsListLength,
         uint256 exitRequestsRateLimitWindowSizeSlots,
-        uint256 exitRequestsRateLimitMaxThroughput
+        uint256 exitRequestsRateLimitMaxThroughputE18
     ) external {
         if (admin == address(0)) revert AdminCannotBeZero();
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
@@ -114,7 +114,7 @@ contract ValidatorsExitBusOracle is BaseOracle {
             maxExitRequestsPerReport,
             maxExitRequestsListLength,
             exitRequestsRateLimitWindowSizeSlots,
-            exitRequestsRateLimitMaxThroughput
+            exitRequestsRateLimitMaxThroughputE18
         );
     }
 
@@ -125,20 +125,21 @@ contract ValidatorsExitBusOracle is BaseOracle {
     /// @param maxExitRequestsListLength The maximum number of exit requests in a list
     ///        for DATA_FORMAT_LIST data format.
     ///
-    /// @param exitRequestsRateLimitMaxThroughput The maximum number of exit requests
-    ///        in a sliding window lasting `exitRequestsRateLimitWindowSizeSlots` slots.
-    ///        This sets the maximum throughput after a period of low number of exit
-    ///        requests. If requests continue after the max throughput is exhausted,
-    ///        the throughput will be limited by approx. half of the max throughput
-    ///        until the new period of low number of exit requests occur.
+    /// @param exitRequestsRateLimitMaxThroughputE18 The maximum number of exit requests
+    ///        in a sliding window lasting `exitRequestsRateLimitWindowSizeSlots` slots,
+    ///        multiplied by 10**18. This sets the maximum throughput after a period of
+    ///        low number of exit requests. If requests continue after the max throughput
+    ///        is exhausted, the throughput will be limited by approx. half of the max
+    ///        throughput until the new period of low number of exit requests occur.
     ///
-    /// @param exitRequestsRateLimitWindowSizeSlots See `exitRequestsRateLimitMaxThroughput`.
+    /// @param exitRequestsRateLimitWindowSizeSlots Size of the rate limiting window.
+    ///        See `exitRequestsRateLimitMaxThroughputE18`.
     ///
     function setDataBoundaries(
         uint256 maxExitRequestsPerReport,
         uint256 maxExitRequestsListLength,
         uint256 exitRequestsRateLimitWindowSizeSlots,
-        uint256 exitRequestsRateLimitMaxThroughput
+        uint256 exitRequestsRateLimitMaxThroughputE18
     )
         external
         onlyRole(MANAGE_DATA_BOUNDARIES_ROLE)
@@ -147,7 +148,7 @@ contract ValidatorsExitBusOracle is BaseOracle {
             maxExitRequestsPerReport,
             maxExitRequestsListLength,
             exitRequestsRateLimitWindowSizeSlots,
-            exitRequestsRateLimitMaxThroughput
+            exitRequestsRateLimitMaxThroughputE18
         );
     }
 
@@ -157,18 +158,13 @@ contract ValidatorsExitBusOracle is BaseOracle {
         uint256 maxExitRequestsPerReport,
         uint256 maxExitRequestsListLength,
         uint256 exitRequestsRateLimitWindowSizeSlots,
-        uint256 exitRequestsRateLimitMaxThroughput
+        uint256 exitRequestsRateLimitMaxThroughputE18
     ) {
         DataBoundraies memory boudaries = _storageDataBoundaries().value;
         maxExitRequestsPerReport = boudaries.maxRequestsPerReport;
         maxExitRequestsListLength = boudaries.maxRequestsListLength;
-
-        uint256 maxThroughputE18;
-        (maxThroughputE18, exitRequestsRateLimitWindowSizeSlots) = RateLimit
-            .load(RATE_LIMIT_POSITION)
-            .getThroughputConfig();
-
-        exitRequestsRateLimitMaxThroughput = maxThroughputE18 / 10**18;
+        (exitRequestsRateLimitMaxThroughputE18, exitRequestsRateLimitWindowSizeSlots) =
+            RateLimit.load(RATE_LIMIT_POSITION).getThroughputConfig();
     }
 
     ///
@@ -290,8 +286,8 @@ contract ValidatorsExitBusOracle is BaseOracle {
     function _setDataBoundaries(
         uint256 maxRequestsPerReport,
         uint256 maxRequestsListLength,
-        uint256 rateLimitWindowSizeSlots,
-        uint256 rateLimitMaxThroughput
+        uint256 rateLimitWindowSlots,
+        uint256 rateLimitMaxThroughputE18
     ) internal {
         uint256 currentRefSlot = _getCurrentRefSlot();
 
@@ -300,18 +296,17 @@ contract ValidatorsExitBusOracle is BaseOracle {
             maxRequestsListLength: maxRequestsListLength.toUint64()
         });
 
-        uint256 maxThroughputE18 = rateLimitMaxThroughput * 10**18;
         RateLimit
             .load(RATE_LIMIT_POSITION)
-            .configureThroughput(currentRefSlot, rateLimitWindowSizeSlots, maxThroughputE18)
+            .configureThroughput(currentRefSlot, rateLimitWindowSlots, rateLimitMaxThroughputE18)
             .store(RATE_LIMIT_POSITION);
 
         emit DataBoundraiesSet(
             currentRefSlot,
             maxRequestsPerReport,
             maxRequestsListLength,
-            rateLimitWindowSizeSlots,
-            rateLimitMaxThroughput
+            rateLimitWindowSlots,
+            rateLimitMaxThroughputE18
         );
     }
 
