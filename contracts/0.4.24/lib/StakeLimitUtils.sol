@@ -170,7 +170,7 @@ library StakeLimitUtils {
     */
     function removeStakingLimit(
         StakeLimitState.Data memory _data
-    ) internal view returns (StakeLimitState.Data memory) {
+    ) internal pure returns (StakeLimitState.Data memory) {
         _data.maxStakeLimit = 0;
 
         return _data;
@@ -216,7 +216,7 @@ library StakeLimitUtils {
      * @param _lhs left hand side value
      * @param _rhs right hand side value
      */
-    function _constGasMin(uint256 _lhs, uint256 _rhs) internal view returns (uint256 min) {
+    function _constGasMin(uint256 _lhs, uint256 _rhs) internal pure returns (uint256 min) {
         uint256 lhsIsLess;
         assembly {
             lhsIsLess := lt(_lhs, _rhs) // lhsIsLess = (_lhs < _rhs) ? 1 : 0
