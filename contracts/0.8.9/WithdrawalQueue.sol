@@ -281,14 +281,6 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
         address recipient;
     }
 
-    struct Permit {
-        uint8 v;
-        bytes32 r;
-        bytes32 s;
-        address owner;
-        uint256 deadline;
-    }
-
     /// @notice Request the sequence of withdrawals according to passed `withdrawalRequestInputs` data
     /// @param _withdrawalRequestInputs an array of `WithdrawalRequestInput` data. The standalone withdrawal request will
     ///  be created for each item in the passed list. If `WithdrawalRequestInput.recipient` is set to `address(0)`,
@@ -305,6 +297,14 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
         }
     }
 
+    struct Permit {
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+        address owner;
+        uint256 deadline;
+    }
+
     /// @notice Request the sequence of withdrawals according to passed `withdrawalRequestInputs` data using EIP-2612 Permit
     /// @param _withdrawalRequestInputs an array of `WithdrawalRequestInput` data. The standalone withdrawal request will
     ///  be created for each item in the passed list. If `WithdrawalRequestInput.recipient` is set to `address(0)`,
@@ -312,7 +312,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
     /// @return requestIds an array of the created withdrawal requests
     function requestWithdrawalsWithPermit(
         WithdrawalRequestInput[] memory _withdrawalRequestInputs,
-        Permit[] calldata _permits
+        Permit[] memory _permits
     ) external whenResumed returns (uint256[] memory requestIds) {
         if (_withdrawalRequestInputs.length != _permits.length)
             revert LengthsMismatch(_withdrawalRequestInputs.length, _permits.length);
