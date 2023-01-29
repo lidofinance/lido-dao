@@ -50,11 +50,11 @@ abstract contract WithdrawalQueueBase {
     error ZeroRecipientAddress();
     error ZeroRequestId();
     error SenderExpected(address _recipient, address _msgSender);
-    error InvalidFinalizationId();
+    error InvalidRequestId(uint256 _requestId);
     error NotEnoughEther();
-    error RequestNotFinalized();
+    error RequestNotFinalized(uint256 _requestId);
     error RequestAlreadyClaimed();
-    error InvalidHint();
+    error InvalidHint(uint256 _hint);
     error CantSendValueRecipientMayHaveReverted();
     error SafeCastValueDoesNotFit64Bits();
     error SafeCastValueDoesNotFit96Bits();
@@ -75,7 +75,7 @@ abstract contract WithdrawalQueueBase {
     mapping(uint256 => Discount) internal discountHistory;
 
     /// @notice size of discount history
-    uint256 internal lastDiscountIndex = 0;
+    uint256 public lastDiscountIndex = 0;
 
     /// @notice amount of ETH on this contract balance that is locked for withdrawal and waiting for claim
     uint128 public lockedEtherAmount = 0;
@@ -84,7 +84,8 @@ abstract contract WithdrawalQueueBase {
     mapping(address => uint256[]) internal requestsByRecipient;
 
     constructor() {
-        // setting dummy zero structs in discountHistory and queue beginning to avoid a lot of if-branches in the code
+        // setting dummy zero structs in discountHistory and queue beginning 
+        // to avoid uint underflows and related if-branches
         queue[lastRequestId] = WithdrawalRequest(0, 0, payable(0), _toUint64(block.number), true);
         discountHistory[lastDiscountIndex] = Discount(lastRequestId, NO_DISCOUNT);
     }
@@ -119,22 +120,23 @@ abstract contract WithdrawalQueueBase {
             bool isClaimed
         )
     {
-        if (_requestId <= lastRequestId) {
-            WithdrawalRequest memory request = queue[_requestId];
+        if (_requestId == 0) revert ZeroRequestId();
+        if (_requestId > lastRequestId) revert InvalidRequestId(_requestId);
 
-            recipient = request.recipient;
-            blockNumber = request.blockNumber;
+        WithdrawalRequest memory request = queue[_requestId];
 
-            amountOfShares = request.cumulativeShares;
-            amountOfStETH = request.cumulativeStETH;
-            if (_requestId > 0) {
-                amountOfShares -= queue[_requestId - 1].cumulativeShares;
-                amountOfStETH -= queue[_requestId - 1].cumulativeStETH;
-            }
+        recipient = request.recipient;
+        blockNumber = request.blockNumber;
 
-            isFinalized = _requestId <= lastFinalizedRequestId;
-            isClaimed = request.claimed;
+        amountOfShares = request.cumulativeShares;
+        amountOfStETH = request.cumulativeStETH;
+        if (_requestId > 0) {
+            amountOfShares -= queue[_requestId - 1].cumulativeShares;
+            amountOfStETH -= queue[_requestId - 1].cumulativeStETH;
         }
+
+        isFinalized = _requestId <= lastFinalizedRequestId;
+        isClaimed = request.claimed;
     }
 
     /**
@@ -150,12 +152,13 @@ abstract contract WithdrawalQueueBase {
         view
         returns (uint128 eth, uint128 shares)
     {
-        if (_lastRequestIdToFinalize > lastFinalizedRequestId) {
-            (eth, shares) = _batch(lastFinalizedRequestId, _lastRequestIdToFinalize);
-            uint256 batchValue = shares * _shareRate / E27_PRECISION_BASE;
-            uint96 discountFactor = _calculateDiscountFactor(eth, batchValue);
-            eth = _applyDiscount(eth, discountFactor);
-        }
+        if (_lastRequestIdToFinalize <= lastFinalizedRequestId) revert InvalidRequestId(_lastRequestIdToFinalize);
+        if (_lastRequestIdToFinalize > lastRequestId) revert InvalidRequestId(_lastRequestIdToFinalize);
+
+        (eth, shares) = _batch(lastFinalizedRequestId, _lastRequestIdToFinalize);
+        uint256 batchValue = shares * _shareRate / E27_PRECISION_BASE;
+        uint96 discountFactor = _calculateDiscountFactor(eth, batchValue);
+        eth = _applyDiscount(eth, discountFactor);
     }
 
     /**
@@ -165,6 +168,9 @@ abstract contract WithdrawalQueueBase {
      * @return hint the hint for `claimWithdrawal` to find the discount for the request
      */
     function findClaimHint(uint256 _requestId) public view returns (uint256 hint) {
+        if (_requestId == 0) revert ZeroRequestId();
+        if (_requestId > lastFinalizedRequestId) revert RequestNotFinalized(_requestId);
+
         for (uint256 i = lastDiscountIndex; i > 0; i--) {
             if (_isHintValid(_requestId, i)) {
                 return i;
@@ -180,8 +186,7 @@ abstract contract WithdrawalQueueBase {
      */
     function claimWithdrawal(uint256 _requestId, uint256 _hint) public {
         if (_requestId == 0) revert ZeroRequestId();
-        if (_hint == 0) revert InvalidHint();
-        if (_requestId > lastFinalizedRequestId) revert RequestNotFinalized();
+        if (_requestId > lastFinalizedRequestId) revert RequestNotFinalized(_requestId);
 
         WithdrawalRequest storage request = queue[_requestId];
         if (request.claimed) revert RequestAlreadyClaimed();
@@ -189,10 +194,10 @@ abstract contract WithdrawalQueueBase {
         request.claimed = true;
 
         Discount memory discount;
-        if (_isHintValid(_requestId, _hint)) {
+        if (_hint <= lastDiscountIndex && _isHintValid(_requestId, _hint)) {
             discount = discountHistory[_hint];
         } else {
-            revert InvalidHint();
+            revert InvalidHint(_hint);
         }
 
         uint128 ethToSend = queue[_requestId].cumulativeStETH - queue[_requestId - 1].cumulativeStETH;
@@ -231,17 +236,16 @@ abstract contract WithdrawalQueueBase {
 
     /// @dev Finalize requests from last finalized one up to `_lastRequestIdToFinalize`
     function _finalize(uint256 _lastRequestIdToFinalize, uint256 _amountofETH) internal {
-        if (_lastRequestIdToFinalize <= lastFinalizedRequestId || _lastRequestIdToFinalize > lastRequestId) {
-            revert InvalidFinalizationId();
-        }
+        if (_lastRequestIdToFinalize <= lastFinalizedRequestId) revert InvalidRequestId(_lastRequestIdToFinalize);
+        if (_lastRequestIdToFinalize > lastRequestId) revert InvalidRequestId(_lastRequestIdToFinalize);
 
-        uint128 amountOfStETH
-            = queue[_lastRequestIdToFinalize].cumulativeStETH - queue[lastFinalizedRequestId].cumulativeStETH;
-        uint96 discountFactor = _calculateDiscountFactor(amountOfStETH, _amountofETH);
+        uint128 finalizedStETH = queue[lastFinalizedRequestId].cumulativeStETH;
+        uint128 stETHToFinalize = queue[_lastRequestIdToFinalize].cumulativeStETH - finalizedStETH;
+        uint96 discountFactor = _calculateDiscountFactor(stETHToFinalize, _amountofETH);
 
         _updateDiscountHistory(_lastRequestIdToFinalize, discountFactor);
 
-        lockedEtherAmount += _applyDiscount(amountOfStETH, discountFactor);
+        lockedEtherAmount += _applyDiscount(stETHToFinalize, discountFactor);
         lastFinalizedRequestId = _lastRequestIdToFinalize;
     }
 
@@ -270,10 +274,15 @@ abstract contract WithdrawalQueueBase {
 
     /// @dev checks if provided request included in the discount hint boundaries
     function _isHintValid(uint256 _requestId, uint256 _indexHint) internal view returns (bool) {
-        uint256 rightBoundary = discountHistory[_indexHint].indexInQueue;
-        uint256 leftBoundary = discountHistory[_indexHint - 1].indexInQueue;
+        bool rightBoundary = _requestId <= discountHistory[_indexHint].indexInQueue;
 
-        return leftBoundary < _requestId && _requestId <= rightBoundary;
+        bool leftBoundary = true;
+        
+        if (_indexHint > 0) {
+            leftBoundary = _requestId > discountHistory[_indexHint - 1].indexInQueue;
+        }
+
+        return rightBoundary && leftBoundary;
     }
 
     /// @dev add a new entry to discount history or modify the last one if discount does not change
@@ -286,10 +295,6 @@ abstract contract WithdrawalQueueBase {
             lastDiscountIndex++;
             discountHistory[lastDiscountIndex] = Discount(_index, _discountFactor);
         }
-    }
-
-    function _min(uint128 a, uint128 b) internal pure returns (uint128) {
-        return a < b ? a : b;
     }
 
     function _sendValue(address payable _recipient, uint256 _amount) internal {

@@ -43,6 +43,11 @@ interface IWstETH is IERC20, IERC20Permit {
      * @return Amount of stETH for a given wstETH amount
      */
     function getStETHByWstETH(uint256 _wstETHAmount) external view returns (uint256);
+
+    /**
+     * @notice Returns a contract that this implementation of WstETH is a wrapper for
+     */
+    function stETH() external view returns (IStETH);
 }
 
 /**
@@ -142,13 +147,12 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
     }
 
     /**
-     * @param _stETH address of StETH contract
      * @param _wstETH address of WstETH contract
      */
-    constructor(IStETH _stETH, IWstETH _wstETH) {
+    constructor(IWstETH _wstETH) {
         // init immutables
-        STETH = _stETH;
         WSTETH = _wstETH;
+        STETH = WSTETH.stETH();
 
         // petrify the implementation by assigning a zero address for every role
         _initialize(address(0), address(0), address(0), address(0));

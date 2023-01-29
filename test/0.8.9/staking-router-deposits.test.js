@@ -117,7 +117,7 @@ contract('StakingRouter', (accounts) => {
 
     const eip712StETH = await EIP712StETH.new({ from: deployer })
     const wsteth = await WstETH.new(lido.address)
-    const withdrawalQueue = await (await withdrawals.deploy(dao.address, lido.address, wsteth.address)).queue
+    const withdrawalQueue = await (await withdrawals.deploy(dao.address, wsteth.address)).queue
 
     await lido.initialize(
       oracle.address,
