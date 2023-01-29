@@ -364,6 +364,8 @@ contract ValidatorsExitBusOracle is BaseOracle {
             dataFormat: uint16(DATA_FORMAT_LIST)
         });
 
+        emit DataSubmitted(report.refSlot);
+
         if (report.requestsCount == 0) {
             return;
         }
