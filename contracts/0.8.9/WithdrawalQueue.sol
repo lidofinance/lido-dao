@@ -306,6 +306,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
 
     /// @dev internal initialization helper. Doesn't check provided addresses intentionally
     function _initialize(address _admin, address _pauser, address _resumer, address _finalizer) internal {
+        _initializeQueue();
         if (CONTRACT_VERSION_POSITION.getStorageUint256() != 0) {
             revert AlreadyInitialized();
         }
