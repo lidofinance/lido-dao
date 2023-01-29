@@ -68,40 +68,32 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
         keccak256("MANAGE_CONSENSUS_VERSION_ROLE");
 
 
+    /// @dev Storage slot: address consensusContract
     bytes32 internal constant CONSENSUS_CONTRACT_POSITION =
         keccak256("lido.BaseOracle.consensusContract");
 
+    /// @dev Storage slot: uint256 consensusVersion
     bytes32 internal constant CONSENSUS_VERSION_POSITION =
         keccak256("lido.BaseOracle.consensusVersion");
 
+    /// @dev Storage slot: uint256 lastProcessingRefSlot
     bytes32 internal constant LAST_PROCESSING_REF_SLOT_POSITION =
         keccak256("lido.BaseOracle.lastProcessingRefSlot");
 
+    /// @dev Storage slot: ConsensusReport consensusReport
     bytes32 internal constant CONSENSUS_REPORT_POSITION =
         keccak256("lido.BaseOracle.consensusReport");
 
 
     uint256 public immutable SECONDS_PER_SLOT;
 
+    ///
+    /// Initialization & admin functions
+    ///
 
     constructor(uint256 secondsPerSlot) {
         SECONDS_PER_SLOT = secondsPerSlot;
     }
-
-    function _initialize(
-        address consensusContract,
-        uint256 consensusVersion,
-        uint256 lastProcessingRefSlot
-    ) internal virtual {
-        _initializeContractVersionTo1();
-        _setConsensusContract(consensusContract, lastProcessingRefSlot);
-        _setConsensusVersion(consensusVersion);
-        LAST_PROCESSING_REF_SLOT_POSITION.setStorageUint256(lastProcessingRefSlot);
-    }
-
-    ///
-    /// Config
-    ///
 
     /// @notice Returns the address of the HashConsensus contract.
     ///
@@ -109,6 +101,8 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
         return CONSENSUS_CONTRACT_POSITION.getStorageAddress();
     }
 
+    /// @notice Sets the addres of the HashConsensus contract.
+    ///
     function setConsensusContract(address addr) external onlyRole(MANAGE_CONSENSUS_CONTRACT_ROLE) {
         _setConsensusContract(addr, LAST_PROCESSING_REF_SLOT_POSITION.getStorageUint256());
     }
@@ -122,41 +116,10 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
         return CONSENSUS_VERSION_POSITION.getStorageUint256();
     }
 
+    /// @notice Sets the consensus version expected by the oracle contract.
+    ///
     function setConsensusVersion(uint256 version) external onlyRole(MANAGE_CONSENSUS_VERSION_ROLE) {
         _setConsensusVersion(version);
-    }
-
-    function _setConsensusVersion(uint256 version) internal {
-        uint256 prevVersion = CONSENSUS_VERSION_POSITION.getStorageUint256();
-        if (version == prevVersion) revert VersionCannotBeSame();
-        CONSENSUS_VERSION_POSITION.setStorageUint256(version);
-        emit ConsensusVersionSet(version, prevVersion);
-    }
-
-    function _setConsensusContract(address addr, uint256 lastProcessingRefSlot) internal {
-        if (addr == address(0)) revert AddressCannotBeZero();
-
-        address prevAddr = CONSENSUS_CONTRACT_POSITION.getStorageAddress();
-        if (addr == prevAddr) revert AddressCannotBeSame();
-
-        (, uint256 secondsPerSlot, ) = IConsensusContract(addr).getChainConfig();
-        if (secondsPerSlot != SECONDS_PER_SLOT) {
-            revert UnexpectedChainConfig();
-        }
-
-        (uint64 refSlot, ) = IConsensusContract(addr).getCurrentFrame();
-        if (refSlot < lastProcessingRefSlot) {
-            revert RefSlotCannotBeLessThanProcessingOne(refSlot, lastProcessingRefSlot);
-        }
-
-        CONSENSUS_CONTRACT_POSITION.setStorageAddress(addr);
-        emit ConsensusContractSet(addr, prevAddr);
-    }
-
-    function _getCurrentRefSlot() internal view returns (uint256) {
-        address consensusContract = CONSENSUS_CONTRACT_POSITION.getStorageAddress();
-        (uint256 refSlot, ) = IConsensusContract(consensusContract).getCurrentFrame();
-        return refSlot;
     }
 
     ///
@@ -233,8 +196,22 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
     }
 
     ///
-    /// Internal interface
+    /// Descendant contract interface
     ///
+
+    /// @notice Initializes the contract storage. Must be called by a descendant
+    /// contract as part of its initialization.
+    ///
+    function _initialize(
+        address consensusContract,
+        uint256 consensusVersion,
+        uint256 lastProcessingRefSlot
+    ) internal virtual {
+        _initializeContractVersionTo1();
+        _setConsensusContract(consensusContract, lastProcessingRefSlot);
+        _setConsensusVersion(consensusVersion);
+        LAST_PROCESSING_REF_SLOT_POSITION.setStorageUint256(lastProcessingRefSlot);
+    }
 
     /// @notice Returns whether the given address is a member of the oracle committee.
     ///
@@ -300,12 +277,51 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
         if (_getTime() > deadline) revert ProcessingDeadlineMissed(deadline);
     }
 
+    /// @notice Returns the reference slot for the current frame.
+    ///
+    function _getCurrentRefSlot() internal view returns (uint256) {
+        address consensusContract = CONSENSUS_CONTRACT_POSITION.getStorageAddress();
+        (uint256 refSlot, ) = IConsensusContract(consensusContract).getCurrentFrame();
+        return refSlot;
+    }
+
+    ///
+    /// Implementation & helpers
+    ///
+
+    function _setConsensusVersion(uint256 version) internal {
+        uint256 prevVersion = CONSENSUS_VERSION_POSITION.getStorageUint256();
+        if (version == prevVersion) revert VersionCannotBeSame();
+        CONSENSUS_VERSION_POSITION.setStorageUint256(version);
+        emit ConsensusVersionSet(version, prevVersion);
+    }
+
+    function _setConsensusContract(address addr, uint256 lastProcessingRefSlot) internal {
+        if (addr == address(0)) revert AddressCannotBeZero();
+
+        address prevAddr = CONSENSUS_CONTRACT_POSITION.getStorageAddress();
+        if (addr == prevAddr) revert AddressCannotBeSame();
+
+        (, uint256 secondsPerSlot, ) = IConsensusContract(addr).getChainConfig();
+        if (secondsPerSlot != SECONDS_PER_SLOT) {
+            revert UnexpectedChainConfig();
+        }
+
+        (uint64 refSlot, ) = IConsensusContract(addr).getCurrentFrame();
+        if (refSlot < lastProcessingRefSlot) {
+            revert RefSlotCannotBeLessThanProcessingOne(refSlot, lastProcessingRefSlot);
+        }
+
+        CONSENSUS_CONTRACT_POSITION.setStorageAddress(addr);
+        emit ConsensusContractSet(addr, prevAddr);
+    }
+
     function _getTime() internal virtual view returns (uint256) {
         return block.timestamp; // solhint-disable-line not-rely-on-time
     }
 
     ///
-    /// Storage
+    /// Storage helpers
     ///
 
     struct StorageConsensusReport {

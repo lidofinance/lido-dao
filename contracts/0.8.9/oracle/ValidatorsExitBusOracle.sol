@@ -88,7 +88,7 @@ contract ValidatorsExitBusOracle is BaseOracle {
         keccak256("lido.ValidatorsExitBusOracle.dataProcessingState");
 
     ///
-    /// Initialization and admin functions
+    /// Initialization & admin functions
     ///
 
     constructor(uint256 secondsPerSlot) BaseOracle(secondsPerSlot) {}
@@ -148,7 +148,7 @@ contract ValidatorsExitBusOracle is BaseOracle {
         );
     }
 
-    /// @notice Returns the current data boundaries. See `setDataBoundaries`.
+    /// @notice Returns the current data safety boundaries. See `setDataBoundaries`.
     ///
     function getDataBoundaries() external view returns (
         uint256 maxExitRequestsPerReport,
@@ -164,7 +164,7 @@ contract ValidatorsExitBusOracle is BaseOracle {
     }
 
     ///
-    /// Oracle interface
+    /// Data provider interface
     ///
 
     struct ReportData {
@@ -292,7 +292,7 @@ contract ValidatorsExitBusOracle is BaseOracle {
     }
 
     ///
-    /// Internal interface & helpers
+    /// Implementation & helpers
     ///
 
     function _setDataBoundaries(
@@ -453,7 +453,7 @@ contract ValidatorsExitBusOracle is BaseOracle {
     }
 
     ///
-    /// Storage
+    /// Storage helpers
     ///
 
     function _storageLastRequestedValidatorIndices() internal pure returns (

@@ -84,6 +84,80 @@ contract AccountingOracle is BaseOracle {
         uint256 itemsCount
     );
 
+    struct DataBoundraies {
+        uint64 maxExitedValidatorsPerDay;
+        uint64 maxExtraDataListItemsCount;
+    }
+
+    struct ExtraDataProcessingState {
+        uint64 refSlot;
+        uint16 dataFormat;
+        uint64 itemsCount;
+        uint64 itemsProcessed;
+        uint256 lastProcessedItem;
+        bytes32 dataHash;
+    }
+
+    /// @notice An ACL role granting the permission to submit the data for a commitee report.
+    bytes32 public constant SUBMIT_DATA_ROLE = keccak256("SUBMIT_DATA_ROLE");
+
+    /// @notice An ACL role granting the permission to set report data safety boundaries.
+    bytes32 constant public MANAGE_DATA_BOUNDARIES_ROLE = keccak256("MANAGE_DATA_BOUNDARIES_ROLE");
+
+
+    /// @dev Storage slot: DataBoundraies dataBoundaries
+    bytes32 internal constant DATA_BOUNDARIES_POSITION =
+        keccak256("lido.AccountingOracle.dataBoundaries");
+
+    /// @dev Storage slot: ExtraDataProcessingState state
+    bytes32 internal constant EXTRA_DATA_PROCESSING_STATE_POSITION =
+        keccak256("lido.AccountingOracle.extraDataProcessingState");
+
+
+    address public immutable LIDO;
+
+    ///
+    /// Initialization & admin functions
+    ///
+
+    constructor(address lido, uint256 secondsPerSlot) BaseOracle(secondsPerSlot) {
+        if (lido == address(0)) revert LidoCannotBeZero();
+        LIDO = lido;
+    }
+
+    function initialize(
+        address admin,
+        address consensusContract,
+        uint256 consensusVersion,
+        uint256 lastProcessingRefSlot,
+        uint256 maxExitedValidatorsPerDay,
+        uint256 maxExtraDataListItemsCount
+    ) external {
+        if (admin == address(0)) revert AdminCannotBeZero();
+        _setupRole(DEFAULT_ADMIN_ROLE, admin);
+        _initialize(consensusContract, consensusVersion, lastProcessingRefSlot);
+        _setDataBoundaries(maxExitedValidatorsPerDay, maxExtraDataListItemsCount);
+    }
+
+    function getDataBoundaries() external view returns (
+        uint256 maxExitedValidatorsPerDay,
+        uint256 maxExtraDataListItemsCount
+    ) {
+        DataBoundraies memory b = _storageDataBoundaries().value;
+        return (b.maxExitedValidatorsPerDay, b.maxExtraDataListItemsCount);
+    }
+
+    function setDataBoundaries(uint256 maxExitedValidatorsPerDay, uint256 maxExtraDataListItemsCount)
+        external
+        onlyRole(MANAGE_DATA_BOUNDARIES_ROLE)
+    {
+        _setDataBoundaries(maxExitedValidatorsPerDay, maxExtraDataListItemsCount);
+    }
+
+    ///
+    /// Data provider interface
+    ///
+
     struct ReportData {
         ///
         /// Oracle consensus info
@@ -170,12 +244,14 @@ contract AccountingOracle is BaseOracle {
         ///
         /// Two types of items are supported:
         ///
-        /// itemType=0: stuck validators by node operator. itemPayload format:
+        /// itemType=EXTRA_DATA_TYPE_STUCK_VALIDATORS: stuck validators by node operator.
+        /// itemPayload format:
         ///
         ///   3 bytes        8 bytes            16 bytes
         /// | moduleId | nodeOperatorId | totalStuckValidators |
         ///
-        /// itemType=1: exited validators by node operator. itemPayload format:
+        /// itemType=EXTRA_DATA_TYPE_EXITED_VALIDATORS: exited validators by node operator.
+        /// itemPayload format:
         ///
         ///   3 bytes        8 bytes             16 bytes
         /// | moduleId | nodeOperatorId | totalExitedValidators |
@@ -199,6 +275,9 @@ contract AccountingOracle is BaseOracle {
         uint256 extraDataItemsCount;
     }
 
+    uint256 public constant EXTRA_DATA_TYPE_STUCK_VALIDATORS = 0;
+    uint256 public constant EXTRA_DATA_TYPE_EXITED_VALIDATORS = 1;
+
     /// @notice The list format for the extra data array. Used when all extra data processing
     /// fits into a single transaction.
     ///
@@ -212,104 +291,6 @@ contract AccountingOracle is BaseOracle {
     /// keccac256(abi.encodePacked(array))
     ///
     uint256 public constant EXTRA_DATA_FORMAT_LIST = 0;
-
-    uint256 public constant EXTRA_DATA_TYPE_STUCK_VALIDATORS = 0;
-    uint256 public constant EXTRA_DATA_TYPE_EXITED_VALIDATORS = 1;
-
-    struct DataBoundraies {
-        uint64 maxExitedValidatorsPerDay;
-        uint64 maxExtraDataListItemsCount;
-    }
-
-    struct ExtraDataProcessingState {
-        uint64 refSlot;
-        uint16 dataFormat;
-        uint64 itemsCount;
-        uint64 itemsProcessed;
-        uint256 lastProcessedItem;
-        bytes32 dataHash;
-    }
-
-    /// @notice An ACL role granting the permission to submit the data for a commitee report.
-    bytes32 public constant SUBMIT_DATA_ROLE = keccak256("SUBMIT_DATA_ROLE");
-
-    /// @notice An ACL role granting the permission to set report data safety boundaries.
-    bytes32 constant public MANAGE_DATA_BOUNDARIES_ROLE = keccak256("MANAGE_DATA_BOUNDARIES_ROLE");
-
-
-    /// @dev Storage slot: DataBoundraies dataBoundaries
-    bytes32 internal constant DATA_BOUNDARIES_POSITION =
-        keccak256("lido.AccountingOracle.dataBoundaries");
-
-    /// @dev Storage slot: ExtraDataProcessingState state
-    bytes32 internal constant EXTRA_DATA_PROCESSING_STATE_POSITION =
-        keccak256("lido.AccountingOracle.extraDataProcessingState");
-
-
-    address public immutable LIDO;
-
-
-    constructor(address lido, uint256 secondsPerSlot) BaseOracle(secondsPerSlot) {
-        if (lido == address(0)) revert LidoCannotBeZero();
-        LIDO = lido;
-    }
-
-    function initialize(
-        address admin,
-        address consensusContract,
-        uint256 consensusVersion,
-        uint256 lastProcessingRefSlot,
-        uint256 maxExitedValidatorsPerDay,
-        uint256 maxExtraDataListItemsCount
-    ) external {
-        if (admin == address(0)) revert AdminCannotBeZero();
-        _setupRole(DEFAULT_ADMIN_ROLE, admin);
-        _initialize(consensusContract, consensusVersion, lastProcessingRefSlot);
-        _setDataBoundaries(maxExitedValidatorsPerDay, maxExtraDataListItemsCount);
-    }
-
-    function getDataBoundaries() external view returns (
-        uint256 maxExitedValidatorsPerDay,
-        uint256 maxExtraDataListItemsCount
-    ) {
-        DataBoundraies memory b = _storageDataBoundaries().value;
-        return (b.maxExitedValidatorsPerDay, b.maxExtraDataListItemsCount);
-    }
-
-    function setDataBoundaries(uint256 maxExitedValidatorsPerDay, uint256 maxExtraDataListItemsCount)
-        external
-        onlyRole(MANAGE_DATA_BOUNDARIES_ROLE)
-    {
-        _setDataBoundaries(maxExitedValidatorsPerDay, maxExtraDataListItemsCount);
-    }
-
-    function _setDataBoundaries(uint256 maxExitedValidatorsPerDay, uint256 maxExtraDataListItemsCount)
-        internal
-    {
-        _storageDataBoundaries().value = DataBoundraies({
-            maxExitedValidatorsPerDay: maxExitedValidatorsPerDay.toUint64(),
-            maxExtraDataListItemsCount: maxExtraDataListItemsCount.toUint64()
-        });
-        emit DataBoundraiesSet(maxExitedValidatorsPerDay, maxExtraDataListItemsCount);
-    }
-
-    function _handleConsensusReport(
-        ConsensusReport memory /* report */,
-        uint256 /* prevSubmittedRefSlot */,
-        uint256 prevProcessingRefSlot
-    ) internal override {
-        ExtraDataProcessingState memory state = _storageExtraDataProcessingState().value;
-        if (state.refSlot == prevProcessingRefSlot && state.itemsProcessed < state.itemsCount) {
-            emit WarnExtraDataIncomleteProcessing(
-                prevProcessingRefSlot,
-                state.itemsProcessed,
-                state.itemsCount);
-        }
-    }
-
-    ///
-    /// Data provider interface: main data
-    ///
 
     /// @notice Submits report data for processing.
     ///
@@ -334,6 +315,65 @@ contract AccountingOracle is BaseOracle {
         uint256 slotsElapsed = data.refSlot - LAST_PROCESSING_REF_SLOT_POSITION.getStorageUint256();
         _startProcessing();
         _handleConsensusReportData(data, slotsElapsed);
+    }
+
+    /// @notice Submits report extra data in the EXTRA_DATA_FORMAT_LIST format for processing.
+    ///
+    /// @param items The extra data items list. See docs for the `EXTRA_DATA_FORMAT_LIST`
+    ///              constant for details.
+    ///
+    function submitReportExtraDataList(uint256[] calldata items) external {
+        _submitReportExtraDataList(items);
+    }
+
+    /// @notice Returns extra data processing state for the current consensus report.
+    ///
+    function getExtraDataProcessingState() external view returns (
+        bool processingStarted,
+        uint256 lastProcessedItem,
+        bytes32 dataHash,
+        uint256 dataFormat,
+        uint256 itemsCount,
+        uint256 itemsProcessed
+    ) {
+        ExtraDataProcessingState memory state = _storageExtraDataProcessingState().value;
+        uint256 processingRefSlot = LAST_PROCESSING_REF_SLOT_POSITION.getStorageUint256();
+        processingStarted = state.refSlot != 0 && state.refSlot == processingRefSlot;
+        if (processingStarted) {
+            lastProcessedItem = state.lastProcessedItem;
+            dataHash = state.dataHash;
+            dataFormat = state.dataFormat;
+            itemsCount = state.itemsCount;
+            itemsProcessed = state.itemsProcessed;
+        }
+    }
+
+    ///
+    /// Implementation & helpers
+    ///
+
+    function _setDataBoundaries(uint256 maxExitedValidatorsPerDay, uint256 maxExtraDataListItemsCount)
+        internal
+    {
+        _storageDataBoundaries().value = DataBoundraies({
+            maxExitedValidatorsPerDay: maxExitedValidatorsPerDay.toUint64(),
+            maxExtraDataListItemsCount: maxExtraDataListItemsCount.toUint64()
+        });
+        emit DataBoundraiesSet(maxExitedValidatorsPerDay, maxExtraDataListItemsCount);
+    }
+
+    function _handleConsensusReport(
+        ConsensusReport memory /* report */,
+        uint256 /* prevSubmittedRefSlot */,
+        uint256 prevProcessingRefSlot
+    ) internal override {
+        ExtraDataProcessingState memory state = _storageExtraDataProcessingState().value;
+        if (state.refSlot == prevProcessingRefSlot && state.itemsProcessed < state.itemsCount) {
+            emit WarnExtraDataIncomleteProcessing(
+                prevProcessingRefSlot,
+                state.itemsProcessed,
+                state.itemsCount);
+        }
     }
 
     function _checkMsgSenderIsAllowedToSubmitData() internal view {
@@ -440,11 +480,7 @@ contract AccountingOracle is BaseOracle {
         );
     }
 
-    ///
-    /// Data provider interface: extra data
-    ///
-
-    function submitReportExtraDataList(uint256[] calldata items) external {
+    function _submitReportExtraDataList(uint256[] calldata items) internal {
         _checkMsgSenderIsAllowedToSubmitData();
         _checkProcessingDeadline();
 
@@ -481,28 +517,6 @@ contract AccountingOracle is BaseOracle {
         _procState.itemsProcessed = uint64(items.length);
 
         emit ExtraDataSubmitted(procState.refSlot, items.length, items.length);
-    }
-
-    /// @notice Returns extra data processing state for the current consensus report.
-    ///
-    function getExtraDataProcessingState() external view returns (
-        bool processingStarted,
-        uint256 lastProcessedItem,
-        bytes32 dataHash,
-        uint256 dataFormat,
-        uint256 itemsCount,
-        uint256 itemsProcessed
-    ) {
-        ExtraDataProcessingState memory state = _storageExtraDataProcessingState().value;
-        uint256 processingRefSlot = LAST_PROCESSING_REF_SLOT_POSITION.getStorageUint256();
-        processingStarted = state.refSlot != 0 && state.refSlot == processingRefSlot;
-        if (processingStarted) {
-            lastProcessedItem = state.lastProcessedItem;
-            dataHash = state.dataHash;
-            dataFormat = state.dataFormat;
-            itemsCount = state.itemsCount;
-            itemsProcessed = state.itemsProcessed;
-        }
     }
 
     struct ExtraDataIterState {
@@ -649,7 +663,7 @@ contract AccountingOracle is BaseOracle {
     }
 
     ///
-    /// Storage
+    /// Storage helpers
     ///
 
     struct StorageDataBoudaries {

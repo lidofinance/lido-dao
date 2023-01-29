@@ -170,6 +170,10 @@ contract HashConsensus is AccessControlEnumerable {
     /// @dev The address of the report processor contract
     address internal _reportProcessor;
 
+    ///
+    /// Initialization
+    ///
+
     constructor(
         uint256 slotsPerEpoch,
         uint256 secondsPerSlot,
@@ -198,6 +202,7 @@ contract HashConsensus is AccessControlEnumerable {
 
     /// @notice Returns the chain configuration required to calculate
     /// epoch and slot given a timestamp.
+    ///
     function getChainConfig() external view returns (
         uint256 slotsPerEpoch,
         uint256 secondsPerSlot,
@@ -207,11 +212,13 @@ contract HashConsensus is AccessControlEnumerable {
     }
 
     /// @notice Returns the parameters required to calculate reporting frame given an epoch.
+    ///
     function getFrameConfig() external view returns (uint64 initialEpoch, uint64 epochsPerFrame) {
         return (_frameConfig.initialEpoch, _frameConfig.epochsPerFrame);
     }
 
     /// @notice Returns the current reporting frame.
+    ///
     function getCurrentFrame() external view returns (
         uint64 refSlot,
         uint64 reportProcessingDeadlineSlot
@@ -220,43 +227,12 @@ contract HashConsensus is AccessControlEnumerable {
         return (frame.refSlot, frame.reportProcessingDeadlineSlot);
     }
 
-    function _computeFrameStartEpoch(uint256 timestamp, FrameConfig memory config)
-        internal view returns (uint256)
-    {
-        uint256 epochsSinceInitial = _computeEpochAtTimestamp(timestamp) - config.initialEpoch;
-        uint256 frameIndex = epochsSinceInitial / config.epochsPerFrame;
-        return config.initialEpoch + frameIndex * config.epochsPerFrame;
-    }
-
-    function _getFrameAtTimestamp(uint256 timestamp) internal view returns (ConsensusFrame memory) {
-        FrameConfig memory config = _frameConfig;
-
-        uint256 frameStartEpoch = _computeFrameStartEpoch(timestamp, config);
-        uint256 frameStartSlot = _computeStartSlotAtEpoch(frameStartEpoch);
-        uint256 nextFrameStartSlot = frameStartSlot + config.epochsPerFrame * SLOTS_PER_EPOCH;
-
-        return ConsensusFrame({
-            refSlot: uint64(frameStartSlot - 1),
-            reportProcessingDeadlineSlot: uint64(nextFrameStartSlot - 1)
-        });
-    }
-
-    function _getCurrentFrame() internal view returns (ConsensusFrame memory) {
-        return _getFrameAtTimestamp(_getTime());
-    }
-
     function setEpochsPerFrame(uint256 epochsPerFrame) external onlyRole(MANAGE_INTERVAL_ROLE) {
         // Updates epochsPerFrame in a way that either keeps the current reference slot the same
         // or increases it by at least the minimum of old and new frame sizes.
         uint256 timestamp = _getTime();
         uint256 currentFrameStartEpoch = _computeFrameStartEpoch(timestamp, _frameConfig);
         _setFrameConfig(currentFrameStartEpoch, epochsPerFrame);
-    }
-
-    function _setFrameConfig(uint256 startEpoch, uint256 epochsPerFrame) internal {
-        if (epochsPerFrame == 0) revert EpochsPerFrameCannotBeZero();
-        _frameConfig = FrameConfig(startEpoch.toUint64(), epochsPerFrame.toUint64());
-        emit FrameConfigSet(startEpoch, epochsPerFrame);
     }
 
     ///
@@ -286,11 +262,15 @@ contract HashConsensus is AccessControlEnumerable {
     /// @param addr The member address.
     ///
     /// @return isMember Whether the provided address is a member of the oracle.
+    ///
     /// @return lastReportRefSlot The last reference slot for which the member reported a data hash.
+    ///
     /// @return currentRefSlot Current reference slot.
+    ///
     /// @return memberReportForCurrentRefSlot The hash reported by the member for the current
     ///         reference slot. Set to zero bytes if no report was recevied for the current
     ///         reference slot.
+    ///
     function getMemberInfo(address addr) external view returns (
         bool isMember,
         uint256 lastReportRefSlot,
@@ -313,67 +293,45 @@ contract HashConsensus is AccessControlEnumerable {
         }
     }
 
-    function _isMember(address addr) internal view returns (bool) {
-        return _memberIndices1b[addr] != 0;
-    }
-
-    function _getMemberIndex(address addr) internal view returns (uint256) {
-        uint256 index1b = _memberIndices1b[addr];
-        if (index1b == 0) {
-            revert NonMember();
-        }
-        unchecked {
-            return uint256(index1b - 1);
-        }
-    }
-
     function addMember(address addr, uint256 quorum)
-        external onlyRole(MANAGE_MEMBERS_AND_QUORUM_ROLE)
+        external
+        onlyRole(MANAGE_MEMBERS_AND_QUORUM_ROLE)
     {
-        if (_isMember(addr)) revert DuplicateMember();
-        if (addr == address(0)) revert AddressCannotBeZero();
-
-        _members.push(MemberState(addr, 0, 0));
-
-        uint256 newTotalMembers = _members.length;
-        _memberIndices1b[addr] = newTotalMembers;
-
-        emit MemberAdded(addr, newTotalMembers, quorum);
-
-        _setQuorumAndCheckConsensus(quorum, newTotalMembers);
+        _addMember(addr, quorum);
     }
 
     function removeMember(address addr, uint256 quorum)
-        external onlyRole(MANAGE_MEMBERS_AND_QUORUM_ROLE)
+        external
+        onlyRole(MANAGE_MEMBERS_AND_QUORUM_ROLE)
     {
-        uint256 index = _getMemberIndex(addr);
-        uint256 newTotalMembers = _members.length - 1;
+        _removeMember(addr, quorum);
+    }
 
-        assert(index <= newTotalMembers);
-        MemberState memory member = _members[index];
+    function getQuorum() external view returns (uint256) {
+        return _quorum;
+    }
 
-        if (index != newTotalMembers) {
-            MemberState memory copyFrom = _members[newTotalMembers];
-            _members[index] = copyFrom;
-            _memberIndices1b[copyFrom.addr] = index + 1;
-        }
+    function setQuorum(uint256 quorum) external {
+        // access control is performed inside the next call
+        _setQuorumAndCheckConsensus(quorum, _members.length);
+    }
 
-        _members.pop();
-        _memberIndices1b[addr] = 0;
+    /// @notice Disables the oracle by setting the quorum to an unreachable value.
+    ///
+    function disableConsensus() external {
+        // access control is performed inside the next call
+        _setQuorumAndCheckConsensus(UNREACHABLE_QUORUM, _members.length);
+    }
 
-        emit MemberRemoved(addr, newTotalMembers, quorum);
+    ///
+    /// Report processor
+    ///
 
-        ConsensusFrame memory frame = _getCurrentFrame();
-
-        if (member.lastReportRefSlot == frame.refSlot &&
-            _getLastProcessingRefSlot() < frame.refSlot
-        ) {
-            // member reported for the current ref. slot and the consensus report
-            // is not processing yet => need to cancel the member's report
-            --_reportVariants[member.lastReportVariantIndex].support;
-        }
-
-        _setQuorumAndCheckConsensus(quorum, newTotalMembers);
+    function setReportProcessor(address newProcessor)
+        external
+        onlyRole(MANAGE_REPORT_PROCESSOR_ROLE)
+    {
+        _setReportProcessor(newProcessor);
     }
 
     ///
@@ -432,7 +390,141 @@ contract HashConsensus is AccessControlEnumerable {
     /// @param consensusVersion Version of the oracle consensus rules. Reverts if doesn't
     ///        match the version returned by the currently set consensus report processor,
     ///        or zero if no report processor is set.
+    ///
     function submitReport(uint256 slot, bytes32 report, uint256 consensusVersion) external {
+        _submitReport(slot, report, consensusVersion);
+    }
+
+    ///
+    /// Implementation: time
+    ///
+
+    function _setFrameConfig(uint256 startEpoch, uint256 epochsPerFrame) internal {
+        if (epochsPerFrame == 0) revert EpochsPerFrameCannotBeZero();
+        _frameConfig = FrameConfig(startEpoch.toUint64(), epochsPerFrame.toUint64());
+        emit FrameConfigSet(startEpoch, epochsPerFrame);
+    }
+
+    function _getCurrentFrame() internal view returns (ConsensusFrame memory) {
+        return _getFrameAtTimestamp(_getTime());
+    }
+
+    function _getFrameAtTimestamp(uint256 timestamp) internal view returns (ConsensusFrame memory) {
+        FrameConfig memory config = _frameConfig;
+
+        uint256 frameStartEpoch = _computeFrameStartEpoch(timestamp, config);
+        uint256 frameStartSlot = _computeStartSlotAtEpoch(frameStartEpoch);
+        uint256 nextFrameStartSlot = frameStartSlot + config.epochsPerFrame * SLOTS_PER_EPOCH;
+
+        return ConsensusFrame({
+            refSlot: uint64(frameStartSlot - 1),
+            reportProcessingDeadlineSlot: uint64(nextFrameStartSlot - 1)
+        });
+    }
+
+    function _computeFrameStartEpoch(uint256 timestamp, FrameConfig memory config)
+        internal view returns (uint256)
+    {
+        uint256 epochsSinceInitial = _computeEpochAtTimestamp(timestamp) - config.initialEpoch;
+        uint256 frameIndex = epochsSinceInitial / config.epochsPerFrame;
+        return config.initialEpoch + frameIndex * config.epochsPerFrame;
+    }
+
+    function _computeTimestampAtSlot(uint256 slot) internal view returns (uint256) {
+        // See: github.com/ethereum/consensus-specs/blob/dev/specs/bellatrix/beacon-chain.md#compute_timestamp_at_slot
+        return GENESIS_TIME + slot * SECONDS_PER_SLOT;
+    }
+
+    function _computeSlotAtTimestamp(uint256 timestamp) internal view returns (uint256) {
+        return (timestamp - GENESIS_TIME) / SECONDS_PER_SLOT;
+    }
+
+    function _computeEpochAtSlot(uint256 slot) internal view returns (uint256) {
+        // See: github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#compute_epoch_at_slot
+        return slot / SLOTS_PER_EPOCH;
+    }
+
+    function _computeEpochAtTimestamp(uint256 timestamp) internal view returns (uint256) {
+        return _computeEpochAtSlot(_computeSlotAtTimestamp(timestamp));
+    }
+
+    function _computeStartSlotAtEpoch(uint256 epoch) internal view returns (uint256) {
+        // See: github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#compute_start_slot_at_epoch
+        return epoch * SLOTS_PER_EPOCH;
+    }
+
+    function _getTime() internal virtual view returns (uint256) {
+        return block.timestamp; // solhint-disable-line not-rely-on-time
+    }
+
+    ///
+    /// Implementation: members
+    ///
+
+    function _isMember(address addr) internal view returns (bool) {
+        return _memberIndices1b[addr] != 0;
+    }
+
+    function _getMemberIndex(address addr) internal view returns (uint256) {
+        uint256 index1b = _memberIndices1b[addr];
+        if (index1b == 0) {
+            revert NonMember();
+        }
+        unchecked {
+            return uint256(index1b - 1);
+        }
+    }
+
+    function _addMember(address addr, uint256 quorum) internal {
+        if (_isMember(addr)) revert DuplicateMember();
+        if (addr == address(0)) revert AddressCannotBeZero();
+
+        _members.push(MemberState(addr, 0, 0));
+
+        uint256 newTotalMembers = _members.length;
+        _memberIndices1b[addr] = newTotalMembers;
+
+        emit MemberAdded(addr, newTotalMembers, quorum);
+
+        _setQuorumAndCheckConsensus(quorum, newTotalMembers);
+    }
+
+    function _removeMember(address addr, uint256 quorum) internal {
+        uint256 index = _getMemberIndex(addr);
+        uint256 newTotalMembers = _members.length - 1;
+
+        assert(index <= newTotalMembers);
+        MemberState memory member = _members[index];
+
+        if (index != newTotalMembers) {
+            MemberState memory copyFrom = _members[newTotalMembers];
+            _members[index] = copyFrom;
+            _memberIndices1b[copyFrom.addr] = index + 1;
+        }
+
+        _members.pop();
+        _memberIndices1b[addr] = 0;
+
+        emit MemberRemoved(addr, newTotalMembers, quorum);
+
+        ConsensusFrame memory frame = _getCurrentFrame();
+
+        if (member.lastReportRefSlot == frame.refSlot &&
+            _getLastProcessingRefSlot() < frame.refSlot
+        ) {
+            // member reported for the current ref. slot and the consensus report
+            // is not processing yet => need to cancel the member's report
+            --_reportVariants[member.lastReportVariantIndex].support;
+        }
+
+        _setQuorumAndCheckConsensus(quorum, newTotalMembers);
+    }
+
+    ///
+    /// Implementation: consensus
+    ///
+
+    function _submitReport(uint256 slot, bytes32 report, uint256 consensusVersion) internal {
         if (slot > type(uint64).max) revert NumericOverflow();
 
         uint256 memberIndex = _getMemberIndex(_msgSender());
@@ -525,21 +617,6 @@ contract HashConsensus is AccessControlEnumerable {
         }
     }
 
-    function getQuorum() external view returns (uint256) {
-        return _quorum;
-    }
-
-    function setQuorum(uint256 quorum) external {
-        // access control is performed inside the next call
-        _setQuorumAndCheckConsensus(quorum, _members.length);
-    }
-
-    /// @notice Disables the oracle by setting the quorum to an unreachable value.
-    function disableConsensus() external {
-        // access control is performed inside the next call
-        _setQuorumAndCheckConsensus(UNREACHABLE_QUORUM, _members.length);
-    }
-
     function _setQuorumAndCheckConsensus(uint256 quorum, uint256 totalMembers) internal {
         if (quorum <= totalMembers / 2) {
             revert QuorumTooSmall(totalMembers / 2 + 1, quorum);
@@ -612,12 +689,10 @@ contract HashConsensus is AccessControlEnumerable {
     }
 
     ///
-    /// Processing
+    /// Implementation: report processing
     ///
 
-    function setReportProcessor(address newProcessor)
-        external onlyRole(MANAGE_REPORT_PROCESSOR_ROLE)
-    {
+    function _setReportProcessor(address newProcessor) internal {
         address prevProcessor = _reportProcessor;
         if (newProcessor == address(0)) revert AddressCannotBeZero();
         if (newProcessor == prevProcessor) revert NewProcessorCannotBeTheSame();
@@ -655,36 +730,5 @@ contract HashConsensus is AccessControlEnumerable {
     function _getConsensusVersion() internal view returns (uint256) {
         address processor = _reportProcessor;
         return processor == address(0) ? 0 : IReportAsyncProcessor(processor).getConsensusVersion();
-    }
-
-    ///
-    /// Utils
-    ///
-
-    function _computeTimestampAtSlot(uint256 slot) internal view returns (uint256) {
-        // See: github.com/ethereum/consensus-specs/blob/dev/specs/bellatrix/beacon-chain.md#compute_timestamp_at_slot
-        return GENESIS_TIME + slot * SECONDS_PER_SLOT;
-    }
-
-    function _computeSlotAtTimestamp(uint256 timestamp) internal view returns (uint256) {
-        return (timestamp - GENESIS_TIME) / SECONDS_PER_SLOT;
-    }
-
-    function _computeEpochAtSlot(uint256 slot) internal view returns (uint256) {
-        // See: github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#compute_epoch_at_slot
-        return slot / SLOTS_PER_EPOCH;
-    }
-
-    function _computeEpochAtTimestamp(uint256 timestamp) internal view returns (uint256) {
-        return _computeEpochAtSlot(_computeSlotAtTimestamp(timestamp));
-    }
-
-    function _computeStartSlotAtEpoch(uint256 epoch) internal view returns (uint256) {
-        // See: github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#compute_start_slot_at_epoch
-        return epoch * SLOTS_PER_EPOCH;
-    }
-
-    function _getTime() internal virtual view returns (uint256) {
-        return block.timestamp; // solhint-disable-line not-rely-on-time
     }
 }
