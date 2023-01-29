@@ -75,7 +75,7 @@ abstract contract WithdrawalQueueBase {
     mapping(uint256 => Discount) internal discountHistory;
 
     /// @notice size of discount history
-    uint256 internal lastDiscountIndex = 0;
+    uint256 public lastDiscountIndex = 0;
 
     /// @notice amount of ETH on this contract balance that is locked for withdrawal and waiting for claim
     uint128 public lockedEtherAmount = 0;
@@ -84,7 +84,8 @@ abstract contract WithdrawalQueueBase {
     mapping(address => uint256[]) internal requestsByRecipient;
 
     constructor() {
-        // setting dummy zero structs in discountHistory and queue beginning to avoid a lot of if-branches in the code
+        // setting dummy zero structs in discountHistory and queue beginning 
+        // to avoid uint underflows and related if-branches
         queue[lastRequestId] = WithdrawalRequest(0, 0, payable(0), _toUint64(block.number), true);
         discountHistory[lastDiscountIndex] = Discount(lastRequestId, NO_DISCOUNT);
     }
