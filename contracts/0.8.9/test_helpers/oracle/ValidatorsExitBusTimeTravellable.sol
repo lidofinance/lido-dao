@@ -4,7 +4,7 @@ pragma solidity 0.8.9;
 
 
 import { UnstructuredStorage } from "../../lib/UnstructuredStorage.sol";
-import { AccountingOracle } from "../../oracle/AccountingOracle.sol";
+import { ValidatorsExitBusOracle } from "../../oracle/ValidatorsExitBusOracle.sol";
 
 
 interface ITimeProvider {
@@ -12,10 +12,10 @@ interface ITimeProvider {
 }
 
 
-contract AccountingOracleTimeTravellable is AccountingOracle, ITimeProvider {
+contract ValidatorsExitBusTimeTravellable is ValidatorsExitBusOracle, ITimeProvider {
     using UnstructuredStorage for bytes32;
 
-    constructor(address lido, uint256 secondsPerSlot) AccountingOracle(lido, secondsPerSlot) {
+    constructor(uint256 secondsPerSlot) ValidatorsExitBusOracle(secondsPerSlot) {
         // allow usage without a proxy for tests
         CONTRACT_VERSION_POSITION.setStorageUint256(0);
     }

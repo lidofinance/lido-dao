@@ -6,7 +6,7 @@ const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 
 const {
   SLOTS_PER_EPOCH, SECONDS_PER_SLOT, GENESIS_TIME, SECONDS_PER_EPOCH,
-  EPOCHS_PER_FRAME, SECONDS_PER_FRAME,
+  EPOCHS_PER_FRAME, SLOTS_PER_FRAME, SECONDS_PER_FRAME,
   computeSlotAt, computeEpochAt, computeEpochFirstSlotAt,
   computeEpochFirstSlot, computeTimestampAtSlot, computeTimestampAtEpoch,
   ZERO_HASH, HASH_1, HASH_2, HASH_3, HASH_4, HASH_5, CONSENSUS_VERSION,
@@ -83,6 +83,11 @@ function calcExtraDataHash(extraDataItems) {
 
 
 module.exports = {
+  SLOTS_PER_EPOCH, SECONDS_PER_SLOT, GENESIS_TIME, SECONDS_PER_EPOCH,
+  EPOCHS_PER_FRAME, SLOTS_PER_FRAME, SECONDS_PER_FRAME,
+  computeSlotAt, computeEpochAt, computeEpochFirstSlotAt,
+  computeEpochFirstSlot, computeTimestampAtSlot, computeTimestampAtEpoch,
+  ZERO_HASH, CONSENSUS_VERSION,
   V1_ORACLE_LAST_REPORT_SLOT,
   MAX_EXITED_VALS_PER_HOUR, MAX_EXITED_VALS_PER_DAY, MAX_EXTRA_DATA_LIST_LEN,
   EXTRA_DATA_FORMAT_LIST, EXTRA_DATA_TYPE_STUCK_VALIDATORS, EXTRA_DATA_TYPE_EXITED_VALIDATORS,
@@ -95,7 +100,7 @@ async function deployAccountingOracle(admin, { dataSubmitter = null } = {}) {
   const mockStakingRouter = await MockStakingRouter.new({from: admin})
   const mockLido = await MockLido.new(mockStakingRouter.address, {from: admin})
   const oracle = await AccountingOracle.new(mockLido.address, SECONDS_PER_SLOT, {from: admin})
-  const {consensus} = await deployHashConsensus(admin, {reportProcessor: oracle}, {from: admin})
+  const {consensus} = await deployHashConsensus(admin, {reportProcessor: oracle})
 
   await consensus.setTime(GENESIS_TIME + 2 * SECONDS_PER_FRAME + SECONDS_PER_EPOCH + SECONDS_PER_SLOT)
   assert.isBelow(V1_ORACLE_LAST_REPORT_SLOT, +(await consensus.getCurrentFrame()).refSlot)
@@ -144,9 +149,14 @@ contract('AccountingOracle', ([admin, member1]) => {
 
     it('mock setup is correct', async () => {
       // check the mock time-travellable setup
-      assert.equal(+await oracle.getTime(), +await consensus.getTime())
+      const time1 = +await consensus.getTime()
+      assert.equal(+await oracle.getTime(), time1)
+
       await consensus.advanceTimeBy(SECONDS_PER_SLOT)
-      assert.equal(+await oracle.getTime(), +await consensus.getTime())
+
+      const time2 = +await consensus.getTime()
+      assert.equal(time2, time1 + SECONDS_PER_SLOT)
+      assert.equal(+await oracle.getTime(), time2)
 
       const handleOracleReportCallData = await mockLido.getLastCall_handleOracleReport()
       assert.equal(+handleOracleReportCallData.callCount, 0)

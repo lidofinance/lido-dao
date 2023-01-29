@@ -7,13 +7,10 @@ const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 
 const {
   SLOTS_PER_EPOCH, SECONDS_PER_SLOT, GENESIS_TIME, SECONDS_PER_EPOCH,
-  SLOTS_PER_FRAME, SECONDS_PER_FRAME,
+  EPOCHS_PER_FRAME, SLOTS_PER_FRAME, SECONDS_PER_FRAME,
   computeSlotAt, computeEpochAt, computeEpochFirstSlotAt,
   computeEpochFirstSlot, computeTimestampAtSlot, computeTimestampAtEpoch,
-  ZERO_HASH, HASH_1, HASH_2, HASH_3, HASH_4, HASH_5,
-  CONSENSUS_VERSION} = require('./hash-consensus-deploy.test')
-
-const {
+  ZERO_HASH, CONSENSUS_VERSION,
   V1_ORACLE_LAST_REPORT_SLOT,
   MAX_EXITED_VALS_PER_HOUR, MAX_EXITED_VALS_PER_DAY, MAX_EXTRA_DATA_LIST_LEN,
   EXTRA_DATA_FORMAT_LIST, EXTRA_DATA_TYPE_STUCK_VALIDATORS, EXTRA_DATA_TYPE_EXITED_VALIDATORS,
@@ -144,7 +141,7 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
     it('the data cannot be submitted passing a different contract version', async () => {
       await assertRevert(
         oracle.submitReportData(reportItems, oracleVersion - 1, {from: member1}),
-        'UnexpectedContractVersion(1, 0)'
+        `UnexpectedContractVersion(${oracleVersion}, ${oracleVersion - 1})`
       )
     })
 
@@ -206,7 +203,7 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       await consensus.setTime(deadline)
     })
 
-    it('a non-member cannot submits extra data', async () => {
+    it('a non-member cannot submit extra data', async () => {
       await assertRevert(
         oracle.submitReportExtraDataList(extraDataItems, {from: stranger}),
         'SenderNotAllowed()'
