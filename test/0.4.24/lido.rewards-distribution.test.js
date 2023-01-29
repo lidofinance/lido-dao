@@ -40,7 +40,7 @@ contract('Lido', ([appManager, voting, treasury, depositor, user2]) => {
   })
 
   beforeEach('deploy dao and app', async () => {
-    ;({ dao, acl } = await newDao(appManager))
+    ; ({ dao, acl } = await newDao(appManager))
 
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
     let proxyAddress = await newApp(dao, 'lido', appBase.address, appManager)
@@ -56,7 +56,6 @@ contract('Lido', ([appManager, voting, treasury, depositor, user2]) => {
     await acl.createPermission(voting, app.address, await app.RESUME_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.BURN_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.MANAGE_PROTOCOL_CONTRACTS_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.SET_EL_REWARDS_VAULT_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE(), appManager, {
       from: appManager
     })
