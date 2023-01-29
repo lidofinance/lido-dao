@@ -42,10 +42,24 @@ const getNetConfig = (networkName, ethAccountName) => {
     ...base,
     url: 'http://localhost:8545',
     chainId: 31337,
-    gas: 8000000 // the same as in Görli
+    gas: 80000000 // the same as in Görli
+  }
+  const mainnetfork = {
+    ...base,
+    url: 'http://localhost:8545',
+    chainId: 1337,
+    gas: 80000000 // the same as in Görli
+  }
+  const devnet3 = {
+    ...base,
+    url: 'http://35.228.211.212:8545',
+    chainId: 1337807,
+    gas: 9194304
   }
   const byNetName = {
     localhost,
+    mainnetfork,
+    devnet3,
     // local
     local: {
       ...base,

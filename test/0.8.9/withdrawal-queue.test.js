@@ -12,7 +12,7 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
   let withdrawalQueue, steth, wsteth
 
   beforeEach('Deploy', async () => {
-    steth = await StETHMock.new({ value: ETH(600) })
+    steth = await StETHMock.new({ value: ETH(601) })
     wsteth = await WstETH.new(steth.address)
 
     withdrawalQueue = (await withdrawals.deploy(daoAgent, wsteth.address)).queue

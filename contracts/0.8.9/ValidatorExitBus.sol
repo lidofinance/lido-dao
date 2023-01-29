@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2022 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.9;
 
@@ -140,6 +140,8 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable, ReportEpo
         _handleMemberReport(msg.sender, _epochId, _reportHash);
     }
 
+    // TODO: what id it should be? NodeOperator registry Id or beacon chain id? validatorIndex
+    // offchain guarantee that don't ask the same validator
     function handleReportData(
         uint256 _epochId,
         address[] calldata _stakingModules,

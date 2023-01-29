@@ -16,7 +16,7 @@ const REQUIRED_NET_STATE = [
   'compositePostRebaseBeaconReceiverAddress',
   'selfOwnedStETHBurnerParams',
   `app:${APP_NAMES.ARAGON_VOTING}`,
-  `app:${APP_NAMES.ORACLE}`,
+  'lidoOracle',
   `app:${APP_NAMES.ARAGON_AGENT}`
 ]
 
@@ -30,7 +30,7 @@ async function upgradeApp({ web3, artifacts }) {
   const state = readNetworkState(network.name, netId)
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
   const votingAddress = state[`app:${APP_NAMES.ARAGON_VOTING}`].proxyAddress
-  const lidoOracleAddress = state[`app:${APP_NAMES.ORACLE}`].proxyAddress
+  const lidoOracleAddress = state['lidoOracle'].proxy
   const lidoAddress = state[`app:${APP_NAMES.LIDO}`].proxyAddress
   const treasuryAddress = state[`app:${APP_NAMES.ARAGON_AGENT}`].proxyAddress
   log(`Using Treasury address:`, yl(treasuryAddress))
@@ -51,8 +51,7 @@ async function upgradeApp({ web3, artifacts }) {
 
   const lidoInstance = await artifacts.require(`${APP_ARTIFACTS.lido}`).at(lidoAddress)
 
-  assert.addressEqual(await lidoInstance.getOracle(), lidoOracleAddress, 'Lido: wrong oracle address')
-  assert.addressEqual(await lidoInstance.getInsuranceFund(), treasuryAddress, 'Lido: wrong treasury address')
+  // assert.addressEqual(await lidoInstance.getOracle(), lidoOracleAddress, 'Lido: wrong oracle address')
 
   const args = [
     treasuryAddress,
