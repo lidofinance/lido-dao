@@ -24,7 +24,7 @@ const PUBKEYS = [
   '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
 ]
 
-contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
+contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger]) => {
 
   context('Happy path', () => {
     let consensus
