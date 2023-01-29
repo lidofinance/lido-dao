@@ -5,8 +5,6 @@ pragma solidity 0.8.9;
 
 import { SafeCast } from "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
 
-import { IOracleReportReceiver, IStakingRouterProvider } from "../interfaces/ILido.sol";
-import { IStakingRouterExitedKeys } from "../interfaces/IStakingRouter.sol";
 import { MemUtils } from "../../common/lib/MemUtils.sol";
 import { ResizableArray } from "../lib/ResizableArray.sol";
 import { UnstructuredStorage } from "../lib/UnstructuredStorage.sol";
@@ -14,8 +12,46 @@ import { UnstructuredStorage } from "../lib/UnstructuredStorage.sol";
 import { BaseOracle } from "./BaseOracle.sol";
 
 
-interface ILido is IOracleReportReceiver, IStakingRouterProvider {}
-interface IStakingRouter is IStakingRouterExitedKeys {}
+interface ILido {
+    function handleOracleReport(
+        uint256 secondsElapsedSinceLastReport,
+        // CL values
+        uint256 beaconValidators,
+        uint256 beaconBalance,
+        // EL values
+        uint256 withdrawalVaultBalance,
+        uint256 elRewardsVaultBalance,
+        // decision
+        uint256 requestIdToFinalizeUpTo,
+        uint256 finalizationShareRate,
+        bool isBunkerMode
+    ) external;
+
+    function getStakingRouter() external view returns (address);
+}
+
+
+interface IStakingRouter {
+    function getExitedKeysCountAcrossAllModules() external view returns (uint256);
+
+    function updateExitedKeysCountByStakingModule(
+        uint256[] calldata _moduleIds,
+        uint256[] calldata _exitedKeysCounts
+    ) external;
+
+    function reportStakingModuleExitedKeysCountByNodeOperator(
+        uint256 _stakingModuleId,
+        uint256[] calldata _nodeOperatorIds,
+        uint256[] calldata _exitedKeysCounts
+    ) external;
+
+    // TODO:
+    // function reportStakingModuleStuckKeysCountByNodeOperator(
+    //     uint256 _stakingModuleId,
+    //     uint256[] calldata _nodeOperatorIds,
+    //     uint256[] calldata _stuckKeysCounts
+    // ) external;
+}
 
 
 contract AccountingOracle is BaseOracle {

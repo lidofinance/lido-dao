@@ -5,31 +5,7 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
-
-interface IStakingRouterExitedKeys {
-    function getExitedKeysCountAcrossAllModules() external view returns (uint256);
-
-    function updateExitedKeysCountByStakingModule(
-        uint256[] calldata _moduleIds,
-        uint256[] calldata _exitedKeysCounts
-    ) external;
-
-    function reportStakingModuleExitedKeysCountByNodeOperator(
-        uint256 _stakingModuleId,
-        uint256[] calldata _nodeOperatorIds,
-        uint256[] calldata _exitedKeysCounts
-    ) external;
-
-    // TODO:
-    // function reportStakingModuleStuckKeysCountByNodeOperator(
-    //     uint256 _stakingModuleId,
-    //     uint256[] calldata _nodeOperatorIds,
-    //     uint256[] calldata _exitedKeysCounts
-    // ) external;
-}
-
-
-interface IStakingRouter is IStakingRouterExitedKeys {
+interface IStakingRouter {
     function getStakingRewardsDistribution()
         external
         view
