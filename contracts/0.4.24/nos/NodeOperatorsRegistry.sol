@@ -44,6 +44,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
     bytes32 public constant DEACTIVATE_NODE_OPERATOR_ROLE = keccak256("DEACTIVATE_NODE_OPERATOR_ROLE");
     bytes32 public constant UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE = keccak256("UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE");
     bytes32 public constant UNSAFE_UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE = keccak256("UNSAFE_UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE");
+    bytes32 public constant UPDATE_TARGET_VALIDATORS_KEYS_COUNT_ROLE = keccak256("UPDATE_TARGET_VALIDATORS_KEYS_COUNT_ROLE");
 
     //
     // CONSTANTS
@@ -83,7 +84,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
     ///      0 - all deposited keys 
     ///      N < deposited keys -
     ///      deposited < N < vetted - use (N-deposited) as available
-    bytes32 internal constant TOTAL_TARGET_KEYS_COUNT = keccak256("lido.NodeOperatorsRegistry.totalTargetKeysCount");
+    bytes32 internal constant TOTAL_UNAVAILABLE_VALIDATORS_KEYS_COUNT = keccak256("lido.NodeOperatorsRegistry.totalUnavailableKeysCount");
 
     bytes32 internal constant TOTAL_STUCK_KEYS_COUNT = keccak256("lido.NodeOperatorsRegistry.totalStuckKeysCount");
 
@@ -123,27 +124,20 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         uint64 totalSigningKeysCount;
         /// @dev Number of keys of this operator which were in DEPOSITED state for all time
         uint64 depositedSigningKeysCount;
-
-        uint64 targetSigningKeysCount;
     }
 
-
-
-    /**
-      * @notice Set the target number of validators
-      */
-    function setNodeOperatorTargetLimit(uint256 _nodeOperatorId, uint64 _targetLimit) external {
-        _onlyExistedNodeOperator(_nodeOperatorId);
-        _authP(SET_NODE_OPERATOR_LIMIT_ROLE, arr(uint256(_nodeOperatorId), uint256(_targetLimit)));
-
-        NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
-        require(nodeOperator.active, "NODE_OPERATOR_DEACTIVATED");
-
-        require(nodeOperator.targetSigningKeysCount != _targetLimit, "NODE_OPERATOR_TARGET_LIMIT_IS_THE_SAME");
-        nodeOperator.targetSigningKeysCount = _targetLimit;
-
-        // emit NodeOperatorTargetLimitSet(_nodeOperatorId, _targetLimit);
-        _increaseValidatorsKeysNonce();
+    /// @dev Node Operator parameters and internal state
+    struct NodeOperatorLimit {
+         /// @dev Flag indicating if the operator has dao limits
+        bool targetValidatorsLimitActive;
+        /// @dev DAO target limit for operator
+        uint64 targetValidatorsKeysCount;
+        /// @dev unavaliable keys count
+        uint64 unavaliableKeysCount;
+        /// @dev stuck keys count from oracle report
+        uint64 stuckSigningKeysCount;
+        /// @dev forgiven keys count from dao
+        uint64 forgivenSigningKeysCount;
     }
 
     //
@@ -152,6 +146,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
 
     /// @dev Mapping of all node operators. Mapping is used to be able to extend the struct.
     mapping(uint256 => NodeOperator) internal _nodeOperators;
+
+    mapping(uint256 => NodeOperatorLimit) internal _nodeOperatorsLimits;
 
     //
     // METHODS
@@ -358,6 +354,29 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
 
         emit VettedSigningKeysCountChanged(_nodeOperatorId, vettedSigningKeysCountAfter);
         _increaseValidatorsKeysNonce();
+
+
+        // update unavailable keys
+        uint256 totalUnavailableKeysCount = getTotalUnavailableKeysCount();
+        NodeOperatorLimit storage nodeOperatorLimit = _nodeOperatorsLimits[_nodeOperatorId];
+        if (nodeOperatorLimit.targetValidatorsLimitActive) {
+            uint64 unavaliableKeysCountBefore = _nodeOperatorsLimits[_nodeOperatorId].unavaliableKeysCount;
+            uint64 unavaliableKeysCountAfter = 0;
+            if (_nodeOperatorsLimits[_nodeOperatorId].targetValidatorsKeysCount < nodeOperator.vettedSigningKeysCount) {
+                unavaliableKeysCountAfter = nodeOperator.vettedSigningKeysCount.sub(
+                    Math64.max(uint64(_nodeOperatorsLimits[_nodeOperatorId].targetValidatorsKeysCount), nodeOperator.depositedSigningKeysCount)
+                );
+            }
+
+            _nodeOperatorsLimits[_nodeOperatorId].unavaliableKeysCount = unavaliableKeysCountAfter;
+            if (unavaliableKeysCountAfter > unavaliableKeysCountBefore) {
+                _setTotalUnavailableKeysCount(totalUnavailableKeysCount.add(unavaliableKeysCountAfter - unavaliableKeysCountBefore));
+            } else {
+                _setTotalUnavailableKeysCount(totalUnavailableKeysCount.sub(unavaliableKeysCountBefore - unavaliableKeysCountAfter));
+            }
+        } else {
+            _setTotalUnavailableKeysCount(totalUnavailableKeysCount.sub(_nodeOperatorsLimits[_nodeOperatorId].unavaliableKeysCount));
+        }
     }
 
     /// @notice Updates the number of the validators in the EXITED state for node operator with given id
@@ -404,6 +423,84 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
 
         emit ExitedSigningKeysCountChanged(_nodeOperatorId, _exitedValidatorsKeysCount);
     }
+
+    /// @notice Updates the limit of the validators that can be used for deposit by DAO
+    /// @param _nodeOperatorId Id of the node operator
+    /// @param _targetValidatorsKeysCount New number of EXITED validators of the node operator
+    function updateTargetValidatorsLimits(uint256 _nodeOperatorId, uint256 _targetValidatorsKeysCount, bool _active)
+        external
+        returns (uint256)
+    {
+        _onlyExistedNodeOperator(_nodeOperatorId);
+        _auth(UPDATE_TARGET_VALIDATORS_KEYS_COUNT_ROLE);
+
+        require(_targetValidatorsKeysCount <= UINT64_MAX, "KEYS_COUNT_TOO_LARGE");
+
+        NodeOperator memory nodeOperator = _nodeOperators[_nodeOperatorId];
+
+        bool targetValidatorsLimitActiveBefore = _nodeOperatorsLimits[_nodeOperatorId].targetValidatorsLimitActive;
+        if (targetValidatorsLimitActiveBefore == _active) {
+            return;
+        }
+
+        _nodeOperatorsLimits[_nodeOperatorId].targetValidatorsKeysCount = uint64(_targetValidatorsKeysCount);
+        _nodeOperatorsLimits[_nodeOperatorId].targetValidatorsLimitActive = _active;
+
+        uint256 totalUnavailableKeysCount = getTotalUnavailableKeysCount();
+
+        //increase total unavalable keys count for node operator and module
+        if (_active) {
+            if (_targetValidatorsKeysCount >= nodeOperator.vettedSigningKeysCount) {
+                _nodeOperatorsLimits[_nodeOperatorId].unavaliableKeysCount = 0;
+            } else {
+                _nodeOperatorsLimits[_nodeOperatorId].unavaliableKeysCount = nodeOperator.vettedSigningKeysCount.sub(
+                    Math64.max(uint64(_targetValidatorsKeysCount), nodeOperator.depositedSigningKeysCount)
+                );
+                totalUnavailableKeysCount = totalUnavailableKeysCount.add(
+                    _nodeOperatorsLimits[_nodeOperatorId].unavaliableKeysCount
+                );
+            }
+        } else {
+           totalUnavailableKeysCount = totalUnavailableKeysCount.sub(_nodeOperatorsLimits[_nodeOperatorId].unavaliableKeysCount);
+        }
+
+        _setTotalUnavailableKeysCount(totalUnavailableKeysCount);
+
+        emit TargetValidatorsLimitChanged(
+            _nodeOperatorId, 
+            _targetValidatorsKeysCount, 
+            _active, 
+            _nodeOperatorsLimits[_nodeOperatorId].unavaliableKeysCount
+        );
+        // emit TotalUnavaliableKeysCountChanged(totalUnavailableKeysCount);
+
+        return totalUnavailableKeysCount;
+    }
+
+    function _setTotalUnavailableKeysCount(uint256 _keysCount) internal {
+        TOTAL_UNAVAILABLE_VALIDATORS_KEYS_COUNT.setStorageUint256(_keysCount);
+    }
+
+    function getTotalUnavailableKeysCount() public view returns(uint256) {
+        return TOTAL_UNAVAILABLE_VALIDATORS_KEYS_COUNT.getStorageUint256();
+    }
+
+    /**
+      * @notice Set the target number of validators
+    //   */
+    // function updateStuckSigningKeysCount(uint256 _nodeOperatorId, uint64 _targetLimit) external {
+    //     _onlyExistedNodeOperator(_nodeOperatorId);
+    //     _authP(SET_NODE_OPERATOR_LIMIT_ROLE, arr(uint256(_nodeOperatorId), uint256(_targetLimit)));
+
+    //     NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
+    //     require(nodeOperator.active, "NODE_OPERATOR_DEACTIVATED");
+
+    //     require(nodeOperator.targetSigningKeysCount != _targetLimit, "NODE_OPERATOR_TARGET_LIMIT_IS_THE_SAME");
+    //     nodeOperator.targetSigningKeysCount = _targetLimit;
+
+    //     // emit NodeOperatorTargetLimitSet(_nodeOperatorId, _targetLimit);
+    //     // _increaseValidatorsKeysNonce();
+    // }
 
     /// @notice Invalidates all unused validators keys for all node operators
     function invalidateReadyToDepositKeys() external {
@@ -586,8 +683,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
             uint64 stakingLimit,
             uint64 stoppedValidators,
             uint64 totalSigningKeys,
-            uint64 usedSigningKeys,
-            uint64 targetLimit
+            uint64 usedSigningKeys
         )
     {
         _onlyExistedNodeOperator(_nodeOperatorId);
@@ -602,7 +698,29 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         stoppedValidators = nodeOperator.exitedSigningKeysCount;
         totalSigningKeys = nodeOperator.totalSigningKeysCount;
         usedSigningKeys = nodeOperator.depositedSigningKeysCount;
-        targetLimit = nodeOperator.targetSigningKeysCount;
+    }
+
+    function getNodeOperatorLimits(uint256 _nodeOperatorId)
+        external
+        view
+        returns (
+            bool targetValidatorsLimitActive,
+            uint64 targetValidatorsKeysCount,
+            uint64 unavaliableKeysCount,
+            uint64 stuckSigningKeysCount,
+            uint64 forgivenSigningKeysCount
+        )
+    {
+        _onlyExistedNodeOperator(_nodeOperatorId);
+
+        NodeOperatorLimit storage nodeOperatorLimit = _nodeOperatorsLimits[_nodeOperatorId];
+    
+        targetValidatorsLimitActive = nodeOperatorLimit.targetValidatorsLimitActive;
+    
+        targetValidatorsKeysCount = nodeOperatorLimit.targetValidatorsKeysCount;
+        unavaliableKeysCount = nodeOperatorLimit.unavaliableKeysCount;
+        stuckSigningKeysCount = nodeOperatorLimit.stuckSigningKeysCount;
+        forgivenSigningKeysCount = nodeOperatorLimit.forgivenSigningKeysCount;
     }
 
     /// @notice Returns the rewards distribution proportional to the effective stake for each node operator.
@@ -923,19 +1041,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
 
         uint256 vettedSigningKeysCount = totalSigningKeysStats.vettedSigningKeysCount;
         uint256 depositedSigningKeysCount = totalSigningKeysStats.depositedSigningKeysCount;
-        // uint256 targetSigningKeysCount = totalSigningKeysStats.targetSigningKeysCount;
+        uint256 unavailableKeysCount = getTotalUnavailableKeysCount();
 
         exitedValidatorsCount = totalSigningKeysStats.exitedSigningKeysCount;
         activeValidatorsKeysCount = depositedSigningKeysCount.sub(exitedValidatorsCount);
-        readyToDepositValidatorsKeysCount = vettedSigningKeysCount.sub(depositedSigningKeysCount);
-
-        // readyToDepositValidatorsKeysCount = 0;
-        // if (targetSigningKeysCount >= vettedSigningKeysCount ) {
-        //     readyToDepositValidatorsKeysCount = vettedSigningKeysCount.sub(depositedSigningKeysCount);
-        // } else if (readyToDepositValidatorsKeysCount > depositedSigningKeysCount && readyToDepositValidatorsKeysCount < vettedSigningKeysCount) {
-        //     readyToDepositValidatorsKeysCount = readyToDepositValidatorsKeysCount.sub(depositedSigningKeysCount);
-        // }
-        
+        readyToDepositValidatorsKeysCount = vettedSigningKeysCount.sub(depositedSigningKeysCount).sub(unavailableKeysCount);
     }
 
     /// @notice Returns the validators stats of given node operator
@@ -953,13 +1063,15 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         )
     {
         NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
+        NodeOperatorLimit memory nodeOperatorLimit = _nodeOperatorsLimits[_nodeOperatorId];
 
         uint256 vettedSigningKeysCount = nodeOperator.vettedSigningKeysCount;
         uint256 depositedSigningKeysCount = nodeOperator.depositedSigningKeysCount;
+        uint256 unavailableKeysCount = nodeOperatorLimit.unavaliableKeysCount;
 
         exitedValidatorsCount = nodeOperator.exitedSigningKeysCount;
         activeValidatorsKeysCount = depositedSigningKeysCount - exitedValidatorsCount;
-        readyToDepositValidatorsKeysCount = vettedSigningKeysCount - depositedSigningKeysCount;
+        readyToDepositValidatorsKeysCount = vettedSigningKeysCount.sub(depositedSigningKeysCount).sub(unavailableKeysCount);
     }
 
     /// @notice Returns total number of node operators

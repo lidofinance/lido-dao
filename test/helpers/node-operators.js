@@ -26,6 +26,8 @@ async function addNodeOperator(registry, config, txOptions) {
   const exitedSigningKeysCount = config.exitedSigningKeysCount || 0
   const depositedSigningKeysCount = config.depositedSigningKeysCount || 0
   const vettedSigningKeysCount = config.vettedSigningKeysCount || 0
+  const targetValidatorsKeysCount = config.targetValidatorsKeysCount || 0
+  const stuckKeysCount = config.stuckKeysCount || 0
   const isActive = config.isActive === undefined ? true : config.isActive
 
   if (vettedSigningKeysCount < depositedSigningKeysCount) {

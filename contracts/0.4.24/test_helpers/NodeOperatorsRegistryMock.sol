@@ -107,6 +107,24 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         emit NodeOperatorAdded(id, _name, _rewardAddress, 0);
     }
 
+    function testing_setNodeOperatorLimits(
+        uint256 _nodeOperatorId, 
+        bool targetValidatorsLimitActive,
+        uint64 targetValidatorsKeysCount,
+        uint64 unavaliableKeysCount,
+        uint64 stuckSigningKeysCount,
+        uint64 forgivenSigningKeysCount 
+    ) external {
+
+        NodeOperatorLimit storage operatorLimit = _nodeOperatorsLimits[_nodeOperatorId];
+
+        operatorLimit.targetValidatorsLimitActive = targetValidatorsLimitActive;
+        operatorLimit.targetValidatorsKeysCount = targetValidatorsKeysCount;
+        operatorLimit.unavaliableKeysCount = unavaliableKeysCount;
+        operatorLimit.stuckSigningKeysCount = stuckSigningKeysCount;
+        operatorLimit.forgivenSigningKeysCount = forgivenSigningKeysCount;
+    }
+
     function testing_getTotalSigningKeysStats()
         external
         view
@@ -135,7 +153,7 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         KEYS_OP_INDEX_POSITION.setStorageUint256(0);
 
         for (uint256 i = 0; i < totalOperatorsCount; ++i) {
-            _nodeOperators[i] = NodeOperator(false, address(0), new string(0), 0, 0, 0, 0, uint64(-1));
+            _nodeOperators[i] = NodeOperator(false, address(0), new string(0), 0, 0, 0, 0);
         }
 
         testing_resetTotalSigningKeysStats();

@@ -53,8 +53,18 @@ interface INodeOperatorsRegistry {
             uint64 stakingLimit,
             uint64 stoppedValidators,
             uint64 totalSigningKeys,
-            uint64 usedSigningKeys,
-            uint64 targetLimit
+            uint64 usedSigningKeys
+        );
+
+    function getNodeOperatorLimits(uint256 _nodeOperatorId)
+        external
+        view
+        returns (
+            bool targetValidatorsLimitActive,
+            uint64 targetValidatorsKeysCount,
+            uint64 unavaliableKeysCount,
+            uint64 stuckSigningKeysCount,
+            uint64 forgivenSigningKeysCount
         );
 
     /// @notice Returns the rewards distribution proportional to the effective stake for each node operator.
@@ -199,4 +209,5 @@ interface INodeOperatorsRegistry {
     event DepositedSigningKeysCountChanged(uint256 indexed nodeOperatorId, uint256 depositedValidatorsCount);
     event ExitedSigningKeysCountChanged(uint256 indexed nodeOperatorId, uint256 exitedValidatorsCount);
     event TotalSigningKeysCountChanged(uint256 indexed nodeOperatorId, uint256 totalValidatorsCount);
+    event TargetValidatorsLimitChanged(uint256 indexed nodeOperatorId, uint256 totalTargetValidatorsCount, bool active, uint64 unavaliableKeysCount);
 }

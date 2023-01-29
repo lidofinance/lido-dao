@@ -8,6 +8,7 @@ const { ZERO_ADDRESS, getEventAt } = require('@aragon/contract-helpers-test')
 const nodeOperators = require('../helpers/node-operators')
 const signingKeys = require('../helpers/signing-keys')
 const { web3 } = require('hardhat')
+const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistryMock')
 const INodeOperatorsRegistry = artifacts.require('contracts/0.4.24/interfaces/INodeOperatorsRegistry.sol:INodeOperatorsRegistry')
@@ -24,7 +25,12 @@ const NODE_OPERATORS = [
     totalSigningKeysCount: 10,
     depositedSigningKeysCount: 5,
     exitedSigningKeysCount: 1,
-    vettedSigningKeysCount: 6
+    vettedSigningKeysCount: 6,
+    targetValidatorsLimitActive: false,
+    targetValidatorsKeysCount: 1,
+    unavaliableKeysCount: 2,
+    stuckSigningKeysCount: 3,
+    forgivenSigningKeysCount: 4,
   },
   {
     name: ' bar',
@@ -32,7 +38,12 @@ const NODE_OPERATORS = [
     totalSigningKeysCount: 15,
     depositedSigningKeysCount: 7,
     exitedSigningKeysCount: 0,
-    vettedSigningKeysCount: 10
+    vettedSigningKeysCount: 10,
+    targetValidatorsLimitActive: false,
+    targetValidatorsKeysCount: 1,
+    unavaliableKeysCount: 2,
+    stuckSigningKeysCount: 3,
+    forgivenSigningKeysCount: 4,
   },
   {
     name: 'deactivated',
@@ -41,7 +52,12 @@ const NODE_OPERATORS = [
     totalSigningKeysCount: 10,
     depositedSigningKeysCount: 0,
     exitedSigningKeysCount: 0,
-    vettedSigningKeysCount: 5
+    vettedSigningKeysCount: 5,
+    targetValidatorsLimitActive: false,
+    targetValidatorsKeysCount: 1,
+    unavaliableKeysCount: 2,
+    stuckSigningKeysCount: 3,
+    forgivenSigningKeysCount: 4,
   }
 ]
 
@@ -88,7 +104,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         SET_NODE_OPERATOR_LIMIT_ROLE: voting,
         UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE: voting,
         UNSAFE_UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE: voting,
-        INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE: voting
+        INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE: voting,
+        UPDATE_TARGET_VALIDATORS_KEYS_COUNT_ROLE: voting,
       }
     })
 
@@ -186,6 +203,15 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
           NODE_OPERATORS[i].depositedSigningKeysCount,
           NODE_OPERATORS[i].exitedSigningKeysCount
         )
+        await app.testing_setNodeOperatorLimits(
+          i, 
+          NODE_OPERATORS[i].targetValidatorsLimitActive, 
+          NODE_OPERATORS[i].targetValidatorsKeysCount, 
+          NODE_OPERATORS[i].unavaliableKeysCount,
+          NODE_OPERATORS[i].stuckSigningKeysCount, 
+          NODE_OPERATORS[i].forgivenSigningKeysCount
+        );
+
         if (NODE_OPERATORS[i].isActive === false) {
           await app.testing_unsafeDeactivateNodeOperator(i)
         }
@@ -198,6 +224,13 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         assert.equal(nodeOperator.stakingLimit.toNumber(), NODE_OPERATORS[i].vettedSigningKeysCount)
         assert.equal(nodeOperator.usedSigningKeys.toNumber(), NODE_OPERATORS[i].depositedSigningKeysCount)
         assert.equal(nodeOperator.stoppedValidators.toNumber(), NODE_OPERATORS[i].exitedSigningKeysCount)
+
+        const nodeOperatorLimits = await app.getNodeOperatorLimits(i)
+        assert.equal(nodeOperatorLimits.targetValidatorsLimitActive, NODE_OPERATORS[i].targetValidatorsLimitActive)
+        assert.equal(nodeOperatorLimits.targetValidatorsKeysCount.toNumber(), NODE_OPERATORS[i].targetValidatorsKeysCount)
+        assert.equal(nodeOperatorLimits.unavaliableKeysCount.toNumber(), NODE_OPERATORS[i].unavaliableKeysCount)
+        assert.equal(nodeOperatorLimits.stuckSigningKeysCount.toNumber(), NODE_OPERATORS[i].stuckSigningKeysCount)
+        assert.equal(nodeOperatorLimits.forgivenSigningKeysCount.toNumber(), NODE_OPERATORS[i].forgivenSigningKeysCount)
       }
 
       await app.finalizeUpgrade_v2(steth.address, CURATED_TYPE)
@@ -226,7 +259,12 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         totalSigningKeysCount: 13,
         vettedSigningKeysCount: 17,
         depositedSigningKeysCount: 7,
-        exitedSigningKeysCount: 5
+        exitedSigningKeysCount: 5,
+        targetValidatorsLimitActive: false,
+        targetValidatorsKeysCount: 0,
+        unavaliableKeysCount: 0,
+        stuckSigningKeysCount: 0,
+        forgivenSigningKeysCount: 0
       }
       await app.testing_addNodeOperator(
         config.name,
@@ -234,7 +272,16 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         config.totalSigningKeysCount,
         config.vettedSigningKeysCount,
         config.depositedSigningKeysCount,
-        config.exitedSigningKeysCount
+        config.exitedSigningKeysCount,
+      )
+      const id = await app.getNodeOperatorsCount() - 1;
+      await app.testing_setNodeOperatorLimits(
+        id,
+        config.targetValidatorsLimitActive,
+        config.targetValidatorsKeysCount,
+        config.unavaliableKeysCount,
+        config.stuckSigningKeysCount,
+        config.forgivenSigningKeysCount
       )
 
       let nodeOperator = await app.getNodeOperator(0, false)
@@ -255,7 +302,12 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         totalSigningKeysCount: 13,
         vettedSigningKeysCount: 4,
         depositedSigningKeysCount: 7,
-        exitedSigningKeysCount: 5
+        exitedSigningKeysCount: 5,
+        targetValidatorsLimitActive: false,
+        targetValidatorsKeysCount: 0,
+        unavaliableKeysCount: 0,
+        stuckSigningKeysCount: 0,
+        forgivenSigningKeysCount: 0
       }
 
       await app.testing_addNodeOperator(
@@ -264,7 +316,16 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         config.totalSigningKeysCount,
         config.vettedSigningKeysCount,
         config.depositedSigningKeysCount,
-        config.exitedSigningKeysCount
+        config.exitedSigningKeysCount,
+      )
+      const id = await app.getNodeOperatorsCount() - 1;
+      await app.testing_setNodeOperatorLimits(
+        id,
+        config.targetValidatorsLimitActive,
+        config.targetValidatorsKeysCount,
+        config.unavaliableKeysCount,
+        config.stuckSigningKeysCount,
+        config.forgivenSigningKeysCount
       )
 
       let nodeOperator = await app.getNodeOperator(0, false)
@@ -2815,61 +2876,479 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
   })
 
-  describe.only('setNodeOperatorTargetLimit()', async () => {
+  
+  describe('updateTargetValidatorsKeysCount()', () => {
     const firstNodeOperatorId = 0
     const secondNodeOperatorId = 1
-    const notExistedNodeOperatorId = 3
+    const notExistedNodeOperatorId = 2
+    let nodeOperatorId;
 
     beforeEach(async () => {
-      await nodeOperators.addNodeOperator(
-        app,
-        { ...NODE_OPERATORS[0], totalSigningKeysCount: 100, vettedSigningKeysCount: 50, depositedSigningKeysCount: 20 },
-        { from: voting }
+      const config = {
+        name: 'test',
+        rewardAddress: ADDRESS_1,
+        totalSigningKeysCount: 200,
+        vettedSigningKeysCount: 150,
+        depositedSigningKeysCount: 100,
+        exitedSigningKeysCount: 10,
+        targetValidatorsLimitActive: false,
+        targetValidatorsKeysCount: 0,
+        unavaliableKeysCount: 0,
+        stuckSigningKeysCount: 0,
+        forgivenSigningKeysCount: 0
+      }
+      await app.testing_addNodeOperator(
+        config.name,
+        config.rewardAddress,
+        config.totalSigningKeysCount,
+        config.vettedSigningKeysCount,
+        config.depositedSigningKeysCount,
+        config.exitedSigningKeysCount,
+        
       )
-      await nodeOperators.addNodeOperator(
-        app,
-        { ...NODE_OPERATORS[1], totalSigningKeysCount: 50, vettedSigningKeysCount: 45, depositedSigningKeysCount: 30 },
-        { from: voting }
+      nodeOperatorId = await app.getNodeOperatorsCount() - 1;
+      await app.testing_setNodeOperatorLimits(
+        nodeOperatorId,
+        config.targetValidatorsLimitActive,
+        config.targetValidatorsKeysCount,
+        config.unavaliableKeysCount,
+        config.stuckSigningKeysCount,
+        config.forgivenSigningKeysCount
       )
-    })
-
-    it('reverts with "APP_AUTH_FAILED" error when called by sender without SET_NODE_OPERATOR_LIMIT_ROLE', async () => {
-      const hasPermission = await dao.hasPermission(nobody, app, 'SET_NODE_OPERATOR_LIMIT_ROLE')
-      assert.isFalse(hasPermission)
-      await assert.reverts(app.setNodeOperatorTargetLimit(firstNodeOperatorId, 40, { from: nobody }), 'APP_AUTH_FAILED')
     })
 
     it('reverts with "NODE_OPERATOR_NOT_FOUND" error when called on non existent validator', async () => {
-      const hasPermission = await dao.hasPermission(voting, app, 'SET_NODE_OPERATOR_LIMIT_ROLE')
+      const hasPermission = await dao.hasPermission(voting, app, 'UPDATE_TARGET_VALIDATORS_KEYS_COUNT_ROLE')
       assert.isTrue(hasPermission)
-      await assert.reverts(app.setNodeOperatorTargetLimit(notExistedNodeOperatorId, 40, { from: voting }), 'NODE_OPERATOR_NOT_FOUND')
+      await assert.reverts(app.updateTargetValidatorsLimits(notExistedNodeOperatorId, 40, true, { from: voting }), 'NODE_OPERATOR_NOT_FOUND')
     })
 
-    it('reverts with "NODE_OPERATOR_DEACTIVATED" error when node operator deactivated', async () => {
-      const hasPermission = await dao.hasPermission(voting, app, 'SET_NODE_OPERATOR_LIMIT_ROLE')
-      assert.isTrue(hasPermission)
-      await app.deactivateNodeOperator(secondNodeOperatorId, { from: voting })
-      assert.isFalse(await app.getNodeOperatorIsActive(secondNodeOperatorId))
-      await assert.reverts(app.setNodeOperatorTargetLimit(secondNodeOperatorId, 40, { from: voting }), 'NODE_OPERATOR_DEACTIVATED')
+    it('reverts with "APP_AUTH_FAILED" error when called by sender without UPDATE_TARGET_VALIDATORS_KEYS_COUNT_ROLE', async () => {
+      const hasPermission = await dao.hasPermission(nobody, app, 'UPDATE_TARGET_VALIDATORS_KEYS_COUNT_ROLE')
+      assert.isFalse(hasPermission)
+      await assert.reverts(app.updateTargetValidatorsLimits(firstNodeOperatorId, 40, true, { from: nobody }), 'APP_AUTH_FAILED')
     })
 
-    it('newStakingLimit < depositedSigningKeys :: sets staking limit to deposited signing keys count', async () => {
-      await app.setNodeOperatorTargetLimit(firstNodeOperatorId, 10, { from: voting })
-      const nodeOperator = await app.getNodeOperator(firstNodeOperatorId, false)
-      assert.equals(nodeOperator.targetLimit, 20)
+    it("doesn't change the state when new value is equal to the previous one", async () => {
+      const { targetValidatorsKeysCount: targetValidatorsKeysCountBefore } = await app.getNodeOperatorLimits(firstNodeOperatorId)
+      
+      await app.updateTargetValidatorsLimits(firstNodeOperatorId, targetValidatorsKeysCountBefore, true, { from: voting })
+      
+      const { targetValidatorsKeysCount: targetValidatorsKeysCountAfter } = await app.getNodeOperatorLimits(firstNodeOperatorId)
+      assert.equals(targetValidatorsKeysCountBefore, targetValidatorsKeysCountAfter)
     })
 
-    it('newStakingLimit > totalSigningKeysCount :: sets staking limit to total signing keys count', async () => {
-      await app.setNodeOperatorTargetLimit(secondNodeOperatorId, 1000, { from: voting })
-      const nodeOperator = await app.getNodeOperator(secondNodeOperatorId, false)
-      assert.equals(nodeOperator.targetLimit, 50)
+    it("doesn't emit TotalTargetValidatorsKeysCountChanged event when new value is equal to the previous one", async () => {
+      const { targetValidatorsKeysCount: targetValidatorsKeysCountBefore } = await app.getNodeOperatorLimits(firstNodeOperatorId)
+      const receipt = await app.updateTargetValidatorsLimits(firstNodeOperatorId, targetValidatorsKeysCountBefore, true, { from: voting })
+      assert.notEmits(receipt, 'TotalTargetValidatorsKeysCountChanged')
     })
 
-    it('depositedSigningKeys <= newStakingLimit <= totalSigningKeysCount :: sets staking limit to passed value', async () => {
-      await app.setNodeOperatorTargetLimit(firstNodeOperatorId, 75, { from: voting })
-      const nodeOperator = await app.getNodeOperator(firstNodeOperatorId, false)
-      assert.equals(nodeOperator.targetLimit, 75)
+    it('increases exited signing keys count of node operator', async () => {
+      const newTargetValidatorsCount = 5
+      const { targetValidatorsKeysCount: targetValidatorsKeysCountBefore } = await app.getNodeOperatorLimits(nodeOperatorId)
+      assert.notEquals(targetValidatorsKeysCountBefore, newTargetValidatorsCount)
+      await app.updateTargetValidatorsLimits(nodeOperatorId, newTargetValidatorsCount, true, { from: voting })
+      const { targetValidatorsKeysCount: targetValidatorsKeysCountAfter } = await app.getNodeOperatorLimits(nodeOperatorId)
+      assert.equals(targetValidatorsKeysCountAfter, newTargetValidatorsCount)
+    })
+
+    it('emits TotalTargetValidatorsLimitChanged event with correct params', async () => {
+      // totalSigningKeys: 200,
+      // stakingLimit: 150,
+      // usedSigningKeys: 100,
+      // stoppedValidators: 10
+      const newTargetValidatorsCount = 4 //so we want o request 100 - 4 = 96 validators to exit
+      // thats mean unavaliable keys count increase by (stakingLimit - max(used,target)) == 150 - 100 = 50
+      // and totalUnavailable should to increase also by 50
+      const receipt = await app.updateTargetValidatorsLimits(firstNodeOperatorId, newTargetValidatorsCount, true, { from: voting })
+
+      const totalUnavailableKeysCountAfter = await app.getTotalUnavailableKeysCount()
+      assertBn(totalUnavailableKeysCountAfter, 50)
+
+      assert.emits(receipt, 'TargetValidatorsLimitChanged', {
+        nodeOperatorId: firstNodeOperatorId,
+        totalTargetValidatorsCount: newTargetValidatorsCount,
+        active: true,
+        unavaliableKeysCount: 50
+      })
+    })
+  })
+
+  describe  ('test target limit by DAO', async() => {
+    beforeEach('add operator', async() => {
+      const config = {
+        name: 'test',
+        rewardAddress: ADDRESS_1,
+        totalSigningKeysCount: 200,
+        vettedSigningKeysCount: 150,
+        depositedSigningKeysCount: 100,
+        exitedSigningKeysCount: 10,
+        targetValidatorsLimitActive: false,
+        targetValidatorsKeysCount: 0,
+        unavaliableKeysCount: 0,
+        stuckSigningKeysCount: 0,
+        forgivenSigningKeysCount: 0
+      }
+      await app.testing_addNodeOperator(
+        config.name,
+        config.rewardAddress,
+        config.totalSigningKeysCount,
+        config.vettedSigningKeysCount,
+        config.depositedSigningKeysCount,
+        config.exitedSigningKeysCount,
+        
+      )
+      const id = await app.getNodeOperatorsCount() - 1;
+      await app.testing_setNodeOperatorLimits(
+        id,
+        config.targetValidatorsLimitActive,
+        config.targetValidatorsKeysCount,
+        config.unavaliableKeysCount,
+        config.stuckSigningKeysCount,
+        config.forgivenSigningKeysCount
+      )
+    })
+
+    it("ready to deposits not changed when targetLimit >= stakingLimit", async () => {
+      const id = await app.getNodeOperatorsCount() - 1
+      const nodeOperator = await app.getNodeOperator(id, true)
+
+      assert.equal(nodeOperator.totalSigningKeys.toNumber(), 200)
+      assert.equal(nodeOperator.stakingLimit.toNumber(), 150)
+      assert.equal(nodeOperator.usedSigningKeys.toNumber(), 100)
+      assert.equal(nodeOperator.stoppedValidators.toNumber(), 10) 
+
+      const operatorKeysStats = await app.getValidatorsKeysStats(id)
+      assert.equal(operatorKeysStats.exitedValidatorsCount.toNumber(), 10) //stopped keys
+      assert.equal(operatorKeysStats.activeValidatorsKeysCount.toNumber(), 100-10) //used - stopped
+      assert.equal(operatorKeysStats.readyToDepositValidatorsKeysCount.toNumber(), 150-100) //stakinglimit - used
+
+      const nodeOperatorLimits = await app.getNodeOperatorLimits(id)
+      assert.equal(nodeOperatorLimits.targetValidatorsLimitActive, false) 
+      assert.equal(nodeOperatorLimits.targetValidatorsKeysCount, 0) 
+
+      const newTargetValidatorsCount = 2000;
+      await app.updateTargetValidatorsLimits(id, newTargetValidatorsCount, true, { from: voting })
+
+      const nodeOperatorLimitsAfter = await app.getNodeOperatorLimits(id)
+      assert.equal(nodeOperatorLimitsAfter.targetValidatorsLimitActive, true) 
+      assert.equal(nodeOperatorLimitsAfter.targetValidatorsKeysCount, newTargetValidatorsCount) 
+    })
+
+    it("ready to deposits not changed when stakingLimit < targetLimit", async () => {
+      const id = await app.getNodeOperatorsCount() - 1
+      
+      //stakingLimit 150
+      //targetLimit  151
+      //depositedKeys 100
+      const newTargetValidatorsCount = 151;
+      await app.updateTargetValidatorsLimits(id, newTargetValidatorsCount, true, { from: voting })
+
+      const operatorKeysStats = await app.getValidatorsKeysStats(id)
+      assert.equal(operatorKeysStats.exitedValidatorsCount.toNumber(), 10) //stopped keys
+      assert.equal(operatorKeysStats.activeValidatorsKeysCount.toNumber(), 100-10) //used - stopped
+      assert.equal(operatorKeysStats.readyToDepositValidatorsKeysCount.toNumber(), 150-100) //min(stakinglimit, targetLimit) - used 
+    })
+
+    it("ready to deposits not changed when depositedKeys < targetLimit <= stakingLimit", async () => {
+      const id = await app.getNodeOperatorsCount() - 1
+      
+      const stakingLimit = 150
+      const newTargetValidatorsCount = 120;
+      await app.updateTargetValidatorsLimits(id, newTargetValidatorsCount, true, { from: voting })
+
+      const operatorKeysStats = await app.getValidatorsKeysStats(id)
+      assert.equal(operatorKeysStats.exitedValidatorsCount.toNumber(), 10) //stopped keys
+      assert.equal(operatorKeysStats.activeValidatorsKeysCount.toNumber(), 100-10) //used - stopped
+      assert.equal(operatorKeysStats.readyToDepositValidatorsKeysCount.toNumber(), 120-100) //min(stakinglimit, targetLimit) - used 
+    })
+
+    it("ready to deposits not changed when depositedKeys == targetLimit", async () => {
+      const id = await app.getNodeOperatorsCount() - 1
+      
+      const newTargetValidatorsCount = 100;
+      await app.updateTargetValidatorsLimits(id, newTargetValidatorsCount, true, { from: voting })
+
+      const operatorKeysStats = await app.getValidatorsKeysStats(id)
+      assert.equal(operatorKeysStats.exitedValidatorsCount.toNumber(), 10) //stopped keys
+      assert.equal(operatorKeysStats.activeValidatorsKeysCount.toNumber(), 100-10) //used - stopped
+      assert.equal(operatorKeysStats.readyToDepositValidatorsKeysCount.toNumber(), 0) //min(stakinglimit, targetLimit) - used 
+    })
+
+    it("ready to deposits not changed when stakingLimit == targetLimit", async () => {
+      const id = await app.getNodeOperatorsCount() - 1
+      
+      const newTargetValidatorsCount = 150;
+      await app.updateTargetValidatorsLimits(id, newTargetValidatorsCount, true, { from: voting })
+
+      const operatorKeysStats = await app.getValidatorsKeysStats(id)
+      assert.equal(operatorKeysStats.exitedValidatorsCount.toNumber(), 10) //stopped keys
+      assert.equal(operatorKeysStats.activeValidatorsKeysCount.toNumber(), 100-10) //used - stopped
+      assert.equal(operatorKeysStats.readyToDepositValidatorsKeysCount.toNumber(), 150-100) //min(stakinglimit, targetLimit) - used 
+    })
+
+    it("ready to deposits not changed when 0 < targetLimit < depositedKeys", async () => {
+      const id = await app.getNodeOperatorsCount() - 1
+      
+      const newTargetValidatorsCount = 80;
+      await app.updateTargetValidatorsLimits(id, newTargetValidatorsCount, true, { from: voting })
+
+      const operatorKeysStats = await app.getValidatorsKeysStats(id)
+      assert.equal(operatorKeysStats.exitedValidatorsCount.toNumber(), 10) //stopped keys
+      assert.equal(operatorKeysStats.activeValidatorsKeysCount.toNumber(), 100-10) //used - stopped
+      assert.equal(operatorKeysStats.readyToDepositValidatorsKeysCount.toNumber(), 0) //min(stakinglimit, targetLimit) - used 
+    })
+  })
+
+  describe('test target limit with 2 node operators', async() => {
+    let nodOperator1Id, nodOperator2Id
+
+    beforeEach('add node operators', async() => {
+      //add first node operator
+      let config = {
+        name: 'test',
+        rewardAddress: ADDRESS_1,
+        totalSigningKeysCount: 200,
+        vettedSigningKeysCount: 150,
+        depositedSigningKeysCount: 100,
+        exitedSigningKeysCount: 10,
+        targetValidatorsLimitActive: false,
+        targetValidatorsKeysCount: 0,
+        unavaliableKeysCount: 0,
+        stuckSigningKeysCount: 0,
+        forgivenSigningKeysCount: 0
+      }
+      await app.testing_addNodeOperator(
+        config.name,
+        config.rewardAddress,
+        config.totalSigningKeysCount,
+        config.vettedSigningKeysCount,
+        config.depositedSigningKeysCount,
+        config.exitedSigningKeysCount,
+      )
+      nodOperator1Id = await app.getNodeOperatorsCount() - 1;
+      await app.testing_setNodeOperatorLimits(
+        nodOperator1Id,
+        config.targetValidatorsLimitActive,
+        config.targetValidatorsKeysCount,
+        config.unavaliableKeysCount,
+        config.stuckSigningKeysCount,
+        config.forgivenSigningKeysCount
+      )
+
+      //add second node operator
+      config = {
+        name: 'test',
+        rewardAddress: ADDRESS_1,
+        totalSigningKeysCount: 100,
+        vettedSigningKeysCount: 70,
+        depositedSigningKeysCount: 20,
+        exitedSigningKeysCount: 1,
+        targetValidatorsLimitActive: false,
+        targetValidatorsKeysCount: 0,
+        unavaliableKeysCount: 0,
+        stuckSigningKeysCount: 0,
+        forgivenSigningKeysCount: 0
+      }
+      await app.testing_addNodeOperator(
+        config.name,
+        config.rewardAddress,
+        config.totalSigningKeysCount,
+        config.vettedSigningKeysCount,
+        config.depositedSigningKeysCount,
+        config.exitedSigningKeysCount,
+        
+      )
+      nodOperator2Id = await app.getNodeOperatorsCount() - 1;
+      await app.testing_setNodeOperatorLimits(
+        nodOperator2Id,
+        config.targetValidatorsLimitActive,
+        config.targetValidatorsKeysCount,
+        config.unavaliableKeysCount,
+        config.stuckSigningKeysCount,
+        config.forgivenSigningKeysCount
+      )
+      await app.testing_setBaseVersion(0)
+      await app.finalizeUpgrade_v2(steth.address, CURATED_TYPE)
+    })
+
+
+    it("check current config", async () => {
+      //config operator1
+      const operator1 = await app.getNodeOperator(nodOperator1Id, false);
+      assert.equal(operator1.totalSigningKeys.toNumber(), 200)
+      assert.equal(operator1.stakingLimit.toNumber(), 150)
+      assert.equal(operator1.usedSigningKeys.toNumber(), 100)
+      assert.equal(operator1.stoppedValidators.toNumber(), 10)
+
+      const operator1Limits = await app.getNodeOperatorLimits(nodOperator1Id);
+      assert.equal(operator1Limits.targetValidatorsLimitActive, false)
+      assert.equal(operator1Limits.targetValidatorsKeysCount.toNumber(), 0)
+      assert.equal(operator1Limits.unavaliableKeysCount.toNumber(), 0)
+      assert.equal(operator1Limits.stuckSigningKeysCount.toNumber(), 0)
+      assert.equal(operator1Limits.forgivenSigningKeysCount.toNumber(), 0)
+
+      const operatorKeysStats1 = await app.getValidatorsKeysStats(nodOperator1Id)
+      assert.equal(operatorKeysStats1.exitedValidatorsCount.toNumber(), 10) //stopped keys
+      assert.equal(operatorKeysStats1.activeValidatorsKeysCount.toNumber(), 100-10) //used - stopped
+      assertBn(operatorKeysStats1.readyToDepositValidatorsKeysCount, 50) //stakinglimit - used 
+
+      //config operator2
+      const operator2 = await app.getNodeOperator(nodOperator2Id, false);
+      assert.equal(operator2.totalSigningKeys.toNumber(), 100)
+      assert.equal(operator2.stakingLimit.toNumber(), 70)
+      assert.equal(operator2.usedSigningKeys.toNumber(), 20)
+      assert.equal(operator2.stoppedValidators.toNumber(), 1)
+
+      const operator2Limits = await app.getNodeOperatorLimits(nodOperator2Id);
+      assert.equal(operator2Limits.targetValidatorsLimitActive, false)
+      assert.equal(operator2Limits.targetValidatorsKeysCount.toNumber(), 0)
+      assert.equal(operator2Limits.unavaliableKeysCount.toNumber(), 0)
+      assert.equal(operator2Limits.stuckSigningKeysCount.toNumber(), 0)
+      assert.equal(operator2Limits.forgivenSigningKeysCount.toNumber(), 0)
+
+      const operatorKeysStats2 = await app.getValidatorsKeysStats(nodOperator2Id)
+      assert.equal(operatorKeysStats2.exitedValidatorsCount.toNumber(), 1) //stopped keys
+      assert.equal(operatorKeysStats2.activeValidatorsKeysCount.toNumber(), 20-1) //used - stopped
+      assertBn(operatorKeysStats2.readyToDepositValidatorsKeysCount, 50) //stakinglimit - used 
+
+      const unavailableKeysCount = await app.getTotalUnavailableKeysCount();
+      assertBn(unavailableKeysCount, 0)
+    })
+
+    it("check operator1 ready to deposit if targetLimit < usedSigningKeys", async () => {
+
+      const newTargetValidatorsCount = 80;
+      await app.updateTargetValidatorsLimits(nodOperator1Id, newTargetValidatorsCount, true, { from: voting })
+
+      const operator1 = await app.getNodeOperator(nodOperator1Id, false);
+      assert.equal(operator1.totalSigningKeys.toNumber(), 200)
+      assert.equal(operator1.stakingLimit.toNumber(), 150)
+      assert.equal(operator1.usedSigningKeys.toNumber(), 100)
+      assert.equal(operator1.stoppedValidators.toNumber(), 10)
+
+      const operator1Limits = await app.getNodeOperatorLimits(nodOperator1Id);
+      assert.equal(operator1Limits.targetValidatorsLimitActive, true)
+      assert.equal(operator1Limits.targetValidatorsKeysCount.toNumber(), 80)
+      assert.equal(operator1Limits.unavaliableKeysCount.toNumber(), 50) //150-100
+      assert.equal(operator1Limits.stuckSigningKeysCount.toNumber(), 0)
+      assert.equal(operator1Limits.forgivenSigningKeysCount.toNumber(), 0)
+
+      const operatorKeysStats1 = await app.getValidatorsKeysStats(nodOperator1Id)
+      assert.equal(operatorKeysStats1.exitedValidatorsCount.toNumber(), 10) //stopped keys
+      assert.equal(operatorKeysStats1.activeValidatorsKeysCount.toNumber(), 100-10) //used - stopped
+      assertBn(operatorKeysStats1.readyToDepositValidatorsKeysCount, 0) //stakinglimit - used 
+
+      const unavailableKeysCount = await app.getTotalUnavailableKeysCount();
+      assertBn(unavailableKeysCount, 50)
+    })
+
+    it("check operator1 ready to deposit if targetLimit1 < usedSigningKeys1 && usedSigningKeys2 < targetLimit2 < stakingLimit2 ", async () => {
+
+      unavailableKeysCount = await app.getTotalUnavailableKeysCount();
+      assertBn(unavailableKeysCount, 0)
+
+      let keyStats = await app.getValidatorsKeysStats()
+      assertBn(keyStats.exitedValidatorsCount, 10+1)
+      assertBn(keyStats.activeValidatorsKeysCount, (100-10)+(20-1))
+      assertBn(keyStats.readyToDepositValidatorsKeysCount, (150-100)+(70-20))
+
+      //..........depositedKeys..........|              <- 100
+      //..........stakingLimit......................|   <- 150
+      //..........targetLimit.......|                   <- 80
+      //    
+      await app.updateTargetValidatorsLimits(nodOperator1Id, 80, true, { from: voting }) 
+
+      const operator1Limits = await app.getNodeOperatorLimits(nodOperator1Id);
+      assertBn(operator1Limits.unavaliableKeysCount, 50) //150-100
+
+      const operatorKeysStats1 = await app.getValidatorsKeysStats(nodOperator1Id)
+      assert.equal(operatorKeysStats1.exitedValidatorsCount.toNumber(), 10) //stopped keys
+      assert.equal(operatorKeysStats1.activeValidatorsKeysCount.toNumber(), 100-10) //used - stopped
+      assertBn(operatorKeysStats1.readyToDepositValidatorsKeysCount, 150 - 100 - 50) //stakinglimit - used - unavail
+
+      //..........depositedKeys..........|              <- 20
+      //..........stakingLimit......................|   <- 70
+      //..........targetLimit..................|        <- 57
+      //    
+      await app.updateTargetValidatorsLimits(nodOperator2Id, 57, true, { from: voting })
+              
+      const operator2Limits = await app.getNodeOperatorLimits(nodOperator2Id);
+      assertBn(operator2Limits.unavaliableKeysCount, 70-57) //stakingLim - max(used,target)
+
+      const operatorKeysStats2 = await app.getValidatorsKeysStats(nodOperator2Id)
+      assert.equal(operatorKeysStats2.exitedValidatorsCount.toNumber(), 1) //stopped keys
+      assert.equal(operatorKeysStats2.activeValidatorsKeysCount.toNumber(), 20-1) //used - stopped
+      assertBn(operatorKeysStats2.readyToDepositValidatorsKeysCount, 70-20-(70-57)) //stakinglimit - used - unavail
+
+      unavailableKeysCount = await app.getTotalUnavailableKeysCount();
+      assertBn(unavailableKeysCount, operator1Limits.unavaliableKeysCount.add(operator2Limits.unavaliableKeysCount))
+
+
+      keyStats = await app.getValidatorsKeysStats()
+      assertBn(keyStats.activeValidatorsKeysCount, (100-10)+(20-1))
+      assertBn(keyStats.readyToDepositValidatorsKeysCount, 0+37)
+
+
+      // remove target limit op2
+      await app.updateTargetValidatorsLimits(nodOperator2Id, 57, false, { from: voting })
+
+      unavailableKeysCount = await app.getTotalUnavailableKeysCount();
+      assertBn(unavailableKeysCount, 50)
+
+      // remove target limit op1
+      await app.updateTargetValidatorsLimits(nodOperator1Id, 0, false, { from: voting })
+      unavailableKeysCount = await app.getTotalUnavailableKeysCount();
+      assertBn(unavailableKeysCount, 0)
+
+      
+      keyStats = await app.getValidatorsKeysStats()
+      assertBn(keyStats.activeValidatorsKeysCount, (100-10)+(20-1))
+      assertBn(keyStats.readyToDepositValidatorsKeysCount, 100)
+    })
+
+    it('increase staking limit when target limit is enabled', async() => {
+      //..........depositedKeys..........|              <- 100
+      //..........stakingLimit......................|   <- 150
+      //..........targetLimit.......|                   <- 80
+      //    
+      await app.updateTargetValidatorsLimits(nodOperator1Id, 80, true, { from: voting }) 
+
+      //..........depositedKeys..........|              <- 20
+      //..........stakingLimit......................|   <- 70
+      //..........targetLimit..................|        <- 57
+      //    
+      await app.updateTargetValidatorsLimits(nodOperator2Id, 57, true, { from: voting })
+
+      unavailableKeysCount = await app.getTotalUnavailableKeysCount();
+      assertBn(unavailableKeysCount, 50+13)
+
+      readyToDepositOp1 = 150-100-50; //stakingLimit - used - unav
+      readyToDepositOp2 = 70-20-13; //stakingLimit - used - unav
+
+      keyStats = await app.getValidatorsKeysStats()
+      assertBn(keyStats.readyToDepositValidatorsKeysCount, readyToDepositOp1 + readyToDepositOp2) //37 keys
+
+      //..........depositedKeys..........|              <- 20
+      //..........stakingLimit........................| <- 80
+      //..........targetLimit..................|        <- 57
+      //    
+      await app.setNodeOperatorStakingLimit(nodOperator2Id, 80, { from: voting })
+
+
+      unavailableKeysCount = await app.getTotalUnavailableKeysCount();
+      assertBn(unavailableKeysCount, 50+23)
+
+      readyToDepositOp1 = 150-100-50; //stakingLimit - used - unav
+      readyToDepositOp2 = 80-20-23; //stakingLimit - used - unav
+
+      keyStats = await app.getValidatorsKeysStats()
+      assertBn(keyStats.readyToDepositValidatorsKeysCount, readyToDepositOp1 + readyToDepositOp2) //37 keys
+
+
     })
 
   })
+
 })
