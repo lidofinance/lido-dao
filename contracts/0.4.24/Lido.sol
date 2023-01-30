@@ -500,28 +500,10 @@ contract Lido is StETHPermit, AragonApp {
     }
 
     /**
-     * @notice Send funds to recovery Vault. Overrides default AragonApp behaviour
-     * @param _token Token to be sent to recovery vault
+     * @notice Overrides default AragonApp behaviour to disallow recovery.
      */
-    function transferToVault(address _token) external {
-        require(allowRecoverability(_token), "RECOVER_DISALLOWED");
-        address vault = getRecoveryVault();
-        require(vault != address(0), "RECOVER_VAULT_ZERO");
-
-        uint256 balance;
-        if (_token == ETH) {
-            balance = _getUnaccountedEther();
-            // Transfer replaced by call to prevent transfer gas amount issue
-            // solhint-disable-next-line
-            require(vault.call.value(balance)(), "RECOVER_TRANSFER_FAILED");
-        } else {
-            ERC20 token = ERC20(_token);
-            balance = token.staticBalanceOf(this);
-            // safeTransfer comes from overridden default implementation
-            require(token.safeTransfer(vault, balance), "RECOVER_TOKEN_TRANSFER_FAILED");
-        }
-
-        emit RecoverToVault(vault, _token, balance);
+    function transferToVault(address /* _token */) external {
+        revert("NOT_SUPPORTED");
     }
 
     /**
