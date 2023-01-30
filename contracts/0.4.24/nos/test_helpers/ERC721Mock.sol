@@ -6,7 +6,7 @@ pragma solidity 0.4.24;
 import "openzeppelin-solidity/contracts/token/ERC721/ERC721.sol";
 
 contract ERC721Mock is ERC721 {
-    constructor() ERC721() {}
+    constructor() ERC721() public {}
 
     function mint(address _account, uint256 _tokenId) public {
         _mint(_account, _tokenId);

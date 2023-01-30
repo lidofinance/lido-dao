@@ -61,10 +61,12 @@ contract Lido is StETHPermit, AragonApp {
     bytes32 internal constant BUFFERED_ETHER_POSITION = keccak256("lido.Lido.bufferedEther");
     /// @dev number of deposited validators (incrementing counter of deposit operations).
     bytes32 internal constant DEPOSITED_VALIDATORS_POSITION = keccak256("lido.Lido.depositedValidators");
-    /// @dev total amount of Beacon-side Ether (sum of all the balances of Lido validators)
-    bytes32 internal constant BEACON_BALANCE_POSITION = keccak256("lido.Lido.beaconBalance");
-    /// @dev number of Lido's validators available in the Beacon state
-    bytes32 internal constant BEACON_VALIDATORS_POSITION = keccak256("lido.Lido.beaconValidators");
+    /// @dev total amount of ether on Consensus Layer (sum of all the balances of Lido validators)
+    // "beacon" in the `keccak256()` parameter is staying here for compatibility reason
+    bytes32 internal constant CL_BALANCE_POSITION = keccak256("lido.Lido.beaconBalance");
+    /// @dev number of Lido's validators available in the Consensus Layer state
+    // "beacon" in the `keccak256()` parameter is staying here for compatibility reason
+    bytes32 internal constant Cl_VALIDATORS_POSITION = keccak256("lido.Lido.beaconValidators"); 
     /// @dev percent in basis points of total pooled ether allowed to withdraw from LidoExecutionLayerRewardsVault per LidoOracle report
     bytes32 internal constant EL_REWARDS_WITHDRAWAL_LIMIT_POSITION = keccak256("lido.Lido.ELRewardsWithdrawalLimit");
     /// @dev Just a counter of total amount of execution layer rewards received by Lido contract. Not used in the logic.
@@ -413,13 +415,6 @@ contract Lido is StETHPermit, AragonApp {
     /**
     * @notice Set Lido protocol contracts (oracle, treasury, execution layer rewards vault).
     *
-    * @dev Oracle contract specified here is allowed to make
-    * periodical updates of beacon stats
-    * by calling pushBeacon. Treasury contract specified here is used
-    * to accumulate the protocol treasury fee.
-    * Execution layer rewards vault is set as `feeRecipient`
-    * by the Lido-participating node operators.
-    *
     * @param _oracle oracle contract
     * @param _treasury treasury contract
     * @param _executionLayerRewardsVault execution layer rewards vault contract
@@ -448,10 +443,10 @@ contract Lido is StETHPermit, AragonApp {
     /**
     * @notice Updates accounting stats, collects EL rewards and distributes collected rewards if beacon balance increased
     * @dev periodically called by the Oracle contract
-    * @param _beaconValidators number of Lido validators on Consensus Layer
-    * @param _beaconBalance sum of all Lido validators' balances
-    * @param _withdrawalVaultBalance withdrawal vault balance on report block
-    * @param _elRewardsVaultBalance elRewards vault balance on report block
+    * @param _clValidators number of Lido validators on Consensus Layer
+    * @param _clBalance sum of all Lido validators' balances on Consensus Layer
+    * @param _withdrawalVaultBalance withdrawal vault balance on Execution Layer for report block
+    * @param _elRewardsVaultBalance elRewards vault balance on Execution Layer for report block
     * @param _requestIdToFinalizeUpTo rigth boundary of requestId range if equals 0, no requests should be finalized 
     * @param _finalizationShareRate share rate that should be used for finalization
     * 
@@ -460,8 +455,8 @@ contract Lido is StETHPermit, AragonApp {
     */
     function handleOracleReport(
         // CL values
-        uint256 _beaconValidators,
-        uint256 _beaconBalance,
+        uint256 _clValidators,
+        uint256 _clBalance,
         // EL values
         uint256 _withdrawalVaultBalance,
         uint256 _elRewardsVaultBalance,
@@ -472,15 +467,15 @@ contract Lido is StETHPermit, AragonApp {
         require(msg.sender == getOracle(), "APP_AUTH_FAILED");
         _whenNotStopped();
 
-        uint256 preBeaconBalance = BEACON_BALANCE_POSITION.getStorageUint256();
+        uint256 preClBalance = CL_BALANCE_POSITION.getStorageUint256();
 
-        // update saved stats from beacon balance checking its sanity
-        uint256 appearedValidators = _processBeaconStateUpdate(
-            _beaconValidators,
-            _beaconBalance
+        // update saved CL stats checking its sanity
+        uint256 appearedValidators = _processClStateUpdate(
+            _clValidators,
+            _clBalance
         );
 
-        // collect ETH from EL and Withdrawal vaults and distribute it to WithdrawalQueue
+        // collect ETH from EL and Withdrawal vaults and send some to WithdrawalQueue if required
         uint256 executionLayerRewards = _processETHDistribution(
             _withdrawalVaultBalance,
             _elRewardsVaultBalance,
@@ -490,8 +485,8 @@ contract Lido is StETHPermit, AragonApp {
 
         // distribute rewards to Lido and Node Operators
         _processRewards(
-            preBeaconBalance,
-            _beaconBalance,
+            preClBalance,
+            _clBalance,
             appearedValidators,
             executionLayerRewards,
             _withdrawalVaultBalance
@@ -538,8 +533,8 @@ contract Lido is StETHPermit, AragonApp {
     /**
      * @notice Returns WithdrawalQueue contract.
      */
-    function getWithdrawalQueue() public view returns (IWithdrawalQueue) {
-        return IWithdrawalQueue(WITHDRAWAL_QUEUE_POSITION.getStorageAddress());
+    function getWithdrawalQueue() public view returns (address) {
+        return WITHDRAWAL_QUEUE_POSITION.getStorageAddress();
     }
 
     function setWithdrawalQueue(address _withdrawalQueue) external {
@@ -595,15 +590,17 @@ contract Lido is StETHPermit, AragonApp {
     }
 
     /**
-    * @notice Returns the key values related to Consensus Layer side of the contract (Beacon chain was deprecated)
-    * @return depositedValidators - number of deposited validators
-    * @return beaconValidators - number of Lido's validators visible on the Consensus Layer state, reported by oracle
-    * @return beaconBalance - total amount of Ether on the Consensus Layer side (sum of all the balances of Lido validators)
+    * @notice Returns the key values related to Consensus Layer side of the contract. It historically contains beacon 
+    * @return depositedValidators - number of deposited validators from Lido contract side
+    * @return beaconValidators - number of Lido validators visible on Consensus Layer, reported by oracle
+    * @return beaconBalance - total amount of ether on the Consensus Layer side (sum of all the balances of Lido validators)
+    * 
+    * @dev `beacon` in naming still here for historical reasons
     */
     function getBeaconStat() public view returns (uint256 depositedValidators, uint256 beaconValidators, uint256 beaconBalance) {
         depositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256();
-        beaconValidators = BEACON_VALIDATORS_POSITION.getStorageUint256();
-        beaconBalance = BEACON_BALANCE_POSITION.getStorageUint256();
+        beaconValidators = Cl_VALIDATORS_POSITION.getStorageUint256();
+        beaconBalance = CL_BALANCE_POSITION.getStorageUint256();
     }
 
     /**
@@ -646,27 +643,26 @@ contract Lido is StETHPermit, AragonApp {
         return EL_REWARDS_VAULT_POSITION.getStorageAddress();
     }
 
-    /// @dev updates beacon state according to the current report
-    function _processBeaconStateUpdate(
-        uint256 _postBeaconValidators,
-        uint256 _postBeaconBalance
+    /// @dev updates Consensus Layer state according to the current report
+    function _processClStateUpdate(
+        uint256 _postClValidators,
+        uint256 _postClBalance
     ) internal returns (uint256 appearedValidators) {
         uint256 depositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256();
-        require(_postBeaconValidators <= depositedValidators, "REPORTED_MORE_DEPOSITED");
+        require(_postClValidators <= depositedValidators, "REPORTED_MORE_DEPOSITED");
 
-        uint256 preBeaconValidators = BEACON_VALIDATORS_POSITION.getStorageUint256();
-        require(_postBeaconValidators >= preBeaconValidators, "REPORTED_LESS_VALIDATORS");
+        uint256 preClValidators = Cl_VALIDATORS_POSITION.getStorageUint256();
+        require(_postClValidators >= preClValidators, "REPORTED_LESS_VALIDATORS");
 
-        // Save the current beacon balance and validators to
+        // Save the current CL balance and validators to
         // calculate rewards on the next push
+        CL_BALANCE_POSITION.setStorageUint256(_postClBalance);
 
-        BEACON_BALANCE_POSITION.setStorageUint256(_postBeaconBalance);
-
-        if (_postBeaconValidators > preBeaconValidators) {
-            BEACON_VALIDATORS_POSITION.setStorageUint256(_postBeaconValidators);
+        if (_postClValidators > preClValidators) {
+            Cl_VALIDATORS_POSITION.setStorageUint256(_postClValidators);
         }
 
-        return _postBeaconValidators.sub(preBeaconValidators);
+        return _postClValidators.sub(preClValidators);
     }
 
     /// @dev collect ETH from ELRewardsVault and WithdrawalVault and send to WithdrawalQueue
@@ -720,7 +716,7 @@ contract Lido is StETHPermit, AragonApp {
         uint256 _requestIdToFinalizeUpTo,
         uint256 _finalizationShareRate
     ) internal returns (uint256 lockedToWithdrawalQueue) {
-        IWithdrawalQueue withdrawalQueue = getWithdrawalQueue();
+        IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(getWithdrawalQueue());
 
         if (withdrawalQueue.isPaused()) return 0;
 
@@ -737,20 +733,20 @@ contract Lido is StETHPermit, AragonApp {
 
     /// @dev calculate the amount of rewards and distribute it
     function _processRewards(
-        uint256 _preBeaconBalance,
-        uint256 _postBeaconBalance,
+        uint256 _preClBalance,
+        uint256 _postClBalance,
         uint256 _appearedValidators,
         uint256 _executionLayerRewards,
         uint256 _withdrawalVaultBalance
     ) internal {
-        uint256 rewardsBase = (_appearedValidators.mul(DEPOSIT_SIZE)).add(_preBeaconBalance);
+        uint256 rewardsBase = (_appearedValidators.mul(DEPOSIT_SIZE)).add(_preClBalance);
 
         // Don’t mint/distribute any protocol fee on the non-profitable Lido oracle report
         // (when consensus layer balance delta is zero or negative).
         // See ADR #3 for details:
         // https://research.lido.fi/t/rewards-distribution-after-the-merge-architecture-decision-record/1535
-        if (_postBeaconBalance.add(_withdrawalVaultBalance) > rewardsBase) {
-            uint256 consensusLayerRewards = _postBeaconBalance.add(_withdrawalVaultBalance).sub(rewardsBase);
+        if (_postClBalance.add(_withdrawalVaultBalance) > rewardsBase) {
+            uint256 consensusLayerRewards = _postClBalance.add(_withdrawalVaultBalance).sub(rewardsBase);
             _distributeFee(consensusLayerRewards.add(_executionLayerRewards));
         }
     }
@@ -946,17 +942,15 @@ contract Lido is StETHPermit, AragonApp {
         return address(0);
     }
 
-    /**
-     * @dev Calculates and returns the total base balance (multiple of 32) of validators in transient state,
-     *      i.e. submitted to the official Deposit contract but not yet visible in the beacon state.
-     * @return transient balance in wei (1e-18 Ether)
-     */
+    /// @dev Calculates and returns the total base balance (multiple of 32) of validators in transient state,
+    ///     i.e. submitted to the official Deposit contract but not yet visible in the CL state.
+    /// @return transient balance in wei (1e-18 Ether)
     function _getTransientBalance() internal view returns (uint256) {
         uint256 depositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256();
-        uint256 beaconValidators = BEACON_VALIDATORS_POSITION.getStorageUint256();
-        // beaconValidators can never be less than deposited ones.
-        assert(depositedValidators >= beaconValidators);
-        return depositedValidators.sub(beaconValidators).mul(DEPOSIT_SIZE);
+        uint256 clValidators = Cl_VALIDATORS_POSITION.getStorageUint256();
+        // clValidators can never be less than deposited ones.
+        assert(depositedValidators >= clValidators);
+        return depositedValidators.sub(clValidators).mul(DEPOSIT_SIZE);
     }
 
     /**
@@ -965,7 +959,7 @@ contract Lido is StETHPermit, AragonApp {
      */
     function _getTotalPooledEther() internal view returns (uint256) {
         return _getBufferedEther()
-            .add(BEACON_BALANCE_POSITION.getStorageUint256())
+            .add(CL_BALANCE_POSITION.getStorageUint256())
             .add(_getTransientBalance());
     }
 
@@ -1017,7 +1011,7 @@ contract Lido is StETHPermit, AragonApp {
 
         uint256 bufferedEth = _getBufferedEther();
         // we dont deposit funds that will go to withdrawals
-        uint256 withdrawalReserve = getWithdrawalQueue().unfinalizedStETH();
+        uint256 withdrawalReserve = IWithdrawalQueue(getWithdrawalQueue()).unfinalizedStETH();
 
         if (bufferedEth > withdrawalReserve) {
             bufferedEth = bufferedEth.sub(withdrawalReserve);
@@ -1046,9 +1040,5 @@ contract Lido is StETHPermit, AragonApp {
 
     function _min(uint256 a, uint256 b) internal pure returns (uint256) {
         return a < b ? a : b;
-    }
-
-    function _max(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a > b ? a : b;
     }
 }
