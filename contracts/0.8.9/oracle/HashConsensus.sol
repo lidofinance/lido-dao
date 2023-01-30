@@ -214,15 +214,15 @@ contract HashConsensus is AccessControlEnumerable {
 
     /// @notice Returns the parameters required to calculate reporting frame given an epoch.
     ///
-    function getFrameConfig() external view returns (uint64 initialEpoch, uint64 epochsPerFrame) {
+    function getFrameConfig() external view returns (uint256 initialEpoch, uint256 epochsPerFrame) {
         return (_frameConfig.initialEpoch, _frameConfig.epochsPerFrame);
     }
 
     /// @notice Returns the current reporting frame.
     ///
     function getCurrentFrame() external view returns (
-        uint64 refSlot,
-        uint64 reportProcessingDeadlineSlot
+        uint256 refSlot,
+        uint256 reportProcessingDeadlineSlot
     ) {
         ConsensusFrame memory frame = _getCurrentFrame();
         return (frame.refSlot, frame.reportProcessingDeadlineSlot);

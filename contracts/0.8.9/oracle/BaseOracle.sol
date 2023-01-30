@@ -15,8 +15,8 @@ interface IConsensusContract {
     function getIsMember(address addr) external view returns (bool);
 
     function getCurrentFrame() external view returns (
-        uint64 refSlot,
-        uint64 reportProcessingDeadlineSlot
+        uint256 refSlot,
+        uint256 reportProcessingDeadlineSlot
     );
 
     function getChainConfig() external view returns (
@@ -307,7 +307,7 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
             revert UnexpectedChainConfig();
         }
 
-        (uint64 refSlot, ) = IConsensusContract(addr).getCurrentFrame();
+        (uint256 refSlot, ) = IConsensusContract(addr).getCurrentFrame();
         if (refSlot < lastProcessingRefSlot) {
             revert RefSlotCannotBeLessThanProcessingOne(refSlot, lastProcessingRefSlot);
         }
