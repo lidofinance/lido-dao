@@ -164,7 +164,7 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
     it('reverts if the permit is expired', async () => {
       const { owner, spender, value, nonce } = permitParams
       // create a signed permit that already invalid
-      const deadline = Math.floor(Date.now() / 1000) - 1
+      const deadline = (await stEthPermit.getBlockTime()).toString() - 1
       const { v, r, s } = signPermit(owner, spender, value, nonce, deadline, domainSeparator, alice.key)
 
       // try to submit the permit that is expired
@@ -176,15 +176,12 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
       )
 
       {
-        // create a signed permit that valid for 1 minute
-        const deadline1min = Math.floor(Date.now() / 1000) + 60
+        // create a signed permit that valid for 1 minute (approximately)
+        const deadline1min = (await stEthPermit.getBlockTime()).toString() + 60
         const { v, r, s } = signPermit(owner, spender, value, nonce, deadline1min, domainSeparator, alice.key)
-
-        // try to submit the permit that is expired
         const receipt = await stEthPermit.permit(owner, spender, value, deadline1min, v, r, s, { from: charlie })
 
         assertBn(await stEthPermit.nonces(owner), bn(1))
-
         assertEvent(
           receipt,
           'Approval',

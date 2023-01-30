@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2022 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 
 // SPDX-License-Identifier: GPL-3.0
 
@@ -11,13 +11,13 @@ interface IStakingRouter {
         view
         returns (
             address[] memory recipients,
-            uint256[] memory moduleIds,
-            uint96[] memory moduleFees,
-            uint96 totalFeee,
+            uint256[] memory stakingModuleIds,
+            uint96[] memory stakingModuleFees,
+            uint96 totalFee,
             uint256 precisionPoints
         );
 
-    function deposit(uint256 maxDepositsCount, uint24 stakingModuleId, bytes depositCalldata) external payable returns (uint256);
+    function deposit(uint256 maxDepositsCount, uint256 stakingModuleId, bytes depositCalldata) external payable returns (uint256);
 
     /**
      * @notice Set credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched to `_withdrawalCredentials`
@@ -33,18 +33,18 @@ interface IStakingRouter {
 
     function getExitedKeysCountAcrossAllModules() external view returns (uint256);
 
-    function getStakingModuleStatus(uint24 _stakingModuleId) external view returns (uint8 status);
+    function getStakingModuleStatus(uint256 _stakingModuleId) external view returns (uint8 status);
 
-    function setStakingModuleStatus(uint24 _stakingModuleId, uint8 _status) external;
+    function setStakingModuleStatus(uint256 _stakingModuleId, uint8 _status) external;
 
-    function pauseStakingModule(uint24 _stakingModuleId) external;
+    function pauseStakingModule(uint256 _stakingModuleId) external;
 
-    function resumeStakingModule(uint24 _stakingModuleId) external;
+    function resumeStakingModule(uint256 _stakingModuleId) external;
 
     function reportRewardsMinted(uint256[] _stakingModuleIds, uint256[] _totalShares) external;
 
     function updateExitedKeysCountByStakingModule(
-        uint256[] _moduleIds,
+        uint256[] _stakingModuleIds,
         uint256[] _exitedKeysCounts
     ) external;
 
@@ -54,19 +54,19 @@ interface IStakingRouter {
         uint256[] _exitedKeysCounts
     ) external;
 
-    function getStakingModuleIsStopped(uint24 _stakingModuleId) external view returns (bool);
+    function getStakingModuleIsStopped(uint256 _stakingModuleId) external view returns (bool);
 
-    function getStakingModuleIsDepositsPaused(uint24 _stakingModuleId) external view returns (bool);
+    function getStakingModuleIsDepositsPaused(uint256 _stakingModuleId) external view returns (bool);
 
-    function getStakingModuleIsActive(uint24 _stakingModuleId) external view returns (bool);
+    function getStakingModuleIsActive(uint256 _stakingModuleId) external view returns (bool);
 
-    function getStakingModuleKeysOpIndex(uint24 _stakingModuleId) external view returns (uint256);
+    function getStakingModuleKeysOpIndex(uint256 _stakingModuleId) external view returns (uint256);
 
-    function getStakingModuleLastDepositBlock(uint24 _stakingModuleId) external view returns (uint256);
+    function getStakingModuleLastDepositBlock(uint256 _stakingModuleId) external view returns (uint256);
 
-    function getStakingModuleActiveKeysCount(uint24 _stakingModuleId) external view returns (uint256);
+    function getStakingModuleActiveKeysCount(uint256 _stakingModuleId) external view returns (uint256);
 
     function getKeysAllocation(uint256 _keysToAllocate) external view returns (uint256 allocated, uint256[] memory allocations);
 
-    function getStakingModuleMaxDepositableKeys(uint24 _stakingModuleId) external view returns (uint256);
+    function getStakingModuleMaxDepositableKeys(uint256 _stakingModuleId) external view returns (uint256);
 }

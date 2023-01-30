@@ -1,6 +1,4 @@
-
-// SPDX-FileCopyrightText: 2022 Lido <info@lido.fi>
-
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.4.24;
@@ -13,6 +11,10 @@ contract StakeLimitUtilsMock {
     using StakeLimitUtils for StakeLimitState.Data;
 
     bytes32 internal constant STAKING_STATE_POSITION = keccak256("abcdef");
+
+    event StakeLimitValue(
+        uint256 currentLimit
+    );
 
     function getStorageStakeLimit(uint256 _slotValue) public view returns (
         uint32 prevStakeBlockNumber,
@@ -48,6 +50,11 @@ contract StakeLimitUtilsMock {
     function calculateCurrentStakeLimit(uint256 _slotValue) public view returns(uint256 limit) {
         STAKING_STATE_POSITION.setStorageUint256(_slotValue);
         return STAKING_STATE_POSITION.getStorageStakeLimitStruct().calculateCurrentStakeLimit();
+    }
+
+    function emitCurrentStakeLimit(uint256 _slotValue) public {
+        uint256 limit = calculateCurrentStakeLimit(_slotValue);
+        emit StakeLimitValue(limit);
     }
 
     function isStakingPaused(uint256 _slotValue) public view returns(bool) {

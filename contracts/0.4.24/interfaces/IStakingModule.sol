@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2022 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.4.24;
@@ -40,6 +40,7 @@ interface IStakingModule {
     ///     2. a node operator's key(s) is removed
     ///     3. a node operator's ready to deposit keys count is changed
     ///     4. a node operator was activated/deactivated
+    ///     5. a node operator's key(s) is used for the deposit
     function getValidatorsKeysNonce() external view returns (uint256);
 
     /// @notice Returns total number of node operators
@@ -65,6 +66,12 @@ interface IStakingModule {
         uint256 _exitedValidatorsKeysCount
     ) external returns (uint256);
 
+    /// @notice Unsafely updates the number of the validators in the EXITED state for node operator with given id
+    /// @param _nodeOperatorId Id of the node operator
+    /// @param _exitedValidatorsKeysCount New number of EXITED validators of the node operator
+    /// @return number of exited validators across all node operators
+    function unsafeUpdateExitedValidatorsKeysCount(uint256 _nodeOperatorId, uint256 _exitedValidatorsKeysCount) external returns (uint256);
+
     /// @notice Invalidates all unused validators keys for all node operators
     function invalidateReadyToDepositKeys() external;
 
@@ -89,6 +96,4 @@ interface IStakingModule {
     event NodeOperatorDeactivated(uint256 indexed nodeOperatorId);
 
     event UnusedValidatorsKeysTrimmed(uint256 indexed nodeOperatorId, uint256 trimmedKeysCount);
-
-    event NodeOperatorUnusedValidatorsKeysTrimmed(uint256 indexed nodeOperatorId, uint256 trimmedKeysCount);
 }

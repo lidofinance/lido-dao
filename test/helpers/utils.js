@@ -7,6 +7,13 @@ const pad = (hex, bytesLength, fill = '0') => {
   return hex
 }
 
+const padRight = (hex, length, fill = '0') => {
+  const strippedHex = hex.replace('0x', '')
+  const absentZeroes = length * 2 - strippedHex.length
+  if (absentZeroes > 0) hex = '0x' + strippedHex + fill.repeat(absentZeroes)
+  return hex
+}
+
 const hexConcat = (first, ...rest) => {
   let result = first.startsWith('0x') ? first : '0x' + first
   rest.forEach((item) => {
@@ -47,7 +54,7 @@ const toBN = (obj) => {
     return new BN(obj)
   }
   const str = obj + ''
-  return str.startsWith('0x') ? new BN(str.substr(2), 16) : new BN(str, 10)
+  return str.startsWith('0x') ? new BN(str.substring(2), 16) : new BN(str, 10)
 }
 
 function hex(n, byteLen) {
@@ -136,4 +143,5 @@ module.exports = {
   genKeys,
   shareRate,
   shares,
+  padRight
 }

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2022 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.9;
 
@@ -24,7 +24,8 @@ interface ILido {
 
     function getTotalShares() external returns (uint256);
 
-    function handleOracleReport(uint256, uint256, uint256, uint256, uint256[] calldata, uint256[] calldata) external;
+    function handleOracleReport(uint256, uint256, uint256, uint256, uint256, uint256) 
+        external returns (uint256, uint256);
 }
 
 /**
@@ -64,8 +65,8 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         uint256 beaconBalance,
         uint256 beaconValidators,
         uint256 withdrawalVaultBalance,
-        uint256[] requestIdToFinalizeUpTo,
-        uint256[] finalizationShareRates
+        uint256 requestIdToFinalizeUpTo,
+        uint256 finalizationShareRate
     );
 
     event PostTotalShares(
@@ -89,10 +90,10 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         uint256[] exitedValidatorsNumbers;
         // EL values
         uint256 withdrawalVaultBalance;
+        uint256 elRewardsVaultBalance;
         // decision
-        uint256 newBufferedEtherReserveAmount;
-        uint256[] requestIdToFinalizeUpTo;
-        uint256[] finalizationShareRates;
+        uint256 requestIdToFinalizeUpTo;
+        uint256 finalizationShareRate;
         bool bunkerModeFlag; // todo: to be utilized later
     }
 
@@ -172,7 +173,8 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         uint64 _secondsPerSlot,
         uint64 _genesisTime,
         uint256 _allowedBeaconBalanceAnnualRelativeIncrease,
-        uint256 _allowedBeaconBalanceRelativeDecrease
+        uint256 _allowedBeaconBalanceRelativeDecrease,
+        address _postRebaseBeaconReportReceiver
     )
         external
     {
@@ -207,6 +209,8 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
 
         // set expected epoch to the first epoch for the next frame
         _setExpectedEpochToFirstOfNextFrame();
+
+        _setBeaconReportReceiver(_postRebaseBeaconReportReceiver);
     }
 
     /**
@@ -277,6 +281,12 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
     function setBeaconReportReceiver(address _address)
         external onlyRole(SET_BEACON_REPORT_RECEIVER_ROLE)
     {
+        _setBeaconReportReceiver(_address);
+    }
+
+    function _setBeaconReportReceiver(address _address)
+        internal
+    {
         if(_address != address(0)) {
             IBeaconReportReceiver iBeacon;
             if (!_address.supportsInterface(iBeacon.processLidoOracleReport.selector)) {
@@ -287,6 +297,7 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         BEACON_REPORT_RECEIVER_POSITION.setStorageAddress(_address);
         emit BeaconReportReceiverSet(_address);
     }
+
 
     /**
      * @notice Return the initialized version of this contract starting from 0
@@ -440,7 +451,7 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
             _report.beaconValidators,
             _report.withdrawalVaultBalance,
             _report.requestIdToFinalizeUpTo,
-            _report.finalizationShareRates
+            _report.finalizationShareRate
         );
 
         // now this frame is completed, so the expected epoch should be advanced to the first epoch
@@ -464,9 +475,9 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
             _report.beaconValidators,
             beaconBalance,
             _report.withdrawalVaultBalance,
-            _report.newBufferedEtherReserveAmount,
+            _report.elRewardsVaultBalance,
             _report.requestIdToFinalizeUpTo,
-            _report.finalizationShareRates
+            _report.finalizationShareRate
         );
         uint256 postTotalPooledEther = lido.totalSupply();
 

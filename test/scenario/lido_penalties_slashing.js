@@ -53,8 +53,6 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
 
     stakingRouter = deployed.stakingRouter
 
-    // stakingRouter.addModule('NOR', nodeOperatorsRegistry.address, 10000, 500, 500, { from: voting })
-
     // addresses
     treasuryAddr = deployed.treasuryAddr
     depositSecurityModule = deployed.depositSecurityModule
@@ -62,40 +60,14 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
 
     depositRoot = await depositContractMock.get_deposit_root()
     withdrawalCredentials = pad('0x0202', 32)
-    await pool.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
+
+    await stakingRouter.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
   })
 
-  // Fee and its distribution are in basis points, 10000 corresponding to 100%
 
-  // Total fee is 1%
-  const totalFeePoints = 0.01 * 10000
-
-  const treasuryFeePoints = 0.3 * 10000
-  const nodeOperatorsFeePoints = 0.7 * 10000
 
   let awaitingTotalShares = new BN(0)
   let awaitingUser1Balance = new BN(0)
-
-  it('voting sets fee and its distribution', async () => {
-    await pool.setFee(totalFeePoints, { from: voting })
-    await pool.setFeeDistribution(treasuryFeePoints, nodeOperatorsFeePoints, { from: voting })
-
-    // Fee and distribution were set
-
-    assertBn(await pool.getFee({ from: nobody }), totalFeePoints, 'total fee')
-
-    const distribution = await pool.getFeeDistribution({ from: nobody })
-    assertBn(distribution.treasuryFeeBasisPoints, treasuryFeePoints, 'treasury fee')
-    assertBn(distribution.operatorsFeeBasisPoints, nodeOperatorsFeePoints, 'node operators fee')
-  })
-
-  it('voting sets withdrawal credentials', async () => {
-    await pool.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
-
-    // Withdrawal credentials were set
-
-    assert.equal(await pool.getWithdrawalCredentials({ from: nobody }), withdrawalCredentials, 'withdrawal credentials')
-  })
 
   // Each node operator has its Ethereum 1 address, a name and a set of registered
   // validators, each of them defined as a (public key, signature) pair
@@ -490,6 +462,54 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     assertRevert(oracleMock.reportBeacon(101, 1, ETH(31)))
   })
 
+  it(`user deposits another 32 ETH to the pool`, async () => {
+    const totalPooledEther = await pool.getTotalPooledEther()
+    const depositAmount = ETH(32)
+    awaitingTotalShares = awaitingTotalShares.add(new BN(depositAmount).mul(awaitingTotalShares).div(totalPooledEther))
+    awaitingUser1Balance = awaitingUser1Balance.add(new BN(depositAmount))
+
+    await web3.eth.sendTransaction({ to: pool.address, from: user1, value: depositAmount })
+    const block = await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
+    const keysOpIndex = await nodeOperatorsRegistry.getKeysOpIndex()
+    const signatures = [
+      signDepositData(
+        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
+        block.number,
+        block.hash,
+        depositRoot,
+        1,
+        keysOpIndex,
+        '0x00',
+        guardians.privateKeys[guardians.addresses[0]]
+      ),
+      signDepositData(
+        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
+        block.number,
+        block.hash,
+        depositRoot,
+        1,
+        keysOpIndex,
+        '0x00',
+        guardians.privateKeys[guardians.addresses[1]]
+      )
+    ]
+    await depositSecurityModule.depositBufferedEther(block.number, block.hash, depositRoot, 1, keysOpIndex, '0x00', signatures)
+
+    const ether2Stat = await pool.getBeaconStat()
+    assertBn(ether2Stat.depositedValidators, 2, 'no validators have received the current deposit')
+
+    // The amount of tokens corresponding to the deposited ETH value was minted to the user
+
+    assertBn(await token.balanceOf(user1), awaitingUser1Balance, 'user1 tokens')
+
+    assertBn(await token.totalSupply(), tokens(92), 'token total supply')
+    // Total shares are equal to deposited eth before ratio change and fee mint
+    assertBn(await token.getTotalShares(), awaitingTotalShares, 'total shares')
+
+    // All Ether was buffered within the pool contract atm
+    assertBn(await pool.getBufferedEther(), ETH(32), `32 ETH is pooled`)
+  })
+
   it(`voting stops the staking module`, async () => {
     await stakingRouter.setStakingModuleStatus(1, 2, { from: voting })
     assertBn(await stakingRouter.getStakingModulesCount(), new BN(1), 'only 1 module exists')
@@ -519,73 +539,14 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
 
   it(`voting stops the first operator`, async () => {
     const activeOperatorsBefore = await nodeOperatorsRegistry.getActiveNodeOperatorsCount()
-    await nodeOperatorsRegistry.setNodeOperatorActive(0, false, { from: voting })
+    await nodeOperatorsRegistry.deactivateNodeOperator(0, { from: voting })
     const activeOperatorsAfter = await nodeOperatorsRegistry.getActiveNodeOperatorsCount()
     assertBn(activeOperatorsAfter, activeOperatorsBefore.sub(new BN(1)), 'deactivated one operator')
   })
 
-  it(`user deposits another 32 ETH to the pool`, async () => {
-    const totalPooledEther = await pool.getTotalPooledEther()
-    const depositAmount = ETH(32)
-    awaitingTotalShares = awaitingTotalShares.add(new BN(depositAmount).mul(awaitingTotalShares).div(totalPooledEther))
-    awaitingUser1Balance = awaitingUser1Balance.add(new BN(depositAmount))
-
-    await web3.eth.sendTransaction({ to: pool.address, from: user1, value: depositAmount })
-    const block = await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
-    const keysOpIndex = await nodeOperatorsRegistry.getKeysOpIndex()
-    const signatures = [
-      signDepositData(
-        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
-        depositRoot,
-        keysOpIndex,
-        block.number,
-        block.hash,
-        guardians.privateKeys[guardians.addresses[0]]
-      ),
-      signDepositData(
-        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
-        depositRoot,
-        keysOpIndex,
-        block.number,
-        block.hash,
-        guardians.privateKeys[guardians.addresses[1]]
-      )
-    ]
-    await depositSecurityModule.depositBufferedEther(depositRoot, keysOpIndex, block.number, block.hash, signatures)
-
-    const ether2Stat = await pool.getBeaconStat()
-    assertBn(ether2Stat.depositedValidators, 2, 'no validators have received the current deposit')
-
-    // The amount of tokens corresponding to the deposited ETH value was minted to the user
-
-    assertBn(await token.balanceOf(user1), awaitingUser1Balance, 'user1 tokens')
-
-    assertBn(await token.totalSupply(), tokens(95), 'token total supply')
-    // Total shares are equal to deposited eth before ratio change and fee mint
-    assertBn(await token.getTotalShares(), awaitingTotalShares, 'total shares')
-
-    // All Ether was buffered within the pool contract atm
-    assertBn(await pool.getBufferedEther(), ETH(32), `32 ETH is pooled`)
-  })
-
-  it(`oracle reports profit, stopped node operator doesn't get the fee`, async () => {
-    const nodeOperator1TokenSharesBefore = await token.sharesOf(nodeOperator1.address)
-    const nodeOperator2TokenSharesBefore = await token.sharesOf(nodeOperator2.address)
-
-    await oracleMock.reportBeacon(105, 2, tokens(96)) // 105 is an epoch number
-
-    const nodeOperator1TokenSharesAfter = await token.sharesOf(nodeOperator1.address)
-    const nodeOperator2TokenSharesAfter = await token.sharesOf(nodeOperator2.address)
-    assertBn(nodeOperator1TokenSharesAfter, nodeOperator1TokenSharesBefore, `first node operator balance hasn't changed`)
-    assert(
-      nodeOperator2TokenSharesBefore.sub(nodeOperator2TokenSharesAfter).negative,
-      `second node operator gained shares under fee distribution`
-    )
-  })
-
   it(`voting stops the second operator`, async () => {
     const activeOperatorsBefore = await nodeOperatorsRegistry.getActiveNodeOperatorsCount()
-    await nodeOperatorsRegistry.setNodeOperatorActive(1, false, { from: voting })
+    await nodeOperatorsRegistry.deactivateNodeOperator(1, { from: voting })
     const activeOperatorsAfter = await nodeOperatorsRegistry.getActiveNodeOperatorsCount()
     assertBn(activeOperatorsAfter, activeOperatorsBefore.sub(new BN(1)), 'deactivated one operator')
     assertBn(activeOperatorsAfter, new BN(0), 'no active operators')
@@ -593,34 +554,40 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
 
   it(`without active staking modules fee is sent to treasury`, async () => {
     const treasurySharesBefore = await token.sharesOf(treasuryAddr)
-    await oracleMock.reportBeacon(105, 2, tokens(98)) // 105 is an epoch number
+    const nodeOperator1TokenSharesBefore = await token.sharesOf(nodeOperator1.address)
+    const nodeOperator2TokenSharesBefore = await token.sharesOf(nodeOperator2.address)
+    const nodeOperatorsRegistrySharesBefore = await token.sharesOf(nodeOperatorsRegistry.address)
+    const prevTotalShares = await token.getTotalShares()
+
+    // Fee and its distribution are in basis points, 10000 corresponding to 100%
+    // Total fee is 10%
+    const totalFeePoints = 0.1 * 10000
+
+    const beaconValidators = 2
+    const beaconBalance = 90 // 98
+    const beaconBalanceIncrement = beaconBalance - 60
+    await oracleMock.reportBeacon(105, beaconValidators, tokens(beaconBalance)) // 105 is an epoch number
 
     const nodeOperator1TokenSharesAfter = await token.sharesOf(nodeOperator1.address)
     const nodeOperator2TokenSharesAfter = await token.sharesOf(nodeOperator2.address)
+    const nodeOperatorsRegistrySharesAfter = await token.sharesOf(nodeOperatorsRegistry.address)
     const treasurySharesAfter = await token.sharesOf(treasuryAddr)
 
     assertBn(nodeOperator1TokenSharesAfter, nodeOperator1TokenSharesBefore, `first node operator hasn't got fees`)
     assertBn(nodeOperator2TokenSharesAfter, nodeOperator2TokenSharesBefore, `second node operator hasn't got fees`)
+    assertBn(nodeOperatorsRegistrySharesAfter, nodeOperatorsRegistrySharesBefore, `NOR stakingModule hasn't got fees`)
 
     const tenKBN = new BN(10000)
-    const totalFeeToDistribute = new BN(ETH(2)).mul(new BN(totalFeePoints)).div(tenKBN)
+    const totalFeeToDistribute = new BN(ETH(beaconBalanceIncrement)).mul(new BN(totalFeePoints)).div(tenKBN)
 
-    const sharesToMint = totalFeeToDistribute.mul(prevTotalShares).div(totalPooledEther.sub(totalFeeToDistribute))
-    const treasuryFeeTotalMinusInsurance = sharesToMint
+    const totalPooledEther = await pool.getTotalPooledEther()
+    let sharesToMint = totalFeeToDistribute
+      .mul(prevTotalShares)
+      .div(
+        totalPooledEther.sub(totalFeeToDistribute)
+      )
 
-    const treasuryFeeTotalTreasuryPlusNodeOperators = sharesToMint
-      .mul(new BN(treasuryFeePoints).add(new BN(nodeOperatorsFeePoints)))
-      .div(tenKBN)
-
-    assertBn(treasurySharesAfter.sub(treasurySharesBefore), treasuryFeeTotalMinusInsurance, 'treasury got the total fee - insurance fee')
-    assertBn(
-      treasurySharesAfter.sub(treasurySharesBefore),
-      treasuryFeeTotalTreasuryPlusNodeOperators,
-      'treasury got the regular fee + node operators fee'
-    )
-
-    // TODO: the following line is from staking router
-    assertBn(treasurySharesAfter.sub(treasurySharesBefore), new BN('2715279303023647411'), 'treasury got the total fee')
+    assertBn(treasurySharesAfter.sub(treasurySharesBefore), sharesToMint, 'treasury got the total fee')
   })
 
   it(`voting starts staking module`, async () => {
@@ -641,4 +608,28 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
       `first node operator gained shares under fee distribution`
     )
   })
+
+  it(`oracle reports profit, stopped node operator doesn't get the fee`, async () => {
+    const nodeOperator1TokenSharesBefore = await token.sharesOf(nodeOperator1.address)
+    const nodeOperator2TokenSharesBefore = await token.sharesOf(nodeOperator2.address)
+
+    await oracleMock.reportBeacon(105, 2, tokens(96)) // 105 is an epoch number
+    // kicks rewards distribution
+    await nodeOperatorsRegistry.finishUpdatingExitedValidatorsKeysCount({ from: voting })
+
+    const nodeOperator1TokenSharesAfter = await token.sharesOf(nodeOperator1.address)
+    const nodeOperator2TokenSharesAfter = await token.sharesOf(nodeOperator2.address)
+    console.log({
+      nodeOperator1TokenSharesBefore: nodeOperator1TokenSharesBefore.toString(),
+      nodeOperator1TokenSharesAfter: nodeOperator1TokenSharesAfter.toString(),
+      nodeOperator2TokenSharesBefore: nodeOperator2TokenSharesBefore.toString(),
+      nodeOperator2TokenSharesAfter: nodeOperator2TokenSharesAfter.toString(),
+    })
+    assertBn(nodeOperator1TokenSharesAfter, nodeOperator1TokenSharesBefore, `first node operator balance hasn't changed`)
+    assert(
+      !nodeOperator2TokenSharesBefore.sub(nodeOperator2TokenSharesAfter).positive,
+      `second node operator gained shares under fee distribution`
+    )
+  })
+
 })

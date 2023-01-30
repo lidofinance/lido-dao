@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2022 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 
 // SPDX-License-Identifier: GPL-3.0
 
@@ -94,6 +94,7 @@ library StakeLimitUnstructuredStorage {
 library StakeLimitUtils {
     /**
     * @notice Calculate stake limit for the current block.
+    * @dev using `_constGasMin` to make gas consumption independent of the current block number
     */
     function calculateCurrentStakeLimit(StakeLimitState.Data memory _data) internal view returns(uint256 limit) {
         uint256 stakeLimitIncPerBlock;
@@ -101,10 +102,13 @@ library StakeLimitUtils {
             stakeLimitIncPerBlock = _data.maxStakeLimit / _data.maxStakeLimitGrowthBlocks;
         }
 
-        limit = _data.prevStakeLimit + ((block.number - _data.prevStakeBlockNumber) * stakeLimitIncPerBlock);
-        if (limit > _data.maxStakeLimit) {
-            limit = _data.maxStakeLimit;
-        }
+        uint256 blocksPassed = block.number - _data.prevStakeBlockNumber;
+        uint256 projectedLimit = _data.prevStakeLimit + blocksPassed * stakeLimitIncPerBlock;
+
+        limit = _constGasMin(
+            projectedLimit,
+            _data.maxStakeLimit
+        );
     }
 
     /**
@@ -204,5 +208,19 @@ library StakeLimitUtils {
         _data.prevStakeBlockNumber = uint32(_isPaused ? 0 : block.number);
 
         return _data;
+    }
+
+    /**
+     * @notice find a minimum of two numbers with a constant gas consumption
+     * @dev doesn't use branching logic inside
+     * @param _lhs left hand side value
+     * @param _rhs right hand side value
+     */
+    function _constGasMin(uint256 _lhs, uint256 _rhs) internal view returns (uint256 min) {
+        uint256 lhsIsLess;
+        assembly {
+            lhsIsLess := lt(_lhs, _rhs) // lhsIsLess = (_lhs < _rhs) ? 1 : 0
+        }
+        min = (_lhs * lhsIsLess) + (_rhs * (1 - lhsIsLess));
     }
 }

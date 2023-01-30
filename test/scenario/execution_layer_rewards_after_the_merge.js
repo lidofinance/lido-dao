@@ -44,10 +44,6 @@ contract('Lido: merge acceptance', (addresses) => {
   // Total fee is 1%
   const totalFeePoints = 0.01 * TOTAL_BASIS_POINTS
 
-  // TODO: next 2 lines from withdrawals
-  // const treasuryFeePoints = 0.3 * TOTAL_BASIS_POINTS
-  // const nodeOperatorsFeePoints = 0.7 * TOTAL_BASIS_POINTS
-
   const withdrawalCredentials = pad('0x0202', 32)
 
   // Each node operator has its Ethereum 1 address, a name and a set of registered
@@ -112,15 +108,6 @@ contract('Lido: merge acceptance', (addresses) => {
 
     assertBn(await web3.eth.getBalance(rewarder.address), ETH(0), 'rewarder balance')
     assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(0), 'Execution layer rewards vault balance')
-
-    // Fee and distribution were set
-
-    // assertBn(await pool.getFee({ from: nobody }), totalFeePoints, 'total fee')
-
-    // const distribution = await pool.getFeeDistribution({ from: nobody })
-    // assertBn(distribution.treasuryFeeBasisPoints, treasuryFeePoints, 'treasury fee')
-    // assertBn(distribution.operatorsFeeBasisPoints, nodeOperatorsFeePoints, 'node operators fee')
-
     await stakingRouter.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
 
     // Withdrawal credentials were set

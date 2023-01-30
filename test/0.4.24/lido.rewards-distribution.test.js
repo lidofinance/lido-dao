@@ -10,7 +10,8 @@ const OracleMock = artifacts.require('OracleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
 const StakingRouter = artifacts.require('StakingRouterMock.sol')
 const ModuleSolo = artifacts.require('ModuleSolo.sol')
-const IStakingModule = artifacts.require('contracts/0.8.9/interfaces/IStakingModule.sol:IStakingModule')
+const EIP712StETH = artifacts.require('EIP712StETH')
+const ELRewardsVault = artifacts.require('LidoExecutionLayerRewardsVault.sol')
 
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 
@@ -26,9 +27,8 @@ const cfgCommunity = {
   targetShare: 5000
 }
 
-contract('Lido', ([appManager, voting, user2]) => {
+contract('Lido: staking router reward distribution', ([appManager, voting, treasury, depositor, user2]) => {
   let appBase, nodeOperatorsRegistryBase, app, oracle, depositContract, curatedModule, stakingRouter, soloModule
-  let treasuryAddr
   let dao, acl
 
   before('deploy base app', async () => {
@@ -56,7 +56,6 @@ contract('Lido', ([appManager, voting, user2]) => {
     await acl.createPermission(voting, app.address, await app.RESUME_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.BURN_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.MANAGE_PROTOCOL_CONTRACTS_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.SET_EL_REWARDS_VAULT_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE(), appManager, {
       from: appManager
     })
@@ -78,8 +77,66 @@ contract('Lido', ([appManager, voting, user2]) => {
       from: appManager
     })
 
+    const eip712StETH = await EIP712StETH.new()
+    const elRewardsVault = await ELRewardsVault.new(app.address, treasury)
+
+    stakingRouter = await StakingRouter.new(depositContract.address)
+    // initialize
+    const wc = '0x'.padEnd(66, '1234')
+    await stakingRouter.initialize(appManager, app.address, wc)
+
+    // Set up the staking router permissions.
+    const STAKING_MODULE_MANAGE_ROLE = await stakingRouter.STAKING_MODULE_MANAGE_ROLE()
+    const REPORT_REWARDS_MINTED_ROLE = await stakingRouter.REPORT_REWARDS_MINTED_ROLE()
+
+    await stakingRouter.grantRole(REPORT_REWARDS_MINTED_ROLE, app.address, { from: appManager })
+    await stakingRouter.grantRole(STAKING_MODULE_MANAGE_ROLE, voting, { from: appManager })
+
+    await acl.createPermission(stakingRouter.address, curatedModule.address, await curatedModule.STAKING_ROUTER_ROLE(), appManager, {
+      from: appManager
+    })
+
+    soloModule = await ModuleSolo.new(app.address, { from: appManager })
+
+    await stakingRouter.addStakingModule(
+      'Curated',
+      curatedModule.address,
+      cfgCurated.targetShare,
+      cfgCurated.moduleFee,
+      cfgCurated.treasuryFee,
+      {
+        from: voting
+      }
+    )
+
+    await curatedModule.increaseTotalSigningKeysCount(500_000, { from: appManager })
+    await curatedModule.increaseDepositedSigningKeysCount(499_950, { from: appManager })
+    await curatedModule.increaseVettedSigningKeysCount(499_950, { from: appManager })
+
+    await stakingRouter.addStakingModule(
+      'Solo',
+      soloModule.address,
+      cfgCommunity.targetShare,
+      cfgCommunity.moduleFee,
+      cfgCommunity.treasuryFee,
+      {
+        from: voting
+      }
+    )
+    await soloModule.setTotalKeys(100, { from: appManager })
+    await soloModule.setTotalUsedKeys(10, { from: appManager })
+    await soloModule.setTotalStoppedKeys(0, { from: appManager })
+
     // Initialize the app's proxy.
-    await app.initialize(oracle.address, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS)
+    await app.initialize(
+      oracle.address,
+      treasury,
+      stakingRouter.address,
+      depositor,
+      elRewardsVault.address,
+      ZERO_ADDRESS,
+      eip712StETH.address,
+    )
 
     assert((await app.isStakingPaused()) === true)
     assert((await app.isStopped()) === true)
@@ -87,63 +144,28 @@ contract('Lido', ([appManager, voting, user2]) => {
     assert((await app.isStakingPaused()) === false)
     assert((await app.isStopped()) === false)
 
-    treasuryAddr = await app.getTreasury()
-
     await oracle.setPool(app.address)
     await depositContract.reset()
   })
 
-  beforeEach('setup staking router', async () => {
-    stakingRouter = await StakingRouter.new(depositContract.address)
-    // initialize
-    const wc = '0x'.padEnd(66, '1234')
-    await stakingRouter.initialize(appManager, app.address, wc)
-
-    // Set up the staking router permissions.
-    const MODULE_MANAGE_ROLE = await stakingRouter.MODULE_MANAGE_ROLE()
-
-    await stakingRouter.grantRole(MODULE_MANAGE_ROLE, voting, { from: appManager })
-
-    await app.setStakingRouter(stakingRouter.address, { from: voting })
-
-    soloModule = await ModuleSolo.new(app.address, { from: appManager })
-
-    await stakingRouter.addModule('Curated', curatedModule.address, cfgCurated.targetShare, cfgCurated.moduleFee, cfgCurated.treasuryFee, {
-      from: voting
-    })
-
-    await curatedModule.increaseTotalSigningKeysCount(500_000, { from: appManager })
-    await curatedModule.increaseDepositedSigningKeysCount(499_950, { from: appManager })
-    await curatedModule.increaseVettedSigningKeysCount(499_950, { from: appManager })
-
-    await stakingRouter.addModule('Solo', soloModule.address, cfgCommunity.targetShare, cfgCommunity.moduleFee, cfgCommunity.treasuryFee, {
-      from: voting
-    })
-    await soloModule.setTotalKeys(100, { from: appManager })
-    await soloModule.setTotalUsedKeys(10, { from: appManager })
-    await soloModule.setTotalStoppedKeys(0, { from: appManager })
-  })
-
-  it.skip('Rewards distribution fills treasury', async () => {
-    // TODO: fix. broken after merging
+  it('Rewards distribution fills treasury', async () => {
     const beaconBalance = ETH(1)
-    const { moduleFees, totalFee, precisionPoints } = await stakingRouter.getStakingRewardsDistribution()
-    const treasuryShare = moduleFees.reduce((total, share) => total.sub(share), totalFee)
+    const { stakingModuleFees, totalFee, precisionPoints } = await stakingRouter.getStakingRewardsDistribution()
+    const treasuryShare = stakingModuleFees.reduce((total, share) => total.sub(share), totalFee)
     const treasuryRewards = bn(beaconBalance).mul(treasuryShare).div(precisionPoints)
     await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(32) })
 
-    const treasuryBalanceBefore = await app.balanceOf(treasuryAddr)
+    const treasuryBalanceBefore = await app.balanceOf(treasury)
     await oracle.reportBeacon(100, 0, beaconBalance, { from: appManager })
 
-    const treasuryBalanceAfter = await app.balanceOf(treasuryAddr)
+    const treasuryBalanceAfter = await app.balanceOf(treasury)
     assert(treasuryBalanceAfter.gt(treasuryBalanceBefore))
     assertBn(fixRound(treasuryBalanceBefore.add(treasuryRewards)), fixRound(treasuryBalanceAfter))
   })
 
-  it.skip('Rewards distribution fills modules', async () => {
-    // TODO: fix. broken after merging
+  it('Rewards distribution fills modules', async () => {
     const beaconBalance = ETH(1)
-    const { recipients, moduleFees, precisionPoints } = await stakingRouter.getStakingRewardsDistribution()
+    const { recipients, stakingModuleFees, precisionPoints } = await stakingRouter.getStakingRewardsDistribution()
 
     await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(32) })
 
@@ -156,7 +178,7 @@ contract('Lido', ([appManager, voting, user2]) => {
 
     for (let i = 0; i < recipients.length; i++) {
       const moduleBalanceAfter = await app.balanceOf(recipients[i])
-      const moduleRewards = bn(beaconBalance).mul(moduleFees[i]).div(precisionPoints)
+      const moduleRewards = bn(beaconBalance).mul(stakingModuleFees[i]).div(precisionPoints)
       assert(moduleBalanceAfter.gt(moduleBalanceBefore[i]))
       assertBn(fixRound(moduleBalanceBefore[i].add(moduleRewards)), fixRound(moduleBalanceAfter))
     }

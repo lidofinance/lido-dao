@@ -1,5 +1,7 @@
 const path = require('path')
 const chalk = require('chalk')
+const { hash: namehash } = require('eth-ens-namehash')
+const { toChecksumAddress } = require('web3-utils')
 
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log } = require('../helpers/log')
@@ -13,9 +15,10 @@ const REQUIRED_NET_STATE = [
   'lidoApmEnsName',
   'daoTemplateAddress',
   `app:${APP_NAMES.LIDO}`,
-  `app:${APP_NAMES.ORACLE}`,
   `app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`
 ]
+
+const VALID_APP_NAMES = Object.entries(APP_NAMES).map((e) => e[1])
 
 async function obtainDeployedAPM({ web3, artifacts }) {
   const netId = await web3.eth.net.getId()
@@ -28,12 +31,26 @@ async function obtainDeployedAPM({ web3, artifacts }) {
 
   log.splitter()
 
+
   log(`Using LidoTemplate: ${chalk.yellow(state.daoTemplateAddress)}`)
   const template = await artifacts.require('LidoTemplate').at(state.daoTemplateAddress)
   if (state.daoTemplateDeployBlock) {
     log(`Using LidoTemplate deploy block: ${chalk.yellow(state.daoTemplateDeployBlock)}`)
   }
   const daoDeployedEvt = await assertLastEvent(template, 'TmplDAOAndTokenDeployed', null, state.daoTemplateDeployBlock)
+
+  const lidoApmEnsName = state.lidoApmEnsName
+  const appIdNameEntries = VALID_APP_NAMES.map((name) => [namehash(`${name}.${lidoApmEnsName}`), name])
+  const appNameByAppId = Object.fromEntries(appIdNameEntries)
+
+  const fromBlock = state.daoTemplateDeployBlock // 4532202
+  const appInstalledEvents = (await template.getPastEvents('TmplAppInstalled', { fromBlock })).map((evt) => evt.args)
+  for (const evt of appInstalledEvents) {
+    const appName = appNameByAppId[evt.appId]
+    const proxyAddress = toChecksumAddress(evt.appProxy)
+    console.log(`${appName}: ${proxyAddress}`)
+  }
+
   state.newDaoTx = daoDeployedEvt.transactionHash
   log(`Using newDao transaction: ${chalk.yellow(state.newDaoTx)}`)
   persistNetworkState(network.name, netId, state)

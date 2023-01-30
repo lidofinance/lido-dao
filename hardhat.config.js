@@ -42,10 +42,24 @@ const getNetConfig = (networkName, ethAccountName) => {
     ...base,
     url: 'http://localhost:8545',
     chainId: 31337,
-    gas: 8000000 // the same as in Görli
+    gas: 80000000 // the same as in Görli
+  }
+  const mainnetfork = {
+    ...base,
+    url: 'http://localhost:8545',
+    chainId: 1337,
+    gas: 80000000 // the same as in Görli
+  }
+  const devnet3 = {
+    ...base,
+    url: 'http://35.228.211.212:8545',
+    chainId: 1337807,
+    gas: 9194304
   }
   const byNetName = {
     localhost,
+    mainnetfork,
+    devnet3,
     // local
     local: {
       ...base,
@@ -163,6 +177,10 @@ module.exports = {
             runs: 5000000 // https://etherscan.io/address/0x00000000219ab540356cbb839cbe05303d7705fa#code
           }
         }
+      },
+      'contracts/0.4.24/test_helpers/MinFirstAllocationStrategyConsumerMockLegacyVersion.sol': {
+        version: '0.4.24',
+        settings: {}
       }
     }
   },

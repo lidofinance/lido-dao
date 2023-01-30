@@ -20,10 +20,10 @@ const REQUIRED_NET_STATE = [
   'multisigAddress',
   'daoTemplateAddress',
   `app:${APP_NAMES.LIDO}`,
-  `app:${APP_NAMES.ORACLE}`,
   `app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`,
   'daoInitialSettings',
-  'eip712StETHAddress'
+  'eip712StETHAddress',
+  'lidoOracle',
 ]
 
 const ARAGON_APM_ENS_DOMAIN = 'aragonpm.eth'
@@ -54,7 +54,7 @@ async function deployDAO({ web3, artifacts }) {
   await checkAppRepos(state)
   log.splitter()
 
-  const { daoInitialSettings, depositContractAddress, eip712StETHAddress } = state
+  const { daoInitialSettings, eip712StETHAddress } = state
 
   const votingSettings = [
     daoInitialSettings.voting.minSupportRequired,
@@ -63,16 +63,8 @@ async function deployDAO({ web3, artifacts }) {
     daoInitialSettings.voting.objectionPhaseDuration,
   ]
 
-  const beaconSpec = [
-    daoInitialSettings.beaconSpec.epochsPerFrame,
-    daoInitialSettings.beaconSpec.slotsPerEpoch,
-    daoInitialSettings.beaconSpec.secondsPerSlot,
-    daoInitialSettings.beaconSpec.genesisTime
-  ]
-
   log(`Using DAO token settings:`, daoInitialSettings.token)
   log(`Using DAO voting settings:`, daoInitialSettings.voting)
-  log(`Using beacon spec:`, daoInitialSettings.beaconSpec)
   log(`Using eip712StETHAddress:`, eip712StETHAddress)
 
   await saveCallTxData(`newDAO`, template, 'newDAO', `tx-05-deploy-dao.json`, {
@@ -80,9 +72,8 @@ async function deployDAO({ web3, artifacts }) {
       daoInitialSettings.token.name,
       daoInitialSettings.token.symbol,
       votingSettings,
-      daoInitialSettings.beaconSpec.depositContractAddress || depositContractAddress,
-      beaconSpec,
-      eip712StETHAddress
+      eip712StETHAddress,
+      state.lidoOracle.proxy,
     ],
     from: state.multisigAddress
   })

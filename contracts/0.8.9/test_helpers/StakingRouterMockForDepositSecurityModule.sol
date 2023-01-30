@@ -1,5 +1,4 @@
-// SPDX-FileCopyrightText: 2022 Lido <info@lido.fi>
-
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 /* See contracts/COMPILERS.md */
@@ -17,7 +16,7 @@ contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
 
     function getStakingModules() external view returns (StakingModule[] memory res) {}
 
-    function addModule(
+    function addStakingModule(
         string memory _name,
         address _stakingModuleAddress,
         uint16 _targetShare,
@@ -25,9 +24,9 @@ contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
         uint16 _treasuryFee
     ) external {}
 
-    function updateStakingModule(uint24 _stakingModuleId, uint16 _targetShare, uint16 _moduleFee, uint16 _treasuryFee) external {}
+    function updateStakingModule(uint256 _stakingModuleId, uint16 _targetShare, uint16 _moduleFee, uint16 _treasuryFee) external {}
 
-    function getStakingModule(uint24 _stakingModuleId) external view returns (StakingModule memory) {}
+    function getStakingModule(uint256 _stakingModuleId) external view returns (StakingModule memory) {}
 
     function getStakingModulesCount() public view returns (uint256) {}
 
@@ -36,62 +35,62 @@ contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
         view
         returns (
             address[] memory recipients,
-            uint256[] memory moduleIds,
+            uint256[] memory stakingModuleIds,
             uint96[] memory moduleFees,
-            uint96 totalFeee,
+            uint96 totalFee,
             uint256 precisionPoints
         )
     {}
 
     function deposit(
         uint256 maxDepositsCount,
-        uint24 stakingModuleId,
+        uint256 stakingModuleId,
         bytes calldata depositCalldata
     ) external payable returns (uint256 keysCount) {
-        emit StakingModuleDeposited(maxDepositsCount, stakingModuleId, depositCalldata);
+        emit StakingModuleDeposited(maxDepositsCount, uint24(stakingModuleId), depositCalldata);
         return maxDepositsCount;
     }
 
     function setWithdrawalCredentials(bytes32 _withdrawalCredentials) external {}
 
-    function getStakingModuleStatus(uint24) external view returns (StakingModuleStatus) {
+    function getStakingModuleStatus(uint256) external view returns (StakingModuleStatus) {
         return status;
     }
 
-    function setStakingModuleStatus(uint24 _stakingModuleId, StakingModuleStatus _status) external {
-        emit StakingModuleStatusSet(_stakingModuleId, _status, msg.sender);
+    function setStakingModuleStatus(uint256 _stakingModuleId, StakingModuleStatus _status) external {
+        emit StakingModuleStatusSet(uint24(_stakingModuleId), _status, msg.sender);
         status = _status;
     }
 
-    function pauseStakingModule(uint24 stakingModuleId) external {
-        emit StakingModuleStatusSet(stakingModuleId, StakingModuleStatus.DepositsPaused, msg.sender);
+    function pauseStakingModule(uint256 stakingModuleId) external {
+        emit StakingModuleStatusSet(uint24(stakingModuleId), StakingModuleStatus.DepositsPaused, msg.sender);
         status = StakingModuleStatus.DepositsPaused;
     }
 
-    function resumeStakingModule(uint24 stakingModuleId) external {
-        emit StakingModuleStatusSet(stakingModuleId, StakingModuleStatus.Active, msg.sender);
+    function resumeStakingModule(uint256 stakingModuleId) external {
+        emit StakingModuleStatusSet(uint24(stakingModuleId), StakingModuleStatus.Active, msg.sender);
         status = StakingModuleStatus.Active;
     }
 
     function getWithdrawalCredentials() external view returns (bytes32) {}
 
-    function getStakingModuleIsStopped(uint24) external view returns (bool) {
+    function getStakingModuleIsStopped(uint256) external view returns (bool) {
         return status == StakingModuleStatus.Stopped;
     }
 
-    function getStakingModuleIsDepositsPaused(uint24) external view returns (bool) {
+    function getStakingModuleIsDepositsPaused(uint256) external view returns (bool) {
         return status == StakingModuleStatus.DepositsPaused;
     }
 
-    function getStakingModuleIsActive(uint24) external view returns (bool) {
+    function getStakingModuleIsActive(uint256) external view returns (bool) {
         return status == StakingModuleStatus.Active;
     }
 
-    function getStakingModuleKeysOpIndex(uint24) external view returns (uint256) {
+    function getStakingModuleKeysOpIndex(uint256) external view returns (uint256) {
         return stakingModuleKeysOpIndex;
     }
 
-    function getStakingModuleLastDepositBlock(uint24) external view returns (uint256) {
+    function getStakingModuleLastDepositBlock(uint256) external view returns (uint256) {
         return stakingModuleLastDepositBlock;
     }
 
@@ -103,13 +102,13 @@ contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
         stakingModuleLastDepositBlock = value;
     }
 
-    function getStakingModuleActiveKeysCount(uint24 _stakingModuleId) external view returns (uint256) {}
+    function getStakingModuleActiveKeysCount(uint256 _stakingModuleId) external view returns (uint256) {}
 
     function getExitedKeysCountAcrossAllModules() external view returns (uint256) {}
 
     function getKeysAllocation(uint256 _keysToAllocate) external view returns (uint256 allocated, uint256[] memory allocations) {}
 
-    function getStakingModuleMaxDepositableKeys(uint24 _stakingModuleId) external view returns (uint256) {}
+    function getStakingModuleMaxDepositableKeys(uint256 _stakingModuleIndex) public view returns (uint256) {}
 
     function reportRewardsMinted(uint256[] calldata _stakingModuleIds, uint256[] calldata _totalShares) external {}
 

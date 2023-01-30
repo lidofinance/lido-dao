@@ -25,13 +25,13 @@ contract LidoMockForOracleNew {
         uint256 _beaconBalance,
         uint256,
         uint256,
-        uint256[] calldata,
-        uint256[] calldata
-    ) external {
+        uint256,
+        uint256
+    ) external returns (uint256, uint256) {
         totalPooledEther = _beaconBalance;
     }
 
-    function getTotalShares() public view returns (uint256) {
+    function getTotalShares() public pure returns (uint256) {
         return 42;
     }
 

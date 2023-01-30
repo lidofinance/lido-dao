@@ -1,5 +1,4 @@
-// SPDX-FileCopyrightText: 2022 Lido <info@lido.fi>
-
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 /* See contracts/COMPILERS.md */
@@ -12,5 +11,8 @@ contract StakingRouterMock is StakingRouter {
         // unlock impl
         _setContractVersion(0);
     }
+
+    function getStakingModuleIndexById(uint256 _stakingModuleId) external view returns (uint256) {
+        return _getStakingModuleIndexById(uint24(_stakingModuleId));
+    }
 }
-    
