@@ -390,65 +390,83 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
     })
   })
 
-  context('requestWithdrawals()', () => {
+  context('requestWithdrawalBatch()', () => {
     it('works correctly with non empty payload and different tokens', async () => {
-      await wsteth.mint(user, ETH(100))
-      await steth.mintShares(wsteth.address, shares(20))
       await steth.mintShares(user, shares(10))
       await steth.approve(withdrawalQueue.address, StETH(300), { from: user })
-      await wsteth.approve(withdrawalQueue.address, ETH(300), { from: user })
       const requests = [
-        [steth.address, ETH(10), recipient],
-        [wsteth.address, ETH(20), stranger]
+        [ETH(10), recipient],
+        [ETH(20), stranger]
       ]
-      const balancesBefore = await Promise.all([steth.balanceOf(user), wsteth.balanceOf(user)])
+      const stETHBalanceBefore = await steth.balanceOf(user)
       const lastRequestIdBefore = await withdrawalQueue.lastRequestId()
-      await withdrawalQueue.requestWithdrawals(requests, { from: user })
+      await withdrawalQueue.requestWithdrawalBatch(requests, { from: user })
       assert.equals(await withdrawalQueue.lastRequestId(), lastRequestIdBefore.add(bn(requests.length)))
-      const balancesAfter = await Promise.all([steth.balanceOf(user), wsteth.balanceOf(user)])
-      assert.almostEqual(balancesAfter[0], balancesBefore[0].sub(bn(requests[0][1])), 3)
-      assert.equals(balancesAfter[1], balancesBefore[1].sub(bn(requests[1][1])))
+      const stETHBalanceAfter = await steth.balanceOf(user)
+      assert.almostEqual(stETHBalanceAfter, stETHBalanceBefore.sub(bn(requests[0][0])).sub(bn(requests[1][0])), 30)
     })
   })
 
-  context('requestWithdrawalsWithPermit()', () => {
-    it('works correctly with non empty payload', async () => {
+  context('requestWithdrawalBatchWstETH()', () => {
+    it('works correctly with non empty payload and different tokens', async () => {
       await wsteth.mint(user, ETH(100))
       await steth.mintShares(wsteth.address, shares(100))
       await steth.mintShares(user, shares(100))
       await wsteth.approve(withdrawalQueue.address, ETH(300), { from: user })
-      const [alice] = ACCOUNTS_AND_KEYS
-      await steth.transfer(alice.address, ETH(100), { from: user })
-      await wsteth.transfer(alice.address, ETH(100), { from: user })
+      const requests = [
+        [ETH(10), recipient],
+        [ETH(20), stranger]
+      ]
+      const wstETHBalanceBefore = await wsteth.balanceOf(user)
+      const lastRequestIdBefore = await withdrawalQueue.lastRequestId()
+      await withdrawalQueue.requestWithdrawalBatchWstETH(requests, { from: user })
+      assert.equals(await withdrawalQueue.lastRequestId(), lastRequestIdBefore.add(bn(requests.length)))
+      const wstETHBalanceAfter = await wsteth.balanceOf(user)
+      assert.equals(wstETHBalanceAfter, wstETHBalanceBefore.sub(bn(requests[0][0])).sub(bn(requests[1][0])))
+    })
+  })
+
+  context('requestWithdrawalBatchWstETHWithPermit()', () => {
+    it('works correctly with non empty payload', async () => {
+      const userPrivateKey = '0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6'
+      await wsteth.mint(user, ETH(100))
+      await steth.mintShares(wsteth.address, shares(100))
+      await steth.mintShares(user, shares(100))
+      await wsteth.approve(withdrawalQueue.address, ETH(300), { from: user })
 
       const requests = []
 
       const withdrawalRequestsCount = 5
       for (let i = 0; i < withdrawalRequestsCount; ++i) {
-        requests.push([wsteth.address, ETH(10), recipient])
+        requests.push([ETH(10), recipient])
       }
 
-      const permissions = []
+      const amount = bn(ETH(10)).mul(bn(withdrawalRequestsCount))
       const chainId = await wsteth.getChainId()
+      const deadline = MAX_UINT256
       const domainSeparator = makeDomainSeparator('Wrapped liquid staked Ether 2.0', '1', chainId, wsteth.address)
-      for (let i = 0; i < withdrawalRequestsCount; ++i) {
-        const { v, r, s } = signPermit(
-          alice.address,
-          withdrawalQueue.address,
-          requests[i][1], // amount
-          i, // nonce
-          MAX_UINT256,
-          domainSeparator,
-          alice.key
-        )
-        permissions.push([v, r, s, alice.address, MAX_UINT256])
-      }
+      const { v, r, s } = signPermit(
+        user,
+        withdrawalQueue.address,
+        amount, // amount
+        0, // nonce
+        deadline,
+        domainSeparator,
+        userPrivateKey
+      )
+      const permission = [
+        amount,
+        deadline, // deadline
+        v,
+        r,
+        s
+      ]
 
-      const aliceBalancesBefore = await wsteth.balanceOf(alice.address)
+      const aliceBalancesBefore = await wsteth.balanceOf(user)
       const lastRequestIdBefore = await withdrawalQueue.lastRequestId()
-      await withdrawalQueue.requestWithdrawalsWithPermit(requests, permissions, { from: user })
+      await withdrawalQueue.requestWithdrawalBatchWstETHWithPermit(requests, permission, { from: user })
       assert.equals(await withdrawalQueue.lastRequestId(), lastRequestIdBefore.add(bn(requests.length)))
-      const aliceBalancesAfter = await wsteth.balanceOf(alice.address)
+      const aliceBalancesAfter = await wsteth.balanceOf(user)
       assert.equals(aliceBalancesAfter, aliceBalancesBefore.sub(bn(ETH(10)).mul(bn(withdrawalRequestsCount))))
     })
   })

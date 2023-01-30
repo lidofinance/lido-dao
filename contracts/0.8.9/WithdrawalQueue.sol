@@ -280,59 +280,84 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
     }
 
     struct WithdrawalRequestInput {
-        address token;
         uint256 amount;
         address recipient;
     }
 
-    /// @notice Request the sequence of withdrawals according to passed `withdrawalRequestInputs` data
+    /// @notice Request the sequence of stETH withdrawals according to passed `withdrawalRequestInputs` data
     /// @param _withdrawalRequestInputs an array of `WithdrawalRequestInput` data. The standalone withdrawal request will
     ///  be created for each item in the passed list. If `WithdrawalRequestInput.recipient` is set to `address(0)`,
     ///  `msg.sender` will be used as recipient.
     /// @return requestIds an array of the created withdrawal requests
-    function requestWithdrawals(WithdrawalRequestInput[] memory _withdrawalRequestInputs)
+    function requestWithdrawalBatch(WithdrawalRequestInput[] memory _withdrawalRequestInputs)
         external
         whenResumed
         returns (uint256[] memory requestIds)
     {
         requestIds = new uint256[](_withdrawalRequestInputs.length);
         for (uint256 i = 0; i < _withdrawalRequestInputs.length; ++i) {
-            requestIds[i] = _enqueueWithdrawalRequest(msg.sender, _withdrawalRequestInputs[i]);
+            requestIds[i] = _requestWithdrawal(
+                _withdrawalRequestInputs[i].amount,
+                _checkWithdrawalRequestInput(_withdrawalRequestInputs[i].amount, _withdrawalRequestInputs[i].recipient)
+            );
         }
     }
 
-    struct Permit {
-        uint8 v;
-        bytes32 r;
-        bytes32 s;
-        address owner;
-        uint256 deadline;
-    }
-
-    /// @notice Request the sequence of withdrawals according to passed `withdrawalRequestInputs` data using EIP-2612 Permit
+    /// @notice Request the sequence of wstETH withdrawals according to passed `withdrawalRequestInputs` data
     /// @param _withdrawalRequestInputs an array of `WithdrawalRequestInput` data. The standalone withdrawal request will
     ///  be created for each item in the passed list. If `WithdrawalRequestInput.recipient` is set to `address(0)`,
     ///  `msg.sender` will be used as recipient.
     /// @return requestIds an array of the created withdrawal requests
-    function requestWithdrawalsWithPermit(
-        WithdrawalRequestInput[] memory _withdrawalRequestInputs,
-        Permit[] memory _permits
-    ) external whenResumed returns (uint256[] memory requestIds) {
-        if (_withdrawalRequestInputs.length != _permits.length)
-            revert LengthsMismatch(_withdrawalRequestInputs.length, _permits.length);
+    function requestWithdrawalBatchWstETH(WithdrawalRequestInput[] memory _withdrawalRequestInputs)
+        public
+        whenResumed
+        returns (uint256[] memory requestIds)
+    {
         requestIds = new uint256[](_withdrawalRequestInputs.length);
         for (uint256 i = 0; i < _withdrawalRequestInputs.length; ++i) {
-            IERC20Permit(_withdrawalRequestInputs[i].token).permit(
-                _permits[i].owner,
-                address(this),
-                _withdrawalRequestInputs[i].amount,
-                _permits[i].deadline,
-                _permits[i].v,
-                _permits[i].r,
-                _permits[i].s
+            uint256 amountOfWstETH = _withdrawalRequestInputs[i].amount;
+            address recipient = _checkWithdrawalRequestInput(
+                IWstETH(WSTETH).getStETHByWstETH(amountOfWstETH),
+                _withdrawalRequestInputs[i].recipient
             );
-            requestIds[i] = _enqueueWithdrawalRequest(_permits[i].owner, _withdrawalRequestInputs[i]);
+            requestIds[i] = _requestWithdrawalWstETH(amountOfWstETH, recipient);
         }
+    }
+
+    struct Permit {
+        uint256 value;
+        uint256 deadline;
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+    }
+
+    /// @notice Request the sequence of stETH withdrawals according to passed `withdrawalRequestInputs` data using EIP-2612 Permit
+    /// @param _withdrawalRequestInputs an array of `WithdrawalRequestInput` data. The standalone withdrawal request will
+    ///  be created for each item in the passed list. If `WithdrawalRequestInput.recipient` is set to `address(0)`,
+    ///  `msg.sender` will be used as recipient.
+    /// @return requestIds an array of the created withdrawal requests
+    function requestWithdrawalBatchWithPermit(WithdrawalRequestInput[] memory _withdrawalRequestInputs, Permit memory _permit)
+        external
+        whenResumed
+        returns (uint256[] memory requestIds)
+    {
+        STETH.permit(msg.sender, address(this), _permit.value, _permit.deadline, _permit.v, _permit.r, _permit.s);
+        return requestWithdrawalBatchWstETH(_withdrawalRequestInputs);
+    }
+
+    /// @notice Request the sequence of wstETH withdrawals according to passed `withdrawalRequestInputs` data using EIP-2612 Permit
+    /// @param _withdrawalRequestInputs an array of `WithdrawalRequestInput` data. The standalone withdrawal request will
+    ///  be created for each item in the passed list. If `WithdrawalRequestInput.recipient` is set to `address(0)`,
+    ///  `msg.sender` will be used as recipient.
+    /// @return requestIds an array of the created withdrawal requests
+    function requestWithdrawalBatchWstETHWithPermit(WithdrawalRequestInput[] memory _withdrawalRequestInputs, Permit memory _permit)
+        external
+        whenResumed
+        returns (uint256[] memory requestIds)
+    {
+        WSTETH.permit(msg.sender, address(this), _permit.value, _permit.deadline, _permit.v, _permit.r, _permit.s);
+        return requestWithdrawalBatchWstETH(_withdrawalRequestInputs);
     }
 
     /// @notice Claim withdrawals batch once finalized (claimable)
@@ -383,33 +408,6 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
         emit InitializedV1(_admin, _pauser, _resumer, _finalizer, msg.sender);
     }
 
-    function _enqueueWithdrawalRequest(address _tokensHolder, WithdrawalRequestInput memory _withdrawalRequestInput)
-        internal
-        onlyValidWithdrawalRequestInput(_withdrawalRequestInput)
-        returns (uint256 requestId)
-    {
-        (uint256 collectedAmountOfStETH, uint256 collectedAmountOfShares) = _collectWithdrawableToken(
-            _tokensHolder,
-            _withdrawalRequestInput
-        );
-        address recipient = _withdrawalRequestInput.recipient;
-        requestId = _enqueue(
-            collectedAmountOfStETH,
-            collectedAmountOfShares,
-            recipient == address(0) ? msg.sender : recipient
-        );
-    }
-
-    function _collectWithdrawableToken(address _tokenHolder, WithdrawalRequestInput memory _withdrawalRequestInput)
-        internal
-        returns (uint256 collectedAmountOfStETH, uint256 collectedAmountOfShares)
-    {
-        uint256 amount = _withdrawalRequestInput.amount;
-        SafeERC20.safeTransferFrom(IERC20(_withdrawalRequestInput.token), _tokenHolder, address(this), amount);
-        collectedAmountOfStETH = _withdrawalRequestInput.token == address(WSTETH) ? WSTETH.unwrap(amount) : amount;
-        collectedAmountOfShares = STETH.getSharesByPooledEth(collectedAmountOfStETH);
-    }
-
     function _requestWithdrawal(uint256 _amountOfStETH, address _recipient) internal returns (uint256 requestId) {
         STETH.safeTransferFrom(msg.sender, address(this), _amountOfStETH);
 
@@ -442,27 +440,5 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
         }
 
         return _recipient;
-    }
-
-    modifier onlyValidWithdrawalRequestInput(WithdrawalRequestInput memory _withdrawalRequestInput) {
-        address token = _withdrawalRequestInput.token;
-        if (token != address(STETH) && token != address(WSTETH)) {
-            address[] memory withdrawableTokens = new address[](2);
-            withdrawableTokens[0] = address(STETH);
-            withdrawableTokens[1] = address(WSTETH);
-            revert UnsupportedWithdrawalToken(token, withdrawableTokens);
-        }
-
-        uint256 amountOfStETH = _withdrawalRequestInput.token == address(WSTETH)
-            ? WSTETH.getStETHByWstETH(_withdrawalRequestInput.amount)
-            : _withdrawalRequestInput.amount;
-
-        if (amountOfStETH < MIN_STETH_WITHDRAWAL_AMOUNT) {
-            revert RequestAmountTooSmall(amountOfStETH);
-        }
-        if (amountOfStETH > MAX_STETH_WITHDRAWAL_AMOUNT) {
-            revert RequestAmountTooLarge(amountOfStETH);
-        }
-        _;
     }
 }

@@ -75,7 +75,7 @@ const getNetConfig = (networkName, ethAccountName) => {
       initialBaseFeePerGas: 0,
       allowUnlimitedContractSize: true,
       accounts: {
-        mnemonic: 'hardhat',
+        mnemonic: 'test test test test test test test test test test test junk',
         count: 20,
         accountsBalance: '100000000000000000000000',
         gasPrice: 0
