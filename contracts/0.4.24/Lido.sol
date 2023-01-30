@@ -887,8 +887,7 @@ contract Lido is StETHPermit, AragonApp {
     * @param _amount Total amount deposited to the Consensus Layer side
     */
     function _markAsUnbuffered(uint256 _amount) internal {
-        BUFFERED_ETHER_POSITION.setStorageUint256(
-            BUFFERED_ETHER_POSITION.getStorageUint256().sub(_amount));
+        BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().sub(_amount));
 
         emit Unbuffered(_amount);
     }
