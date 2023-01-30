@@ -66,7 +66,7 @@ contract Lido is StETHPermit, AragonApp {
     bytes32 internal constant CL_BALANCE_POSITION = keccak256("lido.Lido.beaconBalance");
     /// @dev number of Lido's validators available in the Consensus Layer state
     // "beacon" in the `keccak256()` parameter is staying here for compatibility reason
-    bytes32 internal constant Cl_VALIDATORS_POSITION = keccak256("lido.Lido.beaconValidators"); 
+    bytes32 internal constant CL_VALIDATORS_POSITION = keccak256("lido.Lido.beaconValidators"); 
     /// @dev percent in basis points of total pooled ether allowed to withdraw from LidoExecutionLayerRewardsVault per LidoOracle report
     bytes32 internal constant EL_REWARDS_WITHDRAWAL_LIMIT_POSITION = keccak256("lido.Lido.ELRewardsWithdrawalLimit");
     /// @dev Just a counter of total amount of execution layer rewards received by Lido contract. Not used in the logic.
@@ -599,7 +599,7 @@ contract Lido is StETHPermit, AragonApp {
     */
     function getBeaconStat() public view returns (uint256 depositedValidators, uint256 beaconValidators, uint256 beaconBalance) {
         depositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256();
-        beaconValidators = Cl_VALIDATORS_POSITION.getStorageUint256();
+        beaconValidators = CL_VALIDATORS_POSITION.getStorageUint256();
         beaconBalance = CL_BALANCE_POSITION.getStorageUint256();
     }
 
@@ -651,7 +651,7 @@ contract Lido is StETHPermit, AragonApp {
         uint256 depositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256();
         require(_postClValidators <= depositedValidators, "REPORTED_MORE_DEPOSITED");
 
-        uint256 preClValidators = Cl_VALIDATORS_POSITION.getStorageUint256();
+        uint256 preClValidators = CL_VALIDATORS_POSITION.getStorageUint256();
         require(_postClValidators >= preClValidators, "REPORTED_LESS_VALIDATORS");
 
         // Save the current CL balance and validators to
@@ -659,7 +659,7 @@ contract Lido is StETHPermit, AragonApp {
         CL_BALANCE_POSITION.setStorageUint256(_postClBalance);
 
         if (_postClValidators > preClValidators) {
-            Cl_VALIDATORS_POSITION.setStorageUint256(_postClValidators);
+            CL_VALIDATORS_POSITION.setStorageUint256(_postClValidators);
         }
 
         return _postClValidators.sub(preClValidators);
@@ -947,7 +947,7 @@ contract Lido is StETHPermit, AragonApp {
     /// @return transient balance in wei (1e-18 Ether)
     function _getTransientBalance() internal view returns (uint256) {
         uint256 depositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256();
-        uint256 clValidators = Cl_VALIDATORS_POSITION.getStorageUint256();
+        uint256 clValidators = CL_VALIDATORS_POSITION.getStorageUint256();
         // clValidators can never be less than deposited ones.
         assert(depositedValidators >= clValidators);
         return depositedValidators.sub(clValidators).mul(DEPOSIT_SIZE);

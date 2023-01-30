@@ -34,7 +34,7 @@ contract LidoPushableMock is Lido {
     }
 
     function setBeaconValidators(uint256 _beaconValidators) public {
-        Cl_VALIDATORS_POSITION.setStorageUint256(_beaconValidators);
+        CL_VALIDATORS_POSITION.setStorageUint256(_beaconValidators);
     }
 
     function setTotalShares(uint256 _totalShares) public {
