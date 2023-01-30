@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.9;
 
-import { AccessControlEnumerable } from "@openzeppelin/contracts-v4.4/access/AccessControlEnumerable.sol";
 import { SafeCast } from "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
+
+import { AccessControlEnumerable } from "../utils/access/AccessControlEnumerable.sol";
 
 
 /// @notice A contract that gets consensus reports (i.e. hashes) pushed to and processes them
