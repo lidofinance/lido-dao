@@ -2665,9 +2665,9 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
       const receipt = await app.distributeRewards({ from: user3 })
 
-      assert.emits(receipt, 'RewardsDistributed', { nodeOperatorId: 0, sharesAmount: ETH(3) })
-      assert.emits(receipt, 'RewardsDistributed', { nodeOperatorId: 1, sharesAmount: ETH(7) })
-      assert.emits(receipt, 'RewardsDistributed', { nodeOperatorId: 2, sharesAmount: 0 })
+      assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user1, sharesAmount: ETH(3) })
+      assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user2, sharesAmount: ETH(7) })
+      assert.notEmits(receipt, 'RewardsDistributed', { rewardAddress: user3, sharesAmount: 0 })
     })
   })
 

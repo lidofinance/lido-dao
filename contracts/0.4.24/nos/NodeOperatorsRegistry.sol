@@ -968,9 +968,10 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
 
         distributed = 0;
         for (uint256 idx = 0; idx < recipients.length; ++idx) {
+            if (shares[idx] == 0) continue;
             stETH.transferShares(recipients[idx], shares[idx]);
             distributed = distributed.add(shares[idx]);
-            emit RewardsDistributed(idx, shares[idx]);
+            emit RewardsDistributed(recipients[idx], shares[idx]);
         }
     }
 
