@@ -312,4 +312,71 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
       assert.equals(await withdrawalQueue.lockedEtherAmount(), ETH(0))
     })
   })
+
+  context('Transfer request', async () => {
+    const amount = ETH(300)
+    let requestId
+
+    beforeEach('Enqueue a request', async () => {
+      await withdrawalQueue.requestWithdrawal(amount, user, { from: user })
+      requestId = (await withdrawalQueue.lastRequestId()).toNumber()
+    })
+
+    it('One can change the recipient', async () => {
+      const senderWithdrawalsBefore = await withdrawalQueue.getWithdrawalRequests(user)
+      const recipientWithdrawalsBefore = await withdrawalQueue.getWithdrawalRequests(recipient)
+
+      assert.isTrue(senderWithdrawalsBefore.map(v => v.toNumber()).includes(requestId))
+      assert.isFalse(recipientWithdrawalsBefore.map(v => v.toNumber()).includes(requestId))
+
+      await withdrawalQueue.changeRecipient(requestId, recipient, { from: user })
+
+      const senderWithdrawalAfter = await withdrawalQueue.getWithdrawalRequests(user)
+      const recipientWithdrawalsAfter = await withdrawalQueue.getWithdrawalRequests(recipient)
+
+      assert.isFalse(senderWithdrawalAfter.map(v => v.toNumber()).includes(requestId))
+      assert.isTrue(recipientWithdrawalsAfter.map(v => v.toNumber()).includes(requestId))
+    })
+
+    it("One can't change someone else's request", async () => {
+      await assert.reverts(withdrawalQueue.changeRecipient(requestId, recipient, { from: recipient }), `RecipientExpected("${user}", "${recipient}")`)
+    })
+
+    it("One can't change claimed request", async () => {
+      await withdrawalQueue.finalize(requestId, { from: steth.address, value: amount })
+      await withdrawalQueue.claimWithdrawal(requestId, await withdrawalQueue.findClaimHintUnbounded(requestId), { from: user })
+
+      await assert.reverts(withdrawalQueue.changeRecipient(requestId, recipient, { from: user }), `RequestAlreadyClaimed()`)
+    })
+
+    it("One can't pass the same recipient", async () => {
+      await assert.reverts(withdrawalQueue.changeRecipient(requestId, user, { from: user }), `InvalidRecipient("${user}")`)
+    })
+
+    it("Changing request doesn't work with wrong request id", async () => {
+      const wrongRequestId = requestId + 1
+      await assert.reverts(withdrawalQueue.changeRecipient(wrongRequestId, user, { from: user }), `InvalidRequestId(${wrongRequestId})`)
+    })
+  })
+
+  context('Transfer request performance', function () {
+    const firstRequestCount = 1000
+    const secondRequestCount = 10000
+    
+    this.timeout(1000000)
+
+    it.skip('Can perform a lots of requests', async () => {
+      for (let i = 0; i < firstRequestCount; i++) {
+        await withdrawalQueue.requestWithdrawal(bn(ETH(1 / secondRequestCount)), user, { from: user })
+      }
+      const firstGasUsed = (await withdrawalQueue.changeRecipient(firstRequestCount - 1, recipient, { from: user })).receipt.gasUsed
+
+      for (let i = firstRequestCount; i < secondRequestCount; i++) {
+        await withdrawalQueue.requestWithdrawal(bn(ETH(1 / secondRequestCount)), user, { from: user })
+      }
+      const secondGasUsed = (await withdrawalQueue.changeRecipient(secondRequestCount / 2, recipient, { from: user })).receipt.gasUsed
+
+      assert.isTrue(firstGasUsed >= secondGasUsed)
+    })
+  })
 })
