@@ -5,8 +5,8 @@ const { assertRevert } = require('./helpers/assertThrow')
 
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 const { newDao, newApp } = require('./0.4.24/helpers/dao')
-const { BN } = require('bn.js')
 const nodeOperators = require('./helpers/node-operators')
+const withdrawals = require('./helpers/withdrawals')
 
 const { pad, hexConcat, ETH, changeEndianness } = require('./helpers/utils')
 
@@ -14,9 +14,9 @@ const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 const Lido = artifacts.require('LidoMock.sol')
 const OracleMock = artifacts.require('OracleMock.sol')
 const DepositContract = artifacts.require('DepositContract')
-const VaultMock = artifacts.require('VaultMock.sol')
 const StakingRouter = artifacts.require('StakingRouterMock.sol')
 const EIP712StETH = artifacts.require('EIP712StETH')
+const WstETH = artifacts.require('WstETH')
 
 const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
 const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
@@ -76,7 +76,6 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
     // Set up the app's permissions.
     await acl.createPermission(voting, app.address, await app.PAUSE_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.RESUME_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.SET_EL_REWARDS_VAULT_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE(), appManager, {
       from: appManager
     })
@@ -116,6 +115,8 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
     )
 
     const eip712StETH = await EIP712StETH.new({ from: appManager })
+    const wsteth = await WstETH.new(app.address)
+    const withdrawalQueue = await (await withdrawals.deploy(dao.address, wsteth.address)).queue
 
     // Initialize the app's proxy.
     await app.initialize(
@@ -124,7 +125,7 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
       stakingRouter.address,
       depositor,
       ZERO_ADDRESS,
-      ZERO_ADDRESS,
+      withdrawalQueue.address,
       eip712StETH.address
     )
 

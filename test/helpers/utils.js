@@ -54,7 +54,7 @@ const toBN = (obj) => {
     return new BN(obj)
   }
   const str = obj + ''
-  return str.startsWith('0x') ? new BN(str.substr(2), 16) : new BN(str, 10)
+  return str.startsWith('0x') ? new BN(str.substring(2), 16) : new BN(str, 10)
 }
 
 // Divides a BN by 1e15

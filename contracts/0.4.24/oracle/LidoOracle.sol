@@ -10,7 +10,6 @@ import "@aragon/os/contracts/lib/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/introspection/ERC165Checker.sol";
 
 import "../interfaces/IBeaconReportReceiver.sol";
-import "../interfaces/ILidoOracle.sol";
 
 import "../Lido.sol";
 
@@ -31,7 +30,7 @@ import "./ReportUtils.sol";
  * Not all frames may come to a quorum. Oracles may report only to the first epoch of the frame and
  * only if no quorum is reached for this epoch yet.
  */
-contract LidoOracle is ILidoOracle, AragonApp {
+contract LidoOracle is AragonApp {
     using SafeMath for uint256;
     using ReportUtils for uint256;
     using ERC165Checker for address;
@@ -42,6 +41,37 @@ contract LidoOracle is ILidoOracle, AragonApp {
         uint64 secondsPerSlot;
         uint64 genesisTime;
     }
+
+    event AllowedBeaconBalanceAnnualRelativeIncreaseSet(uint256 value);
+    event AllowedBeaconBalanceRelativeDecreaseSet(uint256 value);
+    event BeaconReportReceiverSet(address callback);
+    event MemberAdded(address member);
+    event MemberRemoved(address member);
+    event QuorumChanged(uint256 quorum);
+    event ExpectedEpochIdUpdated(uint256 epochId);
+    event BeaconSpecSet(
+        uint64 epochsPerFrame,
+        uint64 slotsPerEpoch,
+        uint64 secondsPerSlot,
+        uint64 genesisTime
+    );
+    event BeaconReported(
+        uint256 epochId,
+        uint128 beaconBalance,
+        uint128 beaconValidators,
+        address caller
+    );
+    event Completed(
+        uint256 epochId,
+        uint128 beaconBalance,
+        uint128 beaconValidators
+    );
+    event PostTotalShares(
+         uint256 postTotalPooledEther,
+         uint256 preTotalPooledEther,
+         uint256 timeElapsed,
+         uint256 totalShares);
+    event ContractVersionSet(uint256 version);
 
     /// ACL
     bytes32 constant public MANAGE_MEMBERS =
@@ -641,8 +671,8 @@ contract LidoOracle is ILidoOracle, AragonApp {
             _beaconBalanceEth1,
             0,
             0,
-            new uint256[](0),
-            new uint256[](0)
+            0,
+            0
         ); // here should be withdrawal params
         uint256 postTotalPooledEther = lido.totalSupply();
 
@@ -734,7 +764,7 @@ contract LidoOracle is ILidoOracle, AragonApp {
     /**
      * @notice Return the first epoch of the frame that `_epochId` belongs to
      */
-    function _getFrameFirstEpochId(uint256 _epochId, BeaconSpec memory _beaconSpec) internal view returns (uint256) {
+    function _getFrameFirstEpochId(uint256 _epochId, BeaconSpec memory _beaconSpec) internal pure returns (uint256) {
         return _epochId / _beaconSpec.epochsPerFrame * _beaconSpec.epochsPerFrame;
     }
 

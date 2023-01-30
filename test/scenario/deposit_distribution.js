@@ -1,15 +1,16 @@
 const hre = require('hardhat')
 const { newDao, newApp } = require('../0.4.24/helpers/dao')
+const withdrawals = require('../helpers/withdrawals')
 const { ETH, genKeys } = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
+const { EvmSnapshot } = require('../helpers/blockchain')
 
 const LidoMock = artifacts.require('LidoMock.sol')
+const WstETH = artifacts.require('WstETH.sol')
 const LidoOracleMock = artifacts.require('OracleMock.sol')
 const NodeOperatorsRegistryMock = artifacts.require('NodeOperatorsRegistryMock')
 const StakingRouter = artifacts.require('StakingRouterMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
-const { EvmSnapshot } = require('../helpers/blockchain')
-const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 
 contract('StakingRouter', (accounts) => {
   const snapshot = new EvmSnapshot(hre.ethers.provider)
@@ -49,7 +50,10 @@ contract('StakingRouter', (accounts) => {
     await stakingRouter.grantRole(STAKING_MODULE_PAUSE_ROLE, voting, { from: admin })
     await stakingRouter.grantRole(STAKING_MODULE_MANAGE_ROLE, voting, { from: admin })
 
-    await lido.initialize(oracle.address, treasury, stakingRouter.address, dsm, ZERO_ADDRESS, dummy, dummy)
+    const wsteth = await WstETH.new(lido.address)
+    const withdrawalQueue = (await withdrawals.deploy(dao.address, wsteth.address)).queue
+
+    await lido.initialize(oracle.address, treasury, stakingRouter.address, dsm, dummy, withdrawalQueue.address, dummy)
 
     await snapshot.make()
   })

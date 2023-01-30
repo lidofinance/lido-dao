@@ -27,7 +27,7 @@ const cfgCommunity = {
   targetShare: 5000
 }
 
-contract('Lido', ([appManager, voting, treasury, depositor, user2]) => {
+contract('Lido: staking router reward distribution', ([appManager, voting, treasury, depositor, user2]) => {
   let appBase, nodeOperatorsRegistryBase, app, oracle, depositContract, curatedModule, stakingRouter, soloModule
   let dao, acl
 
@@ -56,7 +56,6 @@ contract('Lido', ([appManager, voting, treasury, depositor, user2]) => {
     await acl.createPermission(voting, app.address, await app.RESUME_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.BURN_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.MANAGE_PROTOCOL_CONTRACTS_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.SET_EL_REWARDS_VAULT_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE(), appManager, {
       from: appManager
     })
