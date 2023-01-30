@@ -344,6 +344,54 @@ contract('StakingRouter', (accounts) => {
       )
     })
 
+    it('addStakingModule fails on zero address', async () => {
+      await assert.revertsWithCustomError(
+        app.addStakingModule(
+          stakingModulesParams[0].name,
+          ZERO_ADDRESS,
+          stakingModulesParams[0].targetShare,
+          stakingModulesParams[0].stakingModuleFee,
+          stakingModulesParams[0].treasuryFee,
+          {
+            from: appManager
+          }
+        ),
+        `ErrorZeroAddress("_stakingModuleAddress")`
+      )
+    })
+
+    it('addStakingModule fails on incorrect module name', async () => {
+      // check zero length
+      await assert.revertsWithCustomError(
+        app.addStakingModule(
+          '',
+          stakingModule1.address,
+          stakingModulesParams[0].targetShare,
+          stakingModulesParams[0].stakingModuleFee,
+          stakingModulesParams[0].treasuryFee,
+          {
+            from: appManager
+          }
+        ),
+        `ErrorStakingModuleWrongName()`
+      )
+
+      // check length > 32 symbols
+      await assert.revertsWithCustomError(
+        app.addStakingModule(
+          '#'.repeat(33),
+          stakingModule1.address,
+          stakingModulesParams[0].targetShare,
+          stakingModulesParams[0].stakingModuleFee,
+          stakingModulesParams[0].treasuryFee,
+          {
+            from: appManager
+          }
+        ),
+        `ErrorStakingModuleWrongName()`
+      )
+    })
+
     it('add staking module', async () => {
       const tx = await app.addStakingModule(
         stakingModulesParams[0].name,
@@ -615,7 +663,7 @@ contract('StakingRouter', (accounts) => {
       await app.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, StakingModuleStatus.Active, {
         from: appManager
       })
-      
+
       await app.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, StakingModuleStatus.Stopped, {
         from: appManager
       })

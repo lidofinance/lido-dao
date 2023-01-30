@@ -47,6 +47,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     error ErrorStakingModuleUnregistered();
     error ErrorAppAuthLidoFailed();
     error ErrorStakingModuleStatusTheSame();
+    error ErrorStakingModuleWrongName();
 
     struct StakingModuleCache {
         address stakingModuleAddress;
@@ -150,6 +151,8 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     ) external onlyRole(STAKING_MODULE_MANAGE_ROLE) {
         if (_targetShare > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_targetShare");
         if (_stakingModuleFee + _treasuryFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_stakingModuleFee + _treasuryFee");
+        if (_stakingModuleAddress == address(0)) revert ErrorZeroAddress("_stakingModuleAddress");
+        if (bytes(_name).length == 0 || bytes(_name).length > 32) revert ErrorStakingModuleWrongName();
 
         uint256 newStakingModuleIndex = getStakingModulesCount();
 
