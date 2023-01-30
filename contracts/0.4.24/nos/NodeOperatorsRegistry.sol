@@ -210,7 +210,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         operator.name = _name;
         operator.rewardAddress = _rewardAddress;
 
-        emit NodeOperatorAdded(id);
         emit NodeOperatorAdded(id, _name, _rewardAddress, 0);
     }
 
@@ -228,7 +227,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
 
         nodeOperator.active = true;
 
-        emit NodeOperatorActivated(_nodeOperatorId);
+        emit NodeOperatorActiveSet(_nodeOperatorId, true);
         _increaseValidatorsKeysNonce();
     }
 
@@ -246,7 +245,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
 
         nodeOperator.active = false;
 
-        emit NodeOperatorDeactivated(_nodeOperatorId);
+        emit NodeOperatorActiveSet(_nodeOperatorId, false);
 
         uint64 vettedSigningKeysCount = nodeOperator.vettedSigningKeysCount;
         uint64 depositedSigningKeysCount = nodeOperator.depositedSigningKeysCount;
@@ -1059,6 +1058,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
     function _increaseValidatorsKeysNonce() internal {
         uint256 keysOpIndex = KEYS_OP_INDEX_POSITION.getStorageUint256() + 1;
         KEYS_OP_INDEX_POSITION.setStorageUint256(keysOpIndex);
+        /// @dev [DEPRECATED] event preserved for tooling compatibility
         emit KeysOpIndexSet(keysOpIndex);
         emit ValidatorsKeysNonceChanged(keysOpIndex);
     }

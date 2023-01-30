@@ -422,7 +422,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.emits(
         tx,
         'NodeOperatorAdded',
-        { id: 0, name, rewardAddress: ADDRESS_1, stakingLimit: 0 },
+        { nodeOperatorId: 0, name, rewardAddress: ADDRESS_1, stakingLimit: 0 },
         { abi: INodeOperatorsRegistry._json.abi }
       )
     })
@@ -512,11 +512,11 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.equal(activeNodeOperatorsCountAfter.toNumber(), activeNodeOperatorsCountBefore.toNumber() + 1)
     })
 
-    it('emits NodeOperatorActivated event', async () => {
+    it('emits NodeOperatorActiveSet(activate) event', async () => {
       const nodeOperatorId = await nodeOperators.findNodeOperatorId(app, (operator) => !operator.active)
       assert.notEqual(nodeOperatorId, -1, `Invariant: not active node operator not found`)
       const tx = await app.activateNodeOperator(nodeOperatorId, { from: voting })
-      assert.emits(tx, 'NodeOperatorActivated', { nodeOperatorId }, { abi: NodeOperatorsRegistry._json.abi })
+      assert.emits(tx, 'NodeOperatorActiveSet', { nodeOperatorId, active: true }, { abi: NodeOperatorsRegistry._json.abi })
     })
 
     it("doesn't change node operators count", async () => {
@@ -691,13 +691,13 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.equals(totalActiveValidatorsKeysCountBefore, totalActiveValidatorsKeysCountAfter)
     })
 
-    it('emits NodeOperatorDeactivated event with correct params', async () => {
+    it('emits NodeOperatorActiveSet(deactivate) event with correct params', async () => {
       const activeNodeOperatorId = await nodeOperators.findNodeOperatorId(app, (operator) => operator.active)
       assert.notEqual(activeNodeOperatorId, -1, `Invariant: active node operator not found`)
 
       const receipt = await app.deactivateNodeOperator(activeNodeOperatorId, { from: voting })
 
-      assert.emits(receipt, 'NodeOperatorDeactivated', { nodeOperatorId: activeNodeOperatorId })
+      assert.emits(receipt, 'NodeOperatorActiveSet', { nodeOperatorId: activeNodeOperatorId, active: false })
     })
 
     it('increases keysOpIndex & changes validatorKeysNonce', async () => {
@@ -769,7 +769,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const nodeOperatorId = 0
       const newName = 'new name'
       const receipt = await app.setNodeOperatorName(nodeOperatorId, newName, { from: voting })
-      assert.emits(receipt, 'NodeOperatorNameSet', { id: nodeOperatorId, name: newName }, { abi: INodeOperatorsRegistry._json.abi })
+      assert.emits(receipt, 'NodeOperatorNameSet', { nodeOperatorId, name: newName }, { abi: INodeOperatorsRegistry._json.abi })
     })
     it("doesn't affect the names of other node operators", async () => {
       const nodeOperatorId = 0
@@ -827,7 +827,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     it('emits "NodeOperatorRewardAddressSet" event with correct params', async () => {
       const receipt = await app.setNodeOperatorRewardAddress(firstNodeOperatorId, ADDRESS_4, { from: voting })
-      assert.emits(receipt, 'NodeOperatorRewardAddressSet', { id: firstNodeOperatorId, rewardAddress: ADDRESS_4 })
+      assert.emits(receipt, 'NodeOperatorRewardAddressSet', { nodeOperatorId: firstNodeOperatorId, rewardAddress: ADDRESS_4 })
     })
 
     it("doesn't affect other node operators reward addresses", async () => {
@@ -1225,11 +1225,11 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         const nodeOperatorAfter = allNodeOperatorsAfter[i]
         if (nodeOperatorBefore.totalSigningKeys.toNumber() !== nodeOperatorAfter.usedSigningKeys.toNumber()) {
           assert.emits(receipt, 'NodeOperatorTotalKeysTrimmed', {
-            id: i,
+            nodeOperatorId: i,
             totalKeysTrimmed: nodeOperatorBefore.totalSigningKeys.toNumber() - nodeOperatorAfter.usedSigningKeys.toNumber()
           })
         } else {
-          assert.notEmits(receipt, 'NodeOperatorTotalKeysTrimmed', { id: i })
+          assert.notEmits(receipt, 'NodeOperatorTotalKeysTrimmed', { nodeOperatorId: i })
         }
       }
     })
@@ -1909,7 +1909,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         from: voting
       })
       for (let i = 0; i < firstNodeOperatorKeys.count; ++i) {
-        assert.emits(receipt, 'SigningKeyAdded', { operatorId: firstNodeOperatorId, pubkey: firstNodeOperatorKeys.get(i)[0] })
+        assert.emits(receipt, 'SigningKeyAdded', { nodeOperatorId: firstNodeOperatorId, pubkey: firstNodeOperatorKeys.get(i)[0] })
       }
     })
 
@@ -2209,7 +2209,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.isTrue(keyIndex <= NODE_OPERATORS[firstNodeOperatorId].totalSigningKeysCount)
       const receipt = await app.removeSigningKey(firstNodeOperatorId, keyIndex, { from: voting })
       assert.emits(receipt, 'SigningKeyRemoved', {
-        operatorId: firstNodeOperatorId,
+        nodeOperatorId: firstNodeOperatorId,
         pubkey: firstNodeOperatorKeys.get(keyIndex)[0]
       })
     })
@@ -2545,7 +2545,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const receipt = await app.removeSigningKeys(firstNodeOperatorId, keyIndex, keysCount, { from: voting })
       for (let i = keyIndex; i < keyIndex + keysCount; ++i) {
         assert.emits(receipt, 'SigningKeyRemoved', {
-          operatorId: firstNodeOperatorId,
+          nodeOperatorId: firstNodeOperatorId,
           pubkey: firstNodeOperatorKeys.get(i)[0]
         })
       }
@@ -2665,9 +2665,9 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
       const receipt = await app.distributeRewards({ from: user3 })
 
-      assert.emits(receipt, 'RewardsDistributed', { id: 0, sharesAmount: ETH(3) })
-      assert.emits(receipt, 'RewardsDistributed', { id: 1, sharesAmount: ETH(7) })
-      assert.emits(receipt, 'RewardsDistributed', { id: 2, sharesAmount: 0 })
+      assert.emits(receipt, 'RewardsDistributed', { nodeOperatorId: 0, sharesAmount: ETH(3) })
+      assert.emits(receipt, 'RewardsDistributed', { nodeOperatorId: 1, sharesAmount: ETH(7) })
+      assert.emits(receipt, 'RewardsDistributed', { nodeOperatorId: 2, sharesAmount: 0 })
     })
   })
 
