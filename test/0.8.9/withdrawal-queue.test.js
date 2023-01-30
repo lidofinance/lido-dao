@@ -339,7 +339,7 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
     })
 
     it("One can't change someone else's request", async () => {
-      await assert.reverts(withdrawalQueue.changeRecipient(requestId, recipient, { from: recipient }), `RecipientExpected("${user}", "${recipient}")`)
+      await assert.reverts(withdrawalQueue.changeRecipient(requestId, stranger, { from: recipient }), `RecipientExpected("${user}", "${recipient}")`)
     })
 
     it("One can't change claimed request", async () => {
@@ -353,9 +353,13 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
       await assert.reverts(withdrawalQueue.changeRecipient(requestId, user, { from: user }), `InvalidRecipient("${user}")`)
     })
 
-    it("Changing request doesn't work with wrong request id", async () => {
+    it("Changing recipient doesn't work with wrong request id", async () => {
       const wrongRequestId = requestId + 1
-      await assert.reverts(withdrawalQueue.changeRecipient(wrongRequestId, user, { from: user }), `InvalidRequestId(${wrongRequestId})`)
+      await assert.reverts(withdrawalQueue.changeRecipient(wrongRequestId, stranger, { from: user }), `InvalidRequestId(${wrongRequestId})`)
+    })
+
+    it("NOP Changing recipient is forbidden", async () => {
+      await assert.reverts(withdrawalQueue.changeRecipient(requestId, recipient, { from: recipient }), `InvalidRecipient("${recipient}")`)
     })
   })
 
