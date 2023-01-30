@@ -7,6 +7,7 @@ import { HashConsensus } from "../../oracle/HashConsensus.sol";
 
 
 contract HashConsensusTimeTravellable is HashConsensus {
+    // must be at least GENESIS_TIME to avoid underflow
     uint256 internal _time = 100500;
 
     constructor(
@@ -14,13 +15,18 @@ contract HashConsensusTimeTravellable is HashConsensus {
         uint256 secondsPerSlot,
         uint256 genesisTime,
         uint256 epochsPerFrame,
+        uint256 startEpoch,
         address admin,
         address reportProcessor
-    ) HashConsensus(slotsPerEpoch, secondsPerSlot, genesisTime, epochsPerFrame, admin, reportProcessor) {
-        // we're setting first frame to start at epoch 1, convenient for basic testing
-        _time = genesisTime + slotsPerEpoch * secondsPerSlot;
-        _setFrameConfig(1, epochsPerFrame);
-    }
+    ) HashConsensus(
+        slotsPerEpoch,
+        secondsPerSlot,
+        genesisTime,
+        epochsPerFrame,
+        startEpoch,
+        admin,
+        reportProcessor
+    ) {}
 
     function getTime() external view returns (uint256) {
         return _time;

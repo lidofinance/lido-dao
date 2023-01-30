@@ -34,14 +34,11 @@ const CONSENSUS_VERSION = 1
 
 async function deployHashConsensus(admin, {
   reportProcessor = null,
-  epochsPerFrame = EPOCHS_PER_FRAME
+  epochsPerFrame = EPOCHS_PER_FRAME,
+  initialEpoch = 1
 } = {}) {
   if (!reportProcessor) {
     reportProcessor = await MockReportProcessor.new(CONSENSUS_VERSION, { from: admin })
-  }
-
-  if (epochsPerFrame === undefined) {
-    epochsPerFrame = EPOCHS_PER_FRAME
   }
 
   const consensus = await HashConsensus.new(
@@ -49,10 +46,13 @@ async function deployHashConsensus(admin, {
     SECONDS_PER_SLOT,
     GENESIS_TIME,
     epochsPerFrame,
+    initialEpoch,
     admin,
     reportProcessor.address,
     { from: admin }
   )
+
+  await consensus.setTime(GENESIS_TIME + initialEpoch * SECONDS_PER_EPOCH)
 
   await consensus.grantRole(await consensus.MANAGE_MEMBERS_AND_QUORUM_ROLE(), admin, { from: admin })
   await consensus.grantRole(await consensus.DISABLE_CONSENSUS_ROLE(), admin, { from: admin })
@@ -78,7 +78,7 @@ contract('HashConsensus', ([admin]) => {
     let reportProcessor
 
     it('deploying hash consensus', async () => {
-      const deployed = await deployHashConsensus(admin)
+      const deployed = await deployHashConsensus(admin, {initialEpoch: 3})
       consensus = deployed.consensus
       reportProcessor = deployed.reportProcessor
     })
@@ -93,8 +93,7 @@ contract('HashConsensus', ([admin]) => {
     it('frame config is correct', async () => {
       const config = await consensus.getFrameConfig()
       const time = +await consensus.getTime()
-      const expectedInitialEpoch = computeEpochAt(time)
-      assert.equal(+config.initialEpoch, expectedInitialEpoch)
+      assert.equal(+config.initialEpoch, 3)
       assert.equal(+config.epochsPerFrame, EPOCHS_PER_FRAME)
     })
   })

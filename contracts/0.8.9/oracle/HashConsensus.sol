@@ -57,6 +57,7 @@ contract HashConsensus is AccessControlEnumerable {
     error AdminCannotBeZero();
     error DuplicateMember();
     error AddressCannotBeZero();
+    error InitialEpochCannotBeInFuture();
     error EpochsPerFrameCannotBeZero();
     error NonMember();
     error UnexpectedConsensusVersion(uint256 expected, uint256 received);
@@ -180,6 +181,7 @@ contract HashConsensus is AccessControlEnumerable {
         uint256 secondsPerSlot,
         uint256 genesisTime,
         uint256 epochsPerFrame,
+        uint256 initialEpoch,
         address admin,
         address reportProcessor
     ) {
@@ -190,8 +192,11 @@ contract HashConsensus is AccessControlEnumerable {
         if (admin == address(0)) revert AdminCannotBeZero();
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
 
-        uint256 startEpoch = _computeEpochAtTimestamp(_getTime());
-        _setFrameConfig(startEpoch, epochsPerFrame);
+        uint256 currentEpoch = _computeEpochAtTimestamp(_getTime());
+        if (initialEpoch > currentEpoch) {
+            revert InitialEpochCannotBeInFuture();
+        }
+        _setFrameConfig(initialEpoch, epochsPerFrame);
 
         // zero address is allowed here, meaning "no processor"
         _reportProcessor = reportProcessor;
@@ -400,10 +405,10 @@ contract HashConsensus is AccessControlEnumerable {
     /// Implementation: time
     ///
 
-    function _setFrameConfig(uint256 startEpoch, uint256 epochsPerFrame) internal {
+    function _setFrameConfig(uint256 initialEpoch, uint256 epochsPerFrame) internal {
         if (epochsPerFrame == 0) revert EpochsPerFrameCannotBeZero();
-        _frameConfig = FrameConfig(startEpoch.toUint64(), epochsPerFrame.toUint64());
-        emit FrameConfigSet(startEpoch, epochsPerFrame);
+        _frameConfig = FrameConfig(initialEpoch.toUint64(), epochsPerFrame.toUint64());
+        emit FrameConfigSet(initialEpoch, epochsPerFrame);
     }
 
     function _getCurrentFrame() internal view returns (ConsensusFrame memory) {
