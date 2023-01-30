@@ -184,5 +184,13 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         emit ValidatorsKeysLoaded(loadedValidatorsKeysCount, publicKeys, signatures);
     }
 
+    function testing_isNodeOperatorPenalized(uint256 operatorId) external view returns(bool) {
+        NodeOperatorLimit memory nodeOperatorLimit = _nodeOperatorsLimits[operatorId];
+        if (nodeOperatorLimit.forgivenSigningKeysCount < nodeOperatorLimit.stuckSigningKeysCount) {
+            return true;
+        }
+        return false;
+    }
+
     event ValidatorsKeysLoaded(uint256 count, bytes publicKeys, bytes signatures);
 }

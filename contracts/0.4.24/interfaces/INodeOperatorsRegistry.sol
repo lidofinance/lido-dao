@@ -210,4 +210,7 @@ interface INodeOperatorsRegistry {
     event ExitedSigningKeysCountChanged(uint256 indexed nodeOperatorId, uint256 exitedValidatorsCount);
     event TotalSigningKeysCountChanged(uint256 indexed nodeOperatorId, uint256 totalValidatorsCount);
     event TargetValidatorsLimitChanged(uint256 indexed nodeOperatorId, uint256 totalTargetValidatorsCount, bool active, uint64 unavaliableKeysCount);
+    event StuckSigningKeysCountChanged(uint256 indexed nodeOperatorId, uint256 stuckValidatorsCount);
+    event ForgivenSigningKeysCountChanged(uint256 indexed nodeOperatorId, uint256 forgivenValidatorsCount);
+    event NodeOperatorPenalized(address indexed receipientAddress, uint256 sharesPenalizedAmount);
 }

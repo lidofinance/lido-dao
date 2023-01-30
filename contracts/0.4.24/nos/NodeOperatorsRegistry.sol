@@ -45,6 +45,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
     bytes32 public constant UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE = keccak256("UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE");
     bytes32 public constant UNSAFE_UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE = keccak256("UNSAFE_UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE");
     bytes32 public constant UPDATE_TARGET_VALIDATORS_KEYS_COUNT_ROLE = keccak256("UPDATE_TARGET_VALIDATORS_KEYS_COUNT_ROLE");
+    bytes32 public constant UPDATE_STUCK_VALIDATORS_KEYS_COUNT_ROLE = keccak256("UPDATE_STUCK_VALIDATORS_KEYS_COUNT_ROLE");
+    bytes32 public constant UPDATE_FORGIVEN_VALIDATORS_KEYS_COUNT_ROLE = keccak256("UPDATE_FORGIVEN_VALIDATORS_KEYS_COUNT_ROLE");
 
     //
     // CONSTANTS
@@ -486,21 +488,34 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
     }
 
     /**
-      * @notice Set the target number of validators
-    //   */
-    // function updateStuckSigningKeysCount(uint256 _nodeOperatorId, uint64 _targetLimit) external {
-    //     _onlyExistedNodeOperator(_nodeOperatorId);
-    //     _authP(SET_NODE_OPERATOR_LIMIT_ROLE, arr(uint256(_nodeOperatorId), uint256(_targetLimit)));
+      * @notice Set the stuck signings keys count
+      */
+    function updateStuckSigningKeysCount(uint256 _nodeOperatorId, uint64 _stuckSigningKeysCount) external {
+        _onlyExistedNodeOperator(_nodeOperatorId);
+        _auth(UPDATE_STUCK_VALIDATORS_KEYS_COUNT_ROLE);
 
-    //     NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
-    //     require(nodeOperator.active, "NODE_OPERATOR_DEACTIVATED");
+        NodeOperatorLimit storage nodeOperatorLimit = _nodeOperatorsLimits[_nodeOperatorId];
 
-    //     require(nodeOperator.targetSigningKeysCount != _targetLimit, "NODE_OPERATOR_TARGET_LIMIT_IS_THE_SAME");
-    //     nodeOperator.targetSigningKeysCount = _targetLimit;
+        require(nodeOperatorLimit.stuckSigningKeysCount != _stuckSigningKeysCount, "NODE_OPERATOR_TARGET_LIMIT_IS_THE_SAME");
+        nodeOperatorLimit.stuckSigningKeysCount = _stuckSigningKeysCount;
 
-    //     // emit NodeOperatorTargetLimitSet(_nodeOperatorId, _targetLimit);
-    //     // _increaseValidatorsKeysNonce();
-    // }
+        emit StuckSigningKeysCountChanged(_nodeOperatorId, _stuckSigningKeysCount);
+    }
+
+    /**
+      * @notice Set the forgivent signing keys count
+      */
+    function updateForgivenSigningKeysCount(uint256 _nodeOperatorId, uint64 _forgivenSigningKeysCount) external {
+        _onlyExistedNodeOperator(_nodeOperatorId);
+        _auth(UPDATE_FORGIVEN_VALIDATORS_KEYS_COUNT_ROLE);
+
+        NodeOperatorLimit storage nodeOperatorLimit = _nodeOperatorsLimits[_nodeOperatorId];
+
+        require(nodeOperatorLimit.forgivenSigningKeysCount != _forgivenSigningKeysCount, "NODE_OPERATOR_TARGET_LIMIT_IS_THE_SAME");
+        nodeOperatorLimit.forgivenSigningKeysCount = _forgivenSigningKeysCount;
+
+        emit ForgivenSigningKeysCountChanged(_nodeOperatorId, _forgivenSigningKeysCount);
+    }
 
     /// @notice Invalidates all unused validators keys for all node operators
     function invalidateReadyToDepositKeys() external {
@@ -725,12 +740,21 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
 
     /// @notice Returns the rewards distribution proportional to the effective stake for each node operator.
     /// @param _totalRewardShares Total amount of reward shares to distribute.
-    function getRewardsDistribution(uint256 _totalRewardShares) public view returns (address[] memory recipients, uint256[] memory shares) {
+    function getRewardsDistribution(uint256 _totalRewardShares) 
+        public 
+        view 
+        returns (
+            address[] memory recipients, 
+            uint256[] memory shares, 
+            bool[] memory penalized
+        ) 
+    {
         uint256 nodeOperatorCount = getNodeOperatorsCount();
 
         uint256 activeCount = getActiveNodeOperatorsCount();
         recipients = new address[](activeCount);
         shares = new uint256[](activeCount);
+        penalized = new bool[](activeCount);
         uint256 idx = 0;
 
         uint256 totalActiveValidatorsCount = 0;
@@ -744,10 +768,15 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
             recipients[idx] = nodeOperator.rewardAddress;
             shares[idx] = activeValidatorsCount;
 
+            NodeOperatorLimit memory nodeOperatorLimit = _nodeOperatorsLimits[operatorId];
+            if (nodeOperatorLimit.forgivenSigningKeysCount < nodeOperatorLimit.stuckSigningKeysCount) {
+                penalized[idx] = true;
+            }
+
             ++idx;
         }
 
-        if (totalActiveValidatorsCount == 0) return (recipients, shares);
+        if (totalActiveValidatorsCount == 0) return (recipients, shares, penalized);
 
         uint256 perValidatorReward = _totalRewardShares.div(totalActiveValidatorsCount);
 
@@ -755,7 +784,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
             shares[idx] = shares[idx].mul(perValidatorReward);
         }
 
-        return (recipients, shares);
+        return (recipients, shares, penalized);
     }
 
     /// @notice Add `_quantity` validator signing keys to the keys of the node operator #`_nodeOperatorId`. Concatenated keys are: `_pubkeys`
@@ -1110,15 +1139,22 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
             return;
         }
 
-        (address[] memory recipients, uint256[] memory shares) = getRewardsDistribution(sharesToDistribute);
+        (address[] memory recipients, uint256[] memory shares, bool[] memory penalized) = getRewardsDistribution(sharesToDistribute);
 
         assert(recipients.length == shares.length);
 
         distributed = 0;
+        uint256 sharesAmount;
         for (uint256 idx = 0; idx < recipients.length; ++idx) {
-            stETH.transferShares(recipients[idx], shares[idx]);
-            distributed = distributed.add(shares[idx]);
-            emit RewardsDistributed(idx, shares[idx]);
+            sharesAmount = shares[idx];
+            if (sharesAmount > 0 && penalized[idx]) {
+                uint256 penalizedAmound = sharesAmount.div(2);
+                sharesAmount = sharesAmount.sub(penalizedAmound);
+                emit NodeOperatorPenalized(recipients[idx], penalizedAmound);
+            }
+            stETH.transferShares(recipients[idx], sharesAmount);
+            distributed = distributed.add(sharesAmount);
+            emit RewardsDistributed(idx, sharesAmount);
         }
     }
 
